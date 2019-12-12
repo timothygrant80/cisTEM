@@ -1,5 +1,7 @@
 class  cisTEMStarFileReader {
 
+private:
+
 	int current_position_in_stack;
 	int current_column;
 
@@ -32,6 +34,9 @@ class  cisTEMStarFileReader {
 	int     reference_3d_filename_column;
 	int     best_2d_class_column;
 	int     beam_tilt_group_column;
+	int		particle_group_column;
+	int		pre_exposure_column;
+	int		total_exposure_column;
 
 public:
 
@@ -84,5 +89,9 @@ public:
 	inline wxString ReturnReference3DFilename(int line_number) {return cached_parameters->Item(line_number).reference_3d_filename;}
 	inline int ReturnBest2DClass(int line_number) {return cached_parameters->Item(line_number).best_2d_class;}
 	inline int ReturnBeamTiltGroup(int line_number) {return cached_parameters->Item(line_number).beam_tilt_group;}
+	inline int ReturnParticleGroup(int line_number) {return cached_parameters->Item(line_number).particle_group;}
+	inline int ReturnPreExposure(int line_number) {return cached_parameters->Item(line_number).pre_exposure;}
+	inline int ReturnTotalExpsosure(int line_number) {return cached_parameters->Item(line_number).total_exposure;}
+
 
 };

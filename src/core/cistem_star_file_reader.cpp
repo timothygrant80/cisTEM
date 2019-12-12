@@ -68,6 +68,9 @@ void cisTEMStarFileReader::ResetColumnPositions()
 	image_shift_y_column = -1;
 	best_2d_class_column = -1;
 	beam_tilt_group_column = -1;
+	particle_group_column = -1;
+	pre_exposure_column = -1;
+	total_exposure_column = -1;
 	original_image_filename_column = -1;
 	reference_3d_filename_column = -1;
 	stack_filename_column = -1;
@@ -126,6 +129,13 @@ void cisTEMStarFileReader::Close()
 
 bool cisTEMStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxString *error_string, bool exclude_negative_film_numbers)
 {
+	/*! \brief Parse a line read from a star file with checks on numeric convertibility.
+	 *
+	 * 	Detailed:
+	 *		Each potential variable has a default column i.d. of -1. If this is not changed, this method will not try to parse the variable,
+	 *		but instead will set it's respective default.
+	 */
+
 	// extract info.
 
 	wxArrayString all_tokens;
@@ -512,6 +522,52 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxSt
 		temp_parameters.beam_tilt_group = int(temp_long);
 	}
 
+	// particle group
+
+	if ( particle_group_column == -1) temp_parameters.particle_group = 0;
+	else
+	{
+		if (all_tokens[particle_group_column].ToLong(&temp_long) == false)
+		{
+			MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[particle_group_column]);
+			if (error_string != NULL) *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[particle_group_column]);
+			return false;
+		}
+
+		temp_parameters.beam_tilt_group = int(temp_long);
+	}
+
+	// pre exposure
+
+	if ( pre_exposure_column == -1) temp_parameters.pre_exposure = 0.0f;
+	else
+	{
+		if (all_tokens[pre_exposure_column].ToDouble(&temp_double) == false)
+		{
+			MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[pre_exposure_column]);
+			if (error_string != NULL) *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[pre_exposure_column]);
+			return false;
+		}
+
+		temp_parameters.pre_exposure = float(temp_double);
+	}
+
+	// total exposure
+
+	if ( total_exposure_column == -1) temp_parameters.total_exposure = 0.0f;
+	else
+	{
+		if (all_tokens[total_exposure_column].ToDouble(&temp_double) == false)
+		{
+			MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[total_exposure_column]);
+			if (error_string != NULL) *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[total_exposure_column]);
+			return false;
+		}
+
+		temp_parameters.total_exposure = float(temp_double);
+	}
+
+
 	// stack filename
 
 	if ( stack_filename_column == -1) temp_parameters.stack_filename = "";
@@ -821,11 +877,32 @@ bool cisTEMStarFileReader::ReadFile(wxString wanted_filename, wxString *error_st
 			parameters_that_were_read.beam_tilt_group = true;
 		}
 		else
-		if (current_line.StartsWith("_cisTEMStackFilename ") == true)
+		if (current_line.StartsWith("_cisTEMParticleGroup ") == true)
 		{
-	    	if (stack_filename_column != -1) wxPrintf("Warning :: _cisTEMStackFilename occurs more than once. I will take the last occurrence\n");
-		   	stack_filename_column = current_column;
-			parameters_that_were_read.stack_filename = true;
+	    	if (particle_group_column != -1) wxPrintf("Warning :: _cisTEMParticleGroup occurs more than once. I will take the last occurrence\n");
+		   	particle_group_column = current_column;
+			parameters_that_were_read.particle_group = true;
+		}
+		else
+		if (current_line.StartsWith("_cisTEMPreExposure ") == true)
+		{
+	    	if (pre_exposure_column != -1) wxPrintf("Warning :: _cisTEMPreExposure occurs more than once. I will take the last occurrence\n");
+		   	pre_exposure_column = current_column;
+			parameters_that_were_read.pre_exposure = true;
+		}
+		else
+		if (current_line.StartsWith("_cisTEMTotalExposure ") == true)
+		{
+	    	if (total_exposure_column != -1) wxPrintf("Warning :: _cisTEMTotalExposure occurs more than once. I will take the last occurrence\n");
+		   	total_exposure_column = current_column;
+			parameters_that_were_read.total_exposure = true;
+		}
+		else
+		if (current_line.StartsWith("_cisTEMReference3DFilename ") == true)
+		{
+	    	if (reference_3d_filename_column != -1) wxPrintf("Warning :: _cisTEMReference3DFilename occurs more than once. I will take the last occurrence\n");
+		   	reference_3d_filename_column = current_column;
+			parameters_that_were_read.reference_3d_filename = true;
 		}
 		else
 		if (current_line.StartsWith("_cisTEMOriginalImageFilename ") == true)

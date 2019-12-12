@@ -2089,7 +2089,7 @@ bool CtffindApp::DoCalculation()
 		average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_thr.mrc",1);
 #endif
 
-		// Set up the CTF object
+		// Set up the CTF object, initially limited to at most maximum_resolution_for_initial_search
 		current_ctf->Init(acceleration_voltage,spherical_aberration,amplitude_contrast,minimum_defocus,minimum_defocus,0.0,1.0/minimum_resolution,1.0/std::max(maximum_resolution,maximum_resolution_for_initial_search),astigmatism_tolerance,pixel_size_for_fitting,minimum_additional_phase_shift);
 		current_ctf->SetDefocus(minimum_defocus/pixel_size_for_fitting,minimum_defocus/pixel_size_for_fitting,0.0);
 		current_ctf->SetAdditionalPhaseShift(minimum_additional_phase_shift);
@@ -2255,6 +2255,8 @@ bool CtffindApp::DoCalculation()
 
 				if (slower_search) // This is the first search we are doing - scan the entire range the user specified
 				{
+
+
 					if (astigmatism_is_known)
 					{
 						bf_halfrange[0] = 0.5 * (maximum_defocus-minimum_defocus)/pixel_size_for_fitting;
@@ -2366,6 +2368,13 @@ bool CtffindApp::DoCalculation()
 				brute_force_search = new BruteForceSearch();
 				brute_force_search->Init(&CtffindObjectiveFunction,comparison_object_2D,number_of_search_dimensions,bf_midpoint,bf_halfrange,bf_stepsize,!slower_search,is_running_locally,desired_number_of_threads);
 				brute_force_search->Run();
+
+				// If we did the slower exhaustive search as our first search, we want to update the max fit resolution from maximum_resolution_for_initial_search -> maximum_resolution.
+				if (slower_search)
+				{
+					current_ctf->SetHighestFrequencyForFitting(pixel_size_for_fitting/maximum_resolution);
+				}
+
 
 				// The end point of the BF search is the beginning of the CG search
 				for (counter=0;counter<number_of_search_dimensions;counter++)

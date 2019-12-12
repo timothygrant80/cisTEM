@@ -10069,7 +10069,8 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 		counter = 0;
 		for (current_beamtilt_azimuth = beam_tilt_azimuth_search_start_value;  current_beamtilt_azimuth <= beam_tilt_azimuth_search_end_value; current_beamtilt_azimuth+=beam_tilt_azimuth_search_step_size)
 		{
-			rotation_matrix.GenerateRotationMatrix2D(rad_2_deg(current_beamtilt_azimuth));
+			//  This method rotates the image at "input angle" back by that amount, so give the negative value.
+			rotation_matrix.GenerateRotationMatrix2D(rad_2_deg(-1.0f*current_beamtilt_azimuth));
 			temp_image->Rotate2D(*beamtilt_spectrum, rotation_matrix, 0.45 * beamtilt_spectrum->logical_x_dimension);
 			beamtilt_spectrum->SubtractImage(phase_difference_spectrum);
 			score = beamtilt_spectrum->ReturnSumOfSquares(mask_radius_local);
@@ -10101,7 +10102,7 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 	//phase_difference_spectrum->Binarise(0.0f);
 
 	best_score = std::numeric_limits<float>::max();
-	best_max_score = -std::numeric_limits<float>::max();
+	best_max_score = std::numeric_limits<float>::lowest();
 
 
 	beam_tilt_azimuth_search_start_value = (best_beamtilt_azimuth) - 0.1f; // search 10 degrees either side
@@ -10151,8 +10152,8 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 	particle_shift_azimuth_search_step_size = 0.025f;
 
 	beam_tilt_search_start_value = 	-0.005f;
-	beam_tilt_search_end_value = 	0.005f; // 5 radians
-	beam_tilt_search_step_size = 	0.0001f; // 0.1 radians
+	beam_tilt_search_end_value = 	0.005f; // 5 milli-radians
+	beam_tilt_search_step_size = 	0.0001f; // 0.1 milli-radians
 
 	particle_shift_search_start_value = -1.0f;
 	particle_shift_search_end_value = 1.0f;
@@ -10217,6 +10218,7 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 
 						if (score > best_max_score)
 						{
+							// Saving the worst score assuming it is near the best magnitude but opposite phase
 							best_max_score = score;
 							best_max_beamtilt_azimuth = current_beamtilt_azimuth;
 							best_max_particle_shift_azimuth = current_particle_shift_azimuth;
@@ -10314,7 +10316,7 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 	best_beamtilt = min_values[3];
 	best_particle_shift = min_values[4];
 
-	// rerun with the "max" values
+	// rerun with the "max" values (aka the worst initial values, with the phase inverted)
 
 	start_values[0] = 0;
 	start_values[1] = best_max_beamtilt_azimuth;
@@ -10375,10 +10377,10 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 
 
 	beamtilt_x = best_beamtilt * cosf(best_beamtilt_azimuth);
-	beamtilt_y = -best_beamtilt * sinf(best_beamtilt_azimuth);
+	beamtilt_y = best_beamtilt * sinf(best_beamtilt_azimuth);
 
 	particle_shift_x = best_particle_shift * cosf(best_particle_shift_azimuth);
-	particle_shift_y = -best_particle_shift * sinf(best_particle_shift_azimuth);
+	particle_shift_y = best_particle_shift * sinf(best_particle_shift_azimuth);
 
 	temp_image->ComputeAmplitudeSpectrumFull2D(&beamtilt_output, true, phase_multiplier);
 	difference_image.CopyFrom(temp_image);
@@ -12025,7 +12027,7 @@ double BeamTiltScorer::ScoreValues(double input_values[])
 	// 3 = beamtilt
 	// 4 = shift
 
-	pointer_to_ctf_to_use_for_calculation->SetBeamTilt(input_values[3] * cosf(input_values[1]), -input_values[3] * sinf(input_values[1]), input_values[4] * cosf(input_values[2]) / pixel_size, -input_values[4] * sinf(input_values[2]) / pixel_size);
+	pointer_to_ctf_to_use_for_calculation->SetBeamTilt(input_values[3] * cosf(input_values[1]), input_values[3] * sinf(input_values[1]), input_values[4] * cosf(input_values[2]) / pixel_size, input_values[4] * sinf(input_values[2]) / pixel_size);
 	temp_image.CalculateBeamTiltImage(*pointer_to_ctf_to_use_for_calculation);
 	temp_image.ComputeAmplitudeSpectrumFull2D(&beamtilt_spectrum, true, phase_multiplier);
 	//beamtilt_spectrum.Binarise(0.0f);

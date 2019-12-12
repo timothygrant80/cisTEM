@@ -517,8 +517,10 @@ std::complex<float> CTF::EvaluateBeamTiltPhaseShift(float squared_spatial_freque
 //		wxPrintf("p2 = %g\n", phase_shift);
 //		phase_shift = rad_2_deg(phase_shift);
 //		return phase_shift + I * 0.0f;
-		// The sign of the phase shift seems to be the opposite (producing a negative shift) should be exp(-I*phaseshift)
-		return cosf( phase_shift ) - I * sinf( phase_shift );
+		// This should be exp(-I*phaseshift), but because our convention is to compute -1*sin( f - CS ) == sin( CS -f ) the phase shift carries an implicit *-1.0f.
+		// This only affects the sin term here so swap (-) for (+)
+//		return cosf( phase_shift ) - I * sinf( phase_shift );
+		return cosf( phase_shift ) + I * sinf( phase_shift );
 	}
 }
 

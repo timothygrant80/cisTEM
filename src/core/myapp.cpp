@@ -1069,6 +1069,9 @@ void MyApp::HandleSocketSendNextJob(wxSocketBase *connected_socket, JobResult *r
 			StopMonitoringAndDestroySocket(connected_socket);
 			ShutDownSocketMonitor();
 			delete received_result;
+
+			if (work_thread != NULL) work_thread->Kill();
+
 			ExitMainLoop();
 			return;
 		}
@@ -1295,6 +1298,7 @@ void MyApp::HandleSocketDisconnect(wxSocketBase *connected_socket)
 		ShutDownServer();
 		ShutDownSocketMonitor();
 
+		if (work_thread != NULL) work_thread->Kill();
 
 		ExitMainLoop();
 		return;

@@ -38,6 +38,7 @@ void SharpenMap::DoInteractiveUserInput()
 	float fudge_SSNR		= my_input->GetFloatFromUser("Part_SSNR scale factor", "Scale the Part_SSNR curve to account for disordered regions in the map", "1.0", 0.1, 10.0);
 //	float fudge_FSC			= my_input->GetFloatFromUser("Statistics curve scale factor", "Resample the Part_FSC curve to extend or limit resolution", "1.0", 0.5, 1.5);
 	bool use_mask			= my_input->GetYesNoFromUser("Use 3D mask", "Should the 3D mask be used to mask the input map before sharpening?", "No");
+
 	bool invert_hand		= my_input->GetYesNoFromUser("Invert handedness", "Should the map handedness be inverted?", "No");
 
 	delete my_input;
@@ -113,7 +114,7 @@ bool SharpenMap::DoCalculation()
 		mask_volume->ReadSlices(input_mask_file, 1, input_mask_file->ReturnNumberOfSlices());
 	}
 
-	input_map.SharpenMap(pixel_size, resolution_limit, invert_hand, inner_mask_radius, outer_mask_radius , bfactor_res_limit, bfactor_low, bfactor_high, filter_edge, mask_volume, input_statistics, fudge_SSNR);
+	input_map.SharpenMap(pixel_size, resolution_limit, invert_hand, inner_mask_radius, outer_mask_radius , bfactor_res_limit, bfactor_low, bfactor_high, filter_edge, false, mask_volume, input_statistics, fudge_SSNR);
 	input_map.is_in_real_space = true;
 	input_map.WriteSlices(&output_file, 1, input_file.ReturnZSize());
 

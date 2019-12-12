@@ -1031,8 +1031,8 @@ void ClassificationManager::RunRefinementJob()
 	number_of_refinement_jobs = number_of_refinement_processes;
 	number_of_particles = output_classification->number_of_particles;
 
-	if (number_of_particles - number_of_refinement_jobs < number_of_refinement_jobs) particles_per_job = 1.0;
-	else particles_per_job = float(number_of_particles - number_of_refinement_jobs) / float(number_of_refinement_jobs);
+	if (number_of_particles < number_of_refinement_jobs) particles_per_job = 1.0;
+	else particles_per_job = float(number_of_particles) / float(number_of_refinement_jobs);
 
 	my_parent->current_job_package.Reset(active_run_profile, "refine2d", number_of_refinement_processes);
 	current_particle_counter = 1.0;
@@ -1049,7 +1049,7 @@ void ClassificationManager::RunRefinementJob()
 
 		long	 first_particle							= myroundint(current_particle_counter);
 		current_particle_counter += particles_per_job;
-		if (current_particle_counter > number_of_particles) current_particle_counter = number_of_particles;
+		if (current_particle_counter > number_of_particles || job_counter == number_of_refinement_jobs - 1) current_particle_counter = number_of_particles;
 		long	 last_particle							= myroundint(current_particle_counter);
 		current_particle_counter++;
 

@@ -59,11 +59,13 @@ noinst_HEADERS = core/asset_group.h \
                  core/cistem_parameters.h \
                  core/cistem_star_file_reader.h \
                  core/socket_communicator.h \
+                 core/template_matching.h \
                  core/json/json_defs.h \
                  core/json/jsonval.h \
                  core/json/jsonreader.h \
                  core/json/jsonwriter.h \
                  core/stopwatch.h \
+                 core/ccl3d.h \
                  gui/job_panel.h \
                  gui/gui_functions.h \
                  gui/ResultsDataViewListCtrl.h \
@@ -132,6 +134,7 @@ noinst_HEADERS = core/asset_group.h \
                  gui/MatchTemplatePanel.h \
                  gui/DistributionPlotDialog.h \
                  gui/RefineCTFPanel.h \
+                 gui/ShowTemplateMatchResultsPanel.h \
                  gui/icons/action_icon.cpp \
                  gui/icons/assets_icon.cpp \
                  gui/icons/ctf_icon.cpp \
@@ -209,7 +212,7 @@ endif
 	
 noinst_LIBRARIES = libcore.a libguicore.a
 
-bin_PROGRAMS = cisTEM unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan make_orth_views sharpen_map calculate_fsc make_size_map prepare_stack prepare_stack_classaverage align_symmetry subtract_from_stack binarize  move_volume_xyz  symmetry_expand_stack_and_par fft local_resolution local_resolution_finalize local_resolution_filter subtract_two_stacks add_two_stacks multiply_two_stacks divide_two_stacks convert_par_to_star align_coordinates find_dqe combine_via_max refine_ctf estimate_beamtilt remove_relion_stripes warp_to_cistem create_mask niko_test
+bin_PROGRAMS = unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan make_orth_views sharpen_map calculate_fsc make_size_map prepare_stack prepare_stack_classaverage align_symmetry subtract_from_stack binarize  move_volume_xyz  symmetry_expand_stack_and_par fft local_resolution local_resolution_finalize local_resolution_filter subtract_two_stacks add_two_stacks multiply_two_stacks divide_two_stacks convert_par_to_star align_coordinates find_dqe combine_via_max refine_ctf estimate_beamtilt remove_relion_stripes warp_to_cistem create_mask invert_hand niko_test cisTEM
 
 if EXPERIMENTAL_AM   
 bin_PROGRAMS += match_template refine_template make_template_result simulate sum_all_power_spectra
@@ -294,6 +297,7 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/json/jsonreader.cpp \
                        core/json/jsonwriter.cpp \
                        core/stopwatch.cpp \
+                       core/ccl3d.cpp \
                        core/template_matching.cpp
 
 
@@ -603,6 +607,11 @@ create_mask_SOURCES = programs/create_mask/create_mask.cpp
 create_mask_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 create_mask_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 create_mask_LDADD = libcore.a $(WX_LIBS_BASE)
+
+invert_hand_SOURCES = programs/invert_hand/invert_hand.cpp
+invert_hand_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+invert_hand_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+invert_hand_LDADD = libcore.a $(WX_LIBS_BASE)
 
 if EXPERIMENTAL_AM
 match_template_SOURCES = programs/match_template/match_template.cpp

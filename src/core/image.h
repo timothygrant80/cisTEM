@@ -163,7 +163,7 @@ public:
 	float CosineRingMask(float wanted_inner_radius, float wanted_outer_radius, float wanted_mask_edge);
 	float CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool invert = false, bool force_mask_value = false, float wanted_mask_value = 0.0);
 	float CosineRectangularMask(float wanted_mask_radius_x, float wanted_mask_radius_y, float wanted_mask_radius_z, float wanted_mask_edge, bool invert = false, bool force_mask_value = false, float wanted_mask_value = 0.0);
-	void ConvertToAutoMask(float pixel_size, float outer_mask_radius_in_angstroms, float filter_resolution_in_angstroms, float rebin_value);
+	void ConvertToAutoMask(float pixel_size, float outer_mask_radius_in_angstroms, float filter_resolution_in_angstroms, float rebin_value, bool auto_estimate_initial_bin_value = false, float wanted_initial_bin_value = 0.0f);
 	void GaussianLowPassFilter(float sigma);
 	void GaussianHighPassFilter(float sigma);
 	void ApplyLocalResolutionFilter(Image &local_resolution_map, float pixel_size, int wanted_number_of_levels);
@@ -205,7 +205,7 @@ public:
 	inline long ReturnFourier1DAddressFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z)
 	{
 		MyDebugAssertTrue(wanted_x >= 0 && wanted_x <= physical_address_of_box_center_x && wanted_y >= 0 && wanted_y <= physical_upper_bound_complex_y && wanted_z >= 0 && wanted_z <= physical_upper_bound_complex_z, "Address (%i %i %i) out of bounds (%i to %i; %i to %i; %i to %i)!",wanted_x,wanted_y,wanted_z,0,physical_upper_bound_complex_x,0,physical_upper_bound_complex_y,0,physical_upper_bound_complex_z );
-		return ((long(physical_upper_bound_complex_x + 1) * long(physical_upper_bound_complex_y + 1)) * wanted_z) + (long(physical_upper_bound_complex_x + 1) * wanted_y) + wanted_x;
+		return ((long(physical_upper_bound_complex_x + 1) * long(physical_upper_bound_complex_y + 1)) * long(wanted_z)) + (long(physical_upper_bound_complex_x + 1) * long(wanted_y)) + long(wanted_x);
 	};
 
 	inline long ReturnFourier1DAddressFromLogicalCoord(int wanted_x, int wanted_y, int wanted_z)
@@ -381,7 +381,7 @@ public:
 	void ApplyBFactor(float bfactor);
 	void ApplyBFactorAndWhiten(Curve &power_spectrum, float bfactor_low, float bfactor_high, float bfactor_res_limit);
 	void CalculateDerivative(float direction_in_x = 0.0f, float direction_in_y = 0.0f, float direction_in_z = 0.0f);
-	void SharpenMap(float pixel_size, float resolution_limit,  bool invert_hand = false, float inner_mask_radius = 0.0f, float outer_mask_radius = 100.0f, float start_res_for_whitening = 8.0f, float additional_bfactor_low = 0.0f, float additional_bfactor_high = 0.0f, float filter_edge = 20.0f, Image *input_mask = NULL, ResolutionStatistics *resolution_statistics = NULL, float statistics_scale_factor = 1.0f, Curve *original_log_plot = NULL, Curve *sharpened_log_plot = NULL);
+	void SharpenMap(float pixel_size, float resolution_limit,  bool invert_hand = false, float inner_mask_radius = 0.0f, float outer_mask_radius = 100.0f, float start_res_for_whitening = 8.0f, float additional_bfactor_low = 0.0f, float additional_bfactor_high = 0.0f, float filter_edge = 20.0f, bool should_auto_mask = true,  Image *input_mask = NULL, ResolutionStatistics *resolution_statistics = NULL, float statistics_scale_factor = 1.0f, Curve *original_log_plot = NULL, Curve *sharpened_log_plot = NULL);
 	void InvertHandedness();
 	void ApplyCTFPhaseFlip(CTF ctf_to_apply);
 	void ApplyCTF(CTF ctf_to_apply, bool absolute = false, bool apply_beam_tilt = false, bool apply_envelope = false);

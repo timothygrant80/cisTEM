@@ -4478,10 +4478,12 @@ float Image::CosineRectangularMask(float wanted_mask_radius_x, float wanted_mask
 	return float(mask_volume);
 }
 
-void Image::ConvertToAutoMask(float pixel_size, float outer_mask_radius_in_angstroms, float filter_resolution_in_angstroms, float rebin_value)
+void Image::ConvertToAutoMask(float pixel_size, float outer_mask_radius_in_angstroms, float filter_resolution_in_angstroms, float rebin_value, bool auto_estimate_initial_bin_value, float wanted_initial_bin_value)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(is_in_real_space, "Image must be in real space");
+
+	Image buffer_image;
 
 	int original_x_size;
 	int original_y_size;
@@ -4497,6 +4499,8 @@ void Image::ConvertToAutoMask(float pixel_size, float outer_mask_radius_in_angst
 	float threshold_value;
 	float binning_factor = filter_resolution_in_angstroms / 2.0f / pixel_size;
 
+	int number_of_top_pixels_to_use;
+
 	original_x_size = logical_x_dimension;
 	original_y_size = logical_y_dimension;
 	original_z_size = logical_z_dimension;
@@ -4505,28 +4509,55 @@ void Image::ConvertToAutoMask(float pixel_size, float outer_mask_radius_in_angst
 	binned_y_size = original_y_size / binning_factor + 0.5f;
 	binned_z_size = original_z_size / binning_factor + 0.5f;
 
+	if (IsOdd(binned_x_size) == true) binned_x_size++;
+	if (IsOdd(binned_y_size) == true) binned_y_size++;
+	if (IsOdd(binned_z_size) == true) binned_z_size++;
+
+	if (binned_x_size > original_x_size || binned_y_size > original_y_size || binned_z_size > original_z_size)
+	{
+		binned_x_size = original_x_size;
+		binned_y_size = original_y_size;
+		binned_z_size = original_z_size;
+	}
+
 	if (binned_x_size != original_x_size)
 	{
 		ForwardFFT();
+		//DivideByConstant(sqrtf(number_of_real_space_pixels));
 		Resize(binned_x_size, binned_y_size, binned_z_size);
+		//DivideByConstant(sqrtf(number_of_real_space_pixels));
 		BackwardFFT();
+
 	}
 
-	original_average_value = ReturnAverageOfRealValues(outer_mask_radius_in_angstroms / binning_factor / pixel_size, true);
+	QuickAndDirtyWriteSlices("/tmp/binning_input.mrc", 1, logical_z_dimension, true);
 
-	// remove disconnected density
+	if (auto_estimate_initial_bin_value == false) threshold_value = wanted_initial_bin_value;
+	else
+	{
+		original_average_value = ReturnAverageOfRealValues(outer_mask_radius_in_angstroms / binning_factor / pixel_size, true);
+		SetMinimumValue(original_average_value);
+		average_value = ReturnAverageOfRealValues(outer_mask_radius_in_angstroms / binning_factor / pixel_size, true);
 
-	SetMinimumValue(original_average_value);
-	average_value = ReturnAverageOfRealValues(outer_mask_radius_in_angstroms / binning_factor / pixel_size, true);
-	average_of_max = ReturnAverageOfMaxN(number_of_real_space_pixels * 0.0001, outer_mask_radius_in_angstroms / binning_factor / pixel_size);
-	threshold_value = average_value + ((average_of_max - average_value) * 0.02);
+		number_of_top_pixels_to_use = number_of_real_space_pixels * 0.000005;
+		if (number_of_top_pixels_to_use < 50) number_of_top_pixels_to_use = 50;
+
+		average_of_max = ReturnAverageOfMaxN(number_of_top_pixels_to_use, outer_mask_radius_in_angstroms / binning_factor / pixel_size);
+		threshold_value = average_value + ((average_of_max - average_value) * 0.05);
+	}
 
 	CosineMask(outer_mask_radius_in_angstroms / binning_factor / pixel_size, 1.0, false, true, -FLT_MAX);
-	Binarise(threshold_value);
 
-	rle3d my_rle3d(*this);
-	my_rle3d.ConnectedSizeDecodeTo(*this);
-	Binarise(ReturnMaximumValue() - 1.0f);
+	Binarise(threshold_value);
+	QuickAndDirtyWriteSlices("/tmp/binned.mrc", 1, logical_z_dimension, true);
+
+	//rle3d my_rle3d(*this);
+	//my_rle3d.ConnectedSizeDecodeTo(*this);
+	//Binarise(ReturnMaximumValue() - 1.0f);
+
+	buffer_image.CopyFrom(this);
+	ccl3d my_ccl3d(buffer_image);
+	my_ccl3d.GetLargestConnectedDensityMask(buffer_image, *this);
 
 	ForwardFFT();
 	GaussianLowPassFilter(0.25);
@@ -4671,6 +4702,12 @@ void Image::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size, bo
     		plan_fwd = fftwf_plan_dft_r2c_2d(logical_y_dimension, logical_x_dimension, real_values, reinterpret_cast<fftwf_complex*>(complex_values), FFTW_ESTIMATE);
     	    plan_bwd = fftwf_plan_dft_c2r_2d(logical_y_dimension, logical_x_dimension, reinterpret_cast<fftwf_complex*>(complex_values), real_values, FFTW_ESTIMATE);
 
+    	}
+
+    	if (plan_fwd == NULL || plan_bwd == NULL)
+    	{
+    		MyPrintWithDetails("Error in FFT Planning...");
+    		DEBUG_ABORT;
     	}
 
     	planned = true;
@@ -9134,7 +9171,7 @@ void Image::ApplyCTF(CTF ctf_to_apply, bool absolute, bool apply_beam_tilt, bool
 //	exit(0);
 }
 
-void Image::SharpenMap(float pixel_size, float resolution_limit,  bool invert_hand, float inner_mask_radius, float outer_mask_radius, float start_res_for_whitening, float additional_bfactor_low, float additional_bfactor_high, float filter_edge, Image *input_mask, ResolutionStatistics *input_resolution_statistics, float statistics_scale_factor, Curve *original_log_plot, Curve *sharpened_log_plot)
+void Image::SharpenMap(float pixel_size, float resolution_limit,  bool invert_hand, float inner_mask_radius, float outer_mask_radius, float start_res_for_whitening, float additional_bfactor_low, float additional_bfactor_high, float filter_edge, bool should_auto_mask, Image *input_mask, ResolutionStatistics *input_resolution_statistics, float statistics_scale_factor, Curve *original_log_plot, Curve *sharpened_log_plot)
 {
 
 	float cosine_edge = 10.0;
@@ -9157,10 +9194,21 @@ void Image::SharpenMap(float pixel_size, float resolution_limit,  bool invert_ha
 
 	if (outer_mask_radius == 0.0) outer_mask_radius = logical_x_dimension / 2.0;
 
-	if (input_mask == NULL) buffer_image.CosineRingMask(inner_mask_radius / pixel_size, outer_mask_radius / pixel_size, cosine_edge / pixel_size);
-	else
+	else if (should_auto_mask == true)
+	{
+		MyDebugAssertTrue(input_mask == NULL, "Error: Automask requested, and mask supplied...")
+		input_mask = new Image;
+		input_mask->CopyFrom(this);
+		input_mask->ConvertToAutoMask(pixel_size, outer_mask_radius, 10.0f, 0.1);
+	}
+
+	if (input_mask != NULL)
 	{
 		buffer_image.ApplyMask(*input_mask, cosine_edge / pixel_size, 0.0, 0.0, 0.0);
+	}
+	else
+	{
+		buffer_image.CosineRingMask(inner_mask_radius / pixel_size, outer_mask_radius / pixel_size, cosine_edge / pixel_size);
 	}
 
 	ForwardFFT();
@@ -9968,8 +10016,6 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 	float best_max_score;
 	float best_alternate_score;
 
-	float score_average = 0.0f;
-	float score_variance = 0.0f;
 	float best_score;
 	float mask_radius_local;
 
@@ -10048,7 +10094,7 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 	}
 
 	best_beamtilt_azimuth /= 2.0f;
-	//wxPrintf("Best Azimuth = %f\n", best_beamtilt_azimuth);
+//	MyDebugPrint("Best Azimuth = %f\n", best_beamtilt_azimuth);
 
 	ComputeAmplitudeSpectrumFull2D(phase_difference_spectrum, true, phase_multiplier);
 	phase_error_output.CopyFrom(phase_difference_spectrum);
@@ -10157,9 +10203,6 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 						input_values[4] = current_particle_shift;
 						score = tilt_scorer.ScoreValues(input_values);
 
-						score_average += score;
-						score_variance += powf(score, 2);
-
 						if (score < best_score)
 						{
 							best_score = score;
@@ -10210,8 +10253,8 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 
 	// do a downhill simplex minimization..
 
-//	wxPrintf("Before minimization, score = %f / %f\n", best_score, best_max_score);
-//	wxPrintf("Values found = %f, %f, %f, %f\nMax Values   = %f, %f, %f, %f\n", best_beamtilt_azimuth, best_particle_shift_azimuth, best_beamtilt, best_particle_shift, best_max_beamtilt_azimuth, best_max_particle_shift_azimuth, best_max_beamtilt, best_max_particle_shift);
+//	MyDebugPrint("Before minimization, score = %f / %f\n", best_score, best_max_score);
+//	MyDebugPrint("Values found = %f, %f, %f, %f\nMax Values   = %f, %f, %f, %f\n", best_beamtilt_azimuth, best_particle_shift_azimuth, best_beamtilt, best_particle_shift, best_max_beamtilt_azimuth, best_max_particle_shift_azimuth, best_max_beamtilt, best_max_particle_shift);
 
 	DownhillSimplex simplex_minimzer(4);
 
@@ -10262,6 +10305,7 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 	simplex_minimzer.MinimizeFunction(&tilt_scorer, BeamTiltScoreFunctionForSimplex);
 	simplex_minimzer.GetMinimizedValues(min_values);
 
+//	MyDebugPrint("After Minimization = %f, %f, %f, %f\n", best_beamtilt_azimuth, best_particle_shift_azimuth, best_beamtilt, best_particle_shift);
 
 	best_score = tilt_scorer.ScoreValues(min_values);
 	temp_image->CopyFrom(&tilt_scorer.temp_image); // should be the best..
@@ -10321,8 +10365,10 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 		best_particle_shift = min_values[4];
 	}
 
-//	wxPrintf("After, score = %f\n", best_score);
-//	wxPrintf("Minimization took %s\n",  simplex_minimzer.ReturnTimeSpanOfMinimization().Format());
+
+//	MyDebugPrint("After, score = %f\n", best_score);
+//	MyDebugPrint("Best Results = %f, %f, %f, %f\n", best_beamtilt_azimuth, best_particle_shift_azimuth, best_beamtilt, best_particle_shift);
+//	MyDebugPrint("Minimization took %s\n",  simplex_minimzer.ReturnTimeSpanOfMinimization().Format());
 
 
 //	wxPrintf("Values found = %f, %f, %f, %f\n", best_beamtilt_azimuth, best_particle_shift_azimuth, best_beamtilt, best_particle_shift);
@@ -10334,11 +10380,6 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 	particle_shift_x = best_particle_shift * cosf(best_particle_shift_azimuth);
 	particle_shift_y = -best_particle_shift * sinf(best_particle_shift_azimuth);
 
-	score_average /= counter;
-	score_variance = score_variance / counter - powf(score_average, 2);
-	//	wxPrintf("score, score_average, score_sigma, npix = %g %g %g %g\n", best_score, score_average, sqrtf(score_variance), PI * mask_radius_local * mask_radius_local);
-
-
 	temp_image->ComputeAmplitudeSpectrumFull2D(&beamtilt_output, true, phase_multiplier);
 	difference_image.CopyFrom(temp_image);
 	difference_image.SubtractImage(phase_difference_spectrum);
@@ -10349,9 +10390,9 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 	delete beamtilt_spectrum;
 	delete temp_image;
 
-	if (progress_bar&& ReturnThreadNumberOfCurrentThread() == 0) delete my_progress;
+	if (progress_bar && ReturnThreadNumberOfCurrentThread() == 0) delete my_progress;
 
-	return 0.5f * PI * powf((0.5f - best_score) * mask_radius_local, 2);
+	return best_score;
 }
 
 Peak Image::FindPeakWithParabolaFit(float wanted_min_radius, float wanted_max_radius)

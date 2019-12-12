@@ -975,6 +975,7 @@ bool RefineCTFApp::DoCalculation()
 			//phase_difference_sum.DivideByConstant(float(148436));
 			phase_difference_sum.CosineMask(0.45f, pixel_size / mask_falloff);
 
+			score = FLT_MAX;
 
 
 			#pragma omp parallel num_threads(max_threads) default(none) shared(voltage_kV, spherical_aberration_mm, pixel_size, temp_image, beamtilt_image, sum_power, beamtilt_x, beamtilt_y, particle_shift_x, particle_shift_y, phase_multiplier, max_threads, score, phase_difference_sum) private(input_ctf)
@@ -1016,7 +1017,7 @@ bool RefineCTFApp::DoCalculation()
 
 				#pragma omp critical
 				{
-					if (score_local > score)
+					if (score_local < score)
 					{
 						score = score_local;
 						beamtilt_x = beamtilt_x_local;
@@ -1026,6 +1027,7 @@ bool RefineCTFApp::DoCalculation()
 						sum_power.CopyFrom(&sum_power_local);
 						beamtilt_image.CopyFrom(&beamtilt_image_local);
 						temp_image.CopyFrom(&temp_image_local);
+//						/MyDebugPrint("Best beamtilt found.. = %f, %f, %f, %f\n", beamtilt_x, beamtilt_y, particle_shift_x, particle_shift_y);
 					}
 				}
 
@@ -1034,14 +1036,26 @@ bool RefineCTFApp::DoCalculation()
 
 			temp_image.WriteSlice(&ouput_phase_difference_file,1);
 
-			wxPrintf("Final score = %f\n", score);
+		//	wxPrintf("Final score = %f\n", score);
 			sum_power.WriteSlice(&ouput_difference_file,1);
 			beamtilt_image.WriteSlice(&ouput_beamtilt_file,1);
 
-			if (score > 10.0f)
+			// work significance
+			temp_image.MultiplyByConstant(float(temp_image.logical_x_dimension));
+			temp_image.Binarise(0.00002f);
+			beamtilt_image.Binarise(0.0f);
+
+			float mask_radius_local = sqrtf((temp_image.ReturnAverageOfRealValues() * temp_image.logical_x_dimension * temp_image.logical_y_dimension) / PI);
+			temp_image.SubtractImage(&beamtilt_image);
+			float binarized_score = temp_image.ReturnSumOfSquares(mask_radius_local);
+
+			float significance = 0.5f * PI * powf((0.5f - binarized_score) * mask_radius_local, 2);
+
+			if (significance > 10.0f)
 			{
 				wxPrintf("\nBeam tilt x,y [mrad]   = %10.4f %10.4f\n", 1000.0f * beamtilt_x, 1000.0f * beamtilt_y);
 				wxPrintf("Particle shift x,y [A] = %10.4f %10.4f\n", particle_shift_x, particle_shift_y);
+				MyDebugPrint("Significance score = %.2f\n", significance);
 
 				for (current_line = 0; current_line < output_star_file.all_parameters.GetCount(); current_line++)
 				{
@@ -1053,7 +1067,9 @@ bool RefineCTFApp::DoCalculation()
 			}
 			else
 			{
+
 				wxPrintf("\nNo detectable beam tilt, set to zero\n");
+				MyDebugPrint("Significance score = %.2f\n", significance);
 			}
 		}
 
@@ -1149,6 +1165,13 @@ void RefineCTFApp::MasterHandleProgramDefinedResult(float *result_array, long ar
 
 		sum_for_master.DivideByConstant(total_results_for_master);
 		sum_for_master.CosineMask(0.45f, pixel_size / 20.0f);
+
+
+		Image temp;
+		temp.Allocate(sum_for_master.logical_x_dimension, sum_for_master.logical_y_dimension, true);
+		sum_for_master.ComputeAmplitudeSpectrumFull2D(&temp, true, 1.0f);
+
+		temp.QuickAndDirtyWriteSlice("/tmp/ori.mrc", 1);
 		sum_for_master.QuickAndDirtyWriteSlice(phase_error_filename, 1, true);
 
 /*		wxPrintf("Estimating Beam Tilt...\n");

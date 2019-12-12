@@ -1709,9 +1709,6 @@ wxThread::ExitCode AutoMaskerThread::Entry()
 	long address;
 	bool apply_size_mask = true;
 
-
-	float minimum_size = pow(40.0 / pixel_size, 3) / pixel_size; // 40A cubed
-
 	for (int class_counter = 0; class_counter < input_files.GetCount(); class_counter++)
 	{
 
@@ -1731,6 +1728,10 @@ wxThread::ExitCode AutoMaskerThread::Entry()
 
 			// remove disconnected density
 
+
+
+			// OLD CODE...
+			/*
 			buffer_image.CopyFrom(&input_image);
 			buffer_image.SetMinimumValue(original_average_value);
 			buffer_image.ForwardFFT();
@@ -1756,8 +1757,15 @@ wxThread::ExitCode AutoMaskerThread::Entry()
 			//maximum_size = std::min(maximum_size, size_image.ReturnMaximumValue());
 			//size_image.Binarise(maximum_size - 1.0f);
 			size_image.Binarise(size_image.ReturnMaximumValue() - 1.0f);
-//			size_image.DilateBinarizedMask(10.0 / pixel_size);
+			//size_image.DilateBinarizedMask(10.0 / pixel_size);
+			*/
 
+			// NEW CODE
+
+			size_image.CopyFrom(&input_image);
+			size_image.ConvertToAutoMask(pixel_size, mask_radius, 10.0f, 0.05);
+
+			//size_image.QuickAndDirtyWriteSlices("/tmp/mask.mrc", 1, size_image.logical_z_dimension);
 		//	input_image.ApplyMask(buffer_image, 20.0f / pixel_size, 0.0, 0.0, 0.0, true, original_average_value);
 
 			for (address = 0; address < input_image.real_memory_allocated; address++)

@@ -162,6 +162,7 @@ protected:
 #include "json/jsonreader.h"
 #include "json/jsonval.h"
 #include "stopwatch.h"
+#include "ccl3d.h"
 
 #ifdef EXPERIMENTAL
 #include "pdb.h"
@@ -202,6 +203,7 @@ protected:
 
 
 #ifdef MKL
+#define MKL_Complex8 std::complex<float>
 #include <mkl.h>
 #endif
 

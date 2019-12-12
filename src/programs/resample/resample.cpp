@@ -66,6 +66,7 @@ bool Resample::DoCalculation()
 
 	if (is_a_volume == true)
 	{
+
 		wxPrintf("\nResampling Volume...\n\n");
 		my_image.ReadSlices(&my_input_file, 1, my_input_file.ReturnNumberOfSlices());
 
@@ -85,7 +86,7 @@ bool Resample::DoCalculation()
 			my_image.ReadSlice(&my_input_file,image_counter+1);
 
 			my_image.ForwardFFT();
-			my_image.Resize(new_x_size, new_y_size, new_z_size, my_image.ReturnAverageOfRealValuesOnEdges());
+			my_image.Resize(new_x_size, new_y_size, new_z_size, 0.0f);
 			my_image.BackwardFFT();
 
 			my_image.WriteSlice(&my_output_file,image_counter+1);

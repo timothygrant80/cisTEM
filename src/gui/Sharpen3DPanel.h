@@ -26,6 +26,7 @@ class Sharpen3DPanel : public Sharpen3DPanelParent
 	Image *active_result;
 	int active_thread_id;
 	int next_thread_id;
+	bool auto_mask_value;
 
 	Refinement *active_refinement;
 	int active_class;
@@ -40,7 +41,7 @@ class Sharpen3DPanel : public Sharpen3DPanelParent
 class SharpenMapThread : public wxThread
 {
 	public:
-	SharpenMapThread(wxWindow *parent, wxString wanted_map_filename, float wanted_pixel_size, float wanted_resolution_limit, bool wanted_invert_hand, float wanted_inner_mask_radius, float wanted_outer_mask_radius, float wanted_start_res_for_whitening, float wanted_additional_low_bfactor, float wanted_additional_high_bfactor, float wanted_filter_edge, wxString wanted_input_mask_filename, ResolutionStatistics *wanted_input_resolution_statistics, float wanted_statistics_scale_factor, bool wanted_correct_sinc, int wanted_thread_id) : wxThread(wxTHREAD_DETACHED)
+	SharpenMapThread(wxWindow *parent, wxString wanted_map_filename, float wanted_pixel_size, float wanted_resolution_limit, bool wanted_invert_hand, float wanted_inner_mask_radius, float wanted_outer_mask_radius, float wanted_start_res_for_whitening, float wanted_additional_low_bfactor, float wanted_additional_high_bfactor, float wanted_filter_edge, wxString wanted_input_mask_filename, ResolutionStatistics *wanted_input_resolution_statistics, float wanted_statistics_scale_factor, bool wanted_correct_sinc, bool wanted_should_auto_mask, int wanted_thread_id) : wxThread(wxTHREAD_DETACHED)
 	{
 		main_thread_pointer = parent;
 		map_filename = wanted_map_filename;
@@ -58,6 +59,7 @@ class SharpenMapThread : public wxThread
 		statistics_scale_factor = wanted_statistics_scale_factor;
 		correct_sinc = wanted_correct_sinc;
 		thread_id = wanted_thread_id;
+		should_auto_mask = wanted_should_auto_mask;
 	}
 
 	protected:
@@ -76,6 +78,7 @@ class SharpenMapThread : public wxThread
 	float filter_edge;
 	wxString input_mask_filename;
 	ResolutionStatistics *input_resolution_statistics;
+	bool should_auto_mask;
 	float statistics_scale_factor;
 	bool correct_sinc;
 	int thread_id;

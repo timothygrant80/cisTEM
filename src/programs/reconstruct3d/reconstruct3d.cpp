@@ -521,6 +521,7 @@ bool Reconstruct3DApp::DoCalculation()
 
 	if (! split_even_odd) fsc_particle_repeat = myroundint((input_star_file.ReturnMaxPositionInStack() - input_star_file.ReturnMinPositionInStack() + 1.0) / 100.0);
 	if (fsc_particle_repeat > images_to_process) fsc_particle_repeat = images_to_process;
+	if (fsc_particle_repeat < 2) fsc_particle_repeat = 2;
 	if (fsc_particle_repeat % 2 != 0) fsc_particle_repeat++;
 
 	if (normalize_particles)
@@ -740,8 +741,8 @@ bool Reconstruct3DApp::DoCalculation()
 
 			// swap the sign of the image shifts (I don't know why we need to do this)
 
-			input_parameters.image_shift_x = -input_parameters.image_shift_x;
-			input_parameters.image_shift_y = -input_parameters.image_shift_y;
+			//input_parameters.image_shift_x = -input_parameters.image_shift_x;
+			//input_parameters.image_shift_y = -input_parameters.image_shift_y;
 
 			current_image++;
 			if (input_parameters.position_in_stack >= first_particle && input_parameters.position_in_stack <= last_particle)

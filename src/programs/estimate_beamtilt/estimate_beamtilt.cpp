@@ -46,16 +46,6 @@ bool EstimateBeamTiltApp::DoCalculation()
 
 	score = phase_difference_sum.FindBeamTilt(input_ctf, pixel_size, temp_image, beamtilt_image, phase_difference_sum, beamtilt_x, beamtilt_y, particle_shift_x, particle_shift_y, phase_multiplier, is_running_locally, first_position_to_search, last_position_to_search, this);
 
-	// setup result
-
-	if (score < 10.0f) // no apparent  beam tilt
-	{
-		beamtilt_x = 0.0f;
-		beamtilt_y = 0.0f;
-		particle_shift_x = 0.0f;
-		particle_shift_y = 0.0f;
-	}
-
 	float result_data[5];
 	result_data[0] = score;
 	result_data[1] = beamtilt_x;

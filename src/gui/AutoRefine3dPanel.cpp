@@ -549,7 +549,7 @@ void AutoRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 					MaskFilterResolutionText->Enable(false);
 
 					AutoCenterYesRadioButton->Enable(true);
-					AutoCenterNoRadioButton->Enable(false);
+					AutoCenterNoRadioButton->Enable(true);
 					AutoCenterStaticText->Enable(true);
 
 					AutoMaskStaticText->Enable(true);
@@ -566,7 +566,7 @@ void AutoRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 				{
 
 					AutoCenterYesRadioButton->Enable(false);
-					AutoCenterNoRadioButton->Enable(true);
+					AutoCenterNoRadioButton->Enable(false);
 					AutoCenterStaticText->Enable(false);
 
 					AutoMaskStaticText->Enable(false);
@@ -1061,7 +1061,10 @@ void AutoRefinementManager::RunRefinementJob()
 		output_refinement->class_refinement_results[class_counter].low_resolution_limit = active_low_resolution_limit;
 		output_refinement->class_refinement_results[class_counter].high_resolution_limit = class_high_res_limits[class_counter];
 		output_refinement->class_refinement_results[class_counter].mask_radius = active_mask_radius;
-		output_refinement->class_refinement_results[class_counter].signed_cc_resolution_limit = 0;
+
+		if (IsOdd(number_of_rounds_run) == true || this_is_the_final_round == true || number_of_rounds_run == 0) output_refinement->class_refinement_results[class_counter].signed_cc_resolution_limit = 0.0f;
+		else output_refinement->class_refinement_results[class_counter].signed_cc_resolution_limit = 15.0f;
+
 		output_refinement->class_refinement_results[class_counter].global_resolution_limit = class_high_res_limits[class_counter];
 		output_refinement->class_refinement_results[class_counter].global_mask_radius = active_global_mask_radius;
 		output_refinement->class_refinement_results[class_counter].number_results_to_refine = active_number_results_to_refine;
@@ -1669,7 +1672,7 @@ void AutoRefinementManager::SetupRefinementJob()
 			else signed_CC_limit = 15.0f;
 
 
-
+		
 			//float	 classification_resolution_limit		= 10.0;//class_high_res_limits[class_counter]; //my_parent->ClassificationHighResLimitTextCtrl->ReturnValue();
 			float    classification_resolution_limit        = 20.0f + (8.0f - 20.0f) * (float(number_of_rounds_run) / 9.0f);
 			if (classification_resolution_limit < lowest_res) classification_resolution_limit = lowest_res;

@@ -34,7 +34,7 @@ void Sharpen3DPanel::OnGuageTimer(wxTimerEvent& event)
 
 void Sharpen3DPanel::ResetDefaults()
 {
-	FlattenFromTextCtrl->ChangeValueFloat(8.0f);
+	FlattenFromTextCtrl->ChangeValueFloat(12.0f);
 	CutOffResTextCtrl->ChangeValueFloat(0.0f);
 	AdditionalLowBFactorTextCtrl->ChangeValueFloat(-90.0f);
 	AdditionalHighBFactorTextCtrl->ChangeValueFloat(0.0f);
@@ -43,6 +43,9 @@ void Sharpen3DPanel::ResetDefaults()
 	SSNRScaleFactorTextCtrl->ChangeValueFloat(1.0f);
 	InnerMaskRadiusTextCtrl->ChangeValueFloat(0.0f);
 	OuterMaskRadiusTextCtrl->ChangeValueFloat(100.0f);
+
+	auto_mask_value = true;
+	UseAutoMaskingYesButton->SetValue(true);
 	InvertHandednessNoButton->SetValue(true);
 	CorrectGriddingYesButton->SetValue(true);
 	UseMaskCheckBox->SetValue(false);
@@ -269,6 +272,7 @@ void Sharpen3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			InnerMaskRadiusTextCtrl->Enable(false);
 			OuterMaskRadiusStaticText->Enable(false);
 			OuterMaskRadiusTextCtrl->Enable(false);
+
 		}
 		else
 		{
@@ -285,8 +289,9 @@ void Sharpen3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			InnerMaskRadiusTextCtrl->Enable(true);
 			OuterMaskRadiusStaticText->Enable(true);
 			OuterMaskRadiusTextCtrl->Enable(true);
-		}
 
+
+		}
 		if (VolumeComboBox->GetSelection() >= 0 && running_a_job == false)
 		{
 			RunJobButton->Enable(true);
@@ -352,18 +357,26 @@ void Sharpen3DPanel::FillVolumePanels()
 
 void Sharpen3DPanel::OnUseMaskCheckBox( wxCommandEvent& event )
 {
-	/*if (UseMaskCheckBox->GetValue() == true)
+	if (UseMaskCheckBox->GetValue() == true)
 	{
-		auto_mask_value = AutoMaskYesRadioButton->GetValue();
+		auto_mask_value = UseAutoMaskingYesButton->GetValue();
+		UseAutoMaskingNoButton->SetValue(true);
 		MaskSelectPanel->FillComboBox();
+		UseAutoMaskingStaticText->Enable(false);
+		UseAutoMaskingYesButton->Enable(false);
+		UseAutoMaskingNoButton->Enable(false);
+
 	}
 	else
 	{
-		if (auto_mask_value == true) AutoMaskYesRadioButton->SetValue(true);
-		else AutoMaskNoRadioButton->SetValue(true);
-	}*/
+		if (auto_mask_value == true) UseAutoMaskingYesButton->SetValue(true);
+		else UseAutoMaskingNoButton->SetValue(true);
+		UseAutoMaskingStaticText->Enable(true);
+		UseAutoMaskingYesButton->Enable(true);
+		UseAutoMaskingNoButton->Enable(true);
+	}
 
-	MaskSelectPanel->FillComboBox();
+
 }
 
 void Sharpen3DPanel::OnImportResultClick( wxCommandEvent& event )
@@ -507,7 +520,7 @@ void Sharpen3DPanel::OnVolumeComboBox( wxCommandEvent& event )
 
 		// set the defaults basically..
 
-		FlattenFromTextCtrl->ChangeValueFloat(8.00f);
+		FlattenFromTextCtrl->ChangeValueFloat(12.00f);
 		FilterEdgeWidthTextCtrl->ChangeValueFloat(20.0f);
 		AdditionalLowBFactorTextCtrl->ChangeValueFloat(-90.0f);
 		AdditionalHighBFactorTextCtrl->ChangeValueFloat(0.0f);
@@ -548,12 +561,14 @@ void Sharpen3DPanel::OnRunButtonClick( wxCommandEvent& event )
 	float additional_high_bfactor = AdditionalHighBFactorTextCtrl->ReturnValue();
 	float filter_edge = FilterEdgeWidthTextCtrl->ReturnValue();
 	bool should_correct_sinc = CorrectGriddingYesButton->GetValue();
+	bool should_automask = UseAutoMaskingYesButton->GetValue();
 
 	wxString input_mask_filename;
 	if (UseMaskCheckBox->GetValue() == true)
 	{
 		VolumeAsset *mask_volume = volume_asset_panel->ReturnAssetPointer(MaskSelectPanel->GetSelection());
 		input_mask_filename = mask_volume->filename.GetFullPath();
+		should_automask = false; // just in case
 	}
 	else input_mask_filename = "";
 
@@ -566,7 +581,7 @@ void Sharpen3DPanel::OnRunButtonClick( wxCommandEvent& event )
 	active_thread_id = next_thread_id;
 	next_thread_id++;
 
-	sharpen_thread = new SharpenMapThread(this, map_filename, pixel_size, resolution_limit, invert_hand, inner_mask_radius, outer_mask_radius, start_res_for_whitening, additional_low_bfactor, additional_high_bfactor, filter_edge, input_mask_filename, input_resolution_statistics, statistics_scale_factor, should_correct_sinc, active_thread_id);
+	sharpen_thread = new SharpenMapThread(this, map_filename, pixel_size, resolution_limit, invert_hand, inner_mask_radius, outer_mask_radius, start_res_for_whitening, additional_low_bfactor, additional_high_bfactor, filter_edge, input_mask_filename, input_resolution_statistics, statistics_scale_factor, should_correct_sinc, should_automask, active_thread_id);
 
 	if ( sharpen_thread->Run() != wxTHREAD_NO_ERROR )
 	{
@@ -738,13 +753,13 @@ wxThread::ExitCode SharpenMapThread::Entry()
 		{
 			mask_image = new Image;
 			mask_image->ReadSlices(mask_file, 1, mask_file->ReturnNumberOfSlices());
+			delete mask_file;
 		}
-		delete mask_file;
 
 		Curve *original_curve = new Curve;
 		Curve *sharpened_curve = new Curve;
 
-		volume_to_sharpen->SharpenMap(pixel_size, resolution_limit, invert_hand, inner_mask_radius, outer_mask_radius, start_res_for_whitening, additional_low_bfactor, additional_high_bfactor, filter_edge, mask_image, input_resolution_statistics, statistics_scale_factor, original_curve, sharpened_curve);
+		volume_to_sharpen->SharpenMap(pixel_size, resolution_limit, invert_hand, inner_mask_radius, outer_mask_radius, start_res_for_whitening, additional_low_bfactor, additional_high_bfactor, filter_edge, should_auto_mask, mask_image, input_resolution_statistics, statistics_scale_factor, original_curve, sharpened_curve);
 
 		// if we are correcting sinc, do it
 

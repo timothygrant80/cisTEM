@@ -2078,6 +2078,9 @@ class Sharpen3DPanelParent : public wxPanel
 		NumericTextCtrl* InnerMaskRadiusTextCtrl;
 		wxStaticText* OuterMaskRadiusStaticText;
 		NumericTextCtrl* OuterMaskRadiusTextCtrl;
+		wxStaticText* UseAutoMaskingStaticText;
+		wxRadioButton* UseAutoMaskingYesButton;
+		wxRadioButton* UseAutoMaskingNoButton;
 		wxStaticText* m_staticText671;
 		wxStaticText* m_staticText642;
 		wxRadioButton* InvertHandednessYesButton;

@@ -8055,6 +8055,22 @@ Sharpen3DPanelParent::Sharpen3DPanelParent( wxWindow* parent, wxWindowID id, con
 	OuterMaskRadiusTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("100.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer11->Add( OuterMaskRadiusTextCtrl, 0, wxALL|wxEXPAND, 5 );
 	
+	UseAutoMaskingStaticText = new wxStaticText( this, wxID_ANY, wxT("Use AutoMasking? :"), wxDefaultPosition, wxDefaultSize, 0 );
+	UseAutoMaskingStaticText->Wrap( -1 );
+	fgSizer11->Add( UseAutoMaskingStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	
+	wxBoxSizer* bSizer26612111;
+	bSizer26612111 = new wxBoxSizer( wxHORIZONTAL );
+	
+	UseAutoMaskingYesButton = new wxRadioButton( this, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer26612111->Add( UseAutoMaskingYesButton, 0, wxALL, 5 );
+	
+	UseAutoMaskingNoButton = new wxRadioButton( this, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer26612111->Add( UseAutoMaskingNoButton, 0, wxALL, 5 );
+	
+	
+	fgSizer11->Add( bSizer26612111, 1, wxEXPAND, 5 );
+	
 	m_staticText671 = new wxStaticText( this, wxID_ANY, wxT("Additional"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText671->Wrap( -1 );
 	m_staticText671->SetFont( wxFont( 10, 74, 90, 92, true, wxT("Sans") ) );
@@ -8201,6 +8217,8 @@ Sharpen3DPanelParent::Sharpen3DPanelParent( wxWindow* parent, wxWindowID id, con
 	UseMaskCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( Sharpen3DPanelParent::OnUseMaskCheckBox ), NULL, this );
 	UseFSCWeightingYesButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Sharpen3DPanelParent::OnAutoMaskButton ), NULL, this );
 	UseFSCWeightingNoButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Sharpen3DPanelParent::OnAutoMaskButton ), NULL, this );
+	UseAutoMaskingYesButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Sharpen3DPanelParent::OnAutoMaskButton ), NULL, this );
+	UseAutoMaskingNoButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Sharpen3DPanelParent::OnAutoMaskButton ), NULL, this );
 	InvertHandednessYesButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Sharpen3DPanelParent::OnAutoMaskButton ), NULL, this );
 	InvertHandednessNoButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Sharpen3DPanelParent::OnAutoMaskButton ), NULL, this );
 	CorrectGriddingYesButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Sharpen3DPanelParent::OnAutoMaskButton ), NULL, this );
@@ -8218,6 +8236,8 @@ Sharpen3DPanelParent::~Sharpen3DPanelParent()
 	UseMaskCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( Sharpen3DPanelParent::OnUseMaskCheckBox ), NULL, this );
 	UseFSCWeightingYesButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Sharpen3DPanelParent::OnAutoMaskButton ), NULL, this );
 	UseFSCWeightingNoButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Sharpen3DPanelParent::OnAutoMaskButton ), NULL, this );
+	UseAutoMaskingYesButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Sharpen3DPanelParent::OnAutoMaskButton ), NULL, this );
+	UseAutoMaskingNoButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Sharpen3DPanelParent::OnAutoMaskButton ), NULL, this );
 	InvertHandednessYesButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Sharpen3DPanelParent::OnAutoMaskButton ), NULL, this );
 	InvertHandednessNoButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Sharpen3DPanelParent::OnAutoMaskButton ), NULL, this );
 	CorrectGriddingYesButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Sharpen3DPanelParent::OnAutoMaskButton ), NULL, this );

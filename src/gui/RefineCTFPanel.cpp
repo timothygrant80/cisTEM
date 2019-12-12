@@ -1080,7 +1080,7 @@ void CTFRefinementManager::RunBeamTiltEstimationJob()
 {
 	running_job_type = ESTIMATE_BEAMTILT;
 	number_of_received_results = 0;
-	best_score = -FLT_MAX;
+	best_score = FLT_MAX;
 
 	int number_of_refinement_processes = active_refinement_run_profile.ReturnTotalJobs();
 	int number_of_refinement_jobs = number_of_refinement_processes;
@@ -1727,7 +1727,7 @@ void CTFRefinementManager::ProcessJobResult(JobResult *result_to_process)
 	else
 	if (running_job_type == ESTIMATE_BEAMTILT)
 	{
-		if (result_to_process->result_data[0] > best_score)
+		if (result_to_process->result_data[0] < best_score)
 		{
 			best_score = result_to_process->result_data[0];
 			best_beamtilt_x = result_to_process->result_data[1];
@@ -1857,13 +1857,58 @@ void CTFRefinementManager::ProcessAllJobsFinished()
 	{
 		main_frame->job_controller.KillJob(my_parent->my_job_id);
 
-	//	wxPrintf("\n\nBeamTilt Found = %f, %f, %f, %f = %f\n", best_beamtilt_x * 1000.0f, best_beamtilt_y * 1000.0f, best_particle_shift_x, best_particle_shift_y, best_score);
+		// work out significance..
+		CTF input_ctf;
+		input_ctf.Init(active_refinement_package->contained_particles[0].microscope_voltage, active_refinement_package->contained_particles[0].spherical_aberration, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, 0.0f, active_refinement_package->output_pixel_size, 0.0f);
+
+		wxString phase_difference_image_filename = main_frame->ReturnRefineCTFScratchDirectory() + "phase_output.mrc";
+
+		Image phase_difference_image;
+		Image phase_difference_spectrum;
+		Image beam_tilt_image;
+
+
+		phase_difference_image.QuickAndDirtyReadSlice(phase_difference_image_filename.ToStdString(), 1);
+
+		phase_difference_image.ForwardFFT();
+		phase_difference_spectrum.Allocate(phase_difference_image.logical_x_dimension, phase_difference_image.logical_y_dimension, false);
+		beam_tilt_image.Allocate(phase_difference_image.logical_x_dimension, phase_difference_image.logical_y_dimension, false);
+		phase_difference_image.ComputeAmplitudeSpectrumFull2D(&phase_difference_spectrum, true, 1.0f);
+		phase_difference_spectrum.CosineRingMask(5.0f, phase_difference_spectrum.ReturnLargestLogicalDimension(), 2.0f);
+
+		input_ctf.SetBeamTilt(best_beamtilt_x, best_beamtilt_y, best_particle_shift_x / active_refinement_package->output_pixel_size, best_particle_shift_y / active_refinement_package->output_pixel_size);
+		phase_difference_image.CalculateBeamTiltImage(input_ctf); // reuse
+		phase_difference_image.ComputeAmplitudeSpectrumFull2D(&beam_tilt_image, true, 1.0);
+		phase_difference_spectrum.QuickAndDirtyWriteSlice("/tmp/phase_diff.mrc", 1);
+		beam_tilt_image.QuickAndDirtyWriteSlice("/tmp/beam_tilt.mrc", 1);
+
+		phase_difference_spectrum.MultiplyByConstant(float(phase_difference_spectrum.logical_x_dimension));
+		phase_difference_spectrum.Binarise(0.00002f);
+		beam_tilt_image.Binarise(0.0f);
+
+		float mask_radius_local = sqrtf((phase_difference_spectrum.ReturnAverageOfRealValues() * phase_difference_spectrum.logical_x_dimension * phase_difference_spectrum.logical_y_dimension) / PI);
+
+		phase_difference_spectrum.SubtractImage(&beam_tilt_image);
+		float binarized_score = phase_difference_spectrum.ReturnSumOfSquares(mask_radius_local);
+
+		float significance = 0.5f * PI * powf((0.5f - binarized_score) * mask_radius_local, 2);
+
+		wxPrintf("%.2f, %.2f, %.2f %.2f\n", best_beamtilt_x * 1000.0f, best_beamtilt_y * 1000.0f, best_particle_shift_x, best_particle_shift_y);
+
+		wxPrintf("Significance = %.2f\n", significance);
+
+		if (significance <= 10.0f)
+		{
+			best_beamtilt_x = 0.0f;
+			best_beamtilt_y = 0.0f;
+			best_particle_shift_x = 0.0f;
+			best_particle_shift_y = 0.0f;
+		}
 
 		for (int class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
 		{
 			for (long particle_counter = 0; particle_counter < output_refinement->number_of_particles; particle_counter++)
 			{
-
 				output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].beam_tilt_x = best_beamtilt_x * 1000.0f;
 				output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].beam_tilt_y = best_beamtilt_y * 1000.0f;
 				output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_shift_x = best_particle_shift_x;
@@ -2034,7 +2079,7 @@ void CTFRefinementManager::DoMasking()
 
 	for (int class_counter = 0; class_counter < current_reference_filenames.GetCount(); class_counter++)
 	{
-		current_masked_filename = main_frame->ReturnRefine3DScratchDirectory();
+		current_masked_filename = main_frame->ReturnRefineCTFScratchDirectory();
 		current_masked_filename += wxFileName(current_reference_filenames.Item(class_counter)).GetName();
 		current_masked_filename += "_masked.mrc";
 

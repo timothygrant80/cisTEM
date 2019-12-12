@@ -2129,7 +2129,7 @@ void AbInitioManager::SetupPrepareStackJob()
 		int	number_of_refinement_jobs = number_of_refinement_processes;
 
 		int	number_of_particles = active_refinement_package->contained_particles.GetCount();
-		particles_per_job = float(number_of_particles - number_of_refinement_jobs) / float(number_of_refinement_jobs);
+		particles_per_job = float(number_of_particles) / float(number_of_refinement_jobs);
 
 		// we don't want less than 100 particles per job..
 

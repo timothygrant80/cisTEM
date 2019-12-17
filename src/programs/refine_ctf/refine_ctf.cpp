@@ -1041,17 +1041,18 @@ bool RefineCTFApp::DoCalculation()
 			beamtilt_image.WriteSlice(&ouput_beamtilt_file,1);
 
 			// work significance
-			temp_image.MultiplyByConstant(float(temp_image.logical_x_dimension));
-			temp_image.Binarise(0.00002f);
-			beamtilt_image.Binarise(0.0f);
+			float significance = temp_image.ReturnBeamTiltSignificanceScore(beamtilt_image);
+//			temp_image.MultiplyByConstant(float(temp_image.logical_x_dimension));
+//			temp_image.Binarise(0.00002f);
+//			beamtilt_image.Binarise(0.0f);
+//
+//			float mask_radius_local = sqrtf((temp_image.ReturnAverageOfRealValues() * temp_image.logical_x_dimension * temp_image.logical_y_dimension) / PI);
+//			temp_image.SubtractImage(&beamtilt_image);
+//			float binarized_score = temp_image.ReturnSumOfSquares(mask_radius_local);
+//
+//			float significance = 0.5f * PI * powf((0.5f - binarized_score) * mask_radius_local, 2);
 
-			float mask_radius_local = sqrtf((temp_image.ReturnAverageOfRealValues() * temp_image.logical_x_dimension * temp_image.logical_y_dimension) / PI);
-			temp_image.SubtractImage(&beamtilt_image);
-			float binarized_score = temp_image.ReturnSumOfSquares(mask_radius_local);
-
-			float significance = 0.5f * PI * powf((0.5f - binarized_score) * mask_radius_local, 2);
-
-			if (significance > 10.0f)
+			if (significance > MINIMUM_BEAM_TILT_SIGNIFICANCE_SCORE)
 			{
 				wxPrintf("\nBeam tilt x,y [mrad]   = %10.4f %10.4f\n", 1000.0f * beamtilt_x, 1000.0f * beamtilt_y);
 				wxPrintf("Particle shift x,y [A] = %10.4f %10.4f\n", particle_shift_x, particle_shift_y);
@@ -1171,7 +1172,7 @@ void RefineCTFApp::MasterHandleProgramDefinedResult(float *result_array, long ar
 		temp.Allocate(sum_for_master.logical_x_dimension, sum_for_master.logical_y_dimension, true);
 		sum_for_master.ComputeAmplitudeSpectrumFull2D(&temp, true, 1.0f);
 
-		temp.QuickAndDirtyWriteSlice("/tmp/ori.mrc", 1);
+//		temp.QuickAndDirtyWriteSlice("/tmp/ori.mrc", 1);
 		sum_for_master.QuickAndDirtyWriteSlice(phase_error_filename, 1, true);
 
 /*		wxPrintf("Estimating Beam Tilt...\n");

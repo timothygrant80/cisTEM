@@ -23,6 +23,17 @@ ImportRefinementPackageWizardParent( parent )
   	SymmetryComboBox->Append("T2");
   	SymmetryComboBox->SetSelection(0);
   	PixelSizeTextCtrl->SetPrecision(4);
+
+  	if (cisTEMRadioButton->GetValue() == true)
+  	{
+  		MicroscopeVoltageTextCtrl->Show(false);
+  		MicroscopeVoltageTextCtrlLabel->Show(false);
+  	  	PixelSizeTextCtrl->Show(false);
+  	  	PixelSizeTextCtrlLabel->Show(false);
+  	  	AmplitudeContrastTextCtrl->Show(false);
+  	  	AmplitudeContrastTextCtrlLabel->Show(false);
+
+  	}
 }
 
 void ImportRefinementPackageWizard::CheckPaths()
@@ -67,6 +78,11 @@ void ImportRefinementPackageWizard::OnMetaBrowseButtonClick( wxCommandEvent& eve
 	{
 		openFileDialog = new wxFileDialog(this, _("Select STAR File"), "", "", "STAR files (*.star)|*.star;", wxFD_OPEN|wxFD_FILE_MUST_EXIST);
 	}
+	else
+	if (cisTEMRadioButton->GetValue() == true)
+	{
+		openFileDialog = new wxFileDialog(this, _("Select STAR File"), "", "", "STAR files (*.star)|*.star;", wxFD_OPEN|wxFD_FILE_MUST_EXIST);
+	}
 
 	if (openFileDialog->ShowModal() == wxID_OK)
 	{
@@ -95,6 +111,11 @@ void ImportRefinementPackageWizard::OnPageChanged(  wxWizardEvent& event  )
 		{
 			MetaFilenameStaticText->SetLabel("STAR Filename :-   ");
 		}
+		else
+		if (cisTEMRadioButton->GetValue() == true)
+		{
+			MetaFilenameStaticText->SetLabel("STAR Filename :-   ");
+		}
 		CheckPaths();
 	}
 	else
@@ -109,9 +130,34 @@ void ImportRefinementPackageWizard::OnPageChanged(  wxWizardEvent& event  )
 		{
 			WhiteProteinRadioButton->SetValue(true);
 		}
+		if (cisTEMRadioButton->GetValue() == true)
+		{
+			BlackProteinRadioButton->SetValue(true);
+		}
+		else
 		CheckPaths();
 		EnableNextButton();
 	}
+
+  	if (cisTEMRadioButton->GetValue() == true)
+  	{
+  		MicroscopeVoltageTextCtrl->Show(false);
+  		MicroscopeVoltageTextCtrlLabel->Show(false);
+  	  	PixelSizeTextCtrl->Show(false);
+  	  	PixelSizeTextCtrlLabel->Show(false);
+  	  	AmplitudeContrastTextCtrl->Show(false);
+  	  	AmplitudeContrastTextCtrlLabel->Show(false);
+
+  	}
+  	else
+  	{
+  		MicroscopeVoltageTextCtrl->Show(true);
+  		MicroscopeVoltageTextCtrlLabel->Show(true);
+  	  	PixelSizeTextCtrl->Show(true);
+  	  	PixelSizeTextCtrlLabel->Show(true);
+  	  	AmplitudeContrastTextCtrl->Show(true);
+  	  	AmplitudeContrastTextCtrlLabel->Show(true);
+  	}
 
 }
 
@@ -158,7 +204,147 @@ void ImportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 	}
 
 	// hmm, so now I guess we have to actually do the import..
+	if (cisTEMRadioButton->GetValue() == true)  // cisTEM
+	{
 
+		cisTEMParameters input_star_file;
+		// Method creates a cisTEMStarFileReader object and reads in
+		input_star_file.ReadFromcisTEMStarFile(MetaDataFileTextCtrl->GetLineText(0), true);
+
+		if (stack_number_of_images != input_star_file.ReturnNumberofLines())
+		{
+			wxMessageBox( wxT("Error: Number of images in stack is different from\nthe number of lines in the star file - aborting."), wxT("Error: Number Mismatch"), wxICON_ERROR);
+			return;
+		}
+
+		OneSecondProgressDialog *my_dialog = new OneSecondProgressDialog ("Refinement Package", "Creating Refinement Package...", stack_number_of_images, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE| wxPD_APP_MODAL);
+
+		// create the refinement package and intial refinement..
+
+		temp_refinement_package = new RefinementPackage;
+		temp_refinement.SizeAndFillWithEmpty(stack_number_of_images, 1);
+
+		temp_refinement_package->name = wxString::Format("Refinement Package #%li (cisTEM Import)", refinement_package_asset_panel->current_asset_number);
+		temp_refinement_package->number_of_classes = 1;
+		temp_refinement_package->number_of_run_refinments = 0;
+		temp_refinement_package->stack_has_white_protein = WhiteProteinRadioButton->GetValue();
+		temp_refinement_package->output_pixel_size = input_star_file.ReturnPixelSize(0); // FIXME should be for all lines.
+//		temp_refinement_package->output_pixel_size = PixelSizeTextCtrl->ReturnValue();
+
+		temp_refinement.number_of_classes = temp_refinement_package->number_of_classes;
+		temp_refinement.number_of_particles = stack_number_of_images;
+		temp_refinement.name = "Imported Parameters";
+		temp_refinement.resolution_statistics_box_size = stack_x_size;
+		temp_refinement.resolution_statistics_pixel_size = input_star_file.ReturnPixelSize(0); // FIXME should be for all lines.
+//		temp_refinement.resolution_statistics_pixel_size = PixelSizeTextCtrl->ReturnValue();
+		temp_refinement.refinement_package_asset_id = refinement_package_asset_panel->current_asset_number + 1;
+
+		temp_refinement_package->stack_box_size = stack_x_size;
+		temp_refinement_package->stack_filename = ParticleStackFileTextCtrl->GetLineText(0);
+		temp_refinement_package->symmetry = SymmetryComboBox->GetValue().Upper();
+		temp_refinement_package->estimated_particle_weight_in_kda = MolecularWeightTextCtrl->ReturnValue();
+		temp_refinement_package->estimated_particle_size_in_angstroms = LargestDimensionTextCtrl->ReturnValue();
+
+		long refinement_id = main_frame->current_project.database.ReturnHighestRefinementID() + 1;
+		temp_refinement_package->refinement_ids.Add(refinement_id);
+		temp_refinement_package->references_for_next_refinement.Add(-1);
+
+		temp_refinement.refinement_id = refinement_id;
+		temp_refinement.resolution_statistics_are_generated = true;
+
+		temp_particle_info.spherical_aberration = SphericalAberrationTextCtrl->ReturnValue();
+		temp_particle_info.microscope_voltage = input_star_file.ReturnMicroscopekV(0); // FIXME should be for all lines.
+//		temp_particle_info.microscope_voltage = MicroscopeVoltageTextCtrl->ReturnValue();
+		temp_particle_info.parent_image_id = -1;
+		temp_particle_info.amplitude_contrast = input_star_file.ReturnAmplitudeContrast(0); // FIXME should be for all lines.
+//		temp_particle_info.pixel_size = PixelSizeTextCtrl->ReturnValue();
+//		temp_particle_info.amplitude_contrast = AmplitudeContrastTextCtrl->ReturnValue();
+		temp_particle_info.x_pos = 0;
+		temp_particle_info.y_pos = 0;
+
+		temp_refinement.class_refinement_results[0].class_resolution_statistics.Init(temp_particle_info.pixel_size, temp_refinement.resolution_statistics_box_size);
+		temp_refinement.class_refinement_results[0].class_resolution_statistics.GenerateDefaultStatistics(temp_refinement_package->estimated_particle_weight_in_kda);
+
+
+		// loop over all particles
+
+		for (int particle_counter = 0; particle_counter < stack_number_of_images; particle_counter++)
+		{
+
+			temp_particle_info.original_particle_position_asset_id =  (int)input_star_file.ReturnPositionInStack(particle_counter);
+			temp_particle_info.position_in_stack = (int)input_star_file.ReturnPositionInStack(particle_counter);
+			temp_particle_info.defocus_1 = input_star_file.ReturnDefocus1(particle_counter);
+			temp_particle_info.defocus_2 = input_star_file.ReturnDefocus2(particle_counter);
+			temp_particle_info.defocus_angle = input_star_file.ReturnDefocusAngle(particle_counter);
+			temp_particle_info.phase_shift = input_star_file.ReturnPhaseShift(particle_counter);
+			temp_particle_info.pixel_size = input_star_file.ReturnPixelSize(particle_counter);
+			temp_particle_info.amplitude_contrast = input_star_file.ReturnAmplitudeContrast(particle_counter);
+
+
+			temp_refinement_package->contained_particles.Add(temp_particle_info);
+
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].position_in_stack = (int)input_star_file.ReturnPositionInStack(particle_counter);
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].defocus1 = input_star_file.ReturnDefocus1(particle_counter);
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].defocus2 = input_star_file.ReturnDefocus2(particle_counter);
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].defocus_angle = input_star_file.ReturnDefocusAngle(particle_counter);
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].phase_shift = input_star_file.ReturnPhaseShift(particle_counter);
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].logp = input_star_file.ReturnLogP(particle_counter);
+
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].occupancy = input_star_file.ReturnOccupancy(particle_counter);
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].phi = input_star_file.ReturnPhi(particle_counter);
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].theta = input_star_file.ReturnTheta(particle_counter);
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].psi = input_star_file.ReturnPsi(particle_counter);
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].xshift = input_star_file.ReturnXShift(particle_counter);
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].yshift = input_star_file.ReturnYShift(particle_counter);
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].score = input_star_file.ReturnScore(particle_counter);
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].image_is_active = (int)input_star_file.ReturnImageIsActive(particle_counter);
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].sigma = input_star_file.ReturnSigma(particle_counter);
+
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].pixel_size = input_star_file.ReturnPixelSize(particle_counter);
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].microscope_voltage_kv = input_star_file.ReturnMicroscopekV(particle_counter);
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].microscope_spherical_aberration_mm = input_star_file.ReturnMicroscopeCs(particle_counter);
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].amplitude_contrast = input_star_file.ReturnAmplitudeContrast(particle_counter);
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].beam_tilt_x = input_star_file.ReturnBeamTiltX(particle_counter);
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].beam_tilt_y = input_star_file.ReturnBeamTiltY(particle_counter);
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].image_shift_x = input_star_file.ReturnImageShiftX(particle_counter);
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].image_shift_y	= input_star_file.ReturnImageShiftY(particle_counter);
+
+
+			// New parameters, set in refinement.h, but don't do anything yet.
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].beam_tilt_group =  input_star_file.ReturnBeamTiltGroup(particle_counter);
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].particle_group =  input_star_file.ReturnParticleGroup(particle_counter);
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].pre_exposure =  input_star_file.ReturnPreExposure(particle_counter);
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].total_exposure =  input_star_file.ReturnTotalExposure(particle_counter);
+
+
+
+			my_dialog->Update(particle_counter + 1);
+		}
+
+
+		// add to the database and panel..
+
+		main_frame->current_project.database.Begin();
+		wxPrintf("\t\t\n\nAdding the temp refinement from the cisTEM import dialog\n\n");
+		refinement_package_asset_panel->AddAsset(temp_refinement_package);
+		main_frame->current_project.database.AddRefinement(&temp_refinement);
+
+		ArrayofAngularDistributionHistograms all_histograms = temp_refinement.ReturnAngularDistributions(temp_refinement_package->symmetry);
+		for (int class_counter = 0; class_counter < temp_refinement.number_of_classes; class_counter++)
+		{
+			main_frame->current_project.database.AddRefinementAngularDistribution(all_histograms[class_counter], temp_refinement.refinement_id, class_counter + 1);
+		}
+
+		ShortRefinementInfo temp_info;
+		temp_info = temp_refinement;
+
+		refinement_package_asset_panel->all_refinement_short_infos.Add(temp_info);
+		main_frame->current_project.database.Commit();
+		my_dialog->Destroy();
+
+
+	}
+	else
 	if (FrealignRadioButton->GetValue() == true)  // FREALIGN
 	{
 		FrealignParameterFile input_par_file(MetaDataFileTextCtrl->GetLineText(0), OPEN_TO_READ);

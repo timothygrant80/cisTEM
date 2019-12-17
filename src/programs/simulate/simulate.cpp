@@ -957,7 +957,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 	    	parameter_star.PreallocateMemoryAndBlank(frame_lines);
 	    }
 
-		parameter_star.parameters_to_write.SetNewToTrue();
+		parameter_star.parameters_to_write.SetAllToTrue();
 		parameter_star.parameters_to_write.image_is_active = false;
 		parameter_star.parameters_to_write.original_image_filename = false;
 		parameter_star.parameters_to_write.reference_3d_filename = false;
@@ -994,7 +994,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		parameters.reference_3d_filename = wxEmptyString;
 		parameters.best_2d_class = 0;
 		parameters.beam_tilt_group = 0;
-		parameters.frame_number = 0;
+		parameters.particle_group = 0;
 		parameters.pre_exposure = 0.0f;
 		parameters.total_exposure = 0.0f;
 
@@ -2199,7 +2199,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		parameters.microscope_voltage_kv = wanted_acceleration_voltage;
 		parameters.microscope_spherical_aberration_mm = wanted_spherical_aberration;
 		parameters.amplitude_contrast = amplitude_contrast;
-		parameters.frame_number = iFrame + 1;
+		parameters.particle_group = iFrame + 1; // FIXME, this is not the intended behavior after switching from tracking frame_number -> particle group
 		parameters.pre_exposure =  current_total_exposure - dose_per_frame;
 		parameters.total_exposure = current_total_exposure;
 

@@ -30,6 +30,10 @@ RefinementResult::RefinementResult()
 	beam_tilt_y = 0.0f;
 	image_shift_x = 0.0f;
 	image_shift_y = 0.0f;
+	beam_tilt_group = 0.0f;
+	particle_group = 0.0f;
+	pre_exposure = 0.0f;
+	total_exposure = 0.0f;
 
 }
 

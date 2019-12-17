@@ -14,6 +14,7 @@ public :
 	wxFileName movie_asset_directory;
 	wxFileName image_asset_directory;
 	wxFileName template_matching_asset_directory;
+	wxFileName phase_difference_asset_directory;
 	wxFileName volume_asset_directory;
 	wxFileName ctf_asset_directory;
 	wxFileName particle_position_asset_directory;

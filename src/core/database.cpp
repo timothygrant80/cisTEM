@@ -328,7 +328,6 @@ int Database::ReturnHighestParticlePositionID()
 	}
 }
 
-
 int Database::ReturnNumberOfPreviousMovieAlignmentsByAssetID(int wanted_asset_id)
 {
 	return ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) FROM MOVIE_ALIGNMENT_LIST WHERE MOVIE_ASSET_ID = %i", wanted_asset_id));

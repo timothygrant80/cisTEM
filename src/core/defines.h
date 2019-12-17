@@ -22,6 +22,8 @@
 // Used in pdb.h simulate.h
 #define NUMBER_OF_ATOM_TYPES 21
 
+#define MINIMUM_BEAM_TILT_SIGNIFICANCE_SCORE 10.0f
+
 #define ANSI_COLOR_RED     "\x1b[31m"
 #define ANSI_COLOR_GREEN   "\x1b[32m"
 #define ANSI_COLOR_YELLOW  "\x1b[33m"

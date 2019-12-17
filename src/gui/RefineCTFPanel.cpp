@@ -269,7 +269,7 @@ void RefineCTFPanel::OnUpdateUI( wxUpdateUIEvent& event )
 		HighResolutionLimitTextCtrl->Enable(false);
 		RefineCTFCheckBox->Enable(false);
 		RefineBeamTiltCheckBox->Enable(false);
-		HighResolutionLimitTextCtrl->Enable(false);
+		HighResolutionLimitTextCtrl->Enable(false); // Why is this duplicated
 		HiResLimitStaticText->Enable(false);
 
 
@@ -1867,6 +1867,16 @@ void CTFRefinementManager::ProcessAllJobsFinished()
 		Image phase_difference_spectrum;
 		Image beam_tilt_image;
 
+//		int number_of_previous_searches = main_frame->current_project.database.ReturnNumberOfPreviousBeamtiltEstimationsFromList();
+
+		std::string model_applied = "CTF";
+		wxString phase_difference_output_file = main_frame->current_project.phase_difference_asset_directory.GetFullPath();
+		phase_difference_output_file += wxString::Format("/%s_phase_difference_%s_%i.mrc","temp",model_applied,(int)current_input_refinement_id);
+//		phase_difference_output_file = wxString::Format("/%s_mip_%i_%i.mrc", current_image->filename.GetName(), current_image->asset_id, number_of_previous_template_matches);
+
+		wxString beam_tilt_output_file = main_frame->current_project.phase_difference_asset_directory.GetFullPath();
+		beam_tilt_output_file += wxString::Format("/%s_beam_tilt_%s_%i.mrc","temp",model_applied,(int)current_input_refinement_id);
+//		phase_difference_output_file = wxString::Format("/%s_mip_%i_%i.mrc", current_image->filename.GetName(), current_image->asset_id, number_of_previous_template_matches);
 
 		phase_difference_image.QuickAndDirtyReadSlice(phase_difference_image_filename.ToStdString(), 1);
 
@@ -1879,25 +1889,28 @@ void CTFRefinementManager::ProcessAllJobsFinished()
 		input_ctf.SetBeamTilt(best_beamtilt_x, best_beamtilt_y, best_particle_shift_x / active_refinement_package->output_pixel_size, best_particle_shift_y / active_refinement_package->output_pixel_size);
 		phase_difference_image.CalculateBeamTiltImage(input_ctf); // reuse
 		phase_difference_image.ComputeAmplitudeSpectrumFull2D(&beam_tilt_image, true, 1.0);
-		phase_difference_spectrum.QuickAndDirtyWriteSlice("/tmp/phase_diff.mrc", 1);
-		beam_tilt_image.QuickAndDirtyWriteSlice("/tmp/beam_tilt.mrc", 1);
+		phase_difference_spectrum.QuickAndDirtyWriteSlice(phase_difference_output_file.ToStdString(), 1);
+		beam_tilt_image.QuickAndDirtyWriteSlice(beam_tilt_output_file.ToStdString(), 1);
+//		phase_difference_spectrum.QuickAndDirtyWriteSlice("/tmp/phase_diff.mrc", 1);
+//		beam_tilt_image.QuickAndDirtyWriteSlice("/tmp/beam_tilt.mrc", 1);
 
-		phase_difference_spectrum.MultiplyByConstant(float(phase_difference_spectrum.logical_x_dimension));
-		phase_difference_spectrum.Binarise(0.00002f);
-		beam_tilt_image.Binarise(0.0f);
-
-		float mask_radius_local = sqrtf((phase_difference_spectrum.ReturnAverageOfRealValues() * phase_difference_spectrum.logical_x_dimension * phase_difference_spectrum.logical_y_dimension) / PI);
-
-		phase_difference_spectrum.SubtractImage(&beam_tilt_image);
-		float binarized_score = phase_difference_spectrum.ReturnSumOfSquares(mask_radius_local);
-
-		float significance = 0.5f * PI * powf((0.5f - binarized_score) * mask_radius_local, 2);
+		float significance = phase_difference_spectrum.ReturnBeamTiltSignificanceScore(beam_tilt_image);
+//		phase_difference_spectrum.MultiplyByConstant(float(phase_difference_spectrum.logical_x_dimension));
+//		phase_difference_spectrum.Binarise(0.00002f);
+//		beam_tilt_image.Binarise(0.0f);
+//
+//		float mask_radius_local = sqrtf((phase_difference_spectrum.ReturnAverageOfRealValues() * phase_difference_spectrum.logical_x_dimension * phase_difference_spectrum.logical_y_dimension) / PI);
+//
+//		phase_difference_spectrum.SubtractImage(&beam_tilt_image);
+//		float binarized_score = phase_difference_spectrum.ReturnSumOfSquares(mask_radius_local);
+//
+//		float significance = 0.5f * PI * powf((0.5f - binarized_score) * mask_radius_local, 2);
 
 		wxPrintf("%.2f, %.2f, %.2f %.2f\n", best_beamtilt_x * 1000.0f, best_beamtilt_y * 1000.0f, best_particle_shift_x, best_particle_shift_y);
 
 		wxPrintf("Significance = %.2f\n", significance);
 
-		if (significance <= 10.0f)
+		if (significance <= MINIMUM_BEAM_TILT_SIGNIFICANCE_SCORE)
 		{
 			best_beamtilt_x = 0.0f;
 			best_beamtilt_y = 0.0f;

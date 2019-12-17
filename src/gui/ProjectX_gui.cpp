@@ -10682,11 +10682,14 @@ ImportRefinementPackageWizardParent::ImportRefinementPackageWizardParent( wxWind
 	wxBoxSizer* bSizer3941;
 	bSizer3941 = new wxBoxSizer( wxVERTICAL );
 	
-	FrealignRadioButton = new wxRadioButton( ImportTypePage, wxID_ANY, wxT("Frealign (Requires particle stack and PAR file)"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer3941->Add( FrealignRadioButton, 0, wxALL, 5 );
+	cisTEMRadioButton = new wxRadioButton( ImportTypePage, wxID_ANY, wxT("cisTEM (Requires particle stack and STAR file)"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer3941->Add( cisTEMRadioButton, 0, wxALL, 5 );
 	
 	RelionRadioButton = new wxRadioButton( ImportTypePage, wxID_ANY, wxT("Relion (Requires particle stack and STAR file)"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer3941->Add( RelionRadioButton, 0, wxALL, 5 );
+	
+	FrealignRadioButton = new wxRadioButton( ImportTypePage, wxID_ANY, wxT("Frealign (Requires particle stack and PAR file)"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer3941->Add( FrealignRadioButton, 0, wxALL, 5 );
 	
 	
 	bSizer3931->Add( bSizer3941, 1, wxEXPAND, 5 );
@@ -10764,18 +10767,18 @@ ImportRefinementPackageWizardParent::ImportRefinementPackageWizardParent( wxWind
 	fgSizer23->SetFlexibleDirection( wxBOTH );
 	fgSizer23->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
 	
-	m_staticText477 = new wxStaticText( GetParametersPage, wxID_ANY, wxT("Pixel Size (Å) : "), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText477->Wrap( -1 );
-	fgSizer23->Add( m_staticText477, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	PixelSizeTextCtrlLabel = new wxStaticText( GetParametersPage, wxID_ANY, wxT("Pixel Size (Å) : "), wxDefaultPosition, wxDefaultSize, 0 );
+	PixelSizeTextCtrlLabel->Wrap( -1 );
+	fgSizer23->Add( PixelSizeTextCtrlLabel, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
 	PixelSizeTextCtrl = new NumericTextCtrl( GetParametersPage, wxID_ANY, wxT("1.00"), wxDefaultPosition, wxDefaultSize, 0 );
 	PixelSizeTextCtrl->SetMinSize( wxSize( 100,-1 ) );
 	
 	fgSizer23->Add( PixelSizeTextCtrl, 0, wxALL, 5 );
 	
-	m_staticText478 = new wxStaticText( GetParametersPage, wxID_ANY, wxT("Microscope Voltage (kV) : "), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText478->Wrap( -1 );
-	fgSizer23->Add( m_staticText478, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	MicroscopeVoltageTextCtrlLabel = new wxStaticText( GetParametersPage, wxID_ANY, wxT("Microscope Voltage (kV) : "), wxDefaultPosition, wxDefaultSize, 0 );
+	MicroscopeVoltageTextCtrlLabel->Wrap( -1 );
+	fgSizer23->Add( MicroscopeVoltageTextCtrlLabel, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
 	MicroscopeVoltageTextCtrl = new NumericTextCtrl( GetParametersPage, wxID_ANY, wxT("300.00"), wxDefaultPosition, wxDefaultSize, 0 );
 	MicroscopeVoltageTextCtrl->SetMinSize( wxSize( 100,-1 ) );
@@ -10791,9 +10794,9 @@ ImportRefinementPackageWizardParent::ImportRefinementPackageWizardParent( wxWind
 	
 	fgSizer23->Add( SphericalAberrationTextCtrl, 0, wxALL, 5 );
 	
-	m_staticText480 = new wxStaticText( GetParametersPage, wxID_ANY, wxT("Amplitude Contrast : "), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText480->Wrap( -1 );
-	fgSizer23->Add( m_staticText480, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	AmplitudeContrastTextCtrlLabel = new wxStaticText( GetParametersPage, wxID_ANY, wxT("Amplitude Contrast : "), wxDefaultPosition, wxDefaultSize, 0 );
+	AmplitudeContrastTextCtrlLabel->Wrap( -1 );
+	fgSizer23->Add( AmplitudeContrastTextCtrlLabel, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 	
 	AmplitudeContrastTextCtrl = new NumericTextCtrl( GetParametersPage, wxID_ANY, wxT("0.07"), wxDefaultPosition, wxDefaultSize, 0 );
 	AmplitudeContrastTextCtrl->SetMinSize( wxSize( 100,-1 ) );
@@ -10834,7 +10837,7 @@ ImportRefinementPackageWizardParent::ImportRefinementPackageWizardParent( wxWind
 	wxBoxSizer* bSizer379;
 	bSizer379 = new wxBoxSizer( wxHORIZONTAL );
 	
-	BlackProteinRadioButton = new wxRadioButton( GetParametersPage, wxID_ANY, wxT("Black (Frealign Default)"), wxDefaultPosition, wxDefaultSize, 0 );
+	BlackProteinRadioButton = new wxRadioButton( GetParametersPage, wxID_ANY, wxT("Black (cisTEM Default)"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer379->Add( BlackProteinRadioButton, 0, wxALL, 5 );
 	
 	WhiteProteinRadioButton = new wxRadioButton( GetParametersPage, wxID_ANY, wxT("White (Relion Default)"), wxDefaultPosition, wxDefaultSize, 0 );

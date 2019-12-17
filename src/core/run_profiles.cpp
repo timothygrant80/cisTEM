@@ -364,6 +364,25 @@ void RunProfileManager::AddDefaultLocalProfile()
 	run_profiles[number_of_run_profiles].AddCommand(execution_command, number_of_cores, 1, false, 0, 10);
 	number_of_run_profiles++;
 
+	bool make_recon = false;
+	if (make_recon)
+	{
+		current_id_number++;
+		run_profiles[number_of_run_profiles].id = current_id_number;
+		run_profiles[number_of_run_profiles].name = "Default Reconstruction";
+		run_profiles[number_of_run_profiles].number_of_run_commands = 0;
+		run_profiles[number_of_run_profiles].manager_command = execution_command;
+		run_profiles[number_of_run_profiles].gui_address = "";
+		run_profiles[number_of_run_profiles].controller_address = "";
+
+		int number_of_cores = wxThread::GetCPUCount();
+		if (number_of_cores == -1) number_of_cores = 1;
+		number_of_cores++;
+
+		run_profiles[number_of_run_profiles].AddCommand(execution_command, 1, (number_of_cores / 2), false, 0, 10);
+		number_of_run_profiles++;
+	}
+
 }
 
 RunProfile * RunProfileManager::ReturnLastProfilePointer()

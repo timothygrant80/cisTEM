@@ -4530,7 +4530,7 @@ void Image::ConvertToAutoMask(float pixel_size, float outer_mask_radius_in_angst
 
 	}
 
-	QuickAndDirtyWriteSlices("/tmp/binning_input.mrc", 1, logical_z_dimension, true);
+//	QuickAndDirtyWriteSlices("/tmp/binning_input.mrc", 1, logical_z_dimension, true);
 
 	if (auto_estimate_initial_bin_value == false) threshold_value = wanted_initial_bin_value;
 	else
@@ -4549,7 +4549,7 @@ void Image::ConvertToAutoMask(float pixel_size, float outer_mask_radius_in_angst
 	CosineMask(outer_mask_radius_in_angstroms / binning_factor / pixel_size, 1.0, false, true, -FLT_MAX);
 
 	Binarise(threshold_value);
-	QuickAndDirtyWriteSlices("/tmp/binned.mrc", 1, logical_z_dimension, true);
+//	QuickAndDirtyWriteSlices("/tmp/binned.mrc", 1, logical_z_dimension, true);
 
 	//rle3d my_rle3d(*this);
 	//my_rle3d.ConnectedSizeDecodeTo(*this);
@@ -10095,7 +10095,7 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 	}
 
 	best_beamtilt_azimuth /= 2.0f;
-//	MyDebugPrint("Best Azimuth = %f\n", best_beamtilt_azimuth);
+	MyDebugPrint("Best Azimuth = %f\n", best_beamtilt_azimuth);
 
 	ComputeAmplitudeSpectrumFull2D(phase_difference_spectrum, true, phase_multiplier);
 	phase_error_output.CopyFrom(phase_difference_spectrum);
@@ -10253,6 +10253,27 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 	}
 
 
+
+	// Before the simplex, check to make sure nothing has gone terribly wrong. If the phase difference image is garbage the simplex can get stuck and not terminate.
+	double sanity_check[5];
+	sanity_check[0] = 0;
+	sanity_check[1] = best_beamtilt_azimuth;
+	sanity_check[2] = best_beamtilt_azimuth + best_particle_shift_azimuth;
+	sanity_check[3] = best_beamtilt;
+	sanity_check[4] = best_particle_shift;
+	best_score = tilt_scorer.ScoreValues(sanity_check);
+
+	temp_image->CopyFrom(&tilt_scorer.temp_image); // should be the best..
+	temp_image->ComputeAmplitudeSpectrumFull2D(&beamtilt_output, true, phase_multiplier);
+
+	float test_significance = phase_difference_spectrum->ReturnBeamTiltSignificanceScore(beamtilt_output);
+
+	MyDebugPrint("Before minimization, score = %f / %f\n", best_score, best_max_score);
+	MyDebugPrint("Values found = %f, %f, %f, %f\nMax Values   = %f, %f, %f, %f\n", best_beamtilt_azimuth, best_particle_shift_azimuth, best_beamtilt, best_particle_shift, best_max_beamtilt_azimuth, best_max_particle_shift_azimuth, best_max_beamtilt, best_max_particle_shift);
+	MyDebugPrint("Significance score on thread %i is %f\n", ReturnThreadNumberOfCurrentThread(), test_significance);
+
+	if ( test_significance > MINIMUM_BEAM_TILT_SIGNIFICANCE_SCORE / 10.0f ) // 10x less stringent than our current final condition. FIXME these should be specified somehwere else
+	{
 	// do a downhill simplex minimization..
 
 //	MyDebugPrint("Before minimization, score = %f / %f\n", best_score, best_max_score);
@@ -10368,13 +10389,17 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 	}
 
 
-//	MyDebugPrint("After, score = %f\n", best_score);
-//	MyDebugPrint("Best Results = %f, %f, %f, %f\n", best_beamtilt_azimuth, best_particle_shift_azimuth, best_beamtilt, best_particle_shift);
-//	MyDebugPrint("Minimization took %s\n",  simplex_minimzer.ReturnTimeSpanOfMinimization().Format());
+	MyDebugPrint("After, score = %f\n", best_score);
+	MyDebugPrint("Best Results = %f, %f, %f, %f\n", best_beamtilt_azimuth, best_particle_shift_azimuth, best_beamtilt, best_particle_shift);
+	MyDebugPrint("Minimization took %s\n",  simplex_minimzer.ReturnTimeSpanOfMinimization().Format());
 
 
-//	wxPrintf("Values found = %f, %f, %f, %f\n", best_beamtilt_azimuth, best_particle_shift_azimuth, best_beamtilt, best_particle_shift);
+	wxPrintf("Values found = %f, %f, %f, %f\n", best_beamtilt_azimuth, best_particle_shift_azimuth, best_beamtilt, best_particle_shift);
 
+
+	temp_image->ComputeAmplitudeSpectrumFull2D(&beamtilt_output, true, phase_multiplier);
+
+	} // if sanity check on score to skip simplex
 
 	beamtilt_x = best_beamtilt * cosf(best_beamtilt_azimuth);
 	beamtilt_y = best_beamtilt * sinf(best_beamtilt_azimuth);
@@ -10382,7 +10407,6 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 	particle_shift_x = best_particle_shift * cosf(best_particle_shift_azimuth);
 	particle_shift_y = best_particle_shift * sinf(best_particle_shift_azimuth);
 
-	temp_image->ComputeAmplitudeSpectrumFull2D(&beamtilt_output, true, phase_multiplier);
 	difference_image.CopyFrom(temp_image);
 	difference_image.SubtractImage(phase_difference_spectrum);
 
@@ -12027,15 +12051,26 @@ double BeamTiltScorer::ScoreValues(double input_values[])
 	// 3 = beamtilt
 	// 4 = shift
 
-	pointer_to_ctf_to_use_for_calculation->SetBeamTilt(input_values[3] * cosf(input_values[1]), input_values[3] * sinf(input_values[1]), input_values[4] * cosf(input_values[2]) / pixel_size, input_values[4] * sinf(input_values[2]) / pixel_size);
-	temp_image.CalculateBeamTiltImage(*pointer_to_ctf_to_use_for_calculation);
-	temp_image.ComputeAmplitudeSpectrumFull2D(&beamtilt_spectrum, true, phase_multiplier);
-	//beamtilt_spectrum.Binarise(0.0f);
+//	// Test a limit on the particle shift
+//	float testParticleRadius = 190.0f; // Ang
+//	if (fabsf(testParticleRadius*input_values[3]) < fabsf(input_values[4]))
+//	{
+//		return std::numeric_limits<float>::max();
+//	}
+//	else
+//	{
+		pointer_to_ctf_to_use_for_calculation->SetBeamTilt(input_values[3] * cosf(input_values[1]), input_values[3] * sinf(input_values[1]), input_values[4] * cosf(input_values[2]) / pixel_size, input_values[4] * sinf(input_values[2]) / pixel_size);
+		temp_image.CalculateBeamTiltImage(*pointer_to_ctf_to_use_for_calculation);
+		temp_image.ComputeAmplitudeSpectrumFull2D(&beamtilt_spectrum, true, phase_multiplier);
+		//beamtilt_spectrum.Binarise(0.0f);
 
-	beamtilt_spectrum.CosineRingMask(5.0f, beamtilt_spectrum.ReturnLargestLogicalDimension(), 2.0f);
-	beamtilt_spectrum.SubtractImage(pointer_binarised_phase_difference_spectrum);
+		beamtilt_spectrum.CosineRingMask(5.0f, beamtilt_spectrum.ReturnLargestLogicalDimension(), 2.0f);
+		beamtilt_spectrum.SubtractImage(pointer_binarised_phase_difference_spectrum);
 
-	return beamtilt_spectrum.ReturnSumOfSquares(mask_radius);
+		return beamtilt_spectrum.ReturnSumOfSquares(mask_radius);
+//	}
+
+
 
 }
 
@@ -12046,3 +12081,20 @@ double BeamTiltScoreFunctionForSimplex(void *pt2Object, double values[])
 //	wxPrintf("%f, %f, %f, %f = %f\n", values[1], values[2], values[3], values[4], score);
 	return scorer_to_use->ScoreValues(values);
 }
+
+float Image::ReturnBeamTiltSignificanceScore(Image calculated_beam_tilt)
+{
+	Image buffer;
+	buffer.CopyFrom(this);
+	// If this is from the sanity check, we want to keep the input image unmodified, so pass by value.
+	// work significance
+	buffer.MultiplyByConstant(float(buffer.logical_x_dimension));
+	buffer.Binarise(0.00002f);
+	calculated_beam_tilt.Binarise(0.0f);
+
+	float mask_radius_local = sqrtf((buffer.ReturnAverageOfRealValues() * buffer.logical_x_dimension * buffer.logical_y_dimension) / PIf);
+	buffer.SubtractImage(&calculated_beam_tilt);
+	float binarized_score = buffer.ReturnSumOfSquares(mask_radius_local);
+	return 0.5f * PIf * powf((0.5f - binarized_score) * mask_radius_local, 2);
+}
+

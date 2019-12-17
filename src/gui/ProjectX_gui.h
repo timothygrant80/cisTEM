@@ -2656,8 +2656,9 @@ class ImportRefinementPackageWizardParent : public wxWizard
 	protected:
 		wxStaticText* m_staticText4651;
 		wxStaticLine* m_staticline1051;
-		wxRadioButton* FrealignRadioButton;
+		wxRadioButton* cisTEMRadioButton;
 		wxRadioButton* RelionRadioButton;
+		wxRadioButton* FrealignRadioButton;
 		wxStaticText* m_staticText474;
 		wxStaticLine* m_staticline106;
 		wxStaticText* m_staticText41;
@@ -2668,13 +2669,13 @@ class ImportRefinementPackageWizardParent : public wxWizard
 		wxButton* m_button24;
 		wxStaticText* m_staticText476;
 		wxStaticLine* m_staticline107;
-		wxStaticText* m_staticText477;
+		wxStaticText* PixelSizeTextCtrlLabel;
 		NumericTextCtrl* PixelSizeTextCtrl;
-		wxStaticText* m_staticText478;
+		wxStaticText* MicroscopeVoltageTextCtrlLabel;
 		NumericTextCtrl* MicroscopeVoltageTextCtrl;
 		wxStaticText* m_staticText479;
 		NumericTextCtrl* SphericalAberrationTextCtrl;
-		wxStaticText* m_staticText480;
+		wxStaticText* AmplitudeContrastTextCtrlLabel;
 		NumericTextCtrl* AmplitudeContrastTextCtrl;
 		wxStaticText* m_staticText459;
 		wxStaticText* m_staticText460;

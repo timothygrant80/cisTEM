@@ -105,6 +105,7 @@ public:
 	float ReturnSigmaNoise(Image &matching_projection, float mask_radius = 0.0);
 	float ReturnImageScale(Image &matching_projection, float mask_radius = 0.0);
 	float ReturnCorrelationCoefficientUnnormalized(Image &other_image, float wanted_mask_radius = 0.0);
+	float ReturnBeamTiltSignificanceScore(Image calculated_beam_tilt);
 	float ReturnPixelWiseProduct(Image &other_image);
 	float GetWeightedCorrelationWithImage(Image &projection_image, int *bins, float signed_CC_limit);
 	void PhaseFlipPixelWise(Image &other_image);

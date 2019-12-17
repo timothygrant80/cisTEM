@@ -83,6 +83,11 @@ bool Project::CreateNewProject(wxFileName wanted_database_file, wxString wanted_
 	if (wxDir::Exists(template_matching_asset_directory.GetFullPath()) == false) wxFileName::Mkdir(template_matching_asset_directory.GetFullPath());
 #endif
 
+	directory_string = project_directory.GetFullPath();
+	directory_string += "/Assets/PhaseDifferenceImages";
+	phase_difference_asset_directory = directory_string;
+	wxFileName::Mkdir(phase_difference_asset_directory.GetFullPath());
+
 
 	directory_string = project_directory.GetFullPath();
 	directory_string += "/Assets/CTF";
@@ -177,6 +182,11 @@ bool Project::OpenProjectFromFile(wxFileName file_to_open)
 	template_matching_asset_directory = directory_string;
 	if (wxDir::Exists(template_matching_asset_directory.GetFullPath()) == false) wxFileName::Mkdir(template_matching_asset_directory.GetFullPath());
 #endif
+
+	directory_string = project_directory.GetFullPath();
+	directory_string += "/Assets/PhaseDifferenceImages";
+	phase_difference_asset_directory = directory_string;
+	if (wxDir::Exists(phase_difference_asset_directory.GetFullPath()) == false) wxFileName::Mkdir(phase_difference_asset_directory.GetFullPath());
 
 	directory_string = project_directory.GetFullPath();
 	directory_string += "/Assets/Volumes";

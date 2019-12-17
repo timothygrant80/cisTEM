@@ -206,7 +206,7 @@ public :
 	inline wxString ReturnReference3DFilename(int line_number) {return all_parameters.Item(line_number).reference_3d_filename;}
 	inline int ReturnBest2DClass(int line_number) {return all_parameters.Item(line_number).best_2d_class;}
 	inline int ReturnBeamTiltGroup(int line_number) {return all_parameters.Item(line_number).beam_tilt_group;}
-	inline int ReturnFrameNumber(int line_number) {return all_parameters.Item(line_number).particle_group;}
+	inline int ReturnParticleGroup(int line_number) {return all_parameters.Item(line_number).particle_group;}
 	inline float ReturnPreExposure(int line_number) {return all_parameters.Item(line_number).pre_exposure;}
 	inline float ReturnTotalExposure(int line_number) {return all_parameters.Item(line_number).total_exposure;}
 

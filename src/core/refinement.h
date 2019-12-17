@@ -27,6 +27,10 @@ public:
 	float beam_tilt_y;
 	float image_shift_x;
 	float image_shift_y;
+	float beam_tilt_group;
+	float particle_group;
+	float pre_exposure;
+	float total_exposure;
 };
 
 WX_DECLARE_OBJARRAY(RefinementResult, ArrayofRefinementResults);

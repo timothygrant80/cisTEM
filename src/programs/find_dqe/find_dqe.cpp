@@ -406,16 +406,16 @@ void FindDQE::DoInteractiveUserInput()
 	bool use_both_images				= my_input->GetYesNoFromUser("Use both images", "Should both images be used in the calculation for more reliable results?", "Yes");
 	std::string output_table			= my_input->GetFilenameFromUser("Output DQE table", "Filename of output table listing MTF, NPS and DQE values", "table.txt", false );
 	std::string output_diagnostic_image	= my_input->GetFilenameFromUser("Output diagnostic image", "Filename of output image showing residuals after MTF fit", "residual.mrc", false );
-//	bool is_a_counting_detector			= my_input->GetYesNoFromUser("Counting detector", "Was the input image recorded on a counting detector?", "Yes");
+	bool is_a_counting_detector			= my_input->GetYesNoFromUser("Counting detector", "Were the input images recorded on a counting detector?", "Yes");
 //	float counts_multiplier				= my_input->GetFloatFromUser("Counts multiplier", "Factor to be applied to camera counts to undo multiplication by the data collection software", "1.0", 0.1f, 10.0f);
-	float exposure						= my_input->GetFloatFromUser("Exposure per pixel", "The number of electrons per pixel used to collect the input image", "50.0", 10.0f, 500.0f);
+	float exposure						= my_input->GetFloatFromUser("Exposure per pixel", "The number of electrons per pixel used to collect the input image", "50.0", 10.0f, 1000.0f);
 
 	delete my_input;
 
 //	my_current_job.Reset(5);
 //	my_current_job.ManualSetArguments("ttbff", input_pointer_image.c_str(), output_diagnostic_image.c_str(), is_a_counting_detector, counts_multiplier, exposure);
 //	my_current_job.Reset(6);
-	my_current_job.ManualSetArguments("ttbttf", input_pointer_image.c_str(), input_pointer_image2.c_str(), use_both_images, output_table.c_str(), output_diagnostic_image.c_str(), exposure);
+	my_current_job.ManualSetArguments("ttbttbf", input_pointer_image.c_str(), input_pointer_image2.c_str(), use_both_images, output_table.c_str(), output_diagnostic_image.c_str(), is_a_counting_detector, exposure);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -428,9 +428,9 @@ bool FindDQE::DoCalculation()
 	bool use_both_images				= my_current_job.arguments[2].ReturnBoolArgument();
 	std::string output_table				= my_current_job.arguments[3].ReturnStringArgument();
 	std::string	output_diagnostic_image = my_current_job.arguments[4].ReturnStringArgument();
-//	bool is_a_counting_detector			= my_current_job.arguments[5].ReturnBoolArgument();
+	bool is_a_counting_detector			= my_current_job.arguments[5].ReturnBoolArgument();
 //	float counts_multiplier				= my_current_job.arguments[3].ReturnFloatArgument();
-	float exposure						= my_current_job.arguments[5].ReturnFloatArgument();
+	float exposure						= my_current_job.arguments[6].ReturnFloatArgument();
 
 	int i, j, l, m;
 	int ix, iy;
@@ -449,6 +449,7 @@ bool FindDQE::DoCalculation()
 	int box_size_x, box_size_y;
 	int fit_window_size;
 	int bin_size = 50;
+	int bin_size_range = 5;
 	float threshold;
 	float threshold1;
 	float threshold2;
@@ -478,7 +479,7 @@ bool FindDQE::DoCalculation()
 	double sigma_background2;
 	double average_shadow2;
 	double sigma_shadow2;
-//	bool is_a_counting_detector = false;
+//	bool is_a_counting_detector = true;
 
 	ImageFile input_file(input_pointer_image,false);
 	if (input_file.ReturnZSize() > 1)
@@ -1024,33 +1025,36 @@ bool FindDQE::DoCalculation()
 	mask_volume /= background_image.number_of_real_space_pixels;
 	if (debug) background_image.QuickAndDirtyWriteSlice("background_image.mrc", 1);
 
+//	bin_size = myroundint(float(std::min(background_image.logical_x_dimension, background_image.logical_y_dimension)) / 5.0f);
 	nps0 = 0.0f;
-	for (i = bin_size - 5; i <= bin_size + 5; i++)
-//	for (i = 10; i < 900; i+=10)
+	if (! is_a_counting_detector)
 	{
-		j = std::max(1, i);
-		temp_image.CopyFrom(&background_image);
-		temp_image.RealSpaceBinning(j, j, 1, false, true);
-		variance = temp_image.ReturnVarianceOfRealValues();
-		temp_image.CopyFrom(&background_mask_image);
-		temp_image.RealSpaceBinning(j, j, 1, false, true);
-		temp_float = 0.0f;
-		pointer = 0;
-		for (m = 0; m < temp_image.logical_y_dimension; m++)
+		for (i = bin_size - bin_size_range; i <= bin_size + bin_size_range; i++)
+//		for (i = 10; i < 900; i+=10)
 		{
-			for (l = 0; l < temp_image.logical_x_dimension; l++)
+			j = std::max(1, i);
+			temp_image.CopyFrom(&background_image);
+			temp_image.RealSpaceBinning(j, j, 1, false, true);
+			variance = temp_image.ReturnVarianceOfRealValues();
+			temp_image.CopyFrom(&background_mask_image);
+			temp_image.RealSpaceBinning(j, j, 1, false, true);
+			temp_float = 0.0f;
+			pointer = 0;
+			for (m = 0; m < temp_image.logical_y_dimension; m++)
 			{
-				temp_float += powf(temp_image.real_values[pointer], 2);
-				pointer++;
+				for (l = 0; l < temp_image.logical_x_dimension; l++)
+				{
+					temp_float += powf(temp_image.real_values[pointer], 2);
+					pointer++;
+				}
+				pointer += temp_image.padding_jump_value;
 			}
-			pointer += temp_image.padding_jump_value;
+			temp_float /= temp_image.number_of_real_space_pixels;
+//			wxPrintf("bin, std = %i %g\n", j, sqrtf(variance / temp_float / two_image_factor) * j);
+			nps0 += variance / temp_float * j * j;
 		}
-		temp_float /= temp_image.number_of_real_space_pixels;
-//		wxPrintf("bin, std = %i %g\n", j, sqrtf(variance) * j);
-		nps0 += variance / temp_float * j * j;
+		nps0 /= (2.0f * bin_size_range + 1.0f);
 	}
-//	exit(0);
-	nps0 /= 11.0f;
 
 	// Calculate NPS
 	background_image.ForwardFFT();
@@ -1060,6 +1064,12 @@ bool FindDQE::DoCalculation()
 	number_of_terms.SetupXAxis(0.0, 0.5f / 1000.0f * 1415.0f, 1416);
 	temp_image.Compute1DRotationalAverage(nps, number_of_terms);
 	nps.MultiplyByConstant(float(background_image.number_of_real_space_pixels) / mask_volume);
+	if (is_a_counting_detector)
+	{
+		for (i = 700; i < 1000; i++) nps0 += nps.data_y[i];
+		nps0 /= 300.0f;
+//		wxPrintf("NPS1 = %g\n", sqrtf(nps0 / two_image_factor));
+	}
 //	temp_image.CopyFrom(&background_image);
 //	noise_whitening_spectrum = nps;
 //	noise_whitening_spectrum.SquareRoot();
@@ -1081,8 +1091,16 @@ bool FindDQE::DoCalculation()
 //	temp_image.BackwardFFT();
 	dqe0 = pow(average_background, 2) / exposure / nps0;
 	wxPrintf("\nGain (counts/e) from exposure and background average = %10.4f\n", gain_conversion_factor);
-	wxPrintf("Sqrt of noise power at 0 frequency (NPS0)            = %10.4f\n", sqrtf(nps0 / two_image_factor));
-	wxPrintf("DQE0 based on gain and NPS0                          = %10.4f\n", dqe0);
+	if (is_a_counting_detector)
+	{
+		wxPrintf("Sqrt of noise power at Nyquist frequency (NPS1)      = %10.4f\n", sqrtf(nps0 / two_image_factor));
+		wxPrintf("DQE0 based on gain and NPS1                          = %10.4f\n", dqe0);
+	}
+	else
+	{
+		wxPrintf("Sqrt of noise power at 0 frequency (NPS0)            = %10.4f\n", sqrtf(nps0 / two_image_factor));
+		wxPrintf("DQE0 based on gain and NPS0                          = %10.4f\n", dqe0);
+	}
 
 //	nps_fit.GetYMinMax(temp_float, nps_max);
 //	nps.MultiplyByConstant(1.0f / nps_max);
@@ -1094,9 +1112,9 @@ bool FindDQE::DoCalculation()
 	nps02 = 0.0f;
 	nps09 = 0.0f;
 	for (i = 175; i < 225; i++) nps02 += nps.data_y[i];
-	nps02 /= 51.0f;
+	nps02 /= 50.0f;
 	for (i = 875; i < 925; i++) nps09 += nps.data_y[i];
-	nps09 /= 51.0f;
+	nps09 /= 50.0f;
 //	if (nps02 / nps09 < 2.0f)
 //	{
 		// This is currently not used
@@ -1174,6 +1192,7 @@ bool FindDQE::DoCalculation()
 //	wxPrintf("\nFitting MTF\n");
 	wxPrintf("\nMin,max x,y coordinates for shadow   = %8i %8i %8i %8i\n", x_min + 1, x_max + 1, y_min + 1, y_max + 1);
 	wxPrintf("Using box size %8i x %8i\n\n", box_size_x, box_size_y);
+	fflush(stdout);
 
 	comparison_object.model_image = &threshold_image;
 	comparison_object.experimental_image = &temp_image;

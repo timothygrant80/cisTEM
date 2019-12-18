@@ -649,6 +649,7 @@ double CTFTilt::ScoreValues(double input_values[])
 
 	switch (refine_mode)
 	{
+		// Fitting defocus 1, defocus 2, astigmatic angle
 		case 0:
 			minimum_radius_sq = powf(float(resampled_power_spectrum.logical_x_dimension) * ctf_fit_pixel_size / low_res_limit, 2);
 			average_defocus = (input_values[1] + input_values[2]) / 2.0f;
@@ -680,8 +681,17 @@ double CTFTilt::ScoreValues(double input_values[])
 				}
 				pointer += ctf_image.padding_jump_value;
 			}
+
+			sum_ctf /= counter;
+			sum_ctf_squared /= counter;
+			sum_power /= counter;
+			sum_power_squared /= counter;
+			sum_ctf_power /= counter;
+			correlation_coefficient = (sum_ctf_power - sum_ctf * sum_power) / sqrt(sum_ctf_squared - pow(sum_ctf, 2)) / sqrt(sum_power_squared - pow(sum_power, 2));
+
 		break;
 
+		// Fitting tilt axis, tilt angle, average defocus
 		case 1:
 			MyDebugAssertTrue(sub_section_dimension_x > 0 && sub_section_dimension_y > 0,"Error: sub_section_dimensions not set\n");
 
@@ -728,15 +738,17 @@ double CTFTilt::ScoreValues(double input_values[])
 				}
 			}
 
+			sum_ctf /= counter;
+			sum_ctf_squared /= counter;
+			sum_power /= counter;
+			sum_power_squared /= counter;
+			sum_ctf_power /= counter;
+			correlation_coefficient = (sum_ctf_power - sum_ctf * sum_power) / sqrt(sum_ctf_squared - pow(sum_ctf, 2)) / sqrt(sum_power_squared - pow(sum_power, 2));
+			// Penalize tilt angles larger than 65 deg
+			if (fabsf(input_values[2]) > 65.0f) correlation_coefficient -= (fabsf(input_values[2]) - 65.0f) / 5.0f;
+
 		break;
 	}
-
-	sum_ctf /= counter;
-	sum_ctf_squared /= counter;
-	sum_power /= counter;
-	sum_power_squared /= counter;
-	sum_ctf_power /= counter;
-	correlation_coefficient = (sum_ctf_power - sum_ctf * sum_power) / sqrt(sum_ctf_squared - pow(sum_ctf, 2)) / sqrt(sum_power_squared - pow(sum_power, 2));
 
 	return - correlation_coefficient;
 }

@@ -40,6 +40,8 @@ bool MyApp::OnInit()
 
 	total_milliseconds_spent_on_threads = 0;
 
+	socket_to_slave_job_pointer_hash.clear();
+
 	ProgramSpecificInit();
 
 	return true;
@@ -68,6 +70,8 @@ void MyApp::OnEventLoopEnter(wxEventLoopBase *	loop)
 		wxString current_address;
 		wxArrayString possible_controller_addresses;
 		wxIPV4address junk_address;
+
+		socket_to_slave_job_pointer_hash.clear();
 
 		// Bind the thread events
 
@@ -250,6 +254,7 @@ void MyApp::SendNextJobTo(wxSocketBase *socket)
 	if (number_of_dispatched_jobs < current_job_package.number_of_jobs)
 	{
 		current_job_package.jobs[number_of_dispatched_jobs].SendJob(socket);
+		socket_to_slave_job_pointer_hash[socket] = & current_job_package.jobs[number_of_dispatched_jobs];
 		number_of_dispatched_jobs++;
 	}
 	else
@@ -257,6 +262,9 @@ void MyApp::SendNextJobTo(wxSocketBase *socket)
 		WriteToSocket(socket, socket_time_to_die, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
 		// stop monitoring the socket..
 		//StopMonitoringSocket(socket); stopped doing this for timings
+
+		// Remember that this socket doesn't have a job anymore
+		socket_to_slave_job_pointer_hash.erase(socket);
 
 	}
 }
@@ -1309,6 +1317,7 @@ void MyApp::HandleSocketDisconnect(wxSocketBase *connected_socket)
 		if (number_of_dispatched_jobs < current_job_package.number_of_jobs)
 		{
 			SocketSendError("Error: A slave has disconnected before all jobs are finished.");
+			SocketSendInfo("The disconnected slave was running a job with the following arguments:\n" + socket_to_slave_job_pointer_hash[connected_socket]->PrintAllArgumentsTowxString());
 		}
 
 		StopMonitoringAndDestroySocket(connected_socket);

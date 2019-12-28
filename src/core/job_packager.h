@@ -73,6 +73,7 @@ public:
 	bool SendJob(wxSocketBase *socket);
 	bool RecieveJob(wxSocketBase *socket);
 	void PrintAllArguments();
+	wxString PrintAllArgumentsTowxString();
 
 	RunJob & operator = (const RunJob &other_job);
 	RunJob & operator = (const RunJob *other_job);

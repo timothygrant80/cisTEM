@@ -1,4 +1,5 @@
 WX_DEFINE_ARRAY_PTR(wxSocketBase *, ArrayOfSocketBasePointers);
+WX_DECLARE_HASH_MAP(wxSocketBase *, RunJob *, wxPointerHash, wxPointerEqual, SocketJobPointerHash);
 
 class ReturnProgramDefinedResultEvent;
 wxDECLARE_EVENT(RETURN_PROGRAM_DEFINED_RESULT_EVT, ReturnProgramDefinedResultEvent);
@@ -170,6 +171,9 @@ MyApp : public wxAppConsole, public SocketCommunicator
 
 		//wxSocketBase **slave_sockets;  // POINTER TO POINTER..
 		ArrayOfSocketBasePointers slave_socket_pointers;
+
+		// HashMap to keep track of which socket is currently working on which job
+		SocketJobPointerHash socket_to_slave_job_pointer_hash;
 
 
 		wxCmdLineParser command_line_parser;

@@ -833,6 +833,10 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 
 	my_progress_dialog->Destroy();
 
+	// Get ID's from database for writing results as they come in..
+
+	template_match_id = main_frame->current_project.database.ReturnHighestTemplateMatchID() + 1;
+	template_match_job_id =  main_frame->current_project.database.ReturnHighestTemplateMatchJobID() + 1;
 
 	// launch a controller
 
@@ -868,6 +872,18 @@ void MatchTemplatePanel::HandleSocketTemplateMatchResultReady(wxSocketBase *conn
 	cached_results[image_number - 1].used_threshold = threshold_used;
 
 	ResultsPanel->SetActiveResult(cached_results[image_number - 1]);
+
+	// write to database..
+
+	main_frame->current_project.database.Begin();
+
+	cached_results[image_number - 1].job_id = template_match_job_id;
+	main_frame->current_project.database.AddTemplateMatchingResult(template_match_id, cached_results[image_number - 1]);
+	template_match_id++;
+
+	main_frame->current_project.database.SetActiveTemplateMatchJobForGivenImageAssetID(cached_results[image_number - 1].image_asset_id, template_match_job_id);
+	main_frame->current_project.database.Commit();
+	match_template_results_panel->is_dirty = true;
 }
 
 void MatchTemplatePanel::FinishButtonClick( wxCommandEvent& event )
@@ -1069,7 +1085,8 @@ void  MatchTemplatePanel::ProcessAllJobsFinished()
 
 void MatchTemplatePanel::WriteResultToDataBase()
 {
-
+	// I have moved this to HandleSocketTemplateMatchResultReady so that things are done one result at at time.
+	/*
 	// find the current highest template match numbers in the database, then increment by one
 
 	int template_match_id = main_frame->current_project.database.ReturnHighestTemplateMatchID() + 1;
@@ -1092,6 +1109,7 @@ void MatchTemplatePanel::WriteResultToDataBase()
 	main_frame->current_project.database.Commit();
 
 	match_template_results_panel->is_dirty = true;
+*/
 }
 
 

@@ -22,16 +22,16 @@ void AlignCoordinatesApp::DoInteractiveUserInput()
 {
 	UserInput *my_input = new UserInput("AlignCoordinatesApp", 1.0);
 
-	std::string input_ref_coordinates = my_input->GetFilenameFromUser("Input reference coordinates", "File with x,y,z coordinates to align to", "input_ref_coords.txt", true );
-	std::string input_align_coordinates	= my_input->GetFilenameFromUser("Input coordinates to be aligned", "File with x,y,z coordinates to be aligned", "input_align_coords.txt", true );
+	std::string input_ref_coordinates = my_input->GetFilenameFromUser("Reference coordinates (A)", "File with x,y,z coordinates to align to", "input_ref_coords.txt", true );
+	std::string input_align_coordinates	= my_input->GetFilenameFromUser("Coordinates to be aligned (A)", "File with x,y,z coordinates to be aligned", "input_align_coords.txt", true );
 	std::string outut_chimera_cmd = my_input->GetFilenameFromUser("Output Chimera cmd file", "File with alignment commands for UCSF Chimera", "output_chimera.cmd", false );
 	float tolerance = my_input->GetFloatFromUser("Distance tolerance (A)", "Distance of points to count as being close (in projection)", "100.0", 0.0);
 	float margin = my_input->GetFloatFromUser("Margin (A)", "Margin of aligned coordinates that should be excluded for comparison", "200.0", 0.0);
-	float x_dimension = my_input->GetFloatFromUser("X-dimension (A)", "The X-dimension of the field of view used for HRTM", "3000.0", 0.0);
-	float y_dimension = my_input->GetFloatFromUser("Y-dimension (A)", "The Y-dimension of the field of view used for HRTM", "3000.0", 0.0);
-	float initial_x = my_input->GetFloatFromUser("Initial X offset (A)", "The X-offset from a previous search", "1500.0");
-	float initial_y = my_input->GetFloatFromUser("Initial Y offset (A)", "The Y-offset from a previous search", "1500.0");
-	float initial_z = my_input->GetFloatFromUser("Initial Z offset (A)", "The Z-offset from a previous search", "1500.0");
+	float x_dimension = my_input->GetFloatFromUser("X-dimension (A)", "The X-dimension of the field of view used for HRTM", "5800.0", 0.0);
+	float y_dimension = my_input->GetFloatFromUser("Y-dimension (A)", "The Y-dimension of the field of view used for HRTM", "4100.0", 0.0);
+	float initial_x = my_input->GetFloatFromUser("Initial X offset (A)", "The X-offset from a previous search", "0.0");
+	float initial_y = my_input->GetFloatFromUser("Initial Y offset (A)", "The Y-offset from a previous search", "0.0");
+	float initial_z = my_input->GetFloatFromUser("Initial Z offset (A)", "The Z-offset from a previous search", "0.0");
 	float initial_angle = my_input->GetFloatFromUser("Initial angle (deg)", "The in-plane alignment angle from a previous search", "0.0");
 	bool perform_search = my_input->GetYesNoFromUser("Perform search", "Should a search & refinement be performed?", "Yes");
 
@@ -122,8 +122,8 @@ bool AlignCoordinatesApp::DoCalculation()
 	float ref_distance[input_ref_file.number_of_lines];
 	ZeroFloatArray(ref_distance, input_ref_file.number_of_lines);
 
-	Allocate2DFloatArray(ref_coordinates, input_ref_file.number_of_lines, 3);
-	Allocate2DFloatArray(align_coordinates, input_align_file.number_of_lines, 4);
+	Allocate2DFloatArray(ref_coordinates, input_ref_file.number_of_lines, 4);
+	Allocate2DFloatArray(align_coordinates, input_align_file.number_of_lines, 5);
 
 	for (i = 0; i < input_ref_file.number_of_lines; i++) input_ref_file.ReadLine(ref_coordinates[i]);
 	wxPrintf("\nRead %3i reference coordinates\n\n", input_ref_file.number_of_lines);
@@ -131,7 +131,7 @@ bool AlignCoordinatesApp::DoCalculation()
 	for (i = 0; i < input_align_file.number_of_lines; i++)
 	{
 		input_align_file.ReadLine(align_coordinates[ii]);
-		align_coordinates[ii][3] = i;
+		align_coordinates[ii][4] = i;
 		if (align_coordinates[ii][0] < margin || align_coordinates[ii][0] > x_dimension - margin || align_coordinates[ii][1] < margin || align_coordinates[ii][1] > y_dimension - margin)
 		{
 			wxPrintf("Align coordinates %3i excluded\n", i + 1);
@@ -275,14 +275,14 @@ bool AlignCoordinatesApp::DoCalculation()
 				{
 					if (ref_distance[best_j] > smallest_diff)
 					{
-						wxPrintf("%3i ref %3i xy = %8.2f %8.2f   align %3i xy = %8.2f %8.2f   in-plane distance = %8.2f   updated\n", number_of_matches, best_j + 1, ref_coordinates[best_j][0], ref_coordinates[best_j][1], jj + 1, x_coordinate_3d + anchor_ref_x, y_coordinate_3d + anchor_ref_y, smallest_diff);
+						wxPrintf("%3i ref %3i peak = %8.4f xy = %8.2f %8.2f   align %3i xy = %8.2f %8.2f   in-plane distance = %8.2f   updated\n", number_of_matches, best_j + 1, ref_coordinates[best_j][3], ref_coordinates[best_j][0], ref_coordinates[best_j][1], jj + 1, x_coordinate_3d + anchor_ref_x, y_coordinate_3d + anchor_ref_y, smallest_diff);
 						ref_distance[best_j] = smallest_diff;
 						for (ii = 0; ii < input_align_file.number_of_lines; ii++) if (align_pairs[ii] == best_j) align_pairs[ii] = -1;
 						align_pairs[jj] = best_j;
 					}
 					else
 					{
-						wxPrintf("%3i ref %3i xy = %8.2f %8.2f   align %3i xy = %8.2f %8.2f   in-plane distance = %8.2f   discarded\n", number_of_matches, best_j + 1, ref_coordinates[best_j][0], ref_coordinates[best_j][1], jj + 1, x_coordinate_3d + anchor_ref_x, y_coordinate_3d + anchor_ref_y, smallest_diff);
+						wxPrintf("%3i ref %3i peak = %8.4f xy = %8.2f %8.2f   align %3i xy = %8.2f %8.2f   in-plane distance = %8.2f   discarded\n", number_of_matches, best_j + 1, ref_coordinates[best_j][3], ref_coordinates[best_j][0], ref_coordinates[best_j][1], jj + 1, x_coordinate_3d + anchor_ref_x, y_coordinate_3d + anchor_ref_y, smallest_diff);
 //						align_pairs[jj] = -1;
 					}
 				}
@@ -290,7 +290,7 @@ bool AlignCoordinatesApp::DoCalculation()
 				{
 					number_of_matches++;
 					ref_distance[best_j] = smallest_diff;
-					wxPrintf("%3i ref %3i xy = %8.2f %8.2f   align %3i xy = %8.2f %8.2f   in-plane distance = %8.2f\n", number_of_matches, best_j + 1, ref_coordinates[best_j][0], ref_coordinates[best_j][1], jj + 1, x_coordinate_3d + anchor_ref_x, y_coordinate_3d + anchor_ref_y, smallest_diff);
+					wxPrintf("%3i ref %3i peak = %8.4f xy = %8.2f %8.2f   align %3i xy = %8.2f %8.2f   in-plane distance = %8.2f\n", number_of_matches, best_j + 1, ref_coordinates[best_j][3], ref_coordinates[best_j][0], ref_coordinates[best_j][1], jj + 1, x_coordinate_3d + anchor_ref_x, y_coordinate_3d + anchor_ref_y, smallest_diff);
 					align_pairs[jj] = best_j;
 					ref_pairs[best_j] = jj;
 				}
@@ -427,13 +427,14 @@ bool AlignCoordinatesApp::DoCalculation()
 			number_ref_in_view++;
 			if (ref_pairs[i] >= 0)
 			{
-//				wxPrintf("%3i  xyz (A) = %8.2f %8.2f %8.2f   xy_rotated = %8.2f %8.2f   align pair %3i\n", i + 1, ref_coordinates[i][0], ref_coordinates[i][1], ref_coordinates[i][2], x_coordinate_3d, y_coordinate_3d, ref_pairs[i] + 1);
-				wxPrintf("%3i  xyz (A) = %8.2f %8.2f %8.2f   xy_rotated = %8.2f %8.2f   align pair %3i\n", i + 1, ref_coordinates[i][0], ref_coordinates[i][1], ref_coordinates[i][2], x_coordinate_3d, y_coordinate_3d, myroundint(align_coordinates[ref_pairs[i]][3]) + 1);
+//				wxPrintf("%3i  xyz (A) = %8.2f %8.2f %8.2f   xy_rotated = %8.2f %8.2f %8.2f   align pair %3i\n", i + 1, ref_coordinates[i][0], ref_coordinates[i][1], ref_coordinates[i][2], x_coordinate_3d, y_coordinate_3d, ref_pairs[i] + 1);
+				wxPrintf("%3i  xyz (A) = %8.2f %8.2f %8.2f   ref peak = %8.4f   xy_rotated = %8.2f %8.2f   align peak = %8.4f   align pair %3i\n", i + 1, ref_coordinates[i][0], ref_coordinates[i][1], ref_coordinates[i][2], \
+						ref_coordinates[i][3], x_coordinate_3d, y_coordinate_3d, align_coordinates[ref_pairs[i]][3], myroundint(align_coordinates[ref_pairs[i]][4]) + 1);
 				tp++;
 			}
 			else
 			{
-				wxPrintf("%3i  xyz (A) = %8.2f %8.2f %8.2f   xy_rotated = %8.2f %8.2f\n", i + 1, ref_coordinates[i][0], ref_coordinates[i][1], ref_coordinates[i][2], x_coordinate_3d, y_coordinate_3d);
+				wxPrintf("%3i  xyz (A) = %8.2f %8.2f %8.2f   ref peak = %8.4f   xy_rotated = %8.2f %8.2f\n", i + 1, ref_coordinates[i][0], ref_coordinates[i][1], ref_coordinates[i][2], ref_coordinates[i][3], x_coordinate_3d, y_coordinate_3d);
 //				fp++;
 			}
 		}
@@ -464,7 +465,9 @@ bool AlignCoordinatesApp::DoCalculation()
 		coordinate_transformation.euler_matrix.RotateCoords2D(x_coordinate_2d, y_coordinate_2d, x_coordinate_3d, y_coordinate_3d);
 		if (align_pairs[ii] >= 0 && ref_pairs[align_pairs[ii]] >= 0)
 		{
-			wxPrintf("%3i  xyz (A) = %8.2f %8.2f %8.2f   ref pair  %3i\n", myroundint(align_coordinates[ii][3]) + 1, x_coordinate_3d + xyz_offset[0] + align_center_of_mass[0], y_coordinate_3d + xyz_offset[1] + align_center_of_mass[1], align_coordinates[ii][2] + xyz_offset[2], align_pairs[ii] + 1);
+			wxPrintf("%3i  xyz (A) = %8.2f %8.2f %8.2f   align peak = %8.4f   xyz_rotated = %8.2f %8.2f %8.2f   ref peak = %8.4f   ref pair %3i\n", myroundint(align_coordinates[ii][4]) + 1, align_coordinates[ii][0], align_coordinates[ii][1], align_coordinates[ii][2], align_coordinates[ii][3], \
+					x_coordinate_3d + xyz_offset[0] + align_center_of_mass[0], y_coordinate_3d + xyz_offset[1] + align_center_of_mass[1], align_coordinates[ii][2] + xyz_offset[2], ref_coordinates[align_pairs[ii]][3], align_pairs[ii] + 1);
+//			wxPrintf("%3i  xyz (A) = %8.2f %8.2f %8.2f   ref pair  %3i\n", myroundint(align_coordinates[ii][3]) + 1, x_coordinate_3d + xyz_offset[0] + align_center_of_mass[0], y_coordinate_3d + xyz_offset[1] + align_center_of_mass[1], align_coordinates[ii][2] + xyz_offset[2], align_pairs[ii] + 1);
 			std_x += powf(x_coordinate_3d + xyz_offset[0] + align_center_of_mass[0] - ref_coordinates[align_pairs[ii]][0], 2);
 			std_y += powf(y_coordinate_3d + xyz_offset[1] + align_center_of_mass[1] - ref_coordinates[align_pairs[ii]][1], 2);
 			std_z += powf(align_coordinates[ii][2] + xyz_offset[2] - ref_coordinates[align_pairs[ii]][2], 2);
@@ -472,7 +475,9 @@ bool AlignCoordinatesApp::DoCalculation()
 		}
 		else
 		{
-			wxPrintf("%3i  xyz (A) = %8.2f %8.2f %8.2f\n", myroundint(align_coordinates[ii][3]) + 1, x_coordinate_3d + xyz_offset[0] + align_center_of_mass[0], y_coordinate_3d + xyz_offset[1] + align_center_of_mass[1], align_coordinates[ii][2] + xyz_offset[2]);
+			wxPrintf("%3i  xyz (A) = %8.2f %8.2f %8.2f   align peak = %8.4f   xyz_rotated = %8.2f %8.2f %8.2f\n", myroundint(align_coordinates[ii][4]) + 1, align_coordinates[ii][0], align_coordinates[ii][1], align_coordinates[ii][2],  align_coordinates[ii][3], \
+					x_coordinate_3d + xyz_offset[0] + align_center_of_mass[0], y_coordinate_3d + xyz_offset[1] + align_center_of_mass[1], align_coordinates[ii][2] + xyz_offset[2]);
+//			wxPrintf("%3i  xyz (A) = %8.2f %8.2f %8.2f\n", myroundint(align_coordinates[ii][3]) + 1, x_coordinate_3d + xyz_offset[0] + align_center_of_mass[0], y_coordinate_3d + xyz_offset[1] + align_center_of_mass[1], align_coordinates[ii][2] + xyz_offset[2]);
 //			fp++;
 		}
 	}

@@ -93,7 +93,9 @@ bool SumAllTIF::DoCalculation()
 	file_x_size = current_input_file->ReturnXSize();
 	file_y_size = current_input_file->ReturnYSize();
 
-	wxPrintf("\nFirst file is %s\nIt is %ix%i sized - all images had better be this size!\n\n", all_files.Item(0), current_input_file->ReturnXSize(), current_input_file->ReturnYSize());
+	wxPrintf("\nFirst file is %s\nIt is %ix%i sized - all images had better be this size!\n", all_files.Item(0), current_input_file->ReturnXSize(), current_input_file->ReturnYSize());
+	if (current_input_file->ReturnZSize() > 1) wxPrintf("Frames per file = %i\n", current_input_file->ReturnZSize());
+	wxPrintf("\n");
 
 	delete current_input_file;
 

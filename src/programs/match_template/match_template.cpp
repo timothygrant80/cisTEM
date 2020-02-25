@@ -1176,7 +1176,7 @@ bool MatchTemplateApp::DoCalculation()
 				correlation_pixel_sum_of_squares[pixel_counter] = sqrtf(correlation_pixel_sum_of_squares[pixel_counter]) * (float)sqrt_input_pixels;
 			}
 			else correlation_pixel_sum_of_squares[pixel_counter] = 0.0f;
-			correlation_pixel_sum[pixel_counter] *= (float)snr_estimate;
+			correlation_pixel_sum[pixel_counter] *= (float)sqrt_input_pixels;
 
 		}
 

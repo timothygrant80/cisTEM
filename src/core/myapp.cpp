@@ -40,6 +40,8 @@ bool MyApp::OnInit()
 
 	total_milliseconds_spent_on_threads = 0;
 
+	socket_to_slave_job_pointer_hash.clear();
+
 	ProgramSpecificInit();
 
 	return true;
@@ -68,6 +70,8 @@ void MyApp::OnEventLoopEnter(wxEventLoopBase *	loop)
 		wxString current_address;
 		wxArrayString possible_controller_addresses;
 		wxIPV4address junk_address;
+
+		socket_to_slave_job_pointer_hash.clear();
 
 		// Bind the thread events
 
@@ -250,6 +254,7 @@ void MyApp::SendNextJobTo(wxSocketBase *socket)
 	if (number_of_dispatched_jobs < current_job_package.number_of_jobs)
 	{
 		current_job_package.jobs[number_of_dispatched_jobs].SendJob(socket);
+		socket_to_slave_job_pointer_hash[socket] = & current_job_package.jobs[number_of_dispatched_jobs];
 		number_of_dispatched_jobs++;
 	}
 	else
@@ -257,6 +262,9 @@ void MyApp::SendNextJobTo(wxSocketBase *socket)
 		WriteToSocket(socket, socket_time_to_die, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
 		// stop monitoring the socket..
 		//StopMonitoringSocket(socket); stopped doing this for timings
+
+		// Remember that this socket doesn't have a job anymore
+		socket_to_slave_job_pointer_hash.erase(socket);
 
 	}
 }
@@ -301,7 +309,7 @@ void MyApp::SendAllJobsFinished()
 	// wait for 5 seconds to give slaves times to send in their last jobs..
 
 	wxSleep(1);
-	Yield();
+	//Yield();
 
 	if (master_job_queue.GetCount() != 0) MasterSendIntenalQueue();
 
@@ -847,7 +855,6 @@ void MyApp::HandleSocketYouAreTheMaster(wxSocketBase *connected_socket, JobPacka
 
 	// connect myself as a slave..
 
-
 	master_ip_address = my_ip_address;
 	master_port_string = my_port_string;
 	master_port = my_port;
@@ -869,25 +876,24 @@ void MyApp::HandleSocketYouAreTheMaster(wxSocketBase *connected_socket, JobPacka
 		master_socket->Close();
 		MyDebugPrint("JOB : Failed ! Unable to connect\n");
 	}
-
-	// otherwise we should be connected.. so start monitoring..
-
-	MonitorSocket(master_socket);
-
-	// Start the worker thread..
-	stopwatch.Start();
-	work_thread = new CalculateThread(this, GetMaxJobWaitTimeInSeconds());
-
-	if ( work_thread->Run() != wxTHREAD_NO_ERROR )
+	else
 	{
-		MyPrintWithDetails("Can't create the thread!");
-		delete work_thread;
-		work_thread = NULL;
-		//ExitMainLoop();
+		MonitorSocket(master_socket);
+
+		// Start the worker thread..
+		stopwatch.Start();
+		work_thread = new CalculateThread(this, GetMaxJobWaitTimeInSeconds());
+
+		if ( work_thread->Run() != wxTHREAD_NO_ERROR )
+		{
+			MyPrintWithDetails("Can't create the thread!");
+			delete work_thread;
+			work_thread = NULL;
+			ExitMainLoop();
+		}
 	}
 
 	// I have to send my ip address to the controller..
-
 
 	// This is possibly dodgy as it's not being controlled by SocketCommunicator - hopefully it is ok, as this socket is not yet
 	// being monitored in the corresponding read in guix_job_control - but it's a possible point of failure.
@@ -982,8 +988,6 @@ void MyApp::HandleSocketTimeToDie(wxSocketBase *connected_socket) // This can be
 		}
 
 		slave_socket_pointers.Clear();
-
-
 	}
 	else  //Slave
 	{
@@ -1014,7 +1018,7 @@ void MyApp::HandleSocketTimeToDie(wxSocketBase *connected_socket) // This can be
 		wxSleep(2);
 
 		// process thread events in case it has done something
-		Yield(); //(wxEVT_CATEGORY_THREAD);
+		// Yield(); //(wxEVT_CATEGORY_THREAD);
 
 		if (work_thread != NULL) work_thread->Kill();
 
@@ -1184,11 +1188,13 @@ void MyApp::HandleSocketSendThreadTiming(wxSocketBase *connected_socket, long re
 
 		// time to die!
 
+		wxSleep(5);
 
+		controller_socket->Destroy();
+		ShutDownServer();
 		ShutDownSocketMonitor();
-		//controller_socket->Destroy();
-		//ExitMainLoop();
-		//return;
+		ExitMainLoop();
+		return;
 	}
 }
 
@@ -1309,6 +1315,7 @@ void MyApp::HandleSocketDisconnect(wxSocketBase *connected_socket)
 		if (number_of_dispatched_jobs < current_job_package.number_of_jobs)
 		{
 			SocketSendError("Error: A slave has disconnected before all jobs are finished.");
+			SocketSendInfo("The disconnected slave was running a job with the following arguments:\n" + socket_to_slave_job_pointer_hash[connected_socket]->PrintAllArgumentsTowxString());
 		}
 
 		StopMonitoringAndDestroySocket(connected_socket);
@@ -1316,7 +1323,7 @@ void MyApp::HandleSocketDisconnect(wxSocketBase *connected_socket)
 	else // i am a slave and the master died.. time to die
 	{
 		StopMonitoringAndDestroySocket(connected_socket);
-		ShutDownSocketMonitor();
+		if (i_am_the_master == false) ShutDownSocketMonitor();
 
 		if (work_thread != NULL) work_thread->Kill();
 		ExitMainLoop();

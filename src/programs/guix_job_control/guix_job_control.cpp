@@ -36,6 +36,8 @@ JobControlApp : public wxAppConsole, public SocketCommunicator
 	long gui_port;
 	long master_process_port;
 
+	bool all_jobs_are_finished;
+
 	short int my_port;
 	wxArrayString my_possible_ip_addresses;
 	wxString my_port_string;
@@ -131,10 +133,13 @@ IMPLEMENT_APP(JobControlApp)
 bool JobControlApp::OnInit()
 {
 	number_of_received_jobs = 0;
+	all_jobs_are_finished = false;
+
 	MyDebugPrint("Job Controller: Running...\n");
 
 	// initialise sockets
 	wxSocketBase::Initialize();
+
 
 	return true;
 
@@ -618,6 +623,9 @@ void JobControlApp::HandleSocketAllJobsFinished(wxSocketBase *connected_socket, 
 	// pass on to the gui..
 
 	SendAllJobsFinished(received_timing_in_milliseconds);
+	all_jobs_are_finished = true;
+
+	// don't die, wait for GUI to kill me..
 }
 
 void JobControlApp::HandleSocketTemplateMatchResultReady(wxSocketBase *connected_socket, int &image_number, float &threshold_used, ArrayOfTemplateMatchFoundPeakInfos &peak_infos, ArrayOfTemplateMatchFoundPeakInfos &peak_changes)
@@ -659,23 +667,29 @@ void JobControlApp::HandleSocketDisconnect(wxSocketBase *connected_socket)
 	if (connected_socket == master_socket)
 	{
 		//must be from the master..
+		//Have we send all jobs are finished?
 
-		MyDebugPrint("Controller got disconnect from master...");
-		//	SendError("Controller received a disconnect from the master before the job was finished..");
+		if (all_jobs_are_finished == false) // something went wrong
+		{
+				MyDebugPrint("Controller got disconnect from master...");
+				SendError("Controller received a disconnect from the master before the job was finished..");
 
 
-		ShutDownServer();
+				ShutDownServer();
 
-		// close GUI connection
+				// close GUI connection
 
-		StopMonitoringAndDestroySocket(gui_socket);
-		ShutDownSocketMonitor();
+				StopMonitoringAndDestroySocket(gui_socket);
+				ShutDownSocketMonitor();
 
-		// die..
+				// die..
 
-		ExitMainLoop();
-		exit(0);
-		return;
+				ExitMainLoop();
+				exit(0);
+				return;
+		}
+
+		// otherwise we don't care.. still wait for gui to kill us..
 	}
 	else // who knows what this is!
 	{

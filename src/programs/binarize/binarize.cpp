@@ -43,6 +43,11 @@ bool Binarize::DoCalculation()
 	std::string	input_filename 						= my_current_job.arguments[0].ReturnStringArgument();
 	std::string	output_filename 					= my_current_job.arguments[1].ReturnStringArgument();
 	float binarize_threshold						= my_current_job.arguments[2].ReturnFloatArgument();
+	int i, j;
+	int image_counter;
+	long pixel_counter;
+	long count0;
+	long count1;
 
 	MRCFile my_input_file(input_filename,false);
 	MRCFile my_output_file(output_filename,true);
@@ -54,17 +59,29 @@ bool Binarize::DoCalculation()
 	wxPrintf("\nBinarizing Images...\n\n");
 	ProgressBar *my_progress = new ProgressBar(my_input_file.ReturnNumberOfSlices());
 
-	for ( long image_counter = 0; image_counter < my_input_file.ReturnNumberOfSlices(); image_counter++ )
+	count0 = 0;
+	count1 = 0;
+	for ( image_counter = 0; image_counter < my_input_file.ReturnNumberOfSlices(); image_counter++ )
 	{
-		my_image.ReadSlice(&my_input_file,image_counter+1);
+		my_image.ReadSlice(&my_input_file,image_counter + 1);
 		my_image.Binarise(binarize_threshold);
-		my_image.WriteSlice(&my_output_file,image_counter+1);
+		my_image.WriteSlice(&my_output_file,image_counter + 1);
+		pixel_counter = 0;
+		for (j = 0; j < my_image.logical_y_dimension; j++)
+		{
+			for (i = 0; i < my_image.logical_x_dimension; i++)
+			{
+				if (my_image.real_values[pixel_counter] == 0.0f) count0++;
+				else count1++;
+				pixel_counter++;
+			}
+			pixel_counter += my_image.padding_jump_value;
+		}
 		my_progress->Update(image_counter + 1);
 	}
 
 	delete my_progress;
-	wxPrintf("\n\n");
-
+	wxPrintf("\nNumber of zero pixels = %li, number of non-zero pixels = %li\n\n", count0, count1);
 
 	my_output_file.SetPixelSize(input_pixel_size);
 	my_output_file.WriteHeader();

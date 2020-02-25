@@ -629,11 +629,11 @@ bool RefineTemplateApp::DoCalculation()
 
 	if (is_running_locally == true)
 	{
-		wxPrintf("\nSearching %i positions in the MIP.\n", number_of_peaks_found);
+		wxPrintf("\nRefining %i positions in the MIP.\n", number_of_peaks_found);
 //		wxPrintf("Searching %i rotations per peak.\n", number_of_rotations);
 //		wxPrintf("Calculating %li correlation total.\n\n", total_correlation_positions);
 
-		wxPrintf("\nPerforming Refinement...\n\n");
+		wxPrintf("\nPerforming refinement...\n\n");
 //		my_progress = new ProgressBar(total_correlation_positions);
 	}
 

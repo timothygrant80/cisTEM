@@ -1401,35 +1401,42 @@ void RunJob::Reset(int wanted_number_of_arguments)
 
 }
 
-void RunJob::PrintAllArguments()
+wxString RunJob::PrintAllArgumentsTowxString()
 {
-	wxPrintf("\n\n");
+	wxString string_to_return = "\n";
 
 	for (int counter = 0; counter < number_of_arguments; counter++)
 	{
 		if (arguments[counter].type_of_argument == TEXT)
 		{
-			wxPrintf("Argument %3i is a string   : %s\n", counter, arguments[counter].ReturnStringArgument());
+			string_to_return += wxString::Format("Argument %3i is a string   : %s\n", counter, arguments[counter].ReturnStringArgument());
 		}
 		else
 		if (arguments[counter].type_of_argument == INTEGER)
 		{
-			wxPrintf("Argument %3i is an integer : %i\n", counter, arguments[counter].ReturnIntegerArgument());
+			string_to_return += wxString::Format("Argument %3i is an integer : %i\n", counter, arguments[counter].ReturnIntegerArgument());
 		}
 		else
 		if (arguments[counter].type_of_argument == FLOAT)
 		{
-			wxPrintf("Argument %3i is a float    : %f\n", counter, arguments[counter].ReturnFloatArgument());
+			string_to_return += wxString::Format("Argument %3i is a float    : %f\n", counter, arguments[counter].ReturnFloatArgument());
 		}
 		else
 		if (arguments[counter].type_of_argument == BOOL)
 		{
-			wxPrintf("Argument %3i is a bool     : ", counter);
+			string_to_return += wxString::Format("Argument %3i is a bool     : ", counter);
 
-			if (arguments[counter].ReturnBoolArgument() == true) wxPrintf("TRUE\n");
-			else wxPrintf("FALSE\n");
+			if (arguments[counter].ReturnBoolArgument() == true) string_to_return += wxString::Format("TRUE\n");
+			else string_to_return += wxString::Format("FALSE\n");
 		}
 	}
+
+	return string_to_return;
+}
+
+void RunJob::PrintAllArguments()
+{
+	wxPrintf(PrintAllArgumentsTowxString());
 }
 
 long RunJob::ReturnEncodedByteTransferSize()

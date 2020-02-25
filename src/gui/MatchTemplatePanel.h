@@ -37,6 +37,12 @@ public:
 		long current_job_starttime;
 		long time_of_last_update;
 
+		// needed to write results as they come in.. should be set when the job is launched..
+
+		int template_match_id;
+		int template_match_job_id;
+
+
 		// methods
 		void WriteResultToDataBase();
 		void OnUpdateUI( wxUpdateUIEvent& event );

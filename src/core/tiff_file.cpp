@@ -35,12 +35,29 @@ bool TiffFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_f
 	{
 		// We open to read/write
 		tif = TIFFOpen(wanted_filename.c_str(),"rc");
-		return_value = ReadLogicalDimensionsFromDisk();
+		if (tif)
+		{
+			return_value = ReadLogicalDimensionsFromDisk();
+		}
+		else
+		{
+			MyPrintfRed("Oops. File %s could not be opened, may be corrupted\n",wanted_filename);
+			return_value = false;
+		}
 	}
 	else
 	{
 		// We just open to write
 		tif = TIFFOpen(wanted_filename.c_str(),"w");
+		if (tif)
+		{
+			return_value = true;
+		}
+		else
+		{
+			MyPrintfRed("Oops. File %s could not be opened for writing\n",wanted_filename);
+			return_value = false;
+		}
 	}
 
 	filename = wanted_filename;

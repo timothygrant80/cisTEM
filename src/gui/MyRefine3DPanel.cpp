@@ -1418,7 +1418,8 @@ void RefinementManager::RunRefinementJob()
 void RefinementManager::SetupMerge3dJob()
 {
 
-	int number_of_reconstruction_jobs = active_reconstruction_run_profile.ReturnTotalJobs();
+	long number_of_particles = active_refinement_package->contained_particles.GetCount();
+	int number_of_reconstruction_jobs = std::min(number_of_particles,active_reconstruction_run_profile.ReturnTotalJobs());
 
 	int class_counter;
 
@@ -1540,26 +1541,23 @@ void RefinementManager::SetupReconstructionJob()
 	int job_counter;
 	long number_of_reconstruction_jobs;
 	long number_of_reconstruction_processes;
-	float current_particle_counter;
 
 	long number_of_particles;
-	float particles_per_job;
+	long first_particle;
+	long last_particle;
 
 	// for now, number of jobs is number of processes -1 (master)..
 
-	number_of_reconstruction_processes = active_reconstruction_run_profile.ReturnTotalJobs();
-	number_of_reconstruction_jobs = number_of_reconstruction_processes;
-
 	number_of_particles = active_refinement_package->contained_particles.GetCount();
 
-	if (number_of_particles - number_of_reconstruction_jobs < number_of_reconstruction_jobs) particles_per_job = 1;
-	else particles_per_job = float(number_of_particles - number_of_reconstruction_jobs) / float(number_of_reconstruction_jobs);
+	number_of_reconstruction_processes = std::min(number_of_particles,active_reconstruction_run_profile.ReturnTotalJobs());
+	number_of_reconstruction_jobs = number_of_reconstruction_processes;
+
 
 	my_parent->current_job_package.Reset(active_reconstruction_run_profile, "reconstruct3d", number_of_reconstruction_jobs * active_refinement_package->number_of_classes);
 
 	for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
 	{
-		current_particle_counter = 1.0;
 
 		for (job_counter = 0; job_counter < number_of_reconstruction_jobs; job_counter++)
 		{
@@ -1571,13 +1569,7 @@ void RefinementManager::SetupReconstructionJob()
 			wxString output_resolution_statistics		= "/dev/null";
 			wxString my_symmetry						= active_refinement_package->symmetry;
 
-			long	 first_particle						= myroundint(current_particle_counter);
-
-			current_particle_counter += particles_per_job;
-			if (current_particle_counter > number_of_particles  || job_counter == number_of_reconstruction_jobs - 1) current_particle_counter = number_of_particles;
-
-			long	 last_particle						= myroundint(current_particle_counter);
-			current_particle_counter+=1.0;
+			FirstLastParticleForJob(first_particle,last_particle,number_of_particles,job_counter+1,number_of_reconstruction_jobs);
 
 			//float 	 pixel_size							= active_refinement_package->contained_particles[0].pixel_size;
 			//float    voltage_kV							= active_refinement_package->contained_particles[0].microscope_voltage;
@@ -1763,7 +1755,8 @@ void RefinementManager::SetupRefinementJob()
 	float current_particle_counter;
 
 	long number_of_particles;
-	float particles_per_job;
+	long first_particle;
+	long last_particle;
 
 	// get the last refinement for the currently selected refinement package..
 
@@ -1774,12 +1767,11 @@ void RefinementManager::SetupRefinementJob()
 
 	// for now, number of jobs is number of processes -1 (master)..
 
-	number_of_refinement_processes = active_refinement_run_profile.ReturnTotalJobs();
+	number_of_particles = active_refinement_package->contained_particles.GetCount();
+
+	number_of_refinement_processes = std::min(number_of_particles,active_refinement_run_profile.ReturnTotalJobs());
 	number_of_refinement_jobs = number_of_refinement_processes;
 
-	number_of_particles = active_refinement_package->contained_particles.GetCount();
-	if (number_of_particles - number_of_refinement_jobs < number_of_refinement_jobs) particles_per_job = 1;
-	else particles_per_job = float(number_of_particles - number_of_refinement_jobs) / float(number_of_refinement_jobs);
 
 	my_parent->current_job_package.Reset(active_refinement_run_profile, "refine3d", number_of_refinement_jobs * active_refinement_package->number_of_classes);
 
@@ -1803,13 +1795,8 @@ void RefinementManager::SetupRefinementJob()
 			wxString ouput_shift_file						= "/dev/null";
 
 			wxString my_symmetry							= active_refinement_package->symmetry;
-			long	 first_particle							= myroundint(current_particle_counter);
 
-			current_particle_counter += particles_per_job;
-			if (current_particle_counter > number_of_particles  || counter == number_of_refinement_jobs - 1) current_particle_counter = number_of_particles;
-
-			long	 last_particle							= myroundint(current_particle_counter);
-			current_particle_counter++;
+			FirstLastParticleForJob(first_particle,last_particle,number_of_particles,counter+1,number_of_refinement_jobs);
 
 			float	 percent_used							= active_percent_used / 100.0;
 

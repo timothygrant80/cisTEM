@@ -28,7 +28,7 @@ class MRCFile : public AbstractImageFile {
 
 	inline bool IsOpen() {return my_file->is_open();}
 
-	bool OpenFile(std::string filename, bool overwrite, bool wait_for_file_to_exist = false);
+	bool OpenFile(std::string filename, bool overwrite, bool wait_for_file_to_exist = false, bool check_only_the_first_image = false);
 	void CloseFile();
 
 	inline void ReadSliceFromDisk(int slice_number, float *output_array) {ReadSlicesFromDisk(slice_number, slice_number, output_array);}

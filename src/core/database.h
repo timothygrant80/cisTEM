@@ -140,6 +140,8 @@ public :
 	void AddNextMovieAsset(int movie_asset_id,  wxString name, wxString filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration, wxString gain_filename, wxString dark_reference, double output_binning_factor, int correct_mag_distortion, float mag_distortion_angle, float mag_distortion_major_scale, float mag_distortion_minor_scale, int protein_is_white);
 	void EndMovieAssetInsert();
 
+	void UpdateNumberOfFramesForAMovieAsset(int movie_asset_id, int new_number_of_frames);
+
 	void BeginImageAssetInsert();
 	void AddNextImageAsset(int image_asset_id,  wxString name, wxString filename, int position_in_stack, int parent_movie_id, int alignment_id, int ctf_estimation_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration, int protein_is_white);
 	void EndImageAssetInsert() {EndBatchInsert();};

@@ -5220,6 +5220,18 @@ MovieImportDialog::MovieImportDialog( wxWindow* parent, wxWindowID id, const wxS
 	
 	bSizer26->Add( bSizer3212, 1, wxEXPAND, 5 );
 	
+	wxBoxSizer* bSizer32121;
+	bSizer32121 = new wxBoxSizer( wxHORIZONTAL );
+	
+	SkipFullIntegrityCheck = new wxCheckBox( this, wxID_ANY, wxT("Skip full integrity check of frames"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer32121->Add( SkipFullIntegrityCheck, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	
+	
+	bSizer32121->Add( 0, 0, 50, wxEXPAND, 5 );
+	
+	
+	bSizer26->Add( bSizer32121, 1, wxEXPAND, 5 );
+	
 	m_staticline8 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	bSizer26->Add( m_staticline8, 0, wxEXPAND | wxALL, 5 );
 	
@@ -5273,6 +5285,7 @@ MovieImportDialog::MovieImportDialog( wxWindow* parent, wxWindowID id, const wxS
 	MajorScaleTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
 	MinorScaleTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
 	MoviesHaveInvertedContrast->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( MovieImportDialog::OnMoviesHaveInvertedContrastCheckBox ), NULL, this );
+	SkipFullIntegrityCheck->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( MovieImportDialog::OnSkipFullIntegrityCheckCheckBox ), NULL, this );
 	m_button13->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieImportDialog::CancelClick ), NULL, this );
 	ImportButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieImportDialog::ImportClick ), NULL, this );
 }
@@ -5302,6 +5315,7 @@ MovieImportDialog::~MovieImportDialog()
 	MajorScaleTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
 	MinorScaleTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( MovieImportDialog::TextChanged ), NULL, this );
 	MoviesHaveInvertedContrast->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( MovieImportDialog::OnMoviesHaveInvertedContrastCheckBox ), NULL, this );
+	SkipFullIntegrityCheck->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( MovieImportDialog::OnSkipFullIntegrityCheckCheckBox ), NULL, this );
 	m_button13->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieImportDialog::CancelClick ), NULL, this );
 	ImportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MovieImportDialog::ImportClick ), NULL, this );
 	

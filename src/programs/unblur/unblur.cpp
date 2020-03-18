@@ -306,7 +306,16 @@ bool UnBlurApp::DoCalculation()
 		SendError(wxString::Format("Error: Input movie %s not found\n", input_filename));
 		exit(-1);
 	}
-	ImageFile input_file(input_filename, false);
+	ImageFile input_file;
+	bool input_file_is_valid = input_file.OpenFile(input_filename, false);
+	if (!input_file_is_valid)
+	{
+		SendInfo(wxString::Format("Input movie %s seems to be corrupt. Unblur results may not be meaningful.\n", input_filename));
+	}
+	else
+	{
+		wxPrintf("Input file looks OK, proceeding\n");
+	}
 	//MRCFile output_file(output_filename, true); changed to quick and dirty write as the file is only used once, and this way it is not created until it is actually written, which is cleaner for cancelled / crashed jobs
 
 	ImageFile gain_file;
@@ -404,12 +413,14 @@ bool UnBlurApp::DoCalculation()
 
 	// some quick checks..
 
+	/*
 	if (number_of_input_images <= 2)
 	{
 		SendError(wxString::Format("Error: Movie (%s) contains less than 3 frames.. Terminating.", input_filename));
 		wxSleep(10);
 		exit(-1);
 	}
+	*/
 
 	// Read in dark/gain reference
 	if (!movie_is_gain_corrected) { gain_image.ReadSlice(&gain_file,1);	}
@@ -1015,31 +1026,37 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 
 		if (inner_radius_for_peak_search != 0) // in this case, weird things can happen (+1/-1 flips), we want to really smooth it. use a polynomial.  This should only affect the first round..
 		{
-			x_shifts_curve.FitPolynomialToData(4);
-			y_shifts_curve.FitPolynomialToData(4);
-
-			// copy back
-
-			for (image_counter = 0; image_counter < number_of_images; image_counter++)
+			if (x_shifts_curve.number_of_points > 2)
 			{
-				current_x_shifts[image_counter] = x_shifts_curve.polynomial_fit[image_counter] - x_shifts[image_counter];
-				current_y_shifts[image_counter] = y_shifts_curve.polynomial_fit[image_counter] - y_shifts[image_counter];
-				wxPrintf("After = %li : %f, %f\n", image_counter, x_shifts_curve.polynomial_fit[image_counter], y_shifts_curve.polynomial_fit[image_counter]);
+				x_shifts_curve.FitPolynomialToData(4);
+				y_shifts_curve.FitPolynomialToData(4);
+
+				// copy back
+
+				for (image_counter = 0; image_counter < number_of_images; image_counter++)
+				{
+					current_x_shifts[image_counter] = x_shifts_curve.polynomial_fit[image_counter] - x_shifts[image_counter];
+					current_y_shifts[image_counter] = y_shifts_curve.polynomial_fit[image_counter] - y_shifts[image_counter];
+					wxPrintf("After poly = %li : %f, %f\n", image_counter, x_shifts_curve.polynomial_fit[image_counter], y_shifts_curve.polynomial_fit[image_counter]);
+				}
 			}
 
 		}
 		else
 		{
-			x_shifts_curve.FitSavitzkyGolayToData(savitzy_golay_window_size, 1);
-			y_shifts_curve.FitSavitzkyGolayToData(savitzy_golay_window_size, 1);
-
-			// copy them back..
-
-			for (image_counter = 0; image_counter < number_of_images; image_counter++)
+			if (savitzy_golay_window_size < x_shifts_curve.number_of_points) // when the input movie is dodgy (very few frames), the fitting won't work
 			{
-				current_x_shifts[image_counter] = x_shifts_curve.savitzky_golay_fit[image_counter] - x_shifts[image_counter];
-				current_y_shifts[image_counter] = y_shifts_curve.savitzky_golay_fit[image_counter] - y_shifts[image_counter];
-				wxPrintf("After = %li : %f, %f\n", image_counter, x_shifts_curve.savitzky_golay_fit[image_counter], y_shifts_curve.savitzky_golay_fit[image_counter]);
+				x_shifts_curve.FitSavitzkyGolayToData(savitzy_golay_window_size, 1);
+				y_shifts_curve.FitSavitzkyGolayToData(savitzy_golay_window_size, 1);
+
+				// copy them back..
+
+				for (image_counter = 0; image_counter < number_of_images; image_counter++)
+				{
+					current_x_shifts[image_counter] = x_shifts_curve.savitzky_golay_fit[image_counter] - x_shifts[image_counter];
+					current_y_shifts[image_counter] = y_shifts_curve.savitzky_golay_fit[image_counter] - y_shifts[image_counter];
+					wxPrintf("After SG = %li : %f, %f\n", image_counter, x_shifts_curve.savitzky_golay_fit[image_counter], y_shifts_curve.savitzky_golay_fit[image_counter]);
+				}
 			}
 
 		}

@@ -55,7 +55,7 @@ class MovieAsset : public Asset {
 
 	bool protein_is_white;
 
-	void Update(wxString wanted_filename);
+	void Update(wxString wanted_filename, int assume_number_of_frames = 0);
 	//void Recheck_if_valid();
 	void CopyFrom(Asset *other_asset);
 	//long FindMember(long member_to_find);

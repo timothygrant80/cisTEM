@@ -1188,6 +1188,11 @@ void Database::EndMovieAssetInsert()
 	EndBatchInsert();
 }
 
+void Database::UpdateNumberOfFramesForAMovieAsset(int movie_asset_id, int new_number_of_frames)
+{
+	ExecuteSQL(wxString::Format("UPDATE MOVIE_ASSETS SET NUMBER_OF_FRAMES = %i WHERE MOVIE_ASSET_ID = %i",new_number_of_frames,movie_asset_id));
+}
+
 
 void Database::BeginImageAssetInsert()
 {

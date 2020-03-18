@@ -1449,6 +1449,7 @@ class MovieImportDialog : public wxDialog
 		wxStaticText* MinorScaleStaticText;
 		NumericTextCtrl* MinorScaleTextCtrl;
 		wxCheckBox* MoviesHaveInvertedContrast;
+		wxCheckBox* SkipFullIntegrityCheck;
 		wxStaticLine* m_staticline8;
 		wxButton* m_button13;
 		wxButton* ImportButton;
@@ -1464,6 +1465,7 @@ class MovieImportDialog : public wxDialog
 		virtual void OnResampleMoviesCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnCorrectMagDistortionCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnMoviesHaveInvertedContrastCheckBox( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnSkipFullIntegrityCheckCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void CancelClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void ImportClick( wxCommandEvent& event ) { event.Skip(); }
 		

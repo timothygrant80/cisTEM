@@ -272,6 +272,11 @@ void MyMovieImportDialog::OnGainFilePickerChanged(wxFileDirPickerEvent & event )
 	CheckImportButtonStatus();
 }
 
+void MyMovieImportDialog::OnSkipFullIntegrityCheckCheckBox( wxCommandEvent & event )
+{
+	CheckImportButtonStatus();
+}
+
 
 void MyMovieImportDialog::OnMoviesAreGainCorrectedCheckBox( wxCommandEvent & event )
 {
@@ -326,6 +331,16 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 
 	wxString gain_ref_filename;
 	wxString dark_ref_filename;
+
+	/*
+	 * To save time, set this to true.
+	 * When true, we will not check the number of frames and every frame for every movie. Most of the time,
+	 * we will just assume we already know the correct number of frames, and that all frames are correct,
+	 * and that the file is not corrupt. This may not be a safe assumption, so you should only
+	 * set this to "true" if you are confident that all programs that will use the movies
+	 * as input will handle bad/weird input files gracefully.
+	 */
+	const bool skip_full_check_of_tiff_movies = SkipFullIntegrityCheck->GetValue();
 
 	VoltageCombo->GetValue().ToDouble(&microscope_voltage);
 	//VoltageCombo->GetStringSelection().ToDouble(&microscope_voltage);
@@ -449,8 +464,11 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 
 		for (long counter = 0; counter < PathListCtrl->GetItemCount(); counter++)
 		{
+
+
+
 			wxDateTime start = wxDateTime::UNow();
-			temp_asset.Update(PathListCtrl->GetItemText(counter));
+			temp_asset.Update(PathListCtrl->GetItemText(counter),skip_full_check_of_tiff_movies);
 			wxDateTime end = wxDateTime::UNow();
 			//wxPrintf("File parsing (disk access) took %li milliseconds\n", (end-start).GetMilliseconds());
 			start = wxDateTime::UNow();
@@ -477,7 +495,7 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 
 				if (temp_asset.is_valid == true)
 				{
-					if (temp_asset.number_of_frames < 3 )
+					if (temp_asset.number_of_frames < 3 && ! skip_full_check_of_tiff_movies) //if we didnt' check the full files, the count of frames is not accurate anyway (it's probably 0)
 					{
 						my_error->ErrorText->AppendText(wxString::Format(wxT("%s contains less than 3 frames, skipping\n"), temp_asset.ReturnFullPathString()));
 						have_errors = true;

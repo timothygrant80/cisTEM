@@ -1685,11 +1685,11 @@ void AbInitioManager::SetupMerge3dJob()
 		else wiener_nominator = 10.0f;
 
 
-
+		float alignment_res = current_high_res_limit;
 		//wiener_nominator = 50.0f;
 		//my_parent->WriteInfoText(wxString::Format("weiner nominator = %f", wiener_nominator));
 
-		my_parent->current_job_package.AddJob("ttttfffttibtif",	output_reconstruction_1.ToUTF8().data(),
+		my_parent->current_job_package.AddJob("ttttfffttibtiff",	output_reconstruction_1.ToUTF8().data(),
 														output_reconstruction_2.ToUTF8().data(),
 														output_reconstruction_filtered.ToUTF8().data(),
 														output_resolution_statistics.ToUTF8().data(),
@@ -1700,7 +1700,7 @@ void AbInitioManager::SetupMerge3dJob()
 														save_orthogonal_views_image,
 														orthogonal_views_filename.ToUTF8().data(),
 														number_of_reconstruction_jobs,
-														wiener_nominator);
+														wiener_nominator, alignment_res);
 	}
 }
 
@@ -2868,7 +2868,7 @@ void AbInitio3DPanel::OnVolumeResampled(ReturnProcessedImageEvent& my_event)
 			current_output_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/startup_volume_%li_%i.mrc", current_startup_id, class_counter + 1);
 			temp_asset.filename = current_output_filename;
 			volume_asset_panel->AddAsset(&temp_asset);
-			main_frame->current_project.database.AddNextVolumeAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), temp_asset.reconstruction_job_id, temp_asset.pixel_size, temp_asset.x_size, temp_asset.y_size, temp_asset.z_size);
+			main_frame->current_project.database.AddNextVolumeAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), temp_asset.reconstruction_job_id, temp_asset.pixel_size, temp_asset.x_size, temp_asset.y_size, temp_asset.z_size, temp_asset.half_map_1_filename.GetFullPath(), temp_asset.half_map_2_filename.GetFullPath());
 		}
 
 		main_frame->current_project.database.EndVolumeAssetInsert();

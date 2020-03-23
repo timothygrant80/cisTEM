@@ -1763,7 +1763,7 @@ wxThread::ExitCode AutoMaskerThread::Entry()
 			// NEW CODE
 
 			size_image.CopyFrom(&input_image);
-			size_image.ConvertToAutoMask(pixel_size, mask_radius, 10.0f, 0.05);
+			size_image.ConvertToAutoMask(pixel_size, mask_radius, 7.0f, 0.1, true);
 
 			//size_image.QuickAndDirtyWriteSlices("/tmp/mask.mrc", 1, size_image.logical_z_dimension);
 		//	input_image.ApplyMask(buffer_image, 20.0f / pixel_size, 0.0, 0.0, 0.0, true, original_average_value);
@@ -1771,6 +1771,7 @@ wxThread::ExitCode AutoMaskerThread::Entry()
 			for (address = 0; address < input_image.real_memory_allocated; address++)
 			{
 				if (size_image.real_values[address] == 0.0f) input_image.real_values[address] = original_average_value;
+				//else input_image.real_values[address] = significant_filtered_image.real_values[address];
 			}
 
 
@@ -1919,4 +1920,3 @@ wxThread::ExitCode Multiply3DMaskerThread::Entry()
 
 	return (wxThread::ExitCode)0;     // success
 }
-

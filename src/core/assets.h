@@ -123,6 +123,9 @@ class VolumeAsset : public Asset {
 
 	long reconstruction_job_id;
 
+	wxFileName half_map_1_filename;
+	wxFileName half_map_2_filename;
+
 	int x_size;
 	int y_size;
 	int z_size;

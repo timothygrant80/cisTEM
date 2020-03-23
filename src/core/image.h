@@ -92,6 +92,8 @@ public:
 
 	void Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size = 1, bool is_in_real_space = true);
 	void Allocate(int wanted_x_size, int wanted_y_size, bool is_in_real_space = true);
+	void Allocate(Image *image_to_copy_size_and_space_from);
+
 	void AllocateAsPointingToSliceIn3D(Image *wanted3d, long wanted_slice);
 
 	void Deallocate();
@@ -164,7 +166,8 @@ public:
 	float CosineRingMask(float wanted_inner_radius, float wanted_outer_radius, float wanted_mask_edge);
 	float CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool invert = false, bool force_mask_value = false, float wanted_mask_value = 0.0);
 	float CosineRectangularMask(float wanted_mask_radius_x, float wanted_mask_radius_y, float wanted_mask_radius_z, float wanted_mask_edge, bool invert = false, bool force_mask_value = false, float wanted_mask_value = 0.0);
-	void ConvertToAutoMask(float pixel_size, float outer_mask_radius_in_angstroms, float filter_resolution_in_angstroms, float rebin_value, bool auto_estimate_initial_bin_value = false, float wanted_initial_bin_value = 0.0f);
+	void ConvertToAutoMask(float pixel_size, float outer_mask_radius_in_angstroms, float filter_resolution_in_angstroms, float rebin_value, bool auto_estimate_initial_bin_value = true, float wanted_initial_bin_value = 0.0f);
+	void LocalResSignificanceFilter(float pixel_size, float starting_resolution, float mask_radius_in_angstroms);
 	void GaussianLowPassFilter(float sigma);
 	void GaussianHighPassFilter(float sigma);
 	void ApplyLocalResolutionFilter(Image &local_resolution_map, float pixel_size, int wanted_number_of_levels);
@@ -180,6 +183,8 @@ public:
 	Peak CenterOfMass(float threshold = 0.0, bool apply_threshold = false);
 	Peak StandardDeviationOfMass(float threshold = 0.0, bool apply_threshold = false, bool invert_densities = false);
 	float ReturnAverageOfMaxN(int number_of_pixels_to_average = 100, float mask_radius = 0.0);
+	float ReturnAverageOfMinN(int number_of_pixels_to_average = 100, float mask_radius = 0.0);
+
 	void AddSlices(Image &sum_of_slices, int first_slice = 0, int last_slice = 0, bool calculate_average = false);
 
 	float FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_output, Image &beamtilt_output, Image &difference_image, float &beamtilt_x, float &beamtilt_y, float &particle_shift_x, float &particle_shift_y, float phase_multiplier, bool progress_bar, int first_position_to_search = 0, int last_position_to_search = INT_MAX, MyApp *app_for_result = NULL);
@@ -471,4 +476,3 @@ public:
 
 	Image temp_image; // to hold experimental beam tilt
 };
-

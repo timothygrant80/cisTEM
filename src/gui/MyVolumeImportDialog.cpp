@@ -168,6 +168,9 @@ void MyVolumeImportDialog::ImportClick( wxCommandEvent& event )
 		VolumeAsset temp_asset;
 
 		temp_asset.pixel_size = pixel_size;
+		temp_asset.half_map_1_filename = "";
+		temp_asset.half_map_2_filename = "";
+
 
 		// ProgressBar..
 
@@ -193,7 +196,7 @@ void MyVolumeImportDialog::ImportClick( wxCommandEvent& event )
 						volume_asset_panel->AddAsset(&temp_asset);
 
 					//	void AddNextVolumeAsset(int image_asset_id,  wxString name, wxString filename, int reconstruction_job_id, double pixel_size, int x_size, int y_size, int z_size);
-						main_frame->current_project.database.AddNextVolumeAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), -1, temp_asset.pixel_size, temp_asset.x_size, temp_asset.y_size, temp_asset.z_size);
+						main_frame->current_project.database.AddNextVolumeAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), -1, temp_asset.pixel_size, temp_asset.x_size, temp_asset.y_size, temp_asset.z_size, temp_asset.half_map_1_filename.GetFullPath(), temp_asset.half_map_2_filename.GetFullPath());
 
 					}
 					else

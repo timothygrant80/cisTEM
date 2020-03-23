@@ -1201,12 +1201,12 @@ void Database::BeginImageAssetInsert()
 
 void Database::BeginVolumeAssetInsert()
 {
-	BeginBatchInsert("VOLUME_ASSETS", 8, "VOLUME_ASSET_ID", "NAME", "FILENAME", "RECONSTRUCTION_JOB_ID", "PIXEL_SIZE", "X_SIZE", "Y_SIZE", "Z_SIZE");
+	BeginBatchInsert("VOLUME_ASSETS", 10, "VOLUME_ASSET_ID", "NAME", "FILENAME", "RECONSTRUCTION_JOB_ID", "PIXEL_SIZE", "X_SIZE", "Y_SIZE", "Z_SIZE", "HALF_MAP1_FILENAME", "HALF_MAP2_FILENAME");
 }
 
-void Database::AddNextVolumeAsset(int image_asset_id,  wxString name, wxString filename, int reconstruction_job_id, double pixel_size, int x_size, int y_size, int z_size)
+void Database::AddNextVolumeAsset(int image_asset_id,  wxString name, wxString filename, int reconstruction_job_id, double pixel_size, int x_size, int y_size, int z_size, wxString half_map_1_filename, wxString half_map_2_filename )
 {
-	AddToBatchInsert("ittiriii", image_asset_id, name.ToUTF8().data(), filename.ToUTF8().data(), reconstruction_job_id, pixel_size, x_size, y_size, z_size);
+	AddToBatchInsert("ittiriiitt", image_asset_id, name.ToUTF8().data(), filename.ToUTF8().data(), reconstruction_job_id, pixel_size, x_size, y_size, z_size, half_map_1_filename.ToUTF8().data(), half_map_2_filename.ToUTF8().data());
 }
 
 void Database::AddNextImageAsset(int image_asset_id,  wxString name, wxString filename, int position_in_stack, int parent_movie_id, int alignment_id, int ctf_estimation_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration, int protein_is_white)
@@ -1784,7 +1784,7 @@ ParticlePositionAsset Database::GetNextParticlePositionAssetFromResults()
 VolumeAsset Database::GetNextVolumeAsset()
 {
 	VolumeAsset temp_asset;
-	GetFromBatchSelect("itflriii", &temp_asset.asset_id, &temp_asset.asset_name, &temp_asset.filename, &temp_asset.reconstruction_job_id, &temp_asset.pixel_size, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.z_size);
+	GetFromBatchSelect("itflriiitt", &temp_asset.asset_id, &temp_asset.asset_name, &temp_asset.filename, &temp_asset.reconstruction_job_id, &temp_asset.pixel_size, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.z_size, &temp_asset.half_map_1_filename, &temp_asset.half_map_2_filename);
 	return temp_asset;
 }
 
@@ -2537,4 +2537,3 @@ void BeginCommitLocker::Commit()
 	already_sent_commit = true;
 	active_database->Commit();
 }
-

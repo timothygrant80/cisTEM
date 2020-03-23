@@ -4478,6 +4478,119 @@ float Image::CosineRectangularMask(float wanted_mask_radius_x, float wanted_mask
 	return float(mask_volume);
 }
 
+void Image::LocalResSignificanceFilter(float pixel_size, float starting_resolution, float mask_radius_in_angstroms)
+{
+	Image sharp3d;
+	Image automask;
+	Image output3d;
+	Image buffer3d;
+	float start_spatial_frequency = (pixel_size / starting_resolution) + 0.03f;
+	if (start_spatial_frequency > 0.5f) start_spatial_frequency = 0.5f;
+	float end_spatial_frequency = pixel_size / 30.0f;
+	float step_size = (start_spatial_frequency - end_spatial_frequency) / 6.0f;
+	float window = (start_spatial_frequency - end_spatial_frequency) / 20.0f;
+	float threshold_value;
+	long pixel_counter;
+	float filter_frequency;
+	int i,j,k;
+
+	int pixels_above_threshold;
+	int pixels_added;
+
+	EmpiricalDistribution distro;
+
+	automask.CopyFrom(this);
+	sharp3d.CopyFrom(this);
+
+	output3d.Allocate(logical_x_dimension, logical_y_dimension, logical_z_dimension);
+	output3d.SetToConstant(0.0f);
+
+	automask.ConvertToAutoMask(pixel_size, mask_radius_in_angstroms, 10.0f, 0.05);
+ int counter = 1;
+	for (float current_spatial_frequency = start_spatial_frequency; current_spatial_frequency >= end_spatial_frequency; current_spatial_frequency -= step_size)
+	{
+		buffer3d.CopyFrom(this);
+		sharp3d.CopyFrom(this);
+
+		buffer3d.ForwardFFT();
+		filter_frequency = current_spatial_frequency + window;
+		if (filter_frequency > 0.5) filter_frequency = 0.5;
+		buffer3d.CosineMask(filter_frequency, window);
+		buffer3d.BackwardFFT();
+		buffer3d.QuickAndDirtyWriteSlices(wxString::Format("/tmp/filter_%i.mrc", counter).ToStdString(), 1, buffer3d.logical_z_dimension);
+
+		sharp3d.SharpenMap(pixel_size, pixel_size / (current_spatial_frequency), false, 0.0f, mask_radius_in_angstroms, 50.0f, 0.0f, 0.0f, 500.0f, false, &automask);
+
+		distro.Reset();
+		pixel_counter = 0;
+
+		for (k = 0; k < sharp3d.logical_z_dimension; k++)
+		{
+			for (j = 0; j < sharp3d.logical_y_dimension; j++)
+			{
+				for (i = 0; i < sharp3d.logical_x_dimension; i++)
+				{
+					distro.AddSampleValue(sharp3d.real_values[pixel_counter]);
+					pixel_counter++;
+				}
+
+				pixel_counter += sharp3d.padding_jump_value;
+			}
+		}
+		// threshold
+
+		//threshold_value = sharp3d.ReturnAverageOfMaxN(50) * 0.3;
+
+		//threshold_value = sharp3d.ReturnAverageOfRealValues() + ((sharp3d.ReturnAverageOfMaxN(50) - sharp3d.ReturnAverageOfRealValues()) * 0.5f);
+		//threshold_value = sharp3d.ReturnAverageOfRealValuesAtRadius(sharp3d.logical_x_dimension / 2.0f) + (6.0f * sqrtf(sharp3d.ReturnVarianceOfRealValues(sharp3d.logical_x_dimension / 2.0f)));
+		//threshold_value = distro.GetSampleMean() + (8.0f * sqrtf(distro.GetSampleVariance()));
+		//threshold_value = (8.0f * sqrtf(distro.GetSampleVariance()));
+		//sharp3d.QuickAndDirtyWriteSlices("/tmp/sharp.mrc", 1, sharp3d.logical_z_dimension);
+		//wxPrintf("Threshold = %f\n", threshold_value);
+		sharp3d.QuickAndDirtyWriteSlices(wxString::Format("/tmp/sharp_%i.mrc", counter).ToStdString(), 1, buffer3d.logical_z_dimension);
+
+		float original_average_value = sharp3d.ReturnAverageOfRealValues(mask_radius_in_angstroms / pixel_size, true);
+		sharp3d.SetMinimumValue(original_average_value);
+		float average_value = sharp3d.ReturnAverageOfRealValues(mask_radius_in_angstroms / pixel_size, true);
+		float average_of_max = sharp3d.ReturnAverageOfMaxN(50, mask_radius_in_angstroms / pixel_size);
+		threshold_value = average_value + ((average_of_max - average_value) * 0.25);
+
+		sharp3d.Binarise(threshold_value);
+		sharp3d.QuickAndDirtyWriteSlices("/tmp/bin.mrc", 1, sharp3d.logical_z_dimension);
+		sharp3d.QuickAndDirtyWriteSlices(wxString::Format("/tmp/bin_%i.mrc", counter).ToStdString(), 1, buffer3d.logical_z_dimension);
+		counter++;
+		pixels_above_threshold = 0;
+		for (pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
+		{
+			if (sharp3d.real_values[pixel_counter] == 1.0f) pixels_above_threshold++;
+		}
+
+	//	sharp3d.QuickAndDirtyWriteSlices("sharp.mrc", 1, sharp3d.logical_z_dimension);
+		pixels_added = 0;
+		for (pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
+		{
+			if (sharp3d.real_values[pixel_counter] == 1.0f && output3d.real_values[pixel_counter] == 0.0f)
+			{
+				output3d.real_values[pixel_counter] = buffer3d.real_values[pixel_counter];
+				pixels_added++;
+			}
+		}
+
+
+
+		wxPrintf("Resolution %.2f has %i pixels above threshold (this added %i pixels to the output)\n", pixel_size / current_spatial_frequency, pixels_above_threshold, pixels_added);
+	}
+
+	for (pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
+	{
+			if (output3d.real_values[pixel_counter] == 0.0f) output3d.real_values[pixel_counter] = buffer3d.real_values[pixel_counter];
+	}
+
+
+//	output3d.QuickAndDirtyWriteSlices("filtered.mrc", 1, sharp3d.logical_z_dimension);
+	Consume(&output3d);
+}
+
 void Image::ConvertToAutoMask(float pixel_size, float outer_mask_radius_in_angstroms, float filter_resolution_in_angstroms, float rebin_value, bool auto_estimate_initial_bin_value, float wanted_initial_bin_value)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
@@ -4527,7 +4640,6 @@ void Image::ConvertToAutoMask(float pixel_size, float outer_mask_radius_in_angst
 		Resize(binned_x_size, binned_y_size, binned_z_size);
 		//DivideByConstant(sqrtf(number_of_real_space_pixels));
 		BackwardFFT();
-
 	}
 
 //	QuickAndDirtyWriteSlices("/tmp/binning_input.mrc", 1, logical_z_dimension, true);
@@ -4540,7 +4652,7 @@ void Image::ConvertToAutoMask(float pixel_size, float outer_mask_radius_in_angst
 		average_value = ReturnAverageOfRealValues(outer_mask_radius_in_angstroms / binning_factor / pixel_size, true);
 
 		number_of_top_pixels_to_use = number_of_real_space_pixels * 0.000005;
-		if (number_of_top_pixels_to_use < 50) number_of_top_pixels_to_use = 50;
+		if (number_of_top_pixels_to_use < 5) number_of_top_pixels_to_use = 5;
 
 		average_of_max = ReturnAverageOfMaxN(number_of_top_pixels_to_use, outer_mask_radius_in_angstroms / binning_factor / pixel_size);
 		threshold_value = average_value + ((average_of_max - average_value) * 0.05);
@@ -4560,9 +4672,13 @@ void Image::ConvertToAutoMask(float pixel_size, float outer_mask_radius_in_angst
 	my_ccl3d.GetLargestConnectedDensityMask(buffer_image, *this);
 
 	ForwardFFT();
-	GaussianLowPassFilter(0.25);
+	QuickAndDirtyWriteSlices("/tmp/prefilter.mrc", 1, logical_z_dimension);
+	GaussianLowPassFilter(binning_factor / pixel_size / 16.0f);
+	QuickAndDirtyWriteSlices("/tmp/presize.mrc", 1, logical_z_dimension);
 	Resize(original_x_size, original_y_size, original_z_size, 0.0);
 	BackwardFFT();
+
+	QuickAndDirtyWriteSlices("/tmp/prebin.mrc", 1, logical_z_dimension);
 
 	DivideByConstant(ReturnMaximumValue());
 	Binarise(rebin_value);
@@ -4732,6 +4848,17 @@ void Image::Allocate(int wanted_x_size, int wanted_y_size, bool should_be_in_rea
 {
 	Allocate(wanted_x_size, wanted_y_size, 1, should_be_in_real_space);
 }
+
+//!>  \brief  Allocate memory for the Image object.
+//
+//  Overloaded version allowing you to supply a reference 3d - the data is NOT copied.
+
+void Image::Allocate(Image *image_to_copy_size_and_space_from)
+{
+	Allocate(image_to_copy_size_and_space_from->logical_x_dimension, image_to_copy_size_and_space_from->logical_y_dimension, image_to_copy_size_and_space_from->logical_z_dimension, image_to_copy_size_and_space_from->is_in_real_space);
+}
+
+
 
 
 void Image::AllocateAsPointingToSliceIn3D(Image *wanted3d, long wanted_slice)
@@ -11623,6 +11750,53 @@ Peak Image::StandardDeviationOfMass(float threshold, bool apply_threshold, bool 
 	return standard_deviations;
 }
 
+float Image::ReturnAverageOfMinN(int number_of_pixels_to_average, float wanted_mask_radius)
+{
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space == true, "Image not in real space");
+
+	int i, j, k;
+	long pixel_counter1 = 0;
+	long pixel_counter2 = 0;
+	int mask_radius;
+	float average_density_min = 0.0;
+
+	if (wanted_mask_radius == 0.0) mask_radius = int(ReturnSmallestLogicalDimension() / 2.0);
+	else mask_radius = std::min(int(ReturnSmallestLogicalDimension() / 2.0), int(wanted_mask_radius));
+
+	float *temp_3d = new float [logical_x_dimension * logical_y_dimension + logical_x_dimension * logical_z_dimension + logical_y_dimension * logical_z_dimension];
+	for (k = 0; k < logical_z_dimension; k++)
+	{
+		for (j = 0; j < logical_y_dimension; j++)
+		{
+			for (i = 0; i < logical_x_dimension; i++)
+			{
+				if (   k >= physical_address_of_box_center_z - mask_radius && k < physical_address_of_box_center_z + mask_radius
+					&& j >= physical_address_of_box_center_y - mask_radius && j < physical_address_of_box_center_y + mask_radius
+					&& i >= physical_address_of_box_center_x - mask_radius && i < physical_address_of_box_center_x + mask_radius)
+				{
+					if (i == physical_address_of_box_center_x || j == physical_address_of_box_center_y  || k == physical_address_of_box_center_z)
+					{
+						temp_3d[pixel_counter2] = real_values[pixel_counter1];
+						pixel_counter2++;
+					}
+				}
+				pixel_counter1++;
+			}
+			pixel_counter1 += padding_jump_value;
+		}
+	}
+	std::sort (temp_3d, temp_3d + pixel_counter2);
+	if (number_of_pixels_to_average > pixel_counter2) number_of_pixels_to_average = pixel_counter2;
+
+	for (i = 0; i < number_of_pixels_to_average; i++) average_density_min += temp_3d[i];
+	average_density_min /= float(number_of_pixels_to_average);
+	delete [] temp_3d;
+
+	return average_density_min;
+}
+
+
 float Image::ReturnAverageOfMaxN(int number_of_pixels_to_average, float wanted_mask_radius)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
@@ -12097,4 +12271,3 @@ float Image::ReturnBeamTiltSignificanceScore(Image calculated_beam_tilt)
 	float binarized_score = buffer.ReturnSumOfSquares(mask_radius_local);
 	return 0.5f * PIf * powf((0.5f - binarized_score) * mask_radius_local, 2);
 }
-

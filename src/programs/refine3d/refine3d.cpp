@@ -1081,7 +1081,11 @@ bool Refine3DApp::DoCalculation()
 //		refine_particle_local.filter_radius_low = low_resolution_limit;
 		refine_particle_local.filter_radius_high = high_resolution_limit;
 		refine_particle_local.molecular_mass_kDa = molecular_mass_kDa;
-		refine_particle_local.signed_CC_limit = signed_CC_limit;
+
+
+		if (local_global_refine == true && global_search == true) refine_particle_local.signed_CC_limit = pixel_size;
+		else refine_particle_local.signed_CC_limit = signed_CC_limit;
+
 		// The following line would allow using particles with different pixel sizes
 		refine_particle_local.pixel_size = input_3d_local.pixel_size;
 		refine_particle_local.is_normalized = normalize_particles;

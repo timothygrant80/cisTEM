@@ -731,6 +731,19 @@ void Curve::ApplyCTF(CTF ctf_to_apply, float azimuth_in_radians)
 	}
 }
 
+void Curve::ApplyGaussianLowPassFilter(float sigma) // Assumption is that X is recipricoal pixels
+{
+	float frequency_squared;
+	float one_over_two_sigma_squared = 0.5 / powf(sigma, 2);
+
+	for (int counter = 0; counter < number_of_points; counter ++ )
+	{
+		frequency_squared = powf(data_x[counter], 2);
+		data_y[counter] *= expf(-frequency_squared * one_over_two_sigma_squared);
+	}
+}
+
+
 void Curve::ApplyCosineMask(float wanted_x_of_cosine_start, float wanted_cosine_width_in_x, bool undo)
 {
 	MyDebugAssertTrue(number_of_points > 0, "No points in curve");
@@ -1425,6 +1438,4 @@ for (i = 0; i <= order_of_polynomial; i++)
 }
 
 }
-
-
 

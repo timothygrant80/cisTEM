@@ -27,6 +27,7 @@ bool MyApp::OnInit()
 	zombie_timer = NULL;
 	queue_timer = NULL;
 	queue_timer_set = false;
+	master_queue_timer_set = false;
 
 	controller_socket = NULL;
 	master_socket = NULL;
@@ -41,6 +42,8 @@ bool MyApp::OnInit()
 	total_milliseconds_spent_on_threads = 0;
 
 	socket_to_slave_job_pointer_hash.clear();
+
+	inter_thread_message_queue.Post(0);
 
 	ProgramSpecificInit();
 
@@ -465,6 +468,9 @@ void MyApp::OnThreadSendImageResult(wxThreadEvent& my_event)
 	WriteToSocket(master_socket, details, sizeof(int) * 3, true, "SendResultImageDetailsFromSlaveToMaster", FUNCTION_DETAILS_AS_WXSTRING);
 	WriteToSocket(master_socket, image_to_send.real_values, image_to_send.real_memory_allocated * sizeof(float), true, "SendResultImageDataFromSlaveToMaster", FUNCTION_DETAILS_AS_WXSTRING);
 	SendwxStringToSocket(&filename_to_write, master_socket);
+
+	// post a message to the message queue to allow the calulcation thread to send the next image..
+	inter_thread_message_queue.Post(0);
 }
 
 void MyApp::OnThreadSendProgramDefinedResult(ReturnProgramDefinedResultEvent& my_event)
@@ -770,6 +776,12 @@ void CalculateThread::MarkIntermediateResultAvailable()
 
 void CalculateThread::SendProcessedImageResult(Image *image_to_send, int position_in_stack, wxString filename_to_save)
 {
+	char message;
+	if (main_thread_pointer->inter_thread_message_queue.ReceiveTimeout(300000, message) == wxMSGQUEUE_TIMEOUT) // timeout after 5 minutes;
+	{
+		QueueError("Timed out waiting for message queue");
+	}
+
 	wxThreadEvent *test_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_SEND_IMAGE_RESULT);
 	test_event->SetInt(position_in_stack);
 	test_event->SetString(filename_to_save);
@@ -928,6 +940,7 @@ void MyApp::HandleSocketYouAreASlave(wxSocketBase *connected_socket, wxString ma
 	// remove this socket from monitoring and destroy it..
 
 	StopMonitoringAndDestroySocket(connected_socket);
+	IfSocketIsAKeySocketSetItToNull(connected_socket);
 
 	// connect to the new master..
 
@@ -1058,8 +1071,6 @@ void MyApp::HandleSocketSendNextJob(wxSocketBase *connected_socket, JobResult *r
 
 		if (number_of_finished_jobs == current_job_package.number_of_jobs && number_of_timing_results_received == max_number_of_connected_slaves)
 		{
-			// if we are writing a file, close it..
-			if (master_output_file.IsOpen() == true) master_output_file.CloseFile();
 
 			SendAllJobsFinished();
 
@@ -1121,18 +1132,18 @@ void MyApp::HandleSocketJobResultQueue(wxSocketBase *connected_socket, ArrayofJo
 	}
 }
 
-void MyApp::HandleSocketResultWithImageToWrite(wxSocketBase *connected_socket, Image *image_to_write, wxString filename_to_write_to, int position_in_stack)
+void MyApp::HandleSocketResultWithImageToWrite(wxSocketBase *connected_socket, wxString filename_to_write_to, int position_in_stack)
 {
-	if (master_output_file.IsOpen() == false || master_output_file.filename != filename_to_write_to)
-	{
-		// if we are writing a file, close it..
-		if (master_output_file.IsOpen() == true) master_output_file.CloseFile();
-		master_output_file.OpenFile(filename_to_write_to.ToStdString(), true);
-		image_to_write->WriteSlice(&master_output_file, 1); // to setup the file..
-	}
-
-	image_to_write->WriteSlice(&master_output_file, position_in_stack);
-	delete image_to_write;
+//	if (master_output_file.IsOpen() == false || master_output_file.filename != filename_to_write_to)
+//	{
+//		// if we are writing a file, close it..
+//		if (master_output_file.IsOpen() == true) master_output_file.CloseFile();
+//		master_output_file.OpenFile(filename_to_write_to.ToStdString(), true);
+//		image_to_write->WriteSlice(&master_output_file, 1); // to setup the file..
+//	}
+//
+//	image_to_write->WriteSlice(&master_output_file, position_in_stack);
+//	delete image_to_write;
 
 	float temp_float;
 	temp_float = position_in_stack;
@@ -1176,9 +1187,6 @@ void MyApp::HandleSocketSendThreadTiming(wxSocketBase *connected_socket, long re
 
 	if (number_of_finished_jobs == current_job_package.number_of_jobs && number_of_timing_results_received == max_number_of_connected_slaves)
 	{
-		// if we are writing a file, close it..
-		if (master_output_file.IsOpen() == true) master_output_file.CloseFile();
-
 		SendAllJobsFinished();
 
 		if (current_job_package.ReturnNumberOfJobsRemaining() != 0)
@@ -1191,6 +1199,8 @@ void MyApp::HandleSocketSendThreadTiming(wxSocketBase *connected_socket, long re
 		wxSleep(5);
 
 		controller_socket->Destroy();
+		controller_socket = NULL;
+
 		ShutDownServer();
 		ShutDownSocketMonitor();
 		ExitMainLoop();
@@ -1296,11 +1306,14 @@ void MyApp::HandleSocketDisconnect(wxSocketBase *connected_socket)
 		{
 			WriteToSocket(slave_socket_pointers[counter], socket_time_to_die, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING );
 			StopMonitoringAndDestroySocket(slave_socket_pointers[counter]);
+			slave_socket_pointers[counter] = NULL;
 	    }
 
 		slave_socket_pointers.Clear();
 
 		StopMonitoringAndDestroySocket(controller_socket);
+		controller_socket = NULL;
+
 		ShutDownServer();
 		ShutDownSocketMonitor();
 
@@ -1329,4 +1342,19 @@ void MyApp::HandleSocketDisconnect(wxSocketBase *connected_socket)
 		ExitMainLoop();
 		return;
 	}
+}
+
+// Mainly for when we destroy slave sockets without directly using the array, we want them to be set to NULL;
+
+void MyApp::IfSocketIsAKeySocketSetItToNull(wxSocketBase *socket_to_check)
+{
+	for (int counter = 0; counter < slave_socket_pointers.GetCount(); counter++)
+	{
+		if (slave_socket_pointers[counter] == socket_to_check) slave_socket_pointers[counter] = NULL;
+	}
+
+	if (controller_socket == socket_to_check) controller_socket = NULL;
+
+	if (master_socket == socket_to_check) master_socket = NULL;
+
 }

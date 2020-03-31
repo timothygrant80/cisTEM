@@ -66,6 +66,7 @@ wxThread::ExitCode SocketServerThread::Entry()
 			else
 			{
 				socket_server->Destroy();
+				socket_server = NULL;
 			}
 
 		}
@@ -89,6 +90,7 @@ wxThread::ExitCode SocketServerThread::Entry()
 			 {
 				socket_server->Close();
 				socket_server->Destroy();
+				socket_server = NULL;
 
 				{ // mutex
 				wxMutexLocker server_is_running_lock(parent_pointer->server_is_running_mutex);
@@ -115,7 +117,7 @@ wxThread::ExitCode SocketServerThread::Entry()
 
 		if (local_copy_server_is_running == true)
 		{
-			new_connection =  socket_server->Accept(false);
+			new_connection = socket_server->Accept(false);
 			while(new_connection != NULL)
 			{
 				// we have a new connection, but we don't know if it has the correct job code.
@@ -129,6 +131,7 @@ wxThread::ExitCode SocketServerThread::Entry()
 				if (new_connection != NULL) parent_pointer->brother_event_handler->CallAfter(std::bind(&SocketCommunicator::MonitorSocket, parent_pointer, new_connection));
 
 				// check for further connections
+
 				new_connection =  socket_server->Accept(false);
 			}
 		}
@@ -438,6 +441,9 @@ wxThread::ExitCode SocketClientMonitorThread::Entry()
 		{
 			// time to die
 
+			// if we are writing a file, close it..
+			if (buffered_output_file.IsOpen() == true) buffered_output_file.CloseFile();
+
 			{ // mutex
 			wxMutexLocker monitor_is_running_lock(parent_pointer->monitor_is_running_mutex);
 			if (monitor_is_running_lock.IsOk() == true)
@@ -448,11 +454,16 @@ wxThread::ExitCode SocketClientMonitorThread::Entry()
 
 			MyDebugPrint("There are %li sockets being monitored on close\n", monitored_sockets.GetCount());
 
+
 			// destroy all connected sockets..
 
 			for (socket_counter = 0; socket_counter < monitored_sockets.GetCount(); socket_counter++)
 			{
-				if (monitored_sockets[socket_counter] != NULL) monitored_sockets[socket_counter]->Destroy();
+				if (monitored_sockets[socket_counter] != NULL)
+				{
+					monitored_sockets[socket_counter]->Destroy();
+					monitored_sockets[socket_counter] = NULL;
+				}
 			}
 
 			} // end mutex
@@ -847,15 +858,37 @@ wxThread::ExitCode SocketClientMonitorThread::Entry()
 								int details[3];
 								if (ReadFromSocket(monitored_sockets[socket_counter], details, sizeof(int) * 3, true, "SendResultImageDetailsFromSlaveToMaster", FUNCTION_DETAILS_AS_WXSTRING) == true)
 								{
-									image_to_write->Allocate(details[0], details[1], 1);
+									image_to_write->Allocate(details[0], details[1], 1, true, false);
 									position_in_stack = details[2];
+
 									if (ReadFromSocket(monitored_sockets[socket_counter], image_to_write->real_values, image_to_write->real_memory_allocated * sizeof(float), true, "SendResultImageDataFromSlaveToMaster", FUNCTION_DETAILS_AS_WXSTRING) == true)
 									{
 										bool no_error;
 										filename_to_write = ReceivewxStringFromSocket(monitored_sockets[socket_counter], no_error);
 										if ( no_error == true)
 										{
-											parent_pointer->brother_event_handler->CallAfter(std::bind(&SocketCommunicator::HandleSocketResultWithImageToWrite,parent_pointer, monitored_sockets[socket_counter], image_to_write, filename_to_write, position_in_stack));
+											// THIS IS UNUSUAL
+											// The previous implementation received the image, then queued the event (with CallAfter), expecting myApp to handle write it.  This lead to a situation where if the data was
+											// provided much faster than it can be written then the master's memory filled up.  In order to fix that, I am changing it so that image is directly written by the socket communicator.
+											// this is also no ideal, as the master will freeze to all events while writing the image, but we shall see how it goes.
+
+											//parent_pointer->brother_event_handler->CallAfter(std::bind(&SocketCommunicator::HandleSocketResultWithImageToWrite,parent_pointer, monitored_sockets[socket_counter], image_to_write, filename_to_write, position_in_stack));
+											parent_pointer->brother_event_handler->CallAfter(std::bind(&SocketCommunicator::HandleSocketResultWithImageToWrite, parent_pointer, monitored_sockets[socket_counter], filename_to_write, position_in_stack));
+
+											if (buffered_output_file.IsOpen() == false || buffered_output_file.filename != filename_to_write)
+											{
+												// if we are writing a file, close it..
+												if (buffered_output_file.IsOpen() == true) buffered_output_file.CloseFile();
+												buffered_output_file.OpenFile(filename_to_write.ToStdString(), true);
+
+												// Setup the file
+												image_to_write->WriteSlice(&buffered_output_file, 1);
+												buffered_output_file.WriteHeader();
+												buffered_output_file.FlushFile();
+											}
+
+											image_to_write->WriteSlice(&buffered_output_file, position_in_stack);
+											delete image_to_write;
 										}
 										else
 										{

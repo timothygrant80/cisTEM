@@ -90,7 +90,7 @@ public:
 
 	void SetupInitialValues();
 
-	void Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size = 1, bool is_in_real_space = true);
+	void Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size = 1, bool is_in_real_space = true, bool do_fft_planning = true);
 	void Allocate(int wanted_x_size, int wanted_y_size, bool is_in_real_space = true);
 	void Allocate(Image *image_to_copy_size_and_space_from);
 

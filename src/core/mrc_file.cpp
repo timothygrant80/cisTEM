@@ -42,6 +42,14 @@ void MRCFile::CloseFile()
 	}
 }
 
+void MRCFile::FlushFile()
+{
+	if (my_file->is_open())
+	{
+		my_file->flush();
+	}
+}
+
 bool MRCFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_for_file_to_exist, bool check_only_first_image)
 {
 //	MyDebugAssertFalse(my_file->is_open(), "File Already Open: %s",wanted_filename);

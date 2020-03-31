@@ -99,7 +99,6 @@ MyApp : public wxAppConsole, public SocketCommunicator
 
 		wxStopWatch stopwatch;
 		long total_milliseconds_spent_on_threads;
-		MRCFile master_output_file;
 
 	public:
 
@@ -121,12 +120,15 @@ MyApp : public wxAppConsole, public SocketCommunicator
 		void HandleSocketIHaveInfo(wxSocketBase *connected_socket, wxString info_message);
 		void HandleSocketSendNextJob(wxSocketBase *connected_socket, JobResult *received_result);
 		void HandleSocketJobResultQueue(wxSocketBase *connected_socket, ArrayofJobResults *received_queue);
-		void HandleSocketResultWithImageToWrite(wxSocketBase *connected_socket, Image *image_to_write, wxString filename_to_write_to, int position_in_stack);
+		//void HandleSocketResultWithImageToWrite(wxSocketBase *connected_socket, Image *image_to_write, wxString filename_to_write_to, int position_in_stack);
+		void HandleSocketResultWithImageToWrite(wxSocketBase *connected_socket, wxString filename_to_write_to, int position_in_stack);
 		void HandleSocketProgramDefinedResult(wxSocketBase *connected_socket, float *data_array, int size_of_data_array, int result_number, int number_of_expected_results);
 		void HandleSocketSendThreadTiming(wxSocketBase *connected_socket, long received_timing_in_milliseconds);
 		void HandleSocketYouAreConnected(wxSocketBase *connected_socket);
 		void HandleSocketReadyToSendSingleJob(wxSocketBase *connected_socket, RunJob *received_job);
 		void HandleSocketDisconnect(wxSocketBase *connected_socket);
+
+		void IfSocketIsAKeySocketSetItToNull(wxSocketBase *socket_to_check);
 
 		// array for sending back the results - this may be better off being made into an object..
 
@@ -144,6 +146,13 @@ MyApp : public wxAppConsole, public SocketCommunicator
 		bool            currently_running_a_job;
 		wxIPV4address 	active_controller_address;
 		long 			controller_port;
+
+		// This message queue is currently used for SendProcessedImageResult, the calculation thread will wait until there is a message on this queue before sending the next image.
+		// This is done, so that the process does not swarm ahead and fill the memory with processed images.
+
+		// currently any message will allow sending, one message is pre posted in MyApps constructor so that the first SendProcessedImageResult will go ahead.
+
+		wxMessageQueue  <char> inter_thread_message_queue;
 
 		short int my_port;
 		wxString my_ip_address;

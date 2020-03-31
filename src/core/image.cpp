@@ -4757,7 +4757,7 @@ void Image::Deallocate()
 //
 //  If the object is already allocated with correct dimensions, nothing happens. Otherwise, object is deallocated first.
 
-void Image::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size, bool should_be_in_real_space)
+void Image::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size, bool should_be_in_real_space, bool do_fft_planning)
 {
 
 	MyDebugAssertTrue(wanted_x_size > 0 && wanted_y_size > 0 && wanted_z_size > 0,"Bad dimensions: %i %i %i\n",wanted_x_size,wanted_y_size,wanted_z_size);
@@ -4804,7 +4804,7 @@ void Image::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size, bo
 
     // Prepare the plans for FFTW
 
-    if (planned == false)
+    if (planned == false && do_fft_planning == true) // skip fft planning at your peril!
     {
     	wxMutexLocker lock(s_mutexProtectingFFTW); // the mutex will be unlocked when this object is destroyed (when it goes out of scope)
     	MyDebugAssertTrue(lock.IsOk(),"Mute locking failed");

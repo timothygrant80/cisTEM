@@ -30,6 +30,7 @@ class MRCFile : public AbstractImageFile {
 
 	bool OpenFile(std::string filename, bool overwrite, bool wait_for_file_to_exist = false, bool check_only_the_first_image = false);
 	void CloseFile();
+	void FlushFile();
 
 	inline void ReadSliceFromDisk(int slice_number, float *output_array) {ReadSlicesFromDisk(slice_number, slice_number, output_array);}
 	void ReadSlicesFromDisk(int start_slice, int end_slice, float *output_array);

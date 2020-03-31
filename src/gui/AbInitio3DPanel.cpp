@@ -2660,12 +2660,14 @@ void AbInitioManager::ProcessAllJobsFinished()
 	{
 		// get the box size of the stack so we can set the pixel size etc..
 
-		/*active_pixel_size = event.GetPayload<float>();
-		preparing_stack = false;*/
-		wxString new_stack_file = main_frame->ReturnStartupScratchDirectory() + "/temp_stack.mrc";
-		MRCFile check_file(new_stack_file.ToStdString(), false, true);
+		wxString new_stack_file = main_frame->ReturnStartupScratchDirectory() + "temp_stack.mrc";
 
+		// wait 1 second just in case!
+		wxSleep(1);
+		MRCFile check_file(new_stack_file.ToStdString(), false, true);
 		stack_bin_factor = float(active_refinement_package->stack_box_size) / float(check_file.ReturnXSize());
+
+
 		active_pixel_size = active_refinement_package->output_pixel_size * stack_bin_factor;
 		active_stack_filename = new_stack_file;
 		stack_has_been_precomputed = true;

@@ -86,6 +86,7 @@ bool GuiJobController::LaunchJob(GuiJob *job_to_launch)
 
 	execution_command = job_to_launch->launch_command;
 	execution_command.Replace("$command", executable);
+	execution_command.Replace("$program_name", "cisTEM_job_control");
 	//execution_command += "&";
 
 	job_to_launch->parent_panel->WriteInfoText("Launching Job...\n(" + execution_command + ")\n");

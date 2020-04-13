@@ -318,6 +318,7 @@ void LaunchJobThread::LaunchRemoteJob()
 		execution_command =  current_run_profile.run_commands[command_counter].command_to_run;
 		executable_with_threads = executable + wxString::Format(" %i", current_run_profile.run_commands[command_counter].number_of_threads_per_copy);
 		execution_command.Replace("$command", executable_with_threads);
+		execution_command.Replace("$program_name", current_run_profile.executable_name);
 
 		execution_command += "&";
 

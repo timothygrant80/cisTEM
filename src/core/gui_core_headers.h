@@ -120,6 +120,7 @@
 #include "../gui/MatchTemplatePanel.h"
 #include "../gui/MatchTemplateResultsPanel.h"
 #include "../gui/RefineTemplatePanel.h"
+#include "../gui/MyPhenixSettingsPanel.h"
 #endif
 
 #define REFINEMENT 0

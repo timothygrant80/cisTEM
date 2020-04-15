@@ -37,6 +37,7 @@ ExperimentalPanel *experimental_panel;
 MatchTemplatePanel *match_template_panel;
 MatchTemplateResultsPanel *match_template_results_panel;
 RefineTemplatePanel *refine_template_panel;
+MyPhenixSettingsPanel *phenix_settings_panel;
 #endif
 
 MyMovieAssetPanel *movie_asset_panel;
@@ -136,6 +137,10 @@ bool MyGuiApp::OnInit()
 	// Individual Panels
 	run_profiles_panel = new MyRunProfilesPanel(settings_panel->SettingsBook);
 
+#ifdef EXPERIMENTAL
+	phenix_settings_panel = new MyPhenixSettingsPanel(experimental_panel->ExperimentalBook);
+#endif
+
 	movie_asset_panel = new MyMovieAssetPanel(assets_panel->AssetsBook);
 	image_asset_panel = new MyImageAssetPanel(assets_panel->AssetsBook);
 	particle_position_asset_panel = new MyParticlePositionAssetPanel(assets_panel->AssetsBook);
@@ -213,6 +218,8 @@ bool MyGuiApp::OnInit()
 #ifdef EXPERIMENTAL
 	wxBitmap match_template_icon_bmp = wxBITMAP_PNG_FROM_DATA(match_template_icon);
 	wxBitmap refine_template_icon_bmp = wxBITMAP_PNG_FROM_DATA(refine_template_icon);
+	wxBitmap phenix_settings_icon_bmp = wxBITMAP_PNG_FROM_DATA(run_profiles_icon);
+	// TODO: replace phenix_settings_icon_bmp with the actual Phenix icon
 #endif
 
 	delete suppress_png_warnings;
@@ -255,6 +262,7 @@ bool MyGuiApp::OnInit()
 #ifdef EXPERIMENTAL
 	ExperimentalBookIconImages->Add(match_template_icon_bmp);
 	ExperimentalBookIconImages->Add(refine_template_icon_bmp);
+	ExperimentalBookIconImages->Add(phenix_settings_icon_bmp);
 #endif
 
 	main_frame->MenuBook->AssignImageList(MenuBookIconImages);
@@ -310,6 +318,7 @@ bool MyGuiApp::OnInit()
 	experimental_panel->ExperimentalBook->AddPage(match_template_panel, "Match Templates", true, 0);
 	experimental_panel->ExperimentalBook->AddPage(refine_template_panel, "Refine Template", false, 1);
 	experimental_panel->ExperimentalBook->AddPage(match_template_results_panel, "MT Results", false, 0);
+	experimental_panel->ExperimentalBook->AddPage(phenix_settings_panel, "Phenix Settings", false, 2);
 
 
 //	experimental_panel->ExperimentalBook->AddPage(refine_ctf_panel, "Match Templates ML", true, 0);
@@ -364,6 +373,9 @@ int MyGuiApp::OnExit()
 	movie_asset_panel->Destroy();
 	image_asset_panel->Destroy();
 	align_movies_panel->Destroy();
+#ifdef EXPERIMENTAL
+	phenix_settings_panel->Destroy();
+#endif
 	run_profiles_panel->Destroy();*/
 
 	return 0;

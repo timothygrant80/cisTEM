@@ -168,6 +168,7 @@ protected:
 #ifdef EXPERIMENTAL
 #include "pdb.h"
 #include "water.h"
+#include "phenix_settings.h"
 #endif
 
 #ifdef ENABLEGPU

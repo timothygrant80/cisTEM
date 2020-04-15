@@ -5,6 +5,10 @@ extern MyRunProfilesPanel *run_profiles_panel;
 extern MyVolumeAssetPanel *volume_asset_panel;
 extern MyRefinementResultsPanel *refinement_results_panel;
 
+//#ifdef EXPERIMENTAL
+//extern MyPhenixSettingsPanel *phenix_settings_panel;
+//#endif
+
 wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_COMPLETED, wxThreadEvent);
 
 MyRefine3DPanel::MyRefine3DPanel( wxWindow* parent )

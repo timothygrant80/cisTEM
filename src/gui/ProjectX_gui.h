@@ -1,8 +1,8 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Oct 19 2018)
+// C++ code generated with wxFormBuilder (version Dec 28 2019)
 // http://www.wxformbuilder.org/
 //
-// PLEASE DO *NOT* EDIT THIS FILE!
+// PLEASE DO "NOT" EDIT THIS FILE!
 ///////////////////////////////////////////////////////////////////////////
 
 #ifndef __PROJECTX_GUI_H__
@@ -28,6 +28,7 @@ class DisplayPanel;
 class DisplayRefinementResultsPanel;
 class ImageGroupPickerComboPanel;
 class ImagesPickerComboPanel;
+class JobPanel;
 class MemoryComboBox;
 class MovieGroupPickerComboPanel;
 class MyFSCPanel;
@@ -1222,24 +1223,6 @@ class AssetsPanel : public wxPanel
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-/// Class ExperimentalPanel
-///////////////////////////////////////////////////////////////////////////////
-class ExperimentalPanel : public wxPanel 
-{
-	private:
-	
-	protected:
-		wxStaticLine* m_staticline68;
-	
-	public:
-		wxListbook* ExperimentalBook;
-		
-		ExperimentalPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL ); 
-		~ExperimentalPanel();
-	
-};
-
-///////////////////////////////////////////////////////////////////////////////
 /// Class OverviewPanel
 ///////////////////////////////////////////////////////////////////////////////
 class OverviewPanel : public wxPanel 
@@ -1478,6 +1461,24 @@ class MovieImportDialog : public wxDialog
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+/// Class ExperimentalPanel
+///////////////////////////////////////////////////////////////////////////////
+class ExperimentalPanel : public wxPanel 
+{
+	private:
+	
+	protected:
+		wxStaticLine* m_staticline68;
+	
+	public:
+		wxListbook* ExperimentalBook;
+		
+		ExperimentalPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL ); 
+		~ExperimentalPanel();
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
 /// Class ImageImportDialog
 ///////////////////////////////////////////////////////////////////////////////
 class ImageImportDialog : public wxDialog 
@@ -1688,6 +1689,33 @@ class RunProfilesPanel : public wxPanel
 			m_splitter5->SetSashPosition( 349 );
 			m_splitter5->Disconnect( wxEVT_IDLE, wxIdleEventHandler( RunProfilesPanel::m_splitter5OnIdle ), NULL, this );
 		}
+	
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class PhenixSettingsPanel
+///////////////////////////////////////////////////////////////////////////////
+class PhenixSettingsPanel : public wxPanel 
+{
+	private:
+	
+	protected:
+		wxStaticText* m_staticText36;
+		wxTextCtrl* PhenixPathTextCtrl;
+		wxButton* PhenixPathBrowseButton;
+		wxStaticText* PhenixPathErrorStaticText;
+		
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
+		virtual void OnTextKeyPress( wxKeyEvent& event ) { event.Skip(); }
+		virtual void OnPhenixPathTextChanged( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnPhenixPathBrowseButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		
+	
+	public:
+		
+		PhenixSettingsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 940,517 ), long style = wxHSCROLL|wxTAB_TRAVERSAL|wxVSCROLL ); 
+		~PhenixSettingsPanel();
 	
 };
 

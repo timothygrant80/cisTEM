@@ -163,7 +163,8 @@ bool SumAllPowerSpectra::DoCalculation()
 
 	int number_processed = 0;
 	// thread if available
-	#pragma omp parallel default(none) num_threads(max_threads) shared(output_PS, output_PS_double, max_threads, all_files, total_summed, number_processed, my_progress, is_mrc) private(file_counter, file_z_size, current_mrc_file, current_tif_file, frame_counter, pixel_counter)
+	// firstprivate(N_mem) is necessary for GCC-9 compatibility, see "OpenMP data sharing" at https://gcc.gnu.org/gcc-9/porting_to.html
+	#pragma omp parallel default(none) num_threads(max_threads) firstprivate(N_mem) shared(output_PS, output_PS_double, max_threads, all_files, total_summed, number_processed, my_progress, is_mrc) private(file_counter, file_z_size, current_mrc_file, current_tif_file, frame_counter, pixel_counter)
 	{ // bracket for omp
 
 	int my_total_summed = 0;

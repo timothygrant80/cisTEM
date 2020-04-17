@@ -1,6 +1,6 @@
 #include "../core/gui_core_headers.h"
 
-JobPanel::JobPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
+JobPanel::JobPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style )
 {
 	brother_event_handler = this;
 	my_job_id = -1;

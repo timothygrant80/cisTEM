@@ -44,7 +44,7 @@ class JobPanel : public wxPanel, public SocketCommunicator
 
 	virtual void OnSocketAllJobsFinished() {}
 
-	JobPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 869,566 ), long style = wxTAB_TRAVERSAL );
+	JobPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 869,566 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 	~JobPanel();
 
 };

@@ -1,12 +1,11 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Oct 19 2018)
+// C++ code generated with wxFormBuilder (version Oct 26 2018)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO *NOT* EDIT THIS FILE!
 ///////////////////////////////////////////////////////////////////////////
 
-#ifndef __PROJECTX_GUI_H__
-#define __PROJECTX_GUI_H__
+#pragma once
 
 #include <wx/artprov.h>
 #include <wx/xrc/xmlres.h>
@@ -96,16 +95,16 @@ WX_DEFINE_ARRAY_PTR( wxWizardPageSimple*, WizardPages );
 ///////////////////////////////////////////////////////////////////////////////
 /// Class MainFrame
 ///////////////////////////////////////////////////////////////////////////////
-class MainFrame : public wxFrame 
+class MainFrame : public wxFrame
 {
 	private:
-	
+
 	protected:
 		wxPanel* LeftPanel;
 		wxMenuBar* m_menubar1;
 		wxMenu* FileMenu;
 		wxMenu* HelpMenu;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnMenuBookChange( wxListbookEvent& event ) { event.Skip(); }
 		virtual void OnFileMenuUpdate( wxUpdateUIEvent& event ) { event.Skip(); }
@@ -115,42 +114,42 @@ class MainFrame : public wxFrame
 		virtual void OnFileExit( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnHelpLaunch( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnAboutLaunch( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		wxListbook* MenuBook;
-		
+
 		MainFrame( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("cisTEM"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1366,768 ), long style = wxDEFAULT_FRAME_STYLE|wxTAB_TRAVERSAL|wxWANTS_CHARS );
-		
+
 		~MainFrame();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class AssetPickerComboPanelParent
 ///////////////////////////////////////////////////////////////////////////////
-class AssetPickerComboPanelParent : public wxPanel 
+class AssetPickerComboPanelParent : public wxPanel
 {
 	private:
-	
+
 	protected:
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnSize( wxSizeEvent& event ) { event.Skip(); }
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnPreviousButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnNextButtonClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		MemoryComboBox* AssetComboBox;
 		NoFocusBitmapButton* PreviousButton;
 		NoFocusBitmapButton* NextButton;
 		NoFocusBitmapButton* WindowSelectButton;
-		
-		AssetPickerComboPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxTAB_TRAVERSAL ); 
+
+		AssetPickerComboPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~AssetPickerComboPanelParent();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -159,7 +158,7 @@ class AssetPickerComboPanelParent : public wxPanel
 class AbInitio3DPanelParent : public JobPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticLine* TopStaticLine;
 		wxStaticText* ImageOrClassAverageStaticText;
@@ -245,7 +244,7 @@ class AbInitio3DPanelParent : public JobPanel
 		wxStaticText* RunProfileText1;
 		MemoryComboBox* ReconstructionRunProfileComboBox;
 		wxButton* StartRefinementButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnMethodChange( wxCommandEvent& event ) { event.Skip(); }
@@ -257,17 +256,17 @@ class AbInitio3DPanelParent : public JobPanel
 		virtual void TakeCurrentClicked( wxCommandEvent& event ) { event.Skip(); }
 		virtual void TakeLastStartClicked( wxCommandEvent& event ) { event.Skip(); }
 		virtual void StartRefinementClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		RefinementPackagePickerComboPanel* RefinementPackageComboBox;
 		ClassSelectionPickerComboPanel* ClassSelectionComboBox;
 		wxPanel* OrthResultsPanel;
 		DisplayPanel* ShowOrthDisplayPanel;
-		
-		AbInitio3DPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1631,686 ), long style = wxTAB_TRAVERSAL ); 
+
+		AbInitio3DPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1631,686 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~AbInitio3DPanelParent();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -276,7 +275,7 @@ class AbInitio3DPanelParent : public JobPanel
 class Refine2DPanel : public JobPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticLine* m_staticline12;
 		wxPanel* InputParamsPanel;
@@ -339,7 +338,7 @@ class Refine2DPanel : public JobPanel
 		wxStaticText* RunProfileText;
 		MemoryComboBox* RefinementRunProfileComboBox;
 		wxButton* StartRefinementButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnExpertOptionsToggle( wxCommandEvent& event ) { event.Skip(); }
@@ -349,25 +348,25 @@ class Refine2DPanel : public JobPanel
 		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void StartClassificationClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		RefinementPackagePickerComboPanel* RefinementPackageComboBox;
 		ClassificationPickerComboPanel* InputParametersComboBox;
 		DisplayPanel* ResultDisplayPanel;
-		
-		Refine2DPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1363,691 ), long style = wxTAB_TRAVERSAL ); 
+
+		Refine2DPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1363,691 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~Refine2DPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class RefinementResultsPanel
 ///////////////////////////////////////////////////////////////////////////////
-class RefinementResultsPanel : public wxPanel 
+class RefinementResultsPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxSplitterWindow* m_splitter7;
 		wxPanel* m_panel49;
@@ -472,44 +471,44 @@ class RefinementResultsPanel : public wxPanel
 		wxStaticText* SmoothingFactorStaticText;
 		wxStaticLine* m_staticline30;
 		DisplayPanel* OrthPanel;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void PopupParametersClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void AngularPlotPopupClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnJobDetailsToggle( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		RefinementPackagePickerComboPanel* RefinementPackageComboBox;
 		RefinementPickerComboPanel* InputParametersComboBox;
 		NoFocusBitmapButton* ParametersDetailButton;
 		NoFocusBitmapButton* AngularPlotDetailsButton;
-		
-		RefinementResultsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1007,587 ), long style = wxTAB_TRAVERSAL ); 
+
+		RefinementResultsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1007,587 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~RefinementResultsPanel();
-		
+
 		void m_splitter7OnIdle( wxIdleEvent& )
 		{
 			m_splitter7->SetSashPosition( 900 );
 			m_splitter7->Disconnect( wxEVT_IDLE, wxIdleEventHandler( RefinementResultsPanel::m_splitter7OnIdle ), NULL, this );
 		}
-		
+
 		void m_splitter16OnIdle( wxIdleEvent& )
 		{
 			m_splitter16->SetSashPosition( 350 );
 			m_splitter16->Disconnect( wxEVT_IDLE, wxIdleEventHandler( RefinementResultsPanel::m_splitter16OnIdle ), NULL, this );
 		}
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class ShowCTFResultsParentPanel
 ///////////////////////////////////////////////////////////////////////////////
-class ShowCTFResultsParentPanel : public wxPanel 
+class ShowCTFResultsParentPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxSplitterWindow* m_splitter16;
 		wxPanel* m_panel87;
@@ -547,36 +546,36 @@ class ShowCTFResultsParentPanel : public wxPanel
 		wxStaticText* m_staticText394;
 		wxStaticText* ImageFileText;
 		wxStaticLine* m_staticline86;
-	
+
 	public:
 		BitmapPanel* CTF2DResultsPanel;
 		CTF1DPanel* CTFPlotPanel;
 		DisplayPanel* ImageDisplayPanel;
-		
-		ShowCTFResultsParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 952,539 ), long style = wxTAB_TRAVERSAL ); 
+
+		ShowCTFResultsParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 952,539 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~ShowCTFResultsParentPanel();
-		
+
 		void m_splitter16OnIdle( wxIdleEvent& )
 		{
 			m_splitter16->SetSashPosition( 700 );
 			m_splitter16->Disconnect( wxEVT_IDLE, wxIdleEventHandler( ShowCTFResultsParentPanel::m_splitter16OnIdle ), NULL, this );
 		}
-		
+
 		void m_splitter15OnIdle( wxIdleEvent& )
 		{
 			m_splitter15->SetSashPosition( 0 );
 			m_splitter15->Disconnect( wxEVT_IDLE, wxIdleEventHandler( ShowCTFResultsParentPanel::m_splitter15OnIdle ), NULL, this );
 		}
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class ShowTemplateMatchResultsParentPanel
 ///////////////////////////////////////////////////////////////////////////////
-class ShowTemplateMatchResultsParentPanel : public wxPanel 
+class ShowTemplateMatchResultsParentPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxSplitterWindow* m_splitter16;
 		wxPanel* m_panel87;
@@ -593,42 +592,42 @@ class ShowTemplateMatchResultsParentPanel : public wxPanel
 		wxStaticText* m_staticText394;
 		wxStaticText* ImageFileText;
 		wxStaticLine* m_staticline86;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnSavePeaksClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		NoFocusBitmapButton* SaveButton;
 		wxListCtrl* PeakListCtrl;
 		PlotCurvePanel* HistogramPlotPanel;
 		wxListCtrl* ChangesListCtrl;
 		DisplayPanel* ImageDisplayPanel;
-		
-		ShowTemplateMatchResultsParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 952,539 ), long style = wxTAB_TRAVERSAL ); 
+
+		ShowTemplateMatchResultsParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 952,539 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~ShowTemplateMatchResultsParentPanel();
-		
+
 		void m_splitter16OnIdle( wxIdleEvent& )
 		{
 			m_splitter16->SetSashPosition( 700 );
 			m_splitter16->Disconnect( wxEVT_IDLE, wxIdleEventHandler( ShowTemplateMatchResultsParentPanel::m_splitter16OnIdle ), NULL, this );
 		}
-		
+
 		void m_splitter15OnIdle( wxIdleEvent& )
 		{
 			m_splitter15->SetSashPosition( 0 );
 			m_splitter15->Disconnect( wxEVT_IDLE, wxIdleEventHandler( ShowTemplateMatchResultsParentPanel::m_splitter15OnIdle ), NULL, this );
 		}
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class Refine2DResultsPanelParent
 ///////////////////////////////////////////////////////////////////////////////
-class Refine2DResultsPanelParent : public wxPanel 
+class Refine2DResultsPanelParent : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticLine* m_staticline67;
 		wxSplitterWindow* m_splitter7;
@@ -690,7 +689,7 @@ class Refine2DResultsPanelParent : public wxPanel
 		wxStaticText* ClassNumberStaticText;
 		wxStaticLine* m_staticline65;
 		DisplayPanel* ParticleDisplayPanel;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnJobDetailsToggle( wxCommandEvent& event ) { event.Skip(); }
@@ -705,30 +704,30 @@ class Refine2DResultsPanelParent : public wxPanel
 		virtual void OnCopyOtherButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnClearButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnInvertButtonClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		RefinementPackagePickerComboPanel* RefinementPackageComboBox;
 		ClassificationPickerComboPanel* InputParametersComboBox;
-		
-		Refine2DResultsPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1269,471 ), long style = wxTAB_TRAVERSAL ); 
+
+		Refine2DResultsPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1269,471 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~Refine2DResultsPanelParent();
-		
+
 		void m_splitter7OnIdle( wxIdleEvent& )
 		{
 			m_splitter7->SetSashPosition( -800 );
 			m_splitter7->Disconnect( wxEVT_IDLE, wxIdleEventHandler( Refine2DResultsPanelParent::m_splitter7OnIdle ), NULL, this );
 		}
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class PickingResultsDisplayParentPanel
 ///////////////////////////////////////////////////////////////////////////////
-class PickingResultsDisplayParentPanel : public wxPanel 
+class PickingResultsDisplayParentPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxCheckBox* CirclesAroundParticlesCheckBox;
 		wxCheckBox* ScaleBarCheckBox;
@@ -744,7 +743,7 @@ class PickingResultsDisplayParentPanel : public wxPanel
 		wxStaticText* NumberOfPicksStaticText;
 		wxStaticLine* m_staticline8311;
 		wxStaticLine* m_staticline26;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnCirclesAroundParticlesCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnScaleBarCheckBox( wxCommandEvent& event ) { event.Skip(); }
@@ -755,25 +754,25 @@ class PickingResultsDisplayParentPanel : public wxPanel
 		virtual void OnWienerFilterCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnUndoButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnRedoButtonClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		PickingBitmapPanel* PickingResultsImagePanel;
 		wxButton* UndoButton;
 		wxButton* RedoButton;
-		
-		PickingResultsDisplayParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1123,360 ), long style = wxTAB_TRAVERSAL ); 
+
+		PickingResultsDisplayParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1123,360 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~PickingResultsDisplayParentPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class FindCTFResultsPanel
 ///////////////////////////////////////////////////////////////////////////////
-class FindCTFResultsPanel : public wxPanel 
+class FindCTFResultsPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticLine* m_staticline25;
 		wxSplitterWindow* m_splitter4;
@@ -838,7 +837,7 @@ class FindCTFResultsPanel : public wxPanel
 		wxButton* DeleteFromGroupButton;
 		wxButton* AddToGroupButton;
 		MemoryComboBox* GroupComboBox;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnAllMoviesSelect( wxCommandEvent& event ) { event.Skip(); }
@@ -851,29 +850,29 @@ class FindCTFResultsPanel : public wxPanel
 		virtual void OnNextButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnRemoveFromGroupClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnAddToGroupClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		NoFocusBitmapButton* PlotResultsButton;
-		
-		FindCTFResultsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 895,557 ), long style = wxTAB_TRAVERSAL ); 
+
+		FindCTFResultsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 895,557 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~FindCTFResultsPanel();
-		
+
 		void m_splitter4OnIdle( wxIdleEvent& )
 		{
 			m_splitter4->SetSashPosition( 450 );
 			m_splitter4->Disconnect( wxEVT_IDLE, wxIdleEventHandler( FindCTFResultsPanel::m_splitter4OnIdle ), NULL, this );
 		}
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class MatchTemplateResultsPanelParent
 ///////////////////////////////////////////////////////////////////////////////
-class MatchTemplateResultsPanelParent : public wxPanel 
+class MatchTemplateResultsPanelParent : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticLine* m_staticline25;
 		wxSplitterWindow* m_splitter4;
@@ -944,7 +943,7 @@ class MatchTemplateResultsPanelParent : public wxPanel
 		wxButton* DeleteFromGroupButton;
 		wxButton* AddToGroupButton;
 		MemoryComboBox* GroupComboBox;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnAllImagesSelect( wxCommandEvent& event ) { event.Skip(); }
@@ -956,28 +955,28 @@ class MatchTemplateResultsPanelParent : public wxPanel
 		virtual void OnNextButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnRemoveFromGroupClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnAddToGroupClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
-		
-		MatchTemplateResultsPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 895,557 ), long style = wxTAB_TRAVERSAL ); 
+
+		MatchTemplateResultsPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 895,557 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~MatchTemplateResultsPanelParent();
-		
+
 		void m_splitter4OnIdle( wxIdleEvent& )
 		{
 			m_splitter4->SetSashPosition( 450 );
 			m_splitter4->Disconnect( wxEVT_IDLE, wxIdleEventHandler( MatchTemplateResultsPanelParent::m_splitter4OnIdle ), NULL, this );
 		}
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class PickingResultsPanel
 ///////////////////////////////////////////////////////////////////////////////
-class PickingResultsPanel : public wxPanel 
+class PickingResultsPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticLine* m_staticline25;
 		wxSplitterWindow* m_splitter4;
@@ -1024,7 +1023,7 @@ class PickingResultsPanel : public wxPanel
 		wxButton* DeleteFromGroupButton;
 		wxButton* AddToGroupButton;
 		MemoryComboBox* GroupComboBox;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnAllMoviesSelect( wxCommandEvent& event ) { event.Skip(); }
@@ -1035,29 +1034,29 @@ class PickingResultsPanel : public wxPanel
 		virtual void OnNextButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnRemoveFromGroupClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnAddToGroupClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		PickingResultsDisplayPanel* ResultDisplayPanel;
-		
-		PickingResultsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1309,557 ), long style = wxTAB_TRAVERSAL ); 
+
+		PickingResultsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1309,557 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~PickingResultsPanel();
-		
+
 		void m_splitter4OnIdle( wxIdleEvent& )
 		{
 			m_splitter4->SetSashPosition( 450 );
 			m_splitter4->Disconnect( wxEVT_IDLE, wxIdleEventHandler( PickingResultsPanel::m_splitter4OnIdle ), NULL, this );
 		}
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class MovieAlignResultsPanel
 ///////////////////////////////////////////////////////////////////////////////
-class MovieAlignResultsPanel : public wxPanel 
+class MovieAlignResultsPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticLine* m_staticline25;
 		wxSplitterWindow* m_splitter4;
@@ -1118,7 +1117,7 @@ class MovieAlignResultsPanel : public wxPanel
 		wxButton* DeleteFromGroupButton;
 		wxButton* AddToGroupButton;
 		MemoryComboBox* GroupComboBox;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnAllMoviesSelect( wxCommandEvent& event ) { event.Skip(); }
@@ -1130,136 +1129,136 @@ class MovieAlignResultsPanel : public wxPanel
 		virtual void OnNextButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnRemoveFromGroupClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnAddToGroupClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
-		
-		MovieAlignResultsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1165,564 ), long style = wxTAB_TRAVERSAL|wxWANTS_CHARS ); 
+
+		MovieAlignResultsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1165,564 ), long style = wxTAB_TRAVERSAL|wxWANTS_CHARS, const wxString& name = wxEmptyString );
 		~MovieAlignResultsPanel();
-		
+
 		void m_splitter4OnIdle( wxIdleEvent& )
 		{
 			m_splitter4->SetSashPosition( 450 );
 			m_splitter4->Disconnect( wxEVT_IDLE, wxIdleEventHandler( MovieAlignResultsPanel::m_splitter4OnIdle ), NULL, this );
 		}
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class ActionsPanel
 ///////////////////////////////////////////////////////////////////////////////
-class ActionsPanel : public wxPanel 
+class ActionsPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticLine* m_staticline3;
-	
+
 	public:
 		wxListbook* ActionsBook;
-		
-		ActionsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL ); 
+
+		ActionsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~ActionsPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class SettingsPanel
 ///////////////////////////////////////////////////////////////////////////////
-class SettingsPanel : public wxPanel 
+class SettingsPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticLine* m_staticline3;
-	
+
 	public:
 		wxListbook* SettingsBook;
-		
-		SettingsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL ); 
+
+		SettingsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~SettingsPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class ResultsPanel
 ///////////////////////////////////////////////////////////////////////////////
-class ResultsPanel : public wxPanel 
+class ResultsPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticLine* m_staticline3;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnResultsBookPageChanged( wxListbookEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		wxListbook* ResultsBook;
-		
-		ResultsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL ); 
+
+		ResultsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~ResultsPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class AssetsPanel
 ///////////////////////////////////////////////////////////////////////////////
-class AssetsPanel : public wxPanel 
+class AssetsPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticLine* m_staticline68;
-	
+
 	public:
 		wxListbook* AssetsBook;
-		
-		AssetsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL ); 
+
+		AssetsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~AssetsPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class ExperimentalPanel
 ///////////////////////////////////////////////////////////////////////////////
-class ExperimentalPanel : public wxPanel 
+class ExperimentalPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticLine* m_staticline68;
-	
+
 	public:
 		wxListbook* ExperimentalBook;
-		
-		ExperimentalPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL ); 
+
+		ExperimentalPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~ExperimentalPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class OverviewPanel
 ///////////////////////////////////////////////////////////////////////////////
-class OverviewPanel : public wxPanel 
+class OverviewPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticLine* m_staticline2;
 		wxPanel* WelcomePanel;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnInfoURL( wxTextUrlEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		wxRichTextCtrl* InfoText;
-		
-		OverviewPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL ); 
+
+		OverviewPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~OverviewPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1268,7 +1267,7 @@ class OverviewPanel : public wxPanel
 class FindParticlesPanel : public JobPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticLine* m_staticline12;
 		wxStaticText* m_staticText21;
@@ -1327,7 +1326,7 @@ class FindParticlesPanel : public JobPanel
 		wxStaticText* RunProfileText;
 		MemoryComboBox* RunProfileComboBox;
 		wxButton* StartPickingButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnPickingAlgorithmComboBox( wxCommandEvent& event ) { event.Skip(); }
@@ -1359,31 +1358,31 @@ class FindParticlesPanel : public JobPanel
 		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void StartPickingClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		ImageGroupPickerComboPanel* GroupComboBox;
 		ImagesPickerComboPanel* ImageComboBox;
 		PickingResultsDisplayPanel* PickingResultsPanel;
-		
-		FindParticlesPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL ); 
+
+		FindParticlesPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~FindParticlesPanel();
-		
+
 		void FindParticlesSplitterWindowOnIdle( wxIdleEvent& )
 		{
 			FindParticlesSplitterWindow->SetSashPosition( 350 );
 			FindParticlesSplitterWindow->Disconnect( wxEVT_IDLE, wxIdleEventHandler( FindParticlesPanel::FindParticlesSplitterWindowOnIdle ), NULL, this );
 		}
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class VolumeImportDialog
 ///////////////////////////////////////////////////////////////////////////////
-class VolumeImportDialog : public wxDialog 
+class VolumeImportDialog : public wxDialog
 {
 	private:
-	
+
 	protected:
 		wxListCtrl* PathListCtrl;
 		wxButton* m_button10;
@@ -1395,7 +1394,7 @@ class VolumeImportDialog : public wxDialog
 		wxStaticLine* m_staticline8;
 		wxButton* m_button13;
 		wxButton* ImportButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void AddFilesClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void AddDirectoryClick( wxCommandEvent& event ) { event.Skip(); }
@@ -1404,22 +1403,22 @@ class VolumeImportDialog : public wxDialog
 		virtual void TextChanged( wxCommandEvent& event ) { event.Skip(); }
 		virtual void CancelClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void ImportClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
-		
-		VolumeImportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Import Images"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 484,539 ), long style = wxCLOSE_BOX ); 
+
+		VolumeImportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Import Images"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 484,539 ), long style = wxCLOSE_BOX );
 		~VolumeImportDialog();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class MovieImportDialog
 ///////////////////////////////////////////////////////////////////////////////
-class MovieImportDialog : public wxDialog 
+class MovieImportDialog : public wxDialog
 {
 	private:
-	
+
 	protected:
 		wxListCtrl* PathListCtrl;
 		wxButton* m_button10;
@@ -1453,7 +1452,7 @@ class MovieImportDialog : public wxDialog
 		wxStaticLine* m_staticline8;
 		wxButton* m_button13;
 		wxButton* ImportButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void AddFilesClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void AddDirectoryClick( wxCommandEvent& event ) { event.Skip(); }
@@ -1468,22 +1467,22 @@ class MovieImportDialog : public wxDialog
 		virtual void OnSkipFullIntegrityCheckCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void CancelClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void ImportClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
-		
-		MovieImportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Import Movies"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxCLOSE_BOX ); 
+
+		MovieImportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Import Movies"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxCLOSE_BOX );
 		~MovieImportDialog();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class ImageImportDialog
 ///////////////////////////////////////////////////////////////////////////////
-class ImageImportDialog : public wxDialog 
+class ImageImportDialog : public wxDialog
 {
 	private:
-	
+
 	protected:
 		wxListCtrl* PathListCtrl;
 		wxButton* m_button10;
@@ -1501,7 +1500,7 @@ class ImageImportDialog : public wxDialog
 		wxStaticLine* m_staticline8;
 		wxButton* m_button13;
 		wxButton* ImportButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void AddFilesClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void AddDirectoryClick( wxCommandEvent& event ) { event.Skip(); }
@@ -1511,22 +1510,22 @@ class ImageImportDialog : public wxDialog
 		virtual void OnImagesHaveInvertedContrastCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void CancelClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void ImportClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
-		
-		ImageImportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Import Images"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 484,559 ), long style = wxCLOSE_BOX ); 
+
+		ImageImportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Import Images"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 484,559 ), long style = wxCLOSE_BOX );
 		~ImageImportDialog();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class AssetParentPanel
 ///////////////////////////////////////////////////////////////////////////////
-class AssetParentPanel : public wxPanel 
+class AssetParentPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticLine* m_staticline5;
 		wxSplitterWindow* SplitterWindow;
@@ -1566,7 +1565,7 @@ class AssetParentPanel : public wxPanel
 		wxStaticText* Label8Text;
 		wxStaticText* Label9Title;
 		wxStaticText* Label9Text;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void MouseCheckGroupsVeto( wxMouseEvent& event ) { event.Skip(); }
@@ -1591,30 +1590,30 @@ class AssetParentPanel : public wxPanel
 		virtual void RenameAssetClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void AddSelectedAssetClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnDisplayButtonClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		wxListCtrl* GroupListBox;
 		ContentsList* ContentsListBox;
-		
-		AssetParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1094,668 ), long style = wxHSCROLL|wxTAB_TRAVERSAL|wxVSCROLL ); 
+
+		AssetParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1094,668 ), long style = wxHSCROLL|wxTAB_TRAVERSAL|wxVSCROLL, const wxString& name = wxEmptyString );
 		~AssetParentPanel();
-		
+
 		void SplitterWindowOnIdle( wxIdleEvent& )
 		{
 			SplitterWindow->SetSashPosition( 405 );
 			SplitterWindow->Disconnect( wxEVT_IDLE, wxIdleEventHandler( AssetParentPanel::SplitterWindowOnIdle ), NULL, this );
 		}
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class RunProfilesPanel
 ///////////////////////////////////////////////////////////////////////////////
-class RunProfilesPanel : public wxPanel 
+class RunProfilesPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticLine* m_staticline12;
 		wxSplitterWindow* m_splitter5;
@@ -1648,7 +1647,7 @@ class RunProfilesPanel : public wxPanel
 		wxButton* EditCommandButton;
 		wxButton* RemoveCommandButton;
 		wxButton* CommandsSaveButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnProfileDClick( wxMouseEvent& event ) { event.Skip(); }
@@ -1676,19 +1675,19 @@ class RunProfilesPanel : public wxPanel
 		virtual void EditCommandButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void RemoveCommandButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void CommandsSaveButtonClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
-		
-		RunProfilesPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 940,517 ), long style = wxHSCROLL|wxTAB_TRAVERSAL|wxVSCROLL ); 
+
+		RunProfilesPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 940,517 ), long style = wxHSCROLL|wxTAB_TRAVERSAL|wxVSCROLL, const wxString& name = wxEmptyString );
 		~RunProfilesPanel();
-		
+
 		void m_splitter5OnIdle( wxIdleEvent& )
 		{
 			m_splitter5->SetSashPosition( 349 );
 			m_splitter5->Disconnect( wxEVT_IDLE, wxIdleEventHandler( RunProfilesPanel::m_splitter5OnIdle ), NULL, this );
 		}
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1697,7 +1696,7 @@ class RunProfilesPanel : public wxPanel
 class AlignMoviesPanel : public JobPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticLine* m_staticline12;
 		wxStaticText* m_staticText21;
@@ -1750,7 +1749,7 @@ class AlignMoviesPanel : public JobPanel
 		wxStaticText* RunProfileText;
 		MemoryComboBox* RunProfileComboBox;
 		wxButton* StartAlignmentButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnExpertOptionsToggle( wxCommandEvent& event ) { event.Skip(); }
@@ -1758,14 +1757,14 @@ class AlignMoviesPanel : public JobPanel
 		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void StartAlignmentClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		MovieGroupPickerComboPanel* GroupComboBox;
-		
-		AlignMoviesPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 927,653 ), long style = wxTAB_TRAVERSAL ); 
+
+		AlignMoviesPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 927,653 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~AlignMoviesPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1774,7 +1773,7 @@ class AlignMoviesPanel : public JobPanel
 class Refine3DPanel : public JobPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticLine* m_staticline12;
 		wxPanel* InputParamsPanel;
@@ -1903,7 +1902,7 @@ class Refine3DPanel : public JobPanel
 		wxStaticText* RunProfileText1;
 		MemoryComboBox* ReconstructionRunProfileComboBox;
 		wxButton* StartRefinementButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnUseMaskCheckBox( wxCommandEvent& event ) { event.Skip(); }
@@ -1916,16 +1915,16 @@ class Refine3DPanel : public JobPanel
 		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void StartRefinementClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		RefinementPackagePickerComboPanel* RefinementPackageComboBox;
 		RefinementPickerComboPanel* InputParametersComboBox;
 		DisplayRefinementResultsPanel* ShowRefinementResultsPanel;
-		
-		Refine3DPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1285,635 ), long style = wxTAB_TRAVERSAL ); 
+
+		Refine3DPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1285,635 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~Refine3DPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -1934,7 +1933,7 @@ class Refine3DPanel : public JobPanel
 class RefineCTFParentPanel : public JobPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticLine* m_staticline12;
 		wxPanel* InputParamsPanel;
@@ -2019,7 +2018,7 @@ class RefineCTFParentPanel : public JobPanel
 		wxStaticText* RunProfileText1;
 		MemoryComboBox* ReconstructionRunProfileComboBox;
 		wxButton* StartRefinementButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnUseMaskCheckBox( wxCommandEvent& event ) { event.Skip(); }
@@ -2032,25 +2031,25 @@ class RefineCTFParentPanel : public JobPanel
 		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void StartRefinementClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		RefinementPackagePickerComboPanel* RefinementPackageComboBox;
 		RefinementPickerComboPanel* InputParametersComboBox;
 		DisplayCTFRefinementResultsPanel* ShowRefinementResultsPanel;
-		
-		RefineCTFParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1285,635 ), long style = wxTAB_TRAVERSAL ); 
+
+		RefineCTFParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1285,635 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~RefineCTFParentPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class Sharpen3DPanelParent
 ///////////////////////////////////////////////////////////////////////////////
-class Sharpen3DPanelParent : public wxPanel 
+class Sharpen3DPanelParent : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticText* m_staticText262;
 		wxCheckBox* UseMaskCheckBox;
@@ -2102,7 +2101,7 @@ class Sharpen3DPanelParent : public wxPanel
 		wxGauge* ProgressGuage;
 		wxButton* ImportResultButton;
 		wxButton* SaveResultButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnUseMaskCheckBox( wxCommandEvent& event ) { event.Skip(); }
@@ -2111,14 +2110,14 @@ class Sharpen3DPanelParent : public wxPanel
 		virtual void OnRunButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnImportResultClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnSaveResultClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		VolumeAssetPickerComboPanel* VolumeComboBox;
-		
-		Sharpen3DPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1124,1252 ), long style = wxTAB_TRAVERSAL ); 
+
+		Sharpen3DPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1124,1252 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~Sharpen3DPanelParent();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2127,7 +2126,7 @@ class Sharpen3DPanelParent : public wxPanel
 class Generate3DPanelParent : public JobPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticLine* m_staticline12;
 		wxPanel* InputParamsPanel;
@@ -2184,7 +2183,7 @@ class Generate3DPanelParent : public JobPanel
 		wxStaticText* RunProfileText1;
 		MemoryComboBox* ReconstructionRunProfileComboBox;
 		wxButton* StartReconstructionButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnExpertOptionsToggle( wxCommandEvent& event ) { event.Skip(); }
@@ -2193,16 +2192,16 @@ class Generate3DPanelParent : public JobPanel
 		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void StartReconstructionClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		RefinementPackagePickerComboPanel* RefinementPackageComboBox;
 		RefinementPickerComboPanel* InputParametersComboBox;
 		DisplayRefinementResultsPanel* ShowRefinementResultsPanel;
-		
-		Generate3DPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1285,635 ), long style = wxTAB_TRAVERSAL ); 
+
+		Generate3DPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1285,635 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~Generate3DPanelParent();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2211,7 +2210,7 @@ class Generate3DPanelParent : public JobPanel
 class AutoRefine3DPanelParent : public JobPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticLine* m_staticline12;
 		wxPanel* InputParamsPanel;
@@ -2289,7 +2288,7 @@ class AutoRefine3DPanelParent : public JobPanel
 		wxStaticText* RunProfileText1;
 		MemoryComboBox* ReconstructionRunProfileComboBox;
 		wxButton* StartRefinementButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnUseMaskCheckBox( wxCommandEvent& event ) { event.Skip(); }
@@ -2300,14 +2299,14 @@ class AutoRefine3DPanelParent : public JobPanel
 		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void StartRefinementClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		DisplayRefinementResultsPanel* ShowRefinementResultsPanel;
-		
-		AutoRefine3DPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1216,660 ), long style = wxTAB_TRAVERSAL ); 
+
+		AutoRefine3DPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1216,660 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~AutoRefine3DPanelParent();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2316,7 +2315,7 @@ class AutoRefine3DPanelParent : public JobPanel
 class FindCTFPanel : public JobPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticLine* m_staticline12;
 		wxStaticText* m_staticText21;
@@ -2376,7 +2375,7 @@ class FindCTFPanel : public JobPanel
 		wxStaticText* RunProfileText;
 		MemoryComboBox* RunProfileComboBox;
 		wxButton* StartEstimationButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnExpertOptionsToggle( wxCommandEvent& event ) { event.Skip(); }
@@ -2389,15 +2388,15 @@ class FindCTFPanel : public JobPanel
 		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void StartEstimationClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		ImageGroupPickerComboPanel* GroupComboBox;
 		ShowCTFResultsPanel* CTFResultsPanel;
-		
-		FindCTFPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL ); 
+
+		FindCTFPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~FindCTFPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2406,7 +2405,7 @@ class FindCTFPanel : public JobPanel
 class MatchTemplateParentPanel : public JobPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticLine* m_staticline149;
 		wxPanel* InputPanel;
@@ -2460,7 +2459,7 @@ class MatchTemplateParentPanel : public JobPanel
 		MemoryComboBox* RunProfileComboBox;
 		wxCheckBox* UseGpuCheckBox;
 		wxButton* StartEstimationButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void ResetAllDefaultsClick( wxCommandEvent& event ) { event.Skip(); }
@@ -2468,16 +2467,16 @@ class MatchTemplateParentPanel : public JobPanel
 		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void StartEstimationClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		ImageGroupPickerComboPanel* GroupComboBox;
 		wxComboBox* SymmetryComboBox;
 		ShowTemplateMatchResultsPanel* ResultsPanel;
-		
-		MatchTemplateParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL ); 
+
+		MatchTemplateParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~MatchTemplateParentPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
@@ -2486,7 +2485,7 @@ class MatchTemplateParentPanel : public JobPanel
 class RefineTemplateParentPanel : public JobPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticLine* m_staticline149;
 		wxPanel* InputPanel;
@@ -2550,7 +2549,7 @@ class RefineTemplateParentPanel : public JobPanel
 		wxStaticText* RunProfileText;
 		MemoryComboBox* RunProfileComboBox;
 		wxButton* StartEstimationButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void ResetAllDefaultsClick( wxCommandEvent& event ) { event.Skip(); }
@@ -2558,25 +2557,25 @@ class RefineTemplateParentPanel : public JobPanel
 		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void StartEstimationClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		ImageGroupPickerComboPanel* GroupComboBox;
 		wxComboBox* SymmetryComboBox;
 		ShowTemplateMatchResultsPanel* ResultsPanel;
-		
-		RefineTemplateParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL ); 
+
+		RefineTemplateParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~RefineTemplateParentPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class NewProjectWizard
 ///////////////////////////////////////////////////////////////////////////////
-class NewProjectWizard : public wxWizard 
+class NewProjectWizard : public wxWizard
 {
 	private:
-	
+
 	protected:
 		wxStaticText* m_staticText41;
 		wxTextCtrl* ProjectNameTextCtrl;
@@ -2586,30 +2585,30 @@ class NewProjectWizard : public wxWizard
 		wxStaticText* m_staticText45;
 		wxTextCtrl* ProjectPathTextCtrl;
 		wxStaticText* ErrorText;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnFinished( wxWizardEvent& event ) { event.Skip(); }
 		virtual void OnProjectTextChange( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnParentDirChange( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnBrowseButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnProjectPathChange( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
-		
+
 		NewProjectWizard( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Create New Project"), const wxBitmap& bitmap = wxNullBitmap, const wxPoint& pos = wxDefaultPosition, long style = wxDEFAULT_DIALOG_STYLE );
 		WizardPages m_pages;
 		~NewProjectWizard();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class ExportRefinementPackageWizardParent
 ///////////////////////////////////////////////////////////////////////////////
-class ExportRefinementPackageWizardParent : public wxWizard 
+class ExportRefinementPackageWizardParent : public wxWizard
 {
 	private:
-	
+
 	protected:
 		wxStaticText* m_staticText46511;
 		wxStaticLine* m_staticline10511;
@@ -2628,7 +2627,7 @@ class ExportRefinementPackageWizardParent : public wxWizard
 		wxStaticText* MetaFilenameStaticText;
 		wxTextCtrl* MetaDataFileTextCtrl;
 		wxButton* m_button242;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnFinished( wxWizardEvent& event ) { event.Skip(); }
@@ -2637,23 +2636,23 @@ class ExportRefinementPackageWizardParent : public wxWizard
 		virtual void OnPathChange( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnStackBrowseButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnMetaBrowseButtonClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
-		
+
 		ExportRefinementPackageWizardParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxBitmap& bitmap = wxNullBitmap, const wxPoint& pos = wxDefaultPosition, long style = wxDEFAULT_DIALOG_STYLE );
 		WizardPages m_pages;
 		~ExportRefinementPackageWizardParent();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class ImportRefinementPackageWizardParent
 ///////////////////////////////////////////////////////////////////////////////
-class ImportRefinementPackageWizardParent : public wxWizard 
+class ImportRefinementPackageWizardParent : public wxWizard
 {
 	private:
-	
+
 	protected:
 		wxStaticText* m_staticText4651;
 		wxStaticLine* m_staticline1051;
@@ -2684,7 +2683,7 @@ class ImportRefinementPackageWizardParent : public wxWizard
 		wxStaticText* m_staticText462;
 		wxRadioButton* BlackProteinRadioButton;
 		wxRadioButton* WhiteProteinRadioButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnFinished( wxWizardEvent& event ) { event.Skip(); }
@@ -2693,26 +2692,26 @@ class ImportRefinementPackageWizardParent : public wxWizard
 		virtual void OnPathChange( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnStackBrowseButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnMetaBrowseButtonClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		wxComboBox* SymmetryComboBox;
 		NumericTextCtrl* MolecularWeightTextCtrl;
 		NumericTextCtrl* LargestDimensionTextCtrl;
-		
+
 		ImportRefinementPackageWizardParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxBitmap& bitmap = wxNullBitmap, const wxPoint& pos = wxDefaultPosition, long style = wxDEFAULT_DIALOG_STYLE );
 		WizardPages m_pages;
 		~ImportRefinementPackageWizardParent();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class AddRunCommandDialog
 ///////////////////////////////////////////////////////////////////////////////
-class AddRunCommandDialog : public wxDialog 
+class AddRunCommandDialog : public wxDialog
 {
 	private:
-	
+
 	protected:
 		wxStaticText* m_staticText45;
 		wxStaticText* m_staticText46;
@@ -2723,14 +2722,14 @@ class AddRunCommandDialog : public wxDialog
 		wxStaticLine* m_staticline14;
 		wxButton* OKButton;
 		wxButton* CancelButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnEnter( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnOverrideCheckbox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnOKClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnCancelClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		wxTextCtrl* CommandTextCtrl;
 		wxSpinCtrl* NumberCopiesSpinCtrl;
@@ -2738,19 +2737,19 @@ class AddRunCommandDialog : public wxDialog
 		wxSpinCtrl* DelayTimeSpinCtrl;
 		wxCheckBox* OverrideCheckBox;
 		wxSpinCtrl* OverridenNoCopiesSpinCtrl;
-		
-		AddRunCommandDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Enter Command..."), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 528,262 ), long style = wxDEFAULT_DIALOG_STYLE ); 
+
+		AddRunCommandDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Enter Command..."), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 528,262 ), long style = wxDEFAULT_DIALOG_STYLE );
 		~AddRunCommandDialog();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class RenameDialog
 ///////////////////////////////////////////////////////////////////////////////
-class RenameDialog : public wxDialog 
+class RenameDialog : public wxDialog
 {
 	private:
-	
+
 	protected:
 		wxBoxSizer* MainBoxSizer;
 		wxStaticText* m_staticText246;
@@ -2759,50 +2758,50 @@ class RenameDialog : public wxDialog
 		wxStaticLine* m_staticline19;
 		wxButton* CancelButton;
 		wxButton* RenameButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnCancelClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnRenameClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		wxBoxSizer* RenameBoxSizer;
-		
-		RenameDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Rename Assets"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxDEFAULT_DIALOG_STYLE ); 
+
+		RenameDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Rename Assets"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxDEFAULT_DIALOG_STYLE );
 		~RenameDialog();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class NewRefinementPackageWizard
 ///////////////////////////////////////////////////////////////////////////////
-class NewRefinementPackageWizard : public wxWizard 
+class NewRefinementPackageWizard : public wxWizard
 {
 	private:
-	
+
 	protected:
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnFinished( wxWizardEvent& event ) { event.Skip(); }
 		virtual void PageChanged( wxWizardEvent& event ) { event.Skip(); }
 		virtual void PageChanging( wxWizardEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
-		
+
 		NewRefinementPackageWizard( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Create New Refinement Package"), const wxBitmap& bitmap = wxNullBitmap, const wxPoint& pos = wxDefaultPosition, long style = wxDEFAULT_DIALOG_STYLE );
 		WizardPages m_pages;
 		~NewRefinementPackageWizard();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class VolumeChooserDialog
 ///////////////////////////////////////////////////////////////////////////////
-class VolumeChooserDialog : public wxDialog 
+class VolumeChooserDialog : public wxDialog
 {
 	private:
-	
+
 	protected:
 		wxBoxSizer* MainBoxSizer;
 		wxStaticText* m_staticText246;
@@ -2810,27 +2809,27 @@ class VolumeChooserDialog : public wxDialog
 		wxStaticLine* m_staticline19;
 		wxButton* CancelButton;
 		wxButton* SetButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnCancelClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnRenameClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		VolumeAssetPickerComboPanel* ComboBox;
-		
-		VolumeChooserDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Select new reference"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE ); 
+
+		VolumeChooserDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Select new reference"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE );
 		~VolumeChooserDialog();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class FilterDialog
 ///////////////////////////////////////////////////////////////////////////////
-class FilterDialog : public wxDialog 
+class FilterDialog : public wxDialog
 {
 	private:
-	
+
 	protected:
 		wxBoxSizer* MainBoxSizer;
 		wxStaticText* m_staticText64;
@@ -2843,27 +2842,27 @@ class FilterDialog : public wxDialog
 		wxStaticLine* m_staticline21;
 		wxButton* CancelButton;
 		wxButton* FilterButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnCancelClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnFilterClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		wxStaticText* m_staticText81;
-		
-		FilterDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Filter / Sort Movies"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxDEFAULT_DIALOG_STYLE ); 
+
+		FilterDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Filter / Sort Movies"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxDEFAULT_DIALOG_STYLE );
 		~FilterDialog();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class ParticlePositionExportDialog
 ///////////////////////////////////////////////////////////////////////////////
-class ParticlePositionExportDialog : public wxDialog 
+class ParticlePositionExportDialog : public wxDialog
 {
 	private:
-	
+
 	protected:
 		wxPanel* m_panel38;
 		wxComboBox* GroupComboBox;
@@ -2871,27 +2870,27 @@ class ParticlePositionExportDialog : public wxDialog
 		wxStaticText* WarningText;
 		wxButton* CancelButton;
 		wxButton* ExportButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnDirChanged( wxFileDirPickerEvent& event ) { event.Skip(); }
 		virtual void OnCancelButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnExportButtonClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
-		
-		ParticlePositionExportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Export particle positions"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE ); 
+
+		ParticlePositionExportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Export particle positions"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE );
 		~ParticlePositionExportDialog();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class FrealignExportDialog
 ///////////////////////////////////////////////////////////////////////////////
-class FrealignExportDialog : public wxDialog 
+class FrealignExportDialog : public wxDialog
 {
 	private:
-	
+
 	protected:
 		wxPanel* m_panel38;
 		wxComboBox* GroupComboBox;
@@ -2905,28 +2904,28 @@ class FrealignExportDialog : public wxDialog
 		wxStaticText* WarningText;
 		wxButton* CancelButton;
 		wxButton* ExportButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnFlipCTFCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnOutputImageStackFileChanged( wxFileDirPickerEvent& event ) { event.Skip(); }
 		virtual void OnCancelButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnExportButtonClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
-		
-		FrealignExportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Export to Frealign"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE ); 
+
+		FrealignExportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Export to Frealign"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE );
 		~FrealignExportDialog();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class RelionExportDialog
 ///////////////////////////////////////////////////////////////////////////////
-class RelionExportDialog : public wxDialog 
+class RelionExportDialog : public wxDialog
 {
 	private:
-	
+
 	protected:
 		wxPanel* m_panel38;
 		wxComboBox* GroupComboBox;
@@ -2943,29 +2942,29 @@ class RelionExportDialog : public wxDialog
 		wxStaticText* WarningText;
 		wxButton* CancelButton;
 		wxButton* ExportButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnNormalizeCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnFlipCTFCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnOutputImageStackFileChanged( wxFileDirPickerEvent& event ) { event.Skip(); }
 		virtual void OnCancelButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnExportButtonClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
-		
-		RelionExportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Export to Relion"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE ); 
+
+		RelionExportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Export to Relion"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE );
 		~RelionExportDialog();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class RefinementPackageAssetPanel
 ///////////////////////////////////////////////////////////////////////////////
-class RefinementPackageAssetPanel : public wxPanel 
+class RefinementPackageAssetPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticLine* m_staticline52;
 		wxSplitterWindow* m_splitter11;
@@ -3001,7 +3000,7 @@ class RefinementPackageAssetPanel : public wxPanel
 		wxStaticText* NumberofRefinementsText;
 		wxStaticText* m_staticText212;
 		wxStaticText* LastRefinementIDText;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnCreateClick( wxCommandEvent& event ) { event.Skip(); }
@@ -3018,400 +3017,400 @@ class RefinementPackageAssetPanel : public wxPanel
 		virtual void MouseCheckParticlesVeto( wxMouseEvent& event ) { event.Skip(); }
 		virtual void OnDisplayStackButton( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnVolumeListItemActivated( wxListEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
-		
-		RefinementPackageAssetPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 770,428 ), long style = wxTAB_TRAVERSAL ); 
+
+		RefinementPackageAssetPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 770,428 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~RefinementPackageAssetPanel();
-		
+
 		void m_splitter11OnIdle( wxIdleEvent& )
 		{
 			m_splitter11->SetSashPosition( 600 );
 			m_splitter11->Disconnect( wxEVT_IDLE, wxIdleEventHandler( RefinementPackageAssetPanel::m_splitter11OnIdle ), NULL, this );
 		}
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class TemplateWizardPanel
 ///////////////////////////////////////////////////////////////////////////////
-class TemplateWizardPanel : public wxPanel 
+class TemplateWizardPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticText* m_staticText214;
-	
+
 	public:
 		wxComboBox* GroupComboBox;
 		AutoWrapStaticText* InfoText;
-		
-		TemplateWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+
+		TemplateWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~TemplateWizardPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class InputParameterWizardPanel
 ///////////////////////////////////////////////////////////////////////////////
-class InputParameterWizardPanel : public wxPanel 
+class InputParameterWizardPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticText* m_staticText214;
-	
+
 	public:
 		wxComboBox* GroupComboBox;
 		AutoWrapStaticText* InfoText;
-		
-		InputParameterWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+
+		InputParameterWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~InputParameterWizardPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class ClassSelectionWizardPanel
 ///////////////////////////////////////////////////////////////////////////////
-class ClassSelectionWizardPanel : public wxPanel 
+class ClassSelectionWizardPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticText* m_staticText416;
-	
+
 	public:
 		wxListCtrl* SelectionListCtrl;
 		AutoWrapStaticText* InfoText;
-		
-		ClassSelectionWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+
+		ClassSelectionWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~ClassSelectionWizardPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class SymmetryWizardPanel
 ///////////////////////////////////////////////////////////////////////////////
-class SymmetryWizardPanel : public wxPanel 
+class SymmetryWizardPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticText* m_staticText214;
-	
+
 	public:
 		wxComboBox* SymmetryComboBox;
 		AutoWrapStaticText* InfoText;
-		
-		SymmetryWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+
+		SymmetryWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~SymmetryWizardPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class MolecularWeightWizardPanel
 ///////////////////////////////////////////////////////////////////////////////
-class MolecularWeightWizardPanel : public wxPanel 
+class MolecularWeightWizardPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticText* m_staticText214;
-	
+
 	public:
 		NumericTextCtrl* MolecularWeightTextCtrl;
 		AutoWrapStaticText* InfoText;
-		
-		MolecularWeightWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+
+		MolecularWeightWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~MolecularWeightWizardPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class InitialReferenceSelectWizardPanel
 ///////////////////////////////////////////////////////////////////////////////
-class InitialReferenceSelectWizardPanel : public wxPanel 
+class InitialReferenceSelectWizardPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticLine* m_staticline108;
-	
+
 	public:
 		wxBoxSizer* MainSizer;
 		wxStaticText* TitleText;
 		wxScrolledWindow* ScrollWindow;
 		wxBoxSizer* ScrollSizer;
 		AutoWrapStaticText* InfoText;
-		
-		InitialReferenceSelectWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+
+		InitialReferenceSelectWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~InitialReferenceSelectWizardPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class LargestDimensionWizardPanel
 ///////////////////////////////////////////////////////////////////////////////
-class LargestDimensionWizardPanel : public wxPanel 
+class LargestDimensionWizardPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticText* m_staticText214;
-	
+
 	public:
 		NumericTextCtrl* LargestDimensionTextCtrl;
 		AutoWrapStaticText* InfoText;
-		
-		LargestDimensionWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+
+		LargestDimensionWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~LargestDimensionWizardPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class OutputPixelSizeWizardPanel
 ///////////////////////////////////////////////////////////////////////////////
-class OutputPixelSizeWizardPanel : public wxPanel 
+class OutputPixelSizeWizardPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticText* m_staticText214;
-	
+
 	public:
 		NumericTextCtrl* OutputPixelSizeTextCtrl;
 		AutoWrapStaticText* InfoText;
-		
-		OutputPixelSizeWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+
+		OutputPixelSizeWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~OutputPixelSizeWizardPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class ParticleGroupWizardPanel
 ///////////////////////////////////////////////////////////////////////////////
-class ParticleGroupWizardPanel : public wxPanel 
+class ParticleGroupWizardPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticText* m_staticText2141;
-	
+
 	public:
 		wxComboBox* ParticlePositionsGroupComboBox;
 		AutoWrapStaticText* InfoText;
-		
-		ParticleGroupWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+
+		ParticleGroupWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~ParticleGroupWizardPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class BoxSizeWizardPanel
 ///////////////////////////////////////////////////////////////////////////////
-class BoxSizeWizardPanel : public wxPanel 
+class BoxSizeWizardPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticText* m_staticText21411;
-	
+
 	public:
 		wxSpinCtrl* BoxSizeSpinCtrl;
 		AutoWrapStaticText* InfoText;
-		
-		BoxSizeWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+
+		BoxSizeWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~BoxSizeWizardPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class NumberofClassesWizardPanel
 ///////////////////////////////////////////////////////////////////////////////
-class NumberofClassesWizardPanel : public wxPanel 
+class NumberofClassesWizardPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticText* m_staticText214111;
-	
+
 	public:
 		wxSpinCtrl* NumberOfClassesSpinCtrl;
 		AutoWrapStaticText* InfoText;
-		
-		NumberofClassesWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+
+		NumberofClassesWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~NumberofClassesWizardPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class ClassesSetupWizardPanelA
 ///////////////////////////////////////////////////////////////////////////////
-class ClassesSetupWizardPanelA : public wxPanel 
+class ClassesSetupWizardPanelA : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticText* m_staticText21411;
 		wxRadioButton* m_radioBtn40;
-	
+
 	public:
 		wxRadioButton* CarryOverYesButton;
 		AutoWrapStaticText* InfoText;
-		
-		ClassesSetupWizardPanelA( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+
+		ClassesSetupWizardPanelA( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~ClassesSetupWizardPanelA();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class RecentrePicksWizardPanel
 ///////////////////////////////////////////////////////////////////////////////
-class RecentrePicksWizardPanel : public wxPanel 
+class RecentrePicksWizardPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticText* m_staticText21411;
 		wxRadioButton* m_radioBtn40;
-	
+
 	public:
 		wxRadioButton* ReCentreYesButton;
 		AutoWrapStaticText* InfoText;
-		
-		RecentrePicksWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+
+		RecentrePicksWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~RecentrePicksWizardPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class RemoveDuplicatesWizardPanel
 ///////////////////////////////////////////////////////////////////////////////
-class RemoveDuplicatesWizardPanel : public wxPanel 
+class RemoveDuplicatesWizardPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticText* m_staticText21411;
 		wxRadioButton* m_radioBtn40;
-	
+
 	public:
 		wxRadioButton* RemoveDuplicateYesButton;
 		AutoWrapStaticText* InfoText;
-		
-		RemoveDuplicatesWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+
+		RemoveDuplicatesWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~RemoveDuplicatesWizardPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class RemoveDuplicateThresholdWizardPanel
 ///////////////////////////////////////////////////////////////////////////////
-class RemoveDuplicateThresholdWizardPanel : public wxPanel 
+class RemoveDuplicateThresholdWizardPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticText* m_staticText214;
-	
+
 	public:
 		NumericTextCtrl* DuplicatePickThresholdTextCtrl;
 		AutoWrapStaticText* InfoText;
-		
-		RemoveDuplicateThresholdWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+
+		RemoveDuplicateThresholdWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~RemoveDuplicateThresholdWizardPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class ClassesSetupWizardPanelB
 ///////////////////////////////////////////////////////////////////////////////
-class ClassesSetupWizardPanelB : public wxPanel 
+class ClassesSetupWizardPanelB : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticText* m_staticText21411;
 		wxStaticLine* m_staticline103;
-	
+
 	public:
 		wxListCtrl* ClassListCtrl;
 		AutoWrapStaticText* InfoText;
-		
-		ClassesSetupWizardPanelB( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+
+		ClassesSetupWizardPanelB( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~ClassesSetupWizardPanelB();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class ClassesSetupWizardPanelC
 ///////////////////////////////////////////////////////////////////////////////
-class ClassesSetupWizardPanelC : public wxPanel 
+class ClassesSetupWizardPanelC : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticText* m_staticText21411;
 		wxStaticLine* m_staticline104;
-	
+
 	public:
 		wxListCtrl* NewClassListCtrl;
 		wxListCtrl* OldClassListCtrl;
 		AutoWrapStaticText* InfoText;
-		
-		ClassesSetupWizardPanelC( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+
+		ClassesSetupWizardPanelC( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~ClassesSetupWizardPanelC();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class ClassesSetupWizardPanelD
 ///////////////////////////////////////////////////////////////////////////////
-class ClassesSetupWizardPanelD : public wxPanel 
+class ClassesSetupWizardPanelD : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticText* m_staticText21411;
 		wxRadioButton* m_radioBtn40;
-	
+
 	public:
 		wxRadioButton* BestOccupancyRadioButton;
 		AutoWrapStaticText* InfoText;
-		
-		ClassesSetupWizardPanelD( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+
+		ClassesSetupWizardPanelD( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~ClassesSetupWizardPanelD();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class ClassesSetupWizardPanelE
 ///////////////////////////////////////////////////////////////////////////////
-class ClassesSetupWizardPanelE : public wxPanel 
+class ClassesSetupWizardPanelE : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticText* m_staticText21411;
 		wxRadioButton* m_radioBtn40;
-	
+
 	public:
 		wxRadioButton* RandomiseOccupanciesRadioButton;
 		AutoWrapStaticText* InfoText;
-		
-		ClassesSetupWizardPanelE( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL ); 
+
+		ClassesSetupWizardPanelE( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~ClassesSetupWizardPanelE();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class FSCPanel
 ///////////////////////////////////////////////////////////////////////////////
-class FSCPanel : public wxPanel 
+class FSCPanel : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxBoxSizer* TitleSizer;
 		wxStaticText* TitleStaticText;
@@ -3420,46 +3419,46 @@ class FSCPanel : public wxPanel
 		wxStaticLine* m_staticline104;
 		wxStaticLine* m_staticline52;
 		PlotFSCPanel* PlotPanel;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void SaveImageClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void PopupTextClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		NoFocusBitmapButton* SaveButton;
 		NoFocusBitmapButton* FSCDetailsButton;
-		
-		FSCPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL ); 
+
+		FSCPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~FSCPanel();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class DisplayPanelParent
 ///////////////////////////////////////////////////////////////////////////////
-class DisplayPanelParent : public wxPanel 
+class DisplayPanelParent : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxBoxSizer* MainSizer;
 		wxToolBar* Toolbar;
-	
+
 	public:
-		
-		DisplayPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL ); 
+
+		DisplayPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~DisplayPanelParent();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class DisplayManualDialogParent
 ///////////////////////////////////////////////////////////////////////////////
-class DisplayManualDialogParent : public wxDialog 
+class DisplayManualDialogParent : public wxDialog
 {
 	private:
-	
+
 	protected:
 		wxBoxSizer* MainSizer;
 		wxStaticLine* m_staticline58;
@@ -3475,7 +3474,7 @@ class DisplayManualDialogParent : public wxDialog
 		wxStaticLine* m_staticline63;
 		wxButton* m_button94;
 		wxButton* m_button95;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnClose( wxCloseEvent& event ) { event.Skip(); }
 		virtual void OnLeftDown( wxMouseEvent& event ) { event.Skip(); }
@@ -3488,60 +3487,60 @@ class DisplayManualDialogParent : public wxDialog
 		virtual void OnRealtimeCheck( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnButtonOK( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnButtonCancel( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
-		
-		DisplayManualDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Manual Grey Settings"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxDEFAULT_DIALOG_STYLE ); 
+
+		DisplayManualDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Manual Grey Settings"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxDEFAULT_DIALOG_STYLE );
 		~DisplayManualDialogParent();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class ClassificationPlotPanelParent
 ///////////////////////////////////////////////////////////////////////////////
-class ClassificationPlotPanelParent : public wxPanel 
+class ClassificationPlotPanelParent : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxPanel* SigmaPanel;
 		wxPanel* LikelihoodPanel;
 		wxPanel* MobilityPanel;
-	
+
 	public:
 		wxAuiNotebook* my_notebook;
-		
-		ClassificationPlotPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL ); 
+
+		ClassificationPlotPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~ClassificationPlotPanelParent();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class AbInitioPlotPanelParent
 ///////////////////////////////////////////////////////////////////////////////
-class AbInitioPlotPanelParent : public wxPanel 
+class AbInitioPlotPanelParent : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxPanel* SigmaPanel;
-	
+
 	public:
 		wxAuiNotebook* my_notebook;
-		
-		AbInitioPlotPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL ); 
+
+		AbInitioPlotPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~AbInitioPlotPanelParent();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class ClassumSelectionCopyFromDialogParent
 ///////////////////////////////////////////////////////////////////////////////
-class ClassumSelectionCopyFromDialogParent : public wxDialog 
+class ClassumSelectionCopyFromDialogParent : public wxDialog
 {
 	private:
-	
+
 	protected:
 		wxStaticText* m_staticText414;
 		wxStaticLine* m_staticline72;
@@ -3549,50 +3548,50 @@ class ClassumSelectionCopyFromDialogParent : public wxDialog
 		wxStaticLine* m_staticline71;
 		wxButton* OkButton;
 		wxButton* CancelButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnOKButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnCancelButtonClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
-		
-		ClassumSelectionCopyFromDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE ); 
+
+		ClassumSelectionCopyFromDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE );
 		~ClassumSelectionCopyFromDialogParent();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class ErrorDialog
 ///////////////////////////////////////////////////////////////////////////////
-class ErrorDialog : public wxDialog 
+class ErrorDialog : public wxDialog
 {
 	private:
-	
+
 	protected:
 		wxStaticBitmap* m_bitmap1;
 		wxStaticText* m_staticText25;
 		wxButton* m_button23;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnClickOK( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		wxTextCtrl* ErrorText;
-		
-		ErrorDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 514,500 ), long style = wxDEFAULT_DIALOG_STYLE ); 
+
+		ErrorDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 514,500 ), long style = wxDEFAULT_DIALOG_STYLE );
 		~ErrorDialog();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class UnblurResultsPanelParent
 ///////////////////////////////////////////////////////////////////////////////
-class UnblurResultsPanelParent : public wxPanel 
+class UnblurResultsPanelParent : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxBoxSizer* MainSizer;
 		wxSplitterWindow* m_splitter13;
@@ -3610,60 +3609,60 @@ class UnblurResultsPanelParent : public wxPanel
 		wxPanel* m_panel81;
 		wxStaticText* m_staticText371;
 		wxStaticLine* m_staticline72;
-	
+
 	public:
 		wxStaticText* SpectraNyquistStaticText;
 		BitmapPanel* SpectraPanel;
 		wxStaticText* FilenameStaticText;
 		DisplayPanel* ImageDisplayPanel;
-		
-		UnblurResultsPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 698,300 ), long style = wxTAB_TRAVERSAL ); 
+
+		UnblurResultsPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 698,300 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~UnblurResultsPanelParent();
-		
+
 		void m_splitter13OnIdle( wxIdleEvent& )
 		{
 			m_splitter13->SetSashPosition( 542 );
 			m_splitter13->Disconnect( wxEVT_IDLE, wxIdleEventHandler( UnblurResultsPanelParent::m_splitter13OnIdle ), NULL, this );
 		}
-		
+
 		void m_splitter14OnIdle( wxIdleEvent& )
 		{
 			m_splitter14->SetSashPosition( 0 );
 			m_splitter14->Disconnect( wxEVT_IDLE, wxIdleEventHandler( UnblurResultsPanelParent::m_splitter14OnIdle ), NULL, this );
 		}
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class ListCtrlDialog
 ///////////////////////////////////////////////////////////////////////////////
-class ListCtrlDialog : public wxDialog 
+class ListCtrlDialog : public wxDialog
 {
 	private:
-	
+
 	protected:
 		wxButton* m_button108;
 		wxButton* m_button109;
-	
+
 	public:
 		AssetPickerListCtrl* MyListCtrl;
-		
-		ListCtrlDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxDEFAULT_DIALOG_STYLE ); 
+
+		ListCtrlDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxDEFAULT_DIALOG_STYLE );
 		~ListCtrlDialog();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class DisplayRefinementResultsPanelParent
 ///////////////////////////////////////////////////////////////////////////////
-class DisplayRefinementResultsPanelParent : public wxPanel 
+class DisplayRefinementResultsPanelParent : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticText* OrthText;
 		wxStaticLine* m_staticline109;
-	
+
 	public:
 		wxSplitterWindow* LeftRightSplitter;
 		wxPanel* LeftPanel;
@@ -3677,35 +3676,35 @@ class DisplayRefinementResultsPanelParent : public wxPanel
 		wxPanel* RightPanel;
 		DisplayPanel* ShowOrthDisplayPanel;
 		wxPanel* RoundPlotPanel;
-		
-		DisplayRefinementResultsPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 952,539 ), long style = wxTAB_TRAVERSAL ); 
+
+		DisplayRefinementResultsPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 952,539 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~DisplayRefinementResultsPanelParent();
-		
+
 		void LeftRightSplitterOnIdle( wxIdleEvent& )
 		{
 			LeftRightSplitter->SetSashPosition( 600 );
 			LeftRightSplitter->Disconnect( wxEVT_IDLE, wxIdleEventHandler( DisplayRefinementResultsPanelParent::LeftRightSplitterOnIdle ), NULL, this );
 		}
-		
+
 		void TopBottomSplitterOnIdle( wxIdleEvent& )
 		{
 			TopBottomSplitter->SetSashPosition( 0 );
 			TopBottomSplitter->Disconnect( wxEVT_IDLE, wxIdleEventHandler( DisplayRefinementResultsPanelParent::TopBottomSplitterOnIdle ), NULL, this );
 		}
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class DisplayCTFRefinementResultsPanelParent
 ///////////////////////////////////////////////////////////////////////////////
-class DisplayCTFRefinementResultsPanelParent : public wxPanel 
+class DisplayCTFRefinementResultsPanelParent : public wxPanel
 {
 	private:
-	
+
 	protected:
 		wxStaticText* OrthText;
 		wxStaticLine* m_staticline109;
-	
+
 	public:
 		wxSplitterWindow* LeftRightSplitter;
 		wxPanel* LeftPanel;
@@ -3719,83 +3718,83 @@ class DisplayCTFRefinementResultsPanelParent : public wxPanel
 		wxPanel* RightPanel;
 		DisplayPanel* ShowOrthDisplayPanel;
 		wxPanel* RoundPlotPanel;
-		
-		DisplayCTFRefinementResultsPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 952,539 ), long style = wxTAB_TRAVERSAL ); 
+
+		DisplayCTFRefinementResultsPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 952,539 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~DisplayCTFRefinementResultsPanelParent();
-		
+
 		void LeftRightSplitterOnIdle( wxIdleEvent& )
 		{
 			LeftRightSplitter->SetSashPosition( 600 );
 			LeftRightSplitter->Disconnect( wxEVT_IDLE, wxIdleEventHandler( DisplayCTFRefinementResultsPanelParent::LeftRightSplitterOnIdle ), NULL, this );
 		}
-		
+
 		void TopBottomSplitterOnIdle( wxIdleEvent& )
 		{
 			TopBottomSplitter->SetSashPosition( 0 );
 			TopBottomSplitter->Disconnect( wxEVT_IDLE, wxIdleEventHandler( DisplayCTFRefinementResultsPanelParent::TopBottomSplitterOnIdle ), NULL, this );
 		}
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class PopupTextDialogParent
 ///////////////////////////////////////////////////////////////////////////////
-class PopupTextDialogParent : public wxDialog 
+class PopupTextDialogParent : public wxDialog
 {
 	private:
-	
+
 	protected:
 		wxButton* CloseButton;
 		wxButton* ClipBoardButton;
 		wxButton* m_button146;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnCloseButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnCopyToClipboardClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnSaveButtonClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		wxTextCtrl* OutputTextCtrl;
-		
-		PopupTextDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxCAPTION|wxCLOSE_BOX|wxRESIZE_BORDER ); 
+
+		PopupTextDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxCAPTION|wxCLOSE_BOX|wxRESIZE_BORDER );
 		~PopupTextDialogParent();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class LargeAngularPlotDialogParent
 ///////////////////////////////////////////////////////////////////////////////
-class LargeAngularPlotDialogParent : public wxDialog 
+class LargeAngularPlotDialogParent : public wxDialog
 {
 	private:
-	
+
 	protected:
 		wxButton* CloseButton;
 		wxButton* ClipBoardButton;
 		wxButton* SaveButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnCloseButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnCopyToClipboardClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnSaveButtonClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		AngularDistributionPlotPanel* AngularPlotPanel;
-		
-		LargeAngularPlotDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1000,800 ), long style = wxCAPTION|wxCLOSE_BOX|wxRESIZE_BORDER ); 
+
+		LargeAngularPlotDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1000,800 ), long style = wxCAPTION|wxCLOSE_BOX|wxRESIZE_BORDER );
 		~LargeAngularPlotDialogParent();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class RefinementParametersDialogParent
 ///////////////////////////////////////////////////////////////////////////////
-class RefinementParametersDialogParent : public wxDialog 
+class RefinementParametersDialogParent : public wxDialog
 {
 	private:
-	
+
 	protected:
 		wxToolBar* ClassToolBar;
 		wxStaticText* m_staticText831;
@@ -3803,26 +3802,26 @@ class RefinementParametersDialogParent : public wxDialog
 		RefinementParametersListCtrl* ParameterListCtrl;
 		wxButton* CloseButton;
 		wxButton* SaveButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnCloseButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnSaveButtonClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
-		
-		RefinementParametersDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1000,800 ), long style = wxCAPTION|wxCLOSE_BOX|wxRESIZE_BORDER ); 
+
+		RefinementParametersDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1000,800 ), long style = wxCAPTION|wxCLOSE_BOX|wxRESIZE_BORDER );
 		~RefinementParametersDialogParent();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class AboutDialog
 ///////////////////////////////////////////////////////////////////////////////
-class AboutDialog : public wxDialog 
+class AboutDialog : public wxDialog
 {
 	private:
-	
+
 	protected:
 		wxStaticLine* m_staticline131;
 		wxStaticLine* m_staticline130;
@@ -3841,24 +3840,24 @@ class AboutDialog : public wxDialog
 		wxHyperlinkCtrl* m_hyperlink2;
 		wxStaticLine* m_staticline129;
 		wxButton* m_button141;
-	
+
 	public:
 		wxStaticBitmap* LogoBitmap;
 		wxStaticText* VersionStaticText;
 		wxStaticText* BuildDateText;
-		
-		AboutDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("About cisTEM"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxDEFAULT_DIALOG_STYLE ); 
+
+		AboutDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("About cisTEM"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxDEFAULT_DIALOG_STYLE );
 		~AboutDialog();
-	
+
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class DistributionPlotDialogParent
 ///////////////////////////////////////////////////////////////////////////////
-class DistributionPlotDialogParent : public wxDialog 
+class DistributionPlotDialogParent : public wxDialog
 {
 	private:
-	
+
 	protected:
 		wxStaticText* m_staticText64711;
 		NumericTextCtrl* UpperBoundYNumericCtrl;
@@ -3871,7 +3870,7 @@ class DistributionPlotDialogParent : public wxDialog
 		NumericTextCtrl* UpperBoundXNumericCtrl;
 		wxButton* SaveTXTButton;
 		wxButton* SavePNGButton;
-		
+
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpperBoundYKillFocus( wxFocusEvent& event ) { event.Skip(); }
 		virtual void OnUpperBoundYSetFocus( wxFocusEvent& event ) { event.Skip(); }
@@ -3888,14 +3887,13 @@ class DistributionPlotDialogParent : public wxDialog
 		virtual void OnUpperBoundXTextEnter( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnSaveTXTButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnSavePNGButtonClick( wxCommandEvent& event ) { event.Skip(); }
-		
-	
+
+
 	public:
 		PlotCurvePanel* PlotCurvePanelInstance;
-		
-		DistributionPlotDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 575,462 ), long style = wxDEFAULT_DIALOG_STYLE ); 
+
+		DistributionPlotDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 575,462 ), long style = wxDEFAULT_DIALOG_STYLE );
 		~DistributionPlotDialogParent();
-	
+
 };
 
-#endif //__PROJECTX_GUI_H__

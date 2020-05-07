@@ -19,7 +19,7 @@
 # This script should be run on an older node on the cluster, to ensure compatibility. I think we want glibc <= 2.18
 # % bsub -n 8 -R "span[hosts=1]" -x -Is -XF bash
 #
-version=4.1.13
+version=4.1.14
 branch_name="ctffind_${version}"
 #configure_flags="--with-wx-config=/groups/grigorieff/home/grantt/Apps/wxWidgets3_cluster_static/bin/wx-config --disable-debugmode --enable-staticmode --enable-mkl CC=icc CXX=icpc "
 configure_flags="--disable-debugmode --enable-staticmode --enable-openmp --enable-mkl CC=icc CXX=icpc "

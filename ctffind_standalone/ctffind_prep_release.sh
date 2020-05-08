@@ -4,7 +4,7 @@
 #
 # Alexis Rohou, 2016
 #
-# Last modified Oct 2018
+# Last modified May 2020
 #
 # Before running this script:
 # - update version in this script
@@ -59,13 +59,11 @@ unset SHELL
 
 # Check out ctffind from github
 module purge
-module load apps/git
 echo "Cloning from git..."
 echo -n Github password: 
 read -s password
 echo
 git clone --single-branch --branch "${branch_name}" "https://arohou:${password}@github.com/ngrigorieff/cisTEM.git" > clone.log 2>&1
-module unload apps/git
 
 cd cisTEM
 rm -f config.guess config.sub depcomp install-sh missing
@@ -94,13 +92,8 @@ COMMENTED_OUT
 module purge
 source ../regenerate_project.b
 
-# make sure we are using the latest Intel compiler, wx, etc
-module purge
-module load apps/intel
-module load apps/wxwidgets
-module load apps/tiff
-module load apps/jpeg
-module load apps/zlib
+# make sure we are using the Intel compiler, wx, etc
+module purge && module load intel/2019.04 wxWidgets/3.0.4 LibTIFF
 
 
 # Configure

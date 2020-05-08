@@ -53,7 +53,7 @@ noinst_HEADERS = 	src/core/asset_group.h \
                  src/core/rle3d.h \
                  src/core/angular_distribution_histogram.h \
                  src/core/local_resolution_estimator.h \
-                 src/core/cistem_paramaters.h \
+                 src/core/cistem_parameters.h \
                  src/core/cistem_star_file_reader.h
 
 bin_PROGRAMS = ctffind

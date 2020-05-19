@@ -25,3 +25,4 @@ RemoteSystemsTempFiles
 .cproject
 /debug_build/
 /release_build/
+**/build*

@@ -26,3 +26,4 @@ RemoteSystemsTempFiles
 /debug_build/
 /release_build/
 **/build*
+**/.DS_Store

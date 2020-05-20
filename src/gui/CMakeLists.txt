@@ -71,4 +71,8 @@ add_library(cisTEM_gui STATIC
 	ShowTemplateMatchResultsPanel.cpp
 )
 
+add_dependencies(cisTEM_gui cisTEM_gui_core)
+add_dependencies(cisTEM_gui cisTEM_core)
+target_link_libraries(cisTEM_gui cisTEM_core)
+target_link_libraries(cisTEM_gui cisTEM_gui_core)
 target_link_libraries(cisTEM_gui ${wxWidgets_LIBRARIES})

@@ -1,4 +1,4 @@
-project(ctffind)
+project(cisTEM)
 cmake_minimum_required(VERSION 2.8)
 
 # specify the C++ standard

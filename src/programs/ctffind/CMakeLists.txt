@@ -1,4 +1,3 @@
-message("In the src/program/ctffind/ CMakeLists file")
 add_executable(ctffind ctffind.cpp)
 add_dependencies(ctffind ctffind_core)
 

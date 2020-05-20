@@ -1,2 +1,7 @@
+add_subdirectory(unblur)
 add_subdirectory(ctffind)
+add_subdirectory(refine2d)
+add_subdirectory(refine3d)
+add_subdirectory(reconstruct3d)
+add_subdirectory(sharpen_map)
 add_subdirectory(projectx)

@@ -1,0 +1,8 @@
+{
+    "C_Cpp.default.configurationProvider": "vector-of-bool.cmake-tools",
+    "C_Cpp.errorSquiggles": "Enabled",
+    "cmake.configureOnOpen": true,
+    "cmake.sourceDirectory": "${workspaceFolder}",
+    "cmake.buildDirectory": "${workspaceFolder}/build/${buildKit}/${buildType}",
+    "cmake.skipConfigureIfCachePresent": false,
+}

@@ -14,5 +14,8 @@
     // ps -ef | grep "Xquartz :\d" | grep -v xinit | awk '{print $9;}'
     "containerEnv": {
         "DISPLAY": "host.docker.internal:0"
-    }
+    },
+    "mounts": [
+        "source=${localEnv:HOME}${localEnv:USERPROFILE},target=/mnt/ext_home,type=bind,consistency=cached"
+    ]
 }

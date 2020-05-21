@@ -138,6 +138,7 @@ MovieAsset WarpToCistemApp::LoadMovieFromWarp(wxXmlDocument warp_doc, wxString w
 	double cs = 2.7;
 	double voltage=300;
 	double dose_rate = 1.0;
+	bool is_valid = true;
 	wxXmlNode *child_1 = warp_doc.GetRoot()->GetChildren();
 	while (child_1) {
 		if ((child_1)->GetName() == "OptionsCTF") {
@@ -145,7 +146,7 @@ MovieAsset WarpToCistemApp::LoadMovieFromWarp(wxXmlDocument warp_doc, wxString w
 			while (child_2) {
 				if (child_2->GetAttribute("Name") == "PixelSizeX") {
 					wxString str_pixel_size = child_2->GetAttribute("Value");
-					if(!str_pixel_size.ToDouble(&pixel_size)) {SendErrorAndCrash("Couldn't convert Pixel Size to a double");}
+					if(!str_pixel_size.ToDouble(&pixel_size)) {SendInfo("Couldn't convert Pixel Size to a double");is_valid=false;}
 					new_asset.pixel_size = pixel_size;
 					double binning_factor = wanted_binned_pixel_size/pixel_size;
 					if (binning_factor >= 1.0) {
@@ -159,12 +160,12 @@ MovieAsset WarpToCistemApp::LoadMovieFromWarp(wxXmlDocument warp_doc, wxString w
 				}
 				if (child_2->GetAttribute("Name") == "Cs") {
 					wxString str_cs = child_2->GetAttribute("Value");
-					if(!str_cs.ToDouble(&cs)) {SendErrorAndCrash("Couldn't convert Spherical Aberration to a double");}
+					if(!str_cs.ToDouble(&cs)) {SendInfo("Couldn't convert Spherical Aberration to a double");is_valid=false;}
 					new_asset.spherical_aberration = cs;
 				}
 				if (child_2->GetAttribute("Name") == "Voltage") {
 					wxString str_voltage = child_2->GetAttribute("Value");
-					if(!str_voltage.ToDouble(&voltage)) {SendErrorAndCrash("Couldn't convert Voltage to a double");}
+					if(!str_voltage.ToDouble(&voltage)) {SendInfo("Couldn't convert Voltage to a double");is_valid=false;}
 					new_asset.microscope_voltage = voltage;
 				}
 				if (child_2->GetAttribute("Name") == "Dimensions") {
@@ -178,7 +179,7 @@ MovieAsset WarpToCistemApp::LoadMovieFromWarp(wxXmlDocument warp_doc, wxString w
 			while (child_2) {
 				if (child_2->GetAttribute("Name") == "DosePerAngstromFrame") {
 					wxString str_dose_rate = child_2->GetAttribute("Value");
-					if(!str_dose_rate.ToDouble(&dose_rate)) {SendErrorAndCrash("Couldn't convert Dose Rate to a double");}
+					if(!str_dose_rate.ToDouble(&dose_rate)) {SendInfo("Couldn't convert Dose Rate to a double");is_valid=false;}
 					new_asset.dose_per_frame = dose_rate;
 				}
 				child_2 = child_2->GetNext();
@@ -193,9 +194,9 @@ MovieAsset WarpToCistemApp::LoadMovieFromWarp(wxXmlDocument warp_doc, wxString w
 	wxString str_x_size = tokenizer.GetNextToken();
 	wxString str_y_size = tokenizer.GetNextToken();
 	wxString str_number_of_frames = tokenizer.GetNextToken();
-	if(!str_x_size.ToDouble(&x_size_angstroms)) {SendErrorAndCrash("Couldn't convert x size to a double");}
+	if(!str_x_size.ToDouble(&x_size_angstroms)) {SendInfo("Couldn't convert x size to a double");is_valid=false;}
 	int x_size = myroundint(x_size_angstroms/pixel_size);
-	if(!str_y_size.ToDouble(&y_size_angstroms)) {SendErrorAndCrash("Couldn't convert y size to a double");}
+	if(!str_y_size.ToDouble(&y_size_angstroms)) {SendInfo("Couldn't convert y size to a double");is_valid=false;}
 	int y_size = myroundint(y_size_angstroms/pixel_size);
 	int number_of_frames = wxAtoi(str_number_of_frames);
 	new_asset.x_size = x_size;
@@ -203,7 +204,7 @@ MovieAsset WarpToCistemApp::LoadMovieFromWarp(wxXmlDocument warp_doc, wxString w
 	new_asset.number_of_frames = number_of_frames;
 	new_asset.total_dose = number_of_frames * new_asset.dose_per_frame;
 	new_asset.protein_is_white = false;
-	new_asset.is_valid = true;
+	new_asset.is_valid = is_valid;
 	return new_asset;
 }
 
@@ -667,32 +668,35 @@ bool WarpToCistemApp::DoCalculation()
 		if (wxFileName::Exists(xml_filename) && doc.Load(xml_filename) && doc.IsOk())
 		{
 			new_movie_asset = LoadMovieFromWarp(doc, warp_directory, all_files.Item(counter), counter, wanted_binned_pixel_size);
-			movie_list.AddAsset(&new_movie_asset);
+			if (new_movie_asset.is_valid)
+			{
+				movie_list.AddAsset(&new_movie_asset);
 
-			image_filename = warp_directory + "average/" + wxFileName(xml_filename).GetName() + ".mrc";
-			if (do_import_images && wxFileName(image_filename).IsOk() == true && wxFileName(image_filename).FileExists() == true) {
-				new_image_asset = LoadImageFromWarp(image_filename, new_movie_asset.asset_id, new_movie_asset.microscope_voltage, new_movie_asset.spherical_aberration, new_movie_asset.protein_is_white);
-				// Need to do the ctf first to adjust the ctf_estimation_id if necessary
-				if (do_import_ctf_results) {
-					new_image_asset.ctf_estimation_id = new_image_asset.asset_id;
-					wxString wanted_avrot_filename = wanted_folder_name + wxString::Format("/Assets/CTF/%s_CTF_0_avrot.txt", new_image_asset.asset_name);
+				image_filename = warp_directory + "average/" + wxFileName(xml_filename).GetName() + ".mrc";
+				if (do_import_images && wxFileName(image_filename).IsOk() == true && wxFileName(image_filename).FileExists() == true) {
+					new_image_asset = LoadImageFromWarp(image_filename, new_movie_asset.asset_id, new_movie_asset.microscope_voltage, new_movie_asset.spherical_aberration, new_movie_asset.protein_is_white);
+					// Need to do the ctf first to adjust the ctf_estimation_id if necessary
+					if (do_import_ctf_results) {
+						new_image_asset.ctf_estimation_id = new_image_asset.asset_id;
+						wxString wanted_avrot_filename = wanted_folder_name + wxString::Format("/Assets/CTF/%s_CTF_0_avrot.txt", new_image_asset.asset_name);
 
-					CTF new_ctf_asset = LoadCTFFromWarp(doc, new_image_asset.pixel_size, new_movie_asset.microscope_voltage, new_movie_asset.spherical_aberration, wanted_avrot_filename);
-					ctf_list.push_back(new_ctf_asset);
-				}
-				if (do_import_particle_coordinates) {
-					 star_filename = warp_directory + "matching/" + new_image_asset.asset_name + "_" + boxnet_name + ".star";
-					 if (wxFileName::Exists(star_filename)) {
-						 temp_particle_list = LoadParticlePositionsFromWarp(star_filename, new_image_asset, starting_id);
-						 WX_APPEND_ARRAY(particle_list,temp_particle_list);
-						 starting_id += temp_particle_list.GetCount();
-					 }
-				}
-				image_list.AddAsset(&new_image_asset);
-			} else if (do_import_images) wxPrintf("Couldn't find averaged image: %s\n", image_filename);
-
+						CTF new_ctf_asset = LoadCTFFromWarp(doc, new_image_asset.pixel_size, new_movie_asset.microscope_voltage, new_movie_asset.spherical_aberration, wanted_avrot_filename);
+						ctf_list.push_back(new_ctf_asset);
+					}
+					if (do_import_particle_coordinates) {
+						star_filename = warp_directory + "matching/" + new_image_asset.asset_name + "_" + boxnet_name + ".star";
+						if (wxFileName::Exists(star_filename)) {
+							temp_particle_list = LoadParticlePositionsFromWarp(star_filename, new_image_asset, starting_id);
+							WX_APPEND_ARRAY(particle_list,temp_particle_list);
+							starting_id += temp_particle_list.GetCount();
+						}
+					}
+					image_list.AddAsset(&new_image_asset);
+				} else if (do_import_images) wxPrintf("Couldn't find averaged image: %s\n", image_filename);
+			}
+			else wxPrintf("Corrupt warp xml output for movie " + all_files.Item(counter) + "\n");
 		}
-		else wxPrintf("Couldn't find a warp xml output for movie " + all_files.Item(counter) + "\n");
+		else wxPrintf("Couldn't find a valid warp xml output for movie " + all_files.Item(counter) + "\n");
 		my_progress->Update(counter+1);
 	}
 

@@ -51,8 +51,7 @@ add_library(cisTEM_core STATIC
 	angular_distribution_histogram.cpp
 	local_resolution_estimator.cpp 
 	cistem_parameters.cpp
-	cistem_star_file_reader.cpp
-	)
+	cistem_star_file_reader.cpp)
 
 
 target_link_libraries(cisTEM_core ${CMAKE_DL_LIBS})

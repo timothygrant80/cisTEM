@@ -510,7 +510,15 @@ CurvePoint Curve::ReturnValueAtXUsingLinearInterpolation(float wanted_x, float v
 	CurvePoint return_value;
 	if (assume_linear_x)
 	{
-		index_of_previous_bin = int((wanted_x - data_x[0]) / (data_x[1] - data_x[0]));
+		if (data_x[0] == data_x[1])
+		{
+			// Special case where x is constant (it's not really a curve in that case, but we still have to deal with this)
+			index_of_previous_bin = number_of_points-2;
+		}
+		else
+		{
+			index_of_previous_bin = int((wanted_x - data_x[0]) / (data_x[1] - data_x[0]));
+		}
 	}
 	else
 	{

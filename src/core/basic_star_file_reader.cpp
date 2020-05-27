@@ -245,6 +245,9 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString *error_str
 	bool found_valid_data_block = false;
 	bool found_valid_loop_block = false;
 
+	XShiftsAreInAngst = false;
+	YShiftsAreInAngst = false;
+
 	input_file->GoToLine(-1);
 	// find a data block
 
@@ -315,9 +318,19 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString *error_str
 		else
 		if (current_line.StartsWith("_rlnAnglePsi") == true) psi_column = current_column;
 		else
-		if (current_line.StartsWith("_rlnOriginX") == true) xshift_column = current_column;
+		if (current_line.StartsWith("_rlnOriginX") == true)
+		{
+			xshift_column = current_column;
+			if (current_line.StartsWith("_rlnOriginXAngst") == true) XShiftsAreInAngst = true;
+			else;
+		}
 		else
-		if (current_line.StartsWith("_rlnOriginY") == true) yshift_column = current_column;
+		if (current_line.StartsWith("_rlnOriginY") == true) 
+		{
+			yshift_column = current_column;
+			if (current_line.StartsWith("_rlnOriginYAngst") == true) YShiftsAreInAngst = true;
+			else;
+		}
 		else
 		if (current_line.StartsWith("_rlnDefocusU") == true) defocus1_column = current_column;
 		else

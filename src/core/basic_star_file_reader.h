@@ -55,6 +55,9 @@ public:
 
 	bool ExtractParametersFromLine(wxString &wanted_line, wxString *error_string = NULL);
 
+	bool XShiftsAreInAngst;
+	bool YShiftsAreInAngst;
+
 	inline int   ReturnPositionInStack(int line_number) { return cached_parameters[line_number].position_in_stack;}
 	inline float ReturnPhi(int line_number) { return cached_parameters[line_number].phi;}
 	inline float ReturnTheta(int line_number) { return cached_parameters[line_number].theta;}

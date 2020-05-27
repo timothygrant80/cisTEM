@@ -8,6 +8,8 @@ StarFileParameters::StarFileParameters()
 	phi = 0;
 	theta = 0;
 	psi = 0;
+	x_coordinate = 0;
+	y_coordinate = 0;
 	x_shift = 0;
 	y_shift = 0;
 	defocus1 = 0;
@@ -31,6 +33,8 @@ BasicStarFileReader::BasicStarFileReader()
 	phi_column = -1;
 	theta_column = -1;
 	psi_column = -1;
+	xcoordinate_column = -1;
+	ycoordinate_column = -1;
 	xshift_column = -1;
 	yshift_column = -1;
 	defocus1_column = -1;
@@ -146,6 +150,32 @@ bool BasicStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxStr
 
 	temp_parameters.psi = float(temp_double);
 
+	// xcoordinate
+
+	if (xcoordinate_column == -1) temp_double = 0.0;
+	else
+	if (all_tokens[xcoordinate_column].ToDouble(&temp_double) == false)
+	{
+		MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[xcoordinate_column]);
+		if (error_string != NULL) *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[xcoordinate_column]);
+		return false;
+	}
+
+	temp_parameters.x_coordinate = float(temp_double);
+
+	// ycoordinate
+
+	if (ycoordinate_column == -1) temp_double = 0.0;
+	else
+	if (all_tokens[ycoordinate_column].ToDouble(&temp_double) == false)
+	{
+		MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[ycoordinate_column]);
+		if (error_string != NULL) *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[ycoordinate_column]);
+		return false;
+	}
+
+	temp_parameters.y_coordinate = float(temp_double);
+
 	// xshift
 
 	if (xshift_column == -1) temp_double = 0.0;
@@ -245,8 +275,8 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString *error_str
 	bool found_valid_data_block = false;
 	bool found_valid_loop_block = false;
 
-	XShiftsAreInAngst = false;
-	YShiftsAreInAngst = false;
+	x_shifts_are_in_angst = false;
+	y_shifts_are_in_angst = false;
 
 	input_file->GoToLine(-1);
 	// find a data block
@@ -318,17 +348,19 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString *error_str
 		else
 		if (current_line.StartsWith("_rlnAnglePsi") == true) psi_column = current_column;
 		else
+		if (current_line.StartsWith("_rlnCoordinateX") == true) xcoordinate_column = current_column;
+		if (current_line.StartsWith("_rlnCoordinateY") == true) ycoordinate_column = current_column;
 		if (current_line.StartsWith("_rlnOriginX") == true)
 		{
 			xshift_column = current_column;
-			if (current_line.StartsWith("_rlnOriginXAngst") == true) XShiftsAreInAngst = true;
+			if (current_line.StartsWith("_rlnOriginXAngst") == true) x_shifts_are_in_angst = true;
 			else;
 		}
 		else
 		if (current_line.StartsWith("_rlnOriginY") == true) 
 		{
 			yshift_column = current_column;
-			if (current_line.StartsWith("_rlnOriginYAngst") == true) YShiftsAreInAngst = true;
+			if (current_line.StartsWith("_rlnOriginYAngst") == true) y_shifts_are_in_angst = true;
 			else;
 		}
 		else

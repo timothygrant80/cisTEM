@@ -290,8 +290,12 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString *error_str
 		current_line = current_line.Trim(false);
 		if (current_line.Find("data_") != wxNOT_FOUND)
 		{
-			found_valid_data_block = true;
-			break;
+			if (current_line.Contains("data_optics") == true) continue;
+			else
+			{
+				found_valid_data_block = true;
+				break;
+			}
 		}
 	}
 

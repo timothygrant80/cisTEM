@@ -10583,6 +10583,9 @@ ExportRefinementPackageWizardParent::ExportRefinementPackageWizardParent( wxWind
 	RelionRadioButton = new wxRadioButton( ExportTypePage, wxID_ANY, wxT("Relion "), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer3941->Add( RelionRadioButton, 0, wxALL, 5 );
 
+	Relion3RadioButton = new wxRadioButton( ExportTypePage, wxID_ANY, wxT("Relion-3.1"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer3941->Add( Relion3RadioButton, 0, wxALL, 5 );
+
 
 	bSizer3931->Add( bSizer3941, 1, wxEXPAND, 5 );
 

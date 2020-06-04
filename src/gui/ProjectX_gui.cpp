@@ -10580,10 +10580,10 @@ ExportRefinementPackageWizardParent::ExportRefinementPackageWizardParent( wxWind
 	FrealignRadioButton = new wxRadioButton( ExportTypePage, wxID_ANY, wxT("Frealign"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer3941->Add( FrealignRadioButton, 0, wxALL, 5 );
 
-	RelionRadioButton = new wxRadioButton( ExportTypePage, wxID_ANY, wxT("Relion "), wxDefaultPosition, wxDefaultSize, 0 );
+	RelionRadioButton = new wxRadioButton( ExportTypePage, wxID_ANY, wxT("Relion (Legacy)"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer3941->Add( RelionRadioButton, 0, wxALL, 5 );
 
-	Relion3RadioButton = new wxRadioButton( ExportTypePage, wxID_ANY, wxT("Relion-3.1"), wxDefaultPosition, wxDefaultSize, 0 );
+	Relion3RadioButton = new wxRadioButton( ExportTypePage, wxID_ANY, wxT("Relion-3.1 (Currently only supports single optics group)"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer3941->Add( Relion3RadioButton, 0, wxALL, 5 );
 
 

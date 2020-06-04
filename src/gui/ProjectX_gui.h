@@ -2659,7 +2659,6 @@ class ImportRefinementPackageWizardParent : public wxWizard
 		wxStaticLine* m_staticline1051;
 		wxRadioButton* cisTEMRadioButton;
 		wxRadioButton* RelionRadioButton;
-		wxRadioButton* Relion3RadioButton;
 		wxRadioButton* FrealignRadioButton;
 		wxStaticText* m_staticText474;
 		wxStaticLine* m_staticline106;

@@ -11620,6 +11620,7 @@ float Image::ApplyMask(Image &mask_volume, float cosine_edge_width, float weight
 
 	delete cosine_edge;
 	delete mask_cosine_edge;
+	delete mask_cosine_double_edge;
 
 
 	return float(sum);

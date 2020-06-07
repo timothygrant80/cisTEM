@@ -2381,15 +2381,14 @@ void RefinementManager::ProcessAllJobsFinished()
 				else temp_asset.asset_name = wxString::Format("Local #%li (Rnd. %i) - Class #%i", current_output_refinement_id, number_of_rounds_run + 1, class_counter + 1);
 
 			}
+
+			current_reconstruction_id = main_frame->current_project.database.ReturnHighestReconstructionID() + 1;
+			temp_asset.reconstruction_job_id = current_reconstruction_id;
 			// set the output volume
 			output_refinement->class_refinement_results[class_counter].reconstructed_volume_asset_id = temp_asset.asset_id;
 			output_refinement->class_refinement_results[class_counter].reconstruction_id = current_reconstruction_id;
 
 			// add the reconstruction job
-
-			current_reconstruction_id = main_frame->current_project.database.ReturnHighestReconstructionID() + 1;
-			temp_asset.reconstruction_job_id = current_reconstruction_id;
-
 			main_frame->current_project.database.AddReconstructionJob(current_reconstruction_id, active_refinement_package->asset_id, output_refinement->refinement_id, "", active_inner_mask_radius, active_mask_radius, active_resolution_limit_rec, active_score_weight_conversion, active_adjust_scores, active_crop_images, false, active_should_apply_blurring, active_smoothing_factor, class_counter + 1, long(temp_asset.asset_id));
 
 

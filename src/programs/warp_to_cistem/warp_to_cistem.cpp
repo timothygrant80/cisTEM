@@ -353,7 +353,7 @@ ArrayOfParticlePositionAssets WarpToCistemApp::LoadParticlePositionsFromWarp(wxS
 
 	input_file->Open();
 	MyDebugAssertTrue(input_file->IsOpened(), "File not open");
-	input_file->GoToLine(-1);
+	input_file->GoToLine(-1); // WARNING: integer conversion resulted in a change of sign
 
 	while (input_file->Eof() == false) {
 		current_line = input_file->GetNextLine();

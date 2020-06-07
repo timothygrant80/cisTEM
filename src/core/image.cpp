@@ -7416,7 +7416,7 @@ void Image::ApplyLocalResolutionFilter(Image &local_resolution_map, float pixel_
 			if (on_lowest_resolution) freq_of_interest_min = 0.00001;
 			float current_res_freq;
 			float weight;
-			float inverse_filter_freq_step_size;
+			float inverse_filter_freq_step_size = 0.01; // ALR 200606: this was not set and icpc gave a warning. Not sure what value is reasonable.
 			MyDebugPrint("Looking for areas with resolution between %f and %f\n",pixel_size/freq_of_interest_min, pixel_size/freq_of_interest_max);
 
 			pixel_counter = 0;

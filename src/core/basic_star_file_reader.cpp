@@ -278,7 +278,7 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString *error_str
 	x_shifts_are_in_angst = false;
 	y_shifts_are_in_angst = false;
 
-	input_file->GoToLine(-1);
+	input_file->GoToLine(-1); //this triggers warning: integer conversion resulted in a change of sign
 	// find a data block
 
 	//while (input_file_stream->Eof() == false)

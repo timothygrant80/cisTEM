@@ -51,8 +51,9 @@ CtffindApp : public MyApp
 };
 
 double SampleTiltScoreFunctionForSimplex(void *pt2Object, double values[]);
+//TODO: gives this function a good name that describes what it actually does (it actually rescales the power spectrum!)
 float PixelSizeForFitting(bool resample_if_pixel_too_small, float pixel_size_of_input_image, float target_pixel_size_after_resampling, \
-	int box_size, Image *current_power_spectrum, Image *resampled_power_spectrum, bool do_resampling = true, float stretch_factor = 1.0f);
+	int box_size, Image *current_power_spectrum, Image *resampled_power_spectrum, bool power_spectrum_was_resampled, bool do_resampling = true, float stretch_factor = 1.0f);
 
 class CTFTilt
 {
@@ -518,6 +519,7 @@ float CTFTilt::CalculateTiltCorrectedSpectra(bool resample_if_pixel_too_small, f
 	float stretch_factor;
 	float padding_value;
 	float pixel_size_for_fitting;
+	bool power_spectrum_was_resampled = false;
 //	float sigma;
 //	float offset_x;
 //	float offset_y;
@@ -529,7 +531,7 @@ float CTFTilt::CalculateTiltCorrectedSpectra(bool resample_if_pixel_too_small, f
 	Image resampled_power_spectrum;
 	Image counts_per_pixel;
 
-	pixel_size_for_fitting = PixelSizeForFitting(resample_if_pixel_too_small, pixel_size_of_input_image, target_pixel_size_after_resampling, box_size, &power_spectrum, &resampled_power_spectrum, false);
+	pixel_size_for_fitting = PixelSizeForFitting(resample_if_pixel_too_small, pixel_size_of_input_image, target_pixel_size_after_resampling, box_size, &power_spectrum, &resampled_power_spectrum, power_spectrum_was_resampled, false);
 
 	n_sec = std::max(input_image_buffer[0].logical_x_dimension / resampled_spectrum->logical_x_dimension, input_image_buffer[0].logical_y_dimension / resampled_spectrum->logical_y_dimension);
 	if (IsEven(n_sec)) n_sec++;
@@ -584,7 +586,7 @@ float CTFTilt::CalculateTiltCorrectedSpectra(bool resample_if_pixel_too_small, f
 //				section_counter++;
 //				for (i = 0; i < power_spectrum_sub_section.real_memory_allocated; i++) power_spectrum_sub_section.real_values[i] = powf(power_spectrum_sub_section.real_values[i], 2);
 
-				PixelSizeForFitting(resample_if_pixel_too_small, pixel_size_of_input_image, target_pixel_size_after_resampling, box_size, &power_spectrum, &resampled_power_spectrum, true, stretch_factor);
+				PixelSizeForFitting(resample_if_pixel_too_small, pixel_size_of_input_image, target_pixel_size_after_resampling, box_size, &power_spectrum, &resampled_power_spectrum, power_spectrum_was_resampled, true, stretch_factor);
 
 //				power_spectrum.ForwardFFT();
 //				stretched_dimension = myroundint(resampled_spectrum->logical_x_dimension * stretch_factor);
@@ -762,7 +764,7 @@ double SampleTiltScoreFunctionForSimplex(void *pt2Object, double values[])
 }
 
 float PixelSizeForFitting(bool resample_if_pixel_too_small, float pixel_size_of_input_image, float target_pixel_size_after_resampling, \
-	int box_size, Image *current_power_spectrum, Image *resampled_power_spectrum, bool do_resampling, float stretch_factor)
+	int box_size, Image *current_power_spectrum, Image *resampled_power_spectrum, bool power_spectrum_was_resampled, bool do_resampling, float stretch_factor)
 {
 	int temporary_box_size;
 	int stretched_dimension;
@@ -770,6 +772,8 @@ float PixelSizeForFitting(bool resample_if_pixel_too_small, float pixel_size_of_
 	bool resampling_is_necessary;
 
 	Image temp_image;
+
+	power_spectrum_was_resampled = false;
 
 	// Resample the amplitude spectrum
 	if (resample_if_pixel_too_small && pixel_size_of_input_image < target_pixel_size_after_resampling)
@@ -794,6 +798,8 @@ float PixelSizeForFitting(bool resample_if_pixel_too_small, float pixel_size_of_
 				temp_image.SetToConstant(0.0); // To avoid valgrind uninitialised errors, but maybe this is a waste?
 				resampled_power_spectrum->ClipInto(&temp_image);
 				resampled_power_spectrum->Consume(&temp_image);
+
+				power_spectrum_was_resampled = true;
 			}
 			else
 			{
@@ -822,6 +828,8 @@ float PixelSizeForFitting(bool resample_if_pixel_too_small, float pixel_size_of_
 				temp_image.SetToConstant(0.0); // To avoid valgrind uninitialised errors, but maybe this is a waste?
 				resampled_power_spectrum->ClipInto(&temp_image);
 				resampled_power_spectrum->Consume(&temp_image);
+
+				power_spectrum_was_resampled = true;
 			}
 			else
 			{
@@ -1689,7 +1697,7 @@ bool CtffindApp::DoCalculation()
 	Image				*temp_image = new Image();
 	Image				*sum_image = new Image();
 	Image				*resampled_power_spectrum = new Image();
-	bool				resampling_is_necessary;
+	bool				power_spectrum_was_resampled;
 	CTF					*current_ctf = new CTF();
 	float				average, sigma;
 	int					convolution_box_size;
@@ -1974,47 +1982,7 @@ bool CtffindApp::DoCalculation()
 					current_power_spectrum->real_values[current_power_spectrum->ReturnReal1DAddressFromPhysicalCoord(current_power_spectrum->physical_address_of_box_center_x,current_power_spectrum->physical_address_of_box_center_y,current_power_spectrum->physical_address_of_box_center_z)] = 0.0;
 
 					// Resample the amplitude spectrum
-					pixel_size_for_fitting = PixelSizeForFitting(resample_if_pixel_too_small, pixel_size_of_input_image, target_pixel_size_after_resampling, box_size, current_power_spectrum, resampled_power_spectrum);
-
-//					if (resample_if_pixel_too_small && pixel_size_of_input_image < target_pixel_size_after_resampling)
-//					{
-//						// The input pixel was too small, so let's resample the amplitude spectrum into a large temporary box, before clipping the center out for fitting
-//						temporary_box_size = round(float(box_size) / pixel_size_of_input_image * target_pixel_size_after_resampling);
-//						if (IsOdd(temporary_box_size)) temporary_box_size++;
-//						resampling_is_necessary = current_power_spectrum->logical_x_dimension != box_size || current_power_spectrum->logical_y_dimension != box_size;
-//						if (resampling_is_necessary)
-//						{
-//							current_power_spectrum->ForwardFFT(false);
-//							resampled_power_spectrum->Allocate(temporary_box_size,temporary_box_size,1,false);
-//							current_power_spectrum->ClipInto(resampled_power_spectrum);
-//							resampled_power_spectrum->BackwardFFT();
-//							temp_image->Allocate(box_size,box_size,1,true);
-//							temp_image->SetToConstant(0.0); // To avoid valgrind uninitialised errors, but maybe this is a waste?
-//							resampled_power_spectrum->ClipInto(temp_image);
-//							resampled_power_spectrum->Consume(temp_image);
-//						}
-//						else
-//						{
-//							resampled_power_spectrum->CopyFrom(current_power_spectrum);
-//						}
-//						pixel_size_for_fitting = pixel_size_of_input_image * float(temporary_box_size) / float(box_size);
-//					}
-//					else
-//					{
-//						// The regular way (the input pixel size was large enough)
-//						resampling_is_necessary = current_power_spectrum->logical_x_dimension != box_size || current_power_spectrum->logical_y_dimension != box_size;
-//						if (resampling_is_necessary)
-//						{
-//							current_power_spectrum->ForwardFFT(false);
-//							resampled_power_spectrum->Allocate(box_size,box_size,1,false);
-//							current_power_spectrum->ClipInto(resampled_power_spectrum);
-//							resampled_power_spectrum->BackwardFFT();
-//						}
-//						else
-//						{
-//							resampled_power_spectrum->CopyFrom(current_power_spectrum);
-//						}
-//					}
+					pixel_size_for_fitting = PixelSizeForFitting(resample_if_pixel_too_small, pixel_size_of_input_image, target_pixel_size_after_resampling, box_size, current_power_spectrum, resampled_power_spectrum, power_spectrum_was_resampled);
 
 					average_spectrum->AddImage(resampled_power_spectrum);
 				}
@@ -2055,7 +2023,7 @@ bool CtffindApp::DoCalculation()
 			}
 
 			// We need to take care of the scaling of the FFTs, as well as the averaging of tiles
-			if (resampling_is_necessary)
+			if (power_spectrum_was_resampled)
 			{
 				average_spectrum->MultiplyByConstant(1.0 / ( float(number_of_tiles_used) * current_input_image->logical_x_dimension * current_input_image->logical_y_dimension * current_power_spectrum->logical_x_dimension * current_power_spectrum->logical_y_dimension ) );
 			}
@@ -3811,6 +3779,8 @@ int ReturnSpectrumBinNumber(int number_of_bins, float number_of_extrema_profile[
 		//MyDebugPrint("final chosen bin = %i\n", chosen_bin);
 		return chosen_bin;
 	}
+
+	return -1;
 }
 /*
 integer function ComputePowerSpectrumBinNumber(number_of_bins,number_of_extrema_profile,number_of_extrema, &

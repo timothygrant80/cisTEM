@@ -283,7 +283,7 @@ void PDB::Init()
 		}
 
 
-		records_per_line = current_records_per_line;
+		records_per_line = current_records_per_line; // WARNING: current_records_per_line is not set to anything
 
 		// rewind the file..
 

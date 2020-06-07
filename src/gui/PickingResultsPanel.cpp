@@ -147,6 +147,7 @@ int MyPickingResultsPanel::GetFilter()
 	else return wxID_CANCEL;
 
 	*/
+return -1;
 }
 
 

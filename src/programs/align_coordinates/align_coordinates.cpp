@@ -226,7 +226,7 @@ bool AlignCoordinatesApp::DoCalculation()
 		best_search_angle = initial_angle;
 		anchor_align_x = align_center_of_mass[0];
 		anchor_align_y = align_center_of_mass[1];
-		anchor_ref_x = xyz_offset[0] + align_center_of_mass[0];
+		anchor_ref_x = xyz_offset[0] + align_center_of_mass[0]; // WARNING: variable "xyz_offset" is used before its value is set
 		anchor_ref_y = xyz_offset[1] + align_center_of_mass[1];
 // score += powf((x_coordinate_3d + xyz_offset[0] + align_center_of_mass[0] - ref_coordinates[align_pairs[ii]][0]), 2) + powf((y_coordinate_3d + ref_center_of_mass[1] + best_y + y - ref_coordinates[align_pairs[ii]][1]), 2);
 // xyz_offset[0] = ref_center_of_mass[0] - align_center_of_mass[0] + best_x + x;

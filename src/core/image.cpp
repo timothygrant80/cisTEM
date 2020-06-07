@@ -591,7 +591,7 @@ float Image::GetWeightedCorrelationWithImage(Image &projection_image, int *bins,
 			}
 			else
 			{
-				sum3 += fabsf(cross_terms[i]);
+				sum3 += fabs(cross_terms[i]);
 //				wxPrintf("i_u = %i, sum_a = %g, sum_b = %i, cross = %g\n", i, sum_a[i], sum_b[i], cross_terms[i]);
 //				r = fabsf(cross_terms[i] / sqrtf(sum_b[i]));
 			}

@@ -19,8 +19,8 @@ int ccl3d::Max(int i,int j,int k)
 }
 int ccl3d::Med(int i,int j,int k)
 {
-	if(i >= j && i <= k || i <= j && i >= k) return i;
-	else if(j >= i && j <= k || j <= i && j >= k) return j;
+	if((i >= j && i <= k) || (i <= j && i >= k)) return i;
+	else if((j >= i && j <= k) || (j <= i && j >= k)) return j;
 	else return k;
 }
 int ccl3d::Min(int i,int j,int k)

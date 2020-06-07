@@ -13,7 +13,7 @@ MemoryComboBox::MemoryComboBox(wxWindow *parent, wxWindowID id, const wxString &
 		wxOwnerDrawnComboBox(parent, id, value, pos, size, n, choices, style, validator, name)
 {
 	associated_ids.clear();
-	selected_id_on_last_clear -10;
+	selected_id_on_last_clear = -10;
 	currently_selected_id = -10;
 
 	Bind(wxEVT_COMBOBOX, &MemoryComboBox::OnComboBox, this);
@@ -1531,7 +1531,7 @@ wxListCtrl(parent, id, pos, size, style, validator, name)
 
 void ClassificationSelectionListCtrl::OnClearAll(wxListEvent& event)
 {
-	selection_id_upon_clear == current_selection_id ;
+	selection_id_upon_clear = current_selection_id ;
 }
 
 void ClassificationSelectionListCtrl::Fill(long refinement_package_asset_id, long classification_id, bool select_latest)

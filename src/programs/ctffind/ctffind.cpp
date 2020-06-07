@@ -745,7 +745,7 @@ double CTFTilt::ScoreValues(double input_values[])
 			sum_ctf_power /= counter;
 			correlation_coefficient = (sum_ctf_power - sum_ctf * sum_power) / sqrt(sum_ctf_squared - pow(sum_ctf, 2)) / sqrt(sum_power_squared - pow(sum_power, 2));
 			// Penalize tilt angles larger than 65 deg
-			if (fabsf(input_values[2]) > 65.0f) correlation_coefficient -= (fabsf(input_values[2]) - 65.0f) / 5.0f;
+			if (fabsf(float(input_values[2])) > 65.0f) correlation_coefficient -= (fabsf(float(input_values[2])) - 65.0f) / 5.0f;
 
 		break;
 	}

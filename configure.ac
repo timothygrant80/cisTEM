@@ -35,7 +35,7 @@ AC_ARG_WITH([warnings-on], [Enable compiler warnings], [WALLON="-Wall"])
 
 
 if test "x$CXX" = "xicpc"; then		
-	CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++11"
+	CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++11 -w2 -wd1125"
 	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
 else
 	CXXFLAGS="$CXXFLAGS -DNDEBUG -funroll-loops -O3 -pipe $WALLON -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++11"		
@@ -133,8 +133,13 @@ AC_ARG_ENABLE(mkl, [  --disable-mkl           Do not use the Intel MKL ],[
 
 AC_ARG_ENABLE(debugmode, [  --enable-debugmode      Compile in debug mode [[default=no]]],[
   if test "$enableval" = yes; then
-  CPPFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG $WALLON $INPUT_CPPFLAGS"
-  CXXFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG -std=c++11 $WALLON $INPUT_CXXFLAGS"
+  if test "x$CXX" = "xicpc"; then   
+    CXXFLAGS="-O2 -debug -no-prec-div -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG -std=c++11 -w2 -wd1125"
+    CPPFLAGS="-O2 -debug -no-prec-div -no-prec-sqrt -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG"
+  else
+    CPPFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG $WALLON $INPUT_CPPFLAGS"
+    CXXFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG -std=c++11 $WALLON $INPUT_CXXFLAGS"
+  fi
   fi
   ])
   

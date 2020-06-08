@@ -2748,9 +2748,15 @@ void Image::ExtractSliceByRotMatrix(Image &image_to_extract, RotationMatrix &wan
 	temp_image->complex_values[0] = 0.0f + I * 0.0f;
 // This was changed to make projections compatible with ML algorithm
 //	temp_image->complex_values[0] = complex_values[0];
+<<<<<<< HEAD
 
 	temp_image->is_in_real_space = false;
 
+=======
+
+	temp_image->is_in_real_space = false;
+
+>>>>>>> reconFromSubTomo
 	if (padding)
 	{
 		temp_image->SwapRealSpaceQuadrants();
@@ -4478,6 +4484,7 @@ float Image::CosineRectangularMask(float wanted_mask_radius_x, float wanted_mask
 	return float(mask_volume);
 }
 
+<<<<<<< HEAD
 void Image::LocalResSignificanceFilter(float pixel_size, float starting_resolution, float mask_radius_in_angstroms)
 {
 	Image sharp3d;
@@ -4591,6 +4598,8 @@ void Image::LocalResSignificanceFilter(float pixel_size, float starting_resoluti
 	Consume(&output3d);
 }
 
+=======
+>>>>>>> reconFromSubTomo
 void Image::ConvertToAutoMask(float pixel_size, float outer_mask_radius_in_angstroms, float filter_resolution_in_angstroms, float rebin_value, bool auto_estimate_initial_bin_value, float wanted_initial_bin_value)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
@@ -4640,6 +4649,10 @@ void Image::ConvertToAutoMask(float pixel_size, float outer_mask_radius_in_angst
 		Resize(binned_x_size, binned_y_size, binned_z_size);
 		//DivideByConstant(sqrtf(number_of_real_space_pixels));
 		BackwardFFT();
+<<<<<<< HEAD
+=======
+
+>>>>>>> reconFromSubTomo
 	}
 
 //	QuickAndDirtyWriteSlices("/tmp/binning_input.mrc", 1, logical_z_dimension, true);
@@ -4652,7 +4665,11 @@ void Image::ConvertToAutoMask(float pixel_size, float outer_mask_radius_in_angst
 		average_value = ReturnAverageOfRealValues(outer_mask_radius_in_angstroms / binning_factor / pixel_size, true);
 
 		number_of_top_pixels_to_use = number_of_real_space_pixels * 0.000005;
+<<<<<<< HEAD
 		if (number_of_top_pixels_to_use < 5) number_of_top_pixels_to_use = 5;
+=======
+		if (number_of_top_pixels_to_use < 50) number_of_top_pixels_to_use = 50;
+>>>>>>> reconFromSubTomo
 
 		average_of_max = ReturnAverageOfMaxN(number_of_top_pixels_to_use, outer_mask_radius_in_angstroms / binning_factor / pixel_size);
 		threshold_value = average_value + ((average_of_max - average_value) * 0.05);
@@ -4672,7 +4689,7 @@ void Image::ConvertToAutoMask(float pixel_size, float outer_mask_radius_in_angst
 	my_ccl3d.GetLargestConnectedDensityMask(buffer_image, *this);
 
 	ForwardFFT();
-// FIXME these writes should probably be under control of a debug flag or something <3 Ben
+<<<<<<< HEAD
 	QuickAndDirtyWriteSlices("/tmp/prefilter.mrc", 1, logical_z_dimension);
 	GaussianLowPassFilter(binning_factor / pixel_size / 16.0f);
 	QuickAndDirtyWriteSlices("/tmp/presize.mrc", 1, logical_z_dimension);
@@ -4681,6 +4698,12 @@ void Image::ConvertToAutoMask(float pixel_size, float outer_mask_radius_in_angst
 
 	QuickAndDirtyWriteSlices("/tmp/prebin.mrc", 1, logical_z_dimension);
 
+=======
+	GaussianLowPassFilter(0.25);
+	Resize(original_x_size, original_y_size, original_z_size, 0.0);
+	BackwardFFT();
+
+>>>>>>> reconFromSubTomo
 	DivideByConstant(ReturnMaximumValue());
 	Binarise(rebin_value);
 }
@@ -12305,3 +12328,7 @@ float Image::ReturnBeamTiltSignificanceScore(Image calculated_beam_tilt)
 	float binarized_score = buffer.ReturnSumOfSquares(mask_radius_local);
 	return 0.5f * PIf * powf((0.5f - binarized_score) * mask_radius_local, 2);
 }
+<<<<<<< HEAD
+=======
+
+>>>>>>> reconFromSubTomo

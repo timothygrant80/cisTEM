@@ -533,7 +533,11 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxSt
 			return false;
 		}
 
+<<<<<<< HEAD
+		temp_parameters.beam_tilt_group = int(temp_long);
+=======
 		temp_parameters.particle_group = int(temp_long);
+>>>>>>> reconFromSubTomo
 	}
 
 	// pre exposure
@@ -883,6 +887,7 @@ bool cisTEMStarFileReader::ReadFile(wxString wanted_filename, wxString *error_st
 		}
 		else
 		if (current_line.StartsWith("_cisTEMPreExposure ") == true)
+<<<<<<< HEAD
 		{
 	    	if (pre_exposure_column != -1) wxPrintf("Warning :: _cisTEMPreExposure occurs more than once. I will take the last occurrence\n");
 		   	pre_exposure_column = current_column;
@@ -891,6 +896,16 @@ bool cisTEMStarFileReader::ReadFile(wxString wanted_filename, wxString *error_st
 		else
 		if (current_line.StartsWith("_cisTEMTotalExposure ") == true)
 		{
+=======
+		{
+	    	if (pre_exposure_column != -1) wxPrintf("Warning :: _cisTEMPreExposure occurs more than once. I will take the last occurrence\n");
+		   	pre_exposure_column = current_column;
+			parameters_that_were_read.pre_exposure = true;
+		}
+		else
+		if (current_line.StartsWith("_cisTEMTotalExposure ") == true)
+		{
+>>>>>>> reconFromSubTomo
 	    	if (total_exposure_column != -1) wxPrintf("Warning :: _cisTEMTotalExposure occurs more than once. I will take the last occurrence\n");
 		   	total_exposure_column = current_column;
 			parameters_that_were_read.total_exposure = true;

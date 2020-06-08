@@ -530,10 +530,11 @@ float CTF::PhaseShiftGivenBeamTiltAndShift(float squared_spatial_frequency, floa
 	float spatial_frequency = sqrtf(squared_spatial_frequency);
 	float phase_shift = 2.0f * PIf * spherical_aberration * squared_wavelength * squared_spatial_frequency * spatial_frequency * beam_tilt;
 	phase_shift -= 2.0f * PIf * spatial_frequency * particle_shift;
-	phase_shift = fmodf(phase_shift, 2.0f * PIf);
-	if (phase_shift > PIf) phase_shift -= 2.0f * PIf;
-	if (phase_shift <= -PIf) phase_shift += 2.0f * PIf;
-	return phase_shift;
+	return clamp_angular_range(phase_shift);
+//	phase_shift = fmodf(phase_shift, 2.0f * PIf);
+//	if (phase_shift > PIf) phase_shift -= 2.0f * PIf;
+//	if (phase_shift <= -PIf) phase_shift += 2.0f * PIf;
+//	return phase_shift;
 }
 
 // Return the effective defocus at the azimuth of interest

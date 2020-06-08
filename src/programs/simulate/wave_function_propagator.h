@@ -8,13 +8,32 @@
 #ifndef PROGRAMS_SCATTERING_POTENTIAL_WAVE_FUNCTION_PROPAGATOR_H_
 #define PROGRAMS_SCATTERING_POTENTIAL_WAVE_FUNCTION_PROPAGATOR_H_
 
-class WaveFunctionPropagator {
+typedef struct _fitParams
+{
+
+
+	float pixel_size;
+	float kv;
+	float Cs;
+	float AmplitudeContrast;
+	float Size;
+	float min_resolution;
+	float max_resolution;
+	float min_defocus;
+	float max_defocus;
+	float nThreads;
+	float defocus_step;
+
+
+} fitParams;
+class WaveFunctionPropagator  {
 public:
 	WaveFunctionPropagator(float set_real_part_wave_function_in,  float wanted_objective_aperture_diameter_micron,
-			   	   	   	   float wanted_pixel_size, int wanted_number_threads, float beam_tilt_x, float beam_tilt_y, bool do_beam_tilt_full);
+			   	   	   	   float wanted_pixel_size, int wanted_number_threads, float beam_tilt_x, float beam_tilt_y, bool do_beam_tilt_full, float* propagator_distance);
 	virtual ~WaveFunctionPropagator();
 
-
+	float min_resolution_for_fitting = 1/30.0f; // 1/A
+	float max_resolution_for_fitting =  -1.0f;//1/5.0f; // 1/A, < 0 for nyquist. The brute force search in ctffind is limited to 5 A so if a match is desired, this should also be at most 5
 	bool is_set_ctf;
 	bool is_set_fresnel_propagator;
 	bool is_set_input_projections;
@@ -30,16 +49,19 @@ public:
 	float requested_kv;
 	float expected_dose_per_pixel;
 
-	Image *temp_img;
-	Image *t_N;
-	Image *wave_function;
-	Image *phase_grating;
-	Image *amplitude_grating;
-	Image *aperture_grating;
+	Image* temp_img;
+	Image* t_N;
+	Image* wave_function;
+	Image* phase_grating;
+	Image* amplitude_grating;
+	Image* aperture_grating;
 
 
-	CTF *ctf;
-	CTF *fresnel_propagtor;
+	CTF* ctf;
+	CTF* fresnel_propagtor;
+	CTF* ctf_for_fitting;
+
+	float* propagator_distance;
 
 	const int	copy_from_1[4] 	 = {0,1,1,0};
 	const int	copy_from_2[4]	 = {0,1,1,0};
@@ -59,13 +81,17 @@ public:
 	float pixel_size_squared;
 	float objective_aperture_resolution;
 
+	fitParams for_ctffind;
+	bool fit_params_are_set = false;
+
 	// Regular
 	void SetCTF(float wanted_acceleration_voltage,
 				float wanted_spherical_aberration,
 				float wanted_defocus_1,
 				float wanted_defocus_2,
 				float wanted_astigmatism_azimuth,
-				float wanted_additional_phase_shift_in_radians);
+				float wanted_additional_phase_shift_in_radians,
+				float defocus_offset);
 
 	// With coherence envelop
 	void SetCTF(float wanted_acceleration_voltage,
@@ -74,15 +100,18 @@ public:
 				float wanted_defocus_2,
 				float wanted_astigmatism_azimuth,
 				float wanted_additional_phase_shift_in_radians,
+				float defocus_offset,
 				float wanted_dose_rate);
 
 	void SetFresnelPropagator(float wanted_acceleration_voltage, float propagation_distance);
 //	void SetInputProjections(Image* scattering_potential, Image* inelastic_potential, int nSlabs);
 	void SetInputWaveFunction(int size_x, int size_y);
+	void SetFitParams(	float pixel_size, float kv, float Cs, float AmplitudeContrast, float Size, float min_resolution, float max_resolution, float min_defocus, float max_defocus, float nThreads, float defocus_step);
+
 
 	float DoPropagation(Image* sum_image, Image* scattering_potential, Image* inelastic_potential,
 			int tilt_IDX, int nSlabs,
-		   float* image_mean, float* inelastic_mean, float* propagator_distance, bool estimate_amplitude_contrast);
+		   float* image_mean, float* inelastic_mean, float* propagator_distance, bool estimate_amplitude_contrast, float tilt_angle);
 
 	void  SetObjectiveAperture(float set_diameter_to) { objective_aperture_diameter = set_diameter_to; }
 	float GetObjectiveAperture() { return objective_aperture_diameter; }
@@ -90,7 +119,7 @@ public:
 	void  SetBandpassFalloff(float set_falloff_to) { mask_falloff = set_falloff_to; }
 	float GetBandpassfalloff() { return mask_falloff; }
 
-	void ReturnImageContrast(Image &wave_function_sq_modulus, float* contrast, float* mean_value);
+	void ReturnImageContrast(Image &wave_function_sq_modulus, float* contrast, bool is_phase_contrast_image, float tilt_angle);
 
 	inline float ReturnPlasmonConversionFactor(float squared_spatial_frequency_in_angstrom)
 	{

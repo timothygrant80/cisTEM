@@ -377,6 +377,8 @@ public:
 	void Consume(Image *other_image);
 	void RealSpaceIntegerShift(int wanted_x_shift, int wanted_y_shift, int wanted_z_shift = 0);
 	void DilateBinarizedMask(float dilation_radius);
+	void ErodeBinarizedMask(float erosion_radius);
+
 	void PhaseShift(float wanted_x_shift, float wanted_y_shift, float wanted_z_shift = 0.0);
 
 	void MakeAbsolute();
@@ -421,6 +423,8 @@ public:
 	void SetMinimumValue(float new_minimum_value);
 	void SetMinimumAndMaximumValues( float new_minimum_value, float new_maximum_value);
 	void Binarise(float threshold_value);
+	void BinariseInverse(float threshold_value);
+
 
 	void ComputeAverageAndSigmaOfValuesInSpectrum(float minimum_radius, float maximum_radius, float &average, float &sigma, int cross_half_width = 2);
 	void SetMaximumValueOnCentralCross(float maximum_value);

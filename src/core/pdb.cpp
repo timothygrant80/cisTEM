@@ -7,7 +7,9 @@ WX_DEFINE_OBJARRAY(ArrayOfParticleTrajectories);
 
 
 const double MIN_PADDING_Z    = 4;
-const int MAX_XY_DIMENSION = 4096;
+const int MAX_XY_DIMENSION = 4096*2;
+#define MAX_NUMBER_OF_NOISE_PARTICLES 6 // FIXME duplicate from header?
+
 
 // Define fixed width limits for PDB reading
 #define NAMESTART	12  //Char
@@ -78,7 +80,7 @@ PDB::PDB(long number_of_non_water_atoms, float cubic_size, float wanted_pixel_si
 
 }
 
-PDB::PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, long wanted_records_per_line, int minimum_paddeding_x_and_y, double minimum_thickness_z)
+PDB::PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, long wanted_records_per_line, int minimum_paddeding_x_and_y, double minimum_thickness_z, bool generate_noise_particles)
 {
 	input_file_stream = NULL;
 	input_text_stream = NULL;
@@ -89,6 +91,8 @@ PDB::PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, lo
 
 	this->MIN_PADDING_XY = minimum_paddeding_x_and_y;
 	this->MIN_THICKNESS  = minimum_thickness_z;
+
+	this->generate_noise_atoms = generate_noise_particles;
 
 
     SetEmpty();
@@ -283,7 +287,21 @@ void PDB::Init()
 		}
 
 
-		records_per_line = current_records_per_line;
+		// Only those atoms that are part of the target molecule
+		number_of_real_atoms = number_of_atoms;
+
+		// Copy every real atom into a noise atom
+		if (generate_noise_atoms)
+		{
+			number_of_atoms += number_of_atoms * MAX_NUMBER_OF_NOISE_PARTICLES;
+		}
+
+		// If noie noise atoms, this will always equal number of atoms. Otherwise, number of atoms is at most this, and changes from particle to particle in the stack
+		number_of_real_and_noise_atoms = number_of_atoms;
+
+		wxPrintf("\nIn constructor real total current %ld %ld %ld\n", number_of_real_atoms,number_of_real_and_noise_atoms, number_of_atoms);
+
+		// FIXME records_per_line = current_records_per_line;
 
 		// rewind the file..
 
@@ -291,8 +309,9 @@ void PDB::Init()
 
 		// Create the atom array, then loop back over the pdb to get the desired info.
 		Atom dummy_atom;
-		my_atoms.Alloc(number_of_atoms);
-		my_atoms.Add(dummy_atom,number_of_atoms);
+		my_atoms.Alloc(number_of_real_and_noise_atoms);
+		my_atoms.Add(dummy_atom,number_of_real_and_noise_atoms);
+
 
 
 
@@ -304,11 +323,10 @@ void PDB::Init()
 			if (current_line.StartsWith("ATOM") == true && current_line.Length() > 0)
 			{
 
-
 				wxString residue_name = current_line.Mid(RESIDUESTART,RESIDUELENGTH).Trim(true).Trim(false);
 
 				my_atoms.Item(current_atom_number).name =  current_line.Mid(NAMESTART,NAMELENGTH).Trim(true).Trim(false);
-
+				my_atoms.Item(current_atom_number).is_real_particle = true;
 
 				// Set all charge to zero - only override for Asp/Glu O that may be charged. Neutral at first in the simulation
 				my_atoms.Item(current_atom_number).charge = 0;
@@ -479,7 +497,7 @@ void PDB::Init()
 					euler3 = temp_double;
 
 					// Set up the initial trajectory for this particle instance. This doesn't actually change the coordinates.
-					this->TransformBaseCoordinates(wanted_origin_x,wanted_origin_y,wanted_origin_z,euler1,euler2,euler3);
+					this->TransformBaseCoordinates(wanted_origin_x,wanted_origin_y,wanted_origin_z,euler1,euler2,euler3, number_of_particles_initialized, 0);
 					//this->TransformBaseCoordinates(wanted_origin_x,wanted_origin_y,wanted_origin_z,0,0,0);
 				}
 
@@ -494,7 +512,7 @@ void PDB::Init()
 		if (this->number_of_particles_initialized == 0)
 		{
 			// Set up the initial trajectory for this particle instance.
-			this->TransformBaseCoordinates(0,0,0,0,0,0);
+			this->TransformBaseCoordinates(0,0,0,0,0,0,0,0);
 		}
 
 		// rewind the file..
@@ -504,7 +522,7 @@ void PDB::Init()
 		// Finally, calculate the center of mass of the PDB object.
 		if (! use_provided_com)
 		{
-			for (current_atom_number = 0; current_atom_number < number_of_atoms; current_atom_number++)
+			for (current_atom_number = 0; current_atom_number < number_of_real_atoms; current_atom_number++)
 			{
 
 				center_of_mass[0] += my_atoms.Item(current_atom_number).x_coordinate;
@@ -517,7 +535,7 @@ void PDB::Init()
 
 			for (current_atom_number = 0; current_atom_number < 3; current_atom_number++)
 			{
-				center_of_mass[current_atom_number] /= number_of_atoms;
+				center_of_mass[current_atom_number] /= number_of_real_atoms;
 				if (std::isnan(center_of_mass[current_atom_number]))
 				{
 					wxPrintf("NaN in center of mass calc from PDB for coordinate %ld, 0=x,1=y,2=z",current_atom_number);
@@ -529,11 +547,39 @@ void PDB::Init()
 		wxPrintf("\n\nPDB center of mass at %f %f %f (x,y,z Angstrom)\n\nSetting origin there.\n\n",center_of_mass[0],center_of_mass[1],center_of_mass[2]);
 
 		// Set the coordinate origin to the center of mass
-		for (current_atom_number = 0; current_atom_number < number_of_atoms; current_atom_number++)
+		for (current_atom_number = 0; current_atom_number < number_of_real_atoms; current_atom_number++)
 		{
 			my_atoms.Item(current_atom_number).x_coordinate -= center_of_mass[0];
 			my_atoms.Item(current_atom_number).y_coordinate -= center_of_mass[1];
 			my_atoms.Item(current_atom_number).z_coordinate -= center_of_mass[2];
+		}
+
+		if (generate_noise_atoms)
+		{
+			// First get the largest molecular radius of the target molecule (centered)
+			for (current_atom_number = 0; current_atom_number < number_of_real_atoms; current_atom_number++)
+			{
+				// FIXME number of noise molecules!!
+				if (fabsf(my_atoms.Item(current_atom_number).x_coordinate) > max_radius) max_radius = fabsf(my_atoms.Item(current_atom_number).x_coordinate);
+				if (fabsf(my_atoms.Item(current_atom_number).y_coordinate) > max_radius) max_radius = fabsf(my_atoms.Item(current_atom_number).y_coordinate);
+				if (fabsf(my_atoms.Item(current_atom_number ).z_coordinate) > max_radius) max_radius = fabsf(my_atoms.Item(current_atom_number).z_coordinate);
+
+			}
+
+
+			for (int iPart = 0; iPart < MAX_NUMBER_OF_NOISE_PARTICLES; iPart++)
+			{
+
+				for (current_atom_number = 0; current_atom_number < number_of_real_atoms; current_atom_number++)
+				{
+
+					my_atoms.Item(current_atom_number + number_of_real_atoms*(1+iPart)) = CopyAtom(my_atoms.Item(current_atom_number));
+					my_atoms.Item(current_atom_number + number_of_real_atoms*(1+iPart)).is_real_particle = false;
+
+
+				}
+			}
+
 		}
 
 	}
@@ -689,7 +735,7 @@ wxString PDB::ReturnFilename()
 }
 
 
-void PDB::TransformBaseCoordinates(float wanted_origin_x,float wanted_origin_y,float wanted_origin_z, float euler1, float euler2, float euler3 )
+void PDB::TransformBaseCoordinates(float wanted_origin_x,float wanted_origin_y,float wanted_origin_z, float euler1, float euler2, float euler3, int particle_idx, int frame_number )
 // Sets the initial position and orientation of the particle (my_ensemble.my_trajectories.Item(0)...)
 {
 
@@ -703,27 +749,28 @@ void PDB::TransformBaseCoordinates(float wanted_origin_x,float wanted_origin_y,f
 
 
     // Is it safe to increment like this?
-	my_trajectory.Item(this->number_of_particles_initialized).current_orientation[0][0]  = wanted_origin_x;
-	my_trajectory.Item(this->number_of_particles_initialized).current_orientation[0][1]  = wanted_origin_y;
-	my_trajectory.Item(this->number_of_particles_initialized).current_orientation[0][2]  = wanted_origin_z;
-	my_trajectory.Item(this->number_of_particles_initialized).current_orientation[0][3]  = rotmat.m[0][0];
-	my_trajectory.Item(this->number_of_particles_initialized).current_orientation[0][4]  = rotmat.m[1][0];
-	my_trajectory.Item(this->number_of_particles_initialized).current_orientation[0][5]  = rotmat.m[2][0];
-	my_trajectory.Item(this->number_of_particles_initialized).current_orientation[0][6]  = rotmat.m[0][1];
-	my_trajectory.Item(this->number_of_particles_initialized).current_orientation[0][7]  = rotmat.m[1][1];
-	my_trajectory.Item(this->number_of_particles_initialized).current_orientation[0][8]  = rotmat.m[2][1];
-	my_trajectory.Item(this->number_of_particles_initialized).current_orientation[0][9]  = rotmat.m[0][2];
-	my_trajectory.Item(this->number_of_particles_initialized).current_orientation[0][10] = rotmat.m[1][2];
-	my_trajectory.Item(this->number_of_particles_initialized).current_orientation[0][11] = rotmat.m[2][2];
+	my_trajectory.Item(particle_idx).current_orientation[frame_number][0]  = wanted_origin_x;
+	my_trajectory.Item(particle_idx).current_orientation[frame_number][1]  = wanted_origin_y;
+	my_trajectory.Item(particle_idx).current_orientation[frame_number][2]  = wanted_origin_z;
+	my_trajectory.Item(particle_idx).current_orientation[frame_number][3]  = rotmat.m[0][0];
+	my_trajectory.Item(particle_idx).current_orientation[frame_number][4]  = rotmat.m[1][0];
+	my_trajectory.Item(particle_idx).current_orientation[frame_number][5]  = rotmat.m[2][0];
+	my_trajectory.Item(particle_idx).current_orientation[frame_number][6]  = rotmat.m[0][1];
+	my_trajectory.Item(particle_idx).current_orientation[frame_number][7]  = rotmat.m[1][1];
+	my_trajectory.Item(particle_idx).current_orientation[frame_number][8]  = rotmat.m[2][1];
+	my_trajectory.Item(particle_idx).current_orientation[frame_number][9]  = rotmat.m[0][2];
+	my_trajectory.Item(particle_idx).current_orientation[frame_number][10] = rotmat.m[1][2];
+	my_trajectory.Item(particle_idx).current_orientation[frame_number][11] = rotmat.m[2][2];
 
 
 	// Storing the update for reference. On the intial round this matches the orientation.
-	my_trajectory.Item(this->number_of_particles_initialized).current_update[0][0]  = wanted_origin_x;
-	my_trajectory.Item(this->number_of_particles_initialized).current_update[0][1]  = wanted_origin_y;
-	my_trajectory.Item(this->number_of_particles_initialized).current_update[0][2]  = wanted_origin_z;
-	my_trajectory.Item(this->number_of_particles_initialized).current_update[0][3]  = euler1;
-	my_trajectory.Item(this->number_of_particles_initialized).current_update[0][4]  = euler2;
-	my_trajectory.Item(this->number_of_particles_initialized).current_update[0][5]  = euler3;
+	my_trajectory.Item(particle_idx).current_update[frame_number][0]  = wanted_origin_x;
+	my_trajectory.Item(particle_idx).current_update[frame_number][1]  = wanted_origin_y;
+	my_trajectory.Item(particle_idx).current_update[frame_number][2]  = wanted_origin_z;
+	my_trajectory.Item(particle_idx).current_update[frame_number][3]  = euler1;
+	my_trajectory.Item(particle_idx).current_update[frame_number][4]  = euler2;
+	my_trajectory.Item(particle_idx).current_update[frame_number][5]  = euler3;
+
 
 
 
@@ -732,7 +779,7 @@ void PDB::TransformBaseCoordinates(float wanted_origin_x,float wanted_origin_y,f
 	wxPrintf("\n\nNumber of particles initialized %d\n",this->number_of_particles_initialized);
 }
 
-void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, long number_of_non_water_atoms, int time_step, RotationMatrix particle_rot, float shift_z)
+void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int frame_number, RotationMatrix particle_rot, float shift_z)
 {
 	/*
 	 * Take an array of PDB objects and create a single array of atoms transformed according to the timestep
@@ -771,78 +818,251 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, long n
 
 		for (current_particle = 0; current_particle < pdb_ensemble[current_pdb].number_of_particles_initialized; current_particle++)
 		{
-			ox = pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[time_step][0];
-			oy = pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[time_step][1];
-			oz = pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[time_step][2];
-			rotmat.SetToValues(pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[time_step][3],
-							   pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[time_step][4],
-							   pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[time_step][5],
-							   pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[time_step][6],
-							   pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[time_step][7],
-							   pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[time_step][8],
-							   pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[time_step][9],
-							   pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[time_step][10],
-							   pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[time_step][11]);
+//			ox = pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[frame_number][0];
+//			oy = pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[frame_number][1];
+//			oz = pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[frame_number][2];
+//			rotmat.SetToValues(pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[frame_number][3],
+//							   pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[frame_number][4],
+//							   pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[frame_number][5],
+//							   pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[frame_number][6],
+//							   pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[frame_number][7],
+//							   pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[frame_number][8],
+//							   pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[frame_number][9],
+//							   pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[frame_number][10],
+//							   pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[frame_number][11]);
+			ox = pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[0][0];
+			oy = pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[0][1];
+			oz = pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[0][2];
+			rotmat.SetToValues(pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[0][3],
+							   pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[0][4],
+							   pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[0][5],
+							   pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[0][6],
+							   pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[0][7],
+							   pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[0][8],
+							   pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[0][9],
+							   pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[0][10],
+							   pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[0][11]);
 
 			rotmat *= particle_rot;
+
+
+			// Randomly set noise atoms before copying in. Initially, there is a copy of every real atom, at the same x,y,z coords. For frame zero we
+			// want to randomly rotate each noise particle, and offset each particle by a random amount that ensures no overlap with the real particle.
+			// The first two noise particles are set to not overlap. Additional particles are able to overlap, which I think is more likely with high crowding (multiple layers of particles.)
+			// It might be that local motion should also be applied, but I think it is fair for now that the neighbors move identically frame to frame as the target particles. They should
+			// at the minimum be highly correlated based on empirical observation.
+
+
+			for (current_atom = 0; current_atom < pdb_ensemble[current_pdb].number_of_atoms ; current_atom++)
+			{
+				this->my_atoms.Item(current_atom) = CopyAtom(pdb_ensemble[current_pdb].my_atoms.Item(current_atom));
+			}
+
+
+			if (pdb_ensemble[current_pdb].generate_noise_atoms && frame_number == 0)
+			{
+
+				RandomNumberGenerator my_rand(PIf);
+				// Set the number of noise particles for this given particle in the stack
+				pdb_ensemble[current_pdb].number_of_noise_particles = myroundint(my_rand.GetUniformRandomSTD(0.0,MAX_NUMBER_OF_NOISE_PARTICLES));
+
+				// Angular sector size such that noise particles do not overlap. This could be a method.
+				float sector_size = 1.0f; //2.0*PIf / pdb_ensemble[current_pdb].number_of_noise_particles;
+				float occupied_sectors[MAX_NUMBER_OF_NOISE_PARTICLES];
+				int current_sector = 0;
+
+				for (int iPart = 0; iPart < MAX_NUMBER_OF_NOISE_PARTICLES; iPart++)
+				{
+
+					float offset_radius;
+					// Rather than mess with the allocations, simply send ignored particles off into space.
+					if (iPart >= pdb_ensemble[current_pdb].number_of_noise_particles)
+					{
+						offset_radius = 1e8;
+					}
+					else
+					{
+//						offset_radius = my_rand.GetNormalRandomSTD(0.0f, 0.1*pdb_ensemble[current_pdb].max_radius);
+						// These numbers (-0.5, 1.8, 0.1 are not at all thought out - please FIXME)
+						offset_radius = my_rand.GetUniformRandomSTD(-0.05*pdb_ensemble[current_pdb].max_radius,0.1*pdb_ensemble[current_pdb].max_radius);
+						offset_radius += 1.8*pdb_ensemble[current_pdb].max_radius;
+					}
+
+
+
+					float offset_angle;
+					// If we have more than one noise particle, enforce non-overlap
+					if (iPart == 0)
+					{
+						offset_angle = clamp_angular_range(my_rand.GetUniformRandomSTD(-PIf,PIf));
+						occupied_sectors[0] = offset_angle;
+					}
+					else
+					{
+						int max_tries = 5000;
+						int iTry = 0;
+						bool is_too_close = true;
+						while (is_too_close && iTry < max_tries)
+						{
+							iTry += 1;
+							offset_angle = clamp_angular_range(my_rand.GetUniformRandomSTD(-PIf,PIf));
+							float dx = cosf(offset_angle);
+							float dy = sinf(offset_angle);
+							float ang_diff;
+							wxPrintf("offset angle is %3.3f\n", rad_2_deg(offset_angle));
+
+							// now check the angle against each previous
+							for (int jPart = 0; jPart < iPart; jPart ++)
+							{
+								ang_diff = cosf(occupied_sectors[jPart])*dx + sinf(occupied_sectors[jPart])*dy;
+								ang_diff = acosf(ang_diff);
+
+								wxPrintf("comparing against %3.3f found a diff of %3.3f\n", rad_2_deg(occupied_sectors[jPart]), rad_2_deg(ang_diff));
+
+								if (ang_diff > sector_size)
+								{
+									is_too_close = false;
+								}
+								else
+								{
+									is_too_close = true;
+								}
+							}
+						}
+						if (is_too_close)
+						{
+							wxPrintf("Error, did not find a well separated noise particle\n");
+							exit(-1);
+						}
+						else
+						{
+							occupied_sectors[iPart] = offset_angle;
+						}
+					}
+
+
+					float offset_X = offset_radius * cosf(offset_angle);
+					float offset_Y = offset_radius * sinf(offset_angle);
+
+
+//					RotationMatrix randmat;
+					// FIXME this will not sample the euler sphere propertly
+//					randmat.SetToEulerRotation(my_rand.GetUniformRandomSTD(0,360),my_rand.GetUniformRandomSTD(0,180),my_rand.GetUniformRandomSTD(0,360));
+
+					pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].Init(my_rand.GetUniformRandomSTD(0,360),my_rand.GetUniformRandomSTD(0,360),my_rand.GetUniformRandomSTD(0,360),offset_X, offset_Y);
+
+
+//					wxPrintf("\n\t\tFor pdb %d particle %d np %d, eulers are %3.3e %3.3e %3.3e, %3.3e %3.3e\n", current_pdb, current_particle, iPart,
+//							pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnPhiAngle(),
+//							pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnThetaAngle(),
+//							pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnPsiAngle(),
+//							pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnShiftX(),
+//							pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnShiftY());
+
+					wxPrintf("\nreal total current %ld %ld %ld\n", pdb_ensemble[current_pdb].number_of_real_atoms,pdb_ensemble[current_pdb].number_of_real_and_noise_atoms, pdb_ensemble[current_pdb].number_of_atoms);
+
+					for (int current_atom_number = 0; current_atom_number < pdb_ensemble[current_pdb].number_of_real_atoms; current_atom_number++)
+					{
+
+						pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].euler_matrix.RotateCoords(
+									my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms*(1+iPart)).x_coordinate,
+									my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms*(1+iPart)).y_coordinate,
+									my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms*(1+iPart)).z_coordinate,
+									tx,ty,tz);
+
+						my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms*(1+iPart)).x_coordinate = tx + pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnShiftX();
+						my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms*(1+iPart)).y_coordinate = ty + pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnShiftY();
+						my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms*(1+iPart)).z_coordinate = tz;
+					}
+
+
+				} // end of loop over noise particles
+			} // if condition on noise particles and frame 0
+
+			else if (pdb_ensemble[current_pdb].generate_noise_atoms)
+			{
+				for (int iPart = 0; iPart < MAX_NUMBER_OF_NOISE_PARTICLES; iPart++)
+				{
+//					wxPrintf("\n\t\tFor pdb %d particle %d np %d, eulers are %3.3e %3.3e %3.3e, %3.3e %3.3e\n", current_pdb, current_particle, iPart,
+//							pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnPhiAngle(),
+//							pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnThetaAngle(),
+//							pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnPsiAngle(),
+//							pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnShiftX(),
+//							pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnShiftY());
+					for (int current_atom_number = 0; current_atom_number < pdb_ensemble[current_pdb].number_of_real_atoms; current_atom_number++)
+					{
+
+						pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].euler_matrix.RotateCoords(
+									my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms*(1+iPart)).x_coordinate,
+									my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms*(1+iPart)).y_coordinate,
+									my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms*(1+iPart)).z_coordinate,
+									tx,ty,tz);
+
+						my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms*(1+iPart)).x_coordinate = tx + pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnShiftX();
+						my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms*(1+iPart)).y_coordinate = ty + pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnShiftY();
+						my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms*(1+iPart)).z_coordinate = tz;
+					}
+				}
+			}
+
 
 			for (current_atom = 0; current_atom < pdb_ensemble[current_pdb].number_of_atoms ; current_atom++)
 			{
 
-
-				this->my_atoms.Item(current_total_atom) = CopyAtom(pdb_ensemble[current_pdb].my_atoms.Item(current_atom));
-
-
-				ix =  my_atoms.Item(current_total_atom).x_coordinate;
-				iy =  my_atoms.Item(current_total_atom).y_coordinate;
-				iz =  my_atoms.Item(current_total_atom).z_coordinate;
-/*				wxPrintf("xyz at %f %f %f\n",pdb_ensemble[current_pdb].my_atoms.Item(current_atom).x_coordinate,
-											 pdb_ensemble[current_pdb].my_atoms.Item(current_atom).y_coordinate,
-											 pdb_ensemble[current_pdb].my_atoms.Item(current_atom).z_coordinate);
-*/
-				rotmat.RotateCoords(ix,iy,iz,tx,ty,tz); // Why can't I just put the shift operation above inline to the function?
-				// Update the specimen with the transformed coords
-
-
-				this->my_atoms.Item(current_total_atom).x_coordinate = tx+ox;
-				this->my_atoms.Item(current_total_atom).y_coordinate = ty+oy;
-				this->my_atoms.Item(current_total_atom).z_coordinate = tz+oz;
-
-				// minMax X
-				if (this->my_atoms.Item(current_total_atom).x_coordinate < min_x)
+				if (my_atoms.Item(current_atom).is_real_particle)
 				{
-					min_x = this->my_atoms.Item(current_total_atom).x_coordinate;
-				}
-				else if (this->my_atoms.Item(current_total_atom).x_coordinate > max_x)
-				{
-					max_x = this->my_atoms.Item(current_total_atom).x_coordinate;
-				}
-				// minMax Y
-				if (this->my_atoms.Item(current_total_atom).y_coordinate < min_y)
-				{
-					min_y = this->my_atoms.Item(current_total_atom).y_coordinate;
-				}
 
-				else if (this->my_atoms.Item(current_total_atom).y_coordinate > max_y )
-				{
-					max_y = this->my_atoms.Item(current_total_atom).y_coordinate;
-				}
-				// minMax Z
-				if (this->my_atoms.Item(current_total_atom).z_coordinate < this->min_z)
-				{
-				  this->min_z = this->my_atoms.Item(current_total_atom).z_coordinate;
-				}
+					ix =  my_atoms.Item(current_atom).x_coordinate;
+					iy =  my_atoms.Item(current_atom).y_coordinate;
+					iz =  my_atoms.Item(current_atom).z_coordinate;
+	/*				wxPrintf("xyz at %f %f %f\n",pdb_ensemble[current_pdb].my_atoms.Item(current_atom).x_coordinate,
+												 pdb_ensemble[current_pdb].my_atoms.Item(current_atom).y_coordinate,
+												 pdb_ensemble[current_pdb].my_atoms.Item(current_atom).z_coordinate);
+	*/
+					rotmat.RotateCoords(ix,iy,iz,tx,ty,tz); // Why can't I just put the shift operation above inline to the function?
+					// Update the specimen with the transformed coords
 
-				else if (this->my_atoms.Item(current_total_atom).z_coordinate > this->max_z )
-				{
-				   this->max_z = this->my_atoms.Item(current_total_atom).z_coordinate;
-				}
 
-				this->number_of_each_atom[pdb_ensemble[current_pdb].my_atoms.Item(current_atom).atom_type]++;
+					this->my_atoms.Item(current_atom).x_coordinate = tx+ox;
+					this->my_atoms.Item(current_atom).y_coordinate = ty+oy;
+					this->my_atoms.Item(current_atom).z_coordinate = tz+oz;
 
-				average_bFactor += my_atoms.Item(current_total_atom).bfactor;
-				current_total_atom++;
+					// minMax X
+					if (this->my_atoms.Item(current_atom).x_coordinate < min_x)
+					{
+						min_x = this->my_atoms.Item(current_atom).x_coordinate;
+					}
+					if (this->my_atoms.Item(current_atom).x_coordinate > max_x)
+					{
+						max_x = this->my_atoms.Item(current_atom).x_coordinate;
+					}
+					// minMax Y
+					if (this->my_atoms.Item(current_atom).y_coordinate < min_y)
+					{
+						min_y = this->my_atoms.Item(current_atom).y_coordinate;
+					}
 
+					if (this->my_atoms.Item(current_atom).y_coordinate > max_y )
+					{
+						max_y = this->my_atoms.Item(current_atom).y_coordinate;
+					}
+					// minMax Z
+					if (this->my_atoms.Item(current_atom).z_coordinate < this->min_z)
+					{
+					  this->min_z = this->my_atoms.Item(current_atom).z_coordinate;
+					}
+
+					if (this->my_atoms.Item(current_atom).z_coordinate > this->max_z )
+					{
+					   this->max_z = this->my_atoms.Item(current_atom).z_coordinate;
+					}
+
+					this->number_of_each_atom[pdb_ensemble[current_pdb].my_atoms.Item(current_atom).atom_type]++;
+
+					average_bFactor += my_atoms.Item(current_atom).bfactor;
+
+					current_total_atom++;
+				} // if on real particles
 
 			}
 
@@ -927,13 +1147,6 @@ void PDB::TransformGlobalAndSortOnZ(long number_of_non_water_atoms, float shift_
 	long current_atom;
     float ix, iy, iz; // input coords for current atom
     float tx, ty, tz; // transformed coords for current atom
-
-
-
-//    // May need more than one to specify a complete transformation?
-//    RotationMatrix rotmat;
-//    rotmat.SetToRotation(0,tilt_specimen,0);
-
 
 
 

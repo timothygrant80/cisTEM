@@ -3,6 +3,9 @@
 #define OPEN_TO_APPEND 2
 #define MAX_NUMBER_OF_TIMESTEPS 200
 
+#define MAX_NUMBER_OF_NOISE_PARTICLES 6
+
+
 enum  AtomType : int  { hydrogen = 0, 	carbon = 1, 	nitrogen = 2, 	oxygen = 3, 		fluorine = 4,
 						sodium = 5, 	magnesium = 6,  silicon = 17, 	phosphorus = 7, 	sulfur = 8,
 						chlorine = 9,	potassium = 10, calcium = 11, 	manganese = 12, 	iron = 13,
@@ -18,6 +21,7 @@ class Atom {
 		// If any fields are added or modified here, be sure to update the CopyAtom method in the PDB class.
 		wxString name;
 		AtomType atom_type;
+		bool is_real_particle;
 		float x_coordinate;  // Angstrom
 		float y_coordinate;  // Angstrom
 		float z_coordinate;  // Angstrom
@@ -65,22 +69,31 @@ class PDB {
 
 		ArrayOfAtoms my_atoms;
 		ArrayOfParticleTrajectories my_trajectory;
+		// This should be used to replace my_trajectory. For now just using for the noise atoms.
+		AnglesAndShifts my_angles_and_shifts[MAX_NUMBER_OF_NOISE_PARTICLES];
+
+		// If generating a particle stack, this may be set to true after PDB initialization. It wouldn't make sense to enable this for a micrograph or tilt-series
+		bool generate_noise_atoms = false;
+		int number_of_noise_particles;
 		//ArrayOfParticleInstances my_particle;
+
+
 
 		// Constructors
 		PDB();
 		PDB(long number_of_non_water_atoms, float cubic_size, float wanted_pixel_size, int minimum_paddeding_x_and_y = 32.0f, double minimum_thickness_z = 5.0f);
-
-		PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, long wanted_records_per_line = 1, int minimum_paddeding_x_and_y = 32.0f, double minimum_thickness_z = 5.0f);
+		PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, long wanted_records_per_line = 1, int minimum_paddeding_x_and_y = 32.0f, double minimum_thickness_z = 5.0f, bool generate_noise_particles = false);
 		PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, long wanted_records_per_line, int minimum_paddeding_x_and_y, double minimum_thickness_z, double *center_of_mass);
-
 
 		~PDB();
 
 		// data
 
 		long number_of_lines;
-		long number_of_atoms;
+		long number_of_atoms; // total atoms to simulate, active in this particle
+		long number_of_real_and_noise_atoms; // total atoms in the PDB object
+		long number_of_real_atoms; // atoms not in the noise particles
+
 		int records_per_line;
 		double center_of_mass[3];
 		bool use_provided_com;
@@ -97,6 +110,7 @@ class PDB {
 		float offset_z;
 		float min_z;
 		float max_z;
+		float max_radius = 0;
 
 		int MIN_PADDING_XY;
 		double MIN_THICKNESS;
@@ -108,14 +122,16 @@ class PDB {
 		Atom CopyAtom(Atom &atom_to_copy)
 		{
 			Atom atom_out;
-			atom_out.name = atom_to_copy.name;
 			atom_out.atom_type = atom_to_copy.atom_type;
+			atom_out.is_real_particle = atom_to_copy.is_real_particle;
+			atom_out.name = atom_to_copy.name;
 			atom_out.x_coordinate = atom_to_copy.x_coordinate;  // Angstrom
 			atom_out.y_coordinate = atom_to_copy.y_coordinate;  // Angstrom
 			atom_out.z_coordinate = atom_to_copy.z_coordinate;  // Angstrom
 			atom_out.occupancy = atom_to_copy.occupancy;
 			atom_out.bfactor = atom_to_copy.bfactor;
 			atom_out.charge = atom_to_copy.charge;
+
 
 			return atom_out;
 		};
@@ -135,8 +151,8 @@ class PDB {
         void WriteLine(float *data_array);
         void WriteLine(double *data_array);
         void WriteCommentLine(const char * format, ...);
-        void TransformBaseCoordinates(float wanted_origin_x,float wanted_origin_y,float wanted_origin_z, float euler1, float euler2, float euler3);
-        void TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, long number_of_non_water_atoms, int time_step, RotationMatrix particle_rot, float shift_z);
+        void TransformBaseCoordinates(float wanted_origin_x,float wanted_origin_y,float wanted_origin_z, float euler1, float euler2, float euler3, int particle_idx, int frame_number);
+        void TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int frame_number, RotationMatrix particle_rot, float shift_z);
         void TransformGlobalAndSortOnZ(long number_of_non_water_atoms,float shift_x, float shift_y, float shift_z,  RotationMatrix rotate_waters);
 
         inline bool IsNonAminoAcid(wxString atom_name)

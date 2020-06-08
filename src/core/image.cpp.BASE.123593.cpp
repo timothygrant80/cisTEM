@@ -247,7 +247,7 @@ float Image::ReturnSumOfSquares(float wanted_mask_radius, float wanted_center_x,
 						{
 							if (distance_from_center_squared > mask_radius_squared)
 							{
-								sum += pow(real_values[address],2);
+								sum += powf(real_values[address],2);
 								number_of_pixels++;
 							}
 						}
@@ -255,7 +255,7 @@ float Image::ReturnSumOfSquares(float wanted_mask_radius, float wanted_center_x,
 						{
 							if (distance_from_center_squared <= mask_radius_squared)
 							{
-								sum += pow(real_values[address],2);
+								sum += powf(real_values[address],2);
 								number_of_pixels++;
 							}
 						}
@@ -281,7 +281,7 @@ float Image::ReturnSumOfSquares(float wanted_mask_radius, float wanted_center_x,
 				{
 					for (i = 0; i < logical_x_dimension; i++)
 					{
-						sum += pow(real_values[address],2);
+						sum += powf(real_values[address],2);
 						address++;
 					}
 					address += padding_jump_value;
@@ -301,9 +301,9 @@ float Image::ReturnSumOfSquares(float wanted_mask_radius, float wanted_center_x,
 				for (i = 0; i <= physical_upper_bound_complex_x; i++)
 				{
 					if ((i == 0 || (i == logical_upper_bound_complex_x && x_is_even)) && (jj == 0 || (jj == logical_lower_bound_complex_y && x_is_even)) && (kk == 0 || (kk == logical_lower_bound_complex_z && x_is_even)))
-						sum += pow(abs(complex_values[address]),2) * 0.5;
-					else if ((i == 0 || (i == logical_upper_bound_complex_x && x_is_even)) && logical_z_dimension != 1) sum += pow(abs(complex_values[address]),2) * 0.25;
-					else if ((i != 0 && (i != logical_upper_bound_complex_x || ! x_is_even)) || (jj >= 0 && kk >= 0)) sum += pow(abs(complex_values[address]),2);
+						sum += powf(abs(complex_values[address]),2) * 0.5;
+					else if ((i == 0 || (i == logical_upper_bound_complex_x && x_is_even)) && logical_z_dimension != 1) sum += powf(abs(complex_values[address]),2) * 0.25;
+					else if ((i != 0 && (i != logical_upper_bound_complex_x || ! x_is_even)) || (jj >= 0 && kk >= 0)) sum += powf(abs(complex_values[address]),2);
 					address++;
 				}
 			}
@@ -2447,7 +2447,7 @@ void Image::RotateFourier2D(Image &rotated_image, AnglesAndShifts &rotation_angl
 
 void Image::ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_shifts_of_image, float resolution_limit, bool apply_resolution_limit)
 {
-//	MyDebugAssertTrue(image_to_extract.logical_x_dimension == logical_x_dimension && image_to_extract.logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
+	MyDebugAssertTrue(image_to_extract.logical_x_dimension == logical_x_dimension && image_to_extract.logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
 	MyDebugAssertTrue(image_to_extract.logical_z_dimension == 1, "Error: attempting to extract 3D image from 3D reconstruction");
 	MyDebugAssertTrue(image_to_extract.is_in_memory, "Memory not allocated for receiving image");
 	MyDebugAssertTrue(IsCubic(), "Image volume to project is not cubic");
@@ -2470,143 +2470,116 @@ void Image::ExtractSlice(Image &image_to_extract, AnglesAndShifts &angles_and_sh
 	float resolution_limit_sq = powf(resolution_limit * logical_x_dimension,2);
 	float y_coord_sq;
 
-	bool padding = false;
-
-	Image *temp_image;
-
-	if (image_to_extract.logical_x_dimension != logical_x_dimension || image_to_extract.logical_y_dimension != logical_y_dimension) padding = true;
-
-	if (! padding)
-	{
-		temp_image = &image_to_extract;
-	}
-	else
-	{
-		temp_image = new Image;
-		temp_image->Allocate(logical_x_dimension, logical_y_dimension, false);
-	}
-
-	temp_image->object_is_centred_in_box = false;
-	temp_image->is_in_real_space = false;
-//	temp_image->SetToConstant(0.0);
+	image_to_extract.object_is_centred_in_box = false;
+	image_to_extract.is_in_real_space = false;
+//	image_to_extract.SetToConstant(0.0);
 
 	if (apply_resolution_limit)
 	{
-		for (j = temp_image->logical_lower_bound_complex_y; j <= temp_image->logical_upper_bound_complex_y; j++)
+		for (j = image_to_extract.logical_lower_bound_complex_y; j <= image_to_extract.logical_upper_bound_complex_y; j++)
 		{
 			y_coordinate_2d = j;
 			y_coord_sq = powf(y_coordinate_2d,2);
-			for (i = 1; i <= temp_image->logical_upper_bound_complex_x; i++)
+			for (i = 1; i <= image_to_extract.logical_upper_bound_complex_x; i++)
 			{
 				x_coordinate_2d = i;
-				pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(i,j,0);
+				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(i,j,0);
 				if (powf(x_coordinate_2d,2) + y_coord_sq <= resolution_limit_sq)
 				{
 					angles_and_shifts_of_image.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-					temp_image->complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+					image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 				}
 				else
 				{
-					temp_image->complex_values[pixel_counter] = 0.0f + I * 0.0f;
+					image_to_extract.complex_values[pixel_counter] = 0.0f + I * 0.0f;
 				}
 			}
 		}
 	// Now deal with special case of i = 0
-		for (j = 1; j <= temp_image->logical_upper_bound_complex_y; j++)
+		for (j = 1; j <= image_to_extract.logical_upper_bound_complex_y; j++)
 		{
 			y_coordinate_2d = j;
 			x_coordinate_2d = 0;
 			if (powf(y_coordinate_2d,2) <= resolution_limit_sq)
 			{
 				angles_and_shifts_of_image.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-				pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,j,0);
-				temp_image->complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-				pixel_counter2 = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
-				temp_image->complex_values[pixel_counter2] = conj(temp_image->complex_values[pixel_counter]);
+				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
+				image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+				pixel_counter2 = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
+				image_to_extract.complex_values[pixel_counter2] = conj(image_to_extract.complex_values[pixel_counter]);
 			}
 			else
 			{
-				pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,j,0);
-				temp_image->complex_values[pixel_counter] = 0.0f + I * 0.0f;
-				pixel_counter2 = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
-				temp_image->complex_values[pixel_counter2] = 0.0f + I * 0.0f;
+				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
+				image_to_extract.complex_values[pixel_counter] = 0.0f + I * 0.0f;
+				pixel_counter2 = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
+				image_to_extract.complex_values[pixel_counter2] = 0.0f + I * 0.0f;
 			}
 		}
 	// Deal with pixel at edge if image dimensions are even
-		if (-temp_image->logical_lower_bound_complex_y != temp_image->logical_upper_bound_complex_y)
+		if (-image_to_extract.logical_lower_bound_complex_y != image_to_extract.logical_upper_bound_complex_y)
 		{
-			y_coordinate_2d = temp_image->logical_lower_bound_complex_y;
+			y_coordinate_2d = image_to_extract.logical_lower_bound_complex_y;
 			x_coordinate_2d = 0;
 			if (powf(y_coordinate_2d,2) <= resolution_limit_sq)
 			{
 				angles_and_shifts_of_image.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-				pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,temp_image->logical_lower_bound_complex_y,0);
-				temp_image->complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,image_to_extract.logical_lower_bound_complex_y,0);
+				image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 			}
 			else
 			{
-				pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,temp_image->logical_lower_bound_complex_y,0);
-				temp_image->complex_values[pixel_counter] = 0.0f + I * 0.0f;
+				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,image_to_extract.logical_lower_bound_complex_y,0);
+				image_to_extract.complex_values[pixel_counter] = 0.0f + I * 0.0f;
 			}
 		}
 	}
 	else
 	{
-		for (j = temp_image->logical_lower_bound_complex_y; j <= temp_image->logical_upper_bound_complex_y; j++)
+		for (j = image_to_extract.logical_lower_bound_complex_y; j <= image_to_extract.logical_upper_bound_complex_y; j++)
 		{
 			y_coordinate_2d = j;
-			for (i = 1; i <= temp_image->logical_upper_bound_complex_x; i++)
+			for (i = 1; i <= image_to_extract.logical_upper_bound_complex_x; i++)
 			{
 				x_coordinate_2d = i;
-				pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(i,j,0);
+				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(i,j,0);
 				angles_and_shifts_of_image.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-				temp_image->complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+				image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 			}
 		}
 // Now deal with special case of i = 0
-		for (j = 1; j <= temp_image->logical_upper_bound_complex_y; j++)
+		for (j = 1; j <= image_to_extract.logical_upper_bound_complex_y; j++)
 		{
 			y_coordinate_2d = j;
 			x_coordinate_2d = 0;
 			angles_and_shifts_of_image.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-			pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,j,0);
-			temp_image->complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-			pixel_counter2 = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
-			temp_image->complex_values[pixel_counter2] = conj(temp_image->complex_values[pixel_counter]);
+			pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
+			image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+			pixel_counter2 = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
+			image_to_extract.complex_values[pixel_counter2] = conj(image_to_extract.complex_values[pixel_counter]);
 		}
 // Deal with pixel at edge if image dimensions are even
-		if (-temp_image->logical_lower_bound_complex_y != temp_image->logical_upper_bound_complex_y)
+		if (-image_to_extract.logical_lower_bound_complex_y != image_to_extract.logical_upper_bound_complex_y)
 		{
-			y_coordinate_2d = temp_image->logical_lower_bound_complex_y;
+			y_coordinate_2d = image_to_extract.logical_lower_bound_complex_y;
 			x_coordinate_2d = 0;
 			angles_and_shifts_of_image.euler_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-			pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,temp_image->logical_lower_bound_complex_y,0);
-			temp_image->complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+			pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,image_to_extract.logical_lower_bound_complex_y,0);
+			image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 		}
 	}
 
 // Set origin to zero to generate a projection with average set to zero
-	temp_image->complex_values[0] = 0.0f + I * 0.0f;
+	image_to_extract.complex_values[0] = 0.0f + I * 0.0f;
 // This was changed to make projections compatible with ML algorithm
-//	temp_image->complex_values[0] = complex_values[0];
+//	image_to_extract.complex_values[0] = complex_values[0];
 
-	temp_image->is_in_real_space = false;
-
-	if (padding)
-	{
-		temp_image->SwapRealSpaceQuadrants();
-		temp_image->BackwardFFT();
-		if (temp_image->logical_x_dimension < image_to_extract.logical_x_dimension && temp_image->logical_y_dimension < image_to_extract.logical_y_dimension) temp_image->ClipIntoLargerRealSpace2D(&image_to_extract);
-		else temp_image->ClipInto(&image_to_extract);
-		image_to_extract.ForwardFFT();
-		image_to_extract.SwapRealSpaceQuadrants();
-		delete temp_image;
-	}
+	image_to_extract.is_in_real_space = false;
 }
 
 void Image::ExtractSliceByRotMatrix(Image &image_to_extract, RotationMatrix &wanted_matrix, float resolution_limit, bool apply_resolution_limit)
 {
-//	MyDebugAssertTrue(image_to_extract.logical_x_dimension == logical_x_dimension && image_to_extract.logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
+	MyDebugAssertTrue(image_to_extract.logical_x_dimension == logical_x_dimension && image_to_extract.logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
 	MyDebugAssertTrue(image_to_extract.logical_z_dimension == 1, "Error: attempting to extract 3D image from 3D reconstruction");
 	MyDebugAssertTrue(image_to_extract.is_in_memory, "Memory not allocated for receiving image");
 	MyDebugAssertTrue(IsCubic(), "Image volume to project is not cubic");
@@ -2629,138 +2602,111 @@ void Image::ExtractSliceByRotMatrix(Image &image_to_extract, RotationMatrix &wan
 	float resolution_limit_sq = powf(resolution_limit * logical_x_dimension,2);
 	float y_coord_sq;
 
-	bool padding = false;
-
-	Image *temp_image;
-
-	if (image_to_extract.logical_x_dimension != logical_x_dimension || image_to_extract.logical_y_dimension != logical_y_dimension) padding = true;
-
-	if (! padding)
-	{
-		temp_image = &image_to_extract;
-	}
-	else
-	{
-		temp_image = new Image;
-		temp_image->Allocate(logical_x_dimension, logical_y_dimension, false);
-	}
-
-	temp_image->object_is_centred_in_box = false;
-	temp_image->is_in_real_space = false;
-//	temp_image->SetToConstant(0.0);
+	image_to_extract.object_is_centred_in_box = false;
+	image_to_extract.is_in_real_space = false;
+//	image_to_extract.SetToConstant(0.0);
 
 	if (apply_resolution_limit)
 	{
-		for (j = temp_image->logical_lower_bound_complex_y; j <= temp_image->logical_upper_bound_complex_y; j++)
+		for (j = image_to_extract.logical_lower_bound_complex_y; j <= image_to_extract.logical_upper_bound_complex_y; j++)
 		{
 			y_coordinate_2d = j;
 			y_coord_sq = powf(y_coordinate_2d,2);
-			for (i = 1; i <= temp_image->logical_upper_bound_complex_x; i++)
+			for (i = 1; i <= image_to_extract.logical_upper_bound_complex_x; i++)
 			{
 				x_coordinate_2d = i;
-				pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(i,j,0);
+				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(i,j,0);
 				if (powf(x_coordinate_2d,2) + y_coord_sq <= resolution_limit_sq)
 				{
 					wanted_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-					temp_image->complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+					image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 				}
 				else
 				{
-					temp_image->complex_values[pixel_counter] = 0.0f + I * 0.0f;
+					image_to_extract.complex_values[pixel_counter] = 0.0f + I * 0.0f;
 				}
 			}
 		}
 	// Now deal with special case of i = 0
-		for (j = 1; j <= temp_image->logical_upper_bound_complex_y; j++)
+		for (j = 1; j <= image_to_extract.logical_upper_bound_complex_y; j++)
 		{
 			y_coordinate_2d = j;
 			x_coordinate_2d = 0;
 			if (powf(y_coordinate_2d,2) <= resolution_limit_sq)
 			{
 				wanted_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-				pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,j,0);
-				temp_image->complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-				pixel_counter2 = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
-				temp_image->complex_values[pixel_counter2] = conj(temp_image->complex_values[pixel_counter]);
+				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
+				image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+				pixel_counter2 = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
+				image_to_extract.complex_values[pixel_counter2] = conj(image_to_extract.complex_values[pixel_counter]);
 			}
 			else
 			{
-				pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,j,0);
-				temp_image->complex_values[pixel_counter] = 0.0f + I * 0.0f;
-				pixel_counter2 = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
-				temp_image->complex_values[pixel_counter2] = 0.0f + I * 0.0f;
+				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
+				image_to_extract.complex_values[pixel_counter] = 0.0f + I * 0.0f;
+				pixel_counter2 = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
+				image_to_extract.complex_values[pixel_counter2] = 0.0f + I * 0.0f;
 			}
 		}
 	// Deal with pixel at edge if image dimensions are even
-		if (-temp_image->logical_lower_bound_complex_y != temp_image->logical_upper_bound_complex_y)
+		if (-image_to_extract.logical_lower_bound_complex_y != image_to_extract.logical_upper_bound_complex_y)
 		{
-			y_coordinate_2d = temp_image->logical_lower_bound_complex_y;
+			y_coordinate_2d = image_to_extract.logical_lower_bound_complex_y;
 			x_coordinate_2d = 0;
 			if (powf(y_coordinate_2d,2) <= resolution_limit_sq)
 			{
 				wanted_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-				pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,temp_image->logical_lower_bound_complex_y,0);
-				temp_image->complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,image_to_extract.logical_lower_bound_complex_y,0);
+				image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 			}
 			else
 			{
-				pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,temp_image->logical_lower_bound_complex_y,0);
-				temp_image->complex_values[pixel_counter] = 0.0f + I * 0.0f;
+				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,image_to_extract.logical_lower_bound_complex_y,0);
+				image_to_extract.complex_values[pixel_counter] = 0.0f + I * 0.0f;
 			}
 		}
 	}
 	else
 	{
-		for (j = temp_image->logical_lower_bound_complex_y; j <= temp_image->logical_upper_bound_complex_y; j++)
+		for (j = image_to_extract.logical_lower_bound_complex_y; j <= image_to_extract.logical_upper_bound_complex_y; j++)
 		{
 			y_coordinate_2d = j;
-			for (i = 1; i <= temp_image->logical_upper_bound_complex_x; i++)
+			for (i = 1; i <= image_to_extract.logical_upper_bound_complex_x; i++)
 			{
 				x_coordinate_2d = i;
-				pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(i,j,0);
+				pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(i,j,0);
 				wanted_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-				temp_image->complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+				image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 			}
 		}
 // Now deal with special case of i = 0
-		for (j = 1; j <= temp_image->logical_upper_bound_complex_y; j++)
+		for (j = 1; j <= image_to_extract.logical_upper_bound_complex_y; j++)
 		{
 			y_coordinate_2d = j;
 			x_coordinate_2d = 0;
 			wanted_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-			pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,j,0);
-			temp_image->complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-			pixel_counter2 = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
-			temp_image->complex_values[pixel_counter2] = conj(temp_image->complex_values[pixel_counter]);
+			pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,j,0);
+			image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+			pixel_counter2 = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,-j,0);
+			image_to_extract.complex_values[pixel_counter2] = conj(image_to_extract.complex_values[pixel_counter]);
 		}
 // Deal with pixel at edge if image dimensions are even
-		if (-temp_image->logical_lower_bound_complex_y != temp_image->logical_upper_bound_complex_y)
+		if (-image_to_extract.logical_lower_bound_complex_y != image_to_extract.logical_upper_bound_complex_y)
 		{
-			y_coordinate_2d = temp_image->logical_lower_bound_complex_y;
+			y_coordinate_2d = image_to_extract.logical_lower_bound_complex_y;
 			x_coordinate_2d = 0;
 			wanted_matrix.RotateCoords(x_coordinate_2d, y_coordinate_2d, z_coordinate_2d, x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
-			pixel_counter = temp_image->ReturnFourier1DAddressFromLogicalCoord(0,temp_image->logical_lower_bound_complex_y,0);
-			temp_image->complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
+			pixel_counter = image_to_extract.ReturnFourier1DAddressFromLogicalCoord(0,image_to_extract.logical_lower_bound_complex_y,0);
+			image_to_extract.complex_values[pixel_counter] = ReturnLinearInterpolatedFourier(x_coordinate_3d, y_coordinate_3d, z_coordinate_3d);
 		}
 	}
 
 // Set origin to zero to generate a projection with average set to zero
-	temp_image->complex_values[0] = 0.0f + I * 0.0f;
+	image_to_extract.complex_values[0] = 0.0f + I * 0.0f;
 // This was changed to make projections compatible with ML algorithm
-//	temp_image->complex_values[0] = complex_values[0];
+//	image_to_extract.complex_values[0] = complex_values[0];
 
-	temp_image->is_in_real_space = false;
-
-	if (padding)
-	{
-		temp_image->SwapRealSpaceQuadrants();
-		temp_image->BackwardFFT();
-		if (temp_image->logical_x_dimension < image_to_extract.logical_x_dimension && temp_image->logical_y_dimension < image_to_extract.logical_y_dimension) temp_image->ClipIntoLargerRealSpace2D(&image_to_extract);
-		else temp_image->ClipInto(&image_to_extract);
-		image_to_extract.ForwardFFT();
-		image_to_extract.SwapRealSpaceQuadrants();
-		delete temp_image;
-	}
+	image_to_extract.is_in_real_space = false;
 }
 
 std::complex<float> Image::ReturnNearestFourier2D(float &x, float &y)
@@ -4478,213 +4424,6 @@ float Image::CosineRectangularMask(float wanted_mask_radius_x, float wanted_mask
 	return float(mask_volume);
 }
 
-void Image::LocalResSignificanceFilter(float pixel_size, float starting_resolution, float mask_radius_in_angstroms)
-{
-	Image sharp3d;
-	Image automask;
-	Image output3d;
-	Image buffer3d;
-	float start_spatial_frequency = (pixel_size / starting_resolution) + 0.03f;
-	if (start_spatial_frequency > 0.5f) start_spatial_frequency = 0.5f;
-	float end_spatial_frequency = pixel_size / 30.0f;
-	float step_size = (start_spatial_frequency - end_spatial_frequency) / 6.0f;
-	float window = (start_spatial_frequency - end_spatial_frequency) / 20.0f;
-	float threshold_value;
-	long pixel_counter;
-	float filter_frequency;
-	int i,j,k;
-
-	int pixels_above_threshold;
-	int pixels_added;
-
-	EmpiricalDistribution distro;
-
-	automask.CopyFrom(this);
-	sharp3d.CopyFrom(this);
-
-	output3d.Allocate(logical_x_dimension, logical_y_dimension, logical_z_dimension);
-	output3d.SetToConstant(0.0f);
-
-	automask.ConvertToAutoMask(pixel_size, mask_radius_in_angstroms, 10.0f, 0.05);
- int counter = 1;
-	for (float current_spatial_frequency = start_spatial_frequency; current_spatial_frequency >= end_spatial_frequency; current_spatial_frequency -= step_size)
-	{
-		buffer3d.CopyFrom(this);
-		sharp3d.CopyFrom(this);
-
-		buffer3d.ForwardFFT();
-		filter_frequency = current_spatial_frequency + window;
-		if (filter_frequency > 0.5) filter_frequency = 0.5;
-		buffer3d.CosineMask(filter_frequency, window);
-		buffer3d.BackwardFFT();
-		buffer3d.QuickAndDirtyWriteSlices(wxString::Format("/tmp/filter_%i.mrc", counter).ToStdString(), 1, buffer3d.logical_z_dimension);
-
-		sharp3d.SharpenMap(pixel_size, pixel_size / (current_spatial_frequency), false, 0.0f, mask_radius_in_angstroms, 50.0f, 0.0f, 0.0f, 500.0f, false, &automask);
-
-		distro.Reset();
-		pixel_counter = 0;
-
-		for (k = 0; k < sharp3d.logical_z_dimension; k++)
-		{
-			for (j = 0; j < sharp3d.logical_y_dimension; j++)
-			{
-				for (i = 0; i < sharp3d.logical_x_dimension; i++)
-				{
-					distro.AddSampleValue(sharp3d.real_values[pixel_counter]);
-					pixel_counter++;
-				}
-
-				pixel_counter += sharp3d.padding_jump_value;
-			}
-		}
-		// threshold
-
-		//threshold_value = sharp3d.ReturnAverageOfMaxN(50) * 0.3;
-
-		//threshold_value = sharp3d.ReturnAverageOfRealValues() + ((sharp3d.ReturnAverageOfMaxN(50) - sharp3d.ReturnAverageOfRealValues()) * 0.5f);
-		//threshold_value = sharp3d.ReturnAverageOfRealValuesAtRadius(sharp3d.logical_x_dimension / 2.0f) + (6.0f * sqrtf(sharp3d.ReturnVarianceOfRealValues(sharp3d.logical_x_dimension / 2.0f)));
-		//threshold_value = distro.GetSampleMean() + (8.0f * sqrtf(distro.GetSampleVariance()));
-		//threshold_value = (8.0f * sqrtf(distro.GetSampleVariance()));
-		//sharp3d.QuickAndDirtyWriteSlices("/tmp/sharp.mrc", 1, sharp3d.logical_z_dimension);
-		//wxPrintf("Threshold = %f\n", threshold_value);
-		sharp3d.QuickAndDirtyWriteSlices(wxString::Format("/tmp/sharp_%i.mrc", counter).ToStdString(), 1, buffer3d.logical_z_dimension);
-
-		float original_average_value = sharp3d.ReturnAverageOfRealValues(mask_radius_in_angstroms / pixel_size, true);
-		sharp3d.SetMinimumValue(original_average_value);
-		float average_value = sharp3d.ReturnAverageOfRealValues(mask_radius_in_angstroms / pixel_size, true);
-		float average_of_max = sharp3d.ReturnAverageOfMaxN(50, mask_radius_in_angstroms / pixel_size);
-		threshold_value = average_value + ((average_of_max - average_value) * 0.25);
-
-		sharp3d.Binarise(threshold_value);
-		sharp3d.QuickAndDirtyWriteSlices("/tmp/bin.mrc", 1, sharp3d.logical_z_dimension);
-		sharp3d.QuickAndDirtyWriteSlices(wxString::Format("/tmp/bin_%i.mrc", counter).ToStdString(), 1, buffer3d.logical_z_dimension);
-		counter++;
-		pixels_above_threshold = 0;
-		for (pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
-		{
-			if (sharp3d.real_values[pixel_counter] == 1.0f) pixels_above_threshold++;
-		}
-
-	//	sharp3d.QuickAndDirtyWriteSlices("sharp.mrc", 1, sharp3d.logical_z_dimension);
-		pixels_added = 0;
-		for (pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
-		{
-			if (sharp3d.real_values[pixel_counter] == 1.0f && output3d.real_values[pixel_counter] == 0.0f)
-			{
-				output3d.real_values[pixel_counter] = buffer3d.real_values[pixel_counter];
-				pixels_added++;
-			}
-		}
-
-
-
-		wxPrintf("Resolution %.2f has %i pixels above threshold (this added %i pixels to the output)\n", pixel_size / current_spatial_frequency, pixels_above_threshold, pixels_added);
-	}
-
-	for (pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++)
-	{
-			if (output3d.real_values[pixel_counter] == 0.0f) output3d.real_values[pixel_counter] = buffer3d.real_values[pixel_counter];
-	}
-
-
-//	output3d.QuickAndDirtyWriteSlices("filtered.mrc", 1, sharp3d.logical_z_dimension);
-	Consume(&output3d);
-}
-
-void Image::ConvertToAutoMask(float pixel_size, float outer_mask_radius_in_angstroms, float filter_resolution_in_angstroms, float rebin_value, bool auto_estimate_initial_bin_value, float wanted_initial_bin_value)
-{
-	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
-	MyDebugAssertTrue(is_in_real_space, "Image must be in real space");
-
-	Image buffer_image;
-
-	int original_x_size;
-	int original_y_size;
-	int original_z_size;
-
-	int binned_x_size;
-	int binned_y_size;
-	int binned_z_size;
-
-	float original_average_value;
-	float average_value;
-	float average_of_max;
-	float threshold_value;
-	float binning_factor = filter_resolution_in_angstroms / 2.0f / pixel_size;
-
-	int number_of_top_pixels_to_use;
-
-	original_x_size = logical_x_dimension;
-	original_y_size = logical_y_dimension;
-	original_z_size = logical_z_dimension;
-
-	binned_x_size = original_x_size / binning_factor + 0.5f;
-	binned_y_size = original_y_size / binning_factor + 0.5f;
-	binned_z_size = original_z_size / binning_factor + 0.5f;
-
-	if (IsOdd(binned_x_size) == true) binned_x_size++;
-	if (IsOdd(binned_y_size) == true) binned_y_size++;
-	if (IsOdd(binned_z_size) == true) binned_z_size++;
-
-	if (binned_x_size > original_x_size || binned_y_size > original_y_size || binned_z_size > original_z_size)
-	{
-		binned_x_size = original_x_size;
-		binned_y_size = original_y_size;
-		binned_z_size = original_z_size;
-	}
-
-	if (binned_x_size != original_x_size)
-	{
-		ForwardFFT();
-		//DivideByConstant(sqrtf(number_of_real_space_pixels));
-		Resize(binned_x_size, binned_y_size, binned_z_size);
-		//DivideByConstant(sqrtf(number_of_real_space_pixels));
-		BackwardFFT();
-	}
-
-//	QuickAndDirtyWriteSlices("/tmp/binning_input.mrc", 1, logical_z_dimension, true);
-
-	if (auto_estimate_initial_bin_value == false) threshold_value = wanted_initial_bin_value;
-	else
-	{
-		original_average_value = ReturnAverageOfRealValues(outer_mask_radius_in_angstroms / binning_factor / pixel_size, true);
-		SetMinimumValue(original_average_value);
-		average_value = ReturnAverageOfRealValues(outer_mask_radius_in_angstroms / binning_factor / pixel_size, true);
-
-		number_of_top_pixels_to_use = number_of_real_space_pixels * 0.000005;
-		if (number_of_top_pixels_to_use < 5) number_of_top_pixels_to_use = 5;
-
-		average_of_max = ReturnAverageOfMaxN(number_of_top_pixels_to_use, outer_mask_radius_in_angstroms / binning_factor / pixel_size);
-		threshold_value = average_value + ((average_of_max - average_value) * 0.05);
-	}
-
-	CosineMask(outer_mask_radius_in_angstroms / binning_factor / pixel_size, 1.0, false, true, -FLT_MAX);
-
-	Binarise(threshold_value);
-//	QuickAndDirtyWriteSlices("/tmp/binned.mrc", 1, logical_z_dimension, true);
-
-	//rle3d my_rle3d(*this);
-	//my_rle3d.ConnectedSizeDecodeTo(*this);
-	//Binarise(ReturnMaximumValue() - 1.0f);
-
-	buffer_image.CopyFrom(this);
-	ccl3d my_ccl3d(buffer_image);
-	my_ccl3d.GetLargestConnectedDensityMask(buffer_image, *this);
-
-	ForwardFFT();
-// FIXME these writes should probably be under control of a debug flag or something <3 Ben
-	QuickAndDirtyWriteSlices("/tmp/prefilter.mrc", 1, logical_z_dimension);
-	GaussianLowPassFilter(binning_factor / pixel_size / 16.0f);
-	QuickAndDirtyWriteSlices("/tmp/presize.mrc", 1, logical_z_dimension);
-	Resize(original_x_size, original_y_size, original_z_size, 0.0);
-	BackwardFFT();
-
-	QuickAndDirtyWriteSlices("/tmp/prebin.mrc", 1, logical_z_dimension);
-
-	DivideByConstant(ReturnMaximumValue());
-	Binarise(rebin_value);
-}
-
 Image & Image::operator = (const Image &other_image)
 {
 	*this = &other_image;
@@ -4758,7 +4497,7 @@ void Image::Deallocate()
 //
 //  If the object is already allocated with correct dimensions, nothing happens. Otherwise, object is deallocated first.
 
-void Image::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size, bool should_be_in_real_space, bool do_fft_planning)
+void Image::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size, bool should_be_in_real_space)
 {
 
 	MyDebugAssertTrue(wanted_x_size > 0 && wanted_y_size > 0 && wanted_z_size > 0,"Bad dimensions: %i %i %i\n",wanted_x_size,wanted_y_size,wanted_z_size);
@@ -4805,7 +4544,7 @@ void Image::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size, bo
 
     // Prepare the plans for FFTW
 
-    if (planned == false && do_fft_planning == true) // skip fft planning at your peril!
+    if (planned == false)
     {
     	wxMutexLocker lock(s_mutexProtectingFFTW); // the mutex will be unlocked when this object is destroyed (when it goes out of scope)
     	MyDebugAssertTrue(lock.IsOk(),"Mute locking failed");
@@ -4819,12 +4558,6 @@ void Image::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size, bo
     		plan_fwd = fftwf_plan_dft_r2c_2d(logical_y_dimension, logical_x_dimension, real_values, reinterpret_cast<fftwf_complex*>(complex_values), FFTW_ESTIMATE);
     	    plan_bwd = fftwf_plan_dft_c2r_2d(logical_y_dimension, logical_x_dimension, reinterpret_cast<fftwf_complex*>(complex_values), real_values, FFTW_ESTIMATE);
 
-    	}
-
-    	if (plan_fwd == NULL || plan_bwd == NULL)
-    	{
-    		MyPrintWithDetails("Error in FFT Planning...");
-    		DEBUG_ABORT;
     	}
 
     	planned = true;
@@ -4849,17 +4582,6 @@ void Image::Allocate(int wanted_x_size, int wanted_y_size, bool should_be_in_rea
 {
 	Allocate(wanted_x_size, wanted_y_size, 1, should_be_in_real_space);
 }
-
-//!>  \brief  Allocate memory for the Image object.
-//
-//  Overloaded version allowing you to supply a reference 3d - the data is NOT copied.
-
-void Image::Allocate(Image *image_to_copy_size_and_space_from)
-{
-	Allocate(image_to_copy_size_and_space_from->logical_x_dimension, image_to_copy_size_and_space_from->logical_y_dimension, image_to_copy_size_and_space_from->logical_z_dimension, image_to_copy_size_and_space_from->is_in_real_space);
-}
-
-
 
 
 void Image::AllocateAsPointingToSliceIn3D(Image *wanted3d, long wanted_slice)
@@ -5370,7 +5092,7 @@ void Image::ReadSlices(MRCFile *input_file, long start_slice, long end_slice)
 	MyDebugAssertTrue(start_slice <= end_slice, "Start slice larger than end slice!");
 	MyDebugAssertTrue(start_slice > 0, "Start slice is less than 0, the first slice is 1!");
 	MyDebugAssertTrue(end_slice <= input_file->ReturnNumberOfSlices(), "End slice is greater than number of slices in the file!");
-	MyDebugAssertTrue(input_file->my_file->is_open(), "MRCFile not open!");
+	MyDebugAssertTrue(input_file->my_file.is_open(), "MRCFile not open!");
 
 
 	// check the allocations..
@@ -5439,7 +5161,7 @@ void Image::ReadSlices(DMFile *input_file, long start_slice, long end_slice)
 void Image::WriteSlices(MRCFile *input_file, long start_slice, long end_slice)
 {
 	MyDebugAssertTrue(start_slice <= end_slice, "Start slice larger than end slice!");
-	MyDebugAssertTrue(input_file->my_file->is_open(), "MRCFile not open!");
+	MyDebugAssertTrue(input_file->my_file.is_open(), "MRCFile not open!");
 
 	// THIS PROBABLY NEEDS ATTENTION..
 
@@ -5631,19 +5353,6 @@ void Image::Binarise(float threshold_value)
 	for (long address = 0; address < real_memory_allocated; address++)
 	{
 		if (real_values[address] >= threshold_value) real_values[address] = 1.0f;
-		else real_values[address] = 0.0f;
-	}
-}
-
-void Image::BinariseInverse(float threshold_value)
-{
-	// Set values below the threshold to 1
-	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
-	MyDebugAssertTrue(is_in_real_space, "Not in real space");
-
-	for (long address = 0; address < real_memory_allocated; address++)
-	{
-		if (real_values[address] <= threshold_value) real_values[address] = 1.0f;
 		else real_values[address] = 0.0f;
 	}
 }
@@ -7569,54 +7278,6 @@ void Image::ComputeAmplitudeSpectrumFull2D(Image *amplitude_spectrum, bool calcu
 	amplitude_spectrum->object_is_centred_in_box = true;
 }
 
-void Image::ComputeFilteredAmplitudeSpectrumFull2D(Image* average_spectrum_masked, Image* current_power_spectrum,  float& average, float& sigma, float minimum_resolution, float maximum_resolution, float pixel_size_for_fitting)
-{
-
-	// This is pulled from the ctffind.cpp App - this filtering is used also in wave_function_propagtor::ReturnImageContrast. Any changes here should affect both programs identically.
-	// The only change I (Ben) made is to change amplitud_spectrum-> to this->
-
-	int convolution_box_size;
-
-	// Try to weaken cross artefacts
-	this->ComputeAverageAndSigmaOfValuesInSpectrum(float(this->logical_x_dimension)*pixel_size_for_fitting/minimum_resolution,float(this->logical_x_dimension),average,sigma,12);
-	this->DivideByConstant(sigma);
-	this->SetMaximumValueOnCentralCross(average/sigma+10.0);
-//			average_spectrum_masked->CopyFrom(this);
-
-	//this->QuickAndDirtyWriteSlice("dbg_average_spectrum_before_conv.mrc",1);
-
-	// Compute low-pass filtered version of the spectrum
-	convolution_box_size = int( float(this->logical_x_dimension) * pixel_size_for_fitting / minimum_resolution * sqrt(2.0) );
-	if (IsEven(convolution_box_size)) convolution_box_size++;
-	current_power_spectrum->Allocate(this->logical_x_dimension,this->logical_y_dimension,true);
-	current_power_spectrum->SetToConstant(0.0); // According to valgrind, this avoid potential problems later on.
-	this->SpectrumBoxConvolution(current_power_spectrum,convolution_box_size,float(this->logical_x_dimension)*pixel_size_for_fitting/minimum_resolution);
-
-	//current_power_spectrum->QuickAndDirtyWriteSlice("dbg_spec_convoluted.mrc",1);
-
-	// Subtract low-pass-filtered spectrum from the spectrum. This should remove the background slope.
-	this->SubtractImage(current_power_spectrum);
-
-//			this->QuickAndDirtyWriteSlice("dbg_spec_before_thresh.mrc",1);
-
-	// Threshold high values
-	this->SetMaximumValue(this->ReturnMaximumValue(3,3));
-
-//			convolution_box_size = int( float(this->logical_x_dimension) * pixel_size_for_fitting / minimum_resolution / sqrt(2.0) );
-//			if (IsEven(convolution_box_size)) convolution_box_size++;
-//			current_power_spectrum->SetToConstant(0.0); // According to valgrind, this avoid potential problems later on.
-//			average_spectrum_masked->SpectrumBoxConvolution(current_power_spectrum,convolution_box_size,float(average_spectrum_masked->logical_x_dimension)*pixel_size_for_fitting/minimum_resolution);
-//			average_spectrum_masked->SubtractImage(current_power_spectrum);
-//			average_spectrum_masked->SetMaximumValue(average_spectrum_masked->ReturnMaximumValue(3,3));
-
-	average_spectrum_masked->CopyFrom(this);
-	average_spectrum_masked->CosineMask(float(average_spectrum_masked->logical_x_dimension)*pixel_size_for_fitting/std::max(maximum_resolution, 8.0f),float(average_spectrum_masked->logical_x_dimension)*pixel_size_for_fitting/std::max(maximum_resolution, 4.0f), true);
-//			average_spectrum_masked->QuickAndDirtyWriteSlice("dbg_spec_before_thresh.mrc",1);
-//			average_spectrum_masked->CorrectSinc();
-//			average_spectrum_masked->CorrectSinc(float(average_spectrum_masked->logical_x_dimension)*pixel_size_for_fitting/std::max(maximum_resolution, 8.0f), 0.5, true, 0.0);
-}
-
-
 //END_FOR_STAND_ALONE_CTFFIND
 
 // Compute the local mean and variance of the image at every point. The mask image must have the same dimensions as the image itself.
@@ -9136,25 +8797,6 @@ void Image::DilateBinarizedMask(float dilation_radius)
 	delete [] buffer;
 }
 
-void Image::ErodeBinarizedMask(float erosion_radius)
-{
-	// Not sure this is the best way, but it is straightforward.
-	Image buffer_1;
-	buffer_1.CopyFrom(this);
-
-	buffer_1.DilateBinarizedMask(2.0f);
-
-	buffer_1.SubtractImage(this);
-	for (int iDilation = 0; iDilation < myroundint(erosion_radius); iDilation++)
-	{
-		buffer_1.DilateBinarizedMask(2.0f);
-	}
-	buffer_1.BinariseInverse(0.5f);
-
-	MultiplyPixelWise(buffer_1);
-}
-
-
 void Image::MakeAbsolute()
 {
 	for (long counter = 0; counter < real_memory_allocated; counter++)
@@ -9331,7 +8973,7 @@ void Image::ApplyCTF(CTF ctf_to_apply, bool absolute, bool apply_beam_tilt, bool
 //	exit(0);
 }
 
-void Image::SharpenMap(float pixel_size, float resolution_limit,  bool invert_hand, float inner_mask_radius, float outer_mask_radius, float start_res_for_whitening, float additional_bfactor_low, float additional_bfactor_high, float filter_edge, bool should_auto_mask, Image *input_mask, ResolutionStatistics *input_resolution_statistics, float statistics_scale_factor, Curve *original_log_plot, Curve *sharpened_log_plot)
+void Image::SharpenMap(float pixel_size, float resolution_limit,  bool invert_hand, float inner_mask_radius, float outer_mask_radius, float start_res_for_whitening, float additional_bfactor_low, float additional_bfactor_high, float filter_edge, Image *input_mask, ResolutionStatistics *input_resolution_statistics, float statistics_scale_factor, Curve *original_log_plot, Curve *sharpened_log_plot)
 {
 
 	float cosine_edge = 10.0;
@@ -9354,21 +8996,10 @@ void Image::SharpenMap(float pixel_size, float resolution_limit,  bool invert_ha
 
 	if (outer_mask_radius == 0.0) outer_mask_radius = logical_x_dimension / 2.0;
 
-	else if (should_auto_mask == true)
-	{
-		MyDebugAssertTrue(input_mask == NULL, "Error: Automask requested, and mask supplied...")
-		input_mask = new Image;
-		input_mask->CopyFrom(this);
-		input_mask->ConvertToAutoMask(pixel_size, outer_mask_radius, 10.0f, 0.1);
-	}
-
-	if (input_mask != NULL)
-	{
-		buffer_image.ApplyMask(*input_mask, cosine_edge / pixel_size, 0.0, 0.0, 0.0);
-	}
+	if (input_mask == NULL) buffer_image.CosineRingMask(inner_mask_radius / pixel_size, outer_mask_radius / pixel_size, cosine_edge / pixel_size);
 	else
 	{
-		buffer_image.CosineRingMask(inner_mask_radius / pixel_size, outer_mask_radius / pixel_size, cosine_edge / pixel_size);
+		buffer_image.ApplyMask(*input_mask, cosine_edge / pixel_size, 0.0, 0.0, 0.0);
 	}
 
 	ForwardFFT();
@@ -10176,6 +9807,8 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 	float best_max_score;
 	float best_alternate_score;
 
+	float score_average = 0.0f;
+	float score_variance = 0.0f;
 	float best_score;
 	float mask_radius_local;
 
@@ -10229,8 +9862,7 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 		counter = 0;
 		for (current_beamtilt_azimuth = beam_tilt_azimuth_search_start_value;  current_beamtilt_azimuth <= beam_tilt_azimuth_search_end_value; current_beamtilt_azimuth+=beam_tilt_azimuth_search_step_size)
 		{
-			//  This method rotates the image at "input angle" back by that amount, so give the negative value.
-			rotation_matrix.GenerateRotationMatrix2D(rad_2_deg(-1.0f*current_beamtilt_azimuth));
+			rotation_matrix.GenerateRotationMatrix2D(rad_2_deg(current_beamtilt_azimuth));
 			temp_image->Rotate2D(*beamtilt_spectrum, rotation_matrix, 0.45 * beamtilt_spectrum->logical_x_dimension);
 			beamtilt_spectrum->SubtractImage(phase_difference_spectrum);
 			score = beamtilt_spectrum->ReturnSumOfSquares(mask_radius_local);
@@ -10255,14 +9887,14 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 	}
 
 	best_beamtilt_azimuth /= 2.0f;
-	MyDebugPrint("Best Azimuth = %f\n", best_beamtilt_azimuth);
+	//wxPrintf("Best Azimuth = %f\n", best_beamtilt_azimuth);
 
 	ComputeAmplitudeSpectrumFull2D(phase_difference_spectrum, true, phase_multiplier);
 	phase_error_output.CopyFrom(phase_difference_spectrum);
 	//phase_difference_spectrum->Binarise(0.0f);
 
 	best_score = std::numeric_limits<float>::max();
-	best_max_score = std::numeric_limits<float>::lowest();
+	best_max_score = -std::numeric_limits<float>::max();
 
 
 	beam_tilt_azimuth_search_start_value = (best_beamtilt_azimuth) - 0.1f; // search 10 degrees either side
@@ -10312,8 +9944,8 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 	particle_shift_azimuth_search_step_size = 0.025f;
 
 	beam_tilt_search_start_value = 	-0.005f;
-	beam_tilt_search_end_value = 	0.005f; // 5 milli-radians
-	beam_tilt_search_step_size = 	0.0001f; // 0.1 milli-radians
+	beam_tilt_search_end_value = 	0.005f; // 5 radians
+	beam_tilt_search_step_size = 	0.0001f; // 0.1 radians
 
 	particle_shift_search_start_value = -1.0f;
 	particle_shift_search_end_value = 1.0f;
@@ -10364,6 +9996,9 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 						input_values[4] = current_particle_shift;
 						score = tilt_scorer.ScoreValues(input_values);
 
+						score_average += score;
+						score_variance += powf(score, 2);
+
 						if (score < best_score)
 						{
 							best_score = score;
@@ -10378,7 +10013,6 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 
 						if (score > best_max_score)
 						{
-							// Saving the worst score assuming it is near the best magnitude but opposite phase
 							best_max_score = score;
 							best_max_beamtilt_azimuth = current_beamtilt_azimuth;
 							best_max_particle_shift_azimuth = current_particle_shift_azimuth;
@@ -10413,31 +10047,10 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 	}
 
 
-
-	// Before the simplex, check to make sure nothing has gone terribly wrong. If the phase difference image is garbage the simplex can get stuck and not terminate.
-	double sanity_check[5];
-	sanity_check[0] = 0;
-	sanity_check[1] = best_beamtilt_azimuth;
-	sanity_check[2] = best_beamtilt_azimuth + best_particle_shift_azimuth;
-	sanity_check[3] = best_beamtilt;
-	sanity_check[4] = best_particle_shift;
-	best_score = tilt_scorer.ScoreValues(sanity_check);
-
-	temp_image->CopyFrom(&tilt_scorer.temp_image); // should be the best..
-	temp_image->ComputeAmplitudeSpectrumFull2D(&beamtilt_output, true, phase_multiplier);
-
-	float test_significance = phase_difference_spectrum->ReturnBeamTiltSignificanceScore(beamtilt_output);
-
-	MyDebugPrint("Before minimization, score = %f / %f\n", best_score, best_max_score);
-	MyDebugPrint("Values found = %f, %f, %f, %f\nMax Values   = %f, %f, %f, %f\n", best_beamtilt_azimuth, best_particle_shift_azimuth, best_beamtilt, best_particle_shift, best_max_beamtilt_azimuth, best_max_particle_shift_azimuth, best_max_beamtilt, best_max_particle_shift);
-	MyDebugPrint("Significance score on thread %i is %f\n", ReturnThreadNumberOfCurrentThread(), test_significance);
-
-	if ( test_significance > MINIMUM_BEAM_TILT_SIGNIFICANCE_SCORE / 10.0f ) // 10x less stringent than our current final condition. FIXME these should be specified somehwere else
-	{
 	// do a downhill simplex minimization..
 
-//	MyDebugPrint("Before minimization, score = %f / %f\n", best_score, best_max_score);
-//	MyDebugPrint("Values found = %f, %f, %f, %f\nMax Values   = %f, %f, %f, %f\n", best_beamtilt_azimuth, best_particle_shift_azimuth, best_beamtilt, best_particle_shift, best_max_beamtilt_azimuth, best_max_particle_shift_azimuth, best_max_beamtilt, best_max_particle_shift);
+//	wxPrintf("Before minimization, score = %f / %f\n", best_score, best_max_score);
+//	wxPrintf("Values found = %f, %f, %f, %f\nMax Values   = %f, %f, %f, %f\n", best_beamtilt_azimuth, best_particle_shift_azimuth, best_beamtilt, best_particle_shift, best_max_beamtilt_azimuth, best_max_particle_shift_azimuth, best_max_beamtilt, best_max_particle_shift);
 
 	DownhillSimplex simplex_minimzer(4);
 
@@ -10488,7 +10101,6 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 	simplex_minimzer.MinimizeFunction(&tilt_scorer, BeamTiltScoreFunctionForSimplex);
 	simplex_minimzer.GetMinimizedValues(min_values);
 
-//	MyDebugPrint("After Minimization = %f, %f, %f, %f\n", best_beamtilt_azimuth, best_particle_shift_azimuth, best_beamtilt, best_particle_shift);
 
 	best_score = tilt_scorer.ScoreValues(min_values);
 	temp_image->CopyFrom(&tilt_scorer.temp_image); // should be the best..
@@ -10497,7 +10109,7 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 	best_beamtilt = min_values[3];
 	best_particle_shift = min_values[4];
 
-	// rerun with the "max" values (aka the worst initial values, with the phase inverted)
+	// rerun with the "max" values
 
 	start_values[0] = 0;
 	start_values[1] = best_max_beamtilt_azimuth;
@@ -10548,25 +10160,25 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 		best_particle_shift = min_values[4];
 	}
 
-
-	MyDebugPrint("After, score = %f\n", best_score);
-	MyDebugPrint("Best Results = %f, %f, %f, %f\n", best_beamtilt_azimuth, best_particle_shift_azimuth, best_beamtilt, best_particle_shift);
-	MyDebugPrint("Minimization took %s\n",  simplex_minimzer.ReturnTimeSpanOfMinimization().Format());
+//	wxPrintf("After, score = %f\n", best_score);
+//	wxPrintf("Minimization took %s\n",  simplex_minimzer.ReturnTimeSpanOfMinimization().Format());
 
 
-	wxPrintf("Values found = %f, %f, %f, %f\n", best_beamtilt_azimuth, best_particle_shift_azimuth, best_beamtilt, best_particle_shift);
+//	wxPrintf("Values found = %f, %f, %f, %f\n", best_beamtilt_azimuth, best_particle_shift_azimuth, best_beamtilt, best_particle_shift);
+
+
+	beamtilt_x = best_beamtilt * cosf(best_beamtilt_azimuth);
+	beamtilt_y = -best_beamtilt * sinf(best_beamtilt_azimuth);
+
+	particle_shift_x = best_particle_shift * cosf(best_particle_shift_azimuth);
+	particle_shift_y = -best_particle_shift * sinf(best_particle_shift_azimuth);
+
+	score_average /= counter;
+	score_variance = score_variance / counter - powf(score_average, 2);
+	//	wxPrintf("score, score_average, score_sigma, npix = %g %g %g %g\n", best_score, score_average, sqrtf(score_variance), PI * mask_radius_local * mask_radius_local);
 
 
 	temp_image->ComputeAmplitudeSpectrumFull2D(&beamtilt_output, true, phase_multiplier);
-
-	} // if sanity check on score to skip simplex
-
-	beamtilt_x = best_beamtilt * cosf(best_beamtilt_azimuth);
-	beamtilt_y = best_beamtilt * sinf(best_beamtilt_azimuth);
-
-	particle_shift_x = best_particle_shift * cosf(best_particle_shift_azimuth);
-	particle_shift_y = best_particle_shift * sinf(best_particle_shift_azimuth);
-
 	difference_image.CopyFrom(temp_image);
 	difference_image.SubtractImage(phase_difference_spectrum);
 
@@ -10576,9 +10188,9 @@ float Image::FindBeamTilt(CTF &input_ctf, float pixel_size, Image &phase_error_o
 	delete beamtilt_spectrum;
 	delete temp_image;
 
-	if (progress_bar && ReturnThreadNumberOfCurrentThread() == 0) delete my_progress;
+	if (progress_bar&& ReturnThreadNumberOfCurrentThread() == 0) delete my_progress;
 
-	return best_score;
+	return 0.5f * PI * powf((0.5f - best_score) * mask_radius_local, 2);
 }
 
 Peak Image::FindPeakWithParabolaFit(float wanted_min_radius, float wanted_max_radius)
@@ -11653,7 +11265,6 @@ float Image::ApplyMask(Image &mask_volume, float cosine_edge_width, float weight
 
 	delete cosine_edge;
 	delete mask_cosine_edge;
-	delete mask_cosine_double_edge;
 
 
 	return float(sum);
@@ -11783,53 +11394,6 @@ Peak Image::StandardDeviationOfMass(float threshold, bool apply_threshold, bool 
 
 	return standard_deviations;
 }
-
-float Image::ReturnAverageOfMinN(int number_of_pixels_to_average, float wanted_mask_radius)
-{
-	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
-	MyDebugAssertTrue(is_in_real_space == true, "Image not in real space");
-
-	int i, j, k;
-	long pixel_counter1 = 0;
-	long pixel_counter2 = 0;
-	int mask_radius;
-	float average_density_min = 0.0;
-
-	if (wanted_mask_radius == 0.0) mask_radius = int(ReturnSmallestLogicalDimension() / 2.0);
-	else mask_radius = std::min(int(ReturnSmallestLogicalDimension() / 2.0), int(wanted_mask_radius));
-
-	float *temp_3d = new float [logical_x_dimension * logical_y_dimension + logical_x_dimension * logical_z_dimension + logical_y_dimension * logical_z_dimension];
-	for (k = 0; k < logical_z_dimension; k++)
-	{
-		for (j = 0; j < logical_y_dimension; j++)
-		{
-			for (i = 0; i < logical_x_dimension; i++)
-			{
-				if (   k >= physical_address_of_box_center_z - mask_radius && k < physical_address_of_box_center_z + mask_radius
-					&& j >= physical_address_of_box_center_y - mask_radius && j < physical_address_of_box_center_y + mask_radius
-					&& i >= physical_address_of_box_center_x - mask_radius && i < physical_address_of_box_center_x + mask_radius)
-				{
-					if (i == physical_address_of_box_center_x || j == physical_address_of_box_center_y  || k == physical_address_of_box_center_z)
-					{
-						temp_3d[pixel_counter2] = real_values[pixel_counter1];
-						pixel_counter2++;
-					}
-				}
-				pixel_counter1++;
-			}
-			pixel_counter1 += padding_jump_value;
-		}
-	}
-	std::sort (temp_3d, temp_3d + pixel_counter2);
-	if (number_of_pixels_to_average > pixel_counter2) number_of_pixels_to_average = pixel_counter2;
-
-	for (i = 0; i < number_of_pixels_to_average; i++) average_density_min += temp_3d[i];
-	average_density_min /= float(number_of_pixels_to_average);
-	delete [] temp_3d;
-
-	return average_density_min;
-}
-
 
 float Image::ReturnAverageOfMaxN(int number_of_pixels_to_average, float wanted_mask_radius)
 {
@@ -12259,26 +11823,15 @@ double BeamTiltScorer::ScoreValues(double input_values[])
 	// 3 = beamtilt
 	// 4 = shift
 
-//	// Test a limit on the particle shift
-//	float testParticleRadius = 190.0f; // Ang
-//	if (fabsf(testParticleRadius*input_values[3]) < fabsf(input_values[4]))
-//	{
-//		return std::numeric_limits<float>::max();
-//	}
-//	else
-//	{
-		pointer_to_ctf_to_use_for_calculation->SetBeamTilt(input_values[3] * cosf(input_values[1]), input_values[3] * sinf(input_values[1]), input_values[4] * cosf(input_values[2]) / pixel_size, input_values[4] * sinf(input_values[2]) / pixel_size);
-		temp_image.CalculateBeamTiltImage(*pointer_to_ctf_to_use_for_calculation);
-		temp_image.ComputeAmplitudeSpectrumFull2D(&beamtilt_spectrum, true, phase_multiplier);
-		//beamtilt_spectrum.Binarise(0.0f);
+	pointer_to_ctf_to_use_for_calculation->SetBeamTilt(input_values[3] * cosf(input_values[1]), -input_values[3] * sinf(input_values[1]), input_values[4] * cosf(input_values[2]) / pixel_size, -input_values[4] * sinf(input_values[2]) / pixel_size);
+	temp_image.CalculateBeamTiltImage(*pointer_to_ctf_to_use_for_calculation);
+	temp_image.ComputeAmplitudeSpectrumFull2D(&beamtilt_spectrum, true, phase_multiplier);
+	//beamtilt_spectrum.Binarise(0.0f);
 
-		beamtilt_spectrum.CosineRingMask(5.0f, beamtilt_spectrum.ReturnLargestLogicalDimension(), 2.0f);
-		beamtilt_spectrum.SubtractImage(pointer_binarised_phase_difference_spectrum);
+	beamtilt_spectrum.CosineRingMask(5.0f, beamtilt_spectrum.ReturnLargestLogicalDimension(), 2.0f);
+	beamtilt_spectrum.SubtractImage(pointer_binarised_phase_difference_spectrum);
 
-		return beamtilt_spectrum.ReturnSumOfSquares(mask_radius);
-//	}
-
-
+	return beamtilt_spectrum.ReturnSumOfSquares(mask_radius);
 
 }
 
@@ -12288,20 +11841,4 @@ double BeamTiltScoreFunctionForSimplex(void *pt2Object, double values[])
 //	float score = scorer_to_use->ScoreValues(values);
 //	wxPrintf("%f, %f, %f, %f = %f\n", values[1], values[2], values[3], values[4], score);
 	return scorer_to_use->ScoreValues(values);
-}
-
-float Image::ReturnBeamTiltSignificanceScore(Image calculated_beam_tilt)
-{
-	Image buffer;
-	buffer.CopyFrom(this);
-	// If this is from the sanity check, we want to keep the input image unmodified, so pass by value.
-	// work significance
-	buffer.MultiplyByConstant(float(buffer.logical_x_dimension));
-	buffer.Binarise(0.00002f);
-	calculated_beam_tilt.Binarise(0.0f);
-
-	float mask_radius_local = sqrtf((buffer.ReturnAverageOfRealValues() * buffer.logical_x_dimension * buffer.logical_y_dimension) / PIf);
-	buffer.SubtractImage(&calculated_beam_tilt);
-	float binarized_score = buffer.ReturnSumOfSquares(mask_radius_local);
-	return 0.5f * PIf * powf((0.5f - binarized_score) * mask_radius_local, 2);
 }

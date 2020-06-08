@@ -157,7 +157,10 @@ void cisTEMParameterLine::Add(cisTEMParameterLine &line_to_add)
 	beam_tilt_y += line_to_add.beam_tilt_y;
 	image_shift_x += line_to_add.image_shift_x;
 	image_shift_y += line_to_add.image_shift_y;
+<<<<<<< HEAD
+=======
 	beam_tilt_group += line_to_add.beam_tilt_group;
+>>>>>>> reconFromSubTomo
 	particle_group += line_to_add.particle_group;
 	pre_exposure += line_to_add.pre_exposure;
 	total_exposure += line_to_add.total_exposure;
@@ -191,7 +194,10 @@ void cisTEMParameterLine::Subtract(cisTEMParameterLine &line_to_add)
 	beam_tilt_y -= line_to_add.beam_tilt_y;
 	image_shift_x -= line_to_add.image_shift_x;
 	image_shift_y -= line_to_add.image_shift_y;
+<<<<<<< HEAD
+=======
 	beam_tilt_group -= line_to_add.beam_tilt_group;
+>>>>>>> reconFromSubTomo
 	particle_group -= line_to_add.particle_group;
 	pre_exposure -= line_to_add.pre_exposure;
 	total_exposure -= line_to_add.total_exposure;
@@ -225,7 +231,10 @@ void cisTEMParameterLine::AddSquare(cisTEMParameterLine &line_to_add)
 	beam_tilt_y = powf(line_to_add.beam_tilt_y, 2);
 	image_shift_x += powf(line_to_add.image_shift_x, 2);
 	image_shift_y += powf(line_to_add.image_shift_y, 2);
+<<<<<<< HEAD
+=======
 	beam_tilt_group += powf(line_to_add.beam_tilt_group, 2);
+>>>>>>> reconFromSubTomo
 	particle_group += powf(line_to_add.particle_group,2);
 	pre_exposure += powf(line_to_add.pre_exposure,2);
 	total_exposure += powf(line_to_add.total_exposure,2);
@@ -295,7 +304,10 @@ void cisTEMParameterLine::ReplaceNanAndInfWithOther(cisTEMParameterLine &other_p
 	if (isnan(beam_tilt_y) || isinf(beam_tilt_y)) beam_tilt_y = other_params.beam_tilt_y;
 	if (isnan(image_shift_x) || isinf(image_shift_x)) image_shift_x = other_params.image_shift_x;
 	if (isnan(image_shift_y) || isinf(image_shift_y)) image_shift_y = other_params.image_shift_y;	
+<<<<<<< HEAD
+=======
 	if (isnan(beam_tilt_group) || isinf(beam_tilt_group)) beam_tilt_group = other_params.beam_tilt_group;
+>>>>>>> reconFromSubTomo
 	if (isnan(particle_group) || isinf(particle_group)) particle_group = other_params.particle_group;
 	if (isnan(pre_exposure) || isinf(pre_exposure)) pre_exposure = other_params.pre_exposure;
 	if (isnan(total_exposure) || isinf(total_exposure)) total_exposure = other_params.total_exposure;
@@ -640,6 +652,10 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first
 		column_counter++;
 	}
 
+<<<<<<< HEAD
+=======
+
+>>>>>>> reconFromSubTomo
 	if (parameters_to_write.particle_group == true)
 	{
 		cisTEM_star_file->AddLine(wxString::Format("_cisTEMParticleGroup #%i", column_counter));
@@ -691,7 +707,11 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first
 	if (parameters_to_write.stack_filename == true)  					data_line += "                                     STACK_FILENAME ";
 	if (parameters_to_write.original_image_filename == true) 			data_line += "                            ORIGINAL_IMAGE_FILENAME ";
 	if (parameters_to_write.reference_3d_filename == true) 				data_line += "                              REFERENCE_3D_FILENAME ";
+<<<<<<< HEAD
+	if (parameters_to_write.particle_group == true) 						data_line += "   PaGRP ";
+=======
 	if (parameters_to_write.particle_group == true) 					data_line += "   PaGRP ";
+>>>>>>> reconFromSubTomo
 	if (parameters_to_write.pre_exposure == true) 						data_line += " PREEXP ";
 	if (parameters_to_write.total_exposure == true) 					data_line += " TOTEXP ";
 

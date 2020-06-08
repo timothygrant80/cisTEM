@@ -158,7 +158,7 @@ int DMFile::readDM(wxString wanted_filename, unsigned char *p, bool readdata, in
 		default:
 			MyDebugAssertFalse(true,"Digital Micrograph format version %i not supported!\n",version);
 			wxPrintf("Digital Micrograph format version %i not supported!\n",version);
-			abort();
+			DEBUG_ABORT;
 	}
 
 	fimg->close();

@@ -353,7 +353,7 @@ ArrayOfParticlePositionAssets WarpToCistemApp::LoadParticlePositionsFromWarp(wxS
 
 	input_file->Open();
 	MyDebugAssertTrue(input_file->IsOpened(), "File not open");
-	input_file->GoToLine(-1);
+	input_file->GoToLine(-1); // WARNING: integer conversion resulted in a change of sign
 
 	while (input_file->Eof() == false) {
 		current_line = input_file->GetNextLine();
@@ -362,7 +362,7 @@ ArrayOfParticlePositionAssets WarpToCistemApp::LoadParticlePositionsFromWarp(wxS
 		if (current_line.IsEmpty() == true) continue;
 		if (current_line[0] == '#' || current_line[0] == '\0' || current_line[0] == ';' || current_line[0]== 'd' || current_line[0] == 'l' || current_line[0] == '_') continue; //Added a catch for data and loop
 		wxStringTokenizer tokenizer(current_line);
-		if(!tokenizer.CountTokens() == 4) continue;
+		if(tokenizer.CountTokens() != 4) continue;
 		str_x_pos = tokenizer.GetNextToken();
 		if(!str_x_pos.ToDouble(&x_pos)) {SendErrorAndCrash("Couldn't convert X position to a double");}
 		x_pos = new_image_asset.pixel_size * x_pos;

@@ -241,6 +241,8 @@ void TiffFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_
 					uint8 hi_4bits;
 					uint8 low_4bits;
 
+					strip_counter = 0;
+
 					number_of_bytes_placed_in_buffer = TIFFReadEncodedStrip(tif, strip_counter, (char *) buf, (tsize_t) -1);
 					//wxPrintf("%i %i %i\n",int(number_of_bytes_placed_in_buffer),int(rows_per_strip), int(rows_per_strip * ReturnXSize()));
 					if (strip_counter < TIFFNumberOfStrips(tif) - 1) MyDebugAssertTrue(number_of_bytes_placed_in_buffer == rows_per_strip * ReturnXSize(),"Unexpected number of bytes in uint8 buffer");

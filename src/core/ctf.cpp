@@ -30,7 +30,7 @@ CTF::CTF()
 	cubed_wavelength = 0;
 
 	squared_illumination_aperture = -1; // microradian
-	squared_energy_half_width -1;
+	squared_energy_half_width = -1;
 	low_resolution_contrast = 0;
 }
 

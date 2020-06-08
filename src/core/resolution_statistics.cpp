@@ -550,17 +550,17 @@ void ResolutionStatistics::CalculateParticleFSCandSSNR(float mask_volume_in_voxe
 
 	for (i = 0; i < number_of_bins_extended; i++)
 	{
-		part_FSC.AddPoint(FSC.data_x[i],  FSC.data_y[i] / volume_fraction / (1.0 + (1.0 / volume_fraction - 1.0) * fabsf(FSC.data_y[i])));
+		part_FSC.AddPoint(FSC.data_x[i],  FSC.data_y[i] / volume_fraction / (1.0f + (1.0f / volume_fraction - 1.0f) * fabsf(FSC.data_y[i])));
 	}
 	for (i = 0; i < number_of_bins_extended; i++)
 	{
 		if (part_FSC.data_y[i] > 0.0)
 		{
-			rec_SSNR.AddPoint(FSC.data_x[i], fabsf(2.0 * part_FSC.data_y[i] / (1.00001 - part_FSC.data_y[i])));
+			rec_SSNR.AddPoint(FSC.data_x[i], fabsf(2.0f * part_FSC.data_y[i] / (1.00001f - part_FSC.data_y[i])));
 		}
 		else
 		{
-			rec_SSNR.AddPoint(FSC.data_x[i],0.0);
+			rec_SSNR.AddPoint(FSC.data_x[i],0.0f);
 		}
 	}
 }
@@ -645,23 +645,23 @@ void ResolutionStatistics::CalculateParticleSSNR(Image &image_reconstruction, fl
 			// Factor of 8.0 is due to 8-point trilinear interpolation
 //			wxPrintf("i = %i, fsc, sum_int, sum_double, ratio = %g %g %g %g\n", i, FSC.data_y[i], float(sum_int[i]), float(sum_double[i]), float(sum_int[i]) / float(sum_double[i]));
 //			part_SSNR.AddPoint(pixel_size / float(i) * float(number_of_bins2), 8.0 * 4.0 * mask_volume_fraction * fabsf(2.0 * fabsf(FSC.data_y[i]) / (1.00001 - fabsf(FSC.data_y[i])) * float(sum_int[i]) / float(sum_double[i])));
-			part_SSNR.AddPoint(pixel_size / float(i) * float(number_of_bins2), mask_volume_fraction * fabsf(2.0 * fabsf(FSC.data_y[i]) / (1.00001 - fabsf(FSC.data_y[i])) * float(sum_int[i]) / float(sum_double[i])));
+			part_SSNR.AddPoint(pixel_size / float(i) * float(number_of_bins2), mask_volume_fraction * fabsf(2.0f * fabsf(FSC.data_y[i]) / (1.00001f - fabsf(FSC.data_y[i])) * float(sum_int[i]) / float(sum_double[i])));
 //			wxPrintf("x = %g, y = %g\n", FSC.data_x[i], FSC.data_y[i]);
 		}
 		else
 		if (i > 0)
 		{
-			part_SSNR.AddPoint(pixel_size / float(i) * float(number_of_bins2), 0.0);
+			part_SSNR.AddPoint(pixel_size / float(i) * float(number_of_bins2), 0.0f);
 		}
 		else
 		{
 //			part_SSNR.AddPoint(pixel_size * powf(float(number_of_bins2), 2), 0.0);
-			part_SSNR.AddPoint(0.0, 0.0);
+			part_SSNR.AddPoint(0.0f, 0.0f);
 		}
 	}
 
 	// Set value at i = 0 to 8 * value at i = 1 to allow reconstructions with non-zero offset
-	part_SSNR.data_y[0] = 8.0 * part_SSNR.data_y[1];
+	part_SSNR.data_y[0] = 8.0f * part_SSNR.data_y[1];
 
 	delete [] sum_double;
 	delete [] sum_int;

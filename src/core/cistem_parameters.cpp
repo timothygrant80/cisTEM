@@ -1035,7 +1035,7 @@ void cisTEMParameters::RemoveSigmaOutliers(float wanted_standard_deviation, bool
 	MyDebugAssertTrue(wanted_standard_deviation > 0.0, "Invalid standard deviation");
 
 	int line;
-	int sum_i;
+	int sum_i = 0;
 	double average = 0.0;
 	double sum2 = 0.0;
 	float std;
@@ -1133,7 +1133,7 @@ void cisTEMParameters::RemoveScoreOutliers(float wanted_standard_deviation, bool
 	MyDebugAssertTrue(wanted_standard_deviation > 0.0, "Invalid standard deviation");
 
 	int line;
-	int sum_i;
+	int sum_i = 0;
 	double average = 0.0;
 	double sum2 = 0.0;
 	float std;

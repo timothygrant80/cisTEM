@@ -205,6 +205,11 @@ uint64_t StopWatch::ticks(TimeFormat T, const time_pt& start_time, const time_pt
 
 	switch (T)
 	{
+		case TimeFormat::NANOSECONDS :
+			up = ns_count;
+			break;
+
+
 		case TimeFormat::MICROSECONDS :
 			up = ((ns_count / 100)%10 >= 5) ? 1 : 0;
 			up += (ns_count/1000);

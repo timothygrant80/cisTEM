@@ -839,7 +839,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].logp = 0.0;
 
 				if (temp_refinement_package->number_of_classes == 1) temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].occupancy = 100.0;
-				else temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].occupancy =  fabsf(global_random_number_generator.GetUniformRandom() * (200.0 / float(temp_refinement_package->number_of_classes)));
+				else temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].occupancy =  fabsf(global_random_number_generator.GetUniformRandom() * (200.0f / float(temp_refinement_package->number_of_classes)));
 
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].phi = global_random_number_generator.GetUniformRandom() * 180.0;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].theta = rad_2_deg(acosf(2.0f * fabsf(global_random_number_generator.GetUniformRandom()) - 1.0f));
@@ -1217,7 +1217,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].logp = 0.0;
 
 					if (temp_refinement_package->number_of_classes == 1) temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].occupancy = 100.0;
-					else temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].occupancy =  fabsf(global_random_number_generator.GetUniformRandom() * (200.0 / float(temp_refinement_package->number_of_classes)));
+					else temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].occupancy =  fabsf(global_random_number_generator.GetUniformRandom() * (200.0f / float(temp_refinement_package->number_of_classes)));
 
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].phi = global_random_number_generator.GetUniformRandom() * 180.0;
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].theta = rad_2_deg(acosf(2.0f * fabsf(global_random_number_generator.GetUniformRandom()) - 1.0f));
@@ -1301,7 +1301,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].logp = 0.0;
 
 					if (temp_refinement_package->number_of_classes == 1) temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].occupancy = 100.0;
-					else temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].occupancy =  fabsf(global_random_number_generator.GetUniformRandom() * (200.0 / float(temp_refinement_package->number_of_classes)));
+					else temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].occupancy =  fabsf(global_random_number_generator.GetUniformRandom() * (200.0f / float(temp_refinement_package->number_of_classes)));
 
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].phi = global_random_number_generator.GetUniformRandom() * 180.0;
 					//temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].theta = global_random_number_generator.GetUniformRandom() * 180.0;
@@ -1537,7 +1537,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 				if (class_setup_pageE->my_panel->RandomiseOccupanciesRadioButton->GetValue() == true && temp_refinement_package->number_of_classes > 1 )
 				{
-					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy = fabsf(global_random_number_generator.GetUniformRandom() * (200.0 / float(temp_refinement_package->number_of_classes)));
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy = fabsf(global_random_number_generator.GetUniformRandom() * (200.0f / float(temp_refinement_package->number_of_classes)));
 				}
 				else
 				{

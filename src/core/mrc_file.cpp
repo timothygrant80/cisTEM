@@ -396,7 +396,7 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 		else
 		{
 			wxPrintf("Ooops, strange ordering of data in MRC file not yet supported");
-			abort();
+			DEBUG_ABORT;
 		}
 	}
 

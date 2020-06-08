@@ -902,7 +902,7 @@ void CTFRefinementManager::BeginRefinementCycle()
 			if (volume_asset_panel->ReturnAssetPointer(volume_asset_panel->ReturnArrayPositionFromAssetID(active_refinement_package->references_for_next_refinement[class_counter]))->x_size != active_refinement_package->stack_box_size ||
 				volume_asset_panel->ReturnAssetPointer(volume_asset_panel->ReturnArrayPositionFromAssetID(active_refinement_package->references_for_next_refinement[class_counter]))->y_size != active_refinement_package->stack_box_size ||
 				volume_asset_panel->ReturnAssetPointer(volume_asset_panel->ReturnArrayPositionFromAssetID(active_refinement_package->references_for_next_refinement[class_counter]))->z_size != active_refinement_package->stack_box_size ||
-				fabsf(volume_asset_panel->ReturnAssetPointer(volume_asset_panel->ReturnArrayPositionFromAssetID(active_refinement_package->references_for_next_refinement[class_counter]))->pixel_size - input_refinement->resolution_statistics_pixel_size) > 0.01f)
+				fabsf(float(volume_asset_panel->ReturnAssetPointer(volume_asset_panel->ReturnArrayPositionFromAssetID(active_refinement_package->references_for_next_refinement[class_counter]))->pixel_size) - input_refinement->resolution_statistics_pixel_size) > 0.01f)
 			{
 				my_parent->WriteErrorText("Error: Reference volume has different dimensions / pixel size from the input stack.  This will currently not work.");
 			}
@@ -1712,7 +1712,7 @@ void CTFRefinementManager::ProcessJobResult(JobResult *result_to_process)
 			my_parent->TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_remaining.hours, time_remaining.minutes, time_remaining.seconds));
 		}
 
-		if (current_time - time_of_last_histogram_update > 5);
+		if (current_time - time_of_last_histogram_update > 5)
 		{
 			time_of_last_histogram_update = current_time;
 
@@ -1986,14 +1986,16 @@ void CTFRefinementManager::ProcessAllJobsFinished()
 			current_reference_asset_ids[class_counter] = temp_asset.asset_id;
 
 			temp_asset.asset_name = wxString::Format("CTF Refine #%li - Class #%i", current_output_refinement_id, class_counter + 1);
+			
+			current_reconstruction_id = main_frame->current_project.database.ReturnHighestReconstructionID() + 1;
+			temp_asset.reconstruction_job_id = current_reconstruction_id;
+			
 			// set the output volume
 			output_refinement->class_refinement_results[class_counter].reconstructed_volume_asset_id = temp_asset.asset_id;
 			output_refinement->class_refinement_results[class_counter].reconstruction_id = current_reconstruction_id;
 
 			// add the reconstruction job
 
-			current_reconstruction_id = main_frame->current_project.database.ReturnHighestReconstructionID() + 1;
-			temp_asset.reconstruction_job_id = current_reconstruction_id;
 
 			main_frame->current_project.database.AddReconstructionJob(current_reconstruction_id, active_refinement_package->asset_id, output_refinement->refinement_id, "", active_inner_mask_radius, active_mask_radius, active_resolution_limit_rec, active_score_weight_conversion, active_adjust_scores, active_crop_images, false, active_should_apply_blurring, active_smoothing_factor, class_counter + 1, long(temp_asset.asset_id));
 

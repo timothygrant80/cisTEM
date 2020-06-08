@@ -131,4 +131,6 @@ bool SharpenMap::DoCalculation()
 		delete mask_volume;
 	}
 	if (use_statistics == true) delete input_statistics;
+
+	return true;
 }

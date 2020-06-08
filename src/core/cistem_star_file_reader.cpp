@@ -629,7 +629,7 @@ bool cisTEMStarFileReader::ReadFile(wxString wanted_filename, wxString *error_st
 	bool found_valid_data_block = false;
 	bool found_valid_loop_block = false;
 
-	input_file->GoToLine(-1);
+	input_file->GoToLine(-1); // this triggers warning: integer conversion resulted in a change of sign
 	// find a data block
 
 	//while (input_file_stream->Eof() == false)

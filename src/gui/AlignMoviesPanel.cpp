@@ -1132,6 +1132,15 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 
 	}
 
+	// now that unblur actually checked the file, we have an accurate number of frames for each movie
+	int number_of_frames_for_current_movie;
+	for (counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++)
+	{
+		number_of_frames_for_current_movie = buffered_results[counter].result_size / 2 + 1;
+		main_frame->current_project.database.UpdateNumberOfFramesForAMovieAsset(movie_asset_panel->ReturnAssetID(active_group.members[counter]),number_of_frames_for_current_movie);
+		movie_asset_panel->all_assets_list->ReturnMovieAssetPointer(active_group.members[counter])->number_of_frames = number_of_frames_for_current_movie;
+	}
+
 	// now we need to add the resulting image files as image assets..
 
 	// for adding to the database..

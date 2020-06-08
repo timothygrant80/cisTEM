@@ -55,7 +55,7 @@ class MovieAsset : public Asset {
 
 	bool protein_is_white;
 
-	void Update(wxString wanted_filename);
+	void Update(wxString wanted_filename, int assume_number_of_frames = 0);
 	//void Recheck_if_valid();
 	void CopyFrom(Asset *other_asset);
 	//long FindMember(long member_to_find);
@@ -122,6 +122,9 @@ class VolumeAsset : public Asset {
 	~VolumeAsset();
 
 	long reconstruction_job_id;
+
+	wxFileName half_map_1_filename;
+	wxFileName half_map_2_filename;
 
 	int x_size;
 	int y_size;

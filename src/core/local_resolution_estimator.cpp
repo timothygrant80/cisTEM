@@ -274,9 +274,9 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 
 	// Debug
 #ifdef DEBUG
-	const int dbg_i = 166;
-	const int dbg_j = 132;
-	const int dbg_k = 128;
+	const int dbg_i = 0;
+	const int dbg_j = 0;
+	const int dbg_k = 0;
 #endif
 
 	// Initialisation
@@ -312,8 +312,28 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 	ProgressBar *my_progress_bar;
 	my_progress_bar = new ProgressBar(total_number_of_boxes);
 	bool below_threshold, just_a_glitch;
-	const bool stringent_mode = true;
-	const bool allow_glitches = true;
+	const bool stringent_mode = false;
+	const bool allow_glitches = false;
+
+	/// SET TIM THRESHOLD! TODO: Sort this out properly
+	for (int shell_counter = 1; shell_counter < number_of_fsc_shells; shell_counter ++ )
+	{
+		current_resolution = pixel_size_in_Angstroms * 2.0 * float(number_of_fsc_shells-1) / float(shell_counter);
+
+		if (current_resolution > 10 && fsc_threshold[shell_counter] >= 0.95f) fsc_threshold[shell_counter] = 0.95f;
+		else
+		if (current_resolution > 7.5 && fsc_threshold[shell_counter] >= 0.93f) fsc_threshold[shell_counter] = 0.93f;
+		else
+		if (current_resolution > 6 && fsc_threshold[shell_counter] >= 0.9f) fsc_threshold[shell_counter] = 0.9f;
+		else
+		if (current_resolution > 5 && fsc_threshold[shell_counter] >= 0.75f) fsc_threshold[shell_counter] = 0.75f;
+		else
+		if (current_resolution > 4 && fsc_threshold[shell_counter] >= 0.5f) fsc_threshold[shell_counter] = 0.5f;
+		else fsc_threshold[shell_counter] = 0.2f;
+
+		wxPrintf("Setting Threshold to %.2f for %.2f A\n", fsc_threshold[shell_counter], current_resolution);
+	}
+
 #ifdef DEBUG
 	bool on_dbg_point;
 #endif
@@ -393,6 +413,10 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 #endif
 
 
+
+
+
+
 								// Walk the FSC curve and check when it crosses our threshold
 								previous_resolution = 0.0;
 								for (shell_counter = 1; shell_counter < number_of_fsc_shells; shell_counter ++ )
@@ -409,7 +433,7 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 									 * So if we're below threshold now but the next shells are back up above threshold,
 									 * and if we're up above 0.9 anyway, let's assume it's just a glitch in the matrix.
 									 */
-									just_a_glitch = false;
+			/*						just_a_glitch = false;
 									if (below_threshold && computed_fsc[shell_counter] > 0.9)
 									{
 										if (stringent_mode)
@@ -421,8 +445,8 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 											if (shell_counter < number_of_fsc_shells - 4) just_a_glitch = computed_fsc[shell_counter+1] > fsc_threshold[shell_counter+1] || (computed_fsc[shell_counter+2] > fsc_threshold[shell_counter+2] && computed_fsc[shell_counter+3] > fsc_threshold[shell_counter+3]);
 										}
 									}
-
-									if (! allow_glitches) just_a_glitch = false;
+*/
+							   if	 (! allow_glitches) just_a_glitch = false;
 
 									if (below_threshold && !just_a_glitch)
 									{
@@ -434,7 +458,8 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 										else
 										{
 											MyDebugAssertTrue(computed_fsc[shell_counter] <= computed_fsc[shell_counter-1],"Oops, FSC is not dropping");
-											local_resolution_volume->real_values[pixel_counter] = ReturnResolutionOfIntersectionBetweenFSCAndThreshold(previous_resolution, current_resolution, computed_fsc[shell_counter-1], computed_fsc[shell_counter], fsc_threshold[shell_counter-1], fsc_threshold[shell_counter]);
+											//local_resolution_volume->real_values[pixel_counter] = ReturnResolutionOfIntersectionBetweenFSCAndThreshold(previous_resolution, current_resolution, computed_fsc[shell_counter-1], computed_fsc[shell_counter], fsc_threshold[shell_counter-1], fsc_threshold[shell_counter]);
+											local_resolution_volume->real_values[pixel_counter] = previous_resolution;
 										}
 #ifdef DEBUG
 										if (on_dbg_point) { wxPrintf("Estimated local resolution: %f Å. Previous resolution: %f Å. Current_resolution: %f Å\n",local_resolution_volume->real_values[pixel_counter], previous_resolution, current_resolution); }
@@ -524,9 +549,13 @@ float LocalResolutionEstimator::ReturnResolutionOfIntersectionBetweenFSCAndThres
 	sf_one = 1.0 / resolution_one;
 	sf_two = 1.0 / resolution_two;
 
+	// TODO: THIS OVERIDES ALEXIS' STUFF - CHECK IT LATER
+	return 1.0f / ((sf_one + sf_two) /  2);
 	sf_of_intersection = sf_one + (sf_two - sf_one) * (threshold_one - fsc_one) / ((fsc_two-fsc_one)-(threshold_two-threshold_one));
 
-	MyDebugAssertTrue(sf_of_intersection >= sf_one && sf_of_intersection <= sf_two,"Sanity check failed. Spatial frequency of interesection should be between two input points");
+
+
+	MyDebugAssertTrue(sf_of_intersection >= sf_one && sf_of_intersection <= sf_two,"Sanity check failed. Spatial frequency of interesection (%.3f) should be between two input points (%.3f and %.3f)\nThresh1 = %.2f, Thresh2 = %.2f", sf_of_intersection, sf_one, sf_two, threshold_one, threshold_two);
 
 	return 1.0 / sf_of_intersection;
 
@@ -597,4 +626,3 @@ float	LocalResolutionEstimator::RhoThreshold(float alpha_t, float n_sigmas, floa
 
 	return rho_t;
 }
-

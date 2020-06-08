@@ -106,7 +106,7 @@ class OrthDrawerThread : public wxThread
 class AutoMaskerThread : public wxThread
 {
 	public:
-	AutoMaskerThread(wxWindow *parent, wxArrayString wanted_input_files, wxArrayString wanted_output_files, float wanted_pixel_size, float wanted_mask_radius, int wanted_thread_id = -1) : wxThread(wxTHREAD_DETACHED)
+	AutoMaskerThread(wxWindow *parent, wxArrayString wanted_input_files, wxArrayString wanted_output_files, float wanted_pixel_size, float wanted_mask_radius, int wanted_thread_id = -1, float wanted_max_resolution = -1) : wxThread(wxTHREAD_DETACHED)
 	{
 		main_thread_pointer = parent;
 		input_files = wanted_input_files;
@@ -114,6 +114,8 @@ class AutoMaskerThread : public wxThread
 		pixel_size = wanted_pixel_size;
 		mask_radius = wanted_mask_radius;
 		thread_id = wanted_thread_id;
+		max_resolution = wanted_max_resolution;
+		if (max_resolution < pixel_size * 2.0f) max_resolution = pixel_size * 2.0f;
 	}
 
 	protected:
@@ -124,6 +126,7 @@ class AutoMaskerThread : public wxThread
 	float pixel_size;
 	float mask_radius;
 	int thread_id;
+	float max_resolution;
 
     virtual ExitCode Entry();
 };

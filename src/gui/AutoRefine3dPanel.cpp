@@ -889,6 +889,8 @@ void AutoRefinementManager::BeginRefinementCycle()
 	active_mask_edge = my_parent->MaskEdgeTextCtrl->ReturnValue();
 	active_mask_weight = my_parent->MaskWeightTextCtrl->ReturnValue();
 
+	reference_3d_contains_all_particles = false;
+
 
 	active_refinement_run_profile = run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()];
 	active_reconstruction_run_profile = run_profiles_panel->run_profile_manager.run_profiles[my_parent->ReconstructionRunProfileComboBox->GetSelection()];
@@ -957,6 +959,7 @@ void AutoRefinementManager::BeginRefinementCycle()
 	}
 
 
+
 	// how many particles to use..
 
 	long number_of_asym_units = number_of_particles * ReturnNumberofAsymmetricUnits(active_refinement_package->symmetry);
@@ -975,13 +978,21 @@ void AutoRefinementManager::BeginRefinementCycle()
 	number_of_rounds_run = 0;
 	percent_used_per_round.Clear();
 	resolution_per_round.Clear();
+
+	last_round_reconstruction_resolution = FLT_MAX;
+
 	high_res_limit_per_round.Clear();
+	high_res_limit_per_round.Add(my_parent->HighResolutionLimitTextCtrl->ReturnValue());
+
 
 	number_of_global_alignments.Clear();
 	number_of_global_alignments.Add(0, number_of_particles);
 
 	rounds_since_global_alignment.Clear();
 	rounds_since_global_alignment.Add(0, number_of_particles);
+
+	resolution_of_last_global_alignment.Clear();
+	resolution_of_last_global_alignment.Add(100.0f, number_of_particles);
 
 	// we need to set the currently selected reference filenames..
 
@@ -1171,7 +1182,10 @@ void AutoRefinementManager::RunRefinementJob()
 
 void AutoRefinementManager::SetupMerge3dJob()
 {
-	int number_of_reconstruction_jobs = active_reconstruction_run_profile.ReturnTotalJobs();
+	long number_of_particles = active_refinement_package->contained_particles.GetCount();
+	int number_of_reconstruction_jobs = std::min(number_of_particles,active_reconstruction_run_profile.ReturnTotalJobs());
+
+
 
 	int class_counter;
 
@@ -1196,7 +1210,9 @@ void AutoRefinementManager::SetupMerge3dJob()
 		wxString orthogonal_views_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/OrthViews/volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
 		float weiner_nominator = 1.0f;
 
-		my_parent->current_job_package.AddJob("ttttfffttibtif",	output_reconstruction_1.ToUTF8().data(),
+		float alignment_res = class_high_res_limits[class_counter];
+
+		my_parent->current_job_package.AddJob("ttttfffttibtiff",	output_reconstruction_1.ToUTF8().data(),
 														output_reconstruction_2.ToUTF8().data(),
 														output_reconstruction_filtered.ToUTF8().data(),
 														output_resolution_statistics.ToUTF8().data(),
@@ -1206,7 +1222,7 @@ void AutoRefinementManager::SetupMerge3dJob()
 														class_counter + 1,
 														save_orthogonal_views_image,
 														orthogonal_views_filename.ToUTF8().data(),
-														number_of_reconstruction_jobs, weiner_nominator);
+														number_of_reconstruction_jobs, weiner_nominator, alignment_res);
 	}
 }
 
@@ -1302,44 +1318,38 @@ void AutoRefinementManager::SetupReconstructionJob()
 	int job_counter;
 	long number_of_reconstruction_jobs;
 	long number_of_reconstruction_processes;
-	float current_particle_counter;
 
 	long number_of_particles;
-	float particles_per_job;
+	long first_particle;
+	long last_particle;
 
 	// for now, number of jobs is number of processes -1 (master)..
 
-	number_of_reconstruction_processes = active_reconstruction_run_profile.ReturnTotalJobs();
-	number_of_reconstruction_jobs = number_of_reconstruction_processes;
-
 	number_of_particles = active_refinement_package->contained_particles.GetCount();
 
-	if (number_of_particles - number_of_reconstruction_jobs < number_of_reconstruction_jobs) particles_per_job = 1;
-	else particles_per_job = float(number_of_particles - number_of_reconstruction_jobs) / float(number_of_reconstruction_jobs);
+	number_of_reconstruction_processes = std::min(number_of_particles,active_reconstruction_run_profile.ReturnTotalJobs());
+	number_of_reconstruction_jobs = number_of_reconstruction_processes;
 
 	my_parent->current_job_package.Reset(active_reconstruction_run_profile, "reconstruct3d", number_of_reconstruction_jobs * active_refinement_package->number_of_classes);
 
 	for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
 	{
-		current_particle_counter = 1.0;
 
 		for (job_counter = 0; job_counter < number_of_reconstruction_jobs; job_counter++)
 		{
+
+			FirstLastParticleForJob(first_particle,last_particle,number_of_particles,job_counter+1,number_of_reconstruction_jobs);
+
 			wxString input_particle_stack 		= active_refinement_package->stack_filename;
 			wxString input_parameter_file 		= written_parameter_files[class_counter];
 			wxString output_reconstruction_1    = "/dev/null";
 			wxString output_reconstruction_2			= "/dev/null";
 			wxString output_reconstruction_filtered		= "/dev/null";
-			wxString output_resolution_statistics		= wxString::Format("/tmp/stats_%i\n", myroundint(current_particle_counter));
+			wxString output_resolution_statistics		= wxString::Format("/tmp/stats_%i\n", int(first_particle));
 			wxString my_symmetry						= active_refinement_package->symmetry;
 
-			long	 first_particle						= myroundint(current_particle_counter);
 
-			current_particle_counter += particles_per_job;
-			if (current_particle_counter > number_of_particles  || job_counter == number_of_reconstruction_jobs - 1) current_particle_counter = number_of_particles;
 
-			long	 last_particle						= myroundint(current_particle_counter);
-			current_particle_counter+=1.0;
 
 			float 	 output_pixel_size					= active_refinement_package->output_pixel_size;
 			float 	 molecular_mass_kDa					= active_refinement_package->estimated_particle_weight_in_kda;
@@ -1349,8 +1359,23 @@ void AutoRefinementManager::SetupReconstructionJob()
 
 			if (this_is_the_final_round == true) resolution_limit_rec = 0;
 			else
-			resolution_limit_rec = input_refinement->class_refinement_results[class_counter].class_resolution_statistics.ReturnResolutionNShellsAfter(class_high_res_limits[class_counter], output_refinement->resolution_statistics_box_size / 10 );
+			{
+				float padded_high_res_limit = input_refinement->class_refinement_results[class_counter].class_resolution_statistics.ReturnResolutionNShellsAfter(class_high_res_limits[class_counter], output_refinement->resolution_statistics_box_size / 10 );
+
+				if (resolution_per_round.GetCount() > 0)
+				{
+					if (fabsf(resolution_per_round[resolution_per_round.GetCount() - 1] - padded_high_res_limit) <  resolution_per_round[resolution_per_round.GetCount() - 1] * 0.05)
+					{
+						resolution_limit_rec = input_refinement->class_refinement_results[class_counter].class_resolution_statistics.ReturnResolutionNShellsAfter(resolution_per_round[resolution_per_round.GetCount() - 1], output_refinement->resolution_statistics_box_size / 10 );
+					}
+					else resolution_limit_rec = padded_high_res_limit;
+				}
+				else resolution_limit_rec = padded_high_res_limit;
+			}
 			//wxPrintf("\n\n\n\nres limit = %.2f\n\n\n\n", resolution_limit_rec);
+
+			if (resolution_limit_rec > last_round_reconstruction_resolution) resolution_limit_rec = last_round_reconstruction_resolution;
+			last_round_reconstruction_resolution = resolution_limit_rec;
 
 			float    score_weight_conversion;
 			if (class_high_res_limits[class_counter] < 8) score_weight_conversion = 2;
@@ -1540,10 +1565,11 @@ void AutoRefinementManager::SetupRefinementJob()
 	long counter;
 	long number_of_refinement_jobs;
 	int number_of_refinement_processes;
-	float current_particle_counter;
+
 
 	long number_of_particles;
-	float particles_per_job;
+	long first_particle;
+	long last_particle;
 	float likelihood_to_global;
 	bool do_global_for_this_particle;
 
@@ -1552,28 +1578,43 @@ void AutoRefinementManager::SetupRefinementJob()
 	wxArrayString written_parameter_files;
 	wxArrayString written_res_files;
 
-	float lowest_res = FLT_MAX;
+	float lowest_alignment_res = FLT_MAX;
+	float lowest_class_resolution = FLT_MAX;
 
 	for (class_counter = 0; class_counter < input_refinement->number_of_classes; class_counter++)
 	{
-		lowest_res = std::min(class_high_res_limits[class_counter], lowest_res);
+		lowest_alignment_res = std::min(class_high_res_limits[class_counter], lowest_alignment_res);
+
 	}
 
 	// setup whether to do global or local refinement..
 
 	for ( long particle_counter = 0; particle_counter < input_refinement->number_of_particles; particle_counter++)
     {
-		// should we do local or global?
+		// if the measured resolution is better than 5 angstroms and the alignment resolution is better than 8 and the highest resolution previously globaled is greater than 9, and then do a global
+		if (number_of_rounds_run == 0) do_global_for_this_particle = true;
+		else
+		if (resolution_per_round[resolution_per_round.GetCount() - 1] < 5.0f && lowest_alignment_res <= 8.0f && resolution_of_last_global_alignment[particle_counter] > 9.0f && reference_3d_contains_all_particles == true && number_of_rounds_run > 2) do_global_for_this_particle = true;
+		else
+		{
 
-		float round_adjust = powf(number_of_global_alignments[particle_counter] - floor(rounds_since_global_alignment[particle_counter] / 3), 2);
-		if (round_adjust < 1) round_adjust = 1;
+			// should we do local or global? Randonly decide..
 
-		float likelihood_to_global;
-		if (lowest_res < 4) likelihood_to_global = -5; // they will all be local at such high res.
-		else likelihood_to_global = powf(lowest_res, 2) / (1000.0f * round_adjust); // very arbritrary
+			float round_adjust = powf(number_of_global_alignments[particle_counter] - floor(rounds_since_global_alignment[particle_counter] / 3), 2);
+			if (round_adjust < 1) round_adjust = 1;
 
-		if (fabsf(global_random_number_generator.GetUniformRandom()) < likelihood_to_global) do_global_for_this_particle = true;
-		else do_global_for_this_particle = false;
+			// if the alignment resolution has greatly changed make it more likely to global..
+
+			float res_adjust = resolution_of_last_global_alignment[particle_counter] - lowest_alignment_res;
+
+
+			float likelihood_to_global;
+			if (resolution_of_last_global_alignment[particle_counter] <= 5.0) likelihood_to_global = -5; // don't bother doing another if we've already done one at this resolution
+			else likelihood_to_global = powf(lowest_alignment_res, 2) / ((1000.0f / res_adjust) * round_adjust); // very arbritrary
+
+			if (fabsf(global_random_number_generator.GetUniformRandom()) < likelihood_to_global) do_global_for_this_particle = true;
+			else do_global_for_this_particle = false;
+		}
 
 		for (int class_counter = 0; class_counter < input_refinement->number_of_classes; class_counter++)
 		{
@@ -1608,21 +1649,20 @@ void AutoRefinementManager::SetupRefinementJob()
 
 	// for now, number of jobs is number of processes -1 (master)..
 
-	number_of_refinement_processes = active_refinement_run_profile.ReturnTotalJobs();
-	number_of_refinement_jobs = number_of_refinement_processes;
-
 	number_of_particles = active_refinement_package->contained_particles.GetCount();
-	if (number_of_particles - number_of_refinement_jobs < number_of_refinement_jobs) particles_per_job = 1;
-	else particles_per_job = float(number_of_particles - number_of_refinement_jobs) / float(number_of_refinement_jobs);
+
+	number_of_refinement_processes = std::min(number_of_particles,active_refinement_run_profile.ReturnTotalJobs());
+	number_of_refinement_jobs = number_of_refinement_processes;
 
 	my_parent->current_job_package.Reset(active_refinement_run_profile, "refine3d", number_of_refinement_jobs * input_refinement->number_of_classes);
 
 	for (class_counter = 0; class_counter < input_refinement->number_of_classes; class_counter++)
 	{
-		current_particle_counter = 1;
 
 		for (counter = 0; counter < number_of_refinement_jobs; counter++)
 		{
+
+			FirstLastParticleForJob(first_particle,last_particle,number_of_particles,counter+1,number_of_refinement_jobs);
 
 			wxString input_particle_images					= active_refinement_package->stack_filename;
 			wxString input_parameter_file 					= written_parameter_files.Item(class_counter);
@@ -1634,13 +1674,6 @@ void AutoRefinementManager::SetupRefinementJob()
 			wxString ouput_shift_file						= "/dev/null";
 
 			wxString my_symmetry							= active_refinement_package->symmetry;
-			long	 first_particle							= myroundint(current_particle_counter);
-
-			current_particle_counter += particles_per_job;
-			if (current_particle_counter > number_of_particles || counter == number_of_refinement_jobs - 1) current_particle_counter = number_of_particles;
-
-			long	 last_particle							= myroundint(current_particle_counter);
-			current_particle_counter++;
 
 			float	 percent_used;
 			if (number_of_rounds_run == 0) percent_used = 1.0f;
@@ -1667,15 +1700,14 @@ void AutoRefinementManager::SetupRefinementJob()
 			float    high_resolution_limit					= class_high_res_limits[class_counter];
 
 			float	 signed_CC_limit;
-			//signed_CC_limit = 0.0f;
-			if (IsOdd(number_of_rounds_run) == true || this_is_the_final_round == true || number_of_rounds_run == 0) signed_CC_limit = 0.0f;
-			else signed_CC_limit = 15.0f;
+			signed_CC_limit = 0.0f;
 
-
+			//if (IsOdd(number_of_rounds_run) == true || this_is_the_final_round == true || number_of_rounds_run == 0) signed_CC_limit = 0.0f;
+			//else signed_CC_limit = 15.0f;
 		
 			//float	 classification_resolution_limit		= 10.0;//class_high_res_limits[class_counter]; //my_parent->ClassificationHighResLimitTextCtrl->ReturnValue();
 			float    classification_resolution_limit        = 20.0f + (8.0f - 20.0f) * (float(number_of_rounds_run) / 9.0f);
-			if (classification_resolution_limit < lowest_res) classification_resolution_limit = lowest_res;
+			if (classification_resolution_limit < lowest_alignment_res) classification_resolution_limit = lowest_alignment_res;
 
 			wxPrintf("classification res limit %i = %.2f\n", class_counter, classification_resolution_limit);
 
@@ -1951,7 +1983,6 @@ void AutoRefinementManager::ProcessJobResult(JobResult *result_to_process)
 
 			if (seconds_remaining > 60) time_remaining.minutes = (seconds_remaining / 60) - (time_remaining.hours * 60);
 			else time_remaining.minutes = 0;
-
 			time_remaining.seconds = seconds_remaining - ((time_remaining.hours * 60 + time_remaining.minutes) * 60);
 			my_parent->TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_remaining.hours, time_remaining.minutes, time_remaining.seconds));
 		}
@@ -2183,7 +2214,7 @@ void AutoRefinementManager::ProcessAllJobsFinished()
 			main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE REFINEMENT_PACKAGE_CURRENT_REFERENCES_%li SET VOLUME_ASSET_ID=%i WHERE CLASS_NUMBER=%i", current_refinement_package_asset_id, temp_asset.asset_id, class_counter + 1 ));
 
 			volume_asset_panel->AddAsset(&temp_asset);
-			main_frame->current_project.database.AddNextVolumeAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), temp_asset.reconstruction_job_id, temp_asset.pixel_size, temp_asset.x_size, temp_asset.y_size, temp_asset.z_size);
+			main_frame->current_project.database.AddNextVolumeAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), temp_asset.reconstruction_job_id, temp_asset.pixel_size, temp_asset.x_size, temp_asset.y_size, temp_asset.z_size, temp_asset.half_map_1_filename.GetFullPath(), temp_asset.half_map_2_filename.GetFullPath());
 		}
 
 		main_frame->current_project.database.EndVolumeAssetInsert();
@@ -2249,6 +2280,10 @@ void AutoRefinementManager::ProcessAllJobsFinished()
 		//wxPrintf("Calling cycle refinement\n");
         main_frame->DirtyVolumes();
         main_frame->DirtyRefinements();
+
+        // are we using all particles yet?
+
+        if (current_percent_used > 99.9f) reference_3d_contains_all_particles = true;
 		CycleRefinement();
 	}
 
@@ -2309,7 +2344,11 @@ void AutoRefinementManager::DoMasking()
 	{
 		my_parent->active_mask_thread_id = my_parent->next_thread_id;
 		my_parent->next_thread_id++;
-		AutoMaskerThread *mask_thread = new AutoMaskerThread(my_parent, current_reference_filenames, masked_filenames, input_refinement->resolution_statistics_pixel_size, active_mask_radius, my_parent->active_mask_thread_id );
+
+		float current_res = input_refinement->class_refinement_results[0].class_resolution_statistics.ReturnEstimatedResolution(true);
+		if (current_res > class_high_res_limits[0]) current_res = class_high_res_limits[0];
+		wxPrintf("Estimated resolution = %.2f\n", current_res);
+		AutoMaskerThread *mask_thread = new AutoMaskerThread(my_parent, current_reference_filenames, masked_filenames, input_refinement->resolution_statistics_pixel_size, active_mask_radius, my_parent->active_mask_thread_id, current_res );
 
 		if ( mask_thread->Run() != wxTHREAD_NO_ERROR )
 		{
@@ -2339,11 +2378,15 @@ void AutoRefinementManager::CycleRefinement()
 	bool did_resolution_improve;
 
 	float current_0p5_resolution;
+	float current_part_0p5_resolution;
 	float bleed_resolution;
 	float res_for_next_round;
 	float resolution_min_shells_after;
 	float safe_resolution;
 	float current_0p5_res_minus_bleed;
+	float current_part_0p5_res_minus_bleed;
+	float average_0p5_res_minus_bleed;
+
 
 	float change_in_occupancies;
 
@@ -2357,6 +2400,7 @@ void AutoRefinementManager::CycleRefinement()
 		{
 			number_of_global_alignments[particle_counter]++;
 			rounds_since_global_alignment[particle_counter] = 0;
+			resolution_of_last_global_alignment[particle_counter] = high_res_limit_per_round[high_res_limit_per_round.GetCount() - 1];
 		}
 		else
 		{
@@ -2366,12 +2410,16 @@ void AutoRefinementManager::CycleRefinement()
 
 	for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
 	{
-		high_res_limit_per_round.Add(class_high_res_limits.Item(class_counter));
-
 		current_0p5_resolution = output_refinement->class_refinement_results[class_counter].class_resolution_statistics.Return0p5Resolution(false);
+		current_part_0p5_resolution = output_refinement->class_refinement_results[class_counter].class_resolution_statistics.Return0p5Resolution(true);
+
 		current_0p5_res_minus_bleed = output_refinement->class_refinement_results[class_counter].class_resolution_statistics.ReturnResolutionNShellsBefore(current_0p5_resolution, number_of_bleed_shells + 1);
+		current_part_0p5_res_minus_bleed = output_refinement->class_refinement_results[class_counter].class_resolution_statistics.ReturnResolutionNShellsBefore(current_part_0p5_resolution, number_of_bleed_shells + 1);
 
 		if (current_0p5_res_minus_bleed == 0) current_0p5_res_minus_bleed = class_high_res_limits[class_counter];
+		if (current_part_0p5_res_minus_bleed == 0) current_part_0p5_res_minus_bleed = class_high_res_limits[class_counter];
+
+		average_0p5_res_minus_bleed = (current_0p5_res_minus_bleed + current_part_0p5_res_minus_bleed) * 0.5f;
 
 		bleed_resolution = output_refinement->class_refinement_results[class_counter].class_resolution_statistics.ReturnResolutionNShellsAfter(class_high_res_limits[class_counter], number_of_bleed_shells);
 		resolution_min_shells_after = output_refinement->class_refinement_results[class_counter].class_resolution_statistics.ReturnResolutionNShellsAfter(class_high_res_limits[class_counter], output_refinement->resolution_statistics_box_size / 15 );
@@ -2379,7 +2427,7 @@ void AutoRefinementManager::CycleRefinement()
 		if (bleed_resolution == 0) bleed_resolution = class_high_res_limits[class_counter];
 		safe_resolution = bleed_resolution;
 
-		res_for_next_round = std::max(resolution_min_shells_after, current_0p5_res_minus_bleed);
+		res_for_next_round = std::max(resolution_min_shells_after, average_0p5_res_minus_bleed);
 		if (res_for_next_round > class_high_res_limits.Item(class_counter)) res_for_next_round = class_high_res_limits.Item(class_counter);
 
 		//if (res_for_next_round < 4.0) res_for_next_round = 4.0;
@@ -2406,13 +2454,24 @@ void AutoRefinementManager::CycleRefinement()
 
 	}
 
+	float lowest_res = FLT_MAX;
+
+	for (class_counter = 0; class_counter < input_refinement->number_of_classes; class_counter++)
+	{
+		lowest_res = std::min(class_high_res_limits[class_counter], lowest_res);
+	}
+
+	high_res_limit_per_round.Add(lowest_res);
+
 	if (resolution_per_round.GetCount() > 0)
 	{
 		if (best_p143_res > resolution_per_round[resolution_per_round.GetCount() - 1] - 0.1) // the resolution did not improve, lets add more particles to the max
 		{
-			max_percent_used += max_percent_used * 0.5;
+			max_percent_used += max_percent_used * 2.0;
 			if (max_percent_used > 100) max_percent_used = 100.0;
 		}
+
+		if (best_p143_res < 7.0f) max_percent_used = 100.0f; // if the resolution is good, just use all the particles..
 	}
 
 	resolution_per_round.Add(best_p143_res);
@@ -2423,7 +2482,6 @@ void AutoRefinementManager::CycleRefinement()
 	long number_of_asym_units = output_refinement->number_of_particles * ReturnNumberofAsymmetricUnits(active_refinement_package->symmetry);
 
 	// what percentage is this.
-
 
 	current_percent_used = (float(wanted_number_of_asym_units) / float(number_of_asym_units)) * 100.0;
 	if (current_percent_used < start_percent_used) current_percent_used = start_percent_used;

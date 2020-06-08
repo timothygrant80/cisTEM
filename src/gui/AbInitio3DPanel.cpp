@@ -1433,30 +1433,31 @@ void AbInitioManager::SetupReconstructionJob()
 	int job_counter;
 	long number_of_reconstruction_jobs;
 	long number_of_reconstruction_processes;
-	float current_particle_counter;
 
 	long number_of_particles;
-	float particles_per_job;
+	long first_particle;
+	long last_particle;
 
 	// for now, number of jobs is number of processes -1 (master)..
-
-	number_of_reconstruction_processes = active_reconstruction_run_profile.ReturnTotalJobs();
-	number_of_reconstruction_jobs = number_of_reconstruction_processes;
 
 	if (active_use_classums == false) number_of_particles = active_refinement_package->contained_particles.GetCount();
 	else number_of_particles = active_classification_selection.selections.GetCount() * active_number_of_2d_classes;
 
-	if (number_of_particles - number_of_reconstruction_jobs < number_of_reconstruction_jobs) particles_per_job = 1;
-	else particles_per_job = float(number_of_particles - number_of_reconstruction_jobs) / float(number_of_reconstruction_jobs);
+	number_of_reconstruction_processes = std::min(number_of_particles,active_reconstruction_run_profile.ReturnTotalJobs());
+	number_of_reconstruction_jobs = number_of_reconstruction_processes;
+
+
 
 	my_parent->current_job_package.Reset(active_reconstruction_run_profile, "reconstruct3d", number_of_reconstruction_jobs * output_refinement->number_of_classes);
 
 	for (class_counter = 0; class_counter < output_refinement->number_of_classes; class_counter++)
 	{
-		current_particle_counter = 1.0;
 
 		for (job_counter = 0; job_counter < number_of_reconstruction_jobs; job_counter++)
 		{
+
+			FirstLastParticleForJob(first_particle,last_particle,number_of_particles,job_counter+1,number_of_reconstruction_jobs);
+
 			wxString input_particle_stack 		= active_stack_filename;//active_refinement_package->stack_filename;
 			wxString input_parameter_file 		= written_parameter_files[class_counter];
 			wxString output_reconstruction_1    = "/dev/null";
@@ -1468,13 +1469,6 @@ void AbInitioManager::SetupReconstructionJob()
 			if (apply_symmetry == true)	my_symmetry = active_symmetry_string;
 			else my_symmetry = "C1";
 
-			long	 first_particle						= myroundint(current_particle_counter);
-
-			current_particle_counter += particles_per_job;
-			if (current_particle_counter > number_of_particles  || job_counter == number_of_reconstruction_jobs - 1) current_particle_counter = number_of_particles;
-
-			long	 last_particle						= myroundint(current_particle_counter);
-			current_particle_counter+=1.0;
 
 			float 	 molecular_mass_kDa					= active_refinement_package->estimated_particle_weight_in_kda;
 			float    inner_mask_radius					= active_inner_mask_radius;
@@ -1641,7 +1635,8 @@ void AbInitioManager::RunReconstructionJob()
 void AbInitioManager::SetupMerge3dJob()
 {
 
-	int number_of_reconstruction_jobs = active_reconstruction_run_profile.ReturnTotalJobs();
+	long number_of_particles = active_refinement_package->contained_particles.GetCount();
+	int number_of_reconstruction_jobs = std::min(number_of_particles,active_reconstruction_run_profile.ReturnTotalJobs());
 
 	int class_counter;
 
@@ -1690,11 +1685,11 @@ void AbInitioManager::SetupMerge3dJob()
 		else wiener_nominator = 10.0f;
 
 
-
+		float alignment_res = current_high_res_limit;
 		//wiener_nominator = 50.0f;
 		//my_parent->WriteInfoText(wxString::Format("weiner nominator = %f", wiener_nominator));
 
-		my_parent->current_job_package.AddJob("ttttfffttibtif",	output_reconstruction_1.ToUTF8().data(),
+		my_parent->current_job_package.AddJob("ttttfffttibtiff",	output_reconstruction_1.ToUTF8().data(),
 														output_reconstruction_2.ToUTF8().data(),
 														output_reconstruction_filtered.ToUTF8().data(),
 														output_resolution_statistics.ToUTF8().data(),
@@ -1705,7 +1700,7 @@ void AbInitioManager::SetupMerge3dJob()
 														save_orthogonal_views_image,
 														orthogonal_views_filename.ToUTF8().data(),
 														number_of_reconstruction_jobs,
-														wiener_nominator);
+														wiener_nominator, alignment_res);
 	}
 }
 
@@ -1738,10 +1733,10 @@ void AbInitioManager::SetupRefinementJob()
 	long counter;
 	long number_of_refinement_jobs;
 	int number_of_refinement_processes;
-	float current_particle_counter;
 
 	long number_of_particles;
-	float particles_per_job;
+	long first_particle;
+	long last_particle;
 
 	if (active_use_classums == false) number_of_particles = active_refinement_package->contained_particles.GetCount();
 	else number_of_particles = active_classification_selection.selections.GetCount() * active_number_of_2d_classes;
@@ -1794,20 +1789,18 @@ void AbInitioManager::SetupRefinementJob()
 
 	// for now, number of jobs is number of processes -1 (master)..
 
-	number_of_refinement_processes = active_refinement_run_profile.ReturnTotalJobs();
+	number_of_refinement_processes = std::min(number_of_particles,active_refinement_run_profile.ReturnTotalJobs());
 	number_of_refinement_jobs = number_of_refinement_processes;
-
-	if (number_of_particles - number_of_refinement_jobs < number_of_refinement_jobs) particles_per_job = 1;
-	else particles_per_job = float(number_of_particles - number_of_refinement_jobs) / float(number_of_refinement_jobs);
 
 	my_parent->current_job_package.Reset(active_refinement_run_profile, "refine3d", number_of_refinement_jobs * input_refinement->number_of_classes);
 
 	for (class_counter = 0; class_counter < input_refinement->number_of_classes; class_counter++)
 	{
-		current_particle_counter = 1;
 
 		for (counter = 0; counter < number_of_refinement_jobs; counter++)
 		{
+
+			FirstLastParticleForJob(first_particle,last_particle,number_of_particles,counter+1,number_of_refinement_jobs);
 
 			wxString input_particle_images					= active_stack_filename;//active_refinement_package->stack_filename;
 			wxString input_parameter_file 					= written_parameter_files.Item(class_counter);
@@ -1823,15 +1816,6 @@ void AbInitioManager::SetupRefinementJob()
 			wxString my_symmetry;
 			if (apply_symmetry == true) my_symmetry = active_symmetry_string;
 			else my_symmetry = "C1";
-
-			long	 first_particle							= myroundint(current_particle_counter);
-
-			current_particle_counter += particles_per_job;
-			if (current_particle_counter > number_of_particles  || counter == number_of_refinement_jobs - 1) current_particle_counter = number_of_particles;
-
-			long	 last_particle							= myroundint(current_particle_counter);
-			current_particle_counter++;
-
 
 
 			float percent_used;
@@ -2130,6 +2114,8 @@ void AbInitioManager::SetupPrepareStackJob()
 
 		int	number_of_particles = active_refinement_package->contained_particles.GetCount();
 		particles_per_job = float(number_of_particles) / float(number_of_refinement_jobs);
+		long first_particle;
+		long last_particle;
 
 		// we don't want less than 100 particles per job..
 
@@ -2150,7 +2136,6 @@ void AbInitioManager::SetupPrepareStackJob()
 		my_parent->current_job_package.Reset(active_refinement_run_profile, "prepare_stack", number_of_refinement_jobs);
 
 		float binning_factor = (active_end_res / 2.0f) / active_refinement_package->output_pixel_size;
-		float current_particle_counter = 1.0f;
 
 		// ONLY WRITING FIRST CLASS FOR PIXEL SIZES..
 
@@ -2168,13 +2153,8 @@ void AbInitioManager::SetupPrepareStackJob()
 			bool resample_box							= true;
 			int	 wanted_output_box_size 				= ReturnClosestFactorizedUpper(ReturnSafeBinnedBoxSize(active_refinement_package->stack_box_size, binning_factor), 3, true);
 			bool process_a_subset						= true;
-			int	 first_particle							= myroundint(current_particle_counter);
 
-			current_particle_counter += particles_per_job;
-			if (current_particle_counter > number_of_particles  || counter == number_of_refinement_jobs - 1) current_particle_counter = number_of_particles;
-
-			int	 last_particle							= myroundint(current_particle_counter);
-			current_particle_counter++;
+			FirstLastParticleForJob(first_particle,last_particle,number_of_particles,counter+1,number_of_refinement_jobs);
 
 			//wxPrintf("1st = %i, last = %i\n", first_particle, last_particle);
 
@@ -2680,12 +2660,14 @@ void AbInitioManager::ProcessAllJobsFinished()
 	{
 		// get the box size of the stack so we can set the pixel size etc..
 
-		/*active_pixel_size = event.GetPayload<float>();
-		preparing_stack = false;*/
-		wxString new_stack_file = main_frame->ReturnStartupScratchDirectory() + "/temp_stack.mrc";
-		MRCFile check_file(new_stack_file.ToStdString(), false, true);
+		wxString new_stack_file = main_frame->ReturnStartupScratchDirectory() + "temp_stack.mrc";
 
+		// wait 1 second just in case!
+		wxSleep(1);
+		MRCFile check_file(new_stack_file.ToStdString(), false, true);
 		stack_bin_factor = float(active_refinement_package->stack_box_size) / float(check_file.ReturnXSize());
+
+
 		active_pixel_size = active_refinement_package->output_pixel_size * stack_bin_factor;
 		active_stack_filename = new_stack_file;
 		stack_has_been_precomputed = true;
@@ -2888,7 +2870,7 @@ void AbInitio3DPanel::OnVolumeResampled(ReturnProcessedImageEvent& my_event)
 			current_output_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/startup_volume_%li_%i.mrc", current_startup_id, class_counter + 1);
 			temp_asset.filename = current_output_filename;
 			volume_asset_panel->AddAsset(&temp_asset);
-			main_frame->current_project.database.AddNextVolumeAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), temp_asset.reconstruction_job_id, temp_asset.pixel_size, temp_asset.x_size, temp_asset.y_size, temp_asset.z_size);
+			main_frame->current_project.database.AddNextVolumeAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), temp_asset.reconstruction_job_id, temp_asset.pixel_size, temp_asset.x_size, temp_asset.y_size, temp_asset.z_size, temp_asset.half_map_1_filename.GetFullPath(), temp_asset.half_map_2_filename.GetFullPath());
 		}
 
 		main_frame->current_project.database.EndVolumeAssetInsert();

@@ -510,7 +510,15 @@ CurvePoint Curve::ReturnValueAtXUsingLinearInterpolation(float wanted_x, float v
 	CurvePoint return_value;
 	if (assume_linear_x)
 	{
-		index_of_previous_bin = int((wanted_x - data_x[0]) / (data_x[1] - data_x[0]));
+		if (data_x[0] == data_x[1])
+		{
+			// Special case where x is constant (it's not really a curve in that case, but we still have to deal with this)
+			index_of_previous_bin = number_of_points-2;
+		}
+		else
+		{
+			index_of_previous_bin = int((wanted_x - data_x[0]) / (data_x[1] - data_x[0]));
+		}
 	}
 	else
 	{
@@ -730,6 +738,19 @@ void Curve::ApplyCTF(CTF ctf_to_apply, float azimuth_in_radians)
 		data_y[counter] *= ctf_to_apply.Evaluate(powf(data_x[counter],2),azimuth_in_radians);
 	}
 }
+
+void Curve::ApplyGaussianLowPassFilter(float sigma) // Assumption is that X is recipricoal pixels
+{
+	float frequency_squared;
+	float one_over_two_sigma_squared = 0.5 / powf(sigma, 2);
+
+	for (int counter = 0; counter < number_of_points; counter ++ )
+	{
+		frequency_squared = powf(data_x[counter], 2);
+		data_y[counter] *= expf(-frequency_squared * one_over_two_sigma_squared);
+	}
+}
+
 
 void Curve::ApplyCosineMask(float wanted_x_of_cosine_start, float wanted_cosine_width_in_x, bool undo)
 {
@@ -1425,6 +1446,4 @@ for (i = 0; i <= order_of_polynomial; i++)
 }
 
 }
-
-
 

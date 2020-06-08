@@ -323,6 +323,50 @@ bool ReceiveTemplateMatchingResultFromSocket(wxSocketBase *socket, int &image_nu
 	return true;
 }
 
+/*
+ * When distributing particles across a set of jobs, call this function to work out the first and last particle to assign to
+ * a particular job.
+ * Note that assume that we are counting from 1. So the first job has current_job_number = 1 and first_particle = 1
+ *
+ * Inspired by
+ * https://stackoverflow.com/a/26554699/11267786
+ */
+void FirstLastParticleForJob(long &first_particle, long &last_particle, long number_of_particles, int current_job_number, int number_of_jobs )
+{
+	// Check inputs
+	MyDebugAssertTrue(number_of_particles > 0,"Number of particles must be positive");
+	MyDebugAssertTrue(number_of_jobs > 0, "Number of jobs must be positive");
+	MyDebugAssertTrue(current_job_number > 0, "Current_job_number starts at 1");
+	MyDebugAssertTrue(current_job_number <= number_of_jobs, "Current job number cannot exceed number of jobs");
+	MyDebugAssertTrue(number_of_jobs <= number_of_particles, "Number of particles must be greater than or equal to number of jobs");
+
+	//
+	int particles_per_job = number_of_particles / number_of_jobs; // integer division
+	int remainder = number_of_particles % number_of_jobs;
+
+	if (current_job_number-1 < remainder)
+	{
+		// the remainder is split evenly across the first 'remainder' jobs
+		first_particle = (current_job_number-1) * (particles_per_job+1) + 1;
+		last_particle = first_particle + particles_per_job;
+	}
+	else
+	{
+		first_particle = (current_job_number-1) * particles_per_job + remainder + 1;
+		last_particle = first_particle + particles_per_job - 1;
+	}
+
+
+	// Sanity checks before we are done
+	MyDebugAssertTrue(first_particle > 0, "Oops, first particle should be positive");
+	MyDebugAssertTrue(last_particle >= first_particle, "Oops, last particle should not be less that first particle");
+	MyDebugAssertTrue(last_particle <= number_of_particles, "Oops, last particle should be <= number of particles");
+	if (current_job_number == number_of_jobs)
+	{
+		MyDebugAssertTrue(last_particle == number_of_particles,"Oops, we're on the last job but the last particle is not the last particle of the stack");
+	}
+}
+
 
 // This is here as when the binned resolution is too close to the refinement resolution or reconstruction
 // resolution (could be 1 or other or both), then it seems to cause some problems - e.g. in Proteasome.

@@ -38,6 +38,8 @@ inline void ZeroFloatArray(float *array_to_zero, int size_of_array)
 	}
 }
 
+void FirstLastParticleForJob(long &first_particle, long &last_particle, long number_of_particles, int current_job_number, int number_of_jobs );
+
 int ReturnSafeBinnedBoxSize(int original_box_size, float bin_factor);
 
 

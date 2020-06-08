@@ -1180,8 +1180,8 @@ void CTFRefinementManager::SetupMerge3dJob()
 		float 	 molecular_mass_kDa					= active_refinement_package->estimated_particle_weight_in_kda;
 		float    inner_mask_radius					= active_inner_mask_radius;
 		float    outer_mask_radius					= active_mask_radius;
-		wxString dump_file_seed_1 					= main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("dump_file_%li_%i_odd_.dump", current_output_refinement_id, class_counter);
-		wxString dump_file_seed_2 					= main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("dump_file_%li_%i_even_.dump", current_output_refinement_id, class_counter);
+		wxString dump_file_seed_1 					= main_frame->ReturnRefineCTFScratchDirectory() + wxString::Format("dump_file_%li_%i_odd_.dump", current_output_refinement_id, class_counter);
+		wxString dump_file_seed_2 					= main_frame->ReturnRefineCTFScratchDirectory() + wxString::Format("dump_file_%li_%i_even_.dump", current_output_refinement_id, class_counter);
 
 		bool save_orthogonal_views_image = true;
 		wxString orthogonal_views_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/OrthViews/volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
@@ -1331,8 +1331,8 @@ void CTFRefinementManager::SetupReconstructionJob()
 			bool	 invert_contrast					= active_refinement_package->stack_has_white_protein;
 			bool	 crop_images						= active_crop_images;
 			bool	 dump_arrays						= true;
-			wxString dump_file_1 						= main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("dump_file_%li_%i_odd_%i.dump", current_output_refinement_id, class_counter, job_counter +1);
-			wxString dump_file_2 						= main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("dump_file_%li_%i_even_%i.dump", current_output_refinement_id, class_counter, job_counter + 1);
+			wxString dump_file_1 						= main_frame->ReturnRefineCTFScratchDirectory() + wxString::Format("dump_file_%li_%i_odd_%i.dump", current_output_refinement_id, class_counter, job_counter +1);
+			wxString dump_file_2 						= main_frame->ReturnRefineCTFScratchDirectory() + wxString::Format("dump_file_%li_%i_even_%i.dump", current_output_refinement_id, class_counter, job_counter + 1);
 
 			wxString input_reconstruction;
 			bool	 use_input_reconstruction;
@@ -2006,7 +2006,7 @@ void CTFRefinementManager::ProcessAllJobsFinished()
 
 
 			volume_asset_panel->AddAsset(&temp_asset);
-			main_frame->current_project.database.AddNextVolumeAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), temp_asset.reconstruction_job_id, temp_asset.pixel_size, temp_asset.x_size, temp_asset.y_size, temp_asset.z_size);
+			main_frame->current_project.database.AddNextVolumeAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), temp_asset.reconstruction_job_id, temp_asset.pixel_size, temp_asset.x_size, temp_asset.y_size, temp_asset.z_size, temp_asset.half_map_1_filename.GetFullPath(), temp_asset.half_map_2_filename.GetFullPath());
 		}
 
 		main_frame->current_project.database.EndVolumeAssetInsert();
@@ -2192,5 +2192,4 @@ void CTFRefinementManager::OnMaskerThreadComplete()
 	SetupRefinementJob();
 	RunRefinementJob();
 }
-
 

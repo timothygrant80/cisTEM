@@ -115,7 +115,14 @@ void MovieAsset::Recheck_if_valid()
 
 }*/
 
-void MovieAsset::Update(wxString wanted_filename)
+/*
+ * If you think you already know the number of frames, give it as assume_number_of_images.
+ * In that case, we will only check the first frame, and assume all the others are there
+ * and of the correct size. This will save a lot of time, but it is risky because
+ * we may not notice that the file is corrupt or has unusual dimensions.
+ * If not, just don't give assume_number_of_images, or set it to 0.
+ */
+void MovieAsset::Update(wxString wanted_filename, int assume_number_of_frames)
 {
 	filename = wanted_filename;
 	is_valid = false;
@@ -129,7 +136,7 @@ void MovieAsset::Update(wxString wanted_filename)
 		else if (filename.GetExt().IsSameAs("tif",false))
 		{
 			TiffFile temp_tif;
-			is_valid = temp_tif.OpenFile(filename.GetFullPath().ToStdString(), false);
+			is_valid = temp_tif.OpenFile(filename.GetFullPath().ToStdString(), false, false, assume_number_of_frames);
 			x_size = temp_tif.ReturnXSize();
 			y_size = temp_tif.ReturnYSize();
 			number_of_frames = temp_tif.ReturnNumberOfSlices();

@@ -37,7 +37,7 @@ public:
 
 	bool IsOpen();
 
-	bool OpenFile(std::string wanted_filename, bool overwrite, bool wait_for_file_to_exist = false);
+	bool OpenFile(std::string wanted_filename, bool overwrite, bool wait_for_file_to_exist = false, bool check_only_the_first_image = false);
 	void CloseFile();
 
 	void ReadSliceFromDisk(int slice_number, float *output_array);

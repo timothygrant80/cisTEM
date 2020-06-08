@@ -689,10 +689,12 @@ bool RefineCTFApp::DoCalculation()
 		currently_open_3d_filename = all_reference_3d_filenames[filename_counter];
 		SetupNewReference3D(currently_open_3d_filename, inner_mask_radius, outer_mask_radius, pixel_size, mask_falloff, threshold_input_3d , padding, beamtilt_refinement, low_resolution_limit, high_resolution_limit, molecular_mass_kDa);
 
+		// firstprivate(I) is necessary for GCC-9 compatibility, see "OpenMP data sharing" at https://gcc.gnu.org/gcc-9/porting_to.html
 		#pragma omp parallel num_threads(max_threads) default(none) shared(parameter_average, parameter_variance, input_star_file, input_stack, phase_difference_sum, max_threads, \
 		first_particle, last_particle, invert_contrast, normalize_particles, noise_power_spectrum, ctf_refinement, defocus_search_range, defocus_step, normalize_input_3d, \
 		refine_statistics, pixel_size, my_progress, outer_mask_radius, mask_falloff, high_resolution_limit, molecular_mass_kDa, binned_image_box_size, \
 		binning_factor_refine, cg_accuracy, low_resolution_limit, input_statistics, output_star_file, beamtilt_refinement, currently_open_3d_filename, filename_counter) \
+		firstprivate(I) \
 		private(image_counter, refine_particle, current_line_local, phase_difference_sum_local, input_parameters, temp_float, output_parameters, input_ctf, variance, average, comparison_object, \
 		best_score, defocus_i, score, cg_starting_point, input_image_local, phase_difference_image_local, input_3d_local, unbinned_3d_local, \
 		binned_image, projection_image_local, best_defocus_i, ctf_image_local, padded_projection_image_local)

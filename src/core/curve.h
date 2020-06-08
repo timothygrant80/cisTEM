@@ -80,6 +80,7 @@ public:
 	void FlattenBeforeIndex(int index);
 	float ReturnAverageValue();
 	void ApplyCosineMask(float wanted_x_of_cosine_start, float wanted_cosine_width_in_x, bool undo = false);
+	void ApplyGaussianLowPassFilter(float sigma); // Assumption is that X is recipricoal pixels
 
 	void GetXMinMax(float &min_value, float &max_value);
 	void GetYMinMax(float &min_value, float &max_value);

@@ -1,0 +1,9 @@
+// This is a workaround for an issue with the 
+// VSCode debugger, as described in
+// https://github.com/microsoft/vscode-cpptools/issues/5079
+{
+    "label": "Open Terminal",
+    "type": "shell",
+    "command": "osascript -e 'tell application \"Terminal\"\ndo script \"echo hello\"\nend tell'",
+    "problemMatcher": []
+}

@@ -541,6 +541,9 @@ void ImportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 			temp_particle_info.defocus_angle = input_star_file.ReturnDefocusAngle(particle_counter);
 			temp_particle_info.phase_shift = input_star_file.ReturnPhaseShift(particle_counter);
 
+			temp_particle_info.x_pos = input_star_file.ReturnXCoordinate(particle_counter) * PixelSizeTextCtrl->ReturnValue();
+			temp_particle_info.y_pos = input_star_file.ReturnYCoordinate(particle_counter) * PixelSizeTextCtrl->ReturnValue();
+
 			temp_refinement_package->contained_particles.Add(temp_particle_info);
 
 			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].position_in_stack = input_star_file.ReturnPositionInStack(particle_counter);
@@ -554,8 +557,25 @@ void ImportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].phi =  input_star_file.ReturnPhi(particle_counter);
 			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].theta = input_star_file.ReturnTheta(particle_counter);
 			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].psi = input_star_file.ReturnPsi(particle_counter);
-			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].xshift = -input_star_file.ReturnXShift(particle_counter) * PixelSizeTextCtrl->ReturnValue();
-			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].yshift = -input_star_file.ReturnYShift(particle_counter) * PixelSizeTextCtrl->ReturnValue();
+			
+			if (input_star_file.x_shifts_are_in_angst)
+			{
+				temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].xshift = -input_star_file.ReturnXShift(particle_counter);
+			}
+			else
+			{
+				temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].xshift = -input_star_file.ReturnXShift(particle_counter) * PixelSizeTextCtrl->ReturnValue();
+			}
+			
+			if (input_star_file.y_shifts_are_in_angst)
+			{
+				temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].yshift = -input_star_file.ReturnYShift(particle_counter);
+			}
+			else
+			{
+				temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].yshift = -input_star_file.ReturnYShift(particle_counter) * PixelSizeTextCtrl->ReturnValue();
+			}
+			
 			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].score = 0.0;
 			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].image_is_active = 1;
 			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].sigma = 10.0;

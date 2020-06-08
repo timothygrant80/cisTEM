@@ -10,7 +10,7 @@ private:
 	float pixel_size;
 
 
-	bool ReadLogicalDimensionsFromDisk();
+	bool ReadLogicalDimensionsFromDisk(bool check_only_the_first_image = false);
 
 public:
 	TiffFile();
@@ -25,7 +25,7 @@ public:
 
 	inline bool IsOpen() {if (tif) {return true;} else { return false;}};
 
-	bool OpenFile(std::string filename, bool overwrite = false, bool wait_for_file_to_exist = false);
+	bool OpenFile(std::string filename, bool overwrite = false, bool wait_for_file_to_exist = false, bool check_only_the_first_image = false);
 	void CloseFile();
 
 	void ReadSliceFromDisk(int slice_number, float *output_array);

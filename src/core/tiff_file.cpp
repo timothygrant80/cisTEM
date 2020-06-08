@@ -18,7 +18,14 @@ TiffFile::~TiffFile()
 	CloseFile();
 }
 
-bool TiffFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_for_file_to_exist)
+
+/*
+ * By default, this method will check all the images within the file, to make sure
+ * they are valid (not corrupted) and of the same dimensions. However, this can take
+ * a long time. If you want to save that time, set check_only_the_first_image to true.
+ * This is risky because we may not notice that the file is corrupt or has unusual dimensions.
+ */
+bool TiffFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_for_file_to_exist, bool check_only_the_first_image)
 {
 
 	MyDebugAssertFalse(tif != NULL,"File already open: %s",wanted_filename);
@@ -28,22 +35,40 @@ bool TiffFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_f
 
 	bool return_value = true;
 
+	filename = wanted_filename;
+
 	// if overwrite is specified, then we delete the file nomatter what..
 	if (overwrite) file_already_exists = false;
 
 	if (file_already_exists)
 	{
 		// We open to read/write
+		// The first dictionary is automatically read in
 		tif = TIFFOpen(wanted_filename.c_str(),"rc");
-		return_value = ReadLogicalDimensionsFromDisk();
+		if (tif)
+		{
+			return_value = ReadLogicalDimensionsFromDisk(check_only_the_first_image);
+		}
+		else
+		{
+			MyPrintfRed("Oops. File %s could not be opened, may be corrupted\n",wanted_filename);
+			return_value = false;
+		}
 	}
 	else
 	{
 		// We just open to write
 		tif = TIFFOpen(wanted_filename.c_str(),"w");
+		if (tif)
+		{
+			return_value = true;
+		}
+		else
+		{
+			MyPrintfRed("Oops. File %s could not be opened for writing\n",wanted_filename);
+			return_value = false;
+		}
 	}
-
-	filename = wanted_filename;
 	pixel_size = 1.0; //TODO: work out out to grab the pixel size from SerialEM/IMOD-style TIFF files
 	return return_value;
 }
@@ -60,13 +85,24 @@ void TiffFile::PrintInfo()
 	wxPrintf("Dimensions: %i %i %i\n",ReturnXSize(),ReturnYSize(),ReturnZSize());
 }
 
-bool TiffFile::ReadLogicalDimensionsFromDisk()
+/*
+ * By default, this method will check all the images within the file, to make sure
+ * they are valid (not corrupted) and of the same dimensions. However, this can take
+ * a long time. If you want to save that time, set check_only_the_first_image to true.
+ * This is risky because we may not notice that the file is corrupt or has unusual dimensions.
+ */
+bool TiffFile::ReadLogicalDimensionsFromDisk(bool check_only_the_first_image)
 {
 	MyDebugAssertTrue(tif != NULL,"File must be open");
-	// Loop through all the TIFF directories and check they all have the same x,y dimensions
+
+	/*
+	 * Since the file was already open, TiffOpen has already read in the first dictionary
+	 * and it must be valid, else we would have returned an error at open-time already
+	 */
 	int set_dir_ret = TIFFSetDirectory(tif,0);
 	bool return_value = (set_dir_ret == 1);
 	int dircount = 1;
+
 	uint32 original_x = 0;
 	uint32 current_x = 0;
 	uint32 current_y = 0;
@@ -93,31 +129,53 @@ bool TiffFile::ReadLogicalDimensionsFromDisk()
 
 	original_x = current_x;
 
-	const bool check_dimensions_of_every_image = true;
-
-	if (check_dimensions_of_every_image)
+	if (!check_only_the_first_image)
 	{
-		// This takes ages when importing TIFFs
-		// TODO: check e.g. IMOD to see if there's a quicker way to check a TIFF is valid
-		while (TIFFReadDirectory(tif))
+		const bool check_dimensions_of_every_image = true;
+		if (check_dimensions_of_every_image)
 		{
-			dircount++;
-			TIFFGetField(tif,TIFFTAG_IMAGEWIDTH,&current_x);
-			TIFFGetField(tif,TIFFTAG_IMAGELENGTH,&current_y);
-
-			if (current_x != original_x || logical_dimension_y != current_y)
+			// Loop through all the TIFF directories and check they all have the same x,y dimensions
+			// This takes ages when importing TIFFs
+			while (!TIFFLastDirectory(tif))
 			{
-				MyPrintfRed("Oops. Image %i of file %s has dimensions %i,%i, whereas previous images had dimensions %i,%i\n",dircount,current_x,current_y,original_x,logical_dimension_y);
-				return_value = false;
-			}
-		}
+				// The current directory is not the last one, so let's go to the next
+				dircount++;
+				set_dir_ret = TIFFSetDirectory(tif,dircount-1);
 
-		number_of_images = dircount;
+				if (set_dir_ret != 1)
+				{
+					MyPrintfRed("Warning: Image %i of file %s seems to be corrupted\n",dircount,filename.GetFullName());
+					return_value = false;
+					dircount--;
+					break;
+				}
+				else
+				{
+					TIFFGetField(tif,TIFFTAG_IMAGEWIDTH,&current_x);
+					TIFFGetField(tif,TIFFTAG_IMAGELENGTH,&current_y);
+
+					if (current_x != original_x || logical_dimension_y != current_y)
+					{
+						MyPrintfRed("Warning: Image %i of file %s has dimensions %i,%i, whereas previous images had dimensions %i,%i\n",dircount,filename.GetFullName(),current_x,current_y,original_x,logical_dimension_y);
+						return_value = false;
+						dircount--;
+						break;
+					}
+				}
+			}
+			// we return the number of valid images
+			number_of_images = dircount;
+		}
+		else
+		{
+			// This doesnt' seem to be significantly faster than the other way to do it.
+			number_of_images = TIFFNumberOfDirectories(tif);
+		}
 	}
 	else
 	{
-		// This doesnt' seem to be significantly faster than the other way to do it.
-		number_of_images = TIFFNumberOfDirectories(tif);
+		// We only checked the first image, so we don't know how many images are in the file
+		number_of_images = -1;
 	}
 
 	return return_value;

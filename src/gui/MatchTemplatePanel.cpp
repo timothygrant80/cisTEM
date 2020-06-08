@@ -669,7 +669,8 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 		wxPrintf("Calculating %i correlation maps\n", current_image_euler_search->number_of_search_positions * number_of_rotations * number_of_defocus_positions * number_of_pixel_size_positions);
 		// how many orientations will each process do for this image..
 		expected_number_of_results += current_image_euler_search->number_of_search_positions * number_of_rotations * number_of_defocus_positions * number_of_pixel_size_positions;
-		orientations_per_process = float(current_image_euler_search->number_of_search_positions - number_of_jobs_per_image_in_gui) / float(number_of_jobs_per_image_in_gui);
+		orientations_per_process = float(current_image_euler_search->number_of_search_positions) / float(number_of_jobs_per_image_in_gui);
+		if (orientations_per_process < 1) orientations_per_process = 1;
 
 		int number_of_previous_template_matches =  main_frame->current_project.database.ReturnNumberOfPreviousTemplateMatchesByAssetID(current_image->asset_id);
 		main_frame->current_project.database.GetCTFParameters(current_image->ctf_estimation_id,voltage_kV,spherical_aberration_mm,amplitude_contrast,defocus1,defocus2,defocus_angle,phase_shift, iciness);
@@ -1120,4 +1121,3 @@ void MatchTemplatePanel::UpdateProgressBar()
 
 	TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_left.hours, time_left.minutes, time_left.seconds));
 }
-

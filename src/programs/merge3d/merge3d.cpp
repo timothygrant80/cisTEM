@@ -47,8 +47,9 @@ void Merge3DApp::DoInteractiveUserInput()
 	bool save_orthogonal_views_image = false;
 	wxString orthogonal_views_filename = "";
 	float weiner_nominator = 1.0f;
+	float alignment_res = 5.0f;
 //	my_current_job.Reset(14);
-	my_current_job.ManualSetArguments("ttttfffttibtif",	output_reconstruction_1.ToUTF8().data(),
+	my_current_job.ManualSetArguments("ttttfffttibtiff",	output_reconstruction_1.ToUTF8().data(),
 													output_reconstruction_2.ToUTF8().data(),
 													output_reconstruction_filtered.ToUTF8().data(),
 													output_resolution_statistics.ToUTF8().data(),
@@ -61,7 +62,8 @@ void Merge3DApp::DoInteractiveUserInput()
 													save_orthogonal_views_image,
 													orthogonal_views_filename.ToUTF8().data(),
 													number_of_dump_files,
-													weiner_nominator);
+													weiner_nominator,
+													alignment_res);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -82,9 +84,12 @@ bool Merge3DApp::DoCalculation()
 	wxString orthogonal_views_filename			= my_current_job.arguments[11].ReturnStringArgument();
 	int number_of_dump_files					= my_current_job.arguments[12].ReturnIntegerArgument();
 	float weiner_nominator                      = my_current_job.arguments[13].ReturnFloatArgument();
-	ResolutionStatistics *gui_statistics = NULL;
+	// FOR LOCRES HACK..
+	float alignment_res	                        = my_current_job.arguments[14].ReturnFloatArgument();
 
-	if (is_running_locally == false) gui_statistics = new ResolutionStatistics;
+
+	ResolutionStatistics *resolution_statistics = NULL;
+	resolution_statistics = new ResolutionStatistics;
 
 	ReconstructedVolume output_3d(molecular_mass_kDa);
 	ReconstructedVolume output_3d1(molecular_mass_kDa);
@@ -203,7 +208,7 @@ bool Merge3DApp::DoCalculation()
 
 	output_3d.FinalizeOptimal(my_reconstruction_1, output_3d1.density_map, output_3d2.density_map,
 			original_pixel_size, pixel_size, inner_mask_radius, outer_mask_radius, mask_falloff,
-			center_mass, output_reconstruction_filtered, output_statistics_file, gui_statistics, weiner_nominator);
+			center_mass, output_reconstruction_filtered, output_statistics_file, resolution_statistics, weiner_nominator);
 
 	//float orientation_distribution_efficiency = output_3d.ComputeOrientationDistributionEfficiency(my_reconstruction_1);
 	//SendInfo(wxString::Format("Orientation distribution efficiency: %0.2f\n",orientation_distribution_efficiency));
@@ -216,6 +221,7 @@ bool Merge3DApp::DoCalculation()
 	// MASKING
 
 	const bool test_locres_filtering = false;
+	const int number_of_threads = 44;
 	if (test_locres_filtering)
 	{
 
@@ -227,11 +233,11 @@ bool Merge3DApp::DoCalculation()
 		/*
 		 * Compute a mask
 		 */
-		Image size_image;
-		{
-			float original_average_value = output_3d.density_map->ReturnAverageOfRealValues(outer_mask_radius / original_pixel_size, true);
+
 
 			// remove disconnected density
+/* old_mask
+ *
 
 			Image buffer_image;
 
@@ -259,8 +265,8 @@ bool Merge3DApp::DoCalculation()
 			MyDebugPrint("About to compute mask\n");
 
 			size_image.Binarise(size_image.ReturnMaximumValue() - 1.0f);
-		#ifdef DEBUG
-			size_image.QuickAndDirtyWriteSlices("locres_mask.mrc", 1, size_image.logical_z_dimension);
+	#ifdef DEBUG
+	size_image.QuickAndDirtyWriteSlices("/tmp/locres_mask.mrc", 1, size_image.logical_z_dimension);
 		#endif
 
 			for (long address = 0; address < output_3d.density_map->real_memory_allocated; address++)
@@ -268,46 +274,300 @@ bool Merge3DApp::DoCalculation()
 				if (size_image.real_values[address] == 0.0f) output_3d.density_map->real_values[address] = original_average_value;
 			}
 
-			output_3d.density_map->SetMinimumValue(original_average_value);
-			output_3d.density_map->CosineMask(outer_mask_radius / original_pixel_size, 1.0, false, true, 0.0);
-		}
+	//		output_3d.density_map->SetMinimumValue(original_average_value);
+	//		output_3d.density_map->CosineMask(outer_mask_radius / original_pixel_size, 1.0, false, true, 0.0);
+
+*/
 
 		/*
 		 * Apply a local resolution filter to the reconstruction
 		 */
 		{
 			Image local_resolution_volume;
-			const float krr = 5.0;
+			Image original_volume;
+			//const float krr = 5.0;
 			int box_size;
-			box_size = int(krr * gui_statistics->ReturnEstimatedResolution() / original_pixel_size);
-			wxPrintf("Will estimate local resolution using a box size of %i\n",box_size);
-			const float threshold_snr = 0.5;
-			const float threshold_confidence = 2.0;
-			const bool use_fixed_threshold = false;
-			const float fixed_fsc_threshold = 0.5;
+			//box_size = int(krr * gui_statistics->ReturnEstimatedResolution() / original_pixel_size);
+			box_size = 18.0f / original_pixel_size;
+			//if (box_size < 15) box_size = 15;
 
-			MyDebugPrint("About to estimate loc res\n");
+			wxPrintf("Will estimate local resolution using a box size of %i\n",box_size);
+			const float threshold_snr = 1;
+			const float threshold_confidence = 2.0;
+			float fixed_fsc_threshold = .9;
+			const bool use_fixed_threshold = true;
+
+			MyDebugPrint("About to estimate loc res, with %.2f cutoff\n", fixed_fsc_threshold);
 			if (! output_3d1.density_map->is_in_real_space) output_3d1.density_map->BackwardFFT();
 			if (! output_3d2.density_map->is_in_real_space) output_3d2.density_map->BackwardFFT();
 
-			local_resolution_volume.Allocate(output_3d.density_map->logical_x_dimension, output_3d.density_map->logical_y_dimension, output_3d.density_map->logical_z_dimension);
+			original_volume.CopyFrom(output_3d.density_map);
+			output_3d.density_map->QuickAndDirtyWriteSlices("/tmp/locres_original.mrc", 1, output_3d.density_map->logical_z_dimension, true, original_pixel_size);
+			Image size_image;
+			size_image.CopyFrom(output_3d.density_map);
 
+			#ifdef DEBUG
+	size_image.QuickAndDirtyWriteSlices("/tmp/locres_filtered_input.mrc", 1, size_image.logical_z_dimension, true, original_pixel_size);
+#endif
+
+			float original_average_value = size_image.ReturnAverageOfRealValues(outer_mask_radius / original_pixel_size, true);
+			size_image.ConvertToAutoMask(original_pixel_size, outer_mask_radius, original_pixel_size * 2.0f, 0.2f);
+
+#ifdef DEBUG
+	size_image.QuickAndDirtyWriteSlices("/tmp/locres_mask.mrc", 1, size_image.logical_z_dimension, true, original_pixel_size);
+#endif
+
+
+	local_resolution_volume.Allocate(output_3d.density_map->logical_x_dimension, output_3d.density_map->logical_y_dimension, output_3d.density_map->logical_z_dimension);
+	local_resolution_volume.SetToConstant(0.0f);
+
+	Image local_resolution_volume_all;
+	local_resolution_volume_all.Allocate(output_3d.density_map->logical_x_dimension, output_3d.density_map->logical_y_dimension, output_3d.density_map->logical_z_dimension);
+	local_resolution_volume_all.SetToConstant(0.0f);
+
+	int first_slice_with_data;
+	int last_slice_with_data;
+
+
+	Image slice_image;
+
+	for (int counter = 1; counter <= local_resolution_volume.logical_z_dimension; counter++)
+	{
+		slice_image.AllocateAsPointingToSliceIn3D(&size_image, counter);
+		if (slice_image.IsConstant() == false)
+		{
+			first_slice_with_data = counter;
+			break;
+		}
+	}
+
+	for (int counter = local_resolution_volume.logical_z_dimension; counter >= 1; counter--)
+	{
+		slice_image.AllocateAsPointingToSliceIn3D(&size_image, counter);
+		if (slice_image.IsConstant() == false)
+		{
+			last_slice_with_data = counter;
+			break;
+		}
+	}
+
+	int slices_with_data = last_slice_with_data - first_slice_with_data;
+	float slices_per_thread = slices_with_data / float(number_of_threads);
+	int number_averaged = 0;
+
+	for (float current_res = 18.0f; current_res < 37.0f; current_res += 6.0f)
+	{
+	//	float current_res = 24;
+		box_size = current_res / original_pixel_size;
+
+		if (alignment_res > 15) fixed_fsc_threshold = 0.75;
+		else
+		if (alignment_res > 8) fixed_fsc_threshold = 0.85;
+		else
+		if (alignment_res > 6) fixed_fsc_threshold = 0.9;
+		else
+		fixed_fsc_threshold = 0.95f;
+
+		local_resolution_volume.SetToConstant(0.0f);
+
+		#pragma omp parallel default(shared) num_threads(number_of_threads)
+		{ // for omp
+
+			int first_slice = (first_slice_with_data - 1) + myroundint(ReturnThreadNumberOfCurrentThread() * slices_per_thread) + 1;
+			int last_slice = (first_slice_with_data - 1) +  myroundint((ReturnThreadNumberOfCurrentThread() + 1) * slices_per_thread);
+
+			Image local_resolution_volume_local;
+			Image input_volume_one_local;
+			Image input_volume_two_local;
+
+			input_volume_one_local.CopyFrom(output_3d1.density_map);
+			input_volume_two_local.CopyFrom(output_3d2.density_map);
+
+			local_resolution_volume_local.Allocate(output_3d.density_map->logical_x_dimension, output_3d.density_map->logical_y_dimension, output_3d.density_map->logical_z_dimension);
+			local_resolution_volume_local.SetToConstant(0.0f);
 			LocalResolutionEstimator *estimator = new LocalResolutionEstimator();
-			estimator->SetAllUserParameters(output_3d1.density_map, output_3d2.density_map, &size_image, 1, size_image.logical_z_dimension, 1, original_pixel_size, box_size, threshold_snr, threshold_confidence, use_fixed_threshold, fixed_fsc_threshold,my_reconstruction_1.symmetry_matrices.symmetry_symbol,true,2);
-			estimator->EstimateLocalResolution(&local_resolution_volume);
+			estimator->SetAllUserParameters(&input_volume_one_local, &input_volume_two_local, &size_image, first_slice,last_slice, 1, original_pixel_size, box_size, threshold_snr, threshold_confidence, use_fixed_threshold, fixed_fsc_threshold,my_reconstruction_1.symmetry_matrices.symmetry_symbol,true,2);
+			estimator->EstimateLocalResolution(&local_resolution_volume_local);
 			delete estimator;
 
-			/*
+			#pragma omp critical
+			{
+				for (long pixel_counter = 0; pixel_counter < local_resolution_volume.number_of_real_space_pixels; pixel_counter++)
+				{
+					if (local_resolution_volume_local.real_values[pixel_counter] != 0.0f) local_resolution_volume.real_values[pixel_counter] = local_resolution_volume_local.real_values[pixel_counter];
+				}
+
+			}
+		} // end omp
+
+		local_resolution_volume.QuickAndDirtyWriteSlices(wxString::Format("/tmp/local_res_%i", int(current_res)).ToStdString(), 1, local_resolution_volume.logical_z_dimension);
+
+		// fill in gaps..
+
+		float max_res = local_resolution_volume.ReturnMaximumValue();
+
+		for (long pixel_counter = 0; pixel_counter < local_resolution_volume.real_memory_allocated; pixel_counter++)
+		{
+			if (local_resolution_volume.real_values[pixel_counter] < 0.5f) local_resolution_volume.real_values[pixel_counter] = max_res;
+		}
+
+		local_resolution_volume_all.AddImage(&local_resolution_volume);
+		number_averaged++;
+	}
+
+
+//			MRCFile junk("/tmp/locres.mrc");
+//			local_resolution_volume.ReadSlices(&junk, 1, junk.ReturnNumberOfSlices());
+
+
+
+
+
+	// divide and copy
+
+	local_resolution_volume_all.DivideByConstant(number_averaged);
+	local_resolution_volume.CopyFrom(&local_resolution_volume_all);
+
+
 #ifdef DEBUG
-			local_resolution_volume.QuickAndDirtyWriteSlices("locres.mrc", 1, size_image.logical_z_dimension);
-			output_3d.density_map->QuickAndDirtyWriteSlices("before_locres_filter.mrc",1,output_3d.density_map->logical_z_dimension);
+	local_resolution_volume.QuickAndDirtyWriteSlices("/tmp/locres.mrc", 1, size_image.logical_z_dimension, true, original_pixel_size);
 #endif
+
+			// get scaler for resolution
+
+			int number_of_top_pixels_to_use = local_resolution_volume.number_of_real_space_pixels * 0.00001;
+			if (number_of_top_pixels_to_use < 50) number_of_top_pixels_to_use = 50;
+
+			float highest_resolution = local_resolution_volume.ReturnAverageOfMinN(number_of_top_pixels_to_use);
+			float measured_resolution = resolution_statistics->ReturnEstimatedResolution(true);
+
+			float average_resolution = 0.0f;
+			long voxels_in_the_mask = 0;
+
+
+			int i,j,k;
+			long pixel_counter = 0;
+
+			for ( k = 0; k < local_resolution_volume.logical_z_dimension; k ++ )
+			{
+				for ( j = 0; j < local_resolution_volume.logical_y_dimension; j ++ )
+				{
+					for ( i = 0; i < local_resolution_volume.logical_x_dimension; i ++ )
+					{
+						if (size_image.real_values[pixel_counter] == 1.0f)
+						{
+							//if (local_resolution_volume.real_values[pixel_counter] < highest_resolution) highest_resolution = local_resolution_volume.real_values[pixel_counter];
+							average_resolution += local_resolution_volume.real_values[pixel_counter];
+							voxels_in_the_mask++;
+						}
+
+						pixel_counter++;
+					}
+					pixel_counter += local_resolution_volume.padding_jump_value;
+				}
+			}
+
+			average_resolution /= voxels_in_the_mask;
+			wxPrintf("Local high / Measured Average / Local Average = %.2f / %.2f / %.2f\n", highest_resolution, measured_resolution, average_resolution);
+
+			if (highest_resolution != 8.0f && measured_resolution != 8.0f)
+			{
+				float scaler = (8.0f - measured_resolution) / (8.0f - highest_resolution);
+
+				pixel_counter = 0;
+				for ( k = 0; k < local_resolution_volume.logical_z_dimension; k ++ )
+				{
+					for ( j = 0; j < local_resolution_volume.logical_y_dimension; j ++ )
+					{
+						for ( i = 0; i < local_resolution_volume.logical_x_dimension; i ++ )
+						{
+							if (size_image.real_values[pixel_counter] == 1.0f)
+							{
+								if (local_resolution_volume.real_values[pixel_counter] < 8.0f)
+								{
+									if (scaler > 1.0f) 	local_resolution_volume.real_values[pixel_counter] = ((local_resolution_volume.real_values[pixel_counter] - highest_resolution) * scaler) + measured_resolution;
+									if (local_resolution_volume.real_values[pixel_counter] < 5.0f)
+									{
+										local_resolution_volume.real_values[pixel_counter] = measured_resolution;
+									}
+								}
+							}
+
+							pixel_counter++;
+						}
+						pixel_counter += local_resolution_volume.padding_jump_value;
+					}
+				}
+			}
+
+
+			local_resolution_volume.SetMaximumValue(20.0f);
+
+#ifdef DEBUG
+			local_resolution_volume.QuickAndDirtyWriteSlices("/tmp/locres_scaled.mrc", 1, size_image.logical_z_dimension, true, pixel_size);
+#endif
+
+
+			// Apply filter mask..
+
+	/*		Image filter_mask;
+			MRCFile filter_mask_file("/tmp/fab_filter_mask.mrc");
+
+			filter_mask.ReadSlices(&filter_mask_file, 1, filter_mask_file.ReturnNumberOfSlices());
+
+			pixel_counter = 0;
+			for ( k = 0; k < local_resolution_volume.logical_z_dimension; k ++ )
+			{
+				for ( j = 0; j < local_resolution_volume.logical_y_dimension; j ++ )
+				{
+					for ( i = 0; i < local_resolution_volume.logical_x_dimension; i ++ )
+					{
+						if (size_image.real_values[pixel_counter] == 1.0f)
+						{
+							if (filter_mask.real_values[pixel_counter] > local_resolution_volume.real_values[pixel_counter])
+							{
+								local_resolution_volume.real_values[pixel_counter] = filter_mask.real_values[pixel_counter];
+							}
+						}
+						pixel_counter++;
+					}
+					pixel_counter += local_resolution_volume.padding_jump_value;
+				}
+			}
 			*/
+
+#ifdef DEBUG
+			local_resolution_volume.QuickAndDirtyWriteSlices("/tmp/locres_scaled_filter_mask.mrc", 1, size_image.logical_z_dimension, true, pixel_size);
+#endif
+
 
 			MyDebugPrint("About to apply locres filter\n");
 
 			int number_of_levels = box_size;
 			output_3d.density_map->ApplyLocalResolutionFilter(local_resolution_volume, original_pixel_size, number_of_levels);
+
+			for (long address = 0; address < output_3d.density_map->real_memory_allocated; address++)
+			{
+			//	if (size_image.real_values[address] == 0.0f) output_3d.density_map->real_values[address] = original_average_value;
+
+				// go back to original density if high res..
+
+				if (local_resolution_volume.real_values[address] <= measured_resolution + (measured_resolution * 0.1))
+				{
+					output_3d.density_map->real_values[address] = original_volume.real_values[address];
+				}
+
+			}
+
+			//output_3d.density_map->SetMinimumValue(original_average_value);
+
+			//  MAKE BACKGROUND ZERO - MIGHT BE BAD!!!
+			//output_3d.density_map->AddConstant(-original_average_value);
+
+
+			output_3d.density_map->CosineMask(outer_mask_radius / original_pixel_size, 1.0, false, true, 0.0);
+
+
 		}
 
 		output_3d.density_map->WriteSlicesAndFillHeader(output_reconstruction_filtered.ToStdString(), original_pixel_size);
@@ -325,17 +585,18 @@ bool Merge3DApp::DoCalculation()
 
 	if (is_running_locally == false)
 	{
-		int number_of_points = gui_statistics->FSC.number_of_points;
+		int number_of_points = resolution_statistics->FSC.number_of_points;
 		int array_size = (number_of_points * 5) + 2;
 		wxPrintf("number of points = %i, class is %i, array size = %i\n", number_of_points, class_number_for_gui, array_size);
 
 	    float *statistics = new float [array_size];
-	    gui_statistics->WriteStatisticsToFloatArray(statistics, class_number_for_gui);
+	    resolution_statistics->WriteStatisticsToFloatArray(statistics, class_number_for_gui);
 	    my_result.SetResult(array_size, statistics);
 	    delete statistics;
 	}
 
 	wxPrintf("\nMerge3D: Normal termination\n\n");
 
+	delete resolution_statistics;
 	return true;
 }

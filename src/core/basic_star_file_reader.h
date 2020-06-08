@@ -6,6 +6,8 @@ public :
 	float phi;
 	float theta;
 	float psi;
+	float x_coordinate;
+	float y_coordinate;
 	float x_shift;
 	float y_shift;
 	float defocus1;
@@ -27,6 +29,8 @@ class BasicStarFileReader {
 	int phi_column;
 	int theta_column;
 	int psi_column;
+	int xcoordinate_column;
+	int ycoordinate_column;
 	int xshift_column;
 	int yshift_column;
 	int defocus1_column;
@@ -45,6 +49,9 @@ public:
 
 	ArrayofStarFileParameters cached_parameters;
 
+	bool x_shifts_are_in_angst;
+	bool y_shifts_are_in_angst;
+
 	BasicStarFileReader();
 	~BasicStarFileReader();
 
@@ -55,10 +62,13 @@ public:
 
 	bool ExtractParametersFromLine(wxString &wanted_line, wxString *error_string = NULL);
 
+
 	inline int   ReturnPositionInStack(int line_number) { return cached_parameters[line_number].position_in_stack;}
 	inline float ReturnPhi(int line_number) { return cached_parameters[line_number].phi;}
 	inline float ReturnTheta(int line_number) { return cached_parameters[line_number].theta;}
 	inline float ReturnPsi(int line_number) { return cached_parameters[line_number].psi;}
+	inline float ReturnXCoordinate(int line_number) { return cached_parameters[line_number].x_coordinate;}
+	inline float ReturnYCoordinate(int line_number) { return cached_parameters[line_number].y_coordinate;}
 	inline float ReturnXShift(int line_number) { return cached_parameters[line_number].x_shift;}
 	inline float ReturnYShift(int line_number) { return cached_parameters[line_number].y_shift;}
 	inline float ReturnDefocus1(int line_number) { return cached_parameters[line_number].defocus1;}

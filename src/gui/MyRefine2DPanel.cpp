@@ -898,11 +898,11 @@ void ClassificationManager::RunRefinementJob()
 {
 	long number_of_refinement_jobs;
 	int number_of_refinement_processes;
-	float current_particle_counter;
 	long number_of_particles;
-	float particles_per_job;
 	int job_counter;
 	int reach_max_high_res_at_cycle;
+	long first_particle;
+	long last_particle;
 
 	running_job_type = REFINEMENT;
 	number_of_received_particle_results = 0;
@@ -1027,15 +1027,11 @@ void ClassificationManager::RunRefinementJob()
 
 	wxString input_star_file = input_classification->WritecisTEMStarFile(main_frame->current_project.parameter_file_directory.GetFullPath() + "/classification_input_star", active_refinement_package);
 
-	number_of_refinement_processes = active_run_profile.ReturnTotalJobs();
-	number_of_refinement_jobs = number_of_refinement_processes;
 	number_of_particles = output_classification->number_of_particles;
-
-	if (number_of_particles < number_of_refinement_jobs) particles_per_job = 1.0;
-	else particles_per_job = float(number_of_particles) / float(number_of_refinement_jobs);
+	number_of_refinement_processes = std::min(long(active_run_profile.ReturnTotalJobs()),number_of_particles);
+	number_of_refinement_jobs = number_of_refinement_processes;
 
 	my_parent->current_job_package.Reset(active_run_profile, "refine2d", number_of_refinement_processes);
-	current_particle_counter = 1.0;
 
 	for (job_counter = 0; job_counter < number_of_refinement_jobs; job_counter++)
 	{
@@ -1047,11 +1043,7 @@ void ClassificationManager::RunRefinementJob()
 		wxString output_class_averages = main_frame->current_project.class_average_directory.GetFullPath() + wxString::Format("/class_averages_%li.mrc", output_classification->classification_id);
 		int number_of_classes = 0;
 
-		long	 first_particle							= myroundint(current_particle_counter);
-		current_particle_counter += particles_per_job;
-		if (current_particle_counter > number_of_particles || job_counter == number_of_refinement_jobs - 1) current_particle_counter = number_of_particles;
-		long	 last_particle							= myroundint(current_particle_counter);
-		current_particle_counter++;
+		FirstLastParticleForJob(first_particle,last_particle,number_of_particles,job_counter+1,number_of_refinement_jobs);
 
 		//output_parameter_file = wxString::Format("/tmp/out_%li_%li.par", first_particle, last_particle);
 
@@ -1183,7 +1175,8 @@ void MyRefine2DPanel::OnSocketAllJobsFinished()
 void ClassificationManager::RunMerge2dJob()
 {
 
-	int number_of_refinement_jobs = my_parent->current_job_package.my_profile.ReturnTotalJobs() - 1;
+	long number_of_particles = output_classification->number_of_particles;
+	int number_of_refinement_jobs = std::min(my_parent->current_job_package.my_profile.ReturnTotalJobs() - 1,number_of_particles-1);
 
 	running_job_type = MERGE;
 

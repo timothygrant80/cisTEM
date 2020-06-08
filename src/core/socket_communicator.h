@@ -73,7 +73,8 @@ class SocketCommunicator
 	virtual void HandleSocketJobFinished(wxSocketBase *connected_socket, int finished_job_number) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketJobFinished)\n");}
 	virtual void HandleSocketAllJobsFinished(wxSocketBase *connected_socket, long received_timing_in_milliseconds) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketAllJobsFinished)\n");}
 	virtual void HandleSocketNumberOfConnections(wxSocketBase *connected_socket, int received_number_of_connections) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketNumberOfConnections)\n");}
-	virtual void HandleSocketResultWithImageToWrite(wxSocketBase *connected_socket, Image *image_to_write, wxString filename_to_write_to, int position_in_stack) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketResultWithImageToWrite)\n");}
+	//virtual void HandleSocketResultWithImageToWrite(wxSocketBase *connected_socket, Image *image_to_write, wxString filename_to_write_to, int position_in_stack) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketResultWithImageToWrite)\n");}
+	virtual void HandleSocketResultWithImageToWrite(wxSocketBase *connected_socket, wxString filename_to_write_to, int position_in_stack) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketResultWithImageToWrite)\n");}  // No longer sending image, see the comment in socket_communicator.cpp
 	virtual void HandleSocketProgramDefinedResult(wxSocketBase *connected_socket, float *data_array, int size_of_data_array, int result_number, int number_of_expected_results) {wxPrintf("Warning:: Unhandled Socket Message (HandleSocketProgramDefinedResult)\n");}
 	virtual void HandleSocketSendThreadTiming(wxSocketBase *connected_socket, long received_timing_in_milliseconds) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketSendThreadTiming\n");}
 	virtual void HandleSocketDisconnect(wxSocketBase *connected_socket) {wxPrintf("Warning:: Unhandled Socket Disconnect(HandleSocketDisconnect)\n");}
@@ -115,6 +116,8 @@ class SocketClientMonitorThread : public wxThread
    	ArrayOfSocketPointers sockets_to_add_next_cycle;
    	ArrayOfSocketPointers sockets_to_remove_next_cycle;
    	ArrayOfSocketPointers sockets_to_remove_and_destroy_next_cycle;
+
+	MRCFile buffered_output_file; // for writing directly in the HandleSocketResultWithImageToWrite sequence.
 
 
 	protected:

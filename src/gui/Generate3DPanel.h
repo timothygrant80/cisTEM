@@ -1,5 +1,5 @@
 #ifndef __Generate3DPanel__
-#define __Generage3DPanel__
+#define __Generate3DPanel__
 
 
 class Generate3DPanel : public Generate3DPanelParent

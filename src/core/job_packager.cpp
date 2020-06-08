@@ -681,10 +681,7 @@ bool JobPackage::ReceiveJobPackage(wxSocketBase *socket)
 				char_pointer[3] = transfer_buffer[byte_counter];
 				byte_counter++;
 
-				// allocate memory
-
-				jobs[job_counter].arguments[argument_counter].integer_argument = new int;
-				jobs[job_counter].arguments[argument_counter].integer_argument[0] = temp_int;
+				jobs[job_counter].arguments[argument_counter].SetIntArgument(temp_int);
 			 }
 			 else
 			 if (jobs[job_counter].arguments[argument_counter].type_of_argument == FLOAT)
@@ -702,22 +699,14 @@ bool JobPackage::ReceiveJobPackage(wxSocketBase *socket)
 				 char_pointer[3] = transfer_buffer[byte_counter];
 				 byte_counter++;
 
-				 // allocate memory
 
-				 jobs[job_counter].arguments[argument_counter].float_argument = new float;
-				 jobs[job_counter].arguments[argument_counter].float_argument[0] = temp_float;
+				 jobs[job_counter].arguments[argument_counter].SetFloatArgument(temp_float);
 			 }
 			 else
 			 if (jobs[job_counter].arguments[argument_counter].type_of_argument == BOOL)
 			 {
-				 // read the value of the bool..
-
-				 // allocate memory
-
-				 jobs[job_counter].arguments[argument_counter].bool_argument = new bool;
-
-				 jobs[job_counter].arguments[argument_counter].bool_argument[0] = bool(transfer_buffer[byte_counter]);
-				 byte_counter++;
+				 jobs[job_counter].arguments[argument_counter].SetBoolArgument(bool(transfer_buffer[byte_counter]));
+				  byte_counter++;
 			 }
 			 else
 			 if (jobs[job_counter].arguments[argument_counter].type_of_argument == TEXT)
@@ -738,8 +727,8 @@ bool JobPackage::ReceiveJobPackage(wxSocketBase *socket)
 				 // allocate memory
 
 				 jobs[job_counter].arguments[argument_counter].string_argument = new std::string;
-
 				 jobs[job_counter].arguments[argument_counter].string_argument[0].clear();
+				 jobs[job_counter].arguments[argument_counter].is_allocated = true;
 
 				 // fill the string..
 
@@ -1241,10 +1230,7 @@ bool RunJob::RecieveJob(wxSocketBase *socket)
 			char_pointer[3] = transfer_buffer[byte_counter];
 			byte_counter++;
 
-			// allocate memory
-
-			arguments[argument_counter].integer_argument = new int;
-			arguments[argument_counter].integer_argument[0] = temp_int;
+			arguments[argument_counter].SetIntArgument(temp_int);
 		 }
 		 else
 		 if (arguments[argument_counter].type_of_argument == FLOAT)
@@ -1261,20 +1247,13 @@ bool RunJob::RecieveJob(wxSocketBase *socket)
 			 char_pointer[3] = transfer_buffer[byte_counter];
 			 byte_counter++;
 
-			 // allocate memory
-
-			 arguments[argument_counter].float_argument = new float;
-			 arguments[argument_counter].float_argument[0] = temp_float;
+			 arguments[argument_counter].SetFloatArgument(temp_float);
 		 }
 		 else
 		 if (arguments[argument_counter].type_of_argument == BOOL)
 		 {
-			 // read the value of the bool..
 
-			 // allocate memory
-
-			 arguments[argument_counter].bool_argument = new bool;
-			 arguments[argument_counter].bool_argument[0] = bool(transfer_buffer[byte_counter]);
+			 arguments[argument_counter].SetBoolArgument(bool(transfer_buffer[byte_counter]));
 			 byte_counter++;
 		 }
 		 else
@@ -1297,6 +1276,7 @@ bool RunJob::RecieveJob(wxSocketBase *socket)
 
 			 arguments[argument_counter].string_argument = new std::string;
 			 arguments[argument_counter].string_argument[0].clear();
+			 arguments[argument_counter].is_allocated = true;
 
 			 // fill the string..
 

@@ -45,16 +45,16 @@ void ImageFile::SetFileTypeFromExtension()
 	}
 }
 
-bool ImageFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_for_file_to_exist)
+bool ImageFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_for_file_to_exist, bool check_only_the_first_image)
 {
 	bool file_seems_ok = false;
 	filename = wanted_filename;
 	SetFileTypeFromExtension();
 	switch(file_type)
 	{
-	case TIFF_FILE: file_seems_ok = tiff_file.OpenFile(wanted_filename, overwrite, wait_for_file_to_exist); break;
-	case MRC_FILE: file_seems_ok = mrc_file.OpenFile(wanted_filename, overwrite, wait_for_file_to_exist); break;
-	case DM_FILE: file_seems_ok = dm_file.OpenFile(wanted_filename, overwrite, wait_for_file_to_exist); break;
+	case TIFF_FILE: file_seems_ok = tiff_file.OpenFile(wanted_filename, overwrite, wait_for_file_to_exist,check_only_the_first_image); break;
+	case MRC_FILE: file_seems_ok = mrc_file.OpenFile(wanted_filename, overwrite, wait_for_file_to_exist,check_only_the_first_image); break;
+	case DM_FILE: file_seems_ok = dm_file.OpenFile(wanted_filename, overwrite, wait_for_file_to_exist,check_only_the_first_image); break;
 	default: MyPrintWithDetails("Unsupported file type\n"); MyDebugAssertTrue(false,"Unsupported file type: %s\n",filename.GetFullPath().ToStdString()); abort; break;
 	}
 	return file_seems_ok;

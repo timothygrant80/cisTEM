@@ -23,3 +23,7 @@ RemoteSystemsTempFiles
 .settings/
 .autotools
 .cproject
+/debug_build/
+/release_build/
+**/build*
+**/.DS_Store

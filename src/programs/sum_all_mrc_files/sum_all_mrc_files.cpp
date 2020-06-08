@@ -90,7 +90,7 @@ bool SumAllMRC::DoCalculation()
 	// find all the mrc files in the current directory..
 
 
-	wxPrintf("\nThere are %li TIF files in this directory.\n", all_files.GetCount());
+	wxPrintf("\nThere are %li MRC files in this directory.\n", all_files.GetCount());
 
 	current_input_file = new MRCFile(all_files.Item(0).ToStdString(), false);
 

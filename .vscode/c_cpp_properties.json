@@ -1,0 +1,45 @@
+{
+    "configurations": [
+        {
+            "name": "Mac",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/usr/local/include",
+                "/usr/local/lib/wx/include/osx_cocoa-unicode-static-3.0",
+                "/usr/local/include/wx-3.0"
+            ],
+            "defines": [
+                "_FILE_OFFSET_BITS=64",
+                "__WXMAC__",
+                "__WXOSX__",
+                "__WXOSX_COCOA__",
+                "DEBUG"
+            ],
+            "macFrameworkPath": [],
+            "compilerPath": "/usr/bin/clang++",
+            "cStandard": "c11",
+            "cppStandard": "gnu++11",
+            "intelliSenseMode": "clang-x64",
+            "configurationProvider": "vector-of-bool.cmake-tools"
+        },
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/usr/local/include",
+                "/usr/local/include/wx-3.0"
+            ],
+            "defines": [
+                "_FILE_OFFSET_BITS=64",
+                "WXUSINGDLL",
+                "__WXGTK__",
+                "DEBUG"
+            ],
+            "compilerPath": "/usr/bin/gcc",
+            "cStandard": "c11",
+            "cppStandard": "gnu++11",
+            "configurationProvider": "vector-of-bool.cmake-tools"
+        }
+    ],
+    "version": 4
+}

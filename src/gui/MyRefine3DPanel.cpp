@@ -1418,7 +1418,8 @@ void RefinementManager::RunRefinementJob()
 void RefinementManager::SetupMerge3dJob()
 {
 
-	int number_of_reconstruction_jobs = active_reconstruction_run_profile.ReturnTotalJobs();
+	long number_of_particles = active_refinement_package->contained_particles.GetCount();
+	int number_of_reconstruction_jobs = std::min(number_of_particles,active_reconstruction_run_profile.ReturnTotalJobs());
 
 	int class_counter;
 
@@ -1442,8 +1443,8 @@ void RefinementManager::SetupMerge3dJob()
 		bool save_orthogonal_views_image = true;
 		wxString orthogonal_views_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/OrthViews/volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
 		float weiner_nominator = 1.0f;
-
-		my_parent->current_job_package.AddJob("ttttfffttibtif",	output_reconstruction_1.ToUTF8().data(),
+		float alignment_res = 5;
+		my_parent->current_job_package.AddJob("ttttfffttibtiff",	output_reconstruction_1.ToUTF8().data(),
 															output_reconstruction_2.ToUTF8().data(),
 															output_reconstruction_filtered.ToUTF8().data(),
 															output_resolution_statistics.ToUTF8().data(),
@@ -1453,7 +1454,7 @@ void RefinementManager::SetupMerge3dJob()
 															class_counter + 1,
 															save_orthogonal_views_image,
 															orthogonal_views_filename.ToUTF8().data(),
-															number_of_reconstruction_jobs, weiner_nominator);
+															number_of_reconstruction_jobs, weiner_nominator, alignment_res);
 	}
 }
 
@@ -1540,26 +1541,23 @@ void RefinementManager::SetupReconstructionJob()
 	int job_counter;
 	long number_of_reconstruction_jobs;
 	long number_of_reconstruction_processes;
-	float current_particle_counter;
 
 	long number_of_particles;
-	float particles_per_job;
+	long first_particle;
+	long last_particle;
 
 	// for now, number of jobs is number of processes -1 (master)..
 
-	number_of_reconstruction_processes = active_reconstruction_run_profile.ReturnTotalJobs();
-	number_of_reconstruction_jobs = number_of_reconstruction_processes;
-
 	number_of_particles = active_refinement_package->contained_particles.GetCount();
 
-	if (number_of_particles - number_of_reconstruction_jobs < number_of_reconstruction_jobs) particles_per_job = 1;
-	else particles_per_job = float(number_of_particles - number_of_reconstruction_jobs) / float(number_of_reconstruction_jobs);
+	number_of_reconstruction_processes = std::min(number_of_particles,active_reconstruction_run_profile.ReturnTotalJobs());
+	number_of_reconstruction_jobs = number_of_reconstruction_processes;
+
 
 	my_parent->current_job_package.Reset(active_reconstruction_run_profile, "reconstruct3d", number_of_reconstruction_jobs * active_refinement_package->number_of_classes);
 
 	for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
 	{
-		current_particle_counter = 1.0;
 
 		for (job_counter = 0; job_counter < number_of_reconstruction_jobs; job_counter++)
 		{
@@ -1571,13 +1569,7 @@ void RefinementManager::SetupReconstructionJob()
 			wxString output_resolution_statistics		= "/dev/null";
 			wxString my_symmetry						= active_refinement_package->symmetry;
 
-			long	 first_particle						= myroundint(current_particle_counter);
-
-			current_particle_counter += particles_per_job;
-			if (current_particle_counter > number_of_particles  || job_counter == number_of_reconstruction_jobs - 1) current_particle_counter = number_of_particles;
-
-			long	 last_particle						= myroundint(current_particle_counter);
-			current_particle_counter+=1.0;
+			FirstLastParticleForJob(first_particle,last_particle,number_of_particles,job_counter+1,number_of_reconstruction_jobs);
 
 			//float 	 pixel_size							= active_refinement_package->contained_particles[0].pixel_size;
 			//float    voltage_kV							= active_refinement_package->contained_particles[0].microscope_voltage;
@@ -1763,7 +1755,8 @@ void RefinementManager::SetupRefinementJob()
 	float current_particle_counter;
 
 	long number_of_particles;
-	float particles_per_job;
+	long first_particle;
+	long last_particle;
 
 	// get the last refinement for the currently selected refinement package..
 
@@ -1774,12 +1767,11 @@ void RefinementManager::SetupRefinementJob()
 
 	// for now, number of jobs is number of processes -1 (master)..
 
-	number_of_refinement_processes = active_refinement_run_profile.ReturnTotalJobs();
+	number_of_particles = active_refinement_package->contained_particles.GetCount();
+
+	number_of_refinement_processes = std::min(number_of_particles,active_refinement_run_profile.ReturnTotalJobs());
 	number_of_refinement_jobs = number_of_refinement_processes;
 
-	number_of_particles = active_refinement_package->contained_particles.GetCount();
-	if (number_of_particles - number_of_refinement_jobs < number_of_refinement_jobs) particles_per_job = 1;
-	else particles_per_job = float(number_of_particles - number_of_refinement_jobs) / float(number_of_refinement_jobs);
 
 	my_parent->current_job_package.Reset(active_refinement_run_profile, "refine3d", number_of_refinement_jobs * active_refinement_package->number_of_classes);
 
@@ -1803,13 +1795,8 @@ void RefinementManager::SetupRefinementJob()
 			wxString ouput_shift_file						= "/dev/null";
 
 			wxString my_symmetry							= active_refinement_package->symmetry;
-			long	 first_particle							= myroundint(current_particle_counter);
 
-			current_particle_counter += particles_per_job;
-			if (current_particle_counter > number_of_particles  || counter == number_of_refinement_jobs - 1) current_particle_counter = number_of_particles;
-
-			long	 last_particle							= myroundint(current_particle_counter);
-			current_particle_counter++;
+			FirstLastParticleForJob(first_particle,last_particle,number_of_particles,counter+1,number_of_refinement_jobs);
 
 			float	 percent_used							= active_percent_used / 100.0;
 
@@ -2414,7 +2401,7 @@ void RefinementManager::ProcessAllJobsFinished()
 
 
 			volume_asset_panel->AddAsset(&temp_asset);
-			main_frame->current_project.database.AddNextVolumeAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), temp_asset.reconstruction_job_id, temp_asset.pixel_size, temp_asset.x_size, temp_asset.y_size, temp_asset.z_size);
+			main_frame->current_project.database.AddNextVolumeAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), temp_asset.reconstruction_job_id, temp_asset.pixel_size, temp_asset.x_size, temp_asset.y_size, temp_asset.z_size, temp_asset.half_map_1_filename.GetFullPath(), temp_asset.half_map_2_filename.GetFullPath());
 		}
 
 		main_frame->current_project.database.EndVolumeAssetInsert();
@@ -2593,7 +2580,10 @@ void RefinementManager::DoMasking()
 		my_parent->active_mask_thread_id = my_parent->next_thread_id;
 		my_parent->next_thread_id++;
 
-		AutoMaskerThread *mask_thread = new AutoMaskerThread(my_parent, current_reference_filenames, masked_filenames, input_refinement->resolution_statistics_pixel_size, active_refinement_package->estimated_particle_size_in_angstroms * 0.75, my_parent->active_mask_thread_id);
+		float current_res = input_refinement->class_refinement_results[0].class_resolution_statistics.ReturnEstimatedResolution(true);
+
+
+		AutoMaskerThread *mask_thread = new AutoMaskerThread(my_parent, current_reference_filenames, masked_filenames, input_refinement->resolution_statistics_pixel_size, active_refinement_package->estimated_particle_size_in_angstroms * 0.75, my_parent->active_mask_thread_id, current_res);
 
 		if ( mask_thread->Run() != wxTHREAD_NO_ERROR )
 		{
@@ -2705,4 +2695,3 @@ void RefinementManager::OnMaskerThreadComplete()
 	SetupRefinementJob();
 	RunRefinementJob();
 }
-

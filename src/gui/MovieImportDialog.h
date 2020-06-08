@@ -30,6 +30,7 @@ class MyMovieImportDialog : public MovieImportDialog
 		void OnCorrectMagDistortionCheckBox( wxCommandEvent & event );
 		void OnGainFilePickerChanged( wxFileDirPickerEvent & event );
 		void OnResampleMoviesCheckBox( wxCommandEvent & event );
+		void OnSkipFullIntegrityCheckCheckBox( wxCommandEvent & event );
 };
 
 

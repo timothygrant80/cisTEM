@@ -55,6 +55,8 @@ public:
 	long number_of_received_particle_results;
 	long expected_number_of_results;
 
+	float last_round_reconstruction_resolution;
+
 	wxArrayFloat percent_used_per_round;
 	wxArrayFloat resolution_per_round;
 	wxArrayFloat high_res_limit_per_round;
@@ -64,11 +66,13 @@ public:
 
 	wxArrayInt number_of_global_alignments;
 	wxArrayInt rounds_since_global_alignment;
+	wxArrayInt resolution_of_last_global_alignment;
 
 	float classification_resolution;
 
 	float max_percent_used;
 
+	bool reference_3d_contains_all_particles;
 	bool this_is_the_final_round;
 
 	RefinementPackage *active_refinement_package;
@@ -101,6 +105,9 @@ public:
 	void RunRefinementJob();
 	void RunReconstructionJob();
 	void RunMerge3dJob();
+
+	//void SetupLocalSNRFilterJob();
+	//void RunLocalSNRFilterJob();
 
 	void ProcessJobResult(JobResult *result_to_process);
 	void ProcessAllJobsFinished();

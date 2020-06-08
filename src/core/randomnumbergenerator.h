@@ -47,7 +47,6 @@ class RandomNumberGenerator {
 
 //		std::mt19937_64 eng{std::random_device{}()};
 
-
 };	// FIXME use new header in random
 
 

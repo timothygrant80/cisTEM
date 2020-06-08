@@ -999,7 +999,7 @@ void AutoRefinementManager::BeginRefinementCycle()
 	if (volume_asset_panel->ReturnAssetPointer(my_parent->ReferenceSelectPanel->ReturnSelection())->x_size != active_refinement_package->stack_box_size ||
 		volume_asset_panel->ReturnAssetPointer(my_parent->ReferenceSelectPanel->ReturnSelection())->y_size != active_refinement_package->stack_box_size ||
 		volume_asset_panel->ReturnAssetPointer(my_parent->ReferenceSelectPanel->ReturnSelection())->z_size != active_refinement_package->stack_box_size ||
-		fabsf(volume_asset_panel->ReturnAssetPointer(my_parent->ReferenceSelectPanel->ReturnSelection())->pixel_size - input_refinement->resolution_statistics_pixel_size) > 0.01f)
+		fabsf(float(volume_asset_panel->ReturnAssetPointer(my_parent->ReferenceSelectPanel->ReturnSelection())->pixel_size) - input_refinement->resolution_statistics_pixel_size) > 0.01f)
 	{
 		my_parent->WriteErrorText(wxString::Format("Error: The reference volume (%i, %i, %i; psize: %f) has different dimensions / pixel size from the input stack (%i; psize: %f).  This will currently not work.",
 													volume_asset_panel->ReturnAssetPointer(my_parent->ReferenceSelectPanel->ReturnSelection())->x_size,
@@ -2083,7 +2083,7 @@ void AutoRefinementManager::ProcessAllJobsFinished()
 			{
 				for ( particle_counter = 0; particle_counter < output_refinement->number_of_particles; particle_counter++)
 				{
-					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy = fabsf(global_random_number_generator.GetUniformRandom() * (200.0 / float(output_refinement->number_of_classes)));
+					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].occupancy = fabsf(global_random_number_generator.GetUniformRandom() * (200.0f / float(output_refinement->number_of_classes)));
 
 					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].position_in_stack = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].position_in_stack;
 					output_refinement->class_refinement_results[class_counter].particle_refinement_results[particle_counter].phi = output_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].phi;

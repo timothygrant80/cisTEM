@@ -60,6 +60,18 @@ void JobPanel::HandleSocketNumberOfConnections(wxSocketBase *connected_socket, i
 
 	int length_of_process_number;
 
+	if (total_processes >= 100000) length_of_process_number = 6;
+	else
+	if (total_processes >= 10000) length_of_process_number = 5;
+	else
+	if (total_processes >= 1000) length_of_process_number = 4;
+	else
+	if (total_processes >= 100) length_of_process_number = 3;
+	else
+	if (total_processes >= 10) length_of_process_number = 2;
+	else
+	length_of_process_number = 1;
+
 	if (received_number_of_connections == total_processes) WriteInfoText(wxString::Format("All %i processes are connected.", received_number_of_connections));
 
 	if (length_of_process_number == 6) SetNumberConnectedText(wxString::Format("%6i / %6i processes connected.", received_number_of_connections, total_processes));

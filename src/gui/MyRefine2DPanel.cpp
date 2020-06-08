@@ -1406,7 +1406,7 @@ void ClassificationManager::CycleRefinement()
 				average_likelihood += output_classification->classification_results[counter].logp;
 				average_sigma += output_classification->classification_results[counter].sigma;
 
-				if (long(fabsf(output_classification->classification_results[counter].best_class)) != long(fabsf(input_classification->classification_results[counter].best_class))) number_moved++;
+				if (long(abs(output_classification->classification_results[counter].best_class)) != long(abs(input_classification->classification_results[counter].best_class))) number_moved++;
 			}
 
 			percent_moved = (double(number_moved) / double (number_active)) * 100.0;

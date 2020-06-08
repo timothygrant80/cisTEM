@@ -592,7 +592,7 @@ bool Merge3DApp::DoCalculation()
 	    float *statistics = new float [array_size];
 	    resolution_statistics->WriteStatisticsToFloatArray(statistics, class_number_for_gui);
 	    my_result.SetResult(array_size, statistics);
-	    delete statistics;
+	    delete [] statistics;
 	}
 
 	wxPrintf("\nMerge3D: Normal termination\n\n");

@@ -197,7 +197,7 @@ void EulerSearch::CalculateGridSearchPositions(bool random_start_angle)
 //		theta_max_local = 90.0;
 		// make sure that theta_step produces an integer number of steps
 		theta_step = theta_max_local / int(theta_max_local / angular_step_size + 0.5);
-		if (random_start_angle == true) theta_start_local = fabsf(theta_step / 2.0 * global_random_number_generator.GetUniformRandom());
+		if (random_start_angle == true) theta_start_local = fabsf(theta_step / 2.0f * global_random_number_generator.GetUniformRandom());
 		else theta_start_local = 0.0f;
 	}
 	else

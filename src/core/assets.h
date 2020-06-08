@@ -12,7 +12,7 @@ public :
 	wxString asset_name;
 
 	Asset();
-	~Asset();
+	virtual ~Asset();
 
 	// pure virtual
 
@@ -158,7 +158,7 @@ protected :
 public :
 
 	AssetList();
-	~AssetList();
+	virtual ~AssetList();
 
 	long number_of_assets;
 

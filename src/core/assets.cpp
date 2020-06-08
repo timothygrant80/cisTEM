@@ -603,7 +603,7 @@ void MovieAssetList::RemoveAll()
 
 	if (number_allocated > 100)
 	{
-		reinterpret_cast < MovieAsset *> (assets);
+		delete [] reinterpret_cast < MovieAsset *> (assets);
 		number_allocated = 100;
 		assets = new MovieAsset[number_allocated];
 	}

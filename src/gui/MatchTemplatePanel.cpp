@@ -573,6 +573,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 
 	current_image = image_asset_panel->ReturnAssetPointer(active_group.members[0]);
 	current_image_euler_search = new EulerSearch;
+	// WARNING: resolution_limit below is used before its value is set
 	current_image_euler_search->InitGrid(wanted_symmetry, wanted_out_of_plane_angular_step, 0.0, 0.0, 360.0, wanted_in_plane_angular_step, 0.0, current_image->pixel_size / resolution_limit, parameter_map, 1);
 
 	if (wanted_symmetry.StartsWith("C1"))

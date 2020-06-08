@@ -46,7 +46,6 @@ DMFile::DMFile(wxString wanted_filename)
 DMFile::~DMFile()
 {
 	CloseFile();
-	true;
 }
 
 bool DMFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_for_file_to_exist, bool only_check_the_first_image)
@@ -159,7 +158,7 @@ int DMFile::readDM(wxString wanted_filename, unsigned char *p, bool readdata, in
 		default:
 			MyDebugAssertFalse(true,"Digital Micrograph format version %i not supported!\n",version);
 			wxPrintf("Digital Micrograph format version %i not supported!\n",version);
-			abort;
+			DEBUG_ABORT;
 	}
 
 	fimg->close();
@@ -300,10 +299,10 @@ int			DMFile::readTagGroupWithVersion(std::ifstream* fimg, unsigned char* p, boo
 	endianness = dm_read_integer(fimg, sizeof(unsigned int));	// Endianness
 
 	if ( show == 1 ) {
-		if ( sb ) std::cout << "Warning: Swapping header bytes" << endl;
-		std::cout << "Version: " << version << endl;
-		std::cout << "File length: " << file_length << endl;
-		std::cout << "Endianness: " << endianness << endl;
+		if ( sb ) std::cout << "Warning: Swapping header bytes" << std::endl;
+		std::cout << "Version: " << version << std::endl;
+		std::cout << "File length: " << file_length << std::endl;
+		std::cout << "Endianness: " << endianness << std::endl;
 	}
 
 	/*
@@ -315,9 +314,9 @@ int			DMFile::readTagGroupWithVersion(std::ifstream* fimg, unsigned char* p, boo
 	MyDebugAssertTrue(file_length > 16,"Error: file length specifier incorrect. File length = %i\n",file_length);
 
 	if ( show == 2 ) {
-		std::cout << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" << endl;
-		std::cout << "<!DOCTYPE plist PUBLIC \"-//Apple Computer//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">" << endl;
-		std::cout << "<plist version=\"1.0\">" << endl;
+		std::cout << "<?xml version=\"1.0\" encoding=\"UTF-8\"?>" << std::endl;
+		std::cout << "<!DOCTYPE plist PUBLIC \"-//Apple Computer//DTD PLIST 1.0//EN\" \"http://www.apple.com/DTDs/PropertyList-1.0.dtd\">" << std::endl;
+		std::cout << "<plist version=\"1.0\">" << std::endl;
 	}
 
 	// Set up default parameters
@@ -331,11 +330,11 @@ int			DMFile::readTagGroupWithVersion(std::ifstream* fimg, unsigned char* p, boo
 	val = dm_read_integer(fimg, sizeof(unsigned int));	// Label size
 	if ( val ) {
 		fimg->read(buf, val);
-		if ( show == 2 ) std::cout << "<" << buf << "/>" << endl;
+		if ( show == 2 ) std::cout << "<" << buf << "/>" << std::endl;
 	}
 
-	if ( show == 1 ) std::cout << endl;
-	if ( show == 2 ) std::cout << "</plist>" << endl;
+	if ( show == 1 ) std::cout << std::endl;
+	if ( show == 2 ) std::cout << "</plist>" << std::endl;
 
 	if ( img_select >= 0 ) {
 		data_offset(data_offset()+img_select*sizeX()*sizeY()*sizeZ()*channels()*data_type_size());
@@ -384,7 +383,7 @@ ntag = dm_read_integer(fimg, sizeof(size_t));	// Number of tags
 if ( show == 1 ) std::cout << "\tntag=" << ntag;
 if ( show == 2 ) {
 	for ( i=0; i<level; i++ ) std::cout << "\t";
-	std::cout << "<dict>" << endl;
+	std::cout << "<dict>" << std::endl;
 }
 
 for ( i=0; i<ntag; i++ ) {
@@ -394,7 +393,7 @@ for ( i=0; i<ntag; i++ ) {
 
 if ( show == 2 ) {
 	for ( i=0; i<level; i++ ) std::cout << "\t";
-	std::cout << "</dict>" << endl;
+	std::cout << "</dict>" << std::endl;
 }
 
 return 0;
@@ -426,8 +425,8 @@ int			DMFile::readTag(std::ifstream* fimg, int dim_flag, unsigned char* p, bool 
 //	cout << "\tlen=" << len << endl;
 
 	if ( len > 128 ) {
-		std::cout << "\tlen=" << len << endl;
-		std::cerr << "Error: tag length too long!" << endl;
+		std::cout << "\tlen=" << len << std::endl;
+		std::cerr << "Error: tag length too long!" << std::endl;
 		DEBUG_ABORT;
 	}
 
@@ -442,13 +441,13 @@ int			DMFile::readTag(std::ifstream* fimg, int dim_flag, unsigned char* p, bool 
 	}
 
 	if ( show == 1 ) {
-		std::cout << endl;
+		std::cout << std::endl;
 		for ( i=0; i<level; i++ ) std::cout << "\t";
 		std::cout << "Tag=" << (int)t << "\tlen=" << len << "\t" << tag;
 	}
 	if ( show == 2 ) {
 		for ( i=0; i<level; i++ ) std::cout << "\t";
-		std::cout << "<key>" << tag << "</key>" << endl;
+		std::cout << "<key>" << tag << "</key>" << std::endl;
 	}
 
 	if ( version == 4 )	{	// Changed in v4
@@ -470,7 +469,7 @@ int			DMFile::readTag(std::ifstream* fimg, int dim_flag, unsigned char* p, bool 
 			dtarr[i] = dm_read_integer(fimg, sizeof(size_t));	// Data type array
 			if ( show == 1 ) std::cout << "\tdt[" << i << "]=" << dtarr[i];
 		}
-		if ( show == 1 ) std::cout << endl;
+		if ( show == 1 ) std::cout << std::endl;
 
 		dt = dtarr[0];
 		if ( dt <= 12 ) {
@@ -482,7 +481,7 @@ int			DMFile::readTag(std::ifstream* fimg, int dim_flag, unsigned char* p, bool 
 				std::cout << "\tstruct=" << narr << "x" << nel;
 			if ( show == 2 ) {
 				for ( i=0; i<level; i++ ) std::cout << "\t";
-				std::cout << "<array>" << endl;
+				std::cout << "<array>" << std::endl;
 			}
 			level++;
 			for ( k=0; k<narr; k++ )
@@ -490,14 +489,14 @@ int			DMFile::readTag(std::ifstream* fimg, int dim_flag, unsigned char* p, bool 
 			level--;
 			if ( show == 2 ) {
 				for ( i=0; i<level; i++ ) std::cout << "\t";
-				std::cout << "</array>" << endl;
+				std::cout << "</array>" << std::endl;
 			}
 		} else if ( dt == 18 ) {	// String
 			fimg->read((char *)buf, dtarr[1]);
 			if ( show == 1 ) std::cout << "\tstrlen=" << dtarr[1];
 			if ( show == 2 ) {
 				for ( i=0; i<level; i++ ) std::cout << "\t";
-				std::cout << "<string>" << buf << "</string>" << endl;
+				std::cout << "<string>" << buf << "</string>" << std::endl;
 			}
 		} else if ( dt == 20 ) {	// Data array
 			if ( dtarr[1] == 15 ) narr = dtarr[3];
@@ -507,7 +506,7 @@ int			DMFile::readTag(std::ifstream* fimg, int dim_flag, unsigned char* p, bool 
 				std::cout << "\tarr=" << narr << "x" << nel;
 			if ( show == 2 ) {
 				for ( i=0; i<level; i++ ) std::cout << "\t";
-				std::cout << "<array>" << endl;
+				std::cout << "<array>" << std::endl;
 			}
 			level++;
 			if ( dtarr[1] == 15 ) {	// Struct
@@ -515,7 +514,7 @@ int			DMFile::readTag(std::ifstream* fimg, int dim_flag, unsigned char* p, bool 
 					std::cout << "\tstruct=" << narr << "x" << nel;
 				if ( show == 2 ) {
 					for ( i=0; i<level; i++ ) std::cout << "\t";
-					std::cout << "<array>" << endl;
+					std::cout << "<array>" << std::endl;
 				}
 				level++;
 				for ( i=0; i<nel; i++ )
@@ -524,7 +523,7 @@ int			DMFile::readTag(std::ifstream* fimg, int dim_flag, unsigned char* p, bool 
 				level--;
 				if ( show == 2 ) {
 					for ( i=0; i<level; i++ ) std::cout << "\t";
-					std::cout << "</array>" << endl;
+					std::cout << "</array>" << std::endl;
 				}
 			} else {
 				narr = 1;
@@ -553,10 +552,10 @@ int			DMFile::readTag(std::ifstream* fimg, int dim_flag, unsigned char* p, bool 
 			level--;
 			if ( show == 2 ) {
 				for ( i=0; i<level; i++ ) std::cout << "\t";
-				std::cout << "</array>" << endl;
+				std::cout << "</array>" << std::endl;
 			}
 		} else {
-			std::cerr << "Error: Data type " << dt << " not defined!" << endl;
+			std::cerr << "Error: Data type " << dt << " not defined!" << std::endl;
 		}
 
 		if ( keep && strcmp((char *)tag, "ImageData") == 0 ) keep = 0;
@@ -586,36 +585,36 @@ int			DMFile::readTag(std::ifstream* fimg, int dim_flag, unsigned char* p, bool 
 				if ( show == 1 ) std::cout << "\tx=" << sizeX() << "\ty=" << sizeY() << "\tn=" << images();
 			}
 			if ( strcmp((char *)tag, "PixelDepth") == 0 ) {
-				if ( show == 1 ) std::cout << "\t" << tag << "=" << val << endl;
+				if ( show == 1 ) std::cout << "\t" << tag << "=" << val << std::endl;
 			}
 			if ( strcmp((char *)tag, "Pixel Size (um)") == 0 ) {
 				sampling(arr[0], arr[1], 1);
-				if ( show == 1 ) std::cout << "\t" << tag << "=" << samplingX() << samplingY() << samplingZ() << endl;
+				if ( show == 1 ) std::cout << "\t" << tag << "=" << samplingX() << samplingY() << samplingZ() << std::endl;
 //				cout << tab << tag << "=" << p->sampling() << endl;
 			}
 			if ( strcmp((char *)tag, "Actual Magnification") == 0 ) {
 				show_scale(val/1e4);
-				if ( show == 1 ) std::cout << "\t" << tag << "=" << val << endl;
+				if ( show == 1 ) std::cout << "\t" << tag << "=" << val << std::endl;
 //				cout << tab << tag << "=" << val << endl;
 			}
 			if ( strcmp((char *)tag, "Pixel Upsampling") == 0 ) {
-				if ( show == 1 ) std::cout << "\t" << "\t" << "=" << arr[0] << "x" << arr[1] << endl;
+				if ( show == 1 ) std::cout << "\t" << "\t" << "=" << arr[0] << "x" << arr[1] << std::endl;
 			}
 			if ( strcmp((char *)tag, "SourceSize_Pixels") == 0 ) {
-				if ( show == 1 ) std::cout << "\t" << "\t" << "=" << arr[0] << "x" << arr[1] << endl;
+				if ( show == 1 ) std::cout << "\t" << "\t" << "=" << arr[0] << "x" << arr[1] << std::endl;
 			}
 //			if ( strcmp(tag, "ImageIndex") == 0 ) {
 //				if ( show == 1 ) cout << tab << tag << "=" << val << endl;
 //			}
 			if ( strstr((char *)tag, "Emission") ) {
 				if ( show == 1 ) {
-					std::cout << "\t" << tag << "=" << val << endl;
-					for ( i=0; i<len; i++ ) std::cout << (int)tag[i] << "\t" << tag[i] << endl;
+					std::cout << "\t" << tag << "=" << val << std::endl;
+					for ( i=0; i<len; i++ ) std::cout << (int)tag[i] << "\t" << tag[i] << std::endl;
 				}
 			}
 		}
 	} else {
-		std::cerr << "Error: Undefined tag type! (" << t << ")" << endl;
+		std::cerr << "Error: Undefined tag type! (" << t << ")" << std::endl;
 	}
 
 	level--;
@@ -649,7 +648,7 @@ double		DMFile::dm3_value(std::ifstream* fimg, int dm3_type)
 		case 11: ivalue = *((long *) buf); break;
 		case 12: ivalue = *((unsigned long *) buf); break;
 		default:
-			std::cerr << "Error: Data type " << dm3_type << " not defined!" << endl;
+			std::cerr << "Error: Data type " << dm3_type << " not defined!" << std::endl;
 	}
 
 	if ( !dvalue ) dvalue = ivalue;
@@ -659,9 +658,9 @@ double		DMFile::dm3_value(std::ifstream* fimg, int dm3_type)
 	if ( show == 2 ) {
 		for ( i=0; i<level; i++ ) std::cout << "\t";
 		if ( dm3_type == 6 || dm3_type == 7 )
-			std::cout << "<real>" << dvalue << "</real>" << endl;
+			std::cout << "<real>" << dvalue << "</real>" << std::endl;
 		else
-			std::cout << "<integer>" << ivalue << "</integer>" << endl;
+			std::cout << "<integer>" << ivalue << "</integer>" << std::endl;
 	}
 
 	return dvalue;
@@ -684,7 +683,7 @@ int			DMFile::dm3_type_length(int dm3_type)
 		case 11: dtlen = 8; break;
 		case 12: dtlen = 8; break;
 		default:
-			std::cerr << "Error: Data type " << dm3_type << " length not defined!" << endl;
+			std::cerr << "Error: Data type " << dm3_type << " length not defined!" << std::endl;
 	}
 
 	return dtlen;

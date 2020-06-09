@@ -485,29 +485,9 @@ void ExportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 		relion_star_file->AddLine(wxString("_rlnAngleRot #14"));
 		relion_star_file->AddLine(wxString("_rlnAngleTilt #15"));
 		relion_star_file->AddLine(wxString("_rlnAnglePsi #16"));
-		relion_star_file->AddLine(wxString("_rlnOriginX #17"));
-		relion_star_file->AddLine(wxString("_rlnOriginY #18"));
+		relion_star_file->AddLine(wxString("_rlnOriginXAngst #17"));
+		relion_star_file->AddLine(wxString("_rlnOriginYAngst #18"));
 		relion_star_file->AddLine(wxString("_rlnOpticsGroup #19"));
-
-
-	/*	// Write headers
-		relion_star_file->AddLine(wxString(" "));
-		relion_star_file->AddLine(wxString("data_"));
-		relion_star_file->AddLine(wxString(" "));
-		relion_star_file->AddLine(wxString("loop_"));
-		relion_star_file->AddLine(wxString("_rlnMicrographName #1"));
-		relion_star_file->AddLine(wxString("_rlnCoordinateX #2"));
-		relion_star_file->AddLine(wxString("_rlnCoordinateY #3"));
-		relion_star_file->AddLine(wxString("_rlnImageName #4"));
-		relion_star_file->AddLine(wxString("_rlnDefocusU #5"));
-		relion_star_file->AddLine(wxString("_rlnDefocusV #6"));
-		relion_star_file->AddLine(wxString("_rlnDefocusAngle #7"));
-		relion_star_file->AddLine(wxString("_rlnPhaseShift #8"));
-		relion_star_file->AddLine(wxString("_rlnVoltage #9"));
-		relion_star_file->AddLine(wxString("_rlnSphericalAberration #10"));
-		relion_star_file->AddLine(wxString("_rlnAmplitudeContrast #11"));
-		relion_star_file->AddLine(wxString("_rlnMagnification #12"));
-		relion_star_file->AddLine(wxString("_rlnDetectorPixelSize #13"));*/
 
 		//Write particle data
 		for (particle_counter = 0; particle_counter < current_package->contained_particles.GetCount(); particle_counter ++ )
@@ -531,21 +511,6 @@ void ExportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 			{
 				micrograph_filename = "unkown.mrc";
 			}
-/*
-			relion_star_file->AddLine(wxString::Format("%s %f %f %06li@%s %f %f %f %f %f %f %f %f %f",	micrograph_filename,
-																										current_particle.x_pos / current_particle.pixel_size,
-																										current_particle.y_pos / current_particle.pixel_size,
-																										particle_counter + 1,
-																										output_stack_filename.GetFullPath(),
-																										current_refinement_result.defocus1,
-																										current_refinement_result.defocus2,
-																										current_refinement_result.defocus_angle,
-																										current_refinement_result.phase_shift,
-																										current_particle.microscope_voltage,
-																										current_particle.spherical_aberration,
-																										current_particle.amplitude_contrast,
-																										10000.0f,
-																										current_particle.pixel_size));*/
 
 			relion_star_file->AddLine(wxString::Format("%s %f %f %06li@%s %f %f %f %f %f %f %f %f %f %f %f %f %f %f %i",	micrograph_filename,
 																										current_particle.x_pos / current_particle.pixel_size,
@@ -564,8 +529,8 @@ void ExportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 																										current_refinement_result.phi,
 																										current_refinement_result.theta,
 																										current_refinement_result.psi,
-																										-current_refinement_result.xshift / current_particle.pixel_size,
-																										-current_refinement_result.yshift / current_particle.pixel_size,
+																										-current_refinement_result.xshift,
+																										-current_refinement_result.yshift,
 																										1));
 
 			my_dialog->Update(particle_counter+1);

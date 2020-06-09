@@ -516,7 +516,7 @@ void ExportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 																										current_particle.x_pos / current_particle.pixel_size,
 																										current_particle.y_pos / current_particle.pixel_size,
 																										particle_counter + 1,
-																										output_stack_filename.GetFullPath(),
+																										output_stack_filename.GetFullName(),
 																										current_refinement_result.defocus1,
 																										current_refinement_result.defocus2,
 																										current_refinement_result.defocus_angle,

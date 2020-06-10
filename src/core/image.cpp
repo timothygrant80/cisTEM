@@ -4672,13 +4672,9 @@ void Image::ConvertToAutoMask(float pixel_size, float outer_mask_radius_in_angst
 	my_ccl3d.GetLargestConnectedDensityMask(buffer_image, *this);
 
 	ForwardFFT();
-	QuickAndDirtyWriteSlices("/tmp/prefilter.mrc", 1, logical_z_dimension);
 	GaussianLowPassFilter(binning_factor / pixel_size / 16.0f);
-	QuickAndDirtyWriteSlices("/tmp/presize.mrc", 1, logical_z_dimension);
 	Resize(original_x_size, original_y_size, original_z_size, 0.0);
 	BackwardFFT();
-
-	QuickAndDirtyWriteSlices("/tmp/prebin.mrc", 1, logical_z_dimension);
 
 	DivideByConstant(ReturnMaximumValue());
 	Binarise(rebin_value);
@@ -5630,6 +5626,19 @@ void Image::Binarise(float threshold_value)
 	for (long address = 0; address < real_memory_allocated; address++)
 	{
 		if (real_values[address] >= threshold_value) real_values[address] = 1.0f;
+		else real_values[address] = 0.0f;
+	}
+}
+
+void Image::BinariseInverse(float threshold_value)
+{
+	// Set values below the threshold to 1
+	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+	MyDebugAssertTrue(is_in_real_space, "Not in real space");
+
+	for (long address = 0; address < real_memory_allocated; address++)
+	{
+		if (real_values[address] <= threshold_value) real_values[address] = 1.0f;
 		else real_values[address] = 0.0f;
 	}
 }
@@ -9121,6 +9130,25 @@ void Image::DilateBinarizedMask(float dilation_radius)
 	}
 	delete [] buffer;
 }
+
+void Image::ErodeBinarizedMask(float erosion_radius)
+{
+	// Not sure this is the best way, but it is straightforward.
+	Image buffer_1;
+	buffer_1.CopyFrom(this);
+
+	buffer_1.DilateBinarizedMask(2.0f);
+
+	buffer_1.SubtractImage(this);
+	for (int iDilation = 0; iDilation < myroundint(erosion_radius); iDilation++)
+	{
+		buffer_1.DilateBinarizedMask(2.0f);
+	}
+	buffer_1.BinariseInverse(0.5f);
+
+	MultiplyPixelWise(buffer_1);
+}
+
 
 void Image::MakeAbsolute()
 {

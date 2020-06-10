@@ -427,6 +427,21 @@ inline float deg_2_rad(float degrees)
   return degrees * PIf / 180.;
 }
 
+inline float clamp_angular_range(float angle, bool is_in_degrees = false)
+{
+	// Clamps the angle to be in the range ( -180,+180 ] { exclusive, inclusive }
+	if (is_in_degrees)
+	{
+		angle = deg_2_rad( angle );
+	}
+
+	angle = fmodf(angle, 2.0f * PIf);
+	if (angle > PIf) angle -= 2.0f * PIf;
+	if (angle <= -PIf) angle += 2.0f * PIf;
+
+	return angle;
+}
+
 inline float sinc(float radians)
 {
 	if (radians == 0.0) return 1.0;

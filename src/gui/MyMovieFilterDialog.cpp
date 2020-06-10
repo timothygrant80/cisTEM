@@ -343,10 +343,10 @@ MyFilterDialog( parent )
 	phase_shift_step_filter = new FloatFilterItem("Phase Shift Step", FilterScrollPanel);
 	FilterBoxSizer->Add(phase_shift_step_filter,  1, wxEXPAND | wxALL, 5 );
 
-	ctf_tilt_angle_filter = new FloatFilterItem("CTF Tilt Angle", FilterScrollPanel);
+	ctf_tilt_angle_filter = new FloatFilterItem("Tilt Angle", FilterScrollPanel);
 	FilterBoxSizer->Add(ctf_tilt_angle_filter,  1, wxEXPAND | wxALL, 5 );
 
-	ctf_tilt_axis_filter = new FloatFilterItem("CTF Tilt Axis", FilterScrollPanel);
+	ctf_tilt_axis_filter = new FloatFilterItem("Tilt Axis", FilterScrollPanel);
 	FilterBoxSizer->Add(ctf_tilt_axis_filter,  1, wxEXPAND | wxALL, 5 );
 
 
@@ -431,10 +431,10 @@ MyFilterDialog( parent )
 	phase_shift_step_radio = new wxRadioButton( SortScrollPanel, wxID_ANY, wxT("Phase Shift Step"), wxDefaultPosition, wxDefaultSize, 0 );
 	SortSizer->Add( phase_shift_step_radio, 0, wxALL, 5 );
 
-	ctf_tilt_angle_radio = new wxRadioButton( SortScrollPanel, wxID_ANY, wxT("CTF Tilt Angle"), wxDefaultPosition, wxDefaultSize, 0 );
+	ctf_tilt_angle_radio = new wxRadioButton( SortScrollPanel, wxID_ANY, wxT("Tilt Angle"), wxDefaultPosition, wxDefaultSize, 0 );
 	SortSizer->Add( ctf_tilt_angle_radio, 0, wxALL, 5 );
 
-	ctf_tilt_axis_radio = new wxRadioButton( SortScrollPanel, wxID_ANY, wxT("CTF Tilt Axis"), wxDefaultPosition, wxDefaultSize, 0 );
+	ctf_tilt_axis_radio = new wxRadioButton( SortScrollPanel, wxID_ANY, wxT("Tilt Axis"), wxDefaultPosition, wxDefaultSize, 0 );
 	SortSizer->Add( ctf_tilt_axis_radio, 0, wxALL, 5 );
 
 	// resize..
@@ -775,5 +775,4 @@ int MyCTFFilterDialog::ReturnNumberChecked()
 
 	return number_checked;
 }
-
 

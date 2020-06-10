@@ -387,7 +387,7 @@ void ExportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 			}
 			else
 			{
-				micrograph_filename = "unkown.mrc";
+				micrograph_filename = "unknown.mrc";
 			}
 			
 			//write particle data for either legacy relion format or relion3.1

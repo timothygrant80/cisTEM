@@ -1,5 +1,6 @@
 #include "../../core/core_headers.h"
 
+#define RECONSTRUCT_SUBTOMOGRAM_AVERAGE true
 class
 Reconstruct3DApp : public MyApp
 {
@@ -574,6 +575,8 @@ bool Reconstruct3DApp::DoCalculation()
 				}
 			}
 			if (input_parameters.position_in_stack < first_particle || input_parameters.position_in_stack > last_particle) continue;
+			if (RECONSTRUCT_SUBTOMOGRAM_AVERAGE && input_parameters.beam_tilt_group == 0) continue;
+
 			image_counter++;
 			if (is_running_locally == true && ReturnThreadNumberOfCurrentThread() == 0) my_progress->Update(image_counter);
 			if (! file_read) continue;
@@ -754,6 +757,17 @@ bool Reconstruct3DApp::DoCalculation()
 
 		if (input_parameters.position_in_stack < first_particle || input_parameters.position_in_stack > last_particle) continue;
 
+
+		if (RECONSTRUCT_SUBTOMOGRAM_AVERAGE)
+		{
+			if (input_parameters.beam_tilt_group == 0)
+			{
+				continue;
+			}
+
+		}
+
+
 		if (input_parameters.occupancy == 0.0f || input_parameters.score < score_threshold || input_parameters.image_is_active < 0.0)
 		{
 			if (is_running_locally == false)
@@ -776,7 +790,22 @@ bool Reconstruct3DApp::DoCalculation()
 		input_particle.is_masked = false;
 
 		input_particle.InitCTFImage(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, std::max(input_parameters.amplitude_contrast, 0.001f), input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, input_parameters.phase_shift, input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, input_parameters.image_shift_x, input_parameters.image_shift_y, calculate_complex_ctf);
+		if (RECONSTRUCT_SUBTOMOGRAM_AVERAGE)
+		{
+			ElectronDose my_electron_dose(input_parameters.microscope_voltage_kv, input_parameters.pixel_size);
+			float dose_filter[input_particle.ctf_image->real_memory_allocated / 2];
 
+			ZeroFloatArray(dose_filter, input_particle.ctf_image->real_memory_allocated / 2);
+			my_electron_dose.CalculateDoseFilterAs1DArray(&input_image_local, dose_filter, input_parameters.pre_exposure, input_parameters.total_exposure);
+
+
+			for (int pixel_counter = 0; pixel_counter < input_particle.ctf_image->real_memory_allocated / 2; pixel_counter++)
+			{
+				input_particle.ctf_image->complex_values[pixel_counter] *= dose_filter[pixel_counter];
+			}
+
+
+		}
 		if (use_input_reconstruction)
 		{
 			input_particle.alignment_parameters.Init(input_parameters.phi, input_parameters.theta, input_parameters.psi, 0.0, 0.0);
@@ -1153,14 +1182,25 @@ bool Reconstruct3DApp::DoCalculation()
 		input_particle.sigma_noise = input_parameters.sigma;
 		if (input_particle.sigma_noise <= 0.0) input_particle.sigma_noise = parameter_averages.sigma;
 
-		if (input_parameters.position_in_stack % fsc_particle_repeat < fsc_particle_repeat / 2)
+		if (RECONSTRUCT_SUBTOMOGRAM_AVERAGE)
 		{
-			input_particle.insert_even = true;
+			if (input_parameters.beam_tilt_group == 1) input_particle.insert_even = false;
+			else if (input_parameters.beam_tilt_group == 2) input_particle.insert_even = true;
+			else {wxPrintf("\nReconstruct subtomogram average is temporarily using the beam_tilt_group to specify odd/even (1/2) or ignore (0), found %d\n", input_parameters.beam_tilt_group); exit(-1);}
+
 		}
 		else
 		{
-			input_particle.insert_even = false;
+			if (input_parameters.position_in_stack % fsc_particle_repeat < fsc_particle_repeat / 2)
+			{
+				input_particle.insert_even = true;
+			}
+			else
+			{
+				input_particle.insert_even = false;
+			}
 		}
+
 
 //		input_particle.particle_image->BackwardFFT();
 //		input_particle.particle_image->AddGaussianNoise(input_particle.particle_image->ReturnSumOfSquares());

@@ -80,6 +80,8 @@ public:
 	FloatFilterItem *min_phase_shift_filter;
 	FloatFilterItem *max_phase_shift_filter;
 	FloatFilterItem *phase_shift_step_filter;
+	FloatFilterItem *ctf_tilt_angle_filter;
+	FloatFilterItem *ctf_tilt_axis_filter;
 
 	wxRadioButton *asset_id_radio;
 	wxRadioButton *estimation_id_radio;
@@ -107,6 +109,8 @@ public:
 	wxRadioButton *min_phase_shift_radio;
 	wxRadioButton *max_phase_shift_radio;
 	wxRadioButton *phase_shift_step_radio;
+	wxRadioButton *ctf_tilt_angle_radio;
+	wxRadioButton *ctf_tilt_axis_radio;
 
 
 };
@@ -146,6 +150,8 @@ public:
 	FloatFilterItem *min_phase_shift_filter;
 	FloatFilterItem *max_phase_shift_filter;
 	FloatFilterItem *phase_shift_step_filter;
+	FloatFilterItem *ctf_tilt_angle_filter;
+	FloatFilterItem *ctf_tilt_axis_filter;
 
 	wxRadioButton *asset_id_radio;
 	wxRadioButton *estimation_id_radio;
@@ -172,6 +178,8 @@ public:
 	wxRadioButton *min_phase_shift_radio;
 	wxRadioButton *max_phase_shift_radio;
 	wxRadioButton *phase_shift_step_radio;
+	wxRadioButton *ctf_tilt_angle_radio;
+	wxRadioButton *ctf_tilt_axis_radio;
 
 
 };

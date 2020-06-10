@@ -289,6 +289,12 @@ MyFilterDialog( parent )
 	astigmatism_angle_filter = new FloatFilterItem("Astigmatism Angle", FilterScrollPanel);
 	FilterBoxSizer->Add(astigmatism_angle_filter,  1, wxEXPAND | wxALL, 5 );
 
+	ctf_tilt_angle_filter = new FloatFilterItem("Tilt Angle", FilterScrollPanel);
+	FilterBoxSizer->Add(ctf_tilt_angle_filter,  1, wxEXPAND | wxALL, 5 );
+
+	ctf_tilt_axis_filter = new FloatFilterItem("Tilt Axis", FilterScrollPanel);
+	FilterBoxSizer->Add(ctf_tilt_axis_filter,  1, wxEXPAND | wxALL, 5 );
+
 	asset_id_filter = new IntegerFilterItem("Asset ID", FilterScrollPanel);
 	FilterBoxSizer->Add(asset_id_filter,  1, wxEXPAND | wxALL, 5 );
 
@@ -367,6 +373,12 @@ MyFilterDialog( parent )
 
 	astigmatism_angle_radio = new wxRadioButton( SortScrollPanel, wxID_ANY, wxT("Astigmatism Angle"), wxDefaultPosition, wxDefaultSize, 0 );
 	SortSizer->Add( astigmatism_angle_radio, 0, wxALL, 5 );
+
+	ctf_tilt_angle_radio = new wxRadioButton( SortScrollPanel, wxID_ANY, wxT("Tilt Angle"), wxDefaultPosition, wxDefaultSize, 0 );
+	SortSizer->Add( ctf_tilt_angle_radio, 0, wxALL, 5 );
+
+	ctf_tilt_axis_radio = new wxRadioButton( SortScrollPanel, wxID_ANY, wxT("Tilt Axis"), wxDefaultPosition, wxDefaultSize, 0 );
+	SortSizer->Add( ctf_tilt_axis_radio, 0, wxALL, 5 );
 
 	score_radio = new wxRadioButton( SortScrollPanel, wxID_ANY, wxT("Score"), wxDefaultPosition, wxDefaultSize, 0 );
 	SortSizer->Add( score_radio, 0, wxALL, 5 );
@@ -650,6 +662,22 @@ void MyCTFFilterDialog::BuildSearchCommand()
 			if (number_accounted_for < number_checked) search_command += " AND";
 		}
 
+		if (ctf_tilt_angle_filter->field_checkbox->IsChecked() == true)
+		{
+			search_command += wxString::Format(" ESTIMATED_CTF_PARAMETERS.TILT_ANGLE BETWEEN %f AND %f", ctf_tilt_angle_filter->GetLowValue(), ctf_tilt_angle_filter->GetHighValue());
+			number_accounted_for++;
+
+			if (number_accounted_for < number_checked) search_command += " AND";
+		}
+
+		if (ctf_tilt_axis_filter->field_checkbox->IsChecked() == true)
+		{
+			search_command += wxString::Format(" ESTIMATED_CTF_PARAMETERS.TILT_AXIS BETWEEN %f AND %f", ctf_tilt_axis_filter->GetLowValue(), ctf_tilt_axis_filter->GetHighValue());
+			number_accounted_for++;
+
+			if (number_accounted_for < number_checked) search_command += " AND";
+		}
+
 	}
 
 	// do the ordering
@@ -705,6 +733,10 @@ void MyCTFFilterDialog::BuildSearchCommand()
 	if (max_phase_shift_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.MAX_PHASE_SHIFT";
 	else
 	if (phase_shift_step_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.PHASE_SHIFT_STEP";
+	else
+	if (ctf_tilt_angle_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.TILT_ANGLE";
+	else
+	if (ctf_tilt_axis_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.TILT_AXIS";
 
 }
 
@@ -738,8 +770,9 @@ int MyCTFFilterDialog::ReturnNumberChecked()
 	if (min_phase_shift_filter->field_checkbox->IsChecked() == true) number_checked++;
 	if (max_phase_shift_filter->field_checkbox->IsChecked() == true) number_checked++;
 	if (phase_shift_step_filter->field_checkbox->IsChecked() == true) number_checked++;
+	if (ctf_tilt_angle_filter->field_checkbox->IsChecked() == true) number_checked++;
+	if (ctf_tilt_axis_filter->field_checkbox->IsChecked() == true) number_checked++;
 
 	return number_checked;
 }
-
 

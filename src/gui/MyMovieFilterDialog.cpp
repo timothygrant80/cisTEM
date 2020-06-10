@@ -343,6 +343,12 @@ MyFilterDialog( parent )
 	phase_shift_step_filter = new FloatFilterItem("Phase Shift Step", FilterScrollPanel);
 	FilterBoxSizer->Add(phase_shift_step_filter,  1, wxEXPAND | wxALL, 5 );
 
+	ctf_tilt_angle_filter = new FloatFilterItem("CTF Tilt Angle", FilterScrollPanel);
+	FilterBoxSizer->Add(ctf_tilt_angle_filter,  1, wxEXPAND | wxALL, 5 );
+
+	ctf_tilt_axis_filter = new FloatFilterItem("CTF Tilt Axis", FilterScrollPanel);
+	FilterBoxSizer->Add(ctf_tilt_axis_filter,  1, wxEXPAND | wxALL, 5 );
+
 
 	// Add the sort combo boxes..
 
@@ -424,6 +430,12 @@ MyFilterDialog( parent )
 
 	phase_shift_step_radio = new wxRadioButton( SortScrollPanel, wxID_ANY, wxT("Phase Shift Step"), wxDefaultPosition, wxDefaultSize, 0 );
 	SortSizer->Add( phase_shift_step_radio, 0, wxALL, 5 );
+
+	ctf_tilt_angle_radio = new wxRadioButton( SortScrollPanel, wxID_ANY, wxT("CTF Tilt Angle"), wxDefaultPosition, wxDefaultSize, 0 );
+	SortSizer->Add( ctf_tilt_angle_radio, 0, wxALL, 5 );
+
+	ctf_tilt_axis_radio = new wxRadioButton( SortScrollPanel, wxID_ANY, wxT("CTF Tilt Axis"), wxDefaultPosition, wxDefaultSize, 0 );
+	SortSizer->Add( ctf_tilt_axis_radio, 0, wxALL, 5 );
 
 	// resize..
 
@@ -650,6 +662,22 @@ void MyCTFFilterDialog::BuildSearchCommand()
 			if (number_accounted_for < number_checked) search_command += " AND";
 		}
 
+		if (ctf_tilt_angle_filter->field_checkbox->IsChecked() == true)
+		{
+			search_command += wxString::Format(" ESTIMATED_CTF_PARAMETERS.TILT_ANGLE BETWEEN %f AND %f", ctf_tilt_angle_filter->GetLowValue(), ctf_tilt_angle_filter->GetHighValue());
+			number_accounted_for++;
+
+			if (number_accounted_for < number_checked) search_command += " AND";
+		}
+
+		if (ctf_tilt_axis_filter->field_checkbox->IsChecked() == true)
+		{
+			search_command += wxString::Format(" ESTIMATED_CTF_PARAMETERS.TILT_AXIS BETWEEN %f AND %f", ctf_tilt_axis_filter->GetLowValue(), ctf_tilt_axis_filter->GetHighValue());
+			number_accounted_for++;
+
+			if (number_accounted_for < number_checked) search_command += " AND";
+		}
+
 	}
 
 	// do the ordering
@@ -705,6 +733,10 @@ void MyCTFFilterDialog::BuildSearchCommand()
 	if (max_phase_shift_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.MAX_PHASE_SHIFT";
 	else
 	if (phase_shift_step_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.PHASE_SHIFT_STEP";
+	else
+	if (ctf_tilt_angle_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.TILT_ANGLE";
+	else
+	if (ctf_tilt_axis_radio->GetValue() == true) search_command += " ORDER BY ESTIMATED_CTF_PARAMETERS.TILT_AXIS";
 
 }
 
@@ -738,6 +770,8 @@ int MyCTFFilterDialog::ReturnNumberChecked()
 	if (min_phase_shift_filter->field_checkbox->IsChecked() == true) number_checked++;
 	if (max_phase_shift_filter->field_checkbox->IsChecked() == true) number_checked++;
 	if (phase_shift_step_filter->field_checkbox->IsChecked() == true) number_checked++;
+	if (ctf_tilt_angle_filter->field_checkbox->IsChecked() == true) number_checked++;
+	if (ctf_tilt_axis_filter->field_checkbox->IsChecked() == true) number_checked++;
 
 	return number_checked;
 }

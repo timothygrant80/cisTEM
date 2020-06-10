@@ -289,6 +289,12 @@ MyFilterDialog( parent )
 	astigmatism_angle_filter = new FloatFilterItem("Astigmatism Angle", FilterScrollPanel);
 	FilterBoxSizer->Add(astigmatism_angle_filter,  1, wxEXPAND | wxALL, 5 );
 
+	ctf_tilt_angle_filter = new FloatFilterItem("Tilt Angle", FilterScrollPanel);
+	FilterBoxSizer->Add(ctf_tilt_angle_filter,  1, wxEXPAND | wxALL, 5 );
+
+	ctf_tilt_axis_filter = new FloatFilterItem("Tilt Axis", FilterScrollPanel);
+	FilterBoxSizer->Add(ctf_tilt_axis_filter,  1, wxEXPAND | wxALL, 5 );
+
 	asset_id_filter = new IntegerFilterItem("Asset ID", FilterScrollPanel);
 	FilterBoxSizer->Add(asset_id_filter,  1, wxEXPAND | wxALL, 5 );
 
@@ -343,12 +349,6 @@ MyFilterDialog( parent )
 	phase_shift_step_filter = new FloatFilterItem("Phase Shift Step", FilterScrollPanel);
 	FilterBoxSizer->Add(phase_shift_step_filter,  1, wxEXPAND | wxALL, 5 );
 
-	ctf_tilt_angle_filter = new FloatFilterItem("Tilt Angle", FilterScrollPanel);
-	FilterBoxSizer->Add(ctf_tilt_angle_filter,  1, wxEXPAND | wxALL, 5 );
-
-	ctf_tilt_axis_filter = new FloatFilterItem("Tilt Axis", FilterScrollPanel);
-	FilterBoxSizer->Add(ctf_tilt_axis_filter,  1, wxEXPAND | wxALL, 5 );
-
 
 	// Add the sort combo boxes..
 
@@ -373,6 +373,12 @@ MyFilterDialog( parent )
 
 	astigmatism_angle_radio = new wxRadioButton( SortScrollPanel, wxID_ANY, wxT("Astigmatism Angle"), wxDefaultPosition, wxDefaultSize, 0 );
 	SortSizer->Add( astigmatism_angle_radio, 0, wxALL, 5 );
+
+	ctf_tilt_angle_radio = new wxRadioButton( SortScrollPanel, wxID_ANY, wxT("Tilt Angle"), wxDefaultPosition, wxDefaultSize, 0 );
+	SortSizer->Add( ctf_tilt_angle_radio, 0, wxALL, 5 );
+
+	ctf_tilt_axis_radio = new wxRadioButton( SortScrollPanel, wxID_ANY, wxT("Tilt Axis"), wxDefaultPosition, wxDefaultSize, 0 );
+	SortSizer->Add( ctf_tilt_axis_radio, 0, wxALL, 5 );
 
 	score_radio = new wxRadioButton( SortScrollPanel, wxID_ANY, wxT("Score"), wxDefaultPosition, wxDefaultSize, 0 );
 	SortSizer->Add( score_radio, 0, wxALL, 5 );
@@ -430,12 +436,6 @@ MyFilterDialog( parent )
 
 	phase_shift_step_radio = new wxRadioButton( SortScrollPanel, wxID_ANY, wxT("Phase Shift Step"), wxDefaultPosition, wxDefaultSize, 0 );
 	SortSizer->Add( phase_shift_step_radio, 0, wxALL, 5 );
-
-	ctf_tilt_angle_radio = new wxRadioButton( SortScrollPanel, wxID_ANY, wxT("Tilt Angle"), wxDefaultPosition, wxDefaultSize, 0 );
-	SortSizer->Add( ctf_tilt_angle_radio, 0, wxALL, 5 );
-
-	ctf_tilt_axis_radio = new wxRadioButton( SortScrollPanel, wxID_ANY, wxT("Tilt Axis"), wxDefaultPosition, wxDefaultSize, 0 );
-	SortSizer->Add( ctf_tilt_axis_radio, 0, wxALL, 5 );
 
 	// resize..
 

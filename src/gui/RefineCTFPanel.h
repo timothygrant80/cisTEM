@@ -149,6 +149,7 @@ class RefineCTFPanel : public RefineCTFParentPanel
 
 	public:
 
+		wxStopWatch stopwatch;
 
 		long time_of_last_result_update;
 

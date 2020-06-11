@@ -676,6 +676,7 @@ void RefineCTFPanel::FinishButtonClick( wxCommandEvent& event )
 
 void RefineCTFPanel::StartRefinementClick( wxCommandEvent& event )
 {
+	stopwatch.Start();
 	my_refinement_manager.BeginRefinementCycle();
 }
 
@@ -2072,7 +2073,7 @@ void CTFRefinementManager::ProcessAllJobsFinished()
 		my_parent->WriteBlueText("Refinement finished!");
 		my_parent->CancelAlignmentButton->Show(false);
 		my_parent->FinishButton->Show(true);
-		my_parent->TimeRemainingText->SetLabel("Time Remaining : Finished!");
+		my_parent->TimeRemainingText->SetLabel(wxString::Format("All Done! (%s)", wxTimeSpan::Milliseconds(my_parent->stopwatch.Time()).Format(wxT("%Hh:%Mm:%Ss"))));
 		my_parent->ProgressBar->SetValue(100);
 
 		my_parent->Layout();

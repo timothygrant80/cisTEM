@@ -1079,6 +1079,7 @@ void MyRefine3DPanel::FinishButtonClick( wxCommandEvent& event )
 
 void MyRefine3DPanel::StartRefinementClick( wxCommandEvent& event )
 {
+	stopwatch.Start();
 	my_refinement_manager.BeginRefinementCycle();
 }
 
@@ -2645,7 +2646,7 @@ void RefinementManager::CycleRefinement()
 			my_parent->WriteBlueText("All refinement cycles are finished!");
 			my_parent->CancelAlignmentButton->Show(false);
 			my_parent->FinishButton->Show(true);
-			my_parent->TimeRemainingText->SetLabel("Time Remaining : Finished!");
+			my_parent->TimeRemainingText->SetLabel(wxString::Format("All Done! (%s)", wxTimeSpan::Milliseconds(my_parent->stopwatch.Time()).Format(wxT("%Hh:%Mm:%Ss"))));
 			my_parent->ProgressBar->SetValue(100);
 			my_parent->ProgressPanel->Layout();
 		}

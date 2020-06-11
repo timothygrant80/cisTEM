@@ -158,6 +158,7 @@ class AutoRefine3DPanel : public AutoRefine3DPanelParent
 
 	public:
 
+		wxStopWatch stopwatch;
 
 		long time_of_last_result_update;
 

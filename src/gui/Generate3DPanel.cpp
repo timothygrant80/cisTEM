@@ -485,6 +485,8 @@ void Generate3DPanel::FinishButtonClick( wxCommandEvent& event )
 
 void Generate3DPanel::StartReconstructionClick( wxCommandEvent& event )
 {
+	stopwatch.Start();
+
 	active_mask_radius = MaskRadiusTextCtrl->ReturnValue();
 	active_inner_mask_radius = InnerMaskRadiusTextCtrl->ReturnValue();
 	active_resolution_limit_rec = ReconstructionResolutionLimitTextCtrl->ReturnValue();
@@ -1120,7 +1122,7 @@ void Generate3DPanel::ProcessAllJobsFinished()
 		WriteBlueText("Reconstruction is finished!");
 		CancelAlignmentButton->Show(false);
 		FinishButton->Show(true);
-		TimeRemainingText->SetLabel("Time Remaining : Finished!");
+		TimeRemainingText->SetLabel(wxString::Format("All Done! (%s)", wxTimeSpan::Milliseconds(stopwatch.Time()).Format(wxT("%Hh:%Mm:%Ss"))));
 		ProgressBar->SetValue(100);
 		ShowRefinementResultsPanel->Show(true);
 		Layout();

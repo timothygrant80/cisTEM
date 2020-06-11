@@ -571,6 +571,7 @@ void MyRefine2DPanel::OnInfoURL(wxTextUrlEvent& event)
 
 void MyRefine2DPanel::StartClassificationClick( wxCommandEvent& event )
 {
+	stopwatch.Start();
 	my_classification_manager.BeginRefinementCycle();
 }
 
@@ -1442,7 +1443,7 @@ void ClassificationManager::CycleRefinement()
 			my_parent->CancelAlignmentButton->Show(false);
 			global_delete_refine2d_scratch();
 			my_parent->FinishButton->Show(true);
-			my_parent->TimeRemainingText->SetLabel("Time Remaining : Finished!");
+			my_parent->TimeRemainingText->SetLabel(wxString::Format("All Done! (%s)", wxTimeSpan::Milliseconds(my_parent->stopwatch.Time()).Format(wxT("%Hh:%Mm:%Ss"))));
 			my_parent->ProgressBar->SetValue(100);
 			my_parent->ProgressPanel->Layout();
 			my_parent->input_params_combo_is_dirty = true;

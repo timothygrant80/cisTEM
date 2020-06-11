@@ -776,6 +776,7 @@ void AbInitio3DPanel::FinishButtonClick( wxCommandEvent& event )
 
 void AbInitio3DPanel::StartRefinementClick( wxCommandEvent& event )
 {
+	stopwatch.Start();
 	my_abinitio_manager.BeginRefinementCycle();
 	running_job = true;
 }
@@ -1398,7 +1399,7 @@ void AbInitioManager::CycleRefinement()
 				main_frame->job_controller.KillJob(my_parent->my_job_id);
 				my_parent->Freeze();
 				my_parent->WriteBlueText("All refinement cycles are finished!");
-				my_parent->TimeRemainingText->SetLabel("Time Remaining : Finished!");
+				my_parent->TimeRemainingText->SetLabel(wxString::Format("All Done! (%s)", wxTimeSpan::Milliseconds(my_parent->stopwatch.Time()).Format(wxT("%Hh:%Mm:%Ss"))));
 				my_parent->CancelAlignmentButton->Show(false);
 				my_parent->CurrentLineOne->Show(false);
 				my_parent->CurrentLineTwo->Show(false);

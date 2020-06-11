@@ -162,6 +162,9 @@ void MyMovieImportDialog::AddFilesClick( wxCommandEvent& event )
       	PathListCtrl->SetColumnWidth(0, wxLIST_AUTOSIZE);
       	PathListCtrl->Thaw();
 
+		GainFilePicker->SetInitialDirectory(wxFileName(final_paths.Last()).GetPath());
+		DarkFilePicker->SetInitialDirectory(wxFileName(final_paths.Last()).GetPath());
+		
       	CheckImportButtonStatus();
    }
 }
@@ -202,6 +205,9 @@ void MyMovieImportDialog::AddDirectoryClick( wxCommandEvent& event )
 
     	PathListCtrl->SetColumnWidth(0, wxLIST_AUTOSIZE);
     	PathListCtrl->Thaw();
+
+		GainFilePicker->SetInitialDirectory(dlg.GetPath());
+		DarkFilePicker->SetInitialDirectory(dlg.GetPath());
 
     	CheckImportButtonStatus();
 

@@ -1032,8 +1032,8 @@ void MyAlignMoviesPanel::ProcessAllJobsFinished()
 
 	WriteInfoText("All Jobs have finished.");
 	ProgressBar->SetValue(100);
-	TimeRemaining time_elapsed = my_job_tracker.ReturnTimeSinceStart();
-	TimeRemainingText->SetLabel(wxString::Format("All Done! (%ih:%im:%is)", time_elapsed.hours, time_elapsed.minutes, time_elapsed.seconds));
+	wxTimeSpan time_elapsed = my_job_tracker.ReturnTimeSinceStart();
+	TimeRemainingText->SetLabel(time_elapsed.Format("All Done! (%Hh:%Mm:%Ss)"));
 	CancelAlignmentButton->Show(false);
 	FinishButton->Show(true);
 	ProgressPanel->Layout();
@@ -1260,10 +1260,9 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 
 void MyAlignMoviesPanel::UpdateProgressBar()
 {
-	TimeRemaining time_left = my_job_tracker.ReturnRemainingTime();
+	wxTimeSpan time_left = my_job_tracker.ReturnRemainingTime();
 	ProgressBar->SetValue(my_job_tracker.ReturnPercentCompleted());
-
-	TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_left.hours, time_left.minutes, time_left.seconds));
+	TimeRemainingText->SetLabel(time_left.Format("Time Remaining : %Hh:%Mm:%Ss"));
 }
 
 

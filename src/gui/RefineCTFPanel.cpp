@@ -745,16 +745,8 @@ void RefineCTFPanel::OnSocketJobResultQueueMsg(ArrayofJobResults &received_queue
 				float seconds_per_job = float(job_time) / float(my_refinement_manager.number_of_received_results - 1);
 				long seconds_remaining = float(my_refinement_manager.number_of_expected_results - my_refinement_manager.number_of_received_results) * seconds_per_job;
 
-				TimeRemaining time_remaining;
-
-				if (seconds_remaining > 3600) time_remaining.hours = seconds_remaining / 3600;
-				else time_remaining.hours = 0;
-
-				if (seconds_remaining > 60) time_remaining.minutes = (seconds_remaining / 60) - (time_remaining.hours * 60);
-				else time_remaining.minutes = 0;
-
-				time_remaining.seconds = seconds_remaining - ((time_remaining.hours * 60 + time_remaining.minutes) * 60);
-				TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_remaining.hours, time_remaining.minutes, time_remaining.seconds));
+				wxTimeSpan time_remaining = wxTimeSpan(0,0,seconds_remaining);
+				TimeRemainingText->SetLabel(time_remaining.Format("Time Remaining : %Hh:%Mm:%Ss"));
 			}
 		}
 	}
@@ -1701,16 +1693,8 @@ void CTFRefinementManager::ProcessJobResult(JobResult *result_to_process)
 			float seconds_per_job = float(job_time) / float(number_of_received_results - 1);
 			long seconds_remaining = float(number_of_expected_results - number_of_received_results) * seconds_per_job;
 
-			TimeRemaining time_remaining;
-
-			if (seconds_remaining > 3600) time_remaining.hours = seconds_remaining / 3600;
-			else time_remaining.hours = 0;
-
-			if (seconds_remaining > 60) time_remaining.minutes = (seconds_remaining / 60) - (time_remaining.hours * 60);
-			else time_remaining.minutes = 0;
-
-			time_remaining.seconds = seconds_remaining - ((time_remaining.hours * 60 + time_remaining.minutes) * 60);
-			my_parent->TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_remaining.hours, time_remaining.minutes, time_remaining.seconds));
+			wxTimeSpan time_remaining = wxTimeSpan(0,0,seconds_remaining);
+			my_parent->TimeRemainingText->SetLabel(time_remaining.Format("Time Remaining : %Hh:%Mm:%Ss"));		
 		}
 
 		if (current_time - time_of_last_histogram_update > 5)
@@ -1763,18 +1747,9 @@ void CTFRefinementManager::ProcessJobResult(JobResult *result_to_process)
 			float seconds_per_job = float(job_time) / float(number_of_received_results - 1);
 			long seconds_remaining = float(number_of_expected_results - number_of_received_results) * seconds_per_job;
 
-			TimeRemaining time_remaining;
-			if (seconds_remaining > 3600) time_remaining.hours = seconds_remaining / 3600;
-			else time_remaining.hours = 0;
-
-			if (seconds_remaining > 60) time_remaining.minutes = (seconds_remaining / 60) - (time_remaining.hours * 60);
-			else time_remaining.minutes = 0;
-
-			time_remaining.seconds = seconds_remaining - ((time_remaining.hours * 60 + time_remaining.minutes) * 60);
-			my_parent->TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_remaining.hours, time_remaining.minutes, time_remaining.seconds));
+			wxTimeSpan time_remaining = wxTimeSpan(0,0,seconds_remaining);
+			my_parent->TimeRemainingText->SetLabel(time_remaining.Format("Time Remaining : %Hh:%Mm:%Ss"));		
 		}
-
-
 	}
 	else
 	if (running_job_type == MERGE)

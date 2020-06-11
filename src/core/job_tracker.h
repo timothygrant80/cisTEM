@@ -1,9 +1,3 @@
-typedef struct TimeRemaining {
-  int hours;
-  int minutes;
-  int seconds;
-} TimeRemaining;
-
 class JobTracker {
 
 public :
@@ -20,8 +14,8 @@ public :
 	long time_of_last_remaining_time_call;
 
 	int old_percent_complete;
-	TimeRemaining old_time_remaining;
-	TimeRemaining time_remaining;
+	wxTimeSpan old_time_remaining;
+	wxTimeSpan time_remaining;
 
 
 
@@ -31,8 +25,8 @@ public :
 	void StartTracking(int wanted_total_number_of_jobs);
 	void AddConnection();
 	void MarkJobFinished();
-	TimeRemaining ReturnRemainingTime();
-	TimeRemaining ReturnTimeSinceStart();
+	wxTimeSpan ReturnRemainingTime();
+	wxTimeSpan ReturnTimeSinceStart();
 
 	inline int ReturnPercentCompleted()
 	{

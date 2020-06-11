@@ -1036,16 +1036,8 @@ void  RefineTemplatePanel::ProcessResult(JobResult *result_to_process) // this w
 		long seconds_remaining;
 		seconds_remaining = float(expected_number_of_results - number_of_received_results) * seconds_per_job;
 
-		TimeRemaining time_remaining;
-
-		if (seconds_remaining > 3600) time_remaining.hours = seconds_remaining / 3600;
-		else time_remaining.hours = 0;
-
-		if (seconds_remaining > 60) time_remaining.minutes = (seconds_remaining / 60) - (time_remaining.hours * 60);
-		else time_remaining.minutes = 0;
-
-		time_remaining.seconds = seconds_remaining - ((time_remaining.hours * 60 + time_remaining.minutes) * 60);
-		TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_remaining.hours, time_remaining.minutes, time_remaining.seconds));
+		wxTimeSpan time_remaining = wxTimeSpan(0,0,seconds_remaining);
+		TimeRemainingText->SetLabel(time_remaining.Format("Time Remaining : %Hh:%Mm:%Ss"));
 	}
 
 
@@ -1137,9 +1129,7 @@ void RefineTemplatePanel::WriteResultToDataBase()
 
 void RefineTemplatePanel::UpdateProgressBar()
 {
-	TimeRemaining time_left = my_job_tracker.ReturnRemainingTime();
 	ProgressBar->SetValue(my_job_tracker.ReturnPercentCompleted());
-
-	TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_left.hours, time_left.minutes, time_left.seconds));
+	TimeRemainingText->SetLabel(my_job_tracker.ReturnRemainingTime().Format("Time Remaining : %Hh:%Mm:%Ss"));
 }
 

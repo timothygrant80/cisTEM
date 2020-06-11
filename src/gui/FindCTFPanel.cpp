@@ -1041,7 +1041,8 @@ void  MyFindCTFPanel::ProcessAllJobsFinished()
 
 	WriteInfoText("All Jobs have finished.");
 	ProgressBar->SetValue(100);
-	TimeRemainingText->SetLabel("Time Remaining : All Done!");
+	TimeRemaining time_elapsed = my_job_tracker.ReturnTimeSinceStart();
+	TimeRemainingText->SetLabel(wxString::Format("All Done! (%ih:%im:%is)", time_elapsed.hours, time_elapsed.minutes, time_elapsed.seconds));
 	CancelAlignmentButton->Show(false);
 	FinishButton->Show(true);
 	ProgressPanel->Layout();

@@ -32,6 +32,7 @@ public :
 	void AddConnection();
 	void MarkJobFinished();
 	TimeRemaining ReturnRemainingTime();
+	TimeRemaining ReturnTimeSinceStart();
 
 	inline int ReturnPercentCompleted()
 	{

@@ -1540,7 +1540,9 @@ void MyFindParticlesPanel::ProcessAllJobsFinished()
 
 	WriteInfoText(wxString::Format("All Jobs have finished. %i particles were picked.", number_of_particles_picked));
 	ProgressBar->SetValue(100);
-	TimeRemainingText->SetLabel("Time Remaining : All Done!");
+
+	TimeRemaining time_elapsed = my_job_tracker.ReturnTimeSinceStart();
+	TimeRemainingText->SetLabel(wxString::Format("All Done! (%ih:%im:%is)", time_elapsed.hours, time_elapsed.minutes, time_elapsed.seconds));
 	CancelAlignmentButton->Show(false);
 	FinishButton->Show(true);
 	ProgressPanel->Layout();

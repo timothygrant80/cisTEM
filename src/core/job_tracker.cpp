@@ -114,6 +114,23 @@ TimeRemaining JobTracker::ReturnRemainingTime()
 
 }
 
+TimeRemaining JobTracker::ReturnTimeSinceStart()
+{
+	long current_time = time(NULL);
+	long seconds_since_start = current_time - start_time;
+	TimeRemaining time_since_start;
+
+	if (seconds_since_start > 3600) time_since_start.hours = seconds_since_start / 3600;
+	else time_since_start.hours = 0;
+
+	if (seconds_since_start > 60) time_since_start.minutes = (seconds_since_start / 60) - (time_since_start.hours * 60);
+	else time_since_start.minutes = 0;
+
+	time_since_start.seconds = seconds_since_start - ((time_since_start.hours * 60 + time_since_start.minutes) * 60);
+
+	return time_since_start;
+}
+
 bool JobTracker::ShouldUpdate()
 {
 	TimeRemaining new_time_remaining = ReturnRemainingTime();

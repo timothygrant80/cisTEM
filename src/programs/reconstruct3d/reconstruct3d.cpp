@@ -279,7 +279,7 @@ bool Reconstruct3DApp::DoCalculation()
 	cisTEMParameters input_star_file;
 	input_star_file.ReadFromcisTEMStarFile(input_star_filename, true);
 
-	apply_exposure_filter_during_reconstruction = input_star_file.ReturnTrueIfThereAreMultipleParticleGroups();
+	apply_exposure_filter_during_reconstruction = input_star_file.ContainsMultipleParticleGroups();
 
 //	input_par_file.ReadFile(true, input_stack.ReturnZSize());
 /*	input_par_file.ReduceAngles();

@@ -28,11 +28,11 @@ class RandomNumberGenerator {
 	int Internal_rand();
 
 	// Distributions are lightweight, create on the fly
-	__inline__ int   GetPoissonRandomSTD(float mean_value) { return std::poisson_distribution<int>{mean_value}(rng); }
-	__inline__ float GetUniformRandomSTD(float min_value, float max_value) { return std::uniform_real_distribution<float>{min_value, max_value}(rng); }
-	__inline__ float GetNormalRandomSTD(float mean_value, float std_deviation) { return std::normal_distribution<float>{mean_value, std_deviation}(rng); }
-	__inline__ float GetExponentialRandomSTD(float lambda) { return std::gamma_distribution<float>{lambda}(rng) ;}
-	__inline__ float GetGammaRandomSTD(float alpha, float beta) { return std::gamma_distribution<float>{alpha, beta}(rng); }
+	inline int   GetPoissonRandomSTD(float mean_value) { return std::poisson_distribution<int>{mean_value}(rng); }
+	inline float GetUniformRandomSTD(float min_value, float max_value) { return std::uniform_real_distribution<float>{min_value, max_value}(rng); }
+	inline float GetNormalRandomSTD(float mean_value, float std_deviation) { return std::normal_distribution<float>{mean_value, std_deviation}(rng); }
+	inline float GetExponentialRandomSTD(float lambda) { return std::gamma_distribution<float>{lambda}(rng) ;}
+	inline float GetGammaRandomSTD(float alpha, float beta) { return std::gamma_distribution<float>{alpha, beta}(rng); }
 
 	private:
 

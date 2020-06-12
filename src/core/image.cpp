@@ -9052,6 +9052,8 @@ void Image::RealSpaceIntegerShift(int wanted_x_shift, int wanted_y_shift, int wa
 
 void Image::DilateBinarizedMask(float dilation_radius)
 {
+	// To get a ring of new pixels 1 pixel wide, a value of 2.0 must be used for dilation_radius. I do not know why. FIXME
+
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(is_in_real_space, "Not in real space");
 
@@ -9137,6 +9139,7 @@ void Image::ErodeBinarizedMask(float erosion_radius)
 	Image buffer_1;
 	buffer_1.CopyFrom(this);
 
+	// To get a ring of new pixels 1 pixel wide, a value of 2.0 must be used for dilation_radius. I do not know why. FIXME
 	buffer_1.DilateBinarizedMask(2.0f);
 
 	buffer_1.SubtractImage(this);

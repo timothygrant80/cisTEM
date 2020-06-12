@@ -151,6 +151,8 @@ protected:
 
 public:
 
+	wxStopWatch stopwatch;
+
 	long time_of_last_result_update;
 	bool refinement_package_combo_is_dirty;
 	bool run_profiles_are_dirty;

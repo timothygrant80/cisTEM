@@ -776,6 +776,7 @@ void AbInitio3DPanel::FinishButtonClick( wxCommandEvent& event )
 
 void AbInitio3DPanel::StartRefinementClick( wxCommandEvent& event )
 {
+	stopwatch.Start();
 	my_abinitio_manager.BeginRefinementCycle();
 	running_job = true;
 }
@@ -1398,7 +1399,7 @@ void AbInitioManager::CycleRefinement()
 				main_frame->job_controller.KillJob(my_parent->my_job_id);
 				my_parent->Freeze();
 				my_parent->WriteBlueText("All refinement cycles are finished!");
-				my_parent->TimeRemainingText->SetLabel("Time Remaining : Finished!");
+				my_parent->TimeRemainingText->SetLabel(wxString::Format("All Done! (%s)", wxTimeSpan::Milliseconds(my_parent->stopwatch.Time()).Format(wxT("%Hh:%Mm:%Ss"))));
 				my_parent->CancelAlignmentButton->Show(false);
 				my_parent->CurrentLineOne->Show(false);
 				my_parent->CurrentLineTwo->Show(false);
@@ -2412,16 +2413,8 @@ void AbInitioManager::ProcessJobResult(JobResult *result_to_process)
 			float seconds_per_job = float(job_time) / float(number_of_received_particle_results - 1);
 			long seconds_remaining = float((input_refinement->number_of_particles * output_refinement->number_of_classes) - number_of_received_particle_results) * seconds_per_job;
 
-			TimeRemaining time_remaining;
-
-			if (seconds_remaining > 3600) time_remaining.hours = seconds_remaining / 3600;
-			else time_remaining.hours = 0;
-
-			if (seconds_remaining > 60) time_remaining.minutes = (seconds_remaining / 60) - (time_remaining.hours * 60);
-			else time_remaining.minutes = 0;
-
-			time_remaining.seconds = seconds_remaining - ((time_remaining.hours * 60 + time_remaining.minutes) * 60);
-			my_parent->TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_remaining.hours, time_remaining.minutes, time_remaining.seconds));
+			wxTimeSpan time_remaining = wxTimeSpan(0,0,seconds_remaining);
+			my_parent->TimeRemainingText->SetLabel(time_remaining.Format("Time Remaining : %Hh:%Mm:%Ss"));
 		}
 
 
@@ -2465,16 +2458,8 @@ void AbInitioManager::ProcessJobResult(JobResult *result_to_process)
 			float seconds_per_job = float(job_time) / float(number_of_received_particle_results - 1);
 			long seconds_remaining = float(number_of_expected_results - number_of_received_particle_results) * seconds_per_job;
 
-			TimeRemaining time_remaining;
-			if (seconds_remaining > 3600) time_remaining.hours = seconds_remaining / 3600;
-			else time_remaining.hours = 0;
-
-			if (seconds_remaining > 60) time_remaining.minutes = (seconds_remaining / 60) - (time_remaining.hours * 60);
-			else time_remaining.minutes = 0;
-
-			time_remaining.seconds = seconds_remaining - ((time_remaining.hours * 60 + time_remaining.minutes) * 60);
-			my_parent->TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_remaining.hours, time_remaining.minutes, time_remaining.seconds));
-		}
+			wxTimeSpan time_remaining = wxTimeSpan(0,0,seconds_remaining);
+			my_parent->TimeRemainingText->SetLabel(time_remaining.Format("Time Remaining : %Hh:%Mm:%Ss"));		}
 	}
 	else
 	if (running_job_type == MERGE)
@@ -2541,17 +2526,8 @@ void AbInitioManager::ProcessJobResult(JobResult *result_to_process)
 			float seconds_per_job = float(job_time) / float(number_of_received_particle_results - 1);
 			long seconds_remaining = float((number_of_expected_results) - number_of_received_particle_results) * seconds_per_job;
 
-			TimeRemaining time_remaining;
-
-			if (seconds_remaining > 3600) time_remaining.hours = seconds_remaining / 3600;
-			else time_remaining.hours = 0;
-
-			if (seconds_remaining > 60) time_remaining.minutes = (seconds_remaining / 60) - (time_remaining.hours * 60);
-			else time_remaining.minutes = 0;
-
-			time_remaining.seconds = seconds_remaining - ((time_remaining.hours * 60 + time_remaining.minutes) * 60);
-			my_parent->TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_remaining.hours, time_remaining.minutes, time_remaining.seconds));
-		}
+			wxTimeSpan time_remaining = wxTimeSpan(0,0,seconds_remaining);
+			my_parent->TimeRemainingText->SetLabel(time_remaining.Format("Time Remaining : %Hh:%Mm:%Ss"));		}
 	}
 	else
 	if (running_job_type == ALIGN_SYMMETRY)
@@ -2575,16 +2551,8 @@ void AbInitioManager::ProcessJobResult(JobResult *result_to_process)
 			float seconds_per_job = float(job_time) / float(number_of_received_particle_results - 1);
 			long seconds_remaining = float((number_of_expected_results) - number_of_received_particle_results) * seconds_per_job;
 
-			TimeRemaining time_remaining;
-
-			if (seconds_remaining > 3600) time_remaining.hours = seconds_remaining / 3600;
-			else time_remaining.hours = 0;
-
-			if (seconds_remaining > 60) time_remaining.minutes = (seconds_remaining / 60) - (time_remaining.hours * 60);
-			else time_remaining.minutes = 0;
-
-			time_remaining.seconds = seconds_remaining - ((time_remaining.hours * 60 + time_remaining.minutes) * 60);
-			my_parent->TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_remaining.hours, time_remaining.minutes, time_remaining.seconds));
+			wxTimeSpan time_remaining = wxTimeSpan(0,0,seconds_remaining);
+			my_parent->TimeRemainingText->SetLabel(time_remaining.Format("Time Remaining : %Hh:%Mm:%Ss"));
 		}
 	}
 }

@@ -571,6 +571,7 @@ void MyRefine2DPanel::OnInfoURL(wxTextUrlEvent& event)
 
 void MyRefine2DPanel::StartClassificationClick( wxCommandEvent& event )
 {
+	stopwatch.Start();
 	my_classification_manager.BeginRefinementCycle();
 }
 
@@ -1250,16 +1251,9 @@ void ClassificationManager::ProcessJobResult(JobResult *result_to_process)
 			float seconds_per_job = float(job_time) / float(number_of_received_particle_results - 1);
 			long seconds_remaining = float((output_classification->number_of_particles * output_classification->percent_used * 0.01) - number_of_received_particle_results) * seconds_per_job;
 
-			TimeRemaining time_remaining;
+			wxTimeSpan time_remaining = wxTimeSpan(0,0,seconds_remaining);
 
-			if (seconds_remaining > 3600) time_remaining.hours = seconds_remaining / 3600;
-			else time_remaining.hours = 0;
-
-			if (seconds_remaining > 60) time_remaining.minutes = (seconds_remaining / 60) - (time_remaining.hours * 60);
-			else time_remaining.minutes = 0;
-
-			time_remaining.seconds = seconds_remaining - ((time_remaining.hours * 60 + time_remaining.minutes) * 60);
-			my_parent->TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_remaining.hours, time_remaining.minutes, time_remaining.seconds));
+			my_parent->TimeRemainingText->SetLabel(time_remaining.Format("Time Remaining : %Hh:%Mm:%Ss"));
 		}
 
 	}
@@ -1310,17 +1304,8 @@ void ClassificationManager::ProcessJobResult(JobResult *result_to_process)
 			float seconds_per_job = float(job_time) / float(number_of_received_particle_results - 1);
 			long seconds_remaining = float((input_classification->number_of_particles) - number_of_received_particle_results) * seconds_per_job;
 
-			TimeRemaining time_remaining;
-
-			if (seconds_remaining > 3600) time_remaining.hours = seconds_remaining / 3600;
-			else time_remaining.hours = 0;
-
-			if (seconds_remaining > 60) time_remaining.minutes = (seconds_remaining / 60) - (time_remaining.hours * 60);
-			else time_remaining.minutes = 0;
-
-			time_remaining.seconds = seconds_remaining - ((time_remaining.hours * 60 + time_remaining.minutes) * 60);
-			my_parent->TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_remaining.hours, time_remaining.minutes, time_remaining.seconds));
-		}
+			wxTimeSpan time_remaining = wxTimeSpan(0,0,seconds_remaining);
+			my_parent->TimeRemainingText->SetLabel(time_remaining.Format("Time Remaining : %Hh:%Mm:%Ss"));		}
 	}
 }
 
@@ -1442,7 +1427,7 @@ void ClassificationManager::CycleRefinement()
 			my_parent->CancelAlignmentButton->Show(false);
 			global_delete_refine2d_scratch();
 			my_parent->FinishButton->Show(true);
-			my_parent->TimeRemainingText->SetLabel("Time Remaining : Finished!");
+			my_parent->TimeRemainingText->SetLabel(wxString::Format("All Done! (%s)", wxTimeSpan::Milliseconds(my_parent->stopwatch.Time()).Format(wxT("%Hh:%Mm:%Ss"))));
 			my_parent->ProgressBar->SetValue(100);
 			my_parent->ProgressPanel->Layout();
 			my_parent->input_params_combo_is_dirty = true;

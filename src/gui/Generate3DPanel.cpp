@@ -485,6 +485,8 @@ void Generate3DPanel::FinishButtonClick( wxCommandEvent& event )
 
 void Generate3DPanel::StartReconstructionClick( wxCommandEvent& event )
 {
+	stopwatch.Start();
+
 	active_mask_radius = MaskRadiusTextCtrl->ReturnValue();
 	active_inner_mask_radius = InnerMaskRadiusTextCtrl->ReturnValue();
 	active_resolution_limit_rec = ReconstructionResolutionLimitTextCtrl->ReturnValue();
@@ -945,15 +947,8 @@ void Generate3DPanel::ProcessJobResult(JobResult *result_to_process)
 			float seconds_per_job = float(job_time) / float(number_of_received_particle_results - 1);
 			long seconds_remaining = float((number_of_expected_results) - number_of_received_particle_results) * seconds_per_job;
 
-			TimeRemaining time_remaining;
-			if (seconds_remaining > 3600) time_remaining.hours = seconds_remaining / 3600;
-			else time_remaining.hours = 0;
-
-			if (seconds_remaining > 60) time_remaining.minutes = (seconds_remaining / 60) - (time_remaining.hours * 60);
-			else time_remaining.minutes = 0;
-
-			time_remaining.seconds = seconds_remaining - ((time_remaining.hours * 60 + time_remaining.minutes) * 60);
-			TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_remaining.hours, time_remaining.minutes, time_remaining.seconds));
+			wxTimeSpan time_remaining = wxTimeSpan(0,0,seconds_remaining);
+			TimeRemainingText->SetLabel(time_remaining.Format("Time Remaining : %Hh:%Mm:%Ss"));
 		}
 
 
@@ -1120,7 +1115,7 @@ void Generate3DPanel::ProcessAllJobsFinished()
 		WriteBlueText("Reconstruction is finished!");
 		CancelAlignmentButton->Show(false);
 		FinishButton->Show(true);
-		TimeRemainingText->SetLabel("Time Remaining : Finished!");
+		TimeRemainingText->SetLabel(wxString::Format("All Done! (%s)", wxTimeSpan::Milliseconds(stopwatch.Time()).Format(wxT("%Hh:%Mm:%Ss"))));
 		ProgressBar->SetValue(100);
 		ShowRefinementResultsPanel->Show(true);
 		Layout();

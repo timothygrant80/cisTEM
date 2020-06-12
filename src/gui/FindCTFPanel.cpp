@@ -1041,7 +1041,7 @@ void  MyFindCTFPanel::ProcessAllJobsFinished()
 
 	WriteInfoText("All Jobs have finished.");
 	ProgressBar->SetValue(100);
-	TimeRemainingText->SetLabel("Time Remaining : All Done!");
+	TimeRemainingText->SetLabel(my_job_tracker.ReturnTimeSinceStart().Format("All Done! (%Hh:%Mm:%Ss)"));
 	CancelAlignmentButton->Show(false);
 	FinishButton->Show(true);
 	ProgressPanel->Layout();
@@ -1247,9 +1247,7 @@ void MyFindCTFPanel::WriteResultToDataBase()
 
 void MyFindCTFPanel::UpdateProgressBar()
 {
-	TimeRemaining time_left = my_job_tracker.ReturnRemainingTime();
 	ProgressBar->SetValue(my_job_tracker.ReturnPercentCompleted());
-
-	TimeRemainingText->SetLabel(wxString::Format("Time Remaining : %ih:%im:%is", time_left.hours, time_left.minutes, time_left.seconds));
+	TimeRemainingText->SetLabel(my_job_tracker.ReturnRemainingTime().Format("Time Remaining : %Hh:%Mm:%Ss"));
 }
 

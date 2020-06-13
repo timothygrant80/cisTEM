@@ -534,7 +534,7 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxSt
 			return false;
 		}
 
-		temp_parameters.beam_tilt_group = int(temp_long);
+		temp_parameters.particle_group = int(temp_long);
 	}
 
 	// pre exposure

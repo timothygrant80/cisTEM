@@ -157,6 +157,7 @@ void cisTEMParameterLine::Add(cisTEMParameterLine &line_to_add)
 	beam_tilt_y += line_to_add.beam_tilt_y;
 	image_shift_x += line_to_add.image_shift_x;
 	image_shift_y += line_to_add.image_shift_y;
+	beam_tilt_group += line_to_add.beam_tilt_group;
 	particle_group += line_to_add.particle_group;
 	pre_exposure += line_to_add.pre_exposure;
 	total_exposure += line_to_add.total_exposure;
@@ -190,6 +191,7 @@ void cisTEMParameterLine::Subtract(cisTEMParameterLine &line_to_add)
 	beam_tilt_y -= line_to_add.beam_tilt_y;
 	image_shift_x -= line_to_add.image_shift_x;
 	image_shift_y -= line_to_add.image_shift_y;
+	beam_tilt_group -= line_to_add.beam_tilt_group;
 	particle_group -= line_to_add.particle_group;
 	pre_exposure -= line_to_add.pre_exposure;
 	total_exposure -= line_to_add.total_exposure;
@@ -223,6 +225,7 @@ void cisTEMParameterLine::AddSquare(cisTEMParameterLine &line_to_add)
 	beam_tilt_y = powf(line_to_add.beam_tilt_y, 2);
 	image_shift_x += powf(line_to_add.image_shift_x, 2);
 	image_shift_y += powf(line_to_add.image_shift_y, 2);
+	beam_tilt_group += powf(line_to_add.beam_tilt_group, 2);
 	particle_group += powf(line_to_add.particle_group,2);
 	pre_exposure += powf(line_to_add.pre_exposure,2);
 	total_exposure += powf(line_to_add.total_exposure,2);
@@ -292,6 +295,7 @@ void cisTEMParameterLine::ReplaceNanAndInfWithOther(cisTEMParameterLine &other_p
 	if (isnan(beam_tilt_y) || isinf(beam_tilt_y)) beam_tilt_y = other_params.beam_tilt_y;
 	if (isnan(image_shift_x) || isinf(image_shift_x)) image_shift_x = other_params.image_shift_x;
 	if (isnan(image_shift_y) || isinf(image_shift_y)) image_shift_y = other_params.image_shift_y;	
+	if (isnan(beam_tilt_group) || isinf(beam_tilt_group)) beam_tilt_group = other_params.beam_tilt_group;
 	if (isnan(particle_group) || isinf(particle_group)) particle_group = other_params.particle_group;
 	if (isnan(pre_exposure) || isinf(pre_exposure)) pre_exposure = other_params.pre_exposure;
 	if (isnan(total_exposure) || isinf(total_exposure)) total_exposure = other_params.total_exposure;
@@ -334,6 +338,8 @@ void cisTEMParameters::ReadFromFrealignParFile(wxString wanted_filename,
 											   float wanted_pre_exposure,
 											   float wanted_total_exposure)
 {
+	// FIXME should this read in wanted_beam_tilt_group?? seems like yes.
+
 	ClearAll();
 	float input_parameters[17];
 
@@ -685,7 +691,7 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first
 	if (parameters_to_write.stack_filename == true)  					data_line += "                                     STACK_FILENAME ";
 	if (parameters_to_write.original_image_filename == true) 			data_line += "                            ORIGINAL_IMAGE_FILENAME ";
 	if (parameters_to_write.reference_3d_filename == true) 				data_line += "                              REFERENCE_3D_FILENAME ";
-	if (parameters_to_write.particle_group == true) 						data_line += "   PaGRP ";
+	if (parameters_to_write.particle_group == true) 					data_line += "   PaGRP ";
 	if (parameters_to_write.pre_exposure == true) 						data_line += " PREEXP ";
 	if (parameters_to_write.total_exposure == true) 					data_line += " TOTEXP ";
 
@@ -1028,6 +1034,42 @@ float cisTEMParameters::ReturnAverageScore(bool exclude_negative_film_numbers)
 	if (number_summed > 0) return sum / double(number_summed);
 	else return 0.0;
 
+}
+
+bool  cisTEMParameters::ContainsMultipleParticleGroups()
+{
+	bool particle_group_different_from_first = false;
+	bool particle_group_to_compare_to_is_set = false; // use to record the first active particle group
+	int  particle_group_to_compare_to; // all other groups are compared to this
+
+	// First, check to see if the particle_group field is even set.
+	if ( parameters_that_were_read.particle_group)
+	{
+		// Scan the particle group if present. if any are different from the first, there are multiple particle groups.
+		for (int line = 0; line < all_parameters.GetCount(); line++)
+		{
+			if (ReturnImageIsActive(line) >= 0)
+			{
+				if (particle_group_to_compare_to_is_set)
+				{
+					if (ReturnParticleGroup(line) != particle_group_to_compare_to)
+					{
+						particle_group_different_from_first = true;
+						break;
+					}
+
+				}
+				else
+				{
+					particle_group_to_compare_to_is_set = true;
+					particle_group_to_compare_to = ReturnParticleGroup(line);
+				}
+			}
+		}
+	}
+
+
+	return particle_group_different_from_first;
 }
 
 void cisTEMParameters::RemoveSigmaOutliers(float wanted_standard_deviation, bool exclude_negative_film_numbers, bool reciprocal_square)

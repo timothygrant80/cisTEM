@@ -214,6 +214,8 @@ public :
 	float ReturnAverageOccupancy(bool exclude_negative_film_numbers = false);
 	float ReturnAverageScore(bool exclude_negative_film_numbers = false);
 
+	bool  ContainsMultipleParticleGroups();
+
 	void RemoveSigmaOutliers(float wanted_standard_deviation, bool exclude_negative_film_numbers = false, bool reciprocal_square = false);
 	void RemoveScoreOutliers(float wanted_standard_deviation, bool exclude_negative_film_numbers = false, bool reciprocal_square = false);
 

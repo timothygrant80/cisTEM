@@ -758,38 +758,7 @@ void Generate3DPanel::RunReconstructionJob()
 
 	if (current_job_id != -1)
 	{
-		long number_of_refinement_processes;
-	    if (current_job_package.number_of_jobs < current_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = current_job_package.number_of_jobs;
-	    else number_of_refinement_processes =  current_job_package.my_profile.ReturnTotalJobs();
-
-		if (number_of_refinement_processes >= 100000) length_of_process_number = 6;
-		else
-		if (number_of_refinement_processes >= 10000) length_of_process_number = 5;
-		else
-		if (number_of_refinement_processes >= 1000) length_of_process_number = 4;
-		else
-		if (number_of_refinement_processes >= 100) length_of_process_number = 3;
-		else
-		if (number_of_refinement_processes >= 10) length_of_process_number = 2;
-		else
-		length_of_process_number = 1;
-
-		if (length_of_process_number == 6) NumberConnectedText->SetLabel(wxString::Format("%6i / %6li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (length_of_process_number == 5) NumberConnectedText->SetLabel(wxString::Format("%5i / %5li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (length_of_process_number == 4) NumberConnectedText->SetLabel(wxString::Format("%4i / %4li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (length_of_process_number == 3) NumberConnectedText->SetLabel(wxString::Format("%3i / %3li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (length_of_process_number == 2) NumberConnectedText->SetLabel(wxString::Format("%2i / %2li processes connected.", 0, number_of_refinement_processes));
-
-		NumberConnectedText->SetLabel(wxString::Format("%i / %li processes connected.", 0, number_of_refinement_processes));
-		TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
-		Layout();
-		running_job = true;
-		my_job_tracker.StartTracking(current_job_package.number_of_jobs);
-
+		SetNumberConnectedTextToZeroAndStartTracking();
 	}
 	ProgressBar->Pulse();
 }
@@ -870,35 +839,6 @@ void Generate3DPanel::RunMerge3dJob()
 
 	if (current_job_id != -1)
 	{
-		long number_of_refinement_processes;
-	    if (current_job_package.number_of_jobs + 1 < current_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = current_job_package.number_of_jobs + 1;
-	    else number_of_refinement_processes =  current_job_package.my_profile.ReturnTotalJobs();
-
-		if (number_of_refinement_processes >= 100000) length_of_process_number = 6;
-		else
-		if (number_of_refinement_processes >= 10000) length_of_process_number = 5;
-		else
-		if (number_of_refinement_processes >= 1000) length_of_process_number = 4;
-		else
-		if (number_of_refinement_processes >= 100) length_of_process_number = 3;
-		else
-		if (number_of_refinement_processes >= 10) length_of_process_number = 2;
-		else
-		length_of_process_number = 1;
-
-		if (length_of_process_number == 6) NumberConnectedText->SetLabel(wxString::Format("%6i / %6li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (length_of_process_number == 5) NumberConnectedText->SetLabel(wxString::Format("%5i / %5li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (length_of_process_number == 4) NumberConnectedText->SetLabel(wxString::Format("%4i / %4li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (length_of_process_number == 3) NumberConnectedText->SetLabel(wxString::Format("%3i / %3li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (length_of_process_number == 2) NumberConnectedText->SetLabel(wxString::Format("%2i / %2li processes connected.", 0, number_of_refinement_processes));
-		else
-
-		NumberConnectedText->SetLabel(wxString::Format("%i / %li processes connected.", 0, number_of_refinement_processes));
-
 		StartPanel->Show(false);
 		ProgressPanel->Show(true);
 
@@ -911,11 +851,7 @@ void Generate3DPanel::RunMerge3dJob()
 		RefinementPackageComboBox->Enable(false);
 		InputParametersComboBox->Enable(false);
 
-		TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
-		Layout();
-		running_job = true;
-		my_job_tracker.StartTracking(current_job_package.number_of_jobs);
-
+		SetNumberConnectedTextToZeroAndStartTracking();
 		}
 
 		ProgressBar->Pulse();

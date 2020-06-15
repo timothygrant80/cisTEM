@@ -5,6 +5,8 @@
 #define SERVER_ID 100
 #define SOCKET_ID 101
 
+
+extern AssetsPanel *assets_panel;
 extern MyMovieAssetPanel *movie_asset_panel;
 extern MyImageAssetPanel *image_asset_panel;
 extern MyParticlePositionAssetPanel *particle_position_asset_panel;
@@ -200,6 +202,22 @@ void MyMainFrame::OnMenuBookChange( wxBookCtrlEvent& event )
 	if ( event.GetOldSelection() == 3)
 	{
 		picking_results_panel->UpdateResultsFromBitmapPanel();
+	}
+
+	//
+	if (event.GetSelection() == 1)
+	{
+		// Assets
+		wxPrintf("Selected Assets in the LHS menu\n");
+		movie_asset_panel->Layout();
+		movie_asset_panel->Refresh();
+
+		//assets_panel->AssetsBook->Layout();
+		assets_panel->AssetsBook->Refresh();
+		//assets_panel->Layout();
+		//assets_panel->Refresh();
+		//assets_panel->Update();		
+		
 	}
 
 }

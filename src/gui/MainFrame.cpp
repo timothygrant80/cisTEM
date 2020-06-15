@@ -6,13 +6,14 @@
 #define SOCKET_ID 101
 
 
-extern AssetsPanel *assets_panel;
+extern MyAssetsPanel *assets_panel;
 extern MyMovieAssetPanel *movie_asset_panel;
 extern MyImageAssetPanel *image_asset_panel;
 extern MyParticlePositionAssetPanel *particle_position_asset_panel;
 extern MyVolumeAssetPanel *volume_asset_panel;
 extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
 
+extern MyActionsPanel *actions_panel;
 extern MyAlignMoviesPanel *align_movies_panel;
 extern MyFindCTFPanel *findctf_panel;
 extern MyFindParticlesPanel *findparticles_panel;
@@ -24,7 +25,10 @@ extern AbInitio3DPanel *ab_initio_3d_panel;
 extern Generate3DPanel *generate_3d_panel;
 extern Sharpen3DPanel *sharpen_3d_panel;
 
+extern MySettingsPanel *settings_panel;
 extern MyRunProfilesPanel *run_profiles_panel;
+
+extern MyResultsPanel *results_panel;
 extern MyMovieAlignResultsPanel *movie_results_panel;
 extern MyFindCTFResultsPanel *ctf_results_panel;
 extern MyPickingResultsPanel *picking_results_panel;
@@ -32,6 +36,7 @@ extern MyRefinementResultsPanel *refinement_results_panel;
 extern Refine2DResultsPanel *refine2d_results_panel;
 
 #ifdef EXPERIMENTAL
+extern MyExperimentalPanel *experimental_panel;
 extern MatchTemplatePanel *match_template_panel;
 extern MatchTemplateResultsPanel *match_template_results_panel;
 extern RefineTemplatePanel *refine_template_panel;
@@ -88,7 +93,6 @@ MainFrame( parent )
 	// Set brother event handler, this is a nastly little hack so that the socket communicator can use the event handler, and it will work whether the "brother" is a console app or gui panel.
 
 	brother_event_handler = this;
-
 
 }
 
@@ -204,23 +208,47 @@ void MyMainFrame::OnMenuBookChange( wxBookCtrlEvent& event )
 		picking_results_panel->UpdateResultsFromBitmapPanel();
 	}
 
-	//
-	if (event.GetSelection() == 1)
+	/*
+	   The below is necessary for the MacOS GUI to behave well.
+	   We need to make sure the list books (rows of icons) are drawn properly
+	   and also the first panel that will be shown.
+	   The other panels will be redrawn explicitely later on when the user
+	   clicks around.
+	 */
+	if (event.GetSelection() == 1) 
 	{
-		// Assets
-		wxPrintf("Selected Assets in the LHS menu\n");
+		assets_panel->AssetsBook->Refresh();
 		movie_asset_panel->Layout();
 		movie_asset_panel->Refresh();
-
-		//assets_panel->AssetsBook->Layout();
-		assets_panel->AssetsBook->Refresh();
-		//assets_panel->Layout();
-		//assets_panel->Refresh();
-		//assets_panel->Update();		
-		
 	}
+	else if (event.GetSelection() == 2) 
+	{
+		actions_panel->ActionsBook->Refresh();
+		align_movies_panel->Layout();
+		align_movies_panel->Refresh();
+	}
+	else if (event.GetSelection() == 3) 
+	{
+		results_panel->ResultsBook->Refresh();
+		movie_results_panel->Layout();
+		movie_results_panel->Refresh();
+	}
+	else if (event.GetSelection() == 4) 
+	{
+		settings_panel->SettingsBook->Refresh();
+		run_profiles_panel->Layout();
+		run_profiles_panel->Refresh();
+	}
+#ifdef EXPERIMENTAL
+	else if (event.GetSelection() == 5) 
+	{
+		experimental_panel->ExperimentalBook->Refresh();
+		//TODO: Layout and Refresh the first Experimental panel
+	}
+#endif
 
 }
+
 
 void MyMainFrame::ResetAllPanels()
 {

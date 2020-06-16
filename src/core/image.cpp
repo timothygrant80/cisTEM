@@ -1436,7 +1436,6 @@ void Image::OptimalFilterWarp(CTF ctf, float pixel_size_in_angstroms, float ssnr
 	const float hp_width = 1.0 * hp_radius;
 	const float hp_radius_start_squared = powf(hp_radius - 0.5*hp_width,2);
 	const float hp_radius_finish_squared = powf(hp_radius + 0.5*hp_width,2);
-	wxPrintf("hp rad = %f; width = %f; start = %f; finish = %f\n", hp_radius, hp_width, sqrtf(hp_radius_start_squared),sqrtf(hp_radius_finish_squared));
 
 	for (j = 0; j <= physical_upper_bound_complex_y; j++)
 	{

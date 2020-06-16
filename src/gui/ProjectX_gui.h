@@ -1154,6 +1154,10 @@ class ActionsPanel : public wxPanel
 	protected:
 		wxStaticLine* m_staticline3;
 
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnActionsBookPageChanged( wxListbookEvent& event ) { event.Skip(); }
+
+
 	public:
 		wxListbook* ActionsBook;
 
@@ -1171,6 +1175,10 @@ class SettingsPanel : public wxPanel
 
 	protected:
 		wxStaticLine* m_staticline3;
+
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnSettingsBookPageChanged( wxListbookEvent& event ) { event.Skip(); }
+
 
 	public:
 		wxListbook* SettingsBook;
@@ -1212,6 +1220,10 @@ class AssetsPanel : public wxPanel
 	protected:
 		wxStaticLine* m_staticline68;
 
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnAssetsBookPageChanged( wxListbookEvent& event ) { event.Skip(); }
+
+
 	public:
 		wxListbook* AssetsBook;
 
@@ -1229,6 +1241,10 @@ class ExperimentalPanel : public wxPanel
 
 	protected:
 		wxStaticLine* m_staticline68;
+
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnExperimentalBookPageChanged( wxListbookEvent& event ) { event.Skip(); }
+
 
 	public:
 		wxListbook* ExperimentalBook;

@@ -16,7 +16,7 @@ void MyAssetsPanel::OnAssetsBookPageChanged(wxBookCtrlEvent& event )
 	extern MyImageAssetPanel *image_asset_panel;
 	extern MyParticlePositionAssetPanel *particle_position_asset_panel;
 	extern MyVolumeAssetPanel *volume_asset_panel;
-	extern MyRefinementResultsPanel *refinement_package_asset_panel;
+	extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
 
 
 	// Necessary for MacOS to refresh the panels

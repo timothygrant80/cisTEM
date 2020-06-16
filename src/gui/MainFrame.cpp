@@ -208,6 +208,7 @@ void MyMainFrame::OnMenuBookChange( wxBookCtrlEvent& event )
 		picking_results_panel->UpdateResultsFromBitmapPanel();
 	}
 
+	#ifdef __WXOSX__
 	/*
 	   The below is necessary for the MacOS GUI to behave well.
 	   We need to make sure the list books (rows of icons) are drawn properly
@@ -239,13 +240,14 @@ void MyMainFrame::OnMenuBookChange( wxBookCtrlEvent& event )
 		run_profiles_panel->Layout();
 		run_profiles_panel->Refresh();
 	}
-#ifdef EXPERIMENTAL
+	#ifdef EXPERIMENTAL
 	else if (event.GetSelection() == 5) 
 	{
 		experimental_panel->ExperimentalBook->Refresh();
 		//TODO: Layout and Refresh the first Experimental panel
 	}
-#endif
+	#endif
+	#endif
 
 }
 

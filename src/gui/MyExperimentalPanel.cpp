@@ -16,13 +16,22 @@ void MyExperimentalPanel::OnExperimentalBookPageChanged(wxBookCtrlEvent& event )
 	extern MatchTemplateResultsPanel *match_template_results_panel;
 	extern RefineTemplatePanel *refine_template_panel;
 
+	#ifdef __WXOSX__
 	// Necessary for MacOS to refresh the panels
-	match_template_panel->Layout();
-	match_template_panel->Refresh();
-
-	match_template_results_panel->Layout();
-	match_template_results_panel->Refresh();
-
-	refine_template_panel->Layout();
-	refine_template_panel->Refresh();
+	if (event.GetSelection() == 0)
+	{
+		match_template_panel->Layout();
+		match_template_panel->Refresh();
+	}
+	else if (event.GetSelection() == 1)
+	{
+		match_template_results_panel->Layout();
+		match_template_results_panel->Refresh();
+	}
+	else if (event.GetSelection() ==2)
+	{
+		refine_template_panel->Layout();
+		refine_template_panel->Refresh();
+	}
+	#endif
 }

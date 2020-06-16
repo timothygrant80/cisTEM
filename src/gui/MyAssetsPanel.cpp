@@ -19,19 +19,32 @@ void MyAssetsPanel::OnAssetsBookPageChanged(wxBookCtrlEvent& event )
 	extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
 
 
+	#ifdef __WXOSX__
 	// Necessary for MacOS to refresh the panels
-	movie_asset_panel->Layout();
-	movie_asset_panel->Refresh();
-
-	image_asset_panel->Layout();
-	image_asset_panel->Refresh();
-
-	particle_position_asset_panel->Layout();
-	particle_position_asset_panel->Refresh();
-
-	volume_asset_panel->Layout();
-	volume_asset_panel->Refresh();
-
-	refinement_package_asset_panel->Layout();
-	refinement_package_asset_panel->Refresh();
+	if (event.GetSelection() == 0)
+	{
+		movie_asset_panel->Layout();
+		movie_asset_panel->Refresh();
+	}
+	else if (event.GetSelection() == 1)
+	{
+		image_asset_panel->Layout();
+		image_asset_panel->Refresh();
+	}
+	else if (event.GetSelection() == 2)
+	{
+		particle_position_asset_panel->Layout();
+		particle_position_asset_panel->Refresh();
+	}
+	else if (event.GetSelection() == 3)
+	{
+		volume_asset_panel->Layout();
+		volume_asset_panel->Refresh();
+	}
+	else if (event.GetSelection() == 4)
+	{
+		refinement_package_asset_panel->Layout();
+		refinement_package_asset_panel->Refresh();
+	}
+	#endif
 }

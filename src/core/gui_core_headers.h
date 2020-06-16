@@ -84,6 +84,9 @@
 #include "../gui/ExportRefinementPackageWizard.h"
 #include "../gui/MyNewRefinementPackageWizard.h"
 #include "../gui/MyResultsPanel.h"
+#include "../gui/MyActionsPanel.h"
+#include "../gui/MyAssetsPanel.h"
+#include "../gui/MySettingsPanel.h"
 #include "../gui/PickingResultsPanel.h"
 #include "../gui/MyParticlePositionExportDialog.h"
 #include "../gui/MyFrealignExportDialog.h"
@@ -117,6 +120,7 @@
 #include "../gui/RefineCTFPanel.h"
 
 #ifdef EXPERIMENTAL
+#include "../gui/MyExperimentalPanel.h"
 #include "../gui/MatchTemplatePanel.h"
 #include "../gui/MatchTemplateResultsPanel.h"
 #include "../gui/RefineTemplatePanel.h"

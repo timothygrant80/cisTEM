@@ -41,6 +41,9 @@ add_library(cisTEM_gui STATIC
 	FindParticlesPanel.cpp 
 	MyVolumeAssetPanel.cpp 
 	MyResultsPanel.cpp 
+	MyAssetsPanel.cpp 
+	MyActionsPanel.cpp 
+	MySettingsPanel.cpp
 	MyParticlePositionExportDialog.cpp 
 	MyFrealignExportDialog.cpp 
 	MyRelionExportDialog.cpp 

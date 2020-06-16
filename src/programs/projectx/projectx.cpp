@@ -125,13 +125,13 @@ bool MyGuiApp::OnInit()
 	// Left hand Panels
 
 	overview_panel = new MyOverviewPanel(main_frame->MenuBook, wxID_ANY);
-	actions_panel = new ActionsPanel(main_frame->MenuBook, wxID_ANY);
-	assets_panel = new AssetsPanel(main_frame->MenuBook, wxID_ANY);
+	actions_panel = new MyActionsPanel(main_frame->MenuBook, wxID_ANY);
+	assets_panel = new MyAssetsPanel(main_frame->MenuBook, wxID_ANY);
 	results_panel = new MyResultsPanel(main_frame->MenuBook, wxID_ANY);
-	settings_panel = new SettingsPanel(main_frame->MenuBook, wxID_ANY);
+	settings_panel = new MySettingsPanel(main_frame->MenuBook, wxID_ANY);
 
 #ifdef EXPERIMENTAL
-	experimental_panel = new ExperimentalPanel(main_frame->MenuBook, wxID_ANY);
+	experimental_panel = new MyExperimentalPanel(main_frame->MenuBook, wxID_ANY);
 #endif
 
 	// Individual Panels

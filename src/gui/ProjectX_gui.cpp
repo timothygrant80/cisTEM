@@ -4277,10 +4277,16 @@ ActionsPanel::ActionsPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos,
 
 	this->SetSizer( bSizer12 );
 	this->Layout();
+
+	// Connect Events
+	ActionsBook->Connect( wxEVT_COMMAND_LISTBOOK_PAGE_CHANGED, wxListbookEventHandler( ActionsPanel::OnActionsBookPageChanged ), NULL, this );
 }
 
 ActionsPanel::~ActionsPanel()
 {
+	// Disconnect Events
+	ActionsBook->Disconnect( wxEVT_COMMAND_LISTBOOK_PAGE_CHANGED, wxListbookEventHandler( ActionsPanel::OnActionsBookPageChanged ), NULL, this );
+
 }
 
 SettingsPanel::SettingsPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
@@ -4307,10 +4313,16 @@ SettingsPanel::SettingsPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 
 	this->SetSizer( bSizer12 );
 	this->Layout();
+
+	// Connect Events
+	SettingsBook->Connect( wxEVT_COMMAND_LISTBOOK_PAGE_CHANGED, wxListbookEventHandler( SettingsPanel::OnSettingsBookPageChanged ), NULL, this );
 }
 
 SettingsPanel::~SettingsPanel()
 {
+	// Disconnect Events
+	SettingsBook->Disconnect( wxEVT_COMMAND_LISTBOOK_PAGE_CHANGED, wxListbookEventHandler( SettingsPanel::OnSettingsBookPageChanged ), NULL, this );
+
 }
 
 ResultsPanel::ResultsPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
@@ -4373,10 +4385,16 @@ AssetsPanel::AssetsPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, c
 
 	this->SetSizer( bSizer76 );
 	this->Layout();
+
+	// Connect Events
+	AssetsBook->Connect( wxEVT_COMMAND_LISTBOOK_PAGE_CHANGED, wxListbookEventHandler( AssetsPanel::OnAssetsBookPageChanged ), NULL, this );
 }
 
 AssetsPanel::~AssetsPanel()
 {
+	// Disconnect Events
+	AssetsBook->Disconnect( wxEVT_COMMAND_LISTBOOK_PAGE_CHANGED, wxListbookEventHandler( AssetsPanel::OnAssetsBookPageChanged ), NULL, this );
+
 }
 
 ExperimentalPanel::ExperimentalPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
@@ -4403,10 +4421,16 @@ ExperimentalPanel::ExperimentalPanel( wxWindow* parent, wxWindowID id, const wxP
 
 	this->SetSizer( bSizer76 );
 	this->Layout();
+
+	// Connect Events
+	ExperimentalBook->Connect( wxEVT_COMMAND_LISTBOOK_PAGE_CHANGED, wxListbookEventHandler( ExperimentalPanel::OnExperimentalBookPageChanged ), NULL, this );
 }
 
 ExperimentalPanel::~ExperimentalPanel()
 {
+	// Disconnect Events
+	ExperimentalBook->Disconnect( wxEVT_COMMAND_LISTBOOK_PAGE_CHANGED, wxListbookEventHandler( ExperimentalPanel::OnExperimentalBookPageChanged ), NULL, this );
+
 }
 
 OverviewPanel::OverviewPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )

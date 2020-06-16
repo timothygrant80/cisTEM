@@ -1125,54 +1125,7 @@ void AutoRefinementManager::RunRefinementJob()
 
 	if (current_job_id != -1)
 	{
-		long number_of_refinement_processes;
-	    if (my_parent->current_job_package.number_of_jobs + 1 < my_parent->current_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = my_parent->current_job_package.number_of_jobs + 1;
-	    else number_of_refinement_processes =  my_parent->current_job_package.my_profile.ReturnTotalJobs();
-
-		if (number_of_refinement_processes >= 100000) my_parent->length_of_process_number = 6;
-		else
-		if (number_of_refinement_processes >= 10000) my_parent->length_of_process_number = 5;
-		else
-		if (number_of_refinement_processes >= 1000) my_parent->length_of_process_number = 4;
-		else
-		if (number_of_refinement_processes >= 100) my_parent->length_of_process_number = 3;
-		else
-		if (number_of_refinement_processes >= 10) my_parent->length_of_process_number = 2;
-		else
-		my_parent->length_of_process_number = 1;
-
-		if (my_parent->length_of_process_number == 6) my_parent->NumberConnectedText->SetLabel(wxString::Format("%6i / %6li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 5) my_parent->NumberConnectedText->SetLabel(wxString::Format("%5i / %5li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 4) my_parent->NumberConnectedText->SetLabel(wxString::Format("%4i / %4li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 3) my_parent->NumberConnectedText->SetLabel(wxString::Format("%3i / %3li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 2) my_parent->NumberConnectedText->SetLabel(wxString::Format("%2i / %2li processes connected.", 0, number_of_refinement_processes));
-		else
-		my_parent->NumberConnectedText->SetLabel(wxString::Format("%i / %li processes connected.", 0, number_of_refinement_processes));
-
-		my_parent->TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
-		my_parent->Layout();
-
-
-		/*
-		my_parent->StartPanel->Show(false);
-		my_parent->ProgressPanel->Show(true);
-
-		my_parent->ExpertPanel->Show(false);
-		my_parent->InfoPanel->Show(false);
-		my_parent->OutputTextPanel->Show(true);
- 		my_parent->ShowRefinementResultsPanel->Show(true);
-
-		my_parent->ExpertToggleButton->Enable(false);
-		my_parent->RefinementPackageSelectPanel->Enable(false);
-		*/
-
-		my_parent->running_job = true;
-		my_parent->my_job_tracker.StartTracking(my_parent->current_job_package.number_of_jobs);
-
+		my_parent->SetNumberConnectedTextToZeroAndStartTracking();
 	}
 
 
@@ -1244,57 +1197,10 @@ void AutoRefinementManager::RunMerge3dJob()
 
 	if (current_job_id != -1)
 	{
-		long number_of_refinement_processes;
-	    if (my_parent->current_job_package.number_of_jobs + 1 < my_parent->current_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = my_parent->current_job_package.number_of_jobs + 1;
-	    else number_of_refinement_processes =  my_parent->current_job_package.my_profile.ReturnTotalJobs();
+		my_parent->SetNumberConnectedTextToZeroAndStartTracking();
+	}
 
-		if (number_of_refinement_processes >= 100000) my_parent->length_of_process_number = 6;
-		else
-		if (number_of_refinement_processes >= 10000) my_parent->length_of_process_number = 5;
-		else
-		if (number_of_refinement_processes >= 1000) my_parent->length_of_process_number = 4;
-		else
-		if (number_of_refinement_processes >= 100) my_parent->length_of_process_number = 3;
-		else
-		if (number_of_refinement_processes >= 10) my_parent->length_of_process_number = 2;
-		else
-		my_parent->length_of_process_number = 1;
-
-		if (my_parent->length_of_process_number == 6) my_parent->NumberConnectedText->SetLabel(wxString::Format("%6i / %6li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 5) my_parent->NumberConnectedText->SetLabel(wxString::Format("%5i / %5li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 4) my_parent->NumberConnectedText->SetLabel(wxString::Format("%4i / %4li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 3) my_parent->NumberConnectedText->SetLabel(wxString::Format("%3i / %3li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 2) my_parent->NumberConnectedText->SetLabel(wxString::Format("%2i / %2li processes connected.", 0, number_of_refinement_processes));
-		else
-		my_parent->NumberConnectedText->SetLabel(wxString::Format("%i / %li processes connected.", 0, number_of_refinement_processes));
-
-
-	/*
-		my_parent->StartPanel->Show(false);
-		my_parent->ProgressPanel->Show(true);
-
-		my_parent->ExpertPanel->Show(false);
-		my_parent->InfoPanel->Show(false);
-		my_parent->OutputTextPanel->Show(true);
-			//	CTFResultsPanel->Show(true);
-
-		my_parent->ExpertToggleButton->Enable(false);
-		my_parent->RefinementPackageSelectPanel->Enable(false);
-		*/
-
-
-		my_parent->TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
-		my_parent->Layout();
-		my_parent->running_job = true;
-		my_parent->my_job_tracker.StartTracking(my_parent->current_job_package.number_of_jobs);
-
-		}
-
-		my_parent->ProgressBar->Pulse();
+	my_parent->ProgressBar->Pulse();
 }
 
 
@@ -1508,55 +1414,9 @@ void AutoRefinementManager::RunReconstructionJob()
 
 	if (current_job_id != -1)
 	{
-		long number_of_refinement_processes;
-	    if (my_parent->current_job_package.number_of_jobs + 1 < my_parent->current_job_package.my_profile.ReturnTotalJobs()) number_of_refinement_processes = my_parent->current_job_package.number_of_jobs + 1;
-	    else number_of_refinement_processes =  my_parent->current_job_package.my_profile.ReturnTotalJobs();
-
-		if (number_of_refinement_processes >= 100000) my_parent->length_of_process_number = 6;
-		else
-		if (number_of_refinement_processes >= 10000) my_parent->length_of_process_number = 5;
-		else
-		if (number_of_refinement_processes >= 1000) my_parent->length_of_process_number = 4;
-		else
-		if (number_of_refinement_processes >= 100) my_parent->length_of_process_number = 3;
-		else
-		if (number_of_refinement_processes >= 10) my_parent->length_of_process_number = 2;
-		else
-		my_parent->length_of_process_number = 1;
-
-		if (my_parent->length_of_process_number == 6) my_parent->NumberConnectedText->SetLabel(wxString::Format("%6i / %6li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 5) my_parent->NumberConnectedText->SetLabel(wxString::Format("%5i / %5li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 4) my_parent->NumberConnectedText->SetLabel(wxString::Format("%4i / %4li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 3) my_parent->NumberConnectedText->SetLabel(wxString::Format("%3i / %3li processes connected.", 0, number_of_refinement_processes));
-		else
-		if (my_parent->length_of_process_number == 2) my_parent->NumberConnectedText->SetLabel(wxString::Format("%2i / %2li processes connected.", 0, number_of_refinement_processes));
-
-
-
-/*
-		my_parent->StartPanel->Show(false);
-		my_parent->ProgressPanel->Show(true);
-
-		my_parent->ExpertPanel->Show(false);
-		my_parent->InfoPanel->Show(false);
-		my_parent->OutputTextPanel->Show(true);
-			//	CTFResultsPanel->Show(true);
-
-		my_parent->ExpertToggleButton->Enable(false);
-		my_parent->RefinementPackageSelectPanel->Enable(false);
-		*/
-
-		my_parent->NumberConnectedText->SetLabel(wxString::Format("%i / %li processes connected.", 0, number_of_refinement_processes));
-		my_parent->TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
-		my_parent->Layout();
-		my_parent->running_job = true;
-		my_parent->my_job_tracker.StartTracking(my_parent->current_job_package.number_of_jobs);
-
+		my_parent->SetNumberConnectedTextToZeroAndStartTracking();
 	}
-		my_parent->ProgressBar->Pulse();
+	my_parent->ProgressBar->Pulse();
 }
 
 void AutoRefinementManager::SetupRefinementJob()

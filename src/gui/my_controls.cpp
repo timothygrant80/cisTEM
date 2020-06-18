@@ -983,6 +983,8 @@ ProperOverwriteCheckSaveDialog::ProperOverwriteCheckSaveDialog(wxWindow *parent,
 :
 wxFileDialog(parent, message, wxEmptyString, wxEmptyString, wildcard, wxFD_SAVE, wxDefaultPosition, wxDefaultSize, wxFileDialogNameStr)
 {
+	wxString default_dir = main_frame->current_project.database.database_file.GetPath();
+	wxFileDialog::SetDirectory(default_dir);
 
 	extension_lowercase = wanted_extension.Lower();
 	extension_uppercase = wanted_extension.Upper();

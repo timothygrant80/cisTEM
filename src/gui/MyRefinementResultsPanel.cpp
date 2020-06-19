@@ -219,9 +219,7 @@ void MyRefinementResultsPanel::FillAngles(int wanted_class)
 
 void MyRefinementResultsPanel::DrawOrthViews()
 {
-
-	wxPrintf("Calling DrawOrthViews\n");
-
+	
 	if (RefinementPackageComboBox->GetSelection() >= 0 && currently_displayed_refinement != NULL)
 	{
 		OrthPanel->Freeze();

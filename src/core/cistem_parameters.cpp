@@ -1036,6 +1036,42 @@ float cisTEMParameters::ReturnAverageScore(bool exclude_negative_film_numbers)
 
 }
 
+bool  cisTEMParameters::ContainsMultipleParticleGroups()
+{
+	bool particle_group_different_from_first = false;
+	bool particle_group_to_compare_to_is_set = false; // use to record the first active particle group
+	int  particle_group_to_compare_to; // all other groups are compared to this
+
+	// First, check to see if the particle_group field is even set.
+	if ( parameters_that_were_read.particle_group)
+	{
+		// Scan the particle group if present. if any are different from the first, there are multiple particle groups.
+		for (int line = 0; line < all_parameters.GetCount(); line++)
+		{
+			if (ReturnImageIsActive(line) >= 0)
+			{
+				if (particle_group_to_compare_to_is_set)
+				{
+					if (ReturnParticleGroup(line) != particle_group_to_compare_to)
+					{
+						particle_group_different_from_first = true;
+						break;
+					}
+
+				}
+				else
+				{
+					particle_group_to_compare_to_is_set = true;
+					particle_group_to_compare_to = ReturnParticleGroup(line);
+				}
+			}
+		}
+	}
+
+
+	return particle_group_different_from_first;
+}
+
 void cisTEMParameters::RemoveSigmaOutliers(float wanted_standard_deviation, bool exclude_negative_film_numbers, bool reciprocal_square)
 {
 	MyDebugAssertTrue(wanted_standard_deviation > 0.0, "Invalid standard deviation");

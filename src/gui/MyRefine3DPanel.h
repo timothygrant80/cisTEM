@@ -159,6 +159,7 @@ class MyRefine3DPanel : public Refine3DPanel
 
 	public:
 
+		wxStopWatch stopwatch;
 
 		long time_of_last_result_update;
 

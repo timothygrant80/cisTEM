@@ -31,6 +31,8 @@ class Generate3DPanel : public Generate3DPanelParent
 
 	public:
 
+		wxStopWatch stopwatch;
+
 		long time_of_last_result_update;
 		long number_of_received_particle_results;
 		long number_of_expected_results;

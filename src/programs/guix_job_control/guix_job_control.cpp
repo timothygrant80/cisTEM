@@ -474,11 +474,15 @@ void JobControlApp::HandleNewSocketConnection(wxSocketBase *new_connection, unsi
 			 SendwxStringToSocket(&master_port, new_connection);
 
 			 // that should be the end of our interactions with the slave
-			 // it should disconnect itself, we won't even bother
-			 // setting up events for it..
+			 // it should disconnect itself. We have to monitor it however so that
+			 // we can destroy it once it disconnects..
+
+			 MonitorSocket(new_connection);
 
 			 number_of_slaves_already_connected++;
 			 SendNumberofConnections();
+
+
 
 		 }
 	 }
@@ -692,7 +696,7 @@ void JobControlApp::HandleSocketDisconnect(wxSocketBase *connected_socket)
 
 		// otherwise we don't care.. still wait for gui to kill us..
 	}
-	else // who knows what this is!
+	else // Must be a slave dropping us to connect to the master
 	{
 		 StopMonitoringAndDestroySocket(connected_socket);
 	}

@@ -3032,9 +3032,9 @@ void Image::AddByLinearInterpolationReal(float &wanted_physical_x_coordinate, fl
 	float weight_z;
 
 	MyDebugAssertTrue(is_in_real_space == true, "Error: attempting REAL insertion into COMPLEX image");
-	MyDebugAssertTrue(wanted_physical_x_coordinate >= 0 && wanted_physical_x_coordinate < logical_x_dimension, "Error: attempting insertion outside image X boundaries");
-	MyDebugAssertTrue(wanted_physical_y_coordinate >= 0 && wanted_physical_y_coordinate < logical_y_dimension, "Error: attempting insertion outside image Y boundaries");
-	MyDebugAssertTrue(wanted_physical_z_coordinate >= 0 && wanted_physical_z_coordinate < logical_z_dimension, "Error: attempting insertion outside image Z boundaries");
+	MyDebugAssertTrue(wanted_physical_x_coordinate >= 0 && wanted_physical_x_coordinate < logical_x_dimension, "Error: attempting insertion outside image X boundaries (%.2f)", wanted_physical_x_coordinate);
+	MyDebugAssertTrue(wanted_physical_y_coordinate >= 0 && wanted_physical_y_coordinate < logical_y_dimension, "Error: attempting insertion outside image Y boundaries (%.2f)", wanted_physical_y_coordinate);
+	MyDebugAssertTrue(wanted_physical_z_coordinate >= 0 && wanted_physical_z_coordinate < logical_z_dimension, "Error: attempting insertion outside image Z boundaries (%.2f)", wanted_physical_z_coordinate);
 
 	int_x_coordinate = int(wanted_physical_x_coordinate);
 	int_y_coordinate = int(wanted_physical_y_coordinate);
@@ -5521,6 +5521,11 @@ void Image::QuickAndDirtyReadSlice(std::string filename, long slice_to_read)
 	ReadSlice(&image_file,slice_to_read);
 }
 
+void Image::QuickAndDirtyReadSlices(std::string filename, int first_slice_to_read, int last_slice_to_read)
+{
+	ImageFile image_file(filename);
+	ReadSlices(&image_file, first_slice_to_read, last_slice_to_read);
+}
 //!> \brief Take a contiguous set of values, and add the FFTW padding.
 
 void Image::AddFFTWPadding()

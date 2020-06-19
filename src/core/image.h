@@ -360,6 +360,7 @@ public:
 	void QuickAndDirtyWriteSlices(std::string filename, long first_slice_to_write, long last_slice_to_write, bool overwrite = false, float pixel_size = 0.0f);
 	void QuickAndDirtyWriteSlice(std::string filename, long slice_to_write, bool overwrite = false, float pixel_size = 0.0f);
 	void QuickAndDirtyReadSlice(std::string filename, long slice_to_read);
+	void QuickAndDirtyReadSlices(std::string filename, int first_slice_to_read, int last_slice_to_read);
 
 	bool IsConstant(bool compare_to_constant = false, float constant_to_compare = 0.0f);
 	bool HasNan();

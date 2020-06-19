@@ -124,6 +124,7 @@ protected:
 #include "tiff/tiffio.h"
 #include "tiff_file.h"
 #include "image_file.h"
+#include "eer_file.h"
 #include "matrix.h"
 #include "angles_and_shifts.h"
 #include "empirical_distribution.h"

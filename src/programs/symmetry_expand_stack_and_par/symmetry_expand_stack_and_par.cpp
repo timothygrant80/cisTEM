@@ -972,9 +972,14 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 				//temp_float[4] = old_x_shift;
 				//temp_float[5] = old_y_shift;
 			}
+			else
+			{
+				temp_float[4] = old_x_shift;
+				temp_float[5] = old_y_shift;
+			}
 
-			my_output_par_file.WriteLine(temp_float);
-
+			my_output_par_file.WriteLine(temp_float);		
+			
 			if (do_centring_and_cropping)
 			{
 				temp_float[4] = old_x_shift;

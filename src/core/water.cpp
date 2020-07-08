@@ -79,14 +79,30 @@ void Water::Init(const PDB *current_specimen, int wanted_size_neighborhood, floa
 
 		wxPrintf("size post rot 1 padding %d %d %f rot\n", current_specimen->vol_nX, current_specimen->vol_nY, in_plane_rotation);
 
-		if (check_min_paddingX > 0 || check_min_paddingY > 0)
+		if (check_min_paddingX > 0)
 		{
-			vol_nX = std::max(check_min_paddingX,vol_nX);
-			vol_nY = std::max(check_min_paddingY,vol_nY);
+			int x_diff = vol_nX - check_min_paddingX;
+			wxPrintf("Xdiff is %d\n",x_diff);
+			if (x_diff < 0)
+			{
+				vol_nX = check_min_paddingX;
+				*padX = -x_diff;
+			}
+
+		}
+		if  (check_min_paddingY > 0)
+		{
+			int y_diff = vol_nY - check_min_paddingY;
+			wxPrintf("yiff is %d\n",y_diff);
+
+			if (y_diff < 0)
+			{
+				vol_nY = check_min_paddingY;
+				*padY = -y_diff;
+			}
 		}
 
 		wxPrintf("size post rot 2 padding %d %d padX %d padY %d padZ %d rot\n",vol_nX, vol_nY, *padX, *padY, padZ);
-
 
 		MyAssertTrue(current_specimen->pixel_size > 0.0f, "The pixel size for your PDB object is not yet set.");
 		// Copy over some values from the current specimen - Do these need to be updated for tilts and rotations?

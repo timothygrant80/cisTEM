@@ -8,7 +8,6 @@ WX_DEFINE_OBJARRAY(ArrayOfParticleTrajectories);
 
 const double MIN_PADDING_Z    = 4;
 const int MAX_XY_DIMENSION = 4096*2;
-#define MAX_NUMBER_OF_NOISE_PARTICLES 6 // FIXME duplicate from header?
 
 
 // Define fixed width limits for PDB reading
@@ -58,7 +57,11 @@ PDB::PDB()
 }
 
 
-PDB::PDB(long number_of_non_water_atoms, float cubic_size, float wanted_pixel_size, int minimum_paddeding_x_and_y, double minimum_thickness_z)
+PDB::PDB(long number_of_non_water_atoms, float cubic_size, float wanted_pixel_size, int minimum_paddeding_x_and_y, double minimum_thickness_z,
+		int max_number_of_noise_particles,
+		float wanted_noise_particle_radius_as_mutliple_of_particle_radius,
+		float wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
+		float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius)
 {
 
 	input_file_stream = NULL;
@@ -81,9 +84,25 @@ PDB::PDB(long number_of_non_water_atoms, float cubic_size, float wanted_pixel_si
     SetEmpty();
 	this->pixel_size = wanted_pixel_size;
 
+	// The default is to not generate neighboring noise particles. This should probably be switched.
+	if ( max_number_of_noise_particles > 0 )
+	{
+		this->generate_noise_atoms = true;
+	}
+
+
+
+	this->max_number_of_noise_particles = max_number_of_noise_particles;
+	this->noise_particle_radius_as_mutliple_of_particle_radius = wanted_noise_particle_radius_as_mutliple_of_particle_radius;
+	this->noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius = wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius;
+	this->noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius = wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius;
 }
 
-PDB::PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, long wanted_records_per_line, int minimum_paddeding_x_and_y, double minimum_thickness_z, bool generate_noise_particles)
+PDB::PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, long wanted_records_per_line, int minimum_paddeding_x_and_y, double minimum_thickness_z,
+		int max_number_of_noise_particles,
+		float wanted_noise_particle_radius_as_mutliple_of_particle_radius,
+		float wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
+		float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius)
 {
 	input_file_stream = NULL;
 	input_text_stream = NULL;
@@ -95,11 +114,22 @@ PDB::PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, lo
 	this->MIN_PADDING_XY = minimum_paddeding_x_and_y;
 	this->MIN_THICKNESS  = minimum_thickness_z;
 
-	this->generate_noise_atoms = generate_noise_particles;
-
 
     SetEmpty();
 	this->pixel_size = wanted_pixel_size;
+	// The default is to not generate neighboring noise particles. This should probably be switched.
+	if ( max_number_of_noise_particles > 0 )
+	{
+		this->generate_noise_atoms = true;
+	}
+
+
+
+	this->max_number_of_noise_particles = max_number_of_noise_particles;
+	this->noise_particle_radius_as_mutliple_of_particle_radius = wanted_noise_particle_radius_as_mutliple_of_particle_radius;
+	this->noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius = wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius;
+	this->noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius = wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius;
+
 	Open(Filename, wanted_access_type, wanted_records_per_line);
 }
 
@@ -300,15 +330,16 @@ void PDB::Init()
 		// Copy every real atom into a noise atom
 		if (generate_noise_atoms)
 		{
-			number_of_atoms += number_of_atoms * MAX_NUMBER_OF_NOISE_PARTICLES;
+			number_of_atoms += number_of_atoms * this->max_number_of_noise_particles;
 		}
 
+		wxPrintf("Max particles is %d here\n",max_number_of_noise_particles);
 		// If noie noise atoms, this will always equal number of atoms. Otherwise, number of atoms is at most this, and changes from particle to particle in the stack
 		number_of_real_and_noise_atoms = number_of_atoms;
 
 		wxPrintf("\nIn constructor real total current %ld %ld %ld\n", number_of_real_atoms,number_of_real_and_noise_atoms, number_of_atoms);
 
-		records_per_line = current_records_per_line;
+		// records_per_line = current_records_per_line;
 
 		// rewind the file..
 
@@ -435,6 +466,8 @@ void PDB::Init()
 						my_atoms.Item(current_atom_number).atom_type = iron;
 					} else if (temp_name.StartsWith("Zn")  ) {
 						my_atoms.Item(current_atom_number).atom_type = zinc;
+					} else if (temp_name.StartsWith("AU")  ) {
+						my_atoms.Item(current_atom_number).atom_type = gold;
 					} else {
 						MyPrintWithDetails("Failed to match the element name %s\n",my_atoms.Item(current_atom_number).name);
 						DEBUG_ABORT;
@@ -572,9 +605,10 @@ void PDB::Init()
 				if (fabsf(my_atoms.Item(current_atom_number ).z_coordinate) > max_radius) max_radius = fabsf(my_atoms.Item(current_atom_number).z_coordinate);
 
 			}
+			wxPrintf("Max particles is %d in spot 2\n",max_number_of_noise_particles);
 
 
-			for (int iPart = 0; iPart < MAX_NUMBER_OF_NOISE_PARTICLES; iPart++)
+			for (int iPart = 0; iPart < this->max_number_of_noise_particles; iPart++)
 			{
 
 				for (current_atom_number = 0; current_atom_number < number_of_real_atoms; current_atom_number++)
@@ -869,14 +903,15 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int fr
 
 				RandomNumberGenerator my_rand(PIf);
 				// Set the number of noise particles for this given particle in the stack
-				pdb_ensemble[current_pdb].number_of_noise_particles = myroundint(my_rand.GetUniformRandomSTD(0.0,MAX_NUMBER_OF_NOISE_PARTICLES));
+				pdb_ensemble[current_pdb].number_of_noise_particles = myroundint(my_rand.GetUniformRandomSTD(0.0,this->max_number_of_noise_particles));
+				wxPrintf("\n\n\tSetting pdb %d to %d noise particles of max %d\n\n", current_pdb, pdb_ensemble[current_pdb].number_of_noise_particles,max_number_of_noise_particles);
 
 				// Angular sector size such that noise particles do not overlap. This could be a method.
 				float sector_size = 1.0f; //2.0*PIf / pdb_ensemble[current_pdb].number_of_noise_particles;
-				float occupied_sectors[MAX_NUMBER_OF_NOISE_PARTICLES];
+				float occupied_sectors[this->max_number_of_noise_particles];
 				int current_sector = 0;
 
-				for (int iPart = 0; iPart < MAX_NUMBER_OF_NOISE_PARTICLES; iPart++)
+				for (int iPart = 0; iPart < this->max_number_of_noise_particles; iPart++)
 				{
 
 					float offset_radius;
@@ -889,8 +924,10 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int fr
 					{
 //						offset_radius = my_rand.GetNormalRandomSTD(0.0f, 0.1*pdb_ensemble[current_pdb].max_radius);
 						// These numbers (-0.5, 1.8, 0.1 are not at all thought out - please FIXME)
-						offset_radius = my_rand.GetUniformRandomSTD(-0.05*pdb_ensemble[current_pdb].max_radius,0.1*pdb_ensemble[current_pdb].max_radius);
-						offset_radius += 1.8*pdb_ensemble[current_pdb].max_radius;
+						offset_radius = my_rand.GetUniformRandomSTD(this->noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius*pdb_ensemble[current_pdb].max_radius,
+																	this->noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius*pdb_ensemble[current_pdb].max_radius);
+						offset_radius += this->noise_particle_radius_as_mutliple_of_particle_radius*pdb_ensemble[current_pdb].max_radius;
+
 					}
 
 
@@ -986,7 +1023,7 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int fr
 
 			else if (pdb_ensemble[current_pdb].generate_noise_atoms)
 			{
-				for (int iPart = 0; iPart < MAX_NUMBER_OF_NOISE_PARTICLES; iPart++)
+				for (int iPart = 0; iPart < this->max_number_of_noise_particles; iPart++)
 				{
 //					wxPrintf("\n\t\tFor pdb %d particle %d np %d, eulers are %3.3e %3.3e %3.3e, %3.3e %3.3e\n", current_pdb, current_particle, iPart,
 //							pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnPhiAngle(),

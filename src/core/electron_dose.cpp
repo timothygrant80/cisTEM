@@ -131,7 +131,7 @@ void ElectronDose::CalculateCummulativeDoseFilterAs1DArray(Image *ref_image, flo
 
 			for (i = 0; i <= ref_image->physical_upper_bound_complex_x; i++)
 			{
-				if (i == 0 && j == 0) filter_array[array_counter] = 1;
+				if (i == 0 && j == 0 && k == 0) filter_array[array_counter] = 1;
 				else
 				{
 					x = i * ref_image->fourier_voxel_size_x;

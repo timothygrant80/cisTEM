@@ -30,7 +30,11 @@ public:
 	__inline__ float ReturnScatteringParamtersB( AtomType id, int term_number) { return SCATTERING_PARAMETERS_B[id][term_number]; }
 	__inline__ float ReturnAtomicNumber( AtomType id) { return ATOMIC_NUMBER[id]; }
 
-	void InitPdbEnsemble( float wanted_pixel_size, float do3d, int minimum_padding_x_and_y, int minimum_thickness_z, bool generate_noise_particles);
+	void InitPdbEnsemble(	float wanted_pixel_size, float do3d, int minimum_padding_x_and_y, int minimum_thickness_z,
+							int max_number_of_noise_particles,
+							float wanted_noise_particle_radius_as_mutliple_of_particle_radius,
+							float wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
+							float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius);
 	long ReturnTotalNumberOfNonWaterAtoms();
 
 

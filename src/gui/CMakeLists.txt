@@ -74,8 +74,22 @@ add_library(cisTEM_gui STATIC
 	ShowTemplateMatchResultsPanel.cpp
 )
 
+if (BUILD_EXPERIMENTAL_FEATURES)
+	add_library(cisTEM_gui_experimental STATIC
+		MatchTemplatePanel.cpp 
+		MatchTemplateResultsPanel.cpp 
+		RefineTemplatePanel.cpp 
+		MyExperimentalPanel.cpp
+	)
+endif(BUILD_EXPERIMENTAL_FEATURES)
+
 add_dependencies(cisTEM_gui cisTEM_gui_core)
 add_dependencies(cisTEM_gui cisTEM_core)
 target_link_libraries(cisTEM_gui cisTEM_core)
 target_link_libraries(cisTEM_gui cisTEM_gui_core)
 target_link_libraries(cisTEM_gui ${wxWidgets_LIBRARIES})
+
+if (BUILD_EXPERIMENTAL_FEATURES) 
+	add_dependencies(cisTEM_gui cisTEM_gui_experimental)
+	target_link_libraries(cisTEM_gui cisTEM_gui_experimental)
+endif(BUILD_EXPERIMENTAL_FEATURES)

@@ -5,4 +5,7 @@
     "cmake.sourceDirectory": "${workspaceFolder}",
     "cmake.buildDirectory": "${workspaceFolder}/build/${buildKit}/${buildType}",
     "cmake.skipConfigureIfCachePresent": false,
+    "cmake.configureSettings": {
+        "BUILD_EXPERIMENTAL_FEATURES":false,
+    },
 }

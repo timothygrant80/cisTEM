@@ -58,8 +58,15 @@ add_library(cisTEM_core STATIC
 	json/jsonwriter.cpp
 	stopwatch.cpp
 	ccl3d.cpp
-	template_matching.cpp)
+	template_matching.cpp
+)
 
+if (BUILD_EXPERIMENTAL_FEATURES)
+	add_library(cisTEM_core_experimental STATIC
+		water.cpp 
+		pdb.cpp 
+	)
+endif(BUILD_EXPERIMENTAL_FEATURES)
 
 target_link_libraries(cisTEM_core ${CMAKE_DL_LIBS})
 target_link_libraries(cisTEM_core fftw3f)
@@ -68,3 +75,7 @@ target_link_libraries(cisTEM_core ${TIFF_LIBRARIES})
 
 target_link_libraries(cisTEM_gui_core ${wxWidgets_LIBRARIES})
 
+if (BUILD_EXPERIMENTAL_FEATURES) 
+	add_dependencies(cisTEM_core cisTEM_core_experimental)
+	target_link_libraries(cisTEM_core cisTEM_core_experimental)
+endif(BUILD_EXPERIMENTAL_FEATURES)

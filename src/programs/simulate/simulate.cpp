@@ -15,8 +15,8 @@ const float DISTANCE_INIT = 100000.0f; // Set the distance slab to a large value
 
 const int N_WATER_TERMS = 40;
 
-const float MIN_BFACTOR = 10.0f;
-const float inelastic_scalar = 0.1f ; // this value is for 1 Apix. When not taking the sqrt (original but I think wrong approach) the value 0.75 worked
+const float MIN_BFACTOR = 30.0f;
+const float inelastic_scalar = 0.0725f ; // this value is for 1 Apix. When not taking the sqrt (original but I think wrong approach) the value 0.75 worked
 
 // Parameters for calculating water. Because all waters are the same, except a sub-pixel origin offset. A SUB_PIXEL_NeL stack of projected potentials is pre-calculated with given offsets.
 const AtomType SOLVENT_TYPE = oxygen; // 2 N, 3 O 15, fit water
@@ -87,6 +87,25 @@ const float DQE_PARAMETERS_C[1][5] = {
 };
 
 
+//// Rough fit for ultrascan4000
+//const float DQE_PARAMETERS_A[1][5] = {
+//
+//		{-1.356, 59.87, -0.2552, -0.00679, -0.02245 }
+//
+//
+//};
+//
+//const float DQE_PARAMETERS_B[1][5] = {
+//
+//		{-0.1878, -3.064, 0.0995, 0.2449, 0.4422}
+//
+//};
+//
+//const float DQE_PARAMETERS_C[1][5] = {
+//
+//		{0.1207,1.457,0.264,0.006423,0.06323}
+//
+//};
 
 struct corners {
 
@@ -386,6 +405,8 @@ class SimulateApp : public MyApp
 	ScatteringPotential sp;
 
 	Image *projected_water; // waters calculated over the specified subpixel shifts and projected.
+	Image *projected_cation; //
+	Image *projected_anion;
 
 
 	bool DoCalculation();
@@ -500,7 +521,7 @@ class SimulateApp : public MyApp
 	void  calc_scattering_potential(const PDB * current_specimen, Image *scattering_slab, Image *inelastic_slab, Image *distance_slab, RotationMatrix rotate_waters,
 			                        float rotated_oZ, int *slabIDX_start, int *slabIDX_end, int iSlab);
 
-	void  calc_water_potential(Image *projected_water);
+	void  calc_water_potential(Image *projected_water, AtomType atom_id);
 	void  fill_water_potential(const PDB * current_specimen,Image *scattering_slab, Image *scattering_potential,
 							   Image *inelastic_potential, Image *distance_slab, Water *water_box,RotationMatrix rotate_waters,
 														   float rotated_oZ, int *slabIDX_start, int *slabIDX_end, int iSlab);
@@ -545,6 +566,7 @@ class SimulateApp : public MyApp
 	};
 
 
+
 	// Shift the curves to the right as the values from Shang/Sigworth are distance to VDW radius (avg C/O/N/H = 1.48 A)
 	// FIXME now that you are saving distances, you can also consider polar/non-polar residues separately for an "effective" distance since the curves have the same shape with a linear offset.
 	const float PUSH_BACK_BY = -1.48;
@@ -553,6 +575,15 @@ class SimulateApp : public MyApp
 		 return  0.5f + 0.5f *  std::erff( (radius + PUSH_BACK_BY)-(HYDRATION_VALS[2]+xtra_shift*this->wanted_pixel_size) / (sqrtf(2)*HYDRATION_VALS[5])) +
 									   HYDRATION_VALS[0] * expf(-powf((radius + PUSH_BACK_BY)-(HYDRATION_VALS[3]+xtra_shift*this->wanted_pixel_size),2)/(2*powf(HYDRATION_VALS[6],2))) +
 									   HYDRATION_VALS[1] * expf(-powf((radius + PUSH_BACK_BY)-(HYDRATION_VALS[4]+xtra_shift*this->wanted_pixel_size),2)/(2*powf(HYDRATION_VALS[7],2)));
+	}
+	// Same as above but taper to zero from 3 - 7 Ang
+	inline float return_hydration_weight_tapered(float taper_from, float &radius)
+	{
+
+		 return  (0.5f + 0.5f *  std::erff( (radius + PUSH_BACK_BY)-(HYDRATION_VALS[2]+xtra_shift*this->wanted_pixel_size) / (sqrtf(2)*HYDRATION_VALS[5])) +
+									   HYDRATION_VALS[0] * expf(-powf((radius + PUSH_BACK_BY)-(HYDRATION_VALS[3]+xtra_shift*this->wanted_pixel_size),2)/(2*powf(HYDRATION_VALS[6],2))) +
+									   HYDRATION_VALS[1] * expf(-powf((radius + PUSH_BACK_BY)-(HYDRATION_VALS[4]+xtra_shift*this->wanted_pixel_size),2)/(2*powf(HYDRATION_VALS[7],2))) ) *
+				 (0.5f + 0.5f * cosf(radius - taper_from));
 	}
 
 
@@ -601,6 +632,9 @@ class SimulateApp : public MyApp
 	int 	CAMERA_MODEL=0;
 
 	int wanted_output_size = -1;
+
+	float wgt = 0.0f;
+	float bf = 0.0f;
 	///////////
 	/////////////////////////////////////////
 
@@ -672,6 +706,10 @@ void SimulateApp::AddCommandLineOptions()
 	command_line_parser.AddLongSwitch("skip-dqe","Do NOT apply the DQE? depends on camera model default is no and applies K2 fixme");
 	command_line_parser.AddLongSwitch("skip-tilted-propagation","Apply the phase shift due to beam tilt, but don't actually do the inclined wave propagation. default no");
 	command_line_parser.AddLongSwitch("save-frames","The default is to save the integrated frames. This option overrides this behavior.");
+
+
+	command_line_parser.AddOption("","wgt","Maximum number of neighboring noise particles when simulating an image stack. Default is 0",wxCMD_LINE_VAL_DOUBLE);
+	command_line_parser.AddOption("","bf","Maximum number of neighboring noise particles when simulating an image stack. Default is 0",wxCMD_LINE_VAL_DOUBLE);
 
 //	command_line_parser.AddOption("j","","Desired number of threads. Overrides interactive user input. Is overriden by env var OMP_NUM_THREADS",wxCMD_LINE_VAL_NUMBER);
 }
@@ -745,6 +783,8 @@ void SimulateApp::DoInteractiveUserInput()
 	if (command_line_parser.Found("noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius", &temp_double)) { noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius = (float)temp_double;}
 
 
+	if (command_line_parser.Found("wgt", &temp_double)) { wgt = (float)temp_double;}
+	if (command_line_parser.Found("bf", &temp_double)) { bf = (float)temp_double;}
 
 
 
@@ -1504,6 +1544,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		timer.lap("Xform Local");
 
 		// FIXME method for defining the size (in pixels) needed for incorporating the atoms density. The formulat used below is based on including the strongest likely scatterer (Phosphorous) given the bfactor.
+		// FIXME
 		float BF;
 		if (DO_PHASE_PLATE) { BF = MIN_BFACTOR ;} else { BF = return_bfactor(current_specimen.average_bFactor);}
 
@@ -1533,15 +1574,25 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 	    {
 
 	    	projected_water= new Image[SUB_PIXEL_NeL];
+	    	projected_cation= new Image[SUB_PIXEL_NeL];
+	    	projected_anion= new Image[SUB_PIXEL_NeL];
+
 
 	        for (int iWater = 0 ; iWater < SUB_PIXEL_NeL; iWater++)
 	        {
 	            projected_water[iWater].Allocate(this->size_neighborhood_water*2+1,this->size_neighborhood_water*2+1,true);
 	            projected_water[iWater].SetToConstant(0.0f);
+
+	            projected_cation[iWater].Allocate(this->size_neighborhood_water*2+1,this->size_neighborhood_water*2+1,true);
+	            projected_cation[iWater].SetToConstant(0.0f);
+
+	            projected_anion[iWater].Allocate(this->size_neighborhood_water*2+1,this->size_neighborhood_water*2+1,true);
+	            projected_anion[iWater].SetToConstant(0.0f);
 	        }
 
 			wxPrintf("Starting projected water calc with sizeN %d, %d\n",this->size_neighborhood_water*2+1,this->size_neighborhood_water*2+1);
-			this->calc_water_potential(projected_water);
+			this->calc_water_potential(projected_water, water);
+
 			wxPrintf("Finishing projected water calc\n");
 
 
@@ -1863,26 +1914,66 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 					Potential_3d.SetToConstant(0.0);
 				}
 
-
 				if (add_mean_water_potential)
 				{
-					for (long current_pixel = 0; current_pixel < scattering_slab.real_memory_allocated; current_pixel++)
-					{
-						for (iPot = N_WATER_TERMS - 1; iPot >=0; iPot--)
-						{
-							// FIXME change this to use the new distance_slab
-							if (scattering_slab.real_values[current_pixel] < this->average_at_cutoff[iPot])
-							{
 
-								scattering_slab.real_values[current_pixel] += this->water_weight[iPot];
-								if (testHoles) {buffer.real_values[current_pixel] += this->water_weight[iPot];}
-								break;
+
+					float scattering_per_water = 0.0f;
+					float avg_scattering_per_voxel;
+					float current_weight = 1.0f;
+					for (int iWater=0; iWater < projected_water[0].real_memory_allocated; iWater++)
+					{
+						scattering_per_water += projected_water[0].real_values[iWater];
+					}
+					float waters_per_ang_cubed = 0.94 * 0.6022140857 / 18.01528; // from water.cpp where 0.94 is a define for water density and 18 is mw
+
+					avg_scattering_per_voxel = scattering_per_water * waters_per_ang_cubed * (this->wanted_pixel_size * this->wanted_pixel_size_sq);
+
+					bool only_use_water_shell = true;
+					float taper_from = 4.0; // distance form which to taper off the constant water shell
+					for (long current_pixel = 0; current_pixel < distance_slab.real_memory_allocated; current_pixel++)
+					{
+						if (distance_slab.real_values[current_pixel] < DISTANCE_INIT)
+						{
+							current_weight = sqrtf(distance_slab.real_values[current_pixel]);
+							if (only_use_water_shell && current_weight > taper_from)
+							{
+								distance_slab.real_values[current_pixel]  = return_hydration_weight_tapered(taper_from, current_weight) * avg_scattering_per_voxel;
+							}
+							else
+							{
+								distance_slab.real_values[current_pixel]  = return_hydration_weight(current_weight) * avg_scattering_per_voxel;
 							}
 
+						}
+						else
+						{
+							if (only_use_water_shell)
+							{
+								distance_slab.real_values[current_pixel]  = 0.0f;
+							}
+							else
+							{
+								distance_slab.real_values[current_pixel]  = avg_scattering_per_voxel;
+							}
 
 						}
+
+//						scattering_slab.real_values[current_pixel] += current_weight;
+//						if (testHoles) {buffer.real_values[current_pixel] += current_weight;}
+
 					}
+
+//					distance_slab.QuickAndDirtyWriteSlices("distance_slab.mrc",1,distance_slab.logical_z_dimension,false,1.5);
+					distance_slab.ForwardFFT(true);
+					distance_slab.ApplyBFactor(this->bf / wanted_pixel_size_sq);
+					distance_slab.BackwardFFT();
+					distance_slab.MultiplyByConstant(this->wgt);
+					scattering_slab.AddImage(&distance_slab);
+
 				}
+
+
 
 				if (testHoles) {scattering_slab = buffer;}
 
@@ -1938,6 +2029,11 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 								Potential_3d.complex_values[pixel_counter] *= 	dose_filter[pixel_counter];
 
 						}
+					}
+
+					if (DO_APPLY_DQE )
+					{
+						apply_sqrt_DQE_or_NTF(&Potential_3d,0,true);
 					}
 
 
@@ -2394,6 +2490,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 				}
 
 				timer.start("DQE");
+				// FIXME am I only applying the DQE to the sum and not the frames? What if I'm only saving the frames?
 				this->apply_sqrt_DQE_or_NTF(img_frame_stack,  0, true);
 				timer.lap("DQE");
 				if (SAVE_WITH_DQE)
@@ -3044,7 +3141,7 @@ void SimulateApp::calc_scattering_potential(const PDB * current_specimen,
 
 }
 
-void SimulateApp::calc_water_potential(Image *projected_water)
+void SimulateApp::calc_water_potential(Image *projected_water, AtomType wanted_atom_id)
 
 // The if conditions needed to have water and protein in the same function
 // make it too complicated and about 10x less parallel friendly.
@@ -3054,6 +3151,8 @@ void SimulateApp::calc_water_potential(Image *projected_water)
 	float bFactor;
 	float radius;
 	float water_lead_term;
+
+
 
 	// Private variables:
 	AtomType atom_id;
@@ -3065,9 +3164,11 @@ void SimulateApp::calc_water_potential(Image *projected_water)
 	}
 	else
 	{
-		atom_id = SOLVENT_TYPE;
 		bFactor = 0.25f * MIN_BFACTOR;
 		water_lead_term = this->lead_term;
+
+		atom_id = SOLVENT_TYPE;
+
 		if (atom_id == oxygen)
 		{
 			water_lead_term *= water_oxygen_ratio;
@@ -3091,7 +3192,7 @@ void SimulateApp::calc_water_potential(Image *projected_water)
 	float  pixel_offset = 0.5f;
 
 
-
+	 // for ions this should be a bigger window but that complicaes things for now FIXME
 	for (iGaussian = 0; iGaussian < 5; iGaussian++)
 	{
 		bPlusB[iGaussian] = 2*PIf/sqrtf(bFactor+sp.ReturnScatteringParamtersB(atom_id,iGaussian));
@@ -3454,7 +3555,7 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 			if (SOLVENT_TYPE == oxygen)
 			{
 				// The total elastic cross section of water is nearly equal to water but the inelastic is higher than expected (via 22.2/Z Reimer) using values from Wanner et al. 2006
-				oxygen_inelastic_to_elastic_ratio = sqrtf(( inelastic_scalar / sp.ReturnAtomicNumber(nitrogen)));
+				oxygen_inelastic_to_elastic_ratio = sqrtf(( inelastic_scalar / sp.ReturnAtomicNumber(plasmon)));
 			}
 			else
 			{
@@ -3557,55 +3658,72 @@ void SimulateApp::apply_sqrt_DQE_or_NTF(Image *image_in, int iTilt_IDX, bool do_
 {
 
 
-	image_in[iTilt_IDX].ForwardFFT(true);
-	float x_coord_sq, y_coord_sq, spatial_frequency;
+	bool do_backward_fft = false;
+
+	if (image_in[iTilt_IDX].is_in_real_space)
+	{
+		image_in[iTilt_IDX].ForwardFFT(true);
+		do_backward_fft = true;
+	}
+
+	float x_coord_sq, y_coord_sq, z_coord_sq, spatial_frequency;
 	float weight;
 	long pixel_counter = 0;
 
-	for (int j = 0; j <= image_in[iTilt_IDX].physical_upper_bound_complex_y; j++)
+	for (int k = 0; k <= image_in[iTilt_IDX].physical_upper_bound_complex_z; k++)
 	{
-		//
-		y_coord_sq = powf( image_in[iTilt_IDX].ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * image_in[iTilt_IDX].fourier_voxel_size_y , 2);
+		z_coord_sq = powf(image_in[iTilt_IDX].ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * image_in[iTilt_IDX].fourier_voxel_size_z, 2);
 
-		for (int i = 0; i <= image_in[iTilt_IDX].physical_upper_bound_complex_x; i++)
+
+		for (int j = 0; j <= image_in[iTilt_IDX].physical_upper_bound_complex_y; j++)
 		{
-			weight = 0.0f;
-
 			//
-			x_coord_sq = powf(  i * image_in[iTilt_IDX].fourier_voxel_size_x , 2);
+			y_coord_sq = powf( image_in[iTilt_IDX].ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * image_in[iTilt_IDX].fourier_voxel_size_y , 2);
 
-			// compute squared radius, in units of reciprocal pixels
-
-			spatial_frequency = sqrtf(x_coord_sq + y_coord_sq);
-
-			if (do_root_DQE)
+			for (int i = 0; i <= image_in[iTilt_IDX].physical_upper_bound_complex_x; i++)
 			{
-				// Sum of three gaussians
-				for (int iGaussian = 0; iGaussian < 5; iGaussian++)
+				weight = 0.0f;
+
+				//
+				x_coord_sq = powf(  i * image_in[iTilt_IDX].fourier_voxel_size_x , 2);
+
+				// compute squared radius, in units of reciprocal pixels
+
+				spatial_frequency = sqrtf(x_coord_sq + y_coord_sq + z_coord_sq);
+
+				if (do_root_DQE)
 				{
-					weight += ( DQE_PARAMETERS_A[CAMERA_MODEL][iGaussian] * expf(-1.0f*
-																		  powf( (spatial_frequency-DQE_PARAMETERS_B[CAMERA_MODEL][iGaussian]) /
-																				 DQE_PARAMETERS_C[CAMERA_MODEL][iGaussian],2)) );
+					// Sum of three gaussians
+					for (int iGaussian = 0; iGaussian < 5; iGaussian++)
+					{
+						weight += ( DQE_PARAMETERS_A[CAMERA_MODEL][iGaussian] * expf(-1.0f*
+																			  powf( (spatial_frequency-DQE_PARAMETERS_B[CAMERA_MODEL][iGaussian]) /
+																					 DQE_PARAMETERS_C[CAMERA_MODEL][iGaussian],2)) );
+					}
 				}
+	//			else
+	//			{
+	//				// NTF (NPS/ConversionFactor^2*Neletrons Ttotal) sum of 2 gaussians
+	//				for (int iGaussian = 0; iGaussian < 2; iGaussian++)
+	//				{
+	//					weight += ( NTF_PARAMETERS_A[CAMERA_MODEL][iGaussian] * expf(-1.0f*
+	//																		  powf( (spatial_frequency-NTF_PARAMETERS_B[CAMERA_MODEL][iGaussian]) /
+	//																				 NTF_PARAMETERS_C[CAMERA_MODEL][iGaussian],2)) );
+	//				}
+	//			}
+				image_in[iTilt_IDX].complex_values[pixel_counter] *= weight;
+
+				pixel_counter++;
+
 			}
-//			else
-//			{
-//				// NTF (NPS/ConversionFactor^2*Neletrons Ttotal) sum of 2 gaussians
-//				for (int iGaussian = 0; iGaussian < 2; iGaussian++)
-//				{
-//					weight += ( NTF_PARAMETERS_A[CAMERA_MODEL][iGaussian] * expf(-1.0f*
-//																		  powf( (spatial_frequency-NTF_PARAMETERS_B[CAMERA_MODEL][iGaussian]) /
-//																				 NTF_PARAMETERS_C[CAMERA_MODEL][iGaussian],2)) );
-//				}
-//			}
-			image_in[iTilt_IDX].complex_values[pixel_counter] *= weight;
-
-			pixel_counter++;
-
 		}
+
 	}
 
-	image_in[iTilt_IDX].BackwardFFT();
+	if (do_backward_fft)
+	{
+		image_in[iTilt_IDX].BackwardFFT();
+	}
 
 
 

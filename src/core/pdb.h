@@ -9,7 +9,9 @@
 enum  AtomType : int  { hydrogen = 0, 	carbon = 1, 	nitrogen = 2, 	oxygen = 3, 		fluorine = 4,
 						sodium = 5, 	magnesium = 6,  silicon = 17, 	phosphorus = 7, 	sulfur = 8,
 						chlorine = 9,	potassium = 10, calcium = 11, 	manganese = 12, 	iron = 13,
-						cobalt = 18, 	zinc = 14, 		selenium = 19, 	gold = 20, 			water = 15, oxygen_anion = 16};
+						cobalt = 18, 	zinc = 14, 		selenium = 19, 	gold = 20, 			water = 15,
+						oxygen_anion_1 = 16, plasmon = 21,
+						};
 
 
 class Atom {

@@ -2033,7 +2033,7 @@ void GpuImage::QuickAndDirtyWriteSlices(std::string filename, int first_slice, i
 
 	MyAssertTrue(is_in_memory_gpu, "Memory not allocated");
   Image buffer_img;
-  buffer_img.Allocate(dims.x, dims.y, dims.z, true);
+  buffer_img.Allocate(dims.x, dims.y, dims.z, true, true);
 
   buffer_img.is_in_real_space = is_in_real_space;
   buffer_img.object_is_centred_in_box = object_is_centred_in_box;

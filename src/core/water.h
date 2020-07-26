@@ -1,6 +1,7 @@
 typedef
 struct __attribute__((packed)) __attribute__((aligned(16))) _AtomPos
 {
+	AtomType  atom_id;
 	float x;
 	float y;
 	float z;
@@ -58,6 +59,8 @@ class Water {
 
 		inline float Return_x_Coordinate(long current_atom) { return water_coords[current_atom].x ; }
 
+
+		inline AtomType ReturnAtomType(long current_atom) { return water_coords[current_atom].atom_id;}
 
 		inline void ReturnCenteredCoordinates(long current_atom, float &dx, float &dy,float &dz)
 		{

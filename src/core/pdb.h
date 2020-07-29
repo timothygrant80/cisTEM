@@ -81,6 +81,7 @@ class PDB {
 		float noise_particle_radius_as_mutliple_of_particle_radius;
 		float noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius;
 		float noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius;
+		float emulate_tilt_angle;
 		//ArrayOfParticleInstances my_particle;
 
 
@@ -91,12 +92,14 @@ class PDB {
 				int max_number_of_noise_particles,
 				float wanted_noise_particle_radius_as_mutliple_of_particle_radius,
 				float wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
-				float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius);
+				float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
+				float emulate_tilt_angle);
 		PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, long wanted_records_per_line, int minimum_paddeding_x_and_y, double minimum_thickness_z,
 			int max_number_of_noise_particles,
 			float wanted_noise_particle_radius_as_mutliple_of_particle_radius,
 			float wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
-			float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius);
+			float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
+			float emulate_tilt_angle);
 		PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, long wanted_records_per_line, int minimum_paddeding_x_and_y, double minimum_thickness_z, double *center_of_mass);
 
 		~PDB();
@@ -166,7 +169,7 @@ class PDB {
         void WriteLine(double *data_array);
         void WriteCommentLine(const char * format, ...);
         void TransformBaseCoordinates(float wanted_origin_x,float wanted_origin_y,float wanted_origin_z, float euler1, float euler2, float euler3, int particle_idx, int frame_number);
-        void TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int frame_number, RotationMatrix particle_rot, float shift_z);
+        void TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int frame_number, RotationMatrix particle_rot, float shift_z, bool is_single_particle = false);
         void TransformGlobalAndSortOnZ(long number_of_non_water_atoms,float shift_x, float shift_y, float shift_z,  RotationMatrix rotate_waters);
 
         inline bool IsNonAminoAcid(wxString atom_name)

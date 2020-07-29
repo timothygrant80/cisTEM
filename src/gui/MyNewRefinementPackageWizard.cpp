@@ -1,39 +1,6 @@
 //#include "../core/core_headers.h"
-
-#include "MyNewRefinementPackageWizard.h"
-
-#include <stddef.h>
+#include "../core/gui_core_headers.h"
 #include <wx/arrimpl.cpp> // this is a magic incantation which must be done!
-#include <cfloat>
-#include <cmath>
-
-#include "../core/angles_and_shifts.h"
-#include "../core/angular_distribution_histogram.h"
-#include "../core/assets.h"
-#include "../core/classification.h"
-#include "../core/core_headers.h"
-#include "../core/database.h"
-#include "../core/defines.h"
-#include "../core/dm_file.h"
-#include "../core/functions.h"
-#include "../core/image.h"
-#include "../core/image_file.h"
-#include "../core/matrix.h"
-#include "../core/mrc_file.h"
-#include "../core/project.h"
-#include "../core/randomnumbergenerator.h"
-#include "../core/refinement.h"
-#include "../core/refinement_package.h"
-#include "AssetPickerComboPanel.h"
-#include "gui_functions.h"
-#include "my_controls.h"
-#include "MainFrame.h"
-#include "MyAssetParentPanel.h"
-#include "MyImageAssetPanel.h"
-#include "MyParticlePositionAssetPanel.h"
-#include "MyRefinementPackageAssetPanel.h"
-#include "MyVolumeAssetPanel.h"
-
 WX_DEFINE_OBJARRAY(ArrayofNewRefinementPackageWizardClassSelection);
 
 extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;

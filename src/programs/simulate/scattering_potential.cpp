@@ -27,7 +27,8 @@ void ScatteringPotential::InitPdbEnsemble(	float wanted_pixel_size, float do3d, 
 											int max_number_of_noise_particles,
 											float wanted_noise_particle_radius_as_mutliple_of_particle_radius,
 											float wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
-											float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius)
+											float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
+											float wanted_tilt_angle_to_emulate)
 {
 
 	// backwards compatible with tigress where everything is double (ints would make more sense here.)
@@ -45,7 +46,8 @@ void ScatteringPotential::InitPdbEnsemble(	float wanted_pixel_size, float do3d, 
 								 max_number_of_noise_particles,
 								 wanted_noise_particle_radius_as_mutliple_of_particle_radius,
 								 wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
-								 wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius);
+								 wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
+								 wanted_tilt_angle_to_emulate);
 
 		if (do3d > 0.5 && iPDB > 0)
 		{

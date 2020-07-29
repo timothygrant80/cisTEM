@@ -138,6 +138,7 @@ class Coords
 
 public:
 
+
 	Coords() {
 		is_set_specimen = false;
 		is_set_fft_padding = false;
@@ -247,7 +248,6 @@ public:
 	void Allocate(Image* image_to_allocate, PaddingStatus status, bool should_be_in_real_space, bool only_2d)
 	{
 		int3 size;
-
 		switch (status)
 		{
 			case none :
@@ -271,6 +271,7 @@ public:
 
 			case solvent :
 				size = GetSolventPadding(); if (only_2d) { size.z = 1; }
+
 				// Sets to zero and returns fals if no allocation needed.
 				if  (IsAllocationNecessary(image_to_allocate, size))
 				{
@@ -278,6 +279,7 @@ public:
 				}
 				break;
 		}
+
 
 
 	}
@@ -347,7 +349,6 @@ public:
 			size.y == image_to_allocate->logical_y_dimension &&
 			size.z == image_to_allocate->logical_z_dimension)
 		{
-			image_to_allocate->SetToConstant(0.0f);
 			allocation_required = false;
 		}
 
@@ -471,6 +472,8 @@ class SimulateApp : public MyApp
 	RotationMatrix beam_tilt_xform;
 	float beam_tilt_x = 0.0f;//0.6f;
 	float beam_tilt_y = 0.0f;//-0.2f;
+	float beam_tilt_z_X_component;
+	float beam_tilt_z_Y_component;
 	float beam_tilt = 0.0f;
 	float beam_tilt_azimuth = 0.0f;
 	float particle_shift_x = 0.0f;
@@ -515,6 +518,7 @@ class SimulateApp : public MyApp
 	float noise_particle_radius_as_mutliple_of_particle_radius = 1.8;
 	float noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius = -0.05;
 	float noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius = 0.10;
+	float emulate_tilt_angle = 0.0f;
 
 	void probability_density_2d(PDB *pdb_ensemble, int time_step);
 	// Note the water does not take the dose as an argument.
@@ -694,6 +698,7 @@ void SimulateApp::AddCommandLineOptions()
 	command_line_parser.AddOption("","noise_particle_radius_as_mutliple_of_particle_radius","default is 1.8",wxCMD_LINE_VAL_DOUBLE);
 	command_line_parser.AddOption("","noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius","default is -0.05",wxCMD_LINE_VAL_DOUBLE);
 	command_line_parser.AddOption("","noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius","default is  0.10",wxCMD_LINE_VAL_DOUBLE);
+	command_line_parser.AddOption("","emulate_tilt_angle","default is 0.0 degrees around Y axis", wxCMD_LINE_VAL_DOUBLE);
 
 
 	command_line_parser.AddLongSwitch("whiten-output", "Whiten the image? default is no"); // if SAVE_REF then it will also be whitened when this option is enabled TODO checkme
@@ -781,6 +786,7 @@ void SimulateApp::DoInteractiveUserInput()
 	if (command_line_parser.Found("noise_particle_radius_as_mutliple_of_particle_radius", &temp_double)) { noise_particle_radius_as_mutliple_of_particle_radius = (float)temp_double;}
 	if (command_line_parser.Found("noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius", &temp_double)) { noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius = (float)temp_double;}
 	if (command_line_parser.Found("noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius", &temp_double)) { noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius = (float)temp_double;}
+	if (command_line_parser.Found("emulate_tilt_angle",&temp_double)) { emulate_tilt_angle = (float)temp_double ; }
 
 
 	if (command_line_parser.Found("wgt", &temp_double)) { wgt = (float)temp_double;}
@@ -1026,7 +1032,8 @@ bool SimulateApp::DoCalculation()
 				max_number_of_noise_particles,
 				noise_particle_radius_as_mutliple_of_particle_radius,
 				noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
-				noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius
+				noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
+				emulate_tilt_angle
 				);
 
 	}
@@ -1038,7 +1045,8 @@ bool SimulateApp::DoCalculation()
 				max_number_of_noise_particles,
 				noise_particle_radius_as_mutliple_of_particle_radius,
 				noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
-				noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius
+				noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
+				emulate_tilt_angle
 				);
 	}
 
@@ -1241,6 +1249,10 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
     	beam_tilt_x /= 1000.0f;
     	beam_tilt_y /= 1000.0f;
 
+    	beam_tilt_z_X_component = tanf(beam_tilt)*cosf(beam_tilt_azimuth);
+    	beam_tilt_z_Y_component = tanf(beam_tilt)*sinf(beam_tilt_azimuth);
+
+
     }
 
     // TODO fix periodicity in Z on slab
@@ -1411,13 +1423,14 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 	// Create a new PDB object that represents the current state of the specimen, with each local motion applied. // TODO mag changes and pixel size (here to determine water box)?
 	// For odd sizes there will be an offset of 0.5 pix if simply padded by 2 and cropped by 2 so make it even to start then trim at the end.
 
-
+	wxPrintf("Got here emulate is %f\n",emulate_tilt_angle);
 	// FIXME I think this should somehow be derived from the information already stored in the scattering potential  object
 	PDB current_specimen(this->number_of_non_water_atoms, bin3d*(do3d-IsOdd(do3d)), wanted_pixel_size, minimum_padding_x_and_y, minimum_thickness_z,
 							max_number_of_noise_particles,
 							noise_particle_radius_as_mutliple_of_particle_radius,
 							noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
-							noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius
+							noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
+							emulate_tilt_angle
 							);
 
 	timer.lap("Init H20 & Spec");
@@ -1870,17 +1883,29 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 			timer.start("Allocate 3d slabs");
 			coords.Allocate(&scattering_slab, (PaddingStatus)solvent, true, false);
-//			scattering_slab.Allocate(current_specimen.vol_nX,current_specimen.vol_nY,slab_nZ);
-			scattering_slab.SetToConstant(0.0f);
-
-
 			coords.Allocate(&distance_slab, (PaddingStatus)solvent, true, false);
-//			distance_slab.Allocate(current_specimen.vol_nX,current_specimen.vol_nY,slab_nZ);
-			distance_slab.SetToConstant(DISTANCE_INIT);
-
 			coords.Allocate(&inelastic_slab, (PaddingStatus)solvent, true, false);
-//			inelastic_slab.Allocate(current_specimen.vol_nX,current_specimen.vol_nY,slab_nZ);
-			inelastic_slab.SetToConstant(0.0f);
+			#pragma omp parallel for num_threads(this->number_of_threads)
+			for (long pixel_counter = 0; pixel_counter < scattering_slab.real_memory_allocated; pixel_counter++)
+			{
+				// Somehow multiplication by zero is about 70% runtime relative to seting zero with image method which in turn is 87 % runtime compared to std::fill or std::memset
+				scattering_slab.real_values[pixel_counter] *= 0.0f;
+			}
+
+			#pragma omp parallel for num_threads(this->number_of_threads)
+			for (long pixel_counter = 0; pixel_counter < inelastic_slab.real_memory_allocated; pixel_counter++)
+			{
+				// Somehow multiplication by zero is about 70% runtime relative to seting zero with image method which in turn is 87 % runtime compared to std::fill or std::memset
+				inelastic_slab.real_values[pixel_counter] *= 0.0f;
+			}
+
+			#pragma omp parallel for num_threads(this->number_of_threads)
+			for (long pixel_counter = 0; pixel_counter < distance_slab.real_memory_allocated; pixel_counter++)
+			{
+				distance_slab.real_values[pixel_counter] = DISTANCE_INIT;
+			}
+
+
 			timer.lap("Allocate 3d slabs");
 
 			timer.start("Calc Atoms");
@@ -2398,7 +2423,9 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		 WaveFunctionPropagator wave_function(this->set_real_part_wave_function_in, objective_aperture, wanted_pixel_size, number_of_threads, beam_tilt_x, beam_tilt_y, DO_BEAM_TILT_FULL, propagator_distance);
 
 		 // TODO redundancies with SetCTF and fit params, fit params etc.
-		 wave_function.SetFitParams(wanted_pixel_size, wanted_acceleration_voltage, wanted_spherical_aberration, 0.0f, ReturnClosestFactorizedUpper(std::max(coords.GetLargestSpecimenVolume().x,coords.GetLargestSpecimenVolume().y),5,true), 20.0f, wanted_pixel_size*2.5, wanted_defocus_1_in_angstroms - 3000.0f, wanted_defocus_1_in_angstroms + 3000.0f, number_of_threads, 1.0f);
+		 wave_function.SetFitParams(wanted_pixel_size, wanted_acceleration_voltage, wanted_spherical_aberration, 0.0f,
+				 	 	 	 	 	std::max(768,ReturnClosestFactorizedUpper(std::max(coords.GetLargestSpecimenVolume().x,coords.GetLargestSpecimenVolume().y),5,true)),
+									20.0f, wanted_pixel_size*2.5, wanted_defocus_1_in_angstroms - 1000.0f, wanted_defocus_1_in_angstroms + 1000.0f, number_of_threads, 1.0f);
 
 //		WaveFunctionPropagator wave_function(this->set_real_part_wave_function_in, wanted_amplitude_contrast, wanted_pixel_size, number_of_threads, beam_tilt_x, beam_tilt_y, DO_BEAM_TILT_FULL);
 
@@ -2952,7 +2979,6 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
     timer.lap("Final mods and save");
     timer.print_times();
 
-
 }
 
 void SimulateApp::calc_scattering_potential(const PDB * current_specimen,
@@ -3038,8 +3064,8 @@ void SimulateApp::calc_scattering_potential(const PDB * current_specimen,
 
 //			z1 = current_specimen->my_atoms.Item(current_atom).z_coordinate - slabIDX_start[iSlab]*wanted_pixel_size;
 
-			x1 += (z1)*tanf(beam_tilt)*cosf(beam_tilt_azimuth);
-			y1 += (z1)*tanf(beam_tilt)*sinf(beam_tilt_azimuth);
+			x1 += (z1)*beam_tilt_z_X_component;
+			y1 += (z1)*beam_tilt_z_Y_component;
 
 			// Convert atom origin to pixels and shift by volume origin to get pixel coordinates. Add 0.5 to place origin at "center" of voxel
 			dx = modff(origin.x + (x1 / wanted_pixel_size + pixel_offset), &ix);
@@ -3304,6 +3330,8 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 	int iPot;
 	const float pixel_offset = 0.5f;
 
+	timer.start("water_pre");
+
 	if( CALC_WATER_NO_HOLE || DO_PHASE_PLATE)
 	{
 		avg_cutoff = 10000; // TODO check this can't break, I think the potential should always be < 1
@@ -3321,7 +3349,6 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 	Image projected_water_atoms;
 	projected_water_atoms.Allocate(scattering_slab->logical_x_dimension,scattering_slab->logical_y_dimension,1);
 	projected_water_atoms.SetToConstant(0.0f);
-
 
 	Image water_mask;
 	if (add_mean_water_potential)
@@ -3358,10 +3385,12 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 	}
 
 	// To compare the thread block ordering, undo with schedule(dynamic,1)
+	// schedule(static, water_box->number_of_waters /number_of_threads )
 
+//	timer.lap("water_pre");
 
 	long n_waters_ignored = 0;
-	#pragma omp parallel for num_threads(this->number_of_threads) schedule(static, water_box->number_of_waters /number_of_threads ) private(radius,ix,iy,iz,dx,dy,dz,x1,y1,z1,indX,indY,indZ,sx,sy,iSubPixX,iSubPixY,iSubPixLinearIndex,n_waters_ignored, current_weight, current_distance, current_potential)
+	#pragma omp parallel for num_threads(this->number_of_threads) schedule(dynamic,number_of_threads) private(radius,ix,iy,iz,dx,dy,dz,x1,y1,z1,indX,indY,indZ,sx,sy,iSubPixX,iSubPixY,iSubPixLinearIndex,n_waters_ignored, current_weight, current_distance, current_potential)
 	for (int current_atom = 0; current_atom < water_box->number_of_waters; current_atom++)
 	{
 
@@ -3370,12 +3399,21 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 		double temp_potential_sum = 0;
 		double norm_value = 0;
 
+//if (ReturnThreadNumberOfCurrentThread()==0) timer.start("w_center");
+//		// TODO put other water manipulation methods inside the water class.
+//if (ReturnThreadNumberOfCurrentThread()==0) timer.start("w_center_1");
 
-		// TODO put other water manipulation methods inside the water class.
 		water_box->ReturnCenteredCoordinates(current_atom,dx,dy,dz);
+
+//if (ReturnThreadNumberOfCurrentThread()==0) timer.lap("w_center_1");
+//
+//if (ReturnThreadNumberOfCurrentThread()==0) timer.start("w_center_2");
 
 		// Rotate to the slab frame
 		rotate_waters.RotateCoords(dx, dy, dz, ix, iy, iz);
+//if (ReturnThreadNumberOfCurrentThread()==0) timer.lap("w_center_2");
+//
+//if (ReturnThreadNumberOfCurrentThread()==0) timer.start("w_center_3");
 
 		if (DO_BEAM_TILT_FULL)
 		{
@@ -3384,8 +3422,8 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 
 			z1 = iz + (rotated_oZ - slabIDX_start[iSlab]);
 
-			ix += z1*tanf(beam_tilt)*cosf(beam_tilt_azimuth);
-			iy += z1*tanf(beam_tilt)*sinf(beam_tilt_azimuth);
+			ix += z1*beam_tilt_z_X_component;
+			iy += z1*beam_tilt_z_Y_component;
 
 		}
 
@@ -3402,19 +3440,27 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 		int_y = myroundint(iy);
 		int_z = myroundint(iz);
 
+//if (ReturnThreadNumberOfCurrentThread()==0) timer.lap("w_center_3");
+//
+//if (ReturnThreadNumberOfCurrentThread()==0) timer.start("w_center_4");
 
 		// FIXME confirm the +1 on the sub pix makes sense
 		// FIXME printing out an error I'm getting iSubPixLinearIndex = -38 w/ iSubpixXYZ = 2,2,4 (should be 62) suspect water_edge having been declared as float. If this fixes, just make two vars.
-		int water_edge = (SUB_PIXEL_NEIGHBORHOOD*2) + 1.0f;
-		iSubPixX = trunc((dx-0.0f) * (float)water_edge) + SUB_PIXEL_NEIGHBORHOOD + 0;
-		iSubPixY = trunc((dy-0.0f) * (float)water_edge) + SUB_PIXEL_NEIGHBORHOOD + 0;
-		iSubPixZ = trunc((dz-0.0f) *(float) water_edge) + SUB_PIXEL_NEIGHBORHOOD + 0;
+		float water_edge = ((float)SUB_PIXEL_NEIGHBORHOOD*2) + 1.0f;
+		iSubPixX = (int)trunc(dx * water_edge) + SUB_PIXEL_NEIGHBORHOOD;
+		iSubPixY = (int)trunc(dy * water_edge) + SUB_PIXEL_NEIGHBORHOOD;
+		iSubPixZ = (int)trunc(dz * water_edge) + SUB_PIXEL_NEIGHBORHOOD;
 
 		iSubPixLinearIndex = int(water_edge * water_edge * iSubPixZ) + int(water_edge * iSubPixY) + (int)iSubPixX;
+
+//if (ReturnThreadNumberOfCurrentThread()==0) timer.lap("w_center_4");
+//
+//if (ReturnThreadNumberOfCurrentThread()==0) timer.lap("w_center");
 
 		if ( int_z >= slabIDX_start[iSlab] && int_z  <= slabIDX_end[iSlab] && int_x-1 > 0 && int_y-1 > 0 && int_x-1 < scattering_slab->logical_x_dimension && int_y-1 < scattering_slab->logical_y_dimension)
 		{
 
+			if (ReturnThreadNumberOfCurrentThread()==0) timer.start("w_weight");
 
 			current_potential = scattering_slab->ReturnRealPixelFromPhysicalCoord(int_x-1,int_y-1,int_z - slabIDX_start[iSlab]);
 			current_distance  = distance_slab->ReturnRealPixelFromPhysicalCoord(int_x-1,int_y-1,int_z - slabIDX_start[iSlab]);
@@ -3451,6 +3497,8 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 			}
 			int iWater = 0;
 //			wxPrintf("This water scale is %3.3f\n",current_weight);
+			if (ReturnThreadNumberOfCurrentThread()==0) timer.start("w_neigh");
+
 			for (sy = 0; sy <  upper_bound ; sy++ )
 			{
 				indY = int_y - upper_bound + sy + size_neighborhood_water + 1;
@@ -3478,6 +3526,7 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 				}
 
 			}
+			if (ReturnThreadNumberOfCurrentThread()==0) timer.lap("w_neigh");
 
 
 
@@ -3496,6 +3545,8 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 		wxPrintf("Water occupies %2.2f percent of the 3d, total added = %2.0f of %ld (%2.2f)\n",
 			100*nWatersAdded/((double)water_box->number_of_waters),this->total_waters_incorporated,water_box->number_of_waters,100*this->total_waters_incorporated/(double)(water_box->number_of_waters));
 	}
+
+	if (ReturnThreadNumberOfCurrentThread()==0) timer.start("w_after");
 
 	MRCFile mrc_out;
 
@@ -3580,6 +3631,7 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 	}
 
 
+	if (ReturnThreadNumberOfCurrentThread()==0) timer.lap("w_after");
 
 
 } // End of fill water func
@@ -3595,21 +3647,43 @@ void SimulateApp::project(Image *image_to_project, Image *image_to_project_into,
 	int prjX, prjY, prjZ;
 	int edgeX = 0;
 	int edgeY = 0;
+	int column_length = image_to_project_into[iSlab].logical_x_dimension + image_to_project_into[iSlab].padding_jump_value;
 	long pixel_counter;
-	long image_plane = 0;
+
 	// TODO add check that these are the same size.
 
-
-	for (prjZ = 0; prjZ < image_to_project->logical_z_dimension; prjZ++)
+	// Have each thread work on a column so sequential addresses may be coalesced
+	#pragma omp parallel for num_threads(this->number_of_threads)
+	for (int iCol = 0 ; iCol < image_to_project->logical_y_dimension; iCol++)
 	{
-		for (int iPixel = 0; iPixel < image_to_project_into[iSlab].real_memory_allocated; iPixel++)
+		int threadIDX = ReturnThreadNumberOfCurrentThread();
+		long image_plane = 0;
+
+		for (prjZ = 0; prjZ < image_to_project->logical_z_dimension; prjZ++)
 		{
-			image_to_project_into[iSlab].real_values[iPixel] += image_to_project->real_values[iPixel + image_plane];
+
+			for (int iPixel = 0; iPixel < image_to_project_into[iSlab].logical_x_dimension; iPixel++)
+			{
+				image_to_project_into[iSlab].real_values[iPixel + threadIDX*column_length] += image_to_project->real_values[iPixel + threadIDX*column_length + image_plane];
+			}
+
+			image_plane += image_to_project_into[iSlab].real_memory_allocated;
+
 		}
-
-		image_plane += image_to_project_into[iSlab].real_memory_allocated;
-
 	}
+
+//	for (prjZ = 0; prjZ < image_to_project->logical_z_dimension; prjZ++)
+//	{
+//
+//		#pragma omp parallel for num_threads(this->number_of_threads)
+//		for (int iPixel = 0; iPixel < image_to_project_into[iSlab].real_memory_allocated; iPixel++)
+//		{
+//			image_to_project_into[iSlab].real_values[iPixel] += image_to_project->real_values[iPixel + image_plane];
+//		}
+//
+//		image_plane += image_to_project_into[iSlab].real_memory_allocated;
+//
+//	}
 
 
 

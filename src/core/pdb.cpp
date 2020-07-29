@@ -61,7 +61,8 @@ PDB::PDB(long number_of_non_water_atoms, float cubic_size, float wanted_pixel_si
 		int max_number_of_noise_particles,
 		float wanted_noise_particle_radius_as_mutliple_of_particle_radius,
 		float wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
-		float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius)
+		float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
+		float wanted_tilt_angle_to_emulate)
 {
 
 	input_file_stream = NULL;
@@ -96,13 +97,16 @@ PDB::PDB(long number_of_non_water_atoms, float cubic_size, float wanted_pixel_si
 	this->noise_particle_radius_as_mutliple_of_particle_radius = wanted_noise_particle_radius_as_mutliple_of_particle_radius;
 	this->noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius = wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius;
 	this->noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius = wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius;
+	this->emulate_tilt_angle = wanted_tilt_angle_to_emulate;
+
 }
 
 PDB::PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, long wanted_records_per_line, int minimum_paddeding_x_and_y, double minimum_thickness_z,
 		int max_number_of_noise_particles,
 		float wanted_noise_particle_radius_as_mutliple_of_particle_radius,
 		float wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
-		float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius)
+		float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
+		float wanted_tilt_angle_to_emulate)
 {
 	input_file_stream = NULL;
 	input_text_stream = NULL;
@@ -129,6 +133,7 @@ PDB::PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, lo
 	this->noise_particle_radius_as_mutliple_of_particle_radius = wanted_noise_particle_radius_as_mutliple_of_particle_radius;
 	this->noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius = wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius;
 	this->noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius = wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius;
+	this->emulate_tilt_angle = wanted_tilt_angle_to_emulate;
 
 	Open(Filename, wanted_access_type, wanted_records_per_line);
 }
@@ -820,7 +825,7 @@ void PDB::TransformBaseCoordinates(float wanted_origin_x,float wanted_origin_y,f
 	wxPrintf("\n\nNumber of particles initialized %d\n",this->number_of_particles_initialized);
 }
 
-void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int frame_number, RotationMatrix particle_rot, float shift_z)
+void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int frame_number, RotationMatrix particle_rot, float shift_z, bool is_single_particle )
 {
 	/*
 	 * Take an array of PDB objects and create a single array of atoms transformed according to the timestep
@@ -903,7 +908,7 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int fr
 
 				RandomNumberGenerator my_rand(PIf);
 				// Set the number of noise particles for this given particle in the stack
-				pdb_ensemble[current_pdb].number_of_noise_particles = myroundint(my_rand.GetUniformRandomSTD(0.0,this->max_number_of_noise_particles));
+				pdb_ensemble[current_pdb].number_of_noise_particles = myroundint(my_rand.GetUniformRandomSTD(std::max(0,this->max_number_of_noise_particles-2),this->max_number_of_noise_particles));
 				wxPrintf("\n\n\tSetting pdb %d to %d noise particles of max %d\n\n", current_pdb, pdb_ensemble[current_pdb].number_of_noise_particles,max_number_of_noise_particles);
 
 				// Angular sector size such that noise particles do not overlap. This could be a method.
@@ -951,7 +956,7 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int fr
 							float dx = cosf(offset_angle);
 							float dy = sinf(offset_angle);
 							float ang_diff;
-							wxPrintf("offset angle is %3.3f\n", rad_2_deg(offset_angle));
+//							wxPrintf("offset angle is %3.3f\n", rad_2_deg(offset_angle));
 
 							// now check the angle against each previous
 							for (int jPart = 0; jPart < iPart; jPart ++)
@@ -959,7 +964,7 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int fr
 								ang_diff = cosf(occupied_sectors[jPart])*dx + sinf(occupied_sectors[jPart])*dy;
 								ang_diff = acosf(ang_diff);
 
-								wxPrintf("comparing against %3.3f found a diff of %3.3f\n", rad_2_deg(occupied_sectors[jPart]), rad_2_deg(ang_diff));
+//								wxPrintf("comparing against %3.3f found a diff of %3.3f\n", rad_2_deg(occupied_sectors[jPart]), rad_2_deg(ang_diff));
 
 								if (ang_diff > sector_size)
 								{
@@ -967,14 +972,16 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int fr
 								}
 								else
 								{
+									// if any are too close, want to break out
 									is_too_close = true;
+									break;
 								}
 							}
 						}
 						if (is_too_close)
 						{
 							wxPrintf("Error, did not find a well separated noise particle\n");
-							exit(-1);
+//							exit(-1);
 						}
 						else
 						{
@@ -983,7 +990,7 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int fr
 					}
 
 
-					float offset_X = offset_radius * cosf(offset_angle);
+					float offset_X = offset_radius * cosf(offset_angle) * cosf(deg_2_rad(emulate_tilt_angle));
 					float offset_Y = offset_radius * sinf(offset_angle);
 
 
@@ -1142,9 +1149,24 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int fr
 
 	this->vol_angX = max_x-min_x+ MIN_PADDING_XY;
 	this->vol_angY = max_y-min_y+ MIN_PADDING_XY;
+
+	float max_depth = 0.0f;
+	if (is_single_particle)
+	{
+		// Keep the thickness of the ice mostly constant, which may not happen if the particle is non globular and randomly oriented.
+		max_depth = std::max(max_x-min_x, std::max(max_y - min_y, fabsf(max_z-min_z)));
+
+	}
+	else
+	{
+		max_depth = max_z-min_z;
+	}
 	// Shifting all atoms in the ensemble by some offset to keep them centered may be preferrable. This could lead to too many waters. TODO
 //	this->vol_angZ = std::max((double)300,(1.50*std::abs(this->max_z-this->min_z))); // take the larger of 20 nm + range and 1.5x the specimen diameter. Look closer at Nobles paper.
-	this->vol_angZ = std::max(MIN_THICKNESS,(2*(MIN_PADDING_Z+fabsf(shift_z)) + (MIN_PADDING_Z+fabsf(this->max_z-this->min_z)))); // take the larger of 20 nm + range and 1.5x the specimen diameter. Look closer at Nobles paper.
+	this->vol_angZ = std::max(MIN_THICKNESS,(2*(MIN_PADDING_Z+fabsf(shift_z)) + (MIN_PADDING_Z+fabsf(max_depth)))); // take the larger of 20 nm + range and 1.5x the specimen diameter. Look closer at Nobles paper.
+
+
+	this->vol_angZ /= cosf(deg_2_rad(emulate_tilt_angle));
 
 	if (this->cubic_size > 1)
 	{

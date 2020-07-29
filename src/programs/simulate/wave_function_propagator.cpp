@@ -741,14 +741,14 @@ float WaveFunctionPropagator::DoPropagation(Image* sum_image, Image* scattering_
 
 
 		ReturnImageContrast(sum_image[tilt_IDX], &total_contrast,false, tilt_angle);// - phase_contrast;
-		sum_image[tilt_IDX].QuickAndDirtyWriteSlice("total.mrc",1,false,1);
+//		sum_image[tilt_IDX].QuickAndDirtyWriteSlice("total.mrc",1,false,1);
 
 		wxPrintf("Total contrast is %3.3e\n", total_contrast);
 	}
 	else if(estimate_amplitude_contrast)
 	{
 		ReturnImageContrast(sum_image[tilt_IDX], &phase_contrast, true, tilt_angle);
-		sum_image[tilt_IDX].QuickAndDirtyWriteSlice("phase.mrc",1,false,1);
+//		sum_image[tilt_IDX].QuickAndDirtyWriteSlice("phase.mrc",1,false,1);
 
 
 		wxPrintf("Phase contrast estimate at %3.3e\n",phase_contrast);
@@ -830,7 +830,9 @@ void WaveFunctionPropagator::ReturnImageContrast(Image &wave_function_sq_modulus
 	std::string text_file_name = "fit_" + file_id;
 	std::string text_file_name_2 = "fit_" + file_id + "_2.txt";
 
-	std::string awk_command = "tail -n -1 " + text_file_name + ".txt | awk '{print $2,$3}' > " + text_file_name_2;
+	std::string awk_command = "tail -n -1 " + text_file_name + ".txt | awk '{print $2,$3}' > " + text_file_name_2; // gets the defocus vals
+	std::string awk_command_2 = "tail -n -1 " + text_file_name + ".txt | awk '{print $7}' > " + text_file_name_2; // gets the best fit res (mainly for thick samples)
+
 	std::string chmod_command = "chmod a=wrx " + script_name;
 	std::string run_command = script_name;
 
@@ -844,110 +846,87 @@ void WaveFunctionPropagator::ReturnImageContrast(Image &wave_function_sq_modulus
 
 	//
 
+	float found_fit_resolution[1] = {0};
 	float found_defocus[2] = {0,0};
 
 	if (is_phase_contrast_image)
 	{
 
-		myfile.open(script_name.c_str());
 		wave_function_sq_modulus.QuickAndDirtyWriteSlice(phase_name,1,false);
 
-		std::string do_tilt;
-		if (fabsf(tilt_angle) > 20.0f)
+		for (int iLoop = 0; iLoop < 2; iLoop ++)
 		{
-			do_tilt = "yes\n";
+
+			myfile.open(script_name.c_str());
+
+
+			std::string do_tilt;
+			if (fabsf(tilt_angle) > 20.0f)
+			{
+				do_tilt = "yes\n";
+			}
+			else
+			{
+				do_tilt = "no\n";
+			}
+
+			// Fixme change floats in params to ints.
+
+			myfile << "#!/bin/bash\n\n";
+			myfile << "ctffind > /dev/null << eof\n";
+			myfile << phase_name + "\n";
+			myfile << text_file_name + ".mrc\n";
+			myfile << std::to_string(pixel_size) + "\n";
+			myfile << std::to_string(for_ctffind.kv) + "\n";
+			myfile << std::to_string(for_ctffind.Cs) + "\n";
+			myfile << std::to_string(for_ctffind.AmplitudeContrast) + "\n";
+			myfile << std::to_string(for_ctffind.Size) + "\n";
+			myfile << std::to_string(for_ctffind.min_resolution) + "\n";
+			myfile << std::to_string(for_ctffind.max_resolution) + "\n";
+			myfile << std::to_string(for_ctffind.min_defocus) + "\n";
+			myfile << std::to_string(for_ctffind.max_defocus) + "\n";
+			myfile << std::to_string(myroundint(for_ctffind.defocus_step)) + "\n";
+			myfile << "yes\n"; // know astig?
+			myfile << "yes\n";
+			myfile << std::to_string(0) + "\n"; //astig
+			myfile << std::to_string(0) + "\n"; // ang
+			myfile << "no\n"; // phase shift
+			myfile << do_tilt; // tilt
+			myfile << "yes\n"; // expert opt
+			myfile << "yes\n"; // resample if too small
+			myfile << "no\n"; // know defocus
+			myfile << std::to_string(myroundint(std::max(for_ctffind.nThreads,2.0f))) + "\n"; // nThreads
+			myfile << "eof\n";
+			myfile.close();
+
+
+			std::system(chmod_command.c_str());
+			std::system(run_command.c_str());
+
+			if (iLoop > 0)
+			{
+				std::system(awk_command.c_str());
+				NumericTextFile myfile_in(text_file_name_2,0,2);
+				myfile_in.ReadLine(found_defocus);
+				myfile_in.Close();
+				wxPrintf("\n\n\t\tFound a defocus of %f %f\n\n", found_defocus[0], found_defocus[1]);
+
+			}
+			else
+			{
+				std::system(awk_command_2.c_str());
+				NumericTextFile myfile_in(text_file_name_2,0,2);
+				myfile_in.ReadLine(found_fit_resolution);
+				myfile_in.Close();
+				found_fit_resolution[0] *= 0.9f;
+				float orig_fit = for_ctffind.max_resolution;
+				for_ctffind.max_resolution = std::max(2*pixel_size,std::min(10.0f, std::max(2.0f*pixel_size,found_fit_resolution[0])));
+				wxPrintf("\n\n\t\tChanging the fit resolution from %f %f Angstrom\n\n", orig_fit, for_ctffind.max_resolution);
+
+			}
+
 		}
-		else
-		{
-			do_tilt = "no\n";
-		}
 
-		// Fixme change floats in params to ints.
-
-		myfile << "#!/bin/bash\n\n";
-		myfile << "ctffind << eof\n";
-		myfile << phase_name + "\n";
-		myfile << text_file_name + ".mrc\n";
-		myfile << std::to_string(pixel_size) + "\n";
-		myfile << std::to_string(for_ctffind.kv) + "\n";
-		myfile << std::to_string(for_ctffind.Cs) + "\n";
-		myfile << std::to_string(for_ctffind.AmplitudeContrast) + "\n";
-		myfile << std::to_string(for_ctffind.Size) + "\n";
-		myfile << std::to_string(myroundint(for_ctffind.min_resolution)) + "\n";
-		myfile << std::to_string(myroundint(for_ctffind.max_resolution)) + "\n";
-		myfile << std::to_string(myroundint(for_ctffind.min_defocus)) + "\n";
-		myfile << std::to_string(myroundint(for_ctffind.max_defocus)) + "\n";
-		myfile << std::to_string(myroundint(for_ctffind.defocus_step)) + "\n";
-		myfile << "yes\n"; // know astig?
-		myfile << "yes\n";
-		myfile << std::to_string(0) + "\n"; //astig
-		myfile << std::to_string(0) + "\n"; // ang
-		myfile << "no\n"; // phase shift
-		myfile << do_tilt; // tilt
-		myfile << "yes\n"; // expert opt
-		myfile << "yes\n"; // resample if too small
-		myfile << "no\n"; // know defocus
-		myfile << std::to_string(myroundint(std::max(for_ctffind.nThreads,2.0f))) + "\n"; // nThreads
-		myfile << "eof\n";
-		myfile.close();
-//
-
-//		myfile << text_file_name + ".mrc\n";
-//		myfile << std::to_string(pixel_size) + "\n";
-//		myfile << std::to_string(300) + "\n";
-//		myfile << std::to_string(2.7) + "\n";
-//		myfile << std::to_string(0) + "\n";
-//		myfile << std::to_string(512) + "\n";
-//		myfile << std::to_string(20) + "\n";
-//		myfile << std::to_string(4) + "\n";
-//		myfile << std::to_string(5000) + "\n";
-//		myfile << std::to_string(10000) + "\n";
-//		myfile << std::to_string(2) + "\n";
-//		myfile << "yes\n"; // know astig?
-//		myfile << "yes\n";
-//		myfile << std::to_string(0) + "\n"; //astig
-//		myfile << std::to_string(0) + "\n"; // ang
-//		myfile << "no\n"; // phase shift
-//		myfile << do_tilt; // tilt
-//		myfile << "yes\n"; // expert opt
-//		myfile << "yes\n"; // resample if too small
-//		myfile << "no\n"; // know defocus
-//		myfile << std::to_string(16) + "\n"; // nThreads
-//		myfile << "eof\n";
-//		myfile.close();
-//		myfile << "#" + text_file_name + ".mrc\n";
-//		myfile << "#" +std::to_string(pixel_size) + "\n";
-//		myfile << "#" +std::to_string(300) + "\n";
-//		myfile << "#" +std::to_string(2.7) + "\n";
-//		myfile << "#" +std::to_string(0) + "\n";
-//		myfile << "#" +std::to_string(512) + "\n";
-//		myfile << "#" +std::to_string(20) + "\n";
-//		myfile << "#" +std::to_string(4) + "\n";
-//		myfile << "#" +std::to_string(5000) + "\n";
-//		myfile << "#" +std::to_string(10000) + "\n";
-//		myfile << "#" +std::to_string(2) + "\n";
-//		myfile << "#yes\n"; // know astig?
-//		myfile << "#yes\n";
-//		myfile << "#" +std::to_string(0) + "\n"; //astig
-//		myfile << "#" +std::to_string(0) + "\n"; // ang
-//		myfile << "#no\n"; // phase shift
-//		myfile << "#" +do_tilt; // tilt
-//		myfile << "#yes\n"; // expert opt
-//		myfile << "#yes\n"; // resample if too small
-//		myfile << "#no\n"; // know defocus
-//		myfile << "#" +std::to_string(16) + "\n"; // nThreads
-//		myfile << "#eof\n";
-//		myfile.close();
-
-		std::system(chmod_command.c_str());
-		std::system(run_command.c_str());
-		std::system(awk_command.c_str());
-
-		NumericTextFile myfile_in(text_file_name_2,0,2);
-		myfile_in.ReadLine(found_defocus);
-		myfile_in.Close();
-
-		wxPrintf("\n\n\t\tFound a defocus of %f %f\n\n", found_defocus[0], found_defocus[1]);
 
 		std::system(clean_script_command.c_str());
 		std::system(clean_image_command.c_str());
@@ -1001,20 +980,23 @@ void WaveFunctionPropagator::ReturnImageContrast(Image &wave_function_sq_modulus
 	float average;
 	float sigma;
 
-	amplitude_spectrum.CopyFrom(&amplitude_spectrum_masked);
-	amplitude_spectrum.ComputeFilteredAmplitudeSpectrumFull2D(&amplitude_spectrum_masked, &buffer, average, sigma, 1/min_resolution_for_fitting, 1/max_resolution_for_fitting,pixel_size);
 
-
-
-
-		// fix the defocus offset and fit the amplitude contrast
-		min_to_fit = 0.0f;
-		max_to_fit = 0.5f;
-		step_for_fit = 0.05;
+	// fix the defocus offset and fit the amplitude contrast
+	min_to_fit = 0.0f;
+	max_to_fit = 0.5f;
+	step_for_fit = 0.05;
 
 
 	if (! is_phase_contrast_image)
 	{
+
+		amplitude_spectrum.CopyFrom(&amplitude_spectrum_masked);
+		// update the search range based on the fit values found in the phase contrast image.
+		ctf_for_fitting->SetHighestFrequencyForFitting( std::min(1/for_ctffind.max_resolution * pixel_size,1/4.0f));
+
+		wxPrintf("min max res for amplitude contrast fitting %f %f %f %f\n",1/min_resolution_for_fitting ,1/max_resolution_for_fitting,ctf_for_fitting->GetLowestFrequencyForFitting(),ctf_for_fitting->GetHighestFrequencyForFitting());
+		amplitude_spectrum.ComputeFilteredAmplitudeSpectrumFull2D(&amplitude_spectrum_masked, &buffer, average, sigma, 1/min_resolution_for_fitting , 1/max_resolution_for_fitting ,pixel_size);
+
 		for (int iIter = 0; iIter < 4; iIter++)
 		{
 
@@ -1022,20 +1004,10 @@ void WaveFunctionPropagator::ReturnImageContrast(Image &wave_function_sq_modulus
 			{
 				if (is_phase_contrast_image || iFit >= 0.0f)
 				{
-					// Set up the CTF object.
-					if (is_phase_contrast_image)
-					{
-						// The error should only be a slight defocus offset, the astigmatism should be correct.
-						ctf_for_fitting->SetDefocus(original_defocus1 + iFit, original_defocus2 + iFit, ctf_for_fitting->GetAstigmatismAzimuth());
-						ctf_for_fitting->SetAdditionalPhaseShift(0.0f);
 
-					}
-					else
-					{
-						if (fabs(iFit - 1.0) < 1e-3) iFit = PIf / 2.0f;
-						else precomputed_amplitude_contrast_term = atanf(iFit/sqrtf(1.0 - powf(iFit, 2)));
-						ctf_for_fitting->SetAdditionalPhaseShift(precomputed_amplitude_contrast_term);
-					}
+					if (fabs(iFit - 1.0) < 1e-3) iFit = PIf / 2.0f;
+					else precomputed_amplitude_contrast_term = atanf(iFit/sqrtf(1.0 - powf(iFit, 2)));
+					ctf_for_fitting->SetAdditionalPhaseShift(precomputed_amplitude_contrast_term);
 
 
 					amplitude_spectrum_masked.SetupQuickCorrelationWithCTF(*ctf_for_fitting, number_to_correlate, norm_image, image_mean, NULL, NULL, NULL);
@@ -1051,14 +1023,6 @@ void WaveFunctionPropagator::ReturnImageContrast(Image &wave_function_sq_modulus
 						best_fit_value = iFit;
 					}
 
-//					if (is_phase_contrast_image)
-//					{
-//						wxPrintf("For iFit %2.4f, score is %3.5e\n", pixel_size*(iFit + original_defocus1), current_score);
-//					}
-//					{
-//						wxPrintf("For iFit %2.4f, score is %3.5e\n", iFit, current_score);
-//					}
-
 
 					delete [] azimuths;
 					delete [] spatial_frequency_squared;
@@ -1069,17 +1033,9 @@ void WaveFunctionPropagator::ReturnImageContrast(Image &wave_function_sq_modulus
 			}
 
 
+			wxPrintf("\n\n\tBest amplitude contrast so far is %2.4f, score %3.3e\n", best_fit_value, best_score);
 
-			if (is_phase_contrast_image)
-			{
-				wxPrintf("\n\n\tBest defocus so far is %2.4f %2.4f, score %3.3e\n", pixel_size*(best_fit_value + original_defocus1),pixel_size*(best_fit_value + original_defocus2), best_score);
 
-			}
-			else
-			{
-				wxPrintf("\n\n\tBest amplitude contrast so far is %2.4f, score %3.3e\n", best_fit_value, best_score);
-
-			}
 
 
 			// Step down by 1/10
@@ -1105,7 +1061,7 @@ void WaveFunctionPropagator::ReturnImageContrast(Image &wave_function_sq_modulus
 //    					  ctf[1].GetAstigmatismAzimuth());
     	float fit_1 = original_defocus1 - (found_defocus[0] / pixel_size);
     	float fit_2 = original_defocus2 - (found_defocus[1] / pixel_size);
-    	wxPrintf("Setting defocus from %f to %f %f\n", ctf[0].GetDefocus1(), fit_1, ctf[0].GetDefocus1() + fit_1);
+    	wxPrintf("Setting defocus to %f from %f because the fit appears %f off\n", pixel_size*(ctf[0].GetDefocus1() + fit_1),pixel_size* ctf[0].GetDefocus1(), pixel_size*fit_1 );
         ctf[0].SetDefocus(ctf[0].GetDefocus1() + fit_1 ,
         				  ctf[0].GetDefocus2() + fit_2,
     					  ctf[0].GetAstigmatismAzimuth());

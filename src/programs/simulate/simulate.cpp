@@ -3402,13 +3402,8 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 		water_box->ReturnCenteredCoordinates(current_atom,dx,dy,dz);
 
 		rotate_waters.RotateCoords(dx, dy, dz, ix, iy, iz);
-		int_x = iz;
-		// The broadest contition for exclusion is being outside the slab, so calculate that first to avoid redundant calcs.
-		dz = modff(iz + rotated_oZ + pixel_offset, &iz) - pixel_offset; // Why am I subtracting here? Should it be an add? TODO
-		int_z = myroundint(iz);
 
-		if ( int_z >= slabIDX_start[iSlab] && int_z  <= slabIDX_end[iSlab])
-		{
+		// The broadest contition for exclusion is being outside the slab, so calculate that first to avoid redundant calcs.
 
 
 		if (DO_BEAM_TILT_FULL)
@@ -3416,7 +3411,7 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 			// Shift atoms positions in X/Y so that they end up being projected at the correct position at the BOTTOM of the slab
 			// TODO save some comp and pre calc the factors on the right
 
-			z1 = int_x + (rotated_oZ - slabIDX_start[iSlab]);
+			z1 = iz + (rotated_oZ - slabIDX_start[iSlab]);
 
 			ix += z1*beam_tilt_z_X_component;
 			iy += z1*beam_tilt_z_Y_component;
@@ -3425,10 +3420,12 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 
 		dx = modff(ix + scattering_slab->logical_x_dimension/2 + pixel_offset, &ix) - pixel_offset;
 		dy = modff(iy + scattering_slab->logical_y_dimension/2 + pixel_offset, &iy) - pixel_offset;
+		dz = modff(iz + rotated_oZ + pixel_offset, &iz) - pixel_offset; // Why am I subtracting here? Should it be an add? TODO
 
 		// Convert these once to avoid type conversion in every loop
 		int_x = myroundint(ix);
 		int_y = myroundint(iy);
+		int_z = myroundint(iz);
 
 
 
@@ -3444,7 +3441,7 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 //
 //if (ReturnThreadNumberOfCurrentThread()==0) timer.lap("w_center");
 
-		if ( int_x-1 > 0 && int_y-1 > 0 && int_x-1 < scattering_slab->logical_x_dimension && int_y-1 < scattering_slab->logical_y_dimension)
+		if ( int_z >= slabIDX_start[iSlab] && int_z  <= slabIDX_end[iSlab] && int_x-1 > 0 && int_y-1 > 0 && int_x-1 < scattering_slab->logical_x_dimension && int_y-1 < scattering_slab->logical_y_dimension)
 		{
 
 			if (ReturnThreadNumberOfCurrentThread()==0) timer.start("w_weight");
@@ -3517,7 +3514,7 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 
 		}
 
-		} // z if
+
 
 	} // end loop over atoms
 

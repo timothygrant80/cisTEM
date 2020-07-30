@@ -3390,59 +3390,47 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 //	timer.lap("water_pre");
 
 	long n_waters_ignored = 0;
-	#pragma omp parallel for num_threads(this->number_of_threads) schedule(dynamic,number_of_threads) private(radius,ix,iy,iz,dx,dy,dz,x1,y1,z1,indX,indY,indZ,sx,sy,iSubPixX,iSubPixY,iSubPixLinearIndex,n_waters_ignored, current_weight, current_distance, current_potential)
+	#pragma omp parallel for num_threads(this->number_of_threads) schedule(static,water_box->number_of_waters/number_of_threads) private(radius,ix,iy,iz,dx,dy,dz,x1,y1,z1,indX,indY,indZ,sx,sy,iSubPixX,iSubPixY,iSubPixLinearIndex,n_waters_ignored, current_weight, current_distance, current_potential)
 	for (int current_atom = 0; current_atom < water_box->number_of_waters; current_atom++)
 	{
-
 
 		int int_x,int_y,int_z;
 		double temp_potential_sum = 0;
 		double norm_value = 0;
 
-//if (ReturnThreadNumberOfCurrentThread()==0) timer.start("w_center");
-//		// TODO put other water manipulation methods inside the water class.
-//if (ReturnThreadNumberOfCurrentThread()==0) timer.start("w_center_1");
 
 		water_box->ReturnCenteredCoordinates(current_atom,dx,dy,dz);
 
-//if (ReturnThreadNumberOfCurrentThread()==0) timer.lap("w_center_1");
-//
-//if (ReturnThreadNumberOfCurrentThread()==0) timer.start("w_center_2");
-
-		// Rotate to the slab frame
 		rotate_waters.RotateCoords(dx, dy, dz, ix, iy, iz);
-//if (ReturnThreadNumberOfCurrentThread()==0) timer.lap("w_center_2");
-//
-//if (ReturnThreadNumberOfCurrentThread()==0) timer.start("w_center_3");
+		int_x = iz;
+		// The broadest contition for exclusion is being outside the slab, so calculate that first to avoid redundant calcs.
+		dz = modff(iz + rotated_oZ + pixel_offset, &iz) - pixel_offset; // Why am I subtracting here? Should it be an add? TODO
+		int_z = myroundint(iz);
+
+		if ( int_z >= slabIDX_start[iSlab] && int_z  <= slabIDX_end[iSlab])
+		{
+
 
 		if (DO_BEAM_TILT_FULL)
 		{
 			// Shift atoms positions in X/Y so that they end up being projected at the correct position at the BOTTOM of the slab
 			// TODO save some comp and pre calc the factors on the right
 
-			z1 = iz + (rotated_oZ - slabIDX_start[iSlab]);
+			z1 = int_x + (rotated_oZ - slabIDX_start[iSlab]);
 
 			ix += z1*beam_tilt_z_X_component;
 			iy += z1*beam_tilt_z_Y_component;
 
 		}
 
-		dx = modff(ix + scattering_slab->logical_x_dimension/2 + pixel_offset, &ix);
-		dy = modff(iy + scattering_slab->logical_y_dimension/2 + pixel_offset, &iy);
-		dz = modff(iz + rotated_oZ + pixel_offset, &iz); // Why am I subtracting here? Should it be an add? TODO
-
-		dx -= pixel_offset;
-		dy -= pixel_offset;
-		dz -= pixel_offset;
+		dx = modff(ix + scattering_slab->logical_x_dimension/2 + pixel_offset, &ix) - pixel_offset;
+		dy = modff(iy + scattering_slab->logical_y_dimension/2 + pixel_offset, &iy) - pixel_offset;
 
 		// Convert these once to avoid type conversion in every loop
 		int_x = myroundint(ix);
 		int_y = myroundint(iy);
-		int_z = myroundint(iz);
 
-//if (ReturnThreadNumberOfCurrentThread()==0) timer.lap("w_center_3");
-//
-//if (ReturnThreadNumberOfCurrentThread()==0) timer.start("w_center_4");
+
 
 		// FIXME confirm the +1 on the sub pix makes sense
 		// FIXME printing out an error I'm getting iSubPixLinearIndex = -38 w/ iSubpixXYZ = 2,2,4 (should be 62) suspect water_edge having been declared as float. If this fixes, just make two vars.
@@ -3453,11 +3441,10 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 
 		iSubPixLinearIndex = int(water_edge * water_edge * iSubPixZ) + int(water_edge * iSubPixY) + (int)iSubPixX;
 
-//if (ReturnThreadNumberOfCurrentThread()==0) timer.lap("w_center_4");
 //
 //if (ReturnThreadNumberOfCurrentThread()==0) timer.lap("w_center");
 
-		if ( int_z >= slabIDX_start[iSlab] && int_z  <= slabIDX_end[iSlab] && int_x-1 > 0 && int_y-1 > 0 && int_x-1 < scattering_slab->logical_x_dimension && int_y-1 < scattering_slab->logical_y_dimension)
+		if ( int_x-1 > 0 && int_y-1 > 0 && int_x-1 < scattering_slab->logical_x_dimension && int_y-1 < scattering_slab->logical_y_dimension)
 		{
 
 			if (ReturnThreadNumberOfCurrentThread()==0) timer.start("w_weight");
@@ -3488,14 +3475,6 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 			}
 
 
-
-
-			if (DO_PRINT)
-			{
-				#pragma omp atomic update
-				nWatersAdded++;
-			}
-			int iWater = 0;
 //			wxPrintf("This water scale is %3.3f\n",current_weight);
 			if (ReturnThreadNumberOfCurrentThread()==0) timer.start("w_neigh");
 
@@ -3510,14 +3489,21 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 					{
 
 //						wxPrintf("%d %d ,%d,  %d %d %d sx sy idx\n", sx, sy, iSubPixLinearIndex, iSubPixX, iSubPixY, iSubPixZ);
-						if (iSubPixLinearIndex < 0 || iSubPixLinearIndex > SUB_PIXEL_NeL -1)
+//						if (iSubPixLinearIndex < 0 || iSubPixLinearIndex > SUB_PIXEL_NeL -1)
+//						{
+//							wxPrintf("%d %d ,%d,  %d %d %d sx sy idx\n", sx, sy, iSubPixLinearIndex, iSubPixX, iSubPixY, iSubPixZ);
+//							continue;
+//						}
+						if (iSubPixLinearIndex >= 0 && iSubPixLinearIndex <= SUB_PIXEL_NeL -1)
 						{
-							wxPrintf("%d %d ,%d,  %d %d %d sx sy idx\n", sx, sy, iSubPixLinearIndex, iSubPixX, iSubPixY, iSubPixZ);
-							continue;
-						}
-						#pragma omp atomic update
-						projected_water_atoms.real_values[projected_water_atoms.ReturnReal1DAddressFromPhysicalCoord(indX,indY,0)] +=
+							if (ReturnThreadNumberOfCurrentThread()==0) timer.start("omp");
+
+							#pragma omp atomic update
+							projected_water_atoms.real_values[projected_water_atoms.ReturnReal1DAddressFromPhysicalCoord(indX,indY,0)] +=
 								(current_weight*this->projected_water[iSubPixLinearIndex].ReturnRealPixelFromPhysicalCoord(sx,sy,0)); // TODO could I land out of bounds?] += projected_water_atoms[iSubPixLinearIndex].real_values[iWater];
+							if (ReturnThreadNumberOfCurrentThread()==0) timer.lap("omp");
+
+						}
 
 //						wxPrintf("Current Water %3.3e\n",current_weight*this->projected_water[iSubPixLinearIndex].real_values[this->projected_water[iSubPixLinearIndex].ReturnReal1DAddressFromPhysicalCoord(sx,sy,0)]);
 
@@ -3526,13 +3512,12 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 				}
 
 			}
-			if (ReturnThreadNumberOfCurrentThread()==0) timer.lap("w_neigh");
 
 
 
 		}
 
-
+		} // z if
 
 	} // end loop over atoms
 
@@ -3650,32 +3635,32 @@ void SimulateApp::project(Image *image_to_project, Image *image_to_project_into,
 	int column_length = image_to_project_into[iSlab].logical_x_dimension + image_to_project_into[iSlab].padding_jump_value;
 	long pixel_counter;
 
-	// TODO add check that these are the same size.
 
-	// Have each thread work on a column so sequential addresses may be coalesced
+//	// Have each thread work on a column so sequential addresses may be coalesced
 	#pragma omp parallel for num_threads(this->number_of_threads)
 	for (int iCol = 0 ; iCol < image_to_project->logical_y_dimension; iCol++)
 	{
-		int threadIDX = ReturnThreadNumberOfCurrentThread();
-		long image_plane = 0;
+		int image_plane = 0;
+		int skip_col = iCol*column_length;
 
 		for (prjZ = 0; prjZ < image_to_project->logical_z_dimension; prjZ++)
 		{
-
-			for (int iPixel = 0; iPixel < image_to_project_into[iSlab].logical_x_dimension; iPixel++)
+			for (int iPixel = 0; iPixel < image_to_project->logical_x_dimension; iPixel++)
 			{
-				image_to_project_into[iSlab].real_values[iPixel + threadIDX*column_length] += image_to_project->real_values[iPixel + threadIDX*column_length + image_plane];
+				image_to_project_into[iSlab].real_values[iPixel + skip_col ] += image_to_project->real_values[iPixel + skip_col + image_plane];
 			}
 
 			image_plane += image_to_project_into[iSlab].real_memory_allocated;
 
 		}
 	}
+	//
 
+//
+//	long image_plane = 0;
 //	for (prjZ = 0; prjZ < image_to_project->logical_z_dimension; prjZ++)
 //	{
 //
-//		#pragma omp parallel for num_threads(this->number_of_threads)
 //		for (int iPixel = 0; iPixel < image_to_project_into[iSlab].real_memory_allocated; iPixel++)
 //		{
 //			image_to_project_into[iSlab].real_values[iPixel] += image_to_project->real_values[iPixel + image_plane];

@@ -827,7 +827,7 @@ void WaveFunctionPropagator::ReturnImageContrast(Image &wave_function_sq_modulus
 //	std::string text_file_name = "/dev/shm/fit_" + file_id;
 //	std::string text_file_name_2 = "/dev/shm/fit_" + file_id + "_2.txt";
 	std::string phase_name = "phase_" + file_id + ".mrc";
-	std::string text_file_name = "fit_" + file_id;
+	std::string text_file_name = "fit_" + file_id + "_1.txt";
 	std::string text_file_name_2 = "fit_" + file_id + "_2.txt";
 
 	std::string awk_command = "tail -n -1 " + text_file_name + ".txt | awk '{print $2,$3}' > " + text_file_name_2; // gets the defocus vals
@@ -873,7 +873,7 @@ void WaveFunctionPropagator::ReturnImageContrast(Image &wave_function_sq_modulus
 			// Fixme change floats in params to ints.
 
 			myfile << "#!/bin/bash\n\n";
-			myfile << "ctffind > /dev/null << eof\n";
+			myfile << "ctffind << eof\n";
 			myfile << phase_name + "\n";
 			myfile << text_file_name + ".mrc\n";
 			myfile << std::to_string(pixel_size) + "\n";

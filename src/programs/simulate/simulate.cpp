@@ -1885,6 +1885,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 			coords.Allocate(&scattering_slab, (PaddingStatus)solvent, true, false);
 			coords.Allocate(&distance_slab, (PaddingStatus)solvent, true, false);
 			coords.Allocate(&inelastic_slab, (PaddingStatus)solvent, true, false);
+			// Not surprisingly a dynamic schedule here is super slow. Interestingly, multiplying by zero instead of setting to zero is about 80% runtime
 			#pragma omp parallel for num_threads(this->number_of_threads)
 			for (long pixel_counter = 0; pixel_counter < scattering_slab.real_memory_allocated; pixel_counter++)
 			{
@@ -3390,20 +3391,17 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 //	timer.lap("water_pre");
 
 	long n_waters_ignored = 0;
-	#pragma omp parallel for num_threads(this->number_of_threads) schedule(static,water_box->number_of_waters/number_of_threads) private(radius,ix,iy,iz,dx,dy,dz,x1,y1,z1,indX,indY,indZ,sx,sy,iSubPixX,iSubPixY,iSubPixLinearIndex,n_waters_ignored, current_weight, current_distance, current_potential)
+	#pragma omp parallel for num_threads(this->number_of_threads) schedule(dynamic,water_box->number_of_waters/number_of_threads) private(radius,ix,iy,iz,dx,dy,dz,x1,y1,z1,indX,indY,indZ,sx,sy,iSubPixX,iSubPixY,iSubPixLinearIndex,n_waters_ignored, current_weight, current_distance, current_potential)
 	for (int current_atom = 0; current_atom < water_box->number_of_waters; current_atom++)
 	{
 
 		int int_x,int_y,int_z;
-		double temp_potential_sum = 0;
-		double norm_value = 0;
-
 
 		water_box->ReturnCenteredCoordinates(current_atom,dx,dy,dz);
 
 		rotate_waters.RotateCoords(dx, dy, dz, ix, iy, iz);
-		int_x = iz;
 		// The broadest contition for exclusion is being outside the slab, so calculate that first to avoid redundant calcs.
+		z1 = iz + (rotated_oZ - slabIDX_start[iSlab]);
 		dz = modff(iz + rotated_oZ + pixel_offset, &iz) - pixel_offset; // Why am I subtracting here? Should it be an add? TODO
 		int_z = myroundint(iz);
 
@@ -3415,8 +3413,6 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 		{
 			// Shift atoms positions in X/Y so that they end up being projected at the correct position at the BOTTOM of the slab
 			// TODO save some comp and pre calc the factors on the right
-
-			z1 = int_x + (rotated_oZ - slabIDX_start[iSlab]);
 
 			ix += z1*beam_tilt_z_X_component;
 			iy += z1*beam_tilt_z_Y_component;
@@ -3431,21 +3427,19 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 		int_y = myroundint(iy);
 
 
-
-		// FIXME confirm the +1 on the sub pix makes sense
-		// FIXME printing out an error I'm getting iSubPixLinearIndex = -38 w/ iSubpixXYZ = 2,2,4 (should be 62) suspect water_edge having been declared as float. If this fixes, just make two vars.
-		float water_edge = ((float)SUB_PIXEL_NEIGHBORHOOD*2) + 1.0f;
-		iSubPixX = (int)trunc(dx * water_edge) + SUB_PIXEL_NEIGHBORHOOD;
-		iSubPixY = (int)trunc(dy * water_edge) + SUB_PIXEL_NEIGHBORHOOD;
-		iSubPixZ = (int)trunc(dz * water_edge) + SUB_PIXEL_NEIGHBORHOOD;
-
-		iSubPixLinearIndex = int(water_edge * water_edge * iSubPixZ) + int(water_edge * iSubPixY) + (int)iSubPixX;
-
-//
-//if (ReturnThreadNumberOfCurrentThread()==0) timer.lap("w_center");
-
 		if ( int_x-1 > 0 && int_y-1 > 0 && int_x-1 < scattering_slab->logical_x_dimension && int_y-1 < scattering_slab->logical_y_dimension)
 		{
+
+			double temp_potential_sum = 0;
+			double norm_value = 0;
+			// FIXME confirm the +1 on the sub pix makes sense
+			// FIXME printing out an error I'm getting iSubPixLinearIndex = -38 w/ iSubpixXYZ = 2,2,4 (should be 62) suspect water_edge having been declared as float. If this fixes, just make two vars.
+			float water_edge = ((float)SUB_PIXEL_NEIGHBORHOOD*2) + 1.0f;
+			iSubPixX = (int)trunc(dx * water_edge) + SUB_PIXEL_NEIGHBORHOOD;
+			iSubPixY = (int)trunc(dy * water_edge) + SUB_PIXEL_NEIGHBORHOOD;
+			iSubPixZ = (int)trunc(dz * water_edge) + SUB_PIXEL_NEIGHBORHOOD;
+
+			iSubPixLinearIndex = int(water_edge * water_edge * iSubPixZ) + int(water_edge * iSubPixY) + (int)iSubPixX;
 
 			if (ReturnThreadNumberOfCurrentThread()==0) timer.start("w_weight");
 

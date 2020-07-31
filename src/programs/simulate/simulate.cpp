@@ -2315,7 +2315,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		sampled_potential.GaussianLowPassFilter(0.05f);
 		sampled_potential.BackwardFFT();
 
-//		sampled_potential.QuickAndDirtyWriteSlice("SampledPotential.mrc",1,false,wanted_pixel_size);
+		sampled_potential.QuickAndDirtyWriteSlice("SampledPotential.mrc",1,false,wanted_pixel_size);
 
 		complemenatry_mask.CopyFrom(&sampled_potential);
 		complemenatry_mask.MultiplyAddConstant(-1.0,1.0);

@@ -741,14 +741,14 @@ float WaveFunctionPropagator::DoPropagation(Image* sum_image, Image* scattering_
 
 
 		ReturnImageContrast(sum_image[tilt_IDX], &total_contrast,false, tilt_angle);// - phase_contrast;
-//		sum_image[tilt_IDX].QuickAndDirtyWriteSlice("total.mrc",1,false,1);
+		sum_image[tilt_IDX].QuickAndDirtyWriteSlice("total.mrc",1,false,1);
 
 		wxPrintf("Total contrast is %3.3e\n", total_contrast);
 	}
 	else if(estimate_amplitude_contrast)
 	{
 		ReturnImageContrast(sum_image[tilt_IDX], &phase_contrast, true, tilt_angle);
-//		sum_image[tilt_IDX].QuickAndDirtyWriteSlice("phase.mrc",1,false,1);
+		sum_image[tilt_IDX].QuickAndDirtyWriteSlice("phase.mrc",1,false,1);
 
 
 		wxPrintf("Phase contrast estimate at %3.3e\n",phase_contrast);

@@ -1061,17 +1061,25 @@ void WaveFunctionPropagator::ReturnImageContrast(Image &wave_function_sq_modulus
 //    					  ctf[1].GetAstigmatismAzimuth());
     	float fit_1 = original_defocus1 - (found_defocus[0] / pixel_size);
     	float fit_2 = original_defocus2 - (found_defocus[1] / pixel_size);
-    	wxPrintf("Setting defocus to %f from %f because the fit appears %f off\n", pixel_size*(ctf[0].GetDefocus1() + fit_1),pixel_size* ctf[0].GetDefocus1(), pixel_size*fit_1 );
-        ctf[0].SetDefocus(ctf[0].GetDefocus1() + fit_1 ,
-        				  ctf[0].GetDefocus2() + fit_2,
-    					  ctf[0].GetAstigmatismAzimuth());
+    	float max_error = 0.01f;
+    	if ( fabsf(fit_1) > fabsf(original_defocus1 * max_error))
+    	{
+    		wxPrintf("The fit defocus (%f) is > %f percent which is probably fit issue, and not a random error in the apparent focal plane. The Amplitude contrast ratio is probably incorrect\n", max_error*100,pixel_size*fit_1);
+    	}
+    	else
+    	{
+			wxPrintf("Setting defocus to %f from %f because the fit appears %f off\n", pixel_size*(ctf[0].GetDefocus1() + fit_1),pixel_size* ctf[0].GetDefocus1(), pixel_size*fit_1 );
+			ctf[0].SetDefocus(ctf[0].GetDefocus1() + fit_1 ,
+							  ctf[0].GetDefocus2() + fit_2,
+							  ctf[0].GetAstigmatismAzimuth());
 
-        ctf[1].SetDefocus(ctf[1].GetDefocus1() + fit_1 ,
-				  	  	  ctf[1].GetDefocus2() + fit_2,
-    					  ctf[1].GetAstigmatismAzimuth());
+			ctf[1].SetDefocus(ctf[1].GetDefocus1() + fit_1 ,
+							  ctf[1].GetDefocus2() + fit_2,
+							  ctf[1].GetAstigmatismAzimuth());
 
 
-        ctf_for_fitting->SetDefocus(original_defocus1,original_defocus2,ctf_for_fitting->GetAstigmatismAzimuth());
+			ctf_for_fitting->SetDefocus(original_defocus1,original_defocus2,ctf_for_fitting->GetAstigmatismAzimuth());
+    	}
 
         *contrast = 0.0f;
     }

@@ -2321,23 +2321,26 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		complemenatry_mask.MultiplyAddConstant(-1.0,1.0);
 
 
-		// Apply the sampling mask
-		for (int iTot = 0; iTot < nSlabs; iTot++)
+		if (water_scaling > 0)
 		{
-
-			float_img.CopyFrom(&complemenatry_mask);
-			float_img.MultiplyByConstant(image_mean[iTot]);
-			scattering_potential[iTot].MultiplyPixelWise(sampled_potential);
-			scattering_potential[iTot].AddImage(&float_img);
-
-
-			float_img.CopyFrom(&complemenatry_mask);
-			float_img.MultiplyByConstant(inelastic_mean[iTot]);
-			inelastic_potential[iTot].MultiplyPixelWise(sampled_potential);
-			inelastic_potential[iTot].AddImage(&float_img);
-			if (SAVE_REF)
+			// Apply the sampling mask. If the waters are multiplied by zero, this won't work so skip it.
+			for (int iTot = 0; iTot < nSlabs; iTot++)
 			{
-				ref_potential[iTot].MultiplyPixelWise(sampled_potential);
+
+				float_img.CopyFrom(&complemenatry_mask);
+				float_img.MultiplyByConstant(image_mean[iTot]);
+				scattering_potential[iTot].MultiplyPixelWise(sampled_potential);
+				scattering_potential[iTot].AddImage(&float_img);
+
+
+				float_img.CopyFrom(&complemenatry_mask);
+				float_img.MultiplyByConstant(inelastic_mean[iTot]);
+				inelastic_potential[iTot].MultiplyPixelWise(sampled_potential);
+				inelastic_potential[iTot].AddImage(&float_img);
+				if (SAVE_REF)
+				{
+					ref_potential[iTot].MultiplyPixelWise(sampled_potential);
+				}
 			}
 		}
 
@@ -3009,6 +3012,9 @@ void SimulateApp::calc_scattering_potential(const PDB * current_specimen,
 		n_atoms_added = 0;
 
 		atom_id = current_specimen->my_atoms.Item(current_atom).atom_type;
+
+		if (atom_id == hydrogen) continue;
+
 		element_inelastic_ratio = sqrtf(non_water_inelastic_scaling / sp.ReturnAtomicNumber(atom_id)); // Reimer/Ross_Messemer 1989
 		bFactor = return_bfactor(current_specimen->my_atoms.Item(current_atom).bfactor);
 

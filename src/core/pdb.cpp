@@ -912,13 +912,15 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int fr
 				wxPrintf("\n\n\tSetting pdb %d to %d noise particles of max %d\n\n", current_pdb, pdb_ensemble[current_pdb].number_of_noise_particles,max_number_of_noise_particles);
 
 				// Angular sector size such that noise particles do not overlap. This could be a method.
-				float sector_size = 1.0f; //2.0*PIf / pdb_ensemble[current_pdb].number_of_noise_particles;
+				float sector_size = 1.1f; //2.0*PIf / pdb_ensemble[current_pdb].number_of_noise_particles;
 				float occupied_sectors[this->max_number_of_noise_particles];
 				int current_sector = 0;
+				bool non_overlaping_particle_found;
 
 				for (int iPart = 0; iPart < this->max_number_of_noise_particles; iPart++)
 				{
 
+					non_overlaping_particle_found = false;
 					float offset_radius;
 					// Rather than mess with the allocations, simply send ignored particles off into space.
 					if (iPart >= pdb_ensemble[current_pdb].number_of_noise_particles)
@@ -942,6 +944,7 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int fr
 					if (iPart == 0)
 					{
 						offset_angle = clamp_angular_range(my_rand.GetUniformRandomSTD(-PIf,PIf));
+						non_overlaping_particle_found = true;
 						occupied_sectors[0] = offset_angle;
 					}
 					else
@@ -956,18 +959,19 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int fr
 							float dx = cosf(offset_angle);
 							float dy = sinf(offset_angle);
 							float ang_diff;
+							int jPart;
 //							wxPrintf("offset angle is %3.3f\n", rad_2_deg(offset_angle));
 
 							// now check the angle against each previous
-							for (int jPart = 0; jPart < iPart; jPart ++)
+							for (jPart = 0; jPart < iPart; jPart ++)
 							{
 								ang_diff = cosf(occupied_sectors[jPart])*dx + sinf(occupied_sectors[jPart])*dy;
 								ang_diff = acosf(ang_diff);
 
-//								wxPrintf("comparing against %3.3f found a diff of %3.3f\n", rad_2_deg(occupied_sectors[jPart]), rad_2_deg(ang_diff));
 
-								if (ang_diff > sector_size)
+								if (fabsf(ang_diff) >= sector_size)
 								{
+									// We need to keep track of whether or not a goo dmatch was found
 									is_too_close = false;
 								}
 								else
@@ -977,6 +981,19 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int fr
 									break;
 								}
 							}
+//							//
+//							// For trouble shooting overlaps: We found a good spot, run through theoptions again and print out.
+//							if (! is_too_close)
+//							{
+//								for (jPart = 0; jPart < iPart; jPart ++)
+//								{
+//									ang_diff = cosf(occupied_sectors[jPart])*dx + sinf(occupied_sectors[jPart])*dy;
+//									ang_diff = acosf(ang_diff);
+//									wxPrintf("on iPart %d comparing %3.3f against %3.3f (jPart %d) found a diff of %3.3f\n", iPart,rad_2_deg(offset_angle),rad_2_deg(occupied_sectors[jPart]), jPart,rad_2_deg(ang_diff));
+//
+//								}
+//
+//							}
 						}
 						if (is_too_close)
 						{
@@ -985,46 +1002,55 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int fr
 						}
 						else
 						{
+							non_overlaping_particle_found = true;
 							occupied_sectors[iPart] = offset_angle;
 						}
 					}
 
 
-					float offset_X = offset_radius * cosf(offset_angle) * cosf(deg_2_rad(emulate_tilt_angle));
-					float offset_Y = offset_radius * sinf(offset_angle);
 
-
-//					RotationMatrix randmat;
-					// FIXME this will not sample the euler sphere propertly
-//					randmat.SetToEulerRotation(my_rand.GetUniformRandomSTD(0,360),my_rand.GetUniformRandomSTD(0,180),my_rand.GetUniformRandomSTD(0,360));
-
-					pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].Init(my_rand.GetUniformRandomSTD(0,360),my_rand.GetUniformRandomSTD(0,360),my_rand.GetUniformRandomSTD(0,360),offset_X, offset_Y);
-
-
-//					wxPrintf("\n\t\tFor pdb %d particle %d np %d, eulers are %3.3e %3.3e %3.3e, %3.3e %3.3e\n", current_pdb, current_particle, iPart,
-//							pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnPhiAngle(),
-//							pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnThetaAngle(),
-//							pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnPsiAngle(),
-//							pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnShiftX(),
-//							pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnShiftY());
-
-					wxPrintf("\nreal total current %ld %ld %ld\n", pdb_ensemble[current_pdb].number_of_real_atoms,pdb_ensemble[current_pdb].number_of_real_and_noise_atoms, pdb_ensemble[current_pdb].number_of_atoms);
-
-					for (int current_atom_number = 0; current_atom_number < pdb_ensemble[current_pdb].number_of_real_atoms; current_atom_number++)
+					if ( ! non_overlaping_particle_found)
 					{
-
-						pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].euler_matrix.RotateCoords(
-									my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms*(1+iPart)).x_coordinate,
-									my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms*(1+iPart)).y_coordinate,
-									my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms*(1+iPart)).z_coordinate,
-									tx,ty,tz);
-
-						my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms*(1+iPart)).x_coordinate = tx + pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnShiftX();
-						my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms*(1+iPart)).y_coordinate = ty + pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnShiftY();
-						my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms*(1+iPart)).z_coordinate = tz;
+						// fix double negative
+						offset_radius = 1e8;
 					}
 
 
+						float offset_X = offset_radius * cosf(offset_angle) * cosf(deg_2_rad(emulate_tilt_angle));
+						float offset_Y = offset_radius * sinf(offset_angle);
+
+
+	//					RotationMatrix randmat;
+						// FIXME this will not sample the euler sphere propertly
+	//					randmat.SetToEulerRotation(my_rand.GetUniformRandomSTD(0,360),my_rand.GetUniformRandomSTD(0,180),my_rand.GetUniformRandomSTD(0,360));
+
+						pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].Init(my_rand.GetUniformRandomSTD(0,360),my_rand.GetUniformRandomSTD(0,360),my_rand.GetUniformRandomSTD(0,360),offset_X, offset_Y);
+
+
+	//					wxPrintf("\n\t\tFor pdb %d particle %d np %d, eulers are %3.3e %3.3e %3.3e, %3.3e %3.3e\n", current_pdb, current_particle, iPart,
+	//							pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnPhiAngle(),
+	//							pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnThetaAngle(),
+	//							pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnPsiAngle(),
+	//							pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnShiftX(),
+	//							pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnShiftY());
+
+						wxPrintf("\nreal total current %ld %ld %ld\n", pdb_ensemble[current_pdb].number_of_real_atoms,pdb_ensemble[current_pdb].number_of_real_and_noise_atoms, pdb_ensemble[current_pdb].number_of_atoms);
+
+						for (int current_atom_number = 0; current_atom_number < pdb_ensemble[current_pdb].number_of_real_atoms; current_atom_number++)
+						{
+
+							pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].euler_matrix.RotateCoords(
+										my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms*(1+iPart)).x_coordinate,
+										my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms*(1+iPart)).y_coordinate,
+										my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms*(1+iPart)).z_coordinate,
+										tx,ty,tz);
+
+							my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms*(1+iPart)).x_coordinate = tx + pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnShiftX();
+							my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms*(1+iPart)).y_coordinate = ty + pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnShiftY();
+							my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms*(1+iPart)).z_coordinate = tz;
+						}
+
+//					} // if condition on non-overlaping particles
 				} // end of loop over noise particles
 			} // if condition on noise particles and frame 0
 

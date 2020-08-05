@@ -766,7 +766,7 @@ bool MatchTemplateApp::DoCalculation()
 
 	// These vars are only needed in the GPU code, but also need to be set out here to compile.
 	bool first_gpu_loop = true;
-	int nThreads = 4;
+	int nThreads = 2;
 	int nGPUs = 1;
 	int nJobs = last_search_position-first_search_position+1;
 	if (use_gpu && nThreads > nJobs)

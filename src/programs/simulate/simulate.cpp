@@ -14,7 +14,8 @@ const float DISTANCE_INIT = 100000.0f; // Set the distance slab to a large value
 
 const int N_WATER_TERMS = 40;
 
-const float MIN_BFACTOR = 30.0f;
+const float WATER_BFACTOR_PER_ELECTRON_PER_SQANG = 78.0f;
+const float PHASE_PLATE_BFACTOR = 20.0f;
 const float inelastic_scalar_water = 0.0725f ; // this value is for 1 Apix. When not taking the sqrt (original but I think wrong approach) the value 0.75 worked
 
 // Parameters for calculating water. Because all waters are the same, except a sub-pixel origin offset. A SUB_PIXEL_NeL stack of projected potentials is pre-calculated with given offsets.
@@ -825,7 +826,7 @@ void SimulateApp::DoInteractiveUserInput()
 
 	 this->wanted_pixel_size 		= my_input->GetFloatFromUser("Output pixel size (Angstroms)","Output size for the final projections","1.0",0.01,MAX_PIXEL_SIZE);
 	 this->bFactor_scaling		 = my_input->GetFloatFromUser("Linear scaling of per atom bFactor","0 off, 1 use as is","0",0,10000);
-	 this->min_bFactor    		 = my_input->GetFloatFromUser("Per atom (xtal) bFactor added to all atoms","0 off, 1 use as is","10.0",0.0f,10000);
+	 this->min_bFactor    		 = my_input->GetFloatFromUser("Per atom (xtal) bFactor added to all atoms","accounts for all quote[unavoidable] experimental error","30.0",0.0f,10000);
 
 
 
@@ -1562,7 +1563,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		// FIXME method for defining the size (in pixels) needed for incorporating the atoms density. The formulat used below is based on including the strongest likely scatterer (Phosphorous) given the bfactor.
 		// FIXME
 		float BF;
-		if (DO_PHASE_PLATE) { BF = MIN_BFACTOR ;} else { BF = return_bfactor(current_specimen.average_bFactor);}
+		if (DO_PHASE_PLATE) { BF = PHASE_PLATE_BFACTOR ;} else { BF = return_bfactor(current_specimen.average_bFactor);}
 
 		this->size_neighborhood 	  =  1 + myroundint( (0.4f *sqrtf(0.6f*BF) + 0.2f) / this->wanted_pixel_size);
 		wxPrintf("\n\n\tfor frame %d the size neigborhood is %d\n\n", iFrame, this->size_neighborhood);
@@ -2315,7 +2316,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		sampled_potential.GaussianLowPassFilter(0.05f);
 		sampled_potential.BackwardFFT();
 
-		sampled_potential.QuickAndDirtyWriteSlice("SampledPotential.mrc",1,false,wanted_pixel_size);
+//		sampled_potential.QuickAndDirtyWriteSlice("SampledPotential.mrc",1,false,wanted_pixel_size);
 
 		complemenatry_mask.CopyFrom(&sampled_potential);
 		complemenatry_mask.MultiplyAddConstant(-1.0,1.0);
@@ -3162,12 +3163,12 @@ void SimulateApp::calc_water_potential(Image *projected_water, AtomType wanted_a
 	if (DO_PHASE_PLATE)
 	{
 		atom_id = carbon;
-		bFactor = 0.25f * MIN_BFACTOR;
+		bFactor = 0.25f * PHASE_PLATE_BFACTOR;
 		water_lead_term = this->lead_term;
 	}
 	else
 	{
-		bFactor = 0.25f * MIN_BFACTOR;
+		bFactor = 0.25f * WATER_BFACTOR_PER_ELECTRON_PER_SQANG * this->dose_per_frame;
 		water_lead_term = this->lead_term;
 
 		atom_id = SOLVENT_TYPE;
@@ -3558,16 +3559,16 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 		}
 		else
 		{
-			if (SOLVENT_TYPE == oxygen)
-			{
+//			if (SOLVENT_TYPE == oxygen)
+//			{
 				// The total elastic cross section of water is nearly equal to water but the inelastic is higher than expected (via 22.2/Z Reimer) using values from Wanner et al. 2006
 				oxygen_inelastic_to_elastic_ratio = sqrtf(( inelastic_scalar_water / (sp.ReturnAtomicNumber(plasmon))));
-			}
-			else
-			{
-				 oxygen_inelastic_to_elastic_ratio = sqrtf(( inelastic_scalar_water / sp.ReturnAtomicNumber(SOLVENT_TYPE)));
-
-			}
+//			}
+//			else
+//			{
+//				 oxygen_inelastic_to_elastic_ratio = sqrtf(( inelastic_scalar_water / sp.ReturnAtomicNumber(SOLVENT_TYPE)));
+//
+//			}
 		}
 
 

@@ -1,5 +1,5 @@
 # *cis*TEM
-[*cis*TEM](https://cistem.org) is user-friendly software to process cryo-EM images of macromolecular complexes and obtain high-resolution 3D reconstructions from them. It was originally developed by Tim Grant, Alexis Rohou and Nikolaus Grigorieff and comprises a number of tools to process image data including movies, micrographs and stacks of single-particle images, implementing a complete “pipeline” of processing steps to obtain high-resolution single-particle reconstructions. cisTEM is distributed under the ***_TBD_*** License and pre-compiled binaries can be downloaded from [cistem.org](https://cistem.org). For best performance, we recommend downloading and using the pre-compiled binaries, rather than compiling the source code. New users are encouraged to follow the [tutorial](https://cistem.org/documentation#tab-1-1), which provides a quick way to become familiar with the most important functions of cisTEM.
+[*cis*TEM](https://cistem.org) is user-friendly software to process cryo-EM images of macromolecular complexes and obtain high-resolution 3D reconstructions from them. It was originally developed by Tim Grant, Alexis Rohou and Nikolaus Grigorieff and comprises a number of tools to process image data including movies, micrographs and stacks of single-particle images, implementing a complete “pipeline” of processing steps to obtain high-resolution single-particle reconstructions. cisTEM is distributed under the [Janelia Research Campus Software License](http://license.janelia.org/license/) License and pre-compiled binaries can be downloaded from [cistem.org](https://cistem.org). For best performance, we recommend downloading and using the pre-compiled binaries, rather than compiling the source code. New users are encouraged to follow the [tutorial](https://cistem.org/documentation#tab-1-1), which provides a quick way to become familiar with the most important functions of cisTEM.
 
 ## Features
 * Complete single-particle analysis pipeline, from raw movie frame alignemnt to final sharpened map ready for model building
@@ -43,7 +43,12 @@ The recommended IDE for developing with cisTEM is Microsoft Visual Studio Code. 
 ## Getting help
 Please address questions and requests to help to the [_cis_TEM forum](https://cistem.org/forum).
 
-## License and distribution
-Recent versions of cisTEM (including the 2.0+ releases) will soon be available under a license TBD.
+## Known issues
+Please note that the repository version of cisTEM is likely unstable, and features are not guaranteed to work.  For this reason we recommend sticking to the released versions of cisTEM. 
 
-cisTEM 1.0 is distributed under [Janelia Research Campus Software License](http://license.janelia.org/license/).
+For a list of currently known issues, please see the issue page on [Github](https://github.com/ngrigorieff/cisTEM/issues/).
+
+## License and distribution
+Recent versions of cisTEM (including the 2.0+ releases) will soon be available under the [Janelia Research Campus Software License](http://license.janelia.org/license/).
+
+cisTEM 1.0 is also distributed under [Janelia Research Campus Software License](http://license.janelia.org/license/).

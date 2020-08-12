@@ -14,7 +14,7 @@ const float DISTANCE_INIT = 100000.0f; // Set the distance slab to a large value
 
 const int N_WATER_TERMS = 40;
 
-const float WATER_BFACTOR_PER_ELECTRON_PER_SQANG = 78.0f;
+const float WATER_BFACTOR_PER_ELECTRON_PER_SQANG = 34.0f;
 const float PHASE_PLATE_BFACTOR = 20.0f;
 const float inelastic_scalar_water = 0.0725f ; // this value is for 1 Apix. When not taking the sqrt (original but I think wrong approach) the value 0.75 worked
 
@@ -174,6 +174,7 @@ public:
 		// Keep a running record of the largest specimen dimensions encountered yet
 		SetLargestSpecimenVolume(nx, ny, nz);
 	}
+
 	int3 GetSpecimenVolume() { CheckVectorIsSet( is_set_specimen) ; return specimen ; }
 
 	// The minimum specimen dimensions can vary depending on the current orientation. We need to track the largest dimension for output
@@ -191,6 +192,12 @@ public:
 	{
 		solvent_padding = make_int3(nx, ny, nz);
 		is_set_solvent_padding = true;
+	}
+
+	void SetSolventPadding_Z(int wanted_nz)
+	{
+		MyAssertTrue(is_set_solvent_padding,"Solvent padding must be set in all dimensions before updating the Z dimension");
+		solvent_padding.z = wanted_nz;
 	}
 
 	int3 GetSolventPadding() { CheckVectorIsSet(is_set_solvent_padding) ; return solvent_padding; }
@@ -351,7 +358,6 @@ public:
 		{
 			allocation_required = false;
 		}
-
 
 
 		return allocation_required;
@@ -527,7 +533,7 @@ class SimulateApp : public MyApp
 
 	void  calc_water_potential(Image *projected_water, AtomType atom_id);
 	void  fill_water_potential(const PDB * current_specimen,Image *scattering_slab, Image *scattering_potential,
-							   Image *inelastic_potential, Image *distance_slab, Water *water_box,RotationMatrix rotate_waters,
+							   Image *inelastic_potential, Image *distance_slab, Image* water_mask_slab, Water *water_box,RotationMatrix rotate_waters,
 														   float rotated_oZ, int *slabIDX_start, int *slabIDX_end, int iSlab);
 
 
@@ -639,6 +645,7 @@ class SimulateApp : public MyApp
 
 	float wgt = 0.0f;
 	float bf = 0.0f;
+	bool water_shell_only = false;
 	///////////
 	/////////////////////////////////////////
 
@@ -716,6 +723,7 @@ void SimulateApp::AddCommandLineOptions()
 
 	command_line_parser.AddOption("","wgt","Maximum number of neighboring noise particles when simulating an image stack. Default is 0",wxCMD_LINE_VAL_DOUBLE);
 	command_line_parser.AddOption("","bf","Maximum number of neighboring noise particles when simulating an image stack. Default is 0",wxCMD_LINE_VAL_DOUBLE);
+	command_line_parser.AddLongSwitch("water-shell-only","when adding constant background, taper off 4 Ang into the water");
 
 //	command_line_parser.AddOption("j","","Desired number of threads. Overrides interactive user input. Is overriden by env var OMP_NUM_THREADS",wxCMD_LINE_VAL_NUMBER);
 }
@@ -793,6 +801,7 @@ void SimulateApp::DoInteractiveUserInput()
 
 	if (command_line_parser.Found("wgt", &temp_double)) { wgt = (float)temp_double;}
 	if (command_line_parser.Found("bf", &temp_double)) { bf = (float)temp_double;}
+	if (command_line_parser.Found("water-shell-only")) water_shell_only = true;
 
 
 
@@ -1640,7 +1649,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		padSpecimenX += N_TAPERS*TAPERWIDTH;
 		padSpecimenY += N_TAPERS*TAPERWIDTH;
 
-		// Set the minimum specimen volume to allow trimming of the tapered region.
+		// Set the minimum specimen volume to allow trimming of the tapered region. Note that the z dimension must be set on each slab, it is ignored for 2d
 		coords.SetSpecimenVolume(current_specimen.vol_nX, current_specimen.vol_nY, current_specimen.vol_nZ);
 		coords.SetSolventPadding(current_specimen.vol_nX + padSpecimenX, current_specimen.vol_nY + padSpecimenY, current_specimen.vol_nZ);
 		 wxPrintf("\n\n\t\twanted size is %d\n\n",padSpecimenX);
@@ -1848,20 +1857,23 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		Image scattering_slab;
 		Image distance_slab;
 		Image inelastic_slab;
+		Image water_mask_slab;
 
 		for (iSlab = 0; iSlab < nSlabs; iSlab++)
 		{
 
+			wxPrintf("Working on %d/%d\n",iSlab,nSlabs);
 			scattering_total_shift[iSlab] = 0.0f;
 			propagator_distance[iSlab] =  -1.0f*( this->wanted_pixel_size * (slabIDX_end[iSlab] - slabIDX_start[iSlab] + 1) );
 //			propagator_distance[iSlab] =  ( this->wanted_pixel_size * (slabIDX_end[iSlab] - slabIDX_start[iSlab] + 0) );
 
 			coords.Allocate(&scattering_potential[iSlab], (PaddingStatus)solvent, true, true);
-//			scattering_potential[iSlab].Allocate(current_specimen.vol_nX, current_specimen.vol_nY,1);
 			scattering_potential[iSlab].SetToConstant(0.0f);
 			coords.Allocate(&inelastic_potential[iSlab], (PaddingStatus)solvent, true, true);
+
 //			inelastic_potential[iSlab].Allocate(current_specimen.vol_nX, current_specimen.vol_nY,1);
 			inelastic_potential[iSlab].SetToConstant(0.0f);
+
 
 
 			if (SAVE_REF)
@@ -1880,9 +1892,24 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 
 			timer.start("Allocate 3d slabs");
+			coords.SetSolventPadding_Z(slab_nZ);
 			coords.Allocate(&scattering_slab, (PaddingStatus)solvent, true, false);
 			coords.Allocate(&distance_slab, (PaddingStatus)solvent, true, false);
 			coords.Allocate(&inelastic_slab, (PaddingStatus)solvent, true, false);
+
+
+			if (add_mean_water_potential)
+			{
+				coords.Allocate(&water_mask_slab,(PaddingStatus)solvent, true, false);
+				// Not surprisingly a dynamic schedule here is super slow. Interestingly, multiplying by zero instead of setting to zero is about 80% runtime
+				#pragma omp parallel for num_threads(this->number_of_threads)
+				for (long pixel_counter = 0; pixel_counter < scattering_slab.real_memory_allocated; pixel_counter++)
+				{
+					// Somehow multiplication by zero is about 70% runtime relative to seting zero with image method which in turn is 87 % runtime compared to std::fill or std::memset
+					water_mask_slab.real_values[pixel_counter] = 1.0f;
+				}
+			}
+
 			// Not surprisingly a dynamic schedule here is super slow. Interestingly, multiplying by zero instead of setting to zero is about 80% runtime
 			#pragma omp parallel for num_threads(this->number_of_threads)
 			for (long pixel_counter = 0; pixel_counter < scattering_slab.real_memory_allocated; pixel_counter++)
@@ -1953,14 +1980,13 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 					avg_scattering_per_voxel = scattering_per_water * waters_per_ang_cubed * (this->wanted_pixel_size * this->wanted_pixel_size_sq);
 
-					bool only_use_water_shell = true;
 					float taper_from = 4.0; // distance form which to taper off the constant water shell
 					for (long current_pixel = 0; current_pixel < distance_slab.real_memory_allocated; current_pixel++)
 					{
 						if (distance_slab.real_values[current_pixel] < DISTANCE_INIT)
 						{
 							current_weight = sqrtf(distance_slab.real_values[current_pixel]);
-							if (only_use_water_shell && current_weight > taper_from)
+							if (water_shell_only && current_weight > taper_from)
 							{
 								distance_slab.real_values[current_pixel]  = return_hydration_weight_tapered(taper_from, current_weight) * avg_scattering_per_voxel;
 							}
@@ -1972,7 +1998,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 						}
 						else
 						{
-							if (only_use_water_shell)
+							if (water_shell_only)
 							{
 								distance_slab.real_values[current_pixel]  = 0.0f;
 							}
@@ -1989,9 +2015,13 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 					}
 
 //					distance_slab.QuickAndDirtyWriteSlices("distance_slab.mrc",1,distance_slab.logical_z_dimension,false,1.5);
-					distance_slab.ForwardFFT(true);
-					distance_slab.ApplyBFactor(this->bf / wanted_pixel_size_sq);
-					distance_slab.BackwardFFT();
+					if (bf > 0)
+					{
+						distance_slab.ForwardFFT(true);
+						distance_slab.ApplyBFactor(this->bf / wanted_pixel_size_sq);
+						distance_slab.BackwardFFT();
+					}
+
 					distance_slab.MultiplyByConstant(this->wgt);
 					scattering_slab.AddImage(&distance_slab);
 
@@ -2225,9 +2255,29 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 				// Now loop back over adding waters where appropriate
 				if (DO_PRINT) {wxPrintf("Working on waters, slab %d\n",iSlab);}
 
+				if (add_mean_water_potential)
+				{
+					// Not surprisingly a dynamic schedule here is super slow. Interestingly, multiplying by zero instead of setting to zero is about 80% runtime
+					#pragma omp parallel for num_threads(this->number_of_threads)
+					for (long pixel_counter = 0; pixel_counter < distance_slab.real_memory_allocated; pixel_counter++)
+					{
+						float current_weight = distance_slab.real_values[pixel_counter];
+						if (current_weight < DISTANCE_INIT)
+						{
+							water_mask_slab.real_values[pixel_counter] = 1.0f;
+						}
+						else
+						{
+							current_weight = sqrtf(current_weight);
+							water_mask_slab.real_values[pixel_counter] = return_hydration_weight(current_weight) ;
+						}
+
+					}
+
+				}
 
 				this->fill_water_potential(&current_specimen, &scattering_slab,
-										   scattering_potential,inelastic_potential, &distance_slab, &water_box,rotate_waters,
+										   scattering_potential,inelastic_potential, &distance_slab, &water_mask_slab, &water_box,rotate_waters,
 						   	   	   	   	   rotated_oZ, slabIDX_start, slabIDX_end, iSlab);
 
 				timer.lap("Fill H20");
@@ -3281,8 +3331,9 @@ void SimulateApp::calc_water_potential(Image *projected_water, AtomType wanted_a
 }
 
 void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scattering_slab, Image *scattering_potential,
-												  Image *inelastic_potential, Image *distance_slab, Water *water_box, RotationMatrix rotate_waters,
-													   float rotated_oZ, int *slabIDX_start, int *slabIDX_end, int iSlab)
+												  Image *inelastic_potential, Image *distance_slab, Image* water_mask_slab,
+												  Water *water_box, RotationMatrix rotate_waters,
+												  float rotated_oZ, int *slabIDX_start, int *slabIDX_end, int iSlab)
 {
 
 	long current_atom;
@@ -3328,39 +3379,7 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 	projected_water_atoms.Allocate(scattering_slab->logical_x_dimension,scattering_slab->logical_y_dimension,1);
 	projected_water_atoms.SetToConstant(0.0f);
 
-	Image water_mask;
-	if (add_mean_water_potential)
-	{
-		water_mask.Allocate(scattering_slab->logical_x_dimension,scattering_slab->logical_y_dimension,scattering_slab->logical_z_dimension);
-		water_mask.SetToConstant(1.0f);
 
-		for (long iVoxel = 0; iVoxel < scattering_slab->real_memory_allocated; iVoxel++)
-		{
-			current_potential = scattering_slab->real_values[iVoxel];
-
-
-			if (DO_PHASE_PLATE)
-			{
-				current_weight = 1;
-			}
-			else
-			{
-
-				for (iPot = N_WATER_TERMS - 1; iPot >=0; iPot--)
-				{
-					if (current_potential < this->average_at_cutoff[iPot])
-					{
-
-						current_weight = this->water_weight[iPot];
-						break;
-					}
-				}
-			}
-
-			water_mask.real_values[iVoxel] *= current_weight;
-		}
-
-	}
 
 	// To compare the thread block ordering, undo with schedule(dynamic,1)
 	// schedule(static, water_box->number_of_waters /number_of_threads )
@@ -3379,11 +3398,13 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 		rotate_waters.RotateCoords(dx, dy, dz, ix, iy, iz);
 		// The broadest contition for exclusion is being outside the slab, so calculate that first to avoid redundant calcs.
 		z1 = iz + (rotated_oZ - slabIDX_start[iSlab]);
-		dz = modff(iz + rotated_oZ + pixel_offset, &iz) - pixel_offset; // Why am I subtracting here? Should it be an add? TODO
+		dz = modff(iz + rotated_oZ + pixel_offset, &iz) - pixel_offset;
 		int_z = myroundint(iz);
 
+//		if ( int_z >= slabIDX_start[iSlab] && int_z  <= slabIDX_end[iSlab])
 		if ( int_z >= slabIDX_start[iSlab] && int_z  <= slabIDX_end[iSlab])
 		{
+//			if (int_z == slabIDX_end[iSlab] && dz > 0.25f ) continue;
 
 
 		if (DO_BEAM_TILT_FULL)
@@ -3527,9 +3548,9 @@ void SimulateApp::fill_water_potential(const PDB * current_specimen,Image *scatt
 		// the number of sample points in Z. Then calc a 2d average of the projected potential
 		tmpPrj[0].Allocate(scattering_potential[iSlab].logical_x_dimension,scattering_potential[iSlab].logical_y_dimension,1);
 		tmpPrj[0].SetToConstant(0.0f);
-		this->project(&water_mask,tmpPrj,0);
-		tmpPrj->DivideByConstant((float)water_mask.logical_z_dimension);
-		float mean_water_value = projected_water_atoms.ReturnAverageOfRealValues(-1.0,false);// / water_mask.logical_z_dimension;
+		this->project(water_mask_slab,tmpPrj,0);
+		tmpPrj->DivideByConstant((float)water_mask_slab->logical_z_dimension);
+		float mean_water_value = projected_water_atoms.ReturnAverageOfRealValues(-0.0001,false);// / water_mask.logical_z_dimension;
 		projected_water_atoms.CopyFrom(tmpPrj);
 		projected_water_atoms.MultiplyByConstant(mean_water_value);
 
@@ -3598,12 +3619,11 @@ void SimulateApp::project(Image *image_to_project, Image *image_to_project_into,
 	 *
 	 */
 	// Project the slab into the two
-
 	double pixel_accumulator;
 	int prjX, prjY, prjZ;
 	int edgeX = 0;
 	int edgeY = 0;
-	int column_length = image_to_project_into[iSlab].logical_x_dimension + image_to_project_into[iSlab].padding_jump_value;
+	int column_length = image_to_project->logical_x_dimension + image_to_project->padding_jump_value;
 	long pixel_counter;
 
 
@@ -3611,6 +3631,7 @@ void SimulateApp::project(Image *image_to_project, Image *image_to_project_into,
 	#pragma omp parallel for num_threads(this->number_of_threads)
 	for (int iCol = 0 ; iCol < image_to_project->logical_y_dimension; iCol++)
 	{
+
 		int image_plane = 0;
 		int skip_col = iCol*column_length;
 

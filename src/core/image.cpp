@@ -6237,6 +6237,8 @@ float Image::ReturnAverageOfRealValues(float wanted_mask_radius, bool invert_mas
 	float   mask_radius_squared;
 	float	distance_from_center_squared;
 
+	// if mask radius < zero, average only values > || mask radius ||
+
 	if (wanted_mask_radius > 0.0)
 	{
 		mask_radius_squared = powf(wanted_mask_radius, 2);
@@ -6276,32 +6278,37 @@ float Image::ReturnAverageOfRealValues(float wanted_mask_radius, bool invert_mas
 				address += padding_jump_value;
 			}
 		}
-		if (number_of_pixels > 0)
-		{
-			return float(sum / number_of_pixels);
-		}
-		else
-		{
-			return 0.0;
-		}
 	}
 	else
 	{
+
+		wanted_mask_radius = fabsf(wanted_mask_radius);
 		for (k = 0; k < logical_z_dimension; k++)
 		{
 			for (j = 0; j < logical_y_dimension; j++)
 			{
 				for (i = 0; i < logical_x_dimension; i++)
 				{
-					sum += real_values[address];
+					if (real_values[address] > wanted_mask_radius)
+					{
+						sum += real_values[address];
+						number_of_pixels += 1;
+					}
 					address++;
 				}
 				address += padding_jump_value;
 			}
 		}
-
 	}
-	return float(sum / (long(logical_x_dimension) * long(logical_y_dimension) * long(logical_z_dimension)));
+
+	if (number_of_pixels > 0)
+	{
+		return float(sum / number_of_pixels);
+	}
+	else
+	{
+		return 0.0;
+	}
 }
 
 

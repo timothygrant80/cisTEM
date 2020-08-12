@@ -702,6 +702,8 @@ bool MatchTemplateApp::DoCalculation()
 
 	total_correlation_positions = 0;
 	current_correlation_position = 0;
+	bool count_defocus_and_pixel_as_fully_independent = true;
+	long total_correlation_positions_for_progress_bar = 0;
 
 	// if running locally, search over all of them
 
@@ -734,7 +736,18 @@ bool MatchTemplateApp::DoCalculation()
 		pixel_size_step = 0.02f;
 	}
 
-	total_correlation_positions *= (2 * myroundint(float(defocus_search_range)/float(defocus_step)) + 1);
+	if (count_defocus_and_pixel_as_fully_independent)
+	{
+		total_correlation_positions *= (2 * myroundint(float(defocus_search_range)/float(defocus_step)) + 1);
+		total_correlation_positions_for_progress_bar = total_correlation_positions;
+	}
+	else
+	{
+		total_correlation_positions_for_progress_bar = total_correlation_positions;
+		total_correlation_positions_for_progress_bar *= (2 * myroundint(float(defocus_search_range)/float(defocus_step)) + 1);
+
+	}
+
 	total_correlation_positions_per_thread = total_correlation_positions;
 
 	number_of_rotations = 0;
@@ -766,7 +779,7 @@ bool MatchTemplateApp::DoCalculation()
 
 	// These vars are only needed in the GPU code, but also need to be set out here to compile.
 	bool first_gpu_loop = true;
-	int nThreads = 2;
+	int nThreads = 4;
 	int nGPUs = 1;
 	int nJobs = last_search_position-first_search_position+1;
 	if (use_gpu && nThreads > nJobs)
@@ -787,7 +800,7 @@ bool MatchTemplateApp::DoCalculation()
 
 	if (use_gpu)
 	{
-		total_correlation_positions_per_thread = total_correlation_positions / nThreads;
+		total_correlation_positions_per_thread = total_correlation_positions_for_progress_bar / nThreads;
 
 #ifdef ENABLEGPU
 //	checkCudaErrors(cudaGetDeviceCount(&nGPUs));
@@ -860,10 +873,14 @@ bool MatchTemplateApp::DoCalculation()
 	} // end of omp block
 #endif
 	}
+//		float AC_inc = amplitude_contrast / (float(defocus_search_range)/float(defocus_step));
+
 		for (defocus_i = - myroundint(float(defocus_search_range)/float(defocus_step)); defocus_i <= myroundint(float(defocus_search_range)/float(defocus_step)); defocus_i++)
 		{
 
-
+//			float this_ac = std::max(0.0f,amplitude_contrast - AC_inc*defocus_i);
+//			wxPrintf("\t\tThis AC is %f for defocus %f, defocus_i %d\n",this_ac,defocus1 + float(defocus_i) * defocus_step,defocus_i);
+//			input_ctf.SetAdditionalPhaseShift(atanf(this_ac/sqrtf(1.0 - powf(this_ac, 2))));
 			// make the projection filter, which will be CTF * whitening filter
 			input_ctf.SetDefocus((defocus1 + float(defocus_i) * defocus_step) / pixel_size, (defocus2 + float(defocus_i) * defocus_step) / pixel_size, deg_2_rad(defocus_angle));
 //			input_ctf.SetDefocus((defocus1 + 200) / pixel_size, (defocus2 + 200) / pixel_size, deg_2_rad(defocus_angle));

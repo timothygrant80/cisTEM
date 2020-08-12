@@ -186,7 +186,9 @@ void Water::SeedWaters3d()
 			jLower = j*incY + size_neighborhood;
 			jUpper = (1+j)*incY + size_neighborhood;
 
-			for (int k = this->size_neighborhood; k < this->vol_nZ - this->size_neighborhood; k++)
+//			for (int k = this->size_neighborhood; k < this->vol_nZ - this->size_neighborhood; k++)
+			for (int k = 0; k < this->vol_nZ; k++)
+
 			{
 				for (int iInner = iLower; iInner < iUpper; iInner++)
 				{

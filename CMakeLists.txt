@@ -51,7 +51,7 @@ include_directories(${FFTW_INCLUDE_DIRS})
 set(wxWidgets_USE_DEBUG false)	
 find_package(wxWidgets REQUIRED COMPONENTS core base std net xml richtext aui)
 include(${wxWidgets_USE_FILE})
-include_directories(${wxWidgets_INCLUDE_DIRS})
+include_directories(${wxWidgets_INCLUDE_DIRS}) 
 
 #
 # Let's look for LibTIFF
@@ -59,4 +59,38 @@ include_directories(${wxWidgets_INCLUDE_DIRS})
 find_package(TIFF REQUIRED)
 include_directories(${TIFF_INCLUDE_DIRS})
 
+#
+# Let's figure out which SVN revision we are building (if indeed we're using SVN at all)
+#
+find_package(Subversion)
+if(SUBVERSION_FOUND)
+    if(EXISTS "${CMAKE_SOURCE_DIR}/.svn")
+        Subversion_WC_INFO(${PROJECT_SOURCE_DIR} cisTEM)
+        message("Current SVN revision is ${cisTEM_WC_REVISION}")
+        execute_process(    COMMAND "${Subversion_SVN_EXECUTABLE}" propget --revprop -r "${cisTEM_WC_REVISION}" git-commit  "https://github.com/ngrigorieff/cisTEM/trunk"
+                            OUTPUT_VARIABLE GIT_COMMIT_FROM_SVN )
+        string(REGEX REPLACE "\n$" "" GIT_COMMIT_FROM_SVN "${GIT_COMMIT_FROM_SVN}")
+        message("Current Git commit from SVN is ${GIT_COMMIT_FROM_SVN}")
+        add_definitions(" -DCISTEM_SVN_REV=\"\\\"${cisTEM_WC_REVISION}\\\"\" " " -DCISTEM_GIT_COMMIT=\"\\\"${GIT_COMMIT_FROM_SVN}\\\"\" ")
+    endif()
+endif() 
+
+#
+# Let's see whether we have git
+#
+find_package(Git)
+if(Git_FOUND)
+    if(EXISTS "${CMAKE_SOURCE_DIR}/.git")
+        execute_process(    COMMAND "${GIT_EXECUTABLE}" log -1 "--format=%H"
+                            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+                            OUTPUT_VARIABLE GIT_COMMIT )
+        string(REGEX REPLACE "\n$" "" GIT_COMMIT "${GIT_COMMIT}")
+        message("Current Git commit is ${GIT_COMMIT}")
+        add_definitions(" -DCISTEM_GIT_COMMIT=\"\\\"${GIT_COMMIT}\\\"\" " )
+    endif()
+endif()
+
+#
+# Add the source directory 
+#
 add_subdirectory(src)

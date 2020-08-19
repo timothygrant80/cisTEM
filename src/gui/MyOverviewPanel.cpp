@@ -126,6 +126,15 @@ void MyOverviewPanel::SetWelcomeInfo()
 	InfoText->BeginFontSize(12);
 	InfoText->WriteText(wxString::Format("Version : %s (Compiled : %s )", CISTEM_VERSION_TEXT, __DATE__));
 	InfoText->Newline();
+#ifdef CISTEM_SVN_REV
+	InfoText->WriteText(wxString::Format("SVN revision : %s", CISTEM_SVN_REV));
+	InfoText->Newline();
+#endif
+#ifdef CISTEM_GIT_COMMIT
+	InfoText->WriteText(wxString::Format("Git commit : %s", CISTEM_GIT_COMMIT));
+	InfoText->Newline();
+#endif
+	InfoText->Newline();
 	InfoText->Newline();
 	InfoText->EndFontSize();
 	InfoText->EndAlignment();

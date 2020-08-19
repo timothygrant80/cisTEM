@@ -355,6 +355,11 @@ fi
 
 #fi
 
+# What SVN revision are we using?
+define([svnversion], esyscmd([sh -c "svnversion -n"]))dnl
+if test "x$want_cuda" != "xUnversioned directory"; then
+ AC_DEFINE(CISTEM_SVN_REV, "svnversion", [SVN Revision])
+fi
 
 
 AC_SUBST(WX_LIBS)

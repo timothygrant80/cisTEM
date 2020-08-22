@@ -5,9 +5,9 @@ extern MyRunProfilesPanel *run_profiles_panel;
 extern MyVolumeAssetPanel *volume_asset_panel;
 extern MyRefinementResultsPanel *refinement_results_panel;
 
-//#ifdef EXPERIMENTAL
-//extern MyPhenixSettingsPanel *phenix_settings_panel;
-//#endif
+#ifdef EXPERIMENTAL
+extern MyPhenixSettingsPanel *phenix_settings_panel;
+#endif
 
 wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_COMPLETED, wxThreadEvent);
 
@@ -60,6 +60,9 @@ Refine3DPanel( parent )
 
 	RefinementPackageComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MyRefine3DPanel::OnRefinementPackageComboBox, this);
 	Bind(RETURN_PROCESSED_IMAGE_EVT, &MyRefine3DPanel::OnOrthThreadComplete, this);
+	#ifdef EXPERIMENTAL
+	Bind(wxEVT_DENMODTHREAD_COMPLETED, & MyRefine3DPanel::OnDenmodThreadComplete, this);
+	#endif
 	Bind(wxEVT_MULTIPLY3DMASKTHREAD_COMPLETED, &MyRefine3DPanel::OnMaskerThreadComplete, this);
 	Bind(wxEVT_AUTOMASKERTHREAD_COMPLETED, &MyRefine3DPanel::OnMaskerThreadComplete, this);
 
@@ -70,6 +73,9 @@ Refine3DPanel( parent )
 	long time_of_last_result_update;
 
 	active_orth_thread_id = -1;
+	#ifdef EXPERIMENTAL
+	active_denmod_thread_id = -1;
+	#endif
 	active_mask_thread_id = -1;
 	next_thread_id = 1;
 
@@ -117,6 +123,9 @@ void MyRefine3DPanel::Reset()
 
 		active_mask_thread_id = -1;
 		active_orth_thread_id = -1;
+		#ifdef EXPERIMENTAL
+		active_denmod_thread_id = -1;
+		#endif
 		running_job = false;
 	}
 
@@ -568,6 +577,14 @@ void MyRefine3DPanel::SetDefaults()
 		LowPassMaskNoRadio->SetValue(true);
 		MaskFilterResolutionText->ChangeValueFloat(20.00);
 
+		#ifdef EXPERIMENTAL
+		DoDenmodYesRadio->SetValue(false);
+		DoDenmodNoRadio->SetValue(true);
+		DenmodShouldUseEnsembleModelYesRadio->SetValue(false);
+		DenmodShouldUseEnsembleModelNoRadio->SetValue(true);
+		DenmodEnsembleModelTextCtrl->SetValue("");
+		#endif
+
 		ExpertPanel->Thaw();
 	}
 
@@ -855,6 +872,31 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 
 				}
 
+				#ifdef EXPERIMENTAL
+				if (DoDenmodYesRadio->GetValue() != true)
+				{
+					DoDenmodNoRadio->SetValue(true);
+					DenmodShouldUseEnsembleModelYesRadio->SetValue(false);
+					DenmodShouldUseEnsembleModelNoRadio->SetValue(true);
+					DenmodShouldUseEnsembleModelYesRadio->Enable(false);
+					DenmodShouldUseEnsembleModelNoRadio->Enable(false);
+					DenmodEnsembleModelTextCtrl->Enable(false);
+				}
+				else
+				{
+					DoDenmodNoRadio->SetValue(false);
+					DenmodShouldUseEnsembleModelYesRadio->Enable(true);
+					DenmodShouldUseEnsembleModelNoRadio->Enable(true);
+					if (DenmodShouldUseEnsembleModelYesRadio->GetValue() != true)
+					{
+						DenmodEnsembleModelTextCtrl->Enable(false);
+					}
+					else
+					{
+						DenmodEnsembleModelTextCtrl->Enable(true);
+					}
+				}
+				#endif
 
 
 			}
@@ -955,6 +997,20 @@ void MyRefine3DPanel::OnExpertOptionsToggle( wxCommandEvent& event )
 	}
 }
 
+// #ifdef EXPERIMENTAL
+// void MyRefine3DPanel::OnEnsembleModelPathBrowseButtonClick( wxCommandEvent& event )
+// {
+// 	// dir --> file
+// 	wxDirDialog openDirDialog(NULL, "Choose atomic model", "", wxDD_DEFAULT_STYLE | wxDD_DIR_MUST_EXIST);
+
+// 	if (openDirDialog.ShowModal() == wxID_OK)
+// 	{
+// 		EnsembleModelPathTextCtrl->SetValue(openDirDialog.GetPath());
+// 	}
+// 	event.Skip();
+// }
+// #endif
+
 void MyRefine3DPanel::ReDrawActiveReferences()
 {
 	Active3DReferencesListCtrl->ClearAll();
@@ -1014,6 +1070,9 @@ void MyRefine3DPanel::TerminateButtonClick( wxCommandEvent& event )
 
 	active_mask_thread_id = -1;
 	active_orth_thread_id = -1;
+	#ifdef EXPERIMENTAL
+	active_denmod_thread_id = -1;
+	#endif
 
 	WriteBlueText("Terminated Job");
 	TimeRemainingText->SetLabel("Time Remaining : Terminated");
@@ -1212,6 +1271,11 @@ void RefinementManager::BeginRefinementCycle()
 	active_mask_edge = my_parent->MaskEdgeTextCtrl->ReturnValue();
 	active_mask_weight = my_parent->MaskWeightTextCtrl->ReturnValue();
 
+	#ifdef EXPERIMENTAL
+	active_should_denmod = my_parent->DoDenmodYesRadio->GetValue();
+	denmod_completed_this_cycle = false;
+	#endif
+
 	active_refinement_run_profile = run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()];
 	active_reconstruction_run_profile = run_profiles_panel->run_profile_manager.run_profiles[my_parent->ReconstructionRunProfileComboBox->GetSelection()];
 
@@ -1401,8 +1465,23 @@ void RefinementManager::SetupMerge3dJob()
 
 	for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
 	{
-		wxString output_reconstruction_1			= "/dev/null";
-		wxString output_reconstruction_2			= "/dev/null";
+		wxString output_reconstruction_1;
+		wxString output_reconstruction_2;
+		#ifdef EXPERIMENTAL
+		if ( active_should_denmod == true )
+		{
+			output_reconstruction_1		= main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_half1.mrc", output_refinement->refinement_id, class_counter + 1);
+			output_reconstruction_2		= main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_half2.mrc", output_refinement->refinement_id, class_counter + 1);
+		}
+		else
+		{
+		#endif
+			output_reconstruction_1		= wxString("/dev/null");
+			output_reconstruction_2		= wxString("/dev/null");
+		#ifdef EXPERIMENTAL
+		}
+		#endif
+
 		wxString output_reconstruction_filtered		= main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
 
 		current_reference_filenames.Item(class_counter) = output_reconstruction_filtered;
@@ -2222,6 +2301,17 @@ void RefinementManager::ProcessAllJobsFinished()
 	else
 	if (running_job_type == MERGE)
 	{
+		#ifdef EXPERIMENTAL
+		if ( active_should_denmod == true )
+		{
+			if ( denmod_completed_this_cycle == false )
+			{
+				denmod_completed_this_cycle = true;
+				DoDensityModification();
+				return;
+			}
+		}
+		#endif
 		long current_reconstruction_id;
 
 		OrthDrawerThread *result_thread;
@@ -2497,8 +2587,87 @@ void RefinementManager::DoMasking()
 
 }
 
+#ifdef EXPERIMENTAL
+void RefinementManager::DoDensityModification()
+{
+	MyDebugAssertTrue(active_should_denmod == true, "DensityModification called when not selected!");
+	my_parent->WriteBlueText("Running density modification...");
+	wxString protein_info;
+
+	if (my_parent->DenmodShouldUseEnsembleModelYesRadio->GetValue() == false)
+	{
+		protein_info = wxString::Format("molecular_mass=%f", active_refinement_package->estimated_particle_weight_in_kda*1000.0); // in Da
+	}
+	else
+	{
+		wxString ensemble_model_filename = my_parent->DenmodEnsembleModelTextCtrl->GetValue(); // fetch the ensemble model filename from the Manual Refine tab
+		// protein_info = wxString::Format("model_1=%s model_2=%s minimum_model_files=2", ensemble_model_filename, ensemble_model_filename);
+		protein_info = ensemble_model_filename;
+	}
+
+	wxString phenix_bin_dir = phenix_settings_panel->buffer_phenix_path;
+	// alternatively add phenix path to database when added in the PhenixSettingsPanel
+	if ( ! wxDirExists(phenix_bin_dir) )
+	{
+		my_parent->WriteBlueText("Could not locate Phenix bin directory; skipping density modification.");
+		return;
+	}
+	wxString return_string;
+
+	// get active_refinement_package
+	for (int class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
+	{
+		long refinement_id = main_frame->current_project.database.ReturnHighestRefinementID() + 1;
+		wxString volumes_dir = main_frame->current_project.volume_asset_directory.GetFullPath();
+		wxString scratch_dir = main_frame->ReturnRefine3DScratchDirectory();
+		wxString working_dir = scratch_dir + wxString::Format("denmod_%li_%i", refinement_id, class_counter + 1);
+		wxMkDir(working_dir, wxS_DIR_DEFAULT);
+		wxString current_map = volumes_dir + wxString::Format("/volume_%li_%i.mrc", refinement_id, class_counter + 1);
+		wxString current_half_map_1 = volumes_dir + wxString::Format("/volume_%li_%i_half1.mrc", refinement_id, class_counter + 1);
+		wxString current_half_map_2 = volumes_dir + wxString::Format("/volume_%li_%i_half2.mrc", refinement_id, class_counter + 1);
+		CommandLineTools denmod_job;
+		my_parent->WriteBlueText("Executing denmod job in new thread.");
+		denmod_job.Init(phenix_bin_dir, wxString("phenix.resolve_cryo_em"));
+		denmod_job.AddArgument(wxString::Format("map_file_name=%s", current_map));
+		denmod_job.AddArgument(wxString::Format("half_map_file_name_1=%s", current_half_map_1));
+		denmod_job.AddArgument(wxString::Format("half_map_file_name_2=%s", current_half_map_2));
+		denmod_job.AddArgument(protein_info);
+		denmod_job.AddArgument(wxString::Format("temp_dir=%s", working_dir));
+		denmod_job.AddArgument(wxString::Format("output_directory=%s", working_dir));
+		denmod_job.AddArgument(wxString::Format("output_files.denmod_map_file_name=volume_%li_%i.mrc", refinement_id, class_counter + 1));
+		// denmod_job.AddArgument(wxString("box_before_analysis=True restore_full_size=True")); // significant speedup vs using full map
+		denmod_job.AddArgument(wxString("box_before_analysis=False restore_full_size=False")); // map is not boxed centered on the particle and the resulting full-size map is trash -- do not use boxing until this is fixed!!
+		// Add more arguments later incl. multiprocessing.
+
+		// Testing only: copy over the map before density modification for comparison
+		wxCopyFile(current_map, working_dir + wxString::Format("/volume_%li_%i_pre_denmod.mrc", refinement_id, class_counter + 1), true);
+
+		// Run phenix.resolve_cryo_em from separate thread using wxExecute
+		DenmodThread *result_thread;
+		my_parent->active_denmod_thread_id = my_parent->next_thread_id;
+		my_parent->next_thread_id++;
+
+		result_thread = new DenmodThread(my_parent, denmod_job, my_parent->active_denmod_thread_id);
+		// wxPrintf("denmod thread has been started\n");
+
+		if ( result_thread->Run() != wxTHREAD_NO_ERROR )
+		{
+			my_parent->WriteErrorText("Error: Cannot run density modification");
+			delete result_thread;
+		} else
+		{
+			return;
+		}
+	}
+
+}
+#endif
+
 void RefinementManager::CycleRefinement()
 {
+	#ifdef EXPERIMENTAL
+	denmod_completed_this_cycle = false;
+	#endif
 	if (start_with_reconstruction == true)
 	{
 		output_refinement = new Refinement;
@@ -2552,6 +2721,12 @@ void RefinementManager::CycleRefinement()
 	main_frame->DirtyRefinements();
 }
 
+void MyRefine3DPanel::OnDenmodThreadComplete (wxThreadEvent& my_event)
+{
+	// if (my_event.GetInt() == active_denmod_thread_id) my_refinement_manager.OnDenmodThreadComplete();
+	my_refinement_manager.OnDenmodThreadComplete();
+}
+
 
 void MyRefine3DPanel::OnMaskerThreadComplete(wxThreadEvent& my_event)
 {
@@ -2584,6 +2759,20 @@ void MyRefine3DPanel::OnOrthThreadComplete(ReturnProcessedImageEvent& my_event)
 
 }
 
+#ifdef EXPERIMENTAL
+void RefinementManager::OnDenmodThreadComplete()
+{
+	for (int class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
+	{
+		// Replace existing final volume with density modified volume
+		wxCopyFile(main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("denmod_%li_%i/volume_%li_%i.mrc", main_frame->current_project.database.ReturnHighestRefinementID() + 1, class_counter + 1, main_frame->current_project.database.ReturnHighestRefinementID() + 1, class_counter + 1), main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i.mrc", main_frame->current_project.database.ReturnHighestRefinementID() + 1, class_counter + 1), true);
+		wxRemoveFile(main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_half1.mrc", main_frame->current_project.database.ReturnHighestRefinementID() + 1, class_counter + 1));
+		wxRemoveFile(main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_half2.mrc", main_frame->current_project.database.ReturnHighestRefinementID() + 1, class_counter + 1));
+	}
+	// wxPrintf("removed temporary files\n");
+	my_parent->my_refinement_manager.ProcessAllJobsFinished();
+}
+#endif
 
 void RefinementManager::OnMaskerThreadComplete()
 {

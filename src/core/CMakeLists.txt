@@ -65,6 +65,7 @@ if (BUILD_EXPERIMENTAL_FEATURES)
 	add_library(cisTEM_core_experimental STATIC
 		water.cpp 
 		pdb.cpp 
+		command_line_tools.cpp
 	)
 endif(BUILD_EXPERIMENTAL_FEATURES)
 

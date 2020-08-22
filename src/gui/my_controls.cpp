@@ -6,6 +6,9 @@ extern MyRefinementResultsPanel *refinement_results_panel;
 extern Refine2DResultsPanel *refine2d_results_panel;
 
 wxDEFINE_EVENT(wxEVT_AUTOMASKERTHREAD_COMPLETED, wxThreadEvent);
+#ifdef EXPERIMENTAL
+wxDEFINE_EVENT (wxEVT_DENMODTHREAD_COMPLETED, wxThreadEvent);
+#endif
 wxDEFINE_EVENT(wxEVT_MULTIPLY3DMASKTHREAD_COMPLETED, wxThreadEvent);
 
 MemoryComboBox::MemoryComboBox(wxWindow *parent, wxWindowID id, const wxString &value, const wxPoint &pos, const wxSize &size, int n, const wxString choices[], long style, const wxValidator &validator, const wxString &name)
@@ -1880,6 +1883,23 @@ wxThread::ExitCode OrthDrawerThread::Entry()
 
 
 }
+
+#ifdef EXPERIMENTAL
+wxThread::ExitCode DenmodThread::Entry()
+{
+	return_string = denmod_job.RunAsync(thread_id);
+	wxPrintf(return_string);
+	// wxSleep(10);
+	// wxPrintf("slept 10 seconds\n");
+
+	// move this block inside OnTerminate method of AsyncProcess
+	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_DENMODTHREAD_COMPLETED);
+	my_thread_event->SetInt(thread_id);
+	wxQueueEvent(main_thread_pointer, my_thread_event);
+
+	return (wxThread::ExitCode) 0;
+}
+#endif
 
 wxThread::ExitCode Multiply3DMaskerThread::Entry()
 {

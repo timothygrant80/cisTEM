@@ -80,6 +80,7 @@ if (BUILD_EXPERIMENTAL_FEATURES)
 		MatchTemplateResultsPanel.cpp 
 		RefineTemplatePanel.cpp 
 		MyExperimentalPanel.cpp
+		MyPhenixSettingsPanel.cpp
 	)
 endif(BUILD_EXPERIMENTAL_FEATURES)
 

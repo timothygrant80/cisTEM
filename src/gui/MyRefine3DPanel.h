@@ -59,6 +59,10 @@ public:
 	float active_mask_edge;
 	float active_mask_weight;
 	long active_mask_asset_id;
+	#ifdef EXPERIMENTAL
+	bool active_should_denmod;
+	bool denmod_completed_this_cycle;
+	#endif
 
 	long current_job_starttime;
 	long time_of_last_update;
@@ -113,6 +117,11 @@ public:
 
 	void DoMasking();
 
+	#ifdef EXPERIMENTAL
+	void DoDensityModification();
+	void OnDenmodThreadComplete();
+	#endif
+
 //	void StartRefinement();
 //	void StartReconstruction();
 
@@ -154,6 +163,9 @@ class MyRefine3DPanel : public Refine3DPanel
 		RefinementManager my_refinement_manager;
 
 		int active_orth_thread_id;
+		#ifdef EXPERIMENTAL
+		int active_denmod_thread_id;
+		#endif
 		int active_mask_thread_id;
 		int next_thread_id;
 
@@ -201,6 +213,9 @@ class MyRefine3DPanel : public Refine3DPanel
 		void OnInputParametersComboBox( wxCommandEvent& event );
 
 		void OnOrthThreadComplete(ReturnProcessedImageEvent& my_event);
+		#ifdef EXPERIMENTAL
+		void OnDenmodThreadComplete(wxThreadEvent& my_event);
+		#endif
 		void OnMaskerThreadComplete(wxThreadEvent& my_event);
 };
 

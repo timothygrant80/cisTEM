@@ -5953,45 +5953,64 @@ RunProfilesPanel::RunProfilesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 
 	bSizer38->Add( CommandErrorStaticText, 0, wxALL|wxEXPAND, 5 );
 
-	wxBoxSizer* bSizer38;
-	bSizer38 = new wxBoxSizer( wxVERTICAL );
+	wxFlexGridSizer* fgSizer3;
+	fgSizer3 = new wxFlexGridSizer( 0, 5, 0, 0 );
+	fgSizer3->AddGrowableCol( 2 );
+	fgSizer3->SetFlexibleDirection( wxBOTH );
+	fgSizer3->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
 
 	m_staticText36 = new wxStaticText( CommandsPanel, wxID_ANY, wxT("Gui Address :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText36->Wrap( -1 );
-	bSizer38->Add( m_staticText36, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	fgSizer3->Add( m_staticText36, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	GuiAddressStaticText = new wxStaticText( CommandsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	GuiAddressStaticText->Wrap( -1 );
-	bSizer38->Add( GuiAddressStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_LEFT|wxALL, 5 );
+	fgSizer3->Add( GuiAddressStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_LEFT|wxALL, 5 );
 
 	GuiAutoButton = new wxButton( CommandsPanel, wxID_ANY, wxT("Auto"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer38->Add( GuiAutoButton, 0, wxALL, 5 );
+	fgSizer3->Add( GuiAutoButton, 0, wxALL, 5 );
 
 	ManagerTextCtrl = new wxTextCtrl( CommandsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxHSCROLL|wxTE_WORDWRAP );
-	bSizer38->Add( ManagerTextCtrl, 0, wxALL, 5 );
+	fgSizer3->Add( ManagerTextCtrl, 0, wxALL, 5 );
 
 
-	bSizer38->Add( 0, 0, 100, wxEXPAND, 5 );
+	fgSizer3->Add( 0, 0, 100, wxEXPAND, 5 );
 
 	m_staticText67 = new wxStaticText( CommandsPanel, wxID_ANY, wxT("Controller Address :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText67->Wrap( -1 );
-	bSizer38->Add( m_staticText67, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	fgSizer3->Add( m_staticText67, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 
-	CommandErrorStaticText = new wxStaticText( CommandsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE );
-	CommandErrorStaticText->Wrap( -1 );
-	CommandErrorStaticText->SetForegroundColour( wxColour( 180, 0, 0 ) );
+	GuiAddressStaticText = new wxStaticText( CommandsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	GuiAddressStaticText->Wrap( -1 );
+	GuiAddressStaticText->SetForegroundColour( wxColour( 180, 0, 0 ) );
 
-	bSizer38->Add( CommandErrorStaticText, 0, wxALL|wxEXPAND, 5 );
+	fgSizer3->Add( GuiAddressStaticText, 0, wxALL|wxEXPAND, 5 );
+
+	GuiAutoButton = new wxButton( CommandsPanel, wxID_ANY, wxT("Auto"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer3->Add( GuiAutoButton, 0, wxALL, 5 );
+
+	ControllerSpecifyButton = new wxButton( CommandsPanel, wxID_ANY, wxT("Specify"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer3->Add( ControllerSpecifyButton, 0, wxALL, 5 );
+
+
+	fgSizer3->Add( 0, 0, 100, wxEXPAND, 5 );
+
+	m_staticText67 = new wxStaticText( CommandsPanel, wxID_ANY, wxT("Controller Address :"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE );
+	m_staticText67->Wrap( -1 );
+	fgSizer3->Add( m_staticText67, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+
+	ControllerAddressStaticText = new wxStaticText( CommandsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	ControllerAddressStaticText->Wrap( -1 );
+	fgSizer3->Add( ControllerAddressStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_LEFT|wxALL, 5 );
 
 	ControllerAutoButton = new wxButton( CommandsPanel, wxID_ANY, wxT("Auto"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer38->Add( ControllerAutoButton, 0, wxEXPAND, 5 );
+	fgSizer3->Add( ControllerAutoButton, 0, wxEXPAND, 5 );
 
-	m_staticText70 = new wxStaticText( CommandsPanel, wxID_ANY, wxT("Specify"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText70->Wrap( -1 );
-	bSizer38->Add( m_staticText70, 0, wxALL, 5 );
+	m_button38 = new wxButton( CommandsPanel, wxID_ANY, wxT("Specify"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer3->Add( m_button38, 0, wxALL, 5 );
 
 
-	bSizer38->Add( bSizer38, 0, wxEXPAND, 5 );
+	bSizer38->Add( fgSizer3, 0, wxEXPAND, 5 );
 
 	m_staticText70 = new wxStaticText( CommandsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText70->Wrap( -1 );
@@ -6076,7 +6095,10 @@ RunProfilesPanel::RunProfilesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	ExportButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RunProfilesPanel::OnExportButtonClick ), NULL, this );
 	ManagerTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( RunProfilesPanel::ManagerTextChanged ), NULL, this );
 	GuiAutoButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RunProfilesPanel::GuiAddressAutoClick ), NULL, this );
+	GuiAutoButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RunProfilesPanel::GuiAddressAutoClick ), NULL, this );
+	ControllerSpecifyButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RunProfilesPanel::GuiAddressSpecifyClick ), NULL, this );
 	ControllerAutoButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RunProfilesPanel::ControllerAddressAutoClick ), NULL, this );
+	m_button38->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RunProfilesPanel::ControllerAddressSpecifyClick ), NULL, this );
 	CommandsListBox->Connect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( RunProfilesPanel::OnCommandDClick ), NULL, this );
 	CommandsListBox->Connect( wxEVT_LEFT_DOWN, wxMouseEventHandler( RunProfilesPanel::OnCommandLeftDown ), NULL, this );
 	CommandsListBox->Connect( wxEVT_LEFT_UP, wxMouseEventHandler( RunProfilesPanel::MouseVeto ), NULL, this );
@@ -6120,7 +6142,10 @@ RunProfilesPanel::~RunProfilesPanel()
 	ExportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RunProfilesPanel::OnExportButtonClick ), NULL, this );
 	ManagerTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( RunProfilesPanel::ManagerTextChanged ), NULL, this );
 	GuiAutoButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RunProfilesPanel::GuiAddressAutoClick ), NULL, this );
+	GuiAutoButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RunProfilesPanel::GuiAddressAutoClick ), NULL, this );
+	ControllerSpecifyButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RunProfilesPanel::GuiAddressSpecifyClick ), NULL, this );
 	ControllerAutoButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RunProfilesPanel::ControllerAddressAutoClick ), NULL, this );
+	m_button38->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RunProfilesPanel::ControllerAddressSpecifyClick ), NULL, this );
 	CommandsListBox->Disconnect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( RunProfilesPanel::OnCommandDClick ), NULL, this );
 	CommandsListBox->Disconnect( wxEVT_LEFT_DOWN, wxMouseEventHandler( RunProfilesPanel::OnCommandLeftDown ), NULL, this );
 	CommandsListBox->Disconnect( wxEVT_LEFT_UP, wxMouseEventHandler( RunProfilesPanel::MouseVeto ), NULL, this );
@@ -6142,26 +6167,29 @@ RunProfilesPanel::~RunProfilesPanel()
 
 PhenixSettingsPanel::PhenixSettingsPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
 {
+	this->SetForegroundColour( wxSystemSettings::GetColour( wxSYS_COLOUR_WINDOW ) );
 	this->SetMinSize( wxSize( 680,400 ) );
 
 	wxBoxSizer* bSizer56;
 	bSizer56 = new wxBoxSizer( wxVERTICAL );
 
 	wxFlexGridSizer* fgSizer3;
-	fgSizer3 = new wxFlexGridSizer( 0, 4, 0, 0 );
+	fgSizer3 = new wxFlexGridSizer( 0, 5, 0, 0 );
 	fgSizer3->AddGrowableCol( 2 );
 	fgSizer3->SetFlexibleDirection( wxBOTH );
 	fgSizer3->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
 
 
-	fgSizer3->Add( 0, 0, 1, wxEXPAND, 5 );
+	fgSizer3->Add( 0, 0, 100, wxEXPAND, 5 );
 
 	m_staticText36 = new wxStaticText( this, wxID_ANY, wxT("Phenix bin directory :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText36->Wrap( -1 );
-	fgSizer3->Add( m_staticText36, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	m_staticText36->SetForegroundColour( wxSystemSettings::GetColour( wxSYS_COLOUR_WINDOWTEXT ) );
 
-	PhenixPathTextCtrl = new wxTextCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-	fgSizer3->Add( PhenixPathTextCtrl, 0, wxALIGN_RIGHT|wxALL|wxEXPAND, 5 );
+	fgSizer3->Add( m_staticText36, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+
+	PhenixPathTextCtrl = new wxTextCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxHSCROLL|wxTE_WORDWRAP|wxALWAYS_SHOW_SB|wxHSCROLL );
+	fgSizer3->Add( PhenixPathTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	PhenixPathBrowseButton = new wxButton( this, wxID_ANY, wxT("Specify"), wxDefaultPosition, wxDefaultSize, 0 );
 	fgSizer3->Add( PhenixPathBrowseButton, 0, wxALL, 5 );
@@ -6169,11 +6197,12 @@ PhenixSettingsPanel::PhenixSettingsPanel( wxWindow* parent, wxWindowID id, const
 
 	bSizer56->Add( fgSizer3, 0, wxEXPAND, 5 );
 
-	PhenixPathErrorStaticText = new wxStaticText( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxALIGN_CENTRE );
+	PhenixPathErrorStaticText = new wxStaticText( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	PhenixPathErrorStaticText->Wrap( -1 );
 	PhenixPathErrorStaticText->SetForegroundColour( wxColour( 180, 0, 0 ) );
+	PhenixPathErrorStaticText->SetBackgroundColour( wxSystemSettings::GetColour( wxSYS_COLOUR_WINDOW ) );
 
-	bSizer56->Add( PhenixPathErrorStaticText, 0, wxALL|wxEXPAND, 5 );
+	bSizer56->Add( PhenixPathErrorStaticText, 0, wxALL, 5 );
 
 
 	this->SetSizer( bSizer56 );
@@ -6181,7 +6210,6 @@ PhenixSettingsPanel::PhenixSettingsPanel( wxWindow* parent, wxWindowID id, const
 
 	// Connect Events
 	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( PhenixSettingsPanel::OnUpdateUI ) );
-	PhenixPathTextCtrl->Connect( wxEVT_CHAR, wxKeyEventHandler( PhenixSettingsPanel::OnTextKeyPress ), NULL, this );
 	PhenixPathTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( PhenixSettingsPanel::OnPhenixPathTextChanged ), NULL, this );
 	PhenixPathBrowseButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PhenixSettingsPanel::OnPhenixPathBrowseButtonClick ), NULL, this );
 }
@@ -6190,7 +6218,6 @@ PhenixSettingsPanel::~PhenixSettingsPanel()
 {
 	// Disconnect Events
 	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( PhenixSettingsPanel::OnUpdateUI ) );
-	PhenixPathTextCtrl->Disconnect( wxEVT_CHAR, wxKeyEventHandler( PhenixSettingsPanel::OnTextKeyPress ), NULL, this );
 	PhenixPathTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( PhenixSettingsPanel::OnPhenixPathTextChanged ), NULL, this );
 	PhenixPathBrowseButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PhenixSettingsPanel::OnPhenixPathBrowseButtonClick ), NULL, this );
 
@@ -6860,7 +6887,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	NumberToRefineStaticText->Wrap( -1 );
 	fgSizer1->Add( NumberToRefineStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	NumberToRefineSpinCtrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -100000, 100000, 20 );
+	NumberToRefineSpinCtrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -100000, 100000, -63 );
 	fgSizer1->Add( NumberToRefineSpinCtrl, 0, wxALL, 5 );
 
 	AlsoRefineInputStaticText1 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tAlso Refine Input Parameters?"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -7193,6 +7220,69 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	MaskFilterResolutionText = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("20.00"), wxDefaultPosition, wxDefaultSize, 0 );
 	fgSizer1->Add( MaskFilterResolutionText, 0, wxALL, 5 );
 
+	DenmodSubheaderStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Density Modification"), wxDefaultPosition, wxDefaultSize, 0 );
+	DenmodSubheaderStaticText->Wrap( -1 );
+	DenmodSubheaderStaticText->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxT("Sans") ) );
+
+	fgSizer1->Add( DenmodSubheaderStaticText, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	DenmodStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Do Density Modification?"), wxDefaultPosition, wxDefaultSize, 0 );
+	DenmodStaticText->Wrap( -1 );
+	fgSizer1->Add( DenmodStaticText, 0, wxALL, 5 );
+
+	wxBoxSizer* bSizer266122;
+	bSizer266122 = new wxBoxSizer( wxHORIZONTAL );
+
+	DoDenmodYesRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer266122->Add( DoDenmodYesRadio, 0, wxALL, 5 );
+
+	DoDenmodNoRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer266122->Add( DoDenmodNoRadio, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( bSizer266122, 1, wxEXPAND, 5 );
+
+	DenmodShouldUseEnsembleModelStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Use Ensemble Model?"), wxDefaultPosition, wxDefaultSize, 0 );
+	DenmodShouldUseEnsembleModelStaticText->Wrap( -1 );
+	fgSizer1->Add( DenmodShouldUseEnsembleModelStaticText, 0, wxALL, 5 );
+
+	wxBoxSizer* bSizer2661221;
+	bSizer2661221 = new wxBoxSizer( wxHORIZONTAL );
+
+	DenmodShouldUseEnsembleModelYesRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	DenmodShouldUseEnsembleModelYesRadio->Enable( false );
+
+	bSizer2661221->Add( DenmodShouldUseEnsembleModelYesRadio, 0, wxALL, 5 );
+
+	DenmodShouldUseEnsembleModelNoRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	DenmodShouldUseEnsembleModelNoRadio->Enable( false );
+
+	bSizer2661221->Add( DenmodShouldUseEnsembleModelNoRadio, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( bSizer2661221, 1, wxEXPAND, 5 );
+
+	DenmodEnsembleModelStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Ensemble Model Path :"), wxDefaultPosition, wxDefaultSize, 0 );
+	DenmodEnsembleModelStaticText->Wrap( -1 );
+	fgSizer1->Add( DenmodEnsembleModelStaticText, 0, wxALL, 5 );
+
+	wxBoxSizer* bSizer26612211;
+	bSizer26612211 = new wxBoxSizer( wxHORIZONTAL );
+
+	DenmodEnsembleModelTextCtrl = new wxTextCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxHSCROLL|wxTE_WORDWRAP|wxALWAYS_SHOW_SB|wxHSCROLL );
+	DenmodEnsembleModelTextCtrl->Enable( false );
+
+	bSizer26612211->Add( DenmodEnsembleModelTextCtrl, 0, wxALL|wxEXPAND, 5 );
+
+	DenmodEnsembleModelPathBrowseButton = new wxButton( ExpertPanel, wxID_ANY, wxT("Specify"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer26612211->Add( DenmodEnsembleModelPathBrowseButton, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( bSizer26612211, 1, wxEXPAND, 5 );
+
 
 	InputSizer->Add( fgSizer1, 1, wxEXPAND, 5 );
 
@@ -7379,6 +7469,12 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::ResetAllDefaultsClick ), NULL, this );
 	AutoMaskYesRadioButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Refine3DPanel::OnAutoMaskButton ), NULL, this );
 	AutoMaskNoRadioButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Refine3DPanel::OnAutoMaskButton ), NULL, this );
+	DoDenmodYesRadio->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Refine3DPanel::OnAutoMaskButton ), NULL, this );
+	DoDenmodNoRadio->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Refine3DPanel::OnAutoMaskButton ), NULL, this );
+	DenmodShouldUseEnsembleModelYesRadio->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Refine3DPanel::OnAutoMaskButton ), NULL, this );
+	DenmodShouldUseEnsembleModelNoRadio->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Refine3DPanel::OnAutoMaskButton ), NULL, this );
+	DenmodEnsembleModelTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( Refine3DPanel::OnPhenixPathTextChanged ), NULL, this );
+	DenmodEnsembleModelPathBrowseButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::OnEnsembleModelPathBrowseButtonClick ), NULL, this );
 	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( Refine3DPanel::OnInfoURL ), NULL, this );
 	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::FinishButtonClick ), NULL, this );
 	CancelAlignmentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::TerminateButtonClick ), NULL, this );
@@ -7396,6 +7492,12 @@ Refine3DPanel::~Refine3DPanel()
 	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::ResetAllDefaultsClick ), NULL, this );
 	AutoMaskYesRadioButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Refine3DPanel::OnAutoMaskButton ), NULL, this );
 	AutoMaskNoRadioButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Refine3DPanel::OnAutoMaskButton ), NULL, this );
+	DoDenmodYesRadio->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Refine3DPanel::OnAutoMaskButton ), NULL, this );
+	DoDenmodNoRadio->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Refine3DPanel::OnAutoMaskButton ), NULL, this );
+	DenmodShouldUseEnsembleModelYesRadio->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Refine3DPanel::OnAutoMaskButton ), NULL, this );
+	DenmodShouldUseEnsembleModelNoRadio->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( Refine3DPanel::OnAutoMaskButton ), NULL, this );
+	DenmodEnsembleModelTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( Refine3DPanel::OnPhenixPathTextChanged ), NULL, this );
+	DenmodEnsembleModelPathBrowseButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::OnEnsembleModelPathBrowseButtonClick ), NULL, this );
 	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( Refine3DPanel::OnInfoURL ), NULL, this );
 	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::FinishButtonClick ), NULL, this );
 	CancelAlignmentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( Refine3DPanel::TerminateButtonClick ), NULL, this );
@@ -10657,6 +10759,9 @@ ExportRefinementPackageWizardParent::ExportRefinementPackageWizardParent( wxWind
 
 	bSizer419->Add( ClassComboBox, 0, wxALL, 5 );
 
+	Relion3RadioButton = new wxRadioButton( ChooseParamsPage, wxID_ANY, wxT("Relion-3.1 (Currently only supports single optics group)"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer419->Add( Relion3RadioButton, 0, wxALL, 5 );
+
 
 	bSizer39311->Add( bSizer419, 0, wxEXPAND, 5 );
 
@@ -10685,9 +10790,6 @@ ExportRefinementPackageWizardParent::ExportRefinementPackageWizardParent( wxWind
 
 	RelionRadioButton = new wxRadioButton( ExportTypePage, wxID_ANY, wxT("Relion (Legacy)"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer3941->Add( RelionRadioButton, 0, wxALL, 5 );
-
-	Relion3RadioButton = new wxRadioButton( ExportTypePage, wxID_ANY, wxT("Relion-3.1 (Currently only supports single optics group)"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer3941->Add( Relion3RadioButton, 0, wxALL, 5 );
 
 
 	bSizer3931->Add( bSizer3941, 1, wxEXPAND, 5 );

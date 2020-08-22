@@ -208,6 +208,7 @@ noinst_HEADERS = core/asset_group.h \
 if EXPERIMENTAL_AM
 noinst_HEADERS += 	gui/MatchTemplatePanel.h \
 					gui/MyPhenixSettingsPanel.h \
+					core/phenix_settings.h \
 					gui/icons/experimental_icon.cpp \
 					gui/icons/match_template_icon.cpp \
 					core/water.h 
@@ -307,7 +308,7 @@ libcore_a_SOURCES =    core/functions.cpp \
 
 
 if EXPERIMENTAL_AM
-libcore_a_SOURCES += core/water.cpp core/pdb.cpp
+libcore_a_SOURCES += core/water.cpp core/pdb.cpp core/phenix_settings.cpp
 endif
 
 libcore_a_CXXFLAGS = $(WX_CPPFLAGS_BASE)

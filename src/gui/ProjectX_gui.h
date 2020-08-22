@@ -1672,9 +1672,13 @@ class RunProfilesPanel : public wxPanel
 		wxButton* GuiAutoButton;
 		wxTextCtrl* ManagerTextCtrl;
 		wxStaticText* m_staticText67;
-		wxStaticText* CommandErrorStaticText;
+		wxStaticText* GuiAddressStaticText;
+		wxButton* GuiAutoButton;
+		wxButton* ControllerSpecifyButton;
+		wxStaticText* m_staticText67;
+		wxStaticText* ControllerAddressStaticText;
 		wxButton* ControllerAutoButton;
-		wxStaticText* m_staticText70;
+		wxButton* m_button38;
 		wxStaticText* m_staticText70;
 		wxListCtrl* CommandsListBox;
 		wxButton* AddCommandButton;
@@ -1698,7 +1702,9 @@ class RunProfilesPanel : public wxPanel
 		virtual void OnExportButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void ManagerTextChanged( wxCommandEvent& event ) { event.Skip(); }
 		virtual void GuiAddressAutoClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void GuiAddressSpecifyClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void ControllerAddressAutoClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void ControllerAddressSpecifyClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnCommandDClick( wxMouseEvent& event ) { event.Skip(); }
 		virtual void OnCommandLeftDown( wxMouseEvent& event ) { event.Skip(); }
 		virtual void OnCommandsActivated( wxListEvent& event ) { event.Skip(); }
@@ -1737,7 +1743,6 @@ class PhenixSettingsPanel : public wxPanel
 
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
-		virtual void OnTextKeyPress( wxKeyEvent& event ) { event.Skip(); }
 		virtual void OnPhenixPathTextChanged( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnPhenixPathBrowseButtonClick( wxCommandEvent& event ) { event.Skip(); }
 
@@ -1943,6 +1948,16 @@ class Refine3DPanel : public JobPanel
 		wxRadioButton* LowPassMaskNoRadio;
 		wxStaticText* FilterResolutionStaticText;
 		NumericTextCtrl* MaskFilterResolutionText;
+		wxStaticText* DenmodSubheaderStaticText;
+		wxStaticText* DenmodStaticText;
+		wxRadioButton* DoDenmodYesRadio;
+		wxRadioButton* DoDenmodNoRadio;
+		wxStaticText* DenmodShouldUseEnsembleModelStaticText;
+		wxRadioButton* DenmodShouldUseEnsembleModelYesRadio;
+		wxRadioButton* DenmodShouldUseEnsembleModelNoRadio;
+		wxStaticText* DenmodEnsembleModelStaticText;
+		wxTextCtrl* DenmodEnsembleModelTextCtrl;
+		wxButton* DenmodEnsembleModelPathBrowseButton;
 		wxPanel* OutputTextPanel;
 		wxTextCtrl* output_textctrl;
 		wxPanel* InfoPanel;
@@ -1970,6 +1985,8 @@ class Refine3DPanel : public JobPanel
 		virtual void OnVolumeListItemActivated( wxListEvent& event ) { event.Skip(); }
 		virtual void ResetAllDefaultsClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnAutoMaskButton( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnPhenixPathTextChanged( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnEnsembleModelPathBrowseButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnInfoURL( wxTextUrlEvent& event ) { event.Skip(); }
 		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }
@@ -2674,11 +2691,11 @@ class ExportRefinementPackageWizardParent : public wxWizard
 		RefinementPickerComboPanel* ParameterSelectPanel;
 		wxStaticLine* m_staticline123;
 		wxComboBox* ClassComboBox;
+		wxRadioButton* Relion3RadioButton;
 		wxStaticText* m_staticText4651;
 		wxStaticLine* m_staticline1051;
 		wxRadioButton* FrealignRadioButton;
 		wxRadioButton* RelionRadioButton;
-		wxRadioButton* Relion3RadioButton;
 		wxStaticText* m_staticText4741;
 		wxStaticLine* m_staticline1061;
 		wxStaticText* m_staticText411;

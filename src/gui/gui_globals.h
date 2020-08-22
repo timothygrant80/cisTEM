@@ -3,6 +3,9 @@ class ReturnSharpeningResultsEvent;
 wxDECLARE_EVENT(RETURN_PROCESSED_IMAGE_EVT, ReturnProcessedImageEvent);
 wxDECLARE_EVENT(RETURN_SHARPENING_RESULTS_EVT, ReturnSharpeningResultsEvent);
 wxDECLARE_EVENT(wxEVT_AUTOMASKERTHREAD_COMPLETED, wxThreadEvent);
+#ifdef EXPERIMENTAL
+wxDECLARE_EVENT(wxEVT_DENMODTHREAD_COMPLETED, wxThreadEvent);
+#endif
 wxDECLARE_EVENT(wxEVT_MULTIPLY3DMASKTHREAD_COMPLETED, wxThreadEvent);
 
 class ReturnProcessedImageEvent: public wxCommandEvent
@@ -102,6 +105,28 @@ class OrthDrawerThread : public wxThread
     virtual ExitCode Entry();
 };
 
+#ifdef EXPERIMENTAL
+class DenmodThread : public wxThread
+{
+	public:
+	DenmodThread(wxWindow *parent, CommandLineTools wanted_denmod_job, int wanted_thread_id = -1) : wxThread(wxTHREAD_JOINABLE)
+	{
+		main_thread_pointer = parent;
+		denmod_job = wanted_denmod_job;
+		thread_id = wanted_thread_id;
+		return_string = wxString("");
+	}
+
+	protected:
+
+	wxWindow *main_thread_pointer;
+	CommandLineTools denmod_job;
+	int thread_id;
+	wxString return_string;
+
+    virtual ExitCode Entry();
+};
+#endif
 
 class AutoMaskerThread : public wxThread
 {

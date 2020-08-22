@@ -1493,24 +1493,6 @@ class MovieImportDialog : public wxDialog
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-/// Class ExperimentalPanel
-///////////////////////////////////////////////////////////////////////////////
-class ExperimentalPanel : public wxPanel
-{
-	private:
-
-	protected:
-		wxStaticLine* m_staticline68;
-
-	public:
-		wxListbook* ExperimentalBook;
-
-		ExperimentalPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = 0, const wxString& name = wxEmptyString );
-		~ExperimentalPanel();
-
-};
-
-///////////////////////////////////////////////////////////////////////////////
 /// Class ImageImportDialog
 ///////////////////////////////////////////////////////////////////////////////
 class ImageImportDialog : public wxDialog
@@ -1667,11 +1649,7 @@ class RunProfilesPanel : public wxPanel
 		wxStaticText* m_staticText36;
 		wxTextCtrl* ManagerTextCtrl;
 		wxStaticText* CommandErrorStaticText;
-		wxStaticText* m_staticText36;
-		wxStaticText* GuiAddressStaticText;
-		wxButton* GuiAutoButton;
-		wxTextCtrl* ManagerTextCtrl;
-		wxStaticText* m_staticText67;
+		wxStaticText* m_staticText65;
 		wxStaticText* GuiAddressStaticText;
 		wxButton* GuiAutoButton;
 		wxButton* ControllerSpecifyButton;

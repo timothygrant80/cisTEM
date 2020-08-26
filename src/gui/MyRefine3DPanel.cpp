@@ -2635,8 +2635,7 @@ void RefinementManager::DoDensityModification()
 		denmod_job.AddArgument(wxString::Format("temp_dir=%s", working_dir));
 		denmod_job.AddArgument(wxString::Format("output_directory=%s", working_dir));
 		denmod_job.AddArgument(wxString::Format("output_files.denmod_map_file_name=volume_%li_%i.mrc", refinement_id, class_counter + 1));
-		// denmod_job.AddArgument(wxString("box_before_analysis=True restore_full_size=True")); // significant speedup vs using full map
-		denmod_job.AddArgument(wxString("box_before_analysis=False restore_full_size=False")); // map is not boxed centered on the particle and the resulting full-size map is trash -- do not use boxing until this is fixed!!
+		denmod_job.AddArgument(wxString("box_before_analysis=True restore_full_size=True")); // significant speedup vs using full map
 		// Add more arguments later incl. multiprocessing.
 
 		// Testing only: copy over the map before density modification for comparison

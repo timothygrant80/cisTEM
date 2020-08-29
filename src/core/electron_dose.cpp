@@ -104,10 +104,12 @@ void ElectronDose::CalculateDoseFilterAs1DArray(Image *ref_image, float *filter_
 
 }
 
-void ElectronDose::CalculateCummulativeDoseFilterAs1DArray(Image *ref_image, float *filter_array, float dose_finish)
+void ElectronDose::CalculateCummulativeDoseFilterAs1DArray(Image *ref_image, float *filter_array, float dose_start, float dose_finish, float shift_x = 0.0f, float shift_y = 0.0f)
 {
 
 //	MyDebugAssertTrue(ref_image->logical_z_dimension == 1, "Reference Image is a 3D!");
+	// The exposure causes both radiation damage && specimen motion. Optionally include a shift in X/Y from movie alignment, which is a lower bound on the intraframe motion.
+	// Approximate the envelope from sinc(pi * <q,d>) as exp(-pi/6 * <q,d>)
 
 	int i;
 	int j;
@@ -135,7 +137,7 @@ void ElectronDose::CalculateCummulativeDoseFilterAs1DArray(Image *ref_image, flo
 				else
 				{
 					x = i * ref_image->fourier_voxel_size_x;
-					filter_array[array_counter] = ReturnCummulativeDoseFilter(dose_finish, ReturnCriticalDose(sqrtf(x*x + y + z) / pixel_size));
+					filter_array[array_counter] = ReturnCummulativeDoseFilter(dose_start, dose_finish, ReturnCriticalDose(sqrtf(x*x + y + z) / pixel_size));
 				}
 
 				array_counter++;

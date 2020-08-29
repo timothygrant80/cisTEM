@@ -88,6 +88,11 @@ void Water::Init(const PDB *current_specimen, int wanted_size_neighborhood, floa
 				vol_nX = check_min_paddingX;
 				*padX = -x_diff;
 			}
+			else
+			{
+				vol_nX = current_specimen->vol_nX;
+				*padX = 0;
+			}
 
 		}
 		if  (check_min_paddingY > 0)
@@ -99,6 +104,11 @@ void Water::Init(const PDB *current_specimen, int wanted_size_neighborhood, floa
 			{
 				vol_nY = check_min_paddingY;
 				*padY = -y_diff;
+			}
+			else
+			{
+				vol_nY = current_specimen->vol_nY;
+				*padY = 0;
 			}
 		}
 

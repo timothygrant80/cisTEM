@@ -291,7 +291,8 @@ void PDB::Init()
 		float euler3; // from pdb
 
 
-
+		// After a phenix ADP refinement + Chimera selection and split, all ATOM --> HETATM. Quick hack to set this until I can figure out why. Generally speaking, this should be left as ATOM
+		wxString pdb_atom = "ATOM";
 
 		input_file_stream = new wxFileInputStream(text_filename);
 		input_text_stream = new wxTextInputStream(*input_file_stream);
@@ -318,7 +319,7 @@ void PDB::Init()
 			{
 				number_of_lines++;
 
-				if (current_line.StartsWith("ATOM") == true)
+				if (current_line.StartsWith(pdb_atom) == true)
 				{
 					number_of_atoms++;
 
@@ -363,7 +364,7 @@ void PDB::Init()
 			current_line = input_text_stream->ReadLine();
 			current_line.Trim(false);
 
-			if (current_line.StartsWith("ATOM") == true && current_line.Length() > 0)
+			if (current_line.StartsWith(pdb_atom) == true && current_line.Length() > 0)
 			{
 
 				wxString residue_name = current_line.Mid(RESIDUESTART,RESIDUELENGTH).Trim(true).Trim(false);

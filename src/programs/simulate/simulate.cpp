@@ -2063,7 +2063,6 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 					ZeroFloatArray(dose_filter, Potential_3d.real_memory_allocated/2);
 
 
-					// Normally the pre-exposure is added to each frame. Here it is taken to be the total exposure.
 					float minimum_exposure = std::max(this->pre_exposure,1.0f);
 					my_electron_dose.CalculateCummulativeDoseFilterAs1DArray(&Potential_3d, dose_filter,minimum_exposure, std::max(minimum_exposure, this->number_of_frames*this->dose_per_frame));
 

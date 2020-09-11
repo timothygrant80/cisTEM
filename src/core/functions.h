@@ -417,6 +417,13 @@ inline bool DoesFileExistWithWait(wxString filename, int max_wait_time_in_second
 
 }
 
+// Function to check if x is power of 2
+inline bool is_power_of_two(int n)
+{
+   if(n==0) return false;
+   return (ceil(log2((float)n)) == floor(log2((float)n)));
+}
+
 inline float rad_2_deg(float radians)
 {
   return radians / (PIf / 180.);

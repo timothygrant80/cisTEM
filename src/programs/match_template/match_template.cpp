@@ -59,6 +59,7 @@ MatchTemplateApp : public MyApp
 	// for master collation
 
 	ArrayOfAggregatedTemplateResults aggregated_results;
+	bool 		is_rotated_by_90 = false;
 
 	float GetMaxJobWaitTimeInSeconds() {return 120.0f;}
 
@@ -511,13 +512,12 @@ bool MatchTemplateApp::DoCalculation()
 	const int max_number_primes = 6;
 	int primes[max_number_primes] = {2,3,5,7,9,13};
 	float max_reduction_by_fraction_of_reference = 0.000001f; // FIXME the cpu version is crashing when the image is reduced, but not the GPU
-	float max_increas_by_fraction_of_image = 0.10f;
+	float max_increas_by_fraction_of_image = 0.1f;
 	int max_padding = 0; // To restrict histogram calculation
 	float histogram_padding_trim_rescale; // scale the counts to
 
 	// for 5760 this will return
 	// 5832 2     2     2     3     3     3     3     3     3 - this is ~ 10% faster than the previous solution BUT
-	// 6144  2     2     2     2     2     2     2     2     2     2     2     3 is another ~ 5% faster
 	if (DO_FACTORIZATION)
 	{
 	for ( i = 0; i < max_number_primes; i++ )
@@ -564,9 +564,18 @@ bool MatchTemplateApp::DoCalculation()
 	if (factorizable_y - original_input_image_y > max_padding) max_padding = factorizable_y - original_input_image_y;
 
 
-//	wxPrintf("old x, y; new x, y = %i %i %i %i\n", input_image.logical_x_dimension, input_image.logical_y_dimension, factorizable_x, factorizable_y);
+	wxPrintf("old x, y; new x, y = %i %i %i %i\n", input_image.logical_x_dimension, input_image.logical_y_dimension, factorizable_x, factorizable_y);
+
 
 	input_image.Resize(factorizable_x, factorizable_y, 1, input_image.ReturnAverageOfRealValuesOnEdges());
+	if ( ! is_power_of_two(factorizable_x) && is_power_of_two(factorizable_y) )
+	{
+		// The speedup in the FFT for better factorization is also dependent on the dimension. The full transform (in cufft anyway) is faster if the best dimension is on X.
+		// TODO figure out how to check the case where there is no factor of two, but one dimension is still faster. Probably getting around to writing an explicit planning tool would be useful.
+
+		is_rotated_by_90 = true;
+		input_image.Rotate2DInPlaceBy90Degrees(true);
+	}
 
 	}
 	padded_reference.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
@@ -1149,6 +1158,37 @@ bool MatchTemplateApp::DoCalculation()
 	{
 		correlation_pixel_sum_image.real_values[pixel_counter] = (float)correlation_pixel_sum[pixel_counter];
 		correlation_pixel_sum_of_squares_image.real_values[pixel_counter] = (float)correlation_pixel_sum_of_squares[pixel_counter];
+	}
+
+	if (is_rotated_by_90)
+	{
+		// swap back all the images prior to re-sizing
+		input_image.Rotate2DInPlaceBy90Degrees(false);
+		max_intensity_projection.Rotate2DInPlaceBy90Degrees(false);
+
+		best_psi.Rotate2DInPlaceBy90Degrees(false);
+		best_theta.Rotate2DInPlaceBy90Degrees(false);
+		best_phi.Rotate2DInPlaceBy90Degrees(false);
+		best_defocus.Rotate2DInPlaceBy90Degrees(false);
+		best_pixel_size.Rotate2DInPlaceBy90Degrees(false);
+
+		correlation_pixel_sum_image.Rotate2DInPlaceBy90Degrees(false);
+		correlation_pixel_sum_of_squares_image.Rotate2DInPlaceBy90Degrees(false);
+
+		// This is ineffecient, but a quick way to ensure consistent results.
+		delete [] correlation_pixel_sum;
+		delete [] correlation_pixel_sum_of_squares;
+		// Now we have the rotated values which may also be a different total amount of memory
+		correlation_pixel_sum = new double[input_image.real_memory_allocated];
+		correlation_pixel_sum_of_squares = new double[input_image.real_memory_allocated];
+		ZeroDoubleArray(correlation_pixel_sum, input_image.real_memory_allocated);
+		ZeroDoubleArray(correlation_pixel_sum_of_squares, input_image.real_memory_allocated);
+		for (pixel_counter = 0; pixel_counter <  input_image.real_memory_allocated; pixel_counter++)
+		{
+			correlation_pixel_sum[pixel_counter] = (double)correlation_pixel_sum_image.real_values[pixel_counter];
+			correlation_pixel_sum_of_squares[pixel_counter] = (double)correlation_pixel_sum_of_squares_image.real_values[pixel_counter];
+		}
+
 	}
 
 

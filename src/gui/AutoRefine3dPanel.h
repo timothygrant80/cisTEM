@@ -23,6 +23,10 @@ public:
 	float active_mask_edge;
 	float active_mask_weight;
 	long active_mask_asset_id;
+	#ifdef EXPERIMENTAL
+	bool active_should_denmod;
+	bool denmod_completed_this_cycle;
+	#endif
 
 	float active_low_resolution_limit;
 	float active_mask_radius;
@@ -116,6 +120,11 @@ public:
 
 	void DoMasking();
 
+	#ifdef EXPERIMENTAL
+	void DoDensityModification();
+	void OnDenmodThreadComplete();
+	#endif
+
 //	void StartRefinement();
 //	void StartReconstruction();
 
@@ -153,6 +162,9 @@ class AutoRefine3DPanel : public AutoRefine3DPanelParent
 		AutoRefinementManager my_refinement_manager;
 
 		int active_orth_thread_id;
+		#ifdef EXPERIMENTAL
+		int active_denmod_thread_id;
+		#endif
 		int active_mask_thread_id;
 		int next_thread_id;
 
@@ -197,6 +209,9 @@ class AutoRefine3DPanel : public AutoRefine3DPanelParent
 
 		void OnMaskerThreadComplete(wxThreadEvent& my_event);
 		void OnOrthThreadComplete(ReturnProcessedImageEvent& my_event);
+		#ifdef EXPERIMENTAL
+		void OnDenmodThreadComplete(wxThreadEvent& my_event);
+		#endif
 };
 
 #endif

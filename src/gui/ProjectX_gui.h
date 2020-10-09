@@ -2324,6 +2324,10 @@ class AutoRefine3DPanelParent : public JobPanel
 		wxRadioButton* LowPassMaskNoRadio;
 		wxStaticText* FilterResolutionStaticText;
 		NumericTextCtrl* MaskFilterResolutionText;
+		wxStaticText* DenmodSubheaderStaticText;
+		wxStaticText* DenmodStaticText;
+		wxRadioButton* DoDenmodYesRadio;
+		wxRadioButton* DoDenmodNoRadio;
 		wxPanel* OutputTextPanel;
 		wxTextCtrl* output_textctrl;
 		wxPanel* InfoPanel;

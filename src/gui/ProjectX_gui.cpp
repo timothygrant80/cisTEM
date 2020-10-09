@@ -9208,6 +9208,31 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 	MaskFilterResolutionText = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("20.00"), wxDefaultPosition, wxDefaultSize, 0 );
 	fgSizer1->Add( MaskFilterResolutionText, 0, wxALL, 5 );
 
+	DenmodSubheaderStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Density Modification"), wxDefaultPosition, wxDefaultSize, 0 );
+	DenmodSubheaderStaticText->Wrap( -1 );
+	DenmodSubheaderStaticText->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxT("Sans") ) );
+
+	fgSizer1->Add( DenmodSubheaderStaticText, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	DenmodStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Do Density Modification?"), wxDefaultPosition, wxDefaultSize, 0 );
+	DenmodStaticText->Wrap( -1 );
+	fgSizer1->Add( DenmodStaticText, 0, wxALL, 5 );
+
+	wxBoxSizer* bSizer266122;
+	bSizer266122 = new wxBoxSizer( wxHORIZONTAL );
+
+	DoDenmodYesRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer266122->Add( DoDenmodYesRadio, 0, wxALL, 5 );
+
+	DoDenmodNoRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer266122->Add( DoDenmodNoRadio, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( bSizer266122, 1, wxEXPAND, 5 );
+
 
 	InputSizer->Add( fgSizer1, 1, wxEXPAND, 5 );
 
@@ -9392,6 +9417,8 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AutoRefine3DPanelParent::ResetAllDefaultsClick ), NULL, this );
 	AutoMaskYesRadioButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( AutoRefine3DPanelParent::OnAutoMaskButton ), NULL, this );
 	AutoMaskNoRadioButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( AutoRefine3DPanelParent::OnAutoMaskButton ), NULL, this );
+	DoDenmodYesRadio->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( AutoRefine3DPanelParent::OnAutoMaskButton ), NULL, this );
+	DoDenmodNoRadio->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( AutoRefine3DPanelParent::OnAutoMaskButton ), NULL, this );
 	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( AutoRefine3DPanelParent::OnInfoURL ), NULL, this );
 	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AutoRefine3DPanelParent::FinishButtonClick ), NULL, this );
 	CancelAlignmentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AutoRefine3DPanelParent::TerminateButtonClick ), NULL, this );
@@ -9407,6 +9434,8 @@ AutoRefine3DPanelParent::~AutoRefine3DPanelParent()
 	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AutoRefine3DPanelParent::ResetAllDefaultsClick ), NULL, this );
 	AutoMaskYesRadioButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( AutoRefine3DPanelParent::OnAutoMaskButton ), NULL, this );
 	AutoMaskNoRadioButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( AutoRefine3DPanelParent::OnAutoMaskButton ), NULL, this );
+	DoDenmodYesRadio->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( AutoRefine3DPanelParent::OnAutoMaskButton ), NULL, this );
+	DoDenmodNoRadio->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( AutoRefine3DPanelParent::OnAutoMaskButton ), NULL, this );
 	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( AutoRefine3DPanelParent::OnInfoURL ), NULL, this );
 	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AutoRefine3DPanelParent::FinishButtonClick ), NULL, this );
 	CancelAlignmentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AutoRefine3DPanelParent::TerminateButtonClick ), NULL, this );

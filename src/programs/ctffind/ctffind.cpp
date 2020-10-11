@@ -1755,6 +1755,11 @@ bool CtffindApp::DoCalculation()
 		SendError(wxString::Format("Error: Finding additional phase shift and determining sample tilt cannot be active at the same time. Terminating."));
 		ExitMainLoop();
 	}
+	if (determine_tilt && (amplitude_spectrum_input || filtered_amplitude_spectrum_input))
+	{
+		SendError(wxString::Format("Error: Determining sample tilt cannot be run with either amplitude-spectrum-input or filtered-amplitude-spectrum-input. Terminating."));
+		DEBUG_ABORT; // THis applies to CLI not GUI
+	}
 	if (minimum_resolution < maximum_resolution)
 	{
 		SendError(wxString::Format("Error: Minimum resolution (%f) higher than maximum resolution (%f). Terminating.", minimum_resolution,maximum_resolution));

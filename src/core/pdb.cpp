@@ -1150,6 +1150,8 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int fr
 	// This is used in the simulator to determine how large a window should be used for the calculation of the atoms.
 	this->average_bFactor /= current_total_atom;
 
+	wxPrintf("\t\t\n\nAVG BFACTOR FROM PDB IS %f\n\n",average_bFactor);
+
 	if (current_total_atom > 2) // for single atom test
 	{
 		// Again, need a check to make sure all sizes are consistent

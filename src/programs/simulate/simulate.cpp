@@ -850,27 +850,24 @@ void SimulateApp::DoInteractiveUserInput()
 
 	 if (this->do3d)
 	 {
-		 // Check to make sure the sampling is sufficient, if not, oversample and bin at the end.
-		 if (this->wanted_pixel_size > 0.8 && this->wanted_pixel_size <= 1.5)
-		 {
-			 wxPrintf("\nOversampling your 3d by a factor of 2 for calculation.\n");
-			 this->wanted_pixel_size /= 2.0f;
-			 this->bin3d = 2;
-		 }
-		 else if (this->wanted_pixel_size > 1.5 && this->wanted_pixel_size < 3.0)
-		 {
-			 wxPrintf("\nOversampling your 3d by a factor of 4 for calculation.\n");
-
-			 this->wanted_pixel_size /= 4.0f;
-			 this->bin3d = 4;
-		 }
-		 else
-		 {
-			 //do nothing
-		 }
-		 this->dose_per_frame			= my_input->GetFloatFromUser("electrons/Ang^2 in a frame at the specimen","","1.0",0.05,20.0);
-		 this->dose_rate			    = my_input->GetFloatFromUser("electrons/Pixel/sec","Affects coherence but not coincidence loss","3.0",0.001,200.0);
-		 this->number_of_frames			= my_input->GetFloatFromUser("number of frames per movie (micrograph or tilt)","","30",1.0,1000.0);
+//		 // Check to make sure the sampling is sufficient, if not, oversample and bin at the end.
+//		 if (this->wanted_pixel_size > 0.8 && this->wanted_pixel_size <= 1.5)
+//		 {
+//			 wxPrintf("\nOversampling your 3d by a factor of 2 for calculation.\n");
+//			 this->wanted_pixel_size /= 2.0f;
+//			 this->bin3d = 2;
+//		 }
+//		 else if (this->wanted_pixel_size > 1.5 && this->wanted_pixel_size < 3.0)
+//		 {
+//			 wxPrintf("\nOversampling your 3d by a factor of 4 for calculation.\n");
+//
+//			 this->wanted_pixel_size /= 4.0f;
+//			 this->bin3d = 4;
+//		 }
+//		 else
+//		 {
+//			 //do nothing
+//		 }
 
 	 }
 	 else
@@ -2063,8 +2060,8 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 					ZeroFloatArray(dose_filter, Potential_3d.real_memory_allocated/2);
 
 
-					float minimum_exposure = std::max(this->pre_exposure,1.0f);
-					my_electron_dose.CalculateCummulativeDoseFilterAs1DArray(&Potential_3d, dose_filter,minimum_exposure, std::max(minimum_exposure, this->number_of_frames*this->dose_per_frame));
+					// Normally the pre-exposure is added to each frame. Here it is taken to be the total exposure.
+					my_electron_dose.CalculateCummulativeDoseFilterAs1DArray(&Potential_3d, dose_filter,std::max(this->pre_exposure,1.0f));
 
 
 					if (MODIFY_ONLY_SIGNAL)

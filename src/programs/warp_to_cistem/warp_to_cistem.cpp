@@ -638,6 +638,7 @@ bool WarpToCistemApp::DoCalculation()
 	wxDir::GetAllFiles 	( warp_directory, &all_files, "*.mrc", wxDIR_FILES);
 	wxDir::GetAllFiles 	( warp_directory, &all_files, "*.mrcs", wxDIR_FILES);
 	wxDir::GetAllFiles 	( warp_directory, &all_files, "*.tif", wxDIR_FILES);
+	wxDir::GetAllFiles 	( warp_directory, &all_files, "*.tiff", wxDIR_FILES);
 	all_files.Sort();
 	wxXmlDocument doc;
 	size_t number_of_files = all_files.GetCount();

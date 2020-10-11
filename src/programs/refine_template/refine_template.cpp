@@ -70,7 +70,7 @@ Peak TemplateScore(void *scoring_parameters)
 	current_projection.BackwardFFT();
 //	wxPrintf("ping");
 
-	return current_projection.FindPeakWithIntegerCoordinates();
+	return current_projection.FindPeakWithIntegerCoordinates(0.0,10.0);
 //	box_peak = current_projection.FindPeakWithIntegerCoordinates();
 //	wxPrintf("address = %li\n", box_peak.physical_address_within_image);
 //	box_peak.x = 0.0f;

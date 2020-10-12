@@ -2292,7 +2292,7 @@ void AutoRefinementManager::DoDensityModification()
 	{
 		long refinement_id = main_frame->current_project.database.ReturnHighestRefinementID() + 1;
 		wxString volumes_dir = main_frame->current_project.volume_asset_directory.GetFullPath();
-		wxString scratch_dir = main_frame->ReturnRefine3DScratchDirectory();
+		wxString scratch_dir = main_frame->ReturnAutoRefine3DScratchDirectory();
 		wxString working_dir = scratch_dir + wxString::Format("denmod_%li_%i", refinement_id, class_counter + 1);
 		wxMkDir(working_dir, wxS_DIR_DEFAULT);
 		wxString current_map = volumes_dir + wxString::Format("/volume_%li_%i.mrc", refinement_id, class_counter + 1);
@@ -2550,7 +2550,7 @@ void AutoRefinementManager::OnDenmodThreadComplete()
 	for (int class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
 	{
 		// Replace existing final volume with density modified volume
-		wxCopyFile(main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("denmod_%li_%i/volume_%li_%i.mrc", main_frame->current_project.database.ReturnHighestRefinementID() + 1, class_counter + 1, main_frame->current_project.database.ReturnHighestRefinementID() + 1, class_counter + 1), main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i.mrc", main_frame->current_project.database.ReturnHighestRefinementID() + 1, class_counter + 1), true);
+		wxCopyFile(main_frame->ReturnAutoRefine3DScratchDirectory() + wxString::Format("denmod_%li_%i/volume_%li_%i.mrc", main_frame->current_project.database.ReturnHighestRefinementID() + 1, class_counter + 1, main_frame->current_project.database.ReturnHighestRefinementID() + 1, class_counter + 1), main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i.mrc", main_frame->current_project.database.ReturnHighestRefinementID() + 1, class_counter + 1), true);
 		wxRemoveFile(main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_half1.mrc", main_frame->current_project.database.ReturnHighestRefinementID() + 1, class_counter + 1));
 		wxRemoveFile(main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_half2.mrc", main_frame->current_project.database.ReturnHighestRefinementID() + 1, class_counter + 1));
 	}

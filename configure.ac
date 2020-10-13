@@ -168,6 +168,9 @@ AC_ARG_WITH([cuda], AS_HELP_STRING([--with-cuda@<:@=yes|no|DIR@:>@], [prefix whe
 if test "$want_cuda" = "yes" 
 then
 
+	# In Thrust 1.10 c++11 is deprecated. Not using those libs now, so squash warnings, but we should consider switching to a newer standard
+	AC_DEFINE(THRUST_IGNORE_DEPRECATED_CPP_11,true)
+
 	# Set conditional and run macro	
 	AX_CUDA
 	

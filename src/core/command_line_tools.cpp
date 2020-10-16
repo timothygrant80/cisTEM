@@ -1,20 +1,5 @@
 #include "core_headers.h"
 
-// AsyncProcess::AsyncProcess()
-// {
-//     finished = false;
-// }
-
-// void AsyncProcess::OnTerminate(int pid, int status)
-// {
-//     finished = true;
-// }
-
-// void AsyncProcess::SetReturnString(wxString wanted_return_string)
-// {
-//     return_string = wanted_return_string;
-// }
-
 CommandLineTools::CommandLineTools()
 {
     args = "";
@@ -59,30 +44,33 @@ wxString CommandLineTools::RunSync()
 wxString CommandLineTools::RunAsync(int wanted_process_id)
 {
     wxProcess *process = new wxProcess();
+    process->Redirect();
     long exit_code = wxExecute(wxString::Format("%s/%s %s", bin_dir, executable, args), wxEXEC_ASYNC, process);
+
+    wxInputStream* output_stream = process->GetInputStream();
+    // wxInputStream* error_stream = process->GetErrorStream();
+    wxTextInputStream text_output_stream { *output_stream };
+
+    wxArrayString output_strings;
+    for ( int i=0; i<10; i++ )
+    {
+        output_strings.Add("");
+    }
+
     // FIXME: this process cannot be killed :(
     while ( wxProcess::Exists(process->GetPid()) )
     {
-        wxSleep(10);
+        if ( output_stream->CanRead() )
+        {
+            output_strings.Add(text_output_stream.ReadLine());
+        }
     }
-    return_string = wxString::Format("Execution of %s/%s %s completed with return code %li.\n", bin_dir, executable, args, exit_code);
+    wxString output_tail = "";
+    for ( int i=0; i<10; i++ )
+    {
+        output_tail = output_tail + wxString("\n") + output_strings.Item(output_strings.GetCount() - 10 + i);
+    }
+    return_string = wxString::Format("Output ends with:\n%s", output_tail);
+
     return return_string;
 }
-
-// wxString CommandLineTools::RunAsync()
-// {
-//     long exit_code = wxExecute(wxString::Format("%s/%s %s", bin_dir, executable, args), wxEXEC_ASYNC, process);
-//     // TODO: subclass wxProcess and customize the OnTerminate method to do what follows
-//     if ( exit_code != 0 )
-// 	{
-// 		return_string = wxString::Format("Execution of %s/%s %s failed to launch with return code %li.\n", bin_dir, executable, args, exit_code);
-// 	}
-//     else {
-//         while ( process->finished != true )
-//         {
-//             wxSleep(10);
-//         }
-//         return_string = wxString::Format("Execution of %s/%s %s completed.\n", bin_dir, executable, args);
-//         return return_string;
-//     }
-// }

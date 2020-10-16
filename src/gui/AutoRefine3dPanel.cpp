@@ -2322,6 +2322,7 @@ void AutoRefinementManager::DoDensityModification()
 			delete result_thread;
 		} else
 		{
+			my_parent->WriteInfoText(denmod_job.return_string);
 			return;
 		}
 	}

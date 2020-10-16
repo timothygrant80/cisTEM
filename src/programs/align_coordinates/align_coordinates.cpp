@@ -97,9 +97,9 @@ bool AlignCoordinatesApp::DoCalculation()
 	int theta_i, number_of_theta_angles;
 	int phi_i, number_of_phi_angles;
 	float best_x, best_y;
-	float xyz_offset[3];
-	float ref_center_of_mass[3];
-	float align_center_of_mass[3];
+	float xyz_offset[3] = {0.0f,0.0f,0.0f};
+	float ref_center_of_mass[3] = {0.0f,0.0f,0.0f};
+	float align_center_of_mass[3] = {0.0f,0.0f,0.0f};
 	float anchor_align_x, anchor_align_y;
 	float anchor_ref_x, anchor_ref_y;
 	float std_x = 0.0f, std_y = 0.0f, std_z = 0.0f;

@@ -1841,6 +1841,7 @@ void Image::RotateQuadrants(Image &rotated_image, int quad_i)
 	MyDebugAssertTrue(logical_z_dimension == 1, "Error: attempting to rotate from 3D image");
 	MyDebugAssertTrue(rotated_image.is_in_memory, "Memory not allocated for receiving image");
 //	MyDebugAssertTrue(! is_in_real_space, "Image is in real space");
+	// These next two are redundant, right? Does it matter for the real space if it is square?
 	MyDebugAssertTrue(IsSquare(), "Image to rotate is not square");
 	MyDebugAssertTrue(rotated_image.logical_x_dimension == logical_x_dimension && rotated_image.logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
 	MyDebugAssertTrue(quad_i == 0 || quad_i == 90 || quad_i == 180 || quad_i == 270, "Selected rotation invalid");
@@ -11045,6 +11046,47 @@ void Image::Rotate2DInPlace(float rotation_in_degrees, float mask_radius_in_pixe
 	AnglesAndShifts rotation;
 	rotation.GenerateRotationMatrix2D(rotation_in_degrees);
 	Rotate2D(buffer_image, rotation, mask_radius_in_pixels);
+	Consume(&buffer_image);
+}
+
+void Image::Rotate2DInPlaceBy90Degrees(bool rotate_by_positive_90_degrees)
+{
+	// Rotate without interpolation by swapping indices.
+	Image buffer_image;
+	buffer_image.Allocate(logical_y_dimension, logical_x_dimension, true);
+	long current_address_old_image = 0;
+	int y_new = -1;
+	int x_new = -1;
+	int y_old = 0;
+	int x_old = 0;
+
+	// Negative rotation is clockwise looking down the image normal (Y --> X)
+	if (rotate_by_positive_90_degrees)
+	{
+		for (y_old = 0 ; y_old < logical_y_dimension; y_old ++)
+		{
+			x_new = logical_y_dimension - y_old - 1;
+
+			for (x_old = 0; x_old < logical_x_dimension; x_old++)
+			{
+				y_new = x_old;
+				buffer_image.real_values[buffer_image.ReturnReal1DAddressFromPhysicalCoord(x_new,y_new,0)] = ReturnRealPixelFromPhysicalCoord(x_old,y_old,0);
+			}
+		}
+	}
+	else
+	{
+		for (y_old = 0 ; y_old < logical_y_dimension; y_old ++)
+		{
+			x_new = y_old;
+			for (x_old = 0; x_old < logical_x_dimension; x_old++)
+			{
+				y_new = logical_x_dimension - x_old - 1;
+				buffer_image.real_values[buffer_image.ReturnReal1DAddressFromPhysicalCoord(x_new,y_new,0)] = ReturnRealPixelFromPhysicalCoord(x_old,y_old,0);
+			}
+
+		}
+	}
 	Consume(&buffer_image);
 }
 

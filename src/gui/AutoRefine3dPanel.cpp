@@ -2316,15 +2316,7 @@ void AutoRefinementManager::DoDensityModification()
 
 		result_thread = new DenmodThread(my_parent, denmod_job, my_parent->active_denmod_thread_id);
 
-		if ( result_thread->Run() != wxTHREAD_NO_ERROR )
-		{
-			my_parent->WriteErrorText("Error: Cannot run density modification");
-			delete result_thread;
-		} else
-		{
-			my_parent->WriteInfoText(denmod_job.return_string);
-			return;
-		}
+		my_parent->WriteInfoText(denmod_job.return_string);
 	}
 
 }

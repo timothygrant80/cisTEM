@@ -115,14 +115,21 @@ class DenmodThread : public wxThread
 		denmod_job = wanted_denmod_job;
 		thread_id = wanted_thread_id;
 		return_string = wxString("");
+		output_string = wxString("");
+		error_string = wxString("");
 	}
+
+	public:
+	wxArrayString return_array_string;
+	wxString return_string;
+	wxString output_string;
+	wxString error_string;
 
 	protected:
 
 	wxWindow *main_thread_pointer;
 	CommandLineTools denmod_job;
 	int thread_id;
-	wxString return_string;
 
     virtual ExitCode Entry();
 };

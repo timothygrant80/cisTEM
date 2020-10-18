@@ -7,6 +7,8 @@ CommandLineTools::CommandLineTools()
     executable = "";
     exit_code = 0;
     return_string = "";
+    error_string = "";
+    output_string = "";
 }
 
 void CommandLineTools::Init(wxString wanted_bin_dir, wxString wanted_executable)
@@ -41,17 +43,19 @@ wxString CommandLineTools::RunSync()
     return return_string;
 }
 
-wxString CommandLineTools::RunAsync(int wanted_process_id)
+wxArrayString CommandLineTools::RunAsync()
 {
     wxProcess *process = new wxProcess();
     process->Redirect();
     long exit_code = wxExecute(wxString::Format("%s/%s %s", bin_dir, executable, args), wxEXEC_ASYNC, process);
 
     wxInputStream* output_stream = process->GetInputStream();
-    // wxInputStream* error_stream = process->GetErrorStream();
+    wxInputStream* error_stream = process->GetErrorStream();
     wxTextInputStream text_output_stream { *output_stream };
+    wxTextInputStream text_error_stream { *error_stream };
 
     wxArrayString output_strings;
+    wxArrayString error_strings;
     for ( int i=0; i<10; i++ )
     {
         output_strings.Add("");
@@ -64,13 +68,26 @@ wxString CommandLineTools::RunAsync(int wanted_process_id)
         {
             output_strings.Add(text_output_stream.ReadLine());
         }
+        if (error_stream->CanRead() )
+        {
+            error_strings.Add(text_error_stream.ReadLine());
+        }
     }
-    wxString output_tail = "";
-    for ( int i=0; i<10; i++ )
+    for ( int i=0; i<output_strings.GetCount(); i++ )
     {
-        output_tail = output_tail + wxString("\n") + output_strings.Item(output_strings.GetCount() - 10 + i);
+        output_string = output_string + wxString("\n") + output_strings.Item(i);
     }
-    return_string = wxString::Format("Output ends with:\n%s", output_tail);
-
-    return return_string;
+    for ( int i=0; i<error_strings.GetCount(); i++ )
+    {
+        error_string = error_string + wxString("\n") + error_strings.Item(i);
+    }
+    // wxString output_tail = "";
+    // for ( int i=0; i<10; i++ )
+    // {
+    //     output_tail = output_tail + wxString("\n") + output_strings.Item(output_strings.GetCount() - 10 + i);
+    // }
+    // return_string = wxString::Format("Output ends with:\n%s", output_tail);
+    return_array_string.Add(output_string);
+    return_array_string.Add(error_string);
+    return return_array_string;
 }

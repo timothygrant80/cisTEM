@@ -21,7 +21,10 @@ public :
     // int process_id;
     // AsyncProcess *process;
     long exit_code;
+    wxArrayString return_array_string;
     wxString return_string;
+    wxString error_string;
+    wxString output_string;
 
     // constructors & deconstructors
     CommandLineTools();
@@ -33,6 +36,6 @@ public :
     wxString GetCommand();
     // wxString Run();
     wxString RunSync();
-    wxString RunAsync(int wanted_process_id);
+    wxArrayString RunAsync();
 
 };

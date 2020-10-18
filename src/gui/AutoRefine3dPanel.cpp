@@ -2315,8 +2315,19 @@ void AutoRefinementManager::DoDensityModification()
 		my_parent->next_thread_id++;
 
 		result_thread = new DenmodThread(my_parent, denmod_job, my_parent->active_denmod_thread_id);
-
-		my_parent->WriteInfoText(denmod_job.return_string);
+		if ( result_thread->Run() != wxTHREAD_NO_ERROR )
+		{
+			my_parent->WriteErrorText("Error: Cannot run density modification");
+			delete result_thread;
+		}
+		else
+		{
+			my_parent->WriteInfoText(wxString::Format("Executing %s", denmod_job.GetCommand()));
+		}
+		// TODO: the thread now has output_string and error_string attributes but these won't be
+		// updated by the time we want to print them. Could see about triggering this from
+		// OnDenmodThreadComplete.
+		// my_parent->WriteInfoText(denmod_job.return_string);
 	}
 
 }

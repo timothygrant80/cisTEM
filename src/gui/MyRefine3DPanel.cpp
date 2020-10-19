@@ -2627,7 +2627,7 @@ void RefinementManager::DoDensityModification()
 		wxString current_half_map_2 = volumes_dir + wxString::Format("/volume_%li_%i_half2.mrc", refinement_id, class_counter + 1);
 		CommandLineTools denmod_job;
 		my_parent->WriteBlueText("Executing denmod job in new thread.");
-		denmod_job.Init(phenix_bin_dir, wxString("phenix.resolve_cryo_em"));
+		denmod_job.Init(phenix_bin_dir, wxString("phenix.resolve_cryo_em"), wxString::Format("%s/denmod.out", working_dir), wxString::Format("%s/denmod.err", working_dir));
 		denmod_job.AddArgument(wxString::Format("map_file_name=%s", current_map));
 		denmod_job.AddArgument(wxString::Format("half_map_file_name_1=%s", current_half_map_1));
 		denmod_job.AddArgument(wxString::Format("half_map_file_name_2=%s", current_half_map_2));

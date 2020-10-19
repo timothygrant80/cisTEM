@@ -17,6 +17,8 @@ class CommandLineTools {
 public :
     wxString bin_dir;
     wxString executable;
+    wxString outfile;
+    wxString errfile;
     wxString args;
     // int process_id;
     // AsyncProcess *process;
@@ -31,7 +33,7 @@ public :
     ~CommandLineTools();
 
     // methods
-    void Init(wxString wanted_bin_dir, wxString wanted_executable);
+    void Init(wxString wanted_bin_dir, wxString wanted_executable, wxString wanted_outfile, wxString wanted_errfile);
     void AddArgument(wxString wanted_argument);
     wxString GetCommand();
     // wxString Run();

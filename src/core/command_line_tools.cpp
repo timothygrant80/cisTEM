@@ -6,15 +6,19 @@ CommandLineTools::CommandLineTools()
     bin_dir = "";
     executable = "";
     exit_code = 0;
+    outfile = "";
+    errfile = "";
     return_string = "";
     error_string = "";
     output_string = "";
 }
 
-void CommandLineTools::Init(wxString wanted_bin_dir, wxString wanted_executable)
+void CommandLineTools::Init(wxString wanted_bin_dir, wxString wanted_executable, wxString wanted_outfile="", wxString wanted_errfile="")
 {
     bin_dir = wanted_bin_dir;
     executable = wanted_executable;
+    outfile = wanted_outfile;
+    errfile = wanted_errfile;
 }
 
 CommandLineTools::~CommandLineTools() {}
@@ -53,6 +57,8 @@ wxArrayString CommandLineTools::RunAsync()
     wxInputStream* error_stream = process->GetErrorStream();
     wxTextInputStream text_output_stream { *output_stream };
     wxTextInputStream text_error_stream { *error_stream };
+    wxTextFile outfile_obj;
+    wxTextFile errfile_obj;
 
     wxArrayString output_strings;
     wxArrayString error_strings;
@@ -73,14 +79,26 @@ wxArrayString CommandLineTools::RunAsync()
             error_strings.Add(text_error_stream.ReadLine());
         }
     }
+
+    outfile_obj.Create(outfile);
+    errfile_obj.Create(errfile);
+
     for ( int i=0; i<output_strings.GetCount(); i++ )
     {
         output_string = output_string + wxString("\n") + output_strings.Item(i);
+        outfile_obj.AddLine(output_strings.Item(i));
     }
     for ( int i=0; i<error_strings.GetCount(); i++ )
     {
         error_string = error_string + wxString("\n") + error_strings.Item(i);
+        errfile_obj.AddLine(error_strings.Item(i));
     }
+
+    outfile_obj.Write();
+    errfile_obj.Write();
+    outfile_obj.Close();
+    errfile_obj.Close();
+
     // wxString output_tail = "";
     // for ( int i=0; i<10; i++ )
     // {

@@ -55,7 +55,15 @@ void MRCHeader::PrintInfo()
 
 	// Start printing
 	wxPrintf("Number of columns, rows, sections: %i, %i, %i\n",nx[0],ny[0],nz[0]);
-	wxPrintf("MRC data mode: %i\n",mode[0]);
+	wxPrintf("MRC data mode: %i",mode[0]);
+	if (mode[0] == 0 && PixelDataAreSigned())
+	{
+		wxPrintf(" (bytes - signed in file)\n");
+	}
+	else 
+	{
+		wxPrintf("\n");
+	}
 	wxPrintf("Bit depth: %i\n",int(bytes_per_pixel * 8));
 	wxPrintf("Pixel size: %0.3f %0.3f %0.3f\n",pixel_size[0],pixel_size[1],pixel_size[2]);
 	wxPrintf("Column index: %i; Row index: %i; Section index: %i\n",map_c[0],map_r[0],map_s[0]);
@@ -207,9 +215,11 @@ void MRCHeader::InitPointers()
 	dmin					= (float*) &buffer[76];
 	dmax       	 			= (float*) &buffer[80];
 	dmean       			= (float*) &buffer[84];
-	space_group_number 		= (int*) &buffer[88];
-	symmetry_data_bytes 	= (int*) &buffer[92];
+	space_group_number 		= (int*) &buffer[88]; // should be 0 for an image stack, 1 for a volume
+	symmetry_data_bytes 	= (int*) &buffer[92]; // number of bytes in extended header ("next" in IMOD C)
 	extra					= (int*) &buffer[96];
+	imodStamp				= (int*) &buffer[152];
+	imodFlags				= (int*) &buffer[156];
 	origin_x				= (float*) &buffer[196];
 	origin_y				= (float*) &buffer[200];
 	origin_z				= (float*) &buffer[204];
@@ -237,7 +247,15 @@ void MRCHeader::ReadHeader(std::fstream *MRCFile)
 	{
 		case 0:
 			bytes_per_pixel = 1;
-			pixel_data_are_signed = true; // Note that MRC mode 0 is sometimes signed, sometimes not signed. TODO: sort this out by checking the imodStamp header
+			if (imodStamp[0] == 1146047817)
+			{
+				// This is a file from IMOD. Let's check whether signed or not
+				pixel_data_are_signed = imodFlags[0] & 1;
+			}
+			else
+			{
+				pixel_data_are_signed = false; // default is unsigned bytes for mode 0
+			}
 			pixel_data_are_of_type = MRCByte;
 			pixel_data_are_complex = false;
 

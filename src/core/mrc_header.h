@@ -80,6 +80,15 @@ class MRCHeader {
 	int 	*space_group_number;	// !< space group number 0 or 1 (default=0)
 	int 	*symmetry_data_bytes;	// !< number of bytes used for symmetry data (0 or 80)
 	int     *extra;					// !< extra space used for anything - 0 by default (100 bytes)
+	int 	*imodStamp;				// 1146047817 indicates that file was created by IMOD or other software that uses bit flags in the following field
+	int		*imodFlags;				// Bit flags:
+                                	// 1 = bytes are stored as signed
+                                	// 2 = pixel spacing was set from size in extended header 
+                                	// 4 = origin is stored with sign inverted from definition
+                                	//     below
+                                	// 8 = RMS value is negative if it was not computed
+                                	// 16 = Bytes have two 4-bit values, the first one in the
+                               		 //      low 4 bits and the second one in the high 4 bits
 	float 	*origin_x;				// !< origin in X used for transforms
 	float 	*origin_y;				// !< origin in Y used for transforms
 	float 	*origin_z;              // !< origin in Z used for transforms
@@ -125,6 +134,7 @@ class MRCHeader {
 	inline int ReturnMapS() {return map_s[0];};
 
 	inline bool ReturnIfThisIsInMastronarde4BitHackFormat() {return this_is_in_mastronarde_4bit_hack_format;}
+	inline bool PixelDataAreSigned() {return pixel_data_are_signed;}
 
 	float ReturnPixelSize();
 	void SetPixelSize(float wanted_pixel_size);

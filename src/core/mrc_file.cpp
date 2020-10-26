@@ -214,17 +214,18 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 			uint8 low_4bits;
 			uint8 hi_4bits;
 
-			// For signed integers
 			char *temp_char_array = new char [records_to_read];
 			my_file->read(temp_char_array, records_to_read);
-			// For unsigned integers
-//			unsigned char *temp_char_array = new unsigned char [records_to_read];
-//			my_file->read((char *)temp_char_array, records_to_read);
-
-			for (long counter = 0; counter < records_to_read; counter++)
+			signed char * temp_signed_char_array = reinterpret_cast <signed char *> (temp_char_array);
+			unsigned char * temp_unsigned_char_array = reinterpret_cast <unsigned char *> (temp_char_array);
+			
+			
+			// Convert to float array
+			if (my_header.ReturnIfThisIsInMastronarde4BitHackFormat())
 			{
-				if (my_header.ReturnIfThisIsInMastronarde4BitHackFormat() == true)
+				for (long counter = 0; counter < records_to_read; counter++)
 				{
+				
 					low_4bits = temp_char_array[counter] & 0x0F;
 					hi_4bits = (temp_char_array[counter]>>4) & 0x0F;
 
@@ -233,12 +234,24 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 					output_array[output_counter] = float(hi_4bits);
 					output_counter ++;
 				}
+			}
+			else
+			{
+				if (my_header.PixelDataAreSigned())
+				{
+					for (long counter = 0; counter < records_to_read; counter++)
+					{
+						output_array[counter] = float(temp_signed_char_array[counter] + 128);
+					}
+				}
 				else
 				{
-					output_array[counter] = float(temp_char_array[counter]);
+					for (long counter = 0; counter < records_to_read; counter++)
+					{
+						output_array[counter] = float(temp_unsigned_char_array[counter]);
+					}
 				}
-
-
+				
 			}
 
 			delete [] temp_char_array;

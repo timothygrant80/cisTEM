@@ -569,8 +569,13 @@ void ExportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 					{
 						should_continue = main_frame->current_project.database.GetFromBatchSelect("iss", &frame_counter, &current_x_shift, &current_y_shift);
 						if (frame_counter == 1) { first_x_shift = current_x_shift; first_y_shift = current_y_shift; }
-						// Relion expects shifts to be in pixels, but unblur returns them in Angstroms
-						relion_motioncor_star_current_file->AddLine(wxString::Format("%i %f %f", frame_counter, (current_x_shift-first_x_shift)/float(current_image_asset->pixel_size), (current_y_shift-first_y_shift)/float(current_image_asset->pixel_size)));
+						/* 
+						 * Relion expects shifts to be in pixels, but unblur returns them in Angstroms
+						 * Specifically, Relion expects them in the original input movie pixels before binning 
+						 * even with --early_binning. For EER, it depends on --eer_upsampling. If it is 2, 
+						 * it is 8K pixels (= 2x superresolution), if 1, it is 4K pixels (= hardware pixels)
+						 */
+						relion_motioncor_star_current_file->AddLine(wxString::Format("%i %f %f", frame_counter, (current_x_shift-first_x_shift)/float(current_movie_asset->pixel_size), (current_y_shift-first_y_shift)/float(current_movie_asset->pixel_size)));
 					}
 					main_frame->current_project.database.EndBatchSelect();
 

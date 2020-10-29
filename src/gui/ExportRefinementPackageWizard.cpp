@@ -280,6 +280,8 @@ void ExportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 		wxString micrograph_filename;
 		float original_movie_pixel_size;
 
+		int random_subset;
+
 		RefinementPackageParticleInfo current_particle;
 		RefinementResult current_refinement_result;
 		ImageAsset * current_image_asset;
@@ -413,10 +415,11 @@ void ExportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 			relion_star_file->AddLine(wxString("_rlnOriginXAngst #17"));
 			relion_star_file->AddLine(wxString("_rlnOriginYAngst #18"));
 			relion_star_file->AddLine(wxString("_rlnOpticsGroup #19"));
+			relion_star_file->AddLine(wxString("_rlnRandomSubset #20"));
 
 
 			relion_corrected_micrographs_file->AddLine(wxString(" "));
-			relion_corrected_micrographs_file->AddLine(wxString("data_microgaphs"));
+			relion_corrected_micrographs_file->AddLine(wxString("data_micrographs"));
 			relion_corrected_micrographs_file->AddLine(wxString(" "));
 			relion_corrected_micrographs_file->AddLine(wxString("loop_"));
 			relion_corrected_micrographs_file->AddLine(wxString("_rlnMicrographName #1"));
@@ -498,7 +501,14 @@ void ExportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 			else
 			if(Relion3RadioButton->GetValue() == true)
 			{
-				relion_star_file->AddLine(wxString::Format("%s %f %f %06li@%s %f %f %f %f %f %f %f %f %f %f %f %f %f %f %i",	micrograph_filename,
+				/*
+				 * We will write even-odd distribution of particles into half maps, but 
+				 * in fact cisTEM, does not do it that way (each process divides its stack into 100 and
+				 * alternates between them). However this is irrelevant since cisTEM does not do 
+				 * independent half-dataset refinements anyway.
+				 */
+				if (random_subset == 2) { random_subset = 1; } else { random_subset = 2; }
+				relion_star_file->AddLine(wxString::Format("%s %f %f %06li@%s %f %f %f %f %f %f %f %f %f %f %f %f %f %f %i %i",	micrograph_filename,
 																							current_particle.x_pos / current_particle.pixel_size,
 																							current_particle.y_pos / current_particle.pixel_size,
 																							particle_counter + 1,
@@ -517,7 +527,8 @@ void ExportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 																							current_refinement_result.psi,
 																							-current_refinement_result.xshift,
 																							-current_refinement_result.yshift,
-																							1));
+																							1,
+																							random_subset));
 			
 				if (current_particle_is_first_from_this_image)
 				{

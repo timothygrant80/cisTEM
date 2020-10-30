@@ -767,15 +767,18 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 
 	min_memory_in_gb_if_run_on_one_machine = max_movie_size_in_gb * run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()].ReturnTotalJobs();
 
-	output_textctrl->AppendText("Approx. memory for each process is ");
-	output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLUE));
-	output_textctrl->AppendText(wxString::Format(" %.2f GB", max_movie_size_in_gb));
-	output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLACK));
-	output_textctrl->AppendText(".\nIf running on a single machine, that machine will need at least ");
-	output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLUE));
-	output_textctrl->AppendText(wxString::Format(" %.2f GB", min_memory_in_gb_if_run_on_one_machine));
-	output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLACK));
-	output_textctrl->AppendText(" of memory.\nIf you do not have enough memory available you will have to use a run profile with fewer processes.\n");
+	if (max_movie_size != 0.0f) //movie_size is 0.0f when the number of frames was set to -1 at import time because the user asked us to skip full file integrity checks in order to save time
+	{
+		output_textctrl->AppendText("Approx. memory for each process is ");
+		output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLUE));
+		output_textctrl->AppendText(wxString::Format(" %.2f GB", max_movie_size_in_gb));
+		output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLACK));
+		output_textctrl->AppendText(".\nIf running on a single machine, that machine will need at least ");
+		output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLUE));
+		output_textctrl->AppendText(wxString::Format(" %.2f GB", min_memory_in_gb_if_run_on_one_machine));
+		output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLACK));
+		output_textctrl->AppendText(" of memory.\nIf you do not have enough memory available you will have to use a run profile with fewer processes.\n");
+	}
 
 /*	WriteInfoText(wxString::Format("Approx. memory needed per process is %.2f GB", max_movie_size_in_gb));
 	WriteInfoText(wxString::Format("If running on a single machine, that machine will need at least %.2f GB of memory.", min_memory_in_gb_if_run_on_one_machine));
@@ -1137,7 +1140,7 @@ void MyAlignMoviesPanel::WriteResultToDataBase()
 	int number_of_frames_for_current_movie;
 	for (counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++)
 	{
-		number_of_frames_for_current_movie = buffered_results[counter].result_size / 2 + 1;
+		number_of_frames_for_current_movie = buffered_results[counter].result_size / 2;
 		main_frame->current_project.database.UpdateNumberOfFramesForAMovieAsset(movie_asset_panel->ReturnAssetID(active_group.members[counter]),number_of_frames_for_current_movie);
 		movie_asset_panel->all_assets_list->ReturnMovieAssetPointer(active_group.members[counter])->number_of_frames = number_of_frames_for_current_movie;
 	}

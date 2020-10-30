@@ -522,6 +522,10 @@ void ExportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 			
 				if (current_particle_is_first_from_this_image)
 				{
+					// We will need a star file to store results of motion correction
+					relion_motioncor_star_current_filename.SetPath(relion_motioncor_star_base_filename.GetPath());
+					relion_motioncor_star_current_filename.SetName(wxString::Format("%s_%06i.star",relion_motioncor_star_base_filename.GetName(),current_image_asset->asset_id));
+
 					// Add this micrograph to the star file listing all micrographs
 					relion_corrected_micrographs_file->AddLine(wxString::Format("%s %s %i",micrograph_filename.ToStdString(),relion_motioncor_star_current_filename.GetFullPath(),1));
 
@@ -536,8 +540,6 @@ void ExportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 					/*
 					 * Write out a star file with the results of the whole-frame motion correction
 					 */
-					relion_motioncor_star_current_filename.SetPath(relion_motioncor_star_base_filename.GetPath());
-					relion_motioncor_star_current_filename.SetName(wxString::Format("%s_%06i.star",relion_motioncor_star_base_filename.GetName(),current_image_asset->asset_id));
 					relion_motioncor_star_current_file = new wxTextFile(relion_motioncor_star_current_filename.GetFullPath());
 					if (relion_motioncor_star_current_file->Exists())
 					{

@@ -257,6 +257,9 @@ void ExportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 		wxFileName relion_motioncor_star_base_filename = MetaDataFileTextCtrl->GetLineText(0); // one star file per movie, with one line per frame
 		wxFileName relion_motioncor_star_current_filename;
 
+		wxFileName gain_ref_filename;
+		bool should_convert_gain_ref;
+
 		relion_star_filename.SetExt("star");
 		relion_corrected_micrographs_filename.ClearExt();
 		relion_corrected_micrographs_filename.SetName( relion_corrected_micrographs_filename.GetName() + wxT("_corrected_micrographs.star"));
@@ -443,19 +446,6 @@ void ExportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 			{
 				//wxPrintf("Particle %li, from image asset %li. If you see this more than once per image asset, there is a bug.\n",particle_counter,current_particle.parent_image_id);
 				array_of_unique_parent_image_asset_ids.Add(int(current_particle.parent_image_id));
-
-				relion_motioncor_star_current_filename.SetPath(relion_motioncor_star_base_filename.GetPath());
-				relion_motioncor_star_current_filename.SetName(wxString::Format("%s_%06i.star",relion_motioncor_star_base_filename.GetName(),current_image_asset->asset_id));
-				relion_motioncor_star_current_file = new wxTextFile(relion_motioncor_star_current_filename.GetFullPath());
-				if (relion_motioncor_star_current_file->Exists())
-				{
-					relion_motioncor_star_current_file->Open();
-					relion_motioncor_star_current_file->Clear();
-				}
-				else
-				{
-					relion_motioncor_star_current_file->Create();
-				}
 			}
 			
 
@@ -532,6 +522,7 @@ void ExportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 			
 				if (current_particle_is_first_from_this_image)
 				{
+					// Add this micrograph to the star file listing all micrographs
 					relion_corrected_micrographs_file->AddLine(wxString::Format("%s %s %i",micrograph_filename.ToStdString(),relion_motioncor_star_current_filename.GetFullPath(),1));
 
 					// Let's grab the motion correction job details from the database
@@ -542,8 +533,44 @@ void ExportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 					main_frame->current_project.database.GetFromBatchSelect("si", &pre_exposure_amount, &first_frame_to_sum);
 					main_frame->current_project.database.EndBatchSelect();
 
+					/*
+					 * Write out a star file with the results of the whole-frame motion correction
+					 */
+					relion_motioncor_star_current_filename.SetPath(relion_motioncor_star_base_filename.GetPath());
+					relion_motioncor_star_current_filename.SetName(wxString::Format("%s_%06i.star",relion_motioncor_star_base_filename.GetName(),current_image_asset->asset_id));
+					relion_motioncor_star_current_file = new wxTextFile(relion_motioncor_star_current_filename.GetFullPath());
+					if (relion_motioncor_star_current_file->Exists())
+					{
+						relion_motioncor_star_current_file->Open();
+						relion_motioncor_star_current_file->Clear();
+					}
+					else
+					{
+						relion_motioncor_star_current_file->Create();
+					}
 
-					// Write out a star file with the results of the whole-frame motion correction
+					/*
+					 * Unfortunately Relion does not support reading .dm4 files. To make users' lives easier,
+					 * let's convert the gain ref from dm4 to mrc 
+					 */ 
+					gain_ref_filename = current_movie_asset->gain_filename;
+					if (gain_ref_filename.GetExt() == "dm4") 
+					{
+						gain_ref_filename.SetExt("mrc");
+						gain_ref_filename.SetPath(output_stack_filename.GetPath());
+
+						if (!wxFileExists(gain_ref_filename.GetFullPath()))
+						{
+							ImageFile input_gain_ref_file(current_movie_asset->gain_filename.ToStdString(),false);
+							MRCFile output_gain_ref_file(gain_ref_filename.GetFullPath().ToStdString(),true);
+							Image gain_image;
+							gain_image.ReadSlice(&input_gain_ref_file,1);
+							gain_image.WriteSlice(&output_gain_ref_file,1);
+						}
+					}
+					
+
+					// Start writing the star file
 					relion_motioncor_star_current_file->AddLine(wxString(" "));
 					relion_motioncor_star_current_file->AddLine(wxString("data_general"));
 					relion_motioncor_star_current_file->AddLine(wxString(" "));
@@ -551,7 +578,7 @@ void ExportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 					relion_motioncor_star_current_file->AddLine(wxString::Format("%s %i","_rlnImageSizeY",current_movie_asset->y_size));
 					relion_motioncor_star_current_file->AddLine(wxString::Format("%s %i","_rlnImageSizeZ",current_movie_asset->number_of_frames));
 					relion_motioncor_star_current_file->AddLine(wxString::Format("%s %s","_rlnMicrographMovieName",current_movie_asset->filename.GetFullPath()));
-					relion_motioncor_star_current_file->AddLine(wxString::Format("%s %s","_rlnMicrographGainName",current_movie_asset->gain_filename.ToStdString()));
+					relion_motioncor_star_current_file->AddLine(wxString::Format("%s %s","_rlnMicrographGainName",gain_ref_filename.GetFullPath()));
 					relion_motioncor_star_current_file->AddLine(wxString::Format("%s %f","_rlnMicrographBinning",current_movie_asset->output_binning_factor));
 					relion_motioncor_star_current_file->AddLine(wxString::Format("%s %f","_rlnMicrographOriginalPixelSize",current_movie_asset->pixel_size));
 					relion_motioncor_star_current_file->AddLine(wxString::Format("%s %f","_rlnMicrographDoseRate",current_movie_asset->dose_per_frame));

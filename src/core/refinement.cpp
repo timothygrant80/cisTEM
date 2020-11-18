@@ -32,6 +32,7 @@ RefinementResult::RefinementResult()
 	image_shift_y = 0.0f;
 	beam_tilt_group = 0.0f;
 	particle_group = 0.0f;
+	assigned_subset = 0.0f;
 	pre_exposure = 0.0f;
 	total_exposure = 0.0f;
 
@@ -352,7 +353,7 @@ void Refinement::WriteSingleClasscisTEMStarFile(wxString filename,int wanted_cla
 	FrealignParameterFile *my_output_par_file = new FrealignParameterFile(filename, OPEN_TO_WRITE);
 
 	cisTEMParameters output_params;
-	output_params.parameters_to_write.SetActiveParameters(POSITION_IN_STACK | IMAGE_IS_ACTIVE | PSI | THETA | PHI | X_SHIFT | Y_SHIFT | DEFOCUS_1 | DEFOCUS_2 | DEFOCUS_ANGLE | PHASE_SHIFT | OCCUPANCY | LOGP | SIGMA | SCORE | PIXEL_SIZE | MICROSCOPE_VOLTAGE | MICROSCOPE_CS | AMPLITUDE_CONTRAST | BEAM_TILT_X | BEAM_TILT_Y | IMAGE_SHIFT_X | IMAGE_SHIFT_Y);
+	output_params.parameters_to_write.SetActiveParameters(POSITION_IN_STACK | IMAGE_IS_ACTIVE | PSI | THETA | PHI | X_SHIFT | Y_SHIFT | DEFOCUS_1 | DEFOCUS_2 | DEFOCUS_ANGLE | PHASE_SHIFT | OCCUPANCY | LOGP | SIGMA | SCORE | SCORE_CHANGE | PIXEL_SIZE | MICROSCOPE_VOLTAGE | MICROSCOPE_CS | AMPLITUDE_CONTRAST | BEAM_TILT_X | BEAM_TILT_Y | IMAGE_SHIFT_X | IMAGE_SHIFT_Y | STACK_FILENAME | ORIGINAL_IMAGE_FILENAME | REFERENCE_3D_FILENAME | BEST_2D_CLASS | BEAM_TILT_GROUP | PARTICLE_GROUP | PRE_EXPOSURE | TOTAL_EXPOSURE | ASSIGNED_SUBSET);
 	output_params.PreallocateMemoryAndBlank(number_of_particles);
 
 	for ( particle_counter = 0; particle_counter < number_of_particles; particle_counter++)
@@ -401,6 +402,21 @@ void Refinement::WriteSingleClasscisTEMStarFile(wxString filename,int wanted_cla
 		output_params.all_parameters[particle_counter].beam_tilt_y = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].beam_tilt_y;
 		output_params.all_parameters[particle_counter].image_shift_x = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].image_shift_x;
 		output_params.all_parameters[particle_counter].image_shift_y = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].image_shift_y;
+
+		// Filenames and the best 2D class are not part of RefinementResults for now - do we want to make them part of it? Until then, the four lines below need to be commented out
+		// TODO - clarify whether we want to track these thigns as part of results, or perhaps work them out on the fly?
+		/*
+		output_params.all_parameters[particle_counter].stack_filename = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].stack_filename;
+		output_params.all_parameters[particle_counter].original_image_filename = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].original_image_filename;
+		output_params.all_parameters[particle_counter].reference_3d_filename = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].reference_3d_filename;
+		output_params.all_parameters[particle_counter].best_2d_class = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].best_2d_class;
+		*/
+
+		output_params.all_parameters[particle_counter].beam_tilt_group = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].beam_tilt_group;
+		output_params.all_parameters[particle_counter].particle_group = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].particle_group;
+		output_params.all_parameters[particle_counter].assigned_subset = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].assigned_subset;
+		output_params.all_parameters[particle_counter].pre_exposure = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].pre_exposure;
+		output_params.all_parameters[particle_counter].total_exposure = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].total_exposure;
 	}
 
 	output_params.WriteTocisTEMStarFile(filename);

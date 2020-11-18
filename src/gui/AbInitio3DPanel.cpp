@@ -2388,6 +2388,7 @@ void AbInitioManager::ProcessJobResult(JobResult *result_to_process)
 		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].image_shift_x = result_to_process->result_data[22];
 		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].image_shift_y = result_to_process->result_data[23];
 		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].amplitude_contrast = result_to_process->result_data[24];
+		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].assigned_subset = result_to_process->result_data[25];
 
 		number_of_received_particle_results++;
 		//wxPrintf("received result!\n");

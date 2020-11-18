@@ -95,7 +95,7 @@ void Reconstruct3DApp::DoInteractiveUserInput()
 	invert_contrast = my_input->GetYesNoFromUser("Invert particle contrast", "Should the contrast in the particle images be inverted?", "No");
 	exclude_blank_edges = my_input->GetYesNoFromUser("Exclude images with blank edges", "Should particle images with blank edges be excluded from processing?", "No");
 	crop_images = my_input->GetYesNoFromUser("Crop particle images", "Should the particle images be cropped to speed up computation?", "No");
-	split_even_odd = my_input->GetYesNoFromUser("FSC calculation with even/odd particles", "Should the FSC half volumes be calulated using even and odd particles?", "Yes");
+	split_even_odd = my_input->GetYesNoFromUser("If no subset assigned, FSC calc with even/odd particles?", "Should the FSC half volumes be calculated using even and odd particles? (only relevant if star file does not specify cisTEMAssignedSubset", "Yes");
 	center_mass = my_input->GetYesNoFromUser("Center mass", "Should the calculated map be centered in the box according to the center of mass (only for C symmetry)?", "No");
 	use_input_reconstruction = my_input->GetYesNoFromUser("Apply likelihood blurring", "Should ML blurring be applied?", "No");
 	threshold_input_3d = my_input->GetYesNoFromUser("Threshold input reconstruction", "Should the input reconstruction thresholded to suppress some of the background noise", "No");
@@ -279,6 +279,7 @@ bool Reconstruct3DApp::DoCalculation()
 	cisTEMParameters input_star_file;
 	input_star_file.ReadFromcisTEMStarFile(input_star_filename, true);
 
+	// TODO: remove this - there may be cases when there are multiple particle groups and yet we do NOT want to apply an exposure filter during reconstruction
 	apply_exposure_filter_during_reconstruction = input_star_file.ContainsMultipleParticleGroups();
 
 //	input_par_file.ReadFile(true, input_stack.ReturnZSize());
@@ -1003,7 +1004,7 @@ bool Reconstruct3DApp::DoCalculation()
 				}
 			}
 		}
-		else
+		else // no cropping
 		{
 			if (binning_factor != 1.0)
 			{
@@ -1182,7 +1183,10 @@ bool Reconstruct3DApp::DoCalculation()
 		input_particle.sigma_noise = input_parameters.sigma;
 		if (input_particle.sigma_noise <= 0.0) input_particle.sigma_noise = parameter_averages.sigma;
 
-		if (apply_exposure_filter_during_reconstruction)
+		/*
+		 * Assign each particle to one of the two half-maps for later FSC
+		 */
+		if (apply_exposure_filter_during_reconstruction) // TODO - remove this branch - this was a hack for going from emClarity to cisTEM before particle_group and assigned_subset were available
 		{
 			if (input_parameters.beam_tilt_group == 1) input_particle.insert_even = false;
 			else if (input_parameters.beam_tilt_group == 2) input_particle.insert_even = true;
@@ -1191,7 +1195,13 @@ bool Reconstruct3DApp::DoCalculation()
 		}
 		else
 		{
-			if (input_parameters.position_in_stack % fsc_particle_repeat < fsc_particle_repeat / 2)
+			if (input_parameters.assigned_subset < 1)
+			{
+				// This particle has not yet been assigned to a subset. Let's do so now
+				SendInfo("Warning: No assigned subset for this particle. This should not happen.");
+				if (input_parameters.position_in_stack % fsc_particle_repeat < fsc_particle_repeat / 2) { input_parameters.assigned_subset = 2; } else { input_parameters.assigned_subset = 1; }
+			}
+			if (input_parameters.assigned_subset == 2)
 			{
 				input_particle.insert_even = true;
 			}
@@ -1200,12 +1210,18 @@ bool Reconstruct3DApp::DoCalculation()
 				input_particle.insert_even = false;
 			}
 		}
+		if (input_particle.insert_even) { wxPrintf("DEBUG: particle going to even\n");} else { wxPrintf("DEBUG: particle going to odd\n");}
 
 //		input_particle.particle_image->BackwardFFT();
 //		input_particle.particle_image->AddGaussianNoise(input_particle.particle_image->ReturnSumOfSquares());
 //		input_particle.particle_image->AddGaussianNoise(100.0 * FLT_MIN);
 //		input_particle.particle_image->ForwardFFT();
 //		input_particle.particle_image->QuickAndDirtyWriteSlice("blurred.mrc", image_counter);
+
+
+		/*
+		 * Insert the particle image into one of the two half maps
+		 */
 		if (input_particle.insert_even)
 		{
 			my_reconstruction_2_local.InsertSliceWithCTF(input_particle, symmetry_weight);

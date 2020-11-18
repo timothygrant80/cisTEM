@@ -17,6 +17,8 @@ public :
 	float spherical_aberration;
 	float amplitude_contrast;
 	float microscope_voltage;
+	// TODO: clarify - why are beam_tilt_group and particle_group not here?
+	int assigned_subset;
 
 };
 

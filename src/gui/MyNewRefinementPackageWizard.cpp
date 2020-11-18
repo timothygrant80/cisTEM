@@ -622,6 +622,33 @@ void MyNewRefinementPackageWizard::PageChanged(wxWizardEvent& event)
 	}
 }
 
+// given an array of refinement package particle infos, return an array of interegers with unique parent image IDs
+wxArrayInt MyNewRefinementPackageWizard::ReturnIDsOfActiveImages( ArrayOfRefinmentPackageParticleInfos& particle_info_buffer )
+{
+	wxArrayInt active_images;
+	long particle_counter;
+	int second_counter;
+
+
+	// get all images we are using..
+
+	for (particle_counter = 0; particle_counter < particle_info_buffer.GetCount(); particle_counter++)
+	{
+		if (particle_info_buffer[particle_counter].parent_image_id != -1  && particle_info_buffer[particle_counter].parent_image_id != -2)
+		{
+			active_images.Add(particle_info_buffer[particle_counter].parent_image_id);
+
+			for (second_counter = particle_counter + 1; second_counter < particle_info_buffer.GetCount(); second_counter++)
+			{
+				if (particle_info_buffer[second_counter].parent_image_id == particle_info_buffer[particle_counter].parent_image_id) particle_info_buffer[second_counter].parent_image_id = -2;
+			}
+		}
+	}
+
+	//wxPrintf("There are %li active images\n", active_images.GetCount());
+	return active_images;
+}
+
 void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 {
 	int class_counter;
@@ -649,7 +676,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 		long number_of_particles;
 		number_of_particles = particle_position_asset_panel->ReturnGroupSize(particle_group_page->my_panel->ParticlePositionsGroupComboBox->GetSelection());
 
-		OneSecondProgressDialog *my_dialog = new OneSecondProgressDialog ("Refinement Package", "Creating Refinement Package...", number_of_particles, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE| wxPD_APP_MODAL);
+		OneSecondProgressDialog *my_dialog = new OneSecondProgressDialog ("Refinement Package", "Creating Refinement Package...", number_of_particles * 2, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE| wxPD_APP_MODAL);
 
 		temp_refinement_package->name = wxString::Format("Refinement Package #%li", refinement_package_asset_panel->current_asset_number);
 		temp_refinement_package->number_of_classes = number_of_classes_page->my_panel->NumberOfClassesSpinCtrl->GetValue();
@@ -824,7 +851,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 				temp_particle_info.defocus_1 = image_defocus_1 + tilt_based_height;
 				temp_particle_info.defocus_2 = image_defocus_2 + tilt_based_height;
 
-		//		wxPrintf("axis = %f, angle = %f, height = %f\n", image_tilt_axis, image_tilt_angle, tilt_based_height);
+				//wxPrintf("axis = %f, angle = %f, height = %f\n", image_tilt_axis, image_tilt_angle, tilt_based_height);
 			}
 
 			temp_refinement_package->contained_particles.Add(temp_particle_info);
@@ -859,6 +886,64 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 			my_dialog->Update(counter + 1);
 		}
+
+		/*
+		 * Now that we know about all the particles, we also know about all the micrographs
+		 * and we can decide how to distribute particles between the two half datasets/maps
+		 */ 
+		{
+			ArrayOfRefinmentPackageParticleInfos particle_info_buffer = temp_refinement_package->contained_particles;
+			wxArrayInt active_images = ReturnIDsOfActiveImages(particle_info_buffer);
+			int number_of_micrographs = active_images.Count();
+			int current_subset;
+
+			if (number_of_particles < 500)
+			{
+				// With so few particles, we have to go even/odd
+				current_subset = 1;
+				for (counter = 0; counter < number_of_particles; counter++)
+				{
+					temp_refinement_package->contained_particles[counter].assigned_subset = current_subset;
+					for (class_counter = 0; class_counter < temp_refinement_package->number_of_classes; class_counter++)
+					{
+						temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].assigned_subset = current_subset;
+					}
+					if (current_subset == 1) { current_subset = 2; } else { current_subset = 1; }
+					my_dialog->Update(number_of_particles + counter);
+				}
+				
+			}
+			else if (number_of_micrographs < 20 )
+			{
+				// We have don't have many micrographs, so splitting by micrograph may not be safe
+				// Let's just split the stack into ~10 chunks
+				for (counter = 0; counter < number_of_particles; counter++)
+				{
+					if ( counter  / (number_of_particles / 10) % 2 ) { current_subset = 1; } else { current_subset = 2; }
+					temp_refinement_package->contained_particles[counter].assigned_subset = current_subset;
+					for (class_counter = 0; class_counter < temp_refinement_package->number_of_classes; class_counter++)
+					{
+						temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].assigned_subset = current_subset;
+					}
+					my_dialog->Update(number_of_particles + counter);
+				}
+			}
+			else
+			{
+				// We have enough particles and enough micrographs, so let's split by micrograph, since this guarantees that any duplicate particle picks won't mess with the FSC (though it means the half-datasets wil likely not be equal-sized)
+				for (counter = 0; counter < number_of_particles; counter++)
+				{
+					// Let's assume that the parent image IDs are approximately random (e.g. the user didn't purposfully remove all odd-numbered image assets)
+					if (temp_refinement_package->contained_particles[counter].parent_image_id % 2) { current_subset = 1; } else { current_subset = 2; }
+					temp_refinement_package->contained_particles[counter].assigned_subset = current_subset;
+					for (class_counter = 0; class_counter < temp_refinement_package->number_of_classes; class_counter++)
+					{
+						temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].assigned_subset = current_subset;
+					}
+					my_dialog->Update(number_of_particles + counter);
+				}
+			}
+		} // end of work on assigned_subset
 
 		my_dialog->Destroy();
 
@@ -932,11 +1017,10 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 			ArrayOfRefinmentPackageParticleInfos particle_info_buffer;
 			particle_info_buffer = class_average_particle_infos;
-			wxArrayInt active_images;
+			wxArrayInt active_images = ReturnIDsOfActiveImages(particle_info_buffer);
 			ArrayOfRefinmentPackageParticleInfos particle_infos_for_current_image;
 			ArrayOfRefinmentPackageParticleInfos current_duplicate_particles;
 			wxArrayInt original_array_locations;
-			int number_of_active_images;
 			int second_counter;
 			int image_counter;
 			int number_removed = 0;
@@ -944,22 +1028,6 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 			//ArrayOfRefinmentPackageParticleInfos duplicate_debug;
 
-			// get all images we are using..
-
-			for (particle_counter = 0; particle_counter < particle_info_buffer.GetCount(); particle_counter++)
-			{
-				if (particle_info_buffer[particle_counter].parent_image_id != -1  && particle_info_buffer[particle_counter].parent_image_id != -2)
-				{
-					active_images.Add(particle_info_buffer[particle_counter].parent_image_id);
-
-					for (second_counter = particle_counter + 1; second_counter < particle_info_buffer.GetCount(); second_counter++)
-					{
-						if (particle_info_buffer[second_counter].parent_image_id == particle_info_buffer[particle_counter].parent_image_id) particle_info_buffer[second_counter].parent_image_id = -2;
-					}
-				}
-			}
-
-			//wxPrintf("There are %li active images\n", active_images.GetCount());
 
 			// we are going to loop image by image, as duplicates must be on the same image, and there should probably never be enough particles on any one image to make this that slow..
 
@@ -1052,7 +1120,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 			my_dialog->Destroy();
 			//wxPrintf("Removed a %i of %li picks\n", number_removed, particle_info_buffer.GetCount());
 
-		}
+		} // end of test for recenter & remove duplicates
 
 		number_of_particles = class_average_particle_infos.GetCount();
 		class_average_particle_infos.Sort(SortByParentImageID);
@@ -1204,6 +1272,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 				temp_particle_info.defocus_angle = class_average_particle_infos[counter].defocus_angle;
 				temp_particle_info.phase_shift = class_average_particle_infos[counter].phase_shift;
 				temp_particle_info.amplitude_contrast = class_average_particle_infos[counter].amplitude_contrast;
+				temp_particle_info.assigned_subset = class_average_particle_infos[counter].assigned_subset;
 
 				// fill in the refinement data..
 
@@ -1233,10 +1302,11 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].beam_tilt_y = 0.0f;
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_shift_x = 0.0f;
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_shift_y = 0.0f;
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].assigned_subset = class_average_particle_infos[counter].assigned_subset;
 				}
 
 			}
-			else // we can cut it out the image..
+			else // we can cut it out of the image..
 			{
 				if (current_loaded_image_id != current_particle_parent_image_id)
 				{
@@ -1270,6 +1340,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 				temp_particle_info.defocus_angle = image_defocus_angle;
 				temp_particle_info.phase_shift = image_phase_shift;
 				temp_particle_info.amplitude_contrast = image_amplitude_contrast;
+				temp_particle_info.assigned_subset = class_average_particle_infos[counter].assigned_subset;
 
 				if (image_tilt_angle == 0.0f && image_tilt_axis == 0.0f)
 					{
@@ -1319,6 +1390,8 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].beam_tilt_y = 0.0f;
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_shift_x = 0.0f;
 					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_shift_y = 0.0f;
+
+					temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].assigned_subset = class_average_particle_infos[counter].assigned_subset;
 
 				}
 			}
@@ -1560,6 +1633,8 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].beam_tilt_y = active_result.beam_tilt_y;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_shift_x = active_result.image_shift_x;
 				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].image_shift_y = active_result.image_shift_y;
+
+				temp_refinement.class_refinement_results[class_counter].particle_refinement_results[particle_counter].assigned_subset = active_result.assigned_subset;
 			}
 
 			my_dialog->Update(particle_counter + 1);

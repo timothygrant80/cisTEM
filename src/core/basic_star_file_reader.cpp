@@ -17,6 +17,7 @@ StarFileParameters::StarFileParameters()
 	defocus_angle = 0;
 	phase_shift = 0;
 	micrograph_name = "";
+	random_subset = -1;
 }
 
 BasicStarFileReader::BasicStarFileReader()
@@ -42,7 +43,7 @@ BasicStarFileReader::BasicStarFileReader()
 	defocus_angle_column = -1;
 	phase_shift_column = -1;
 	micrograph_name_column = -1;
-
+	random_subset_column = -1;
 }
 
 BasicStarFileReader::BasicStarFileReader(wxString wanted_filename)
@@ -250,6 +251,21 @@ bool BasicStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxStr
 		temp_parameters.phase_shift = deg_2_rad(float(temp_double));
 	}
 
+	// random_subset
+
+	if (random_subset_column == -1) temp_parameters.random_subset = -1;
+	else
+	{
+		if (all_tokens[random_subset_column].ToDouble(&temp_double) == false)
+		{
+			MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[random_subset_column]);
+			if (error_string != NULL) *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[random_subset_column]);
+			return false;
+		}
+
+		temp_parameters.random_subset = int(temp_double);
+	}
+
 	// Micrograph Name
 
 	if (micrograph_name_column == -1) temp_parameters.micrograph_name = "";
@@ -377,6 +393,9 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString *error_str
 		if (current_line.StartsWith("_rlnPhaseShift") == true) phase_shift_column = current_column;
 		else
 		if (current_line.StartsWith("_rlnMicrographName") == true) micrograph_name_column = current_column;
+		else
+		if (current_line.StartsWith("_rlnRandomSubset") == true) random_subset_column = current_column;
+		
 	    current_column++;
 	}
 

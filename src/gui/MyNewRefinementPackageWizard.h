@@ -369,6 +369,8 @@ public:
 		void PageChanging(wxWizardEvent& event);
 		void PageChanged(wxWizardEvent& event);
 
+		wxArrayInt ReturnIDsOfActiveImages( ArrayOfRefinmentPackageParticleInfos& particle_info_buffer );
+
 };
 
 #endif

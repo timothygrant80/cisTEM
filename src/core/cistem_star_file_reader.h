@@ -35,6 +35,7 @@ private:
 	int     best_2d_class_column;
 	int     beam_tilt_group_column;
 	int		particle_group_column;
+	int 	assigned_subset_column;
 	int		pre_exposure_column;
 	int		total_exposure_column;
 
@@ -90,6 +91,7 @@ public:
 	inline int ReturnBest2DClass(int line_number) {return cached_parameters->Item(line_number).best_2d_class;}
 	inline int ReturnBeamTiltGroup(int line_number) {return cached_parameters->Item(line_number).beam_tilt_group;}
 	inline int ReturnParticleGroup(int line_number) {return cached_parameters->Item(line_number).particle_group;}
+	inline int ReturnAssignedSubset(int line_number) {return cached_parameters->Item(line_number).assigned_subset;}
 	inline int ReturnPreExposure(int line_number) {return cached_parameters->Item(line_number).pre_exposure;}
 	inline int ReturnTotalExpsosure(int line_number) {return cached_parameters->Item(line_number).total_exposure;}
 

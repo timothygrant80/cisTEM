@@ -1504,6 +1504,7 @@ RefinementPackage*  Database::GetNextRefinementPackage()
 		temp_info.spherical_aberration = sqlite3_column_double(list_statement, 10);
 		temp_info.microscope_voltage = sqlite3_column_double(list_statement, 11);
 		temp_info.amplitude_contrast = sqlite3_column_double(list_statement, 12);
+		temp_info.assigned_subset = sqlite3_column_int(list_statement, 13);
 
 		temp_package->contained_particles.Add(temp_info);
 
@@ -1821,12 +1822,12 @@ void Database::AddRefinementPackageAsset(RefinementPackage *asset_to_add)
 	CreateRefinementPackageClassificationsList(asset_to_add->asset_id);
 
 
-	BeginBatchInsert(wxString::Format("REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%li", asset_to_add->asset_id), 13 , "ORIGINAL_PARTICLE_POSITION_ASSET_ID", "PARENT_IMAGE_ASSET_ID", "POSITION_IN_STACK", "X_POSITION", "Y_POSITION", "PIXEL_SIZE", "DEFOCUS_1", "DEFOCUS_2", "DEFOCUS_ANGLE", "PHASE_SHIFT", "SPHERICAL_ABERRATION", "MICROSCOPE_VOLTAGE", "AMPLITUDE_CONTRAST");
+	BeginBatchInsert(wxString::Format("REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%li", asset_to_add->asset_id), 14 , "ORIGINAL_PARTICLE_POSITION_ASSET_ID", "PARENT_IMAGE_ASSET_ID", "POSITION_IN_STACK", "X_POSITION", "Y_POSITION", "PIXEL_SIZE", "DEFOCUS_1", "DEFOCUS_2", "DEFOCUS_ANGLE", "PHASE_SHIFT", "SPHERICAL_ABERRATION", "MICROSCOPE_VOLTAGE", "AMPLITUDE_CONTRAST","ASSIGNED_SUBSET");
 
 	for (long counter = 0; counter < asset_to_add->contained_particles.GetCount(); counter++)
 	{
 
-		AddToBatchInsert("lllrrrrrrrrrr", asset_to_add->contained_particles.Item(counter).original_particle_position_asset_id, asset_to_add->contained_particles.Item(counter).parent_image_id, asset_to_add->contained_particles.Item(counter).position_in_stack, asset_to_add->contained_particles.Item(counter).x_pos, asset_to_add->contained_particles.Item(counter).y_pos, asset_to_add->contained_particles.Item(counter).pixel_size, asset_to_add->contained_particles.Item(counter).defocus_1, asset_to_add->contained_particles.Item(counter).defocus_2, asset_to_add->contained_particles.Item(counter).defocus_angle, asset_to_add->contained_particles.Item(counter).phase_shift, asset_to_add->contained_particles.Item(counter).spherical_aberration, asset_to_add->contained_particles.Item(counter).microscope_voltage, asset_to_add->contained_particles.Item(counter).amplitude_contrast);
+		AddToBatchInsert("lllrrrrrrrrrri", asset_to_add->contained_particles.Item(counter).original_particle_position_asset_id, asset_to_add->contained_particles.Item(counter).parent_image_id, asset_to_add->contained_particles.Item(counter).position_in_stack, asset_to_add->contained_particles.Item(counter).x_pos, asset_to_add->contained_particles.Item(counter).y_pos, asset_to_add->contained_particles.Item(counter).pixel_size, asset_to_add->contained_particles.Item(counter).defocus_1, asset_to_add->contained_particles.Item(counter).defocus_2, asset_to_add->contained_particles.Item(counter).defocus_angle, asset_to_add->contained_particles.Item(counter).phase_shift, asset_to_add->contained_particles.Item(counter).spherical_aberration, asset_to_add->contained_particles.Item(counter).microscope_voltage, asset_to_add->contained_particles.Item(counter).amplitude_contrast, asset_to_add->contained_particles.Item(counter).assigned_subset);
 	}
 
 	EndBatchInsert();
@@ -2089,11 +2090,11 @@ void Database::AddRefinement(Refinement *refinement_to_add)
 
 	for (class_counter = 1; class_counter <= refinement_to_add->number_of_classes; class_counter++)
 	{
-		BeginBatchInsert(wxString::Format("REFINEMENT_RESULT_%li_%i", refinement_to_add->refinement_id, class_counter), 23 ,"POSITION_IN_STACK", "PSI", "THETA", "PHI", "XSHIFT", "YSHIFT", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "PHASE_SHIFT", "OCCUPANCY", "LOGP", "SIGMA", "SCORE", "IMAGE_IS_ACTIVE", "PIXEL_SIZE", "MICROSCOPE_VOLTAGE", "MICROSCOPE_CS", "AMPLITUDE_CONTRAST", "BEAM_TILT_X", "BEAM_TILT_Y", "IMAGE_SHIFT_X", "IMAGE_SHIFT_Y");
+		BeginBatchInsert(wxString::Format("REFINEMENT_RESULT_%li_%i", refinement_to_add->refinement_id, class_counter), 24 ,"POSITION_IN_STACK", "PSI", "THETA", "PHI", "XSHIFT", "YSHIFT", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "PHASE_SHIFT", "OCCUPANCY", "LOGP", "SIGMA", "SCORE", "IMAGE_IS_ACTIVE", "PIXEL_SIZE", "MICROSCOPE_VOLTAGE", "MICROSCOPE_CS", "AMPLITUDE_CONTRAST", "BEAM_TILT_X", "BEAM_TILT_Y", "IMAGE_SHIFT_X", "IMAGE_SHIFT_Y","ASSIGNED_SUBSET");
 
 		for (counter = 0; counter < refinement_to_add->number_of_particles; counter++)
 		{
-			AddToBatchInsert("lrrrrrrrrrrrrrirrrrrrrr", refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].position_in_stack, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].psi, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].theta, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].phi, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].xshift, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].yshift, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].defocus1, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].defocus2, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].defocus_angle, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].phase_shift, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].occupancy, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].logp, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].sigma, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].score, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].image_is_active, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].pixel_size, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].microscope_voltage_kv, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].microscope_spherical_aberration_mm, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].amplitude_contrast, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].beam_tilt_x, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].beam_tilt_y, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].image_shift_x, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].image_shift_y);
+			AddToBatchInsert("lrrrrrrrrrrrrrirrrrrrrri", refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].position_in_stack, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].psi, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].theta, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].phi, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].xshift, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].yshift, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].defocus1, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].defocus2, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].defocus_angle, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].phase_shift, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].occupancy, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].logp, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].sigma, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].score, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].image_is_active, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].pixel_size, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].microscope_voltage_kv, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].microscope_spherical_aberration_mm, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].amplitude_contrast, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].beam_tilt_x, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].beam_tilt_y, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].image_shift_x, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].image_shift_y, refinement_to_add->class_refinement_results[class_counter - 1].particle_refinement_results[counter].assigned_subset);
 		}
 
 		EndBatchInsert();
@@ -2248,7 +2249,7 @@ Refinement *Database::GetRefinementByID(long wanted_refinement_id, bool include_
 
 			while (more_data == true)
 			{
-				more_data = GetFromBatchSelect("lsssssssssssssissssssss", &temp_result.position_in_stack,
+				more_data = GetFromBatchSelect("lsssssssssssssissssssssi", &temp_result.position_in_stack,
 					                                                                              &temp_result.psi,
 																								  &temp_result.theta,
 																								  &temp_result.phi,
@@ -2270,7 +2271,8 @@ Refinement *Database::GetRefinementByID(long wanted_refinement_id, bool include_
 																								  &temp_result.beam_tilt_x,
 																								  &temp_result.beam_tilt_y,
 																								  &temp_result.image_shift_x,
-																								  &temp_result.image_shift_y);
+																								  &temp_result.image_shift_y,
+																								  &temp_result.assigned_subset);
 
 				temp_refinement->class_refinement_results[class_counter].particle_refinement_results.Add(temp_result);
 

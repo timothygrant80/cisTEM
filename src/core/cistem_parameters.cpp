@@ -44,6 +44,7 @@ void cisTEMParameterMask::SetAllToTrue()
 	best_2d_class = true;
 	beam_tilt_group = true;
 	particle_group = true;
+	assigned_subset = true;
 	pre_exposure = true;
 	total_exposure = true;
 }
@@ -81,6 +82,7 @@ void cisTEMParameterMask::SetAllToFalse()
 	best_2d_class = false;
 	beam_tilt_group = false;
 	particle_group = false;
+	assigned_subset = false;
 	pre_exposure = false;
 	total_exposure = false;
 }
@@ -117,6 +119,7 @@ void cisTEMParameterMask::SetActiveParameters(long parameters_to_set)
 	best_2d_class = ((parameters_to_set & BEST_2D_CLASS) == BEST_2D_CLASS);
 	beam_tilt_group = ((parameters_to_set & BEAM_TILT_GROUP) == BEAM_TILT_GROUP);
 	particle_group = ((parameters_to_set & PARTICLE_GROUP) == PARTICLE_GROUP);
+	assigned_subset = ((parameters_to_set & ASSIGNED_SUBSET) == ASSIGNED_SUBSET);
 	pre_exposure = ((parameters_to_set & PRE_EXPOSURE) == PRE_EXPOSURE);
 	total_exposure = ((parameters_to_set & TOTAL_EXPOSURE) == TOTAL_EXPOSURE);
 }
@@ -157,8 +160,9 @@ void cisTEMParameterLine::Add(cisTEMParameterLine &line_to_add)
 	beam_tilt_y += line_to_add.beam_tilt_y;
 	image_shift_x += line_to_add.image_shift_x;
 	image_shift_y += line_to_add.image_shift_y;
-	beam_tilt_group += line_to_add.beam_tilt_group;
-	particle_group += line_to_add.particle_group;
+	beam_tilt_group += line_to_add.beam_tilt_group; // why?
+	particle_group += line_to_add.particle_group; // why?
+	assigned_subset += line_to_add.assigned_subset; // why?
 	pre_exposure += line_to_add.pre_exposure;
 	total_exposure += line_to_add.total_exposure;
 
@@ -191,8 +195,9 @@ void cisTEMParameterLine::Subtract(cisTEMParameterLine &line_to_add)
 	beam_tilt_y -= line_to_add.beam_tilt_y;
 	image_shift_x -= line_to_add.image_shift_x;
 	image_shift_y -= line_to_add.image_shift_y;
-	beam_tilt_group -= line_to_add.beam_tilt_group;
-	particle_group -= line_to_add.particle_group;
+	beam_tilt_group -= line_to_add.beam_tilt_group; // why?
+	particle_group -= line_to_add.particle_group; // why?
+	assigned_subset -= line_to_add.assigned_subset; // why?
 	pre_exposure -= line_to_add.pre_exposure;
 	total_exposure -= line_to_add.total_exposure;
 
@@ -225,8 +230,9 @@ void cisTEMParameterLine::AddSquare(cisTEMParameterLine &line_to_add)
 	beam_tilt_y = powf(line_to_add.beam_tilt_y, 2);
 	image_shift_x += powf(line_to_add.image_shift_x, 2);
 	image_shift_y += powf(line_to_add.image_shift_y, 2);
-	beam_tilt_group += powf(line_to_add.beam_tilt_group, 2);
-	particle_group += powf(line_to_add.particle_group,2);
+	beam_tilt_group += powf(line_to_add.beam_tilt_group, 2); // why?
+	particle_group += powf(line_to_add.particle_group,2); // why?
+	assigned_subset += powf(line_to_add.assigned_subset,2); // why?
 	pre_exposure += powf(line_to_add.pre_exposure,2);
 	total_exposure += powf(line_to_add.total_exposure,2);
 
@@ -266,6 +272,7 @@ void cisTEMParameterLine::SetAllToZero()
 	best_2d_class = 0;
 	beam_tilt_group = 0;
 	particle_group = 0;
+	assigned_subset = 0;
 	pre_exposure = 0.0f;
 	total_exposure = 0.0f;
 
@@ -297,6 +304,7 @@ void cisTEMParameterLine::ReplaceNanAndInfWithOther(cisTEMParameterLine &other_p
 	if (isnan(image_shift_y) || isinf(image_shift_y)) image_shift_y = other_params.image_shift_y;	
 	if (isnan(beam_tilt_group) || isinf(beam_tilt_group)) beam_tilt_group = other_params.beam_tilt_group;
 	if (isnan(particle_group) || isinf(particle_group)) particle_group = other_params.particle_group;
+	if (isnan(assigned_subset) || isinf(assigned_subset)) assigned_subset = other_params.assigned_subset;
 	if (isnan(pre_exposure) || isinf(pre_exposure)) pre_exposure = other_params.pre_exposure;
 	if (isnan(total_exposure) || isinf(total_exposure)) total_exposure = other_params.total_exposure;
 }
@@ -339,6 +347,7 @@ void cisTEMParameters::ReadFromFrealignParFile(wxString wanted_filename,
 											   float wanted_total_exposure)
 {
 	// FIXME should this read in wanted_beam_tilt_group?? seems like yes.
+	// FIXME what about assigned_subset? (ALR - are we going to keep maintinaing FrealignPar files?)
 
 	ClearAll();
 	float input_parameters[17];
@@ -646,6 +655,12 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first
 		column_counter++;
 	}
 
+	if (parameters_to_write.assigned_subset == true)
+	{
+		cisTEM_star_file->AddLine(wxString::Format("_cisTEMAssignedSubset #%i", column_counter));
+		column_counter++;
+	}
+
 	if (parameters_to_write.pre_exposure == true)
 	{
 		cisTEM_star_file->AddLine(wxString::Format("_cisTEMPreExposure #%i", column_counter));
@@ -692,6 +707,7 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first
 	if (parameters_to_write.original_image_filename == true) 			data_line += "                            ORIGINAL_IMAGE_FILENAME ";
 	if (parameters_to_write.reference_3d_filename == true) 				data_line += "                              REFERENCE_3D_FILENAME ";
 	if (parameters_to_write.particle_group == true) 					data_line += "   PaGRP ";
+	if (parameters_to_write.assigned_subset == true) 					data_line += " Sset ";
 	if (parameters_to_write.pre_exposure == true) 						data_line += " PREEXP ";
 	if (parameters_to_write.total_exposure == true) 					data_line += " TOTEXP ";
 
@@ -739,6 +755,7 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first
 		if (parameters_to_write.original_image_filename == true) data_line += wxString::Format("%50s ", wxString::Format("'%s'", all_parameters[particle_counter].original_image_filename));
 		if (parameters_to_write.reference_3d_filename == true) data_line += wxString::Format("%50s ", wxString::Format("'%s'", all_parameters[particle_counter].reference_3d_filename));
 		if (parameters_to_write.particle_group == true) data_line += wxString::Format("%8u ", all_parameters[particle_counter].particle_group);
+		if (parameters_to_write.assigned_subset == true) data_line += wxString::Format("%5i ", all_parameters[particle_counter].assigned_subset);
 		if (parameters_to_write.pre_exposure == true) data_line += wxString::Format("%7.2f ", all_parameters[particle_counter].pre_exposure);
 		if (parameters_to_write.total_exposure == true) data_line += wxString::Format("%7.2f ", all_parameters[particle_counter].total_exposure);
 

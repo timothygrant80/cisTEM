@@ -32,6 +32,7 @@
 #define PARTICLE_GROUP				536870912
 #define PRE_EXPOSURE				1073741824
 #define TOTAL_EXPOSURE				2147483648
+#define ASSIGNED_SUBSET				4294967296
 
 class cisTEMParameterLine {
 
@@ -65,8 +66,9 @@ public:
 	wxString		original_image_filename;
 	wxString		reference_3d_filename;
 	int				best_2d_class;
-	int 			beam_tilt_group;
-	int				particle_group;
+	int 			beam_tilt_group; // identify particles expected to have the same beam tilt parameters
+	int				particle_group;  // identify images of the same particle (e.g. all images in a tilt series of a particle should have same PARTICLE_GROUP value)
+	int				assigned_subset; // used for example to assign particles to half-datasets, half-maps for the purposes of FSCs
 	float			pre_exposure;
 	float			total_exposure;
 
@@ -119,6 +121,7 @@ public:
 	bool best_2d_class;
 	bool beam_tilt_group;
 	bool particle_group;
+	bool assigned_subset;
 	bool pre_exposure;
 	bool total_exposure;
 
@@ -207,6 +210,7 @@ public :
 	inline int ReturnBest2DClass(int line_number) {return all_parameters.Item(line_number).best_2d_class;}
 	inline int ReturnBeamTiltGroup(int line_number) {return all_parameters.Item(line_number).beam_tilt_group;}
 	inline int ReturnParticleGroup(int line_number) {return all_parameters.Item(line_number).particle_group;}
+	inline int ReturnAssignedSubset(int line_number) {return all_parameters.Item(line_number).assigned_subset;}
 	inline float ReturnPreExposure(int line_number) {return all_parameters.Item(line_number).pre_exposure;}
 	inline float ReturnTotalExposure(int line_number) {return all_parameters.Item(line_number).total_exposure;}
 

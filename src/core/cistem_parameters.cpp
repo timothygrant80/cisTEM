@@ -707,7 +707,7 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first
 	if (parameters_to_write.original_image_filename == true) 			data_line += "                            ORIGINAL_IMAGE_FILENAME ";
 	if (parameters_to_write.reference_3d_filename == true) 				data_line += "                              REFERENCE_3D_FILENAME ";
 	if (parameters_to_write.particle_group == true) 					data_line += "   PaGRP ";
-	if (parameters_to_write.assigned_subset == true) 					data_line += " Sset ";
+	if (parameters_to_write.assigned_subset == true) 					data_line += " SUBSET ";
 	if (parameters_to_write.pre_exposure == true) 						data_line += " PREEXP ";
 	if (parameters_to_write.total_exposure == true) 					data_line += " TOTEXP ";
 
@@ -755,7 +755,7 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first
 		if (parameters_to_write.original_image_filename == true) data_line += wxString::Format("%50s ", wxString::Format("'%s'", all_parameters[particle_counter].original_image_filename));
 		if (parameters_to_write.reference_3d_filename == true) data_line += wxString::Format("%50s ", wxString::Format("'%s'", all_parameters[particle_counter].reference_3d_filename));
 		if (parameters_to_write.particle_group == true) data_line += wxString::Format("%8u ", all_parameters[particle_counter].particle_group);
-		if (parameters_to_write.assigned_subset == true) data_line += wxString::Format("%5i ", all_parameters[particle_counter].assigned_subset);
+		if (parameters_to_write.assigned_subset == true) data_line += wxString::Format("%8i ", all_parameters[particle_counter].assigned_subset);
 		if (parameters_to_write.pre_exposure == true) data_line += wxString::Format("%7.2f ", all_parameters[particle_counter].pre_exposure);
 		if (parameters_to_write.total_exposure == true) data_line += wxString::Format("%7.2f ", all_parameters[particle_counter].total_exposure);
 

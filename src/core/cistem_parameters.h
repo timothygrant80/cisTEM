@@ -67,7 +67,7 @@ public:
 	wxString		reference_3d_filename;
 	int				best_2d_class;
 	int 			beam_tilt_group; // identify particles expected to have the same beam tilt parameters
-	int				particle_group;  // identify images of the same particle (e.g. all images in a tilt series of a particle should have same PARTICLE_GROUP value)
+	int				particle_group;  // identify images of the same particle (all images of a given particle should have the same PARTICLE_GROUP number. E.g. across a tilt-series or movie, i.e. a frame-series))
 	int				assigned_subset; // used for example to assign particles to half-datasets, half-maps for the purposes of FSCs
 	float			pre_exposure;
 	float			total_exposure;

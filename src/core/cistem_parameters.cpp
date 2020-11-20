@@ -160,9 +160,9 @@ void cisTEMParameterLine::Add(cisTEMParameterLine &line_to_add)
 	beam_tilt_y += line_to_add.beam_tilt_y;
 	image_shift_x += line_to_add.image_shift_x;
 	image_shift_y += line_to_add.image_shift_y;
-	beam_tilt_group += line_to_add.beam_tilt_group; // why?
-	particle_group += line_to_add.particle_group; // why?
-	assigned_subset += line_to_add.assigned_subset; // why?
+	beam_tilt_group += line_to_add.beam_tilt_group; 
+	particle_group += line_to_add.particle_group; 
+	assigned_subset += line_to_add.assigned_subset;
 	pre_exposure += line_to_add.pre_exposure;
 	total_exposure += line_to_add.total_exposure;
 
@@ -195,9 +195,9 @@ void cisTEMParameterLine::Subtract(cisTEMParameterLine &line_to_add)
 	beam_tilt_y -= line_to_add.beam_tilt_y;
 	image_shift_x -= line_to_add.image_shift_x;
 	image_shift_y -= line_to_add.image_shift_y;
-	beam_tilt_group -= line_to_add.beam_tilt_group; // why?
-	particle_group -= line_to_add.particle_group; // why?
-	assigned_subset -= line_to_add.assigned_subset; // why?
+	beam_tilt_group -= line_to_add.beam_tilt_group; 
+	particle_group -= line_to_add.particle_group; 
+	assigned_subset -= line_to_add.assigned_subset;
 	pre_exposure -= line_to_add.pre_exposure;
 	total_exposure -= line_to_add.total_exposure;
 
@@ -230,9 +230,9 @@ void cisTEMParameterLine::AddSquare(cisTEMParameterLine &line_to_add)
 	beam_tilt_y = powf(line_to_add.beam_tilt_y, 2);
 	image_shift_x += powf(line_to_add.image_shift_x, 2);
 	image_shift_y += powf(line_to_add.image_shift_y, 2);
-	beam_tilt_group += powf(line_to_add.beam_tilt_group, 2); // why?
-	particle_group += powf(line_to_add.particle_group,2); // why?
-	assigned_subset += powf(line_to_add.assigned_subset,2); // why?
+	beam_tilt_group += powf(line_to_add.beam_tilt_group, 2);
+	particle_group += powf(line_to_add.particle_group,2);
+	assigned_subset += powf(line_to_add.assigned_subset,2);
 	pre_exposure += powf(line_to_add.pre_exposure,2);
 	total_exposure += powf(line_to_add.total_exposure,2);
 

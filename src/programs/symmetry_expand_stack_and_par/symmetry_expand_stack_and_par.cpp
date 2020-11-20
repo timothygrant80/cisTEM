@@ -376,7 +376,7 @@ void SymmetryExpandStackAndPar::DoInteractiveUserInput()
 		do_centring_and_cropping = false;
 	}
 
-	do_centring_and_cropping = my_input->GetYesNoFromUser("Center and crop specific area", "If yes, the (3D) co-ordinates specified will be centered and cropped in the resulting 2D images. Typically, this would be the are that WASNT subtracted", "YES");
+	do_centring_and_cropping = my_input->GetYesNoFromUser("Center and crop specific area", "If yes, the (3D) co-ordinates specified will be centered and cropped in the resulting 2D images. Typically, this would be the area that WASNT subtracted", "YES");
 
 	if (do_centring_and_cropping == true)
 	{

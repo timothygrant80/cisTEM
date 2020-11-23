@@ -112,7 +112,7 @@ MovieImportDialog( parent )
 
 void MyMovieImportDialog::AddFilesClick( wxCommandEvent& event )
 {
-    wxFileDialog openFileDialog(this, _("Select movie files - basic wildcards are allowed"), "", "", "MRC or TIFF files (*.mrc;*.mrcs;*.tif)|*.mrc;*.mrcs;*.tif", wxFD_OPEN | wxFD_MULTIPLE);
+    wxFileDialog openFileDialog(this, _("Select movie files - basic wildcards are allowed"), "", "", "MRC or TIFF files (*.mrc;*.mrcs;*.tif)|*.mrc;*.mrcs;*.tif;*.MRC;*.MRCS;*.TIF", wxFD_OPEN | wxFD_MULTIPLE);
 
 
     if (openFileDialog.ShowModal() == wxID_OK)

@@ -34,7 +34,7 @@ ImageImportDialog( parent )
 
 void MyImageImportDialog::AddFilesClick( wxCommandEvent& event )
 {
-    wxFileDialog openFileDialog(this, _("Select MRC files - basic wildcards are allowed"), "", "", "MRC files (*.mrc)|*.mrc;*.mrcs", wxFD_OPEN | wxFD_MULTIPLE);
+    wxFileDialog openFileDialog(this, _("Select MRC files - basic wildcards are allowed"), "", "", "MRC or TIFF files (*.mrc;*.tif)|*.mrc;*.tif;*.MRC;*.TIF", wxFD_OPEN | wxFD_MULTIPLE);
 
 
 

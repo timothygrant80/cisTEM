@@ -27,8 +27,9 @@ public:
 	float beam_tilt_y;
 	float image_shift_x;
 	float image_shift_y;
-	float beam_tilt_group;
-	float particle_group;
+	int beam_tilt_group; 
+	int particle_group; 
+	int assigned_subset; 
 	float pre_exposure;
 	float total_exposure;
 };

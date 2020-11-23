@@ -17,7 +17,7 @@ public :
 	float spherical_aberration;
 	float amplitude_contrast;
 	float microscope_voltage;
-
+	int assigned_subset;
 };
 
 

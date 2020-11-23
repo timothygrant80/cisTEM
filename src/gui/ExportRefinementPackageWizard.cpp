@@ -492,12 +492,10 @@ void ExportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 			if(Relion3RadioButton->GetValue() == true)
 			{
 				/*
-				 * We will write even-odd distribution of particles into half maps, but 
-				 * in fact cisTEM, does not do it that way (each process divides its stack into 100 and
-				 * alternates between them). However this is irrelevant since cisTEM does not do 
-				 * independent half-dataset refinements anyway.
+				 * if for some reason the assigned_subset doesn't have a reasonable value, we will go even/odd 
 				 */
-				if (random_subset == 2) { random_subset = 1; } else { random_subset = 2; }
+				if (current_refinement_result.assigned_subset >= 1) { random_subset = current_refinement_result.assigned_subset; }
+				else { if (random_subset == 2) { random_subset = 1; } else { random_subset = 2; } }
 				relion_star_file->AddLine(wxString::Format("%s %f %f %06li@%s %f %f %f %f %f %f %f %f %f %f %f %f %f %f %i %i",	micrograph_filename,
 																							current_particle.x_pos / current_particle.pixel_size,
 																							current_particle.y_pos / current_particle.pixel_size,

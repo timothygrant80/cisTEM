@@ -21,6 +21,7 @@ RefinementPackageParticleInfo::RefinementPackageParticleInfo()
 	spherical_aberration = 0;
 	microscope_voltage = 0;
 	amplitude_contrast = 0.07;
+	assigned_subset = -1;
 }
 
 RefinementPackageParticleInfo::~RefinementPackageParticleInfo()

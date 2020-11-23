@@ -476,7 +476,7 @@ bool Refine3DApp::DoCalculation()
 
 	float cg_starting_point[17];
 	float cg_accuracy[17];
-	float gui_result_parameters[25];
+	float gui_result_parameters[26];
 
 	float binning_factor_refine;
 	float binning_factor_search;
@@ -1054,8 +1054,9 @@ bool Refine3DApp::DoCalculation()
 				gui_result_parameters[22] = input_parameters.image_shift_x;
 				gui_result_parameters[23] = input_parameters.image_shift_y;
 				gui_result_parameters[24] = input_parameters.amplitude_contrast;
+				gui_result_parameters[25] = input_parameters.assigned_subset;
 
-				intermediate_result->SetResult(25, gui_result_parameters);
+				intermediate_result->SetResult(26, gui_result_parameters);
 				AddJobToResultQueue(intermediate_result);
 			}
 
@@ -1578,8 +1579,9 @@ bool Refine3DApp::DoCalculation()
 			gui_result_parameters[22] = output_parameters.image_shift_x;
 			gui_result_parameters[23] = output_parameters.image_shift_y;
 			gui_result_parameters[24] = output_parameters.amplitude_contrast;
+			gui_result_parameters[25] = output_parameters.assigned_subset;
 
-			intermediate_result->SetResult(25, gui_result_parameters);
+			intermediate_result->SetResult(26, gui_result_parameters);
 			AddJobToResultQueue(intermediate_result);
 		}
 

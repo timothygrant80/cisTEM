@@ -279,6 +279,7 @@ void ImportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 			temp_particle_info.phase_shift = input_star_file.ReturnPhaseShift(particle_counter);
 			temp_particle_info.pixel_size = input_star_file.ReturnPixelSize(particle_counter);
 			temp_particle_info.amplitude_contrast = input_star_file.ReturnAmplitudeContrast(particle_counter);
+			temp_particle_info.assigned_subset = input_star_file.ReturnAssignedSubset(particle_counter);
 
 
 			temp_refinement_package->contained_particles.Add(temp_particle_info);
@@ -310,9 +311,10 @@ void ImportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].image_shift_y	= input_star_file.ReturnImageShiftY(particle_counter);
 
 
-			// New parameters, set in refinement.h, but don't do anything yet.
+			// 
 			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].beam_tilt_group =  input_star_file.ReturnBeamTiltGroup(particle_counter);
 			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].particle_group =  input_star_file.ReturnParticleGroup(particle_counter);
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].assigned_subset = input_star_file.ReturnAssignedSubset(particle_counter);
 			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].pre_exposure =  input_star_file.ReturnPreExposure(particle_counter);
 			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].total_exposure =  input_star_file.ReturnTotalExposure(particle_counter);
 
@@ -404,7 +406,7 @@ void ImportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 
 
 		// loop over all particles
-
+		int current_subset;
 		for (int particle_counter = 0; particle_counter < stack_number_of_images; particle_counter++)
 		{
 			input_par_file.ReadLine(input_parameters);
@@ -415,6 +417,10 @@ void ImportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 			temp_particle_info.defocus_2 = input_parameters[9];
 			temp_particle_info.defocus_angle = input_parameters[10];
 			temp_particle_info.phase_shift = input_parameters[11];
+
+			// we split the stack in 10 and assign half-dataset membership accordingly
+			if ( particle_counter  / (stack_number_of_images / 10) % 2 ) { current_subset = 1; } else { current_subset = 2; }
+			temp_particle_info.assigned_subset = current_subset;
 
 			temp_refinement_package->contained_particles.Add(temp_particle_info);
 
@@ -440,6 +446,7 @@ void ImportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].microscope_spherical_aberration_mm = SphericalAberrationTextCtrl->ReturnValue();
 			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].amplitude_contrast = AmplitudeContrastTextCtrl->ReturnValue();
 
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].assigned_subset = current_subset;
 
 			my_dialog->Update(particle_counter + 1);
 		}
@@ -544,6 +551,8 @@ void ImportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 			temp_particle_info.x_pos = input_star_file.ReturnXCoordinate(particle_counter) * PixelSizeTextCtrl->ReturnValue();
 			temp_particle_info.y_pos = input_star_file.ReturnYCoordinate(particle_counter) * PixelSizeTextCtrl->ReturnValue();
 
+			temp_particle_info.assigned_subset = input_star_file.ReturnAssignedSubset(particle_counter);
+
 			temp_refinement_package->contained_particles.Add(temp_particle_info);
 
 			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].position_in_stack = input_star_file.ReturnPositionInStack(particle_counter);
@@ -584,6 +593,8 @@ void ImportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].microscope_voltage_kv = MicroscopeVoltageTextCtrl->ReturnValue();
 			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].microscope_spherical_aberration_mm = SphericalAberrationTextCtrl->ReturnValue();
 			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].amplitude_contrast = AmplitudeContrastTextCtrl->ReturnValue();
+
+			temp_refinement.class_refinement_results[0].particle_refinement_results[particle_counter].assigned_subset = input_star_file.ReturnAssignedSubset(particle_counter);
 
 			my_dialog->Update(particle_counter + 1);
 		}

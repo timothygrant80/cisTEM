@@ -69,6 +69,7 @@ void cisTEMStarFileReader::ResetColumnPositions()
 	best_2d_class_column = -1;
 	beam_tilt_group_column = -1;
 	particle_group_column = -1;
+	assigned_subset_column = -1;
 	pre_exposure_column = -1;
 	total_exposure_column = -1;
 	original_image_filename_column = -1;
@@ -537,6 +538,21 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxSt
 		temp_parameters.particle_group = int(temp_long);
 	}
 
+	// assigned subset (for half-dataset refinement, or half map FSCs, etc)
+
+	if ( assigned_subset_column == -1) temp_parameters.assigned_subset = 0;
+	else
+	{
+		if (all_tokens[assigned_subset_column].ToLong(&temp_long) == false)
+		{
+			MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[assigned_subset_column]);
+			if (error_string != NULL) *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[assigned_subset_column]);
+			return false;
+		}
+
+		temp_parameters.assigned_subset = int(temp_long);
+	}
+
 	// pre exposure
 
 	if ( pre_exposure_column == -1) temp_parameters.pre_exposure = 0.0f;
@@ -882,6 +898,13 @@ bool cisTEMStarFileReader::ReadFile(wxString wanted_filename, wxString *error_st
 	    	if (particle_group_column != -1) wxPrintf("Warning :: _cisTEMParticleGroup occurs more than once. I will take the last occurrence\n");
 		   	particle_group_column = current_column;
 			parameters_that_were_read.particle_group = true;
+		}
+		else
+		if (current_line.StartsWith("_cisTEMAssignedSubset ") == true)
+		{
+	    	if (assigned_subset_column != -1) wxPrintf("Warning :: _cisTEMAssignedSubset occurs more than once. I will take the last occurrence\n");
+		   	assigned_subset_column = current_column;
+			parameters_that_were_read.assigned_subset = true;
 		}
 		else
 		if (current_line.StartsWith("_cisTEMPreExposure ") == true)

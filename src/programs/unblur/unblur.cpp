@@ -343,7 +343,7 @@ bool UnBlurApp::DoCalculation()
 
 	if (last_frame > number_of_input_images)
 	{
-		SendError(wxString::Format("(%s) Specified last frame is greater than total number of frames.. using last frame instead."));
+		SendError(wxString::Format("(%s) Specified last frame is greater than total number of frames.. using last frame instead.",input_filename));
 		last_frame = number_of_input_images;
 	}
 

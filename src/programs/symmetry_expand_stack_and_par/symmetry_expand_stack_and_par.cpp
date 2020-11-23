@@ -341,7 +341,7 @@ void SymmetryExpandStackAndPar::DoInteractiveUserInput()
 	int 		first_particle;
 	int			last_particle;
 
-	UserInput *my_input = new UserInput("SymmetryExpandStackAndPar", 1.00);
+	UserInput *my_input = new UserInput("SymmetryExpandStackAndPar", 1.01);
 
 	input_particle_images = my_input->GetFilenameFromUser("Input particle images", "The input image stack, containing the experimental particle images", "my_image_stack.mrc", true);
 	input_parameter_file = my_input->GetFilenameFromUser("Input Frealign parameter filename", "The input parameter file, containing your particle alignment parameters", "my_parameters.par", true);
@@ -362,7 +362,7 @@ void SymmetryExpandStackAndPar::DoInteractiveUserInput()
 		use_least_squares_scaling = my_input->GetYesNoFromUser("Use Least Squares Scaling", "Answer yes to scale per particle.", "Yes");
 		mask_radius = my_input->GetFloatFromUser("Mask Radius for scaling (A)", "Only consider within this radius for scaling", "100", 0.0);
 
-		do_centring_and_cropping = my_input->GetYesNoFromUser("Center and crop specific area", "If yes, the (3D) co-ordinates specified will be centered and cropped in the resulting 2D images. Typically, this would be the are that WASNT subtracted", "YES");
+//		do_centring_and_cropping = my_input->GetYesNoFromUser("Center and crop specific area", "If yes, the (3D) co-ordinates specified will be centered and cropped in the resulting 2D images. Typically, this would be the are that WASNT subtracted", "YES");
 	}
 	else
 	{
@@ -376,8 +376,11 @@ void SymmetryExpandStackAndPar::DoInteractiveUserInput()
 		do_centring_and_cropping = false;
 	}
 
+	do_centring_and_cropping = my_input->GetYesNoFromUser("Center and crop specific area", "If yes, the (3D) co-ordinates specified will be centered and cropped in the resulting 2D images. Typically, this would be the area that WASNT subtracted", "YES");
+
 	if (do_centring_and_cropping == true)
 	{
+		if (do_subtraction == false) 	pixel_size = my_input->GetFloatFromUser("Pixel size of images (A)", "Pixel size of input images in Angstroms", "1.0", 0.0);
 		centre_x_coord = my_input->GetFloatFromUser("X-Coord in 3D to center (pixels)", "0 is bottom left", "100", 0.0);
 		centre_y_coord = my_input->GetFloatFromUser("Y-Coord in 3D to center (pixels)", "0 is bottom left", "100", 0.0);
 		centre_z_coord = my_input->GetFloatFromUser("Z-Coord in 3D to center (pixels)", "0 is bottom left", "100", 0.0);
@@ -537,6 +540,14 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 
 	ProgressBar *my_progress;
 
+	if (do_centring_and_cropping == true)
+	{
+		cropped_image.Allocate(cropped_box_size, cropped_box_size, 1);
+		original_x_coord = centre_x_coord - input_stack.ReturnXSize() / 2;
+		original_y_coord = centre_y_coord - input_stack.ReturnYSize() / 2;
+		original_z_coord = centre_z_coord - input_stack.ReturnXSize() / 2; // Assume square
+	}
+
 	if (do_subtraction == true)
 	{
 		// get the power spectra..
@@ -544,7 +555,7 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 		projection_image.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), false);
 		unmasked_projection_image.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), false);
 		sum_power.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), false);
-		if (do_centring_and_cropping == true) cropped_image.Allocate(cropped_box_size, cropped_box_size, 1);
+
 
 		wxPrintf("\nCalculating noise power spectrum...\n\n");
 
@@ -732,7 +743,7 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 					//unmasked_projection_image.CircleMask(mask_radius / pixel_size);
 					//unmasked_projection_image.DivideByConstant(sqrtf(float(projection_image.logical_x_dimension * projection_image.logical_y_dimension)));
 
-					if (current_image == 1 && symmetry_counter == 1 && first_particle == 1) unmasked_projection_image.QuickAndDirtyWriteSlice("/tmp/unmasked_proj.mrc", 1);
+					//if (current_image == 1 && symmetry_counter == 1 && first_particle == 1) unmasked_projection_image.QuickAndDirtyWriteSlice("/tmp/unmasked_proj.mrc", 1);
 
 					//projection_image.ForwardFFT();
 					//projection_image.DivideByConstant(sqrtf(float(projection_image.logical_x_dimension * projection_image.logical_y_dimension)));
@@ -909,11 +920,11 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 
 				}
 
-				if (current_image == 1 && symmetry_counter == 1 && first_particle == 1)
-				{
-					projection_image.QuickAndDirtyWriteSlice("/tmp/proj.mrc", 1);
-					particle_image.QuickAndDirtyWriteSlice("/tmp/particle.mrc", position_in_output_stack);
-				}
+				//if (current_image == 1 && symmetry_counter == 1 && first_particle == 1)
+				//{
+				//	projection_image.QuickAndDirtyWriteSlice("/tmp/proj.mrc", 1);
+				//	particle_image.QuickAndDirtyWriteSlice("/tmp/particle.mrc", position_in_output_stack);
+				//}
 
 				buffer_image.SubtractImage(&projection_image);
 				//projection_image.QuickAndDirtyWriteSlice("/tmp/projs.mrc", position_in_output_stack);
@@ -931,15 +942,13 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 				//current_symmetry_related_matrix = matrix_for_centring * my_symmetry_matrices.rot_mat[symmetry_counter - 1];
 				matrix_for_centring.RotateCoords(original_x_coord, original_y_coord, original_z_coord, rotated_x_coord, rotated_y_coord, rotated_z_coord);
 
-				//wxPrintf("original coords (%i) = %.2f, %.2f, %.2f\n", symmetry_counter + 1, original_x_coord, original_y_coord, original_z_coord);
-				//wxPrintf("rotated  coords (%i) = %.2f, %.2f, %.2f\n", symmetry_counter + 1, rotated_x_coord, rotated_y_coord, rotated_z_coord);
+			//	wxPrintf("original coords (%i) = %.2f, %.2f, %.2f\n", symmetry_counter + 1, original_x_coord, original_y_coord, original_z_coord);
+			//	wxPrintf("rotated  coords (%i) = %.2f, %.2f, %.2f\n", symmetry_counter + 1, rotated_x_coord, rotated_y_coord, rotated_z_coord);
 
 
 				// phase_shift the subtracted image so that the bit we want is in the centre..
 
 				cropped_image.SetToConstant(0.0f);
-
-
 
 				if (do_subtraction == true)
 				{
@@ -948,8 +957,9 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 				}
 				else
 				{
-					particle_image.PhaseShift(-rotated_x_coord - (temp_float[4] / pixel_size), -rotated_y_coord  - (temp_float[5] / pixel_size));
-					particle_image.ClipInto(&cropped_image);
+					buffer_image.CopyFrom(&particle_image);
+					buffer_image.PhaseShift(-rotated_x_coord - (temp_float[4] / pixel_size), -rotated_y_coord  - (temp_float[5] / pixel_size));
+					buffer_image.ClipInto(&cropped_image);
 				}
 
 				cropped_image.WriteSlice(&output_stack, position_in_output_stack);
@@ -997,12 +1007,14 @@ bool SymmetryExpandStackAndPar::DoCalculation()
 	{
 		delete input_3d_file;
 		delete input_mask_file;
+
+		average_scale_factor /= double(number_of_scale_factors_calculated);
+		average_difference /= double(number_of_differences_calculated);
+		wxPrintf("Average scale factor = %f\n", average_scale_factor);
+		wxPrintf("Average differnce = %f\n", average_difference);
 	}
 
-	average_scale_factor /= double(number_of_scale_factors_calculated);
-	average_difference /= double(number_of_differences_calculated);
-	wxPrintf("Average scale factor = %f\n", average_scale_factor);
-	wxPrintf("Average differnce = %f\n", average_difference);
+
 	wxPrintf("\nSymmetryExpandStackAndPar: Normal termination\n\n");
 
 	return true;

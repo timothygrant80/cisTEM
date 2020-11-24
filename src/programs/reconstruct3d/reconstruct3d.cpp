@@ -1210,7 +1210,6 @@ bool Reconstruct3DApp::DoCalculation()
 				input_particle.insert_even = false;
 			}
 		}
-		if (input_particle.insert_even) { wxPrintf("DEBUG: particle going to even\n");} else { wxPrintf("DEBUG: particle going to odd\n");}
 
 //		input_particle.particle_image->BackwardFFT();
 //		input_particle.particle_image->AddGaussianNoise(input_particle.particle_image->ReturnSumOfSquares());

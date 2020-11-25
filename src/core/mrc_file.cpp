@@ -63,6 +63,7 @@ bool MRCFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_fo
 	{
 		filename = wanted_filename;
 	}
+	else
 	{
 		bool file_already_exists;
 

@@ -9,6 +9,8 @@ class MRCFile : public AbstractImageFile {
 	MRCHeader my_header;
 	wxString filename;
 
+	bool do_nothing; // under special circumstances (like when the file is /dev/null), let's not do anything at all
+
 	bool rewrite_header_on_close;
 	int max_number_of_seconds_to_wait_for_file_to_exist;
 

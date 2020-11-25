@@ -432,7 +432,9 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first
 {
 
 	wxFileName cisTEM_star_filename = wanted_filename;
-	if (wanted_filename != "/dev/null") cisTEM_star_filename.SetExt("star"); // When the filename was set to /dev/null, this gives the malformed /dev/null.star, which somehow leads to occasional crashes on some clusters (whereas /dev/null does not)
+	if (wanted_filename.IsSameAs("/dev/null")) return; // if the user gave us /dev/null, they didn't intend to write anything - let's stop here. This saves trouble later on -some OSes will throw errors when we try to write to /dev/null
+	
+	cisTEM_star_filename.SetExt("star"); 
 	long particle_counter;
 
 	wxTextFile *cisTEM_star_file = new wxTextFile(cisTEM_star_filename.GetFullPath());

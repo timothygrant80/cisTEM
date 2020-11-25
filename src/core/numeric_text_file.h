@@ -40,4 +40,7 @@ class NumericTextFile {
         void WriteLine(double *data_array);
         void WriteCommentLine(const char * format, ...);
 
+        // In special cases (e.g. if the filename is /dev/null), we don't do anything
+        bool do_nothing;
+
 };

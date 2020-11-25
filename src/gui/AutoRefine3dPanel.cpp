@@ -2158,6 +2158,9 @@ void AutoRefinementManager::DoMasking()
 
 	if (active_should_mask)
 	{
+
+		my_parent->WriteInfoText("Masking reference reconstruction with selected mask");
+
 		float wanted_cosine_edge_width = active_mask_edge;
 		float wanted_weight_outside_mask = active_mask_weight;
 
@@ -2190,6 +2193,9 @@ void AutoRefinementManager::DoMasking()
 	}
 	else
 	{
+
+		my_parent->WriteInfoText("Automasking reference reconstruction");
+
 		my_parent->active_mask_thread_id = my_parent->next_thread_id;
 		my_parent->next_thread_id++;
 

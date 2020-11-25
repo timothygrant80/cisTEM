@@ -1066,6 +1066,8 @@ void ClassificationManager::RunRefinementJob()
 		bool auto_centre = my_parent->AutoCentreRadioYes->GetValue();
 		int max_threads = 1;
 
+		if (job_counter == 0) my_parent->WriteInfoText("Will automask reference class averages");
+
 		my_parent->current_job_package.AddJob("tttttiiiffffffffibbbbtbbi",	input_particle_images.ToUTF8().data(),
 																		input_star_file.ToUTF8().data(),
 																		input_class_averages.ToUTF8().data(),

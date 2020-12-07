@@ -8464,6 +8464,187 @@ void Image::InsertOtherImageAtSpecifiedPosition(Image *other_image, int wanted_x
 		}
 	}
 }
+void Image::ReplacePixelsOfSpecifiedValueWithOtherImage(Image *other_image, float replaced_value)
+{
+ MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+ MyDebugAssertTrue(other_image->is_in_memory, "Other image Memory not allocated");
+ MyDebugAssertTrue(is_in_real_space == true, "Only real space make sense");
+ MyDebugAssertTrue(logical_x_dimension == other_image->logical_x_dimension, "Images are not of the same dimensions");
+ MyDebugAssertTrue(logical_y_dimension == other_image->logical_y_dimension, "Images are not of the same dimensions");
+ MyDebugAssertTrue(logical_z_dimension == other_image->logical_z_dimension, "Images are not of the same dimensions");
+
+ int k;
+ int j;
+ int i;
+ long pixel_counter = 0;
+
+ for (k = 0; k < logical_z_dimension; k++)
+ {
+   for (j = 0; j < logical_y_dimension; j++)
+   {
+     for (i = 0; i < logical_x_dimension; i++)
+     {
+       if (real_values[pixel_counter] == replaced_value)
+       {
+         real_values[pixel_counter] = other_image->real_values[pixel_counter];
+       }
+       pixel_counter++;
+     }
+     pixel_counter+=padding_jump_value;
+   }
+ }
+}
+
+void Image::ReplaceBorderOfOneImageWithOtherImage(Image *other_image, long i_start, long j_start, long k_start, long i_end, long j_end, long k_end, float radius_for_matching_variance)
+{
+ // Scale variance of other image outside radius_for_matching_variance and within the selected box to match variance of this image in the same range.
+ MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+ MyDebugAssertTrue(other_image->is_in_memory, "Other image Memory not allocated");
+ MyDebugAssertTrue(is_in_real_space == true, "Image is not in real space");
+ MyDebugAssertTrue(other_image->is_in_real_space == true, "Other image is not in real space");
+ MyDebugAssertTrue(logical_x_dimension == other_image->logical_x_dimension, "Images are not of the same dimensions");
+ MyDebugAssertTrue(logical_y_dimension == other_image->logical_y_dimension, "Images are not of the same dimensions");
+ MyDebugAssertTrue(logical_z_dimension == other_image->logical_z_dimension, "Images are not of the same dimensions");
+ // Below assertions: I don't think these are constructed right yet.
+ MyDebugAssertTrue(i_end <= logical_x_dimension, "Bounds of volume to replace are outside limits of image");
+ MyDebugAssertTrue(j_end <= logical_y_dimension, "Bounds of volume to replace are outside limits of image");
+ MyDebugAssertTrue(k_end <= logical_z_dimension, "Bounds of volume to replace are outside limits of image");
+ MyDebugAssertTrue(i_start >=0, "Bounds of volume to replace are outside limits of image");
+ MyDebugAssertTrue(j_start >=0, "Bounds of volume to replace are outside limits of image");
+ MyDebugAssertTrue(k_start >=0, "Bounds of volume to replace are outside limits of image");
+
+ long pixel_counter;
+ int i,j,k;
+ float x,y,z,xx,yy,zz;
+ float distance_from_center_squared;
+ const float radius_for_matching_variance_squared = powf(radius_for_matching_variance, 2);
+ double average_value = 0.0;
+ double average_squared_value = 0.0;
+ double average_value_other = 0.0;
+ double average_squared_value_other = 0.0;
+ double variance_this, variance_other, variance_scale_factor;
+ long number_of_pixels = 0;
+ long number_of_pixels_other = 0;
+
+ pixel_counter = k_start*logical_y_dimension*(logical_x_dimension + padding_jump_value);
+
+ for (k = k_start; k < k_end; k++)
+ {
+   z = k - physical_address_of_box_center_z;
+   zz = powf(z, 2);
+
+   pixel_counter += j_start*(logical_x_dimension + padding_jump_value);
+
+   for (j = j_start; j < j_end; j++)
+   {
+     y = j - physical_address_of_box_center_y;
+     yy = powf(y, 2);
+
+     pixel_counter += i_start;
+
+     for (i = i_start; i < i_end; i++)
+     {
+       x = i - physical_address_of_box_center_x;
+       xx = powf(x, 2);
+
+       distance_from_center_squared = xx + yy + zz;
+       if (distance_from_center_squared >= radius_for_matching_variance_squared)
+       {
+         number_of_pixels++;
+         average_value += real_values[pixel_counter];
+         average_squared_value += powf(real_values[pixel_counter], 2);
+       }
+       pixel_counter++;
+     }
+     pixel_counter += (logical_x_dimension - i_end) + padding_jump_value;
+   }
+   pixel_counter += (logical_y_dimension - j_end)*(logical_x_dimension + padding_jump_value);
+ }
+ pixel_counter += (logical_z_dimension - k_end)*logical_y_dimension*(logical_x_dimension + padding_jump_value);
+ // debug assert the pixel counter is at the right total now
+
+ average_value /= float(number_of_pixels);
+ average_squared_value /= float(number_of_pixels);
+ variance_this = abs(powf(average_value, 2) - average_squared_value);
+
+ // begin again to compute variance in other image in same interval
+ pixel_counter = k_start*other_image->logical_y_dimension*(other_image->logical_x_dimension + other_image->padding_jump_value);
+
+ for (k = k_start; k < k_end; k++)
+ {
+   z = k - other_image->physical_address_of_box_center_z;
+   zz = powf(z, 2);
+
+   pixel_counter += k_start*(other_image->logical_x_dimension + other_image->padding_jump_value);
+
+   for (j = j_start; j < j_end; j++)
+   {
+     y = j - other_image->physical_address_of_box_center_y;
+     yy = powf(y, 2);
+
+     pixel_counter += j_start;
+
+     for (i = i_start; i < i_end; i++)
+     {
+       x = i - other_image->physical_address_of_box_center_x;
+       xx = powf(x, 2);
+
+       distance_from_center_squared = xx + yy + zz;
+       if (distance_from_center_squared >= radius_for_matching_variance_squared)
+       {
+         number_of_pixels_other++;
+         average_value_other += other_image->real_values[pixel_counter];
+         average_squared_value_other += powf(other_image->real_values[pixel_counter], 2);
+       }
+       pixel_counter++;
+     }
+     pixel_counter += (other_image->logical_x_dimension - i_end) + other_image->padding_jump_value;
+   }
+   pixel_counter += (other_image->logical_y_dimension - j_end)*(other_image->logical_x_dimension + other_image->padding_jump_value);
+ }
+ pixel_counter += (other_image->logical_z_dimension - k_end)*other_image->logical_y_dimension*(other_image->logical_x_dimension + other_image->padding_jump_value);
+ // debug assert the pixel counter is at the right total now
+
+ average_value_other /= float(number_of_pixels_other);
+ average_squared_value_other /= float(number_of_pixels_other);
+ variance_other = abs(powf(average_value_other, 2) - average_squared_value_other);
+
+ // variance_scale_factor = variance_this/variance_other;
+ variance_scale_factor = sqrt(variance_this/variance_other);
+
+ // now loop over the *not boxed* regions of both images and replace pixel values in this image with scaled values from the other image
+ pixel_counter = 0;
+ for (k = 0; k < logical_z_dimension; k++)
+ {
+   z = k - physical_address_of_box_center_z;
+   zz = powf(z, 2);
+
+   for (j = 0; j < logical_y_dimension; j++)
+   {
+     y = j - physical_address_of_box_center_y;
+     yy = powf(y, 2);
+
+     for (i = 0; i < logical_x_dimension; i++)
+     {
+       x = i - physical_address_of_box_center_x;
+       xx = powf(x, 2);
+
+       distance_from_center_squared = xx + yy + zz;
+
+       if (i < i_start or i >= i_end or j < j_start or j >= j_end or k < k_start or k >= k_end)
+       {
+         if (distance_from_center_squared >= radius_for_matching_variance_squared)
+         {
+           number_of_pixels++;
+           real_values[pixel_counter] = ((other_image->real_values[pixel_counter] - average_value_other)*variance_scale_factor) + average_value;
+         }
+       }
+       pixel_counter++;
+     }
+     pixel_counter += padding_jump_value;
+   }
+ }
+}
 
 // If you don't want to clip from the center, you can give wanted_coordinate_of_box_center_{x,y,z}. This will define the pixel in the image at which other_image will be centered. (0,0,0) means center of image.
 void Image::ClipInto(Image *other_image, float wanted_padding_value, bool fill_with_noise, float wanted_noise_sigma, int wanted_coordinate_of_box_center_x, int wanted_coordinate_of_box_center_y, int wanted_coordinate_of_box_center_z)

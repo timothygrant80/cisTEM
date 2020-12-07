@@ -109,7 +109,7 @@ class OrthDrawerThread : public wxThread
 class DenmodThread : public wxThread
 {
 	public:
-	DenmodThread(wxWindow *parent, CommandLineTools wanted_denmod_job, int wanted_thread_id = -1) : wxThread(wxTHREAD_JOINABLE)
+	DenmodThread(wxWindow *parent, DenmodJob wanted_denmod_job, int wanted_thread_id = -1) : wxThread(wxTHREAD_JOINABLE)
 	{
 		main_thread_pointer = parent;
 		denmod_job = wanted_denmod_job;
@@ -128,7 +128,7 @@ class DenmodThread : public wxThread
 	protected:
 
 	wxWindow *main_thread_pointer;
-	CommandLineTools denmod_job;
+	DenmodJob denmod_job;
 	int thread_id;
 
     virtual ExitCode Entry();

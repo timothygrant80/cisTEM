@@ -2625,17 +2625,21 @@ void RefinementManager::DoDensityModification()
 		wxString current_map = volumes_dir + wxString::Format("/volume_%li_%i.mrc", refinement_id, class_counter + 1);
 		wxString current_half_map_1 = volumes_dir + wxString::Format("/volume_%li_%i_half1.mrc", refinement_id, class_counter + 1);
 		wxString current_half_map_2 = volumes_dir + wxString::Format("/volume_%li_%i_half2.mrc", refinement_id, class_counter + 1);
-		CommandLineTools denmod_job;
-		my_parent->WriteBlueText("Executing denmod job in new thread.");
-		denmod_job.Init(phenix_bin_dir, wxString("phenix.resolve_cryo_em"), wxString::Format("%s/denmod.out", working_dir), wxString::Format("%s/denmod.err", working_dir));
-		denmod_job.AddArgument(wxString::Format("map_file_name=%s", current_map));
-		denmod_job.AddArgument(wxString::Format("half_map_file_name_1=%s", current_half_map_1));
-		denmod_job.AddArgument(wxString::Format("half_map_file_name_2=%s", current_half_map_2));
+		DenmodJob denmod_job;
+		denmod_job.Init(phenix_bin_dir,
+		wxString("phenix.resolve_cryo_em"),
+		wxString::Format("%s/denmod.out", working_dir),
+		wxString::Format("%s/denmod.err", working_dir),
+		current_map,
+		current_half_map_1,
+		current_half_map_2,
+		working_dir,
+		wxString::Format("volume_%li_%i.mrc", refinement_id, class_counter + 1)); // denmod map filename
+
 		denmod_job.AddArgument(protein_info);
-		denmod_job.AddArgument(wxString::Format("temp_dir=%s", working_dir));
-		denmod_job.AddArgument(wxString::Format("output_directory=%s", working_dir));
-		denmod_job.AddArgument(wxString::Format("output_files.denmod_map_file_name=volume_%li_%i.mrc", refinement_id, class_counter + 1));
+		denmod_job.AddArgument(wxString("box_cushion=50"));
 		denmod_job.AddArgument(wxString("box_before_analysis=True restore_full_size=True")); // significant speedup vs using full map
+		my_parent->WriteBlueText(wxString::Format("Executing %s\n", denmod_job.GetCommand()));
 		// Add more arguments later incl. multiprocessing.
 
 		// Testing only: copy over the map before density modification for comparison
@@ -2763,12 +2767,14 @@ void RefinementManager::OnDenmodThreadComplete()
 {
 	for (int class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
 	{
-		// Replace existing final volume with density modified volume
-		wxCopyFile(main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("denmod_%li_%i/volume_%li_%i.mrc", main_frame->current_project.database.ReturnHighestRefinementID() + 1, class_counter + 1, main_frame->current_project.database.ReturnHighestRefinementID() + 1, class_counter + 1), main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i.mrc", main_frame->current_project.database.ReturnHighestRefinementID() + 1, class_counter + 1), true);
+		DenmodJobWrapup wrapup;
+		wrapup.Init(main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("denmod_%li_%i/denmod.out", main_frame->current_project.database.ReturnHighestRefinementID() + 1, class_counter + 1), main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i.mrc", main_frame->current_project.database.ReturnHighestRefinementID() + 1, class_counter + 1), main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("denmod_%li_%i/volume_%li_%i.mrc", main_frame->current_project.database.ReturnHighestRefinementID() + 1, class_counter + 1, main_frame->current_project.database.ReturnHighestRefinementID() + 1, class_counter + 1));
+		wrapup.Run();
+
+		// remove half maps
 		wxRemoveFile(main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_half1.mrc", main_frame->current_project.database.ReturnHighestRefinementID() + 1, class_counter + 1));
 		wxRemoveFile(main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_half2.mrc", main_frame->current_project.database.ReturnHighestRefinementID() + 1, class_counter + 1));
 	}
-	// wxPrintf("removed temporary files\n");
 	my_parent->my_refinement_manager.ProcessAllJobsFinished();
 }
 #endif

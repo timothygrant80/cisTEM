@@ -370,6 +370,8 @@ public:
 	void ClipInto(Image *other_image, float wanted_padding_value = 0.0, bool fill_with_noise = false, float wanted_noise_sigma = 1.0,int wanted_coordinate_of_box_center_x=0, int wanted_coordinate_of_box_center_y=0, int wanted_coordinate_of_box_center_z=0);
 	void ChangePixelSize(Image *other_image, float wanted_factor, float wanted_tolerance, bool return_fft = false);
 	void InsertOtherImageAtSpecifiedPosition(Image *other_image, int wanted_x_coord, int wanted_y_coord, int wanted_z_coord, float threshold_value = -FLT_MAX);
+	void ReplacePixelsOfSpecifiedValueWithOtherImage(Image *other_image, float replaced_value);
+	void ReplaceBorderOfOneImageWithOtherImage(Image *other_image, long i_start, long j_start, long k_start, long i_end, long j_end, long k_end, float radius_for_matching_variance);
 	void Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted_z_dimension, float wanted_padding_value = 0);
 	void RealSpaceBinning(int bin_x, int bin_y, int bin_z = 1, bool symmetrical = false, bool exclude_incomplete_bins = false);
 	float ReturnVarianceOfRealValuesTiled(int bin_x, int bin_y, int bin_z = 1, bool exclude_incomplete_bins = false);

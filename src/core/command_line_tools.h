@@ -39,5 +39,54 @@ public :
     // wxString Run();
     wxString RunSync();
     wxArrayString RunAsync();
+};
 
+class WriteAndRunScript : public CommandLineTools {
+
+public:
+    wxString shell;
+    wxString script;
+    wxFileName filename;
+    wxString output;
+    wxString error;
+
+    WriteAndRunScript();
+    ~WriteAndRunScript();
+    void Init(wxString wanted_shell, wxString wanted_script, wxString wanted_filename);
+    bool Write();
+    bool Run();
+    wxString GetOutput();
+    wxString GetError();
+};
+
+WX_DECLARE_OBJARRAY(long, ArrayOfLongs);
+
+class DenmodJob : public CommandLineTools {
+
+public:
+ wxString original_map_filename;
+ wxString half_map_1_filename;
+ wxString half_map_2_filename;
+ wxString working_dir;
+ wxString denmod_map_filename;
+
+    DenmodJob();
+    ~DenmodJob();
+    void Init(wxString wanted_bin_dir, wxString wanted_executable, wxString wanted_outfile, wxString wanted_errfile, wxString wanted_original_map_filename="", wxString wanted_half_map_1_filename="", wxString wanted_half_map_2_filename="", wxString wanted_working_dir="", wxString wanted_denmod_map_filename="");
+
+};
+
+class DenmodJobWrapup : public CommandLineTools {
+
+public:
+    wxString output_path;
+    wxString reconstructed_volume_path;
+    wxString denmod_volume_path;
+    wxString grep_script;
+
+    DenmodJobWrapup();
+    ~DenmodJobWrapup();
+    void Init(wxString wanted_output_path, wxString wanted_reconstructed_volume_path, wxString wanted_denmod_volume_path);
+    ArrayOfLongs GetBounds();
+    void Run();
 };

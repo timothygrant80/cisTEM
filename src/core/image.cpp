@@ -5433,8 +5433,11 @@ void Image::ReadSlices(DMFile *input_file, long start_slice, long end_slice)
 
 void Image::WriteSlices(MRCFile *input_file, long start_slice, long end_slice)
 {
+
+	if (input_file->do_nothing) return; // this happens when the user gave /dev/null as a filename
+
 	MyDebugAssertTrue(start_slice <= end_slice, "Start slice larger than end slice!");
-	MyDebugAssertTrue(input_file->my_file->is_open(), "MRCFile not open!");
+	MyDebugAssertTrue(input_file->IsOpen(), "MRCFile not open!");
 
 	// THIS PROBABLY NEEDS ATTENTION..
 

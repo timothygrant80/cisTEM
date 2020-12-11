@@ -1887,11 +1887,9 @@ wxThread::ExitCode OrthDrawerThread::Entry()
 #ifdef EXPERIMENTAL
 wxThread::ExitCode DenmodThread::Entry()
 {
-	return_array_string = denmod_job.RunAsync();
-	output_string = return_array_string.Item(0);
-	error_string = return_array_string.Item(1);
+	output_string = denmod_job.RedirectedSystemCallWithError(denmod_job.GetCommand());
 	wxPrintf(output_string);
-	wxPrintf(error_string);
+	denmod_job.WriteFile(denmod_job.outfile, output_string);
 
 	// move this block inside OnTerminate method of AsyncProcess
 	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_DENMODTHREAD_COMPLETED);

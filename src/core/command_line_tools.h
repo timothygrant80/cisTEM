@@ -39,6 +39,12 @@ public :
     // wxString Run();
     wxString RunSync();
     wxArrayString RunAsync();
+    wxString RedirectedSystemCall(wxString command);
+    wxString RedirectedSystemCallWithError(wxString command);
+    wxString ReadFile(wxString path);
+    void WriteFile(wxString path, wxString contents);
+    void WriteFile(wxString path, wxArrayString contents);
+    // wxArrayString SystemCallWithFiles(wxString command);
 };
 
 class WriteAndRunScript : public CommandLineTools {

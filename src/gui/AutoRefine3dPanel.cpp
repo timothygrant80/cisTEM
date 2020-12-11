@@ -2311,7 +2311,6 @@ void AutoRefinementManager::DoDensityModification()
 		denmod_job.AddArgument(protein_info);
 		denmod_job.AddArgument(wxString("box_cushion=50"));
 		denmod_job.AddArgument(wxString("box_before_analysis=True restore_full_size=True")); // significant speedup vs using full map
-		my_parent->WriteBlueText(wxString::Format("Executing %s\n", denmod_job.GetCommand()));
 
 		// Run phenix.resolve_cryo_em from separate thread using wxExecute
 		DenmodThread *result_thread;
@@ -2326,7 +2325,7 @@ void AutoRefinementManager::DoDensityModification()
 		}
 		else
 		{
-			my_parent->WriteInfoText(wxString::Format("Executing %s", denmod_job.GetCommand()));
+			my_parent->WriteInfoText(wxString::Format("Executing %s\n", denmod_job.GetCommand()));
 		}
 		// TODO: the thread now has output_string and error_string attributes but these won't be
 		// updated by the time we want to print them. Could see about triggering this from

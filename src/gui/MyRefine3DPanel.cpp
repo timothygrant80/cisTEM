@@ -2639,7 +2639,6 @@ void RefinementManager::DoDensityModification()
 		denmod_job.AddArgument(protein_info);
 		denmod_job.AddArgument(wxString("box_cushion=50"));
 		denmod_job.AddArgument(wxString("box_before_analysis=True restore_full_size=True")); // significant speedup vs using full map
-		my_parent->WriteBlueText(wxString::Format("Executing %s\n", denmod_job.GetCommand()));
 		// Add more arguments later incl. multiprocessing.
 
 		// Testing only: copy over the map before density modification for comparison
@@ -2659,6 +2658,7 @@ void RefinementManager::DoDensityModification()
 			delete result_thread;
 		} else
 		{
+			my_parent->WriteInfoText(wxString::Format("Executing %s\n", denmod_job.GetCommand()));
 			return;
 		}
 	}

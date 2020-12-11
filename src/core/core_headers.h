@@ -172,6 +172,10 @@ protected:
 #include "phenix_settings.h"
 #include "command_line_tools.h"
 #include <wx/process.h>
+#include <cstdio>
+#include <memory>
+#include <stdexcept>
+#include <array>
 #endif
 
 #ifdef ENABLEGPU

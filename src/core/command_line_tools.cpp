@@ -120,6 +120,82 @@ wxArrayString CommandLineTools::RunAsync()
     return return_array_string;
 }
 
+wxString CommandLineTools::RedirectedSystemCall(wxString command)
+{
+    const char * cmd_char = (const char*)command.mb_str();
+    std::array<char, 128> buffer;
+    std::string cstr_result;
+    std::unique_ptr<FILE, decltype(&pclose)> pipe(popen(cmd_char, "r"), pclose);
+    if (!pipe)
+    {
+        throw std::runtime_error("could not execute the requested command");
+    }
+    while (fgets(buffer.data(), buffer.size(), pipe.get()) != nullptr)
+    {
+        cstr_result += buffer.data();
+    }
+    return wxString(cstr_result);
+}
+
+wxString CommandLineTools::RedirectedSystemCallWithError(wxString command)
+{
+    wxString result = RedirectedSystemCall(wxString::Format("%s 2>&1", command));
+    return result;
+}
+
+wxString CommandLineTools::ReadFile(wxString path)
+{
+    wxString contents;
+    std::string line;
+    std::ifstream fileobj(path);
+    if (fileobj.is_open())
+    {
+        while ( getline(fileobj, line) )
+        {
+            contents.Append(wxString::Format("%s\n", line));
+        }
+        fileobj.close();
+    }
+    return contents;
+}
+
+void CommandLineTools::WriteFile(wxString path, wxString contents)
+{
+    wxTextFile file_obj;
+    file_obj.Create(path);
+    file_obj.AddLine(contents);
+    file_obj.Write();
+    file_obj.Close();
+}
+
+void CommandLineTools::WriteFile(wxString path, wxArrayString contents)
+{
+    wxTextFile file_obj;
+    file_obj.Create(path);
+    for ( int i=0; i<contents.GetCount(); i++ )
+    {
+        file_obj.AddLine(contents.Item(i));
+    }
+    file_obj.Write();
+    file_obj.Close();
+}
+
+// wxArrayString CommandLineTools::SystemCallWithFiles(wxString command)
+// {
+//     // seems to not be able to generate files (probably a permissions thing?)
+//     wxPrintf(wxString::Format("Using command: %s\nUsing outfile: %s\nUsing errfile:%s\n", command, outfile, errfile));
+//     const char * cmd_char = (const char*)(wxString::Format("%s >%s 2>%s", command, outfile, errfile)).mb_str();
+//     system(cmd_char);
+//     wxArrayString results;
+//     wxString stdout = ReadFile(outfile);
+//     wxString stderr = ReadFile(errfile);
+//     wxPrintf(stdout);
+//     wxPrintf(stderr);
+//     results.Add(stdout);
+//     results.Add(stderr);
+//     return results;
+// }
+
 WriteAndRunScript::WriteAndRunScript()
 {
     shell = wxString("");
@@ -168,13 +244,14 @@ bool WriteAndRunScript::Run()
         // const char *cmd_char = cmd.c_str();
         // system(cmd_char);
         // return true;
-        wxPrintf("run async is about to hang\n");
         // wxString results = job.RunSync();
-        wxArrayString results = job.RunAsync();
-        error = results[0];
-        output = results[1];
-        wxPrintf(wxString::Format("error: %s", error));
-        wxPrintf(wxString::Format("output: %s", output));
+        // wxArrayString results = job.RunAsync();
+        // error = results[0];
+        // output = results[1];
+        // wxPrintf(wxString::Format("error: %s", error));
+        // wxPrintf(wxString::Format("output: %s", output));
+        output = job.RedirectedSystemCallWithError(job.GetCommand());
+        wxPrintf(output);
         return true;
     }
 }
@@ -236,14 +313,11 @@ ArrayOfLongs DenmodJobWrapup::GetBounds()
     WriteAndRunScript grep_run;
     grep_run.Init(wxString("/usr/bin/bash"), grep_script, wxString("grep_bounds.sh"));
     grep_run.Run();
-    wxPrintf("DEBUG: SUCCESS");
-    wxPrintf(grep_run.output);
     wxArrayString output_bounds_as_strings = wxSplit(grep_run.output, ' ');
     ArrayOfLongs bounds;
     long bound_long;
     for ( int i=0; i<6; i++ )
     {
-        wxPrintf(output_bounds_as_strings[i]);
         output_bounds_as_strings[i].ToLong(&bound_long);
         bounds.Add(bound_long);
     }
@@ -273,8 +347,14 @@ void DenmodJobWrapup::Run()
     denmod_with_background_volume_file.OpenFile(denmod_volume_path.ToStdString(), true);
 
     // use the image method to replace the background region of the image produced with the original image (scaled)
-    ArrayOfLongs bounds = GetBounds(); //FIXME initializing this wrong somehow
-    long xmin, ymin, zmin, xmax, ymax, zmax = bounds[0,1,2,3,4,5];
+    ArrayOfLongs bounds = GetBounds();
+    long zmin = bounds[0];
+    long ymin = bounds[1];
+    long xmin = bounds[2];
+    long zmax = bounds[3];
+    long ymax = bounds[4];
+    long xmax = bounds[5];
+    // wxPrintf(wxString::Format("DEBUG: Requesting to replace borders outside of box with bounds %li, %li, %li, %li, %li, %li\n", zmin, ymin, xmin, zmax, ymax, xmax));
     long shortest_distance_from_center = std::min({(full_box_radius - xmin),
                                                    (xmax - full_box_radius),
                                                    (full_box_radius - ymin),

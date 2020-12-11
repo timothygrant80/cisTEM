@@ -8505,7 +8505,6 @@ void Image::ReplaceBorderOfOneImageWithOtherImage(Image *other_image, long i_sta
  MyDebugAssertTrue(logical_x_dimension == other_image->logical_x_dimension, "Images are not of the same dimensions");
  MyDebugAssertTrue(logical_y_dimension == other_image->logical_y_dimension, "Images are not of the same dimensions");
  MyDebugAssertTrue(logical_z_dimension == other_image->logical_z_dimension, "Images are not of the same dimensions");
- // Below assertions: I don't think these are constructed right yet.
  MyDebugAssertTrue(i_end <= logical_x_dimension, "Bounds of volume to replace are outside limits of image");
  MyDebugAssertTrue(j_end <= logical_y_dimension, "Bounds of volume to replace are outside limits of image");
  MyDebugAssertTrue(k_end <= logical_z_dimension, "Bounds of volume to replace are outside limits of image");

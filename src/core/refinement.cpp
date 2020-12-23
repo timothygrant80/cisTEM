@@ -765,3 +765,20 @@ void Refinement::SetAllAmplitudeContrast(float wanted_amplitude_contrast)
 
 }
 
+void Refinement::SetAssignedSubsetToEvenOdd()
+{
+	int class_counter;
+	int particle_counter;
+
+
+	for (class_counter = 0; class_counter < this->number_of_classes; class_counter++)
+	{
+		for (particle_counter = 0; particle_counter < this->number_of_particles; particle_counter++)
+		{
+			if (IsEven(particle_counter) == true) this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].assigned_subset = 1;
+			else
+			this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].assigned_subset = 2;
+		}
+	}
+}
+

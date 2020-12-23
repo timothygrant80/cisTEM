@@ -2647,6 +2647,7 @@ void AbInitioManager::ProcessAllJobsFinished()
 		input_refinement->SetAllVoltages(300);
 		input_refinement->SetAllCs(2.7);
 		input_refinement->SetAllAmplitudeContrast(0.07);
+		input_refinement->SetAssignedSubsetToEvenOdd();
 
 
 		SetupReconstructionJob();

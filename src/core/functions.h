@@ -38,6 +38,7 @@ inline void ZeroFloatArray(float *array_to_zero, int size_of_array)
 	}
 }
 
+
 void FirstLastParticleForJob(long &first_particle, long &last_particle, long number_of_particles, int current_job_number, int number_of_jobs );
 
 int ReturnSafeBinnedBoxSize(int original_box_size, float bin_factor);
@@ -599,3 +600,5 @@ double cisTEM_erfinv(double x);
 double cisTEM_erfcinv(double x);
 
 bool StripEnclosingSingleQuotesFromString(wxString &string_to_strip); // returns true if it was done, false if first and last characters are not '
+
+void ActivateMKLDebugForNonIntelCPU(); // will activate MKL debug environment variable if running on an AMD that supports high level features.  This works on my version on intel MKL - it is disabled in the released MKL (although setting it should not break anything)

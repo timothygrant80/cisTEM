@@ -135,6 +135,7 @@ public :
 	void SetAllVoltages(float wanted_voltage_in_kV);
 	void SetAllCs(float wanted_Cs_in_mm);
 	void SetAllAmplitudeContrast(float wanted_amplitude_contrast);
+	void SetAssignedSubsetToEvenOdd();
 
 
 };

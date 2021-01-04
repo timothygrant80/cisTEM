@@ -353,7 +353,8 @@ void Refinement::WriteSingleClasscisTEMStarFile(wxString filename,int wanted_cla
 	FrealignParameterFile *my_output_par_file = new FrealignParameterFile(filename, OPEN_TO_WRITE);
 
 	cisTEMParameters output_params;
-	output_params.parameters_to_write.SetActiveParameters(POSITION_IN_STACK | IMAGE_IS_ACTIVE | PSI | THETA | PHI | X_SHIFT | Y_SHIFT | DEFOCUS_1 | DEFOCUS_2 | DEFOCUS_ANGLE | PHASE_SHIFT | OCCUPANCY | LOGP | SIGMA | SCORE | SCORE_CHANGE | PIXEL_SIZE | MICROSCOPE_VOLTAGE | MICROSCOPE_CS | AMPLITUDE_CONTRAST | BEAM_TILT_X | BEAM_TILT_Y | IMAGE_SHIFT_X | IMAGE_SHIFT_Y | STACK_FILENAME | ORIGINAL_IMAGE_FILENAME | REFERENCE_3D_FILENAME | BEST_2D_CLASS | BEAM_TILT_GROUP | PARTICLE_GROUP | PRE_EXPOSURE | TOTAL_EXPOSURE | ASSIGNED_SUBSET);
+	output_params.parameters_to_write.SetActiveParameters(POSITION_IN_STACK | IMAGE_IS_ACTIVE | PSI | THETA | PHI | X_SHIFT | Y_SHIFT | DEFOCUS_1 | DEFOCUS_2 | DEFOCUS_ANGLE | PHASE_SHIFT | OCCUPANCY | LOGP | SIGMA | SCORE | PIXEL_SIZE | MICROSCOPE_VOLTAGE | MICROSCOPE_CS | AMPLITUDE_CONTRAST | BEAM_TILT_X | BEAM_TILT_Y | IMAGE_SHIFT_X | IMAGE_SHIFT_Y | ASSIGNED_SUBSET);
+
 	output_params.PreallocateMemoryAndBlank(number_of_particles);
 
 	for ( particle_counter = 0; particle_counter < number_of_particles; particle_counter++)
@@ -763,5 +764,22 @@ void Refinement::SetAllAmplitudeContrast(float wanted_amplitude_contrast)
 		}
 	}
 
+}
+
+void Refinement::SetAssignedSubsetToEvenOdd()
+{
+	int class_counter;
+	int particle_counter;
+
+
+	for (class_counter = 0; class_counter < this->number_of_classes; class_counter++)
+	{
+		for (particle_counter = 0; particle_counter < this->number_of_particles; particle_counter++)
+		{
+			if (IsEven(particle_counter) == true) this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].assigned_subset = 1;
+			else
+			this->class_refinement_results[class_counter].particle_refinement_results[particle_counter].assigned_subset = 2;
+		}
+	}
 }
 

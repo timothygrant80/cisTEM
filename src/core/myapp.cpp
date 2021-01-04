@@ -45,6 +45,7 @@ bool MyApp::OnInit()
 
 	inter_thread_message_queue.Post(0);
 
+	ActivateMKLDebugForNonIntelCPU(); // if not Intel CPU and if using the MKL attempt to set an environment variable that can lead to substanstial speedup.
 	ProgramSpecificInit();
 
 	return true;

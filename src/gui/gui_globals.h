@@ -4,6 +4,7 @@ wxDECLARE_EVENT(RETURN_PROCESSED_IMAGE_EVT, ReturnProcessedImageEvent);
 wxDECLARE_EVENT(RETURN_SHARPENING_RESULTS_EVT, ReturnSharpeningResultsEvent);
 wxDECLARE_EVENT(wxEVT_AUTOMASKERTHREAD_COMPLETED, wxThreadEvent);
 wxDECLARE_EVENT(wxEVT_MULTIPLY3DMASKTHREAD_COMPLETED, wxThreadEvent);
+wxDECLARE_EVENT(wxEVT_WRITECLASSIFICATIONSTARFILETHREAD_COMPLETED, wxThreadEvent);
 
 class ReturnProcessedImageEvent: public wxCommandEvent
 {
@@ -160,6 +161,26 @@ class Multiply3DMaskerThread : public wxThread
 	float low_pass_filter_radius;
 	float pixel_size;
 
+    virtual ExitCode Entry();
+};
+
+class WriteClassificationStarFileThread : public wxThread
+{
+	public:
+	WriteClassificationStarFileThread(wxWindow *parent, wxString wanted_base_filename, Classification *wanted_classification, RefinementPackage *wanted_active_refinement_package) : wxThread(wxTHREAD_DETACHED)
+	{
+		main_thread_pointer = parent;
+		current_classification = wanted_classification;
+		active_refinement_package = wanted_active_refinement_package;
+		base_filename = wanted_base_filename;
+	}
+
+	protected:
+
+	Classification *current_classification;
+	RefinementPackage *active_refinement_package;
+	wxWindow *main_thread_pointer;
+	wxString base_filename;
     virtual ExitCode Entry();
 };
 

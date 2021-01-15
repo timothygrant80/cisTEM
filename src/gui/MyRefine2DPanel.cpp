@@ -28,6 +28,8 @@ Refine2DPanel( parent )
 	RefinementPackageComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MyRefine2DPanel::OnRefinementPackageComboBox, this);
 	InputParametersComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MyRefine2DPanel::OnInputParametersComboBox, this);
 
+	Bind(wxEVT_WRITECLASSIFICATIONSTARFILETHREAD_COMPLETED, &MyRefine2DPanel::OnStarFileWriteThreadComplete, this);
+
 	input_params_combo_is_dirty = false;
 }
 
@@ -569,6 +571,19 @@ void MyRefine2DPanel::OnInfoURL(wxTextUrlEvent& event)
 	 wxLaunchDefaultBrowser(my_style.GetURL());
 }
 
+void MyRefine2DPanel::OnStarFileWriteThreadComplete( wxThreadEvent& event )
+{
+	if (my_classification_manager.running_job_type == STARTUP)
+	{
+		my_classification_manager.RunInitialStartJobPostStarFileWrite(event.GetString());
+	}
+	else
+	if (my_classification_manager.running_job_type == REFINEMENT)
+	{
+		my_classification_manager.RunRefinementJobPostStarFileWrite(event.GetString());
+	}
+}
+
 void MyRefine2DPanel::StartClassificationClick( wxCommandEvent& event )
 {
 	stopwatch.Start();
@@ -641,7 +656,7 @@ void MyRefine2DPanel::ResetAllDefaultsClick( wxCommandEvent& event )
 void MyRefine2DPanel::TerminateButtonClick( wxCommandEvent& event )
 {
 	main_frame->job_controller.KillJob(my_job_id);
-
+	my_classification_manager.running_job_type = NOJOB;
 	WriteBlueText("Terminated Job");
 	TimeRemainingText->SetLabel("Time Remaining : Terminated");
 	CancelAlignmentButton->Show(false);
@@ -766,9 +781,46 @@ void ClassificationManager::BeginRefinementCycle()
 
 }
 
+
+// This now just changes gui launches a thread to write the star file, this is to stop gui lockups.
+// After the thread finishes, RunInitialStartJobbPostStarFileWrite will be called.
+
 void ClassificationManager::RunInitialStartJob()
 {
 	running_job_type = STARTUP;
+	my_parent->current_job_package.Reset(active_run_profile, "refine2d", 1);
+
+	my_parent->WriteBlueText("Creating Initial References...");
+	my_parent->WriteBlueText("Preparing Data Files...\n");
+
+	my_parent->StartPanel->Show(false);
+	my_parent->ProgressPanel->Show(true);
+
+	my_parent->ExpertPanel->Show(false);
+	my_parent->InfoPanel->Show(false);
+	my_parent->InputParamsPanel->Show(false);
+	my_parent->OutputTextPanel->Show(true);
+
+	my_parent->ExpertToggleButton->Enable(false);
+	my_parent->RefinementPackageComboBox->Enable(false);
+	my_parent->InputParametersComboBox->Enable(false);
+
+	my_parent->SetNumberConnectedTextToZeroAndStartTracking();
+
+	WriteClassificationStarFileThread *star_file_writer_thread;
+	star_file_writer_thread = new WriteClassificationStarFileThread(my_parent, main_frame->current_project.parameter_file_directory.GetFullPath() + "/classification_input_star", output_classification, active_refinement_package);
+
+	if ( star_file_writer_thread->Run() != wxTHREAD_NO_ERROR )
+	{
+		my_parent->WriteErrorText("Error: Cannot start star file writer thread, things are going to break...");
+		delete star_file_writer_thread;
+	}
+}
+
+
+
+void ClassificationManager::RunInitialStartJobPostStarFileWrite(wxString input_star_file)
+{
 	number_of_received_particle_results = 0;
 
 	output_classification->classification_id = main_frame->current_project.database.ReturnHighestClassificationID() + 1;
@@ -811,9 +863,6 @@ void ClassificationManager::RunInitialStartJob()
 		output_classification->classification_results[counter - 1].defocus_angle = active_refinement_package->ReturnParticleInfoByPositionInStack( counter ).defocus_angle;
 		output_classification->classification_results[counter - 1].phase_shift = active_refinement_package->ReturnParticleInfoByPositionInStack( counter ).phase_shift;
 	}
-
-	wxString input_star_file = output_classification->WritecisTEMStarFile(main_frame->current_project.parameter_file_directory.GetFullPath() + "/classification_input_star", active_refinement_package);
-	my_parent->current_job_package.Reset(active_run_profile, "refine2d", 1);
 
 	wxString input_particle_images =  active_refinement_package->stack_filename;
 	wxString input_class_averages = "/dev/null";
@@ -868,34 +917,48 @@ void ClassificationManager::RunInitialStartJob()
 																	auto_centre,
 																	max_threads);
 
-	my_parent->WriteBlueText("Creating Initial References...");
 	current_job_id = main_frame->job_controller.AddJob(my_parent, active_run_profile.manager_command, active_run_profile.gui_address);
 	my_parent->my_job_id = current_job_id;
-
-	if (current_job_id != -1)
-	{
-		my_parent->StartPanel->Show(false);
-		my_parent->ProgressPanel->Show(true);
-
-		my_parent->ExpertPanel->Show(false);
-		my_parent->InfoPanel->Show(false);
-		my_parent->InputParamsPanel->Show(false);
-		my_parent->OutputTextPanel->Show(true);
-		//my_parent->PlotPanel->Show(true);
- 		//my_parent->AngularPlotPanel->Show(true);
-
-		my_parent->ExpertToggleButton->Enable(false);
-		my_parent->RefinementPackageComboBox->Enable(false);
-		my_parent->InputParametersComboBox->Enable(false);
-
-		my_parent->SetNumberConnectedTextToZeroAndStartTracking();
-	}
 
 	my_parent->ProgressBar->Pulse();
 
 }
 
+// This now just changes gui anlaunches a thread to write the star file, this is to stop gui lockups.
+// After the thread finishes, RunRefinementJobPostStarFileWrite will be called.
+
 void ClassificationManager::RunRefinementJob()
+{
+	running_job_type = REFINEMENT;
+	my_parent->current_job_package.Reset(active_run_profile, "refine2d", std::min(long(active_run_profile.ReturnTotalJobs()), input_classification->number_of_particles));
+	my_parent->WriteBlueText(wxString::Format("Running refinement round %2i of %2i \n", number_of_rounds_run + 1, number_of_rounds_to_run));
+	my_parent->WriteBlueText("Preparing Data Files...\n");
+
+	my_parent->StartPanel->Show(false);
+	my_parent->ProgressPanel->Show(true);
+	my_parent->ExpertPanel->Show(false);
+	my_parent->InfoPanel->Show(false);
+	my_parent->InputParamsPanel->Show(false);
+	my_parent->OutputTextPanel->Show(true);
+	my_parent->ResultDisplayPanel->Show(true);
+
+	my_parent->ExpertToggleButton->Enable(false);
+	my_parent->RefinementPackageComboBox->Enable(false);
+	my_parent->InputParametersComboBox->Enable(false);
+
+	my_parent->SetNumberConnectedTextToZeroAndStartTracking();
+
+	WriteClassificationStarFileThread *star_file_writer_thread;
+	star_file_writer_thread = new WriteClassificationStarFileThread(my_parent, main_frame->current_project.parameter_file_directory.GetFullPath() + "/classification_input_star", input_classification, active_refinement_package);
+
+	if ( star_file_writer_thread->Run() != wxTHREAD_NO_ERROR )
+	{
+		my_parent->WriteErrorText("Error: Cannot start star file writer thread, things are going to break...");
+		delete star_file_writer_thread;
+	}
+}
+
+void ClassificationManager::RunRefinementJobPostStarFileWrite(wxString input_star_file)
 {
 	long number_of_refinement_jobs;
 	int number_of_refinement_processes;
@@ -905,7 +968,6 @@ void ClassificationManager::RunRefinementJob()
 	long first_particle;
 	long last_particle;
 
-	running_job_type = REFINEMENT;
 	number_of_received_particle_results = 0;
 
 	output_classification->classification_id = main_frame->current_project.database.ReturnHighestClassificationID() + 1;
@@ -1026,13 +1088,9 @@ void ClassificationManager::RunRefinementJob()
 		output_classification->classification_results[counter].position_in_stack = counter + 1;
 	}
 
-	wxString input_star_file = input_classification->WritecisTEMStarFile(main_frame->current_project.parameter_file_directory.GetFullPath() + "/classification_input_star", active_refinement_package);
-
 	number_of_particles = output_classification->number_of_particles;
 	number_of_refinement_processes = std::min(long(active_run_profile.ReturnTotalJobs()),number_of_particles);
 	number_of_refinement_jobs = number_of_refinement_processes;
-
-	my_parent->current_job_package.Reset(active_run_profile, "refine2d", number_of_refinement_processes);
 
 	for (job_counter = 0; job_counter < number_of_refinement_jobs; job_counter++)
 	{
@@ -1095,7 +1153,6 @@ void ClassificationManager::RunRefinementJob()
 																		max_threads);
 	}
 
-	my_parent->WriteBlueText(wxString::Format("Running refinement round %2i of %2i \n", number_of_rounds_run + 1, number_of_rounds_to_run));
 	my_parent->WriteInfoText(wxString::Format("High resolution limit: %.1f A",output_classification->high_resolution_limit));
 	if (my_parent->AutoPercentUsedRadioYes->GetValue() == true)
 	{
@@ -1103,28 +1160,9 @@ void ClassificationManager::RunRefinementJob()
 
 	}
 
+
 	current_job_id = main_frame->job_controller.AddJob(my_parent, active_run_profile.manager_command, active_run_profile.gui_address);
 	my_parent->my_job_id = current_job_id;
-
-	if (current_job_id != -1)
-	{
-		my_parent->StartPanel->Show(false);
-		my_parent->ProgressPanel->Show(true);
-
-		my_parent->ExpertPanel->Show(false);
-		my_parent->InfoPanel->Show(false);
-		my_parent->InputParamsPanel->Show(false);
-		my_parent->OutputTextPanel->Show(true);
-		//y_parent->PlotPanel->Show(true);
-	 	//my_parent->AngularPlotPanel->Show(true);
-		my_parent->ResultDisplayPanel->Show(true);
-
-		my_parent->ExpertToggleButton->Enable(false);
-		my_parent->RefinementPackageComboBox->Enable(false);
-		my_parent->InputParametersComboBox->Enable(false);
-
-		my_parent->SetNumberConnectedTextToZeroAndStartTracking();
-	}
 	my_parent->ProgressBar->Pulse();
 
 }
@@ -1425,6 +1463,8 @@ void ClassificationManager::CycleRefinement()
 		{
 			delete input_classification;
 			delete output_classification;
+
+			running_job_type = NOJOB;
 			my_parent->WriteBlueText("All refinement cycles are finished!");
 			my_parent->CancelAlignmentButton->Show(false);
 			global_delete_refine2d_scratch();

@@ -437,7 +437,12 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first
 	cisTEM_star_filename.SetExt("star"); 
 	long particle_counter;
 
-	wxTextFile *cisTEM_star_file = new wxTextFile(cisTEM_star_filename.GetFullPath());
+	FILE * cisTEM_star_file = fopen( cisTEM_star_filename.GetFullPath().ToStdString().c_str(), "w" );
+	char *output_buffer = new char[50000];
+
+	// set to a large buffer size (~50MB) full buffered..
+
+	setvbuf ( cisTEM_star_file, output_buffer, _IOFBF, 50000 );
 
 	if (first_line_to_write == -1) first_line_to_write = 0;
 	else
@@ -447,231 +452,222 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first
 	else
 	if (last_line_to_write < 0 || last_line_to_write >= all_parameters.GetCount()) last_line_to_write = all_parameters.GetCount() - 1;
 
-	if (cisTEM_star_file->Exists())
-	{
-		cisTEM_star_file->Open();
-		cisTEM_star_file->Clear();
-	}
-	else
-	{
-		cisTEM_star_file->Create();
-	}
-
-	cisTEM_star_file->AddLine(wxString::Format("# Written by cisTEM Version %s on %s", CISTEM_VERSION_TEXT, wxDateTime::Now().FormatISOCombined(' ')));
+	fprintf(cisTEM_star_file, "# Written by cisTEM Version %s on %s", CISTEM_VERSION_TEXT, wxDateTime::Now().FormatISOCombined(' ').ToStdString().c_str());
 
 	for (int counter = 0; counter < header_comments.GetCount(); counter++)
 	{
-		cisTEM_star_file->AddLine(header_comments[counter]);
+		header_comments[counter] += "\n";
+		fprintf(cisTEM_star_file, "%s", header_comments[counter].ToStdString().c_str());
 	}
+
 	if (first_image_to_write == -1) first_image_to_write = 1;
 	if (last_image_to_write == -1) last_image_to_write = INT_MAX;
 
 	int column_counter = 1;
 
 	// Write headers
-	cisTEM_star_file->AddLine(wxString(" "));
-	cisTEM_star_file->AddLine(wxString("data_"));
-	cisTEM_star_file->AddLine(wxString(" "));
-	cisTEM_star_file->AddLine(wxString("loop_"));
+	fprintf(cisTEM_star_file, " \ndata_\n \nloop_\n");
+
 
 	// write headers depending on parameter mask...
 
 	if (parameters_to_write.position_in_stack == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMPositionInStack #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMPositionInStack #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.psi == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMAnglePsi #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMAnglePsi #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.theta == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMAngleTheta #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMAngleTheta #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.phi == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMAnglePhi #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMAnglePhi #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.x_shift == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMXShift #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMXShift #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.y_shift == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMYShift #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMYShift #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.defocus_1 == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMDefocus1 #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMDefocus1 #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.defocus_2 == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMDefocus2 #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMDefocus2 #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.defocus_angle == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMDefocusAngle #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMDefocusAngle #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.phase_shift == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMPhaseShift #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMPhaseShift #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.image_is_active == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMImageActivity #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMImageActivity #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.occupancy == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMOccupancy #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMOccupancy #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.logp == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMLogP #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMLogP #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.sigma == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMSigma #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMSigma #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.score == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMScore #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMScore #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.score_change == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMScoreChange #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMScoreChange #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.pixel_size == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMPixelSize #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMPixelSize #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.microscope_voltage_kv == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMMicroscopeVoltagekV #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMMicroscopeVoltagekV #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.microscope_spherical_aberration_mm == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMMicroscopeCsMM #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMMicroscopeCsMM #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.amplitude_contrast == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMAmplitudeContrast #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMAmplitudeContrast #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.beam_tilt_x == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMBeamTiltX #%i", column_counter));
+
+		fprintf(cisTEM_star_file, "_cisTEMBeamTiltX #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.beam_tilt_y == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMBeamTiltY #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMBeamTiltY #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.image_shift_x == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMImageShiftX #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMImageShiftX #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.image_shift_y == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMImageShiftY #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMImageShiftY #%i\n", column_counter);
 		column_counter++;
 	}
 
 
 	if (parameters_to_write.best_2d_class == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMBest2DClass #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMBest2DClass #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.beam_tilt_group == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMBeamTiltGroup #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMBeamTiltGroup #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.stack_filename == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMStackFilename #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMStackFilename #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.original_image_filename == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMOriginalImageFilename #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMOriginalImageFilename #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.reference_3d_filename == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMReference3DFilename #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMReference3DFilename #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.particle_group == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMParticleGroup #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMParticleGroup #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.assigned_subset == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMAssignedSubset #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMAssignedSubset #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.pre_exposure == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMPreExposure #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMPreExposure #%i\n", column_counter);
 		column_counter++;
 	}
 
 	if (parameters_to_write.total_exposure == true)
 	{
-		cisTEM_star_file->AddLine(wxString::Format("_cisTEMTotalExposure #%i", column_counter));
+		fprintf(cisTEM_star_file, "_cisTEMTotalExposure #%i\n", column_counter);
 		column_counter++;
 	}
 
@@ -713,14 +709,12 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first
 	if (parameters_to_write.pre_exposure == true) 						data_line += " PREEXP ";
 	if (parameters_to_write.total_exposure == true) 					data_line += " TOTEXP ";
 
+	data_line += "\n";
 	data_line[0] = '#';
-	cisTEM_star_file->AddLine(data_line);
 
-
+	fprintf(cisTEM_star_file, "%s", data_line.ToStdString().c_str());
 
 	// write the data..
-
-
 
 	for (particle_counter = first_line_to_write; particle_counter <= last_line_to_write; particle_counter ++ )
 	{
@@ -761,16 +755,14 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first
 		if (parameters_to_write.pre_exposure == true) data_line += wxString::Format("%7.2f ", all_parameters[particle_counter].pre_exposure);
 		if (parameters_to_write.total_exposure == true) data_line += wxString::Format("%7.2f ", all_parameters[particle_counter].total_exposure);
 
+		data_line += "\n";
 
-		cisTEM_star_file->AddLine(data_line);
+		fprintf(cisTEM_star_file, "%s", data_line.ToStdString().c_str());
 
 	}
 
-	cisTEM_star_file->Write();
-	cisTEM_star_file->Close();
-
-	delete  cisTEM_star_file;
-
+	fclose(cisTEM_star_file);
+	delete [] output_buffer;
 }
 
 cisTEMParameterLine cisTEMParameters::ReturnParameterAverages(bool only_average_active)

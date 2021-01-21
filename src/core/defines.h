@@ -7,8 +7,23 @@
 #define PIf 3.14159265359f
 #define PISQ 9.869604401089
 #define PISQf 9.869604401089f
+
 #define SOCKET_FLAGS wxSOCKET_WAITALL | wxSOCKET_BLOCK
 //#define SOCKET_FLAGS wxSOCKET_WAITALL
+
+// data types.. (moved from job_packager.h)
+
+#define NONE        	 0
+#define TEXT			 1
+#define INTEGER			 2
+#define FLOAT			 3
+#define BOOL	 	 	 4
+#define LONG        	 5
+#define DOUBLE      	 6
+#define CHAR			 7
+#define VARIABLE_LENGTH  8
+#define UNSIGNED_INTEGER 9
+
 
 // From Table 2.2 DeGraff
 #define RELATIVISTIC_VOLTAGE_100 109784.0f // Volts

@@ -52,6 +52,7 @@ MyTestApp : public wxAppConsole
 		void TestNumericTextFiles();
 		void TestClipIntoFourier();
 		void TestMaskCentralCross();
+		void TestStarToBinaryFileConversion();
 
 		void BeginTest(const char *test_name);
 		void EndTest();
@@ -92,6 +93,7 @@ bool MyTestApp::OnInit()
 	TestNumericTextFiles();
 	TestClipIntoFourier();
 	TestMaskCentralCross();
+	TestStarToBinaryFileConversion();
 
 
 	wxPrintf("\n\n\n");
@@ -304,6 +306,86 @@ void MyTestApp::TestClipIntoFourier()
 
 
 
+
+	EndTest();
+}
+
+void MyTestApp::TestStarToBinaryFileConversion()
+{
+	BeginTest("Star File To Binary Conversion");
+	// generate set of 10k random parameters
+
+	cisTEMParameters test_parameters;
+	cisTEMParameterLine temp_line;
+
+	for (int counter = 0; counter <1000; counter++)
+	{
+		temp_line.amplitude_contrast = global_random_number_generator.GetUniformRandom() * 1;
+		temp_line.assigned_subset  = myroundint(global_random_number_generator.GetUniformRandom() * 10);
+		temp_line.beam_tilt_group = myroundint(global_random_number_generator.GetUniformRandom() * 10);
+		temp_line.beam_tilt_x = global_random_number_generator.GetUniformRandom() * 10;
+		temp_line.beam_tilt_y = global_random_number_generator.GetUniformRandom() * 10;
+		temp_line.best_2d_class = myroundint(global_random_number_generator.GetUniformRandom() * 100);
+		temp_line.defocus_1 = global_random_number_generator.GetUniformRandom() * 30000;
+		temp_line.defocus_2 = global_random_number_generator.GetUniformRandom() * 30000;
+		temp_line.defocus_angle = global_random_number_generator.GetUniformRandom() * 180;
+		temp_line.image_is_active = myroundint(global_random_number_generator.GetUniformRandom() * 1);
+		temp_line.image_shift_x = global_random_number_generator.GetUniformRandom() * 10;
+		temp_line.image_shift_y = global_random_number_generator.GetUniformRandom() * 10;
+		temp_line.logp = global_random_number_generator.GetUniformRandom() * 10000;
+		temp_line.microscope_spherical_aberration_mm = global_random_number_generator.GetUniformRandom() * 2.7;
+		temp_line.microscope_voltage_kv = global_random_number_generator.GetUniformRandom() * 300;
+		temp_line.occupancy = global_random_number_generator.GetUniformRandom() * 100;
+		temp_line.original_image_filename = wxString::Format("This_is_an_original_filename_string_with_a_random_number_:_%f", global_random_number_generator.GetUniformRandom() * 100000);
+		temp_line.particle_group =  myroundint(global_random_number_generator.GetUniformRandom() * 10);
+		temp_line.phase_shift = global_random_number_generator.GetUniformRandom() * 3.14;
+		temp_line.phi = global_random_number_generator.GetUniformRandom() * 180;
+		temp_line.pixel_size = global_random_number_generator.GetUniformRandom() * 2;
+		temp_line.position_in_stack = counter + 1;
+		temp_line.pre_exposure = global_random_number_generator.GetUniformRandom() * 10;
+		temp_line.psi = global_random_number_generator.GetUniformRandom() * 180;
+		temp_line.reference_3d_filename = wxString::Format("This_is_a_reference_3d_filename_string_with_a_random_number_:_%f", global_random_number_generator.GetUniformRandom() * 100000);
+		temp_line.score = global_random_number_generator.GetUniformRandom() * 100;
+		temp_line.sigma = global_random_number_generator.GetUniformRandom() * 180;
+		temp_line.stack_filename = wxString::Format("This_is_a_stack_filename_string_with_a_random_number_:_%f", global_random_number_generator.GetUniformRandom() * 100000);
+		temp_line.theta = global_random_number_generator.GetUniformRandom() * 180;
+		temp_line.total_exposure = global_random_number_generator.GetUniformRandom() * 100;
+		temp_line.x_shift = global_random_number_generator.GetUniformRandom() * 50;
+		temp_line.y_shift = global_random_number_generator.GetUniformRandom() * 50;
+
+		test_parameters.all_parameters.Add(temp_line);
+
+	}
+
+	temp_directory = wxFileName::GetTempDir();
+
+	// write star and binary file..
+
+	test_parameters.WriteTocisTEMStarFile(temp_directory + "/star_file.star");
+	test_parameters.WriteTocisTEMBinaryFile(temp_directory + "/binary_file.cistem");
+
+	// read in binary file and write out star file..
+
+	test_parameters.ClearAll();
+	test_parameters.ReadFromcisTEMBinaryFile(temp_directory + "/binary_file.cistem");
+	test_parameters.WriteTocisTEMStarFile(temp_directory + "/star_file_converted_from_binary.star");
+
+	// read in star file and write to binary..
+
+	test_parameters.ClearAll();
+	test_parameters.ReadFromcisTEMStarFile(temp_directory + "/star_file.star");
+	test_parameters.WriteTocisTEMBinaryFile(temp_directory + "/binary_file_converted_from_star.cistem");
+
+	// Check the sizes are the same - this isn't a very thorough test, but better than nothing.
+	// It is at least an easy way to get files with all the parameters written out to quickly check by eye
+
+	long original_star_size_in_bytes = ReturnFileSizeInBytes(temp_directory + "/star_file.star");
+	long original_binary_size_in_bytes = ReturnFileSizeInBytes(temp_directory + "/binary_file.cistem");
+	long star_from_binary_size_in_bytes = ReturnFileSizeInBytes(temp_directory + "/star_file_converted_from_binary.star");
+	long binary_from_star_size_in_bytes = ReturnFileSizeInBytes(temp_directory + "/binary_file_converted_from_star.cistem");
+
+	if (original_star_size_in_bytes != star_from_binary_size_in_bytes) FailTest;
+	if (original_binary_size_in_bytes != binary_from_star_size_in_bytes) FailTest;
 
 	EndTest();
 }

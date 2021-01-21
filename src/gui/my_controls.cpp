@@ -1929,9 +1929,7 @@ wxThread::ExitCode Multiply3DMaskerThread::Entry()
 wxThread::ExitCode WriteClassificationStarFileThread::Entry()
 {
 	// write out the star file..
-
-	wxString written_filename = current_classification->WritecisTEMStarFile(base_filename, active_refinement_package);
-
+	wxString written_filename = current_classification->WritecisTEMStarFile(base_filename, active_refinement_package, true);
 	// send finished event..
 
 	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_WRITECLASSIFICATIONSTARFILETHREAD_COMPLETED);

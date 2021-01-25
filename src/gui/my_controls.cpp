@@ -7,6 +7,8 @@ extern Refine2DResultsPanel *refine2d_results_panel;
 
 wxDEFINE_EVENT(wxEVT_AUTOMASKERTHREAD_COMPLETED, wxThreadEvent);
 wxDEFINE_EVENT(wxEVT_MULTIPLY3DMASKTHREAD_COMPLETED, wxThreadEvent);
+wxDEFINE_EVENT(wxEVT_WRITECLASSIFICATIONSTARFILETHREAD_COMPLETED, wxThreadEvent);
+
 
 MemoryComboBox::MemoryComboBox(wxWindow *parent, wxWindowID id, const wxString &value, const wxPoint &pos, const wxSize &size, int n, const wxString choices[], long style, const wxValidator &validator, const wxString &name)
 :
@@ -1922,3 +1924,24 @@ wxThread::ExitCode Multiply3DMaskerThread::Entry()
 
 	return (wxThread::ExitCode)0;     // success
 }
+
+
+wxThread::ExitCode WriteClassificationStarFileThread::Entry()
+{
+	// write out the star file..
+	wxString written_filename = current_classification->WritecisTEMStarFile(base_filename, active_refinement_package, true);
+	// send finished event..
+
+	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_WRITECLASSIFICATIONSTARFILETHREAD_COMPLETED);
+	my_thread_event->SetString(written_filename);
+	wxQueueEvent(main_thread_pointer, my_thread_event);
+
+	return (wxThread::ExitCode)0;     // success
+}
+
+
+
+
+
+
+//wxString input_star_file = input_classification->WritecisTEMStarFile(main_frame->current_project.parameter_file_directory.GetFullPath() + "/classification_input_star", active_refinement_package);

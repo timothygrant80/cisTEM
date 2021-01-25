@@ -104,10 +104,11 @@ void Classification::SizeAndFillWithEmpty(long wanted_number_of_particles)
 	classification_results.Add(junk_result, number_of_particles);
 }
 
-wxString Classification::WritecisTEMStarFile(wxString base_filename, RefinementPackage *parent_refinement_package)
+wxString Classification::WritecisTEMStarFile(wxString base_filename, RefinementPackage *parent_refinement_package, bool write_as_cistem_binary_file)
 {
 	wxString output_filename;
-	output_filename = base_filename + wxString::Format("_%li.star", classification_id);
+	if (write_as_cistem_binary_file == false) output_filename = base_filename + wxString::Format("_%li.star", classification_id);
+	else output_filename = base_filename + wxString::Format("_%li.cistem", classification_id);
 
 	long particle_counter;
 
@@ -140,7 +141,8 @@ wxString Classification::WritecisTEMStarFile(wxString base_filename, RefinementP
 		output_params.all_parameters[particle_counter].image_shift_y = classification_results[particle_counter].image_shift_y;
 	}
 
-	output_params.WriteTocisTEMStarFile(output_filename);
+	if (write_as_cistem_binary_file == false) output_params.WriteTocisTEMStarFile(output_filename);
+	else output_params.WriteTocisTEMBinaryFile(output_filename);
 
 	return output_filename;
 }

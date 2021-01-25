@@ -104,10 +104,9 @@ protected:
     }
 };
 
-
+#include "defines.h"
 #include "cistem_parameters.h"
 #include "cistem_star_file_reader.h"
-#include "defines.h"
 #include "assets.h"
 #include "asset_group.h"
 #include "socket_codes.h"

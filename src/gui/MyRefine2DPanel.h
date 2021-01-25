@@ -59,10 +59,12 @@ public:
 	void BeginRefinementCycle();
 	void CycleRefinement();
 
-	void RunRefinementJob();
+	void RunRefinementJob(); // this now just writes a star file in a thread, after the file is written RunRefinementJobPostStarFileWrite is called.
+	void RunRefinementJobPostStarFileWrite(wxString input_star_file);
 	void SetupMerge2dJob();
 
 	void RunInitialStartJob();
+	void RunInitialStartJobPostStarFileWrite(wxString input_star_file);
 
 	void RunMerge2dJob();
 
@@ -121,6 +123,8 @@ public:
 	void FinishButtonClick( wxCommandEvent& event );
 	void OnRefinementPackageComboBox( wxCommandEvent& event );
 	void OnInputParametersComboBox( wxCommandEvent& event );
+
+	void OnStarFileWriteThreadComplete( wxThreadEvent& event );
 
 	void SetDefaults();
 	void SetInfo();

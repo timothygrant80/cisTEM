@@ -1,8 +1,4 @@
-#define NONE        0
-#define TEXT		1
-#define INTEGER		2
-#define FLOAT		3
-#define BOOL		4
+
 
 // we need a header to describe how to decode the stream. - which i'm about to make up off the top of my head..  SENDER AND RECEIVER MUST HAVE THE SAME ENDIANESS
 

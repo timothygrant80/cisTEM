@@ -1,3 +1,8 @@
+// ADDING A NEW COLUMN
+// ----------------------
+// See top of cistem_parameters.cpp for documentation describing how to add a new column
+
+
 class  cisTEMStarFileReader {
 
 private:
@@ -39,10 +44,131 @@ private:
 	int		pre_exposure_column;
 	int		total_exposure_column;
 
+	long binary_buffer_position;
+
+	// The following "Safely" functions are to read data from the buffer with error checking to make sure there is no segfault
+
+	inline bool SafelyReadFromBinaryBufferIntoInteger(int &integer_to_read_into)
+	{
+		if (binary_buffer_position + sizeof(int) - 1 >= binary_file_size)
+		{
+			MyPrintWithDetails("Error: Binary file is too short");
+			return false;
+		}
+
+		int *temp_int_pointer = reinterpret_cast <int *> (&binary_file_read_buffer[binary_buffer_position]);
+		integer_to_read_into = *temp_int_pointer;
+		binary_buffer_position += sizeof(int);
+		return true;
+	}
+
+	inline bool SafelyReadFromBinaryBufferIntoUnsignedInteger(unsigned int &unsigned_integer_to_read_into)
+	{
+		if (binary_buffer_position + sizeof(unsigned int) - 1 >= binary_file_size)
+		{
+			MyPrintWithDetails("Error: Binary file is too short");
+			return false;
+		}
+
+		unsigned int *temp_int_pointer = reinterpret_cast <unsigned int *> (&binary_file_read_buffer[binary_buffer_position]);
+		unsigned_integer_to_read_into = *temp_int_pointer;
+		binary_buffer_position += sizeof(unsigned int);
+		return true;
+	}
+
+	inline bool SafelyReadFromBinaryBufferIntoFloat(float &float_to_read_into)
+	{
+		if (binary_buffer_position + sizeof(float) - 1 >= binary_file_size)
+		{
+			MyPrintWithDetails("Error: Binary file is too short\n");
+			return false;
+		}
+
+		float *temp_float_pointer = reinterpret_cast <float *> (&binary_file_read_buffer[binary_buffer_position]);
+		float_to_read_into = *temp_float_pointer;
+		binary_buffer_position += sizeof(float);
+		return true;
+	}
+
+	inline bool SafelyReadFromBinaryBufferIntoLong(long &long_to_read_into)
+	{
+		if (binary_buffer_position + sizeof(long) - 1 >= binary_file_size)
+		{
+			MyPrintWithDetails("Error: Binary file is too short\n");
+			return false;
+		}
+
+		long *temp_long_pointer = reinterpret_cast <long *> (&binary_file_read_buffer[binary_buffer_position]);
+		long_to_read_into = *temp_long_pointer;
+		binary_buffer_position += sizeof(long);
+		return true;
+	}
+
+	inline bool SafelyReadFromBinaryBufferIntoChar(char &char_to_read_into)
+	{
+		if (binary_buffer_position + sizeof(char) - 1 >= binary_file_size)
+		{
+			MyPrintWithDetails("Error: Binary file is too short\n");
+			return false;
+		}
+
+		char *temp_long_pointer = &binary_file_read_buffer[binary_buffer_position];
+		char_to_read_into = *temp_long_pointer;
+		binary_buffer_position += sizeof(char);
+		return true;
+	}
+
+	inline bool SafelyReadFromBinaryBufferIntoDouble(double &double_to_read_into)
+	{
+		if (binary_buffer_position + sizeof(double) - 1 >= binary_file_size)
+		{
+			MyPrintWithDetails("Error: Binary file is too short\n");
+			return false;
+		}
+
+		double *temp_double_pointer = reinterpret_cast <double *> (&binary_file_read_buffer[binary_buffer_position]);
+		double_to_read_into = *temp_double_pointer;
+		binary_buffer_position += sizeof(double);
+		return true;
+	}
+
+	inline bool SafelyReadFromBinaryBufferIntowxString(wxString &wxstring_to_read_into)
+	{
+		int length_of_string;
+		if (SafelyReadFromBinaryBufferIntoInteger(length_of_string) == false) return false;
+
+		if (length_of_string < 0)
+		{
+			MyPrintWithDetails("Error Reading string, length is %i", length_of_string);
+		}
+
+		if (binary_buffer_position + length_of_string * sizeof(char) - 1 >= binary_file_size)
+		{
+			MyPrintWithDetails("Error: Binary file is too short\n");
+			return false;
+		}
+
+		char string_buffer[length_of_string + 1];
+
+		for (int array_counter = 0; array_counter < length_of_string; array_counter++)
+		{
+			string_buffer[array_counter] = binary_file_read_buffer[binary_buffer_position + array_counter];
+		}
+
+		string_buffer[length_of_string] = 0;
+		wxstring_to_read_into = string_buffer;
+
+		binary_buffer_position += sizeof(char) * length_of_string;
+		return true;
+	}
+
 public:
 
 	wxString    filename;
-	wxTextFile *input_file;
+	wxTextFile *input_text_file;
+
+	char *binary_file_read_buffer;
+	long binary_file_size;
 
 	bool using_external_array;
 
@@ -54,9 +180,11 @@ public:
 
 	cisTEMStarFileReader(wxString wanted_filename, ArrayOfcisTEMParameterLines *alternate_cached_parameters_pointer = NULL, bool exclude_negative_film_numbers = false);
 
-	void Open(wxString wanted_filename, ArrayOfcisTEMParameterLines *alternate_cached_parameters_pointer = NULL);
+	void Open(wxString wanted_filename, ArrayOfcisTEMParameterLines *alternate_cached_parameters_pointer = NULL, bool read_as_binary = false);
 	void Close();
-	bool ReadFile(wxString wanted_filename, wxString *error_string = NULL, ArrayOfcisTEMParameterLines *alternate_cached_parameters_pointer = NULL, bool exclude_negative_film_numbers = false);
+	bool ReadTextFile(wxString wanted_filename, wxString *error_string = NULL, ArrayOfcisTEMParameterLines *alternate_cached_parameters_pointer = NULL, bool exclude_negative_film_numbers = false);
+	bool ReadBinaryFile(wxString wanted_filename, ArrayOfcisTEMParameterLines *alternate_cached_parameters_pointer = NULL, bool exclude_negative_film_numbers = false);
+
 
 	bool ExtractParametersFromLine(wxString &wanted_line, wxString *error_string = NULL, bool exclude_negative_film_numbers = false);
 	void Reset();

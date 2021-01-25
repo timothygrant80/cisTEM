@@ -357,35 +357,65 @@ void MyTestApp::TestStarToBinaryFileConversion()
 
 	}
 
+	test_parameters.parameters_to_write.SetAllToTrue();
+
 	temp_directory = wxFileName::GetTempDir();
 
 	// write star and binary file..
 
-	test_parameters.WriteTocisTEMStarFile(temp_directory + "/star_file.star");
-	test_parameters.WriteTocisTEMBinaryFile(temp_directory + "/binary_file.cistem");
+	wxString original_star_filename = temp_directory + "/star_file.star";
+	wxString original_binary_filename = temp_directory + "/binary_file.cistem";
+	wxString star_from_binary_filename = temp_directory + "/star_file_converted_from_binary.star";
+	wxString binary_from_star_filename = temp_directory + "/binary_file_converted_from_star.cistem";
+
+
+	test_parameters.WriteTocisTEMStarFile(original_star_filename.ToStdString().c_str());
+	test_parameters.WriteTocisTEMBinaryFile(original_binary_filename.ToStdString().c_str());
+
 
 	// read in binary file and write out star file..
 
 	test_parameters.ClearAll();
-	test_parameters.ReadFromcisTEMBinaryFile(temp_directory + "/binary_file.cistem");
-	test_parameters.WriteTocisTEMStarFile(temp_directory + "/star_file_converted_from_binary.star");
+	test_parameters.ReadFromcisTEMBinaryFile(original_binary_filename.ToStdString().c_str());
+	test_parameters.WriteTocisTEMStarFile(star_from_binary_filename.ToStdString().c_str());
 
 	// read in star file and write to binary..
 
 	test_parameters.ClearAll();
-	test_parameters.ReadFromcisTEMStarFile(temp_directory + "/star_file.star");
-	test_parameters.WriteTocisTEMBinaryFile(temp_directory + "/binary_file_converted_from_star.cistem");
+	test_parameters.ReadFromcisTEMStarFile(original_star_filename.ToStdString().c_str());
+	test_parameters.WriteTocisTEMBinaryFile(binary_from_star_filename.ToStdString().c_str());
 
 	// Check the sizes are the same - this isn't a very thorough test, but better than nothing.
 	// It is at least an easy way to get files with all the parameters written out to quickly check by eye
 
-	long original_star_size_in_bytes = ReturnFileSizeInBytes(temp_directory + "/star_file.star");
-	long original_binary_size_in_bytes = ReturnFileSizeInBytes(temp_directory + "/binary_file.cistem");
-	long star_from_binary_size_in_bytes = ReturnFileSizeInBytes(temp_directory + "/star_file_converted_from_binary.star");
-	long binary_from_star_size_in_bytes = ReturnFileSizeInBytes(temp_directory + "/binary_file_converted_from_star.cistem");
+	long original_star_size_in_bytes = ReturnFileSizeInBytes(original_star_filename.ToStdString().c_str());
+	long original_binary_size_in_bytes = ReturnFileSizeInBytes(original_binary_filename.ToStdString().c_str());
+	long star_from_binary_size_in_bytes = ReturnFileSizeInBytes(star_from_binary_filename.ToStdString().c_str());
+	long binary_from_star_size_in_bytes = ReturnFileSizeInBytes(binary_from_star_filename.ToStdString().c_str());
 
 	if (original_star_size_in_bytes != star_from_binary_size_in_bytes) FailTest;
 	if (original_binary_size_in_bytes != binary_from_star_size_in_bytes) FailTest;
+
+	// Check the star files are byte identical (apart from bytes in the text file which represent the write time)..
+	// the binary files are not expected to be byte identical as there is a change in precision after being written out to star file.
+
+	char original_star_file[original_star_size_in_bytes];
+	char star_file_from_binary_file[star_from_binary_size_in_bytes];
+
+	FILE *current_file;
+
+	current_file = fopen(original_star_filename.ToStdString().c_str(), "rb");
+	fread(original_star_file, 1, original_star_size_in_bytes, current_file);
+	fclose(current_file);
+
+	current_file = fopen(star_from_binary_filename.ToStdString().c_str(), "rb");
+	fread(star_file_from_binary_file, 1, star_from_binary_size_in_bytes, current_file);
+	fclose(current_file);
+
+	for (long byte_counter = 63; byte_counter < original_star_size_in_bytes; byte_counter++) // start at byte 63, the before that is a comment which includes the time written
+	{
+		if (original_star_file[byte_counter] != star_file_from_binary_file[byte_counter]) FailTest;
+	}
 
 	EndTest();
 }

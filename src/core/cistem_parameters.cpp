@@ -543,308 +543,6 @@ void cisTEMParameters::ReadFromcisTEMBinaryFile(wxString wanted_filename, bool e
 	parameters_that_were_read = star_reader.parameters_that_were_read;
 }
 
-
-/*
-void cisTEMParameters::ReadFromcisTEMStarFile(wxString wanted_filename, bool exclude_negative_film_numbers)
-{
-	cisTEMParameterLine temp_line;
-	all_parameters.Clear();
-
-	wxFileName cisTEM_bin_filename = wanted_filename;
-
-	FILE * cisTEM_bin_file = fopen( cisTEM_bin_filename.GetFullPath().ToStdString().c_str(), "rb" );
-
-	// read the whole file into memory
-	long file_size_in_bytes;
-	fseek(cisTEM_bin_file, 0, SEEK_END);
-	file_size_in_bytes = ftell(cisTEM_bin_file);
-	fseek(cisTEM_bin_file, 0, SEEK_SET);
-
-	char *data_buffer = new char [file_size_in_bytes];
-	fread(data_buffer, 1, file_size_in_bytes, cisTEM_bin_file);
-
-	fclose(cisTEM_bin_file);
-
-	// decode it..
-
-	long max_byte_position = sizeof(int); // we will use this to check we don't run out of array
-
-	int *number_of_columns = reinterpret_cast <int> (data_buffer);
-	long *bitmask_identifier = reinterpret_cast <long> (data_buffer + sizeof(int));
-
-	for (int current_column = 0; current_column < number_of_columns[0]; current_column++)
-	{
-		if (max_byte_position + sizeof(long) > file_size_in_bytes - 1)
-		{
-			wxPrintf("Error Reading Binary parameter file!");
-			DEBUG_ABORT;
-		}
-
-
-	}
-
-
-		int number_of_columns = ReturnNumberOfParametersToWrite();
-		fwrite ( &number_of_columns, sizeof(int), 1, cisTEM_bin_file );
-
-		// write an identifier for each column based on bit mask values above..
-
-		long bitmask_identifier;
-
-		if (first_image_to_write == -1) first_image_to_write = 1;
-		if (last_image_to_write == -1) last_image_to_write = INT_MAX;
-
-		if (parameters_to_write.position_in_stack == true)
-		{
-			bitmask_identifier = POSITION_IN_STACK;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.psi == true)
-		{
-			bitmask_identifier = PSI;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.theta == true)
-		{
-			bitmask_identifier = THETA;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.phi == true)
-		{
-			bitmask_identifier = PHI;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.x_shift == true)
-		{
-			bitmask_identifier = X_SHIFT;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.y_shift == true)
-		{
-			bitmask_identifier = Y_SHIFT;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.defocus_1 == true)
-		{
-			bitmask_identifier = DEFOCUS_1;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.defocus_2 == true)
-		{
-			bitmask_identifier = DEFOCUS_2;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.defocus_angle == true)
-		{
-			bitmask_identifier = DEFOCUS_ANGLE;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.phase_shift == true)
-		{
-			bitmask_identifier = PHASE_SHIFT;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.image_is_active == true)
-		{
-			bitmask_identifier = IMAGE_IS_ACTIVE;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.occupancy == true)
-		{
-			bitmask_identifier = OCCUPANCY;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.logp == true)
-		{
-			bitmask_identifier = LOGP;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.sigma == true)
-		{
-			bitmask_identifier = SIGMA;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.score == true)
-		{
-			bitmask_identifier = SCORE;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.score_change == true)
-		{
-			bitmask_identifier = SCORE;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.pixel_size == true)
-		{
-			bitmask_identifier = PIXEL_SIZE;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.microscope_voltage_kv == true)
-		{
-			bitmask_identifier = MICROSCOPE_VOLTAGE;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.microscope_spherical_aberration_mm == true)
-		{
-			bitmask_identifier = MICROSCOPE_CS;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.amplitude_contrast == true)
-		{
-			bitmask_identifier = AMPLITUDE_CONTRAST;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.beam_tilt_x == true)
-		{
-			bitmask_identifier = BEAM_TILT_X;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.beam_tilt_y == true)
-		{
-			bitmask_identifier = BEAM_TILT_Y;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.image_shift_x == true)
-		{
-			bitmask_identifier = IMAGE_SHIFT_X;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.image_shift_y == true)
-		{
-			bitmask_identifier = IMAGE_SHIFT_Y;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-
-		if (parameters_to_write.best_2d_class == true)
-		{
-			bitmask_identifier = BEST_2D_CLASS;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.beam_tilt_group == true)
-		{
-			bitmask_identifier = BEAM_TILT_GROUP;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.stack_filename == true)
-		{
-			bitmask_identifier = STACK_FILENAME;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.original_image_filename == true)
-		{
-			bitmask_identifier = ORIGINAL_IMAGE_FILENAME;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.reference_3d_filename == true)
-		{
-			bitmask_identifier = REFERENCE_3D_FILENAME;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.particle_group == true)
-		{
-			bitmask_identifier = PARTICLE_GROUP;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.assigned_subset == true)
-		{
-			bitmask_identifier = ASSIGNED_SUBSET;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.pre_exposure == true)
-		{
-			bitmask_identifier = PRE_EXPOSURE;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		if (parameters_to_write.total_exposure == true)
-		{
-			bitmask_identifier = TOTAL_EXPOSURE;
-			fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		}
-
-		// now write the data..
-
-		for (int particle_counter = 0; particle_counter < all_parameters.GetCount(); particle_counter ++ )
-		{
-			if (all_parameters[particle_counter].position_in_stack < first_image_to_write || all_parameters[particle_counter].position_in_stack > last_image_to_write) continue;
-
-			if (parameters_to_write.position_in_stack == true) 	fwrite ( &all_parameters[particle_counter].position_in_stack, sizeof(int), 1, cisTEM_bin_file );
-			if (parameters_to_write.psi == true) 	fwrite ( &all_parameters[particle_counter].psi, sizeof(float), 1, cisTEM_bin_file );
-			if (parameters_to_write.theta == true) 	fwrite ( &all_parameters[particle_counter].theta, sizeof(float), 1, cisTEM_bin_file );
-			if (parameters_to_write.phi == true) 	fwrite ( &all_parameters[particle_counter].phi, sizeof(float), 1, cisTEM_bin_file );
-			if (parameters_to_write.x_shift == true) 	fwrite ( &all_parameters[particle_counter].x_shift, sizeof(float), 1, cisTEM_bin_file );
-			if (parameters_to_write.y_shift == true) 	fwrite ( &all_parameters[particle_counter].y_shift, sizeof(float), 1, cisTEM_bin_file );
-			if (parameters_to_write.defocus_1 == true) 	fwrite ( &all_parameters[particle_counter].defocus_1, sizeof(float), 1, cisTEM_bin_file );
-			if (parameters_to_write.defocus_2 == true) 	fwrite ( &all_parameters[particle_counter].defocus_2, sizeof(float), 1, cisTEM_bin_file );
-			if (parameters_to_write.defocus_angle == true)  	fwrite ( &all_parameters[particle_counter].defocus_angle, sizeof(float), 1, cisTEM_bin_file );
-			if (parameters_to_write.phase_shift == true) 	fwrite ( &all_parameters[particle_counter].phase_shift, sizeof(float), 1, cisTEM_bin_file );
-			if (parameters_to_write.image_is_active == true) 	fwrite ( &all_parameters[particle_counter].image_is_active, sizeof(int), 1, cisTEM_bin_file );
-			if (parameters_to_write.occupancy == true) 	fwrite ( &all_parameters[particle_counter].occupancy, sizeof(float), 1, cisTEM_bin_file );
-			if (parameters_to_write.logp == true) 	fwrite ( &all_parameters[particle_counter].logp, sizeof(float), 1, cisTEM_bin_file );
-			if (parameters_to_write.sigma == true) 	fwrite ( &all_parameters[particle_counter].sigma, sizeof(float), 1, cisTEM_bin_file );
-			if (parameters_to_write.score == true) 	fwrite ( &all_parameters[particle_counter].score, sizeof(float), 1, cisTEM_bin_file );
-			if (parameters_to_write.score_change == true) 	fwrite ( &all_parameters[particle_counter].score_change, sizeof(float), 1, cisTEM_bin_file );
-			if (parameters_to_write.pixel_size == true) 	fwrite ( &all_parameters[particle_counter].pixel_size, sizeof(float), 1, cisTEM_bin_file );
-			if (parameters_to_write.microscope_voltage_kv == true)  	fwrite ( &all_parameters[particle_counter].microscope_voltage_kv, sizeof(float), 1, cisTEM_bin_file );
-			if (parameters_to_write.microscope_spherical_aberration_mm == true) 	fwrite ( &all_parameters[particle_counter].microscope_spherical_aberration_mm, sizeof(float), 1, cisTEM_bin_file );
-			if (parameters_to_write.amplitude_contrast == true) 	fwrite ( &all_parameters[particle_counter].amplitude_contrast, sizeof(float), 1, cisTEM_bin_file );
-			if (parameters_to_write.beam_tilt_x == true) 	fwrite ( &all_parameters[particle_counter].beam_tilt_x, sizeof(float), 1, cisTEM_bin_file );
-			if (parameters_to_write.beam_tilt_y == true) 	fwrite ( &all_parameters[particle_counter].beam_tilt_y, sizeof(float), 1, cisTEM_bin_file );
-			if (parameters_to_write.image_shift_x == true) 	fwrite ( &all_parameters[particle_counter].image_shift_x, sizeof(float), 1, cisTEM_bin_file );
-			if (parameters_to_write.image_shift_y == true) 	fwrite ( &all_parameters[particle_counter].image_shift_y, sizeof(float), 1, cisTEM_bin_file );
-			if (parameters_to_write.best_2d_class == true) 	fwrite ( &all_parameters[particle_counter].best_2d_class, sizeof(int), 1, cisTEM_bin_file );
-			if (parameters_to_write.beam_tilt_group == true) 	fwrite ( &all_parameters[particle_counter].beam_tilt_group, sizeof(int), 1, cisTEM_bin_file );
-
-			if (parameters_to_write.stack_filename == true)
-			{
-				fwrite ( &all_parameters[particle_counter].stack_filename, sizeof(int), 1, cisTEM_bin_file );
-			}
-
-			if (parameters_to_write.original_image_filename == true) 	fwrite ( &all_parameters[particle_counter].original_image_filename, sizeof(int), 1, cisTEM_bin_file );
-			if (parameters_to_write.reference_3d_filename == true) 	fwrite ( &all_parameters[particle_counter].reference_3d_filename, sizeof(int), 1, cisTEM_bin_file );
-
-			if (parameters_to_write.particle_group == true) 	fwrite ( &all_parameters[particle_counter].particle_group, sizeof(int), 1, cisTEM_bin_file );
-			if (parameters_to_write.assigned_subset == true) 	fwrite ( &all_parameters[particle_counter].assigned_subset, sizeof(int), 1, cisTEM_bin_file );
-			if (parameters_to_write.pre_exposure == true) 	fwrite ( &all_parameters[particle_counter].pre_exposure, sizeof(float), 1, cisTEM_bin_file );
-			if (parameters_to_write.total_exposure == true) 	fwrite ( &all_parameters[particle_counter].total_exposure, sizeof(float), 1, cisTEM_bin_file );
-		}
-
-		fclose(cisTEM_bin_file);
-		delete [] output_buffer;
-
-
-}*/
 void cisTEMParameters::AddCommentToHeader(wxString comment_to_add)
 {
 	if (comment_to_add.StartsWith("#") == false)
@@ -1341,7 +1039,7 @@ void cisTEMParameters::WriteTocisTEMBinaryFile(wxString wanted_filename, int fir
 	if (parameters_to_write.particle_group == true)
 	{
 		bitmask_identifier = PARTICLE_GROUP;
-		data_type = VARIABLE_LENGTH;
+		data_type = INTEGER;
 		fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
 		fwrite ( &data_type, sizeof(char), 1, cisTEM_bin_file );
 	}
@@ -1349,7 +1047,7 @@ void cisTEMParameters::WriteTocisTEMBinaryFile(wxString wanted_filename, int fir
 	if (parameters_to_write.assigned_subset == true)
 	{
 		bitmask_identifier = ASSIGNED_SUBSET;
-		data_type = VARIABLE_LENGTH;
+		data_type = INTEGER;
 		fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
 		fwrite ( &data_type, sizeof(char), 1, cisTEM_bin_file );
 	}
@@ -1357,7 +1055,7 @@ void cisTEMParameters::WriteTocisTEMBinaryFile(wxString wanted_filename, int fir
 	if (parameters_to_write.pre_exposure == true)
 	{
 		bitmask_identifier = PRE_EXPOSURE;
-		data_type = VARIABLE_LENGTH;
+		data_type = FLOAT;
 		fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
 		fwrite ( &data_type, sizeof(char), 1, cisTEM_bin_file );
 	}
@@ -1365,7 +1063,7 @@ void cisTEMParameters::WriteTocisTEMBinaryFile(wxString wanted_filename, int fir
 	if (parameters_to_write.total_exposure == true)
 	{
 		bitmask_identifier = TOTAL_EXPOSURE;
-		data_type = VARIABLE_LENGTH;
+		data_type = FLOAT;
 		fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
 		fwrite ( &data_type, sizeof(char), 1, cisTEM_bin_file );
 	}

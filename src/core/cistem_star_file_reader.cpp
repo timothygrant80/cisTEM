@@ -2,139 +2,10 @@
 
 //TODO : Currently, any strings with spaces will cause the star file (but not binary) reader to break - needs to be fixed.
 
-// **************************************
-// ADDING NEW COLUMNS TO THE DATA FILES..
-// **************************************
-/*
+// ADDING A NEW COLUMN
+// ----------------------
+// See top of cistem_parameters.cpp for documentation describing how to add a new column
 
-cistem_parameters.h
--------------------
-
-1. Add a bitwise definition for your data type to the top of cistem_parameters.h
-2. Add it as a new member variable to  cisTEMParameterLine in cistem_parameters.h
-3. Add it as a new member variable to  cisTEMParameterMask in cistem_parameters.h
-4. Add a new method to return the parameter from a given line e.g. ReturnPositionInStack
-
-cistem_parameters.cpp
----------------------
-
-1. Add it to void cisTEMParameterMask::SetAllToTrue(), void cisTEMParameterMask::SetAllToFalse() and cisTEMParameterMask::SetActiveParameters()
-2. Add it to cisTEMParameterLine::SetAllToZero() and  cisTEMParameterLine::ReplaceNanAndInfWithOther if it is a number
-3. If it makes sense to add this parameter etc, add it to  cisTEMParameterLine::Add, cisTEMParameterLine::Subtract,  cisTEMParameterLine::AddSquare
-4. Add it to cisTEMParameters:: ReturnNumberOfParametersToWrite
-5. Add it to cisTEMParameters::WriteTocisTEMBinaryFile - you will need to add it 2 places, the first is in the block that currently ends at line ~940, and looks like this:-
-
-	if (parameters_to_write.total_exposure == true)
-	{
-		bitmask_identifier = TOTAL_EXPOSURE;
-		data_type = VARIABLE_LENGTH;
-		fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
-		fwrite ( &data_type, sizeof(char), 1, cisTEM_bin_file );
-	}
-
-You will need to change parameters_to_write.total_exposure to your variable, bitmask_identifier = to your identifier and data_type to your
-data type (it can be INTEGER, UNSIGNED_INTEGER, FLOAT, LONG, BYTE, DOUBLE or VARIABLE)
-
-You will then have to add it to loop where the data values are written out - this currently ends at line ~996, and looks like this :-
-
-	if (parameters_to_write.total_exposure == true) fwrite ( &all_parameters[particle_counter].total_exposure, sizeof(float), 1, cisTEM_bin_file );
-
-you need to change parameters_to_write.total_exposure and all_parameters[particle_counter].total_exposure to your variable.  Then make sure you change float to your data type.
-
-6. Add it to cisTEMParameters::WriteTocisTEMStarFile - in a few places.
-
-Firstly, the block that currently ends at ~line 1240 and looks like :-
-
-	if (parameters_to_write.total_exposure == true)
-	{
-		fprintf(cisTEM_star_file, "_cisTEMTotalExposure #%i\n", column_counter);
-		column_counter++;
-	}
-
-Changeparameters_to_write.total_exposure to your variable, and _cisTEMTotalExposure to whatever you want the star file descriptor to be for your variable.
-
-Add a header for your variable to the block below which looks like :-
-
-	if (parameters_to_write.total_exposure == true) 					data_line += " TOTEXP ";
-
-Finally, add it to the loop that writes the actual data, which currently ends at line ~1325 and looks like :-
-
-	if (parameters_to_write.total_exposure == true) data_line += wxString::Format("%7.2f ", all_parameters[particle_counter].total_exposure);
-
-Change parameters_to_write.total_exposure and all_parameters[particle_counter].total_exposure to your variable, and change "%7.2f " to whatever formatting is
-suitable for your variable.
-
-cistem_star_file_reader.h
--------------------------
-
-1. Add an int member variable to cisTEMStarFileReader to hold the found column for your variable (e.g. int total_exposure_column)
-2. Also add an inline method to return your variable (e.g. 	inline int ReturnTotalExpsosure(int line_number) {return cached_parameters->Item(line_number).total_exposure;})
-
-cistem_star_file_reader.cpp
----------------------------
-
-1. Add your variable to cisTEMStarFileReader::ResetColumnPositions
-2. Add your variable to cisTEMStarFileReader::ExtractParametersFromLine.
-
-Add it to the block which currently ends ~line 675 and looks like this :-
-
-	if ( total_exposure_column == -1) temp_parameters.total_exposure = 0.0f;
-	else
-	{
-		if (all_tokens[total_exposure_column].ToDouble(&temp_double) == false)
-		{
-			MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[total_exposure_column]);
-			if (error_string != NULL) *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[total_exposure_column]);
-			return false;
-		}
-
-		temp_parameters.total_exposure = float(temp_double);
-	}
-
-change the comment to be your variable, change  total_exposure_column to be your column variable (thisis on 3 lines), and temp_parameters.total_exposure (2 different places)to be your variable, change the = set the variable
-to the default value that should be taken if the column does not exist.
-
-3.Change cisTEMStarFileReader::ReadFile.  Add to the section which currently ends at line ~1085 and looks like :-
-
-		if (current_line.StartsWith("_cisTEMStackFilename ") == true)
-		{
-	    	if (stack_filename_column != -1) wxPrintf("Warning :: _cisTEMStackFilename occurs more than once. I will take the last occurrence\n");
-		   	stack_filename_column = current_column;
-			parameters_that_were_read.stack_filename = true;
-		}
-
-Change _cisTEMStackFilename (2 places) to be the header name which you chose earlier and added to WriteCisTEMStarFile in cistem_parameters.cpp.
-Change stack_filename_column to your columns variable and parameters_that_were_read.stack_filename to your variable.
-
-4. Change cisTEMStarFileReader::ReadBinaryFile - You will have to change
-
-Change the section that currently ends at line ~1450 and looks like :-
-
-		if (column_order_buffer[current_column] == STACK_FILENAME)
-		{
-	    	if (stack_filename_column != -1) wxPrintf("Warning :: _cisTEMStackFilename occurs more than once. I will take the last occurrence\n");
-		   	stack_filename_column = current_column;
-		   	parameters_that_were_read.stack_filename = true;
-		}
-
-Change STACK_FILENAME to be whatever bitwise define you chose at the top of cistem_parameters.h for your variable. Change stack_filename_column (2 places) to be your variable and
-_cisTEMStackFilename to be your header name. change parameters_that_were_read.stack_filename to your variable.
-
-Change the section that currently ends at line ~1690 and add your variable.  E.g. for total exposure it looks like :-
-
-		if (column_order_buffer[current_column] == TOTAL_EXPOSURE)
-		{
-			if (SafelyReadFromBinaryBufferIntoFloat(temp_parameters.total_exposure) == false) return false;
-		}
-
-Change TOTAL_EXPOSURE to your bitwise type and temp_parameters.total_exposure to your variable.  You will have to change the SafelyReadFromBinaryBufferInto function to be the correct data type.
-
-console_test.cpp
-----------------
-
-Add your variable to TestStarToBinaryFileConversion, setting it to some random variable.
-
-*/
 
 cisTEMStarFileReader::cisTEMStarFileReader()
 {
@@ -156,7 +27,7 @@ cisTEMStarFileReader::cisTEMStarFileReader(wxString wanted_filename, ArrayOfcisT
 		using_external_array = true;
 	}
 
-	ReadFile(wanted_filename, NULL, alternate_cached_parameters_pointer, exclude_negative_film_numbers);
+	ReadTextFile(wanted_filename, NULL, alternate_cached_parameters_pointer, exclude_negative_film_numbers);
 }
 
 void cisTEMStarFileReader::Reset()
@@ -807,7 +678,7 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxSt
 
 
 
-bool cisTEMStarFileReader::ReadFile(wxString wanted_filename, wxString *error_string, ArrayOfcisTEMParameterLines *alternate_cached_parameters_pointer, bool exclude_negative_film_numbers)
+bool cisTEMStarFileReader::ReadTextFile(wxString wanted_filename, wxString *error_string, ArrayOfcisTEMParameterLines *alternate_cached_parameters_pointer, bool exclude_negative_film_numbers)
 {
 	Open(wanted_filename, alternate_cached_parameters_pointer);
 	wxString current_line;

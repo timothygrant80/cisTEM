@@ -807,20 +807,6 @@ void ClassificationManager::RunInitialStartJob()
 
 	my_parent->SetNumberConnectedTextToZeroAndStartTracking();
 
-	WriteClassificationStarFileThread *star_file_writer_thread;
-	star_file_writer_thread = new WriteClassificationStarFileThread(my_parent, main_frame->current_project.parameter_file_directory.GetFullPath() + "/classification_input_star", output_classification, active_refinement_package);
-
-	if ( star_file_writer_thread->Run() != wxTHREAD_NO_ERROR )
-	{
-		my_parent->WriteErrorText("Error: Cannot start star file writer thread, things are going to break...");
-		delete star_file_writer_thread;
-	}
-}
-
-
-
-void ClassificationManager::RunInitialStartJobPostStarFileWrite(wxString input_star_file)
-{
 	number_of_received_particle_results = 0;
 
 	output_classification->classification_id = main_frame->current_project.database.ReturnHighestClassificationID() + 1;
@@ -863,6 +849,22 @@ void ClassificationManager::RunInitialStartJobPostStarFileWrite(wxString input_s
 		output_classification->classification_results[counter - 1].defocus_angle = active_refinement_package->ReturnParticleInfoByPositionInStack( counter ).defocus_angle;
 		output_classification->classification_results[counter - 1].phase_shift = active_refinement_package->ReturnParticleInfoByPositionInStack( counter ).phase_shift;
 	}
+
+
+	WriteClassificationStarFileThread *star_file_writer_thread;
+	star_file_writer_thread = new WriteClassificationStarFileThread(my_parent, main_frame->current_project.parameter_file_directory.GetFullPath() + "/classification_input_star", output_classification, active_refinement_package);
+
+	if ( star_file_writer_thread->Run() != wxTHREAD_NO_ERROR )
+	{
+		my_parent->WriteErrorText("Error: Cannot start star file writer thread, things are going to break...");
+		delete star_file_writer_thread;
+	}
+}
+
+
+
+void ClassificationManager::RunInitialStartJobPostStarFileWrite(wxString input_star_file)
+{
 
 	wxString input_particle_images =  active_refinement_package->stack_filename;
 	wxString input_class_averages = "/dev/null";

@@ -812,12 +812,14 @@ bool Refine2DApp::DoCalculation()
 							current_block_read_size = 0;
 						}
 					}
+					else
+					{
+						current_block_read_size++;
+						if (current_block_read_size == block_size) keep_reading = false;
 
-					current_block_read_size++;
-					if (current_block_read_size == block_size) keep_reading = false;
-
-					input_image_local.ReadSlice(&input_stack, input_parameters.position_in_stack);
-					file_read = true;
+						input_image_local.ReadSlice(&input_stack, input_parameters.position_in_stack);
+						file_read = true;
+					}
 				}
 			}
 

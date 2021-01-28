@@ -95,7 +95,7 @@ void EerFile::ReadLogicalDimensionsFromDisk()
 	int dircount = 1;
 
 	uint32 original_x = 0;
-	uint32 compression;
+	uint16 compression;
 
 	TIFFGetField(tif,TIFFTAG_IMAGEWIDTH,&logical_dimension_x);
 	TIFFGetField(tif,TIFFTAG_IMAGELENGTH,&logical_dimension_y);
@@ -103,6 +103,11 @@ void EerFile::ReadLogicalDimensionsFromDisk()
 	TIFFGetField(tif,TIFFTAG_COMPRESSION,&compression);
 	if (compression == 65000) bits_per_rle = 8;
 	else if (compression == 65001) bits_per_rle = 7;
+	else
+	{
+		MyPrintWithDetails("Warning:: Unknown Compression in EER tif file, assuming 7-bit (65001)");
+		bits_per_rle = 7;
+	}
 	while (TIFFSetDirectory(tif, number_of_frames) != 0) number_of_frames++;
 	fseek(fh, 0, SEEK_END);
 	file_size = ftell(fh);
@@ -274,5 +279,5 @@ void EerFile::rleFrames(std::string output_file, int super_res_factor, int tempo
 		//wxPrintf("Frame: %d\n",iframe);
 	}
 
-	if (output_sum_filename != NULL) unaligned_sum.QuickAndDirtyWriteSlice(output_file, 1);
+	if (output_sum_filename != NULL) unaligned_sum.QuickAndDirtyWriteSlice(output_sum_filename->ToStdString(), 1);
 }

@@ -11,6 +11,7 @@ private:
 	unsigned char * buf;
 	//unsigned int * ion_of_each_frame;
 	unsigned long long file_size;
+	unsigned long long frame_size_bits;
 
 
 
@@ -31,7 +32,5 @@ public:
 	void ReadSlicesFromDisk();
 
 	void PrintInfo();
-	void rleFrames();
-	void ReadCoordinateFromRle1(unsigned int ion_number, unsigned char * rle_in_each_frame, unsigned char * subpixels_in_each_frame);
-	void ReadCoordinateFromRle2(unsigned int ion_number, unsigned char * rle_in_each_frame, unsigned char * subpixels_in_each_frame);
+	void rleFrames(std::string output_file, int super_res_factor = 1, int temporal_frame_bin_factor = 1, wxString *output_sum_filename = NULL);
 };

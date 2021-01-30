@@ -56,18 +56,23 @@ bool ConvertEERToMRC::DoCalculation()
 	std::string unaligned_sum_filename	= my_current_job.arguments[5].ReturnStringArgument();
 
 	EerFile input_file;
-	wxString *save_sum_filename = NULL;
-	if (write_unaligned_sum == true)
-	{
-		save_sum_filename = new wxString;
-		*save_sum_filename = unaligned_sum_filename;
-	}
 	
-	input_file.OpenFile(input_eer_filename, false, false, false);
-	input_file.rleFrames(output_image_filename, super_res_level, temporal_frame_bin_factor, save_sum_filename);
+	input_file.OpenFile(input_eer_filename, false, false, false, super_res_level, temporal_frame_bin_factor);
+	input_file.PrintInfo();
+	Image frame_stack;
+	frame_stack.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
+	MRCFile output_stack;
+	output_stack.OpenFile(output_image_filename,true);
+	frame_stack.WriteSlices(&output_stack,1,frame_stack.logical_z_dimension);
+	output_stack.PrintInfo();
 
-	if (write_unaligned_sum == true)
+	if (write_unaligned_sum)
 	{
-		delete save_sum_filename;
+		Image unaligned_sum;
+		unaligned_sum.Allocate(frame_stack.logical_x_dimension,frame_stack.logical_y_dimension,1);
+		unaligned_sum.AddSlices(frame_stack);
+		unaligned_sum.QuickAndDirtyWriteSlice(unaligned_sum_filename,1);
 	}
+
+	return true;
 }

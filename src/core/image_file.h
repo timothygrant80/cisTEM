@@ -8,6 +8,7 @@ enum supported_file_types
 	MRC_FILE,
 	TIFF_FILE,
 	DM_FILE,
+	EER_FILE,
 	UNSUPPORTED_FILE_TYPE
 };
 
@@ -18,6 +19,7 @@ private:
 	MRCFile mrc_file;
 	TiffFile tiff_file;
 	DMFile dm_file;
+	EerFile eer_file;
 
 
 	int file_type;
@@ -37,7 +39,7 @@ public:
 
 	bool IsOpen();
 
-	bool OpenFile(std::string wanted_filename, bool overwrite, bool wait_for_file_to_exist = false, bool check_only_the_first_image = false);
+	bool OpenFile(std::string wanted_filename, bool overwrite, bool wait_for_file_to_exist = false, bool check_only_the_first_image = false, int eer_super_res_factor = 1, int eer_frames_per_image = 0);
 	void CloseFile();
 
 	void ReadSliceFromDisk(int slice_number, float *output_array);

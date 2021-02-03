@@ -19,6 +19,7 @@ add_library(cisTEM_core STATIC
 	mrc_file.cpp
 	tiff_file.cpp
 	dm_file.cpp
+	eer_file.cpp
 	image_file.cpp
 	sqlite/sqlite3.c
 	database.cpp
@@ -69,7 +70,7 @@ if (BUILD_EXPERIMENTAL_FEATURES)
 endif(BUILD_EXPERIMENTAL_FEATURES)
 
 target_link_libraries(cisTEM_core ${CMAKE_DL_LIBS})
-target_link_libraries(cisTEM_core fftw3f)
+target_link_libraries(cisTEM_core ${FFTW_LIBRARIES})
 target_link_libraries(cisTEM_core ${wxWidgets_LIBRARIES})
 target_link_libraries(cisTEM_core ${TIFF_LIBRARIES})
 

@@ -25,7 +25,7 @@ TiffFile::~TiffFile()
  * a long time. If you want to save that time, set check_only_the_first_image to true.
  * This is risky because we may not notice that the file is corrupt or has unusual dimensions.
  */
-bool TiffFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_for_file_to_exist, bool check_only_the_first_image)
+bool TiffFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_for_file_to_exist, bool check_only_the_first_image, int eer_super_res_factor, int eer_frames_per_image)
 {
 
 	MyDebugAssertFalse(tif != NULL,"File already open: %s",wanted_filename);

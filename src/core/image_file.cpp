@@ -38,6 +38,11 @@ void ImageFile::SetFileTypeFromExtension()
 		file_type = DM_FILE;
 		file_type_string = "DM";
 	}
+	else if (ext.IsSameAs("eer"))
+	{
+		file_type = EER_FILE;
+		file_type_string = "EER";
+	}
 	else
 	{
 		file_type = UNSUPPORTED_FILE_TYPE;
@@ -45,16 +50,17 @@ void ImageFile::SetFileTypeFromExtension()
 	}
 }
 
-bool ImageFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_for_file_to_exist, bool check_only_the_first_image)
+bool ImageFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_for_file_to_exist, bool check_only_the_first_image, int eer_super_res_factor, int eer_frames_per_image)
 {
 	bool file_seems_ok = false;
 	filename = wanted_filename;
 	SetFileTypeFromExtension();
 	switch(file_type)
 	{
-	case TIFF_FILE: file_seems_ok = tiff_file.OpenFile(wanted_filename, overwrite, wait_for_file_to_exist,check_only_the_first_image); break;
-	case MRC_FILE: file_seems_ok = mrc_file.OpenFile(wanted_filename, overwrite, wait_for_file_to_exist,check_only_the_first_image); break;
-	case DM_FILE: file_seems_ok = dm_file.OpenFile(wanted_filename, overwrite, wait_for_file_to_exist,check_only_the_first_image); break;
+	case TIFF_FILE: file_seems_ok = tiff_file.OpenFile(wanted_filename, overwrite, wait_for_file_to_exist,check_only_the_first_image,eer_super_res_factor,eer_frames_per_image); break;
+	case MRC_FILE: file_seems_ok = mrc_file.OpenFile(wanted_filename, overwrite, wait_for_file_to_exist,check_only_the_first_image,eer_super_res_factor,eer_frames_per_image); break;
+	case DM_FILE: file_seems_ok = dm_file.OpenFile(wanted_filename, overwrite, wait_for_file_to_exist,check_only_the_first_image,eer_super_res_factor,eer_frames_per_image); break;
+	case EER_FILE: file_seems_ok = eer_file.OpenFile(wanted_filename, overwrite, wait_for_file_to_exist,check_only_the_first_image,eer_super_res_factor,eer_frames_per_image); break;
 	default: MyPrintWithDetails("Unsupported file type\n"); MyDebugAssertTrue(false,"Unsupported file type: %s\n",filename.GetFullPath().ToStdString()); DEBUG_ABORT; break;
 	}
 	return file_seems_ok;
@@ -67,6 +73,7 @@ void ImageFile::CloseFile()
 	case TIFF_FILE: tiff_file.CloseFile(); break;
 	case MRC_FILE: mrc_file.CloseFile(); break;
 	case DM_FILE: dm_file.CloseFile(); break;
+	case EER_FILE: eer_file.CloseFile(); break;
 	}
 }
 
@@ -82,6 +89,7 @@ void ImageFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output
 	case TIFF_FILE: tiff_file.ReadSlicesFromDisk(start_slice, end_slice, output_array); break;
 	case MRC_FILE: mrc_file.ReadSlicesFromDisk(start_slice, end_slice, output_array); break;
 	case DM_FILE: dm_file.ReadSlicesFromDisk(start_slice-1, end_slice-1, output_array); break;
+	case EER_FILE: eer_file.ReadSlicesFromDisk(start_slice-1, end_slice-1, output_array); break;
 	default: MyPrintWithDetails("Unsupported file type\n"); DEBUG_ABORT; break;
 	}
 }
@@ -98,6 +106,7 @@ void ImageFile::WriteSlicesToDisk(int start_slice, int end_slice, float *input_a
 	case TIFF_FILE: tiff_file.WriteSlicesToDisk(start_slice, end_slice, input_array); break;
 	case MRC_FILE: mrc_file.WriteSlicesToDisk(start_slice, end_slice, input_array); break;
 	case DM_FILE: dm_file.WriteSlicesToDisk(start_slice, end_slice, input_array); break;
+	case EER_FILE: eer_file.WriteSlicesToDisk(start_slice, end_slice, input_array); break;
 	default: MyPrintWithDetails("Unsupported file type\n"); DEBUG_ABORT; break;
 	}
 }
@@ -110,6 +119,7 @@ int ImageFile::ReturnXSize()
 	case TIFF_FILE: return tiff_file.ReturnXSize(); break;
 	case MRC_FILE: return mrc_file.ReturnXSize(); break;
 	case DM_FILE: return dm_file.ReturnXSize(); break;
+	case EER_FILE: return eer_file.ReturnXSize(); break;
 	default: MyPrintWithDetails("Unsupported file type\n"); DEBUG_ABORT; break;
 	}
 	return -1;
@@ -122,6 +132,7 @@ int ImageFile::ReturnYSize()
 	case TIFF_FILE: return tiff_file.ReturnYSize(); break;
 	case MRC_FILE: return mrc_file.ReturnYSize(); break;
 	case DM_FILE: return dm_file.ReturnYSize(); break;
+	case EER_FILE: return eer_file.ReturnYSize(); break;
 	default: MyPrintWithDetails("Unsupported file type\n"); DEBUG_ABORT; break;
 	}
 	return -1;
@@ -134,6 +145,7 @@ int ImageFile::ReturnZSize()
 	case TIFF_FILE: return tiff_file.ReturnZSize(); break;
 	case MRC_FILE: return mrc_file.ReturnZSize(); break;
 	case DM_FILE: return dm_file.ReturnZSize(); break;
+	case EER_FILE: return eer_file.ReturnZSize(); break;
 	default: MyPrintWithDetails("Unsupported file type\n"); DEBUG_ABORT; break;
 	}
 	return -1;
@@ -146,6 +158,7 @@ int ImageFile::ReturnNumberOfSlices()
 	case TIFF_FILE: return tiff_file.ReturnNumberOfSlices(); break;
 	case MRC_FILE: return mrc_file.ReturnNumberOfSlices(); break;
 	case DM_FILE: return dm_file.ReturnNumberOfSlices(); break;
+	case EER_FILE: return eer_file.ReturnNumberOfSlices(); break;
 	default: MyPrintWithDetails("Unsupported file type\n"); DEBUG_ABORT; break;
 	}
 	return -1;
@@ -158,6 +171,7 @@ float ImageFile::ReturnPixelSize()
 	case TIFF_FILE: return tiff_file.ReturnPixelSize(); break;
 	case MRC_FILE: return mrc_file.ReturnPixelSize(); break;
 	case DM_FILE: return dm_file.ReturnPixelSize(); break;
+	case EER_FILE: return eer_file.ReturnPixelSize(); break;
 	default: MyPrintWithDetails("Unsupported file type\n"); DEBUG_ABORT; break;
 	}
 	return - 1;
@@ -169,7 +183,8 @@ bool ImageFile::IsOpen()
 	{
 	case TIFF_FILE: return tiff_file.IsOpen(); break;
 	case MRC_FILE: return mrc_file.IsOpen(); break;
-	case DM_FILE: return dm_file.IsOpen();
+	case DM_FILE: return dm_file.IsOpen(); break;
+	case EER_FILE: return eer_file.IsOpen(); break;
 	default: MyPrintWithDetails("Unsupported file type\n"); DEBUG_ABORT; break;
 	}
 	return false;

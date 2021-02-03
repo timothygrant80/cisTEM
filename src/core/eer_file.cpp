@@ -4,7 +4,13 @@ EerFile::EerFile()
 	tif = NULL;
 	logical_dimension_x = 0;
 	logical_dimension_y = 0;
-	number_of_frames = 1;
+	number_of_images = 0;
+	number_of_eer_frames = 0;
+	number_of_eer_frames_per_image = 0;
+	super_res_factor = 0;
+	buf = NULL;
+	frame_starts = NULL;
+	frame_sizes = NULL;
 }
 
 EerFile::EerFile(std::string wanted_filename, bool overwrite)
@@ -21,13 +27,8 @@ EerFile::~EerFile()
 }
 
 
-/*
- * By default, this method will check all the images within the file, to make sure
- * they are valid (not corrupted) and of the same dimensions. However, this can take
- * a long time. If you want to save that time, set check_only_the_first_image to true.
- * This is risky because we may not notice that the file is corrupt or has unusual dimensions.
- */
-bool EerFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_for_file_to_exist, bool check_only_the_first_image)
+//
+bool EerFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_for_file_to_exist, bool check_only_the_first_image, int eer_super_res_factor, int eer_frames_per_image)
 {
 
 	MyDebugAssertFalse(tif != NULL,"File already open: %s",wanted_filename);
@@ -37,6 +38,9 @@ bool EerFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_fo
 
 	bool return_value = true;
 
+	filename = wanted_filename;
+	super_res_factor = eer_super_res_factor;
+	number_of_eer_frames_per_image = eer_frames_per_image;
 
 	// if overwrite is specified, then we delete the file nomatter what..
 	if (overwrite) file_already_exists = false;
@@ -47,21 +51,22 @@ bool EerFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_fo
 		// The first dictionary is automatically read in
 		tif = TIFFOpen(wanted_filename.c_str(),"rc");
 		fh = fopen(wanted_filename.c_str(), "r");
-	}
-	else
-	{
-		// We just open to write
-		tif = TIFFOpen(wanted_filename.c_str(),"w");
 		if (tif)
 		{
-			return_value = true;
+			return_value = ReadLogicalDimensionsFromDisk(check_only_the_first_image);
 		}
 		else
 		{
-			MyPrintfRed("Oops. File %s could not be opened for writing\n",wanted_filename);
+			MyPrintfRed("Oops. File %s could not be opened, may be corrupted\n",wanted_filename);
 			return_value = false;
 		}
+		
 	}
+	else
+	{
+		MyDebugAssertTrue(false,"EER file writing is not supported");
+	}
+	pixel_size = 1.0; //TODO: can we get a useful pixel value from the header of an EER file?
 	return return_value;
 }
 
@@ -73,7 +78,11 @@ void EerFile::CloseFile()
 
 void EerFile::PrintInfo()
 {
-	wxPrintf("Dimensions: %i %i %i\n",ReturnXSize(),ReturnYSize(),ReturnZSize());
+	wxPrintf("Filename  : %s\n",filename.GetFullName());
+	wxPrintf("Dimensions: %i %i %i\n",ReturnXSize()*super_res_factor,ReturnYSize()*super_res_factor,ReturnZSize());
+	wxPrintf("Number of EER frames: %i\n",number_of_eer_frames);
+	wxPrintf("Super resolution factor: %i\n", super_res_factor);
+	wxPrintf("Bits per RLE: %i\n",bits_per_rle);
 }
 
 /*
@@ -81,8 +90,9 @@ void EerFile::PrintInfo()
  * they are valid (not corrupted) and of the same dimensions. However, this can take
  * a long time. If you want to save that time, set check_only_the_first_image to true.
  * This is risky because we may not notice that the file is corrupt or has unusual dimensions.
+ * The file size and the number of images will not be set in that case. 
  */
-void EerFile::ReadLogicalDimensionsFromDisk()
+bool EerFile::ReadLogicalDimensionsFromDisk(bool check_only_the_first_image)
 {
 	MyDebugAssertTrue(tif != NULL,"File must be open");
 	MyDebugAssertTrue(fh != NULL,"File must be open");
@@ -97,9 +107,12 @@ void EerFile::ReadLogicalDimensionsFromDisk()
 	uint32 original_x = 0;
 	uint16 compression;
 
+	// Work out logical dimensions of the frames (x,y)
 	TIFFGetField(tif,TIFFTAG_IMAGEWIDTH,&logical_dimension_x);
 	TIFFGetField(tif,TIFFTAG_IMAGELENGTH,&logical_dimension_y);
 	frame_size_bits = logical_dimension_x * logical_dimension_y;
+
+	// Work out RLE compression scheme
 	TIFFGetField(tif,TIFFTAG_COMPRESSION,&compression);
 	if (compression == 65000) bits_per_rle = 8;
 	else if (compression == 65001) bits_per_rle = 7;
@@ -108,29 +121,40 @@ void EerFile::ReadLogicalDimensionsFromDisk()
 		MyPrintWithDetails("Warning:: Unknown Compression in EER tif file, assuming 7-bit (65001)");
 		bits_per_rle = 7;
 	}
-	while (TIFFSetDirectory(tif, number_of_frames) != 0) number_of_frames++;
-	fseek(fh, 0, SEEK_END);
-	file_size = ftell(fh);
-	fseek(fh, 0, SEEK_SET);
 
-	wxPrintf("x_size = %d, y_size = %d, bits = %d, number_of_frames = %d, file_size = %li\n", logical_dimension_x, logical_dimension_y, bits_per_rle, number_of_frames, file_size);
+	if (!check_only_the_first_image)
+	{
+		// Work out the number of frames
+		while (TIFFSetDirectory(tif, number_of_eer_frames) != 0) number_of_eer_frames++;
+
+		// Work out the number of images
+		number_of_images = number_of_eer_frames / number_of_eer_frames_per_image;
+
+		// Work out the total file size
+		fseek(fh, 0, SEEK_END);
+		file_size_bytes = ftell(fh);
+		fseek(fh, 0, SEEK_SET); //go back to the beginning of the file
+	}
+	
+	return return_value;
 }
 
-
-void EerFile::ReadSlicesFromDisk()
+void EerFile::ReadWholeFileIntoBuffer()
 {
-	ReadLogicalDimensionsFromDisk();
 	MyDebugAssertTrue(tif != NULL,"File must be open");
+	MyDebugAssertTrue(logical_dimension_x > 0, "You must call ReadLogicalDimensionsFromDisk first");
+	MyDebugAssertTrue(buf == NULL,"Buffer was already allocated");
+	MyDebugAssertTrue(frame_starts == NULL, "frame_starts was already allocated");
+	MyDebugAssertTrue(frame_sizes == NULL, "frame_sizes was already allocated");
 
-
-	frame_starts = new unsigned long long[number_of_frames];
-	frame_sizes = new unsigned long long[number_of_frames];
-	buf = new unsigned char[file_size];
+	frame_starts = new unsigned long long[number_of_eer_frames];
+	frame_sizes = new unsigned long long[number_of_eer_frames];
+	buf = new unsigned char[file_size_bytes];
 	long output_counter;
 	unsigned long long pos = 0;
 
-	// Read everything
-	for (int frame = 0; frame < number_of_frames; frame++)
+	// Read everything into the buffer
+	for (int frame = 0; frame < number_of_eer_frames; frame++)
 	{
 		TIFFSetDirectory(tif, frame);
 		const int nstrips = TIFFNumberOfStrips(tif);
@@ -148,31 +172,64 @@ void EerFile::ReadSlicesFromDisk()
 	} // end of loop over slices
 }
 
-void EerFile::rleFrames(std::string output_file, int super_res_factor, int temporal_frame_bin_factor, wxString *output_sum_filename)
+void EerFile::ReadSliceFromDisk(int slice_number, float * output_array)
 {
-	ReadSlicesFromDisk();
-	float temp_float[3];
-	Image unaligned_sum;
-	Image current_frame_image;
+	ReadSlicesFromDisk(slice_number, slice_number, output_array);
+}
 
-	MRCFile frame_output_file(output_file, true);
+/*
+ * start_slice and end_slice are 1-indexed
+ * output_array must be allocated to the correct dimensions (logical_dimension_x * logical_dimension_y * super_res_factor**2 * number_of_frames)
+ * and will be zeroed internally
+ */
+void EerFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_array)
+{
+	MyDebugAssertTrue(tif != NULL,"File must be open");
+	MyDebugAssertTrue(start_slice > 0 && end_slice >= start_slice && end_slice <= number_of_images,"Bad start or end slice number");
+	MyDebugAssertTrue(number_of_eer_frames_per_image > 0,"You have not yet set the number of EER frames per image");
+	MyDebugAssertTrue(super_res_factor > 0,"Super res factor was not set");
+	MyDebugAssertTrue(logical_dimension_y > 0,"Logical dimensions were not set");
 
-	long current_address;
 
-	int frame_binning_counter = 0;
-	int output_slice_number = 1;
+	// Read the contents of the file into the buffer
+	if (buf==NULL) ReadWholeFileIntoBuffer();
 
-	if (output_sum_filename != NULL)
+	long start_pos_in_output_array = 0;
+
+	// Loop over output slices
+	for (int slice_counter = start_slice; slice_counter <= end_slice; slice_counter++)
 	{
-		unaligned_sum.Allocate(logical_dimension_x * super_res_factor, logical_dimension_x * super_res_factor,1);
-		unaligned_sum.SetToConstant(0.0f);
+		
+
+		// Work out start and finish EER frames (0-indexed)
+		int start_eer_frame = (slice_counter-1) * number_of_eer_frames_per_image;
+		int finish_eer_frame = std::min(start_eer_frame+number_of_eer_frames_per_image-1,number_of_eer_frames);
+
+		start_pos_in_output_array = (slice_counter-start_slice) * (logical_dimension_x*logical_dimension_y*super_res_factor*super_res_factor);
+
+		MyDebugPrint("Reading slice %i of %i (EER frames %i to %i)",slice_counter,end_slice - start_slice +1, start_eer_frame,finish_eer_frame);
+		DecodeToFloatArray(start_eer_frame,finish_eer_frame,&output_array[start_pos_in_output_array]);
 	}
 
-	current_frame_image.Allocate(logical_dimension_x * super_res_factor, logical_dimension_x * super_res_factor,1);
-	current_frame_image.SetToConstant(0.0f);
+	
+}
 
+/*
+ * Start and finish EER frames should be 0-indexed
+ * A single image data array will be returned, summing all the events founds between the start and finish eer_frames
+ */
+void EerFile::DecodeToFloatArray(int start_eer_frame, int finish_eer_frame, float *output_array)
+{
+	MyDebugAssertTrue(buf != NULL,"Data from the file has not been read into the buffer yet");
+	long current_address;
 
-	for (int iframe = 0; iframe < number_of_frames; iframe++)
+	// Zeroe the array
+	for ( current_address=0; current_address < logical_dimension_x*logical_dimension_y*super_res_factor*super_res_factor; current_address++) { output_array[current_address] = 0.0f; }
+
+	/*
+	 * Decode into a list of events
+	 */
+	for (int iframe = start_eer_frame; iframe <= finish_eer_frame; iframe++)
 	{
 
 		long long pos = frame_starts[iframe];
@@ -236,9 +293,12 @@ void EerFile::rleFrames(std::string output_file, int super_res_factor, int tempo
 			}
 		}
 
-
+		/*
+		 * Insert the events into a pixel array
+		 */
 		for (int i = 0; i < nelectrons; i++)
 		{
+			// Work out 0-indexed x,y location of the event
 			int x,y;
 			if (super_res_factor == 1)
 			{
@@ -256,28 +316,19 @@ void EerFile::rleFrames(std::string output_file, int super_res_factor, int tempo
 				y = ((positions[i] >> 12) << 2) | ((symbols[i] & 12) >> 2); //render16K;  4096 = 2^12, 12 = 00001100b
 			}
 
-			current_address = current_frame_image.ReturnReal1DAddressFromPhysicalCoord(x, y, 0);
+			current_address = y * logical_dimension_y + x;
 
-			if (output_sum_filename != NULL)
-			{
-
-				unaligned_sum.real_values[current_address] += 1.0f;
-			}
-
-			current_frame_image.real_values[current_address] += 1.0f;
+			output_array[current_address] += 1.0f;
 		}
-
-		frame_binning_counter++;
-		if (frame_binning_counter == temporal_frame_bin_factor)
-		{
-			current_frame_image.WriteSlice(&frame_output_file, output_slice_number);
-			wxPrintf("Writing Slice %i\n", output_slice_number);
-			current_frame_image.SetToConstant(0.0f);
-			frame_binning_counter = 0;
-			output_slice_number++;
-		}
-		//wxPrintf("Frame: %d\n",iframe);
 	}
+}
 
-	if (output_sum_filename != NULL) unaligned_sum.QuickAndDirtyWriteSlice(output_sum_filename->ToStdString(), 1);
+void EerFile::WriteSliceToDisk(int slice_number, float * input_array)
+{
+	WriteSlicesToDisk(slice_number, slice_number, input_array);
+}
+
+void EerFile::WriteSlicesToDisk(int start_slice, int end_slice, float * input_array)
+{
+	MyDebugAssertTrue(false,"Not implemented yet");
 }

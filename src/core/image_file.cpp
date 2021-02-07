@@ -89,7 +89,7 @@ void ImageFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output
 	case TIFF_FILE: tiff_file.ReadSlicesFromDisk(start_slice, end_slice, output_array); break;
 	case MRC_FILE: mrc_file.ReadSlicesFromDisk(start_slice, end_slice, output_array); break;
 	case DM_FILE: dm_file.ReadSlicesFromDisk(start_slice-1, end_slice-1, output_array); break;
-	case EER_FILE: eer_file.ReadSlicesFromDisk(start_slice-1, end_slice-1, output_array); break;
+	case EER_FILE: eer_file.ReadSlicesFromDisk(start_slice, end_slice, output_array); break;
 	default: MyPrintWithDetails("Unsupported file type\n"); DEBUG_ABORT; break;
 	}
 }

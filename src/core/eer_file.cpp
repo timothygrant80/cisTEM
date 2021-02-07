@@ -207,7 +207,7 @@ void EerFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 
 		start_pos_in_output_array = (slice_counter-start_slice) * (logical_dimension_x*logical_dimension_y*super_res_factor*super_res_factor);
 
-		MyDebugPrint("Reading slice %i of %i (EER frames %i to %i)",slice_counter,end_slice - start_slice +1, start_eer_frame,finish_eer_frame);
+		MyDebugPrint("Reading slice %i of %i (EER frames %i to %i)",slice_counter,number_of_images, start_eer_frame,finish_eer_frame);
 		DecodeToFloatArray(start_eer_frame,finish_eer_frame,&output_array[start_pos_in_output_array]);
 	}
 

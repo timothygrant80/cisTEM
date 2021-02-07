@@ -30,7 +30,7 @@ class MRCFile : public AbstractImageFile {
 
 	inline bool IsOpen() {return my_file->is_open();}
 
-	bool OpenFile(std::string filename, bool overwrite, bool wait_for_file_to_exist = false, bool check_only_the_first_image = false);
+	bool OpenFile(std::string filename, bool overwrite, bool wait_for_file_to_exist = false, bool check_only_the_first_image = false, int eer_super_res_factor = 1, int eer_frames_per_image = 0);
 	void CloseFile();
 	void FlushFile();
 

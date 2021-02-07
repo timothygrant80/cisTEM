@@ -19,6 +19,7 @@ add_library(cisTEM_core STATIC
 	mrc_file.cpp
 	tiff_file.cpp
 	dm_file.cpp
+	eer_file.cpp
 	image_file.cpp
 	sqlite/sqlite3.c
 	database.cpp

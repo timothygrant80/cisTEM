@@ -48,7 +48,7 @@ DMFile::~DMFile()
 	CloseFile();
 }
 
-bool DMFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_for_file_to_exist, bool only_check_the_first_image)
+bool DMFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_for_file_to_exist, bool only_check_the_first_image, int eer_super_res_factor, int eer_frames_per_image)
 {
 	MyDebugAssertFalse(overwrite,"Overwriting is not supported for DM files");
 	MyDebugAssertFalse(wait_for_file_to_exist,"Waiting for file to exist not supported for DM files");

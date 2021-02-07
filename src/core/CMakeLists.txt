@@ -69,7 +69,7 @@ if (BUILD_EXPERIMENTAL_FEATURES)
 endif(BUILD_EXPERIMENTAL_FEATURES)
 
 target_link_libraries(cisTEM_core ${CMAKE_DL_LIBS})
-target_link_libraries(cisTEM_core fftw3f)
+target_link_libraries(cisTEM_core ${FFTW_LIBRARIES})
 target_link_libraries(cisTEM_core ${wxWidgets_LIBRARIES})
 target_link_libraries(cisTEM_core ${TIFF_LIBRARIES})
 

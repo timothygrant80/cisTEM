@@ -517,6 +517,7 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 	int first_frame;
 	int last_frame;
 
+	int eer_frames_per_image;
 	int number_of_frames_for_running_average;
 	int max_threads;
 
@@ -561,6 +562,8 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 	float mag_distortion_angle;
 	float mag_distortion_major_axis_scale;
 	float mag_distortion_minor_axis_scale;
+
+	const int eer_frames_per_image = 0;
 
 
 	// read the options form the gui..
@@ -718,7 +721,7 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 		std::string aligned_frames_filename = "/dev/null";
 		std::string output_shift_text_file = "/dev/null";
 
-		current_job_package.AddJob("ssfffbbfifbiifffbsbsfbfffbtbtiiiibtt",current_filename.c_str(), //0
+		current_job_package.AddJob("ssfffbbfifbiifffbsbsfbfffbtbtiiiibtti",current_filename.c_str(), //0
 														output_filename.ToUTF8().data(),
 														current_pixel_size,
 														float(minimum_shift),
@@ -753,7 +756,8 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 														max_threads,
 														saved_aligned_frames,
 														aligned_frames_filename.c_str(),
-														output_shift_text_file.c_str());
+														output_shift_text_file.c_str(),
+														eer_frames_per_image);
 
 		my_progress_dialog->Update(counter + 1);
 	}

@@ -96,6 +96,7 @@ bool EerFile::ReadLogicalDimensionsFromDisk(bool check_only_the_first_image)
 {
 	MyDebugAssertTrue(tif != NULL,"File must be open");
 	MyDebugAssertTrue(fh != NULL,"File must be open");
+	MyDebugAssertFalse(number_of_eer_frames_per_image == 0, "Number of EER frames per image has not yet been set. Cannot work out logical dimensions.");
 	/*
 	 * Since the file was already open, EerOpen has already read in the first dictionary
 	 * and it must be valid, else we would have returned an error at open-time already
@@ -207,7 +208,7 @@ void EerFile::ReadSlicesFromDisk(int start_slice, int end_slice, float *output_a
 
 		start_pos_in_output_array = (slice_counter-start_slice) * (logical_dimension_x*logical_dimension_y*super_res_factor*super_res_factor);
 
-		MyDebugPrint("Reading slice %i of %i (EER frames %i to %i)",slice_counter,end_slice - start_slice +1, start_eer_frame,finish_eer_frame);
+		//MyDebugPrint("Reading slice %i of %i (EER frames %i to %i)",slice_counter,number_of_images, start_eer_frame,finish_eer_frame);
 		DecodeToFloatArray(start_eer_frame,finish_eer_frame,&output_array[start_pos_in_output_array]);
 	}
 

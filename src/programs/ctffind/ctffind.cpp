@@ -1125,6 +1125,7 @@ void CtffindApp::DoInteractiveUserInput()
 	float known_defocus_2 = 0.0;
 	float known_phase_shift = 0.0;
 	int desired_number_of_threads = 1;
+	int eer_frames_per_image = 0;
 
 
 	// Things we need for old school input
@@ -1362,14 +1363,23 @@ void CtffindApp::DoInteractiveUserInput()
 
 		input_filename  			= my_input->GetFilenameFromUser("Input image file name", "Filename of input image", "input.mrc", true );
 
-		ImageFile input_file(input_filename,false);
-		if (input_file.ReturnZSize() > 1)
+		ImageFile input_file;
+		if (FilenameExtensionMatches(input_filename,"eer"))
 		{
-			input_is_a_movie 		= my_input->GetYesNoFromUser("Input is a movie (stack of frames)","Answer yes if the input file is a stack of frames from a dose-fractionated movie. If not, each image will be processed separately","No");
+			// If the input file is EER format, we will find out how many EER frames to average per image only later, so for now we have no way of knowing the logical Z dimension, but we know it's a movie
+			input_is_a_movie = true;
 		}
 		else
 		{
-			input_is_a_movie = false;
+			input_file.OpenFile(input_filename,false);
+			if (input_file.ReturnZSize() > 1)
+			{
+				input_is_a_movie 		= my_input->GetYesNoFromUser("Input is a movie (stack of frames)","Answer yes if the input file is a stack of frames from a dose-fractionated movie. If not, each image will be processed separately","No");
+			}
+			else
+			{
+				input_is_a_movie = false;
+			}
 		}
 
 		if (input_is_a_movie)
@@ -1475,6 +1485,11 @@ void CtffindApp::DoInteractiveUserInput()
 
 				}
 
+				if (FilenameExtensionMatches(input_filename,"eer"))
+				{
+					eer_frames_per_image = my_input->GetIntFromUser("Number of EER frames per image","If the input movie is in EER format, we will average EER frames together so that each frame image for alignment has a reasonable exposure","25",1);
+				}
+				else { eer_frames_per_image = 0; }
 
 			}
 			else
@@ -1483,6 +1498,7 @@ void CtffindApp::DoInteractiveUserInput()
 				movie_is_dark_corrected 		= true;
 				gain_filename = "";
 				dark_filename = "";
+				eer_frames_per_image = 0;
 			}
 			defocus_is_known					= my_input->GetYesNoFromUser("Do you already know the defocus?","Answer yes if you already know the defocus and you just want to know the score or fit resolution. If you answer yes, the known astigmatism parameter specified eariler will be ignored","No");
 			if (defocus_is_known)
@@ -1521,14 +1537,15 @@ void CtffindApp::DoInteractiveUserInput()
 			dark_filename						= "";
 			defocus_is_known					= false;
 			desired_number_of_threads			= 1;
+			eer_frames_per_image				= 0;
 		}
 
 		delete my_input;
 
 	}
 
-//	my_current_job.Reset(38);
-	my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbsbfffbfffbi",	input_filename.c_str(), //1
+//	my_current_job.Reset(39);
+	my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbsbfffbfffbii",	input_filename.c_str(), //1
 																			input_is_a_movie,
 																			number_of_frames_to_average,
 																			output_diagnostic_filename.c_str(),
@@ -1565,7 +1582,8 @@ void CtffindApp::DoInteractiveUserInput()
 																			known_defocus_2,
 																			known_phase_shift,
 																			determine_tilt,
-																			desired_number_of_threads);
+																			desired_number_of_threads,
+																			eer_frames_per_image);
 	}
 
 
@@ -1629,6 +1647,7 @@ bool CtffindApp::DoCalculation()
 	const float			known_phase_shift					= my_current_job.arguments[35].ReturnFloatArgument();
 	const bool  		determine_tilt						= my_current_job.arguments[36].ReturnBoolArgument();
 	int					desired_number_of_threads			= my_current_job.arguments[37].ReturnIntegerArgument();
+	int					eer_frames_per_image				= my_current_job.arguments[38].ReturnIntegerArgument();
 
 	// if we are applying a mag distortion, it can change the pixel size, so do that here to make sure it is used forever onwards..
 
@@ -1678,7 +1697,7 @@ bool CtffindApp::DoCalculation()
 	// Other variables
 	int					number_of_movie_frames;
 	int         		number_of_micrographs;
-	ImageFile			input_file(input_filename,false);
+	ImageFile			input_file;
 	Image				*average_spectrum = new Image();
 	Image				*average_spectrum_masked = new Image();
 	wxString			output_text_fn;
@@ -1747,6 +1766,16 @@ bool CtffindApp::DoCalculation()
 	wxDateTime time_before_diagnostics;
 	wxDateTime time_finish;
 
+	// Open the input file
+	bool input_file_is_valid = input_file.OpenFile(input_filename, false,false,false,1,eer_frames_per_image);
+	if (!input_file_is_valid)
+	{
+		SendInfo(wxString::Format("Input movie %s seems to be corrupt. Ctffind results may not be meaningful.\n", input_filename));
+	}
+	else
+	{
+		wxPrintf("Input file looks OK, proceeding\n");
+	}
 
 
 	// Some argument checking

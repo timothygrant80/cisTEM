@@ -600,6 +600,7 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 
 	bool determine_tilt;
 
+	const int eer_frames_per_image = 0;
 
 	// allocate space for the buffered results..
 
@@ -752,7 +753,7 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 
 		const int number_of_threads = 1;
 
-		current_job_package.AddJob("sbisffffifffffbfbfffbffbbsbsbfffbfffbi",	input_filename.c_str(), // 0
+		current_job_package.AddJob("sbisffffifffffbfbfffbffbbsbsbfffbfffbii",	input_filename.c_str(), // 0
 																	input_is_a_movie, // 1
 																	number_of_frames_to_average, //2
 																	output_diagnostic_filename.c_str(), // 3
@@ -789,7 +790,8 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 																	known_defocus_2,
 																	known_phase_shift,
 																	determine_tilt,
-																	number_of_threads);
+																	number_of_threads,
+																	eer_frames_per_image);
 
 		my_progress_dialog->Update(counter + 1);
 	}

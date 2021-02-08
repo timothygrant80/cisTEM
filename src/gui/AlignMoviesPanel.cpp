@@ -563,6 +563,8 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 	float mag_distortion_major_axis_scale;
 	float mag_distortion_minor_axis_scale;
 
+	const int eer_frames_per_image = 0;
+
 
 	// read the options form the gui..
 
@@ -712,7 +714,6 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 		mag_distortion_minor_axis_scale = movie_asset_panel->ReturnMagDistortionMinorScale(active_group.members[counter]);
 
 
-		eer_frames_per_image = 0;
 		number_of_frames_for_running_average = 1;
 		max_threads = 1;
 

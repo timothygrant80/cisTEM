@@ -4,7 +4,11 @@
 // think i got it from a book i had about game programming in c.. it's probably slower than what the compiler would do these days.
 
 #define AL_PI        3.14159265358979323846
+#if defined(__i386__) || defined(__x86_64__)
 #define _AL_SINCOS(x, s, c)  __asm__ ("fsincos" : "=t" (c), "=u" (s) : "0" (x))
+#else
+#define _AL_SINCOS(x, s, c) s = sinf(x); c = cosf(x);
+#endif
 #define FLOATSINCOS(x, s, c)  _AL_SINCOS((x) * AL_PI / 128.0, s ,c)
 
 #define MAKE_ROTATION_f(x, y, z)                \

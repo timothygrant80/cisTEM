@@ -131,12 +131,11 @@ void UnBlurApp::DoInteractiveUserInput()
 	 		 aligned_frames_filename = "";
 	 	 }
 		
-		wxFileName input_filename_wx(input_filename);
-		wxString input_filename_ext = input_filename_wx.GetExt();
-		if (input_filename_ext.IsSameAs("eer",false))
+		if (FilenameExtensionMatches(input_filename,"eer"))
 		{
 			eer_frames_per_image = my_input->GetIntFromUser("Number of EER frames per image","If the input movie is in EER format, we will average EER frames together so that each frame image for alignment has a reasonable exposure","25",1);
 		}
+		else { eer_frames_per_image = 0; }
 	 }
  	 else
  	 {

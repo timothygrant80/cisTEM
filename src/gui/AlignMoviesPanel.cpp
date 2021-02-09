@@ -517,7 +517,6 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 	int first_frame;
 	int last_frame;
 
-	int eer_frames_per_image;
 	int number_of_frames_for_running_average;
 	int max_threads;
 

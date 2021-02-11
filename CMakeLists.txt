@@ -1,13 +1,22 @@
+#
+# CMake for cisTEM
+#
+# Example usage:
+# mdkir build && cd build
+# cmake -DBUILD_STATIC_BINARIES=ON -DBUILD_EXPERIMENTAL_FEATURES=OFF ..
+#
+# or from settings.json in vscode, set same variables
+#
 project(cisTEM)
-cmake_minimum_required(VERSION 2.8)
+cmake_minimum_required(VERSION 3.11)
 
 # specify the C++ standard
 set(CMAKE_CXX_STANDARD 11)
-set(CMAKE_CXX_STANDARD_REQUIRED True)
+set(CMAKE_CXX_STANDARD_REQUIRED ON)
 
 # Debug mode
 set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -DDEBUG")
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG -O0")
 
 # Experimental build option
 option(BUILD_EXPERIMENTAL_FEATURES "Build experimental parts of cisTEM" OFF)
@@ -17,7 +26,22 @@ if (BUILD_EXPERIMENTAL_FEATURES)
 endif(BUILD_EXPERIMENTAL_FEATURES)
 
 #
+# Let's link in static libraries
+#
+option(BUILD_STATIC_BINARIES "Build static binaries to minimize runtime dependencies" OFF)
+if (BUILD_STATIC_BINARIES)
+    #set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
+    set(BUILD_SHARED_LIBS OFF)
+    #set(CMAKE_EXE_LINKER_FLAGS "-static" )
+    set(wxWidgets_USE_STATIC ON)
+    set(FFTW_USE_STATIC_LIBS ON)
+endif(BUILD_STATIC_BINARIES) 
+
+
+#
 # Setup findFFTW
+#
+# https://github.com/egpbos/findfftw
 #
 configure_file(downloadFindFFTW.cmake.in findFFTW-download/CMakeLists.txt)
 execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
@@ -34,9 +58,7 @@ execute_process(COMMAND ${CMAKE_COMMAND} --build .
 if(result)
     message(FATAL_ERROR "Build step for findFFTW failed: ${result}")
 endif()
-
 set(findFFTW_DIR ${CMAKE_CURRENT_BINARY_DIR}/findFFTW-src)
-
 set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${findFFTW_DIR}")
 	
 #
@@ -44,25 +66,53 @@ set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${findFFTW_DIR}")
 #
 find_package(FFTW REQUIRED COMPONENTS FLOAT_LIB)
 include_directories(${FFTW_INCLUDE_DIRS})
+message("Static library suffix: ${CMAKE_STATIC_LIBRARY_SUFFIX}")
+message("FFTW libraries: ${FFTW_LIBRARIES}")
 
 #
-# Let's look for wxWidgets (we can rely on cmake's built-in)
+# Let's look for wxWidgets
 #
+# How can the user point us to the correct wx-config?
+# https://github.com/wxMaxima-developers/wxmaxima/issues/1078
+# by setting environment variable WX_CONFIG, assuming cmake 3.11+
+#
+# To set an environmental variable for cmake configure time in vscode, 
+# edit the "cmake.configureEnvironment" part of settings.json
+#
+# The FindwxWidgets.cmake module will then use this to search for wx-config
+# and once it's found it, will remember its path as wxWidgets_CONFIG_EXECUTABLE
+#
+# More info here: https://gitlab.kitware.com/cmake/cmake/-/issues/17164
+# 
+# Note: if you first run cmake without this env variable, running this again
+# may keep finding the same old wx-config, not the one in the env var. 
+# Probably some caching behavior. 
+# Solution: delete the CMakeCache.txt file, or possibly nuke the build directory and re-run cmake
+# Solution within vscode: run "CMake: Delete cached built settings and reconfigure" from the command palette
+#
+message("Will search for wxWidgets. To specify which installation to use, set the environment variable WX_CONFIG to the full path of wx-config")
+if(DEFINED ENV{WX_CONFIG})
+message("Found the following wx-config set by ENV{WX_CONFIG}: $ENV{WX_CONFIG}")
+endif()
 set(wxWidgets_USE_DEBUG false)	
 find_package(wxWidgets REQUIRED COMPONENTS core base std net xml richtext aui)
+message("wx include locations: ${wxWidgets_INCLUDE_DIRS}")
 include(${wxWidgets_USE_FILE})
-include_directories(${wxWidgets_INCLUDE_DIRS}) 
+include_directories(${wxWidgets_INCLUDE_DIRS})
+message(wxWidgets libraries: ${wxWidgets_LIBRARIES})
 
 #
 # Let's look for LibTIFF
 #
+#set(CMAKE_FIND_LIBRARY_SUFFIXES ".a")
 find_package(TIFF REQUIRED)
 include_directories(${TIFF_INCLUDE_DIRS})
+message("TIFF libraries: ${TIFF_LIBRARIES}")
 
 #
 # Let's figure out which SVN revision we are building (if indeed we're using SVN at all)
 #
-find_package(Subversion)
+find_package(Subversion) 
 if(SUBVERSION_FOUND)
     if(EXISTS "${CMAKE_SOURCE_DIR}/.svn")
         Subversion_WC_INFO(${PROJECT_SOURCE_DIR} cisTEM)

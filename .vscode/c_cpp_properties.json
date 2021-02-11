@@ -5,22 +5,24 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "/usr/local/include",
-                "/usr/local/lib/wx/include/osx_cocoa-unicode-static-3.0",
+                "/usr/local/lib/wx/include/osx_cocoa-unicode-3.0",
                 "/usr/local/include/wx-3.0"
             ],
             "defines": [
                 "_FILE_OFFSET_BITS=64",
-                "__WXMAC__",
-                "__WXOSX__",
+                "WX_PRECOMP",
+                //"__WXMAC__",
+                //"__WXOSX__",
                 "__WXOSX_COCOA__",
+                "__ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES=1",
                 "DEBUG"
             ],
-            "macFrameworkPath": [],
-            "compilerPath": "/usr/bin/clang++",
+            "macFrameworkPath": ["/System/Library/Frameworks"],
+            "compilerPath": "/usr/bin/clang",
             "cStandard": "c11",
             "cppStandard": "gnu++11",
             "intelliSenseMode": "clang-x64",
-            "configurationProvider": "vector-of-bool.cmake-tools"
+            "configurationProvider": "ms-vscode.cmake-tools"
         },
         {
             "name": "Linux",
@@ -38,7 +40,7 @@
             "compilerPath": "/usr/bin/gcc",
             "cStandard": "c11",
             "cppStandard": "gnu++11",
-            "configurationProvider": "vector-of-bool.cmake-tools"
+            "configurationProvider": "ms-vscode.cmake-tools"
         }
     ],
     "version": 4

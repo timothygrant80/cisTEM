@@ -66,6 +66,7 @@ noinst_HEADERS = core/asset_group.h \
                  core/json/jsonwriter.h \
                  core/stopwatch.h \
                  core/ccl3d.h \
+                 core/eer_file.h \
                  gui/job_panel.h \
                  gui/gui_functions.h \
                  gui/ResultsDataViewListCtrl.h \
@@ -138,6 +139,9 @@ noinst_HEADERS = core/asset_group.h \
                  gui/DistributionPlotDialog.h \
                  gui/RefineCTFPanel.h \
                  gui/ShowTemplateMatchResultsPanel.h \
+                 gui/MyExperimentalPanel.h \
+                 gui/MatchTemplateResultsPanel.h \
+                 gui/RefineTemplatePanel.h \
                  gui/icons/action_icon.cpp \
                  gui/icons/assets_icon.cpp \
                  gui/icons/ctf_icon.cpp \
@@ -201,9 +205,12 @@ noinst_HEADERS = core/asset_group.h \
                  gui/icons/VSV_startup_800.cpp \
                  gui/icons/vsv_sharpening.cpp \
                  gui/icons/refine_ctf_icon.cpp \
+                 gui/icons/refine_template_icon.cpp \
                  programs/console_test/hiv_image_80x80x1.cpp \
                  programs/console_test/hiv_images_shift_noise_80x80x10.cpp \
-                 programs/console_test/sine_128x128x1.cpp
+                 programs/console_test/sine_128x128x1.cpp \
+                 programs/simulate/wave_function_propagator.h \
+                 programs/simulate/scattering_potential.h 
                  
 if EXPERIMENTAL_AM
 noinst_HEADERS += 	gui/MatchTemplatePanel.h \

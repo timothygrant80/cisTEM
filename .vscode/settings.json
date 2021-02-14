@@ -18,8 +18,4 @@
         "string": "cpp",
         "filesystem": "cpp"
     },
-    "files.associations": {
-        "limits": "cpp",
-        "iostream": "cpp"
-    },
 }

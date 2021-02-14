@@ -11,7 +11,7 @@
         "BUILD_OpenMP":true,
     },
     //"cmake.configureEnvironment": {
-    //    "WX_CONFIG":"/Users/rohoua/work/software/wx/bin/wx-config",
+    //    "WX_CONFIG":"/path/to/your/wx/bin/wx-config",
     //},
     "C_Cpp.dimInactiveRegions": true,
     "files.associations": {

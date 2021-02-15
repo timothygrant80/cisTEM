@@ -9,6 +9,7 @@
 #
 project(cisTEM)
 cmake_minimum_required(VERSION 3.11)
+set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake_modules" ${CMAKE_MODULE_PATH})
 
 # specify the C++ standard
 set(CMAKE_CXX_STANDARD 11)
@@ -52,33 +53,51 @@ endif(BUILD_STATIC_BINARIES)
 
 
 #
-# Setup findFFTW
+# MKL
 #
-# https://github.com/egpbos/findfftw
-#
-configure_file(downloadFindFFTW.cmake.in findFFTW-download/CMakeLists.txt)
-execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
-        RESULT_VARIABLE result
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/findFFTW-download )
-if(result)
-    message(FATAL_ERROR "CMake step for findFFTW failed: ${result}")
-    else()
-    message("CMake step for findFFTW completed (${result}).")
+# According to the URL below, proper linking will require:
+# target_link_libraries(mytest "-Wl,--start-group" ${MKL_LIBRARIES} "-Wl,--end-group -lpthread -lm -ldl")
+# https://stackoverflow.com/questions/56200963/how-to-setup-mkl-on-linux-with-cmake?noredirect=1&lq=1
+find_package(MKL)
+if(MKL_FOUND)
+    message("Using Intel MKL for fast Fourier transforms")
+    include_directories(${MKL_INCLUDE_DIRS})
+    # We have MKL, so we will use the MKL-provided FFT instead of relying on the FFTW library
+    set(FFTW_LIBRARIES ${MKL_LIBRARIES})
+else()
+    message("Using FFTW for fast Fourier transforms")
+    #
+    # Setup findFFTW
+    #
+    # https://github.com/egpbos/findfftw
+    #
+    # TODO: just add a static FindFFTW.cmake module in cmake_modules/ so that we do not need to be connected to the internet to build
+    configure_file(downloadFindFFTW.cmake.in findFFTW-download/CMakeLists.txt)
+    execute_process(COMMAND ${CMAKE_COMMAND} -G "${CMAKE_GENERATOR}" .
+            RESULT_VARIABLE result
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/findFFTW-download )
+    if(result)
+        message(FATAL_ERROR "CMake step for findFFTW failed: ${result}")
+        else()
+        message("CMake step for findFFTW completed (${result}).")
+    endif()
+    execute_process(COMMAND ${CMAKE_COMMAND} --build .
+            RESULT_VARIABLE result
+            WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/findFFTW-download )
+    if(result)
+        message(FATAL_ERROR "Build step for findFFTW failed: ${result}")
+    endif()
+    set(findFFTW_DIR ${CMAKE_CURRENT_BINARY_DIR}/findFFTW-src)
+    set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${findFFTW_DIR}")
+        
+    #
+    # Let's look for single-precision FFTW
+    #
+    find_package(FFTW REQUIRED COMPONENTS FLOAT_LIB)
+    include_directories(${FFTW_INCLUDE_DIRS})
 endif()
-execute_process(COMMAND ${CMAKE_COMMAND} --build .
-        RESULT_VARIABLE result
-        WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}/findFFTW-download )
-if(result)
-    message(FATAL_ERROR "Build step for findFFTW failed: ${result}")
-endif()
-set(findFFTW_DIR ${CMAKE_CURRENT_BINARY_DIR}/findFFTW-src)
-set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${findFFTW_DIR}")
-	
-#
-# Let's look for single-precision FFTW
-#
-find_package(FFTW REQUIRED COMPONENTS FLOAT_LIB)
-include_directories(${FFTW_INCLUDE_DIRS})
+
+
 message("Static library suffix: ${CMAKE_STATIC_LIBRARY_SUFFIX}")
 message("FFTW libraries: ${FFTW_LIBRARIES}")
 

@@ -8,9 +8,10 @@
     "cmake.configureSettings": {
         "BUILD_EXPERIMENTAL_FEATURES":true,
         "BUILD_STATIC_BINARIES":false,
+        "BUILD_OpenMP":true,
     },
     //"cmake.configureEnvironment": {
-    //    "WX_CONFIG":"/Users/rohoua/work/software/wx/bin/wx-config",
+    //    "WX_CONFIG":"/path/to/your/wx/bin/wx-config",
     //},
     "C_Cpp.dimInactiveRegions": true,
     "files.associations": {

@@ -25,6 +25,19 @@ if (BUILD_EXPERIMENTAL_FEATURES)
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEXPERIMENTAL")
 endif(BUILD_EXPERIMENTAL_FEATURES)
 
+# OpenMP build option
+option(BUILD_OpenMP "Enable OpenMP for multithreading" OFF)
+if (BUILD_OpenMP)
+    find_package(OpenMP)
+    if(OpenMP_FOUND OR OpenMP_CXX_FOUND)
+        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
+        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
+        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
+    else()
+        message(FATAL_ERROR "Build step for OpenMP failed.")
+    endif()
+endif(BUILD_OpenMP)
+
 #
 # Let's link in static libraries
 #

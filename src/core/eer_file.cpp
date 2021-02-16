@@ -317,7 +317,7 @@ void EerFile::DecodeToFloatArray(int start_eer_frame, int finish_eer_frame, floa
 				y = ((positions[i] >> 12) << 2) | ((symbols[i] & 12) >> 2); //render16K;  4096 = 2^12, 12 = 00001100b
 			}
 
-			current_address = y * logical_dimension_y + x;
+			current_address = y * logical_dimension_y * super_res_factor + x;
 
 			output_array[current_address] += 1.0f;
 		}

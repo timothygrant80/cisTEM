@@ -1445,9 +1445,13 @@ class MovieImportDialog : public wxDialog
 		wxComboBox* VoltageCombo;
 		wxStaticText* m_staticText21;
 		wxTextCtrl* CsText;
-		wxStaticText* m_staticText20;
+		wxStaticText* EerSuperResFactorStaticText;
+		wxChoice* EerSuperResFactorChoice;
+		wxStaticText* PixelSizeStaticText;
 		wxTextCtrl* PixelSizeText;
-		wxStaticText* m_staticText22;
+		wxStaticText* EerNumberOfFramesStaticText;
+		wxSpinCtrl* EerNumberOfFramesSpinCtrl;
+		wxStaticText* ExposurePerFrameStaticText;
 		wxTextCtrl* DoseText;
 		wxCheckBox* ApplyDarkImageCheckbox;
 		wxFilePickerCtrl* DarkFilePicker;

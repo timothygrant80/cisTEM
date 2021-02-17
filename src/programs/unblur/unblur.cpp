@@ -191,7 +191,6 @@ void UnBlurApp::DoInteractiveUserInput()
 	bool write_out_small_sum_image = false;
 	std::string small_sum_image_filename = "/dev/null";
 
-	my_current_job.Reset(38);
 	my_current_job.ManualSetArguments("ttfffbbfifbiifffbsbsfbfffbtbtiiiibttii",input_filename.c_str(),
 																 output_filename.c_str(),
 																 original_pixel_size,

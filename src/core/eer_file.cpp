@@ -1,6 +1,7 @@
 #include "core_headers.h"
 EerFile::EerFile()
 {
+	fh = NULL;
 	tif = NULL;
 	logical_dimension_x = 0;
 	logical_dimension_y = 0;
@@ -74,6 +75,8 @@ void EerFile::CloseFile()
 {
 	if (tif != NULL) TIFFClose(tif);
 	tif = NULL;
+	if (fh != NULL) fclose(fh);
+	fh = NULL;
 }
 
 void EerFile::PrintInfo()
@@ -95,7 +98,7 @@ void EerFile::PrintInfo()
 bool EerFile::ReadLogicalDimensionsFromDisk(bool check_only_the_first_image)
 {
 	MyDebugAssertTrue(tif != NULL,"File must be open");
-	MyDebugAssertTrue(fh != NULL,"File must be open");
+	MyDebugAssertTrue(fh != NULL,"File must be open: %s", filename.GetFullPath());
 	MyDebugAssertFalse(number_of_eer_frames_per_image == 0, "Number of EER frames per image has not yet been set. Cannot work out logical dimensions.");
 	/*
 	 * Since the file was already open, EerOpen has already read in the first dictionary

@@ -85,7 +85,7 @@ void MyAlignMoviesPanel::ResetDefaults()
 	dose_filter_checkbox->SetValue(true);
 	restore_power_checkbox->SetValue(true);
 	termination_threshold_text->ChangeValue("1");
-	max_iterations_spinctrl->SetValue(20);
+	max_iterations_spinctrl->SetValue(10);
 	bfactor_spinctrl->SetValue(1500);
 	mask_central_cross_checkbox->SetValue(true);
 	horizontal_mask_spinctrl->SetValue(1);

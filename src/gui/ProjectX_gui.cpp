@@ -5090,12 +5090,32 @@ MovieImportDialog::MovieImportDialog( wxWindow* parent, wxWindowID id, const wxS
 
 	bSizer26->Add( bSizer30, 0, wxEXPAND, 5 );
 
+	wxBoxSizer* bSizer291;
+	bSizer291 = new wxBoxSizer( wxHORIZONTAL );
+
+	EerSuperResFactorStaticText = new wxStaticText( this, wxID_ANY, wxT("EER super res. factor :"), wxDefaultPosition, wxDefaultSize, 0 );
+	EerSuperResFactorStaticText->Wrap( -1 );
+	EerSuperResFactorStaticText->Enable( false );
+
+	bSizer291->Add( EerSuperResFactorStaticText, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	wxString EerSuperResFactorChoiceChoices[] = { wxT("1"), wxT("2"), wxT("4") };
+	int EerSuperResFactorChoiceNChoices = sizeof( EerSuperResFactorChoiceChoices ) / sizeof( wxString );
+	EerSuperResFactorChoice = new wxChoice( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, EerSuperResFactorChoiceNChoices, EerSuperResFactorChoiceChoices, 0 );
+	EerSuperResFactorChoice->SetSelection( 0 );
+	EerSuperResFactorChoice->Enable( false );
+
+	bSizer291->Add( EerSuperResFactorChoice, 50, wxALL, 5 );
+
+
+	bSizer26->Add( bSizer291, 1, wxEXPAND, 5 );
+
 	wxBoxSizer* bSizer29;
 	bSizer29 = new wxBoxSizer( wxHORIZONTAL );
 
-	m_staticText20 = new wxStaticText( this, wxID_ANY, wxT("Pixel Size (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText20->Wrap( -1 );
-	bSizer29->Add( m_staticText20, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	PixelSizeStaticText = new wxStaticText( this, wxID_ANY, wxT("Pixel Size (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	PixelSizeStaticText->Wrap( -1 );
+	bSizer29->Add( PixelSizeStaticText, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	PixelSizeText = new wxTextCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer29->Add( PixelSizeText, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
@@ -5103,12 +5123,29 @@ MovieImportDialog::MovieImportDialog( wxWindow* parent, wxWindowID id, const wxS
 
 	bSizer26->Add( bSizer29, 0, wxEXPAND, 5 );
 
+	wxBoxSizer* bSizer2911;
+	bSizer2911 = new wxBoxSizer( wxHORIZONTAL );
+
+	EerNumberOfFramesStaticText = new wxStaticText( this, wxID_ANY, wxT("EER number of frames to average :"), wxDefaultPosition, wxDefaultSize, 0 );
+	EerNumberOfFramesStaticText->Wrap( -1 );
+	EerNumberOfFramesStaticText->Enable( false );
+
+	bSizer2911->Add( EerNumberOfFramesStaticText, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	EerNumberOfFramesSpinCtrl = new wxSpinCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 100000, 25 );
+	EerNumberOfFramesSpinCtrl->Enable( false );
+
+	bSizer2911->Add( EerNumberOfFramesSpinCtrl, 50, wxALL, 5 );
+
+
+	bSizer26->Add( bSizer2911, 1, wxEXPAND, 5 );
+
 	wxBoxSizer* bSizer32;
 	bSizer32 = new wxBoxSizer( wxHORIZONTAL );
 
-	m_staticText22 = new wxStaticText( this, wxID_ANY, wxT("Exposure per frame (e¯/Å²) :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText22->Wrap( -1 );
-	bSizer32->Add( m_staticText22, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	ExposurePerFrameStaticText = new wxStaticText( this, wxID_ANY, wxT("Exposure per frame (e¯/Å²) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	ExposurePerFrameStaticText->Wrap( -1 );
+	bSizer32->Add( ExposurePerFrameStaticText, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	DoseText = new wxTextCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer32->Add( DoseText, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );

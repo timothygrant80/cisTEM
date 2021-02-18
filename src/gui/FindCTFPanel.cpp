@@ -600,7 +600,8 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 
 	bool determine_tilt;
 
-	const int eer_frames_per_image = 0;
+	int current_eer_frames_per_image = 0;
+	int current_eer_super_res_factor = 1;
 
 	// allocate space for the buffered results..
 
@@ -742,6 +743,9 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 				movie_mag_distortion_major_scale = 1.0;
 				movie_mag_distortion_minor_scale = 1.0;
             }
+
+			current_eer_frames_per_image = current_movie->eer_frames_per_image;
+			current_eer_super_res_factor = current_movie->eer_super_res_factor;
         }
 		else
 		{
@@ -749,11 +753,13 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 			movie_is_gain_corrected = true;
 			current_dark_filename = "";
 			movie_is_dark_corrected = true;
+			current_eer_super_res_factor = 1;
+			current_eer_frames_per_image = 0;
 		}
 
 		const int number_of_threads = 1;
 
-		current_job_package.AddJob("sbisffffifffffbfbfffbffbbsbsbfffbfffbii",	input_filename.c_str(), // 0
+		current_job_package.AddJob("sbisffffifffffbfbfffbffbbsbsbfffbfffbiii",	input_filename.c_str(), // 0
 																	input_is_a_movie, // 1
 																	number_of_frames_to_average, //2
 																	output_diagnostic_filename.c_str(), // 3
@@ -791,7 +797,8 @@ void MyFindCTFPanel::StartEstimationClick( wxCommandEvent& event )
 																	known_phase_shift,
 																	determine_tilt,
 																	number_of_threads,
-																	eer_frames_per_image);
+																	current_eer_frames_per_image,
+																	current_eer_super_res_factor);
 
 		my_progress_dialog->Update(counter + 1);
 	}

@@ -40,13 +40,18 @@ MovieImportDialog( parent )
 		float default_mag_distortion_major_scale;
 		float default_mag_distortion_minor_scale;
 		bool default_protein_is_white;
+		int default_eer_super_res_factor;
+		int default_eer_frames_per_image;
 
-		main_frame->current_project.database.GetMovieImportDefaults(default_voltage, default_spherical_aberration, default_pixel_size, default_exposure_per_frame, default_movies_are_gain_corrected, default_gain_reference_filename, default_movies_are_dark_corrected, default_dark_reference_filename, default_resample_movies, default_desired_pixel_size, default_correct_mag_distortion, default_mag_distortion_angle, default_mag_distortion_major_scale, default_mag_distortion_minor_scale, default_protein_is_white);
+		main_frame->current_project.database.GetMovieImportDefaults(default_voltage, default_spherical_aberration, default_pixel_size, default_exposure_per_frame, default_movies_are_gain_corrected, default_gain_reference_filename, default_movies_are_dark_corrected, default_dark_reference_filename, default_resample_movies, default_desired_pixel_size, default_correct_mag_distortion, default_mag_distortion_angle, default_mag_distortion_major_scale, default_mag_distortion_minor_scale, default_protein_is_white, default_eer_super_res_factor, default_eer_frames_per_image);
 
 		VoltageCombo->ChangeValue(wxString::Format("%.0f", default_voltage));
 		CsText->ChangeValue(wxString::Format("%.2f", default_spherical_aberration));
 		PixelSizeText->ChangeValue(wxString::Format("%.4f", default_pixel_size));
 		DoseText->ChangeValue(wxString::Format("%.2f", default_exposure_per_frame));
+
+		EerNumberOfFramesSpinCtrl->SetValue(default_eer_frames_per_image);
+		EerSuperResFactorChoice->SetStringSelection(wxString::Format("%i",default_eer_super_res_factor));
 
 		if (default_movies_are_gain_corrected == true)
 		{
@@ -112,8 +117,10 @@ MovieImportDialog( parent )
 
 void MyMovieImportDialog::AddFilesClick( wxCommandEvent& event )
 {
-    wxFileDialog openFileDialog(this, _("Select movie files - basic wildcards are allowed"), "", "", "MRC or TIFF files (*.mrc;*.mrcs;*.tif;*.tiff)|*.mrc;*.mrcs;*.tif;*.tiff;*.MRC;*.MRCS;*.TIF;*.TIFF", wxFD_OPEN | wxFD_MULTIPLE);
+    wxFileDialog openFileDialog(this, _("Select movie files - basic wildcards are allowed"), "", "", "MRC, TIFF, or EER files (*.mrc;*.mrcs;*.tif;*.tiff;*.eer)|*.mrc;*.mrcs;*.tif;*.tiff;*.eer;*.MRC;*.MRCS;*.TIF;*.TIFF;*.EER", wxFD_OPEN | wxFD_MULTIPLE);
 
+	bool at_least_one_eer_file = false;
+	wxString current_extension;
 
     if (openFileDialog.ShowModal() == wxID_OK)
     {
@@ -136,7 +143,6 @@ void MyMovieImportDialog::AddFilesClick( wxCommandEvent& event )
       			wxArrayString wildcard_files;
       			wxString directory_string;
       			wxString file_string;
-      			wxString current_extension;
 
       			SplitFileIntoDirectoryAndFile(selected_paths.Item(counter), directory_string, file_string);
       			wxDir::GetAllFiles 	( directory_string, &wildcard_files, file_string, wxDIR_FILES);
@@ -146,7 +152,7 @@ void MyMovieImportDialog::AddFilesClick( wxCommandEvent& event )
       				current_extension = wxFileName(wildcard_files.Item(wildcard_counter)).GetExt();
       				current_extension = current_extension.MakeLower();
 
-      				if ( current_extension == "mrc" || current_extension == "mrcs" || current_extension == "tif") final_paths.Add(wildcard_files.Item(wildcard_counter));
+      				if ( current_extension == "mrc" || current_extension == "mrcs" || current_extension == "tif" || current_extension == "eer") final_paths.Add(wildcard_files.Item(wildcard_counter));
       			}
 
       		}
@@ -157,6 +163,9 @@ void MyMovieImportDialog::AddFilesClick( wxCommandEvent& event )
 		for (int file_counter = 0; file_counter < final_paths.GetCount(); file_counter++)
       	{
 			PathListCtrl->InsertItem(PathListCtrl->GetItemCount(), final_paths.Item(file_counter), PathListCtrl->GetItemCount());
+			current_extension = wxFileName(final_paths.Item(file_counter)).GetExt();
+			current_extension = current_extension.MakeLower();
+			if (current_extension == "eer") at_least_one_eer_file = true;
       	}
 
       	PathListCtrl->SetColumnWidth(0, wxLIST_AUTOSIZE);
@@ -166,14 +175,40 @@ void MyMovieImportDialog::AddFilesClick( wxCommandEvent& event )
 		DarkFilePicker->SetInitialDirectory(wxFileName(final_paths.Last()).GetPath());
 		
       	CheckImportButtonStatus();
-   }
+
+
+		if (at_least_one_eer_file)
+		{
+			PixelSizeStaticText->SetLabel(wxT("Pixel Size (post EER sampling) (Å) :"));
+			ExposurePerFrameStaticText->SetLabel(wxT("Exp. per frame (post EER avg.) (e¯/Å²) :"));
+			EerNumberOfFramesStaticText->Enable();
+			EerNumberOfFramesSpinCtrl->Enable();
+			EerSuperResFactorStaticText->Enable();
+			EerSuperResFactorChoice->Enable();
+		}
+		else
+		{
+			PixelSizeStaticText->SetLabel(wxT("Pixel Size (Å) :"));
+			ExposurePerFrameStaticText->SetLabel(wxT("Exposure per frame (e¯/Å²) :"));
+			EerNumberOfFramesStaticText->Disable();
+			EerNumberOfFramesSpinCtrl->Disable();
+			EerSuperResFactorStaticText->Disable();
+			EerSuperResFactorChoice->Disable();
+		}
+	}
+   
 }
 
 void MyMovieImportDialog::ClearClick( wxCommandEvent& event )
 {
 	PathListCtrl->DeleteAllItems();
 	CheckImportButtonStatus();
-
+	PixelSizeStaticText->SetLabel(wxT("Pixel Size (Å) :"));
+	ExposurePerFrameStaticText->SetLabel(wxT("Exposure per frame (e¯/Å²) :"));
+	EerNumberOfFramesStaticText->Disable();
+	EerNumberOfFramesSpinCtrl->Disable();
+	EerSuperResFactorStaticText->Disable();
+	EerSuperResFactorChoice->Disable();
 }
 
 void MyMovieImportDialog::CancelClick( wxCommandEvent& event )
@@ -188,28 +223,50 @@ void MyMovieImportDialog::AddDirectoryClick( wxCommandEvent& event )
 
 	wxArrayString all_files;
 
+	bool at_least_one_eer_file = false;
+	wxString current_extension;
+
     if (dlg.ShowModal() == wxID_OK)
     {
-    	wxDir::GetAllFiles 	( dlg.GetPath(), &all_files, "*.mrc", wxDIR_FILES);
-    	wxDir::GetAllFiles 	( dlg.GetPath(), &all_files, "*.mrcs", wxDIR_FILES);
-    	wxDir::GetAllFiles 	( dlg.GetPath(), &all_files, "*.tif", wxDIR_FILES);
+		wxDir::GetAllFiles 	( dlg.GetPath(), &all_files, "*.mrc", wxDIR_FILES);
+		wxDir::GetAllFiles 	( dlg.GetPath(), &all_files, "*.mrcs", wxDIR_FILES);
+		wxDir::GetAllFiles 	( dlg.GetPath(), &all_files, "*.tif", wxDIR_FILES);
 
-    	all_files.Sort();
+		all_files.Sort();
 
-    	PathListCtrl->Freeze();
+		PathListCtrl->Freeze();
 
-    	for (unsigned long counter = 0; counter < all_files.GetCount(); counter++)
-    	{
-    		PathListCtrl->InsertItem(PathListCtrl->GetItemCount(), all_files.Item(counter), PathListCtrl->GetItemCount());
-    	}
+		for (unsigned long counter = 0; counter < all_files.GetCount(); counter++)
+		{
+			PathListCtrl->InsertItem(PathListCtrl->GetItemCount(), all_files.Item(counter), PathListCtrl->GetItemCount());
+		}
 
-    	PathListCtrl->SetColumnWidth(0, wxLIST_AUTOSIZE);
-    	PathListCtrl->Thaw();
+		PathListCtrl->SetColumnWidth(0, wxLIST_AUTOSIZE);
+		PathListCtrl->Thaw();
 
 		GainFilePicker->SetInitialDirectory(dlg.GetPath());
 		DarkFilePicker->SetInitialDirectory(dlg.GetPath());
 
-    	CheckImportButtonStatus();
+		CheckImportButtonStatus();
+
+		if (at_least_one_eer_file)
+		{
+			PixelSizeStaticText->SetLabel(wxT("Pixel Size (post EER sampling) (Å) :"));
+			ExposurePerFrameStaticText->SetLabel(wxT("Exp. per frame (post EER avg.) (e¯/Å²) :"));
+			EerNumberOfFramesStaticText->Enable();
+			EerNumberOfFramesSpinCtrl->Enable();
+			EerSuperResFactorStaticText->Enable();
+			EerSuperResFactorChoice->Enable();
+		}
+		else
+		{
+			PixelSizeStaticText->SetLabel(wxT("Pixel Size (Å) :"));
+			ExposurePerFrameStaticText->SetLabel(wxT("Exposure per frame (e¯/Å²) :"));
+			EerNumberOfFramesStaticText->Disable();
+			EerNumberOfFramesSpinCtrl->Disable();
+			EerSuperResFactorStaticText->Disable();
+			EerSuperResFactorChoice->Disable();
+		}
 
     }
 
@@ -367,6 +424,10 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 		temp_asset.dose_per_frame = dose_per_frame;
 		temp_asset.spherical_aberration = spherical_aberration;
 		temp_asset.protein_is_white = MoviesHaveInvertedContrast->IsChecked();
+		long temp_long;
+		EerSuperResFactorChoice->GetStringSelection().ToLong(&temp_long);
+		temp_asset.eer_super_res_factor = temp_long;
+		temp_asset.eer_frames_per_image = EerNumberOfFramesSpinCtrl->GetValue();
 
 		movies_are_gain_corrected = !ApplyGainImageCheckbox->IsChecked();
 		movies_are_dark_corrected = !ApplyDarkImageCheckbox->IsChecked();
@@ -514,7 +575,7 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 						temp_asset.total_dose = double(temp_asset.number_of_frames) * dose_per_frame;
 						movie_asset_panel->AddAsset(&temp_asset);
 
-						main_frame->current_project.database.AddNextMovieAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), 1, temp_asset.x_size, temp_asset.y_size, temp_asset.number_of_frames, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.dose_per_frame, temp_asset.spherical_aberration,temp_asset.gain_filename,temp_asset.dark_filename, temp_asset.output_binning_factor, temp_asset.correct_mag_distortion, temp_asset.mag_distortion_angle, temp_asset.mag_distortion_major_scale, temp_asset.mag_distortion_minor_scale, temp_asset.protein_is_white);
+						main_frame->current_project.database.AddNextMovieAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), 1, temp_asset.x_size, temp_asset.y_size, temp_asset.number_of_frames, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.dose_per_frame, temp_asset.spherical_aberration,temp_asset.gain_filename,temp_asset.dark_filename, temp_asset.output_binning_factor, temp_asset.correct_mag_distortion, temp_asset.mag_distortion_angle, temp_asset.mag_distortion_major_scale, temp_asset.mag_distortion_minor_scale, temp_asset.protein_is_white, temp_asset.eer_super_res_factor, temp_asset.eer_frames_per_image);
 					}
 				}
 				else
@@ -541,7 +602,7 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 
 		main_frame->current_project.database.DeleteTable("MOVIE_IMPORT_DEFAULTS");
 		main_frame->current_project.database.CreateMovieImportDefaultsTable();
-		main_frame->current_project.database.InsertOrReplace("MOVIE_IMPORT_DEFAULTS", "prrrrititirirrri", "NUMBER", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "MOVIES_ARE_GAIN_CORRECTED", "GAIN_REFERENCE_FILENAME", "MOVIES_ARE_DARK_CORRECTED", "DARK_REFERENCE_FILENAME", "RESAMPLE_MOVIES", "DESIRED_PIXEL_SIZE", "CORRECT_MAG_DISTORTION", "MAG_DISTORTION_ANGLE", "MAG_DISTORTION_MAJOR_SCALE", "MAG_DISTORTION_MINOR_SCALE", "PROTEIN_IS_WHITE", 1,  microscope_voltage, spherical_aberration, pixel_size, dose_per_frame, movies_are_gain_corrected, gain_ref_filename.ToUTF8().data(), movies_are_dark_corrected, dark_ref_filename.ToUTF8().data(), resample_movies, double(DesiredPixelSizeTextCtrl->ReturnValue()), correct_mag_distortion, double(DistortionAngleTextCtrl->ReturnValue()), double(MajorScaleTextCtrl->ReturnValue()), double(MinorScaleTextCtrl->ReturnValue()), int(MoviesHaveInvertedContrast->IsChecked()));
+		main_frame->current_project.database.InsertOrReplace("MOVIE_IMPORT_DEFAULTS", "prrrrititirirrriii", "NUMBER", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "MOVIES_ARE_GAIN_CORRECTED", "GAIN_REFERENCE_FILENAME", "MOVIES_ARE_DARK_CORRECTED", "DARK_REFERENCE_FILENAME", "RESAMPLE_MOVIES", "DESIRED_PIXEL_SIZE", "CORRECT_MAG_DISTORTION", "MAG_DISTORTION_ANGLE", "MAG_DISTORTION_MAJOR_SCALE", "MAG_DISTORTION_MINOR_SCALE", "PROTEIN_IS_WHITE", "EER_SUPER_RES_FACTOR", "EER_FRAMES_PER_IMAGE", 1,  microscope_voltage, spherical_aberration, pixel_size, dose_per_frame, movies_are_gain_corrected, gain_ref_filename.ToUTF8().data(), movies_are_dark_corrected, dark_ref_filename.ToUTF8().data(), resample_movies, double(DesiredPixelSizeTextCtrl->ReturnValue()), correct_mag_distortion, double(DistortionAngleTextCtrl->ReturnValue()), double(MajorScaleTextCtrl->ReturnValue()), double(MinorScaleTextCtrl->ReturnValue()), int(MoviesHaveInvertedContrast->IsChecked()), temp_asset.eer_super_res_factor, temp_asset.eer_frames_per_image);
 		main_frame->current_project.database.Commit();
 
 		main_frame->DirtyMovieGroups();

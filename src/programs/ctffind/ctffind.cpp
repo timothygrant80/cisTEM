@@ -1126,6 +1126,7 @@ void CtffindApp::DoInteractiveUserInput()
 	float known_phase_shift = 0.0;
 	int desired_number_of_threads = 1;
 	int eer_frames_per_image = 0;
+	int eer_super_res_factor = 1;
 
 
 	// Things we need for old school input
@@ -1488,8 +1489,9 @@ void CtffindApp::DoInteractiveUserInput()
 				if (FilenameExtensionMatches(input_filename,"eer"))
 				{
 					eer_frames_per_image = my_input->GetIntFromUser("Number of EER frames per image","If the input movie is in EER format, we will average EER frames together so that each frame image for alignment has a reasonable exposure","25",1);
+					eer_super_res_factor = my_input->GetIntFromUser("EER super resolution factor","Choose between 1 (no supersampling), 2, or 4 (image pixel size will be 4 times smaller that the camera phyiscal pixel)","1",1,4);
 				}
-				else { eer_frames_per_image = 0; }
+				else { eer_frames_per_image = 0; eer_super_res_factor = 1;}
 
 			}
 			else
@@ -1499,6 +1501,7 @@ void CtffindApp::DoInteractiveUserInput()
 				gain_filename = "";
 				dark_filename = "";
 				eer_frames_per_image = 0;
+				eer_super_res_factor = 1;
 			}
 			defocus_is_known					= my_input->GetYesNoFromUser("Do you already know the defocus?","Answer yes if you already know the defocus and you just want to know the score or fit resolution. If you answer yes, the known astigmatism parameter specified eariler will be ignored","No");
 			if (defocus_is_known)
@@ -1538,6 +1541,7 @@ void CtffindApp::DoInteractiveUserInput()
 			defocus_is_known					= false;
 			desired_number_of_threads			= 1;
 			eer_frames_per_image				= 0;
+			eer_super_res_factor				= 1;
 		}
 
 		delete my_input;
@@ -1545,7 +1549,7 @@ void CtffindApp::DoInteractiveUserInput()
 	}
 
 //	my_current_job.Reset(39);
-	my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbsbfffbfffbii",	input_filename.c_str(), //1
+	my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbsbfffbfffbiii",	input_filename.c_str(), //1
 																			input_is_a_movie,
 																			number_of_frames_to_average,
 																			output_diagnostic_filename.c_str(),
@@ -1583,7 +1587,8 @@ void CtffindApp::DoInteractiveUserInput()
 																			known_phase_shift,
 																			determine_tilt,
 																			desired_number_of_threads,
-																			eer_frames_per_image);
+																			eer_frames_per_image,
+																			eer_super_res_factor);
 	}
 
 
@@ -1648,6 +1653,7 @@ bool CtffindApp::DoCalculation()
 	const bool  		determine_tilt						= my_current_job.arguments[36].ReturnBoolArgument();
 	int					desired_number_of_threads			= my_current_job.arguments[37].ReturnIntegerArgument();
 	int					eer_frames_per_image				= my_current_job.arguments[38].ReturnIntegerArgument();
+	int					eer_super_res_factor				= my_current_job.arguments[39].ReturnIntegerArgument();
 
 	// if we are applying a mag distortion, it can change the pixel size, so do that here to make sure it is used forever onwards..
 
@@ -1767,7 +1773,7 @@ bool CtffindApp::DoCalculation()
 	wxDateTime time_finish;
 
 	// Open the input file
-	bool input_file_is_valid = input_file.OpenFile(input_filename, false,false,false,1,eer_frames_per_image);
+	bool input_file_is_valid = input_file.OpenFile(input_filename, false,false,false,eer_super_res_factor,eer_frames_per_image);
 	if (!input_file_is_valid)
 	{
 		SendInfo(wxString::Format("Input movie %s seems to be corrupt. Ctffind results may not be meaningful.\n", input_filename));

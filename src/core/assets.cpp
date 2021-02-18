@@ -39,6 +39,8 @@ MovieAsset::MovieAsset()
 	parent_id = -1;
 	position_in_stack = 1;
 	number_of_frames = 0;
+	eer_frames_per_image = 0;
+	eer_super_res_factor = 1;
 	x_size = 0;
 	y_size = 0;
 	pixel_size = 0;
@@ -79,6 +81,8 @@ MovieAsset::MovieAsset(wxString wanted_filename)
 	position_in_stack = 1;
 
 	number_of_frames = 0;
+	eer_frames_per_image = 0;
+	eer_super_res_factor = 1;
 	x_size = 0;
 	y_size = 0;
 	pixel_size = 0;
@@ -142,6 +146,15 @@ void MovieAsset::Update(wxString wanted_filename, int assume_number_of_frames)
 			number_of_frames = temp_tif.ReturnNumberOfSlices();
 			temp_tif.CloseFile();
 		}
+		else if (filename.GetExt().IsSameAs("eer",false))
+		{
+			EerFile temp_eer;
+			is_valid = temp_eer.OpenFile(filename.GetFullPath().ToStdString(), false, false, assume_number_of_frames,eer_super_res_factor,eer_frames_per_image);
+			x_size = temp_eer.ReturnXSize();
+			y_size = temp_eer.ReturnYSize();
+			number_of_frames = temp_eer.ReturnNumberOfSlices();
+			temp_eer.CloseFile();
+		}
 		else
 		{
 			is_valid = false;
@@ -159,6 +172,8 @@ void MovieAsset::CopyFrom(Asset *other_asset)
 	x_size = casted_asset->x_size;
 	y_size = casted_asset->y_size;
 	number_of_frames = casted_asset->number_of_frames;
+	eer_frames_per_image = casted_asset->eer_frames_per_image;
+	eer_super_res_factor = casted_asset->eer_super_res_factor;
 	filename = casted_asset->filename;
 	pixel_size = casted_asset->pixel_size;
 	microscope_voltage = casted_asset->microscope_voltage;

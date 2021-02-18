@@ -1,6 +1,7 @@
 #include "core_headers.h"
 EerFile::EerFile()
 {
+	fh = NULL;
 	tif = NULL;
 	logical_dimension_x = 0;
 	logical_dimension_y = 0;
@@ -74,6 +75,8 @@ void EerFile::CloseFile()
 {
 	if (tif != NULL) TIFFClose(tif);
 	tif = NULL;
+	if (fh != NULL) fclose(fh);
+	fh = NULL;
 }
 
 void EerFile::PrintInfo()
@@ -95,7 +98,7 @@ void EerFile::PrintInfo()
 bool EerFile::ReadLogicalDimensionsFromDisk(bool check_only_the_first_image)
 {
 	MyDebugAssertTrue(tif != NULL,"File must be open");
-	MyDebugAssertTrue(fh != NULL,"File must be open");
+	MyDebugAssertTrue(fh != NULL,"File must be open: %s", filename.GetFullPath());
 	MyDebugAssertFalse(number_of_eer_frames_per_image == 0, "Number of EER frames per image has not yet been set. Cannot work out logical dimensions.");
 	/*
 	 * Since the file was already open, EerOpen has already read in the first dictionary
@@ -228,17 +231,24 @@ void EerFile::DecodeToFloatArray(int start_eer_frame, int finish_eer_frame, floa
 	for ( current_address=0; current_address < logical_dimension_x*logical_dimension_y*super_res_factor*super_res_factor; current_address++) { output_array[current_address] = 0.0f; }
 
 	/*
-	 * Decode into a list of events
+	 * Max number of electrons in a frame
 	 */
+	unsigned long long max_electrons = 0;
 	for (int iframe = start_eer_frame; iframe <= finish_eer_frame; iframe++)
 	{
+		max_electrons = std::max(max_electrons,frame_sizes[iframe]*2); // at 4 bits per electron (very permissive bound!)
+	}
 
+
+	/*
+	 * Decode into a list of events
+	 */
+	unsigned int * positions = new unsigned int[max_electrons];
+	unsigned char * symbols = new unsigned char[max_electrons];
+	for (int iframe = start_eer_frame; iframe <= finish_eer_frame; iframe++)
+	{
 		long long pos = frame_starts[iframe];
 		unsigned int npixels = 0, nelectrons = 0;
-		const int max_electrons = frame_sizes[iframe] * 2; // at 4 bits per electron (very permissive bound!)
-		unsigned int * positions = new unsigned int[max_electrons];
-		unsigned char * symbols = new unsigned char[max_electrons];
-
 		unsigned int bit_pos = 0; // 4 K * 4 K * 11 bit << 2 ** 32
 		unsigned char rle, subpixel;
 		long long first_byte;
@@ -317,11 +327,14 @@ void EerFile::DecodeToFloatArray(int start_eer_frame, int finish_eer_frame, floa
 				y = ((positions[i] >> 12) << 2) | ((symbols[i] & 12) >> 2); //render16K;  4096 = 2^12, 12 = 00001100b
 			}
 
-			current_address = y * logical_dimension_y + x;
+			current_address = y * logical_dimension_y * super_res_factor + x;
 
 			output_array[current_address] += 1.0f;
 		}
 	}
+
+	delete [] positions;
+	delete [] symbols;
 }
 
 void EerFile::WriteSliceToDisk(int slice_number, float * input_array)

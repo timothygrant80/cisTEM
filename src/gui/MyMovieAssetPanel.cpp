@@ -307,6 +307,8 @@ void MyMovieAssetPanel::FillAssetSpecificContentsList()
 		ContentsListBox->InsertColumn(14,"Dist. major scale", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
 		ContentsListBox->InsertColumn(15,"Dist. minor scale", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
 		ContentsListBox->InsertColumn(16,"Particles are white?", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(17,"EER frames per image", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
+		ContentsListBox->InsertColumn(18,"EER super res factor", wxLIST_FORMAT_LEFT, wxLIST_AUTOSIZE_USEHEADER );
 
 /*
 		for (long counter = 0; counter < all_groups_list->groups[selected_group].number_of_members; counter++)
@@ -375,6 +377,10 @@ wxString MyMovieAssetPanel::ReturnItemText(long item, long column) const
 	    	return wxString::Format(wxT("%.3f"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->mag_distortion_minor_scale);
 	    case 16:
 			return wxString::Format(wxT("%i"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->protein_is_white);
+		case 17:
+			return wxString::Format(wxT("%i"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->eer_frames_per_image);
+		case 18:
+			return wxString::Format(wxT("%i"), all_assets_list->ReturnMovieAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->eer_super_res_factor);
 		default :
 	       MyPrintWithDetails("Error, asking for column (%li) which does not exist", column);
 	       return "";
@@ -430,6 +436,16 @@ wxString MyMovieAssetPanel::ReturnAssetDarkFilename(long wanted_asset)
 float MyMovieAssetPanel::ReturnAssetBinningFactor(long wanted_asset)
 {
 	return all_assets_list->ReturnMovieAssetPointer(wanted_asset)->output_binning_factor;
+}
+
+int MyMovieAssetPanel::ReturnAssetEerFramesPerImage(long wanted_asset)
+{
+	return all_assets_list->ReturnMovieAssetPointer(wanted_asset)->eer_frames_per_image;
+}
+
+int MyMovieAssetPanel::ReturnAssetEerSuperResFactor(long wanted_asset)
+{
+	return all_assets_list->ReturnMovieAssetPointer(wanted_asset)->eer_super_res_factor;
 }
 
 int MyMovieAssetPanel::ReturnAssetID(long wanted_asset)

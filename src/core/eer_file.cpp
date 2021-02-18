@@ -231,17 +231,24 @@ void EerFile::DecodeToFloatArray(int start_eer_frame, int finish_eer_frame, floa
 	for ( current_address=0; current_address < logical_dimension_x*logical_dimension_y*super_res_factor*super_res_factor; current_address++) { output_array[current_address] = 0.0f; }
 
 	/*
-	 * Decode into a list of events
+	 * Max number of electrons in a frame
 	 */
+	unsigned long long max_electrons = 0;
 	for (int iframe = start_eer_frame; iframe <= finish_eer_frame; iframe++)
 	{
+		max_electrons = std::max(max_electrons,frame_sizes[iframe]*2); // at 4 bits per electron (very permissive bound!)
+	}
 
+
+	/*
+	 * Decode into a list of events
+	 */
+	unsigned int * positions = new unsigned int[max_electrons];
+	unsigned char * symbols = new unsigned char[max_electrons];
+	for (int iframe = start_eer_frame; iframe <= finish_eer_frame; iframe++)
+	{
 		long long pos = frame_starts[iframe];
 		unsigned int npixels = 0, nelectrons = 0;
-		const int max_electrons = frame_sizes[iframe] * 2; // at 4 bits per electron (very permissive bound!)
-		unsigned int * positions = new unsigned int[max_electrons];
-		unsigned char * symbols = new unsigned char[max_electrons];
-
 		unsigned int bit_pos = 0; // 4 K * 4 K * 11 bit << 2 ** 32
 		unsigned char rle, subpixel;
 		long long first_byte;
@@ -325,6 +332,9 @@ void EerFile::DecodeToFloatArray(int start_eer_frame, int finish_eer_frame, floa
 			output_array[current_address] += 1.0f;
 		}
 	}
+
+	delete [] positions;
+	delete [] symbols;
 }
 
 void EerFile::WriteSliceToDisk(int slice_number, float * input_array)

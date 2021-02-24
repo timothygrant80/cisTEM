@@ -277,7 +277,10 @@ bool Reconstruct3DApp::DoCalculation()
 	}
 
 	cisTEMParameters input_star_file;
-	input_star_file.ReadFromcisTEMStarFile(input_star_filename, true);
+
+	wxFileName star_filename(input_star_filename);
+	if (star_filename.GetExt() == "cistem") input_star_file.ReadFromcisTEMBinaryFile(input_star_filename, true);
+	else input_star_file.ReadFromcisTEMStarFile(input_star_filename);
 
 	// TODO: remove this - there may be cases when there are multiple particle groups and yet we do NOT want to apply an exposure filter during reconstruction
 	apply_exposure_filter_during_reconstruction = input_star_file.ContainsMultipleParticleGroups();

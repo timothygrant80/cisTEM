@@ -345,7 +345,7 @@ void Refinement::WriteSingleClassFrealignParameterFile(wxString filename,int wan
 	delete my_output_par_file;
 }
 
-void Refinement::WriteSingleClasscisTEMStarFile(wxString filename,int wanted_class, float percent_used_overide, float sigma_override)
+void Refinement::WriteSingleClasscisTEMStarFile(wxString filename,int wanted_class, float percent_used_overide, float sigma_override, bool write_binary_file)
 {
 	long particle_counter;
 	float temp_float;
@@ -418,7 +418,8 @@ void Refinement::WriteSingleClasscisTEMStarFile(wxString filename,int wanted_cla
 		output_params.all_parameters[particle_counter].total_exposure = class_refinement_results[wanted_class].particle_refinement_results[particle_counter].total_exposure;
 	}
 
-	output_params.WriteTocisTEMStarFile(filename);
+	if (write_binary_file == false) output_params.WriteTocisTEMStarFile(filename);
+	else output_params.WriteTocisTEMBinaryFile(filename);
 }
 
 
@@ -442,7 +443,7 @@ wxArrayString Refinement::WriteFrealignParameterFiles(wxString base_filename, fl
 	return output_filenames;
 }
 
-wxArrayString Refinement::WritecisTEMStarFiles(wxString base_filename, float percent_used_overide, float sigma_override)
+wxArrayString Refinement::WritecisTEMStarFiles(wxString base_filename, float percent_used_overide, float sigma_override, bool write_binary_files)
 {
 	MyDebugAssertTrue(number_of_classes > 0, "Number of classes is not greater than 0!")
 	wxArrayString output_filenames;
@@ -454,9 +455,11 @@ wxArrayString Refinement::WritecisTEMStarFiles(wxString base_filename, float per
 
 	for ( class_counter = 0; class_counter < number_of_classes; class_counter++)
 	{
-		current_filename = base_filename + wxString::Format("_%li_%i.star", refinement_id, class_counter + 1);
+		if (write_binary_files == false) current_filename = base_filename + wxString::Format("_%li_%i.star", refinement_id, class_counter + 1);
+		else current_filename = base_filename + wxString::Format("_%li_%i.cistem", refinement_id, class_counter + 1);
+
 		output_filenames.Add(current_filename);
-		WriteSingleClasscisTEMStarFile(current_filename, class_counter, percent_used_overide, sigma_override);
+		WriteSingleClasscisTEMStarFile(current_filename, class_counter, percent_used_overide, sigma_override, write_binary_files);
 	}
 
 	return output_filenames;

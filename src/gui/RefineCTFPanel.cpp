@@ -1171,7 +1171,7 @@ void CTFRefinementManager::RunMerge3dJob()
 void CTFRefinementManager::SetupReconstructionJob()
 {
 	wxArrayString written_parameter_files;
-	written_parameter_files = output_refinement->WritecisTEMStarFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/beam_tilt_output_par");
+	written_parameter_files = output_refinement->WritecisTEMStarFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/beam_tilt_output_par", 1.0f, 0.0f, true);
 
 	int class_counter;
 	long counter;
@@ -1404,8 +1404,8 @@ void CTFRefinementManager::SetupRefinementJob()
 		output_parameters.all_parameters[counter].reference_3d_filename = current_reference_filenames.Item(best_class);
 	}
 
-	wxString output_star_filename = wxString::Format("%s/refine_ctf_input_star_%li.star", main_frame->current_project.parameter_file_directory.GetFullPath(), input_refinement->refinement_id);
-	output_parameters.WriteTocisTEMStarFile(output_star_filename);
+	wxString output_star_filename = wxString::Format("%s/refine_ctf_input_star_%li.cistem", main_frame->current_project.parameter_file_directory.GetFullPath(), input_refinement->refinement_id);
+	output_parameters.WriteTocisTEMBinaryFile(output_star_filename);
 
 	//	wxPrintf("Input refinement has %li particles\n", input_refinement->number_of_particles);
 

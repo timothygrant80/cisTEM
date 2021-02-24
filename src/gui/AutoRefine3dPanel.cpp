@@ -1218,7 +1218,7 @@ void AutoRefinementManager::SetupReconstructionJob()
         }
 	}
 
-	written_parameter_files = output_refinement->WritecisTEMStarFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/auto_output_par");
+	written_parameter_files = output_refinement->WritecisTEMStarFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/auto_output_par", 1.0f, 0.0f, true);
 
 	int class_counter;
 	long counter;
@@ -1505,7 +1505,7 @@ void AutoRefinementManager::SetupRefinementJob()
 		input_refinement->number_of_classes = 1;
 	}
 
-	written_parameter_files = input_refinement->WritecisTEMStarFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/auto_input_par");
+	written_parameter_files = input_refinement->WritecisTEMStarFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/auto_input_par", 1.0f, 0.0f, true);
 	written_res_files = input_refinement->WriteResolutionStatistics(main_frame->current_project.parameter_file_directory.GetFullPath() + "/auto_input_stats");
 
 	// for now, number of jobs is number of processes -1 (master)..

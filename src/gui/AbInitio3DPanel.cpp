@@ -1422,10 +1422,10 @@ void AbInitioManager::SetupReconstructionJob()
 {
 	wxArrayString written_parameter_files;
 
-	if (start_with_reconstruction == true) written_parameter_files = output_refinement->WritecisTEMStarFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", current_percent_used / 100.0, 10.0);
+	if (start_with_reconstruction == true) written_parameter_files = output_refinement->WritecisTEMStarFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", current_percent_used / 100.0, 10.0, true);
 	else
 	{
-		written_parameter_files = output_refinement->WritecisTEMStarFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", 1.0f, 1.0f);
+		written_parameter_files = output_refinement->WritecisTEMStarFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", 1.0f, 1.0f, true);
 	}
 
 
@@ -1783,7 +1783,7 @@ void AbInitioManager::SetupRefinementJob()
 
 
 	//wxPrintf("refinement_id = %li\n", input_refinement->refinement_id);
-	written_parameter_files = input_refinement->WritecisTEMStarFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/startup_input_par");
+	written_parameter_files = input_refinement->WritecisTEMStarFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/startup_input_par", 1.0f, 0.0f, true);
 	written_res_files = input_refinement->WriteResolutionStatistics(main_frame->current_project.parameter_file_directory.GetFullPath() + "/startup_input_stats");
 
 //	wxPrintf("Input refinement has %li particles\n", input_refinement->number_of_particles);
@@ -2041,7 +2041,7 @@ void AbInitioManager::SetupPrepareStackJob()
 
 		RefinementPackage *classification_package = &refinement_package_asset_panel->all_refinement_packages.Item(refinement_package_asset_panel->ReturnArrayPositionFromAssetID(active_classification_selection.refinement_package_asset_id));
 		Classification *input_classification = main_frame->current_project.database.GetClassificationByID(active_classification_selection.classification_id);
-		wxString input_parameter_file = input_classification->WritecisTEMStarFile(main_frame->ReturnStartupScratchDirectory() + "/classification_star", classification_package);
+		wxString input_parameter_file = input_classification->WritecisTEMStarFile(main_frame->ReturnStartupScratchDirectory() + "/classification_star", classification_package, true);
 		delete input_classification;
 
 		// setup the job
@@ -2140,8 +2140,8 @@ void AbInitioManager::SetupPrepareStackJob()
 
 		// ONLY WRITING FIRST CLASS FOR PIXEL SIZES..
 
-		wxString written_star_file = main_frame->current_project.parameter_file_directory.GetFullPath() + "/prepare_stack_output_star.star";
-		input_refinement->WriteSingleClasscisTEMStarFile(written_star_file, 0);
+		wxString written_star_file = main_frame->current_project.parameter_file_directory.GetFullPath() + "/prepare_stack_output_star.cistem";
+		input_refinement->WriteSingleClasscisTEMStarFile(written_star_file, 0, 1.0f, 0.0f, true);
 
 
 		for (int counter = 0; counter < number_of_refinement_jobs; counter++)

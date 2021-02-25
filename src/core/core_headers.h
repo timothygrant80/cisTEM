@@ -104,10 +104,9 @@ protected:
     }
 };
 
-
+#include "defines.h"
 #include "cistem_parameters.h"
 #include "cistem_star_file_reader.h"
-#include "defines.h"
 #include "assets.h"
 #include "asset_group.h"
 #include "socket_codes.h"
@@ -123,8 +122,8 @@ protected:
 #include "dm_file.h"
 #include "tiff/tiffio.h"
 #include "tiff_file.h"
-#include "image_file.h"
 #include "eer_file.h"
+#include "image_file.h"
 #include "matrix.h"
 #include "angles_and_shifts.h"
 #include "empirical_distribution.h"

@@ -34,6 +34,10 @@
 #define TOTAL_EXPOSURE				2147483648
 #define ASSIGNED_SUBSET				4294967296
 
+// ADDING A NEW COLUMN
+// ----------------------
+// See top of cistem_parameters.cpp for documentation describing how to add a new column
+
 class cisTEMParameterLine {
 
 public:
@@ -78,6 +82,7 @@ public:
 	void AddSquare(cisTEMParameterLine &line_to_add);
 
 	void SetAllToZero();
+	void SetAllToDefault();
 	void ReplaceNanAndInfWithOther(cisTEMParameterLine &other_params);
 
 
@@ -129,7 +134,6 @@ public:
 	void SetAllToFalse();
 	void SetActiveParameters(long parameters_to_set); // uses takes the defines above bitwise
 
-
 	cisTEMParameterMask();
 
 };
@@ -149,6 +153,8 @@ public :
 
 	// for defocus dependance
 
+
+
 	float		average_defocus;
 	float		defocus_coeff_a;
 	float		defocus_coeff_b;
@@ -157,6 +163,8 @@ public :
 	~cisTEMParameters();
 
 	void ReadFromcisTEMStarFile(wxString wanted_filename, bool exclude_negative_film_numbers = false );
+	void ReadFromcisTEMBinaryFile(wxString wanted_filename, bool exclude_negative_film_numbers = false);
+
 	void ReadFromFrealignParFile(wxString wanted_filename,
 								float wanted_pixel_size = 0.0f,
 								float wanted_microscope_voltage = 0.0f,
@@ -169,6 +177,10 @@ public :
 								int	  wanted_particle_group = 1,
 								float wanted_pre_exposure = 0.0f,
 								float wanted_total_exposure = 0.1f);
+
+	int ReturnNumberOfParametersToWrite();
+	int ReturnNumberOfLinesToWrite(int first_image_to_write, int last_image_to_write);
+	void WriteTocisTEMBinaryFile(wxString wanted_filename, int first_image_to_write = -1, int last_image_to_write = -1);
 
 	void AddCommentToHeader(wxString comment_to_add);
 	void WriteTocisTEMStarFile(wxString wanted_filename, int first_line_to_write = -1, int last_line_to_write = -1, int first_image_to_write = -1, int last_image_to_write = -1);

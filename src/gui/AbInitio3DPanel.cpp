@@ -2644,10 +2644,14 @@ void AbInitioManager::ProcessAllJobsFinished()
 		input_refinement->resolution_statistics_pixel_size = active_pixel_size;
 		input_refinement->resolution_statistics_box_size = check_file.ReturnXSize();
 		input_refinement->SetAllPixelSizes(active_pixel_size);
-		input_refinement->SetAllVoltages(300);
-		input_refinement->SetAllCs(2.7);
-		input_refinement->SetAllAmplitudeContrast(0.07);
-		input_refinement->SetAssignedSubsetToEvenOdd();
+
+		if (active_use_classums == true) // in this case input refinement and output refinement should be the same
+		{
+			input_refinement->SetAllVoltages(300);
+			input_refinement->SetAllCs(2.7);
+			input_refinement->SetAllAmplitudeContrast(0.07);
+			input_refinement->SetAssignedSubsetToEvenOdd();
+		}
 
 
 		SetupReconstructionJob();

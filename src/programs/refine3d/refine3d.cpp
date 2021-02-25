@@ -956,11 +956,11 @@ bool Refine3DApp::DoCalculation()
 	#pragma omp parallel num_threads(max_threads) default(none) shared(parameter_average, input_3d, input_star_file, input_stack, max_threads, search_particle, \
 		first_particle, last_particle, invert_contrast, normalize_particles, noise_power_spectrum, padding, ctf_refinement, defocus_search_range, defocus_step, normalize_input_3d, \
 		refine_statistics, pixel_size, my_progress, outer_mask_radius, mask_falloff, high_resolution_limit, molecular_mass_kDa, percent_used, output_shifts_file, local_refinement, \
-		binning_factor_refine, low_resolution_limit, input_statistics, output_star_file, current_projection, local_global_refine, global_search, signed_CC_limit, defocus_bias, \
+		binning_factor_refine, low_resolution_limit, input_statistics, output_star_file, current_projection, local_global_refine, signed_CC_limit, defocus_bias, \
 		random_particle, defocus_range_mean2, defocus_range_std, defocus_mean_score, current_class, mask_radius_search, search_reference_3d, high_resolution_limit_search, \
 		binning_factor_search, search_statistics, search_box_size, projection_cache, my_symmetry, angular_step, psi_max, psi_step, psi_start, take_random_best_parameter, refine_particle, \
 		skip_local_refinement, calculate_matching_projections, classification_resolution_limit, output_file, best_parameters_to_keep, ignore_input_angles, global_random_number_generator, \
-		global_euler_search, binned_image_box_size, binned_search_image_box_size) \
+		global_euler_search, binned_image_box_size, binned_search_image_box_size, global_search) \
 	private(image_counter, refine_particle_local, current_line_local, input_parameters, temp_float, output_parameters, input_ctf, variance, average, comparison_object, \
 		best_score, defocus_i, score, cg_starting_point, input_image_local, search_particle_local, intermediate_result, gui_result_parameters, image_shift_x, image_shift_y, \
 		binned_image, projection_image_local, best_defocus_i, defocus_score, temp_image2_local, search_projection_image, cg_accuracy, search_reference_3d_local, \
@@ -971,6 +971,9 @@ bool Refine3DApp::DoCalculation()
 	input_3d_local.CopyAllButVolume(&input_3d);
 	input_3d_local.density_map = input_3d.density_map;
 
+	bool global_search_local = global_search;
+	bool local_refinement_local = local_refinement;
+
 	refine_particle_local.CopyAllButImages(&refine_particle);
 	refine_particle_local.Allocate(binned_image_box_size, binned_image_box_size);
 //	refine_particle_local.SetParameterStatistics(parameter_average, parameter_variance);
@@ -979,7 +982,7 @@ bool Refine3DApp::DoCalculation()
 	temp_image_local.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), true);
 	projection_image_local.Allocate(binned_image_box_size, binned_image_box_size, false);
 	if (ctf_refinement && high_resolution_limit <= 20.0) binned_image.Allocate(binned_image_box_size, binned_image_box_size, false);
-	if (global_search)
+	if (global_search_local || local_global_refine)
 	{
 		search_reference_3d_local.CopyAllButVolume(&search_reference_3d);
 		search_reference_3d_local.density_map = search_reference_3d.density_map;
@@ -1071,8 +1074,8 @@ bool Refine3DApp::DoCalculation()
 
 		if (local_global_refine)
 		{
-			if (input_parameters.image_is_active == 0.0) {local_refinement = false; global_search = true;}
-			else {local_refinement = true; global_search = false;}
+			if (input_parameters.image_is_active == 0.0) {local_refinement_local = false; global_search_local = true;}
+			else {local_refinement_local = true; global_search_local = false;}
 		}
 
 // Set up Particle object
@@ -1084,7 +1087,7 @@ bool Refine3DApp::DoCalculation()
 		refine_particle_local.molecular_mass_kDa = molecular_mass_kDa;
 
 
-		if (local_global_refine == true && global_search == true) refine_particle_local.signed_CC_limit = pixel_size;
+		if (local_global_refine == true && global_search_local == true) refine_particle_local.signed_CC_limit = pixel_size;
 		else refine_particle_local.signed_CC_limit = signed_CC_limit;
 
 		// The following line would allow using particles with different pixel sizes
@@ -1219,10 +1222,10 @@ bool Refine3DApp::DoCalculation()
 //		input_parameters[15] = 10.0;
 //		input_parameters.score = - 100.0 * FrealignObjectiveFunction(&comparison_object, cg_starting_point);
 
-		if ((refine_particle_local.number_of_search_dimensions > 0) && (global_search || local_refinement))
+		if ((refine_particle_local.number_of_search_dimensions > 0) && (global_search_local || local_refinement_local))
 		{
 			input_parameters.score = - 100.0 * FrealignObjectiveFunction(&comparison_object, cg_starting_point);
-			if (global_search)
+			if (global_search_local)
 			{
 //				my_time_in = wxDateTime::UNow();
 				search_particle_local.ResetImageFlags();
@@ -1378,7 +1381,7 @@ bool Refine3DApp::DoCalculation()
 
 					search_parameters.score = - 100.0 * conjugate_gradient_minimizer.Init(&FrealignObjectiveFunction, &comparison_object, search_particle_local.number_of_search_dimensions, cg_starting_point, cg_accuracy);
 					output_parameters.score = search_parameters.score;
-					if (! local_refinement) input_parameters.score = output_parameters.score;
+					if (! local_refinement_local) input_parameters.score = output_parameters.score;
 
 					temp_float = - 100.0 * conjugate_gradient_minimizer.Run(50);
 					search_particle_local.UnmapParametersToExternal(output_parameters, conjugate_gradient_minimizer.GetPointerToBestValues());
@@ -1405,7 +1408,7 @@ bool Refine3DApp::DoCalculation()
 					if (i == istart)
 					{
 						output_parameters.score = search_parameters.score;
-						if (! local_refinement) input_parameters.score = output_parameters.score;
+						if (! local_refinement_local) input_parameters.score = output_parameters.score;
 					}
 					if (skip_local_refinement) temp_float = search_parameters.score;
 					else temp_float = - 100.0 * conjugate_gradient_minimizer.Run(50);
@@ -1439,7 +1442,7 @@ bool Refine3DApp::DoCalculation()
 //				my_time_out = wxDateTime::UNow(); wxPrintf("global search done: ms taken = %li\n", my_time_out.Subtract(my_time_in).GetMilliseconds());
 			}
 
-			if (local_refinement)
+			if (local_refinement_local)
 			{
 //				my_time_in = wxDateTime::UNow();
 				comparison_object.reference_volume = &input_3d_local;
@@ -1489,7 +1492,7 @@ bool Refine3DApp::DoCalculation()
 //		unbinned_image.ClipInto(&final_image);
 //		logp = refine_particle_local.ReturnLogLikelihood(input_image_local, final_image, pixel_size, classification_resolution_limit, alpha, sigma);
 
-		if ((refine_particle_local.number_of_search_dimensions > 0) && (global_search || local_refinement))
+		if ((refine_particle_local.number_of_search_dimensions > 0) && (global_search_local || local_refinement_local))
 		{
 			output_parameters.logp = refine_particle_local.ReturnLogLikelihood(input_image_local, input_ctf, input_3d_local, input_statistics, classification_resolution_limit);
 		}
@@ -1605,7 +1608,7 @@ bool Refine3DApp::DoCalculation()
 	projection_image_local.Deallocate();
 	if (ctf_refinement && high_resolution_limit <= 20.0) binned_image.Deallocate();
 	refine_particle_local.Deallocate();
-	if (global_search)
+	if (global_search_local || local_global_refine == true)
 	{
 		search_particle_local.Deallocate();
 		search_projection_image.Deallocate();

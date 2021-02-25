@@ -959,7 +959,7 @@ bool Database::DoesColumnExist(wxString table_name, wxString column_name)
 	return return_code == SQLITE_OK;
 }
 
-void Database::GetMovieImportDefaults(float &voltage, float &spherical_aberration, float &pixel_size, float &exposure_per_frame, bool &movies_are_gain_corrected, wxString &gain_reference_filename, bool &movies_are_dark_corrected, wxString dark_reference_filename, bool &resample_movies, float &desired_pixel_size, bool &correct_mag_distortion, float &mag_distortion_angle, float &mag_distortion_major_scale, float &mag_distortion_minor_scale, bool &protein_is_white)
+void Database::GetMovieImportDefaults(float &voltage, float &spherical_aberration, float &pixel_size, float &exposure_per_frame, bool &movies_are_gain_corrected, wxString &gain_reference_filename, bool &movies_are_dark_corrected, wxString dark_reference_filename, bool &resample_movies, float &desired_pixel_size, bool &correct_mag_distortion, float &mag_distortion_angle, float &mag_distortion_major_scale, float &mag_distortion_minor_scale, bool &protein_is_white, int &eer_super_res_factor, int &eer_frames_per_image)
 {
 	MyDebugAssertTrue(is_open == true, "database not open!");
 
@@ -985,6 +985,8 @@ void Database::GetMovieImportDefaults(float &voltage, float &spherical_aberratio
 	mag_distortion_major_scale = sqlite3_column_double(sqlite_statement, 13);
 	mag_distortion_minor_scale = sqlite3_column_double(sqlite_statement, 14);
 	protein_is_white = sqlite3_column_int(sqlite_statement,15);
+	eer_super_res_factor = sqlite3_column_int(sqlite_statement,16);
+	eer_frames_per_image = sqlite3_column_int(sqlite_statement,17);
 
 	Finalize(sqlite_statement);
 }
@@ -1168,12 +1170,12 @@ void Database::EndBatchInsert()
 
 void Database::BeginMovieAssetInsert()
 {
-	BeginBatchInsert("MOVIE_ASSETS", 19, "MOVIE_ASSET_ID", "NAME", "FILENAME", "POSITION_IN_STACK", "X_SIZE", "Y_SIZE", "NUMBER_OF_FRAMES", "VOLTAGE", "PIXEL_SIZE", "DOSE_PER_FRAME", "SPHERICAL_ABERRATION","GAIN_FILENAME", "DARK_FILENAME", "OUTPUT_BINNING_FACTOR", "CORRECT_MAG_DISTORTION", "MAG_DISTORTION_ANGLE", "MAG_DISTORTION_MAJOR_SCALE", "MAG_DISTORTION_MINOR_SCALE", "PROTEIN_IS_WHITE");
+	BeginBatchInsert("MOVIE_ASSETS", 21, "MOVIE_ASSET_ID", "NAME", "FILENAME", "POSITION_IN_STACK", "X_SIZE", "Y_SIZE", "NUMBER_OF_FRAMES", "VOLTAGE", "PIXEL_SIZE", "DOSE_PER_FRAME", "SPHERICAL_ABERRATION","GAIN_FILENAME", "DARK_FILENAME", "OUTPUT_BINNING_FACTOR", "CORRECT_MAG_DISTORTION", "MAG_DISTORTION_ANGLE", "MAG_DISTORTION_MAJOR_SCALE", "MAG_DISTORTION_MINOR_SCALE", "PROTEIN_IS_WHITE", "EER_SUPER_RES_FACTOR", "EER_FRAMES_PER_IMAGE");
 }
 
-void Database::AddNextMovieAsset(int movie_asset_id,  wxString name, wxString filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration, wxString gain_filename, wxString dark_filename, double output_binning_factor, int correct_mag_distortion, float mag_distortion_angle, float mag_distortion_major_scale, float mag_distortion_minor_scale, int protein_is_white)
+void Database::AddNextMovieAsset(int movie_asset_id,  wxString name, wxString filename, int position_in_stack, int x_size, int y_size, int number_of_frames, double voltage, double pixel_size, double dose_per_frame, double spherical_aberration, wxString gain_filename, wxString dark_filename, double output_binning_factor, int correct_mag_distortion, float mag_distortion_angle, float mag_distortion_major_scale, float mag_distortion_minor_scale, int protein_is_white, int eer_super_res_factor, int eer_frames_per_image)
 {
-	AddToBatchInsert("ittiiiirrrrttrirrri", movie_asset_id, name.ToUTF8().data(), filename.ToUTF8().data(), position_in_stack, x_size, y_size, number_of_frames, voltage, pixel_size, dose_per_frame, spherical_aberration,gain_filename.ToUTF8().data(), dark_filename.ToUTF8().data(), output_binning_factor, correct_mag_distortion, mag_distortion_angle, mag_distortion_major_scale, mag_distortion_minor_scale,protein_is_white);
+	AddToBatchInsert("ittiiiirrrrttrirrriii", movie_asset_id, name.ToUTF8().data(), filename.ToUTF8().data(), position_in_stack, x_size, y_size, number_of_frames, voltage, pixel_size, dose_per_frame, spherical_aberration,gain_filename.ToUTF8().data(), dark_filename.ToUTF8().data(), output_binning_factor, correct_mag_distortion, mag_distortion_angle, mag_distortion_major_scale, mag_distortion_minor_scale,protein_is_white, eer_super_res_factor, eer_frames_per_image);
 }
 
 /*
@@ -1752,7 +1754,7 @@ MovieAsset Database::GetNextMovieAsset()
 	MovieAsset temp_asset;
 	int correct_mag_distortion;
 
-	GetFromBatchSelect("itfiiiirrrrttrirrri", &temp_asset.asset_id, &temp_asset.asset_name, &temp_asset.filename, &temp_asset.position_in_stack, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.number_of_frames, &temp_asset.microscope_voltage, &temp_asset.pixel_size, &temp_asset.dose_per_frame, &temp_asset.spherical_aberration, &temp_asset.gain_filename, &temp_asset.dark_filename, & temp_asset.output_binning_factor, &correct_mag_distortion, &temp_asset.mag_distortion_angle, &temp_asset.mag_distortion_major_scale, &temp_asset.mag_distortion_minor_scale, &temp_asset.protein_is_white);
+	GetFromBatchSelect("itfiiiirrrrttrirrriii", &temp_asset.asset_id, &temp_asset.asset_name, &temp_asset.filename, &temp_asset.position_in_stack, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.number_of_frames, &temp_asset.microscope_voltage, &temp_asset.pixel_size, &temp_asset.dose_per_frame, &temp_asset.spherical_aberration, &temp_asset.gain_filename, &temp_asset.dark_filename, & temp_asset.output_binning_factor, &correct_mag_distortion, &temp_asset.mag_distortion_angle, &temp_asset.mag_distortion_major_scale, &temp_asset.mag_distortion_minor_scale, &temp_asset.protein_is_white, &temp_asset.eer_super_res_factor, &temp_asset.eer_frames_per_image);
 	temp_asset.correct_mag_distortion = correct_mag_distortion;
 	temp_asset.total_dose = temp_asset.dose_per_frame * temp_asset.number_of_frames;
 	return temp_asset;

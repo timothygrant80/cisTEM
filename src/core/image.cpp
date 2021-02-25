@@ -5393,6 +5393,37 @@ void Image::ReadSlices(MRCFile *input_file, long start_slice, long end_slice)
 
 }
 
+void Image::ReadSlices(EerFile *input_file, long start_slice, long end_slice)
+{
+
+	MyDebugAssertTrue(start_slice <= end_slice, "Start slice larger than end slice!");
+	MyDebugAssertTrue(start_slice > 0, "Start slice is less than 0, the first slice is 1!");
+	MyDebugAssertTrue(end_slice <= input_file->ReturnNumberOfSlices(), "End slice is greater than number of slices in the file!");
+	MyDebugAssertTrue(input_file->IsOpen(), "EER file is not open!");
+
+
+	// check the allocations..
+
+	int number_of_slices = (end_slice - start_slice) + 1;
+
+	if (logical_x_dimension != input_file->ReturnXSize() || logical_y_dimension != input_file->ReturnYSize() || logical_z_dimension != number_of_slices || is_in_memory == false)
+	{
+		Deallocate();
+		Allocate(input_file->ReturnXSize(), input_file->ReturnYSize(), number_of_slices); // ReturnXSize returns the super-res dimension, if appropriate
+
+	}
+
+	is_in_real_space = true;
+	object_is_centred_in_box = true;
+
+	input_file->ReadSlicesFromDisk(start_slice, end_slice, real_values);
+
+	// we need to respace this to take into account the FFTW padding..
+
+	AddFFTWPadding();
+
+}
+
 //!> \brief Read a set of slices from disk (FFTW padding is done automatically)
 
 void Image::ReadSlices(DMFile *input_file, long start_slice, long end_slice)

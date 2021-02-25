@@ -55,6 +55,8 @@ void UnBlurApp::DoInteractiveUserInput()
 	int last_frame;
 	int number_of_frames_for_running_average;
 	int max_threads;
+	int eer_frames_per_image = 0;
+	int eer_super_res_factor = 1;
 
 	bool save_aligned_frames;
 
@@ -129,7 +131,14 @@ void UnBlurApp::DoInteractiveUserInput()
 	 	 {
 	 		 aligned_frames_filename = "";
 	 	 }
- 	 }
+		
+		if (FilenameExtensionMatches(input_filename,"eer"))
+		{
+			eer_frames_per_image = my_input->GetIntFromUser("Number of EER frames per image","If the input movie is in EER format, we will average EER frames together so that each frame image for alignment has a reasonable exposure","25",1);
+			eer_super_res_factor = my_input->GetIntFromUser("EER super resolution factor","Choose between 1 (no supersampling), 2, or 4 (image pixel size will be 4 times smaller that the camera phyiscal pixel)","1",1,4);
+		}
+		else { eer_frames_per_image = 0; eer_super_res_factor = 1;}
+	 }
  	 else
  	 {
  		 minimum_shift_in_angstroms = original_pixel_size * output_binning_factor + 0.001;
@@ -149,7 +158,8 @@ void UnBlurApp::DoInteractiveUserInput()
  		 number_of_frames_for_running_average = 1;
  		 save_aligned_frames = false;
  		 aligned_frames_filename = "";
-
+		 eer_frames_per_image = 0;
+		 eer_super_res_factor = 1;
  	 }
 
 	correct_mag_distortion = my_input->GetYesNoFromUser("Correct Magnification Distortion?", "If yes, a magnification distortion can be corrected", "no");
@@ -181,8 +191,7 @@ void UnBlurApp::DoInteractiveUserInput()
 	bool write_out_small_sum_image = false;
 	std::string small_sum_image_filename = "/dev/null";
 
-	my_current_job.Reset(36);
-	my_current_job.ManualSetArguments("ttfffbbfifbiifffbsbsfbfffbtbtiiiibtt",input_filename.c_str(),
+	my_current_job.ManualSetArguments("ttfffbbfifbiifffbsbsfbfffbtbtiiiibttii",input_filename.c_str(),
 																 output_filename.c_str(),
 																 original_pixel_size,
 																 minimum_shift_in_angstroms,
@@ -217,7 +226,9 @@ void UnBlurApp::DoInteractiveUserInput()
 																 max_threads,
 																 save_aligned_frames,
 																 aligned_frames_filename.c_str(),
-																 output_shift_text_file.c_str());
+																 output_shift_text_file.c_str(),
+																 eer_frames_per_image,
+																 eer_super_res_factor);
 
 
 }
@@ -278,6 +289,8 @@ bool UnBlurApp::DoCalculation()
 	bool		saved_aligned_frames				= my_current_job.arguments[33].ReturnBoolArgument();
 	std::string aligned_frames_filename 			= my_current_job.arguments[34].ReturnStringArgument();
 	std::string output_shift_text_file				= my_current_job.arguments[35].ReturnStringArgument();
+	int			eer_frames_per_image				= my_current_job.arguments[36].ReturnIntegerArgument();
+	int 		eer_super_res_factor				= my_current_job.arguments[37].ReturnIntegerArgument();
 
 	if (is_running_locally == false) max_threads = number_of_threads_requested_on_command_line; // OVERRIDE FOR THE GUI, AS IT HAS TO BE SET ON THE COMMAND LINE...
 
@@ -307,7 +320,7 @@ bool UnBlurApp::DoCalculation()
 		exit(-1);
 	}
 	ImageFile input_file;
-	bool input_file_is_valid = input_file.OpenFile(input_filename, false);
+	bool input_file_is_valid = input_file.OpenFile(input_filename, false,false,false,eer_super_res_factor,eer_frames_per_image);
 	if (!input_file_is_valid)
 	{
 		SendInfo(wxString::Format("Input movie %s seems to be corrupt. Unblur results may not be meaningful.\n", input_filename));

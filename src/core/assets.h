@@ -35,6 +35,8 @@ class MovieAsset : public Asset {
 	int x_size;
 	int y_size;
 	int number_of_frames;
+	int eer_frames_per_image;
+	int eer_super_res_factor;
 	
 
 	double pixel_size;

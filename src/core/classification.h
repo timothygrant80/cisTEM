@@ -61,7 +61,7 @@ public :
 
 	ArrayofClassificationResults classification_results;
 	wxString WriteFrealignParameterFiles(wxString base_filename, RefinementPackage *parent_refinement_package);
-	wxString WritecisTEMStarFile(wxString base_filename, RefinementPackage *parent_refinement_package);
+	wxString WritecisTEMStarFile(wxString base_filename, RefinementPackage *parent_refinement_package, bool write_as_cistem_binary_file = false);
 };
 
 WX_DECLARE_OBJARRAY(Classification, ArrayofClassifications);

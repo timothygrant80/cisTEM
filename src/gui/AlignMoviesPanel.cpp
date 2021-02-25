@@ -85,7 +85,7 @@ void MyAlignMoviesPanel::ResetDefaults()
 	dose_filter_checkbox->SetValue(true);
 	restore_power_checkbox->SetValue(true);
 	termination_threshold_text->ChangeValue("1");
-	max_iterations_spinctrl->SetValue(20);
+	max_iterations_spinctrl->SetValue(10);
 	bfactor_spinctrl->SetValue(1500);
 	mask_central_cross_checkbox->SetValue(true);
 	horizontal_mask_spinctrl->SetValue(1);
@@ -529,6 +529,9 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 
 	float current_pixel_size;
 
+	int current_eer_frames_per_image;
+	int current_eer_super_res_factor;
+
 	float current_acceleration_voltage;
 	float current_dose_per_frame;
 	float current_pre_exposure;
@@ -702,6 +705,8 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 			movie_is_dark_corrected = false;
 		}
 
+		current_eer_frames_per_image = movie_asset_panel->ReturnAssetEerFramesPerImage(active_group.members[counter]);
+		current_eer_super_res_factor = movie_asset_panel->ReturnAssetEerSuperResFactor(active_group.members[counter]);
 
 		output_binning_factor = movie_asset_panel->ReturnAssetBinningFactor(active_group.members[counter]);
 
@@ -718,7 +723,7 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 		std::string aligned_frames_filename = "/dev/null";
 		std::string output_shift_text_file = "/dev/null";
 
-		current_job_package.AddJob("ssfffbbfifbiifffbsbsfbfffbtbtiiiibtt",current_filename.c_str(), //0
+		current_job_package.AddJob("ssfffbbfifbiifffbsbsfbfffbtbtiiiibttii",current_filename.c_str(), //0
 														output_filename.ToUTF8().data(),
 														current_pixel_size,
 														float(minimum_shift),
@@ -753,7 +758,9 @@ void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
 														max_threads,
 														saved_aligned_frames,
 														aligned_frames_filename.c_str(),
-														output_shift_text_file.c_str());
+														output_shift_text_file.c_str(),
+														current_eer_frames_per_image,
+														current_eer_super_res_factor);
 
 		my_progress_dialog->Update(counter + 1);
 	}

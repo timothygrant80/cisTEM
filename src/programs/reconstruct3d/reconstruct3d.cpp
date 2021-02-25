@@ -1198,7 +1198,7 @@ bool Reconstruct3DApp::DoCalculation()
 			if (input_parameters.assigned_subset < 1)
 			{
 				// This particle has not yet been assigned to a subset. Let's do so now
-				SendInfo("Warning: No assigned subset for this particle. This should not happen.");
+				if (current_image_local == 0) SendInfo("Warning: No assigned subset for FSC. This should not happen. Will use even/odd assignment.");
 				if (input_parameters.position_in_stack % fsc_particle_repeat < fsc_particle_repeat / 2) { input_parameters.assigned_subset = 2; } else { input_parameters.assigned_subset = 1; }
 			}
 			if (input_parameters.assigned_subset == 2)

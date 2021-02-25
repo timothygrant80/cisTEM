@@ -2,6 +2,7 @@ message("In the src/gui CMakeLists file")
 
 add_library(cisTEM_gui STATIC 
 	gui_globals.cpp 
+	MyOverviewPanel.cpp 
 	MyFSCPanel.cpp 
 	MyRefinementResultsPanel.cpp 
 	PlotFSCPanel.cpp 
@@ -56,7 +57,6 @@ add_library(cisTEM_gui STATIC
 	AngularDistributionPlotPanel.cpp 
 	DisplayPanel.cpp 
 	ClassumSelectionCopyFromDialog.cpp 
-	MyOverviewPanel.cpp 
 	AbInitio3DPanel.cpp 
 	AssetPickerComboPanel.cpp 
 	AutoRefine3dPanel.cpp 

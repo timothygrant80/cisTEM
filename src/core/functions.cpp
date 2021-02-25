@@ -504,6 +504,14 @@ wxString ReturnIPAddressFromSocket(wxSocketBase *socket)
 
 }
 
+// Test whether the filename's extension matches; case insensitive
+bool FilenameExtensionMatches(std::string filename, std::string extension)
+{
+	wxFileName input_filename_wx(filename);
+	wxString input_filename_ext = input_filename_wx.GetExt();
+	return input_filename_ext.IsSameAs(extension,false);
+}
+
 /*
  *
  * String manipulations

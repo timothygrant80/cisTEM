@@ -33,6 +33,8 @@ class MyMovieAssetPanel : public MyAssetParentPanel
 		double ReturnAssetPreExposureAmount(long wanted_asset);
 		float ReturnAssetSphericalAbberation(long wanted_asset);
 		bool ReturnAssetProteinIsWhite(long wanted_asset);
+		int ReturnAssetEerFramesPerImage(long wanted_asset);
+		int ReturnAssetEerSuperResFactor(long wanted_asset);
 		int ReturnAssetID(long wanted_asset);
 		wxString ReturnAssetGainFilename(long wanted_asset);
 		wxString ReturnAssetDarkFilename(long wanted_asset);

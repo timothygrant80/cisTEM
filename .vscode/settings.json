@@ -1,11 +1,21 @@
 {
-    "C_Cpp.default.configurationProvider": "vector-of-bool.cmake-tools",
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
     "C_Cpp.errorSquiggles": "Enabled",
     "cmake.configureOnOpen": true,
     "cmake.sourceDirectory": "${workspaceFolder}",
     "cmake.buildDirectory": "${workspaceFolder}/build/${buildKit}/${buildType}",
     "cmake.skipConfigureIfCachePresent": false,
     "cmake.configureSettings": {
-        "BUILD_EXPERIMENTAL_FEATURES":false,
+        "BUILD_EXPERIMENTAL_FEATURES":true,
+        "BUILD_STATIC_BINARIES":false,
+        "BUILD_OpenMP":true,
+    },
+    //"cmake.configureEnvironment": {
+    //    "WX_CONFIG":"/path/to/your/wx/bin/wx-config",
+    //},
+    "C_Cpp.dimInactiveRegions": true,
+    "files.associations": {
+        "string": "cpp",
+        "filesystem": "cpp"
     },
 }

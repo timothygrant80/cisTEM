@@ -243,7 +243,10 @@ bool Refine2DApp::DoCalculation()
 	}
 
 	cisTEMParameters input_star_file;
-	input_star_file.ReadFromcisTEMStarFile(input_star_filename);
+
+	wxFileName star_filename(input_star_filename);
+	if (star_filename.GetExt() == "cistem") input_star_file.ReadFromcisTEMBinaryFile(input_star_filename);
+	else input_star_file.ReadFromcisTEMStarFile(input_star_filename);
 
 	// Read whole parameter file to work out average values and variances
 
@@ -809,12 +812,14 @@ bool Refine2DApp::DoCalculation()
 							current_block_read_size = 0;
 						}
 					}
+					else
+					{
+						current_block_read_size++;
+						if (current_block_read_size == block_size) keep_reading = false;
 
-					current_block_read_size++;
-					if (current_block_read_size == block_size) keep_reading = false;
-
-					input_image_local.ReadSlice(&input_stack, input_parameters.position_in_stack);
-					file_read = true;
+						input_image_local.ReadSlice(&input_stack, input_parameters.position_in_stack);
+						file_read = true;
+					}
 				}
 			}
 

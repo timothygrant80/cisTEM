@@ -3108,9 +3108,10 @@ void Image::AddByLinearInterpolationFourier2D(float &wanted_logical_x_coordinate
 	}
 }
 
-void Image::CalculateCTFImage(CTF &ctf_of_image, bool calculate_complex_ctf)
+void Image::CalculateCTFImage(CTF &ctf_of_image, bool calculate_complex_ctf, bool apply_coherence_envelope)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated for CTF image");
+	if (apply_coherence_envelope) {MyDebugAssertFalse( calculate_complex_ctf, "calculating a complex CTF and a coherence envelope is not supported.");}
 //	MyDebugAssertTrue(is_in_real_space == false, "CTF image not in Fourier space");
 
 	int i;
@@ -3152,7 +3153,9 @@ void Image::CalculateCTFImage(CTF &ctf_of_image, bool calculate_complex_ctf)
 			}
 			else
 			{
-				complex_values[pixel_counter] = ctf_of_image.Evaluate(frequency_squared,azimuth) + I * 0.0f;
+				if (apply_coherence_envelope) complex_values[pixel_counter] = ctf_of_image.EvaluateWithEnvelope(frequency_squared,azimuth) + I * 0.0f;
+				else complex_values[pixel_counter] = ctf_of_image.Evaluate(frequency_squared,azimuth) + I * 0.0f;
+
 			}
 			pixel_counter++;
 		}
@@ -7120,8 +7123,14 @@ void Image::Compute1DRotationalAverage(Curve &average, Curve &number_of_values, 
 	}
 }
 
+void Image::Compute1DAmplitudeSpectrumCurve(Curve *curve_with_average_power, Curve *curve_with_number_of_values)
+{
+	bool average_amplitudes_not_intensities = true;
+	Compute1DPowerSpectrumCurve(curve_with_average_power, curve_with_number_of_values, average_amplitudes_not_intensities);
+}
 // It is assumed the curve objects are already setup with an X axis in reciprocal pixels (i.e. origin is 0.0, Nyquist is 0.5)
-void Image::Compute1DPowerSpectrumCurve(Curve *curve_with_average_power, Curve *curve_with_number_of_values)
+// This function is called by Compute1DAmplitudeSpectrumCurve with average_amplitudes_not_intensities=true.
+void Image::Compute1DPowerSpectrumCurve(Curve *curve_with_average_power, Curve *curve_with_number_of_values, bool average_amplitudes_not_intensities)
 {
 
 	MyDebugAssertTrue(is_in_memory,"Memory not allocated");
@@ -7168,7 +7177,14 @@ void Image::Compute1DPowerSpectrumCurve(Curve *curve_with_average_power, Curve *
 					spatial_frequency = sqrtf(sq_dist_x+sq_dist_y+sq_dist_z);
 
 					// TODO: this could be made faster by doing both interpolations in one go, so one wouldn't have to work out twice between which points the interpolation will happen
-					curve_with_average_power->AddValueAtXUsingLinearInterpolation(spatial_frequency,real(complex_values[address]) * real(complex_values[address]) + imag(complex_values[address]) * imag(complex_values[address]), true );
+					if (average_amplitudes_not_intensities)
+					{
+						curve_with_average_power->AddValueAtXUsingLinearInterpolation(spatial_frequency,sqrtf(real(complex_values[address]) * real(complex_values[address]) + imag(complex_values[address]) * imag(complex_values[address])), true );
+					}
+					else
+					{
+						curve_with_average_power->AddValueAtXUsingLinearInterpolation(spatial_frequency,real(complex_values[address]) * real(complex_values[address]) + imag(complex_values[address]) * imag(complex_values[address]), true );
+					}
 					curve_with_number_of_values->AddValueAtXUsingLinearInterpolation(spatial_frequency,1.0, true);
 
 					address ++;

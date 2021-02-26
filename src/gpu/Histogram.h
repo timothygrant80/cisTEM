@@ -23,14 +23,19 @@ public:
 	dim3 threadsPerBlock_accum_array;
 	dim3 gridDims_accum_array;
 
+//	float* histogram;		bool is_allocated_histogram; // histogram_n_bins in size;
 	float* histogram;		bool is_allocated_histogram; // histogram_n_bins in size;
+
 	size_t size_of_temp_hist;
 	float* cummulative_histogram;
 
 	int histogram_n_bins; //
-	float histogram_min;
-	float histogram_max;
-	float histogram_step;
+//	float histogram_min;
+//	float histogram_max;
+//	float histogram_step;
+	__half histogram_min;
+	__half histogram_max;
+	__half histogram_step;
 
 	int max_padding;
 

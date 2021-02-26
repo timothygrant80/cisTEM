@@ -176,7 +176,7 @@ public:
 	void CircleMaskWithValue(float wanted_mask_radius, float wanted_mask_value, bool invert = false);
 	void SquareMaskWithValue(float wanted_mask_dim, float wanted_mask_value, bool invert = false, int wanted_center_x = 0, int wanted_center_y = 0, int wanted_center_z = 0);
 	void TriangleMask(float wanted_triangle_half_base_length);
-	void CalculateCTFImage(CTF &ctf_of_image, bool calculate_complex_ctf = false);
+	void CalculateCTFImage(CTF &ctf_of_image, bool calculate_complex_ctf = false, bool apply_coherence_envelope = false);
 	void CalculateBeamTiltImage(CTF &ctf_of_image, bool output_phase_shifts = false);
 	bool ContainsBlankEdges(float mask_radius = 0.0);
 	void CorrectMagnificationDistortion(float distortion_angle, float distortion_major_axis, float distortion_minor_axis);
@@ -407,7 +407,8 @@ public:
 	void ComputeFilteredAmplitudeSpectrumFull2D(Image* average_spectrum_masked, Image* current_power_spectrum, float& average, float& sigma, float minimum_resolution, float maximum_resolution, float pixel_size_for_fitting);
 	void ComputeAmplitudeSpectrum(Image *other_image, bool signed_values = false);
 	void ComputeHistogramOfRealValuesCurve(Curve *histogram_curve);
-	void Compute1DPowerSpectrumCurve(Curve *curve_with_average_power, Curve *curve_with_number_of_values);
+	void Compute1DAmplitudeSpectrumCurve(Curve *curve_with_average_power, Curve *curve_with_number_of_values);
+	void Compute1DPowerSpectrumCurve(Curve *curve_with_average_power, Curve *curve_with_number_of_values, bool average_amplitudes_not_intensities = false);
 	void Compute1DRotationalAverage(Curve &average, Curve &number_of_values, bool fractional_radius_in_real_space = false, bool average_real_parts = false);
 	void ComputeSpatialFrequencyAtEveryVoxel();
 	void AverageRadially();

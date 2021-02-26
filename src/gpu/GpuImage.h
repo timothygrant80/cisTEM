@@ -9,6 +9,7 @@
 #define GPUIMAGE_H_
 
 
+
 class GpuImage {
 
 public:
@@ -150,7 +151,7 @@ public:
 	void ForwardFFT(bool should_scale = true);                                           /**CPU_eq**/
 	void BackwardFFT();                                                                   /**CPU_eq**/
 	void ForwardFFTAndClipInto(GpuImage &image_to_insert, bool should_scale);
-	template < typename T > void BackwardFFTAfterComplexConjMul(T* image_to_multiply, bool load_half_precision = false);
+	template < typename T > void BackwardFFTAfterComplexConjMul(T* image_to_multiply, bool load_half_precision);
 
 
 	float ReturnSumOfSquares();
@@ -201,13 +202,13 @@ public:
 					   input_dims.z);
 	};
 
-	__inline__  void ReturnLaunchParamtersLimitSMs(int N, int M)
+	__inline__  void ReturnLaunchParamtersLimitSMs(float N, int M)
 	{
 		// This should only be called for kernels with grid stride loops setup. The idea
 		// is to limit the number of SMs available for some kernels so that other threads on the device can run in parallel.
 		// limit_SMs_by_threads is default 1, so this must be set prior to this call.
 	  threadsPerBlock = dim3(M, 1, 1);
-	  gridDims = dim3( N* number_of_streaming_multiprocessors );
+	  gridDims = dim3( myroundint(N* number_of_streaming_multiprocessors) );
 	};
 
 	void CopyFromCpuImage(Image &cpu_image);

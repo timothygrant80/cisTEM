@@ -1597,7 +1597,7 @@ bool cisTEMStarFileReader::ReadBinaryFile(wxString wanted_filename, ArrayOfcisTE
 					if (SafelyReadFromBinaryBufferIntoInteger(buffer_int) == false) return false;
 				}
 				else
-				if (column_data_types[current_column] == UNSIGNED_INTEGER)
+				if (column_data_types[current_column] == INTEGER_UNSIGNED)
 				{
 					unsigned int buffer_int;
 					if (SafelyReadFromBinaryBufferIntoUnsignedInteger(buffer_int) == false) return false;

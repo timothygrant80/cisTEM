@@ -8,10 +8,10 @@
 #include "gpu_core_headers.h"
 
 
-__global__ void histogram_smem_atomics(const Npp32f* in, int4 dims, float *out, int n_bins, const float bin_min, const float bin_inc, const int max_padding);
+__global__ void histogram_smem_atomics(const __half* in, int4 dims, float *out, int n_bins, const __half bin_min, const __half bin_inc, const int max_padding);
 
 
-__global__ void histogram_smem_atomics(const Npp32f* in, int4 dims, float *out, int n_bins, const float bin_min, const float bin_inc, const int max_padding)
+__global__ void histogram_smem_atomics(const  __half* in, int4 dims, float *out, int n_bins, const __half bin_min, const __half bin_inc, const int max_padding)
 {
   // pixel coordinates
   int x = blockIdx.x * blockDim.x + threadIdx.x;
@@ -41,7 +41,10 @@ __global__ void histogram_smem_atomics(const Npp32f* in, int4 dims, float *out, 
     for (int row = y; row < dims.y*dims.z - max_padding; row += ny)
     {
       if (row < max_padding) continue;
-      pixel_idx = (int)(floor((in[row * dims.w + col]-bin_min) / bin_inc));
+//      pixel_idx = (int)(floor((in[row * dims.w + col]-bin_min) / bin_inc));
+      pixel_idx = __half2int_rd((in[row * dims.w + col]-bin_min) / bin_inc);
+
+
       pixel_idx = MAX(MIN(pixel_idx,n_bins-1),0);
 
       atomicAdd(&smem[pixel_idx], 1);
@@ -113,8 +116,8 @@ void Histogram::Init(int histogram_n_bins, float histogram_min, float histogram_
 {
 
 	this->histogram_n_bins 	= histogram_n_bins;
-	this->histogram_min 	= histogram_min;
-	this->histogram_step	= histogram_step;
+	this->histogram_min 	= __float2half(histogram_min);
+	this->histogram_step	= __float2half(histogram_step);
 	this->max_padding = 2;
 
 }
@@ -123,8 +126,8 @@ void Histogram::SetInitialValues()
 {
 	is_allocated_histogram = false;
 	histogram_n_bins 	= 0;
-	histogram_min 	= 0.0f;
-	histogram_step	= 0.0f;
+	histogram_min 	= (__half)0.0;
+	histogram_step	= (__half) 0.0;
 }
 
 
@@ -168,7 +171,7 @@ void Histogram::AddToHistogram(GpuImage &input_image)
 
 
 	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
-	histogram_smem_atomics<<< gridDims_img,threadsPerBlock_img, (histogram_n_bins)*sizeof(int), input_image.nppStream.hStream>>>((const Npp32f*)input_image.real_values_gpu, input_image.dims, histogram, histogram_n_bins,histogram_min,histogram_step,max_padding);
+	histogram_smem_atomics<<< gridDims_img,threadsPerBlock_img, (histogram_n_bins)*sizeof(int), input_image.nppStream.hStream>>>((const __half*)input_image.real_values_16f, input_image.dims, histogram, histogram_n_bins,histogram_min,histogram_step,max_padding);
 	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 
 

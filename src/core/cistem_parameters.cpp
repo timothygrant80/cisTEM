@@ -804,7 +804,7 @@ void cisTEMParameters::WriteTocisTEMBinaryFile(wxString wanted_filename, int fir
 	if (parameters_to_write.position_in_stack == true)
 	{
 		bitmask_identifier = POSITION_IN_STACK;
-		data_type = UNSIGNED_INTEGER;
+		data_type = INTEGER_UNSIGNED;
 
 		fwrite ( &bitmask_identifier, sizeof(long), 1, cisTEM_bin_file );
 		fwrite ( &data_type, sizeof(char), 1, cisTEM_bin_file );

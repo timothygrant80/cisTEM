@@ -483,6 +483,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 	int number_of_pixel_size_positions;
 
 	bool use_gpu;
+	int  max_threads = 1; // Only used for the GPU code. For GUI this comes from the run profile -> command line override as in other programs.
 
 	int image_number_for_gui;
 	int number_of_jobs_per_image_in_gui;
@@ -785,7 +786,7 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 			//wxPrintf("%i = %i - %i\n", job_counter, first_search_position, last_search_position);
 
 
-			current_job_package.AddJob("ttffffffffffifffffbfftttttttttftiiiitttfb",	input_search_image.ToUTF8().data(),
+			current_job_package.AddJob("ttffffffffffifffffbfftttttttttftiiiitttfbi",	input_search_image.ToUTF8().data(),
 																	input_reconstruction.ToUTF8().data(),
 																	pixel_size,
 																	voltage_kV,
@@ -825,7 +826,8 @@ void MatchTemplatePanel::StartEstimationClick( wxCommandEvent& event )
 																	directory_for_results.ToUTF8().data(),
 																	output_result_file.ToUTF8().data(),
 																	min_peak_radius,
-																	use_gpu);
+																	use_gpu,
+																	max_threads);
 		}
 
 		delete current_image_euler_search;

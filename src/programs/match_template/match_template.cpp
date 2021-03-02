@@ -42,9 +42,9 @@ WX_DEFINE_OBJARRAY(ArrayOfAggregatedTemplateResults);
 
 // nasty globals to track histogram size
 
-int histogram_number_of_points = 1024;
-float histogram_min = -20.0f;
-float histogram_max = 50.0f;
+int histogram_number_of_points = 512;
+float histogram_min = -12.5f;
+float histogram_max = 22.5f;
 
 class
 MatchTemplateApp : public MyApp
@@ -179,6 +179,7 @@ void MatchTemplateApp::DoInteractiveUserInput()
 	wxString	my_symmetry = "C1";
 	float 		in_plane_angular_step = 0;
 	bool 		use_gpu_input = false;
+	int			max_threads = 1; // Only used for the GPU code
 
 	UserInput *my_input = new UserInput("MatchTemplate", 1.00);
 
@@ -214,9 +215,10 @@ void MatchTemplateApp::DoInteractiveUserInput()
 	padding = my_input->GetFloatFromUser("Padding factor", "Factor determining how much the input volume is padded to improve projections", "1.0", 1.0, 2.0);
 //	ctf_refinement = my_input->GetYesNoFromUser("Refine defocus", "Should the particle defocus be refined?", "No");
 	particle_radius_angstroms = my_input->GetFloatFromUser("Mask radius for global search (A) (0.0 = max)", "Radius of a circular mask to be applied to the input images during global search", "0.0", 0.0);
-//	my_symmetry = my_input->GetSymmetryFromUser("Template symmetry", "The symmetry of the template reconstruction", "C1");
+	my_symmetry = my_input->GetSymmetryFromUser("Template symmetry", "The symmetry of the template reconstruction", "C1");
 #ifdef ENABLEGPU
 	use_gpu_input = my_input->GetYesNoFromUser("Use GPU", "Offload expensive calcs to GPU","No");
+	max_threads = my_input->GetIntFromUser("Max. threads to use for calculation", "when threading, what is the max threads to run", "1", 1);
 #endif
 
 
@@ -232,7 +234,7 @@ void MatchTemplateApp::DoInteractiveUserInput()
 	delete my_input;
 
 
-	my_current_job.ManualSetArguments("ttffffffffffifffffbfftttttttttftiiiitttfb",	input_search_images.ToUTF8().data(),
+	my_current_job.ManualSetArguments("ttffffffffffifffffbfftttttttttftiiiitttfbi",	input_search_images.ToUTF8().data(),
 															input_reconstruction.ToUTF8().data(),
 															pixel_size,
 															voltage_kV,
@@ -272,7 +274,8 @@ void MatchTemplateApp::DoInteractiveUserInput()
 															directory_for_results.ToUTF8().data(),
 															result_filename.ToUTF8().data(),
 															min_peak_radius,
-															use_gpu_input);
+															use_gpu_input,
+															max_threads);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -381,6 +384,21 @@ bool MatchTemplateApp::DoCalculation()
 	wxString	result_output_filename = my_current_job.arguments[38].ReturnStringArgument();
 	float		min_peak_radius = my_current_job.arguments[39].ReturnFloatArgument();
 	bool		use_gpu   = my_current_job.arguments[40].ReturnBoolArgument();
+	int			max_threads =  my_current_job.arguments[41].ReturnIntegerArgument();
+
+	if (is_running_locally == false) max_threads = number_of_threads_requested_on_command_line; // OVERRIDE FOR THE GUI, AS IT HAS TO BE SET ON THE COMMAND LINE...
+
+
+	// This condition applies to GUI and CLI - it is just a recommendation to the user.
+	if(use_gpu && max_threads <= 1)
+	{
+		SendInfo("Warning, you are only using one thread on the GPU. Suggested minimum is 2. Check compute saturation using nvidia-smi -l 1\n");
+	}
+	if(!use_gpu && max_threads > 1)
+	{
+		SendInfo("Using more than one thread only works in the GPU implementation\nSet No. of threads per copy to 1 in your Run Profile\n.");
+		max_threads=1;
+	}
 
 
 	/*wxPrintf("input image = %s\n", input_search_images_filename);
@@ -689,7 +707,7 @@ bool MatchTemplateApp::DoCalculation()
 	wxDateTime my_time_in;
 
 	// remove outliers
-
+	// This won't work for movie frames (13.0 is used in unblur) TODO use poisson stats
 	input_image.ReplaceOutliersWithMean(5.0f);
 	input_image.ForwardFFT();
 	input_image.SwapRealSpaceQuadrants();
@@ -778,15 +796,15 @@ bool MatchTemplateApp::DoCalculation()
 	int nThreads = 2;
 	int nGPUs = 1;
 	int nJobs = last_search_position-first_search_position+1;
-	if (use_gpu && nThreads > nJobs)
+	if (use_gpu && max_threads > nJobs)
 	{
-		wxPrintf("\n\tWarning, you request more threads (%d) than there are search positions (%d)\n", nThreads, nJobs);
-		nThreads = nJobs;
+		wxPrintf("\n\tWarning, you request more threads (%d) than there are search positions (%d)\n", max_threads, nJobs);
+		max_threads = nJobs;
 	}
 
 	int minPos = first_search_position;
 	int maxPos = last_search_position;
-	int incPos = (nJobs) / (nThreads);
+	int incPos = (nJobs) / (max_threads);
 
 //	wxPrintf("First last and inc %d, %d, %d\n", minPos, maxPos, incPos);
 #ifdef ENABLEGPU
@@ -796,11 +814,11 @@ bool MatchTemplateApp::DoCalculation()
 
 	if (use_gpu)
 	{
-		total_correlation_positions_per_thread = total_correlation_positions / nThreads;
+		total_correlation_positions_per_thread = total_correlation_positions / max_threads;
 
 #ifdef ENABLEGPU
 //	checkCudaErrors(cudaGetDeviceCount(&nGPUs));
-	GPU = new TemplateMatchingCore[nThreads];
+	GPU = new TemplateMatchingCore[max_threads];
 	gpuDev.Init(nGPUs);
 
 //	wxPrintf("Host: %s is running\nnThreads: %d\nnGPUs: %d\n:nSearchPos %d \n",hostNameBuffer,nThreads, nGPUs, maxPos);
@@ -832,7 +850,7 @@ bool MatchTemplateApp::DoCalculation()
 		{
 #ifdef ENABLEGPU
 
-	#pragma omp parallel num_threads(nThreads)
+	#pragma omp parallel num_threads(max_threads)
 	{
 		int tIDX = ReturnThreadNumberOfCurrentThread();
 		gpuDev.SetGpu(tIDX);
@@ -843,7 +861,7 @@ bool MatchTemplateApp::DoCalculation()
 				int t_first_search_position = first_search_position + (tIDX*incPos);
 				int t_last_search_position = first_search_position + (incPos-1) + (tIDX*incPos);
 
-				if (tIDX == (nThreads - 1)) t_last_search_position = maxPos;
+				if (tIDX == (max_threads - 1)) t_last_search_position = maxPos;
 
 				GPU[tIDX].Init(this, template_reconstruction, input_image, current_projection,
 								pixel_size_search_range, pixel_size_step, pixel_size,
@@ -887,10 +905,11 @@ bool MatchTemplateApp::DoCalculation()
 //			wxPrintf("\n\n\t\tsizeI defI %d %d\n\n\n", size_i, defocus_i);
 
 
-			#pragma omp parallel num_threads(nThreads)
+			#pragma omp parallel num_threads(max_threads)
 			{
 				int tIDX = ReturnThreadNumberOfCurrentThread();
 				gpuDev.SetGpu(tIDX);
+
 
 				GPU[tIDX].RunInnerLoop(projection_filter, size_i, defocus_i, tIDX, current_correlation_position);
 
@@ -1256,7 +1275,7 @@ bool MatchTemplateApp::DoCalculation()
 		// calculate the expected threshold (from peter's paper)
 		const float CCG_NOISE_STDDEV = 1.0;
 		double temp_threshold;
-		double erf_input = 1.0 / (2.0 * (double)original_input_image_x * (double)original_input_image_y * (double)total_correlation_positions);
+		double erf_input = 2.0 / (1.0 * (double)original_input_image_x * (double)original_input_image_y * (double)total_correlation_positions);
 #ifdef MKL
 		vdErfcInv(1, &erf_input, &temp_threshold);
 #else
@@ -1771,7 +1790,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 		// calculate the expected threshold (from peter's paper)
 		const float CCG_NOISE_STDDEV = 1.0;
 		double temp_threshold = 0.0;
-		double erf_input = 1.0 / (2.0 * ((double)aggregated_results[array_location].collated_data_array[0] * (double)aggregated_results[array_location].collated_data_array[1] * (double)aggregated_results[array_location].total_number_of_ccs));
+		double erf_input = 2.0 / (1.0 * ((double)aggregated_results[array_location].collated_data_array[0] * (double)aggregated_results[array_location].collated_data_array[1] * (double)aggregated_results[array_location].total_number_of_ccs));
 //		wxPrintf("ox oy total %3.3e %3.3e %3.3e\n", (double)result_array[5] , (double)result_array[6] , (double)aggregated_results[array_location].total_number_of_ccs, erf_input);
 
 #ifdef MKL
@@ -1819,10 +1838,9 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 
 		// Calculate the result image, and keep the peak info to send back...
 
-		float min_peak_radius = powf(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[39].ReturnFloatArgument(), 2);
-		// TODO, I think this is in angstrom and should be in pixels.
-		int   min_search_radius = myroundint(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[39].ReturnFloatArgument() /
-											 current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[2].ReturnFloatArgument()) / 2 + 1;
+		int   min_peak_radius = current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[39].ReturnFloatArgument();
+		float min_peak_radius_squared = powf(float(min_peak_radius), 2);
+
 
 		result_image.Allocate(scaled_mip.logical_x_dimension, scaled_mip.logical_y_dimension, 1);
 		result_image.SetToConstant(0.0f);
@@ -1848,7 +1866,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 			nTrys++;
 //			wxPrintf("Trying the %ld'th peak\n",nTrys);
 			// FIXME min-distance from edges would be better to set dynamically.
-			current_peak = scaled_mip.FindPeakWithIntegerCoordinates(0.0, FLT_MAX, 50);
+			current_peak = scaled_mip.FindPeakWithIntegerCoordinates(0.0, FLT_MAX, input_reconstruction.logical_x_dimension / 4 + 1);
 			if (current_peak.value < expected_threshold) break;
 
 			// ok we have peak..
@@ -1869,14 +1887,14 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 
 //			wxPrintf("Peak = %f, %f, %f : %f\n", current_peak.x, current_peak.y, current_peak.value);
 
-			for ( j = current_peak.y - min_search_radius; j < current_peak.y + min_search_radius; j ++ )
+			for ( j = std::max(myroundint(current_peak.y) - min_peak_radius, 0); j < std::min(myroundint(current_peak.y) + min_peak_radius, scaled_mip.logical_y_dimension) ; j ++ )
 			{
-				sq_dist_y = j-current_peak.y;
+				sq_dist_y = float(j)-current_peak.y;
 				sq_dist_y *= sq_dist_y;
 
-				for ( i = current_peak.x - min_search_radius; i < current_peak.x + min_search_radius; i ++ )
+				for ( i = std::max(myroundint(current_peak.x) - min_peak_radius, 0); i < std::min(myroundint(current_peak.x) + min_peak_radius, scaled_mip.logical_x_dimension) ; i ++ )
 				{
-					sq_dist_x = i-current_peak.x;
+					sq_dist_x = float(i)-current_peak.x;
 					sq_dist_x *= sq_dist_x;
 					address = phi_image.ReturnReal1DAddressFromPhysicalCoord(i,j,0);
 
@@ -1897,7 +1915,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
 
 					}
 
-					if ( sq_dist_x + sq_dist_y <= min_peak_radius )
+					if ( sq_dist_x + sq_dist_y <= min_peak_radius_squared )
 					{
 						scaled_mip.real_values[address] = -FLT_MAX;
 					}

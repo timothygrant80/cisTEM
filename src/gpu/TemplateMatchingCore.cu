@@ -2,12 +2,11 @@
 
 #define DO_HISTOGRAM true
 
-const unsigned int SUM_PIXELWISE_UNROLL = 1;
-const unsigned int MIP_PIXELWISE_UNROLL = 1;
 
-__global__ void  SumPixelWiseKernel(const cufftReal* correlation_output, Stats* my_stats, const int numel);
-__global__ void MipPixelWiseKernel(const cufftReal*  correlation_output, Peaks* my_peaks, const int  numel,
-                                   __half psi, __half theta, __half phi);
+__global__ void MipPixelWiseKernel(__half* correlation_output, __half2* my_peaks, const int  numel,
+                                   __half psi, __half theta, __half phi, __half2* my_stats, __half2* my_new_peaks);
+
+
 
 
 TemplateMatchingCore::TemplateMatchingCore() 
@@ -162,9 +161,16 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 	// Either do not delete the single precision, or add in a copy here so that each loop over defocus vals
 	// have a copy to work with. Otherwise this will not exist on the second loop
 	d_input_image.ConvertToHalfPrecision(false);
+	d_padded_reference.ConvertToHalfPrecision(false);
 
-	cudaErr(cudaMalloc((void **)&my_peaks, sizeof(Peaks)*d_input_image.real_memory_allocated));
-	cudaErr(cudaMalloc((void **)&my_stats, sizeof(Stats)*d_input_image.real_memory_allocated));
+
+	cudaErr(cudaMalloc((void **)&my_peaks, sizeof(__half2)*d_input_image.real_memory_allocated));
+	cudaErr(cudaMalloc((void **)&my_new_peaks, sizeof(__half2)*d_input_image.real_memory_allocated));
+	cudaErr(cudaMalloc((void **)&my_stats, sizeof(__half2)*d_input_image.real_memory_allocated));
+	cudaErr(cudaMemset(my_peaks,0,sizeof(__half2)*d_input_image.real_memory_allocated));
+//	cudaErr(cudaMemset(my_stats,0,sizeof(Peaks)*d_input_image.real_memory_allocated));
+
+
 
 	cudaEvent_t projection_is_free_Event, gpu_work_is_done_Event;
 	cudaErr(cudaEventCreateWithFlags(&projection_is_free_Event, cudaEventDisableTiming));
@@ -197,7 +203,6 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 		{
 
 			angles.Init(global_euler_search.list_of_search_parameters[current_search_position][0], global_euler_search.list_of_search_parameters[current_search_position][1], current_psi, 0.0, 0.0);
-
 //			current_projection.SetToConstant(0.0f); // This also sets the FFT padding to zero
 			template_reconstruction.ExtractSlice(current_projection, angles, 1.0f, false);
 			current_projection.complex_values[0] = 0.0f + I * 0.0f;
@@ -208,10 +213,8 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 			average_on_edge = current_projection.ReturnAverageOfRealValuesOnEdges();
 
 
-
 			// Make sure the device has moved on to the padded projection
 			cudaStreamWaitEvent(cudaStreamPerThread,projection_is_free_Event, 0);
-
 
 			//// TO THE GPU ////
 			d_current_projection.CopyHostToDevice();
@@ -221,19 +224,19 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 			average_on_edge *= (d_current_projection.number_of_real_space_pixels / (float)d_padded_reference.number_of_real_space_pixels);
 
 			d_current_projection.MultiplyByConstant(rsqrtf(  d_current_projection.ReturnSumOfSquares() / (float)d_padded_reference.number_of_real_space_pixels - (average_on_edge * average_on_edge)));
-
 			d_current_projection.ClipInto(&d_padded_reference, 0, false, 0, 0, 0, 0);
 			cudaEventRecord(projection_is_free_Event, cudaStreamPerThread);
-
 
 			// For the cpu code (MKL and FFTW) the image is multiplied by N on the forward xform, and subsequently normalized by 1/N
 			// cuFFT multiplies by 1/root(N) forward and then 1/root(N) on the inverse. The input image is done on the cpu, and so has no scaling.
 			// Stating false on the forward FFT leaves the ref = ref*root(N). Then we have root(N)*ref*input * root(N) (on the inverse) so we need a factor of 1/N to come out proper. This is included in BackwardFFTAfterComplexConjMul
 			d_padded_reference.ForwardFFT(false);
+
 			//      d_padded_reference.ForwardFFTAndClipInto(d_current_projection,false);
 			d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image.complex_values_16f, true);
-//			d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image.complex_values_gpu, false);
 
+//			d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image.complex_values_gpu, false);
+//			d_padded_reference.ConvertToHalfPrecision(false);
 
 
 
@@ -260,11 +263,11 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 //			}
 //			else
 //			{
-				this->MipPixelWise(d_padded_reference, __float2half_rn(current_psi) , __float2half_rn(global_euler_search.list_of_search_parameters[current_search_position][1]),
+				this->MipPixelWise( __float2half_rn(current_psi) , __float2half_rn(global_euler_search.list_of_search_parameters[current_search_position][1]),
 																					  __float2half_rn(global_euler_search.list_of_search_parameters[current_search_position][0]));
 	//			this->MipPixelWise(d_padded_reference, float(current_psi) , float(global_euler_search.list_of_search_parameters[current_search_position][1]),
 	//																			 	 float(global_euler_search.list_of_search_parameters[current_search_position][0]));
-				this->SumPixelWise(d_padded_reference);
+//				this->SumPixelWise(d_padded_reference);
 //			}
 
 
@@ -334,11 +337,11 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 				temp_result->SetResult(1, &temp_float);
 				parent_pointer->AddJobToResultQueue(temp_result);
 			}
-
 			} // loop over psi angles
 
       
  	} // end of outer loop euler sphere position
+
 
 	wxPrintf("\t\t\ntotal number %d\n",ccc_counter);
 
@@ -352,7 +355,7 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 	d_sum3.AddImage(d_sum2);
 	d_sumSq3.AddImage(d_sumSq2);
 
-	this->MipToImage((const Peaks *)my_peaks, d_max_intensity_projection, d_best_psi, d_best_theta, d_best_phi);
+	this->MipToImage();
 
 	MyAssertTrue(histogram.is_allocated_histogram, "Trying to accumulate a histogram that has not been initialized!")
 	histogram.Accumulate(d_padded_reference);
@@ -365,169 +368,119 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 }
 
 
-void TemplateMatchingCore::SumPixelWise(GpuImage &image)
+
+
+void TemplateMatchingCore::MipPixelWise( __half psi, __half theta, __half phi)
 {
 
 	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
-//	dim3 threadsPerBlock = dim3(1024, 1, 1);
-//	dim3 gridDims = dim3((image.real_memory_allocated / SUM_PIXELWISE_UNROLL + threadsPerBlock.x - 1) / threadsPerBlock.x,1,1);
 
-	image.ReturnLaunchParamtersLimitSMs(64,512);
 
-    cudaErr(cudaFuncSetCacheConfig(SumPixelWiseKernel, cudaFuncCachePreferL1));
-	SumPixelWiseKernel<< <image.gridDims, image.threadsPerBlock, 0,cudaStreamPerThread>> >((cufftReal *)image.real_values_gpu, my_stats,(int) image.real_memory_allocated - SUM_PIXELWISE_UNROLL + 1);
+	// N*
+	d_padded_reference.ReturnLaunchParamtersLimitSMs(5.f,1024);
+
+
+	MipPixelWiseKernel<< <d_padded_reference.gridDims, d_padded_reference.threadsPerBlock,0,cudaStreamPerThread>> >((__half *)d_padded_reference.real_values_16f, my_peaks,(int)d_padded_reference.real_memory_allocated , psi,theta, phi, my_stats, my_new_peaks);
 	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 
 }
 
-
-__global__ void SumPixelWiseKernel(const cufftReal* correlation_output, Stats* my_stats, const int  numel)
+__global__ void MipPixelWiseKernel(__half* correlation_output, __half2* my_peaks, const int  numel,
+									__half psi, __half theta, __half phi, __half2* my_stats, __half2* my_new_peaks)
 {
-//    const int x = SUM_PIXELWISE_UNROLL * (blockIdx.x*blockDim.x + threadIdx.x);
+
+//	Peaks tmp_peak;
 
     for ( int i = blockIdx.x*blockDim.x + threadIdx.x; i < numel; i+=blockDim.x * gridDim.x)
     {
-    	const float val = correlation_output[i];
-    	my_stats[i].sum += val;
-    	my_stats[i].sq_sum += val*val;
-    }
-//	if ( x < numel )
-//	{
-//		#pragma unroll (SUM_PIXELWISE_UNROLL)
-//		for ( int iVal = 0; iVal < SUM_PIXELWISE_UNROLL; iVal++)
-//		{
-//			const float val = correlation_output[x + iVal];
-//			my_stats[x + iVal].sum += val;
-//			my_stats[x + iVal].sq_sum += val*val;
-// 		}
-//	}
-
-}
 
 
+    	const __half half_val = correlation_output[i];
+    	const __half2 input = __half2half2(half_val * __half(10000.0));
+    	const __half2 mulVal = __halves2half2((__half)1.0, half_val);
+//    	my_stats[i].sum = __hadd(my_stats[i].sum, half_val);
+//    	my_stats[i].sq_sum = __hfma(__half(1000.)*half_val,half_val,my_stats[i].sq_sum);
+    	my_stats[i] = __hfma2(input, mulVal, my_stats[i]);
+//    	tmp_peak = my_peaks[i];
+//		const __half half_val = __float2half_rn(val);
 
-void TemplateMatchingCore::MipPixelWise(GpuImage &image, __half psi, __half theta, __half phi)
-{
+//			tmp_peak.psi = psi;
+//			tmp_peak.theta = theta;
+//			tmp_peak.phi = phi;
+			if (  half_val > __low2half(my_peaks[i]) )
+			{
+//				tmp_peak.mip = half_val;
+				my_peaks[i] = __halves2half2(half_val, psi);
+				my_new_peaks[i] = __halves2half2(theta, phi);
 
-	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
-//	dim3 threadsPerBlock = dim3(1024, 1, 1);
-//	dim3 gridDims = dim3((image.real_memory_allocated / MIP_PIXELWISE_UNROLL + threadsPerBlock.x - 1) / threadsPerBlock.x,1,1);
-//	int N = 64;
-
-	image.ReturnLaunchParamtersLimitSMs(64,512);
-
-	MipPixelWiseKernel<< <image.gridDims, image.threadsPerBlock,0,cudaStreamPerThread>> >((cufftReal *)image.real_values_gpu, my_peaks,(int) image.real_memory_allocated - MIP_PIXELWISE_UNROLL + 1, psi,theta, phi);
-	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
-
-}
-
-__global__ void MipPixelWiseKernel(const cufftReal*  correlation_output, Peaks* my_peaks, const int  numel,
-									__half psi, __half theta, __half phi)
-{
-
-    for ( int i = blockIdx.x*blockDim.x + threadIdx.x; i < numel; i+=blockDim.x * gridDim.x)
-    {
-		const __half val = __float2half_rn(correlation_output[i]);
-
-		if ( __hgt( val , my_peaks[i].mip) )
-		{
-			my_peaks[i].mip = val;
-			my_peaks[i].psi = psi;
-			my_peaks[i].theta = theta;
-			my_peaks[i].phi = phi;
-
-		}
+//				my_peaks[i].mip = correlation_output[i];
+//				my_peaks[i].psi = psi;
+//				my_peaks[i].theta = theta;
+//				my_peaks[i].phi = phi;
+			}
     }
 //
-//    const unsigned int x = MIP_PIXELWISE_UNROLL *(blockIdx.x*blockDim.x + threadIdx.x);
-//
-//
-//	if ( x < numel  )
-//	{
-//		#pragma unroll (MIP_PIXELWISE_UNROLL)
-//		for (unsigned int iVal = 0; iVal < MIP_PIXELWISE_UNROLL; iVal++)
-//		{
-//
-//			const __half val = __float2half_rn(correlation_output[x+iVal]);
-//
-//			if ( __hgt( val , my_peaks[x+iVal].mip) )
-//			{
-//				my_peaks[x+iVal].mip = val;
-//				my_peaks[x+iVal].psi = psi;
-//				my_peaks[x+iVal].theta = theta;
-//				my_peaks[x+iVal].phi = phi;
-//
-//			}
-//
-//		}
-//	}
+
 
 }
 
-__global__ void MipToImageKernel(const Peaks*, const int, cufftReal*, cufftReal*, cufftReal*, cufftReal*);
+__global__ void MipToImageKernel(const __half2*, const __half2* my_new_peaks, const int, cufftReal*, cufftReal*, cufftReal*, cufftReal*);
 
-void TemplateMatchingCore::MipToImage(const Peaks* my_peaks, GpuImage &mip, GpuImage &psi, GpuImage &theta, GpuImage &phi)
+void TemplateMatchingCore::MipToImage()
 {
 
 	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 	dim3 threadsPerBlock = dim3(1024, 1, 1);
-	dim3 gridDims = dim3((mip.real_memory_allocated + threadsPerBlock.x - 1) / threadsPerBlock.x,1,1);
+	dim3 gridDims = dim3((d_max_intensity_projection.real_memory_allocated + threadsPerBlock.x - 1) / threadsPerBlock.x,1,1);
 
-	MipToImageKernel<< <gridDims, threadsPerBlock,0,cudaStreamPerThread>> >(my_peaks, mip.real_memory_allocated, mip.real_values_gpu, psi.real_values_gpu, theta.real_values_gpu, phi.real_values_gpu);
+	MipToImageKernel<< <gridDims, threadsPerBlock,0,cudaStreamPerThread>> >(my_peaks, my_new_peaks, d_max_intensity_projection.real_memory_allocated,
+			d_max_intensity_projection.real_values_gpu, d_best_psi.real_values_gpu, d_best_theta.real_values_gpu, d_best_phi.real_values_gpu);
 	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 
 }
 
-__global__ void  MipToImageKernel(const Peaks* my_peaks, const int numel, cufftReal* mip, cufftReal* psi, cufftReal* theta, cufftReal* phi)
+__global__ void  MipToImageKernel(const __half2* my_peaks, const __half2* my_new_peaks, const int numel, cufftReal* mip, cufftReal* psi, cufftReal* theta, cufftReal* phi)
 {
 
     const int x = blockIdx.x*blockDim.x + threadIdx.x;
 
 	if ( x < numel  )
 	{
-		mip[x] = 	(cufftReal)__half2float(my_peaks[x].mip);
-		psi[x] = 	(cufftReal)__half2float(my_peaks[x].psi);
-		theta[x] =	(cufftReal)__half2float(my_peaks[x].theta);
-		phi[x] =	(cufftReal)__half2float(my_peaks[x].phi);
 
-//		mip[x] = 	(cufftReal)(my_peaks[x].mip);
-//		psi[x] = 	(cufftReal)(my_peaks[x].psi);
-//		theta[x] =	(cufftReal)(my_peaks[x].theta);
-//		phi[x] =	(cufftReal)(my_peaks[x].phi);
+		mip[x] = 	(cufftReal)__low2float(my_peaks[x]);
+		psi[x] = 	(cufftReal)__high2float(my_peaks[x]);
+		theta[x] =	(cufftReal)__low2float(my_new_peaks[x]);
+		phi[x] =	(cufftReal)__high2float(my_new_peaks[x]);
 
     }
 }
 
-__global__ void AccumulateSumsKernel(Stats* my_stats, const int numel, cufftReal* sum, cufftReal* sq_sum);
+__global__ void AccumulateSumsKernel(__half2* my_stats, const int numel, cufftReal* sum, cufftReal* sq_sum);
 
-void TemplateMatchingCore::AccumulateSums(Stats* my_stats, GpuImage &sum, GpuImage &sq_sum)
+void TemplateMatchingCore::AccumulateSums(__half2* my_stats, GpuImage &sum, GpuImage &sq_sum)
 {
 
 	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 	dim3 threadsPerBlock = dim3(1024, 1, 1);
-	dim3 gridDims = dim3((sum.real_memory_allocated / SUM_PIXELWISE_UNROLL + threadsPerBlock.x - 1) / threadsPerBlock.x,1,1);
+	dim3 gridDims = dim3((sum.real_memory_allocated + threadsPerBlock.x - 1) / threadsPerBlock.x,1,1);
 
-	AccumulateSumsKernel<< <gridDims, threadsPerBlock,0,cudaStreamPerThread>> >(my_stats, sum.real_memory_allocated - SUM_PIXELWISE_UNROLL + 1, sum.real_values_gpu, sq_sum.real_values_gpu);
+	AccumulateSumsKernel<< <gridDims, threadsPerBlock,0,cudaStreamPerThread>> >(my_stats, sum.real_memory_allocated, sum.real_values_gpu, sq_sum.real_values_gpu);
 	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 
 }
 
-__global__ void AccumulateSumsKernel(Stats* my_stats, const int numel, cufftReal* sum, cufftReal* sq_sum)
+__global__ void AccumulateSumsKernel(__half2* my_stats, const int numel, cufftReal* sum, cufftReal* sq_sum)
 {
 
-    const unsigned int x = SUM_PIXELWISE_UNROLL * (blockIdx.x*blockDim.x + threadIdx.x);
-
+	int x = blockIdx.x*blockDim.x + threadIdx.x;
 	if ( x < numel )
 	{
-		#pragma unroll (SUM_PIXELWISE_UNROLL)
-		for (unsigned int iVal = 0; iVal < SUM_PIXELWISE_UNROLL; iVal++)
-		{
-			sum[x+iVal] += my_stats[x+iVal].sum;
-			sq_sum[x+iVal] += my_stats[x+iVal].sq_sum;
 
-			my_stats[x+iVal].sum = 0.0f;
-			my_stats[x+iVal].sq_sum = 0.0f;
-		}
+			sum[x] = __fmaf_rn(0.0001f, __low2float(my_stats[x]), sum[x]);
+			sq_sum[x] = __fmaf_rn(0.0001f, __high2float(my_stats[x]), sq_sum[x]);
+
+			my_stats[x] = __halves2half2((__half)0.,(__half)0.);
+
 
     }
 }

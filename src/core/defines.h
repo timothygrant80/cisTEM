@@ -22,7 +22,7 @@
 #define DOUBLE      	 6
 #define CHAR			 7
 #define VARIABLE_LENGTH  8
-#define UNSIGNED_INTEGER 9
+#define INTEGER_UNSIGNED 9
 
 
 // From Table 2.2 DeGraff

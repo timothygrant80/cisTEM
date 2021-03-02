@@ -111,7 +111,10 @@ bool PrepareStackApp::DoCalculation()
 	sum_power.SetToConstant(0.0);
 
 	cisTEMParameters input_star_file;
-	input_star_file.ReadFromcisTEMStarFile(input_star_filename);
+
+	wxFileName star_filename(input_star_filename);
+	if (star_filename.GetExt() == "cistem") input_star_file.ReadFromcisTEMBinaryFile(input_star_filename);
+	else input_star_file.ReadFromcisTEMStarFile(input_star_filename);
 
 	if (process_a_subset == false)
 	{

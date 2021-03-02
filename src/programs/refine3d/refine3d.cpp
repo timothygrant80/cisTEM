@@ -538,7 +538,10 @@ bool Refine3DApp::DoCalculation()
 
 	//FrealignParameterFile input_par_file(input_parameter_file, OPEN_TO_READ);
 	cisTEMParameters input_star_file;
-	input_star_file.ReadFromcisTEMStarFile(input_star_filename);
+
+	wxFileName star_filename(input_star_filename);
+	if (star_filename.GetExt() == "cistem") input_star_file.ReadFromcisTEMBinaryFile(input_star_filename);
+	else input_star_file.ReadFromcisTEMStarFile(input_star_filename);
 
 	// Read whole parameter file to work out average values and variances
 

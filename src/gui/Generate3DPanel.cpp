@@ -591,7 +591,7 @@ void Generate3DPanel::OnSocketAllJobsFinished()
 void Generate3DPanel::SetupReconstructionJob()
 {
 	wxArrayString written_parameter_files;
-	written_parameter_files = input_refinement->WritecisTEMStarFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/generate3d_par");
+	written_parameter_files = input_refinement->WritecisTEMStarFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/generate3d_par", 1.0f, 0.0f, true);
 	int class_counter;
 	long counter;
 	int job_counter;

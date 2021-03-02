@@ -119,10 +119,10 @@ public :
 	RefinementResult ReturnRefinementResultByClassAndPositionInStack(int wanted_class, long wanted_position_in_stack);
 
 	void WriteSingleClassFrealignParameterFile(wxString filename,int wanted_class, float percent_used_overide = 1.0f, float sigma_override = 0.0f);
-	void WriteSingleClasscisTEMStarFile(wxString filename,int wanted_class, float percent_used_overide = 1.0f, float sigma_override = 0.0f);
+	void WriteSingleClasscisTEMStarFile(wxString filename,int wanted_class, float percent_used_overide = 1.0f, float sigma_override = 0.0f, bool write_binary_file = false);
 
 	wxArrayString WriteFrealignParameterFiles(wxString base_filename, float percent_used_overide = 1.0f, float sigma_override = 0.0f);
-	wxArrayString WritecisTEMStarFiles(wxString base_filename, float percent_used_overide = 1.0f, float sigma_override = 0.0f);
+	wxArrayString WritecisTEMStarFiles(wxString base_filename, float percent_used_overide = 1.0f, float sigma_override = 0.0f, bool write_binary_files = false);
 	wxArrayString WriteResolutionStatistics(wxString base_filename, float pssnr_division_factor = 1.0f);
 
 	long ReturnNumberOfActiveParticlesInFirstClass();

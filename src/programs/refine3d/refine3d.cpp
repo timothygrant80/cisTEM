@@ -96,11 +96,12 @@ float FrealignObjectiveFunction(void *scoring_parameters, float *array_of_values
 //			comparison_object->particle->ReturnParameterPenalty(comparison_object->particle->temp_float));
 
 	//****************
-	if (fabsf(comparison_object->particle->alignment_parameters.ReturnShiftX() - comparison_object->initial_x_shift) > comparison_object->x_shift_limit) return 1;
-	if (fabsf(comparison_object->particle->alignment_parameters.ReturnShiftY() - comparison_object->initial_y_shift) > comparison_object->y_shift_limit) return 1;
-	if (fabsf(comparison_object->particle->alignment_parameters.ReturnPsiAngle() - comparison_object->initial_psi_angle) > comparison_object->angle_change_limit) return 1;
-	if (fabsf(comparison_object->particle->alignment_parameters.ReturnPhiAngle() - comparison_object->initial_phi_angle) > comparison_object->angle_change_limit) return 1;
-	if (fabsf(comparison_object->particle->alignment_parameters.ReturnThetaAngle() - comparison_object->initial_theta_angle) > comparison_object->angle_change_limit) return 1;
+	// The minimizer sometimes tries weird values
+	if (isnan(comparison_object->particle->alignment_parameters.ReturnShiftX()) || fabsf(comparison_object->particle->alignment_parameters.ReturnShiftX() - comparison_object->initial_x_shift) > comparison_object->x_shift_limit) return 1;
+	if (isnan(comparison_object->particle->alignment_parameters.ReturnShiftY()) || fabsf(comparison_object->particle->alignment_parameters.ReturnShiftY() - comparison_object->initial_y_shift) > comparison_object->y_shift_limit) return 1;
+	if (isnan(comparison_object->particle->alignment_parameters.ReturnPsiAngle()) || fabsf(comparison_object->particle->alignment_parameters.ReturnPsiAngle() - comparison_object->initial_psi_angle) > comparison_object->angle_change_limit) return 1;
+	if (isnan(comparison_object->particle->alignment_parameters.ReturnPhiAngle()) || fabsf(comparison_object->particle->alignment_parameters.ReturnPhiAngle() - comparison_object->initial_phi_angle) > comparison_object->angle_change_limit) return 1;
+	if (isnan(comparison_object->particle->alignment_parameters.ReturnThetaAngle()) || fabsf(comparison_object->particle->alignment_parameters.ReturnThetaAngle() - comparison_object->initial_theta_angle) > comparison_object->angle_change_limit) return 1;
 
 	/*
 	 *
@@ -186,9 +187,28 @@ float FrealignObjectiveFunction(void *scoring_parameters, float *array_of_values
 //		temp_image.WriteSlice(&input_stack1, z + 1);
 //	}
 
-	return 	- comparison_object->particle->particle_image->GetWeightedCorrelationWithImage(*comparison_object->projection_image, comparison_object->particle->bin_index,
-			  comparison_object->particle->pixel_size / comparison_object->particle->signed_CC_limit)
-			- comparison_object->particle->ReturnParameterPenalty(comparison_object->particle->temp_parameters);
+	float tmp_corr = comparison_object->particle->particle_image->GetWeightedCorrelationWithImage(*comparison_object->projection_image, comparison_object->particle->bin_index,
+			  comparison_object->particle->pixel_size / comparison_object->particle->signed_CC_limit);
+	float tmp_penalty = comparison_object->particle->ReturnParameterPenalty(comparison_object->particle->temp_parameters);
+
+#ifdef DEBUG
+	if (isnan(tmp_corr) || isnan(tmp_penalty))
+	{
+		MyPrintWithDetails("FrealignObjectiveFunction about to return NaN. Details to follow.\n");
+		wxPrintf("shift x = %f\nshift y = %f\npsi   = %f\nphi   = %f\ntheta = %f\n",
+		comparison_object->particle->alignment_parameters.ReturnShiftX(),
+		comparison_object->particle->alignment_parameters.ReturnShiftY(),
+		comparison_object->particle->alignment_parameters.ReturnPsiAngle(),
+		comparison_object->particle->alignment_parameters.ReturnPhiAngle(),
+		comparison_object->particle->alignment_parameters.ReturnThetaAngle());
+	}
+	MyDebugAssertFalse(isnan(tmp_corr),"Frealign score function: correlation term is NaN");
+	MyDebugAssertFalse(isnan(tmp_penalty),"Frealign score function: penalty term is NaN");
+#endif
+
+
+	return 	- tmp_corr
+			- tmp_penalty;
 		// This penalty term assumes a Gaussian x,y distribution that is probably not correct in most cases. It might be better to leave it out.
 }
 
@@ -282,7 +302,7 @@ void Refine3DApp::DoInteractiveUserInput()
 	mask_radius_search = my_input->GetFloatFromUser("Mask radius for global search (A) (0.0 = max)", "Radius of a circular mask to be applied to the input images during global search", "100.0", 0.0);
 	high_resolution_limit_search = my_input->GetFloatFromUser("Approx. resolution limit for search (A)", "High resolution limit of the data used in the global search in Angstroms", "20.0", 0.0);
 	angular_step = my_input->GetFloatFromUser("Angular step (0.0 = set automatically)", "Angular step size for global grid search", "0.0", 0.0);
-	best_parameters_to_keep = my_input->GetIntFromUser("Number of top hits to refine", "The number of best global search orientations to refine locally", "20", 1);
+	best_parameters_to_keep = my_input->GetIntFromUser("Number of top hits to refine", "The number of best global search orientations to refine locally", "20");
 	max_search_x = my_input->GetFloatFromUser("Search range in X (A) (0.0 = 0.5 * mask radius)", "The maximum global peak search distance along X from the particle box center", "0.0", 0.0);
 	max_search_y = my_input->GetFloatFromUser("Search range in Y (A) (0.0 = 0.5 * mask radius)", "The maximum global peak search distance along Y from the particle box center", "0.0", 0.0);
 	mask_center_2d_x = my_input->GetFloatFromUser("2D mask X coordinate (A)", "X coordinate of 2D mask center", "100.0", 0.0);
@@ -1010,6 +1030,7 @@ bool Refine3DApp::DoCalculation()
 		// ReadSlice requires omp critical to avoid parallel reads, which may lead to the wrong slice being read
 		#pragma omp critical
 		input_image_local.ReadSlice(&input_stack, input_parameters.position_in_stack);
+		MyDebugAssertFalse(input_image_local.HasNan(),"Input image read from disk has NaN. Position in stack = %i\n",input_parameters.position_in_stack);
 
 		image_counter++;
 

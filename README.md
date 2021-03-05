@@ -26,7 +26,7 @@ Pre-compiled binaries for Linux are available from [*cis*TEM.org](https://cisTEM
 ### Building from source
 We use GNU autotools to configure and build cisTEM. You should be able to do:
 <pre>
-git clone https://github.com/ngrigorieff/cistem.git
+git clone https://github.com/timothygrant80/cistem.git
 cd cisTEM
 mkdir build
 cd build
@@ -46,7 +46,7 @@ Please address questions and requests to help to the [_cis_TEM forum](https://ci
 ## Known issues
 Please note that the repository version of cisTEM is likely unstable, and features are not guaranteed to work.  For this reason we recommend sticking to the released versions of cisTEM. 
 
-For a list of currently known issues, please see the issue page on [Github](https://github.com/ngrigorieff/cisTEM/issues/).
+For a list of currently known issues, please see the issue page on [Github](https://github.com/timothygrant80/cisTEM/issues/).
 
 ## License and distribution
 Recent versions of cisTEM (including the 2.0+ releases) will soon be available under the [Janelia Research Campus Software License](http://license.janelia.org/license/).

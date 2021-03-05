@@ -685,9 +685,11 @@ void ResolutionStatistics::RestrainParticleSSNR(float low_resolution_limit)
     {
     	if (temp_curve.data_x[i] >= reciprocal_resolution_limit)
     	{
-    		if (adjustment_factor < -FLT_MAX / 2.0f) adjustment_factor = part_SSNR.data_y[i] / powf(temp_curve.gaussian_fit[i], 2);
+			// Set adjustment factor for the first time
+    		if (adjustment_factor < -FLT_MAX * 0.5f && temp_curve.gaussian_fit[i] > 0.0f) adjustment_factor = part_SSNR.data_y[i] / powf(temp_curve.gaussian_fit[i], 2);
     		// Square Gaussian for additional down-weighting of high frequencies to counter over-fitting
-    		part_SSNR.data_y[i] = adjustment_factor * powf(temp_curve.gaussian_fit[i], 2);
+			// Only do this if adjustment_factor was set to a reasonable value
+    		if (adjustment_factor >= -FLT_MAX * 0.5f) part_SSNR.data_y[i] = adjustment_factor * powf(temp_curve.gaussian_fit[i], 2);
     	}
     }
 }

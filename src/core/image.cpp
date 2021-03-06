@@ -491,6 +491,8 @@ float Image::GetWeightedCorrelationWithImage(Image &projection_image, int *bins,
 //	MyDebugAssertTrue(! projection_image.object_is_centred_in_box, "projection_image quadrants have not been swapped");
 	MyDebugAssertTrue(HasSameDimensionsAs(&projection_image), "Images do not have the same dimensions");
 	MyDebugAssertTrue(bins != NULL, , "bin_index not calculated");
+	MyDebugAssertFalse(HasNan(), "Image has one or more NaN pixels");
+	MyDebugAssertFalse(projection_image.HasNan(),"Projection has one or more NaN pixels");
 
 	int i;
 //	int j;

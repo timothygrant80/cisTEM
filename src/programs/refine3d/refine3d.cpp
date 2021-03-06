@@ -207,8 +207,7 @@ float FrealignObjectiveFunction(void *scoring_parameters, float *array_of_values
 #endif
 
 
-	return 	- tmp_corr
-			- tmp_penalty;
+	return 	- tmp_corr - tmp_penalty;
 		// This penalty term assumes a Gaussian x,y distribution that is probably not correct in most cases. It might be better to leave it out.
 }
 

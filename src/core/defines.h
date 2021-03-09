@@ -35,7 +35,7 @@
 #define ELECTRON_REST_MASS 510998.0f // eV
 
 // Used in pdb.h simulate.h
-#define NUMBER_OF_ATOM_TYPES 21
+#define NUMBER_OF_ATOM_TYPES 22
 
 #define MINIMUM_BEAM_TILT_SIGNIFICANCE_SCORE 10.0f
 

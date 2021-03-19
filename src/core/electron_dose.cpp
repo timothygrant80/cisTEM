@@ -104,7 +104,7 @@ void ElectronDose::CalculateDoseFilterAs1DArray(Image *ref_image, float *filter_
 
 }
 
-void ElectronDose::CalculateCummulativeDoseFilterAs1DArray(Image *ref_image, float *filter_array, float dose_finish)
+void ElectronDose::CalculateCummulativeDoseFilterAs1DArray(Image *ref_image, float *filter_array, float dose_start, float dose_finish)
 {
 
 //	MyDebugAssertTrue(ref_image->logical_z_dimension == 1, "Reference Image is a 3D!");
@@ -131,11 +131,11 @@ void ElectronDose::CalculateCummulativeDoseFilterAs1DArray(Image *ref_image, flo
 
 			for (i = 0; i <= ref_image->physical_upper_bound_complex_x; i++)
 			{
-				if (i == 0 && j == 0) filter_array[array_counter] = 1;
+				if (i == 0 && j == 0 && k == 0) filter_array[array_counter] = 1;
 				else
 				{
 					x = i * ref_image->fourier_voxel_size_x;
-					filter_array[array_counter] = ReturnCummulativeDoseFilter(dose_finish, ReturnCriticalDose(sqrtf(x*x + y + z) / pixel_size));
+					filter_array[array_counter] = ReturnCummulativeDoseFilter(dose_start, dose_finish, ReturnCriticalDose(sqrtf(x*x + y + z) / pixel_size));
 				}
 
 				array_counter++;

@@ -11,13 +11,28 @@ public:
 private:
 };
 
+typedef struct ctf_parameters
+{
+	float acceleration_voltage; // keV
+	float spherical_aberration; // mm
+	float amplitude_contrast;
+	float defocus_1;					 // A
+	float defocus_2;					 // A
+	float astigmatism_angle;			 // degrees
+	float lowest_frequency_for_fitting;	 // 1/A
+	float highest_frequency_for_fitting; // 1/A
+	float astigmatism_tolerance;		 // A
+	float pixel_size;					 // A
+	float additional_phase_shift;		 // rad
+} ctf_parameters;
+
 void azimuthal_alignment(Image *input_stack, Image *input_stack_times_ctf, int number_of_images, int max_iterations, float unitless_bfactor, bool mask_central_cross, int width_of_vertical_line, int width_of_horizontal_line, float inner_radius_for_peak_search, float outer_radius_for_peak_search, float max_shift_convergence_threshold, float start_angle_for_peak_search, float end_angle_for_peak_search, float rotation_step_size, float max_rotation_convergence_threshold, float pixel_size, int number_of_frames_for_running_average, int savitzy_golay_window_size, int max_threads, float *x_shifts, float *y_shifts, float *psi_angles, float *ctf_sum_of_squares);
 void apply_ctf(Image *current_image, CTF ctf_to_apply, float *ctf_sum_of_squares, bool absolute);
-void divide_by_ctf_sum_of_squares(Image *current_image, float *ctf_sum_f_squares); // const float
+void divide_by_ctf_sum_of_squares(Image *current_image, float *ctf_sum_of_squares); // const float
 void sum_image_direction(Image *current_image, int dim);
 //void sum_image_direction(Image *current_image, Image *directional_image_sum, int dim);
 void average_rotationally(Image *current_image, Image *current_volume);
-void scale_reference(Image *input_stack, int number_of_images, Image *current_volume, float **ctf_parameters, bool absolute, int max_threads);
+void scale_reference(Image *input_stack, int number_of_images, Image *current_volume, ctf_parameters *ctf_parameters_stack, bool absolute, int max_threads);
 void normalize_image(Image* input_image, float pixel_size, float mask_falloff);
 
 IMPLEMENT_APP(AzimuthalAverage)
@@ -67,7 +82,7 @@ void AzimuthalAverage::DoInteractiveUserInput()
 
 	UserInput *my_input = new UserInput("AzimuthalAverage", 1.0);
 
-	std::string input_filename = my_input->GetFilenameFromUser("Input image file name #1", "Filename of stack to be added to", "input_stack1.mrc", true);
+	std::string input_filename = my_input->GetFilenameFromUser("Input image file name", "Filename of stack to be added to", "input_stack1.mrc", true);
 	// get CTF from user
 	pixel_size = my_input->GetFloatFromUser("Pixel size of images (A)", "Pixel size of input images in Angstroms", "1.0", 0.0);
 	acceleration_voltage = my_input->GetFloatFromUser("Acceleration voltage (keV)", "Acceleration voltage, in keV", "300.0", 0.0, 500.0);
@@ -204,24 +219,8 @@ bool AzimuthalAverage::DoCalculation()
 	// CTF object
 	// temporary array to hold CTF parameters read from file
 	float temp_float[5];
-	// allocate 2D array for CTF
-	int ncols_ctf = 11;
-	// dynamically create array of pointers of size number_of_images (rows)
-	float** ctf_parameters = new float*[number_of_input_images];
-	// dynamically allocate memory of size 11 for each row (columns)
-	for (int i = 0; i < number_of_input_images; i++)
-	{
-		ctf_parameters[i] = new float[ncols_ctf];
-	}
-
-	// assign values to allocated memory
-	for (int i = 0; i < number_of_input_images; i++)
-	{
-		for (int j = 0; j < ncols_ctf; j++)
-		{
-			ctf_parameters[i][j] = 0.0;
-		}
-	}
+	// store CTF parameters for each image in the stack
+	ctf_parameters *ctf_parameters_stack = new ctf_parameters[number_of_input_images];
 
 	current_ctf.Init(acceleration_voltage, spherical_aberration, amplitude_contrast, defocus_1, defocus_2, astigmatism_angle, 0.0, 0.5, 0.0, pixel_size, additional_phase_shift);
 
@@ -243,6 +242,10 @@ bool AzimuthalAverage::DoCalculation()
 
 	// rotational and translational alignment of images
 	Image *image_stack = new Image[number_of_input_images];
+	// input stack times ctf
+	Image *image_stack_times_ctf = new Image[number_of_input_images];
+	// allocate arrays for the ctf sum of squares
+	float *ctf_sum_of_squares;
 	// Arrays to hold the shifts and rotations
 	float *x_shifts = new float[number_of_input_images];
 	float *y_shifts = new float[number_of_input_images];
@@ -262,42 +265,37 @@ bool AzimuthalAverage::DoCalculation()
 
 			if (input_text->records_per_line == 3)
 			{
-				ctf_parameters[image_counter][0] = acceleration_voltage;
-				ctf_parameters[image_counter][1] = spherical_aberration;
-				ctf_parameters[image_counter][2] = amplitude_contrast;
-				ctf_parameters[image_counter][3] = temp_float[0];
-				ctf_parameters[image_counter][4] = temp_float[1];
-				ctf_parameters[image_counter][5] = temp_float[2];
-				ctf_parameters[image_counter][6] = 0.0;
-				ctf_parameters[image_counter][7] = 0.5;
-				ctf_parameters[image_counter][8] = 0.0;
-				ctf_parameters[image_counter][9] = pixel_size;
-				ctf_parameters[image_counter][10] = 0.0;
+				ctf_parameters_stack[image_counter].acceleration_voltage = acceleration_voltage;
+				ctf_parameters_stack[image_counter].spherical_aberration = spherical_aberration;
+				ctf_parameters_stack[image_counter].amplitude_contrast = amplitude_contrast;
+				ctf_parameters_stack[image_counter].defocus_1 = temp_float[0];
+				ctf_parameters_stack[image_counter].defocus_2 = temp_float[1];
+				ctf_parameters_stack[image_counter].astigmatism_angle = temp_float[2];
+				ctf_parameters_stack[image_counter].lowest_frequency_for_fitting = 0.0;
+				ctf_parameters_stack[image_counter].highest_frequency_for_fitting = 0.5;
+				ctf_parameters_stack[image_counter].astigmatism_tolerance = 0.0;
+				ctf_parameters_stack[image_counter].pixel_size = pixel_size;
+				ctf_parameters_stack[image_counter].additional_phase_shift = 0.0;
 			}
 			else
 			{
-				ctf_parameters[image_counter][0] = acceleration_voltage;
-				ctf_parameters[image_counter][1] = spherical_aberration;
-				ctf_parameters[image_counter][2] = amplitude_contrast;
-				ctf_parameters[image_counter][3] = temp_float[0];
-				ctf_parameters[image_counter][4] = temp_float[1];
-				ctf_parameters[image_counter][5] = temp_float[2];
-				ctf_parameters[image_counter][6] = 0.0;
-				ctf_parameters[image_counter][7] = 0.5;
-				ctf_parameters[image_counter][8] = 0.0;
-				ctf_parameters[image_counter][9] = pixel_size;
-				ctf_parameters[image_counter][10] = temp_float[3];
+				ctf_parameters_stack[image_counter].acceleration_voltage = acceleration_voltage;
+				ctf_parameters_stack[image_counter].spherical_aberration = spherical_aberration;
+				ctf_parameters_stack[image_counter].amplitude_contrast = amplitude_contrast;
+				ctf_parameters_stack[image_counter].defocus_1 = temp_float[0];
+				ctf_parameters_stack[image_counter].defocus_2 = temp_float[1];
+				ctf_parameters_stack[image_counter].astigmatism_angle = temp_float[2];
+				ctf_parameters_stack[image_counter].lowest_frequency_for_fitting = 0.0;
+				ctf_parameters_stack[image_counter].highest_frequency_for_fitting = 0.5;
+				ctf_parameters_stack[image_counter].astigmatism_tolerance = 0.0;
+				ctf_parameters_stack[image_counter].pixel_size = pixel_size;
+				ctf_parameters_stack[image_counter].additional_phase_shift = temp_float[3];	
 			}
 		}
 	}
 
 	// read in image stack and FFT
-
 	read_frames_start = wxDateTime::Now();
-	// input stack times ctf
-	Image *image_stack_times_ctf = new Image[number_of_input_images];
-	// allocate arrays for the ctf sum of squares
-	float *ctf_sum_of_squares;
 
 	// read image stack
 
@@ -305,29 +303,9 @@ bool AzimuthalAverage::DoCalculation()
 	{
 		// Read from disk
 		image_stack[image_counter].ReadSlice(&my_input_file, image_counter + 1);
-		image_stack_times_ctf[image_counter].ReadSlice(&my_input_file, image_counter + 1);
 
 		// Normalize images
 		normalize_image(&image_stack[image_counter], pixel_size, 10.0);
-		normalize_image(&image_stack_times_ctf[image_counter], pixel_size, 10.0);
-
-		// read CTF from file
-		if (input_ctf_values_from_text_file == true)
-		{
-			current_ctf.Init(ctf_parameters[image_counter][0], ctf_parameters[image_counter][1], ctf_parameters[image_counter][2], ctf_parameters[image_counter][3], ctf_parameters[image_counter][4], ctf_parameters[image_counter][5], ctf_parameters[image_counter][6], ctf_parameters[image_counter][7], ctf_parameters[image_counter][8], ctf_parameters[image_counter][9], ctf_parameters[image_counter][10]);
-		}
-
-		// allocate arrays for the ctf sum of squares
-		if (image_counter == 0)
-		{
-			ctf_sum_of_squares = new float[image_stack[0].real_memory_allocated / 2];
-			ZeroFloatArray(ctf_sum_of_squares, image_stack[0].real_memory_allocated / 2);
-		}
-
-		// apply CTF
-		image_stack_times_ctf[image_counter].ForwardFFT();
-		image_stack_times_ctf[image_counter].ZeroCentralPixel();
-		apply_ctf(&image_stack_times_ctf[image_counter], current_ctf, ctf_sum_of_squares, phase_flip_only);
 
 		// FT
 		image_stack[image_counter].ForwardFFT();
@@ -338,6 +316,26 @@ bool AzimuthalAverage::DoCalculation()
 		y_shifts[image_counter] = 0.0;
 		psi_angles[image_counter] = 0.0;
 	}
+
+	// apply CTF to copy of image stack
+
+	// allocate arrays for the ctf sum of squares
+	ctf_sum_of_squares = new float[image_stack[0].real_memory_allocated / 2];
+	ZeroFloatArray(ctf_sum_of_squares, image_stack[0].real_memory_allocated / 2);
+
+	for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
+	{
+		image_stack_times_ctf[image_counter].CopyFrom(&image_stack[image_counter]);
+
+		// read CTF from file
+		if (input_ctf_values_from_text_file == true)
+		{
+			current_ctf.Init(ctf_parameters_stack[image_counter].acceleration_voltage, ctf_parameters_stack[image_counter].spherical_aberration, ctf_parameters_stack[image_counter].amplitude_contrast, ctf_parameters_stack[image_counter].defocus_1, ctf_parameters_stack[image_counter].defocus_2, ctf_parameters_stack[image_counter].astigmatism_angle, ctf_parameters_stack[image_counter].lowest_frequency_for_fitting, ctf_parameters_stack[image_counter].highest_frequency_for_fitting, ctf_parameters_stack[image_counter].astigmatism_tolerance, ctf_parameters_stack[image_counter].pixel_size, ctf_parameters_stack[image_counter].additional_phase_shift);
+		}
+
+		apply_ctf(&image_stack_times_ctf[image_counter], current_ctf, ctf_sum_of_squares, phase_flip_only);
+	}
+
 	read_frames_finish = wxDateTime::Now();
 
 	// Timings
@@ -408,7 +406,7 @@ bool AzimuthalAverage::DoCalculation()
 
 	// get scale factor to multiply reference with
 	wxPrintf("\nScaling Reference...\n");
-	scale_reference(image_stack, number_of_input_images, &my_volume, ctf_parameters, phase_flip_only, max_threads);
+	scale_reference(image_stack, number_of_input_images, &my_volume, ctf_parameters_stack, phase_flip_only, max_threads);
 
 	// print out 3D reconstruction
 	my_volume.QuickAndDirtyWriteSlices("my_averaged_volume.mrc", 1, my_volume.logical_z_dimension);
@@ -428,11 +426,7 @@ bool AzimuthalAverage::DoCalculation()
 	delete[] image_stack;
 	delete[] image_stack_times_ctf;
 	delete[] ctf_sum_of_squares;
-	for (int i = 0; i < number_of_input_images; i++)
-	{
-		delete[] ctf_parameters[i];
-	}
-	delete[] ctf_parameters;
+	delete[] ctf_parameters_stack;
 	wxPrintf("\n\n");
 	
 	overall_finish = wxDateTime::Now();
@@ -504,6 +498,9 @@ void divide_by_ctf_sum_of_squares(Image *current_image, float *ctf_sum_of_square
 		{
 			current_image->complex_values[pixel_counter] /= sqrtf(ctf_sum_of_squares[pixel_counter]);
 			pixel_counter++;
+
+			//if (ctf_sum_of_squares[pixel_counter] != 0.0) current_image->complex_values[pixel_counter] /= sqrtf(ctf_sum_of_squares[pixel_counter]);
+			//pixel_counter++;
 		}
 	}
 }
@@ -675,7 +672,7 @@ void sum_image_direction(Image *current_image, Image *directional_image_sum, int
 
 // rotational and translational alignment of tubes
 // function similar to unblur_refine_alignment in unblur.cpp with a few differences
-// 1. Does not do smoothing, 2. Does not shift in y (vertically), 3. Does not subtract current image from sum
+// 1. Does not do smoothing, 2. Does not shift in y (vertically), 3. Does not subtract current image from sum 4. Does not calculate running average (must be set to 1)
 void azimuthal_alignment(Image *input_stack, Image *input_stack_times_ctf, int number_of_images, int max_iterations, float unitless_bfactor, bool mask_central_cross, int width_of_vertical_line, int width_of_horizontal_line, float inner_radius_for_peak_search, float outer_radius_for_peak_search, float max_shift_convergence_threshold, float start_angle_for_peak_search, float end_angle_for_peak_search, float rotation_step_size, float max_rotation_convergence_threshold, float pixel_size, int number_of_frames_for_running_average, int savitzy_golay_window_size, int max_threads, float *x_shifts, float *y_shifts, float *psi_angles, float *ctf_sum_of_squares)
 {
 	long pixel_counter;
@@ -844,7 +841,8 @@ void azimuthal_alignment(Image *input_stack, Image *input_stack_times_ctf, int n
 			//sum_of_images_temp.QuickAndDirtyWriteSlice("my_rotated_sum.mrc", 1);
 			*/
 					
-			best_inplane_score = - std::numeric_limits<float>::max();
+			//best_inplane_score = - std::numeric_limits<float>::max();
+			best_inplane_score = -FLT_MAX;
 			// loop over rotations
 			for (int psi_i = 0; psi_i <= number_of_rotations; psi_i++)
 			{
@@ -1203,104 +1201,6 @@ void average_rotationally(Image *current_image, Image *current_volume)
 	delete[] ring_weight;
 
 /*
-	// radius in real space sqrt(2)*0.5*logical_dimension
-	long number_of_rings = long( myround( sqrtf( powf(double(current_image->physical_address_of_box_center_x), 2) + powf(double(current_image->physical_address_of_box_center_y), 2) ) ) ) + 1;
-	float edge_value = current_image->ReturnAverageOfRealValues(std::min(current_image->physical_address_of_box_center_x - 2, current_image->physical_address_of_box_center_y - 2), true);
-
-	double *ring_values = new double[number_of_rings];
-	double *ring_weight = new double[number_of_rings];
-
-	long central_x_pixel = current_image->physical_address_of_box_center_x;
-	long central_y_pixel = current_image->physical_address_of_box_center_y;
-
-	double radius;
-	double difference;
-	long iradius;
-	long counter;
-	long x;
-	long y;
-	long z;
-
-	// intialize values and weights
-
-	for (counter = 0; counter < number_of_rings; counter++)
-	{
-		ring_values[counter] = 0;
-		ring_weight[counter] = 0;
-	}
-
-	// now go through and work out the average;
-
-	counter = 0;
-
-	for (y = 0; y < current_image->logical_y_dimension; y++)
-	{
-		for (x = 0; x < current_image->logical_x_dimension; x++)
-		{
-			radius = sqrtf( powf(double(central_x_pixel - x), 2) + powf(double(central_y_pixel - y), 2) );
-			iradius = long(radius);
-			difference = radius - double(iradius);
-			ring_values[iradius] += current_image->real_values[counter] * (1 - difference);
-			ring_values[iradius + 1] += current_image->real_values[counter] * difference;
-			// interpolation correction
-			ring_weight[iradius] += (1 - difference);
-			ring_weight[iradius + 1] += difference;
-			counter++;
-		}
-		counter += current_image->padding_jump_value;
-	}
-
-	// divide by number of members..
-
-	for (counter = 0; counter < number_of_rings; counter++)
-	{
-		ring_values[counter] /= ring_weight[counter];
-	}
-
-	// put the data back into the image
-
-	counter = 0;
-
-	for (y = 0; y < current_image->logical_y_dimension; y++)
-	{
-		for (x = 0; x < current_image->logical_x_dimension; x++)
-		{
-			radius = sqrtf( powf(double(central_x_pixel - x), 2) + powf(double(central_y_pixel - y), 2) );
-			iradius = long(radius);
-			difference = radius - double(iradius);
-			current_image->real_values[counter] = (ring_values[iradius] * (1 - difference)) + (ring_values[iradius + 1] * difference);
-			counter++;
-		}
-		counter += current_image->padding_jump_value;
-	}
-
-	// put the data back into the image in the z-direction
-
-	long pixel_coord_xy = 0;
-	long pixel_coord_xyz = 0;
-	counter = 0;
-
-	for (z = 0; z < current_volume->logical_z_dimension; z++)
-	{
-		for (y = 0; y < current_volume->logical_y_dimension; y++)
-		{
-			for (x = 0; x < current_volume->logical_x_dimension; x++)
-			{
-				pixel_coord_xy = current_image->ReturnReal1DAddressFromPhysicalCoord(x, y, 0);
-				//pixel_coord_xyz = current_volume->ReturnReal1DAddressFromPhysicalCoord(x, y, z);
-				//current_volume->real_values[pixel_coord_xyz] = current_image->real_values[pixel_coord_xy];
-				current_volume->real_values[counter] = current_image->real_values[pixel_coord_xy];
-				counter++;
-			}
-			counter += current_volume->padding_jump_value;
-		}
-	}
-
-	delete[] ring_values;
-	delete[] ring_weight;
-*/
-
-/*
 	Image psf;
 	psf.Allocate(current_image->logical_x_dimension, current_image->logical_y_dimension, true);
 
@@ -1350,7 +1250,7 @@ void average_rotationally(Image *current_image, Image *current_volume)
 }
 
 // takes projection and multiply by CTF of each image and then subtract image (removes low resolution features)
-void scale_reference(Image *input_stack, int number_of_images, Image *current_volume, float **ctf_parameters, bool absolute, int max_threads)
+void scale_reference(Image *input_stack, int number_of_images, Image *current_volume, ctf_parameters *ctf_parameters_stack, bool absolute, int max_threads)
 {
 	CTF current_ctf;
 	Image buffer_proj;
@@ -1388,33 +1288,6 @@ void scale_reference(Image *input_stack, int number_of_images, Image *current_vo
 	{
 		buffer_stack[image_counter].CopyFrom(&input_stack[image_counter]);
 	}
-	
-	/*
-	#pragma omp parallel default(shared) num_threads(max_threads) private(image_counter, buffer_proj, current_ctf)
-	{
-		buffer_proj.Allocate(current_volume->logical_x_dimension, current_volume->logical_y_dimension, false);
-
-	#pragma omp for
-	for (image_counter = 0; image_counter < number_of_images; image_counter++)
-	{
-		// copy projection
-		buffer_proj.CopyFrom(&proj_two);
-		
-		// apply ctf
-		current_ctf.Init(ctf_parameters[image_counter][0], ctf_parameters[image_counter][1], ctf_parameters[image_counter][2], ctf_parameters[image_counter][3], ctf_parameters[image_counter][4], ctf_parameters[image_counter][5], ctf_parameters[image_counter][6], ctf_parameters[image_counter][7], ctf_parameters[image_counter][8], ctf_parameters[image_counter][9], ctf_parameters[image_counter][10]);
-		if (absolute == true) buffer_proj.ApplyCTFPhaseFlip(current_ctf);
-		else buffer_proj.ApplyCTF(current_ctf);
-
-		buffer_proj.BackwardFFT();
-
-		// subtract projection from image
-		input_stack[image_counter].SubtractImage(&buffer_proj);
-	}
-
-	buffer_proj.Deallocate();
-	
-	} //end omp
-	*/
 
 	buffer_proj.Allocate(current_volume->logical_x_dimension, current_volume->logical_y_dimension, false);
 
@@ -1438,7 +1311,7 @@ void scale_reference(Image *input_stack, int number_of_images, Image *current_vo
 		buffer_proj.CopyFrom(&proj_two);
 		
 		// apply ctf
-		current_ctf.Init(ctf_parameters[image_counter][0], ctf_parameters[image_counter][1], ctf_parameters[image_counter][2], ctf_parameters[image_counter][3], ctf_parameters[image_counter][4], ctf_parameters[image_counter][5], ctf_parameters[image_counter][6], ctf_parameters[image_counter][7], ctf_parameters[image_counter][8], ctf_parameters[image_counter][9], ctf_parameters[image_counter][10]);
+		current_ctf.Init(ctf_parameters_stack[image_counter].acceleration_voltage, ctf_parameters_stack[image_counter].spherical_aberration, ctf_parameters_stack[image_counter].amplitude_contrast, ctf_parameters_stack[image_counter].defocus_1, ctf_parameters_stack[image_counter].defocus_2, ctf_parameters_stack[image_counter].astigmatism_angle, ctf_parameters_stack[image_counter].lowest_frequency_for_fitting, ctf_parameters_stack[image_counter].highest_frequency_for_fitting, ctf_parameters_stack[image_counter].astigmatism_tolerance, ctf_parameters_stack[image_counter].pixel_size, ctf_parameters_stack[image_counter].additional_phase_shift);
 		if (absolute == true) buffer_proj.ApplyCTFPhaseFlip(current_ctf);
 		else buffer_proj.ApplyCTF(current_ctf);
 

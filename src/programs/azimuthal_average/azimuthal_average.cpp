@@ -496,11 +496,8 @@ void divide_by_ctf_sum_of_squares(Image *current_image, float *ctf_sum_of_square
 	{
 		for (int i = 0; i <= current_image->physical_upper_bound_complex_x; i++)
 		{
-			current_image->complex_values[pixel_counter] /= sqrtf(ctf_sum_of_squares[pixel_counter]);
+			if (ctf_sum_of_squares[pixel_counter] != 0.0) current_image->complex_values[pixel_counter] /= sqrtf(ctf_sum_of_squares[pixel_counter]);
 			pixel_counter++;
-
-			//if (ctf_sum_of_squares[pixel_counter] != 0.0) current_image->complex_values[pixel_counter] /= sqrtf(ctf_sum_of_squares[pixel_counter]);
-			//pixel_counter++;
 		}
 	}
 }

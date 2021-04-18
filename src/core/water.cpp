@@ -114,7 +114,6 @@ void Water::Init(const PDB *current_specimen, int wanted_size_neighborhood, floa
 //		}
 
 		wxPrintf("size post rot 2 padding %d %d padX %d padY %d padZ %d rot\n",vol_nX, vol_nY, *padX, *padY, padZ);
-
 		MyAssertTrue(current_specimen->pixel_size > 0.0f, "The pixel size for your PDB object is not yet set.");
 		// Copy over some values from the current specimen - Do these need to be updated for tilts and rotations?
 		this->vol_angX = vol_nX * current_specimen->pixel_size; //current_specimen->vol_angX;

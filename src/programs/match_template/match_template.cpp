@@ -2,7 +2,7 @@
 
 
 // Values for data that are passed around in the results.
-const int number_of_output_images = 8; //mip, scaledmip, psi, theta, phi, pixel, defocus, sums, sqsums
+const int number_of_output_images = 8; //mip, psi, theta, phi, pixel, defocus, sums, sqsums (scaled mip is not sent out)
 const int number_of_meta_data_values = 6; // img_x, img_y, number cccs, histogram values.
 const int MAX_ALLOWED_NUMBER_OF_PEAKS = 1000; // An error will be thrown and job aborted if this number of peaks is exceeded in the make template results block
 
@@ -1186,6 +1186,8 @@ bool MatchTemplateApp::DoCalculation()
 		max_intensity_projection.Rotate2DInPlaceBy90Degrees(false);
 
 		best_psi.Rotate2DInPlaceBy90Degrees(false);
+		// To account for the pre-rotation, psi needs to have 90 added to it.
+		best_psi.AddConstant(90.0f);
 		best_theta.Rotate2DInPlaceBy90Degrees(false);
 		best_phi.Rotate2DInPlaceBy90Degrees(false);
 		best_defocus.Rotate2DInPlaceBy90Degrees(false);

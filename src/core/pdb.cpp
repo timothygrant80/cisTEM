@@ -267,7 +267,6 @@ void PDB::SetEmpty()
 		this->center_of_mass[2] = 0;
 	}
 
-
 }
 
 void PDB::Init()

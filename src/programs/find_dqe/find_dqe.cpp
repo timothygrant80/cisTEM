@@ -12,10 +12,11 @@ FindDQE : public MyApp
 	private:
 };
 
-int 	padding = 3;			// Amount of super-sampling to simulate detector before pixel binning
-int 	margin = 200;			// Margin in pixels used to taper the edges of the images
+int 	padding = 3;			// Amount of super-sampling to simulate detector before pixel binning (default: 3)
+int 	margin = 200;			// Margin in pixels used to taper the edges of the images (default: 200)
 bool	two_sided_mtf = true;	// Determine the MTF on both sides of the edge and take the average (experimental)
 bool	debug = false;			// Output additional images and fitted parameters for debugging
+bool	nps_mtf = true;		// Include the sqrt of the NPS in the fit of the MTF (experimental)
 
 class CurveComparison
 {
@@ -176,9 +177,14 @@ float MTFFit(void *scoring_parameters, float *array_of_values)
 			for (j = 0; j < comparison_object->parameters_to_fit; j += 2) sum_of_gaussians += fabsf(array_of_values[j + 1]) * exp(-fabsf(array_of_values[j]) * powf(mtf_curve.data_x[i] * padding, 2));
 			sum_of_gaussians /= sum_of_coefficients;
 		}
-		if (mtf_curve.data_x[i] * padding <= 0.5f) mtf_curve.data_y[i] = sum_of_gaussians * sqrtf(comparison_object->nps_fit->ReturnLinearInterpolationFromX(mtf_curve.data_x[i] * padding));
-		else mtf_curve.data_y[i] = sum_of_gaussians * sqrtf(comparison_object->nps_fit->ReturnLinearInterpolationFromX(0.5f));
-//		mtf_curve.data_y[i] = sum_of_gaussians;
+		scale = sqrtf(comparison_object->nps_fit->ReturnLinearInterpolationFromX(0.05f));
+		if (nps_mtf && ! comparison_object->reset_background)
+		{
+			if (mtf_curve.data_x[i] * padding <= 0.05f) mtf_curve.data_y[i] = sum_of_gaussians;
+			else if (mtf_curve.data_x[i] * padding <= 0.5f) mtf_curve.data_y[i] = sum_of_gaussians * sqrtf(comparison_object->nps_fit->ReturnLinearInterpolationFromX(mtf_curve.data_x[i] * padding)) / scale;
+			else mtf_curve.data_y[i] = sum_of_gaussians * sqrtf(comparison_object->nps_fit->ReturnLinearInterpolationFromX(0.5f)) / scale;
+		}
+		else mtf_curve.data_y[i] = sum_of_gaussians;
 //		if (comparison_object->is_a_counting_detector) mtf_curve.data_y[i] *= sqrtf(comparison_object->nps_fit->ReturnLinearInterpolationFromX(mtf_curve.data_x[i]));
 		scale = mtf_curve.data_y[i] * sinc(mtf_curve.data_x[i] * padding * PI);
 		if (scale > function_max && mtf_curve.data_x[i] * padding <= 0.5f) function_max = scale;
@@ -507,8 +513,8 @@ bool FindDQE::DoCalculation()
 	int x_mid, y_mid;
 	int box_size_x, box_size_y;
 	int fit_window_size;
-	int bin_size = 50;
-	int bin_size_range = 5;
+	int bin_size = 200;
+	int bin_size_range = 0;
 	float threshold;
 	float threshold1;
 	float threshold2;
@@ -516,6 +522,7 @@ bool FindDQE::DoCalculation()
 	float temp_float;
 	float average;
 	float function_value;
+	float function_value2;
 	float function_max;
 	float low_pass_filter_constant = 0.05f;
 	float gain_conversion_factor;
@@ -528,12 +535,14 @@ bool FindDQE::DoCalculation()
 	float two_image_factor = 1.0f;
 	float allowed_discrepancy = 0.01f;
 	float sum_of_coefficients;
+	float sum_of_coefficients2;
 	float variance;
 	float sizing_threshold = 1000.0f;
 	float score;
 	float best_mtf_score;
 	float offset;
 	float slope;
+	float x, y, radius;
 	double average_background;
 	double sigma_background;
 	double average_shadow;
@@ -542,7 +551,9 @@ bool FindDQE::DoCalculation()
 	double sigma_background2;
 	double average_shadow2;
 	double sigma_shadow2;
+	double average_double, variance_double;
 //	bool is_a_counting_detector = true;
+	is_a_counting_detector = false;
 
 	ImageFile input_file(input_pointer_image,false);
 	if (input_file.ReturnZSize() > 1)
@@ -655,15 +666,16 @@ bool FindDQE::DoCalculation()
 //		background_image.BackwardFFT();
 //		background_image.SetMinimumValue(0.0f);
 		background_image.SubtractImage(&input_image2);
+		background_image.DivideByConstant(sqrtf(2.0f));
 //		for (i = 0; i < background_image.real_memory_allocated; i++) background_image.real_values[i] = fabsf(background_image.real_values[i]);
 //		background_image.QuickAndDirtyWriteSlice("background_image.mrc", 1);
 //		input_image.QuickAndDirtyWriteSlice("input_image.mrc", 1);
 //		input_image2.QuickAndDirtyWriteSlice("input_image2.mrc", 1);
 //		exit(0);
 		input_image1.CopyFrom(&input_image);
-		input_image.AddImage(&input_image2);
-		two_image_factor = 2.0f;
-		exposure *= two_image_factor;
+//		input_image.AddImage(&input_image2);
+//		two_image_factor = 2.0f;
+//		exposure *= two_image_factor;
 	}
 
 	wxPrintf("\nThresholding image...  ");
@@ -867,29 +879,29 @@ bool FindDQE::DoCalculation()
 //	mask_image.QuickAndDirtyWriteSlice("filtered_edge.mrc", 1);
 
 	// Test if edge moved between images 1 and 2
-	if (use_both_images)
-	{
-		pointer = 0;
-		for (j = 0; j < input_image1.logical_y_dimension; j++)
-		{
-			for (i = 0; i < input_image1.logical_x_dimension; i++)
-			{
-				if (mask_image.real_values[pointer] > 0.0f)
-				{
-					if (input_image1.real_values[pointer] > threshold1 && input_image2.real_values[pointer] < threshold2) discrepancy_pixels++;
-					else if (input_image1.real_values[pointer] < threshold1 && input_image2.real_values[pointer] > threshold2) discrepancy_pixels++;
-				}
-				pointer++;
-			}
-			pointer += input_image1.padding_jump_value;
-		}
-//		wxPrintf("disc, edge = %i %i\n", discrepancy_pixels, edge_pixels);
-		if (discrepancy_pixels > edge_pixels)
-		{
-			wxPrintf("\nEdge in Image 2 offset from Image 1, or edge too noisy. Aborting...\n");
-			exit(1);
-		}
-	}
+//	if (use_both_images)
+//	{
+//		pointer = 0;
+//		for (j = 0; j < input_image1.logical_y_dimension; j++)
+//		{
+//			for (i = 0; i < input_image1.logical_x_dimension; i++)
+//			{
+//				if (mask_image.real_values[pointer] > 0.0f)
+//				{
+//					if (input_image1.real_values[pointer] > threshold1 && input_image2.real_values[pointer] < threshold2) discrepancy_pixels++;
+//					else if (input_image1.real_values[pointer] < threshold1 && input_image2.real_values[pointer] > threshold2) discrepancy_pixels++;
+//				}
+//				pointer++;
+//			}
+//			pointer += input_image1.padding_jump_value;
+//		}
+////		wxPrintf("disc, edge = %i %i\n", discrepancy_pixels, edge_pixels);
+//		if (discrepancy_pixels > edge_pixels)
+//		{
+//			wxPrintf("\nEdge in Image 2 offset from Image 1, or edge too noisy. Aborting...\n");
+//			exit(1);
+//		}
+//	}
 
 	// Finding min, max x,y coordinates of shadow to cut image
 	y_min = input_image.logical_y_dimension;
@@ -901,7 +913,7 @@ bool FindDQE::DoCalculation()
 		{
 			if (mask_image.ReturnRealPixelFromPhysicalCoord(i, j, 0) > 0.5f) counter1++;
 		}
-		if (counter1 > 10)
+		if (counter1 > 8)
 		{
 			if (j > y_max) y_max = j;
 			if (j < y_min) y_min = j;
@@ -916,7 +928,7 @@ bool FindDQE::DoCalculation()
 		{
 			if (mask_image.ReturnRealPixelFromPhysicalCoord(i, j, 0) > 0.5f) counter1++;
 		}
-		if (counter1 > 10)
+		if (counter1 > 8)
 		{
 			if (i > x_max) x_max = i;
 			if (i < x_min) x_min = i;
@@ -1071,10 +1083,32 @@ bool FindDQE::DoCalculation()
 //	}
 
 	// Mask background image
+	average_background_float = average_background;
+	if (use_both_images)
+	{
+		pointer = 0;
+		average_background2 = 0.0;
+		counter1 = 0;
+		for (j = 0; j < background_mask_image.logical_y_dimension; j++)
+		{
+			for (i = 0; i < background_mask_image.logical_x_dimension; i++)
+			{
+				if (background_mask_image.real_values[pointer] == 1.0f)
+				{
+					average_background2 += background_image.real_values[pointer];
+					counter1++;
+				}
+				pointer++;
+			}
+			pointer += background_mask_image.padding_jump_value;
+		}
+		if (counter1 > 0) average_background2 /= counter1;
+		wxPrintf("counter1, average_background2 = %li, %g\n", counter1, average_background2);
+		background_image.AddConstant(- average_background2);
+		average_background_float = 0.0f;
+	}
 	mask_volume = 0.0f;
 	pointer = 0;
-	average_background_float = average_background;
-	if (use_both_images) average_background_float = 0.0f;
 	for (j = 0; j < background_mask_image.logical_y_dimension; j++)
 	{
 		for (i = 0; i < background_mask_image.logical_x_dimension; i++)
@@ -1088,6 +1122,9 @@ bool FindDQE::DoCalculation()
 	mask_volume /= background_image.number_of_real_space_pixels;
 	if (debug) background_image.QuickAndDirtyWriteSlice("background_image.mrc", 1);
 
+//	background_image.SetToConstant(0.0f);
+//	background_image.AddGaussianNoise(1.0f);
+//	mask_volume = 1.0f;
 //	bin_size = myroundint(float(std::min(background_image.logical_x_dimension, background_image.logical_y_dimension)) / 5.0f);
 	nps0 = 0.0f;
 	for (i = bin_size - bin_size_range; i <= bin_size + bin_size_range; i++)
@@ -1095,25 +1132,20 @@ bool FindDQE::DoCalculation()
 		j = std::max(1, i);
 		temp_image.CopyFrom(&background_image);
 		temp_image.RealSpaceBinning(j, j, 1, false, true);
-		variance = temp_image.ReturnVarianceOfRealValues();
+//		temp_image.QuickAndDirtyWriteSlice("binned1.mrc", 1);
+		variance = temp_image.ReturnSumOfSquares();
 		temp_image.CopyFrom(&background_mask_image);
 		temp_image.RealSpaceBinning(j, j, 1, false, true);
-		temp_float = 0.0f;
-		pointer = 0;
-		for (m = 0; m < temp_image.logical_y_dimension; m++)
-		{
-			for (l = 0; l < temp_image.logical_x_dimension; l++)
-			{
-				temp_float += powf(temp_image.real_values[pointer], 2);
-				pointer++;
-			}
-			pointer += temp_image.padding_jump_value;
-		}
-		temp_float /= temp_image.number_of_real_space_pixels;
+//		temp_image.QuickAndDirtyWriteSlice("binned2.mrc", 1);
+		temp_float = temp_image.ReturnSumOfSquares();
 //		wxPrintf("bin, std = %i %g\n", j, sqrtf(variance / temp_float / two_image_factor) * j);
 		nps0 += variance / temp_float * j * j;
 	}
 	nps0 /= (2.0f * bin_size_range + 1.0f);
+
+//	nps0 = average_background;
+//	nps0 = background_image.ReturnSumOfSquares() / mask_volume;
+//	wxPrintf("0: nps0 = %g\n", nps0);
 
 	// Calculate NPS
 	background_image.ForwardFFT();
@@ -1123,11 +1155,49 @@ bool FindDQE::DoCalculation()
 	number_of_terms.SetupXAxis(0.0, 0.5f / 1000.0f * 1415.0f, 1416);
 	temp_image.Compute1DRotationalAverage(nps, number_of_terms);
 	nps.MultiplyByConstant(float(background_image.number_of_real_space_pixels) / mask_volume);
+//	temp_image.QuickAndDirtyWriteSlice("power.mrc", 1);
+
+//	for (cycle = 0; cycle < 10; cycle++)
+//	{
+//		pointer = 0;
+//		average_double = 0.0;
+//		variance_double = 0.0;
+//		counter1 = 0;
+//		for (j = 0; j <= temp_image.physical_upper_bound_complex_y; j++)
+//		{
+//			y = powf(temp_image.ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * temp_image.fourier_voxel_size_y, 2);
+//
+//			for (i = 0; i <= temp_image.physical_upper_bound_complex_x; i++)
+//			{
+//				x = powf(i * temp_image.fourier_voxel_size_x, 2);
+//				radius = sqrtf(x + y);
+//				if (radius >= 0.01f && radius <= 0.05f)
+//				{
+//					if (cycle == 0 || fabsf(average - sqrtf(abs(temp_image.complex_values[pointer]))) < 3.0f * sqrtf(variance))
+//					{
+//						average_double += sqrtf(abs(temp_image.complex_values[pointer]));
+//						variance_double += abs(temp_image.complex_values[pointer]);
+//						counter1++;
+//					}
+//				}
+//				pointer++;
+//			}
+//		}
+//		average_double /= counter1;
+//		variance_double /= counter1;
+//		nps0 = variance_double * float(background_image.number_of_real_space_pixels) / mask_volume;
+//		variance_double -= pow(average_double, 2);
+//		average = average_double;
+//		variance = variance_double;
+////		wxPrintf("1: counter1, variance,  = %li %g\n", counter1, nps0);
+//	}
 
 	nps1 = 0.0f;
 	for (i = 700; i < 1000; i++) nps1 += nps.data_y[i];
 	nps1 /= 300.0f;
-//	wxPrintf("NPS1 = %g\n", sqrtf(nps0 / two_image_factor));
+//	nps1 = nps0;
+//	wxPrintf("NPS1 = %g\n", sqrtf(nps1 / two_image_factor));
+//	exit(0);
 
 //	temp_image.CopyFrom(&background_image);
 //	noise_whitening_spectrum = nps;
@@ -1544,7 +1614,8 @@ bool FindDQE::DoCalculation()
 		// calculate difference image with best parameters
 		//	MTFFitSinc(&comparison_object, fitted_parameters);
 			score = MTFFit(&comparison_object, best_parameters);
-			if (two_sided_mtf) wxPrintf("\n\nUsing the average MTF for DQE calculation.\n");
+			if (two_sided_mtf) wxPrintf("\n\nUsing the MTF outside the shadow for DQE calculation.\n");
+//			if (two_sided_mtf) wxPrintf("\n\nUsing the average MTF for DQE calculation.\n");
 		}
 		if (! two_sided_mtf) break;
 	}
@@ -1568,16 +1639,20 @@ bool FindDQE::DoCalculation()
 	nps.number_of_points = mtf.number_of_points;
 	nps_fit.number_of_points = mtf.number_of_points;
 	sum_of_coefficients = 0.0f;
+	sum_of_coefficients2 = 0.0f;
 	for (j = 1; j < 10; j += 2) sum_of_coefficients += fabsf(best_parameters[j]);
-	if (two_sided_mtf) {for (j = 1; j < 10; j += 2) sum_of_coefficients += fabsf(saved_parameters[j]);}
+	if (two_sided_mtf) {for (j = 1; j < 10; j += 2) sum_of_coefficients2 += fabsf(saved_parameters[j]);}
 	for (i = 0; i < mtf.number_of_points; i++)
 	{
 		function_value = 0.0f;
+		function_value2 = 0.0f;
 		for (j = 0; j < 10; j += 2) function_value += fabsf(best_parameters[j + 1]) * exp(-fabsf(best_parameters[j]) * powf(mtf.data_x[i], 2));
-		if (two_sided_mtf) {for (j = 0; j < 10; j += 2) function_value += fabsf(saved_parameters[j + 1]) * exp(-fabsf(saved_parameters[j]) * powf(mtf.data_x[i], 2));}
+		if (two_sided_mtf) {for (j = 0; j < 10; j += 2) function_value2 += fabsf(saved_parameters[j + 1]) * exp(-fabsf(saved_parameters[j]) * powf(mtf.data_x[i], 2));}
 //		if (comparison_object.parameters_to_fit > 10) function_value += sinc(fabsf(fitted_parameters[10]) * mtf.data_x[i]) * fabsf(fitted_parameters[9]) * exp(-fabsf(fitted_parameters[8]) * powf(mtf.data_x[i], 2));
-		mtf.data_y[i] = function_value / sum_of_coefficients * sqrtf(nps_fit.data_y[i]);
-//		mtf.data_y[i] = function_value / sum_of_coefficients;
+//		if (nps_mtf) mtf.data_y[i] = (function_value2 + function_value  * sqrtf(nps_fit.data_y[i])) / (sum_of_coefficients + sum_of_coefficients2);
+//		else mtf.data_y[i] = (function_value2 + function_value) / (sum_of_coefficients + sum_of_coefficients2);
+		if (nps_mtf) mtf.data_y[i] = function_value * sqrtf(nps_fit.data_y[i]) / sum_of_coefficients;
+		else mtf.data_y[i] = function_value / sum_of_coefficients;
 //		if (is_a_counting_detector) mtf.data_y[i] *= sqrtf(nps_fit.data_y[i]);
 //		mtf.data_y[i] = function_value;
 //		if (function_value > function_max) function_max = function_value;

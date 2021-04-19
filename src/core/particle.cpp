@@ -909,12 +909,16 @@ float Particle::ReturnLogLikelihood(Image &input_image, CTF &input_ctf, Reconstr
 //	particle_image->QuickAndDirtyWriteSlice("diff.mrc", 1);
 	// This low-pass filter reduces the number of independent pixels. It should therefore be applied only to
 	// the reference (temp_projection), and not to the difference (temp_particle - temp_projection), as is done here...
-	if (classification_resolution_limit > 0.0)
+//	temp_particle->ForwardFFT();
+//	if (classification_resolution_limit < 20.0f) temp_particle->CosineMask(original_pixel_size / 20.0f, original_pixel_size / 10.0f, true);
+	if (classification_resolution_limit > 0.0f)
 	{
 		temp_particle->ForwardFFT();
 		temp_particle->CosineMask(original_pixel_size / classification_resolution_limit, original_pixel_size / mask_falloff);
+//		temp_particle->CosineMask(0.75f * original_pixel_size / classification_resolution_limit, original_pixel_size / classification_resolution_limit);
 		temp_particle->BackwardFFT();
 	}
+//	temp_particle->BackwardFFT();
 	if (apply_2D_masking)
 	{
 		variance_difference = temp_particle->ReturnSumOfSquares(pixel_radius_2d, rotated_center_x + temp_particle->physical_address_of_box_center_x,

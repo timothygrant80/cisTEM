@@ -593,7 +593,7 @@ float Image::GetWeightedCorrelationWithImage(Image &projection_image, int *bins,
 			}
 			else
 			{
-				sum3 += fabs(cross_terms[i]);
+				sum3 += fabsf(cross_terms[i]);
 //				wxPrintf("i_u = %i, sum_a = %g, sum_b = %i, cross = %g\n", i, sum_a[i], sum_b[i], cross_terms[i]);
 //				r = fabsf(cross_terms[i] / sqrtf(sum_b[i]));
 			}
@@ -1843,7 +1843,6 @@ void Image::RotateQuadrants(Image &rotated_image, int quad_i)
 	MyDebugAssertTrue(logical_z_dimension == 1, "Error: attempting to rotate from 3D image");
 	MyDebugAssertTrue(rotated_image.is_in_memory, "Memory not allocated for receiving image");
 //	MyDebugAssertTrue(! is_in_real_space, "Image is in real space");
-	// These next two are redundant, right? Does it matter for the real space if it is square?
 	MyDebugAssertTrue(IsSquare(), "Image to rotate is not square");
 	MyDebugAssertTrue(rotated_image.logical_x_dimension == logical_x_dimension && rotated_image.logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
 	MyDebugAssertTrue(quad_i == 0 || quad_i == 90 || quad_i == 180 || quad_i == 270, "Selected rotation invalid");
@@ -4017,7 +4016,7 @@ float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool i
 			pixel_sum /= number_of_pixels;
 		}
 
-		pixel_counter = 0.0;
+		pixel_counter = 0;
 		for (k = 0; k < logical_z_dimension; k++)
 		{
 			z = powf(k - physical_address_of_box_center_z, 2);

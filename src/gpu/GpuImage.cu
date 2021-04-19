@@ -72,7 +72,7 @@ __device__ void CB_mipCCGAndStore(void* dataOut, size_t offset, cufftReal elemen
 //	((cufftReal *)dataOut)[offset] = element;
 
 #ifdef DISABLECACHEHINTS
-	((__half *)dataOut)[offset] = __float2half(element);
+	((__half *)data_out_half)[offset] = __float2half(element);
 #else
 	__stcs( &data_out_half[offset], __float2half(element) );
 #endif

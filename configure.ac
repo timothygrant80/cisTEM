@@ -173,6 +173,15 @@ want_cuda="no"
 AX_CUDA  
   	
 if test "$want_cuda" = "yes" ; then
+
+	# ~Runtime about 85% with K3 images, but mips are different - total detection is ~the same, but needs more investigation.
+	# Disabling by default so that the code matches what Bronwyn used in the 2D vs 3DTM paper (for reproducibility.)
+	AC_ARG_ENABLE(rotated-tm, AS_HELP_STRING([--enable-rotated-tm],[Place power of 2 sized axis on X by rotating 90 deg in template matching for speed [default=no]]),[
+	  if test "$enableval" = yes; then
+	  CPPFLAGS="$CPPFLAGS -DROTATEFORSPEED"
+	  CXXFLAGS="$CXXFLAGS -DROTATEFORSPEED"
+	  fi
+	  ])
 		
     AC_MSG_NOTICE([Adding the CUDA includes Setting up NVCC initial flags])
     CUDA_CPPFLAGS="$CUDA_CFLAGS $NVCCFLAGS"

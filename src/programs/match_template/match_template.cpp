@@ -586,6 +586,7 @@ bool MatchTemplateApp::DoCalculation()
 
 
 	input_image.Resize(factorizable_x, factorizable_y, 1, input_image.ReturnAverageOfRealValuesOnEdges());
+#ifdef ROTATEFORSPEED
 	if ( ! is_power_of_two(factorizable_x) && is_power_of_two(factorizable_y) )
 	{
 		// The speedup in the FFT for better factorization is also dependent on the dimension. The full transform (in cufft anyway) is faster if the best dimension is on X.
@@ -594,6 +595,7 @@ bool MatchTemplateApp::DoCalculation()
 		is_rotated_by_90 = true;
 		input_image.Rotate2DInPlaceBy90Degrees(true);
 	}
+#endif
 
 	}
 	padded_reference.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);

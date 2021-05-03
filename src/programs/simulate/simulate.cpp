@@ -853,24 +853,24 @@ void SimulateApp::DoInteractiveUserInput()
 
 	 if (this->do3d)
 	 {
-//		 // Check to make sure the sampling is sufficient, if not, oversample and bin at the end.
-//		 if (this->wanted_pixel_size > 0.8 && this->wanted_pixel_size <= 1.5)
-//		 {
-//			 wxPrintf("\nOversampling your 3d by a factor of 2 for calculation.\n");
-//			 this->wanted_pixel_size /= 2.0f;
-//			 this->bin3d = 2;
-//		 }
-//		 else if (this->wanted_pixel_size > 1.5 && this->wanted_pixel_size < 3.0)
-//		 {
-//			 wxPrintf("\nOversampling your 3d by a factor of 4 for calculation.\n");
-//
-//			 this->wanted_pixel_size /= 4.0f;
-//			 this->bin3d = 4;
-//		 }
-//		 else
-//		 {
-//			 //do nothing
-//		 }
+		 // Check to make sure the sampling is sufficient, if not, oversample and bin at the end.
+		 if (this->wanted_pixel_size > 0.5 && this->wanted_pixel_size <= 1.5)
+		 {
+			 wxPrintf("\nOversampling your 3d by a factor of 2 for calculation.\n");
+			 this->wanted_pixel_size /= 2.0f;
+			 this->bin3d = 2;
+		 }
+		 else if (this->wanted_pixel_size > 1.5 && this->wanted_pixel_size < 3.0)
+		 {
+			 wxPrintf("\nOversampling your 3d by a factor of 4 for calculation.\n");
+
+			 this->wanted_pixel_size /= 4.0f;
+			 this->bin3d = 4;
+		 }
+		 else
+		 {
+			 //do nothing
+		 }
 		 this->dose_per_frame			= my_input->GetFloatFromUser("electrons/Ang^2 in a frame at the specimen","","1.0",0.05,20.0);
 		 this->number_of_frames			= my_input->GetFloatFromUser("number of frames per movie (micrograph or tilt)","","30",1.0,1000.0);
 

@@ -105,7 +105,6 @@ class PDB {
 		~PDB();
 
 		// data
-
 		long number_of_lines;
 		long number_of_atoms; // total atoms to simulate, active in this particle
 		long number_of_real_and_noise_atoms; // total atoms in the PDB object

@@ -2,7 +2,7 @@
 
 
 // Values for data that are passed around in the results.
-const int number_of_output_images = 8; //mip, scaledmip, psi, theta, phi, pixel, defocus, sums, sqsums
+const int number_of_output_images = 8; //mip, psi, theta, phi, pixel, defocus, sums, sqsums (scaled mip is not sent out)
 const int number_of_meta_data_values = 6; // img_x, img_y, number cccs, histogram values.
 const int MAX_ALLOWED_NUMBER_OF_PEAKS = 1000; // An error will be thrown and job aborted if this number of peaks is exceeded in the make template results block
 
@@ -586,6 +586,7 @@ bool MatchTemplateApp::DoCalculation()
 
 
 	input_image.Resize(factorizable_x, factorizable_y, 1, input_image.ReturnAverageOfRealValuesOnEdges());
+#ifdef ROTATEFORSPEED
 	if ( ! is_power_of_two(factorizable_x) && is_power_of_two(factorizable_y) )
 	{
 		// The speedup in the FFT for better factorization is also dependent on the dimension. The full transform (in cufft anyway) is faster if the best dimension is on X.
@@ -594,6 +595,7 @@ bool MatchTemplateApp::DoCalculation()
 		is_rotated_by_90 = true;
 		input_image.Rotate2DInPlaceBy90Degrees(true);
 	}
+#endif
 
 	}
 	padded_reference.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
@@ -1186,6 +1188,8 @@ bool MatchTemplateApp::DoCalculation()
 		max_intensity_projection.Rotate2DInPlaceBy90Degrees(false);
 
 		best_psi.Rotate2DInPlaceBy90Degrees(false);
+		// To account for the pre-rotation, psi needs to have 90 added to it.
+		best_psi.AddConstant(90.0f);
 		best_theta.Rotate2DInPlaceBy90Degrees(false);
 		best_phi.Rotate2DInPlaceBy90Degrees(false);
 		best_defocus.Rotate2DInPlaceBy90Degrees(false);

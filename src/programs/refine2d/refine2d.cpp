@@ -965,7 +965,7 @@ bool Refine2DApp::DoCalculation()
 		}
 		else
 		{
-			input_parameters.best_2d_class = abs(input_parameters.best_2d_class);
+			input_parameters.best_2d_class = fabsf(input_parameters.best_2d_class);
 		}
 		input_image_local.ChangePixelSize(&input_image_local, pixel_size / input_parameters.pixel_size, 0.001f);
 

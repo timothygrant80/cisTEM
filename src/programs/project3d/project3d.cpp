@@ -65,7 +65,8 @@ void Project3DApp::DoInteractiveUserInput()
 	}
 
 	ouput_projection_stack = my_input->GetFilenameFromUser("Output projection stack", "The output image stack, containing the 2D projections", "my_projection_stack.mrc", false);
-	pixel_size = my_input->GetFloatFromUser("Pixel size of images (A)", "Pixel size of input images in Angstroms", "1.0", 0.0);
+	pixel_size = my_input->GetFloatFromUser("Pixel size of reconstruction (A)", "Pixel size of input images in Angstroms", "1.0", 0.0);
+
 //	voltage_kV = my_input->GetFloatFromUser("Beam energy (keV)", "The energy of the electron beam used to image the sample in kilo electron volts", "300.0", 0.0);
 //	spherical_aberration_mm = my_input->GetFloatFromUser("Spherical aberration (mm)", "Spherical aberration of the objective lens in millimeters", "2.7", 0.0);
 //	amplitude_contrast = my_input->GetFloatFromUser("Amplitude contrast", "Assumed amplitude contrast", "0.07", 0.0, 1.0);
@@ -269,10 +270,10 @@ bool Project3DApp::DoCalculation()
 			if (apply_CTF) projection_image.ApplyCTF(my_ctf, false, true);
 			if (apply_shifts) projection_image.PhaseShift(input_parameters.x_shift / pixel_size, input_parameters.y_shift / pixel_size);
 
-			projection_image.SwapRealSpaceQuadrants();
+      projection_image.SwapRealSpaceQuadrants();
 			projection_image.BackwardFFT();
 
-			if (project_based_on_star == true) projection_image.ChangePixelSize(&final_image, pixel_size / input_parameters.pixel_size, 0.001f);
+			if (project_based_on_star == true) projection_image.ChangePixelSize(&final_image,  input_parameters.pixel_size / pixel_size, 0.001f);
 			else final_image.CopyFrom(&projection_image);
 
 			if (add_noise && wanted_SNR != 0.0)

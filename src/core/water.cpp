@@ -5,8 +5,8 @@ const double SOLVENT_DENSITY = 0.94; // 0.94 +/- 0.02 Ghormley JA, Hochanadel CJ
 const double CARBON_DENSITY  = 1.75; // 2.0; // NIST and Holography paper TODO add cite (using the lower density to match the Holography paper)
 const double MW_WATER        = 18.01528;
 const double MW_CARBON       = 12.0107;
-const double CARBON_X_ANG    = 2000.0;
-const double CARBON_Y_ANG    = 2000.0;
+const double CARBON_X_ANG    = 4096.0;
+const double CARBON_Y_ANG    = 4096.0;
 
 
 Water::Water(bool do_carbon)
@@ -15,12 +15,12 @@ Water::Water(bool do_carbon)
 
 }
 
-Water::Water(const PDB *current_specimen, int wanted_size_neighborhood, float wanted_pixel_size, float wanted_dose_per_frame, float max_tilt, float in_plane_rotation, int *padX, int *padY, int nThreads, bool do_carbon)
+Water::Water(const PDB *current_specimen, int wanted_size_neighborhood, float wanted_pixel_size, float wanted_dose_per_frame, RotationMatrix max_rotation, float in_plane_rotation, int *padX, int *padY, int nThreads, bool is_single_particle, bool do_carbon)
 {
 
 	//
 	this->simulate_phase_plate = do_carbon;
-	this->Init( current_specimen, wanted_size_neighborhood, wanted_pixel_size, wanted_dose_per_frame, max_tilt, in_plane_rotation, padX, padY, nThreads);
+	this->Init( current_specimen, wanted_size_neighborhood, wanted_pixel_size, wanted_dose_per_frame, max_rotation, in_plane_rotation, padX, padY, nThreads, is_single_particle);
 
 
 }
@@ -34,7 +34,7 @@ Water::~Water()
 	}
 }
 
-void Water::Init(const PDB *current_specimen, int wanted_size_neighborhood, float wanted_pixel_size, float wanted_dose_per_frame, float max_tilt, float in_plane_rotation, int *padX, int *padY, int nThreads)
+void Water::Init(const PDB *current_specimen, int wanted_size_neighborhood, float wanted_pixel_size, float wanted_dose_per_frame, RotationMatrix max_rotation, float in_plane_rotation, int *padX, int *padY, int nThreads, bool is_single_particle)
 {
 
 	this->size_neighborhood = wanted_size_neighborhood;
@@ -43,11 +43,15 @@ void Water::Init(const PDB *current_specimen, int wanted_size_neighborhood, floa
 
 	this->nThreads = nThreads;
 
+	// This input values in padX and padY if > 0 are the wanted output dimensions + padding for taper. Make sure solvent is at least this big if provided.
+	int check_min_paddingX = *padX;
+	int check_min_paddingY = *padY;
+
 	if (this->simulate_phase_plate)
 	{
 		this->vol_angX = CARBON_X_ANG;
 		this->vol_angY = CARBON_Y_ANG;
-		this->vol_angZ = max_tilt;
+		this->vol_angZ = max_rotation.m[0][0];
 
 		this->vol_nX = myroundint(this->vol_angX / wanted_pixel_size);
 		this->vol_nY = myroundint(this->vol_angY / wanted_pixel_size);
@@ -57,19 +61,59 @@ void Water::Init(const PDB *current_specimen, int wanted_size_neighborhood, floa
 	else
 	{
 
-		int padZ;
+		int padZ = 0;
 		vol_nZ = current_specimen->vol_nZ;
 
 		wxPrintf("size pre rot padding %d %d %f rot\n", current_specimen->vol_nX, current_specimen->vol_nY, in_plane_rotation);
 
-		ReturnPadding(max_tilt, in_plane_rotation, current_specimen->vol_nZ, current_specimen->vol_nX, current_specimen->vol_nY, padX, padY, &padZ);
+		if (! is_single_particle)
+		{
+			ReturnPadding(max_rotation, in_plane_rotation, current_specimen->vol_nZ, current_specimen->vol_nX, current_specimen->vol_nY, padX, padY, &padZ);
+		}
 
-		vol_nX = current_specimen->vol_nX + *padX + padZ; // This assums the tilting is only around the Y-Axis which isn't correct FIXME
-		vol_nY = current_specimen->vol_nY + *padY;
+		vol_nX = current_specimen->vol_nX + (*padX);// + padZ; // This assumes the tilting is only around the Y-Axis which isn't correct FIXME
+		vol_nY = current_specimen->vol_nY + (*padY);
+		vol_nZ = current_specimen->vol_nZ;// + 2*padZ;
 
-		wxPrintf("size post rot padding %d %d padX %d padY %d padZ %d rot\n",vol_nX, vol_nY, *padX, *padY, padZ);
 
 
+//		wxPrintf("size post rot 1 padding %d %d %f rot\n", current_specimen->vol_nX, current_specimen->vol_nY, in_plane_rotation);
+		wxPrintf("size post rot 1 padding %d %d %f rot\n", vol_nX, vol_nY, in_plane_rotation);
+
+//		if (check_min_paddingX > 0)
+//		{
+//			int x_diff = vol_nX - check_min_paddingX;
+//			wxPrintf("Xdiff is %d\n",x_diff);
+//			if (x_diff < 0)
+//			{
+//				vol_nX = check_min_paddingX;
+//				*padX = -x_diff;
+//			}
+//			else
+//			{
+//				vol_nX = current_specimen->vol_nX;
+//				*padX = 0;
+//			}
+//
+//		}
+//		if  (check_min_paddingY > 0)
+//		{
+//			int y_diff = vol_nY - check_min_paddingY;
+//			wxPrintf("yiff is %d\n",y_diff);
+//
+//			if (y_diff < 0)
+//			{
+//				vol_nY = check_min_paddingY;
+//				*padY = -y_diff;
+//			}
+//			else
+//			{
+//				vol_nY = current_specimen->vol_nY;
+//				*padY = 0;
+//			}
+//		}
+
+		wxPrintf("size post rot 2 padding %d %d padX %d padY %d padZ %d rot\n",vol_nX, vol_nY, *padX, *padY, padZ);
 		MyAssertTrue(current_specimen->pixel_size > 0.0f, "The pixel size for your PDB object is not yet set.");
 		// Copy over some values from the current specimen - Do these need to be updated for tilts and rotations?
 		this->vol_angX = vol_nX * current_specimen->pixel_size; //current_specimen->vol_angX;
@@ -107,12 +151,12 @@ void Water::SeedWaters3d()
 
 	wxPrintf("Atoms per nm^3 %3.3f, vol (in Ang^3) %2.2f %2.2f %2.2f\n",waters_per_angstrom_cubed*1000,this->vol_angX , this->vol_angY , this->vol_angZ);
 	double n_waters_lower_bound = waters_per_angstrom_cubed*(this->vol_angX * this->vol_angY * this->vol_angZ);
-	long n_waters_possible = (long)floor(1.05*n_waters_lower_bound);
+	long n_waters_possible = (long)floor(1.1*n_waters_lower_bound); // maybe make this a real vector so it is extensible.
 	wxPrintf("specimen volume is %3.3e nm expecting %3.3e waters\n",(this->vol_angX * this->vol_angY * this->vol_angZ)/1000,n_waters_lower_bound);
-
 
     RandomNumberGenerator my_rand(PIf);
 
+    // FIXME is the multiplication by pixel size correct? I am not so sure.
 	const float random_sigma_cutoff = 1 - (n_waters_lower_bound/double((this->vol_nX - (this->size_neighborhood*this->pixel_size)) *
 																	   (this->vol_nY - (this->size_neighborhood*this->pixel_size)) *
 																	   (this->vol_nZ - (this->size_neighborhood*this->pixel_size))));
@@ -152,7 +196,9 @@ void Water::SeedWaters3d()
 			jLower = j*incY + size_neighborhood;
 			jUpper = (1+j)*incY + size_neighborhood;
 
-			for (int k = this->size_neighborhood; k < this->vol_nZ - this->size_neighborhood; k++)
+//			for (int k = this->size_neighborhood; k < this->vol_nZ - this->size_neighborhood; k++)
+			for (int k = 0; k < this->vol_nZ; k++)
+
 			{
 				for (int iInner = iLower; iInner < iUpper; iInner++)
 				{
@@ -167,7 +213,6 @@ void Water::SeedWaters3d()
 							water_coords[number_of_waters].x = (float)iInner;
 							water_coords[number_of_waters].y = (float)jInner;
 							water_coords[number_of_waters].z = (float)k;
-
 							number_of_waters++;
 						}
 					}
@@ -312,46 +357,157 @@ void Water::ShakeWaters3d(int number_of_threads)
 }
 
 
-void Water::ReturnPadding(float max_tilt, float in_plane_rotation, int current_thickness, int current_nX, int current_nY, int* padX, int* padY, int* padZ)
+void Water::ReturnPadding(RotationMatrix max_rotation, float in_plane_rotation, int current_nZ, int current_nX, int current_nY, int* padX, int* padY, int* padZ)
 {
-	// Assuming tilting only along the Y-axis
-	// TODO consider rotations of the projection which will also bring new water into view
-
-	MyAssertTrue(max_tilt < 70.01, "maximum tilt angle supported is 70 degrees")
-
-	float max_ip_ang = 45.0f;
 
 
-	if( in_plane_rotation > max_ip_ang + .01)
+	// If these need to be re-enabled, change RotationMatrix to an AnglesAndShifts object which also retains the original euler angles as member variables.
+//	MyAssertTrue(max_rotation. < 70.01, "maximum tilt angle supported is 70 degrees")
+//
+
+
+	const bool vector_padding = true;
+
+	if (vector_padding)
 	{
-		wxPrintf("\n\n\t\tWarning, you have requested a tilt-axis rotation of %3.3f degrees, which is greater than the recommended max of %2.2f\n\t\tthis will add a lot of waters\n\n", in_plane_rotation, max_ip_ang);
+		// TODO just put the vector types into the main cisTEM core.
+		// We don't care if existing water is rotated out of bounds with respect to the starting box. If vacuum is rotated in bounds, we want to prevent that.
+
+		AtomPos origin;
+		AtomPos max_padding;
+		AtomPos padding;
+
+		float x_in(0), y_in(0), z_in(0), x_out(0), y_out(0), z_out(0), x_back(0), y_back(0), z_back(0);
+
+		origin.x = (float)current_nX/2;
+		origin.y = (float)current_nY/2;
+		origin.z = (float)current_nZ/2;
+
+		max_padding.x = 0.0f;
+		max_padding.y = 0.0f;
+		max_padding.z = 0.0f;
+
+		int corner_counter = 0;
+		for (int k = 0; k < 2; k++)
+		{
+			for (int j = 0; j < 2; j++)
+			{
+				for (int i = 0; i < 2; i++)
+				{
+
+
+					// When 0, return positive radius, when 1 return negative radius.
+					x_in = (float)(1 - i)*origin.x - (float)i*origin.x;
+					y_in = (float)(1 - j)*origin.y - (float)j*origin.y;
+					z_in = (float)(1 - k)*origin.z - (float)k*origin.z;
+
+
+					max_rotation.RotateCoords(x_in, y_in, z_in, x_out, y_out, z_out);
+
+					wxPrintf("Coords before %f %f %f\nRotated %f %f %f\n",x_in, y_in, z_in, x_out, y_out, z_out);
+					// Both x & y must be in bounds for padding to be required
+					if ( x_out >= -origin.x && x_out <= origin.x && y_out >= -origin.y && y_out <= origin.y)
+					{
+						// Find the smallest value to get us to an edge
+						if ( x_out + origin.x > origin.x - x_out )
+						{
+							// x is in the + quadrant, so extend it to that edge
+							x_out = origin.x;
+						}
+						else
+						{
+							// t is in the - quadrant, so extend it to that edge
+							x_out = -origin.x;
+						}
+
+						if ( y_out + origin.y > origin.y - y_out )
+						{
+							// x is in the + quadrant, so extend it to that edge
+							y_out = origin.y;
+						}
+						else
+						{
+							// t is in the - quadrant, so extend it to that edge
+							y_out = -origin.y;
+						}
+
+						// Rotate back into the original frame
+						max_rotation.RotateCoords(x_out, y_out, z_out, x_back, y_back, z_back);
+
+						wxPrintf("Coords out %f %f %f\nRotated back %f %f %f\n",x_out, y_out, z_out, x_back, y_back, z_back);
+
+
+						// Now check to see if the padded vector is larger than our current largest
+						if (x_back - x_in > max_padding.x)
+						{
+							max_padding.x = x_back - x_in;
+						}
+						if (y_back - y_in > max_padding.y)
+						{
+							max_padding.y = y_back - y_in;
+						}
+						if (z_back - z_in > max_padding.z)
+						{
+							max_padding.z = y_back - z_in;
+						}
+
+					}
+				}
+			}
+		}
+
+		wxPrintf("Original dims = %d %d %d\nPadding = %f %f %f\n", current_nX, current_nY, current_nZ, max_padding.x, max_padding.y, max_padding.z);
+		*padX = 2*(int)ceil(max_padding.x);
+		*padY = 2*(int)ceil(max_padding.y);
+		*padZ = (int)ceil(max_padding.z);
 	}
+	else
+	{
 
-    // Now tack on the rotation padding
-    int rot_padding =
-    *padX = myroundint(0.5f*(float)current_nY * fabsf(sinf(in_plane_rotation * PIf / 180.0f)));;
-    *padY = myroundint(0.5f*(float)current_nX * fabsf(sinf(in_plane_rotation * PIf / 180.0f)));;
+		float v1,v2,v3;
+		float t1(1.0f),t2(0.0f),t3(0.0f);
+
+		max_rotation.RotateCoords(t1,t2,t3,v1,v2,v3);
+		float max_tilt = fabsf(asinf(v3 / v1));
+
+			float max_ip_ang = 45.0f;
 
 
+			if( in_plane_rotation > max_ip_ang + .01)
+			{
+				wxPrintf("\n\n\t\tWarning, you have requested a tilt-axis rotation of %3.3f degrees, which is greater than the recommended max of %2.2f\n\t\tthis will add a lot of waters\n\n", in_plane_rotation, max_ip_ang);
+			}
 
-    if (fabsf(max_tilt) < 1e-1)
-    {
-    	*padZ = 0;
-    }
-    else
-    {
+		// Set the 0 position to be the radius
 
-        float x0 = 0.5f*((float)current_nX + (float)*padX);
-        float y0 = 0.0f;
-        float z0 = -(float)current_thickness/2.0f;
-        float xf,yf,zf;
-        RotationMatrix rotmat;
-        rotmat.SetToEulerRotation(0.0f,max_tilt,0.0f);
-        rotmat.RotateCoords(x0, y0, z0, xf, yf, zf);
+	    *padX = myroundint(0.5f*(float)current_nY * fabsf(sinf(in_plane_rotation * PIf / 180.0f)));
+	    *padY = myroundint(0.5f*(float)current_nX * fabsf(sinf(in_plane_rotation * PIf / 180.0f)));
 
-        *padZ = myroundint(fabsf(2.0f*(xf-x0)));
-//    	*padZ = myroundint(1.0f*current_thickness*sinf(max_tilt * (float)PIf / 180.0f));
-    }
+
+	    // TODO start here, change to find the four corners of the box under both rotations, first confirming the order with a simple grid and exit
+	    // Then determine the padding needed in x and y as a function of this. Also bring in the FFT padding here so the FFT size is also padded with water, which
+	    // will also require more variables to pass info back to the main simulator.
+
+	    if (fabsf(max_tilt) < 1e-1)
+	    {
+	    	*padZ = 0;
+	    }
+	    else
+	    {
+
+	        float x0 = 0.5f*((float)current_nX + (float)*padX);
+	        float y0 = 0.0f;
+	        float z0 = -(float)current_nZ/2.0f;
+	        float xf,yf,zf;
+	        RotationMatrix rotmat;
+	        rotmat.SetToEulerRotation(0.0f,max_tilt,0.0f);
+	        rotmat.RotateCoords(x0, y0, z0, xf, yf, zf);
+
+	        *padZ = myroundint(fabsf(2.0f*(xf-x0)));
+	//    	*padZ = myroundint(1.0f*current_nZ*sinf(max_tilt * (float)PIf / 180.0f));
+	    }
+
+	}
 
 
 

@@ -49,10 +49,10 @@ bool PrintStackStatistics::DoCalculation()
 	float average_sigma = 0.0f;
 	float average_average = 0.0f;
 
-	float image_min;
-	float image_max;
-	float average_min = 0;
-	float average_max = 0;
+	double image_min;
+	double image_max;
+	double average_min = 0;
+	double average_max = 0;
 
 	wxPrintf("\n\n");
 

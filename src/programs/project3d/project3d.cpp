@@ -156,10 +156,15 @@ bool Project3DApp::DoCalculation()
 
 	if (project_based_on_star == false)
 	{
-
+		// this line sets up a grid, however it was designed for refinement and uses a "test" mirror variable.  If set to true,
+		// then the max theta is 90 and the mirror of each projection is checked in the refinement.  We want to overide this so that
+		// we get the theta > 90 projections.  So first we do it normally :-
+		
 		global_euler_search.InitGrid(my_symmetry, angular_step, 0.0f, 0.0f, 360, 180, 180, pixel_size / 8, parameter_map, 20);
-		//	wxPrintf("%s",my_symmetry);
-		if (my_symmetry.StartsWith("C1")) // TODO 2x check me - w/o this O symm at least is broken
+		
+		// Then, if the symmetry is C1, we set the theta max to 180 and recalculate the grid search positions.
+		
+		if (my_symmetry.StartsWith("C1"))
 		{
 			if (global_euler_search.test_mirror == true) // otherwise the theta max is set to 90.0 and test_mirror is set to true.  However, I don't want to have to test the mirrors.
 			{

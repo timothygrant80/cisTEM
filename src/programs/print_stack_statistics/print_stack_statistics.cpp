@@ -46,11 +46,11 @@ bool PrintStackStatistics::DoCalculation()
 	Image my_image_one;
 	float image_sigma;
 	float image_average;
-	float average_sigma = 0.0f;
-	float average_average = 0.0f;
+	double average_sigma = 0.0f;
+	double average_average = 0.0f;
 
-	double image_min;
-	double image_max;
+	float image_min;
+	float image_max;
 	double average_min = 0;
 	double average_max = 0;
 

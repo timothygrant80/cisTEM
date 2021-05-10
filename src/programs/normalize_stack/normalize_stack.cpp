@@ -25,7 +25,7 @@ void NormalizeStack::DoInteractiveUserInput()
 
 	UserInput *my_input = new UserInput("NormalizeStack", 1.0);
 
-	std::string input_filename_one	=		my_input->GetFilenameFromUser("Input image file name #1", "Filename of first stack to be multiplied", "input_stack1.mrc", true );
+	std::string input_filename_one	=		my_input->GetFilenameFromUser("Input image stack", "Filename of the stack of images to normalize", "input_stack1.mrc", true );
 	std::string output_filename		=		my_input->GetFilenameFromUser("Output image file name", "the Normalised result", "output.mrc", false );
 	float		wanted_sigma		=		my_input->GetFloatFromUser("Desired Sigma", "Wanted Sigma for normalization.","1.0");
 	bool        should_zero_float   =       my_input->GetYesNoFromUser("Also Zero-float?", "If yes, images will also be zero floated (average value set to 0)", "YES");

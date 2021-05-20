@@ -4502,19 +4502,26 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 
 	bSizer44->Add( GroupComboBox, 1, wxEXPAND | wxALL, 5 );
 
-	PickingAlgorithStaticText = new wxStaticText( this, wxID_ANY, wxT("Picking algorithm :"), wxDefaultPosition, wxDefaultSize, 0 );
-	PickingAlgorithStaticText->Wrap( -1 );
-	PickingAlgorithStaticText->Enable( false );
-
-	bSizer44->Add( PickingAlgorithStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	PickingAlgorithmStaticText = new wxStaticText( this, wxID_ANY, wxT("Picking algorithm :"), wxDefaultPosition, wxDefaultSize, 0 );
+	PickingAlgorithmStaticText->Wrap( -1 );
+	bSizer44->Add( PickingAlgorithmStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	PickingAlgorithmComboBox = new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
 	PickingAlgorithmComboBox->Append( wxT("default") );
 	PickingAlgorithmComboBox->SetSelection( 0 );
-	PickingAlgorithmComboBox->Enable( false );
 	PickingAlgorithmComboBox->SetMinSize( wxSize( 150,-1 ) );
 
 	bSizer44->Add( PickingAlgorithmComboBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	ReferenceVolumeStaticText = new wxStaticText( this, wxID_ANY, wxT("Reference volume :"), wxDefaultPosition, wxDefaultSize, 0 );
+	ReferenceVolumeStaticText->Wrap( -1 );
+	bSizer44->Add( ReferenceVolumeStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	ReferenceSelectPanel = new VolumeAssetPickerComboPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	ReferenceSelectPanel->SetMinSize( wxSize( 350,-1 ) );
+	ReferenceSelectPanel->SetMaxSize( wxSize( 350,-1 ) );
+
+	bSizer44->Add( ReferenceSelectPanel, 1, wxEXPAND | wxALL, 5 );
 
 
 	bSizer44->Add( 0, 0, 60, wxEXPAND, 5 );
@@ -4561,40 +4568,56 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	fgSizer1->SetFlexibleDirection( wxBOTH );
 	fgSizer1->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
 
-	m_staticText196 = new wxStaticText( PickingParametersPanel, wxID_ANY, wxT("Exclusion radius (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText196->Wrap( -1 );
-	fgSizer1->Add( m_staticText196, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	ExclusionRadiusText = new wxStaticText( PickingParametersPanel, wxID_ANY, wxT("Exclusion radius (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	ExclusionRadiusText->Wrap( -1 );
+	fgSizer1->Add( ExclusionRadiusText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	ExclusionRadiusNumericCtrl = new NumericTextCtrl( PickingParametersPanel, wxID_ANY, wxT("120"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( ExclusionRadiusNumericCtrl, 0, wxALL|wxEXPAND, 5 );
 
-	CharacteristicParticleRadiusStaticText = new wxStaticText( PickingParametersPanel, wxID_ANY, wxT("Template radius (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
-	CharacteristicParticleRadiusStaticText->Wrap( -1 );
-	fgSizer1->Add( CharacteristicParticleRadiusStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	TemplateRadiusStaticText = new wxStaticText( PickingParametersPanel, wxID_ANY, wxT("Template radius (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	TemplateRadiusStaticText->Wrap( -1 );
+	fgSizer1->Add( TemplateRadiusStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	TemplateRadiusNumericCtrl = new NumericTextCtrl( PickingParametersPanel, wxID_ANY, wxT("80"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( TemplateRadiusNumericCtrl, 0, wxALL|wxEXPAND, 5 );
 
-	ThresholdPeakHeightStaticText1 = new wxStaticText( PickingParametersPanel, wxID_ANY, wxT("Threshold peak height :"), wxDefaultPosition, wxDefaultSize, 0 );
-	ThresholdPeakHeightStaticText1->Wrap( -1 );
-	fgSizer1->Add( ThresholdPeakHeightStaticText1, 0, wxALL, 5 );
+	SymmetryStaticText = new wxStaticText( PickingParametersPanel, wxID_ANY, wxT("Symmetry : "), wxDefaultPosition, wxDefaultSize, 0 );
+	SymmetryStaticText->Wrap( -1 );
+	fgSizer1->Add( SymmetryStaticText, 0, wxALL, 5 );
+
+	SymmetryComboBox = new wxComboBox( PickingParametersPanel, wxID_ANY, wxT("C1"), wxDefaultPosition, wxDefaultSize, 0, NULL, 0 );
+	SymmetryComboBox->SetMinSize( wxSize( 100,-1 ) );
+
+	fgSizer1->Add( SymmetryComboBox, 0, wxALL|wxEXPAND, 5 );
+
+	HighestResolutionStaticText = new wxStaticText( PickingParametersPanel, wxID_ANY, wxT("Highest resolution used (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	HighestResolutionStaticText->Wrap( -1 );
+	fgSizer1->Add( HighestResolutionStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+
+	HighestResolutionNumericCtrl = new NumericTextCtrl( PickingParametersPanel, wxID_ANY, wxT("20.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( HighestResolutionNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+
+	ThresholdPeakHeightStaticText = new wxStaticText( PickingParametersPanel, wxID_ANY, wxT("Threshold peak height :"), wxDefaultPosition, wxDefaultSize, 0 );
+	ThresholdPeakHeightStaticText->Wrap( -1 );
+	fgSizer1->Add( ThresholdPeakHeightStaticText, 0, wxALL, 5 );
 
 	ThresholdPeakHeightNumericCtrl = new NumericTextCtrl( PickingParametersPanel, wxID_ANY, wxT("6.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( ThresholdPeakHeightNumericCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	AvoidLowVarianceAreasCheckBox = new wxCheckBox( PickingParametersPanel, wxID_ANY, wxT("Avoid low variance areas"), wxDefaultPosition, wxDefaultSize, 0 );
-	AvoidLowVarianceAreasCheckBox->SetValue(true);
 	fgSizer1->Add( AvoidLowVarianceAreasCheckBox, 0, wxALL, 5 );
 
 	LowVarianceThresholdNumericCtrl = new NumericTextCtrl( PickingParametersPanel, wxID_ANY, wxT("-0.5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	LowVarianceThresholdNumericCtrl->Enable( false );
+
 	fgSizer1->Add( LowVarianceThresholdNumericCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	AvoidHighVarianceAreasCheckBox = new wxCheckBox( PickingParametersPanel, wxID_ANY, wxT("Avoid high variance areas"), wxDefaultPosition, wxDefaultSize, 0 );
+	AvoidHighVarianceAreasCheckBox->SetValue(true);
 	fgSizer1->Add( AvoidHighVarianceAreasCheckBox, 0, wxALL, 5 );
 
 	HighVarianceThresholdNumericCtrl = new NumericTextCtrl( PickingParametersPanel, wxID_ANY, wxT("2.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
-	HighVarianceThresholdNumericCtrl->Enable( false );
-
 	fgSizer1->Add( HighVarianceThresholdNumericCtrl, 0, wxALL|wxEXPAND, 5 );
 
 
@@ -4647,13 +4670,6 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 
 	ExpertOptionsSizer->Add( 0, 0, 1, wxEXPAND, 5 );
 
-	HighestResolutionStaticText = new wxStaticText( ExpertOptionsPanel, wxID_ANY, wxT("Highest resolution used (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
-	HighestResolutionStaticText->Wrap( -1 );
-	ExpertOptionsSizer->Add( HighestResolutionStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
-
-	HighestResolutionNumericCtrl = new NumericTextCtrl( ExpertOptionsPanel, wxID_ANY, wxT("30.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
-	ExpertOptionsSizer->Add( HighestResolutionNumericCtrl, 0, wxALL|wxEXPAND, 5 );
-
 	SetMinimumDistanceFromEdgesCheckBox = new wxCheckBox( ExpertOptionsPanel, wxID_ANY, wxT("Min. edge distance (pix.) : "), wxDefaultPosition, wxDefaultSize, 0 );
 	ExpertOptionsSizer->Add( SetMinimumDistanceFromEdgesCheckBox, 0, wxALL|wxEXPAND, 5 );
 
@@ -4662,10 +4678,18 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 
 	ExpertOptionsSizer->Add( MinimumDistanceFromEdgesSpinCtrl, 0, wxALL|wxEXPAND, 5 );
 
-	m_checkBox9 = new wxCheckBox( ExpertOptionsPanel, wxID_ANY, wxT("Number of template rotations : "), wxDefaultPosition, wxDefaultSize, 0 );
-	m_checkBox9->Enable( false );
+	ProjectionIntervalStaticText = new wxStaticText( ExpertOptionsPanel, wxID_ANY, wxT("Projection interval (deg) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	ProjectionIntervalStaticText->Wrap( -1 );
+	ExpertOptionsSizer->Add( ProjectionIntervalStaticText, 0, wxALL, 5 );
 
-	ExpertOptionsSizer->Add( m_checkBox9, 0, wxALL|wxEXPAND, 5 );
+	ProjectionIntervalNumericCtrl = new NumericTextCtrl( ExpertOptionsPanel, wxID_ANY, wxT("30.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	ExpertOptionsSizer->Add( ProjectionIntervalNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+
+	NumberOfTemplateRotationsStaticText = new wxStaticText( ExpertOptionsPanel, wxID_ANY, wxT("Number of template rotations : "), wxDefaultPosition, wxDefaultSize, 0 );
+	NumberOfTemplateRotationsStaticText->Wrap( -1 );
+	NumberOfTemplateRotationsStaticText->Enable( false );
+
+	ExpertOptionsSizer->Add( NumberOfTemplateRotationsStaticText, 0, wxALL, 5 );
 
 	NumberOfTemplateRotationsSpinCtrl = new wxSpinCtrl( ExpertOptionsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 360, 72 );
 	NumberOfTemplateRotationsSpinCtrl->Enable( false );
@@ -4873,6 +4897,9 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	TemplateRadiusNumericCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnTemplateRadiusNumericTextKillFocus ), NULL, this );
 	TemplateRadiusNumericCtrl->Connect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnTemplateRadiusNumericTextSetFocus ), NULL, this );
 	TemplateRadiusNumericCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnTemplateRadiusNumericTextEnter ), NULL, this );
+	HighestResolutionNumericCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnHighestResolutionNumericKillFocus ), NULL, this );
+	HighestResolutionNumericCtrl->Connect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnHighestResolutionNumericSetFocus ), NULL, this );
+	HighestResolutionNumericCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnHighestResolutionNumericTextEnter ), NULL, this );
 	ThresholdPeakHeightNumericCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextKillFocus ), NULL, this );
 	ThresholdPeakHeightNumericCtrl->Connect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextSetFocus ), NULL, this );
 	ThresholdPeakHeightNumericCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextEnter ), NULL, this );
@@ -4886,11 +4913,11 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	HighVarianceThresholdNumericCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnHighVarianceThresholdNumericTextEnter ), NULL, this );
 	TestOnCurrentMicrographButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnTestOnCurrentMicrographButtonClick ), NULL, this );
 	AutoPickRefreshCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnAutoPickRefreshCheckBox ), NULL, this );
-	HighestResolutionNumericCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnHighestResolutionNumericKillFocus ), NULL, this );
-	HighestResolutionNumericCtrl->Connect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnHighestResolutionNumericSetFocus ), NULL, this );
-	HighestResolutionNumericCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnHighestResolutionNumericTextEnter ), NULL, this );
 	SetMinimumDistanceFromEdgesCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnSetMinimumDistanceFromEdgesCheckBox ), NULL, this );
 	MinimumDistanceFromEdgesSpinCtrl->Connect( wxEVT_COMMAND_SPINCTRL_UPDATED, wxSpinEventHandler( FindParticlesPanel::OnMinimumDistanceFromEdgesSpinCtrl ), NULL, this );
+	ProjectionIntervalNumericCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextKillFocus ), NULL, this );
+	ProjectionIntervalNumericCtrl->Connect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextSetFocus ), NULL, this );
+	ProjectionIntervalNumericCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextEnter ), NULL, this );
 	AvoidAbnormalLocalMeanAreasCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnAvoidAbnormalLocalMeanAreasCheckBox ), NULL, this );
 	NumberOfBackgroundBoxesSpinCtrl->Connect( wxEVT_COMMAND_SPINCTRL_UPDATED, wxSpinEventHandler( FindParticlesPanel::OnNumberOfBackgroundBoxesSpinCtrl ), NULL, this );
 	AlgorithmToFindBackgroundChoice->Connect( wxEVT_COMMAND_CHOICE_SELECTED, wxCommandEventHandler( FindParticlesPanel::OnAlgorithmToFindBackgroundChoice ), NULL, this );
@@ -4912,6 +4939,9 @@ FindParticlesPanel::~FindParticlesPanel()
 	TemplateRadiusNumericCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnTemplateRadiusNumericTextKillFocus ), NULL, this );
 	TemplateRadiusNumericCtrl->Disconnect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnTemplateRadiusNumericTextSetFocus ), NULL, this );
 	TemplateRadiusNumericCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnTemplateRadiusNumericTextEnter ), NULL, this );
+	HighestResolutionNumericCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnHighestResolutionNumericKillFocus ), NULL, this );
+	HighestResolutionNumericCtrl->Disconnect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnHighestResolutionNumericSetFocus ), NULL, this );
+	HighestResolutionNumericCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnHighestResolutionNumericTextEnter ), NULL, this );
 	ThresholdPeakHeightNumericCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextKillFocus ), NULL, this );
 	ThresholdPeakHeightNumericCtrl->Disconnect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextSetFocus ), NULL, this );
 	ThresholdPeakHeightNumericCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextEnter ), NULL, this );
@@ -4925,11 +4955,11 @@ FindParticlesPanel::~FindParticlesPanel()
 	HighVarianceThresholdNumericCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnHighVarianceThresholdNumericTextEnter ), NULL, this );
 	TestOnCurrentMicrographButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnTestOnCurrentMicrographButtonClick ), NULL, this );
 	AutoPickRefreshCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnAutoPickRefreshCheckBox ), NULL, this );
-	HighestResolutionNumericCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnHighestResolutionNumericKillFocus ), NULL, this );
-	HighestResolutionNumericCtrl->Disconnect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnHighestResolutionNumericSetFocus ), NULL, this );
-	HighestResolutionNumericCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnHighestResolutionNumericTextEnter ), NULL, this );
 	SetMinimumDistanceFromEdgesCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnSetMinimumDistanceFromEdgesCheckBox ), NULL, this );
 	MinimumDistanceFromEdgesSpinCtrl->Disconnect( wxEVT_COMMAND_SPINCTRL_UPDATED, wxSpinEventHandler( FindParticlesPanel::OnMinimumDistanceFromEdgesSpinCtrl ), NULL, this );
+	ProjectionIntervalNumericCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextKillFocus ), NULL, this );
+	ProjectionIntervalNumericCtrl->Disconnect( wxEVT_SET_FOCUS, wxFocusEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextSetFocus ), NULL, this );
+	ProjectionIntervalNumericCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( FindParticlesPanel::OnThresholdPeakHeightNumericTextEnter ), NULL, this );
 	AvoidAbnormalLocalMeanAreasCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindParticlesPanel::OnAvoidAbnormalLocalMeanAreasCheckBox ), NULL, this );
 	NumberOfBackgroundBoxesSpinCtrl->Disconnect( wxEVT_COMMAND_SPINCTRL_UPDATED, wxSpinEventHandler( FindParticlesPanel::OnNumberOfBackgroundBoxesSpinCtrl ), NULL, this );
 	AlgorithmToFindBackgroundChoice->Disconnect( wxEVT_COMMAND_CHOICE_SELECTED, wxCommandEventHandler( FindParticlesPanel::OnAlgorithmToFindBackgroundChoice ), NULL, this );
@@ -5286,6 +5316,7 @@ MovieImportDialog::MovieImportDialog( wxWindow* parent, wxWindowID id, const wxS
 	bSizer32121 = new wxBoxSizer( wxHORIZONTAL );
 
 	SkipFullIntegrityCheck = new wxCheckBox( this, wxID_ANY, wxT("Skip full integrity check of frames"), wxDefaultPosition, wxDefaultSize, 0 );
+	SkipFullIntegrityCheck->SetValue(true);
 	bSizer32121->Add( SkipFullIntegrityCheck, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 

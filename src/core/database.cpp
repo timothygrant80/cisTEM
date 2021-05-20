@@ -1884,6 +1884,21 @@ void Database::AddReconstructionJob(long reconstruction_id, long refinement_pack
 	InsertOrReplace("RECONSTRUCTION_LIST", "Plltrrrriiiiril", "RECONSTRUCTION_ID", "REFINEMENT_PACKAGE_ID", "REFINEMENT_ID", "NAME", "INNER_MASK_RADIUS", "OUTER_MASK_RADIUS", "RESOLUTION_LIMIT", "SCORE_WEIGHT_CONVERSION", "SHOULD_ADJUST_SCORES", "SHOULD_CROP_IMAGES", "SHOULD_SAVE_HALF_MAPS", "SHOULD_LIKELIHOOD_BLUR", "SMOOTHING_FACTOR", "CLASS_NUMBER", "VOLUME_ASSET_ID", reconstruction_id, refinement_package_asset_id, refinement_id, name.ToUTF8().data(), inner_mask_radius, outer_mask_radius, resolution_limit, score_weight_conversion, int(should_adjust_score), int(should_crop_images), int (should_save_half_maps), int (should_likelihood_blur), smoothing_factor, class_number, volume_asset_id);
 }
 
+wxString Database::ReturnSymmetryGivenVolumeAssetID(int volume_asset_id)
+{	
+	wxString sql_command = wxString::Format("SELECT symmetry FROM refinement_package_assets INNER JOIN reconstruction_list ON reconstruction_list.refinement_package_id = refinement_package_assets.refinement_package_asset_id INNER JOIN volume_assets ON reconstruction_list.reconstruction_id = volume_assets.reconstruction_job_id WHERE volume_assets.volume_asset_id = %i;",volume_asset_id);
+	wxArrayString array_of_strings = ReturnStringArrayFromSelectCommand(sql_command);
+	if (array_of_strings.IsEmpty()) 
+	{
+		return "";
+	}
+	else
+	{
+		MyDebugAssertTrue(array_of_strings.GetCount() == 1,"Got more than one symmetry for the given volume asset ID");
+		return array_of_strings.Item(0);
+	}
+}
+
 void Database::GetReconstructionJob(long wanted_reconstruction_id, long &refinement_package_asset_id, long &refinement_id, wxString &name, float &inner_mask_radius, float &outer_mask_radius, float &resolution_limit, float &score_weight_conversion, bool &should_adjust_score, bool &should_crop_images, bool &should_save_half_maps, bool &should_likelihood_blur, float &smoothing_factor, int &class_number, long &volume_asset_id)
 {
 	wxString sql_select_command;

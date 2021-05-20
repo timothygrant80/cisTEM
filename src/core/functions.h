@@ -604,3 +604,6 @@ double cisTEM_erfcinv(double x);
 bool StripEnclosingSingleQuotesFromString(wxString &string_to_strip); // returns true if it was done, false if first and last characters are not '
 
 void ActivateMKLDebugForNonIntelCPU(); // will activate MKL debug environment variable if running on an AMD that supports high level features.  This works on my version on intel MKL - it is disabled in the released MKL (although setting it should not break anything)
+
+// Make sure the resolution and radius are either both in Angstroms, or both in pixels
+float RotationalAccuracyGivenResolutionRadiusPhaseError(float wanted_resolution, float wanted_radius, float wanted_phase_error_in_degrees);

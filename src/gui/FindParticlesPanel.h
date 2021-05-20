@@ -14,6 +14,8 @@ class MyFindParticlesPanel : public FindParticlesPanel
 
 		AssetGroup active_group;
 
+		wxFileName projections_filename;
+
 public:
 
 		MyFindParticlesPanel( wxWindow* parent );
@@ -21,6 +23,7 @@ public:
 
 		bool group_combo_is_dirty;
 		bool run_profiles_are_dirty;
+		bool volumes_are_dirty;
 		long time_of_last_result_update;
 
 
@@ -30,6 +33,7 @@ public:
 
 		void OnGroupComboBox( wxCommandEvent& event );
 		void OnImageComboBox( wxCommandEvent& event );
+		void OnReferenceVolumeComboBox( wxCommandEvent& event );
 		void WriteResultToDataBase();
 		void ProcessAllJobsFinished();
 		void OnExpertOptionsToggle( wxCommandEvent& event );
@@ -53,7 +57,9 @@ public:
 		void DrawResultsFromParticleFinder();
 		int ReturnDefaultMinimumDistanceFromEdges();
 		void ShowPickingParametersPanel();
+		void PrepareTemplatesFromReferenceVolume();
 
+		void OnNewPickingAlgorithm();
 		void OnNewTemplateRadius();
 		void OnNewThresholdPeakHeight();
 		void OnNewExclusionRadius();
@@ -106,7 +112,7 @@ public:
 		void OnSocketAllJobsFinished();
 
 		//
-		enum particle_picking_algorithms { ab_initio, number_of_picking_algorithms };
+		enum particle_picking_algorithms { ab_initio, reference_volume, number_of_picking_algorithms };
 		wxString ReturnNameOfPickingAlgorithm( const int wanted_algorithm );
 
 		int ReturnNumberOfJobsCurrentlyRunning();

@@ -1287,8 +1287,10 @@ class FindParticlesPanel : public JobPanel
 	protected:
 		wxStaticLine* m_staticline12;
 		wxStaticText* m_staticText21;
-		wxStaticText* PickingAlgorithStaticText;
+		wxStaticText* PickingAlgorithmStaticText;
 		wxComboBox* PickingAlgorithmComboBox;
+		wxStaticText* ReferenceVolumeStaticText;
+		VolumeAssetPickerComboPanel* ReferenceSelectPanel;
 		wxToggleButton* ExpertToggleButton;
 		wxStaticText* PleaseEstimateCTFStaticText;
 		wxStaticLine* m_staticline10;
@@ -1296,11 +1298,15 @@ class FindParticlesPanel : public JobPanel
 		wxPanel* LeftPanel;
 		wxScrolledWindow* PickingParametersPanel;
 		wxBoxSizer* InputSizer;
-		wxStaticText* m_staticText196;
+		wxStaticText* ExclusionRadiusText;
 		NumericTextCtrl* ExclusionRadiusNumericCtrl;
-		wxStaticText* CharacteristicParticleRadiusStaticText;
+		wxStaticText* TemplateRadiusStaticText;
 		NumericTextCtrl* TemplateRadiusNumericCtrl;
-		wxStaticText* ThresholdPeakHeightStaticText1;
+		wxStaticText* SymmetryStaticText;
+		wxComboBox* SymmetryComboBox;
+		wxStaticText* HighestResolutionStaticText;
+		NumericTextCtrl* HighestResolutionNumericCtrl;
+		wxStaticText* ThresholdPeakHeightStaticText;
 		NumericTextCtrl* ThresholdPeakHeightNumericCtrl;
 		wxCheckBox* AvoidLowVarianceAreasCheckBox;
 		NumericTextCtrl* LowVarianceThresholdNumericCtrl;
@@ -1314,11 +1320,11 @@ class FindParticlesPanel : public JobPanel
 		wxBoxSizer* ExpertInputSizer;
 		wxStaticLine* m_staticline35;
 		wxStaticText* ExpertOptionsStaticText;
-		wxStaticText* HighestResolutionStaticText;
-		NumericTextCtrl* HighestResolutionNumericCtrl;
 		wxCheckBox* SetMinimumDistanceFromEdgesCheckBox;
 		wxSpinCtrl* MinimumDistanceFromEdgesSpinCtrl;
-		wxCheckBox* m_checkBox9;
+		wxStaticText* ProjectionIntervalStaticText;
+		NumericTextCtrl* ProjectionIntervalNumericCtrl;
+		wxStaticText* NumberOfTemplateRotationsStaticText;
 		wxSpinCtrl* NumberOfTemplateRotationsSpinCtrl;
 		wxCheckBox* AvoidAbnormalLocalMeanAreasCheckBox;
 		wxStaticText* m_staticText170;
@@ -1353,6 +1359,9 @@ class FindParticlesPanel : public JobPanel
 		virtual void OnTemplateRadiusNumericTextKillFocus( wxFocusEvent& event ) { event.Skip(); }
 		virtual void OnTemplateRadiusNumericTextSetFocus( wxFocusEvent& event ) { event.Skip(); }
 		virtual void OnTemplateRadiusNumericTextEnter( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnHighestResolutionNumericKillFocus( wxFocusEvent& event ) { event.Skip(); }
+		virtual void OnHighestResolutionNumericSetFocus( wxFocusEvent& event ) { event.Skip(); }
+		virtual void OnHighestResolutionNumericTextEnter( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnThresholdPeakHeightNumericTextKillFocus( wxFocusEvent& event ) { event.Skip(); }
 		virtual void OnThresholdPeakHeightNumericTextSetFocus( wxFocusEvent& event ) { event.Skip(); }
 		virtual void OnThresholdPeakHeightNumericTextEnter( wxCommandEvent& event ) { event.Skip(); }
@@ -1362,9 +1371,6 @@ class FindParticlesPanel : public JobPanel
 		virtual void OnHighVarianceThresholdNumericTextEnter( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnTestOnCurrentMicrographButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnAutoPickRefreshCheckBox( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnHighestResolutionNumericKillFocus( wxFocusEvent& event ) { event.Skip(); }
-		virtual void OnHighestResolutionNumericSetFocus( wxFocusEvent& event ) { event.Skip(); }
-		virtual void OnHighestResolutionNumericTextEnter( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnSetMinimumDistanceFromEdgesCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnMinimumDistanceFromEdgesSpinCtrl( wxSpinEvent& event ) { event.Skip(); }
 		virtual void OnAvoidAbnormalLocalMeanAreasCheckBox( wxCommandEvent& event ) { event.Skip(); }

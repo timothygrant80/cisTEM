@@ -80,6 +80,7 @@ public :
 	void SetProcessLockInfo(long &active_process_id, wxString &active_hostname);
 
 	long ReturnRefinementIDGivenReconstructionID(long reconstruction_id);
+	wxString ReturnSymmetryGivenVolumeAssetID(int volume_asset_id);
 
 	// Get various id numbers and counts
 

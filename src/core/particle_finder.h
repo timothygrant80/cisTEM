@@ -7,9 +7,10 @@ public:
 	~ParticleFinder();
 
 	ArrayOfParticlePositionAssets 	ReturnArrayOfParticlePositionAssets();
-	void 							DoItAll();
-	void							RedoWithNewMaximumRadius();
-	void							RedoWithNewTypicalRadius();
+	void 							DoItAll(bool do_cleanup = true);
+	void							RedoWithNewExclusionRadius();
+	void							RedoWithNewTemplateRadius();
+	void							RedoWithNewTemplates();
 	void							RedoWithNewMinimumPeakHeight();
 	void							RedoWithNewHighestResolution();
 	void							RedoWithNewMinimumDistanceFromEdges();
@@ -37,8 +38,8 @@ public:
 															wxString			wanted_templates_filename,
 															bool				wanted_average_templates_radially,
 															int					wanted_number_of_template_rotations,
-															float				wanted_typical_radius_in_angstroms,
-															float				wanted_maximum_radius_in_angstroms,
+															float				wanted_template_radius_in_angstroms,
+															float				wanted_exclusion_radius_in_angstroms,
 															float				wanted_highest_resolution_to_use,
 															wxString			wanted_output_stack_filename,
 															int					wanted_output_stack_box_size,
@@ -74,8 +75,8 @@ private:
 	bool 		already_have_templates;
 	float 		original_micrograph_pixel_size;
 	float 		highest_resolution_to_use;
-	float 		maximum_radius_in_angstroms;
-	float		typical_radius_in_angstroms;
+	float 		exclusion_radius_in_angstroms;
+	float		template_radius_in_angstroms;
 	bool		average_templates_radially;
 	int			algorithm_to_find_background;
 	int			number_of_background_boxes;
@@ -106,7 +107,8 @@ private:
 	int 		new_template_dimension;
 	float 		pixel_size;
 	float 		maximum_radius_in_pixels;
-	float		typical_radius_in_pixels;
+	float		exclusion_radius_in_pixels; 
+	float		template_radius_in_pixels;
 	int			number_of_background_boxes_to_skip;
 	//float 		minimum_distance_between_picks_in_angstroms;
 	//float		minimum_distance_between_picks_in_pixels;
@@ -142,8 +144,8 @@ private:
 
 
 	// Private methods
-	void		UpdateMaximumRadiusInPixels();
-	void		UpdateTypicalRadiusInPixels();
+	void		UpdateExclusionRadiusInPixels();
+	void		UpdateTemplateRadiusInPixels();
 	void		CloseImageFiles();
 	void		FindPeaksAndExtractParticles();
 	void		RemoveHighLowMeanAreasFromTargetFunction();

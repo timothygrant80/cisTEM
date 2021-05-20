@@ -8,6 +8,7 @@ extern MyMainFrame *main_frame;
 extern MyFindCTFResultsPanel *ctf_results_panel;
 extern MyParticlePositionAssetPanel *particle_position_asset_panel;
 extern MyPickingResultsPanel *picking_results_panel;
+extern MyVolumeAssetPanel *volume_asset_panel;
 
 
 MyFindParticlesPanel::MyFindParticlesPanel( wxWindow* parent )
@@ -49,9 +50,25 @@ FindParticlesPanel( parent )
 
 	GroupComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MyFindParticlesPanel::OnGroupComboBox, this);
 	ImageComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MyFindParticlesPanel::OnImageComboBox, this);
+	ReferenceSelectPanel->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MyFindParticlesPanel::OnReferenceVolumeComboBox, this);
 
 	ExclusionRadiusNumericCtrl->SetPrecision(0);
 	TemplateRadiusNumericCtrl->SetPrecision(0);
+
+	// Symmetries available
+	SymmetryComboBox->Append("C1");
+  	SymmetryComboBox->Append("C2");
+  	SymmetryComboBox->Append("C3");
+  	SymmetryComboBox->Append("C4");
+  	SymmetryComboBox->Append("D2");
+  	SymmetryComboBox->Append("D3");
+  	SymmetryComboBox->Append("D4");
+  	SymmetryComboBox->Append("I");
+  	SymmetryComboBox->Append("I2");
+  	SymmetryComboBox->Append("O");
+  	SymmetryComboBox->Append("T");
+  	SymmetryComboBox->Append("T2");
+  	SymmetryComboBox->ChangeValue("C1");
 }
 
 
@@ -88,6 +105,7 @@ void MyFindParticlesPanel::Reset()
 	PickingResultsPanel->Clear();
 	//graph_is_hidden = true;
 	InfoPanel->Show(true);
+	ReferenceSelectPanel->Clear();
 
 	ExpertToggleButton->Enable(false);
 
@@ -117,16 +135,19 @@ void MyFindParticlesPanel::ResetDefaults()
 	TemplateRadiusNumericCtrl->ChangeValueFloat(80.0f);
 	ThresholdPeakHeightNumericCtrl->ChangeValueFloat(6.0f);
 	AutoPickRefreshCheckBox->SetValue(false);
-	AvoidLowVarianceAreasCheckBox->SetValue(true);
-	AvoidHighVarianceAreasCheckBox->SetValue(false);
+	AvoidLowVarianceAreasCheckBox->SetValue(false);
+	AvoidHighVarianceAreasCheckBox->SetValue(true);
 	LowVarianceThresholdNumericCtrl->ChangeValueFloat(-0.5f);
 	HighVarianceThresholdNumericCtrl->ChangeValueFloat(2.0f);
-	HighestResolutionNumericCtrl->ChangeValueFloat(30.0f);
+	HighestResolutionNumericCtrl->ChangeValueFloat(20.0f);
 	SetMinimumDistanceFromEdgesCheckBox->SetValue(false);
 	MinimumDistanceFromEdgesSpinCtrl->SetValue(128);
 	AvoidAbnormalLocalMeanAreasCheckBox->SetValue(true);
 	NumberOfBackgroundBoxesSpinCtrl->SetValue(50);
 	AlgorithmToFindBackgroundChoice->SetSelection(0);
+	ProjectionIntervalNumericCtrl->SetValue(wxString::Format("%.1f",2.0 * RotationalAccuracyGivenResolutionRadiusPhaseError(HighestResolutionNumericCtrl->ReturnValue(),TemplateRadiusNumericCtrl->ReturnValue(),120.0)));
+	PickingAlgorithmComboBox->SetSelection(ab_initio);
+	NumberOfTemplateRotationsSpinCtrl->SetValue(1);
 }
 
 void MyFindParticlesPanel::SetInfo()
@@ -178,19 +199,19 @@ void MyFindParticlesPanel::SetInfo()
 	InfoText->WriteText(wxT("The selected run profile will be used to run the job.  The run profile describes how the job should be run (e.g. how many processors should be used, and on which different computers).  Run profiles are set in the Run Profile panel, located under settings."));
 	InfoText->Newline();
 	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Maximum Particle Radius (Å) : "));
+	InfoText->WriteText(wxT("Exclusion Radius (Å) : "));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT("In Angstroms, the maximum radius of the particles to be found. This also determines the minimum distance between picks."));
+	InfoText->WriteText(wxT("When a pick is located, no other pick will be made within that distance (in Angstroms). This is the radius of the circles drawn in the preview."));
 	InfoText->Newline();
 	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Characteristic Particle Radius (Å) : "));
+	InfoText->WriteText(wxT("Template Radius (Å) : "));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT("In Angstroms, the radius within which most of the density is enclosed. The template for picking is a soft-edge disc, where the edge is 5 pixels wide and this parameter defines the radius at which the cosine-edge template reaches 0.5."));
+	InfoText->WriteText(wxT("When picking with a blob: the radius of the blob template. When picking with a reference volume: the maximum radius of the volume, in Angstroms. The projections will be masked with a soft circle slightly larger than this radius before being used as templates."));
 	InfoText->Newline();
 	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Threshold Peak Hight : "));
+	InfoText->WriteText(wxT("Threshold Peak Hwight : "));
 	InfoText->EndBold();
-	InfoText->WriteText(wxT("Particle coordinates will be defined as the coordinates of any peak in the search function which exceeds this threshold. In numbers of standard deviations above expected noise variations in the scoring function. See Sigworth (2004) for definition."));
+	InfoText->WriteText(wxT("Pick coordinates will be defined as the coordinates of any peak in the search function which exceeds this threshold. In numbers of standard deviations above expected noise variations in the scoring function. See Sigworth (2004) for definition."));
 	InfoText->Newline();
 	InfoText->BeginBold();
 	InfoText->WriteText(wxT("Avoid High-Variance Areas : "));
@@ -223,16 +244,6 @@ void MyFindParticlesPanel::SetInfo()
 	InfoText->WriteText(wxT("Avoid Areas With Abnormal Local Means : "));
 	InfoText->EndBold();
 	InfoText->WriteText(wxT("Avoid areas with abnormally low or high local mean. This can be effective to avoid picking from, e.g., contaminating ice crystals, support film."));
-	InfoText->Newline();
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Show Estimated Background Spectrum : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("Show 1D plot of the estimated background spectrum, which is used to build the whitening filter (see Sigworth, 2004, for details)"));
-	InfoText->Newline();
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Show Positions of Background Boxes : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("Plot the position of areas the algorithm selected as background. For optimal performance, none of these boxes should contain any particles."));
 	InfoText->Newline();
 	InfoText->BeginBold();
 	InfoText->WriteText(wxT("Number of Background Boxes : "));
@@ -296,7 +307,7 @@ void MyFindParticlesPanel::FillImageComboBox()
 
 		SetAllUserParametersForParticleFinder();
 
-		particle_finder.DoItAll();
+		particle_finder.DoItAll(false);
 
 		DrawResultsFromParticleFinder();
 
@@ -313,7 +324,10 @@ wxString MyFindParticlesPanel::ReturnNameOfPickingAlgorithm( const int wanted_al
 	switch(wanted_algorithm)
 	{
 	case(ab_initio):
-			string_to_return = "ab-initio";
+			string_to_return = "blob";
+			break;
+	case(reference_volume):
+			string_to_return = "reference volume";
 			break;
 	default:
 			string_to_return = "unknown";
@@ -354,10 +368,17 @@ void MyFindParticlesPanel::OnPickingAlgorithmComboBox( wxCommandEvent& event )
 			PickingParametersPanel->Hide();
 			ExpertToggleButton->Enable(false);
 			break;
-	case(0):
+	case(ab_initio):
 			// Ab initio
 			ShowPickingParametersPanel();
 			ExpertToggleButton->Enable(true);
+			OnNewPickingAlgorithm();
+			break;
+	case(reference_volume):
+			// Reference volume
+			ShowPickingParametersPanel();
+			ExpertToggleButton->Enable(true);
+			OnNewPickingAlgorithm();
 			break;
 	default:
 			// This algorithm not implemented yet
@@ -409,9 +430,10 @@ void MyFindParticlesPanel::OnAutoPickRefreshCheckBox( wxCommandEvent& event )
 			PickingParametersPanel->Freeze();
 			ExpertOptionsPanel->Freeze();
 
+			if (PickingAlgorithmComboBox->GetSelection() == reference_volume) PrepareTemplatesFromReferenceVolume();
 			SetAllUserParametersForParticleFinder();
 
-			particle_finder.DoItAll();
+			particle_finder.DoItAll(false);
 
 			DrawResultsFromParticleFinder();
 
@@ -431,7 +453,7 @@ void MyFindParticlesPanel::OnAutoPickRefreshCheckBox( wxCommandEvent& event )
 int MyFindParticlesPanel::ReturnDefaultMinimumDistanceFromEdges()
 {
 	float pixel_size = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), 0))->pixel_size;
-	return int(ExclusionRadiusNumericCtrl->ReturnValue() / pixel_size)+1;
+	return int(2.5 * ExclusionRadiusNumericCtrl->ReturnValue() / pixel_size)+1;
 }
 
 
@@ -440,6 +462,13 @@ void MyFindParticlesPanel::OnNewTemplateRadius()
 	// Enforce min
 	if (TemplateRadiusNumericCtrl->ReturnValue() < 1.0) TemplateRadiusNumericCtrl->ChangeValueFloat(1.0);
 
+	// Reset the rotational parameters
+	if ( PickingAlgorithmComboBox->GetSelection() == reference_volume )
+	{
+		ProjectionIntervalNumericCtrl->SetValue(wxString::Format("%.1f",2.0 * RotationalAccuracyGivenResolutionRadiusPhaseError(HighestResolutionNumericCtrl->ReturnValue(),TemplateRadiusNumericCtrl->ReturnValue(),120.0)));
+		NumberOfTemplateRotationsSpinCtrl->SetValue(myroundint(360.0f/ProjectionIntervalNumericCtrl->ReturnValue()));
+	}
+
 	if (AutoPickRefreshCheckBox->GetValue())
 	{
 		wxBusyCursor wait;
@@ -447,9 +476,46 @@ void MyFindParticlesPanel::OnNewTemplateRadius()
 		PickingParametersPanel->Freeze();
 		ExpertOptionsPanel->Freeze();
 
+		if (PickingAlgorithmComboBox->GetSelection() == reference_volume) PrepareTemplatesFromReferenceVolume(); // need to do this because the masking of the projections needs to be redone with the new radius
 		SetAllUserParametersForParticleFinder();
 
-		particle_finder.RedoWithNewTypicalRadius();
+		particle_finder.RedoWithNewTemplateRadius();
+
+		DrawResultsFromParticleFinder();
+
+		PickingParametersPanel->Thaw();
+		ExpertOptionsPanel->Thaw();
+	}
+}
+
+void MyFindParticlesPanel::OnNewPickingAlgorithm()
+{
+
+	wxPrintf("OnNewPickingAlgorithm\n");
+	switch(PickingAlgorithmComboBox->GetCurrentSelection())
+	{
+	case(ab_initio) :
+		wxPrintf("ab initio should set to 1\n");
+		NumberOfTemplateRotationsSpinCtrl->SetValue(1);
+	case(reference_volume) :
+		NumberOfTemplateRotationsSpinCtrl->SetValue(myroundint(360.0f/ProjectionIntervalNumericCtrl->ReturnValue()));
+	break;
+	default :
+		MyDebugAssertTrue(false,"Oops, unknown picking algorithm: %i\n",PickingAlgorithmComboBox->GetCurrentSelection());
+	}
+
+	if (AutoPickRefreshCheckBox->GetValue())
+	{
+		wxBusyCursor wait;
+
+		PickingParametersPanel->Freeze();
+		ExpertOptionsPanel->Freeze();
+
+		if (PickingAlgorithmComboBox->GetCurrentSelection() == reference_volume) PrepareTemplatesFromReferenceVolume();
+
+		SetAllUserParametersForParticleFinder();
+		
+		particle_finder.DoItAll(false);
 
 		DrawResultsFromParticleFinder();
 
@@ -502,7 +568,7 @@ void MyFindParticlesPanel::OnNewExclusionRadius()
 
 		SetAllUserParametersForParticleFinder();
 
-		particle_finder.RedoWithNewMaximumRadius();
+		particle_finder.RedoWithNewExclusionRadius();
 
 		DrawResultsFromParticleFinder();
 
@@ -517,6 +583,13 @@ void MyFindParticlesPanel::OnNewHighestResolution()
 	// Enforce min
 	float pixel_size = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), ImageComboBox->GetSelection()))->pixel_size;
 	if (HighestResolutionNumericCtrl->ReturnValue() <  pixel_size * 2.0 ) HighestResolutionNumericCtrl->ChangeValueFloat( pixel_size * 2.0 );
+
+	// Reset the rotational parameters
+	if ( PickingAlgorithmComboBox->GetCurrentSelection() == reference_volume )
+	{
+		ProjectionIntervalNumericCtrl->SetValue(wxString::Format("%.1f",2.0 * RotationalAccuracyGivenResolutionRadiusPhaseError(HighestResolutionNumericCtrl->ReturnValue(),TemplateRadiusNumericCtrl->ReturnValue(),100.0)));
+		NumberOfTemplateRotationsSpinCtrl->SetValue(myroundint(360.0f/ProjectionIntervalNumericCtrl->ReturnValue()));
+	}
 
 	if (AutoPickRefreshCheckBox->GetValue())
 	{
@@ -845,7 +918,35 @@ void MyFindParticlesPanel::OnImageComboBox( wxCommandEvent & event )
 
 		SetAllUserParametersForParticleFinder();
 
-		particle_finder.DoItAll();
+		particle_finder.DoItAll(false);
+
+		DrawResultsFromParticleFinder();
+
+		PickingParametersPanel->Thaw();
+		ExpertOptionsPanel->Thaw();
+	}
+}
+
+void MyFindParticlesPanel::OnReferenceVolumeComboBox( wxCommandEvent & event )
+{
+	
+	// Get symmetry of volume asset and set the symmetry dropdown accordingly
+	int volume_asset_id = volume_asset_panel->ReturnAssetID(ReferenceSelectPanel->ReturnSelection());
+	wxString sym = main_frame->current_project.database.ReturnSymmetryGivenVolumeAssetID(volume_asset_id);
+	SymmetryComboBox->SetStringSelection(sym); // if we don't know the sym, an empty string will have been return, and this will fail
+
+
+	if (AutoPickRefreshCheckBox->GetValue())
+	{
+		wxBusyCursor wait;
+
+		PickingParametersPanel->Freeze();
+		ExpertOptionsPanel->Freeze();
+
+		PrepareTemplatesFromReferenceVolume();
+		SetAllUserParametersForParticleFinder();
+
+		particle_finder.DoItAll(false);
 
 		DrawResultsFromParticleFinder();
 
@@ -864,6 +965,8 @@ void MyFindParticlesPanel::OnUpdateUI( wxUpdateUIEvent& event )
 		PickingAlgorithmComboBox->Enable(false);
 		ExpertToggleButton->Enable(false);
 		StartPickingButton->Enable(false);
+		ReferenceSelectPanel->Enable(false);
+		SymmetryComboBox->Enable(false);
 		if (PickingParametersPanel->IsShown())
 		{
 			PickingParametersPanel->Show(false);
@@ -906,8 +1009,14 @@ void MyFindParticlesPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			LeftPanel->Layout();
 			RightPanel->Layout();
 		}
+
+		if (ReferenceSelectPanel->GetCount() > 0)
+		{
+			ReferenceSelectPanel->Clear();
+			ReferenceSelectPanel->ChangeValue("");
+		}
 	}
-	else
+	else // a project is open
 	{
 		//Enable(true);
 
@@ -929,7 +1038,6 @@ void MyFindParticlesPanel::OnUpdateUI( wxUpdateUIEvent& event )
 		{
 			RunProfileComboBox->Enable(true);
 			GroupComboBox->Enable(true);
-			PickingAlgorithmComboBox->Enable(false);
 			ExpertToggleButton->Enable(true);
 			ShowPickingParametersPanel();
 			if (image_asset_panel->all_groups_list->groups[GroupComboBox->GetSelection()].can_be_picked)
@@ -952,6 +1060,19 @@ void MyFindParticlesPanel::OnUpdateUI( wxUpdateUIEvent& event )
 					RightPanel->Layout();
 				}
 			}
+
+			// Only give a choice of picking algorithm if there is at least one volume available
+			if (ReferenceSelectPanel->GetCount() > 0)
+			{
+				PickingAlgorithmComboBox->Enable(true);
+			}
+			else
+			{
+				PickingAlgorithmComboBox->Enable(false);
+				PickingAlgorithmComboBox->SetSelection(ab_initio);
+			}
+			
+
 			if (PickingAlgorithmComboBox->GetCurrentSelection() >= 0)
 			{
 				ExpertToggleButton->Enable(true);
@@ -968,8 +1089,42 @@ void MyFindParticlesPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			{
 				StartPickingButton->Enable(false);
 			}
+
+			if (PickingAlgorithmComboBox->GetCurrentSelection() == reference_volume && ReferenceSelectPanel->GetCount() > 0)
+			{
+				ReferenceSelectPanel->Enable(true);
+				ReferenceVolumeStaticText->Enable(true);
+				ProjectionIntervalStaticText->Enable(true);
+				ProjectionIntervalNumericCtrl->Enable(true);
+				TemplateRadiusStaticText->Enable(true);
+				TemplateRadiusNumericCtrl->Enable(true);
+				SymmetryStaticText->Enable(true);
+				SymmetryComboBox->Enable(true);
+				NumberOfTemplateRotationsSpinCtrl->Enable(true);
+				NumberOfTemplateRotationsStaticText->Enable(true);
+			}
+			else
+			{
+				ReferenceSelectPanel->Enable(false);
+				ReferenceVolumeStaticText->Enable(false);
+				ProjectionIntervalStaticText->Enable(false);
+				ProjectionIntervalNumericCtrl->Enable(false);
+				TemplateRadiusStaticText->Enable(true);
+				TemplateRadiusNumericCtrl->Enable(true);
+				SymmetryStaticText->Enable(false);
+				SymmetryComboBox->Enable(false);
+				NumberOfTemplateRotationsSpinCtrl->SetValue(1);
+				NumberOfTemplateRotationsSpinCtrl->Enable(false);
+				NumberOfTemplateRotationsStaticText->Enable(false);
+			}
+
+			if (volumes_are_dirty == true)
+			{
+				ReferenceSelectPanel->FillComboBox();
+				volumes_are_dirty = false;
+			}
 		}
-		else
+		else // there is a job running
 		{
 			ExpertToggleButton->Enable(false);
 			GroupComboBox->Enable(false);
@@ -977,6 +1132,8 @@ void MyFindParticlesPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			RunProfileComboBox->Enable(false);
 			//StartAlignmentButton->SetLabel("Stop Job");
 			//StartAlignmentButton->Enable(true);
+			ReferenceSelectPanel->Enable(false);
+			SymmetryComboBox->Enable(false);
 		}
 
 	}
@@ -994,6 +1151,60 @@ void MyFindParticlesPanel::OnExpertOptionsToggle( wxCommandEvent& event )
 	RightPanel->Layout();
 }
 
+void MyFindParticlesPanel::PrepareTemplatesFromReferenceVolume()
+{
+	MyDebugAssertTrue(PickingAlgorithmComboBox->GetSelection() == reference_volume,"Oops. Doesn't make sense to prepare templates from volume if that's not the algorithm chosen by the user");
+
+	// Choose a filename for the projections
+	projections_filename.SetPath(main_frame->current_project.scratch_directory.GetFullPath());
+	projections_filename.SetFullName(wxString::Format("picking_templates.mrc"));
+	wxPrintf("Filename for projections: %s\n",projections_filename.GetFullPath());
+
+	// Prepare to compute projections
+	ImageFile reference_volume_file(volume_asset_panel->ReturnAssetLongFilename(ReferenceSelectPanel->ReturnSelection()).ToStdString());
+	ReconstructedVolume reference_3d;
+	wxPrintf("Using symmetry: "+SymmetryComboBox->GetValue()+"\n");
+	reference_3d.InitWithDimensions(reference_volume_file.ReturnXSize(), reference_volume_file.ReturnYSize(), reference_volume_file.ReturnZSize(), volume_asset_panel->ReturnAssetPointer(ReferenceSelectPanel->ReturnSelection())->pixel_size, SymmetryComboBox->GetValue());
+	reference_3d.density_map->ReadSlices(&reference_volume_file, 1, reference_3d.density_map->logical_z_dimension);
+	reference_3d.mask_radius = float(reference_volume_file.ReturnXSize()) * 0.45;
+	reference_3d.density_map->CorrectSinc(reference_3d.mask_radius / reference_3d.pixel_size);
+	reference_3d.PrepareForProjections(0.0,2.0f * reference_3d.pixel_size);
+
+	// Prepare the regular grid of projection directions
+	ParameterMap parameter_map; // needed for Euler search init
+	parameter_map.SetAllTrue();
+	EulerSearch euler_search;
+	euler_search.InitGrid(SymmetryComboBox->GetValue(),ProjectionIntervalNumericCtrl->ReturnValue(),0.0f,0.0f,360.0f,360.0f,0.0f,2.0f,parameter_map,1);
+	if (SymmetryComboBox->GetValue().StartsWith("C1")) { euler_search.theta_max = 180.0f; }
+	euler_search.CalculateGridSearchPositions(false);
+
+	// Padding of the 3D volume (? optional ?)
+
+	// Prepare a projection image and open a file to write them
+	Image projection_image;
+	projection_image.Allocate(reference_3d.density_map->logical_x_dimension,reference_3d.density_map->logical_y_dimension,false);
+	MRCFile projections_file(projections_filename.GetFullPath().ToStdString(),true);
+
+	// Loop over projections
+	AnglesAndShifts current_parameters;
+	for (int projection_counter = 0; projection_counter < euler_search.number_of_search_positions; projection_counter++)
+	{
+		current_parameters.Init(euler_search.list_of_search_parameters[projection_counter][0], euler_search.list_of_search_parameters[projection_counter][1],0.0f,0.0f,0.0f);
+		reference_3d.density_map->ExtractSlice(projection_image,current_parameters);
+		projection_image.complex_values[0] = reference_3d.density_map->complex_values[0];
+		projection_image.SwapRealSpaceQuadrants();
+		projection_image.BackwardFFT();
+		// Add a soft mask (to dampen the aliases)
+		projection_image.CosineMask(1.05f * TemplateRadiusNumericCtrl->ReturnValue()/reference_3d.pixel_size + 5.0,10.0);
+		// Write the projection to disk
+		projection_image.WriteSlice(&projections_file,projection_counter+1);
+	}
+	projections_file.PrintInfo();
+	projections_file.CloseFile();
+	wxPrintf("Templates have been written to %s\n", projections_file.filename);
+	
+}
+
 void MyFindParticlesPanel::SetAllUserParametersForParticleFinder()
 {
 	ImageAsset * current_image_asset;
@@ -1005,9 +1216,9 @@ void MyFindParticlesPanel::SetAllUserParametersForParticleFinder()
 	double astigmatism_angle;
 	double additional_phase_shift;
 	double iciness;
-	const bool already_have_templates = false;
+	const bool already_have_templates = (PickingAlgorithmComboBox->GetCurrentSelection() == reference_volume);
 	const bool average_templates_radially = false;
-	const int number_of_template_rotations = 1;
+	const int number_of_template_rotations = NumberOfTemplateRotationsSpinCtrl->GetValue();
 	const int output_stack_box_size = 0;
 	wxString image_file;
 	float pixel_size = 10;
@@ -1052,7 +1263,7 @@ void MyFindParticlesPanel::SetAllUserParametersForParticleFinder()
 											defocus_2,
 											astigmatism_angle,
 											already_have_templates,
-											"no_templates.mrc",
+											projections_filename.GetFullPath(),
 											average_templates_radially,
 											number_of_template_rotations,
 											TemplateRadiusNumericCtrl->ReturnValue(),
@@ -1113,9 +1324,14 @@ void MyFindParticlesPanel::OnTestOnCurrentMicrographButtonClick( wxCommandEvent 
 		PickingParametersPanel->Freeze();
 		ExpertOptionsPanel->Freeze();
 
+		if (PickingAlgorithmComboBox->GetSelection() == reference_volume) 
+		{
+			PrepareTemplatesFromReferenceVolume();
+		}
+
 		SetAllUserParametersForParticleFinder();
 
-		particle_finder.DoItAll();
+		particle_finder.DoItAll(false);
 
 		DrawResultsFromParticleFinder();
 
@@ -1162,7 +1378,7 @@ void MyFindParticlesPanel::StartPickingClick( wxCommandEvent& event )
 	bool		already_have_templates = false;
 	std::string	templates_filename = "no_templates.mrcs";
 	bool		average_templates_radially = true;
-	int			number_of_template_rotations = 1;
+	int			number_of_template_rotations = NumberOfTemplateRotationsSpinCtrl->GetValue();
 	float		typical_radius = TemplateRadiusNumericCtrl->ReturnValue();
 	float		maximum_radius = ExclusionRadiusNumericCtrl->ReturnValue();
 	float		highest_resolution_to_use = HighestResolutionNumericCtrl->ReturnValue();

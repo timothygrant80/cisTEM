@@ -1466,3 +1466,9 @@ void ActivateMKLDebugForNonIntelCPU() // this sets an environment variable that 
 	}
 #endif
 }
+
+// Make sure the resolution and radius are in the same units (either both in pixels, or both in Angstroms)
+float RotationalAccuracyGivenResolutionRadiusPhaseError(float wanted_resolution, float wanted_radius, float wanted_phase_error_in_degrees)
+{
+	return wanted_phase_error_in_degrees / ((1.0 / wanted_resolution) * 2.0 * PI * wanted_radius);
+}

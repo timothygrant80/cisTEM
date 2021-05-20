@@ -24,8 +24,8 @@ ParticleFinder::ParticleFinder()
 	templates_filename							    = 	"";
 	average_templates_radially					    = 	false;
 	number_of_template_rotations				    = 	0;
-	typical_radius_in_angstroms					    = 	0.0;
-	maximum_radius_in_angstroms					    = 	0.0;
+	template_radius_in_angstroms					= 	0.0;
+	exclusion_radius_in_angstroms					= 	0.0;
 	highest_resolution_to_use					    = 	0.0;
 	output_stack_filename						    = 	"";
 	output_stack_box_size						    = 	0;
@@ -48,7 +48,8 @@ ParticleFinder::ParticleFinder()
 	minimum_box_size_for_picking					=	0;
 	minimum_box_size_for_object_with_psf			=	0;
 	maximum_radius_in_pixels						=	0.0;
-	typical_radius_in_pixels						=	0.0;
+	exclusion_radius_in_pixels						=	0.0;
+	template_radius_in_pixels						=	0.0;
 	new_template_dimension							=	0;
 	new_micrograph_dimension_x						=	0;
 	new_micrograph_dimension_y						=	0;
@@ -68,7 +69,7 @@ ParticleFinder::~ParticleFinder()
 	CloseImageFiles();
 }
 
-void ParticleFinder::DoItAll()
+void ParticleFinder::DoItAll(bool do_cleanup)
 {
 	OpenMicrographAndUpdateDimensions();
 
@@ -119,14 +120,17 @@ void ParticleFinder::DoItAll()
 	FindPeaksAndExtractParticles();
 
 	// Cleanup
-	DeallocateTemplateImages();
-	CloseImageFiles();
+	if (do_cleanup)
+	{
+		DeallocateTemplateImages();
+		CloseImageFiles();
+	}
 }
 
 void ParticleFinder::RedoWithNewHighestResolution()
 {
 	// When the highest resolution changes, I think we need to redo everything
-	DoItAll();
+	DoItAll(false);
 }
 
 void ParticleFinder::RedoWithNewMinimumDistanceFromEdges()
@@ -227,19 +231,15 @@ void ParticleFinder::RedoWithNewAlgorithmToFindBackground()
 
 void ParticleFinder::RedoWithNewMinimumPeakHeight()
 {
-	/*
-	OpenMicrographAndUpdateDimensions();
+	// Look for peaks and extract particles
+	FindPeaksAndExtractParticles();
+}
 
-	UpdatePixelSizeFromMicrographDimensions();
+void ParticleFinder::RedoWithNewTemplateRadius()
+{
+	UpdateTemplateRadiusInPixels();
 
 	OpenTemplatesAndUpdateDimensions();
-
-	UpdateCTF();
-
-	UpdateMinimumBoxSize();
-
-	SetupCurveObjects();
-
 
 	// If the user is supplying templates, read them in. If not, generate a single template image.
 	AllocateTemplateImages();
@@ -272,9 +272,6 @@ void ParticleFinder::RedoWithNewMinimumPeakHeight()
 	// Compute the target function (i.e. do template matching)
 	DoTemplateMatching();
 
-	*/
-
-
 	// Look for peaks and extract particles
 	FindPeaksAndExtractParticles();
 
@@ -283,33 +280,15 @@ void ParticleFinder::RedoWithNewMinimumPeakHeight()
 	//CloseImageFiles();
 }
 
-void ParticleFinder::RedoWithNewTypicalRadius()
+void ParticleFinder::RedoWithNewTemplates()
 {
-	UpdateTypicalRadiusInPixels();
-
-	//OpenMicrographAndUpdateDimensions();
-
-	//UpdatePixelSizeFromMicrographDimensions();
 
 	OpenTemplatesAndUpdateDimensions();
 
-	//UpdateCTF();
-
-	//UpdateMinimumBoxSize();
-
-	//SetupCurveObjects();
-
-
 	// If the user is supplying templates, read them in. If not, generate a single template image.
 	AllocateTemplateImages();
-	if (already_have_templates)
-	{
-		//ReadTemplatesFromDisk();
-	}
-	else // User did not supply a template, we will generate one
-	{
-		GenerateATemplate();
-	}
+	MyDebugAssertTrue(already_have_templates,"Cannot redo with new templates unless the user supplies templates");
+	ReadTemplatesFromDisk();
 
 #ifdef dump_intermediate_files
 	template_power_spectrum.WriteToFile("dbg_template_power.txt");
@@ -320,13 +299,13 @@ void ParticleFinder::RedoWithNewTypicalRadius()
 	//ReadAndResampleMicrograph();
 
 	// Band-pass filter the micrograph to emphasize features similar to the templates
-	BandPassMicrograph();
+	BandPassMicrograph(); // TODO: is this necessary? Do we need to know the diameter?
 
 	// Compute local mean, local sigma and get stats on these local statistics
-	UpdateLocalMeanAndSigma();
+	UpdateLocalMeanAndSigma(); // TODO: is this necessary?
 
 	// Whiten the background
-	WhitenMicrographBackground();
+	WhitenMicrographBackground(); // TODO: is this necessary? Do we need to know the diameter?
 
 	// Compute the target function (i.e. do template matching)
 	DoTemplateMatching();
@@ -335,14 +314,16 @@ void ParticleFinder::RedoWithNewTypicalRadius()
 	FindPeaksAndExtractParticles();
 
 	// Cleanup
-	DeallocateTemplateImages();
-	CloseImageFiles();
+	//DeallocateTemplateImages();
+	//CloseImageFiles();
 }
 
-void ParticleFinder::RedoWithNewMaximumRadius()
+
+
+void ParticleFinder::RedoWithNewExclusionRadius()
 {
 
-	UpdateMaximumRadiusInPixels();
+	UpdateExclusionRadiusInPixels();
 
 	//OpenMicrographAndUpdateDimensions();
 
@@ -392,8 +373,8 @@ void ParticleFinder::RedoWithNewMaximumRadius()
 	FindPeaksAndExtractParticles();
 
 	// Cleanup
-	DeallocateTemplateImages();
-	CloseImageFiles();
+	//DeallocateTemplateImages();
+	//CloseImageFiles();
 }
 
 void ParticleFinder::CloseImageFiles()
@@ -445,8 +426,8 @@ void ParticleFinder::SetAllUserParameters(	wxString			wanted_micrograph_filename
 											wxString			wanted_templates_filename,
 											bool				wanted_average_templates_radially,
 											int					wanted_number_of_template_rotations,
-											float				wanted_typical_radius_in_angstroms,
-											float				wanted_maximum_radius_in_angstroms,
+											float				wanted_template_radius_in_angstroms,
+											float				wanted_exclusion_radius_in_angstroms,
 											float				wanted_highest_resolution_to_use,
 											wxString			wanted_output_stack_filename,
 											int					wanted_output_stack_box_size,
@@ -474,8 +455,8 @@ void ParticleFinder::SetAllUserParameters(	wxString			wanted_micrograph_filename
 	templates_filename							    =    wanted_templates_filename;
 	average_templates_radially					    =    wanted_average_templates_radially;
 	number_of_template_rotations				    =    wanted_number_of_template_rotations;
-	typical_radius_in_angstroms					    =    wanted_typical_radius_in_angstroms;
-	maximum_radius_in_angstroms					    =    wanted_maximum_radius_in_angstroms;
+	template_radius_in_angstroms					=    wanted_template_radius_in_angstroms;
+	exclusion_radius_in_angstroms					=    wanted_exclusion_radius_in_angstroms;
 	highest_resolution_to_use					    =    wanted_highest_resolution_to_use;
 	output_stack_filename						    =    wanted_output_stack_filename;
 	output_stack_box_size						    =    wanted_output_stack_box_size;
@@ -540,7 +521,7 @@ void ParticleFinder::FindPeaksAndExtractParticles()
 		// Zero an area around this peak to ensure we don't pick again near there
 		coo_to_ignore_x = int(my_peak.x) + maximum_score_modified.physical_address_of_box_center_x;
 		coo_to_ignore_y = int(my_peak.y) + maximum_score_modified.physical_address_of_box_center_y;
-		SetCircularAreaToIgnore(maximum_score_modified,coo_to_ignore_x,coo_to_ignore_y,2.0 * maximum_radius_in_pixels,0.0);
+		SetCircularAreaToIgnore(maximum_score_modified,coo_to_ignore_x,coo_to_ignore_y,2.0 * exclusion_radius_in_pixels,0.0);
 		//maximum_score.QuickAndDirtyWriteSlice("dbg_latest_maximum_score.mrc",number_of_candidate_particles);
 		// Now we do the actual check as to whether the peak is within our boundaries
 		if (coo_to_ignore_x >= min_x && coo_to_ignore_x <= max_x && coo_to_ignore_y >= min_y && coo_to_ignore_y <= max_y )
@@ -750,13 +731,12 @@ void ParticleFinder::DoTemplateMatching()
 	template_rotation_giving_maximum_score = template_giving_maximum_score;
 	for ( int template_counter = 0; template_counter < number_of_templates; template_counter ++ )
 	{
-		wxPrintf("Working on template %i\n", template_counter);
+		wxPrintf("Working on template %i, with %i rotations\n", template_counter, number_of_template_rotations);
 
 		// Ideally, one would pad the template image to the micrograph dimensions before applying the CTF,
 		// so that one wouldn't have to worry about PSF spread, or at least one would pad them large enough
 		// to allow for proper CTF correction
 		// For performance however, one does the CTF and filtering on a small box before padding
-
 
 		for ( int rotation_counter = 0; rotation_counter < number_of_template_rotations; rotation_counter ++ )
 		{
@@ -764,6 +744,8 @@ void ParticleFinder::DoTemplateMatching()
 			// Prepare the template for matching
 			// (rotate it, pad it, apply CTF, apply whitening filter, pad to micrograph dimensions
 			PrepareTemplateForMatching(&template_image[template_counter],template_medium,360.0/number_of_template_rotations*rotation_counter,&micrograph_ctf,&background_whitening_filter);
+			if (template_counter == 0) template_medium.QuickAndDirtyWriteSlice("dbg_template_medium.mrc",rotation_counter+1);
+
 
 			// Clip into micrograph-sized image
 			MyDebugAssertTrue(template_medium.is_in_real_space,"template_medium should be in real space");
@@ -1163,7 +1145,7 @@ void ParticleFinder::GenerateATemplate()
 
 	template_image[0].Allocate(minimum_box_size_for_picking,minimum_box_size_for_picking,1);
 	template_image[0].SetToConstant(1.0);
-	template_image[0].CosineMask(typical_radius_in_pixels,5.0,false,true,0.0);
+	template_image[0].CosineMask(template_radius_in_pixels,5.0,false,true,0.0);
 #ifdef dump_intermediate_files
 	template_image[0].QuickAndDirtyWriteSlice("dbg_template.mrc",1);
 #endif
@@ -1264,8 +1246,9 @@ void ParticleFinder::DeallocateTemplateImages()
 void ParticleFinder::UpdateMinimumBoxSize()
 {
 	// Let's decide on a box size for picking (on the resampled micrograph)
-	minimum_box_size_for_object_with_psf = 2 * (maximum_radius_in_pixels + int(std::max(micrograph_ctf.GetDefocus1(),micrograph_ctf.GetDefocus2()) * micrograph_ctf.GetWavelength() / highest_resolution_to_use * pixel_size));
-	minimum_box_size_for_object_with_psf = std::max(4,minimum_box_size_for_object_with_psf);
+	minimum_box_size_for_object_with_psf = myroundint(2.2 * (float(maximum_radius_in_pixels) + myroundint(std::max(micrograph_ctf.GetDefocus1(),micrograph_ctf.GetDefocus2()) * micrograph_ctf.GetWavelength() / highest_resolution_to_use * pixel_size)));
+	if (IsOdd(minimum_box_size_for_object_with_psf)) minimum_box_size_for_object_with_psf++;
+	minimum_box_size_for_object_with_psf = std::max(4,minimum_box_size_for_object_with_psf); //May2021
 	minimum_box_size_for_picking = minimum_box_size_for_object_with_psf;
 
 	const int minimum_box_size_for_picking_unbinned = int(float(minimum_box_size_for_picking)*pixel_size/original_micrograph_pixel_size)+1;
@@ -1297,7 +1280,6 @@ void ParticleFinder::OpenTemplatesAndUpdateDimensions()
 		if (pixel_size_mistmatch_due_to_rescaling > 0.5)
 		{
 			wxPrintf("Warning: internal image resampling led to significant scaling mistmatch between micrograph and template, of %f %\n",pixel_size_mistmatch_due_to_rescaling);
-			MyDebugAssertTrue(false,"Problematic resampling");
 		}
 	}
 	else
@@ -1306,14 +1288,16 @@ void ParticleFinder::OpenTemplatesAndUpdateDimensions()
 	}
 }
 
-void ParticleFinder::UpdateMaximumRadiusInPixels()
+void ParticleFinder::UpdateExclusionRadiusInPixels()
 {
-	maximum_radius_in_pixels = maximum_radius_in_angstroms / pixel_size;
+	exclusion_radius_in_pixels = exclusion_radius_in_angstroms / pixel_size;
+	maximum_radius_in_pixels = std::max(template_radius_in_pixels,exclusion_radius_in_pixels);
 }
 
-void ParticleFinder::UpdateTypicalRadiusInPixels()
+void ParticleFinder::UpdateTemplateRadiusInPixels()
 {
-	typical_radius_in_pixels = typical_radius_in_angstroms / pixel_size;
+	template_radius_in_pixels = template_radius_in_angstroms / pixel_size;
+	maximum_radius_in_pixels = std::max(template_radius_in_pixels,exclusion_radius_in_pixels);
 }
 
 void ParticleFinder::UpdatePixelSizeFromMicrographDimensions()
@@ -1321,8 +1305,8 @@ void ParticleFinder::UpdatePixelSizeFromMicrographDimensions()
 	pixel_size = original_micrograph_pixel_size * micrograph_file.ReturnXSize() / new_micrograph_dimension_x;
 
 	// When the pixel size changes, these need to be updated
-	UpdateMaximumRadiusInPixels();
-	UpdateTypicalRadiusInPixels();
+	UpdateExclusionRadiusInPixels();
+	UpdateTemplateRadiusInPixels();
 }
 
 CTF ParticleFinder::ReturnMicrographCTFWithOriginalPixelSize()
@@ -1381,7 +1365,7 @@ void ParticleFinder::UpdateCTF()
 {
 	// Set up a CTF object
 	micrograph_ctf.Init(acceleration_voltage_in_keV,spherical_aberration_in_mm,amplitude_contrast,defocus_1_in_angstroms,defocus_2_in_angstroms,astigmatism_angle_in_degrees,pixel_size,additional_phase_shift_in_radians);
-
+	//micrograph_ctf.SetLowResolutionContrast(1.0f); //May 2021
 }
 
 
@@ -1464,6 +1448,7 @@ void ParticleFinder::PrepareTemplateForMatching(Image *template_image, Image &pr
 	prepared_image.BackwardFFT();
 	prepared_image.NormalizeFT();
 	prepared_image.AddConstant(-prepared_image.ReturnAverageOfRealValuesOnEdges());
+	//prepared_image.CosineMask(template_radius_in_pixels+3.0,5.0); // Added May 2021, not sure needed/helps
 	my_dist = prepared_image.ReturnDistributionOfRealValues();
 	prepared_image.DivideByConstant(sqrtf(my_dist.GetSampleSumOfSquares()));
 

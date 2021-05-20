@@ -35,7 +35,7 @@ void FindParticlesApp::DoInteractiveUserInput()
 	bool 		rotate_templates					=	false;
 	int			number_of_template_rotations		=	1;
 	bool 		average_templates_radially			=	false;
-	float 		typical_radius						=	25.0;
+	float 		template_radius						=	25.0;
 	if (already_have_templates)
 	{
 				templates_filename					=	my_input->GetFilenameFromUser("Input templates filename","Set of templates to use in the search. Must have same pixel size as the micrograph","templates.mrc",true);
@@ -55,9 +55,9 @@ void FindParticlesApp::DoInteractiveUserInput()
 	}
 	else
 	{
-		typical_radius								=	my_input->GetFloatFromUser("Typical radius of particles (in Angstroms)","An estimate of the typical or average radius of the particles to be found. This will be used to generate a featureless disc as a template.","25.0",0.0);
+		template_radius								=	my_input->GetFloatFromUser("Template radius (in Angstroms)","An estimate of the typical or average radius of the particles to be found. This will be used to generate a featureless disc as a template.","25.0",0.0);
 	}
-	float		maximum_radius						=	my_input->GetFloatFromUser("Maximum radius of the particle (in Angstroms)","The maximum radius of the templates, in angstroms","32.0",0.0);
+	float		exclusion_radius					=	my_input->GetFloatFromUser("In Angstroms.","Picked coordinates will be at least 2x this radius away from each other","32.0",0.0);
 	float		highest_resolution_to_use			=	my_input->GetFloatFromUser("Highest resolution to use for picking","In Angstroms. Data at higher resolutions will be ignored in the picking process","15.0",pixel_size * 2.0);
 	wxString	output_stack_filename				=	my_input->GetFilenameFromUser("Filename for output stack of candidate particles.","A stack of candidate particles will be written to disk","candidate_particles.mrc",false);
 	int			output_stack_box_size				=	my_input->GetIntFromUser("Box size for output candidate particle images (pixels)","In pixels. Give 0 to skip writing particle images to disk.","256",0);
@@ -90,8 +90,8 @@ void FindParticlesApp::DoInteractiveUserInput()
 																	templates_filename.ToStdString().c_str(),
 																	average_templates_radially,
 																	number_of_template_rotations,
-																	typical_radius,
-																	maximum_radius,
+																	template_radius,
+																	exclusion_radius,
 																	highest_resolution_to_use,
 																	output_stack_filename.ToStdString().c_str(),
 																	output_stack_box_size,
@@ -130,8 +130,8 @@ bool FindParticlesApp::DoCalculation()
 	wxString	templates_filename							= 	my_current_job.arguments[10].ReturnStringArgument();
 	bool		average_templates_radially					=	my_current_job.arguments[11].ReturnBoolArgument();
 	int			number_of_template_rotations				=	my_current_job.arguments[12].ReturnIntegerArgument();
-	float		typical_radius_in_angstroms					=	my_current_job.arguments[13].ReturnFloatArgument();
-	float		maximum_radius_in_angstroms					=	my_current_job.arguments[14].ReturnFloatArgument();
+	float		template_radius_in_angstroms				=	my_current_job.arguments[13].ReturnFloatArgument();
+	float		exclusion_radius_in_angstroms				=	my_current_job.arguments[14].ReturnFloatArgument();
 	float		highest_resolution_to_use					=	my_current_job.arguments[15].ReturnFloatArgument();
 	wxString	output_stack_filename						=	my_current_job.arguments[16].ReturnStringArgument();
 	int			output_stack_box_size						=	my_current_job.arguments[17].ReturnIntegerArgument();
@@ -160,8 +160,8 @@ bool FindParticlesApp::DoCalculation()
 			                                templates_filename,
 			                                average_templates_radially,
 			                                number_of_template_rotations,
-			                                typical_radius_in_angstroms,
-			                                maximum_radius_in_angstroms,
+			                                template_radius_in_angstroms,
+			                                exclusion_radius_in_angstroms,
 			                                highest_resolution_to_use,
 			                                output_stack_filename,
 			                                output_stack_box_size,

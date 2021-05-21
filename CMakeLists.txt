@@ -22,8 +22,12 @@ set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -DDEBUG -O0")
 # Experimental build option
 option(BUILD_EXPERIMENTAL_FEATURES "Build experimental parts of cisTEM" OFF)
 if (BUILD_EXPERIMENTAL_FEATURES)
+    message("Building with experimental features")
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DEXPERIMENTAL")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DEXPERIMENTAL")
+else()
+    message("Not building with experimental features")
+
 endif(BUILD_EXPERIMENTAL_FEATURES)
 
 # OpenMP build option

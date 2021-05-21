@@ -1,0 +1,21 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "tasks": [
+        {
+            "label": "echo",
+            "type": "shell",
+            "command": "echo Hello"
+
+        }
+
+        {
+            "label": "Configure g++ cuda experimental",
+            "type": "shell",
+            "command": "CC=gcc CXX=g++ ${workspaceFolder}/configure  --bindir=${workspaceFolder}/build --enable-staticmode --with-cuda=/admin/software/cuda-11.1 --enable-openmp --enable-experimental --with-wx-config=/admin/software/wxWidgets3_static_GNU/bin/wx-config"    
+    
+        }
+
+    ]
+}

@@ -1,3 +1,7 @@
+#ifndef CORE_HEADERS_H
+#define CORE_HEADERS_H
+
+
 typedef struct Peak {
   float x;
   float y;
@@ -209,3 +213,6 @@ protected:
 #endif
 
 extern RandomNumberGenerator global_random_number_generator;
+
+#endif // CORE_HEADERS_H 
+

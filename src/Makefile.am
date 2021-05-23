@@ -219,6 +219,10 @@ noinst_HEADERS += 	gui/MatchTemplatePanel.h \
 					core/water.h 
 					
 endif      
+if ENABLESAMPLES_AM
+noinst_HEADERS +=  programs/samples/samples_functional_testing.hpp \
+                   programs/samples/classes/TestResult.hpp
+endif
 	
 noinst_LIBRARIES = libcore.a libguicore.a
 
@@ -227,6 +231,10 @@ bin_PROGRAMS = unblur cisTEM_job_control console_test applyctf reconstruct3d mer
 if EXPERIMENTAL_AM   
 bin_PROGRAMS += match_template refine_template make_template_result simulate sum_all_power_spectra
 endif
+
+if ENABLESAMPLES_AM
+bin_PROGRAMS +=  samples_functional_testing
+endif 
 
 if ENABLEGPU_AM
 bin_PROGRAMS += gpu_util_test gpu_devices
@@ -653,6 +661,17 @@ convert_eer_to_mrc_SOURCES = programs/convert_eer_to_mrc/convert_eer_to_mrc.cpp
 convert_eer_to_mrc_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 convert_eer_to_mrc_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 convert_eer_to_mrc_LDADD = libcore.a $(WX_LIBS_BASE)
+
+if ENABLESAMPLES_AM
+samples_functional_testing_SOURCES = programs/samples/samples_functional_testing.cpp programs/samples/classes/TestResult.cpp
+samples_functional_testing_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+samples_functional_testing_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+if ENABLEGPU_AM 
+samples_functional_testing_LDADD = libgpucore.a libcore.a $(WX_LIBS_BASE) $(CUDA_LIBS)
+else
+samples_functional_testing_LDADD = libcore.a $(WX_LIBS_BASE)
+endif
+endif 
 
 if EXPERIMENTAL_AM
 match_template_SOURCES = programs/match_template/match_template.cpp

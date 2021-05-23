@@ -1,6 +1,6 @@
 {
     "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
-    "C_Cpp.errorSquiggles": "Enabled",
+    "C_Cpp.errorSquiggles": "Disabled",
     "cmake.configureOnOpen": false,
     "cmake.sourceDirectory": "${workspaceFolder}",
     "cmake.buildDirectory": "${workspaceFolder}/build/${buildKit}/${buildType}",
@@ -27,4 +27,5 @@
         "filesystem": "cpp"
     },
     "DockerRun.DisableDockerrc": true,
+    "C_Cpp.intelliSenseEngineFallback": "Enabled",
 }

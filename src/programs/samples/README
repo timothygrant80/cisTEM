@@ -1,0 +1,16 @@
+Individual recipes for image processing using the tools available in cisTEM are provided in the sub-directories, modelled after the samples in the CUDA toolkit.
+
+Initially, there is no provisioning for compilation of these individual programs, instead, they will all be compiled into samples_functional_testing.cpp
+
+0_Simple
+  * Goal is to illustrate how applications are built in cisTEM
+
+1_Utilities
+  * Illustrate tools built in useful for programming in cisTEM, such as timers, debug asserts, etc.
+
+2_Imaging
+  * Small programs to isolate common image procesing tasks
+  * Each example will cover the cpu (.cpp) and gpu (.cu) implementation
+
+3_SpecializedFFTRoutines
+

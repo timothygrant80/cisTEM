@@ -250,12 +250,15 @@ else
 fi
 
 if test "x$is_cuda_ge_11" -eq "1" ; then
-  AC_MSG_NOTICE([CUDA >= 11.0, enabling --extra-device-vectorization])
-  NVCCFLAGS+=" --extra-device-vectorization"
+  AC_MSG_NOTICE([CUDA >= 11.0, enabling --extra-device-vectorization and std=c++17])
+  NVCCFLAGS+=" --extra-device-vectorization -std=c++17"
+else
+  AC_MSG_NOTICE([CUDA < 11.0, enabling std=c++14])
+  NVCCFLAGS+=" -std=c++14"
 fi
   
 #--extra-device-vectorization
-NVCCFLAGS+=" --default-stream per-thread -m64 -O3 --use_fast_math  -Xptxas --warn-on-local-memory-usage,--warn-on-spills, --generate-line-info -std=c++17 -Xcompiler= -DGPU -DSTDC_HEADERS=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_MEMORY_H=1 -DHAVE_STRINGS_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_UNISTD_H=1 -DHAVE_DLFCN_H=1"
+NVCCFLAGS+=" --default-stream per-thread -m64 -O3 --use_fast_math  -Xptxas --warn-on-local-memory-usage,--warn-on-spills, --generate-line-info -Xcompiler= -DGPU -DSTDC_HEADERS=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_MEMORY_H=1 -DHAVE_STRINGS_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_UNISTD_H=1 -DHAVE_DLFCN_H=1"
 
 AC_ARG_ENABLE(gpu-cache-hints, AS_HELP_STRING([--disable-gpu-cache-hints],[Do not use the intrinsics for cache hints]),[
   if test "$enableval" = no; then

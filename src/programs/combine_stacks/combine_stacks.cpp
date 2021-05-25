@@ -11,7 +11,6 @@ CombineStack : public MyApp
     void DoInteractiveUserInput();
 	bool DoCalculation();
 	
-
 	private:
 };
 
@@ -21,13 +20,10 @@ IMPLEMENT_APP(CombineStack)
 
 void CombineStack::DoInteractiveUserInput()
 {
-
 	UserInput *my_input = new UserInput("CombineStack", 1.0);
 
     std::string input_star_file	=		my_input->GetFilenameFromUser("Input Star File", "required star file", "starFile.star", true);  
-
 	std::string output_filename	=		my_input->GetFilenameFromUser("Output image file name", "the combined result", "output.mrc", false );
-
 
 	delete my_input;
 
@@ -51,31 +47,14 @@ bool CombineStack::DoCalculation()
 
 	if (input_star_file_reader.ReadFile(input_star_file, &star_error_text) == false)
 	{
-        //print error 
-		exit(-1);
+        //print error
+		SendErrorAndCrash(star_error_text);
 	}
-    
-    //loop over the members of the star file 
 
     int sumOfStacks = 0;
     int stack_x_size = 0;
     int stack_y_size = 0;
     int stack_number_of_images = 0;
-    // int numMRC = 0; 
-
-    // for (int i = 0; i < numMRC; i++) {
-       
-    //     bool stack_is_ok = GetMRCDetails(, stack_x_size, stack_y_size, stack_number_of_images);     
-
-	//     if (stack_is_ok == false)
-	//     {
-    //         //print statement 
-    //         MyPrintfRed("\n Error\n");
-    //         exit(-1);
-	//     }
-    //     sumOfStacks += stack_number_of_images;
-    //     stack_number_of_images = 0;
-    // }
     
     //start looping over star file 
     std::string delim1 = "@";
@@ -84,31 +63,26 @@ bool CombineStack::DoCalculation()
 
     for (int particle_counter = 0; particle_counter < numLines; particle_counter++) {
         
-
-        std::string cur_mrc_name = std::string((input_star_file_reader.ReturnImageName(particle_counter)).mb_str());
+        std::string current_mrc_name = std::string((input_star_file_reader.ReturnImageName(particle_counter)).mb_str());
 
         //parse image name 
-        std::string slice = cur_mrc_name.substr(0, cur_mrc_name.find(delim1));
-        cur_mrc_name.erase(0, cur_mrc_name.find(delim1) + delim1.length());
-        std::string cur_image_name = cur_mrc_name.substr(0, cur_mrc_name.length());
-        //MyPrintfRed("\n cur_image_name %s\n", cur_image_name);
+        std::string slice = current_mrc_name.substr(0, current_mrc_name.find(delim1));
+        current_mrc_name.erase(0, current_mrc_name.find(delim1) + delim1.length());
+        std::string current_image_name = current_mrc_name.substr(0, current_mrc_name.length());
 
         //open relavent file, add relavent slice to the file
-        ImageFile cur_input_file(cur_image_name,false);
-        Image cur_image;
-	    input_pixel_size = cur_input_file.ReturnPixelSize();
+        ImageFile current_input_file(current_image_name,false);
+        Image current_image;
+	    input_pixel_size = current_input_file.ReturnPixelSize();
         input_pixel_size_set = 1;
 
         //slice to string 
         long slice_num = std::stol(slice, nullptr);
-        cur_image.ReadSlice(&cur_input_file, slice_num);
+        current_image.ReadSlice(&current_input_file, slice_num);
         num_slices += 1;
-		cur_image.WriteSlice(&output_file, num_slices);
-
-
+		current_image.WriteSlice(&output_file, num_slices);
     }
     
-
     output_file.SetPixelSize(input_pixel_size);
 	output_file.WriteHeader();
 	

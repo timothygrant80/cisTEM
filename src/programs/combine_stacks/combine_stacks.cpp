@@ -63,7 +63,7 @@ bool CombineStack::DoCalculation()
 
     for (int particle_counter = 0; particle_counter < numLines; particle_counter++) {
         
-        std::string current_mrc_name = std::string((input_star_file_reader.ReturnImageName(particle_counter)).mb_str());
+        std::string current_mrc_name = std::string((input_star_file_reader.ReturnImageName(particle_counter)).ToStdString());
 
         //parse image name 
         std::string slice = current_mrc_name.substr(0, current_mrc_name.find(delim1));

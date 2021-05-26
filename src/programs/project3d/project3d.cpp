@@ -162,9 +162,9 @@ bool Project3DApp::DoCalculation()
 		
 		global_euler_search.InitGrid(my_symmetry, angular_step, 0.0f, 0.0f, 360, 180, 180, pixel_size / 8, parameter_map, 20);
 		
-		// Then, if the symmetry is C1, we set the theta max to 180 and recalculate the grid search positions.
+		// Then, if the symmetry is C, we set the theta max to 180 and recalculate the grid search positions.
 		
-		if (my_symmetry.StartsWith("C1"))
+		if (my_symmetry.StartsWith("C"))
 		{
 			if (global_euler_search.test_mirror == true) // otherwise the theta max is set to 90.0 and test_mirror is set to true.  However, I don't want to have to test the mirrors.
 			{

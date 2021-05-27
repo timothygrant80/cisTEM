@@ -27,4 +27,6 @@
         "filesystem": "cpp"
     },
     "DockerRun.DisableDockerrc": true,
+    "html.format.endWithNewline": true
 }
+

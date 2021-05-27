@@ -222,10 +222,10 @@ endif
 	
 noinst_LIBRARIES = libcore.a libguicore.a
 
-bin_PROGRAMS = unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan make_orth_views sharpen_map calculate_fsc make_size_map prepare_stack prepare_stack_classaverage align_symmetry subtract_from_stack binarize  move_volume_xyz  symmetry_expand_stack_and_par fft local_resolution local_resolution_finalize local_resolution_filter subtract_two_stacks add_two_stacks multiply_two_stacks divide_two_stacks invert_stack convert_par_to_star align_coordinates find_dqe combine_via_max refine_ctf estimate_beamtilt remove_relion_stripes warp_to_cistem create_mask invert_hand niko_test append_stacks cisTEM convert_star_to_binary convert_binary_to_star convert_eer_to_mrc azimuthal_average combine_relion_stacks
+bin_PROGRAMS = unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan make_orth_views sharpen_map calculate_fsc make_size_map prepare_stack prepare_stack_classaverage align_symmetry subtract_from_stack binarize  move_volume_xyz  symmetry_expand_stack_and_par fft local_resolution local_resolution_finalize local_resolution_filter subtract_two_stacks add_two_stacks multiply_two_stacks divide_two_stacks invert_stack convert_par_to_star align_coordinates find_dqe combine_via_max refine_ctf estimate_beamtilt remove_relion_stripes warp_to_cistem create_mask invert_hand niko_test append_stacks cisTEM convert_star_to_binary convert_binary_to_star convert_eer_to_mrc azimuthal_average normalize_stack print_stack_statistics combine_stacks_by_star
 
 if EXPERIMENTAL_AM   
-bin_PROGRAMS += match_template refine_template make_template_result simulate sum_all_power_spectra
+bin_PROGRAMS += match_template refine_template make_template_result make_particle_stack simulate sum_all_power_spectra
 endif
 
 if ENABLEGPU_AM
@@ -654,15 +654,31 @@ convert_eer_to_mrc_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 convert_eer_to_mrc_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 convert_eer_to_mrc_LDADD = libcore.a $(WX_LIBS_BASE)
 
-combine_relion_stacks_SOURCES = programs/combine_relion_stacks/combine_relion_stacks.cpp
-combine_relion_stacks_CXXFLAGS = $(WX_CPPFLAGS_BASE)
-combine_relion_stacks_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-combine_relion_stacks_LDADD = libcore.a $(WX_LIBS_BASE)
+normalize_stack_SOURCES = programs/normalize_stack/normalize_stack.cpp
+normalize_stack_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+normalize_stack_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+normalize_stack_LDADD = libcore.a $(WX_LIBS_BASE)
+
+print_stack_statistics_SOURCES = programs/print_stack_statistics/print_stack_statistics.cpp
+print_stack_statistics_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+print_stack_statistics_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+print_stack_statistics_LDADD = libcore.a $(WX_LIBS_BASE)
+
+combine_stacks_by_star_SOURCES = programs/combine_stacks_by_star/combine_stacks_by_star.cpp
+combine_stacks_by_star_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+combine_stacks_by_star_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+combine_stacks_by_star_LDADD = libcore.a $(WX_LIBS_BASE)
 
 if EXPERIMENTAL_AM
 match_template_SOURCES = programs/match_template/match_template.cpp
 match_template_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 match_template_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+
+
+make_particle_stack_SOURCES = programs/make_particle_stack/make_particle_stack.cpp
+make_particle_stack_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+make_particle_stack_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+make_particle_stack_LDADD = libcore.a $(WX_LIBS_BASE)
 
 if ENABLEGPU_AM 
 match_template_LDADD = libgpucore.a libcore.a $(WX_LIBS_BASE) $(CUDA_LIBS)

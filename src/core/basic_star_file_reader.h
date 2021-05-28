@@ -15,6 +15,7 @@ public :
 	float defocus_angle;
 	float phase_shift;
 	wxString micrograph_name;
+	wxString image_name;
 	int random_subset;
 
 	StarFileParameters();
@@ -39,6 +40,7 @@ class BasicStarFileReader {
 	int defocus_angle_column;
 	int phase_shift_column;
 	int micrograph_name_column;
+	int image_name_column; 
 	int random_subset_column;
 
 public:
@@ -79,5 +81,6 @@ public:
 	inline float ReturnPhaseShift(int line_number) { return cached_parameters[line_number].phase_shift;}
 	inline float ReturnAssignedSubset(int line_number) { return cached_parameters[line_number].random_subset;}
 	inline wxString ReturnMicrographName(int line_number) { return cached_parameters[line_number].micrograph_name;}
-
+	inline wxString ReturnImageName(int line_number) { return cached_parameters[line_number].image_name;}
+	inline int returnNumLines() {return cached_parameters.GetCount(); }
 };

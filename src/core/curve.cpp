@@ -864,11 +864,6 @@ int Curve::ReturnIndexOfNearestPreviousBin(float wanted_x)
 		return number_of_points - 1;
 	}
 
-	// wxPrintf("wanted_x: %f\n", wanted_x);
-	// wxPrintf("number of points: %d\n", number_of_points);
-	// wxPrintf("index: %d\n", index_of_last_point_used);
-	// PrintToStandardOut();
-
 	// Should never get here
 	MyDebugAssertTrue(false,"Oops, programming error\n");
 	return 0;

@@ -836,6 +836,7 @@ int Curve::ReturnIndexOfNearestPreviousBin(float wanted_x)
 	MyDebugAssertTrue(number_of_points > 0, "No points in curve");
 	MyDebugAssertTrue(wanted_x >= data_x[0]  - (data_x[number_of_points-1]-data_x[0])*0.01 && wanted_x <= data_x[number_of_points-1]  + (data_x[number_of_points-1]-data_x[0])*0.01, "Wanted X (%f) falls outside of range (%f to %f)\n",wanted_x, data_x[0],data_x[number_of_points-1]);
 
+	
 	for (int counter = index_of_last_point_used; counter < number_of_points - 1; counter++)
 	{
 		if (wanted_x >=data_x[counter] && wanted_x < data_x[counter+1])
@@ -863,6 +864,7 @@ int Curve::ReturnIndexOfNearestPreviousBin(float wanted_x)
 		index_of_last_point_used = number_of_points - 1;
 		return number_of_points - 1;
 	}
+	
 
 	// Should never get here
 	MyDebugAssertTrue(false,"Oops, programming error\n");

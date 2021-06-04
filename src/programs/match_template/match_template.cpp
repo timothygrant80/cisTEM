@@ -688,7 +688,7 @@ bool MatchTemplateApp::DoCalculation()
 
 	global_euler_search.InitGrid(my_symmetry, angular_step, 0.0f, 0.0f, psi_max, psi_step, psi_start, pixel_size / high_resolution_limit_search, parameter_map, best_parameters_to_keep);
 //	wxPrintf("%s",my_symmetry);
-	if (my_symmetry.StartsWith("C1")) // TODO 2x check me - w/o this O symm at least is broken
+	if (my_symmetry.StartsWith("C")) // TODO 2x check me - w/o this O symm at least is broken
 	{
 		if (global_euler_search.test_mirror == true) // otherwise the theta max is set to 90.0 and test_mirror is set to true.  However, I don't want to have to test the mirrors.
 		{

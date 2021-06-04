@@ -707,6 +707,9 @@ bool Reconstruct3DApp::DoCalculation()
 		current_ctf_image, current_beamtilt_image, unmasked_image, ssq_X, psi, rotation_angle, rotation_cache)
 	{ // for omp
 
+	Curve noise_power_spectrum_local; 
+	noise_power_spectrum_local = noise_power_spectrum;
+
 	input_image_local.Allocate(input_stack.ReturnXSize(), input_stack.ReturnYSize(), true);
 	projection_image.Allocate(original_box_size, original_box_size, false);
 	temp3_image_local.Allocate(original_box_size, original_box_size, false);
@@ -859,7 +862,7 @@ bool Reconstruct3DApp::DoCalculation()
 			if (normalize_particles)
 			{
 				temp_image_local.ForwardFFT();
-				temp_image_local.ApplyCurveFilter(&noise_power_spectrum);
+				temp_image_local.ApplyCurveFilter(&noise_power_spectrum_local);
 				if (use_input_reconstruction)
 				{
 					temp_image_local.PhaseShift(- input_parameters.x_shift / original_pixel_size, - input_parameters.y_shift / original_pixel_size);
@@ -1017,7 +1020,7 @@ bool Reconstruct3DApp::DoCalculation()
 				if (normalize_particles)
 				{
 					temp_image_local.ForwardFFT();
-					temp_image_local.ApplyCurveFilter(&noise_power_spectrum);
+					temp_image_local.ApplyCurveFilter(&noise_power_spectrum_local);
 					if (use_input_reconstruction)
 					{
 						temp_image_local.PhaseShift(- input_parameters.x_shift / original_pixel_size, - input_parameters.y_shift / original_pixel_size);
@@ -1104,7 +1107,8 @@ bool Reconstruct3DApp::DoCalculation()
 				if (normalize_particles)
 				{
 					input_particle.ForwardFFT();
-					input_particle.particle_image->ApplyCurveFilter(&noise_power_spectrum);
+					input_particle.particle_image->ApplyCurveFilter(&noise_power_spectrum_local);
+
 					if (use_input_reconstruction)
 					{
 						input_particle.particle_image->PhaseShift(- input_parameters.x_shift / original_pixel_size, - input_parameters.y_shift / original_pixel_size);

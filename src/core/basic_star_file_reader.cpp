@@ -43,6 +43,7 @@ BasicStarFileReader::BasicStarFileReader()
 	defocus_angle_column = -1;
 	phase_shift_column = -1;
 	micrograph_name_column = -1;
+	image_name_column = -1; 
 	random_subset_column = -1;
 }
 
@@ -271,6 +272,11 @@ bool BasicStarFileReader::ExtractParametersFromLine(wxString &wanted_line, wxStr
 	if (micrograph_name_column == -1) temp_parameters.micrograph_name = "";
 	else temp_parameters.micrograph_name = all_tokens[micrograph_name_column];
 
+	// Image Name
+
+	if (image_name_column == -1) temp_parameters.image_name = "";
+	else temp_parameters.image_name = all_tokens[image_name_column];
+
 
 	cached_parameters.Add(temp_parameters);
 
@@ -395,6 +401,7 @@ bool BasicStarFileReader::ReadFile(wxString wanted_filename, wxString *error_str
 		if (current_line.StartsWith("_rlnMicrographName") == true) micrograph_name_column = current_column;
 		else
 		if (current_line.StartsWith("_rlnRandomSubset") == true) random_subset_column = current_column;
+		else if (current_line.StartsWith("_rlnImageName") == true) image_name_column = current_column;
 		
 	    current_column++;
 	}

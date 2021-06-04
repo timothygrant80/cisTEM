@@ -1177,7 +1177,7 @@ void ClassificationManager::RunRefinementJobPostStarFileWrite(wxString input_sta
  */
 void ClassificationManager::RemoveFilesFromScratch()
 {
-	int number_of_refinement_jobs = active_run_profile.ReturnTotalJobs() - 1;
+	int number_of_refinement_jobs = active_run_profile.ReturnTotalJobs();
 	wxString dump_file;
 	for (int job_counter = 0; job_counter < number_of_refinement_jobs; job_counter++)
 	{
@@ -1219,7 +1219,7 @@ void ClassificationManager::RunMerge2dJob()
 {
 
 	long number_of_particles = output_classification->number_of_particles;
-	int number_of_refinement_jobs = std::min(my_parent->current_job_package.my_profile.ReturnTotalJobs() - 1,number_of_particles-1);
+	int number_of_refinement_jobs = std::min(my_parent->current_job_package.my_profile.ReturnTotalJobs(),number_of_particles);
 
 	running_job_type = MERGE;
 

@@ -28,6 +28,17 @@ CPPFLAGS="$INPUT_CPPFLAGS"
 # set up initial flags
 AC_MSG_NOTICE([Setting up initial flags])
 
+#
+# Check CUDA at the top, b/c it needs at least c++14 so we are now using c++17, let cpu only builds stay on c++11 until other devs are okay with modernizing.
+#
+want_cuda="no"
+AX_CUDA 
+if test "$want_cuda" = "yes" ; then
+  CPP_STANDARD=17
+else
+  CPP_STANDARD=11
+fi
+
 
 # check to see if compiler warnings are desired.
 
@@ -55,10 +66,10 @@ AC_ARG_ENABLE([disable-warnings], AS_HELP_STRING([--disable compiler warnings], 
 
 
 if test "x$CXX" = "xicpc"; then		
-	CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -no-prec-sqrt $WARNINGS_ON -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++11 -wd1125"
+	CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -no-prec-sqrt $WARNINGS_ON -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++${CPP_STANDARD} -wd1125"
 	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -no-prec-sqrt $WARNINGS_ON -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
 else
-	CXXFLAGS="$CXXFLAGS -DNDEBUG -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++11"		
+	CXXFLAGS="$CXXFLAGS -DNDEBUG -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++${CPP_STANDARD}"		
 	CPPFLAGS="$CPPFLAGS -DNDEBUG -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
 
 	#sqlite needs dl on gcc
@@ -155,11 +166,11 @@ AC_ARG_ENABLE(debugmode, AS_HELP_STRING([--enable-debugmode],[Compile in debug m
 [
   if test "$enableval" = yes; then
   if test "x$CXX" = "xicpc"; then   
-    CXXFLAGS="-O2 -debug -no-prec-div -no-prec-sqrt $WARNINGS_ON -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG -std=c++11 -wd1125"
+    CXXFLAGS="-O2 -debug -no-prec-div -no-prec-sqrt $WARNINGS_ON -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG -std=c++${CPP_STANDARD} -wd1125"
     CPPFLAGS="-O2 -debug -no-prec-div -no-prec-sqrt $WARNINGS_ON -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG"
   else
     CPPFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG $WARNINGS_ON $INPUT_CPPFLAGS"
-    CXXFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG -std=c++11 $WARNINGS_ON $INPUT_CXXFLAGS"
+    CXXFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG -std=c++${CPP_STANDARD} $WARNINGS_ON $INPUT_CXXFLAGS"
   fi
   fi
  ])
@@ -168,9 +179,7 @@ AC_ARG_ENABLE(debugmode, AS_HELP_STRING([--enable-debugmode],[Compile in debug m
 ###############################
 # BEGIN CUDA CHECKS AND SETS
 ###############################
-want_cuda="no"
 
-AX_CUDA  
   	
 if test "$want_cuda" = "yes" ; then
 

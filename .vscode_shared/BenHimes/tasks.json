@@ -1,0 +1,55 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "options": {
+        "env": {
+            "cuda_dir": "/admin/software/cuda-11.1",
+            "wx_dir":"/admin/software/wxWidgets3_static_INTEL/bin/wx-config",
+            "build_dir": "${workspaceFolder}/build",
+            "compile_cores": "56"
+        }
+    },
+    "tasks": [
+        {
+            "label": "echo",
+            "type": "shell",
+            "command": "echo --with-wx-config=${wx_dir}"
+
+        }, 
+
+        {
+            "label": "CONFIG intel,gpu,debug",
+            "type": "shell",
+            "command": "mkdir -p ${build_dir}/Intel-gpu-debug && cd ${build_dir}/Intel-gpu-debug && CC=icc CXX=icpc ../../configure  --enable-debugmode --enable-experimental --with-cuda=${cuda_dir} --enable-staticmode --enable-openmp  --with-wx-config=${wx_dir}"
+        },
+        {
+            "label": "BUILD intel,gpu,debug",
+            "type": "shell",
+            "command": "cd ${build_dir}/Intel-gpu-debug && make -j${compile_cores}"
+        },
+
+        {
+            "label": "CONFIG intel,gpu",
+            "type": "shell",
+            "command": "mkdir -p ${build_dir}/Intel-gpu && cd ${build_dir}/Intel-gpu && CC=icc CXX=icpc ../../configure  --enable-experimental --with-cuda=${cuda_dir} --enable-staticmode --enable-openmp  --with-wx-config=${wx_dir}"
+        },
+        {
+            "label": "BUILD intel,gpu",
+            "type": "shell",
+            "command": "cd ${build_dir}/Intel-gpu && make -j${compile_cores}"
+        },
+        {
+            "label": "CONFIG intel,gpu,samples,debug",
+            "type": "shell",
+            "command": "mkdir -p ${build_dir}/Intel-gpu-samples-debug && cd ${build_dir}/Intel-gpu-samples-debug && CC=icc CXX=icpc ../../configure --enable-samples --enable-debugmode --enable-experimental --with-cuda=${cuda_dir} --enable-staticmode --enable-openmp  --with-wx-config=${wx_dir}"
+        },
+        {
+            "label": "BUILD intel,gpu,samples,debug",
+            "type": "shell",
+            "command": "cd ${build_dir}/Intel-gpu-samples-debug && make -j${compile_cores}"
+        }
+   
+
+    ]
+}

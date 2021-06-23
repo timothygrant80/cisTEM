@@ -68,7 +68,7 @@ void LocalResolutionEstimator::SetAllUserParameters(Image *wanted_input_volume_o
 
 void LocalResolutionEstimator::EstimateLocalResolution(Image *local_resolution_volume)
 {
-	MyDebugAssertTrue(input_volume_one->IsCubic(),"This method assumes the input volumes are cubic");
+	//MyDebugAssertTrue(input_volume_one->IsCubic(),"This method assumes the input volumes are cubic");
 	MyDebugAssertTrue(local_resolution_volume->HasSameDimensionsAs(input_volume_one),"Local res volume does not have expected dimensions");
 
 

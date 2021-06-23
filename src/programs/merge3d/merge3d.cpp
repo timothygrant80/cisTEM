@@ -439,7 +439,7 @@ bool Merge3DApp::DoCalculation()
 			if (number_of_top_pixels_to_use < 50) number_of_top_pixels_to_use = 50;
 
 			float highest_resolution = local_resolution_volume.ReturnAverageOfMinN(number_of_top_pixels_to_use);
-			float measured_resolution = resolution_statistics->ReturnEstimatedResolution(true);
+			float measured_resolution = resolution_statistics->ReturnEstimatedResolution(true); //arg measured global res 
 
 			float average_resolution = 0.0f;
 			long voxels_in_the_mask = 0;

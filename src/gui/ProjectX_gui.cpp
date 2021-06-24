@@ -8926,6 +8926,22 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 
 	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
 
+	m_staticText784 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Use Local Density Weighting?"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText784->Wrap( -1 );
+	fgSizer1->Add( m_staticText784, 0, wxALL, 5 );
+
+	wxBoxSizer* bSizer569;
+	bSizer569 = new wxBoxSizer( wxHORIZONTAL );
+
+	LocalDensityYesRadioButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer569->Add( LocalDensityYesRadioButton, 0, wxALL, 5 );
+
+	LocalDensityNoRadioButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer569->Add( LocalDensityNoRadioButton, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( bSizer569, 1, wxEXPAND, 5 );
+
 	NoMovieFramesStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Low-Resolution Limit (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	NoMovieFramesStaticText->Wrap( -1 );
 	fgSizer1->Add( NoMovieFramesStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );

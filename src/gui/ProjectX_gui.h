@@ -2250,6 +2250,9 @@ class AutoRefine3DPanelParent : public JobPanel
 		wxBoxSizer* InputSizer;
 		wxButton* ResetAllDefaultsButton;
 		wxStaticText* m_staticText202;
+		wxStaticText* m_staticText784;
+		wxRadioButton* LocalDensityYesRadioButton;
+		wxRadioButton* LocalDensityNoRadioButton;
 		wxStaticText* NoMovieFramesStaticText;
 		NumericTextCtrl* LowResolutionLimitTextCtrl;
 		wxStaticText* m_staticText196;

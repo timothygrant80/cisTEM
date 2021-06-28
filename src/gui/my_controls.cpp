@@ -1694,6 +1694,65 @@ ClassVolumeSelectPanel::~ClassVolumeSelectPanel()
 {
 }
 
+//generatemaskheads WTW
+
+wxThread::ExitCode GenerateMaskThread::Entry() 
+{
+
+	ImageFile half_map_1_imagefile(half_map_1.ToStdString());
+	ImageFile half_map_2_imagefile(half_map_2.ToStdString());
+	Image mask_image;
+	Image half_map_1_image; 
+	Image half_map_2_image;
+
+	int num_slices_half_map = half_map_1_imagefile.ReturnNumberOfSlices();
+	half_map_1_image.ReadSlices(&half_map_1_imagefile, 1, num_slices_half_map);
+	half_map_2_image.ReadSlices(&half_map_2_imagefile, 1, num_slices_half_map);
+
+	Image combined_images(half_map_1_image);
+	combined_images.AddImage(&half_map_2_image);
+	combined_images.DivideByConstant(2); 
+	mask_image.CopyFrom(&combined_images);
+	mask_image.ConvertToAutoMask(pixel_size, outer_mask_radius, pixel_size * 2.0f, 0.2f);
+	mask_image.WriteSlicesAndFillHeader(mask_image_name.ToStdString(), pixel_size);
+
+	//calculate first and last thread with data 
+	int first_slice_with_data;
+	int last_slice_with_data;
+	Image slice_image;
+
+	for (int counter = 1; counter <= mask_image.logical_z_dimension; counter++)
+	{
+		slice_image.AllocateAsPointingToSliceIn3D(&mask_image, counter);
+		if (slice_image.IsConstant() == false)
+		{
+			first_slice_with_data = counter;
+			break;
+		}
+	}
+
+	for (int counter = mask_image.logical_z_dimension; counter >= 1; counter--)
+	{
+		slice_image.AllocateAsPointingToSliceIn3D(&mask_image, counter);
+		if (slice_image.IsConstant() == false)
+		{
+			last_slice_with_data = counter;
+			break;
+		}
+	}
+
+	wxString payload_string = "";
+
+	// send finished event..
+
+	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_GENERATEMASKTHREAD_COMPLETED);
+	my_thread_event->SetInt(thread_id);
+	my_thread_event->SetString(payload_string);
+
+	wxQueueEvent(main_thread_pointer, my_thread_event);
+
+	return (wxThread::ExitCode)0;     // success
+}
 
 wxThread::ExitCode AutoMaskerThread::Entry()
 {

@@ -381,6 +381,9 @@ void AutoRefine3DPanel::SetDefaults()
 
 		InnerMaskRadiusTextCtrl->SetValue("0.00");
 
+		LocalDensityYesRadioButton->SetValue(false);
+		LocalDensityNoRadioButton->SetValue(true);
+
 		AutoCropYesRadioButton->SetValue(false);
 		AutoCropNoRadioButton->SetValue(true);
 
@@ -861,6 +864,18 @@ AutoRefinementManager::AutoRefinementManager()
 void AutoRefinementManager::SetParent(AutoRefine3DPanel *wanted_parent)
 {
 	my_parent = wanted_parent;
+}
+
+//should add generate res to be before the refinement cycle 
+//need to get half maps from selected thing and then pass finish product to refinement 
+
+void AutoRefinementManager::BeginLocalFiltering() 
+{
+	//WTW code 
+}
+
+void AutoRefinementManager::SetupLocalFilteringJob() 
+{
 }
 
 void AutoRefinementManager::BeginRefinementCycle()

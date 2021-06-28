@@ -54,7 +54,7 @@ void Generate_Local_Res_App::DoInteractiveUserInput()
 
     delete my_input;
 
-    my_current_job.ManualSetArguments("ttttiiffftfif", half_map_1.ToUTF8().data(), half_map_2.ToUTF8().data(), output_reconstruction.ToUTF8().data(), mask_image.ToUTF8().data(), first_slice, last_slice, inner_mask_radius, outer_mask_radius, molecular_mass_kDa, symmetry.ToUTF8().data(), pixel_size, number_of_threads, measured_global_resolution);
+    my_current_job.ManualSetArguments("ttttiiftfifff", half_map_1.ToUTF8().data(), half_map_2.ToUTF8().data(), output_reconstruction.ToUTF8().data(), mask_image.ToUTF8().data(), first_slice, last_slice, molecular_mass_kDa, symmetry.ToUTF8().data(), pixel_size, number_of_threads, measured_global_resolution, outer_mask_radius, inner_mask_radius);
 
 }
 
@@ -69,13 +69,15 @@ bool Generate_Local_Res_App::DoCalculation()
 	wxString mask_image_name 			= my_current_job.arguments[3].ReturnStringArgument();
     int first_slice			    		= my_current_job.arguments[4].ReturnIntegerArgument();
 	int last_slice			    		= my_current_job.arguments[5].ReturnIntegerArgument();
-    float inner_mask_radius     		= my_current_job.arguments[6].ReturnFloatArgument();
-    float outer_mask_radius     		= my_current_job.arguments[7].ReturnFloatArgument();
-    float molecular_mass_kDa    		= my_current_job.arguments[8].ReturnFloatArgument();
-    wxString symmetry           		= my_current_job.arguments[9].ReturnStringArgument();
-	float original_pixel_size			= my_current_job.arguments[10].ReturnFloatArgument();
-	int	 num_threads					= my_current_job.arguments[11].ReturnIntegerArgument();
-	float measured_global_resolution 	= my_current_job.arguments[12].ReturnFloatArgument();
+    float molecular_mass_kDa    		= my_current_job.arguments[6].ReturnFloatArgument();
+    wxString symmetry           		= my_current_job.arguments[7].ReturnStringArgument();
+	float original_pixel_size			= my_current_job.arguments[8].ReturnFloatArgument();
+	int	 num_threads					= my_current_job.arguments[9].ReturnIntegerArgument();
+	float measured_global_resolution 	= my_current_job.arguments[10].ReturnFloatArgument();
+	float outer_mask_radius     		= my_current_job.arguments[11].ReturnFloatArgument();
+	float inner_mask_radius     		= my_current_job.arguments[12].ReturnFloatArgument();
+
+	if (is_running_locally == false) num_threads = number_of_threads_requested_on_command_line; 
 
 	int max_width = ceil(18 / original_pixel_size);
 	int num_slices = 0;
@@ -157,7 +159,7 @@ bool Generate_Local_Res_App::DoCalculation()
 
 	// Image mask_image;
 	// mask_image.CopyFrom(&combined_images);
-	float original_average_value = mask_image.ReturnAverageOfRealValues(outer_mask_radius / original_pixel_size, true);
+	//float original_average_value = mask_image.ReturnAverageOfRealValues(outer_mask_radius / original_pixel_size, true);
 	// mask_image.ConvertToAutoMask(original_pixel_size, outer_mask_radius, original_pixel_size * 2.0f, 0.2f);
 
 	int first_slice_with_data;

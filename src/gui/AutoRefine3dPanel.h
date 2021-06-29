@@ -15,6 +15,11 @@ class AutoRefinementManager
 public:
 	AutoRefine3DPanel *my_parent;
 
+	bool use_local_filtering;
+
+	long first_slice_with_data;
+	long last_slice_with_data;
+
 	bool active_should_mask;
 	bool active_should_auto_mask;
 	wxString active_mask_filename;
@@ -81,12 +86,16 @@ public:
 
 	RunProfile active_refinement_run_profile;
 	RunProfile active_reconstruction_run_profile;
+	RunProfile local_filtering_run_profile; 
 
 
 	wxArrayString current_reference_filenames;
 	wxArrayLong current_reference_asset_ids;
 
 	void SetParent(AutoRefine3DPanel *wanted_parent);
+
+	void SetupLocalFilteringJob();
+	void RunLocalFilteringJob();
 
 	AutoRefinementManager();
 	void BeginRefinementCycle();
@@ -111,6 +120,8 @@ public:
 
 	void ProcessJobResult(JobResult *result_to_process);
 	void ProcessAllJobsFinished();
+
+	void OnGenerateMaskThreadComplete(wxString first_last_slice_with_data);
 
 	void OnMaskerThreadComplete();
 
@@ -196,6 +207,7 @@ class AutoRefine3DPanel : public AutoRefine3DPanelParent
 		void OnInputParametersComboBox( wxCommandEvent& event );
 
 		void OnMaskerThreadComplete(wxThreadEvent& my_event);
+		void OnGenerateMaskThreadComplete(wxThreadEvent& my_event); 
 		void OnOrthThreadComplete(ReturnProcessedImageEvent& my_event);
 };
 

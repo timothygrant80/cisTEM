@@ -60,6 +60,7 @@ AutoRefine3DPanelParent( parent )
 	Bind(wxEVT_AUTOMASKERTHREAD_COMPLETED, &AutoRefine3DPanel::OnMaskerThreadComplete, this);
 	Bind(wxEVT_MULTIPLY3DMASKTHREAD_COMPLETED, &AutoRefine3DPanel::OnMaskerThreadComplete, this);
 	Bind(RETURN_PROCESSED_IMAGE_EVT, &AutoRefine3DPanel::OnOrthThreadComplete, this);
+	Bind(wxEVT_GENERATEMASKTHREAD_COMPLETED, &AutoRefine3DPanel::OnGenerateMaskThreadComplete, this);
 
 	my_refinement_manager.SetParent(this);
 
@@ -871,11 +872,110 @@ void AutoRefinementManager::SetParent(AutoRefine3DPanel *wanted_parent)
 
 void AutoRefinementManager::BeginLocalFiltering() 
 {
-	//WTW code 
+	//WTW code idk what should go here 
+
+	//well okay so i should check this button before then calling local filtering? maybe no begin local filtering, check button
+	// in the before-this and then go straight to setuplocal? depends on purpose of begin
+
+	// maybe like checking the button? clearing scratch, and then calling setup? 
+	// i probably need a runlocalfilteringjob? idk what it does ish
 }
 
 void AutoRefinementManager::SetupLocalFilteringJob() 
 {
+	int number_of_threads = 1; 
+
+	int class_counter = 0; //to avoid file name conflicts? idk tbh 
+	int first_slice; //first and last slice with data? should be different for each thread? need for loop over jobs maybe? 
+	int last_slice;
+    float pixel_size 					= active_refinement_package->output_pixel_size; 
+    float inner_mask_radius 			= active_inner_mask_radius;
+    float outer_mask_radius 			= active_mask_radius;
+    float molecular_mass_kDa 			= active_refinement_package->estimated_particle_weight_in_kda;;
+    
+    wxString symmetry 					= active_refinement_package->symmetry;
+	float measured_global_resolution; //this def happens at the end? lmao 		
+
+	wxString output_reconstruction = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/local_filter_volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1); //just a name 
+	wxString half_map_1 = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map1.mrc", output_refinement->refinement_id, class_counter + 1);
+    wxString half_map_2 = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map2.mrc", output_refinement->refinement_id, class_counter + 1);
+	wxString mask_image_name = main_frame->ReturnAutoRefine3DScratchDirectory() + wxString::Format("mask_volume.mrc"); 
+
+	my_parent->active_mask_thread_id = my_parent->next_thread_id;
+	my_parent->next_thread_id++;
+
+	GenerateMaskThread *mask_thread = new GenerateMaskThread(my_parent, half_map_1, half_map_1, mask_image_name, pixel_size, outer_mask_radius, my_parent->active_mask_thread_id);
+
+	if ( mask_thread->Run() != wxTHREAD_NO_ERROR )
+	{
+		my_parent->WriteErrorText("Error: Cannot start masking thread, masking will not be performed");
+		delete mask_thread;
+	}
+	else
+	{	
+		//what does this line do? 
+		//current_reference_filenames = masked_filenames;
+		
+		return; // just return, we will startup again whent he mask thread finishes.
+	}
+
+	//need to get the first and last slice with dataaaaaa
+	
+
+
+	// int slices_with_data = last_slice_with_data - first_slice_with_data;
+	// float slices_per_thread = slices_with_data / float(num_threads);
+
+	for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++) {
+
+		for (int thread_counter = 0; thread_counter < number_of_threads; thread_counter++) {
+
+
+			my_parent->current_job_package.AddJob("ttttiiffftfif", 
+										half_map_1.ToUTF8().data(), 
+										half_map_2.ToUTF8().data(), 
+										output_reconstruction.ToUTF8().data(), 
+										mask_image_name.ToUTF8().data(), 
+										first_slice, 
+										last_slice, 
+										inner_mask_radius, 
+										outer_mask_radius, 
+										molecular_mass_kDa, 
+										symmetry.ToUTF8().data(), 
+										pixel_size, 	
+										number_of_threads, 
+										measured_global_resolution);
+		}
+
+		//relationship between class_counter and first slice last slice? 
+		//maybe instead could just divide slices with data by numthreads and calculate first slice last slice that way? 
+		//then would loop over numthreads --- actually num processses? is num processes class counter? 
+
+
+		
+	}
+}
+
+//WTW
+void AutoRefinementManager::RunLocalFilteringJob() {
+
+	running_job_type = LOCAL_FILTERING;
+
+	// start job..
+
+	// if (output_refinement->number_of_classes > 1) my_parent->WriteBlueText("Merging and Filtering Reconstructions...");
+	// else
+	// my_parent->WriteBlueText("Merging and Filtering Reconstruction...");
+
+	// current_job_id = main_frame->job_controller.AddJob(my_parent, active_reconstruction_run_profile.manager_command, active_reconstruction_run_profile.gui_address);
+	// my_parent->my_job_id = current_job_id;
+
+	if (current_job_id != -1)
+	{
+		my_parent->SetNumberConnectedTextToZeroAndStartTracking();
+	}
+
+	my_parent->ProgressBar->Pulse();
 }
 
 void AutoRefinementManager::BeginRefinementCycle()
@@ -907,12 +1007,10 @@ void AutoRefinementManager::BeginRefinementCycle()
 
 	reference_3d_contains_all_particles = false;
 
-
 	active_refinement_run_profile = run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()];
 	active_reconstruction_run_profile = run_profiles_panel->run_profile_manager.run_profiles[my_parent->ReconstructionRunProfileComboBox->GetSelection()];
 
 	active_auto_crop = my_parent->AutoCropYesRadioButton->GetValue();
-
 
 	int class_counter;
 	long particle_counter;
@@ -1143,9 +1241,6 @@ void AutoRefinementManager::RunRefinementJob()
 		my_parent->SetNumberConnectedTextToZeroAndStartTracking();
 	}
 
-
-
-
 	my_parent->ProgressBar->Pulse();
 }
 
@@ -1162,10 +1257,8 @@ void AutoRefinementManager::SetupMerge3dJob()
 
 	for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
 	{
-		//wxString output_reconstruction_1			= "/dev/null";
-		//wxString output_reconstruction_2			= "/dev/null";
-		wxString output_reconstruction_1		= main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_map1.mrc", output_refinement->refinement_id, class_counter + 1);
-		wxString output_reconstruction_2		= main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_map2.mrc", output_refinement->refinement_id, class_counter + 1);
+		wxString output_reconstruction_1		= main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map1.mrc", output_refinement->refinement_id, class_counter + 1);
+		wxString output_reconstruction_2		= main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map2.mrc", output_refinement->refinement_id, class_counter + 1);
 		wxString output_reconstruction_filtered		= main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
 
 		current_reference_filenames.Item(class_counter) = output_reconstruction_filtered;
@@ -2066,8 +2159,8 @@ void AutoRefinementManager::ProcessAllJobsFinished()
 			main_frame->current_project.database.AddReconstructionJob(current_reconstruction_id, active_refinement_package->asset_id, output_refinement->refinement_id, "", active_inner_mask_radius, active_mask_radius, current_resolution_limit_rec, current_score_weight_conversion, false, active_auto_crop, false, active_should_apply_blurring, active_smoothing_factor, class_counter + 1, long(temp_asset.asset_id));
 
 			temp_asset.asset_name = wxString::Format("Auto #%li (Rnd. %i) - Class #%i", current_output_refinement_id, number_of_rounds_run + 1, class_counter + 1);
-			temp_asset.half_map_1_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_map1.mrc", output_refinement->refinement_id, class_counter + 1);
-            temp_asset.half_map_2_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_map2.mrc", output_refinement->refinement_id, class_counter + 1);
+			temp_asset.half_map_1_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("volume_%i_%i_map1.mrc", output_refinement->refinement_id, class_counter + 1);
+            temp_asset.half_map_2_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%i_%i_map2.mrc", output_refinement->refinement_id, class_counter + 1);
 			temp_asset.filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
 
 			output_refinement->reference_volume_ids.Add(current_reference_asset_ids[class_counter]);
@@ -2436,6 +2529,18 @@ void AutoRefine3DPanel::OnMaskerThreadComplete(wxThreadEvent& my_event)
 	if (my_event.GetInt() == active_mask_thread_id) my_refinement_manager.OnMaskerThreadComplete();
 }
 
+//WTW is this right 
+void AutoRefine3DPanel::OnGenerateMaskThreadComplete(wxThreadEvent& my_event) 
+{
+	//idk what to do here 
+	//what is the autorefinement manager class? lmaoo
+	if (my_event.GetInt() == active_mask_thread_id) my_refinement_manager.OnGenerateMaskThreadComplete(my_event.GetString());
+}
+
+void AutoRefinementManager::OnGenerateMaskThreadComplete(wxString first_last_slice_with_data)
+{
+	//idk WTW probs wrong lmao 
+}
 
 void AutoRefinementManager::OnMaskerThreadComplete()
 {

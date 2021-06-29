@@ -86,8 +86,6 @@ public:
 
 	RunProfile active_refinement_run_profile;
 	RunProfile active_reconstruction_run_profile;
-	RunProfile local_filtering_run_profile; 
-
 
 	wxArrayString current_reference_filenames;
 	wxArrayLong current_reference_asset_ids;

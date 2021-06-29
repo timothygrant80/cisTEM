@@ -341,7 +341,6 @@ void AutoRefine3DPanel::OnInfoURL(wxTextUrlEvent& event)
 	 wxLaunchDefaultBrowser(my_style.GetURL());
 }
 
-
 void AutoRefine3DPanel::ResetAllDefaultsClick( wxCommandEvent& event )
 {
 	// TODO : should probably check that the user hasn't changed the defaults yet in the future
@@ -870,23 +869,90 @@ void AutoRefinementManager::SetParent(AutoRefine3DPanel *wanted_parent)
 //should add generate res to be before the refinement cycle 
 //need to get half maps from selected thing and then pass finish product to refinement 
 
-void AutoRefinementManager::BeginLocalFiltering() 
-{
-	//WTW code idk what should go here 
+	//WTW
 
 	//well okay so i should check this button before then calling local filtering? maybe no begin local filtering, check button
 	// in the before-this and then go straight to setuplocal? depends on purpose of begin
 
 	// maybe like checking the button? clearing scratch, and then calling setup? 
-	// i probably need a runlocalfilteringjob? idk what it does ish
-}
+	//do i need to change the value and such of the button or is that handeled automatically? 
 
 void AutoRefinementManager::SetupLocalFilteringJob() 
 {
+
+	// int found_class;
+	// long found_refinement_id;
+	// float inner_mask_radius;
+	// float outer_mask_radius;
+	// Refinement *refinement_that_created_3d = NULL;
+	// VolumeAsset *selected_volume = volume_asset_panel->ReturnAssetPointer(VolumeComboBox->GetSelection());
+	// if (selected_volume->reconstruction_job_id >= 0)
+	// {
+	// 	sqlite3_stmt *current_statement;
+	// 	main_frame->current_project.database.Prepare(wxString::Format("SELECT REFINEMENT_ID, CLASS_NUMBER, INNER_MASK_RADIUS, OUTER_MASK_RADIUS FROM RECONSTRUCTION_LIST WHERE RECONSTRUCTION_ID=%li", selected_volume->reconstruction_job_id), &current_statement);
+	// 	main_frame->current_project.database.Step(current_statement);
+	// 	found_refinement_id = sqlite3_column_int64(current_statement, 0);
+	// 	found_class = sqlite3_column_int(current_statement, 1);
+	// 	inner_mask_radius = sqlite3_column_double(current_statement, 2);
+	// 	outer_mask_radius = sqlite3_column_double(current_statement, 3);
+	// 	active_class = found_class - 1;
+	// 	main_frame->current_project.database.Finalize(current_statement);
+	// 	// what is the refinement id for this reconstruction_job
+	// 	long refinement_id = main_frame->current_project.database.ReturnRefinementIDGivenReconstructionID(selected_volume->reconstruction_job_id);
+	// 	ShortRefinementInfo *short_info = refinement_package_asset_panel->ReturnPointerToShortRefinementInfoByRefinementID(refinement_id);
+	// 	if (short_info != NULL)
+	// 	{
+	// 		if (short_info->reconstructed_volume_asset_ids[found_class - 1] == selected_volume->asset_id)
+	// 		{
+	// 			// this all checks out.. get the refinement
+	// 			if (active_refinement == NULL) active_refinement = main_frame->current_project.database.GetRefinementByID(refinement_id, false);
+	// 			else
+	// 			{
+	// 				if (active_refinement->refinement_id != refinement_id) // get the new one
+	// 				{
+	// 					delete active_refinement;
+	// 					active_refinement = main_frame->current_project.database.GetRefinementByID(refinement_id, false);
+	// 				}
+	// 			}
+	// 		}
+	// 		else // they don't match, so the 3D for this refinement must have been regenerated, and we have no details
+	// 		{
+	// 			if (active_refinement != NULL)
+	// 			{
+	// 				delete active_refinement;
+	// 				active_refinement = NULL;
+	// 			}
+	// 			inner_mask_radius = 0.0f;
+	// 			outer_mask_radius = selected_volume->pixel_size * float(selected_volume->x_size) * 0.5;
+	// 		}
+	// 	}
+	// 	else
+	// 	{
+	// 		if (active_refinement != NULL)
+	// 		{
+	// 			delete active_refinement;
+	// 			active_refinement = NULL;
+	// 		}
+	// 		inner_mask_radius = 0.0f;
+	// 		outer_mask_radius = selected_volume->pixel_size * float(selected_volume->x_size) * 0.5;
+	// 	}
+	// }
+	// else // we don't have the refinement
+	// {
+	// 	if (active_refinement != NULL)
+	// 	{
+	// 		delete active_refinement;
+	// 		active_refinement = NULL;
+	// 	}
+	// 	inner_mask_radius = 0.0f;
+	// 	outer_mask_radius = selected_volume->pixel_size * float(selected_volume->x_size) * 0.5;
+	// }
+
+	
 	int number_of_threads = 1; 
 
-	int class_counter = 0; //to avoid file name conflicts? idk tbh 
-	int first_slice; //first and last slice with data? should be different for each thread? need for loop over jobs maybe? 
+	int class_counter; 
+	int first_slice;
 	int last_slice;
     float pixel_size 					= active_refinement_package->output_pixel_size; 
     float inner_mask_radius 			= active_inner_mask_radius;
@@ -894,50 +960,47 @@ void AutoRefinementManager::SetupLocalFilteringJob()
     float molecular_mass_kDa 			= active_refinement_package->estimated_particle_weight_in_kda;;
     
     wxString symmetry 					= active_refinement_package->symmetry;
-	float measured_global_resolution; //this def happens at the end? lmao 		
-
-	wxString output_reconstruction = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/local_filter_volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1); //just a name 
-	wxString half_map_1 = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map1.mrc", output_refinement->refinement_id, class_counter + 1);
-    wxString half_map_2 = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map2.mrc", output_refinement->refinement_id, class_counter + 1);
-	wxString mask_image_name = main_frame->ReturnAutoRefine3DScratchDirectory() + wxString::Format("mask_volume.mrc"); 
-
-	my_parent->active_mask_thread_id = my_parent->next_thread_id;
-	my_parent->next_thread_id++;
-
-	GenerateMaskThread *mask_thread = new GenerateMaskThread(my_parent, half_map_1, half_map_1, mask_image_name, pixel_size, outer_mask_radius, my_parent->active_mask_thread_id);
-
-	if ( mask_thread->Run() != wxTHREAD_NO_ERROR )
-	{
-		my_parent->WriteErrorText("Error: Cannot start masking thread, masking will not be performed");
-		delete mask_thread;
-	}
-	else
-	{	
-		//what does this line do? 
-		//current_reference_filenames = masked_filenames;
-		
-		return; // just return, we will startup again whent he mask thread finishes.
-	}
-
-	//need to get the first and last slice with dataaaaaa
-	
-
-
-	// int slices_with_data = last_slice_with_data - first_slice_with_data;
-	// float slices_per_thread = slices_with_data / float(num_threads);
+	float measured_global_resolution; // TODO see comments at top of method 
 
 	for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++) {
 
-		for (int thread_counter = 0; thread_counter < number_of_threads; thread_counter++) {
+		wxString output_reconstruction = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/local_filter_volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);  
+		wxString half_map_1 = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map1.mrc", output_refinement->refinement_id, class_counter + 1);
+		wxString half_map_2 = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map2.mrc", output_refinement->refinement_id, class_counter + 1);
+		wxString mask_image_name = main_frame->ReturnAutoRefine3DScratchDirectory() + wxString::Format("mask_volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);  
 
+		my_parent->active_mask_thread_id = my_parent->next_thread_id;
+		my_parent->next_thread_id++;
 
+		GenerateMaskThread *mask_thread = new GenerateMaskThread(my_parent, half_map_1, half_map_1, mask_image_name, pixel_size, outer_mask_radius, my_parent->active_mask_thread_id);
+
+		if (mask_thread->Run() != wxTHREAD_NO_ERROR)
+		{
+			my_parent->WriteErrorText("Error: Cannot start masking thread, masking will not be performed");
+			delete mask_thread;
+		}
+
+		int slices_with_data = last_slice_with_data - first_slice_with_data;
+
+		//potential concern is that active refinement run profile may not exist at this point! next line could be deletable 
+		active_refinement_run_profile = run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()]; 
+		
+		int number_of_processes = active_refinement_run_profile.ReturnTotalJobs(); 
+		float slices_per_process = slices_with_data / float(number_of_processes);
+
+		for (int process_counter = 0; process_counter < number_of_processes; process_counter++) {
+
+			int first_slice_p = (first_slice_with_data - 1) + myroundint(ReturnThreadNumberOfCurrentThread() * slices_per_process) + 1;
+			int last_slice_p = (first_slice_with_data - 1) +  myroundint((ReturnThreadNumberOfCurrentThread() + 1) * slices_per_process);
+
+			//do i need to send the class counter? 
 			my_parent->current_job_package.AddJob("ttttiiffftfif", 
 										half_map_1.ToUTF8().data(), 
 										half_map_2.ToUTF8().data(), 
 										output_reconstruction.ToUTF8().data(), 
 										mask_image_name.ToUTF8().data(), 
-										first_slice, 
-										last_slice, 
+										first_slice_p, 
+										last_slice_p, 
 										inner_mask_radius, 
 										outer_mask_radius, 
 										molecular_mass_kDa, 
@@ -945,30 +1008,18 @@ void AutoRefinementManager::SetupLocalFilteringJob()
 										pixel_size, 	
 										number_of_threads, 
 										measured_global_resolution);
-		}
-
-		//relationship between class_counter and first slice last slice? 
-		//maybe instead could just divide slices with data by numthreads and calculate first slice last slice that way? 
-		//then would loop over numthreads --- actually num processses? is num processes class counter? 
-
-
-		
+		}	
 	}
 }
 
-//WTW
 void AutoRefinementManager::RunLocalFilteringJob() {
 
 	running_job_type = LOCAL_FILTERING;
 
-	// start job..
+	my_parent->WriteBlueText("Running Local Filtering...");
 
-	// if (output_refinement->number_of_classes > 1) my_parent->WriteBlueText("Merging and Filtering Reconstructions...");
-	// else
-	// my_parent->WriteBlueText("Merging and Filtering Reconstruction...");
-
-	// current_job_id = main_frame->job_controller.AddJob(my_parent, active_reconstruction_run_profile.manager_command, active_reconstruction_run_profile.gui_address);
-	// my_parent->my_job_id = current_job_id;
+	current_job_id = main_frame->job_controller.AddJob(my_parent, active_refinement_run_profile.manager_command, active_refinement_run_profile.gui_address);
+	my_parent->my_job_id = current_job_id;
 
 	if (current_job_id != -1)
 	{
@@ -994,6 +1045,7 @@ void AutoRefinementManager::BeginRefinementCycle()
 	active_smoothing_factor = my_parent->SmoothingFactorTextCtrl->ReturnValue();
 	active_should_mask = my_parent->UseMaskCheckBox->GetValue();
 	active_should_auto_mask = my_parent->AutoMaskYesRadioButton->GetValue();
+	use_local_filtering = my_parent->LocalDensityYesRadioButton->GetValue();
 
 	if (my_parent->MaskSelectPanel->ReturnSelection() >= 0) active_mask_asset_id = volume_asset_panel->ReturnAssetID(my_parent->MaskSelectPanel->ReturnSelection());
 	else active_mask_asset_id = -1;
@@ -1071,8 +1123,6 @@ void AutoRefinementManager::BeginRefinementCycle()
 		class_high_res_limits.Add(my_parent->HighResolutionLimitTextCtrl->ReturnValue());
 		class_next_high_res_limits.Add(my_parent->HighResolutionLimitTextCtrl->ReturnValue());
 	}
-
-
 
 	// how many particles to use..
 
@@ -1162,7 +1212,6 @@ void AutoRefinementManager::BeginRefinementCycle()
 
 }
 
-
 void AutoRefinementManager::RunRefinementJob()
 {
 	running_job_type = REFINEMENT;
@@ -1249,8 +1298,6 @@ void AutoRefinementManager::SetupMerge3dJob()
 	long number_of_particles = active_refinement_package->contained_particles.GetCount();
 	int number_of_reconstruction_jobs = std::min(number_of_particles,active_reconstruction_run_profile.ReturnTotalJobs());
 
-
-
 	int class_counter;
 
 	my_parent->current_job_package.Reset(active_reconstruction_run_profile, "merge3d", active_refinement_package->number_of_classes);
@@ -1290,8 +1337,6 @@ void AutoRefinementManager::SetupMerge3dJob()
 	}
 }
 
-
-
 void AutoRefinementManager::RunMerge3dJob()
 {
 	running_job_type = MERGE;
@@ -1312,7 +1357,6 @@ void AutoRefinementManager::RunMerge3dJob()
 
 	my_parent->ProgressBar->Pulse();
 }
-
 
 void AutoRefinementManager::SetupReconstructionJob()
 {
@@ -1497,8 +1541,6 @@ void AutoRefinementManager::SetupReconstructionJob()
 		}
 	}
 }
-
-
 // for now we take the paramter
 
 void AutoRefinementManager::RunReconstructionJob()
@@ -1996,8 +2038,6 @@ void AutoRefinementManager::ProcessJobResult(JobResult *result_to_process)
 		}
 
 	}
-
-
 
 }
 
@@ -2523,23 +2563,33 @@ void AutoRefinementManager::CycleRefinement()
 	}
 }
 
-
 void AutoRefine3DPanel::OnMaskerThreadComplete(wxThreadEvent& my_event)
 {
 	if (my_event.GetInt() == active_mask_thread_id) my_refinement_manager.OnMaskerThreadComplete();
 }
 
-//WTW is this right 
 void AutoRefine3DPanel::OnGenerateMaskThreadComplete(wxThreadEvent& my_event) 
 {
-	//idk what to do here 
-	//what is the autorefinement manager class? lmaoo
 	if (my_event.GetInt() == active_mask_thread_id) my_refinement_manager.OnGenerateMaskThreadComplete(my_event.GetString());
 }
 
 void AutoRefinementManager::OnGenerateMaskThreadComplete(wxString first_last_slice_with_data)
 {
-	//idk WTW probs wrong lmao 
+	wxStringTokenizer tokenizer(first_last_slice_with_data, " ");
+	if (tokenizer.HasMoreTokens()) {
+		wxString first_slice_with_data_string = tokenizer.GetNextToken();
+		first_slice_with_data_string.ToLong(&first_slice_with_data);
+		if (tokenizer.HasMoreTokens()) {
+			wxString last_slice_with_data_string = tokenizer.GetNextToken();
+			last_slice_with_data_string.ToLong(&last_slice_with_data); 
+		} else {
+			MyPrintfRed("Could Not Parse First Slice With Data\n");
+			//maybe should error out
+		}
+	} else {
+		MyPrintfRed("Could Not Parse Last Slice With Data\n"); 
+	}
+
 }
 
 void AutoRefinementManager::OnMaskerThreadComplete()

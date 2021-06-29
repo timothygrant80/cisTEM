@@ -1100,8 +1100,8 @@ void CTFRefinementManager::SetupMerge3dJob()
 
 	for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
 	{
-		wxString output_reconstruction_1			= main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_map1.mrc", output_refinement->refinement_id, class_counter + 1);
-		wxString output_reconstruction_2			= main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_map2.mrc", output_refinement->refinement_id, class_counter + 1);
+		wxString output_reconstruction_1			= main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map1.mrc", output_refinement->refinement_id, class_counter + 1);
+		wxString output_reconstruction_2			= main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map2.mrc", output_refinement->refinement_id, class_counter + 1);
 		wxString output_reconstruction_filtered		= main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
 
 		current_reference_filenames.Item(class_counter) = output_reconstruction_filtered;
@@ -1849,8 +1849,8 @@ void CTFRefinementManager::ProcessAllJobsFinished()
 
 			main_frame->current_project.database.AddReconstructionJob(current_reconstruction_id, active_refinement_package->asset_id, output_refinement->refinement_id, "", active_inner_mask_radius, active_mask_radius, active_resolution_limit_rec, active_score_weight_conversion, active_adjust_scores, active_crop_images, false, active_should_apply_blurring, active_smoothing_factor, class_counter + 1, long(temp_asset.asset_id));
 
-			temp_asset.half_map_1_filename = temp_asset.filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_map1.mrc", output_refinement->refinement_id, class_counter + 1);
-			temp_asset.half_map_2_filename = temp_asset.filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_map2.mrc", output_refinement->refinement_id, class_counter + 1);
+			temp_asset.half_map_1_filename = temp_asset.filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map1.mrc", output_refinement->refinement_id, class_counter + 1);
+			temp_asset.half_map_2_filename = temp_asset.filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map2.mrc", output_refinement->refinement_id, class_counter + 1);
 			temp_asset.filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
 			output_refinement->reference_volume_ids.Add(temp_asset.asset_id);
 

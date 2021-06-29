@@ -133,4 +133,5 @@
 #define PREPARE_STACK 4
 #define ALIGN_SYMMETRY 5
 #define ESTIMATE_BEAMTILT 6
-#define NOJOB 7
+#define LOCAL_FILTERING 7
+#define NOJOB 8

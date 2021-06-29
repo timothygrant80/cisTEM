@@ -157,38 +157,8 @@ bool Generate_Local_Res_App::DoCalculation()
     int number_averaged = 0;
 	float alignment_res = 5.0f;
 
-	// Image mask_image;
-	// mask_image.CopyFrom(&combined_images);
-	//float original_average_value = mask_image.ReturnAverageOfRealValues(outer_mask_radius / original_pixel_size, true);
-	// mask_image.ConvertToAutoMask(original_pixel_size, outer_mask_radius, original_pixel_size * 2.0f, 0.2f);
-
-	int first_slice_with_data;
-	int last_slice_with_data;
-
-	Image slice_image;
-
-	for (int counter = 1; counter <= local_resolution_volume.logical_z_dimension; counter++)
-	{
-		slice_image.AllocateAsPointingToSliceIn3D(&mask_image, counter);
-		if (slice_image.IsConstant() == false)
-		{
-			first_slice_with_data = counter;
-			break;
-		}
-	}
-
-	for (int counter = local_resolution_volume.logical_z_dimension; counter >= 1; counter--)
-	{
-		slice_image.AllocateAsPointingToSliceIn3D(&mask_image, counter);
-		if (slice_image.IsConstant() == false)
-		{
-			last_slice_with_data = counter;
-			break;
-		}
-	}
-
-	int slices_with_data = last_slice_with_data - first_slice_with_data;
-	float slices_per_thread = slices_with_data / float(num_threads);
+	int total_slices = last_slice - first_slice;
+	float slices_per_thread = total_slices / float(num_threads);
 
 	for (float current_res = 18.0f; current_res < 37.0f; current_res += 6.0f)
 	{
@@ -208,8 +178,8 @@ bool Generate_Local_Res_App::DoCalculation()
 		#pragma omp parallel default(shared) num_threads(num_threads)
 		{
 
-			int first_slice_p = (first_slice_with_data - 1) + myroundint(ReturnThreadNumberOfCurrentThread() * slices_per_thread) + 1;
-			int last_slice_p = (first_slice_with_data - 1) +  myroundint((ReturnThreadNumberOfCurrentThread() + 1) * slices_per_thread);
+			int first_slice_p = (first_slice - 1) + myroundint(ReturnThreadNumberOfCurrentThread() * slices_per_thread) + 1;
+			int last_slice_p = (last_slice - 1) +  myroundint((ReturnThreadNumberOfCurrentThread() + 1) * slices_per_thread);
 
 			Image local_resolution_volume_local;
 			Image input_volume_one_local;

@@ -1741,7 +1741,7 @@ wxThread::ExitCode GenerateMaskThread::Entry()
 		}
 	}
 
-	wxString payload_string = "";
+	wxString payload_string = wxString::Format(wxT("%i %i"), first_slice_with_data, last_slice_with_data);
 
 	// send finished event..
 

@@ -14,7 +14,7 @@
 #endif
 
 #ifndef HEAVY_ERROR_CHECKING
-#define HEAVE_ERROR_CHECKING false
+#define HEAVY_ERROR_CHECKING false
 #endif
 
 #include "../core/core_headers.h"

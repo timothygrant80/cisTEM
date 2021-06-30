@@ -1532,9 +1532,19 @@ bool MatchTemplateApp::DoCalculation()
 		}
 
 		SendProgramDefinedResultToMaster(result, number_of_result_floats, image_number_for_gui, number_of_jobs_per_image_in_gui);
+		// The result should not be deleted here, as the worker thread will free it up once it has been send to the master
+		// delete [] result;
 	}
 
 	delete [] histogram_data;
+	delete [] correlation_pixel_sum;
+	delete [] correlation_pixel_sum_of_squares;
+	#ifdef ENABLEGPU
+		if (use_gpu)
+		{
+			delete [] GPU;
+		}
+	#endif
 
 	if (is_running_locally == true)
 	{

@@ -44,10 +44,12 @@ __global__ void histogram_smem_atomics(const  __half* in, int4 dims, float *out,
 //      pixel_idx = (int)(floor((in[row * dims.w + col]-bin_min) / bin_inc));
       pixel_idx = __half2int_rd((in[row * dims.w + col]-bin_min) / bin_inc);
 
-
-      pixel_idx = MAX(MIN(pixel_idx,n_bins-1),0);
-
-      atomicAdd(&smem[pixel_idx], 1);
+	  // use nvidia integer instrinic max/min
+      //pixel_idx = max(min(pixel_idx,n_bins-1),0);
+	  if (pixel_idx >= 0 && pixel_idx < n_bins)
+	  {
+   	    atomicAdd(&smem[pixel_idx], 1);	
+	  }
 
     }
   }

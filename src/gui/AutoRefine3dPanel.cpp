@@ -835,15 +835,16 @@ void AutoRefinementManager::SetParent(AutoRefine3DPanel *wanted_parent)
 	my_parent = wanted_parent;
 }
 
-//should add generate res to be before the refinement cycle
-//need to get half maps from selected thing and then pass finish product to refinement
-
-//WTW
-//well okay so i should check this button before then calling local filtering? maybe no begin local filtering, check button
-// in the before-this and then go straight to setuplocal? depends on purpose of begin
-
-// maybe like checking the button? clearing scratch, and then calling setup?
-//do i need to change the value and such of the button or is that handeled automatically?
+bool AutoRefinementManager::halfMapExists(wxString &half_map)
+{
+	struct stat buff;
+	int retval = stat(half_map.ToStdString().c_str(), &buff);
+	if (retval == 0)
+	{
+		return true;
+	}
+	return false;
+}
 
 void AutoRefinementManager::SetupLocalFilteringJob()
 {
@@ -958,17 +959,6 @@ void AutoRefinementManager::SetupLocalFilteringJob()
 			}
 		}
 	}
-}
-
-bool halfMapExists(wxString &half_map)
-{
-	struct stat buff;
-	int retval = stat(half_map.ToStdString().c_str(), &buff);
-	if (retval == 0)
-	{
-		return true;
-	}
-	return false;
 }
 
 void AutoRefinementManager::RunLocalFilteringJob()

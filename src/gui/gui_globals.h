@@ -105,7 +105,7 @@ protected:
 class GenerateMaskThread : public wxThread
 {
 public:
-	GenerateMaskThread(wxWindow *parent, wxString half_map_1, wxString half_map_2, wxString mask_image_name, float wanted_pixel_size, float wanted_outer_mask_radius, bool active_should_mask, wxString active_mask_filename, int wanted_thread_id = -1) : wxThread(wxTHREAD_DETACHED)
+	GenerateMaskThread(wxWindow *parent, wxString half_map_1, wxString half_map_2, wxString mask_image_name, float wanted_pixel_size, float wanted_outer_mask_radius, bool active_should_mask, int wanted_thread_id = -1) : wxThread(wxTHREAD_DETACHED)
 	{
 		main_thread_pointer = parent;
 		half_map_1 = half_map_1;
@@ -115,7 +115,6 @@ public:
 		outer_mask_radius = wanted_outer_mask_radius;
 		thread_id = wanted_thread_id;
 		active_should_mask = active_should_mask;
-		active_mask_filename = active_mask_filename;
 	}
 
 protected:
@@ -126,8 +125,7 @@ protected:
 	float pixel_size;
 	float outer_mask_radius;
 	int thread_id;
-	bool acitve_should_mask;
-	wxString active_mask_filename;
+	bool active_should_mask;
 
 	virtual ExitCode Entry();
 };

@@ -8,6 +8,7 @@ extern Refine2DResultsPanel *refine2d_results_panel;
 wxDEFINE_EVENT(wxEVT_AUTOMASKERTHREAD_COMPLETED, wxThreadEvent);
 wxDEFINE_EVENT(wxEVT_MULTIPLY3DMASKTHREAD_COMPLETED, wxThreadEvent);
 wxDEFINE_EVENT(wxEVT_WRITECLASSIFICATIONSTARFILETHREAD_COMPLETED, wxThreadEvent);
+wxDEFINE_EVENT(wxEVT_GENERATEMASKTHREAD_COMPLETED, wxThreadEvent);
 
 MemoryComboBox::MemoryComboBox(wxWindow *parent, wxWindowID id, const wxString &value, const wxPoint &pos, const wxSize &size, int n, const wxString choices[], long style, const wxValidator &validator, const wxString &name)
 	: wxOwnerDrawnComboBox(parent, id, value, pos, size, n, choices, style, validator, name)

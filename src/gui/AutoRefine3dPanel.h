@@ -15,11 +15,10 @@ class AutoRefinementManager
 public:
 	AutoRefine3DPanel *my_parent;
 
-	bool use_local_filtering;
-
 	long first_slice_with_data;
 	long last_slice_with_data;
 
+	bool active_local_filtering;
 	bool active_should_mask;
 	bool active_should_auto_mask;
 	wxString active_mask_filename;
@@ -92,6 +91,7 @@ public:
 
 	void SetParent(AutoRefine3DPanel *wanted_parent);
 
+	bool halfMapExists(wxString &half_map);
 	void SetupLocalFilteringJob();
 	void RunLocalFilteringJob();
 
@@ -125,88 +125,84 @@ public:
 
 	void DoMasking();
 
-//	void StartRefinement();
-//	void StartReconstruction();
-
-
+	//	void StartRefinement();
+	//	void StartReconstruction();
 };
-
 
 class AutoRefine3DPanel : public AutoRefine3DPanelParent
 {
 	friend class AutoRefinementManager;
 
-	protected:
-		// Handlers for Refine3DPanel events.
-		void OnUpdateUI( wxUpdateUIEvent& event );
-		void OnExpertOptionsToggle( wxCommandEvent& event );
-		void OnInfoURL( wxTextUrlEvent& event );
-		void TerminateButtonClick( wxCommandEvent& event );
-		void FinishButtonClick( wxCommandEvent& event );
-		void StartRefinementClick( wxCommandEvent& event );
-		void ResetAllDefaultsClick( wxCommandEvent& event );
+protected:
+	// Handlers for Refine3DPanel events.
+	void OnUpdateUI(wxUpdateUIEvent &event);
+	void OnExpertOptionsToggle(wxCommandEvent &event);
+	void OnInfoURL(wxTextUrlEvent &event);
+	void TerminateButtonClick(wxCommandEvent &event);
+	void FinishButtonClick(wxCommandEvent &event);
+	void StartRefinementClick(wxCommandEvent &event);
+	void ResetAllDefaultsClick(wxCommandEvent &event);
 
-		void OnUseMaskCheckBox ( wxCommandEvent& event );
-		void OnAutoMaskButton( wxCommandEvent& event );
+	void OnUseMaskCheckBox(wxCommandEvent &event);
+	void OnAutoMaskButton(wxCommandEvent &event);
 
-		// overridden socket methods..
+	// overridden socket methods..
 
-		void OnSocketJobResultMsg(JobResult &received_result);
-		void OnSocketJobResultQueueMsg(ArrayofJobResults &received_queue);
-		void SetNumberConnectedText(wxString wanted_text);
-		void SetTimeRemainingText(wxString wanted_text);
-		void OnSocketAllJobsFinished();
+	void OnSocketJobResultMsg(JobResult &received_result);
+	void OnSocketJobResultQueueMsg(ArrayofJobResults &received_queue);
+	void SetNumberConnectedText(wxString wanted_text);
+	void SetTimeRemainingText(wxString wanted_text);
+	void OnSocketAllJobsFinished();
 
-		int length_of_process_number;
+	int length_of_process_number;
 
-		AutoRefinementManager my_refinement_manager;
+	AutoRefinementManager my_refinement_manager;
 
-		int active_orth_thread_id;
-		int active_mask_thread_id;
-		int next_thread_id;
+	int active_orth_thread_id;
+	int active_mask_thread_id;
+	int next_thread_id;
 
-	public:
+public:
+	wxStopWatch stopwatch;
 
-		wxStopWatch stopwatch;
+	long time_of_last_result_update;
 
-		long time_of_last_result_update;
+	bool refinement_package_combo_is_dirty;
+	bool run_profiles_are_dirty;
+	bool volumes_are_dirty;
 
-		bool refinement_package_combo_is_dirty;
-		bool run_profiles_are_dirty;
-		bool volumes_are_dirty;
+	JobResult *buffered_results;
+	long selected_refinement_package;
 
-		JobResult *buffered_results;
-		long selected_refinement_package;
+	//int length_of_process_number;
 
-		//int length_of_process_number;
+	JobTracker my_job_tracker;
 
-		JobTracker my_job_tracker;
+	bool auto_mask_value; // this is needed to keep track of the automask, as the radiobutton will be overidden to no when masking is selected
 
-		bool auto_mask_value; // this is needed to keep track of the automask, as the radiobutton will be overidden to no when masking is selected
+	bool running_job;
 
-		bool running_job;
+	AutoRefine3DPanel(wxWindow *parent);
 
-		AutoRefine3DPanel( wxWindow* parent );
+	void Reset();
+	void SetDefaults();
+	void SetInfo();
 
-		void Reset();
-		void SetDefaults();
-		void SetInfo();
+	void WriteInfoText(wxString text_to_write);
+	void WriteErrorText(wxString text_to_write);
+	void WriteBlueText(wxString text_to_write);
 
-		void WriteInfoText(wxString text_to_write);
-		void WriteErrorText(wxString text_to_write);
-		void WriteBlueText(wxString text_to_write);
+	void FillRefinementPackagesComboBox();
+	void FillRunProfileComboBoxes();
 
-		void FillRefinementPackagesComboBox();
-		void FillRunProfileComboBoxes();
+	void NewRefinementPackageSelected();
 
-		void NewRefinementPackageSelected();
+	void OnRefinementPackageComboBox(wxCommandEvent &event);
+	void OnInputParametersComboBox(wxCommandEvent &event);
 
-		void OnRefinementPackageComboBox( wxCommandEvent& event );
-		void OnInputParametersComboBox( wxCommandEvent& event );
-
-		void OnMaskerThreadComplete(wxThreadEvent& my_event);
-		void OnGenerateMaskThreadComplete(wxThreadEvent& my_event); 
-		void OnOrthThreadComplete(ReturnProcessedImageEvent& my_event);
+	void OnMaskerThreadComplete(wxThreadEvent &my_event);
+	void OnGenerateMaskThreadComplete(wxThreadEvent &my_event);
+	void OnOrthThreadComplete(ReturnProcessedImageEvent &my_event);
 };
 
 #endif

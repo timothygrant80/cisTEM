@@ -848,13 +848,11 @@ void AutoRefinementManager::SetParent(AutoRefine3DPanel *wanted_parent)
 void AutoRefinementManager::SetupLocalFilteringJob()
 {
 	float measured_global_resolution;
-
 	int found_class;
 	long found_refinement_id;
 	float inner_mask_radius;
 	float outer_mask_radius;
 	Refinement *refinement_that_created_3d = NULL;
-	//should be right, check other volume_asset_penel things if not
 	VolumeAsset *selected_volume = volume_asset_panel->ReturnAssetPointer(my_parent->ReferenceSelectPanel->ReturnSelection());
 
 	if (selected_volume->reconstruction_job_id >= 0)
@@ -892,24 +890,36 @@ void AutoRefinementManager::SetupLocalFilteringJob()
 		int first_slice;
 		int last_slice;
 		float pixel_size = active_refinement_package->output_pixel_size;
-		//consider what it means for the next two to not match sql retrieval vals
-		float inner_mask_radius = active_inner_mask_radius;
-		float outer_mask_radius = active_mask_radius;
+		//float inner_mask_radius = active_inner_mask_radius;
+		//float outer_mask_radius = active_mask_radius;
 		float molecular_mass_kDa = active_refinement_package->estimated_particle_weight_in_kda;
 		wxString symmetry = active_refinement_package->symmetry;
 
 		for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
 		{
-
 			wxString output_reconstruction = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/local_filter_volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
 			wxString half_map_1 = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map1.mrc", output_refinement->refinement_id, class_counter + 1);
 			wxString half_map_2 = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map2.mrc", output_refinement->refinement_id, class_counter + 1);
-			wxString mask_image_name = main_frame->ReturnAutoRefine3DScratchDirectory() + wxString::Format("mask_volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
+
+			if (!halfMapExists(half_map_1) || !halfMapExists(half_map_2))
+			{
+				return; //can i empty return in void function
+			}
+
+			wxString mask_image_name;
+			if (active_should_mask == true)
+			{
+				mask_image_name = active_mask_filename;
+			}
+			else
+			{
+				mask_image_name = main_frame->ReturnAutoRefine3DScratchDirectory() + wxString::Format("mask_volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
+			}
 
 			my_parent->active_mask_thread_id = my_parent->next_thread_id;
 			my_parent->next_thread_id++;
 
-			GenerateMaskThread *mask_thread = new GenerateMaskThread(my_parent, half_map_1, half_map_1, mask_image_name, pixel_size, outer_mask_radius, my_parent->active_mask_thread_id);
+			GenerateMaskThread *mask_thread = new GenerateMaskThread(my_parent, half_map_1, half_map_1, mask_image_name, pixel_size, outer_mask_radius, active_should_mask, my_parent->active_mask_thread_id);
 
 			if (mask_thread->Run() != wxTHREAD_NO_ERROR)
 			{
@@ -919,7 +929,7 @@ void AutoRefinementManager::SetupLocalFilteringJob()
 
 			int slices_with_data = last_slice_with_data - first_slice_with_data;
 
-			//potential concern is that active refinement run profile may not exist at this point! next line could be deletable
+			//potential concern is that active refinement run profile may not exist at this point! next line could be deletable WTW
 			active_refinement_run_profile = run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()];
 
 			int number_of_processes = active_refinement_run_profile.ReturnTotalJobs();
@@ -931,7 +941,6 @@ void AutoRefinementManager::SetupLocalFilteringJob()
 				int first_slice_p = (first_slice_with_data - 1) + myroundint(ReturnThreadNumberOfCurrentThread() * slices_per_process) + 1;
 				int last_slice_p = (first_slice_with_data - 1) + myroundint((ReturnThreadNumberOfCurrentThread() + 1) * slices_per_process);
 
-				//do i need to send the class counter?
 				my_parent->current_job_package.AddJob("ttttiiffftfif",
 													  half_map_1.ToUTF8().data(),
 													  half_map_2.ToUTF8().data(),
@@ -949,15 +958,21 @@ void AutoRefinementManager::SetupLocalFilteringJob()
 			}
 		}
 	}
-	else
+}
+
+bool halfMapExists(wxString &half_map)
+{
+	struct stat buff;
+	int retval = stat(half_map.ToStdString().c_str(), &buff);
+	if (retval == 0)
 	{
-		//not the right way to end, probs shouldnt continue if the associated if fails?
+		return true;
 	}
+	return false;
 }
 
 void AutoRefinementManager::RunLocalFilteringJob()
 {
-
 	running_job_type = LOCAL_FILTERING;
 
 	my_parent->WriteBlueText("Running Local Filtering...");
@@ -989,7 +1004,7 @@ void AutoRefinementManager::BeginRefinementCycle()
 	active_smoothing_factor = my_parent->SmoothingFactorTextCtrl->ReturnValue();
 	active_should_mask = my_parent->UseMaskCheckBox->GetValue();
 	active_should_auto_mask = my_parent->AutoMaskYesRadioButton->GetValue();
-	use_local_filtering = my_parent->LocalDensityYesRadioButton->GetValue();
+	active_local_filtering = my_parent->LocalDensityYesRadioButton->GetValue();
 
 	if (my_parent->MaskSelectPanel->ReturnSelection() >= 0)
 		active_mask_asset_id = volume_asset_panel->ReturnAssetID(my_parent->MaskSelectPanel->ReturnSelection());
@@ -1028,6 +1043,14 @@ void AutoRefinementManager::BeginRefinementCycle()
 	// Clear scratch..
 
 	global_delete_autorefine3d_scratch();
+
+	//do local filtering? WTW
+
+	if (active_local_filtering == true)
+	{
+		SetupLocalFilteringJob();
+		RunLocalFilteringJob();
+	}
 
 	// setup input/output refinements
 

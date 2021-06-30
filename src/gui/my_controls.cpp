@@ -9,17 +9,14 @@ wxDEFINE_EVENT(wxEVT_AUTOMASKERTHREAD_COMPLETED, wxThreadEvent);
 wxDEFINE_EVENT(wxEVT_MULTIPLY3DMASKTHREAD_COMPLETED, wxThreadEvent);
 wxDEFINE_EVENT(wxEVT_WRITECLASSIFICATIONSTARFILETHREAD_COMPLETED, wxThreadEvent);
 
-
 MemoryComboBox::MemoryComboBox(wxWindow *parent, wxWindowID id, const wxString &value, const wxPoint &pos, const wxSize &size, int n, const wxString choices[], long style, const wxValidator &validator, const wxString &name)
-:
-		wxOwnerDrawnComboBox(parent, id, value, pos, size, n, choices, style, validator, name)
+	: wxOwnerDrawnComboBox(parent, id, value, pos, size, n, choices, style, validator, name)
 {
 	associated_ids.clear();
 	selected_id_on_last_clear = -10;
 	currently_selected_id = -10;
 
 	Bind(wxEVT_COMBOBOX, &MemoryComboBox::OnComboBox, this);
-
 }
 
 MemoryComboBox::~MemoryComboBox()
@@ -27,7 +24,7 @@ MemoryComboBox::~MemoryComboBox()
 	Unbind(wxEVT_COMBOBOX, &MemoryComboBox::OnComboBox, this);
 }
 
-void MemoryComboBox::OnComboBox(wxCommandEvent& event)
+void MemoryComboBox::OnComboBox(wxCommandEvent &event)
 {
 	if (GetSelection() >= 0)
 	{
@@ -91,8 +88,7 @@ void MemoryComboBox::AddMemoryItem(wxString wanted_text, long wanted_id)
 
 void MemoryComboBox::AddMemoryItems(wxArrayString wanted_texts, wxArrayLong wanted_ids)
 {
-	MyDebugAssertTrue(wanted_texts.GetCount() == wanted_ids.GetCount(), "different number of texts and ids")
-	for (int counter = 0; counter < wanted_texts.GetCount(); counter++)
+	MyDebugAssertTrue(wanted_texts.GetCount() == wanted_ids.GetCount(), "different number of texts and ids") for (int counter = 0; counter < wanted_texts.GetCount(); counter++)
 	{
 		associated_text.Add(wanted_texts[counter]);
 		associated_ids.Add(wanted_ids[counter]);
@@ -100,8 +96,6 @@ void MemoryComboBox::AddMemoryItems(wxArrayString wanted_texts, wxArrayLong want
 
 	Append(wanted_texts);
 }
-
-
 
 bool MemoryComboBox::FillWithRunProfiles()
 {
@@ -133,8 +127,10 @@ bool MemoryComboBox::FillWithRunProfiles()
 	currently_selected_id = new_id;
 	Thaw();
 
-	if (new_id == selected_id_on_last_clear && new_id != -1) return true;
-	else return false;
+	if (new_id == selected_id_on_last_clear && new_id != -1)
+		return true;
+	else
+		return false;
 }
 
 bool MemoryComboBox::FillWithMovieGroups(bool include_all_movies_group)
@@ -149,16 +145,20 @@ bool MemoryComboBox::FillWithMovieGroups(bool include_all_movies_group)
 	long new_id = -1;
 	long start_position;
 
-	if (include_all_movies_group == true) start_position = 0;
-	else start_position = 1;
+	if (include_all_movies_group == true)
+		start_position = 0;
+	else
+		start_position = 1;
 
 	for (long counter = start_position; counter < movie_asset_panel->ReturnNumberOfGroups(); counter++)
 	{
-		AddMemoryItem(movie_asset_panel->ReturnGroupName(counter) +  " (" + wxString::Format(wxT("%li"), movie_asset_panel->ReturnGroupSize(counter)) + ")", movie_asset_panel->ReturnGroupID(counter));
+		AddMemoryItem(movie_asset_panel->ReturnGroupName(counter) + " (" + wxString::Format(wxT("%li"), movie_asset_panel->ReturnGroupSize(counter)) + ")", movie_asset_panel->ReturnGroupID(counter));
 		if (movie_asset_panel->ReturnGroupID(counter) == selected_id_on_last_clear)
 		{
-			if (include_all_movies_group == true) new_selection = counter;
-			else new_selection = counter -1;
+			if (include_all_movies_group == true)
+				new_selection = counter;
+			else
+				new_selection = counter - 1;
 
 			new_id = selected_id_on_last_clear;
 		}
@@ -172,8 +172,10 @@ bool MemoryComboBox::FillWithMovieGroups(bool include_all_movies_group)
 	currently_selected_id = new_id;
 	Thaw();
 
-	if (new_id == selected_id_on_last_clear && new_id != -1) return true;
-	else return false;
+	if (new_id == selected_id_on_last_clear && new_id != -1)
+		return true;
+	else
+		return false;
 }
 
 bool MemoryComboBox::FillWithImages(long wanted_image_group)
@@ -208,9 +210,10 @@ bool MemoryComboBox::FillWithImages(long wanted_image_group)
 	currently_selected_id = new_id;
 	Thaw();
 
-	if (new_id == selected_id_on_last_clear && new_id != -1) return true;
-	else return false;
-
+	if (new_id == selected_id_on_last_clear && new_id != -1)
+		return true;
+	else
+		return false;
 }
 
 bool MemoryComboBox::FillWithImageGroups(bool include_all_images_group)
@@ -225,16 +228,20 @@ bool MemoryComboBox::FillWithImageGroups(bool include_all_images_group)
 	long new_id = -1;
 	long start_position;
 
-	if (include_all_images_group == true) start_position = 0;
-	else start_position = 1;
+	if (include_all_images_group == true)
+		start_position = 0;
+	else
+		start_position = 1;
 
 	for (long counter = start_position; counter < image_asset_panel->ReturnNumberOfGroups(); counter++)
 	{
-		AddMemoryItem(image_asset_panel->ReturnGroupName(counter) +  " (" + wxString::Format(wxT("%li"), image_asset_panel->ReturnGroupSize(counter)) + ")", image_asset_panel->ReturnGroupID(counter));
+		AddMemoryItem(image_asset_panel->ReturnGroupName(counter) + " (" + wxString::Format(wxT("%li"), image_asset_panel->ReturnGroupSize(counter)) + ")", image_asset_panel->ReturnGroupID(counter));
 		if (image_asset_panel->ReturnGroupID(counter) == selected_id_on_last_clear)
 		{
-			if (include_all_images_group == true) new_selection = counter;
-			else new_selection = counter - 1;
+			if (include_all_images_group == true)
+				new_selection = counter;
+			else
+				new_selection = counter - 1;
 
 			new_id = selected_id_on_last_clear;
 		}
@@ -248,9 +255,10 @@ bool MemoryComboBox::FillWithImageGroups(bool include_all_images_group)
 	currently_selected_id = new_id;
 	Thaw();
 
-	if (new_id == selected_id_on_last_clear && new_id != -1) return true;
-	else return false;
-
+	if (new_id == selected_id_on_last_clear && new_id != -1)
+		return true;
+	else
+		return false;
 }
 
 bool MemoryComboBox::FillWithRefinementPackages()
@@ -275,15 +283,19 @@ bool MemoryComboBox::FillWithRefinementPackages()
 
 	if (GetCount() > 0)
 	{
-		if (new_selection == -1) SetSelection(GetCount() - 1);
-		else SetSelectionWithEvent(new_selection);
+		if (new_selection == -1)
+			SetSelection(GetCount() - 1);
+		else
+			SetSelectionWithEvent(new_selection);
 	}
 
 	currently_selected_id = new_id;
 	Thaw();
 
-	if (new_id == selected_id_on_last_clear && new_id != -1) return true;
-	else return false;
+	if (new_id == selected_id_on_last_clear && new_id != -1)
+		return true;
+	else
+		return false;
 }
 
 bool MemoryComboBox::FillWithVolumeAssets(bool include_generate_from_params, bool always_select_newest)
@@ -300,7 +312,6 @@ bool MemoryComboBox::FillWithVolumeAssets(bool include_generate_from_params, boo
 	wxArrayString items_to_add;
 	wxArrayLong ids_to_add;
 
-
 	if (include_generate_from_params == true)
 	{
 		items_to_add.Add("Generate from params.");
@@ -314,7 +325,7 @@ bool MemoryComboBox::FillWithVolumeAssets(bool include_generate_from_params, boo
 		items_to_add.Add(volume_asset_panel->ReturnAssetName(counter));
 		ids_to_add.Add(volume_asset_panel->ReturnAssetID(counter));
 
-		if ( volume_asset_panel->ReturnAssetID(counter) == selected_id_on_last_clear)
+		if (volume_asset_panel->ReturnAssetID(counter) == selected_id_on_last_clear)
 		{
 			new_selection = counter;
 			new_id = selected_id_on_last_clear;
@@ -323,22 +334,26 @@ bool MemoryComboBox::FillWithVolumeAssets(bool include_generate_from_params, boo
 
 	AddMemoryItems(items_to_add, ids_to_add);
 
-
 	if (GetCount() > 0)
 	{
 		if (new_selection == -1)
 		{
-			if (always_select_newest == false) SetSelectionWithEvent(0);
-			else SetSelectionWithEvent(GetCount() - 1);
+			if (always_select_newest == false)
+				SetSelectionWithEvent(0);
+			else
+				SetSelectionWithEvent(GetCount() - 1);
 		}
-		else SetSelectionWithEvent(new_selection);
+		else
+			SetSelectionWithEvent(new_selection);
 	}
 
 	currently_selected_id = new_id;
 	Thaw();
 
-	if (new_id == selected_id_on_last_clear && new_id != -1) return true;
-	else return false;
+	if (new_id == selected_id_on_last_clear && new_id != -1)
+		return true;
+	else
+		return false;
 }
 
 bool MemoryComboBox::FillWithClassifications(long wanted_refinement_package, bool include_new_classification, bool always_select_newest)
@@ -351,15 +366,18 @@ bool MemoryComboBox::FillWithClassifications(long wanted_refinement_package, boo
 	long new_selection = -1;
 	long new_id = -1;
 
-	if (include_new_classification == true) AddMemoryItem("New Classification", -1);
+	if (include_new_classification == true)
+		AddMemoryItem("New Classification", -1);
 
 	for (long counter = 0; counter < refinement_package_asset_panel->all_refinement_packages.Item(wanted_refinement_package).classification_ids.GetCount(); counter++)
 	{
 		AddMemoryItem(refinement_package_asset_panel->ReturnPointerToShortClassificationInfoByClassificationID(refinement_package_asset_panel->all_refinement_packages.Item(wanted_refinement_package).classification_ids.Item(counter))->name, refinement_package_asset_panel->ReturnPointerToShortClassificationInfoByClassificationID(refinement_package_asset_panel->all_refinement_packages.Item(wanted_refinement_package).classification_ids.Item(counter))->classification_id);
 		if (refinement_package_asset_panel->ReturnPointerToShortClassificationInfoByClassificationID(refinement_package_asset_panel->all_refinement_packages.Item(wanted_refinement_package).classification_ids.Item(counter))->classification_id == selected_id_on_last_clear)
 		{
-			if (include_new_classification == true) new_selection = counter + 1;
-			else new_selection = counter;
+			if (include_new_classification == true)
+				new_selection = counter + 1;
+			else
+				new_selection = counter;
 
 			new_id = selected_id_on_last_clear;
 		}
@@ -367,15 +385,19 @@ bool MemoryComboBox::FillWithClassifications(long wanted_refinement_package, boo
 
 	if (GetCount() > 0)
 	{
-		if (new_selection == -1 || always_select_newest == true) SetSelectionWithEvent(GetCount() - 1);
-		else SetSelectionWithEvent(new_selection);
+		if (new_selection == -1 || always_select_newest == true)
+			SetSelectionWithEvent(GetCount() - 1);
+		else
+			SetSelectionWithEvent(new_selection);
 	}
 
 	currently_selected_id = new_id;
 	Thaw();
 
-	if (new_id == selected_id_on_last_clear && new_id != -1) return true;
-	else return false;
+	if (new_id == selected_id_on_last_clear && new_id != -1)
+		return true;
+	else
+		return false;
 }
 
 bool MemoryComboBox::FillWithRefinements(long wanted_refinement_package, bool always_select_newest)
@@ -387,7 +409,6 @@ bool MemoryComboBox::FillWithRefinements(long wanted_refinement_package, bool al
 
 	long new_selection = -1;
 	long new_id = -1;
-
 
 	for (long counter = 0; counter < refinement_package_asset_panel->all_refinement_packages[wanted_refinement_package].refinement_ids.GetCount(); counter++)
 	{
@@ -402,17 +423,20 @@ bool MemoryComboBox::FillWithRefinements(long wanted_refinement_package, bool al
 
 	if (GetCount() > 0)
 	{
-		if (new_selection == -1 || always_select_newest == true) SetSelectionWithEvent(GetCount() - 1);
-		else SetSelectionWithEvent(new_selection);
+		if (new_selection == -1 || always_select_newest == true)
+			SetSelectionWithEvent(GetCount() - 1);
+		else
+			SetSelectionWithEvent(new_selection);
 	}
 
 	currently_selected_id = new_id;
 	Thaw();
 
-	if (new_id == selected_id_on_last_clear && new_id != -1) return true;
-	else return false;
+	if (new_id == selected_id_on_last_clear && new_id != -1)
+		return true;
+	else
+		return false;
 }
-
 
 bool MemoryComboBox::FillWithClassAverageSelections(bool always_select_newest, long wanted_refinement_package_id) // -1 = all refinement packages
 {
@@ -422,8 +446,6 @@ bool MemoryComboBox::FillWithClassAverageSelections(bool always_select_newest, l
 
 	extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
 
-
-
 	long new_selection = -1;
 	long new_id = -1;
 
@@ -432,7 +454,7 @@ bool MemoryComboBox::FillWithClassAverageSelections(bool always_select_newest, l
 		if (refinement_package_asset_panel->all_classification_selections[counter].refinement_package_asset_id == wanted_refinement_package_id || wanted_refinement_package_id == -1)
 		{
 			AddMemoryItem(refinement_package_asset_panel->all_classification_selections[counter].name, refinement_package_asset_panel->all_classification_selections[counter].selection_id);
-			if ( refinement_package_asset_panel->all_classification_selections[counter].selection_id == selected_id_on_last_clear)
+			if (refinement_package_asset_panel->all_classification_selections[counter].selection_id == selected_id_on_last_clear)
 			{
 				new_selection = counter;
 				new_id = selected_id_on_last_clear;
@@ -442,34 +464,35 @@ bool MemoryComboBox::FillWithClassAverageSelections(bool always_select_newest, l
 
 	if (GetCount() > 0)
 	{
-		if (new_selection == -1 || always_select_newest == true) SetSelectionWithEvent(GetCount() - 1);
-		else SetSelectionWithEvent(new_selection);
+		if (new_selection == -1 || always_select_newest == true)
+			SetSelectionWithEvent(GetCount() - 1);
+		else
+			SetSelectionWithEvent(new_selection);
 	}
 
 	currently_selected_id = new_id;
 	Thaw();
 
-	if (new_id == selected_id_on_last_clear && new_id != -1) return true;
-	else return false;
+	if (new_id == selected_id_on_last_clear && new_id != -1)
+		return true;
+	else
+		return false;
 }
 
-
-
-
 OneSecondProgressDialog::OneSecondProgressDialog(const wxString &title, const wxString &message, int maximum, wxWindow *parent, int style)
-:
-wxProgressDialog(title, message, maximum, parent, style)
+	: wxProgressDialog(title, message, maximum, parent, style)
 {
 	time_of_last_update = time(NULL);
 }
 
-bool OneSecondProgressDialog::Update(int value, const wxString & newmsg, bool * skip)
+bool OneSecondProgressDialog::Update(int value, const wxString &newmsg, bool *skip)
 {
 	if (time(NULL) - time_of_last_update > 0 || newmsg != wxEmptyString)
 	{
 		bool return_value;
 		return_value = wxProgressDialog::Update(value, newmsg, skip);
-		if (newmsg != wxEmptyString) Fit();
+		if (newmsg != wxEmptyString)
+			Fit();
 		time_of_last_update = time(NULL);
 		return return_value;
 	}
@@ -477,16 +500,14 @@ bool OneSecondProgressDialog::Update(int value, const wxString & newmsg, bool * 
 	return true;
 }
 
-
 NumericTextCtrl::NumericTextCtrl(wxWindow *parent, wxWindowID id, const wxString &value, const wxPoint &pos, const wxSize &size, long style, const wxValidator &validator, const wxString &name)
-:
-wxTextCtrl(parent, id, value, pos, size, style, validator, name)
+	: wxTextCtrl(parent, id, value, pos, size, style, validator, name)
 {
 	// bind change text method..
 
 	Bind(wxEVT_CHAR, &NumericTextCtrl::OnKeyPress, this);
-	Bind(wxEVT_TEXT_ENTER, &NumericTextCtrl::OnEnterPressed, this );
-	Bind(wxEVT_KILL_FOCUS, &NumericTextCtrl::OnFocusLost, this );
+	Bind(wxEVT_TEXT_ENTER, &NumericTextCtrl::OnEnterPressed, this);
+	Bind(wxEVT_KILL_FOCUS, &NumericTextCtrl::OnFocusLost, this);
 
 	min_value = -FLT_MAX;
 	max_value = FLT_MAX;
@@ -494,7 +515,8 @@ wxTextCtrl(parent, id, value, pos, size, style, validator, name)
 	precision = 2;
 
 	double initial_value;
-	if (value.ToDouble(&initial_value) == false) initial_value = 0.0;
+	if (value.ToDouble(&initial_value) == false)
+		initial_value = 0.0;
 
 	previous_value = initial_value;
 	ChangeValueFloat(initial_value);
@@ -503,24 +525,24 @@ wxTextCtrl(parent, id, value, pos, size, style, validator, name)
 NumericTextCtrl::~NumericTextCtrl()
 {
 	Unbind(wxEVT_CHAR, &NumericTextCtrl::OnKeyPress, this);
-	Unbind(wxEVT_TEXT_ENTER, &NumericTextCtrl::OnEnterPressed, this );
-	Unbind(wxEVT_KILL_FOCUS, &NumericTextCtrl::OnFocusLost, this );
+	Unbind(wxEVT_TEXT_ENTER, &NumericTextCtrl::OnEnterPressed, this);
+	Unbind(wxEVT_KILL_FOCUS, &NumericTextCtrl::OnFocusLost, this);
 }
 
 void NumericTextCtrl::ChangeValueFloat(float wanted_float)
 {
-	if (precision == 2) ChangeValue(wxString::Format("%.2f", wanted_float));
+	if (precision == 2)
+		ChangeValue(wxString::Format("%.2f", wanted_float));
+	else if (precision == 3)
+		ChangeValue(wxString::Format("%.3f", wanted_float));
+	else if (precision == 4)
+		ChangeValue(wxString::Format("%.4f", wanted_float));
+	else if (precision == 1)
+		ChangeValue(wxString::Format("%.1f", wanted_float));
+	else if (precision == 0)
+		ChangeValue(wxString::Format("%.0f", wanted_float));
 	else
-	if (precision == 3) ChangeValue(wxString::Format("%.3f", wanted_float));
-	else
-	if (precision == 4) ChangeValue(wxString::Format("%.4f", wanted_float));
-	else
-	if (precision == 1)	ChangeValue(wxString::Format("%.1f", wanted_float));
-	else
-	if (precision == 0) ChangeValue(wxString::Format("%.0f", wanted_float));
-	else
-	ChangeValue(wxString::Format("%.2f", wanted_float));
-
+		ChangeValue(wxString::Format("%.2f", wanted_float));
 }
 
 void NumericTextCtrl::SetPrecision(int wanted_precision)
@@ -529,12 +551,10 @@ void NumericTextCtrl::SetPrecision(int wanted_precision)
 
 	double current_value;
 
-	if (GetLineText(0).ToDouble(&current_value) == false) current_value = 0.0;
+	if (GetLineText(0).ToDouble(&current_value) == false)
+		current_value = 0.0;
 	ChangeValueFloat(current_value);
-
 }
-
-
 
 void NumericTextCtrl::SetMinMaxValue(float wanted_min_value, float wanted_max_value)
 {
@@ -546,11 +566,11 @@ void NumericTextCtrl::SetMinMaxValue(float wanted_min_value, float wanted_max_va
 float NumericTextCtrl::ReturnValue()
 {
 	double current_value;
-	if (GetLineText(0).ToDouble(&current_value) == false) return 0.0;
-	else return float(current_value);
-
+	if (GetLineText(0).ToDouble(&current_value) == false)
+		return 0.0;
+	else
+		return float(current_value);
 }
-
 
 void NumericTextCtrl::CheckValues()
 {
@@ -567,8 +587,7 @@ void NumericTextCtrl::CheckValues()
 			ChangeValueFloat(min_value);
 			previous_value = min_value;
 		}
-		else
-		if (current_value > max_value)
+		else if (current_value > max_value)
 		{
 			ChangeValueFloat(max_value);
 			previous_value = max_value;
@@ -581,36 +600,39 @@ void NumericTextCtrl::CheckValues()
 	}
 }
 
-void NumericTextCtrl::OnKeyPress( wxKeyEvent& event )
+void NumericTextCtrl::OnKeyPress(wxKeyEvent &event)
 {
 	int keycode = event.GetKeyCode();
 	bool is_valid_key = false;
 
 	if (keycode > 31 && keycode < 127)
 	{
-		if (keycode > 47 && keycode < 58) is_valid_key = true;
-		else if (keycode > 44 && keycode < 47) is_valid_key = true;
+		if (keycode > 47 && keycode < 58)
+			is_valid_key = true;
+		else if (keycode > 44 && keycode < 47)
+			is_valid_key = true;
 	}
-	else is_valid_key = true;
+	else
+		is_valid_key = true;
 
-	if (is_valid_key == true) event.Skip();
+	if (is_valid_key == true)
+		event.Skip();
 }
 
-void NumericTextCtrl::OnEnterPressed( wxCommandEvent& event)
+void NumericTextCtrl::OnEnterPressed(wxCommandEvent &event)
 {
 	CheckValues();
 	event.Skip();
 }
 
-void NumericTextCtrl::OnFocusLost( wxFocusEvent& event )
+void NumericTextCtrl::OnFocusLost(wxFocusEvent &event)
 {
 	CheckValues();
 	event.Skip();
 }
 
 AutoWrapStaticText::AutoWrapStaticText(wxWindow *parent, wxWindowID id, const wxString &label, const wxPoint &pos, const wxSize &size, long style, const wxString &name)
-:
-wxStaticText(parent, id, label, pos, size, style, name)
+	: wxStaticText(parent, id, label, pos, size, style, name)
 {
 	//Bind(wxEVT_SIZE, &AutoWrapStaticText::OnSize, this );
 	has_autowrapped = false;
@@ -627,63 +649,55 @@ void AutoWrapStaticText::AutoWrap()
 	has_autowrapped = true;
 }
 
-void AutoWrapStaticText::OnSize(wxSizeEvent& event)
+void AutoWrapStaticText::OnSize(wxSizeEvent &event)
 {
 	Wrap(GetClientSize().GetWidth());
 	event.Skip();
 }
 
-FilterItem::FilterItem( wxString field_name, wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
+FilterItem::FilterItem(wxString field_name, wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style) : wxPanel(parent, id, pos, size, style)
 {
 	my_parent = parent;
-	my_sizer = new wxBoxSizer (wxHORIZONTAL );
-	field_checkbox =  new wxCheckBox( this, wxID_ANY, field_name + " :", wxDefaultPosition, wxDefaultSize, 0 );
-	my_sizer->Add(field_checkbox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-	my_sizer->Add( 0, 0, 1, wxEXPAND, 5 );
+	my_sizer = new wxBoxSizer(wxHORIZONTAL);
+	field_checkbox = new wxCheckBox(this, wxID_ANY, field_name + " :", wxDefaultPosition, wxDefaultSize, 0);
+	my_sizer->Add(field_checkbox, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
+	my_sizer->Add(0, 0, 1, wxEXPAND, 5);
 
 	// add events for the checkbox..
 
-	field_checkbox->Bind(wxEVT_COMMAND_CHECKBOX_CLICKED, &FilterItem::CheckBoxClicked, this );
+	field_checkbox->Bind(wxEVT_COMMAND_CHECKBOX_CLICKED, &FilterItem::CheckBoxClicked, this);
 
-
-	SetSizer( my_sizer );
+	SetSizer(my_sizer);
 	Layout();
 	my_sizer->Fit(this);
-
 }
-
 
 FilterItem::~FilterItem()
 {
-	field_checkbox->Unbind(wxEVT_COMMAND_CHECKBOX_CLICKED, &FilterItem::CheckBoxClicked, this );
+	field_checkbox->Unbind(wxEVT_COMMAND_CHECKBOX_CLICKED, &FilterItem::CheckBoxClicked, this);
 }
 
-
-IntegerFilterItem::IntegerFilterItem(wxString field_name, wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style )
-:
-FilterItem(field_name, parent, id, pos, size, style)
+IntegerFilterItem::IntegerFilterItem(wxString field_name, wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style)
+	: FilterItem(field_name, parent, id, pos, size, style)
 {
 
-	LowSpinCtrl = new wxSpinCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize( 120,-1 ), wxSP_ARROW_KEYS, 0, 99999999, 0 );
-	my_sizer->Add( LowSpinCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	LowSpinCtrl = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(120, -1), wxSP_ARROW_KEYS, 0, 99999999, 0);
+	my_sizer->Add(LowSpinCtrl, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
-	ToText = new wxStaticText( this, wxID_ANY, wxT("To"), wxDefaultPosition, wxDefaultSize, 0 );
-	ToText->Wrap( -1 );
-	my_sizer->Add( ToText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	ToText = new wxStaticText(this, wxID_ANY, wxT("To"), wxDefaultPosition, wxDefaultSize, 0);
+	ToText->Wrap(-1);
+	my_sizer->Add(ToText, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
-	HighSpinCtrl = new wxSpinCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize( 120,-1 ), wxSP_ARROW_KEYS, 0, 99999999, 0 );
-	my_sizer->Add( HighSpinCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	HighSpinCtrl = new wxSpinCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(120, -1), wxSP_ARROW_KEYS, 0, 99999999, 0);
+	my_sizer->Add(HighSpinCtrl, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
 	LowSpinCtrl->Enable(false);
 	HighSpinCtrl->Enable(false);
 	Layout();
 
-	LowSpinCtrl->Bind(wxEVT_SPINCTRL, &IntegerFilterItem::LowControlChanged, this );
-	HighSpinCtrl->Bind(wxEVT_SPINCTRL, &IntegerFilterItem::HighControlChanged, this );
-
-
+	LowSpinCtrl->Bind(wxEVT_SPINCTRL, &IntegerFilterItem::LowControlChanged, this);
+	HighSpinCtrl->Bind(wxEVT_SPINCTRL, &IntegerFilterItem::HighControlChanged, this);
 }
-
 
 void IntegerFilterItem::CheckBoxClicked(wxCommandEvent &event)
 {
@@ -696,39 +710,38 @@ void IntegerFilterItem::CheckBoxClicked(wxCommandEvent &event)
 	{
 		LowSpinCtrl->Enable(false);
 		HighSpinCtrl->Enable(false);
-
-
 	}
 }
 
-void IntegerFilterItem::LowControlChanged( wxCommandEvent& event)
+void IntegerFilterItem::LowControlChanged(wxCommandEvent &event)
 {
 	//	wxPrintf("Changed\n");
 
 	int current_value = LowSpinCtrl->GetValue();
 
-	if (HighSpinCtrl->GetValue() < current_value) HighSpinCtrl->SetValue(current_value);
+	if (HighSpinCtrl->GetValue() < current_value)
+		HighSpinCtrl->SetValue(current_value);
 }
 
-void IntegerFilterItem::HighControlChanged( wxCommandEvent& event)
+void IntegerFilterItem::HighControlChanged(wxCommandEvent &event)
 {
 	//	wxPrintf("Changed\n");
 
 	int current_value = HighSpinCtrl->GetValue();
 
-	if (LowSpinCtrl->GetValue() > current_value) LowSpinCtrl->SetValue(current_value);
+	if (LowSpinCtrl->GetValue() > current_value)
+		LowSpinCtrl->SetValue(current_value);
 }
 
 IntegerFilterItem::~IntegerFilterItem()
 {
-	LowSpinCtrl->Unbind(wxEVT_SPINCTRL, &IntegerFilterItem::LowControlChanged, this );
-	HighSpinCtrl->Unbind(wxEVT_SPINCTRL, &IntegerFilterItem::HighControlChanged, this );
+	LowSpinCtrl->Unbind(wxEVT_SPINCTRL, &IntegerFilterItem::LowControlChanged, this);
+	HighSpinCtrl->Unbind(wxEVT_SPINCTRL, &IntegerFilterItem::HighControlChanged, this);
 }
 
 int IntegerFilterItem::GetLowValue()
 {
 	return LowSpinCtrl->GetValue();
-
 }
 
 int IntegerFilterItem::GetHighValue()
@@ -736,32 +749,30 @@ int IntegerFilterItem::GetHighValue()
 	return HighSpinCtrl->GetValue();
 }
 
-
 //-------------
 
-FloatFilterItem::FloatFilterItem(wxString field_name, wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style )
-:
-FilterItem(field_name, parent, id, pos, size, style)
+FloatFilterItem::FloatFilterItem(wxString field_name, wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style)
+	: FilterItem(field_name, parent, id, pos, size, style)
 {
 
-	LowTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize( 120,-1 ), wxTE_PROCESS_ENTER );
-	my_sizer->Add( LowTextCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	LowTextCtrl = new NumericTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(120, -1), wxTE_PROCESS_ENTER);
+	my_sizer->Add(LowTextCtrl, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
-	ToText = new wxStaticText( this, wxID_ANY, wxT("To"), wxDefaultPosition, wxDefaultSize, 0 );
-	ToText->Wrap( -1 );
-	my_sizer->Add( ToText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	ToText = new wxStaticText(this, wxID_ANY, wxT("To"), wxDefaultPosition, wxDefaultSize, 0);
+	ToText->Wrap(-1);
+	my_sizer->Add(ToText, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
-	HighTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize( 120,-1 ), wxTE_PROCESS_ENTER );
-	my_sizer->Add( HighTextCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	HighTextCtrl = new NumericTextCtrl(this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(120, -1), wxTE_PROCESS_ENTER);
+	my_sizer->Add(HighTextCtrl, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
 	LowTextCtrl->Enable(false);
 	HighTextCtrl->Enable(false);
 	Layout();
 
-	LowTextCtrl->Bind(wxEVT_TEXT_ENTER, &FloatFilterItem::LowControlChanged, this );
-	HighTextCtrl->Bind(wxEVT_TEXT_ENTER, &FloatFilterItem::HighControlChanged, this );
-	LowTextCtrl->Bind(wxEVT_KILL_FOCUS, &FloatFilterItem::LowKillFocus, this );
-	HighTextCtrl->Bind(wxEVT_KILL_FOCUS, &FloatFilterItem::HighKillFocus, this );
+	LowTextCtrl->Bind(wxEVT_TEXT_ENTER, &FloatFilterItem::LowControlChanged, this);
+	HighTextCtrl->Bind(wxEVT_TEXT_ENTER, &FloatFilterItem::HighControlChanged, this);
+	LowTextCtrl->Bind(wxEVT_KILL_FOCUS, &FloatFilterItem::LowKillFocus, this);
+	HighTextCtrl->Bind(wxEVT_KILL_FOCUS, &FloatFilterItem::HighKillFocus, this);
 
 	LowTextCtrl->ChangeValue("0.0");
 	HighTextCtrl->ChangeValue("0.0");
@@ -769,7 +780,6 @@ FilterItem(field_name, parent, id, pos, size, style)
 	previous_low_value = 0.0;
 	previous_high_value = 0.0;
 }
-
 
 void FloatFilterItem::CheckBoxClicked(wxCommandEvent &event)
 {
@@ -782,8 +792,6 @@ void FloatFilterItem::CheckBoxClicked(wxCommandEvent &event)
 	{
 		LowTextCtrl->Enable(false);
 		HighTextCtrl->Enable(false);
-
-
 	}
 }
 
@@ -813,9 +821,7 @@ void FloatFilterItem::CheckLowValue()
 				previous_high_value = current_low_value;
 			}
 		}
-
 	}
-
 }
 
 void FloatFilterItem::CheckHighValue()
@@ -844,27 +850,25 @@ void FloatFilterItem::CheckHighValue()
 				previous_low_value = current_high_value;
 			}
 		}
-
 	}
-
 }
 
-void FloatFilterItem::LowControlChanged( wxCommandEvent& event)
+void FloatFilterItem::LowControlChanged(wxCommandEvent &event)
 {
 	CheckLowValue();
 }
 
-void FloatFilterItem::HighControlChanged( wxCommandEvent& event)
+void FloatFilterItem::HighControlChanged(wxCommandEvent &event)
 {
 	CheckHighValue();
 }
 
-void FloatFilterItem::LowKillFocus( wxFocusEvent& event )
+void FloatFilterItem::LowKillFocus(wxFocusEvent &event)
 {
 	CheckLowValue();
 }
 
-void FloatFilterItem::HighKillFocus( wxFocusEvent& event )
+void FloatFilterItem::HighKillFocus(wxFocusEvent &event)
 {
 	CheckHighValue();
 }
@@ -874,7 +878,6 @@ float FloatFilterItem::GetLowValue()
 	double current_value;
 	LowTextCtrl->GetLineText(0).ToDouble(&current_value);
 	return float(current_value);
-
 }
 
 float FloatFilterItem::GetHighValue()
@@ -882,45 +885,39 @@ float FloatFilterItem::GetHighValue()
 	double current_value;
 	HighTextCtrl->GetLineText(0).ToDouble(&current_value);
 	return float(current_value);
-
 }
 
 FloatFilterItem::~FloatFilterItem()
 {
-	LowTextCtrl->Unbind(wxEVT_TEXT_ENTER, &FloatFilterItem::LowControlChanged, this );
-	HighTextCtrl->Unbind(wxEVT_TEXT_ENTER, &FloatFilterItem::HighControlChanged, this );
-	LowTextCtrl->Unbind(wxEVT_KILL_FOCUS, &FloatFilterItem::LowKillFocus, this );
-	HighTextCtrl->Unbind(wxEVT_KILL_FOCUS, &FloatFilterItem::HighKillFocus, this );
-
+	LowTextCtrl->Unbind(wxEVT_TEXT_ENTER, &FloatFilterItem::LowControlChanged, this);
+	HighTextCtrl->Unbind(wxEVT_TEXT_ENTER, &FloatFilterItem::HighControlChanged, this);
+	LowTextCtrl->Unbind(wxEVT_KILL_FOCUS, &FloatFilterItem::LowKillFocus, this);
+	HighTextCtrl->Unbind(wxEVT_KILL_FOCUS, &FloatFilterItem::HighKillFocus, this);
 }
 
 //------------------
 
-DateFilterItem::DateFilterItem(wxString field_name, wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style )
-:
-FilterItem(field_name, parent, id, pos, size, style)
+DateFilterItem::DateFilterItem(wxString field_name, wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style)
+	: FilterItem(field_name, parent, id, pos, size, style)
 {
 
-	LowDateCtrl = new wxDatePickerCtrl( this, wxID_ANY, wxDefaultDateTime, wxDefaultPosition, wxSize( 120,-1 ), wxDP_DEFAULT );
-	my_sizer->Add( LowDateCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	LowDateCtrl = new wxDatePickerCtrl(this, wxID_ANY, wxDefaultDateTime, wxDefaultPosition, wxSize(120, -1), wxDP_DEFAULT);
+	my_sizer->Add(LowDateCtrl, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
-	ToText = new wxStaticText( this, wxID_ANY, wxT("To"), wxDefaultPosition, wxDefaultSize, 0 );
-	ToText->Wrap( -1 );
-	my_sizer->Add( ToText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	ToText = new wxStaticText(this, wxID_ANY, wxT("To"), wxDefaultPosition, wxDefaultSize, 0);
+	ToText->Wrap(-1);
+	my_sizer->Add(ToText, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
-	HighDateCtrl = new wxDatePickerCtrl( this, wxID_ANY, wxDefaultDateTime, wxDefaultPosition, wxSize( 120,-1 ), wxDP_DEFAULT );
-	my_sizer->Add( HighDateCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	HighDateCtrl = new wxDatePickerCtrl(this, wxID_ANY, wxDefaultDateTime, wxDefaultPosition, wxSize(120, -1), wxDP_DEFAULT);
+	my_sizer->Add(HighDateCtrl, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
 	LowDateCtrl->Enable(false);
 	HighDateCtrl->Enable(false);
 	Layout();
 
-	LowDateCtrl->Bind(wxEVT_DATE_CHANGED, &DateFilterItem::LowControlChanged, this );
-	HighDateCtrl->Bind(wxEVT_DATE_CHANGED, &DateFilterItem::HighControlChanged, this );
-
-
+	LowDateCtrl->Bind(wxEVT_DATE_CHANGED, &DateFilterItem::LowControlChanged, this);
+	HighDateCtrl->Bind(wxEVT_DATE_CHANGED, &DateFilterItem::HighControlChanged, this);
 }
-
 
 void DateFilterItem::CheckBoxClicked(wxCommandEvent &event)
 {
@@ -933,11 +930,10 @@ void DateFilterItem::CheckBoxClicked(wxCommandEvent &event)
 	{
 		LowDateCtrl->Enable(false);
 		HighDateCtrl->Enable(false);
-
 	}
 }
 
-void DateFilterItem::LowControlChanged( wxCommandEvent& event)
+void DateFilterItem::LowControlChanged(wxCommandEvent &event)
 {
 	wxDateTime current_value;
 
@@ -949,7 +945,7 @@ void DateFilterItem::LowControlChanged( wxCommandEvent& event)
 	}
 }
 
-void DateFilterItem::HighControlChanged( wxCommandEvent& event)
+void DateFilterItem::HighControlChanged(wxCommandEvent &event)
 {
 	wxDateTime current_value;
 
@@ -961,17 +957,15 @@ void DateFilterItem::HighControlChanged( wxCommandEvent& event)
 	}
 }
 
-
 DateFilterItem::~DateFilterItem()
 {
-	LowDateCtrl->Unbind(wxEVT_DATE_CHANGED, &DateFilterItem::LowControlChanged, this );
-	HighDateCtrl->Unbind(wxEVT_DATE_CHANGED, &DateFilterItem::HighControlChanged, this );
+	LowDateCtrl->Unbind(wxEVT_DATE_CHANGED, &DateFilterItem::LowControlChanged, this);
+	HighDateCtrl->Unbind(wxEVT_DATE_CHANGED, &DateFilterItem::HighControlChanged, this);
 }
 
 int DateFilterItem::GetLowValue()
 {
 	return LowDateCtrl->GetValue().GetTicks();
-
 }
 
 int DateFilterItem::GetHighValue()
@@ -979,31 +973,29 @@ int DateFilterItem::GetHighValue()
 	return HighDateCtrl->GetValue().GetTicks();
 }
 
-
-
 ProperOverwriteCheckSaveDialog::ProperOverwriteCheckSaveDialog(wxWindow *parent, const wxString &message, const wxString &wildcard, const wxString wanted_extension)
-:
-wxFileDialog(parent, message, wxEmptyString, wxEmptyString, wildcard, wxFD_SAVE, wxDefaultPosition, wxDefaultSize, wxFileDialogNameStr)
+	: wxFileDialog(parent, message, wxEmptyString, wxEmptyString, wildcard, wxFD_SAVE, wxDefaultPosition, wxDefaultSize, wxFileDialogNameStr)
 {
 	wxString default_dir = main_frame->current_project.database.database_file.GetPath();
 	wxFileDialog::SetDirectory(default_dir);
 
 	extension_lowercase = wanted_extension.Lower();
 	extension_uppercase = wanted_extension.Upper();
-	Bind (wxEVT_BUTTON, &ProperOverwriteCheckSaveDialog::OnSave, this, wxID_OK);
+	Bind(wxEVT_BUTTON, &ProperOverwriteCheckSaveDialog::OnSave, this, wxID_OK);
 	overidden_path = "";
-
 };
 
 ProperOverwriteCheckSaveDialog::~ProperOverwriteCheckSaveDialog()
 {
-	Unbind (wxEVT_BUTTON, &ProperOverwriteCheckSaveDialog::OnSave, this, wxID_OK);
+	Unbind(wxEVT_BUTTON, &ProperOverwriteCheckSaveDialog::OnSave, this, wxID_OK);
 }
 
 wxString ProperOverwriteCheckSaveDialog::ReturnProperPath()
 {
-	if (overidden_path == "") return GetPath();
-	else return overidden_path;
+	if (overidden_path == "")
+		return GetPath();
+	else
+		return overidden_path;
 }
 
 void ProperOverwriteCheckSaveDialog::OnSave(wxCommandEvent &event)
@@ -1022,25 +1014,24 @@ void ProperOverwriteCheckSaveDialog::OnSave(wxCommandEvent &event)
 
 	if (DoesFileExist(current_path) == true)
 	{
-		wxMessageDialog check_dialog(this, wxString::Format("The File :-\n\n\"%s\"\n\nAlready exists, Do you want to OVERWRITE it?", GetPath()), "Confirm", wxYES_NO|wxICON_WARNING);
+		wxMessageDialog check_dialog(this, wxString::Format("The File :-\n\n\"%s\"\n\nAlready exists, Do you want to OVERWRITE it?", GetPath()), "Confirm", wxYES_NO | wxICON_WARNING);
 
-		if (check_dialog.ShowModal() ==  wxID_YES) event.Skip();
+		if (check_dialog.ShowModal() == wxID_YES)
+			event.Skip();
 	}
-	else event.Skip();
+	else
+		event.Skip();
 }
-
 
 // VIRTUAL LIST CTRL
 ContentsList::ContentsList(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style, const wxValidator &validator, const wxString &name)
-:
-wxListCtrl(parent, id, pos, size, style, validator, name)
+	: wxListCtrl(parent, id, pos, size, style, validator, name)
 {
-
 }
 
 wxString ContentsList::OnGetItemText(long item, long column) const
 {
-	MyAssetParentPanel *parent_panel =  reinterpret_cast < MyAssetParentPanel *> (m_parent->GetParent()->GetParent()); // not very nice code!
+	MyAssetParentPanel *parent_panel = reinterpret_cast<MyAssetParentPanel *>(m_parent->GetParent()->GetParent()); // not very nice code!
 	return parent_panel->ReturnItemText(item, column);
 	//wxPrintf("Here!\n");
 	//	return "Hi"	;
@@ -1059,51 +1050,49 @@ int ContentsList::ReturnGuessAtColumnTextWidth(int wanted_column)
 
 	if (GetItemCount() < 100)
 	{
-		for ( counter = 0; counter < GetItemCount(); counter++)
+		for (counter = 0; counter < GetItemCount(); counter++)
 		{
-			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
+			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width)
+				max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
 		}
 	}
 	else
 	{
-		for ( counter = 0; counter < 50; counter++)
+		for (counter = 0; counter < 50; counter++)
 		{
-			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
+			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width)
+				max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
 		}
 
-		for ( counter = GetItemCount() - 50; counter < GetItemCount(); counter++)
+		for (counter = GetItemCount() - 50; counter < GetItemCount(); counter++)
 		{
-			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
+			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width)
+				max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
 		}
-
 	}
 
 	return max_width;
-
 }
 
 // REFINEMENT PACKAGE LIST
 
 RefinementPackageListControl::RefinementPackageListControl(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style, const wxValidator &validator, const wxString &name)
-:
-wxListCtrl(parent, id, pos, size, style, validator, name)
+	: wxListCtrl(parent, id, pos, size, style, validator, name)
 {
-
 }
 
 wxString RefinementPackageListControl::OnGetItemText(long item, long column) const
 {
 	MyDebugAssertTrue(column == 0, "Asking for column that shouldn't exist (%li)", column);
 
-	MyRefinementPackageAssetPanel *parent_panel =  reinterpret_cast < MyRefinementPackageAssetPanel *> (m_parent->GetParent()->GetParent()); // not very nice code!
+	MyRefinementPackageAssetPanel *parent_panel = reinterpret_cast<MyRefinementPackageAssetPanel *>(m_parent->GetParent()->GetParent()); // not very nice code!
 
 	if (parent_panel->all_refinement_packages.GetCount() > 0)
 	{
 		return parent_panel->all_refinement_packages.Item(item).name;
-
 	}
-	else return "";
-
+	else
+		return "";
 }
 
 int RefinementPackageListControl::ReturnGuessAtColumnTextWidth()
@@ -1121,83 +1110,82 @@ int RefinementPackageListControl::ReturnGuessAtColumnTextWidth()
 
 	if (GetItemCount() < 100)
 	{
-		for ( counter = 0; counter < GetItemCount(); counter++)
+		for (counter = 0; counter < GetItemCount(); counter++)
 		{
-			if (dc.GetTextExtent(OnGetItemText(counter, 0)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, 0)).x + 20;
+			if (dc.GetTextExtent(OnGetItemText(counter, 0)).x + 20 > max_width)
+				max_width = dc.GetTextExtent(OnGetItemText(counter, 0)).x + 20;
 		}
 	}
 	else
 	{
-		for ( counter = 0; counter < 50; counter++)
+		for (counter = 0; counter < 50; counter++)
 		{
-			if (dc.GetTextExtent(OnGetItemText(counter, 0)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, 0)).x + 20;
+			if (dc.GetTextExtent(OnGetItemText(counter, 0)).x + 20 > max_width)
+				max_width = dc.GetTextExtent(OnGetItemText(counter, 0)).x + 20;
 		}
 
-		for ( counter = GetItemCount() - 50; counter < GetItemCount(); counter++)
+		for (counter = GetItemCount() - 50; counter < GetItemCount(); counter++)
 		{
-			if (dc.GetTextExtent(OnGetItemText(counter, 0)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, 0)).x + 20;
+			if (dc.GetTextExtent(OnGetItemText(counter, 0)).x + 20 > max_width)
+				max_width = dc.GetTextExtent(OnGetItemText(counter, 0)).x + 20;
 		}
-
 	}
 
 	return max_width;
-
 }
 
 // CONTAINED PARTICLES
 
 ContainedParticleListControl::ContainedParticleListControl(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style, const wxValidator &validator, const wxString &name)
-:
-wxListCtrl(parent, id, pos, size, style, validator, name)
+	: wxListCtrl(parent, id, pos, size, style, validator, name)
 {
-
 }
 
 wxString ContainedParticleListControl::OnGetItemText(long item, long column) const
 {
-	MyRefinementPackageAssetPanel *parent_panel =  refinement_package_asset_panel;////refinereinterpret_cast < MyRefinementPackageAssetPanel *> (m_parent->GetParent()->GetParent()); // not very nice code!
+	MyRefinementPackageAssetPanel *parent_panel = refinement_package_asset_panel; ////refinereinterpret_cast < MyRefinementPackageAssetPanel *> (m_parent->GetParent()->GetParent()); // not very nice code!
 
 	if (parent_panel->all_refinement_packages.GetCount() > 0 && parent_panel->selected_refinement_package >= 0)
 	{
-		switch(column)
+		switch (column)
 		{
-		    case 0  :
-		    	return wxString::Format(wxT("%li"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).original_particle_position_asset_id);
-		       break;
-		    case 1  :
-		    	return wxString::Format(wxT("%li"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).parent_image_id);
-		       break;
-		    case 2  :
-		    	return wxString::Format(wxT("%.2f Å"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).x_pos);
-		       break;
-		    case 3  :
-		    	return wxString::Format(wxT("%.2f Å"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).y_pos);
-		       break;
-		    case 4  :
-		    	return wxString::Format(wxT("%.4f Å"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).pixel_size);
-		       break;
-		    case 5  :
-				return wxString::Format(wxT("%.2f mm"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).spherical_aberration);
-			   break;
-		    case 6  :
-				return wxString::Format(wxT("%.2f kV"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).microscope_voltage);
-			   break;
-		    case 7  :
-		    	return wxString::Format(wxT("%.2f"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).amplitude_contrast);
-			   break;
-		    case 8  :
-		    	return wxString::Format(wxT("%.0f Å"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).defocus_1);
-		     break;
-		    case 9  :
-		    	return wxString::Format(wxT("%.0f Å"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).defocus_2);
-			   break;
-		    case 10  :
-		    	return wxString::Format(wxT("%.2f °"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).defocus_angle);
-		    	break;
-		    case 11  :
-		    	return wxString::Format(wxT("%.2f °"), rad_2_deg(parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).phase_shift));
-		    	break;
-		 /*   case 10 :
+		case 0:
+			return wxString::Format(wxT("%li"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).original_particle_position_asset_id);
+			break;
+		case 1:
+			return wxString::Format(wxT("%li"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).parent_image_id);
+			break;
+		case 2:
+			return wxString::Format(wxT("%.2f Å"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).x_pos);
+			break;
+		case 3:
+			return wxString::Format(wxT("%.2f Å"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).y_pos);
+			break;
+		case 4:
+			return wxString::Format(wxT("%.4f Å"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).pixel_size);
+			break;
+		case 5:
+			return wxString::Format(wxT("%.2f mm"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).spherical_aberration);
+			break;
+		case 6:
+			return wxString::Format(wxT("%.2f kV"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).microscope_voltage);
+			break;
+		case 7:
+			return wxString::Format(wxT("%.2f"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).amplitude_contrast);
+			break;
+		case 8:
+			return wxString::Format(wxT("%.0f Å"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).defocus_1);
+			break;
+		case 9:
+			return wxString::Format(wxT("%.0f Å"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).defocus_2);
+			break;
+		case 10:
+			return wxString::Format(wxT("%.2f °"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).defocus_angle);
+			break;
+		case 11:
+			return wxString::Format(wxT("%.2f °"), rad_2_deg(parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).phase_shift));
+			break;
+			/*   case 10 :
 			   	return wxString::Format(wxT("%.2f °"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).psi);
 			   	break;
 		    case 11 :
@@ -1213,10 +1201,9 @@ wxString ContainedParticleListControl::OnGetItemText(long item, long column) con
 			    return wxString::Format(wxT("%.2f °"), parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).contained_particles.Item(item).y_shift);
 			    break;
 */
-		    default :
-		       MyPrintWithDetails("Error, asking for column (%li) which does not exist", column);
-		       return "";
-
+		default:
+			MyPrintWithDetails("Error, asking for column (%li) which does not exist", column);
+			return "";
 		}
 	}
 	else
@@ -1238,23 +1225,25 @@ int ContainedParticleListControl::ReturnGuessAtColumnTextWidth(int wanted_column
 
 	if (GetItemCount() < 100)
 	{
-		for ( counter = 0; counter < GetItemCount(); counter++)
+		for (counter = 0; counter < GetItemCount(); counter++)
 		{
-			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
+			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width)
+				max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
 		}
 	}
 	else
 	{
-		for ( counter = 0; counter < 50; counter++)
+		for (counter = 0; counter < 50; counter++)
 		{
-			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
+			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width)
+				max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
 		}
 
-		for ( counter = GetItemCount() - 50; counter < GetItemCount(); counter++)
+		for (counter = GetItemCount() - 50; counter < GetItemCount(); counter++)
 		{
-			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
+			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width)
+				max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
 		}
-
 	}
 
 	return max_width;
@@ -1263,32 +1252,31 @@ int ContainedParticleListControl::ReturnGuessAtColumnTextWidth(int wanted_column
 // 3D References
 
 ReferenceVolumesListControl::ReferenceVolumesListControl(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style, const wxValidator &validator, const wxString &name)
-:
-wxListCtrl(parent, id, pos, size, style, validator, name)
+	: wxListCtrl(parent, id, pos, size, style, validator, name)
 {
-
 }
 
 wxString ReferenceVolumesListControl::OnGetItemText(long item, long column) const
 {
 	extern MyVolumeAssetPanel *volume_asset_panel;
-	MyRefinementPackageAssetPanel *parent_panel =  refinement_package_asset_panel;
+	MyRefinementPackageAssetPanel *parent_panel = refinement_package_asset_panel;
 
 	if (parent_panel->all_refinement_packages.GetCount() > 0 && parent_panel->selected_refinement_package >= 0)
 	{
-		switch(column)
+		switch (column)
 		{
-		    case 0  :
-		    	return wxString::Format(wxT("%li"), item + 1);
-		       break;
-		    case 1  :
-		    	if (parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).references_for_next_refinement.Item(item) == -1) return wxT("Generate from params.");
-		    	else
-		    	return volume_asset_panel->ReturnAssetName(volume_asset_panel->ReturnArrayPositionFromAssetID(parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).references_for_next_refinement.Item(item)));
-		       break;
-		    default :
-		       MyPrintWithDetails("Error, asking for column (%li) which does not exist", column);
-		       return "";
+		case 0:
+			return wxString::Format(wxT("%li"), item + 1);
+			break;
+		case 1:
+			if (parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).references_for_next_refinement.Item(item) == -1)
+				return wxT("Generate from params.");
+			else
+				return volume_asset_panel->ReturnAssetName(volume_asset_panel->ReturnArrayPositionFromAssetID(parent_panel->all_refinement_packages.Item(parent_panel->selected_refinement_package).references_for_next_refinement.Item(item)));
+			break;
+		default:
+			MyPrintWithDetails("Error, asking for column (%li) which does not exist", column);
+			return "";
 		}
 	}
 	else
@@ -1296,8 +1284,6 @@ wxString ReferenceVolumesListControl::OnGetItemText(long item, long column) cons
 		return "";
 	}
 }
-
-
 
 int ReferenceVolumesListControl::ReturnGuessAtColumnTextWidth(int wanted_column)
 {
@@ -1312,32 +1298,32 @@ int ReferenceVolumesListControl::ReturnGuessAtColumnTextWidth(int wanted_column)
 
 	if (GetItemCount() < 100)
 	{
-		for ( counter = 0; counter < GetItemCount(); counter++)
+		for (counter = 0; counter < GetItemCount(); counter++)
 		{
-			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
+			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width)
+				max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
 		}
 	}
 	else
 	{
-		for ( counter = 0; counter < 50; counter++)
+		for (counter = 0; counter < 50; counter++)
 		{
-			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
+			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width)
+				max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
 		}
 
-		for ( counter = GetItemCount() - 50; counter < GetItemCount(); counter++)
+		for (counter = GetItemCount() - 50; counter < GetItemCount(); counter++)
 		{
-			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
+			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width)
+				max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
 		}
-
 	}
 
 	return max_width;
 }
 
-
 ReferenceVolumesListControlRefinement::ReferenceVolumesListControlRefinement(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style, const wxValidator &validator, const wxString &name)
-:
-ReferenceVolumesListControl(parent, id, pos, size, style, validator, name)
+	: ReferenceVolumesListControl(parent, id, pos, size, style, validator, name)
 {
 	refinement_package_picker_to_use = NULL;
 }
@@ -1348,23 +1334,25 @@ wxString ReferenceVolumesListControlRefinement::OnGetItemText(long item, long co
 	extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
 	int selected_refinement_package;
 
-	if (refinement_package_picker_to_use != NULL)  selected_refinement_package = refinement_package_picker_to_use->GetSelection();
+	if (refinement_package_picker_to_use != NULL)
+		selected_refinement_package = refinement_package_picker_to_use->GetSelection();
 
 	if (refinement_package_asset_panel->all_refinement_packages.GetCount() > 0 && selected_refinement_package >= 0 && refinement_package_picker_to_use != NULL)
 	{
-		switch(column)
+		switch (column)
 		{
-		    case 0  :
-		    	return wxString::Format(wxT("%li"), item + 1);
-		       break;
-		    case 1  :
-		    	if (refinement_package_asset_panel->all_refinement_packages.Item(selected_refinement_package).references_for_next_refinement.Item(item) == -1) return wxT("Generate from params.");
-		    	else
-		    	return volume_asset_panel->ReturnAssetName(volume_asset_panel->ReturnArrayPositionFromAssetID(refinement_package_asset_panel->all_refinement_packages.Item(selected_refinement_package).references_for_next_refinement.Item(item)));
-		       break;
-		    default :
-		       MyPrintWithDetails("Error, asking for column (%li) which does not exist", column);
-		       return "";
+		case 0:
+			return wxString::Format(wxT("%li"), item + 1);
+			break;
+		case 1:
+			if (refinement_package_asset_panel->all_refinement_packages.Item(selected_refinement_package).references_for_next_refinement.Item(item) == -1)
+				return wxT("Generate from params.");
+			else
+				return volume_asset_panel->ReturnAssetName(volume_asset_panel->ReturnArrayPositionFromAssetID(refinement_package_asset_panel->all_refinement_packages.Item(selected_refinement_package).references_for_next_refinement.Item(item)));
+			break;
+		default:
+			MyPrintWithDetails("Error, asking for column (%li) which does not exist", column);
+			return "";
 		}
 	}
 	else
@@ -1376,8 +1364,7 @@ wxString ReferenceVolumesListControlRefinement::OnGetItemText(long item, long co
 // Refinements..
 
 RefinementParametersListCtrl::RefinementParametersListCtrl(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style, const wxValidator &validator, const wxString &name)
-:
-wxListCtrl(parent, id, pos, size, style, validator, name)
+	: wxListCtrl(parent, id, pos, size, style, validator, name)
 {
 	parent_dialog = NULL;
 }
@@ -1390,7 +1377,7 @@ void RefinementParametersListCtrl::SetParent(RefinementParametersDialog *wanted_
 wxString RefinementParametersListCtrl::OnGetItemText(long item, long column) const
 {
 
-//	wxPrintf("REturning Value for item = %li, column = %li\n", item, column);
+	//	wxPrintf("REturning Value for item = %li, column = %li\n", item, column);
 
 	if (parent_dialog != NULL)
 	{
@@ -1399,88 +1386,89 @@ wxString RefinementParametersListCtrl::OnGetItemText(long item, long column) con
 
 		//wxPrintf("getting text for column %li column\n", column);
 
-		switch(column)
+		switch (column)
 		{
-		    case 0  : // position_in_stack
-		    	return wxString::Format("%li",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].position_in_stack);
-		    	break;
-		    case 1  : // psi
-		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].psi);
-		     	break;
-		    case 2  : // theta
-		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].theta);
-		     	break;
-		    case 3  : // phi
-		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].phi);
-		     	break;
-		    case 4  : // xshift
-		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].xshift);
-		     	break;
-		    case 5  : // yshift
-		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].yshift);
-		     	break;
-		    case 6  : // defocus1
-		    	return wxString::Format("%.0f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].defocus1);
-		     	break;
-		    case 7  : // defocus2
-		    	return wxString::Format("%.0f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].defocus2);
-		     	break;
-		    case 8  : // defocus_angle
-		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].defocus_angle);
-		     	break;
-		    case 9  : // phase shift
-		    	return wxString::Format("%.2f",rad_2_deg(current_refinement->class_refinement_results[current_class].particle_refinement_results[item].phase_shift));
-		       	break;
-		    case 10  : // Beam Tilt X
-		    	return wxString::Format("%.2f", current_refinement->class_refinement_results[current_class].particle_refinement_results[item].beam_tilt_x);
-		    	break;
-		    case 11  : // Beam Tilt Y
-		    	return wxString::Format("%.2f", current_refinement->class_refinement_results[current_class].particle_refinement_results[item].beam_tilt_y);
-		    	break;
-		    case 12  : // Image Shift X
-		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].image_shift_x);
-		    	break;
-		    case 13  : // Image Shift Y
-		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].image_shift_y);
-		    	break;
-		    case 14  : // Voltage
-		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].microscope_voltage_kv);
-		    	break;
-		    case 15  : // Cs
-		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].microscope_spherical_aberration_mm);
-		    	break;
-		    case 16  : // Amplitude Contrast
-		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].amplitude_contrast);
-		    	break;
-		    case 17  : // Pixel Size
-		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].pixel_size);
-		    	break;
-		    case 18  : // occupancy
-		    	return wxString::Format("%.1f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].occupancy);
-		     	break;
-		    case 19  : // logp
-		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].logp);
-		     	break;
-		    case 20  : // sigma
-		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].sigma);
-		     	break;
-		    case 21 : // score
-		    	return wxString::Format("%.2f",current_refinement->class_refinement_results[current_class].particle_refinement_results[item].score);
-		     	break;
-		    case 22 : // image is active
-		    	if (current_refinement->class_refinement_results[current_class].particle_refinement_results[item].image_is_active < 0) return "No";
-		    	else return "Yes";
-		     	break;
-		   default :
-		       MyPrintWithDetails("Error, asking for column (%li) which does not exist", column);
-		       return "";
+		case 0: // position_in_stack
+			return wxString::Format("%li", current_refinement->class_refinement_results[current_class].particle_refinement_results[item].position_in_stack);
+			break;
+		case 1: // psi
+			return wxString::Format("%.2f", current_refinement->class_refinement_results[current_class].particle_refinement_results[item].psi);
+			break;
+		case 2: // theta
+			return wxString::Format("%.2f", current_refinement->class_refinement_results[current_class].particle_refinement_results[item].theta);
+			break;
+		case 3: // phi
+			return wxString::Format("%.2f", current_refinement->class_refinement_results[current_class].particle_refinement_results[item].phi);
+			break;
+		case 4: // xshift
+			return wxString::Format("%.2f", current_refinement->class_refinement_results[current_class].particle_refinement_results[item].xshift);
+			break;
+		case 5: // yshift
+			return wxString::Format("%.2f", current_refinement->class_refinement_results[current_class].particle_refinement_results[item].yshift);
+			break;
+		case 6: // defocus1
+			return wxString::Format("%.0f", current_refinement->class_refinement_results[current_class].particle_refinement_results[item].defocus1);
+			break;
+		case 7: // defocus2
+			return wxString::Format("%.0f", current_refinement->class_refinement_results[current_class].particle_refinement_results[item].defocus2);
+			break;
+		case 8: // defocus_angle
+			return wxString::Format("%.2f", current_refinement->class_refinement_results[current_class].particle_refinement_results[item].defocus_angle);
+			break;
+		case 9: // phase shift
+			return wxString::Format("%.2f", rad_2_deg(current_refinement->class_refinement_results[current_class].particle_refinement_results[item].phase_shift));
+			break;
+		case 10: // Beam Tilt X
+			return wxString::Format("%.2f", current_refinement->class_refinement_results[current_class].particle_refinement_results[item].beam_tilt_x);
+			break;
+		case 11: // Beam Tilt Y
+			return wxString::Format("%.2f", current_refinement->class_refinement_results[current_class].particle_refinement_results[item].beam_tilt_y);
+			break;
+		case 12: // Image Shift X
+			return wxString::Format("%.2f", current_refinement->class_refinement_results[current_class].particle_refinement_results[item].image_shift_x);
+			break;
+		case 13: // Image Shift Y
+			return wxString::Format("%.2f", current_refinement->class_refinement_results[current_class].particle_refinement_results[item].image_shift_y);
+			break;
+		case 14: // Voltage
+			return wxString::Format("%.2f", current_refinement->class_refinement_results[current_class].particle_refinement_results[item].microscope_voltage_kv);
+			break;
+		case 15: // Cs
+			return wxString::Format("%.2f", current_refinement->class_refinement_results[current_class].particle_refinement_results[item].microscope_spherical_aberration_mm);
+			break;
+		case 16: // Amplitude Contrast
+			return wxString::Format("%.2f", current_refinement->class_refinement_results[current_class].particle_refinement_results[item].amplitude_contrast);
+			break;
+		case 17: // Pixel Size
+			return wxString::Format("%.2f", current_refinement->class_refinement_results[current_class].particle_refinement_results[item].pixel_size);
+			break;
+		case 18: // occupancy
+			return wxString::Format("%.1f", current_refinement->class_refinement_results[current_class].particle_refinement_results[item].occupancy);
+			break;
+		case 19: // logp
+			return wxString::Format("%.2f", current_refinement->class_refinement_results[current_class].particle_refinement_results[item].logp);
+			break;
+		case 20: // sigma
+			return wxString::Format("%.2f", current_refinement->class_refinement_results[current_class].particle_refinement_results[item].sigma);
+			break;
+		case 21: // score
+			return wxString::Format("%.2f", current_refinement->class_refinement_results[current_class].particle_refinement_results[item].score);
+			break;
+		case 22: // image is active
+			if (current_refinement->class_refinement_results[current_class].particle_refinement_results[item].image_is_active < 0)
+				return "No";
+			else
+				return "Yes";
+			break;
+		default:
+			MyPrintWithDetails("Error, asking for column (%li) which does not exist", column);
+			return "";
 		}
 	}
 	else
 	{
 		return "";
 	}
-
 }
 
 int RefinementParametersListCtrl::ReturnGuessAtColumnTextWidth(int wanted_column)
@@ -1497,23 +1485,25 @@ int RefinementParametersListCtrl::ReturnGuessAtColumnTextWidth(int wanted_column
 
 	if (GetItemCount() < 100)
 	{
-		for ( counter = 0; counter < GetItemCount(); counter++)
+		for (counter = 0; counter < GetItemCount(); counter++)
 		{
-			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
+			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width)
+				max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
 		}
 	}
 	else
 	{
-		for ( counter = 0; counter < 50; counter++)
+		for (counter = 0; counter < 50; counter++)
 		{
-			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
+			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width)
+				max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
 		}
 
-		for ( counter = GetItemCount() - 50; counter < GetItemCount(); counter++)
+		for (counter = GetItemCount() - 50; counter < GetItemCount(); counter++)
 		{
-			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
+			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width)
+				max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
 		}
-
 	}
 
 	return max_width;
@@ -1522,8 +1512,7 @@ int RefinementParametersListCtrl::ReturnGuessAtColumnTextWidth(int wanted_column
 // Classification Selection..
 
 ClassificationSelectionListCtrl::ClassificationSelectionListCtrl(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style, const wxValidator &validator, const wxString &name)
-:
-wxListCtrl(parent, id, pos, size, style, validator, name)
+	: wxListCtrl(parent, id, pos, size, style, validator, name)
 {
 
 	current_selection_id = -10;
@@ -1533,9 +1522,9 @@ wxListCtrl(parent, id, pos, size, style, validator, name)
 	Bind(wxEVT_LIST_DELETE_ALL_ITEMS, &ClassificationSelectionListCtrl::OnClearAll, this);
 }
 
-void ClassificationSelectionListCtrl::OnClearAll(wxListEvent& event)
+void ClassificationSelectionListCtrl::OnClearAll(wxListEvent &event)
 {
-	selection_id_upon_clear = current_selection_id ;
+	selection_id_upon_clear = current_selection_id;
 }
 
 void ClassificationSelectionListCtrl::Fill(long refinement_package_asset_id, long classification_id, bool select_latest)
@@ -1553,15 +1542,16 @@ void ClassificationSelectionListCtrl::Fill(long refinement_package_asset_id, lon
 		{
 			all_valid_selections.Add(refinement_package_asset_panel->all_classification_selections.Item(counter));
 			original_classum_selection_array_positions.Add(counter);
-			if (refinement_package_asset_panel->all_classification_selections.Item(counter).selection_id == selection_id_upon_clear) item_to_select = counter;
+			if (refinement_package_asset_panel->all_classification_selections.Item(counter).selection_id == selection_id_upon_clear)
+				item_to_select = counter;
 		}
 	}
 
 	if (all_valid_selections.GetCount() > 0)
 	{
-		InsertColumn(0, wxT("Selection"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
-		InsertColumn(1, wxT("Creation Date"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
-		InsertColumn(2, wxT("Number Selected"), wxLIST_FORMAT_CENTRE,  wxLIST_AUTOSIZE_USEHEADER );
+		InsertColumn(0, wxT("Selection"), wxLIST_FORMAT_CENTRE, wxLIST_AUTOSIZE_USEHEADER);
+		InsertColumn(1, wxT("Creation Date"), wxLIST_FORMAT_CENTRE, wxLIST_AUTOSIZE_USEHEADER);
+		InsertColumn(2, wxT("Number Selected"), wxLIST_FORMAT_CENTRE, wxLIST_AUTOSIZE_USEHEADER);
 
 		SetItemCount(all_valid_selections.GetCount());
 		RefreshItems(0, all_valid_selections.GetCount() - 1);
@@ -1576,8 +1566,7 @@ void ClassificationSelectionListCtrl::Fill(long refinement_package_asset_id, lon
 			SetItemState(all_valid_selections.GetCount() - 1, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
 			current_selection_id = all_valid_selections.Item(all_valid_selections.GetCount() - 1).selection_id;
 		}
-		else
-		if (item_to_select != -1)
+		else if (item_to_select != -1)
 		{
 			SetItemState(item_to_select, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
 			current_selection_id = selection_id_upon_clear;
@@ -1587,8 +1576,6 @@ void ClassificationSelectionListCtrl::Fill(long refinement_package_asset_id, lon
 		//	SetItemState(0, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
 		//	current_selection_id = all_valid_selections.Item(0).selection_id;
 		//}
-
-
 	}
 
 	Thaw();
@@ -1597,7 +1584,7 @@ void ClassificationSelectionListCtrl::Fill(long refinement_package_asset_id, lon
 wxString ClassificationSelectionListCtrl::OnGetItemText(long item, long column) const
 {
 
-//	wxPrintf("REturning Value for item = %li, column = %li\n", item, column);
+	//	wxPrintf("REturning Value for item = %li, column = %li\n", item, column);
 
 	if (all_valid_selections.GetCount() > 0 && refine2d_results_panel->RefinementPackageComboBox->GetCount() > 0)
 	{
@@ -1605,28 +1592,26 @@ wxString ClassificationSelectionListCtrl::OnGetItemText(long item, long column) 
 
 		//wxPrintf("getting text for column %li column\n", column);
 
-		switch(column)
+		switch (column)
 		{
-		    case 0  : // position_in_stack
-		    	return current_selection->name;
-		    	break;
-		    case 1  : // psi
-		    	return current_selection->creation_date.FormatISOCombined(' ');
-		     	break;
-		    case 2  : // theta
-		    	return wxString::Format("%i", current_selection->number_of_selections);
-		     	break;
-		    default :
-		       MyPrintWithDetails("Error, asking for column (%li) which does not exist", column);
-		       return "";
+		case 0: // position_in_stack
+			return current_selection->name;
+			break;
+		case 1: // psi
+			return current_selection->creation_date.FormatISOCombined(' ');
+			break;
+		case 2: // theta
+			return wxString::Format("%i", current_selection->number_of_selections);
+			break;
+		default:
+			MyPrintWithDetails("Error, asking for column (%li) which does not exist", column);
+			return "";
 		}
-
 	}
 	else
 	{
 		return "";
 	}
-
 }
 
 int ClassificationSelectionListCtrl::ReturnGuessAtColumnTextWidth(int wanted_column)
@@ -1643,50 +1628,49 @@ int ClassificationSelectionListCtrl::ReturnGuessAtColumnTextWidth(int wanted_col
 
 	if (GetItemCount() < 100)
 	{
-		for ( counter = 0; counter < GetItemCount(); counter++)
+		for (counter = 0; counter < GetItemCount(); counter++)
 		{
-			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
+			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width)
+				max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
 		}
 	}
 	else
 	{
-		for ( counter = 0; counter < 50; counter++)
+		for (counter = 0; counter < 50; counter++)
 		{
-			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
+			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width)
+				max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
 		}
 
-		for ( counter = GetItemCount() - 50; counter < GetItemCount(); counter++)
+		for (counter = GetItemCount() - 50; counter < GetItemCount(); counter++)
 		{
-			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width) max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
+			if (dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20 > max_width)
+				max_width = dc.GetTextExtent(OnGetItemText(counter, wanted_column)).x + 20;
 		}
-
 	}
 
 	return max_width;
 }
 
-
-
-
-ClassVolumeSelectPanel::ClassVolumeSelectPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style ) : wxPanel( parent, id, pos, size, style )
+ClassVolumeSelectPanel::ClassVolumeSelectPanel(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style) : wxPanel(parent, id, pos, size, style)
 {
-	MainSizer = new wxBoxSizer( wxHORIZONTAL );
+	MainSizer = new wxBoxSizer(wxHORIZONTAL);
 
-	wxBoxSizer* bSizer201;
-	bSizer201 = new wxBoxSizer( wxHORIZONTAL );
+	wxBoxSizer *bSizer201;
+	bSizer201 = new wxBoxSizer(wxHORIZONTAL);
 
-	ClassText = new wxStaticText( this, wxID_ANY, wxT("Class #1 :"), wxDefaultPosition, wxDefaultSize, 0 );
-	ClassText->Wrap( -1 );
-	bSizer201->Add( ClassText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	ClassText = new wxStaticText(this, wxID_ANY, wxT("Class #1 :"), wxDefaultPosition, wxDefaultSize, 0);
+	ClassText->Wrap(-1);
+	bSizer201->Add(ClassText, 0, wxALIGN_CENTER_VERTICAL | wxALL, 5);
 
-	VolumeComboBox = new VolumeAssetPickerComboPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	VolumeComboBox = new VolumeAssetPickerComboPanel(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
 	VolumeComboBox->FillComboBox(true);
 	VolumeComboBox->SetSelectionWithEvent(0);
-	bSizer201->Add( VolumeComboBox, 1, wxALL, 5 );
-	MainSizer->Add( bSizer201, 1, 0, 5 );
+	bSizer201->Add(VolumeComboBox, 1, wxALL, 5);
+	MainSizer->Add(bSizer201, 1, 0, 5);
 	class_number = -1;
 
-	this->SetSizer( MainSizer );
+	this->SetSizer(MainSizer);
 	this->Layout();
 }
 
@@ -1694,29 +1678,44 @@ ClassVolumeSelectPanel::~ClassVolumeSelectPanel()
 {
 }
 
-//generatemaskheads WTW
-
-wxThread::ExitCode GenerateMaskThread::Entry() 
+wxThread::ExitCode GenerateMaskThread::Entry()
 {
+	Image mask_image;
 
 	ImageFile half_map_1_imagefile(half_map_1.ToStdString());
-	ImageFile half_map_2_imagefile(half_map_2.ToStdString());
-	Image mask_image;
-	Image half_map_1_image; 
-	Image half_map_2_image;
-
 	int num_slices_half_map = half_map_1_imagefile.ReturnNumberOfSlices();
-	half_map_1_image.ReadSlices(&half_map_1_imagefile, 1, num_slices_half_map);
-	half_map_2_image.ReadSlices(&half_map_2_imagefile, 1, num_slices_half_map);
 
-	Image combined_images(half_map_1_image);
-	combined_images.AddImage(&half_map_2_image);
-	combined_images.DivideByConstant(2); 
-	mask_image.CopyFrom(&combined_images);
-	mask_image.ConvertToAutoMask(pixel_size, outer_mask_radius, pixel_size * 2.0f, 0.2f);
-	mask_image.WriteSlicesAndFillHeader(mask_image_name.ToStdString(), pixel_size);
+	if (active_should_mask == false)
+	{
+		ImageFile half_map_2_imagefile(half_map_2.ToStdString());
+		Image half_map_1_image;
+		Image half_map_2_image;
 
-	//calculate first and last thread with data 
+		half_map_1_image.ReadSlices(&half_map_1_imagefile, 1, num_slices_half_map);
+		half_map_2_image.ReadSlices(&half_map_2_imagefile, 1, num_slices_half_map);
+
+		Image combined_images(half_map_1_image);
+		combined_images.AddImage(&half_map_2_image);
+		combined_images.DivideByConstant(2);
+		mask_image.CopyFrom(&combined_images);
+		mask_image.ConvertToAutoMask(pixel_size, outer_mask_radius, pixel_size * 2.0f, 0.2f);
+		mask_image.WriteSlicesAndFillHeader(mask_image_name.ToStdString(), pixel_size);
+	}
+	else
+	{
+		ImageFile mask_imagefile(mask_image_name.ToStdString());
+		int num_slices_mask = mask_imagefile.ReturnNumberOfSlices();
+
+		if (num_slices_half_map != num_slices_mask)
+		{
+			MyPrintfRed("Number of slices in provided mask does not align with number of slices in half maps.");
+			//what was the alternative to exit(1) TODO
+		}
+
+		mask_image.ReadSlices(&mask_imagefile, 1, num_slices_mask);
+	}
+
+	//calculate first and last thread with data
 	int first_slice_with_data;
 	int last_slice_with_data;
 	Image slice_image;
@@ -1751,7 +1750,7 @@ wxThread::ExitCode GenerateMaskThread::Entry()
 
 	wxQueueEvent(main_thread_pointer, my_thread_event);
 
-	return (wxThread::ExitCode)0;     // success
+	return (wxThread::ExitCode)0; // success
 }
 
 wxThread::ExitCode AutoMaskerThread::Entry()
@@ -1779,7 +1778,7 @@ wxThread::ExitCode AutoMaskerThread::Entry()
 		input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
 		input_file.CloseFile();
 
-		if (! apply_size_mask)
+		if (!apply_size_mask)
 		{
 			average_value = input_image.ReturnAverageOfRealValues();
 			input_image.SetMinimumValue(average_value);
@@ -1790,8 +1789,6 @@ wxThread::ExitCode AutoMaskerThread::Entry()
 			original_average_value = input_image.ReturnAverageOfRealValues(mask_radius / pixel_size, true);
 
 			// remove disconnected density
-
-
 
 			// OLD CODE...
 			/*
@@ -1829,26 +1826,24 @@ wxThread::ExitCode AutoMaskerThread::Entry()
 			size_image.ConvertToAutoMask(pixel_size, mask_radius, 7.0f, 0.1, true);
 
 			//size_image.QuickAndDirtyWriteSlices("/tmp/mask.mrc", 1, size_image.logical_z_dimension);
-		//	input_image.ApplyMask(buffer_image, 20.0f / pixel_size, 0.0, 0.0, 0.0, true, original_average_value);
+			//	input_image.ApplyMask(buffer_image, 20.0f / pixel_size, 0.0, 0.0, 0.0, true, original_average_value);
 
 			for (address = 0; address < input_image.real_memory_allocated; address++)
 			{
-				if (size_image.real_values[address] == 0.0f) input_image.real_values[address] = original_average_value;
+				if (size_image.real_values[address] == 0.0f)
+					input_image.real_values[address] = original_average_value;
 				//else input_image.real_values[address] = significant_filtered_image.real_values[address];
 			}
-
 
 			input_image.SetMinimumValue(original_average_value);
 			input_image.CosineMask(mask_radius / pixel_size, 1.0, false, true, 0.0);
 			//input_image.QuickAndDirtyWriteSlices("/tmp/masked.mrc", 1, input_image.logical_z_dimension);
-
 		}
 
 		output_file.OpenFile(output_files.Item(class_counter).ToStdString(), true);
 		input_image.WriteSlices(&output_file, 1, input_image.logical_z_dimension);
 		output_file.CloseFile();
 	}
-
 
 	// send finished event..
 
@@ -1857,9 +1852,8 @@ wxThread::ExitCode AutoMaskerThread::Entry()
 
 	wxQueueEvent(main_thread_pointer, my_thread_event);
 
-	return (wxThread::ExitCode)0;     // success
+	return (wxThread::ExitCode)0; // success
 }
-
 
 wxThread::ExitCode OrthDrawerThread::Entry()
 {
@@ -1877,7 +1871,8 @@ wxThread::ExitCode OrthDrawerThread::Entry()
 		input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
 
 		Image *new_image = new Image;
-		if (input_file.ReturnXSize() > 500) scale_factor = 500.0f / float(input_file.ReturnXSize());
+		if (input_file.ReturnXSize() > 500)
+			scale_factor = 500.0f / float(input_file.ReturnXSize());
 		new_image->Allocate(myroundint(float(input_file.ReturnXSize()) * scale_factor) * 3, myroundint(float(input_file.ReturnYSize()) * scale_factor) * 2.0, filenames_of_volumes.GetCount(), true);
 		input_file.CloseFile();
 
@@ -1887,12 +1882,11 @@ wxThread::ExitCode OrthDrawerThread::Entry()
 		input_image.CreateOrthogonalProjectionsImage(&current_output, true, scale_factor, mask_radius_in_pixels);
 		//current_output.QuickAndDirtyWriteSlice("/tmp/after.mrc", 1);
 
-
 		// if there are multiple classes, take care of it.
 
 		for (int class_counter = 2; class_counter <= filenames_of_volumes.GetCount(); class_counter++)
 		{
-			if (DoesFileExist(filenames_of_volumes.Item(class_counter -1 )) == false)
+			if (DoesFileExist(filenames_of_volumes.Item(class_counter - 1)) == false)
 			{
 				delete new_image;
 				finished_event->SetImage(NULL);
@@ -1907,8 +1901,7 @@ wxThread::ExitCode OrthDrawerThread::Entry()
 			input_image.CreateOrthogonalProjectionsImage(&current_output, true, scale_factor, mask_radius_in_pixels);
 		}
 
-
-	/*	if (new_image->logical_x_dimension > 1500)
+		/*	if (new_image->logical_x_dimension > 1500)
 		{
 			float downscale_factor = new_image->logical_x_dimension / 1500;
 			new_image->ForwardFFT();
@@ -1934,12 +1927,9 @@ wxThread::ExitCode OrthDrawerThread::Entry()
 		finished_event->SetImage(NULL);
 	}
 
-
 	wxQueueEvent(main_thread_pointer, finished_event);
 
-	return (wxThread::ExitCode) 0;
-
-
+	return (wxThread::ExitCode)0;
 }
 
 wxThread::ExitCode Multiply3DMaskerThread::Entry()
@@ -1957,7 +1947,6 @@ wxThread::ExitCode Multiply3DMaskerThread::Entry()
 	mask_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());
 	input_file.CloseFile();
 
-
 	// loop through and mask
 
 	for (int class_counter = 0; class_counter < input_files.GetCount(); class_counter++)
@@ -1973,17 +1962,14 @@ wxThread::ExitCode Multiply3DMaskerThread::Entry()
 		output_file.CloseFile();
 	}
 
-
 	// send finished event..
 
 	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_MULTIPLY3DMASKTHREAD_COMPLETED);
 	my_thread_event->SetInt(thread_id);
 	wxQueueEvent(main_thread_pointer, my_thread_event);
 
-
-	return (wxThread::ExitCode)0;     // success
+	return (wxThread::ExitCode)0; // success
 }
-
 
 wxThread::ExitCode WriteClassificationStarFileThread::Entry()
 {
@@ -1995,12 +1981,7 @@ wxThread::ExitCode WriteClassificationStarFileThread::Entry()
 	my_thread_event->SetString(written_filename);
 	wxQueueEvent(main_thread_pointer, my_thread_event);
 
-	return (wxThread::ExitCode)0;     // success
+	return (wxThread::ExitCode)0; // success
 }
-
-
-
-
-
 
 //wxString input_star_file = input_classification->WritecisTEMStarFile(main_frame->current_project.parameter_file_directory.GetFullPath() + "/classification_input_star", active_refinement_package);

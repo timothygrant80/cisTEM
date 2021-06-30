@@ -7,21 +7,21 @@ wxDECLARE_EVENT(wxEVT_AUTOMASKERTHREAD_COMPLETED, wxThreadEvent);
 wxDECLARE_EVENT(wxEVT_MULTIPLY3DMASKTHREAD_COMPLETED, wxThreadEvent);
 wxDECLARE_EVENT(wxEVT_WRITECLASSIFICATIONSTARFILETHREAD_COMPLETED, wxThreadEvent);
 
-class ReturnProcessedImageEvent: public wxCommandEvent
+class ReturnProcessedImageEvent : public wxCommandEvent
 {
 public:
 	ReturnProcessedImageEvent(wxEventType commandType = RETURN_PROCESSED_IMAGE_EVT, int id = 0)
-        		:  wxCommandEvent(commandType, id) { }
+		: wxCommandEvent(commandType, id) {}
 
 	// You *must* copy here the data to be transported
-	ReturnProcessedImageEvent(const ReturnProcessedImageEvent& event)
-        		:  wxCommandEvent(event) { this->SetImage(event.GetImage()); }
+	ReturnProcessedImageEvent(const ReturnProcessedImageEvent &event)
+		: wxCommandEvent(event) { this->SetImage(event.GetImage()); }
 
 	// Required for sending with wxPostEvent()
-	wxEvent* Clone() const { return new ReturnProcessedImageEvent(*this); }
+	wxEvent *Clone() const { return new ReturnProcessedImageEvent(*this); }
 
-	Image* GetImage() const { return m_image; }
-	void SetImage( Image *image) { m_image = image; }
+	Image *GetImage() const { return m_image; }
+	void SetImage(Image *image) { m_image = image; }
 
 private:
 	Image *m_image;
@@ -30,21 +30,20 @@ private:
 typedef void (wxEvtHandler::*ReturnProcessedImageEventFunction)(ReturnProcessedImageEvent &);
 #define ReturnProcessedImageEventHandler(func) wxEVENT_HANDLER_CAST(ReturnProcessedImageEventFunction, func)
 
-class ReturnSharpeningResultsEvent: public wxCommandEvent
+class ReturnSharpeningResultsEvent : public wxCommandEvent
 {
 public:
-	ReturnSharpeningResultsEvent(wxEventType commandType = RETURN_SHARPENING_RESULTS_EVT, int id = 0) :  wxCommandEvent(commandType, id)
+	ReturnSharpeningResultsEvent(wxEventType commandType = RETURN_SHARPENING_RESULTS_EVT, int id = 0) : wxCommandEvent(commandType, id)
 	{
 		m_sharpened_image = NULL;
 		m_original_orth_image = NULL;
 		m_sharpened_orth_image = NULL;
 		m_original_curve = NULL;
 		m_sharpened_curve = NULL;
-
 	}
 
 	// You *must* copy here the data to be transported
-	ReturnSharpeningResultsEvent(const ReturnSharpeningResultsEvent& event) :  wxCommandEvent(event)
+	ReturnSharpeningResultsEvent(const ReturnSharpeningResultsEvent &event) : wxCommandEvent(event)
 	{
 		this->SetSharpenedImage(event.GetSharpenedImage());
 		this->SetOriginalOrthImage(event.GetOriginalOrthImage());
@@ -53,19 +52,19 @@ public:
 	}
 
 	// Required for sending with wxPostEvent()
-	wxEvent* Clone() const { return new ReturnSharpeningResultsEvent(*this); }
+	wxEvent *Clone() const { return new ReturnSharpeningResultsEvent(*this); }
 
-	Image* GetSharpenedImage() const { return m_sharpened_image; }
-	Image* GetOriginalOrthImage() const { return m_original_orth_image; }
-	Image* GetSharpenedOrthImage() const { return m_sharpened_orth_image; }
-	Curve* GetOriginalCurve() const { return m_original_curve; }
-	Curve* GetSharpenedCurve() const { return m_sharpened_curve; }
+	Image *GetSharpenedImage() const { return m_sharpened_image; }
+	Image *GetOriginalOrthImage() const { return m_original_orth_image; }
+	Image *GetSharpenedOrthImage() const { return m_sharpened_orth_image; }
+	Curve *GetOriginalCurve() const { return m_original_curve; }
+	Curve *GetSharpenedCurve() const { return m_sharpened_curve; }
 
-	void SetSharpenedImage( Image *image) { m_sharpened_image = image; }
-	void SetOriginalOrthImage( Image *image) { m_original_orth_image = image; }
-	void SetSharpenedOrthImage( Image *image) { m_sharpened_orth_image = image; }
-	void SetOriginalCurve(Curve *curve) { m_original_curve = curve;}
-	void SetSharpenedCurve(Curve *curve) { m_sharpened_curve = curve;}
+	void SetSharpenedImage(Image *image) { m_sharpened_image = image; }
+	void SetOriginalOrthImage(Image *image) { m_original_orth_image = image; }
+	void SetSharpenedOrthImage(Image *image) { m_sharpened_orth_image = image; }
+	void SetOriginalCurve(Curve *curve) { m_original_curve = curve; }
+	void SetSharpenedCurve(Curve *curve) { m_sharpened_curve = curve; }
 
 private:
 	Image *m_sharpened_image;
@@ -78,10 +77,9 @@ private:
 typedef void (wxEvtHandler::*ReturnSharpeningResultsEventFunction)(ReturnSharpeningResultsEvent &);
 #define ReturnSharpeningResultsEventHandler(func) wxEVENT_HANDLER_CAST(ReturnSharpeningResultsEventFunction, func)
 
-
 class OrthDrawerThread : public wxThread
 {
-	public:
+public:
 	OrthDrawerThread(wxWindow *parent, wxArrayString wanted_filenames_of_volumes, wxString wanted_tab_name, float wanted_scale_factor = 1.0f, float wanted_mask_radius_in_pixels = 0.0f, int wanted_thread_id = -1) : wxThread(wxTHREAD_DETACHED)
 	{
 		main_thread_pointer = parent;
@@ -92,8 +90,7 @@ class OrthDrawerThread : public wxThread
 		thread_id = wanted_thread_id;
 	}
 
-	protected:
-
+protected:
 	wxWindow *main_thread_pointer;
 	wxArrayString filenames_of_volumes;
 	wxString tab_name;
@@ -101,13 +98,14 @@ class OrthDrawerThread : public wxThread
 	float mask_radius_in_pixels;
 	int thread_id;
 
-    virtual ExitCode Entry();
+	virtual ExitCode Entry();
 };
 
-class GenerateMaskThread : public wxThread 
+//WTW find where the mask thread does its work and then change it to accomidate user supplied mask
+class GenerateMaskThread : public wxThread
 {
-	public:
-	GenerateMaskThread(wxWindow *parent, wxString half_map_1, wxString half_map_2, wxString mask_image_name, float wanted_pixel_size, float wanted_outer_mask_radius, int wanted_thread_id = -1) : wxThread(wxTHREAD_DETACHED)
+public:
+	GenerateMaskThread(wxWindow *parent, wxString half_map_1, wxString half_map_2, wxString mask_image_name, float wanted_pixel_size, float wanted_outer_mask_radius, bool active_should_mask, wxString active_mask_filename, int wanted_thread_id = -1) : wxThread(wxTHREAD_DETACHED)
 	{
 		main_thread_pointer = parent;
 		half_map_1 = half_map_1;
@@ -116,10 +114,11 @@ class GenerateMaskThread : public wxThread
 		pixel_size = wanted_pixel_size;
 		outer_mask_radius = wanted_outer_mask_radius;
 		thread_id = wanted_thread_id;
+		active_should_mask = active_should_mask;
+		active_mask_filename = active_mask_filename;
 	}
 
-	protected:
-
+protected:
 	wxWindow *main_thread_pointer;
 	wxString half_map_1;
 	wxString half_map_2;
@@ -127,13 +126,15 @@ class GenerateMaskThread : public wxThread
 	float pixel_size;
 	float outer_mask_radius;
 	int thread_id;
+	bool acitve_should_mask;
+	wxString active_mask_filename;
 
-    virtual ExitCode Entry();
+	virtual ExitCode Entry();
 };
 
 class AutoMaskerThread : public wxThread
 {
-	public:
+public:
 	AutoMaskerThread(wxWindow *parent, wxArrayString wanted_input_files, wxArrayString wanted_output_files, float wanted_pixel_size, float wanted_mask_radius, int wanted_thread_id = -1, float wanted_max_resolution = -1) : wxThread(wxTHREAD_DETACHED)
 	{
 		main_thread_pointer = parent;
@@ -143,11 +144,11 @@ class AutoMaskerThread : public wxThread
 		mask_radius = wanted_mask_radius;
 		thread_id = wanted_thread_id;
 		max_resolution = wanted_max_resolution;
-		if (max_resolution < pixel_size * 2.0f) max_resolution = pixel_size * 2.0f;
+		if (max_resolution < pixel_size * 2.0f)
+			max_resolution = pixel_size * 2.0f;
 	}
 
-	protected:
-
+protected:
 	wxWindow *main_thread_pointer;
 	wxArrayString input_files;
 	wxArrayString output_files;
@@ -156,12 +157,12 @@ class AutoMaskerThread : public wxThread
 	int thread_id;
 	float max_resolution;
 
-    virtual ExitCode Entry();
+	virtual ExitCode Entry();
 };
 
 class Multiply3DMaskerThread : public wxThread
 {
-	public:
+public:
 	Multiply3DMaskerThread(wxWindow *parent, wxArrayString wanted_input_files, wxArrayString wanted_output_files, wxString wanted_mask_filename, float wanted_cosine_edge_width, float wanted_weight_outside_mask, float wanted_low_pass_filter_radius, float wanted_pixel_size, int wanted_thread_id = -1) : wxThread(wxTHREAD_DETACHED)
 	{
 		main_thread_pointer = parent;
@@ -175,8 +176,7 @@ class Multiply3DMaskerThread : public wxThread
 		thread_id = wanted_thread_id;
 	}
 
-	protected:
-
+protected:
 	wxWindow *main_thread_pointer;
 	wxArrayString input_files;
 	wxArrayString output_files;
@@ -188,12 +188,12 @@ class Multiply3DMaskerThread : public wxThread
 	float low_pass_filter_radius;
 	float pixel_size;
 
-    virtual ExitCode Entry();
+	virtual ExitCode Entry();
 };
 
 class WriteClassificationStarFileThread : public wxThread
 {
-	public:
+public:
 	WriteClassificationStarFileThread(wxWindow *parent, wxString wanted_base_filename, Classification *wanted_classification, RefinementPackage *wanted_active_refinement_package) : wxThread(wxTHREAD_DETACHED)
 	{
 		main_thread_pointer = parent;
@@ -202,17 +202,13 @@ class WriteClassificationStarFileThread : public wxThread
 		base_filename = wanted_base_filename;
 	}
 
-	protected:
-
+protected:
 	Classification *current_classification;
 	RefinementPackage *active_refinement_package;
 	wxWindow *main_thread_pointer;
 	wxString base_filename;
-    virtual ExitCode Entry();
+	virtual ExitCode Entry();
 };
-
-
-
 
 WX_DECLARE_OBJARRAY(wxColor, ArrayofColors);
 

@@ -101,7 +101,6 @@ protected:
 	virtual ExitCode Entry();
 };
 
-//WTW find where the mask thread does its work and then change it to accomidate user supplied mask
 class GenerateMaskThread : public wxThread
 {
 public:

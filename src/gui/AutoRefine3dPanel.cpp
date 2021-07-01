@@ -1034,13 +1034,16 @@ void AutoRefinementManager::BeginRefinementCycle()
 
 	global_delete_autorefine3d_scratch();
 
-	//do local filtering? WTW
+	//do local filtering?
 
+	printf("local filtering try\n");
 	if (active_local_filtering == true)
 	{
+		printf("local filtering yay\n");
 		SetupLocalFilteringJob();
 		RunLocalFilteringJob();
 	}
+	printf("local filtering end\n");
 
 	// setup input/output refinements
 

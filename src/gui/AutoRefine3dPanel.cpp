@@ -148,7 +148,7 @@ void AutoRefine3DPanel::SetInfo()
 	InfoText->EndAlignment();
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
-	InfoText->WriteText(wxT("This panel allows users to refine a 3D reconstruction to high resolution using Frealign (Grigorieff, 2016) without the need to set many of the parameters that are required for manual refinement (see Manual Refine panel). In the simplest case, all that is required is the specification of a refinement package (set up under Assets), a starting reference (for example, a reconstruction obtained from the ab-initio procedure) and an initial resolution limit used in the refinement. The resolution should start low, for at 30 Å, to remove potential bias in the starting reference. However, for particles that are close to spherical, such as apoferritin, a higher resolution should be specified, between 8 and 12 Å (see Expert Options).  If the starting reference contains errors, the refinement may finish before converging to the correct answer.  This can often be solved by running another auto-refinement beginning with the result of the previous refinement.  In some cases multiple rounds may be needed to reach full convergence."));
+	InfoText->WriteText(wxT("THIS IS A TEST WTW This panel allows users to refine a 3D reconstruction to high resolution using Frealign (Grigorieff, 2016) without the need to set many of the parameters that are required for manual refinement (see Manual Refine panel). In the simplest case, all that is required is the specification of a refinement package (set up under Assets), a starting reference (for example, a reconstruction obtained from the ab-initio procedure) and an initial resolution limit used in the refinement. The resolution should start low, for at 30 Å, to remove potential bias in the starting reference. However, for particles that are close to spherical, such as apoferritin, a higher resolution should be specified, between 8 and 12 Å (see Expert Options).  If the starting reference contains errors, the refinement may finish before converging to the correct answer.  This can often be solved by running another auto-refinement beginning with the result of the previous refinement.  In some cases multiple rounds may be needed to reach full convergence."));
 	InfoText->Newline();
 	InfoText->Newline();
 	InfoText->EndAlignment();
@@ -898,6 +898,8 @@ void AutoRefinementManager::SetupLocalFilteringJob()
 
 		for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
 		{
+			//wxString output_reconstruction = main_frame->current_project.volume_asset_directory.GetFullPath();
+			int output_refinement_id = output_refinement->refinement_id;
 			wxString output_reconstruction = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/local_filter_volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
 			wxString half_map_1 = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map1.mrc", output_refinement->refinement_id, class_counter + 1);
 			wxString half_map_2 = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map2.mrc", output_refinement->refinement_id, class_counter + 1);
@@ -1034,17 +1036,6 @@ void AutoRefinementManager::BeginRefinementCycle()
 
 	global_delete_autorefine3d_scratch();
 
-	//do local filtering?
-
-	printf("local filtering try\n");
-	if (active_local_filtering == true)
-	{
-		printf("local filtering yay\n");
-		SetupLocalFilteringJob();
-		RunLocalFilteringJob();
-	}
-	printf("local filtering end\n");
-
 	// setup input/output refinements
 
 	long current_input_refinement_id = active_refinement_package->refinement_ids[0];
@@ -1059,6 +1050,12 @@ void AutoRefinementManager::BeginRefinementCycle()
 
 	output_refinement->SizeAndFillWithEmpty(number_of_particles, number_of_classes);
 	output_refinement->refinement_id = main_frame->current_project.database.ReturnHighestRefinementID() + 1;
+
+	if (active_local_filtering == true)
+	{
+		SetupLocalFilteringJob();
+		RunLocalFilteringJob();
+	}
 
 	// Randomise the input parameters, and set the default resolution statistics..
 
@@ -2251,6 +2248,21 @@ void AutoRefinementManager::ProcessAllJobsFinished()
 
 		if (current_percent_used > 99.9f)
 			reference_3d_contains_all_particles = true;
+
+		if (active_local_filtering == false)
+		{
+			CycleRefinement();
+		}
+		else
+		{
+			SetupLocalFilteringJob();
+			RunLocalFilteringJob();
+		}
+	}
+	else if (running_job_type == LOCAL_FILTERING)
+	{
+		main_frame->job_controller.KillJob(my_parent->my_job_id); //TODO whats the point of this
+		//also may need to modify above section of code to relfect merge -> refine may not be true anymore
 		CycleRefinement();
 	}
 }

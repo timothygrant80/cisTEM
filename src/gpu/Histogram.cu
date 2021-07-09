@@ -105,11 +105,11 @@ Histogram::Histogram(int histogram_n_bins, float histogram_min, float histogram_
 Histogram::~Histogram()
 {
 
-//	if (is_allocated_histogram)
-//	{
-//		cudaErr(cudaFree(histogram));
-//		cudaErr(cudaFree(cummulative_histogram));
-//	}
+	if (is_allocated_histogram)
+	{
+		cudaErr(cudaFree(histogram));
+		cudaErr(cudaFree(cummulative_histogram));
+	}
 
 }
 	//FIXME

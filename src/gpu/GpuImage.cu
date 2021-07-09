@@ -268,7 +268,9 @@ GpuImage & GpuImage::operator = (const GpuImage *other_gpu_image)
 
 GpuImage::~GpuImage() 
 {
-//  Deallocate();
+	Deallocate();
+	// cudaErr(cudaFree(tmpVal));
+	// cudaErr(cudaFree(tmpValComplex));
 }
 
 
@@ -722,9 +724,100 @@ void GpuImage::BufferInit(BufferType bt)
 	  break;
 
 
+	}
 }
 
+void GpuImage::BufferDestroy()
+{
+
+	if ( is_allocated_image_buffer )
+	{
+		image_buffer->Deallocate();
+		cudaErr(cudaFree(image_buffer));
+		is_allocated_image_buffer = false;
+	}     
+
+	if ( is_allocated_16f_buffer )
+	{
+		cudaErr(cudaFree(real_values_16f));
+		is_allocated_16f_buffer = false;
+	}
+
+	if ( is_allocated_sum_buffer ) 
+	{
+		cudaErr(cudaFree(sum_buffer));
+		is_allocated_sum_buffer = false;
+	}     
+
+	if ( is_allocated_min_buffer )
+	{
+		cudaErr(cudaFree(min_buffer));
+		is_allocated_min_buffer = false;
+	}
+
+	if ( is_allocated_minIDX_buffer )
+	{
+		cudaErr(cudaFree(minIDX_buffer));
+		is_allocated_minIDX_buffer = false;
+	}
+
+	if ( is_allocated_max_buffer )
+	{
+		cudaErr(cudaFree(max_buffer));
+		is_allocated_max_buffer = false;
+	}
+
+	if ( is_allocated_maxIDX_buffer )
+	{
+		cudaErr(cudaFree(maxIDX_buffer));
+		is_allocated_maxIDX_buffer = false;
+	}
+
+	if ( is_allocated_minmax_buffer )
+	{
+		cudaErr(cudaFree(minmax_buffer));
+		is_allocated_minmax_buffer = false;
+	}
+
+	if ( is_allocated_minmaxIDX_buffer )
+	{
+		cudaErr(cudaFree(minmaxIDX_buffer));
+		is_allocated_minmaxIDX_buffer = false;
+	}
+
+	if ( is_allocated_mean_buffer )
+	{
+		cudaErr(cudaFree(mean_buffer));
+		is_allocated_mean_buffer = false;
+	}
+
+	if ( is_allocated_meanstddev_buffer )
+	{
+		cudaErr(cudaFree(meanstddev_buffer));
+		is_allocated_meanstddev_buffer = false;
+	}
+
+	if ( is_allocated_countinrange_buffer )
+	{
+		cudaErr(cudaFree(countinrange_buffer));
+		is_allocated_countinrange_buffer = false;
+	}
+
+	if (is_allocated_l2norm_buffer)
+	{
+		cudaErr(cudaFree(l2norm_buffer));
+		is_allocated_l2norm_buffer = false;
+	}
+
+	if ( is_allocated_dotproduct_buffer )
+	{
+		cudaErr(cudaFree(dotproduct_buffer));
+		is_allocated_dotproduct_buffer = false;
+	}
+
+
 }
+
 
 
 float GpuImage::ReturnSumOfSquares()
@@ -1338,7 +1431,10 @@ void GpuImage::CopyDeviceToHost(bool free_gpu_memory, bool unpin_host_memory)
 	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 	//  cudaErr(cudaMemcpyAsync(real_values, real_values_gpu, real_memory_allocated*sizeof(float),cudaMemcpyDeviceToHost,cudaStreamPerThread));
 	// TODO add asserts etc.
-	if (free_gpu_memory) { cudaFree(real_values_gpu) ; } // FIXME what about the other structures
+	if (free_gpu_memory) 
+	{ 
+		Deallocate();
+	}
 	if (unpin_host_memory && is_host_memory_pinned)
 	{
 		cudaHostUnregister(real_values);
@@ -2179,19 +2275,28 @@ void GpuImage::SetCufftPlan(bool use_half_precision)
 void GpuImage::Deallocate()
 {
 
+  if (is_host_memory_pinned)
+	{
+		cudaErr(cudaHostUnregister(real_values));
+		is_host_memory_pinned = false;
+	} 
+	if (is_in_memory_gpu) 
+	{
+		cudaErr(cudaFree(real_values_gpu));
+		cudaErr(cudaFree(tmpVal));
+		cudaErr(cudaFree(tmpValComplex));
+		is_in_memory_gpu = false;
+	}	
 
-  if (is_host_memory_pinned) cudaHostUnregister(real_values);
+	BufferDestroy();
 
-  cudaFree(tmpVal);
-  cudaFree(tmpValComplex);
 
   if (is_fft_planned)
   {
-
-	is_set_complexConjMulLoad = false;
     cudaErr(cufftDestroy(cuda_plan_inverse));
     cudaErr(cufftDestroy(cuda_plan_forward));
     is_fft_planned = false;
+		is_set_complexConjMulLoad = false;
   }
 
 //  if (is_cublas_loaded)
@@ -2203,16 +2308,20 @@ void GpuImage::Deallocate()
   if (is_allocated_mask_CSOS)
   {
     mask_CSOS->Deallocate();
+		delete mask_CSOS;
   }
 
   if (is_allocated_image_buffer)
   {
     image_buffer->Deallocate();
+		delete image_buffer;
   }
 
-  if (is_allocated_sum_buffer) cudaErr(cudaFree(this->sum_buffer)); is_allocated_sum_buffer = false;
-
-  if (is_allocated_clip_into_mask) cudaErr(cudaFree(this->clip_into_mask));
+  if (is_allocated_clip_into_mask) 
+	{
+		cudaErr(cudaFree(clip_into_mask));
+		delete clip_into_mask;
+	}
 
 }
 
@@ -2228,7 +2337,6 @@ void GpuImage::ConvertToHalfPrecision(bool deallocate_single_precision)
 	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 	if (is_in_real_space)
 	{
-		wxPrintf("Calling the REAL version\n\n\n");
 		ReturnLaunchParamters(dims, true);
 		ConvertToHalfPrecisionKernelReal<< <gridDims, threadsPerBlock,0, cudaStreamPerThread>> > (real_values_gpu, real_values_16f, this->dims);
 	}

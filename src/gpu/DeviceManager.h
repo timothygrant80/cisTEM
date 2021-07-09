@@ -19,7 +19,7 @@ public:
 
   void Init(int wanted_number_of_gpus);
   void SetGpu(int cpu_thread_idx);
-  void ReSetGpu();
+  void ResetGpu();
   void ListDevices();
 
 private:

@@ -267,6 +267,8 @@ public:
 	//  void CublasInit();
 	void NppInit();
 	void BufferInit(BufferType bt);
+	void BufferDestroy();
+
 
 
 
@@ -286,7 +288,7 @@ public:
 	Npp8u* countinrange_buffer;	bool is_allocated_countinrange_buffer;
 	Npp8u* l2norm_buffer;			bool is_allocated_l2norm_buffer;
 	Npp8u* dotproduct_buffer;		bool is_allocated_dotproduct_buffer;
-								bool is_allocated_16f_buffer;
+	bool is_allocated_16f_buffer;
 	int* clip_into_mask;		bool is_allocated_clip_into_mask; bool is_set_realLoadAndClipInto;
 
 

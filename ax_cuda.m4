@@ -249,7 +249,7 @@ else
 		
 fi
 
-if test "x$is_cuda_ge_11" -eq "1" ; then
+if test "x$is_cuda_ge_11" -eq "x1" ; then
   AC_MSG_NOTICE([CUDA >= 11.0, enabling --extra-device-vectorization])
   NVCCFLAGS+=" --extra-device-vectorization"
 fi

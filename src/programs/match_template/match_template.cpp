@@ -581,8 +581,7 @@ bool MatchTemplateApp::DoCalculation()
 	if (factorizable_x - original_input_image_x > max_padding) max_padding = factorizable_x - original_input_image_x;
 	if (factorizable_y - original_input_image_y > max_padding) max_padding = factorizable_y - original_input_image_y;
 
-
-	wxPrintf("old x, y; new x, y = %i %i %i %i\n", input_image.logical_x_dimension, input_image.logical_y_dimension, factorizable_x, factorizable_y);
+	wxPrintf("old x, y; new x, y = %i %i ", input_image.logical_x_dimension, input_image.logical_y_dimension);
 
 
 	input_image.Resize(factorizable_x, factorizable_y, 1, input_image.ReturnAverageOfRealValuesOnEdges());
@@ -596,7 +595,7 @@ bool MatchTemplateApp::DoCalculation()
 		input_image.Rotate2DInPlaceBy90Degrees(true);
 	}
 #endif
-
+	wxPrintf("%i %i\n", input_image.logical_x_dimension, input_image.logical_y_dimension);
 	}
 	padded_reference.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
 	max_intensity_projection.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
@@ -1184,6 +1183,7 @@ bool MatchTemplateApp::DoCalculation()
 	if (is_rotated_by_90)
 	{
 		// swap back all the images prior to re-sizing
+		input_image.BackwardFFT();
 		input_image.Rotate2DInPlaceBy90Degrees(false);
 		max_intensity_projection.Rotate2DInPlaceBy90Degrees(false);
 
@@ -1544,6 +1544,8 @@ bool MatchTemplateApp::DoCalculation()
 		{
 			delete [] GPU;
 		}
+		
+		//  gpuDev.ResetGpu();
 	#endif
 
 	if (is_running_locally == true)

@@ -223,7 +223,7 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 			d_current_projection.AddConstant(-average_on_edge);
 
 			// The average in the full padded image will be different;
-			average_of_reals *= (d_current_projection.number_of_real_space_pixels / (float)d_padded_reference.number_of_real_space_pixels);
+			average_of_reals *= ((float)d_current_projection.number_of_real_space_pixels / (float)d_padded_reference.number_of_real_space_pixels);
 
 			d_current_projection.MultiplyByConstant(rsqrtf(  d_current_projection.ReturnSumOfSquares() / (float)d_padded_reference.number_of_real_space_pixels - (average_of_reals * average_of_reals)));
 			d_current_projection.ClipInto(&d_padded_reference, 0, false, 0, 0, 0, 0);
@@ -366,6 +366,7 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 
 	cudaErr(cudaFree(my_peaks));
 	cudaErr(cudaFree(my_stats));
+	cudaErr(cudaFree(my_new_peaks));
 
 }
 

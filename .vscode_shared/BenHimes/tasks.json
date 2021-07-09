@@ -7,7 +7,7 @@
             "cuda_dir": "/groups/cryoadmin/software/CUDA-TOOLKIT/cuda_11.3.1",
             "wx_dir":"/groups/cryoadmin/software/WX/wx_static_3.05_",
             "build_dir": "${workspaceFolder}/build",
-            "compile_cores": "48"
+            "compile_cores": "24"
         }
     },
     "tasks": [
@@ -29,6 +29,17 @@
             "command": "cd ${build_dir}/Intel-gpu-debug && make -j${compile_cores}"
         },
 
+        {
+            "label": "CONFIG intel,gpu,debug,rotate",
+            "type": "shell",
+            "command": "mkdir -p ${build_dir}/Intel-gpu-debug-rotate && cd ${build_dir}/Intel-gpu-debug-rotate && CC=icc CXX=icpc ../../configure --enable-rotated-tm --enable-debugmode --enable-experimental --with-cuda=${cuda_dir} --enable-staticmode --enable-openmp  --with-wx-config=${wx_dir}INTEL/bin/wx-config"
+        },
+
+        {
+            "label": "BUILD intel,gpu,debug,rotate",
+            "type": "shell",
+            "command": "cd ${build_dir}/Intel-gpu-debug-rotate && make -j${compile_cores}"
+        },
         {
             "label": "CONFIG intel,gpu",
             "type": "shell",

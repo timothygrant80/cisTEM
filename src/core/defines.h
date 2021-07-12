@@ -1,5 +1,4 @@
 #define INTEGER_DATABASE_VERSION 2
-#define CISTEM_VERSION_TEXT "2.0.0-alpha"
 #define START_PORT 3000
 #define END_PORT 5000
 // Define PI constants

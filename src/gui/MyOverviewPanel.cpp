@@ -126,8 +126,8 @@ void MyOverviewPanel::SetWelcomeInfo()
 	InfoText->BeginFontSize(12);
 #ifdef EXPERIMENTAL
 	// Currently this is only defined in autoconf builds
-	#ifdef CISTEM_VERSION_tag_nCommits_commitish
-		InfoText->WriteText(wxString::Format("cisTEM version : %s", CISTEM_VERSION_tag_nCommits_commitish));
+	#ifdef CISTEM_VERSION_TEXT
+		InfoText->WriteText(wxString::Format("cisTEM version : %s", CISTEM_VERSION_TEXT));
 		InfoText->Newline();
 	#endif
 	// Currently this is only defined in autoconf builds

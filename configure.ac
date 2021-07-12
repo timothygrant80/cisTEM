@@ -17,7 +17,7 @@ AC_LANG(C++)
 
 # Set this for the gpu makefile hack
 TOPSRCDIR=$srcdir
-if test "$TOPSRCDIR" = "." ; then
+if test "x$TOPSRCDIR" = "x." ; then
 	TOPSRCDIR=`pwd`
 fi
 # don't let the AC_PROG_CXX set default flags, set them back to input..
@@ -385,32 +385,30 @@ if test "x$SVN_CHECK" == "xyes" ; then
   fi
 fi
 
-if test x$compile_experimental = xtrue ; then
-
+if test $compile_experimental = true ; then
 AC_CHECK_PROG(GIT_CHECK,git,yes)
-AC_CHECK_FILE(/groups/himesb/git/cisTEM_downstream_bah/.git/HEAD,
+# If we have git, it must not be too old, e.g. 1.8 is still the default on older OS's like CentOS 7 
+is_git_new_enough=`git version | awk '{if($3 >= 2) print yes; else print no}'`
+if test "xis_git_new_enough" == "xno" ; then
+  	AC_MSG_NOTICE([your version of git is too old, you can updated on Centos 7 with sudo yum -y install https://packages.endpoint.com/rhel/7/os/x86_64/endpoint-repo-1.7-1.x86_64.rpm
+  	])
+else
+	
+AC_CHECK_FILE("$TOPSRCDIR/.git/HEAD",
   [
     if test "x$GIT_CHECK" == "xyes"; then 
-      # Get the current branch, which could have multiple refs, which is why we need the awk (*) marks the active branch.
-      AC_SUBST([CISTEM_CURRENT_BRANCH],[`git  branch --points-at  HEAD | awk '/^\*/{print $2}'`])
-      # Get the first reachable tag - number of commits since that tag - short commit hash
-      AC_SUBST([CISTEM_VERSION_tag_nCommits_commitish],[`git describe --tags`])
-      # Get both an easily parsed date, as well as a more readable date
-      AC_SUBST([CISTEM_TIME_YYMMDDHHMMSS],[`git show --no-patch --no-notes --pretty='%cd' --date=format:%y%m%d%H%M%S`])
-      AC_SUBST([CISTEM_TIME_READABLE],[`git show --no-patch --no-notes --pretty='%ci' --date=format:%y%m%d%H%M%S`]) 
-      # Get the git configured user name (I believe this is required to push up to the repo)
-      AC_SUBST([CISTEM_GIT_USERNAME],[`git config --get user.name`])
-
-      # Print out what we found
-      AC_MSG_NOTICE([CISTEM_CURRENT_BRANCH is $CISTEM_CURRENT_BRANCH])
-      AC_MSG_NOTICE([CISTEM_VERSION_tag_nCommits_commitish is $CISTEM_VERSION_tag_nCommits_commitish])
-      AC_MSG_NOTICE([CISTEM_TIME_YYMMDDHHMMSS is $CISTEM_TIME_YYMMDDHHMMSS])
-      AC_MSG_NOTICE([CISTEM_TIME_READABLE is $CISTEM_TIME_READABLE])
-      AC_MSG_NOTICE([CISTEM_GIT_USERNAME is $CISTEM_GIT_USERNAME])
-
+      # All the args require the extra double quotes to be properly formated later on.
       
-      CXXFLAGS="$CXXFLAGS -DCISTEM_CURRENT_BRANCH=\"\\\"${CISTEM_CURRENT_BRANCH}\\\"\" -DCISTEM_VERSION_tag_nCommits_commitish=\"\\\"${CISTEM_VERSION_tag_nCommits_commitish}\\\"\" -DCISTEM_TIME_YYMMDDHHMMSS=\"\\\"${CISTEM_TIME_YYMMDDHHMMSS}\\\"\" -DCISTEM_TIME_READABLE=\"\\\"${CISTEM_TIME_READABLE}\\\"\" -DCISTEM_GIT_USERNAME=\"\\\"${CISTEM_GIT_USERNAME}\\\"\""
-      CPPFLAGS="$CPPFLAGS -DCISTEM_CURRENT_BRANCH=\"\\\"${CISTEM_CURRENT_BRANCH}\\\"\" -DCISTEM_VERSION_tag_nCommits_commitish=\"\\\"${CISTEM_VERSION_tag_nCommits_commitish}\\\"\" -DCISTEM_TIME_YYMMDDHHMMSS=\"\\\"${CISTEM_TIME_YYMMDDHHMMSS}\\\"\" -DCISTEM_TIME_READABLE=\"\\\"${CISTEM_TIME_READABLE}\\\"\" -DCISTEM_GIT_USERNAME=\"\\\"${CISTEM_GIT_USERNAME}\\\"\""
+      # Get the current branch, which could have multiple refs, which is why we need the awk (*) marks the active branch.
+      AC_DEFINE_UNQUOTED([CISTEM_CURRENT_BRANCH],["`git  branch | awk '/^\*/{print $2}'`"])
+      # Get the first reachable tag - number of commits since that tag - short commit hash
+      AC_DEFINE_UNQUOTED([CISTEM_VERSION_TEXT],["`git describe --tags --dirty`"])
+      # Get both an easily parsed date, as well as a more readable date
+      AC_DEFINE_UNQUOTED([CISTEM_TIME_YYMMDDHHMMSS],["`git show --no-patch --no-notes --pretty='%cd' --date=format:%y%m%d%H%M%S`"])
+      AC_DEFINE_UNQUOTED([CISTEM_TIME_READABLE],["`git show --no-patch --no-notes --pretty='%ci' --date=format:%y%m%d%H%M%S`"]) 
+      # Get the git configured user name (I believe this is required to push up to the repo)
+      AC_DEFINE_UNQUOTED([CISTEM_GIT_USERNAME],["`git config --get user.name`"])
+      
     else
       AC_MSG_NOTICE([We DO NOT have git on path])
       AC_DEFINE(CISTEM_VERSION_TEXT, "2.0.0-alpha", [A hard coded version moved in from defines.h]) 
@@ -420,6 +418,8 @@ AC_CHECK_FILE(/groups/himesb/git/cisTEM_downstream_bah/.git/HEAD,
       AC_DEFINE(CISTEM_VERSION_TEXT, "2.0.0-alpha", [A hard coded version moved in from defines.h]) 
   ])
 fi
+
+fi # Check on git > vs2
 
 AC_SUBST(WX_LIBS)
 AC_SUBST(WX_CPPFLAGS)

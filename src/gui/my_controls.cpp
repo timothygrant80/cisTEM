@@ -1683,6 +1683,7 @@ wxThread::ExitCode GenerateMaskThread::Entry()
 {
 	Image mask_image;
 
+	wxPrintf("NAME OF HALFMAP:%s:DEBUG\n", half_map_1.ToStdString());
 	ImageFile half_map_1_imagefile(half_map_1.ToStdString());
 	int num_slices_half_map = half_map_1_imagefile.ReturnNumberOfSlices();
 

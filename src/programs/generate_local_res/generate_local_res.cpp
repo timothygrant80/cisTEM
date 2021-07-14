@@ -1,11 +1,34 @@
 #include "../../core/core_headers.h"
 
+class AggregatedLocalResResult
+{
+public:
+	int result_id;
+	int start_slice;
+	int end_slice;
+	int x_dimension;
+	int y_dimension;
+	int num_float_values;
+	float pixel_size;
+	float *float_values;
+
+	AggregatedLocalResResult();
+	~AggregatedLocalResResult();
+};
+
+WX_DECLARE_OBJARRAY(AggregatedLocalResResult, ArrayOfAggregatedLocalResResults);
+#include <wx/arrimpl.cpp> // this is a magic incantation which must be done!
+WX_DEFINE_OBJARRAY(ArrayOfAggregatedLocalResResults);
+
 class
 	Generate_Local_Res_App : public MyApp
 {
 public:
 	bool DoCalculation();
 	void DoInteractiveUserInput();
+	void MasterHandleProgramDefinedResult(float *result_array, long array_size, int result_number, int number_of_expected_results);
+
+	ArrayOfAggregatedLocalResResults aggregated_results;
 
 private:
 };
@@ -14,35 +37,21 @@ IMPLEMENT_APP(Generate_Local_Res_App)
 
 void Generate_Local_Res_App::DoInteractiveUserInput()
 {
-
-	wxString half_map_1;
-	wxString half_map_2;
-	wxString output_reconstruction;
-	wxString mask_image;
-	int first_slice;
-	int last_slice;
-	float pixel_size;
-	float inner_mask_radius;
-	float outer_mask_radius;
-	float molecular_mass_kDa;
 	int number_of_threads;
-	wxString symmetry;
-	float measured_global_resolution;
 
 	UserInput *my_input = new UserInput("Generate_Local_Res", 1.01);
 
-	half_map_1 = my_input->GetFilenameFromUser("Half Map 1", "The first output 3D reconstruction, calculated from half the data", "my_reconstruction_1.mrc", false);
-	half_map_2 = my_input->GetFilenameFromUser("Half Map 2", "The second output 3D reconstruction, calculated from half the data", "my_reconstruction_2.mrc", false);
-	output_reconstruction = my_input->GetFilenameFromUser("Output reconstruction", "The final 3D reconstruction, containing all data", "my_reconstruction.mrc", false);
-	mask_image = my_input->GetFilenameFromUser("Mask Image", "The filename of the mask", "mask_image.mrc", false);
-	first_slice = my_input->GetIntFromUser("Starting Slice", "The slice to start from", "1", false);
-	last_slice = my_input->GetIntFromUser("Last Slice", "The slice to end with", "1", false);
-	inner_mask_radius = my_input->GetFloatFromUser("Inner mask radius (A)", "Radius of a circular mask to be applied to the center of the final reconstruction in Angstroms", "0.0", 0.0);
-	outer_mask_radius = my_input->GetFloatFromUser("Outer mask radius (A)", "Radius of a circular mask to be applied to the final reconstruction in Angstroms", "100.0", inner_mask_radius);
-	molecular_mass_kDa = my_input->GetFloatFromUser("Molecular mass of particle (kDa)", "Total molecular mass of the particle to be reconstructed in kilo Daltons", "1000.0", 0.0);
-	symmetry = my_input->GetSymmetryFromUser("Particle symmetry", "The symmetry imposed on the input reconstructions", "C1");
-	pixel_size = my_input->GetFloatFromUser("Pixel size", "In Angstroms", "1.0", 0.0);
-	measured_global_resolution = my_input->GetFloatFromUser("Measured Global Resolution", "In Angstroms", "5.0", 0.0);
+	wxString half_map_1 = my_input->GetFilenameFromUser("Half Map 1", "The first output 3D reconstruction, calculated from half the data", "my_reconstruction_1.mrc", false);
+	wxString half_map_2 = my_input->GetFilenameFromUser("Half Map 2", "The second output 3D reconstruction, calculated from half the data", "my_reconstruction_2.mrc", false);
+	wxString output_reconstruction = my_input->GetFilenameFromUser("Output reconstruction", "The final 3D reconstruction, containing all data", "my_reconstruction.mrc", false);
+	wxString mask_image = my_input->GetFilenameFromUser("Mask Image", "The filename of the mask", "mask_image.mrc", false);
+	int first_slice = my_input->GetIntFromUser("Starting Slice", "The slice to start from", "1", false);
+	int last_slice = my_input->GetIntFromUser("Last Slice", "The slice to end with", "1", false);
+	float inner_mask_radius = my_input->GetFloatFromUser("Inner mask radius (A)", "Radius of a circular mask to be applied to the center of the final reconstruction in Angstroms", "0.0", 0.0);
+	float outer_mask_radius = my_input->GetFloatFromUser("Outer mask radius (A)", "Radius of a circular mask to be applied to the final reconstruction in Angstroms", "100.0", inner_mask_radius);
+	float molecular_mass_kDa = my_input->GetFloatFromUser("Molecular mass of particle (kDa)", "Total molecular mass of the particle to be reconstructed in kilo Daltons", "1000.0", 0.0);
+	wxString symmetry = my_input->GetSymmetryFromUser("Particle symmetry", "The symmetry imposed on the input reconstructions", "C1");
+	float pixel_size = my_input->GetFloatFromUser("Pixel size", "In Angstroms", "1.0", 0.0);
 
 #ifdef _OPENMP
 	number_of_threads = my_input->GetIntFromUser("Max. threads to use for calculation", "When threading, what is the max threads to run", "1", 1);
@@ -50,9 +59,18 @@ void Generate_Local_Res_App::DoInteractiveUserInput()
 	number_of_threads = 1;
 #endif
 
+	float measured_global_resolution = my_input->GetFloatFromUser("Measured Global Resolution", "In Angstroms", "5.0", 0.0);
+
+	int image_number_for_gui = 0;
+	int number_of_jobs_per_image_in_gui = 0;
+
+	wxString directory_for_collated_results = "/dev/null/";
+	wxString result_filename = "/dev/null"; // shouldn't be used in interactive
+
 	delete my_input;
 
-	my_current_job.ManualSetArguments("ttttiiffftfif", half_map_1.ToUTF8().data(),
+	//TODO change autorefine3d panel to match
+	my_current_job.ManualSetArguments("ttttiiffftfifiitt", half_map_1.ToUTF8().data(),
 									  half_map_2.ToUTF8().data(),
 									  output_reconstruction.ToUTF8().data(),
 									  mask_image.ToUTF8().data(),
@@ -64,27 +82,30 @@ void Generate_Local_Res_App::DoInteractiveUserInput()
 									  symmetry.ToUTF8().data(),
 									  pixel_size,
 									  number_of_threads,
-									  measured_global_resolution);
+									  measured_global_resolution,
+									  image_number_for_gui,
+									  number_of_jobs_per_image_in_gui,
+									  directory_for_collated_results.ToUTF8().data(),
+									  result_filename.ToUTF8().data());
 }
 
 bool Generate_Local_Res_App::DoCalculation()
 {
-	//TODO
-	// need to read in slices that are relavant
-	// need to ask for mask file name, and only right slices of mask
 	wxString half_map_1 = my_current_job.arguments[0].ReturnStringArgument();
 	wxString half_map_2 = my_current_job.arguments[1].ReturnStringArgument();
 	wxString output_reconstruction = my_current_job.arguments[2].ReturnStringArgument();
 	wxString mask_image_name = my_current_job.arguments[3].ReturnStringArgument();
 	int first_slice = my_current_job.arguments[4].ReturnIntegerArgument();
 	int last_slice = my_current_job.arguments[5].ReturnIntegerArgument();
-	float inner_mask_radius = my_current_job.arguments[12].ReturnFloatArgument();
-	float outer_mask_radius = my_current_job.arguments[11].ReturnFloatArgument();
-	float molecular_mass_kDa = my_current_job.arguments[6].ReturnFloatArgument();
-	wxString symmetry = my_current_job.arguments[7].ReturnStringArgument();
-	float original_pixel_size = my_current_job.arguments[8].ReturnFloatArgument();
-	int num_threads = my_current_job.arguments[9].ReturnIntegerArgument();
-	float measured_global_resolution = my_current_job.arguments[10].ReturnFloatArgument();
+	float inner_mask_radius = my_current_job.arguments[6].ReturnFloatArgument();
+	float outer_mask_radius = my_current_job.arguments[7].ReturnFloatArgument();
+	float molecular_mass_kDa = my_current_job.arguments[8].ReturnFloatArgument();
+	wxString symmetry = my_current_job.arguments[9].ReturnStringArgument();
+	float original_pixel_size = my_current_job.arguments[10].ReturnFloatArgument();
+	int num_threads = my_current_job.arguments[11].ReturnIntegerArgument();
+	float measured_global_resolution = my_current_job.arguments[12].ReturnFloatArgument();
+	int image_number_for_gui = my_current_job.arguments[13].ReturnIntegerArgument();
+	int number_of_jobs_per_image_in_gui = my_current_job.arguments[14].ReturnIntegerArgument();
 
 	if (is_running_locally == false)
 		num_threads = number_of_threads_requested_on_command_line;
@@ -336,9 +357,86 @@ bool Generate_Local_Res_App::DoCalculation()
 	//output_3d.density_map->SetMinimumValue(original_average_value);
 	combined_images.CosineMask(outer_mask_radius / original_pixel_size, 1.0, false, true, 0.0);
 
-	//passing back more than asked for! TODO
-	//combined_images.QuickAndDirtyWriteSlices(output_reconstruction.ToStdString(), first_slice, last_slice);
-	combined_images.WriteSlicesAndFillHeader(output_reconstruction.ToStdString(), original_pixel_size);
+	//TODO calculation for number of floats may not be right
+	int number_of_meta_data_values = 6;
+	long number_of_result_floats = number_of_meta_data_values + (last_slice - (first_slice - 1)) * combined_images.logical_x_dimension * combined_images.logical_y_dimension; // 4 metadata values + num_slices*x_dim*y_dim
+	float *result = new float[number_of_result_floats];
+
+	result[0] = first_slice;
+	result[1] = last_slice;
+	result[2] = combined_images.logical_x_dimension;
+	result[3] = combined_images.logical_y_dimension;
+	result[4] = number_of_result_floats;
+	result[5] = original_pixel_size;
+
+	//fMIGHT BE WRONG TODO WTW
+	int result_array_counter = number_of_meta_data_values;
+	int real_val_counter = 0;
+
+	for (int result_array_counter = number_of_meta_data_values - 1; result_array_counter < number_of_result_floats; result_array_counter++)
+	{
+		result[result_array_counter] = combined_images.real_values[real_val_counter];
+		real_val_counter++;
+	}
+
+	SendProgramDefinedResultToMaster(result, number_of_result_floats, image_number_for_gui, number_of_jobs_per_image_in_gui);
+
+	wxPrintf("\nGenerate Local Res: Normal termination\n\n");
 
 	return true;
+}
+
+AggregatedLocalResResult::AggregatedLocalResResult()
+{
+	result_id = -1;
+	start_slice = -1;
+	end_slice = -1;
+	x_dimension = -1;
+	y_dimension = -1;
+	float_values = NULL;
+}
+
+AggregatedLocalResResult::~AggregatedLocalResResult()
+{
+	//TODO WHAT IS THE POINT OF THIS WTW
+	// if (collated_data_array != NULL)
+	// 	delete[] collated_data_array;
+}
+
+void Generate_Local_Res_App::MasterHandleProgramDefinedResult(float *result_array, long array_size, int result_number, int number_of_expected_results)
+{
+	AggregatedLocalResResult result_to_add;
+	aggregated_results.Add(result_to_add);
+	aggregated_results[aggregated_results.GetCount() - 1].result_id = result_number;
+	aggregated_results[aggregated_results.GetCount() - 1].start_slice = result_array[0];
+	aggregated_results[aggregated_results.GetCount() - 1].end_slice = result_array[1];
+	aggregated_results[aggregated_results.GetCount() - 1].x_dimension = result_array[2];
+	aggregated_results[aggregated_results.GetCount() - 1].y_dimension = result_array[3];
+	aggregated_results[aggregated_results.GetCount() - 1].num_float_values = result_array[4];
+	aggregated_results[aggregated_results.GetCount() - 1].pixel_size = result_array[5];
+	aggregated_results[aggregated_results.GetCount() - 1].float_values = &result_array[6]; //should act like a sub array of all non-metadata values
+	int array_location = aggregated_results.GetCount() - 1;
+
+	if (aggregated_results.GetCount() == number_of_expected_results)
+	{
+		Image result_image; //need to allocate result_image
+		result_image.logical_x_dimension = -1;
+		result_image.logical_y_dimension = -1; //TODO could use this to check consistency
+		for (int results_counter = 0; results_counter < aggregated_results.GetCount(); results_counter++)
+		{
+
+			result_image.logical_x_dimension = aggregated_results[results_counter].x_dimension;
+			result_image.logical_y_dimension = aggregated_results[results_counter].y_dimension;
+			int start_slice_temp = aggregated_results[results_counter].start_slice;
+
+			for (int float_counter = 0; float_counter < aggregated_results[results_counter].num_float_values; float_counter++)
+			{
+				result_image.real_values[start_slice_temp * float_counter] = aggregated_results[results_counter].float_values[float_counter];
+			}
+		}
+
+		//TODO find a way to get the output reconstruction name here
+
+		result_image.WriteSlicesAndFillHeader("/dev/null", aggregated_results[aggregated_results.GetCount() - 1].pixel_size);
+	}
 }

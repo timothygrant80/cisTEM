@@ -15,8 +15,8 @@ class AutoRefinementManager
 public:
 	AutoRefine3DPanel *my_parent;
 
-	long first_slice_with_data;
-	long last_slice_with_data;
+	int first_slice_with_data;
+	int last_slice_with_data;
 
 	bool active_local_filtering;
 	bool active_should_mask;

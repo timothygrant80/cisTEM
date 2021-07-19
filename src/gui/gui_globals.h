@@ -104,16 +104,17 @@ protected:
 class GenerateMaskThread : public wxThread
 {
 public:
-	GenerateMaskThread(wxWindow *parent, wxString half_map_1, wxString half_map_2, wxString mask_image_name, float wanted_pixel_size, float wanted_outer_mask_radius, bool active_should_mask, int wanted_thread_id = -1) : wxThread(wxTHREAD_DETACHED)
+	GenerateMaskThread(wxWindow *parent, wxString wanted_half_map_1, wxString wanted_half_map_2, wxString wanted_mask_image_name, float wanted_pixel_size, float wanted_outer_mask_radius, bool wanted_active_should_mask, int wanted_thread_id = -1) : wxThread(wxTHREAD_DETACHED)
 	{
 		main_thread_pointer = parent;
-		half_map_1 = half_map_1;
-		half_map_2 = half_map_2;
-		mask_image_name = mask_image_name;
+		half_map_1 = wanted_half_map_1;
+		wxPrintf("WTW DEBUG IN GUI GLOBALS:%s:\n", half_map_1.ToStdString());
+		half_map_2 = wanted_half_map_2;
+		mask_image_name = wanted_mask_image_name;
 		pixel_size = wanted_pixel_size;
 		outer_mask_radius = wanted_outer_mask_radius;
 		thread_id = wanted_thread_id;
-		active_should_mask = active_should_mask;
+		active_should_mask = wanted_active_should_mask;
 	}
 
 protected:

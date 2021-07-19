@@ -837,10 +837,10 @@ void AutoRefinementManager::SetParent(AutoRefine3DPanel *wanted_parent)
 
 bool AutoRefinementManager::halfMapExists(wxString &half_map)
 {
-	if (half_map.Trim().ToStdString().compare("") == 0)
-	{
-		return false;
-	}
+	// if (half_map.Trim().ToStdString().compare("") == 0)
+	// {
+	// 	return false;
+	// }
 
 	struct stat buff;
 	int retval = stat(half_map.ToStdString().c_str(), &buff);
@@ -917,6 +917,8 @@ void AutoRefinementManager::SetupLocalFilteringJob()
 
 			if (halfMapExists(half_map_1) && halfMapExists(half_map_2))
 			{
+				wxPrintf("WTW HALFMAP 1 DEBUG:%s:\n", half_map_1.ToStdString());
+				wxPrintf("WTW HALFMAP 2 DEBUG:%s:\n", half_map_2.ToStdString());
 
 				wxString mask_image_name;
 				if (active_should_mask == true)
@@ -931,7 +933,7 @@ void AutoRefinementManager::SetupLocalFilteringJob()
 				my_parent->active_mask_thread_id = my_parent->next_thread_id;
 				my_parent->next_thread_id++;
 
-				GenerateMaskThread *mask_thread = new GenerateMaskThread(my_parent, half_map_1, half_map_1, mask_image_name, pixel_size, outer_mask_radius, active_should_mask, my_parent->active_mask_thread_id);
+				GenerateMaskThread *mask_thread = new GenerateMaskThread(my_parent, half_map_1, half_map_2, mask_image_name, pixel_size, outer_mask_radius, active_should_mask, my_parent->active_mask_thread_id);
 
 				if (mask_thread->Run() != wxTHREAD_NO_ERROR)
 				{
@@ -944,11 +946,14 @@ void AutoRefinementManager::SetupLocalFilteringJob()
 
 				for (int process_counter = 0; process_counter < number_of_processes; process_counter++)
 				{
-
+					//WTW TODO should these ints be longs?
 					int first_slice_p = (first_slice_with_data - 1) + myroundint(ReturnThreadNumberOfCurrentThread() * slices_per_process) + 1;
 					int last_slice_p = (first_slice_with_data - 1) + myroundint((ReturnThreadNumberOfCurrentThread() + 1) * slices_per_process);
+					wxPrintf("WTW DEBUG FIRST_SLICE_WITH_DATA:%i:LAST_SLICE__WITH_DATA:%i:\n", first_slice_with_data, last_slice_with_data);
+					wxPrintf("WTW DEBUG FIRST_SLICE_P:%i:LAST_SLICE_P:%i:\n", first_slice_p, last_slice_p);
+					int number_of_jobs_per_image_in_gui = 1;
 
-					my_parent->current_job_package.AddJob("ttttiiffftfif",
+					my_parent->current_job_package.AddJob("ttttiiffftfifiitt",
 														  half_map_1.ToUTF8().data(),
 														  half_map_2.ToUTF8().data(),
 														  output_reconstruction.ToUTF8().data(),
@@ -961,7 +966,11 @@ void AutoRefinementManager::SetupLocalFilteringJob()
 														  symmetry.ToUTF8().data(),
 														  pixel_size,
 														  number_of_threads,
-														  measured_global_resolution);
+														  measured_global_resolution,
+														  process_counter, //to be used instead of 'image number for gui'
+														  number_of_jobs_per_image_in_gui,
+														  main_frame->current_project.volume_asset_directory.GetFullPath().ToUTF8().data(),
+														  output_reconstruction.ToUTF8().data());
 				}
 			}
 		}
@@ -2178,8 +2187,8 @@ void AutoRefinementManager::ProcessAllJobsFinished()
 			main_frame->current_project.database.AddReconstructionJob(current_reconstruction_id, active_refinement_package->asset_id, output_refinement->refinement_id, "", active_inner_mask_radius, active_mask_radius, current_resolution_limit_rec, current_score_weight_conversion, false, active_auto_crop, false, active_should_apply_blurring, active_smoothing_factor, class_counter + 1, long(temp_asset.asset_id));
 
 			temp_asset.asset_name = wxString::Format("Auto #%li (Rnd. %i) - Class #%i", current_output_refinement_id, number_of_rounds_run + 1, class_counter + 1);
-			temp_asset.half_map_1_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("volume_%i_%i_map1.mrc", output_refinement->refinement_id, class_counter + 1);
-			temp_asset.half_map_2_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%i_%i_map2.mrc", output_refinement->refinement_id, class_counter + 1);
+			temp_asset.half_map_1_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("volume_%li_%i_map1.mrc", output_refinement->refinement_id, class_counter + 1);
+			temp_asset.half_map_2_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map2.mrc", output_refinement->refinement_id, class_counter + 1);
 			temp_asset.filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
 
 			output_refinement->reference_volume_ids.Add(current_reference_asset_ids[class_counter]);
@@ -2589,16 +2598,18 @@ void AutoRefinementManager::OnGenerateMaskThreadComplete(wxString first_last_sli
 	if (tokenizer.HasMoreTokens())
 	{
 		wxString first_slice_with_data_string = tokenizer.GetNextToken();
-		first_slice_with_data_string.ToLong(&first_slice_with_data);
+		first_slice_with_data = wxAtoi(first_slice_with_data_string);
+		wxPrintf("WTW DEBUG GOT HERE PARSING FIRST SLICE:%s:%i:\n\n", first_slice_with_data_string.ToStdString(), first_slice_with_data);
 		if (tokenizer.HasMoreTokens())
 		{
 			wxString last_slice_with_data_string = tokenizer.GetNextToken();
-			last_slice_with_data_string.ToLong(&last_slice_with_data);
+			last_slice_with_data = wxAtoi(last_slice_with_data_string);
+			wxPrintf("WTW DEBUG GOT HERE PARSING LAST SLICE:%s:%i:\n\n", last_slice_with_data_string.ToStdString(), last_slice_with_data);
 		}
 		else
 		{
 			MyPrintfRed("Could Not Parse First Slice With Data\n");
-			//maybe should error out
+			//maybe should error out TODO WTW
 		}
 	}
 	else

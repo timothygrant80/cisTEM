@@ -8,6 +8,7 @@ public:
 	int end_slice;
 	int x_dimension;
 	int y_dimension;
+	int z_dimension;
 	int num_float_values;
 	float pixel_size;
 	float *float_values;
@@ -27,6 +28,8 @@ public:
 	bool DoCalculation();
 	void DoInteractiveUserInput();
 	void MasterHandleProgramDefinedResult(float *result_array, long array_size, int result_number, int number_of_expected_results);
+
+	wxString output_reconstruction;
 
 	ArrayOfAggregatedLocalResResults aggregated_results;
 
@@ -93,7 +96,7 @@ bool Generate_Local_Res_App::DoCalculation()
 {
 	wxString half_map_1 = my_current_job.arguments[0].ReturnStringArgument();
 	wxString half_map_2 = my_current_job.arguments[1].ReturnStringArgument();
-	wxString output_reconstruction = my_current_job.arguments[2].ReturnStringArgument();
+	output_reconstruction = my_current_job.arguments[2].ReturnStringArgument();
 	wxString mask_image_name = my_current_job.arguments[3].ReturnStringArgument();
 	int first_slice = my_current_job.arguments[4].ReturnIntegerArgument();
 	int last_slice = my_current_job.arguments[5].ReturnIntegerArgument();
@@ -106,11 +109,15 @@ bool Generate_Local_Res_App::DoCalculation()
 	float measured_global_resolution = my_current_job.arguments[12].ReturnFloatArgument();
 	int image_number_for_gui = my_current_job.arguments[13].ReturnIntegerArgument();
 	int number_of_jobs_per_image_in_gui = my_current_job.arguments[14].ReturnIntegerArgument();
+	wxString directory_for_collated_results = my_current_job.arguments[15].ReturnStringArgument();
+	wxString result_filename = my_current_job.arguments[16].ReturnStringArgument();
 
 	if (is_running_locally == false)
 		num_threads = number_of_threads_requested_on_command_line;
 
 	int max_width = ceil(18 / original_pixel_size);
+	wxPrintf("DEBUG WTW MAX WIDTH:%i:\n", max_width);
+	wxPrintf("WTW DEBUG FIRST SLICE:%i:LAST SLICE:%i:\n", first_slice, last_slice);
 	int num_slices = 0;
 
 	ImageFile half_map_1_imagefile(half_map_1.ToStdString());
@@ -357,26 +364,25 @@ bool Generate_Local_Res_App::DoCalculation()
 	//output_3d.density_map->SetMinimumValue(original_average_value);
 	combined_images.CosineMask(outer_mask_radius / original_pixel_size, 1.0, false, true, 0.0);
 
-	//TODO calculation for number of floats may not be right
-	int number_of_meta_data_values = 6;
-	long number_of_result_floats = number_of_meta_data_values + (last_slice - (first_slice - 1)) * combined_images.logical_x_dimension * combined_images.logical_y_dimension; // 4 metadata values + num_slices*x_dim*y_dim
+	//TODO there might be 2 times as many floats as expected
+	int number_of_meta_data_values = 7;
+	int num_slices_for_results = last_slice - (first_slice - 1);
+	long number_of_valid_floats = num_slices_for_results * (combined_images.real_memory_allocated / combined_images.logical_z_dimension);
+	long number_of_result_floats = number_of_meta_data_values + number_of_valid_floats;
 	float *result = new float[number_of_result_floats];
 
 	result[0] = first_slice;
 	result[1] = last_slice;
 	result[2] = combined_images.logical_x_dimension;
 	result[3] = combined_images.logical_y_dimension;
-	result[4] = number_of_result_floats;
-	result[5] = original_pixel_size;
+	result[4] = num_slices_for_results;
+	result[5] = number_of_result_floats; //long to float?
+	result[6] = original_pixel_size;
 
-	//fMIGHT BE WRONG TODO WTW
-	int result_array_counter = number_of_meta_data_values;
-	int real_val_counter = 0;
-
-	for (int result_array_counter = number_of_meta_data_values - 1; result_array_counter < number_of_result_floats; result_array_counter++)
+	//WTW DEF WRONG LOL
+	for (int result_array_counter = 0; result_array_counter < combined_images.real_memory_allocated; result_array_counter++)
 	{
-		result[result_array_counter] = combined_images.real_values[real_val_counter];
-		real_val_counter++;
+		result[result_array_counter + number_of_meta_data_values] = combined_images.real_values[result_array_counter];
 	}
 
 	SendProgramDefinedResultToMaster(result, number_of_result_floats, image_number_for_gui, number_of_jobs_per_image_in_gui);
@@ -393,6 +399,9 @@ AggregatedLocalResResult::AggregatedLocalResResult()
 	end_slice = -1;
 	x_dimension = -1;
 	y_dimension = -1;
+	z_dimension = -1;
+	num_float_values = -1;
+	pixel_size = -1;
 	float_values = NULL;
 }
 
@@ -412,23 +421,35 @@ void Generate_Local_Res_App::MasterHandleProgramDefinedResult(float *result_arra
 	aggregated_results[aggregated_results.GetCount() - 1].end_slice = result_array[1];
 	aggregated_results[aggregated_results.GetCount() - 1].x_dimension = result_array[2];
 	aggregated_results[aggregated_results.GetCount() - 1].y_dimension = result_array[3];
-	aggregated_results[aggregated_results.GetCount() - 1].num_float_values = result_array[4];
-	aggregated_results[aggregated_results.GetCount() - 1].pixel_size = result_array[5];
-	aggregated_results[aggregated_results.GetCount() - 1].float_values = &result_array[6]; //should act like a sub array of all non-metadata values
+	aggregated_results[aggregated_results.GetCount() - 1].z_dimension = result_array[4];
+	aggregated_results[aggregated_results.GetCount() - 1].num_float_values = result_array[5];
+	aggregated_results[aggregated_results.GetCount() - 1].pixel_size = result_array[6];
+	aggregated_results[aggregated_results.GetCount() - 1].float_values = &result_array[7]; //should act like a sub array of all non-metadata values
+																						   //may need to copy them? mem disapears? is it on the heap ig
 	int array_location = aggregated_results.GetCount() - 1;
 
 	if (aggregated_results.GetCount() == number_of_expected_results)
 	{
-		Image result_image; //need to allocate result_image
-		result_image.logical_x_dimension = -1;
-		result_image.logical_y_dimension = -1; //TODO could use this to check consistency
+		//get total z dim
+		int x_dim = aggregated_results[aggregated_results.GetCount() - 1].x_dimension;
+		int y_dim = aggregated_results[aggregated_results.GetCount() - 1].y_dimension;
+		int z_dim = 0;
+
 		for (int results_counter = 0; results_counter < aggregated_results.GetCount(); results_counter++)
 		{
+			z_dim += aggregated_results[results_counter].z_dimension;
+		}
 
-			result_image.logical_x_dimension = aggregated_results[results_counter].x_dimension;
-			result_image.logical_y_dimension = aggregated_results[results_counter].y_dimension;
+		Image result_image;
+		result_image.Allocate(x_dim, y_dim, z_dim, true, true);
+
+		for (int results_counter = 0; results_counter < aggregated_results.GetCount(); results_counter++)
+		{
+			// Image individual_image;
+			// result_image.Allocate(x_dim, y_dim, aggregated_results[results_counter].z_dimension, true, true);
+			// result_image.real_values = aggregated_results[results_counter].float_values; //should this be a deep copy
+
 			int start_slice_temp = aggregated_results[results_counter].start_slice;
-
 			for (int float_counter = 0; float_counter < aggregated_results[results_counter].num_float_values; float_counter++)
 			{
 				result_image.real_values[start_slice_temp * float_counter] = aggregated_results[results_counter].float_values[float_counter];
@@ -436,7 +457,6 @@ void Generate_Local_Res_App::MasterHandleProgramDefinedResult(float *result_arra
 		}
 
 		//TODO find a way to get the output reconstruction name here
-
-		result_image.WriteSlicesAndFillHeader("/dev/null", aggregated_results[aggregated_results.GetCount() - 1].pixel_size);
+		result_image.WriteSlicesAndFillHeader(output_reconstruction.ToStdString(), aggregated_results[aggregated_results.GetCount() - 1].pixel_size);
 	}
 }

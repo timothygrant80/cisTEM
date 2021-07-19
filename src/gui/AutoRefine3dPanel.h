@@ -92,6 +92,7 @@ public:
 	void SetParent(AutoRefine3DPanel *wanted_parent);
 
 	bool halfMapExists(wxString &half_map);
+	void SetupAndLaunchGenerateMaskThread();
 	void SetupLocalFilteringJob();
 	void RunLocalFilteringJob();
 

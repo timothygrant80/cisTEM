@@ -851,9 +851,85 @@ bool AutoRefinementManager::halfMapExists(wxString &half_map)
 	return false;
 }
 
+//think about the for loop over classes for launching the mask thread WTW TODO
+void AutoRefinementManager::SetupAndLaunchGenerateMaskThread()
+{
+	//float measured_global_resolution;
+	int found_class;
+	long found_refinement_id;
+	float inner_mask_radius;
+	float outer_mask_radius;
+	Refinement *refinement_that_created_3d = NULL;
+	VolumeAsset *selected_volume = volume_asset_panel->ReturnAssetPointer(my_parent->ReferenceSelectPanel->ReturnSelection());
+
+	if (selected_volume->reconstruction_job_id >= 0)
+	{
+		sqlite3_stmt *current_statement;
+		main_frame->current_project.database.Prepare(wxString::Format("SELECT REFINEMENT_ID, CLASS_NUMBER, INNER_MASK_RADIUS, OUTER_MASK_RADIUS FROM RECONSTRUCTION_LIST WHERE RECONSTRUCTION_ID=%li", selected_volume->reconstruction_job_id), &current_statement);
+		main_frame->current_project.database.Step(current_statement);
+		found_refinement_id = sqlite3_column_int64(current_statement, 0);
+		found_class = sqlite3_column_int(current_statement, 1);
+		inner_mask_radius = sqlite3_column_double(current_statement, 2);
+		outer_mask_radius = sqlite3_column_double(current_statement, 3);
+
+		main_frame->current_project.database.Finalize(current_statement);
+
+		long refinement_id = main_frame->current_project.database.ReturnRefinementIDGivenReconstructionID(selected_volume->reconstruction_job_id);
+
+		int number_of_threads = 1;
+		int class_counter;
+		int first_slice;
+		int last_slice;
+		float pixel_size = active_refinement_package->output_pixel_size;
+		float molecular_mass_kDa = active_refinement_package->estimated_particle_weight_in_kda;
+		wxString symmetry = active_refinement_package->symmetry;
+
+		//potential concern is that active refinement run profile may not exist at this point! next line could be deletable WTW
+		active_refinement_run_profile = run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()];
+
+		int number_of_processes = active_refinement_run_profile.ReturnTotalJobs();
+		my_parent->current_job_package.Reset(active_refinement_run_profile, "generate_local_res", number_of_processes * active_refinement_package->number_of_classes);
+
+		for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
+		{
+			//wxString output_reconstruction = main_frame->current_project.volume_asset_directory.GetFullPath();
+			//when load volume asset can check for halfmap filenames
+			wxString output_reconstruction = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/local_filter_volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
+			wxString half_map_1 = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map1.mrc", output_refinement->refinement_id, class_counter + 1);
+			wxString half_map_2 = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map2.mrc", output_refinement->refinement_id, class_counter + 1);
+
+			if (halfMapExists(half_map_1) && halfMapExists(half_map_2))
+			{
+				wxPrintf("WTW HALFMAP 1 DEBUG:%s:\n", half_map_1.ToStdString());
+				wxPrintf("WTW HALFMAP 2 DEBUG:%s:\n", half_map_2.ToStdString());
+
+				wxString mask_image_name;
+				if (active_should_mask == true)
+				{
+					mask_image_name = active_mask_filename;
+				}
+				else
+				{
+					mask_image_name = main_frame->ReturnAutoRefine3DScratchDirectory() + wxString::Format("mask_volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
+				}
+
+				my_parent->active_mask_thread_id = my_parent->next_thread_id;
+				my_parent->next_thread_id++;
+
+				GenerateMaskThread *mask_thread = new GenerateMaskThread(my_parent, half_map_1, half_map_2, mask_image_name, pixel_size, outer_mask_radius, active_should_mask, my_parent->active_mask_thread_id);
+
+				if (mask_thread->Run() != wxTHREAD_NO_ERROR)
+				{
+					my_parent->WriteErrorText("Error: Cannot start masking thread, masking will not be performed");
+					delete mask_thread;
+				}
+			}
+		}
+	}
+}
+
 void AutoRefinementManager::SetupLocalFilteringJob()
 {
-	//
 	float measured_global_resolution;
 	int found_class;
 	long found_refinement_id;
@@ -897,28 +973,21 @@ void AutoRefinementManager::SetupLocalFilteringJob()
 		int first_slice;
 		int last_slice;
 		float pixel_size = active_refinement_package->output_pixel_size;
-		//float inner_mask_radius = active_inner_mask_radius;
-		//float outer_mask_radius = active_mask_radius;
 		float molecular_mass_kDa = active_refinement_package->estimated_particle_weight_in_kda;
 		wxString symmetry = active_refinement_package->symmetry;
-		//potential concern is that active refinement run profile may not exist at this point! next line could be deletable WTW
+
 		active_refinement_run_profile = run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()];
 		int number_of_processes = active_refinement_run_profile.ReturnTotalJobs();
 		my_parent->current_job_package.Reset(active_refinement_run_profile, "generate_local_res", number_of_processes * active_refinement_package->number_of_classes);
 
 		for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
 		{
-			//wxString output_reconstruction = main_frame->current_project.volume_asset_directory.GetFullPath();
-			//when load volume asset can check for halfmap filenames
-			int output_refinement_id = output_refinement->refinement_id;
 			wxString output_reconstruction = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/local_filter_volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
 			wxString half_map_1 = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map1.mrc", output_refinement->refinement_id, class_counter + 1);
 			wxString half_map_2 = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map2.mrc", output_refinement->refinement_id, class_counter + 1);
 
 			if (halfMapExists(half_map_1) && halfMapExists(half_map_2))
 			{
-				wxPrintf("WTW HALFMAP 1 DEBUG:%s:\n", half_map_1.ToStdString());
-				wxPrintf("WTW HALFMAP 2 DEBUG:%s:\n", half_map_2.ToStdString());
 
 				wxString mask_image_name;
 				if (active_should_mask == true)
@@ -930,27 +999,18 @@ void AutoRefinementManager::SetupLocalFilteringJob()
 					mask_image_name = main_frame->ReturnAutoRefine3DScratchDirectory() + wxString::Format("mask_volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
 				}
 
-				my_parent->active_mask_thread_id = my_parent->next_thread_id;
-				my_parent->next_thread_id++;
-
-				GenerateMaskThread *mask_thread = new GenerateMaskThread(my_parent, half_map_1, half_map_2, mask_image_name, pixel_size, outer_mask_radius, active_should_mask, my_parent->active_mask_thread_id);
-
-				if (mask_thread->Run() != wxTHREAD_NO_ERROR)
-				{
-					my_parent->WriteErrorText("Error: Cannot start masking thread, masking will not be performed");
-					delete mask_thread;
-				}
-
 				int slices_with_data = last_slice_with_data - first_slice_with_data;
 				float slices_per_process = slices_with_data / float(number_of_processes);
 
 				for (int process_counter = 0; process_counter < number_of_processes; process_counter++)
 				{
-					//WTW TODO should these ints be longs?
+
 					int first_slice_p = (first_slice_with_data - 1) + myroundint(ReturnThreadNumberOfCurrentThread() * slices_per_process) + 1;
 					int last_slice_p = (first_slice_with_data - 1) + myroundint((ReturnThreadNumberOfCurrentThread() + 1) * slices_per_process);
+
 					wxPrintf("WTW DEBUG FIRST_SLICE_WITH_DATA:%i:LAST_SLICE__WITH_DATA:%i:\n", first_slice_with_data, last_slice_with_data);
 					wxPrintf("WTW DEBUG FIRST_SLICE_P:%i:LAST_SLICE_P:%i:\n", first_slice_p, last_slice_p);
+
 					int number_of_jobs_per_image_in_gui = 1;
 
 					my_parent->current_job_package.AddJob("ttttiiffftfifiitt",
@@ -1065,12 +1125,6 @@ void AutoRefinementManager::BeginRefinementCycle()
 	output_refinement->SizeAndFillWithEmpty(number_of_particles, number_of_classes);
 	output_refinement->refinement_id = main_frame->current_project.database.ReturnHighestRefinementID() + 1;
 
-	if (active_local_filtering == true)
-	{
-		SetupLocalFilteringJob();
-		RunLocalFilteringJob();
-	}
-
 	// Randomise the input parameters, and set the default resolution statistics..
 
 	class_high_res_limits.Clear();
@@ -1179,15 +1233,23 @@ void AutoRefinementManager::BeginRefinementCycle()
 
 	//my_parent->Thaw();
 
-	if (active_should_auto_mask == true || active_should_mask == true)
+	if (active_local_filtering == true)
 	{
-		DoMasking();
+
+		SetupAndLaunchGenerateMaskThread();
+		////depending on if local filtering, should call automask, automask will then call the local refinement, which will then call refinement
 	}
 	else
 	{
-		SetupRefinementJob();
-		RunRefinementJob();
-		wxPrintf("GOT HERE DEBUG 1181 WTW\n\n");
+		if (active_should_auto_mask == true || active_should_mask == true)
+		{
+			DoMasking();
+		}
+		else
+		{
+			SetupRefinementJob();
+			RunRefinementJob();
+		}
 	}
 }
 
@@ -2272,22 +2334,13 @@ void AutoRefinementManager::ProcessAllJobsFinished()
 		if (current_percent_used > 99.9f)
 			reference_3d_contains_all_particles = true;
 
-		if (active_local_filtering == false)
-		{
-			CycleRefinement();
-		}
-		else
-		{
-			SetupLocalFilteringJob();
-			RunLocalFilteringJob();
-		}
+		CycleRefinement();
 	}
 	else if (running_job_type == LOCAL_FILTERING)
 	{
-		main_frame->job_controller.KillJob(my_parent->my_job_id); //TODO whats the point of this
-		//also may need to modify above section of code to relfect merge -> refine may not be true anymore
-		wxPrintf("GOT HERE DEBUG 2273 WTW\n\n");
-		CycleRefinement();
+		main_frame->job_controller.KillJob(my_parent->my_job_id);
+		SetupRefinementJob();
+		RunRefinementJob();
 	}
 }
 
@@ -2374,7 +2427,6 @@ void AutoRefinementManager::DoMasking()
 
 void AutoRefinementManager::CycleRefinement()
 {
-	wxPrintf("GOT HERE DEBUG 2361 WTW\n\n");
 	percent_used_per_round.Add(current_percent_used);
 
 	int class_counter;
@@ -2565,17 +2617,21 @@ void AutoRefinementManager::CycleRefinement()
 		output_refinement = new Refinement;
 		output_refinement->refinement_package_asset_id = input_refinement->refinement_package_asset_id;
 
-		if (active_should_mask == true || active_should_auto_mask == true)
+		if (active_local_filtering == true)
 		{
-			DoMasking();
+			SetupAndLaunchGenerateMaskThread();
 		}
 		else
 		{
-			wxPrintf("GOT HERE DEBUG 2557 WTW\n\n");
-			SetupRefinementJob();
-			wxPrintf("GOT HERE DEBUG 2558 WTW\n\n");
-			RunRefinementJob();
-			wxPrintf("GOT HERE DEBUG 2559 WTW\n\n");
+			if (active_should_mask == true || active_should_auto_mask == true)
+			{
+				DoMasking();
+			}
+			else
+			{
+				SetupRefinementJob();
+				RunRefinementJob();
+			}
 		}
 	}
 }
@@ -2616,6 +2672,9 @@ void AutoRefinementManager::OnGenerateMaskThreadComplete(wxString first_last_sli
 	{
 		MyPrintfRed("Could Not Parse Last Slice With Data\n");
 	}
+
+	SetupLocalFilteringJob();
+	RunLocalFilteringJob();
 }
 
 void AutoRefinementManager::OnMaskerThreadComplete()

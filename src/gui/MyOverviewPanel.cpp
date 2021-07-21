@@ -124,7 +124,8 @@ void MyOverviewPanel::SetWelcomeInfo()
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
 	InfoText->BeginFontSize(12);
-#ifdef EXPERIMENTAL
+
+
 	// Currently this is only defined in autoconf builds
 	#ifdef CISTEM_VERSION_TEXT
 		InfoText->WriteText(wxString::Format("cisTEM version : %s", CISTEM_VERSION_TEXT));
@@ -145,15 +146,7 @@ void MyOverviewPanel::SetWelcomeInfo()
 		// InfoText->WriteText(wxString::Format("Compiled from branch : %s", CISTEM_TIME_YYMMDDHHMMSS));
 		// InfoText->Newline();
 	#endif
-#else
-	InfoText->WriteText(wxString::Format("Version : %s (Compiled : %s )", CISTEM_VERSION_TEXT, __DATE__));
-	InfoText->Newline();
-	// Currently this is only defined in CMake builds
-	#ifdef CISTEM_GIT_COMMIT
-		InfoText->WriteText(wxString::Format("Git commit : %s", CISTEM_GIT_COMMIT));
-		InfoText->Newline();
-	#endif
-#endif
+
 	
 #ifdef CISTEM_SVN_REV
 	InfoText->WriteText(wxString::Format("SVN revision : %s", CISTEM_SVN_REV));

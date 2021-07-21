@@ -131,11 +131,6 @@ void MyOverviewPanel::SetWelcomeInfo()
 		InfoText->Newline();
 	#endif
 	// Currently this is only defined in autoconf builds
-	#ifdef CISTEM_GIT_USERNAME
-		InfoText->WriteText(wxString::Format("Compiled by: %s", CISTEM_GIT_USERNAME));
-		InfoText->Newline();
-	#endif
-	// Currently this is only defined in autoconf builds
 	#ifdef CISTEM_TIME_READABLE
 		InfoText->WriteText(wxString::Format("Commit datetime: %s", CISTEM_TIME_READABLE));
 		InfoText->Newline();

@@ -385,7 +385,6 @@ if test "x$SVN_CHECK" == "xyes" ; then
   fi
 fi
 
-if test $compile_experimental = true ; then
 AC_CHECK_PROG(GIT_CHECK,git,yes)
 # If we have git, it must not be too old, e.g. 1.8 is still the default on older OS's like CentOS 7 
 is_git_new_enough=`git version | awk '{if($3 >= 2) print yes; else print no}'`
@@ -406,8 +405,6 @@ AC_CHECK_FILE("$TOPSRCDIR/.git/HEAD",
       # Get both an easily parsed date, as well as a more readable date
       AC_DEFINE_UNQUOTED([CISTEM_TIME_YYMMDDHHMMSS],["`git show --no-patch --no-notes --pretty='%cd' --date=format:%y%m%d%H%M%S`"])
       AC_DEFINE_UNQUOTED([CISTEM_TIME_READABLE],["`git show --no-patch --no-notes --pretty='%ci' --date=format:%y%m%d%H%M%S`"]) 
-      # Get the git configured user name (I believe this is required to push up to the repo)
-      AC_DEFINE_UNQUOTED([CISTEM_GIT_USERNAME],["`git config --get user.name`"])
       
     else
       AC_MSG_NOTICE([We DO NOT have git on path])
@@ -419,7 +416,6 @@ AC_CHECK_FILE("$TOPSRCDIR/.git/HEAD",
   ])
 fi
 
-fi # Check on git > vs2
 
 AC_SUBST(WX_LIBS)
 AC_SUBST(WX_CPPFLAGS)

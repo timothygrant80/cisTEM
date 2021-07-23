@@ -3,6 +3,7 @@
 #include "scattering_potential.h"
 #include "wave_function_propagator.h"
 
+using namespace cistem_timer;
 
 //#define DO_BEAM_TILT_FULL true
 

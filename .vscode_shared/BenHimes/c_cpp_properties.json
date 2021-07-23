@@ -22,7 +22,7 @@
         {
             "name": "Linux",
             "includePath": [
-                "${workspaceFolder}/**",
+                "${workspaceFolder}/src/**",
                 "/usr/local/include",
                 "/usr/include"
                 // "/groups/cryoadmin/software/WX/wx_static_3.05_INTEL/include/",

@@ -17,7 +17,7 @@ AC_LANG(C++)
 
 # Set this for the gpu makefile hack
 TOPSRCDIR=$srcdir
-if test "$TOPSRCDIR" = "." ; then
+if test "x$TOPSRCDIR" = "x." ; then
 	TOPSRCDIR=`pwd`
 fi
 # don't let the AC_PROG_CXX set default flags, set them back to input..
@@ -221,7 +221,7 @@ AS_HELP_STRING([--with-fftw-dir=DIR],[Declare the root directory of fftw3, if it
 ])
 
 # experimental
-
+compile_experimental="false"
 AC_ARG_ENABLE(experimental, AS_HELP_STRING([--enable-experimental],[Compile with experimental [default=no]]),[
   if test "$enableval" = yes; then
   CPPFLAGS="$CPPFLAGS -DEXPERIMENTAL"
@@ -376,10 +376,44 @@ fi
 
 #fi
 
-# What SVN revision are we using?
-define([svnversion], esyscmd([sh -c "svnversion -n"]))dnl
-if test "x$want_cuda" != "xUnversioned directory"; then
- AC_DEFINE(CISTEM_SVN_REV, "svnversion", [SVN Revision])
+# What SVN revision are we using? Inner if clause will not work if svnversion is not callable
+AC_CHECK_PROG(SVB_CHECK,svnversion,yes)
+if test "x$SVN_CHECK" == "xyes" ; then
+  define([svnversion], esyscmd([sh -c "svnversion -n"]))dnl
+  if test "x$svnversion" != "xUnversioned directory"; then
+  AC_DEFINE(CISTEM_SVN_REV, "svnversion", [SVN Revision])
+  fi
+fi
+
+AC_CHECK_PROG(GIT_CHECK,git,yes)
+# If we have git, it must not be too old, e.g. 1.8 is still the default on older OS's like CentOS 7 
+is_git_new_enough=`git version | awk '{if($3 >= 2) print yes; else print no}'`
+if test "xis_git_new_enough" == "xno" ; then
+  	AC_MSG_NOTICE([your version of git is too old, you can updated on Centos 7 with sudo yum -y install https://packages.endpoint.com/rhel/7/os/x86_64/endpoint-repo-1.7-1.x86_64.rpm
+  	])
+else
+	
+AC_CHECK_FILE("$TOPSRCDIR/.git/HEAD",
+  [
+    if test "x$GIT_CHECK" == "xyes"; then 
+      # All the args require the extra double quotes to be properly formated later on.
+      
+      # Get the current branch, which could have multiple refs, which is why we need the awk (*) marks the active branch.
+      AC_DEFINE_UNQUOTED([CISTEM_CURRENT_BRANCH],["`git  branch | awk '/^\*/{print $2}'`"])
+      # Get the first reachable tag - number of commits since that tag - short commit hash
+      AC_DEFINE_UNQUOTED([CISTEM_VERSION_TEXT],["`git describe --tags --dirty`"])
+      # Get both an easily parsed date, as well as a more readable date
+      AC_DEFINE_UNQUOTED([CISTEM_TIME_YYMMDDHHMMSS],["`git show --no-patch --no-notes --pretty='%cd' --date=format:%y%m%d%H%M%S`"])
+      AC_DEFINE_UNQUOTED([CISTEM_TIME_READABLE],["`git show --no-patch --no-notes --pretty='%ci' --date=format:%y%m%d%H%M%S`"]) 
+      
+    else
+      AC_MSG_NOTICE([We DO NOT have git on path])
+      AC_DEFINE(CISTEM_VERSION_TEXT, "2.0.0-alpha", [A hard coded version moved in from defines.h]) 
+    fi
+  ], 
+  [
+      AC_DEFINE(CISTEM_VERSION_TEXT, "2.0.0-alpha", [A hard coded version moved in from defines.h]) 
+  ])
 fi
 
 

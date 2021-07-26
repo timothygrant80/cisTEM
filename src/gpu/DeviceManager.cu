@@ -18,7 +18,7 @@ DeviceManager::~DeviceManager()
 {
 	if (is_manager_initialized)
 	{
-		checkCudaErrors(cudaDeviceReset());
+		cudaErr(cudaDeviceReset());
 	}
 
 };
@@ -92,7 +92,7 @@ void DeviceManager::Init(int wanted_number_of_gpus)
 		  if (total_mem < min_memory_total)
 		  {
 			  // Don't use this device. This might not be the best way to do this.
-			  checkCudaErrors(cudaDeviceReset());
+			  cudaErr(cudaDeviceReset());
 			  continue;
 		  }
 		  else if (free_mem > max_mem && free_mem > min_memory_available) { max_mem = free_mem; }
@@ -110,7 +110,7 @@ void DeviceManager::Init(int wanted_number_of_gpus)
 			  selected_GPU = iGPU;
 		  }
 	  }
-	  checkCudaErrors(cudaDeviceReset());
+	  cudaErr(cudaDeviceReset());
   }
 
   MyAssertTrue(selected_GPU >= 0, "No suitable GPU found. Terminating...");
@@ -129,9 +129,9 @@ void DeviceManager::SetGpu(int cpu_thread_idx)
   
 //	// Select the current device
 //	this->gpuIDX = -1;
-//	checkCudaErrors(cudaSetDevice(cpu_thread_idx % this->nGPUs));   // "% num_gpus" allows more CPU threads than GPU devices
+//	cudaErr(cudaSetDevice(cpu_thread_idx % this->nGPUs));   // "% num_gpus" allows more CPU threads than GPU devices
 	cudaErr(cudaSetDevice(this->gpuIDX));
-//	checkCudaErrors(cudaGetDevice(&gpuIDX));
+//	cudaErr(cudaGetDevice(&gpuIDX));
 
 //	wxPrintf("For thread %d of nGpus %d assigned %d\n",cpu_thread_idx, nGPUs, gpuIDX);
   
@@ -139,10 +139,10 @@ void DeviceManager::SetGpu(int cpu_thread_idx)
 
 };
 
-void DeviceManager::ReSetGpu()
+void DeviceManager::ResetGpu()
 {
 
-	checkCudaErrors(cudaSetDevice(this->gpuIDX));   // "% num_gpus" allows more CPU threads than GPU devices
+	cudaErr(cudaDeviceReset());   // "% num_gpus" allows more CPU threads than GPU devices
 
 };
 

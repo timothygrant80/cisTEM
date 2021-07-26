@@ -124,16 +124,35 @@ void MyOverviewPanel::SetWelcomeInfo()
 
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
 	InfoText->BeginFontSize(12);
-	InfoText->WriteText(wxString::Format("Version : %s (Compiled : %s )", CISTEM_VERSION_TEXT, __DATE__));
-	InfoText->Newline();
+
+
+	// Currently this is only defined in autoconf builds
+	#ifdef CISTEM_VERSION_TEXT
+		InfoText->WriteText(wxString::Format("cisTEM version : %s", CISTEM_VERSION_TEXT));
+		InfoText->Newline();
+	#endif
+	// Currently this is only defined in autoconf builds
+	#ifdef CISTEM_TIME_READABLE
+		InfoText->WriteText(wxString::Format("Commit datetime: %s", CISTEM_TIME_READABLE));
+		InfoText->Newline();
+	#endif
+	// Currently this is only defined in autoconf builds
+	#ifdef CISTEM_CURRENT_BRANCH
+		InfoText->WriteText(wxString::Format("From branch : %s", CISTEM_CURRENT_BRANCH));
+		InfoText->Newline();
+	#endif
+	// Currently this is only defined in autoconf builds, only include human readable time here
+	#ifdef CISTEM_TIME_YYMMDDHHMMSS
+		// InfoText->WriteText(wxString::Format("Compiled from branch : %s", CISTEM_TIME_YYMMDDHHMMSS));
+		// InfoText->Newline();
+	#endif
+
+	
 #ifdef CISTEM_SVN_REV
 	InfoText->WriteText(wxString::Format("SVN revision : %s", CISTEM_SVN_REV));
 	InfoText->Newline();
 #endif
-#ifdef CISTEM_GIT_COMMIT
-	InfoText->WriteText(wxString::Format("Git commit : %s", CISTEM_GIT_COMMIT));
-	InfoText->Newline();
-#endif
+
 	InfoText->Newline();
 	InfoText->Newline();
 	InfoText->EndFontSize();

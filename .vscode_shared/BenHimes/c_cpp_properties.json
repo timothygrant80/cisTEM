@@ -1,36 +1,10 @@
 {
     "configurations": [
         {
-            "name": "Mac",
-            "includePath": [
-                "${workspaceFolder}/**",
-                "/usr/local/include"
-
-            ],
-            "defines": [
-                "_FILE_OFFSET_BITS=64",
-                "WX_PRECOMP",
-                //"__WXMAC__",
-                //"__WXOSX__",
-                "__WXOSX_COCOA__",
-                "__ASSERT_MACROS_DEFINE_VERSIONS_WITHOUT_UNDERSCORES=1",
-                "DEBUG"
-            ]
-
-
-        },
-        {
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/usr/local/include",
-                "/usr/include"
-                // "/groups/cryoadmin/software/WX/wx_static_3.05_INTEL/include/",
-                // "/groups/cryoadmin/software/WX/wx_static_3.05_INTEL/include/wx-3.0",
-                // "/groups/cryoadmin/software/WX/wx_static_3.05_INTEL/include/wx-3.0/wx"
-                // "/groups/cryoadmin/software/WX/wx_static_3.05_GNU/include/",
-                // "/groups/cryoadmin/software/WX/wx_static_3.05_GNU/include/wx-3.0"
-                // "/groups/cryoadmin/software/WX/wx_static_3.05_GNU/include/wx-3.0/wx"
+                "/groups/himesb/git/gemmi/include/**"
             ],
             "defines": [
                 "_FILE_OFFSET_BITS=64",
@@ -38,10 +12,12 @@
                 "__WXGTK__",
                 "DEBUG"
             ],
-            "compilerPath": "/usr/bin/gcc",
-            "cStandard": "c11",
-            "cppStandard": "gnu++17",
-            "configurationProvider": "ms-vscode.cmake-tools"
+            "compilerPath": "/groups/himesb/intel/compilers_and_libraries_2020.2.254/linux/bin/intel64/icpc",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "browse": {
+                "limitSymbolsToIncludedHeaders": true
+            }
         }
     ],
     "version": 4

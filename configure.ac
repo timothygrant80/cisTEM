@@ -225,7 +225,11 @@ compile_experimental="false"
 AC_ARG_ENABLE(experimental, AS_HELP_STRING([--enable-experimental],[Compile with experimental [default=no]]),[
   if test "$enableval" = yes; then
   CPPFLAGS="$CPPFLAGS -DEXPERIMENTAL"
-  CXXFLAGS="$CXXFLAGS -DEXPERIMENTAL"
+  if test "x$CXX" = "xicpc"; then 
+    CXXFLAGS="$CXXFLAGS -DEXPERIMENTAL  -wd1595"
+  else
+    CXXFLAGS="$CXXFLAGS -DEXPERIMENTAL"
+  fi
   compile_experimental="true"
   fi
   ])

@@ -276,8 +276,7 @@ void PDB::Init()
 
 
 
-	if (access_type == OPEN_TO_READ)
-	{
+
 		wxString current_line;
 		wxString token;
 		double temp_double;

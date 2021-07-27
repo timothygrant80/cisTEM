@@ -401,7 +401,10 @@ AC_CHECK_FILE("$TOPSRCDIR/.git/HEAD",
       # Get the current branch, which could have multiple refs, which is why we need the awk (*) marks the active branch.
       AC_DEFINE_UNQUOTED([CISTEM_CURRENT_BRANCH],["`git  branch | awk '/^\*/{print $2}'`"])
       # Get the first reachable tag - number of commits since that tag - short commit hash
-      AC_DEFINE_UNQUOTED([CISTEM_VERSION_TEXT],["`git describe --tags --dirty`"])
+      version_name="`cat $TOPSRCDIR/VERSION | $AWK  '{print $1}'`"
+      version_commit="`cat $TOPSRCDIR/VERSION | $AWK  '{print $2}'`"
+      is_dirty="`git status --short | awk '{if($0!="" && FNR==1) print "-dirty"}'`"
+      AC_DEFINE_UNQUOTED([CISTEM_VERSION_TEXT],["`git rev-list ${version_commit}..HEAD | awk -v NAME=$version_name -v ISDIRTY=$is_dirty 'BEGIN{n=0}{n=n+1}{if(FNR==1) H=$1}END{print NAME"-"n-1"-"substr(H,1,7)ISDIRTY}'`"])
       # Get both an easily parsed date, as well as a more readable date
       AC_DEFINE_UNQUOTED([CISTEM_TIME_YYMMDDHHMMSS],["`git show --no-patch --no-notes --pretty='%cd' --date=format:%y%m%d%H%M%S`"])
       AC_DEFINE_UNQUOTED([CISTEM_TIME_READABLE],["`git show --no-patch --no-notes --pretty='%ci' --date=format:%y%m%d%H%M%S`"]) 

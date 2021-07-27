@@ -158,6 +158,10 @@ void UserInput::Init(const char *program_name, wxString program_version)
 	wxPrintf("         Version : %s\n", program_version);
 	for (counter = 0; counter < strlen(program_name) / 2; counter++) wxPrintf(" ");
 	wxPrintf("        Compiled : %s\n", __DATE__);
+  for (counter = 0; counter < strlen(program_name) / 2; counter++) wxPrintf(" ");
+  wxPrintf(" Library Version : %s\n", CISTEM_VERSION_TEXT );
+	for (counter = 0; counter < strlen(program_name) / 2; counter++) wxPrintf(" ");
+  wxPrintf("     From Branch : %s\n", CISTEM_CURRENT_BRANCH );
 	for (counter = 0; counter < strlen(program_name) / 2; counter++) wxPrintf(" ");
 	wxPrintf("            Mode : ");
 

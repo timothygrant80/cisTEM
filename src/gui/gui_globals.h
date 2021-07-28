@@ -108,7 +108,6 @@ public:
 	{
 		main_thread_pointer = parent;
 		half_map_1 = wanted_half_map_1;
-		wxPrintf("WTW DEBUG IN GUI GLOBALS:%s:\n", half_map_1.ToStdString());
 		half_map_2 = wanted_half_map_2;
 		mask_image_name = wanted_mask_image_name;
 		pixel_size = wanted_pixel_size;

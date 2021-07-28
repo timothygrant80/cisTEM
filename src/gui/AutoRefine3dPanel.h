@@ -56,6 +56,9 @@ public:
 	long current_refinement_package_asset_id;
 	long current_output_refinement_id;
 
+	int recieved_local_filtering_job_results;
+	int num_processes_for_local_filtering;
+
 	long number_of_received_particle_results;
 	long expected_number_of_results;
 

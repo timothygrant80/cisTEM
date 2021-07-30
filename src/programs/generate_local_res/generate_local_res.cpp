@@ -119,6 +119,7 @@ bool Generate_Local_Res_App::DoCalculation()
 	int max_width = ceil(18 / original_pixel_size);
 	wxPrintf("DEBUG WTW MAX WIDTH:%i:\n", max_width);
 	wxPrintf("WTW DEBUG FIRST SLICE:%i:LAST SLICE:%i:\n", first_slice, last_slice);
+	wxPrintf("WTW DEBUG mask name :%s:\n", mask_image_name.ToStdString());
 	int num_slices = 0;
 
 	ImageFile half_map_1_imagefile(half_map_1.ToStdString());
@@ -138,6 +139,7 @@ bool Generate_Local_Res_App::DoCalculation()
 	{
 		if (last_slice + max_width > num_slices_half_map_1)
 		{
+
 			first_used_slice = 1;
 			last_used_slice = num_slices_half_map_1;
 			half_map_1_image.ReadSlices(&half_map_1_imagefile, 1, num_slices_half_map_1);
@@ -147,6 +149,7 @@ bool Generate_Local_Res_App::DoCalculation()
 		}
 		else
 		{
+
 			first_used_slice = 1;
 			last_used_slice = last_slice + max_width;
 			half_map_1_image.ReadSlices(&half_map_1_imagefile, 1, last_slice + max_width);
@@ -159,6 +162,7 @@ bool Generate_Local_Res_App::DoCalculation()
 	{
 		if (last_slice + max_width > num_slices_half_map_1)
 		{
+
 			first_used_slice = first_slice - max_width;
 			last_used_slice = num_slices_half_map_1;
 			half_map_1_image.ReadSlices(&half_map_1_imagefile, first_slice - max_width, num_slices_half_map_1);
@@ -168,6 +172,7 @@ bool Generate_Local_Res_App::DoCalculation()
 		}
 		else
 		{
+
 			first_used_slice = first_slice - max_width;
 			last_used_slice = last_slice + max_width;
 			half_map_1_image.ReadSlices(&half_map_1_imagefile, first_slice - max_width, last_slice + max_width);
@@ -233,15 +238,24 @@ bool Generate_Local_Res_App::DoCalculation()
 
 		local_resolution_volume.SetToConstant(0.0f);
 
+		////DEBUGGING WTW
+		for (int i = 0; i < 64; i++)
+		{
+			int first_slice_d = (first_slice - 1) + myroundint(i * slices_per_thread) + 1;
+			int last_slice_d = (first_slice - 1) + myroundint((i + 1) * slices_per_thread);
+
+			wxPrintf("WTW DEBUG FIRST SLICE P:%i:LAST SLICE P:%i:\n", first_slice_d, last_slice_d);
+		}
+		exit(1);
+		////
+
 #pragma omp parallel default(shared) num_threads(num_threads)
 		{
 
 			int first_slice_p = (first_slice - 1) + myroundint(ReturnThreadNumberOfCurrentThread() * slices_per_thread) + 1;
 			int last_slice_p = (first_slice - 1) + myroundint((ReturnThreadNumberOfCurrentThread() + 1) * slices_per_thread);
-			//was last_slice ^^^^^^
 
-			//int first_slice = (first_slice_with_data - 1) + myroundint(ReturnThreadNumberOfCurrentThread() * slices_per_thread) + 1;
-			//int last_slice = (first_slice_with_data - 1) +  myroundint((ReturnThreadNumberOfCurrentThread() + 1) * slices_per_thread);
+			wxPrintf("WTW DEBUG FIRST SLICE P:%i:LAST SLICE P:%i:\n", first_slice_p, last_slice_p);
 
 			Image local_resolution_volume_local;
 			Image input_volume_one_local;

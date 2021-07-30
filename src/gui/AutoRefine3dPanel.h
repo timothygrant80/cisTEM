@@ -56,6 +56,13 @@ public:
 	long current_refinement_package_asset_id;
 	long current_output_refinement_id;
 
+	//long last_used_reconstruction_id;
+	bool first_round_flag;
+	float measured_global_resolution;
+	wxString volume_asset_filename;
+	wxString volume_asset_specified_half_map_1;
+	wxString volume_asset_specified_half_map_2;
+
 	int recieved_local_filtering_job_results;
 	int num_processes_for_local_filtering;
 

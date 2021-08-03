@@ -166,6 +166,9 @@ protected:
 #include "ccl3d.h"
 
 #ifdef EXPERIMENTAL
+#include "../../include/ieee-754-half/half.hpp"
+#include "../../include/gemmi/model.hpp"
+#include "../../include/gemmi/elem.hpp"
 #include "pdb.h"
 #include "water.h"
 #endif

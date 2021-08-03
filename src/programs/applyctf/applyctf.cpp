@@ -34,6 +34,12 @@ void ApplyCTFApp::DoInteractiveUserInput()
 
 	bool input_ctf_values_from_text_file;
 	bool phase_flip_only;
+	bool apply_wiener_filter = false;
+
+	float wiener_filter_falloff_frequency = 100.0;
+	float wiener_filter_falloff_fudge_factor = 1.0;
+	float wiener_filter_scale_fudge_factor = 1.0;
+	float wiener_filter_high_pass_radius = 200.0;
 
 	bool set_expert_options;
 
@@ -62,12 +68,24 @@ void ApplyCTFApp::DoInteractiveUserInput()
 
 	phase_flip_only = my_input->GetYesNoFromUser("Phase Flip Only", "If Yes, only phase flipping is performed", "NO");
 
+	if (phase_flip_only == false)
+	{
+		apply_wiener_filter = my_input->GetYesNoFromUser("Apply Wiener Filter", "If Yes, apply Wiener filter as suggested by Tegunov, et.al.","NO");
+	}
+	if (apply_wiener_filter == true)
+	{
+		wiener_filter_falloff_frequency = my_input->GetFloatFromUser("SSNR Falloff frequency","In Angstromsm, the frequency at which SSNR falls off","100.0");
+		wiener_filter_falloff_fudge_factor = my_input->GetFloatFromUser("SSNR Falloff speed","How fast does SSNR fall off","1.0");
+		wiener_filter_scale_fudge_factor = my_input->GetFloatFromUser("Deconvolution strength","Strength of the deconvolution","1.0");
+		wiener_filter_high_pass_radius = my_input->GetFloatFromUser("Highpass filter frequency","In Angstromsm, the frequency at which to cutoff low freq signal","200.0");
+
+	}
 
 
 	delete my_input;
 
 	my_current_job.Reset(10);
-	my_current_job.ManualSetArguments("ttffffffffbtb",     	 input_filename.c_str(),
+	my_current_job.ManualSetArguments("ttffffffffbtbbffff",     	 input_filename.c_str(),
 															 output_filename.c_str(),
 															 pixel_size,
 															 acceleration_voltage,
@@ -79,7 +97,12 @@ void ApplyCTFApp::DoInteractiveUserInput()
 															 additional_phase_shift,
 															 input_ctf_values_from_text_file,
 															 text_filename.c_str(),
-															 phase_flip_only
+															 phase_flip_only,
+															 apply_wiener_filter,
+															 wiener_filter_falloff_frequency,
+															 wiener_filter_falloff_fudge_factor,
+															 wiener_filter_scale_fudge_factor,
+															 wiener_filter_high_pass_radius
 															 );
 
 
@@ -109,7 +132,12 @@ bool ApplyCTFApp::DoCalculation()
 	bool        input_ctf_values_from_text_file     = my_current_job.arguments[10].ReturnBoolArgument();
 	std::string text_filename                       = my_current_job.arguments[11].ReturnStringArgument();
 	bool        phase_flip_only                     = my_current_job.arguments[12].ReturnBoolArgument();
+	bool        apply_wiener_filter                 = my_current_job.arguments[13].ReturnBoolArgument();
 
+	float 		wiener_filter_falloff_frequency 	= my_current_job.arguments[14].ReturnFloatArgument();
+	float 		wiener_filter_falloff_fudge_factor 	= my_current_job.arguments[15].ReturnFloatArgument();
+	float 		wiener_filter_scale_fudge_factor 	= my_current_job.arguments[16].ReturnFloatArgument();
+	float 		wiener_filter_high_pass_radius 			= my_current_job.arguments[17].ReturnFloatArgument();	
 	float temp_float[5];
 
 	ProgressBar			*my_progress_bar;
@@ -165,9 +193,19 @@ bool ApplyCTFApp::DoCalculation()
 			}
 		}
 
-		if (phase_flip_only == true) current_image.ApplyCTFPhaseFlip(current_ctf);
-		else current_image.ApplyCTF(current_ctf);
+		if (phase_flip_only == true) {current_image.ApplyCTFPhaseFlip(current_ctf);}
+		else if (apply_wiener_filter == true) {current_image.OptimalFilterWarp(current_ctf,
+											   pixel_size,
+											   wiener_filter_falloff_frequency, 
+											   wiener_filter_falloff_fudge_factor,
+											   wiener_filter_scale_fudge_factor,
+											   wiener_filter_high_pass_radius);}
+		else {current_image.ApplyCTF(current_ctf);}
+		//current_image.ZeroCentralPixel();
 		current_image.BackwardFFT();
+		if (apply_wiener_filter == false) {
+			current_image.InvertRealValues();
+		}
 		current_image.WriteSlice(&output_file,image_counter + 1 );
 
 		my_progress_bar->Update(image_counter + 1);

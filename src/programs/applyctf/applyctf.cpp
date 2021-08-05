@@ -196,9 +196,9 @@ bool ApplyCTFApp::DoCalculation()
 		if (phase_flip_only == true) {current_image.ApplyCTFPhaseFlip(current_ctf);}
 		else if (apply_wiener_filter == true) {current_image.OptimalFilterWarp(current_ctf,
 											   pixel_size,
-											   wiener_filter_falloff_frequency, 
 											   wiener_filter_falloff_fudge_factor,
 											   wiener_filter_scale_fudge_factor,
+											   wiener_filter_falloff_frequency,
 											   wiener_filter_high_pass_radius);}
 		else {current_image.ApplyCTF(current_ctf);}
 		//current_image.ZeroCentralPixel();

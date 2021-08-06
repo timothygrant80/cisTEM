@@ -41,6 +41,8 @@ void ApplyCTFApp::DoInteractiveUserInput()
 	float wiener_filter_scale_fudge_factor = 1.0;
 	float wiener_filter_high_pass_radius = 200.0;
 
+	bool maintain_image_contrast = false;
+
 	bool set_expert_options;
 
 	UserInput *my_input = new UserInput("ApplyCTF", 1.0);
@@ -80,12 +82,13 @@ void ApplyCTFApp::DoInteractiveUserInput()
 		wiener_filter_high_pass_radius = my_input->GetFloatFromUser("Highpass filter frequency","In Angstromsm, the frequency at which to cutoff low freq signal","200.0");
 
 	}
-
+	
+	maintain_image_contrast = my_input->GetYesNoFromUser("Maintain image contrast", "If Yes, contrast is the same as image", "NO");
 
 	delete my_input;
 
-	my_current_job.Reset(10);
-	my_current_job.ManualSetArguments("ttffffffffbtbbffff",     	 input_filename.c_str(),
+	my_current_job.Reset(19);
+	my_current_job.ManualSetArguments("ttffffffffbtbbffffb",     	 input_filename.c_str(),
 															 output_filename.c_str(),
 															 pixel_size,
 															 acceleration_voltage,
@@ -102,7 +105,8 @@ void ApplyCTFApp::DoInteractiveUserInput()
 															 wiener_filter_falloff_frequency,
 															 wiener_filter_falloff_fudge_factor,
 															 wiener_filter_scale_fudge_factor,
-															 wiener_filter_high_pass_radius
+															 wiener_filter_high_pass_radius,
+															 maintain_image_contrast
 															 );
 
 
@@ -133,11 +137,11 @@ bool ApplyCTFApp::DoCalculation()
 	std::string text_filename                       = my_current_job.arguments[11].ReturnStringArgument();
 	bool        phase_flip_only                     = my_current_job.arguments[12].ReturnBoolArgument();
 	bool        apply_wiener_filter                 = my_current_job.arguments[13].ReturnBoolArgument();
-
 	float 		wiener_filter_falloff_frequency 	= my_current_job.arguments[14].ReturnFloatArgument();
 	float 		wiener_filter_falloff_fudge_factor 	= my_current_job.arguments[15].ReturnFloatArgument();
 	float 		wiener_filter_scale_fudge_factor 	= my_current_job.arguments[16].ReturnFloatArgument();
-	float 		wiener_filter_high_pass_radius 			= my_current_job.arguments[17].ReturnFloatArgument();	
+	float 		wiener_filter_high_pass_radius 		= my_current_job.arguments[17].ReturnFloatArgument();
+	bool		maintain_image_contrast             = my_current_job.arguments[18].ReturnBoolArgument();
 	float temp_float[5];
 
 	ProgressBar			*my_progress_bar;
@@ -203,7 +207,8 @@ bool ApplyCTFApp::DoCalculation()
 		else {current_image.ApplyCTF(current_ctf);}
 		//current_image.ZeroCentralPixel();
 		current_image.BackwardFFT();
-		if (apply_wiener_filter == false) {
+		// Applying the wiener filter does not invert contrast, so if maintain_image_contrast is false and apply_wiener_filter is true we need to invert
+		if (maintain_image_contrast ^ apply_wiener_filter ) {  
 			current_image.InvertRealValues();
 		}
 		current_image.WriteSlice(&output_file,image_counter + 1 );

@@ -459,6 +459,7 @@ bool RefineTemplateApp::DoCalculation()
 	int number_of_peaks_found = 0;
 	int peak_number;
 	float mask_falloff = 20.0;
+	float min_peak_radius2 = powf(min_peak_radius, 2);
 
 	if ((input_search_image_file.ReturnZSize() < result_number) || (mip_input_file.ReturnZSize() < result_number) || (scaled_mip_input_file.ReturnZSize() < result_number) \
 		|| (best_psi_input_file.ReturnZSize() < result_number) || (best_theta_input_file.ReturnZSize() < result_number) || (best_phi_input_file.ReturnZSize() < result_number) \
@@ -586,7 +587,7 @@ bool RefineTemplateApp::DoCalculation()
 				sq_dist_x = float(pow(i-current_peak.x,2));
 
 				// The square centered at the pixel
-				if ( sq_dist_x + sq_dist_y <= min_peak_radius )
+				if ( sq_dist_x + sq_dist_y <= min_peak_radius2 )
 				{
 					best_scaled_mip.real_values[address] = -FLT_MAX;
 				}
@@ -664,7 +665,7 @@ bool RefineTemplateApp::DoCalculation()
 
 	#pragma omp parallel num_threads(max_threads) default(none) shared(number_of_peaks_found, found_peaks, input_image, mask_radius, pixel_size, mask_falloff, \
 		mip_image, scaled_mip_image, phi_image, theta_image, psi_image, defocus_image, pixel_size_image, defocus_search_range, defocus_refine_step, pixel_size_search_range, \
-		pixel_size_refine_step, defocus1, defocus2, defocus_angle, angular_step, in_plane_angular_step, whitening_filter, input_reconstruction, min_peak_radius, best_mip, \
+		pixel_size_refine_step, defocus1, defocus2, defocus_angle, angular_step, in_plane_angular_step, whitening_filter, input_reconstruction, min_peak_radius2, best_mip, \
 		best_scaled_mip, best_phi, best_theta, best_psi, best_defocus, best_pixel_size, input_reconstruction_file, voltage_kV, spherical_aberration_mm, amplitude_contrast, \
 		phase_shift, max_threads, defocus_step, xy_change_threshold, exclude_above_xy_threshold, all_peak_changes, all_peak_infos) \
 	private(current_peak, padded_reference, windowed_particle, sq_dist_x, sq_dist_y, address, current_address, current_phi, current_theta, current_psi, current_defocus, \
@@ -740,7 +741,7 @@ bool RefineTemplateApp::DoCalculation()
 				sq_dist_x = float(pow(i-current_peak.x,2));
 
 				// The square centered at the pixel
-//				if ( sq_dist_x + sq_dist_y <= min_peak_radius )
+//				if ( sq_dist_x + sq_dist_y <= min_peak_radius2 )
 //				{
 //					scaled_mip_image_local.real_values[address] = -FLT_MAX;
 //				}

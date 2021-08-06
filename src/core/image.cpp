@@ -1407,7 +1407,7 @@ void Image::WeightBySSNR(Image &ctf_image, float molecular_mass_kDa, float pixel
  * are probably not needed.
  *
  */
-void Image::OptimalFilterWarp(CTF ctf, float pixel_size_in_angstroms, float ssnr_falloff_fudge_factor, float ssnr_scale_fudge_factor)
+void Image::OptimalFilterWarp(CTF ctf, float pixel_size_in_angstroms, float ssnr_falloff_fudge_factor, float ssnr_scale_fudge_factor, float ssnr_falloff_frequency, float high_pass_frequency)
 {
 	MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 	MyDebugAssertTrue(is_in_real_space == false, "image not in Fourier space");
@@ -1432,9 +1432,9 @@ void Image::OptimalFilterWarp(CTF ctf, float pixel_size_in_angstroms, float ssnr
 	float ssnr_value_pre_ctf;
 	float filter_value;
 
-	const float ssnr_falloff_characteristic_spacing = 100.0 / pixel_size_in_angstroms * ssnr_falloff_fudge_factor; // 100A was suggested by Tegunov, seems to work well
+	const float ssnr_falloff_characteristic_spacing = ssnr_falloff_frequency / pixel_size_in_angstroms * ssnr_falloff_fudge_factor; // 100A was suggested by Tegunov, seems to work well
 	const float ssnr_peak_scale_factor = powf(10.0,3.0*ssnr_scale_fudge_factor);
-	const float hp_radius = 1.0/200.0*pixel_size_in_angstroms;
+	const float hp_radius = 1.0/high_pass_frequency*pixel_size_in_angstroms;
 	const float hp_width = 1.0 * hp_radius;
 	const float hp_radius_start_squared = powf(hp_radius - 0.5*hp_width,2);
 	const float hp_radius_finish_squared = powf(hp_radius + 0.5*hp_width,2);

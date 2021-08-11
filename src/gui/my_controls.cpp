@@ -1683,7 +1683,7 @@ wxThread::ExitCode GenerateMaskThread::Entry()
 {
 	Image mask_image;
 
-	wxPrintf("NAME OF HALFMAP:%s:DEBUG\n", half_map_1.ToStdString());
+	//wxPrintf("NAME OF HALFMAP:%s:DEBUG\n", half_map_1.ToStdString());
 	ImageFile half_map_1_imagefile(half_map_1.ToStdString());
 	int num_slices_half_map = half_map_1_imagefile.ReturnNumberOfSlices();
 
@@ -1702,6 +1702,9 @@ wxThread::ExitCode GenerateMaskThread::Entry()
 		mask_image.CopyFrom(&combined_images);
 		mask_image.ConvertToAutoMask(pixel_size, outer_mask_radius, pixel_size * 2.0f, 0.2f);
 		mask_image.WriteSlicesAndFillHeader(mask_image_name.ToStdString(), pixel_size);
+
+		//WTW debug print below
+		mask_image.WriteSlicesAndFillHeader("/data/wtwoods/test_local_filtering/mask_image_test_r.mrc", pixel_size);
 	}
 	else
 	{
@@ -1711,7 +1714,7 @@ wxThread::ExitCode GenerateMaskThread::Entry()
 		if (num_slices_half_map != num_slices_mask)
 		{
 			MyPrintfRed("Number of slices in provided mask does not align with number of slices in half maps.");
-			//what was the alternative to exit(1) TODO
+			//what was the alternative to exit(1) TODO WTW
 		}
 
 		mask_image.ReadSlices(&mask_imagefile, 1, num_slices_mask);

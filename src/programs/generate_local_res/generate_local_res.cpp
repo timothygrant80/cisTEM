@@ -12,6 +12,7 @@ public:
 	int num_float_values; //WTW should be long?
 	int number_of_meta_data_values;
 	float pixel_size;
+	int class_number;
 	float *float_values;
 
 	AggregatedLocalResResult();
@@ -31,6 +32,7 @@ public:
 	void MasterHandleProgramDefinedResult(float *result_array, long array_size, int result_number, int number_of_expected_results);
 
 	wxString output_reconstruction;
+	wxString input_original_volume;
 
 	ArrayOfAggregatedLocalResResults aggregated_results;
 
@@ -64,6 +66,8 @@ void Generate_Local_Res_App::DoInteractiveUserInput()
 #endif
 
 	float measured_global_resolution = my_input->GetFloatFromUser("Measured Global Resolution", "In Angstroms", "5.0", 0.0);
+	int class_number = my_input->GetIntFromUser("Class Number", "The Class Id of the input volume", "1", false);
+	wxString input_original_volume = my_input->GetFilenameFromUser("Input Volume", "The input volume", "my_input_volume.mrc", false);
 
 	int image_number_for_gui = 0;
 	int number_of_jobs_per_image_in_gui = 0;
@@ -74,7 +78,7 @@ void Generate_Local_Res_App::DoInteractiveUserInput()
 	delete my_input;
 
 	//TODO change autorefine3d panel to match
-	my_current_job.ManualSetArguments("ttttiiffftfifiitt", half_map_1.ToUTF8().data(),
+	my_current_job.ManualSetArguments("ttttiiffftfifiittit", half_map_1.ToUTF8().data(),
 									  half_map_2.ToUTF8().data(),
 									  output_reconstruction.ToUTF8().data(),
 									  mask_image.ToUTF8().data(),
@@ -90,7 +94,9 @@ void Generate_Local_Res_App::DoInteractiveUserInput()
 									  image_number_for_gui,
 									  number_of_jobs_per_image_in_gui,
 									  directory_for_collated_results.ToUTF8().data(),
-									  result_filename.ToUTF8().data());
+									  result_filename.ToUTF8().data(),
+									  class_number,
+									  input_original_volume.ToUTF8().data());
 }
 
 bool Generate_Local_Res_App::DoCalculation()
@@ -112,14 +118,13 @@ bool Generate_Local_Res_App::DoCalculation()
 	int number_of_jobs_per_image_in_gui = my_current_job.arguments[14].ReturnIntegerArgument();
 	wxString directory_for_collated_results = my_current_job.arguments[15].ReturnStringArgument();
 	wxString result_filename = my_current_job.arguments[16].ReturnStringArgument();
+	int class_number = my_current_job.arguments[17].ReturnIntegerArgument();
+	input_original_volume = my_current_job.arguments[18].ReturnStringArgument();
 
 	if (is_running_locally == false)
 		num_threads = number_of_threads_requested_on_command_line;
 
 	int max_width = ceil(18 / original_pixel_size);
-	wxPrintf("DEBUG WTW MAX WIDTH:%i:\n", max_width);
-	wxPrintf("WTW DEBUG FIRST SLICE:%i:LAST SLICE:%i:\n", first_slice, last_slice);
-	wxPrintf("WTW DEBUG mask name :%s:\n", mask_image_name.ToStdString());
 	int num_slices = 0;
 
 	ImageFile half_map_1_imagefile(half_map_1.ToStdString());
@@ -178,13 +183,8 @@ bool Generate_Local_Res_App::DoCalculation()
 			half_map_1_image.ReadSlices(&half_map_1_imagefile, first_slice - max_width, last_slice + max_width);
 			half_map_2_image.ReadSlices(&half_map_2_imagefile, first_slice - max_width, last_slice + max_width);
 			mask_image.ReadSlices(&mask_image_imagefile, first_slice - max_width, last_slice + max_width);
-			num_slices = last_slice + max_width - (first_slice - max_width) + 1;
+			num_slices = last_used_slice - (first_used_slice - 1);
 		}
-	}
-
-	if (num_threads > num_slices)
-	{
-		num_threads = num_slices;
 	}
 
 	//combie the two image files (need to do this in gui for correct mask)
@@ -192,10 +192,15 @@ bool Generate_Local_Res_App::DoCalculation()
 	combined_images.AddImage(&half_map_2_image);
 	combined_images.DivideByConstant(2);
 
-	float mask_falloff = 10.0;
+	//float mask_falloff = 10.0;
 
 	if (is_running_locally == false)
 		num_threads = number_of_threads_requested_on_command_line;
+
+	if (num_threads > num_slices)
+	{
+		num_threads = num_slices;
+	}
 
 	//initialize images
 	Image local_resolution_volume;
@@ -219,8 +224,8 @@ bool Generate_Local_Res_App::DoCalculation()
 	int number_averaged = 0;
 	float alignment_res = 5.0f;
 
-	int total_slices = last_slice - first_slice;
-	float slices_per_thread = total_slices / float(num_threads);
+	int total_used_slices = last_used_slice - (first_used_slice - 1);
+	float slices_per_thread = total_used_slices / float(num_threads);
 
 	for (float current_res = 18.0f; current_res < 37.0f; current_res += 6.0f)
 	{
@@ -238,22 +243,14 @@ bool Generate_Local_Res_App::DoCalculation()
 
 		local_resolution_volume.SetToConstant(0.0f);
 
-		////DEBUGGING WTW
-		for (int i = 0; i < 64; i++)
-		{
-			int first_slice_d = (first_slice - 1) + myroundint(i * slices_per_thread) + 1;
-			int last_slice_d = (first_slice - 1) + myroundint((i + 1) * slices_per_thread);
-
-			wxPrintf("WTW DEBUG FIRST SLICE P:%i:LAST SLICE P:%i:\n", first_slice_d, last_slice_d);
-		}
-		exit(1);
-		////
-
 #pragma omp parallel default(shared) num_threads(num_threads)
 		{
 
-			int first_slice_p = (first_slice - 1) + myroundint(ReturnThreadNumberOfCurrentThread() * slices_per_thread) + 1;
-			int last_slice_p = (first_slice - 1) + myroundint((ReturnThreadNumberOfCurrentThread() + 1) * slices_per_thread);
+			int first_slice_p = myroundint(ReturnThreadNumberOfCurrentThread() * slices_per_thread) + 1;
+			int last_slice_p = myroundint((ReturnThreadNumberOfCurrentThread() + 1) * slices_per_thread);
+
+			//int first_slice_p = (first_slice - 1) + myroundint(ReturnThreadNumberOfCurrentThread() * slices_per_thread) + 1;
+			//int last_slice_p = (first_slice - 1) + myroundint((ReturnThreadNumberOfCurrentThread() + 1) * slices_per_thread);
 
 			wxPrintf("WTW DEBUG FIRST SLICE P:%i:LAST SLICE P:%i:\n", first_slice_p, last_slice_p);
 
@@ -264,6 +261,11 @@ bool Generate_Local_Res_App::DoCalculation()
 			input_volume_one_local.CopyFrom(&half_map_1_image);
 			input_volume_two_local.CopyFrom(&half_map_2_image);
 
+			//WTW debug
+			//input_volume_one_local.WriteSlicesAndFillHeader((wxString::Format("/data/wtwoods/test_local_filtering/local_res_vol_%f_input_vol_one.mrc", current_res)).ToStdString(), original_pixel_size);
+			//input_volume_two_local.WriteSlicesAndFillHeader((wxString::Format("/data/wtwoods/test_local_filtering/local_res_vol_%f_input_vol_two.mrc", current_res)).ToStdString(), original_pixel_size);
+			//end debug
+
 			local_resolution_volume_local.Allocate(combined_images.logical_x_dimension, combined_images.logical_y_dimension, combined_images.logical_z_dimension);
 			local_resolution_volume_local.SetToConstant(0.0f);
 
@@ -271,6 +273,10 @@ bool Generate_Local_Res_App::DoCalculation()
 			estimator->SetAllUserParameters(&input_volume_one_local, &input_volume_two_local, &mask_image, first_slice_p, last_slice_p, 1, original_pixel_size, box_size, threshold_snr, threshold_confidence, use_fixed_threshold, fixed_fsc_threshold, symmetry, true, 2);
 			estimator->EstimateLocalResolution(&local_resolution_volume_local);
 			delete estimator;
+
+			//WTW debug
+			//local_resolution_volume_local.WriteSlicesAndFillHeader((wxString::Format("/data/wtwoods/test_local_filtering/local_res_vol_%f_local_vol.mrc", current_res)).ToStdString(), original_pixel_size);
+			//end debug
 
 #pragma omp critical
 			{
@@ -284,6 +290,10 @@ bool Generate_Local_Res_App::DoCalculation()
 
 		float max_res = local_resolution_volume.ReturnMaximumValue();
 		MyPrintfRed("Max_Res: %f", max_res);
+
+		//WTW debug
+		//local_resolution_volume.WriteSlicesAndFillHeader((wxString::Format("/data/wtwoods/test_local_filtering/local_res_vol_%f.mrc", current_res)).ToStdString(), original_pixel_size);
+		//end debug
 
 		for (long pixel_counter = 0; pixel_counter < local_resolution_volume.real_memory_allocated; pixel_counter++)
 		{
@@ -300,7 +310,8 @@ bool Generate_Local_Res_App::DoCalculation()
 	local_resolution_volume_all.DivideByConstant(number_averaged);
 	local_resolution_volume.CopyFrom(&local_resolution_volume_all);
 
-	local_resolution_volume.WriteSlicesAndFillHeader("local_res_vol_test.mrc", original_pixel_size);
+	//WTW here lol
+	//local_resolution_volume.WriteSlicesAndFillHeader("/data/wtwoods/test_local_filtering/local_res_vol_test_before_scaling.mrc", original_pixel_size);
 
 	//scaling code
 
@@ -374,7 +385,7 @@ bool Generate_Local_Res_App::DoCalculation()
 
 	//local_resolution_volume.WriteSlicesAndFillHeader(output_reconstruction.ToStdString(), original_pixel_size);
 
-	MyDebugPrint("About to apply locres filter\n");
+	//local_resolution_volume.WriteSlicesAndFillHeader("/data/wtwoods/test_local_filtering/local_res_vol_test_after_scaling.mrc", original_pixel_size);
 
 	int number_of_levels = box_size;
 	combined_images.ApplyLocalResolutionFilter(local_resolution_volume, original_pixel_size, number_of_levels);
@@ -394,10 +405,7 @@ bool Generate_Local_Res_App::DoCalculation()
 	//output_3d.density_map->SetMinimumValue(original_average_value);
 	combined_images.CosineMask(outer_mask_radius / original_pixel_size, 1.0, false, true, 0.0);
 
-	MyDebugPrint("About to proccess data for SendProgramDefinedResultToMaster\n");
-
-	//TODO there might be 2 times as many floats as expected
-	int number_of_meta_data_values = 8;
+	int number_of_meta_data_values = 9;
 	int num_slices_for_results = last_slice - (first_slice - 1);
 	long number_of_valid_floats = num_slices_for_results * (combined_images.real_memory_allocated / combined_images.logical_z_dimension);
 	long offest_to_valid_values = (first_slice - first_used_slice) * (combined_images.real_memory_allocated / combined_images.logical_z_dimension);
@@ -405,7 +413,6 @@ bool Generate_Local_Res_App::DoCalculation()
 	float *result = new float[number_of_result_floats];
 
 	MyDebugPrint("Number of Floats:%li:Combined Images Real Mem Allocated:%li:\n", number_of_result_floats, combined_images.real_memory_allocated);
-	MyDebugPrint("DEBUG 1 for SendProgramDefinedResultToMaster\n");
 
 	result[0] = first_slice;
 	result[1] = last_slice;
@@ -415,8 +422,7 @@ bool Generate_Local_Res_App::DoCalculation()
 	result[5] = number_of_result_floats; //long to float?
 	result[6] = number_of_meta_data_values;
 	result[7] = original_pixel_size;
-
-	MyDebugPrint("DEBUG 2 for SendProgramDefinedResultToMaster\n");
+	result[8] = class_number;
 
 	for (int result_array_counter = 0; result_array_counter < number_of_valid_floats; result_array_counter++)
 	{
@@ -435,10 +441,9 @@ bool Generate_Local_Res_App::DoCalculation()
 	MyDebugPrint("First Slice:%i:LastSlice:%i:\n", first_slice, last_slice);
 	MyDebugPrint("num_slices_for_results:%i:combined_images.logical_z_dimension:%i:\n", num_slices_for_results, combined_images.logical_z_dimension);
 	MyDebugPrint("DEBUG WTW MAX WIDTH:%i:\n", max_width);
-	result_image.WriteSlicesAndFillHeader("/data/wtwoods/test_local_filtering/debug_test_result_images.mrc", original_pixel_size);
+	MyDebugPrint("DEBUG WTW Offset to valid values:%li:first_slice:%i:first_used_slice:%i:\n", offest_to_valid_values, first_slice, first_used_slice);
+	combined_images.WriteSlicesAndFillHeader("/data/wtwoods/test_local_filtering/debug_test_combined_images.mrc", original_pixel_size);
 	//WTW debug
-
-	MyDebugPrint("About to pass data back with SendProgramDefinedResultToMaster\n");
 
 	SendProgramDefinedResultToMaster(result, number_of_result_floats, image_number_for_gui, number_of_jobs_per_image_in_gui);
 
@@ -458,6 +463,7 @@ AggregatedLocalResResult::AggregatedLocalResResult()
 	num_float_values = -1;
 	number_of_meta_data_values = -1;
 	pixel_size = -1;
+	class_number = -1;
 	float_values = NULL;
 }
 
@@ -470,7 +476,7 @@ AggregatedLocalResResult::~AggregatedLocalResResult()
 
 void Generate_Local_Res_App::MasterHandleProgramDefinedResult(float *result_array, long array_size, int result_number, int number_of_expected_results)
 {
-	MyDebugPrint("WTW DEBUG MASTER 1\n");
+
 	AggregatedLocalResResult result_to_add;
 	aggregated_results.Add(result_to_add);
 	aggregated_results[aggregated_results.GetCount() - 1].result_id = result_number;
@@ -482,38 +488,56 @@ void Generate_Local_Res_App::MasterHandleProgramDefinedResult(float *result_arra
 	aggregated_results[aggregated_results.GetCount() - 1].num_float_values = result_array[5];
 	aggregated_results[aggregated_results.GetCount() - 1].number_of_meta_data_values = result_array[6];
 	aggregated_results[aggregated_results.GetCount() - 1].pixel_size = result_array[7];
-	aggregated_results[aggregated_results.GetCount() - 1].float_values = &result_array[8]; //should act like a sub array of all non-metadata values
-																						   //may need to copy them? mem disapears? is it on the heap ig
-	int array_location = aggregated_results.GetCount() - 1;
-
-	MyDebugPrint("WTW DEBUG MASTER 2\n");
+	aggregated_results[aggregated_results.GetCount() - 1].class_number = result_array[8];
+	aggregated_results[aggregated_results.GetCount() - 1].float_values = &result_array[9];
 
 	if (aggregated_results.GetCount() == number_of_expected_results)
 	{
-		MyDebugPrint("WTW DEBUG MASTER 3\n");
-		//get total z dim
 		int x_dim = aggregated_results[aggregated_results.GetCount() - 1].x_dimension;
 		int y_dim = aggregated_results[aggregated_results.GetCount() - 1].y_dimension;
-		int z_dim = 0;
-		long num_floats_per_slice = x_dim * y_dim;
+
+		//need to get original volume and read in [1, first_slice - 1] and [last_slice + 1, num_slices]
+		ImageFile original_volume_imagefile(input_original_volume.ToStdString());
+		int num_slices_original_volume = original_volume_imagefile.ReturnNumberOfSlices();
+		Image original_volume;
+		original_volume.ReadSlices(&original_volume_imagefile, 1, num_slices_original_volume);
+
+		float min_res_Angstroms = 20.0f;
+		float current_filter_freq = aggregated_results[aggregated_results.GetCount() - 1].pixel_size / min_res_Angstroms;
+		float cosine_falloff_width = 10.0 / float(x_dim); // 5 Fourier voxels
+		original_volume.ForwardFFT();
+		original_volume.CosineMask(current_filter_freq, cosine_falloff_width);
+		original_volume.BackwardFFT();
+
+		//get total z dim
+		//int z_dim = 0;
+		long num_floats_per_slice = (original_volume.real_memory_allocated / original_volume.logical_z_dimension);
 		int min_start_slice = aggregated_results[aggregated_results.GetCount() - 1].start_slice;
-
-		MyDebugPrint("WTW DEBUG MASTER 4\n");
-
+		int max_end_slice = aggregated_results[aggregated_results.GetCount() - 1].end_slice;
 		for (int results_counter = 0; results_counter < aggregated_results.GetCount(); results_counter++)
 		{
-			z_dim += aggregated_results[results_counter].z_dimension;
+			//z_dim += aggregated_results[results_counter].z_dimension;
 			if (aggregated_results[results_counter].start_slice < min_start_slice)
 			{
 				min_start_slice = aggregated_results[results_counter].start_slice;
 			}
+			if (aggregated_results[results_counter].end_slice > max_end_slice)
+			{
+				max_end_slice = aggregated_results[results_counter].end_slice;
+			}
 		}
 
-		MyDebugPrint("WTW DEBUG MASTER 5\n");
-
 		Image result_image;
-		result_image.Allocate(x_dim, y_dim, z_dim, true, true);
-		MyDebugPrint("x:%i:, y:%i:, z:%i:\n", x_dim, y_dim, z_dim);
+		result_image.Allocate(x_dim, y_dim, num_slices_original_volume, true, true);
+		//MyDebugPrint("x:%i:, y:%i:, z:%i:, min_start_slice:%i:\n", x_dim, y_dim, num_slices_original_volume, min_start_slice);
+
+		//long total_starting_floats = num_floats_per_slice * (min_start_slice - 1);
+		long total_starting_floats = (min_start_slice - 1) * num_floats_per_slice;
+		MyDebugPrint("x:%i:, y:%i:, z:%i:, min_start_slice:%i:, total_starting_floats:%li:\n", x_dim, y_dim, num_slices_original_volume, min_start_slice, total_starting_floats);
+		for (int float_counter = 0; float_counter < total_starting_floats; float_counter++)
+		{
+			result_image.real_values[float_counter] = original_volume.real_values[float_counter];
+		}
 
 		for (int results_counter = 0; results_counter < aggregated_results.GetCount(); results_counter++)
 		{
@@ -522,20 +546,27 @@ void Generate_Local_Res_App::MasterHandleProgramDefinedResult(float *result_arra
 			// result_image.Allocate(x_dim, y_dim, aggregated_results[results_counter].z_dimension, true, true);
 			// result_image.real_values = aggregated_results[results_counter].float_values; //should this be a deep copy
 
-			int start_slice_temp = aggregated_results[results_counter].start_slice - min_start_slice;
-			MyDebugPrint("start_slice_temp:%i:num_floats_per_slice:%li:aggregated_results[results_counter].num_float_values:%i:\n", start_slice_temp, num_floats_per_slice, aggregated_results[results_counter].num_float_values);
-			MyDebugPrint("result_image.real_memory_allocated:%li:\n", result_image.real_memory_allocated);
+			int start_slice_temp = aggregated_results[results_counter].start_slice - 1;
+			//MyDebugPrint("start_slice_temp:%i:num_floats_per_slice:%li:aggregated_results[results_counter].num_float_values:%i:\n", start_slice_temp, num_floats_per_slice, aggregated_results[results_counter].num_float_values);
+			//MyDebugPrint("result_image.real_memory_allocated:%li:\n", result_image.real_memory_allocated);
 
-			MyDebugPrint("WTW DEBUG MASTER 6\n");
-
-			int number_of_non_meta_floats = aggregated_results[results_counter].num_float_values - aggregated_results[results_counter].number_of_meta_data_values;
+			long number_of_non_meta_floats = aggregated_results[results_counter].num_float_values - aggregated_results[results_counter].number_of_meta_data_values;
 			for (int float_counter = 0; float_counter < number_of_non_meta_floats; float_counter++)
 			{
 				result_image.real_values[(start_slice_temp * num_floats_per_slice) + float_counter] = aggregated_results[results_counter].float_values[float_counter];
 			}
 		}
 
-		MyDebugPrint("WTW DEBUG MASTER 7\n");
+		long total_ending_floats = num_floats_per_slice * (num_slices_original_volume - max_end_slice);
+		for (int float_counter = 0; float_counter < total_ending_floats; float_counter++)
+		{
+			result_image.real_values[(max_end_slice * num_floats_per_slice) + float_counter] = original_volume.real_values[(max_end_slice * num_floats_per_slice) + float_counter];
+		}
+
 		result_image.WriteSlicesAndFillHeader(output_reconstruction.ToStdString(), aggregated_results[aggregated_results.GetCount() - 1].pixel_size);
+
+		//debug WTW
+		//result_image.WriteSlicesAndFillHeader("/data/wtwoods/test_local_filtering/final_result_images.mrc", aggregated_results[aggregated_results.GetCount() - 1].pixel_size);
+		//original_volume.WriteSlicesAndFillHeader("/data/wtwoods/test_local_filtering/original_vol.mrc", aggregated_results[aggregated_results.GetCount() - 1].pixel_size);
 	}
 }

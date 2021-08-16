@@ -1702,9 +1702,6 @@ wxThread::ExitCode GenerateMaskThread::Entry()
 		mask_image.CopyFrom(&combined_images);
 		mask_image.ConvertToAutoMask(pixel_size, outer_mask_radius, pixel_size * 2.0f, 0.2f);
 		mask_image.WriteSlicesAndFillHeader(mask_image_name.ToStdString(), pixel_size);
-
-		//WTW debug print below
-		mask_image.WriteSlicesAndFillHeader("/data/wtwoods/test_local_filtering/mask_image_test_r.mrc", pixel_size);
 	}
 	else
 	{
@@ -1778,6 +1775,7 @@ wxThread::ExitCode AutoMaskerThread::Entry()
 
 	for (int class_counter = 0; class_counter < input_files.GetCount(); class_counter++)
 	{
+		MyDebugPrint("WTW DEBUG IN MASK \n");
 
 		input_file.OpenFile(input_files.Item(class_counter).ToStdString(), false);
 		input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());

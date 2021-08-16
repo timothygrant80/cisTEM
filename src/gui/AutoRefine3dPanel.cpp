@@ -837,7 +837,6 @@ void AutoRefinementManager::SetParent(AutoRefine3DPanel *wanted_parent)
 
 bool AutoRefinementManager::halfMapExists(wxString &half_map)
 {
-	//TODO WTW what is behavior with NULL?
 
 	struct stat buff;
 	int retval = stat(half_map.ToStdString().c_str(), &buff);
@@ -863,7 +862,6 @@ void AutoRefinementManager::SetupAndLaunchGenerateMaskThread()
 	float molecular_mass_kDa = active_refinement_package->estimated_particle_weight_in_kda;
 	wxString symmetry = active_refinement_package->symmetry;
 
-	//potential concern is that active refinement run profile may not exist at this point! next line could be deletable WTW
 	active_refinement_run_profile = run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()];
 
 	int number_of_processes = active_refinement_run_profile.ReturnTotalJobs();
@@ -944,9 +942,6 @@ void AutoRefinementManager::SetupAndLaunchGenerateMaskThread()
 	}
 }
 
-//WTW could give an arg indicating if this is the first round, also make sure input refienemnt is not null
-//input refinement could be null the first round? WTW
-//store inital refinement id in a global? or check if its the initial round and then get it and then use it as refinement id variable
 void AutoRefinementManager::SetupLocalFilteringJob()
 {
 
@@ -974,7 +969,7 @@ void AutoRefinementManager::SetupLocalFilteringJob()
 	{
 		filtered_filenames.Add(main_frame->ReturnAutoRefine3DScratchDirectory() + wxString::Format("%s_%i_filtered.mrc", volume_asset_filename, class_counter + 1));
 	}
-	current_reference_filenames = filtered_filenames; //WTW do i have to clear this before i use it or something
+	current_reference_filenames = filtered_filenames;
 
 	for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
 	{
@@ -1026,8 +1021,8 @@ void AutoRefinementManager::SetupLocalFilteringJob()
 				int first_slice_p = (first_slice_with_data - 1) + myroundint(ReturnThreadNumberOfCurrentThread() * slices_per_process) + 1;
 				int last_slice_p = (first_slice_with_data - 1) + myroundint((ReturnThreadNumberOfCurrentThread() + 1) * slices_per_process);
 
-				my_parent->WriteBlueText(wxString::Format(wxT("WTW DEBUG FIRST_SLICE_WITH_DATA:%i:LAST_SLICE__WITH_DATA:%i:\n"), first_slice_with_data, last_slice_with_data));
-				my_parent->WriteBlueText(wxString::Format(wxT("WTW DEBUG FIRST_SLICE_P:%i:LAST_SLICE_P:%i:\n"), first_slice_p, last_slice_p));
+				//my_parent->WriteBlueText(wxString::Format(wxT("WTW DEBUG FIRST_SLICE_WITH_DATA:%i:LAST_SLICE__WITH_DATA:%i:\n"), first_slice_with_data, last_slice_with_data));
+				//my_parent->WriteBlueText(wxString::Format(wxT("WTW DEBUG FIRST_SLICE_P:%i:LAST_SLICE_P:%i:\n"), first_slice_p, last_slice_p));
 
 				int number_of_jobs_per_image_in_gui = 1;
 
@@ -1289,15 +1284,30 @@ void AutoRefinementManager::BeginRefinementCycle()
 			}
 			else
 			{
-				//what does it mean to fail here
-				//WTW what to do after this???
+				my_parent->WriteErrorText("Volume Asset ID did not match corresponding Asset ID to class.\n");
+				if (active_should_auto_mask == true || active_should_mask == true)
+				{
+					DoMasking();
+				}
+				else
+				{
+					SetupRefinementJob();
+					RunRefinementJob();
+				}
 			}
 		}
 		else
 		{
-			//probs need to print a warning and then skip rest of local filtering
-			//WTW what to do after this???
 			my_parent->WriteErrorText("Could Not Find Refinement Information\n");
+			if (active_should_auto_mask == true || active_should_mask == true)
+			{
+				DoMasking();
+			}
+			else
+			{
+				SetupRefinementJob();
+				RunRefinementJob();
+			}
 		}
 	}
 	else
@@ -1789,7 +1799,7 @@ void AutoRefinementManager::SetupRefinementJob()
 			wxString input_particle_images = active_refinement_package->stack_filename;
 			wxString input_parameter_file = written_parameter_files.Item(class_counter);
 			wxString input_reconstruction = current_reference_filenames.Item(class_counter);
-			my_parent->WriteBlueText(wxString::Format(wxT("input reconstruction :%s:\n"), input_reconstruction)); //WTW WTW
+			//my_parent->WriteBlueText(wxString::Format(wxT("input reconstruction :%s:\n"), input_reconstruction)); //WTW
 			wxString input_reconstruction_statistics = written_res_files.Item(class_counter);
 			bool use_statistics = true;
 
@@ -2155,7 +2165,7 @@ void AutoRefinementManager::ProcessJobResult(JobResult *result_to_process)
 		//make following var global
 		recieved_local_filtering_job_results++;
 
-		long current_time = time(NULL); //WTW do time thing in run local filtering
+		long current_time = time(NULL);
 
 		if (recieved_local_filtering_job_results == 1)
 		{
@@ -2508,7 +2518,7 @@ void AutoRefinementManager::DoMasking()
 		else
 		{
 			current_reference_filenames = masked_filenames;
-			//current_reference_filenames = filtered_filenames; -> should be one for each class WTW
+			//my_parent->WriteInfoText("waiting for finish WTW debug\n");
 			return; // just return, we will startup again whent he mask thread finishes.
 		}
 	}
@@ -2746,12 +2756,12 @@ void AutoRefinementManager::OnGenerateMaskThreadComplete(wxString first_last_sli
 	{
 		wxString first_slice_with_data_string = tokenizer.GetNextToken();
 		first_slice_with_data = wxAtoi(first_slice_with_data_string);
-		wxPrintf("WTW DEBUG GOT HERE PARSING FIRST SLICE:%s:%i:\n\n", first_slice_with_data_string.ToStdString(), first_slice_with_data);
+		//wxPrintf("WTW DEBUG GOT HERE PARSING FIRST SLICE:%s:%i:\n\n", first_slice_with_data_string.ToStdString(), first_slice_with_data);
 		if (tokenizer.HasMoreTokens())
 		{
 			wxString last_slice_with_data_string = tokenizer.GetNextToken();
 			last_slice_with_data = wxAtoi(last_slice_with_data_string);
-			wxPrintf("WTW DEBUG GOT HERE PARSING LAST SLICE:%s:%i:\n\n", last_slice_with_data_string.ToStdString(), last_slice_with_data);
+			//wxPrintf("WTW DEBUG GOT HERE PARSING LAST SLICE:%s:%i:\n\n", last_slice_with_data_string.ToStdString(), last_slice_with_data);
 		}
 		else
 		{

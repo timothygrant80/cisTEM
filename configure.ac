@@ -175,6 +175,7 @@ AC_ARG_ENABLE(debugmode, AS_HELP_STRING([--enable-debugmode],[Compile in debug m
   fi
  ])
   
+
 ###############################
 # BEGIN CUDA CHECKS AND SETS
 ###############################

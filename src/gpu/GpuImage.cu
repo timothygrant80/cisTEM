@@ -170,6 +170,10 @@ d_ReturnReal1DAddressFromPhysicalCoord(int3 coords, int4 img_dims);
  __device__ __forceinline__ int
 d_ReturnFourier1DAddressFromPhysicalCoord(int3 wanted_dims, int3 physical_upper_bound_complex);
 
+__device__ __forceinline__ int
+d_ReturnFourier1DAddressFromLogicalCoord(int wanted_x_coord, int wanted_y_coord, int wanted_z_coord, const int3& dims, const int3& physical_upper_bound_complex);
+
+
  __inline__ int
 ReturnFourierLogicalCoordGivenPhysicalCoord_Y(int physical_index,
                                               int logical_y_dimension,
@@ -1446,45 +1450,25 @@ void GpuImage::CopyDeviceToHost(bool free_gpu_memory, bool unpin_host_memory)
 void GpuImage::CopyDeviceToHost(Image &cpu_image, bool should_block_until_complete, bool free_gpu_memory)
 {
 
-  MyAssertTrue(is_in_memory_gpu, "GPU memory not allocated");
-
-  // TODO other asserts on size etc.
-
-  float *tmpPinnedPtr;
-  // FIXME for now always pin the memory - this might be a bad choice for single copy or small images, but is required for asynch xfer and is ~2x as fast after pinning
+	MyAssertTrue(is_in_memory_gpu, "GPU memory not allocated");
+	// TODO other asserts on size etc.
 
 
-  precheck
+	float* tmpPinnedPtr;
+	// FIXME for now always pin the memory - this might be a bad choice for single copy or small images, but is required for asynch xfer and is ~2x as fast after pinning
+	cudaHostRegister(cpu_image.real_values, sizeof(float)*real_memory_allocated, cudaHostRegisterDefault);
+	cudaHostGetDevicePointer( &tmpPinnedPtr, cpu_image.real_values, 0);
 
-  if (is_in_real_space) {
-    wxPrintf(" in real space.\n");
-    cudaHostRegister(cpu_image.real_values, sizeof(float) * real_memory_allocated, cudaHostRegisterDefault);
-    cudaHostGetDevicePointer(&tmpPinnedPtr, cpu_image.real_values, 0);
-    cudaErr(cudaMemcpyAsync(tmpPinnedPtr, real_values_gpu, real_memory_allocated * sizeof(float), cudaMemcpyDeviceToHost, cudaStreamPerThread));
-  }
-  else {
-    wxPrintf(" in fourier space.\n");
-    cudaHostRegister(cpu_image.complex_values, sizeof(cufftComplex) * real_memory_allocated, cudaHostRegisterDefault);
-    cudaHostGetDevicePointer(&tmpPinnedPtr, cpu_image.complex_values, 0);
-    cudaErr(cudaMemcpyAsync(tmpPinnedPtr, complex_values_gpu, real_memory_allocated * sizeof(cufftComplex), cudaMemcpyDeviceToHost, cudaStreamPerThread));
-  }
-  postcheck
-  // if (should_block_until_complete)
-	// cudaErr(cudaStreamSynchronize(cudaStreamPerThread));
-  cudaErr(cudaStreamSynchronize(cudaStreamPerThread));
+	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+	cudaErr(cudaMemcpyAsync(tmpPinnedPtr, real_values_gpu, real_memory_allocated*sizeof(float),cudaMemcpyDeviceToHost,cudaStreamPerThread));
+	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
 
-  // TODO add asserts etc.
-  if (free_gpu_memory)
-  {
-    cudaFree(real_values_gpu);
-  } // FIXME what about the other structures
+	if (should_block_until_complete) cudaErr(cudaStreamSynchronize(cudaStreamPerThread));
+	// TODO add asserts etc.
+	if (free_gpu_memory) { cudaFree(real_values_gpu) ; } // FIXME what about the other structures
 
-  cudaHostUnregister(tmpPinnedPtr);
+	cudaHostUnregister(tmpPinnedPtr);
 
-  
-  
-  
-  //if (cpu_image.real_values == nullptr){ wxPrintf(" pointer is null AFTER copy from device to host!\n");}
 }
 
 void GpuImage::CopyDeviceToNewHost(Image &cpu_image, bool should_block_until_complete, bool free_gpu_memory)
@@ -2004,6 +1988,47 @@ d_ReturnFourier1DAddressFromPhysicalCoord(int3 wanted_dims, int3 physical_upper_
             (int)(physical_upper_bound_complex.x + 1) + (int)wanted_dims.x );
 }
 
+__device__ __forceinline__ int
+d_ReturnFourier1DAddressFromLogicalCoord(int wanted_x_coord, int wanted_y_coord, int wanted_z_coord, const int3& dims, const int3& physical_upper_bound_complex)
+{
+
+
+  if (wanted_x_coord >= 0)
+  {
+    if (wanted_y_coord < 0)
+    {
+      wanted_y_coord += dims.y;
+    }
+    if (wanted_z_coord < 0)
+    {
+      wanted_z_coord += dims.z;
+    }
+  }
+  else
+  {
+    wanted_x_coord = -wanted_x_coord;
+
+    if (wanted_y_coord > 0)
+    {
+      wanted_y_coord = dims.y - wanted_y_coord;
+    }
+    else
+    {
+      wanted_y_coord = -wanted_y_coord;
+    }
+
+    if (wanted_z_coord > 0)
+    {
+      wanted_z_coord = dims.z - wanted_z_coord;
+    }
+    else
+    {
+      wanted_z_coord = -wanted_z_coord;
+    }
+  }
+  return d_ReturnFourier1DAddressFromPhysicalCoord(make_int3(wanted_x_coord, wanted_y_coord, wanted_z_coord), physical_upper_bound_complex);
+}
+
 
 __global__ void ClipIntoRealKernel(cufftReal* real_values_gpu,
                                    cufftReal* other_image_real_values_gpu,
@@ -2292,7 +2317,6 @@ void GpuImage::SetCufftPlan(bool use_half_precision)
     }
     else if (dims.y > 1) 
     { 
-      wxPrintf("\n\nAllocating a 2d Plan\n\n");
       rank = 2;
       fftDims = new long long int[rank];
       inembed = new long long int[rank];
@@ -2765,27 +2789,27 @@ __global__ void SetUniformComplexValueKernel(cufftComplex* complex_values_gpu, c
 
 
 __global__ void ClipIntoFourierSpaceKernel(cufftComplex* source_complex_values_gpu,
-    cufftComplex* destination_complex_values_gpu,
-    int4 source_dims,
-    int4 destination_dims,
-    int3 destination_image_physical_index_of_first_negative_frequency,
-    int3 source_logical_lower_bound_complex,
-    int3 source_logical_upper_bound_complex,
-    int3 source_physical_upper_bound_complex,
-    int3 destination_physical_upper_bound_complex,
-    cufftComplex out_of_bounds_value
-  );
+                                           cufftComplex* destination_complex_values_gpu,
+                                           int4 source_dims,
+                                           int4 destination_dims,
+                                           int3 destination_image_physical_index_of_first_negative_frequency,
+                                           int3 source_logical_lower_bound_complex,
+                                           int3 source_logical_upper_bound_complex,
+                                           int3 source_physical_upper_bound_complex,
+                                           int3 destination_physical_upper_bound_complex,
+                                           cufftComplex out_of_bounds_value
+                                      );
   __global__ void ClipIntoFourierSpaceKernel(cufftComplex* source_complex_values_gpu,
-    cufftComplex* destination_complex_values_gpu,
-    int4 source_dims,
-    int4 destination_dims,
-    int3 destination_image_physical_index_of_first_negative_frequency,
-    int3 source_logical_lower_bound_complex,
-    int3 source_logical_upper_bound_complex,
-    int3 source_physical_upper_bound_complex,
-    int3 destination_physical_upper_bound_complex,
-    cufftComplex out_of_bounds_value
-  )
+                                             cufftComplex* destination_complex_values_gpu,
+                                             int4 source_dims,
+                                             int4 destination_dims,
+                                             int3 destination_image_physical_index_of_first_negative_frequency,
+                                             int3 source_logical_lower_bound_complex,
+                                             int3 source_logical_upper_bound_complex,
+                                             int3 source_physical_upper_bound_complex,
+                                             int3 destination_physical_upper_bound_complex,
+                                             cufftComplex out_of_bounds_value
+                                            )
   {
     int3 index_coord = make_int3(blockIdx.x * blockDim.x + threadIdx.x,
                                  blockIdx.y * blockDim.y + threadIdx.y,
@@ -2898,21 +2922,21 @@ void GpuImage::Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted
 	return;
   }
 
-  wxPrintf("Init temp GPUImage.\n");
+  // wxPrintf("Init temp GPUImage.\n");
   GpuImage temp_image;
 
-  wxPrintf("Allocating memory.\n");
+  // wxPrintf("Allocating memory.\n");
   temp_image.Allocate(wanted_x_dimension, wanted_y_dimension, wanted_z_dimension, is_in_real_space);
 
 
-  wxPrintf("Clipping temp image.\n");
+  // wxPrintf("Clipping temp image.\n");
   precheck
   if (is_in_real_space) {
-    wxPrintf("Clipping real space.\n");
+    // wxPrintf("Clipping real space.\n");
     ClipIntoRealSpace(&temp_image, wanted_padding_value, false, 1.0, 0, 0, 0);
   }
   else {
-    wxPrintf("Clipping Fourier space.\n");
+    // wxPrintf("Clipping Fourier space.\n");
     ClipIntoFourierSpace(&temp_image, wanted_padding_value);
   }
   //ClipInto(&temp_image, wanted_padding_value, false, 1.0, 0, 0, 0);
@@ -2920,7 +2944,7 @@ void GpuImage::Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted
 
 
 
-  wxPrintf("Consuming temp image\n");
+  // wxPrintf("Consuming temp image\n");
   Consume(temp_image);
 
 }
@@ -2985,7 +3009,7 @@ void GpuImage::Consume(GpuImage &temp_image) // copy the parameters then directl
   postcheck
   //Allocate(dims.x, dims.y, dims.z, is_in_real_space);
   
-  temp_image.printVal("Value 1:", 1);
+  // temp_image.printVal("Value 1:", 1);
   
   if (is_in_real_space) {
     precheck
@@ -3080,82 +3104,18 @@ void GpuImage::ClipIntoFourierSpace(GpuImage *destination_image, float wanted_pa
 
   precheck
   ClipIntoFourierSpaceKernel<<<gridDims, threadsPerBlock, 0, cudaStreamPerThread>>>(complex_values_gpu,
-                                                                                            destination_image->complex_values_gpu,
-                                                                                            dims,
-                                                                                            destination_image->dims,
-                                                                                            destination_image->physical_index_of_first_negative_frequency,
-                                                                                            logical_lower_bound_complex,
-                                                                                            logical_upper_bound_complex,
-                                                                                            physical_upper_bound_complex,
-                                                                                            destination_image->physical_upper_bound_complex,
-                                                                                            make_cuComplex(wanted_padding_value, 0.0)
-                                                                                          );
+                                                                                    destination_image->complex_values_gpu,
+                                                                                    dims,
+                                                                                    destination_image->dims,
+                                                                                    destination_image->physical_index_of_first_negative_frequency,
+                                                                                    logical_lower_bound_complex,
+                                                                                    logical_upper_bound_complex,
+                                                                                    physical_upper_bound_complex,
+                                                                                    destination_image->physical_upper_bound_complex,
+                                                                                    make_cuComplex(wanted_padding_value, 0.0)
+                                                                                    );
 
   postcheck
   cudaStreamSynchronize(cudaStreamPerThread);
-
-  if (dims.y < destination_image->dims.y || dims.z < destination_image->dims.z)
-		{
-      int i, ii, jj, jj_logi, kk_logi, kk;
-
-			// For a 2D image
-			if (dims.z == 1)
-			{
-				for (i = 0; i <= physical_upper_bound_complex.x; i++)
-				{
-					destination_image->complex_values[destination_image->ReturnFourier1DAddressFromPhysicalCoord(i,physical_index_of_first_negative_frequency.y,0)] = complex_values[ReturnFourier1DAddressFromPhysicalCoord(i,physical_index_of_first_negative_frequency.y,0)];
-				}
-			}
-			// For a 3D volume
-			else
-			{
-					jj = physical_index_of_first_negative_frequency.y;
-					jj_logi = logical_lower_bound_complex.y;
-				// Deal with the positive Nyquist of the 2nd dimension
-				for (kk_logi = logical_lower_bound_complex.z; kk_logi <= logical_upper_bound_complex.z; kk_logi ++)
-				{
-
-					for (ii = 0; ii <= physical_upper_bound_complex.x; ii++)
-					{
-						destination_image->complex_values[destination_image->ReturnFourier1DAddressFromLogicalCoord(ii,jj,kk_logi)] = complex_values[ReturnFourier1DAddressFromLogicalCoord(ii,jj_logi,kk_logi)];
-					}
-				}
-
-
-				// Deal with the positive Nyquist in the 3rd dimension
-				kk = physical_index_of_first_negative_frequency.z;
-				int kk_mirror = destination_image->dims.z - physical_index_of_first_negative_frequency.z;
-				//wxPrintf("\nkk = %i; kk_mirror = %i\n",kk,kk_mirror);
-				int jj_mirror;
-				//wxPrintf("Will loop jj from %i to %i\n",1,physical_index_of_first_negative_frequency.y);
-				for (jj = 1; jj <= physical_index_of_first_negative_frequency.y; jj ++ )
-				{
-					//jj_mirror = destination_image->dims.y - jj;
-					jj_mirror = jj;
-					for (ii = 0; ii <= physical_upper_bound_complex.x; ii++ )
-					{
-						//wxPrintf("(1) ii = %i; jj = %i; kk = %i; jj_mirror = %i; kk_mirror = %i\n",ii,jj,kk,jj_mirror,kk_mirror);
-						destination_image->complex_values[destination_image-> ReturnFourier1DAddressFromPhysicalCoord(ii,jj,kk)] = destination_image->complex_values[destination_image->ReturnFourier1DAddressFromPhysicalCoord(ii,jj_mirror,kk_mirror)];
-					}
-				}
-				//wxPrintf("Will loop jj from %i to %i\n", destination_image->dims.y - physical_index_of_first_negative_frequency.y, destination_image->dims.y - 1);
-				for (jj = destination_image->dims.y - physical_index_of_first_negative_frequency.y; jj <= destination_image->dims.y - 1; jj ++)
-				{
-					//jj_mirror = destination_image->dims.y - jj;
-					jj_mirror = jj;
-					for (ii = 0; ii <= physical_upper_bound_complex.x; ii++ )
-					{
-						//wxPrintf("(2) ii = %i; jj = %i; kk = %i; jj_mirror = %i; kk_mirror = %i\n",ii,jj,kk,jj_mirror,kk_mirror);
-						destination_image->complex_values[destination_image-> ReturnFourier1DAddressFromPhysicalCoord(ii,jj,kk)] = destination_image->complex_values[destination_image->ReturnFourier1DAddressFromPhysicalCoord(ii,jj_mirror,kk_mirror)];
-					}
-				}
-				jj = 0;
-				for (ii = 0; ii <= physical_upper_bound_complex.x; ii++)
-				{
-					destination_image->complex_values[destination_image->ReturnFourier1DAddressFromPhysicalCoord(ii,jj,kk)] = destination_image->complex_values[destination_image->ReturnFourier1DAddressFromPhysicalCoord(ii,jj,kk_mirror)];
-				}
-
-			}
-		}
 
 }

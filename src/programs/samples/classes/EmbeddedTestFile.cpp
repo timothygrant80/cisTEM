@@ -25,7 +25,7 @@ void EmbeddedTestFile::WriteEmbeddedArray(const char *filename,
 
 
   FILE *output_file = NULL;
-  wxPrintf("%s\n",filename);
+  wxPrintf("\t%s\n",filename);
   output_file = fopen(filename, "wb+");
 
   if (output_file == NULL) {

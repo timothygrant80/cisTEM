@@ -1,0 +1,32 @@
+{
+    "C_Cpp.default.configurationProvider": "ms-vscode.cmake-tools",
+    "C_Cpp.errorSquiggles": "Enabled",
+    "cmake.configureOnOpen": false,
+    "cmake.sourceDirectory": "${workspaceFolder}",
+    "cmake.buildDirectory": "${workspaceFolder}/build/${buildKit}/${buildType}",
+    "cmake.skipConfigureIfCachePresent": false,
+    "cmake.configureSettings": {
+        "BUILD_EXPERIMENTAL_FEATURES":true,
+        "BUILD_GPU_FEATURES":true,
+        "BUILD_STATIC_BINARIES":true,
+        "BUILD_OpenMP":true,
+        "cisTEM_CUDA_TOOLKIT_PATH":"/groups/cryoadmin/software/CUDA-TOOLKIT/cuda_11.3.1/"
+        
+    },
+    "cmake.configureEnvironment": {
+        "WX_CONFIG":"/admin/software/wxWidgets3_static_GNU/bin/wx-config",
+        "CUDACXX":"/groups/cryoadmin/software/CUDA-TOOLKIT/cuda_11.3.1/bin/nvcc",
+        "CUDAARCHS":"70;75",
+        "CUDAFLAGS":" --default-stream per-thread -m64  --use_fast_math  -Xptxas --warn-on-local-memory-usage,--warn-on-spills, --generate-line-info -Xcompiler= -DGPU -DSTDC_HEADERS=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_MEMORY_H=1 -DHAVE_STRINGS_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_UNISTD_H=1 -DHAVE_DLFCN_H=1"
+     
+
+    },
+    "C_Cpp.dimInactiveRegions": true,
+    "files.associations": {
+        "string": "cpp",
+        "filesystem": "cpp"
+    },
+    "DockerRun.DisableDockerrc": true,
+    "html.format.endWithNewline": true
+}
+

@@ -319,70 +319,7 @@ public:
 
 /*template void d_MultiplyByScalar<T>(T* d_input, T* d_multiplicators, T* d_output, size_t elements, int batch);*/
 
-// A little nasty copy paste from Image class. These inline long functions will be removed later.
-inline long ReturnFourier1DAddressFromPhysicalCoord(int wanted_x, int wanted_y, int wanted_z)
-	{
-		MyDebugAssertTrue(wanted_x >= 0 && wanted_x <= physical_address_of_box_center.x && wanted_y >= 0 && wanted_y <= physical_upper_bound_complex.y && wanted_z >= 0 && wanted_z <= physical_upper_bound_complex.z, "Address (%i %i %i) out of bounds (%i to %i; %i to %i; %i to %i)!",wanted_x,wanted_y,wanted_z,0,physical_upper_bound_complex.x,0,physical_upper_bound_complex.y,0,physical_upper_bound_complex.z );
-		long val = ((long(physical_upper_bound_complex.x + 1) * long(physical_upper_bound_complex.y + 1)) * long(wanted_z)) + (long(physical_upper_bound_complex.x + 1) * long(wanted_y)) + long(wanted_x);
-		return val;
-	};
 
-	inline long ReturnFourier1DAddressFromLogicalCoord(int wanted_x, int wanted_y, int wanted_z)
-	{
-		MyDebugAssertTrue(wanted_x >= logical_lower_bound_complex.x && wanted_x <=logical_upper_bound_complex.x && wanted_y >= logical_lower_bound_complex.y && wanted_y <= logical_upper_bound_complex.y && wanted_z >= logical_lower_bound_complex.z && wanted_z <= logical_upper_bound_complex.z, "Logical coordinates (%i, %i, %i) are out of bounds (%i to %i ; %i to %i; %i to %i)\n", wanted_x, wanted_y, wanted_z, logical_lower_bound_complex.x, logical_upper_bound_complex.x, logical_lower_bound_complex.y, logical_upper_bound_complex.y, logical_lower_bound_complex.z, logical_upper_bound_complex.z)
-
-		int physical_x_address;
-		int physical_y_address;
-		int physical_z_address;
-
-		if (wanted_x >= 0)
-		{
-			physical_x_address = wanted_x;
-
-			if (wanted_y >= 0)
-			{
-				physical_y_address = wanted_y;
-			}
-			else
-			{
-				physical_y_address = dims.y + wanted_y;
-			}
-
-			if (wanted_z >= 0)
-			{
-				physical_z_address = wanted_z;
-			}
-			else
-			{
-				physical_z_address = dims.z + wanted_z;
-			}
-		}
-		else
-		{
-			physical_x_address = -wanted_x;
-
-			if (wanted_y > 0)
-			{
-				physical_y_address = dims.y - wanted_y;
-			}
-			else
-			{
-				physical_y_address = -wanted_y;
-			}
-
-			if (wanted_z > 0)
-			{
-				physical_z_address = dims.z - wanted_z;
-			}
-			else
-			{
-				physical_z_address = -wanted_z;
-			}
-		}
-
-
-		return ReturnFourier1DAddressFromPhysicalCoord(physical_x_address, physical_y_address, physical_z_address);
-	};
 
 private:
 

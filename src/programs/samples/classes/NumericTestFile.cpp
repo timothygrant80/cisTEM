@@ -5,7 +5,7 @@ public:
 
 NumericTestFile::NumericTestFile(wxString path) {
   const char *filename = path.mb_str();
-  wxPrintf("%s\n",filename);
+  wxPrintf("\t%s\n",filename);
   FILE *output_file = NULL;
   output_file = fopen(filename, "wb+");
 

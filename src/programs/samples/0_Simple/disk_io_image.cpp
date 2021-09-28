@@ -36,11 +36,10 @@
 
 #include <iostream>
 void PrintResult(wxString testName, bool result) {
-  // result ? sampleHelper.PrintSuccess(testName.mb_str())
-  //        : sampleHelper.PrintFailure(testName.mb_str());
 
-  wxPrintf(testName);
+  wxPrintf("\t%s",testName);
   result ? wxPrintf(": [Success]\n") : wxPrintf(": [Failed]\n");
+
 }
 
 void TestResult(wxString testName, bool result) {
@@ -49,12 +48,12 @@ void TestResult(wxString testName, bool result) {
   PrintResult(testName, result);
 }
 
-bool DoDiskIOImageTests(wxString hiv_image_80x80x1_filename, wxString temp_directory) {
+bool DoDiskIOImageTests(wxString hiv_images_80x80x10_filename, wxString temp_directory) {
 
   bool passed = true, allPassed = true;
 
   //MRCFile input_file(std::string(hiv_image_80x80x1_filename.mb_str()), false);
-  MRCFile input_file(hiv_image_80x80x1_filename.ToStdString(), false);
+  MRCFile input_file(hiv_images_80x80x10_filename.ToStdString(), false);
 
   wxString temp_filename = temp_directory + "/tmp1.mrc";
 
@@ -63,7 +62,7 @@ bool DoDiskIOImageTests(wxString hiv_image_80x80x1_filename, wxString temp_direc
   Image test_image;
   test_image.ReadSlice(&input_file, 1);
 
-  wxPrintf(" Starting disk I/O image tests.\n");
+  wxPrintf("Starting disk I/O image tests.\n");
 
   // The easiest way to read or write and image is simply to use the "quick and
   // dirty methods" in Image class
@@ -92,10 +91,10 @@ bool DoDiskIOImageTests(wxString hiv_image_80x80x1_filename, wxString temp_direc
   // TODO run size checks as in above
   testName = "Dimensions";
 
-  passed = input_file.ReturnNumberOfSlices() == 1;
+  passed = input_file.ReturnNumberOfSlices() == 10;
   passed = (input_file.ReturnXSize() == 80) && passed;
   passed = (input_file.ReturnYSize() == 80) && passed;
-  passed = (input_file.ReturnZSize() == 1) && passed;
+  passed = (input_file.ReturnZSize() == 10) && passed;
   TestResult(testName, passed);
   allPassed = allPassed && passed;
 
@@ -115,12 +114,8 @@ bool DoDiskIOImageTests(wxString hiv_image_80x80x1_filename, wxString temp_direc
 
   // check first and last pixel...
 
-  passed = (DoublesAreAlmostTheSame(test_image.real_values[0], -0.340068) !=
-            false) &&
-           passed;
-  passed = (DoublesAreAlmostTheSame(test_image.real_values[test_image.real_memory_allocated - 3], 0.637069) != false) &&
-           passed;
-
+  passed = (DoublesAreAlmostTheSame(test_image.real_values[0], -0.340068) != false) && passed;
+  passed = (DoublesAreAlmostTheSame(test_image.real_values[test_image.real_memory_allocated - 3], 0.637069) != false) && passed;
 
 
   allPassed = allPassed && passed;
@@ -197,7 +192,7 @@ bool DoDiskIOImageTests(wxString hiv_image_80x80x1_filename, wxString temp_direc
   TestResult(testName, passed);
   // TODO call end test and ensure the printout indicates this test
   // (disk_io_image) has pass/failed.
-  testName = "Disk I/O image";
+  testName = "Disk I/O images overall";
   PrintResult(testName, allPassed);
   return passed;
 }

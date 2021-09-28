@@ -65,17 +65,17 @@ void PrintArray(float *p, int maxLoops = 10)
 //     return false;
 // }
 
-bool ProperCompareRealValues(Image &first_image, Image &second_image,  float eppsilon = 1e-5)
+bool ProperCompareRealValues(Image &first_image, Image &second_image,  float epsilon = 1e-5)
 {
   bool passed;
   if (first_image.real_memory_allocated != second_image.real_memory_allocated)
   {
 
-    wxPrintf(" real_memory_allocated values are not the same. [Failed]\n");
-    wxPrintf(" cpu_image.real_memory_allocated ==  %s\n",
-            std::to_string(first_image.real_memory_allocated));
-    wxPrintf(" resized_host_image.real_memory_allocated ==  %s\n",
-            std::to_string(second_image.real_memory_allocated));
+    // wxPrintf(" real_memory_allocated values are not the same. [Failed]\n");
+    // wxPrintf(" cpu_image.real_memory_allocated ==  %s\n",
+    //         std::to_string(first_image.real_memory_allocated));
+    // wxPrintf(" resized_host_image.real_memory_allocated ==  %s\n",
+    //         std::to_string(second_image.real_memory_allocated));
 
     passed = false;
   }
@@ -87,9 +87,9 @@ bool ProperCompareRealValues(Image &first_image, Image &second_image,  float epp
 
 	int total_pixels = 0;
 	int unequal_pixels = 0;
-	wxPrintf(" real_memory_allocated values are the same. (%s) Starting loop\n", std::to_string(first_image.real_memory_allocated));
-	wxPrintf(" cpu_image.real_values[0] == (%s)\n", std::to_string(first_image.real_values[0]));
-	wxPrintf(" resized_host_image.real_values[0] == (%s)\n", std::to_string(second_image.real_values[0]));
+	// wxPrintf(" real_memory_allocated values are the same. (%s) Starting loop\n", std::to_string(first_image.real_memory_allocated));
+	// wxPrintf(" cpu_image.real_values[0] == (%s)\n", std::to_string(first_image.real_values[0]));
+	// wxPrintf(" resized_host_image.real_values[0] == (%s)\n", std::to_string(second_image.real_values[0]));
 
 	int i = 0;
 	for (int z = 0; z < first_image.logical_z_dimension; z++)
@@ -98,7 +98,7 @@ bool ProperCompareRealValues(Image &first_image, Image &second_image,  float epp
 	  {
 		for (int x = 0; x < first_image.logical_x_dimension; x++)
 		{
-		  if (std::fabs(first_image.real_values[i] - second_image.real_values[i]) > eppsilon) {
+		  if (std::fabs(first_image.real_values[i] - second_image.real_values[i]) > epsilon) {
             unequal_pixels++;
             if (unequal_pixels < 5) {
               wxPrintf(" Unequal pixels at position: %s, value 1: %s, value 2: %s.\n", std::to_string(i),
@@ -132,13 +132,14 @@ bool ProperCompareRealValues(Image &first_image, Image &second_image,  float epp
 	}
   }
 
+// TODO make this match what is done in disk_io.cpp, or better move the print test to classes.
   if (passed)
   {
-	wxPrintf(" Images are equal (eppsilon= %f).  [Success]\n", eppsilon);
+	  wxPrintf("\n\tCpu/Gpu images are ~equal after resizing (epsilon= %f).  [Success]\n", epsilon);
   }
   else
   {
-	wxPrintf(" Images are different (eppsilon= %f). [Failed]\n", eppsilon);
+	  wxPrintf("\tCpu/Gpu images are not equal after resizing (epsilon= %f). [Failed]\n", epsilon);
   }
   return passed;
 }
@@ -149,6 +150,7 @@ bool DoCPUvsGPUResize(wxString hiv_image_80x80x1_filename,
 {
 
   bool passed = true;
+  bool print_verbose = false;
 
   MRCFile input_file(hiv_image_80x80x1_filename.ToStdString(), false);
 
@@ -156,7 +158,7 @@ bool DoCPUvsGPUResize(wxString hiv_image_80x80x1_filename,
 
   MRCFile output_file(temp_filename.ToStdString(), false);
 
-  wxPrintf(" Starting CPU vs GPU compare (not resizing).\n");
+  if (print_verbose) wxPrintf(" Starting CPU vs GPU compare (not resizing).\n");
   Image cpu_image;
   cpu_image.ReadSlice(&input_file, 1);
 
@@ -166,11 +168,11 @@ bool DoCPUvsGPUResize(wxString hiv_image_80x80x1_filename,
   gpu_image.CopyHostToDevice();
   Image new_cpu_image_from_gpu = gpu_image.CopyDeviceToNewHost(true, true);
   passed = ProperCompareRealValues(cpu_image, new_cpu_image_from_gpu);
-  wxPrintf(" CPU vs GPU compare (not resizing) ended.\n");
+  if (print_verbose) wxPrintf(" CPU vs GPU compare (not resizing) ended.\n");
 
 
     // resize test
-  wxPrintf(" Starting CPU resize.\n");
+  if (print_verbose) wxPrintf(" Starting CPU resize.\n");
   cpu_image.Resize(40, 40, 1, 0);
 
   Image host_image;
@@ -179,37 +181,39 @@ bool DoCPUvsGPUResize(wxString hiv_image_80x80x1_filename,
 
   GpuImage device_image(host_image);
 
-  wxPrintf(" GPU image initiated from host image.\n");
+  if (print_verbose) wxPrintf(" GPU image initiated from host image.\n");
   device_image.CopyHostToDevice();
 
-  wxPrintf(" Image copied from host to device.\n");
+  if (print_verbose) wxPrintf(" Image copied from host to device.\n");
 
   device_image.Resize(40, 40, 1, 0);
 
-  wxPrintf(" Image resized.\n");
+  if (print_verbose) wxPrintf(" Image resized.\n");
 
   Image resized_host_image = device_image.CopyDeviceToNewHost(true, true);
 
-  wxPrintf(" Image copied from device to host.\n");
+  if (print_verbose) wxPrintf(" Image copied from device to host.\n");
 
   passed = ProperCompareRealValues(cpu_image, resized_host_image);
 
-  wxPrintf(" End.\n");
+  if (print_verbose) wxPrintf(" End.\n");
   return passed;
 }
 
-bool DoGPUComplexResize(wxString hiv_image_80x80x1_filename, wxString temp_directory) {
- bool passed = true;
+bool DoGPUComplexResize(wxString hiv_image_80x80x1_filename, wxString temp_directory) 
+{
+  bool passed = true;
   int z_cpu, z_gpu;
-  
+  bool print_verbose = false;
 
   MRCFile input_file(hiv_image_80x80x1_filename.ToStdString(), false);
+
 
   wxString temp_filename = temp_directory + "/tmp1.mrc";
 
   MRCFile output_file(temp_filename.ToStdString(), false);
 
-  wxPrintf(" Starting CPU vs GPU compare (not resizing).\n");
+  if (print_verbose) wxPrintf("\tStarting CPU vs GPU compare (not resizing).\n");
   Image cpu_image;
   cpu_image.ReadSlice(&input_file, 1);
   // Image from_gpu_image;
@@ -224,10 +228,10 @@ bool DoGPUComplexResize(wxString hiv_image_80x80x1_filename, wxString temp_direc
 
     // resize test
 
-  wxPrintf(" Transforming CPU image to Fourier space.\n");
+  if (print_verbose) wxPrintf(" Transforming CPU image to Fourier space.\n");
   cpu_image.ForwardFFT();
 
-  wxPrintf(" Resizing CPU Image.\n");
+  if (print_verbose) wxPrintf(" Resizing CPU Image.\n");
   cpu_image.Resize(40, 40, 1, 0);
   cpu_image.BackwardFFT();
   // z_cpu = cpu_image.logical_z_dimension;
@@ -239,36 +243,39 @@ bool DoGPUComplexResize(wxString hiv_image_80x80x1_filename, wxString temp_direc
 // wxPrintf("%i\n", z_gpu);
   GpuImage device_image(host_image);
 
-  wxPrintf(" GPU image initiated from host image.\n");
+  if (print_verbose) wxPrintf(" GPU image initiated from host image.\n");
   device_image.CopyHostToDevice();
   
-  wxPrintf(" Transforming to Fourier space.\n");
+  if (print_verbose)wxPrintf(" Transforming to Fourier space.\n");
   device_image.ForwardFFT();
 
 
-  wxPrintf(" Resizing image.\n");
+  if (print_verbose) wxPrintf(" Resizing image.\n");
   device_image.Resize(40, 40, 1, 0);
 
 
-  wxPrintf(" Transforming GPU image to real space.\n");
+  if (print_verbose) wxPrintf(" Transforming GPU image to real space.\n");
   device_image.BackwardFFT();
 
-  wxPrintf(" Copying image from device to host.\n");
+  if (print_verbose) wxPrintf(" Copying image from device to host.\n");
   Image resized_host_image = device_image.CopyDeviceToNewHost(true, true);
 // z_gpu = resized_host_image.logical_z_dimension;
 // wxPrintf("%i\n", z_gpu);
   
   passed = ProperCompareRealValues(cpu_image, resized_host_image);
 
-  wxPrintf(" Exporting images.\n");
+  if (print_verbose) wxPrintf(" Exporting images.\n");
   // wxPrintf("resized_host_image.is_in.real_space: %d\n", resized_host_image.is_in_real_space);
   // wxPrintf("resized_host_image.is_in.is_in_memory: %d\n", resized_host_image.is_in_memory);
-    cpu_image.QuickAndDirtyWriteSlice("/home/rafgroupgpu/shiran/cpu.mrc", 1, true, 1.0);
 
-  resized_host_image.QuickAndDirtyWriteSlice("/home/rafgroupgpu/shiran/gpu.mrc", 1, true, 1.0);
+  // std::string name1 = std::tmpnam(nullptr);
+  // wxPrintf("Tmp outputs are at %s\n", name1.c_str());
+  
+  // cpu_image.QuickAndDirtyWriteSlice( name1 + "_cpu.mrc", 1, true, 1.0);
+  // resized_host_image.QuickAndDirtyWriteSlice( name1 + "_gpu.mrc", 1, true, 1.0);
 
 
-  wxPrintf(" End.\n");
+  if (print_verbose) wxPrintf(" End.\n");
   return passed;
 
 }

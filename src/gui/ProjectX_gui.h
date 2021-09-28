@@ -1469,6 +1469,7 @@ class MovieImportDialog : public wxDialog
 		NumericTextCtrl* MinorScaleTextCtrl;
 		wxCheckBox* MoviesHaveInvertedContrast;
 		wxCheckBox* SkipFullIntegrityCheck;
+		wxCheckBox* ImportMetadataCheckbox;
 		wxStaticLine* m_staticline8;
 		wxButton* m_button13;
 		wxButton* ImportButton;

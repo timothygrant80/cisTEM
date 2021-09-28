@@ -529,6 +529,11 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 		// for adding to the database..
 		main_frame->current_project.database.BeginMovieAssetInsert();
 
+		// list of added movies for subsequent metadata insertion
+		// 
+		wxArrayInt list_asset_id;
+		wxArrayString list_filenames;
+
 		for (long counter = 0; counter < PathListCtrl->GetItemCount(); counter++)
 		{
 
@@ -575,8 +580,12 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 						temp_asset.total_dose = double(temp_asset.number_of_frames) * dose_per_frame;
 						movie_asset_panel->AddAsset(&temp_asset);
 
-						main_frame->current_project.database.AddNextMovieAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), 1, temp_asset.x_size, temp_asset.y_size, temp_asset.number_of_frames, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.dose_per_frame, temp_asset.spherical_aberration,temp_asset.gain_filename,temp_asset.dark_filename, temp_asset.output_binning_factor, temp_asset.correct_mag_distortion, temp_asset.mag_distortion_angle, temp_asset.mag_distortion_major_scale, temp_asset.mag_distortion_minor_scale, temp_asset.protein_is_white, temp_asset.eer_super_res_factor, temp_asset.eer_frames_per_image);
-					}
+						main_frame->current_project.database.AddNextMovieAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), 1, temp_asset.x_size, temp_asset.y_size, temp_asset.number_of_frames, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.dose_per_frame, temp_asset.spherical_aberration,temp_asset.gain_filename,temp_asset.dark_filename, temp_asset.output_binning_factor, temp_asset.correct_mag_distortion, temp_asset.mag_distortion_angle, temp_asset.mag_distortion_major_scale, temp_asset.mag_distortion_minor_scale, temp_asset.protein_is_white, temp_asset.eer_super_res_factor, temp_asset.eer_frames_per_image);					}
+						// Since we cannot bulk insert into two tables, save info in these lists to loop through them later
+						if (ImportMetadataCheckbox->IsChecked() == true) {
+							list_asset_id.Add(temp_asset.asset_id);
+							list_filenames.Add(temp_asset.filename.GetFullPath());
+						}
 				}
 				else
 				{
@@ -596,6 +605,36 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 		// do database write..
 
 		main_frame->current_project.database.EndMovieAssetInsert();
+
+		// Do Metadata import
+		if (ImportMetadataCheckbox->IsChecked() == true) 
+		{
+			wxTextFile temp_file; 
+			wxString temp_string;
+			wxJSONValue root;
+			wxString     temp_json_string;
+			wxJSONWriter json_writer(wxJSONWRITER_NONE);
+			main_frame->current_project.database.BeginMovieAssetMetadataInsert();
+			for (long counter = 0; counter < list_asset_id.GetCount(); counter++) 
+			{
+				root.Clear();
+				if (wxFileExists(list_filenames[counter]+".mdoc")) {
+					temp_file.Open(list_filenames[counter]+".mdoc");
+
+					while(!temp_file.Eof()) {
+						temp_string = temp_file.GetNextLine();
+						if (!temp_string.StartsWith("[") & temp_string.Contains(" = ")) {
+							root[temp_string.BeforeFirst('=').Trim().Trim(false)] = temp_string.AfterFirst('=').Trim().Trim(false);
+						}
+					}
+
+				}
+				json_writer.Write(root,temp_json_string);
+				main_frame->current_project.database.AddNextMovieAssetMetadata(list_asset_id[counter],"serialem_frames_mdoc",temp_json_string);
+			}
+			main_frame->current_project.database.EndMovieAssetMetadataInsert();
+		}
+
 		my_progress_dialog->Destroy();
 
 		// write these values as future defaults..

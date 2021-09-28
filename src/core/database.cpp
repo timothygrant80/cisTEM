@@ -819,6 +819,8 @@ bool Database::CreateAllTables()
 	CheckSuccess(success);
 	success = CreateTemplateMatchingResultsTable();
 	CheckSuccess(success);
+	success = CreateMovieMetadataTable();
+	CheckSuccess(success);
 
 	return success;
 }
@@ -1186,6 +1188,21 @@ void Database::AddMovieAsset(MovieAsset *asset_to_add)
 */
 
 void Database::EndMovieAssetInsert()
+{
+	EndBatchInsert();
+}
+
+void Database::BeginMovieAssetMetadataInsert()
+{
+	BeginBatchInsert("MOVIE_ASSETS_METADATA", 3, "MOVIE_ASSET_ID", "METADATA_SOURCE", "CONTENT_JSON");
+}
+
+void Database::AddNextMovieAssetMetadata(int movie_asset_id,  wxString metadata_type, wxString json)
+{
+	AddToBatchInsert("itt", movie_asset_id, metadata_type.ToUTF8().data(), json.ToUTF8().data());
+}
+
+void Database::EndMovieAssetMetadataInsert()
 {
 	EndBatchInsert();
 }

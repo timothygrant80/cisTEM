@@ -5,12 +5,15 @@
     "version": "0.2.0",
     "configurations": [
         {
-   
-            "includePath": [
-                "${workspaceFolder}/**",
-                "/groups/himesb/git/gemmi/include/**"
-            ],          
-   
+            "name": "CUDA C++: Launch",
+            "type": "cuda-gdb",
+            "request": "launch",
+            "gdb": "cuda-gdb",
+            "program": "${workspaceFolder}/build/Intel-gpu-samples-debug/src/samples_functional_testing",
+            "arguments": [],
+            "preLaunchTask": "BUILD intel,gpu,samples,debug"
+        },
+        {
             "name": "(lldb) Launch",
             "type": "cppdbg",
             "request": "launch",
@@ -30,5 +33,6 @@
             "externalConsole": false,
             "MIMode": "lldb"
         }
+       
     ]
 }

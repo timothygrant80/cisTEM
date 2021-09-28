@@ -175,7 +175,6 @@ AC_ARG_ENABLE(debugmode, AS_HELP_STRING([--enable-debugmode],[Compile in debug m
   fi
  ])
   
-
 ###############################
 # BEGIN CUDA CHECKS AND SETS
 ###############################
@@ -219,6 +218,19 @@ AS_HELP_STRING([--with-fftw-dir=DIR],[Declare the root directory of fftw3, if it
         LDFLAGS="$LDFLAGS -L$withval/lib"
     fi
 ])
+
+# Compile programs/samples/sample_functional_test.cpp 
+
+want_samples="no"  
+AC_ARG_ENABLE(samples, [  --enable-samples      Compile with samples [[default=no]]],[
+  if test "$enableval" = yes; then
+    CXXFLAGS="$CXXFLAGS -DSAMPLES"
+    CPPFLAGS="$CPPFLAGS -DSAMPLES"
+  	want_samples="true"
+  	AC_MSG_NOTICE([Compiling sample functional tests])	
+  fi
+  ]) 
+AM_CONDITIONAL([ENABLESAMPLES_AM], [test x$want_samples = xtrue])
 
 # experimental
 compile_experimental="false"

@@ -146,6 +146,15 @@ public:
 				int wanted_coordinate_of_box_center_x,
 				int wanted_coordinate_of_box_center_y,
 				int wanted_coordinate_of_box_center_z);
+
+
+	void ClipIntoRealSpace(GpuImage *other_image, float wanted_padding_value,
+				bool fill_with_noise, float wanted_noise_sigma,
+				int wanted_coordinate_of_box_center_x,
+				int wanted_coordinate_of_box_center_y,
+				int wanted_coordinate_of_box_center_z);
+	void ClipIntoFourierSpace(GpuImage *destination_image, float wanted_padding_value);
+
 	void ClipIntoReturnMask(GpuImage *other_image);
 
 	void ForwardFFT(bool should_scale = true);                                           /**CPU_eq**/
@@ -153,6 +162,9 @@ public:
 	void ForwardFFTAndClipInto(GpuImage &image_to_insert, bool should_scale);
 	template < typename T > void BackwardFFTAfterComplexConjMul(T* image_to_multiply, bool load_half_precision);
 
+	void Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted_z_dimension, float wanted_padding_value);
+	void Consume(GpuImage &other_image);
+	void CopyLoopingAndAddressingFrom(GpuImage *other_image);
 
 	float ReturnSumOfSquares();
 	float ReturnAverageOfRealValuesOnEdges();
@@ -170,6 +182,9 @@ public:
 	void CopyHostToDevice();
 	void CopyDeviceToHost(bool free_gpu_memory = true, bool unpin_host_memory = true);
 	void CopyDeviceToHost(Image &cpu_image, bool should_block_until_complete = false, bool free_gpu_memory = true);
+
+	void CopyDeviceToNewHost(Image &cpu_image, bool should_block_until_complete, bool free_gpu_memory);
+	Image CopyDeviceToNewHost(bool should_block_until_complete, bool free_gpu_memory);
 	// The volume copies with memory coalescing favoring padding are not directly
 	// compatible with the memory layout in Image().
 	void CopyVolumeHostToDevice();

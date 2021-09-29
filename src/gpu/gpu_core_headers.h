@@ -14,7 +14,7 @@
 #endif
 
 #ifndef HEAVY_ERROR_CHECKING
-#define HEAVY_ERROR_CHECKING false
+#define HEAVY_ERROR_CHECKING true
 #endif
 
 #include "../core/core_headers.h"
@@ -38,6 +38,9 @@ const int MAX_GPU_COUNT = 32;
 #endif
 
 #if HEAVY_ERROR_CHECKING
+#define postcheck { cudaError_t error = cudaStreamSynchronize(cudaStreamPerThread); cudaErr2(error); };  //if (error != cudaSuccess) { std::cerr << cudaGetErrorString(error) << std::endl; MyPrintWithDetails(""); exit(-1);} 
+#define cudaErr2(error) { auto status = static_cast<cudaError_t>(error); if (status != cudaSuccess) { std::cerr << cudaGetErrorString(status) << std::endl; MyPrintWithDetails(""); exit(-1); } }; 
+#define precheck { cudaErr2(cudaGetLastError()); } 
 #define checkErrorsAndTimingWithSynchronization(input_stream) { cudaError_t cuda_error = cudaStreamSynchronize(input_stream); if (cuda_error != cudaSuccess) {wxPrintf("Sync Check error = %s at line %d in file %s\n", _cudaGetErrorEnum(cuda_error), __LINE__, __FILE__);} };
 #define pre_checkErrorsAndTimingWithSynchronization(input_sream) { checkCudaErrors(cudaGetLastError()); }
 #else

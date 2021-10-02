@@ -615,6 +615,8 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 			wxString     temp_json_string;
 			wxJSONWriter json_writer(wxJSONWRITER_NONE);
 			main_frame->current_project.database.BeginMovieAssetMetadataInsert();
+			double temp_double;
+			MovieMetadataAsset temp_metadata_asset;
 			for (long counter = 0; counter < list_asset_id.GetCount(); counter++) 
 			{
 				root.Clear();
@@ -630,7 +632,49 @@ void MyMovieImportDialog::ImportClick( wxCommandEvent& event )
 
 				}
 				json_writer.Write(root,temp_json_string);
-				main_frame->current_project.database.AddNextMovieAssetMetadata(list_asset_id[counter],"serialem_frames_mdoc",temp_json_string);
+				temp_metadata_asset = MovieMetadataAsset();
+				temp_metadata_asset.movie_asset_id = list_asset_id[counter];
+				temp_metadata_asset.metadata_source = "serialem_frames_mdoc";
+				temp_metadata_asset.content_json = temp_json_string;
+				if (root.HasMember("TiltAngle") & root["TiltAngle"].AsString().ToDouble(&temp_double)) 
+				{
+					temp_metadata_asset.tilt_angle = temp_double;
+				}
+				if (root.HasMember("StagePosition")) 
+				{
+					if (root["StagePosition"].AsString().BeforeFirst(' ').ToDouble(&temp_double))
+					{
+						temp_metadata_asset.stage_position_x = temp_double;
+					}
+					if (root["StagePosition"].AsString().AfterFirst(' ').ToDouble(&temp_double))
+					{
+						temp_metadata_asset.stage_position_y = temp_double;
+					}
+				}
+				if (root.HasMember("StageZ") & root["StageZ"].AsString().ToDouble(&temp_double)) 
+				{
+					temp_metadata_asset.stage_position_z = temp_double;
+				}
+				if (root.HasMember("ImageShift")) 
+				{
+					if (root["ImageShift"].AsString().BeforeFirst(' ').ToDouble(&temp_double))
+					{
+						temp_metadata_asset.image_shift_x = temp_double;
+					}
+					if (root["ImageShift"].AsString().AfterFirst(' ').ToDouble(&temp_double))
+					{
+						temp_metadata_asset.image_shift_y = temp_double;
+					}
+				}
+				if (root.HasMember("ExposureDose") & root["ExposureDose"].AsString().ToDouble(&temp_double)) 
+				{
+					temp_metadata_asset.exposure_dose = temp_double;
+				}
+				if (root.HasMember("DateTime")) 
+				{
+					temp_metadata_asset.acquisition_time.ParseFormat(root["DateTime"].AsString(),"%d-%b-%y %H:%M:%S");
+				}
+				main_frame->current_project.database.AddNextMovieAssetMetadata(temp_metadata_asset);
 			}
 			main_frame->current_project.database.EndMovieAssetMetadataInsert();
 		}

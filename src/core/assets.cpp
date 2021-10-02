@@ -192,6 +192,28 @@ void MovieAsset::CopyFrom(Asset *other_asset)
 	protein_is_white = casted_asset->protein_is_white;
 }
 
+// Movie Metadata asset //
+
+MovieMetadataAsset::MovieMetadataAsset()
+{
+	movie_asset_id = -1;
+	metadata_source = wxEmptyString;
+	content_json = wxEmptyString;
+	tilt_angle = NAN;
+	stage_position_x = NAN;
+	stage_position_y = NAN;
+	stage_position_z = NAN;
+	image_shift_x = NAN;
+	image_shift_y = NAN;
+	exposure_dose = NAN ;
+	acquisition_time = wxInvalidDateTime;
+}
+
+MovieMetadataAsset::~MovieMetadataAsset() 
+{
+	// Do nothing
+}
+
 // Image asset///
 
 ImageAsset::ImageAsset()

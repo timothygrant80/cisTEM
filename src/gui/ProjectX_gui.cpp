@@ -11014,7 +11014,7 @@ AddRunCommandDialog::AddRunCommandDialog( wxWindow* parent, wxWindowID id, const
 	bSizer45->Add( fgSizer2, 0, wxEXPAND, 5 );
 
 	m_staticline166 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
-	bSizer45->Add( m_staticline166, 0, wxEXPAND | wxALL, 5 );
+	bSizer45->Add( m_staticline166, 0, wxEXPAND | wxALL, 0 );
 
 	ErrorStaticText = new wxStaticText( this, wxID_ANY, wxT("Oops! - Command must contain \"$command\""), wxDefaultPosition, wxDefaultSize, 0 );
 	ErrorStaticText->Wrap( -1 );
@@ -11043,11 +11043,11 @@ AddRunCommandDialog::AddRunCommandDialog( wxWindow* parent, wxWindowID id, const
 	wxBoxSizer* bSizer47;
 	bSizer47 = new wxBoxSizer( wxHORIZONTAL );
 
-	OKButton = new wxButton( this, wxID_ANY, wxT("OK"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer47->Add( OKButton, 0, wxALL, 5 );
-
 	CancelButton = new wxButton( this, wxID_ANY, wxT("Cancel"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer47->Add( CancelButton, 0, wxALL, 5 );
+	bSizer47->Add( CancelButton, 0, wxALL|wxEXPAND, 5 );
+
+	OKButton = new wxButton( this, wxID_ANY, wxT("OK"), wxDefaultPosition, wxSize( -1,-1 ), 0 );
+	bSizer47->Add( OKButton, 0, wxALL|wxEXPAND, 5 );
 
 
 	bSizer45->Add( bSizer47, 0, wxALIGN_CENTER, 5 );
@@ -11055,14 +11055,15 @@ AddRunCommandDialog::AddRunCommandDialog( wxWindow* parent, wxWindowID id, const
 
 	this->SetSizer( bSizer45 );
 	this->Layout();
+	bSizer45->Fit( this );
 
 	this->Centre( wxBOTH );
 
 	// Connect Events
 	CommandTextCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( AddRunCommandDialog::OnEnter ), NULL, this );
 	OverrideCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( AddRunCommandDialog::OnOverrideCheckbox ), NULL, this );
-	OKButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AddRunCommandDialog::OnOKClick ), NULL, this );
 	CancelButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AddRunCommandDialog::OnCancelClick ), NULL, this );
+	OKButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AddRunCommandDialog::OnOKClick ), NULL, this );
 }
 
 AddRunCommandDialog::~AddRunCommandDialog()
@@ -11070,8 +11071,8 @@ AddRunCommandDialog::~AddRunCommandDialog()
 	// Disconnect Events
 	CommandTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( AddRunCommandDialog::OnEnter ), NULL, this );
 	OverrideCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( AddRunCommandDialog::OnOverrideCheckbox ), NULL, this );
-	OKButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AddRunCommandDialog::OnOKClick ), NULL, this );
 	CancelButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AddRunCommandDialog::OnCancelClick ), NULL, this );
+	OKButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AddRunCommandDialog::OnOKClick ), NULL, this );
 
 }
 

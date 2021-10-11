@@ -2741,14 +2741,14 @@ class AddRunCommandDialog : public wxDialog
 		wxStaticLine* m_staticline166;
 		wxStaticText* ErrorStaticText;
 		wxStaticLine* m_staticline14;
-		wxButton* OKButton;
 		wxButton* CancelButton;
+		wxButton* OKButton;
 
 		// Virtual event handlers, overide them in your derived class
 		virtual void OnEnter( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnOverrideCheckbox( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnOKClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnCancelClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnOKClick( wxCommandEvent& event ) { event.Skip(); }
 
 
 	public:
@@ -2759,7 +2759,7 @@ class AddRunCommandDialog : public wxDialog
 		wxCheckBox* OverrideCheckBox;
 		wxSpinCtrl* OverridenNoCopiesSpinCtrl;
 
-		AddRunCommandDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Enter Command..."), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 528,262 ), long style = wxDEFAULT_DIALOG_STYLE );
+		AddRunCommandDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Enter Command..."), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE );
 		~AddRunCommandDialog();
 
 };

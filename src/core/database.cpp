@@ -819,6 +819,8 @@ bool Database::CreateAllTables()
 	CheckSuccess(success);
 	success = CreateTemplateMatchingResultsTable();
 	CheckSuccess(success);
+	success = CreateMovieMetadataTable();
+	CheckSuccess(success);
 
 	return success;
 }
@@ -1186,6 +1188,32 @@ void Database::AddMovieAsset(MovieAsset *asset_to_add)
 */
 
 void Database::EndMovieAssetInsert()
+{
+	EndBatchInsert();
+}
+
+void Database::BeginMovieAssetMetadataInsert()
+{
+	BeginBatchInsert("MOVIE_ASSETS_METADATA", 11, "MOVIE_ASSET_ID", "METADATA_SOURCE", "CONTENT_JSON", "TILT_ANGLE", "STAGE_POSITION_X", "STAGE_POSITION_Y", "STAGE_POSITION_Z", "IMAGE_SHIFT_X", "IMAGE_SHIFT_Y", "EXPOSURE_DOSE", "ACQUISITION_TIME");
+}
+
+void Database::AddNextMovieAssetMetadata(MovieMetadataAsset asset)
+{
+	AddToBatchInsert("lttrrrrrrrl", asset.movie_asset_id, 
+	                        asset.metadata_source.ToUTF8().data(),
+							asset.content_json.ToUTF8().data(), 
+							asset.tilt_angle,
+							asset.stage_position_x,
+							asset.stage_position_y,
+							asset.stage_position_z,
+							asset.image_shift_x,
+							asset.image_shift_y,
+							asset.exposure_dose,
+							(asset.acquisition_time.IsValid()) ?
+							asset.acquisition_time.GetAsDOS() : -1);
+}
+
+void Database::EndMovieAssetMetadataInsert()
 {
 	EndBatchInsert();
 }

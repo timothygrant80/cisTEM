@@ -64,6 +64,27 @@ class MovieAsset : public Asset {
 
 };
 
+class MovieMetadataAsset : public Asset {
+
+  public:
+
+	MovieMetadataAsset();
+	~MovieMetadataAsset();
+
+	long movie_asset_id;
+	wxString  metadata_source;
+	wxString content_json;
+	double tilt_angle;
+	double stage_position_x;
+	double stage_position_y;
+	double stage_position_z;
+	double image_shift_x;
+	double image_shift_y;
+	double exposure_dose;
+	wxDateTime acquisition_time;
+
+};
+
 class ImageAsset : public Asset {
 
   public:

@@ -2494,10 +2494,11 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		if (SAVE_REF) { nLoops = 2; }
 		 WaveFunctionPropagator wave_function(this->set_real_part_wave_function_in, objective_aperture, wanted_pixel_size, number_of_threads, beam_tilt_x, beam_tilt_y, DO_BEAM_TILT_FULL, propagator_distance);
 
+    float avg_defocus = 0.5f * (wanted_defocus_1_in_angstroms + wanted_defocus_2_in_angstroms);
 		 // TODO redundancies with SetCTF and fit params, fit params etc.
 		 wave_function.SetFitParams(wanted_pixel_size, wanted_acceleration_voltage, wanted_spherical_aberration, 0.0f,
 				 	 	 	 	 	std::max(768,ReturnClosestFactorizedUpper(std::max(coords.GetLargestSpecimenVolume().x,coords.GetLargestSpecimenVolume().y),5,true)),
-									20.0f, wanted_pixel_size*2.5, wanted_defocus_1_in_angstroms - 1000.0f, wanted_defocus_1_in_angstroms + 1000.0f, number_of_threads, 1.0f);
+									20.0f, wanted_pixel_size*2.5, avg_defocus - 1000.0f, avg_defocus + 1000.0f, number_of_threads, 1.0f);
 
 //		WaveFunctionPropagator wave_function(this->set_real_part_wave_function_in, wanted_amplitude_contrast, wanted_pixel_size, number_of_threads, beam_tilt_x, beam_tilt_y, DO_BEAM_TILT_FULL);
 

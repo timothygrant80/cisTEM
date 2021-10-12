@@ -813,7 +813,7 @@ void WaveFunctionPropagator::ReturnImageContrast(Image &wave_function_sq_modulus
 
 	float original_defocus1 = ctf_for_fitting->GetDefocus1() ; // The defocus is returned in pixels, not Angstrom
 	float original_defocus2 = ctf_for_fitting->GetDefocus2();
-	float known_astigmatism = (original_defocus1 - original_defocus2) / 2.0f * pixel_size;
+	float known_astigmatism = (original_defocus1 - original_defocus2) * pixel_size; // ctffind defines astigmatism as the difference in defocus1 and defocus2
 	float known_astigmatism_angle = rad_2_deg(ctf_for_fitting->GetAstigmatismAzimuth());
 
 	wxPrintf("Astigmatism params are %3.3e %3.3e\n", known_astigmatism, known_astigmatism_angle);
@@ -888,8 +888,8 @@ void WaveFunctionPropagator::ReturnImageContrast(Image &wave_function_sq_modulus
 			myfile << std::to_string(myroundint(for_ctffind.defocus_step)) + "\n";
 			myfile << "yes\n"; // know astig?
 			myfile << "yes\n";
-			myfile << std::to_string(0) + "\n"; //astig
-			myfile << std::to_string(0) + "\n"; // ang
+			myfile << std::to_string(known_astigmatism) + "\n"; //astig
+			myfile << std::to_string(known_astigmatism_angle) + "\n"; // ang
 			myfile << "no\n"; // phase shift
 			myfile << do_tilt; // tilt
 			myfile << "yes\n"; // expert opt
@@ -1064,7 +1064,7 @@ void WaveFunctionPropagator::ReturnImageContrast(Image &wave_function_sq_modulus
     	float max_error = 0.01f;
     	if ( fabsf(fit_1) > fabsf(original_defocus1 * max_error))
     	{
-    		wxPrintf("The fit defocus (%f) is > %f percent which is probably fit issue, and not a random error in the apparent focal plane. The Amplitude contrast ratio is probably incorrect\n", max_error*100,pixel_size*fit_1);
+    		wxPrintf("The fit defocus error (%f angstrom) is > %f percent which is probably fit issue, and not a random error in the apparent focal plane. The Amplitude contrast ratio is probably incorrect\n", fit_1*pixel_size, fit_1/original_defocus1*100, max_error*100);
     	}
     	else
     	{

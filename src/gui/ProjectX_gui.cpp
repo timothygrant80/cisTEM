@@ -11056,10 +11056,10 @@ AddRunCommandDialog::AddRunCommandDialog( wxWindow* parent, wxWindowID id, const
 	bSizer47 = new wxBoxSizer( wxHORIZONTAL );
 
 	OKButton = new wxButton( this, wxID_ANY, wxT("OK"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer47->Add( OKButton, 0, wxALL, 5 );
+	bSizer47->Add( OKButton, 0, wxALL|wxEXPAND, 5 );
 
 	CancelButton = new wxButton( this, wxID_ANY, wxT("Cancel"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer47->Add( CancelButton, 0, wxALL, 5 );
+	bSizer47->Add( CancelButton, 0, wxALL|wxEXPAND, 5 );
 
 
 	bSizer45->Add( bSizer47, 0, wxALIGN_CENTER, 5 );
@@ -11067,6 +11067,7 @@ AddRunCommandDialog::AddRunCommandDialog( wxWindow* parent, wxWindowID id, const
 
 	this->SetSizer( bSizer45 );
 	this->Layout();
+	bSizer45->Fit( this );
 
 	this->Centre( wxBOTH );
 

@@ -1775,7 +1775,6 @@ wxThread::ExitCode AutoMaskerThread::Entry()
 
 	for (int class_counter = 0; class_counter < input_files.GetCount(); class_counter++)
 	{
-		MyDebugPrint("WTW DEBUG IN MASK \n");
 
 		input_file.OpenFile(input_files.Item(class_counter).ToStdString(), false);
 		input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices());

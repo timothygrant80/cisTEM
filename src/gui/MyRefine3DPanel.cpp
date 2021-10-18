@@ -7,9 +7,8 @@ extern MyRefinementResultsPanel *refinement_results_panel;
 
 wxDEFINE_EVENT(wxEVT_COMMAND_MYTHREAD_COMPLETED, wxThreadEvent);
 
-MyRefine3DPanel::MyRefine3DPanel( wxWindow* parent )
-:
-Refine3DPanel( parent )
+MyRefine3DPanel::MyRefine3DPanel(wxWindow *parent)
+	: Refine3DPanel(parent)
 {
 	buffered_results = NULL;
 
@@ -20,19 +19,18 @@ Refine3DPanel( parent )
 	my_job_id = -1;
 	running_job = false;
 
-//	group_combo_is_dirty = false;
-//	run_profiles_are_dirty = false;
+	//	group_combo_is_dirty = false;
+	//	run_profiles_are_dirty = false;
 
 	SetInfo();
-//	FillGroupComboBox()t
-//	FillRunProfileComboBox();
+	//	FillGroupComboBox()t
+	//	FillRunProfileComboBox();
 
 	wxSize input_size = InputSizer->GetMinSize();
 	input_size.x += wxSystemSettings::GetMetric(wxSYS_VSCROLL_X);
 	input_size.y = -1;
 	ExpertPanel->SetMinSize(input_size);
 	ExpertPanel->SetSize(input_size);
-
 
 	// set values //
 
@@ -58,6 +56,7 @@ Refine3DPanel( parent )
 	Bind(RETURN_PROCESSED_IMAGE_EVT, &MyRefine3DPanel::OnOrthThreadComplete, this);
 	Bind(wxEVT_MULTIPLY3DMASKTHREAD_COMPLETED, &MyRefine3DPanel::OnMaskerThreadComplete, this);
 	Bind(wxEVT_AUTOMASKERTHREAD_COMPLETED, &MyRefine3DPanel::OnMaskerThreadComplete, this);
+	Bind(wxEVT_GENERATEMASKTHREAD_COMPLETED, &MyRefine3DPanel::OnGenerateMaskThreadComplete, this);
 
 	my_refinement_manager.SetParent(this);
 
@@ -70,15 +69,13 @@ Refine3DPanel( parent )
 	next_thread_id = 1;
 
 	Active3DReferencesListCtrl->refinement_package_picker_to_use = RefinementPackageComboBox;
-
-
 }
 
 void MyRefine3DPanel::Reset()
 {
 	ProgressBar->SetValue(0);
 	TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
-    CancelAlignmentButton->Show(true);
+	CancelAlignmentButton->Show(true);
 	FinishButton->Show(false);
 
 	InputParamsPanel->Show(true);
@@ -116,7 +113,8 @@ void MyRefine3DPanel::Reset()
 		running_job = false;
 	}
 
-	if (my_refinement_manager.output_refinement != NULL) delete my_refinement_manager.output_refinement;
+	if (my_refinement_manager.output_refinement != NULL)
+		delete my_refinement_manager.output_refinement;
 	SetDefaults();
 	global_delete_refine3d_scratch();
 	Layout();
@@ -126,10 +124,10 @@ void MyRefine3DPanel::SetInfo()
 {
 
 	wxLogNull *suppress_png_warnings = new wxLogNull;
-//	#include "icons/niko_picture1.cpp"
-//	wxBitmap niko_picture1_bmp = wxBITMAP_PNG_FROM_DATA(niko_picture1);
+	//	#include "icons/niko_picture1.cpp"
+	//	wxBitmap niko_picture1_bmp = wxBITMAP_PNG_FROM_DATA(niko_picture1);
 
-	#include "icons/niko_picture2.cpp"
+#include "icons/niko_picture2.cpp"
 	wxBitmap niko_picture2_bmp = wxBITMAP_PNG_FROM_DATA(niko_picture2);
 	delete suppress_png_warnings;
 
@@ -154,13 +152,13 @@ void MyRefine3DPanel::SetInfo()
 	InfoText->Newline();
 	InfoText->EndAlignment();
 
-/*	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
+	/*	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
 	InfoText->WriteImage(niko_picture1_bmp);
 	InfoText->Newline();
 	InfoText->Newline();
 	InfoText->EndAlignment();*/
 
-/*
+	/*
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
 	InfoText->WriteText(wxT(""));
 	InfoText->Newline();
@@ -371,7 +369,7 @@ void MyRefine3DPanel::SetInfo()
 	InfoText->WriteText(wxT("The reconstruction calculation can also be accelerated by cropping the boxes containing the particles. Cropping will slightly reduce the overall quality of the reconstruction due to increased aliasing effects and should not be used when finalizing refinement. However, during refinement, cropping can greatly increase the speed of reconstruction without noticeable impact on the refinement results."));
 	InfoText->Newline();
 
-//	InfoText->EndAlignment();
+	//	InfoText->EndAlignment();
 	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
 	InfoText->BeginBold();
 	InfoText->BeginUnderline();
@@ -445,30 +443,28 @@ void MyRefine3DPanel::SetInfo()
 	InfoText->EndAlignment();
 	InfoText->Newline();
 	InfoText->Newline();
-
-
 }
 
-void MyRefine3DPanel::OnInfoURL(wxTextUrlEvent& event)
+void MyRefine3DPanel::OnInfoURL(wxTextUrlEvent &event)
 {
-	 const wxMouseEvent& ev = event.GetMouseEvent();
+	const wxMouseEvent &ev = event.GetMouseEvent();
 
-	 // filter out mouse moves, too many of them
-	 if ( ev.Moving() ) return;
+	// filter out mouse moves, too many of them
+	if (ev.Moving())
+		return;
 
-	 long start = event.GetURLStart();
+	long start = event.GetURLStart();
 
-	 wxTextAttr my_style;
+	wxTextAttr my_style;
 
-	 InfoText->GetStyle(start, my_style);
+	InfoText->GetStyle(start, my_style);
 
-	 // Launch the URL
+	// Launch the URL
 
-	 wxLaunchDefaultBrowser(my_style.GetURL());
+	wxLaunchDefaultBrowser(my_style.GetURL());
 }
 
-
-void MyRefine3DPanel::ResetAllDefaultsClick( wxCommandEvent& event )
+void MyRefine3DPanel::ResetAllDefaultsClick(wxCommandEvent &event)
 {
 	// TODO : should probably check that the user hasn't changed the defaults yet in the future
 	SetDefaults();
@@ -486,14 +482,14 @@ void MyRefine3DPanel::SetDefaults()
 
 		ExpertPanel->Freeze();
 
-	// calculate high resolution limit..
+		// calculate high resolution limit..
 
 		long current_input_refinement_id = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).refinement_ids[InputParametersComboBox->GetSelection()];
 		calculated_high_resolution_cutoff = 30.0;
 
 		for (int class_counter = 0; class_counter < refinement_package_asset_panel->ReturnPointerToShortRefinementInfoByRefinementID(current_input_refinement_id)->number_of_classes; class_counter++)
 		{
-		//if (refinement_package_asset_panel->ReturnPointerToRefinementByRefinementID(current_input_refinement_id)->class_refinement_results[class_counter].class_resolution_statistics.Return0p5Resolution() > calculated_high_resolution_cutoff) calculated_high_resolution_cutoff = refinement_package_asset_panel->ReturnPointerToRefinementByRefinementID(current_input_refinement_id)->class_refinement_results[class_counter].class_resolution_statistics.Return0p8Resolution();
+			//if (refinement_package_asset_panel->ReturnPointerToRefinementByRefinementID(current_input_refinement_id)->class_refinement_results[class_counter].class_resolution_statistics.Return0p5Resolution() > calculated_high_resolution_cutoff) calculated_high_resolution_cutoff = refinement_package_asset_panel->ReturnPointerToRefinementByRefinementID(current_input_refinement_id)->class_refinement_results[class_counter].class_resolution_statistics.Return0p8Resolution();
 		}
 
 		local_mask_radius = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 0.65;
@@ -512,7 +508,8 @@ void MyRefine3DPanel::SetDefaults()
 		RefineOccupanciesCheckBox->SetValue(true);
 
 		float low_res_limit = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).estimated_particle_size_in_angstroms * 1.5;
-		if (low_res_limit > 300.00) low_res_limit = 300.00;
+		if (low_res_limit > 300.00)
+			low_res_limit = 300.00;
 
 		auto_mask_value = true;
 		LowResolutionLimitTextCtrl->SetValue(wxString::Format("%.2f", low_res_limit));
@@ -529,6 +526,9 @@ void MyRefine3DPanel::SetDefaults()
 		ClassificationHighResLimitTextCtrl->SetValue(wxString::Format("%.2f", calculated_high_resolution_cutoff));
 		SphereClassificatonYesRadio->SetValue(false);
 		SphereClassificatonNoRadio->SetValue(true);
+
+		//LocalDensityYesRadioButton->SetValue(false);
+		//LocalDensityNoRadioButton->SetValue(true);
 
 		SphereXTextCtrl->SetValue("0.00");
 		SphereYTextCtrl->SetValue("0.00");
@@ -566,17 +566,16 @@ void MyRefine3DPanel::SetDefaults()
 
 		ExpertPanel->Thaw();
 	}
-
 }
 
-void MyRefine3DPanel::OnHighResLimitChange( wxCommandEvent& event )
+void MyRefine3DPanel::OnHighResLimitChange(wxCommandEvent &event)
 {
 	float global_angular_step = CalculateAngularStep(HighResolutionLimitTextCtrl->ReturnValue(), MaskRadiusTextCtrl->ReturnValue());
 	AngularStepTextCtrl->SetValue(wxString::Format("%.2f", global_angular_step));
 	ClassificationHighResLimitTextCtrl->SetValue(wxString::Format("%.2f", HighResolutionLimitTextCtrl->ReturnValue()));
 }
 
-void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
+void MyRefine3DPanel::OnUpdateUI(wxUpdateUIEvent &event)
 {
 	// are there enough members in the selected group.
 	if (main_frame->current_project.is_open == false)
@@ -594,20 +593,17 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 		MaskSelectPanel->Enable(false);
 		HighResolutionLimitTextCtrl->Enable(false);
 
-
 		if (ExpertPanel->IsShown() == true)
 		{
 			ExpertToggleButton->SetValue(false);
 			ExpertPanel->Show(false);
 			Layout();
-
 		}
 
 		if (RefinementPackageComboBox->GetCount() > 0)
 		{
 			RefinementPackageComboBox->Clear();
 			RefinementPackageComboBox->ChangeValue("");
-
 		}
 
 		if (InputParametersComboBox->GetCount() > 0)
@@ -633,7 +629,6 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			PleaseCreateRefinementPackageText->Show(false);
 			Layout();
 		}
-
 	}
 	else
 	{
@@ -677,7 +672,6 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 					PleaseCreateRefinementPackageText->Show(false);
 					Layout();
 				}
-
 			}
 			else
 			{
@@ -701,7 +695,7 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 				if (GlobalRefinementRadio->GetValue() == false)
 				{
 					//GlobalResolutionLimitStaticText->Enable(false);
-				//	GlobalResolutionLimitTextCtrl->Enable(false);
+					//	GlobalResolutionLimitTextCtrl->Enable(false);
 					GlobalMaskRadiusStaticText->Enable(false);
 					GlobalMaskRadiusTextCtrl->Enable(false);
 					NumberToRefineSpinCtrl->Enable(false);
@@ -718,8 +712,8 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 				}
 				else
 				{
-				//	GlobalResolutionLimitStaticText->Enable(true);
-				//	GlobalResolutionLimitTextCtrl->Enable(true);
+					//	GlobalResolutionLimitStaticText->Enable(true);
+					//	GlobalResolutionLimitTextCtrl->Enable(true);
 					GlobalMaskRadiusStaticText->Enable(true);
 					GlobalMaskRadiusTextCtrl->Enable(true);
 					NumberToRefineSpinCtrl->Enable(true);
@@ -733,7 +727,6 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 					AlsoRefineInputStaticText1->Enable(true);
 					AlsoRefineInputYesRadio->Enable(true);
 					AlsoRefineInputNoRadio->Enable(true);
-
 				}
 
 				if (SphereClassificatonYesRadio->GetValue() == false)
@@ -746,7 +739,6 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 					SphereZStaticText->Enable(false);
 					SphereRadiusTextCtrl->Enable(false);
 					SphereRadiusStaticText->Enable(false);
-
 				}
 				else
 				{
@@ -808,8 +800,10 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 
 					if (AutoMaskYesRadioButton->GetValue() != auto_mask_value)
 					{
-						if (auto_mask_value == true) AutoMaskYesRadioButton->SetValue(true);
-						else AutoMaskNoRadioButton->SetValue(true);
+						if (auto_mask_value == true)
+							AutoMaskYesRadioButton->SetValue(true);
+						else
+							AutoMaskNoRadioButton->SetValue(true);
 					}
 				}
 				else
@@ -845,14 +839,7 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 						FilterResolutionStaticText->Enable(false);
 						MaskFilterResolutionText->Enable(false);
 					}
-
-
-
-
 				}
-
-
-
 			}
 
 			bool estimation_button_status = false;
@@ -864,9 +851,8 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 					if (RefinementPackageComboBox->GetSelection() != wxNOT_FOUND && InputParametersComboBox->GetSelection() != wxNOT_FOUND)
 					{
 						if (UseMaskCheckBox->GetValue() == false || MaskSelectPanel->AssetComboBox->GetSelection() != wxNOT_FOUND)
-						estimation_button_status = true;
+							estimation_button_status = true;
 					}
-
 				}
 			}
 
@@ -909,18 +895,16 @@ void MyRefine3DPanel::OnUpdateUI( wxUpdateUIEvent& event )
 			HighResolutionLimitTextCtrl->Enable(false);
 			UseMaskCheckBox->Enable(false);
 			MaskSelectPanel->Enable(false);
-
 		}
 	}
-
 }
 
-void MyRefine3DPanel::OnAutoMaskButton( wxCommandEvent& event )
+void MyRefine3DPanel::OnAutoMaskButton(wxCommandEvent &event)
 {
 	auto_mask_value = AutoMaskYesRadioButton->GetValue();
 }
 
-void MyRefine3DPanel::OnUseMaskCheckBox( wxCommandEvent& event )
+void MyRefine3DPanel::OnUseMaskCheckBox(wxCommandEvent &event)
 {
 	if (UseMaskCheckBox->GetValue() == true)
 	{
@@ -929,14 +913,16 @@ void MyRefine3DPanel::OnUseMaskCheckBox( wxCommandEvent& event )
 	}
 	else
 	{
-		if (auto_mask_value == true) AutoMaskYesRadioButton->SetValue(true);
-		else AutoMaskNoRadioButton->SetValue(true);
+		if (auto_mask_value == true)
+			AutoMaskYesRadioButton->SetValue(true);
+		else
+			AutoMaskNoRadioButton->SetValue(true);
 	}
 	AutoCenterYesRadioButton->SetValue(false);
 	AutoCenterNoRadioButton->SetValue(true);
 }
 
-void MyRefine3DPanel::OnExpertOptionsToggle( wxCommandEvent& event )
+void MyRefine3DPanel::OnExpertOptionsToggle(wxCommandEvent &event)
 {
 
 	if (ExpertToggleButton->GetValue() == true)
@@ -964,7 +950,7 @@ void MyRefine3DPanel::ReDrawActiveReferences()
 
 		if (refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).references_for_next_refinement.GetCount() > 0)
 		{
-			Active3DReferencesListCtrl->RefreshItems(0, refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).references_for_next_refinement.GetCount() -1);
+			Active3DReferencesListCtrl->RefreshItems(0, refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).references_for_next_refinement.GetCount() - 1);
 
 			Active3DReferencesListCtrl->SetColumnWidth(0, Active3DReferencesListCtrl->ReturnGuessAtColumnTextWidth(0));
 			Active3DReferencesListCtrl->SetColumnWidth(1, Active3DReferencesListCtrl->ReturnGuessAtColumnTextWidth(1));
@@ -974,12 +960,14 @@ void MyRefine3DPanel::ReDrawActiveReferences()
 
 void MyRefine3DPanel::FillRefinementPackagesComboBox()
 {
-	if (RefinementPackageComboBox->FillComboBox() == false) NewRefinementPackageSelected();
+	if (RefinementPackageComboBox->FillComboBox() == false)
+		NewRefinementPackageSelected();
 }
 
 void MyRefine3DPanel::FillInputParamsComboBox()
 {
-	if (RefinementPackageComboBox->GetCount() > 0 ) InputParametersComboBox->FillComboBox(RefinementPackageComboBox->GetSelection(), true);
+	if (RefinementPackageComboBox->GetCount() > 0)
+		InputParametersComboBox->FillComboBox(RefinementPackageComboBox->GetSelection(), true);
 }
 
 void MyRefine3DPanel::NewRefinementPackageSelected()
@@ -989,22 +977,19 @@ void MyRefine3DPanel::NewRefinementPackageSelected()
 	SetDefaults();
 	ReDrawActiveReferences();
 	//wxPrintf("New Refinement Package Selection\n");
-
 }
 
-void MyRefine3DPanel::OnRefinementPackageComboBox( wxCommandEvent& event )
+void MyRefine3DPanel::OnRefinementPackageComboBox(wxCommandEvent &event)
 {
-
 	NewRefinementPackageSelected();
-
 }
 
-void MyRefine3DPanel::OnInputParametersComboBox( wxCommandEvent& event )
+void MyRefine3DPanel::OnInputParametersComboBox(wxCommandEvent &event)
 {
 	//SetDefaults();
 }
 
-void MyRefine3DPanel::TerminateButtonClick( wxCommandEvent& event )
+void MyRefine3DPanel::TerminateButtonClick(wxCommandEvent &event)
 {
 	main_frame->job_controller.KillJob(my_job_id);
 
@@ -1016,7 +1001,7 @@ void MyRefine3DPanel::TerminateButtonClick( wxCommandEvent& event )
 	CancelAlignmentButton->Show(false);
 	FinishButton->Show(true);
 	ProgressPanel->Layout();
-/*
+	/*
 	if (buffered_results != NULL)
 	{
 		delete [] buffered_results;
@@ -1024,7 +1009,7 @@ void MyRefine3DPanel::TerminateButtonClick( wxCommandEvent& event )
 	}*/
 }
 
-void MyRefine3DPanel::OnVolumeListItemActivated( wxListEvent& event )
+void MyRefine3DPanel::OnVolumeListItemActivated(wxListEvent &event)
 {
 	MyVolumeChooserDialog *dialog = new MyVolumeChooserDialog(this);
 
@@ -1035,7 +1020,7 @@ void MyRefine3DPanel::OnVolumeListItemActivated( wxListEvent& event )
 		if (dialog->selected_volume_id != refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).references_for_next_refinement.Item(event.GetIndex()))
 		{
 			refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).references_for_next_refinement.Item(event.GetIndex()) = dialog->selected_volume_id;
-					// Change in database..
+			// Change in database..
 			main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE REFINEMENT_PACKAGE_CURRENT_REFERENCES_%li SET VOLUME_ASSET_ID=%li WHERE CLASS_NUMBER=%li;", refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection()).asset_id, dialog->selected_volume_id, event.GetIndex() + 1));
 
 			ReDrawActiveReferences();
@@ -1044,11 +1029,11 @@ void MyRefine3DPanel::OnVolumeListItemActivated( wxListEvent& event )
 	dialog->Destroy();
 }
 
-void MyRefine3DPanel::FinishButtonClick( wxCommandEvent& event )
+void MyRefine3DPanel::FinishButtonClick(wxCommandEvent &event)
 {
 	ProgressBar->SetValue(0);
 	TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
-    CancelAlignmentButton->Show(true);
+	CancelAlignmentButton->Show(true);
 	FinishButton->Show(false);
 
 	InputParamsPanel->Show(true);
@@ -1062,22 +1047,21 @@ void MyRefine3DPanel::FinishButtonClick( wxCommandEvent& event )
 	//graph_is_hidden = true;
 	InfoPanel->Show(true);
 
-	if (my_refinement_manager.output_refinement != NULL) delete my_refinement_manager.output_refinement;
+	if (my_refinement_manager.output_refinement != NULL)
+		delete my_refinement_manager.output_refinement;
 
-	if (ExpertToggleButton->GetValue() == true) ExpertPanel->Show(true);
-	else ExpertPanel->Show(false);
+	if (ExpertToggleButton->GetValue() == true)
+		ExpertPanel->Show(true);
+	else
+		ExpertPanel->Show(false);
 	running_job = false;
 	Layout();
 
 	//CTFResultsPanel->CTF2DResultsPanel->should_show = false;
 	//CTFResultsPanel->CTF2DResultsPanel->Refresh();
-
 }
 
-
-
-
-void MyRefine3DPanel::StartRefinementClick( wxCommandEvent& event )
+void MyRefine3DPanel::StartRefinementClick(wxCommandEvent &event)
 {
 	stopwatch.Start();
 	my_refinement_manager.BeginRefinementCycle();
@@ -1088,7 +1072,8 @@ void MyRefine3DPanel::WriteInfoText(wxString text_to_write)
 	output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLACK));
 	output_textctrl->AppendText(text_to_write);
 
-	if (text_to_write.EndsWith("\n") == false)	 output_textctrl->AppendText("\n");
+	if (text_to_write.EndsWith("\n") == false)
+		output_textctrl->AppendText("\n");
 }
 
 void MyRefine3DPanel::WriteBlueText(wxString text_to_write)
@@ -1096,17 +1081,18 @@ void MyRefine3DPanel::WriteBlueText(wxString text_to_write)
 	output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLUE));
 	output_textctrl->AppendText(text_to_write);
 
-	if (text_to_write.EndsWith("\n") == false)	 output_textctrl->AppendText("\n");
+	if (text_to_write.EndsWith("\n") == false)
+		output_textctrl->AppendText("\n");
 }
 
 void MyRefine3DPanel::WriteErrorText(wxString text_to_write)
 {
-	 output_textctrl->SetDefaultStyle(wxTextAttr(*wxRED));
-	 output_textctrl->AppendText(text_to_write);
+	output_textctrl->SetDefaultStyle(wxTextAttr(*wxRED));
+	output_textctrl->AppendText(text_to_write);
 
-	 if (text_to_write.EndsWith("\n") == false)	 output_textctrl->AppendText("\n");
+	if (text_to_write.EndsWith("\n") == false)
+		output_textctrl->AppendText("\n");
 }
-
 
 void MyRefine3DPanel::FillRunProfileComboBoxes()
 {
@@ -1116,8 +1102,6 @@ void MyRefine3DPanel::FillRunProfileComboBoxes()
 void MyRefine3DPanel::OnSocketJobResultMsg(JobResult &received_result)
 {
 	my_refinement_manager.ProcessJobResult(&received_result);
-
-
 }
 
 void MyRefine3DPanel::OnSocketJobResultQueueMsg(ArrayofJobResults &received_queue)
@@ -1126,7 +1110,6 @@ void MyRefine3DPanel::OnSocketJobResultQueueMsg(ArrayofJobResults &received_queu
 	{
 		my_refinement_manager.ProcessJobResult(&received_queue.Item(counter));
 	}
-
 }
 
 void MyRefine3DPanel::SetNumberConnectedText(wxString wanted_text)
@@ -1148,12 +1131,23 @@ RefinementManager::RefinementManager()
 {
 	input_refinement = NULL;
 	output_refinement = NULL;
-
 }
 
 void RefinementManager::SetParent(MyRefine3DPanel *wanted_parent)
 {
 	my_parent = wanted_parent;
+}
+
+bool RefinementManager::halfMapExists(wxString &half_map)
+{
+
+	struct stat buff;
+	int retval = stat(half_map.ToStdString().c_str(), &buff);
+	if (retval == 0)
+	{
+		return true;
+	}
+	return false;
 }
 
 void RefinementManager::BeginRefinementCycle()
@@ -1180,10 +1174,10 @@ void RefinementManager::BeginRefinementCycle()
 	active_percent_used = my_parent->PercentUsedTextCtrl->ReturnValue();
 	active_inner_mask_radius = my_parent->InnerMaskRadiusTextCtrl->ReturnValue();
 	active_resolution_limit_rec = my_parent->ReconstructionResolutionLimitTextCtrl->ReturnValue();
-	active_score_weight_conversion	= my_parent->ScoreToWeightConstantTextCtrl->ReturnValue();
-	active_score_threshold	= my_parent->ReconstructionScoreThreshold->ReturnValue();
+	active_score_weight_conversion = my_parent->ScoreToWeightConstantTextCtrl->ReturnValue();
+	active_score_threshold = my_parent->ReconstructionScoreThreshold->ReturnValue();
 	active_adjust_scores = my_parent->AdjustScoreForDefocusYesRadio->GetValue();
-	active_crop_images	= my_parent->AutoCropYesRadioButton->GetValue();
+	active_crop_images = my_parent->AutoCropYesRadioButton->GetValue();
 	active_should_apply_blurring = my_parent->ApplyBlurringYesRadioButton->GetValue();
 	active_smoothing_factor = my_parent->SmoothingFactorTextCtrl->ReturnValue();
 	active_sphere_radius = my_parent->SphereRadiusTextCtrl->ReturnValue();
@@ -1197,11 +1191,16 @@ void RefinementManager::BeginRefinementCycle()
 	active_should_mask = my_parent->UseMaskCheckBox->GetValue();
 	active_should_auto_mask = my_parent->AutoMaskYesRadioButton->GetValue();
 	active_centre_mass = my_parent->AutoCenterYesRadioButton->GetValue();
+	active_local_filtering = my_parent->LocalDensityYesRadioButton->GetValue();
 
-	if (my_parent->MaskSelectPanel->ReturnSelection() >= 0) active_mask_asset_id = volume_asset_panel->ReturnAssetID(my_parent->MaskSelectPanel->ReturnSelection());
-	else active_mask_asset_id = -1;
-	if (my_parent->MaskSelectPanel->ReturnSelection() >= 0)	active_mask_filename = volume_asset_panel->ReturnAssetLongFilename(my_parent->MaskSelectPanel->ReturnSelection());
-	else active_mask_filename = "";
+	if (my_parent->MaskSelectPanel->ReturnSelection() >= 0)
+		active_mask_asset_id = volume_asset_panel->ReturnAssetID(my_parent->MaskSelectPanel->ReturnSelection());
+	else
+		active_mask_asset_id = -1;
+	if (my_parent->MaskSelectPanel->ReturnSelection() >= 0)
+		active_mask_filename = volume_asset_panel->ReturnAssetLongFilename(my_parent->MaskSelectPanel->ReturnSelection());
+	else
+		active_mask_filename = "";
 
 	active_should_low_pass_filter_mask = my_parent->LowPassMaskYesRadio->GetValue();
 	active_mask_filter_resolution = my_parent->MaskFilterResolutionText->ReturnValue();
@@ -1236,7 +1235,8 @@ void RefinementManager::BeginRefinementCycle()
 
 	for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
 	{
-		if (active_refinement_package->references_for_next_refinement[class_counter] == -1) start_with_reconstruction = true;
+		if (active_refinement_package->references_for_next_refinement[class_counter] == -1)
+			start_with_reconstruction = true;
 	}
 
 	my_parent->Freeze();
@@ -1249,8 +1249,10 @@ void RefinementManager::BeginRefinementCycle()
 	my_parent->OutputTextPanel->Show(true);
 	my_parent->ShowRefinementResultsPanel->Clear();
 
-	if (my_parent->ShowRefinementResultsPanel->LeftRightSplitter->IsSplit() == true) my_parent->ShowRefinementResultsPanel->LeftRightSplitter->Unsplit();
-	if (my_parent->ShowRefinementResultsPanel->TopBottomSplitter->IsSplit() == true) my_parent->ShowRefinementResultsPanel->TopBottomSplitter->Unsplit();
+	if (my_parent->ShowRefinementResultsPanel->LeftRightSplitter->IsSplit() == true)
+		my_parent->ShowRefinementResultsPanel->LeftRightSplitter->Unsplit();
+	if (my_parent->ShowRefinementResultsPanel->TopBottomSplitter->IsSplit() == true)
+		my_parent->ShowRefinementResultsPanel->TopBottomSplitter->Unsplit();
 	my_parent->ShowRefinementResultsPanel->Show(true);
 	my_parent->Layout();
 
@@ -1290,18 +1292,303 @@ void RefinementManager::BeginRefinementCycle()
 			current_reference_asset_ids.Item(class_counter) = volume_asset_panel->ReturnAssetID(volume_asset_panel->ReturnArrayPositionFromAssetID(active_refinement_package->references_for_next_refinement[class_counter]));
 		}
 
-		if (my_parent->UseMaskCheckBox->GetValue() == true || my_parent->AutoMaskYesRadioButton->GetValue() == true)
+		///
+		//do not want to do local refinement if there is not a valid reconstruction job id for the first round
+		VolumeAsset *selected_volume = volume_asset_panel->ReturnAssetPointer(my_parent->RefinementPackageComboBox->ReturnSelection());
+		//VolumeAsset *selected_volume = refinement_package_asset_panel->all_refinement_packages.Item(RefinementPackageComboBox->GetSelection());
+		//VolumeAsset *selected_volume = NULL;
+		volume_asset_filename = (selected_volume->filename).GetName();
+		volume_asset_specified_half_map_1 = (selected_volume->half_map_1_filename).GetFullPath();
+		volume_asset_specified_half_map_2 = (selected_volume->half_map_2_filename).GetFullPath();
+
+		//my_parent->WriteBlueText(wxString::Format(wxT("volume_asset_filename:%s:HalfMap1:%s:HalfMap2:%s:\n"), volume_asset_filename, volume_asset_specified_half_map_1, volume_asset_specified_half_map_2));
+
+		if (active_local_filtering == true && selected_volume->reconstruction_job_id >= 0)
 		{
-			DoMasking();
+
+			sqlite3_stmt *current_statement;
+			main_frame->current_project.database.Prepare(wxString::Format("SELECT CLASS_NUMBER FROM RECONSTRUCTION_LIST WHERE RECONSTRUCTION_ID=%li", selected_volume->reconstruction_job_id), &current_statement);
+			main_frame->current_project.database.Step(current_statement);
+			int found_class = sqlite3_column_int(current_statement, 0);
+
+			main_frame->current_project.database.Finalize(current_statement);
+
+			long refinement_id = main_frame->current_project.database.ReturnRefinementIDGivenReconstructionID(selected_volume->reconstruction_job_id);
+			ShortRefinementInfo *short_info = refinement_package_asset_panel->ReturnPointerToShortRefinementInfoByRefinementID(refinement_id);
+			if (short_info != NULL)
+			{
+				if (short_info->reconstructed_volume_asset_ids[found_class - 1] == selected_volume->asset_id)
+				{
+					measured_global_resolution = short_info->estimated_resolution[found_class - 1];
+					first_round_flag = true;
+
+					SetupAndLaunchGenerateMaskThread();
+				}
+				else
+				{
+					my_parent->WriteErrorText("Volume Asset ID did not match corresponding Asset ID to class.\n");
+					if (my_parent->UseMaskCheckBox->GetValue() == true || my_parent->AutoMaskYesRadioButton->GetValue() == true)
+					{
+						DoMasking();
+					}
+					else
+					{
+						SetupRefinementJob();
+						RunRefinementJob();
+					}
+				}
+			}
+			else
+			{
+				my_parent->WriteErrorText("Could Not Find Refinement Information\n");
+				if (my_parent->UseMaskCheckBox->GetValue() == true || my_parent->AutoMaskYesRadioButton->GetValue() == true)
+				{
+					DoMasking();
+				}
+				else
+				{
+					SetupRefinementJob();
+					RunRefinementJob();
+				}
+			}
 		}
 		else
 		{
-			SetupRefinementJob();
-			RunRefinementJob();
+			if (my_parent->UseMaskCheckBox->GetValue() == true || my_parent->AutoMaskYesRadioButton->GetValue() == true)
+			{
+				DoMasking();
+			}
+			else
+			{
+				SetupRefinementJob();
+				RunRefinementJob();
+			}
 		}
 	}
 }
 
+void RefinementManager::SetupAndLaunchGenerateMaskThread()
+{
+	my_parent->WriteBlueText("Setting up and launching masking threads...\n");
+
+	int number_of_threads = 1;
+	int class_counter;
+	int first_slice;
+	int last_slice;
+	bool invalid_half_maps = false;
+	float inner_mask_radius = active_inner_mask_radius;
+	float outer_mask_radius = active_mask_radius;
+	float pixel_size = active_refinement_package->output_pixel_size;
+	float molecular_mass_kDa = active_refinement_package->estimated_particle_weight_in_kda;
+	wxString symmetry = active_refinement_package->symmetry;
+
+	active_refinement_run_profile = run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()];
+
+	int number_of_processes = active_refinement_run_profile.ReturnTotalJobs();
+	my_parent->current_job_package.Reset(active_refinement_run_profile, "generate_local_res", number_of_processes * active_refinement_package->number_of_classes);
+
+	for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
+	{
+		wxString half_map_1;
+		wxString half_map_2;
+		if (first_round_flag == true)
+		{
+			half_map_1 = volume_asset_specified_half_map_1;
+			half_map_2 = volume_asset_specified_half_map_2;
+		}
+		else
+		{
+			half_map_1 = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map1.mrc", input_refinement->refinement_id, class_counter + 1);
+			half_map_2 = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map2.mrc", input_refinement->refinement_id, class_counter + 1);
+		}
+
+		if (!(halfMapExists(half_map_1) && halfMapExists(half_map_2)))
+		{
+			//my_parent->WriteBlueText(wxString::Format(wxT("Half Map 1:%s:Half Map 2:%s:Highest Refinement id:%li:\n"), half_map_1, half_map_2, main_frame->current_project.database.ReturnHighestRefinementID() + 1));
+			invalid_half_maps = true;
+		}
+	}
+
+	if (invalid_half_maps == false)
+	{
+
+		for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
+		{
+			//wxString output_reconstruction = main_frame->ReturnAutoRefine3DScratchDirectory() + wxString::Format("%s_%i_filtered.mrc", volume_asset_filename, class_counter + 1);
+			wxString half_map_1;
+			wxString half_map_2;
+			if (first_round_flag == true)
+			{
+				half_map_1 = volume_asset_specified_half_map_1;
+				half_map_2 = volume_asset_specified_half_map_2;
+			}
+			else
+			{
+				half_map_1 = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map1.mrc", input_refinement->refinement_id, class_counter + 1);
+				half_map_2 = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map2.mrc", input_refinement->refinement_id, class_counter + 1);
+			}
+
+			if (halfMapExists(half_map_1) && halfMapExists(half_map_2))
+			{
+
+				wxString mask_image_name;
+				if (active_should_mask == true)
+				{
+					mask_image_name = active_mask_filename;
+				}
+				else
+				{
+					mask_image_name = main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("%s_%i_masked.mrc", volume_asset_filename, class_counter + 1);
+				}
+
+				my_parent->active_mask_thread_id = my_parent->next_thread_id;
+				my_parent->next_thread_id++;
+
+				GenerateMaskThread *mask_thread = new GenerateMaskThread(my_parent, half_map_1, half_map_2, mask_image_name, pixel_size, outer_mask_radius, active_should_mask, my_parent->active_mask_thread_id);
+
+				if (mask_thread->Run() != wxTHREAD_NO_ERROR)
+				{
+					my_parent->WriteErrorText("Error: Cannot start masking thread, masking will not be performed");
+					delete mask_thread;
+				}
+			}
+		}
+	}
+	else
+	{
+		first_round_flag = false;
+		SetupRefinementJob();
+		RunRefinementJob();
+	}
+}
+
+void RefinementManager::SetupLocalFilteringJob()
+{
+
+	float measured_global_resolution;
+	float inner_mask_radius = active_inner_mask_radius;
+	float outer_mask_radius = active_mask_radius;
+
+	int number_of_threads = 1;
+	int class_counter;
+	int first_slice;
+	int last_slice;
+	float pixel_size = active_refinement_package->output_pixel_size;
+	float molecular_mass_kDa = active_refinement_package->estimated_particle_weight_in_kda;
+	wxString symmetry = active_refinement_package->symmetry;
+
+	active_refinement_run_profile = run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()];
+	int number_of_processes = active_refinement_run_profile.ReturnTotalJobs();
+
+	num_processes_for_local_filtering = number_of_processes;
+
+	my_parent->current_job_package.Reset(active_refinement_run_profile, "generate_local_res", number_of_processes * active_refinement_package->number_of_classes);
+
+	wxArrayString filtered_filenames;
+	for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
+	{
+		filtered_filenames.Add(main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("%s_%i_filtered.mrc", volume_asset_filename, class_counter + 1));
+	}
+	current_reference_filenames = filtered_filenames;
+
+	for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
+	{
+		wxString output_reconstruction = main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("%s_%i_filtered.mrc", volume_asset_filename, class_counter + 1);
+		wxString half_map_1;
+		wxString half_map_2;
+		if (first_round_flag == true)
+		{
+			half_map_1 = volume_asset_specified_half_map_1;
+			half_map_2 = volume_asset_specified_half_map_2;
+			input_original_volume_local_filtering = volume_asset_filename;
+		}
+		else
+		{
+			half_map_1 = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map1.mrc", input_refinement->refinement_id, class_counter + 1);
+			half_map_2 = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map2.mrc", input_refinement->refinement_id, class_counter + 1);
+			input_original_volume_local_filtering = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i.mrc", input_refinement->refinement_id, class_counter + 1);
+		}
+
+		float measured_resolution;
+		if (first_round_flag == true)
+		{
+			measured_resolution = measured_global_resolution;
+		}
+		else
+		{
+			measured_resolution = input_refinement->class_refinement_results[class_counter].class_resolution_statistics.ReturnEstimatedResolution();
+		}
+
+		if (halfMapExists(half_map_1) && halfMapExists(half_map_2))
+		{
+
+			wxString mask_image_name;
+			if (active_should_mask == true)
+			{
+				mask_image_name = active_mask_filename;
+			}
+			else
+			{
+				mask_image_name = main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("%s_%i_masked.mrc", volume_asset_filename, class_counter + 1);
+			}
+
+			int slices_with_data = last_slice_with_data - (first_slice_with_data - 1);
+			float slices_per_process = slices_with_data / float(number_of_processes);
+
+			for (int process_counter = 0; process_counter < number_of_processes; process_counter++)
+			{
+
+				int first_slice_p = (first_slice_with_data - 1) + myroundint(ReturnThreadNumberOfCurrentThread() * slices_per_process) + 1;
+				int last_slice_p = (first_slice_with_data - 1) + myroundint((ReturnThreadNumberOfCurrentThread() + 1) * slices_per_process);
+
+				int number_of_jobs_per_image_in_gui = 1;
+
+				my_parent->current_job_package.AddJob("ttttiiffftfifiittiti",
+													  half_map_1.ToUTF8().data(),
+													  half_map_2.ToUTF8().data(),
+													  output_reconstruction.ToUTF8().data(),
+													  mask_image_name.ToUTF8().data(),
+													  first_slice_p, //should be first_slice_p
+													  last_slice_p,	 //should be last_slice_p
+													  inner_mask_radius,
+													  outer_mask_radius,
+													  molecular_mass_kDa,
+													  symmetry.ToUTF8().data(),
+													  pixel_size,
+													  number_of_threads,
+													  measured_resolution,
+													  process_counter, //to be used instead of 'image number for gui'
+													  number_of_jobs_per_image_in_gui,
+													  main_frame->current_project.volume_asset_directory.GetFullPath().ToUTF8().data(),
+													  output_reconstruction.ToUTF8().data(),
+													  class_counter + 1,
+													  input_original_volume_local_filtering.ToUTF8().data(), number_of_rounds_run);
+			}
+		}
+	}
+	first_round_flag = false;
+}
+
+void RefinementManager::RunLocalFilteringJob()
+{
+	running_job_type = LOCAL_FILTERING;
+	recieved_local_filtering_job_results = 0;
+
+	my_parent->WriteBlueText("Running Local Filtering...");
+
+	current_job_starttime = time(NULL);
+	time_of_last_update = current_job_starttime;
+
+	current_job_id = main_frame->job_controller.AddJob(my_parent, active_refinement_run_profile.manager_command, active_refinement_run_profile.gui_address);
+	my_parent->my_job_id = current_job_id;
+
+	if (current_job_id != -1)
+	{
+		my_parent->SetNumberConnectedTextToZeroAndStartTracking();
+	}
+
+	my_parent->ProgressBar->Pulse();
+}
 
 void RefinementManager::RunRefinementJob()
 {
@@ -1320,7 +1607,8 @@ void RefinementManager::RunRefinementJob()
 	{
 		output_refinement->name = wxString::Format("Global Search #%li", current_output_refinement_id);
 	}
-	else output_refinement->name = wxString::Format("Local Refinement #%li", current_output_refinement_id);
+	else
+		output_refinement->name = wxString::Format("Local Refinement #%li", current_output_refinement_id);
 
 	output_refinement->resolution_statistics_are_generated = false;
 	output_refinement->datetime_of_run = wxDateTime::Now();
@@ -1376,11 +1664,7 @@ void RefinementManager::RunRefinementJob()
 	if (current_job_id != -1)
 	{
 		my_parent->SetNumberConnectedTextToZeroAndStartTracking();
-
 	}
-
-
-
 
 	my_parent->ProgressBar->Pulse();
 }
@@ -1389,7 +1673,7 @@ void RefinementManager::SetupMerge3dJob()
 {
 
 	long number_of_particles = active_refinement_package->contained_particles.GetCount();
-	int number_of_reconstruction_jobs = std::min(number_of_particles,active_reconstruction_run_profile.ReturnTotalJobs());
+	int number_of_reconstruction_jobs = std::min(number_of_particles, active_reconstruction_run_profile.ReturnTotalJobs());
 
 	int class_counter;
 
@@ -1397,38 +1681,36 @@ void RefinementManager::SetupMerge3dJob()
 
 	for (class_counter = 0; class_counter < active_refinement_package->number_of_classes; class_counter++)
 	{
-		wxString output_reconstruction_1			= main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map1.mrc", output_refinement->refinement_id, class_counter + 1);
-		wxString output_reconstruction_2			= main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map2.mrc", output_refinement->refinement_id, class_counter + 1);
-		wxString output_reconstruction_filtered		= main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
+		wxString output_reconstruction_1 = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map1.mrc", output_refinement->refinement_id, class_counter + 1);
+		wxString output_reconstruction_2 = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i_map2.mrc", output_refinement->refinement_id, class_counter + 1);
+		wxString output_reconstruction_filtered = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
 
 		current_reference_filenames.Item(class_counter) = output_reconstruction_filtered;
 
-		wxString output_resolution_statistics		= "/dev/null";
-		float 	 molecular_mass_kDa					= active_refinement_package->estimated_particle_weight_in_kda;
-		float    inner_mask_radius					= active_inner_mask_radius;
-		float    outer_mask_radius					= active_mask_radius;
-		wxString dump_file_seed_1 					= main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("dump_file_%li_%i_odd_.dump", current_output_refinement_id, class_counter);
-		wxString dump_file_seed_2 					= main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("dump_file_%li_%i_even_.dump", current_output_refinement_id, class_counter);
+		wxString output_resolution_statistics = "/dev/null";
+		float molecular_mass_kDa = active_refinement_package->estimated_particle_weight_in_kda;
+		float inner_mask_radius = active_inner_mask_radius;
+		float outer_mask_radius = active_mask_radius;
+		wxString dump_file_seed_1 = main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("dump_file_%li_%i_odd_.dump", current_output_refinement_id, class_counter);
+		wxString dump_file_seed_2 = main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("dump_file_%li_%i_even_.dump", current_output_refinement_id, class_counter);
 
 		bool save_orthogonal_views_image = true;
 		wxString orthogonal_views_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/OrthViews/volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
 		float weiner_nominator = 1.0f;
 		float alignment_res = 5;
-		my_parent->current_job_package.AddJob("ttttfffttibtiff",	output_reconstruction_1.ToUTF8().data(),
-															output_reconstruction_2.ToUTF8().data(),
-															output_reconstruction_filtered.ToUTF8().data(),
-															output_resolution_statistics.ToUTF8().data(),
-															molecular_mass_kDa, inner_mask_radius, outer_mask_radius,
-															dump_file_seed_1.ToUTF8().data(),
-															dump_file_seed_2.ToUTF8().data(),
-															class_counter + 1,
-															save_orthogonal_views_image,
-															orthogonal_views_filename.ToUTF8().data(),
-															number_of_reconstruction_jobs, weiner_nominator, alignment_res);
+		my_parent->current_job_package.AddJob("ttttfffttibtiff", output_reconstruction_1.ToUTF8().data(),
+											  output_reconstruction_2.ToUTF8().data(),
+											  output_reconstruction_filtered.ToUTF8().data(),
+											  output_resolution_statistics.ToUTF8().data(),
+											  molecular_mass_kDa, inner_mask_radius, outer_mask_radius,
+											  dump_file_seed_1.ToUTF8().data(),
+											  dump_file_seed_2.ToUTF8().data(),
+											  class_counter + 1,
+											  save_orthogonal_views_image,
+											  orthogonal_views_filename.ToUTF8().data(),
+											  number_of_reconstruction_jobs, weiner_nominator, alignment_res);
 	}
 }
-
-
 
 void RefinementManager::RunMerge3dJob()
 {
@@ -1436,16 +1718,16 @@ void RefinementManager::RunMerge3dJob()
 
 	// start job..
 
-	if (output_refinement->number_of_classes > 1) my_parent->WriteBlueText("Merging and Filtering Reconstructions...");
+	if (output_refinement->number_of_classes > 1)
+		my_parent->WriteBlueText("Merging and Filtering Reconstructions...");
 	else
-	my_parent->WriteBlueText("Merging and Filtering Reconstruction...");
+		my_parent->WriteBlueText("Merging and Filtering Reconstruction...");
 
 	current_job_id = main_frame->job_controller.AddJob(my_parent, active_reconstruction_run_profile.manager_command, active_reconstruction_run_profile.gui_address);
 	my_parent->my_job_id = current_job_id;
 
 	if (current_job_id != -1)
 	{
-		
 
 		my_parent->StartPanel->Show(false);
 		my_parent->ProgressPanel->Show(true);
@@ -1453,27 +1735,26 @@ void RefinementManager::RunMerge3dJob()
 		my_parent->ExpertPanel->Show(false);
 		my_parent->InfoPanel->Show(false);
 		my_parent->OutputTextPanel->Show(true);
-			//	CTFResultsPanel->Show(true);
+		//	CTFResultsPanel->Show(true);
 
 		my_parent->ExpertToggleButton->Enable(false);
 		my_parent->RefinementPackageComboBox->Enable(false);
 		my_parent->InputParametersComboBox->Enable(false);
 
 		my_parent->SetNumberConnectedTextToZeroAndStartTracking();
-		}
+	}
 
-		my_parent->ProgressBar->Pulse();
+	my_parent->ProgressBar->Pulse();
 }
-
 
 void RefinementManager::SetupReconstructionJob()
 {
 	wxArrayString written_parameter_files;
 
-	if (start_with_reconstruction == true) written_parameter_files = output_refinement->WritecisTEMStarFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", active_percent_used / 100.0, 1.0, true);
+	if (start_with_reconstruction == true)
+		written_parameter_files = output_refinement->WritecisTEMStarFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", active_percent_used / 100.0, 1.0, true);
 	else
-	written_parameter_files = output_refinement->WritecisTEMStarFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", 1.0f, 0.0f, true);
-
+		written_parameter_files = output_refinement->WritecisTEMStarFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/output_par", 1.0f, 0.0f, true);
 
 	int class_counter;
 	long counter;
@@ -1489,9 +1770,8 @@ void RefinementManager::SetupReconstructionJob()
 
 	number_of_particles = active_refinement_package->contained_particles.GetCount();
 
-	number_of_reconstruction_processes = std::min(number_of_particles,active_reconstruction_run_profile.ReturnTotalJobs());
+	number_of_reconstruction_processes = std::min(number_of_particles, active_reconstruction_run_profile.ReturnTotalJobs());
 	number_of_reconstruction_jobs = number_of_reconstruction_processes;
-
 
 	my_parent->current_job_package.Reset(active_reconstruction_run_profile, "reconstruct3d", number_of_reconstruction_jobs * active_refinement_package->number_of_classes);
 
@@ -1500,35 +1780,35 @@ void RefinementManager::SetupReconstructionJob()
 
 		for (job_counter = 0; job_counter < number_of_reconstruction_jobs; job_counter++)
 		{
-			wxString input_particle_stack 		= active_refinement_package->stack_filename;
-			wxString input_parameter_file 		= written_parameter_files[class_counter];
-			wxString output_reconstruction_1    = "/dev/null";
-			wxString output_reconstruction_2			= "/dev/null";
-			wxString output_reconstruction_filtered		= "/dev/null";
-			wxString output_resolution_statistics		= "/dev/null";
-			wxString my_symmetry						= active_refinement_package->symmetry;
+			wxString input_particle_stack = active_refinement_package->stack_filename;
+			wxString input_parameter_file = written_parameter_files[class_counter];
+			wxString output_reconstruction_1 = "/dev/null";
+			wxString output_reconstruction_2 = "/dev/null";
+			wxString output_reconstruction_filtered = "/dev/null";
+			wxString output_resolution_statistics = "/dev/null";
+			wxString my_symmetry = active_refinement_package->symmetry;
 
-			FirstLastParticleForJob(first_particle,last_particle,number_of_particles,job_counter+1,number_of_reconstruction_jobs);
+			FirstLastParticleForJob(first_particle, last_particle, number_of_particles, job_counter + 1, number_of_reconstruction_jobs);
 
 			//float 	 pixel_size							= active_refinement_package->contained_particles[0].pixel_size;
 			//float    voltage_kV							= active_refinement_package->contained_particles[0].microscope_voltage;
 			//float 	 spherical_aberration_mm			= active_refinement_package->contained_particles[0].spherical_aberration;
 			//float    amplitude_contrast					= active_refinement_package->contained_particles[0].amplitude_contrast;
-			float 	 molecular_mass_kDa					= active_refinement_package->estimated_particle_weight_in_kda;
-			float    inner_mask_radius					= active_inner_mask_radius;
-			float    outer_mask_radius					= active_mask_radius;
-			float    resolution_limit_rec				= active_resolution_limit_rec;
-			float    score_weight_conversion			= active_score_weight_conversion;
-			float    score_threshold					= active_score_threshold;
-			bool	 adjust_scores						= active_adjust_scores;
-			bool	 invert_contrast					= active_refinement_package->stack_has_white_protein;
-			bool	 crop_images						= active_crop_images;
-			bool	 dump_arrays						= true;
-			wxString dump_file_1 						= main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("dump_file_%li_%i_odd_%i.dump", current_output_refinement_id, class_counter, job_counter +1);
-			wxString dump_file_2 						= main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("dump_file_%li_%i_even_%i.dump", current_output_refinement_id, class_counter, job_counter + 1);
+			float molecular_mass_kDa = active_refinement_package->estimated_particle_weight_in_kda;
+			float inner_mask_radius = active_inner_mask_radius;
+			float outer_mask_radius = active_mask_radius;
+			float resolution_limit_rec = active_resolution_limit_rec;
+			float score_weight_conversion = active_score_weight_conversion;
+			float score_threshold = active_score_threshold;
+			bool adjust_scores = active_adjust_scores;
+			bool invert_contrast = active_refinement_package->stack_has_white_protein;
+			bool crop_images = active_crop_images;
+			bool dump_arrays = true;
+			wxString dump_file_1 = main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("dump_file_%li_%i_odd_%i.dump", current_output_refinement_id, class_counter, job_counter + 1);
+			wxString dump_file_2 = main_frame->ReturnRefine3DScratchDirectory() + wxString::Format("dump_file_%li_%i_even_%i.dump", current_output_refinement_id, class_counter, job_counter + 1);
 
 			wxString input_reconstruction;
-			bool	 use_input_reconstruction;
+			bool use_input_reconstruction;
 			float pixel_size_of_reference = active_refinement_package->output_pixel_size;
 
 			if (active_should_apply_blurring == true)
@@ -1537,80 +1817,71 @@ void RefinementManager::SetupReconstructionJob()
 
 				if (active_refinement_package->references_for_next_refinement[class_counter] == -1)
 				{
-					input_reconstruction			= "/dev/null";
-					use_input_reconstruction		= false;
+					input_reconstruction = "/dev/null";
+					use_input_reconstruction = false;
 				}
 				else
 				{
-					input_reconstruction = current_reference_filenames.Item(class_counter);//volume_asset_panel->ReturnAssetLongFilename(volume_asset_panel->ReturnArrayPositionFromAssetID(refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).references_for_next_refinement[class_counter]));
+					input_reconstruction = current_reference_filenames.Item(class_counter); //volume_asset_panel->ReturnAssetLongFilename(volume_asset_panel->ReturnArrayPositionFromAssetID(refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).references_for_next_refinement[class_counter]));
 					use_input_reconstruction = true;
 				}
-
-
 			}
 			else
 			{
-				input_reconstruction			= "/dev/null";
-				use_input_reconstruction		= false;
+				input_reconstruction = "/dev/null";
+				use_input_reconstruction = false;
 			}
 
-			float    resolution_limit_ref               = active_high_resolution_limit;
-			float	 smoothing_factor					= active_smoothing_factor;
-			float    padding							= 1.0f;
-			bool	 normalize_particles				= true;
-			bool	 exclude_blank_edges				= false;
-			bool	 split_even_odd						= false;
-			bool     centre_mass                        = active_centre_mass;
-			int		 max_threads						= 1;
-
-
+			float resolution_limit_ref = active_high_resolution_limit;
+			float smoothing_factor = active_smoothing_factor;
+			float padding = 1.0f;
+			bool normalize_particles = true;
+			bool exclude_blank_edges = false;
+			bool split_even_odd = false;
+			bool centre_mass = active_centre_mass;
+			int max_threads = 1;
 
 			bool threshold_input_3d = true;
 			int correct_ewald_sphere = 0;
 
 			my_parent->current_job_package.AddJob("ttttttttiiffffffffffbbbbbbbbbbttii",
-																		input_particle_stack.ToUTF8().data(),
-																		input_parameter_file.ToUTF8().data(),
-																		input_reconstruction.ToUTF8().data(),
-																		output_reconstruction_1.ToUTF8().data(),
-																		output_reconstruction_2.ToUTF8().data(),
-																		output_reconstruction_filtered.ToUTF8().data(),
-																		output_resolution_statistics.ToUTF8().data(),
-																		my_symmetry.ToUTF8().data(),
-																		first_particle,
-																		last_particle,
-																		pixel_size_of_reference,
-																		molecular_mass_kDa,
-																		inner_mask_radius,
-																		outer_mask_radius,
-																		resolution_limit_rec,
-																		resolution_limit_ref,
-																		score_weight_conversion,
-																		score_threshold,
-																		smoothing_factor,
-																		padding,
-																		normalize_particles,
-																		adjust_scores,
-																		invert_contrast,
-																		exclude_blank_edges,
-																		crop_images,
-																		split_even_odd,
-																		centre_mass,
-																		use_input_reconstruction,
-																		threshold_input_3d,
-																		dump_arrays,
-																		dump_file_1.ToUTF8().data(),
-																		dump_file_2.ToUTF8().data(),
-																		correct_ewald_sphere,
-																		max_threads);
-
-
-
-
+												  input_particle_stack.ToUTF8().data(),
+												  input_parameter_file.ToUTF8().data(),
+												  input_reconstruction.ToUTF8().data(),
+												  output_reconstruction_1.ToUTF8().data(),
+												  output_reconstruction_2.ToUTF8().data(),
+												  output_reconstruction_filtered.ToUTF8().data(),
+												  output_resolution_statistics.ToUTF8().data(),
+												  my_symmetry.ToUTF8().data(),
+												  first_particle,
+												  last_particle,
+												  pixel_size_of_reference,
+												  molecular_mass_kDa,
+												  inner_mask_radius,
+												  outer_mask_radius,
+												  resolution_limit_rec,
+												  resolution_limit_ref,
+												  score_weight_conversion,
+												  score_threshold,
+												  smoothing_factor,
+												  padding,
+												  normalize_particles,
+												  adjust_scores,
+												  invert_contrast,
+												  exclude_blank_edges,
+												  crop_images,
+												  split_even_odd,
+												  centre_mass,
+												  use_input_reconstruction,
+												  threshold_input_3d,
+												  dump_arrays,
+												  dump_file_1.ToUTF8().data(),
+												  dump_file_2.ToUTF8().data(),
+												  correct_ewald_sphere,
+												  max_threads);
 		}
 	}
 }
-
 
 // for now we take the paramter
 
@@ -1624,23 +1895,24 @@ void RefinementManager::RunReconstructionJob()
 
 	// empty scratch directory..
 
-//	if (wxDir::Exists(main_frame->current_project.scratch_directory.GetFullPath() + "/Refine3D/") == true) wxFileName::Rmdir(main_frame->current_project.scratch_directory.GetFullPath() + "/Refine3D/", wxPATH_RMDIR_RECURSIVE);
-//	if (wxDir::Exists(main_frame->current_project.scratch_directory.GetFullPath() + "/Refine3D/") == false) wxFileName::Mkdir(main_frame->current_project.scratch_directory.GetFullPath() + "/Refine3D/");
+	//	if (wxDir::Exists(main_frame->current_project.scratch_directory.GetFullPath() + "/Refine3D/") == true) wxFileName::Rmdir(main_frame->current_project.scratch_directory.GetFullPath() + "/Refine3D/", wxPATH_RMDIR_RECURSIVE);
+	//	if (wxDir::Exists(main_frame->current_project.scratch_directory.GetFullPath() + "/Refine3D/") == false) wxFileName::Mkdir(main_frame->current_project.scratch_directory.GetFullPath() + "/Refine3D/");
 
 	// launch a controller
 
-
 	if (start_with_reconstruction == true)
 	{
-		if (output_refinement->number_of_classes > 1) my_parent->WriteBlueText("Calculating Initial Reconstructions...");
-		else my_parent->WriteBlueText("Calculating Initial Reconstruction...");
-
+		if (output_refinement->number_of_classes > 1)
+			my_parent->WriteBlueText("Calculating Initial Reconstructions...");
+		else
+			my_parent->WriteBlueText("Calculating Initial Reconstruction...");
 	}
 	else
 	{
-		if (output_refinement->number_of_classes > 1) my_parent->WriteBlueText("Calculating Reconstructions...");
-		else my_parent->WriteBlueText("Calculating Reconstruction...");
-
+		if (output_refinement->number_of_classes > 1)
+			my_parent->WriteBlueText("Calculating Reconstructions...");
+		else
+			my_parent->WriteBlueText("Calculating Reconstruction...");
 	}
 
 	current_job_id = main_frame->job_controller.AddJob(my_parent, active_reconstruction_run_profile.manager_command, active_reconstruction_run_profile.gui_address);
@@ -1649,9 +1921,8 @@ void RefinementManager::RunReconstructionJob()
 	if (current_job_id != -1)
 	{
 		my_parent->SetNumberConnectedTextToZeroAndStartTracking();
-
 	}
-		my_parent->ProgressBar->Pulse();
+	my_parent->ProgressBar->Pulse();
 }
 
 void RefinementManager::SetupRefinementJob()
@@ -1672,15 +1943,14 @@ void RefinementManager::SetupRefinementJob()
 	input_refinement->WritecisTEMStarFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/input_par", 1.0f, 0.0f, true);
 	input_refinement->WriteResolutionStatistics(main_frame->current_project.parameter_file_directory.GetFullPath() + "/input_stats");
 
-//	wxPrintf("Input refinement has %li particles\n", input_refinement->number_of_particles);
+	//	wxPrintf("Input refinement has %li particles\n", input_refinement->number_of_particles);
 
 	// for now, number of jobs is number of processes -1 (master)..
 
 	number_of_particles = active_refinement_package->contained_particles.GetCount();
 
-	number_of_refinement_processes = std::min(number_of_particles,active_refinement_run_profile.ReturnTotalJobs());
+	number_of_refinement_processes = std::min(number_of_particles, active_refinement_run_profile.ReturnTotalJobs());
 	number_of_refinement_jobs = number_of_refinement_processes;
-
 
 	my_parent->current_job_package.Reset(active_refinement_run_profile, "refine3d", number_of_refinement_jobs * active_refinement_package->number_of_classes);
 
@@ -1691,23 +1961,23 @@ void RefinementManager::SetupRefinementJob()
 		for (counter = 0; counter < number_of_refinement_jobs; counter++)
 		{
 
-			wxString input_particle_images					= active_refinement_package->stack_filename;
-			wxString input_parameter_file 					= main_frame->current_project.parameter_file_directory.GetFullPath() + wxString::Format("/input_par_%li_%i.cistem", current_input_refinement_id, class_counter + 1);
-			wxString input_reconstruction					= current_reference_filenames.Item(class_counter);
-			wxString input_reconstruction_statistics 		= main_frame->current_project.parameter_file_directory.GetFullPath() + wxString::Format("/input_stats_%li_%i.txt", current_input_refinement_id, class_counter + 1);
-			bool	 use_statistics							= true;
+			wxString input_particle_images = active_refinement_package->stack_filename;
+			wxString input_parameter_file = main_frame->current_project.parameter_file_directory.GetFullPath() + wxString::Format("/input_par_%li_%i.cistem", current_input_refinement_id, class_counter + 1);
+			wxString input_reconstruction = current_reference_filenames.Item(class_counter);
+			wxString input_reconstruction_statistics = main_frame->current_project.parameter_file_directory.GetFullPath() + wxString::Format("/input_stats_%li_%i.txt", current_input_refinement_id, class_counter + 1);
+			bool use_statistics = true;
 
-			wxString ouput_matching_projections		 		= "";
+			wxString ouput_matching_projections = "";
 			//					= "/tmp/output_par.par";
 			//wxString ouput_shift_file						= "/tmp/output_shift.shft";
 			//wxString output_parameter_file					= "/dev/null";
-			wxString ouput_shift_file						= "/dev/null";
+			wxString ouput_shift_file = "/dev/null";
 
-			wxString my_symmetry							= active_refinement_package->symmetry;
+			wxString my_symmetry = active_refinement_package->symmetry;
 
-			FirstLastParticleForJob(first_particle,last_particle,number_of_particles,counter+1,number_of_refinement_jobs);
+			FirstLastParticleForJob(first_particle, last_particle, number_of_particles, counter + 1, number_of_refinement_jobs);
 
-			float	 percent_used							= active_percent_used / 100.0;
+			float percent_used = active_percent_used / 100.0;
 
 #ifdef DEBUG
 			wxString output_parameter_file = wxString::Format("/tmp/output_par_%li_%li_%i.star", first_particle, last_particle, class_counter);
@@ -1715,28 +1985,28 @@ void RefinementManager::SetupRefinementJob()
 			wxString output_parameter_file = "/dev/null";
 #endif
 
-			float 	 output_pixel_size						= active_refinement_package->output_pixel_size;
-			float	 molecular_mass_kDa						= active_refinement_package->estimated_particle_weight_in_kda;
-			float    mask_radius							= active_mask_radius;
-			float    inner_mask_radius                      = active_inner_mask_radius;
-			float    low_resolution_limit					= active_low_resolution_limit;
-			float    high_resolution_limit					= active_high_resolution_limit;
-			float	 signed_CC_limit						= active_signed_cc_limit;
-			float	 classification_resolution_limit		= active_classification_high_res_limit;
-			float    mask_radius_search						= active_global_mask_radius;
-			float	 high_resolution_limit_search			= active_high_resolution_limit;
-			float	 angular_step							= active_angular_search_step;
-			int		 best_parameters_to_keep				= active_number_results_to_refine;
-			float	 max_search_x							= active_search_range_x;
-			float	 max_search_y							= active_search_range_y;
-			float    mask_center_2d_x						= active_sphere_x_coord;
-			float 	 mask_center_2d_y						= active_sphere_y_coord;
-			float    mask_center_2d_z						= active_sphere_z_coord;
-			float    mask_radius_2d							= active_sphere_radius;
+			float output_pixel_size = active_refinement_package->output_pixel_size;
+			float molecular_mass_kDa = active_refinement_package->estimated_particle_weight_in_kda;
+			float mask_radius = active_mask_radius;
+			float inner_mask_radius = active_inner_mask_radius;
+			float low_resolution_limit = active_low_resolution_limit;
+			float high_resolution_limit = active_high_resolution_limit;
+			float signed_CC_limit = active_signed_cc_limit;
+			float classification_resolution_limit = active_classification_high_res_limit;
+			float mask_radius_search = active_global_mask_radius;
+			float high_resolution_limit_search = active_high_resolution_limit;
+			float angular_step = active_angular_search_step;
+			int best_parameters_to_keep = active_number_results_to_refine;
+			float max_search_x = active_search_range_x;
+			float max_search_y = active_search_range_y;
+			float mask_center_2d_x = active_sphere_x_coord;
+			float mask_center_2d_y = active_sphere_y_coord;
+			float mask_center_2d_z = active_sphere_z_coord;
+			float mask_radius_2d = active_sphere_radius;
 
-			float	 defocus_search_range					= active_defocus_search_range;
-			float	 defocus_step							= active_defocus_search_step;
-			float	 padding								= 1.0;
+			float defocus_search_range = active_defocus_search_range;
+			float defocus_step = active_defocus_search_step;
+			float padding = 1.0;
 
 			bool global_search;
 			bool local_refinement;
@@ -1755,23 +2025,24 @@ void RefinementManager::SetupRefinementJob()
 
 			bool ignore_input_parameters = active_also_refine_input;
 
-
-			bool refine_psi 								= active_should_refine_psi;
-			bool refine_theta								= active_should_refine_theta;
-			bool refine_phi									= active_should_refine_phi;
-			bool refine_x_shift								= active_should_refine_x_shift;
-			bool refine_y_shift								= active_should_refine_y_shift;
-			bool calculate_matching_projections				= false;
-			bool apply_2d_masking							= active_should_focus_classify;
-			bool ctf_refinement								= active_should_refine_ctf;
-			bool invert_contrast							= active_refinement_package->stack_has_white_protein;
+			bool refine_psi = active_should_refine_psi;
+			bool refine_theta = active_should_refine_theta;
+			bool refine_phi = active_should_refine_phi;
+			bool refine_x_shift = active_should_refine_x_shift;
+			bool refine_y_shift = active_should_refine_y_shift;
+			bool calculate_matching_projections = false;
+			bool apply_2d_masking = active_should_focus_classify;
+			bool ctf_refinement = active_should_refine_ctf;
+			bool invert_contrast = active_refinement_package->stack_has_white_protein;
 
 			bool normalize_particles = true;
 			bool exclude_blank_edges = false;
 			bool normalize_input_3d;
 
-			if (active_should_apply_blurring == true) normalize_input_3d = false;
-			else normalize_input_3d = true;
+			if (active_should_apply_blurring == true)
+				normalize_input_3d = false;
+			else
+				normalize_input_3d = true;
 
 			bool threshold_input_3d = true;
 			bool defocus_bias = false;
@@ -1779,63 +2050,60 @@ void RefinementManager::SetupRefinementJob()
 			int max_threads = 1;
 
 			my_parent->current_job_package.AddJob("ttttbttttiiffffffffffffifffffffffbbbbbbbbbbbbbbbibibb",
-																											input_particle_images.ToUTF8().data(),
-																											input_parameter_file.ToUTF8().data(),
-																											input_reconstruction.ToUTF8().data(),
-																											input_reconstruction_statistics.ToUTF8().data(),
-																											use_statistics,
-																											ouput_matching_projections.ToUTF8().data(),
-																											output_parameter_file.ToUTF8().data(),
-																											ouput_shift_file.ToUTF8().data(),
-																											my_symmetry.ToUTF8().data(),
-																											first_particle,
-																											last_particle,
-																											percent_used,
-																											output_pixel_size,
-																											molecular_mass_kDa,
-																											inner_mask_radius,
-																											mask_radius,
-																											low_resolution_limit,
-																											high_resolution_limit,
-																											signed_CC_limit,
-																											classification_resolution_limit,
-																											mask_radius_search,
-																											high_resolution_limit_search,
-																											angular_step,
-																											best_parameters_to_keep,
-																											max_search_x,
-																											max_search_y,
-																											mask_center_2d_x,
-																											mask_center_2d_y,
-																											mask_center_2d_z,
-																											mask_radius_2d,
-																											defocus_search_range,
-																											defocus_step,
-																											padding,
-																											global_search,
-																											local_refinement,
-																											refine_psi,
-																											refine_theta,
-																											refine_phi,
-																											refine_x_shift,
-																											refine_y_shift,
-																											calculate_matching_projections,
-																											apply_2d_masking,
-																											ctf_refinement,
-																											normalize_particles,
-																											invert_contrast,
-																											exclude_blank_edges,
-																											normalize_input_3d,
-																											threshold_input_3d,
-																											max_threads,
-																											global_local_refinemnent,
-																											class_counter,
-																											ignore_input_parameters,
-																											defocus_bias);
-
-
+												  input_particle_images.ToUTF8().data(),
+												  input_parameter_file.ToUTF8().data(),
+												  input_reconstruction.ToUTF8().data(),
+												  input_reconstruction_statistics.ToUTF8().data(),
+												  use_statistics,
+												  ouput_matching_projections.ToUTF8().data(),
+												  output_parameter_file.ToUTF8().data(),
+												  ouput_shift_file.ToUTF8().data(),
+												  my_symmetry.ToUTF8().data(),
+												  first_particle,
+												  last_particle,
+												  percent_used,
+												  output_pixel_size,
+												  molecular_mass_kDa,
+												  inner_mask_radius,
+												  mask_radius,
+												  low_resolution_limit,
+												  high_resolution_limit,
+												  signed_CC_limit,
+												  classification_resolution_limit,
+												  mask_radius_search,
+												  high_resolution_limit_search,
+												  angular_step,
+												  best_parameters_to_keep,
+												  max_search_x,
+												  max_search_y,
+												  mask_center_2d_x,
+												  mask_center_2d_y,
+												  mask_center_2d_z,
+												  mask_radius_2d,
+												  defocus_search_range,
+												  defocus_step,
+												  padding,
+												  global_search,
+												  local_refinement,
+												  refine_psi,
+												  refine_theta,
+												  refine_phi,
+												  refine_x_shift,
+												  refine_y_shift,
+												  calculate_matching_projections,
+												  apply_2d_masking,
+												  ctf_refinement,
+												  normalize_particles,
+												  invert_contrast,
+												  exclude_blank_edges,
+												  normalize_input_3d,
+												  threshold_input_3d,
+												  max_threads,
+												  global_local_refinemnent,
+												  class_counter,
+												  ignore_input_parameters,
+												  defocus_bias);
 		}
-
 	}
 
 	/*
@@ -2025,9 +2293,8 @@ void RefinementManager::ProcessJobResult(JobResult *result_to_process)
 
 		MyDebugAssertTrue(current_particle != -1 && current_class != -1, "Current Particle (%li) or Current Class(%i) = -1!", current_particle, current_class);
 
-	//	wxPrintf("Received a refinement result for class #%i, particle %li\n", current_class + 1, current_particle + 1);
+		//	wxPrintf("Received a refinement result for class #%i, particle %li\n", current_class + 1, current_particle + 1);
 		//wxPrintf("output refinement has %i classes and %li particles\n", output_refinement->number_of_classes, output_refinement->number_of_particles);
-
 
 		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].position_in_stack = long(result_to_process->result_data[1] + 0.5);
 		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].image_is_active = int(result_to_process->result_data[2]);
@@ -2054,13 +2321,12 @@ void RefinementManager::ProcessJobResult(JobResult *result_to_process)
 		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].amplitude_contrast = result_to_process->result_data[24];
 		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].assigned_subset = result_to_process->result_data[25];
 
-	/*	wxPrintf("Recieved a result for particle %li, x_shift = %f, y_shift = %f, psi = %f, theta = %f, phi = %f\n",		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].position_in_stack,
+		/*	wxPrintf("Recieved a result for particle %li, x_shift = %f, y_shift = %f, psi = %f, theta = %f, phi = %f\n",		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].position_in_stack,
 																															output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].xshift,
 																															output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].yshift,
 																															output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].psi,
 																															output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].theta,
 																															output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].phi);*/
-
 
 		number_of_received_particle_results++;
 		//wxPrintf("received result!\n");
@@ -2070,46 +2336,43 @@ void RefinementManager::ProcessJobResult(JobResult *result_to_process)
 		{
 			current_job_starttime = current_time;
 			time_of_last_update = 0;
-			my_parent->ShowRefinementResultsPanel->AngularPlotPanel->SetSymmetryAndNumber(active_refinement_package->symmetry,long(float(output_refinement->number_of_particles) * active_percent_used * 0.01f));
+			my_parent->ShowRefinementResultsPanel->AngularPlotPanel->SetSymmetryAndNumber(active_refinement_package->symmetry, long(float(output_refinement->number_of_particles) * active_percent_used * 0.01f));
 			my_parent->Layout();
 		}
-		else
-		if (current_time != time_of_last_update)
+		else if (current_time != time_of_last_update)
 		{
 			int current_percentage = float(number_of_received_particle_results) / float(number_of_expected_results) * 100.0;
 			time_of_last_update = current_time;
-			if (current_percentage > 100) current_percentage = 100;
+			if (current_percentage > 100)
+				current_percentage = 100;
 			my_parent->ProgressBar->SetValue(current_percentage);
 			long job_time = current_time - current_job_starttime;
 			float seconds_per_job = float(job_time) / float(number_of_received_particle_results - 1);
 			long seconds_remaining = float(number_of_expected_results - number_of_received_particle_results) * seconds_per_job;
 
-			wxTimeSpan time_remaining = wxTimeSpan(0,0,seconds_remaining);
+			wxTimeSpan time_remaining = wxTimeSpan(0, 0, seconds_remaining);
 
 			my_parent->TimeRemainingText->SetLabel(time_remaining.Format("Time Remaining : %Hh:%Mm:%Ss"));
 		}
 
-
-        // Add this result to the list of results to be plotted onto the angular plot
+		// Add this result to the list of results to be plotted onto the angular plot
 		if (current_class == 0 && output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].image_is_active >= 0)
 		{
-			my_parent->ShowRefinementResultsPanel->AngularPlotPanel->AddRefinementResult( &output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle]);
-	         // Plot this new result onto the angular plot immediately if it's one of the first few results to come in. Otherwise, only plot at regular intervals.
+			my_parent->ShowRefinementResultsPanel->AngularPlotPanel->AddRefinementResult(&output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle]);
+			// Plot this new result onto the angular plot immediately if it's one of the first few results to come in. Otherwise, only plot at regular intervals.
 
-		     if(my_parent->ShowRefinementResultsPanel->AngularPlotPanel->refinement_results_to_plot.Count() * my_parent->ShowRefinementResultsPanel->AngularPlotPanel->symmetry_matrices.number_of_matrices < 1500 || current_time - my_parent->time_of_last_result_update > 0)
-	        {
-		        my_parent->ShowRefinementResultsPanel->AngularPlotPanel->Refresh();
-	            my_parent->time_of_last_result_update = current_time;
-	        }
-
+			if (my_parent->ShowRefinementResultsPanel->AngularPlotPanel->refinement_results_to_plot.Count() * my_parent->ShowRefinementResultsPanel->AngularPlotPanel->symmetry_matrices.number_of_matrices < 1500 || current_time - my_parent->time_of_last_result_update > 0)
+			{
+				my_parent->ShowRefinementResultsPanel->AngularPlotPanel->Refresh();
+				my_parent->time_of_last_result_update = current_time;
+			}
 		}
 	}
-	else
-	if (running_job_type == RECONSTRUCTION)
+	else if (running_job_type == RECONSTRUCTION)
 	{
 		//wxPrintf("Got reconstruction job \n");
 		number_of_received_particle_results++;
-	//	wxPrintf("Received a reconstruction intermmediate result\n");
+		//	wxPrintf("Received a reconstruction intermmediate result\n");
 
 		long current_time = time(NULL);
 
@@ -2118,25 +2381,24 @@ void RefinementManager::ProcessJobResult(JobResult *result_to_process)
 			time_of_last_update = 0;
 			current_job_starttime = current_time;
 		}
-		else
-		if (current_time - time_of_last_update >= 1)
+		else if (current_time - time_of_last_update >= 1)
 		{
 			time_of_last_update = current_time;
 			int current_percentage = float(number_of_received_particle_results) / float(number_of_expected_results) * 100.0;
-			if (current_percentage > 100) current_percentage = 100;
+			if (current_percentage > 100)
+				current_percentage = 100;
 			my_parent->ProgressBar->SetValue(current_percentage);
 			long job_time = current_time - current_job_starttime;
 			float seconds_per_job = float(job_time) / float(number_of_received_particle_results - 1);
 			long seconds_remaining = float(number_of_expected_results - number_of_received_particle_results) * seconds_per_job;
 
-			wxTimeSpan time_remaining = wxTimeSpan(0,0,seconds_remaining);
-			my_parent->TimeRemainingText->SetLabel(time_remaining.Format("Time Remaining : %Hh:%Mm:%Ss"));		
+			wxTimeSpan time_remaining = wxTimeSpan(0, 0, seconds_remaining);
+			my_parent->TimeRemainingText->SetLabel(time_remaining.Format("Time Remaining : %Hh:%Mm:%Ss"));
 		}
 	}
-	else
-	if (running_job_type == MERGE)
+	else if (running_job_type == MERGE)
 	{
-	//	wxPrintf("received merge result!\n");
+		//	wxPrintf("received merge result!\n");
 
 		// add to the correct resolution statistics..
 
@@ -2159,7 +2421,6 @@ void RefinementManager::ProcessJobResult(JobResult *result_to_process)
 		output_refinement->class_refinement_results[class_number - 1].class_resolution_statistics.part_SSNR.ClearData();
 		output_refinement->class_refinement_results[class_number - 1].class_resolution_statistics.rec_SSNR.ClearData();
 
-
 		for (int counter = 0; counter < number_of_points; counter++)
 		{
 			current_resolution = result_to_process->result_data[array_position];
@@ -2173,18 +2434,13 @@ void RefinementManager::ProcessJobResult(JobResult *result_to_process)
 			rec_ssnr = result_to_process->result_data[array_position];
 			array_position++;
 
-
 			output_refinement->class_refinement_results[class_number - 1].class_resolution_statistics.FSC.AddPoint(current_resolution, fsc);
 			output_refinement->class_refinement_results[class_number - 1].class_resolution_statistics.part_FSC.AddPoint(current_resolution, part_fsc);
 			output_refinement->class_refinement_results[class_number - 1].class_resolution_statistics.part_SSNR.AddPoint(current_resolution, part_ssnr);
 			output_refinement->class_refinement_results[class_number - 1].class_resolution_statistics.rec_SSNR.AddPoint(current_resolution, rec_ssnr);
-
 		}
-
 	}
 }
-
-
 
 void RefinementManager::ProcessAllJobsFinished()
 {
@@ -2193,7 +2449,6 @@ void RefinementManager::ProcessAllJobsFinished()
 	extern MyOverviewPanel *overview_panel;
 	overview_panel->SetProjectInfo();
 
-
 	if (running_job_type == REFINEMENT)
 	{
 		main_frame->job_controller.KillJob(my_parent->my_job_id);
@@ -2201,23 +2456,22 @@ void RefinementManager::ProcessAllJobsFinished()
 		// calculate occupancies..
 		//if (output_refinement->percent_used < 99.99) output_refinement->UpdateOccupancies(false);
 		//else output_refinement->UpdateOccupancies(true);
-		if (my_parent->RefineOccupanciesCheckBox->GetValue() == true) output_refinement->UpdateOccupancies();
-		else output_refinement->UpdateAverageOccupancy();
+		if (my_parent->RefineOccupanciesCheckBox->GetValue() == true)
+			output_refinement->UpdateOccupancies();
+		else
+			output_refinement->UpdateAverageOccupancy();
 
 		SetupReconstructionJob();
 		RunReconstructionJob();
-
 	}
-	else
-	if (running_job_type == RECONSTRUCTION)
+	else if (running_job_type == RECONSTRUCTION)
 	{
 		main_frame->job_controller.KillJob(my_parent->my_job_id);
 		//wxPrintf("Reconstruction has finished\n");
 		SetupMerge3dJob();
 		RunMerge3dJob();
 	}
-	else
-	if (running_job_type == MERGE)
+	else if (running_job_type == MERGE)
 	{
 		long current_reconstruction_id;
 
@@ -2225,10 +2479,12 @@ void RefinementManager::ProcessAllJobsFinished()
 		my_parent->active_orth_thread_id = my_parent->next_thread_id;
 		my_parent->next_thread_id++;
 
-		if (start_with_reconstruction == true) result_thread = new OrthDrawerThread(my_parent, current_reference_filenames, wxString::Format("Iter. #%i", 0), 1.0f, active_mask_radius / input_refinement->resolution_statistics_pixel_size, my_parent->active_orth_thread_id);
-		else result_thread = new OrthDrawerThread(my_parent, current_reference_filenames, wxString::Format("Iter. #%i", number_of_rounds_run + 1), 1.0f, active_mask_radius / input_refinement->resolution_statistics_pixel_size, my_parent->active_orth_thread_id);
+		if (start_with_reconstruction == true)
+			result_thread = new OrthDrawerThread(my_parent, current_reference_filenames, wxString::Format("Iter. #%i", 0), 1.0f, active_mask_radius / input_refinement->resolution_statistics_pixel_size, my_parent->active_orth_thread_id);
+		else
+			result_thread = new OrthDrawerThread(my_parent, current_reference_filenames, wxString::Format("Iter. #%i", number_of_rounds_run + 1), 1.0f, active_mask_radius / input_refinement->resolution_statistics_pixel_size, my_parent->active_orth_thread_id);
 
-		if ( result_thread->Run() != wxTHREAD_NO_ERROR )
+		if (result_thread->Run() != wxTHREAD_NO_ERROR)
 		{
 			my_parent->WriteErrorText("Error: Cannot start result creation thread, results not displayed");
 			delete result_thread;
@@ -2264,7 +2520,6 @@ void RefinementManager::ProcessAllJobsFinished()
 			if (start_with_reconstruction == true)
 			{
 				temp_asset.asset_name = wxString::Format("Start Params #%li - Class #%i", current_output_refinement_id, class_counter + 1);
-
 			}
 			else
 			{
@@ -2272,8 +2527,8 @@ void RefinementManager::ProcessAllJobsFinished()
 				{
 					temp_asset.asset_name = wxString::Format("Global #%li (Rnd. %i) - Class #%i", current_output_refinement_id, number_of_rounds_run + 1, class_counter + 1);
 				}
-				else temp_asset.asset_name = wxString::Format("Local #%li (Rnd. %i) - Class #%i", current_output_refinement_id, number_of_rounds_run + 1, class_counter + 1);
-
+				else
+					temp_asset.asset_name = wxString::Format("Local #%li (Rnd. %i) - Class #%i", current_output_refinement_id, number_of_rounds_run + 1, class_counter + 1);
 			}
 
 			current_reconstruction_id = main_frame->current_project.database.ReturnHighestReconstructionID() + 1;
@@ -2291,8 +2546,7 @@ void RefinementManager::ProcessAllJobsFinished()
 			output_refinement->reference_volume_ids.Add(temp_asset.asset_id);
 
 			active_refinement_package->references_for_next_refinement.Add(temp_asset.asset_id);
-			main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE REFINEMENT_PACKAGE_CURRENT_REFERENCES_%li SET VOLUME_ASSET_ID=%i WHERE CLASS_NUMBER=%i", current_refinement_package_asset_id, temp_asset.asset_id, class_counter + 1 ));
-
+			main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE REFINEMENT_PACKAGE_CURRENT_REFERENCES_%li SET VOLUME_ASSET_ID=%i WHERE CLASS_NUMBER=%i", current_refinement_package_asset_id, temp_asset.asset_id, class_counter + 1));
 
 			volume_asset_panel->AddAsset(&temp_asset);
 			main_frame->current_project.database.AddNextVolumeAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), temp_asset.reconstruction_job_id, temp_asset.pixel_size, temp_asset.x_size, temp_asset.y_size, temp_asset.z_size, temp_asset.half_map_1_filename.GetFullPath(), temp_asset.half_map_2_filename.GetFullPath());
@@ -2318,8 +2572,6 @@ void RefinementManager::ProcessAllJobsFinished()
 
 		my_parent->WriteInfoText("");
 
-
-
 		//wxPrintf("Writing to databse\n");
 		// write the refinement to the database
 
@@ -2331,8 +2583,8 @@ void RefinementManager::ProcessAllJobsFinished()
 			//volume_asset_panel->is_dirty = true;
 			//refinement_package_asset_panel->is_dirty = true;
 			//my_parent->input_params_combo_is_dirty = true;
-		//	my_parent->SetDefaults();
-//			refinement_results_panel->is_dirty = true;
+			//	my_parent->SetDefaults();
+			//			refinement_results_panel->is_dirty = true;
 
 			Refinement *current_refinement = main_frame->current_project.database.GetRefinementByID(output_refinement->refinement_id);
 			//update resolution statistics in database and gui..
@@ -2352,9 +2604,7 @@ void RefinementManager::ProcessAllJobsFinished()
 					current_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_FSC.AddPoint(output_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_FSC.data_x[point_counter], output_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_FSC.data_y[point_counter]);
 					current_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.AddPoint(output_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.data_x[point_counter], output_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.data_y[point_counter]);
 					current_refinement->class_refinement_results[class_counter].class_resolution_statistics.rec_SSNR.AddPoint(output_refinement->class_refinement_results[class_counter].class_resolution_statistics.rec_SSNR.data_x[point_counter], output_refinement->class_refinement_results[class_counter].class_resolution_statistics.rec_SSNR.data_y[point_counter]);
-
 				}
-
 			}
 
 			my_parent->ShowRefinementResultsPanel->FSCResultsPanel->AddRefinement(output_refinement);
@@ -2386,15 +2636,15 @@ void RefinementManager::ProcessAllJobsFinished()
 			active_refinement_package->refinement_ids.Add(output_refinement->refinement_id);
 
 			main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE REFINEMENT_PACKAGE_ASSETS SET LAST_REFINEMENT_ID=%li WHERE REFINEMENT_PACKAGE_ASSET_ID=%li", output_refinement->refinement_id, current_refinement_package_asset_id));
-			main_frame->current_project.database.ExecuteSQL(wxString::Format("INSERT INTO REFINEMENT_PACKAGE_REFINEMENTS_LIST_%li (REFINEMENT_NUMBER, REFINEMENT_ID) VALUES (%li, %li);", current_refinement_package_asset_id, main_frame->current_project.database.ReturnSingleLongFromSelectCommand(wxString::Format("SELECT MAX(REFINEMENT_NUMBER) FROM REFINEMENT_PACKAGE_REFINEMENTS_LIST_%li", current_refinement_package_asset_id)) + 1,  output_refinement->refinement_id));
+			main_frame->current_project.database.ExecuteSQL(wxString::Format("INSERT INTO REFINEMENT_PACKAGE_REFINEMENTS_LIST_%li (REFINEMENT_NUMBER, REFINEMENT_ID) VALUES (%li, %li);", current_refinement_package_asset_id, main_frame->current_project.database.ReturnSingleLongFromSelectCommand(wxString::Format("SELECT MAX(REFINEMENT_NUMBER) FROM REFINEMENT_PACKAGE_REFINEMENTS_LIST_%li", current_refinement_package_asset_id)) + 1, output_refinement->refinement_id));
 
 			main_frame->DirtyVolumes();
 			main_frame->DirtyRefinements();
 
-//			volume_asset_panel->is_dirty = true;
-	//		refinement_package_asset_panel->is_dirty = true;
-		//	my_parent->input_params_combo_is_dirty = true;
-	//		my_parent->SetDefaults();
+			//			volume_asset_panel->is_dirty = true;
+			//		refinement_package_asset_panel->is_dirty = true;
+			//	my_parent->input_params_combo_is_dirty = true;
+			//		my_parent->SetDefaults();
 			//refinement_results_panel->is_dirty = true;
 
 			my_parent->ShowRefinementResultsPanel->FSCResultsPanel->AddRefinement(output_refinement);
@@ -2411,13 +2661,18 @@ void RefinementManager::ProcessAllJobsFinished()
 
 		my_parent->Layout();
 
-
 		//wxPrintf("Calling cycle refinement\n");
 		main_frame->DirtyVolumes();
 		main_frame->DirtyRefinements();
 		CycleRefinement();
 	}
+	else if (running_job_type == LOCAL_FILTERING)
+	{
+		main_frame->job_controller.KillJob(my_parent->my_job_id);
 
+		SetupRefinementJob();
+		RunRefinementJob();
+	}
 }
 
 void RefinementManager::DoMasking()
@@ -2461,7 +2716,7 @@ void RefinementManager::DoMasking()
 
 		Multiply3DMaskerThread *mask_thread = new Multiply3DMaskerThread(my_parent, current_reference_filenames, masked_filenames, filename_of_mask, wanted_cosine_edge_width, wanted_weight_outside_mask, wanted_low_pass_filter_radius, input_refinement->resolution_statistics_pixel_size, my_parent->active_mask_thread_id);
 
-		if ( mask_thread->Run() != wxTHREAD_NO_ERROR )
+		if (mask_thread->Run() != wxTHREAD_NO_ERROR)
 		{
 			my_parent->WriteErrorText("Error: Cannot start masking thread, masking will not be performed");
 			delete mask_thread;
@@ -2482,10 +2737,9 @@ void RefinementManager::DoMasking()
 
 		float current_res = input_refinement->class_refinement_results[0].class_resolution_statistics.ReturnEstimatedResolution(true);
 
-
 		AutoMaskerThread *mask_thread = new AutoMaskerThread(my_parent, current_reference_filenames, masked_filenames, input_refinement->resolution_statistics_pixel_size, active_refinement_package->estimated_particle_size_in_angstroms * 0.75, my_parent->active_mask_thread_id, current_res);
 
-		if ( mask_thread->Run() != wxTHREAD_NO_ERROR )
+		if (mask_thread->Run() != wxTHREAD_NO_ERROR)
 		{
 			my_parent->WriteErrorText("Error: Cannot start masking thread, masking will not be performed");
 			delete mask_thread;
@@ -2496,9 +2750,6 @@ void RefinementManager::DoMasking()
 			return;
 		}
 	}
-
-
-
 }
 
 void RefinementManager::CycleRefinement()
@@ -2508,14 +2759,21 @@ void RefinementManager::CycleRefinement()
 		output_refinement = new Refinement;
 		start_with_reconstruction = false;
 
-		if (active_should_mask == true || active_should_auto_mask == true)
+		if (active_local_filtering == true)
 		{
-			DoMasking();
+			SetupAndLaunchGenerateMaskThread();
 		}
 		else
 		{
-			SetupRefinementJob();
-			RunRefinementJob();
+			if (active_should_mask == true || active_should_auto_mask == true)
+			{
+				DoMasking();
+			}
+			else
+			{
+				SetupRefinementJob();
+				RunRefinementJob();
+			}
 		}
 	}
 	else
@@ -2529,20 +2787,27 @@ void RefinementManager::CycleRefinement()
 			input_refinement = output_refinement;
 			output_refinement = new Refinement;
 
-			if (active_should_mask == true || active_should_auto_mask == true)
+			if (active_local_filtering == true)
 			{
-				DoMasking();
+				SetupAndLaunchGenerateMaskThread();
 			}
 			else
 			{
-				SetupRefinementJob();
-				RunRefinementJob();
+				if (active_should_mask == true || active_should_auto_mask == true)
+				{
+					DoMasking();
+				}
+				else
+				{
+					SetupRefinementJob();
+					RunRefinementJob();
+				}
 			}
 		}
 		else
 		{
 			delete input_refinement;
-//			delete output_refinement;
+			//			delete output_refinement;
 			my_parent->WriteBlueText("All refinement cycles are finished!");
 			my_parent->CancelAlignmentButton->Show(false);
 			my_parent->FinishButton->Show(true);
@@ -2556,14 +2821,46 @@ void RefinementManager::CycleRefinement()
 	main_frame->DirtyRefinements();
 }
 
-
-void MyRefine3DPanel::OnMaskerThreadComplete(wxThreadEvent& my_event)
+void MyRefine3DPanel::OnMaskerThreadComplete(wxThreadEvent &my_event)
 {
-	if (my_event.GetInt() == active_mask_thread_id)	my_refinement_manager.OnMaskerThreadComplete();
+	if (my_event.GetInt() == active_mask_thread_id)
+		my_refinement_manager.OnMaskerThreadComplete();
 }
 
+void MyRefine3DPanel::OnGenerateMaskThreadComplete(wxThreadEvent &my_event)
+{
+	if (my_event.GetInt() == active_mask_thread_id)
+		my_refinement_manager.OnGenerateMaskThreadComplete(my_event.GetString());
+}
 
-void MyRefine3DPanel::OnOrthThreadComplete(ReturnProcessedImageEvent& my_event)
+void RefinementManager::OnGenerateMaskThreadComplete(wxString first_last_slice_with_data)
+{
+	wxStringTokenizer tokenizer(first_last_slice_with_data, " ");
+	if (tokenizer.HasMoreTokens())
+	{
+		wxString first_slice_with_data_string = tokenizer.GetNextToken();
+		first_slice_with_data = wxAtoi(first_slice_with_data_string);
+		if (tokenizer.HasMoreTokens())
+		{
+			wxString last_slice_with_data_string = tokenizer.GetNextToken();
+			last_slice_with_data = wxAtoi(last_slice_with_data_string);
+		}
+		else
+		{
+			MyPrintfRed("Could Not Parse First Slice With Data\n");
+			//maybe should error out TODO WTW
+		}
+	}
+	else
+	{
+		MyPrintfRed("Could Not Parse Last Slice With Data\n");
+	}
+
+	SetupLocalFilteringJob();
+	RunLocalFilteringJob();
+}
+
+void MyRefine3DPanel::OnOrthThreadComplete(ReturnProcessedImageEvent &my_event)
 {
 
 	Image *new_image = my_event.GetImage();
@@ -2585,9 +2882,7 @@ void MyRefine3DPanel::OnOrthThreadComplete(ReturnProcessedImageEvent& my_event)
 	{
 		delete new_image;
 	}
-
 }
-
 
 void RefinementManager::OnMaskerThreadComplete()
 {

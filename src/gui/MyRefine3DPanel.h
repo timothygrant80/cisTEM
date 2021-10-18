@@ -16,6 +16,20 @@ public:
 	bool start_with_reconstruction;
 	MyRefine3DPanel *my_parent;
 
+	float measured_global_resolution;
+
+	bool first_round_flag;
+	wxString volume_asset_specified_half_map_1;
+	wxString volume_asset_specified_half_map_2;
+	int num_processes_for_local_filtering;
+	wxString input_original_volume_local_filtering;
+	wxString volume_asset_filename;
+
+	int recieved_local_filtering_job_results;
+
+	int first_slice_with_data;
+	int last_slice_with_data;
+
 	float active_low_resolution_limit;
 	float active_high_resolution_limit;
 	float active_mask_radius;
@@ -53,6 +67,7 @@ public:
 	bool active_should_mask;
 	bool active_should_auto_mask;
 	bool active_centre_mass;
+	bool active_local_filtering;
 	wxString active_mask_filename;
 	bool active_should_low_pass_filter_mask;
 	float active_mask_filter_resolution;
@@ -89,7 +104,13 @@ public:
 	RefinementManager();
 	void SetParent(MyRefine3DPanel *wanted_parent);
 
+	bool halfMapExists(wxString &half_map);
+
 	void BeginRefinementCycle();
+
+	void SetupAndLaunchGenerateMaskThread();
+	void SetupLocalFilteringJob();
+
 	void CycleRefinement();
 
 	void SetupRefinementJob();
@@ -102,6 +123,8 @@ public:
 	void RunInitialReconstructionJob();
 	void RunInitialMerge3dJob();
 
+	void RunLocalFilteringJob();
+
 	void RunRefinementJob();
 	void RunReconstructionJob();
 	void RunMerge3dJob();
@@ -111,99 +134,94 @@ public:
 
 	void OnMaskerThreadComplete();
 
+	void OnGenerateMaskThreadComplete(wxString first_last_slice_with_data);
+
 	void DoMasking();
 
-//	void StartRefinement();
-//	void StartReconstruction();
-
-
+	//	void StartRefinement();
+	//	void StartReconstruction();
 };
-
 
 class MyRefine3DPanel : public Refine3DPanel
 {
 	friend class RefinementManager;
 
-	protected:
-		// Handlers for Refine3DPanel events.
-		void OnUpdateUI( wxUpdateUIEvent& event );
-		void OnExpertOptionsToggle( wxCommandEvent& event );
-		void OnInfoURL( wxTextUrlEvent& event );
-		void TerminateButtonClick( wxCommandEvent& event );
-		void FinishButtonClick( wxCommandEvent& event );
-		void StartRefinementClick( wxCommandEvent& event );
-		void ResetAllDefaultsClick( wxCommandEvent& event );
-		void OnHighResLimitChange( wxCommandEvent& event );
+protected:
+	// Handlers for Refine3DPanel events.
+	void OnUpdateUI(wxUpdateUIEvent &event);
+	void OnExpertOptionsToggle(wxCommandEvent &event);
+	void OnInfoURL(wxTextUrlEvent &event);
+	void TerminateButtonClick(wxCommandEvent &event);
+	void FinishButtonClick(wxCommandEvent &event);
+	void StartRefinementClick(wxCommandEvent &event);
+	void ResetAllDefaultsClick(wxCommandEvent &event);
+	void OnHighResLimitChange(wxCommandEvent &event);
 
-		void OnUseMaskCheckBox( wxCommandEvent& event );
-		void OnAutoMaskButton( wxCommandEvent& event );
+	void OnUseMaskCheckBox(wxCommandEvent &event);
+	void OnAutoMaskButton(wxCommandEvent &event);
 
-		void OnVolumeListItemActivated( wxListEvent& event );
+	void OnVolumeListItemActivated(wxListEvent &event);
 
+	// overridden socket methods..
 
-		// overridden socket methods..
+	void OnSocketJobResultMsg(JobResult &received_result);
+	void OnSocketJobResultQueueMsg(ArrayofJobResults &received_queue);
+	void SetNumberConnectedText(wxString wanted_text);
+	void SetTimeRemainingText(wxString wanted_text);
+	void OnSocketAllJobsFinished();
 
-		void OnSocketJobResultMsg(JobResult &received_result);
-		void OnSocketJobResultQueueMsg(ArrayofJobResults &received_queue);
-		void SetNumberConnectedText(wxString wanted_text);
-		void SetTimeRemainingText(wxString wanted_text);
-		void OnSocketAllJobsFinished();
+	int length_of_process_number;
 
-		int length_of_process_number;
+	RefinementManager my_refinement_manager;
 
-		RefinementManager my_refinement_manager;
+	int active_orth_thread_id;
+	int active_mask_thread_id;
+	int next_thread_id;
 
-		int active_orth_thread_id;
-		int active_mask_thread_id;
-		int next_thread_id;
+public:
+	wxStopWatch stopwatch;
 
-	public:
+	long time_of_last_result_update;
 
-		wxStopWatch stopwatch;
+	bool refinement_package_combo_is_dirty;
+	bool run_profiles_are_dirty;
+	bool input_params_combo_is_dirty;
+	bool volumes_are_dirty;
 
-		long time_of_last_result_update;
+	JobResult *buffered_results;
+	long selected_refinement_package;
 
-		bool refinement_package_combo_is_dirty;
-		bool run_profiles_are_dirty;
-		bool input_params_combo_is_dirty;
-		bool volumes_are_dirty;
+	//int length_of_process_number;
 
-		JobResult *buffered_results;
-		long selected_refinement_package;
+	JobTracker my_job_tracker;
 
-		//int length_of_process_number;
+	bool auto_mask_value; // this is needed to keep track of the automask, as the radiobutton will be overidden to no when masking is selected
 
-		JobTracker my_job_tracker;
+	bool running_job;
 
-		bool auto_mask_value; // this is needed to keep track of the automask, as the radiobutton will be overidden to no when masking is selected
+	void SetDefaults();
+	void Reset();
 
-		bool running_job;
+	MyRefine3DPanel(wxWindow *parent);
+	void SetInfo();
 
-		void SetDefaults();
-		void Reset();
+	void WriteInfoText(wxString text_to_write);
+	void WriteErrorText(wxString text_to_write);
+	void WriteBlueText(wxString text_to_write);
 
+	void FillRefinementPackagesComboBox();
+	void FillRunProfileComboBoxes();
+	void FillInputParamsComboBox();
+	void ReDrawActiveReferences();
 
-		MyRefine3DPanel( wxWindow* parent );
-		void SetInfo();
+	void NewRefinementPackageSelected();
 
-		void WriteInfoText(wxString text_to_write);
-		void WriteErrorText(wxString text_to_write);
-		void WriteBlueText(wxString text_to_write);
+	void OnRefinementPackageComboBox(wxCommandEvent &event);
+	void OnInputParametersComboBox(wxCommandEvent &event);
 
-		void FillRefinementPackagesComboBox();
-		void FillRunProfileComboBoxes();
-		void FillInputParamsComboBox();
-		void ReDrawActiveReferences();
-
-		void NewRefinementPackageSelected();
-
-		void OnRefinementPackageComboBox( wxCommandEvent& event );
-		void OnInputParametersComboBox( wxCommandEvent& event );
-
-		void OnOrthThreadComplete(ReturnProcessedImageEvent& my_event);
-		void OnMaskerThreadComplete(wxThreadEvent& my_event);
+	void OnOrthThreadComplete(ReturnProcessedImageEvent &my_event);
+	void OnMaskerThreadComplete(wxThreadEvent &my_event);
+	void OnGenerateMaskThreadComplete(wxThreadEvent &my_event);
 };
-
-
 
 #endif // __MyRefine3DPanel__

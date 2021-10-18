@@ -1824,6 +1824,9 @@ class Refine3DPanel : public JobPanel
 		wxCheckBox* RefineYShiftCheckBox;
 		wxCheckBox* RefineOccupanciesCheckBox;
 		wxStaticText* m_staticText202;
+		wxStaticText* UseLocalDensityWeighting;
+		wxRadioButton* LocalDensityYesRadioButton;
+		wxRadioButton* LocalDensityNoRadioButton;
 		wxStaticText* NoMovieFramesStaticText;
 		NumericTextCtrl* LowResolutionLimitTextCtrl;
 		wxStaticText* m_staticText196;

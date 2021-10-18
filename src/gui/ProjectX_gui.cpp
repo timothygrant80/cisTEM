@@ -6632,6 +6632,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	bSizer358 = new wxBoxSizer( wxHORIZONTAL );
 
 	ExpertToggleButton = new wxToggleButton( InputParamsPanel, wxID_ANY, wxT("Show Expert Options"), wxDefaultPosition, wxDefaultSize, 0 );
+	ExpertToggleButton->SetValue( true );
 	bSizer358->Add( ExpertToggleButton, 0, wxALIGN_BOTTOM|wxALIGN_CENTER|wxALL, 5 );
 
 
@@ -6762,6 +6763,23 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 
 
 	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	UseLocalDensityWeighting = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Use Local Density Weighting?"), wxDefaultPosition, wxDefaultSize, 0 );
+	UseLocalDensityWeighting->Wrap( -1 );
+	fgSizer1->Add( UseLocalDensityWeighting, 0, wxALL, 5 );
+
+	wxBoxSizer* bSizer26311;
+	bSizer26311 = new wxBoxSizer( wxHORIZONTAL );
+
+	LocalDensityYesRadioButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer26311->Add( LocalDensityYesRadioButton, 0, wxALL, 5 );
+
+	LocalDensityNoRadioButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	LocalDensityNoRadioButton->SetValue( true );
+	bSizer26311->Add( LocalDensityNoRadioButton, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( bSizer26311, 1, wxEXPAND, 5 );
 
 	NoMovieFramesStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Low-Resolution Limit (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	NoMovieFramesStaticText->Wrap( -1 );
@@ -8890,8 +8908,6 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 
 	ExpertPanel = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxSize( -1,-1 ), wxVSCROLL );
 	ExpertPanel->SetScrollRate( 5, 5 );
-	ExpertPanel->Hide();
-
 	InputSizer = new wxBoxSizer( wxVERTICAL );
 
 	wxBoxSizer* bSizer258;

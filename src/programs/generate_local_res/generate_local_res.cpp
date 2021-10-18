@@ -3,38 +3,39 @@
 class AggregatedLocalResResult
 {
 public:
-	int result_id;
-	int start_slice;
-	int end_slice;
-	int x_dimension;
-	int y_dimension;
-	int z_dimension;
-	int num_float_values; //WTW should be long?
-	int number_of_meta_data_values;
-	float pixel_size;
-	int class_number;
-	float *float_values;
+  int result_id;
+  int start_slice;
+  int end_slice;
+  int x_dimension;
+  int y_dimension;
+  int z_dimension;
+  int num_float_values; // WTW should be int64?
+  int number_of_meta_data_values;
+  float pixel_size;
+  int class_number;
+  float *float_values;
 
-	AggregatedLocalResResult();
-	~AggregatedLocalResResult();
+  AggregatedLocalResResult();
+  ~AggregatedLocalResResult();
 };
 
 WX_DECLARE_OBJARRAY(AggregatedLocalResResult, ArrayOfAggregatedLocalResResults);
 #include <wx/arrimpl.cpp> // this is a magic incantation which must be done!
 WX_DEFINE_OBJARRAY(ArrayOfAggregatedLocalResResults);
 
-class
-	Generate_Local_Res_App : public MyApp
+class Generate_Local_Res_App : public MyApp
 {
 public:
-	bool DoCalculation();
-	void DoInteractiveUserInput();
-	void MasterHandleProgramDefinedResult(float *result_array, long array_size, int result_number, int number_of_expected_results);
+  bool DoCalculation();
+  void DoInteractiveUserInput();
+  void MasterHandleProgramDefinedResult(float *result_array, int64 array_size,
+                                        int result_number,
+                                        int number_of_expected_results);
 
-	wxString output_reconstruction;
-	wxString input_original_volume;
+  wxString output_reconstruction;
+  wxString input_original_volume;
 
-	ArrayOfAggregatedLocalResResults aggregated_results;
+  ArrayOfAggregatedLocalResResults aggregated_results;
 
 private:
 };
@@ -43,518 +44,676 @@ IMPLEMENT_APP(Generate_Local_Res_App)
 
 void Generate_Local_Res_App::DoInteractiveUserInput()
 {
-	int number_of_threads;
+  int number_of_threads;
 
-	UserInput *my_input = new UserInput("Generate_Local_Res", 1.01);
+  UserInput *my_input = new UserInput("Generate_Local_Res", 1.01);
 
-	wxString half_map_1 = my_input->GetFilenameFromUser("Half Map 1", "The first output 3D reconstruction, calculated from half the data", "my_reconstruction_1.mrc", false);
-	wxString half_map_2 = my_input->GetFilenameFromUser("Half Map 2", "The second output 3D reconstruction, calculated from half the data", "my_reconstruction_2.mrc", false);
-	wxString output_reconstruction = my_input->GetFilenameFromUser("Output reconstruction", "The final 3D reconstruction, containing all data", "my_reconstruction.mrc", false);
-	wxString mask_image = my_input->GetFilenameFromUser("Mask Image", "The filename of the mask", "mask_image.mrc", false);
-	int first_slice = my_input->GetIntFromUser("Starting Slice", "The slice to start from", "1", false);
-	int last_slice = my_input->GetIntFromUser("Last Slice", "The slice to end with", "1", false);
-	float inner_mask_radius = my_input->GetFloatFromUser("Inner mask radius (A)", "Radius of a circular mask to be applied to the center of the final reconstruction in Angstroms", "0.0", 0.0);
-	float outer_mask_radius = my_input->GetFloatFromUser("Outer mask radius (A)", "Radius of a circular mask to be applied to the final reconstruction in Angstroms", "100.0", inner_mask_radius);
-	float molecular_mass_kDa = my_input->GetFloatFromUser("Molecular mass of particle (kDa)", "Total molecular mass of the particle to be reconstructed in kilo Daltons", "1000.0", 0.0);
-	wxString symmetry = my_input->GetSymmetryFromUser("Particle symmetry", "The symmetry imposed on the input reconstructions", "C1");
-	float pixel_size = my_input->GetFloatFromUser("Pixel size", "In Angstroms", "1.0", 0.0);
+  wxString half_map_1 = my_input->GetFilenameFromUser(
+      "Half Map 1",
+      "The first output 3D reconstruction, calculated from half the data",
+      "my_reconstruction_1.mrc", false);
+  wxString half_map_2 = my_input->GetFilenameFromUser(
+      "Half Map 2",
+      "The second output 3D reconstruction, calculated from half the data",
+      "my_reconstruction_2.mrc", false);
+  wxString output_reconstruction = my_input->GetFilenameFromUser(
+      "Output reconstruction",
+      "The final 3D reconstruction, containing all data",
+      "my_reconstruction.mrc", false);
+  wxString mask_image = my_input->GetFilenameFromUser(
+      "Mask Image", "The filename of the mask", "mask_image.mrc", false);
+  int first_slice = my_input->GetIntFromUser(
+      "Starting Slice", "The slice to start from", "1", false);
+  int last_slice = my_input->GetIntFromUser(
+      "Last Slice", "The slice to end with", "1", false);
+  float inner_mask_radius = my_input->GetFloatFromUser(
+      "Inner mask radius (A)",
+      "Radius of a circular mask to be applied to the center of the final "
+      "reconstruction in Angstroms",
+      "0.0", 0.0);
+  float outer_mask_radius =
+      my_input->GetFloatFromUser("Outer mask radius (A)",
+                                 "Radius of a circular mask to be applied to "
+                                 "the final reconstruction in Angstroms",
+                                 "100.0", inner_mask_radius);
+  float molecular_mass_kDa =
+      my_input->GetFloatFromUser("Molecular mass of particle (kDa)",
+                                 "Total molecular mass of the particle to be "
+                                 "reconstructed in kilo Daltons",
+                                 "1000.0", 0.0);
+  wxString symmetry = my_input->GetSymmetryFromUser(
+      "Particle symmetry", "The symmetry imposed on the input reconstructions",
+      "C1");
+  float pixel_size =
+      my_input->GetFloatFromUser("Pixel size", "In Angstroms", "1.0", 0.0);
 
 #ifdef _OPENMP
-	number_of_threads = my_input->GetIntFromUser("Max. threads to use for calculation", "When threading, what is the max threads to run", "1", 1);
+  number_of_threads = my_input->GetIntFromUser(
+      "Max. threads to use for calculation",
+      "When threading, what is the max threads to run", "1", 1);
 #else
-	number_of_threads = 1;
+  number_of_threads = 1;
 #endif
 
-	float measured_global_resolution = my_input->GetFloatFromUser("Measured Global Resolution", "In Angstroms", "5.0", 0.0);
-	int class_number = my_input->GetIntFromUser("Class Number", "The Class Id of the input volume", "1", false);
-	wxString input_original_volume = my_input->GetFilenameFromUser("Input Volume", "The input volume", "my_input_volume.mrc", false);
+  float measured_global_resolution = my_input->GetFloatFromUser(
+      "Measured Global Resolution", "In Angstroms", "5.0", 0.0);
+  int class_number = my_input->GetIntFromUser(
+      "Class Number", "The Class Id of the input volume", "1", false);
+  wxString input_original_volume = my_input->GetFilenameFromUser(
+      "Input Volume", "The input volume", "my_input_volume.mrc", false);
 
-	int image_number_for_gui = 0;
-	int number_of_jobs_per_image_in_gui = 0;
+  int image_number_for_gui = 0;
+  int number_of_jobs_per_image_in_gui = 0;
+  int number_of_rounds_run = 0;
+  wxString directory_for_collated_results = "/dev/null/";
+  wxString result_filename = "/dev/null"; // shouldn't be used in interactive
 
-	wxString directory_for_collated_results = "/dev/null/";
-	wxString result_filename = "/dev/null"; // shouldn't be used in interactive
+  delete my_input;
 
-	delete my_input;
-
-	//TODO change autorefine3d panel to match
-	my_current_job.ManualSetArguments("ttttiiffftfifiittit", half_map_1.ToUTF8().data(),
-									  half_map_2.ToUTF8().data(),
-									  output_reconstruction.ToUTF8().data(),
-									  mask_image.ToUTF8().data(),
-									  first_slice,
-									  last_slice,
-									  inner_mask_radius,
-									  outer_mask_radius,
-									  molecular_mass_kDa,
-									  symmetry.ToUTF8().data(),
-									  pixel_size,
-									  number_of_threads,
-									  measured_global_resolution,
-									  image_number_for_gui,
-									  number_of_jobs_per_image_in_gui,
-									  directory_for_collated_results.ToUTF8().data(),
-									  result_filename.ToUTF8().data(),
-									  class_number,
-									  input_original_volume.ToUTF8().data());
+  my_current_job.ManualSetArguments(
+      "ttttiiffftfifiittiti", half_map_1.ToUTF8().data(),
+      half_map_2.ToUTF8().data(), output_reconstruction.ToUTF8().data(),
+      mask_image.ToUTF8().data(), first_slice, last_slice, inner_mask_radius,
+      outer_mask_radius, molecular_mass_kDa, symmetry.ToUTF8().data(),
+      pixel_size, number_of_threads, measured_global_resolution,
+      image_number_for_gui, number_of_jobs_per_image_in_gui,
+      directory_for_collated_results.ToUTF8().data(),
+      result_filename.ToUTF8().data(), class_number,
+      input_original_volume.ToUTF8().data(), number_of_rounds_run);
 }
 
 bool Generate_Local_Res_App::DoCalculation()
 {
-	wxString half_map_1 = my_current_job.arguments[0].ReturnStringArgument();
-	wxString half_map_2 = my_current_job.arguments[1].ReturnStringArgument();
-	output_reconstruction = my_current_job.arguments[2].ReturnStringArgument();
-	wxString mask_image_name = my_current_job.arguments[3].ReturnStringArgument();
-	int first_slice = my_current_job.arguments[4].ReturnIntegerArgument();
-	int last_slice = my_current_job.arguments[5].ReturnIntegerArgument();
-	float inner_mask_radius = my_current_job.arguments[6].ReturnFloatArgument();
-	float outer_mask_radius = my_current_job.arguments[7].ReturnFloatArgument();
-	float molecular_mass_kDa = my_current_job.arguments[8].ReturnFloatArgument();
-	wxString symmetry = my_current_job.arguments[9].ReturnStringArgument();
-	float original_pixel_size = my_current_job.arguments[10].ReturnFloatArgument();
-	int num_threads = my_current_job.arguments[11].ReturnIntegerArgument();
-	float measured_global_resolution = my_current_job.arguments[12].ReturnFloatArgument();
-	int image_number_for_gui = my_current_job.arguments[13].ReturnIntegerArgument();
-	int number_of_jobs_per_image_in_gui = my_current_job.arguments[14].ReturnIntegerArgument();
-	wxString directory_for_collated_results = my_current_job.arguments[15].ReturnStringArgument();
-	wxString result_filename = my_current_job.arguments[16].ReturnStringArgument();
-	int class_number = my_current_job.arguments[17].ReturnIntegerArgument();
-	input_original_volume = my_current_job.arguments[18].ReturnStringArgument();
+  wxString half_map_1 = my_current_job.arguments[0].ReturnStringArgument();
+  wxString half_map_2 = my_current_job.arguments[1].ReturnStringArgument();
+  output_reconstruction = my_current_job.arguments[2].ReturnStringArgument();
+  wxString mask_image_name = my_current_job.arguments[3].ReturnStringArgument();
+  int first_slice = my_current_job.arguments[4].ReturnIntegerArgument();
+  int last_slice = my_current_job.arguments[5].ReturnIntegerArgument();
+  float inner_mask_radius = my_current_job.arguments[6].ReturnFloatArgument();
+  float outer_mask_radius = my_current_job.arguments[7].ReturnFloatArgument();
+  float molecular_mass_kDa = my_current_job.arguments[8].ReturnFloatArgument();
+  wxString symmetry = my_current_job.arguments[9].ReturnStringArgument();
+  float original_pixel_size =
+      my_current_job.arguments[10].ReturnFloatArgument();
+  int num_threads = my_current_job.arguments[11].ReturnIntegerArgument();
+  float measured_global_resolution =
+      my_current_job.arguments[12].ReturnFloatArgument();
+  int image_number_for_gui =
+      my_current_job.arguments[13].ReturnIntegerArgument();
+  int number_of_jobs_per_image_in_gui =
+      my_current_job.arguments[14].ReturnIntegerArgument();
+  wxString directory_for_collated_results =
+      my_current_job.arguments[15].ReturnStringArgument();
+  wxString result_filename =
+      my_current_job.arguments[16].ReturnStringArgument();
+  int class_number = my_current_job.arguments[17].ReturnIntegerArgument();
+  input_original_volume = my_current_job.arguments[18].ReturnStringArgument();
+  int number_of_rounds_run =
+      my_current_job.arguments[19].ReturnIntegerArgument();
 
-	if (is_running_locally == false)
-		num_threads = number_of_threads_requested_on_command_line;
+  if (is_running_locally == false)
+    num_threads = number_of_threads_requested_on_command_line;
 
-	int max_width = ceil(18 / original_pixel_size);
-	int num_slices = 0;
+  int max_width = ceil(18 / original_pixel_size);
+  int num_slices = 0;
 
-	ImageFile half_map_1_imagefile(half_map_1.ToStdString());
-	ImageFile half_map_2_imagefile(half_map_2.ToStdString());
-	ImageFile mask_image_imagefile(mask_image_name.ToStdString());
-	int num_slices_half_map_1 = half_map_1_imagefile.ReturnNumberOfSlices();
+  ImageFile half_map_1_imagefile(half_map_1.ToStdString());
+  ImageFile half_map_2_imagefile(half_map_2.ToStdString());
+  ImageFile mask_image_imagefile(mask_image_name.ToStdString());
+  int num_slices_half_map_1 = half_map_1_imagefile.ReturnNumberOfSlices();
 
-	//read slices (keeping in mind window)
-	Image half_map_1_image;
-	Image half_map_2_image;
-	Image mask_image;
+  // read slices (keeping in mind window)
+  Image half_map_1_image;
+  Image half_map_2_image;
+  Image mask_image;
 
-	int first_used_slice = -1;
-	int last_used_slice = -1;
+  int first_used_slice = -1;
+  int last_used_slice = -1;
 
-	if (first_slice - max_width < 1)
-	{
-		if (last_slice + max_width > num_slices_half_map_1)
-		{
+  if (first_slice - max_width < 1)
+  {
+    if (last_slice + max_width > num_slices_half_map_1)
+    {
+      first_used_slice = 1;
+      last_used_slice = num_slices_half_map_1;
+      half_map_1_image.ReadSlices(&half_map_1_imagefile, 1,
+                                  num_slices_half_map_1);
+      half_map_2_image.ReadSlices(&half_map_2_imagefile, 1,
+                                  num_slices_half_map_1);
+      mask_image.ReadSlices(&mask_image_imagefile, 1, num_slices_half_map_1);
+      num_slices = num_slices_half_map_1;
+    }
+    else
+    {
+      first_used_slice = 1;
+      last_used_slice = last_slice + max_width;
+      half_map_1_image.ReadSlices(&half_map_1_imagefile, 1,
+                                  last_slice + max_width);
+      half_map_2_image.ReadSlices(&half_map_2_imagefile, 1,
+                                  last_slice + max_width);
+      mask_image.ReadSlices(&mask_image_imagefile, 1, last_slice + max_width);
+      num_slices = last_slice + max_width;
+    }
+  }
+  else
+  {
+    if (last_slice + max_width > num_slices_half_map_1)
+    {
+      first_used_slice = first_slice - max_width;
+      last_used_slice = num_slices_half_map_1;
+      half_map_1_image.ReadSlices(&half_map_1_imagefile,
+                                  first_slice - max_width,
+                                  num_slices_half_map_1);
+      half_map_2_image.ReadSlices(&half_map_2_imagefile,
+                                  first_slice - max_width,
+                                  num_slices_half_map_1);
+      mask_image.ReadSlices(&mask_image_imagefile, first_slice - max_width,
+                            num_slices_half_map_1);
+      num_slices = num_slices_half_map_1 - (first_slice - max_width) + 1;
+    }
+    else
+    {
+      first_used_slice = first_slice - max_width;
+      last_used_slice = last_slice + max_width;
+      half_map_1_image.ReadSlices(&half_map_1_imagefile,
+                                  first_slice - max_width,
+                                  last_slice + max_width);
+      half_map_2_image.ReadSlices(&half_map_2_imagefile,
+                                  first_slice - max_width,
+                                  last_slice + max_width);
+      mask_image.ReadSlices(&mask_image_imagefile, first_slice - max_width,
+                            last_slice + max_width);
+      num_slices = last_used_slice - (first_used_slice - 1);
+    }
+  }
 
-			first_used_slice = 1;
-			last_used_slice = num_slices_half_map_1;
-			half_map_1_image.ReadSlices(&half_map_1_imagefile, 1, num_slices_half_map_1);
-			half_map_2_image.ReadSlices(&half_map_2_imagefile, 1, num_slices_half_map_1);
-			mask_image.ReadSlices(&mask_image_imagefile, 1, num_slices_half_map_1);
-			num_slices = num_slices_half_map_1;
-		}
-		else
-		{
+  Image combined_images(half_map_1_image);
+  combined_images.AddImage(&half_map_2_image);
+  combined_images.DivideByConstant(2);
 
-			first_used_slice = 1;
-			last_used_slice = last_slice + max_width;
-			half_map_1_image.ReadSlices(&half_map_1_imagefile, 1, last_slice + max_width);
-			half_map_2_image.ReadSlices(&half_map_2_imagefile, 1, last_slice + max_width);
-			mask_image.ReadSlices(&mask_image_imagefile, 1, last_slice + max_width);
-			num_slices = last_slice + max_width;
-		}
-	}
-	else
-	{
-		if (last_slice + max_width > num_slices_half_map_1)
-		{
+  combined_images.WriteSlicesAndFillHeader(
+      wxString::Format(wxT("data/wtwoods/compare_with_devel/new_filtering/"
+                           "inital_local_filter_volume_%i.mrc"),
+                       number_of_rounds_run)
+          .ToStdString(),
+      original_pixel_size);
 
-			first_used_slice = first_slice - max_width;
-			last_used_slice = num_slices_half_map_1;
-			half_map_1_image.ReadSlices(&half_map_1_imagefile, first_slice - max_width, num_slices_half_map_1);
-			half_map_2_image.ReadSlices(&half_map_2_imagefile, first_slice - max_width, num_slices_half_map_1);
-			mask_image.ReadSlices(&mask_image_imagefile, first_slice - max_width, num_slices_half_map_1);
-			num_slices = num_slices_half_map_1 - (first_slice - max_width) + 1;
-		}
-		else
-		{
+  if (is_running_locally == false)
+    num_threads = number_of_threads_requested_on_command_line;
 
-			first_used_slice = first_slice - max_width;
-			last_used_slice = last_slice + max_width;
-			half_map_1_image.ReadSlices(&half_map_1_imagefile, first_slice - max_width, last_slice + max_width);
-			half_map_2_image.ReadSlices(&half_map_2_imagefile, first_slice - max_width, last_slice + max_width);
-			mask_image.ReadSlices(&mask_image_imagefile, first_slice - max_width, last_slice + max_width);
-			num_slices = last_used_slice - (first_used_slice - 1);
-		}
-	}
+  if (num_threads > num_slices)
+  {
+    num_threads = num_slices;
+  }
 
-	//combie the two image files (need to do this in gui for correct mask)
-	Image combined_images(half_map_1_image);
-	combined_images.AddImage(&half_map_2_image);
-	combined_images.DivideByConstant(2);
+  // initialize images
+  Image local_resolution_volume;
+  local_resolution_volume.Allocate(combined_images.logical_x_dimension,
+                                   combined_images.logical_y_dimension,
+                                   combined_images.logical_z_dimension);
+  local_resolution_volume.SetToConstant(0.0f);
 
-	//float mask_falloff = 10.0;
+  Image local_resolution_volume_all;
+  local_resolution_volume_all.Allocate(combined_images.logical_x_dimension,
+                                       combined_images.logical_y_dimension,
+                                       combined_images.logical_z_dimension);
+  local_resolution_volume_all.SetToConstant(0.0f);
 
-	if (is_running_locally == false)
-		num_threads = number_of_threads_requested_on_command_line;
+  Image original_volume;
+  original_volume.CopyFrom(&combined_images);
 
-	if (num_threads > num_slices)
-	{
-		num_threads = num_slices;
-	}
+  // declare and initialize constants and other variables
+  int box_size;
+  box_size = 18.0f / original_pixel_size;
+  const float threshold_snr = 1;
+  const float threshold_confidence = 2.0;
+  float fixed_fsc_threshold = .9;
+  const bool use_fixed_threshold = true;
+  int number_averaged = 0;
+  // note that when set here it does not take into account current res
+  float alignment_res = 5.0f;
 
-	//initialize images
-	Image local_resolution_volume;
-	local_resolution_volume.Allocate(combined_images.logical_x_dimension, combined_images.logical_y_dimension, combined_images.logical_z_dimension);
-	local_resolution_volume.SetToConstant(0.0f);
+  int total_used_slices = last_used_slice - (first_used_slice - 1);
+  float slices_per_thread = total_used_slices / static_cast<float>(num_threads);
 
-	Image local_resolution_volume_all;
-	local_resolution_volume_all.Allocate(combined_images.logical_x_dimension, combined_images.logical_y_dimension, combined_images.logical_z_dimension);
-	local_resolution_volume_all.SetToConstant(0.0f);
+  for (float current_res = 12.0f; current_res < 43.0f; current_res += 3.0f)
+  {
+    // float current_res = 24;
+    box_size = current_res / original_pixel_size;
 
-	Image original_volume;
-	original_volume.CopyFrom(&combined_images);
+    if (alignment_res > 15)
+      fixed_fsc_threshold = 0.75;
+    else if (alignment_res > 8)
+      fixed_fsc_threshold = 0.85;
+    else if (alignment_res > 6)
+      fixed_fsc_threshold = 0.9;
+    else
+      fixed_fsc_threshold = 0.95f;
 
-	//declare and initialize constants and other variables
-	int box_size;
-	box_size = 18.0f / original_pixel_size;
-	const float threshold_snr = 1;
-	const float threshold_confidence = 2.0;
-	float fixed_fsc_threshold = .9;
-	const bool use_fixed_threshold = true;
-	int number_averaged = 0;
-	float alignment_res = 5.0f;
-
-	int total_used_slices = last_used_slice - (first_used_slice - 1);
-	float slices_per_thread = total_used_slices / float(num_threads);
-
-	for (float current_res = 18.0f; current_res < 37.0f; current_res += 6.0f)
-	{
-		//	float current_res = 24;
-		box_size = current_res / original_pixel_size;
-
-		if (alignment_res > 15)
-			fixed_fsc_threshold = 0.75;
-		else if (alignment_res > 8)
-			fixed_fsc_threshold = 0.85;
-		else if (alignment_res > 6)
-			fixed_fsc_threshold = 0.9;
-		else
-			fixed_fsc_threshold = 0.95f;
-
-		local_resolution_volume.SetToConstant(0.0f);
+    local_resolution_volume.SetToConstant(0.0f);
 
 #pragma omp parallel default(shared) num_threads(num_threads)
-		{
+    {
+      int first_slice_p =
+          myroundint(ReturnThreadNumberOfCurrentThread() * slices_per_thread) +
+          1;
+      int last_slice_p = myroundint((ReturnThreadNumberOfCurrentThread() + 1) *
+                                    slices_per_thread);
 
-			int first_slice_p = myroundint(ReturnThreadNumberOfCurrentThread() * slices_per_thread) + 1;
-			int last_slice_p = myroundint((ReturnThreadNumberOfCurrentThread() + 1) * slices_per_thread);
+      Image local_resolution_volume_local;
+      Image input_volume_one_local;
+      Image input_volume_two_local;
 
-			//int first_slice_p = (first_slice - 1) + myroundint(ReturnThreadNumberOfCurrentThread() * slices_per_thread) + 1;
-			//int last_slice_p = (first_slice - 1) + myroundint((ReturnThreadNumberOfCurrentThread() + 1) * slices_per_thread);
+      input_volume_one_local.CopyFrom(&half_map_1_image);
+      input_volume_two_local.CopyFrom(&half_map_2_image);
 
-			//wxPrintf("WTW DEBUG FIRST SLICE P:%i:LAST SLICE P:%i:\n", first_slice_p, last_slice_p);
+      local_resolution_volume_local.Allocate(
+          combined_images.logical_x_dimension,
+          combined_images.logical_y_dimension,
+          combined_images.logical_z_dimension);
+      local_resolution_volume_local.SetToConstant(0.0f);
 
-			Image local_resolution_volume_local;
-			Image input_volume_one_local;
-			Image input_volume_two_local;
-
-			input_volume_one_local.CopyFrom(&half_map_1_image);
-			input_volume_two_local.CopyFrom(&half_map_2_image);
-
-			local_resolution_volume_local.Allocate(combined_images.logical_x_dimension, combined_images.logical_y_dimension, combined_images.logical_z_dimension);
-			local_resolution_volume_local.SetToConstant(0.0f);
-
-			LocalResolutionEstimator *estimator = new LocalResolutionEstimator();
-			estimator->SetAllUserParameters(&input_volume_one_local, &input_volume_two_local, &mask_image, first_slice_p, last_slice_p, 1, original_pixel_size, box_size, threshold_snr, threshold_confidence, use_fixed_threshold, fixed_fsc_threshold, symmetry, true, 2);
-			estimator->EstimateLocalResolution(&local_resolution_volume_local);
-			delete estimator;
+      LocalResolutionEstimator *estimator = new LocalResolutionEstimator();
+      estimator->SetAllUserParameters(
+          &input_volume_one_local, &input_volume_two_local, &mask_image,
+          first_slice_p, last_slice_p, 1, original_pixel_size, box_size,
+          threshold_snr, threshold_confidence, use_fixed_threshold,
+          fixed_fsc_threshold, symmetry, true, 2);
+      estimator->EstimateLocalResolution(&local_resolution_volume_local);
+      delete estimator;
 
 #pragma omp critical
-			{
-				for (long pixel_counter = 0; pixel_counter < local_resolution_volume.number_of_real_space_pixels; pixel_counter++)
-				{
-					if (local_resolution_volume_local.real_values[pixel_counter] != 0.0f)
-						local_resolution_volume.real_values[pixel_counter] = local_resolution_volume_local.real_values[pixel_counter];
-				}
-			}
-		}
+      {
+        for (int64 pixel_counter = 0;
+             pixel_counter <
+             local_resolution_volume.number_of_real_space_pixels;
+             pixel_counter++)
+        {
+          if (local_resolution_volume_local.real_values[pixel_counter] != 0.0f)
+            local_resolution_volume.real_values[pixel_counter] =
+                local_resolution_volume_local.real_values[pixel_counter];
+        }
+      }
+    }
 
-		float max_res = local_resolution_volume.ReturnMaximumValue();
-		MyPrintfRed("Max_Res: %f", max_res);
+    float max_res = local_resolution_volume.ReturnMaximumValue();
+    MyPrintfRed("Max_Res: %f", max_res);
 
-		//WTW debug
-		//local_resolution_volume.WriteSlicesAndFillHeader((wxString::Format("/data/wtwoods/test_local_filtering/local_res_vol_%f.mrc", current_res)).ToStdString(), original_pixel_size);
-		//end debug
+    for (int64 pixel_counter = 0;
+         pixel_counter < local_resolution_volume.real_memory_allocated;
+         pixel_counter++)
+    {
+      if (local_resolution_volume.real_values[pixel_counter] < 0.5f)
+        local_resolution_volume.real_values[pixel_counter] = max_res;
+    }
 
-		for (long pixel_counter = 0; pixel_counter < local_resolution_volume.real_memory_allocated; pixel_counter++)
-		{
-			if (local_resolution_volume.real_values[pixel_counter] < 0.5f)
-				local_resolution_volume.real_values[pixel_counter] = max_res;
-		}
+    local_resolution_volume_all.AddImage(&local_resolution_volume);
+    number_averaged++;
+  }
 
-		local_resolution_volume_all.AddImage(&local_resolution_volume);
-		number_averaged++;
-	}
+  // divide and copy
 
-	// divide and copy
+  local_resolution_volume_all.DivideByConstant(number_averaged);
+  local_resolution_volume.CopyFrom(&local_resolution_volume_all);
 
-	local_resolution_volume_all.DivideByConstant(number_averaged);
-	local_resolution_volume.CopyFrom(&local_resolution_volume_all);
+  // scaling code
 
-	//WTW here lol
-	//local_resolution_volume.WriteSlicesAndFillHeader("/data/wtwoods/test_local_filtering/local_res_vol_test_before_scaling.mrc", original_pixel_size);
+  int number_of_top_pixels_to_use =
+      local_resolution_volume.number_of_real_space_pixels * 0.00001;
+  if (number_of_top_pixels_to_use < 50)
+    number_of_top_pixels_to_use = 50;
 
-	//scaling code
+  float highest_resolution =
+      local_resolution_volume.ReturnAverageOfMinN(number_of_top_pixels_to_use);
+  // measured_global_resolution =
+  // resolution_statistics->ReturnEstimatedResolution(true); //arg measured
+  // global res
 
-	int number_of_top_pixels_to_use = local_resolution_volume.number_of_real_space_pixels * 0.00001;
-	if (number_of_top_pixels_to_use < 50)
-		number_of_top_pixels_to_use = 50;
+  float average_resolution = 0.0f;
+  int64 voxels_in_the_mask = 0;
 
-	float highest_resolution = local_resolution_volume.ReturnAverageOfMinN(number_of_top_pixels_to_use);
-	// measured_global_resolution = resolution_statistics->ReturnEstimatedResolution(true); //arg measured global res
+  int i, j, k;
+  int64 pixel_counter = 0;
 
-	float average_resolution = 0.0f;
-	long voxels_in_the_mask = 0;
+  for (k = 0; k < local_resolution_volume.logical_z_dimension; k++)
+  {
+    for (j = 0; j < local_resolution_volume.logical_y_dimension; j++)
+    {
+      for (i = 0; i < local_resolution_volume.logical_x_dimension; i++)
+      {
+        if (mask_image.real_values[pixel_counter] == 1.0f)
+        {
+          // if (local_resolution_volume.real_values[pixel_counter] <
+          // highest_resolution) highest_resolution =
+          // local_resolution_volume.real_values[pixel_counter];
+          average_resolution +=
+              local_resolution_volume.real_values[pixel_counter];
+          voxels_in_the_mask++;
+        }
 
-	int i, j, k;
-	long pixel_counter = 0;
+        pixel_counter++;
+      }
+      pixel_counter += local_resolution_volume.padding_jump_value;
+    }
+  }
 
-	for (k = 0; k < local_resolution_volume.logical_z_dimension; k++)
-	{
-		for (j = 0; j < local_resolution_volume.logical_y_dimension; j++)
-		{
-			for (i = 0; i < local_resolution_volume.logical_x_dimension; i++)
-			{
-				if (mask_image.real_values[pixel_counter] == 1.0f)
-				{
-					//if (local_resolution_volume.real_values[pixel_counter] < highest_resolution) highest_resolution = local_resolution_volume.real_values[pixel_counter];
-					average_resolution += local_resolution_volume.real_values[pixel_counter];
-					voxels_in_the_mask++;
-				}
+  average_resolution /= voxels_in_the_mask;
+  wxPrintf(
+      "Local high / Measured Average / Local Average = %.2f / %.2f / %.2f\n",
+      highest_resolution, measured_global_resolution, average_resolution);
 
-				pixel_counter++;
-			}
-			pixel_counter += local_resolution_volume.padding_jump_value;
-		}
-	}
+  if (highest_resolution != 8.0f && measured_global_resolution != 8.0f)
+  {
+    float scaler =
+        (8.0f - measured_global_resolution) / (8.0f - highest_resolution);
 
-	average_resolution /= voxels_in_the_mask;
-	wxPrintf("Local high / Measured Average / Local Average = %.2f / %.2f / %.2f\n", highest_resolution, measured_global_resolution, average_resolution);
+    pixel_counter = 0;
+    for (k = 0; k < local_resolution_volume.logical_z_dimension; k++)
+    {
+      for (j = 0; j < local_resolution_volume.logical_y_dimension; j++)
+      {
+        for (i = 0; i < local_resolution_volume.logical_x_dimension; i++)
+        {
+          if (mask_image.real_values[pixel_counter] == 1.0f)
+          {
+            if (local_resolution_volume.real_values[pixel_counter] < 8.0f)
+            {
+              if (scaler > 1.0f)
+                local_resolution_volume.real_values[pixel_counter] =
+                    ((local_resolution_volume.real_values[pixel_counter] -
+                      highest_resolution) *
+                     scaler) +
+                    measured_global_resolution;
+              if (local_resolution_volume.real_values[pixel_counter] < 5.0f)
+              {
+                local_resolution_volume.real_values[pixel_counter] =
+                    measured_global_resolution;
+              }
+            }
+          }
 
-	if (highest_resolution != 8.0f && measured_global_resolution != 8.0f)
-	{
-		float scaler = (8.0f - measured_global_resolution) / (8.0f - highest_resolution);
+          pixel_counter++;
+        }
+        pixel_counter += local_resolution_volume.padding_jump_value;
+      }
+    }
+  }
 
-		pixel_counter = 0;
-		for (k = 0; k < local_resolution_volume.logical_z_dimension; k++)
-		{
-			for (j = 0; j < local_resolution_volume.logical_y_dimension; j++)
-			{
-				for (i = 0; i < local_resolution_volume.logical_x_dimension; i++)
-				{
-					if (mask_image.real_values[pixel_counter] == 1.0f)
-					{
-						if (local_resolution_volume.real_values[pixel_counter] < 8.0f)
-						{
-							if (scaler > 1.0f)
-								local_resolution_volume.real_values[pixel_counter] = ((local_resolution_volume.real_values[pixel_counter] - highest_resolution) * scaler) + measured_global_resolution;
-							if (local_resolution_volume.real_values[pixel_counter] < 5.0f)
-							{
-								local_resolution_volume.real_values[pixel_counter] = measured_global_resolution;
-							}
-						}
-					}
+  local_resolution_volume.SetMaximumValue(20.0f);
 
-					pixel_counter++;
-				}
-				pixel_counter += local_resolution_volume.padding_jump_value;
-			}
-		}
-	}
+  local_resolution_volume.WriteSlicesAndFillHeader(
+      wxString::Format(wxT("data/wtwoods/compare_with_devel/new_filtering/"
+                           "test_result_small_mem_lrv_%i.mrc"),
+                       number_of_rounds_run)
+          .ToStdString(),
+      original_pixel_size);
+  mask_image.WriteSlicesAndFillHeader(
+      wxString::Format(wxT("data/wtwoods/compare_with_devel/new_filtering/"
+                           "test_result_small_mem_mask_%i.mrc"),
+                       number_of_rounds_run)
+          .ToStdString(),
+      original_pixel_size);
 
-	local_resolution_volume.SetMaximumValue(20.0f);
+  int number_of_levels = box_size;
+  combined_images.ApplyLocalResolutionFilter(
+      local_resolution_volume, original_pixel_size, number_of_levels);
 
-	//local_resolution_volume.WriteSlicesAndFillHeader(output_reconstruction.ToStdString(), original_pixel_size);
+  for (int64 address = 0; address < combined_images.real_memory_allocated;
+       address++)
+  {
+    // if (size_image.real_values[address] == 0.0f)
+    // output_3d.density_map->real_values[address] = original_average_value;
 
-	//local_resolution_volume.WriteSlicesAndFillHeader("/data/wtwoods/test_local_filtering/local_res_vol_test_after_scaling.mrc", original_pixel_size);
+    // go back to original density if high res...
 
-	int number_of_levels = box_size;
-	combined_images.ApplyLocalResolutionFilter(local_resolution_volume, original_pixel_size, number_of_levels);
+    if (local_resolution_volume.real_values[address] <=
+        measured_global_resolution + (measured_global_resolution * 0.1))
+    {
+      combined_images.real_values[address] =
+          original_volume.real_values[address];
+    }
+  }
 
-	for (long address = 0; address < combined_images.real_memory_allocated; address++)
-	{
-		//	if (size_image.real_values[address] == 0.0f) output_3d.density_map->real_values[address] = original_average_value;
+  // output_3d.density_map->SetMinimumValue(original_average_value);
+  combined_images.CosineMask(outer_mask_radius / original_pixel_size, 1.0,
+                             false, true, 0.0);
 
-		// go back to original density if high res..
+  int number_of_meta_data_values = 10;
+  int num_slices_for_results = last_slice - (first_slice - 1);
+  int64 number_of_valid_floats =
+      num_slices_for_results * (combined_images.real_memory_allocated /
+                                combined_images.logical_z_dimension);
+  int64 offest_to_valid_values = (first_slice - first_used_slice) *
+                                 (combined_images.real_memory_allocated /
+                                  combined_images.logical_z_dimension);
+  int64 number_of_result_floats =
+      number_of_meta_data_values + number_of_valid_floats;
+  float *result = new float[number_of_result_floats];
 
-		if (local_resolution_volume.real_values[address] <= measured_global_resolution + (measured_global_resolution * 0.1))
-		{
-			combined_images.real_values[address] = original_volume.real_values[address];
-		}
-	}
+  result[0] = first_slice;
+  result[1] = last_slice;
+  result[2] = combined_images.logical_x_dimension;
+  result[3] = combined_images.logical_y_dimension;
+  result[4] = num_slices_for_results;
+  result[5] = number_of_result_floats; // int64 to float?
+  result[6] = number_of_meta_data_values;
+  result[7] = original_pixel_size;
+  result[8] = class_number;
+  result[9] = number_of_rounds_run;
 
-	//output_3d.density_map->SetMinimumValue(original_average_value);
-	combined_images.CosineMask(outer_mask_radius / original_pixel_size, 1.0, false, true, 0.0);
+  for (int result_array_counter = 0;
+       result_array_counter < number_of_valid_floats; result_array_counter++)
+  {
+    result[result_array_counter + number_of_meta_data_values] =
+        combined_images
+            .real_values[offest_to_valid_values + result_array_counter];
+  }
 
-	int number_of_meta_data_values = 9;
-	int num_slices_for_results = last_slice - (first_slice - 1);
-	long number_of_valid_floats = num_slices_for_results * (combined_images.real_memory_allocated / combined_images.logical_z_dimension);
-	long offest_to_valid_values = (first_slice - first_used_slice) * (combined_images.real_memory_allocated / combined_images.logical_z_dimension);
-	long number_of_result_floats = number_of_meta_data_values + number_of_valid_floats;
-	float *result = new float[number_of_result_floats];
+  // //WTW debug
+  // Image result_image;
+  // result_image.Allocate(combined_images.logical_x_dimension,
+  // combined_images.logical_y_dimension, num_slices_for_results, true, true);
 
-	MyDebugPrint("Number of Floats:%li:Combined Images Real Mem Allocated:%li:\n", number_of_result_floats, combined_images.real_memory_allocated);
+  // for (int result_array_counter = 0; result_array_counter <
+  // number_of_valid_floats; result_array_counter++)
+  // {
+  //    result_image.real_values[result_array_counter] =
+  // combined_images.real_values[offest_to_valid_values + result_array_counter];
+  // }
 
-	result[0] = first_slice;
-	result[1] = last_slice;
-	result[2] = combined_images.logical_x_dimension;
-	result[3] = combined_images.logical_y_dimension;
-	result[4] = num_slices_for_results;
-	result[5] = number_of_result_floats; //long to float?
-	result[6] = number_of_meta_data_values;
-	result[7] = original_pixel_size;
-	result[8] = class_number;
+  // MyDebugPrint("First Slice:%i:LastSlice:%i:\n", first_slice, last_slice);
+  // MyDebugPrint("num_slices_for_results:%i:combined_images.logical_z_dimension:%i:\n",
+  // num_slices_for_results, combined_images.logical_z_dimension);
+  // MyDebugPrint("DEBUG MAX WIDTH:%i:\n", max_width);
+  // MyDebugPrint("DEBUG Offset to valid
+  // values:%li:first_slice:%i:first_used_slice:%i:\n", offest_to_valid_values,
+  // first_slice, first_used_slice);
+  // combined_images.WriteSlicesAndFillHeader("/data/wtwoods/test_local_filtering/debug_test_combined_images.mrc",
+  // original_pixel_size);
+  // // debug
 
-	for (int result_array_counter = 0; result_array_counter < number_of_valid_floats; result_array_counter++)
-	{
-		result[result_array_counter + number_of_meta_data_values] = combined_images.real_values[offest_to_valid_values + result_array_counter];
-	}
+  SendProgramDefinedResultToMaster(result, number_of_result_floats,
+                                   image_number_for_gui,
+                                   number_of_jobs_per_image_in_gui);
 
-	// //WTW debug
-	// Image result_image;
-	// result_image.Allocate(combined_images.logical_x_dimension, combined_images.logical_y_dimension, num_slices_for_results, true, true);
+  MyDebugPrint("\nGenerate Local Res: Normal termination\n\n");
 
-	// for (int result_array_counter = 0; result_array_counter < number_of_valid_floats; result_array_counter++)
-	// {
-	// 	result_image.real_values[result_array_counter] = combined_images.real_values[offest_to_valid_values + result_array_counter];
-	// }
-
-	// MyDebugPrint("First Slice:%i:LastSlice:%i:\n", first_slice, last_slice);
-	// MyDebugPrint("num_slices_for_results:%i:combined_images.logical_z_dimension:%i:\n", num_slices_for_results, combined_images.logical_z_dimension);
-	// MyDebugPrint("DEBUG MAX WIDTH:%i:\n", max_width);
-	// MyDebugPrint("DEBUG Offset to valid values:%li:first_slice:%i:first_used_slice:%i:\n", offest_to_valid_values, first_slice, first_used_slice);
-	// combined_images.WriteSlicesAndFillHeader("/data/wtwoods/test_local_filtering/debug_test_combined_images.mrc", original_pixel_size);
-	// // debug
-
-	SendProgramDefinedResultToMaster(result, number_of_result_floats, image_number_for_gui, number_of_jobs_per_image_in_gui);
-
-	MyDebugPrint("\nGenerate Local Res: Normal termination\n\n");
-
-	return true;
+  return true;
 }
 
 AggregatedLocalResResult::AggregatedLocalResResult()
 {
-	result_id = -1;
-	start_slice = -1;
-	end_slice = -1;
-	x_dimension = -1;
-	y_dimension = -1;
-	z_dimension = -1;
-	num_float_values = -1;
-	number_of_meta_data_values = -1;
-	pixel_size = -1;
-	class_number = -1;
-	float_values = NULL;
+  result_id = -1;
+  start_slice = -1;
+  end_slice = -1;
+  x_dimension = -1;
+  y_dimension = -1;
+  z_dimension = -1;
+  num_float_values = -1;
+  number_of_meta_data_values = -1;
+  pixel_size = -1;
+  class_number = -1;
+  float_values = NULL;
 }
 
-AggregatedLocalResResult::~AggregatedLocalResResult()
+AggregatedLocalResResult::~AggregatedLocalResResult() {}
+
+void Generate_Local_Res_App::MasterHandleProgramDefinedResult(
+    float *result_array, int64 array_size, int result_number,
+    int number_of_expected_results)
 {
-}
+  AggregatedLocalResResult result_to_add;
+  aggregated_results.Add(result_to_add);
+  aggregated_results[aggregated_results.GetCount() - 1].result_id =
+      result_number;
+  aggregated_results[aggregated_results.GetCount() - 1].start_slice =
+      result_array[0];
+  aggregated_results[aggregated_results.GetCount() - 1].end_slice =
+      result_array[1];
+  aggregated_results[aggregated_results.GetCount() - 1].x_dimension =
+      result_array[2];
+  aggregated_results[aggregated_results.GetCount() - 1].y_dimension =
+      result_array[3];
+  aggregated_results[aggregated_results.GetCount() - 1].z_dimension =
+      result_array[4];
+  aggregated_results[aggregated_results.GetCount() - 1].num_float_values =
+      result_array[5];
+  aggregated_results[aggregated_results.GetCount() - 1]
+      .number_of_meta_data_values = result_array[6];
+  aggregated_results[aggregated_results.GetCount() - 1].pixel_size =
+      result_array[7];
+  aggregated_results[aggregated_results.GetCount() - 1].class_number =
+      result_array[8];
+  aggregated_results[aggregated_results.GetCount() - 1].float_values =
+      &result_array[10];
 
-void Generate_Local_Res_App::MasterHandleProgramDefinedResult(float *result_array, long array_size, int result_number, int number_of_expected_results)
-{
+  if (aggregated_results.GetCount() == number_of_expected_results)
+  {
+    int x_dim =
+        aggregated_results[aggregated_results.GetCount() - 1].x_dimension;
+    int y_dim =
+        aggregated_results[aggregated_results.GetCount() - 1].y_dimension;
 
-	AggregatedLocalResResult result_to_add;
-	aggregated_results.Add(result_to_add);
-	aggregated_results[aggregated_results.GetCount() - 1].result_id = result_number;
-	aggregated_results[aggregated_results.GetCount() - 1].start_slice = result_array[0];
-	aggregated_results[aggregated_results.GetCount() - 1].end_slice = result_array[1];
-	aggregated_results[aggregated_results.GetCount() - 1].x_dimension = result_array[2];
-	aggregated_results[aggregated_results.GetCount() - 1].y_dimension = result_array[3];
-	aggregated_results[aggregated_results.GetCount() - 1].z_dimension = result_array[4];
-	aggregated_results[aggregated_results.GetCount() - 1].num_float_values = result_array[5];
-	aggregated_results[aggregated_results.GetCount() - 1].number_of_meta_data_values = result_array[6];
-	aggregated_results[aggregated_results.GetCount() - 1].pixel_size = result_array[7];
-	aggregated_results[aggregated_results.GetCount() - 1].class_number = result_array[8];
-	aggregated_results[aggregated_results.GetCount() - 1].float_values = &result_array[9];
+    // need to get original volume and read in [1, first_slice - 1] and
+    // [last_slice + 1, num_slices]
+    ImageFile original_volume_imagefile(input_original_volume.ToStdString());
+    int num_slices_original_volume =
+        original_volume_imagefile.ReturnNumberOfSlices();
+    Image original_volume;
+    original_volume.ReadSlices(&original_volume_imagefile, 1,
+                               num_slices_original_volume);
 
-	if (aggregated_results.GetCount() == number_of_expected_results)
-	{
-		int x_dim = aggregated_results[aggregated_results.GetCount() - 1].x_dimension;
-		int y_dim = aggregated_results[aggregated_results.GetCount() - 1].y_dimension;
+    float min_res_Angstroms = 20.0f;
+    float current_filter_freq =
+        aggregated_results[aggregated_results.GetCount() - 1].pixel_size /
+        min_res_Angstroms;
+    float cosine_falloff_width =
+        10.0 / static_cast<float>(x_dim); // 5 Fourier voxels
+    original_volume.ForwardFFT();
+    original_volume.CosineMask(current_filter_freq, cosine_falloff_width);
+    original_volume.BackwardFFT();
 
-		//need to get original volume and read in [1, first_slice - 1] and [last_slice + 1, num_slices]
-		ImageFile original_volume_imagefile(input_original_volume.ToStdString());
-		int num_slices_original_volume = original_volume_imagefile.ReturnNumberOfSlices();
-		Image original_volume;
-		original_volume.ReadSlices(&original_volume_imagefile, 1, num_slices_original_volume);
+    // get total z dim
+    // int z_dim = 0;
+    int64 num_floats_per_slice = (original_volume.real_memory_allocated /
+                                  original_volume.logical_z_dimension);
+    int min_start_slice =
+        aggregated_results[aggregated_results.GetCount() - 1].start_slice;
+    int max_end_slice =
+        aggregated_results[aggregated_results.GetCount() - 1].end_slice;
+    for (int results_counter = 0;
+         results_counter < aggregated_results.GetCount(); results_counter++)
+    {
+      // z_dim += aggregated_results[results_counter].z_dimension;
+      if (aggregated_results[results_counter].start_slice < min_start_slice)
+      {
+        min_start_slice = aggregated_results[results_counter].start_slice;
+      }
+      if (aggregated_results[results_counter].end_slice > max_end_slice)
+      {
+        max_end_slice = aggregated_results[results_counter].end_slice;
+      }
+    }
 
-		float min_res_Angstroms = 20.0f;
-		float current_filter_freq = aggregated_results[aggregated_results.GetCount() - 1].pixel_size / min_res_Angstroms;
-		float cosine_falloff_width = 10.0 / float(x_dim); // 5 Fourier voxels
-		original_volume.ForwardFFT();
-		original_volume.CosineMask(current_filter_freq, cosine_falloff_width);
-		original_volume.BackwardFFT();
+    Image result_image;
+    result_image.Allocate(x_dim, y_dim, num_slices_original_volume, true, true);
+    // MyDebugPrint("x:%i:, y:%i:, z:%i:, min_start_slice:%i:\n", x_dim, y_dim,
+    // num_slices_original_volume, min_start_slice);
 
-		//get total z dim
-		//int z_dim = 0;
-		long num_floats_per_slice = (original_volume.real_memory_allocated / original_volume.logical_z_dimension);
-		int min_start_slice = aggregated_results[aggregated_results.GetCount() - 1].start_slice;
-		int max_end_slice = aggregated_results[aggregated_results.GetCount() - 1].end_slice;
-		for (int results_counter = 0; results_counter < aggregated_results.GetCount(); results_counter++)
-		{
-			//z_dim += aggregated_results[results_counter].z_dimension;
-			if (aggregated_results[results_counter].start_slice < min_start_slice)
-			{
-				min_start_slice = aggregated_results[results_counter].start_slice;
-			}
-			if (aggregated_results[results_counter].end_slice > max_end_slice)
-			{
-				max_end_slice = aggregated_results[results_counter].end_slice;
-			}
-		}
+    // int64 total_starting_floats = num_floats_per_slice * (min_start_slice -
+    // 1);
+    int64 total_starting_floats = (min_start_slice - 1) * num_floats_per_slice;
+    // MyDebugPrint("x:%i:, y:%i:, z:%i:, min_start_slice:%i:,
+    // total_starting_floats:%li:\n", x_dim, y_dim, num_slices_original_volume,
+    // min_start_slice, total_starting_floats);
+    for (int float_counter = 0; float_counter < total_starting_floats;
+         float_counter++)
+    {
+      result_image.real_values[float_counter] =
+          original_volume.real_values[float_counter];
+    }
 
-		Image result_image;
-		result_image.Allocate(x_dim, y_dim, num_slices_original_volume, true, true);
-		//MyDebugPrint("x:%i:, y:%i:, z:%i:, min_start_slice:%i:\n", x_dim, y_dim, num_slices_original_volume, min_start_slice);
+    for (int results_counter = 0;
+         results_counter < aggregated_results.GetCount(); results_counter++)
+    {
+      // Image individual_image;
+      // result_image.Allocate(x_dim, y_dim,
+      // aggregated_results[results_counter].z_dimension, true, true);
+      // result_image.real_values =
+      // aggregated_results[results_counter].float_values; //should this be a
+      // deep copy
 
-		//long total_starting_floats = num_floats_per_slice * (min_start_slice - 1);
-		long total_starting_floats = (min_start_slice - 1) * num_floats_per_slice;
-		MyDebugPrint("x:%i:, y:%i:, z:%i:, min_start_slice:%i:, total_starting_floats:%li:\n", x_dim, y_dim, num_slices_original_volume, min_start_slice, total_starting_floats);
-		for (int float_counter = 0; float_counter < total_starting_floats; float_counter++)
-		{
-			result_image.real_values[float_counter] = original_volume.real_values[float_counter];
-		}
+      int start_slice_temp =
+          aggregated_results[results_counter].start_slice - 1;
+      // MyDebugPrint("start_slice_temp:%i:num_floats_per_slice:%li:aggregated_results[results_counter].num_float_values:%i:\n",
+      // start_slice_temp, num_floats_per_slice,
+      // aggregated_results[results_counter].num_float_values);
+      // MyDebugPrint("result_image.real_memory_allocated:%li:\n",
+      // result_image.real_memory_allocated);
 
-		for (int results_counter = 0; results_counter < aggregated_results.GetCount(); results_counter++)
-		{
+      int64 number_of_non_meta_floats =
+          aggregated_results[results_counter].num_float_values -
+          aggregated_results[results_counter].number_of_meta_data_values;
+      for (int float_counter = 0; float_counter < number_of_non_meta_floats;
+           float_counter++)
+      {
+        result_image.real_values[(start_slice_temp * num_floats_per_slice) +
+                                 float_counter] =
+            aggregated_results[results_counter].float_values[float_counter];
+      }
+    }
 
-			// Image individual_image;
-			// result_image.Allocate(x_dim, y_dim, aggregated_results[results_counter].z_dimension, true, true);
-			// result_image.real_values = aggregated_results[results_counter].float_values; //should this be a deep copy
+    int64 total_ending_floats =
+        num_floats_per_slice * (num_slices_original_volume - max_end_slice);
+    for (int float_counter = 0; float_counter < total_ending_floats;
+         float_counter++)
+    {
+      result_image
+          .real_values[(max_end_slice * num_floats_per_slice) + float_counter] =
+          original_volume.real_values[(max_end_slice * num_floats_per_slice) +
+                                      float_counter];
+    }
 
-			int start_slice_temp = aggregated_results[results_counter].start_slice - 1;
-			//MyDebugPrint("start_slice_temp:%i:num_floats_per_slice:%li:aggregated_results[results_counter].num_float_values:%i:\n", start_slice_temp, num_floats_per_slice, aggregated_results[results_counter].num_float_values);
-			//MyDebugPrint("result_image.real_memory_allocated:%li:\n", result_image.real_memory_allocated);
+    result_image.WriteSlicesAndFillHeader(
+        output_reconstruction.ToStdString(),
+        aggregated_results[aggregated_results.GetCount() - 1].pixel_size);
 
-			long number_of_non_meta_floats = aggregated_results[results_counter].num_float_values - aggregated_results[results_counter].number_of_meta_data_values;
-			for (int float_counter = 0; float_counter < number_of_non_meta_floats; float_counter++)
-			{
-				result_image.real_values[(start_slice_temp * num_floats_per_slice) + float_counter] = aggregated_results[results_counter].float_values[float_counter];
-			}
-		}
+    int number_of_rounds_run = 0; // WTW set this
 
-		long total_ending_floats = num_floats_per_slice * (num_slices_original_volume - max_end_slice);
-		for (int float_counter = 0; float_counter < total_ending_floats; float_counter++)
-		{
-			result_image.real_values[(max_end_slice * num_floats_per_slice) + float_counter] = original_volume.real_values[(max_end_slice * num_floats_per_slice) + float_counter];
-		}
+    // debug WTW print final result and origrinal_volume
+    result_image.WriteSlicesAndFillHeader(
+        wxString::Format(wxT("/data/wtwoods/compare_with_devel/new_filtering/"
+                             "final_result_images_%i.mrc"),
+                         result_array[9])
+            .ToStdString(),
+        aggregated_results[aggregated_results.GetCount() - 1].pixel_size);
 
-		result_image.WriteSlicesAndFillHeader(output_reconstruction.ToStdString(), aggregated_results[aggregated_results.GetCount() - 1].pixel_size);
-
-		//debug WTW
-		//result_image.WriteSlicesAndFillHeader("/data/wtwoods/test_local_filtering/final_result_images.mrc", aggregated_results[aggregated_results.GetCount() - 1].pixel_size);
-		//original_volume.WriteSlicesAndFillHeader("/data/wtwoods/test_local_filtering/original_vol.mrc", aggregated_results[aggregated_results.GetCount() - 1].pixel_size);
-	}
+    original_volume.WriteSlicesAndFillHeader(
+        wxString::Format(wxT("/data/wtwoods/compare_with_devel/new_filtering/"
+                             "original_vol_%i.mrc"),
+                         result_array[9])
+            .ToStdString(),
+        aggregated_results[aggregated_results.GetCount() - 1].pixel_size);
+  }
 }

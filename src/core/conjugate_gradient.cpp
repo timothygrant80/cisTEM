@@ -17,61 +17,83 @@ ConjugateGradient::~ConjugateGradient()
 {
 	if (is_in_memory)
 	{
-		delete [] best_values;
-		delete [] e;
+		delete[] best_values;
+		delete[] e;
 		is_in_memory = false;
 	}
 }
 
-float ConjugateGradient::Init(float (*function_to_minimize)(void* parameters, float []), void *parameters_to_pass, int num_dim, float starting_value[], float accuracy[] )
+float ConjugateGradient::Init(float (*function_to_minimize)(void *parameters, float[]), void *parameters_to_pass, int num_dim, float starting_value[], float accuracy[])
 {
 
-	MyDebugAssertTrue(num_dim > 0,"Initializing conjugate gradient with zero dimensions");
+	MyDebugAssertTrue(num_dim > 0, "Initializing conjugate gradient with zero dimensions");
 
-// Copy pointers to the target function and the needed parameters
+	// Copy pointers to the target function and the needed parameters
 	target_function = function_to_minimize;
 	parameters = parameters_to_pass;
 
 	if (is_in_memory)
 	{
-		delete [] best_values;
-		delete [] e;
+		delete[] best_values;
+		delete[] e;
 		is_in_memory = false;
 	}
 
 	// Allocate memory
-	n 					= 	num_dim;
-	best_values 		=	new float[n];
-	e					=	new float[n];
-	is_in_memory		=	true;
+	n = num_dim;
+	best_values = new float[n];
+	e = new float[n];
+	is_in_memory = true;
 
 	// Initialise values
 	escale = 100.0;
 	num_function_calls = 0;
 
-
-	for (int dim_counter=0; dim_counter < n; dim_counter++)
+	for (int dim_counter = 0; dim_counter < n; dim_counter++)
 	{
-		best_values[dim_counter]	=	starting_value[dim_counter];
-		e[dim_counter]				=	accuracy[dim_counter];
+		best_values[dim_counter] = starting_value[dim_counter];
+		e[dim_counter] = accuracy[dim_counter];
 	}
 
 	// Call the target function to find out our starting score
-	best_score = target_function(parameters,starting_value);
+	best_score = target_function(parameters, starting_value);
 
-//	MyDebugPrint("Starting score = %f\n",best_score);
+	//	MyDebugPrint("Starting score = %f\n",best_score);
 	return best_score;
-
 }
 
 float ConjugateGradient::Run(int maxit)
 {
 	int iprint = 0;
 	int icon = 1;
-//	int maxit = 50;
+	//	int maxit = 50;
 	int va04_success = 0;
 
-	va04_success = va04a_(&n,e,&escale,&num_function_calls,target_function,parameters,&best_score,&iprint,&icon,&maxit,best_values);
+	//find out if you can delete the "test if nan and replace business"
+	// float temp[n];
+	// for (int dim_counter = 0; dim_counter < n; dim_counter++)
+	// {
+	// 	temp[dim_counter] = best_values[dim_counter];
+	// }
+
+	va04_success = va04a_(&n, e, &escale, &num_function_calls, target_function, parameters, &best_score, &iprint, &icon, &maxit, best_values);
+
+	// int numNan = 0;
+	// for (int dim_counter = 0; dim_counter < n; dim_counter++)
+	// {
+	// 	if (isnan(best_values[dim_counter]) != 0)
+	// 	{
+	// 		numNan++;
+	// 	}
+	// }
+	// if (numNan > 0)
+	// {
+	// 	wxPrintf("Encountered NaN parameter val\n");
+	// 	for (int dim_counter = 0; dim_counter < n; dim_counter++)
+	// 	{
+	// 		best_values[dim_counter] = temp[dim_counter];
+	// 	}
+	// }
 
 	return best_score;
 }

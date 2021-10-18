@@ -631,10 +631,10 @@ float Particle::ReturnParameterPenalty(cisTEMParameterLine &parameters)
 	if (constraints_used.y_shift)
 		penalty += sigma_noise / mask_volume * parameter_constraints.ReturnShiftYLogP(parameters.y_shift);
 
-	if (isnan(penalty))
+	if (isnan(penalty) || isnan(parameters.phi))
 	{
-		MyDebugPrint("Mask_Volume:%f:phi:%f:theta:%f:psi:%f:x:%f:y:%f:\n", mask_volume, parameter_constraints.ReturnPhiAngleLogP(parameters.phi), parameter_constraints.ReturnThetaAngleLogP(parameters.theta), parameter_constraints.ReturnPsiAngleLogP(parameters.psi), parameter_constraints.ReturnShiftXLogP(parameters.x_shift), parameter_constraints.ReturnShiftYLogP(parameters.y_shift));
-		MyDebugPrint("phi_v:%f:theta_v:%f:psi_v:%f:x_v:%f:y_v:%f:\n", parameters.phi, parameters.theta, parameters.psi, parameters.x_shift, parameters.y_shift);
+		wxPrintf("Mask_Volume:%f:phi:%f:theta:%f:psi:%f:x:%f:y:%f:\n", mask_volume, parameter_constraints.ReturnPhiAngleLogP(parameters.phi), parameter_constraints.ReturnThetaAngleLogP(parameters.theta), parameter_constraints.ReturnPsiAngleLogP(parameters.psi), parameter_constraints.ReturnShiftXLogP(parameters.x_shift), parameter_constraints.ReturnShiftYLogP(parameters.y_shift));
+		wxPrintf("phi_v:%f:theta_v:%f:psi_v:%f:x_v:%f:y_v:%f:\n", parameters.phi, parameters.theta, parameters.psi, parameters.x_shift, parameters.y_shift);
 	}
 
 	return penalty;

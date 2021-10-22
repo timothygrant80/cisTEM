@@ -10,7 +10,7 @@ MyRelionExportDialog::MyRelionExportDialog( wxWindow * parent )
 RelionExportDialog( parent )
 {
 	ExportButton->Enable(false);
-	FillGroupComboBoxSlave( GroupComboBox , true );
+	FillGroupComboBoxWorker( GroupComboBox , true );
 	WarningText->Show(findparticles_panel->ReturnNumberOfJobsCurrentlyRunning() > 0);
 }
 

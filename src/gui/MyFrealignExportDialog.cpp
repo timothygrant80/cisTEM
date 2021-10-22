@@ -10,7 +10,7 @@ MyFrealignExportDialog::MyFrealignExportDialog( wxWindow * parent )
 FrealignExportDialog( parent )
 {
 	ExportButton->Enable(false);
-	FillGroupComboBoxSlave( GroupComboBox , true );
+	FillGroupComboBoxWorker( GroupComboBox , true );
 	WarningText->Show(findparticles_panel->ReturnNumberOfJobsCurrentlyRunning() > 0);
 }
 

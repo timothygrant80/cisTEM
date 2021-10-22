@@ -16,8 +16,8 @@
 //#include "hiv_images_shift_noise_80x80x10.cpp"
 //#include "sine_128x128x1.cpp"
 //
-//#define PrintResult(result)	PrintResultSlave(result, __LINE__);
-//#define FailTest {if (test_has_passed == true) PrintResultSlave(false, __LINE__); test_has_passed = false;}
+//#define PrintResult(result)	PrintResultWorker(result, __LINE__);
+//#define FailTest {if (test_has_passed == true) PrintResultWorker(false, __LINE__); test_has_passed = false;}
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 

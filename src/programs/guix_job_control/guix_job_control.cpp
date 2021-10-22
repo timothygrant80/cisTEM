@@ -45,7 +45,7 @@ JobControlApp : public wxAppConsole, public SocketCommunicator
 	wxString master_ip_address;
 	wxString master_port;
 
-	long number_of_slaves_already_connected;
+	long number_of_workers_already_connected;
 
 	// Socket Handling overrides..
 
@@ -253,7 +253,7 @@ void JobControlApp::OnEventLoopEnter(wxEventLoopBase *	loop)
 		gui_socket->SetFlags(SOCKET_FLAGS);
 		MyDebugPrint("Job Controller: Succeeded - Connection established!\n\n");
 
-		number_of_slaves_already_connected = 0;
+		number_of_workers_already_connected = 0;
 
 
 		// monitor gui socket..
@@ -406,14 +406,14 @@ void JobControlApp::SendAllJobsFinished(long total_timing_from_master)
 void JobControlApp::SendNumberofConnections()
 {
 	WriteToSocket(gui_socket, socket_number_of_connections, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
-	WriteToSocket(gui_socket, &number_of_slaves_already_connected, 4, true, "SendNumberOfConnections", FUNCTION_DETAILS_AS_WXSTRING);
+	WriteToSocket(gui_socket, &number_of_workers_already_connected, 4, true, "SendNumberOfConnections", FUNCTION_DETAILS_AS_WXSTRING);
 
 	int number_of_commands_to_run;
 
 	if (current_job_package.number_of_jobs + 1 < current_job_package.my_profile.ReturnTotalJobs()) number_of_commands_to_run = current_job_package.number_of_jobs + 1;
 	else number_of_commands_to_run = current_job_package.my_profile.ReturnTotalJobs();
 
-	if (number_of_slaves_already_connected == number_of_commands_to_run)
+	if (number_of_workers_already_connected == number_of_commands_to_run)
 	{
 
 		ShutDownServer();
@@ -440,9 +440,9 @@ void JobControlApp::HandleNewSocketConnection(wxSocketBase *new_connection, unsi
 	 }
 	 else
 	 {
-		 // one of the slaves has connected to us.  If it is the first one then
+		 // one of the workers has connected to us.  If it is the first one then
 		 // we need to make it the master, tell it to start a socket server
-		 // and send us the address so we can pass it on to all future slaves.
+		 // and send us the address so we can pass it on to all future workers.
 		 // If we have already assigned the master, then we just need to send it
 		 // the masters address.
 
@@ -463,23 +463,23 @@ void JobControlApp::HandleNewSocketConnection(wxSocketBase *new_connection, unsi
 
 			 MonitorSocket(new_connection);
 
-			 number_of_slaves_already_connected++;
+			 number_of_workers_already_connected++;
 			 SendNumberofConnections();
 
 		 }
-		 else  // we have a master, tell this slave who it's master is.
+		 else  // we have a master, tell this worker who it's master is.
 		 {
-			 WriteToSocket(new_connection, socket_you_are_a_slave, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
+			 WriteToSocket(new_connection, socket_you_are_a_worker, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
 			 SendwxStringToSocket(&master_ip_address, new_connection);
 			 SendwxStringToSocket(&master_port, new_connection);
 
-			 // that should be the end of our interactions with the slave
+			 // that should be the end of our interactions with the worker
 			 // it should disconnect itself. We have to monitor it however so that
 			 // we can destroy it once it disconnects..
 
 			 MonitorSocket(new_connection);
 
-			 number_of_slaves_already_connected++;
+			 number_of_workers_already_connected++;
 			 SendNumberofConnections();
 
 
@@ -696,7 +696,7 @@ void JobControlApp::HandleSocketDisconnect(wxSocketBase *connected_socket)
 
 		// otherwise we don't care.. still wait for gui to kill us..
 	}
-	else // Must be a slave dropping us to connect to the master
+	else // Must be a worker dropping us to connect to the master
 	{
 		 StopMonitoringAndDestroySocket(connected_socket);
 	}

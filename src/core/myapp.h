@@ -113,7 +113,7 @@ MyApp : public wxAppConsole, public SocketCommunicator
 		void HandleNewSocketConnection(wxSocketBase *new_connection,  unsigned char *identification_code);
 		//void HandleSocketJobPackage(wxSocketBase *connected_socket, JobPackage *received_package);
 		void HandleSocketYouAreTheMaster(wxSocketBase *connected_socket, JobPackage *received_package);
-		void HandleSocketYouAreASlave(wxSocketBase *connected_socket, wxString master_ip_address, wxString master_port_string);
+		void HandleSocketYouAreAWorker(wxSocketBase *connected_socket, wxString master_ip_address, wxString master_port_string);
 		void HandleSocketTimeToDie(wxSocketBase *connected_socket);
 		void HandleSocketJobResult(wxSocketBase *connected_socket, JobResult *received_result);
 		void HandleSocketIHaveAnError(wxSocketBase *connected_socket, wxString error_message);
@@ -162,7 +162,7 @@ MyApp : public wxAppConsole, public SocketCommunicator
 		int number_of_threads_requested_on_command_line;
 
 		bool i_am_the_master;
-		bool i_am_a_slave;
+		bool i_am_a_worker;
 
 		int number_of_results_sent;
 		int number_of_timing_results_received;
@@ -174,15 +174,15 @@ MyApp : public wxAppConsole, public SocketCommunicator
 		wxString master_port_string;
 		short int master_port;
 
-		long max_number_of_connected_slaves; // for the master...
+		long max_number_of_connected_workers; // for the master...
 		long number_of_dispatched_jobs;
 		long number_of_finished_jobs;
 
-		//wxSocketBase **slave_sockets;  // POINTER TO POINTER..
-		ArrayOfSocketBasePointers slave_socket_pointers;
+		//wxSocketBase **worker_sockets;  // POINTER TO POINTER..
+		ArrayOfSocketBasePointers worker_socket_pointers;
 
 		// HashMap to keep track of which socket is currently working on which job
-		SocketJobPointerHash socket_to_slave_job_pointer_hash;
+		SocketJobPointerHash socket_to_worker_job_pointer_hash;
 
 
 		wxCmdLineParser command_line_parser;

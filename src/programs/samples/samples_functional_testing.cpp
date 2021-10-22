@@ -8,8 +8,8 @@
 #include "classes/EmbeddedTestFile.cpp"
 #include "classes/NumericTestFile.cpp"
 #include "samples_functional_testing.h"
-// #define PrintResult(result)	PrintResultSlave(result, __LINE__);
-// #define FailTest {if (test_has_passed == true) PrintResultSlave(false,
+// #define PrintResult(result)	PrintResultWorker(result, __LINE__);
+// #define FailTest {if (test_has_passed == true) PrintResultWorker(false,
 // __LINE__); test_has_passed = false;}//#include
 // "samples_functional_testing.hpp"
 

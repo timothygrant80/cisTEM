@@ -22,7 +22,7 @@ bool MyApp::OnInit()
 	number_of_finished_jobs = 0;
 	number_of_timing_results_received = 0;
 
-	max_number_of_connected_slaves = 0;
+	max_number_of_connected_workers = 0;
 
 	zombie_timer = NULL;
 	queue_timer = NULL;
@@ -41,7 +41,7 @@ bool MyApp::OnInit()
 
 	total_milliseconds_spent_on_threads = 0;
 
-	socket_to_slave_job_pointer_hash.clear();
+	socket_to_worker_job_pointer_hash.clear();
 
 	inter_thread_message_queue.Post(0);
 
@@ -75,7 +75,7 @@ void MyApp::OnEventLoopEnter(wxEventLoopBase *	loop)
 		wxArrayString possible_controller_addresses;
 		wxIPV4address junk_address;
 
-		socket_to_slave_job_pointer_hash.clear();
+		socket_to_worker_job_pointer_hash.clear();
 
 		// Bind the thread events
 
@@ -253,12 +253,12 @@ void MyApp::AddCommandLineOptions( )
 
 void MyApp::SendNextJobTo(wxSocketBase *socket)
 {
-	// if we haven't dispatched all jobs yet, then send it, otherwise tell the slave to die..
+	// if we haven't dispatched all jobs yet, then send it, otherwise tell the worker to die..
 
 	if (number_of_dispatched_jobs < current_job_package.number_of_jobs)
 	{
 		current_job_package.jobs[number_of_dispatched_jobs].SendJob(socket);
-		socket_to_slave_job_pointer_hash[socket] = & current_job_package.jobs[number_of_dispatched_jobs];
+		socket_to_worker_job_pointer_hash[socket] = & current_job_package.jobs[number_of_dispatched_jobs];
 		number_of_dispatched_jobs++;
 	}
 	else
@@ -268,14 +268,14 @@ void MyApp::SendNextJobTo(wxSocketBase *socket)
 		//StopMonitoringSocket(socket); stopped doing this for timings
 
 		// Remember that this socket doesn't have a job anymore
-		socket_to_slave_job_pointer_hash.erase(socket);
+		socket_to_worker_job_pointer_hash.erase(socket);
 
 	}
 }
 
 void MyApp::SendJobFinished(int job_number)
 {
-	//MyDebugAssertTrue(i_am_the_master == true, "SendJobFinished called by a slave!");
+	//MyDebugAssertTrue(i_am_the_master == true, "SendJobFinished called by a worker!");
 
 	WriteToSocket(controller_socket, socket_job_finished, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
 	// send the job number of the current job..
@@ -284,7 +284,7 @@ void MyApp::SendJobFinished(int job_number)
 
 void MyApp::SendJobResult(JobResult *result)
 {
-	//MyDebugAssertTrue(i_am_the_master == true, "SendJobResult called by a slave!");
+	//MyDebugAssertTrue(i_am_the_master == true, "SendJobResult called by a worker!");
 
 	WriteToSocket(controller_socket, socket_job_result, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
 	result->SendToSocket(controller_socket);
@@ -292,7 +292,7 @@ void MyApp::SendJobResult(JobResult *result)
 
 void MyApp::SendJobResultQueue(ArrayofJobResults &queue_to_send)
 {
-	//MyDebugAssertTrue(i_am_the_master == true, "SendJobResultQueue called by a slave!");
+	//MyDebugAssertTrue(i_am_the_master == true, "SendJobResultQueue called by a worker!");
 
 	WriteToSocket(controller_socket, socket_job_result_queue, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
 	SendResultQueueToSocket(controller_socket, queue_to_send);
@@ -307,10 +307,10 @@ void MyApp::MasterSendIntenalQueue()
 
 void MyApp::SendAllJobsFinished()
 {
-	//MyDebugAssertTrue(i_am_the_master == true, "SendAllJobsFinished called by a slave!");
+	//MyDebugAssertTrue(i_am_the_master == true, "SendAllJobsFinished called by a worker!");
 
 	// we will send all jobs finished - but first we need to ensure we have sent any results in the result queue
-	// wait for 5 seconds to give slaves times to send in their last jobs..
+	// wait for 5 seconds to give workers times to send in their last jobs..
 
 	wxSleep(1);
 	//Yield();
@@ -466,8 +466,8 @@ void MyApp::OnThreadSendImageResult(wxThreadEvent& my_event)
 	details[2] = position_in_stack;
 
 	WriteToSocket(master_socket, socket_result_with_image_to_write, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
-	WriteToSocket(master_socket, details, sizeof(int) * 3, true, "SendResultImageDetailsFromSlaveToMaster", FUNCTION_DETAILS_AS_WXSTRING);
-	WriteToSocket(master_socket, image_to_send.real_values, image_to_send.real_memory_allocated * sizeof(float), true, "SendResultImageDataFromSlaveToMaster", FUNCTION_DETAILS_AS_WXSTRING);
+	WriteToSocket(master_socket, details, sizeof(int) * 3, true, "SendResultImageDetailsFromWorkerToMaster", FUNCTION_DETAILS_AS_WXSTRING);
+	WriteToSocket(master_socket, image_to_send.real_values, image_to_send.real_memory_allocated * sizeof(float), true, "SendResultImageDataFromWorkerToMaster", FUNCTION_DETAILS_AS_WXSTRING);
 	SendwxStringToSocket(&filename_to_write, master_socket);
 
 	// post a message to the message queue to allow the calulcation thread to send the next image..
@@ -490,8 +490,8 @@ void MyApp::OnThreadSendProgramDefinedResult(ReturnProgramDefinedResultEvent& my
 	details[2] = number_of_expected_results;
 
 	WriteToSocket(master_socket, socket_program_defined_result, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
-	WriteToSocket(master_socket, details, sizeof(int) * 3, true, "SendProgramDefinedResultDetailsFromSlaveToMaster", FUNCTION_DETAILS_AS_WXSTRING);
-	WriteToSocket(master_socket, array_to_send, size_of_array * sizeof(float), true, "SendProgramDefinedResultArrayFromSlaveToMaster", FUNCTION_DETAILS_AS_WXSTRING);
+	WriteToSocket(master_socket, details, sizeof(int) * 3, true, "SendProgramDefinedResultDetailsFromWorkerToMaster", FUNCTION_DETAILS_AS_WXSTRING);
+	WriteToSocket(master_socket, array_to_send, size_of_array * sizeof(float), true, "SendProgramDefinedResultArrayFromWorkerToMaster", FUNCTION_DETAILS_AS_WXSTRING);
 
 	delete [] array_to_send;
 }
@@ -853,7 +853,7 @@ void MyApp::HandleSocketYouAreTheMaster(wxSocketBase *connected_socket, JobPacka
 
 	i_am_the_master = true;
 
-	// we need to start a server so that the slaves can connect..
+	// we need to start a server so that the workers can connect..
 
 	SetupServer();
 
@@ -866,7 +866,7 @@ void MyApp::HandleSocketYouAreTheMaster(wxSocketBase *connected_socket, JobPacka
 
 	my_ip_address = ReturnIPAddressFromSocket(connected_socket);
 
-	// connect myself as a slave..
+	// connect myself as a worker..
 
 	master_ip_address = my_ip_address;
 	master_port_string = my_port_string;
@@ -920,7 +920,7 @@ void MyApp::HandleSocketYouAreTheMaster(wxSocketBase *connected_socket, JobPacka
 
 }
 
-void MyApp::HandleSocketYouAreASlave(wxSocketBase *connected_socket, wxString master_ip_address, wxString master_port_string)
+void MyApp::HandleSocketYouAreAWorker(wxSocketBase *connected_socket, wxString master_ip_address, wxString master_port_string)
 {
 
 	// we got real communication, so we are not a zombie
@@ -990,20 +990,20 @@ void MyApp::HandleSocketYouAreASlave(wxSocketBase *connected_socket, wxString ma
 	
 }
 
-void MyApp::HandleSocketTimeToDie(wxSocketBase *connected_socket) // This can be sent to a slave or the master, need to check which it is.
+void MyApp::HandleSocketTimeToDie(wxSocketBase *connected_socket) // This can be sent to a worker or the master, need to check which it is.
 {
 	if (i_am_the_master == true && connected_socket == controller_socket)
 	{
-		// tell any connected slaves to die. then exit..
+		// tell any connected workers to die. then exit..
 
-		for (int counter = 0; counter < slave_socket_pointers.GetCount(); counter++)
+		for (int counter = 0; counter < worker_socket_pointers.GetCount(); counter++)
 		{
-			WriteToSocket(slave_socket_pointers[counter], socket_time_to_die, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING );
+			WriteToSocket(worker_socket_pointers[counter], socket_time_to_die, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING );
 		}
 
-		slave_socket_pointers.Clear();
+		worker_socket_pointers.Clear();
 	}
-	else  //Slave
+	else  //Worker
 	{
 		 // Timing stuff here
 		long milliseconds_spent_by_thread = stopwatch.Time();
@@ -1045,7 +1045,7 @@ void MyApp::HandleSocketTimeToDie(wxSocketBase *connected_socket) // This can be
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
-//                        FROM SLAVES WHEN I AM THE MASTER                       //
+//                        FROM WORKERS WHEN I AM THE MASTER                       //
 ///////////////////////////////////////////////////////////////////////////////////
 
 void MyApp::HandleSocketSendNextJob(wxSocketBase *connected_socket, JobResult *received_result)
@@ -1070,7 +1070,7 @@ void MyApp::HandleSocketSendNextJob(wxSocketBase *connected_socket, JobResult *r
 
 		// check if we have all timings, and all results (this is chctedecked in two places - socket send timing and receive results as it is not certain will happen last)
 
-		if (number_of_finished_jobs == current_job_package.number_of_jobs && number_of_timing_results_received == max_number_of_connected_slaves)
+		if (number_of_finished_jobs == current_job_package.number_of_jobs && number_of_timing_results_received == max_number_of_connected_workers)
 		{
 
 			SendAllJobsFinished();
@@ -1186,7 +1186,7 @@ void MyApp::HandleSocketSendThreadTiming(wxSocketBase *connected_socket, long re
 
 	// check if we have all timings, and all results (this is checked in two places - socket send timing and receive results as it is not certain will happen last)
 
-	if (number_of_finished_jobs == current_job_package.number_of_jobs && number_of_timing_results_received == max_number_of_connected_slaves)
+	if (number_of_finished_jobs == current_job_package.number_of_jobs && number_of_timing_results_received == max_number_of_connected_workers)
 	{
 		SendAllJobsFinished();
 
@@ -1210,7 +1210,7 @@ void MyApp::HandleSocketSendThreadTiming(wxSocketBase *connected_socket, long re
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
-//              SERVER CONNECTIONS FROM SLAVES WHEN I AM THE MASTER              //
+//              SERVER CONNECTIONS FROM WORKERS WHEN I AM THE MASTER              //
 ///////////////////////////////////////////////////////////////////////////////////
 
 void MyApp::HandleNewSocketConnection(wxSocketBase *new_connection,  unsigned char *identification_code)
@@ -1227,8 +1227,8 @@ void MyApp::HandleNewSocketConnection(wxSocketBase *new_connection,  unsigned ch
 	 {
 		 // start monitoring this socket..
 		 MonitorSocket(new_connection);
-		 slave_socket_pointers.Add(new_connection);
-		 max_number_of_connected_slaves++;
+		 worker_socket_pointers.Add(new_connection);
+		 max_number_of_connected_workers++;
 
 		 // tell it is is connected..
 		 WriteToSocket(new_connection, socket_you_are_connected, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING);
@@ -1237,9 +1237,9 @@ void MyApp::HandleNewSocketConnection(wxSocketBase *new_connection,  unsigned ch
 		if (current_job_package.number_of_jobs + 1 < current_job_package.my_profile.ReturnTotalJobs()) number_of_commands_to_run = current_job_package.number_of_jobs + 1;
 		else number_of_commands_to_run = current_job_package.my_profile.ReturnTotalJobs();
 
-		if (slave_socket_pointers.GetCount() == number_of_commands_to_run - 1)
+		if (worker_socket_pointers.GetCount() == number_of_commands_to_run - 1)
  		{
-			SocketSendInfo("All slaves have re-connected to the master.");
+			SocketSendInfo("All workers have re-connected to the master.");
 		}
 	 }
 
@@ -1247,10 +1247,10 @@ void MyApp::HandleNewSocketConnection(wxSocketBase *new_connection,  unsigned ch
 }
 
 ///////////////////////////////////////////////////////////////////////////////////
-//                      FROM THE MASTER WHEN I AM A SLAVE                        //
+//                      FROM THE MASTER WHEN I AM A WORKER                        //
 ///////////////////////////////////////////////////////////////////////////////////
 
-// Time to die is above as it could be for slave or master
+// Time to die is above as it could be for worker or master
 
 void MyApp::HandleSocketYouAreConnected(wxSocketBase *connected_socket)
 {
@@ -1303,14 +1303,14 @@ void MyApp::HandleSocketDisconnect(wxSocketBase *connected_socket)
 	{
 		MyDebugPrint("Master received disconnect from controller");
 
-		for (int counter = 0; counter < slave_socket_pointers.GetCount(); counter++)
+		for (int counter = 0; counter < worker_socket_pointers.GetCount(); counter++)
 		{
-			WriteToSocket(slave_socket_pointers[counter], socket_time_to_die, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING );
-			StopMonitoringAndDestroySocket(slave_socket_pointers[counter]);
-			slave_socket_pointers[counter] = NULL;
+			WriteToSocket(worker_socket_pointers[counter], socket_time_to_die, SOCKET_CODE_SIZE, true, "SendSocketJobType", FUNCTION_DETAILS_AS_WXSTRING );
+			StopMonitoringAndDestroySocket(worker_socket_pointers[counter]);
+			worker_socket_pointers[counter] = NULL;
 	    }
 
-		slave_socket_pointers.Clear();
+		worker_socket_pointers.Clear();
 
 		StopMonitoringAndDestroySocket(controller_socket);
 		controller_socket = NULL;
@@ -1324,17 +1324,17 @@ void MyApp::HandleSocketDisconnect(wxSocketBase *connected_socket)
 		return;
 	}
 	else
-	if (i_am_the_master == true && connected_socket != master_socket) // a slave died..
+	if (i_am_the_master == true && connected_socket != master_socket) // a worker died..
 	{
 		if (number_of_dispatched_jobs < current_job_package.number_of_jobs)
 		{
-			SocketSendError("Error: A slave has disconnected before all jobs are finished.");
-			SocketSendInfo("The disconnected slave was running a job with the following arguments:\n" + socket_to_slave_job_pointer_hash[connected_socket]->PrintAllArgumentsTowxString());
+			SocketSendError("Error: A worker has disconnected before all jobs are finished.");
+			SocketSendInfo("The disconnected worker was running a job with the following arguments:\n" + socket_to_worker_job_pointer_hash[connected_socket]->PrintAllArgumentsTowxString());
 		}
 
 		StopMonitoringAndDestroySocket(connected_socket);
 	}
-	else // i am a slave and the master died.. time to die
+	else // i am a worker and the master died.. time to die
 	{
 		StopMonitoringAndDestroySocket(connected_socket);
 		if (i_am_the_master == false) ShutDownSocketMonitor();
@@ -1345,13 +1345,13 @@ void MyApp::HandleSocketDisconnect(wxSocketBase *connected_socket)
 	}
 }
 
-// Mainly for when we destroy slave sockets without directly using the array, we want them to be set to NULL;
+// Mainly for when we destroy worker sockets without directly using the array, we want them to be set to NULL;
 
 void MyApp::IfSocketIsAKeySocketSetItToNull(wxSocketBase *socket_to_check)
 {
-	for (int counter = 0; counter < slave_socket_pointers.GetCount(); counter++)
+	for (int counter = 0; counter < worker_socket_pointers.GetCount(); counter++)
 	{
-		if (slave_socket_pointers[counter] == socket_to_check) slave_socket_pointers[counter] = NULL;
+		if (worker_socket_pointers[counter] == socket_to_check) worker_socket_pointers[counter] = NULL;
 	}
 
 	if (controller_socket == socket_to_check) controller_socket = NULL;

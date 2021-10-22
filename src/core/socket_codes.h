@@ -10,7 +10,7 @@ const unsigned char socket_you_are_connected [] = "J82zjSwYY^-!bF>4";
 const unsigned char socket_send_job_details [] = "gr<V>ThBp6w9fzLg";
 const unsigned char socket_sending_job_package [] = "'8ujA!Lup%PR*!hG";
 const unsigned char socket_you_are_the_master [] = "eVmYc.3!g}}cZZs";
-const unsigned char socket_you_are_a_slave [] = "U6u*:z6}W+7nV2g'";
+const unsigned char socket_you_are_a_worker [] = "U6u*:z6}W+7nV2g'";
 const unsigned char socket_send_next_job [] = "\7PnJh=x;[b#f/6L";
 const unsigned char socket_time_to_die [] = ")[czL7$#Sg/d4-*K";
 const unsigned char socket_ready_to_send_single_job [] = "-TDv(X*kY.:d`D5:";

@@ -62,7 +62,7 @@ class SocketCommunicator
 	virtual void HandleSocketSendJobDetails(wxSocketBase *connected_socket) {wxPrintf("Warning:: Unhandled Socket Message (HandleSocketSendJobDetails)\n");}
 	virtual void HandleSocketJobPackage(wxSocketBase *connected_socket, JobPackage *received_package) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketJobPackage)\n");}
 	virtual void HandleSocketYouAreTheMaster(wxSocketBase *connected_socket, JobPackage *received_package) {wxPrintf("Warning:: Unhandled Socket Message (HandleSocketYouAreTheMaster)\n");}
-	virtual void HandleSocketYouAreASlave(wxSocketBase *connected_socket, wxString master_ip_address, wxString master_port_string) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketYouAreTheSlave)\n");}
+	virtual void HandleSocketYouAreAWorker(wxSocketBase *connected_socket, wxString master_ip_address, wxString master_port_string) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketYouAreTheWorker)\n");}
 	virtual void HandleSocketSendNextJob(wxSocketBase *connected_socket, JobResult *received_result) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketSendNextJob)\n");}
 	virtual void HandleSocketTimeToDie(wxSocketBase *connected_socket) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketTimeToDie)\n");}
 	virtual void HandleSocketReadyToSendSingleJob(wxSocketBase *connected_socket, RunJob *received_job) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketReadyToSendSingleJob)\n");}

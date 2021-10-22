@@ -12,8 +12,8 @@
 #include "hiv_images_shift_noise_80x80x10.cpp"
 #include "sine_128x128x1.cpp"
 
-#define PrintResult(result)	PrintResultSlave(result, __LINE__);
-#define FailTest {if (test_has_passed == true) PrintResultSlave(false, __LINE__); test_has_passed = false;}
+#define PrintResult(result)	PrintResultWorker(result, __LINE__);
+#define FailTest {if (test_has_passed == true) PrintResultWorker(false, __LINE__); test_has_passed = false;}
 
 
 
@@ -57,7 +57,7 @@ MyTestApp : public wxAppConsole
 		void BeginTest(const char *test_name);
 		void EndTest();
 		void PrintTitle(const char *title);
-		void PrintResultSlave( bool passed, int line);
+		void PrintResultWorker( bool passed, int line);
 		void WriteEmbeddedFiles();
 		void WriteEmbeddedArray(const char *filename, const unsigned char *array, long length);
 		void WriteNumericTextFile(const char *filename);
@@ -1058,7 +1058,7 @@ void MyTestApp::EndTest()
 	if (test_has_passed == true) PrintResult(true);
 }
 
-void MyTestApp::PrintResultSlave(bool passed, int line)
+void MyTestApp::PrintResultWorker(bool passed, int line)
 {
 
 	if (passed == true)

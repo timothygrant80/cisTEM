@@ -13,6 +13,7 @@ public:
   int number_of_meta_data_values;
   float pixel_size;
   int class_number;
+  int number_of_rounds_run;
   float *float_values;
 
   AggregatedLocalResResult();
@@ -171,6 +172,15 @@ bool Generate_Local_Res_App::DoCalculation()
   int first_used_slice = -1;
   int last_used_slice = -1;
 
+  // first_used_slice = 1;
+  // last_used_slice = num_slices_half_map_1;
+  // half_map_1_image.ReadSlices(&half_map_1_imagefile, 1,
+  //                             num_slices_half_map_1);
+  // half_map_2_image.ReadSlices(&half_map_2_imagefile, 1,
+  //                             num_slices_half_map_1);
+  // mask_image.ReadSlices(&mask_image_imagefile, 1, num_slices_half_map_1);
+  // num_slices = num_slices_half_map_1;
+
   if (first_slice - max_width < 1)
   {
     if (last_slice + max_width > num_slices_half_map_1)
@@ -232,8 +242,9 @@ bool Generate_Local_Res_App::DoCalculation()
   combined_images.AddImage(&half_map_2_image);
   combined_images.DivideByConstant(2);
 
+  // WTW DEBUG savefile combined_images
   combined_images.WriteSlicesAndFillHeader(
-      wxString::Format(wxT("data/wtwoods/compare_with_devel/new_filtering/"
+      wxString::Format(wxT("/data/wtwoods/compare_with_devel/new_filtering/"
                            "inital_local_filter_volume_%i.mrc"),
                        number_of_rounds_run)
           .ToStdString(),
@@ -277,7 +288,7 @@ bool Generate_Local_Res_App::DoCalculation()
   int total_used_slices = last_used_slice - (first_used_slice - 1);
   float slices_per_thread = total_used_slices / static_cast<float>(num_threads);
 
-  for (float current_res = 12.0f; current_res < 43.0f; current_res += 3.0f)
+  for (float current_res = 18.0f; current_res < 37.0f; current_res += 6.0f)
   {
     // float current_res = 24;
     box_size = current_res / original_pixel_size;
@@ -442,14 +453,15 @@ bool Generate_Local_Res_App::DoCalculation()
 
   local_resolution_volume.SetMaximumValue(20.0f);
 
+  // WTW DEBUG savefile local_res_vol and mask_image
   local_resolution_volume.WriteSlicesAndFillHeader(
-      wxString::Format(wxT("data/wtwoods/compare_with_devel/new_filtering/"
+      wxString::Format(wxT("/data/wtwoods/compare_with_devel/new_filtering/"
                            "test_result_small_mem_lrv_%i.mrc"),
                        number_of_rounds_run)
           .ToStdString(),
       original_pixel_size);
   mask_image.WriteSlicesAndFillHeader(
-      wxString::Format(wxT("data/wtwoods/compare_with_devel/new_filtering/"
+      wxString::Format(wxT("/data/wtwoods/compare_with_devel/new_filtering/"
                            "test_result_small_mem_mask_%i.mrc"),
                        number_of_rounds_run)
           .ToStdString(),
@@ -554,6 +566,7 @@ AggregatedLocalResResult::AggregatedLocalResResult()
   number_of_meta_data_values = -1;
   pixel_size = -1;
   class_number = -1;
+  number_of_rounds_run = -1;
   float_values = NULL;
 }
 
@@ -585,6 +598,8 @@ void Generate_Local_Res_App::MasterHandleProgramDefinedResult(
       result_array[7];
   aggregated_results[aggregated_results.GetCount() - 1].class_number =
       result_array[8];
+  aggregated_results[aggregated_results.GetCount() - 1].number_of_rounds_run =
+      result_array[9];
   aggregated_results[aggregated_results.GetCount() - 1].float_values =
       &result_array[10];
 
@@ -699,20 +714,18 @@ void Generate_Local_Res_App::MasterHandleProgramDefinedResult(
         output_reconstruction.ToStdString(),
         aggregated_results[aggregated_results.GetCount() - 1].pixel_size);
 
-    int number_of_rounds_run = 0; // WTW set this
-
-    // debug WTW print final result and origrinal_volume
+    // WTW DEBUG print final result and origrinal_volume
     result_image.WriteSlicesAndFillHeader(
         wxString::Format(wxT("/data/wtwoods/compare_with_devel/new_filtering/"
                              "final_result_images_%i.mrc"),
-                         result_array[9])
+                         aggregated_results[aggregated_results.GetCount() - 1].number_of_rounds_run)
             .ToStdString(),
         aggregated_results[aggregated_results.GetCount() - 1].pixel_size);
 
     original_volume.WriteSlicesAndFillHeader(
         wxString::Format(wxT("/data/wtwoods/compare_with_devel/new_filtering/"
                              "original_vol_%i.mrc"),
-                         result_array[9])
+                         aggregated_results[aggregated_results.GetCount() - 1].number_of_rounds_run)
             .ToStdString(),
         aggregated_results[aggregated_results.GetCount() - 1].pixel_size);
   }

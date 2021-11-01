@@ -11236,91 +11236,6 @@ VolumeChooserDialog::~VolumeChooserDialog()
 
 }
 
-FilterDialog::FilterDialog( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
-{
-	this->SetSizeHints( wxSize( -1,-1 ), wxDefaultSize );
-
-	MainBoxSizer = new wxBoxSizer( wxVERTICAL );
-
-	m_staticText64 = new wxStaticText( this, wxID_ANY, wxT("Filter By :-"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText64->Wrap( -1 );
-	m_staticText64->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
-
-	MainBoxSizer->Add( m_staticText64, 0, wxALL, 5 );
-
-	m_staticline18 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
-	MainBoxSizer->Add( m_staticline18, 0, wxEXPAND | wxALL, 5 );
-
-	FilterScrollPanel = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL|wxBORDER_SUNKEN );
-	FilterScrollPanel->SetScrollRate( 5, 5 );
-	FilterBoxSizer = new wxBoxSizer( wxVERTICAL );
-
-
-	FilterScrollPanel->SetSizer( FilterBoxSizer );
-	FilterScrollPanel->Layout();
-	FilterBoxSizer->Fit( FilterScrollPanel );
-	MainBoxSizer->Add( FilterScrollPanel, 1, wxALL|wxEXPAND, 5 );
-
-	m_staticText81 = new wxStaticText( this, wxID_ANY, wxT("\nSort By :-"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText81->Wrap( -1 );
-	m_staticText81->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
-
-	MainBoxSizer->Add( m_staticText81, 0, wxALL, 5 );
-
-	m_staticline19 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
-	MainBoxSizer->Add( m_staticline19, 0, wxEXPAND | wxALL, 5 );
-
-	SortScrollPanel = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL );
-	SortScrollPanel->SetScrollRate( 5, 5 );
-	SortSizer = new wxGridSizer( 0, 3, 0, 0 );
-
-
-	SortScrollPanel->SetSizer( SortSizer );
-	SortScrollPanel->Layout();
-	SortSizer->Fit( SortScrollPanel );
-	MainBoxSizer->Add( SortScrollPanel, 0, wxEXPAND | wxALL, 5 );
-
-	m_staticline21 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
-	MainBoxSizer->Add( m_staticline21, 0, wxEXPAND | wxALL, 5 );
-
-	wxBoxSizer* bSizer90;
-	bSizer90 = new wxBoxSizer( wxHORIZONTAL );
-
-
-	bSizer90->Add( 0, 0, 1, wxEXPAND, 5 );
-
-	CancelButton = new wxButton( this, wxID_ANY, wxT("Cancel"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer90->Add( CancelButton, 0, wxALL, 5 );
-
-	FilterButton = new wxButton( this, wxID_ANY, wxT("Filter/Sort"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer90->Add( FilterButton, 0, wxALL, 5 );
-
-
-	bSizer90->Add( 0, 0, 1, wxEXPAND, 5 );
-
-
-	MainBoxSizer->Add( bSizer90, 0, wxEXPAND, 5 );
-
-
-	this->SetSizer( MainBoxSizer );
-	this->Layout();
-	MainBoxSizer->Fit( this );
-
-	this->Centre( wxBOTH );
-
-	// Connect Events
-	CancelButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FilterDialog::OnCancelClick ), NULL, this );
-	FilterButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FilterDialog::OnFilterClick ), NULL, this );
-}
-
-FilterDialog::~FilterDialog()
-{
-	// Disconnect Events
-	CancelButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FilterDialog::OnCancelClick ), NULL, this );
-	FilterButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FilterDialog::OnFilterClick ), NULL, this );
-
-}
-
 ParticlePositionExportDialog::ParticlePositionExportDialog( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
 {
 	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
@@ -11404,6 +11319,91 @@ ParticlePositionExportDialog::~ParticlePositionExportDialog()
 	DestinationDirectoryPickerCtrl->Disconnect( wxEVT_COMMAND_DIRPICKER_CHANGED, wxFileDirPickerEventHandler( ParticlePositionExportDialog::OnDirChanged ), NULL, this );
 	CancelButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ParticlePositionExportDialog::OnCancelButtonClick ), NULL, this );
 	ExportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ParticlePositionExportDialog::OnExportButtonClick ), NULL, this );
+
+}
+
+FilterDialog::FilterDialog( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
+{
+	this->SetSizeHints( wxSize( -1,-1 ), wxDefaultSize );
+
+	MainBoxSizer = new wxBoxSizer( wxVERTICAL );
+
+	m_staticText64 = new wxStaticText( this, wxID_ANY, wxT("Filter By :-"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText64->Wrap( -1 );
+	m_staticText64->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+
+	MainBoxSizer->Add( m_staticText64, 0, wxALL, 5 );
+
+	m_staticline18 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	MainBoxSizer->Add( m_staticline18, 0, wxEXPAND | wxALL, 5 );
+
+	FilterScrollPanel = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL|wxBORDER_SUNKEN );
+	FilterScrollPanel->SetScrollRate( 5, 5 );
+	FilterBoxSizer = new wxBoxSizer( wxVERTICAL );
+
+
+	FilterScrollPanel->SetSizer( FilterBoxSizer );
+	FilterScrollPanel->Layout();
+	FilterBoxSizer->Fit( FilterScrollPanel );
+	MainBoxSizer->Add( FilterScrollPanel, 1, wxALL|wxEXPAND, 5 );
+
+	m_staticText81 = new wxStaticText( this, wxID_ANY, wxT("\nSort By :-"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText81->Wrap( -1 );
+	m_staticText81->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+
+	MainBoxSizer->Add( m_staticText81, 0, wxALL, 5 );
+
+	m_staticline19 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	MainBoxSizer->Add( m_staticline19, 0, wxEXPAND | wxALL, 5 );
+
+	SortScrollPanel = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL );
+	SortScrollPanel->SetScrollRate( 5, 5 );
+	SortSizer = new wxGridSizer( 0, 3, 0, 0 );
+
+
+	SortScrollPanel->SetSizer( SortSizer );
+	SortScrollPanel->Layout();
+	SortSizer->Fit( SortScrollPanel );
+	MainBoxSizer->Add( SortScrollPanel, 0, wxEXPAND | wxALL, 5 );
+
+	m_staticline21 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	MainBoxSizer->Add( m_staticline21, 0, wxEXPAND | wxALL, 5 );
+
+	wxBoxSizer* bSizer90;
+	bSizer90 = new wxBoxSizer( wxHORIZONTAL );
+
+
+	bSizer90->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	CancelButton = new wxButton( this, wxID_ANY, wxT("Cancel"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer90->Add( CancelButton, 0, wxALL, 5 );
+
+	FilterButton = new wxButton( this, wxID_ANY, wxT("Filter/Sort"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer90->Add( FilterButton, 0, wxALL, 5 );
+
+
+	bSizer90->Add( 0, 0, 1, wxEXPAND, 5 );
+
+
+	MainBoxSizer->Add( bSizer90, 0, wxEXPAND, 5 );
+
+
+	this->SetSizer( MainBoxSizer );
+	this->Layout();
+	MainBoxSizer->Fit( this );
+
+	this->Centre( wxBOTH );
+
+	// Connect Events
+	CancelButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FilterDialog::OnCancelClick ), NULL, this );
+	FilterButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FilterDialog::OnFilterClick ), NULL, this );
+}
+
+FilterDialog::~FilterDialog()
+{
+	// Disconnect Events
+	CancelButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FilterDialog::OnCancelClick ), NULL, this );
+	FilterButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FilterDialog::OnFilterClick ), NULL, this );
 
 }
 
@@ -11773,6 +11773,9 @@ RefinementPackageAssetPanel::RefinementPackageAssetPanel( wxWindow* parent, wxWi
 	ExportButton = new wxButton( m_panel50, wxID_ANY, wxT("Export"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer193->Add( ExportButton, 0, wxALL, 5 );
 
+	CombineButton = new wxButton( m_panel50, wxID_ANY, wxT("Combine..."), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer193->Add( CombineButton, 0, wxALL, 5 );
+
 
 	bSizer145->Add( bSizer193, 0, wxEXPAND, 5 );
 
@@ -11917,6 +11920,7 @@ RefinementPackageAssetPanel::RefinementPackageAssetPanel( wxWindow* parent, wxWi
 
 	this->SetSizer( bSizer187 );
 	this->Layout();
+	bSizer187->Fit( this );
 
 	// Connect Events
 	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RefinementPackageAssetPanel::OnUpdateUI ) );
@@ -11925,6 +11929,7 @@ RefinementPackageAssetPanel::RefinementPackageAssetPanel( wxWindow* parent, wxWi
 	DeleteButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnDeleteClick ), NULL, this );
 	ImportButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnImportClick ), NULL, this );
 	ExportButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnExportClick ), NULL, this );
+	CombineButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnCombineClick ), NULL, this );
 	RefinementPackageListCtrl->Connect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( RefinementPackageAssetPanel::MouseCheckPackagesVeto ), NULL, this );
 	RefinementPackageListCtrl->Connect( wxEVT_LEFT_DOWN, wxMouseEventHandler( RefinementPackageAssetPanel::MouseCheckPackagesVeto ), NULL, this );
 	RefinementPackageListCtrl->Connect( wxEVT_LEFT_UP, wxMouseEventHandler( RefinementPackageAssetPanel::MouseVeto ), NULL, this );
@@ -11962,6 +11967,7 @@ RefinementPackageAssetPanel::~RefinementPackageAssetPanel()
 	DeleteButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnDeleteClick ), NULL, this );
 	ImportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnImportClick ), NULL, this );
 	ExportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnExportClick ), NULL, this );
+	CombineButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnCombineClick ), NULL, this );
 	RefinementPackageListCtrl->Disconnect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( RefinementPackageAssetPanel::MouseCheckPackagesVeto ), NULL, this );
 	RefinementPackageListCtrl->Disconnect( wxEVT_LEFT_DOWN, wxMouseEventHandler( RefinementPackageAssetPanel::MouseCheckPackagesVeto ), NULL, this );
 	RefinementPackageListCtrl->Disconnect( wxEVT_LEFT_UP, wxMouseEventHandler( RefinementPackageAssetPanel::MouseVeto ), NULL, this );
@@ -11988,6 +11994,74 @@ RefinementPackageAssetPanel::~RefinementPackageAssetPanel()
 	ContainedParticlesListCtrl->Disconnect( wxEVT_RIGHT_UP, wxMouseEventHandler( RefinementPackageAssetPanel::MouseVeto ), NULL, this );
 	DisplayStackButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnDisplayStackButton ), NULL, this );
 	Active3DReferencesListCtrl->Disconnect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( RefinementPackageAssetPanel::OnVolumeListItemActivated ), NULL, this );
+
+}
+
+CombineRefinementPackagesDialogParent::CombineRefinementPackagesDialogParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
+{
+	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
+
+	wxBoxSizer* bSizer45;
+	bSizer45 = new wxBoxSizer( wxVERTICAL );
+
+	wxFlexGridSizer* fgSizer2;
+	fgSizer2 = new wxFlexGridSizer( 0, 2, 0, 0 );
+	fgSizer2->AddGrowableCol( 1 );
+	fgSizer2->SetFlexibleDirection( wxBOTH );
+	fgSizer2->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
+
+	wxArrayString m_checkList1Choices;
+	m_checkList1 = new wxCheckListBox( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, m_checkList1Choices, wxLB_MULTIPLE|wxLB_NEEDED_SB );
+	fgSizer2->Add( m_checkList1, 0, wxALL|wxEXPAND, 5 );
+
+
+	bSizer45->Add( fgSizer2, 0, wxEXPAND, 5 );
+
+	ErrorStaticText = new wxStaticText( this, wxID_ANY, wxT("Oops! - Command must contain \"$command\""), wxDefaultPosition, wxDefaultSize, 0 );
+	ErrorStaticText->Wrap( -1 );
+	ErrorStaticText->SetForegroundColour( wxColour( 180, 0, 0 ) );
+	ErrorStaticText->Hide();
+
+	bSizer45->Add( ErrorStaticText, 0, wxALIGN_CENTER|wxALL, 5 );
+
+	wxBoxSizer* bSizer590;
+	bSizer590 = new wxBoxSizer( wxHORIZONTAL );
+
+
+	bSizer45->Add( bSizer590, 0, wxALIGN_CENTER, 5 );
+
+	m_staticline14 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer45->Add( m_staticline14, 0, wxEXPAND | wxALL, 5 );
+
+	wxBoxSizer* bSizer47;
+	bSizer47 = new wxBoxSizer( wxHORIZONTAL );
+
+	CancelButton = new wxButton( this, wxID_ANY, wxT("Cancel"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer47->Add( CancelButton, 0, wxALL|wxEXPAND, 5 );
+
+	CombineButton = new wxButton( this, wxID_ANY, wxT("Combine"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer47->Add( CombineButton, 0, wxALL|wxEXPAND, 5 );
+
+
+	bSizer45->Add( bSizer47, 0, wxALIGN_CENTER, 5 );
+
+
+	this->SetSizer( bSizer45 );
+	this->Layout();
+	bSizer45->Fit( this );
+
+	this->Centre( wxBOTH );
+
+	// Connect Events
+	CancelButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( CombineRefinementPackagesDialogParent::OnCancelClick ), NULL, this );
+	CombineButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( CombineRefinementPackagesDialogParent::OnCombineClick ), NULL, this );
+}
+
+CombineRefinementPackagesDialogParent::~CombineRefinementPackagesDialogParent()
+{
+	// Disconnect Events
+	CancelButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( CombineRefinementPackagesDialogParent::OnCancelClick ), NULL, this );
+	CombineButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( CombineRefinementPackagesDialogParent::OnCombineClick ), NULL, this );
 
 }
 

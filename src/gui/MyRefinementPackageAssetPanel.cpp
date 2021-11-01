@@ -50,6 +50,17 @@ void MyRefinementPackageAssetPanel::OnRenameClick( wxCommandEvent& event )
 
 }
 
+void MyRefinementPackageAssetPanel::OnCombineClick( wxCommandEvent& event )
+{
+	CombineRefinementPackagesDialog *combine_packages = new CombineRefinementPackagesDialog(this);
+
+
+	if (combine_packages->ShowModal() == wxID_OK){
+		combine_packages->Destroy();
+	}
+}
+
+
 void MyRefinementPackageAssetPanel::OnImportClick( wxCommandEvent& event )
 {
 	ImportRefinementPackageWizard *my_wizard = new ImportRefinementPackageWizard(this);

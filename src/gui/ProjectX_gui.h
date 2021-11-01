@@ -85,6 +85,7 @@ class VolumeAssetPickerComboPanel;
 #include <wx/dynarray.h>
 WX_DEFINE_ARRAY_PTR( wxWizardPageSimple*, WizardPages );
 #include <wx/statbox.h>
+#include <wx/checklst.h>
 #include <wx/toolbar.h>
 #include <wx/aui/auibook.h>
 #include <wx/statbmp.h>
@@ -2846,6 +2847,34 @@ class VolumeChooserDialog : public wxDialog
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+/// Class ParticlePositionExportDialog
+///////////////////////////////////////////////////////////////////////////////
+class ParticlePositionExportDialog : public wxDialog
+{
+	private:
+
+	protected:
+		wxPanel* m_panel38;
+		wxComboBox* GroupComboBox;
+		wxDirPickerCtrl* DestinationDirectoryPickerCtrl;
+		wxStaticText* WarningText;
+		wxButton* CancelButton;
+		wxButton* ExportButton;
+
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnDirChanged( wxFileDirPickerEvent& event ) { event.Skip(); }
+		virtual void OnCancelButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnExportButtonClick( wxCommandEvent& event ) { event.Skip(); }
+
+
+	public:
+
+		ParticlePositionExportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Export particle positions"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE );
+		~ParticlePositionExportDialog();
+
+};
+
+///////////////////////////////////////////////////////////////////////////////
 /// Class FilterDialog
 ///////////////////////////////////////////////////////////////////////////////
 class FilterDialog : public wxDialog
@@ -2875,34 +2904,6 @@ class FilterDialog : public wxDialog
 
 		FilterDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Filter / Sort Movies"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxDEFAULT_DIALOG_STYLE );
 		~FilterDialog();
-
-};
-
-///////////////////////////////////////////////////////////////////////////////
-/// Class ParticlePositionExportDialog
-///////////////////////////////////////////////////////////////////////////////
-class ParticlePositionExportDialog : public wxDialog
-{
-	private:
-
-	protected:
-		wxPanel* m_panel38;
-		wxComboBox* GroupComboBox;
-		wxDirPickerCtrl* DestinationDirectoryPickerCtrl;
-		wxStaticText* WarningText;
-		wxButton* CancelButton;
-		wxButton* ExportButton;
-
-		// Virtual event handlers, overide them in your derived class
-		virtual void OnDirChanged( wxFileDirPickerEvent& event ) { event.Skip(); }
-		virtual void OnCancelButtonClick( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnExportButtonClick( wxCommandEvent& event ) { event.Skip(); }
-
-
-	public:
-
-		ParticlePositionExportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Export particle positions"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE );
-		~ParticlePositionExportDialog();
 
 };
 
@@ -2998,6 +2999,7 @@ class RefinementPackageAssetPanel : public wxPanel
 		wxStaticLine* m_staticline122;
 		wxButton* ImportButton;
 		wxButton* ExportButton;
+		wxButton* CombineButton;
 		RefinementPackageListControl* RefinementPackageListCtrl;
 		wxPanel* m_panel51;
 		wxStaticText* ContainedParticlesStaticText;
@@ -3030,6 +3032,7 @@ class RefinementPackageAssetPanel : public wxPanel
 		virtual void OnDeleteClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnImportClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnExportClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnCombineClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void MouseCheckPackagesVeto( wxMouseEvent& event ) { event.Skip(); }
 		virtual void MouseVeto( wxMouseEvent& event ) { event.Skip(); }
 		virtual void OnBeginEdit( wxListEvent& event ) { event.Skip(); }
@@ -3043,7 +3046,7 @@ class RefinementPackageAssetPanel : public wxPanel
 
 	public:
 
-		RefinementPackageAssetPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 770,428 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+		RefinementPackageAssetPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~RefinementPackageAssetPanel();
 
 		void m_splitter11OnIdle( wxIdleEvent& )
@@ -3051,6 +3054,32 @@ class RefinementPackageAssetPanel : public wxPanel
 			m_splitter11->SetSashPosition( 600 );
 			m_splitter11->Disconnect( wxEVT_IDLE, wxIdleEventHandler( RefinementPackageAssetPanel::m_splitter11OnIdle ), NULL, this );
 		}
+
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class CombineRefinementPackagesDialogParent
+///////////////////////////////////////////////////////////////////////////////
+class CombineRefinementPackagesDialogParent : public wxDialog
+{
+	private:
+
+	protected:
+		wxCheckListBox* m_checkList1;
+		wxStaticText* ErrorStaticText;
+		wxStaticLine* m_staticline14;
+		wxButton* CancelButton;
+		wxButton* CombineButton;
+
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnCancelClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnCombineClick( wxCommandEvent& event ) { event.Skip(); }
+
+
+	public:
+
+		CombineRefinementPackagesDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Select Packages to Combine..."), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE );
+		~CombineRefinementPackagesDialogParent();
 
 };
 

@@ -97,12 +97,27 @@ float FrealignObjectiveFunction(void *scoring_parameters, float *array_of_values
 
 	//****************
 	// The minimizer sometimes tries weird values
-	if (isnan(comparison_object->particle->alignment_parameters.ReturnShiftX()) || fabsf(comparison_object->particle->alignment_parameters.ReturnShiftX() - comparison_object->initial_x_shift) > comparison_object->x_shift_limit) return 1;
-	if (isnan(comparison_object->particle->alignment_parameters.ReturnShiftY()) || fabsf(comparison_object->particle->alignment_parameters.ReturnShiftY() - comparison_object->initial_y_shift) > comparison_object->y_shift_limit) return 1;
-	if (isnan(comparison_object->particle->alignment_parameters.ReturnPsiAngle()) || fabsf(comparison_object->particle->alignment_parameters.ReturnPsiAngle() - comparison_object->initial_psi_angle) > comparison_object->angle_change_limit) return 1;
-	if (isnan(comparison_object->particle->alignment_parameters.ReturnPhiAngle()) || fabsf(comparison_object->particle->alignment_parameters.ReturnPhiAngle() - comparison_object->initial_phi_angle) > comparison_object->angle_change_limit) return 1;
-	if (isnan(comparison_object->particle->alignment_parameters.ReturnThetaAngle()) || fabsf(comparison_object->particle->alignment_parameters.ReturnThetaAngle() - comparison_object->initial_theta_angle) > comparison_object->angle_change_limit) return 1;
+	if (isnan(comparison_object->particle->alignment_parameters.ReturnShiftX()) || fabsf(comparison_object->particle->alignment_parameters.ReturnShiftX() - comparison_object->initial_x_shift) > comparison_object->x_shift_limit)
+		return 1;
+	if (isnan(comparison_object->particle->alignment_parameters.ReturnShiftY()) || fabsf(comparison_object->particle->alignment_parameters.ReturnShiftY() - comparison_object->initial_y_shift) > comparison_object->y_shift_limit)
+		return 1;
+	if (isnan(comparison_object->particle->alignment_parameters.ReturnPsiAngle()) || fabsf(comparison_object->particle->alignment_parameters.ReturnPsiAngle() - comparison_object->initial_psi_angle) > comparison_object->angle_change_limit)
+		return 1;
+	if (isnan(comparison_object->particle->alignment_parameters.ReturnPhiAngle()) || fabsf(comparison_object->particle->alignment_parameters.ReturnPhiAngle() - comparison_object->initial_phi_angle) > comparison_object->angle_change_limit)
+		return 1;
+	if (isnan(comparison_object->particle->alignment_parameters.ReturnThetaAngle()) || fabsf(comparison_object->particle->alignment_parameters.ReturnThetaAngle() - comparison_object->initial_theta_angle) > comparison_object->angle_change_limit)
+		return 1;
 
+	if (isnan(comparison_object->particle->temp_parameters.x_shift) || fabsf(comparison_object->particle->temp_parameters.x_shift - comparison_object->initial_x_shift) > comparison_object->x_shift_limit)
+		return 1;
+	if (isnan(comparison_object->particle->temp_parameters.y_shift) || fabsf(comparison_object->particle->temp_parameters.y_shift - comparison_object->initial_y_shift) > comparison_object->y_shift_limit)
+		return 1;
+	if (isnan(comparison_object->particle->temp_parameters.psi) || fabsf(comparison_object->particle->temp_parameters.psi - comparison_object->initial_psi_angle) > comparison_object->angle_change_limit)
+		return 1;
+	if (isnan(comparison_object->particle->temp_parameters.phi) || fabsf(comparison_object->particle->temp_parameters.phi - comparison_object->initial_phi_angle) > comparison_object->angle_change_limit)
+		return 1;
+	if (isnan(comparison_object->particle->temp_parameters.theta) || fabsf(comparison_object->particle->temp_parameters.theta - comparison_object->initial_theta_angle) > comparison_object->angle_change_limit)
+		return 1;
 	/*
 	 *
 	float additional_penalty = 0;

@@ -10,7 +10,7 @@ extern MatchTemplateResultsPanel *match_template_results_panel;
 
 RefineTemplatePanel::RefineTemplatePanel( wxWindow* parent )
 :
-RefineTemplateParentPanel( parent )
+RefineTemplatePanelParent( parent )
 {
 	// Set variables
 

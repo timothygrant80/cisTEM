@@ -503,9 +503,9 @@ class RefinementResultsPanel : public wxPanel
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-/// Class ShowCTFResultsParentPanel
+/// Class ShowCTFResultsPanelParent
 ///////////////////////////////////////////////////////////////////////////////
-class ShowCTFResultsParentPanel : public wxPanel
+class ShowCTFResultsPanelParent : public wxPanel
 {
 	private:
 
@@ -552,27 +552,27 @@ class ShowCTFResultsParentPanel : public wxPanel
 		CTF1DPanel* CTFPlotPanel;
 		DisplayPanel* ImageDisplayPanel;
 
-		ShowCTFResultsParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 952,539 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
-		~ShowCTFResultsParentPanel();
+		ShowCTFResultsPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 952,539 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+		~ShowCTFResultsPanelParent();
 
 		void m_splitter16OnIdle( wxIdleEvent& )
 		{
 			m_splitter16->SetSashPosition( 700 );
-			m_splitter16->Disconnect( wxEVT_IDLE, wxIdleEventHandler( ShowCTFResultsParentPanel::m_splitter16OnIdle ), NULL, this );
+			m_splitter16->Disconnect( wxEVT_IDLE, wxIdleEventHandler( ShowCTFResultsPanelParent::m_splitter16OnIdle ), NULL, this );
 		}
 
 		void m_splitter15OnIdle( wxIdleEvent& )
 		{
 			m_splitter15->SetSashPosition( 0 );
-			m_splitter15->Disconnect( wxEVT_IDLE, wxIdleEventHandler( ShowCTFResultsParentPanel::m_splitter15OnIdle ), NULL, this );
+			m_splitter15->Disconnect( wxEVT_IDLE, wxIdleEventHandler( ShowCTFResultsPanelParent::m_splitter15OnIdle ), NULL, this );
 		}
 
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-/// Class ShowTemplateMatchResultsParentPanel
+/// Class ShowTemplateMatchResultsPanelParent
 ///////////////////////////////////////////////////////////////////////////////
-class ShowTemplateMatchResultsParentPanel : public wxPanel
+class ShowTemplateMatchResultsPanelParent : public wxPanel
 {
 	private:
 
@@ -604,19 +604,19 @@ class ShowTemplateMatchResultsParentPanel : public wxPanel
 		wxListCtrl* ChangesListCtrl;
 		DisplayPanel* ImageDisplayPanel;
 
-		ShowTemplateMatchResultsParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 952,539 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
-		~ShowTemplateMatchResultsParentPanel();
+		ShowTemplateMatchResultsPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 952,539 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+		~ShowTemplateMatchResultsPanelParent();
 
 		void m_splitter16OnIdle( wxIdleEvent& )
 		{
 			m_splitter16->SetSashPosition( 700 );
-			m_splitter16->Disconnect( wxEVT_IDLE, wxIdleEventHandler( ShowTemplateMatchResultsParentPanel::m_splitter16OnIdle ), NULL, this );
+			m_splitter16->Disconnect( wxEVT_IDLE, wxIdleEventHandler( ShowTemplateMatchResultsPanelParent::m_splitter16OnIdle ), NULL, this );
 		}
 
 		void m_splitter15OnIdle( wxIdleEvent& )
 		{
 			m_splitter15->SetSashPosition( 0 );
-			m_splitter15->Disconnect( wxEVT_IDLE, wxIdleEventHandler( ShowTemplateMatchResultsParentPanel::m_splitter15OnIdle ), NULL, this );
+			m_splitter15->Disconnect( wxEVT_IDLE, wxIdleEventHandler( ShowTemplateMatchResultsPanelParent::m_splitter15OnIdle ), NULL, this );
 		}
 
 };
@@ -722,9 +722,9 @@ class Refine2DResultsPanelParent : public wxPanel
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-/// Class PickingResultsDisplayParentPanel
+/// Class PickingResultsDisplayPanelParent
 ///////////////////////////////////////////////////////////////////////////////
-class PickingResultsDisplayParentPanel : public wxPanel
+class PickingResultsDisplayPanelParent : public wxPanel
 {
 	private:
 
@@ -761,8 +761,8 @@ class PickingResultsDisplayParentPanel : public wxPanel
 		wxButton* UndoButton;
 		wxButton* RedoButton;
 
-		PickingResultsDisplayParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1123,360 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
-		~PickingResultsDisplayParentPanel();
+		PickingResultsDisplayPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1123,360 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+		~PickingResultsDisplayPanelParent();
 
 };
 
@@ -1429,6 +1429,38 @@ class VolumeImportDialog : public wxDialog
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+/// Class AtomicCoordinatesImportDialog
+///////////////////////////////////////////////////////////////////////////////
+class AtomicCoordinatesImportDialog : public wxDialog
+{
+	private:
+
+	protected:
+		wxListCtrl* PathListCtrl;
+		wxButton* m_button10;
+		wxButton* m_button11;
+		wxButton* ClearButton;
+		wxStaticLine* m_staticline7;
+		wxStaticLine* m_staticline8;
+		wxButton* m_button13;
+		wxButton* ImportButton;
+
+		// Virtual event handlers, overide them in your derived class
+		virtual void AddFilesClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void AddDirectoryClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void ClearClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void CancelClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void ImportClick( wxCommandEvent& event ) { event.Skip(); }
+
+
+	public:
+
+		AtomicCoordinatesImportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Import Images"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 484,539 ), long style = wxCLOSE_BOX );
+		~AtomicCoordinatesImportDialog();
+
+};
+
+///////////////////////////////////////////////////////////////////////////////
 /// Class MovieImportDialog
 ///////////////////////////////////////////////////////////////////////////////
 class MovieImportDialog : public wxDialog
@@ -1949,9 +1981,9 @@ class Refine3DPanel : public JobPanel
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-/// Class RefineCTFParentPanel
+/// Class RefineCTFPanelParent
 ///////////////////////////////////////////////////////////////////////////////
-class RefineCTFParentPanel : public JobPanel
+class RefineCTFPanelParent : public JobPanel
 {
 	private:
 
@@ -2059,8 +2091,8 @@ class RefineCTFParentPanel : public JobPanel
 		RefinementPickerComboPanel* InputParametersComboBox;
 		DisplayCTFRefinementResultsPanel* ShowRefinementResultsPanel;
 
-		RefineCTFParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1285,635 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
-		~RefineCTFParentPanel();
+		RefineCTFPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1285,635 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+		~RefineCTFPanelParent();
 
 };
 
@@ -2421,9 +2453,9 @@ class FindCTFPanel : public JobPanel
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-/// Class MatchTemplateParentPanel
+/// Class MatchTemplatePanelParent
 ///////////////////////////////////////////////////////////////////////////////
-class MatchTemplateParentPanel : public JobPanel
+class MatchTemplatePanelParent : public JobPanel
 {
 	private:
 
@@ -2495,15 +2527,15 @@ class MatchTemplateParentPanel : public JobPanel
 		wxComboBox* SymmetryComboBox;
 		ShowTemplateMatchResultsPanel* ResultsPanel;
 
-		MatchTemplateParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
-		~MatchTemplateParentPanel();
+		MatchTemplatePanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+		~MatchTemplatePanelParent();
 
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-/// Class RefineTemplateParentPanel
+/// Class RefineTemplatePanelParent
 ///////////////////////////////////////////////////////////////////////////////
-class RefineTemplateParentPanel : public JobPanel
+class RefineTemplatePanelParent : public JobPanel
 {
 	private:
 
@@ -2585,8 +2617,8 @@ class RefineTemplateParentPanel : public JobPanel
 		wxComboBox* SymmetryComboBox;
 		ShowTemplateMatchResultsPanel* ResultsPanel;
 
-		RefineTemplateParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
-		~RefineTemplateParentPanel();
+		RefineTemplatePanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+		~RefineTemplatePanelParent();
 
 };
 

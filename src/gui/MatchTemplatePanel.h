@@ -2,7 +2,7 @@
 #define __MatchTemplatePanel__
 
 
-class MatchTemplatePanel : public MatchTemplateParentPanel
+class MatchTemplatePanel : public MatchTemplatePanelParent
 {
 		long my_job_id;
 

@@ -10,7 +10,7 @@ extern MatchTemplateResultsPanel *match_template_results_panel;
 
 MatchTemplatePanel::MatchTemplatePanel( wxWindow* parent )
 :
-MatchTemplateParentPanel( parent )
+MatchTemplatePanelParent( parent )
 {
 	// Set variables
 

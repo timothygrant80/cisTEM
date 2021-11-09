@@ -111,7 +111,7 @@ public:
 };
 
 
-class RefineCTFPanel : public RefineCTFParentPanel
+class RefineCTFPanel : public RefineCTFPanelParent
 {
 	friend class CTFRefinementManager;
 

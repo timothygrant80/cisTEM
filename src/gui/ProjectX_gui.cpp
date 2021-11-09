@@ -1867,14 +1867,14 @@ RefinementResultsPanel::~RefinementResultsPanel()
 
 }
 
-ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
+ShowCTFResultsPanelParent::ShowCTFResultsPanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
 {
 	wxBoxSizer* bSizer92;
 	bSizer92 = new wxBoxSizer( wxVERTICAL );
 
 	m_splitter16 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
 	m_splitter16->SetSashGravity( 0.5 );
-	m_splitter16->Connect( wxEVT_IDLE, wxIdleEventHandler( ShowCTFResultsParentPanel::m_splitter16OnIdle ), NULL, this );
+	m_splitter16->Connect( wxEVT_IDLE, wxIdleEventHandler( ShowCTFResultsPanelParent::m_splitter16OnIdle ), NULL, this );
 
 	m_panel87 = new wxPanel( m_splitter16, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	wxBoxSizer* bSizer301;
@@ -1882,7 +1882,7 @@ ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindow
 
 	m_splitter15 = new wxSplitterWindow( m_panel87, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
 	m_splitter15->SetSashGravity( 0.5 );
-	m_splitter15->Connect( wxEVT_IDLE, wxIdleEventHandler( ShowCTFResultsParentPanel::m_splitter15OnIdle ), NULL, this );
+	m_splitter15->Connect( wxEVT_IDLE, wxIdleEventHandler( ShowCTFResultsPanelParent::m_splitter15OnIdle ), NULL, this );
 
 	m_panel88 = new wxPanel( m_splitter15, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	wxBoxSizer* bSizer302;
@@ -2098,18 +2098,18 @@ ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindow
 	this->Layout();
 }
 
-ShowCTFResultsParentPanel::~ShowCTFResultsParentPanel()
+ShowCTFResultsPanelParent::~ShowCTFResultsPanelParent()
 {
 }
 
-ShowTemplateMatchResultsParentPanel::ShowTemplateMatchResultsParentPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
+ShowTemplateMatchResultsPanelParent::ShowTemplateMatchResultsPanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
 {
 	wxBoxSizer* bSizer92;
 	bSizer92 = new wxBoxSizer( wxVERTICAL );
 
 	m_splitter16 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
 	m_splitter16->SetSashGravity( 0.5 );
-	m_splitter16->Connect( wxEVT_IDLE, wxIdleEventHandler( ShowTemplateMatchResultsParentPanel::m_splitter16OnIdle ), NULL, this );
+	m_splitter16->Connect( wxEVT_IDLE, wxIdleEventHandler( ShowTemplateMatchResultsPanelParent::m_splitter16OnIdle ), NULL, this );
 
 	m_panel87 = new wxPanel( m_splitter16, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	wxBoxSizer* bSizer301;
@@ -2117,7 +2117,7 @@ ShowTemplateMatchResultsParentPanel::ShowTemplateMatchResultsParentPanel( wxWind
 
 	m_splitter15 = new wxSplitterWindow( m_panel87, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
 	m_splitter15->SetSashGravity( 0.5 );
-	m_splitter15->Connect( wxEVT_IDLE, wxIdleEventHandler( ShowTemplateMatchResultsParentPanel::m_splitter15OnIdle ), NULL, this );
+	m_splitter15->Connect( wxEVT_IDLE, wxIdleEventHandler( ShowTemplateMatchResultsPanelParent::m_splitter15OnIdle ), NULL, this );
 
 	m_panel89 = new wxPanel( m_splitter15, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	wxBoxSizer* bSizer303;
@@ -2242,13 +2242,13 @@ ShowTemplateMatchResultsParentPanel::ShowTemplateMatchResultsParentPanel( wxWind
 	this->Layout();
 
 	// Connect Events
-	SaveButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ShowTemplateMatchResultsParentPanel::OnSavePeaksClick ), NULL, this );
+	SaveButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ShowTemplateMatchResultsPanelParent::OnSavePeaksClick ), NULL, this );
 }
 
-ShowTemplateMatchResultsParentPanel::~ShowTemplateMatchResultsParentPanel()
+ShowTemplateMatchResultsPanelParent::~ShowTemplateMatchResultsPanelParent()
 {
 	// Disconnect Events
-	SaveButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ShowTemplateMatchResultsParentPanel::OnSavePeaksClick ), NULL, this );
+	SaveButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ShowTemplateMatchResultsPanelParent::OnSavePeaksClick ), NULL, this );
 
 }
 
@@ -2649,7 +2649,7 @@ Refine2DResultsPanelParent::~Refine2DResultsPanelParent()
 
 }
 
-PickingResultsDisplayParentPanel::PickingResultsDisplayParentPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
+PickingResultsDisplayPanelParent::PickingResultsDisplayPanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
 {
 	wxBoxSizer* bSizer92;
 	bSizer92 = new wxBoxSizer( wxHORIZONTAL );
@@ -2763,29 +2763,29 @@ PickingResultsDisplayParentPanel::PickingResultsDisplayParentPanel( wxWindow* pa
 	this->Layout();
 
 	// Connect Events
-	CirclesAroundParticlesCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnCirclesAroundParticlesCheckBox ), NULL, this );
-	ScaleBarCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnScaleBarCheckBox ), NULL, this );
-	HighPassFilterCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnHighPassFilterCheckBox ), NULL, this );
-	LowPassFilterCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnLowPassFilterCheckBox ), NULL, this );
-	LowResFilterTextCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( PickingResultsDisplayParentPanel::OnLowPassKillFocus ), NULL, this );
-	LowResFilterTextCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnLowPassEnter ), NULL, this );
-	WienerFilterCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnWienerFilterCheckBox ), NULL, this );
-	UndoButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnUndoButtonClick ), NULL, this );
-	RedoButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnRedoButtonClick ), NULL, this );
+	CirclesAroundParticlesCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnCirclesAroundParticlesCheckBox ), NULL, this );
+	ScaleBarCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnScaleBarCheckBox ), NULL, this );
+	HighPassFilterCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnHighPassFilterCheckBox ), NULL, this );
+	LowPassFilterCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnLowPassFilterCheckBox ), NULL, this );
+	LowResFilterTextCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( PickingResultsDisplayPanelParent::OnLowPassKillFocus ), NULL, this );
+	LowResFilterTextCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnLowPassEnter ), NULL, this );
+	WienerFilterCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnWienerFilterCheckBox ), NULL, this );
+	UndoButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnUndoButtonClick ), NULL, this );
+	RedoButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnRedoButtonClick ), NULL, this );
 }
 
-PickingResultsDisplayParentPanel::~PickingResultsDisplayParentPanel()
+PickingResultsDisplayPanelParent::~PickingResultsDisplayPanelParent()
 {
 	// Disconnect Events
-	CirclesAroundParticlesCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnCirclesAroundParticlesCheckBox ), NULL, this );
-	ScaleBarCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnScaleBarCheckBox ), NULL, this );
-	HighPassFilterCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnHighPassFilterCheckBox ), NULL, this );
-	LowPassFilterCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnLowPassFilterCheckBox ), NULL, this );
-	LowResFilterTextCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( PickingResultsDisplayParentPanel::OnLowPassKillFocus ), NULL, this );
-	LowResFilterTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnLowPassEnter ), NULL, this );
-	WienerFilterCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnWienerFilterCheckBox ), NULL, this );
-	UndoButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnUndoButtonClick ), NULL, this );
-	RedoButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnRedoButtonClick ), NULL, this );
+	CirclesAroundParticlesCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnCirclesAroundParticlesCheckBox ), NULL, this );
+	ScaleBarCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnScaleBarCheckBox ), NULL, this );
+	HighPassFilterCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnHighPassFilterCheckBox ), NULL, this );
+	LowPassFilterCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnLowPassFilterCheckBox ), NULL, this );
+	LowResFilterTextCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( PickingResultsDisplayPanelParent::OnLowPassKillFocus ), NULL, this );
+	LowResFilterTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnLowPassEnter ), NULL, this );
+	WienerFilterCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnWienerFilterCheckBox ), NULL, this );
+	UndoButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnUndoButtonClick ), NULL, this );
+	RedoButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnRedoButtonClick ), NULL, this );
 
 }
 
@@ -5030,6 +5030,88 @@ VolumeImportDialog::~VolumeImportDialog()
 	PixelSizeText->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( VolumeImportDialog::TextChanged ), NULL, this );
 	m_button13->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::CancelClick ), NULL, this );
 	ImportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::ImportClick ), NULL, this );
+
+}
+
+AtomicCoordinatesImportDialog::AtomicCoordinatesImportDialog( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
+{
+	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
+
+	wxBoxSizer* bSizer26;
+	bSizer26 = new wxBoxSizer( wxVERTICAL );
+
+	PathListCtrl = new wxListCtrl( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_LIST|wxLC_NO_HEADER|wxLC_REPORT|wxVSCROLL );
+	bSizer26->Add( PathListCtrl, 100, wxALL|wxEXPAND, 5 );
+
+	wxBoxSizer* bSizer27;
+	bSizer27 = new wxBoxSizer( wxHORIZONTAL );
+
+	m_button10 = new wxButton( this, wxID_ANY, wxT("Add Files"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer27->Add( m_button10, 33, wxALL, 5 );
+
+	m_button11 = new wxButton( this, wxID_ANY, wxT("Add Directory"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer27->Add( m_button11, 33, wxALL, 5 );
+
+	ClearButton = new wxButton( this, wxID_ANY, wxT("Clear"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer27->Add( ClearButton, 33, wxALL, 5 );
+
+
+	bSizer26->Add( bSizer27, 0, wxEXPAND, 5 );
+
+	m_staticline7 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer26->Add( m_staticline7, 0, wxEXPAND | wxALL, 5 );
+
+	wxBoxSizer* bSizer29;
+	bSizer29 = new wxBoxSizer( wxHORIZONTAL );
+
+
+	bSizer26->Add( bSizer29, 0, wxEXPAND, 5 );
+
+	m_staticline8 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer26->Add( m_staticline8, 0, wxEXPAND | wxALL, 5 );
+
+	wxBoxSizer* bSizer33;
+	bSizer33 = new wxBoxSizer( wxHORIZONTAL );
+
+	m_button13 = new wxButton( this, wxID_ANY, wxT("Cancel"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer33->Add( m_button13, 0, wxALL, 5 );
+
+
+	bSizer33->Add( 0, 0, 1, wxEXPAND, 5 );
+
+
+	bSizer33->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	ImportButton = new wxButton( this, wxID_ANY, wxT("Import"), wxDefaultPosition, wxDefaultSize, 0 );
+	ImportButton->Enable( false );
+
+	bSizer33->Add( ImportButton, 0, wxALL, 5 );
+
+
+	bSizer26->Add( bSizer33, 1, wxEXPAND, 5 );
+
+
+	this->SetSizer( bSizer26 );
+	this->Layout();
+
+	this->Centre( wxBOTH );
+
+	// Connect Events
+	m_button10->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialog::AddFilesClick ), NULL, this );
+	m_button11->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialog::AddDirectoryClick ), NULL, this );
+	ClearButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialog::ClearClick ), NULL, this );
+	m_button13->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialog::CancelClick ), NULL, this );
+	ImportButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialog::ImportClick ), NULL, this );
+}
+
+AtomicCoordinatesImportDialog::~AtomicCoordinatesImportDialog()
+{
+	// Disconnect Events
+	m_button10->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialog::AddFilesClick ), NULL, this );
+	m_button11->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialog::AddDirectoryClick ), NULL, this );
+	ClearButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialog::ClearClick ), NULL, this );
+	m_button13->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialog::CancelClick ), NULL, this );
+	ImportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialog::ImportClick ), NULL, this );
 
 }
 
@@ -7373,7 +7455,7 @@ Refine3DPanel::~Refine3DPanel()
 
 }
 
-RefineCTFParentPanel::RefineCTFParentPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : JobPanel( parent, id, pos, size, style, name )
+RefineCTFPanelParent::RefineCTFPanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : JobPanel( parent, id, pos, size, style, name )
 {
 	wxBoxSizer* bSizer43;
 	bSizer43 = new wxBoxSizer( wxVERTICAL );
@@ -7955,35 +8037,35 @@ RefineCTFParentPanel::RefineCTFParentPanel( wxWindow* parent, wxWindowID id, con
 	this->Layout();
 
 	// Connect Events
-	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RefineCTFParentPanel::OnUpdateUI ) );
-	UseMaskCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( RefineCTFParentPanel::OnUseMaskCheckBox ), NULL, this );
-	HighResolutionLimitTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( RefineCTFParentPanel::OnHighResLimitChange ), NULL, this );
-	ExpertToggleButton->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( RefineCTFParentPanel::OnExpertOptionsToggle ), NULL, this );
-	Active3DReferencesListCtrl->Connect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( RefineCTFParentPanel::OnVolumeListItemActivated ), NULL, this );
-	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFParentPanel::ResetAllDefaultsClick ), NULL, this );
-	AutoMaskYesRadioButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( RefineCTFParentPanel::OnAutoMaskButton ), NULL, this );
-	AutoMaskNoRadioButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( RefineCTFParentPanel::OnAutoMaskButton ), NULL, this );
-	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( RefineCTFParentPanel::OnInfoURL ), NULL, this );
-	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFParentPanel::FinishButtonClick ), NULL, this );
-	CancelAlignmentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFParentPanel::TerminateButtonClick ), NULL, this );
-	StartRefinementButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFParentPanel::StartRefinementClick ), NULL, this );
+	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RefineCTFPanelParent::OnUpdateUI ) );
+	UseMaskCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( RefineCTFPanelParent::OnUseMaskCheckBox ), NULL, this );
+	HighResolutionLimitTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( RefineCTFPanelParent::OnHighResLimitChange ), NULL, this );
+	ExpertToggleButton->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( RefineCTFPanelParent::OnExpertOptionsToggle ), NULL, this );
+	Active3DReferencesListCtrl->Connect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( RefineCTFPanelParent::OnVolumeListItemActivated ), NULL, this );
+	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFPanelParent::ResetAllDefaultsClick ), NULL, this );
+	AutoMaskYesRadioButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( RefineCTFPanelParent::OnAutoMaskButton ), NULL, this );
+	AutoMaskNoRadioButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( RefineCTFPanelParent::OnAutoMaskButton ), NULL, this );
+	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( RefineCTFPanelParent::OnInfoURL ), NULL, this );
+	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFPanelParent::FinishButtonClick ), NULL, this );
+	CancelAlignmentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFPanelParent::TerminateButtonClick ), NULL, this );
+	StartRefinementButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFPanelParent::StartRefinementClick ), NULL, this );
 }
 
-RefineCTFParentPanel::~RefineCTFParentPanel()
+RefineCTFPanelParent::~RefineCTFPanelParent()
 {
 	// Disconnect Events
-	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RefineCTFParentPanel::OnUpdateUI ) );
-	UseMaskCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( RefineCTFParentPanel::OnUseMaskCheckBox ), NULL, this );
-	HighResolutionLimitTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( RefineCTFParentPanel::OnHighResLimitChange ), NULL, this );
-	ExpertToggleButton->Disconnect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( RefineCTFParentPanel::OnExpertOptionsToggle ), NULL, this );
-	Active3DReferencesListCtrl->Disconnect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( RefineCTFParentPanel::OnVolumeListItemActivated ), NULL, this );
-	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFParentPanel::ResetAllDefaultsClick ), NULL, this );
-	AutoMaskYesRadioButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( RefineCTFParentPanel::OnAutoMaskButton ), NULL, this );
-	AutoMaskNoRadioButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( RefineCTFParentPanel::OnAutoMaskButton ), NULL, this );
-	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( RefineCTFParentPanel::OnInfoURL ), NULL, this );
-	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFParentPanel::FinishButtonClick ), NULL, this );
-	CancelAlignmentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFParentPanel::TerminateButtonClick ), NULL, this );
-	StartRefinementButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFParentPanel::StartRefinementClick ), NULL, this );
+	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RefineCTFPanelParent::OnUpdateUI ) );
+	UseMaskCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( RefineCTFPanelParent::OnUseMaskCheckBox ), NULL, this );
+	HighResolutionLimitTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( RefineCTFPanelParent::OnHighResLimitChange ), NULL, this );
+	ExpertToggleButton->Disconnect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( RefineCTFPanelParent::OnExpertOptionsToggle ), NULL, this );
+	Active3DReferencesListCtrl->Disconnect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( RefineCTFPanelParent::OnVolumeListItemActivated ), NULL, this );
+	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFPanelParent::ResetAllDefaultsClick ), NULL, this );
+	AutoMaskYesRadioButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( RefineCTFPanelParent::OnAutoMaskButton ), NULL, this );
+	AutoMaskNoRadioButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( RefineCTFPanelParent::OnAutoMaskButton ), NULL, this );
+	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( RefineCTFPanelParent::OnInfoURL ), NULL, this );
+	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFPanelParent::FinishButtonClick ), NULL, this );
+	CancelAlignmentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFPanelParent::TerminateButtonClick ), NULL, this );
+	StartRefinementButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFPanelParent::StartRefinementClick ), NULL, this );
 
 }
 
@@ -9738,7 +9820,7 @@ FindCTFPanel::~FindCTFPanel()
 
 }
 
-MatchTemplateParentPanel::MatchTemplateParentPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : JobPanel( parent, id, pos, size, style, name )
+MatchTemplatePanelParent::MatchTemplatePanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : JobPanel( parent, id, pos, size, style, name )
 {
 	wxBoxSizer* bSizer43;
 	bSizer43 = new wxBoxSizer( wxVERTICAL );
@@ -10084,27 +10166,27 @@ MatchTemplateParentPanel::MatchTemplateParentPanel( wxWindow* parent, wxWindowID
 	this->Layout();
 
 	// Connect Events
-	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( MatchTemplateParentPanel::OnUpdateUI ) );
-	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::ResetAllDefaultsClick ), NULL, this );
-	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( MatchTemplateParentPanel::OnInfoURL ), NULL, this );
-	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::FinishButtonClick ), NULL, this );
-	CancelAlignmentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::TerminateButtonClick ), NULL, this );
-	StartEstimationButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::StartEstimationClick ), NULL, this );
+	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( MatchTemplatePanelParent::OnUpdateUI ) );
+	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplatePanelParent::ResetAllDefaultsClick ), NULL, this );
+	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( MatchTemplatePanelParent::OnInfoURL ), NULL, this );
+	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplatePanelParent::FinishButtonClick ), NULL, this );
+	CancelAlignmentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplatePanelParent::TerminateButtonClick ), NULL, this );
+	StartEstimationButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplatePanelParent::StartEstimationClick ), NULL, this );
 }
 
-MatchTemplateParentPanel::~MatchTemplateParentPanel()
+MatchTemplatePanelParent::~MatchTemplatePanelParent()
 {
 	// Disconnect Events
-	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( MatchTemplateParentPanel::OnUpdateUI ) );
-	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::ResetAllDefaultsClick ), NULL, this );
-	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( MatchTemplateParentPanel::OnInfoURL ), NULL, this );
-	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::FinishButtonClick ), NULL, this );
-	CancelAlignmentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::TerminateButtonClick ), NULL, this );
-	StartEstimationButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::StartEstimationClick ), NULL, this );
+	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( MatchTemplatePanelParent::OnUpdateUI ) );
+	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplatePanelParent::ResetAllDefaultsClick ), NULL, this );
+	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( MatchTemplatePanelParent::OnInfoURL ), NULL, this );
+	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplatePanelParent::FinishButtonClick ), NULL, this );
+	CancelAlignmentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplatePanelParent::TerminateButtonClick ), NULL, this );
+	StartEstimationButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplatePanelParent::StartEstimationClick ), NULL, this );
 
 }
 
-RefineTemplateParentPanel::RefineTemplateParentPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : JobPanel( parent, id, pos, size, style, name )
+RefineTemplatePanelParent::RefineTemplatePanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : JobPanel( parent, id, pos, size, style, name )
 {
 	wxBoxSizer* bSizer43;
 	bSizer43 = new wxBoxSizer( wxVERTICAL );
@@ -10493,23 +10575,23 @@ RefineTemplateParentPanel::RefineTemplateParentPanel( wxWindow* parent, wxWindow
 	this->Layout();
 
 	// Connect Events
-	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RefineTemplateParentPanel::OnUpdateUI ) );
-	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateParentPanel::ResetAllDefaultsClick ), NULL, this );
-	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( RefineTemplateParentPanel::OnInfoURL ), NULL, this );
-	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateParentPanel::FinishButtonClick ), NULL, this );
-	CancelAlignmentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateParentPanel::TerminateButtonClick ), NULL, this );
-	StartEstimationButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateParentPanel::StartEstimationClick ), NULL, this );
+	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RefineTemplatePanelParent::OnUpdateUI ) );
+	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplatePanelParent::ResetAllDefaultsClick ), NULL, this );
+	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( RefineTemplatePanelParent::OnInfoURL ), NULL, this );
+	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplatePanelParent::FinishButtonClick ), NULL, this );
+	CancelAlignmentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplatePanelParent::TerminateButtonClick ), NULL, this );
+	StartEstimationButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplatePanelParent::StartEstimationClick ), NULL, this );
 }
 
-RefineTemplateParentPanel::~RefineTemplateParentPanel()
+RefineTemplatePanelParent::~RefineTemplatePanelParent()
 {
 	// Disconnect Events
-	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RefineTemplateParentPanel::OnUpdateUI ) );
-	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateParentPanel::ResetAllDefaultsClick ), NULL, this );
-	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( RefineTemplateParentPanel::OnInfoURL ), NULL, this );
-	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateParentPanel::FinishButtonClick ), NULL, this );
-	CancelAlignmentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateParentPanel::TerminateButtonClick ), NULL, this );
-	StartEstimationButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateParentPanel::StartEstimationClick ), NULL, this );
+	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RefineTemplatePanelParent::OnUpdateUI ) );
+	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplatePanelParent::ResetAllDefaultsClick ), NULL, this );
+	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( RefineTemplatePanelParent::OnInfoURL ), NULL, this );
+	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplatePanelParent::FinishButtonClick ), NULL, this );
+	CancelAlignmentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplatePanelParent::TerminateButtonClick ), NULL, this );
+	StartEstimationButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplatePanelParent::StartEstimationClick ), NULL, this );
 
 }
 

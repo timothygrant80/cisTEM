@@ -442,6 +442,86 @@ void VolumeAsset::CopyFrom(Asset *other_asset)
 
 // Return Pointers
 
+#ifdef EXPERIMENTAL
+// AtomicCoordinates asset///
+
+AtomicCoordinatesAsset::AtomicCoordinatesAsset()
+{
+	asset_id = -1;
+	parent_id = -1;
+	simulation_3d_job_id = -1;
+	x_size = 0;
+	y_size = 0;
+	z_size = 0;
+	pixel_size = 0;
+
+	is_valid = false;
+	filename = wxEmptyString;
+	asset_name = wxEmptyString;
+
+}
+
+AtomicCoordinatesAsset::~AtomicCoordinatesAsset()
+{
+	//Don't have to do anything for now
+}
+
+AtomicCoordinatesAsset::AtomicCoordinatesAsset(wxString wanted_filename)
+{
+	filename = wanted_filename;
+	asset_name = wanted_filename;
+	asset_id = -1;
+	parent_id = -1;
+	simulation_3d_job_id = -1;
+
+	x_size = 0;
+	y_size = 0;
+	z_size = 0;
+	pixel_size = 0;
+	is_valid = false;
+
+	int number_in_stack;
+
+	if (filename.IsOk() == true && filename.FileExists() == true)
+	{
+		is_valid = GetMRCDetails(filename.GetFullPath().fn_str(), x_size, y_size, z_size);
+	}
+
+}
+
+
+void AtomicCoordinatesAsset::Update(wxString wanted_filename)
+{
+	filename = wanted_filename;
+	is_valid = false;
+
+	if (filename.IsOk() == true && filename.FileExists() == true)
+	{
+		is_valid = GetMRCDetails(filename.GetFullPath().fn_str(), x_size, y_size, z_size);
+	}
+
+}
+
+
+void AtomicCoordinatesAsset::CopyFrom(Asset *other_asset)
+{
+	AtomicCoordinatesAsset *casted_asset = reinterpret_cast < AtomicCoordinatesAsset *> (other_asset);
+	asset_id = casted_asset->asset_id;
+	parent_id = casted_asset->parent_id;
+	simulation_3d_job_id = casted_asset->simulation_3d_job_id;
+
+	x_size = casted_asset->x_size;
+	y_size = casted_asset->y_size;
+	z_size = casted_asset->z_size;
+
+	filename = casted_asset->filename;
+	pixel_size = casted_asset->pixel_size;
+	is_valid = casted_asset->is_valid;
+	asset_name = casted_asset->asset_name;
+}
+
+
+#endif
 
 MovieAsset * AssetList::ReturnMovieAssetPointer(long wanted_asset)
 {
@@ -466,6 +546,14 @@ VolumeAsset* AssetList::ReturnVolumeAssetPointer(long wanted_asset)
 	MyPrintWithDetails("This should never be called!!");
 	DEBUG_ABORT;
 }
+
+#ifdef EXPERIMENTAL
+AtomicCoordinatesAsset* AssetList::ReturnAtomicCoordinatesAssetPointer(long wanted_asset)
+{
+	MyPrintWithDetails("This should never be called!!");
+	DEBUG_ABORT;
+}
+#endif
 
 
 ////////////////////////Movie Asset List//////////////////
@@ -1171,3 +1259,178 @@ void VolumeAssetList::RemoveAll()
 	}
 }
 
+#ifdef EXPERIMENTAL
+// AtomicCoordinates Asset List
+
+AtomicCoordinatesAssetList::AtomicCoordinatesAssetList()
+{
+	number_of_assets = 0;
+	number_allocated = 15;
+	assets = new AtomicCoordinatesAsset[15];
+
+}
+
+AtomicCoordinatesAssetList::~AtomicCoordinatesAssetList()
+{
+	delete [] reinterpret_cast < AtomicCoordinatesAsset *> (assets);
+}
+
+void AtomicCoordinatesAssetList::CheckMemory()
+{
+	AtomicCoordinatesAsset *buffer;
+
+	// check we have enough memory
+
+	if (number_of_assets >= number_allocated)
+	{
+		// reallocate..
+
+		if (number_of_assets < 10000) number_allocated *= 2;
+		else number_allocated += 10000;
+
+		buffer = new AtomicCoordinatesAsset[number_allocated];
+
+		for (long counter = 0; counter < number_of_assets; counter++)
+		{
+			buffer[counter].CopyFrom(& reinterpret_cast < AtomicCoordinatesAsset *> (assets)[counter]);
+		}
+
+		delete [] reinterpret_cast < AtomicCoordinatesAsset *>  (assets);
+		assets = buffer;
+	}
+
+
+}
+
+long AtomicCoordinatesAssetList::FindFile(wxFileName file_to_find, bool also_check_vs_shortname, long max_asset_number_to_check)
+{
+	long found_position = -1;
+
+	if (max_asset_number_to_check == -1) max_asset_number_to_check = number_of_assets;
+
+	for (long counter = 0; counter < max_asset_number_to_check; counter++)
+	{
+		if (reinterpret_cast < AtomicCoordinatesAsset *> (assets)[counter].filename == file_to_find)
+		{
+			found_position = counter;
+			break;
+		}
+
+		if (also_check_vs_shortname == true)
+		{
+			if (reinterpret_cast < AtomicCoordinatesAsset *> (assets)[counter].filename.GetFullName() == file_to_find.GetFullName())
+			{
+				found_position = counter;
+				break;
+			}
+		}
+	}
+
+	return found_position;
+
+}
+
+Asset * AtomicCoordinatesAssetList::ReturnAssetPointer(long wanted_asset)
+{
+	MyDebugAssertTrue(wanted_asset >= 0 && wanted_asset < number_of_assets, "Requesting an asset (%li) that doesn't exist!", wanted_asset);
+	return & reinterpret_cast <AtomicCoordinatesAsset *> (assets)[wanted_asset];
+}
+
+long AtomicCoordinatesAssetList::ReturnParentAssetID(long wanted_asset)
+{
+	return  reinterpret_cast <AtomicCoordinatesAsset *> (assets)[wanted_asset].parent_id;
+}
+
+AtomicCoordinatesAsset * AtomicCoordinatesAssetList::ReturnAtomicCoordinatesAssetPointer(long wanted_asset)
+{
+	MyDebugAssertTrue(wanted_asset >= 0 && wanted_asset < number_of_assets, "Requesting an asset (%li) that doesn't exist!", wanted_asset);
+	return & reinterpret_cast <AtomicCoordinatesAsset *> (assets)[wanted_asset];
+}
+
+int AtomicCoordinatesAssetList::ReturnAssetID(long wanted_asset)
+{
+	return  reinterpret_cast <AtomicCoordinatesAsset *> (assets)[wanted_asset].asset_id;
+}
+
+wxString AtomicCoordinatesAssetList::ReturnAssetName(long wanted_asset)
+{
+	return  reinterpret_cast <AtomicCoordinatesAsset *> (assets)[wanted_asset].asset_name;
+}
+
+
+wxString AtomicCoordinatesAssetList::ReturnAssetFullFilename(long wanted_asset)
+{
+	return  reinterpret_cast <AtomicCoordinatesAsset *> (assets)[wanted_asset].filename.GetFullPath();
+}
+
+int AtomicCoordinatesAssetList::ReturnArrayPositionFromID(int wanted_id, int last_found_position)
+{
+	MyDebugAssertTrue(last_found_position < number_of_assets || number_of_assets == 0,"Bad last found position: %i >= %li\n",last_found_position,number_of_assets);
+
+	for (int counter = last_found_position; counter < number_of_assets; counter++)
+	{
+		if (reinterpret_cast <AtomicCoordinatesAsset *> (assets)[counter].asset_id == wanted_id) return counter;
+	}
+
+	for (int counter = 0; counter < last_found_position; counter++)
+	{
+		if (reinterpret_cast <AtomicCoordinatesAsset *> (assets)[counter].asset_id == wanted_id) return counter;
+	}
+
+	return -1;
+}
+
+int AtomicCoordinatesAssetList::ReturnArrayPositionFromParentID(int wanted_id)
+{
+	for (int counter = 0; counter < number_of_assets; counter++)
+	{
+		if (reinterpret_cast <AtomicCoordinatesAsset *> (assets)[counter].parent_id == wanted_id) return counter;
+	}
+
+	return -1;
+}
+
+
+
+void AtomicCoordinatesAssetList::AddAsset(Asset *asset_to_add)
+{
+	CheckMemory();
+
+	// Should be fine for memory, so just add one.
+
+	reinterpret_cast < AtomicCoordinatesAsset *> (assets)[number_of_assets].CopyFrom(asset_to_add);
+	number_of_assets++;
+
+
+
+}
+
+void AtomicCoordinatesAssetList::RemoveAsset(long number_to_remove)
+{
+	if (number_to_remove < 0 || number_to_remove >= number_of_assets)
+	{
+		wxPrintf("Error! Trying to remove a movie that does not exist\n\n");
+		exit(-1);
+	}
+
+	for (long counter = number_to_remove; counter < number_of_assets -1; counter++)
+	{
+		reinterpret_cast < AtomicCoordinatesAsset *> (assets)[counter].CopyFrom(& reinterpret_cast < AtomicCoordinatesAsset *> (assets)[counter + 1]);
+	}
+
+	number_of_assets--;
+}
+
+void AtomicCoordinatesAssetList::RemoveAll()
+{
+	number_of_assets = 0;
+
+	if (number_allocated > 100)
+	{
+		delete [] reinterpret_cast < AtomicCoordinatesAsset *> (assets);
+		number_allocated = 100;
+		assets = new AtomicCoordinatesAsset[number_allocated];
+	}
+}
+
+#endif

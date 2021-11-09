@@ -803,6 +803,12 @@ bool Database::CreateAllTables()
 	CheckSuccess(success);
 	success = CreateVolumeGroupListTable();
 	CheckSuccess(success);
+#ifdef EXPERIMENTAL
+	success = CreateAtomicCoordinatesAssetTable();
+	CheckSuccess(success);
+	// success = CreateVolumeGroupListTable();
+	// CheckSuccess(success);
+#endif  
 	success = CreateRefinementPackageAssetTable();
 	CheckSuccess(success);
 	success = CreateRefinementListTable();
@@ -1239,6 +1245,18 @@ void Database::AddNextVolumeAsset(int image_asset_id,  wxString name, wxString f
 	AddToBatchInsert("ittiriiitt", image_asset_id, name.ToUTF8().data(), filename.ToUTF8().data(), reconstruction_job_id, pixel_size, x_size, y_size, z_size, half_map_1_filename.ToUTF8().data(), half_map_2_filename.ToUTF8().data());
 }
 
+#ifdef EXPERIMENTAL
+void Database::BeginAtomicCoordinatesAssetInsert()
+{
+	BeginBatchInsert("ATOMICCOORDINATES_ASSETS", 8, "VOLUME_ASSET_ID", "NAME", "FILENAME", "RECONSTRUCTION_JOB_ID", "PIXEL_SIZE", "X_SIZE", "Y_SIZE", "Z_SIZE");
+}
+
+void Database::AddNextAtomicCoordinatesAsset(int image_asset_id,  wxString name, wxString filename, int simulation_3d_job_id, double pixel_size, int x_size, int y_size, int z_size )
+{
+	AddToBatchInsert("ittiriii", image_asset_id, name.ToUTF8().data(), filename.ToUTF8().data(), simulation_3d_job_id, pixel_size, x_size, y_size, z_size );
+}
+#endif
+
 void Database::AddNextImageAsset(int image_asset_id,  wxString name, wxString filename, int position_in_stack, int parent_movie_id, int alignment_id, int ctf_estimation_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration, int protein_is_white)
 {
 	AddToBatchInsert("ittiiiiiirrri", image_asset_id, name.ToUTF8().data(), filename.ToUTF8().data(), position_in_stack, parent_movie_id, alignment_id, ctf_estimation_id, x_size, y_size, pixel_size, voltage, spherical_aberration, protein_is_white);
@@ -1382,6 +1400,13 @@ void Database::BeginAllVolumeAssetsSelect()
 {
 	BeginBatchSelect("SELECT * FROM VOLUME_ASSETS;");
 }
+
+#ifdef EXPERIMENTAL
+void Database::BeginAllAtomicCoordinatesAssetsSelect()
+{
+	BeginBatchSelect("SELECT * FROM ATOMICCOORDINATES_ASSETS;");
+}
+#endif
 
 void Database::BeginAllParticlePositionGroupsSelect()
 {
@@ -1818,6 +1843,16 @@ VolumeAsset Database::GetNextVolumeAsset()
 	GetFromBatchSelect("itflriiitt", &temp_asset.asset_id, &temp_asset.asset_name, &temp_asset.filename, &temp_asset.reconstruction_job_id, &temp_asset.pixel_size, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.z_size, &temp_asset.half_map_1_filename, &temp_asset.half_map_2_filename);
 	return temp_asset;
 }
+
+#ifdef EXPERIMENTAL
+
+AtomicCoordinatesAsset Database::GetNextAtomicCoordinatesAsset()
+{
+	AtomicCoordinatesAsset temp_asset;
+	GetFromBatchSelect("itflriii", &temp_asset.asset_id, &temp_asset.asset_name, &temp_asset.filename, &temp_asset.simulation_3d_job_id, &temp_asset.pixel_size, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.z_size );
+	return temp_asset;
+}
+#endif
 
 
 void Database::AddOrReplaceRunProfile(RunProfile *profile_to_add)

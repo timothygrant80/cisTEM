@@ -154,7 +154,11 @@ public :
 	void AddNextVolumeAsset(int image_asset_id,  wxString name, wxString filename, int reconstruction_job_id, double pixel_size, int x_size, int y_size, int z_size, wxString half_map_1_filename, wxString half_map_2_filename);
 	void EndVolumeAssetInsert() {EndBatchInsert();};
 
-
+#ifdef EXPERIMENTAL
+	void BeginAtomicCoordinatesAssetInsert();
+	void AddNextAtomicCoordinatesAsset(int image_asset_id,  wxString name, wxString filename, int simulation_3d_job_id, double pixel_size, int x_size, int y_size, int z_size);
+	void EndAtomicCoordinatesAssetInsert() {EndBatchInsert();};
+#endif
 	void BeginParticlePositionAssetInsert();
 	//void AddNextParticlePositionAsset(int particle_position_asset_id, int parent_image_asset_id, int pick_job_id, double x_position, double y_position);
 	void AddNextParticlePositionAsset(const ParticlePositionAsset *asset);
@@ -181,6 +185,11 @@ public :
 	bool CreateVolumeAssetTable() {return CreateTable("VOLUME_ASSETS", "pttiriiitt", "VOLUME_ASSET_ID", "NAME", "FILENAME", "RECONSTRUCTION_JOB_ID", "PIXEL_SIZE", "X_SIZE", "Y_SIZE", "Z_SIZE", "HALF_MAP1_FILENAME", "HALF_MAP2_FILENAME");};
 	bool CreateVolumeGroupListTable() {return  CreateTable("VOLUME_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );};
 
+#ifdef EXPERIMENTAL
+  bool CreateAtomicCoordinatesAssetTable() {return CreateTable("ATOMICCOORDINATES_ASSETS", "pttiriii", "ATOMICCOORDINATES_ASSET_ID", "NAME", "FILENAME", "SIMULATION_3D_JOB_ID", "PIXEL_SIZE", "X_SIZE", "Y_SIZE", "Z_SIZE");};
+	bool CreateAtomicCoordinatesGroupListTable() {return  CreateTable("ATOMICCOORDINATES_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );};
+  // TODO: I'm not sure if the following sections that are related to refinement will also be needed for AtomicCoordinates objects, though I may be given we do refinement....just not refinement packages.
+#endif
 
 	bool CreateRefinementPackageAssetTable() {return CreateTable("REFINEMENT_PACKAGE_ASSETS", "pttirtrriiii", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "STACK_FILENAME", "STACK_BOX_SIZE", "OUTPUT_PIXEL_SIZE", "SYMMETRY", "MOLECULAR_WEIGHT", "PARTICLE_SIZE","NUMBER_OF_CLASSES", "NUMBER_OF_REFINEMENTS", "LAST_REFINEMENT_ID", "STACK_HAS_WHITE_PROTEIN");};
 	bool CreateRefinementPackageContainedParticlesTable(const long refinement_package_asset_id) {return CreateTable(wxString::Format("REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%li", refinement_package_asset_id), "piirrrrrrrrrri", "ORIGINAL_PARTICLE_POSITION_ASSET_ID", "PARENT_IMAGE_ASSET_ID", "POSITION_IN_STACK", "X_POSITION", "Y_POSITION", "PIXEL_SIZE", "DEFOCUS_1", "DEFOCUS_2", "DEFOCUS_ANGLE", "PHASE_SHIFT", "SPHERICAL_ABERRATION", "MICROSCOPE_VOLTAGE", "AMPLITUDE_CONTRAST","ASSIGNED_SUBSET");};
@@ -255,6 +264,12 @@ public :
 	void BeginAllVolumeAssetsSelect();
 	VolumeAsset GetNextVolumeAsset();
 	void EndAllVolumeAssetsSelect() {EndBatchSelect();};
+
+#ifdef EXPERIMENTAL
+	void BeginAllAtomicCoordinatesAssetsSelect();
+	AtomicCoordinatesAsset GetNextAtomicCoordinatesAsset();
+	void EndAllAtomicCoordinatesAssetsSelect() {EndBatchSelect();};
+#endif
 
 	void BeginAllVolumeGroupsSelect();
 	AssetGroup GetNextVolumeGroup();

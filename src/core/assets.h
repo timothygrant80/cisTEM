@@ -158,6 +158,29 @@ class VolumeAsset : public Asset {
 	void Update(wxString wanted_filename);
 	void CopyFrom(Asset *other_asset);
 };
+
+#ifdef EXPERIMENTAL
+class AtomicCoordinatesAsset : public Asset {
+
+  public:
+
+	AtomicCoordinatesAsset();
+	AtomicCoordinatesAsset(wxString wanted_filename);
+	~AtomicCoordinatesAsset();
+
+	long simulation_3d_job_id;
+
+	int x_size;
+	int y_size;
+	int z_size;
+
+	double pixel_size;
+
+	void Update(wxString wanted_filename);
+	void CopyFrom(Asset *other_asset);
+};
+#endif
+
 /*
 class ClassesAsset : public Asset {
 
@@ -198,7 +221,9 @@ public :
 	virtual ImageAsset * ReturnImageAssetPointer(long wanted_asset);
 	virtual ParticlePositionAsset * ReturnParticlePositionAssetPointer(long wanted_asset);
 	virtual VolumeAsset* ReturnVolumeAssetPointer(long wanted_asset);
-
+#ifdef EXPERIMENTAL
+	virtual AtomicCoordinatesAsset* ReturnAtomicCoordinatesAssetPointer(long wanted_asset);
+#endif
 	virtual int ReturnAssetID(long wanted_asset) = 0;
 	virtual long ReturnParentAssetID(long wanted_asset) = 0;
 	virtual wxString ReturnAssetName(long wanted_asset) = 0;
@@ -315,7 +340,32 @@ public:
 
 };
 
+#ifdef EXPERIMENTAL
+class AtomicCoordinatesAssetList : public AssetList {
+
+public:
+
+	AtomicCoordinatesAssetList();
+	~AtomicCoordinatesAssetList();
 
 
+	Asset * ReturnAssetPointer(long wanted_asset);
+	AtomicCoordinatesAsset * ReturnAtomicCoordinatesAssetPointer(long wanted_asset);
+
+	int ReturnAssetID(long wanted_asset);
+	long ReturnParentAssetID(long wanted_asset);
+	wxString ReturnAssetName(long wanted_asset);
+	int ReturnArrayPositionFromID(int wanted_id, int last_found_position = 0 );
+	int ReturnArrayPositionFromParentID(int wanted_id);
+	wxString ReturnAssetFullFilename(long wanted_asst);
+
+	void AddAsset(Asset *asset_to_add);
+	void RemoveAsset(long number_to_remove);
+	void RemoveAll();
+	long FindFile(wxFileName file_to_find, bool also_check_vs_shortname = false, long max_asset_number_to_check = -1);
+	void CheckMemory();
+
+};
+#endif
 
 #endif

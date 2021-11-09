@@ -41,6 +41,15 @@ public:
 	bool FillComboBox(bool include_generate_from_params=false, bool always_select_latest = false) {return AssetComboBox->FillWithVolumeAssets(include_generate_from_params, always_select_latest);}
 };
 
+#ifdef EXPERIMENTAL
+class AtomicCoordinatesAssetPickerComboPanel : public AssetPickerComboPanel
+{
+public:
+	AtomicCoordinatesAssetPickerComboPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
+	bool FillComboBox(bool include_generate_from_params=false, bool always_select_latest = false) {return AssetComboBox->FillWithAtomicCoordinatesAssets(include_generate_from_params, always_select_latest);}
+};
+#endif
+
 class RefinementPackagePickerComboPanel : public AssetPickerComboPanel
 {
 public:

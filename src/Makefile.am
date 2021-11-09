@@ -213,10 +213,10 @@ noinst_HEADERS = core/asset_group.h \
                  
 if EXPERIMENTAL_AM
 noinst_HEADERS += 	gui/MatchTemplatePanel.h \
-					gui/icons/experimental_icon.cpp \
-					gui/icons/match_template_icon.cpp 
-					
-					
+                    gui/icons/experimental_icon.cpp \
+                    gui/icons/match_template_icon.cpp \
+                    gui/AtomicCoordinatesAssetPanel.h \
+                    gui/AtomicCoordinatesChooserDialog.h 				
 endif      
 
 if EXPERIMENTAL_AM

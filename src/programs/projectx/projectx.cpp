@@ -43,6 +43,9 @@ MyMovieAssetPanel *movie_asset_panel;
 MyImageAssetPanel *image_asset_panel;
 MyParticlePositionAssetPanel *particle_position_asset_panel;
 MyVolumeAssetPanel *volume_asset_panel;
+#ifdef EXPERIMENTAL
+AtomicCoordinatesAssetPanel  *atomic_coordinates_asset_panel;
+#endif
 MyRefinementPackageAssetPanel *refinement_package_asset_panel;
 
 MyMovieAlignResultsPanel *movie_results_panel;
@@ -285,6 +288,9 @@ bool MyGuiApp::OnInit()
 	assets_panel->AssetsBook->AddPage(image_asset_panel, "Images", false, 1);
 	assets_panel->AssetsBook->AddPage(particle_position_asset_panel, "Particle Positions", false, 2);
 	assets_panel->AssetsBook->AddPage(volume_asset_panel, "3D Volumes", false, 3);
+#ifdef EXPERIMENTAL
+	assets_panel->AssetsBook->AddPage(atomic_coordinates_asset_panel, "3D Atomic Coordinates", false, 3);
+#endif
 	assets_panel->AssetsBook->AddPage(refinement_package_asset_panel, "Refine Pkgs.", false, 4);
 
 	actions_panel->ActionsBook->AddPage(align_movies_panel, "Align Movies", true, 0);

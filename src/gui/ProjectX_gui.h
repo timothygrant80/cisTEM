@@ -2878,6 +2878,34 @@ class VolumeChooserDialog : public wxDialog
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+/// Class AtomicCoordinatesChooserDialogParent
+///////////////////////////////////////////////////////////////////////////////
+class AtomicCoordinatesChooserDialogParent : public wxDialog
+{
+	private:
+
+	protected:
+		wxBoxSizer* MainBoxSizer;
+		wxStaticText* m_staticText246;
+		wxStaticLine* m_staticline18;
+		wxStaticLine* m_staticline19;
+		wxButton* CancelButton;
+		wxButton* SetButton;
+
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnCancelClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnRenameClick( wxCommandEvent& event ) { event.Skip(); }
+
+
+	public:
+		VolumeAssetPickerComboPanel* ComboBox;
+
+		AtomicCoordinatesChooserDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Select new reference"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE );
+		~AtomicCoordinatesChooserDialogParent();
+
+};
+
+///////////////////////////////////////////////////////////////////////////////
 /// Class FilterDialog
 ///////////////////////////////////////////////////////////////////////////////
 class FilterDialog : public wxDialog

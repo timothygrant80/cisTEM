@@ -11318,6 +11318,65 @@ VolumeChooserDialog::~VolumeChooserDialog()
 
 }
 
+AtomicCoordinatesChooserDialogParent::AtomicCoordinatesChooserDialogParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
+{
+	this->SetSizeHints( wxSize( -1,-1 ), wxDefaultSize );
+
+	MainBoxSizer = new wxBoxSizer( wxVERTICAL );
+
+	m_staticText246 = new wxStaticText( this, wxID_ANY, wxT("Select New Volume :-"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText246->Wrap( -1 );
+	MainBoxSizer->Add( m_staticText246, 0, wxALL, 5 );
+
+	m_staticline18 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	MainBoxSizer->Add( m_staticline18, 0, wxEXPAND | wxALL, 5 );
+
+	ComboBox = new VolumeAssetPickerComboPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	ComboBox->SetMinSize( wxSize( 350,-1 ) );
+
+	MainBoxSizer->Add( ComboBox, 1, wxEXPAND | wxALL, 5 );
+
+	m_staticline19 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	MainBoxSizer->Add( m_staticline19, 0, wxEXPAND | wxALL, 5 );
+
+	wxBoxSizer* bSizer90;
+	bSizer90 = new wxBoxSizer( wxHORIZONTAL );
+
+
+	bSizer90->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	CancelButton = new wxButton( this, wxID_ANY, wxT("Cancel"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer90->Add( CancelButton, 0, wxALL, 5 );
+
+	SetButton = new wxButton( this, wxID_ANY, wxT("Set Reference"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer90->Add( SetButton, 0, wxALL, 5 );
+
+
+	bSizer90->Add( 0, 0, 1, wxEXPAND, 5 );
+
+
+	MainBoxSizer->Add( bSizer90, 0, wxEXPAND, 5 );
+
+
+	this->SetSizer( MainBoxSizer );
+	this->Layout();
+	MainBoxSizer->Fit( this );
+
+	this->Centre( wxBOTH );
+
+	// Connect Events
+	CancelButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesChooserDialogParent::OnCancelClick ), NULL, this );
+	SetButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesChooserDialogParent::OnRenameClick ), NULL, this );
+}
+
+AtomicCoordinatesChooserDialogParent::~AtomicCoordinatesChooserDialogParent()
+{
+	// Disconnect Events
+	CancelButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesChooserDialogParent::OnCancelClick ), NULL, this );
+	SetButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesChooserDialogParent::OnRenameClick ), NULL, this );
+
+}
+
 FilterDialog::FilterDialog( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
 {
 	this->SetSizeHints( wxSize( -1,-1 ), wxDefaultSize );

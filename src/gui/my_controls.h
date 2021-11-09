@@ -50,6 +50,9 @@ public :
 	bool FillWithRunProfiles();
 	bool FillWithRefinementPackages();
 	bool FillWithVolumeAssets(bool include_generate_from_params = false, bool always_select_newest = false);
+#ifdef EXPERIMENTAL
+	bool FillWithAtomicCoordinatesAssets(bool include_generate_from_params = false, bool always_select_newest = false);
+#endif
 	bool FillWithMovieGroups(bool include_all_movies_group = true);
 	bool FillWithImageGroups(bool include_all_images_group = true);
 	bool FillWithImages(long wanted_image_group);

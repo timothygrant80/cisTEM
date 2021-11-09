@@ -124,6 +124,8 @@
 #include "../gui/MatchTemplatePanel.h"
 #include "../gui/MatchTemplateResultsPanel.h"
 #include "../gui/RefineTemplatePanel.h"
+#include "../gui/AtomicCoordinatesAssetPanel.h"
+#include "../gui/AtomicCoordinatesChooserDialog.h"
 #endif
 
 #define REFINEMENT 0

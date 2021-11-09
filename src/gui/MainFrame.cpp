@@ -11,6 +11,9 @@ extern MyMovieAssetPanel *movie_asset_panel;
 extern MyImageAssetPanel *image_asset_panel;
 extern MyParticlePositionAssetPanel *particle_position_asset_panel;
 extern MyVolumeAssetPanel *volume_asset_panel;
+#ifdef EXPERIMENTAL
+extern AtomicCoordinatesAssetPanel *atomic_coordinates_asset_panel;
+#endif
 extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
 
 extern MyActionsPanel *actions_panel;
@@ -257,6 +260,9 @@ void MyMainFrame::ResetAllPanels()
 	movie_asset_panel->Reset();
 	image_asset_panel->Reset();
 	volume_asset_panel->Reset();
+#ifdef EXPERIMENTAL
+  atomic_coordinates_asset_panel->Reset();
+#endif
 	particle_position_asset_panel->Reset();
 	refinement_package_asset_panel->Reset();
 
@@ -304,6 +310,9 @@ void MyMainFrame::DirtyEverything()
 void MyMainFrame::DirtyVolumes()
 {
 	volume_asset_panel->is_dirty = true;
+#ifdef EXPERIMENTAL
+  atomic_coordinates_asset_panel->is_dirty = true;
+#endif  
 	refine_3d_panel->volumes_are_dirty = true;
 	auto_refine_3d_panel->volumes_are_dirty = true;
 	sharpen_3d_panel->volumes_are_dirty = true;
@@ -652,6 +661,7 @@ void MyMainFrame::OpenProject(wxString project_filename)
 		run_profiles_panel->ImportAllFromDatabase();
 		my_dialog->Update(4, "Opening project (loading volume assets...)");
 		volume_asset_panel->ImportAllFromDatabase();
+    // TODO: DO I need something from atomic_coordinate_asset_panel here?
 		my_dialog->Update(5, "Opening project (loading Refinement Packages...)");
 		refinement_package_asset_panel->ImportAllFromDatabase();
 		//align_movies_panel->Refresh();

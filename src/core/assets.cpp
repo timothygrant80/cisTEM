@@ -508,10 +508,10 @@ void AtomicCoordinatesAsset::Update(wxString wanted_filename)
 	wxFFileOutputStream output( stderr );
 	wxTextOutputStream cout( output );
 #endif
-
   // Using the try/catch incase the user provides a bad file.
   try 
   {
+
       auto st = gemmi::read_structure(gemmi::MaybeGzipped(filename.GetFullPath().ToStdString()));
       pdb_id = st.name; 
 

@@ -17,7 +17,7 @@ AtomicCoordinatesImportDialogParent( parent )
 
 void AtomicCoordinatesImportDialog::AddFilesClick( wxCommandEvent& event )
 {
-	  wxFileDialog openFileDialog(this, _("Select PDBx/mmCIF files - basic wildcards are allowed"), "", "", "Atomic Coord files (*.pdb)|*.mmCIF;*.cif", wxFD_OPEN | wxFD_MULTIPLE);
+	  wxFileDialog openFileDialog(this, _("Select PDBx/mmCIF files - basic wildcards are allowed"), "", "", "Atomic Coord files (*.pdb*;*.cif*)|*.*cif*;*.CIF;*.pdb*;*.PDB*", wxFD_OPEN | wxFD_MULTIPLE);
 
 
 

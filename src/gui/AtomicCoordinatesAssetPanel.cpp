@@ -10,15 +10,15 @@ AtomicCoordinatesAssetPanel::AtomicCoordinatesAssetPanel( wxWindow* parent )
 :
 MyAssetParentPanel( parent )
 {
-	Label0Title->SetLabel("Name : ");
-	Label1Title->SetLabel("I.D. : ");
-	Label2Title->SetLabel("Simulation 3d Job I.D. : ");
-	Label3Title->SetLabel("Pixel Size : ");
+	Label0Title->SetLabel("File Name : ");
+  Label1Title->SetLabel("PDB I.D. : ");
+	Label2Title->SetLabel("Asset I.D. : ");
+	Label3Title->SetLabel("Simulation 3d Job I.D. : ");
 	Label4Title->SetLabel("X Size : ");
 	Label5Title->SetLabel("Y Size : ");
 	Label6Title->SetLabel("Z Size : ");
-	Label7Title->SetLabel("");
-	Label8Title->SetLabel("");
+	Label7Title->SetLabel("PDB Avg Bfactor");
+	Label8Title->SetLabel("PDB StdDev Bfactor");
 	Label9Title->SetLabel("");
 
 	UpdateInfo();
@@ -26,7 +26,7 @@ MyAssetParentPanel( parent )
 	SplitterWindow->Unsplit(LeftPanel);
 
 
-	AssetTypeText->SetLabel("AtomicCoordinates");
+	AssetTypeText->SetLabel("Atomic Coordinates (PDBx/mmCIF)");
 
 	all_groups_list->groups[0].SetName("All AtomicCoordinates");
 	all_assets_list = new AtomicCoordinatesAssetList;
@@ -41,17 +41,18 @@ AtomicCoordinatesAssetPanel::~AtomicCoordinatesAssetPanel()
 
 void AtomicCoordinatesAssetPanel::UpdateInfo()
 {
+
 	if (selected_content >= 0 && selected_group >= 0 && all_groups_list->groups[selected_group].number_of_members > 0)
 	{
 		Label0Text->SetLabel(all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->asset_name);
-		Label1Text->SetLabel(wxString::Format(wxT("%i"), all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->asset_id));
-		Label2Text->SetLabel(wxString::Format(wxT("%li"), all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->simulation_3d_job_id));
-		Label3Text->SetLabel(wxString::Format(wxT("%.4f"), all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->pixel_size));
-		Label4Text->SetLabel(wxString::Format(wxT("%i"), all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->x_size));
-		Label5Text->SetLabel(wxString::Format(wxT("%i"), all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->y_size));
-		Label6Text->SetLabel(wxString::Format(wxT("%i"), all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->z_size));
-		Label7Text->SetLabel("");
-		Label8Text->SetLabel("");
+    Label1Text->SetLabel(all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->pdb_id);
+		Label2Text->SetLabel(wxString::Format(wxT("%i"), all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->asset_id));
+		Label3Text->SetLabel(wxString::Format(wxT("%li"), all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->simulation_3d_job_id));
+		Label4Text->SetLabel(wxString::Format(wxT("%i"), int(all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->x_size)));
+		Label5Text->SetLabel(wxString::Format(wxT("%i"), int(all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->y_size)));
+		Label6Text->SetLabel(wxString::Format(wxT("%i"), int(all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->z_size)));
+		Label7Text->SetLabel(wxString::Format(wxT("%4.2f"), all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->pdb_avg_bfactor));
+		Label8Text->SetLabel(wxString::Format(wxT("%4.2f"), all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->pdb_std_bfactor));
 		Label9Text->SetLabel("");
 	}
 	else
@@ -110,7 +111,7 @@ void AtomicCoordinatesAssetPanel::CompletelyRemoveAssetByID(long wanted_asset_id
 
 	for (counter = 0; counter < tables.GetCount(); counter++)
 	{
-		main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE %s SET ATOMICCOORDINATES_ASSET_ID=0 WHERE ATOMICCOORDINATES_ASSET_ID=%li", tables[counter], wanted_asset_id));
+		main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE %s SET ATOMIC_COORDINATES_ASSET_ID=0 WHERE ATOMIC_COORDINATES_ASSET_ID=%li", tables[counter], wanted_asset_id));
 	}
 
 	// refinement_package_current_references
@@ -119,7 +120,7 @@ void AtomicCoordinatesAssetPanel::CompletelyRemoveAssetByID(long wanted_asset_id
 
 	for (counter = 0; counter < tables.GetCount(); counter++)
 	{
-		main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE %s SET ATOMICCOORDINATES_ASSET_ID=-1 WHERE ATOMICCOORDINATES_ASSET_ID=%li", tables[counter], wanted_asset_id));
+		main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE %s SET ATOMIC_COORDINATES_ASSET_ID=-1 WHERE ATOMIC_COORDINATES_ASSET_ID=%li", tables[counter], wanted_asset_id));
 	}
 
 	// refinement details
@@ -128,7 +129,7 @@ void AtomicCoordinatesAssetPanel::CompletelyRemoveAssetByID(long wanted_asset_id
 
 	for (counter = 0; counter < tables.GetCount(); counter++)
 	{
-		main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE %s SET REFERENCE_ATOMICCOORDINATES_ASSET_ID=0 WHERE REFERENCE_ATOMICCOORDINATES_ASSET_ID=%li", tables[counter], wanted_asset_id));
+		main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE %s SET REFERENCE_ATOMIC_COORDINATES_ASSET_ID=0 WHERE REFERENCE_ATOMIC_COORDINATES_ASSET_ID=%li", tables[counter], wanted_asset_id));
 	}
 
 	// delete from in memory refinement package assets
@@ -138,7 +139,7 @@ void AtomicCoordinatesAssetPanel::CompletelyRemoveAssetByID(long wanted_asset_id
 
 	// now delete from volume_assets
 
-	main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM ATOMICCOORDINATES_ASSETS WHERE ATOMICCOORDINATES_ASSET_ID=%li", wanted_asset_id).ToUTF8().data());
+	main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM ATOMIC_COORDINATES_ASSETS WHERE ATOMIC_COORDINATES_ASSET_ID=%li", wanted_asset_id).ToUTF8().data());
 
 
 	asset_array_position = all_assets_list->ReturnArrayPositionFromID(wanted_asset_id);
@@ -157,13 +158,13 @@ void AtomicCoordinatesAssetPanel::DoAfterDeletionCleanup()
 
 void AtomicCoordinatesAssetPanel::RemoveAssetFromDatabase(long wanted_asset)
 {
-	main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM ATOMICCOORDINATES_ASSETS WHERE ATOMICCOORDINATES_ASSET_ID=%i", all_assets_list->ReturnAssetID(wanted_asset)).ToUTF8().data());
+	main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM ATOMIC_COORDINATES_ASSETS WHERE ATOMIC_COORDINATES_ASSET_ID=%i", all_assets_list->ReturnAssetID(wanted_asset)).ToUTF8().data());
 	all_assets_list->RemoveAsset(wanted_asset);
 }
 
 void AtomicCoordinatesAssetPanel::RemoveFromGroupInDatabase(int wanted_group_id, int wanted_asset_id)
 {
-	main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM ATOMICCOORDINATES_GROUP_%i WHERE ATOMICCOORDINATES_ASSET_ID=%i", wanted_group_id, wanted_asset_id).ToUTF8().data());
+	main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM ATOMIC_COORDINATES_GROUP_%i WHERE ATOMIC_COORDINATES_ASSET_ID=%i", wanted_group_id, wanted_asset_id).ToUTF8().data());
 }
 
 void AtomicCoordinatesAssetPanel::InsertGroupMemberToDatabase(int wanted_group, int wanted_asset)
@@ -171,12 +172,12 @@ void AtomicCoordinatesAssetPanel::InsertGroupMemberToDatabase(int wanted_group, 
 	MyDebugAssertTrue(wanted_group > 0 && wanted_group < all_groups_list->number_of_groups, "Requesting a group (%i) that doesn't exist!", wanted_group);
 	MyDebugAssertTrue(wanted_asset >= 0 && wanted_asset < all_assets_list->number_of_assets, "Requesting an partice position (%i) that doesn't exist!", wanted_asset);
 
-	main_frame->current_project.database.InsertOrReplace(wxString::Format("ATOMICCOORDINATES_GROUP_%i", ReturnGroupID(wanted_group)).ToUTF8().data(), "ii", "MEMBER_NUMBER", "ATOMICCOORDINATES_ASSET_ID", ReturnGroupSize(wanted_group), ReturnGroupMemberID(wanted_group, wanted_asset));
+	main_frame->current_project.database.InsertOrReplace(wxString::Format("ATOMIC_COORDINATES_GROUP_%i", ReturnGroupID(wanted_group)).ToUTF8().data(), "ii", "MEMBER_NUMBER", "ATOMIC_COORDINATES_ASSET_ID", ReturnGroupSize(wanted_group), ReturnGroupMemberID(wanted_group, wanted_asset));
 }
 
 void AtomicCoordinatesAssetPanel::InsertArrayofGroupMembersToDatabase(long wanted_group, wxArrayLong *wanted_array, OneSecondProgressDialog *progress_dialog)
 {
-
+  // TODO, this is empty in VolumeAssets but not others, review and determine why.
 }
 
 void  AtomicCoordinatesAssetPanel::RemoveAllFromDatabase()
@@ -184,13 +185,13 @@ void  AtomicCoordinatesAssetPanel::RemoveAllFromDatabase()
 	/*
 	for (long counter = 1; counter < all_groups_list->number_of_groups; counter++)
 	{
-		main_frame->current_project.database.ExecuteSQL(wxString::Format("DROP TABLE ATOMICCOORDINATES_GROUP_%i", all_groups_list->groups[counter].id).ToUTF8().data());
+		main_frame->current_project.database.ExecuteSQL(wxString::Format("DROP TABLE ATOMIC_COORDINATES_GROUP_%i", all_groups_list->groups[counter].id).ToUTF8().data());
 	}
 
-	main_frame->current_project.database.ExecuteSQL("DROP TABLE ATOMICCOORDINATES_GROUP_LIST");
+	main_frame->current_project.database.ExecuteSQL("DROP TABLE ATOMIC_COORDINATES_GROUP_LIST");
 	main_frame->current_project.database.CreateVolumeGroupListTable();
 
-	main_frame->current_project.database.ExecuteSQL("DROP TABLE ATOMICCOORDINATES_ASSETS");
+	main_frame->current_project.database.ExecuteSQL("DROP TABLE ATOMIC_COORDINATES_ASSETS");
 	main_frame->current_project.database.CreateAtomicCoordinatesAssetTable();
 	*/
 
@@ -203,31 +204,32 @@ void  AtomicCoordinatesAssetPanel::RemoveAllFromDatabase()
 
 
 
+
 }
 
 void AtomicCoordinatesAssetPanel::RemoveAllGroupMembersFromDatabase(int wanted_group_id)
 {
-	main_frame->current_project.database.ExecuteSQL(wxString::Format("DROP TABLE ATOMICCOORDINATES_GROUP_%i", wanted_group_id).ToUTF8().data());
-	main_frame->current_project.database.CreateTable(wxString::Format("ATOMICCOORDINATES_GROUP_%i", wanted_group_id).ToUTF8().data(), "ii", "MEMBER_NUMBER", "ATOMICCOORDINATES_POSITION_ASSET_ID");
+	main_frame->current_project.database.ExecuteSQL(wxString::Format("DROP TABLE ATOMIC_COORDINATES_GROUP_%i", wanted_group_id).ToUTF8().data());
+	main_frame->current_project.database.CreateTable(wxString::Format("ATOMIC_COORDINATES_GROUP_%i", wanted_group_id).ToUTF8().data(), "ii", "MEMBER_NUMBER", "ATOMIC_COORDINATES_POSITION_ASSET_ID");
 }
 
 void AtomicCoordinatesAssetPanel::AddGroupToDatabase(int wanted_group_id, const char * wanted_group_name, int wanted_list_id)
 {
-	main_frame->current_project.database.InsertOrReplace("ATOMICCOORDINATES_GROUP_LIST", "iti", "GROUP_ID", "GROUP_NAME", "LIST_ID", wanted_group_id, wanted_group_name, wanted_list_id);
-	main_frame->current_project.database.CreateTable(wxString::Format("ATOMICCOORDINATES_GROUP_%i", wanted_list_id).ToUTF8().data(), "ii", "MEMBER_NUMBER", "ATOMICCOORDINATES_POSITION_ASSET_ID");
+	main_frame->current_project.database.InsertOrReplace("ATOMIC_COORDINATES_GROUP_LIST", "iti", "GROUP_ID", "GROUP_NAME", "LIST_ID", wanted_group_id, wanted_group_name, wanted_list_id);
+	main_frame->current_project.database.CreateTable(wxString::Format("ATOMIC_COORDINATES_GROUP_%i", wanted_list_id).ToUTF8().data(), "ii", "MEMBER_NUMBER", "ATOMIC_COORDINATES_POSITION_ASSET_ID");
 }
 
 void AtomicCoordinatesAssetPanel::RemoveGroupFromDatabase(int wanted_group_id)
 {
-	main_frame->current_project.database.ExecuteSQL(wxString::Format("DROP TABLE ATOMICCOORDINATES_GROUP_%i", wanted_group_id).ToUTF8().data());
-	main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM ATOMICCOORDINATES_GROUP_LIST WHERE GROUP_ID=%i", wanted_group_id));
+	main_frame->current_project.database.ExecuteSQL(wxString::Format("DROP TABLE ATOMIC_COORDINATES_GROUP_%i", wanted_group_id).ToUTF8().data());
+	main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM ATOMIC_COORDINATES_GROUP_LIST WHERE GROUP_ID=%i", wanted_group_id));
 }
 
 void AtomicCoordinatesAssetPanel::RenameGroupInDatabase(int wanted_group_id, const char *wanted_name)
 {
 	wxString name = wanted_name;
 	name.Replace("'", "''");
-	wxString sql_command = wxString::Format("UPDATE ATOMICCOORDINATES_GROUP_LIST SET GROUP_NAME='%s' WHERE GROUP_ID=%i", name, wanted_group_id);
+	wxString sql_command = wxString::Format("UPDATE ATOMIC_COORDINATES_GROUP_LIST SET GROUP_NAME='%s' WHERE GROUP_ID=%i", name, wanted_group_id);
 	main_frame->current_project.database.ExecuteSQL(sql_command.ToUTF8().data());
 
 }
@@ -237,7 +239,7 @@ void AtomicCoordinatesAssetPanel::RenameAsset(long wanted_asset, wxString wanted
 	wxString name = wanted_name;
 	name.Replace("'", "''");
 	all_assets_list->ReturnAtomicCoordinatesAssetPointer(wanted_asset)->asset_name = wanted_name;
-	wxString sql_command = wxString::Format("UPDATE ATOMICCOORDINATES_ASSETS SET NAME='%s' WHERE ATOMICCOORDINATES_ASSET_ID=%i", name, all_assets_list->ReturnAtomicCoordinatesAssetPointer(wanted_asset)->asset_id);
+	wxString sql_command = wxString::Format("UPDATE ATOMIC_COORDINATES SET NAME='%s' WHERE ATOMIC_COORDINATES_ASSET_ID=%i", name, all_assets_list->ReturnAtomicCoordinatesAssetPointer(wanted_asset)->asset_id);
 	main_frame->current_project.database.ExecuteSQL(sql_command.ToUTF8().data());
 	main_frame->DirtyVolumes();
 
@@ -291,13 +293,16 @@ void AtomicCoordinatesAssetPanel::ImportAllFromDatabase()
 
 void AtomicCoordinatesAssetPanel::FillAssetSpecificContentsList()
 {
-	ContentsListBox->InsertColumn(0, "Name", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
-	ContentsListBox->InsertColumn(1, "I.D.", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
-	ContentsListBox->InsertColumn(2, "Reconstruction Job I.D.", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
-	ContentsListBox->InsertColumn(3, "Pixel Size", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
-	ContentsListBox->InsertColumn(4, "X Size", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
-	ContentsListBox->InsertColumn(5, "Y Size", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
-	ContentsListBox->InsertColumn(6, "Z Size", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+	ContentsListBox->InsertColumn(0, "File Name", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+  ContentsListBox->InsertColumn(1, "PDB I.D.", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+	ContentsListBox->InsertColumn(2, "Asset I.D.", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+	ContentsListBox->InsertColumn(3, "Simulation 3d Job I.D.", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+	ContentsListBox->InsertColumn(4, "X Size (A)", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+	ContentsListBox->InsertColumn(5, "Y Size (A)", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+	ContentsListBox->InsertColumn(6, "Z Size (A)", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+  ContentsListBox->InsertColumn(7, "Avg B-factor", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+  ContentsListBox->InsertColumn(8, "StdDev B-factor", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+
 /*
 
 		for (long counter = 0; counter < all_groups_list->groups[selected_group].number_of_members; counter++)
@@ -316,33 +321,41 @@ void AtomicCoordinatesAssetPanel::FillAssetSpecificContentsList()
 
 wxString AtomicCoordinatesAssetPanel::ReturnItemText(long item, long column) const
 {
+
 	switch(column)
 	{
 	    case 0  :
 	    	return all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->asset_name;
 	       break;
-	    case 1  :
+      case 1  :
+        return all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->pdb_id;
+        break;
+	    case 2  :
 	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->asset_id);
 	       break;
-	    case 2  :
+	    case 3  :
 	    	return wxString::Format(wxT("%li"), all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->simulation_3d_job_id);
 	       break;
-	    case 3  :
-	    	return wxString::Format(wxT("%.4f"), all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->pixel_size);
-	       break;
 	    case 4  :
-	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->x_size);
+	    	return wxString::Format(wxT("%i"), int(all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->x_size));
 	       break;
 	    case 5  :
-	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->y_size);
+	    	return wxString::Format(wxT("%i"), int(all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->y_size));
 		   break;
 	    case 6  :
-	    	return wxString::Format(wxT("%i"), all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->z_size);
+	    	return wxString::Format(wxT("%i"), int(all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->z_size));
 		   break;
+      case 7  :
+		    return wxString::Format(wxT("%4.2f"), all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->pdb_avg_bfactor);
+        break;
+      case 8  :
+        return wxString::Format(wxT("%4.2f"), all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->pdb_std_bfactor);
+        break;
 	    default :
 	       MyPrintWithDetails("Error, asking for column (%li) which does not exist", column);
 	       return "";
 	}
+
 }
 
 bool AtomicCoordinatesAssetPanel::IsFileAnAsset(wxFileName file_to_check)
@@ -353,8 +366,8 @@ bool AtomicCoordinatesAssetPanel::IsFileAnAsset(wxFileName file_to_check)
 
 void AtomicCoordinatesAssetPanel::ImportAssetClick( wxCommandEvent& event )
 {
-	MyVolumeImportDialog *import_dialog = new MyVolumeImportDialog(this);
+	AtomicCoordinatesImportDialog *import_dialog = new AtomicCoordinatesImportDialog(this);
 		import_dialog->ShowModal();
-		main_frame->DirtyVolumes();
+		// main_frame->DirtyVolumes(); FIXME
 
 }

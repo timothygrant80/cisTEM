@@ -186,8 +186,8 @@ public :
 	bool CreateVolumeGroupListTable() {return  CreateTable("VOLUME_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );};
 
 #ifdef EXPERIMENTAL
-  bool CreateAtomicCoordinatesAssetTable() {return CreateTable("ATOMICCOORDINATES_ASSETS", "pttiriii", "ATOMICCOORDINATES_ASSET_ID", "NAME", "FILENAME", "SIMULATION_3D_JOB_ID", "PIXEL_SIZE", "X_SIZE", "Y_SIZE", "Z_SIZE");};
-	bool CreateAtomicCoordinatesGroupListTable() {return  CreateTable("ATOMICCOORDINATES_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );};
+  bool CreateAtomicCoordinatesAssetTable() {return CreateTable("ATOMIC_COORDINATES_ASSETS", "pttiriii", "ATOMIC_COORDINATES_ASSET_ID", "NAME", "FILENAME", "SIMULATION_3D_JOB_ID", "PIXEL_SIZE", "X_SIZE", "Y_SIZE", "Z_SIZE");};
+	bool CreateAtomicCoordinatesGroupListTable() {return  CreateTable("ATOMIC_COORDINATES_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );};
   // TODO: I'm not sure if the following sections that are related to refinement will also be needed for AtomicCoordinates objects, though I may be given we do refinement....just not refinement packages.
 #endif
 

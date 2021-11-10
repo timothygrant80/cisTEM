@@ -1248,7 +1248,7 @@ void Database::AddNextVolumeAsset(int image_asset_id,  wxString name, wxString f
 #ifdef EXPERIMENTAL
 void Database::BeginAtomicCoordinatesAssetInsert()
 {
-	BeginBatchInsert("ATOMICCOORDINATES_ASSETS", 8, "VOLUME_ASSET_ID", "NAME", "FILENAME", "RECONSTRUCTION_JOB_ID", "PIXEL_SIZE", "X_SIZE", "Y_SIZE", "Z_SIZE");
+	BeginBatchInsert("ATOMIC_COORDINATES_ASSETS", 8, "ATOMIC_COORDINATES_ASSET_ID", "NAME", "FILENAME", "SIMULATION_3D_JOB_ID", "PIXEL_SIZE", "X_SIZE", "Y_SIZE", "Z_SIZE");
 }
 
 void Database::AddNextAtomicCoordinatesAsset(int image_asset_id,  wxString name, wxString filename, int simulation_3d_job_id, double pixel_size, int x_size, int y_size, int z_size )
@@ -1404,7 +1404,7 @@ void Database::BeginAllVolumeAssetsSelect()
 #ifdef EXPERIMENTAL
 void Database::BeginAllAtomicCoordinatesAssetsSelect()
 {
-	BeginBatchSelect("SELECT * FROM ATOMICCOORDINATES_ASSETS;");
+	BeginBatchSelect("SELECT * FROM ATOMIC_COORDINATES_ASSETS;");
 }
 #endif
 

@@ -126,6 +126,7 @@
 #include "../gui/RefineTemplatePanel.h"
 #include "../gui/AtomicCoordinatesAssetPanel.h"
 #include "../gui/AtomicCoordinatesChooserDialog.h"
+#include "../gui/AtomicCoordinatesImportDialog.h"
 #endif
 
 #define REFINEMENT 0

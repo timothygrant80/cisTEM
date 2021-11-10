@@ -17,7 +17,7 @@ AtomicCoordinatesImportDialogParent( parent )
 
 void AtomicCoordinatesImportDialog::AddFilesClick( wxCommandEvent& event )
 {
-	  wxFileDialog openFileDialog(this, _("Select MRC files - basic wildcards are allowed"), "", "", "MRC files (*.mrc)|*.mrc;*.mrcs", wxFD_OPEN | wxFD_MULTIPLE);
+	  wxFileDialog openFileDialog(this, _("Select PDBx/mmCIF files - basic wildcards are allowed"), "", "", "Atomic Coord files (*.pdb)|*.mmCIF;*.cif", wxFD_OPEN | wxFD_MULTIPLE);
 
 
 
@@ -50,7 +50,7 @@ void AtomicCoordinatesImportDialog::AddFilesClick( wxCommandEvent& event )
 	    				current_extension = wxFileName(wildcard_files.Item(wildcard_counter)).GetExt();
 	    				current_extension = current_extension.MakeLower();
 
-	    				if ( current_extension == "mrc" || current_extension == "mrcs") PathListCtrl->InsertItem(PathListCtrl->GetItemCount(), wildcard_files.Item(wildcard_counter), PathListCtrl->GetItemCount());
+	    				if ( current_extension == "pdb" || current_extension == "pdbx" || current_extension == "cif" || current_extension == "mmcif") PathListCtrl->InsertItem(PathListCtrl->GetItemCount(), wildcard_files.Item(wildcard_counter), PathListCtrl->GetItemCount());
 	    			}
 
 	    		}
@@ -84,8 +84,8 @@ void AtomicCoordinatesImportDialog::AddDirectoryClick( wxCommandEvent& event )
 
     if (dlg.ShowModal() == wxID_OK)
     {
-    	wxDir::GetAllFiles 	( dlg.GetPath(), &all_files, "*.mrc", wxDIR_FILES);
-    	wxDir::GetAllFiles 	( dlg.GetPath(), &all_files, "*.mrcs", wxDIR_FILES);
+    	wxDir::GetAllFiles 	( dlg.GetPath(), &all_files, "*.pdb*", wxDIR_FILES);
+    	wxDir::GetAllFiles 	( dlg.GetPath(), &all_files, "*.*cif*", wxDIR_FILES);
 
     	all_files.Sort();
 
@@ -136,7 +136,7 @@ void AtomicCoordinatesImportDialog::CheckImportButtonStatus()
 
 	if (PathListCtrl->GetItemCount() < 1) enable_import_box = false;
 
-	if (PixelSizeText->GetLineLength(0) == 0 ) enable_import_box = false;
+	// if (PixelSizeText->GetLineLength(0) == 0 ) enable_import_box = false;
 
 	if (enable_import_box == true) ImportButton->Enable(true);
 	else  ImportButton->Enable(false);
@@ -149,15 +149,11 @@ void AtomicCoordinatesImportDialog::CheckImportButtonStatus()
 
 void AtomicCoordinatesImportDialog::ImportClick( wxCommandEvent& event )
 {
-	// Get the microscope values
+	// 
 
-
-	double microscope_voltage;
-	double pixel_size;
-	double spherical_aberration;
 
 	bool have_errors = false;
-	PixelSizeText->GetLineText(0).ToDouble(&pixel_size);
+	// PixelSizeText->GetLineText(0).ToDouble(&pixel_size);
 
 	//  In case we need it make an error dialog..
 
@@ -165,11 +161,9 @@ void AtomicCoordinatesImportDialog::ImportClick( wxCommandEvent& event )
 
 	if (PathListCtrl->GetItemCount() > 0)
 	{
-		AtomicCoordinateAsset temp_asset;
+		AtomicCoordinatesAsset temp_asset;
 
-		temp_asset.pixel_size = pixel_size;
-		temp_asset.half_map_1_filename = "";
-		temp_asset.half_map_2_filename = "";
+		temp_asset.pixel_size = 3.14; // TODO: Remove me, this is just for setup while translating from VolumeAsset base and thinking through what info an AtomicCoordinatesAsset should have.
 
 
 		// ProgressBar..
@@ -196,12 +190,12 @@ void AtomicCoordinatesImportDialog::ImportClick( wxCommandEvent& event )
 						atomic_coordinates_asset_panel->AddAsset(&temp_asset);
 
 					//	void AddNextatomic_coordinatesAsset(int image_asset_id,  wxString name, wxString filename, int reconstruction_job_id, double pixel_size, int x_size, int y_size, int z_size);
-						main_frame->current_project.database.AddNextAtomicCoordinatesAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), -1, temp_asset.pixel_size, temp_asset.x_size, temp_asset.y_size, temp_asset.z_size, temp_asset.half_map_1_filename.GetFullPath(), temp_asset.half_map_2_filename.GetFullPath());
+						main_frame->current_project.database.AddNextAtomicCoordinatesAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), -1, temp_asset.pixel_size, temp_asset.x_size, temp_asset.y_size, temp_asset.z_size );
 
 					}
 					else
 					{
-						my_error->ErrorText->AppendText(wxString::Format(wxT("%s is not a valid MRC file, skipping\n"), temp_asset.ReturnFullPathString()));
+						my_error->ErrorText->AppendText(wxString::Format(wxT("%s is not a valid Atomic Coordinate file, skipping\n"), temp_asset.ReturnFullPathString()));
 						have_errors = true;
 					}
 			}
@@ -225,7 +219,7 @@ void AtomicCoordinatesImportDialog::ImportClick( wxCommandEvent& event )
 		atomic_coordinates_asset_panel->FillContentsList();
 		//main_frame->RecalculateAssetBrowser();
 		//main_frame->Dirtyatomic_coordinatesGroups();
-		main_frame->DirtyAtomicCoordinatess();
+		// main_frame->DirtyAtomicCoordinates(); FIXME
 	}
 
 

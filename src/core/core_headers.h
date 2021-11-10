@@ -169,6 +169,9 @@ protected:
 #include "../../include/ieee-754-half/half.hpp"
 #include "../../include/gemmi/model.hpp"
 #include "../../include/gemmi/elem.hpp"
+#include "../../include/gemmi/mmread.hpp"
+#include "../../include/gemmi/gz.hpp"
+#include "../../include/gemmi/resinfo.hpp"
 #include "pdb.h"
 #include "water.h"
 #endif

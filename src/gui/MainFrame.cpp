@@ -305,14 +305,15 @@ void MyMainFrame::DirtyEverything()
 	DirtyClassificationSelections();
 	DirtyClassifications();
 	DirtyVolumes();
+#ifdef EXPERIMENTAL
+  DirtyAtomicCoordinates();
+#endif 
 
 }
+
 void MyMainFrame::DirtyVolumes()
 {
 	volume_asset_panel->is_dirty = true;
-#ifdef EXPERIMENTAL
-  atomic_coordinates_asset_panel->is_dirty = true;
-#endif  
 	refine_3d_panel->volumes_are_dirty = true;
 	auto_refine_3d_panel->volumes_are_dirty = true;
 	sharpen_3d_panel->volumes_are_dirty = true;
@@ -324,6 +325,13 @@ void MyMainFrame::DirtyVolumes()
 #endif
 
 }
+
+#ifdef EXPERIMENTAL
+void MyMainFrame::DirtyAtomicCoordinates()
+{
+	atomic_coordinates_asset_panel->is_dirty = true;
+}
+#endif
 
 void MyMainFrame::DirtyMovieGroups()
 {

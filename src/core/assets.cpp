@@ -459,6 +459,10 @@ AtomicCoordinatesAsset::AtomicCoordinatesAsset()
 	filename = wxEmptyString;
 	asset_name = wxEmptyString;
 
+  pdb_id = wxEmptyString;
+  pdb_avg_bfactor = 0.0;
+  pdb_std_bfactor = 0.0;
+
 }
 
 AtomicCoordinatesAsset::~AtomicCoordinatesAsset()
@@ -480,25 +484,100 @@ AtomicCoordinatesAsset::AtomicCoordinatesAsset(wxString wanted_filename)
 	pixel_size = 0;
 	is_valid = false;
 
+  pdb_id = wxEmptyString;
+  pdb_avg_bfactor = 0.0;
+  pdb_std_bfactor = 0.0;
+
 	int number_in_stack;
 
 	if (filename.IsOk() == true && filename.FileExists() == true)
 	{
-		is_valid = GetMRCDetails(filename.GetFullPath().fn_str(), x_size, y_size, z_size);
+    Update(wanted_filename);
 	}
 
 }
-
 
 void AtomicCoordinatesAsset::Update(wxString wanted_filename)
 {
 	filename = wanted_filename;
 	is_valid = false;
 
-	if (filename.IsOk() == true && filename.FileExists() == true)
-	{
-		is_valid = GetMRCDetails(filename.GetFullPath().fn_str(), x_size, y_size, z_size);
-	}
+#define ATOMIC_COORDINATES_ASSET_DEBUG
+
+#ifdef ATOMIC_COORDINATES_ASSET_DEBUG
+	wxFFileOutputStream output( stderr );
+	wxTextOutputStream cout( output );
+#endif
+
+  // Using the try/catch incase the user provides a bad file.
+  try 
+  {
+      auto st = gemmi::read_structure(gemmi::MaybeGzipped(filename.GetFullPath().ToStdString()));
+      pdb_id = st.name; 
+
+      // This loop should be part of some atomic coordinates utiltity class later on. For now, we want to get the x,y,z extents
+      // which will minimally be useful in determining the box size for simulating templates.
+      // TOOD: Check on NCS and option to expand?
+      
+      float x_min = std::numeric_limits<float>::max(); 
+      float x_max = std::numeric_limits<float>::min();
+      float y_min = std::numeric_limits<float>::max(); 
+      float y_max = std::numeric_limits<float>::min();
+      float z_min = std::numeric_limits<float>::max(); 
+      float z_max = std::numeric_limits<float>::min();
+      long n = 0;
+      double b = 0, bb = 0;
+
+      // I'm sure there is already something in GEMMI to do an iteration like this.
+      for (gemmi::Model& model : st.models)
+      {		
+        for (gemmi::Chain& chain : model.chains)
+        {
+            for (gemmi::Residue& res : chain.residues)
+            {
+
+                // For now, we only want ATOM 
+                if (res.het_flag == 'A')  // 'A' = ATOM, 'H' = HETATM, 0 = unspecified
+                {
+                  for (gemmi::Atom& atom : res.atoms) 
+                  {
+                      b  += atom.b_iso;
+                      bb += (atom.b_iso * atom.b_iso);
+                      if (atom.pos.x < x_min) x_min = atom.pos.x;
+                      if (atom.pos.x > x_max) x_max = atom.pos.x;
+                      if (atom.pos.y < y_min) y_min = atom.pos.y;
+                      if (atom.pos.y > y_max) y_max = atom.pos.y;
+                      if (atom.pos.z < z_min) z_min = atom.pos.z;
+                      if (atom.pos.z > z_max) z_max = atom.pos.z;
+                      n++;
+                  } 
+                }
+            }
+        }
+      }
+      b /= n;
+      bb = sqrt(bb / n - b * b);
+      pdb_avg_bfactor = b;
+      pdb_std_bfactor = bb;
+      wxPrintf("factors 3.3%e and 3.3%e\n",b,bb);
+      x_size = x_max - x_min;
+      y_size = y_max - y_min;
+      z_size = z_max - z_min;
+
+      #ifdef ATOMIC_COORDINATES_ASSET_DEBUG
+        wxPrintf("This file has %i models\n", int(st.models.size()) );
+        wxPrintf("The name is %s\n", st.name );
+        wxPrintf("The resolution is %3.3e\n",st.resolution );
+      #endif
+      is_valid = true;
+  } 
+  catch (std::runtime_error& e) 
+  {
+    #ifdef ATOMIC_COORDINATES_ASSET_DEBUG
+      cout << "Oops: " << e.what()  << '\n' ;
+    #endif
+  }
+
 
 }
 
@@ -518,6 +597,10 @@ void AtomicCoordinatesAsset::CopyFrom(Asset *other_asset)
 	pixel_size = casted_asset->pixel_size;
 	is_valid = casted_asset->is_valid;
 	asset_name = casted_asset->asset_name;
+
+  pdb_id = casted_asset->pdb_id;
+  pdb_avg_bfactor = casted_asset->pdb_avg_bfactor;
+  pdb_std_bfactor = casted_asset->pdb_std_bfactor;
 }
 
 
@@ -1264,6 +1347,7 @@ void VolumeAssetList::RemoveAll()
 
 AtomicCoordinatesAssetList::AtomicCoordinatesAssetList()
 {
+  // TODO: This is likely too few pre allocated memory.
 	number_of_assets = 0;
 	number_allocated = 15;
 	assets = new AtomicCoordinatesAsset[15];

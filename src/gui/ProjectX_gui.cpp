@@ -5033,7 +5033,7 @@ VolumeImportDialog::~VolumeImportDialog()
 
 }
 
-AtomicCoordinatesImportDialog::AtomicCoordinatesImportDialog( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
+AtomicCoordinatesImportDialogParent::AtomicCoordinatesImportDialogParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
 {
 	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
 
@@ -5097,21 +5097,21 @@ AtomicCoordinatesImportDialog::AtomicCoordinatesImportDialog( wxWindow* parent, 
 	this->Centre( wxBOTH );
 
 	// Connect Events
-	m_button10->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialog::AddFilesClick ), NULL, this );
-	m_button11->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialog::AddDirectoryClick ), NULL, this );
-	ClearButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialog::ClearClick ), NULL, this );
-	m_button13->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialog::CancelClick ), NULL, this );
-	ImportButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialog::ImportClick ), NULL, this );
+	m_button10->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialogParent::AddFilesClick ), NULL, this );
+	m_button11->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialogParent::AddDirectoryClick ), NULL, this );
+	ClearButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialogParent::ClearClick ), NULL, this );
+	m_button13->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialogParent::CancelClick ), NULL, this );
+	ImportButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialogParent::ImportClick ), NULL, this );
 }
 
-AtomicCoordinatesImportDialog::~AtomicCoordinatesImportDialog()
+AtomicCoordinatesImportDialogParent::~AtomicCoordinatesImportDialogParent()
 {
 	// Disconnect Events
-	m_button10->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialog::AddFilesClick ), NULL, this );
-	m_button11->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialog::AddDirectoryClick ), NULL, this );
-	ClearButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialog::ClearClick ), NULL, this );
-	m_button13->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialog::CancelClick ), NULL, this );
-	ImportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialog::ImportClick ), NULL, this );
+	m_button10->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialogParent::AddFilesClick ), NULL, this );
+	m_button11->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialogParent::AddDirectoryClick ), NULL, this );
+	ClearButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialogParent::ClearClick ), NULL, this );
+	m_button13->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialogParent::CancelClick ), NULL, this );
+	ImportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialogParent::ImportClick ), NULL, this );
 
 }
 

@@ -176,6 +176,10 @@ class AtomicCoordinatesAsset : public Asset {
 
 	double pixel_size;
 
+  wxString pdb_id;
+  float pdb_avg_bfactor;
+  float pdb_std_bfactor;
+
 	void Update(wxString wanted_filename);
 	void CopyFrom(Asset *other_asset);
 };

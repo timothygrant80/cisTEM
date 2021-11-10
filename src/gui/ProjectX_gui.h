@@ -1429,9 +1429,9 @@ class VolumeImportDialog : public wxDialog
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-/// Class AtomicCoordinatesImportDialog
+/// Class AtomicCoordinatesImportDialogParent
 ///////////////////////////////////////////////////////////////////////////////
-class AtomicCoordinatesImportDialog : public wxDialog
+class AtomicCoordinatesImportDialogParent : public wxDialog
 {
 	private:
 
@@ -1455,8 +1455,8 @@ class AtomicCoordinatesImportDialog : public wxDialog
 
 	public:
 
-		AtomicCoordinatesImportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Import Images"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 484,539 ), long style = wxCLOSE_BOX );
-		~AtomicCoordinatesImportDialog();
+		AtomicCoordinatesImportDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Import PDBx/mmCIF"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 484,539 ), long style = wxCLOSE_BOX );
+		~AtomicCoordinatesImportDialogParent();
 
 };
 

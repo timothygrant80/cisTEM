@@ -156,7 +156,7 @@ public :
 
 #ifdef EXPERIMENTAL
 	void BeginAtomicCoordinatesAssetInsert();
-	void AddNextAtomicCoordinatesAsset(int image_asset_id,  wxString name, wxString filename, int simulation_3d_job_id, double pixel_size, int x_size, int y_size, int z_size);
+	void AddNextAtomicCoordinatesAsset(int image_asset_id,  wxString name, wxString filename, int simulation_3d_job_id, int x_size, int y_size, int z_size, wxString pdb_id, float pdb_avg_bfactor, float pdb_std_bfactor, float effective_weight);
 	void EndAtomicCoordinatesAssetInsert() {EndBatchInsert();};
 #endif
 	void BeginParticlePositionAssetInsert();
@@ -186,7 +186,7 @@ public :
 	bool CreateVolumeGroupListTable() {return  CreateTable("VOLUME_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );};
 
 #ifdef EXPERIMENTAL
-  bool CreateAtomicCoordinatesAssetTable() {return CreateTable("ATOMIC_COORDINATES_ASSETS", "pttiriii", "ATOMIC_COORDINATES_ASSET_ID", "NAME", "FILENAME", "SIMULATION_3D_JOB_ID", "PIXEL_SIZE", "X_SIZE", "Y_SIZE", "Z_SIZE");};
+  bool CreateAtomicCoordinatesAssetTable() {return CreateTable("ATOMIC_COORDINATES_ASSETS", "pttiiiitrrr", "ATOMIC_COORDINATES_ASSET_ID", "NAME", "FILENAME", "SIMULATION_3D_JOB_ID", "X_SIZE", "Y_SIZE", "Z_SIZE", "PDB_ID", "PDB_AVG_BFACTOR", "PDB_STD_BFACTOR", "EFFECTIVE_WEIGHT");};
 	bool CreateAtomicCoordinatesGroupListTable() {return  CreateTable("ATOMIC_COORDINATES_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );};
   // TODO: I'm not sure if the following sections that are related to refinement will also be needed for AtomicCoordinates objects, though I may be given we do refinement....just not refinement packages.
 #endif

@@ -806,8 +806,8 @@ bool Database::CreateAllTables()
 #ifdef EXPERIMENTAL
 	success = CreateAtomicCoordinatesAssetTable();
 	CheckSuccess(success);
-	// success = CreateVolumeGroupListTable();
-	// CheckSuccess(success);
+	success = CreateAtomicCoordinatesGroupListTable();
+	CheckSuccess(success);
 #endif  
 	success = CreateRefinementPackageAssetTable();
 	CheckSuccess(success);
@@ -1248,12 +1248,12 @@ void Database::AddNextVolumeAsset(int image_asset_id,  wxString name, wxString f
 #ifdef EXPERIMENTAL
 void Database::BeginAtomicCoordinatesAssetInsert()
 {
-	BeginBatchInsert("ATOMIC_COORDINATES_ASSETS", 8, "ATOMIC_COORDINATES_ASSET_ID", "NAME", "FILENAME", "SIMULATION_3D_JOB_ID", "PIXEL_SIZE", "X_SIZE", "Y_SIZE", "Z_SIZE");
+	BeginBatchInsert("ATOMIC_COORDINATES_ASSETS", 11, "ATOMIC_COORDINATES_ASSET_ID", "NAME", "FILENAME", "SIMULATION_3D_JOB_ID", "X_SIZE", "Y_SIZE", "Z_SIZE", "PDB_ID", "PDB_AVG_BFACTOR", "PDB_STD_BFACTOR", "EFFECTIVE_WEIGHT");
 }
 
-void Database::AddNextAtomicCoordinatesAsset(int image_asset_id,  wxString name, wxString filename, int simulation_3d_job_id, double pixel_size, int x_size, int y_size, int z_size )
+void Database::AddNextAtomicCoordinatesAsset(int image_asset_id,  wxString name, wxString filename, int simulation_3d_job_id, int x_size, int y_size, int z_size, wxString pdb_id, float pdb_avg_bfactor, float pdb_std_bfactor, float effective_weight )
 {
-	AddToBatchInsert("ittiriii", image_asset_id, name.ToUTF8().data(), filename.ToUTF8().data(), simulation_3d_job_id, pixel_size, x_size, y_size, z_size );
+	AddToBatchInsert("ittiiiitrrr", image_asset_id, name.ToUTF8().data(), filename.ToUTF8().data(), simulation_3d_job_id, x_size, y_size, z_size, pdb_id.ToUTF8().data(), pdb_avg_bfactor, pdb_std_bfactor, effective_weight);
 }
 #endif
 
@@ -1849,7 +1849,11 @@ VolumeAsset Database::GetNextVolumeAsset()
 AtomicCoordinatesAsset Database::GetNextAtomicCoordinatesAsset()
 {
 	AtomicCoordinatesAsset temp_asset;
-	GetFromBatchSelect("itflriii", &temp_asset.asset_id, &temp_asset.asset_name, &temp_asset.filename, &temp_asset.simulation_3d_job_id, &temp_asset.pixel_size, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.z_size );
+  // Note: no distinction between single and double (s/r) seems to be made in writing to the DB, based on format strings, yet when reading it must be correct. 
+  // 
+	GetFromBatchSelect("itfliiitsss", &temp_asset.asset_id, &temp_asset.asset_name, &temp_asset.filename, &temp_asset.simulation_3d_job_id, 
+                                    &temp_asset.x_size, &temp_asset.y_size, &temp_asset.z_size, &temp_asset.pdb_id, 
+                                    &temp_asset.pdb_avg_bfactor, &temp_asset.pdb_std_bfactor, &temp_asset.effective_weight);
 	return temp_asset;
 }
 #endif

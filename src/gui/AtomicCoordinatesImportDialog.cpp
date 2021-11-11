@@ -163,9 +163,6 @@ void AtomicCoordinatesImportDialog::ImportClick( wxCommandEvent& event )
 	{
 		AtomicCoordinatesAsset temp_asset;
 
-		temp_asset.pixel_size = 3.14; // TODO: Remove me, this is just for setup while translating from VolumeAsset base and thinking through what info an AtomicCoordinatesAsset should have.
-
-
 		// ProgressBar..
 
 		OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog("Import AtomicCoordinates",	"Importing AtomicCoordinates...", PathListCtrl->GetItemCount(), this,  wxPD_AUTO_HIDE|wxPD_APP_MODAL|wxPD_ELAPSED_TIME);
@@ -190,7 +187,9 @@ void AtomicCoordinatesImportDialog::ImportClick( wxCommandEvent& event )
 						atomic_coordinates_asset_panel->AddAsset(&temp_asset);
 
 					//	void AddNextatomic_coordinatesAsset(int image_asset_id,  wxString name, wxString filename, int reconstruction_job_id, double pixel_size, int x_size, int y_size, int z_size);
-						main_frame->current_project.database.AddNextAtomicCoordinatesAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), -1, temp_asset.pixel_size, temp_asset.x_size, temp_asset.y_size, temp_asset.z_size );
+						main_frame->current_project.database.AddNextAtomicCoordinatesAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), -1, 
+                                                                               temp_asset.x_size, temp_asset.y_size, temp_asset.z_size,
+                                                                               temp_asset.pdb_id, temp_asset.pdb_avg_bfactor, temp_asset.pdb_std_bfactor, temp_asset.effective_weight);
 
 					}
 					else

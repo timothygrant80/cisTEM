@@ -299,7 +299,7 @@ bool MyGuiApp::OnInit()
 	assets_panel->AssetsBook->AddPage(volume_asset_panel, "3D Volumes", false, 3);
 	assets_panel->AssetsBook->AddPage(refinement_package_asset_panel, "Refine Pkgs.", false, 4);
 #ifdef EXPERIMENTAL
-	assets_panel->AssetsBook->AddPage(atomic_coordinates_asset_panel, "3D Atomic Coordinates", false, 5);
+	assets_panel->AssetsBook->AddPage(atomic_coordinates_asset_panel, "Atomic Coordinates", false, 5);
 #endif
 
 	actions_panel->ActionsBook->AddPage(align_movies_panel, "Align Movies", true, 0);

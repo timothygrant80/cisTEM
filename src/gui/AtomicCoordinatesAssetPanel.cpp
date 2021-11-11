@@ -14,12 +14,12 @@ MyAssetParentPanel( parent )
   Label1Title->SetLabel("PDB I.D. : ");
 	Label2Title->SetLabel("Asset I.D. : ");
 	Label3Title->SetLabel("Simulation 3d Job I.D. : ");
-	Label4Title->SetLabel("X Size : ");
-	Label5Title->SetLabel("Y Size : ");
-	Label6Title->SetLabel("Z Size : ");
+	Label4Title->SetLabel("X Size (A): ");
+	Label5Title->SetLabel("Y Size (A): ");
+	Label6Title->SetLabel("Z Size (A): ");
 	Label7Title->SetLabel("PDB Avg Bfactor");
 	Label8Title->SetLabel("PDB StdDev Bfactor");
-	Label9Title->SetLabel("");
+	Label9Title->SetLabel("Effective Weight (kDa)");
 
 	UpdateInfo();
 
@@ -53,7 +53,7 @@ void AtomicCoordinatesAssetPanel::UpdateInfo()
 		Label6Text->SetLabel(wxString::Format(wxT("%i"), int(all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->z_size)));
 		Label7Text->SetLabel(wxString::Format(wxT("%4.2f"), all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->pdb_avg_bfactor));
 		Label8Text->SetLabel(wxString::Format(wxT("%4.2f"), all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->pdb_std_bfactor));
-		Label9Text->SetLabel("");
+		Label9Text->SetLabel(wxString::Format(wxT("%4.2f"), all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, selected_content))->effective_weight));
 	}
 	else
 	{
@@ -64,9 +64,9 @@ void AtomicCoordinatesAssetPanel::UpdateInfo()
 		Label4Text->SetLabel("-");
 		Label5Text->SetLabel("-");
 		Label6Text->SetLabel("-");
-		Label7Text->SetLabel("");
-		Label8Text->SetLabel("");
-		Label9Text->SetLabel("");
+		Label7Text->SetLabel("-");
+		Label8Text->SetLabel("-");
+		Label9Text->SetLabel("-");
 	}
 
 }
@@ -151,8 +151,7 @@ void AtomicCoordinatesAssetPanel::CompletelyRemoveAssetByID(long wanted_asset_id
 void AtomicCoordinatesAssetPanel::DoAfterDeletionCleanup()
 {
 	main_frame->DirtyVolumes();
-	refinement_package_asset_panel->ReDrawActiveReferences();
-	refine_3d_panel->ReDrawActiveReferences();
+
 }
 
 
@@ -239,7 +238,7 @@ void AtomicCoordinatesAssetPanel::RenameAsset(long wanted_asset, wxString wanted
 	wxString name = wanted_name;
 	name.Replace("'", "''");
 	all_assets_list->ReturnAtomicCoordinatesAssetPointer(wanted_asset)->asset_name = wanted_name;
-	wxString sql_command = wxString::Format("UPDATE ATOMIC_COORDINATES SET NAME='%s' WHERE ATOMIC_COORDINATES_ASSET_ID=%i", name, all_assets_list->ReturnAtomicCoordinatesAssetPointer(wanted_asset)->asset_id);
+	wxString sql_command = wxString::Format("UPDATE ATOMIC_COORDINATES_ASSETS SET NAME='%s' WHERE ATOMIC_COORDINATES_ASSET_ID=%i", name, all_assets_list->ReturnAtomicCoordinatesAssetPointer(wanted_asset)->asset_id);
 	main_frame->current_project.database.ExecuteSQL(sql_command.ToUTF8().data());
 	main_frame->DirtyVolumes();
 
@@ -302,6 +301,8 @@ void AtomicCoordinatesAssetPanel::FillAssetSpecificContentsList()
 	ContentsListBox->InsertColumn(6, "Z Size (A)", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
   ContentsListBox->InsertColumn(7, "Avg B-factor", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
   ContentsListBox->InsertColumn(8, "StdDev B-factor", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+  ContentsListBox->InsertColumn(9, "Effective Weight (kDa)", wxLIST_FORMAT_LEFT,  wxLIST_AUTOSIZE_USEHEADER );
+
 
 /*
 
@@ -351,6 +352,9 @@ wxString AtomicCoordinatesAssetPanel::ReturnItemText(long item, long column) con
       case 8  :
         return wxString::Format(wxT("%4.2f"), all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->pdb_std_bfactor);
         break;
+      case 9  :
+        return wxString::Format(wxT("%4.2f"), all_assets_list->ReturnAtomicCoordinatesAssetPointer(all_groups_list->ReturnGroupMember(selected_group, item))->effective_weight);
+        break;        
 	    default :
 	       MyPrintWithDetails("Error, asking for column (%li) which does not exist", column);
 	       return "";
@@ -368,6 +372,5 @@ void AtomicCoordinatesAssetPanel::ImportAssetClick( wxCommandEvent& event )
 {
 	AtomicCoordinatesImportDialog *import_dialog = new AtomicCoordinatesImportDialog(this);
 		import_dialog->ShowModal();
-		// main_frame->DirtyVolumes(); FIXME
-
+    main_frame->DirtyAtomicCoordinates();
 }

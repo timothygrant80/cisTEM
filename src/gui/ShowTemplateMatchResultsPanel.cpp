@@ -47,7 +47,7 @@ void ShowTemplateMatchResultsPanel::OnSavePeaksClick( wxCommandEvent& event )
 		wxDateTime wxdatetime_of_run;
 		wxdatetime_of_run.SetFromDOS((unsigned long) current_result.datetime_of_run);
 
-		coordinate_file.WriteCommentLine(wxString::Format("Template Match Result #%li (%s - %s, %s)", current_result.job_name, wxdatetime_of_run.FormatISODate(), wxdatetime_of_run.FormatISOTime()).ToUTF8().data());
+		coordinate_file.WriteCommentLine(wxString::Format("Template Match Result #%li (%s - %s, %s)", current_result.job_id, current_result.job_name, wxdatetime_of_run.FormatISODate(), wxdatetime_of_run.FormatISOTime()).ToUTF8().data());
 		coordinate_file.WriteCommentLine(wxString::Format("Searched Image               : %s", image_asset_panel->ReturnAssetLongFilename(image_asset_panel->ReturnArrayPositionFromAssetID(current_result.image_asset_id))).ToUTF8().data());
 		coordinate_file.WriteCommentLine(wxString::Format("Reference Volume File        : %s", volume_asset_panel->ReturnAssetLongFilename(volume_asset_panel->ReturnArrayPositionFromAssetID(current_result.ref_volume_asset_id))).ToUTF8().data());
 		coordinate_file.WriteCommentLine(wxString::Format("Used Result Threshold        : %.2f", current_result.used_threshold).ToUTF8().data());

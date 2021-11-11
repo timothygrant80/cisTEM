@@ -56,6 +56,7 @@ void MyRefinementPackageAssetPanel::OnCombineClick( wxCommandEvent& event )
 
 
 	if (combine_packages->ShowModal() == wxID_OK){
+		//TODO: insert code for combining extant packages
 		combine_packages->Destroy();
 	}
 }

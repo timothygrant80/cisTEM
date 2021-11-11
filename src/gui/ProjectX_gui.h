@@ -3065,7 +3065,7 @@ class CombineRefinementPackagesDialogParent : public wxDialog
 	private:
 
 	protected:
-		wxCheckListBox* m_checkList1;
+		wxCheckListBox* RefinementPackagesListCtrl;
 		wxStaticText* ErrorStaticText;
 		wxStaticLine* m_staticline14;
 		wxButton* CancelButton;

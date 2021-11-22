@@ -49,13 +49,14 @@ class UnblurResultsPanel;
 class VolumeAssetPickerComboPanel;
 
 #include "job_panel.h"
+#include <wx/string.h>
+#include <wx/combobox.h>
 #include <wx/gdicmn.h>
-#include <wx/listbook.h>
-#include <wx/listctrl.h>
 #include <wx/font.h>
 #include <wx/colour.h>
 #include <wx/settings.h>
-#include <wx/string.h>
+#include <wx/listbook.h>
+#include <wx/listctrl.h>
 #include <wx/sizer.h>
 #include <wx/panel.h>
 #include <wx/bitmap.h>
@@ -63,7 +64,6 @@ class VolumeAssetPickerComboPanel;
 #include <wx/icon.h>
 #include <wx/menu.h>
 #include <wx/frame.h>
-#include <wx/combobox.h>
 #include <wx/bmpbuttn.h>
 #include <wx/button.h>
 #include <wx/statline.h>
@@ -117,7 +117,9 @@ class MainFrame : public wxFrame
 
 
 	public:
-		wxListbook* MenuBook;
+		MemoryComboBox* ModeComboBox;
+		wxListbook* MenuBook_SingleParticle;
+		wxListbook* MenuBook_TemplateMatching;
 
 		MainFrame( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("cisTEM"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1366,768 ), long style = wxDEFAULT_FRAME_STYLE|wxTAB_TRAVERSAL|wxWANTS_CHARS );
 

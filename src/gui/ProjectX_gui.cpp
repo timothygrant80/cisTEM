@@ -39,18 +39,36 @@ MainFrame::MainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	wxBoxSizer* bSizer8;
 	bSizer8 = new wxBoxSizer( wxVERTICAL );
 
-	MenuBook = new wxListbook( LeftPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLB_LEFT );
+	ModeComboBox = new MemoryComboBox( LeftPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
+	bSizer8->Add( ModeComboBox, 0, wxALL, 5 );
+
+	MenuBook_SingleParticle = new wxListbook( LeftPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLB_LEFT );
 	#ifdef __WXGTK__ // Small icon style not supported in GTK
-	wxListView* MenuBookListView = MenuBook->GetListView();
-	long MenuBookFlags = MenuBookListView->GetWindowStyleFlag();
-	if( MenuBookFlags & wxLC_SMALL_ICON )
+	wxListView* MenuBook_SingleParticleListView = MenuBook_SingleParticle->GetListView();
+	long MenuBook_SingleParticleFlags = MenuBook_SingleParticleListView->GetWindowStyleFlag();
+	if( MenuBook_SingleParticleFlags & wxLC_SMALL_ICON )
 	{
-		MenuBookFlags = ( MenuBookFlags & ~wxLC_SMALL_ICON ) | wxLC_ICON;
+		MenuBook_SingleParticleFlags = ( MenuBook_SingleParticleFlags & ~wxLC_SMALL_ICON ) | wxLC_ICON;
 	}
-	MenuBookListView->SetWindowStyleFlag( MenuBookFlags );
+	MenuBook_SingleParticleListView->SetWindowStyleFlag( MenuBook_SingleParticleFlags );
 	#endif
 
-	bSizer8->Add( MenuBook, 1, wxEXPAND | wxALL, 5 );
+	bSizer8->Add( MenuBook_SingleParticle, 1, wxEXPAND | wxALL, 5 );
+
+	MenuBook_TemplateMatching = new wxListbook( LeftPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLB_LEFT );
+	MenuBook_TemplateMatching->Hide();
+
+	#ifdef __WXGTK__ // Small icon style not supported in GTK
+	wxListView* MenuBook_TemplateMatchingListView = MenuBook_TemplateMatching->GetListView();
+	long MenuBook_TemplateMatchingFlags = MenuBook_TemplateMatchingListView->GetWindowStyleFlag();
+	if( MenuBook_TemplateMatchingFlags & wxLC_SMALL_ICON )
+	{
+		MenuBook_TemplateMatchingFlags = ( MenuBook_TemplateMatchingFlags & ~wxLC_SMALL_ICON ) | wxLC_ICON;
+	}
+	MenuBook_TemplateMatchingListView->SetWindowStyleFlag( MenuBook_TemplateMatchingFlags );
+	#endif
+
+	bSizer8->Add( MenuBook_TemplateMatching, 1, wxEXPAND | wxALL, 5 );
 
 
 	LeftPanel->SetSizer( bSizer8 );
@@ -100,7 +118,8 @@ MainFrame::MainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	this->Centre( wxBOTH );
 
 	// Connect Events
-	MenuBook->Connect( wxEVT_COMMAND_LISTBOOK_PAGE_CHANGED, wxListbookEventHandler( MainFrame::OnMenuBookChange ), NULL, this );
+	MenuBook_SingleParticle->Connect( wxEVT_COMMAND_LISTBOOK_PAGE_CHANGED, wxListbookEventHandler( MainFrame::OnMenuBookChange ), NULL, this );
+	MenuBook_TemplateMatching->Connect( wxEVT_COMMAND_LISTBOOK_PAGE_CHANGED, wxListbookEventHandler( MainFrame::OnMenuBookChange ), NULL, this );
 	m_menubar1->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( MainFrame::OnFileMenuUpdate ), NULL, this );
 	FileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileNewProject ), this, FileNewProject->GetId());
 	FileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileOpenProject ), this, FileOpenProject->GetId());
@@ -113,7 +132,8 @@ MainFrame::MainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 MainFrame::~MainFrame()
 {
 	// Disconnect Events
-	MenuBook->Disconnect( wxEVT_COMMAND_LISTBOOK_PAGE_CHANGED, wxListbookEventHandler( MainFrame::OnMenuBookChange ), NULL, this );
+	MenuBook_SingleParticle->Disconnect( wxEVT_COMMAND_LISTBOOK_PAGE_CHANGED, wxListbookEventHandler( MainFrame::OnMenuBookChange ), NULL, this );
+	MenuBook_TemplateMatching->Disconnect( wxEVT_COMMAND_LISTBOOK_PAGE_CHANGED, wxListbookEventHandler( MainFrame::OnMenuBookChange ), NULL, this );
 	m_menubar1->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( MainFrame::OnFileMenuUpdate ), NULL, this );
 
 }

@@ -39,7 +39,10 @@ MainFrame::MainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	wxBoxSizer* bSizer8;
 	bSizer8 = new wxBoxSizer( wxVERTICAL );
 
-	ModeComboBox = new MemoryComboBox( LeftPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
+	wxString choices[] = new wxString[2];
+	choices[0] = "Single Particle";
+	choices[1] = "Template Matching";
+	ModeComboBox = new MemoryComboBox( LeftPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 2, choices, wxCB_READONLY );
 	bSizer8->Add( ModeComboBox, 0, wxALL, 5 );
 
 	MenuBook_SingleParticle = new wxListbook( LeftPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLB_LEFT );

@@ -101,8 +101,6 @@ bool MyGuiApp::OnInit()
 #ifdef EXPERIMENTAL
 	#include "../../gui/icons/match_template_icon.cpp"
 	#include "../../gui/icons/refine_template_icon.cpp"
-  // FIXME: tmp for simulating a 3d
-  #include "../../gui/icons/settings_icon2.cpp"
 #endif
 
 	wxImage::AddHandler(new wxPNGHandler);
@@ -196,7 +194,6 @@ bool MyGuiApp::OnInit()
 
 #ifdef EXPERIMENTAL
 	wxBitmap experimental_icon_bmp = wxBITMAP_PNG_FROM_DATA(experimental_icon);
-  wxBitmap settings_icon2_bmp = wxBITMAP_PNG_FROM_DATA(settings_icon2);
 #endif
 
 	wxBitmap movie_icon_bmp = wxBITMAP_PNG_FROM_DATA(movie_icon);

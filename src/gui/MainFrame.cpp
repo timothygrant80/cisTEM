@@ -723,7 +723,7 @@ void MyMainFrame::OnFileCloseProject( wxCommandEvent& event )
 	ResetAllPanels();
 
 	SetTitle("cisTEM");
-	MenuBook->SetSelection(0);
+	MenuBook_SingleParticle->SetSelection(0);
 	overview_panel->SetWelcomeInfo();
 	overview_panel->InfoText->Show(true);
 	ClearScratchDirectory();

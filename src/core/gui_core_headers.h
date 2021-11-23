@@ -60,7 +60,7 @@
 #include "../gui/CTF1DPanel.h"
 #include "../gui/MainFrame.h"
 #include "../gui/ErrorDialog.h"
-#include "../gui/MyAssetParentPanel.h"
+#include "../gui/MyAssetPanelParent.h"
 #include "../gui/MyMovieAssetPanel.h"
 #include "../gui/MyImageAssetPanel.h"
 #include "../gui/MyParticlePositionAssetPanel.h"

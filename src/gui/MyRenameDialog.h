@@ -5,7 +5,7 @@
 
 class MyRenameDialog : public RenameDialog
 {
-	friend class MyAssetParentPanel;
+	friend class MyAssetPanelParent;
 
 public :
 

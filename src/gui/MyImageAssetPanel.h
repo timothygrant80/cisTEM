@@ -1,6 +1,6 @@
 extern MyMovieAssetPanel *movie_asset_panel;
 
-class MyImageAssetPanel : public MyAssetParentPanel
+class MyImageAssetPanel : public MyAssetPanelParent
 {
 
 	protected:

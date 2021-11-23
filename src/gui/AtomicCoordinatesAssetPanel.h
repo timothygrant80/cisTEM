@@ -1,4 +1,4 @@
-class AtomicCoordinatesAssetPanel : public MyAssetParentPanel
+class AtomicCoordinatesAssetPanel : public MyAssetPanelParent
 {
 
 	protected:

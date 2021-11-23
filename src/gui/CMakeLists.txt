@@ -16,7 +16,7 @@ add_library(cisTEM_gui STATIC
 	ResultsDataViewListCtrl.cpp 
 	MyMovieFilterDialog.cpp 
 	MainFrame.cpp 
-	MyAssetParentPanel.cpp 
+	MyAssetPanelParent.cpp 
 	MyMovieAssetPanel.cpp 
 	MyImageAssetPanel.cpp 
 	MyParticlePositionAssetPanel.cpp 

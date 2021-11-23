@@ -1,4 +1,4 @@
-class MyMovieAssetPanel : public MyAssetParentPanel
+class MyMovieAssetPanel : public MyAssetPanelParent
 {
 
 	protected:

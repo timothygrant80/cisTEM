@@ -1096,7 +1096,7 @@ wxListCtrl(parent, id, pos, size, style, validator, name)
 
 wxString ContentsList::OnGetItemText(long item, long column) const
 {
-	MyAssetParentPanel *parent_panel =  reinterpret_cast < MyAssetParentPanel *> (m_parent->GetParent()->GetParent()); // not very nice code!
+	MyAssetPanelParent *parent_panel =  reinterpret_cast < MyAssetPanelParent *> (m_parent->GetParent()->GetParent()); // not very nice code!
 	return parent_panel->ReturnItemText(item, column);
 	//wxPrintf("Here!\n");
 	//	return "Hi"	;
@@ -1353,7 +1353,6 @@ wxString ReferenceVolumesListControl::OnGetItemText(long item, long column) cons
 	}
 }
 
-// TODO: Do I need somthing here for atomic_coordinates_asset_panel?
 
 int ReferenceVolumesListControl::ReturnGuessAtColumnTextWidth(int wanted_column)
 {
@@ -1390,7 +1389,6 @@ int ReferenceVolumesListControl::ReturnGuessAtColumnTextWidth(int wanted_column)
 	return max_width;
 }
 
-// TODO: Do I need somthing here for atomic_coordinates_asset_panel?
 
 ReferenceVolumesListControlRefinement::ReferenceVolumesListControlRefinement(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style, const wxValidator &validator, const wxString &name)
 :

@@ -1,6 +1,6 @@
 extern MyMainFrame *main_frame;
 
-class MyAssetParentPanel : public AssetParentPanel
+class MyAssetPanelParent : public AssetPanelParent
 {
 
 		friend class GroupDropTarget;
@@ -74,8 +74,8 @@ private:
 
 		bool is_dirty;
 
-		MyAssetParentPanel( wxWindow* parent );
-		~MyAssetParentPanel();
+		MyAssetPanelParent( wxWindow* parent );
+		~MyAssetPanelParent();
 
 		virtual void InsertGroupMemberToDatabase(int wanted_group, int wanted_asset) = 0;
 		virtual void InsertArrayofGroupMembersToDatabase(long wanted_group, wxArrayLong *wanted_array, OneSecondProgressDialog *progress_dialog = NULL) = 0;
@@ -140,16 +140,16 @@ private:
 class GroupDropTarget : public wxDropTarget
 {
 
-	friend class MyAssetParentPanel;
+	friend class MyAssetPanelParent;
 
 	private:
 
 		wxListCtrl *my_owner;
 		wxTextDataObject *my_data;
-		MyAssetParentPanel *my_panel;
+		MyAssetPanelParent *my_panel;
 
 	public:
-    	GroupDropTarget(wxListCtrl *owner, MyAssetParentPanel *asset_panel);
+    	GroupDropTarget(wxListCtrl *owner, MyAssetPanelParent *asset_panel);
 
     virtual bool OnDrop(wxCoord x, wxCoord y);//, const wxString& dropped_text);
     virtual wxDragResult OnData(wxCoord x, wxCoord y, wxDragResult defResult);

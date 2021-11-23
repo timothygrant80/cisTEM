@@ -4,9 +4,9 @@
 extern MyMainFrame *main_frame;
 extern wxTreeItemId Tree_Root;
 
-MyAssetParentPanel::MyAssetParentPanel( wxWindow* parent )
+MyAssetPanelParent::MyAssetPanelParent( wxWindow* parent )
 :
-AssetParentPanel( parent )
+AssetPanelParent( parent )
 {
 
 	all_groups_list = new AssetGroupList;
@@ -26,13 +26,13 @@ AssetParentPanel( parent )
 	is_dirty = false;
 }
 
-MyAssetParentPanel::~MyAssetParentPanel()
+MyAssetPanelParent::~MyAssetPanelParent()
 {
 	delete all_groups_list;
 }
 
 
-void MyAssetParentPanel::RemoveAssetFromGroups(long wanted_asset, bool dirty_groups)
+void MyAssetPanelParent::RemoveAssetFromGroups(long wanted_asset, bool dirty_groups)
 {
 	long counter;
 	long found_position;
@@ -64,12 +64,12 @@ void MyAssetParentPanel::RemoveAssetFromGroups(long wanted_asset, bool dirty_gro
 	if (dirty_groups == true) DirtyGroups();
 }
 
-void MyAssetParentPanel::OnDisplayButtonClick( wxCommandEvent& event )
+void MyAssetPanelParent::OnDisplayButtonClick( wxCommandEvent& event )
 {
 	DisplaySelectedItems();
 }
 
-void MyAssetParentPanel::DisplaySelectedItems()
+void MyAssetPanelParent::DisplaySelectedItems()
 {
 	if (DisplayButton->IsEnabled() == true)
 	{
@@ -98,7 +98,7 @@ void MyAssetParentPanel::DisplaySelectedItems()
 	}
 }
 
-void MyAssetParentPanel::RemoveAssetClick( wxCommandEvent& event )
+void MyAssetPanelParent::RemoveAssetClick( wxCommandEvent& event )
 {
 	// How many assets are selected?
 
@@ -205,7 +205,7 @@ void MyAssetParentPanel::RemoveAssetClick( wxCommandEvent& event )
 
 }
 
-void MyAssetParentPanel::AddContentItemToGroup(long wanted_group, long wanted_content_item)
+void MyAssetPanelParent::AddContentItemToGroup(long wanted_group, long wanted_content_item)
 {
 	MyDebugAssertTrue(wanted_group > 0 && wanted_group < all_groups_list->number_of_groups, "Requesting a group (%li) that doesn't exist!", wanted_group)
 	MyDebugAssertTrue(wanted_content_item >= 0 && wanted_content_item < all_assets_list->number_of_assets, "Requesting an asset(%li) that doesn't exist!", wanted_content_item)
@@ -215,7 +215,7 @@ void MyAssetParentPanel::AddContentItemToGroup(long wanted_group, long wanted_co
 	AddArrayItemToGroup(wanted_group, selected_asset);
 }
 
-void MyAssetParentPanel::AddArrayItemToGroup(long wanted_group, long wanted_array_item)
+void MyAssetPanelParent::AddArrayItemToGroup(long wanted_group, long wanted_array_item)
 {
 	MyDebugAssertTrue(wanted_group > 0 && wanted_group < all_groups_list->number_of_groups, "Requesting a group (%li) that doesn't exist!", wanted_group)
 	MyDebugAssertTrue(wanted_array_item >= 0 && wanted_array_item < all_assets_list->number_of_assets, "Requesting an asset(%li) that doesn't exist!", wanted_array_item)
@@ -228,7 +228,7 @@ void MyAssetParentPanel::AddArrayItemToGroup(long wanted_group, long wanted_arra
 	}
 }
 
-void MyAssetParentPanel::DeleteArrayItemFromGroup(long wanted_group, long wanted_array_item)
+void MyAssetPanelParent::DeleteArrayItemFromGroup(long wanted_group, long wanted_array_item)
 {
 	MyDebugAssertTrue(wanted_group > 0 && wanted_group < all_groups_list->number_of_groups, "Requesting a group (%li) that doesn't exist!", wanted_group)
 	MyDebugAssertTrue(wanted_array_item >= 0 && wanted_array_item < all_assets_list->number_of_assets, "Requesting an asset(%li) that doesn't exist!", wanted_array_item)
@@ -243,7 +243,7 @@ void MyAssetParentPanel::DeleteArrayItemFromGroup(long wanted_group, long wanted
 }
 
 
-void MyAssetParentPanel::AddArrayofArrayItemsToGroup(long wanted_group, wxArrayLong *array_of_wanted_items, OneSecondProgressDialog *progress_dialog)
+void MyAssetPanelParent::AddArrayofArrayItemsToGroup(long wanted_group, wxArrayLong *array_of_wanted_items, OneSecondProgressDialog *progress_dialog)
 {
 	MyDebugAssertTrue(wanted_group > 0 && wanted_group < all_groups_list->number_of_groups, "Requesting a group (%li) that doesn't exist!", wanted_group)
 
@@ -266,7 +266,7 @@ void MyAssetParentPanel::AddArrayofArrayItemsToGroup(long wanted_group, wxArrayL
 
 }
 
-void MyAssetParentPanel::AddSelectedAssetClick( wxCommandEvent& event )
+void MyAssetPanelParent::AddSelectedAssetClick( wxCommandEvent& event )
 {
 	// How many assets are selected?
 
@@ -314,7 +314,7 @@ void MyAssetParentPanel::AddSelectedAssetClick( wxCommandEvent& event )
 
 }
 
-void MyAssetParentPanel::RemoveAllAssetsClick( wxCommandEvent& event )
+void MyAssetPanelParent::RemoveAllAssetsClick( wxCommandEvent& event )
 {
 	long counter;
 
@@ -356,7 +356,7 @@ void MyAssetParentPanel::RemoveAllAssetsClick( wxCommandEvent& event )
 	}
 }
 
-void MyAssetParentPanel::NewGroupClick( wxCommandEvent& event )
+void MyAssetPanelParent::NewGroupClick( wxCommandEvent& event )
 {
 	// Add a new Group - called New Group
 
@@ -398,7 +398,7 @@ void MyAssetParentPanel::NewGroupClick( wxCommandEvent& event )
 }
 
 
-void MyAssetParentPanel::RemoveGroupClick( wxCommandEvent& event )
+void MyAssetPanelParent::RemoveGroupClick( wxCommandEvent& event )
 {
 	if (selected_group != 0)
 	{
@@ -417,13 +417,13 @@ void MyAssetParentPanel::RemoveGroupClick( wxCommandEvent& event )
 	main_frame->RecalculateAssetBrowser();
 }
 
-void MyAssetParentPanel::RenameGroupClick( wxCommandEvent& event )
+void MyAssetPanelParent::RenameGroupClick( wxCommandEvent& event )
 {
 	MyDebugAssertTrue(selected_group >= 0 && selected_group < all_groups_list->number_of_groups, "Trying to rename an non existent group!");
 	GroupListBox->EditLabel(selected_group);
 }
 
-void MyAssetParentPanel::InvertGroupClick( wxCommandEvent& event )
+void MyAssetPanelParent::InvertGroupClick( wxCommandEvent& event )
 {
 	//
 	int group_to_invert = selected_group;
@@ -498,22 +498,22 @@ void MyAssetParentPanel::InvertGroupClick( wxCommandEvent& event )
 
 }
 
-void MyAssetParentPanel::NewFromParentClick ( wxCommandEvent & event )
+void MyAssetPanelParent::NewFromParentClick ( wxCommandEvent & event )
 {
 	MyDebugAssertTrue(false,"Oops, this method should never be called. You need to override it in the panel class");
 }
 
-void MyAssetParentPanel::OnGroupActivated( wxListEvent& event )
+void MyAssetPanelParent::OnGroupActivated( wxListEvent& event )
 {
 	GroupListBox->EditLabel(event.GetIndex());
 }
 
-void MyAssetParentPanel::OnAssetActivated( wxListEvent& event )
+void MyAssetPanelParent::OnAssetActivated( wxListEvent& event )
 {
 	DisplaySelectedItems();
 }
 
-void MyAssetParentPanel::AddAsset(Asset *asset_to_add)
+void MyAssetPanelParent::AddAsset(Asset *asset_to_add)
 {
 	// Firstly add the asset to the Asset list
 
@@ -525,7 +525,7 @@ void MyAssetParentPanel::AddAsset(Asset *asset_to_add)
 	//FillContentsList();
 }
 
-void MyAssetParentPanel::SetSelectedGroup(long wanted_group)
+void MyAssetPanelParent::SetSelectedGroup(long wanted_group)
 {
 	MyDebugAssertTrue(wanted_group >= 0 && wanted_group <= all_groups_list->number_of_groups, "Trying to select a group that doesn't exist!");
 
@@ -541,17 +541,17 @@ void MyAssetParentPanel::SetSelectedGroup(long wanted_group)
 	}
 }
 
-unsigned long MyAssetParentPanel::ReturnNumberOfAssets()
+unsigned long MyAssetPanelParent::ReturnNumberOfAssets()
 {
 	return all_assets_list->number_of_assets;
 }
 
-unsigned long MyAssetParentPanel::ReturnNumberOfGroups()
+unsigned long MyAssetPanelParent::ReturnNumberOfGroups()
 {
 	return all_groups_list->number_of_groups;
 }
 
-void MyAssetParentPanel::SetGroupName(long wanted_group, wxString wanted_name)
+void MyAssetPanelParent::SetGroupName(long wanted_group, wxString wanted_name)
 {
 	if (all_groups_list->groups[wanted_group].name != wanted_name)
 	{
@@ -561,43 +561,43 @@ void MyAssetParentPanel::SetGroupName(long wanted_group, wxString wanted_name)
 	}
 }
 
-wxString MyAssetParentPanel::ReturnGroupName(long wanted_group)
+wxString MyAssetPanelParent::ReturnGroupName(long wanted_group)
 {
 	return all_groups_list->groups[wanted_group].name;
 }
 
-int MyAssetParentPanel::ReturnGroupID(long wanted_group)
+int MyAssetPanelParent::ReturnGroupID(long wanted_group)
 {
 	return all_groups_list->groups[wanted_group].id;
 }
 
-wxString MyAssetParentPanel::ReturnAssetShortFilename(long wanted_asset)
+wxString MyAssetPanelParent::ReturnAssetShortFilename(long wanted_asset)
 {
 	return all_assets_list->ReturnAssetPointer(wanted_asset)->ReturnShortNameString();
 }
 
-wxString MyAssetParentPanel::ReturnAssetLongFilename(long wanted_asset)
+wxString MyAssetPanelParent::ReturnAssetLongFilename(long wanted_asset)
 {
 	return all_assets_list->ReturnAssetPointer(wanted_asset)->ReturnFullPathString();
 }
 
-long MyAssetParentPanel::ReturnGroupMember(long wanted_group, long wanted_member)
+long MyAssetPanelParent::ReturnGroupMember(long wanted_group, long wanted_member)
 {
 	return all_groups_list->groups[wanted_group].members[wanted_member];
 }
 
-int MyAssetParentPanel::ReturnGroupMemberID(long wanted_group, long wanted_member)
+int MyAssetPanelParent::ReturnGroupMemberID(long wanted_group, long wanted_member)
 {
 	return all_assets_list->ReturnAssetPointer(all_groups_list->groups[wanted_group].members[wanted_member])->asset_id;
 }
 
 
-long MyAssetParentPanel::ReturnGroupSize(long wanted_group)
+long MyAssetPanelParent::ReturnGroupSize(long wanted_group)
 {
 	return all_groups_list->groups[wanted_group].number_of_members;
 }
 
-void MyAssetParentPanel::SizeGroupColumn()
+void MyAssetPanelParent::SizeGroupColumn()
 {
 	int client_height;
 	int client_width;
@@ -613,7 +613,7 @@ void MyAssetParentPanel::SizeGroupColumn()
 
 }
 
-void MyAssetParentPanel::FillGroupList()
+void MyAssetPanelParent::FillGroupList()
 {
 	//wxColor my_grey(50,50,50);
 
@@ -648,7 +648,7 @@ void MyAssetParentPanel::FillGroupList()
 	GroupListBox->Thaw();
 }
 
-void MyAssetParentPanel::OnBeginEdit( wxListEvent& event )
+void MyAssetPanelParent::OnBeginEdit( wxListEvent& event )
 {
 	//wxPrintf("Begin Label = %s\n", event.GetLabel());
 
@@ -665,7 +665,7 @@ void MyAssetParentPanel::OnBeginEdit( wxListEvent& event )
 	}
 }
 
-void MyAssetParentPanel::OnEndEdit( wxListEvent& event )
+void MyAssetPanelParent::OnEndEdit( wxListEvent& event )
 {
 
 	if (event.GetLabel() == wxEmptyString)
@@ -696,7 +696,7 @@ void MyAssetParentPanel::OnEndEdit( wxListEvent& event )
 }
 
 
-void MyAssetParentPanel::RenameAssetClick( wxCommandEvent& event )
+void MyAssetPanelParent::RenameAssetClick( wxCommandEvent& event )
 {
 
 
@@ -733,7 +733,7 @@ void MyAssetParentPanel::RenameAssetClick( wxCommandEvent& event )
 
 
 
-void MyAssetParentPanel::SizeContentsColumn(int column_number)
+void MyAssetPanelParent::SizeContentsColumn(int column_number)
 {
 /*	int header_width, text_width;
 
@@ -750,7 +750,7 @@ void MyAssetParentPanel::SizeContentsColumn(int column_number)
 
 }
 
-void MyAssetParentPanel::FillContentsList()
+void MyAssetPanelParent::FillContentsList()
 {
 	if ( selected_group >= 0  )
 	{
@@ -788,7 +788,7 @@ void MyAssetParentPanel::FillContentsList()
 }
 
 
-void MyAssetParentPanel::OnGroupFocusChange( wxListEvent& event )
+void MyAssetPanelParent::OnGroupFocusChange( wxListEvent& event )
 {
 	if (event.GetIndex() != selected_group)
 	{
@@ -800,7 +800,7 @@ void MyAssetParentPanel::OnGroupFocusChange( wxListEvent& event )
 	event.Skip();
 }
 
-void MyAssetParentPanel::OnContentsSelected( wxListEvent& event )
+void MyAssetPanelParent::OnContentsSelected( wxListEvent& event )
 {
 	selected_content = event.GetIndex();
 
@@ -814,7 +814,7 @@ void MyAssetParentPanel::OnContentsSelected( wxListEvent& event )
 
 }
 
-void MyAssetParentPanel::OnBeginContentsDrag( wxListEvent& event )
+void MyAssetPanelParent::OnBeginContentsDrag( wxListEvent& event )
 {
 	long source_item = event.GetIndex();
 
@@ -828,24 +828,24 @@ void MyAssetParentPanel::OnBeginContentsDrag( wxListEvent& event )
 	event.Skip();
 }
 
-void MyAssetParentPanel::MouseVeto( wxMouseEvent& event )
+void MyAssetPanelParent::MouseVeto( wxMouseEvent& event )
 {
 	//Do nothing
 
 }
 
-void MyAssetParentPanel::MouseCheckContentsVeto( wxMouseEvent& event )
+void MyAssetPanelParent::MouseCheckContentsVeto( wxMouseEvent& event )
 {
 	VetoInvalidMouse(ContentsListBox, event);
 
 }
 
-void MyAssetParentPanel::MouseCheckGroupsVeto( wxMouseEvent& event )
+void MyAssetPanelParent::MouseCheckGroupsVeto( wxMouseEvent& event )
 {
 	VetoInvalidMouse(GroupListBox, event);
 }
 
-void MyAssetParentPanel::VetoInvalidMouse( wxListCtrl *wanted_list, wxMouseEvent& event )
+void MyAssetPanelParent::VetoInvalidMouse( wxListCtrl *wanted_list, wxMouseEvent& event )
 {
 	// Don't allow clicking on anything other than item, to stop the selection bar changing
 
@@ -859,13 +859,13 @@ void MyAssetParentPanel::VetoInvalidMouse( wxListCtrl *wanted_list, wxMouseEvent
 	else should_veto_motion = true;
 }
 
-void MyAssetParentPanel::OnMotion(wxMouseEvent& event)
+void MyAssetPanelParent::OnMotion(wxMouseEvent& event)
 {
 	if (should_veto_motion == false) event.Skip();
 }
 
 /*
-bool MyAssetParentPanel::IsFileAnAsset(wxFileName file_to_check)
+bool MyAssetPanelParent::IsFileAnAsset(wxFileName file_to_check)
 {
 	if (all_assets_list->FindFile(file_to_check) == -1) return false;
 	else return true;
@@ -874,33 +874,33 @@ bool MyAssetParentPanel::IsFileAnAsset(wxFileName file_to_check)
 	DEBUG_ABORT;
 }*/
 
-int MyAssetParentPanel::ReturnArrayPositionFromParentID(int wanted_id)
+int MyAssetPanelParent::ReturnArrayPositionFromParentID(int wanted_id)
 {
 	return all_assets_list->ReturnArrayPositionFromParentID(wanted_id);
 }
 
-int MyAssetParentPanel::ReturnArrayPositionFromAssetID(int wanted_id)
+int MyAssetPanelParent::ReturnArrayPositionFromAssetID(int wanted_id)
 {
 	return all_assets_list->ReturnArrayPositionFromID(wanted_id);
 }
 
-long MyAssetParentPanel::ReturnParentAssetID(long wanted_asset)
+long MyAssetPanelParent::ReturnParentAssetID(long wanted_asset)
 {
 	return all_assets_list->ReturnParentAssetID(wanted_asset);
 }
 
-int MyAssetParentPanel::ReturnAssetID(int wanted_asset)
+int MyAssetPanelParent::ReturnAssetID(int wanted_asset)
 {
 	return all_assets_list->ReturnAssetID(wanted_asset);
 }
 
-wxString MyAssetParentPanel::ReturnAssetName(long wanted_asset)
+wxString MyAssetPanelParent::ReturnAssetName(long wanted_asset)
 {
 	return all_assets_list->ReturnAssetName(wanted_asset);
 }
 
 
-bool MyAssetParentPanel::DragOverGroups(wxCoord x, wxCoord y)
+bool MyAssetPanelParent::DragOverGroups(wxCoord x, wxCoord y)
 {
 	const wxPoint drop_position(x, y);
 	int flags;
@@ -939,7 +939,7 @@ bool MyAssetParentPanel::DragOverGroups(wxCoord x, wxCoord y)
 
 
 
-void MyAssetParentPanel::Reset()
+void MyAssetPanelParent::Reset()
 {
 
 	all_assets_list->RemoveAll();
@@ -958,14 +958,14 @@ void MyAssetParentPanel::Reset()
 
 }
 
-void MyAssetParentPanel::EnableNewFromParentButton()
+void MyAssetPanelParent::EnableNewFromParentButton()
 {
 	//NewFromParentButton->Enable(false);
 }
 
 
 
-void MyAssetParentPanel::OnUpdateUI( wxUpdateUIEvent& event )
+void MyAssetPanelParent::OnUpdateUI( wxUpdateUIEvent& event )
 {
 	if (main_frame->current_project.is_open == false)
 	{
@@ -1035,7 +1035,7 @@ void MyAssetParentPanel::OnUpdateUI( wxUpdateUIEvent& event )
 
 // Drag and Drop
 
-GroupDropTarget::GroupDropTarget(wxListCtrl *owner, MyAssetParentPanel *asset_panel)
+GroupDropTarget::GroupDropTarget(wxListCtrl *owner, MyAssetPanelParent *asset_panel)
 {
 	my_owner = owner;
 	my_panel = asset_panel;

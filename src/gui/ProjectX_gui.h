@@ -1573,9 +1573,9 @@ class ImageImportDialog : public wxDialog
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-/// Class AssetParentPanel
+/// Class AssetPanelParent
 ///////////////////////////////////////////////////////////////////////////////
-class AssetParentPanel : public wxPanel
+class AssetPanelParent : public wxPanel
 {
 	private:
 
@@ -1649,13 +1649,13 @@ class AssetParentPanel : public wxPanel
 		wxListCtrl* GroupListBox;
 		ContentsList* ContentsListBox;
 
-		AssetParentPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1094,668 ), long style = wxHSCROLL|wxTAB_TRAVERSAL|wxVSCROLL, const wxString& name = wxEmptyString );
-		~AssetParentPanel();
+		AssetPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1094,668 ), long style = wxHSCROLL|wxTAB_TRAVERSAL|wxVSCROLL, const wxString& name = wxEmptyString );
+		~AssetPanelParent();
 
 		void SplitterWindowOnIdle( wxIdleEvent& )
 		{
 			SplitterWindow->SetSashPosition( 405 );
-			SplitterWindow->Disconnect( wxEVT_IDLE, wxIdleEventHandler( AssetParentPanel::SplitterWindowOnIdle ), NULL, this );
+			SplitterWindow->Disconnect( wxEVT_IDLE, wxIdleEventHandler( AssetPanelParent::SplitterWindowOnIdle ), NULL, this );
 		}
 
 };

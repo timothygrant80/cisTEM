@@ -156,7 +156,7 @@ public :
 
 #ifdef EXPERIMENTAL
 	void BeginAtomicCoordinatesAssetInsert();
-	void AddNextAtomicCoordinatesAsset(int image_asset_id,  wxString name, wxString filename, int simulation_3d_job_id, int x_size, int y_size, int z_size, wxString pdb_id, float pdb_avg_bfactor, float pdb_std_bfactor, float effective_weight);
+  void AddNextAtomicCoordinatesAsset(const AtomicCoordinatesAsset *asset);
 	void EndAtomicCoordinatesAssetInsert() {EndBatchInsert();};
 #endif
 	void BeginParticlePositionAssetInsert();

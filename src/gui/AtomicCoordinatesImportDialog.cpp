@@ -186,10 +186,7 @@ void AtomicCoordinatesImportDialog::ImportClick( wxCommandEvent& event )
 						temp_asset.asset_name = temp_asset.filename.GetName();
 						atomic_coordinates_asset_panel->AddAsset(&temp_asset);
 
-					//	void AddNextatomic_coordinatesAsset(int image_asset_id,  wxString name, wxString filename, int reconstruction_job_id, double pixel_size, int x_size, int y_size, int z_size);
-						main_frame->current_project.database.AddNextAtomicCoordinatesAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), -1, 
-                                                                               temp_asset.x_size, temp_asset.y_size, temp_asset.z_size,
-                                                                               temp_asset.pdb_id, temp_asset.pdb_avg_bfactor, temp_asset.pdb_std_bfactor, temp_asset.effective_weight);
+						main_frame->current_project.database.AddNextAtomicCoordinatesAsset(&temp_asset);
 
 					}
 					else

@@ -1251,9 +1251,11 @@ void Database::BeginAtomicCoordinatesAssetInsert()
 	BeginBatchInsert("ATOMIC_COORDINATES_ASSETS", 11, "ATOMIC_COORDINATES_ASSET_ID", "NAME", "FILENAME", "SIMULATION_3D_JOB_ID", "X_SIZE", "Y_SIZE", "Z_SIZE", "PDB_ID", "PDB_AVG_BFACTOR", "PDB_STD_BFACTOR", "EFFECTIVE_WEIGHT");
 }
 
-void Database::AddNextAtomicCoordinatesAsset(int image_asset_id,  wxString name, wxString filename, int simulation_3d_job_id, int x_size, int y_size, int z_size, wxString pdb_id, float pdb_avg_bfactor, float pdb_std_bfactor, float effective_weight )
+void Database::AddNextAtomicCoordinatesAsset(const AtomicCoordinatesAsset *asset)
 {
-	AddToBatchInsert("ittiiiitrrr", image_asset_id, name.ToUTF8().data(), filename.ToUTF8().data(), simulation_3d_job_id, x_size, y_size, z_size, pdb_id.ToUTF8().data(), pdb_avg_bfactor, pdb_std_bfactor, effective_weight);
+	AddToBatchInsert("ittiiiitrrr", asset->asset_id, asset->asset_name.ToUTF8().data(), asset->filename.GetFullPath().ToUTF8().data(), 
+                                  asset->simulation_3d_job_id, asset->x_size, asset->y_size, asset->z_size, 
+                                  asset->pdb_id.ToUTF8().data(), asset->pdb_avg_bfactor, asset->pdb_std_bfactor, asset->effective_weight);
 }
 #endif
 

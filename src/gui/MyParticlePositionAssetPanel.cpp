@@ -5,7 +5,7 @@ extern MyImageAssetPanel *image_asset_panel;
 
 MyParticlePositionAssetPanel::MyParticlePositionAssetPanel( wxWindow* parent )
 :
-MyAssetParentPanel( parent )
+MyAssetPanelParent( parent )
 {
 	RenameAssetButton->Show(false);
 	DisplayButton->Show(false);

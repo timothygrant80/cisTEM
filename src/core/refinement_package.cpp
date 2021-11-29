@@ -48,6 +48,7 @@ RefinementPackage::RefinementPackage()
 	lowest_resolution_of_intial_parameter_generated_3ds = -1;
 
 	stack_has_white_protein = false;
+
 }
 
 RefinementPackage::~RefinementPackage()

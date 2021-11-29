@@ -4,14 +4,14 @@
 #include <wx/textctrl.h>
 #include <wx/checkbox.h>
 #include <wx/listbox.h>
+#include <wx/checklst.h>
 
 class CombineRefinementPackagesDialog : public CombineRefinementPackagesDialogParent
 {
-	MyRefinementPackageAssetPanel *my_parent;
-
 	public:
 
 	wxArrayString refinement_name;
+	wxArrayString packages_to_combine_filenames;
 
 	CombineRefinementPackagesDialog( MyRefinementPackageAssetPanel *parent );
 

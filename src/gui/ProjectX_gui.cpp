@@ -12010,9 +12010,9 @@ CombineRefinementPackagesDialogParent::CombineRefinementPackagesDialogParent( wx
 	fgSizer2->SetFlexibleDirection( wxBOTH );
 	fgSizer2->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
 
-	wxArrayString RefinementPackagesListCtrlChoices;
-	RefinementPackagesListCtrl = new wxCheckListBox( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, RefinementPackagesListCtrlChoices, wxLB_MULTIPLE|wxLB_NEEDED_SB );
-	fgSizer2->Add( RefinementPackagesListCtrl, 0, wxALL|wxEXPAND, 5 );
+	wxArrayString RefinementPackagesCheckListBoxChoices;
+	RefinementPackagesCheckListBox = new wxCheckListBox( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, RefinementPackagesCheckListBoxChoices, wxLB_MULTIPLE|wxLB_NEEDED_SB );
+	fgSizer2->Add( RefinementPackagesCheckListBox, 0, wxALL|wxEXPAND, 5 );
 
 
 	bSizer45->Add( fgSizer2, 0, wxEXPAND, 5 );

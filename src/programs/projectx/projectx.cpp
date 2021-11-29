@@ -123,14 +123,14 @@ bool MyGuiApp::OnInit()
 
 	// Left hand Panels
 
-	overview_panel = new MyOverviewPanel(main_frame->MenuBook, wxID_ANY);
-	actions_panel = new MyActionsPanel(main_frame->MenuBook, wxID_ANY);
-	assets_panel = new MyAssetsPanel(main_frame->MenuBook, wxID_ANY);
-	results_panel = new MyResultsPanel(main_frame->MenuBook, wxID_ANY);
-	settings_panel = new MySettingsPanel(main_frame->MenuBook, wxID_ANY);
+	overview_panel = new MyOverviewPanel(main_frame->MenuBook_SingleParticle , wxID_ANY);
+	actions_panel = new MyActionsPanel(main_frame->MenuBook_SingleParticle , wxID_ANY);
+	assets_panel = new MyAssetsPanel(main_frame->MenuBook_SingleParticle , wxID_ANY);
+	results_panel = new MyResultsPanel(main_frame->MenuBook_SingleParticle , wxID_ANY);
+	settings_panel = new MySettingsPanel(main_frame->MenuBook_SingleParticle , wxID_ANY);
 
 #ifdef EXPERIMENTAL
-	experimental_panel = new MyExperimentalPanel(main_frame->MenuBook, wxID_ANY);
+	experimental_panel = new MyExperimentalPanel(main_frame->MenuBook_SingleParticle , wxID_ANY);
 #endif
 
 	// Individual Panels
@@ -257,7 +257,7 @@ bool MyGuiApp::OnInit()
 	ExperimentalBookIconImages->Add(refine_template_icon_bmp);
 #endif
 
-	main_frame->MenuBook->AssignImageList(MenuBookIconImages);
+	main_frame->MenuBook_SingleParticle ->AssignImageList(MenuBookIconImages);
 	actions_panel->ActionsBook->AssignImageList(ActionsBookIconImages);
 	assets_panel->AssetsBook->AssignImageList(AssetsBookIconImages);
 	results_panel->ResultsBook->AssignImageList(ResultsBookIconImages);
@@ -267,19 +267,19 @@ bool MyGuiApp::OnInit()
 	experimental_panel->ExperimentalBook->AssignImageList(ExperimentalBookIconImages);
 #endif
 
-	main_frame->MenuBook->AddPage(overview_panel, "Overview", true, 0);
-	main_frame->MenuBook->AddPage(assets_panel, "Assets", false, 1);
-	main_frame->MenuBook->AddPage(actions_panel, "Actions", false, 2);
-	main_frame->MenuBook->AddPage(results_panel, "Results", false, 3);
+	main_frame->MenuBook_SingleParticle ->AddPage(overview_panel, "Overview", true, 0);
+	main_frame->MenuBook_SingleParticle ->AddPage(assets_panel, "Assets", false, 1);
+	main_frame->MenuBook_SingleParticle ->AddPage(actions_panel, "Actions", false, 2);
+	main_frame->MenuBook_SingleParticle ->AddPage(results_panel, "Results", false, 3);
 
 #ifdef EXPERIMENTAL
-	main_frame->MenuBook->AddPage(experimental_panel, "Experimental", false, 5);
+	main_frame->MenuBook_SingleParticle ->AddPage(experimental_panel, "Experimental", false, 5);
 #endif
 
-	main_frame->MenuBook->AddPage(settings_panel, "Settings", false, 4);
+	main_frame->MenuBook_SingleParticle ->AddPage(settings_panel, "Settings", false, 4);
 
 
-	//main_frame->MenuBook->AppendSeparator();
+	//main_frame->MenuBook_SingleParticle ->AppendSeparator();
 
 	assets_panel->AssetsBook->AddPage(movie_asset_panel, "Movies", true, 0);
 	assets_panel->AssetsBook->AddPage(image_asset_panel, "Images", false, 1);

@@ -39,7 +39,7 @@ MainFrame::MainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	wxBoxSizer* bSizer8;
 	bSizer8 = new wxBoxSizer( wxVERTICAL );
 
-	wxString choices[] = new wxString[2];
+	wxString choices[2];
 	choices[0] = "Single Particle";
 	choices[1] = "Template Matching";
 	ModeComboBox = new MemoryComboBox( LeftPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 2, choices, wxCB_READONLY );

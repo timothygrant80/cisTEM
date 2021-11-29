@@ -4,9 +4,6 @@ WX_DEFINE_OBJARRAY(ArrayOfAtoms);
 WX_DEFINE_OBJARRAY(ArrayOfParticleTrajectories);
 //WX_DEFINE_OBJARRAY(ArrayOfParticleInstances);
 
-#include "../../include/gemmi/mmread.hpp"
-#include "../../include/gemmi/gz.hpp"
-#include "../../include/gemmi/resinfo.hpp"
 
 const double MIN_PADDING_Z    = 4;
 const int MAX_XY_DIMENSION = 4096*2;

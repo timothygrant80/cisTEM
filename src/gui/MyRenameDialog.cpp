@@ -5,7 +5,7 @@ MyRenameDialog::MyRenameDialog( wxWindow* parent )
 :
 RenameDialog( parent )
 {
-	MyAssetParentPanel *parent_asset_panel = reinterpret_cast <MyAssetParentPanel *> (parent);
+	MyAssetPanelParent *parent_asset_panel = reinterpret_cast <MyAssetPanelParent *> (parent);
 
 	// How many assets are selected?
 

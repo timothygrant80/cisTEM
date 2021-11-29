@@ -2,7 +2,7 @@
 #define __SHOW_TEMPLATE_MATCH_RESULTS_PANEL_H__
 
 class
-ShowTemplateMatchResultsPanel : public ShowTemplateMatchResultsParentPanel
+ShowTemplateMatchResultsPanel : public ShowTemplateMatchResultsPanelParent
 {
 public :
 

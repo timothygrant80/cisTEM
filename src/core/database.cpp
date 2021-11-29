@@ -803,6 +803,12 @@ bool Database::CreateAllTables()
 	CheckSuccess(success);
 	success = CreateVolumeGroupListTable();
 	CheckSuccess(success);
+#ifdef EXPERIMENTAL
+	success = CreateAtomicCoordinatesAssetTable();
+	CheckSuccess(success);
+	success = CreateAtomicCoordinatesGroupListTable();
+	CheckSuccess(success);
+#endif  
 	success = CreateRefinementPackageAssetTable();
 	CheckSuccess(success);
 	success = CreateRefinementListTable();
@@ -1239,6 +1245,20 @@ void Database::AddNextVolumeAsset(int image_asset_id,  wxString name, wxString f
 	AddToBatchInsert("ittiriiitt", image_asset_id, name.ToUTF8().data(), filename.ToUTF8().data(), reconstruction_job_id, pixel_size, x_size, y_size, z_size, half_map_1_filename.ToUTF8().data(), half_map_2_filename.ToUTF8().data());
 }
 
+#ifdef EXPERIMENTAL
+void Database::BeginAtomicCoordinatesAssetInsert()
+{
+	BeginBatchInsert("ATOMIC_COORDINATES_ASSETS", 11, "ATOMIC_COORDINATES_ASSET_ID", "NAME", "FILENAME", "SIMULATION_3D_JOB_ID", "X_SIZE", "Y_SIZE", "Z_SIZE", "PDB_ID", "PDB_AVG_BFACTOR", "PDB_STD_BFACTOR", "EFFECTIVE_WEIGHT");
+}
+
+void Database::AddNextAtomicCoordinatesAsset(const AtomicCoordinatesAsset *asset)
+{
+	AddToBatchInsert("ittiiiitrrr", asset->asset_id, asset->asset_name.ToUTF8().data(), asset->filename.GetFullPath().ToUTF8().data(), 
+                                  asset->simulation_3d_job_id, asset->x_size, asset->y_size, asset->z_size, 
+                                  asset->pdb_id.ToUTF8().data(), asset->pdb_avg_bfactor, asset->pdb_std_bfactor, asset->effective_weight);
+}
+#endif
+
 void Database::AddNextImageAsset(int image_asset_id,  wxString name, wxString filename, int position_in_stack, int parent_movie_id, int alignment_id, int ctf_estimation_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration, int protein_is_white)
 {
 	AddToBatchInsert("ittiiiiiirrri", image_asset_id, name.ToUTF8().data(), filename.ToUTF8().data(), position_in_stack, parent_movie_id, alignment_id, ctf_estimation_id, x_size, y_size, pixel_size, voltage, spherical_aberration, protein_is_white);
@@ -1382,6 +1402,13 @@ void Database::BeginAllVolumeAssetsSelect()
 {
 	BeginBatchSelect("SELECT * FROM VOLUME_ASSETS;");
 }
+
+#ifdef EXPERIMENTAL
+void Database::BeginAllAtomicCoordinatesAssetsSelect()
+{
+	BeginBatchSelect("SELECT * FROM ATOMIC_COORDINATES_ASSETS;");
+}
+#endif
 
 void Database::BeginAllParticlePositionGroupsSelect()
 {
@@ -1818,6 +1845,20 @@ VolumeAsset Database::GetNextVolumeAsset()
 	GetFromBatchSelect("itflriiitt", &temp_asset.asset_id, &temp_asset.asset_name, &temp_asset.filename, &temp_asset.reconstruction_job_id, &temp_asset.pixel_size, &temp_asset.x_size, &temp_asset.y_size, &temp_asset.z_size, &temp_asset.half_map_1_filename, &temp_asset.half_map_2_filename);
 	return temp_asset;
 }
+
+#ifdef EXPERIMENTAL
+
+AtomicCoordinatesAsset Database::GetNextAtomicCoordinatesAsset()
+{
+	AtomicCoordinatesAsset temp_asset;
+  // Note: no distinction between single and double (s/r) seems to be made in writing to the DB, based on format strings, yet when reading it must be correct. 
+  // 
+	GetFromBatchSelect("itfliiitsss", &temp_asset.asset_id, &temp_asset.asset_name, &temp_asset.filename, &temp_asset.simulation_3d_job_id, 
+                                    &temp_asset.x_size, &temp_asset.y_size, &temp_asset.z_size, &temp_asset.pdb_id, 
+                                    &temp_asset.pdb_avg_bfactor, &temp_asset.pdb_std_bfactor, &temp_asset.effective_weight);
+	return temp_asset;
+}
+#endif
 
 
 void Database::AddOrReplaceRunProfile(RunProfile *profile_to_add)

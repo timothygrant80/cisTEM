@@ -341,6 +341,62 @@ bool MemoryComboBox::FillWithVolumeAssets(bool include_generate_from_params, boo
 	else return false;
 }
 
+#ifdef EXPERIMENTAL
+bool MemoryComboBox::FillWithAtomicCoordinatesAssets(bool include_generate_from_params, bool always_select_newest)
+{
+	extern AtomicCoordinatesAssetPanel *atomic_coordinates_asset_panel;
+
+	Freeze();
+	Clear();
+	ChangeValue("");
+
+	long new_selection = -1;
+	long new_id = -1;
+
+	wxArrayString items_to_add;
+	wxArrayLong ids_to_add;
+
+
+	if (include_generate_from_params == true)
+	{
+		items_to_add.Add("Generate from params.");
+		ids_to_add.Add(-100);
+		//AddMemoryItem("Generate from params.", -100);
+	}
+
+	for (long counter = 0; counter < atomic_coordinates_asset_panel->all_assets_list->number_of_assets; counter++)
+	{
+		//AddMemoryItem(atomic_coordinates_asset_panel->ReturnAssetName(counter), atomic_coordinates_asset_panel->ReturnAssetID(counter));
+		items_to_add.Add(atomic_coordinates_asset_panel->ReturnAssetName(counter));
+		ids_to_add.Add(atomic_coordinates_asset_panel->ReturnAssetID(counter));
+
+		if ( atomic_coordinates_asset_panel->ReturnAssetID(counter) == selected_id_on_last_clear)
+		{
+			new_selection = counter;
+			new_id = selected_id_on_last_clear;
+		}
+	}
+
+	AddMemoryItems(items_to_add, ids_to_add);
+
+
+	if (GetCount() > 0)
+	{
+		if (new_selection == -1)
+		{
+			if (always_select_newest == false) SetSelectionWithEvent(0);
+			else SetSelectionWithEvent(GetCount() - 1);
+		}
+		else SetSelectionWithEvent(new_selection);
+	}
+
+	currently_selected_id = new_id;
+	Thaw();
+
+	if (new_id == selected_id_on_last_clear && new_id != -1) return true;
+	else return false;
+}
+#endif
 bool MemoryComboBox::FillWithClassifications(long wanted_refinement_package, bool include_new_classification, bool always_select_newest)
 {
 	extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
@@ -1040,7 +1096,7 @@ wxListCtrl(parent, id, pos, size, style, validator, name)
 
 wxString ContentsList::OnGetItemText(long item, long column) const
 {
-	MyAssetParentPanel *parent_panel =  reinterpret_cast < MyAssetParentPanel *> (m_parent->GetParent()->GetParent()); // not very nice code!
+	MyAssetPanelParent *parent_panel =  reinterpret_cast < MyAssetPanelParent *> (m_parent->GetParent()->GetParent()); // not very nice code!
 	return parent_panel->ReturnItemText(item, column);
 	//wxPrintf("Here!\n");
 	//	return "Hi"	;
@@ -1296,7 +1352,6 @@ wxString ReferenceVolumesListControl::OnGetItemText(long item, long column) cons
 		return "";
 	}
 }
-
 
 
 int ReferenceVolumesListControl::ReturnGuessAtColumnTextWidth(int wanted_column)

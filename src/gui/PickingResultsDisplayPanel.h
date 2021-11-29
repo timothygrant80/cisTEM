@@ -6,7 +6,7 @@
 #include "../gui/job_panel.h"
 #include "../gui/ProjectX_gui.h"
 class
-PickingResultsDisplayPanel : public PickingResultsDisplayParentPanel
+PickingResultsDisplayPanel : public PickingResultsDisplayPanelParent
 {
 public :
 

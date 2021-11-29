@@ -1,4 +1,4 @@
-class MyVolumeAssetPanel : public MyAssetParentPanel
+class MyVolumeAssetPanel : public MyAssetPanelParent
 {
 
 	protected:

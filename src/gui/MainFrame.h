@@ -63,6 +63,9 @@ class MyMainFrame : public MainFrame, public SocketCommunicator
 		void DirtyMovieGroups();
 		void DirtyImageGroups();
 		void DirtyVolumes();
+#ifdef EXPERIMENTAL
+		void DirtyAtomicCoordinates();
+#endif    
 		void DirtyParticlePositionGroups();
 		void DirtyRunProfiles();
 		void DirtyRefinementPackages();

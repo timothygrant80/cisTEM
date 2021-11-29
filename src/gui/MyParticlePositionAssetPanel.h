@@ -1,4 +1,4 @@
-class MyParticlePositionAssetPanel : public MyAssetParentPanel
+class MyParticlePositionAssetPanel : public MyAssetPanelParent
 {
 
 	protected:

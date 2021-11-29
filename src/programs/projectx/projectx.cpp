@@ -43,6 +43,9 @@ MyMovieAssetPanel *movie_asset_panel;
 MyImageAssetPanel *image_asset_panel;
 MyParticlePositionAssetPanel *particle_position_asset_panel;
 MyVolumeAssetPanel *volume_asset_panel;
+#ifdef EXPERIMENTAL
+AtomicCoordinatesAssetPanel  *atomic_coordinates_asset_panel;
+#endif
 MyRefinementPackageAssetPanel *refinement_package_asset_panel;
 
 MyMovieAlignResultsPanel *movie_results_panel;
@@ -140,6 +143,9 @@ bool MyGuiApp::OnInit()
 	image_asset_panel = new MyImageAssetPanel(assets_panel->AssetsBook);
 	particle_position_asset_panel = new MyParticlePositionAssetPanel(assets_panel->AssetsBook);
 	volume_asset_panel = new MyVolumeAssetPanel(assets_panel->AssetsBook);
+#ifdef EXPERIMENTAL
+  atomic_coordinates_asset_panel = new AtomicCoordinatesAssetPanel(assets_panel->AssetsBook);
+#endif
 	refinement_package_asset_panel = new MyRefinementPackageAssetPanel(assets_panel->AssetsBook);
 
 	align_movies_panel = new MyAlignMoviesPanel(actions_panel->ActionsBook);
@@ -243,6 +249,9 @@ bool MyGuiApp::OnInit()
 	AssetsBookIconImages->Add(particle_position_icon_bmp);
 	AssetsBookIconImages->Add(virus_icon_bmp);
 	AssetsBookIconImages->Add(refinement_package_icon_bmp);
+#ifdef EXPERIMENTAL
+  AssetsBookIconImages->Add(generate3d_icon_bmp);
+#endif
 
 	ResultsBookIconImages->Add(movie_align_icon_bmp);
 	ResultsBookIconImages->Add(ctf_icon_bmp);
@@ -271,12 +280,12 @@ bool MyGuiApp::OnInit()
 	main_frame->MenuBook->AddPage(assets_panel, "Assets", false, 1);
 	main_frame->MenuBook->AddPage(actions_panel, "Actions", false, 2);
 	main_frame->MenuBook->AddPage(results_panel, "Results", false, 3);
+	main_frame->MenuBook->AddPage(settings_panel, "Settings", false, 4);
 
 #ifdef EXPERIMENTAL
 	main_frame->MenuBook->AddPage(experimental_panel, "Experimental", false, 5);
 #endif
 
-	main_frame->MenuBook->AddPage(settings_panel, "Settings", false, 4);
 
 
 	//main_frame->MenuBook->AppendSeparator();
@@ -286,6 +295,9 @@ bool MyGuiApp::OnInit()
 	assets_panel->AssetsBook->AddPage(particle_position_asset_panel, "Particle Positions", false, 2);
 	assets_panel->AssetsBook->AddPage(volume_asset_panel, "3D Volumes", false, 3);
 	assets_panel->AssetsBook->AddPage(refinement_package_asset_panel, "Refine Pkgs.", false, 4);
+#ifdef EXPERIMENTAL
+	assets_panel->AssetsBook->AddPage(atomic_coordinates_asset_panel, "Atomic Coordinates", false, 5);
+#endif
 
 	actions_panel->ActionsBook->AddPage(align_movies_panel, "Align Movies", true, 0);
 	actions_panel->ActionsBook->AddPage(findctf_panel, "Find CTF", false, 1);

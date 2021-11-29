@@ -60,7 +60,7 @@
 #include "../gui/CTF1DPanel.h"
 #include "../gui/MainFrame.h"
 #include "../gui/ErrorDialog.h"
-#include "../gui/MyAssetParentPanel.h"
+#include "../gui/MyAssetPanelParent.h"
 #include "../gui/MyMovieAssetPanel.h"
 #include "../gui/MyImageAssetPanel.h"
 #include "../gui/MyParticlePositionAssetPanel.h"
@@ -124,6 +124,9 @@
 #include "../gui/MatchTemplatePanel.h"
 #include "../gui/MatchTemplateResultsPanel.h"
 #include "../gui/RefineTemplatePanel.h"
+#include "../gui/AtomicCoordinatesAssetPanel.h"
+#include "../gui/AtomicCoordinatesChooserDialog.h"
+#include "../gui/AtomicCoordinatesImportDialog.h"
 #endif
 
 #define REFINEMENT 0

@@ -9,7 +9,7 @@ extern MyMovieAlignResultsPanel *movie_results_panel;
 
 MyImageAssetPanel::MyImageAssetPanel( wxWindow* parent )
 :
-MyAssetParentPanel( parent )
+MyAssetPanelParent( parent )
 {
 	Label0Title->SetLabel("Name : ");
 	Label1Title->SetLabel("I.D. : ");

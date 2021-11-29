@@ -2,7 +2,7 @@
 #define __RefineTemplatePanel__
 
 
-class RefineTemplatePanel : public RefineTemplateParentPanel
+class RefineTemplatePanel : public RefineTemplatePanelParent
 {
 		long my_job_id;
 

@@ -7,7 +7,7 @@ extern MyRefinementResultsPanel *refinement_results_panel;
 
 RefineCTFPanel::RefineCTFPanel( wxWindow* parent )
 :
-RefineCTFParentPanel( parent )
+RefineCTFPanelParent( parent )
 {
 	buffered_results = NULL;
 

@@ -7,7 +7,7 @@
 #include "../gui/job_panel.h"
 #include "../gui/ProjectX_gui.h"
 class
-ShowCTFResultsPanel : public ShowCTFResultsParentPanel
+ShowCTFResultsPanel : public ShowCTFResultsPanelParent
 {
 public :
 

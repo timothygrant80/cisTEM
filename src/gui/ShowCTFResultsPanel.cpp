@@ -2,7 +2,7 @@
 #include "../core/gui_core_headers.h"
 
 ShowCTFResultsPanel::ShowCTFResultsPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
-: ShowCTFResultsParentPanel(parent, id, pos, size, style)
+: ShowCTFResultsPanelParent(parent, id, pos, size, style)
 {
 	Bind(wxEVT_COMBOBOX, &ShowCTFResultsPanel::OnFitTypeRadioButton, this);
 	Bind(wxEVT_COMBOBOX, &ShowCTFResultsPanel::OnFitTypeRadioButton, this);

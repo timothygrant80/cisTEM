@@ -2,7 +2,7 @@
 #include "../core/gui_core_headers.h"
 
 PickingResultsDisplayPanel::PickingResultsDisplayPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
-: PickingResultsDisplayParentPanel(parent, id, pos, size, style)
+: PickingResultsDisplayPanelParent(parent, id, pos, size, style)
 {
 	//Bind(wxEVT_COMBOBOX, &ShowPickingResultsPanel::OnFitTypeRadioButton, this);
 	//Bind(wxEVT_COMBOBOX, &ShowPickingResultsPanel::OnFitTypeRadioButton, this);

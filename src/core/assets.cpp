@@ -1,4 +1,5 @@
 #include "core_headers.h"
+
 //#include "gui_core_headers.h"
 
 
@@ -442,6 +443,181 @@ void VolumeAsset::CopyFrom(Asset *other_asset)
 
 // Return Pointers
 
+#ifdef EXPERIMENTAL
+// AtomicCoordinates asset///
+
+AtomicCoordinatesAsset::AtomicCoordinatesAsset()
+{
+	asset_id = -1;
+	parent_id = -1;
+	simulation_3d_job_id = -1;
+	x_size = 0;
+	y_size = 0;
+	z_size = 0;
+
+	is_valid = false;
+	filename = wxEmptyString;
+	asset_name = wxEmptyString;
+
+  pdb_id = wxEmptyString;
+  pdb_avg_bfactor = 0.0f;
+  pdb_std_bfactor = 0.0f;
+  effective_weight = 0.0f;
+
+}
+
+AtomicCoordinatesAsset::~AtomicCoordinatesAsset()
+{
+	//Don't have to do anything for now
+}
+
+AtomicCoordinatesAsset::AtomicCoordinatesAsset(wxString wanted_filename)
+{
+	filename = wanted_filename;
+	asset_name = wanted_filename;
+	asset_id = -1;
+	parent_id = -1;
+	simulation_3d_job_id = -1;
+
+	x_size = 0;
+	y_size = 0;
+	z_size = 0;
+	is_valid = false;
+
+  pdb_id = wxEmptyString;
+  pdb_avg_bfactor = 0.0f;
+  pdb_std_bfactor = 0.0f;
+  effective_weight = 0.0f;
+
+	int number_in_stack;
+
+	if (filename.IsOk() == true && filename.FileExists() == true)
+	{
+    Update(wanted_filename);
+	}
+
+}
+
+void AtomicCoordinatesAsset::Update(wxString wanted_filename)
+{
+	filename = wanted_filename;
+	is_valid = false;
+
+  // Using the try/catch incase the user provides a bad file.
+  try 
+  {
+    // Note that gemmi will fail for "bad" extension names, which I should check into. It wouldn't be so hard to add a check on file names (pdb1 for example)
+    // but this would be more appropriate to patch and apply upstream in their repo. TODO
+    auto st = gemmi::read_structure(gemmi::MaybeGzipped(filename.GetFullPath().ToStdString()));
+    pdb_id = st.name; 
+
+    // This loop should be part of some atomic coordinates utiltity class later on. For now, we want to get the x,y,z extents
+    // which will minimally be useful in determining the box size for simulating templates.
+    // TOOD: Check on NCS and option to expand?
+    
+    float x_min = std::numeric_limits<float>::max(); 
+    float x_max = std::numeric_limits<float>::min();
+    float y_min = std::numeric_limits<float>::max(); 
+    float y_max = std::numeric_limits<float>::min();
+    float z_min = std::numeric_limits<float>::max(); 
+    float z_max = std::numeric_limits<float>::min();
+    long n = 0;
+    double b = 0, bb = 0;
+    double weight = 0;
+    long n_atoms = 0;
+    long n_hetatms = 0;
+    // I'm sure there is already something in GEMMI to do an iteration like this.
+    for (gemmi::Model& model : st.models)
+    {		
+      // mass += gemmi::calculate_mass(model);
+      for (gemmi::Chain& chain : model.chains)
+      {
+          for (gemmi::Residue& res : chain.residues)
+          {
+
+              // For now, we only want ATOM 
+              if (res.het_flag == 'A')  // 'A' = ATOM, 'H' = HETATM, 0 = unspecified
+              {
+                for (gemmi::Atom& atom : res.atoms) 
+                {
+                  n_atoms++;
+                  weight += (atom.occ * atom.element.weight());
+                  b  += atom.b_iso;
+                  bb += (atom.b_iso * atom.b_iso);
+                  if (atom.pos.x < x_min) x_min = atom.pos.x;
+                  if (atom.pos.x > x_max) x_max = atom.pos.x;
+                  if (atom.pos.y < y_min) y_min = atom.pos.y;
+                  if (atom.pos.y > y_max) y_max = atom.pos.y;
+                  if (atom.pos.z < z_min) z_min = atom.pos.z;
+                  if (atom.pos.z > z_max) z_max = atom.pos.z;
+                  n++;
+                } 
+              }
+              else if (res.het_flag == 'H')
+              {
+                for (gemmi::Atom& atom : res.atoms) 
+                {
+                  n_hetatms++;
+                }
+              }
+ 
+          }
+      }
+    }
+
+    size_t n_hydrogens = gemmi::count_hydrogen_sites(st.models[0]);
+    wxPrintf("There are N: \n");
+    wxPrintf("Hydrogens : %ld\n", long(n_hydrogens));
+    wxPrintf("Atoms     : %ld\n", long(n_atoms));
+    wxPrintf("HetAtoms  : %ld\n", long(n_hetatms));
+
+    b /= n;
+    bb = sqrt(bb / n - b * b);
+    pdb_avg_bfactor = b;
+    pdb_std_bfactor = bb;
+
+    x_size = x_max - x_min;
+    y_size = y_max - y_min;
+    z_size = z_max - z_min;
+
+    effective_weight = float(weight / 1000.); // kDa
+
+    is_valid = true;
+  } 
+  catch (std::runtime_error& e) 
+  {
+    // It may be nice if this returned and printed in the error dialog invoked when is_valid is false, rather than
+    // printing to stdout.
+    MyPrintWithDetails("\n\nGEMMI threw an error reading this file:\n %s\n", e.what());
+  }
+
+
+}
+
+
+void AtomicCoordinatesAsset::CopyFrom(Asset *other_asset)
+{
+	AtomicCoordinatesAsset *casted_asset = reinterpret_cast < AtomicCoordinatesAsset *> (other_asset);
+	asset_id = casted_asset->asset_id;
+	parent_id = casted_asset->parent_id;
+	simulation_3d_job_id = casted_asset->simulation_3d_job_id;
+
+	x_size = casted_asset->x_size;
+	y_size = casted_asset->y_size;
+	z_size = casted_asset->z_size;
+
+	filename = casted_asset->filename;
+	is_valid = casted_asset->is_valid;
+	asset_name = casted_asset->asset_name;
+
+  pdb_id = casted_asset->pdb_id;
+  pdb_avg_bfactor = casted_asset->pdb_avg_bfactor;
+  pdb_std_bfactor = casted_asset->pdb_std_bfactor;
+  effective_weight = casted_asset->effective_weight;
+}
+
+
+#endif
 
 MovieAsset * AssetList::ReturnMovieAssetPointer(long wanted_asset)
 {
@@ -466,6 +642,14 @@ VolumeAsset* AssetList::ReturnVolumeAssetPointer(long wanted_asset)
 	MyPrintWithDetails("This should never be called!!");
 	DEBUG_ABORT;
 }
+
+#ifdef EXPERIMENTAL
+AtomicCoordinatesAsset* AssetList::ReturnAtomicCoordinatesAssetPointer(long wanted_asset)
+{
+	MyPrintWithDetails("This should never be called!!");
+	DEBUG_ABORT;
+}
+#endif
 
 
 ////////////////////////Movie Asset List//////////////////
@@ -1171,3 +1355,179 @@ void VolumeAssetList::RemoveAll()
 	}
 }
 
+#ifdef EXPERIMENTAL
+// AtomicCoordinates Asset List
+
+AtomicCoordinatesAssetList::AtomicCoordinatesAssetList()
+{
+  // TODO: This is likely too few pre allocated memory.
+	number_of_assets = 0;
+	number_allocated = 15;
+	assets = new AtomicCoordinatesAsset[15];
+
+}
+
+AtomicCoordinatesAssetList::~AtomicCoordinatesAssetList()
+{
+	delete [] reinterpret_cast < AtomicCoordinatesAsset *> (assets);
+}
+
+void AtomicCoordinatesAssetList::CheckMemory()
+{
+	AtomicCoordinatesAsset *buffer;
+
+	// check we have enough memory
+
+	if (number_of_assets >= number_allocated)
+	{
+		// reallocate..
+
+		if (number_of_assets < 10000) number_allocated *= 2;
+		else number_allocated += 10000;
+
+		buffer = new AtomicCoordinatesAsset[number_allocated];
+
+		for (long counter = 0; counter < number_of_assets; counter++)
+		{
+			buffer[counter].CopyFrom(& reinterpret_cast < AtomicCoordinatesAsset *> (assets)[counter]);
+		}
+
+		delete [] reinterpret_cast < AtomicCoordinatesAsset *>  (assets);
+		assets = buffer;
+	}
+
+
+}
+
+long AtomicCoordinatesAssetList::FindFile(wxFileName file_to_find, bool also_check_vs_shortname, long max_asset_number_to_check)
+{
+	long found_position = -1;
+
+	if (max_asset_number_to_check == -1) max_asset_number_to_check = number_of_assets;
+
+	for (long counter = 0; counter < max_asset_number_to_check; counter++)
+	{
+		if (reinterpret_cast < AtomicCoordinatesAsset *> (assets)[counter].filename == file_to_find)
+		{
+			found_position = counter;
+			break;
+		}
+
+		if (also_check_vs_shortname == true)
+		{
+			if (reinterpret_cast < AtomicCoordinatesAsset *> (assets)[counter].filename.GetFullName() == file_to_find.GetFullName())
+			{
+				found_position = counter;
+				break;
+			}
+		}
+	}
+
+	return found_position;
+
+}
+
+Asset * AtomicCoordinatesAssetList::ReturnAssetPointer(long wanted_asset)
+{
+	MyDebugAssertTrue(wanted_asset >= 0 && wanted_asset < number_of_assets, "Requesting an asset (%li) that doesn't exist!", wanted_asset);
+	return & reinterpret_cast <AtomicCoordinatesAsset *> (assets)[wanted_asset];
+}
+
+long AtomicCoordinatesAssetList::ReturnParentAssetID(long wanted_asset)
+{
+	return  reinterpret_cast <AtomicCoordinatesAsset *> (assets)[wanted_asset].parent_id;
+}
+
+AtomicCoordinatesAsset * AtomicCoordinatesAssetList::ReturnAtomicCoordinatesAssetPointer(long wanted_asset)
+{
+	MyDebugAssertTrue(wanted_asset >= 0 && wanted_asset < number_of_assets, "Requesting an asset (%li) that doesn't exist!", wanted_asset);
+	return & reinterpret_cast <AtomicCoordinatesAsset *> (assets)[wanted_asset];
+}
+
+int AtomicCoordinatesAssetList::ReturnAssetID(long wanted_asset)
+{
+	return  reinterpret_cast <AtomicCoordinatesAsset *> (assets)[wanted_asset].asset_id;
+}
+
+wxString AtomicCoordinatesAssetList::ReturnAssetName(long wanted_asset)
+{
+	return  reinterpret_cast <AtomicCoordinatesAsset *> (assets)[wanted_asset].asset_name;
+}
+
+
+wxString AtomicCoordinatesAssetList::ReturnAssetFullFilename(long wanted_asset)
+{
+	return  reinterpret_cast <AtomicCoordinatesAsset *> (assets)[wanted_asset].filename.GetFullPath();
+}
+
+int AtomicCoordinatesAssetList::ReturnArrayPositionFromID(int wanted_id, int last_found_position)
+{
+	MyDebugAssertTrue(last_found_position < number_of_assets || number_of_assets == 0,"Bad last found position: %i >= %li\n",last_found_position,number_of_assets);
+
+	for (int counter = last_found_position; counter < number_of_assets; counter++)
+	{
+		if (reinterpret_cast <AtomicCoordinatesAsset *> (assets)[counter].asset_id == wanted_id) return counter;
+	}
+
+	for (int counter = 0; counter < last_found_position; counter++)
+	{
+		if (reinterpret_cast <AtomicCoordinatesAsset *> (assets)[counter].asset_id == wanted_id) return counter;
+	}
+
+	return -1;
+}
+
+int AtomicCoordinatesAssetList::ReturnArrayPositionFromParentID(int wanted_id)
+{
+	for (int counter = 0; counter < number_of_assets; counter++)
+	{
+		if (reinterpret_cast <AtomicCoordinatesAsset *> (assets)[counter].parent_id == wanted_id) return counter;
+	}
+
+	return -1;
+}
+
+
+
+void AtomicCoordinatesAssetList::AddAsset(Asset *asset_to_add)
+{
+	CheckMemory();
+
+	// Should be fine for memory, so just add one.
+
+	reinterpret_cast < AtomicCoordinatesAsset *> (assets)[number_of_assets].CopyFrom(asset_to_add);
+	number_of_assets++;
+
+
+
+}
+
+void AtomicCoordinatesAssetList::RemoveAsset(long number_to_remove)
+{
+	if (number_to_remove < 0 || number_to_remove >= number_of_assets)
+	{
+		wxPrintf("Error! Trying to remove a movie that does not exist\n\n");
+		exit(-1);
+	}
+
+	for (long counter = number_to_remove; counter < number_of_assets -1; counter++)
+	{
+		reinterpret_cast < AtomicCoordinatesAsset *> (assets)[counter].CopyFrom(& reinterpret_cast < AtomicCoordinatesAsset *> (assets)[counter + 1]);
+	}
+
+	number_of_assets--;
+}
+
+void AtomicCoordinatesAssetList::RemoveAll()
+{
+	number_of_assets = 0;
+
+	if (number_allocated > 100)
+	{
+		delete [] reinterpret_cast < AtomicCoordinatesAsset *> (assets);
+		number_allocated = 100;
+		assets = new AtomicCoordinatesAsset[number_allocated];
+	}
+}
+
+#endif

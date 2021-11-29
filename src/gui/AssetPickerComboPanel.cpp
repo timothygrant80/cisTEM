@@ -2,6 +2,9 @@
 
 extern MyVolumeAssetPanel *volume_asset_panel;
 extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
+#ifdef EXPERIMENTAL
+extern AtomicCoordinatesAssetPanel *atomic_coordinates_asset_panel;
+#endif
 
 AssetPickerListCtrl::AssetPickerListCtrl(wxWindow *parent, wxWindowID id, const wxPoint &pos, const wxSize &size, long style, const wxValidator &validator, const wxString &name)
 :

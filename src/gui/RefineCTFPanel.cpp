@@ -1116,18 +1116,23 @@ void CTFRefinementManager::SetupMerge3dJob()
 		bool save_orthogonal_views_image = true;
 		wxString orthogonal_views_filename = main_frame->current_project.volume_asset_directory.GetFullPath() + wxString::Format("/OrthViews/volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
 		float weiner_nominator = 1.0f;
+	  float alignment_res = 5.0f;
 
-		my_parent->current_job_package.AddJob("ttttfffttibtif",	output_reconstruction_1.ToUTF8().data(),
-															output_reconstruction_2.ToUTF8().data(),
-															output_reconstruction_filtered.ToUTF8().data(),
-															output_resolution_statistics.ToUTF8().data(),
-															molecular_mass_kDa, inner_mask_radius, outer_mask_radius,
-															dump_file_seed_1.ToUTF8().data(),
-															dump_file_seed_2.ToUTF8().data(),
-															class_counter + 1,
-															save_orthogonal_views_image,
-															orthogonal_views_filename.ToUTF8().data(),
-															number_of_reconstruction_jobs, weiner_nominator);
+		my_parent->current_job_package.AddJob("ttttfffttibtiff",	output_reconstruction_1.ToUTF8().data(),
+                                                              output_reconstruction_2.ToUTF8().data(),
+                                                              output_reconstruction_filtered.ToUTF8().data(),
+                                                              output_resolution_statistics.ToUTF8().data(),
+                                                              molecular_mass_kDa, 
+                                                              inner_mask_radius, 
+                                                              outer_mask_radius,
+                                                              dump_file_seed_1.ToUTF8().data(),
+                                                              dump_file_seed_2.ToUTF8().data(),
+                                                              class_counter + 1,
+                                                              save_orthogonal_views_image,
+                                                              orthogonal_views_filename.ToUTF8().data(),
+                                                              number_of_reconstruction_jobs, 
+                                                              weiner_nominator,
+                                                              alignment_res);
 	}
 }
 

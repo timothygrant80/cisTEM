@@ -260,6 +260,12 @@ void ExportRefinementPackageWizard::OnFinished(  wxWizardEvent& event  )
 		wxFileName gain_ref_filename;
 		bool should_convert_gain_ref;
 
+    // Check to ensure that a filename extension is there, and if not add "mrcs"
+    if (output_stack_filename.GetExt().IsEmpty())
+    {
+      output_stack_filename.SetExt("mrcs");
+    }
+
 		relion_star_filename.SetExt("star");
 		relion_corrected_micrographs_filename.ClearExt();
 		relion_corrected_micrographs_filename.SetName( relion_corrected_micrographs_filename.GetName() + wxT("_corrected_micrographs.star"));

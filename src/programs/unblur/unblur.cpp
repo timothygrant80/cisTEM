@@ -6,6 +6,7 @@
 #ifdef HYPOTHETICAL_CONTROL_OVER_TIMING
 using namespace cistem_timer;
 #else
+#define PRINT_VERBOSE
 using namespace cistem_timer_noop;
 #endif
 

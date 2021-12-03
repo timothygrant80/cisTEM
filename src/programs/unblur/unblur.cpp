@@ -1,5 +1,14 @@
 #include "../../core/core_headers.h"
 
+// The timing that unblur originally tracks is always on, by direct reference to cistem_timer::StopWatch
+// The profiling for development is under conrtol of the using declarations below. In principle, the HYPOTHETICAL_CONTROL_OVER_TIMING could be a configure time option.
+#define HYPOTHETICAL_CONTROL_OVER_TIMING
+#ifdef HYPOTHETICAL_CONTROL_OVER_TIMING
+using namespace cistem_timer;
+#else
+using namespace cistem_timer_noop;
+#endif
+
 class
 UnBlurApp : public MyApp
 {
@@ -14,7 +23,7 @@ UnBlurApp : public MyApp
 
 };
 
-void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_iterations, float unitless_bfactor, bool mask_central_cross, int width_of_vertical_line, int width_of_horizontal_line, float inner_radius_for_peak_search, float outer_radius_for_peak_search, float max_shift_convergence_threshold, float pixel_size, int number_of_frames_for_running_average, int savitzy_golay_window_size, int max_threads, float *x_shifts, float *y_shifts);
+void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_iterations, float unitless_bfactor, bool mask_central_cross, int width_of_vertical_line, int width_of_horizontal_line, float inner_radius_for_peak_search, float outer_radius_for_peak_search, float max_shift_convergence_threshold, float pixel_size, int number_of_frames_for_running_average, int savitzy_golay_window_size, int max_threads, float *x_shifts, float *y_shifts, StopWatch& profile_timing_refinement_method);
 
 IMPLEMENT_APP(UnBlurApp)
 
@@ -296,17 +305,12 @@ bool UnBlurApp::DoCalculation()
 
 	//my_current_job.PrintAllArguments();
 
-	// Profiling
-	wxDateTime	overall_start = wxDateTime::Now();
-	wxDateTime 	overall_finish;
-	wxDateTime 	read_frames_start;
-	wxDateTime	read_frames_finish;
-	wxDateTime	first_alignment_start;
-	wxDateTime	first_alignment_finish;
-	wxDateTime	main_alignment_start;
-	wxDateTime	main_alignment_finish;
-	wxDateTime	final_alignment_start;
-	wxDateTime	final_alignment_finish;
+	// StopWatch objects
+	cistem_timer::StopWatch unblur_timing;
+	StopWatch profile_timing;
+	StopWatch profile_timing_refinement_method;
+
+
 
 	float temp_float[2];
 
@@ -418,12 +422,13 @@ bool UnBlurApp::DoCalculation()
 	int preprocess_block_counter;
 	int total_processed;
 
+	profile_timing.start("allocate electron dose");
 	// Electron dose object for if dose filtering..
 
 	ElectronDose *my_electron_dose;
 
 	if (should_dose_filter == true) my_electron_dose = new ElectronDose(acceleration_voltage, output_pixel_size);
-
+	profile_timing.lap("allocate electron dose");
 	// some quick checks..
 
 	/*
@@ -441,8 +446,7 @@ bool UnBlurApp::DoCalculation()
 
 	// Read in, gain-correct, FFT and resample all the images..
 
-	read_frames_start = wxDateTime::Now();
-
+	unblur_timing.start("read frames");
 	// big loop over number of threads, so that far large number of frames you might save some memory..
 
 
@@ -456,12 +460,13 @@ bool UnBlurApp::DoCalculation()
 
 	for (preprocess_block_counter = 0; preprocess_block_counter < number_of_preprocess_blocks; preprocess_block_counter++)
 	{
-
+		profile_timing.start("read in frames");
 		for (image_counter = first_frame_to_preprocess; image_counter <= last_frame_to_preprocess; image_counter++)
 		{
 			// Read from disk
 			image_stack[image_counter - 1].ReadSlice(&input_file,image_counter);
 		}
+		profile_timing.lap("read in frames");
 
 		#pragma omp parallel for default(shared) num_threads(max_threads) private(image_counter)
 		for (image_counter = first_frame_to_preprocess; image_counter <= last_frame_to_preprocess; image_counter++)
@@ -469,6 +474,7 @@ bool UnBlurApp::DoCalculation()
 		// Dark correction
 		if (! movie_is_dark_corrected)
 		{
+			profile_timing.start("dark correct");		
 			if (! image_stack[image_counter - 1].HasSameDimensionsAs(&dark_image))
 			{
 				SendError(wxString::Format("Error: location %li of input file (%s) does not have same dimensions as the dark image (%s)", image_counter, input_filename, dark_filename));
@@ -477,11 +483,13 @@ bool UnBlurApp::DoCalculation()
 			}
 			//if (image_counter == 0) SendInfo(wxString::Format("Info: multiplying %s by gain %s\n",input_filename,gain_filename.ToStdString()));
 			image_stack[image_counter - 1].SubtractImage(&dark_image);
+			profile_timing.lap("dark correct");
 		}
 
 		// Gain correction
 		if (! movie_is_gain_corrected)
 		{
+			profile_timing.start("gain correct");
 			if (! image_stack[image_counter - 1].HasSameDimensionsAs(&gain_image))
 			{
 				SendError(wxString::Format("Error: location %li of input file (%s) does not have same dimensions as the gain image (%s)", image_counter, input_filename, gain_filename));
@@ -490,23 +498,32 @@ bool UnBlurApp::DoCalculation()
 			}
 			//if (image_counter == 0) SendInfo(wxString::Format("Info: multiplying %s by gain %s\n",input_filename,gain_filename.ToStdString()));
 			image_stack[image_counter - 1].MultiplyPixelWise(gain_image);
+			profile_timing.lap("gain correct");
 		}
 
+		profile_timing.start("replace outliers");
 		image_stack[image_counter - 1].ReplaceOutliersWithMean(12);
+		profile_timing.lap("replace outliers");
 
 		if (correct_mag_distortion == true)
 		{
+			profile_timing.start("correct mag distortion");
 			image_stack[image_counter - 1].CorrectMagnificationDistortion(mag_distortion_angle, mag_distortion_major_scale, mag_distortion_minor_scale);
+			profile_timing.lap("correct mag distortion");
 		}
 
 		// FT
+		profile_timing.start("forward FFT");
 		image_stack[image_counter - 1].ForwardFFT(true);
 		image_stack[image_counter - 1].ZeroCentralPixel();
+		profile_timing.lap("forward FFT");
 
 		// Resize the FT (binning)
 		if (output_binning_factor > 1.0001)
 		{
+			profile_timing.start("resize");
 			image_stack[image_counter - 1].Resize(myroundint(image_stack[image_counter - 1].logical_x_dimension/output_binning_factor),myroundint(image_stack[image_counter - 1].logical_y_dimension/output_binning_factor),1);
+			profile_timing.lap("resize");
 		}
 
 		// Init shifts
@@ -522,8 +539,7 @@ bool UnBlurApp::DoCalculation()
 	}
 	input_file.CloseFile();
 
-	read_frames_finish = wxDateTime::Now();
-
+	unblur_timing.lap("read frames");
 	// if we are binning - choose a binning factor..
 
 	pre_binning_factor = int(myround(5. / output_pixel_size));
@@ -559,6 +575,7 @@ bool UnBlurApp::DoCalculation()
 
 	if (pre_binning_factor > 1)
 	{
+		profile_timing.start("make prebinned stack");
 		#pragma omp parallel for default(shared) num_threads(max_threads) private(image_counter)
 		for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
 		{
@@ -566,7 +583,7 @@ bool UnBlurApp::DoCalculation()
 			unbinned_image_stack[image_counter].ClipInto(&image_stack[image_counter]);
 			//image_stack[image_counter].QuickAndDirtyWriteSlice("binned.mrc", image_counter + 1);
 		}
-
+		profile_timing.lap("make prebinned stack");
 		// for the binned images, we don't want to insist on a super low termination factor.
 
 		if (termination_threshold_in_pixels < 1 && pre_binning_factor > 1) termination_threshold_in_pixels = 1;
@@ -574,20 +591,20 @@ bool UnBlurApp::DoCalculation()
 	}
 
 	// do the initial refinement (only 1 round - with the min shift)
-	first_alignment_start = wxDateTime::Now();
+	unblur_timing.start("initial refine"); profile_timing.start("initial refine");
 	//SendInfo(wxString::Format("Doing first alignment on %s\n",input_filename));
-	unblur_refine_alignment(image_stack, number_of_input_images, 1, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, min_shift_in_pixels, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts);
-	first_alignment_finish = wxDateTime::Now();
+	unblur_refine_alignment(image_stack, number_of_input_images, 1, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, min_shift_in_pixels, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts, profile_timing_refinement_method);
+	unblur_timing.lap("initial refine"); profile_timing.lap("initial refine");
 
 	// now do the actual refinement..
-	main_alignment_start = wxDateTime::Now();
+	unblur_timing.start("main refine"); profile_timing.start("main refine");
 	//SendInfo(wxString::Format("Doing main alignment on %s\n",input_filename));
-	unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts);
-	main_alignment_finish = wxDateTime::Now();
+	unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts, profile_timing_refinement_method);
+	unblur_timing.lap("main refine"); profile_timing.lap("main refine");
 
 
 	// if we have been using pre-binning, we need to do a refinment on the unbinned data..
-	final_alignment_start = wxDateTime::Now();
+	unblur_timing.start("final refine");
 	if (pre_binning_factor > 1)
 	{
 		// we don't need the binned images anymore..
@@ -597,7 +614,7 @@ bool UnBlurApp::DoCalculation()
 		pixel_size = output_pixel_size;
 
 		// Adjust the shifts, then phase shift the original images
-
+		profile_timing.start("apply shifts 1");
 		#pragma omp parallel for default(shared) num_threads(max_threads) private(image_counter)
 		for (image_counter = 0; image_counter < number_of_input_images; image_counter++)
 		{
@@ -606,6 +623,7 @@ bool UnBlurApp::DoCalculation()
 
 			image_stack[image_counter].PhaseShift(x_shifts[image_counter], y_shifts[image_counter], 0.0);
 		}
+		profile_timing.lap("apply shifts 1");
 
 		// convert parameters to pixels with new pixel size..
 
@@ -619,14 +637,15 @@ bool UnBlurApp::DoCalculation()
 
 		// do the refinement..
 		//SendInfo(wxString::Format("Doing final unbinned alignment on %s\n",input_filename));
-		unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, output_pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts);
-
+		profile_timing.start("final refine");
+		unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, output_pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts, profile_timing_refinement_method);
+		profile_timing.lap("final refine");
 		// if allocated delete the binned stack, and swap the unbinned to image_stack - so that no matter what is happening we can just use image_stack
 
 
 
 	}
-	final_alignment_finish = wxDateTime::Now();
+	unblur_timing.lap("final refine");
 
 	// we should be finished with alignment, now we just need to make the final sum..
 
@@ -637,55 +656,60 @@ bool UnBlurApp::DoCalculation()
 	{
 		if (write_out_amplitude_spectrum == true)
 		{
+			profile_timing.start("amplitude spectrum");
 			sum_image_no_dose_filter.Allocate(image_stack[0].logical_x_dimension, image_stack[0].logical_y_dimension, false);
 			sum_image_no_dose_filter.SetToConstant(0.0);
-		}
 
-
-		for (image_counter = first_frame - 1; image_counter < last_frame; image_counter++)
-		{
-			if (write_out_amplitude_spectrum == true)
+			for (image_counter = first_frame - 1; image_counter < last_frame; image_counter++)
 			{
 				sum_image_no_dose_filter.AddImage(&image_stack[image_counter]);
 			}
+			profile_timing.lap("amplitude spectrum");
 		}
 
 		// allocate arrays for the filter, and the sum of squares..
-
+		profile_timing.start("setup dose filter");
 		dose_filter_sum_of_squares = new float[image_stack[0].real_memory_allocated / 2];
 		ZeroFloatArray(dose_filter_sum_of_squares, image_stack[0].real_memory_allocated/2);
+		profile_timing.lap("setup dose filter");
 
+		// We don't want any copying of the timer, so just let them all have a pointer, only thread zero will do anything with it.
+		StopWatch* shared_ptr;
+		shared_ptr = &profile_timing;
 
-		#pragma omp parallel default(shared) num_threads(max_threads) private(image_counter, dose_filter, pixel_counter)
+		#pragma omp parallel default(shared) num_threads(max_threads) shared(shared_ptr) private(image_counter, dose_filter, pixel_counter)
 		{ // for omp
 
-
+		shared_ptr->start("setup dose filter");
 		dose_filter = new float[image_stack[0].real_memory_allocated / 2];
 		ZeroFloatArray(dose_filter, image_stack[0].real_memory_allocated/2);
 		float *thread_dose_filter_sum_of_squares = new  float[image_stack[0].real_memory_allocated / 2];
 		ZeroFloatArray(thread_dose_filter_sum_of_squares, image_stack[0].real_memory_allocated/2);
+		shared_ptr->lap("setup dose filter");
 
 		#pragma omp for
 		for (image_counter = first_frame - 1; image_counter < last_frame; image_counter++)
 		{
+			shared_ptr->start("calc dose filter");
 			my_electron_dose->CalculateDoseFilterAs1DArray(&image_stack[image_counter], dose_filter, (image_counter * exposure_per_frame) + pre_exposure_amount, ((image_counter + 1) * exposure_per_frame) + pre_exposure_amount);
-
+		 	shared_ptr->lap("calc dose filter");
 			// filter the image, and also calculate the sum of squares..
 
 
-
+			shared_ptr->start("apply dose filter");
 			for (pixel_counter = 0; pixel_counter < image_stack[image_counter].real_memory_allocated / 2; pixel_counter++)
 			{
 				image_stack[image_counter].complex_values[pixel_counter] *= dose_filter[pixel_counter];
 				thread_dose_filter_sum_of_squares[pixel_counter] += powf(dose_filter[pixel_counter], 2);
 				//if (image_counter == 65) wxPrintf("%f\n", dose_filter[pixel_counter]);
 			}
+			shared_ptr->lap("apply dose filter");
 		}
 
 		delete [] dose_filter;
 
 		// copy the local sum of squares to global
-
+		shared_ptr->start("copy dose filter sum of squares");
 		#pragma omp critical
 		{
 
@@ -694,11 +718,12 @@ bool UnBlurApp::DoCalculation()
 				dose_filter_sum_of_squares[pixel_counter] += thread_dose_filter_sum_of_squares[pixel_counter];
 			}
 		}
+		shared_ptr->lap("copy dose filter sum of squares"); 
 
 		delete [] thread_dose_filter_sum_of_squares;
 
 		} // end omp section
-
+		profile_timing.start("final sum");
 		for (image_counter = first_frame - 1; image_counter < last_frame; image_counter++)
 		{
 			sum_image.AddImage(&image_stack[image_counter]);
@@ -708,9 +733,11 @@ bool UnBlurApp::DoCalculation()
 				image_stack[image_counter].QuickAndDirtyWriteSlice(aligned_frames_filename, image_counter + 1);
 			}
 		}
+		profile_timing.lap("final sum");
 	}
 	else // just add them
 	{
+		profile_timing.start("final sum");
 		for (image_counter = first_frame - 1; image_counter < last_frame; image_counter++)
 		{
 			sum_image.AddImage(&image_stack[image_counter]);
@@ -720,6 +747,7 @@ bool UnBlurApp::DoCalculation()
 				image_stack[image_counter].QuickAndDirtyWriteSlice(aligned_frames_filename, image_counter + 1);
 			}
 		}
+		profile_timing.lap("final sum");
 	}
 
 
@@ -729,6 +757,7 @@ bool UnBlurApp::DoCalculation()
 
 	if (should_dose_filter == true && should_restore_power == true)
 	{
+		profile_timing.start("restore power");
 		for (pixel_counter = 0; pixel_counter < sum_image.real_memory_allocated / 2; pixel_counter++)
 		{
 			if (dose_filter_sum_of_squares[pixel_counter] != 0)
@@ -736,12 +765,14 @@ bool UnBlurApp::DoCalculation()
 				sum_image.complex_values[pixel_counter] /= sqrtf(dose_filter_sum_of_squares[pixel_counter]);
 			}
 		}
+		profile_timing.lap("restore power");
 	}
 
 	// do we need to write out the amplitude spectra
 
 	if (write_out_amplitude_spectrum == true)
 	{
+		profile_timing.start("write out amplitude spectrum");
 		Image current_power_spectrum;
 		current_power_spectrum.Allocate(sum_image.logical_x_dimension,sum_image.logical_y_dimension,true);
 
@@ -808,12 +839,14 @@ bool UnBlurApp::DoCalculation()
 		//current_power_spectrum.CosineRingMask(0.05,0.45, 0.05);
 		//average_spectrum->QuickAndDirtyWriteSlice("dbg_average_spectrum_before_conv.mrc",1);
 		current_power_spectrum.QuickAndDirtyWriteSlice(amplitude_spectrum_filename, 1,true);
+		profile_timing.lap("write out amplitude spectrum");
 	}
 
 	//  Shall we write out a scaled image?
 
 	if (write_out_small_sum_image == true)
 	{
+		profile_timing.start("write out small sum image");
 		// work out a good size..
 		int largest_dimension =  std::max(sum_image.logical_x_dimension, sum_image.logical_y_dimension);
 		float scale_factor = float(SCALED_IMAGE_SIZE) / float(largest_dimension);
@@ -825,10 +858,11 @@ bool UnBlurApp::DoCalculation()
 			sum_image.ClipInto(&buffer_image);
 			buffer_image.QuickAndDirtyWriteSlice(small_sum_image_filename, 1,true);
 		}
+		profile_timing.lap("write out small sum image");
 	}
 
 	// now we just need to write out the final sum..
-
+	profile_timing.start("write out sum image");
 	MRCFile output_file(output_filename, true);
 	sum_image.BackwardFFT();
 	sum_image.WriteSlice(&output_file, 1); // I made this change as the file is only used once, and this way it is not created until it is actually written, which is cleaner for cancelled / crashed jobs
@@ -837,11 +871,11 @@ bool UnBlurApp::DoCalculation()
 	sum_image.UpdateDistributionOfRealValues(&density_distribution);
 	output_file.SetDensityStatistics(density_distribution.GetMinimum(), density_distribution.GetMaximum(), density_distribution.GetSampleMean(), sqrtf(density_distribution.GetSampleVariance()));
 	output_file.CloseFile();
-
+	profile_timing.lap("write out sum image");
 
 	// fill the result..
 
-
+	profile_timing.start("fill result");
 	float *result_array = new float[number_of_input_images * 2];
 
 	if (is_running_locally == true)
@@ -854,7 +888,9 @@ bool UnBlurApp::DoCalculation()
 			temp_float[0] = x_shifts[image_counter] * output_pixel_size;
 			temp_float[1] = y_shifts[image_counter] * output_pixel_size;
 			shifts_file.WriteLine(temp_float);
-			wxPrintf("image #%li = %f, %f\n", image_counter, result_array[image_counter], result_array[image_counter + number_of_input_images]);
+      #ifdef PRINT_VERBOSE
+			  wxPrintf("image #%li = %f, %f\n", image_counter, result_array[image_counter], result_array[image_counter + number_of_input_images]);
+      #endif
 		}
 	}
 	else
@@ -867,7 +903,8 @@ bool UnBlurApp::DoCalculation()
 	}
 
 	my_result.SetResult(number_of_input_images * 2, result_array);
-
+	profile_timing.lap("fill result");
+	profile_timing.start("cleanup");
 	delete [] result_array;
 	delete [] x_shifts;
 	delete [] y_shifts;
@@ -878,16 +915,19 @@ bool UnBlurApp::DoCalculation()
 		delete my_electron_dose;
 		delete [] dose_filter_sum_of_squares;
 	}
-
-	overall_finish = wxDateTime::Now();
-
-	//SendInfo(wxString::Format("Timings for %s: Overall: %s; reading, gain, FT, resampling of stack: %s; initial ali: %s; main ali: %s; unbinned ali: %s\n",input_filename,(overall_finish-overall_start).Format(),(read_frames_finish-read_frames_start).Format(),(first_alignment_finish-first_alignment_start).Format(),(main_alignment_finish-main_alignment_start).Format(),(final_alignment_finish-final_alignment_start).Format()));
+	profile_timing.lap("cleanup");
+	unblur_timing.print_times();
+	profile_timing.print_times();
+	profile_timing_refinement_method.print_times();
 
 	return true;
 }
 
-void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_iterations, float unitless_bfactor, bool mask_central_cross, int width_of_vertical_line, int width_of_horizontal_line, float inner_radius_for_peak_search, float outer_radius_for_peak_search, float max_shift_convergence_threshold, float pixel_size, int number_of_frames_for_running_average, int savitzy_golay_window_size, int max_threads, float *x_shifts, float *y_shifts)
+void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_iterations, float unitless_bfactor, bool mask_central_cross, int width_of_vertical_line, int width_of_horizontal_line, float inner_radius_for_peak_search, float outer_radius_for_peak_search, float max_shift_convergence_threshold, float pixel_size, int number_of_frames_for_running_average, int savitzy_golay_window_size, int max_threads, float *x_shifts, float *y_shifts, StopWatch& profile_timing_refinement_method)
 {
+
+	profile_timing_refinement_method.mark_entry_or_exit_point();
+
 	long pixel_counter;
 	long image_counter;
 	int running_average_counter;
@@ -926,7 +966,7 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 	sum_of_images.Allocate(input_stack[0].logical_x_dimension, input_stack[0].logical_y_dimension, false);
 	sum_of_images.SetToConstant(0.0);
 
-
+	profile_timing_refinement_method.start("allocate running average");
 	if (number_of_frames_for_running_average > 1)
 	{
 		running_average_stack = new Image[number_of_images];
@@ -939,17 +979,18 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 		stack_for_alignment = running_average_stack;
 	}
 	else stack_for_alignment = input_stack;
+	profile_timing_refinement_method.lap("allocate running average");
 
 
 	// prepare the initial sum
-
+	profile_timing_refinement_method.start("prepare initial sum");
 	for (image_counter = 0; image_counter < number_of_images; image_counter++)
 	{
 		sum_of_images.AddImage(&input_stack[image_counter]);
 		current_x_shifts[image_counter] = 0;
 		current_y_shifts[image_counter] = 0;
 	}
-
+	profile_timing_refinement_method.lap("prepare initial sum");
 	// perform the main alignment loop until we reach a max shift less than wanted, or max iterations
 
 	for (iteration_counter = 1; iteration_counter <= max_iterations; iteration_counter++)
@@ -1000,7 +1041,7 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 		for (image_counter = 0; image_counter < number_of_images; image_counter++)
 		{
 			// prepare the sum reference by subtracting out the current image, applying a bfactor and masking central cross
-
+			profile_timing_refinement_method.start("prepare sum");
 			sum_of_images_minus_current.CopyFrom(&sum_of_images);
 			sum_of_images_minus_current.SubtractImage(&stack_for_alignment[image_counter]);
 			sum_of_images_minus_current.ApplyBFactor(unitless_bfactor);
@@ -1009,22 +1050,25 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 			{
 				sum_of_images_minus_current.MaskCentralCross(width_of_vertical_line, width_of_horizontal_line);
 			}
-
+			profile_timing_refinement_method.lap("prepare sum");
 			// compute the cross correlation function and find the peak
-
+				profile_timing_refinement_method.start("compute cross correlation");
 		    sum_of_images_minus_current.CalculateCrossCorrelationImageWith(&stack_for_alignment[image_counter]);
+				profile_timing_refinement_method.lap("compute cross correlation");
+				profile_timing_refinement_method.start("find peak");
 		    my_peak = sum_of_images_minus_current.FindPeakWithParabolaFit(inner_radius_for_peak_search, outer_radius_for_peak_search);
-
+				profile_timing_refinement_method.lap("find peak");
 			// update the shifts..
 
 			current_x_shifts[image_counter] = my_peak.x;
 			current_y_shifts[image_counter] = my_peak.y;
 		}
-
+			profile_timing_refinement_method.start("deallocate sum minus");
 			sum_of_images_minus_current.Deallocate();
+			profile_timing_refinement_method.lap("deallocate sum minus");
 		} // end omp
 		// smooth the shifts
-
+		profile_timing_refinement_method.start("smooth shifts");
 		x_shifts_curve.ClearData();
 		y_shifts_curve.ClearData();
 
@@ -1033,7 +1077,9 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 			x_shifts_curve.AddPoint(image_counter, x_shifts[image_counter] + current_x_shifts[image_counter]);
 			y_shifts_curve.AddPoint(image_counter, y_shifts[image_counter] + current_y_shifts[image_counter]);
 
-			wxPrintf("Before = %li : %f, %f\n", image_counter, x_shifts[image_counter] + current_x_shifts[image_counter], y_shifts[image_counter] + current_y_shifts[image_counter]);
+      #ifdef PRINT_VERBOSE
+			  wxPrintf("Before = %li : %f, %f\n", image_counter, x_shifts[image_counter] + current_x_shifts[image_counter], y_shifts[image_counter] + current_y_shifts[image_counter]);
+      #endif        
 		}
 
 
@@ -1050,7 +1096,10 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 				{
 					current_x_shifts[image_counter] = x_shifts_curve.polynomial_fit[image_counter] - x_shifts[image_counter];
 					current_y_shifts[image_counter] = y_shifts_curve.polynomial_fit[image_counter] - y_shifts[image_counter];
-					wxPrintf("After poly = %li : %f, %f\n", image_counter, x_shifts_curve.polynomial_fit[image_counter], y_shifts_curve.polynomial_fit[image_counter]);
+
+          #ifdef PRINT_VERBOSE
+				  	wxPrintf("After poly = %li : %f, %f\n", image_counter, x_shifts_curve.polynomial_fit[image_counter], y_shifts_curve.polynomial_fit[image_counter]);
+          #endif
 				}
 			}
 
@@ -1068,12 +1117,15 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 				{
 					current_x_shifts[image_counter] = x_shifts_curve.savitzky_golay_fit[image_counter] - x_shifts[image_counter];
 					current_y_shifts[image_counter] = y_shifts_curve.savitzky_golay_fit[image_counter] - y_shifts[image_counter];
-					wxPrintf("After SG = %li : %f, %f\n", image_counter, x_shifts_curve.savitzky_golay_fit[image_counter], y_shifts_curve.savitzky_golay_fit[image_counter]);
+
+          #ifdef PRINT_VERBOSE
+					  wxPrintf("After SG = %li : %f, %f\n", image_counter, x_shifts_curve.savitzky_golay_fit[image_counter], y_shifts_curve.savitzky_golay_fit[image_counter]);
+          #endif
 				}
 			}
 
 		}
-
+		profile_timing_refinement_method.lap("smooth shifts");
 
 
 
@@ -1096,16 +1148,19 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 		#pragma omp parallel for default(shared) num_threads(max_threads) private(image_counter)
 		for (image_counter = 0; image_counter < number_of_images; image_counter++)
 		{
+			profile_timing_refinement_method.start("shift image");
 			input_stack[image_counter].PhaseShift(current_x_shifts[image_counter], current_y_shifts[image_counter], 0.0);
 
 			x_shifts[image_counter] += current_x_shifts[image_counter];
 			y_shifts[image_counter] += current_y_shifts[image_counter];
+			profile_timing_refinement_method.lap("shift image");
 		}
 
 		// check to see if the convergence criteria have been reached and return if so
 
 		if (iteration_counter >= max_iterations || max_shift <= max_shift_convergence_threshold)
 		{
+			profile_timing_refinement_method.start("cleanup");
 			wxPrintf("returning, iteration = %li, max_shift = %f\n", iteration_counter, max_shift);
 			delete [] current_x_shifts;
 			delete [] current_y_shifts;
@@ -1114,6 +1169,8 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 			{
 				delete [] running_average_stack;
 			}
+			profile_timing_refinement_method.lap("cleanup");
+			profile_timing_refinement_method.mark_entry_or_exit_point();
 			return;
 		}
 		else
@@ -1123,15 +1180,17 @@ void unblur_refine_alignment(Image *input_stack, int number_of_images, int max_i
 		}
 
 		// going to be doing another round so we need to make the new sum..
-
+		profile_timing_refinement_method.start("remake sum");
 		sum_of_images.SetToConstant(0.0);
 
 		for (image_counter = 0; image_counter < number_of_images; image_counter++)
 		{
 			sum_of_images.AddImage(&input_stack[image_counter]);
 		}
-
+		profile_timing_refinement_method.lap("remake sum");
 	}
+	profile_timing_refinement_method.mark_entry_or_exit_point();
+
 }
 
 

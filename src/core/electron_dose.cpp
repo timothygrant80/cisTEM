@@ -82,16 +82,16 @@ void ElectronDose::CalculateDoseFilterAs1DArray(Image *ref_image, float *filter_
   const float reduced_fourier_voxel_size = ref_image->fourier_voxel_size_x / pixel_size;
   // The spatial frequency is calculated as sqrt(x^2 + y^2 + z^2)/pixel_size.
   // To remove the sqrt call, we square the pixel size to move it inside, and then absorb the sqrt i.e. () ^ 1/2 into the exponent critical_dose_b -> critical_dose_b / 2
-  pixel_size *= pixel_size;
+  float pixel_size_sq = pixel_size * pixel_size;
 	for (k = 0; k <= ref_image->physical_upper_bound_complex_z; k++)
 	{
 		z = ref_image->ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * ref_image->fourier_voxel_size_z;
-		z = (z*z/pixel_size);
+		z = (z*z/pixel_size_sq);
 
 		for (j = 0; j <= ref_image->physical_upper_bound_complex_y; j++)
 		{
 			y = ref_image->ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * ref_image->fourier_voxel_size_y;
-			y = (y*y/pixel_size);
+			y = (y*y/pixel_size_sq);
 
 			for (i = 0; i <= ref_image->physical_upper_bound_complex_x; i++)
 			{
@@ -122,18 +122,18 @@ void ElectronDose::CalculateCummulativeDoseFilterAs1DArray(Image *ref_image, flo
   const float reduced_fourier_voxel_size = ref_image->fourier_voxel_size_x / pixel_size;
   // The spatial frequency is calculated as sqrt(x^2 + y^2 + z^2)/pixel_size.
   // To remove the sqrt call, we square the pixel size to move it inside, and then absorb the sqrt i.e. () ^ 1/2 into the exponent critical_dose_b -> critical_dose_b / 2
-  pixel_size *= pixel_size;
+  float pixel_size_sq = pixel_size * pixel_size;
 
 	for (k = 0; k <= ref_image->physical_upper_bound_complex_z; k++)
 	{
 		z = ref_image->ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * ref_image->fourier_voxel_size_z;
-		z = (z*z/pixel_size);
+		z = (z*z/pixel_size_sq);
 
 
 		for (j = 0; j <= ref_image->physical_upper_bound_complex_y; j++)
 		{
 			y = ref_image->ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * ref_image->fourier_voxel_size_y;
-			y = (y*y/pixel_size);
+			y = (y*y/pixel_size_sq);
 
 			for (i = 0; i <= ref_image->physical_upper_bound_complex_x; i++)
 			{

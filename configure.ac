@@ -233,6 +233,19 @@ AC_ARG_ENABLE(samples, [  --enable-samples      Compile with samples [[default=n
   ]) 
 AM_CONDITIONAL([ENABLESAMPLES_AM], [test x$want_samples = xtrue])
 
+# Use fine grained profiling
+
+want_profiling="no"  
+AC_ARG_ENABLE(profiling, [  --enable-profiling      Include fine-grained profiling [[default=no]]],[
+  if test "$enableval" = yes; then
+    CXXFLAGS="$CXXFLAGS -DPROFILING"
+    CPPFLAGS="$CPPFLAGS -DPROFILING"
+  	want_profiling="true"
+  	AC_MSG_NOTICE([Compiling with fine-grained profiling])	
+  fi
+  ]) 
+AM_CONDITIONAL([ENABLEPROFILING_AM], [test x$want_profiling = xtrue])
+
 # experimental
 compile_experimental="false"
 AC_ARG_ENABLE(experimental, AS_HELP_STRING([--enable-experimental],[Compile with experimental [default=no]]),[

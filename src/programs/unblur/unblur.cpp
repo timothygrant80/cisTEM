@@ -1,9 +1,8 @@
 #include "../../core/core_headers.h"
 
 // The timing that unblur originally tracks is always on, by direct reference to cistem_timer::StopWatch
-// The profiling for development is under conrtol of the using declarations below. In principle, the HYPOTHETICAL_CONTROL_OVER_TIMING could be a configure time option.
-#define HYPOTHETICAL_CONTROL_OVER_TIMING
-#ifdef HYPOTHETICAL_CONTROL_OVER_TIMING
+// The profiling for development is under conrtol of --enable-profiling. 
+#ifdef PROFILING
 using namespace cistem_timer;
 #else
 #define PRINT_VERBOSE

@@ -4,7 +4,7 @@
 #
 # Johannes Elferich, December 2021
 #
-
+set -e 
 print_help() {
   cat <<DOC
    
@@ -55,7 +55,7 @@ parse_params() {
 
 parse_params "$@"
 
-$cisTEM_path/console_test
+# $cisTEM_path/console_test
 
 # TODO: Provide more realistic benchmark (Maybe montage hiv image together and simulate ctf(?))
 

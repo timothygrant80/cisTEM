@@ -39,6 +39,7 @@ jobs:
       run: |
         cd build/icpc
         make -j4
+        cp ../../scripts/testing/test_and_benchmark.sh src/
     - name: clean up
       run: |
         cd build/icpc
@@ -65,6 +66,10 @@ jobs:
       run: |
         chmod +x console_test
         ./console_test 
+    - name: run benchmark
+      run: |
+        chmod +x test_and_benchmark.sh
+        ./test_and_benchmark.sh
     - name: Create image artifact
       uses: actions/upload-artifact@v2
       with: 

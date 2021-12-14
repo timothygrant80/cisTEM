@@ -69,7 +69,7 @@ jobs:
     - name: run benchmark
       run: |
         chmod +x test_and_benchmark.sh
-        ./test_and_benchmark.sh
+        ./test_and_benchmark.sh ./
     - name: Create image artifact
       uses: actions/upload-artifact@v2
       with: 

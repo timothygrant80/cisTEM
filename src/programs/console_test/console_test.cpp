@@ -28,7 +28,7 @@
 
 
 class
-MyTestApp : public wxAppConsole
+MyTestApp : public MyApp //public wxAppConsole
 {
 	wxString hiv_image_80x80x1_filename;
 	wxString hiv_images_80x80x10_filename;
@@ -37,9 +37,12 @@ MyTestApp : public wxAppConsole
 	wxString temp_directory;
 
 	public:
-		virtual bool OnInit();
+    // We need DoCalculation so we can have a bool return type for automated testing and a noop DoInteractiveUserInput to allow it to run from the console.
+		bool DoCalculation();
+    void DoInteractiveUserInput();
 
 		bool test_has_passed;
+    bool all_tests_have_passed;
 
 		void TestMRCFunctions();
 		void TestFFTFunctions();
@@ -53,6 +56,7 @@ MyTestApp : public wxAppConsole
 		void TestClipIntoFourier();
 		void TestMaskCentralCross();
 		void TestStarToBinaryFileConversion();
+    void TestElectronExposureFilter();
 
 		void BeginTest(const char *test_name);
 		void EndTest();
@@ -66,7 +70,12 @@ MyTestApp : public wxAppConsole
 
 IMPLEMENT_APP(MyTestApp)
 
-bool MyTestApp::OnInit()
+void MyTestApp::DoInteractiveUserInput()
+{
+  // noop
+}
+
+bool MyTestApp::DoCalculation()
 {
 	wxPrintf("\n\n\n     **   ");
 	if (OutputIsAtTerminal() == true) wxPrintf(ANSI_UNDERLINE "ProjectX Library Tester" ANSI_UNDERLINE_OFF);
@@ -82,6 +91,8 @@ bool MyTestApp::OnInit()
 
 	//PrintTitle("Basic I/O Functions");
 
+  all_tests_have_passed = true;
+
 	TestMRCFunctions();
 	TestImageArithmeticFunctions();
 	TestFFTFunctions();
@@ -94,10 +105,12 @@ bool MyTestApp::OnInit()
 	TestClipIntoFourier();
 	TestMaskCentralCross();
 	TestStarToBinaryFileConversion();
-
+  TestElectronExposureFilter();
 
 	wxPrintf("\n\n\n");
-	return false;
+
+  if ( ! all_tests_have_passed ) std::exit(-1);
+  else return 0;
 }
 
 
@@ -416,6 +429,70 @@ void MyTestApp::TestStarToBinaryFileConversion()
 	{
 		if (original_star_file[byte_counter] != star_file_from_binary_file[byte_counter]) FailTest;
 	}
+
+	EndTest();
+}
+
+
+void MyTestApp::TestElectronExposureFilter()
+{
+	BeginTest("Test Electron Exposure Filter");
+
+/*
+  Test exposure filter for a simple square image size, over all voltages and three pixel sizes.
+  The "ground truth" values are taken from a print out using the code for electron_dose.* from commit 
+  cdd0c04e984412661c983ab7176954093b502ad5 Dec 9, 2021
+  using this line in the inner loop (once for odd once for even)
+    for (auto & indx : indx_even)
+    {
+        wxPrintf("%3.9f, ", dose_filter_odd[indx]);
+    }
+*/
+  const int size_small = 1024;
+  
+  std::vector<float> accelerating_voltage_vector = { 300.f, 200.f, 100.f}; // only three supported values.
+  std::vector<float> pixel_size_vector = { 0.72, 1.0, 2.1 }; // values not chosen for any  good reason.
+  std::vector<int>   indx_even = { 0, 13, size_small / 3, size_small - 1};
+  std::vector<int>   indx_odd  = { 0, 13, (size_small+1) / 3, size_small};
+
+  std::vector<float> ground_truth_even= {1.000000000, 0.929921567, 0.017324856, 0.010133515, 1.000000000, 0.958591580, 0.031609546, 0.015432503, 1.000000000, 0.987710178, 0.155882418, 0.065504745, 1.000000000, 0.913183212, 0.006285460, 0.003215143, 1.000000000, 0.948510230, 0.013328240, 0.005439333, 1.000000000, 0.984661400, 0.097948194, 0.033139121, 1.000000000, 0.872345626, 0.000488910, 0.000178414, 1.000000000, 0.923584640, 0.001513943, 0.000393374, 1.000000000, 0.977023780, 0.030387951, 0.005955920};
+  std::vector<float> ground_truth_odd = {1.000000000, 0.930029809, 0.017352197, 0.010144006, 1.000000000, 0.958656907, 0.031672075, 0.015455280, 1.000000000, 0.987729967, 0.156189293, 0.065646693, 1.000000000, 0.913316071, 0.006297863, 0.003219303, 1.000000000, 0.948590994, 0.013361209, 0.005449366, 1.000000000, 0.984686077, 0.098189279, 0.033228900, 1.000000000, 0.872536480, 0.000490361, 0.000178761, 1.000000000, 0.923702955, 0.001519577, 0.000394466, 1.000000000, 0.977060616, 0.030500494, 0.005980202};
+  int ground_truth_counter = 0;
+  ElectronDose* my_electron_dose;
+
+
+  Image test_image_small_even,test_image_small_odd;
+  test_image_small_even.Allocate(size_small, size_small, true);
+  test_image_small_odd.Allocate(size_small+1, size_small+1, true);
+
+	float* dose_filter_even = new float[test_image_small_even.real_memory_allocated / 2];
+	float* dose_filter_odd  = new float[test_image_small_odd.real_memory_allocated / 2];
+
+  for (auto & acceleration_voltage : accelerating_voltage_vector)
+  {
+    for (auto & pixel_size : pixel_size_vector)
+    {
+      my_electron_dose = new ElectronDose(acceleration_voltage, pixel_size);
+
+      ZeroFloatArray(dose_filter_even, test_image_small_even.real_memory_allocated/2);
+      ZeroFloatArray(dose_filter_odd, test_image_small_odd.real_memory_allocated/2);
+
+			my_electron_dose->CalculateDoseFilterAs1DArray(&test_image_small_even, dose_filter_even, 15.f, 30.f);
+      my_electron_dose->CalculateDoseFilterAs1DArray(&test_image_small_odd, dose_filter_odd, 15.f, 30.f);
+
+      for (auto & indx : indx_even)
+      {
+        if ( ! FloatsAreAlmostTheSame(dose_filter_even[indx], ground_truth_even[ground_truth_counter]) ) {wxPrintf("Failed for kv,pix,ev: %3.f %3.3f, values %f %f\n",acceleration_voltage,pixel_size,dose_filter_even[indx], ground_truth_even[ground_truth_counter]);FailTest;}
+        if ( ! FloatsAreAlmostTheSame(dose_filter_odd[indx], ground_truth_odd[ground_truth_counter]) ) {wxPrintf("Failed for kv,pix,od: %3.f %3.3f, values %f %f\n",acceleration_voltage,pixel_size,dose_filter_odd[indx], ground_truth_odd[ground_truth_counter]);FailTest;}
+        ground_truth_counter++;
+      }
+
+      delete my_electron_dose;
+    }
+  }
+  
+  delete [] dose_filter_even;
+  delete [] dose_filter_odd;
 
 	EndTest();
 }
@@ -1055,7 +1132,15 @@ void MyTestApp::BeginTest(const char *test_name)
 
 void MyTestApp::EndTest()
 {
-	if (test_has_passed == true) PrintResult(true);
+	if (test_has_passed == true) 
+  {
+    PrintResult(true);
+  }
+  else
+  {
+    // Sets the final return value, used in auto build &
+    all_tests_have_passed = false;
+  }
 }
 
 void MyTestApp::PrintResultWorker(bool passed, int line)

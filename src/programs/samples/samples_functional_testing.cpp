@@ -2,7 +2,9 @@
 
 #include "../../core/core_headers.h"
 #include "0_Simple/disk_io_image.cpp"
+#ifdef ENABLEGPU
 #include "1_GPU_comparison/cpu_vs_gpu.cpp"
+#endif
 
 #include "classes/TestFile.cpp"
 #include "classes/EmbeddedTestFile.cpp"

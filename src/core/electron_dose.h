@@ -8,6 +8,7 @@ public:
 	float critical_dose_a;
 	float critical_dose_b;
 	float critical_dose_c;
+  float reduced_critical_dose_b;
 
 	float voltage_scaling_factor;
 
@@ -29,7 +30,7 @@ public:
 
 inline float ElectronDose::ReturnCriticalDose(float spatial_frequency)
 {
-	return (critical_dose_a * powf(spatial_frequency, critical_dose_b) + critical_dose_c) * voltage_scaling_factor;
+	return (critical_dose_a * powf(spatial_frequency, reduced_critical_dose_b) + critical_dose_c) * voltage_scaling_factor;
 }
 
 

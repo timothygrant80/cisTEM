@@ -13,9 +13,6 @@
 #define ENABLEGPU true
 #endif
 
-#ifndef HEAVY_ERROR_CHECKING
-#define HEAVY_ERROR_CHECKING true
-#endif
 
 #include "../core/core_headers.h"
 
@@ -26,31 +23,24 @@ const int MAX_GPU_COUNT = 32;
 #define gMin(a,b) (((a) < (b)) ? (a) : (b))
 #define gMax(a,b) (((a) > (b)) ? (a) : (b))
 
-#define checkNppErrors(npp_stat, ...) {if (npp_stat != NPP_SUCCESS) { wxPrintf("NPP_CHECK_NPP - npp_stat = %s at line %d in file %s\n", _cudaGetErrorEnum(npp_stat), __LINE__,__FILE__); DEBUG_ABORT}}
-#define checkCudaEvent(event_handle, ...) {if (cudaEventQuery(event_handle) != cudaSuccess) {return false; else return true;}}
 
-#ifdef DEBUG_MODE
-#define cudaErr(err, ...) { checkCudaErrors(err);}
-#define nppErr(err, ...) { checkNppErrors(err);}
-#else
+
+#ifndef ENABLE_GPU_DEBUG
 #define cudaErr(err, ...) { err; }
 #define nppErr(err, ...) { err; }
-#endif
-
-#if HEAVY_ERROR_CHECKING
-#define postcheck { cudaError_t error = cudaStreamSynchronize(cudaStreamPerThread); cudaErr2(error); };  //if (error != cudaSuccess) { std::cerr << cudaGetErrorString(error) << std::endl; MyPrintWithDetails(""); exit(-1);} 
-#define cudaErr2(error) { auto status = static_cast<cudaError_t>(error); if (status != cudaSuccess) { std::cerr << cudaGetErrorString(status) << std::endl; MyPrintWithDetails(""); exit(-1); } }; 
-#define precheck { cudaErr2(cudaGetLastError()); } 
-#define checkErrorsAndTimingWithSynchronization(input_stream) { cudaError_t cuda_error = cudaStreamSynchronize(input_stream); if (cuda_error != cudaSuccess) {wxPrintf("Sync Check error = %s at line %d in file %s\n", _cudaGetErrorEnum(cuda_error), __LINE__, __FILE__);} };
-#define pre_checkErrorsAndTimingWithSynchronization(input_sream) { checkCudaErrors(cudaGetLastError()); }
+#define postcheck 
+#define precheck 
 #else
-#define checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
-#define pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+#define nppErr(npp_stat)  {if (npp_stat != NPP_SUCCESS) { wxPrintf("NPP_CHECK_NPP - npp_stat = %s at line %d in file %s\n", _cudaGetErrorEnum(npp_stat), __LINE__,__FILE__); DEBUG_ABORT} };
+#define cudaErr(error) { auto status = static_cast<cudaError_t>(error); if (status != cudaSuccess) { std::cerr << cudaGetErrorString(status) << " :-> "; MyFFTPrintWithDetails(""); DEBUG_ABORT} };
+#define postcheck { cudaErr(cudaPeekAtLastError()); cudaError_t error = cudaStreamSynchronize(cudaStreamPerThread); cudaErr(error); };
+#define precheck { cudaErr(cudaGetLastError()); }
 #endif
 
 // Complex data type
 typedef float2 Complex;
 static __device__ __host__ inline Complex ComplexAdd(Complex, Complex);
+static __device__ __host__ inline void ComplexScale(Complex*, float);
 static __device__ __host__ inline Complex ComplexScale(Complex&, float&);
 static __device__ __host__ inline Complex ComplexMul(Complex, Complex);
 static __device__ __host__ inline Complex ComplexConjMul(Complex, Complex);
@@ -77,6 +67,13 @@ static __device__ __host__  inline Complex ComplexScale(Complex &a, float &s)
     c.x = s * a.x;
     c.y = s * a.y;
     return c;
+}
+
+// Complex scale
+static __device__ __host__  inline void ComplexScale(Complex* a, float s)
+{ 
+    a->x *= s;
+    a->y *= s;
 }
 
 // Complex multiplication

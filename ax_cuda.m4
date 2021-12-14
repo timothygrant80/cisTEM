@@ -100,10 +100,10 @@ if test "$want_cuda" = "yes" ; then
 	if test -n "$cuda_home_path"
 	then
 	  CUDA_CFLAGS="-I$cuda_home_path/include  -I$cuda_home_path/samples/common/inc/"
-      CUDA_LIBS="-L$cuda_home_path/$libdir -lcufft_static -lnppial_static -lnppist_static -lnppc_static -lcurand_static -lculibos -lcudart_static -lrt"
+      CUDA_LIBS="-L$cuda_home_path/$libdir -lcufft_static -lnppial_static -lnppist_static -lnppc_static -lnppidei_static -lcurand_static -lculibos -lcudart_static -lrt"
 	else
 	  CUDA_CFLAGS="-I/usr/local/cuda/include  -I/usr/local/cuda/samples/common/inc/"
-	  CUDA_LIBS="-L/usr/local/cuda/$libdir -lcufft_static -lnppial_static -lnppist_static -lnppc_static -lcurand_static -lculibos -lcudart_static -lrt"
+	  CUDA_LIBS="-L/usr/local/cuda/$libdir -lcufft_static -lnppial_static -lnppist_static -lnppc_static -lnppidei_static -lcurand_static -lculibos -lcudart_static -lrt"
 	fi
 
 
@@ -249,7 +249,7 @@ else
 		
 fi
 
-if test "x$is_cuda_ge_11" -eq "x1" ; then
+if test "x$is_cuda_ge_11" == "x1" ; then
   AC_MSG_NOTICE([CUDA >= 11.0, enabling --extra-device-vectorization])
   NVCCFLAGS+=" --extra-device-vectorization -std=c++17" 
 else

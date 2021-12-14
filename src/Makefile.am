@@ -207,9 +207,8 @@ noinst_HEADERS = core/asset_group.h \
                  gui/icons/refine_template_icon.cpp \
                  programs/console_test/hiv_image_80x80x1.cpp \
                  programs/console_test/hiv_images_shift_noise_80x80x10.cpp \
-                 programs/console_test/sine_128x128x1.cpp \
-                 programs/simulate/wave_function_propagator.h \
-                 programs/simulate/scattering_potential.h 
+                 programs/console_test/sine_128x128x1.cpp 
+
                  
 if EXPERIMENTAL_AM
 noinst_HEADERS += 	gui/MatchTemplatePanel.h \
@@ -218,22 +217,22 @@ noinst_HEADERS += 	gui/MatchTemplatePanel.h \
                     gui/AtomicCoordinatesAssetPanel.h \
                     gui/AtomicCoordinatesChooserDialog.h \
                     gui/AtomicCoordinatesImportDialog.h 
+
 endif      
 
 if EXPERIMENTAL_AM
 noinst_HEADERS += core/water.h \
-                  core/pdb.h 
+                  core/pdb.h \
+                  programs/simulate/wave_function_propagator.h \
+                  programs/simulate/scattering_potential.h 
 endif
 
 if ENABLESAMPLES_AM
 noinst_HEADERS +=  programs/samples/samples_functional_testing.h 
+noinst_HEADERS +=  programs/samples/common/helper_functions.h programs/samples/common/embedded_test_file.h programs/samples/common/numeric_test_file.h
+noinst_HEADERS +=  programs/samples/common/common.h programs/samples/0_simple/simple.h programs/samples/1_cpu_gpu_comparison/cpu_gpu_comparison.h
 endif
 	
-
-if EXPERIMENTAL_AM
-noinst_HEADERS += core/water.h \
-                  core/pdb.h 
-endif
 
 noinst_LIBRARIES = libcore.a libguicore.a
 
@@ -689,7 +688,9 @@ combine_stacks_by_star_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 combine_stacks_by_star_LDADD = libcore.a $(WX_LIBS_BASE)
 
 if ENABLESAMPLES_AM
-samples_functional_testing_SOURCES = programs/samples/samples_functional_testing.cpp
+samples_functional_testing_SOURCES  = programs/samples/samples_functional_testing.cpp 
+samples_functional_testing_SOURCES += programs/samples/common/helper_functions.cpp programs/samples/common/embedded_test_file.cpp programs/samples/common/numeric_test_file.cpp
+samples_functional_testing_SOURCES += programs/samples/0_simple/disk_io_image.cpp  programs/samples/1_cpu_gpu_comparison/resize_comparison.cpp 
 samples_functional_testing_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 samples_functional_testing_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 if ENABLEGPU_AM 

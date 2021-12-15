@@ -230,7 +230,10 @@ endif
 if ENABLESAMPLES_AM
 noinst_HEADERS +=  programs/samples/samples_functional_testing.h 
 noinst_HEADERS +=  programs/samples/common/helper_functions.h programs/samples/common/embedded_test_file.h programs/samples/common/numeric_test_file.h
-noinst_HEADERS +=  programs/samples/common/common.h programs/samples/0_simple/simple.h programs/samples/1_cpu_gpu_comparison/cpu_gpu_comparison.h
+noinst_HEADERS +=  programs/samples/common/common.h programs/samples/0_simple/simple.h 
+if ENABLEGPU_AM
+noinst_HEADERS += programs/samples/1_cpu_gpu_comparison/cpu_gpu_comparison.h
+endif
 endif
 	
 
@@ -690,7 +693,10 @@ combine_stacks_by_star_LDADD = libcore.a $(WX_LIBS_BASE)
 if ENABLESAMPLES_AM
 samples_functional_testing_SOURCES  = programs/samples/samples_functional_testing.cpp 
 samples_functional_testing_SOURCES += programs/samples/common/helper_functions.cpp programs/samples/common/embedded_test_file.cpp programs/samples/common/numeric_test_file.cpp
-samples_functional_testing_SOURCES += programs/samples/0_simple/disk_io_image.cpp  programs/samples/1_cpu_gpu_comparison/resize_comparison.cpp 
+samples_functional_testing_SOURCES += programs/samples/0_simple/disk_io_image.cpp  
+if ENABLEGPU_AM
+samples_functional_testing_SOURCES += programs/samples/1_cpu_gpu_comparison/resize_comparison.cpp 
+endif
 samples_functional_testing_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 samples_functional_testing_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 if ENABLEGPU_AM 

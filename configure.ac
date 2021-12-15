@@ -221,14 +221,14 @@ AS_HELP_STRING([--with-fftw-dir=DIR],[Declare the root directory of fftw3, if it
 ])
 
 # Compile programs/samples/sample_functional_test.cpp 
-
+want_samples="no"
 AC_ARG_ENABLE(samples, AS_HELP_STRING([--enable-samples],[Compile with samples [default=no]]),[
   if test "$enableval" = yes; then
-    AM_CONDITIONAL([ENABLESAMPLES_AM], [true])
+    want_samples="yes"
   	AC_MSG_NOTICE([Compiling sample functional tests])	
   fi
   ]) 
-
+AM_CONDITIONAL([ENABLESAMPLES_AM], [test "$want_samples" = "yes"])
 
 AC_ARG_ENABLE(gpu-debug, AS_HELP_STRING([--enable-gpu-debug],[Compile heavy synchronous checking [default=no]]),[
   if test "$enableval" = yes; then

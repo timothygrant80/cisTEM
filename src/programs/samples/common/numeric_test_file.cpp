@@ -1,11 +1,18 @@
-class NumericTestFile : public TestFile {
-public:
-  NumericTestFile(wxString path);
-};
 
-NumericTestFile::NumericTestFile(wxString path) {
+#ifdef ENABLEGPU
+  #include "../../../gpu/gpu_core_headers.h"
+#else
+  #include "../../../core/core_headers.h"
+#endif
+
+#include "helper_functions.h"
+#include "numeric_test_file.h"
+
+NumericTestFile::NumericTestFile(wxString path) 
+{
+  
   const char *filename = path.mb_str();
-  wxPrintf("\t%s\n",filename);
+  wxPrintf("  %s\n",filename);
   FILE *output_file = NULL;
   output_file = fopen(filename, "wb+");
 

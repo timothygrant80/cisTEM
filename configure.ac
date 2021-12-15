@@ -221,17 +221,14 @@ AS_HELP_STRING([--with-fftw-dir=DIR],[Declare the root directory of fftw3, if it
 ])
 
 # Compile programs/samples/sample_functional_test.cpp 
-
-want_samples="no"  
-AC_ARG_ENABLE(samples, [  --enable-samples      Compile with samples [[default=no]]],[
+want_samples="no"
+AC_ARG_ENABLE(samples, AS_HELP_STRING([--enable-samples],[Compile with samples [default=no]]),[
   if test "$enableval" = yes; then
-    CXXFLAGS="$CXXFLAGS -DSAMPLES"
-    CPPFLAGS="$CPPFLAGS -DSAMPLES"
-  	want_samples="true"
+    want_samples="yes"
   	AC_MSG_NOTICE([Compiling sample functional tests])	
   fi
   ]) 
-AM_CONDITIONAL([ENABLESAMPLES_AM], [test x$want_samples = xtrue])
+AM_CONDITIONAL([ENABLESAMPLES_AM], [test "$want_samples" = "yes"])
 
 # Use fine grained profiling
 
@@ -246,6 +243,13 @@ AC_ARG_ENABLE(profiling, [  --enable-profiling      Include fine-grained profili
   ]) 
 AM_CONDITIONAL([ENABLEPROFILING_AM], [test x$want_profiling = xtrue])
 
+AC_ARG_ENABLE(gpu-debug, AS_HELP_STRING([--enable-gpu-debug],[Compile heavy synchronous checking [default=no]]),[
+  if test "$enableval" = yes; then
+    AC_DEFINE([ENABLE_GPU_DEBUG])
+  	AC_MSG_NOTICE([Compiling with synchronizing debug checks for GPU code])	
+  fi
+  ]) 
+  
 # experimental
 compile_experimental="false"
 AC_ARG_ENABLE(experimental, AS_HELP_STRING([--enable-experimental],[Compile with experimental [default=no]]),[

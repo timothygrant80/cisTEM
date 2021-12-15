@@ -120,6 +120,7 @@ void MyApp::OnEventLoopEnter(wxEventLoopBase *	loop)
 			stopwatch.Start();
 			DoCalculation();
 			total_milliseconds_spent_on_threads += stopwatch.Time();
+      MyInteractiveProgramCleanup();
 			fftwf_cleanup(); // this is needed to stop valgrind reporting memory leaks..
 			exit(0);
 		}

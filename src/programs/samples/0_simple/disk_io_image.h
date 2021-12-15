@@ -51,6 +51,10 @@
 
 // TODO call end test and ensure the printout indicates this test (disk_io_image) has pass/failed.
 
+void PrintResult(wxString testName, bool result);
+bool DoDiskIOImageTests(wxString hiv_images_80x80x10_filename, wxString temp_directory);
+void TestResult(wxString testName, bool result);
+bool DoDiskIOImageTests(wxString hiv_images_80x80x10_filename, wxString temp_directory);
 
 
 

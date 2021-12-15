@@ -107,7 +107,7 @@ Histogram::~Histogram()
 
 	if (is_allocated_histogram)
 	{
-		cudaErr(cudaFree(histogram));
+		cudaErr(cudaFree(histogram))
 		cudaErr(cudaFree(cummulative_histogram));
 	}
 
@@ -172,9 +172,9 @@ void Histogram::AddToHistogram(GpuImage &input_image)
 
 
 
-	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+	precheck
 	histogram_smem_atomics<<< gridDims_img,threadsPerBlock_img, (histogram_n_bins)*sizeof(int), input_image.nppStream.hStream>>>((const __half*)input_image.real_values_16f, input_image.dims, histogram, histogram_n_bins,histogram_min,histogram_step,max_padding);
-	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+	postcheck
 
 
 }
@@ -182,9 +182,9 @@ void Histogram::AddToHistogram(GpuImage &input_image)
 void Histogram::Accumulate(GpuImage &input_image)
 {
 	cudaErr(cudaStreamSynchronize(input_image.nppStream.hStream));
-	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+	precheck
 	histogram_final_accum<<< gridDims_accum_array,threadsPerBlock_accum_array, 0, input_image.nppStream.hStream>>>(histogram, cummulative_histogram, histogram_n_bins,gridDims_img.x*gridDims_img.y);
-	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+	postcheck
 }
 
 void Histogram::CopyToHostAndAdd(long* array_to_add_to)

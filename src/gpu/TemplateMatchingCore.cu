@@ -376,7 +376,7 @@ void TemplateMatchingCore::RunInnerLoop(Image &projection_filter, float c_pixel,
 void TemplateMatchingCore::MipPixelWise( __half psi, __half theta, __half phi)
 {
 
-	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+	precheck
 
 
 	// N*
@@ -384,7 +384,7 @@ void TemplateMatchingCore::MipPixelWise( __half psi, __half theta, __half phi)
 
 
 	MipPixelWiseKernel<< <d_padded_reference.gridDims, d_padded_reference.threadsPerBlock,0,cudaStreamPerThread>> >((__half *)d_padded_reference.real_values_16f, my_peaks,(int)d_padded_reference.real_memory_allocated , psi,theta, phi, my_stats, my_new_peaks);
-	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+	postcheck
 
 }
 
@@ -432,13 +432,13 @@ __global__ void MipToImageKernel(const __half2*, const __half2* my_new_peaks, co
 void TemplateMatchingCore::MipToImage()
 {
 
-	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+	precheck
 	dim3 threadsPerBlock = dim3(1024, 1, 1);
 	dim3 gridDims = dim3((d_max_intensity_projection.real_memory_allocated + threadsPerBlock.x - 1) / threadsPerBlock.x,1,1);
 
 	MipToImageKernel<< <gridDims, threadsPerBlock,0,cudaStreamPerThread>> >(my_peaks, my_new_peaks, d_max_intensity_projection.real_memory_allocated,
 			d_max_intensity_projection.real_values_gpu, d_best_psi.real_values_gpu, d_best_theta.real_values_gpu, d_best_phi.real_values_gpu);
-	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+	postcheck
 
 }
 
@@ -463,12 +463,12 @@ __global__ void AccumulateSumsKernel(__half2* my_stats, const int numel, cufftRe
 void TemplateMatchingCore::AccumulateSums(__half2* my_stats, GpuImage &sum, GpuImage &sq_sum)
 {
 
-	pre_checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+	precheck
 	dim3 threadsPerBlock = dim3(1024, 1, 1);
 	dim3 gridDims = dim3((sum.real_memory_allocated + threadsPerBlock.x - 1) / threadsPerBlock.x,1,1);
 
 	AccumulateSumsKernel<< <gridDims, threadsPerBlock,0,cudaStreamPerThread>> >(my_stats, sum.real_memory_allocated, sum.real_values_gpu, sq_sum.real_values_gpu);
-	checkErrorsAndTimingWithSynchronization(cudaStreamPerThread);
+	postcheck
 
 }
 

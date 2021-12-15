@@ -49,6 +49,9 @@
 #define ANSI_UNDERLINE_OFF "\e[24m"
 #define ANSI_BLINK_SLOW "\x1b[5m"
 #define ANSI_BLINK_OFF "\x1b[25m"
+#define ANSI_BOLD "\033[1m"
+#define ANSI_BOLD_OFF "\033[0m"
+
 
 #define SCALED_IMAGE_SIZE 1200
 

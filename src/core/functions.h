@@ -513,6 +513,12 @@ inline bool FloatsAreAlmostTheSame(float a, float b)
 	return (fabs(a-b) < 0.0001);
 }
 
+template <typename T>
+inline bool RelativeErrorIsLessThanEpsilon(T reference, T test_value, T epsilon = 0.0001)
+{
+  return (std::abs( (reference-test_value) / reference ) < epsilon);
+}
+
 inline bool InputIsATerminal()
 {
    return isatty(fileno(stdin));

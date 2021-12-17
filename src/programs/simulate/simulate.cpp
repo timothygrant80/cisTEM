@@ -9,7 +9,7 @@ const bool GEMMI_ENABLED = true;
 const bool GEMMI_ENABLED = false;
 #endif
 
-const int MAX_3D_SIZE = 1024;
+const int MAX_3D_SIZE = 1536; // ~14.5 Gb in single precision
 
 using namespace cistem_timer;
 //#define DO_BEAM_TILT_FULL true
@@ -524,9 +524,8 @@ class SimulateApp : public MyApp
   bool  SAVE_PHASE_GRATING = false;
   bool  SAVE_PHASE_GRATING_DOSE_FILTERED = false;
   bool  SAVE_PHASE_GRATING_PLUS_WATER = false;
+  bool  DO_CROSSHAIR = false;
   bool  SAVE_PROBABILITY_WAVE = false;
-  bool  SAVE_TO_COMPARE_JPR = false;
-  int   JPR_SIZE = 514;
   bool  SAVE_WITH_DQE = false;
   bool  SAVE_WITH_NORMALIZED_DOSE = false;
   bool  SAVE_POISSON_PRE_NTF = false;
@@ -677,6 +676,7 @@ void SimulateApp::AddCommandLineOptions()
 	command_line_parser.AddLongSwitch("save-water-and-other","Save image of water and scattering.");
 	command_line_parser.AddLongSwitch("save-projected-water","Save image projected water atoms with sub-pixel offsets.");
 	command_line_parser.AddLongSwitch("save-phase-grating","Save phase grating of non-solvent atoms.");
+  command_line_parser.AddLongSwitch("do-cross-hair","Trim to output size and abort after phase calculation.");
 	command_line_parser.AddLongSwitch("save-phase-grating-dose-filtered","Save phase grating of non-solvent atoms + exposure filter.");
 	command_line_parser.AddLongSwitch("save-phase-grating-plus-water","Save phase grating of non-solvent atoms plus water atoms.");
 	command_line_parser.AddLongSwitch("save-with-dqe","Save |wavefunction|^2 + DQE effects.");
@@ -763,6 +763,8 @@ void SimulateApp::DoInteractiveUserInput()
 	SAVE_WATER_AND_OTHER = command_line_parser.FoundSwitch("save-water-and-other");
 	SAVE_PROJECTED_WATER = command_line_parser.FoundSwitch("save-projected-water");
 	SAVE_PHASE_GRATING = command_line_parser.FoundSwitch("save-phase-grating");
+  DO_CROSSHAIR = command_line_parser.FoundSwitch("do-cross-hair"); // implies skip-solvent
+
 	SAVE_PHASE_GRATING_DOSE_FILTERED = command_line_parser.FoundSwitch("save-phase-grating-dose-filtered");
 	SAVE_PHASE_GRATING_PLUS_WATER = command_line_parser.FoundSwitch("save-phase-grating-plus-water");
 	SAVE_WITH_DQE = command_line_parser.FoundSwitch("save-with-dqe");
@@ -816,7 +818,7 @@ void SimulateApp::DoInteractiveUserInput()
 	if (command_line_parser.Found("bf", &temp_double)) { bf = (float)temp_double;}
 	if (command_line_parser.Found("water-shell-only")) water_shell_only = true;
 
-
+  if (DO_CROSSHAIR) DO_SOLVENT = false;
 	UserInput *my_input = new UserInput("Simulator", 0.25);
 
 	output_filename = my_input->GetFilenameFromUser("Output filename","just the base, no extension, will be mrc","test_tilt.mrc",false);
@@ -847,24 +849,31 @@ void SimulateApp::DoInteractiveUserInput()
 
 
 	if (do3d)
-	{
+	{ 
+    bool found_the_best_binning = false;
 		// Check to make sure the sampling is sufficient, if not, oversample and bin at the end.
-		if (wanted_pixel_size > 0.5 && wanted_pixel_size <= 1.5)
-		{
-		 wxPrintf("\nOversampling your 3d by a factor of 2 for calculation.\n");
-		 wanted_pixel_size /= 2.0f;
-		 bin3d = 2;
-		}
-		else if (wanted_pixel_size > 1.5 && wanted_pixel_size < 3.0)
-		{
-		 wxPrintf("\nOversampling your 3d by a factor of 4 for calculation.\n");
-		 wanted_pixel_size /= 4.0f;
-		 bin3d = 4;
-	 }
-	 else
-	 {
-		 //do nothing
-	 }
+    if (wanted_pixel_size > 1.5)
+    {
+      if (wanted_output_size * 4 < MAX_3D_SIZE)
+      {
+        wxPrintf("\nOversampling your 3d by a factor of 4 for calculation.\n");
+        wanted_pixel_size /= 4.f;
+        bin3d = 4;
+        found_the_best_binning = true;
+      }
+    }
+
+    if (wanted_pixel_size > 0.75 && !found_the_best_binning)
+    {
+      if (wanted_output_size * 2 < MAX_3D_SIZE)
+      {
+        wxPrintf("\nOversampling your 3d by a factor of 2 for calculation.\n");
+        wanted_pixel_size /= 2.f;
+        bin3d = 2;
+        found_the_best_binning = true;
+      }
+    }
+
 	 dose_per_frame			= my_input->GetFloatFromUser("electrons/Ang^2 in a frame at the specimen","","1.0",0.05,20.0);
 	 number_of_frames			= my_input->GetFloatFromUser("number of frames per movie (micrograph or tilt)","","30",1.0,1000.0);
 	}
@@ -992,12 +1001,21 @@ void SimulateApp::DoInteractiveUserInput()
 
   non_water_inelastic_scaling *= inelastic_scalar_water;
 
-      // We only want one slab for a 3d simulation
-    if (do3d)
+  // Various overrides based on input flags and command line options.
+
+  if (do3d)
+  {
+    // We only want one slab for a 3d simulation
+    minimum_thickness_z = wanted_output_size*wanted_pixel_size;
+    propagation_distance = -minimum_thickness_z;
+
+    // We need to be sure there is SOME exposure. Note for 3d sims, the exposure applied is an integrated
+    // exposure. 
+    if (number_of_frames - dose_per_frame < 1)
     {
-      minimum_thickness_z = 2048;
-      propagation_distance = 2048;
+      number_of_frames++;
     }
+  }
 
 	delete my_input;
 
@@ -1522,6 +1540,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		float full_tilt_radians = 0;
 
 		Image sum_phase;
+    Image cross_hair;
 		Image sum_detector;
 
 		// Include the max rand shift in z for thickness
@@ -1580,32 +1599,35 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
     //////////
     ///////////////////////////////////////////////////////////////////////////////
 
-    // If negative ignore, otherwise make sure the solvent is at least this dimension. The actual padding including rotations are returned in these variables after initializeation.
-    int padSpecimenX = wanted_output_size;
-    int padSpecimenY = wanted_output_size;
+    int padSpecimenX;
+    int padSpecimenY;
 
-		if (padSpecimenX > 0)
+		if (do3d) padSpecimenX = 0;
+    else
 		{
+      padSpecimenX = wanted_output_size;
 			int x_diff = current_specimen.vol_nX- padSpecimenX;
 			if (x_diff < 0)
 			{
 				padSpecimenX= -x_diff;
 			}
+		  padSpecimenX += N_TAPERS*TAPERWIDTH;
 
 		}
-		else padSpecimenX = 0;
-		if  (padSpecimenY > 0)
+		if (do3d) padSpecimenY = 0;
+    else
 		{
+      padSpecimenY = wanted_output_size;
 			int y_diff = current_specimen.vol_nY - padSpecimenY;
 			if (y_diff < 0)
 			{
 				padSpecimenY = -y_diff;
 			}
-		}
-		else padSpecimenY = 0;
+      padSpecimenY += N_TAPERS*TAPERWIDTH;
 
-		padSpecimenX += N_TAPERS*TAPERWIDTH;
-		padSpecimenY += N_TAPERS*TAPERWIDTH;
+		}
+		
+    if (DO_PRINT) { wxPrintf("\n\n\tfor frame %d the size of the specimen is %d, %d\n\n", iFrame, padSpecimenX, padSpecimenY); }
 
 		// Set the minimum specimen volume to allow trimming of the tapered region. Note that the z dimension must be set on each slab, it is ignored for 2d
 		coords.SetSpecimenVolume(current_specimen.vol_nX, current_specimen.vol_nY, current_specimen.vol_nZ);
@@ -1646,6 +1668,12 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
       sum_detector.SetToConstant(0.0f);
 
 		}
+
+    if (DO_CROSSHAIR) 
+    {
+      coords.Allocate(&cross_hair, (PaddingStatus)solvent, true, true);
+      cross_hair.SetToConstant(0.0f);
+    }
 
 		// For the tilt pair experiment, add additional drift to the specimen. This is a rough fit to the mean abs shifts measured over 0.33 elec/A^2 frames on my ribo data
 		// The tilted is roughly 4x worse than the untilted.
@@ -2130,6 +2158,11 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 					mrc_out.CloseFile();
 			}
 
+      if (DO_CROSSHAIR)
+      {
+        cross_hair.AddImage(&scattering_potential[iSlab]);
+      }
+
 
 
 			if (DO_EXPOSURE_FILTER == 2 && CALC_WATER_NO_HOLE == false)
@@ -2295,6 +2328,20 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 		} // end loop nSlabs
 
+
+    if (DO_CROSSHAIR)
+    {
+  		std::string fileNameOUT = "crosshair" + this->output_filename;
+			MRCFile mrc_out(fileNameOUT,true);
+      coords.PadToWantedSize(&cross_hair, wanted_output_size);
+      EmpiricalDistribution my_dist = cross_hair.ReturnDistributionOfRealValues();
+      cross_hair.Binarise(0.9*my_dist.GetMaximum());
+	  	cross_hair.WriteSlices(&mrc_out,1,1);
+			mrc_out.SetPixelSize(this->wanted_pixel_size);
+			mrc_out.CloseFile();    
+      exit(0);
+    }
+    
 		// Make the sampling mask
 		Image float_img;
 		Image complemenatry_mask;
@@ -2563,12 +2610,15 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 
     if (DO_PRINT) { wxPrintf("before the destructor there are %ld non-water-atoms\n",this->number_of_non_water_atoms); }
-		if (SAVE_TO_COMPARE_JPR || DO_PHASE_PLATE)
+		if ( DO_PHASE_PLATE )
 		{
 
 			std::string fileNameOUT = "phaseGrating_" + this->output_filename;
 			MRCFile mrc_out(fileNameOUT,true);
       coords.PadToWantedSize(&sum_phase, wanted_output_size);
+      EmpiricalDistribution phase_shift_distribution = sum_phase.ReturnDistributionOfRealValues();
+      wxPrintf("\n\tPhase plate shift avg: %3.6f\n\tPhase plate shift std %3.6f\n\tPhase plate shift relative error %3.6f\n", 
+      phase_shift_distribution.GetSampleMean(), phase_shift_distribution.GetSampleVariance(), 100.f * std::abs(phase_shift_distribution.GetSampleMean() - PIf/2) / (PIf/2) );
 	  	sum_phase.WriteSlices(&mrc_out,1,1);
 
 			mrc_out.SetPixelSize(this->wanted_pixel_size);

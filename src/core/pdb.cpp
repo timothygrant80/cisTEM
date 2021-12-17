@@ -313,8 +313,11 @@ void PDB::Init()
 			
 			for (gemmi::Chain& chain : model.chains)
 			{
+        // wxPrintf("Working on chain %s\n",chain.name);
 					for (gemmi::Residue& res : chain.residues)
 					{
+            // wxPrintf("Residue Name, Segment, Entity type, %s %s\n",res.name,res.segment);
+
 						for (gemmi::Atom& atom : res.atoms) 
 						{
 							// For now, we only want ATOM 
@@ -365,7 +368,6 @@ void PDB::Init()
 			{
 					for (gemmi::Residue& res : chain.residues)
 					{
-
 							// For now, we only want ATOM 
 							if (res.het_flag == 'A')  // 'A' = ATOM, 'H' = HETATM, 0 = unspecified
 							{
@@ -384,11 +386,13 @@ void PDB::Init()
 									my_atoms.Item(current_atom_number).occupancy = atom.occ;
 									my_atoms.Item(current_atom_number).bfactor = atom.b_iso;
 
+
+
 									// Will replace this by actually using the element type
 									switch (atom.element.ordinal()) {
 
 										case 0:
-											MyDebugPrintWithDetails("Error, non-element type");
+											MyDebugPrintWithDetails("Error, non-element type, %s\n", my_atoms.Item(current_atom_number).name );
 											exit(-1);
 											break;
 										case 1:
@@ -1060,17 +1064,22 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int fr
 		// Again, need a check to make sure all sizes are consistent
 		if (max_x - min_x <= 0)
 		{
-			MyPrintWithDetails("The measured X dimension is invalid max - min = X, %d - %d = %d\n",max_x,min_x, max_x-min_x);
+			MyPrintWithDetails("The measured X dimension is invalid max - min = X, %f - %f = %f\n",max_x,min_x, max_x-min_x);
 			DEBUG_ABORT;
 		}
 		if (max_y - min_y <= 0)
 		{
-			MyPrintWithDetails("The measured Y dimension is invalid max - min = Y, %d - %d = %d\n",max_y,min_y, max_y-min_y);
+			MyPrintWithDetails("The measured Y dimension is invalid max - min = Y, %f - %f = %f\n",max_y,min_y, max_y-min_y);
 			DEBUG_ABORT;
 		}
+    // Allow for a perfectly planar layer of atoms, for testing images. Notice == not a more typical diff < epsilon to make it more likely this only is allowed when intended (dev).
+    if (max_z - min_z == 0)
+    {
+      max_z+=1;
+    }
 		if (this->max_z - this->min_z <= 0)
 		{
-			MyPrintWithDetails("The measured Z dimension is invalid max - min = Z, %d - %d = %d\n",this->max_z,this->min_z, this->max_z-this->min_z);
+			MyPrintWithDetails("The measured Z dimension is invalid max - min = Z, %f - %f = %f\n",this->max_z,this->min_z, this->max_z-this->min_z);
 			DEBUG_ABORT;
 		}
 

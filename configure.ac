@@ -183,22 +183,29 @@ AC_ARG_ENABLE(debugmode, AS_HELP_STRING([--enable-debugmode],[Compile in debug m
   	
 if test "$want_cuda" = "yes" ; then
 
-	# ~Runtime about 85% with K3 images, but mips are different - total detection is ~the same, but needs more investigation.
-	# Disabling by default so that the code matches what Bronwyn used in the 2D vs 3DTM paper (for reproducibility.)
-	AC_ARG_ENABLE(rotated-tm, AS_HELP_STRING([--enable-rotated-tm],[Place power of 2 sized axis on X by rotating 90 deg in template matching for speed [default=no]]),[
-	  if test "$enableval" = yes; then
-	  CPPFLAGS="$CPPFLAGS -DROTATEFORSPEED"
-	  CXXFLAGS="$CXXFLAGS -DROTATEFORSPEED"
+	# ~Runtime about 85% with K3 images, but mips are different - total detection is ~the same. 
+  # Determined this is likely just numerical error. Enabling by default.
+  #  --disable-feature is equivalent to --enable-feature=no. 
+  use_rotated_tm=1
+	AC_ARG_ENABLE(rotated-tm, AS_HELP_STRING([--disable-rotated-tm],[Place power of 2 sized axis on X by rotating 90 deg in template matching for speed [default=no]]),[
+	  if test "$enableval" = no; then
+      use_rotated_tm=0
 	  fi
 	  ])
-		
-    AC_MSG_NOTICE([Adding the CUDA includes Setting up NVCC initial flags])
-    CUDA_CPPFLAGS="$CUDA_CFLAGS $NVCCFLAGS"
-    CUDA_CXXFLAGS="$CUDA_CFLAGS $NVCCFLAGS"
-    CXXFLAGS="$CXXFLAGS -DENABLEGPU $use_gpu_cache_hints $CUDA_CFLAGS"
-    CPPFLAGS="$CPPFLAGS -DENABLEGPU $use_gpu_cache_hints $CUDA_CFLAGS"
-    AC_MSG_NOTICE([Using CUDA_CXXFLAGS=$CUDA_CXXFLAGS])
-    AC_MSG_NOTICE([Using CUDA_LIBS=$CUDA_LIBS])
+
+  if test "x$use_rotated_tm" = "x1"; then
+    CPPFLAGS="$CPPFLAGS -DROTATEFORSPEED"
+    CXXFLAGS="$CXXFLAGS -DROTATEFORSPEED"
+    AC_MSG_NOTICE([Enabling rotated-tm]);
+  fi
+
+  AC_MSG_NOTICE([Adding the CUDA includes Setting up NVCC initial flags])
+  CUDA_CPPFLAGS="$CUDA_CFLAGS $NVCCFLAGS"
+  CUDA_CXXFLAGS="$CUDA_CFLAGS $NVCCFLAGS"
+  CXXFLAGS="$CXXFLAGS -DENABLEGPU $use_gpu_cache_hints $CUDA_CFLAGS"
+  CPPFLAGS="$CPPFLAGS -DENABLEGPU $use_gpu_cache_hints $CUDA_CFLAGS"
+  AC_MSG_NOTICE([Using CUDA_CXXFLAGS=$CUDA_CXXFLAGS])
+  AC_MSG_NOTICE([Using CUDA_LIBS=$CUDA_LIBS])
 fi
 
 ##############################

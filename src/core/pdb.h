@@ -82,6 +82,7 @@ class PDB {
 		float noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius;
 		float noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius;
 		float emulate_tilt_angle;
+    bool shift_by_center_of_mass;
 		//ArrayOfParticleInstances my_particle;
 
 
@@ -93,13 +94,15 @@ class PDB {
 				float wanted_noise_particle_radius_as_mutliple_of_particle_radius,
 				float wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
 				float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
-				float emulate_tilt_angle);
+				float emulate_tilt_angle,
+        bool shift_by_center_of_mass);
 		PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, long wanted_records_per_line, int minimum_paddeding_x_and_y, double minimum_thickness_z,
 			int max_number_of_noise_particles,
 			float wanted_noise_particle_radius_as_mutliple_of_particle_radius,
 			float wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
 			float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
-			float emulate_tilt_angle);
+			float emulate_tilt_angle,
+      bool shift_by_center_of_mass);
 		PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, long wanted_records_per_line, int minimum_paddeding_x_and_y, double minimum_thickness_z, double *center_of_mass);
 
 		~PDB();

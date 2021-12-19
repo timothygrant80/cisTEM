@@ -401,31 +401,6 @@ bool MatchTemplateApp::DoCalculation()
 	}
 
 
-	/*wxPrintf("input image = %s\n", input_search_images_filename);
-	wxPrintf("input reconstruction= %s\n", input_reconstruction_filename);
-	wxPrintf("pixel size = %f\n", pixel_size);
-	wxPrintf("voltage = %f\n", voltage_kV);
-	wxPrintf("Cs = %f\n", spherical_aberration_mm);
-	wxPrintf("amp contrast = %f\n", amplitude_contrast);
-	wxPrintf("defocus1 = %f\n", defocus1);
-	wxPrintf("defocus2 = %f\n", defocus2);
-	wxPrintf("defocus_angle = %f\n", defocus_angle);
-	wxPrintf("low res limit = %f\n", low_resolution_limit);
-	wxPrintf("high res limit = %f\n", high_resolution_limit_search);
-	wxPrintf("angular step = %f\n", angular_step);
-	wxPrintf("best params to keep = %i\n", best_parameters_to_keep);
-	wxPrintf("defocus search range = %f\n", defocus_search_range);
-	wxPrintf("defocus step = %f\n", defocus_step);
-	wxPrintf("padding = %f\n", padding);
-	wxPrintf("ctf_refinement = %i\n", int(ctf_refinement));
-	wxPrintf("mask search radius = %f\n", mask_radius_search);
-	wxPrintf("phase shift = %f\n", phase_shift);
-	wxPrintf("symmetry = %s\n", my_symmetry);
-	wxPrintf("in plane step = %f\n", in_plane_angular_step);
-	wxPrintf("first location = %i\n", first_search_position);
-	wxPrintf("last location = %i\n", last_search_position);
-	*/
-
 	ParameterMap parameter_map; // needed for euler search init
 	//for (int i = 0; i < 5; i++) {parameter_map[i] = true;}
 	parameter_map.SetAllTrue();
@@ -538,65 +513,67 @@ bool MatchTemplateApp::DoCalculation()
 	// 5832 2     2     2     3     3     3     3     3     3 - this is ~ 10% faster than the previous solution BUT
 	if (DO_FACTORIZATION)
 	{
-	for ( i = 0; i < max_number_primes; i++ )
-	{
+    for ( i = 0; i < max_number_primes; i++ )
+    {
 
-		factor_result_neg = ReturnClosestFactorizedLower(original_input_image_x, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
-		factor_result_pos = ReturnClosestFactorizedUpper(original_input_image_x, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
+      factor_result_neg = ReturnClosestFactorizedLower(original_input_image_x, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
+      factor_result_pos = ReturnClosestFactorizedUpper(original_input_image_x, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
 
-//		wxPrintf("i, result, score = %i %i %g\n", i, factor_result, logf(float(abs(i) + 100)) * factor_result);
-		if ( (float)(original_input_image_x - factor_result_neg) < (float)input_reconstruction_file.ReturnXSize() * max_reduction_by_fraction_of_reference)
-		{
-			factorizable_x = factor_result_neg;
-			break;
-		}
-		if ((float)(-original_input_image_x + factor_result_pos) < (float)input_image.logical_x_dimension * max_increas_by_fraction_of_image)
-		{
-			factorizable_x = factor_result_pos;
-			break;
-		}
+      if ( (float)(original_input_image_x - factor_result_neg) < (float)input_reconstruction_file.ReturnXSize() * max_reduction_by_fraction_of_reference)
+      {
+        factorizable_x = factor_result_neg;
+        break;
+      }
+      if ((float)(-original_input_image_x + factor_result_pos) < (float)input_image.logical_x_dimension * max_increas_by_fraction_of_image)
+      {
+        factorizable_x = factor_result_pos;
+        break;
+      }
 
+    }
+    factor_score = FLT_MAX;
+    for ( i = 0; i < max_number_primes; i++ )
+    {
+
+      factor_result_neg = ReturnClosestFactorizedLower(original_input_image_y, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
+      factor_result_pos = ReturnClosestFactorizedUpper(original_input_image_y, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
+
+      if ( (float)(original_input_image_y - factor_result_neg) < (float)input_reconstruction_file.ReturnYSize() * max_reduction_by_fraction_of_reference)
+      {
+        factorizable_y = factor_result_neg;
+        break;
+      }
+      if ((float)(-original_input_image_y + factor_result_pos) < (float)input_image.logical_y_dimension * max_increas_by_fraction_of_image)
+      {
+        factorizable_y = factor_result_pos;
+        break;
+      }
+
+    }
+    if (factorizable_x - original_input_image_x > max_padding) max_padding = factorizable_x - original_input_image_x;
+    if (factorizable_y - original_input_image_y > max_padding) max_padding = factorizable_y - original_input_image_y;
+
+    if (ReturnThreadNumberOfCurrentThread() == 0) { wxPrintf("old x, y = %i %i\n  new x, y = %i %i\n", input_image.logical_x_dimension, input_image.logical_y_dimension, factorizable_x, factorizable_y); }
+
+
+    input_image.Resize(factorizable_x, factorizable_y, 1, input_image.ReturnAverageOfRealValuesOnEdges());
+
+    #ifdef ROTATEFORSPEED
+    if ( ! is_power_of_two(factorizable_x) && is_power_of_two(factorizable_y) )
+    {
+      // The speedup in the FFT for better factorization is also dependent on the dimension. The full transform (in cufft anyway) is faster if the best dimension is on X.
+      // TODO figure out how to check the case where there is no factor of two, but one dimension is still faster. Probably getting around to writing an explicit planning tool would be useful.
+      if (ReturnThreadNumberOfCurrentThread() == 0) { wxPrintf("Rotating the search image for speed\n"); }
+      is_rotated_by_90 = true;
+      input_image.Rotate2DInPlaceBy90Degrees(true);
+    }
+    else
+    {
+      if (ReturnThreadNumberOfCurrentThread() == 0) { wxPrintf("Not rotating the search image for speed even though it is enabled\n"); }
+    }
+    #endif
 	}
-	factor_score = FLT_MAX;
-	for ( i = 0; i < max_number_primes; i++ )
-	{
 
-		factor_result_neg = ReturnClosestFactorizedLower(original_input_image_y, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
-		factor_result_pos = ReturnClosestFactorizedUpper(original_input_image_y, primes[i], true, MUST_BE_FACTOR_OF_FOUR);
-
-
-//		wxPrintf("i, result, score = %i %i %g\n", i, factor_result, logf(float(abs(i) + 100)) * factor_result);
-		if ( (float)(original_input_image_y - factor_result_neg) < (float)input_reconstruction_file.ReturnYSize() * max_reduction_by_fraction_of_reference)
-		{
-			factorizable_y = factor_result_neg;
-			break;
-		}
-		if ((float)(-original_input_image_y + factor_result_pos) < (float)input_image.logical_y_dimension * max_increas_by_fraction_of_image)
-		{
-			factorizable_y = factor_result_pos;
-			break;
-		}
-
-	}
-	if (factorizable_x - original_input_image_x > max_padding) max_padding = factorizable_x - original_input_image_x;
-	if (factorizable_y - original_input_image_y > max_padding) max_padding = factorizable_y - original_input_image_y;
-
-	wxPrintf("old x, y; new x, y = %i %i ", input_image.logical_x_dimension, input_image.logical_y_dimension);
-
-
-	input_image.Resize(factorizable_x, factorizable_y, 1, input_image.ReturnAverageOfRealValuesOnEdges());
-#ifdef ROTATEFORSPEED
-	if ( ! is_power_of_two(factorizable_x) && is_power_of_two(factorizable_y) )
-	{
-		// The speedup in the FFT for better factorization is also dependent on the dimension. The full transform (in cufft anyway) is faster if the best dimension is on X.
-		// TODO figure out how to check the case where there is no factor of two, but one dimension is still faster. Probably getting around to writing an explicit planning tool would be useful.
-
-		is_rotated_by_90 = true;
-		input_image.Rotate2DInPlaceBy90Degrees(true);
-	}
-#endif
-	wxPrintf("%i %i\n", input_image.logical_x_dimension, input_image.logical_y_dimension);
-	}
 	padded_reference.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
 	max_intensity_projection.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
 	best_psi.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
@@ -624,14 +601,9 @@ bool MatchTemplateApp::DoCalculation()
 	{
 		input_reconstruction.Resize(input_reconstruction.logical_x_dimension * padding, input_reconstruction.logical_y_dimension * padding, input_reconstruction.logical_z_dimension * padding, input_reconstruction.ReturnAverageOfRealValuesOnEdges());
 	}
-//	input_reconstruction.ForwardFFT();
-	//input_reconstruction.CosineMask(0.1, 0.01, true);
-	//input_reconstruction.Whiten();
-	//if (first_search_position == 0) input_reconstruction.QuickAndDirtyWriteSlices("/tmp/filter.mrc", 1, input_reconstruction.logical_z_dimension);
-//	input_reconstruction.ZeroCentralPixel();
-//	input_reconstruction.SwapRealSpaceQuadrants();
 
 	sqrt_input_pixels =  sqrt((double)(input_image.logical_x_dimension * input_image.logical_y_dimension));
+
 	// setup curve
 	histogram_step = (histogram_max - histogram_min) / float(histogram_number_of_points);
 	histogram_min_scaled = histogram_min / sqrt_input_pixels;
@@ -656,6 +628,7 @@ bool MatchTemplateApp::DoCalculation()
 
 
 	// angular step
+
 	float mask_radius_search;
 	if (particle_radius_angstroms < 1.0f) { mask_radius_search = 200.0f; } // This was the original default value.
 	else mask_radius_search = particle_radius_angstroms;
@@ -686,7 +659,6 @@ bool MatchTemplateApp::DoCalculation()
 	// search grid
 
 	global_euler_search.InitGrid(my_symmetry, angular_step, 0.0f, 0.0f, psi_max, psi_step, psi_start, pixel_size / high_resolution_limit_search, parameter_map, best_parameters_to_keep);
-//	wxPrintf("%s",my_symmetry);
 	if (my_symmetry.StartsWith("C")) // TODO 2x check me - w/o this O symm at least is broken
 	{
 		if (global_euler_search.test_mirror == true) // otherwise the theta max is set to 90.0 and test_mirror is set to true.  However, I don't want to have to test the mirrors.

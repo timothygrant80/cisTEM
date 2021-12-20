@@ -57,6 +57,8 @@ MyTestApp : public MyApp //public wxAppConsole
 		void TestMaskCentralCross();
 		void TestStarToBinaryFileConversion();
     void TestElectronExposureFilter();
+    void TestEmpiricalDistribution();
+    void TestSumOfSquaresFourierAndFFTNormalization();
 
 		void BeginTest(const char *test_name);
 		void EndTest();
@@ -106,6 +108,8 @@ bool MyTestApp::DoCalculation()
 	TestMaskCentralCross();
 	TestStarToBinaryFileConversion();
   TestElectronExposureFilter();
+  TestEmpiricalDistribution();
+  TestSumOfSquaresFourierAndFFTNormalization();
 
 	wxPrintf("\n\n\n");
 
@@ -495,6 +499,51 @@ void MyTestApp::TestElectronExposureFilter()
   delete [] dose_filter_odd;
 
 	EndTest();
+}
+
+void MyTestApp::TestEmpiricalDistribution()
+{
+  BeginTest("Test Empirical Distribution");
+
+  Image test_image;
+  test_image.QuickAndDirtyReadSlice(hiv_image_80x80x1_filename.ToStdString(),1);
+
+  EmpiricalDistribution my_dist = test_image.ReturnDistributionOfRealValues();
+
+  if ( ! RelativeErrorIsLessThanEpsilon(my_dist.GetSampleMean() + 1.f, 1.0f) ) FailTest;
+  if ( ! RelativeErrorIsLessThanEpsilon(my_dist.GetSampleVariance(), 1.0f) ) FailTest;
+  if (   my_dist.GetNumberOfSamples() != 6400 ) FailTest;
+  if ( ! RelativeErrorIsLessThanEpsilon(my_dist.GetMinimum(), -3.1520f) ) FailTest;
+  if ( ! RelativeErrorIsLessThanEpsilon(my_dist.GetMaximum(),  7.0222f) ) FailTest;
+  if ( ! RelativeErrorIsLessThanEpsilon(my_dist.GetSampleSumOfSquares(), 6400.f) ) FailTest;
+
+  EndTest();
+}
+
+void MyTestApp::TestSumOfSquaresFourierAndFFTNormalization()
+{
+  // Test depends on TestFFTFunctions passing.
+  
+  BeginTest("Test Sum Of Squares Fourier");
+
+  Image test_image;
+  test_image.QuickAndDirtyReadSlice(hiv_image_80x80x1_filename.ToStdString(),1);
+  test_image.ForwardFFT(false);
+
+  // By Parsevals theorem, the sum of squares of the Fourier transform of an image is equal to the sum of squares of the real image.
+  // On the foward FFT the variance is scaled by N and on the inverse by N again. (This makes it as though the original values were scaled by N round-trip.)
+  // So without normalization, the sum of squares should be N * realspace sumof squares.
+  float sum_of_squares = test_image.ReturnSumOfSquares();
+  if ( ! RelativeErrorIsLessThanEpsilon(sum_of_squares, 6400.f * 6400.f) ) FailTest;
+
+  // We normalize for the full round trip on the forward FFT, so in this case the sum of squares should be
+  // realspace sumof squares / N.
+  test_image.QuickAndDirtyReadSlice(hiv_image_80x80x1_filename.ToStdString(),1);
+  test_image.ForwardFFT(true);
+  sum_of_squares = test_image.ReturnSumOfSquares();
+  if ( ! RelativeErrorIsLessThanEpsilon(sum_of_squares,1.f) ) FailTest;
+
+  EndTest();
 }
 
 void MyTestApp::TestImageLoopingAndAddressing()

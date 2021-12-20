@@ -21,8 +21,8 @@ public:
 
 	PDB  		*pdb_ensemble;
 	wxString	pdb_file_names[MAX_NUMBER_PDBS];
-    int 	 	number_of_pdbs = 1;
-    bool 		is_allocated_pdb_ensemble = false;
+  int 	 	number_of_pdbs = 1;
+  bool 		is_allocated_pdb_ensemble = false;
 
 
 
@@ -30,12 +30,12 @@ public:
 	__inline__ float ReturnScatteringParamtersB( AtomType id, int term_number) { return  SCATTERING_PARAMETERS_B[id][term_number]; }
 	__inline__ float ReturnAtomicNumber( AtomType id) { return ATOMIC_NUMBER[id]; }
 
-	void InitPdbEnsemble(	float wanted_pixel_size, float do3d, int minimum_padding_x_and_y, int minimum_thickness_z,
-							int max_number_of_noise_particles,
-							float wanted_noise_particle_radius_as_mutliple_of_particle_radius,
-							float wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
-							float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
-							float wanted_tilt_angle_to_emulate);
+	void InitPdbEnsemble(	float wanted_pixel_size, bool shift_by_cetner_of_mass, int minimum_padding_x_and_y, int minimum_thickness_z,
+                        int max_number_of_noise_particles,
+                        float wanted_noise_particle_radius_as_mutliple_of_particle_radius,
+                        float wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
+                        float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
+                        float wanted_tilt_angle_to_emulate);
 	long ReturnTotalNumberOfNonWaterAtoms();
 
 

@@ -5,8 +5,8 @@ const double SOLVENT_DENSITY = 0.94; // 0.94 +/- 0.02 Ghormley JA, Hochanadel CJ
 const double CARBON_DENSITY  = 1.75; // 2.0; // NIST and Holography paper TODO add cite (using the lower density to match the Holography paper)
 const double MW_WATER        = 18.01528;
 const double MW_CARBON       = 12.0107;
-const double CARBON_X_ANG    = 4096.0;
-const double CARBON_Y_ANG    = 4096.0;
+const double CARBON_X_ANG    = 384.0;
+const double CARBON_Y_ANG    = 384.0;
 
 
 Water::Water(bool do_carbon)
@@ -122,7 +122,7 @@ void Water::Init(const PDB *current_specimen, int wanted_size_neighborhood, floa
 
 	}
 
-	wxPrintf("vol dimension in Ang %2.2f x %2.2f y  %2.2f z\n", this->vol_angX , this->vol_angY , this->vol_angZ);
+	// wxPrintf("vol dimension in Ang %2.2f x %2.2f y  %2.2f z\n", this->vol_angX , this->vol_angY , this->vol_angZ);
 
 
 	this->vol_oX = floor(this->vol_nX / 2);
@@ -152,7 +152,7 @@ void Water::SeedWaters3d()
 	wxPrintf("Atoms per nm^3 %3.3f, vol (in Ang^3) %2.2f %2.2f %2.2f\n",waters_per_angstrom_cubed*1000,this->vol_angX , this->vol_angY , this->vol_angZ);
 	double n_waters_lower_bound = waters_per_angstrom_cubed*(this->vol_angX * this->vol_angY * this->vol_angZ);
 	long n_waters_possible = (long)floor(1.1*n_waters_lower_bound); // maybe make this a real vector so it is extensible.
-	wxPrintf("specimen volume is %3.3e nm expecting %3.3e waters\n",(this->vol_angX * this->vol_angY * this->vol_angZ)/1000,n_waters_lower_bound);
+	// wxPrintf("specimen volume is %3.3e nm expecting %3.3e waters\n",(this->vol_angX * this->vol_angY * this->vol_angZ)/1000,n_waters_lower_bound);
 
     RandomNumberGenerator my_rand(PIf);
 
@@ -164,9 +164,9 @@ void Water::SeedWaters3d()
 	float current_random;
 	const float random_sigma = 0.5/this->pixel_size; // random shift in pixel values
     float thisRand;
-    wxPrintf("cuttoff is %2.6e %2.6e %f %f\n",n_waters_lower_bound,double((this->vol_nX - this->size_neighborhood) *
-    																	  (this->vol_nY - this->size_neighborhood) *
-    		 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	  (this->vol_nZ - this->size_neighborhood)), random_sigma_cutoff, random_sigma_negativo);
+    // wxPrintf("cuttoff is %2.6e %2.6e %f %f\n",n_waters_lower_bound,double((this->vol_nX - this->size_neighborhood) *
+    // 																	  (this->vol_nY - this->size_neighborhood) *
+    // 		 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	  (this->vol_nZ - this->size_neighborhood)), random_sigma_cutoff, random_sigma_negativo);
 
 
 
@@ -245,7 +245,7 @@ void Water::ShakeWaters3d(int number_of_threads)
 //    std::normal_distribution<float>  norm_dist_mag(0.0,random_sigma*1.5);
 
 
-	wxPrintf("Using a rmsd of %f for water perturbation\n", random_sigma);
+	// wxPrintf("Using a rmsd of %f for water perturbation\n", random_sigma);
 
 
 	// Private variables for parfor loop
@@ -404,7 +404,7 @@ void Water::ReturnPadding(RotationMatrix max_rotation, float in_plane_rotation, 
 
 					max_rotation.RotateCoords(x_in, y_in, z_in, x_out, y_out, z_out);
 
-					wxPrintf("Coords before %f %f %f\nRotated %f %f %f\n",x_in, y_in, z_in, x_out, y_out, z_out);
+					// wxPrintf("Coords before %f %f %f\nRotated %f %f %f\n",x_in, y_in, z_in, x_out, y_out, z_out);
 					// Both x & y must be in bounds for padding to be required
 					if ( x_out >= -origin.x && x_out <= origin.x && y_out >= -origin.y && y_out <= origin.y)
 					{
@@ -434,7 +434,7 @@ void Water::ReturnPadding(RotationMatrix max_rotation, float in_plane_rotation, 
 						// Rotate back into the original frame
 						max_rotation.RotateCoords(x_out, y_out, z_out, x_back, y_back, z_back);
 
-						wxPrintf("Coords out %f %f %f\nRotated back %f %f %f\n",x_out, y_out, z_out, x_back, y_back, z_back);
+						// wxPrintf("Coords out %f %f %f\nRotated back %f %f %f\n",x_out, y_out, z_out, x_back, y_back, z_back);
 
 
 						// Now check to see if the padded vector is larger than our current largest

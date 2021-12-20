@@ -1987,7 +1987,7 @@ bool CtffindApp::DoCalculation()
 						profile_timing.lap("Correct mag distortion");
 					}
 					// Make the image square
-					profile_timing.start("Square image");
+					profile_timing.start("Crop image to shortest dimension");
 					micrograph_square_dimension = std::max(current_input_image->logical_x_dimension,current_input_image->logical_y_dimension);
 					if (IsOdd((micrograph_square_dimension))) micrograph_square_dimension++;
 					if (current_input_image->logical_x_dimension != micrograph_square_dimension || current_input_image->logical_y_dimension != micrograph_square_dimension)
@@ -1997,7 +1997,7 @@ bool CtffindApp::DoCalculation()
 						current_input_image->ClipIntoLargerRealSpace2D(current_input_image_square,current_input_image->ReturnAverageOfRealValues());
 						current_input_image->Consume(current_input_image_square);
 					}
-					profile_timing.lap("Square image");
+					profile_timing.lap("Crop image to shortest dimension");
 					//
 					profile_timing.start("Average frames");
 					if (current_frame_within_average == 1)
@@ -2787,6 +2787,7 @@ bool CtffindApp::DoCalculation()
 		//average_spectrum->AddConstant(- average_spectrum->ReturnAverageOfRealValuesOnEdges()); // this used to be done in OverlayCTF / CTFOperation in the Fortran code
 		//average_spectrum.QuickAndDirtyWriteSlice("dbg_spec_diag_3.mrc",1);
 		if (dump_debug_files) average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_rescaling.mrc",1);
+		profile_timing.start("Write diagnostic image");
 		if (compute_extra_stats) {
 			RescaleSpectrumAndRotationalAverage(average_spectrum,number_of_extrema_image,ctf_values_image,number_of_bins_in_1d_spectra,spatial_frequency,rotational_average_astig,rotational_average_astig_fit,number_of_extrema_profile,ctf_values_profile,last_bin_without_aliasing,last_bin_with_good_fit);
 		}
@@ -2804,7 +2805,7 @@ bool CtffindApp::DoCalculation()
 
 		average_spectrum->WriteSlice(&output_diagnostic_file,current_output_location);
 		output_diagnostic_file.SetDensityStatistics(average_spectrum->ReturnMinimumValue(), average_spectrum->ReturnMaximumValue(), average_spectrum->ReturnAverageOfRealValues(), 0.1);
-
+		profile_timing.lap("Write diagnostic image");
 		// Keep track of time
 		ctffind_timing.lap("Diagnostics");
 

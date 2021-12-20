@@ -59,41 +59,55 @@ parse_params "$@"
 
 # TODO: Provide more realistic benchmark (Maybe montage hiv image together and simulate ctf(?))
 
+# PARAMETERS
+
+MOVIE_FILE=/tmp/hiv_images_shift_noise_80x80x10.mrc
+PIXEL_SIZE=1.0
+VOLTAGE=300
+SPHERICAL_ABBERATION=2.7
+AMPLITUDE_CONTRAST=0.07
+BOX_SIZE=512
+BINNING_FACTOR=1
+
+# UNBLUR - No expert options
+
 $cisTEM_path/unblur <<EOF
-/tmp/hiv_images_shift_noise_80x80x10.mrc
+$MOVIE_FILE
 /tmp/align.mrc
 /tmp/shifts.txt
-1.0
-1
-yes
-300.0
-1.0
-0.0
-no
-no
-1
+$PIXEL_SIZE
+$BINNING_FACTOR
+yes                              # Apply exposure Filter
+$VOLTAGE
+1.0                              # Exposure per frame
+0.0                              # Pre-exposure
+no                               # Expert options
+no                               # Mag distortion correction
+1                                # Number of threads
 EOF
 
+# CTFFIND - Movie, No expert options, No phase, No Tilt
+
 $cisTEM_path/ctffind <<EOF
-/tmp/hiv_images_shift_noise_80x80x10.mrc
-yes
-2
-/tmp/diagnostic_output.mrc
-1.0
-300.0
-2.7
-0.07
-512
-30.0
-5.0
-5000.0
-50000.0
-100.0
-no
-no
-no
-no
-no
-no
+$MOVIE_FILE
+yes                              # Is movie
+2                                # Frames to average
+/tmp/diagnostic_output.mrc         
+$PIXEL_SIZE
+$VOLTAGE
+$SPHERICAL_ABBERATION
+$AMPLITUDE_CONTRAST
+$BOX_SIZE
+30.0                             # Low resolution limit
+5.0                              # High resolution limit
+5000.0                           # Low defocus search range
+50000.0                          # High defocus search range
+100.0                            # Defocus step during search
+no                               # Astigmatism known
+no                               # Slow, exhaustive, search
+no                               # Restrain astigmatism
+no                               # Find phase shift     
+no                               # Find sample tilt
+no                               # Set expert options
 EOF
 

@@ -233,7 +233,7 @@ AM_CONDITIONAL([ENABLESAMPLES_AM], [test "$want_samples" = "yes"])
 # Use fine grained profiling
 
 want_profiling="no"  
-AC_ARG_ENABLE(profiling, [  --enable-profiling      Include fine-grained profiling [[default=no]]],[
+AC_ARG_ENABLE(profiling, AS_HELP_STRING([--enable-profiling],[Include fine-grained profiling [default=no]]),[
   if test "$enableval" = yes; then
     CXXFLAGS="$CXXFLAGS -DPROFILING"
     CPPFLAGS="$CPPFLAGS -DPROFILING"

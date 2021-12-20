@@ -230,6 +230,19 @@ AC_ARG_ENABLE(samples, AS_HELP_STRING([--enable-samples],[Compile with samples [
   ]) 
 AM_CONDITIONAL([ENABLESAMPLES_AM], [test "$want_samples" = "yes"])
 
+# Use fine grained profiling
+
+want_profiling="no"  
+AC_ARG_ENABLE(profiling, AS_HELP_STRING([--enable-profiling],[Include fine-grained profiling [default=no]]),[
+  if test "$enableval" = yes; then
+    CXXFLAGS="$CXXFLAGS -DPROFILING"
+    CPPFLAGS="$CPPFLAGS -DPROFILING"
+  	want_profiling="true"
+  	AC_MSG_NOTICE([Compiling with fine-grained profiling])	
+  fi
+  ]) 
+AM_CONDITIONAL([ENABLEPROFILING_AM], [test x$want_profiling = xtrue])
+
 AC_ARG_ENABLE(gpu-debug, AS_HELP_STRING([--enable-gpu-debug],[Compile heavy synchronous checking [default=no]]),[
   if test "$enableval" = yes; then
     AC_DEFINE([ENABLE_GPU_DEBUG])

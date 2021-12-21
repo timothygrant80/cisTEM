@@ -153,6 +153,30 @@ void MyOverviewPanel::SetWelcomeInfo()
 	InfoText->Newline();
 #endif
 
+// If compiled with debug and any other special configure flags are set, display them here
+#ifdef DEBUG
+  InfoText->WriteText(wxString::Format("Compiled in DEBUG mode with additional configure flags: "));
+  #ifdef ENABLEGPU
+    InfoText->WriteText(wxString::Format("ENABLEGPU "));
+  #endif
+  #ifdef MKL
+    InfoText->WriteText(wxString::Format("MKL "));
+  #endif
+  #ifdef EXPERIMENTAL
+    InfoText->WriteText(wxString::Format("EXPERIMENTAL "));
+  #endif
+  #ifdef RIGOROUS_SOCKET_CHECK
+    InfoText->WriteText(wxString::Format("RIGOROUS_SOCKET_CHECK "));
+  #endif
+  #ifdef ENABLESAMPLES
+    InfoText->WriteText(wxString::Format("ENABLESAMPLES "));
+  #endif
+  #ifdef ROTATEFORSPEED
+    InfoText->WriteText(wxString::Format("ROTATEFORSPEED "));
+  #endif
+  InfoText->Newline();
+#endif
+
 	InfoText->Newline();
 	InfoText->Newline();
 	InfoText->EndFontSize();

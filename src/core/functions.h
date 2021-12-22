@@ -435,7 +435,21 @@ inline float deg_2_rad(float degrees)
   return degrees * PIf / 180.;
 }
 
-inline float clamp_angular_range(float angle, bool units_are_degrees = false)
+inline float clamp_angular_range_0_to_2pi(float angle, bool units_are_degrees = false)
+{
+	// Clamps the angle to be in the range ( 0,+360 ] { exclusive, inclusive }
+	if (units_are_degrees)
+	{
+		angle = fmodf(angle, 360.0f);
+	}
+	else
+	{
+		angle = fmodf(angle, 2.0f * PIf);
+	}
+	return angle;
+}
+
+inline float clamp_angular_range_negative_pi_to_pi(float angle, bool units_are_degrees = false)
 {
 	// Clamps the angle to be in the range ( -180,+180 ] { exclusive, inclusive }
 	if (units_are_degrees)

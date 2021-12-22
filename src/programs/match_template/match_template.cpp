@@ -1163,7 +1163,7 @@ bool MatchTemplateApp::DoCalculation()
 		// To account for the pre-rotation, psi needs to have 90 added to it.
 		best_psi.AddConstant(90.0f);
 		// We also want the angles to remain in (0,360] so loop over and clamp
-		for (int idx = 0; idx < best_psi.real_memory_allocated; idx++) { best_psi.real_values[idx] = clamp_angular_range(best_psi.real_values[idx], true); }
+		for (int idx = 0; idx < best_psi.real_memory_allocated; idx++) { best_psi.real_values[idx] = clamp_angular_range_0_to_2pi(best_psi.real_values[idx], true); }
 		best_theta.Rotate2DInPlaceBy90Degrees(false);
 		best_phi.Rotate2DInPlaceBy90Degrees(false);
 		best_defocus.Rotate2DInPlaceBy90Degrees(false);

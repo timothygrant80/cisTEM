@@ -1,6 +1,8 @@
 //BEGIN_FOR_STAND_ALONE_CTFFIND
 #include "core_headers.h"
 
+using namespace cistem;
+
 wxMutex Image::s_mutexProtectingFFTW;
 double BeamTiltScoreFunctionForSimplex(void *pt2Object, double values[]);
 
@@ -931,6 +933,40 @@ void Image::AddGaussianNoise(float wanted_sigma_value, RandomNumberGenerator *pr
 	{
 		real_values[pixel_counter] += wanted_sigma_value * used_generator->GetNormalRandom();
 	}
+}
+
+void Image::AddNoise( NoiseType wanted_noise_type, float noise_param_1, float noise_param_2)
+{
+	MyDebugAssertTrue(is_in_real_space == true, "Image must be in real space");
+  // These could go down in the switch, but I think it is cleaner to keep DebugAsserts at the top of the method like elsewhere in cisTEM.
+  MyDebugAssertTrue(wanted_noise_type == POISSON ? noise_param_1 > 0 : true, "Mean of a Poisson distribution must be positive");
+  MyDebugAssertTrue(wanted_noise_type == EXPONENTIAL ? noise_param_1 > 0 : true, "Mean of an Exponential distribution must be positive");
+  MyDebugAssertTrue(wanted_noise_type == GAMMA ? (noise_param_1 > 0 && noise_param_2 > 0) : true, "alpha and beta of a Gamma distribution must be positive");
+
+  RandomNumberGenerator my_rng(PIf);
+
+  switch (wanted_noise_type)
+  {
+    case GAUSSIAN:
+      for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++) { real_values[pixel_counter] += my_rng.GetNormalRandomSTD(noise_param_1,noise_param_2);}
+      break;
+    case POISSON:
+      for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++) { real_values[pixel_counter] += my_rng.GetPoissonRandomSTD(noise_param_1);}
+      break;
+    case UNIFORM:
+      for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++) { real_values[pixel_counter] += my_rng.GetUniformRandomSTD(noise_param_1,noise_param_2);}
+      break;
+    case EXPONENTIAL:
+      for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++) { real_values[pixel_counter] += my_rng.GetExponentialRandomSTD(noise_param_1);}
+      break;
+    case GAMMA:
+      for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++) { real_values[pixel_counter] += my_rng.GetGammaRandomSTD(noise_param_1,noise_param_2);}
+      break;
+    default:
+      MyPrintWithDetails("Error: Unknown noise type %i\n", wanted_noise_type);
+      DEBUG_ABORT;
+      break; // shouldn't be needed with the DEBUG_ABORT, but just in case that breaks for whatever reason.
+  }
 }
 
 long Image::ZeroFloat(float wanted_mask_radius, bool outside)

@@ -11104,8 +11104,9 @@ void Image::Rotate2DInPlaceBy90Degrees(bool rotate_by_positive_90_degrees)
 {
 	// Rotate without interpolation by swapping indices.
 	Image buffer_image;
-	buffer_image.Allocate(logical_y_dimension, logical_x_dimension, true);
+	buffer_image.Allocate(logical_y_dimension, logical_x_dimension, logical_z_dimension, true);
 	long current_address_old_image = 0;
+ 	int k;
 	int y_new = -1;
 	int x_new = -1;
 	int y_old = 0;
@@ -11114,29 +11115,35 @@ void Image::Rotate2DInPlaceBy90Degrees(bool rotate_by_positive_90_degrees)
 	// Negative rotation is clockwise looking down the image normal (Y --> X)
 	if (rotate_by_positive_90_degrees)
 	{
-		for (y_old = 0 ; y_old < logical_y_dimension; y_old ++)
-		{
-			x_new = logical_y_dimension - y_old - 1;
+    for (k = 0 ; k < logical_z_dimension; k++)
+    {
+      for (y_old = 0 ; y_old < logical_y_dimension; y_old++)
+      {
+        x_new = logical_y_dimension - y_old - 1;
 
-			for (x_old = 0; x_old < logical_x_dimension; x_old++)
-			{
-				y_new = x_old;
-				buffer_image.real_values[buffer_image.ReturnReal1DAddressFromPhysicalCoord(x_new,y_new,0)] = ReturnRealPixelFromPhysicalCoord(x_old,y_old,0);
-			}
-		}
+        for (x_old = 0; x_old < logical_x_dimension; x_old++)
+        {
+          y_new = x_old;
+          buffer_image.real_values[buffer_image.ReturnReal1DAddressFromPhysicalCoord(x_new,y_new,k)] = ReturnRealPixelFromPhysicalCoord(x_old,y_old,k);
+        }
+      }
+    }
 	}
 	else
 	{
-		for (y_old = 0 ; y_old < logical_y_dimension; y_old ++)
-		{
-			x_new = y_old;
-			for (x_old = 0; x_old < logical_x_dimension; x_old++)
-			{
-				y_new = logical_x_dimension - x_old - 1;
-				buffer_image.real_values[buffer_image.ReturnReal1DAddressFromPhysicalCoord(x_new,y_new,0)] = ReturnRealPixelFromPhysicalCoord(x_old,y_old,0);
-			}
+    for (k = 0 ; k < logical_z_dimension; k++)
+    {    
+      for (y_old = 0 ; y_old < logical_y_dimension; y_old++)
+      {
+        x_new = y_old;
+        for (x_old = 0; x_old < logical_x_dimension; x_old++)
+        {
+          y_new = logical_x_dimension - x_old - 1;
+          buffer_image.real_values[buffer_image.ReturnReal1DAddressFromPhysicalCoord(x_new,y_new,k)] = ReturnRealPixelFromPhysicalCoord(x_old,y_old,k);
+        }
 
-		}
+      }
+    }
 	}
 	Consume(&buffer_image);
 }

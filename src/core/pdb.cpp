@@ -851,7 +851,7 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int fr
 					// If we have more than one noise particle, enforce non-overlap
 					if (iPart == 0)
 					{
-						offset_angle = clamp_angular_range(my_rand.GetUniformRandomSTD(-PIf,PIf));
+						offset_angle = clamp_angular_range_negative_pi_to_pi(my_rand.GetUniformRandomSTD(-PIf,PIf));
 						non_overlaping_particle_found = true;
 						occupied_sectors[0] = offset_angle;
 					}
@@ -863,7 +863,7 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int fr
 						while (is_too_close && iTry < max_tries)
 						{
 							iTry += 1;
-							offset_angle = clamp_angular_range(my_rand.GetUniformRandomSTD(-PIf,PIf));
+							offset_angle = clamp_angular_range_negative_pi_to_pi(my_rand.GetUniformRandomSTD(-PIf,PIf));
 							float dx = cosf(offset_angle);
 							float dy = sinf(offset_angle);
 							float ang_diff;

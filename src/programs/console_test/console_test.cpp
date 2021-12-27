@@ -60,6 +60,7 @@ MyTestApp : public MyApp //public wxAppConsole
 
 
     void TestMRCFunctions();
+    void TestAssignmentOperatorsAndFunctions();
     void TestFFTFunctions();
     void TestScalingAndSizingFunctions();
     void TestFilterFunctions();
@@ -136,7 +137,106 @@ bool MyTestApp::DoCalculation()
   else return 0;
 }
 
+void MyTestApp::TestAssignmentOperatorsAndFunctions()
+{
 
+  BeginTest("Memory Assignment Ops and Funcs");
+
+  // Test for even and odd sized square
+  const int wanted_size = 16;
+  const float test_value = 1.234f;
+
+  Image ref_image[2];
+  
+  ref_image[0].Allocate(wanted_size, wanted_size, 1);
+  ref_image[1].Allocate(wanted_size + 1, wanted_size + 1, 1);
+
+  // Set the initial values of the reference images, that we will use to check the results of the assignment ops.
+  for (int pixel_counter = 0; pixel_counter < ref_image[0].real_memory_allocated; pixel_counter++) 
+  { 
+    ref_image[0].real_values[pixel_counter] = test_value;
+  }
+
+  for (int pixel_counter = 0; pixel_counter < ref_image[1].real_memory_allocated; pixel_counter++) 
+  { 
+    ref_image[1].real_values[pixel_counter] = test_value;
+  }
+
+  // First test the assignment operator Image = *Image under several conditions.
+
+  // Condition 1: test image is not allogated.
+  for (int iTest = 0; iTest < 2; iTest++)
+  {
+    Image test_image;
+    test_image = &ref_image[iTest];
+    // The memory should be in different places and the values of test should be equal.
+    if (test_image.real_memory_allocated == ref_image[iTest].real_memory_allocated) FailTest;
+    if (&test_image.real_values == &ref_image[iTest].real_values) FailTest;
+    for (int pixel_counter = 0; pixel_counter < test_image.real_memory_allocated; pixel_counter++) 
+    { 
+      if (test_image.real_values[pixel_counter] != ref_image[iTest].real_values[pixel_counter]) FailTest;
+    }
+  }
+
+  // Condition 2: test image is allocated but not the same size.
+  for (int iTest = 0; iTest < 2; iTest++)
+  {
+    Image test_image;
+    test_image.Allocate(wanted_size + 3, wanted_size + 3, 1);
+    test_image = &ref_image[iTest];
+    // The memory should be in different places and the values of test should be equal.
+    if (test_image.real_memory_allocated == ref_image[iTest].real_memory_allocated) FailTest;
+    if (&test_image.real_values == &ref_image[iTest].real_values) FailTest;
+    for (int pixel_counter = 0; pixel_counter < test_image.real_memory_allocated; pixel_counter++) 
+    { 
+      if (test_image.real_values[pixel_counter] != ref_image[iTest].real_values[pixel_counter]) FailTest;
+    }
+  }
+
+  // Image::CopyFrom should just use the underlying method tested.
+  for (int iTest = 0; iTest < 2; iTest++)
+  {
+    Image test_image;
+    test_image.CopyFrom(&ref_image[iTest]);
+    // The memory should be in different places and the values of test should be equal.
+    if (test_image.real_memory_allocated == ref_image[iTest].real_memory_allocated) FailTest;
+    if (&test_image.real_values == &ref_image[iTest].real_values) FailTest;
+    for (int pixel_counter = 0; pixel_counter < test_image.real_memory_allocated; pixel_counter++) 
+    { 
+      if (test_image.real_values[pixel_counter] != ref_image[iTest].real_values[pixel_counter]) FailTest;
+    }
+  }
+
+  // Assignment by reference should also then just call the pointer based assignment.
+  for (int iTest = 0; iTest < 2; iTest++)
+  {
+    Image test_image;
+    test_image = ref_image[iTest]; // This line is different (i.e. assign by reference.)
+    // The memory should be in different places and the values of test should be equal.
+    if (test_image.real_memory_allocated == ref_image[iTest].real_memory_allocated) FailTest;
+    if (&test_image.real_values == &ref_image[iTest].real_values) FailTest;
+    for (int pixel_counter = 0; pixel_counter < test_image.real_memory_allocated; pixel_counter++) 
+    { 
+      if (test_image.real_values[pixel_counter] != ref_image[iTest].real_values[pixel_counter]) FailTest;
+    }
+  }
+
+  // Finally we check the Image::Consume method, which differs from the above test in that the resulting pointers should have the same address
+  for (int iTest = 0; iTest < 2; iTest++)
+  {
+    Image test_image;
+    test_image.Consume(&ref_image[iTest]); // This line is different (i.e. assign by reference.)
+    // The memory should be in different places and the values of test should be equal.
+    if (test_image.real_memory_allocated != ref_image[iTest].real_memory_allocated) FailTest;
+    if (&test_image.real_values == &ref_image[iTest].real_values) FailTest;
+    for (int pixel_counter = 0; pixel_counter < test_image.real_memory_allocated; pixel_counter++) 
+    { 
+      if (test_image.real_values[pixel_counter] != ref_image[iTest].real_values[pixel_counter]) FailTest;
+    }
+  }  
+
+
+}
 // A partial test for the ClipInto method, specifically when clipping a Fourier transform into
 // a larger volume
 void MyTestApp::TestClipIntoFourier()
@@ -356,7 +456,7 @@ void MyTestApp::TestStarToBinaryFileConversion()
   cisTEMParameters test_parameters;
   cisTEMParameterLine temp_line;
 
-  for (int counter = 0; counter <1000; counter++)
+  for (unsigned int counter = 0; counter <1000; counter++)
   {
     temp_line.amplitude_contrast = global_random_number_generator.GetUniformRandom() * 1;
     temp_line.assigned_subset  = myroundint(global_random_number_generator.GetUniformRandom() * 10);
@@ -374,7 +474,7 @@ void MyTestApp::TestStarToBinaryFileConversion()
     temp_line.microscope_spherical_aberration_mm = global_random_number_generator.GetUniformRandom() * 2.7;
     temp_line.microscope_voltage_kv = global_random_number_generator.GetUniformRandom() * 300;
     temp_line.occupancy = global_random_number_generator.GetUniformRandom() * 100;
-    temp_line.original_image_filename = wxString::Format("This_is_an_original_filename_string_with_a_random_number_:_%f", global_random_number_generator.GetUniformRandom() * 100000);
+    temp_line.original_image_filename = wxString::Format("This_is_an_original_filename_string_with_a_random_number_:_%f", global_random_number_generator.GetUniformRandom() * 100000); 
     temp_line.particle_group =  myroundint(global_random_number_generator.GetUniformRandom() * 10);
     temp_line.phase_shift = global_random_number_generator.GetUniformRandom() * 3.14;
     temp_line.phi = global_random_number_generator.GetUniformRandom() * 180;
@@ -415,7 +515,7 @@ void MyTestApp::TestStarToBinaryFileConversion()
 
   test_parameters.ClearAll();
   test_parameters.ReadFromcisTEMBinaryFile(original_binary_filename.ToStdString().c_str());
-  test_parameters.WriteTocisTEMStarFile(star_from_binary_filename.ToStdString().c_str());
+  int header_bytes_to_ignore = test_parameters.WriteTocisTEMStarFile(star_from_binary_filename.ToStdString().c_str());
 
   // read in star file and write to binary..
 
@@ -450,9 +550,9 @@ void MyTestApp::TestStarToBinaryFileConversion()
   fread(star_file_from_binary_file, 1, star_from_binary_size_in_bytes, current_file);
   fclose(current_file);
 
-  for (long byte_counter = 63; byte_counter < original_star_size_in_bytes; byte_counter++) // start at byte 63, the before that is a comment which includes the time written
+  for (long byte_counter = header_bytes_to_ignore; byte_counter < original_star_size_in_bytes; byte_counter++) // start at byte header_bytes_to_ignore, the before that is a comment which includes the time written
   {
-    if (original_star_file[byte_counter] != star_file_from_binary_file[byte_counter]) FailTest;
+    if (original_star_file[byte_counter] != star_file_from_binary_file[byte_counter]) { std::cerr << "failed on byte" << byte_counter << std::endl; FailTest;}
   }
 
   EndTest();
@@ -527,7 +627,7 @@ void MyTestApp::TestEmpiricalDistribution()
 {
   CheckDependencies({"MRCFile::OpenFile", "MRCFile::ReadSlice"});
 
-  BeginTest("Test Empirical Distribution");
+  BeginTest("Empirical Distribution");
 
   Image test_image;
   test_image.QuickAndDirtyReadSlice(hiv_image_80x80x1_filename.ToStdString(),1);
@@ -548,7 +648,7 @@ void MyTestApp::TestSumOfSquaresFourierAndFFTNormalization()
 {
   CheckDependencies({"MRCFile::OpenFile", "MRCFile::ReadSlice", "Image::ForwardFFT", "Image::BackwardFFT"});
 
-  BeginTest("Test Sum Of Squares Fourier");
+  BeginTest("Sum Of Squares Fourier");
 
   Image test_image;
   test_image.QuickAndDirtyReadSlice(hiv_image_80x80x1_filename.ToStdString(),1);
@@ -572,9 +672,9 @@ void MyTestApp::TestSumOfSquaresFourierAndFFTNormalization()
 
 void MyTestApp::TestRandomVariableFunctions()
 {
-  BeginTest("Test Random Variable Functions");
+  BeginTest("Random Variable Functions");
 
-  float acceptable_error = 0.01f; // this is a random sample so it won't be so exact. 
+  float acceptable_error = 0.025f; // this is a random sample so it won't be so exact. 
 
   // We want a reasonably large image to ensure that we sample the distribution well
   Image test_image;
@@ -631,18 +731,18 @@ void MyTestApp::TestRandomVariableFunctions()
     if ( ! RelativeErrorIsLessThanEpsilon(my_dist.GetSampleVariance(), 1.f/(val*val), acceptable_error) ) FailTest;
   } 
 
-  // Test the gamma distribution, mean = kappa*theta, variance = kappa*theta^2
+  // Test the gamma distribution, mean = alpha*theta, variance = alpha*theta^2
   // Re-use the poisson test values
-  float theta;
-  for (auto& kappa : test_poisson_vals)
+  float beta;
+  for (auto& alpha : test_poisson_vals)
   {
-    theta  = kappa + 1.f;
+    beta  = alpha + 1.f;
     test_image.SetToConstant(0.f);
     my_dist.Reset();
-    test_image.AddNoiseFromGammaDistribution(kappa, theta);
+    test_image.AddNoiseFromGammaDistribution(alpha, beta);
     test_image.UpdateDistributionOfRealValues(&my_dist);
-    if ( ! RelativeErrorIsLessThanEpsilon(my_dist.GetSampleMean(), kappa*theta, acceptable_error) ) {wxPrintf("m,a/b %f %f\n", my_dist.GetSampleMean(), kappa * theta); FailTest;}
-    if ( ! RelativeErrorIsLessThanEpsilon(my_dist.GetSampleVariance(), kappa*theta*theta, acceptable_error) ) FailTest;
+    if ( ! RelativeErrorIsLessThanEpsilon(my_dist.GetSampleMean(), alpha*beta, 2.0f*acceptable_error) ) {wxPrintf("m,a/b %f %f\n", my_dist.GetSampleMean(), alpha * beta); FailTest;}
+    if ( ! RelativeErrorIsLessThanEpsilon(my_dist.GetSampleVariance(), alpha*beta*beta, 2.0f*acceptable_error) ) FailTest;
   } 
   
   EndTest();

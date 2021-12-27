@@ -1134,7 +1134,7 @@ void cisTEMParameters::WriteTocisTEMBinaryFile(wxString wanted_filename, int fir
 
 }
 
-void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first_line_to_write, int last_line_to_write, int first_image_to_write, int last_image_to_write)
+int cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first_line_to_write, int last_line_to_write, int first_image_to_write, int last_image_to_write)
 {
 
 	wxFileName cisTEM_star_filename = wanted_filename;
@@ -1153,7 +1153,9 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first
 	else
 	if (last_line_to_write < 0 || last_line_to_write >= all_parameters.GetCount()) last_line_to_write = all_parameters.GetCount() - 1;
 
-	fprintf(cisTEM_star_file, "# Written by cisTEM Version %s on %s", CISTEM_VERSION_TEXT, wxDateTime::Now().FormatISOCombined(' ').ToStdString().c_str());
+  // For console tests, we need to ignore these bytes because the time stampls will be diffferent in the testing as written. 
+  // The number of bytes to ignore is not fixed as CISTEM_VERSION_TEXT is variable.
+	int version_and_time_stamp_bytes_written = fprintf(cisTEM_star_file, "# Written by cisTEM Version %s on %s", CISTEM_VERSION_TEXT, wxDateTime::Now().FormatISOCombined(' ').ToStdString().c_str());
 
 	for (int counter = 0; counter < header_comments.GetCount(); counter++)
 	{
@@ -1463,6 +1465,7 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first
 	}
 
 	fclose(cisTEM_star_file);
+  return version_and_time_stamp_bytes_written;
 }
 
 cisTEMParameterLine cisTEMParameters::ReturnParameterAverages(bool only_average_active)

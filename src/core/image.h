@@ -10,6 +10,8 @@ class ResolutionStatistics;
 class RotationMatrix;
 class MyApp;
 
+using namespace cistem;
+
 class Image {
 
 public:
@@ -118,6 +120,14 @@ public:
 	void ComputeFSC(Image *other_image, int number_of_shells, int *shell_number, float *computed_fsc, double *work_sum_of_squares, double *work_sum_of_other_squares, double *work_sum_of_cross_products);
 	void DividePixelWise(Image &other_image);
 	void AddGaussianNoise(float wanted_sigma_value = 1.0, RandomNumberGenerator *provided_generator = NULL);
+ 	// using cistem::NoiseType from defines.h
+ 	void AddNoise(NoiseType wanted_noise_type, float noise_param_1, float noise_param_2);
+ 	void AddNoiseFromUniformDistribution(float wanted_minimum_value, float wanted_maximum_value) {  AddNoise(UNIFORM, wanted_minimum_value, wanted_maximum_value); }
+ 	void AddNoiseFromNormalDistribution(float wanted_mean_value, float wanted_sigma_value) {  AddNoise(GAUSSIAN, wanted_mean_value, wanted_sigma_value); }
+ 	void AddNoiseFromPoissonDistribution(float wanted_mean_value) {  AddNoise(POISSON, wanted_mean_value, 0.1f); }
+ 	void AddNoiseFromExponentialDistribution(float wanted_lambda_value) {  AddNoise(EXPONENTIAL, wanted_lambda_value, 0.1f); }
+ 	void AddNoiseFromGammaDistribution(float wanted_alpha_value, float wanted_beta_value) {  AddNoise(GAMMA, wanted_alpha_value, wanted_beta_value); }
+
 	long ZeroFloat(float wanted_mask_radius = 0.0, bool outsize = false);
 	long ZeroFloatAndNormalize(float wanted_sigma_value = 1.0, float wanted_mask_radius = 0.0, bool outside = false);
 	long Normalize(float wanted_sigma_value = 1.0, float wanted_mask_radius = 0.0, bool outside = false);

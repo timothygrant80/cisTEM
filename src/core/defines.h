@@ -23,6 +23,12 @@
 #define VARIABLE_LENGTH  8
 #define INTEGER_UNSIGNED 9
 
+// Types of noise distributions
+namespace cistem {
+
+  enum NoiseType : int { UNIFORM, GAUSSIAN, POISSON, EXPONENTIAL, GAMMA };
+
+}
 
 // From Table 2.2 DeGraff
 #define RELATIVISTIC_VOLTAGE_100 109784.0f // Volts

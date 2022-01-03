@@ -25,7 +25,34 @@
 // NON SQUARE IMAGES
 
 
-
+void print2DArray(Image &image) 
+{
+  int width = 10;
+  int padding_counter = 1;
+  wxPrintf("\n");
+  for (int x = -1; x < image.logical_x_dimension + image.padding_jump_value; x++)
+  {
+    wxPrintf("[%-4d]   ", x);
+    for (int y = 0; y < image.logical_y_dimension; y++)
+    {
+      if (x == -1) 
+      {  
+        wxPrintf("[%*.3d]", width, y);
+      }
+      else if (x < image.logical_x_dimension)
+      {
+        wxPrintf("%*.3f", width, image.real_values[image.ReturnReal1DAddressFromPhysicalCoord(x,y,0)]);
+      }
+      else
+      {
+        wxPrintf("%*.3f", width, image.real_values[padding_counter+image.ReturnReal1DAddressFromPhysicalCoord(x-padding_counter,y,0)]);
+      }
+    }
+    if  (x >= image.logical_x_dimension) padding_counter++;
+    wxPrintf("\n");
+  }
+  wxPrintf("\n");
+}
 
 class
 MyTestApp : public MyApp //public wxAppConsole
@@ -76,6 +103,7 @@ MyTestApp : public MyApp //public wxAppConsole
     void TestEmpiricalDistribution();
     void TestSumOfSquaresFourierAndFFTNormalization();
     void TestRandomVariableFunctions();
+    void TestIntegerShifts();
 
 
     void BeginTest(const char *test_name);
@@ -114,6 +142,7 @@ bool MyTestApp::DoCalculation()
   all_tests_have_passed = true;
 
   TestMRCFunctions();
+  TestAssignmentOperatorsAndFunctions();
   TestImageArithmeticFunctions();
   TestFFTFunctions();
   TestScalingAndSizingFunctions();
@@ -129,6 +158,7 @@ bool MyTestApp::DoCalculation()
   TestEmpiricalDistribution();
   TestSumOfSquaresFourierAndFFTNormalization();
   TestRandomVariableFunctions();
+  TestIntegerShifts();
 
 
   wxPrintf("\n\n\n");
@@ -170,7 +200,7 @@ void MyTestApp::TestAssignmentOperatorsAndFunctions()
     Image test_image;
     test_image = &ref_image[iTest];
     // The memory should be in different places and the values of test should be equal.
-    if (test_image.real_memory_allocated == ref_image[iTest].real_memory_allocated) FailTest;
+    if (test_image.real_memory_allocated != ref_image[iTest].real_memory_allocated) FailTest;
     if (&test_image.real_values == &ref_image[iTest].real_values) FailTest;
     for (int pixel_counter = 0; pixel_counter < test_image.real_memory_allocated; pixel_counter++) 
     { 
@@ -185,7 +215,7 @@ void MyTestApp::TestAssignmentOperatorsAndFunctions()
     test_image.Allocate(wanted_size + 3, wanted_size + 3, 1);
     test_image = &ref_image[iTest];
     // The memory should be in different places and the values of test should be equal.
-    if (test_image.real_memory_allocated == ref_image[iTest].real_memory_allocated) FailTest;
+    if (test_image.real_memory_allocated != ref_image[iTest].real_memory_allocated) FailTest;
     if (&test_image.real_values == &ref_image[iTest].real_values) FailTest;
     for (int pixel_counter = 0; pixel_counter < test_image.real_memory_allocated; pixel_counter++) 
     { 
@@ -199,7 +229,7 @@ void MyTestApp::TestAssignmentOperatorsAndFunctions()
     Image test_image;
     test_image.CopyFrom(&ref_image[iTest]);
     // The memory should be in different places and the values of test should be equal.
-    if (test_image.real_memory_allocated == ref_image[iTest].real_memory_allocated) FailTest;
+    if (test_image.real_memory_allocated != ref_image[iTest].real_memory_allocated) FailTest;
     if (&test_image.real_values == &ref_image[iTest].real_values) FailTest;
     for (int pixel_counter = 0; pixel_counter < test_image.real_memory_allocated; pixel_counter++) 
     { 
@@ -213,7 +243,7 @@ void MyTestApp::TestAssignmentOperatorsAndFunctions()
     Image test_image;
     test_image = ref_image[iTest]; // This line is different (i.e. assign by reference.)
     // The memory should be in different places and the values of test should be equal.
-    if (test_image.real_memory_allocated == ref_image[iTest].real_memory_allocated) FailTest;
+    if (test_image.real_memory_allocated != ref_image[iTest].real_memory_allocated) FailTest;
     if (&test_image.real_values == &ref_image[iTest].real_values) FailTest;
     for (int pixel_counter = 0; pixel_counter < test_image.real_memory_allocated; pixel_counter++) 
     { 
@@ -229,19 +259,18 @@ void MyTestApp::TestAssignmentOperatorsAndFunctions()
     // The memory should be in different places and the values of test should be equal.
     if (test_image.real_memory_allocated != ref_image[iTest].real_memory_allocated) FailTest;
     if (&test_image.real_values == &ref_image[iTest].real_values) FailTest;
-    for (int pixel_counter = 0; pixel_counter < test_image.real_memory_allocated; pixel_counter++) 
-    { 
-      if (test_image.real_values[pixel_counter] != ref_image[iTest].real_values[pixel_counter]) FailTest;
-    }
+
+    // Because the data array is "stolen" we obvi cannot compare to the reference as this would give a segfault.
   }  
 
+  EndTest();
 
 }
 // A partial test for the ClipInto method, specifically when clipping a Fourier transform into
 // a larger volume
 void MyTestApp::TestClipIntoFourier()
 {
-  CheckDependencies({"MRCFile::OpenFile", "MRCFile::ReadSlice", "Image::ForwardFFT", "Image::BackwardFFT"});
+  CheckDependencies({"MRCFile::OpenFile", "MRCFile::ReadSlice", "Image::ForwardFFT", "Image::BackwardFFT","Memory Assignment Ops and Funcs","Image::SetToConstant"});
 
   BeginTest("Image::ClipIntoFourier");
 
@@ -375,6 +404,7 @@ void MyTestApp::TestClipIntoFourier()
     }
   }
 
+
   /*
    *  Now test with odd dimensions into even dimensions
    */
@@ -408,6 +438,7 @@ void MyTestApp::TestClipIntoFourier()
     }
   }
 
+
   /*
    *  Now test with even dimensions into odd dimensions
    */
@@ -440,9 +471,6 @@ void MyTestApp::TestClipIntoFourier()
       address += test_image.padding_jump_value;
     }
   }
-
-
-
 
 
   EndTest();
@@ -494,6 +522,7 @@ void MyTestApp::TestStarToBinaryFileConversion()
     test_parameters.all_parameters.Add(temp_line);
 
   }
+  
 
   test_parameters.parameters_to_write.SetAllToTrue();
 
@@ -744,9 +773,167 @@ void MyTestApp::TestRandomVariableFunctions()
     if ( ! RelativeErrorIsLessThanEpsilon(my_dist.GetSampleMean(), alpha*beta, 2.0f*acceptable_error) ) {wxPrintf("m,a/b %f %f\n", my_dist.GetSampleMean(), alpha * beta); FailTest;}
     if ( ! RelativeErrorIsLessThanEpsilon(my_dist.GetSampleVariance(), alpha*beta*beta, 2.0f*acceptable_error) ) FailTest;
   } 
-  
+
   EndTest();
 }
+
+void MyTestApp::TestIntegerShifts()
+{
+  // Dependencies?
+  BeginTest("Integer Shifts and Rotations");
+  CheckDependencies({"Memory Assignment Ops and Funcs"});
+  
+  // TODO Image::RotateQuadrants should be tested, but I'm not clear on what it is supposed to do.
+
+  // Goal is to verify image transforms that work without interpolation.
+  const int eve_size = 16;
+  const int odd_size  = 17;
+
+  Image odd_image, eve_image;
+  odd_image.Allocate(odd_size,odd_size,1,true,false);
+  eve_image.Allocate(eve_size,eve_size,1,true,false);
+
+  // Set values around the center, which is also the origin for rotations.
+  const int ocx = odd_image.physical_address_of_box_center_x;
+  const int ocy = odd_image.physical_address_of_box_center_y;
+  const int ecx = eve_image.physical_address_of_box_center_x;
+  const int ecy = eve_image.physical_address_of_box_center_y;
+
+  // Locations and test values.
+  std::vector<float> tv = {1.f,2.f,3.f,4.f};
+  std::vector<int> sx = {2,0,-2,0}; // x shift
+  std::vector<int> sy = {0,2,0,-2}; // y shift
+
+  std::vector<int> addr_odd = {0,0,0,0};
+  std::vector<int> addr_eve = {0,0,0,0}; 
+
+  const int origin_addr_odd = odd_image.ReturnReal1DAddressFromPhysicalCoord(ocx, ocy, 0);
+  const int origin_addr_eve = eve_image.ReturnReal1DAddressFromPhysicalCoord(ecx, ecy, 0);
+  float tmp = 0.f;
+  for (int i = 0; i < addr_odd.size(); i++)
+  {
+    addr_odd[i] = odd_image.ReturnReal1DAddressFromPhysicalCoord(ocx + sx[i], ocy + sy[i], 0);
+    addr_eve[i] = eve_image.ReturnReal1DAddressFromPhysicalCoord(ecx + sx[i], ecy + sy[i], 0);
+    tmp += tv[i];
+  }
+
+  // make sure we don't change the value for the origin
+  const float origin_val = tmp;
+
+
+  /*
+      y ->
+   x 
+   |  . . .0 0 3 0 0
+   V  . . .0 0 0 0 0
+      . . .4 0 6 0 2
+      . . .0 0 0 0 0
+      . . .0 0 1 0 0
+
+      Note that for an even sized image, the origin is effectively shifted by -1 in x on a +90 rotation
+      This is an "artifact" of defining the origin based on the pixel grid and not the underlying image data.
+      0 0     0 6
+      0 6  -> 0 0
+  */
+
+  odd_image.SetToConstant(0.f);
+  eve_image.SetToConstant(0.f);
+  odd_image.real_values[origin_addr_odd] = origin_val;
+  eve_image.real_values[origin_addr_eve] = origin_val;
+  int from_addr;
+  for (int i = 0; i < tv.size(); i++)
+  {
+    odd_image.real_values[addr_odd[i]] = tv[i];
+    eve_image.real_values[addr_eve[i]] = tv[i];
+  }
+
+
+  Image odd_test_image, eve_test_image;
+  odd_test_image.CopyFrom(&odd_image); 
+  eve_test_image.CopyFrom(&eve_image);
+
+  bool rotate_by_positive_90_degrees = true;
+  bool preserve_origin = false;
+  odd_test_image.RotateInPlaceAboutZBy90Degrees(rotate_by_positive_90_degrees);
+  eve_test_image.RotateInPlaceAboutZBy90Degrees(rotate_by_positive_90_degrees);
+  // origin should be the same, pixel values should be permuted one value counter-clockwise.
+  if (odd_test_image.real_values[origin_addr_odd] != origin_val) FailTest;
+  if (eve_test_image.real_values[origin_addr_eve-1] != origin_val) FailTest; 
+  for (int i = 0; i < tv.size(); i++)
+  {
+    from_addr = (i+tv.size()+1) % tv.size();
+    if (odd_test_image.real_values[addr_odd[from_addr]] != tv[i]) FailTest;
+    if (eve_test_image.real_values[addr_eve[from_addr]-1] != tv[i]) FailTest;
+  } 
+
+  // Test rotating back by -90 degress, everything should be identical to the starting conditions.
+  rotate_by_positive_90_degrees = false;
+  odd_test_image.RotateInPlaceAboutZBy90Degrees(rotate_by_positive_90_degrees);
+  eve_test_image.RotateInPlaceAboutZBy90Degrees(rotate_by_positive_90_degrees);
+  // origin should be the same, pixel values should be permuted one value counter-clockwise.
+  if (odd_test_image.real_values[origin_addr_odd] != origin_val) FailTest;
+  if (eve_test_image.real_values[origin_addr_eve] != origin_val) FailTest; 
+  for (int i = 0; i < tv.size(); i++)
+  {
+    from_addr = i;
+    if (odd_test_image.real_values[addr_odd[from_addr]] != tv[i]) FailTest;
+    if (eve_test_image.real_values[addr_eve[from_addr]] != tv[i]) FailTest;
+  }  
+
+  // Test forward rotation with a integer base shift (shouldn't need offsets in Y)
+  rotate_by_positive_90_degrees = true;
+  eve_test_image.RotateInPlaceAboutZBy90Degrees(rotate_by_positive_90_degrees);
+  eve_test_image.RealSpaceIntegerShift(-1,0,0);
+
+  // origin should be the same, pixel values should be permuted one value counter-clockwise.
+  if (eve_test_image.real_values[origin_addr_eve] != origin_val) FailTest; 
+  for (int i = 0; i < tv.size(); i++)
+  {
+    from_addr = (i+tv.size()+1) % tv.size();
+    if (eve_test_image.real_values[addr_eve[from_addr]] != tv[i]) FailTest;
+  }  
+
+  // Test combined shift and rotate, from a clean copy
+  preserve_origin = true;
+  odd_test_image.CopyFrom(&odd_image); 
+  eve_test_image.CopyFrom(&eve_image);
+
+  odd_test_image.RotateInPlaceAboutZBy90Degrees(rotate_by_positive_90_degrees, preserve_origin);
+  eve_test_image.RotateInPlaceAboutZBy90Degrees(rotate_by_positive_90_degrees, preserve_origin);
+
+  // origin should be the same, pixel values should be permuted one value counter-clockwise.
+  if (odd_test_image.real_values[origin_addr_odd] != origin_val) FailTest;
+  if (eve_test_image.real_values[origin_addr_eve] != origin_val) FailTest; 
+
+  for (int i = 0; i < tv.size(); i++)
+  {
+    from_addr = (i+tv.size()+1) % tv.size();
+    if (odd_test_image.real_values[addr_odd[from_addr]] != tv[i]) FailTest;
+    if (eve_test_image.real_values[addr_eve[from_addr]] != tv[i]) FailTest;
+  }  
+
+  // Test combined shift and inverse rotate
+  rotate_by_positive_90_degrees = false;
+  odd_test_image.CopyFrom(&odd_image); 
+  eve_test_image.CopyFrom(&eve_image);
+  odd_test_image.RotateInPlaceAboutZBy90Degrees(rotate_by_positive_90_degrees, preserve_origin);
+  eve_test_image.RotateInPlaceAboutZBy90Degrees(rotate_by_positive_90_degrees, preserve_origin);
+
+  // origin should be the same, pixel values should be permuted one value clockwise.
+  if (odd_test_image.real_values[origin_addr_odd] != origin_val) FailTest;
+  if (eve_test_image.real_values[origin_addr_eve] != origin_val) FailTest; 
+  for (int i = 0; i < tv.size(); i++)
+  {
+    // Note the difference in address here.
+    from_addr = (i+1) % tv.size();
+    if (odd_test_image.real_values[addr_odd[i]] != tv[from_addr]) FailTest;
+    if (eve_test_image.real_values[addr_eve[i]] != tv[from_addr]) FailTest;
+  }   
+
+  EndTest();
+
+}
+
 
 
 void MyTestApp::TestImageLoopingAndAddressing()
@@ -1072,21 +1259,6 @@ void MyTestApp::TestFilterFunctions()
 
   EndTest();
 
-  // Mask central cross
-
-  BeginTest("Image::MaskCentralCross");
-
-  test_image.QuickAndDirtyReadSlice(hiv_images_80x80x10_filename.ToStdString(), 1);
-  test_image.ForwardFFT();
-  test_image.MaskCentralCross(2,2);
-  test_image.BackwardFFT();
-  if (DoublesAreAlmostTheSame(test_image.ReturnRealPixelFromPhysicalCoord(0, 0, 0), -0.256103) == false) FailTest;
-  if (DoublesAreAlmostTheSame(test_image.ReturnRealPixelFromPhysicalCoord(40,40, 0), 0.158577) == false) FailTest;
-  if (DoublesAreAlmostTheSame(test_image.ReturnRealPixelFromPhysicalCoord(79,79, 0), 0.682073) == false) FailTest;
-
-  EndTest();
-
-
 }
 
 void MyTestApp::TestMaskCentralCross()
@@ -1135,7 +1307,7 @@ void MyTestApp::TestMaskCentralCross()
 void MyTestApp::TestScalingAndSizingFunctions()
 {
 
-  CheckDependencies({"MRCFile::OpenFile", "MRCFile::ReadSlice"});
+  CheckDependencies({"MRCFile::OpenFile", "MRCFile::ReadSlice", "Image::ForwardFFT", "Memory Assignment Ops and Funcs"});
 
   BeginTest("Image::ClipInto");
 

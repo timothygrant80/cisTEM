@@ -2,6 +2,7 @@
 #include <wx/app.h>
 #include <wx/cmdline.h>
 #include <cstdio>
+#include <unordered_map>
 #include "wx/socket.h"
 
 #include "../../core/core_headers.h"

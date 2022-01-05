@@ -1,4 +1,4 @@
-FROM dockcross/manylinux2014-x64
+FROM gcc
 
 RUN apt-get --allow-releaseinfo-change update && \
     apt-get install -y gtk2.0-dev \

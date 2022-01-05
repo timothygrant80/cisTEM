@@ -2,7 +2,7 @@ name: cisTEM CI
 
 on:
   push:
-    branches: different_compilers
+    branches: master
   pull_request:
     branches: master
 
@@ -45,7 +45,7 @@ jobs:
 #        echo "NLSPATH=/opt/intel/oneapi/mkl/2021.4.0/lib/intel64/locale/%l_%t/%N" >> $GITHUB_ENV
     - name: configure
       env:
-        CC: ${{ matrix.xx }}
+        CC: ${{ matrix.cc }}
         CXX: ${{ matrix.cxx }}
       run: |
         mkdir -p build/${{ matrix.compiler }} 
@@ -74,6 +74,7 @@ jobs:
 
   console_test:
     strategy:
+      fail-fast: false
       matrix:
         compiler: [icpc,gcc,clang]
     name: Console test
@@ -99,6 +100,7 @@ jobs:
 
   samples_functional_testing:
     strategy:
+      fail-fast: false
       matrix:
         compiler: [icpc,gcc,clang]
     name: Samples functional testing

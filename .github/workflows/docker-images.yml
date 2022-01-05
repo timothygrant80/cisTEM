@@ -1,0 +1,16 @@
+name: Prepare CI docker containers
+
+on: workflow_dispatch
+
+jobs:
+
+  build:
+
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        compiler: [icpc,gcc,clang]
+    steps:
+    - uses: actions/checkout@v2
+    - name: Build the Docker image
+      run: docker build . --file .cicontainer/${{ matrix.node }}/Dockerfile --tag cistem_ci_${{ matrix.node }}:$(date +%s)

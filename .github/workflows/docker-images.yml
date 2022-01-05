@@ -23,5 +23,5 @@ jobs:
         context: .cicontainer/${{ matrix.compiler }}/
         push: true
         tags: |
-          jojoelfe/cistem_ci_${{ matrix.compiler }}:$(date +%s)
+          jojoelfe/cistem_ci_${{ matrix.compiler }}:${{ github.sha }}
           jojoelfe/cistem_ci_${{ matrix.compiler }}:latest

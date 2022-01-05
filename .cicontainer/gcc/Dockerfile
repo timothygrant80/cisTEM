@@ -8,7 +8,6 @@ RUN sed -i \
 RUN yum update -y \
     && yum install -y \
     wget \
-    git \
     fftw-devel \
     gtk2-devel \
     && yum clean all

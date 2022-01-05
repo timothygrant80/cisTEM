@@ -17,12 +17,15 @@ jobs:
           - compiler: icpc
             cxx: icpc
             cc: icc
+            staticmode: "--enable-staticmode"
           - compiler: gcc
             cxx: g++
             cc: gcc
+            staticmode: "--enable-staticmode"
           - compiler: clang
             cxx: clang++
             cc: clang
+            staticmode: ""
           
     runs-on: ubuntu-18.04
     container: jojoelfe/cistem_ci_${{ matrix.compiler }}
@@ -52,7 +55,7 @@ jobs:
         cd build/${{ matrix.compiler }} 
         echo $CC
         echo $CXX
-        ../../configure  --enable-experimental --enable-staticmode --enable-openmp  --with-wx-config=wx-config  --enable-samples
+        ../../configure  --enable-experimental ${{matrix.staticmode}} --enable-openmp  --with-wx-config=wx-config  --enable-samples
         VERSION=$(cat config.log | grep CISTEM_VERSION_TEXT | cut -d' ' -f3 | tr -d '"')
         echo "::set-output name=version::$VERSION" 
     - name: make

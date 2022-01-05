@@ -1,16 +1,26 @@
-name: ICPC compile
+name: cisTEM CI
 
 on:
   push:
-    branches: master
+    branches: different_compilers
   pull_request:
     branches: master
 
 jobs:
   build:
-
+    strategy:
+      matrix:
+        compiler: [icpc,gcc,clang]
+        include:
+          - compiler: icpc
+            cxx: icpc
+            cc: icc
+          - compiler: clang
+            cxx: clang++
+            cc: clang
+          
     runs-on: ubuntu-18.04
-    container: jojoelfe/cistem_ci
+    container: jojoelfe/cistem_ci_${{ matrix.compiler }}
     outputs:
       version: ${{ steps.configure.outputs.version }}
     steps:
@@ -19,40 +29,43 @@ jobs:
         fetch-depth: 0
     - name: regenerate_project
       run: ./regenerate_project.b
-    - name: set path
-      run: | 
-        echo "/opt/intel/oneapi/compiler/2021.4.0/linux/bin/intel64" >> $GITHUB_PATH
-        echo "CPATH=/opt/intel/oneapi/vpl/2021.6.0/include:/opt/intel/oneapi/tbb/2021.4.0/env/../include:/opt/intel/oneapi/mpi/2021.4.0//include:/opt/intel/oneapi/mkl/2021.4.0/include:/opt/intel/oneapi/ippcp/2021.4.0/include:/opt/intel/oneapi/ipp/2021.4.0/include:/opt/intel/oneapi/dpl/2021.5.0/linux/include:/opt/intel/oneapi/dnnl/2021.4.0/cpu_dpcpp_gpu_dpcpp/lib:/opt/intel/oneapi/dev-utilities/2021.4.0/include:/opt/intel/oneapi/dal/2021.4.0/include:/opt/intel/oneapi/compiler/2021.4.0/linux/include:/opt/intel/oneapi/ccl/2021.4.0/include/cpu_gpu_dpcpp" >> $GITHUB_ENV
-        echo "LD_LIBRARY_PATH=/opt/intel/oneapi/vpl/2021.6.0/lib:/opt/intel/oneapi/tbb/2021.4.0/env/../lib/intel64/gcc4.8:/opt/intel/oneapi/mpi/2021.4.0//libfabric/lib:/opt/intel/oneapi/mpi/2021.4.0//lib/release:/opt/intel/oneapi/mpi/2021.4.0//lib:/opt/intel/oneapi/mkl/2021.4.0/lib/intel64:/opt/intel/oneapi/itac/2021.4.0/slib:/opt/intel/oneapi/ippcp/2021.4.0/lib/intel64:/opt/intel/oneapi/ipp/2021.4.0/lib/intel64:/opt/intel/oneapi/dnnl/2021.4.0/cpu_dpcpp_gpu_dpcpp/lib:/opt/intel/oneapi/debugger/10.2.4/gdb/intel64/lib:/opt/intel/oneapi/debugger/10.2.4/libipt/intel64/lib:/opt/intel/oneapi/debugger/10.2.4/dep/lib:/opt/intel/oneapi/dal/2021.4.0/lib/intel64:/opt/intel/oneapi/compiler/2021.4.0/linux/lib:/opt/intel/oneapi/compiler/2021.4.0/linux/lib/x64:/opt/intel/oneapi/compiler/2021.4.0/linux/lib/emu:/opt/intel/oneapi/compiler/2021.4.0/linux/lib/oclfpga/host/linux64/lib:/opt/intel/oneapi/compiler/2021.4.0/linux/lib/oclfpga/linux64/lib:/opt/intel/oneapi/compiler/2021.4.0/linux/compiler/lib/intel64_lin:/opt/intel/oneapi/ccl/2021.4.0/lib/cpu_gpu_dpcpp" >> $GITHUB_ENV
-        echo "MKLROOT=/opt/intel/oneapi/mkl/2021.4.0" >> $GITHUB_ENV
-        echo "PKG_CONFIG_PATH=/opt/intel/oneapi/vtune/2021.7.1/include/pkgconfig/lib64:/opt/intel/oneapi/vpl/2021.6.0/lib/pkgconfig:/opt/intel/oneapi/tbb/2021.4.0/env/../lib/pkgconfig:/opt/intel/oneapi/mpi/2021.4.0/lib/pkgconfig:/opt/intel/oneapi/mkl/2021.4.0/lib/pkgconfig:/opt/intel/oneapi/ippcp/2021.4.0/lib/pkgconfig:/opt/intel/oneapi/inspector/2021.4.0/include/pkgconfig/lib64:/opt/intel/oneapi/dpl/2021.5.0/lib/pkgconfig:/opt/intel/oneapi/dal/2021.4.0/lib/pkgconfig:/opt/intel/oneapi/compiler/2021.4.0/lib/pkgconfig:/opt/intel/oneapi/ccl/2021.4.0/lib/pkgconfig:/opt/intel/oneapi/advisor/2021.4.0/include/pkgconfig/lib64:" >> $GITHUB_ENV
-        echo "LIBRARY_PATH=/opt/intel/oneapi/vpl/2021.6.0/lib:/opt/intel/oneapi/tbb/2021.4.0/env/../lib/intel64/gcc4.8:/opt/intel/oneapi/mpi/2021.4.0//libfabric/lib:/opt/intel/oneapi/mpi/2021.4.0//lib/release:/opt/intel/oneapi/mpi/2021.4.0//lib:/opt/intel/oneapi/mkl/2021.4.0/lib/intel64:/opt/intel/oneapi/ippcp/2021.4.0/lib/intel64:/opt/intel/oneapi/ipp/2021.4.0/lib/intel64:/opt/intel/oneapi/dnnl/2021.4.0/cpu_dpcpp_gpu_dpcpp/lib:/opt/intel/oneapi/dal/2021.4.0/lib/intel64:/opt/intel/oneapi/compiler/2021.4.0/linux/compiler/lib/intel64_lin:/opt/intel/oneapi/compiler/2021.4.0/linux/lib:/opt/intel/oneapi/clck/2021.4.0/lib/intel64:/opt/intel/oneapi/ccl/2021.4.0/lib/cpu_gpu_dpcpp" >> $GITHUB_ENV
-        echo "NLSPATH=/opt/intel/oneapi/mkl/2021.4.0/lib/intel64/locale/%l_%t/%N" >> $GITHUB_ENV
+#    - name: set path
+#      run: | 
+#        echo "/opt/intel/oneapi/compiler/2021.4.0/linux/bin/intel64" >> $GITHUB_PATH
+#        echo "CPATH=/opt/intel/oneapi/vpl/2021.6.0/include:/opt/intel/oneapi/tbb/2021.4.0/env/../include:/opt/intel/oneapi/mpi/2021.4.0//include:/opt/intel/oneapi/mkl/2021.4.0/include:/opt/intel/oneapi/ippcp/2021.4.0/include:/opt/intel/oneapi/ipp/2021.4.0/include:/opt/intel/oneapi/dpl/2021.5.0/linux/include:/opt/intel/oneapi/dnnl/2021.4.0/cpu_dpcpp_gpu_dpcpp/lib:/opt/intel/oneapi/dev-utilities/2021.4.0/include:/opt/intel/oneapi/dal/2021.4.0/include:/opt/intel/oneapi/compiler/2021.4.0/linux/include:/opt/intel/oneapi/ccl/2021.4.0/include/cpu_gpu_dpcpp" >> $GITHUB_ENV
+#        echo "LD_LIBRARY_PATH=/opt/intel/oneapi/vpl/2021.6.0/lib:/opt/intel/oneapi/tbb/2021.4.0/env/../lib/intel64/gcc4.8:/opt/intel/oneapi/mpi/2021.4.0//libfabric/lib:/opt/intel/oneapi/mpi/2021.4.0//lib/release:/opt/intel/oneapi/mpi/2021.4.0//lib:/opt/intel/oneapi/mkl/2021.4.0/lib/intel64:/opt/intel/oneapi/itac/2021.4.0/slib:/opt/intel/oneapi/ippcp/2021.4.0/lib/intel64:/opt/intel/oneapi/ipp/2021.4.0/lib/intel64:/opt/intel/oneapi/dnnl/2021.4.0/cpu_dpcpp_gpu_dpcpp/lib:/opt/intel/oneapi/debugger/10.2.4/gdb/intel64/lib:/opt/intel/oneapi/debugger/10.2.4/libipt/intel64/lib:/opt/intel/oneapi/debugger/10.2.4/dep/lib:/opt/intel/oneapi/dal/2021.4.0/lib/intel64:/opt/intel/oneapi/compiler/2021.4.0/linux/lib:/opt/intel/oneapi/compiler/2021.4.0/linux/lib/x64:/opt/intel/oneapi/compiler/2021.4.0/linux/lib/emu:/opt/intel/oneapi/compiler/2021.4.0/linux/lib/oclfpga/host/linux64/lib:/opt/intel/oneapi/compiler/2021.4.0/linux/lib/oclfpga/linux64/lib:/opt/intel/oneapi/compiler/2021.4.0/linux/compiler/lib/intel64_lin:/opt/intel/oneapi/ccl/2021.4.0/lib/cpu_gpu_dpcpp" >> $GITHUB_ENV
+#        echo "MKLROOT=/opt/intel/oneapi/mkl/2021.4.0" >> $GITHUB_ENV
+#        echo "PKG_CONFIG_PATH=/opt/intel/oneapi/vtune/2021.7.1/include/pkgconfig/lib64:/opt/intel/oneapi/vpl/2021.6.0/lib/pkgconfig:/opt/intel/oneapi/tbb/2021.4.0/env/../lib/pkgconfig:/opt/intel/oneapi/mpi/2021.4.0/lib/pkgconfig:/opt/intel/oneapi/mkl/2021.4.0/lib/pkgconfig:/opt/intel/oneapi/ippcp/2021.4.0/lib/pkgconfig:/opt/intel/oneapi/inspector/2021.4.0/include/pkgconfig/lib64:/opt/intel/oneapi/dpl/2021.5.0/lib/pkgconfig:/opt/intel/oneapi/dal/2021.4.0/lib/pkgconfig:/opt/intel/oneapi/compiler/2021.4.0/lib/pkgconfig:/opt/intel/oneapi/ccl/2021.4.0/lib/pkgconfig:/opt/intel/oneapi/advisor/2021.4.0/include/pkgconfig/lib64:" >> $GITHUB_ENV
+#        echo "LIBRARY_PATH=/opt/intel/oneapi/vpl/2021.6.0/lib:/opt/intel/oneapi/tbb/2021.4.0/env/../lib/intel64/gcc4.8:/opt/intel/oneapi/mpi/2021.4.0//libfabric/lib:/opt/intel/oneapi/mpi/2021.4.0//lib/release:/opt/intel/oneapi/mpi/2021.4.0//lib:/opt/intel/oneapi/mkl/2021.4.0/lib/intel64:/opt/intel/oneapi/ippcp/2021.4.0/lib/intel64:/opt/intel/oneapi/ipp/2021.4.0/lib/intel64:/opt/intel/oneapi/dnnl/2021.4.0/cpu_dpcpp_gpu_dpcpp/lib:/opt/intel/oneapi/dal/2021.4.0/lib/intel64:/opt/intel/oneapi/compiler/2021.4.0/linux/compiler/lib/intel64_lin:/opt/intel/oneapi/compiler/2021.4.0/linux/lib:/opt/intel/oneapi/clck/2021.4.0/lib/intel64:/opt/intel/oneapi/ccl/2021.4.0/lib/cpu_gpu_dpcpp" >> $GITHUB_ENV
+#        echo "NLSPATH=/opt/intel/oneapi/mkl/2021.4.0/lib/intel64/locale/%l_%t/%N" >> $GITHUB_ENV
     - name: configure
       run: |
-        mkdir -p build/icpc 
-        cd build/icpc 
-        CXX=icpc CC=icc ../../configure  --enable-experimental --enable-staticmode --enable-openmp  --with-wx-config=wx-config  --enable-samples
+        mkdir -p build/${{ matrix.compiler }} 
+        cd build/${{ matrix.compiler }} 
+        ../../configure  --enable-experimental --enable-staticmode --enable-openmp  --with-wx-config=wx-config  --enable-samples
         VERSION=$(cat config.log | grep CISTEM_VERSION_TEXT | cut -d' ' -f3 | tr -d '"')
         echo "::set-output name=version::$VERSION" 
     - name: make
       run: |
-        cd build/icpc
+        cd build/${{ matrix.compiler }}
         make -j4
         cp ../../scripts/testing/test_and_benchmark.sh src/
     - name: clean up
       run: |
-        cd build/icpc
+        cd build/${{ matrix.compiler }}
         rm -r src/core
         rm -r src/gui
         rm -r src/programs
     - name: Create binary artifact
       uses: actions/upload-artifact@v2
       with: 
-        name: cistem_binaries
-        path: build/icpc/src
+        name: cistem_binaries_${{ matrix.compiler }}
+        path: build/${{ matrix.compiler }}/src
 
   console_test:
+    strategy:
+      matrix:
+        compiler: [icpc,gcc,clang]
     name: Console test
     needs: build
     runs-on: ubuntu-18.04
@@ -60,7 +73,7 @@ jobs:
     - name: Download artifact
       uses: actions/download-artifact@v2
       with:
-        name: cistem_binaries
+        name: cistem_binaries_${{ matrix.compiler }}
     - name: Fix permissions
       run: chmod +x *
     - name: test console_test
@@ -75,6 +88,9 @@ jobs:
         path: /tmp/*.mrc
 
   samples_functional_testing:
+    strategy:
+      matrix:
+        compiler: [icpc,gcc,clang]
     name: Samples functional testing
     needs: build
     runs-on: ubuntu-18.04
@@ -82,7 +98,7 @@ jobs:
     - name: Download artifact
       uses: actions/download-artifact@v2
       with:
-        name: cistem_binaries
+        name: cistem_binaries_${{ matrix.compiler }}
     - name: test samples_functional_testing
       continue-on-error: true
       run: |

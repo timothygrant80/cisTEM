@@ -11126,6 +11126,8 @@ void Image::Rotate3DThenShiftThenApplySymmetry(RotationMatrix &wanted_matrix, fl
 
 }
 
+// Note: This function allocates new memory, so it is not really "in-place" compared to FFT, but only
+// in that the same Image object is retained.
 void Image::Rotate2DInPlace(float rotation_in_degrees, float mask_radius_in_pixels)
 {
 	Image buffer_image;
@@ -11136,9 +11138,13 @@ void Image::Rotate2DInPlace(float rotation_in_degrees, float mask_radius_in_pixe
 	Consume(&buffer_image);
 }
 
-void Image::Rotate2DInPlaceBy90Degrees(bool rotate_by_positive_90_degrees)
+// Note: This function allocates new memory, so it is not really "in-place" compared to FFT, but only
+// in that the same Image object is retained.
+void Image::RotateInPlaceAboutZBy90Degrees(bool rotate_by_positive_90_degrees, bool preserve_origin)
 {
 	// Rotate without interpolation by swapping indices.
+  // For an even sized image the image feature at the box center will be shifted -1 in x (positive rotation) or -1 in y (negative rotation)
+  // Include and additional shift to compensate if(preserve_origin) Note: you lose a row of pixels if true.
 	Image buffer_image;
 	buffer_image.Allocate(logical_y_dimension, logical_x_dimension, logical_z_dimension, true);
 	long current_address_old_image = 0;
@@ -11148,6 +11154,13 @@ void Image::Rotate2DInPlaceBy90Degrees(bool rotate_by_positive_90_degrees)
 	int y_old = 0;
 	int x_old = 0;
 
+  int shift_value = 0;
+  if (preserve_origin)
+  {
+    if      (  rotate_by_positive_90_degrees && IsEven(logical_y_dimension) ) shift_value =  1;
+    else if ( !rotate_by_positive_90_degrees && IsEven(logical_x_dimension) ) shift_value =  1;
+    else shift_value = 0;
+  }
 	// Negative rotation is clockwise looking down the image normal (Y --> X)
 	if (rotate_by_positive_90_degrees)
 	{
@@ -11155,12 +11168,20 @@ void Image::Rotate2DInPlaceBy90Degrees(bool rotate_by_positive_90_degrees)
     {
       for (y_old = 0 ; y_old < logical_y_dimension; y_old++)
       {
-        x_new = logical_y_dimension - y_old - 1;
-
+        x_new = logical_y_dimension - y_old - 1 + shift_value;
         for (x_old = 0; x_old < logical_x_dimension; x_old++)
         {
           y_new = x_old;
-          buffer_image.real_values[buffer_image.ReturnReal1DAddressFromPhysicalCoord(x_new,y_new,k)] = ReturnRealPixelFromPhysicalCoord(x_old,y_old,k);
+          if (x_new == logical_y_dimension)
+          {
+            // We are shifting the new indices +1 in X, so will be out of bounds here. B/c x(0) is undefined with 
+            // this simple index interpolation, set it to zero.
+            buffer_image.real_values[buffer_image.ReturnReal1DAddressFromPhysicalCoord(0,y_new,k)] = 0.f;
+          }
+          else
+          {
+            buffer_image.real_values[buffer_image.ReturnReal1DAddressFromPhysicalCoord(x_new,y_new,k)] = ReturnRealPixelFromPhysicalCoord(x_old,y_old,k);
+          }
         }
       }
     }
@@ -11172,10 +11193,17 @@ void Image::Rotate2DInPlaceBy90Degrees(bool rotate_by_positive_90_degrees)
       for (y_old = 0 ; y_old < logical_y_dimension; y_old++)
       {
         x_new = y_old;
-        for (x_old = 0; x_old < logical_x_dimension; x_old++)
+        for (x_old = shift_value; x_old < logical_x_dimension; x_old++)
         {
-          y_new = logical_x_dimension - x_old - 1;
-          buffer_image.real_values[buffer_image.ReturnReal1DAddressFromPhysicalCoord(x_new,y_new,k)] = ReturnRealPixelFromPhysicalCoord(x_old,y_old,k);
+          y_new = logical_x_dimension - x_old - 1 + shift_value;
+          if (y_new == logical_x_dimension)
+          {
+            buffer_image.real_values[buffer_image.ReturnReal1DAddressFromPhysicalCoord(x_new,0,k)] = 0.f; 
+          }
+          else
+          {
+            buffer_image.real_values[buffer_image.ReturnReal1DAddressFromPhysicalCoord(x_new,y_new,k)] = ReturnRealPixelFromPhysicalCoord(x_old,y_old,k);
+          }
         }
 
       }

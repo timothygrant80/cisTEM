@@ -138,7 +138,7 @@ void MovieAsset::Update(wxString wanted_filename, int assume_number_of_frames)
 		{
 			is_valid = GetMRCDetails(filename.GetFullPath().fn_str(), x_size, y_size, number_of_frames);
 		}
-		else if (filename.GetExt().IsSameAs("tif",false))
+		else if (filename.GetExt().IsSameAs("tif",false) || filename.GetExt().IsSameAs("tiff",false))
 		{
 			TiffFile temp_tif;
 			is_valid = temp_tif.OpenFile(filename.GetFullPath().ToStdString(), false, false, assume_number_of_frames);

@@ -9,9 +9,9 @@ on:
 jobs:
   build:
     strategy:
+      fail-fast: false
       matrix:
         compiler: [icpc,gcc,clang]
-        fail-fast: false
         include:
           - compiler: icpc
             cxx: icpc

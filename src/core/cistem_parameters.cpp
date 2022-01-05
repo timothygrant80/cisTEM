@@ -1134,7 +1134,7 @@ void cisTEMParameters::WriteTocisTEMBinaryFile(wxString wanted_filename, int fir
 
 }
 
-int cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first_line_to_write, int last_line_to_write, int first_image_to_write, int last_image_to_write)
+void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first_line_to_write, int last_line_to_write, int first_image_to_write, int last_image_to_write)
 {
 
 	wxFileName cisTEM_star_filename = wanted_filename;
@@ -1154,8 +1154,10 @@ int cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first_
 	if (last_line_to_write < 0 || last_line_to_write >= all_parameters.GetCount()) last_line_to_write = all_parameters.GetCount() - 1;
 
   // For console tests, we need to ignore these bytes because the time stampls will be diffferent in the testing as written. 
-  // The number of bytes to ignore is not fixed as CISTEM_VERSION_TEXT is variable.
-	int version_and_time_stamp_bytes_written = fprintf(cisTEM_star_file, "# Written by cisTEM Version %s on %s", CISTEM_VERSION_TEXT, wxDateTime::Now().FormatISOCombined(' ').ToStdString().c_str());
+  // The number of bytes to ignore is not fixed as CISTEM_VERSION_TEXT is variable. 
+	fprintf(cisTEM_star_file, "# Written by cisTEM Version %s on %s", CISTEM_VERSION_TEXT, wxDateTime::Now().FormatISOCombined(' ').ToStdString().c_str());
+  // In console tests, using the first line return to determine when we've read past the above line. Printing here in case the block over header comments below, which prefixes a new line is changed.
+  fprintf(cisTEM_star_file,"\n");
 
 	for (int counter = 0; counter < header_comments.GetCount(); counter++)
 	{
@@ -1465,7 +1467,6 @@ int cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first_
 	}
 
 	fclose(cisTEM_star_file);
-  return version_and_time_stamp_bytes_written;
 }
 
 cisTEMParameterLine cisTEMParameters::ReturnParameterAverages(bool only_average_active)

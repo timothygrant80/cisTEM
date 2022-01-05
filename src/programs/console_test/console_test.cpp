@@ -545,7 +545,7 @@ void MyTestApp::TestStarToBinaryFileConversion()
 
   test_parameters.ClearAll();
   test_parameters.ReadFromcisTEMBinaryFile(original_binary_filename.ToStdString().c_str());
-  int header_bytes_to_ignore = test_parameters.WriteTocisTEMStarFile(star_from_binary_filename.ToStdString().c_str());
+  test_parameters.WriteTocisTEMStarFile(star_from_binary_filename.ToStdString().c_str());
 
   // read in star file and write to binary..
 
@@ -580,9 +580,19 @@ void MyTestApp::TestStarToBinaryFileConversion()
   fread(star_file_from_binary_file, 1, star_from_binary_size_in_bytes, current_file);
   fclose(current_file);
 
-  for (long byte_counter = header_bytes_to_ignore; byte_counter < original_star_size_in_bytes; byte_counter++) // start at byte header_bytes_to_ignore, the before that is a comment which includes the time written
-  {
-    if (original_star_file[byte_counter] != star_file_from_binary_file[byte_counter]) { std::cerr << "failed on byte" << byte_counter << std::endl; FailTest;}
+  // To avoid the first line which contains the cistem version and a timestamp, we look for the first line return.
+  bool reading_first_line = true;
+  for (long byte_counter = 0; byte_counter < original_star_size_in_bytes; byte_counter++) {
+    if (reading_first_line) {
+      if (original_star_file[byte_counter] == '\n') {
+        reading_first_line = false;
+      }
+    }
+    else {
+      if (original_star_file[byte_counter] != star_file_from_binary_file[byte_counter]) { 
+        std::cerr << "failed on byte" << byte_counter << std::endl; FailTest;
+      }
+    }  
   }
 
   EndTest();

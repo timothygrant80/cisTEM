@@ -8,6 +8,7 @@ on:
 
 jobs:
   build:
+    continue-on-error: true
     strategy:
       fail-fast: false
       matrix:
@@ -16,6 +17,9 @@ jobs:
           - compiler: icpc
             cxx: icpc
             cc: icc
+          - compiler: gcc
+            cxx: g++
+            cc: gcc
           - compiler: clang
             cxx: clang++
             cc: clang
@@ -40,6 +44,9 @@ jobs:
 #        echo "LIBRARY_PATH=/opt/intel/oneapi/vpl/2021.6.0/lib:/opt/intel/oneapi/tbb/2021.4.0/env/../lib/intel64/gcc4.8:/opt/intel/oneapi/mpi/2021.4.0//libfabric/lib:/opt/intel/oneapi/mpi/2021.4.0//lib/release:/opt/intel/oneapi/mpi/2021.4.0//lib:/opt/intel/oneapi/mkl/2021.4.0/lib/intel64:/opt/intel/oneapi/ippcp/2021.4.0/lib/intel64:/opt/intel/oneapi/ipp/2021.4.0/lib/intel64:/opt/intel/oneapi/dnnl/2021.4.0/cpu_dpcpp_gpu_dpcpp/lib:/opt/intel/oneapi/dal/2021.4.0/lib/intel64:/opt/intel/oneapi/compiler/2021.4.0/linux/compiler/lib/intel64_lin:/opt/intel/oneapi/compiler/2021.4.0/linux/lib:/opt/intel/oneapi/clck/2021.4.0/lib/intel64:/opt/intel/oneapi/ccl/2021.4.0/lib/cpu_gpu_dpcpp" >> $GITHUB_ENV
 #        echo "NLSPATH=/opt/intel/oneapi/mkl/2021.4.0/lib/intel64/locale/%l_%t/%N" >> $GITHUB_ENV
     - name: configure
+      env:
+        CC: ${{ matrix.xx }}
+        CXX: ${{ matrix.cxx }}
       run: |
         mkdir -p build/${{ matrix.compiler }} 
         cd build/${{ matrix.compiler }} 

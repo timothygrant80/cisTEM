@@ -13,4 +13,4 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Build the Docker image
-      run: docker build . --file .cicontainer/${{ matrix.node }}/Dockerfile --tag cistem_ci_${{ matrix.node }}:$(date +%s)
+      run: docker build . --file .cicontainer/${{ matrix.compiler }}/Dockerfile --tag cistem_ci_${{ matrix.compiler }}:$(date +%s)

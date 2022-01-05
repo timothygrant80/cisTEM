@@ -1,6 +1,9 @@
 FROM dockcross/manylinux-x64
 
- 
+ # Fix yum. CentOS 5 is end-of-life as of 2017-03-31.
+RUN sed -i \
+    '/^mirrorlist=/d; s|^#\(baseurl=http://\).*/\([^/]*\)/\$basearch/$|\1vault.centos.org/5.11/\2/$basearch|' \
+    /etc/yum.repos.d/{CentOS-Base.repo,libselinux.repo}
 
 RUN yum update -y \
     && yum install -y \

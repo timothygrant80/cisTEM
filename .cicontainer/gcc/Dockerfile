@@ -1,16 +1,10 @@
-FROM dockcross/manylinux-x64
+FROM dockcross/manylinux2014-x64
 
- # Fix yum. CentOS 5 is end-of-life as of 2017-03-31.
-RUN sed -i \
-    '/^mirrorlist=/d; s|^#\(baseurl=http://\).*/\([^/]*\)/\$basearch/$|\1vault.centos.org/5.11/\2/$basearch|' \
-    /etc/yum.repos.d/{CentOS-Base.repo,libselinux.repo}
-
-RUN yum update -y \
-    && yum install -y \
-    wget \
-    fftw-devel \
-    gtk2-devel \
-    && yum clean all
+RUN apt-get --allow-releaseinfo-change update && \
+    apt-get install -y gtk2.0-dev \
+        fftw3-dev libtiff-dev software-properties-common libffi-dev \
+        libbz2-dev libsqlite3-dev zlib1g-dev libjpeg-dev libtiff-dev \
+        libreadline-dev liblzma-dev libssl-dev libncursesw5-dev wget
 
 RUN wget -q https://github.com/wxWidgets/wxWidgets/releases/download/v3.0.5/wxWidgets-3.0.5.tar.bz2 -O /tmp/wxwidgets.tar.bz2 && \
     echo 'Installing wxWidgets' && \

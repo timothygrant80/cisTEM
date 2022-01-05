@@ -11,6 +11,7 @@ jobs:
     strategy:
       matrix:
         compiler: [icpc,gcc,clang]
+        fail-fast: false
         include:
           - compiler: icpc
             cxx: icpc
@@ -42,6 +43,8 @@ jobs:
       run: |
         mkdir -p build/${{ matrix.compiler }} 
         cd build/${{ matrix.compiler }} 
+        echo $CC
+        echo $CXX
         ../../configure  --enable-experimental --enable-staticmode --enable-openmp  --with-wx-config=wx-config  --enable-samples
         VERSION=$(cat config.log | grep CISTEM_VERSION_TEXT | cut -d' ' -f3 | tr -d '"')
         echo "::set-output name=version::$VERSION" 

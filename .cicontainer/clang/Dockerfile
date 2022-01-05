@@ -1,21 +1,11 @@
-FROM intel/oneapi-hpckit
+FROM silkeh/clang
 
-RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y locales
-
-RUN sed -i -e 's/# en_US.UTF-8 UTF-8/en_US.UTF-8 UTF-8/' /etc/locale.gen && \
-    dpkg-reconfigure --frontend=noninteractive locales && \
-    update-locale LANG=en_US.UTF-8
-
-ENV LANG en_US.UTF-8 
 
 RUN apt-get --allow-releaseinfo-change update && \
     apt-get install -y gtk2.0-dev \
         fftw3-dev libtiff-dev software-properties-common libffi-dev \
         libbz2-dev libsqlite3-dev zlib1g-dev libjpeg-dev libtiff-dev \
-        libreadline-dev liblzma-dev libssl-dev libncursesw5-dev
-
-#Need newer git for Github actions
-RUN add-apt-repository ppa:git-core/ppa -y && apt-get --allow-releaseinfo-change update && apt-get install -y git
+        libreadline-dev liblzma-dev libssl-dev libncursesw5-dev wget
 
 RUN wget -q https://github.com/wxWidgets/wxWidgets/releases/download/v3.0.5/wxWidgets-3.0.5.tar.bz2 -O /tmp/wxwidgets.tar.bz2 && \
     echo 'Installing wxWidgets' && \

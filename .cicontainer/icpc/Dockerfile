@@ -12,7 +12,7 @@ RUN apt-get --allow-releaseinfo-change update && \
     apt-get install -y gtk2.0-dev \
         fftw3-dev libtiff-dev software-properties-common libffi-dev \
         libbz2-dev libsqlite3-dev zlib1g-dev libjpeg-dev libtiff-dev \
-        libreadline-dev liblzma-dev libssl-dev libncursesw5-dev
+        libreadline-dev liblzma-dev libssl-dev libncursesw5-dev wget 
 
 #Need newer git for Github actions
 RUN add-apt-repository ppa:git-core/ppa -y && apt-get --allow-releaseinfo-change update && apt-get install -y git

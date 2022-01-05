@@ -565,7 +565,7 @@ bool MatchTemplateApp::DoCalculation()
       // TODO figure out how to check the case where there is no factor of two, but one dimension is still faster. Probably getting around to writing an explicit planning tool would be useful.
       if (ReturnThreadNumberOfCurrentThread() == 0) { wxPrintf("Rotating the search image for speed\n"); }
       is_rotated_by_90 = true;
-      input_image.Rotate2DInPlaceBy90Degrees(true);
+      input_image.RotateInPlaceAboutZBy90Degrees(true);
     }
     else
     {
@@ -1156,21 +1156,21 @@ bool MatchTemplateApp::DoCalculation()
 	{
 		// swap back all the images prior to re-sizing
 		input_image.BackwardFFT();
-		input_image.Rotate2DInPlaceBy90Degrees(false);
-		max_intensity_projection.Rotate2DInPlaceBy90Degrees(false);
+		input_image.RotateInPlaceAboutZBy90Degrees(false);
+		max_intensity_projection.RotateInPlaceAboutZBy90Degrees(false);
 
-		best_psi.Rotate2DInPlaceBy90Degrees(false);
+		best_psi.RotateInPlaceAboutZBy90Degrees(false);
 		// To account for the pre-rotation, psi needs to have 90 added to it.
 		best_psi.AddConstant(90.0f);
 		// We also want the angles to remain in (0,360] so loop over and clamp
 		for (int idx = 0; idx < best_psi.real_memory_allocated; idx++) { best_psi.real_values[idx] = clamp_angular_range_0_to_2pi(best_psi.real_values[idx], true); }
-		best_theta.Rotate2DInPlaceBy90Degrees(false);
-		best_phi.Rotate2DInPlaceBy90Degrees(false);
-		best_defocus.Rotate2DInPlaceBy90Degrees(false);
-		best_pixel_size.Rotate2DInPlaceBy90Degrees(false);
+		best_theta.RotateInPlaceAboutZBy90Degrees(false);
+		best_phi.RotateInPlaceAboutZBy90Degrees(false);
+		best_defocus.RotateInPlaceAboutZBy90Degrees(false);
+		best_pixel_size.RotateInPlaceAboutZBy90Degrees(false);
 
-		correlation_pixel_sum_image.Rotate2DInPlaceBy90Degrees(false);
-		correlation_pixel_sum_of_squares_image.Rotate2DInPlaceBy90Degrees(false);
+		correlation_pixel_sum_image.RotateInPlaceAboutZBy90Degrees(false);
+		correlation_pixel_sum_of_squares_image.RotateInPlaceAboutZBy90Degrees(false);
 
 		// This is ineffecient, but a quick way to ensure consistent results.
 		delete [] correlation_pixel_sum;

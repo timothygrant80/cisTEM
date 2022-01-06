@@ -88,6 +88,9 @@ jobs:
       uses: actions/download-artifact@v2
       with:
         name: cistem_binaries_${{ matrix.compiler }}
+    - name: Install fftw3
+      if: ${{ matrix.compiler=='gcc' || matrix.compiler=='clang' }}
+      run: sudo apt-get install -y libfftw3-dev
     - name: Fix permissions
       run: chmod +x *
     - name: test console_test
@@ -116,7 +119,7 @@ jobs:
         name: cistem_binaries_${{ matrix.compiler }}
     - name: Install fftw3
       if: ${{ matrix.compiler=='gcc' || matrix.compiler=='clang' }}
-      run: sudo apt install -y libfftw3 
+      run: sudo apt-get install -y libfftw3-dev 
     - name: test samples_functional_testing
       continue-on-error: true
       run: |

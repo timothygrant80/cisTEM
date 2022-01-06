@@ -36,7 +36,7 @@ AX_CUDA
 if test "$want_cuda" = "yes" ; then
   CPP_STANDARD=17
 else
-  CPP_STANDARD=17
+  CPP_STANDARD=11
 fi
 
 
@@ -64,12 +64,18 @@ AC_ARG_ENABLE([disable-warnings], AS_HELP_STRING([--disable compiler warnings], 
 		fi	
 ])
 
+if test "x$CXX" = "xclang++"; then		
+		CPP_STANDARD=17
+    EXTRAFLAGS="-Wno-c++11-narrowing"
+	else
+		EXTRAFLAGS=""	
+i	
 
 if test "x$CXX" = "xicpc"; then		
 	CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -no-prec-sqrt $WARNINGS_ON -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++${CPP_STANDARD} -wd1125"
 	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -no-prec-sqrt $WARNINGS_ON -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
 else
-	CXXFLAGS="$CXXFLAGS -DNDEBUG -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++${CPP_STANDARD}"		
+	CXXFLAGS="$CXXFLAGS -DNDEBUG -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++${CPP_STANDARD} $EXTRAFLAGS" 		
 	CPPFLAGS="$CPPFLAGS -DNDEBUG -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
 
 	#sqlite needs dl on gcc

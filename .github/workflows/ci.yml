@@ -114,6 +114,14 @@ jobs:
       uses: actions/download-artifact@v2
       with:
         name: cistem_binaries_${{ matrix.compiler }}
+    - name: Install fftw3
+      run: 
+         if [ ${{matrix.compiler}} == "icpc" ]; then
+         echo "Keeping things static"
+         else
+              sudo apt install -y libfftw3 
+         fi
+      shell: bash
     - name: test samples_functional_testing
       continue-on-error: true
       run: |

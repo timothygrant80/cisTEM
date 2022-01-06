@@ -36,7 +36,7 @@ AX_CUDA
 if test "$want_cuda" = "yes" ; then
   CPP_STANDARD=17
 else
-  CPP_STANDARD=11
+  CPP_STANDARD=17
 fi
 
 

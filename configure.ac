@@ -69,7 +69,7 @@ if test "x$CXX" = "xclang++"; then
     EXTRAFLAGS="-Wno-c++11-narrowing"
 	else
 		EXTRAFLAGS=""	
-i	
+fi	
 
 if test "x$CXX" = "xicpc"; then		
 	CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -no-prec-sqrt $WARNINGS_ON -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++${CPP_STANDARD} -wd1125"

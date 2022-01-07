@@ -58,15 +58,9 @@ jobs:
         ../../configure  --enable-experimental ${{matrix.staticmode}} --with-wx-config=wx-config  --enable-samples
         VERSION=$(cat config.log | grep CISTEM_VERSION_TEXT | cut -d' ' -f3 | tr -d '"')
         echo "::set-output name=version::$VERSION" 
-    - name: make gcc
+    - uses: ammaraskar/gcc-problem-matcher@master
       if: ${{ matrix.compiler=='gcc' }}
-      uses: ammaraskar/gcc-problem-matcher@master
-      run: |
-        cd build/${{ matrix.compiler }}
-        make 
-        cp ../../scripts/testing/test_and_benchmark.sh src/
-    - name: make other
-      if: ${{ matrix.compiler=='icpc' || matrix.compiler=='clang' }}
+    - name: make 
       run: |
         cd build/${{ matrix.compiler }}
         make 

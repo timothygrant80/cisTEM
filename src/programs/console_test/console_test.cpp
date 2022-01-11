@@ -116,6 +116,7 @@ MyTestApp : public MyApp //public wxAppConsole
     void WriteEmbeddedFiles();
     void WriteEmbeddedArray(const char *filename, const unsigned char *array, long length);
     void WriteNumericTextFile(const char *filename);
+    void WriteDatabase(const char *dir, const char *filename);
 };
 
 
@@ -476,6 +477,21 @@ void MyTestApp::TestClipIntoFourier()
     }
   }
 
+
+  EndTest();
+}
+
+void MyTestApp::TestDatabase()
+{
+  BeginTest("Database");
+
+  temp_directory = wxFileName::GetTempDir();
+
+
+  wxString database_filename = temp_directory + "/1_0_test/1_0_test.db";
+  Database database;
+  database.Open(database_filename);
+  database.CheckSchema();
 
   EndTest();
 }

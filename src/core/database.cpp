@@ -2598,16 +2598,18 @@ void Database::GetRefinementAngularDistributionHistogramData(long wanted_refinem
 
 std::pair<std::vector<wxString>, std::vector<std::pair<wxString, wxString>>> Database::CheckSchema() {
 	MyDebugAssertTrue(is_open == true, "database not open!");
-	std::vector<wxString> missing_databases;
+	std::vector<wxString> missing_tables;
+	std::vector<std::pair<wxString, wxString>> missing_columns;
 	// Check Databases
 	wxArrayString return_strings;
 	for (auto & table : static_tables ) {
 		
 		return_strings = ReturnStringArrayFromSelectCommand(wxString::Format("SELECT name FROM sqlite_master WHERE type='table' AND name='%s';",std::get<0>(table)));
 		if (return_strings.IsEmpty()) {
-			MyDebugPrint("Table %s is missing",std::get<0>(table));
+			missing_tables.push_back(std::get<0>(table));
 		}
 	}
+	return std::pair(missing_tables, missing_columns);
 
 }
 

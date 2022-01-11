@@ -195,6 +195,7 @@ wxArrayString Database::ReturnStringArrayFromSelectCommand(wxString select_comma
 
 }
 
+
 long Database::ReturnSingleLongFromSelectCommand(wxString select_command)
 {
 	MyDebugAssertTrue(is_open == true, "database not open!");
@@ -770,6 +771,7 @@ bool Database::CreateTable(const char *table_name, const char *column_format, ..
 bool Database::CreateAllTables()
 {
 	bool success;
+	
 
 	BeginCommitLocker active_locker(this);
 
@@ -2592,6 +2594,21 @@ void Database::GetRefinementAngularDistributionHistogramData(long wanted_refinem
 	}
 
 	EndBatchSelect();
+}
+
+std::pair<std::vector<wxString>, std::vector<std::pair<wxString, wxString>>> Database::CheckSchema() {
+	MyDebugAssertTrue(is_open == true, "database not open!");
+	std::vector<wxString> missing_databases;
+	// Check Databases
+	wxArrayString return_strings;
+	for (auto & table : static_tables ) {
+		
+		return_strings = ReturnStringArrayFromSelectCommand(wxString::Format("SELECT name FROM sqlite_master WHERE type='table' AND name='%s';",std::get<0>(table)));
+		if (return_strings.IsEmpty()) {
+			MyDebugPrint("Table %s is missing",std::get<0>(table));
+		}
+	}
+
 }
 
 BeginCommitLocker::BeginCommitLocker(Database *wanted_database)

@@ -5,8 +5,8 @@ AC_CONFIG_MACRO_DIR([m4])
 INPUT_CPPFLAGS="$CPPFLAGS"
 INPUT_CXXFLAGS="$CXXFLAGS"
 
-AC_PROG_CC([icc gcc])
-AC_PROG_CXX([icpc g++ gcc])
+AC_PROG_CC([icc gcc clang])
+AC_PROG_CXX([icpc g++ clang++])
 
 AM_PROG_CC_C_O
 
@@ -33,7 +33,7 @@ AC_MSG_NOTICE([Setting up initial flags])
 #
 want_cuda="no"
 AX_CUDA 
-if test "$want_cuda" = "yes" ; then
+if test "$want_cuda" = "yes" || test "x$CXX" = "xclang++"; then
   CPP_STANDARD=17
 else
   CPP_STANDARD=11
@@ -64,18 +64,17 @@ AC_ARG_ENABLE([disable-warnings], AS_HELP_STRING([--disable compiler warnings], 
 		fi	
 ])
 
-if test "x$CXX" = "xclang++"; then		
-		CPP_STANDARD=17
-    EXTRAFLAGS="-Wno-c++11-narrowing"
-	else
-		EXTRAFLAGS=""	
-fi	
+
 
 if test "x$CXX" = "xicpc"; then		
 	CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -no-prec-sqrt $WARNINGS_ON -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++${CPP_STANDARD} -wd1125"
 	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -no-prec-sqrt $WARNINGS_ON -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
-else
-	CXXFLAGS="$CXXFLAGS -DNDEBUG -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++${CPP_STANDARD} $EXTRAFLAGS" 		
+else if test "x$CXX" = "xclang++"; then
+# Clang needs the -no-c++11-narrowing suppression to compile
+	CXXFLAGS="$CXXFLAGS -DNDEBUG -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++${CPP_STANDARD} -Wno-c++11-narrowing" 		
+	CPPFLAGS="$CPPFLAGS -DNDEBUG -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
+else 
+	CXXFLAGS="$CXXFLAGS -DNDEBUG -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++${CPP_STANDARD}" 		
 	CPPFLAGS="$CPPFLAGS -DNDEBUG -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
 
 	#sqlite needs dl on gcc

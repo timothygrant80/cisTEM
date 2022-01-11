@@ -9,7 +9,7 @@ RUN apt-get --allow-releaseinfo-change update && \
         fftw3-dev libtiff-dev software-properties-common libffi-dev \
         libbz2-dev libsqlite3-dev zlib1g-dev libjpeg-dev libtiff-dev \
         libreadline-dev liblzma-dev libssl-dev libncursesw5-dev wget \
-        build-essential \\
+        build-essential \
     && rm -rf /var/lib/apt/lists/*
 
 RUN wget -q https://github.com/wxWidgets/wxWidgets/releases/download/v3.0.5/wxWidgets-3.0.5.tar.bz2 -O /tmp/wxwidgets.tar.bz2 && \

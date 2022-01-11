@@ -72,17 +72,19 @@ AC_ARG_ENABLE([disable-warnings], AS_HELP_STRING([--disable compiler warnings], 
 if test "x$CXX" = "xicpc"; then		
 	CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -no-prec-sqrt $WARNINGS_ON -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++${CPP_STANDARD} -wd1125"
 	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -no-prec-sqrt $WARNINGS_ON -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
-else if test "x$CXX" = "xclang++"; then
-# Clang needs the -no-c++11-narrowing suppression to compile
-	CXXFLAGS="$CXXFLAGS -DNDEBUG -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++${CPP_STANDARD} -Wno-c++11-narrowing" 		
-	CPPFLAGS="$CPPFLAGS -DNDEBUG -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
 else 
-	CXXFLAGS="$CXXFLAGS -DNDEBUG -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++${CPP_STANDARD}" 		
-	CPPFLAGS="$CPPFLAGS -DNDEBUG -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
+  if test "x$CXX" = "xclang++"; then
+    # Clang needs the -no-c++11-narrowing suppression to compile
+	  CXXFLAGS="$CXXFLAGS -DNDEBUG -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++${CPP_STANDARD} -Wno-c++11-narrowing" 		
+	  CPPFLAGS="$CPPFLAGS -DNDEBUG -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
+  else 
+	  CXXFLAGS="$CXXFLAGS -DNDEBUG -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++${CPP_STANDARD}" 		
+	  CPPFLAGS="$CPPFLAGS -DNDEBUG -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
 
-	#sqlite needs dl on gcc
+	  #sqlite needs dl on gcc
 	
-	LIBS="$LIBS -ldl"
+	  LIBS="$LIBS -ldl"
+  fi
 fi
 
 #

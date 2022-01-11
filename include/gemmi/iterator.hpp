@@ -21,11 +21,11 @@ namespace gemmi {
 // implements concept BidirectionalIterator
 template <typename Policy>
 struct BidirIterator : Policy {
-  typedef typename std::remove_cv<typename Policy::value_type>::type value_type;
-  typedef std::ptrdiff_t difference_type;
-  typedef typename Policy::value_type* pointer;
-  typedef typename Policy::value_type& reference;
-  typedef std::bidirectional_iterator_tag iterator_category;
+  using value_type = typename std::remove_cv<typename Policy::value_type>::type;
+  using difference_type = std::ptrdiff_t;
+  using pointer = typename Policy::value_type*;
+  using reference = typename Policy::reference;
+  using iterator_category = std::bidirectional_iterator_tag;
 
   BidirIterator() = default;
   BidirIterator(Policy&& p) : Policy(p) {}
@@ -47,7 +47,8 @@ struct BidirIterator : Policy {
 template<typename Value>
 class StrideIterPolicy {
 public:
-  typedef Value value_type;
+  using value_type = Value;
+  using reference = Value&;
   StrideIterPolicy() : cur_(nullptr), offset_(0), stride_(0) {}
   StrideIterPolicy(Value* ptr, std::size_t offset, size_t stride)
     : cur_(ptr), offset_(offset), stride_((unsigned)stride) {}
@@ -69,7 +70,8 @@ using StrideIter = BidirIterator<StrideIterPolicy<Value>>;
 template<typename Redirect, typename Value>
 class IndirectIterPolicy {
 public:
-  typedef Value value_type;
+  using value_type = Value;
+  using reference = Value&;
   IndirectIterPolicy() : redir_(nullptr) {}
   IndirectIterPolicy(Redirect* redir, std::vector<int>::const_iterator cur)
     : redir_(redir), cur_(cur) {}
@@ -91,7 +93,8 @@ using IndirectIter = BidirIterator<IndirectIterPolicy<Redirect, Value>>;
 template<typename Vector, typename Value>
 class UniqIterPolicy {
 public:
-  typedef Value value_type;
+  using value_type = Value;
+  using reference = Value&;
   UniqIterPolicy() : vec_(nullptr), pos_(0) {}
   UniqIterPolicy(Vector* vec, std::size_t pos) : vec_(vec), pos_(pos) {}
   void increment() {
@@ -137,7 +140,8 @@ struct ConstUniqProxy {
 template<typename Vector, typename Value>
 class GroupingIterPolicy {
 public:
-  typedef Value value_type;
+  using value_type = Value;
+  using reference = Value&;
   GroupingIterPolicy() = default;
   GroupingIterPolicy(const Value& span) : span_(span) {}
   void increment() {
@@ -172,7 +176,8 @@ using GroupingIter = BidirIterator<GroupingIterPolicy<Vector, Value>>;
 template<typename Filter, typename Vector, typename Value>
 class FilterIterPolicy {
 public:
-  typedef Value value_type;
+  using value_type = Value;
+  using reference = Value&;
   FilterIterPolicy() : vec_(nullptr), pos_(0) {}
   FilterIterPolicy(const Filter* filter, Vector* vec, std::size_t pos)
       : filter_(filter), vec_(vec), pos_(pos) {

@@ -260,9 +260,9 @@ inline bool same_str(const std::string& s, const char (&literal)[N]) {
   return s.size() == N - 1 && std::strcmp(s.c_str(), literal) == 0;
 }
 
-template<typename Input>
-Structure read_pdb_from_input(Input&& infile, const std::string& source,
-                              const PdbReadOptions& options) {
+template<typename Stream>
+Structure read_pdb_from_stream(Stream&& stream, const std::string& source,
+                               const PdbReadOptions& options) {
   using namespace pdb_impl;
   int line_num = 0;
   auto wrong = [&line_num](const std::string& msg) {
@@ -272,8 +272,7 @@ Structure read_pdb_from_input(Input&& infile, const std::string& source,
   st.input_format = CoorFormat::Pdb;
   st.name = path_basename(source, {".gz", ".pdb"});
   std::vector<std::string> conn_records;
-  st.models.emplace_back("1");
-  Model *model = &st.models.back();
+  Model *model = nullptr;
   Chain *chain = nullptr;
   Residue *resi = nullptr;
   char line[122] = {0};
@@ -283,16 +282,17 @@ Structure read_pdb_from_input(Input&& infile, const std::string& source,
   bool after_ter = false;
   Transform matrix;
   std::unordered_map<ResidueId, int> resmap;
-  while (size_t len = copy_line_from_stream(line, max_line_length+1, infile)) {
+  while (size_t len = copy_line_from_stream(line, max_line_length+1, stream)) {
     ++line_num;
     if (is_record_type(line, "ATOM") || is_record_type(line, "HETATM")) {
-      if (len < 66)
+      if (len < 55)
         wrong("The line is too short to be correct:\n" + std::string(line));
       std::string chain_name = read_string(line+20, 2);
       ResidueId rid = read_res_id(line+22, line+17);
 
       if (!chain || chain_name != chain->name) {
         if (!model) {
+          // A single model usually doesn't have the MODEL record. Also,
           // MD trajectories may have frames separated by ENDMDL without MODEL.
           std::string name = std::to_string(st.models.size() + 1);
           if (st.find_model(name))
@@ -340,8 +340,10 @@ Structure read_pdb_from_input(Input&& infile, const std::string& source,
       atom.pos.x = read_double(line+30, 8);
       atom.pos.y = read_double(line+38, 8);
       atom.pos.z = read_double(line+46, 8);
-      atom.occ = (float) read_double(line+54, 6);
-      atom.b_iso = (float) read_double(line+60, 6);
+      if (len > 58)
+        atom.occ = (float) read_double(line+54, 6);
+      if (len > 64)
+        atom.b_iso = (float) read_double(line+60, 6);
       if (len > 76 && (std::isalpha(line[76]) || std::isalpha(line[77])))
         atom.element = Element(line + 76);
       // Atom names HXXX are ambiguous, but Hg, He, Hf, Ho and Hs (almost)
@@ -352,6 +354,9 @@ Structure read_pdb_from_input(Input&& infile, const std::string& source,
       // Some MD files use similar names for other elements ("1C4A" -> C).
       else if (is_digit(line[12]))
         atom.element = impl::find_single_letter_element(line[13]);
+      // ... or it can be "C210"
+      else if (is_digit(line[13]))
+        atom.element = impl::find_single_letter_element(line[12]);
       else
         atom.element = Element(line + 12);
       atom.charge = (len > 78 ? read_charge(line[78], line[79]) : 0);
@@ -409,7 +414,7 @@ Structure read_pdb_from_input(Input&& infile, const std::string& source,
               opers.back().transform = matrix;
               matrix.set_identity();
             }
-#define CHECK(cpos, text) (colon == line+cpos && starts_with(line+11, text))
+#define CHECK(cpos, text) (colon == line+(cpos) && starts_with(line+11, text))
         } else if (CHECK(44, "AUTHOR DETERMINED")) {
           assembly.author_determined = true;
           assembly.oligomeric_details = read_string(line+45, 35);
@@ -607,10 +612,19 @@ Structure read_pdb_from_input(Input&& infile, const std::string& source,
     } else if (is_record_type3(line, "END")) {
       break;
     } else if (is_record_type(line, "data")) {
-      if (line[4] == '_' && model && model->chains.empty())
+      if (line[4] == '_' && !model)
         fail("Incorrect file format (perhaps it is cif not pdb?): " + source);
+    } else if (is_record_type(line, "{\"da")) {
+      if (ialpha3_id(line+4) == ialpha3_id("ta_") && !model)
+        fail("Incorrect file format (perhaps it is mmJSON not pdb?): " + source);
     }
   }
+
+  // If we read a PDB header (they can be downloaded from RSCB) we have no
+  // models. User's code may not expect this. Usually, empty model will be
+  // handled more gracefully than no models.
+  if (st.models.empty())
+    st.models.emplace_back("1");
 
   for (Model& mod : st.models)
     for (Chain& ch : mod.chains)
@@ -634,13 +648,13 @@ Structure read_pdb_from_input(Input&& infile, const std::string& source,
 inline Structure read_pdb_file(const std::string& path,
                                PdbReadOptions options=PdbReadOptions()) {
   auto f = file_open(path.c_str(), "rb");
-  return pdb_impl::read_pdb_from_input(FileStream{f.get()}, path, options);
+  return pdb_impl::read_pdb_from_stream(FileStream{f.get()}, path, options);
 }
 
 inline Structure read_pdb_from_memory(const char* data, size_t size,
                                       const std::string& name,
                                       PdbReadOptions options=PdbReadOptions()) {
-  return pdb_impl::read_pdb_from_input(MemoryStream(data, size), name, options);
+  return pdb_impl::read_pdb_from_stream(MemoryStream(data, size), name, options);
 }
 
 inline Structure read_pdb_string(const std::string& str,
@@ -653,10 +667,10 @@ inline Structure read_pdb_string(const std::string& str,
 template<typename T>
 inline Structure read_pdb(T&& input, PdbReadOptions options=PdbReadOptions()) {
   if (input.is_stdin())
-    return pdb_impl::read_pdb_from_input(FileStream{stdin}, "stdin", options);
+    return pdb_impl::read_pdb_from_stream(FileStream{stdin}, "stdin", options);
   if (input.is_compressed())
-    return pdb_impl::read_pdb_from_input(input.get_uncompressing_stream(),
-                                         input.path(), options);
+    return pdb_impl::read_pdb_from_stream(input.get_uncompressing_stream(),
+                                          input.path(), options);
   return read_pdb_file(input.path(), options);
 }
 

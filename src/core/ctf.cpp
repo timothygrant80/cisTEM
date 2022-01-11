@@ -530,7 +530,7 @@ float CTF::PhaseShiftGivenBeamTiltAndShift(float squared_spatial_frequency, floa
 	float spatial_frequency = sqrtf(squared_spatial_frequency);
 	float phase_shift = 2.0f * PIf * spherical_aberration * squared_wavelength * squared_spatial_frequency * spatial_frequency * beam_tilt;
 	phase_shift -= 2.0f * PIf * spatial_frequency * particle_shift;
-	return clamp_angular_range(phase_shift);
+	return clamp_angular_range_negative_pi_to_pi(phase_shift);
 
 }
 

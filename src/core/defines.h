@@ -23,6 +23,12 @@
 #define VARIABLE_LENGTH  8
 #define INTEGER_UNSIGNED 9
 
+// Types of noise distributions
+namespace cistem {
+
+  enum NoiseType : int { UNIFORM, GAUSSIAN, POISSON, EXPONENTIAL, GAMMA };
+
+}
 
 // From Table 2.2 DeGraff
 #define RELATIVISTIC_VOLTAGE_100 109784.0f // Volts
@@ -49,6 +55,9 @@
 #define ANSI_UNDERLINE_OFF "\e[24m"
 #define ANSI_BLINK_SLOW "\x1b[5m"
 #define ANSI_BLINK_OFF "\x1b[25m"
+#define ANSI_BOLD "\033[1m"
+#define ANSI_BOLD_OFF "\033[0m"
+
 
 #define SCALED_IMAGE_SIZE 1200
 

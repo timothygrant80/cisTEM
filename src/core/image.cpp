@@ -1,6 +1,8 @@
 //BEGIN_FOR_STAND_ALONE_CTFFIND
 #include "core_headers.h"
 
+using namespace cistem;
+
 wxMutex Image::s_mutexProtectingFFTW;
 double BeamTiltScoreFunctionForSimplex(void *pt2Object, double values[]);
 
@@ -931,6 +933,40 @@ void Image::AddGaussianNoise(float wanted_sigma_value, RandomNumberGenerator *pr
 	{
 		real_values[pixel_counter] += wanted_sigma_value * used_generator->GetNormalRandom();
 	}
+}
+
+void Image::AddNoise( NoiseType wanted_noise_type, float noise_param_1, float noise_param_2)
+{
+	MyDebugAssertTrue(is_in_real_space == true, "Image must be in real space");
+  // These could go down in the switch, but I think it is cleaner to keep DebugAsserts at the top of the method like elsewhere in cisTEM.
+  MyDebugAssertTrue(wanted_noise_type == POISSON ? noise_param_1 > 0 : true, "Mean of a Poisson distribution must be positive");
+  MyDebugAssertTrue(wanted_noise_type == EXPONENTIAL ? noise_param_1 > 0 : true, "Mean of an Exponential distribution must be positive");
+  MyDebugAssertTrue(wanted_noise_type == GAMMA ? (noise_param_1 > 0 && noise_param_2 > 0) : true, "alpha and beta of a Gamma distribution must be positive");
+
+  RandomNumberGenerator my_rng(PIf);
+
+  switch (wanted_noise_type)
+  {
+    case GAUSSIAN:
+      for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++) { real_values[pixel_counter] += my_rng.GetNormalRandomSTD(noise_param_1,noise_param_2);}
+      break;
+    case POISSON:
+      for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++) { real_values[pixel_counter] += my_rng.GetPoissonRandomSTD(noise_param_1);}
+      break;
+    case UNIFORM:
+      for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++) { real_values[pixel_counter] += my_rng.GetUniformRandomSTD(noise_param_1,noise_param_2);}
+      break;
+    case EXPONENTIAL:
+      for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++) { real_values[pixel_counter] += my_rng.GetExponentialRandomSTD(noise_param_1);}
+      break;
+    case GAMMA:
+      for (long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++) { real_values[pixel_counter] += my_rng.GetGammaRandomSTD(noise_param_1,noise_param_2);}
+      break;
+    default:
+      MyPrintWithDetails("Error: Unknown noise type %i\n", wanted_noise_type);
+      DEBUG_ABORT;
+      break; // shouldn't be needed with the DEBUG_ABORT, but just in case that breaks for whatever reason.
+  }
 }
 
 long Image::ZeroFloat(float wanted_mask_radius, bool outside)
@@ -11090,6 +11126,8 @@ void Image::Rotate3DThenShiftThenApplySymmetry(RotationMatrix &wanted_matrix, fl
 
 }
 
+// Note: This function allocates new memory, so it is not really "in-place" compared to FFT, but only
+// in that the same Image object is retained.
 void Image::Rotate2DInPlace(float rotation_in_degrees, float mask_radius_in_pixels)
 {
 	Image buffer_image;
@@ -11100,43 +11138,76 @@ void Image::Rotate2DInPlace(float rotation_in_degrees, float mask_radius_in_pixe
 	Consume(&buffer_image);
 }
 
-void Image::Rotate2DInPlaceBy90Degrees(bool rotate_by_positive_90_degrees)
+// Note: This function allocates new memory, so it is not really "in-place" compared to FFT, but only
+// in that the same Image object is retained.
+void Image::RotateInPlaceAboutZBy90Degrees(bool rotate_by_positive_90_degrees, bool preserve_origin)
 {
 	// Rotate without interpolation by swapping indices.
+  // For an even sized image the image feature at the box center will be shifted -1 in x (positive rotation) or -1 in y (negative rotation)
+  // Include and additional shift to compensate if(preserve_origin) Note: you lose a row of pixels if true.
 	Image buffer_image;
-	buffer_image.Allocate(logical_y_dimension, logical_x_dimension, true);
+	buffer_image.Allocate(logical_y_dimension, logical_x_dimension, logical_z_dimension, true);
 	long current_address_old_image = 0;
+ 	int k;
 	int y_new = -1;
 	int x_new = -1;
 	int y_old = 0;
 	int x_old = 0;
 
+  int shift_value = 0;
+  if (preserve_origin)
+  {
+    if      (  rotate_by_positive_90_degrees && IsEven(logical_y_dimension) ) shift_value =  1;
+    else if ( !rotate_by_positive_90_degrees && IsEven(logical_x_dimension) ) shift_value =  1;
+    else shift_value = 0;
+  }
 	// Negative rotation is clockwise looking down the image normal (Y --> X)
 	if (rotate_by_positive_90_degrees)
 	{
-		for (y_old = 0 ; y_old < logical_y_dimension; y_old ++)
-		{
-			x_new = logical_y_dimension - y_old - 1;
-
-			for (x_old = 0; x_old < logical_x_dimension; x_old++)
-			{
-				y_new = x_old;
-				buffer_image.real_values[buffer_image.ReturnReal1DAddressFromPhysicalCoord(x_new,y_new,0)] = ReturnRealPixelFromPhysicalCoord(x_old,y_old,0);
-			}
-		}
+    for (k = 0 ; k < logical_z_dimension; k++)
+    {
+      for (y_old = 0 ; y_old < logical_y_dimension; y_old++)
+      {
+        x_new = logical_y_dimension - y_old - 1 + shift_value;
+        for (x_old = 0; x_old < logical_x_dimension; x_old++)
+        {
+          y_new = x_old;
+          if (x_new == logical_y_dimension)
+          {
+            // We are shifting the new indices +1 in X, so will be out of bounds here. B/c x(0) is undefined with 
+            // this simple index interpolation, set it to zero.
+            buffer_image.real_values[buffer_image.ReturnReal1DAddressFromPhysicalCoord(0,y_new,k)] = 0.f;
+          }
+          else
+          {
+            buffer_image.real_values[buffer_image.ReturnReal1DAddressFromPhysicalCoord(x_new,y_new,k)] = ReturnRealPixelFromPhysicalCoord(x_old,y_old,k);
+          }
+        }
+      }
+    }
 	}
 	else
 	{
-		for (y_old = 0 ; y_old < logical_y_dimension; y_old ++)
-		{
-			x_new = y_old;
-			for (x_old = 0; x_old < logical_x_dimension; x_old++)
-			{
-				y_new = logical_x_dimension - x_old - 1;
-				buffer_image.real_values[buffer_image.ReturnReal1DAddressFromPhysicalCoord(x_new,y_new,0)] = ReturnRealPixelFromPhysicalCoord(x_old,y_old,0);
-			}
+    for (k = 0 ; k < logical_z_dimension; k++)
+    {    
+      for (y_old = 0 ; y_old < logical_y_dimension; y_old++)
+      {
+        x_new = y_old;
+        for (x_old = shift_value; x_old < logical_x_dimension; x_old++)
+        {
+          y_new = logical_x_dimension - x_old - 1 + shift_value;
+          if (y_new == logical_x_dimension)
+          {
+            buffer_image.real_values[buffer_image.ReturnReal1DAddressFromPhysicalCoord(x_new,0,k)] = 0.f; 
+          }
+          else
+          {
+            buffer_image.real_values[buffer_image.ReturnReal1DAddressFromPhysicalCoord(x_new,y_new,k)] = ReturnRealPixelFromPhysicalCoord(x_old,y_old,k);
+          }
+        }
 
-		}
+      }
+    }
 	}
 	Consume(&buffer_image);
 }

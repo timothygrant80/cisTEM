@@ -111,11 +111,13 @@ public:
   size_t size() const { return size_; }
   void set_size(size_t n) { size_ = n; }
 
+  MemoryStream stream() const { return MemoryStream(data(), size()); }
+
   void resize(size_t n) {
     char* new_ptr = (char*) std::realloc(ptr_.get(), n);
     if (!new_ptr)
       fail("Out of memory.");
-    ptr_.release();
+    (void) ptr_.release();
     ptr_.reset(new_ptr);
     size_ = n;
   }

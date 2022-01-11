@@ -105,7 +105,8 @@ MyApp : public wxAppConsole, public SocketCommunicator
 		bool OnInit();
 		int OnExit();
 		virtual void ProgramSpecificInit() {};
-		virtual void ProgramSpecificCleanUp() {};
+		virtual void ProgramSpecificCleanUp() {}; 
+    virtual void MyInteractiveProgramCleanup() {};
 		void OnEventLoopEnter(wxEventLoopBase *	loop);
 
 		// Socket overides

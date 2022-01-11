@@ -17,7 +17,16 @@
             "command": "echo --with-wx-config=${wx_dir}"
 
         }, 
-
+        {
+          "label": "CONFIG intel,debug,samples",
+          "type": "shell",
+          "command": "mkdir -p ${build_dir}/Intel-samples-debug && cd ${build_dir}/Intel-samples-debug && CC=icc CXX=icpc ../../configure  --enable-samples --enable-debugmode --enable-experimental --enable-staticmode --enable-openmp  --with-wx-config=${wx_dir}INTEL/bin/wx-config"
+      },
+      {
+          "label": "BUILD intel,debug,samples",
+          "type": "shell",
+          "command": "cd ${build_dir}/Intel-samples-debug && make -j${compile_cores}"
+      },
         {
             "label": "CONFIG intel,gpu,debug",
             "type": "shell",

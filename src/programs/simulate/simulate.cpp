@@ -9,6 +9,8 @@ const bool GEMMI_ENABLED = true;
 const bool GEMMI_ENABLED = false;
 #endif
 
+const int MAX_3D_SIZE = 1536; // ~14.5 Gb in single precision
+
 using namespace cistem_timer;
 //#define DO_BEAM_TILT_FULL true
 
@@ -451,36 +453,38 @@ class SimulateApp : public MyApp
 
 	long 		doParticleStack = 0;
 	int 	 	number_of_threads = 1;
-    float 	 	do3d = 0.0f;
-    int			bin3d = 1;
+  bool 	 	do3d = true;
+  
+  int			bin3d = 1;
 
 
 
 
 
-	float 		dose_per_frame = 1;
-	float 		dose_rate = 3.0; // e/physical pixel/s this should be set by the user. Changes the illumination aperature and DQE curve
-	float 		number_of_frames = 1;
-	double		total_waters_incorporated = 0;
-	float 		average_at_cutoff[N_WATER_TERMS]; // This assumes a fixed 1/2 angstrom sampling of the hydration shell curve
+	float   dose_per_frame = 1;
+	float   dose_rate = 3.0; // e/physical pixel/s this should be set by the user. Changes the illumination aperature and DQE curve
+	float   number_of_frames = 1;
+	double  total_waters_incorporated = 0;
+	float   average_at_cutoff[N_WATER_TERMS]; // This assumes a fixed 1/2 angstrom sampling of the hydration shell curve
 	float		water_weight[N_WATER_TERMS];
 
-	float       set_real_part_wave_function_in = 1.0f;
-	int 		minimum_padding_x_and_y = 32; // This will be changed to be the larger of this value plus the required taper region
-	float  		propagation_distance = 5.0f;
-	float       minimum_thickness_z = 20.0f;
+  float   set_real_part_wave_function_in = 1.0f;
+	int     minimum_padding_x_and_y = 32; // This will be changed to be the larger of this value plus the required taper region
+	float   propagation_distance = 5.0f;
+	float   minimum_thickness_z = 20.0f;
 
 
-	bool ONLY_SAVE_SUMS = true;
-	bool DO_NOT_RANDMOIZE_ANGLES = false;
-	int MODIFY_ONLY_SIGNAL = 0;
+	bool    ONLY_SAVE_SUMS = true;
+	bool    DO_NOT_RANDMOIZE_ANGLES = false;
+	int     MODIFY_ONLY_SIGNAL = 0;
+
 	// To add error to the global alignment
 	float 	tilt_axis = 0; // degrees from Y-axis FIXME thickness calc, water padding, a few others are only valid for 0* tilt axis.
 	float 	in_plane_sigma = 2; // spread in-plane angles based on neighbors
 	float 	tilt_angle_sigma = 0.1; //;
 	float 	magnification_sigma = 0.0001;//;
-    float	stdErr = 0.0f;
-    float	extra_phase_shift = 0.0f;
+  float	  stdErr = 0.0f;
+  float	  extra_phase_shift = 0.0f;
 
 	RotationMatrix beam_tilt_xform;
 	float beam_tilt_x = 0.0f;//0.6f;
@@ -495,40 +499,39 @@ class SimulateApp : public MyApp
 	float amplitude_contrast;
 
 
-    float bFactor_scaling;
-    float min_bFactor;
+  float bFactor_scaling;
+  float min_bFactor;
 
-    FrealignParameterFile  parameter_file;
-    cisTEMParameters parameter_star;
-    cisTEMParameterLine parameters;
-    std::string			   parameter_file_name;
-    std::string	parameter_star_file_name;
-    long number_preexisting_particles;
-    wxString preexisting_particle_file_name;
+  FrealignParameterFile  parameter_file;
+  cisTEMParameters parameter_star;
+  cisTEMParameterLine parameters;
+  std::string			   parameter_file_name;
+  std::string	parameter_star_file_name;
+  long number_preexisting_particles;
+  wxString preexisting_particle_file_name;
 
-    float parameter_vect[17] = {0.0f};
-    float water_scaling = 1.0f;
-    float non_water_inelastic_scaling = 1.0f;
+  float parameter_vect[17] = {0.0f};
+  float water_scaling = 1.0f;
+  float non_water_inelastic_scaling = 1.0f;
 
-    Coords coords;
-    StopWatch timer;
+  Coords coords;
+  StopWatch timer;
 
-    // Intermediate images that may be useful for diagnostics.
-    void AddCommandLineOptions();
-    bool SAVE_WATER_AND_OTHER = false;
-    bool SAVE_PROJECTED_WATER = false;
-    bool SAVE_PHASE_GRATING = false;
-    bool SAVE_PHASE_GRATING_DOSE_FILTERED = false;
-    bool SAVE_PHASE_GRATING_PLUS_WATER = false;
-    bool SAVE_PROBABILITY_WAVE = false;
-    bool SAVE_TO_COMPARE_JPR = false;
-    int  JPR_SIZE = 514;
-    bool SAVE_WITH_DQE = false;
-    bool SAVE_WITH_NORMALIZED_DOSE = false;
-    bool SAVE_POISSON_PRE_NTF = false;
-    bool SAVE_POISSON_WITH_NTF = false;
+  // Intermediate images that may be useful for diagnostics.
+  void  AddCommandLineOptions();
+  bool  SAVE_WATER_AND_OTHER = false;
+  bool  SAVE_PROJECTED_WATER = false;
+  bool  SAVE_PHASE_GRATING = false;
+  bool  SAVE_PHASE_GRATING_DOSE_FILTERED = false;
+  bool  SAVE_PHASE_GRATING_PLUS_WATER = false;
+  bool  DO_CROSSHAIR = false;
+  bool  SAVE_PROBABILITY_WAVE = false;
+  bool  SAVE_WITH_DQE = false;
+  bool  SAVE_WITH_NORMALIZED_DOSE = false;
+  bool  SAVE_POISSON_PRE_NTF = false;
+  bool  SAVE_POISSON_WITH_NTF = false;
     // Add these from the command line with long option
-	int max_number_of_noise_particles = 0;
+	int   max_number_of_noise_particles = 0;
 	float noise_particle_radius_as_mutliple_of_particle_radius = 1.8;
 	float noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius = -0.05;
 	float noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius = 0.10;
@@ -624,6 +627,7 @@ class SimulateApp : public MyApp
 	float	BOND_SCALING_FACTOR = 1.043; //1.0475;
 	float	MEAN_INNER_POTENTIAL = 9.09; // for 1.75 g/cm^3 amorphous carbon as in Wanner & Tesche
 	bool	DO_PHASE_PLATE = false;
+  bool  SHIFT_BY_CENTER_OF_MASS = true; // By default the atoms in the PDB are shifted so the center of mass is at the origin.
 
 	// CONTROL FOR DEBUGGING AND VALIDATION
 	bool 	add_mean_water_potential  = false; // For comparing to published results - only applies to a 3d potential
@@ -672,15 +676,17 @@ void SimulateApp::AddCommandLineOptions()
 	command_line_parser.AddLongSwitch("save-water-and-other","Save image of water and scattering.");
 	command_line_parser.AddLongSwitch("save-projected-water","Save image projected water atoms with sub-pixel offsets.");
 	command_line_parser.AddLongSwitch("save-phase-grating","Save phase grating of non-solvent atoms.");
+  command_line_parser.AddLongSwitch("do-cross-hair","Trim to output size and abort after phase calculation.");
 	command_line_parser.AddLongSwitch("save-phase-grating-dose-filtered","Save phase grating of non-solvent atoms + exposure filter.");
 	command_line_parser.AddLongSwitch("save-phase-grating-plus-water","Save phase grating of non-solvent atoms plus water atoms.");
-	command_line_parser.AddLongSwitch("save-to-compare-jpr","Save images with the same size to compare to JPR reference images.");
 	command_line_parser.AddLongSwitch("save-with-dqe","Save |wavefunction|^2 + DQE effects.");
 	// These shouldn't be needed anymore, no NTF applied.
 	command_line_parser.AddLongSwitch("save-poisson-pre-ntf","Save image of water and scattering.");
 	command_line_parser.AddLongSwitch("save-poisson-post-ntf","Save image of water and scattering.");
 	command_line_parser.AddLongSwitch("save-detector-wavefunction", "Save the detector wave function directly? Skip Poisson draw, default is no"); // Skip the poisson draw - must be true (this is gets over-ridden) if DO_PHASE_PLATE is true
 
+  // Option to skip centering by mass
+  command_line_parser.AddLongSwitch("skip-centering-by-mass","Skip centering by mass");
 
 	// Options for computation (TODO add gpu flag here)
 	command_line_parser.AddOption("j","","Desired number of threads. Overrides interactive user input. Is overriden by env var OMP_NUM_THREADS",wxCMD_LINE_VAL_NUMBER);
@@ -744,10 +750,6 @@ IMPLEMENT_APP(SimulateApp);
 void SimulateApp::DoInteractiveUserInput()
 {
 
-	 if (GEMMI_ENABLED) wxPrintf("Gemmi is enabled\n");
-	 else wxPrintf("Gemmi is disabled\n");
-
-
 	 bool add_more_pdbs = true;
 	 bool supply_origin = false;
 	 int iPDB = 0;
@@ -761,14 +763,14 @@ void SimulateApp::DoInteractiveUserInput()
 	SAVE_WATER_AND_OTHER = command_line_parser.FoundSwitch("save-water-and-other");
 	SAVE_PROJECTED_WATER = command_line_parser.FoundSwitch("save-projected-water");
 	SAVE_PHASE_GRATING = command_line_parser.FoundSwitch("save-phase-grating");
+  DO_CROSSHAIR = command_line_parser.FoundSwitch("do-cross-hair"); // implies skip-solvent
+
 	SAVE_PHASE_GRATING_DOSE_FILTERED = command_line_parser.FoundSwitch("save-phase-grating-dose-filtered");
 	SAVE_PHASE_GRATING_PLUS_WATER = command_line_parser.FoundSwitch("save-phase-grating-plus-water");
-	SAVE_TO_COMPARE_JPR = command_line_parser.FoundSwitch("save-to-compare-jpr");
 	SAVE_WITH_DQE = command_line_parser.FoundSwitch("save-with-dqe");
 	SAVE_POISSON_PRE_NTF = command_line_parser.FoundSwitch("save-poisson-pre-ntf");
 	SAVE_POISSON_WITH_NTF = command_line_parser.FoundSwitch("save-poisson-post-ntf");
 	DEBUG_POISSON = command_line_parser.Found("save-detector-wavefunction");
-
 
 	if (command_line_parser.Found("j", &temp_long)) { number_of_threads = (int)temp_long;}
 	if (command_line_parser.Found("surface-phase-error", &temp_double)) { SURFACE_PHASE_ERROR = (float)temp_double;}
@@ -782,6 +784,7 @@ void SimulateApp::DoInteractiveUserInput()
 	if (command_line_parser.Found("carbon-mip",  &temp_double)) { MEAN_INNER_POTENTIAL = (float)temp_double;}
 	if (command_line_parser.FoundSwitch("do-phase-plate")) DO_PHASE_PLATE = true;
 	if (command_line_parser.Found("non-water-inelastic-scaling", &temp_double)) { non_water_inelastic_scaling = (float)temp_double;}
+	if (command_line_parser.FoundSwitch("skip-centering-by-mass")) SHIFT_BY_CENTER_OF_MASS = false;
 
 	// CONTROL FOR DEBUGGING AND VALIDATION
 	add_mean_water_potential = command_line_parser.Found("add-constant-background");
@@ -815,210 +818,204 @@ void SimulateApp::DoInteractiveUserInput()
 	if (command_line_parser.Found("bf", &temp_double)) { bf = (float)temp_double;}
 	if (command_line_parser.Found("water-shell-only")) water_shell_only = true;
 
+  if (DO_CROSSHAIR) DO_SOLVENT = false;
+	UserInput *my_input = new UserInput("Simulator", 0.25);
+
+	output_filename = my_input->GetFilenameFromUser("Output filename","just the base, no extension, will be mrc","test_tilt.mrc",false);
+  // FIXME the range is way too big for 3d but needed for the fixed size hack.
+	do3d = my_input->GetYesNoFromUser("Make a 3d scattering potential?","just potential if > 0, input is the wanted cubic size","yes");
+  wanted_output_size = my_input->GetIntFromUser("Wanted output size", "Size along all dimensions", "16", 1, 8096);
+
+  // Limit the total 3d size allowed. This should probably depend on the pixel size, because of the oversampling
+  if (do3d && wanted_output_size > MAX_3D_SIZE) { wxPrintf("WARNING: wanted 3d size is too big, max size is %d\n", MAX_3D_SIZE); exit(-1); }
+ 	number_of_threads = my_input->GetIntFromUser("Number of threads", "Max is number of tilts", "1", 1);
 
 
-//	command_line_parser.AddLongSwitch(, "Save the detector wave function directly? Skip Poisson draw, default is no"); // Skip the poisson draw - must be true (this is gets over-ridden) if DO_PHASE_PLATE is true
-
-
-
-	///////////////////
-	//////////////////
-	 UserInput *my_input = new UserInput("Simulator", 0.25);
-
-	 this->output_filename = my_input->GetFilenameFromUser("Output filename","just the base, no extension, will be mrc","test_tilt.mrc",false);
-	 // FIXME the range is way too big for 3d but needed for the fixed size hack.
-	 this->do3d = my_input->GetFloatFromUser("Make a 3d scattering potential?","just potential if > 0, input is the wanted cubic size","0.0",-4096.0f,4096.0f);
-
-
- 	 this->number_of_threads = my_input->GetIntFromUser("Number of threads", "Max is number of tilts", "1", 1);
-
-	 while (sp.number_of_pdbs < MAX_NUMBER_PDBS && add_more_pdbs)
-	 {
-		 sp.pdb_file_names[sp.number_of_pdbs-1] = my_input->GetFilenameFromUser("PDB file name", "an input PDB", "my_atom_coords.pdb", true );
+  bool require_pdb_to_exist = true;
+	while (sp.number_of_pdbs < MAX_NUMBER_PDBS && add_more_pdbs)
+	{
+		 sp.pdb_file_names[sp.number_of_pdbs-1] = my_input->GetFilenameFromUser("PDB file name", "an input PDB", "my_atom_coords.pdb", require_pdb_to_exist );
 		 // This is now coming directly from the PDB
 		 //particle_copy_number[number_of_pdbs-1] = my_input->GetIntFromUser("Copy number of this particle", "To be inserted into the ensemble", "1", 1);
 
 
 		 add_more_pdbs = my_input->GetYesNoFromUser("Add another type of particle?", "Add another pdb to create additional features in the ensemble", "no");
 		 if (add_more_pdbs) {sp.number_of_pdbs++;}
-	 }
+	}
+
+	wanted_pixel_size 		= my_input->GetFloatFromUser("Output pixel size (Angstroms)","Output size for the final projections","1.0",0.01,MAX_PIXEL_SIZE);
+	bFactor_scaling		 = my_input->GetFloatFromUser("Linear scaling of per atom bFactor","0 off, 1 use as is","0",0,10000);
+	min_bFactor    		 = my_input->GetFloatFromUser("Per atom (xtal) bFactor added to all atoms","accounts for all quote[unavoidable] experimental error","30.0",0.0f,10000);
 
 
+	if (do3d)
+	{ 
+    bool found_the_best_binning = false;
+		// Check to make sure the sampling is sufficient, if not, oversample and bin at the end.
+    if (wanted_pixel_size > 1.5)
+    {
+      if (wanted_output_size * 4 < MAX_3D_SIZE)
+      {
+        wxPrintf("\nOversampling your 3d by a factor of 4 for calculation.\n");
+        wanted_pixel_size /= 4.f;
+        bin3d = 4;
+        found_the_best_binning = true;
+      }
+    }
 
-	 this->wanted_pixel_size 		= my_input->GetFloatFromUser("Output pixel size (Angstroms)","Output size for the final projections","1.0",0.01,MAX_PIXEL_SIZE);
-	 this->bFactor_scaling		 = my_input->GetFloatFromUser("Linear scaling of per atom bFactor","0 off, 1 use as is","0",0,10000);
-	 this->min_bFactor    		 = my_input->GetFloatFromUser("Per atom (xtal) bFactor added to all atoms","accounts for all quote[unavoidable] experimental error","30.0",0.0f,10000);
+    if (wanted_pixel_size > 0.75 && !found_the_best_binning)
+    {
+      if (wanted_output_size * 2 < MAX_3D_SIZE)
+      {
+        wxPrintf("\nOversampling your 3d by a factor of 2 for calculation.\n");
+        wanted_pixel_size /= 2.f;
+        bin3d = 2;
+        found_the_best_binning = true;
+      }
+    }
 
-
-
-	 // Hack to set the wanted output size for a 2d. Build this in as a real option FIXME
-	 if (this->do3d < 0)
+	 dose_per_frame			= my_input->GetFloatFromUser("electrons/Ang^2 in a frame at the specimen","","1.0",0.05,20.0);
+	 number_of_frames			= my_input->GetFloatFromUser("number of frames per movie (micrograph or tilt)","","30",1.0,1000.0);
+	}
+	else
+	{
+	 tilt_series = my_input->GetYesNoFromUser("Create a tilt-series as well?","Should make 0 degree with full dose, then tilt","no");
+	 if ( tilt_series == true )
 	 {
-		 wanted_output_size = fabsf(this->do3d);
-		 this->do3d = 0;
+		 // not doing anything for now, fixed range and increment.test_multi.mrc
+		 // TODO read in star file name
+		 (long)my_input->GetFloatFromUser("Dummy particle stack question, not valid for tilt-series","Number of particles at random orientations, 0 for just an image","1",0,1e7);
 	 }
-	 wxPrintf("\n\n\t\twanted size is %d\n\n",wanted_output_size);
-	 // end hack
-
-	 if (this->do3d)
+	 if (tilt_series == false)
 	 {
-		 // Check to make sure the sampling is sufficient, if not, oversample and bin at the end.
-		 if (this->wanted_pixel_size > 0.5 && this->wanted_pixel_size <= 1.5)
-		 {
-			 wxPrintf("\nOversampling your 3d by a factor of 2 for calculation.\n");
-			 this->wanted_pixel_size /= 2.0f;
-			 this->bin3d = 2;
-		 }
-		 else if (this->wanted_pixel_size > 1.5 && this->wanted_pixel_size < 3.0)
-		 {
-			 wxPrintf("\nOversampling your 3d by a factor of 4 for calculation.\n");
-
-			 this->wanted_pixel_size /= 4.0f;
-			 this->bin3d = 4;
-		 }
-		 else
-		 {
-			 //do nothing
-		 }
-		 this->dose_per_frame			= my_input->GetFloatFromUser("electrons/Ang^2 in a frame at the specimen","","1.0",0.05,20.0);
-		 this->number_of_frames			= my_input->GetFloatFromUser("number of frames per movie (micrograph or tilt)","","30",1.0,1000.0);
-
-	 }
-	 else
-	 {
-		 this->tilt_series = my_input->GetYesNoFromUser("Create a tilt-series as well?","Should make 0 degree with full dose, then tilt","no");
-		 if ( this->tilt_series == true )
-		 {
-			 // not doing anything for now, fixed range and increment.test_multi.mrc
-			 // TODO read in star file name
-			 (long)my_input->GetFloatFromUser("Dummy particle stack question, not valid for tilt-series","Number of particles at random orientations, 0 for just an image","1",0,1e7);
-		 }
-		 if (this->tilt_series == false)
-		 {
-			 this->doParticleStack = (long)my_input->GetFloatFromUser("Create a particle stack?","Number of particles at random orientations, 0 for just an image","1",0,1e7);
-			 wxPrintf("Making a particle stack with %ld images\n",this->doParticleStack);
-		 }
-
-		 this->defocus                  = my_input->GetFloatFromUser("wanted defocus (Angstroms)","Out","700",0,120000);
-		 this->extra_phase_shift        = my_input->GetFloatFromUser("wanted additional phase shift x * PI radians, i.e. 0.5 for PI/2 shift.","","0.0",-2.0,2.0);
-		 this->dose_per_frame			= my_input->GetFloatFromUser("electrons/Ang^2 in a frame at the specimen","","1.0",0.05,20.0);
-		 this->dose_rate			    = my_input->GetFloatFromUser("electrons/Pixel/sec","Affects coherence but not coincidence loss","3.0",0.001,200.0);
-
-		 this->number_of_frames			= my_input->GetFloatFromUser("number of frames per movie (micrograph or tilt)","","30",1.0,1000.0);
+		 doParticleStack = (long)my_input->GetFloatFromUser("Create a particle stack?","Number of particles at random orientations, 0 for just an image","1",0,1e7);
+		 wxPrintf("Making a particle stack with %ld images\n",doParticleStack);
 	 }
 
-	 this->doExpertOptions			= my_input->GetYesNoFromUser("Set expert options?","","no");
-	 this->wanted_pixel_size_sq 	= powf(this->wanted_pixel_size,2);
+		defocus                  = my_input->GetFloatFromUser("wanted defocus (Angstroms)","Out","700",0,120000);
+		extra_phase_shift        = my_input->GetFloatFromUser("wanted additional phase shift x * PI radians, i.e. 0.5 for PI/2 shift.","","0.0",-2.0,2.0);
+		dose_per_frame			= my_input->GetFloatFromUser("electrons/Ang^2 in a frame at the specimen","","1.0",0.05,20.0);
+		dose_rate			    = my_input->GetFloatFromUser("electrons/Pixel/sec","Affects coherence but not coincidence loss","3.0",0.001,200.0);
+		number_of_frames			= my_input->GetFloatFromUser("number of frames per movie (micrograph or tilt)","","30",1.0,1000.0);
+	}
+
+	doExpertOptions			= my_input->GetYesNoFromUser("Set expert options?","","no");
+	wanted_pixel_size_sq 	= powf(wanted_pixel_size,2);
 
 
-	 if (this->doExpertOptions)
-	 {
+	if (doExpertOptions)
+	{
 
-		 this->use_existing_params   = my_input->GetYesNoFromUser("Use an existing set of orientations","yes no","no");
-			if (use_existing_params)
-			{
-				// Check to see if the paramter file is valid
-				preexisting_particle_file_name = my_input->GetFilenameFromUser("cisTEM star file name", "an input star file to match reconstruction", "myparams.star", true );
-				if (! DoesFileExist(preexisting_particle_file_name))
-				{
-					SendError(wxString::Format("Error: Input star file %s not found\n", preexisting_particle_file_name));
-					exit(-1);
-				}
+	  use_existing_params   = my_input->GetYesNoFromUser("Use an existing set of orientations","yes no","no");
+    if (use_existing_params)
+    {
+      // Check to see if the paramter file is valid
+      preexisting_particle_file_name = my_input->GetFilenameFromUser("cisTEM star file name", "an input star file to match reconstruction", "myparams.star", true );
+      if (! DoesFileExist(preexisting_particle_file_name))
+      {
+        SendError(wxString::Format("Error: Input star file %s not found\n", preexisting_particle_file_name));
+        exit(-1);
+      }
 
-			    number_preexisting_particles = my_input->GetIntFromUser("Number of particles in the param file", "I don't know of a better way to get this info jsut yet", "1", 1);
-//				this->parameter_file.Open(parameter_file_name, access_type,17);
-//				wxPrintf("%d access_type\n", this->parameter_file.access_type);
-//				this->parameter_file.ReadFile(true, number_of_particles);
-//				wxPrintf("\nRecreating %ld particles from the supplied parameter file\n", number_of_particles);
+      number_preexisting_particles = my_input->GetIntFromUser("Number of particles in the param file", "I don't know of a better way to get this info jsut yet", "1", 1);
 
-			}
-		 this->water_scaling 		 = my_input->GetFloatFromUser("Linear scaling water intensity","0 off, 1 use as is","1",0,1);
-		 this->astigmatism_scaling	 = my_input->GetFloatFromUser("fraction of the defocus to add as astigmatism","0 off, 1 use as is","0.0",0,0.5);
-		 this->kV 					 = my_input->GetFloatFromUser("Accelrating volatage (kV)","Default is 300","300.0",80.0,1000.0f); // Calculations are not valid outside this range
-		 this->objective_aperture 	 = my_input->GetFloatFromUser("Objective aperture diameter in micron","","100.0",0.0,1000.0);
-		 this->spherical_aberration	 = my_input->GetFloatFromUser("Spherical aberration constant in millimeters","","2.7",0.0,5.0);
-		 this->stdErr = my_input->GetFloatFromUser("Std deviation of error to use in shifts, astigmatism, rotations etc.","","0.0",0.0,100.0);
-		 this->pre_exposure = my_input->GetFloatFromUser("Pre-exposure in electron/A^2","use for testing exposure filter","0",0.0);
+    }
+		water_scaling 		 = my_input->GetFloatFromUser("Linear scaling water intensity","0 off, 1 use as is","1",0,1);
+		astigmatism_scaling	 = my_input->GetFloatFromUser("fraction of the defocus to add as astigmatism","0 off, 1 use as is","0.0",0,0.5);
+		kV 					 = my_input->GetFloatFromUser("Accelrating volatage (kV)","Default is 300","300.0",80.0,1000.0f); // Calculations are not valid outside this range
+		objective_aperture 	 = my_input->GetFloatFromUser("Objective aperture diameter in micron","","100.0",0.0,1000.0);
+		spherical_aberration	 = my_input->GetFloatFromUser("Spherical aberration constant in millimeters","","2.7",0.0,5.0);
+		stdErr = my_input->GetFloatFromUser("Std deviation of error to use in shifts, astigmatism, rotations etc.","","0.0",0.0,100.0);
+		pre_exposure = my_input->GetFloatFromUser("Pre-exposure in electron/A^2","use for testing exposure filter","0",0.0);
 
-		 // Since kV is not default, need to calculate these parameters
-//		 const float WAVELENGTH = pow(1.968697e-2,1); // Angstrom
-		 this->wavelength 		  = 1226.39 / sqrtf(this->kV*1000 + 0.97845e-6*powf(this->kV*1000,2)) * 1e-2; // Angstrom
+		// Since kV is not default, need to calculate these parameters
+		wavelength 		  = 1226.39 / sqrtf(kV*1000 + 0.97845e-6*powf(kV*1000,2)) * 1e-2; // Angstrom
 
-			// This minimum padding should probably depend on the defocus. FIXME
-			this->minimum_padding_x_and_y = my_input->GetIntFromUser("minimum padding of images with solvent", "", "32", 0,4096);
-			this->minimum_thickness_z = my_input->GetIntFromUser("minimum thickness in Z", "", "10",2,10000);
-			this->propagation_distance = my_input->GetFloatFromUser("Propagation distance in angstrom","Also used as minimum thickness","5",-1e6,1e6);
-
-			// propagation_distance can be negative to set nSlabs = 1;
-			if (fabsf(propagation_distance) > minimum_thickness_z)
-			{
-				minimum_thickness_z = fabsf(propagation_distance);
-				wxPrintf("min thickness was less than propagation distance, so setting it there\n");
-			}
-
-			// To add error to the global alignment
-			this->tilt_axis = my_input->GetFloatFromUser("Rotation of tilt-axis from Y (degrees)","","0.0",0,180); // TODO does this apply everywhere it should
-			this->in_plane_sigma = my_input->GetFloatFromUser("Standard deviation on angles in plane (degrees)","","2",0,100); // spread in-plane angles based on neighbors
-			this->tilt_angle_sigma = my_input->GetFloatFromUser("Standard deviation on tilt-angles (degrees)","","0.1",0,10);; //;
-			this->magnification_sigma = my_input->GetFloatFromUser("Standard deviation on magnification (fraction)","","0.0001",0,1);//;
-			this->beam_tilt_x = my_input->GetFloatFromUser("Beam-tilt in X (milli radian)","","0.0",-300,300);//0.6f;
-			this->beam_tilt_y = my_input->GetFloatFromUser("Beam-tilt in Y (milli radian)","","0.0",-300,300);//-0.2f;
-			this->particle_shift_x =  my_input->GetFloatFromUser("Beam-tilt particle shift in X (Angstrom)","","0.0",-100,100);
-			this->particle_shift_y =  my_input->GetFloatFromUser("Beam-tilt particle shift in Y (Angstrom)","","0.0",-100,100);
+    // This minimum padding should probably depend on the defocus. FIXME
+    minimum_padding_x_and_y = my_input->GetIntFromUser("minimum padding of images with solvent", "", "32", 0,4096);
+    minimum_thickness_z = my_input->GetIntFromUser("minimum thickness in Z", "", "10",2,10000);
+    propagation_distance = my_input->GetFloatFromUser("Propagation distance in angstrom","Also used as minimum thickness","5",-1e6,1e6);
 
 
 
-			set_real_part_wave_function_in = sqrt(this->dose_per_frame * this->wanted_pixel_size_sq);
+
+    if (fabsf(propagation_distance) > minimum_thickness_z)
+    {
+      minimum_thickness_z = fabsf(propagation_distance);
+      if (DO_PRINT) { wxPrintf("min thickness was less than propagation distance, so setting it there\n"); }
+    }
+    
 
 
-	 }
-	 else
-	 {
-		 this->wavelength 		  = 1226.39 / sqrtf(this->kV*1000 + 0.97845e-6*powf(this->kV*1000,2)) * 1e-2; // Angstrom
-		 this->water_scaling=1.0f;
-		 this->astigmatism_scaling=0.0f;
-		 this->objective_aperture = 100.0f;
-		 this->spherical_aberration = 2.7f;
-		 this->stdErr = 0.0f;
-	 }
+    // To add error to the global alignment
+    tilt_axis = my_input->GetFloatFromUser("Rotation of tilt-axis from Y (degrees)","","0.0",0,180); // TODO does this apply everywhere it should
+    in_plane_sigma = my_input->GetFloatFromUser("Standard deviation on angles in plane (degrees)","","2",0,100); // spread in-plane angles based on neighbors
+    tilt_angle_sigma = my_input->GetFloatFromUser("Standard deviation on tilt-angles (degrees)","","0.1",0,10);; //;
+    magnification_sigma = my_input->GetFloatFromUser("Standard deviation on magnification (fraction)","","0.0001",0,1);//;
+    beam_tilt_x = my_input->GetFloatFromUser("Beam-tilt in X (milli radian)","","0.0",-300,300);//0.6f;
+    beam_tilt_y = my_input->GetFloatFromUser("Beam-tilt in Y (milli radian)","","0.0",-300,300);//-0.2f;
+    particle_shift_x =  my_input->GetFloatFromUser("Beam-tilt particle shift in X (Angstrom)","","0.0",-100,100);
+    particle_shift_y =  my_input->GetFloatFromUser("Beam-tilt particle shift in Y (Angstrom)","","0.0",-100,100);
+
+
+
+    set_real_part_wave_function_in = sqrt(dose_per_frame * wanted_pixel_size_sq);
+
+
+  }
+  else
+  {
+    wavelength 		  = 1226.39 / sqrtf(kV*1000 + 0.97845e-6*powf(kV*1000,2)) * 1e-2; // Angstrom
+    water_scaling=1.0f;
+    astigmatism_scaling=0.0f;
+    objective_aperture = 100.0f;
+    spherical_aberration = 2.7f;
+    stdErr = 0.0f;
+  }
 
 
 
 	parameter_star_file_name = output_filename + ".star";
 
-//	parameter_file_name = output_filename + ".par";
-//	wxString parameter_header = "C           PSI   THETA     PHI       SHX       SHY     MAG  INCLUDE   DF1      DF2  ANGAST  PSHIFT     OCC      LogP      SIGMA   SCORE  CHANGE";
-//	this->parameter_file.Open(parameter_file_name,1,17);
-//	this->parameter_file.WriteCommentLine(parameter_header);
+  if (DO_PHASE_PLATE)
+  {
+    if (SURFACE_PHASE_ERROR < 0)
+    {
+      if (DO_PRINT) { wxPrintf("SURFACE_PHASE_ERROR < 0, subbing min thickness for phase plate thickness\n"); }
+      phase_plate_thickness = minimum_thickness_z;
+    }
+    else
+    {
+      phase_plate_thickness = (PIf/2.0f + SURFACE_PHASE_ERROR + BOND_PHASE_ERROR) / ( MEAN_INNER_POTENTIAL/(kV*1000) * (511+kV)/(2*511+kV) * (2*PIf / (wavelength*1e-10)) )*1e10;
+    }
 
+    if (DO_PRINT) { wxPrintf("With a mean inner potential of %2.2fV a thickness of %2.2f ang is needed for a pi/2 phase shift \n",MEAN_INNER_POTENTIAL,phase_plate_thickness); }
+    if (DO_PRINT) { wxPrintf("Phase shift params %f %f %f\n",BOND_PHASE_ERROR,BOND_SCALING_FACTOR,SURFACE_PHASE_ERROR); }
 
-	 if (DO_PHASE_PLATE)
-	 {
+  }
 
-		 if (SURFACE_PHASE_ERROR < 0)
-		 {
-			 wxPrintf("SURFACE_PHASE_ERROR < 0, subbing min thickness for phase plate thickness\n");
-			 this->phase_plate_thickness = this->minimum_thickness_z;
-		 }
-		 else
-		 {
-			 this->phase_plate_thickness = (PIf/2.0f + SURFACE_PHASE_ERROR + BOND_PHASE_ERROR) / ( MEAN_INNER_POTENTIAL/(kV*1000) * (511+kV)/(2*511+kV) * (2*PIf / (wavelength*1e-10)) )*1e10;
-		 }
+  lead_term = BOND_SCALING_FACTOR * wavelength  / 8.0f / wanted_pixel_size_sq;
 
-		 wxPrintf("With a mean inner potential of %2.2fV a thickness of %2.2f ang is needed for a pi/2 phase shift \n",MEAN_INNER_POTENTIAL,this->phase_plate_thickness);
-		 wxPrintf("Phase shift params %f %f %f\n",BOND_PHASE_ERROR,BOND_SCALING_FACTOR,SURFACE_PHASE_ERROR);
+  // The third term is a rough estiamte to ensure any delocalized info from particles is retained. It should probably also consider the stdErr
+  minimum_padding_x_and_y =  myroundint(N_TAPERS*TAPERWIDTH*wanted_pixel_size + (float)minimum_padding_x_and_y + defocus/100.0f);
 
-	 }
+  non_water_inelastic_scaling *= inelastic_scalar_water;
 
-	 //	 this->lead_term = BOND_SCALING_FACTOR * this->wavelength / this->wanted_pixel_size_sq / 8.0f;
-	 	 // the 1/8 just comes from the integration of the gaussian which is too large by a factor of 2 in each dimension
-//	     BOND_SCALING_FACTOR = (BOND_SCALING_FACTOR - 1.0f) / wanted_pixel_size + 1.0f;
-	 	 this->lead_term = BOND_SCALING_FACTOR * this->wavelength  / 8.0f / wanted_pixel_size_sq;
+  // Various overrides based on input flags and command line options.
 
-	 	 // The third term is a rough estiamte to ensure any delocalized info from particles is retained. It should probably also consider the stdErr
-	 	 minimum_padding_x_and_y =  myroundint(N_TAPERS*TAPERWIDTH*wanted_pixel_size + (float)minimum_padding_x_and_y + defocus/100.0f);
+  if (do3d)
+  {
+    // We only want one slab for a 3d simulation
+    minimum_thickness_z = wanted_output_size*wanted_pixel_size;
+    propagation_distance = -minimum_thickness_z;
 
-	 	non_water_inelastic_scaling *= inelastic_scalar_water;
+    // We need to be sure there is SOME exposure. Note for 3d sims, the exposure applied is an integrated
+    // exposure. 
+    if (number_of_frames - dose_per_frame < 1)
+    {
+      number_of_frames++;
+    }
+  }
 
 	delete my_input;
 
@@ -1031,58 +1028,47 @@ bool SimulateApp::DoCalculation()
 {
 
 
-
-
-//	if (use_existing_params) wxPrintf("\nRecreating %d particles from the supplied parameter file\n", this->parameter_file.number_of_lines);
-
-
-	// Profiling
-
-	// get the arguments for this job..
-
-
-
 	// TODO is this the best place to put this?
-	this->current_total_exposure = pre_exposure;
+	current_total_exposure = pre_exposure;
 
 	if (CORRECT_CTF && use_existing_params)
 	{
 		wxPrintf("I did not set up ctf correction and the use of existing parameters. FIXME\n");
-		throw;
+		exit(-1);
 	}
 
 
 	if (doParticleStack > 0)
 	{
 
-		sp.InitPdbEnsemble( wanted_pixel_size, do3d, minimum_padding_x_and_y, minimum_thickness_z,
-				max_number_of_noise_particles,
-				noise_particle_radius_as_mutliple_of_particle_radius,
-				noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
-				noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
-				emulate_tilt_angle
-				);
+		sp.InitPdbEnsemble( wanted_pixel_size, SHIFT_BY_CENTER_OF_MASS, minimum_padding_x_and_y, minimum_thickness_z,
+                        max_number_of_noise_particles,
+                        noise_particle_radius_as_mutliple_of_particle_radius,
+                        noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
+                        noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
+                        emulate_tilt_angle
+                        );
 
 	}
 	else
 	{
 		// Over-ride the max number of noise particles
 		max_number_of_noise_particles = 0;
-		sp.InitPdbEnsemble( wanted_pixel_size, do3d, minimum_padding_x_and_y, minimum_thickness_z,
-				max_number_of_noise_particles,
-				noise_particle_radius_as_mutliple_of_particle_radius,
-				noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
-				noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
-				emulate_tilt_angle
-				);
+		sp.InitPdbEnsemble( wanted_pixel_size, SHIFT_BY_CENTER_OF_MASS, minimum_padding_x_and_y, minimum_thickness_z,
+                        max_number_of_noise_particles,
+                        noise_particle_radius_as_mutliple_of_particle_radius,
+                        noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
+                        noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
+                        emulate_tilt_angle
+                        );
 	}
 
 	number_of_non_water_atoms = sp.ReturnTotalNumberOfNonWaterAtoms();
 
 
 
-	wxPrintf("\nThere are %ld non-water atoms in the specimen.\n",this->number_of_non_water_atoms);
-	wxPrintf("\nCurrent number of PDBs %d\n",sp.number_of_pdbs);
+	if (DO_PRINT) { wxPrintf("\nThere are %ld non-water atoms in the specimen.\n",this->number_of_non_water_atoms); }
+	if (DO_PRINT) { wxPrintf("\nCurrent number of PDBs %d\n",sp.number_of_pdbs); }
 
 	// FIXME add time steps.
 	int time_step = 0 ;
@@ -1090,7 +1076,7 @@ bool SimulateApp::DoCalculation()
     this->probability_density_2d(sp.pdb_ensemble, time_step);
 
 
-	wxPrintf("\nFinished pre seg fault\n");
+	if (DO_PRINT) { wxPrintf("\nFinished pre seg fault\n"); }
 
 
 	// It gives a segfault at the end either way.
@@ -1146,12 +1132,12 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 	float astigmatism_angle_randomizer = 0.0; //
 	float defocus_randomizer = 0.0;
 	float wanted_additional_phase_shift_in_radians  = this->extra_phase_shift*PI;
-    float *propagator_distance; // in Angstom, <= defocus tolerance.
-    float defocus_offset = 0;
+  float *propagator_distance; // in Angstom, <= defocus tolerance.
+  float defocus_offset = 0;
 
 
 
-    wxPrintf("Using extra phase shift of %f radians\n",wanted_additional_phase_shift_in_radians);
+  if (DO_PRINT) { wxPrintf("Using extra phase shift of %f radians\n",wanted_additional_phase_shift_in_radians); }
 
 	int frame_lines;
 	if (ONLY_SAVE_SUMS) { frame_lines = 1; }
@@ -1182,17 +1168,9 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 	{
 		// For now, we are only reading in from the par file FIXME
 
-//		this->parameter_file.Open(preexisting_particle_file_name, 0,17);
-//		this->parameter_file.ReadFile(true, number_preexisting_particles);
-//
-		//		wxPrintf("\nRecreating %ld particles from the supplied parameter file\n", number_preexisting_particles);
-//		// Read the first line so that all of the values are initialized in parameter_vect
-//		this->parameter_file.ReadLine(this->parameter_vect);
-//		// Reset the counter to the first line
-//		this->parameter_file.current_line--;
 
 		parameter_star.ReadFromcisTEMStarFile(preexisting_particle_file_name);
-		wxPrintf("\nRecreating %ld particles from the supplied star file\n", parameter_star.ReturnNumberofLines());
+		if (DO_PRINT) { wxPrintf("\nRecreating %ld particles from the supplied star file\n", parameter_star.ReturnNumberofLines()); }
 
 		parameter_star.parameters_to_write.SetAllToTrue();
 		parameter_star.parameters_to_write.image_is_active = false;
@@ -1307,7 +1285,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		if (this->use_existing_params)
 		{
 			wxPrintf("\n\nUsing an existing parameter file only supported on a particle stack\n\n");
-			throw;
+			exit(-1);
 		}
 //    	max_tilt  = 60.0f;
 //    	float tilt_range = max_tilt;
@@ -1341,7 +1319,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
     		tilt_psi[iTilt] = tilt_axis + this->stdErr * norm_dist_inplane(gen); // *(2*PI);
 //    		tilt_theta[iTilt] = -((tilt_range - (float)iTilt*tilt_inc) + this->stdErr * norm_dist_tiltangle(gen));
     		tilt_theta[iTilt] = SET_TILT_ANGLES[iTilt];
-    		wxPrintf("%f\n",SET_TILT_ANGLES[iTilt]);
+    		if (DO_PRINT) { wxPrintf("%f\n",SET_TILT_ANGLES[iTilt]); }
     		tilt_phi[iTilt] = 0.0f;
     		shift_x[iTilt] = this->stdErr * 8*uniform_dist(gen) ;
     		shift_y[iTilt] = this->stdErr * 8*uniform_dist(gen);
@@ -1403,7 +1381,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		if (this->use_existing_params)
 		{
 			wxPrintf("\n\nUsing an existing parameter file only supported on a particle stack\n\n");
-			throw;
+			exit(-1);
 		}
 
     	max_tilt = 0.0;
@@ -1450,108 +1428,100 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 	// Create a new PDB object that represents the current state of the specimen, with each local motion applied. // TODO mag changes and pixel size (here to determine water box)?
 	// For odd sizes there will be an offset of 0.5 pix if simply padded by 2 and cropped by 2 so make it even to start then trim at the end.
 
-	wxPrintf("Got here emulate is %f\n",emulate_tilt_angle);
+	if (DO_PRINT) { wxPrintf("Got here emulate is %f\n",emulate_tilt_angle); }
 	// FIXME I think this should somehow be derived from the information already stored in the scattering potential  object
-	PDB current_specimen(this->number_of_non_water_atoms, bin3d*(do3d-IsOdd(do3d)), wanted_pixel_size, minimum_padding_x_and_y, minimum_thickness_z,
+	PDB current_specimen(this->number_of_non_water_atoms, bin3d*(wanted_output_size-IsOdd(wanted_output_size)), wanted_pixel_size, minimum_padding_x_and_y, minimum_thickness_z,
 							max_number_of_noise_particles,
 							noise_particle_radius_as_mutliple_of_particle_radius,
 							noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
 							noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
-							emulate_tilt_angle
-							);
+							emulate_tilt_angle,
+              SHIFT_BY_CENTER_OF_MASS);
 
 	timer.lap("Init H20 & Spec");
 
 
 
-	wxPrintf("\nThere are %d tilts\n",number_of_images);
-    for ( iTilt = 0 ; iTilt < number_of_images ; iTilt++)
+	if (DO_PRINT) { wxPrintf("\nThere are %d tilts\n",number_of_images); }
+  
+  for ( iTilt = 0 ; iTilt < number_of_images ; iTilt++)
+  {
+
+    this->wanted_pixel_size = this->unscaled_pixel_size * mag_diff[iTilt];
+
+    this->wanted_pixel_size_sq = this->wanted_pixel_size * this->wanted_pixel_size;
+
+    wxPrintf("for Tilt %d, scaling the pixel size from %3.3f to %3.3f\n",iTilt,this->unscaled_pixel_size,this->wanted_pixel_size);
+
+    float total_drift = 0.0f;
+  RotationMatrix rotate_waters;
+  RotationMatrix max_rotation;
+  if (this->tilt_series)
+  {
+//			rotate_waters.SetToRotation(-tilt_phi[iTilt],-tilt_theta[iTilt],-tilt_psi[iTilt]);
+    rotate_waters.SetToEulerRotation(-tilt_psi[iTilt],-tilt_theta[iTilt],-tilt_phi[iTilt]);
+    max_rotation.SetToEulerRotation(-tilt_psi[iTilt],-max_tilt,0.0f);
+
+  }
+  else
+  {
+    rotate_waters.SetToEulerRotation(euler1,euler2,euler3);
+    max_rotation.SetToEulerRotation(-tilt_psi[iTilt],-tilt_theta[iTilt],-tilt_phi[iTilt]);
+
+  }
+  if (this->doParticleStack > 0)
+  {
+
+
+    float phiOUT = 0;
+    float psiOUT = 0;
+    float thetaOUT = 0;
+
+    wxPrintf("\n\nWorking on iParticle %d/ %d\n\n",iTilt,number_of_images);
+
+    particle_rot.SetToEulerRotation(-tilt_psi[iTilt],-tilt_theta[iTilt],-tilt_phi[iTilt]);
+    // For particle stack, use the fixed supplied defocus, and apply a fixed amount of astigmatism at random angle to make sure everything is filled in
+
+    if (this->use_existing_params)
     {
 
-    	this->wanted_pixel_size = this->unscaled_pixel_size * mag_diff[iTilt];
-
-    	this->wanted_pixel_size_sq = this->wanted_pixel_size * this->wanted_pixel_size;
-
-    	wxPrintf("for Tilt %d, scaling the pixel size from %3.3f to %3.3f\n",iTilt,this->unscaled_pixel_size,this->wanted_pixel_size);
-
-    	float total_drift = 0.0f;
-		RotationMatrix rotate_waters;
-		RotationMatrix max_rotation;
-		if (this->tilt_series)
-		{
-//			rotate_waters.SetToRotation(-tilt_phi[iTilt],-tilt_theta[iTilt],-tilt_psi[iTilt]);
-			rotate_waters.SetToEulerRotation(-tilt_psi[iTilt],-tilt_theta[iTilt],-tilt_phi[iTilt]);
-			max_rotation.SetToEulerRotation(-tilt_psi[iTilt],-max_tilt,0.0f);
-
-		}
-		else
-		{
-			rotate_waters.SetToEulerRotation(euler1,euler2,euler3);
-			max_rotation.SetToEulerRotation(-tilt_psi[iTilt],-tilt_theta[iTilt],-tilt_phi[iTilt]);
-
-		}
-		if (this->doParticleStack > 0)
-		{
+      wanted_defocus_1_in_angstroms = parameter_star.ReturnDefocus1(iTilt); //parameter_vect[8];
+      wanted_defocus_2_in_angstroms = parameter_star.ReturnDefocus2(iTilt); //parameter_vect[9];
+      wanted_astigmatism_azimuth    = parameter_star.ReturnDefocusAngle(iTilt); //parameter_vect[10];
+      wanted_additional_phase_shift_in_radians = parameter_star.ReturnPhaseShift(iTilt); //parameter_vect[10];
+    }
+    else
+    {
+      defocus_randomizer = uniform_dist(gen)*this->astigmatism_scaling*this->stdErr;
+      wxPrintf("For the particle stack, stretching the defocus by %3.2f percent and randmozing the astigmatism angle -90,90",100*defocus_randomizer);
+      wanted_defocus_1_in_angstroms = this->defocus*(1+defocus_randomizer) + shift_z[iTilt]; // A
+      wanted_defocus_2_in_angstroms = this->defocus*(1-defocus_randomizer) + shift_z[iTilt]; //A
+      wanted_astigmatism_azimuth = (uniform_dist(gen)-0.5f)*179.99f;
+    }
 
 
-			float phiOUT = 0;
-			float psiOUT = 0;
-			float thetaOUT = 0;
+  }
+  else
+  {
+    particle_rot.SetToIdentity();
+  }
 
-			wxPrintf("\n\nWorking on iParticle %d/ %d\n\n",iTilt,number_of_images);
-
-//			particle_rot.SetToEulerRotation(tilt_phi[iTilt],tilt_theta[iTilt],tilt_psi[iTilt]);
-			particle_rot.SetToEulerRotation(-tilt_psi[iTilt],-tilt_theta[iTilt],-tilt_phi[iTilt]);
-
-
-		    // For particle stack, use the fixed supplied defocus, and apply a fixed amount of astigmatism at random angle to make sure everything is filled in
-
-			if (this->use_existing_params)
-			{
-
-				wanted_defocus_1_in_angstroms = parameter_star.ReturnDefocus1(iTilt); //parameter_vect[8];
-				wanted_defocus_2_in_angstroms = parameter_star.ReturnDefocus2(iTilt); //parameter_vect[9];
-				wanted_astigmatism_azimuth    = parameter_star.ReturnDefocusAngle(iTilt); //parameter_vect[10];
-				wanted_additional_phase_shift_in_radians = parameter_star.ReturnPhaseShift(iTilt); //parameter_vect[10];
-
-
-			}
-			else
-			{
-			    defocus_randomizer = uniform_dist(gen)*this->astigmatism_scaling*this->stdErr;
-		    	wxPrintf("For the particle stack, stretching the defocus by %3.2f percent and randmozing the astigmatism angle -90,90",100*defocus_randomizer);
-		    	wanted_defocus_1_in_angstroms = this->defocus*(1+defocus_randomizer) + shift_z[iTilt]; // A
-		    	wanted_defocus_2_in_angstroms = this->defocus*(1-defocus_randomizer) + shift_z[iTilt]; //A
-				wanted_astigmatism_azimuth = (uniform_dist(gen)-0.5f)*179.99f;
-			}
-
-
-		}
-		else
-		{
-			particle_rot.SetToIdentity();
-
-		}
-
-
-		if (SCALE_DEFOCUS_TO_MATCH_300)
-		{
-			scale_defocus = (0.0196869700756145f / this->wavelength);
-			wanted_defocus_1_in_angstroms *= scale_defocus;
-			wanted_defocus_2_in_angstroms *= scale_defocus;
-			wxPrintf("Scaling the defocus by %6.6f to match the def at 300 KeV\n", scale_defocus);
-
-		}
-		// Scale the defocus so that it is equivalent to 300KeV for experiment
+  if (SCALE_DEFOCUS_TO_MATCH_300)
+  {
+    scale_defocus = (0.0196869700756145f / this->wavelength);
+    wanted_defocus_1_in_angstroms *= scale_defocus;
+    wanted_defocus_2_in_angstroms *= scale_defocus;
+    if (DO_PRINT) { wxPrintf("Scaling the defocus by %6.6f to match the def at 300 KeV\n", scale_defocus); }
+  }
+  // Scale the defocus so that it is equivalent to 300KeV for experiment
 
 
 	// Override any rotations when making a 3d reference
-	if (this->do3d > 1 || DO_PHASE_PLATE || DO_NOT_RANDMOIZE_ANGLES)
+	if (do3d || DO_PHASE_PLATE || DO_NOT_RANDMOIZE_ANGLES)
 	{
 		particle_rot.SetToIdentity();
 		rotate_waters.SetToIdentity();
 		max_rotation.SetToIdentity();
-
 	}
 	if (DO_PHASE_PLATE)
 	{
@@ -1561,21 +1531,17 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 	for ( int iFrame = 0; iFrame < this->number_of_frames; iFrame ++)
 	{
-
-
-
-    	int slab_nZ;
-    	int rotated_Z; // full range in Z to cover the rotated specimen
-    	float rotated_oZ;
-    	float slab_oZ;
-	    int nSlabs;
+    int slab_nZ;
+    int rotated_Z; // full range in Z to cover the rotated specimen
+    float rotated_oZ;
+    float slab_oZ;
+    int nSlabs;
 		int nS;
 		float full_tilt_radians = 0;
 
-
-		Image jpr_sum_phase;
-		Image jpr_sum_detector;
-
+		Image sum_phase;
+    Image cross_hair;
+		Image sum_detector;
 
 		// Include the max rand shift in z for thickness
 
@@ -1589,7 +1555,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		if (DO_PHASE_PLATE) { BF = PHASE_PLATE_BFACTOR ;} else { BF = return_bfactor(current_specimen.average_bFactor + min_bFactor);}
 
 		this->size_neighborhood 	  =  1 + myroundint( (0.4f *sqrtf(0.6f*BF) + 0.2f) / this->wanted_pixel_size);
-		wxPrintf("\n\n\tfor frame %d the size neigborhood is %d\n\n", iFrame, this->size_neighborhood);
+		if (DO_PRINT) { wxPrintf("\n\n\tfor frame %d the size neigborhood is %d\n\n", iFrame, this->size_neighborhood); }
 
 
 		if (DO_PHASE_PLATE)
@@ -1603,70 +1569,70 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 		}
 
-	    wxPrintf("using neighborhood of %2.2f vox^3 for waters and %2.2f vox^3 for non-waters\n",powf(this->size_neighborhood_water*2+1,3),powf(this->size_neighborhood*2+1,3));
-	    timer.start("Calc H20 Atoms");
-	    ////////////////////////////////////////////////////////////////////////////////
-	    ////////// PRE_CALCULATE WATERS
-	    // Because the waters are all identical, we create an array of projected water atoms with the wanted sub-pixel offsets. When water is added, the pre-calculated atom with the closest sub-pixel origin is used, weighted depending on
-	    // it's proximity to any non-water atoms, and added to the 2d.
+    if (DO_PRINT) { wxPrintf("using neighborhood of %2.2f vox^3 for waters and %2.2f vox^3 for non-waters\n",powf(this->size_neighborhood_water*2+1,3),powf(this->size_neighborhood*2+1,3)); }
+    timer.start("Calc H20 Atoms");
+    ////////////////////////////////////////////////////////////////////////////////
+    ////////// PRE_CALCULATE WATERS
+    // Because the waters are all identical, we create an array of projected water atoms with the wanted sub-pixel offsets. When water is added, the pre-calculated atom with the closest sub-pixel origin is used, weighted depending on
+    // it's proximity to any non-water atoms, and added to the 2d.
 
-	    if ( DO_SOLVENT && this->need_to_allocate_projected_water)
-	    {
+    if ( DO_SOLVENT && this->need_to_allocate_projected_water)
+    {
 
-	    	projected_water= new Image[SUB_PIXEL_NeL];
-
-
-
-	        for (int iWater = 0 ; iWater < SUB_PIXEL_NeL; iWater++)
-	        {
-	            projected_water[iWater].Allocate(this->size_neighborhood_water*2+1,this->size_neighborhood_water*2+1,true);
-	            projected_water[iWater].SetToConstant(0.0f);
-
-	        }
-
-			wxPrintf("Starting projected water calc with sizeN %d, %d\n",this->size_neighborhood_water*2+1,this->size_neighborhood_water*2+1);
-			this->calc_water_potential(projected_water, water);
-
-			wxPrintf("Finishing projected water calc\n");
+      projected_water= new Image[SUB_PIXEL_NeL];
 
 
-			this->need_to_allocate_projected_water = false;
-	    }
-	    timer.lap("Calc H20 Atoms");
-	    //////////
-	    ///////////////////////////////////////////////////////////////////////////////
 
-	    // If negative ignore, otherwise make sure the solvent is at least this dimension. The actual padding including rotations are returned in these variables after initializeation.
-	    int padSpecimenX = wanted_output_size;
-	    int padSpecimenY = wanted_output_size;
+      for (int iWater = 0 ; iWater < SUB_PIXEL_NeL; iWater++)
+      {
+        projected_water[iWater].Allocate(this->size_neighborhood_water*2+1,this->size_neighborhood_water*2+1,true);
+        projected_water[iWater].SetToConstant(0.0f);
+      }
 
-		if (padSpecimenX > 0)
+      if (DO_PRINT) { wxPrintf("Starting projected water calc with sizeN %d, %d\n",this->size_neighborhood_water*2+1,this->size_neighborhood_water*2+1); }
+      calc_water_potential(projected_water, water);
+
+    if (DO_PRINT) { wxPrintf("Finishing projected water calc\n"); }
+      need_to_allocate_projected_water = false;
+    }
+    timer.lap("Calc H20 Atoms");
+    //////////
+    ///////////////////////////////////////////////////////////////////////////////
+
+    int padSpecimenX;
+    int padSpecimenY;
+
+		if (do3d) padSpecimenX = 0;
+    else
 		{
+      padSpecimenX = wanted_output_size;
 			int x_diff = current_specimen.vol_nX- padSpecimenX;
 			if (x_diff < 0)
 			{
 				padSpecimenX= -x_diff;
 			}
+		  padSpecimenX += N_TAPERS*TAPERWIDTH;
 
 		}
-		else padSpecimenX = 0;
-		if  (padSpecimenY > 0)
+		if (do3d) padSpecimenY = 0;
+    else
 		{
+      padSpecimenY = wanted_output_size;
 			int y_diff = current_specimen.vol_nY - padSpecimenY;
 			if (y_diff < 0)
 			{
 				padSpecimenY = -y_diff;
 			}
-		}
-		else padSpecimenY = 0;
+      padSpecimenY += N_TAPERS*TAPERWIDTH;
 
-		padSpecimenX += N_TAPERS*TAPERWIDTH;
-		padSpecimenY += N_TAPERS*TAPERWIDTH;
+		}
+		
+    if (DO_PRINT) { wxPrintf("\n\n\tfor frame %d the size of the specimen is %d, %d\n\n", iFrame, padSpecimenX, padSpecimenY); }
 
 		// Set the minimum specimen volume to allow trimming of the tapered region. Note that the z dimension must be set on each slab, it is ignored for 2d
 		coords.SetSpecimenVolume(current_specimen.vol_nX, current_specimen.vol_nY, current_specimen.vol_nZ);
 		coords.SetSolventPadding(current_specimen.vol_nX + padSpecimenX, current_specimen.vol_nY + padSpecimenY, current_specimen.vol_nZ);
-		 wxPrintf("\n\n\t\twanted size is %d\n\n",padSpecimenX);
+		if (DO_PRINT) { wxPrintf("\n\n\t\twanted size is %d\n\n",padSpecimenX); }
 
 
 
@@ -1679,7 +1645,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 	    	bool is_single_particle;
 	    	if (this->tilt_series || this->doParticleStack == 0) is_single_particle = false;
 	    	else is_single_particle = true;
-	    	wxPrintf("Is single particle is %d\n", is_single_particle);
+	    	if (DO_PRINT) { wxPrintf("Is single particle is %d\n", is_single_particle); }
 		    water_box.Init( &current_specimen,this->size_neighborhood_water, this->wanted_pixel_size, this->dose_per_frame, max_rotation, tilt_axis, &padSpecimenX, &padSpecimenY, number_of_threads, is_single_particle);
 	    }
 	    timer.lap("Calc H20 Box");
@@ -1691,30 +1657,23 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 
 
-		if (SAVE_TO_COMPARE_JPR || DO_PHASE_PLATE)
+		if (DO_PHASE_PLATE)
 		{
-			if (DO_PHASE_PLATE)
-			{
-				wxPrintf("\n\nSimulating a phase plate for validation, this overrides SAVE_TO_COMPARE_JPR\n\n");
 
+      if (DO_PRINT) { wxPrintf("\n\nSimulating a phase plate for validation\n\n"); }
+      coords.Allocate(&sum_phase, (PaddingStatus)solvent, true, true);
+      sum_phase.SetToConstant(0.0f);
 
-				coords.Allocate(&jpr_sum_phase, (PaddingStatus)solvent, true, true);
-				jpr_sum_phase.SetToConstant(0.0f);
-
-				coords.Allocate(&jpr_sum_detector, (PaddingStatus)solvent, true, true);
-				jpr_sum_detector.SetToConstant(0.0f);
-
-			}
-			else
-			{
-				jpr_sum_phase.Allocate(JPR_SIZE,JPR_SIZE,true);
-				jpr_sum_phase.SetToConstant(0.0f);
-
-				jpr_sum_detector.Allocate(JPR_SIZE,JPR_SIZE,true);
-				jpr_sum_detector.SetToConstant(0.0f);
-			}
+      coords.Allocate(&sum_detector, (PaddingStatus)solvent, true, true);
+      sum_detector.SetToConstant(0.0f);
 
 		}
+
+    if (DO_CROSSHAIR) 
+    {
+      coords.Allocate(&cross_hair, (PaddingStatus)solvent, true, true);
+      cross_hair.SetToConstant(0.0f);
+    }
 
 		// For the tilt pair experiment, add additional drift to the specimen. This is a rough fit to the mean abs shifts measured over 0.33 elec/A^2 frames on my ribo data
 		// The tilted is roughly 4x worse than the untilted.
@@ -1722,7 +1681,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 					            0.514f * expf(-1.0f*powf((iFrame*dose_per_frame-3.21f  )/7.214f,2))) * (0.25f + 0.75f*iTilt);
 
 		total_drift += 0.0f;//iDrift/sqrt(2);
-		wxPrintf("\n\tDrift for iTilt %d, iFrame %d is %4.4f Ang\n",iTilt,iFrame,total_drift);
+		if (DO_PRINT) { wxPrintf("\n\tDrift for iTilt %d, iFrame %d is %4.4f Ang\n",iTilt,iFrame,total_drift); }
 //		current_specimen.TransformGlobalAndSortOnZ(number_of_non_water_atoms, total_drift, total_drift, 0.0f, rotate_waters);
 		// TODO incororate the drift;
 
@@ -1736,7 +1695,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		// Compute the solvent fraction, with ratio of protein/ water density.
 		// Assuming an average 2.2Ang vanderwaal radius ~50 cubic ang, 33.33 waters / cubic nanometer.
 
-		if ( DO_SOLVENT  && water_box.number_of_waters == 0 && this->do3d < 1 )
+		if ( DO_SOLVENT  && water_box.number_of_waters == 0 && !do3d )
 		{
 			// Waters are member variables of the scatteringPotential app - currentSpecimen is passed for size information.
 
@@ -1752,7 +1711,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 
 		}
-		else if ( DO_SOLVENT && this->do3d < 1 && ! DO_PHASE_PLATE)
+		else if ( DO_SOLVENT && !do3d && ! DO_PHASE_PLATE)
 		{
 
 
@@ -1799,12 +1758,12 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 			full_tilt_radians = PI/180.0f*(euler2);
 		}
 
-		if (DO_PRINT) {wxPrintf("tilt angle in radians/deg %2.2e/%2.2e iFrame %d/%f\n",full_tilt_radians,tilt_theta[iTilt],iFrame,this->number_of_frames);}
+		if (DO_PRINT) { wxPrintf("tilt angle in radians/deg %2.2e/%2.2e iFrame %d/%f\n",full_tilt_radians,tilt_theta[iTilt],iFrame,this->number_of_frames); }
 
 
 		rotated_Z = myroundint((float)water_box.vol_nX*fabsf(std::sin(full_tilt_radians)) + (float)water_box.vol_nZ*std::cos(full_tilt_radians));
 
-		wxPrintf("wZ %d csZ %d,rotZ %d\n",water_box.vol_nZ,current_specimen.vol_nZ, rotated_Z);
+		if (DO_PRINT) { wxPrintf("wZ %d csZ %d,rotZ %d\n",water_box.vol_nZ,current_specimen.vol_nZ, rotated_Z); }
 
 		//rotated_oZ = ceilf((rotated_Z+1)/2);
 		if (DO_PRINT) {wxPrintf("\nflat thicknes, %d and rotated_Z %d\n", current_specimen.vol_nZ, rotated_Z);}
@@ -1876,7 +1835,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		for (iSlab = 0; iSlab < nSlabs; iSlab++)
 		{
 
-			if (DO_PRINT)  wxPrintf("Working on %d/%d\n",iSlab,nSlabs);
+			wxPrintf("Working on slice %d/%d\n",iSlab,nSlabs);
 			scattering_total_shift[iSlab] = 0.0f;
 			propagator_distance[iSlab] =  -1.0f*( this->wanted_pixel_size * (slabIDX_end[iSlab] - slabIDX_start[iSlab] + 1) );
 //			propagator_distance[iSlab] =  ( this->wanted_pixel_size * (slabIDX_end[iSlab] - slabIDX_start[iSlab] + 0) );
@@ -1958,7 +1917,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 
 			////////////////////
-			if (this->do3d)
+			if ( do3d )
 			{
 
 				int iPot;
@@ -1981,8 +1940,6 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 				if (add_mean_water_potential)
 				{
-
-
 					float scattering_per_water = 0.0f;
 					float avg_scattering_per_voxel;
 					float current_weight = 1.0f;
@@ -2023,19 +1980,15 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 						}
 
-//						scattering_slab.real_values[current_pixel] += current_weight;
-//						if (testHoles) {buffer.real_values[current_pixel] += current_weight;}
-
 					}
 
-//					distance_slab.QuickAndDirtyWriteSlices("distance_slab.mrc",1,distance_slab.logical_z_dimension,false,1.5);
 					if (bf > 0)
 					{
 						distance_slab.ForwardFFT(true);
 						distance_slab.ApplyBFactor(this->bf / wanted_pixel_size_sq);
 						distance_slab.BackwardFFT();
 					}
-					wxPrintf("\n\n\t\tMultiplying distance slab by wgt %4.4e\n\n",wgt);
+					if (DO_PRINT) { wxPrintf("\n\n\t\tMultiplying distance slab by wgt %4.4e\n\n",wgt); }
 
 					distance_slab.MultiplyByConstant(this->wgt);
 					scattering_slab.AddImage(&distance_slab);
@@ -2060,7 +2013,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 					MRCFile mrc_out(this->output_filename,true);
 					int cubic_size = std::max(std::max(Potential_3d.logical_x_dimension,Potential_3d.logical_y_dimension),Potential_3d.logical_z_dimension);
 					// To get the pixel size exact, ensure the volume is a factor of the binning size. If this differs from the wanted size, address after Fourier cropping.
-					int exact_cropping_size = cubic_size +  ((int)do3d - IsOdd(do3d)) - ( cubic_size / bin3d );
+					int exact_cropping_size = cubic_size +  (wanted_output_size - IsOdd(wanted_output_size)) - ( cubic_size / bin3d );
 					wxPrintf("Found a max cubic dimension of %d\nFound an exact cropping size of %d\n",cubic_size,exact_cropping_size);
 					Potential_3d.Resize(exact_cropping_size,exact_cropping_size,exact_cropping_size, Potential_3d.ReturnAverageOfRealValuesOnEdges());
 //					Potential_3d.QuickAndDirtyWriteSlices("tmpNotCropped.mrc",1,cubic_size);
@@ -2129,12 +2082,12 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 
 					// Now make sure we come out at the correct 3d size.
-					Potential_3d.Resize((int)do3d,(int)do3d,(int)do3d,0.0f);
+					Potential_3d.Resize(wanted_output_size,wanted_output_size,wanted_output_size,0.0f);
 
 
 
-					wxPrintf("Writing out your 3d slices %d --> %d\n",1,(int)do3d);
-					Potential_3d.WriteSlices(&mrc_out,1,(int)do3d);
+					wxPrintf("Writing out your 3d slices %d --> %d\n",1,wanted_output_size);
+					Potential_3d.WriteSlices(&mrc_out,1,wanted_output_size);
 					mrc_out.SetPixelSize(this->wanted_pixel_size * this->bin3d);
 					mrc_out.CloseFile();
 					// Exit after writing the final slice for the reference. Is this the best way to do this? FIXME
@@ -2205,15 +2158,11 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 					mrc_out.CloseFile();
 			}
 
-			if (SAVE_TO_COMPARE_JPR && ! DO_PHASE_PLATE)
-			{
-				// For comparing to JPR @ 0.965
-				Image binImage;
-				binImage.CopyFrom(&scattering_potential[iSlab]);
-				binImage.Resize(JPR_SIZE,JPR_SIZE,1);
-				jpr_sum_phase.AddImage(&binImage);
+      if (DO_CROSSHAIR)
+      {
+        cross_hair.AddImage(&scattering_potential[iSlab]);
+      }
 
-			}
 
 
 			if (DO_EXPOSURE_FILTER == 2 && CALC_WATER_NO_HOLE == false)
@@ -2272,7 +2221,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 
 
-			if ( DO_SOLVENT && this->do3d < 1)
+			if ( DO_SOLVENT && !do3d)
 			{
 
 
@@ -2356,7 +2305,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 			if (DO_PHASE_PLATE)
 			{
 
-				jpr_sum_phase.AddImage(&scattering_potential[iSlab]);
+				sum_phase.AddImage(&scattering_potential[iSlab]);
 
 			}
 
@@ -2379,6 +2328,20 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 		} // end loop nSlabs
 
+
+    if (DO_CROSSHAIR)
+    {
+  		std::string fileNameOUT = "crosshair" + this->output_filename;
+			MRCFile mrc_out(fileNameOUT,true);
+      coords.PadToWantedSize(&cross_hair, wanted_output_size);
+      EmpiricalDistribution my_dist = cross_hair.ReturnDistributionOfRealValues();
+      cross_hair.Binarise(0.9*my_dist.GetMaximum());
+	  	cross_hair.WriteSlices(&mrc_out,1,1);
+			mrc_out.SetPixelSize(this->wanted_pixel_size);
+			mrc_out.CloseFile();    
+      exit(0);
+    }
+    
 		// Make the sampling mask
 		Image float_img;
 		Image complemenatry_mask;
@@ -2434,12 +2397,12 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 		scattering_center_of_mass = total_prod / total_mass;
 
-		wxPrintf("\n\nFound a scattering cetner of mass at %3.3f Ang\n\n", scattering_center_of_mass);
+		if (DO_PRINT) { wxPrintf("\n\nFound a scattering cetner of mass at %3.3f Ang\n\n", scattering_center_of_mass); }
 
 		this->current_total_exposure += this->dose_per_frame; // increment the dose
-		wxPrintf("Exposure is %3.3f for frame\n",this->current_total_exposure,iFrame+1);
+		if (DO_PRINT) { wxPrintf("Exposure is %3.3f for frame\n",this->current_total_exposure,iFrame+1); }
 
-		if (DO_PRINT) {wxPrintf("\n\t%ld out of bounds of %ld = percent\n\n", nOutOfBounds,number_of_non_water_atoms);}
+		if (DO_PRINT) {wxPrintf("\n\t%ld out of bounds of %ld = percent\n\n", nOutOfBounds,number_of_non_water_atoms); }
 
 
 
@@ -2475,16 +2438,16 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		delete [] scattering_mass;
 		delete [] scattering_total_shift;
 
-		wxPrintf("%f %f %f\n",scattering_center_of_mass , propagator_distance[0] ,defocus_offset/(2.0f*(float)nSlabs));
+		if (DO_PRINT) { wxPrintf("%f %f %f\n",scattering_center_of_mass , propagator_distance[0] ,defocus_offset/(2.0f*(float)nSlabs)); }
 
 
 		// todo it still isn't immediately clear which approach is correct. I would think the center of mass is what will be measured by ctffind
 //		defocus_offset = defocus_offset/2.0f + propagator_distance[0];
 		defocus_offset = scattering_center_of_mass - propagator_distance[0]/2.0f;
 
-		wxPrintf("Propagator distance is %3.3e Angstroms, with offset for CTF of %3.3e Angstroms for the specimen.\n",propagator_distance[0],defocus_offset);
+		if (DO_PRINT) { wxPrintf("Propagator distance is %3.3e Angstroms, with offset for CTF of %3.3e Angstroms for the specimen.\n",propagator_distance[0],defocus_offset); }
 
-		wxPrintf("\n\t%ld out of bounds of %ld = percent\n\n", nOutOfBounds,number_of_non_water_atoms);
+		if (DO_PRINT) { wxPrintf("\n\t%ld out of bounds of %ld = percent\n\n", nOutOfBounds,number_of_non_water_atoms); }
 
 //		#pragma omp parallel num_threads(4)
 //		{
@@ -2502,7 +2465,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 //		WaveFunctionPropagator wave_function(this->set_real_part_wave_function_in, wanted_amplitude_contrast, wanted_pixel_size, number_of_threads, beam_tilt_x, beam_tilt_y, DO_BEAM_TILT_FULL);
 
-		 wxPrintf("\n\n%5.5e %5.5e\n\n", wanted_defocus_1_in_angstroms, wanted_defocus_2_in_angstroms);
+    if (DO_PRINT) { wxPrintf("\n\n%5.5e %5.5e\n\n", wanted_defocus_1_in_angstroms, wanted_defocus_2_in_angstroms); }
 		if (DO_COHERENCE_ENVELOPE)
 		{
 			wave_function.SetCTF(wanted_acceleration_voltage,
@@ -2544,7 +2507,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 			{
 				// Measuring the amplitude contrast is expensive as the wave propagation has to be done twice, along with  multiple CTF fits, which include disk writes. Only do on the first frame.
 				amplitude_contrast = wave_function.DoPropagation(img_frame, scattering_potential,inelastic_potential, 0, nSlabs, image_mean, inelastic_mean, propagator_distance, true, tilt_to_scale_search_range);
-				wxPrintf("\nFound an amplitude contrast of %3.6f\n\n", amplitude_contrast);
+				if (DO_PRINT) { wxPrintf("\nFound an amplitude contrast of %3.6f\n\n", amplitude_contrast); }
 			}
 			else
 			{
@@ -2563,20 +2526,14 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 			}
 
 
-			if ( (SAVE_TO_COMPARE_JPR || DO_PHASE_PLATE) &&  is_image_loop)
+			if ( DO_PHASE_PLATE  &&  is_image_loop)
 			{
-				// For comparing to JPR @ 0.965
 				Image binImage;
 				binImage.CopyFrom(img_frame);
-				if (! DO_PHASE_PLATE)
-				{
-					binImage.Resize(JPR_SIZE,JPR_SIZE,1);
-				}
-				else
-				{
-					coords.PadFFTToSolvent(&binImage);
-				}
-				jpr_sum_detector.AddImage(&binImage);
+
+        coords.PadFFTToSolvent(&binImage);
+				
+				sum_detector.AddImage(&binImage);
 
 			}
 
@@ -2652,19 +2609,25 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 		} // loop over image, then optionally perfect reference
 
 
-	    wxPrintf("before the destructor there are %ld non-water-atoms\n",this->number_of_non_water_atoms);
-		if (SAVE_TO_COMPARE_JPR || DO_PHASE_PLATE)
+    if (DO_PRINT) { wxPrintf("before the destructor there are %ld non-water-atoms\n",this->number_of_non_water_atoms); }
+		if ( DO_PHASE_PLATE )
 		{
 
-			std::string fileNameOUT = "compareJPR_phaseGrating_" + this->output_filename;
+			std::string fileNameOUT = "phaseGrating_" + this->output_filename;
 			MRCFile mrc_out(fileNameOUT,true);
-			jpr_sum_phase.WriteSlices(&mrc_out,1,1);
+      coords.PadToWantedSize(&sum_phase, wanted_output_size);
+      EmpiricalDistribution phase_shift_distribution = sum_phase.ReturnDistributionOfRealValues();
+      wxPrintf("\n\tPhase plate shift avg: %3.6f\n\tPhase plate shift std %3.6f\n\tPhase plate shift relative error %3.6f\n", 
+      phase_shift_distribution.GetSampleMean(), phase_shift_distribution.GetSampleVariance(), 100.f * std::abs(phase_shift_distribution.GetSampleMean() - PIf/2) / (PIf/2) );
+	  	sum_phase.WriteSlices(&mrc_out,1,1);
+
 			mrc_out.SetPixelSize(this->wanted_pixel_size);
 			mrc_out.CloseFile();
 
-			std::string fileNameOUT2 = "compareJPR_detector_" + this->output_filename;
+			std::string fileNameOUT2 = "detector_wavefunction2_" + this->output_filename;
 			MRCFile mrc_out2(fileNameOUT2,true);
-			jpr_sum_detector.WriteSlices(&mrc_out2,1,1);
+      coords.PadToWantedSize(&sum_detector, wanted_output_size);
+			sum_detector.WriteSlices(&mrc_out2,1,1);
 			mrc_out2.SetPixelSize(this->wanted_pixel_size);
 			mrc_out2.CloseFile();
 
@@ -2834,7 +2797,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 	parameter_star.WriteTocisTEMStarFile(parameter_star_file_name);
 
 
-    if (DO_PRINT) {wxPrintf("%s\n",this->output_filename);}
+  if (DO_PRINT) {wxPrintf("%s\n",this->output_filename);}
 
 	bool over_write = true;
 	MRCFile mrc_out_final(this->output_filename,over_write);
@@ -2886,7 +2849,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
 	// This assumes all tilts have been made the same size (which they should be.)
 //		tilt_sum.Allocate(xDIM,yDIM, 1);
-	wxPrintf("outputSize %d %d\n",outputSize.x, outputSize.y);
+	if (DO_PRINT) { wxPrintf("outputSize %d %d\n",outputSize.x, outputSize.y); }
 	tilt_sum.Allocate(outputSize.x,outputSize.y, 1);
 	tilt_sum.SetToConstant(0.0);
 
@@ -2918,12 +2881,12 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 	for (int iImg=0; iImg < number_of_images*(int)this->number_of_frames; iImg+=final_tilt_inc)
 	{
 
-		wxPrintf("save sums inc saved i %d %d %d %d\n", ONLY_SAVE_SUMS, final_tilt_inc, n_tilts_saved, iImg);
+		if (DO_PRINT) { wxPrintf("save sums inc saved i %d %d %d %d\n", ONLY_SAVE_SUMS, final_tilt_inc, n_tilts_saved, iImg); }
 		// I am getting some nans on occassion, but so far they only show up in big expensive calcs, so add a nan check and print info to see if
 		// the problem can be isolated.
 		if (output_image_stack[iImg].HasNan() == true)
 		{
-			wxPrintf("Frame %d / %d has NaN values, trashing it\n",iImg,number_of_images*(int)this->number_of_frames);
+			if (DO_PRINT) { wxPrintf("Frame %d / %d has NaN values, trashing it\n",iImg,number_of_images*(int)this->number_of_frames); }
 			output_image_stack[iImg].SetToConstant(0.0f);
 			continue;
 		}

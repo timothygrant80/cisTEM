@@ -56,12 +56,13 @@ PDB::PDB()
 }
 
 
-PDB::PDB(long number_of_non_water_atoms, float cubic_size, float wanted_pixel_size, int minimum_paddeding_x_and_y, double minimum_thickness_z,
-		int max_number_of_noise_particles,
-		float wanted_noise_particle_radius_as_mutliple_of_particle_radius,
-		float wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
-		float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
-		float wanted_tilt_angle_to_emulate)
+PDB::PDB( long number_of_non_water_atoms, float cubic_size, float wanted_pixel_size, int minimum_paddeding_x_and_y, double minimum_thickness_z,
+          int max_number_of_noise_particles,
+          float wanted_noise_particle_radius_as_mutliple_of_particle_radius,
+          float wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
+          float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
+          float wanted_tilt_angle_to_emulate,
+          bool shift_by_center_of_mass)
 {
 
 	input_file_stream = NULL;
@@ -97,6 +98,7 @@ PDB::PDB(long number_of_non_water_atoms, float cubic_size, float wanted_pixel_si
 	this->noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius = wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius;
 	this->noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius = wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius;
 	this->emulate_tilt_angle = wanted_tilt_angle_to_emulate;
+  this->shift_by_center_of_mass = shift_by_center_of_mass;
 
 }
 
@@ -105,7 +107,8 @@ PDB::PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, lo
 		float wanted_noise_particle_radius_as_mutliple_of_particle_radius,
 		float wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
 		float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
-		float wanted_tilt_angle_to_emulate)
+		float wanted_tilt_angle_to_emulate,
+    bool shift_by_center_of_mass)
 {
 	input_file_stream = NULL;
 	input_text_stream = NULL;
@@ -133,6 +136,7 @@ PDB::PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, lo
 	this->noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius = wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius;
 	this->noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius = wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius;
 	this->emulate_tilt_angle = wanted_tilt_angle_to_emulate;
+  this->shift_by_center_of_mass = shift_by_center_of_mass;
 
 	Open(Filename, wanted_access_type, wanted_records_per_line);
 }
@@ -155,7 +159,7 @@ PDB::PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, lo
 		wxPrintf("Using provided center of mass %d %3.3f\n",iCOM,this->center_of_mass[iCOM]);
 	}
 
-
+  shift_by_center_of_mass = false;
     SetEmpty();
 	this->pixel_size = wanted_pixel_size;
 	Open(Filename, wanted_access_type, wanted_records_per_line);
@@ -296,13 +300,12 @@ void PDB::Init()
 		wxString pdb_atom = "ATOM";
 
 	// test out gemmi
-	wxPrintf("did I get here, filename is %s?\n",text_filename.ToStdString());
 	wxFFileOutputStream output( stderr );
 	wxTextOutputStream cout( output );
 
-
-
-		auto st = gemmi::read_structure(gemmi::MaybeGzipped(text_filename.ToStdString()));
+  gemmi::Structure st;
+  try {
+		st = gemmi::read_structure(gemmi::MaybeGzipped(text_filename.ToStdString()));
 
 		// I'm sure there is already something in GEMMI to do an iteration like this.
 		for (gemmi::Model& model : st.models)
@@ -310,8 +313,11 @@ void PDB::Init()
 			
 			for (gemmi::Chain& chain : model.chains)
 			{
+        // wxPrintf("Working on chain %s\n",chain.name);
 					for (gemmi::Residue& res : chain.residues)
 					{
+            // wxPrintf("Residue Name, Segment, Entity type, %s %s\n",res.name,res.segment);
+
 						for (gemmi::Atom& atom : res.atoms) 
 						{
 							// For now, we only want ATOM 
@@ -324,7 +330,14 @@ void PDB::Init()
 
 			}
 		}
-
+  }
+  catch (std::runtime_error& e) 
+  {
+    // It may be nice if this returned and printed in the error dialog invoked when is_valid is false, rather than
+    // printing to stdout.
+    MyPrintWithDetails("\n\nGEMMI threw an error reading this file:\n %s\n", e.what());
+    exit(-1);
+  } 
 
 		// Only those atoms that are part of the target molecule - TODO change the name ... they are all real
 		number_of_real_atoms = number_of_atoms;
@@ -355,7 +368,6 @@ void PDB::Init()
 			{
 					for (gemmi::Residue& res : chain.residues)
 					{
-
 							// For now, we only want ATOM 
 							if (res.het_flag == 'A')  // 'A' = ATOM, 'H' = HETATM, 0 = unspecified
 							{
@@ -374,11 +386,13 @@ void PDB::Init()
 									my_atoms.Item(current_atom_number).occupancy = atom.occ;
 									my_atoms.Item(current_atom_number).bfactor = atom.b_iso;
 
+
+
 									// Will replace this by actually using the element type
 									switch (atom.element.ordinal()) {
 
 										case 0:
-											MyDebugPrintWithDetails("Error, non-element type");
+											MyDebugPrintWithDetails("Error, non-element type, %s\n", my_atoms.Item(current_atom_number).name );
 											exit(-1);
 											break;
 										case 1:
@@ -469,8 +483,8 @@ void PDB::Init()
 		}
 
 
-		// Finally, calculate the center of mass of the PDB object.
-		if (! use_provided_com)
+		// Finally, calculate the center of mass of the PDB object if it is not provided and is to be applied.
+		if (! use_provided_com && shift_by_center_of_mass)
 		{
 			for (current_atom_number = 0; current_atom_number < number_of_real_atoms; current_atom_number++)
 			{
@@ -494,15 +508,22 @@ void PDB::Init()
 			}
 		}
 
-		wxPrintf("\n\nPDB center of mass at %f %f %f (x,y,z Angstrom)\n\nSetting origin there.\n\n",center_of_mass[0],center_of_mass[1],center_of_mass[2]);
+    if (shift_by_center_of_mass) 
+    { 
+      if (use_provided_com) { wxPrintf("\n\nSetting PDB center of mass to that provided %f %f %f (x,y,z Angstrom)\n\n",center_of_mass[0],center_of_mass[1],center_of_mass[2]); }
+      else { wxPrintf("\n\nPDB center of mass at %f %f %f (x,y,z Angstrom)\n\nSetting origin there.\n\n",center_of_mass[0],center_of_mass[1],center_of_mass[2]); }
 
-		// Set the coordinate origin to the center of mass
-		for (current_atom_number = 0; current_atom_number < number_of_real_atoms; current_atom_number++)
-		{
-			my_atoms.Item(current_atom_number).x_coordinate -= center_of_mass[0];
-			my_atoms.Item(current_atom_number).y_coordinate -= center_of_mass[1];
-			my_atoms.Item(current_atom_number).z_coordinate -= center_of_mass[2];
-		}
+      // Set the coordinate origin to the calculated or provided center of mass
+      for (current_atom_number = 0; current_atom_number < number_of_real_atoms; current_atom_number++)
+      {
+        my_atoms.Item(current_atom_number).x_coordinate -= center_of_mass[0];
+        my_atoms.Item(current_atom_number).y_coordinate -= center_of_mass[1];
+        my_atoms.Item(current_atom_number).z_coordinate -= center_of_mass[2];
+      }
+
+    }
+
+
 
 		if (generate_noise_atoms)
 		{
@@ -830,7 +851,7 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int fr
 					// If we have more than one noise particle, enforce non-overlap
 					if (iPart == 0)
 					{
-						offset_angle = clamp_angular_range(my_rand.GetUniformRandomSTD(-PIf,PIf));
+						offset_angle = clamp_angular_range_negative_pi_to_pi(my_rand.GetUniformRandomSTD(-PIf,PIf));
 						non_overlaping_particle_found = true;
 						occupied_sectors[0] = offset_angle;
 					}
@@ -842,7 +863,7 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int fr
 						while (is_too_close && iTry < max_tries)
 						{
 							iTry += 1;
-							offset_angle = clamp_angular_range(my_rand.GetUniformRandomSTD(-PIf,PIf));
+							offset_angle = clamp_angular_range_negative_pi_to_pi(my_rand.GetUniformRandomSTD(-PIf,PIf));
 							float dx = cosf(offset_angle);
 							float dy = sinf(offset_angle);
 							float ang_diff;
@@ -1043,21 +1064,26 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int fr
 		// Again, need a check to make sure all sizes are consistent
 		if (max_x - min_x <= 0)
 		{
-			MyPrintWithDetails("The measured X dimension is invalid max - min = X, %d - %d = %d\n",max_x,min_x, max_x-min_x);
+			MyPrintWithDetails("The measured X dimension is invalid max - min = X, %f - %f = %f\n",max_x,min_x, max_x-min_x);
 			DEBUG_ABORT;
 		}
 		if (max_y - min_y <= 0)
 		{
-			MyPrintWithDetails("The measured Y dimension is invalid max - min = Y, %d - %d = %d\n",max_y,min_y, max_y-min_y);
+			MyPrintWithDetails("The measured Y dimension is invalid max - min = Y, %f - %f = %f\n",max_y,min_y, max_y-min_y);
 			DEBUG_ABORT;
 		}
+    // Allow for a perfectly planar layer of atoms, for testing images. Notice == not a more typical diff < epsilon to make it more likely this only is allowed when intended (dev).
+    if (max_z - min_z == 0)
+    {
+      max_z+=1;
+    }
 		if (this->max_z - this->min_z <= 0)
 		{
-			MyPrintWithDetails("The measured Z dimension is invalid max - min = Z, %d - %d = %d\n",this->max_z,this->min_z, this->max_z-this->min_z);
+			MyPrintWithDetails("The measured Z dimension is invalid max - min = Z, %f - %f = %f\n",this->max_z,this->min_z, this->max_z-this->min_z);
 			DEBUG_ABORT;
 		}
 
-		wxPrintf("max/min xyz, %f,%f  %f,%f  %f,%f\n",max_x,min_x,max_y,min_y,max_z,min_z);
+		// wxPrintf("max/min xyz, %f,%f  %f,%f  %f,%f\n",max_x,min_x,max_y,min_y,max_z,min_z);
 	}
 
 
@@ -1078,7 +1104,7 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int fr
 	}
 	// Shifting all atoms in the ensemble by some offset to keep them centered may be preferrable. This could lead to too many waters. TODO
 //	this->vol_angZ = std::max((double)300,(1.50*std::abs(this->max_z-this->min_z))); // take the larger of 20 nm + range and 1.5x the specimen diameter. Look closer at Nobles paper.
-	wxPrintf("min is %f, shift is %d, max_depth is %d\n", MIN_THICKNESS, (int)fabsf(shift_z), (int)fabsf(max_depth));
+	// wxPrintf("min is %f, shift is %d, max_depth is %d\n", MIN_THICKNESS, (int)fabsf(shift_z), (int)fabsf(max_depth));
 	this->vol_angZ = std::max(MIN_THICKNESS,(2*(MIN_PADDING_Z+fabsf(shift_z)) + (MIN_PADDING_Z+fabsf(max_depth)))); // take the larger of 20 nm + range and 1.5x the specimen diameter. Look closer at Nobles paper.
 
 

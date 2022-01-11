@@ -12,7 +12,7 @@
 namespace gemmi {
 
 // For now it's only partly-working
-void reindex_mtz(Mtz& mtz, const Op& op, std::ostream* out) {
+inline void reindex_mtz(Mtz& mtz, const Op& op, std::ostream* out) {
   mtz.switch_to_original_hkl();
   Op real_space_op{op.transposed_rot(), {0, 0, 0}};
   if (out)
@@ -50,7 +50,12 @@ void reindex_mtz(Mtz& mtz, const Op& op, std::ostream* out) {
   }
   // change space group
   const SpaceGroup* sg_before = mtz.spacegroup;
-  mtz.spacegroup = find_spacegroup_by_change_of_basis(mtz.spacegroup, op.inverse());
+  if (sg_before) {
+    GroupOps gops = sg_before->operations();
+    gops.change_basis_backward(op);
+    mtz.spacegroup = find_spacegroup_by_ops(gops);
+  }
+
   if (mtz.spacegroup) {
     if (mtz.spacegroup != sg_before) {
       if (out)
@@ -66,11 +71,11 @@ void reindex_mtz(Mtz& mtz, const Op& op, std::ostream* out) {
     fail("reindexing: failed to determine new space group name");
   }
   // change unit cell parameters
-  mtz.cell = mtz.cell.change_basis(real_space_op, false);
+  mtz.cell = mtz.cell.changed_basis_backward(real_space_op, false);
   for (Mtz::Dataset& ds : mtz.datasets)
-    ds.cell = ds.cell.change_basis(real_space_op, false);
+    ds.cell = ds.cell.changed_basis_backward(real_space_op, false);
   for (Mtz::Batch& batch : mtz.batches)
-    batch.set_cell(batch.get_cell().change_basis(real_space_op, false));
+    batch.set_cell(batch.get_cell().changed_basis_backward(real_space_op, false));
 
   if (mtz.is_merged())
     mtz.ensure_asu();

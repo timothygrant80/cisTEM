@@ -183,22 +183,30 @@ AC_ARG_ENABLE(debugmode, AS_HELP_STRING([--enable-debugmode],[Compile in debug m
   	
 if test "$want_cuda" = "yes" ; then
 
-	# ~Runtime about 85% with K3 images, but mips are different - total detection is ~the same, but needs more investigation.
-	# Disabling by default so that the code matches what Bronwyn used in the 2D vs 3DTM paper (for reproducibility.)
-	AC_ARG_ENABLE(rotated-tm, AS_HELP_STRING([--enable-rotated-tm],[Place power of 2 sized axis on X by rotating 90 deg in template matching for speed [default=no]]),[
-	  if test "$enableval" = yes; then
-	  CPPFLAGS="$CPPFLAGS -DROTATEFORSPEED"
-	  CXXFLAGS="$CXXFLAGS -DROTATEFORSPEED"
+	# ~Runtime about 85% with K3 images, but mips are different - total detection is ~the same. 
+  # Determined this is likely just numerical error. Enabling by default.
+  #  --disable-feature is equivalent to --enable-feature=no. 
+  use_rotated_tm=1
+	AC_ARG_ENABLE(rotated-tm, AS_HELP_STRING([--disable-rotated-tm],[Place power of 2 sized axis on X by rotating 90 deg in template matching for speed [default=no]]),[
+	  if test "$enableval" = no; then
+      use_rotated_tm=0
 	  fi
 	  ])
-		
-    AC_MSG_NOTICE([Adding the CUDA includes Setting up NVCC initial flags])
-    CUDA_CPPFLAGS="$CUDA_CFLAGS $NVCCFLAGS"
-    CUDA_CXXFLAGS="$CUDA_CFLAGS $NVCCFLAGS"
-    CXXFLAGS="$CXXFLAGS -DENABLEGPU $use_gpu_cache_hints $CUDA_CFLAGS"
-    CPPFLAGS="$CPPFLAGS -DENABLEGPU $use_gpu_cache_hints $CUDA_CFLAGS"
-    AC_MSG_NOTICE([Using CUDA_CXXFLAGS=$CUDA_CXXFLAGS])
-    AC_MSG_NOTICE([Using CUDA_LIBS=$CUDA_LIBS])
+
+  if test "x$use_rotated_tm" = "x1"; then
+    CPPFLAGS="$CPPFLAGS -DROTATEFORSPEED"
+    CXXFLAGS="$CXXFLAGS -DROTATEFORSPEED"
+    AC_MSG_NOTICE([Enabling rotated-tm]);
+  fi
+
+  AC_MSG_NOTICE([Adding the CUDA includes Setting up NVCC initial flags])
+  CUDA_CPPFLAGS="$CUDA_CFLAGS $NVCCFLAGS"
+  CUDA_CXXFLAGS="$CUDA_CFLAGS $NVCCFLAGS"
+  
+  CXXFLAGS="$CXXFLAGS -DENABLEGPU $use_gpu_cache_hints $CUDA_CFLAGS"
+  CPPFLAGS="$CPPFLAGS -DENABLEGPU $use_gpu_cache_hints $CUDA_CFLAGS"
+  AC_MSG_NOTICE([Using CUDA_CXXFLAGS=$CUDA_CXXFLAGS])
+  AC_MSG_NOTICE([Using CUDA_LIBS=$CUDA_LIBS])
 fi
 
 ##############################
@@ -221,18 +229,35 @@ AS_HELP_STRING([--with-fftw-dir=DIR],[Declare the root directory of fftw3, if it
 ])
 
 # Compile programs/samples/sample_functional_test.cpp 
-
-want_samples="no"  
-AC_ARG_ENABLE(samples, [  --enable-samples      Compile with samples [[default=no]]],[
+want_samples="no"
+AC_ARG_ENABLE(samples, AS_HELP_STRING([--enable-samples],[Compile with samples [default=no]]),[
   if test "$enableval" = yes; then
-    CXXFLAGS="$CXXFLAGS -DSAMPLES"
-    CPPFLAGS="$CPPFLAGS -DSAMPLES"
-  	want_samples="true"
+    want_samples="yes"
   	AC_MSG_NOTICE([Compiling sample functional tests])	
   fi
   ]) 
-AM_CONDITIONAL([ENABLESAMPLES_AM], [test x$want_samples = xtrue])
+AM_CONDITIONAL([ENABLESAMPLES_AM], [test "$want_samples" = "yes"])
 
+# Use fine grained profiling
+
+want_profiling="no"  
+AC_ARG_ENABLE(profiling, AS_HELP_STRING([--enable-profiling],[Include fine-grained profiling [default=no]]),[
+  if test "$enableval" = yes; then
+    CXXFLAGS="$CXXFLAGS -DPROFILING"
+    CPPFLAGS="$CPPFLAGS -DPROFILING"
+  	want_profiling="true"
+  	AC_MSG_NOTICE([Compiling with fine-grained profiling])	
+  fi
+  ]) 
+AM_CONDITIONAL([ENABLEPROFILING_AM], [test x$want_profiling = xtrue])
+
+AC_ARG_ENABLE(gpu-debug, AS_HELP_STRING([--enable-gpu-debug],[Compile heavy synchronous checking [default=no]]),[
+  if test "$enableval" = yes; then
+    AC_DEFINE([ENABLE_GPU_DEBUG])
+  	AC_MSG_NOTICE([Compiling with synchronizing debug checks for GPU code])	
+  fi
+  ]) 
+  
 # experimental
 compile_experimental="false"
 AC_ARG_ENABLE(experimental, AS_HELP_STRING([--enable-experimental],[Compile with experimental [default=no]]),[

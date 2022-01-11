@@ -33,12 +33,15 @@ AC_MSG_NOTICE([Setting up initial flags])
 #
 want_cuda="no"
 AX_CUDA 
-if test "$want_cuda" = "yes" || test "x$CXX" = "xclang++"; then
+if test "$want_cuda" = "yes" ; then
   CPP_STANDARD=17
 else
   CPP_STANDARD=11
 fi
 
+if test "x$CXX" = "xclang++"; then
+  CPP_STANDARD=17
+fi
 
 # check to see if compiler warnings are desired.
 

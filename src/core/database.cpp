@@ -2600,15 +2600,24 @@ std::pair<std::vector<wxString>, std::vector<std::pair<wxString, wxString>>> Dat
 	MyDebugAssertTrue(is_open == true, "database not open!");
 	std::vector<wxString> missing_tables;
 	std::vector<std::pair<wxString, wxString>> missing_columns;
-	// Check Databases
+	// Check Static Tables
 	wxArrayString return_strings;
+	int count;
 	for (auto & table : static_tables ) {
 		
 		return_strings = ReturnStringArrayFromSelectCommand(wxString::Format("SELECT name FROM sqlite_master WHERE type='table' AND name='%s';",std::get<0>(table)));
 		if (return_strings.IsEmpty()) {
 			missing_tables.push_back(std::get<0>(table));
+			continue;
+		}
+		for (auto & column : std::get<2>(table)) {
+			count = ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) AS CNTREC FROM pragma_table_info('%s') WHERE name='%s';",std::get<0>(table),column));
+			if (count < 1) {
+				MyDebugPrint("Table %s is missing column %s",std::get<0>(table),column);
+				missing_columns.push_back(std::pair(std::get<0>(table),column));
 		}
 	}
+	
 	return std::pair(missing_tables, missing_columns);
 
 }

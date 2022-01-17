@@ -2615,6 +2615,7 @@ std::pair<std::vector<wxString>, std::vector<std::pair<wxString, wxString>>> Dat
 			if (count < 1) {
 				MyDebugPrint("Table %s is missing column %s",std::get<0>(table),column);
 				missing_columns.push_back(std::pair(std::get<0>(table),column));
+			}
 		}
 	}
 	

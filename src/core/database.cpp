@@ -2657,7 +2657,7 @@ std::pair<std::vector<wxString>, std::vector<std::tuple<wxString, wxString, char
 
 			count = ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) AS CNTREC FROM pragma_table_info('%s') WHERE name='%s';",std::get<0>(table),column));
 			if (count < 1) {
-				missing_columns.push_back(std::tuple(std::get<0>(table),column,type));
+				missing_columns.push_back(std::tuple<wxString, wxString, char>(std::get<0>(table),column,type));
 			}
 		}
 	}
@@ -2667,7 +2667,7 @@ std::pair<std::vector<wxString>, std::vector<std::tuple<wxString, wxString, char
 		return_strings = ReturnStringArrayFromSelectCommand(wxString::Format("SELECT name FROM sqlite_master WHERE type='table' AND name  LIKE '%s_%';",std::get<0>(table)));
 		for (counter = 0; counter < return_strings.GetCount(); counter++) {
 			// Make sure it is not any of the static columns that happen to match
-			if (any_of(static_tables.begin(), static_tables.end(), [&](auto & table) { return return_strings[counter].IsSameAs(std::get<0>(table)); })) {
+			if (any_of(static_tables.begin(), static_tables.end(), [&](std::tuple<wxString, char *, std::vector<wxString>> & table) { return return_strings[counter].IsSameAs(std::get<0>(table)); })) {
         		continue;
     		}
 			for (col_counter = 0; col_counter < std::get<2>(table).size(); col_counter++) {
@@ -2675,13 +2675,13 @@ std::pair<std::vector<wxString>, std::vector<std::tuple<wxString, wxString, char
 				char type = std::get<1>(table)[col_counter];
 				count = ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) AS CNTREC FROM pragma_table_info('%s') WHERE name='%s';",return_strings[counter],column));
 				if (count < 1) {
-					missing_columns.push_back(std::tuple(return_strings[counter],column,type));
+					missing_columns.push_back(std::tuple<wxString, wxString, char>(return_strings[counter],column,type));
 				}
 			}
 		}
 	}
 	
-	return std::pair(missing_tables, missing_columns);
+	return std::pair<std::vector<wxString>, std::vector<std::tuple<wxString, wxString, char>>>(missing_tables, missing_columns);
 
 }
 

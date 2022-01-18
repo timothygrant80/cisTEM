@@ -2596,13 +2596,55 @@ void Database::GetRefinementAngularDistributionHistogramData(long wanted_refinem
 	EndBatchSelect();
 }
 
-std::pair<std::vector<wxString>, std::vector<std::pair<wxString, wxString>>> Database::CheckSchema() {
+bool Database::UpdateSchema(std::vector<std::pair<wxString, wxString>> columns) {
+	for (auto & column : columns) {
+		if (*column_format == 't') // text
+		{
+			sql_command += va_arg(args, const char *);
+			sql_command += " TEXT";
+		}
+		else
+		if (*column_format == 'r') // real
+		{
+			sql_command += va_arg(args, const char *);
+			sql_command += " REAL";
+		}
+		else
+		if (*column_format == 'i') // integer
+		{
+			sql_command += va_arg(args, const char *);
+			sql_command += " INTEGER";
+		}
+		else
+		if (*column_format == 'l') // integer
+		{
+			sql_command += va_arg(args, const char *);
+			sql_command += " INTEGER";
+		}
+		else
+		if (*column_format == 'p' || *column_format == 'P') // integer
+		{
+			sql_command += va_arg(args, const char *);
+			sql_command += " INTEGER PRIMARY KEY";
+		}
+		else
+		{
+			MyPrintWithDetails("Error: Unknown format character!\n");
+		}
+		ExecuteSQL(wxString::Format("ALTER TABLE %s ADD COLUMN %s %s;"));
+	}
+	return true;
+}
+
+std::pair<std::vector<wxString>, std::vector<std::tuple<wxString, wxString, wxString>>> Database::CheckSchema() {
 	MyDebugAssertTrue(is_open == true, "database not open!");
 	std::vector<wxString> missing_tables;
-	std::vector<std::pair<wxString, wxString>> missing_columns;
+	std::vector<std::tuple<wxString, wxString, wxString>> missing_columns;
 	// Check Static Tables
 	wxArrayString return_strings;
 	int count;
+	int counter;
+	int col_counter;
 	for (auto & table : static_tables ) {
 		
 		return_strings = ReturnStringArrayFromSelectCommand(wxString::Format("SELECT name FROM sqlite_master WHERE type='table' AND name='%s';",std::get<0>(table)));
@@ -2610,12 +2652,33 @@ std::pair<std::vector<wxString>, std::vector<std::pair<wxString, wxString>>> Dat
 			missing_tables.push_back(std::get<0>(table));
 			continue;
 		}
-		for (auto & column : std::get<2>(table)) {
+		for (col_counter = 0; col_counter < std::get<2>(table).size(); col_counter++) {
+			auto & column = std::get<2>(table)[col_counter];
+			char type = std::get<1>(table)[col_counter];
+
 			count = ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) AS CNTREC FROM pragma_table_info('%s') WHERE name='%s';",std::get<0>(table),column));
 			if (count < 1) {
 				MyDebugPrint("Table %s is missing column %s",std::get<0>(table),column);
-				missing_columns.push_back(std::pair(std::get<0>(table),column));
+				missing_columns.push_back(std::tuple(std::get<0>(table),column,type));
 			}
+		}
+	}
+
+	for (auto & table : dynamic_tables ) {
+		
+		return_strings = ReturnStringArrayFromSelectCommand(wxString::Format("SELECT name FROM sqlite_master WHERE type='table' AND name  LIKE '%s_%';",std::get<0>(table)));
+		for (counter = 0; counter < return_strings.GetCount(); counter++) {
+			// Make sure it is not any of the static columns that happen to match
+			if (any_of(static_tables.begin(), static_tables.end(), [&](auto & table) { return return_strings[counter].IsSameAs(std::get<0>(table)); })) {
+        		continue;
+    		}
+			for (auto & column : std::get<2>(table)) {
+			count = ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) AS CNTREC FROM pragma_table_info('%s') WHERE name='%s';",return_strings[counter],column));
+			if (count < 1) {
+				MyDebugPrint("Table %s is missing column %s",return_strings[counter],column);
+				missing_columns.push_back(std::pair(std::get<0>(table),column,""));
+			}
+		}
 		}
 	}
 	

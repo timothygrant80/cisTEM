@@ -609,22 +609,33 @@ void MyMainFrame::OpenProject(wxString project_filename)
 			auto schema_comparison = current_project.database.CheckSchema();
 			wxString message;
 			wxString button;
+			wxString changes = "";
 			if (schema_comparison.first.size() == 0 && schema_comparison.second.size() == 0) {
 				message= "However, there seem to be no changes in the file format\n\nAttempt to open the project?";
 				button = "Open";
 			} else {
 				message= "cisTEM can try to update the format. It is wise to make a backup of the database before trying this.\n\nAttempt to update the project?";
 				button = "Update";
+				for (auto & table : schema_comparison.first) {
+					changes += wxString::Format("Add Table \t: %s\n",table);
+				}
+				for (auto & column : schema_comparison.second) {
+					changes += wxString::Format("In Table \t %s \tadd column: \t %s\n",std::get<0>(column),std::get<1>(column));
+				}
 			}
-			wxRichMessageDialog *my_dialog = new wxRichMessageDialog(this, wxString::Format("This project was last opened by a different cisTEM version :-\n\nCurrent Version. \t: %s\nProject Dir. \t: %s\n\n%s", CISTEM_VERSION_TEXT, current_project.cistem_version_text, message), "Database from different cisTEM version?", wxICON_ERROR | wxYES_NO | wxNO_DEFAULT);
+			wxRichMessageDialog *my_dialog = new wxRichMessageDialog(this, wxString::Format("This project was last opened by a different cisTEM version :-\n\nCurrent Version \t: %s\nProject Version \t: %s\n\n%s", CISTEM_VERSION_TEXT, current_project.cistem_version_text, message), "Database from different cisTEM version?", wxICON_ERROR | wxYES_NO | wxNO_DEFAULT);
 			my_dialog->SetYesNoLabels(button, "Close");
-			if (my_dialog->ShowModal() != wxID_YES)
+			if (changes != wxString("")) {
+				my_dialog->ShowDetailedText(changes);
+			}
+			if (my_dialog->ShowModal() == wxID_YES)
 			{
 				my_dialog->Destroy();
-				current_project.Close(false,false);
+				current_project.database.UpdateSchema(schema_comparison.second);
 			} else {
 				my_dialog->Destroy();
 				current_project.Close(false,false);
+				return;
 			}
 			// if yes
 

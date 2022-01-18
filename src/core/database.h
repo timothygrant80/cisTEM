@@ -327,8 +327,8 @@ public :
 	void AddClassificationSelection(ClassificationSelection *classification_selection_to_add);
 	//ClassificationSelection *GetClassificationSelectionByID(long wanted_selection_id);
 
-	std::pair<std::vector<wxString>, std::vector<std::pair<wxString, wxString>>> CheckSchema();
-	bool UpdateSchema(std::vector<std::pair<wxString, wxString>> columns);
+	std::pair<std::vector<wxString>, std::vector<std::tuple<wxString, wxString, char>>> CheckSchema();
+	bool UpdateSchema(std::vector<std::tuple<wxString, wxString, char>> columns);
 
 	
 	// Description of the database schema. 

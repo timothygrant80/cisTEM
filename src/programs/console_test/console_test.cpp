@@ -491,8 +491,17 @@ void MyTestApp::TestDatabase()
   wxString database_filename = temp_directory + "/1_0_test/1_0_test.db";
   Database database;
   database.Open(database_filename);
-  database.CheckSchema();
-
+  auto schema_result = database.CheckSchema();
+  if (schema_result.first.size() < 1 || schema_result.second.size() < 1) {
+    wxPrintf("Check Schema did not detect missing tables/columns\n");
+    FailTest;
+  }
+  database.UpdateSchema(schema_result.second);
+  schema_result = database.CheckSchema();
+  if (schema_result.first.size() > 0 || schema_result.second.size() > 0) {
+    wxPrintf("Update Schema did not fix missing tables/columns\n");
+    FailTest;
+  }
   EndTest();
 }
 

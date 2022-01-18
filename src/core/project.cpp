@@ -141,7 +141,7 @@ bool Project::CreateNewProject(wxFileName wanted_database_file, wxString wanted_
 
 	// set master settings..
 
-	if (database.InsertOrReplace("MASTER_SETTINGS", "ittiri", "NUMBER", "PROJECT_DIRECTORY", "PROJECT_NAME", "CURRENT_VERSION", "TOTAL_CPU_HOURS", "TOTAL_JOBS_RUN", 1, project_directory.GetFullPath().ToUTF8().data(), project_name.ToUTF8().data(), INTEGER_DATABASE_VERSION, total_cpu_hours, total_jobs_run) == false) return false;
+	if (database.InsertOrReplace("MASTER_SETTINGS", "ittirit", "NUMBER", "PROJECT_DIRECTORY", "PROJECT_NAME", "CURRENT_VERSION", "TOTAL_CPU_HOURS", "TOTAL_JOBS_RUN", "CISTEM_VERSION_TEXT", 1, project_directory.GetFullPath().ToUTF8().data(), project_name.ToUTF8().data(), INTEGER_DATABASE_VERSION, total_cpu_hours, total_jobs_run, CISTEM_VERSION_TEXT) == false) return false;
 
 	is_open = true;
 

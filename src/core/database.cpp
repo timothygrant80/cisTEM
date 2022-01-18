@@ -649,7 +649,7 @@ bool Database::Open(wxFileName file_to_open, bool disable_locking)
 
 	// check all the tables exist?
 
-	CreateAllTables();
+	// CreateAllTables();
 
 	return true;
 
@@ -775,7 +775,7 @@ bool Database::CreateAllTables()
 
 	BeginCommitLocker active_locker(this);
 
-	success = CreateTable("MASTER_SETTINGS", "pttiri", "NUMBER", "PROJECT_DIRECTORY", "PROJECT_NAME", "CURRENT_VERSION", "TOTAL_CPU_HOURS", "TOTAL_JOBS_RUN");
+	success = CreateTable("MASTER_SETTINGS", "pttirit", "NUMBER", "PROJECT_DIRECTORY", "PROJECT_NAME", "CURRENT_VERSION", "TOTAL_CPU_HOURS", "TOTAL_JOBS_RUN","CISTEM_VERSION_TEXT");
 	CheckSuccess(success);
 	success = CreateProcessLockTable();
 	CheckSuccess(success);
@@ -2596,50 +2596,46 @@ void Database::GetRefinementAngularDistributionHistogramData(long wanted_refinem
 	EndBatchSelect();
 }
 
-bool Database::UpdateSchema(std::vector<std::pair<wxString, wxString>> columns) {
+bool Database::UpdateSchema(std::vector<std::tuple<wxString, wxString, char>> columns) {
+	
+	CreateAllTables();
+	char format;
+	wxString column_format;
 	for (auto & column : columns) {
-		if (*column_format == 't') // text
+		format = std::get<2>(column);
+		if (format == 't') // text
 		{
-			sql_command += va_arg(args, const char *);
-			sql_command += " TEXT";
+			column_format = "TEXT";
 		}
 		else
-		if (*column_format == 'r') // real
+		if (format == 'r') // real
 		{
-			sql_command += va_arg(args, const char *);
-			sql_command += " REAL";
+			column_format = "REAL";
 		}
 		else
-		if (*column_format == 'i') // integer
+		if (format == 'i') // integer
 		{
-			sql_command += va_arg(args, const char *);
-			sql_command += " INTEGER";
+			column_format = "INTEGER";
 		}
 		else
-		if (*column_format == 'l') // integer
+		if (format == 'l') // integer
 		{
-			sql_command += va_arg(args, const char *);
-			sql_command += " INTEGER";
-		}
-		else
-		if (*column_format == 'p' || *column_format == 'P') // integer
-		{
-			sql_command += va_arg(args, const char *);
-			sql_command += " INTEGER PRIMARY KEY";
+			column_format = "INTEGER";
 		}
 		else
 		{
 			MyPrintWithDetails("Error: Unknown format character!\n");
+			column_format = "BLOB";
 		}
-		ExecuteSQL(wxString::Format("ALTER TABLE %s ADD COLUMN %s %s;"));
+		ExecuteSQL(wxString::Format("ALTER TABLE %s ADD COLUMN %s %s;",std::get<0>(column),std::get<1>(column),column_format));
 	}
 	return true;
 }
 
-std::pair<std::vector<wxString>, std::vector<std::tuple<wxString, wxString, wxString>>> Database::CheckSchema() {
+std::pair<std::vector<wxString>, std::vector<std::tuple<wxString, wxString, char>>> Database::CheckSchema() {
 	MyDebugAssertTrue(is_open == true, "database not open!");
 	std::vector<wxString> missing_tables;
-	std::vector<std::tuple<wxString, wxString, wxString>> missing_columns;
+	std::vector<std::tuple<wxString, wxString, char>> missing_columns;
 	// Check Static Tables
 	wxArrayString return_strings;
 	int count;
@@ -2658,7 +2654,6 @@ std::pair<std::vector<wxString>, std::vector<std::tuple<wxString, wxString, wxSt
 
 			count = ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) AS CNTREC FROM pragma_table_info('%s') WHERE name='%s';",std::get<0>(table),column));
 			if (count < 1) {
-				MyDebugPrint("Table %s is missing column %s",std::get<0>(table),column);
 				missing_columns.push_back(std::tuple(std::get<0>(table),column,type));
 			}
 		}
@@ -2672,13 +2667,14 @@ std::pair<std::vector<wxString>, std::vector<std::tuple<wxString, wxString, wxSt
 			if (any_of(static_tables.begin(), static_tables.end(), [&](auto & table) { return return_strings[counter].IsSameAs(std::get<0>(table)); })) {
         		continue;
     		}
-			for (auto & column : std::get<2>(table)) {
-			count = ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) AS CNTREC FROM pragma_table_info('%s') WHERE name='%s';",return_strings[counter],column));
-			if (count < 1) {
-				MyDebugPrint("Table %s is missing column %s",return_strings[counter],column);
-				missing_columns.push_back(std::pair(std::get<0>(table),column,""));
+			for (col_counter = 0; col_counter < std::get<2>(table).size(); col_counter++) {
+				auto & column = std::get<2>(table)[col_counter];
+				char type = std::get<1>(table)[col_counter];
+				count = ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) AS CNTREC FROM pragma_table_info('%s') WHERE name='%s';",return_strings[counter],column));
+				if (count < 1) {
+					missing_columns.push_back(std::tuple(return_strings[counter],column,type));
+				}
 			}
-		}
 		}
 	}
 	

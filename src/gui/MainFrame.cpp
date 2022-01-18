@@ -617,13 +617,13 @@ void MyMainFrame::OpenProject(wxString project_filename)
 				message= "cisTEM can try to update the format. It is wise to make a backup of the database before trying this.\n\nAttempt to update the project?";
 				button = "Update";
 				for (auto & table : schema_comparison.first) {
-					changes += wxString::Format("Add Table \t: %s\n",table);
+					changes += wxString::Format("Add Table: \t %s\n",table);
 				}
 				for (auto & column : schema_comparison.second) {
-					changes += wxString::Format("In Table \t %s \tadd column: \t %s\n",std::get<0>(column),std::get<1>(column));
+					changes += wxString::Format("In Table: \t %s \tadd column: \t %s\n",std::get<0>(column),std::get<1>(column));
 				}
 			}
-			wxRichMessageDialog *my_dialog = new wxRichMessageDialog(this, wxString::Format("This project was last opened by a different cisTEM version :-\n\nCurrent Version \t: %s\nProject Version \t: %s\n\n%s", CISTEM_VERSION_TEXT, current_project.cistem_version_text, message), "Database from different cisTEM version?", wxICON_ERROR | wxYES_NO | wxNO_DEFAULT);
+			wxRichMessageDialog *my_dialog = new wxRichMessageDialog(this, wxString::Format("This project was last opened by a different cisTEM version :-\n\nCurrent Version: \t %s\nProject Version: \t %s\n\n%s", CISTEM_VERSION_TEXT, current_project.cistem_version_text, message), "Database from different cisTEM version?", wxICON_ERROR | wxYES_NO | wxNO_DEFAULT);
 			my_dialog->SetYesNoLabels(button, "Close");
 			if (changes != wxString("")) {
 				my_dialog->ShowDetailedText(changes);

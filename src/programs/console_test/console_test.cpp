@@ -489,6 +489,9 @@ void MyTestApp::TestDatabase()
 
 
   wxString database_filename = temp_directory + "/1_0_test/1_0_test.db";
+  Project project;
+  project.OpenProjectFromFile(database_filename);
+  project.Close(false,false);
   Database database;
   database.Open(database_filename);
   auto schema_result = database.CheckSchema();
@@ -502,6 +505,15 @@ void MyTestApp::TestDatabase()
     wxPrintf("Update Schema did not fix missing tables/columns\n");
     FailTest;
   }
+  database.Close();
+  project.OpenProjectFromFile(database_filename);
+  if (project.cistem_version_text != CISTEM_VERSION_TEXT) {
+    wxPrintf("New database does not have right version text\n");
+    FailTest;
+  }
+  project.Close(false,true);
+  
+  
   EndTest();
 }
 
@@ -1743,6 +1755,7 @@ void MyTestApp::WriteEmbeddedArray(const char *filename, const unsigned char *ar
 void MyTestApp::WriteDatabase(const char *dir, const char *filename) {
 	Database database;
 	wxFileName::Mkdir(dir,0777,wxPATH_MKDIR_FULL);
+  wxFileName::Mkdir(std::string(dir)+"/Assets/",0777,wxPATH_MKDIR_FULL);
 	wxFileName db_filename = wxFileName(filename);
 	if (db_filename.Exists()) wxRemoveFile(filename);
 	database.CreateNewDatabase(db_filename);

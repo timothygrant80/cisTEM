@@ -251,7 +251,7 @@ bool Project::ReadMasterSettings()
 
 	//MyDebugAssertTrue(is_open == true, "Project not open!");
 
-	success = database.GetMasterSettings(project_directory, project_name, integer_database_version, total_cpu_hours, total_jobs_run);
+	success = database.GetMasterSettings(project_directory, project_name, integer_database_version, total_cpu_hours, total_jobs_run, cistem_version_text);
 
 	if (success == true)
 	{
@@ -267,9 +267,9 @@ void Project::WriteProjectStatisticsToDatabase()
 	database.SetProjectStatistics(total_cpu_hours,total_jobs_run);
 }
 
-void Project::Close(bool remove_lock)
+void Project::Close(bool remove_lock, bool update_statistics)
 {
-	WriteProjectStatisticsToDatabase();
+	if (update_statistics) WriteProjectStatisticsToDatabase();
 	database.Close(remove_lock);
 
 	is_open = false;

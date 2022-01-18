@@ -919,7 +919,7 @@ bool Database::InsertOrReplace(const char *table_name, const char *column_format
 
 }
 
-bool Database::GetMasterSettings(wxFileName &project_directory, wxString &project_name, int &imported_integer_version, double &total_cpu_hours, int &total_jobs_run)
+bool Database::GetMasterSettings(wxFileName &project_directory, wxString &project_name, int &imported_integer_version, double &total_cpu_hours, int &total_jobs_run, wxString &cistem_version_text)
 {
 	MyDebugAssertTrue(is_open == true, "database not open!");
 
@@ -934,6 +934,7 @@ bool Database::GetMasterSettings(wxFileName &project_directory, wxString &projec
 	imported_integer_version = sqlite3_column_int(sqlite_statement, 3);
 	total_cpu_hours = sqlite3_column_double(sqlite_statement, 4);
 	total_jobs_run = sqlite3_column_int(sqlite_statement, 5);
+	cistem_version_text = sqlite3_column_text(sqlite_statement, 6);
 
 	Finalize(sqlite_statement);
 	return true;
@@ -944,7 +945,7 @@ bool Database::SetProjectStatistics(double &total_cpu_hours, int &total_jobs_run
 	MyDebugAssertTrue(is_open == true, "database not open!");
 	MyDebugAssertTrue(total_cpu_hours >= 0.0,"Oops, negative total number of CPU hours: %f",total_cpu_hours);
 
-	ExecuteSQL(wxString::Format("UPDATE MASTER_SETTINGS SET TOTAL_JOBS_RUN = %i, TOTAL_CPU_HOURS = %f",total_jobs_run,float(total_cpu_hours)));
+	ExecuteSQL(wxString::Format("UPDATE MASTER_SETTINGS SET TOTAL_JOBS_RUN = %i, TOTAL_CPU_HOURS = %f, CISTEM_VERSION_TEXT = '%s'",total_jobs_run,float(total_cpu_hours),CISTEM_VERSION_TEXT));
 	return true;
 }
 
@@ -2628,6 +2629,8 @@ bool Database::UpdateSchema(std::vector<std::tuple<wxString, wxString, char>> co
 			column_format = "BLOB";
 		}
 		ExecuteSQL(wxString::Format("ALTER TABLE %s ADD COLUMN %s %s;",std::get<0>(column),std::get<1>(column),column_format));
+		ExecuteSQL(wxString::Format("UPDATE MASTER_SETTINGS SET CURRENT_VERSION = %i, CISTEM_VERSION_TEXT = '%s'",INTEGER_DATABASE_VERSION,CISTEM_VERSION_TEXT));
+
 	}
 	return true;
 }

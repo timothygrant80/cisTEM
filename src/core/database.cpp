@@ -2007,7 +2007,7 @@ void Database::AddTemplateMatchingResult(long wanted_template_match_id, Template
 
 	for (peak_counter = 1; peak_counter <= job_details.peak_changes.GetCount(); peak_counter++)
 	{
-		AddToBatchInsert("irrrrrrrrii",  peak_counter, job_details.peak_changes[peak_counter - 1].x_pos, job_details.peak_changes[peak_counter - 1].y_pos, job_details.peak_changes[peak_counter - 1].phi,job_details.peak_changes[peak_counter - 1].theta, job_details.peak_changes[peak_counter - 1].psi, job_details.peak_changes[peak_counter - 1].defocus, job_details.peak_changes[peak_counter - 1].pixel_size, job_details.peak_changes[peak_counter - 1].peak_height, job_details.peak_changes[peak_counter - 1].original_peak_number, job_details.peak_changes[peak_counter - 1].new_peak_number);
+		AddToBatchInsert("irrrrrrrrii",  peak_counter, job_details.peak_changes[peak_counter - 1].x_pos, job_details.peak_changes[peak_counter - 1].y_pos, job_details.peak_changes[peak_counter - 1].psi,job_details.peak_changes[peak_counter - 1].theta, job_details.peak_changes[peak_counter - 1].phi, job_details.peak_changes[peak_counter - 1].defocus, job_details.peak_changes[peak_counter - 1].pixel_size, job_details.peak_changes[peak_counter - 1].peak_height, job_details.peak_changes[peak_counter - 1].original_peak_number, job_details.peak_changes[peak_counter - 1].new_peak_number);
 	}
 
 	EndBatchInsert();

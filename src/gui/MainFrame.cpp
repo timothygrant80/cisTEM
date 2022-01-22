@@ -637,11 +637,6 @@ void MyMainFrame::OpenProject(wxString project_filename)
 				current_project.Close(false,false);
 				return;
 			}
-			// if yes
-
-
-			// if no
-			
 		}
 
 

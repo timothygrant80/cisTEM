@@ -192,11 +192,6 @@ protected:
 #include <nppi_arithmetic_and_logical_operations.h>
 #include <nppi_statistics_functions.h>
 #include <npps_arithmetic_and_logical_operations.h>
-#include <helper_functions.h>
-#include <helper_cuda.h>
-#include <thrust/transform_reduce.h>
-#include <thrust/device_vector.h>
-#include <thrust/functional.h>
 #include <typeinfo>
 #include <limits>
 

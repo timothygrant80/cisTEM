@@ -28,7 +28,8 @@ void ScatteringPotential::InitPdbEnsemble(float wanted_pixel_size, bool shift_by
                                           float wanted_noise_particle_radius_as_mutliple_of_particle_radius,
                                           float wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
                                           float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
-                                          float wanted_tilt_angle_to_emulate)
+                                          float wanted_tilt_angle_to_emulate,
+                                          bool is_alpha_fold_prediction)
 {
 
 	// backwards compatible with tigress where everything is double (ints would make more sense here.)
@@ -48,7 +49,8 @@ void ScatteringPotential::InitPdbEnsemble(float wanted_pixel_size, bool shift_by
                                 wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
                                 wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
                                 wanted_tilt_angle_to_emulate,
-                                shift_by_cetner_of_mass);
+                                shift_by_cetner_of_mass, 
+                                is_alpha_fold_prediction);
 	}
 }
 

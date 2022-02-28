@@ -62,10 +62,10 @@ PDB::PDB( long number_of_non_water_atoms, float cubic_size, float wanted_pixel_s
           float wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
           float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
           float wanted_tilt_angle_to_emulate,
-          bool shift_by_center_of_mass)
-{
+          bool shift_by_center_of_mass,
+          bool is_alpha_fold_prediction) {
 
-	input_file_stream = NULL;
+    input_file_stream = NULL;
 	input_text_stream = NULL;
 	output_file_stream = NULL;
 	output_text_stream = NULL;
@@ -77,6 +77,7 @@ PDB::PDB( long number_of_non_water_atoms, float cubic_size, float wanted_pixel_s
 	this->cubic_size = cubic_size;
 
 	this->use_provided_com = false;
+    this->is_alpha_fold_prediction = is_alpha_fold_prediction;
 
 
 	this->MIN_PADDING_XY = minimum_paddeding_x_and_y;
@@ -108,7 +109,8 @@ PDB::PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, lo
 		float wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
 		float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
 		float wanted_tilt_angle_to_emulate,
-    bool shift_by_center_of_mass)
+    bool shift_by_center_of_mass,
+    bool is_alpha_fold_prediction)
 {
 	input_file_stream = NULL;
 	input_text_stream = NULL;
@@ -116,6 +118,7 @@ PDB::PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, lo
 	output_text_stream = NULL;
 
 	this->use_provided_com = false;
+    this->is_alpha_fold_prediction = is_alpha_fold_prediction;
 
 	this->MIN_PADDING_XY = minimum_paddeding_x_and_y;
 	this->MIN_THICKNESS  = minimum_thickness_z;
@@ -141,7 +144,7 @@ PDB::PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, lo
 	Open(Filename, wanted_access_type, wanted_records_per_line);
 }
 
-PDB::PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, long wanted_records_per_line, int minimum_paddeding_x_and_y, double minimum_thickness_z, double *COM)
+PDB::PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, long wanted_records_per_line, int minimum_paddeding_x_and_y, double minimum_thickness_z, double *COM, bool is_alpha_fold_prediction)
 {
 	input_file_stream = NULL;
 	input_text_stream = NULL;
@@ -152,6 +155,7 @@ PDB::PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, lo
 	this->MIN_THICKNESS  = minimum_thickness_z;
 
 	this->use_provided_com = true;
+    this->is_alpha_fold_prediction = is_alpha_fold_prediction;
 
 	for (int iCOM = 0; iCOM < 3; iCOM++)
 	{
@@ -384,7 +388,15 @@ void PDB::Init()
 									my_atoms.Item(current_atom_number).y_coordinate = float(atom.pos.y);
 									my_atoms.Item(current_atom_number).z_coordinate = float(atom.pos.z);
 									my_atoms.Item(current_atom_number).occupancy = atom.occ;
-									my_atoms.Item(current_atom_number).bfactor = atom.b_iso;
+                                    if (is_alpha_fold_prediction) {
+                                        // Convert the confidence score to a bfactor. The formula is adhoc.
+                                        // Confidence score is 0->100 with higher being more confident. 
+                                        my_atoms.Item(current_atom_number).bfactor = 4.f + powf(100.f - atom.b_iso,1.314159f);
+                                        // wxPrintf("Confidence score %f, bfactor %f\n",atom.b_iso,my_atoms.Item(current_atom_number).bfactor);
+                                    }
+                                    else {
+									    my_atoms.Item(current_atom_number).bfactor = atom.b_iso;
+                                    }
 
 
 

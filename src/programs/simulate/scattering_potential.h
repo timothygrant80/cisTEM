@@ -35,7 +35,8 @@ public:
                         float wanted_noise_particle_radius_as_mutliple_of_particle_radius,
                         float wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
                         float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
-                        float wanted_tilt_angle_to_emulate);
+                        float wanted_tilt_angle_to_emulat,
+                        bool is_alpha_fold_prediction);
 	long ReturnTotalNumberOfNonWaterAtoms();
 
 

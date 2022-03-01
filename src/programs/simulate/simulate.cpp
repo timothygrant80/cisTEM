@@ -658,6 +658,7 @@ class SimulateApp : public MyApp
 	float wgt = 0.0f;
 	float bf = 0.0f;
 	bool water_shell_only = false;
+    bool is_alpha_fold_prediction = false;
 	///////////
 	/////////////////////////////////////////
 
@@ -739,6 +740,7 @@ void SimulateApp::AddCommandLineOptions()
 	command_line_parser.AddOption("","wgt","Maximum number of neighboring noise particles when simulating an image stack. Default is 0",wxCMD_LINE_VAL_DOUBLE);
 	command_line_parser.AddOption("","bf","Maximum number of neighboring noise particles when simulating an image stack. Default is 0",wxCMD_LINE_VAL_DOUBLE);
 	command_line_parser.AddLongSwitch("water-shell-only","when adding constant background, taper off 4 Ang into the water");
+    command_line_parser.AddLongSwitch("is-alpha-fold-prediction", "Is this a alpha-fold prediction? If so, convert the confidence score stored in the bfactor column to a bfactor. default is no");
 
 //	command_line_parser.AddOption("j","","Desired number of threads. Overrides interactive user input. Is overriden by env var OMP_NUM_THREADS",wxCMD_LINE_VAL_NUMBER);
 }
@@ -817,6 +819,7 @@ void SimulateApp::DoInteractiveUserInput()
 	if (command_line_parser.Found("wgt", &temp_double)) { wgt = (float)temp_double;}
 	if (command_line_parser.Found("bf", &temp_double)) { bf = (float)temp_double;}
 	if (command_line_parser.Found("water-shell-only")) water_shell_only = true;
+    if (command_line_parser.Found("is-alpha-fold-prediction")) is_alpha_fold_prediction = true;
 
   if (DO_CROSSHAIR) DO_SOLVENT = false;
 	UserInput *my_input = new UserInput("Simulator", 0.25);
@@ -1046,7 +1049,7 @@ bool SimulateApp::DoCalculation()
                         noise_particle_radius_as_mutliple_of_particle_radius,
                         noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
                         noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
-                        emulate_tilt_angle
+                        emulate_tilt_angle,is_alpha_fold_prediction
                         );
 
 	}
@@ -1059,7 +1062,7 @@ bool SimulateApp::DoCalculation()
                         noise_particle_radius_as_mutliple_of_particle_radius,
                         noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
                         noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
-                        emulate_tilt_angle
+                        emulate_tilt_angle, is_alpha_fold_prediction
                         );
 	}
 
@@ -1436,7 +1439,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 							noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
 							noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
 							emulate_tilt_angle,
-              SHIFT_BY_CENTER_OF_MASS);
+              SHIFT_BY_CENTER_OF_MASS, is_alpha_fold_prediction);
 
 	timer.lap("Init H20 & Spec");
 

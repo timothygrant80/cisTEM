@@ -558,6 +558,13 @@ bool MatchTemplateApp::DoCalculation()
 
     input_image.Resize(factorizable_x, factorizable_y, 1, input_image.ReturnAverageOfRealValuesOnEdges());
 
+
+	input_reconstruction.ReadSlices(&input_reconstruction_file, 1, input_reconstruction_file.ReturnNumberOfSlices());
+	if (padding != 1.0f)
+	{
+		input_reconstruction.Resize(input_reconstruction.logical_x_dimension * padding, input_reconstruction.logical_y_dimension * padding, input_reconstruction.logical_z_dimension * padding, input_reconstruction.ReturnAverageOfRealValuesOnEdges());
+	}
+
     #ifdef ROTATEFORSPEED
     if ( ! is_power_of_two(factorizable_x) && is_power_of_two(factorizable_y) )
     {
@@ -566,6 +573,10 @@ bool MatchTemplateApp::DoCalculation()
       if (ReturnThreadNumberOfCurrentThread() == 0) { wxPrintf("Rotating the search image for speed\n"); }
       is_rotated_by_90 = true;
       input_image.RotateInPlaceAboutZBy90Degrees(true);
+      // bool preserve_origin = true;
+      // input_reconstruction.RotateInPlaceAboutZBy90Degrees(true, preserve_origin);
+      // The amplitude spectrum is also rotated
+      defocus_angle += 90.0f;
     }
     else
     {
@@ -595,12 +606,6 @@ bool MatchTemplateApp::DoCalculation()
 
 	ZeroDoubleArray(correlation_pixel_sum, input_image.real_memory_allocated);
 	ZeroDoubleArray(correlation_pixel_sum_of_squares, input_image.real_memory_allocated);
-
-	input_reconstruction.ReadSlices(&input_reconstruction_file, 1, input_reconstruction_file.ReturnNumberOfSlices());
-	if (padding != 1.0f)
-	{
-		input_reconstruction.Resize(input_reconstruction.logical_x_dimension * padding, input_reconstruction.logical_y_dimension * padding, input_reconstruction.logical_z_dimension * padding, input_reconstruction.ReturnAverageOfRealValuesOnEdges());
-	}
 
 	sqrt_input_pixels =  sqrt((double)(input_image.logical_x_dimension * input_image.logical_y_dimension));
 
@@ -1160,8 +1165,9 @@ bool MatchTemplateApp::DoCalculation()
 		max_intensity_projection.RotateInPlaceAboutZBy90Degrees(false);
 
 		best_psi.RotateInPlaceAboutZBy90Degrees(false);
-		// To account for the pre-rotation, psi needs to have 90 added to it.
-		best_psi.AddConstant(90.0f);
+        // If the template is also rotated, then this additional accounting is not needed.
+            // To account for the pre-rotation, psi needs to have 90 added to it.
+        best_psi.AddConstant(90.0f);
 		// We also want the angles to remain in (0,360] so loop over and clamp
 		for (int idx = 0; idx < best_psi.real_memory_allocated; idx++) { best_psi.real_values[idx] = clamp_angular_range_0_to_2pi(best_psi.real_values[idx], true); }
 		best_theta.RotateInPlaceAboutZBy90Degrees(false);

@@ -4,7 +4,7 @@
     "version": "2.0.0",
     "options": {
         "env": {
-            "cuda_dir": "/groups/cryoadmin/software/CUDA-TOOLKIT/cuda_11.3.1",
+            "cuda_dir": "/groups/cryoadmin/software/CUDA-TOOLKIT/cuda_11.6.0",
             "wx_dir":"/groups/cryoadmin/software/WX/wx_static_3.05_",
             "build_dir": "${workspaceFolder}/build",
             "compile_cores": "48"

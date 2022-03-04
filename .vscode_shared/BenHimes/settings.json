@@ -21,7 +21,7 @@
      
 
     },
-    "C_Cpp.dimInactiveRegions": true,
+    "C_Cpp.dimInactiveRegions": false,
     "files.associations": {
         "string": "cpp",
         "filesystem": "cpp"

@@ -5,10 +5,11 @@
         "--security-opt",
         "seccomp=unconfined" 
         ] ,
-    "extensions": [ 
-        "ms-vscode.cpptools", 
-        "ms-vscode.cmake-tools" 
-    ] ,
+    "extensions": [
+		"ms-vscode.cpptools",
+		"ms-vscode.cmake-tools",
+		"GitHub.copilot"
+	] ,
     // Note: the proper way to set the display number
     // would be with something like this:
     // ps -ef | grep "Xquartz :\d" | grep -v xinit | awk '{print $9;}'

@@ -1,3 +1,9 @@
+#ifndef _gui_gui_core_headers_h_
+#define _gui_gui_core_headers_h_
+
+namespace cistem {
+    enum class workflow { single_particle, template_matching };
+}
 #include <wx/artprov.h>
 #include <wx/xrc/xmlres.h>
 #include <wx/gdicmn.h>
@@ -84,7 +90,8 @@
 #include "../gui/ExportRefinementPackageWizard.h"
 #include "../gui/MyNewRefinementPackageWizard.h"
 #include "../gui/MyResultsPanel.h"
-#include "../gui/MyActionsPanel.h"
+#include "../gui/ActionsPanelSpa.h"
+#include "../gui/ActionsPanelTm.h"
 #include "../gui/MyAssetsPanel.h"
 #include "../gui/MySettingsPanel.h"
 #include "../gui/PickingResultsPanel.h"
@@ -118,17 +125,19 @@
 #include "../gui/PlotCurvePanel.h"
 #include "../gui/DistributionPlotDialog.h"
 #include "../gui/RefineCTFPanel.h"
-
-#ifdef EXPERIMENTAL
-#include "../gui/MyExperimentalPanel.h"
 #include "../gui/MatchTemplatePanel.h"
 #include "../gui/MatchTemplateResultsPanel.h"
 #include "../gui/RefineTemplatePanel.h"
+
+#ifdef EXPERIMENTAL
+#include "../gui/MyExperimentalPanel.h"
+#include "../gui/RefineTemplateDevPanel.h"
 #include "../gui/AtomicCoordinatesAssetPanel.h"
 #include "../gui/AtomicCoordinatesChooserDialog.h"
 #include "../gui/AtomicCoordinatesImportDialog.h"
 #endif
-
+// FIXME: These and all the panel integers should be in defines as enums, and should be in their own header
+// included at the top of core headers
 #define REFINEMENT 0
 #define RECONSTRUCTION 1
 #define MERGE 2
@@ -137,3 +146,6 @@
 #define ALIGN_SYMMETRY 5
 #define ESTIMATE_BEAMTILT 6
 #define NOJOB 7
+
+
+#endif

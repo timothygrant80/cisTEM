@@ -141,7 +141,7 @@ bool Project::CreateNewProject(wxFileName wanted_database_file, wxString wanted_
 
 	// set master settings..
 
-	if (database.InsertOrReplace("MASTER_SETTINGS", "ittiri", "NUMBER", "PROJECT_DIRECTORY", "PROJECT_NAME", "CURRENT_VERSION", "TOTAL_CPU_HOURS", "TOTAL_JOBS_RUN", 1, project_directory.GetFullPath().ToUTF8().data(), project_name.ToUTF8().data(), INTEGER_DATABASE_VERSION, total_cpu_hours, total_jobs_run) == false) return false;
+	if (database.InsertOrReplace("MASTER_SETTINGS", "ittirit", "NUMBER", "PROJECT_DIRECTORY", "PROJECT_NAME", "CURRENT_VERSION", "TOTAL_CPU_HOURS", "TOTAL_JOBS_RUN", "CISTEM_VERSION_TEXT", 1, project_directory.GetFullPath().ToUTF8().data(), project_name.ToUTF8().data(), INTEGER_DATABASE_VERSION, total_cpu_hours, total_jobs_run, CISTEM_VERSION_TEXT) == false) return false;
 
 	is_open = true;
 
@@ -251,7 +251,7 @@ bool Project::ReadMasterSettings()
 
 	//MyDebugAssertTrue(is_open == true, "Project not open!");
 
-	success = database.GetMasterSettings(project_directory, project_name, integer_database_version, total_cpu_hours, total_jobs_run);
+	success = database.GetMasterSettings(project_directory, project_name, integer_database_version, total_cpu_hours, total_jobs_run, cistem_version_text);
 
 	if (success == true)
 	{
@@ -267,9 +267,9 @@ void Project::WriteProjectStatisticsToDatabase()
 	database.SetProjectStatistics(total_cpu_hours,total_jobs_run);
 }
 
-void Project::Close(bool remove_lock)
+void Project::Close(bool remove_lock, bool update_statistics)
 {
-	WriteProjectStatisticsToDatabase();
+	if (update_statistics) WriteProjectStatisticsToDatabase();
 	database.Close(remove_lock);
 
 	is_open = false;

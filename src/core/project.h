@@ -28,11 +28,12 @@ public :
 	int total_jobs_run;
 
 	int integer_database_version;
+	wxString cistem_version_text;
 
 	Project();
 	~Project();
 
-	void Close(bool remove_lock = true);
+	void Close(bool remove_lock = true, bool update_statistics = true);
 	bool CreateNewProject(wxFileName database_file, wxString project_directory, wxString project_name);
 	bool OpenProjectFromFile(wxFileName file_to_open);
 	bool ReadMasterSettings();

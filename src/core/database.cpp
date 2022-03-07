@@ -1,4 +1,5 @@
 #include "core_headers.h"
+#include "database_schema.h"
 
 Database::Database()
 {
@@ -194,6 +195,7 @@ wxArrayString Database::ReturnStringArrayFromSelectCommand(wxString select_comma
 	return strings_to_return;
 
 }
+
 
 long Database::ReturnSingleLongFromSelectCommand(wxString select_command)
 {
@@ -583,11 +585,11 @@ bool Database::CreateNewDatabase(wxFileName wanted_database_file)
 
 	return_code = sqlite3_open_v2(wanted_database_file.GetFullPath().ToUTF8().data(), &sqlite_database, SQLITE_OPEN_READWRITE | SQLITE_OPEN_CREATE, "unix-dotfile");
 
-    if( return_code )
-    {
-    	MyPrintWithDetails("Can't open database: %s\n%s\n", database_file.GetFullPath().ToUTF8().data(), sqlite3_errmsg(sqlite_database));
-        return false;
-    }
+	if( return_code )
+	{
+		MyPrintWithDetails("Can't open database: %s\n%s\n", database_file.GetFullPath().ToUTF8().data(), sqlite3_errmsg(sqlite_database));
+		return false;
+	}
 
 	//ExecuteSQL("PRAGMA main.locking_mode=EXCLUSIVE;");
 	//ExecuteSQL("PRAGMA main.temp_store=MEMORY;");
@@ -601,7 +603,7 @@ bool Database::CreateNewDatabase(wxFileName wanted_database_file)
 	database_file = wanted_database_file;
 	is_open = true;
 
-    return true;
+	return true;
 }
 
 bool Database::Open(wxFileName file_to_open, bool disable_locking)
@@ -631,7 +633,7 @@ bool Database::Open(wxFileName file_to_open, bool disable_locking)
 	if( return_code )
 	{
 		MyPrintWithDetails("Can't open database: %s\n%s\n", database_file.GetFullPath().ToUTF8().data(), sqlite3_errmsg(sqlite_database));
-	    return false;
+		return false;
 	}
 
 	//	ExecuteSQL("PRAGMA main.locking_mode=EXCLUSIVE;");
@@ -646,9 +648,9 @@ bool Database::Open(wxFileName file_to_open, bool disable_locking)
 	database_file = file_to_open;
 	is_open = true;
 
-	// check all the tables exist?
-
-	CreateAllTables();
+	// We used to check here whether all tables exists, this has been moved now
+	// to the GUI upon project opening
+	// CreateAllTables();
 
 	return true;
 
@@ -757,76 +759,59 @@ bool Database::CreateTable(const char *table_name, const char *column_format, ..
 
 	return_code = ExecuteSQL(sql_command.ToUTF8().data());
 
-    if( return_code != SQLITE_OK )
-    {
-        DEBUG_ABORT;
-    }
+	if( return_code != SQLITE_OK )
+	{
+		DEBUG_ABORT;
+	}
 
-    return true;
+	return true;
+
+}
+
+bool Database::CreateTable(const char *table_name, const char *column_format, std::vector<wxString> columns) {
+	int return_code;
+	int col_counter;
+
+	wxString sql_command;
+
+	int number_of_columns = strlen(column_format);
+	MyDebugAssertTrue(number_of_columns == columns.size(),"Column formt string length unequal to number of columns\n");
+
+	sql_command = "CREATE TABLE IF NOT EXISTS ";
+	sql_command += table_name;
+	sql_command += "(";
+
+	for (col_counter = 0; col_counter < columns.size(); col_counter++) {
+		sql_command += columns[col_counter];
+		sql_command += map_type_char_to_sqlite_string(column_format[col_counter]);
+
+		if (col_counter < number_of_columns - 1) sql_command += ", ";
+		else sql_command += " );";
+	}
+		
+	return_code = ExecuteSQL(sql_command.ToUTF8().data());
+
+	if( return_code != SQLITE_OK )
+	{
+		DEBUG_ABORT;
+	}
+
+	return true;
 
 }
 
 
 bool Database::CreateAllTables()
 {
+	using namespace database_schema;
 	bool success;
 
 	BeginCommitLocker active_locker(this);
 
-	success = CreateTable("MASTER_SETTINGS", "pttiri", "NUMBER", "PROJECT_DIRECTORY", "PROJECT_NAME", "CURRENT_VERSION", "TOTAL_CPU_HOURS", "TOTAL_JOBS_RUN");
-	CheckSuccess(success);
-	success = CreateProcessLockTable();
-	CheckSuccess(success);
-	success = CreateTable("RUNNING_JOBS", "pti", "JOB_NUMBER", "JOB_CODE", "MANAGER_IP_ADDRESS");
-	CheckSuccess(success);
-	success = CreateTable("RUN_PROFILES", "ptttti", "RUN_PROFILE_ID", "PROFILE_NAME", "MANAGER_RUN_COMMAND", "GUI_ADDRESS", "CONTROLLER_ADDRESS", "COMMANDS_ID");
-	CheckSuccess(success);
-	//success = CreateTable("MOVIE_ASSETS", "ptiiiirrrr", "MOVIE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "X_SIZE", "Y_SIZE", "NUMBER_OF_FRAMES", "VOLTAGE", "PIXEL_SIZE", "DOSE_PER_FRAME", "SPHERICAL_ABERRATION");
-	success = CreateMovieAssetTable();
-	CheckSuccess(success);
-	success = CreateImageAssetTable();
-	CheckSuccess(success);
-	success = CreateTable("MOVIE_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
-	CheckSuccess(success);
-	success = CreateTable("MOVIE_ALIGNMENT_LIST", "piiitrrrrrriiriiiiiiii", "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "OUTPUT_FILE", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK", "SHOULD_INCLUDE_ALL_FRAMES_IN_SUM", "FIRST_FRAME_TO_SUM", "LAST_FRAME_TO_SUM" );
-	CheckSuccess(success);
-
-	success = CreateTable("IMAGE_GROUP_LIST", "pti", "GROUP_ID", "GROUP_NAME", "LIST_ID" );
-	CheckSuccess(success);
-	success = CreateParticlePickingListTable();
-	CheckSuccess(success);
-	success = CreateParticlePositionAssetTable();
-	CheckSuccess(success);
-	success = CreateParticlePositionGroupListTable();
-	CheckSuccess(success);
-	success = CreateVolumeAssetTable();
-	CheckSuccess(success);
-	success = CreateVolumeGroupListTable();
-	CheckSuccess(success);
-#ifdef EXPERIMENTAL
-	success = CreateAtomicCoordinatesAssetTable();
-	CheckSuccess(success);
-	success = CreateAtomicCoordinatesGroupListTable();
-	CheckSuccess(success);
-#endif  
-	success = CreateRefinementPackageAssetTable();
-	CheckSuccess(success);
-	success = CreateRefinementListTable();
-	CheckSuccess(success);
-	success = CreateClassificationListTable();
-	CheckSuccess(success);
-	success = CreateClassificationSelectionListTable();
-	CheckSuccess(success);
-	success = CreateStartupListTable();
-	CheckSuccess(success);
-	success = CreateReconstructionListTable();
-	CheckSuccess(success);
-	success = CreateTable("ESTIMATED_CTF_PARAMETERS", "piiiirrrrirrrrririrrrrrrrrrrtiirrr", "CTF_ESTIMATION_ID", "CTF_ESTIMATION_JOB_ID", "DATETIME_OF_RUN", "IMAGE_ASSET_ID", "ESTIMATED_ON_MOVIE_FRAMES", "VOLTAGE", "SPHERICAL_ABERRATION", "PIXEL_SIZE", "AMPLITUDE_CONTRAST", "BOX_SIZE", "MIN_RESOLUTION", "MAX_RESOLUTION", "MIN_DEFOCUS", "MAX_DEFOCUS", "DEFOCUS_STEP", "RESTRAIN_ASTIGMATISM", "TOLERATED_ASTIGMATISM", "FIND_ADDITIONAL_PHASE_SHIFT", "MIN_PHASE_SHIFT", "MAX_PHASE_SHIFT", "PHASE_SHIFT_STEP", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "ADDITIONAL_PHASE_SHIFT", "SCORE", "DETECTED_RING_RESOLUTION", "DETECTED_ALIAS_RESOLUTION", "OUTPUT_DIAGNOSTIC_FILE","NUMBER_OF_FRAMES_AVERAGED","LARGE_ASTIGMATISM_EXPECTED","ICINESS", "TILT_ANGLE", "TILT_AXIS");
-	CheckSuccess(success);
-	success = CreateTemplateMatchingResultsTable();
-	CheckSuccess(success);
-	success = CreateMovieMetadataTable();
-	CheckSuccess(success);
+	for (TableData & table : static_tables) {
+		success = CreateTable(std::get<TABLE_NAME>(table),std::get<TABLE_TYPES>(table),std::get<TABLE_COLUMNS>(table));
+		CheckSuccess(success);
+	}
 
 	return success;
 }
@@ -906,18 +891,18 @@ bool Database::InsertOrReplace(const char *table_name, const char *column_format
 	// escape apostrophes;
 	return_code = ExecuteSQL(sql_command.ToUTF8().data());
 
-    if( return_code != SQLITE_OK )
-    {
-    	DEBUG_ABORT;
+	if( return_code != SQLITE_OK )
+	{
+		DEBUG_ABORT;
 
-    }
+	}
 
-    return true;
+	return true;
 
 
 }
 
-bool Database::GetMasterSettings(wxFileName &project_directory, wxString &project_name, int &imported_integer_version, double &total_cpu_hours, int &total_jobs_run)
+bool Database::GetMasterSettings(wxFileName &project_directory, wxString &project_name, int &imported_integer_version, double &total_cpu_hours, int &total_jobs_run, wxString &cistem_version_text)
 {
 	MyDebugAssertTrue(is_open == true, "database not open!");
 
@@ -932,6 +917,7 @@ bool Database::GetMasterSettings(wxFileName &project_directory, wxString &projec
 	imported_integer_version = sqlite3_column_int(sqlite_statement, 3);
 	total_cpu_hours = sqlite3_column_double(sqlite_statement, 4);
 	total_jobs_run = sqlite3_column_int(sqlite_statement, 5);
+	cistem_version_text = sqlite3_column_text(sqlite_statement, 6);
 
 	Finalize(sqlite_statement);
 	return true;
@@ -942,7 +928,7 @@ bool Database::SetProjectStatistics(double &total_cpu_hours, int &total_jobs_run
 	MyDebugAssertTrue(is_open == true, "database not open!");
 	MyDebugAssertTrue(total_cpu_hours >= 0.0,"Oops, negative total number of CPU hours: %f",total_cpu_hours);
 
-	ExecuteSQL(wxString::Format("UPDATE MASTER_SETTINGS SET TOTAL_JOBS_RUN = %i, TOTAL_CPU_HOURS = %f",total_jobs_run,float(total_cpu_hours)));
+	ExecuteSQL(wxString::Format("UPDATE MASTER_SETTINGS SET TOTAL_JOBS_RUN = %i, TOTAL_CPU_HOURS = %f, CISTEM_VERSION_TEXT = '%s'",total_jobs_run,float(total_cpu_hours),CISTEM_VERSION_TEXT));
 	return true;
 }
 
@@ -1157,7 +1143,7 @@ void Database::AddToBatchInsert(const char *column_format, ...)
 	return_code = Step(batch_statement);
 	MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code );
 
-    return_code = sqlite3_clear_bindings(batch_statement);
+	return_code = sqlite3_clear_bindings(batch_statement);
 	MyDebugAssertTrue(return_code == SQLITE_OK, "SQL error, return code : %i\n", return_code );
 
 	return_code = sqlite3_reset(batch_statement);
@@ -1173,7 +1159,7 @@ void Database::EndBatchInsert()
 	Commit();
 
 	Finalize(batch_statement);
-    in_batch_insert = false;
+	in_batch_insert = false;
 }
 
 void Database::BeginMovieAssetInsert()
@@ -1206,7 +1192,7 @@ void Database::BeginMovieAssetMetadataInsert()
 void Database::AddNextMovieAssetMetadata(MovieMetadataAsset asset)
 {
 	AddToBatchInsert("lttrrrrrrrl", asset.movie_asset_id, 
-	                        asset.metadata_source.ToUTF8().data(),
+							asset.metadata_source.ToUTF8().data(),
 							asset.content_json.ToUTF8().data(), 
 							asset.tilt_angle,
 							asset.stage_position_x,
@@ -1254,8 +1240,8 @@ void Database::BeginAtomicCoordinatesAssetInsert()
 void Database::AddNextAtomicCoordinatesAsset(const AtomicCoordinatesAsset *asset)
 {
 	AddToBatchInsert("ittiiiitrrr", asset->asset_id, asset->asset_name.ToUTF8().data(), asset->filename.GetFullPath().ToUTF8().data(), 
-                                  asset->simulation_3d_job_id, asset->x_size, asset->y_size, asset->z_size, 
-                                  asset->pdb_id.ToUTF8().data(), asset->pdb_avg_bfactor, asset->pdb_std_bfactor, asset->effective_weight);
+								  asset->simulation_3d_job_id, asset->x_size, asset->y_size, asset->z_size, 
+								  asset->pdb_id.ToUTF8().data(), asset->pdb_avg_bfactor, asset->pdb_std_bfactor, asset->effective_weight);
 }
 #endif
 
@@ -1722,7 +1708,7 @@ void Database::RemoveParticlePositionAssetsPickedFromImageWithGivenID( const int
 void Database::CopyParticleAssetsFromResultsTable(const int &picking_job_id, const int &parent_image_asset_id)
 {
 	ExecuteSQL(wxString::Format("insert into particle_position_assets select particle_picking_results_%i.position_id, %i, particle_picking_results_%i.picking_id, %i, particle_picking_results_%i.x_position, particle_picking_results_%i.y_position, particle_picking_results_%i.peak_height, particle_picking_results_%i.template_asset_id, particle_picking_results_%i.template_psi, particle_picking_results_%i.template_theta, particle_picking_results_%i.template_phi from particle_picking_results_%i where particle_picking_results_%i.parent_image_asset_id = %i",
-												                                          picking_job_id,  parent_image_asset_id,     picking_job_id,     picking_job_id,           picking_job_id,                         picking_job_id,                              picking_job_id,                            picking_job_id,                             picking_job_id,                                picking_job_id,                        picking_job_id,                              picking_job_id,                    picking_job_id,                  parent_image_asset_id));
+																						  picking_job_id,  parent_image_asset_id,     picking_job_id,     picking_job_id,           picking_job_id,                         picking_job_id,                              picking_job_id,                            picking_job_id,                             picking_job_id,                                picking_job_id,                        picking_job_id,                              picking_job_id,                    picking_job_id,                  parent_image_asset_id));
 }
 
 void Database::AddArrayOfParticlePositionAssetsToResultsTable(const int &picking_job_id, ArrayOfParticlePositionAssets *array_of_assets)
@@ -1854,8 +1840,8 @@ AtomicCoordinatesAsset Database::GetNextAtomicCoordinatesAsset()
   // Note: no distinction between single and double (s/r) seems to be made in writing to the DB, based on format strings, yet when reading it must be correct. 
   // 
 	GetFromBatchSelect("itfliiitsss", &temp_asset.asset_id, &temp_asset.asset_name, &temp_asset.filename, &temp_asset.simulation_3d_job_id, 
-                                    &temp_asset.x_size, &temp_asset.y_size, &temp_asset.z_size, &temp_asset.pdb_id, 
-                                    &temp_asset.pdb_avg_bfactor, &temp_asset.pdb_std_bfactor, &temp_asset.effective_weight);
+									&temp_asset.x_size, &temp_asset.y_size, &temp_asset.z_size, &temp_asset.pdb_id, 
+									&temp_asset.pdb_avg_bfactor, &temp_asset.pdb_std_bfactor, &temp_asset.effective_weight);
 	return temp_asset;
 }
 #endif
@@ -2321,7 +2307,7 @@ Refinement *Database::GetRefinementByID(long wanted_refinement_id, bool include_
 			while (more_data == true)
 			{
 				more_data = GetFromBatchSelect("lsssssssssssssissssssssi", &temp_result.position_in_stack,
-					                                                                              &temp_result.psi,
+																								  &temp_result.psi,
 																								  &temp_result.theta,
 																								  &temp_result.phi,
 																								  &temp_result.xshift,
@@ -2592,6 +2578,72 @@ void Database::GetRefinementAngularDistributionHistogramData(long wanted_refinem
 	}
 
 	EndBatchSelect();
+}
+
+bool Database::UpdateSchema(ColumnChanges columns) {
+	using namespace database_schema;
+	CreateAllTables();
+	char format;
+	wxString column_format;
+	for (ColumnChange & column : columns) {
+		format = std::get<COLUMN_CHANGE_TYPE>(column);
+		column_format = map_type_char_to_sqlite_string(format);
+		ExecuteSQL(wxString::Format("ALTER TABLE %s ADD COLUMN %s %s;",std::get<COLUMN_CHANGE_TABLE>(column),std::get<COLUMN_CHANGE_NAME>(column),column_format));
+		ExecuteSQL(wxString::Format("UPDATE MASTER_SETTINGS SET CURRENT_VERSION = %i, CISTEM_VERSION_TEXT = '%s'",INTEGER_DATABASE_VERSION,CISTEM_VERSION_TEXT));
+
+	}
+	return true;
+}
+
+std::pair<Database::TableChanges, Database::ColumnChanges> Database::CheckSchema() {
+	using namespace database_schema;
+	MyDebugAssertTrue(is_open == true, "database not open!");
+	TableChanges missing_tables;
+	ColumnChanges missing_columns;
+	// Check Static Tables
+	wxArrayString return_strings;
+	int count;
+	int counter;
+	int col_counter;
+	for (TableData & table : static_tables ) {
+		
+		return_strings = ReturnStringArrayFromSelectCommand(wxString::Format("SELECT name FROM sqlite_master WHERE type='table' AND name='%s';",std::get<0>(table)));
+		if (return_strings.IsEmpty()) {
+			missing_tables.push_back(std::get<TABLE_NAME>(table));
+			continue;
+		}
+		for (col_counter = 0; col_counter < std::get<TABLE_COLUMNS>(table).size(); col_counter++) {
+			auto & column = std::get<TABLE_COLUMNS>(table)[col_counter];
+			char type = std::get<TABLE_TYPES>(table)[col_counter];
+
+			count = ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) AS CNTREC FROM pragma_table_info('%s') WHERE name='%s';",std::get<0>(table),column));
+			if (count < 1) {
+				missing_columns.push_back(ColumnChange(std::get<TABLE_NAME>(table),column,type));
+			}
+		}
+	}
+
+	for (TableData & table : dynamic_tables ) {
+		
+		return_strings = ReturnStringArrayFromSelectCommand(wxString::Format("SELECT name FROM sqlite_master WHERE type='table' AND name  LIKE '%s_%';",std::get<0>(table)));
+		for (counter = 0; counter < return_strings.GetCount(); counter++) {
+			// Make sure it is not any of the static columns that happen to match
+			if (any_of(static_tables.begin(), static_tables.end(), [&](TableData & table) { return return_strings[counter].IsSameAs(std::get<0>(table)); })) {
+				continue;
+			}
+			for (col_counter = 0; col_counter < std::get<TABLE_COLUMNS>(table).size(); col_counter++) {
+				auto & column = std::get<TABLE_COLUMNS>(table)[col_counter];
+				char type = std::get<TABLE_TYPES>(table)[col_counter];
+				count = ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) AS CNTREC FROM pragma_table_info('%s') WHERE name='%s';",return_strings[counter],column));
+				if (count < 1) {
+					missing_columns.push_back(ColumnChange(return_strings[counter],column,type));
+				}
+			}
+		}
+	}
+	
+	return std::pair<TableChanges, ColumnChanges>(missing_tables, missing_columns);
+
 }
 
 BeginCommitLocker::BeginCommitLocker(Database *wanted_database)

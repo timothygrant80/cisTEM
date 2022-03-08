@@ -36,7 +36,8 @@ public:
                         float wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
                         float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
                         float wanted_tilt_angle_to_emulat,
-                        bool is_alpha_fold_prediction);
+                        bool is_alpha_fold_prediction,
+                        cisTEMParameters& wanted_star_file, bool use_star_file);
 	long ReturnTotalNumberOfNonWaterAtoms();
 
 

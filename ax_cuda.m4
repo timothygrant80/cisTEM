@@ -99,10 +99,10 @@ if test "$want_cuda" = "yes" ; then
 	# set CUDA flags for static compilation. This is required for cufft callbacks.
 	if test -n "$cuda_home_path"
 	then
-	  CUDA_CFLAGS="-I$cuda_home_path/include  -I$cuda_home_path/samples/common/inc/"
+	  CUDA_CFLAGS="-I$cuda_home_path/include "
       CUDA_LIBS="-L$cuda_home_path/$libdir -lcufft_static -lnppial_static -lnppist_static -lnppc_static -lnppidei_static -lcurand_static -lculibos -lcudart_static -lrt"
 	else
-	  CUDA_CFLAGS="-I/usr/local/cuda/include  -I/usr/local/cuda/samples/common/inc/"
+	  CUDA_CFLAGS="-I/usr/local/cuda/include "
 	  CUDA_LIBS="-L/usr/local/cuda/$libdir -lcufft_static -lnppial_static -lnppist_static -lnppc_static -lnppidei_static -lcurand_static -lculibos -lcudart_static -lrt"
 	fi
 
@@ -140,45 +140,17 @@ if test "$want_cuda" = "yes" ; then
 		AC_MSG_RESULT([not found])
 	])
 
-	AC_MSG_CHECKING([for Cuda libraries])
-	AC_LINK_IFELSE(
-	[
-		AC_LANG_PROGRAM([@%:@include <cuda.h>],
-		[
-			CUmodule cuModule;
-			cuModuleLoad(&cuModule, "myModule.cubin");
-			CUdeviceptr devPtr;
-			CUfunction cuFunction;
-			unsigned pitch, width = 250, height = 500;
-			cuMemAllocPitch(&devPtr, &pitch,width * sizeof(float), height, 4);
-			cuModuleGetFunction(&cuFunction, cuModule, "myKernel");
-			cuFuncSetBlockShape(cuFunction, 512, 1, 1);
-			cuParamSeti(cuFunction, 0, devPtr);
-			cuParamSetSize(cuFunction, sizeof(devPtr));
-			cuLaunchGrid(cuFunction, 100, 1);
-		])
-	],
-	[
-		have_cuda_libs="yes"
-		AC_MSG_RESULT([yes])
-	],
-	[
-		have_cuda_libs="no"
-		AC_MSG_RESULT([not found])
-	])
+
 	AC_LANG_POP(C)
 
 	CPPFLAGS=$saved_CPPFLAGS
 	LIBS=$saved_LIBS
   	CUDA_LIBS=$saved_CUDA_LIBS
 	
-	if test "$have_cuda_headers" = "yes" -a "$have_cuda_libs" = "yes" -a "$have_nvcc" = "yes"
-	then
+
+
 		have_cuda="yes"
-	else
-		have_cuda="no"
-		AC_MSG_ERROR([Cuda is requested but not available])
-	fi
+
 fi
 
 # This is the code that will be generated at compile time and should be specified for the most used gpu 

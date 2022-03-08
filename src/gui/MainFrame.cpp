@@ -16,7 +16,9 @@ extern AtomicCoordinatesAssetPanel *atomic_coordinates_asset_panel;
 #endif
 extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
 
-extern MyActionsPanel *actions_panel;
+extern ActionsPanelSpa *actions_panel_spa;
+extern ActionsPanelTm *actions_panel_tm;
+
 extern MyAlignMoviesPanel *align_movies_panel;
 extern MyFindCTFPanel *findctf_panel;
 extern MyFindParticlesPanel *findparticles_panel;
@@ -37,12 +39,13 @@ extern MyFindCTFResultsPanel *ctf_results_panel;
 extern MyPickingResultsPanel *picking_results_panel;
 extern MyRefinementResultsPanel *refinement_results_panel;
 extern Refine2DResultsPanel *refine2d_results_panel;
-
-#ifdef EXPERIMENTAL
-extern MyExperimentalPanel *experimental_panel;
 extern MatchTemplatePanel *match_template_panel;
 extern MatchTemplateResultsPanel *match_template_results_panel;
 extern RefineTemplatePanel *refine_template_panel;
+extern RefineTemplateDevPanel* refine_template_dev_panel;
+
+#ifdef EXPERIMENTAL
+extern MyExperimentalPanel *experimental_panel;
 #endif
 
 extern MyOverviewPanel *overview_panel;
@@ -274,22 +277,20 @@ void MyMainFrame::ResetAllPanels()
 	refinement_results_panel->Clear();
 
 
-	align_movies_panel->Reset();
-	findctf_panel->Reset();
-	findparticles_panel->Reset();
-	classification_panel->Reset();
-	ab_initio_3d_panel->Reset();
-	auto_refine_3d_panel->Reset();
-	refine_3d_panel->Reset();
-	refine_ctf_panel->Reset();
-	generate_3d_panel->Reset();
-	sharpen_3d_panel->Reset();
+    align_movies_panel->Reset();
+    findctf_panel->Reset();
+    findparticles_panel->Reset();
+    classification_panel->Reset();
+    ab_initio_3d_panel->Reset();
+    auto_refine_3d_panel->Reset();
+    refine_3d_panel->Reset();
+    refine_ctf_panel->Reset();
+    generate_3d_panel->Reset();
+    sharpen_3d_panel->Reset();
+    match_template_panel->Reset();
+    match_template_results_panel->Clear();
+    refine_template_panel->Reset();
 
-#ifdef EXPERIMENTAL
-	match_template_panel->Reset();
-	match_template_results_panel->Clear();
-	refine_template_panel->Reset();
-#endif
 
 	DirtyEverything();
 }
@@ -956,4 +957,57 @@ bool MyMainFrame::MigrateProject(wxString old_project_directory, wxString new_pr
 	return true;
 }
 
+template < class FrameTypeFrom, class FrameTypeTo > 
+void MyMainFrame::UpdateWorkflow(FrameTypeFrom* input_frame, FrameTypeTo* output_frame, wxString frame_name) {
 
+    // Get the stored index of the input frame so we can replace it in-place.
+    int current_page_idx = MenuBook->FindPage(input_frame);
+    MenuBook->RemovePage(current_page_idx);
+
+    // Set the parent to the output frame
+    align_movies_panel->Reparent(output_frame->ActionsBook);
+    findctf_panel->Reparent(output_frame->ActionsBook);
+    generate_3d_panel->Reparent(output_frame->ActionsBook);
+    sharpen_3d_panel->Reparent(output_frame->ActionsBook);
+
+    // TODO: number two needs to be set from some record.
+    MenuBook->InsertPage(current_page_idx, output_frame, frame_name, true, 2);
+
+    // Layout() and Refresh() or Update() leaves the panels empty until the actions are "re-clicked"
+    // after something else. This is a hack to get the panels to update. FIXME
+    MenuBook->SetSelection(MenuBook->SetSelection(0)); 
+
+    Layout();
+    Refresh();
+}
+
+void MyMainFrame::OnSingleParticleWorkflow( wxCommandEvent& event ) {
+  
+    // The idenitiy of the event (selecting worflow menu) defines the output panel.
+    if (current_workflow != cistem::workflow::single_particle) { 
+        previous_workflow = current_workflow;
+        // With only two workflows, we don't need the switch, but
+        switch (current_workflow) {
+            case cistem::workflow::template_matching: {
+                UpdateWorkflow(actions_panel_tm, actions_panel_spa, "Actions");
+                // If other panels, e.g. results is a likely next candidate, it should go here. 
+                // TODO: if there are multiple panels to switch, we'll need to only do the update and set the icon for the LAST call in this sequence.
+                break;
+            }
+            default: {
+                MyDebugAssertTrue(false, "Unknown workflow");
+                break;
+            }
+        }
+        current_workflow = cistem::workflow::single_particle;
+    }
+}
+
+void MyMainFrame::OnTemplateMatchingWorkflow( wxCommandEvent& event ) {
+
+    if (current_workflow != cistem::workflow::template_matching) { 
+        previous_workflow = current_workflow;
+        UpdateWorkflow(actions_panel_spa, actions_panel_tm, "Actions");
+        current_workflow = cistem::workflow::template_matching;
+    }
+}

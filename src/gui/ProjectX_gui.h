@@ -103,6 +103,7 @@ class MainFrame : public wxFrame
 		wxPanel* LeftPanel;
 		wxMenuBar* m_menubar1;
 		wxMenu* FileMenu;
+		wxMenu* WorkflowMenu;
 		wxMenu* HelpMenu;
 
 		// Virtual event handlers, overide them in your derived class
@@ -112,6 +113,8 @@ class MainFrame : public wxFrame
 		virtual void OnFileOpenProject( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnFileCloseProject( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnFileExit( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnSingleParticleWorkflow( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnTemplateMatchingWorkflow( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnHelpLaunch( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnAboutLaunch( wxCommandEvent& event ) { event.Skip(); }
 
@@ -1145,9 +1148,9 @@ class MovieAlignResultsPanel : public wxPanel
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-/// Class ActionsPanel
+/// Class ActionsPanelParent
 ///////////////////////////////////////////////////////////////////////////////
-class ActionsPanel : public wxPanel
+class ActionsPanelParent : public wxPanel
 {
 	private:
 
@@ -1161,8 +1164,8 @@ class ActionsPanel : public wxPanel
 	public:
 		wxListbook* ActionsBook;
 
-		ActionsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
-		~ActionsPanel();
+		ActionsPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+		~ActionsPanelParent();
 
 };
 
@@ -2619,6 +2622,96 @@ class RefineTemplatePanelParent : public JobPanel
 
 		RefineTemplatePanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~RefineTemplatePanelParent();
+
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class RefineTemplateDevPanelParent
+///////////////////////////////////////////////////////////////////////////////
+class RefineTemplateDevPanelParent : public JobPanel
+{
+	private:
+
+	protected:
+		wxStaticLine* m_staticline149;
+		wxPanel* InputPanel;
+		wxStaticText* m_staticText262;
+		wxStaticText* m_staticText478;
+		VolumeAssetPickerComboPanel* ReferenceSelectPanel;
+		wxStaticText* InputErrorText;
+		wxStaticLine* m_staticline151;
+		wxScrolledWindow* ExpertPanel;
+		wxBoxSizer* InputSizer;
+		wxStaticText* m_staticText847;
+		wxButton* ResetAllDefaultsButton;
+		wxStaticText* m_staticText849;
+		NumericTextCtrl* MinPeakRadiusNumericCtrl;
+		wxStaticText* m_staticText846;
+		NumericTextCtrl* PeakSelectionThresholdNumericCtrl;
+		wxStaticText* m_staticText848;
+		NumericTextCtrl* PeakPlottingThresholdNumericCtrl;
+		wxStaticText* mask_radius;
+		wxRadioButton* RemoveShiftedPeaksYesRadio;
+		wxRadioButton* RemoveShiftedPeaksNoRadio;
+		wxStaticText* ShiftThresholdStaticText;
+		NumericTextCtrl* PeakChangeThresholdNumericTextCtrl;
+		wxStaticText* m_staticText201;
+		wxStaticText* m_staticText852;
+		NumericTextCtrl* MaskRadiusNumericTextCtrl;
+		wxStaticText* m_staticText189;
+		NumericTextCtrl* OutofPlaneStepNumericCtrl;
+		wxStaticText* m_staticText190;
+		NumericTextCtrl* InPlaneStepNumericCtrl;
+		wxStaticText* m_staticText190211;
+		NumericTextCtrl* HighResolutionLimitNumericCtrl;
+		wxStaticText* m_staticText698;
+		wxRadioButton* DefocusSearchYesRadio;
+		wxRadioButton* DefocusSearchNoRadio;
+		wxStaticText* DefocusRangeStaticText;
+		NumericTextCtrl* DefocusSearchRangeNumericCtrl;
+		wxStaticText* DefocusStepStaticText;
+		NumericTextCtrl* DefocusSearchStepNumericCtrl;
+		wxStaticText* m_staticText699;
+		wxRadioButton* AstigmatismSearchYesRadio;
+		wxRadioButton* AstigmatismSearchNoRadio;
+		wxStaticText* AstigmatismConstraint;
+		NumericTextCtrl* PixelSizeSearchRangeNumericCtrl;
+		wxStaticText* m_staticText6992;
+		wxRadioButton* BeamTiltSearchYesRadio1;
+		wxRadioButton* BeamTiltSearchNoRadio1;
+		wxStaticText* m_staticText6991;
+		wxPanel* OutputTextPanel;
+		wxTextCtrl* output_textctrl;
+		wxPanel* InfoPanel;
+		wxRichTextCtrl* InfoText;
+		wxStaticLine* m_staticline11;
+		wxPanel* ProgressPanel;
+		wxStaticText* NumberConnectedText;
+		wxGauge* ProgressBar;
+		wxStaticText* TimeRemainingText;
+		wxStaticLine* m_staticline60;
+		wxButton* FinishButton;
+		wxButton* CancelAlignmentButton;
+		wxPanel* StartPanel;
+		wxStaticText* RunProfileText;
+		MemoryComboBox* RunProfileComboBox;
+		wxButton* StartEstimationButton;
+
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
+		virtual void ResetAllDefaultsClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnInfoURL( wxTextUrlEvent& event ) { event.Skip(); }
+		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void StartEstimationClick( wxCommandEvent& event ) { event.Skip(); }
+
+
+	public:
+		ImageGroupPickerComboPanel* GroupComboBox;
+		ShowTemplateMatchResultsPanel* ResultsPanel;
+
+		RefineTemplateDevPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+		~RefineTemplateDevPanelParent();
 
 };
 

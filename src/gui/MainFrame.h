@@ -1,5 +1,6 @@
-#ifndef __MainFrame__
-#define __MainFrame__
+#ifndef _gui_MainFrame_h_
+#define _gui_MainFrame_h_
+
 
 /** Implementing MainFrame */
 class MyMainFrame : public MainFrame, public SocketCommunicator
@@ -93,11 +94,17 @@ class MyMainFrame : public MainFrame, public SocketCommunicator
 
 		bool MigrateProject(wxString old_project_directory, wxString new_project_directory);
 
+    template < class FrameTypeFrom, class FrameTypeTo > 
+    void UpdateWorkflow(FrameTypeFrom* input_frame, FrameTypeTo* output_frame, wxString frame_name);
 
+    void OnSingleParticleWorkflow( wxCommandEvent& event );
+    void OnTemplateMatchingWorkflow( wxCommandEvent& event );
+    inline cistem::workflow ReturnCurrentWorkflow() { return current_workflow; };
+    inline cistem::workflow ReturnPreviousWorkflow() { return previous_workflow; };
 
 		//LaunchJob(JobPanel *parent_panel, )
 
 };
 
 
-#endif // __MainFrame__
+#endif // _gui_MainFrame_h_

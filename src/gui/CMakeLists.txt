@@ -43,7 +43,8 @@ add_library(cisTEM_gui STATIC
 	MyVolumeAssetPanel.cpp 
 	MyResultsPanel.cpp 
 	MyAssetsPanel.cpp 
-	MyActionsPanel.cpp 
+	ActionsPanelSpa.cpp 
+    ActionsPanelTm.cpp
 	MySettingsPanel.cpp
 	MyParticlePositionExportDialog.cpp 
 	MyFrealignExportDialog.cpp 
@@ -72,13 +73,14 @@ add_library(cisTEM_gui STATIC
 	DistributionPlotDialog.cpp 
 	RefineCTFPanel.cpp
 	ShowTemplateMatchResultsPanel.cpp
+    MatchTemplatePanel.cpp 
+    MatchTemplateResultsPanel.cpp 
+    RefineTemplatePanel.cpp
 )
 
 if (BUILD_EXPERIMENTAL_FEATURES)
-	add_library(cisTEM_gui_experimental STATIC
-		MatchTemplatePanel.cpp 
-		MatchTemplateResultsPanel.cpp 
-		RefineTemplatePanel.cpp 
+	add_library(cisTEM_gui_experimental STATIC 
+        RefineTemplateDevPanel.cpp
 		MyExperimentalPanel.cpp
 	)
 endif(BUILD_EXPERIMENTAL_FEATURES)

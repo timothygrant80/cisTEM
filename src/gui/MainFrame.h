@@ -6,6 +6,8 @@
 class MyMainFrame : public MainFrame, public SocketCommunicator
 {
 		bool is_fullscreen;
+        cistem::workflow current_workflow;
+        cistem::workflow previous_workflow;
 	public:
 		/** Constructor */
 		MyMainFrame( wxWindow* parent );

@@ -3062,7 +3062,6 @@ void SimulateApp::calc_scattering_potential(const PDB * current_specimen,
         n_atoms_added = 0;
 
         atom_id = current_specimen->my_atoms.Item(current_atom).atom_type;
-
         if (atom_id == hydrogen) continue;
 
         element_inelastic_ratio = sqrtf(non_water_inelastic_scaling / sp.ReturnAtomicNumber(atom_id)); // Reimer/Ross_Messemer 1989

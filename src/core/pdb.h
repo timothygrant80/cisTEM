@@ -1,7 +1,7 @@
 #define OPEN_TO_READ 0
 #define OPEN_TO_WRITE 1
 #define OPEN_TO_APPEND 2
-#define MAX_NUMBER_OF_TIMESTEPS 200
+#define MAX_NUMBER_OF_TIMESTEPS 2000
 
 #define MAX_NUMBER_OF_NOISE_PARTICLES 6
 
@@ -47,8 +47,6 @@ class ParticleTrajectory {
         float current_orientation[MAX_NUMBER_OF_TIMESTEPS][12]; // Total xyz shift in ang then listed in column major order (surprised that marix.cpp does this. m00,m10,m20...m22
         float current_update[MAX_NUMBER_OF_TIMESTEPS][6]; // Update to get here. the first entries in these two should be the same.
         
-
-
 };
 
 WX_DECLARE_OBJARRAY(ParticleTrajectory, ArrayOfParticleTrajectories);

@@ -742,7 +742,7 @@ void PDB::TransformLocalAndCombine(PDB *pdb_ensemble, int number_of_pdbs, int fr
             if (pdb_ensemble[current_pdb].use_star_file)  {
                 // Fetch a clean copy of the atomic coordinates for this molecule
                 long current_atom = 0;
-                for (long intra_mol_current_atom = 0; intra_mol_current_atom < pdb_ensemble[current_pdb].number_of_atoms -1 ; intra_mol_current_atom++) {
+                for (long intra_mol_current_atom = 0; intra_mol_current_atom < pdb_ensemble[current_pdb].number_of_atoms; intra_mol_current_atom++) {
                     current_atom = intra_mol_current_atom + pdb_ensemble[current_pdb].number_of_atoms*current_particle;
                     this->my_atoms.Item(current_atom) = CopyAtom(pdb_ensemble[current_pdb].my_atoms.Item(intra_mol_current_atom));
                 

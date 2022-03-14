@@ -1,3 +1,5 @@
+// clang-format off
+
 #define INTEGER_DATABASE_VERSION 2
 #define START_PORT 3000
 #define END_PORT 5000
@@ -90,3 +92,4 @@ namespace cistem {
 WX_DECLARE_OBJARRAY(float, wxArrayFloat);
 WX_DECLARE_OBJARRAY(bool, wxArrayBool);
 
+// clang-format on

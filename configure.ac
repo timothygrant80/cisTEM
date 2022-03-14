@@ -2,6 +2,10 @@ AC_INIT(cisTEM, [2.0.0-alpha])
 AM_INIT_AUTOMAKE([subdir-objects])
 AC_CONFIG_MACRO_DIR([m4])
 
+# The include is to capture <cistem_config.h> where all symbols defined by AC_DEFINE | AC_DEFINE_UNQUOTED placed.
+# This is needed to ensure they are passed to nvcc and also cleans up the output of make.
+# Note: autoheader breaks if all three args are not present in AC_DEFINE
+# Note2: autoheader is v. picky, no space before a seperator "," e.g. [VARNAME], is okay but [VARNAME] , is not.
 INPUT_CPPFLAGS="$CPPFLAGS"
 INPUT_CXXFLAGS="$CXXFLAGS"
 
@@ -17,9 +21,11 @@ AC_LANG(C++)
 
 # Set this for the gpu makefile hack
 TOPSRCDIR=$srcdir
+CISTEM_CONFIG_DIR=`pwd`
 if test "x$TOPSRCDIR" = "x." ; then
 	TOPSRCDIR=`pwd`
 fi
+
 # don't let the AC_PROG_CXX set default flags, set them back to input..
 
 CXXFLAGS="$INPUT_CXXFLAGS"
@@ -33,15 +39,16 @@ AC_MSG_NOTICE([Setting up initial flags])
 #
 want_cuda="no"
 AX_CUDA 
-if test "$want_cuda" = "yes" ; then
-  CPP_STANDARD=17
-else
-  CPP_STANDARD=11
-fi
+CPP_STANDARD=17
+# if test "$want_cuda" = "yes" ; then
+#   CPP_STANDARD=17
+# else
+#   CPP_STANDARD=11
+# fi
 
-if test "x$CXX" = "xclang++"; then
-  CPP_STANDARD=17
-fi
+# if test "x$CXX" = "xclang++"; then
+#   CPP_STANDARD=17
+# fi
 
 # check to see if compiler warnings are desired.
 
@@ -68,18 +75,19 @@ AC_ARG_ENABLE([disable-warnings], AS_HELP_STRING([--disable compiler warnings], 
 ])
 
 
-
+# AC_DEFINE_UNQUOTED([_FILE_OFFSET_BITS], [64], [Define the file offset bits])
+# AC_DEFINE([_LARGEFILE_SOURCE], [], [Define the large file source])
 if test "x$CXX" = "xicpc"; then		
-	CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -no-prec-sqrt $WARNINGS_ON -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++${CPP_STANDARD} -wd1125"
-	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -no-prec-sqrt $WARNINGS_ON -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
+	CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -no-prec-sqrt $WARNINGS_ON -std=c++${CPP_STANDARD} -wd1125"
+	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -no-prec-sqrt $WARNINGS_ON"
 else 
   if test "x$CXX" = "xclang++"; then
     # Clang needs the -no-c++11-narrowing suppression to compile
-	  CXXFLAGS="$CXXFLAGS -DNDEBUG -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++${CPP_STANDARD} -Wno-c++11-narrowing" 		
-	  CPPFLAGS="$CPPFLAGS -DNDEBUG -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
+	  CXXFLAGS="$CXXFLAGS -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -std=c++${CPP_STANDARD} -Wno-c++11-narrowing" 		
+	  CPPFLAGS="$CPPFLAGS -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations"
   else 
-	  CXXFLAGS="$CXXFLAGS -DNDEBUG -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -std=c++${CPP_STANDARD}" 		
-	  CPPFLAGS="$CPPFLAGS -DNDEBUG -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE"
+	  CXXFLAGS="$CXXFLAGS -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -std=c++${CPP_STANDARD}" 		
+	  CPPFLAGS="$CPPFLAGS -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations"
 
 	  #sqlite needs dl on gcc
 	
@@ -175,15 +183,22 @@ AS_HELP_STRING([--with-wx-config=FILE],[Use the given path to wx-config when det
 AC_ARG_ENABLE(debugmode, AS_HELP_STRING([--enable-debugmode],[Compile in debug mode [default=no]]),
 [
   if test "$enableval" = yes; then
-  if test "x$CXX" = "xicpc"; then   
-    CXXFLAGS="-O2 -debug -no-prec-div -no-prec-sqrt $WARNINGS_ON -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG -std=c++${CPP_STANDARD} -wd1125"
-    CPPFLAGS="-O2 -debug -no-prec-div -no-prec-sqrt $WARNINGS_ON -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG"
+    AC_DEFINE([DEBUG], [], [Define the debug flag])
+    if test "x$CXX" = "xicpc"; then   
+        CXXFLAGS="-O2 -debug -no-prec-div -no-prec-sqrt $WARNINGS_ON -std=c++${CPP_STANDARD} -wd1125"
+        CPPFLAGS="-O2 -debug -no-prec-div -no-prec-sqrt $WARNINGS_ON"
+    else
+        CPPFLAGS="-O2 -g $WARNINGS_ON $INPUT_CPPFLAGS"
+        CXXFLAGS="-O2 -g -std=c++${CPP_STANDARD} $WARNINGS_ON $INPUT_CXXFLAGS"
+    fi
   else
-    CPPFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG $WARNINGS_ON $INPUT_CPPFLAGS"
-    CXXFLAGS="-O2 -g -D_FILE_OFFSET_BITS=64 -D_LARGEFILE_SOURCE -DDEBUG -std=c++${CPP_STANDARD} $WARNINGS_ON $INPUT_CXXFLAGS"
+    AC_DEFINE([NDEBUG], [], [Define the nodebug flag for either g++ or clang builds])
   fi
-  fi
- ])
+ ], 
+[
+    # Action if not given
+    AC_DEFINE([NDEBUG], [], [Define the nodebug flag for either g++ or clang builds])
+])
   
 
 ###############################
@@ -204,8 +219,7 @@ if test "$want_cuda" = "yes" ; then
 	  ])
 
   if test "x$use_rotated_tm" = "x1"; then
-    CPPFLAGS="$CPPFLAGS -DROTATEFORSPEED"
-    CXXFLAGS="$CXXFLAGS -DROTATEFORSPEED"
+    AC_DEFINE([ROTATEFORSPEED], [], [Rotate image for faster FFT in template matching])
     AC_MSG_NOTICE([Enabling rotated-tm]);
   fi
 
@@ -213,10 +227,13 @@ if test "$want_cuda" = "yes" ; then
   CUDA_CPPFLAGS="$CUDA_CFLAGS $NVCCFLAGS"
   CUDA_CXXFLAGS="$CUDA_CFLAGS $NVCCFLAGS"
   
-  CXXFLAGS="$CXXFLAGS -DENABLEGPU $use_gpu_cache_hints $CUDA_CFLAGS"
-  CPPFLAGS="$CPPFLAGS -DENABLEGPU $use_gpu_cache_hints $CUDA_CFLAGS"
+  CXXFLAGS="$CXXFLAGS $use_gpu_cache_hints $CUDA_CFLAGS"
+  CPPFLAGS="$CPPFLAGS $use_gpu_cache_hints $CUDA_CFLAGS"
   AC_MSG_NOTICE([Using CUDA_CXXFLAGS=$CUDA_CXXFLAGS])
   AC_MSG_NOTICE([Using CUDA_LIBS=$CUDA_LIBS])
+
+  AC_DEFINE([ENABLEGPU], [], [Enable gpu codepath])
+
 fi
 
 ##############################
@@ -253,17 +270,17 @@ AM_CONDITIONAL([ENABLESAMPLES_AM], [test "$want_samples" = "yes"])
 want_profiling="no"  
 AC_ARG_ENABLE(profiling, AS_HELP_STRING([--enable-profiling],[Include fine-grained profiling [default=no]]),[
   if test "$enableval" = yes; then
-    CXXFLAGS="$CXXFLAGS -DPROFILING"
-    CPPFLAGS="$CPPFLAGS -DPROFILING"
+    AC_DEFINE([PROFILING], [], [Define the profiling flag])
   	want_profiling="true"
   	AC_MSG_NOTICE([Compiling with fine-grained profiling])	
   fi
   ]) 
+
 AM_CONDITIONAL([ENABLEPROFILING_AM], [test x$want_profiling = xtrue])
 
 AC_ARG_ENABLE(gpu-debug, AS_HELP_STRING([--enable-gpu-debug],[Compile heavy synchronous checking [default=no]]),[
   if test "$enableval" = yes; then
-    AC_DEFINE([ENABLE_GPU_DEBUG])
+    AC_DEFINE([ENABLE_GPU_DEBUG],[], [use the gpu or not])
   	AC_MSG_NOTICE([Compiling with synchronizing debug checks for GPU code])	
   fi
   ]) 
@@ -272,12 +289,10 @@ AC_ARG_ENABLE(gpu-debug, AS_HELP_STRING([--enable-gpu-debug],[Compile heavy sync
 compile_experimental="false"
 AC_ARG_ENABLE(experimental, AS_HELP_STRING([--enable-experimental],[Compile with experimental [default=no]]),[
   if test "$enableval" = yes; then
-  CPPFLAGS="$CPPFLAGS -DEXPERIMENTAL"
-  if test "x$CXX" = "xicpc"; then 
-    CXXFLAGS="$CXXFLAGS -DEXPERIMENTAL  -wd1595"
-  else
-    CXXFLAGS="$CXXFLAGS -DEXPERIMENTAL"
-  fi
+    AC_DEFINE([EXPERIMENTAL], [], [Define the experimental flag])
+    if test "x$CXX" = "xicpc"; then 
+        CXXFLAGS="$CXXFLAGS -wd1595"
+    fi
   compile_experimental="true"
   fi
   ])
@@ -286,8 +301,8 @@ AC_ARG_ENABLE(experimental, AS_HELP_STRING([--enable-experimental],[Compile with
 
 AC_ARG_ENABLE(rigorous-sockets, AS_HELP_STRING([--enable-rigorous-sockets],[Use rigorous socket checking [default=no]]),[
   if test "$enableval" = yes; then
-  CPPFLAGS="$CPPFLAGS -DRIGOROUS_SOCKET_CHECK"
-  CXXFLAGS="$CXXFLAGS -DRIGOROUS_SOCKET_CHECK"  
+    AC_DEFINE([RIGOROUS_SOCKETS],[], [Define the rigorous sockets flag])
+  	AC_MSG_NOTICE([Compiling with rigorous socket checking])	
   fi
   ])
  
@@ -336,6 +351,10 @@ WXTEST
 # Verify minimus requires
 vers=`echo $wxversion | $AWK 'BEGIN { FS = "."; } { printf "% d", ($1  1000 + $2)  1000 + $3;}'`
 if test -n "$vers" && test "$vers" -ge 3000004; then
+
+    # TODO: Get all define symbols from WX into cistem_config.h
+    # wx_cxx_defines="`$($WXCONFIG $WXCONFIGFLAGS --cxxflags) | awk  'BEGIN{output_string=""}{ for (i = 1; i <= NF; i++) if($i ~ /^-D/) output_string=output_string" "$i}END{print output_string}'`"   
+
         WX_CPPFLAGS="`$WXCONFIG $WXCONFIGFLAGS --cppflags`"
         WX_CXXFLAGS="`$WXCONFIG $WXCONFIGFLAGS --cxxflags | sed -e 's/-fno-exceptions//'`"
         WX_LIBS="`$WXCONFIG $WXCONFIGFLAGS --libs richtext,std,aui`"
@@ -369,9 +388,7 @@ fi
 if test "x$HAVE_MKL" = "xyes"; then
 
 	AC_MSG_NOTICE(Using Intel MKL for fast Fourier transforms)
-	
-	CXXFLAGS="$CXXFLAGS -DMKL"
-	CPPFLAGS="$CPPFLAGS -DMKL"
+	AC_DEFINE([MKL], [], [Use the MKL])
 
 	if test "x$CXX" = "xicpc"; then
 		CPPFLAGS="$CPPFLAGS -mkl=sequential"
@@ -433,7 +450,7 @@ AC_CHECK_PROG(SVB_CHECK,svnversion,yes)
 if test "x$SVN_CHECK" == "xyes" ; then
   define([svnversion], esyscmd([sh -c "svnversion -n"]))dnl
   if test "x$svnversion" != "xUnversioned directory"; then
-  AC_DEFINE(CISTEM_SVN_REV, "svnversion", [SVN Revision])
+    AC_DEFINE(CISTEM_SVN_REV, "svnversion", [SVN Revision])
   fi
 fi
 
@@ -451,15 +468,15 @@ AC_CHECK_FILE("$TOPSRCDIR/.git/HEAD",
       # All the args require the extra double quotes to be properly formated later on.
       
       # Get the current branch, which could have multiple refs, which is why we need the awk (*) marks the active branch.
-      AC_DEFINE_UNQUOTED([CISTEM_CURRENT_BRANCH],["`git  branch | awk '/^\*/{print $2}'`"])
+      AC_DEFINE_UNQUOTED([CISTEM_CURRENT_BRANCH],["`git  branch | awk '/^\*/{print $2}'`"], [get the current branch])
       # Get the first reachable tag - number of commits since that tag - short commit hash
       version_name="`cat $TOPSRCDIR/VERSION | $AWK  '{print $1}'`"
       version_commit="`cat $TOPSRCDIR/VERSION | $AWK  '{print $2}'`"
       is_dirty="`git status --short | awk '{if($0!="" && FNR==1) print "-dirty"}'`"
-      AC_DEFINE_UNQUOTED([CISTEM_VERSION_TEXT],["`git rev-list ${version_commit}..HEAD | awk -v NAME=$version_name -v ISDIRTY=$is_dirty 'BEGIN{n=0}{n=n+1}{if(FNR==1) H=$1}END{print NAME"-"n-1"-"substr(H,1,7)ISDIRTY}'`"])
+      AC_DEFINE_UNQUOTED([CISTEM_VERSION_TEXT],["`git rev-list ${version_commit}..HEAD | awk -v NAME=$version_name -v ISDIRTY=$is_dirty 'BEGIN{n=0}{n=n+1}{if(FNR==1) H=$1}END{print NAME"-"n-1"-"substr(H,1,7)ISDIRTY}'`"], [current version text])
       # Get both an easily parsed date, as well as a more readable date
-      AC_DEFINE_UNQUOTED([CISTEM_TIME_YYMMDDHHMMSS],["`git show --no-patch --no-notes --pretty='%cd' --date=format:%y%m%d%H%M%S`"])
-      AC_DEFINE_UNQUOTED([CISTEM_TIME_READABLE],["`git show --no-patch --no-notes --pretty='%ci' --date=format:%y%m%d%H%M%S`"]) 
+      AC_DEFINE_UNQUOTED([CISTEM_TIME_YYMMDDHHMMSS],["`git show --no-patch --no-notes --pretty='%cd' --date=format:%y%m%d%H%M%S`"], [time of build complete])
+      AC_DEFINE_UNQUOTED([CISTEM_TIME_READABLE],["`git show --no-patch --no-notes --pretty='%ci' --date=format:%y%m%d%H%M%S`"], [time of build readable]) 
       
     else
       AC_MSG_NOTICE([We DO NOT have git on path])
@@ -472,6 +489,17 @@ AC_CHECK_FILE("$TOPSRCDIR/.git/HEAD",
 fi
 
 
+CXXFLAGS="$CXXFLAGS -I$CISTEM_CONFIG_DIR"
+CPPFLAGS="$CPPFLAGS -I$CISTEM_CONFIG_DIR"
+WX_CPPFLAGS="$WX_CPPFLAGS -I$CISTEM_CONFIG_DIR"
+WX_CPPFLAGS_BASE="$WX_CPPFLAGS_BASE -I$CISTEM_CONFIG_DIR"
+
+# Make sure the host compiler gets all flags when called from nvcc
+CUDA_TO_CPP="`echo $CPPFLAGS $WX_CPPFLAGS | sed -e 's/\s\+/,/g' | awk '{print "-Xcompiler " $0}'`"
+CUDA_TO_CXX="`echo $CXXFLAGS $WX_CXXFLAGS | sed -e 's/\s\+/,/g' | awk '{print "-Xcompiler " $0}'`"
+CUDA_CPPFLAGS="$CUDA_CPPFLAGS $CUDA_TO_CPP "
+CUDA_CXXFLAGS="$CUDA_CXXFLAGS $CUDA_TO_CXX "
+
 AC_SUBST(WX_LIBS)
 AC_SUBST(WX_CPPFLAGS)
 AC_SUBST(WX_LIBS_BASE)
@@ -480,6 +508,8 @@ AC_SUBST(CUDA_CXXFLAGS)
 AC_SUBST(CUDA_CPPFLAGS)
 AC_SUBST(CUDA_LIBS)
 
-AC_CONFIG_FILES([Makefile src/Makefile])
+  AC_MSG_NOTICE([Using CUDA_CXXFLAGS=$CUDA_CXXFLAGS])
 
+AC_CONFIG_FILES([Makefile src/Makefile])
+AC_CONFIG_HEADERS([cistem_config.h:cistem_config.in])
 AC_OUTPUT

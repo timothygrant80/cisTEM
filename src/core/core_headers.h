@@ -21,6 +21,8 @@ typedef struct CurvePoint {
   float value_n;
 } CurvePoint;
 
+// All the defines set in configure.ac
+#include <cistem_config.h>
 
 #include <string>
 #include <iostream>

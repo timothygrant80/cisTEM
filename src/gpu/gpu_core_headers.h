@@ -9,9 +9,6 @@
 #ifndef GPU_CORE_HEADERS_H_
 #define GPU_CORE_HEADERS_H_
 
-#ifndef ENABLEGPU
-#define ENABLEGPU true
-#endif
 
 
 #include "../core/core_headers.h"

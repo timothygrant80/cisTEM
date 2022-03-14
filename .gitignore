@@ -22,3 +22,4 @@ RemoteSystemsTempFiles
 **/build*
 **/.DS_Store
 .vscode
+scripts/testing/post_format_test.cpp

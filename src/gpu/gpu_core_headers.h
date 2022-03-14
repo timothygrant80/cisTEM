@@ -23,7 +23,7 @@ const int MAX_GPU_COUNT = 32;
 #define gMin(a,b) (((a) < (b)) ? (a) : (b))
 #define gMax(a,b) (((a) > (b)) ? (a) : (b))
 
-
+// clang-format off
 
 #ifndef ENABLE_GPU_DEBUG
 #define cudaErr(err, ...) { err; }
@@ -36,6 +36,8 @@ const int MAX_GPU_COUNT = 32;
 #define postcheck { cudaErr(cudaPeekAtLastError()); cudaError_t error = cudaStreamSynchronize(cudaStreamPerThread); cudaErr(error); };
 #define precheck { cudaErr(cudaGetLastError()); }
 #endif
+
+// clang-format on
 
 // Complex data type
 typedef float2 Complex;

@@ -15,12 +15,12 @@ Water::Water(bool do_carbon)
 
 }
 
-Water::Water(const PDB *current_specimen, int wanted_size_neighborhood, float wanted_pixel_size, float wanted_dose_per_frame, RotationMatrix max_rotation, float in_plane_rotation, int *padX, int *padY, int nThreads, bool is_single_particle, bool do_carbon)
+Water::Water(const PDB *current_specimen, int wanted_size_neighborhood, float wanted_pixel_size, float wanted_dose_per_frame, RotationMatrix max_rotation, float in_plane_rotation, int *padX, int *padY, int nThreads, bool pad_based_on_rotation, bool do_carbon)
 {
 
 	//
 	this->simulate_phase_plate = do_carbon;
-	this->Init( current_specimen, wanted_size_neighborhood, wanted_pixel_size, wanted_dose_per_frame, max_rotation, in_plane_rotation, padX, padY, nThreads, is_single_particle);
+	this->Init( current_specimen, wanted_size_neighborhood, wanted_pixel_size, wanted_dose_per_frame, max_rotation, in_plane_rotation, padX, padY, nThreads, pad_based_on_rotation);
 
 
 }
@@ -34,7 +34,7 @@ Water::~Water()
 	}
 }
 
-void Water::Init(const PDB *current_specimen, int wanted_size_neighborhood, float wanted_pixel_size, float wanted_dose_per_frame, RotationMatrix max_rotation, float in_plane_rotation, int *padX, int *padY, int nThreads, bool is_single_particle)
+void Water::Init(const PDB *current_specimen, int wanted_size_neighborhood, float wanted_pixel_size, float wanted_dose_per_frame, RotationMatrix max_rotation, float in_plane_rotation, int *padX, int *padY, int nThreads, bool pad_based_on_rotation)
 {
 
 	this->size_neighborhood = wanted_size_neighborhood;
@@ -66,7 +66,9 @@ void Water::Init(const PDB *current_specimen, int wanted_size_neighborhood, floa
 
 		wxPrintf("size pre rot padding %d %d %f rot\n", current_specimen->vol_nX, current_specimen->vol_nY, in_plane_rotation);
 
-		if (! is_single_particle)
+        // The padding function should be renamed to something that reflects that it adds padding based on that needed for rotation.
+        // The boolean param should be renamed to reflect this as well.
+		if (! pad_based_on_rotation)
 		{
 			ReturnPadding(max_rotation, in_plane_rotation, current_specimen->vol_nZ, current_specimen->vol_nX, current_specimen->vol_nY, padX, padY, &padZ);
 		}

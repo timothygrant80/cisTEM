@@ -891,8 +891,9 @@ void SimulateApp::DoInteractiveUserInput()
             else {
                 SendErrorAndCrash(wxString::Format("Error: Input star file %s not found\n", preexisting_particle_file_name));
             }
-            std::string wanted_default = std::to_string(default_number_parameters);
-            number_preexisting_particles = my_input->GetIntFromUser("Limit the number of particles used from the star file.", "0: use all", wanted_default.c_str());
+            // The following doesn't work if there is a .dff file
+            // std::string wanted_default = std::to_string(default_number_parameters);
+            // number_preexisting_particles = my_input->GetIntFromUser("Limit the number of particles used from the star file.", "0: use all", wanted_default.c_str());
         }
 
         // image type : 
@@ -919,14 +920,16 @@ void SimulateApp::DoInteractiveUserInput()
                 input_star_file.parameters_that_were_read.pre_exposure &&
                 input_star_file.parameters_that_were_read.total_exposure &&
                 input_star_file.parameters_that_were_read.microscope_spherical_aberration_mm &&
-                input_star_file.parameters_that_were_read.microscope_voltage_kv) {
+                input_star_file.parameters_that_were_read.microscope_voltage_kv &&
+                input_star_file.parameters_that_were_read.beam_tilt_x &&
+                input_star_file.parameters_that_were_read.beam_tilt_y) {
 
                 wanted_parameters_are_present = true;
 
                 kV = input_star_file.ReturnMicroscopekV(0);
                 spherical_aberration = input_star_file.ReturnMicroscopeCs(0);
 
-                float max_exposure, mean_phase_shift;
+                float max_exposure, mean_phase_shift,mean_beam_tilt_x(0.f), mean_beam_tilt_y(0.f);
                 mean_defocus = 0.f;
                 mean_phase_shift = 0.f;
                 number_of_frames = 1;
@@ -939,8 +942,12 @@ void SimulateApp::DoInteractiveUserInput()
                 for (int counter = 0; counter < number_preexisting_particles; counter++) {
                     mean_defocus +=  0.5f*(input_star_file.ReturnDefocus1(counter) + input_star_file.ReturnDefocus2(counter));
                     number_of_frames = std::max(number_of_frames, float(input_star_file.ReturnParticleGroup(counter))); // FIXME, why is number of frames a float, prob a bad idea
+                    mean_beam_tilt_x += input_star_file.ReturnBeamTiltX(counter);
+                    mean_beam_tilt_y += input_star_file.ReturnBeamTiltY(counter);
                 }
                 mean_defocus /= number_preexisting_particles;
+                beam_tilt_x = mean_beam_tilt_x / number_preexisting_particles;
+                beam_tilt_y = mean_beam_tilt_y / number_preexisting_particles;
                 dose_rate = 3.0f; // FIXME this is not currently in the parameter file
             }
             else { 
@@ -992,10 +999,13 @@ void SimulateApp::DoInteractiveUserInput()
         in_plane_sigma = my_input->GetFloatFromUser("Standard deviation on angles in plane (degrees)","","2",0,100); // spread in-plane angles based on neighbors
         tilt_angle_sigma = my_input->GetFloatFromUser("Standard deviation on tilt-angles (degrees)","","0.1",0,10);; //;
         magnification_sigma = my_input->GetFloatFromUser("Standard deviation on magnification (fraction)","","0.0001",0,1);//;
-        beam_tilt_x = my_input->GetFloatFromUser("Beam-tilt in X (milli radian)","","0.0",-300,300);//0.6f;
-        beam_tilt_y = my_input->GetFloatFromUser("Beam-tilt in Y (milli radian)","","0.0",-300,300);//-0.2f;
-        particle_shift_x =  my_input->GetFloatFromUser("Beam-tilt particle shift in X (Angstrom)","","0.0",-100,100);
-        particle_shift_y =  my_input->GetFloatFromUser("Beam-tilt particle shift in Y (Angstrom)","","0.0",-100,100);
+        if ( ! use_existing_params ) {
+            beam_tilt_x = my_input->GetFloatFromUser("Beam-tilt in X (milli radian)","","0.0",-300,300);//0.6f;
+            beam_tilt_y = my_input->GetFloatFromUser("Beam-tilt in Y (milli radian)","","0.0",-300,300);//-0.2f;
+            particle_shift_x =  my_input->GetFloatFromUser("Beam-tilt particle shift in X (Angstrom)","","0.0",-100,100);
+            particle_shift_y =  my_input->GetFloatFromUser("Beam-tilt particle shift in Y (Angstrom)","","0.0",-100,100);
+        }
+
 
 
 
@@ -1607,7 +1617,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
     int padSpecimenX;
     int padSpecimenY;
 
-        if (do3d) padSpecimenX = 0;
+    if (do3d) padSpecimenX = 0;
     else
         {
       padSpecimenX = wanted_output_size;
@@ -1647,12 +1657,12 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
         timer.start("Calc H20 Box");
         if (iTilt == 0 && iFrame == 0)
         {
-            bool is_single_particle;
-            if (this->make_tilt_series || this->make_particle_stack == 0) is_single_particle = false;
-            else is_single_particle = true;
-            if (DO_PRINT) { wxPrintf("Is single particle is %d\n", is_single_particle); }
+            bool pad_based_on_rotation;
+            if (this->make_tilt_series || (this->make_particle_stack == 0 && ! use_existing_params)) pad_based_on_rotation = false;
+            else pad_based_on_rotation = true;
+            if (DO_PRINT) { wxPrintf("Padding based on image rotation is (%d)\n", pad_based_on_rotation); }
             if (DO_PRINT) { wxPrintf("Current specimen is x,y,z %d,%d,%d\n", current_specimen.vol_nX, current_specimen.vol_nY, current_specimen.vol_nZ); }
-            water_box.Init( &current_specimen,this->size_neighborhood_water, this->wanted_pixel_size, this->dose_per_frame, max_rotation, tilt_axis, &padSpecimenX, &padSpecimenY, number_of_threads, is_single_particle);
+            water_box.Init( &current_specimen,this->size_neighborhood_water, this->wanted_pixel_size, this->dose_per_frame, max_rotation, tilt_axis, &padSpecimenX, &padSpecimenY, number_of_threads, pad_based_on_rotation);
         }
         timer.lap("Calc H20 Box");
 

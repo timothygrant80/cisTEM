@@ -164,10 +164,8 @@ void  MyParticlePositionAssetPanel::RemoveAllFromDatabase()
 	}
 
 	main_frame->current_project.database.ExecuteSQL("DROP TABLE PARTICLE_POSITION_GROUP_LIST");
-	main_frame->current_project.database.CreateParticlePositionGroupListTable();
-
 	main_frame->current_project.database.ExecuteSQL("DROP TABLE PARTICLE_POSITION_ASSETS");
-	main_frame->current_project.database.CreateParticlePositionAssetTable();
+	main_frame->current_project.database.CreateAllTables();
 	main_frame->current_project.database.Commit();
 
 

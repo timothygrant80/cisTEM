@@ -505,7 +505,8 @@ class SimulateApp : public MyApp
   cisTEMParameters output_star_file;
   cisTEMParameterLine parameters;
   std::string               parameter_file_name;
-  std::string    star_file_name;
+  std::string    input_star_file_name;
+  std::string   output_star_file_name;
   long number_preexisting_particles;
   wxString preexisting_particle_file_name;
 
@@ -949,6 +950,7 @@ void SimulateApp::DoInteractiveUserInput()
                 beam_tilt_x = mean_beam_tilt_x / number_preexisting_particles;
                 beam_tilt_y = mean_beam_tilt_y / number_preexisting_particles;
                 dose_rate = 3.0f; // FIXME this is not currently in the parameter file
+                output_star_file = input_star_file; // we may change some of the parameters or save frames
             }
             else { 
                 SendInfo("Warning: You must specify all parameters in the input star file\nIgnoring the input star file.\nQuit, or continue by entering manual parameters.\n");
@@ -1022,7 +1024,7 @@ void SimulateApp::DoInteractiveUserInput()
 
  wavelength           = 1226.39 / sqrtf(kV*1000 + 0.97845e-6*powf(kV*1000,2)) * 1e-2; // Angstrom
 
-    star_file_name = output_filename + ".star";
+    output_star_file_name = output_filename + ".star";
 
   if (DO_PHASE_PLATE)
   {
@@ -2683,7 +2685,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
 
         if ( ( ONLY_SAVE_SUMS && iFrame < 1 ) || ( ! ONLY_SAVE_SUMS ) )
         {
-            input_star_file.all_parameters.Add(parameters);
+            output_star_file.all_parameters.Add(parameters);
         }
 
 
@@ -2810,7 +2812,7 @@ void SimulateApp::probability_density_2d(PDB *pdb_ensemble, int time_step)
     } // end of loop over tilts, todo rename number_of_images
 
     // Write out the star file, TODO should the ranges be explicitly defined?
-    input_star_file.WriteTocisTEMStarFile(star_file_name);
+    output_star_file.WriteTocisTEMStarFile(output_star_file_name);
 
 
   if (DO_PRINT) {wxPrintf("%s\n",this->output_filename);}

@@ -1,5 +1,7 @@
 #include "../../core/core_headers.h"
 
+#include "../../core/cistem_constants.h"
+
 
 class
 MakeTemplateResult : public MyApp
@@ -194,7 +196,7 @@ bool MakeTemplateResult::DoCalculation()
 	if (ignore_N_pixels_from_the_border < 0)
 	{
 		// Default value is -1 giving
-		ignore_N_pixels_from_the_border = input_reconstruction_file.ReturnXSize() / 4 + 1;
+		ignore_N_pixels_from_the_border = input_reconstruction_file.ReturnXSize() / cistem::fraction_of_box_size_to_exclude_for_border + 1;
 		// Otherwise, the user has asked for a specific value. Only available from the CLI.
 	}
 

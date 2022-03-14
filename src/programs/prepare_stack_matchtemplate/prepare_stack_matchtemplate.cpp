@@ -1,5 +1,6 @@
 #include "../../core/core_headers.h"
 
+#include "../../core/cistem_constants.h"
 
 class
 MakeParticleStack : public MyApp
@@ -212,8 +213,8 @@ bool MakeParticleStack::DoCalculation()
     while (1 == 1) {
         if (! read_coordinates) {
             // look for a peak..
-            // match_template box/4+1 (unless override), refine_template 50, here box/2 : FIXME this is ridiculous
-            current_peak = mip_image.FindPeakWithIntegerCoordinates(0.0, FLT_MAX, 50); ///box_size / 2 + 1);
+
+            current_peak = mip_image.FindPeakWithIntegerCoordinates(0.0, FLT_MAX, box_size / cistem::fraction_of_box_size_to_exclude_for_border + 1);
             if (current_peak.value < wanted_threshold) break;
 
             // ok we have peak..

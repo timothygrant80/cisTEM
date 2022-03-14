@@ -1,5 +1,7 @@
 #include "../../core/core_headers.h"
 
+#include "../../core/cistem_constants.h"
+
 
 // Values for data that are passed around in the results.
 const int number_of_output_images = 8; //mip, psi, theta, phi, pixel, defocus, sums, sqsums (scaled mip is not sent out)
@@ -1862,7 +1864,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
             nTrys++;
 //            wxPrintf("Trying the %ld'th peak\n",nTrys);
             // FIXME min-distance from edges would be better to set dynamically.
-            current_peak = scaled_mip.FindPeakWithIntegerCoordinates(0.0, FLT_MAX, input_reconstruction.logical_x_dimension / 4 + 1);
+            current_peak = scaled_mip.FindPeakWithIntegerCoordinates(0.0, FLT_MAX, input_reconstruction.logical_x_dimension / cistem::fraction_of_box_size_to_exclude_for_border + 1);
             if (current_peak.value < expected_threshold) break;
 
             // ok we have peak..
@@ -1936,7 +1938,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
             // CURRENTLY HARD CODED TO ONLY DO 1000 MAX //
             //////////////////////////////////////////////
 
-            if (number_of_peaks_found <= MAX_ALLOWED_NUMBER_OF_PEAKS)
+            if (number_of_peaks_found <= cistem::maximum_number_of_detections)
             {
 
                 angles.Init(current_phi, current_theta, current_psi, 0.0, 0.0);
@@ -1957,11 +1959,8 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float *result_array, lon
             }
             else
             {
-                SendError("More than 1000 peaks above threshold were found. Limiting results to 1000 peaks.\n");
+                SendInfo("WARNING: More than 1000 peaks above threshold were found. Limiting results to 1000 peaks.\n");
                 break;
-//                SendError("Something seems to have gone wrong, more than 1000 _peaks_ were found\n");
-//                scaled_mip.QuickAndDirtyWriteSlice("/tmp/scaled_mip_1000.mrc", 1);
-//                exit(-1);
             }
 
         }

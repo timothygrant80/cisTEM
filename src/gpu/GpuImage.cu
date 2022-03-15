@@ -1171,7 +1171,7 @@ void GpuImage::ApplyBFactor(float bfactor, const float vertical_mask_size, const
 
   MyDebugAssertFalse(is_in_real_space, "This function is only for Fourier space images.");
   MyDebugAssertTrue(dims.z == 1, "This function is only for 2D images.");
-	MyDebugAssertTrue(vertical_half_width > 0 && horizontal_half_width > 0, "Half width must be greater than 0");
+    MyDebugAssertTrue(vertical_mask_size > 0 && horizontal_mask_size > 0, "Half width must be greater than 0");
 
   precheck
   ReturnLaunchParamters(dims, false);

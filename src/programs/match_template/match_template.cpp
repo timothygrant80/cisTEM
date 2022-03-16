@@ -1,5 +1,7 @@
 #include "../../core/core_headers.h"
 
+#include "../../core/cistem_constants.h"
+
 // Values for data that are passed around in the results.
 const int number_of_output_images     = 8; //mip, psi, theta, phi, pixel, defocus, sums, sqsums (scaled mip is not sent out)
 const int number_of_meta_data_values  = 6; // img_x, img_y, number cccs, histogram values.
@@ -60,7 +62,7 @@ class ImageProjectionComparison {
     Particle*            particle;
     ReconstructedVolume* reference_volume;
     Image*               projection_image;
-    //	Image						*temp_image;
+    //    Image                        *temp_image;
 };
 
 // This is the function which will be minimized
@@ -69,9 +71,9 @@ float FrealignObjectiveFunction(void* scoring_parameters, float* array_of_values
     comparison_object->particle->temp_parameters = comparison_object->particle->current_parameters;
     comparison_object->particle->UnmapParameters(array_of_values);
 
-    //	comparison_object->reference_volume->CalculateProjection(*comparison_object->projection_image, *comparison_object->particle->ctf_image,
-    //			comparison_object->particle->alignment_parameters, 0.0, 0.0,
-    //			comparison_object->particle->pixel_size / comparison_object->particle->filter_radius_high, false, true);
+    //    comparison_object->reference_volume->CalculateProjection(*comparison_object->projection_image, *comparison_object->particle->ctf_image,
+    //            comparison_object->particle->alignment_parameters, 0.0, 0.0,
+    //            comparison_object->particle->pixel_size / comparison_object->particle->filter_radius_high, false, true);
 
     if ( comparison_object->particle->no_ctf_weighting )
         comparison_object->reference_volume->CalculateProjection(*comparison_object->projection_image,
@@ -88,33 +90,33 @@ float FrealignObjectiveFunction(void* scoring_parameters, float* array_of_values
                                                                  *comparison_object->particle->ctf_image, comparison_object->particle->alignment_parameters, 0.0, 0.0,
                                                                  comparison_object->particle->pixel_size / comparison_object->particle->filter_radius_high, false, true, false, true, true);
 
-    //	if (comparison_object->particle->origin_micrograph < 0) comparison_object->particle->origin_micrograph = 0;
-    //	comparison_object->particle->origin_micrograph++;
-    //	for (int i = 0; i < comparison_object->projection_image->real_memory_allocated; i++) {comparison_object->projection_image->real_values[i] *= fabs(comparison_object->projection_image->real_values[i]);}
-    //	comparison_object->projection_image->ForwardFFT();
-    //	comparison_object->projection_image->CalculateCrossCorrelationImageWith(comparison_object->particle->particle_image);
-    //	comparison_object->projection_image->SwapRealSpaceQuadrants();
-    //	comparison_object->projection_image->BackwardFFT();
-    //	comparison_object->projection_image->QuickAndDirtyWriteSlice("proj.mrc", comparison_object->particle->origin_micrograph);
-    //	comparison_object->projection_image->SwapRealSpaceQuadrants();
-    //	comparison_object->particle->particle_image->SwapRealSpaceQuadrants();
-    //	comparison_object->particle->particle_image->BackwardFFT();
-    //	comparison_object->particle->particle_image->QuickAndDirtyWriteSlice("part.mrc", comparison_object->particle->origin_micrograph);
-    //	comparison_object->particle->particle_image->SwapRealSpaceQuadrants();
-    //	exit(0);
+    //    if (comparison_object->particle->origin_micrograph < 0) comparison_object->particle->origin_micrograph = 0;
+    //    comparison_object->particle->origin_micrograph++;
+    //    for (int i = 0; i < comparison_object->projection_image->real_memory_allocated; i++) {comparison_object->projection_image->real_values[i] *= fabs(comparison_object->projection_image->real_values[i]);}
+    //    comparison_object->projection_image->ForwardFFT();
+    //    comparison_object->projection_image->CalculateCrossCorrelationImageWith(comparison_object->particle->particle_image);
+    //    comparison_object->projection_image->SwapRealSpaceQuadrants();
+    //    comparison_object->projection_image->BackwardFFT();
+    //    comparison_object->projection_image->QuickAndDirtyWriteSlice("proj.mrc", comparison_object->particle->origin_micrograph);
+    //    comparison_object->projection_image->SwapRealSpaceQuadrants();
+    //    comparison_object->particle->particle_image->SwapRealSpaceQuadrants();
+    //    comparison_object->particle->particle_image->BackwardFFT();
+    //    comparison_object->particle->particle_image->QuickAndDirtyWriteSlice("part.mrc", comparison_object->particle->origin_micrograph);
+    //    comparison_object->particle->particle_image->SwapRealSpaceQuadrants();
+    //    exit(0);
 
-    //	float score =  	- comparison_object->particle->particle_image->GetWeightedCorrelationWithImage(*comparison_object->projection_image, comparison_object->particle->bin_index,
-    //			  comparison_object->particle->pixel_size / comparison_object->particle->signed_CC_limit)
-    //			- comparison_object->particle->ReturnParameterPenalty(comparison_object->particle->temp_float);
-    //	wxPrintf("psi, theta, phi, x, y, = %g, %g, %g, %g, %g, score = %g\n",
-    //			comparison_object->particle->alignment_parameters.ReturnPsiAngle(),
-    //			comparison_object->particle->alignment_parameters.ReturnThetaAngle(),
-    //			comparison_object->particle->alignment_parameters.ReturnPhiAngle(),
-    //			comparison_object->particle->alignment_parameters.ReturnShiftX(),
-    //			comparison_object->particle->alignment_parameters.ReturnShiftY(), score);
-    //	return score;
-    //	wxPrintf("sigma_noise, mask_volume, penalty = %g %g %g\n", comparison_object->particle->sigma_noise, comparison_object->particle->mask_volume,
-    //			comparison_object->particle->ReturnParameterPenalty(comparison_object->particle->temp_float));
+    //    float score =      - comparison_object->particle->particle_image->GetWeightedCorrelationWithImage(*comparison_object->projection_image, comparison_object->particle->bin_index,
+    //              comparison_object->particle->pixel_size / comparison_object->particle->signed_CC_limit)
+    //            - comparison_object->particle->ReturnParameterPenalty(comparison_object->particle->temp_float);
+    //    wxPrintf("psi, theta, phi, x, y, = %g, %g, %g, %g, %g, score = %g\n",
+    //            comparison_object->particle->alignment_parameters.ReturnPsiAngle(),
+    //            comparison_object->particle->alignment_parameters.ReturnThetaAngle(),
+    //            comparison_object->particle->alignment_parameters.ReturnPhiAngle(),
+    //            comparison_object->particle->alignment_parameters.ReturnShiftX(),
+    //            comparison_object->particle->alignment_parameters.ReturnShiftY(), score);
+    //    return score;
+    //    wxPrintf("sigma_noise, mask_volume, penalty = %g %g %g\n", comparison_object->particle->sigma_noise, comparison_object->particle->mask_volume,
+    //            comparison_object->particle->ReturnParameterPenalty(comparison_object->particle->temp_float));
     return -comparison_object->particle->particle_image->GetWeightedCorrelationWithImage(*comparison_object->projection_image, comparison_object->particle->bin_index,
                                                                                          comparison_object->particle->pixel_size / comparison_object->particle->signed_CC_limit) -
            comparison_object->particle->ReturnParameterPenalty(comparison_object->particle->temp_parameters);
@@ -191,17 +193,17 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
     defocus2                    = my_input->GetFloatFromUser("Defocus2 (angstroms)", "Defocus2 for the input image", "10000", 0.0);
     defocus_angle               = my_input->GetFloatFromUser("Defocus Angle (degrees)", "Defocus Angle for the input image", "0.0");
     phase_shift                 = my_input->GetFloatFromUser("Phase Shift (degrees)", "Additional phase shift in degrees", "0.0");
-    //	low_resolution_limit = my_input->GetFloatFromUser("Low resolution limit (A)", "Low resolution limit of the data used for alignment in Angstroms", "300.0", 0.0);
+    //    low_resolution_limit = my_input->GetFloatFromUser("Low resolution limit (A)", "Low resolution limit of the data used for alignment in Angstroms", "300.0", 0.0);
     high_resolution_limit = my_input->GetFloatFromUser("High resolution limit (A)", "High resolution limit of the data used for alignment in Angstroms", "8.0", 0.0);
     angular_step          = my_input->GetFloatFromUser("Out of plane angular step (0.0 = set automatically)", "Angular step size for global grid search", "0.0", 0.0);
     in_plane_angular_step = my_input->GetFloatFromUser("In plane angular step (0.0 = set automatically)", "Angular step size for in-plane rotations during the search", "0.0", 0.0);
-    //	best_parameters_to_keep = my_input->GetIntFromUser("Number of top hits to refine", "The number of best global search orientations to refine locally", "20", 1);
+    //    best_parameters_to_keep = my_input->GetIntFromUser("Number of top hits to refine", "The number of best global search orientations to refine locally", "20", 1);
     defocus_search_range    = my_input->GetFloatFromUser("Defocus search range (A)", "Search range (-value ... + value) around current defocus", "500.0", 0.0);
     defocus_step            = my_input->GetFloatFromUser("Defocus step (A) (0.0 = no search)", "Step size used in the defocus search", "50.0", 0.0);
     pixel_size_search_range = my_input->GetFloatFromUser("Pixel size search range (A)", "Search range (-value ... + value) around current pixel size", "0.1", 0.0);
     pixel_size_step         = my_input->GetFloatFromUser("Pixel size step (A) (0.0 = no search)", "Step size used in the pixel size search", "0.01", 0.0);
     padding                 = my_input->GetFloatFromUser("Padding factor", "Factor determining how much the input volume is padded to improve projections", "1.0", 1.0, 2.0);
-    //	ctf_refinement = my_input->GetYesNoFromUser("Refine defocus", "Should the particle defocus be refined?", "No");
+    //    ctf_refinement = my_input->GetYesNoFromUser("Refine defocus", "Should the particle defocus be refined?", "No");
     particle_radius_angstroms = my_input->GetFloatFromUser("Mask radius for global search (A) (0.0 = max)", "Radius of a circular mask to be applied to the input images during global search", "0.0", 0.0);
     my_symmetry               = my_input->GetSymmetryFromUser("Template symmetry", "The symmetry of the template reconstruction", "C1");
 #ifdef ENABLEGPU
@@ -268,62 +270,62 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
 
 bool MatchTemplateApp::DoCalculation( ) {
     /*
-	wxString input_particle_images 				= my_current_job.arguments[0].ReturnStringArgument(); // global
-	wxString input_parameter_file 				= my_current_job.arguments[1].ReturnStringArgument(); // not sure
-	wxString input_reconstruction				= my_current_job.arguments[2].ReturnStringArgument(); // global
-	wxString input_reconstruction_statistics 	= my_current_job.arguments[3].ReturnStringArgument(); // global
-	bool	 use_statistics						= my_current_job.arguments[4].ReturnBoolArgument();   // global
-	wxString ouput_matching_projections 		= my_current_job.arguments[5].ReturnStringArgument(); // ignore (always false)
-	wxString ouput_parameter_file				= my_current_job.arguments[6].ReturnStringArgument(); // not sure par file
-	wxString ouput_shift_file					= my_current_job.arguments[7].ReturnStringArgument(); // not sure output
-	wxString my_symmetry						= my_current_job.arguments[8].ReturnStringArgument(); // global
-	int		 first_particle						= my_current_job.arguments[9].ReturnIntegerArgument(); // local (effectively ignore)
-	int		 last_particle						= my_current_job.arguments[10].ReturnIntegerArgument(); // local (effectively ignore)
-	float	 percent_used						= my_current_job.arguments[11].ReturnFloatArgument();
-	float 	 pixel_size							= my_current_job.arguments[12].ReturnFloatArgument(); // local
-	float    voltage_kV							= my_current_job.arguments[13].ReturnFloatArgument(); // local
-	float 	 spherical_aberration_mm			= my_current_job.arguments[14].ReturnFloatArgument(); // local
-	float    amplitude_contrast					= my_current_job.arguments[15].ReturnFloatArgument(); // local
-	float	 molecular_mass_kDa					= my_current_job.arguments[16].ReturnFloatArgument(); // global
-	float    inner_mask_radius					= my_current_job.arguments[17].ReturnFloatArgument(); // global
-	float    outer_mask_radius					= my_current_job.arguments[18].ReturnFloatArgument(); // global
-	float    low_resolution_limit				= my_current_job.arguments[19].ReturnFloatArgument(); // global
-	float    high_resolution_limit				= my_current_job.arguments[20].ReturnFloatArgument(); // global
-	float	 signed_CC_limit					= my_current_job.arguments[21].ReturnFloatArgument(); // global
-	float	 classification_resolution_limit	= my_current_job.arguments[22].ReturnFloatArgument(); // global
-	float    particle_radius_angstroms					= my_current_job.arguments[23].ReturnFloatArgument(); // global
-	float	 high_resolution_limit_search		= my_current_job.arguments[24].ReturnFloatArgument(); // global
-	float	 angular_step						= my_current_job.arguments[25].ReturnFloatArgument(); // global
-	int		 best_parameters_to_keep			= my_current_job.arguments[26].ReturnIntegerArgument(); // global
-	float	 max_search_x						= my_current_job.arguments[27].ReturnFloatArgument(); // global
-	float	 max_search_y						= my_current_job.arguments[28].ReturnFloatArgument(); // global
-	refine_particle.mask_center_2d_x			= my_current_job.arguments[29].ReturnFloatArgument(); // global
-	refine_particle.mask_center_2d_y			= my_current_job.arguments[30].ReturnFloatArgument(); // global
-	refine_particle.mask_center_2d_z			= my_current_job.arguments[31].ReturnFloatArgument(); // global
-	refine_particle.mask_radius_2d				= my_current_job.arguments[32].ReturnFloatArgument(); // global
-	float	 defocus_search_range				= my_current_job.arguments[33].ReturnFloatArgument(); // global
-	float	 defocus_step						= my_current_job.arguments[34].ReturnFloatArgument(); // global
-	float	 padding							= my_current_job.arguments[35].ReturnFloatArgument(); // global
-//	float	 filter_constant					= my_current_job.arguments[35].ReturnFloatArgument();
-	bool	 global_search						= my_current_job.arguments[36].ReturnBoolArgument(); // global
-	bool	 local_refinement					= my_current_job.arguments[37].ReturnBoolArgument(); // global
+    wxString input_particle_images                 = my_current_job.arguments[0].ReturnStringArgument(); // global
+    wxString input_parameter_file                 = my_current_job.arguments[1].ReturnStringArgument(); // not sure
+    wxString input_reconstruction                = my_current_job.arguments[2].ReturnStringArgument(); // global
+    wxString input_reconstruction_statistics     = my_current_job.arguments[3].ReturnStringArgument(); // global
+    bool     use_statistics                        = my_current_job.arguments[4].ReturnBoolArgument();   // global
+    wxString ouput_matching_projections         = my_current_job.arguments[5].ReturnStringArgument(); // ignore (always false)
+    wxString ouput_parameter_file                = my_current_job.arguments[6].ReturnStringArgument(); // not sure par file
+    wxString ouput_shift_file                    = my_current_job.arguments[7].ReturnStringArgument(); // not sure output
+    wxString my_symmetry                        = my_current_job.arguments[8].ReturnStringArgument(); // global
+    int         first_particle                        = my_current_job.arguments[9].ReturnIntegerArgument(); // local (effectively ignore)
+    int         last_particle                        = my_current_job.arguments[10].ReturnIntegerArgument(); // local (effectively ignore)
+    float     percent_used                        = my_current_job.arguments[11].ReturnFloatArgument();
+    float      pixel_size                            = my_current_job.arguments[12].ReturnFloatArgument(); // local
+    float    voltage_kV                            = my_current_job.arguments[13].ReturnFloatArgument(); // local
+    float      spherical_aberration_mm            = my_current_job.arguments[14].ReturnFloatArgument(); // local
+    float    amplitude_contrast                    = my_current_job.arguments[15].ReturnFloatArgument(); // local
+    float     molecular_mass_kDa                    = my_current_job.arguments[16].ReturnFloatArgument(); // global
+    float    inner_mask_radius                    = my_current_job.arguments[17].ReturnFloatArgument(); // global
+    float    outer_mask_radius                    = my_current_job.arguments[18].ReturnFloatArgument(); // global
+    float    low_resolution_limit                = my_current_job.arguments[19].ReturnFloatArgument(); // global
+    float    high_resolution_limit                = my_current_job.arguments[20].ReturnFloatArgument(); // global
+    float     signed_CC_limit                    = my_current_job.arguments[21].ReturnFloatArgument(); // global
+    float     classification_resolution_limit    = my_current_job.arguments[22].ReturnFloatArgument(); // global
+    float    particle_radius_angstroms                    = my_current_job.arguments[23].ReturnFloatArgument(); // global
+    float     high_resolution_limit_search        = my_current_job.arguments[24].ReturnFloatArgument(); // global
+    float     angular_step                        = my_current_job.arguments[25].ReturnFloatArgument(); // global
+    int         best_parameters_to_keep            = my_current_job.arguments[26].ReturnIntegerArgument(); // global
+    float     max_search_x                        = my_current_job.arguments[27].ReturnFloatArgument(); // global
+    float     max_search_y                        = my_current_job.arguments[28].ReturnFloatArgument(); // global
+    refine_particle.mask_center_2d_x            = my_current_job.arguments[29].ReturnFloatArgument(); // global
+    refine_particle.mask_center_2d_y            = my_current_job.arguments[30].ReturnFloatArgument(); // global
+    refine_particle.mask_center_2d_z            = my_current_job.arguments[31].ReturnFloatArgument(); // global
+    refine_particle.mask_radius_2d                = my_current_job.arguments[32].ReturnFloatArgument(); // global
+    float     defocus_search_range                = my_current_job.arguments[33].ReturnFloatArgument(); // global
+    float     defocus_step                        = my_current_job.arguments[34].ReturnFloatArgument(); // global
+    float     padding                            = my_current_job.arguments[35].ReturnFloatArgument(); // global
+//    float     filter_constant                    = my_current_job.arguments[35].ReturnFloatArgument();
+    bool     global_search                        = my_current_job.arguments[36].ReturnBoolArgument(); // global
+    bool     local_refinement                    = my_current_job.arguments[37].ReturnBoolArgument(); // global
 // Psi, Theta, Phi, ShiftX, ShiftY
-	refine_particle.parameter_map[3]			= my_current_job.arguments[38].ReturnBoolArgument(); //global
-	refine_particle.parameter_map[2]			= my_current_job.arguments[39].ReturnBoolArgument(); //global
-	refine_particle.parameter_map[1]			= my_current_job.arguments[40].ReturnBoolArgument(); // global
-	refine_particle.parameter_map[4]			= my_current_job.arguments[41].ReturnBoolArgument(); // global
-	refine_particle.parameter_map[5]			= my_current_job.arguments[42].ReturnBoolArgument(); // global
-	bool 	 calculate_matching_projections		= my_current_job.arguments[43].ReturnBoolArgument(); // global - but ignore
-	refine_particle.apply_2D_masking			= my_current_job.arguments[44].ReturnBoolArgument(); // global
-	bool	 ctf_refinement						= my_current_job.arguments[45].ReturnBoolArgument(); // global
-	bool	 normalize_particles				= my_current_job.arguments[46].ReturnBoolArgument();
-	bool	 invert_contrast					= my_current_job.arguments[47].ReturnBoolArgument(); // global - but ignore.
-	bool	 exclude_blank_edges				= my_current_job.arguments[48].ReturnBoolArgument();
-	bool	 normalize_input_3d					= my_current_job.arguments[49].ReturnBoolArgument();
-	bool	 threshold_input_3d					= my_current_job.arguments[50].ReturnBoolArgument();
-	bool	 local_global_refine				= my_current_job.arguments[51].ReturnBoolArgument();
-	int		 current_class						= my_current_job.arguments[52].ReturnIntegerArgument(); // global - but ignore.
-	bool	 ignore_input_angles				= my_current_job.arguments[53].ReturnBoolArgument(); // during global search, ignore the starting parameters (this helps reduce bias)
+    refine_particle.parameter_map[3]            = my_current_job.arguments[38].ReturnBoolArgument(); //global
+    refine_particle.parameter_map[2]            = my_current_job.arguments[39].ReturnBoolArgument(); //global
+    refine_particle.parameter_map[1]            = my_current_job.arguments[40].ReturnBoolArgument(); // global
+    refine_particle.parameter_map[4]            = my_current_job.arguments[41].ReturnBoolArgument(); // global
+    refine_particle.parameter_map[5]            = my_current_job.arguments[42].ReturnBoolArgument(); // global
+    bool      calculate_matching_projections        = my_current_job.arguments[43].ReturnBoolArgument(); // global - but ignore
+    refine_particle.apply_2D_masking            = my_current_job.arguments[44].ReturnBoolArgument(); // global
+    bool     ctf_refinement                        = my_current_job.arguments[45].ReturnBoolArgument(); // global
+    bool     normalize_particles                = my_current_job.arguments[46].ReturnBoolArgument();
+    bool     invert_contrast                    = my_current_job.arguments[47].ReturnBoolArgument(); // global - but ignore.
+    bool     exclude_blank_edges                = my_current_job.arguments[48].ReturnBoolArgument();
+    bool     normalize_input_3d                    = my_current_job.arguments[49].ReturnBoolArgument();
+    bool     threshold_input_3d                    = my_current_job.arguments[50].ReturnBoolArgument();
+    bool     local_global_refine                = my_current_job.arguments[51].ReturnBoolArgument();
+    int         current_class                        = my_current_job.arguments[52].ReturnIntegerArgument(); // global - but ignore.
+    bool     ignore_input_angles                = my_current_job.arguments[53].ReturnBoolArgument(); // during global search, ignore the starting parameters (this helps reduce bias)
 */
 
     wxDateTime start_time = wxDateTime::Now( );
@@ -450,7 +452,7 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     //
     remove_npix_from_edge = myroundint(particle_radius_angstroms / pixel_size);
-    //	wxPrintf("Removing %d pixels around the edge.\n", remove_npix_from_edge);
+    //    wxPrintf("Removing %d pixels around the edge.\n", remove_npix_from_edge);
 
     Image input_image;
     Image padded_reference;
@@ -729,8 +731,8 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     wxPrintf("Performing Search...\n\n");
 
-    //	wxPrintf("Searching %i - %i of %i total positions\n", first_search_position, last_search_position, global_euler_search.number_of_search_positions);
-    //	wxPrintf("psi_start = %f, psi_max = %f, psi_step = %f\n", psi_start, psi_max, psi_step);
+    //    wxPrintf("Searching %i - %i of %i total positions\n", first_search_position, last_search_position, global_euler_search.number_of_search_positions);
+    //    wxPrintf("psi_start = %f, psi_max = %f, psi_step = %f\n", psi_start, psi_max, psi_step);
 
     actual_number_of_ccs_calculated = 0.0;
 
@@ -752,7 +754,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     int maxPos = last_search_position;
     int incPos = (nJobs) / (max_threads);
 
-//	wxPrintf("First last and inc %d, %d, %d\n", minPos, maxPos, incPos);
+//    wxPrintf("First last and inc %d, %d, %d\n", minPos, maxPos, incPos);
 #ifdef ENABLEGPU
     TemplateMatchingCore* GPU;
     DeviceManager         gpuDev;
@@ -762,13 +764,13 @@ bool MatchTemplateApp::DoCalculation( ) {
         total_correlation_positions_per_thread = total_correlation_positions / max_threads;
 
 #ifdef ENABLEGPU
-        //	checkCudaErrors(cudaGetDeviceCount(&nGPUs));
+        //    checkCudaErrors(cudaGetDeviceCount(&nGPUs));
         GPU = new TemplateMatchingCore[max_threads];
         gpuDev.Init(nGPUs);
 
-//	wxPrintf("Host: %s is running\nnThreads: %d\nnGPUs: %d\n:nSearchPos %d \n",hostNameBuffer,nThreads, nGPUs, maxPos);
+//    wxPrintf("Host: %s is running\nnThreads: %d\nnGPUs: %d\n:nSearchPos %d \n",hostNameBuffer,nThreads, nGPUs, maxPos);
 
-//	TemplateMatchingCore GPU(number_of_jobs_per_image_in_gui);
+//    TemplateMatchingCore GPU(number_of_jobs_per_image_in_gui);
 #endif
     }
 
@@ -776,16 +778,16 @@ bool MatchTemplateApp::DoCalculation( ) {
         my_progress = new ProgressBar(total_correlation_positions_per_thread);
     }
 
-    //	wxPrintf("Starting job\n");
+    //    wxPrintf("Starting job\n");
     for ( size_i = -myroundint(float(pixel_size_search_range) / float(pixel_size_step)); size_i <= myroundint(float(pixel_size_search_range) / float(pixel_size_step)); size_i++ ) {
 
-        //		template_reconstruction.CopyFrom(&input_reconstruction);
+        //        template_reconstruction.CopyFrom(&input_reconstruction);
         input_reconstruction.ChangePixelSize(&template_reconstruction, (pixel_size + float(size_i) * pixel_size_step) / pixel_size, 0.001f, true);
-        //	template_reconstruction.ForwardFFT();
+        //    template_reconstruction.ForwardFFT();
         template_reconstruction.ZeroCentralPixel( );
         template_reconstruction.SwapRealSpaceQuadrants( );
 
-        //		wxPrintf("First search last search position %d/ %d\n",first_search_position, last_search_position);
+        //        wxPrintf("First search last search position %d/ %d\n",first_search_position, last_search_position);
 
         if ( use_gpu ) {
 #ifdef ENABLEGPU
@@ -829,14 +831,14 @@ bool MatchTemplateApp::DoCalculation( ) {
 
             // make the projection filter, which will be CTF * whitening filter
             input_ctf.SetDefocus((defocus1 + float(defocus_i) * defocus_step) / pixel_size, (defocus2 + float(defocus_i) * defocus_step) / pixel_size, deg_2_rad(defocus_angle));
-            //			input_ctf.SetDefocus((defocus1 + 200) / pixel_size, (defocus2 + 200) / pixel_size, deg_2_rad(defocus_angle));
+            //            input_ctf.SetDefocus((defocus1 + 200) / pixel_size, (defocus2 + 200) / pixel_size, deg_2_rad(defocus_angle));
             projection_filter.CalculateCTFImage(input_ctf);
             projection_filter.ApplyCurveFilter(&whitening_filter);
 
-            //			projection_filter.QuickAndDirtyWriteSlices("/tmp/projection_filter.mrc",1,projection_filter.logical_z_dimension,true,1.5);
+            //            projection_filter.QuickAndDirtyWriteSlices("/tmp/projection_filter.mrc",1,projection_filter.logical_z_dimension,true,1.5);
             if ( use_gpu ) {
 #ifdef ENABLEGPU
-                //			wxPrintf("\n\n\t\tsizeI defI %d %d\n\n\n", size_i, defocus_i);
+                //            wxPrintf("\n\n\t\tsizeI defI %d %d\n\n\n", size_i, defocus_i);
 
 #pragma omp parallel num_threads(max_threads)
                 {
@@ -862,7 +864,7 @@ bool MatchTemplateApp::DoCalculation( ) {
                         GPU[tIDX].d_best_phi.CopyDeviceToHost(phi_buffer, true, false);
                         GPU[tIDX].d_best_theta.CopyDeviceToHost(theta_buffer, true, false);
 
-                        //					mip_buffer.QuickAndDirtyWriteSlice("/tmp/tmpMipBuffer.mrc",1,1);
+                        //                    mip_buffer.QuickAndDirtyWriteSlice("/tmp/tmpMipBuffer.mrc",1,1);
                         // TODO should prob aggregate these across all workers
                         // TODO add a copySum method that allocates a pinned buffer, copies there then sumes into the wanted image.
                         Image sum;
@@ -905,7 +907,7 @@ bool MatchTemplateApp::DoCalculation( ) {
 
                         GPU[tIDX].histogram.CopyToHostAndAdd(histogram_data);
 
-                        //					current_correlation_position += GPU[tIDX].total_number_of_cccs_calculated;
+                        //                    current_correlation_position += GPU[tIDX].total_number_of_cccs_calculated;
                         actual_number_of_ccs_calculated += GPU[tIDX].total_number_of_cccs_calculated;
 
                     } // end of omp critical block
@@ -923,7 +925,7 @@ bool MatchTemplateApp::DoCalculation( ) {
                 for ( current_psi = psi_start; current_psi <= psi_max; current_psi += psi_step ) {
 
                     angles.Init(global_euler_search.list_of_search_parameters[current_search_position][0], global_euler_search.list_of_search_parameters[current_search_position][1], current_psi, 0.0, 0.0);
-                    //					angles.Init(130.0, 30.0, 199.5, 0.0, 0.0);
+                    //                    angles.Init(130.0, 30.0, 199.5, 0.0, 0.0);
 
                     if ( padding != 1.0f ) {
                         template_reconstruction.ExtractSlice(padded_projection, angles, 1.0f, false);
@@ -936,7 +938,7 @@ bool MatchTemplateApp::DoCalculation( ) {
                         template_reconstruction.ExtractSlice(current_projection, angles, 1.0f, false);
                         current_projection.SwapRealSpaceQuadrants( );
                     }
-                    //					current_projection.QuickAndDirtyWriteSlice("proj.mrc", 1);
+                    //                    current_projection.QuickAndDirtyWriteSlice("proj.mrc", 1);
                     //if (first_search_position == 0) current_projection.QuickAndDirtyWriteSlice("/tmp/small_proj_nofilter.mrc", 1);
 
                     current_projection.MultiplyPixelWise(projection_filter);
@@ -951,35 +953,35 @@ bool MatchTemplateApp::DoCalculation( ) {
 
                     // find the pixel with the largest absolute density, and shift it to the centre
 
-                    /*	pixel_counter = 0;
-					int best_x;
-					int best_y;
-					float max_value = -FLT_MAX;
+                    /*    pixel_counter = 0;
+                    int best_x;
+                    int best_y;
+                    float max_value = -FLT_MAX;
 
-					for ( int y = 0; y < current_projection.logical_y_dimension; y ++ )
-					{
-						for ( int x = 0; x < current_projection.logical_x_dimension; x ++ )
-						{
-							if (fabsf(current_projection.real_values[pixel_counter]) > max_value)
-							{
-								max_value = fabsf(current_projection.real_values[pixel_counter]);
-								best_x = x - current_projection.physical_address_of_box_center_x;
-								best_y = y - current_projection.physical_address_of_box_center_y;;
-							}
-							pixel_counter++;
-						}
-						pixel_counter += current_projection.padding_jump_value;
-					}
+                    for ( int y = 0; y < current_projection.logical_y_dimension; y ++ )
+                    {
+                        for ( int x = 0; x < current_projection.logical_x_dimension; x ++ )
+                        {
+                            if (fabsf(current_projection.real_values[pixel_counter]) > max_value)
+                            {
+                                max_value = fabsf(current_projection.real_values[pixel_counter]);
+                                best_x = x - current_projection.physical_address_of_box_center_x;
+                                best_y = y - current_projection.physical_address_of_box_center_y;;
+                            }
+                            pixel_counter++;
+                        }
+                        pixel_counter += current_projection.padding_jump_value;
+                    }
 
-					current_projection.RealSpaceIntegerShift(best_x, best_y, 0);
-	*/
+                    current_projection.RealSpaceIntegerShift(best_x, best_y, 0);
+    */
                     ///
 
                     current_projection.AddConstant(-current_projection.ReturnAverageOfRealValuesOnEdges( ));
 
-                    //					variance = current_projection.number_of_real_space_pixels / padded_reference.number_of_real_space_pixels;
-                    //					current_projection.DivideByConstant(sqrtf(variance));
-                    //					variance = current_projection.ReturnSumOfSquares();
+                    //                    variance = current_projection.number_of_real_space_pixels / padded_reference.number_of_real_space_pixels;
+                    //                    current_projection.DivideByConstant(sqrtf(variance));
+                    //                    variance = current_projection.ReturnSumOfSquares();
                     variance = current_projection.ReturnSumOfSquares( ) * current_projection.number_of_real_space_pixels / padded_reference.number_of_real_space_pixels - powf(current_projection.ReturnAverageOfRealValues( ) * current_projection.number_of_real_space_pixels / padded_reference.number_of_real_space_pixels, 2);
                     current_projection.DivideByConstant(sqrtf(variance));
                     current_projection.ClipIntoLargerRealSpace2D(&padded_reference);
@@ -987,7 +989,7 @@ bool MatchTemplateApp::DoCalculation( ) {
                     padded_reference.ForwardFFT( );
                     // Zeroing the central pixel is probably not doing anything useful...
                     padded_reference.ZeroCentralPixel( );
-                    //					padded_reference.DivideByConstant(sqrtf(variance));
+                    //                    padded_reference.DivideByConstant(sqrtf(variance));
 
                     //if (first_search_position == 0)  padded_reference.QuickAndDirtyWriteSlice("/tmp/proj.mrc", 1);
 
@@ -1001,17 +1003,17 @@ bool MatchTemplateApp::DoCalculation( ) {
 #endif
 
                     padded_reference.BackwardFFT( );
-                    //					padded_reference.QuickAndDirtyWriteSlice("cc.mrc", 1);
-                    //					exit(0);
+                    //                    padded_reference.QuickAndDirtyWriteSlice("cc.mrc", 1);
+                    //                    exit(0);
 
-                    //					for (pixel_counter = 0; pixel_counter <  padded_reference.real_memory_allocated; pixel_counter++)
-                    //					{
-                    //						temp_float = padded_reference.real_values[pixel_counter] / variance;
-                    //						padded_reference.real_values[pixel_counter] = temp_float * padded_reference.real_values[pixel_counter] - powf(temp_float, 2) * variance;
-                    ////						if (pixel_counter == 1000) wxPrintf("l, value = %g %g\n", temp_float, padded_reference.real_values[pixel_counter]);
-                    ////						padded_reference.real_values[pixel_counter] *= powf(float(padded_reference.number_of_real_space_pixels), 2);
-                    ////						padded_reference.real_values[pixel_counter] = temp_float;
-                    //					}
+                    //                    for (pixel_counter = 0; pixel_counter <  padded_reference.real_memory_allocated; pixel_counter++)
+                    //                    {
+                    //                        temp_float = padded_reference.real_values[pixel_counter] / variance;
+                    //                        padded_reference.real_values[pixel_counter] = temp_float * padded_reference.real_values[pixel_counter] - powf(temp_float, 2) * variance;
+                    ////                        if (pixel_counter == 1000) wxPrintf("l, value = %g %g\n", temp_float, padded_reference.real_values[pixel_counter]);
+                    ////                        padded_reference.real_values[pixel_counter] *= powf(float(padded_reference.number_of_real_space_pixels), 2);
+                    ////                        padded_reference.real_values[pixel_counter] = temp_float;
+                    //                    }
 
                     // update mip, and histogram..
                     pixel_counter = 0;
@@ -1027,8 +1029,8 @@ bool MatchTemplateApp::DoCalculation( ) {
                                 best_phi.real_values[pixel_counter]                 = global_euler_search.list_of_search_parameters[current_search_position][0];
                                 best_defocus.real_values[pixel_counter]             = float(defocus_i) * defocus_step;
                                 best_pixel_size.real_values[pixel_counter]          = float(size_i) * pixel_size_step;
-                                //								if (size_i != 0) wxPrintf("size_i = %i\n", size_i);
-                                //								correlation_pixel_sum[pixel_counter] = variance;
+                                //                                if (size_i != 0) wxPrintf("size_i = %i\n", size_i);
+                                //                                correlation_pixel_sum[pixel_counter] = variance;
                             }
 
                             // histogram
@@ -1046,12 +1048,12 @@ bool MatchTemplateApp::DoCalculation( ) {
                         pixel_counter += padded_reference.padding_jump_value;
                     }
 
-                    //					correlation_pixel_sum.AddImage(&padded_reference);
+                    //                    correlation_pixel_sum.AddImage(&padded_reference);
                     for ( pixel_counter = 0; pixel_counter < padded_reference.real_memory_allocated; pixel_counter++ ) {
                         correlation_pixel_sum[pixel_counter] += padded_reference.real_values[pixel_counter];
                     }
                     padded_reference.SquareRealValues( );
-                    //					correlation_pixel_sum_of_squares.AddImage(&padded_reference);
+                    //                    correlation_pixel_sum_of_squares.AddImage(&padded_reference);
                     for ( pixel_counter = 0; pixel_counter < padded_reference.real_memory_allocated; pixel_counter++ ) {
                         correlation_pixel_sum_of_squares[pixel_counter] += padded_reference.real_values[pixel_counter];
                     }
@@ -1127,13 +1129,13 @@ bool MatchTemplateApp::DoCalculation( ) {
 
         for ( pixel_counter = 0; pixel_counter < input_image.real_memory_allocated; pixel_counter++ ) {
 
-            //			correlation_pixel_sum.real_values[pixel_counter] /= float(total_correlation_positions);
-            //			correlation_pixel_sum_of_squares.real_values[pixel_counter] = correlation_pixel_sum_of_squares.real_values[pixel_counter] / float(total_correlation_positions) - powf(correlation_pixel_sum.real_values[pixel_counter], 2);
-            //			if (correlation_pixel_sum_of_squares.real_values[pixel_counter] > 0.0f)
-            //			{
-            //				correlation_pixel_sum_of_squares.real_values[pixel_counter] = sqrtf(correlation_pixel_sum_of_squares.real_values[pixel_counter]) * sqrtf(correlation_pixel_sum.logical_x_dimension * correlation_pixel_sum.logical_y_dimension);
-            //			}
-            //			else correlation_pixel_sum_of_squares.real_values[pixel_counter] = 0.0f;
+            //            correlation_pixel_sum.real_values[pixel_counter] /= float(total_correlation_positions);
+            //            correlation_pixel_sum_of_squares.real_values[pixel_counter] = correlation_pixel_sum_of_squares.real_values[pixel_counter] / float(total_correlation_positions) - powf(correlation_pixel_sum.real_values[pixel_counter], 2);
+            //            if (correlation_pixel_sum_of_squares.real_values[pixel_counter] > 0.0f)
+            //            {
+            //                correlation_pixel_sum_of_squares.real_values[pixel_counter] = sqrtf(correlation_pixel_sum_of_squares.real_values[pixel_counter]) * sqrtf(correlation_pixel_sum.logical_x_dimension * correlation_pixel_sum.logical_y_dimension);
+            //            }
+            //            else correlation_pixel_sum_of_squares.real_values[pixel_counter] = 0.0f;
             correlation_pixel_sum[pixel_counter] /= float(total_correlation_positions);
             correlation_pixel_sum_of_squares[pixel_counter] = correlation_pixel_sum_of_squares[pixel_counter] / float(total_correlation_positions) - powf(correlation_pixel_sum[pixel_counter], 2);
             if ( correlation_pixel_sum_of_squares[pixel_counter] > 0.0f ) {
@@ -1145,31 +1147,31 @@ bool MatchTemplateApp::DoCalculation( ) {
         }
 
         max_intensity_projection.MultiplyByConstant((float)sqrt_input_pixels);
-        //		correlation_pixel_sum.MultiplyByConstant(sqrtf(max_intensity_projection.logical_x_dimension * max_intensity_projection.logical_y_dimension));
-        //		correlation_pixel_sum_of_squares.MultiplyByConstant(max_intensity_projection.logical_x_dimension * max_intensity_projection.logical_y_dimension);
+        //        correlation_pixel_sum.MultiplyByConstant(sqrtf(max_intensity_projection.logical_x_dimension * max_intensity_projection.logical_y_dimension));
+        //        correlation_pixel_sum_of_squares.MultiplyByConstant(max_intensity_projection.logical_x_dimension * max_intensity_projection.logical_y_dimension);
 
         // we need to quadrant swap the images, also shift them, with an extra pixel shift.  This is because I take the conjugate of the input image, not the reference..
 
-        //		max_intensity_projection.InvertPixelOrder();
-        //		max_intensity_projection.SwapRealSpaceQuadrants();
+        //        max_intensity_projection.InvertPixelOrder();
+        //        max_intensity_projection.SwapRealSpaceQuadrants();
 
-        //		best_psi.InvertPixelOrder();
-        //		best_psi.SwapRealSpaceQuadrants();
+        //        best_psi.InvertPixelOrder();
+        //        best_psi.SwapRealSpaceQuadrants();
 
-        //		best_theta.InvertPixelOrder();
-        //		best_theta.SwapRealSpaceQuadrants();
+        //        best_theta.InvertPixelOrder();
+        //        best_theta.SwapRealSpaceQuadrants();
 
-        //		best_phi.InvertPixelOrder();
-        //		best_phi.SwapRealSpaceQuadrants();
+        //        best_phi.InvertPixelOrder();
+        //        best_phi.SwapRealSpaceQuadrants();
 
-        //		best_defocus.InvertPixelOrder();
-        //		best_defocus.SwapRealSpaceQuadrants();
+        //        best_defocus.InvertPixelOrder();
+        //        best_defocus.SwapRealSpaceQuadrants();
 
-        //		correlation_pixel_sum.InvertPixelOrder();
-        //		correlation_pixel_sum.SwapRealSpaceQuadrants();
+        //        correlation_pixel_sum.InvertPixelOrder();
+        //        correlation_pixel_sum.SwapRealSpaceQuadrants();
 
-        //		correlation_pixel_sum_of_squares.InvertPixelOrder();
-        //		correlation_pixel_sum_of_squares.SwapRealSpaceQuadrants();
+        //        correlation_pixel_sum_of_squares.InvertPixelOrder();
+        //        correlation_pixel_sum_of_squares.SwapRealSpaceQuadrants();
 
         // calculate the expected threshold (from peter's paper)
         const float CCG_NOISE_STDDEV = 1.0;
@@ -1182,17 +1184,17 @@ bool MatchTemplateApp::DoCalculation( ) {
 #endif
         expected_threshold = sqrtf(2.0f) * (float)temp_threshold * CCG_NOISE_STDDEV;
 
-        //		expected_threshold = sqrtf(2.0f)*cisTEM_erfcinv((2.0f*(1))/((original_input_image_x * original_input_image_y * double(total_correlation_positions))));
+        //        expected_threshold = sqrtf(2.0f)*cisTEM_erfcinv((2.0f*(1))/((original_input_image_x * original_input_image_y * double(total_correlation_positions))));
 
         // write out images..
 
-        //		wxPrintf("\nPeak at %g, %g : %g\n", max_intensity_projection.FindPeakWithIntegerCoordinates().x, max_intensity_projection.FindPeakWithIntegerCoordinates().y, max_intensity_projection.FindPeakWithIntegerCoordinates().value);
-        //		wxPrintf("Sigma = %g, ratio = %g\n", sqrtf(max_intensity_projection.ReturnVarianceOfRealValues()), max_intensity_projection.FindPeakWithIntegerCoordinates().value / sqrtf(max_intensity_projection.ReturnVarianceOfRealValues()));
+        //        wxPrintf("\nPeak at %g, %g : %g\n", max_intensity_projection.FindPeakWithIntegerCoordinates().x, max_intensity_projection.FindPeakWithIntegerCoordinates().y, max_intensity_projection.FindPeakWithIntegerCoordinates().value);
+        //        wxPrintf("Sigma = %g, ratio = %g\n", sqrtf(max_intensity_projection.ReturnVarianceOfRealValues()), max_intensity_projection.FindPeakWithIntegerCoordinates().value / sqrtf(max_intensity_projection.ReturnVarianceOfRealValues()));
 
         temp_image.CopyFrom(&max_intensity_projection);
         temp_image.Resize(original_input_image_x, original_input_image_y, 1, temp_image.ReturnAverageOfRealValuesOnEdges( ));
         temp_image.QuickAndDirtyWriteSlice(mip_output_file.ToStdString( ), 1, pixel_size);
-        //		max_intensity_projection.SubtractImage(&correlation_pixel_sum);
+        //        max_intensity_projection.SubtractImage(&correlation_pixel_sum);
         for ( pixel_counter = 0; pixel_counter < input_image.real_memory_allocated; pixel_counter++ ) {
             max_intensity_projection.real_values[pixel_counter] -= correlation_pixel_sum[pixel_counter];
             if ( correlation_pixel_sum_of_squares[pixel_counter] > 0.0f ) {
@@ -1203,7 +1205,7 @@ bool MatchTemplateApp::DoCalculation( ) {
             correlation_pixel_sum_image.real_values[pixel_counter]            = correlation_pixel_sum[pixel_counter];
             correlation_pixel_sum_of_squares_image.real_values[pixel_counter] = correlation_pixel_sum_of_squares[pixel_counter];
         }
-        //		max_intensity_projection.DividePixelWise(correlation_pixel_sum_of_squares);
+        //        max_intensity_projection.DividePixelWise(correlation_pixel_sum_of_squares);
         max_intensity_projection.Resize(original_input_image_x, original_input_image_y, 1, max_intensity_projection.ReturnAverageOfRealValuesOnEdges( ));
         max_intensity_projection.QuickAndDirtyWriteSlice(scaled_mip_output_file.ToStdString( ), 1, pixel_size);
 
@@ -1269,14 +1271,14 @@ bool MatchTemplateApp::DoCalculation( ) {
 
         pointer_to_histogram_data = (float*)histogram_data;
 
-        //		max_intensity_projection.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
-        //		correlation_pixel_sum_image.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
-        //		correlation_pixel_sum_of_squares_image.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
-        //		best_psi.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
-        //		best_theta.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
-        //		best_phi.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
-        //		best_defocus.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
-        //		best_pixel_size.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
+        //        max_intensity_projection.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
+        //        correlation_pixel_sum_image.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
+        //        correlation_pixel_sum_of_squares_image.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
+        //        best_psi.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
+        //        best_theta.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
+        //        best_phi.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
+        //        best_defocus.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
+        //        best_pixel_size.Resize(original_input_image_x, original_input_image_y, 1, 0.0f);
 
         // If the padded image is large, we want to resize, then trim to valid area, otherwise we want to trim to valid area and then resize.
         // Default to the case where the padding increases the image size. A call to resize a same size image only cost the function call time.
@@ -1347,8 +1349,8 @@ bool MatchTemplateApp::DoCalculation( ) {
         result[3] = histogram_number_of_points;
         result[4] = actual_number_of_ccs_calculated;
         result[5] = (float)sqrt_input_pixels;
-        //		result[5] = original_input_image_x;
-        //		result[6] = original_input_image_y;
+        //        result[5] = original_input_image_x;
+        //        result[6] = original_input_image_y;
 
         result_array_counter = number_of_meta_data_values;
 
@@ -1459,8 +1461,8 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
 
         wxString directory_for_writing_results = current_job_package.jobs[0].arguments[37].ReturnStringArgument( );
 
-        //		wxPrintf("temp x, y, n, resize x, y = %i %i %i %i %i \n", int(aggregated_results[array_location].collated_data_array[0]), \
-//			int(aggregated_results[array_location].collated_data_array[1]), int(result_array[2]), int(result_array[5]), int(result_array[6]));
+        //        wxPrintf("temp x, y, n, resize x, y = %i %i %i %i %i \n", int(aggregated_results[array_location].collated_data_array[0]), \
+//            int(aggregated_results[array_location].collated_data_array[1]), int(result_array[2]), int(result_array[5]), int(result_array[6]));
 
         Image temp_image;
 
@@ -1574,7 +1576,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
             if ( aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] > 0.0f ) {
 
                 // Save the variance, not the stdDev
-                //				aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] = sqrtf(aggregated_results[array_location].collated_pixel_square_sums[pixel_counter]);
+                //                aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] = sqrtf(aggregated_results[array_location].collated_pixel_square_sums[pixel_counter]);
                 aggregated_results[array_location].collated_mip_data[pixel_counter] = (aggregated_results[array_location].collated_mip_data[pixel_counter] - aggregated_results[array_location].collated_pixel_sums[pixel_counter]) /
                                                                                       aggregated_results[array_location].collated_pixel_square_sums[pixel_counter];
             }
@@ -1641,7 +1643,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
         const float CCG_NOISE_STDDEV = 1.0;
         double      temp_threshold   = 0.0;
         double      erf_input        = 2.0 / (1.0 * ((double)aggregated_results[array_location].collated_data_array[0] * (double)aggregated_results[array_location].collated_data_array[1] * (double)aggregated_results[array_location].total_number_of_ccs));
-        //		wxPrintf("ox oy total %3.3e %3.3e %3.3e\n", (double)result_array[5] , (double)result_array[6] , (double)aggregated_results[array_location].total_number_of_ccs, erf_input);
+        //        wxPrintf("ox oy total %3.3e %3.3e %3.3e\n", (double)result_array[5] , (double)result_array[6] , (double)aggregated_results[array_location].total_number_of_ccs, erf_input);
 
 #ifdef MKL
         vdErfcInv(1, &erf_input, &temp_threshold);
@@ -1650,7 +1652,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
 #endif
         expected_threshold = sqrtf(2.0f) * (float)temp_threshold * CCG_NOISE_STDDEV;
 
-        //		expected_threshold = sqrtf(2.0f)*cisTEM_erfcinv((2.0f*(1))/(((original_input_image_x * original_input_image_y * aggregated_results[array_location].total_number_of_ccs))));
+        //        expected_threshold = sqrtf(2.0f)*cisTEM_erfcinv((2.0f*(1))/(((original_input_image_x * original_input_image_y * aggregated_results[array_location].total_number_of_ccs))));
 
         histogram_file.WriteCommentLine("Expected threshold = %.2f\n", expected_threshold);
         histogram_file.WriteCommentLine("histogram, expected histogram, survival histogram, expected survival histogram");
@@ -1707,9 +1709,9 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
         while ( 1 == 1 ) {
             // look for a peak..
             nTrys++;
-            //			wxPrintf("Trying the %ld'th peak\n",nTrys);
+            //            wxPrintf("Trying the %ld'th peak\n",nTrys);
             // FIXME min-distance from edges would be better to set dynamically.
-            current_peak = scaled_mip.FindPeakWithIntegerCoordinates(0.0, FLT_MAX, input_reconstruction.logical_x_dimension / 4 + 1);
+            current_peak = scaled_mip.FindPeakWithIntegerCoordinates(0.0, FLT_MAX, input_reconstruction.logical_x_dimension / cistem::fraction_of_box_size_to_exclude_for_border + 1);
             if ( current_peak.value < expected_threshold )
                 break;
 
@@ -1728,7 +1730,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
             temp_peak_info.x_pos = current_peak.x * current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[2].ReturnFloatArgument( ); // RETURNING IN ANGSTROMS
             temp_peak_info.y_pos = current_peak.y * current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[2].ReturnFloatArgument( ); // RETURNING IN ANGSTROMS
 
-            //			wxPrintf("Peak = %f, %f, %f : %f\n", current_peak.x, current_peak.y, current_peak.value);
+            //            wxPrintf("Peak = %f, %f, %f : %f\n", current_peak.x, current_peak.y, current_peak.value);
 
             for ( j = std::max(myroundint(current_peak.y) - min_peak_radius, 0); j < std::min(myroundint(current_peak.y) + min_peak_radius, scaled_mip.logical_y_dimension); j++ ) {
                 sq_dist_y = float(j) - current_peak.y;
@@ -1758,17 +1760,17 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
                         scaled_mip.real_values[address] = -FLT_MAX;
                     }
 
-                    //					address++;
+                    //                    address++;
                 }
-                //				address += scaled_mip.padding_jump_value;
+                //                address += scaled_mip.padding_jump_value;
             }
 
-            //		wxPrintf("Peak %4i at x, y, psi, theta, phi, defocus, pixel size = %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f : %10.6f\n", number_of_peaks_found, current_peak.x, current_peak.y, current_psi, current_theta, current_phi, current_defocus, current_pixel_size, current_peak.value);
-            //		coordinates[0] = current_peak.x * pixel_size;
-            //		coordinates[1] = current_peak.y * pixel_size;
-            ////		coordinates[2] = binned_pixel_size * (slab.physical_address_of_box_center_z - binned_reconstruction.physical_address_of_box_center_z) - current_defocus;
-            //		coordinates[2] = binned_pixel_size * slab.physical_address_of_box_center_z - current_defocus;
-            //		coordinate_file.WriteLine(coordinates);
+            //        wxPrintf("Peak %4i at x, y, psi, theta, phi, defocus, pixel size = %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f : %10.6f\n", number_of_peaks_found, current_peak.x, current_peak.y, current_psi, current_theta, current_phi, current_defocus, current_pixel_size, current_peak.value);
+            //        coordinates[0] = current_peak.x * pixel_size;
+            //        coordinates[1] = current_peak.y * pixel_size;
+            ////        coordinates[2] = binned_pixel_size * (slab.physical_address_of_box_center_z - binned_reconstruction.physical_address_of_box_center_z) - current_defocus;
+            //        coordinates[2] = binned_pixel_size * slab.physical_address_of_box_center_z - current_defocus;
+            //        coordinate_file.WriteLine(coordinates);
 
             // ok get a projection
 
@@ -1776,7 +1778,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
             // CURRENTLY HARD CODED TO ONLY DO 1000 MAX //
             //////////////////////////////////////////////
 
-            if ( number_of_peaks_found <= MAX_ALLOWED_NUMBER_OF_PEAKS ) {
+            if ( number_of_peaks_found <= cistem::maximum_number_of_detections ) {
 
                 angles.Init(current_phi, current_theta, current_psi, 0.0, 0.0);
 
@@ -1795,11 +1797,8 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
                 //current_projection.QuickAndDirtyWriteSlice("/tmp/projs.mrc", all_peak_infos.GetCount());
             }
             else {
-                SendError("More than 1000 peaks above threshold were found. Limiting results to 1000 peaks.\n");
+                SendInfo("WARNING: More than 1000 peaks above threshold were found. Limiting results to 1000 peaks.\n");
                 break;
-                //				SendError("Something seems to have gone wrong, more than 1000 _peaks_ were found\n");
-                //				scaled_mip.QuickAndDirtyWriteSlice("/tmp/scaled_mip_1000.mrc", 1);
-                //				exit(-1);
             }
         }
 

@@ -1,7 +1,7 @@
 #define OPEN_TO_READ 0
 #define OPEN_TO_WRITE 1
 #define OPEN_TO_APPEND 2
-#define MAX_NUMBER_OF_TIMESTEPS 200
+#define MAX_NUMBER_OF_TIMESTEPS 2000
 
 #define MAX_NUMBER_OF_NOISE_PARTICLES 6
 
@@ -63,6 +63,19 @@ class ParticleTrajectory {
 
 WX_DECLARE_OBJARRAY(ParticleTrajectory, ArrayOfParticleTrajectories);
 
+class InitialOrientations {
+
+  public:
+    float euler1;
+    float euler2;
+    float euler3;
+    float ox;
+    float oy;
+    float oz;
+
+    InitialOrientations(float phi, float theta, float psi, float x, float y, float z) : euler1(phi), euler2(theta), euler3(psi), ox(x), oy(y), oz(z) {}
+};
+
 class PDB {
 
   private:
@@ -78,7 +91,8 @@ class PDB {
     ArrayOfAtoms                my_atoms;
     ArrayOfParticleTrajectories my_trajectory;
     // This should be used to replace my_trajectory. For now just using for the noise atoms.
-    AnglesAndShifts my_angles_and_shifts[MAX_NUMBER_OF_NOISE_PARTICLES];
+    AnglesAndShifts                  my_angles_and_shifts[MAX_NUMBER_OF_NOISE_PARTICLES];
+    std::vector<InitialOrientations> initial_values;
 
     // If generating a particle stack, this may be set to true after PDB initialization. It wouldn't make sense to enable this for a micrograph or tilt-series
     bool  generate_noise_atoms          = false;
@@ -90,7 +104,6 @@ class PDB {
     float emulate_tilt_angle;
     bool  shift_by_center_of_mass;
     //ArrayOfParticleInstances my_particle;
-
     // Constructors
     PDB( );
     PDB(long number_of_non_water_atoms, float cubic_size, float wanted_pixel_size, int minimum_paddeding_x_and_y, double minimum_thickness_z,
@@ -99,14 +112,20 @@ class PDB {
         float wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
         float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
         float emulate_tilt_angle,
-        bool shift_by_center_of_mass, bool is_alpha_fold_prediction);
+        bool  shift_by_center_of_mass,
+        bool  is_alpha_fold_prediction,
+        bool  use_star_file);
+
     PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, long wanted_records_per_line, int minimum_paddeding_x_and_y, double minimum_thickness_z,
-        int   max_number_of_noise_particles,
-        float wanted_noise_particle_radius_as_mutliple_of_particle_radius,
-        float wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
-        float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
-        float emulate_tilt_angle,
-        bool shift_by_center_of_mass, bool is_alpha_fold_prediction);
+        int               max_number_of_noise_particles,
+        float             wanted_noise_particle_radius_as_mutliple_of_particle_radius,
+        float             wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
+        float             wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
+        float             emulate_tilt_angle,
+        bool              shift_by_center_of_mass,
+        bool              is_alpha_fold_prediction,
+        cisTEMParameters& wanted_star_file, bool use_star_file);
+
     PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, long wanted_records_per_line, int minimum_paddeding_x_and_y, double minimum_thickness_z, double* center_of_mass, bool is_alpha_fold_prediction);
 
     ~PDB( );
@@ -139,6 +158,9 @@ class PDB {
     int    MIN_PADDING_XY;
     double MIN_THICKNESS;
 
+    cisTEMParameters star_file_parameters;
+    bool             use_star_file;
+
     // H(0),C(1),N(2),O(3),F(4),Na(5),Mg(6),P(7),S(8),Cl(9),K(10),Ca(11),Mn(12),Fe(13),Zn(14),H20(15),0-(16)
 
     // This should probably be a copy constructor in the Atom class FIXME
@@ -153,7 +175,6 @@ class PDB {
         atom_out.occupancy        = atom_to_copy.occupancy;
         atom_out.bfactor          = atom_to_copy.bfactor;
         atom_out.charge           = atom_to_copy.charge;
-
         return atom_out;
     };
 

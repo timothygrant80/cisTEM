@@ -28,12 +28,13 @@ class ScatteringPotential {
     __inline__ float ReturnAtomicNumber(AtomType id) { return ATOMIC_NUMBER[id]; }
 
     void InitPdbEnsemble(float wanted_pixel_size, bool shift_by_cetner_of_mass, int minimum_padding_x_and_y, int minimum_thickness_z,
-                         int   max_number_of_noise_particles,
-                         float wanted_noise_particle_radius_as_mutliple_of_particle_radius,
-                         float wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
-                         float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
-                         float wanted_tilt_angle_to_emulat,
-                         bool  is_alpha_fold_prediction);
+                         int               max_number_of_noise_particles,
+                         float             wanted_noise_particle_radius_as_mutliple_of_particle_radius,
+                         float             wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
+                         float             wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
+                         float             wanted_tilt_angle_to_emulat,
+                         bool              is_alpha_fold_prediction,
+                         cisTEMParameters& wanted_star_file, bool use_star_file);
     long ReturnTotalNumberOfNonWaterAtoms( );
 
   private:

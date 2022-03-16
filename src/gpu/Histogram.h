@@ -10,50 +10,43 @@
 
 class Histogram {
 
-public:
+  public:
+    Histogram( );
+    Histogram(int histogram_n_bins, float histogram_min, float histogram_step);
+    virtual ~Histogram( );
 
+    dim3 threadsPerBlock_img;
+    dim3 gridDims_img;
 
-	Histogram();
-	Histogram(int histogram_n_bins, float histogram_min, float histogram_step);
-	virtual ~Histogram();
+    dim3 threadsPerBlock_accum_array;
+    dim3 gridDims_accum_array;
 
-	dim3 threadsPerBlock_img;
-	dim3 gridDims_img;
+    //	float* histogram;		bool is_allocated_histogram; // histogram_n_bins in size;
+    float* histogram;
+    bool   is_allocated_histogram; // histogram_n_bins in size;
 
-	dim3 threadsPerBlock_accum_array;
-	dim3 gridDims_accum_array;
+    size_t size_of_temp_hist;
+    float* cummulative_histogram;
 
-//	float* histogram;		bool is_allocated_histogram; // histogram_n_bins in size;
-	float* histogram;		bool is_allocated_histogram; // histogram_n_bins in size;
+    int histogram_n_bins; //
+    //	float histogram_min;
+    //	float histogram_max;
+    //	float histogram_step;
+    __half histogram_min;
+    __half histogram_max;
+    __half histogram_step;
 
-	size_t size_of_temp_hist;
-	float* cummulative_histogram;
+    int max_padding;
 
-	int histogram_n_bins; //
-//	float histogram_min;
-//	float histogram_max;
-//	float histogram_step;
-	__half histogram_min;
-	__half histogram_max;
-	__half histogram_step;
+    void SetInitialValues( );
+    void Init(int histogram_n_bins, float histogram_min, float histogram_step);
+    void BufferInit(NppiSize npp_ROI);
+    void AddToHistogram(GpuImage& input_image);
+    void Accumulate(GpuImage& input_image);
 
-	int max_padding;
+    void CopyToHostAndAdd(long* array_to_add_to);
 
-
-	void SetInitialValues();
-	void Init(int histogram_n_bins, float histogram_min, float histogram_step);
-	void BufferInit(NppiSize npp_ROI);
-	void AddToHistogram(GpuImage &input_image);
-	void Accumulate(GpuImage &input_image);
-
-	void CopyToHostAndAdd(long* array_to_add_to);
-
-private:
-
-
-
-
-
+  private:
 };
 
 #endif /* HISTOGRAM_H_ */

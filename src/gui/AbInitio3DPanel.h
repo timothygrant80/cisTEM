@@ -3,284 +3,261 @@
 
 class AbInitio3DPanel;
 
-class AbInitioManager
-{
-public:
+class AbInitioManager {
+  public:
+    AbInitioManager( );
 
-	AbInitioManager();
+    bool             start_with_reconstruction;
+    AbInitio3DPanel* my_parent;
 
-	bool start_with_reconstruction;
-	AbInitio3DPanel *my_parent;
+    long current_job_starttime;
+    long time_of_last_update;
+    int  number_of_generated_3ds;
 
-	long current_job_starttime;
-	long time_of_last_update;
-	int number_of_generated_3ds;
+    int running_job_type;
+    int number_of_rounds_to_run;
+    int number_of_rounds_run;
 
-	int running_job_type;
-	int number_of_rounds_to_run;
-	int number_of_rounds_run;
+    long current_job_id;
 
-	long current_job_id;
+    long current_refinement_package_asset_id;
+    long current_input_refinement_id;
+    long current_output_refinement_id;
 
+    long number_of_received_particle_results;
+    long number_of_expected_results;
 
-	long current_refinement_package_asset_id;
-	long current_input_refinement_id;
-	long current_output_refinement_id;
+    wxArrayFloat align_sym_best_correlations;
+    wxArrayFloat align_sym_best_x_rots;
+    wxArrayFloat align_sym_best_y_rots;
+    wxArrayFloat align_sym_best_z_rots;
+    wxArrayFloat align_sym_best_x_shifts;
+    wxArrayFloat align_sym_best_y_shifts;
+    wxArrayFloat align_sym_best_z_shifts;
+    bool         apply_symmetry;
 
-	long number_of_received_particle_results;
-	long number_of_expected_results;
+    RefinementPackage* active_refinement_package;
+    Refinement*        input_refinement;
+    Refinement*        output_refinement;
 
-	wxArrayFloat align_sym_best_correlations;
-	wxArrayFloat align_sym_best_x_rots;
-	wxArrayFloat align_sym_best_y_rots;
-	wxArrayFloat align_sym_best_z_rots;
-	wxArrayFloat align_sym_best_x_shifts;
-	wxArrayFloat align_sym_best_y_shifts;
-	wxArrayFloat align_sym_best_z_shifts;
-	bool apply_symmetry;
+    ClassificationSelection active_classification_selection;
 
-	RefinementPackage *active_refinement_package;
-	Refinement *input_refinement;
-	Refinement *output_refinement;
+    RunProfile active_refinement_run_profile;
+    RunProfile active_reconstruction_run_profile;
 
-	ClassificationSelection active_classification_selection;
+    bool active_always_apply_symmetry;
 
-	RunProfile active_refinement_run_profile;
-	RunProfile active_reconstruction_run_profile;
+    wxString active_symmetry_string;
 
-	bool active_always_apply_symmetry;
+    //float startup_percent_used;
+    float current_high_res_limit;
+    float next_high_res_limit;
 
-	wxString active_symmetry_string;
+    float start_percent_used;
+    float end_percent_used;
+    float symmetry_start_percent_used;
+    float symmetry_end_percent_used;
 
-	//float startup_percent_used;
-	float current_high_res_limit;
-	float next_high_res_limit;
+    float active_start_percent_used;
+    float active_end_percent_used;
+    float current_percent_used;
 
-	float start_percent_used;
-	float end_percent_used;
-	float symmetry_start_percent_used;
-	float symmetry_end_percent_used;
+    float active_start_res;
+    float active_end_res;
 
-	float active_start_percent_used;
-	float active_end_percent_used;
-	float current_percent_used;
+    bool active_should_automask;
+    bool active_auto_set_percent_used;
 
-	float active_start_res;
-	float active_end_res;
+    float active_inner_mask_radius;
+    float active_global_mask_radius;
 
-	bool active_should_automask;
-	bool active_auto_set_percent_used;
+    float active_search_range_x;
+    float active_search_range_y;
 
-	float active_inner_mask_radius;
-	float active_global_mask_radius;
+    bool active_should_apply_blurring;
+    bool active_smoothing_factor;
+    bool active_use_classums;
 
-	float active_search_range_x;
-	float active_search_range_y;
+    int active_images_per_class;
+    int active_number_of_2d_classes;
 
-	bool active_should_apply_blurring;
-	bool active_smoothing_factor;
-	bool active_use_classums;
+    int number_of_starts_to_run;
+    int number_of_starts_run;
 
-	int active_images_per_class;
-	int active_number_of_2d_classes;
+    wxArrayString current_reference_filenames;
 
-	int number_of_starts_to_run;
-	int number_of_starts_run;
+    float    stack_bin_factor;
+    wxString active_stack_filename;
+    float    active_pixel_size;
+    bool     stack_has_been_precomputed;
 
-	wxArrayString current_reference_filenames;
+    void SetParent(AbInitio3DPanel* wanted_parent);
 
-	float stack_bin_factor;
-	wxString active_stack_filename;
-	float active_pixel_size;
-	bool stack_has_been_precomputed;
+    void BeginRefinementCycle( );
+    void CycleRefinement( );
 
-	void SetParent(AbInitio3DPanel *wanted_parent);
+    void UpdatePlotPanel( );
 
-	void BeginRefinementCycle();
-	void CycleRefinement();
+    void SetupPrepareStackJob( );
+    void RunPrepareStackJob( );
 
-	void UpdatePlotPanel();
+    void SetupAlignSymmetryJob( );
+    void RunAlignSymmetryJob( );
 
-	void SetupPrepareStackJob();
-	void RunPrepareStackJob();
+    void SetupRefinementJob( );
+    void SetupReconstructionJob( );
+    void SetupMerge3dJob( );
 
-	void SetupAlignSymmetryJob();
-	void RunAlignSymmetryJob();
+    void SetupInitialReconstructionJob( );
+    void SetupInitialMerge3dJob( );
 
-	void SetupRefinementJob();
-	void SetupReconstructionJob();
-	void SetupMerge3dJob();
+    void RunInitialReconstructionJob( );
+    void RunInitialMerge3dJob( );
 
-	void SetupInitialReconstructionJob();
-	void SetupInitialMerge3dJob();
+    void RunRefinementJob( );
+    void RunReconstructionJob( );
+    void RunMerge3dJob( );
 
-	void RunInitialReconstructionJob();
-	void RunInitialMerge3dJob();
+    void ProcessJobResult(JobResult* result_to_process);
+    void ProcessAllJobsFinished( );
 
-	void RunRefinementJob();
-	void RunReconstructionJob();
-	void RunMerge3dJob();
-
-	void ProcessJobResult(JobResult *result_to_process);
-	void ProcessAllJobsFinished();
-
-	void OnMaskerThreadComplete();
-	void DoMasking();
-
-
-
+    void OnMaskerThreadComplete( );
+    void DoMasking( );
 };
 
+class AbInitio3DPanel : public AbInitio3DPanelParent {
+    friend class AbInitioManager;
 
-class AbInitio3DPanel : public AbInitio3DPanelParent
-{
-	friend class AbInitioManager;
+  protected:
+    // Handlers for events.
 
-protected:
-	// Handlers for events.
+    AbInitioManager my_abinitio_manager;
 
-	AbInitioManager my_abinitio_manager;
+    void OnUpdateUI(wxUpdateUIEvent& event);
+    void OnExpertOptionsToggle(wxCommandEvent& event);
+    void OnInfoURL(wxTextUrlEvent& event);
+    void TerminateButtonClick(wxCommandEvent& event);
+    void FinishButtonClick(wxCommandEvent& event);
+    void StartRefinementClick(wxCommandEvent& event);
+    void ResetAllDefaultsClick(wxCommandEvent& event);
 
-	void OnUpdateUI( wxUpdateUIEvent& event );
-	void OnExpertOptionsToggle( wxCommandEvent& event );
-	void OnInfoURL( wxTextUrlEvent& event );
-	void TerminateButtonClick( wxCommandEvent& event );
-	void FinishButtonClick( wxCommandEvent& event );
-	void StartRefinementClick( wxCommandEvent& event );
-	void ResetAllDefaultsClick( wxCommandEvent& event );
+  public:
+    wxStopWatch stopwatch;
 
-public:
+    long time_of_last_result_update;
+    bool refinement_package_combo_is_dirty;
+    bool run_profiles_are_dirty;
+    bool classification_selections_are_dirty;
 
-	wxStopWatch stopwatch;
+    long selected_refinement_package;
 
-	long time_of_last_result_update;
-	bool refinement_package_combo_is_dirty;
-	bool run_profiles_are_dirty;
-	bool classification_selections_are_dirty;
+    int           number_of_resampled_volumes_recieved;
+    long          current_startup_id;
+    wxArrayString resampled_volume_filenames;
 
-	long selected_refinement_package;
+    wxString old_symmetry;
+    int      old_number_of_classes;
+    int      old_class_selection;
+    bool     old_automask_value;
 
-	int number_of_resampled_volumes_recieved;
-	long current_startup_id;
-	wxArrayString resampled_volume_filenames;
+    int active_orth_thread_id;
+    int active_mask_thread_id;
+    int active_sym_thread_id;
 
-	wxString old_symmetry;
-	int old_number_of_classes;
-	int old_class_selection;
-	bool old_automask_value;
+    int next_thread_id;
 
-	int active_orth_thread_id;
-	int active_mask_thread_id;
-	int active_sym_thread_id;
+    bool running_job;
 
-	int next_thread_id;
+    AbInitio3DPanel(wxWindow* parent);
 
-	bool running_job;
+    wxString ReturnName( ) { return "AbInitioPanel"; }
 
+    void WriteInfoText(wxString text_to_write);
+    void WriteErrorText(wxString text_to_write);
+    void WriteWarningText(wxString text_to_write);
+    void WriteBlueText(wxString text_to_write);
 
-	AbInitio3DPanel( wxWindow* parent );
-	wxString ReturnName() {return "AbInitioPanel";}
+    // overridden socket methods..
 
-	void WriteInfoText(wxString text_to_write);
-	void WriteErrorText(wxString text_to_write);
-	void WriteWarningText(wxString text_to_write);
-	void WriteBlueText(wxString text_to_write);
+    void OnSocketJobResultMsg(JobResult& received_result);
+    void OnSocketJobResultQueueMsg(ArrayofJobResults& received_queue);
+    void SetNumberConnectedText(wxString wanted_text);
+    void SetTimeRemainingText(wxString wanted_text);
+    void OnSocketAllJobsFinished( );
 
-	// overridden socket methods..
+    void OnMaskerThreadComplete(wxThreadEvent& my_event);
+    void OnOrthThreadComplete(ReturnProcessedImageEvent& my_event);
+    void OnVolumeResampled(ReturnProcessedImageEvent& my_event);
+    void OnImposeSymmetryThreadComplete(wxThreadEvent& event);
 
-	void OnSocketJobResultMsg(JobResult &received_result);
-	void OnSocketJobResultQueueMsg(ArrayofJobResults &received_queue);
-	void SetNumberConnectedText(wxString wanted_text);
-	void SetTimeRemainingText(wxString wanted_text);
-	void OnSocketAllJobsFinished();
+  public:
+    void Reset( );
+    void SetDefaults( );
+    void SetInfo( );
+    void FillRefinementPackagesComboBox( );
+    void FillRunProfileComboBoxes( );
+    void NewRefinementPackageSelected( );
 
+    void OnRefinementPackageComboBox(wxCommandEvent& event);
+    void OnMethodChange(wxCommandEvent& event);
 
-	void OnMaskerThreadComplete(wxThreadEvent& my_event);
-	void OnOrthThreadComplete(ReturnProcessedImageEvent& my_event);
-	void OnVolumeResampled(ReturnProcessedImageEvent& my_event);
-	void OnImposeSymmetryThreadComplete(wxThreadEvent& event);
+    void TakeLastStartClicked(wxCommandEvent& event);
+    void TakeCurrentClicked(wxCommandEvent& event);
 
-public:
-
-	void Reset();
-	void SetDefaults();
-	void SetInfo();
-	void FillRefinementPackagesComboBox();
-	void FillRunProfileComboBoxes();
-	void NewRefinementPackageSelected();
-
-	void OnRefinementPackageComboBox( wxCommandEvent& event );
-	void OnMethodChange( wxCommandEvent& event );
-
-	void TakeLastStartClicked( wxCommandEvent& event );
-	void TakeCurrentClicked( wxCommandEvent& event );
-
-	void TakeCurrent();
-	void TakeLastStart();
-
+    void TakeCurrent( );
+    void TakeLastStart( );
 };
 
+class ResampleVolumeThread : public wxThread {
+  public:
+    ResampleVolumeThread(wxWindow* wanted_parent_window, wxString wanted_input_volume, int wanted_box_size, float wanted_output_pixel_size, int wanted_class_number) : wxThread(wxTHREAD_DETACHED) {
+        parent_window     = wanted_parent_window;
+        input_volume      = wanted_input_volume;
+        box_size          = wanted_box_size;
+        output_pixel_size = wanted_output_pixel_size;
+        class_number      = wanted_class_number;
+    }
 
-class ResampleVolumeThread : public wxThread
-{
-	public:
-	ResampleVolumeThread(wxWindow *wanted_parent_window, wxString wanted_input_volume, int wanted_box_size, float wanted_output_pixel_size, int wanted_class_number) : wxThread(wxTHREAD_DETACHED)
-	{
-		parent_window = wanted_parent_window;
-		input_volume = wanted_input_volume;
-		box_size = wanted_box_size;
-		output_pixel_size = wanted_output_pixel_size;
-		class_number = wanted_class_number;
-	}
+    wxWindow* parent_window;
+    wxString  input_volume;
+    int       box_size;
+    float     output_pixel_size;
+    int       class_number;
 
-	wxWindow *parent_window;
-    wxString input_volume;
-    int box_size;
-    float output_pixel_size;
-    int class_number;
-
-	protected:
-
-    ExitCode Entry();
+  protected:
+    ExitCode Entry( );
 };
 
+class ImposeAlignmentAndSymmetryThread : public wxThread {
+  public:
+    ImposeAlignmentAndSymmetryThread(wxWindow* wanted_parent_window, wxArrayString wanted_input_volumes, wxArrayString wanted_output_volumes, wxArrayFloat wanted_x_rots, wxArrayFloat wanted_y_rots, wxArrayFloat wanted_z_rots, wxArrayFloat wanted_x_shifts, wxArrayFloat wanted_y_shifts, wxArrayFloat wanted_z_shifts, wxString wanted_symmetry, int wanted_thread_id = -1) {
+        parent_window  = wanted_parent_window;
+        input_volumes  = wanted_input_volumes;
+        output_volumes = wanted_output_volumes;
+        x_rots         = wanted_x_rots;
+        y_rots         = wanted_y_rots;
+        z_rots         = wanted_z_rots;
+        x_shifts       = wanted_x_shifts;
+        y_shifts       = wanted_y_shifts;
+        z_shifts       = wanted_z_shifts;
+        symmetry       = wanted_symmetry;
+        thread_id      = wanted_thread_id;
+    }
 
-class ImposeAlignmentAndSymmetryThread : public wxThread
-{
-	public:
-	ImposeAlignmentAndSymmetryThread(wxWindow *wanted_parent_window, wxArrayString wanted_input_volumes, wxArrayString wanted_output_volumes, wxArrayFloat wanted_x_rots, wxArrayFloat wanted_y_rots, wxArrayFloat wanted_z_rots, wxArrayFloat wanted_x_shifts, wxArrayFloat wanted_y_shifts, wxArrayFloat wanted_z_shifts, wxString wanted_symmetry, int wanted_thread_id = -1)
-	{
-		parent_window = wanted_parent_window;
-		input_volumes = wanted_input_volumes;
-		output_volumes = wanted_output_volumes;
-		x_rots = wanted_x_rots;
-		y_rots = wanted_y_rots;
-		z_rots = wanted_z_rots;
-		x_shifts = wanted_x_shifts;
-		y_shifts = wanted_y_shifts;
-		z_shifts = wanted_z_shifts;
-		symmetry = wanted_symmetry;
-		thread_id = wanted_thread_id;
-	}
+    wxWindow*     parent_window;
+    wxArrayString input_volumes;
+    wxArrayString output_volumes;
+    wxArrayFloat  x_rots;
+    wxArrayFloat  y_rots;
+    wxArrayFloat  z_rots;
+    wxArrayFloat  x_shifts;
+    wxArrayFloat  y_shifts;
+    wxArrayFloat  z_shifts;
+    wxString      symmetry;
+    int           thread_id;
 
-	wxWindow *parent_window;
-	wxArrayString input_volumes;
-	wxArrayString output_volumes;
-	wxArrayFloat x_rots;
-	wxArrayFloat y_rots;
-	wxArrayFloat z_rots;
-	wxArrayFloat x_shifts;
-	wxArrayFloat y_shifts;
-	wxArrayFloat z_shifts;
-	wxString symmetry;
-	int thread_id;
-
-	protected:
-
-    ExitCode Entry();
+  protected:
+    ExitCode Entry( );
 };
-
-
 
 #endif
-

@@ -56,7 +56,4 @@ bool DoDiskIOImageTests(wxString hiv_images_80x80x10_filename, wxString temp_dir
 void TestResult(wxString testName, bool result);
 bool DoDiskIOImageTests(wxString hiv_images_80x80x10_filename, wxString temp_directory);
 
-
-
-
 #endif /* SRC_PROGRAMS_SAMPLES_0_SIMPLE_DISK_IO_IMAGE_HPP_ */

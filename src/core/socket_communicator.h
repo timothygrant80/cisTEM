@@ -1,126 +1,140 @@
 class SocketServerThread;
 class SocketClientMonitorThread;
 
-
 wxDEFINE_EVENT(wxEVT_SOCKET_SERVER_EVENT, wxThreadEvent);
-WX_DEFINE_ARRAY(wxSocketBase *, ArrayOfSocketPointers);
+WX_DEFINE_ARRAY(wxSocketBase*, ArrayOfSocketPointers);
 
-class SocketCommunicator
-{
-	protected :
+class SocketCommunicator {
+  protected:
+    SocketServerThread*        server_thread;
+    SocketClientMonitorThread* socket_monitor_thread;
 
+    JobPackage current_job_package;
 
-	SocketServerThread *server_thread;
-	SocketClientMonitorThread *socket_monitor_thread;
+  public:
+    bool server_is_running;
+    bool monitor_is_running;
 
-	JobPackage current_job_package;
+    wxMutex server_mutex;
+    wxMutex server_is_running_mutex;
+    wxMutex shutdown_mutex;
 
-	public :
+    wxMutex monitor_is_running_mutex;
 
-	bool server_is_running;
-	bool monitor_is_running;
+    wxMutex add_sockets_mutex;
+    wxMutex remove_sockets_mutex;
+    wxMutex remove_sockets_and_destroy_mutex;
 
-	wxMutex server_mutex;
-	wxMutex server_is_running_mutex;
-	wxMutex shutdown_mutex;
+    wxEvtHandler* brother_event_handler; // THIS MUST BE SET IN THE CONTRUCTOR OF INHERITED CLASSES!!!
 
-	wxMutex monitor_is_running_mutex;
+    unsigned char current_job_code[SOCKET_CODE_SIZE];
 
-	wxMutex add_sockets_mutex;
-	wxMutex remove_sockets_mutex;
-	wxMutex remove_sockets_and_destroy_mutex;
+    SocketCommunicator( );
+    ~SocketCommunicator( );
 
-	wxEvtHandler *brother_event_handler; // THIS MUST BE SET IN THE CONTRUCTOR OF INHERITED CLASSES!!!
+    bool SetupServer( );
+    void ShutDownServer( );
 
-	unsigned char current_job_code[SOCKET_CODE_SIZE];
+    void ShutDownSocketMonitor( );
 
-	SocketCommunicator();
-	~SocketCommunicator();
+    short int     ReturnServerPort( );
+    wxString      ReturnServerPortString( );
+    wxArrayString ReturnServerAllIpAddresses( );
 
-	bool SetupServer();
-	void ShutDownServer();
+    void MonitorSocket(wxSocketBase* socket_to_monitor);
+    void StopMonitoringSocket(wxSocketBase* socket_to_monitor);
+    void StopMonitoringAndDestroySocket(wxSocketBase* socket_to_monitor);
+    void SetJobCode(unsigned char* code_to_set);
 
-	void ShutDownSocketMonitor();
+    virtual wxString ReturnName( ) { return "GenericCommunicator"; }
 
-	short int ReturnServerPort();
-	wxString ReturnServerPortString();
-	wxArrayString ReturnServerAllIpAddresses();
+    // the following should be overidden in the inherited classes
+    // It is VERY IMPORTANT that data is never read on the passed socket, it should only be written to the socket.
+    // All reading should be handled completely in the monitor thread loop.
 
-	void MonitorSocket(wxSocketBase *socket_to_monitor);
-	void StopMonitoringSocket(wxSocketBase *socket_to_monitor);
-	void StopMonitoringAndDestroySocket(wxSocketBase *socket_to_monitor);
-	void SetJobCode(unsigned char *code_to_set);
+    virtual void HandleNewSocketConnection(wxSocketBase* new_connection, unsigned char* identification_code) { wxPrintf("Warning:: Unhandled Socket Message (HandleNewSocketConnection)\n"); }
 
-	virtual wxString ReturnName() {return "GenericCommunicator";}
+    virtual void HandleSocketYouAreConnected(wxSocketBase* connected_socket) { wxPrintf("Warning:: Unhandled Socket Message (HandleSocketYouAreConnected)\n"); }
 
-	// the following should be overidden in the inherited classes
-	// It is VERY IMPORTANT that data is never read on the passed socket, it should only be written to the socket.
-	// All reading should be handled completely in the monitor thread loop.
+    virtual void HandleSocketSendJobDetails(wxSocketBase* connected_socket) { wxPrintf("Warning:: Unhandled Socket Message (HandleSocketSendJobDetails)\n"); }
 
-	virtual void HandleNewSocketConnection(wxSocketBase *new_connection, unsigned char *identification_code) {wxPrintf("Warning:: Unhandled Socket Message (HandleNewSocketConnection)\n");}
-	virtual void HandleSocketYouAreConnected(wxSocketBase *connected_socket) {wxPrintf("Warning:: Unhandled Socket Message (HandleSocketYouAreConnected)\n");}
-	virtual void HandleSocketSendJobDetails(wxSocketBase *connected_socket) {wxPrintf("Warning:: Unhandled Socket Message (HandleSocketSendJobDetails)\n");}
-	virtual void HandleSocketJobPackage(wxSocketBase *connected_socket, JobPackage *received_package) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketJobPackage)\n");}
-	virtual void HandleSocketYouAreTheMaster(wxSocketBase *connected_socket, JobPackage *received_package) {wxPrintf("Warning:: Unhandled Socket Message (HandleSocketYouAreTheMaster)\n");}
-	virtual void HandleSocketYouAreAWorker(wxSocketBase *connected_socket, wxString master_ip_address, wxString master_port_string) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketYouAreTheWorker)\n");}
-	virtual void HandleSocketSendNextJob(wxSocketBase *connected_socket, JobResult *received_result) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketSendNextJob)\n");}
-	virtual void HandleSocketTimeToDie(wxSocketBase *connected_socket) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketTimeToDie)\n");}
-	virtual void HandleSocketReadyToSendSingleJob(wxSocketBase *connected_socket, RunJob *received_job) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketReadyToSendSingleJob)\n");}
-	virtual void HandleSocketIHaveAnError(wxSocketBase *connected_socket, wxString error_message) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketIHaveAnError)\n");}
-	virtual void HandleSocketIHaveInfo(wxSocketBase *connected_socket, wxString info_message) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketIHaveInfo)\n");}
-	virtual void HandleSocketJobResult(wxSocketBase *connected_socket, JobResult *received_result) {wxPrintf("Warning:: Unhandled Socket Message(HAndleSocketJobResult)\n");}
-	virtual void HandleSocketJobResultQueue(wxSocketBase *connected_socket, ArrayofJobResults *received_queue) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketJobResultQueue)\n");}
-	virtual void HandleSocketJobFinished(wxSocketBase *connected_socket, int finished_job_number) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketJobFinished)\n");}
-	virtual void HandleSocketAllJobsFinished(wxSocketBase *connected_socket, long received_timing_in_milliseconds) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketAllJobsFinished)\n");}
-	virtual void HandleSocketNumberOfConnections(wxSocketBase *connected_socket, int received_number_of_connections) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketNumberOfConnections)\n");}
-	//virtual void HandleSocketResultWithImageToWrite(wxSocketBase *connected_socket, Image *image_to_write, wxString filename_to_write_to, int position_in_stack) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketResultWithImageToWrite)\n");}
-	virtual void HandleSocketResultWithImageToWrite(wxSocketBase *connected_socket, wxString filename_to_write_to, int position_in_stack) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketResultWithImageToWrite)\n");}  // No longer sending image, see the comment in socket_communicator.cpp
-	virtual void HandleSocketProgramDefinedResult(wxSocketBase *connected_socket, float *data_array, int size_of_data_array, int result_number, int number_of_expected_results) {wxPrintf("Warning:: Unhandled Socket Message (HandleSocketProgramDefinedResult)\n");}
-	virtual void HandleSocketSendThreadTiming(wxSocketBase *connected_socket, long received_timing_in_milliseconds) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketSendThreadTiming\n");}
-	virtual void HandleSocketDisconnect(wxSocketBase *connected_socket) {wxPrintf("Warning:: Unhandled Socket Disconnect(HandleSocketDisconnect)\n");}
-	virtual void HandleSocketTemplateMatchResultReady(wxSocketBase *connected_socket, int &image_number, float &threshold_used, ArrayOfTemplateMatchFoundPeakInfos &peak_infos, ArrayOfTemplateMatchFoundPeakInfos &peak_changes ) {wxPrintf("Warning:: Unhandled Socket Message (HandleSocketTemplateMatchResultReady)\n");}
+    virtual void HandleSocketJobPackage(wxSocketBase* connected_socket, JobPackage* received_package) { wxPrintf("Warning:: Unhandled Socket Message(HandleSocketJobPackage)\n"); }
 
+    virtual void HandleSocketYouAreTheMaster(wxSocketBase* connected_socket, JobPackage* received_package) { wxPrintf("Warning:: Unhandled Socket Message (HandleSocketYouAreTheMaster)\n"); }
+
+    virtual void HandleSocketYouAreAWorker(wxSocketBase* connected_socket, wxString master_ip_address, wxString master_port_string) { wxPrintf("Warning:: Unhandled Socket Message(HandleSocketYouAreTheWorker)\n"); }
+
+    virtual void HandleSocketSendNextJob(wxSocketBase* connected_socket, JobResult* received_result) { wxPrintf("Warning:: Unhandled Socket Message(HandleSocketSendNextJob)\n"); }
+
+    virtual void HandleSocketTimeToDie(wxSocketBase* connected_socket) { wxPrintf("Warning:: Unhandled Socket Message(HandleSocketTimeToDie)\n"); }
+
+    virtual void HandleSocketReadyToSendSingleJob(wxSocketBase* connected_socket, RunJob* received_job) { wxPrintf("Warning:: Unhandled Socket Message(HandleSocketReadyToSendSingleJob)\n"); }
+
+    virtual void HandleSocketIHaveAnError(wxSocketBase* connected_socket, wxString error_message) { wxPrintf("Warning:: Unhandled Socket Message(HandleSocketIHaveAnError)\n"); }
+
+    virtual void HandleSocketIHaveInfo(wxSocketBase* connected_socket, wxString info_message) { wxPrintf("Warning:: Unhandled Socket Message(HandleSocketIHaveInfo)\n"); }
+
+    virtual void HandleSocketJobResult(wxSocketBase* connected_socket, JobResult* received_result) { wxPrintf("Warning:: Unhandled Socket Message(HAndleSocketJobResult)\n"); }
+
+    virtual void HandleSocketJobResultQueue(wxSocketBase* connected_socket, ArrayofJobResults* received_queue) { wxPrintf("Warning:: Unhandled Socket Message(HandleSocketJobResultQueue)\n"); }
+
+    virtual void HandleSocketJobFinished(wxSocketBase* connected_socket, int finished_job_number) { wxPrintf("Warning:: Unhandled Socket Message(HandleSocketJobFinished)\n"); }
+
+    virtual void HandleSocketAllJobsFinished(wxSocketBase* connected_socket, long received_timing_in_milliseconds) { wxPrintf("Warning:: Unhandled Socket Message(HandleSocketAllJobsFinished)\n"); }
+
+    virtual void HandleSocketNumberOfConnections(wxSocketBase* connected_socket, int received_number_of_connections) { wxPrintf("Warning:: Unhandled Socket Message(HandleSocketNumberOfConnections)\n"); }
+
+    //virtual void HandleSocketResultWithImageToWrite(wxSocketBase *connected_socket, Image *image_to_write, wxString filename_to_write_to, int position_in_stack) {wxPrintf("Warning:: Unhandled Socket Message(HandleSocketResultWithImageToWrite)\n");}
+    virtual void HandleSocketResultWithImageToWrite(wxSocketBase* connected_socket, wxString filename_to_write_to, int position_in_stack) { wxPrintf("Warning:: Unhandled Socket Message(HandleSocketResultWithImageToWrite)\n"); } // No longer sending image, see the comment in socket_communicator.cpp
+
+    virtual void HandleSocketProgramDefinedResult(wxSocketBase* connected_socket, float* data_array, int size_of_data_array, int result_number, int number_of_expected_results) { wxPrintf("Warning:: Unhandled Socket Message (HandleSocketProgramDefinedResult)\n"); }
+
+    virtual void HandleSocketSendThreadTiming(wxSocketBase* connected_socket, long received_timing_in_milliseconds) { wxPrintf("Warning:: Unhandled Socket Message(HandleSocketSendThreadTiming\n"); }
+
+    virtual void HandleSocketDisconnect(wxSocketBase* connected_socket) { wxPrintf("Warning:: Unhandled Socket Disconnect(HandleSocketDisconnect)\n"); }
+
+    virtual void HandleSocketTemplateMatchResultReady(wxSocketBase* connected_socket, int& image_number, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes) { wxPrintf("Warning:: Unhandled Socket Message (HandleSocketTemplateMatchResultReady)\n"); }
 };
 
-class SocketServerThread : public wxThread
-{
-	public:
-	SocketServerThread(SocketCommunicator *handler) : wxThread(wxTHREAD_DETACHED) { parent_pointer = handler; should_shutdown = false;}
-   	~SocketServerThread();
+class SocketServerThread : public wxThread {
+  public:
+    SocketServerThread(SocketCommunicator* handler) : wxThread(wxTHREAD_DETACHED) {
+        parent_pointer  = handler;
+        should_shutdown = false;
+    }
 
-   	SocketCommunicator *parent_pointer;
+    ~SocketServerThread( );
 
-   	wxArrayString all_my_ip_addresses;
-	wxString my_port_string;
-	short int my_port;
+    SocketCommunicator* parent_pointer;
 
-	bool should_shutdown;
+    wxArrayString all_my_ip_addresses;
+    wxString      my_port_string;
+    short int     my_port;
 
-	wxSocketServer *socket_server;
-	bool local_copy_server_is_running;
+    bool should_shutdown;
 
-	protected:
+    wxSocketServer* socket_server;
+    bool            local_copy_server_is_running;
 
-    virtual ExitCode Entry();
+  protected:
+    virtual ExitCode Entry( );
 };
 
-class SocketClientMonitorThread : public wxThread
-{
-	public:
-	SocketClientMonitorThread(SocketCommunicator *handler) : wxThread(wxTHREAD_DETACHED) { parent_pointer = handler; }
-   	~SocketClientMonitorThread();
+class SocketClientMonitorThread : public wxThread {
+  public:
+    SocketClientMonitorThread(SocketCommunicator* handler) : wxThread(wxTHREAD_DETACHED) { parent_pointer = handler; }
 
-   	SocketCommunicator *parent_pointer;
+    ~SocketClientMonitorThread( );
 
-   	ArrayOfSocketPointers monitored_sockets;
-   	ArrayOfSocketPointers sockets_to_add_next_cycle;
-   	ArrayOfSocketPointers sockets_to_remove_next_cycle;
-   	ArrayOfSocketPointers sockets_to_remove_and_destroy_next_cycle;
+    SocketCommunicator* parent_pointer;
 
-	MRCFile buffered_output_file; // for writing directly in the HandleSocketResultWithImageToWrite sequence.
+    ArrayOfSocketPointers monitored_sockets;
+    ArrayOfSocketPointers sockets_to_add_next_cycle;
+    ArrayOfSocketPointers sockets_to_remove_next_cycle;
+    ArrayOfSocketPointers sockets_to_remove_and_destroy_next_cycle;
 
+    MRCFile buffered_output_file; // for writing directly in the HandleSocketResultWithImageToWrite sequence.
 
-	protected:
-
-    virtual ExitCode Entry();
+  protected:
+    virtual ExitCode Entry( );
 };

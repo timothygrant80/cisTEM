@@ -8,5 +8,4 @@ Inherited by specific sub classes in the same folder
 
 #include <string>
 
-
 #endif

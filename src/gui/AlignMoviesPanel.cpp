@@ -1,1278 +1,1178 @@
 //#include "../core/core_headers.h"
 #include "../core/gui_core_headers.h"
 
-extern MyMovieAssetPanel *movie_asset_panel;
-extern MyImageAssetPanel *image_asset_panel;
-extern MyRunProfilesPanel *run_profiles_panel;
-extern MyMovieAlignResultsPanel *movie_results_panel;
-extern MyMainFrame *main_frame;
+extern MyMovieAssetPanel*        movie_asset_panel;
+extern MyImageAssetPanel*        image_asset_panel;
+extern MyRunProfilesPanel*       run_profiles_panel;
+extern MyMovieAlignResultsPanel* movie_results_panel;
+extern MyMainFrame*              main_frame;
 
-MyAlignMoviesPanel::MyAlignMoviesPanel( wxWindow* parent )
-:
-AlignMoviesPanel( parent )
-{
-	// Set variables
+MyAlignMoviesPanel::MyAlignMoviesPanel(wxWindow* parent)
+    : AlignMoviesPanel(parent) {
+    // Set variables
 
-	buffered_results = NULL;
-	show_expert_options = false;
+    buffered_results    = NULL;
+    show_expert_options = false;
 
-	// Fill combo box..
+    // Fill combo box..
 
-	FillGroupComboBox();
+    FillGroupComboBox( );
 
-	my_job_id = -1;
-	running_job = false;
+    my_job_id   = -1;
+    running_job = false;
 
-	graph_is_hidden = true;
-	group_combo_is_dirty = false;
-	run_profiles_are_dirty = false;
+    graph_is_hidden        = true;
+    group_combo_is_dirty   = false;
+    run_profiles_are_dirty = false;
 
-	GraphPanel->SpectraPanel->use_auto_contrast = false;
+    GraphPanel->SpectraPanel->use_auto_contrast = false;
 
-	wxSize input_size = InputSizer->GetMinSize();
-	input_size.x += wxSystemSettings::GetMetric(wxSYS_VSCROLL_X);
-	input_size.y = -1;
-	ExpertPanel->SetMinSize(input_size);
-	ExpertPanel->SetSize(input_size);
+    wxSize input_size = InputSizer->GetMinSize( );
+    input_size.x += wxSystemSettings::GetMetric(wxSYS_VSCROLL_X);
+    input_size.y = -1;
+    ExpertPanel->SetMinSize(input_size);
+    ExpertPanel->SetSize(input_size);
 
-	ResetDefaults();
+    ResetDefaults( );
 
-	SetInfo();
-
+    SetInfo( );
 }
 
-void MyAlignMoviesPanel::Reset()
-{
-	ProgressBar->SetValue(0);
-	TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
+void MyAlignMoviesPanel::Reset( ) {
+    ProgressBar->SetValue(0);
+    TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
     CancelAlignmentButton->Show(true);
-	FinishButton->Show(false);
+    FinishButton->Show(false);
 
-	ProgressPanel->Show(false);
-	StartPanel->Show(true);
-	OutputTextPanel->Show(false);
-	output_textctrl->Clear();
-	GraphPanel->Show(false);
-	graph_is_hidden = true;
-	InfoPanel->Show(true);
+    ProgressPanel->Show(false);
+    StartPanel->Show(true);
+    OutputTextPanel->Show(false);
+    output_textctrl->Clear( );
+    GraphPanel->Show(false);
+    graph_is_hidden = true;
+    InfoPanel->Show(true);
 
-	ExpertToggleButton->SetValue(false);
-	show_expert_options = false;
-	ExpertPanel->Show(false);
+    ExpertToggleButton->SetValue(false);
+    show_expert_options = false;
+    ExpertPanel->Show(false);
 
-	if (running_job == true)
-	{
-		main_frame->job_controller.KillJob(my_job_id);
+    if ( running_job == true ) {
+        main_frame->job_controller.KillJob(my_job_id);
 
-		if (buffered_results != NULL)
-		{
-			delete [] buffered_results;
-			buffered_results = NULL;
-		}
+        if ( buffered_results != NULL ) {
+            delete[] buffered_results;
+            buffered_results = NULL;
+        }
 
-		running_job = false;
-	}
+        running_job = false;
+    }
 
-	ResetDefaults();
-	Layout();
-
+    ResetDefaults( );
+    Layout( );
 }
 
-void MyAlignMoviesPanel::ResetDefaults()
-{
-	minimum_shift_text->ChangeValue("2");
-	maximum_shift_text->ChangeValue("40");
-	dose_filter_checkbox->SetValue(true);
-	restore_power_checkbox->SetValue(true);
-	termination_threshold_text->ChangeValue("1");
-	max_iterations_spinctrl->SetValue(10);
-	bfactor_spinctrl->SetValue(1500);
-	mask_central_cross_checkbox->SetValue(true);
-	horizontal_mask_spinctrl->SetValue(1);
-	vertical_mask_spinctrl->SetValue(1);
-	include_all_frames_checkbox->SetValue(true);
-	first_frame_spin_ctrl->SetValue(1);
-	last_frame_spin_ctrl->SetValue(1);
-	SaveScaledSumCheckbox->SetValue(true);
+void MyAlignMoviesPanel::ResetDefaults( ) {
+    minimum_shift_text->ChangeValue("2");
+    maximum_shift_text->ChangeValue("40");
+    dose_filter_checkbox->SetValue(true);
+    restore_power_checkbox->SetValue(true);
+    termination_threshold_text->ChangeValue("1");
+    max_iterations_spinctrl->SetValue(10);
+    bfactor_spinctrl->SetValue(1500);
+    mask_central_cross_checkbox->SetValue(true);
+    horizontal_mask_spinctrl->SetValue(1);
+    vertical_mask_spinctrl->SetValue(1);
+    include_all_frames_checkbox->SetValue(true);
+    first_frame_spin_ctrl->SetValue(1);
+    last_frame_spin_ctrl->SetValue(1);
+    SaveScaledSumCheckbox->SetValue(true);
 }
 
-void MyAlignMoviesPanel::OnInfoURL(wxTextUrlEvent& event)
-{
-	 const wxMouseEvent& ev = event.GetMouseEvent();
+void MyAlignMoviesPanel::OnInfoURL(wxTextUrlEvent& event) {
+    const wxMouseEvent& ev = event.GetMouseEvent( );
 
-	 // filter out mouse moves, too many of them
-	 if ( ev.Moving() ) return;
+    // filter out mouse moves, too many of them
+    if ( ev.Moving( ) )
+        return;
 
-	 long start = event.GetURLStart();
+    long start = event.GetURLStart( );
 
-	 wxTextAttr my_style;
+    wxTextAttr my_style;
 
-	 InfoText->GetStyle(start, my_style);
+    InfoText->GetStyle(start, my_style);
 
-	 // Launch the URL
+    // Launch the URL
 
-	 wxLaunchDefaultBrowser(my_style.GetURL());
+    wxLaunchDefaultBrowser(my_style.GetURL( ));
 }
 
-void MyAlignMoviesPanel::SetInfo()
-{
-	#include "icons/dlp_alignment.cpp"
+void MyAlignMoviesPanel::SetInfo( ) {
+#include "icons/dlp_alignment.cpp"
 
-	wxLogNull *suppress_png_warnings = new wxLogNull;
-	wxBitmap alignment_bmp = wxBITMAP_PNG_FROM_DATA(dlp_alignment);
-	delete suppress_png_warnings;
+    wxLogNull* suppress_png_warnings = new wxLogNull;
+    wxBitmap   alignment_bmp         = wxBITMAP_PNG_FROM_DATA(dlp_alignment);
+    delete suppress_png_warnings;
 
-	InfoText->GetCaret()->Hide();
+    InfoText->GetCaret( )->Hide( );
 
-	InfoText->BeginSuppressUndo();
-	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
-	InfoText->BeginBold();
-	InfoText->BeginUnderline();
-	InfoText->BeginFontSize(14);
-	InfoText->WriteText(wxT("Movie Alignment"));
-	InfoText->EndFontSize();
-	InfoText->EndBold();
-	InfoText->EndUnderline();
-	InfoText->Newline();
-	InfoText->Newline();
-	InfoText->EndAlignment();
+    InfoText->BeginSuppressUndo( );
+    InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
+    InfoText->BeginBold( );
+    InfoText->BeginUnderline( );
+    InfoText->BeginFontSize(14);
+    InfoText->WriteText(wxT("Movie Alignment"));
+    InfoText->EndFontSize( );
+    InfoText->EndBold( );
+    InfoText->EndUnderline( );
+    InfoText->Newline( );
+    InfoText->Newline( );
+    InfoText->EndAlignment( );
 
-	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
-	InfoText->WriteText(wxT("Physical drift and beam induced motion (Brilot et al., 2012; Campbell et al., 2012; Li et al., 2013; Scheres, 2014) of the specimen leads to a degradation of information within images, and will ultimately limit the resolution of any reconstruction.  Aligning a movie prior to calculating the sum will prevent a large amount of this degradation and lead to better data.  This panel therefore attempts to align movies based on the Unblur algorithm described in (Grant and Grigorieff, 2015)."));
-	InfoText->Newline();
-	InfoText->Newline();
-	InfoText->EndAlignment();
+    InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
+    InfoText->WriteText(wxT("Physical drift and beam induced motion (Brilot et al., 2012; Campbell et al., 2012; Li et al., 2013; Scheres, 2014) of the specimen leads to a degradation of information within images, and will ultimately limit the resolution of any reconstruction.  Aligning a movie prior to calculating the sum will prevent a large amount of this degradation and lead to better data.  This panel therefore attempts to align movies based on the Unblur algorithm described in (Grant and Grigorieff, 2015)."));
+    InfoText->Newline( );
+    InfoText->Newline( );
+    InfoText->EndAlignment( );
 
-	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
-	InfoText->WriteImage(alignment_bmp);
-	InfoText->Newline();
-	InfoText->Newline();
-	InfoText->EndAlignment();
+    InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
+    InfoText->WriteImage(alignment_bmp);
+    InfoText->Newline( );
+    InfoText->Newline( );
+    InfoText->EndAlignment( );
 
-	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
-	InfoText->WriteText(wxT("Additionally an exposure weighted sum can be calculated which attempts to maximize the signal-to-noise ratio in the final sums by taking into account the radiation damage the sample has suffered as the movie progresses.  This exposure weighting is described in (Grant and Grigorieff, 2015a).  During this step, any anisotropic magnification distortions present in the images can also be corrected (Grant and Grigorieff, 2015b), using the parameters that were entered during movie import. "));
-	InfoText->Newline();
-	InfoText->Newline();
-	InfoText->EndAlignment();
+    InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
+    InfoText->WriteText(wxT("Additionally an exposure weighted sum can be calculated which attempts to maximize the signal-to-noise ratio in the final sums by taking into account the radiation damage the sample has suffered as the movie progresses.  This exposure weighting is described in (Grant and Grigorieff, 2015a).  During this step, any anisotropic magnification distortions present in the images can also be corrected (Grant and Grigorieff, 2015b), using the parameters that were entered during movie import. "));
+    InfoText->Newline( );
+    InfoText->Newline( );
+    InfoText->EndAlignment( );
 
-	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
-	InfoText->BeginBold();
-	InfoText->BeginUnderline();
-	InfoText->WriteText(wxT("Program Options"));
-	InfoText->EndBold();
-	InfoText->EndUnderline();
-	InfoText->Newline();
-	InfoText->Newline();
-	InfoText->EndAlignment();
+    InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
+    InfoText->BeginBold( );
+    InfoText->BeginUnderline( );
+    InfoText->WriteText(wxT("Program Options"));
+    InfoText->EndBold( );
+    InfoText->EndUnderline( );
+    InfoText->Newline( );
+    InfoText->Newline( );
+    InfoText->EndAlignment( );
 
-	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Input Group : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("The group of movie assets that will be aligned.  For each movie within the group, the output will be an image representing the sum of the aligned movie.  This movie will be automatically added to the image assets list."));
-	InfoText->Newline();
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Run Profile : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("The selected run profile will be used to run the job.  The run profile describes how the job should be run (e.g. how many processors should be used, and on which different computers).  Run profiles are set in the Run Profile panel, located under settings."));
-	InfoText->Newline();
-	InfoText->Newline();
-	InfoText->EndAlignment();
+    InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Input Group : "));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT("The group of movie assets that will be aligned.  For each movie within the group, the output will be an image representing the sum of the aligned movie.  This movie will be automatically added to the image assets list."));
+    InfoText->Newline( );
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Run Profile : "));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT("The selected run profile will be used to run the job.  The run profile describes how the job should be run (e.g. how many processors should be used, and on which different computers).  Run profiles are set in the Run Profile panel, located under settings."));
+    InfoText->Newline( );
+    InfoText->Newline( );
+    InfoText->EndAlignment( );
 
-	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
-	InfoText->BeginBold();
-	InfoText->BeginUnderline();
-	InfoText->WriteText(wxT("Expert Options"));
-	InfoText->EndBold();
-	InfoText->EndUnderline();
-	InfoText->Newline();
-	InfoText->Newline();
-	InfoText->EndAlignment();
+    InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
+    InfoText->BeginBold( );
+    InfoText->BeginUnderline( );
+    InfoText->WriteText(wxT("Expert Options"));
+    InfoText->EndBold( );
+    InfoText->EndUnderline( );
+    InfoText->Newline( );
+    InfoText->Newline( );
+    InfoText->EndAlignment( );
 
-	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Minimum Shift : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("This is the minimum shift that can be applied during the initial refinement stage.  Its purpose is to prevent images aligning to detector artifacts that may be reinforced in the initial sum which is used as the first reference. It is applied only during the first alignment round, and is ignored after that. "));
-	InfoText->Newline();
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Maximum Shift : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("This is the maximum shift that can be applied in any single alignment round. Its purpose is to avoid alignment to spurious noise peaks by not considering unreasonably large shifts.  This limit is applied during every alignment round, but only for that round, such that it can be exceeded over a number of successive rounds."));
-	InfoText->Newline();
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Exposure Filter Sums? : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("If selected the resulting aligned movie sums will be calculated using the exposure filter as described in Grant and Grigorieff (2015)."));
-	InfoText->Newline();
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Restore Power? : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("If selected, and the exposure filter is used to calculate the sum then the sum will be high pass filtered to restore the noise power.  This is essentially the denominator of Eq. 9 in Grant and Grigorieff (2015)."));
-	InfoText->Newline();
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Termination Threshold : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("The frames will be iteratively aligned until either the maximum number of iterations is reached, or if after an alignment round every frame was shifted by less than this threshold."));
-	InfoText->Newline();
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Max Iterations : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("The maximum number of iterations that can be run for the movie alignment. If reached, the alignment will stop and the current best values will be taken."));
-	InfoText->Newline();
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("B-Factor : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("This B-Factor is applied to the reference sum prior to alignment.  It is intended to low-pass filter the images in order to prevent alignment to spurious noise peaks and detector artifacts."));
-	InfoText->Newline();
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Mask Central Cross? : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("If selected, the Fourier transform of the reference will be masked by a cross centered on the origin of the transform. This is intended to reduce the influence of detector artifacts which often have considerable power along the central cross."));
-	InfoText->Newline();
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Horizontal Mask : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("The width of the horizontal line in the central cross mask. It is only used if Mask Central Cross is selected."));
-	InfoText->Newline();
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Vertical Mask : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("The width of the vertical line in the central cross mask. It is only used if Mask Central Cross is selected."));
-	InfoText->Newline();
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Include All Frames in Sum? : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("If selected, all of the input frames will be used to create the final sum.  If you wish to specify a subset (e.g. to ignore the first couple of frames), untick this option."));
-	InfoText->Newline();
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("First Frame to Sum : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("If not summing all frames then this is the first frame that will be included in the sum."));
-	InfoText->Newline();
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Last Frame to Sum : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("If not summing all frames then this is the last frame that will be included in the sum. Entering 0 will use the last frame of the movie."));
-	InfoText->Newline();
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Also Save Scaled Sum? : "));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT("If selected a scaled version of the sum will be written to disk to use for faster display later in the project."));
-	InfoText->Newline();
+    InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Minimum Shift : "));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT("This is the minimum shift that can be applied during the initial refinement stage.  Its purpose is to prevent images aligning to detector artifacts that may be reinforced in the initial sum which is used as the first reference. It is applied only during the first alignment round, and is ignored after that. "));
+    InfoText->Newline( );
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Maximum Shift : "));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT("This is the maximum shift that can be applied in any single alignment round. Its purpose is to avoid alignment to spurious noise peaks by not considering unreasonably large shifts.  This limit is applied during every alignment round, but only for that round, such that it can be exceeded over a number of successive rounds."));
+    InfoText->Newline( );
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Exposure Filter Sums? : "));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT("If selected the resulting aligned movie sums will be calculated using the exposure filter as described in Grant and Grigorieff (2015)."));
+    InfoText->Newline( );
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Restore Power? : "));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT("If selected, and the exposure filter is used to calculate the sum then the sum will be high pass filtered to restore the noise power.  This is essentially the denominator of Eq. 9 in Grant and Grigorieff (2015)."));
+    InfoText->Newline( );
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Termination Threshold : "));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT("The frames will be iteratively aligned until either the maximum number of iterations is reached, or if after an alignment round every frame was shifted by less than this threshold."));
+    InfoText->Newline( );
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Max Iterations : "));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT("The maximum number of iterations that can be run for the movie alignment. If reached, the alignment will stop and the current best values will be taken."));
+    InfoText->Newline( );
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("B-Factor : "));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT("This B-Factor is applied to the reference sum prior to alignment.  It is intended to low-pass filter the images in order to prevent alignment to spurious noise peaks and detector artifacts."));
+    InfoText->Newline( );
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Mask Central Cross? : "));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT("If selected, the Fourier transform of the reference will be masked by a cross centered on the origin of the transform. This is intended to reduce the influence of detector artifacts which often have considerable power along the central cross."));
+    InfoText->Newline( );
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Horizontal Mask : "));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT("The width of the horizontal line in the central cross mask. It is only used if Mask Central Cross is selected."));
+    InfoText->Newline( );
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Vertical Mask : "));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT("The width of the vertical line in the central cross mask. It is only used if Mask Central Cross is selected."));
+    InfoText->Newline( );
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Include All Frames in Sum? : "));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT("If selected, all of the input frames will be used to create the final sum.  If you wish to specify a subset (e.g. to ignore the first couple of frames), untick this option."));
+    InfoText->Newline( );
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("First Frame to Sum : "));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT("If not summing all frames then this is the first frame that will be included in the sum."));
+    InfoText->Newline( );
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Last Frame to Sum : "));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT("If not summing all frames then this is the last frame that will be included in the sum. Entering 0 will use the last frame of the movie."));
+    InfoText->Newline( );
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Also Save Scaled Sum? : "));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT("If selected a scaled version of the sum will be written to disk to use for faster display later in the project."));
+    InfoText->Newline( );
 
+    InfoText->Newline( );
+    InfoText->EndAlignment( );
+    InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
+    InfoText->BeginBold( );
+    InfoText->BeginUnderline( );
+    InfoText->WriteText(wxT("References"));
+    InfoText->EndBold( );
+    InfoText->EndUnderline( );
+    InfoText->Newline( );
+    InfoText->Newline( );
+    InfoText->EndAlignment( );
 
-	InfoText->Newline();
-	InfoText->EndAlignment();
-	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
-	InfoText->BeginBold();
-	InfoText->BeginUnderline();
-	InfoText->WriteText(wxT("References"));
-	InfoText->EndBold();
-	InfoText->EndUnderline();
-	InfoText->Newline();
-	InfoText->Newline();
-	InfoText->EndAlignment();
+    InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Brilot, A.F., Chen, J.Z., Cheng, A., Pan, J., Harrison, S.C., Potter, C.S., Carragher, B., Henderson, R., Grigorieff, N.,"));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT(" 2012. Beam-induced motion of vitrified specimen on holey carbon film. J. Struct. Biol. 177, 630–637. "));
+    InfoText->BeginURL("http://dx.doi.org/10.1016/j.jsb.2012.02.003");
+    InfoText->BeginUnderline( );
+    InfoText->BeginTextColour(*wxBLUE);
+    InfoText->WriteText(wxT("doi:10.1016/j.jsb.2012.02.003"));
+    InfoText->EndURL( );
+    InfoText->EndTextColour( );
+    InfoText->EndUnderline( );
+    InfoText->Newline( );
+    InfoText->Newline( );
 
-	InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Brilot, A.F., Chen, J.Z., Cheng, A., Pan, J., Harrison, S.C., Potter, C.S., Carragher, B., Henderson, R., Grigorieff, N.,"));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT(" 2012. Beam-induced motion of vitrified specimen on holey carbon film. J. Struct. Biol. 177, 630–637. "));
-	InfoText->BeginURL("http://dx.doi.org/10.1016/j.jsb.2012.02.003");
-	InfoText->BeginUnderline();
-	InfoText->BeginTextColour(*wxBLUE);
-	InfoText->WriteText(wxT("doi:10.1016/j.jsb.2012.02.003"));
-	InfoText->EndURL();
-	InfoText->EndTextColour();
-	InfoText->EndUnderline();
-	InfoText->Newline();
-	InfoText->Newline();
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Campbell, M.G., Cheng, A., Brilot, A.F., Moeller, A., Lyumkis, D., Veesler, D., Pan, J., Harrison, S.C., Potter, C.S., Carragher, B., Grigorieff, N.,"));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT(" 2012. Movies of ice-embedded particles enhance resolution in electron cryo-microscopy. Structure 20, 1823–8. "));
+    InfoText->BeginURL("http://dx.doi.org/10.1016/j.str.2012.08.026");
+    InfoText->BeginUnderline( );
+    InfoText->BeginTextColour(*wxBLUE);
+    InfoText->WriteText(wxT("doi:10.1016/j.str.2012.08.026"));
+    InfoText->EndURL( );
+    InfoText->EndTextColour( );
+    InfoText->EndUnderline( );
+    InfoText->Newline( );
+    InfoText->Newline( );
 
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Campbell, M.G., Cheng, A., Brilot, A.F., Moeller, A., Lyumkis, D., Veesler, D., Pan, J., Harrison, S.C., Potter, C.S., Carragher, B., Grigorieff, N.,"));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT(" 2012. Movies of ice-embedded particles enhance resolution in electron cryo-microscopy. Structure 20, 1823–8. "));
-	InfoText->BeginURL("http://dx.doi.org/10.1016/j.str.2012.08.026");
-	InfoText->BeginUnderline();
-	InfoText->BeginTextColour(*wxBLUE);
-	InfoText->WriteText(wxT("doi:10.1016/j.str.2012.08.026"));
-	InfoText->EndURL();
-	InfoText->EndTextColour();
-	InfoText->EndUnderline();
-	InfoText->Newline();
-	InfoText->Newline();
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Li, X., Mooney, P., Zheng, S., Booth, C.R., Braunfeld, M.B., Gubbens, S., Agard, D.A., Cheng, Y.,"));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT(" 2013. Electron counting and beam-induced motion correction enable near-atomic-resolution single-particle cryo-EM. Nat. Methods 10, 584–90. "));
+    InfoText->BeginURL("http://dx.doi.org/10.1038/nmeth.2472");
+    InfoText->BeginUnderline( );
+    InfoText->BeginTextColour(*wxBLUE);
+    InfoText->WriteText(wxT("doi:10.1038/nmeth.2472"));
+    InfoText->EndURL( );
+    InfoText->EndTextColour( );
+    InfoText->EndUnderline( );
+    InfoText->Newline( );
+    InfoText->Newline( );
 
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Li, X., Mooney, P., Zheng, S., Booth, C.R., Braunfeld, M.B., Gubbens, S., Agard, D.A., Cheng, Y.,"));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT(" 2013. Electron counting and beam-induced motion correction enable near-atomic-resolution single-particle cryo-EM. Nat. Methods 10, 584–90. "));
-	InfoText->BeginURL("http://dx.doi.org/10.1038/nmeth.2472");
-	InfoText->BeginUnderline();
-	InfoText->BeginTextColour(*wxBLUE);
-	InfoText->WriteText(wxT("doi:10.1038/nmeth.2472"));
-	InfoText->EndURL();
-	InfoText->EndTextColour();
-	InfoText->EndUnderline();
-	InfoText->Newline();
-	InfoText->Newline();
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Scheres, S.H.,"));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT(" 2014. Beam-induced motion correction for sub-megadalton cryo-EM particles. Elife 3, e03665. "));
+    InfoText->BeginURL("http://dx.doi.org/10.7554/eLife.03665");
+    InfoText->BeginUnderline( );
+    InfoText->BeginTextColour(*wxBLUE);
+    InfoText->WriteText(wxT("doi:10.7554/eLife.03665"));
+    InfoText->EndURL( );
+    InfoText->EndTextColour( );
+    InfoText->EndUnderline( );
+    InfoText->Newline( );
+    InfoText->Newline( );
 
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Scheres, S.H.,"));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT(" 2014. Beam-induced motion correction for sub-megadalton cryo-EM particles. Elife 3, e03665. "));
-	InfoText->BeginURL("http://dx.doi.org/10.7554/eLife.03665");
-	InfoText->BeginUnderline();
-	InfoText->BeginTextColour(*wxBLUE);
-	InfoText->WriteText(wxT("doi:10.7554/eLife.03665"));
-	InfoText->EndURL();
-	InfoText->EndTextColour();
-	InfoText->EndUnderline();
-	InfoText->Newline();
-	InfoText->Newline();
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Grant, T., Grigorieff, N.,"));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT(" 2015. Measuring the optimal exposure for single particle cryo-EM using a 2.6 Å reconstruction of rotavirus VP6. Elife 4, e06980. "));
+    InfoText->BeginURL("http://dx.doi.org/10.7554/eLife.06980");
+    InfoText->BeginUnderline( );
+    InfoText->BeginTextColour(*wxBLUE);
+    InfoText->WriteText(wxT("doi:10.7554/eLife.06980"));
+    InfoText->EndURL( );
+    InfoText->EndTextColour( );
+    InfoText->EndUnderline( );
+    InfoText->Newline( );
+    InfoText->Newline( );
 
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Grant, T., Grigorieff, N.,"));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT(" 2015. Measuring the optimal exposure for single particle cryo-EM using a 2.6 Å reconstruction of rotavirus VP6. Elife 4, e06980. "));
-	InfoText->BeginURL("http://dx.doi.org/10.7554/eLife.06980");
-	InfoText->BeginUnderline();
-	InfoText->BeginTextColour(*wxBLUE);
-	InfoText->WriteText(wxT("doi:10.7554/eLife.06980"));
-	InfoText->EndURL();
-	InfoText->EndTextColour();
-	InfoText->EndUnderline();
-	InfoText->Newline();
-	InfoText->Newline();
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Grant, T., Grigorieff, N.,"));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT(" 2015. Automatic estimation and correction of anisotropic magnification distortion in electron microscopes. J. Struct. Biol. 192, 204-208. "));
+    InfoText->BeginURL("https://doi.org/10.1016/j.jsb.2015.08.006");
+    InfoText->BeginUnderline( );
+    InfoText->BeginTextColour(*wxBLUE);
+    InfoText->WriteText(wxT("doi:10.1016/j.jsb.2015.08.006"));
+    InfoText->EndURL( );
+    InfoText->EndTextColour( );
+    InfoText->EndUnderline( );
+    InfoText->Newline( );
+    InfoText->Newline( );
 
-	InfoText->BeginBold();
-	InfoText->WriteText(wxT("Grant, T., Grigorieff, N.,"));
-	InfoText->EndBold();
-	InfoText->WriteText(wxT(" 2015. Automatic estimation and correction of anisotropic magnification distortion in electron microscopes. J. Struct. Biol. 192, 204-208. "));
-	InfoText->BeginURL("https://doi.org/10.1016/j.jsb.2015.08.006");
-	InfoText->BeginUnderline();
-	InfoText->BeginTextColour(*wxBLUE);
-	InfoText->WriteText(wxT("doi:10.1016/j.jsb.2015.08.006"));
-	InfoText->EndURL();
-	InfoText->EndTextColour();
-	InfoText->EndUnderline();
-	InfoText->Newline();
-	InfoText->Newline();
-
-
-	InfoText->EndSuppressUndo();
-
-
+    InfoText->EndSuppressUndo( );
 }
 
-void MyAlignMoviesPanel::OnExpertOptionsToggle( wxCommandEvent& event )
-{
-	if (show_expert_options == true)
-	{
-		show_expert_options = false;
-		ExpertPanel->Show(false);
-		Layout();
-	}
-	else
-	{
-		show_expert_options = true;
-		ExpertPanel->Show(true);
-		Layout();
-	}
+void MyAlignMoviesPanel::OnExpertOptionsToggle(wxCommandEvent& event) {
+    if ( show_expert_options == true ) {
+        show_expert_options = false;
+        ExpertPanel->Show(false);
+        Layout( );
+    }
+    else {
+        show_expert_options = true;
+        ExpertPanel->Show(true);
+        Layout( );
+    }
 }
 
-void MyAlignMoviesPanel::OnUpdateUI( wxUpdateUIEvent& event )
-{
-	// are there enough members in the selected group.
-	if (main_frame->current_project.is_open == false)
-	{
-		RunProfileComboBox->Enable(false);
-		GroupComboBox->Enable(false);
-		ExpertToggleButton->Enable(false);
-		StartAlignmentButton->Enable(false);
-	}
-	else
-	{
-		//Enable(true);
+void MyAlignMoviesPanel::OnUpdateUI(wxUpdateUIEvent& event) {
+    // are there enough members in the selected group.
+    if ( main_frame->current_project.is_open == false ) {
+        RunProfileComboBox->Enable(false);
+        GroupComboBox->Enable(false);
+        ExpertToggleButton->Enable(false);
+        StartAlignmentButton->Enable(false);
+    }
+    else {
+        //Enable(true);
 
+        if ( running_job == false ) {
+            RunProfileComboBox->Enable(true);
+            GroupComboBox->Enable(true);
+            ExpertToggleButton->Enable(true);
 
-		if (running_job == false)
-		{
-			RunProfileComboBox->Enable(true);
-			GroupComboBox->Enable(true);
-			ExpertToggleButton->Enable(true);
+            if ( RunProfileComboBox->GetCount( ) > 0 ) {
+                if ( movie_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection( )) > 0 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(RunProfileComboBox->GetSelection( )) > 0 ) {
+                    StartAlignmentButton->Enable(true);
+                }
+                else
+                    StartAlignmentButton->Enable(false);
+            }
+            else {
+                StartAlignmentButton->Enable(false);
+            }
 
-			if (RunProfileComboBox->GetCount() > 0)
-			{
-				if (movie_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection()) > 0 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(RunProfileComboBox->GetSelection()) > 0)
-				{
-					StartAlignmentButton->Enable(true);
-				}
-				else StartAlignmentButton->Enable(false);
-			}
-			else
-			{
-				StartAlignmentButton->Enable(false);
-			}
+            if ( group_combo_is_dirty == true ) {
+                FillGroupComboBox( );
+                group_combo_is_dirty = false;
+            }
 
-			if (group_combo_is_dirty == true)
-			{
-				FillGroupComboBox();
-				group_combo_is_dirty = false;
-			}
+            if ( run_profiles_are_dirty == true ) {
+                FillRunProfileComboBox( );
+                run_profiles_are_dirty = false;
+            }
 
-			if (run_profiles_are_dirty == true)
-			{
-				FillRunProfileComboBox();
-				run_profiles_are_dirty = false;
-			}
+            if ( mask_central_cross_checkbox->GetValue( ) == true ) {
+                horizontal_mask_static_text->Enable(true);
+                vertical_mask_static_text->Enable(true);
+                horizontal_mask_spinctrl->Enable(true);
+                vertical_mask_spinctrl->Enable(true);
+            }
+            else {
+                horizontal_mask_static_text->Enable(false);
+                vertical_mask_static_text->Enable(false);
+                horizontal_mask_spinctrl->Enable(false);
+                vertical_mask_spinctrl->Enable(false);
+            }
 
-			if (mask_central_cross_checkbox->GetValue() == true)
-			{
-				horizontal_mask_static_text->Enable(true);
-				vertical_mask_static_text->Enable(true);
-				horizontal_mask_spinctrl->Enable(true);
-				vertical_mask_spinctrl->Enable(true);
-			}
-			else
-			{
-				horizontal_mask_static_text->Enable(false);
-				vertical_mask_static_text->Enable(false);
-				horizontal_mask_spinctrl->Enable(false);
-				vertical_mask_spinctrl->Enable(false);
-			}
-
-			if (include_all_frames_checkbox->GetValue() == false)
-			{
-				first_frame_static_text->Enable(true);
-				last_frame_static_text->Enable(true);
-				first_frame_spin_ctrl->Enable(true);
-				last_frame_spin_ctrl->Enable(true);
-			}
-			else
-			{
-				first_frame_static_text->Enable(false);
-				last_frame_static_text->Enable(false);
-				first_frame_spin_ctrl->Enable(false);
-				last_frame_spin_ctrl->Enable(false);
-			}
-		}
-		else
-		{
-			ExpertToggleButton->Enable(false);
-			GroupComboBox->Enable(false);
-			RunProfileComboBox->Enable(false);
-			//StartAlignmentButton->SetLabel("Stop Job");
-			//StartAlignmentButton->Enable(true);
-		}
-
-
-	}
-
-
-
-
+            if ( include_all_frames_checkbox->GetValue( ) == false ) {
+                first_frame_static_text->Enable(true);
+                last_frame_static_text->Enable(true);
+                first_frame_spin_ctrl->Enable(true);
+                last_frame_spin_ctrl->Enable(true);
+            }
+            else {
+                first_frame_static_text->Enable(false);
+                last_frame_static_text->Enable(false);
+                first_frame_spin_ctrl->Enable(false);
+                last_frame_spin_ctrl->Enable(false);
+            }
+        }
+        else {
+            ExpertToggleButton->Enable(false);
+            GroupComboBox->Enable(false);
+            RunProfileComboBox->Enable(false);
+            //StartAlignmentButton->SetLabel("Stop Job");
+            //StartAlignmentButton->Enable(true);
+        }
+    }
 }
 
-void MyAlignMoviesPanel::FillGroupComboBox()
-{
+void MyAlignMoviesPanel::FillGroupComboBox( ) {
 
-	GroupComboBox->FillComboBox(true);
+    GroupComboBox->FillComboBox(true);
 }
 
-void MyAlignMoviesPanel::Refresh()
-{
-	FillGroupComboBox();
-	FillRunProfileComboBox();
+void MyAlignMoviesPanel::Refresh( ) {
+    FillGroupComboBox( );
+    FillRunProfileComboBox( );
 }
 
-void MyAlignMoviesPanel::FillRunProfileComboBox()
-{
-	RunProfileComboBox->FillWithRunProfiles();
+void MyAlignMoviesPanel::FillRunProfileComboBox( ) {
+    RunProfileComboBox->FillWithRunProfiles( );
 }
 
-void MyAlignMoviesPanel::StartAlignmentClick( wxCommandEvent& event )
-{
+void MyAlignMoviesPanel::StartAlignmentClick(wxCommandEvent& event) {
 
-	MyDebugAssertTrue(buffered_results == NULL, "Error: buffered results not null")
+    MyDebugAssertTrue(buffered_results == NULL, "Error: buffered results not null")
 
-	active_group.CopyFrom(&movie_asset_panel->all_groups_list->groups[GroupComboBox->GetSelection()]);
+            active_group.CopyFrom(&movie_asset_panel->all_groups_list->groups[GroupComboBox->GetSelection( )]);
 
-	long counter;
-	long number_of_jobs = active_group.number_of_members;//movie_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection()); // how many movies in the selected group..
+    long counter;
+    long number_of_jobs = active_group.number_of_members; //movie_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection()); // how many movies in the selected group..
 
-	bool ok_number_conversion;
+    bool ok_number_conversion;
 
-	double minimum_shift;
-	double maximum_shift;
+    double minimum_shift;
+    double maximum_shift;
 
-	bool should_dose_filter;
-	bool should_restore_power;
+    bool should_dose_filter;
+    bool should_restore_power;
 
-	double termination_threshold;
-	int max_iterations;
-	int bfactor;
-	int number_of_processes;
+    double termination_threshold;
+    int    max_iterations;
+    int    bfactor;
+    int    number_of_processes;
 
-	int first_frame;
-	int last_frame;
+    int first_frame;
+    int last_frame;
 
-	int number_of_frames_for_running_average;
-	int max_threads;
+    int number_of_frames_for_running_average;
+    int max_threads;
 
-	int current_asset_id;
-	int number_of_previous_alignments;
+    int current_asset_id;
+    int number_of_previous_alignments;
 
-	bool should_mask_central_cross;
-	int horizontal_mask;
-	int vertical_mask;
+    bool should_mask_central_cross;
+    int  horizontal_mask;
+    int  vertical_mask;
 
-	float current_pixel_size;
+    float current_pixel_size;
 
-	int current_eer_frames_per_image;
-	int current_eer_super_res_factor;
+    int current_eer_frames_per_image;
+    int current_eer_super_res_factor;
 
-	float current_acceleration_voltage;
-	float current_dose_per_frame;
-	float current_pre_exposure;
+    float current_acceleration_voltage;
+    float current_dose_per_frame;
+    float current_pre_exposure;
 
-	float max_movie_size = 0.0f;
-	float current_movie_size;
-	float max_movie_size_in_gb;
-	float min_memory_in_gb_if_run_on_one_machine;
+    float max_movie_size = 0.0f;
+    float current_movie_size;
+    float max_movie_size_in_gb;
+    float min_memory_in_gb_if_run_on_one_machine;
 
+    time_of_last_graph_update = 0;
 
-	time_of_last_graph_update = 0;
+    std::string current_filename;
+    wxString    current_gain_filename;
+    wxString    current_dark_filename;
+    wxString    output_filename;
+    wxFileName  buffer_filename;
 
-	std::string current_filename;
-	wxString current_gain_filename;
-	wxString current_dark_filename;
-	wxString output_filename;
-	wxFileName buffer_filename;
+    wxString amplitude_spectrum_filename;
+    bool     write_out_amplitude_spectrum = true;
 
-	wxString amplitude_spectrum_filename;
-	bool write_out_amplitude_spectrum = true;
+    bool     write_out_small_sum_image = SaveScaledSumCheckbox->GetValue( );
+    wxString small_sum_image_filename;
 
-	bool write_out_small_sum_image = SaveScaledSumCheckbox->GetValue();
-	wxString small_sum_image_filename;
+    bool  movie_is_gain_corrected;
+    bool  movie_is_dark_corrected;
+    float output_binning_factor;
 
-	bool movie_is_gain_corrected;
-	bool movie_is_dark_corrected;
-	float output_binning_factor;
+    bool  correct_mag_distortion;
+    float mag_distortion_angle;
+    float mag_distortion_major_axis_scale;
+    float mag_distortion_minor_axis_scale;
 
-	bool correct_mag_distortion;
-	float mag_distortion_angle;
-	float mag_distortion_major_axis_scale;
-	float mag_distortion_minor_axis_scale;
+    // read the options form the gui..
 
+    // min_shift
+    ok_number_conversion = minimum_shift_text->GetLineText(0).ToDouble(&minimum_shift);
+    MyDebugAssertTrue(ok_number_conversion == true, "Couldn't convert minimum shift text to number!");
 
-	// read the options form the gui..
+    // max_shift
+    ok_number_conversion = maximum_shift_text->GetLineText(0).ToDouble(&maximum_shift);
+    MyDebugAssertTrue(ok_number_conversion == true, "Couldn't convert maximum shift text to number!");
 
-	// min_shift
-	ok_number_conversion = minimum_shift_text->GetLineText(0).ToDouble(&minimum_shift);
-	MyDebugAssertTrue(ok_number_conversion == true, "Couldn't convert minimum shift text to number!");
+    // dose filter
+    should_dose_filter = dose_filter_checkbox->IsChecked( );
 
-	// max_shift
-	ok_number_conversion = maximum_shift_text->GetLineText(0).ToDouble(&maximum_shift);
-	MyDebugAssertTrue(ok_number_conversion == true, "Couldn't convert maximum shift text to number!");
+    // restore power
+    should_restore_power = restore_power_checkbox->IsChecked( );
 
-	// dose filter
-	should_dose_filter = dose_filter_checkbox->IsChecked();
+    // termination threshold
+    ok_number_conversion = termination_threshold_text->GetLineText(0).ToDouble(&termination_threshold);
+    MyDebugAssertTrue(ok_number_conversion == true, "Couldn't convert termination threshold text to number!");
 
-	// restore power
-	should_restore_power = restore_power_checkbox->IsChecked();
+    // max iterations
 
-	// termination threshold
-	ok_number_conversion = termination_threshold_text->GetLineText(0).ToDouble(&termination_threshold);
-	MyDebugAssertTrue(ok_number_conversion == true, "Couldn't convert termination threshold text to number!");
+    max_iterations = max_iterations_spinctrl->GetValue( );
 
-	// max iterations
+    // b-factor
 
-	max_iterations = max_iterations_spinctrl->GetValue();
+    bfactor = bfactor_spinctrl->GetValue( );
 
-	// b-factor
+    // mask central cross
+
+    should_mask_central_cross = mask_central_cross_checkbox->IsChecked( );
 
-	bfactor = bfactor_spinctrl->GetValue();
+    // horizontal mask
 
-	// mask central cross
+    horizontal_mask = horizontal_mask_spinctrl->GetValue( );
 
-	should_mask_central_cross = mask_central_cross_checkbox->IsChecked();
+    // vertical mask
+
+    vertical_mask = vertical_mask_spinctrl->GetValue( );
 
-	// horizontal mask
+    // first_frame
 
-	horizontal_mask = horizontal_mask_spinctrl->GetValue();
-
-	// vertical mask
-
-	vertical_mask = vertical_mask_spinctrl->GetValue();
-
-	// first_frame
-
-	if (include_all_frames_checkbox->GetValue() == true)
-	{
-		first_frame = 1;
-		last_frame = 0;
-	}
-	else
-	{
-		first_frame = first_frame_spin_ctrl->GetValue();
-		last_frame = last_frame_spin_ctrl->GetValue();
-	}
-
-	// allocate space for the buffered results..
-
-	buffered_results = new JobResult[number_of_jobs];
-
-	current_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()], "unblur", number_of_jobs);
-
-
-
-	OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog ("Preparing Job", "Preparing Job...", number_of_jobs, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE| wxPD_APP_MODAL);
-
-	for (counter = 0; counter < number_of_jobs; counter++)
-	{
-		// job is :-
-		//
-		// Input Filename (string)
-		// Output Filename (string)
-		// Minimum shift in angstroms (float)
-		// Maximum Shift in angstroms (float)
-		// Dose filter Sums? (bool)
-		// Restore power? (bool)
-		// Termination threshold in angstroms (float)
-		// Max iterations (int)
-		// B-Factor in angstroms (float)
-		// Mask central cross (bool)
-		// Horizontal mask size in pixels (int)
-		// Vertical mask size in pixels (int)
-
-		// OUTPUT FILENAME, MUST BE SET PROPERLY
-
-		//output_filename = movie_asset_panel->ReturnAssetLongFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter));
-		//output_filename.Replace(".mrc", "_ali.mrc", false);
-
-		current_movie_size = (float(movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->x_size) / movie_asset_panel->ReturnAssetBinningFactor(active_group.members[counter])) * (float(movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->y_size) / movie_asset_panel->ReturnAssetBinningFactor(active_group.members[counter]));
-		current_movie_size *= movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->number_of_frames;
-
-		max_movie_size = std::max(max_movie_size, current_movie_size);
-
-		current_asset_id = movie_asset_panel->ReturnAssetID(active_group.members[counter]);//movie_asset_panel->ReturnAssetID(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter));
-		buffer_filename = movie_asset_panel->ReturnAssetShortFilename(active_group.members[counter]);
-		number_of_previous_alignments =  main_frame->current_project.database.ReturnNumberOfPreviousMovieAlignmentsByAssetID(current_asset_id);
-
-		output_filename = main_frame->current_project.image_asset_directory.GetFullPath();
-		output_filename += wxString::Format("/%s_%i_%i.mrc", buffer_filename.GetName(), current_asset_id, number_of_previous_alignments);
-
-		amplitude_spectrum_filename = main_frame->current_project.image_asset_directory.GetFullPath();
-		amplitude_spectrum_filename += wxString::Format("/Spectra/%s_%i_%i.mrc", buffer_filename.GetName(), current_asset_id, number_of_previous_alignments);
-
-		if (write_out_small_sum_image == true)
-		{
-			small_sum_image_filename = main_frame->current_project.image_asset_directory.GetFullPath();
-			small_sum_image_filename += wxString::Format("/Scaled/%s_%i_%i.mrc", buffer_filename.GetName(), current_asset_id, number_of_previous_alignments);
-		}
-		else
-		{
-			small_sum_image_filename = "/dev/null";
-		}
-
-		current_filename = movie_asset_panel->ReturnAssetLongFilename(active_group.members[counter]).ToStdString();
-		current_pixel_size = movie_asset_panel->ReturnAssetPixelSize(active_group.members[counter]);
-		current_acceleration_voltage = movie_asset_panel->ReturnAssetAccelerationVoltage(active_group.members[counter]);
-		current_dose_per_frame = movie_asset_panel->ReturnAssetDosePerFrame(active_group.members[counter]);
-		current_pre_exposure = movie_asset_panel->ReturnAssetPreExposureAmount(active_group.members[counter]);
-
-		current_gain_filename = movie_asset_panel->ReturnAssetGainFilename(active_group.members[counter]);
-		current_dark_filename = movie_asset_panel->ReturnAssetDarkFilename(active_group.members[counter]);
-
-		if (current_gain_filename.IsEmpty() == true)
-		{
-			current_gain_filename = "/dev/null";
-			movie_is_gain_corrected = true;
-		}
-		else
-		{
-			movie_is_gain_corrected = false;
-		}
-
-		if (current_dark_filename.IsEmpty() == true)
-		{
-			current_dark_filename = "/dev/null";
-			movie_is_dark_corrected = true;
-		}
-		else
-		{
-			movie_is_dark_corrected = false;
-		}
-
-		current_eer_frames_per_image = movie_asset_panel->ReturnAssetEerFramesPerImage(active_group.members[counter]);
-		current_eer_super_res_factor = movie_asset_panel->ReturnAssetEerSuperResFactor(active_group.members[counter]);
-
-		output_binning_factor = movie_asset_panel->ReturnAssetBinningFactor(active_group.members[counter]);
-
-		correct_mag_distortion = movie_asset_panel->ReturnCorrectMagDistortion(active_group.members[counter]);
-		mag_distortion_angle = movie_asset_panel->ReturnMagDistortionAngle(active_group.members[counter]);
-		mag_distortion_major_axis_scale = movie_asset_panel->ReturnMagDistortionMajorScale(active_group.members[counter]);
-		mag_distortion_minor_axis_scale = movie_asset_panel->ReturnMagDistortionMinorScale(active_group.members[counter]);
-
-
-		number_of_frames_for_running_average = 1;
-		max_threads = 1;
-
-		bool saved_aligned_frames = false;
-		std::string aligned_frames_filename = "/dev/null";
-		std::string output_shift_text_file = "/dev/null";
-
-		current_job_package.AddJob("ssfffbbfifbiifffbsbsfbfffbtbtiiiibttii",current_filename.c_str(), //0
-														output_filename.ToUTF8().data(),
-														current_pixel_size,
-														float(minimum_shift),
-														float(maximum_shift),
-														should_dose_filter, //5
-														should_restore_power,
-														float(termination_threshold),
-														max_iterations,
-														float(bfactor),
-														should_mask_central_cross, //10
-														horizontal_mask,
-														vertical_mask,
-														current_acceleration_voltage,
-														current_dose_per_frame,
-														current_pre_exposure, //15
-														movie_is_gain_corrected,
-														current_gain_filename.ToStdString().c_str(),
-														movie_is_dark_corrected,
-														current_dark_filename.ToStdString().c_str(),
-														output_binning_factor,
-														correct_mag_distortion,
-														mag_distortion_angle,
-														mag_distortion_major_axis_scale,
-														mag_distortion_minor_axis_scale,
-														write_out_amplitude_spectrum,
-														amplitude_spectrum_filename.ToStdString().c_str(),
-														write_out_small_sum_image,
-														small_sum_image_filename.ToStdString().c_str(),
-														first_frame,
-														last_frame,
-														number_of_frames_for_running_average,
-														max_threads,
-														saved_aligned_frames,
-														aligned_frames_filename.c_str(),
-														output_shift_text_file.c_str(),
-														current_eer_frames_per_image,
-														current_eer_super_res_factor);
-
-		my_progress_dialog->Update(counter + 1);
-	}
-
-	my_progress_dialog->Destroy();
-
-	// write out details about the max movies size
-
-	max_movie_size_in_gb = float(max_movie_size) /1073741824.0f;
-	max_movie_size_in_gb *= 4;
-
-	min_memory_in_gb_if_run_on_one_machine = max_movie_size_in_gb * run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()].ReturnTotalJobs();
-
-	if (max_movie_size != 0.0f) //movie_size is 0.0f when the number of frames was set to -1 at import time because the user asked us to skip full file integrity checks in order to save time
-	{
-		output_textctrl->AppendText("Approx. memory for each process is ");
-		output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLUE));
-		output_textctrl->AppendText(wxString::Format(" %.2f GB", max_movie_size_in_gb));
-		output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLACK));
-		output_textctrl->AppendText(".\nIf running on a single machine, that machine will need at least ");
-		output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLUE));
-		output_textctrl->AppendText(wxString::Format(" %.2f GB", min_memory_in_gb_if_run_on_one_machine));
-		output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLACK));
-		output_textctrl->AppendText(" of memory.\nIf you do not have enough memory available you will have to use a run profile with fewer processes.\n");
-	}
-
-/*	WriteInfoText(wxString::Format("Approx. memory needed per process is %.2f GB", max_movie_size_in_gb));
+    if ( include_all_frames_checkbox->GetValue( ) == true ) {
+        first_frame = 1;
+        last_frame  = 0;
+    }
+    else {
+        first_frame = first_frame_spin_ctrl->GetValue( );
+        last_frame  = last_frame_spin_ctrl->GetValue( );
+    }
+
+    // allocate space for the buffered results..
+
+    buffered_results = new JobResult[number_of_jobs];
+
+    current_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection( )], "unblur", number_of_jobs);
+
+    OneSecondProgressDialog* my_progress_dialog = new OneSecondProgressDialog("Preparing Job", "Preparing Job...", number_of_jobs, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE | wxPD_APP_MODAL);
+
+    for ( counter = 0; counter < number_of_jobs; counter++ ) {
+        // job is :-
+        //
+        // Input Filename (string)
+        // Output Filename (string)
+        // Minimum shift in angstroms (float)
+        // Maximum Shift in angstroms (float)
+        // Dose filter Sums? (bool)
+        // Restore power? (bool)
+        // Termination threshold in angstroms (float)
+        // Max iterations (int)
+        // B-Factor in angstroms (float)
+        // Mask central cross (bool)
+        // Horizontal mask size in pixels (int)
+        // Vertical mask size in pixels (int)
+
+        // OUTPUT FILENAME, MUST BE SET PROPERLY
+
+        //output_filename = movie_asset_panel->ReturnAssetLongFilename(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter));
+        //output_filename.Replace(".mrc", "_ali.mrc", false);
+
+        current_movie_size = (float(movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->x_size) / movie_asset_panel->ReturnAssetBinningFactor(active_group.members[counter])) * (float(movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->y_size) / movie_asset_panel->ReturnAssetBinningFactor(active_group.members[counter]));
+        current_movie_size *= movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->number_of_frames;
+
+        max_movie_size = std::max(max_movie_size, current_movie_size);
+
+        current_asset_id              = movie_asset_panel->ReturnAssetID(active_group.members[counter]); //movie_asset_panel->ReturnAssetID(movie_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection(), counter));
+        buffer_filename               = movie_asset_panel->ReturnAssetShortFilename(active_group.members[counter]);
+        number_of_previous_alignments = main_frame->current_project.database.ReturnNumberOfPreviousMovieAlignmentsByAssetID(current_asset_id);
+
+        output_filename = main_frame->current_project.image_asset_directory.GetFullPath( );
+        output_filename += wxString::Format("/%s_%i_%i.mrc", buffer_filename.GetName( ), current_asset_id, number_of_previous_alignments);
+
+        amplitude_spectrum_filename = main_frame->current_project.image_asset_directory.GetFullPath( );
+        amplitude_spectrum_filename += wxString::Format("/Spectra/%s_%i_%i.mrc", buffer_filename.GetName( ), current_asset_id, number_of_previous_alignments);
+
+        if ( write_out_small_sum_image == true ) {
+            small_sum_image_filename = main_frame->current_project.image_asset_directory.GetFullPath( );
+            small_sum_image_filename += wxString::Format("/Scaled/%s_%i_%i.mrc", buffer_filename.GetName( ), current_asset_id, number_of_previous_alignments);
+        }
+        else {
+            small_sum_image_filename = "/dev/null";
+        }
+
+        current_filename             = movie_asset_panel->ReturnAssetLongFilename(active_group.members[counter]).ToStdString( );
+        current_pixel_size           = movie_asset_panel->ReturnAssetPixelSize(active_group.members[counter]);
+        current_acceleration_voltage = movie_asset_panel->ReturnAssetAccelerationVoltage(active_group.members[counter]);
+        current_dose_per_frame       = movie_asset_panel->ReturnAssetDosePerFrame(active_group.members[counter]);
+        current_pre_exposure         = movie_asset_panel->ReturnAssetPreExposureAmount(active_group.members[counter]);
+
+        current_gain_filename = movie_asset_panel->ReturnAssetGainFilename(active_group.members[counter]);
+        current_dark_filename = movie_asset_panel->ReturnAssetDarkFilename(active_group.members[counter]);
+
+        if ( current_gain_filename.IsEmpty( ) == true ) {
+            current_gain_filename   = "/dev/null";
+            movie_is_gain_corrected = true;
+        }
+        else {
+            movie_is_gain_corrected = false;
+        }
+
+        if ( current_dark_filename.IsEmpty( ) == true ) {
+            current_dark_filename   = "/dev/null";
+            movie_is_dark_corrected = true;
+        }
+        else {
+            movie_is_dark_corrected = false;
+        }
+
+        current_eer_frames_per_image = movie_asset_panel->ReturnAssetEerFramesPerImage(active_group.members[counter]);
+        current_eer_super_res_factor = movie_asset_panel->ReturnAssetEerSuperResFactor(active_group.members[counter]);
+
+        output_binning_factor = movie_asset_panel->ReturnAssetBinningFactor(active_group.members[counter]);
+
+        correct_mag_distortion          = movie_asset_panel->ReturnCorrectMagDistortion(active_group.members[counter]);
+        mag_distortion_angle            = movie_asset_panel->ReturnMagDistortionAngle(active_group.members[counter]);
+        mag_distortion_major_axis_scale = movie_asset_panel->ReturnMagDistortionMajorScale(active_group.members[counter]);
+        mag_distortion_minor_axis_scale = movie_asset_panel->ReturnMagDistortionMinorScale(active_group.members[counter]);
+
+        number_of_frames_for_running_average = 1;
+        max_threads                          = 1;
+
+        bool        saved_aligned_frames    = false;
+        std::string aligned_frames_filename = "/dev/null";
+        std::string output_shift_text_file  = "/dev/null";
+
+        current_job_package.AddJob("ssfffbbfifbiifffbsbsfbfffbtbtiiiibttii", current_filename.c_str( ), //0
+                                   output_filename.ToUTF8( ).data( ),
+                                   current_pixel_size,
+                                   float(minimum_shift),
+                                   float(maximum_shift),
+                                   should_dose_filter, //5
+                                   should_restore_power,
+                                   float(termination_threshold),
+                                   max_iterations,
+                                   float(bfactor),
+                                   should_mask_central_cross, //10
+                                   horizontal_mask,
+                                   vertical_mask,
+                                   current_acceleration_voltage,
+                                   current_dose_per_frame,
+                                   current_pre_exposure, //15
+                                   movie_is_gain_corrected,
+                                   current_gain_filename.ToStdString( ).c_str( ),
+                                   movie_is_dark_corrected,
+                                   current_dark_filename.ToStdString( ).c_str( ),
+                                   output_binning_factor,
+                                   correct_mag_distortion,
+                                   mag_distortion_angle,
+                                   mag_distortion_major_axis_scale,
+                                   mag_distortion_minor_axis_scale,
+                                   write_out_amplitude_spectrum,
+                                   amplitude_spectrum_filename.ToStdString( ).c_str( ),
+                                   write_out_small_sum_image,
+                                   small_sum_image_filename.ToStdString( ).c_str( ),
+                                   first_frame,
+                                   last_frame,
+                                   number_of_frames_for_running_average,
+                                   max_threads,
+                                   saved_aligned_frames,
+                                   aligned_frames_filename.c_str( ),
+                                   output_shift_text_file.c_str( ),
+                                   current_eer_frames_per_image,
+                                   current_eer_super_res_factor);
+
+        my_progress_dialog->Update(counter + 1);
+    }
+
+    my_progress_dialog->Destroy( );
+
+    // write out details about the max movies size
+
+    max_movie_size_in_gb = float(max_movie_size) / 1073741824.0f;
+    max_movie_size_in_gb *= 4;
+
+    min_memory_in_gb_if_run_on_one_machine = max_movie_size_in_gb * run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection( )].ReturnTotalJobs( );
+
+    if ( max_movie_size != 0.0f ) //movie_size is 0.0f when the number of frames was set to -1 at import time because the user asked us to skip full file integrity checks in order to save time
+    {
+        output_textctrl->AppendText("Approx. memory for each process is ");
+        output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLUE));
+        output_textctrl->AppendText(wxString::Format(" %.2f GB", max_movie_size_in_gb));
+        output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLACK));
+        output_textctrl->AppendText(".\nIf running on a single machine, that machine will need at least ");
+        output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLUE));
+        output_textctrl->AppendText(wxString::Format(" %.2f GB", min_memory_in_gb_if_run_on_one_machine));
+        output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLACK));
+        output_textctrl->AppendText(" of memory.\nIf you do not have enough memory available you will have to use a run profile with fewer processes.\n");
+    }
+
+    /*	WriteInfoText(wxString::Format("Approx. memory needed per process is %.2f GB", max_movie_size_in_gb));
 	WriteInfoText(wxString::Format("If running on a single machine, that machine will need at least %.2f GB of memory.", min_memory_in_gb_if_run_on_one_machine));
 	WriteInfoText("");*/
 
-	// launch a controller
+    // launch a controller
 
-	my_job_id = main_frame->job_controller.AddJob(this, run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()].manager_command, run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection()].gui_address);
+    my_job_id = main_frame->job_controller.AddJob(this, run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection( )].manager_command, run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection( )].gui_address);
 
-	if (my_job_id != -1)
-	{
-		if (current_job_package.number_of_jobs  < current_job_package.my_profile.ReturnTotalJobs()) number_of_processes = current_job_package.number_of_jobs;
-		else number_of_processes =  current_job_package.my_profile.ReturnTotalJobs();
+    if ( my_job_id != -1 ) {
+        if ( current_job_package.number_of_jobs < current_job_package.my_profile.ReturnTotalJobs( ) )
+            number_of_processes = current_job_package.number_of_jobs;
+        else
+            number_of_processes = current_job_package.my_profile.ReturnTotalJobs( );
 
-		if (number_of_processes >= 100000) length_of_process_number = 6;
-		else
-		if (number_of_processes >= 10000) length_of_process_number = 5;
-		else
-		if (number_of_processes >= 1000) length_of_process_number = 4;
-		else
-		if (number_of_processes >= 100) length_of_process_number = 3;
-		else
-		if (number_of_processes >= 10) length_of_process_number = 2;
-		else
-		length_of_process_number = 1;
+        if ( number_of_processes >= 100000 )
+            length_of_process_number = 6;
+        else if ( number_of_processes >= 10000 )
+            length_of_process_number = 5;
+        else if ( number_of_processes >= 1000 )
+            length_of_process_number = 4;
+        else if ( number_of_processes >= 100 )
+            length_of_process_number = 3;
+        else if ( number_of_processes >= 10 )
+            length_of_process_number = 2;
+        else
+            length_of_process_number = 1;
 
-		if (length_of_process_number == 6) NumberConnectedText->SetLabel(wxString::Format("%6i / %6i processes connected.", 0, number_of_processes));
-		else
-		if (length_of_process_number == 5) NumberConnectedText->SetLabel(wxString::Format("%5i / %5i processes connected.", 0, number_of_processes));
-		else
-		if (length_of_process_number == 4) NumberConnectedText->SetLabel(wxString::Format("%4i / %4i processes connected.", 0, number_of_processes));
-		else
-		if (length_of_process_number == 3) NumberConnectedText->SetLabel(wxString::Format("%3i / %3i processes connected.", 0, number_of_processes));
-		else
-		if (length_of_process_number == 2) NumberConnectedText->SetLabel(wxString::Format("%2i / %2i processes connected.", 0, number_of_processes));
-		else
-		NumberConnectedText->SetLabel(wxString::Format("%1i / %1i processes connected.", 0, number_of_processes));
+        if ( length_of_process_number == 6 )
+            NumberConnectedText->SetLabel(wxString::Format("%6i / %6i processes connected.", 0, number_of_processes));
+        else if ( length_of_process_number == 5 )
+            NumberConnectedText->SetLabel(wxString::Format("%5i / %5i processes connected.", 0, number_of_processes));
+        else if ( length_of_process_number == 4 )
+            NumberConnectedText->SetLabel(wxString::Format("%4i / %4i processes connected.", 0, number_of_processes));
+        else if ( length_of_process_number == 3 )
+            NumberConnectedText->SetLabel(wxString::Format("%3i / %3i processes connected.", 0, number_of_processes));
+        else if ( length_of_process_number == 2 )
+            NumberConnectedText->SetLabel(wxString::Format("%2i / %2i processes connected.", 0, number_of_processes));
+        else
+            NumberConnectedText->SetLabel(wxString::Format("%1i / %1i processes connected.", 0, number_of_processes));
 
-		StartPanel->Show(false);
-		ProgressPanel->Show(true);
+        StartPanel->Show(false);
+        ProgressPanel->Show(true);
 
+        ExpertPanel->Show(false);
+        InfoPanel->Show(false);
+        OutputTextPanel->Show(true);
+        //GraphPanel->Show(true);
 
-		ExpertPanel->Show(false);
-		InfoPanel->Show(false);
-		OutputTextPanel->Show(true);
-		//GraphPanel->Show(true);
+        ExpertToggleButton->Enable(false);
+        GroupComboBox->Enable(false);
+        Layout( );
 
-		ExpertToggleButton->Enable(false);
-		GroupComboBox->Enable(false);
-		Layout();
-
-		running_job = true;
-		my_job_tracker.StartTracking(current_job_package.number_of_jobs);
-
-	}
-	ProgressBar->Pulse();
-
+        running_job = true;
+        my_job_tracker.StartTracking(current_job_package.number_of_jobs);
+    }
+    ProgressBar->Pulse( );
 }
 
-void MyAlignMoviesPanel::FinishButtonClick( wxCommandEvent& event )
-{
-	ProgressBar->SetValue(0);
-	TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
+void MyAlignMoviesPanel::FinishButtonClick(wxCommandEvent& event) {
+    ProgressBar->SetValue(0);
+    TimeRemainingText->SetLabel("Time Remaining : ???h:??m:??s");
     CancelAlignmentButton->Show(true);
-	FinishButton->Show(false);
+    FinishButton->Show(false);
 
-	ProgressPanel->Show(false);
-	StartPanel->Show(true);
-	OutputTextPanel->Show(false);
-	output_textctrl->Clear();
-	GraphPanel->Show(false);
-	graph_is_hidden = true;
-	InfoPanel->Show(true);
+    ProgressPanel->Show(false);
+    StartPanel->Show(true);
+    OutputTextPanel->Show(false);
+    output_textctrl->Clear( );
+    GraphPanel->Show(false);
+    graph_is_hidden = true;
+    InfoPanel->Show(true);
 
-	if (show_expert_options == true) ExpertPanel->Show(true);
-	else ExpertPanel->Show(false);
-	running_job = false;
-	Layout();
-
-
-
+    if ( show_expert_options == true )
+        ExpertPanel->Show(true);
+    else
+        ExpertPanel->Show(false);
+    running_job = false;
+    Layout( );
 }
 
-void MyAlignMoviesPanel::TerminateButtonClick( wxCommandEvent& event )
+void MyAlignMoviesPanel::TerminateButtonClick(wxCommandEvent& event) {
+    // kill the job, this will kill the socket to terminate downstream processes
+    // - this will have to be improved when clever network failure is incorporated
+
+    main_frame->job_controller.KillJob(my_job_id);
+
+    WriteInfoText("Terminated Job");
+    TimeRemainingText->SetLabel("Time Remaining : Terminated");
+    CancelAlignmentButton->Show(false);
+    FinishButton->Show(true);
+    ProgressPanel->Layout( );
+
+    if ( buffered_results != NULL ) {
+        delete[] buffered_results;
+        buffered_results = NULL;
+    }
+    //running_job = false;
+}
+
+void MyAlignMoviesPanel::WriteInfoText(wxString text_to_write) {
+    output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLACK));
+    output_textctrl->AppendText(text_to_write);
+
+    if ( text_to_write.EndsWith("\n") == false )
+        output_textctrl->AppendText("\n");
+}
+
+void MyAlignMoviesPanel::WriteErrorText(wxString text_to_write) {
+    output_textctrl->SetDefaultStyle(wxTextAttr(*wxRED));
+    output_textctrl->AppendText(text_to_write);
+
+    if ( text_to_write.EndsWith("\n") == false )
+        output_textctrl->AppendText("\n");
+}
+
+void MyAlignMoviesPanel::OnSocketJobResultMsg(JobResult& received_result) {
+    if ( received_result.result_size > 0 ) {
+        ProcessResult(&received_result);
+    }
+}
+
+void MyAlignMoviesPanel::SetNumberConnectedText(wxString wanted_text) {
+    NumberConnectedText->SetLabel(wanted_text);
+}
+
+void MyAlignMoviesPanel::SetTimeRemainingText(wxString wanted_text) {
+    TimeRemainingText->SetLabel(wanted_text);
+}
+
+void MyAlignMoviesPanel::OnSocketAllJobsFinished( ) {
+    ProcessAllJobsFinished( );
+}
+
+void MyAlignMoviesPanel::ProcessResult(JobResult* result_to_process) // this will have to be overidden in the parent clas when i make it.
 {
-	// kill the job, this will kill the socket to terminate downstream processes
-	// - this will have to be improved when clever network failure is incorporated
+    int number_of_frames;
+    int frame_counter;
 
+    long current_time = time(NULL);
 
-	main_frame->job_controller.KillJob(my_job_id);
+    // mark the job as finished, update progress bar
 
-	WriteInfoText("Terminated Job");
-	TimeRemainingText->SetLabel("Time Remaining : Terminated");
-	CancelAlignmentButton->Show(false);
-	FinishButton->Show(true);
-	ProgressPanel->Layout();
+    float exposure_per_frame = current_job_package.jobs[result_to_process->job_number].arguments[14].ReturnFloatArgument( );
 
-	if (buffered_results != NULL)
-	{
-		delete [] buffered_results;
-		buffered_results = NULL;
-	}
-			  //running_job = false;
+    // ok the result should be x-shifts, followed by y-shifts..
+    //WriteInfoText(wxString::Format("Job #%i finished.", job_number));
 
+    number_of_frames = result_to_process->result_size / 2;
 
+    if ( current_time - time_of_last_graph_update > 1 ) {
+        GraphPanel->ClearGraph( );
+        wxFileName current_filename = wxString(current_job_package.jobs[result_to_process->job_number].arguments[0].ReturnStringArgument( ));
+        wxFileName sum_filename     = wxString(current_job_package.jobs[result_to_process->job_number].arguments[1].ReturnStringArgument( ));
+        //GraphPanel->title->SetName(current_filename.GetFullName());
+
+        float current_corrected_pixel_size = current_job_package.jobs[result_to_process->job_number].arguments[2].ReturnFloatArgument( ) / current_job_package.jobs[result_to_process->job_number].arguments[20].ReturnFloatArgument( );
+        // if we corrected a mag distortion, we have to adjust the pixel size appropriately.
+
+        if ( current_job_package.jobs[result_to_process->job_number].arguments[21].ReturnBoolArgument( ) == true ) // correct mag distortion
+        {
+            current_corrected_pixel_size = ReturnMagDistortionCorrectedPixelSize(current_corrected_pixel_size, current_job_package.jobs[result_to_process->job_number].arguments[23].ReturnFloatArgument( ), current_job_package.jobs[result_to_process->job_number].arguments[24].ReturnFloatArgument( ));
+        }
+
+        float current_nyquist;
+
+        if ( current_corrected_pixel_size < 1.4 )
+            current_nyquist = 2.8;
+        else
+            current_nyquist = current_corrected_pixel_size * 2.0;
+
+        GraphPanel->SpectraNyquistStaticText->SetLabel(wxString::Format(wxT("%.2f Å)   "), current_nyquist));
+        GraphPanel->FilenameStaticText->SetLabel(wxString::Format("(%s)", current_filename.GetFullName( )));
+
+        // draw..
+
+        if ( DoesFileExist(current_job_package.jobs[result_to_process->job_number].arguments[26].ReturnStringArgument( )) == true ) {
+            GraphPanel->SpectraPanel->PanelImage.QuickAndDirtyReadSlice(current_job_package.jobs[result_to_process->job_number].arguments[26].ReturnStringArgument( ), 1);
+            GraphPanel->SpectraPanel->should_show = true;
+            GraphPanel->SpectraPanel->Refresh( );
+        }
+
+        for ( frame_counter = 0; frame_counter < number_of_frames; frame_counter++ ) {
+            GraphPanel->AddPoint(exposure_per_frame * frame_counter, result_to_process->result_data[frame_counter], result_to_process->result_data[frame_counter + number_of_frames]);
+        }
+
+        GraphPanel->Draw( );
+
+        if ( DoesFileExist(current_job_package.jobs[result_to_process->job_number].arguments[28].ReturnStringArgument( )) == true ) {
+            GraphPanel->ImageDisplayPanel->ChangeFile(current_job_package.jobs[result_to_process->job_number].arguments[28].ReturnStringArgument( ), "");
+        }
+        else if ( DoesFileExist(sum_filename.GetFullPath( )) == true )
+            GraphPanel->ImageDisplayPanel->ChangeFile(sum_filename.GetFullPath( ), sum_filename.GetShortPath( ));
+
+        if ( graph_is_hidden == true ) {
+            GraphPanel->Show(true);
+            Layout( );
+            graph_is_hidden = false;
+        }
+
+        time_of_last_graph_update = current_time;
+    }
+
+    my_job_tracker.MarkJobFinished( );
+    if ( my_job_tracker.ShouldUpdate( ) == true )
+        UpdateProgressBar( );
+
+    // store the results..
+
+    buffered_results[result_to_process->job_number] = result_to_process;
 }
 
-void MyAlignMoviesPanel::WriteInfoText(wxString text_to_write)
-{
-	output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLACK));
-	output_textctrl->AppendText(text_to_write);
+void MyAlignMoviesPanel::ProcessAllJobsFinished( ) {
 
-	if (text_to_write.EndsWith("\n") == false)	 output_textctrl->AppendText("\n");
+    MyDebugAssertTrue(my_job_tracker.total_number_of_finished_jobs == my_job_tracker.total_number_of_jobs, "In ProcessAllJobsFinished, but total_number_of_finished_jobs != total_number_of_jobs. Oops.");
+
+    // Update the GUI with project timings
+    extern MyOverviewPanel* overview_panel;
+    overview_panel->SetProjectInfo( );
+
+    //
+    WriteResultToDataBase( );
+
+    if ( buffered_results != NULL ) {
+        delete[] buffered_results;
+        buffered_results = NULL;
+    }
+
+    // Kill the job (in case it isn't already dead)
+    main_frame->job_controller.KillJob(my_job_id);
+
+    WriteInfoText("All Jobs have finished.");
+    ProgressBar->SetValue(100);
+    wxTimeSpan time_elapsed = my_job_tracker.ReturnTimeSinceStart( );
+    TimeRemainingText->SetLabel(time_elapsed.Format("All Done! (%Hh:%Mm:%Ss)"));
+    CancelAlignmentButton->Show(false);
+    FinishButton->Show(true);
+    ProgressPanel->Layout( );
 }
 
-void MyAlignMoviesPanel::WriteErrorText(wxString text_to_write)
-{
-	 output_textctrl->SetDefaultStyle(wxTextAttr(*wxRED));
-	 output_textctrl->AppendText(text_to_write);
+void MyAlignMoviesPanel::WriteResultToDataBase( ) {
 
-	 if (text_to_write.EndsWith("\n") == false)	 output_textctrl->AppendText("\n");
+    long counter;
+    int  frame_counter;
+    int  array_location;
+    int  parent_id;
+    bool have_errors = false;
+
+    float x_bin_factor;
+    float y_bin_factor;
+    float average_bin_factor;
+
+    float corrected_pixel_size;
+
+    wxString   current_table_name;
+    ImageAsset temp_asset;
+
+    // find the current highest alignment number in the database, then increment by one
+
+    int starting_alignment_id = main_frame->current_project.database.ReturnHighestAlignmentID( );
+    int alignment_id          = starting_alignment_id + 1;
+    int alignment_job_id      = main_frame->current_project.database.ReturnHighestAlignmentJobID( ) + 1;
+
+    // global begin
+
+    main_frame->current_project.database.Begin( );
+
+    // loop over all the jobs, and add them..
+
+    main_frame->current_project.database.BeginBatchInsert("MOVIE_ALIGNMENT_LIST", 22, "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "OUTPUT_FILE", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK", "SHOULD_INCLUDE_ALL_FRAMES_IN_SUM", "FIRST_FRAME_TO_SUM", "LAST_FRAME_TO_SUM");
+
+    wxDateTime now = wxDateTime::Now( );
+
+    OneSecondProgressDialog* my_progress_dialog = new OneSecondProgressDialog("Write Results", "Writing results to the database...", my_job_tracker.total_number_of_jobs * 3, this, wxPD_APP_MODAL);
+
+    for ( counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++ ) {
+        main_frame->current_project.database.AddToBatchInsert("iliitrrrrrriiriiiiiiii", alignment_id,
+                                                              (long int)now.GetAsDOS( ),
+                                                              alignment_job_id,
+                                                              movie_asset_panel->ReturnAssetID(active_group.members[counter]),
+                                                              current_job_package.jobs[counter].arguments[1].ReturnStringArgument( ).c_str( ), // output_filename
+                                                              current_job_package.jobs[counter].arguments[13].ReturnFloatArgument( ), // voltage
+                                                              current_job_package.jobs[counter].arguments[2].ReturnFloatArgument( ), // pixel size
+                                                              current_job_package.jobs[counter].arguments[14].ReturnFloatArgument( ), // exposure per frame
+                                                              current_job_package.jobs[counter].arguments[15].ReturnFloatArgument( ), // current_pre_exposure
+                                                              current_job_package.jobs[counter].arguments[3].ReturnFloatArgument( ), // min shift
+                                                              current_job_package.jobs[counter].arguments[4].ReturnFloatArgument( ), // max shift
+                                                              current_job_package.jobs[counter].arguments[5].ReturnBoolArgument( ), // should dose filter
+                                                              current_job_package.jobs[counter].arguments[6].ReturnBoolArgument( ), // should restore power
+                                                              current_job_package.jobs[counter].arguments[7].ReturnFloatArgument( ), // termination threshold
+                                                              current_job_package.jobs[counter].arguments[8].ReturnIntegerArgument( ), // max_iterations
+                                                              int(current_job_package.jobs[counter].arguments[9].ReturnFloatArgument( )), // bfactor
+                                                              current_job_package.jobs[counter].arguments[10].ReturnBoolArgument( ), // should mask central cross
+                                                              current_job_package.jobs[counter].arguments[11].ReturnIntegerArgument( ), // horizonatal mask
+                                                              current_job_package.jobs[counter].arguments[12].ReturnIntegerArgument( ), // vertical mask
+                                                              include_all_frames_checkbox->GetValue( ), // include all frames
+                                                              current_job_package.jobs[counter].arguments[29].ReturnIntegerArgument( ), // first_frame
+                                                              current_job_package.jobs[counter].arguments[30].ReturnIntegerArgument( ) // last_frame
+        );
+
+        alignment_id++;
+
+        my_progress_dialog->Update(counter + 1);
+    }
+
+    main_frame->current_project.database.EndBatchInsert( );
+
+    // now need to add the results of the job..
+
+    alignment_id = starting_alignment_id + 1;
+
+    for ( counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++ ) {
+        current_table_name = wxString::Format("MOVIE_ALIGNMENT_PARAMETERS_%i", alignment_id);
+        main_frame->current_project.database.CreateTable(current_table_name, "prr", "FRAME_NUMBER", "X_SHIFT", "Y_SHIFT");
+        main_frame->current_project.database.BeginBatchInsert(current_table_name, 3, "FRAME_NUMBER", "X_SHIFT", "Y_SHIFT");
+
+        for ( frame_counter = 0; frame_counter < buffered_results[counter].result_size / 2; frame_counter++ ) {
+            main_frame->current_project.database.AddToBatchInsert("irr", frame_counter + 1, buffered_results[counter].result_data[frame_counter], buffered_results[counter].result_data[frame_counter + buffered_results[counter].result_size / 2]);
+        }
+
+        main_frame->current_project.database.EndBatchInsert( );
+        alignment_id++;
+
+        my_progress_dialog->Update(my_job_tracker.total_number_of_jobs + counter + 1);
+    }
+
+    // now that unblur actually checked the file, we have an accurate number of frames for each movie
+    int number_of_frames_for_current_movie;
+    for ( counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++ ) {
+        number_of_frames_for_current_movie = buffered_results[counter].result_size / 2;
+        main_frame->current_project.database.UpdateNumberOfFramesForAMovieAsset(movie_asset_panel->ReturnAssetID(active_group.members[counter]), number_of_frames_for_current_movie);
+        movie_asset_panel->all_assets_list->ReturnMovieAssetPointer(active_group.members[counter])->number_of_frames = number_of_frames_for_current_movie;
+    }
+
+    // now we need to add the resulting image files as image assets..
+
+    // for adding to the database..
+    main_frame->current_project.database.BeginImageAssetInsert( );
+
+    MyErrorDialog* my_error = new MyErrorDialog(this);
+    alignment_id            = starting_alignment_id + 1;
+
+    for ( counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++ ) {
+        temp_asset.Update(current_job_package.jobs[counter].arguments[1].ReturnStringArgument( ));
+
+        if ( temp_asset.is_valid == true ) {
+            parent_id = movie_asset_panel->ReturnAssetID(active_group.members[counter]);
+
+            // work out the corrected pixel size
+            // so the bin amount, might not be exactly the specified amount, as it is fixed by integer resizing of the image.
+
+            x_bin_factor       = float(movie_asset_panel->all_assets_list->ReturnMovieAssetPointer(active_group.members[counter])->x_size) / float(temp_asset.x_size);
+            y_bin_factor       = float(movie_asset_panel->all_assets_list->ReturnMovieAssetPointer(active_group.members[counter])->y_size) / float(temp_asset.y_size);
+            average_bin_factor = (x_bin_factor + y_bin_factor) / 2.0;
+
+            corrected_pixel_size = current_job_package.jobs[counter].arguments[2].ReturnFloatArgument( ) * average_bin_factor;
+
+            // if we corrected a mag distortion, we have to adjust the pixel size appropriately.
+
+            if ( current_job_package.jobs[counter].arguments[21].ReturnBoolArgument( ) == true ) // correct mag distortion
+            {
+                corrected_pixel_size = ReturnMagDistortionCorrectedPixelSize(corrected_pixel_size, current_job_package.jobs[counter].arguments[23].ReturnFloatArgument( ), current_job_package.jobs[counter].arguments[24].ReturnFloatArgument( ));
+            }
+
+            array_location = image_asset_panel->ReturnArrayPositionFromParentID(parent_id);
+
+            // is this image (or a previous version) already an asset?
+
+            if ( array_location == -1 ) // we don't already have an asset from this movie..
+            {
+                temp_asset.asset_id           = image_asset_panel->current_asset_number;
+                temp_asset.asset_name         = movie_asset_panel->ReturnAssetName(active_group.members[counter]) + "_aligned";
+                temp_asset.parent_id          = parent_id;
+                temp_asset.alignment_id       = alignment_id;
+                temp_asset.microscope_voltage = current_job_package.jobs[counter].arguments[13].ReturnFloatArgument( );
+
+                temp_asset.pixel_size = corrected_pixel_size;
+
+                temp_asset.position_in_stack    = 1;
+                temp_asset.spherical_aberration = movie_asset_panel->ReturnAssetSphericalAbberation(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_id));
+                temp_asset.protein_is_white     = movie_asset_panel->ReturnAssetProteinIsWhite(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_id));
+                image_asset_panel->AddAsset(&temp_asset);
+                main_frame->current_project.database.AddNextImageAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath( ), temp_asset.position_in_stack, temp_asset.parent_id, alignment_id, -1, temp_asset.x_size, temp_asset.y_size, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.spherical_aberration, temp_asset.protein_is_white);
+            }
+            else { // TODO:: Rewrite this to use return asset pointer..//
+                reinterpret_cast<ImageAsset*>(image_asset_panel->all_assets_list->assets)[array_location].filename             = current_job_package.jobs[counter].arguments[1].ReturnStringArgument( );
+                reinterpret_cast<ImageAsset*>(image_asset_panel->all_assets_list->assets)[array_location].parent_id            = parent_id;
+                reinterpret_cast<ImageAsset*>(image_asset_panel->all_assets_list->assets)[array_location].alignment_id         = alignment_id;
+                reinterpret_cast<ImageAsset*>(image_asset_panel->all_assets_list->assets)[array_location].microscope_voltage   = current_job_package.jobs[counter].arguments[13].ReturnFloatArgument( );
+                reinterpret_cast<ImageAsset*>(image_asset_panel->all_assets_list->assets)[array_location].pixel_size           = corrected_pixel_size;
+                reinterpret_cast<ImageAsset*>(image_asset_panel->all_assets_list->assets)[array_location].position_in_stack    = 1;
+                reinterpret_cast<ImageAsset*>(image_asset_panel->all_assets_list->assets)[array_location].spherical_aberration = movie_asset_panel->ReturnAssetSphericalAbberation(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_id));
+
+                main_frame->current_project.database.AddNextImageAsset(reinterpret_cast<ImageAsset*>(image_asset_panel->all_assets_list->assets)[array_location].asset_id,
+                                                                       reinterpret_cast<ImageAsset*>(image_asset_panel->all_assets_list->assets)[array_location].asset_name,
+                                                                       current_job_package.jobs[counter].arguments[1].ReturnStringArgument( ),
+                                                                       reinterpret_cast<ImageAsset*>(image_asset_panel->all_assets_list->assets)[array_location].position_in_stack,
+                                                                       parent_id,
+                                                                       alignment_id,
+                                                                       reinterpret_cast<ImageAsset*>(image_asset_panel->all_assets_list->assets)[array_location].ctf_estimation_id,
+                                                                       reinterpret_cast<ImageAsset*>(image_asset_panel->all_assets_list->assets)[array_location].x_size,
+                                                                       reinterpret_cast<ImageAsset*>(image_asset_panel->all_assets_list->assets)[array_location].y_size,
+                                                                       reinterpret_cast<ImageAsset*>(image_asset_panel->all_assets_list->assets)[array_location].microscope_voltage,
+                                                                       reinterpret_cast<ImageAsset*>(image_asset_panel->all_assets_list->assets)[array_location].pixel_size,
+                                                                       reinterpret_cast<ImageAsset*>(image_asset_panel->all_assets_list->assets)[array_location].spherical_aberration,
+                                                                       reinterpret_cast<ImageAsset*>(image_asset_panel->all_assets_list->assets)[array_location].protein_is_white);
+
+                image_asset_panel->current_asset_number++;
+            }
+        }
+        else {
+            my_error->ErrorText->AppendText(wxString::Format(wxT("%s is not a valid MRC file, skipping\n"), temp_asset.ReturnFullPathString( )));
+            have_errors = true;
+        }
+
+        alignment_id++;
+
+        my_progress_dialog->Update(my_job_tracker.total_number_of_jobs + my_job_tracker.total_number_of_jobs + counter + 1);
+    }
+
+    my_progress_dialog->Destroy( );
+
+    main_frame->current_project.database.EndImageAssetInsert( );
+
+    // global commit..
+
+    main_frame->current_project.database.Commit( );
+
+    image_asset_panel->is_dirty   = true;
+    movie_results_panel->is_dirty = true;
+    main_frame->DirtyImageGroups( );
+
+    if ( have_errors == true ) {
+        my_error->ShowModal( );
+    }
+
+    my_error->Destroy( );
 }
 
-void MyAlignMoviesPanel::OnSocketJobResultMsg(JobResult &received_result)
-{
-	if (received_result.result_size > 0)
-	{
-		ProcessResult(&received_result);
-	}
+void MyAlignMoviesPanel::UpdateProgressBar( ) {
+    wxTimeSpan time_left = my_job_tracker.ReturnRemainingTime( );
+    ProgressBar->SetValue(my_job_tracker.ReturnPercentCompleted( ));
+    TimeRemainingText->SetLabel(time_left.Format("Time Remaining : %Hh:%Mm:%Ss"));
 }
-
-void MyAlignMoviesPanel::SetNumberConnectedText(wxString wanted_text)
-{
-	NumberConnectedText->SetLabel(wanted_text);
-}
-
-void MyAlignMoviesPanel::SetTimeRemainingText(wxString wanted_text)
-{
-	TimeRemainingText->SetLabel(wanted_text);
-}
-
-void MyAlignMoviesPanel::OnSocketAllJobsFinished()
-{
-	ProcessAllJobsFinished();
-}
-
-void  MyAlignMoviesPanel::ProcessResult(JobResult *result_to_process) // this will have to be overidden in the parent clas when i make it.
-{
-	int number_of_frames;
-	int frame_counter;
-
-	long current_time = time(NULL);
-
-
-	// mark the job as finished, update progress bar
-
-
-	float exposure_per_frame = current_job_package.jobs[result_to_process->job_number].arguments[14].ReturnFloatArgument();
-
-	// ok the result should be x-shifts, followed by y-shifts..
-	//WriteInfoText(wxString::Format("Job #%i finished.", job_number));
-
-	number_of_frames = result_to_process->result_size / 2;
-
-
-	if (current_time - time_of_last_graph_update > 1)
-	{
-		GraphPanel->ClearGraph();
-		wxFileName current_filename = wxString(current_job_package.jobs[result_to_process->job_number].arguments[0].ReturnStringArgument());
-		wxFileName sum_filename = wxString(current_job_package.jobs[result_to_process->job_number].arguments[1].ReturnStringArgument());
-		//GraphPanel->title->SetName(current_filename.GetFullName());
-
-		float current_corrected_pixel_size = current_job_package.jobs[result_to_process->job_number].arguments[2].ReturnFloatArgument() / current_job_package.jobs[result_to_process->job_number].arguments[20].ReturnFloatArgument();
-		// if we corrected a mag distortion, we have to adjust the pixel size appropriately.
-
-		if (current_job_package.jobs[result_to_process->job_number].arguments[21].ReturnBoolArgument() == true) // correct mag distortion
-		{
-			current_corrected_pixel_size = ReturnMagDistortionCorrectedPixelSize(current_corrected_pixel_size, current_job_package.jobs[result_to_process->job_number].arguments[23].ReturnFloatArgument(), current_job_package.jobs[result_to_process->job_number].arguments[24].ReturnFloatArgument());
-		}
-
-		float current_nyquist;
-
-		if (current_corrected_pixel_size < 1.4) current_nyquist = 2.8;
-		else current_nyquist = current_corrected_pixel_size * 2.0;
-
-		GraphPanel->SpectraNyquistStaticText->SetLabel(wxString::Format(wxT("%.2f Å)   "), current_nyquist));
-		GraphPanel->FilenameStaticText->SetLabel(wxString::Format("(%s)"        , current_filename.GetFullName()));
-
-		// draw..
-
-		if (DoesFileExist(current_job_package.jobs[result_to_process->job_number].arguments[26].ReturnStringArgument()) == true)
-		{
-			GraphPanel->SpectraPanel->PanelImage.QuickAndDirtyReadSlice(current_job_package.jobs[result_to_process->job_number].arguments[26].ReturnStringArgument(), 1);
-			GraphPanel->SpectraPanel->should_show = true;
-			GraphPanel->SpectraPanel->Refresh();
-		}
-
-
-		for (frame_counter = 0; frame_counter < number_of_frames; frame_counter++)
-		{
-			GraphPanel->AddPoint(exposure_per_frame * frame_counter, result_to_process->result_data[frame_counter], result_to_process->result_data[frame_counter + number_of_frames]);
-		}
-
-		GraphPanel->Draw();
-
-		if (DoesFileExist(current_job_package.jobs[result_to_process->job_number].arguments[28].ReturnStringArgument()) == true)
-		{
-			GraphPanel->ImageDisplayPanel->ChangeFile(current_job_package.jobs[result_to_process->job_number].arguments[28].ReturnStringArgument(), "");
-		}
-		else
-		if (DoesFileExist(sum_filename.GetFullPath()) == true) GraphPanel->ImageDisplayPanel->ChangeFile(sum_filename.GetFullPath(), sum_filename.GetShortPath());
-
-		if (graph_is_hidden == true)
-		{
-			GraphPanel->Show(true);
-			Layout();
-			graph_is_hidden = false;
-		}
-
-		time_of_last_graph_update = current_time;
-
-
-	}
-
-	my_job_tracker.MarkJobFinished();
-	if (my_job_tracker.ShouldUpdate() == true) UpdateProgressBar();
-
-	// store the results..
-
-	buffered_results[result_to_process->job_number] = result_to_process;
-
-}
-
-void MyAlignMoviesPanel::ProcessAllJobsFinished()
-{
-
-	MyDebugAssertTrue(my_job_tracker.total_number_of_finished_jobs == my_job_tracker.total_number_of_jobs,"In ProcessAllJobsFinished, but total_number_of_finished_jobs != total_number_of_jobs. Oops.");
-
-	// Update the GUI with project timings
-	extern MyOverviewPanel *overview_panel;
-	overview_panel->SetProjectInfo();
-
-	//
-	WriteResultToDataBase();
-
-	if (buffered_results != NULL)
-	{
-		delete [] buffered_results;
-		buffered_results = NULL;
-	}
-
-	// Kill the job (in case it isn't already dead)
-	main_frame->job_controller.KillJob(my_job_id);
-
-	WriteInfoText("All Jobs have finished.");
-	ProgressBar->SetValue(100);
-	wxTimeSpan time_elapsed = my_job_tracker.ReturnTimeSinceStart();
-	TimeRemainingText->SetLabel(time_elapsed.Format("All Done! (%Hh:%Mm:%Ss)"));
-	CancelAlignmentButton->Show(false);
-	FinishButton->Show(true);
-	ProgressPanel->Layout();
-}
-
-void MyAlignMoviesPanel::WriteResultToDataBase()
-{
-
-	long counter;
-	int frame_counter;
-	int array_location;
-	int parent_id;
-	bool have_errors = false;
-
-	float x_bin_factor;
-	float y_bin_factor;
-	float average_bin_factor;
-
-	float corrected_pixel_size;
-
-
-	wxString current_table_name;
-	ImageAsset temp_asset;
-
-	// find the current highest alignment number in the database, then increment by one
-
-	int starting_alignment_id = main_frame->current_project.database.ReturnHighestAlignmentID();
-	int alignment_id = starting_alignment_id + 1;
-	int alignment_job_id =  main_frame->current_project.database.ReturnHighestAlignmentJobID() + 1;
-
-	// global begin
-
-	main_frame->current_project.database.Begin();
-
-	// loop over all the jobs, and add them..
-
-	main_frame->current_project.database.BeginBatchInsert("MOVIE_ALIGNMENT_LIST", 22, "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "OUTPUT_FILE", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK", "SHOULD_INCLUDE_ALL_FRAMES_IN_SUM", "FIRST_FRAME_TO_SUM", "LAST_FRAME_TO_SUM" );
-
-	wxDateTime now = wxDateTime::Now();
-
-	OneSecondProgressDialog *my_progress_dialog = new OneSecondProgressDialog ("Write Results", "Writing results to the database...", my_job_tracker.total_number_of_jobs * 3, this, wxPD_APP_MODAL);
-
-
-	for (counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++)
-	{
-		main_frame->current_project.database.AddToBatchInsert("iliitrrrrrriiriiiiiiii", alignment_id,
-				                                                                    (long int) now.GetAsDOS(),
-																					alignment_job_id,
-																					movie_asset_panel->ReturnAssetID(active_group.members[counter]),
-																					current_job_package.jobs[counter].arguments[1].ReturnStringArgument().c_str(), // output_filename
-																					current_job_package.jobs[counter].arguments[13].ReturnFloatArgument(), // voltage
-																					current_job_package.jobs[counter].arguments[2].ReturnFloatArgument(), // pixel size
-																					current_job_package.jobs[counter].arguments[14].ReturnFloatArgument(), // exposure per frame
-																					current_job_package.jobs[counter].arguments[15].ReturnFloatArgument(), // current_pre_exposure
-																					current_job_package.jobs[counter].arguments[3].ReturnFloatArgument(), // min shift
-																					current_job_package.jobs[counter].arguments[4].ReturnFloatArgument(), // max shift
-																					current_job_package.jobs[counter].arguments[5].ReturnBoolArgument(), // should dose filter
-																					current_job_package.jobs[counter].arguments[6].ReturnBoolArgument(), // should restore power
-																					current_job_package.jobs[counter].arguments[7].ReturnFloatArgument(), // termination threshold
-																					current_job_package.jobs[counter].arguments[8].ReturnIntegerArgument(), // max_iterations
-																					int(current_job_package.jobs[counter].arguments[9].ReturnFloatArgument()), // bfactor
-																					current_job_package.jobs[counter].arguments[10].ReturnBoolArgument(), // should mask central cross
-																					current_job_package.jobs[counter].arguments[11].ReturnIntegerArgument(), // horizonatal mask
-																					current_job_package.jobs[counter].arguments[12].ReturnIntegerArgument(), // vertical mask
-																					include_all_frames_checkbox->GetValue(), // include all frames
-																					current_job_package.jobs[counter].arguments[29].ReturnIntegerArgument(), // first_frame
-																					current_job_package.jobs[counter].arguments[30].ReturnIntegerArgument() // last_frame
-																					);
-
-		alignment_id++;
-
-		my_progress_dialog->Update(counter + 1);
-
-	}
-
-	main_frame->current_project.database.EndBatchInsert();
-
-	// now need to add the results of the job..
-
-	alignment_id = starting_alignment_id + 1;
-
-	for (counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++)
-	{
-		current_table_name = wxString::Format("MOVIE_ALIGNMENT_PARAMETERS_%i", alignment_id);
-		main_frame->current_project.database.CreateTable(current_table_name, "prr", "FRAME_NUMBER", "X_SHIFT", "Y_SHIFT");
-		main_frame->current_project.database.BeginBatchInsert(current_table_name, 3, "FRAME_NUMBER", "X_SHIFT", "Y_SHIFT");
-
-		for (frame_counter = 0; frame_counter < buffered_results[counter].result_size / 2; frame_counter++)
-		{
-			main_frame->current_project.database.AddToBatchInsert("irr", frame_counter + 1, buffered_results[counter].result_data[frame_counter], buffered_results[counter].result_data[frame_counter +  buffered_results[counter].result_size / 2]);
-		}
-
-		main_frame->current_project.database.EndBatchInsert();
-		alignment_id++;
-
-		my_progress_dialog->Update(my_job_tracker.total_number_of_jobs + counter + 1);
-
-	}
-
-	// now that unblur actually checked the file, we have an accurate number of frames for each movie
-	int number_of_frames_for_current_movie;
-	for (counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++)
-	{
-		number_of_frames_for_current_movie = buffered_results[counter].result_size / 2;
-		main_frame->current_project.database.UpdateNumberOfFramesForAMovieAsset(movie_asset_panel->ReturnAssetID(active_group.members[counter]),number_of_frames_for_current_movie);
-		movie_asset_panel->all_assets_list->ReturnMovieAssetPointer(active_group.members[counter])->number_of_frames = number_of_frames_for_current_movie;
-	}
-
-	// now we need to add the resulting image files as image assets..
-
-	// for adding to the database..
-	main_frame->current_project.database.BeginImageAssetInsert();
-
-	MyErrorDialog *my_error = new MyErrorDialog(this);
-	alignment_id = starting_alignment_id + 1;
-
-	for (counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++)
-	{
-			temp_asset.Update(current_job_package.jobs[counter].arguments[1].ReturnStringArgument());
-
-			if (temp_asset.is_valid == true)
-			{
-				parent_id = movie_asset_panel->ReturnAssetID(active_group.members[counter]);
-
-				// work out the corrected pixel size
-				// so the bin amount, might not be exactly the specified amount, as it is fixed by integer resizing of the image.
-
-				x_bin_factor = float(movie_asset_panel->all_assets_list->ReturnMovieAssetPointer(active_group.members[counter])->x_size) / float(temp_asset.x_size);
-				y_bin_factor = float(movie_asset_panel->all_assets_list->ReturnMovieAssetPointer(active_group.members[counter])->y_size) / float(temp_asset.y_size);
-				average_bin_factor = (x_bin_factor + y_bin_factor) / 2.0;
-
-				corrected_pixel_size = current_job_package.jobs[counter].arguments[2].ReturnFloatArgument() * average_bin_factor;
-
-				// if we corrected a mag distortion, we have to adjust the pixel size appropriately.
-
-				if (current_job_package.jobs[counter].arguments[21].ReturnBoolArgument() == true) // correct mag distortion
-				{
-					corrected_pixel_size = ReturnMagDistortionCorrectedPixelSize(corrected_pixel_size, current_job_package.jobs[counter].arguments[23].ReturnFloatArgument(), current_job_package.jobs[counter].arguments[24].ReturnFloatArgument());
-				}
-
-				array_location = image_asset_panel->ReturnArrayPositionFromParentID(parent_id);
-
-				// is this image (or a previous version) already an asset?
-
-				if (array_location == -1) // we don't already have an asset from this movie..
-				{
-					temp_asset.asset_id = image_asset_panel->current_asset_number;
-					temp_asset.asset_name = movie_asset_panel->ReturnAssetName(active_group.members[counter]) + "_aligned";
-					temp_asset.parent_id = parent_id;
-					temp_asset.alignment_id = alignment_id;
-					temp_asset.microscope_voltage = current_job_package.jobs[counter].arguments[13].ReturnFloatArgument();
-
-					temp_asset.pixel_size = corrected_pixel_size;
-
-					temp_asset.position_in_stack = 1;
-					temp_asset.spherical_aberration = movie_asset_panel->ReturnAssetSphericalAbberation(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_id));
-					temp_asset.protein_is_white = movie_asset_panel->ReturnAssetProteinIsWhite(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_id));
-					image_asset_panel->AddAsset(&temp_asset);
-					main_frame->current_project.database.AddNextImageAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath(), temp_asset.position_in_stack, temp_asset.parent_id, alignment_id, -1, temp_asset.x_size, temp_asset.y_size, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.spherical_aberration, temp_asset.protein_is_white);
-
-
-				}
-				else
-				{// TODO:: Rewrite this to use return asset pointer..//
-					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].filename = current_job_package.jobs[counter].arguments[1].ReturnStringArgument();
-					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].parent_id = parent_id;
-					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].alignment_id = alignment_id;
-					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].microscope_voltage = current_job_package.jobs[counter].arguments[13].ReturnFloatArgument();
-					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].pixel_size = corrected_pixel_size;
-					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].position_in_stack = 1;
-					reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].spherical_aberration = movie_asset_panel->ReturnAssetSphericalAbberation(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_id));
-
-					main_frame->current_project.database.AddNextImageAsset(reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].asset_id,
-																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].asset_name,
-							 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	 	            current_job_package.jobs[counter].arguments[1].ReturnStringArgument(),
-																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].position_in_stack,
-																											parent_id,
-																											alignment_id,
-																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].ctf_estimation_id,
-																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].x_size,
-																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].y_size,
-																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].microscope_voltage,
-																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].pixel_size,
-																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].spherical_aberration,
-																											reinterpret_cast <ImageAsset *> (image_asset_panel->all_assets_list->assets)[array_location].protein_is_white);
-
-					image_asset_panel->current_asset_number++;
-				}
-			}
-			else
-			{
-				my_error->ErrorText->AppendText(wxString::Format(wxT("%s is not a valid MRC file, skipping\n"), temp_asset.ReturnFullPathString()));
-				have_errors = true;
-			}
-
-			alignment_id++;
-
-			my_progress_dialog->Update(my_job_tracker.total_number_of_jobs + my_job_tracker.total_number_of_jobs + counter + 1);
-	}
-
-	my_progress_dialog->Destroy();
-
-	main_frame->current_project.database.EndImageAssetInsert();
-
-	// global commit..
-
-	main_frame->current_project.database.Commit();
-
-	image_asset_panel->is_dirty = true;
-	movie_results_panel->is_dirty = true;
-	main_frame->DirtyImageGroups();
-
-
-	if (have_errors == true)
-	{
-		my_error->ShowModal();
-	}
-
-	my_error->Destroy();
-
-
-}
-
-
-void MyAlignMoviesPanel::UpdateProgressBar()
-{
-	wxTimeSpan time_left = my_job_tracker.ReturnRemainingTime();
-	ProgressBar->SetValue(my_job_tracker.ReturnPercentCompleted());
-	TimeRemainingText->SetLabel(time_left.Format("Time Remaining : %Hh:%Mm:%Ss"));
-}
-
-

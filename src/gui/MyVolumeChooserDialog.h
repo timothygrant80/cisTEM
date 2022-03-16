@@ -3,18 +3,15 @@
 
 #include "ProjectX_gui.h"
 
-class MyVolumeChooserDialog : public VolumeChooserDialog
-{
+class MyVolumeChooserDialog : public VolumeChooserDialog {
 
-	public :
+  public:
+    long     selected_volume_id;
+    wxString selected_volume_name;
 
-	long selected_volume_id;
-	wxString selected_volume_name;
-
-	MyVolumeChooserDialog (wxWindow *parent);
-	virtual void OnCancelClick( wxCommandEvent& event );
-	virtual void OnRenameClick( wxCommandEvent& event );
+    MyVolumeChooserDialog(wxWindow* parent);
+    virtual void OnCancelClick(wxCommandEvent& event);
+    virtual void OnRenameClick(wxCommandEvent& event);
 };
 
 #endif
-

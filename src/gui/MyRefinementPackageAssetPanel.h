@@ -1,68 +1,62 @@
 #ifndef __MyRefinementPackageAssetPanel__
 #define __MyRefinementPackageAssetPanel__
 
+class MyRefinementPackageAssetPanel : public RefinementPackageAssetPanel {
+  public:
+    bool is_dirty;
+    long current_asset_number;
+    long selected_refinement_package;
+    bool should_veto_motion;
 
-class MyRefinementPackageAssetPanel : public RefinementPackageAssetPanel
-{
-	public:
+    MyRefinementPackageAssetPanel(wxWindow* parent);
+    ArrayOfRefinementPackages all_refinement_packages;
 
-		bool is_dirty;
-		long current_asset_number;
-		long selected_refinement_package;
-		bool should_veto_motion;
+    long ReturnArrayPositionFromAssetID(long wanted_asset_id);
+    void OnCreateClick(wxCommandEvent& event);
+    void OnRenameClick(wxCommandEvent& event);
+    void OnDeleteClick(wxCommandEvent& event);
+    void OnImportClick(wxCommandEvent& event);
+    void OnExportClick(wxCommandEvent& event);
+    void OnUpdateUI(wxUpdateUIEvent& event);
+    void OnDisplayStackButton(wxCommandEvent& event);
 
-		MyRefinementPackageAssetPanel( wxWindow* parent );
-		ArrayOfRefinementPackages all_refinement_packages;
+    void AddAsset(RefinementPackage* refinement_package);
 
-		long ReturnArrayPositionFromAssetID(long wanted_asset_id);
-		void OnCreateClick( wxCommandEvent& event );
-		void OnRenameClick( wxCommandEvent& event );
-		void OnDeleteClick( wxCommandEvent& event );
-		void OnImportClick( wxCommandEvent& event );
-		void OnExportClick( wxCommandEvent& event );
-		void OnUpdateUI(wxUpdateUIEvent& event);
-		void OnDisplayStackButton( wxCommandEvent& event );
+    void Reset( );
 
-		void AddAsset(RefinementPackage *refinement_package );
+    void FillRefinementPackages( );
 
-		void Reset();
+    void ImportAllFromDatabase( );
 
-		void FillRefinementPackages();
+    // mouse vetos
 
-		void ImportAllFromDatabase();
+    void MouseVeto(wxMouseEvent& event);
+    void MouseCheckPackagesVeto(wxMouseEvent& event);
+    void MouseCheckParticlesVeto(wxMouseEvent& event);
+    void VetoInvalidMouse(wxListCtrl* wanted_list, wxMouseEvent& event);
+    void OnMotion(wxMouseEvent& event);
+    void OnPackageFocusChange(wxListEvent& event);
+    void OnPackageActivated(wxListEvent& event);
+    void OnBeginEdit(wxListEvent& event);
+    void OnEndEdit(wxListEvent& event);
+    void OnVolumeListItemActivated(wxListEvent& event);
+    void ReDrawActiveReferences( );
 
-		// mouse vetos
+    void RemoveVolumeFromAllRefinementPackages(long wanted_volume_asset_id);
+    void RemoveImageFromAllRefinementPackages(long wanted_image_asset_id);
 
-		void MouseVeto( wxMouseEvent& event );
-		void MouseCheckPackagesVeto( wxMouseEvent& event );
-		void MouseCheckParticlesVeto( wxMouseEvent& event );
-		void VetoInvalidMouse( wxListCtrl *wanted_list, wxMouseEvent& event );
-		void OnMotion(wxMouseEvent& event);
-		void OnPackageFocusChange( wxListEvent& event );
-		void OnPackageActivated( wxListEvent& event );
-		void OnBeginEdit( wxListEvent& event );
-		void OnEndEdit( wxListEvent& event );
-		void OnVolumeListItemActivated( wxListEvent& event );
-		void ReDrawActiveReferences();
+    //	Refinement* ReturnPointerToRefinementByRefinementID(long wanted_id);
+    ShortRefinementInfo*        ReturnPointerToShortRefinementInfoByRefinementID(long wanted_id);
+    void                        ImportAllRefinementInfosFromDatabase( );
+    ArrayofShortRefinementInfos all_refinement_short_infos;
+    //ArrayofRefinements all_refinements;
 
-		void RemoveVolumeFromAllRefinementPackages(long wanted_volume_asset_id);
-		void RemoveImageFromAllRefinementPackages(long wanted_image_asset_id);
+    ShortClassificationInfo*        ReturnPointerToShortClassificationInfoByClassificationID(long wanted_id);
+    void                            ImportAllClassificationInfosFromDatabase( );
+    ArrayofShortClassificationInfos all_classification_short_infos;
 
-	//	Refinement* ReturnPointerToRefinementByRefinementID(long wanted_id);
-		ShortRefinementInfo* ReturnPointerToShortRefinementInfoByRefinementID(long wanted_id);
-		void ImportAllRefinementInfosFromDatabase();
-		ArrayofShortRefinementInfos all_refinement_short_infos;
-		//ArrayofRefinements all_refinements;
-
-		ShortClassificationInfo* ReturnPointerToShortClassificationInfoByClassificationID(long wanted_id);
-		void ImportAllClassificationInfosFromDatabase();
-		ArrayofShortClassificationInfos all_classification_short_infos;
-
-		void ImportAllClassificationSelectionsFromDatabase();
-		ArrayofClassificationSelections all_classification_selections;
-
-
+    void                            ImportAllClassificationSelectionsFromDatabase( );
+    ArrayofClassificationSelections all_classification_selections;
 };
-
 
 #endif // __MyRefinementPackageAssetPanel__

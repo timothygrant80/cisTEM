@@ -1,45 +1,37 @@
-class MyRefinementResultsPanel : public RefinementResultsPanel
-{
+class MyRefinementResultsPanel : public RefinementResultsPanel {
 
+  public:
+    bool refinement_package_is_dirty;
+    bool input_params_are_dirty;
 
-	public:
+    long        refinement_id_of_buffered_refinement;
+    Refinement* currently_displayed_refinement;
+    Refinement* buffered_full_refinement;
 
-	bool refinement_package_is_dirty;
-	bool input_params_are_dirty;
+    MyRefinementResultsPanel(wxWindow* parent);
+    void FillRefinementPackageComboBox(void);
+    void FillInputParametersComboBox(void);
+    void FillAngles(int wanted_class);
+    void DrawOrthViews( );
 
-	long refinement_id_of_buffered_refinement;
-	Refinement *currently_displayed_refinement;
-	Refinement *buffered_full_refinement;
+    void OnUpdateUI(wxUpdateUIEvent& event);
 
-	MyRefinementResultsPanel( wxWindow* parent );
-	void FillRefinementPackageComboBox(void);
-	void FillInputParametersComboBox(void);
-	void FillAngles(int wanted_class);
-	void DrawOrthViews();
+    void OnRefinementPackageComboBox(wxCommandEvent& event);
+    void OnInputParametersComboBox(wxCommandEvent& event);
+    void OnDisplayTabChange(wxAuiNotebookEvent& event);
+    void OnJobDetailsToggle(wxCommandEvent& event);
 
-	void OnUpdateUI( wxUpdateUIEvent& event );
+    int current_class;
 
-	void OnRefinementPackageComboBox( wxCommandEvent& event );
-	void OnInputParametersComboBox( wxCommandEvent& event );
-	void OnDisplayTabChange(wxAuiNotebookEvent& event);
-	void OnJobDetailsToggle( wxCommandEvent& event );
+    void OnClassComboBoxChange(wxCommandEvent& event);
+    void AngularPlotPopupClick(wxCommandEvent& event);
+    void PopupParametersClick(wxCommandEvent& event);
 
-	int current_class;
+    void UpdateCachedRefinement( );
+    void UpdateBufferedFullRefinement( );
 
-	void OnClassComboBoxChange( wxCommandEvent& event );
-	void AngularPlotPopupClick(wxCommandEvent& event);
-	void PopupParametersClick(wxCommandEvent& event);
+    void WriteJobInfo(int wanted_class);
+    void ClearJobInfo( );
 
-	void UpdateCachedRefinement();
-	void UpdateBufferedFullRefinement();
-
-	void WriteJobInfo(int wanted_class);
-	void ClearJobInfo();
-
-	void Clear();
-
-
-
-
+    void Clear( );
 };
-

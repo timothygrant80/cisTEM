@@ -2,9 +2,9 @@
 
 // #include "common/samples_headers.h"
 #ifdef ENABLEGPU
-  #include "../../gpu/gpu_core_headers.h"
+#include "../../gpu/gpu_core_headers.h"
 #else
-  #include "../../core/core_headers.h"
+#include "../../core/core_headers.h"
 #endif
 
 // Helper classes for interacting with the test data.
@@ -23,49 +23,45 @@
 
 IMPLEMENT_APP(SamplesTestingApp)
 
-bool SamplesTestingApp::DoCalculation() 
-{
+bool SamplesTestingApp::DoCalculation( ) {
 
-  // This is returned and for automated testing allows you to only visualize the overall results,
-  // and if false, using github actions you can expand to see the full results.
-  bool all_tests_passed = true;
+    // This is returned and for automated testing allows you to only visualize the overall results,
+    // and if false, using github actions you can expand to see the full results.
+    bool all_tests_passed = true;
 
-  SamplesPrintTestStartMessage("Starting samples testing", true);
+    SamplesPrintTestStartMessage("Starting samples testing", true);
 
-  all_tests_passed = all_tests_passed && DoDiskIOImageTests(hiv_images_80x80x10_filename, temp_directory);
+    all_tests_passed = all_tests_passed && DoDiskIOImageTests(hiv_images_80x80x10_filename, temp_directory);
 
-  #ifdef ENABLEGPU
+#ifdef ENABLEGPU
     all_tests_passed = all_tests_passed && DoCPUvsGPUResize(hiv_image_80x80x1_filename, temp_directory);
-  #else
+#else
     wxPrintf("GPU support disabled. skipping GPU tests.\n");
-  #endif
+#endif
 
-  SamplesPrintTestStartMessage("Samples testing done!", true);
-  ProgramSpecificCleanUp();
-  
-  return true;
+    SamplesPrintTestStartMessage("Samples testing done!", true);
+    ProgramSpecificCleanUp( );
+
+    return true;
 }
 
-
-void SamplesTestingApp::DoInteractiveUserInput()
-{
-  // noop (otherwise this triggers an error in MyApp.)
+void SamplesTestingApp::DoInteractiveUserInput( ) {
+    // noop (otherwise this triggers an error in MyApp.)
 }
 
-void SamplesTestingApp::ProgramSpecificInit() 
-{
-	// constructor: set file names and temp folder, write embbeded files to harddrive.
-  temp_directory = wxFileName::GetHomeDir();
+void SamplesTestingApp::ProgramSpecificInit( ) {
+    // constructor: set file names and temp folder, write embbeded files to harddrive.
+    temp_directory = wxFileName::GetHomeDir( );
 
-  hiv_image_80x80x1_filename    = temp_directory + "/hiv_image_80x80x1.mrc";
-  hiv_images_80x80x10_filename  = temp_directory + "/hiv_images_shift_noise_80x80x10.mrc";
-  sine_wave_128x128x1_filename  = temp_directory + "/sine_wave_128x128x1.mrc";
-  numeric_text_filename         = temp_directory + "/numbers.num";
+    hiv_image_80x80x1_filename   = temp_directory + "/hiv_image_80x80x1.mrc";
+    hiv_images_80x80x10_filename = temp_directory + "/hiv_images_shift_noise_80x80x10.mrc";
+    sine_wave_128x128x1_filename = temp_directory + "/sine_wave_128x128x1.mrc";
+    numeric_text_filename        = temp_directory + "/numbers.num";
 
-  WriteFiles();
+    WriteFiles( );
 }
 
-// void SamplesTestingApp::ProgramSpecificCleanup() 
+// void SamplesTestingApp::ProgramSpecificCleanup()
 // {
 // 	// destructor: remove all files written to harddrive.
 // 	wxPrintf("\nRemoving test files from '%s'... \n", temp_directory);
@@ -79,18 +75,16 @@ void SamplesTestingApp::ProgramSpecificInit()
 //   wxPrintf("done!\n");
 // }
 
-void SamplesTestingApp::WriteFiles() 
-{
+void SamplesTestingApp::WriteFiles( ) {
 
-  /* Write out the test files in mrc (images) or txt (numeric txt) */
-  wxPrintf("\nWriting out embedded test files to '%s'...\n\n", temp_directory);
-  fflush(stdout);
-  
-  file_tracker.testFiles.push_back(new EmbeddedTestFile(hiv_image_80x80x1_filename, hiv_image_80x80x1_array, sizeof(hiv_image_80x80x1_array)));
-  file_tracker.testFiles.push_back(new EmbeddedTestFile(hiv_images_80x80x10_filename, hiv_images_shift_noise_80x80x10_array, sizeof(hiv_images_shift_noise_80x80x10_array)));
-  file_tracker.testFiles.push_back(new EmbeddedTestFile(sine_wave_128x128x1_filename, sine_128x128x1_array, sizeof(sine_128x128x1_array)));
-  file_tracker.testFiles.push_back(new NumericTestFile(numeric_text_filename));
+    /* Write out the test files in mrc (images) or txt (numeric txt) */
+    wxPrintf("\nWriting out embedded test files to '%s'...\n\n", temp_directory);
+    fflush(stdout);
 
-  wxPrintf("\ndone writing files!\n\n\n");
+    file_tracker.testFiles.push_back(new EmbeddedTestFile(hiv_image_80x80x1_filename, hiv_image_80x80x1_array, sizeof(hiv_image_80x80x1_array)));
+    file_tracker.testFiles.push_back(new EmbeddedTestFile(hiv_images_80x80x10_filename, hiv_images_shift_noise_80x80x10_array, sizeof(hiv_images_shift_noise_80x80x10_array)));
+    file_tracker.testFiles.push_back(new EmbeddedTestFile(sine_wave_128x128x1_filename, sine_128x128x1_array, sizeof(sine_128x128x1_array)));
+    file_tracker.testFiles.push_back(new NumericTestFile(numeric_text_filename));
+
+    wxPrintf("\ndone writing files!\n\n\n");
 }
-

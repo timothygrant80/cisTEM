@@ -1,158 +1,146 @@
-extern MyMainFrame *main_frame;
+extern MyMainFrame* main_frame;
 
-class AssetPanel : public AssetPanelParent
-{
+class AssetPanel : public AssetPanelParent {
 
-		friend class GroupDropTarget;
-		friend class RenameDialog;
+    friend class GroupDropTarget;
+    friend class RenameDialog;
 
-private:
+  private:
+    long highlighted_item;
 
+    bool name_is_being_edited;
+    bool should_veto_motion;
 
+    virtual void ImportAssetClick(wxCommandEvent& event) = 0;
+    //virtual void ExportAssetClick( wxCommandEvent& event ) = 0;
 
-		long highlighted_item;
+    void RemoveAssetClick(wxCommandEvent& event);
+    void RenameAssetClick(wxCommandEvent& event);
+    void OnDisplayButtonClick(wxCommandEvent& event);
 
-		bool name_is_being_edited;
-		bool should_veto_motion;
+    void RemoveAllAssetsClick(wxCommandEvent& event);
+    void AddSelectedAssetClick(wxCommandEvent& event);
 
+    void         NewGroupClick(wxCommandEvent& event);
+    void         RemoveGroupClick(wxCommandEvent& event);
+    void         RenameGroupClick(wxCommandEvent& event);
+    void         InvertGroupClick(wxCommandEvent& event);
+    void         NewFromParentClick(wxCommandEvent& event);
+    virtual void EnableNewFromParentButton( );
 
-		virtual void ImportAssetClick( wxCommandEvent& event ) = 0;
-		//virtual void ExportAssetClick( wxCommandEvent& event ) = 0;
+    void OnUpdateUI(wxUpdateUIEvent& event);
+    void MouseVeto(wxMouseEvent& event);
+    void OnMotion(wxMouseEvent& event);
+    void VetoInvalidMouse(wxListCtrl* wanted_list, wxMouseEvent& event);
+    void MouseCheckGroupsVeto(wxMouseEvent& event);
+    void MouseCheckContentsVeto(wxMouseEvent& event);
+    void OnGroupActivated(wxListEvent& event);
+    void OnAssetActivated(wxListEvent& event);
 
-		void RemoveAssetClick( wxCommandEvent& event );
-		void RenameAssetClick( wxCommandEvent& event);
-		void OnDisplayButtonClick( wxCommandEvent& event );
+    virtual void DisplaySelectedItems( );
 
-		void RemoveAllAssetsClick( wxCommandEvent& event );
-		void AddSelectedAssetClick( wxCommandEvent& event );
+    virtual int ShowDeleteMessageDialog( )    = 0;
+    virtual int ShowDeleteAllMessageDialog( ) = 0;
 
-		void NewGroupClick( wxCommandEvent& event );
-		void RemoveGroupClick( wxCommandEvent& event );
-		void RenameGroupClick( wxCommandEvent& event );
-		void InvertGroupClick( wxCommandEvent& event );
-		void NewFromParentClick( wxCommandEvent& event );
-		virtual void EnableNewFromParentButton();
+    virtual void CompletelyRemoveAsset(long wanted_asset)                                                   = 0;
+    virtual void RemoveAssetFromDatabase(long wanted_asset)                                                 = 0;
+    virtual void RenameAsset(long wanted_asset, wxString wanted_name)                                       = 0;
+    virtual void RemoveFromGroupInDatabase(int wanted_group, int wanted_asset_id)                           = 0;
+    virtual void RemoveAllFromDatabase( )                                                                   = 0;
+    virtual void RemoveAllGroupMembersFromDatabase(int wanted_group_id)                                     = 0;
+    virtual void AddGroupToDatabase(int wanted_group_id, const char* wanted_group_name, int wanted_list_id) = 0;
+    virtual void RemoveGroupFromDatabase(int wanted_group_id)                                               = 0;
+    virtual void RenameGroupInDatabase(int wanted_group_id, const char* wanted_name)                        = 0;
+    virtual void FillAssetSpecificContentsList( )                                                           = 0;
+    virtual void ImportAllFromDatabase( )                                                                   = 0;
+    virtual void DirtyGroups( )                                                                             = 0;
+    virtual void DoAfterDeletionCleanup( )                                                                  = 0;
 
-		void OnUpdateUI( wxUpdateUIEvent& event );
-		void MouseVeto( wxMouseEvent& event );
-		void OnMotion( wxMouseEvent& event );
-		void VetoInvalidMouse( wxListCtrl *wanted_list, wxMouseEvent& event );
-		void MouseCheckGroupsVeto( wxMouseEvent& event );
-		void MouseCheckContentsVeto( wxMouseEvent& event );
-		void OnGroupActivated( wxListEvent& event );
-		void OnAssetActivated( wxListEvent& event );
+  public:
+    AssetGroupList* all_groups_list;
+    AssetList*      all_assets_list;
 
-		virtual void DisplaySelectedItems();
+    long selected_group;
+    long selected_content;
 
-		virtual int ShowDeleteMessageDialog() = 0;
-		virtual int ShowDeleteAllMessageDialog() = 0;
+    int current_asset_number;
+    int current_group_number;
 
-		virtual void CompletelyRemoveAsset(long wanted_asset) = 0;
-		virtual void RemoveAssetFromDatabase(long wanted_asset) = 0;
-		virtual void RenameAsset(long wanted_asset, wxString wanted_name) = 0;
-		virtual void RemoveFromGroupInDatabase(int wanted_group, int wanted_asset_id) = 0;
-		virtual void RemoveAllFromDatabase() = 0;
-		virtual void RemoveAllGroupMembersFromDatabase(int wanted_group_id) = 0;
-		virtual void AddGroupToDatabase(int wanted_group_id, const char * wanted_group_name, int wanted_list_id) = 0;
-		virtual void RemoveGroupFromDatabase(int wanted_group_id) = 0;
-		virtual void RenameGroupInDatabase(int wanted_group_id, const char *wanted_name) = 0;
-		virtual void FillAssetSpecificContentsList() = 0;
-		virtual void ImportAllFromDatabase() = 0;
-		virtual void DirtyGroups() = 0;
-		virtual void DoAfterDeletionCleanup() = 0;
+    bool is_dirty;
 
-	public:
+    AssetPanel(wxWindow* parent);
+    ~AssetPanel( );
 
-		AssetGroupList *all_groups_list;
-		AssetList *all_assets_list;
+    virtual void InsertGroupMemberToDatabase(int wanted_group, int wanted_asset)                                                                    = 0;
+    virtual void InsertArrayofGroupMembersToDatabase(long wanted_group, wxArrayLong* wanted_array, OneSecondProgressDialog* progress_dialog = NULL) = 0;
+    long         ReturnGroupMember(long wanted_group, long wanted_member);
 
-		long selected_group;
-		long selected_content;
+    void FillContentsList( );
+    void AddAsset(Asset* asset_to_add);
+    void AddContentItemToGroup(long wanted_group, long wanted_content_item);
+    void AddArrayItemToGroup(long wanted_group, long wanted_array_item);
+    void DeleteArrayItemFromGroup(long wanted_group, long wanted_array_item);
+    void AddArrayofArrayItemsToGroup(long wanted_group, wxArrayLong* array_of_wanted_items, OneSecondProgressDialog* progress_dialog = NULL);
 
-		int current_asset_number;
-		int current_group_number;
+    void OnGroupFocusChange(wxListEvent& event);
+    void OnContentsSelected(wxListEvent& event);
+    void OnBeginEdit(wxListEvent& event);
+    void OnEndEdit(wxListEvent& event);
+    void OnBeginContentsDrag(wxListEvent& event);
 
-		bool is_dirty;
+    void SizeGroupColumn( );
+    void SizeContentsColumn(int column_number);
 
-		AssetPanel( wxWindow* parent );
-		~AssetPanel();
+    unsigned long ReturnNumberOfAssets( );
+    unsigned long ReturnNumberOfGroups( );
 
-		virtual void InsertGroupMemberToDatabase(int wanted_group, int wanted_asset) = 0;
-		virtual void InsertArrayofGroupMembersToDatabase(long wanted_group, wxArrayLong *wanted_array, OneSecondProgressDialog *progress_dialog = NULL) = 0;
-		long ReturnGroupMember(long wanted_group, long wanted_member);
+    bool DragOverGroups(wxCoord x, wxCoord y);
 
-		void FillContentsList();
-		void AddAsset(Asset *asset_to_add);
-		void AddContentItemToGroup(long wanted_group, long wanted_content_item);
-		void AddArrayItemToGroup(long wanted_group, long wanted_array_item);
-		void DeleteArrayItemFromGroup(long wanted_group, long wanted_array_item);
-		void AddArrayofArrayItemsToGroup(long wanted_group, wxArrayLong *array_of_wanted_items, OneSecondProgressDialog *progress_dialog = NULL);
+    void SetGroupName(long wanted_group, wxString wanted_name);
 
-		void OnGroupFocusChange( wxListEvent& event );
-		void OnContentsSelected( wxListEvent& event );
-		void OnBeginEdit( wxListEvent& event );
-		void OnEndEdit( wxListEvent& event );
-		void OnBeginContentsDrag( wxListEvent& event );
+    wxString ReturnGroupName(long wanted_group);
+    int      ReturnGroupID(long wanted_group);
+    wxString ReturnAssetShortFilename(long wanted_asset);
+    wxString ReturnAssetLongFilename(long wanted_asset);
 
-		void SizeGroupColumn();
-		void SizeContentsColumn(int column_number);
+    long ReturnGroupSize(long wanted_group);
+    int  ReturnGroupMemberID(long wanted_group, long wanted_member);
+    void RemoveAssetFromGroups(long wanted_asset, bool dirty_groups = true);
+    void FillGroupList( );
 
-		unsigned long ReturnNumberOfAssets();
-		unsigned long ReturnNumberOfGroups();
+    void SetSelectedGroup(long wanted_group);
 
-		bool DragOverGroups(wxCoord x, wxCoord y);
+    //void CheckActiveButtons();
 
-		void SetGroupName(long wanted_group, wxString wanted_name);
+    int      ReturnArrayPositionFromParentID(int wanted_id);
+    int      ReturnArrayPositionFromAssetID(int wanted_id);
+    int      ReturnAssetID(int wanted_asset);
+    wxString ReturnAssetName(long wanted_asset);
+    long     ReturnParentAssetID(long wanted_asset);
 
-		wxString ReturnGroupName(long wanted_group);
-		int ReturnGroupID(long wanted_group);
-		wxString ReturnAssetShortFilename(long wanted_asset);
-		wxString ReturnAssetLongFilename(long wanted_asset);
+    //bool IsFileAnAsset(wxFileName file_to_check) = 0;
+    virtual Asset*   ReturnAssetPointer(long wanted_asset)        = 0;
+    virtual wxString ReturnItemText(long item, long column) const = 0;
 
-		long ReturnGroupSize(long wanted_group);
-		int ReturnGroupMemberID(long wanted_group, long wanted_member);
-		void RemoveAssetFromGroups(long wanted_asset, bool dirty_groups = true);
-		void FillGroupList();
+    void Reset( );
 
-		void SetSelectedGroup(long wanted_group);
-
-		//void CheckActiveButtons();
-
-		int ReturnArrayPositionFromParentID(int wanted_id);
-		int ReturnArrayPositionFromAssetID(int wanted_id);
-		int ReturnAssetID(int wanted_asset);
-		wxString ReturnAssetName(long wanted_asset);
-		long ReturnParentAssetID(long wanted_asset);
-
-		//bool IsFileAnAsset(wxFileName file_to_check) = 0;
-		virtual Asset* ReturnAssetPointer(long wanted_asset) = 0;
-		virtual wxString ReturnItemText(long item, long column) const  = 0;
-
-
-		void Reset();
-
-
-		virtual void UpdateInfo() = 0;
-
+    virtual void UpdateInfo( ) = 0;
 };
 
+class GroupDropTarget : public wxDropTarget {
 
-class GroupDropTarget : public wxDropTarget
-{
+    friend class AssetPanel;
 
-	friend class AssetPanel;
+  private:
+    wxListCtrl*       my_owner;
+    wxTextDataObject* my_data;
+    AssetPanel*       my_panel;
 
-	private:
+  public:
+    GroupDropTarget(wxListCtrl* owner, AssetPanel* asset_panel);
 
-		wxListCtrl *my_owner;
-		wxTextDataObject *my_data;
-		AssetPanel *my_panel;
-
-	public:
-    	GroupDropTarget(wxListCtrl *owner, AssetPanel *asset_panel);
-
-    virtual bool OnDrop(wxCoord x, wxCoord y);//, const wxString& dropped_text);
+    virtual bool         OnDrop(wxCoord x, wxCoord y); //, const wxString& dropped_text);
     virtual wxDragResult OnData(wxCoord x, wxCoord y, wxDragResult defResult);
-    virtual wxDragResult OnDragOver (wxCoord x, wxCoord y, wxDragResult defResult);
-    virtual void OnLeave();
+    virtual wxDragResult OnDragOver(wxCoord x, wxCoord y, wxDragResult defResult);
+    virtual void         OnLeave( );
 };

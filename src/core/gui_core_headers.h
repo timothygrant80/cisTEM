@@ -2,8 +2,10 @@
 #define _gui_gui_core_headers_h_
 
 namespace cistem {
-    enum class workflow { single_particle, template_matching };
+enum class workflow { single_particle,
+                      template_matching };
 }
+
 #include <wx/artprov.h>
 #include <wx/xrc/xmlres.h>
 #include <wx/gdicmn.h>
@@ -146,6 +148,5 @@ namespace cistem {
 #define ALIGN_SYMMETRY 5
 #define ESTIMATE_BEAMTILT 6
 #define NOJOB 7
-
 
 #endif

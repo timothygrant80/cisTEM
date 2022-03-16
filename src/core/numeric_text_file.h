@@ -4,43 +4,39 @@
 
 class NumericTextFile {
 
-        private:
+  private:
+    void                Init( );
+    wxString            text_filename;
+    long                access_type;
+    wxFileInputStream*  input_file_stream;
+    wxTextInputStream*  input_text_stream;
+    wxFileOutputStream* output_file_stream;
+    wxTextOutputStream* output_text_stream;
 
-                void Init();
-                wxString text_filename;
-                long access_type;
-                wxFileInputStream *input_file_stream;
-                wxTextInputStream *input_text_stream;
-                wxFileOutputStream *output_file_stream;
-                wxTextOutputStream *output_text_stream;
+  public:
+    // Constructors
+    NumericTextFile( );
+    NumericTextFile(wxString Filename, long wanted_access_type, long wanted_records_per_line = 1);
+    ~NumericTextFile( );
 
-	public:
+    // data
 
+    int number_of_lines;
+    int records_per_line;
 
-		// Constructors
-		NumericTextFile();
-		NumericTextFile(wxString Filename, long wanted_access_type, long wanted_records_per_line = 1);
-		~NumericTextFile();
+    // Methods
 
-		// data
+    void     Open(wxString Filename, long wanted_access_type, long wanted_records_per_line = 1);
+    void     Close( );
+    void     Rewind( );
+    void     Flush( );
+    wxString ReturnFilename( );
 
-		int number_of_lines;
-		int records_per_line;
+    void ReadLine(float* data_array);
+    void WriteLine(float* data_array);
+    void WriteLine(double* data_array);
+    void WriteCommentLine(const char* format, ...);
 
-		// Methods
-
-        void Open(wxString Filename, long wanted_access_type, long wanted_records_per_line = 1);
-        void Close();
-        void Rewind();
-        void Flush();
-        wxString ReturnFilename();
-
-		void ReadLine(float *data_array);
-        void WriteLine(float *data_array);
-        void WriteLine(double *data_array);
-        void WriteCommentLine(const char * format, ...);
-
-        // In special cases (e.g. if the filename is /dev/null), we don't do anything
-        bool do_nothing;
-
+    // In special cases (e.g. if the filename is /dev/null), we don't do anything
+    bool do_nothing;
 };

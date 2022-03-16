@@ -5,54 +5,50 @@
 #include "../gui/mathplot.h"
 #include <wx/panel.h>
 
-WX_DEFINE_ARRAY(mpFXYVector *, ArrayofmpFXYVectors);
+WX_DEFINE_ARRAY(mpFXYVector*, ArrayofmpFXYVectors);
 
-class RefinementLimit : public mpFY
-{
+class RefinementLimit : public mpFY {
 
-public:
-	double spatial_frequency;
-	RefinementLimit(float wanted_spatial_frequency) : mpFY(wxT(" Min. refinement limit"),mpALIGN_TOP) { spatial_frequency = wanted_spatial_frequency; }
-	void SetSpatialFrequency(float wanted_spatial_frequency) { spatial_frequency = wanted_spatial_frequency; }
-	virtual double GetX( double y ) { return spatial_frequency; }
-	virtual double GetMinX() { return -0.05; }
-	virtual double GetMinY() { return 1.05; }
+  public:
+    double spatial_frequency;
+
+    RefinementLimit(float wanted_spatial_frequency) : mpFY(wxT(" Min. refinement limit"), mpALIGN_TOP) { spatial_frequency = wanted_spatial_frequency; }
+
+    void SetSpatialFrequency(float wanted_spatial_frequency) { spatial_frequency = wanted_spatial_frequency; }
+
+    virtual double GetX(double y) { return spatial_frequency; }
+
+    virtual double GetMinX( ) { return -0.05; }
+
+    virtual double GetMinY( ) { return 1.05; }
 };
 
 class
-PlotFSCPanel : public wxPanel
-{
+        PlotFSCPanel : public wxPanel {
 
-	wxBoxSizer* GraphSizer;
-	int number_of_added_fscs;
+    wxBoxSizer* GraphSizer;
+    int         number_of_added_fscs;
 
-	public:
+  public:
+    PlotFSCPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxPanelNameStr);
+    ~PlotFSCPanel( );
 
-	PlotFSCPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxPanelNameStr);
-	~PlotFSCPanel();
+    void Clear(bool update_display = true);
+    void AddPartFSC(ResolutionStatistics* statistics_to_add, float wanted_nyquist);
+    void Draw(float nyquist);
+    void SetupBaseLayers( );
+    void HighlightClass(int wanted_class);
 
-	void Clear(bool update_display = true);
-	void AddPartFSC(ResolutionStatistics *statistics_to_add, float wanted_nyquist);
-	void Draw(float nyquist);
-	void SetupBaseLayers();
-	void HighlightClass(int wanted_class);
+    ArrayofmpFXYVectors FSC_Layers;
 
-	ArrayofmpFXYVectors FSC_Layers;
+    float current_refinement_resolution_limit;
 
-
-
-	float current_refinement_resolution_limit;
-
-
-	float current_nyquist;
-	mpWindow        *current_plot_window;
-	mpTitle         *title;
-	mpScaleX * current_xaxis;
-	mpScaleY * current_yaxis;
-	RefinementLimit * refinement_limit;
-
-
+    float            current_nyquist;
+    mpWindow*        current_plot_window;
+    mpTitle*         title;
+    mpScaleX*        current_xaxis;
+    mpScaleY*        current_yaxis;
+    RefinementLimit* refinement_limit;
 };
-
 
 #endif

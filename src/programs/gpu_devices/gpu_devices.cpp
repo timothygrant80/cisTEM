@@ -1,37 +1,28 @@
 #include "../../core/core_headers.h"
 
-
-
-
 class
-GpuDevices : public MyApp
-{
+        GpuDevices : public MyApp {
 
-	public:
+  public:
+    bool DoCalculation( );
+    void DoInteractiveUserInput( );
 
-	bool DoCalculation();
-	void DoInteractiveUserInput();
-
-	private:
+  private:
 };
-
 
 IMPLEMENT_APP(GpuDevices)
 
 // override the DoInteractiveUserInput
 
-void GpuDevices::DoInteractiveUserInput()
-{
-
+void GpuDevices::DoInteractiveUserInput( ) {
 }
 
 // override the do calculation method which will be what is actually run..
 
-bool GpuDevices::DoCalculation()
-{
-	DeviceManager gpuDev;
+bool GpuDevices::DoCalculation( ) {
+    DeviceManager gpuDev;
 
-	wxPrintf("\nGpuDevices is running...\n\n");
+    wxPrintf("\nGpuDevices is running...\n\n");
 
-	gpuDev.ListDevices();
+    gpuDev.ListDevices( );
 }

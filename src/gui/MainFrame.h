@@ -1,112 +1,110 @@
 #ifndef _gui_MainFrame_h_
 #define _gui_MainFrame_h_
 
-
 /** Implementing MainFrame */
-class MyMainFrame : public MainFrame, public SocketCommunicator
-{
-		bool is_fullscreen;
-        cistem::workflow current_workflow;
-        cistem::workflow previous_workflow;
-	public:
-		/** Constructor */
-		MyMainFrame( wxWindow* parent );
-		~MyMainFrame();
+class MyMainFrame : public MainFrame, public SocketCommunicator {
+    bool             is_fullscreen;
+    cistem::workflow current_workflow;
+    cistem::workflow previous_workflow;
 
-	//// end generated class members
+  public:
+    /** Constructor */
+    MyMainFrame(wxWindow* parent);
+    ~MyMainFrame( );
 
-		wxTreeItemId tree_root;
-		wxTreeItemId movie_branch;
+    //// end generated class members
 
-		GuiJobController job_controller;
+    wxTreeItemId tree_root;
+    wxTreeItemId movie_branch;
 
-		wxArrayString all_my_ip_addresses;
-		wxString my_port_string;
+    GuiJobController job_controller;
 
-		Project current_project;
+    wxArrayString all_my_ip_addresses;
+    wxString      my_port_string;
 
-		short int my_port;
+    Project current_project;
 
-		virtual wxString ReturnName() {return "MainFrame";}
+    short int my_port;
 
-		void RecalculateAssetBrowser(void);
-		void OnCollapseAll( wxCommandEvent& event );
-		void OnMenuBookChange( wxBookCtrlEvent& event );
+    virtual wxString ReturnName( ) { return "MainFrame"; }
 
-		void OnFileNewProject( wxCommandEvent& event );
-		void OnFileOpenProject( wxCommandEvent& event );
-		void OnFileExit( wxCommandEvent& event );
-		void OnFileCloseProject( wxCommandEvent& event );
-		void OnFileMenuUpdate( wxUpdateUIEvent& event );
+    void RecalculateAssetBrowser(void);
+    void OnCollapseAll(wxCommandEvent& event);
+    void OnMenuBookChange(wxBookCtrlEvent& event);
 
-		void OnHelpLaunch( wxCommandEvent& event );
-		void OnAboutLaunch( wxCommandEvent& event );
+    void OnFileNewProject(wxCommandEvent& event);
+    void OnFileOpenProject(wxCommandEvent& event);
+    void OnFileExit(wxCommandEvent& event);
+    void OnFileCloseProject(wxCommandEvent& event);
+    void OnFileMenuUpdate(wxUpdateUIEvent& event);
 
-		void OnExportCoordinatesToImagic ( wxCommandEvent & event );
-		void OnExportToFrealign( wxCommandEvent & event );
-		void OnExportToRelion( wxCommandEvent & event );
+    void OnHelpLaunch(wxCommandEvent& event);
+    void OnAboutLaunch(wxCommandEvent& event);
 
-		void OpenProject(wxString project_filename);
-		void GetFileAndOpenProject();
-		void StartNewProject();
+    void OnExportCoordinatesToImagic(wxCommandEvent& event);
+    void OnExportToFrealign(wxCommandEvent& event);
+    void OnExportToRelion(wxCommandEvent& event);
 
-		void OnCharHook( wxKeyEvent& event );
+    void OpenProject(wxString project_filename);
+    void GetFileAndOpenProject( );
+    void StartNewProject( );
 
-	//	void OnServerEvent(wxSocketEvent& event);
-	//	void OnSocketEvent(wxSocketEvent& event);
+    void OnCharHook(wxKeyEvent& event);
 
-		// Socket Handling overrides..
+    //	void OnServerEvent(wxSocketEvent& event);
+    //	void OnSocketEvent(wxSocketEvent& event);
 
-		void HandleNewSocketConnection(wxSocketBase *new_connection,  unsigned char *identification_code);
+    // Socket Handling overrides..
 
-		// end socket
+    void HandleNewSocketConnection(wxSocketBase* new_connection, unsigned char* identification_code);
 
+    // end socket
 
-		void DirtyEverything();
-		void DirtyMovieGroups();
-		void DirtyImageGroups();
-		void DirtyVolumes();
+    void DirtyEverything( );
+    void DirtyMovieGroups( );
+    void DirtyImageGroups( );
+    void DirtyVolumes( );
 #ifdef EXPERIMENTAL
-		void DirtyAtomicCoordinates();
-#endif    
-		void DirtyParticlePositionGroups();
-		void DirtyRunProfiles();
-		void DirtyRefinementPackages();
-		void DirtyRefinements();
-		void DirtyClassificationSelections();
-		void DirtyClassifications();
+    void DirtyAtomicCoordinates( );
+#endif
+    void DirtyParticlePositionGroups( );
+    void DirtyRunProfiles( );
+    void DirtyRefinementPackages( );
+    void DirtyRefinements( );
+    void DirtyClassificationSelections( );
+    void DirtyClassifications( );
 
-		void ResetAllPanels();
+    void ResetAllPanels( );
 
-		void ClearScratchDirectory();
-		void ClearStartupScratch();
-		void ClearRefine2DScratch();
-		void ClearRefine3DScratch();
-		void ClearAutoRefine3DScratch();
-		void ClearGenerate3DScratch();
-		void ClearRefineCTFScratch();
+    void ClearScratchDirectory( );
+    void ClearStartupScratch( );
+    void ClearRefine2DScratch( );
+    void ClearRefine3DScratch( );
+    void ClearAutoRefine3DScratch( );
+    void ClearGenerate3DScratch( );
+    void ClearRefineCTFScratch( );
 
-		wxString ReturnScratchDirectory();
-		wxString ReturnStartupScratchDirectory();
-		wxString ReturnRefine2DScratchDirectory();
-		wxString ReturnRefine3DScratchDirectory();
-		wxString ReturnAutoRefine3DScratchDirectory();
-		wxString ReturnGenerate3DScratchDirectory();
-		wxString ReturnRefineCTFScratchDirectory();
+    wxString ReturnScratchDirectory( );
+    wxString ReturnStartupScratchDirectory( );
+    wxString ReturnRefine2DScratchDirectory( );
+    wxString ReturnRefine3DScratchDirectory( );
+    wxString ReturnAutoRefine3DScratchDirectory( );
+    wxString ReturnGenerate3DScratchDirectory( );
+    wxString ReturnRefineCTFScratchDirectory( );
 
-		bool MigrateProject(wxString old_project_directory, wxString new_project_directory);
+    bool MigrateProject(wxString old_project_directory, wxString new_project_directory);
 
-    template < class FrameTypeFrom, class FrameTypeTo > 
+    template <class FrameTypeFrom, class FrameTypeTo>
     void UpdateWorkflow(FrameTypeFrom* input_frame, FrameTypeTo* output_frame, wxString frame_name);
 
-    void OnSingleParticleWorkflow( wxCommandEvent& event );
-    void OnTemplateMatchingWorkflow( wxCommandEvent& event );
-    inline cistem::workflow ReturnCurrentWorkflow() { return current_workflow; };
-    inline cistem::workflow ReturnPreviousWorkflow() { return previous_workflow; };
+    void OnSingleParticleWorkflow(wxCommandEvent& event);
+    void OnTemplateMatchingWorkflow(wxCommandEvent& event);
 
-		//LaunchJob(JobPanel *parent_panel, )
+    inline cistem::workflow ReturnCurrentWorkflow( ) { return current_workflow; };
 
+    inline cistem::workflow ReturnPreviousWorkflow( ) { return previous_workflow; };
+
+    //LaunchJob(JobPanel *parent_panel, )
 };
-
 
 #endif // _gui_MainFrame_h_

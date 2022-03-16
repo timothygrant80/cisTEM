@@ -2,32 +2,32 @@
 #define SRC_PROGRAMS_CORE_CORE_HEADERS_H_
 
 typedef struct Peak {
-  float x;
-  float y;
-  float z;
-  float value;
-  long  physical_address_within_image;
+    float x;
+    float y;
+    float z;
+    float value;
+    long  physical_address_within_image;
 } Peak;
 
 typedef struct Kernel2D {
-  int   pixel_index[4];
-  float pixel_weight[4];
+    int   pixel_index[4];
+    float pixel_weight[4];
 } Kernel2D;
 
 typedef struct CurvePoint {
-  int   index_m;
-  int   index_n;
-  float value_m;
-  float value_n;
+    int   index_m;
+    int   index_n;
+    float value_m;
+    float value_n;
 } CurvePoint;
 
 // All the defines set in configure.ac
 #include <cistem_config.h>
 #ifndef _LARGE_FILE_SOURCE
-    #define _LARGE_FILE_SOURCE
+#define _LARGE_FILE_SOURCE
 #endif
 #ifndef _FILE_OFFSET_BITS
-    #define _FILE_OFFSET_BITS 64
+#define _FILE_OFFSET_BITS 64
 #endif
 
 #include <string>
@@ -40,7 +40,7 @@ typedef struct CurvePoint {
 #include <cstdarg>
 #include <cfloat>
 #include <complex>
-const std::complex<float> I(0.0,1.0);
+const std::complex<float> I(0.0, 1.0);
 #include <iterator>
 #include <utility>
 #include <vector>
@@ -65,51 +65,42 @@ const std::complex<float> I(0.0,1.0);
 #include <wx/xml/xml.h>
 #include <wx/msgqueue.h>
 
-
 class StackDump : public wxStackWalker // so we can give backtraces..
 {
-public:
-    StackDump(const char *argv0)
-        : wxStackWalker(argv0)
-    {
+  public:
+    StackDump(const char* argv0)
+        : wxStackWalker(argv0) {
     }
 
-    virtual void Walk(size_t skip = 1)
-    {
+    virtual void Walk(size_t skip = 1) {
         wxPrintf("Stack dump:\n\n");
 
         wxStackWalker::Walk(skip);
     }
 
-protected:
-    virtual void OnStackFrame(const wxStackFrame& frame)
-    {
-        wxPrintf("[%2i] ", int(frame.GetLevel()));
+  protected:
+    virtual void OnStackFrame(const wxStackFrame& frame) {
+        wxPrintf("[%2i] ", int(frame.GetLevel( )));
 
-        wxString name = frame.GetName();
-        if ( !name.empty() )
-        {
-            wxPrintf("%-20.40s", name.mb_str());
+        wxString name = frame.GetName( );
+        if ( ! name.empty( ) ) {
+            wxPrintf("%-20.40s", name.mb_str( ));
         }
-        else
-        {
-            wxPrintf("0x%08lx", (unsigned long)frame.GetAddress());
+        else {
+            wxPrintf("0x%08lx", (unsigned long)frame.GetAddress( ));
         }
 
-        if ( frame.HasSourceLocation() )
-        {
+        if ( frame.HasSourceLocation( ) ) {
             wxPrintf("\t%s:%i",
-                   frame.GetFileName().mb_str(),
-                   int(frame.GetLine()));
+                     frame.GetFileName( ).mb_str( ),
+                     int(frame.GetLine( )));
         }
 
         wxPrintf("");
 
         wxString type, val;
-        for ( size_t n = 0; frame.GetParam(n, &type, &name, &val); n++ )
-        {
-            wxPrintf("\t%s %s = %s\n", type.mb_str(), name.mb_str(), val.mb_str());
-
+        for ( size_t n = 0; frame.GetParam(n, &type, &name, &val); n++ ) {
+            wxPrintf("\t%s %s = %s\n", type.mb_str( ), name.mb_str( ), val.mb_str( ));
         }
         wxPrintf("\n");
     }
@@ -203,18 +194,12 @@ protected:
 #include <typeinfo>
 #include <limits>
 
-
- // These headers are need so that gpu specific types can be instantiated outside the if(use_gpu) brackets.
+// These headers are need so that gpu specific types can be instantiated outside the if(use_gpu) brackets.
 #include "../gpu/DeviceManager.h"
 #include "../gpu/GpuImage.h"
 #include "../gpu/Histogram.h"
 #include "../gpu/TemplateMatchingCore.h"
 #endif
-
-
-
-
-
 
 #ifdef MKL
 #define MKL_Complex8 std::complex<float>

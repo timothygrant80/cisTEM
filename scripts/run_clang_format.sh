@@ -1,5 +1,11 @@
 #!/bin/bash
 
+# This must be run from the root of the repository.
+if [[ ! -f .clang-format ]] ; then 
+    echo "Did not find the .clang-format file. Are you in the root of the repository?"
+    exit 1
+fi
+
 # Run clang format with the "fixed" style defined in .clang-format
 
 # To ensure the correct version and options are specified, we use the hash of a pre/post converted test file using md5sum
@@ -70,7 +76,7 @@ file_path=""
 tmp_file="./format_tmp"
 if [[ $format_all -eq 1 ]] ; then
     echo "Formatting all files in src directory"
-    find ../src -name '*.cpp' -o -name '*.cu' -o -name '*.h'  | grep -v icons > $tmp_file
+    find ./src -name '*.cpp' -o -name '*.cu' -o -name '*.h'  | grep -v icons > $tmp_file
 else
     echo "Formatting $1"
     echo $1 > $tmp_file

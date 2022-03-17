@@ -1,5 +1,6 @@
-//#include "../core/core_headers.h"
+#include "../core/cistem_constants.h"
 #include "../core/gui_core_headers.h"
+
 extern MyImageAssetPanel*  image_asset_panel;
 extern MyVolumeAssetPanel* volume_asset_panel;
 
@@ -105,7 +106,7 @@ void ShowTemplateMatchResultsPanel::OnPeakListSelectionChange(wxListEvent& event
 
         // if this is a refinement, also select the appropriate peak
 
-        if ( current_result.job_type == TEMPLATE_MATCH_REFINEMENT ) {
+        if ( current_result.job_type == cistem::job_type::template_match_refinement ) {
             int selected_change;
             if ( ChangesListCtrl->GetSelectedItemCount( ) > 0 )
                 selected_change = ChangesListCtrl->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
@@ -121,7 +122,7 @@ void ShowTemplateMatchResultsPanel::OnPeakListSelectionChange(wxListEvent& event
 }
 
 void ShowTemplateMatchResultsPanel::OnChangeListSelectionChange(wxListEvent& event) {
-    if ( ChangesListCtrl->GetSelectedItemCount( ) > 0 && current_result.job_type == TEMPLATE_MATCH_REFINEMENT ) {
+    if ( ChangesListCtrl->GetSelectedItemCount( ) > 0 && current_result.job_type == cistem::job_type::template_match_refinement ) {
         int selected_change = ChangesListCtrl->GetNextItem(-1, wxLIST_NEXT_ALL, wxLIST_STATE_SELECTED);
 
         if ( current_result.peak_changes[selected_change].new_peak_number != -1 ) {
@@ -147,7 +148,7 @@ void ShowTemplateMatchResultsPanel::SetActiveResult(TemplateMatchJobResults& res
 
     wxFileName input_file = image_asset_panel->ReturnAssetLongFilename(image_asset_panel->ReturnArrayPositionFromAssetID(current_result.image_asset_id));
 
-    if ( current_result.job_type == TEMPLATE_MATCH_FULL_SEARCH ) {
+    if ( current_result.job_type == cistem::job_type::template_match_full_search ) {
         SetHistogramLabelText(wxString::Format("Survival Histogram (%s)", current_result.job_name));
         DrawHistogram(current_result.histogram_filename);
         HistogramPlotPanel->Show(true);
@@ -309,7 +310,7 @@ void ShowTemplateMatchResultsPanel::FillPeakInfoTable(float threshold_used) {
 
     // if it's a refinement fill the changes table..
 
-    if ( current_result.job_type == TEMPLATE_MATCH_REFINEMENT ) {
+    if ( current_result.job_type == cistem::job_type::template_match_refinement ) {
         ChangesListCtrl->DeleteAllItems( );
 
         for ( counter = 0; counter < current_result.peak_changes.GetCount( ); counter++ ) {

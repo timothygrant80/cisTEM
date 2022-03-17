@@ -1,4 +1,5 @@
 //#include "../core/core_headers.h"
+#include "../core/cistem_constants.h"
 #include "../core/gui_core_headers.h"
 
 // extern MyMovieAssetPanel *movie_asset_panel;
@@ -505,7 +506,7 @@ void RefineTemplateDevPanel::StartEstimationClick(wxCommandEvent& event) {
     TemplateMatchJobResults input_result;
     TemplateMatchJobResults temp_result;
 
-    temp_result.job_type = TEMPLATE_MATCH_REFINEMENT; //			float high_resolution_limit = resolution_limit;
+    temp_result.job_type = cistem::job_type::template_match_refinement; //			float high_resolution_limit = resolution_limit;
 
     for ( int image_counter = 0; image_counter < active_group.number_of_members; image_counter++ ) {
         image_number_for_gui = image_counter + 1;

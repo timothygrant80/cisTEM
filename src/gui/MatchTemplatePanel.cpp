@@ -1,4 +1,5 @@
 //#include "../core/core_headers.h"
+#include "../core/cistem_constants.h"
 #include "../core/gui_core_headers.h"
 
 // extern MyMovieAssetPanel *movie_asset_panel;
@@ -581,7 +582,7 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
 
     TemplateMatchJobResults temp_result;
     temp_result.input_job_id               = -1;
-    temp_result.job_type                   = TEMPLATE_MATCH_FULL_SEARCH;
+    temp_result.job_type                   = cistem::job_type::template_match_full_search;
     temp_result.mask_radius                = 0.0f;
     temp_result.min_peak_radius            = min_peak_radius;
     temp_result.exclude_above_xy_threshold = false;

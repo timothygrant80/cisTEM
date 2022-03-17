@@ -28,7 +28,8 @@ MyPickingResultsPanel::MyPickingResultsPanel(wxWindow* parent)
     FillGroupComboBox( );
 
     Bind(wxEVT_CHAR_HOOK, &MyPickingResultsPanel::OnCharHook, this);
-    ResultDataView->my_parents_name = "PickingResultsPanel";
+    ResultDataView->my_parents_name        = "Picking Results";
+    ResultDataView->OnHeaderClickInterrupt = &MyPickingResultsPanel::OnHeaderClick;
 }
 
 MyPickingResultsPanel::~MyPickingResultsPanel( ) {

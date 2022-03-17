@@ -2,6 +2,8 @@
 #define __MatchTemplatePanel__
 
 class MatchTemplatePanel : public MatchTemplatePanelParent {
+
+    friend class MatchTemplateResultsPanel;
     long my_job_id;
 
     JobTracker my_job_tracker;

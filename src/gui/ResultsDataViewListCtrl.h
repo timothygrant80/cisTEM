@@ -23,6 +23,8 @@ class ResultsDataViewListCtrl : public wxDataViewListCtrl {
 
   public:
     std::string my_parents_name;
+    int (*OnHeaderClickInterrupt)( );
+
     ResultsDataViewListCtrl(wxWindow* parent, wxWindowID id, const wxPoint& pt, const wxSize& sz, long style);
     ~ResultsDataViewListCtrl( );
     void AppendCheckColumn(wxString column_title);

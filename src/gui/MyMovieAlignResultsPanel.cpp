@@ -29,7 +29,8 @@ MyMovieAlignResultsPanel::MyMovieAlignResultsPanel(wxWindow* parent)
 
     ResultPanel->SpectraPanel->use_auto_contrast = false;
 
-    ResultDataView->my_parents_name = "MyMovieAlignResultsPanel";
+    ResultDataView->my_parents_name        = "Movie Alignment Results";
+    ResultDataView->OnHeaderClickInterrupt = &MyMovieAlignResultsPanel::OnHeaderClick;
 }
 
 void MyMovieAlignResultsPanel::OnCharHook(wxKeyEvent& event) {

@@ -42,4 +42,6 @@ class MyMovieAlignResultsPanel : public MovieAlignResultsPanel {
     bool group_combo_is_dirty;
 
     wxString current_fill_command;
+
+    static inline int OnHeaderClick( ) { return 2; }
 };

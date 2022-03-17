@@ -122,6 +122,9 @@ void ResultsDataViewListCtrl::OnHeaderClick(wxDataViewEvent& event) {
                 my_dialog->Update(counter);
             }
 
+            // Run a function that is defined in the derived class and "bound" in the derived constructor
+            OnHeaderClickInterrupt( );
+
             my_dialog->Destroy( );
         }
     }

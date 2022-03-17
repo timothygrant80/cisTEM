@@ -345,7 +345,8 @@ void MatchTemplateResultsPanel::FillResultsPanelAndDetails(int row, int column) 
         IgnoreShiftedPeaksStaticText->SetLabel("No");
 
     RightPanel->Layout( );
-    ResultDataView->my_parents_name = "MatchTemplateResultsPanel";
+    ResultDataView->my_parents_name        = "MatchTemplate Results";
+    ResultDataView->OnHeaderClickInterrupt = &MatchTemplateResultsPanel::OnHeaderClick;
 }
 
 void MatchTemplateResultsPanel::OnValueChanged(wxDataViewEvent& event) {

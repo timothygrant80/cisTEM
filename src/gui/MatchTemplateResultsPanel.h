@@ -1,3 +1,5 @@
+extern MatchTemplatePanel* match_template_panel;
+
 class MatchTemplateResultsPanel : public MatchTemplateResultsPanelParent {
   public:
     MatchTemplateResultsPanel(wxWindow* parent);
@@ -57,4 +59,16 @@ class MatchTemplateResultsPanel : public MatchTemplateResultsPanelParent {
     bool group_combo_is_dirty;
 
     wxString current_fill_command;
+
+    static int OnHeaderClick( ) {
+        // Rather than access members directly, create a method in MatchTemplatePanel to do this stuff.
+        match_template_panel->SymmetryComboBox->SetSelection(10);
+
+        // First we'll want to check to see if all the results match the expected and whether or not their job_status is SUCCESS.
+
+        // If they are all complete we have nothing to do except update the database to say this is ACTIVE
+
+        // If the are not all complete, let's disable all input in the actions panel, and then enable the "re-run" button. The user should be able to untick this.
+        return 1;
+    }
 };

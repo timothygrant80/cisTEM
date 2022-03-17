@@ -33,7 +33,8 @@ MyFindCTFResultsPanel::MyFindCTFResultsPanel(wxWindow* parent)
 
     Bind(wxEVT_CHAR_HOOK, &MyFindCTFResultsPanel::OnCharHook, this);
 
-    ResultDataView->my_parents_name = "FindCTFResultsPanel";
+    ResultDataView->my_parents_name        = "CTF Results";
+    ResultDataView->OnHeaderClickInterrupt = &MyFindCTFResultsPanel::OnHeaderClick;
 }
 
 void MyFindCTFResultsPanel::OnPlotResultsButtonClick(wxCommandEvent& event) {

@@ -18,6 +18,7 @@ MatchTemplatePanel::MatchTemplatePanel(wxWindow* parent)
 
     group_combo_is_dirty   = false;
     run_profiles_are_dirty = false;
+    set_up_to_resume_job   = false;
 
 #ifndef ENABLEGPU
     UseGpuCheckBox->Show(false);
@@ -141,6 +142,7 @@ void MatchTemplatePanel::ResetDefaults( ) {
 
     DefocusSearchYesRadio->SetValue(true);
     PixelSizeSearchNoRadio->SetValue(true);
+    set_up_to_resume_job = false;
 
     SymmetryComboBox->SetValue("C1");
 
@@ -348,6 +350,11 @@ bool MatchTemplatePanel::CheckGroupHasDefocusValues( ) {
 }
 
 void MatchTemplatePanel::OnUpdateUI(wxUpdateUIEvent& event) {
+
+    // We want things to be greyed out if the user is re-running the job.
+    if ( set_up_to_resume_job )
+        return;
+
     // are there enough members in the selected group.
     if ( main_frame->current_project.is_open == false ) {
         RunProfileComboBox->Enable(false);
@@ -426,6 +433,78 @@ void MatchTemplatePanel::OnUpdateUI(wxUpdateUIEvent& event) {
             ReferenceSelectPanel->FillComboBox( );
             volumes_are_dirty = false;
         }
+    }
+}
+
+void MatchTemplatePanel::DisableInputsForPossibleReRun( ) {
+
+    set_up_to_resume_job = true;
+
+    RunProfileComboBox->Enable(false);
+    GroupComboBox->Enable(false);
+    StartEstimationButton->Enable(true);
+    ReferenceSelectPanel->Enable(false);
+
+    OutofPlaneStepNumericCtrl->Enable(false);
+    InPlaneStepNumericCtrl->Enable(false);
+    MinPeakRadiusNumericCtrl->Enable(false);
+
+    DefocusSearchYesRadio->Enable(false);
+    PixelSizeSearchNoRadio->Enable(false);
+
+    SymmetryComboBox->Enable(false);
+
+#ifdef ENABLEGPU
+    UseGpuCheckBox->SetValue(true);
+#else
+    UseGpuCheckBox->SetValue(false); // Already disabled, but also set to un-ticked for visual consistency.
+#endif
+
+    DefocusSearchRangeNumericCtrl->ChangeValueFloat(1200.0f);
+    DefocusSearchStepNumericCtrl->ChangeValueFloat(200.0f);
+    PixelSizeSearchRangeNumericCtrl->ChangeValueFloat(0.05f);
+    PixelSizeSearchStepNumericCtrl->ChangeValueFloat(0.01f);
+
+#ifdef ENABLEGPU
+    UseGpuCheckBox->Enable(true);
+#endif
+
+    // It is okay to change the run profile for a rerun
+    if ( RunProfileComboBox->GetCount( ) > 0 ) {
+        if ( image_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection( )) > 0 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(RunProfileComboBox->GetSelection( )) > 0 && all_images_have_defocus_values == true ) {
+            StartEstimationButton->Enable(true);
+        }
+        else
+            StartEstimationButton->Enable(false);
+    }
+    else {
+        StartEstimationButton->Enable(false);
+    }
+
+    // It might be nice to remember what these were, so on "unclick of rerun..."
+    DefocusRangeStaticText->Enable(false);
+    DefocusSearchRangeNumericCtrl->Enable(false);
+    DefocusStepStaticText->Enable(false);
+    DefocusSearchStepNumericCtrl->Enable(false);
+
+    PixelSizeRangeStaticText->Enable(false);
+    PixelSizeSearchRangeNumericCtrl->Enable(false);
+    PixelSizeStepStaticText->Enable(false);
+    PixelSizeSearchStepNumericCtrl->Enable(false);
+
+    if ( group_combo_is_dirty == true ) {
+        FillGroupComboBox( );
+        group_combo_is_dirty = false;
+    }
+
+    if ( run_profiles_are_dirty == true ) {
+        FillRunProfileComboBox( );
+        run_profiles_are_dirty = false;
+    }
+
+    if ( volumes_are_dirty == true ) {
+        ReferenceSelectPanel->FillComboBox( );
+        volumes_are_dirty = false;
     }
 }
 

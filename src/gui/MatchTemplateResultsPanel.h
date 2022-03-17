@@ -62,7 +62,7 @@ class MatchTemplateResultsPanel : public MatchTemplateResultsPanelParent {
 
     static int OnHeaderClick( ) {
         // Rather than access members directly, create a method in MatchTemplatePanel to do this stuff.
-        match_template_panel->SymmetryComboBox->SetSelection(10);
+        match_template_panel->DisableInputsForPossibleReRun( );
 
         // First we'll want to check to see if all the results match the expected and whether or not their job_status is SUCCESS.
 

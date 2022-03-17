@@ -28,6 +28,7 @@ class MatchTemplatePanel : public MatchTemplatePanelParent {
     bool group_combo_is_dirty;
     bool run_profiles_are_dirty;
     bool volumes_are_dirty;
+    bool set_up_to_resume_job;
     long time_of_last_result_update;
 
     long expected_number_of_results;
@@ -72,6 +73,7 @@ class MatchTemplatePanel : public MatchTemplatePanelParent {
 
     void Reset( );
     void ResetDefaults( );
+    void DisableInputsForPossibleReRun( );
 };
 
 #endif

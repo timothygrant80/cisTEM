@@ -108,7 +108,8 @@ void ResultsDataViewListCtrl::CheckItem(const int row, const int column) {
 
 void ResultsDataViewListCtrl::OnHeaderClick(wxDataViewEvent& event) {
     wxDataViewColumn* current_column = event.GetDataViewColumn( );
-
+    // Run a function that is defined in the derived class and "bound" in the derived constructor
+    OnHeaderClickInterrupt( );
     if ( current_column->GetModelColumn( ) > 1 ) {
         wxMessageDialog* check_dialog = new wxMessageDialog(this, wxString::Format("Do you want to set the active job for all possible %s to %s?", my_parents_name, current_column->GetTitle( )), "Please Confirm", wxYES_NO);
 
@@ -121,9 +122,6 @@ void ResultsDataViewListCtrl::OnHeaderClick(wxDataViewEvent& event) {
                 CheckItem(counter, current_column->GetModelColumn( ));
                 my_dialog->Update(counter);
             }
-
-            // Run a function that is defined in the derived class and "bound" in the derived constructor
-            OnHeaderClickInterrupt( );
 
             my_dialog->Destroy( );
         }

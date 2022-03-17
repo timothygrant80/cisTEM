@@ -28,6 +28,8 @@ MyMovieAlignResultsPanel::MyMovieAlignResultsPanel(wxWindow* parent)
     Bind(wxEVT_CHAR_HOOK, &MyMovieAlignResultsPanel::OnCharHook, this);
 
     ResultPanel->SpectraPanel->use_auto_contrast = false;
+
+    ResultDataView->my_parents_name = "MyMovieAlignResultsPanel";
 }
 
 void MyMovieAlignResultsPanel::OnCharHook(wxKeyEvent& event) {

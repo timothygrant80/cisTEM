@@ -2,10 +2,10 @@
 #include "../core/gui_core_headers.h"
 
 //#include "icons/open_eye_icon_20.cpp"
-#include "icons/checked_checkbox_icon_20.cpp"
-#include "icons/unchecked_checkbox_icon_20.cpp"
 #include "icons/checked_checkbox_eye_icon_20.cpp"
+#include "icons/checked_checkbox_icon_20.cpp"
 #include "icons/unchecked_checkbox_eye_icon_20.cpp"
+#include "icons/unchecked_checkbox_icon_20.cpp"
 
 wxBitmap CheckboxRenderer::checked_bmp;
 wxBitmap CheckboxRenderer::unchecked_bmp;
@@ -110,7 +110,7 @@ void ResultsDataViewListCtrl::OnHeaderClick(wxDataViewEvent& event) {
     wxDataViewColumn* current_column = event.GetDataViewColumn( );
 
     if ( current_column->GetModelColumn( ) > 1 ) {
-        wxMessageDialog* check_dialog = new wxMessageDialog(this, wxString::Format("Do you want to set the active job for all possible movies to %s?", current_column->GetTitle( )), "Please Confirm", wxYES_NO);
+        wxMessageDialog* check_dialog = new wxMessageDialog(this, wxString::Format("Do you want to set the active job for all possible %s to %s?", my_parents_name, current_column->GetTitle( )), "Please Confirm", wxYES_NO);
 
         if ( check_dialog->ShowModal( ) == wxID_YES ) {
             OneSecondProgressDialog* my_dialog = new OneSecondProgressDialog("Select Column", "Setting Selections", GetItemCount( ), this);

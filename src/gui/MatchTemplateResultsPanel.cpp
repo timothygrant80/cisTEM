@@ -1,6 +1,6 @@
 //#include "../core/core_headers.h"
-#include "../core/gui_core_headers.h"
 #include "../core/cistem_constants.h"
+#include "../core/gui_core_headers.h"
 
 extern MyMainFrame*       main_frame;
 extern MyImageAssetPanel* image_asset_panel;
@@ -345,6 +345,7 @@ void MatchTemplateResultsPanel::FillResultsPanelAndDetails(int row, int column) 
         IgnoreShiftedPeaksStaticText->SetLabel("No");
 
     RightPanel->Layout( );
+    ResultDataView->my_parents_name = "MatchTemplateResultsPanel";
 }
 
 void MatchTemplateResultsPanel::OnValueChanged(wxDataViewEvent& event) {

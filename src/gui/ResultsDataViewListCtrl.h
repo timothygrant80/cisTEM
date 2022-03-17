@@ -22,6 +22,7 @@ class ResultsDataViewListCtrl : public wxDataViewListCtrl {
     int currently_selected_column;
 
   public:
+    std::string my_parents_name;
     ResultsDataViewListCtrl(wxWindow* parent, wxWindowID id, const wxPoint& pt, const wxSize& sz, long style);
     ~ResultsDataViewListCtrl( );
     void AppendCheckColumn(wxString column_title);

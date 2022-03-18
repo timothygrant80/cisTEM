@@ -76,7 +76,7 @@ file_path=""
 tmp_file="./format_tmp"
 if [[ $format_all -eq 1 ]] ; then
     echo "Formatting all files in src directory"
-    find ./src -name '*.cpp' -o -name '*.cu' -o -name '*.h'  | grep -v icons > $tmp_file
+    find ./src -name '*.cpp' -o -name '*.cu' -o -name '*.h'  | grep -v icons | grep -v ProjectX > $tmp_file
 else
     echo "Formatting $1"
     echo $1 > $tmp_file

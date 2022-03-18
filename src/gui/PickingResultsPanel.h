@@ -44,5 +44,5 @@ class MyPickingResultsPanel : public PickingResultsPanel {
 
     wxString current_fill_command;
 
-    static inline int OnHeaderClick( ) { return 3; }
+    static inline void OnHeaderClick( ) { return; }
 };

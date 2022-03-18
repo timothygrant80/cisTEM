@@ -20,10 +20,11 @@ class ResultsDataViewListCtrl : public wxDataViewListCtrl {
     // TODO: shouldn't these really be called current_eye_row and current_eye_column?
     int currently_selected_row;
     int currently_selected_column;
+    int currently_active_job_id;
 
   public:
     std::string my_parents_name;
-    int (*OnHeaderClickInterrupt)( );
+    void (*OnHeaderClickInterrupt)( );
 
     ResultsDataViewListCtrl(wxWindow* parent, wxWindowID id, const wxPoint& pt, const wxSize& sz, long style);
     ~ResultsDataViewListCtrl( );
@@ -47,6 +48,8 @@ class ResultsDataViewListCtrl : public wxDataViewListCtrl {
     inline int ReturnEyeColumn( ) { return currently_selected_column; };
 
     inline int ReturnEyeRow( ) { return currently_selected_row; };
+
+    inline int ReturnActiveJobID( ) { return currently_active_job_id; }
 
     void Clear( );
 

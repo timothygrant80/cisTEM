@@ -3,6 +3,7 @@
 
 class MatchTemplatePanel : public MatchTemplatePanelParent {
 
+    // The results and actions panels need to talk to each other.
     friend class MatchTemplateResultsPanel;
     long my_job_id;
 
@@ -22,6 +23,23 @@ class MatchTemplatePanel : public MatchTemplatePanelParent {
 
     ArrayOfTemplateMatchJobResults cached_results;
 
+    // When changing the state based on a possible re-run, we want to store the current state of the panel.
+    // These are *not* set until a call to SetInputsForPossibleReRun(true)
+    bool was_enabled_GroupComboBox;
+    bool was_enabled_StartEstimationButton;
+    bool was_enabled_ReferenceSelectPanel;
+    bool was_enabled_OutofPlaneStepNumericCtrl;
+    bool was_enabled_InPlaneStepNumericCtrl;
+    bool was_enabled_MinPeakRadiusNumericCtrl;
+    bool was_enabled_DefocusSearchYesRadio;
+    bool was_enabled_DefocusSearchNoRadio;
+    bool was_enabled_PixelSizeSearchYesRadio;
+    bool was_enabled_PixelSizeSearchNoRadio;
+    bool was_enabled_SymmetryComboBox;
+    bool was_enabled_HighResolutionLimitNumericCtrl;
+    bool was_enabled_DefocusSearchRangeNumericCtrl;
+    bool was_enabled_DefocusSearchStepNumericCtrl;
+
   public:
     MatchTemplatePanel(wxWindow* parent);
 
@@ -29,6 +47,8 @@ class MatchTemplatePanel : public MatchTemplatePanelParent {
     bool run_profiles_are_dirty;
     bool volumes_are_dirty;
     bool set_up_to_resume_job;
+    bool no_unfinished_jobs = true; // jJust for testing,, will be set locally by DB functions
+
     long time_of_last_result_update;
 
     long expected_number_of_results;
@@ -73,7 +93,18 @@ class MatchTemplatePanel : public MatchTemplatePanelParent {
 
     void Reset( );
     void ResetDefaults( );
-    void DisableInputsForPossibleReRun( );
+
+    // Functions for interacting with the results panel and possibly resuming a job
+    void SetInputsForPossibleReRun(bool set_up_to_resume_job);
+
+    template <class T>
+    inline void SetAndRememberEnableState(T* control_to_disable, bool& was_enabled, bool set_to = false) {
+        was_enabled = control_to_disable->IsEnabled( );
+        control_to_disable->Enable(set_to);
+    }
+
+    void ResumeRunCheckBoxOnCheckBox(wxCommandEvent& event);
+    void CheckForUnfinishedWork(bool is_checked, bool is_from_check_box);
 };
 
 #endif

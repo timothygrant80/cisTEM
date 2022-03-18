@@ -59,5 +59,5 @@ class MyFindCTFResultsPanel : public FindCTFResultsPanel {
 
     wxString current_fill_command;
 
-    static inline int OnHeaderClick( ) { return 1; }
+    static inline void OnHeaderClick( ) { return; }
 };

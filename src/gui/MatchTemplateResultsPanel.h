@@ -3,27 +3,9 @@ extern MatchTemplatePanel* match_template_panel;
 class MatchTemplateResultsPanel : public MatchTemplateResultsPanelParent {
   public:
     MatchTemplateResultsPanel(wxWindow* parent);
+    // The results and actions panels need to talk to each other.
+    friend class MatchTemplatePanel;
 
-    /*
-		void OnDefineFilterClick( wxCommandEvent& event );
-		void OnAddToGroupClick( wxCommandEvent& event );
-		void OnNextButtonClick( wxCommandEvent& event );
-		void OnPreviousButtonClick( wxCommandEvent& event );
-
-		void OnShowTypeRadioBoxChange(wxCommandEvent& event);
-		void OnJobDetailsToggle( wxCommandEvent& event );
-
-		void OnAllMoviesSelect( wxCommandEvent& event );
-		void OnByFilterSelect( wxCommandEvent& event );
-
-		int GetFilter();
-
-
-
-		int ReturnRowFromAssetID(int asset_id, int start_location = 0);
-
-		void Clear();
-*/
     void OnDefineFilterClick(wxCommandEvent& event);
     void OnUpdateUI(wxUpdateUIEvent& event);
     void OnValueChanged(wxDataViewEvent& event);
@@ -60,15 +42,8 @@ class MatchTemplateResultsPanel : public MatchTemplateResultsPanelParent {
 
     wxString current_fill_command;
 
-    static int OnHeaderClick( ) {
+    static void OnHeaderClick( ) {
         // Rather than access members directly, create a method in MatchTemplatePanel to do this stuff.
-        match_template_panel->DisableInputsForPossibleReRun( );
-
-        // First we'll want to check to see if all the results match the expected and whether or not their job_status is SUCCESS.
-
-        // If they are all complete we have nothing to do except update the database to say this is ACTIVE
-
-        // If the are not all complete, let's disable all input in the actions panel, and then enable the "re-run" button. The user should be able to untick this.
-        return 1;
+        match_template_panel->CheckForUnfinishedWork(true, false);
     }
 };

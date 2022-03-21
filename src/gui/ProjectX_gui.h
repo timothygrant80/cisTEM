@@ -104,6 +104,8 @@ class MainFrame : public wxFrame
 		wxMenuBar* m_menubar1;
 		wxMenu* FileMenu;
 		wxMenu* WorkflowMenu;
+		wxMenuItem* WorkflowSingleParticle;
+		wxMenuItem* WorkflowTemplateMatching;
 		wxMenu* HelpMenu;
 
 		// Virtual event handlers, overide them in your derived class

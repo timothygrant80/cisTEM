@@ -110,17 +110,11 @@ class MyMainFrame : public MainFrame, public SocketCommunicator {
     inline void ManuallyUpdateWorkflowMenuCheckBox( ) {
 
         if ( current_workflow == cistem::workflow::single_particle ) {
-            WorkflowSingleParticle->Check(true);
-        }
-        else {
-            WorkflowSingleParticle->Check(false);
+            WorkflowMenu->Check(WorkflowSingleParticle->GetId( ), true);
         }
 
         if ( current_workflow == cistem::workflow::template_matching ) {
-            WorkflowTemplateMatching->Check(true);
-        }
-        else {
-            WorkflowTemplateMatching->Check(false);
+            WorkflowMenu->Check(WorkflowTemplateMatching->GetId( ), true);
         }
     }
 

@@ -27,7 +27,7 @@ class Project {
 
     int                    integer_database_version;
     wxString               cistem_version_text;
-    cistem::workflow::Enum current_workflow;
+    cistem::workflow::Enum current_workflow; // It would be better to connect this somehow to main_frame.current_workflow or vice-versa
 
     Project( );
     ~Project( );

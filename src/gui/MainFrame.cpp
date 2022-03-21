@@ -873,6 +873,9 @@ bool MyMainFrame::MigrateProject(wxString old_project_directory, wxString new_pr
 template <class FrameTypeFrom, class FrameTypeTo>
 void MyMainFrame::UpdateWorkflow(FrameTypeFrom* input_frame, FrameTypeTo* output_frame, wxString frame_name) {
 
+    // Record the currently displayed page so we can maintain it.
+    int displayed_page_idx = MenuBook->FindPage(MenuBook->GetCurrentPage( ));
+
     // Get the stored index of the input frame so we can replace it in-place.
     int current_page_idx = MenuBook->FindPage(input_frame);
     MenuBook->RemovePage(current_page_idx);
@@ -884,18 +887,15 @@ void MyMainFrame::UpdateWorkflow(FrameTypeFrom* input_frame, FrameTypeTo* output
     sharpen_3d_panel->Reparent(output_frame->ActionsBook);
 
     // TODO: number two needs to be set from some record.
-    MenuBook->InsertPage(current_page_idx, output_frame, frame_name, true, 2);
+    MenuBook->InsertPage(current_page_idx, output_frame, frame_name, false, current_page_idx);
 
-    // Layout() and Refresh() or Update() leaves the panels empty until the actions are "re-clicked"
-    // after something else. This is a hack to get the panels to update. FIXME
-    MenuBook->SetSelection(MenuBook->SetSelection(0));
+    MenuBook->SetSelection(displayed_page_idx);
 
     Layout( );
     Refresh( );
 }
 
 void MyMainFrame::SetSingleParticleWorkflow(bool triggered_by_gui_event) {
-    wxPrintf("SPA Matching Workflow %i\n", cistem::workflow::single_particle);
 
     // The idenitiy of the event (selecting worflow menu) defines the output panel.
     if ( current_workflow != cistem::workflow::single_particle ) {
@@ -916,6 +916,10 @@ void MyMainFrame::SetSingleParticleWorkflow(bool triggered_by_gui_event) {
         }
         current_workflow = cistem::workflow::single_particle;
         current_project.RecordCurrentWorkflowInDB(current_workflow);
+        // If not called from the GUI, we need to update the menu.
+        if ( ! triggered_by_gui_event ) {
+            ManuallyUpdateWorkflowMenuCheckBox( );
+        }
     }
 }
 
@@ -924,7 +928,6 @@ void MyMainFrame::OnSingleParticleWorkflow(wxCommandEvent& event) {
 }
 
 void MyMainFrame::SetTemplateMatchingWorkflow(bool triggered_by_gui_event) {
-    wxPrintf("Template Matching Workflow %i\n", cistem::workflow::template_matching);
     if ( current_workflow != cistem::workflow::template_matching ) {
         previous_workflow = current_workflow;
         UpdateWorkflow(actions_panel_spa, actions_panel_tm, "Actions");

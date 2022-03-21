@@ -785,7 +785,7 @@ bool Database::InsertOrReplace(const char* table_name, const char* column_format
     return true;
 }
 
-bool Database::GetMasterSettings(wxFileName& project_directory, wxString& project_name, int& imported_integer_version, double& total_cpu_hours, int& total_jobs_run, wxString& cistem_version_text) {
+bool Database::GetMasterSettings(wxFileName& project_directory, wxString& project_name, int& imported_integer_version, double& total_cpu_hours, int& total_jobs_run, wxString& cistem_version_text, cistem::workflow::Enum& current_workflow) {
     MyDebugAssertTrue(is_open == true, "database not open!");
 
     sqlite3_stmt* sqlite_statement;
@@ -800,6 +800,7 @@ bool Database::GetMasterSettings(wxFileName& project_directory, wxString& projec
     total_cpu_hours          = sqlite3_column_double(sqlite_statement, 4);
     total_jobs_run           = sqlite3_column_int(sqlite_statement, 5);
     cistem_version_text      = sqlite3_column_text(sqlite_statement, 6);
+    current_workflow         = static_cast<cistem::workflow::Enum>(sqlite3_column_int(sqlite_statement, 7));
 
     Finalize(sqlite_statement);
     return true;
@@ -1727,14 +1728,7 @@ void Database::AddTemplateMatchingResult(long wanted_template_match_id, Template
 
     int peak_counter;
 
-    InsertOrReplace("TEMPLATE_MATCH_LIST", "Ptllillltrrrrrrrrrrrrrrrrrrrrrrittttttttttt", "TEMPLATE_MATCH_ID", "JOB_NAME", "DATETIME_OF_RUN", "TEMPLATE_MATCH_JOB_ID", 
-    "JOB_TYPE_CODE", "INPUT_TEMPLATE_MATCH_ID", "IMAGE_ASSET_ID", "REFERENCE_VOLUME_ASSET_ID", "USED_SYMMETRY", "USED_PIXEL_SIZE", "USED_VOLTAGE", "USED_SPHERICAL_ABERRATION", 
-    "USED_AMPLITUDE_CONTRAST", "USED_DEFOCUS1", "USED_DEFOCUS2", "USED_DEFOCUS_ANGLE", "USED_PHASE_SHIFT", "LOW_RESOLUTION_LIMIT", "HIGH_RESOLUTION_LIMIT", 
-    "OUT_OF_PLANE_ANGULAR_STEP", "IN_PLANE_ANGULAR_STEP", "DEFOCUS_SEARCH_RANGE", "DEFOCUS_STEP", "PIXEL_SIZE_SEARCH_RANGE", "PIXEL_SIZE_STEP", "REFINEMENT_THRESHOLD", 
-    "USED_THRESHOLD", "REF_BOX_SIZE_IN_ANGSTROMS", "MASK_RADIUS", "MIN_PEAK_RADIUS", "XY_CHANGE_THRESHOLD", "EXCLUDE_ABOVE_XY_THRESHOLD", "MIP_OUTPUT_FILE", 
-    "SCALED_MIP_OUTPUT_FILE", "AVG_OUTPUT_FILE", "STD_OUTPUT_FILE", "PSI_OUTPUT_FILE", "THETA_OUTPUT_FILE", "PHI_OUTPUT_FILE", "DEFOCUS_OUTPUT_FILE", "PIXEL_SIZE_OUTPUT_FILE", 
-    "HISTOGRAM_OUTPUT_FILE", "PROJECTION_RESULT_OUTPUT_FILE", wanted_template_match_id, job_details.job_name.ToUTF8( ).data( ), job_details.datetime_of_run, 
-    job_details.job_id, job_details.job_type, job_details.input_job_id, job_details.image_asset_id, job_details.ref_volume_asset_id, job_details.symmetry.ToUTF8( ).data( ), job_details.pixel_size, job_details.voltage, job_details.spherical_aberration, job_details.amplitude_contrast, job_details.defocus1, job_details.defocus2, job_details.defocus_angle, job_details.phase_shift, job_details.low_res_limit, job_details.high_res_limit, job_details.out_of_plane_step, job_details.in_plane_step, job_details.defocus_search_range, job_details.defocus_step, job_details.pixel_size_search_range, job_details.pixel_size_step, job_details.refinement_threshold, job_details.used_threshold, job_details.reference_box_size_in_angstroms, job_details.mask_radius, job_details.min_peak_radius, job_details.xy_change_threshold, int(job_details.exclude_above_xy_threshold), job_details.mip_filename.ToUTF8( ).data( ), job_details.scaled_mip_filename.ToUTF8( ).data( ), job_details.avg_filename.ToUTF8( ).data( ), job_details.std_filename.ToUTF8( ).data( ), job_details.psi_filename.ToUTF8( ).data( ), job_details.theta_filename.ToUTF8( ).data( ), job_details.phi_filename.ToUTF8( ).data( ), job_details.defocus_filename.ToUTF8( ).data( ), job_details.pixel_size_filename.ToUTF8( ).data( ), job_details.histogram_filename.ToUTF8( ).data( ), job_details.projection_result_filename.ToUTF8( ).data( ));
+    InsertOrReplace("TEMPLATE_MATCH_LIST", "Ptllillltrrrrrrrrrrrrrrrrrrrrrrittttttttttt", "TEMPLATE_MATCH_ID", "JOB_NAME", "DATETIME_OF_RUN", "TEMPLATE_MATCH_JOB_ID", "JOB_TYPE_CODE", "INPUT_TEMPLATE_MATCH_ID", "IMAGE_ASSET_ID", "REFERENCE_VOLUME_ASSET_ID", "USED_SYMMETRY", "USED_PIXEL_SIZE", "USED_VOLTAGE", "USED_SPHERICAL_ABERRATION", "USED_AMPLITUDE_CONTRAST", "USED_DEFOCUS1", "USED_DEFOCUS2", "USED_DEFOCUS_ANGLE", "USED_PHASE_SHIFT", "LOW_RESOLUTION_LIMIT", "HIGH_RESOLUTION_LIMIT", "OUT_OF_PLANE_ANGULAR_STEP", "IN_PLANE_ANGULAR_STEP", "DEFOCUS_SEARCH_RANGE", "DEFOCUS_STEP", "PIXEL_SIZE_SEARCH_RANGE", "PIXEL_SIZE_STEP", "REFINEMENT_THRESHOLD", "USED_THRESHOLD", "REF_BOX_SIZE_IN_ANGSTROMS", "MASK_RADIUS", "MIN_PEAK_RADIUS", "XY_CHANGE_THRESHOLD", "EXCLUDE_ABOVE_XY_THRESHOLD", "MIP_OUTPUT_FILE", "SCALED_MIP_OUTPUT_FILE", "AVG_OUTPUT_FILE", "STD_OUTPUT_FILE", "PSI_OUTPUT_FILE", "THETA_OUTPUT_FILE", "PHI_OUTPUT_FILE", "DEFOCUS_OUTPUT_FILE", "PIXEL_SIZE_OUTPUT_FILE", "HISTOGRAM_OUTPUT_FILE", "PROJECTION_RESULT_OUTPUT_FILE", wanted_template_match_id, job_details.job_name.ToUTF8( ).data( ), job_details.datetime_of_run, job_details.job_id, job_details.job_type, job_details.input_job_id, job_details.image_asset_id, job_details.ref_volume_asset_id, job_details.symmetry.ToUTF8( ).data( ), job_details.pixel_size, job_details.voltage, job_details.spherical_aberration, job_details.amplitude_contrast, job_details.defocus1, job_details.defocus2, job_details.defocus_angle, job_details.phase_shift, job_details.low_res_limit, job_details.high_res_limit, job_details.out_of_plane_step, job_details.in_plane_step, job_details.defocus_search_range, job_details.defocus_step, job_details.pixel_size_search_range, job_details.pixel_size_step, job_details.refinement_threshold, job_details.used_threshold, job_details.reference_box_size_in_angstroms, job_details.mask_radius, job_details.min_peak_radius, job_details.xy_change_threshold, int(job_details.exclude_above_xy_threshold), job_details.mip_filename.ToUTF8( ).data( ), job_details.scaled_mip_filename.ToUTF8( ).data( ), job_details.avg_filename.ToUTF8( ).data( ), job_details.std_filename.ToUTF8( ).data( ), job_details.psi_filename.ToUTF8( ).data( ), job_details.theta_filename.ToUTF8( ).data( ), job_details.phi_filename.ToUTF8( ).data( ), job_details.defocus_filename.ToUTF8( ).data( ), job_details.pixel_size_filename.ToUTF8( ).data( ), job_details.histogram_filename.ToUTF8( ).data( ), job_details.projection_result_filename.ToUTF8( ).data( ));
 
     CreateTemplateMatchPeakListTable(wanted_template_match_id);
 
@@ -2302,8 +2296,13 @@ bool Database::UpdateSchema(ColumnChanges columns) {
         format        = std::get<COLUMN_CHANGE_TYPE>(column);
         column_format = map_type_char_to_sqlite_string(format);
         ExecuteSQL(wxString::Format("ALTER TABLE %s ADD COLUMN %s %s;", std::get<COLUMN_CHANGE_TABLE>(column), std::get<COLUMN_CHANGE_NAME>(column), column_format));
-        ExecuteSQL(wxString::Format("UPDATE MASTER_SETTINGS SET CURRENT_VERSION = %i, CISTEM_VERSION_TEXT = '%s'", INTEGER_DATABASE_VERSION, CISTEM_VERSION_TEXT));
     }
+    UpdateVersion( );
+    return true;
+}
+
+bool Database::UpdateVersion( ) {
+    ExecuteSQL(wxString::Format("UPDATE MASTER_SETTINGS SET CURRENT_VERSION = %i, CISTEM_VERSION_TEXT = '%s'", INTEGER_DATABASE_VERSION, CISTEM_VERSION_TEXT));
     return true;
 }
 

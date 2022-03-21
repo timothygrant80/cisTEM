@@ -644,6 +644,19 @@ void MyMainFrame::OpenProject(wxString project_filename) {
         AddProjectToRecentProjects(project_filename);
         ClearScratchDirectory( );
         overview_panel->SetProjectInfo( );
+
+        // Set the Workflow
+        switch ( current_project.current_workflow ) {
+            case cistem::workflow::template_matching: {
+                // We need to set the current workflow to the default prior to calling SetTemplateMatchingWorkflow, or else
+                // it will think it is already set and not change the workflow.
+                current_workflow = cistem::workflow::single_particle;
+                SetTemplateMatchingWorkflow( );
+                break;
+            }
+            default: {
+            }
+        }
     }
     else {
         wxMessageBox(wxString::Format("Error Opening database :- \n%s\n\nDoes the file exist?", project_filename), "Cannot open database!", wxICON_ERROR);
@@ -881,7 +894,8 @@ void MyMainFrame::UpdateWorkflow(FrameTypeFrom* input_frame, FrameTypeTo* output
     Refresh( );
 }
 
-void MyMainFrame::OnSingleParticleWorkflow(wxCommandEvent& event) {
+void MyMainFrame::SetSingleParticleWorkflow(bool triggered_by_gui_event) {
+    wxPrintf("SPA Matching Workflow %i\n", cistem::workflow::single_particle);
 
     // The idenitiy of the event (selecting worflow menu) defines the output panel.
     if ( current_workflow != cistem::workflow::single_particle ) {
@@ -890,6 +904,7 @@ void MyMainFrame::OnSingleParticleWorkflow(wxCommandEvent& event) {
         switch ( current_workflow ) {
             case cistem::workflow::template_matching: {
                 UpdateWorkflow(actions_panel_tm, actions_panel_spa, "Actions");
+
                 // If other panels, e.g. results is a likely next candidate, it should go here.
                 // TODO: if there are multiple panels to switch, we'll need to only do the update and set the icon for the LAST call in this sequence.
                 break;
@@ -900,14 +915,29 @@ void MyMainFrame::OnSingleParticleWorkflow(wxCommandEvent& event) {
             }
         }
         current_workflow = cistem::workflow::single_particle;
+        current_project.RecordCurrentWorkflowInDB(current_workflow);
     }
 }
 
-void MyMainFrame::OnTemplateMatchingWorkflow(wxCommandEvent& event) {
+void MyMainFrame::OnSingleParticleWorkflow(wxCommandEvent& event) {
+    SetSingleParticleWorkflow(true);
+}
 
+void MyMainFrame::SetTemplateMatchingWorkflow(bool triggered_by_gui_event) {
+    wxPrintf("Template Matching Workflow %i\n", cistem::workflow::template_matching);
     if ( current_workflow != cistem::workflow::template_matching ) {
         previous_workflow = current_workflow;
         UpdateWorkflow(actions_panel_spa, actions_panel_tm, "Actions");
         current_workflow = cistem::workflow::template_matching;
+        current_project.RecordCurrentWorkflowInDB(current_workflow);
+
+        // If not called from the GUI, we need to update the menu.
+        if ( ! triggered_by_gui_event ) {
+            ManuallyUpdateWorkflowMenuCheckBox( );
+        }
     }
+}
+
+void MyMainFrame::OnTemplateMatchingWorkflow(wxCommandEvent& event) {
+    SetTemplateMatchingWorkflow(true);
 }

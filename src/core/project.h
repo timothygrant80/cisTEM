@@ -1,3 +1,5 @@
+#include "cistem_constants.h"
+
 class Project {
 
   public:
@@ -23,8 +25,9 @@ class Project {
     double total_cpu_hours;
     int    total_jobs_run;
 
-    int      integer_database_version;
-    wxString cistem_version_text;
+    int                    integer_database_version;
+    wxString               cistem_version_text;
+    cistem::workflow::Enum current_workflow;
 
     Project( );
     ~Project( );
@@ -34,4 +37,6 @@ class Project {
     bool OpenProjectFromFile(wxFileName file_to_open);
     bool ReadMasterSettings( );
     void WriteProjectStatisticsToDatabase( );
+
+    inline bool RecordCurrentWorkflowInDB(cistem::workflow::Enum workflow) { return database.RecordCurrentWorkflowInDB(workflow); }
 };

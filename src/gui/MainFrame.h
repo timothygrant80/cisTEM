@@ -3,9 +3,9 @@
 
 /** Implementing MainFrame */
 class MyMainFrame : public MainFrame, public SocketCommunicator {
-    bool             is_fullscreen;
-    cistem::workflow current_workflow;
-    cistem::workflow previous_workflow;
+    bool                   is_fullscreen;
+    cistem::workflow::Enum current_workflow;
+    cistem::workflow::Enum previous_workflow;
 
   public:
     /** Constructor */
@@ -97,12 +97,32 @@ class MyMainFrame : public MainFrame, public SocketCommunicator {
     template <class FrameTypeFrom, class FrameTypeTo>
     void UpdateWorkflow(FrameTypeFrom* input_frame, FrameTypeTo* output_frame, wxString frame_name);
 
+    void SetSingleParticleWorkflow(bool triggered_by_gui_event = false);
+    void SetTemplateMatchingWorkflow(bool triggered_by_gui_event = false);
+
     void OnSingleParticleWorkflow(wxCommandEvent& event);
     void OnTemplateMatchingWorkflow(wxCommandEvent& event);
 
-    inline cistem::workflow ReturnCurrentWorkflow( ) { return current_workflow; };
+    inline cistem::workflow::Enum ReturnCurrentWorkflow( ) { return current_workflow; };
 
-    inline cistem::workflow ReturnPreviousWorkflow( ) { return previous_workflow; };
+    inline cistem::workflow::Enum ReturnPreviousWorkflow( ) { return previous_workflow; };
+
+    inline void ManuallyUpdateWorkflowMenuCheckBox( ) {
+
+        if ( current_workflow == cistem::workflow::single_particle ) {
+            WorkflowSingleParticle->Check(true);
+        }
+        else {
+            WorkflowSingleParticle->Check(false);
+        }
+
+        if ( current_workflow == cistem::workflow::template_matching ) {
+            WorkflowTemplateMatching->Check(true);
+        }
+        else {
+            WorkflowTemplateMatching->Check(false);
+        }
+    }
 
     //LaunchJob(JobPanel *parent_panel, )
 };

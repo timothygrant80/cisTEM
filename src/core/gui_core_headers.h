@@ -1,11 +1,6 @@
 #ifndef _gui_gui_core_headers_h_
 #define _gui_gui_core_headers_h_
 
-namespace cistem {
-enum class workflow { single_particle,
-                      template_matching };
-}
-
 #include <wx/artprov.h>
 #include <wx/xrc/xmlres.h>
 #include <wx/gdicmn.h>

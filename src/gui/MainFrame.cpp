@@ -644,6 +644,19 @@ void MyMainFrame::OpenProject(wxString project_filename) {
         AddProjectToRecentProjects(project_filename);
         ClearScratchDirectory( );
         overview_panel->SetProjectInfo( );
+
+        // Set the Workflow
+        switch ( current_project.current_workflow ) {
+            case cistem::workflow::template_matching: {
+                // We need to set the current workflow to the default prior to calling SetTemplateMatchingWorkflow, or else
+                // it will think it is already set and not change the workflow.
+                current_workflow = cistem::workflow::single_particle;
+                SetTemplateMatchingWorkflow( );
+                break;
+            }
+            default: {
+            }
+        }
     }
     else {
         wxMessageBox(wxString::Format("Error Opening database :- \n%s\n\nDoes the file exist?", project_filename), "Cannot open database!", wxICON_ERROR);
@@ -860,6 +873,9 @@ bool MyMainFrame::MigrateProject(wxString old_project_directory, wxString new_pr
 template <class FrameTypeFrom, class FrameTypeTo>
 void MyMainFrame::UpdateWorkflow(FrameTypeFrom* input_frame, FrameTypeTo* output_frame, wxString frame_name) {
 
+    // Record the currently displayed page so we can maintain it.
+    int displayed_page_idx = MenuBook->FindPage(MenuBook->GetCurrentPage( ));
+
     // Get the stored index of the input frame so we can replace it in-place.
     int current_page_idx = MenuBook->FindPage(input_frame);
     MenuBook->RemovePage(current_page_idx);
@@ -871,17 +887,15 @@ void MyMainFrame::UpdateWorkflow(FrameTypeFrom* input_frame, FrameTypeTo* output
     sharpen_3d_panel->Reparent(output_frame->ActionsBook);
 
     // TODO: number two needs to be set from some record.
-    MenuBook->InsertPage(current_page_idx, output_frame, frame_name, true, 2);
+    MenuBook->InsertPage(current_page_idx, output_frame, frame_name, false, current_page_idx);
 
-    // Layout() and Refresh() or Update() leaves the panels empty until the actions are "re-clicked"
-    // after something else. This is a hack to get the panels to update. FIXME
-    MenuBook->SetSelection(MenuBook->SetSelection(0));
+    MenuBook->SetSelection(displayed_page_idx);
 
     Layout( );
     Refresh( );
 }
 
-void MyMainFrame::OnSingleParticleWorkflow(wxCommandEvent& event) {
+void MyMainFrame::SetSingleParticleWorkflow(bool triggered_by_gui_event) {
 
     // The idenitiy of the event (selecting worflow menu) defines the output panel.
     if ( current_workflow != cistem::workflow::single_particle ) {
@@ -890,6 +904,7 @@ void MyMainFrame::OnSingleParticleWorkflow(wxCommandEvent& event) {
         switch ( current_workflow ) {
             case cistem::workflow::template_matching: {
                 UpdateWorkflow(actions_panel_tm, actions_panel_spa, "Actions");
+
                 // If other panels, e.g. results is a likely next candidate, it should go here.
                 // TODO: if there are multiple panels to switch, we'll need to only do the update and set the icon for the LAST call in this sequence.
                 break;
@@ -900,14 +915,32 @@ void MyMainFrame::OnSingleParticleWorkflow(wxCommandEvent& event) {
             }
         }
         current_workflow = cistem::workflow::single_particle;
+        current_project.RecordCurrentWorkflowInDB(current_workflow);
+        // If not called from the GUI, we need to update the menu.
+        if ( ! triggered_by_gui_event ) {
+            ManuallyUpdateWorkflowMenuCheckBox( );
+        }
     }
 }
 
-void MyMainFrame::OnTemplateMatchingWorkflow(wxCommandEvent& event) {
+void MyMainFrame::OnSingleParticleWorkflow(wxCommandEvent& event) {
+    SetSingleParticleWorkflow(true);
+}
 
+void MyMainFrame::SetTemplateMatchingWorkflow(bool triggered_by_gui_event) {
     if ( current_workflow != cistem::workflow::template_matching ) {
         previous_workflow = current_workflow;
         UpdateWorkflow(actions_panel_spa, actions_panel_tm, "Actions");
         current_workflow = cistem::workflow::template_matching;
+        current_project.RecordCurrentWorkflowInDB(current_workflow);
+
+        // If not called from the GUI, we need to update the menu.
+        if ( ! triggered_by_gui_event ) {
+            ManuallyUpdateWorkflowMenuCheckBox( );
+        }
     }
+}
+
+void MyMainFrame::OnTemplateMatchingWorkflow(wxCommandEvent& event) {
+    SetTemplateMatchingWorkflow(true);
 }

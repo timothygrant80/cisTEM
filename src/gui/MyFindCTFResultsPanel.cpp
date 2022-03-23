@@ -32,6 +32,9 @@ MyFindCTFResultsPanel::MyFindCTFResultsPanel(wxWindow* parent)
     PlotResultsButton->SetBitmap(angles_popup_bmp);
 
     Bind(wxEVT_CHAR_HOOK, &MyFindCTFResultsPanel::OnCharHook, this);
+
+    ResultDataView->my_parents_name        = "CTF Results";
+    ResultDataView->OnHeaderClickInterrupt = &MyFindCTFResultsPanel::OnHeaderClick;
 }
 
 void MyFindCTFResultsPanel::OnPlotResultsButtonClick(wxCommandEvent& event) {

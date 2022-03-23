@@ -2,10 +2,10 @@
 #include "../core/gui_core_headers.h"
 
 //#include "icons/open_eye_icon_20.cpp"
-#include "icons/checked_checkbox_icon_20.cpp"
-#include "icons/unchecked_checkbox_icon_20.cpp"
 #include "icons/checked_checkbox_eye_icon_20.cpp"
+#include "icons/checked_checkbox_icon_20.cpp"
 #include "icons/unchecked_checkbox_eye_icon_20.cpp"
+#include "icons/unchecked_checkbox_icon_20.cpp"
 
 wxBitmap CheckboxRenderer::checked_bmp;
 wxBitmap CheckboxRenderer::unchecked_bmp;
@@ -16,6 +16,7 @@ ResultsDataViewListCtrl::ResultsDataViewListCtrl(wxWindow* parent, wxWindowID id
     my_parent                 = parent;
     currently_selected_row    = -1;
     currently_selected_column = -1;
+    currently_active_job_id   = 1; // The first active job will always be 1
 
     // set the icons..
 
@@ -110,9 +111,10 @@ void ResultsDataViewListCtrl::OnHeaderClick(wxDataViewEvent& event) {
     wxDataViewColumn* current_column = event.GetDataViewColumn( );
 
     if ( current_column->GetModelColumn( ) > 1 ) {
-        wxMessageDialog* check_dialog = new wxMessageDialog(this, wxString::Format("Do you want to set the active job for all possible movies to %s?", current_column->GetTitle( )), "Please Confirm", wxYES_NO);
+        wxMessageDialog* check_dialog = new wxMessageDialog(this, wxString::Format("Do you want to set the active job for all possible %s to %s?", my_parents_name, current_column->GetTitle( )), "Please Confirm", wxYES_NO);
 
         if ( check_dialog->ShowModal( ) == wxID_YES ) {
+            currently_active_job_id            = current_column->GetModelColumn( ) - 1;
             OneSecondProgressDialog* my_dialog = new OneSecondProgressDialog("Select Column", "Setting Selections", GetItemCount( ), this);
 
             for ( long counter = 0; counter < GetItemCount( ); counter++ ) {
@@ -121,7 +123,8 @@ void ResultsDataViewListCtrl::OnHeaderClick(wxDataViewEvent& event) {
                 CheckItem(counter, current_column->GetModelColumn( ));
                 my_dialog->Update(counter);
             }
-
+            // Run a function that is defined in the derived class and "bound" in the derived constructor
+            OnHeaderClickInterrupt( );
             my_dialog->Destroy( );
         }
     }

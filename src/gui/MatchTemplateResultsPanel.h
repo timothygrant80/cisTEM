@@ -1,27 +1,11 @@
+extern MatchTemplatePanel* match_template_panel;
+
 class MatchTemplateResultsPanel : public MatchTemplateResultsPanelParent {
   public:
     MatchTemplateResultsPanel(wxWindow* parent);
+    // The results and actions panels need to talk to each other.
+    friend class MatchTemplatePanel;
 
-    /*
-		void OnDefineFilterClick( wxCommandEvent& event );
-		void OnAddToGroupClick( wxCommandEvent& event );
-		void OnNextButtonClick( wxCommandEvent& event );
-		void OnPreviousButtonClick( wxCommandEvent& event );
-
-		void OnShowTypeRadioBoxChange(wxCommandEvent& event);
-		void OnJobDetailsToggle( wxCommandEvent& event );
-
-		void OnAllMoviesSelect( wxCommandEvent& event );
-		void OnByFilterSelect( wxCommandEvent& event );
-
-		int GetFilter();
-
-
-
-		int ReturnRowFromAssetID(int asset_id, int start_location = 0);
-
-		void Clear();
-*/
     void OnDefineFilterClick(wxCommandEvent& event);
     void OnUpdateUI(wxUpdateUIEvent& event);
     void OnValueChanged(wxDataViewEvent& event);
@@ -57,4 +41,9 @@ class MatchTemplateResultsPanel : public MatchTemplateResultsPanelParent {
     bool group_combo_is_dirty;
 
     wxString current_fill_command;
+
+    static void OnHeaderClick( ) {
+        // Rather than access members directly, create a method in MatchTemplatePanel to do this stuff.
+        match_template_panel->CheckForUnfinishedWork(true, false);
+    }
 };

@@ -1,4 +1,5 @@
 //#include "../core/core_headers.h"
+#include "../core/cistem_constants.h"
 #include "../core/gui_core_headers.h"
 
 // extern MyMovieAssetPanel *movie_asset_panel;
@@ -17,6 +18,7 @@ MatchTemplatePanel::MatchTemplatePanel(wxWindow* parent)
 
     group_combo_is_dirty   = false;
     run_profiles_are_dirty = false;
+    set_up_to_resume_job   = false;
 
 #ifndef ENABLEGPU
     UseGpuCheckBox->Show(false);
@@ -140,8 +142,20 @@ void MatchTemplatePanel::ResetDefaults( ) {
 
     DefocusSearchYesRadio->SetValue(true);
     PixelSizeSearchNoRadio->SetValue(true);
+    set_up_to_resume_job = false;
 
     SymmetryComboBox->SetValue("C1");
+
+    if ( main_frame->current_project.is_open ) {
+        ResumeRunCheckBox->SetValue(false);
+        if ( main_frame->current_project.database.ReturnNumberOfTemplateMatchingJobs( ) == 0 )
+            ResumeRunCheckBox->Enable(false);
+        else
+            ResumeRunCheckBox->Enable(true);
+    }
+    else {
+        ResumeRunCheckBox->Enable(false);
+    }
 
 #ifdef ENABLEGPU
     UseGpuCheckBox->SetValue(true);
@@ -347,15 +361,27 @@ bool MatchTemplatePanel::CheckGroupHasDefocusValues( ) {
 }
 
 void MatchTemplatePanel::OnUpdateUI(wxUpdateUIEvent& event) {
+
+    // We want things to be greyed out if the user is re-running the job.
+    if ( set_up_to_resume_job ) {
+        return;
+    }
+
     // are there enough members in the selected group.
     if ( main_frame->current_project.is_open == false ) {
         RunProfileComboBox->Enable(false);
         GroupComboBox->Enable(false);
         StartEstimationButton->Enable(false);
         ReferenceSelectPanel->Enable(false);
+        ResumeRunCheckBox->Enable(false);
     }
     else {
-        //Enable(true);
+        if ( main_frame->current_project.database.ReturnNumberOfTemplateMatchingJobs( ) == 0 ) {
+            ResumeRunCheckBox->Enable(false);
+        }
+        else {
+            ResumeRunCheckBox->Enable(true);
+        }
 
         if ( running_job == false ) {
             RunProfileComboBox->Enable(true);
@@ -425,6 +451,77 @@ void MatchTemplatePanel::OnUpdateUI(wxUpdateUIEvent& event) {
             ReferenceSelectPanel->FillComboBox( );
             volumes_are_dirty = false;
         }
+    }
+}
+
+void MatchTemplatePanel::SetInputsForPossibleReRun(bool set_up_to_resume_job) {
+
+    this->set_up_to_resume_job = set_up_to_resume_job;
+    bool enable_value;
+    if ( set_up_to_resume_job ) {
+        // We want to disable user inputs so the job run matches the intial state.
+        enable_value = false;
+        ResumeRunCheckBox->Show(true);
+        ResumeRunCheckBox->SetValue(true);
+        ResumeRunCheckBox->Enable(true);
+        ResetAllDefaultsButton->Enable(false);
+    }
+    else {
+        // We want to allow the user to not re-run the job if the disable the ReRun radio button.
+        // The state remembered in "was_enabled..." is meaningless here.
+        enable_value = true;
+        ResetAllDefaultsButton->Enable(true);
+    }
+
+    SetAndRememberEnableState(GroupComboBox, was_enabled_GroupComboBox, enable_value);
+    SetAndRememberEnableState(ReferenceSelectPanel, was_enabled_ReferenceSelectPanel, enable_value);
+
+    SetAndRememberEnableState(OutofPlaneStepNumericCtrl, was_enabled_OutofPlaneStepNumericCtrl, enable_value);
+    SetAndRememberEnableState(InPlaneStepNumericCtrl, was_enabled_InPlaneStepNumericCtrl, enable_value);
+    SetAndRememberEnableState(MinPeakRadiusNumericCtrl, was_enabled_MinPeakRadiusNumericCtrl, enable_value);
+
+    SetAndRememberEnableState(DefocusSearchYesRadio, was_enabled_DefocusSearchYesRadio, enable_value);
+    SetAndRememberEnableState(DefocusSearchNoRadio, was_enabled_DefocusSearchNoRadio, enable_value);
+    SetAndRememberEnableState(PixelSizeSearchYesRadio, was_enabled_PixelSizeSearchYesRadio, enable_value);
+    SetAndRememberEnableState(PixelSizeSearchNoRadio, was_enabled_PixelSizeSearchNoRadio, enable_value);
+
+    SetAndRememberEnableState(SymmetryComboBox, was_enabled_SymmetryComboBox, enable_value);
+    SetAndRememberEnableState(HighResolutionLimitNumericCtrl, was_enabled_HighResolutionLimitNumericCtrl, enable_value);
+    SetAndRememberEnableState(DefocusSearchRangeNumericCtrl, was_enabled_DefocusSearchRangeNumericCtrl, enable_value);
+    SetAndRememberEnableState(DefocusSearchStepNumericCtrl, was_enabled_DefocusSearchStepNumericCtrl, enable_value);
+
+    // We still want things that are needed to re-run the job to be enabled.
+#ifdef ENABLEGPU
+    UseGpuCheckBox->SetValue(true);
+#else
+    UseGpuCheckBox->SetValue(false); // Already disabled, but also set to un-ticked for visual consistency.
+#endif
+
+    // It is okay to change the run profile for a rerun
+    if ( RunProfileComboBox->GetCount( ) > 0 ) {
+        if ( image_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection( )) > 0 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(RunProfileComboBox->GetSelection( )) > 0 && all_images_have_defocus_values == true ) {
+            StartEstimationButton->Enable(true);
+        }
+        else
+            StartEstimationButton->Enable(false);
+    }
+    else {
+        StartEstimationButton->Enable(false);
+    }
+
+    if ( group_combo_is_dirty == true ) {
+        FillGroupComboBox( );
+        group_combo_is_dirty = false;
+    }
+
+    if ( run_profiles_are_dirty == true ) {
+        FillRunProfileComboBox( );
+        run_profiles_are_dirty = false;
+    }
+
+    if ( volumes_are_dirty == true ) {
+        ReferenceSelectPanel->FillComboBox( );
+        volumes_are_dirty = false;
     }
 }
 
@@ -581,7 +678,7 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
 
     TemplateMatchJobResults temp_result;
     temp_result.input_job_id               = -1;
-    temp_result.job_type                   = TEMPLATE_MATCH_FULL_SEARCH;
+    temp_result.job_type                   = cistem::job_type::template_match_full_search;
     temp_result.mask_radius                = 0.0f;
     temp_result.min_peak_radius            = min_peak_radius;
     temp_result.exclude_above_xy_threshold = false;
@@ -1035,4 +1132,56 @@ void MatchTemplatePanel::WriteResultToDataBase( ) {
 void MatchTemplatePanel::UpdateProgressBar( ) {
     ProgressBar->SetValue(my_job_tracker.ReturnPercentCompleted( ));
     TimeRemainingText->SetLabel(my_job_tracker.ReturnRemainingTime( ).Format("Time Remaining : %Hh:%Mm:%Ss"));
+}
+
+void MatchTemplatePanel::ResumeRunCheckBoxOnCheckBox(wxCommandEvent& event) {
+    if ( event.IsChecked( ) ) {
+        CheckForUnfinishedWork(true, true);
+    }
+    else {
+        CheckForUnfinishedWork(false, true);
+    }
+}
+
+void MatchTemplatePanel::CheckForUnfinishedWork(bool is_checked, bool is_from_check_box) {
+    // This may be called when the user clicks the resume run checkbox.
+    // OR
+    // When the header in the results panel is changed.
+
+    if ( is_checked ) {
+        int active_job_id = match_template_results_panel->ResultDataView->ReturnActiveJobID( );
+        // Dummy values that should be set by the above method to query the DB
+        int images_total                  = 20;
+        int images_successfully_processed = 3;
+        // Now check the data base to see if all template matching ids for this batch have been completed.
+
+        if ( no_unfinished_jobs ) {
+            wxPrintf("No unfinished jobs.\n");
+            // Only create the dialog if triggered by the checkbox, not by the header change.
+            if ( is_from_check_box ) {
+                wxMessageDialog* check_dialog = new wxMessageDialog(this,
+                                                                    wxString::Format("There is no unfinished work for job %d.\n\nYou may select another job by clicking the header in the TM results panel.",
+                                                                                     active_job_id, "Please Confirm", wxOK));
+                check_dialog->ShowModal( );
+            }
+            ResumeRunCheckBox->SetValue(false);
+            no_unfinished_jobs = false; // Just for testing flip back and forth
+        }
+        else {
+            wxPrintf("Checking for unfinished work for job %d\n", active_job_id);
+            // Only create the dialog if triggered by the checkbox, not by the header change.
+            if ( is_from_check_box ) {
+                wxMessageDialog* check_dialog = new wxMessageDialog(this,
+                                                                    wxString::Format("Resuming work for job %d, which has %d/%d images completed.\n",
+                                                                                     active_job_id, images_successfully_processed, images_total, "Please Confirm", wxOK));
+                check_dialog->ShowModal( );
+            }
+            no_unfinished_jobs = true; // Just for testing flip back and forth
+            SetInputsForPossibleReRun(true);
+        }
+    }
+    else {
+        wxPrintf("ELSE\n");
+        SetInputsForPossibleReRun(false);
+    }
 }

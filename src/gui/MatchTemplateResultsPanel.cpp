@@ -1,4 +1,5 @@
 //#include "../core/core_headers.h"
+#include "../core/cistem_constants.h"
 #include "../core/gui_core_headers.h"
 
 extern MyMainFrame*       main_frame;
@@ -307,7 +308,7 @@ void MatchTemplateResultsPanel::FillResultsPanelAndDetails(int row, int column) 
 
     ResultPanel->SetActiveResult(current_result);
 
-    if ( current_result.job_type == TEMPLATE_MATCH_FULL_SEARCH )
+    if ( current_result.job_type == cistem::job_type::template_match_full_search )
         JobTitleStaticText->SetLabel(current_result.job_name);
     else
         JobTitleStaticText->SetLabel(wxString::Format("%s, Refinement of job #%li", current_result.job_name, current_result.input_job_id));
@@ -344,6 +345,8 @@ void MatchTemplateResultsPanel::FillResultsPanelAndDetails(int row, int column) 
         IgnoreShiftedPeaksStaticText->SetLabel("No");
 
     RightPanel->Layout( );
+    ResultDataView->my_parents_name        = "MatchTemplate Results";
+    ResultDataView->OnHeaderClickInterrupt = &MatchTemplateResultsPanel::OnHeaderClick;
 }
 
 void MatchTemplateResultsPanel::OnValueChanged(wxDataViewEvent& event) {

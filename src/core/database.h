@@ -1,3 +1,5 @@
+#include "cistem_constants.h"
+
 class Database {
 
     bool is_open;
@@ -67,13 +69,19 @@ class Database {
         }
     }
 
+    inline bool RecordCurrentWorkflowInDB(cistem::workflow::Enum workflow) {
+        ExecuteSQL(wxString::Format("UPDATE MASTER_SETTINGS SET CURRENT_WORKFLOW = %i", workflow));
+        return true;
+    }
+
     bool CreateTable(const char* table_name, const char* column_format, ...);
     bool CreateTable(const char* table_name, const char* column_format, std::vector<wxString> columns);
     bool DeleteTable(const char* table_name);
     bool AddColumnToTable(wxString table_name, wxString column_name, wxString column_format, wxString default_value);
     //bool DeleteTable(const char *table_name);
     bool InsertOrReplace(const char* table_name, const char* column_format, ...);
-    bool GetMasterSettings(wxFileName& project_directory, wxString& project_name, int& imported_integer_version, double& total_cpu_hours, int& total_jobs_run, wxString& cistem_version_text);
+    bool GetMasterSettings(wxFileName& project_directory, wxString& project_name, int& imported_integer_version, double& total_cpu_hours, int& total_jobs_run, wxString& cistem_version_text, cistem::workflow::Enum& current_workflow);
+
     bool SetProjectStatistics(double& total_cpu_hours, int& total_jobs_run);
     bool CreateAllTables( );
 
@@ -358,6 +366,7 @@ class Database {
     using ColumnChanges = std::vector<ColumnChange>;
     std::pair<TableChanges, ColumnChanges> CheckSchema( );
     bool                                   UpdateSchema(ColumnChanges columns);
+    bool                                   UpdateVersion( );
 };
 
 class BeginCommitLocker // just call begin in the contructor, and commit in the destructor, if it hasn't already been called.

@@ -1,5 +1,3 @@
-#define TEMPLATE_MATCH_FULL_SEARCH 0
-#define TEMPLATE_MATCH_REFINEMENT 1
 
 class TemplateMatchFoundPeakInfo {
   public:

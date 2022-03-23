@@ -203,7 +203,7 @@ bool MakeParticleStack::DoCalculation( ) {
         if ( ! read_coordinates ) {
             // look for a peak..
 
-            current_peak = mip_image.FindPeakWithIntegerCoordinates(0.0, FLT_MAX, box_size / 2 + 1);
+            current_peak = mip_image.FindPeakWithIntegerCoordinates(0.0, FLT_MAX, box_size / cistem::fraction_of_box_size_to_exclude_for_border + 1);
             if ( current_peak.value < wanted_threshold )
                 break;
 

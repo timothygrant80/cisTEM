@@ -13,6 +13,7 @@ MatchTemplateResultsPanel::MatchTemplateResultsPanel(wxWindow* parent)
 
     per_row_asset_id       = NULL;
     per_row_array_position = NULL;
+    template_match_job_ids = NULL;
     number_of_assets       = 0;
 
     selected_row     = -1;
@@ -141,8 +142,9 @@ void MatchTemplateResultsPanel::FillBasedOnSelectCommand(wxString wanted_command
     }
     // cache the various  alignment_job_ids
 
-    if ( template_match_job_ids != NULL )
+    if ( template_match_job_ids != NULL ) {
         delete[] template_match_job_ids;
+    }
     template_match_job_ids = new long[number_of_template_match_ids];
 
     main_frame->current_project.database.GetUniqueTemplateMatchIDs(template_match_job_ids, number_of_template_match_ids);

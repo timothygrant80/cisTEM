@@ -1,4 +1,3 @@
-extern MatchTemplatePanel* match_template_panel;
 
 class MatchTemplateResultsPanel : public MatchTemplateResultsPanelParent {
   public:
@@ -41,9 +40,4 @@ class MatchTemplateResultsPanel : public MatchTemplateResultsPanelParent {
     bool group_combo_is_dirty;
 
     wxString current_fill_command;
-
-    static void OnHeaderClick( ) {
-        // Rather than access members directly, create a method in MatchTemplatePanel to do this stuff.
-        match_template_panel->CheckForUnfinishedWork(true, false);
-    }
 };

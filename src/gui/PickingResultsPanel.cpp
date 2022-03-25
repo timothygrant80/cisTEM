@@ -6,6 +6,8 @@ extern MyImageAssetPanel*            image_asset_panel;
 extern MyParticlePositionAssetPanel* particle_position_asset_panel;
 extern MyFindParticlesPanel*         findparticles_panel;
 
+static inline void OnHeaderClick( ) { return; }
+
 MyPickingResultsPanel::MyPickingResultsPanel(wxWindow* parent)
     : PickingResultsPanel(parent) {
 
@@ -29,7 +31,7 @@ MyPickingResultsPanel::MyPickingResultsPanel(wxWindow* parent)
 
     Bind(wxEVT_CHAR_HOOK, &MyPickingResultsPanel::OnCharHook, this);
     ResultDataView->my_parents_name        = "Picking Results";
-    ResultDataView->OnHeaderClickInterrupt = &MyPickingResultsPanel::OnHeaderClick;
+    ResultDataView->OnHeaderClickInterrupt = &OnHeaderClick;
 }
 
 MyPickingResultsPanel::~MyPickingResultsPanel( ) {

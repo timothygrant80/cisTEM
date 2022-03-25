@@ -43,5 +43,4 @@ class MyMovieAlignResultsPanel : public MovieAlignResultsPanel {
 
     wxString current_fill_command;
 
-    static inline void OnHeaderClick( ) { return; }
 };

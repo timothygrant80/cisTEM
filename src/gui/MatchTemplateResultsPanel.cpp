@@ -2,9 +2,15 @@
 #include "../core/cistem_constants.h"
 #include "../core/gui_core_headers.h"
 
-extern MyMainFrame*       main_frame;
-extern MyImageAssetPanel* image_asset_panel;
-extern MyMovieAssetPanel* movie_asset_panel;
+extern MyMainFrame*        main_frame;
+extern MyImageAssetPanel*  image_asset_panel;
+extern MyMovieAssetPanel*  movie_asset_panel;
+extern MatchTemplatePanel* match_template_panel;
+
+static void OnHeaderClick( ) {
+    // Rather than access members directly, create a method in MatchTemplatePanel to do this stuff.
+    match_template_panel->CheckForUnfinishedWork(true, false);
+}
 
 MatchTemplateResultsPanel::MatchTemplateResultsPanel(wxWindow* parent)
     : MatchTemplateResultsPanelParent(parent) {
@@ -27,6 +33,8 @@ MatchTemplateResultsPanel::MatchTemplateResultsPanel(wxWindow* parent)
     FillGroupComboBox( );
 
     Bind(wxEVT_CHAR_HOOK, &MatchTemplateResultsPanel::OnCharHook, this);
+    ResultDataView->my_parents_name        = "Match Template Results";
+    ResultDataView->OnHeaderClickInterrupt = &OnHeaderClick;
 }
 
 void MatchTemplateResultsPanel::OnCharHook(wxKeyEvent& event) {
@@ -347,8 +355,6 @@ void MatchTemplateResultsPanel::FillResultsPanelAndDetails(int row, int column) 
         IgnoreShiftedPeaksStaticText->SetLabel("No");
 
     RightPanel->Layout( );
-    ResultDataView->my_parents_name        = "MatchTemplate Results";
-    ResultDataView->OnHeaderClickInterrupt = &MatchTemplateResultsPanel::OnHeaderClick;
 }
 
 void MatchTemplateResultsPanel::OnValueChanged(wxDataViewEvent& event) {

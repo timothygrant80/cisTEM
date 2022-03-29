@@ -157,6 +157,7 @@ void SamplesPrintResult(bool passed, int line) {
             wxPrintf(ANSI_COLOR_RED "FAILED! (Line : %i)" ANSI_COLOR_RESET, line);
         else
             wxPrintf("FAILED! (Line : %i)", line);
+        exit(1);
     }
 
     wxPrintf("\n");

@@ -459,11 +459,8 @@ void MyTestApp::TestDatabase( ) {
     BeginTest("Database");
 
     temp_directory = wxFileName::GetTempDir( );
-
     wxString database_filename = temp_directory + "/1_0_test/1_0_test.db";
     Project  project;
-    project.OpenProjectFromFile(database_filename);
-    project.Close(false, false);
     Database database;
     database.Open(database_filename);
     auto schema_result = database.CheckSchema( );
@@ -1798,6 +1795,7 @@ void MyTestApp::PrintResultWorker(bool passed, int line) {
             wxPrintf(ANSI_COLOR_RED "FAILED! (Line : %i)" ANSI_COLOR_RESET, line);
         else
             wxPrintf("FAILED! (Line : %i)", line);
+        exit(1);
     }
 
     wxPrintf("\n");

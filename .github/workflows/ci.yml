@@ -8,9 +8,9 @@ on:
 
 jobs:
   build:
-    continue-on-error: true
+    continue-on-error: false
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         compiler: [icpc,gcc,clang]
         include:
@@ -80,7 +80,7 @@ jobs:
 
   console_test:
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         compiler: [icpc,gcc,clang]
     name: Console test
@@ -109,7 +109,7 @@ jobs:
 
   samples_functional_testing:
     strategy:
-      fail-fast: false
+      fail-fast: true
       matrix:
         compiler: [icpc,gcc,clang]
     name: Samples functional testing

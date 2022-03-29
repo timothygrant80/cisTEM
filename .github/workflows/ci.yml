@@ -62,9 +62,10 @@ jobs:
     - name: make 
       run: |
         cd build/${{ matrix.compiler }}
-        make | tee make.log
-        NUM_WARNING=$(cat make.log | grep warning | wc -l)
-        echo "::set-output name=numwarnings::$NUM_WARNING"
+        make 
+#        | tee make.log
+#        NUM_WARNING=$(cat make.log | grep warning | wc -l)
+#        echo "::set-output name=numwarnings::$NUM_WARNING"
         cp ../../scripts/testing/test_and_benchmark.sh src/
     - name: clean up
       run: |

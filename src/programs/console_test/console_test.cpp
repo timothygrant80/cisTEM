@@ -462,8 +462,6 @@ void MyTestApp::TestDatabase( ) {
 
     wxString database_filename = temp_directory + "/1_0_test/1_0_test.db";
     Project  project;
-    project.OpenProjectFromFile(database_filename);
-    project.Close(false, false);
     Database database;
     database.Open(database_filename);
     auto schema_result = database.CheckSchema( );

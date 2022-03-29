@@ -62,7 +62,7 @@ jobs:
     - name: make 
       run: |
         cd build/${{ matrix.compiler }}
-        make 
+        make -j2
         cp ../../scripts/testing/test_and_benchmark.sh src/
     - name: clean up
       run: |
@@ -95,7 +95,7 @@ jobs:
     - name: Fix permissions
       run: chmod +x *
     - name: test console_test
-      continue-on-error: true
+      continue-on-error: false
       run: ./console_test 
     - name: run benchmark
       run: ./test_and_benchmark.sh ./
@@ -122,7 +122,7 @@ jobs:
       if: ${{ matrix.compiler=='gcc' || matrix.compiler=='clang' }}
       run: sudo apt-get install -y libfftw3-dev 
     - name: test samples_functional_testing
-      continue-on-error: true
+      continue-on-error: false
       run: |
         chmod +x samples_functional_testing
         ./samples_functional_testing

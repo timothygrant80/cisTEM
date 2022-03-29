@@ -1156,7 +1156,7 @@ void MatchTemplatePanel::CheckForUnfinishedWork(bool is_checked, bool is_from_ch
         int         images_successfully_processed = 0;
         wxArrayLong unfinished_match_template_ids;
 
-        if ( selected_image_group == -1 ) {
+        if ( active_group.id == -1 ) {
             unfinished_match_template_ids = main_frame->current_project.database.ReturnLongArrayFromSelectCommand(
                     wxString::Format("select IMAGE_ASSETS.IMAGE_ASSET_ID, COMP.IMAGE_ASSET_ID as CID FROM IMAGE_ASSETS "
                                      "LEFT JOIN (SELECT IMAGE_ASSET_ID FROM TEMPLATE_MATCH_LIST WHERE TEMPLATE_MATCH_JOB_ID = %i ) COMP "

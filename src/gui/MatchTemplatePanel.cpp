@@ -1151,8 +1151,12 @@ void MatchTemplatePanel::CheckForUnfinishedWork(bool is_checked, bool is_from_ch
     if ( is_checked ) {
         int active_job_id = match_template_results_panel->ResultDataView->ReturnActiveJobID( );
         // Dummy values that should be set by the above method to query the DB
-        int images_total                  = 20;
-        int images_successfully_processed = 3;
+        int selected_image_group = active_group.id;
+        if ( selected_image_group == 0 ) {
+            main_frame->current_project.database.ExecuteSQL(wxString::Format("select IMAGE_ASSETS.IMAGE_ASSET_ID, COMP.IMAGE_ASSET_ID as cid FROM IMAGE_ASSETS LEFT JOIN (SELECT IMAGE_ASSET_ID FROM TEMPLATE_MATCH_LIST WHERE TEMPLATE_MATCH_JOB_ID = %i ) COMP ON IMAGE_ASSETS.IMAGE_ASSET_ID = COMP.IMAGE_ASSET_ID WHERE cid IS NULL", active_job_id));
+        }
+        int images_total           = active_group.number_of_members;
+        int images_to_be_processed = 3;
         // Now check the data base to see if all template matching ids for this batch have been completed.
 
         if ( no_unfinished_jobs ) {

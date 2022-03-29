@@ -473,7 +473,7 @@ void MatchTemplatePanel::SetInputsForPossibleReRun(bool set_up_to_resume_job) {
         ResetAllDefaultsButton->Enable(true);
     }
 
-    SetAndRememberEnableState(GroupComboBox, was_enabled_GroupComboBox, enable_value);
+    //SetAndRememberEnableState(GroupComboBox, was_enabled_GroupComboBox, enable_value);
     SetAndRememberEnableState(ReferenceSelectPanel, was_enabled_ReferenceSelectPanel, enable_value);
 
     SetAndRememberEnableState(OutofPlaneStepNumericCtrl, was_enabled_OutofPlaneStepNumericCtrl, enable_value);
@@ -1151,9 +1151,30 @@ void MatchTemplatePanel::CheckForUnfinishedWork(bool is_checked, bool is_from_ch
     if ( is_checked ) {
         int active_job_id = match_template_results_panel->ResultDataView->ReturnActiveJobID( );
         // Dummy values that should be set by the above method to query the DB
-        int images_total                  = 20;
-        int images_successfully_processed = 3;
-        // Now check the data base to see if all template matching ids for this batch have been completed.
+        int         images_total                  = active_group.number_of_members;
+        int         images_to_be_processed        = 0;
+        int         images_successfully_processed = 0;
+        wxArrayLong unfinished_match_template_ids;
+
+        if ( selected_image_group == -1 ) {
+            unfinished_match_template_ids = main_frame->current_project.database.ReturnLongArrayFromSelectCommand(
+                    wxString::Format("select IMAGE_ASSETS.IMAGE_ASSET_ID, COMP.IMAGE_ASSET_ID as CID FROM IMAGE_ASSETS "
+                                     "LEFT JOIN (SELECT IMAGE_ASSET_ID FROM TEMPLATE_MATCH_LIST WHERE TEMPLATE_MATCH_JOB_ID = %i ) COMP "
+                                     "ON IMAGE_ASSETS.IMAGE_ASSET_ID = COMP.IMAGE_ASSET_ID "
+                                     "WHERE CID IS NULL",
+                                     active_job_id));
+        }
+        else {
+            unfinished_match_template_ids = main_frame->current_project.database.ReturnLongArrayFromSelectCommand(
+                    wxString::Format("select IMAGE_ASSETS.IMAGE_ASSET_ID, COMP.IMAGE_ASSET_ID as CID FROM IMAGE_GROUP_%i AS IMAGE_ASSETS "
+                                     "LEFT JOIN (SELECT IMAGE_ASSET_ID FROM TEMPLATE_MATCH_LIST WHERE TEMPLATE_MATCH_JOB_ID = %i ) COMP "
+                                     "ON IMAGE_ASSETS.IMAGE_ASSET_ID = COMP.IMAGE_ASSET_ID "
+                                     "WHERE CID IS NULL",
+                                     active_group.id, active_job_id));
+        }
+        images_to_be_processed        = unfinished_match_template_ids.GetCount( );
+        images_successfully_processed = images_total - images_to_be_processed;
+        no_unfinished_jobs            = (images_to_be_processed == 0);
 
         if ( no_unfinished_jobs ) {
             wxPrintf("No unfinished jobs.\n");
@@ -1165,7 +1186,6 @@ void MatchTemplatePanel::CheckForUnfinishedWork(bool is_checked, bool is_from_ch
                 check_dialog->ShowModal( );
             }
             ResumeRunCheckBox->SetValue(false);
-            no_unfinished_jobs = false; // Just for testing flip back and forth
         }
         else {
             wxPrintf("Checking for unfinished work for job %d\n", active_job_id);
@@ -1176,7 +1196,6 @@ void MatchTemplatePanel::CheckForUnfinishedWork(bool is_checked, bool is_from_ch
                                                                                      active_job_id, images_successfully_processed, images_total, "Please Confirm", wxOK));
                 check_dialog->ShowModal( );
             }
-            no_unfinished_jobs = true; // Just for testing flip back and forth
             SetInputsForPossibleReRun(true);
         }
     }

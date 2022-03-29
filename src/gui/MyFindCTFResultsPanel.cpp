@@ -5,6 +5,8 @@ extern MyMainFrame*       main_frame;
 extern MyImageAssetPanel* image_asset_panel;
 extern MyMovieAssetPanel* movie_asset_panel;
 
+static inline void OnHeaderClick( ) { return; }
+
 MyFindCTFResultsPanel::MyFindCTFResultsPanel(wxWindow* parent)
     : FindCTFResultsPanel(parent) {
 
@@ -34,7 +36,7 @@ MyFindCTFResultsPanel::MyFindCTFResultsPanel(wxWindow* parent)
     Bind(wxEVT_CHAR_HOOK, &MyFindCTFResultsPanel::OnCharHook, this);
 
     ResultDataView->my_parents_name        = "CTF Results";
-    ResultDataView->OnHeaderClickInterrupt = &MyFindCTFResultsPanel::OnHeaderClick;
+    ResultDataView->OnHeaderClickInterrupt = &OnHeaderClick;
 }
 
 void MyFindCTFResultsPanel::OnPlotResultsButtonClick(wxCommandEvent& event) {

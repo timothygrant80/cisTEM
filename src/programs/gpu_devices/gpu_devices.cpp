@@ -23,6 +23,9 @@ bool GpuDevices::DoCalculation( ) {
     DeviceManager gpuDev;
 
     wxPrintf("\nGpuDevices is running...\n\n");
+            MyPrintWithDetails("");
 
     gpuDev.ListDevices( );
+            MyPrintWithDetails("");
+    return true;
 }

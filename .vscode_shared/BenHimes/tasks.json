@@ -5,7 +5,7 @@
     "options": {
         "env": {
             "cuda_dir": "/groups/cryoadmin/software/CUDA-TOOLKIT/cuda_11.6.0",
-            "wx_dir":"/groups/cryoadmin/software/WX/wx_static_3.05_",
+            "wx_dir": "/groups/cryoadmin/software/WX/wx_static_3.05_",
             "build_dir": "${workspaceFolder}/build",
             "compile_cores": "48"
         }
@@ -15,18 +15,17 @@
             "label": "echo",
             "type": "shell",
             "command": "echo --with-wx-config=${wx_dir}"
-
-        }, 
+        },
         {
-          "label": "CONFIG intel,debug,samples",
-          "type": "shell",
-          "command": "mkdir -p ${build_dir}/Intel-samples-debug && cd ${build_dir}/Intel-samples-debug && CC=icc CXX=icpc ../../configure  --enable-samples --enable-debugmode --enable-experimental --enable-staticmode --enable-openmp  --with-wx-config=${wx_dir}INTEL/bin/wx-config"
-      },
-      {
-          "label": "BUILD intel,debug,samples",
-          "type": "shell",
-          "command": "cd ${build_dir}/Intel-samples-debug && make -j${compile_cores}"
-      },
+            "label": "CONFIG intel,debug,samples",
+            "type": "shell",
+            "command": "mkdir -p ${build_dir}/Intel-samples-debug && cd ${build_dir}/Intel-samples-debug && CC=icc CXX=icpc ../../configure  --enable-samples --enable-debugmode --enable-experimental --enable-staticmode --enable-openmp  --with-wx-config=${wx_dir}INTEL/bin/wx-config"
+        },
+        {
+            "label": "BUILD intel,debug,samples",
+            "type": "shell",
+            "command": "cd ${build_dir}/Intel-samples-debug && make -j${compile_cores}"
+        },
         {
             "label": "CONFIG intel,gpu,debug",
             "type": "shell",
@@ -37,7 +36,6 @@
             "type": "shell",
             "command": "cd ${build_dir}/Intel-gpu-debug && make -j${compile_cores}"
         },
-        
         {
             "label": "CONFIG intel,gpu,debug,noexp",
             "type": "shell",
@@ -48,13 +46,11 @@
             "type": "shell",
             "command": "cd ${build_dir}/Intel-gpu-debug-noexp && make -j${compile_cores}"
         },
-
         {
             "label": "CONFIG intel,gpu,debug,rotate",
             "type": "shell",
             "command": "mkdir -p ${build_dir}/Intel-gpu-debug-rotate && cd ${build_dir}/Intel-gpu-debug-rotate && CC=icc CXX=icpc ../../configure --enable-rotated-tm --enable-debugmode --enable-experimental --with-cuda=${cuda_dir} --enable-staticmode --enable-openmp  --with-wx-config=${wx_dir}INTEL/bin/wx-config"
         },
-
         {
             "label": "BUILD intel,gpu,debug,rotate",
             "type": "shell",
@@ -80,7 +76,6 @@
             "type": "shell",
             "command": "cd ${build_dir}/Intel-gpu-samples-debug && make -j${compile_cores}"
         },
-
         {
             "label": "CONFIG intel,gpu,device-lto",
             "type": "shell",
@@ -91,18 +86,15 @@
             "type": "shell",
             "command": "cd ${build_dir}/Intel-gpu-lto && make -j${compile_cores}"
         },
-
         {
             "label": "CONFIG GNU ,gpu",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/GNU-gpu && cd ${build_dir}/GNU-gpu && CC=gcc CXX=g++ ../../configure  --disable-mkl --enable-experimental --with-cuda=${cuda_dir} --enable-staticmode --enable-openmp  --with-wx-config=${wx_dir}GNU/bin/wx-config"
+            "command": "mkdir -p ${build_dir}/GNU-gpu && cd ${build_dir}/GNU-gpu && CC=gcc CXX=g++ ../../configure  --disable-mkl --enable-experimental --with-cuda=/usr/local/cuda --enable-staticmode --enable-openmp"
         },
         {
             "label": "BUILD GNU,gpu",
             "type": "shell",
             "command": "cd  ${build_dir}/GNU-gpu && make -j${compile_cores}"
         },
-   
-
     ]
 }

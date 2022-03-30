@@ -1,7 +1,7 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.230.0/containers/ubuntu
 {
-    "name": "Ubuntu",
+    "name": "cisTEMx-0.1",
     "build": {
         "dockerfile": "Dockerfile",
         // Update 'VARIANT' to pick an Ubuntu version: hirsute, focal, bionic
@@ -19,5 +19,26 @@
     // Use 'postCreateCommand' to run commands after the container is created.
     // "postCreateCommand": "uname -a",
     // Comment out to connect as root instead. More info: https://aka.ms/vscode-remote/containers/non-root.
-    "remoteUser": "cisTEMx"
+    "remoteUser": "cisTEMx",
+    "runArgs": [
+        "-it",
+        "--net",
+        "host",
+        "-e",
+        "DISPLAY=${env:DISPLAY}",
+        "-v",
+        "${env:XAUTHORITY}:/root/.Xauthority",
+        "-v",
+        "/tmp/.X11-unix:/tmp/.X11-unix",
+        "debian:11-slim"
+    ]
+    // "runArgs": [
+    //     "-it",
+    //     "--rm",
+    //     "DISPLAY=$DISPLAY",
+    //     "--net=host",
+    //     "-v /tmp/.X11-unix:/tmp/.X11-unix",
+    // ]
+    ///$XAUTHORITY "-v /groups/himesb/.Xauthority:/root/.Xauthority",
+    // "debian:11-slim"
 }

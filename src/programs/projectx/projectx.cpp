@@ -33,10 +33,10 @@ SettingsPanel*             settings_panel;
 MatchTemplatePanel*        match_template_panel;
 MatchTemplateResultsPanel* match_template_results_panel;
 RefineTemplatePanel*       refine_template_panel;
-RefineTemplateDevPanel*    refine_template_dev_panel;
 
 #ifdef EXPERIMENTAL
-ExperimentalPanel* experimental_panel;
+ExperimentalPanel*      experimental_panel;
+RefineTemplateDevPanel* refine_template_dev_panel;
 #endif
 
 MyMovieAssetPanel*            movie_asset_panel;

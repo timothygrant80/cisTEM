@@ -29,16 +29,10 @@
         "-v",
         "${env:XAUTHORITY}:/root/.Xauthority",
         "-v",
-        "/tmp/.X11-unix:/tmp/.X11-unix",
-        "debian:11-slim"
+        "/tmp/.X11-unix:/tmp/.X11-unix"
+        // You may need to
+        // $ touch ~/.Xauthority
+        // On host $ xauth list | grep $hostname
+        // $xauth add <full line>
     ]
-    // "runArgs": [
-    //     "-it",
-    //     "--rm",
-    //     "DISPLAY=$DISPLAY",
-    //     "--net=host",
-    //     "-v /tmp/.X11-unix:/tmp/.X11-unix",
-    // ]
-    ///$XAUTHORITY "-v /groups/himesb/.Xauthority:/root/.Xauthority",
-    // "debian:11-slim"
 }

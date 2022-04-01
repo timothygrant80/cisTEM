@@ -94,7 +94,15 @@
         {
             "label": "BUILD GNU,gpu",
             "type": "shell",
-            "command": "cd  ${build_dir}/GNU-gpu && make -j${compile_cores}"
+            "command": "cd  ${build_dir}/GNU-gpu && make -j4"
         },
+        {
+            // This doesn't work - spaces, ugh
+            "label": "Build dev container",
+            "type": "shell",
+            "command": "~/.config/devcontainer build --image-name bhimesbhimes/cistem_build_env .devcontainer_build/"
+            // devcontainer is a link I placed to get around the spacing in the name vscode wants.
+            // ~/.config/Code\ -\ Insiders/CodeInsiders/User/globalStorage/ms-vscode-remote.remote-containers/cli-bin/devcontainer-insiders build --image-name bhimesbhimes/cistem_build_env .devcontainer_build/
+        }
     ]
 }

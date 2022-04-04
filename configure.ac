@@ -445,14 +445,6 @@ fi
 
 #fi
 
-# What SVN revision are we using? Inner if clause will not work if svnversion is not callable
-AC_CHECK_PROG(SVB_CHECK,svnversion,yes)
-if test "x$SVN_CHECK" == "xyes" ; then
-  define([svnversion], esyscmd([sh -c "svnversion -n"]))dnl
-  if test "x$svnversion" != "xUnversioned directory"; then
-    AC_DEFINE(CISTEM_SVN_REV, "svnversion", [SVN Revision])
-  fi
-fi
 
 AC_CHECK_PROG(GIT_CHECK,git,yes)
 # If we have git, it must not be too old, e.g. 1.8 is still the default on older OS's like CentOS 7 

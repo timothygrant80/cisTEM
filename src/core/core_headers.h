@@ -51,6 +51,8 @@ const std::complex<float> I(0.0, 1.0);
 #include <chrono>
 #include "sqlite/sqlite3.h"
 #include <wx/wx.h>
+#include <wx/txtstrm.h>
+#include <wx/defs.h>
 #include <wx/socket.h>
 #include <wx/cmdline.h>
 #include <wx/stdpaths.h>
@@ -58,7 +60,6 @@ const std::complex<float> I(0.0, 1.0);
 #include <wx/dir.h>
 #include <wx/wfstream.h>
 #include <wx/tokenzr.h>
-#include <wx/txtstrm.h>
 #include <wx/textfile.h>
 #include <wx/regex.h>
 #include <wx/stackwalk.h>

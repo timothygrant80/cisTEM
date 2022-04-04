@@ -25,4 +25,5 @@ bool GpuDevices::DoCalculation( ) {
     wxPrintf("\nGpuDevices is running...\n\n");
 
     gpuDev.ListDevices( );
+    return true;
 }

@@ -454,7 +454,7 @@ void MatchTemplatePanel::OnUpdateUI(wxUpdateUIEvent& event) {
     }
 }
 
-void MatchTemplatePanel::SetInputsForPossibleReRun(bool set_up_to_resume_job) {
+void MatchTemplatePanel::SetInputsForPossibleReRun(bool set_up_to_resume_job, TemplateMatchJobResults* job_to_resume) {
 
     this->set_up_to_resume_job = set_up_to_resume_job;
     bool enable_value;
@@ -465,6 +465,14 @@ void MatchTemplatePanel::SetInputsForPossibleReRun(bool set_up_to_resume_job) {
         ResumeRunCheckBox->SetValue(true);
         ResumeRunCheckBox->Enable(true);
         ResetAllDefaultsButton->Enable(false);
+
+        ReferenceSelectPanel->SetSelection(job_to_resume->ref_volume_asset_id);
+        DefocusSearchYesRadio->SetValue(job_to_resume->defocus_search_range != 0.0f && job_to_resume->defocus_step != 0.0f);
+        PixelSizeSearchYesRadio->SetValue(job_to_resume->pixel_size_search_range != 0.0f && job_to_resume->pixel_size_step != 0.0f);
+        DefocusSearchRangeNumericCtrl->SetValue(job_to_resume->defocus_search_range);
+        DefocusSearchStepNumericCtrl->SetValue(job_to_resume->defocus_step);
+        PixelSizeSearchRangeNumericCtrl->SetValue(job_to_resume->pixel_size_search_range);
+        PixelSizeSearchStepNumericCtrl->SetValue(job_to_resume->pixel_size_step);
     }
     else {
         // We want to allow the user to not re-run the job if the disable the ReRun radio button.
@@ -528,6 +536,17 @@ void MatchTemplatePanel::SetInputsForPossibleReRun(bool set_up_to_resume_job) {
 void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
 
     active_group.CopyFrom(&image_asset_panel->all_groups_list->groups[GroupComboBox->GetSelection( )]);
+    bool        resume = ResumeRunCheckBox->GetValue( );
+    int         job_id_to_resume;
+    wxArrayLong images_to_resume;
+    if ( resume ) {
+        images_to_resume = CheckForUnfinishedWork(true, true);
+        job_id_to_resume = match_template_results_panel->ResultDataView->ReturnActiveJobID( );
+
+        wxPrintf("Resuming job %i\n", job_id_to_resume);
+        wxPrintf("Number of images %li\n", images_to_resume.GetCount( ));
+        return;
+    }
 
     float resolution_limit;
     float orientations_per_process;
@@ -565,7 +584,8 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
     ImageAsset*  current_image;
     VolumeAsset* current_volume;
 
-    current_volume         = volume_asset_panel->ReturnAssetPointer(ReferenceSelectPanel->GetSelection( ));
+    current_volume = volume_asset_panel->ReturnAssetPointer(ReferenceSelectPanel->GetSelection( ));
+
     ref_box_size_in_pixels = current_volume->x_size / current_volume->pixel_size;
 
     ParameterMap parameter_map;
@@ -1143,18 +1163,17 @@ void MatchTemplatePanel::ResumeRunCheckBoxOnCheckBox(wxCommandEvent& event) {
     }
 }
 
-void MatchTemplatePanel::CheckForUnfinishedWork(bool is_checked, bool is_from_check_box) {
+wxArrayLong MatchTemplatePanel::CheckForUnfinishedWork(bool is_checked, bool is_from_check_box) {
     // This may be called when the user clicks the resume run checkbox.
     // OR
     // When the header in the results panel is changed.
-
+    wxArrayLong unfinished_match_template_ids;
     if ( is_checked ) {
         int active_job_id = match_template_results_panel->ResultDataView->ReturnActiveJobID( );
         // Dummy values that should be set by the above method to query the DB
-        int         images_total                  = active_group.number_of_members;
-        int         images_to_be_processed        = 0;
-        int         images_successfully_processed = 0;
-        wxArrayLong unfinished_match_template_ids;
+        int images_total                  = active_group.number_of_members;
+        int images_to_be_processed        = 0;
+        int images_successfully_processed = 0;
 
         if ( active_group.id == -1 ) {
             unfinished_match_template_ids = main_frame->current_project.database.ReturnLongArrayFromSelectCommand(
@@ -1196,11 +1215,16 @@ void MatchTemplatePanel::CheckForUnfinishedWork(bool is_checked, bool is_from_ch
                                                                                      active_job_id, images_successfully_processed, images_total, "Please Confirm", wxOK));
                 check_dialog->ShowModal( );
             }
-            SetInputsForPossibleReRun(true);
+
+            int                     job_id_to_resume      = match_template_results_panel->ResultDataView->ReturnActiveJobID( );
+            long                    template_match_id     = main_frame->current_project.database.GetTemplateMatchIdForGivenJobId(job_id_to_resume);
+            TemplateMatchJobResults job_results_to_resume = main_frame->current_project.database.GetTemplateMatchingResultByID(template_match_id);
+            SetInputsForPossibleReRun(true, &job_results_to_resume);
         }
     }
     else {
         wxPrintf("ELSE\n");
         SetInputsForPossibleReRun(false);
     }
+    return unfinished_match_template_ids;
 }

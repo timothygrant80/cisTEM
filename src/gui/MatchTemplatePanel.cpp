@@ -466,13 +466,21 @@ void MatchTemplatePanel::SetInputsForPossibleReRun(bool set_up_to_resume_job, Te
         ResumeRunCheckBox->Enable(true);
         ResetAllDefaultsButton->Enable(false);
 
-        ReferenceSelectPanel->SetSelection(job_to_resume->ref_volume_asset_id);
+        ReferenceSelectPanel->SetSelection(volume_asset_panel->ReturnArrayPositionFromAssetID(job_to_resume->ref_volume_asset_id));
+        OutofPlaneStepNumericCtrl->SetValue(wxString::Format(wxT("%f"), job_to_resume->out_of_plane_step));
+        InPlaneStepNumericCtrl->SetValue(wxString::Format(wxT("%f"), job_to_resume->in_plane_step));
+        MinPeakRadiusNumericCtrl->SetValue(wxString::Format(wxT("%f"), job_to_resume->min_peak_radius));
+        HighResolutionLimitNumericCtrl->SetValue(wxString::Format(wxT("%f"), job_to_resume->high_res_limit));
+        SymmetryComboBox->SetValue(job_to_resume->symmetry);
         DefocusSearchYesRadio->SetValue(job_to_resume->defocus_search_range != 0.0f && job_to_resume->defocus_step != 0.0f);
+        DefocusSearchNoRadio->SetValue(job_to_resume->defocus_search_range == 0.0f || job_to_resume->defocus_step == 0.0f);
         PixelSizeSearchYesRadio->SetValue(job_to_resume->pixel_size_search_range != 0.0f && job_to_resume->pixel_size_step != 0.0f);
-        DefocusSearchRangeNumericCtrl->SetValue(job_to_resume->defocus_search_range);
-        DefocusSearchStepNumericCtrl->SetValue(job_to_resume->defocus_step);
-        PixelSizeSearchRangeNumericCtrl->SetValue(job_to_resume->pixel_size_search_range);
-        PixelSizeSearchStepNumericCtrl->SetValue(job_to_resume->pixel_size_step);
+        PixelSizeSearchNoRadio->SetValue(job_to_resume->pixel_size_search_range == 0.0f || job_to_resume->pixel_size_step == 0.0f);
+
+        DefocusSearchRangeNumericCtrl->SetValue(wxString::Format(wxT("%f"), job_to_resume->defocus_search_range));
+        DefocusSearchStepNumericCtrl->SetValue(wxString::Format(wxT("%f"), job_to_resume->defocus_step));
+        PixelSizeSearchRangeNumericCtrl->SetValue(wxString::Format(wxT("%f"), job_to_resume->pixel_size_search_range));
+        PixelSizeSearchStepNumericCtrl->SetValue(wxString::Format(wxT("%f"), job_to_resume->pixel_size_step));
     }
     else {
         // We want to allow the user to not re-run the job if the disable the ReRun radio button.
@@ -542,10 +550,11 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
     if ( resume ) {
         images_to_resume = CheckForUnfinishedWork(true, true);
         job_id_to_resume = match_template_results_panel->ResultDataView->ReturnActiveJobID( );
-
-        wxPrintf("Resuming job %i\n", job_id_to_resume);
-        wxPrintf("Number of images %li\n", images_to_resume.GetCount( ));
-        return;
+        active_group.RemoveAll( );
+        for ( long counter = 0; counter < images_to_resume.GetCount( ); counter++ ) {
+            long image_index = image_asset_panel->ReturnArrayPositionFromAssetID(images_to_resume[counter]);
+            active_group.AddMember(image_index);
+        }
     }
 
     float resolution_limit;
@@ -641,7 +650,8 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
 
     // get first image to make decisions about how many jobs.. .we assume this is representative.
 
-    current_image              = image_asset_panel->ReturnAssetPointer(active_group.members[0]);
+    current_image = image_asset_panel->ReturnAssetPointer(active_group.members[0]);
+
     current_image_euler_search = new EulerSearch;
     // WARNING: resolution_limit below is used before its value is set
     current_image_euler_search->InitGrid(wanted_symmetry, wanted_out_of_plane_angular_step, 0.0, 0.0, 360.0, wanted_in_plane_angular_step, 0.0, current_image->pixel_size / resolution_limit, parameter_map, 1);
@@ -905,9 +915,13 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
 
     // Get ID's from database for writing results as they come in..
 
-    template_match_id     = main_frame->current_project.database.ReturnHighestTemplateMatchID( ) + 1;
-    template_match_job_id = main_frame->current_project.database.ReturnHighestTemplateMatchJobID( ) + 1;
-
+    template_match_id = main_frame->current_project.database.ReturnHighestTemplateMatchID( ) + 1;
+    if ( resume ) {
+        template_match_job_id = job_id_to_resume;
+    }
+    else {
+        template_match_job_id = main_frame->current_project.database.ReturnHighestTemplateMatchJobID( ) + 1;
+    }
     // launch a controller
 
     my_job_id = main_frame->job_controller.AddJob(this, run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection( )].manager_command, run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection( )].gui_address);
@@ -1216,7 +1230,8 @@ wxArrayLong MatchTemplatePanel::CheckForUnfinishedWork(bool is_checked, bool is_
                 check_dialog->ShowModal( );
             }
 
-            int                     job_id_to_resume      = match_template_results_panel->ResultDataView->ReturnActiveJobID( );
+            int job_id_to_resume = match_template_results_panel->ResultDataView->ReturnActiveJobID( );
+            // This returns just one of the finished jobs, so we can get the arguments from it.
             long                    template_match_id     = main_frame->current_project.database.GetTemplateMatchIdForGivenJobId(job_id_to_resume);
             TemplateMatchJobResults job_results_to_resume = main_frame->current_project.database.GetTemplateMatchingResultByID(template_match_id);
             SetInputsForPossibleReRun(true, &job_results_to_resume);

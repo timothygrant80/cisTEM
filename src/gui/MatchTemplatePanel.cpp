@@ -507,11 +507,12 @@ void MatchTemplatePanel::SetInputsForPossibleReRun(bool set_up_to_resume_job, Te
     SetAndRememberEnableState(DefocusSearchStepNumericCtrl, was_enabled_DefocusSearchStepNumericCtrl, enable_value);
 
     // We still want things that are needed to re-run the job to be enabled.
-#ifdef ENABLEGPU
-    UseGpuCheckBox->SetValue(true);
-#else
-    UseGpuCheckBox->SetValue(false); // Already disabled, but also set to un-ticked for visual consistency.
-#endif
+    // This might not be needed
+    //#ifdef ENABLEGPU
+    //    UseGpuCheckBox->SetValue(true);
+    //#else
+    //    UseGpuCheckBox->SetValue(false); // Already disabled, but also set to un-ticked for visual consistency.
+    //#endif
 
     // It is okay to change the run profile for a rerun
     if ( RunProfileComboBox->GetCount( ) > 0 ) {
@@ -1183,6 +1184,9 @@ wxArrayLong MatchTemplatePanel::CheckForUnfinishedWork(bool is_checked, bool is_
     // When the header in the results panel is changed.
     wxArrayLong unfinished_match_template_ids;
     if ( is_checked ) {
+        // active group might have been overriden when resuming a run
+        active_group.CopyFrom(&image_asset_panel->all_groups_list->groups[GroupComboBox->GetSelection( )]);
+
         int active_job_id = match_template_results_panel->ResultDataView->ReturnActiveJobID( );
         // Dummy values that should be set by the above method to query the DB
         int images_total                  = active_group.number_of_members;
@@ -1219,6 +1223,7 @@ wxArrayLong MatchTemplatePanel::CheckForUnfinishedWork(bool is_checked, bool is_
                 check_dialog->ShowModal( );
             }
             ResumeRunCheckBox->SetValue(false);
+            SetInputsForPossibleReRun(false);
         }
         else {
             wxPrintf("Checking for unfinished work for job %d\n", active_job_id);

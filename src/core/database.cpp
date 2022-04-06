@@ -1751,6 +1751,10 @@ void Database::AddTemplateMatchingResult(long wanted_template_match_id, Template
     EndBatchInsert( );
 }
 
+/** 
+ * Returns the Template Match ID for one result of a given Job
+*/
+
 long Database::GetTemplateMatchIdForGivenJobId(long wanted_template_match_job_id) {
     wxString sql_select_command = wxString::Format("SELECT TEMPLATE_MATCH_ID FROM TEMPLATE_MATCH_LIST WHERE TEMPLATE_MATCH_JOB_ID=%li", wanted_template_match_job_id);
     return ReturnSingleLongFromSelectCommand(sql_select_command);

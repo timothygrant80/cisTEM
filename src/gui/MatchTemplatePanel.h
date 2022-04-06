@@ -40,22 +40,6 @@ class MatchTemplatePanel : public MatchTemplatePanelParent {
     bool was_enabled_DefocusSearchRangeNumericCtrl;
     bool was_enabled_DefocusSearchStepNumericCtrl;
 
-    // Save the currently set values of the controls.
-    // These are *not* set until a call to SetInputsForPossibleReRun(true)
-    bool     was_values_set = false;
-    long     was_value_ReferenceSelectPanel;
-    float    was_value_OutofPlaneStepNumericCtrl;
-    float    was_value_InPlaneStepNumericCtrl;
-    float    was_value_MinPeakRadiusNumericCtrl;
-    bool     was_value_DefocusSearchYesRadio;
-    bool     was_value_DefocusSearchNoRadio;
-    bool     was_value_PixelSizeSearchYesRadio;
-    bool     was_value_PixelSizeSearchNoRadio;
-    wxString was_value_SymmetryComboBox;
-    float    was_value_HighResolutionLimitNumericCtrl;
-    float    was_value_DefocusSearchRangeNumericCtrl;
-    float    was_value_DefocusSearchStepNumericCtrl;
-
   public:
     MatchTemplatePanel(wxWindow* parent);
 

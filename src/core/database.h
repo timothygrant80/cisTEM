@@ -341,6 +341,7 @@ class Database {
     void AddTemplateMatchingResult(long wanted_template_match_id, TemplateMatchJobResults& job_details);
 
     TemplateMatchJobResults GetTemplateMatchingResultByID(long wanted_template_match_id);
+    long GetTemplateMatchIdForGivenJobId(long wanted_template_match_job_id);
 
     void AddRefinementAngularDistribution(AngularDistributionHistogram& histogram_to_add, long refinement_id, int class_number);
     void CopyRefinementAngularDistributions(long refinement_id_to_copy, long refinement_id_to_copy_to, int wanted_class_number);

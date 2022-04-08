@@ -310,13 +310,18 @@ bool ReceiveTemplateMatchingResultFromSocket(wxSocketBase* socket, int& image_nu
     return true;
 }
 
-/*
- * When distributing particles across a set of jobs, call this function to work out the first and last particle to assign to
- * a particular job.
- * Note that assume that we are counting from 1. So the first job has current_job_number = 1 and first_particle = 1
- *
+/**
+ * @brief When distributing particles across a set of jobs, call this function to work out the first and last particle to assign to
+ * a particular job. Note that assume that we are counting from 1. So the first job has current_job_number = 1 and first_particle = 1
+ * 
  * Inspired by
  * https://stackoverflow.com/a/26554699/11267786
+ * 
+ * @param first_particle 
+ * @param last_particle 
+ * @param number_of_particles 
+ * @param current_job_number 
+ * @param number_of_jobs 
  */
 void FirstLastParticleForJob(long& first_particle, long& last_particle, long number_of_particles, int current_job_number, int number_of_jobs) {
     // Check inputs
@@ -349,13 +354,13 @@ void FirstLastParticleForJob(long& first_particle, long& last_particle, long num
     }
 }
 
-// This is here as when the binned resolution is too close to the refinement resolution or reconstruction
-// resolution (could be 1 or other or both), then it seems to cause some problems - e.g. in Proteasome.
-// I'm going to add a 1.3 factor here, but this can be changed.
-//
-// My plan is to use this function all the places it is calculated in the code, so that changing it here will change
-// it everywhere.
-
+/**
+ * @brief Returns the binned box size. Previous versions had a factor of 1.3 to deal with refinement cutoffs near Nyquist (hence "safe").
+ * 
+ * @param original_box_size 
+ * @param bin_factor 
+ * @return int 
+ */
 int ReturnSafeBinnedBoxSize(int original_box_size, float bin_factor) {
     //return (original_box_size / bin_factor) * 1.3f;
     return myroundint(float(original_box_size) / bin_factor);
@@ -471,26 +476,51 @@ wxString ReturnIPAddressFromSocket(wxSocketBase* socket) {
     return ip_address;
 }
 
-// Test whether the filename's extension matches; case insensitive
+/**
+ * @brief Test whether the filename's extension matches; case insensitive
+ * 
+ * @param filename 
+ * @param extension 
+ * @return true 
+ * @return false 
+ */
 bool FilenameExtensionMatches(std::string filename, std::string extension) {
     wxFileName input_filename_wx(filename);
     wxString   input_filename_ext = input_filename_wx.GetExt( );
     return input_filename_ext.IsSameAs(extension, false);
 }
 
-/*
- *
- * String manipulations
- *
+/**
+ * @brief Changes the extension of the filename, assuming it follows the last "."
+ * 
+ * @param filename 
+ * @param new_extension 
+ * @return std::string 
  */
 std::string FilenameReplaceExtension(std::string filename, std::string new_extension) {
     return filename.substr(0, filename.find_last_of('.') + 1) + new_extension;
 }
 
+/**
+ * @brief Adds a suffix to the filename preceding the extension.
+ * 
+ * @param filename 
+ * @param suffix_to_add 
+ * @return std::string 
+ */
 std::string FilenameAddSuffix(std::string filename, std::string suffix_to_add) {
     return filename.substr(0, filename.find_last_of('.')) + suffix_to_add + filename.substr(filename.find_last_of('.'), filename.length( ) - 1);
 }
 
+/**
+ * @brief Use to find Fourier friendly sizes larger than the input size, based on prime factors. A Larger factor may permit less padding but result in less efficient tranforms.
+ * 
+ * @param wanted_int 
+ * @param largest_factor 
+ * @param enforce_even 
+ * @param enforce_factor 
+ * @return int 
+ */
 int ReturnClosestFactorizedUpper(int wanted_int, int largest_factor, bool enforce_even, int enforce_factor) {
     int number;
     int remainder = wanted_int;
@@ -541,6 +571,15 @@ int ReturnClosestFactorizedUpper(int wanted_int, int largest_factor, bool enforc
     return number;
 }
 
+/**
+ * @brief Use to find Fourier friendly sizes smaller than the input size, based on prime factors. A Larger factor may permit less padding but result in less efficient tranforms.
+ * 
+ * @param wanted_int input size, that may not be Fourier friendly
+ * @param largest_factor Largest prime factor, often 3 or 5
+ * @param enforce_even 
+ * @param enforce_factor 
+ * @return int 
+ */
 int ReturnClosestFactorizedLower(int wanted_int, int largest_factor, bool enforce_even, int enforce_factor) {
     int number;
     int remainder = wanted_int;
@@ -591,8 +630,15 @@ int ReturnClosestFactorizedLower(int wanted_int, int largest_factor, bool enforc
     return number;
 }
 
+/**
+ * @brief Return the angular step in degrees, that produces an arc length of twice the specified resolution.
+ * (TODO: in my mind it should be 1/2)
+ * @param required_resolution 
+ * @param radius_in_angstroms 
+ * @return float 
+ */
 float CalculateAngularStep(float required_resolution, float radius_in_angstroms) {
-    return 360.0 * required_resolution / PI / radius_in_angstroms;
+    return 360.f * required_resolution / PIf / radius_in_angstroms;
 }
 
 void Allocate2DFloatArray(float**& array, int dim1, int dim2) {

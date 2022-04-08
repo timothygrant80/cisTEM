@@ -20,7 +20,7 @@
         "-e",
         "DISPLAY=${env:DISPLAY}",
         "-v",
-        "${env:XAUTHORITY}:/root/.Xauthority",
+        "${env:XAUTHORITY}:/home/cisTEMx/.Xauthority",
         "-v",
         "/tmp/.X11-unix:/tmp/.X11-unix"
         // You may need to

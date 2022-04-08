@@ -1112,11 +1112,15 @@ static int numCoresAndLogicalProcs(int* physical, int* logical) {
     return (processorCoreCount <= 0 || logicalProcessorCount < 0) ? 1 : 0;
 }
 
-/*
- * Warn the user if the number of threads they are asking for seems
+/**
+ * @brief Warn the user if the number of threads they are asking for seems
  * excessive.
  * If OpenMP is not available, reset the number of threads to 1.
- */
+ *
+ * @param[in] nthreads The number of threads to use.
+ *
+ * @return The number of threads to use.sslak
+*/
 int CheckNumberOfThreads(int number_of_threads) {
 #ifdef _OPENMP
     int number_logical_cores;

@@ -765,7 +765,7 @@ if EXPERIMENTAL_AM
     refine_template_dev_CPPFLAGS = $(WX_CPPFLAGS_BASE)
     refine_template_dev_LDADD = libcore.a $(WX_LIBS_BASE)
 
-    unit_test_runner_SOURCES = test/unit_test_runner.cpp test/core/test_matrix.cpp
+    unit_test_runner_SOURCES = test/unit_test_runner.cpp test/core/test_matrix.cpp test/core/test_functions.cpp
     unit_test_runner_CXXFLAGS = $(WX_CPPFLAGS_BASE)
     unit_test_runner_CPPFLAGS = $(WX_CPPFLAGS_BASE)
     unit_test_runner_LDADD = libcore.a $(WX_LIBS_BASE)

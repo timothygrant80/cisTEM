@@ -1,4 +1,4 @@
-#include "../../core/functions.h"
+#include "../../core/core_headers.h"
 #include "../../../include/catch2/catch.hpp"
 
 TEST_CASE("ZeroBoolArray", "[ZeroBoolArray]") {
@@ -42,7 +42,7 @@ TEST_CASE("FilenameReplaceExtension", "[FilenameReplaceExtension]") {
 
 TEST_CASE("FilenameAddSuffix") {
     std::string filename = "test.txt";
-    std::string suffix   = "new";
+    std::string suffix   = "_new";
     std::string expected = "test_new.txt";
     REQUIRE(FilenameAddSuffix(filename, suffix) == expected);
 }

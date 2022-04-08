@@ -7,12 +7,11 @@ module_objects=${1}
 Po_name=${2}
 
 # Search all files to indicate they depend on a given set of modules
-a=($(awk '/.c\+\+m/{if(!/^CXX_IMPORTS/) print $0}' $Po_name))
+a=($(awk '{if(/.c\+\+m/ && !/^CXX_IMPORTS/) print $0}' $Po_name))
 
 record_length=${#a[@]}
-
 my_tmp=$(tempfile)
-if [ $record_length -gt 1 ] ; then
+if [ $record_length -gt 0 ] ; then
     # The first word is just the path to the target object file, this stays unchanged
     modified_dependency="${a[0]}"
     for word in $(seq 1 $((record_length - 1))) ; do

@@ -530,6 +530,6 @@ AC_SUBST(CUDA_LIBS)
 
   AC_MSG_NOTICE([Using CUDA_CXXFLAGS=$CUDA_CXXFLAGS])
 
-AC_CONFIG_FILES([Makefile src/modules/Makefile src/Makefile])
+AC_CONFIG_FILES([Makefile src/Makefile])
 AC_CONFIG_HEADERS([cistem_config.h:cistem_config.in])
 AC_OUTPUT

@@ -8,10 +8,9 @@ path_to_fix_deps=${2}
 tmp_objects=$(mktemp)
 find . -name libmodules_a*.o > ${tmp_objects}
 
-
 # # List of all the dep files that may include these modules.
 # # If we don't limit the number of args (n) then only one proc (not P) is run
-find . -name *.Po | xargs -n 3 -P $n_threads $path_to_fix_deps $tmp_objects
+find . -name *.Po | grep -v libmodules | parallel -j${n_threads} $path_to_fix_deps $tmp_objects {}
 
 # Cleanup
 rm $tmp_objects

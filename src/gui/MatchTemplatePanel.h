@@ -95,7 +95,7 @@ class MatchTemplatePanel : public MatchTemplatePanelParent {
     void ResetDefaults( );
 
     // Functions for interacting with the results panel and possibly resuming a job
-    void SetInputsForPossibleReRun(bool set_up_to_resume_job);
+    void SetInputsForPossibleReRun(bool set_up_to_resume_job, TemplateMatchJobResults* results_to_resume = nullptr);
 
     template <class T>
     inline void SetAndRememberEnableState(T* control_to_disable, bool& was_enabled, bool set_to = false) {
@@ -103,8 +103,8 @@ class MatchTemplatePanel : public MatchTemplatePanelParent {
         control_to_disable->Enable(set_to);
     }
 
-    void ResumeRunCheckBoxOnCheckBox(wxCommandEvent& event);
-    void CheckForUnfinishedWork(bool is_checked, bool is_from_check_box);
+    void        ResumeRunCheckBoxOnCheckBox(wxCommandEvent& event);
+    wxArrayLong CheckForUnfinishedWork(bool is_checked, bool is_from_check_box);
 };
 
 #endif

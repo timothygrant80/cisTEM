@@ -88,8 +88,6 @@ RUN cd /tmp && wget https://download.pytorch.org/libtorch/cu113/libtorch-cxx11-a
 ENV LD_RUN_PATH=/opt/libtorch/lib:${LD_RUN_PATH}
 # cisTEMx@derp:~$ g++ -L/opt/libtorch/lib -I/opt/libtorch/include -I/opt/libtorch/include/torch/csrc/api/include test_torch.cpp -o tt -ltorch -lc10 -ltorch_cpu -ltorch_cuda_cppFH
 
-# Install catch2 v3
-RUN cd /opt && git clone https://github.com/catchorg/Catch2.git && cd Catch2 && mkdir -p build && cd build && cmake ..
 # clang format
 # 14 - these goa t the end of /etc/apt/sources.list
 RUN echo "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-14 main" | tee -a /etc/apt/sources.list && \

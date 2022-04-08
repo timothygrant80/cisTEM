@@ -39,24 +39,33 @@ AC_MSG_NOTICE([Setting up initial flags])
 #
 want_cuda="no"
 AX_CUDA 
-CPP_STANDARD=17
-# if test "$want_cuda" = "yes" ; then
-#   CPP_STANDARD=17
-# else
-#   CPP_STANDARD=11
-# fi
 
-# if test "x$CXX" = "xclang++"; then
-#   CPP_STANDARD=17
-# fi
+want_modules="no"
+
+if test "x$CXX" != "xg++"; then
+    CPP_STANDARD=17
+else
+    CPP_STANDARD=20
+    AC_DEFINE([_CISTEM_MODULES], [], [Define whether we build with modules or not])  
+    want_modules="yes"  
+fi
+
+AM_CONDITIONAL([MODULES_AM], [test "$want_modules" = "yes"])
+
+
+# TODO: this is not used, currently AX_CUDA checks std=c++ = cuda > 11.0 ? 17 : 11
+CUDA_CPP_STANDARD=17
+
+
+
 
 # check to see if compiler warnings are desired.
 
-AC_ARG_ENABLE([disable-warnings], AS_HELP_STRING([--disable compiler warnings], [Default=false]), 
+AC_ARG_ENABLE([warnings], AS_HELP_STRING([--disable compiler warnings], [Default=false]), 
 [
 	# If flag do this
 	if test "x$enableval" = "no" ; then
-		WARNINGS_ON=""		
+		WARNINGS_ON="-w"		
 	else
 		if test "x$CXX" = "xicpc"; then		
 			WARNINGS_ON="-w2"
@@ -75,19 +84,18 @@ AC_ARG_ENABLE([disable-warnings], AS_HELP_STRING([--disable compiler warnings], 
 ])
 
 
-# AC_DEFINE_UNQUOTED([_FILE_OFFSET_BITS], [64], [Define the file offset bits])
-# AC_DEFINE([_LARGEFILE_SOURCE], [], [Define the large file source])
+# The cpp std is currently diffent between cuda and gcc so we set this at the end
 if test "x$CXX" = "xicpc"; then		
-	CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -no-prec-sqrt $WARNINGS_ON -std=c++${CPP_STANDARD} -wd1125"
+	CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -no-prec-sqrt $WARNINGS_ON -wd1125"
 	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -no-prec-sqrt $WARNINGS_ON"
 else 
   if test "x$CXX" = "xclang++"; then
     # Clang needs the -no-c++11-narrowing suppression to compile
-	  CXXFLAGS="$CXXFLAGS -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -std=c++${CPP_STANDARD} -Wno-c++11-narrowing" 		
+	  CXXFLAGS="$CXXFLAGS -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -Wno-c++11-narrowing" 		
 	  CPPFLAGS="$CPPFLAGS -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations"
   else 
-	  CXXFLAGS="$CXXFLAGS -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -std=c++${CPP_STANDARD}" 		
-	  CPPFLAGS="$CPPFLAGS -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations"
+	  CXXFLAGS="$CXXFLAGS -fmodules-ts -flang-info-module-cmi -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations" 		
+	  CPPFLAGS="$CPPFLAGS -fmodules-ts -flang-info-module-cmi -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations"
 
 	  #sqlite needs dl on gcc
 	
@@ -185,11 +193,13 @@ AC_ARG_ENABLE(debugmode, AS_HELP_STRING([--enable-debugmode],[Compile in debug m
   if test "$enableval" = yes; then
     AC_DEFINE([DEBUG], [], [Define the debug flag])
     if test "x$CXX" = "xicpc"; then   
-        CXXFLAGS="-O2 -debug -no-prec-div -no-prec-sqrt $WARNINGS_ON -std=c++${CPP_STANDARD} -wd1125"
+        # The cpp std is currently diffent between cuda and gcc so we set this at the end
+        CXXFLAGS="-O2 -debug -no-prec-div -no-prec-sqrt $WARNINGS_ON -wd1125"
         CPPFLAGS="-O2 -debug -no-prec-div -no-prec-sqrt $WARNINGS_ON"
     else
-        CPPFLAGS="-O2 -g $WARNINGS_ON $INPUT_CPPFLAGS"
-        CXXFLAGS="-O2 -g -std=c++${CPP_STANDARD} $WARNINGS_ON $INPUT_CXXFLAGS"
+        # The cpp std is currently diffent between cuda and gcc so we set this at the end
+        CPPFLAGS="-O2 -g -fmodules-ts -flang-info-module-cmi $WARNINGS_ON $INPUT_CPPFLAGS"
+        CXXFLAGS="-O2 -g -fmodules-ts -flang-info-module-cmi $WARNINGS_ON $INPUT_CXXFLAGS"
     fi
   else
     AC_DEFINE([NDEBUG], [], [Define the nodebug flag for either g++ or clang builds])
@@ -368,7 +378,7 @@ if test -n "$vers" && test "$vers" -ge 3000004; then
           WX_CXXFLAGS_BASE="`$WXCONFIG $WXCONFIGFLAGS --cxxflags base | sed -e 's/-fno-exceptions//'`"
           WX_LIBS_BASE="`$WXCONFIG $WXCONFIGFLAGS --libs base,net,xml`"
         fi
-                
+        
         wx_is_available=1
 else
         AC_MSG_ERROR("Only wxWidgets version 3.0.4+ is currently supported.")
@@ -492,6 +502,24 @@ CUDA_TO_CXX="`echo $CXXFLAGS $WX_CXXFLAGS | sed -e 's/\s\+/,/g' | awk '{print "-
 CUDA_CPPFLAGS="$CUDA_CPPFLAGS $CUDA_TO_CPP "
 CUDA_CXXFLAGS="$CUDA_CXXFLAGS $CUDA_TO_CXX "
 
+# Finally set the cpp standard which may be divergent between different backends
+CXXFLAGS="$CXXFLAGS -std=c++${CPP_STANDARD}"
+CPPFLAGS="$CPPFLAGS -std=c++${CPP_STANDARD}"
+
+CUDA_CPPFLAGS="$CUDA_CPPFLAGS -std=c++${CUDA_CPP_STANDARD} -Xcompiler -std=c++${CUDA_CPP_STANDARD}"
+CUDA_CXXFLAGS="$CUDA_CXXFLAGS -std=c++${CUDA_CPP_STANDARD} -Xcompiler -std=c++${CUDA_CPP_STANDARD}"
+
+
+if test "x$CXX" = "xg++"; then
+    if test "x$want_modules" = "xyes"; then
+        MODULES_CXXFLAGS="$CXXFLAGS -fmodules-ts -flang-info-module-cmi -x c++"
+        MODULES_CPPFLAGS="$CPPFLAGS -fmodules-ts -flang-info-module-cmi -x c++" 
+    fi
+fi
+AC_MSG_NOTICE([check flags is g++ want modules value is $MODULES_CXXFLAGS])
+
+AC_SUBST(MODULES_CXXFLAGS)
+AC_SUBST(MODULES_CPPFLAGS)
 AC_SUBST(WX_LIBS)
 AC_SUBST(WX_CPPFLAGS)
 AC_SUBST(WX_LIBS_BASE)

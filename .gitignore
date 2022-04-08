@@ -25,3 +25,9 @@ RemoteSystemsTempFiles
 .devcontainer
 cistem_config.in*
 scripts/testing/post_format_test.cpp
+
+# g++ compiled module interfaces
+gcm.*
+module_app
+*.a
+*.o 

@@ -7,8 +7,12 @@
 
 #include "../../core/core_headers.h"
 
+#ifdef _CISTEM_MODULES
+import hello;
+import hello2;
+#endif
 // embedded images..
-
+#define atest
 #include "hiv_image_80x80x1.cpp"
 #include "hiv_images_shift_noise_80x80x10.cpp"
 #include "sine_128x128x1.cpp"
@@ -50,9 +54,7 @@ void print2DArray(Image& image) {
     wxPrintf("\n");
 }
 
-class
-        MyTestApp : public MyApp //public wxAppConsole
-{
+class MyTestApp : public MyApp {
     wxString hiv_image_80x80x1_filename;
     wxString hiv_images_80x80x10_filename;
     wxString sine_wave_128x128x1_filename;
@@ -110,6 +112,10 @@ class
     void WriteEmbeddedArray(const char* filename, const unsigned char* array, long length);
     void WriteNumericTextFile(const char* filename);
     void WriteDatabase(const char* dir, const char* filename);
+
+#ifdef _CISTEM_MODULES
+    void TestModules( );
+#endif
 };
 
 IMPLEMENT_APP(MyTestApp)
@@ -156,6 +162,10 @@ bool MyTestApp::DoCalculation( ) {
     TestSumOfSquaresFourierAndFFTNormalization( );
     TestRandomVariableFunctions( );
     TestIntegerShifts( );
+
+#ifdef _CISTEM_MODULES
+    TestModules( );
+#endif
 
     wxPrintf("\n\n\n");
 
@@ -458,7 +468,7 @@ void MyTestApp::TestClipIntoFourier( ) {
 void MyTestApp::TestDatabase( ) {
     BeginTest("Database");
 
-    temp_directory = wxFileName::GetTempDir( );
+    temp_directory             = wxFileName::GetTempDir( );
     wxString database_filename = temp_directory + "/1_0_test/1_0_test.db";
     Project  project;
     Database database;
@@ -1726,6 +1736,21 @@ void MyTestApp::TestFFTFunctions( ) {
 
     EndTest( );
 }
+
+#ifdef _CISTEM_MODULES
+void MyTestApp::TestModules( ) {
+
+    BeginTest("Cpp20 Module");
+    if ( hello::test_return_value( ) != 40 ) {
+        FailTest;
+    }
+    if ( hello2::test_return_value( ) != 42 ) {
+        FailTest;
+    }
+
+    EndTest( );
+}
+#endif
 
 void MyTestApp::BeginTest(const char* test_name) {
     // For access by other tests when running CheckDependencies

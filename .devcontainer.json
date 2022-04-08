@@ -1,8 +1,8 @@
 // For format details, see https://aka.ms/devcontainer.json. For config options, see the README at:
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.230.0/containers/ubuntu
 {
-    "name": "cisTEMx-0.1",
-    "image": "bhimesbhimes/cistem_build_dev:latest",
+    // "name": "cisTEMx-0.1",
+    "image": "bhimesbhimes/cistem_build_env:latest",
     // Set *default* container specific settings.json values on container create.
     "settings": {},
     // Add the IDs of extensions you want installed when the container is created.

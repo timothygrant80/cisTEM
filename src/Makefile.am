@@ -233,23 +233,26 @@ if ENABLESAMPLES_AM
 noinst_HEADERS +=  programs/samples/samples_functional_testing.h 
 noinst_HEADERS +=  programs/samples/common/helper_functions.h programs/samples/common/embedded_test_file.h programs/samples/common/numeric_test_file.h
 noinst_HEADERS +=  programs/samples/common/common.h programs/samples/0_simple/simple.h 
+
 if ENABLEGPU_AM
 noinst_HEADERS += programs/samples/1_cpu_gpu_comparison/cpu_gpu_comparison.h
 endif
+
 endif
 	
-
 noinst_LIBRARIES = libcore.a libguicore.a
+
 
 bin_PROGRAMS = unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan make_orth_views sharpen_map calculate_fsc make_size_map prepare_stack prepare_stack_classaverage align_symmetry subtract_from_stack binarize  move_volume_xyz  symmetry_expand_stack_and_par fft local_resolution local_resolution_finalize local_resolution_filter subtract_two_stacks add_two_stacks multiply_two_stacks divide_two_stacks invert_stack convert_par_to_star align_coordinates find_dqe combine_via_max refine_ctf estimate_beamtilt remove_relion_stripes warp_to_cistem create_mask invert_hand niko_test append_stacks cisTEM convert_star_to_binary convert_binary_to_star convert_eer_to_mrc azimuthal_average normalize_stack print_stack_statistics combine_stacks_by_star match_template refine_template make_template_result prepare_stack_matchtemplate
 
 if EXPERIMENTAL_AM   
-bin_PROGRAMS += refine_template_dev simulate sum_all_power_spectra
+bin_PROGRAMS += refine_template_dev simulate sum_all_power_spectra cistem_test_runner
 endif
 
 if ENABLESAMPLES_AM
 bin_PROGRAMS +=  samples_functional_testing
 endif 
+
 
 if ENABLEGPU_AM
 bin_PROGRAMS += gpu_util_test gpu_devices
@@ -365,7 +368,18 @@ cisTEM_job_control_LDADD = libcore.a $(WX_LIBS_BASE)
 console_test_SOURCES = programs/console_test/console_test.cpp 
 console_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 console_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+
+if MODULES_AM
+noinst_LIBRARIES += libmodules.a 
+libmodules_a_SOURCES = programs/samples/2_modules/hello.cpp \
+                        programs/samples/2_modules/hello2.cpp
+libmodules_a_CXXFLAGS = $(MODULES_CXXFLAGS)
+libmodules_a_CPPFLAGS = $(MODULES_CXXFLAGS)
+
+console_test_LDADD = libmodules.a libcore.a $(WX_LIBS_BASE)
+else
 console_test_LDADD = libcore.a $(WX_LIBS_BASE)
+endif
 
 unblur_SOURCES = programs/unblur/unblur.cpp
 unblur_CXXFLAGS = $(WX_CPPFLAGS_BASE)
@@ -750,6 +764,11 @@ if EXPERIMENTAL_AM
     refine_template_dev_CXXFLAGS = $(WX_CPPFLAGS_BASE)
     refine_template_dev_CPPFLAGS = $(WX_CPPFLAGS_BASE)
     refine_template_dev_LDADD = libcore.a $(WX_LIBS_BASE)
+
+    cistem_test_runner_SOURCES = test/cistem_test_runner.cpp test/core/test_matrix.cpp
+    cistem_test_runner_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+    cistem_test_runner_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+    cistem_test_runner_LDADD = libcore.a $(WX_LIBS_BASE)
 endif
 
 
@@ -766,4 +785,5 @@ gpu_devices_SOURCES =  programs/gpu_devices/gpu_devices.cpp
 gpu_devices_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 gpu_devices_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 gpu_devices_LDADD =  libgpucore.a libcore.a $(WX_LIBS_BASE) $(CUDA_LIBS)
+
 endif

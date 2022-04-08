@@ -1,5 +1,7 @@
 FROM ubuntu:20.04
 
+# /groups/himesb/.config/Code\ -\ Insiders/User/globalStorage/ms-vscode-remote.remote-containers/cli-bin/code-insiders build --image-name bhimesbhimes/cistem_build_env:latest ./.devcontainer_build
+
 # For compiling wxWidgets
 ARG n_threads=24
 ARG DEBIAN_FRONTEND=noninteractive
@@ -20,7 +22,7 @@ RUN useradd -ms /bin/bash cisTEMx
 RUN echo "cisTEMx:cisTEMx" | chpasswd && adduser cisTEMx sudo
 
 RUN apt-get --allow-releaseinfo-change update && apt-get install -y libgtk2.0-dev \
-    libtool autoconf autotools-dev nano gedit meld \
+    libtool autoconf autotools-dev nano gedit meld cmake \
     fftw3-dev libtiff-dev software-properties-common libffi-dev \
     libbz2-dev libsqlite3-dev zlib1g-dev libjpeg-dev libtiff-dev \
     libreadline-dev liblzma-dev libssl-dev libncursesw5-dev wget \
@@ -50,9 +52,9 @@ RUN add-apt-repository ppa:ubuntu-toolchain-r/test -y && \
     /usr/bin/g++ g++ /usr/bin/g++-${GCC_VER} --slave /usr/bin/gcov gcov /usr/bin/gcov-${GCC_VER} \
     && rm -rf /var/lib/apt/lists/*
 
-#Need newer git for Github actions
-RUN add-apt-repository ppa:git-core/ppa -y && apt-get --allow-releaseinfo-change update && apt-get install -y git \
-    && rm -rf /var/lib/apt/lists/*
+# Need newer git for Github actions (requires > git 2.18 so for ubuntu > 20.04 this is standard )
+# RUN add-apt-repository ppa:git-core/ppa -y && apt-get --allow-releaseinfo-change update && apt-get install -y git \
+#     && rm -rf /var/lib/apt/lists/*
 
 
 RUN wget -q https://github.com/wxWidgets/wxWidgets/releases/download/v3.0.5/wxWidgets-3.0.5.tar.bz2 -O /tmp/wxwidgets.tar.bz2 && \
@@ -77,15 +79,17 @@ RUN tf=`tempfile` && cp /usr/local/include/wx-3.0/wx/longlong.h /usr/local/inclu
     chmod a+r /usr/local/include/wx-3.0/wx/longlong.h
 
 # Let's also grab pytorch
-RUN cd /tmp && wget https://download.pytorch.org/libtorch/cu113/libtorch-cxx11-abi-static-with-deps-1.11.0%2Bcu113.zip && \
-    unzip libtorch-cxx11-abi-static-with-deps-1.11.0+cu113.zip && \
-    rm libtorch-cxx11-abi-static-with-deps-1.11.0+cu113.zip && \
+RUN cd /tmp && wget https://download.pytorch.org/libtorch/cu113/libtorch-cxx11-abi-shared-with-deps-1.11.0%2Bcu113.zip && \
+    unzip libtorch-cxx11-abi-shared-with-deps-1.11.0+cu113.zip && \
+    rm libtorch-cxx11-abi-shared-with-deps-1.11.0+cu113.zip && \
     mv libtorch /opt
 
 # Include the lib path in LD_RUN_PATH so on linking, the correct path is known 
 ENV LD_RUN_PATH=/opt/libtorch/lib:${LD_RUN_PATH}
 # cisTEMx@derp:~$ g++ -L/opt/libtorch/lib -I/opt/libtorch/include -I/opt/libtorch/include/torch/csrc/api/include test_torch.cpp -o tt -ltorch -lc10 -ltorch_cpu -ltorch_cuda_cppFH
 
+# Install catch2 v3
+RUN cd /opt && git clone https://github.com/catchorg/Catch2.git && cd Catch2 && mkdir -p build && cd build && cmake ..
 # clang format
 # 14 - these goa t the end of /etc/apt/sources.list
 RUN echo "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-14 main" | tee -a /etc/apt/sources.list && \

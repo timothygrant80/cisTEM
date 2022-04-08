@@ -89,12 +89,12 @@
         {
             "label": "CONFIG GNU ,gpu",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/GNU-gpu && cd ${build_dir}/GNU-gpu && CC=gcc CXX=g++ ../../configure  --disable-mkl --enable-experimental --with-cuda=/usr/local/cuda --enable-staticmode --enable-openmp"
+            "command": "mkdir -p ${build_dir}/GNU-gpu && cd ${build_dir}/GNU-gpu && CC=gcc CXX=g++ ../../configure --enable-samples --disable-mkl --enable-experimental --with-cuda=/usr/local/cuda --enable-staticmode --enable-openmp"
         },
         {
             "label": "BUILD GNU,gpu",
             "type": "shell",
-            "command": "cd  ${build_dir}/GNU-gpu && make -j4"
+            "command": "${workspaceFolder}/scripts/cistem_make.sh ${build_dir}/GNU-gpu ${compile_cores}"
         },
         {
             // This doesn't work - spaces, ugh

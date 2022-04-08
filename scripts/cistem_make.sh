@@ -10,16 +10,16 @@ fi
 
 # We need to first  build any modules
 cd ${build_dir}/src
-cd ..
-# make -j${n_threads} libmodules.a
 
-# # Now do the normal build
-# cd ..
-# make -j${n_threads}
+make -j${n_threads} libmodules.a
+
+# Now do the normal build
+cd ..
+make -j${n_threads}
 
 # Get the top level directory relative to the build dir
 top_srcdir=$(awk '/^top_srcdir/ {print $3}' Makefile)
-echo $top_srcdir
+
 # Finally we need to fix the dependency files which are somewhat broken for modules as of now
 cd src
 ${top_srcdir}/../scripts/module_deps_find.sh ${n_threads} ${top_srcdir}/../scripts/module_deps_fix.sh

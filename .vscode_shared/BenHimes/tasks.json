@@ -89,20 +89,18 @@
         {
             "label": "CONFIG GNU ,gpu",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/GNU-gpu && cd ${build_dir}/GNU-gpu && CC=gcc CXX=g++ ../../configure --enable-samples --disable-mkl --enable-experimental --with-cuda=/usr/local/cuda --enable-staticmode --enable-openmp"
+            "command": "mkdir -p ${build_dir}/GNU-gpu && cd ${build_dir}/GNU-gpu && CC=gcc CXX=g++ ../../configure --enable-samples --disable-mkl --enable-experimental --with-cuda=/usr/local/cuda --disable-staticmode --enable-openmp"
         },
         {
             "label": "BUILD GNU,gpu",
             "type": "shell",
-            "command": "${workspaceFolder}/scripts/cistem_make.sh ${build_dir}/GNU-gpu ${compile_cores}"
+            "command": "${workspaceFolder}/scripts/cistem_make.sh ${build_dir}/GNU-gpu ${compile_cores}",
+            "problemMatcher": []
         },
         {
-            // This doesn't work - spaces, ugh
             "label": "Build dev container",
             "type": "shell",
             "command": "~/.config/devcontainer build --image-name bhimesbhimes/cistem_build_env .devcontainer_build/"
-            // devcontainer is a link I placed to get around the spacing in the name vscode wants.
-            // ~/.config/Code\ -\ Insiders/CodeInsiders/User/globalStorage/ms-vscode-remote.remote-containers/cli-bin/devcontainer-insiders build --image-name bhimesbhimes/cistem_build_env .devcontainer_build/
         }
     ]
 }

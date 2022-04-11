@@ -11017,6 +11017,28 @@ RefineTemplateDevPanelParent::~RefineTemplateDevPanelParent()
 
 }
 
+WebViewPanelParent::WebViewPanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : JobPanel( parent, id, pos, size, style, name )
+{
+	bSizer43 = new wxBoxSizer( wxVERTICAL );
+
+	m_staticline149 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer43->Add( m_staticline149, 0, wxEXPAND | wxALL, 5 );
+
+
+	this->SetSizer( bSizer43 );
+	this->Layout();
+
+	// Connect Events
+	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( WebViewPanelParent::OnUpdateUI ) );
+}
+
+WebViewPanelParent::~WebViewPanelParent()
+{
+	// Disconnect Events
+	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( WebViewPanelParent::OnUpdateUI ) );
+
+}
+
 NewProjectWizard::NewProjectWizard( wxWindow* parent, wxWindowID id, const wxString& title, const wxBitmap& bitmap, const wxPoint& pos, long style )
 {
 	this->Create( parent, id, title, bitmap, pos, style );

@@ -99,7 +99,7 @@ else
 
 	  #sqlite needs dl on gcc
 	
-	  LIBS="$LIBS -ldl"
+	  LIBS="$LIBS -ldl -lz"
   fi
 fi
 

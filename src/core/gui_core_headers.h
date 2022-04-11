@@ -129,6 +129,7 @@
 #ifdef EXPERIMENTAL
 #include "../gui/MyExperimentalPanel.h"
 #include "../gui/RefineTemplateDevPanel.h"
+// #include "../gui/WebViewPanel.h"
 #include "../gui/AtomicCoordinatesAssetPanel.h"
 #include "../gui/AtomicCoordinatesChooserDialog.h"
 #include "../gui/AtomicCoordinatesImportDialog.h"

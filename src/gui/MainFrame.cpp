@@ -291,6 +291,8 @@ void MyMainFrame::DirtyVolumes( ) {
 #ifdef EXPERIMENTAL
     match_template_panel->volumes_are_dirty  = true;
     refine_template_panel->volumes_are_dirty = true;
+    match_template_results_panel->volumes_are_dirty = true;
+
 #endif
 }
 

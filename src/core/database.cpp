@@ -340,6 +340,10 @@ int Database::ReturnNumberOfTemplateMatchingJobs( ) {
     return ReturnSingleIntFromSelectCommand("SELECT COUNT(DISTINCT TEMPLATE_MATCH_JOB_ID) FROM TEMPLATE_MATCH_LIST");
 }
 
+int Database::ReturnNumberOfTemplateMatchingJobsGivenVolumeAssetId(int wanted_asset_id) {
+    return ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(DISTINCT TEMPLATE_MATCH_JOB_ID) FROM TEMPLATE_MATCH_LIST WHERE REFERENCE_VOLUME_ASSET_ID = %i", wanted_asset_id));
+}
+
 int Database::ReturnNumberOfPickingJobs( ) {
     return ReturnSingleIntFromSelectCommand("SELECT COUNT(DISTINCT PICKING_JOB_ID) FROM PARTICLE_PICKING_LIST");
 }
@@ -407,6 +411,25 @@ void Database::GetUniqueTemplateMatchIDs(long* template_match_job_ids, int numbe
     bool more_data;
 
     more_data = BeginBatchSelect("SELECT DISTINCT TEMPLATE_MATCH_JOB_ID FROM TEMPLATE_MATCH_LIST") == true;
+
+    for ( int counter = 0; counter < number_of_template_match_jobs; counter++ ) {
+        if ( more_data == false ) {
+            MyPrintWithDetails("Unexpected end of select command");
+            DEBUG_ABORT;
+        }
+
+        more_data = GetFromBatchSelect("l", &template_match_job_ids[counter]);
+    }
+
+    EndBatchSelect( );
+}
+
+void Database::GetUniqueTemplateMatchIDsGivenVolumeAssetId(long* template_match_job_ids, int number_of_template_match_jobs, int wanted_asset_id) {
+    MyDebugAssertTrue(is_open == true, "database not open!");
+
+    bool more_data;
+
+    more_data = BeginBatchSelect(wxString::Format("SELECT DISTINCT TEMPLATE_MATCH_JOB_ID FROM TEMPLATE_MATCH_LIST WHERE REFERENCE_VOLUME_ASSET_ID = %i", wanted_asset_id)) == true;
 
     for ( int counter = 0; counter < number_of_template_match_jobs; counter++ ) {
         if ( more_data == false ) {
@@ -532,6 +555,10 @@ bool Database::Open(wxFileName file_to_open, bool disable_locking) {
         MyPrintWithDetails("Attempting to open a new database, but the file does not exist");
         return false;
     }
+
+    // make a copy of the database before opening it. The backup filename should contain the current date and time.
+    wxString backup_filename = file_to_open.GetFullPath( ) + wxString::Format("backup_%s", wxDateTime::Now( ).Format("%F_%H-%M-%S"));
+    wxCopyFile(file_to_open.GetFullPath( ), backup_filename);
 
     if ( disable_locking == true )
         return_code = sqlite3_open_v2(file_to_open.GetFullPath( ).ToUTF8( ).data( ), &sqlite_database, SQLITE_OPEN_READWRITE, "unix-none");

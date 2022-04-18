@@ -9,7 +9,7 @@ class MatchTemplateResultsPanel : public MatchTemplateResultsPanelParent {
     void OnUpdateUI(wxUpdateUIEvent& event);
     void OnValueChanged(wxDataViewEvent& event);
     void FillGroupComboBox( );
-    void FillBasedOnSelectCommand(wxString wanted_command);
+    void FillBasedOnSelectCommand(wxString wanted_command, int wanted_volume_asset_id = -1);
     int  ReturnRowFromAssetID(int asset_id, int start_location = 0);
     void OnAddAllToGroupClick(wxCommandEvent& event);
     void FillResultsPanelAndDetails(int row, int column);
@@ -18,6 +18,7 @@ class MatchTemplateResultsPanel : public MatchTemplateResultsPanelParent {
     void OnAddToGroupClick(wxCommandEvent& event);
     void OnRemoveFromGroupClick(wxCommandEvent& event);
     void OnJobDetailsToggle(wxCommandEvent& event);
+    void OnTemplateComboBox(wxCommandEvent& event);
     void Clear( );
 
     int  GetFilter( );
@@ -38,6 +39,7 @@ class MatchTemplateResultsPanel : public MatchTemplateResultsPanelParent {
 
     bool is_dirty;
     bool group_combo_is_dirty;
+    bool volumes_are_dirty;
 
     wxString current_fill_command;
 };

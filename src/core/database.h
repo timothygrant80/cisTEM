@@ -142,12 +142,15 @@ class Database {
     int ReturnNumberOfAlignmentJobs( );
     int ReturnNumberOfCTFEstimationJobs( );
     int ReturnNumberOfTemplateMatchingJobs( );
+    int ReturnNumberOfTemplateMatchingJobsGivenVolumeAssetId(int wanted_asset_id);
     int ReturnNumberOfPickingJobs( );
     int ReturnNumberOfImageAssetsWithCTFEstimates( );
 
     void GetUniqueAlignmentIDs(int* alignment_job_ids, int number_of_alignmnet_jobs);
     void GetUniqueCTFEstimationIDs(int* ctf_estimation_job_ids, int number_of_ctf_estimation_jobs);
     void GetUniqueTemplateMatchIDs(long* template_match_job_ids, int number_of_template_match_jobs);
+    void GetUniqueTemplateMatchIDsGivenVolumeAssetId(long* template_match_job_ids, int number_of_template_match_jobs, int wanted_asset_id);
+
     void GetUniquePickingJobIDs(int* picking_job_ids, int number_of_picking_jobs);
     void GetUniqueIDsOfImagesWithCTFEstimations(int* image_ids, int& number_of_image_ids);
 
@@ -341,7 +344,7 @@ class Database {
     void AddTemplateMatchingResult(long wanted_template_match_id, TemplateMatchJobResults& job_details);
 
     TemplateMatchJobResults GetTemplateMatchingResultByID(long wanted_template_match_id);
-    long GetTemplateMatchIdForGivenJobId(long wanted_template_match_job_id);
+    long                    GetTemplateMatchIdForGivenJobId(long wanted_template_match_job_id);
 
     void AddRefinementAngularDistribution(AngularDistributionHistogram& histogram_to_add, long refinement_id, int class_number);
     void CopyRefinementAngularDistributions(long refinement_id_to_copy, long refinement_id_to_copy_to, int wanted_class_number);

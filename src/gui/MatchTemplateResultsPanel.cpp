@@ -6,6 +6,7 @@ extern MyMainFrame*        main_frame;
 extern MyImageAssetPanel*  image_asset_panel;
 extern MyMovieAssetPanel*  movie_asset_panel;
 extern MatchTemplatePanel* match_template_panel;
+extern MyVolumeAssetPanel* volume_asset_panel;
 
 static void OnHeaderClick( ) {
     // Rather than access members directly, create a method in MatchTemplatePanel to do this stuff.
@@ -26,15 +27,21 @@ MatchTemplateResultsPanel::MatchTemplateResultsPanel(wxWindow* parent)
     selected_column  = -1;
     doing_panel_fill = false;
 
-    current_fill_command = "SELECT IMAGE_ASSET_ID FROM TEMPLATE_MATCH_LIST";
+    current_fill_command = "SELECT IMAGE_ASSET_ID FROM TEMPLATE_MATCH_LIST WHERE REFERENCE_VOLUME_ASSET_ID = %i";
     is_dirty             = false;
     group_combo_is_dirty = false;
+    volumes_are_dirty    = false;
 
     FillGroupComboBox( );
 
     Bind(wxEVT_CHAR_HOOK, &MatchTemplateResultsPanel::OnCharHook, this);
     ResultDataView->my_parents_name        = "Match Template Results";
     ResultDataView->OnHeaderClickInterrupt = &OnHeaderClick;
+    TemplateComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MatchTemplateResultsPanel::OnTemplateComboBox, this);
+}
+
+void MatchTemplateResultsPanel::OnTemplateComboBox(wxCommandEvent& event) {
+    is_dirty = true;
 }
 
 void MatchTemplateResultsPanel::OnCharHook(wxKeyEvent& event) {
@@ -59,13 +66,6 @@ void MatchTemplateResultsPanel::OnUpdateUI(wxUpdateUIEvent& event) {
     else {
         Enable(true);
 
-        if ( ByFilterButton->GetValue( ) == true ) {
-            FilterButton->Enable(true);
-        }
-        else {
-            FilterButton->Enable(false);
-        }
-
         if ( GroupComboBox->GetCount( ) > 0 && ResultDataView->GetItemCount( ) > 0 ) {
             AddToGroupButton->Enable(true);
             DeleteFromGroupButton->Enable(true);
@@ -77,47 +77,27 @@ void MatchTemplateResultsPanel::OnUpdateUI(wxUpdateUIEvent& event) {
             AddAllToGroupButton->Enable(false);
         }
 
-        if ( is_dirty == true ) {
-            is_dirty = false;
-            FillBasedOnSelectCommand(current_fill_command);
-        }
-
         if ( group_combo_is_dirty == true ) {
             FillGroupComboBox( );
             group_combo_is_dirty = false;
         }
+
+        if ( volumes_are_dirty == true ) {
+            TemplateComboBox->FillComboBox( );
+            volumes_are_dirty = false;
+        }
+
+        if ( is_dirty == true ) {
+            is_dirty          = false;
+            int ref_selection = volume_asset_panel->ReturnAssetPointer(TemplateComboBox->GetSelection( ))->asset_id;
+            if ( ref_selection > 0 ) {
+                FillBasedOnSelectCommand(wxString::Format(current_fill_command, ref_selection), ref_selection);
+            }
+        }
     }
 }
 
-void MatchTemplateResultsPanel::OnAllImagesSelect(wxCommandEvent& event) {
-    FillBasedOnSelectCommand("SELECT DISTINCT IMAGE_ASSET_ID FROM TEMPLATE_MATCH_LIST");
-}
-
-void MatchTemplateResultsPanel::OnByFilterSelect(wxCommandEvent& event) {
-    if ( GetFilter( ) == wxID_CANCEL ) {
-        AllImagesButton->SetValue(true);
-    }
-}
-
-int MatchTemplateResultsPanel::GetFilter( ) {
-    MyCTFFilterDialog* filter_dialog = new MyCTFFilterDialog(this);
-
-    // set initial settings..
-
-    // show modal
-
-    if ( filter_dialog->ShowModal( ) == wxID_OK ) {
-        //wxPrintf("Command = %s\n", filter_dialog->search_command);
-        FillBasedOnSelectCommand(filter_dialog->search_command);
-
-        filter_dialog->Destroy( );
-        return wxID_OK;
-    }
-    else
-        return wxID_CANCEL;
-}
-
-void MatchTemplateResultsPanel::FillBasedOnSelectCommand(wxString wanted_command) {
+void MatchTemplateResultsPanel::FillBasedOnSelectCommand(wxString wanted_command, int wanted_volume_asset_id) {
     wxVector<wxVariant> data;
     wxVariant           temp_variant;
     long                asset_counter;
@@ -131,8 +111,7 @@ void MatchTemplateResultsPanel::FillBasedOnSelectCommand(wxString wanted_command
 
     // append columns..
 
-    doing_panel_fill     = true;
-    current_fill_command = wanted_command;
+    doing_panel_fill = true;
 
     Freeze( );
     Clear( );
@@ -142,8 +121,12 @@ void MatchTemplateResultsPanel::FillBasedOnSelectCommand(wxString wanted_command
 
     //
     // find out how many alignment jobs there are :-
-
-    number_of_template_match_ids = main_frame->current_project.database.ReturnNumberOfTemplateMatchingJobs( );
+    if ( wanted_volume_asset_id > 0 ) {
+        number_of_template_match_ids = main_frame->current_project.database.ReturnNumberOfTemplateMatchingJobsGivenVolumeAssetId(wanted_volume_asset_id);
+    }
+    else {
+        number_of_template_match_ids = main_frame->current_project.database.ReturnNumberOfTemplateMatchingJobs( );
+    }
     if ( number_of_template_match_ids == 0 ) {
         Thaw( );
         return;
@@ -154,9 +137,12 @@ void MatchTemplateResultsPanel::FillBasedOnSelectCommand(wxString wanted_command
         delete[] template_match_job_ids;
     }
     template_match_job_ids = new long[number_of_template_match_ids];
-
-    main_frame->current_project.database.GetUniqueTemplateMatchIDs(template_match_job_ids, number_of_template_match_ids);
-
+    if ( wanted_volume_asset_id > 0 ) {
+        main_frame->current_project.database.GetUniqueTemplateMatchIDsGivenVolumeAssetId(template_match_job_ids, number_of_template_match_ids, wanted_volume_asset_id);
+    }
+    else {
+        main_frame->current_project.database.GetUniqueTemplateMatchIDs(template_match_job_ids, number_of_template_match_ids);
+    }
     // retrieve their ids
 
     for ( job_counter = 0; job_counter < number_of_template_match_ids; job_counter++ ) {
@@ -270,21 +256,22 @@ void MatchTemplateResultsPanel::FillBasedOnSelectCommand(wxString wanted_command
         main_frame->current_project.database.EndBatchSelect( );
 
         // select the first row..
+
         doing_panel_fill = false;
 
         selected_column = -1;
         selected_row    = -1;
-
+        Thaw( );
         if ( number_of_assets > 0 ) {
             ResultDataView->ChangeDisplayTo(0, ResultDataView->ReturnCheckedColumn(0));
         }
+
         ResultDataView->SizeColumns( );
     }
     else {
         main_frame->current_project.database.EndBatchSelect( );
+        Thaw( );
     }
-
-    Thaw( );
 }
 
 int MatchTemplateResultsPanel::ReturnRowFromAssetID(int asset_id, int start_location) {
@@ -496,8 +483,4 @@ void MatchTemplateResultsPanel::OnAddAllToGroupClick(wxCommandEvent& event) {
     OneSecondProgressDialog* progress_bar = new OneSecondProgressDialog("Add all to group", "Adding all to group", ResultDataView->GetItemCount( ), this, wxPD_APP_MODAL);
     image_asset_panel->AddArrayofArrayItemsToGroup(GroupComboBox->GetSelection( ) + 1, &items_to_add, progress_bar);
     progress_bar->Destroy( );
-}
-
-void MatchTemplateResultsPanel::OnDefineFilterClick(wxCommandEvent& event) {
-    GetFilter( );
 }

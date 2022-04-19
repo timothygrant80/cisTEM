@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Oct 26 2018)
+// C++ code generated with wxFormBuilder (version 3.10.0-4761b0c)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO *NOT* EDIT THIS FILE!
@@ -3211,24 +3211,18 @@ MatchTemplateResultsPanelParent::MatchTemplateResultsPanelParent( wxWindow* pare
 	wxBoxSizer* bSizer64;
 	bSizer64 = new wxBoxSizer( wxHORIZONTAL );
 
-	AllImagesButton = new wxRadioButton( m_panel13, wxID_ANY, wxT("All Images"), wxDefaultPosition, wxDefaultSize, 0 );
-	AllImagesButton->Hide();
+	m_staticText809 = new wxStaticText( m_panel13, wxID_ANY, wxT("Template:"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText809->Wrap( -1 );
+	bSizer64->Add( m_staticText809, 0, wxALL, 5 );
 
-	bSizer64->Add( AllImagesButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	TemplateComboBox = new VolumeAssetPickerComboPanel( m_panel13, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	TemplateComboBox->SetMinSize( wxSize( 350,-1 ) );
+	TemplateComboBox->SetMaxSize( wxSize( 350,-1 ) );
 
-	ByFilterButton = new wxRadioButton( m_panel13, wxID_ANY, wxT("By Filter"), wxDefaultPosition, wxDefaultSize, 0 );
-	ByFilterButton->Hide();
-
-	bSizer64->Add( ByFilterButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-
-	FilterButton = new wxButton( m_panel13, wxID_ANY, wxT("Define Filter"), wxDefaultPosition, wxDefaultSize, 0 );
-	FilterButton->Enable( false );
-	FilterButton->Hide();
-
-	bSizer64->Add( FilterButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer64->Add( TemplateComboBox, 1, wxEXPAND | wxALL, 5 );
 
 
-	bSizer64->Add( 0, 0, 1, wxEXPAND, 5 );
+	bSizer64->Add( 0, 0, 0, wxEXPAND, 5 );
 
 	m_staticline77 = new wxStaticLine( m_panel13, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	bSizer64->Add( m_staticline77, 0, wxEXPAND | wxALL, 5 );
@@ -3582,9 +3576,6 @@ MatchTemplateResultsPanelParent::MatchTemplateResultsPanelParent( wxWindow* pare
 
 	// Connect Events
 	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( MatchTemplateResultsPanelParent::OnUpdateUI ) );
-	AllImagesButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnAllImagesSelect ), NULL, this );
-	ByFilterButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnByFilterSelect ), NULL, this );
-	FilterButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnDefineFilterClick ), NULL, this );
 	JobDetailsToggleButton->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnJobDetailsToggle ), NULL, this );
 	PreviousButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnPreviousButtonClick ), NULL, this );
 	AddAllToGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnAddAllToGroupClick ), NULL, this );
@@ -3597,9 +3588,6 @@ MatchTemplateResultsPanelParent::~MatchTemplateResultsPanelParent()
 {
 	// Disconnect Events
 	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( MatchTemplateResultsPanelParent::OnUpdateUI ) );
-	AllImagesButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnAllImagesSelect ), NULL, this );
-	ByFilterButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnByFilterSelect ), NULL, this );
-	FilterButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnDefineFilterClick ), NULL, this );
 	JobDetailsToggleButton->Disconnect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnJobDetailsToggle ), NULL, this );
 	PreviousButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnPreviousButtonClick ), NULL, this );
 	AddAllToGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateResultsPanelParent::OnAddAllToGroupClick ), NULL, this );
@@ -11032,6 +11020,7 @@ RefineTemplateDevPanelParent::~RefineTemplateDevPanelParent()
 NewProjectWizard::NewProjectWizard( wxWindow* parent, wxWindowID id, const wxString& title, const wxBitmap& bitmap, const wxPoint& pos, long style )
 {
 	this->Create( parent, id, title, bitmap, pos, style );
+
 	this->SetSizeHints( wxSize( 500,350 ), wxDefaultSize );
 
 	wxWizardPageSimple* m_wizPage1 = new wxWizardPageSimple( this );
@@ -11114,6 +11103,7 @@ NewProjectWizard::~NewProjectWizard()
 ExportRefinementPackageWizardParent::ExportRefinementPackageWizardParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxBitmap& bitmap, const wxPoint& pos, long style )
 {
 	this->Create( parent, id, title, bitmap, pos, style );
+
 	this->SetSizeHints( wxSize( 700,400 ), wxDefaultSize );
 
 	wxWizardPageSimple* ChooseParamsPage = new wxWizardPageSimple( this );
@@ -11271,6 +11261,7 @@ ExportRefinementPackageWizardParent::~ExportRefinementPackageWizardParent()
 ImportRefinementPackageWizardParent::ImportRefinementPackageWizardParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxBitmap& bitmap, const wxPoint& pos, long style )
 {
 	this->Create( parent, id, title, bitmap, pos, style );
+
 	this->SetSizeHints( wxSize( 700,400 ), wxDefaultSize );
 
 	wxWizardPageSimple* ImportTypePage = new wxWizardPageSimple( this );
@@ -11671,6 +11662,7 @@ RenameDialog::~RenameDialog()
 NewRefinementPackageWizard::NewRefinementPackageWizard( wxWindow* parent, wxWindowID id, const wxString& title, const wxBitmap& bitmap, const wxPoint& pos, long style )
 {
 	this->Create( parent, id, title, bitmap, pos, style );
+
 	this->SetSizeHints( wxSize( -1,-1 ), wxDefaultSize );
 
 

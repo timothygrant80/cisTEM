@@ -2751,6 +2751,29 @@ class RefineTemplateDevPanelParent : public JobPanel
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+/// Class WebViewPanelParent
+///////////////////////////////////////////////////////////////////////////////
+class WebViewPanelParent : public JobPanel
+{
+	private:
+
+	protected:
+		wxStaticLine* m_staticline149;
+
+		// Virtual event handlers, override them in your derived class
+		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
+
+
+	public:
+		wxBoxSizer* bSizer43;
+
+		WebViewPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+
+		~WebViewPanelParent();
+
+};
+
+///////////////////////////////////////////////////////////////////////////////
 /// Class NewProjectWizard
 ///////////////////////////////////////////////////////////////////////////////
 class NewProjectWizard : public wxWizard

@@ -1,0 +1,24 @@
+{
+    "configurations": [
+        {
+            "name": "Linux",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/groups/himesb/git/gemmi/include/**"
+            ],
+            "defines": [
+                "_FILE_OFFSET_BITS=64",
+                "WXUSINGDLL",
+                "__WXGTK__",
+                "DEBUG"
+            ],
+            "compilerPath": "/groups/himesb/intel/compilers_and_libraries_2020.2.254/linux/bin/intel64/icpc",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "browse": {
+                "limitSymbolsToIncludedHeaders": true
+            }
+        }
+    ],
+    "version": 4
+}

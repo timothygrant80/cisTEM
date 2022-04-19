@@ -26,7 +26,7 @@ RUN apt-get --allow-releaseinfo-change update && apt-get install -y libgtk2.0-de
     fftw3-dev libtiff-dev software-properties-common libffi-dev \
     libbz2-dev libsqlite3-dev zlib1g-dev libjpeg-dev libtiff-dev \
     libreadline-dev liblzma-dev libssl-dev libncursesw5-dev wget \
-    build-essential git xauth zip unzip parallel libwxgtk3.0-gtk \
+    build-essential git xauth zip unzip parallel libwxgtk3.0-gtk3-0v5 \
     libwxgtk3.0-gtk3-dev libwxgtk-webview3.0-gtk3-0v5 libwxgtk-webview3.0-gtk3-dev \
     && rm -rf /var/lib/apt/lists/*
 

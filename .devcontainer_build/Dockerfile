@@ -74,10 +74,10 @@ RUN cd /tmp && wget https://github.com/wxFormBuilder/wxFormBuilder/releases/down
     apt-get update && apt install -y ./wxformbuilder_3.10.0_ubuntu-20.04_amd64.deb && rm wxformbuilder_3.10.0_ubuntu-20.04_amd64.deb
 
 # First noticed outside container with g++9, several errors in longlong.h seem to be fixed by this extra include
-RUN tf=`tempfile` && cp /usr/local/include/wx-3.0/wx/longlong.h /usr/local/include/wx-3.0/wx/longlong.h.orig && \
-    awk '{if(/#include "wx\/defs.h"/){ print $0 ;print "#include <wx/txtstrm.h>"} else print $0}' /usr/local/include/wx-3.0/wx/longlong.h.orig > $tf && \
-    mv $tf /usr/local/include/wx-3.0/wx/longlong.h && \
-    chmod a+r /usr/local/include/wx-3.0/wx/longlong.h
+RUN tf=`tempfile` && cp /usr/include/wx-3.0/wx/longlong.h /usr/include/wx-3.0/wx/longlong.h.orig && \
+    awk '{if(/#include "wx\/defs.h"/){ print $0 ;print "#include <wx/txtstrm.h>"} else print $0}' /usr/include/wx-3.0/wx/longlong.h.orig > $tf && \
+    mv $tf /usr/include/wx-3.0/wx/longlong.h && \
+    chmod a+r /usr/include/wx-3.0/wx/longlong.h
 
 # Let's also grab pytorch
 RUN cd /tmp && wget https://download.pytorch.org/libtorch/cu113/libtorch-cxx11-abi-shared-with-deps-1.11.0%2Bcu113.zip && \

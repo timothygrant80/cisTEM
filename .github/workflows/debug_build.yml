@@ -14,7 +14,7 @@ jobs:
         # the macro for CISTEM_VERSION_TEXT needs access to the history.
         with:
           fetch-depth: 0    
-      - uses: bHimes/cisTEMx/.github/workflows/run_builds@dynamic_plus_singularity
+      - uses: ./.github/workflows/run_builds
         with:
           built_type: debug
           configure_options: "--disable-staticmode --enable-openmp --enable-debugmode"

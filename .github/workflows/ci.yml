@@ -81,8 +81,8 @@ jobs:
     - name: Unit tests
       run: |
         cd build/${{ matrix.configure_as }}/src 
-        chmod +x cistem_test_runner
-        ./cistem_test_runner
+        chmod +x unit_test_runner
+        ./unit_test_runner
   # console_test:
   #   strategy:
   #     fail-fast: true

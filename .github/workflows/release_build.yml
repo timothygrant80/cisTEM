@@ -1,0 +1,16 @@
+name: cisTEMx release
+
+on:
+  push:
+    branches: main
+  pull_request:
+    branches: main
+
+jobs:
+  run_build:
+    uses: ./.github/workflows/run_builds.yml
+    with:
+      build_type: release
+      configure_options: "--disable-staticmode --enable-openmp"
+      runs_on_os: "ubuntu-20.04"
+

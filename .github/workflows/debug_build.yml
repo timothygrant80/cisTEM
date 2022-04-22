@@ -1,0 +1,16 @@
+name: cisTEMx debug
+
+on:
+  push:
+    branches: main
+  pull_request:
+    branches: main
+
+jobs:
+  run_build:  
+    uses: ./.github/workflows/run_builds.yml
+    with:
+      build_type: debug
+      configure_options: "--disable-staticmode --enable-openmp --enable-debugmode"
+      runs_on_os: "ubuntu-20.04"
+

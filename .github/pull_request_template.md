@@ -2,19 +2,13 @@
 
 Please include a summary of the change and which issue is fixed. Please also include **relevant motivation** and context. It is usually easy to see what you are doing, so please be thoughtful with explaining *Why* you are doing it!
 
-Fixes # (issue)
+# Fixes 
+ issue # (issue)
 
 # I have rebased my feature branch to be current with the master branch using to minimize conflicts and headaches
 
 - [ ] yes
 - [ ] no
-
-# Which compilers were tested
-
-- [ ] g++
-- [ ] icpc
-- [ ] clang
-- [ ] other (please specify)
 
 # These changes are isolated to the
 
@@ -23,15 +17,10 @@ Fixes # (issue)
 - [ ] gpu core library
 - [ ] program it modifies
 
-# How has the functionality been tested?
+# This build was done using the cistem_build_env docker container
 
-Please describe the tests that you ran to verify your changes. Please also note any relevant details for your test configuration.
-
-- [ ] Tested manually from GUI
-- [ ] Tested manually from CLI
-- [ ] Passed console tests
-- [ ] Passed samples functional testing
-- [ ] other (please specify)
+- [ ] yes
+- [ ] no
 
 # Checklist:
 

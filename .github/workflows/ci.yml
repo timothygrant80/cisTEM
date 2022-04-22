@@ -12,13 +12,13 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        compile_option: [debug, release]
+        configure_as: [debug, release]
         include:
-          - compile_option: debug
+          - configure_as: debug
             cxx: icpc
             cc: icc
             build_flags: "--disable-staticmode --enable-openmp --enable-debugmode"
-          - compile_option: release
+          - configure_as: release
             cxx: g++
             cc: gcc
             build_flags: "--disable-staticmode --enable-openmp"
@@ -40,8 +40,8 @@ jobs:
         CC: ${{ matrix.cc }}
         CXX: ${{ matrix.cxx }}
       run: |
-        mkdir -p build/${{ matrix.compile_options }} 
-        cd build/${{ matrix.compile_options }} 
+        mkdir -p build/${{ matrix.configure_as }} 
+        cd build/${{ matrix.configure_as }} 
         echo $CC
         echo $CXX
         ../../configure  --enable-experimental ${{matrix.build_flags}} --with-wx-config=wx-config  --enable-samples
@@ -50,19 +50,19 @@ jobs:
     - uses: ammaraskar/gcc-problem-matcher@master
     - name: make 
       run: |
-        scripts/cistem_make.sh build/${{ matrix.compile_options }} -j2
-        cp scripts/testing/test_and_benchmark.sh build/${{ matrix.compile_options }}/src/
+        scripts/cistem_make.sh build/${{ matrix.configure_as }} -j2
+        cp scripts/testing/test_and_benchmark.sh build/${{ matrix.configure_as }}/src/
     - name: clean up
       run: |
-        cd build/${{ matrix.compile_options }}
+        cd build/${{ matrix.configure_as }}
         rm -r src/core
         rm -r src/gui
         rm -r src/programs
     - name: Create binary artifact
       uses: actions/upload-artifact@v2
       with: 
-        name: cistem_binaries_${{ matrix.compile_options }}
-        path: build/${{ matrix.compile_options }}/src
+        name: cistem_binaries_${{ matrix.configure_as }}
+        path: build/${{ matrix.configure_as }}/src
 
     - name: Console test
       run: |
@@ -73,14 +73,14 @@ jobs:
     # chmod is redundant, but to keep this independent of Console test we keep it.
     - name: Samples functional testing
       run: |
-        cd build/${{ matrix.compile_options }}/src 
+        cd build/${{ matrix.configure_as }}/src 
         chmod +x samples_functional_testing
         ./samples_functional_testing
 
     # chmod is redundant, but to keep this independent of Console test we keep it.
     - name: Unit tests
       run: |
-        cd build/${{ matrix.compile_options }}/src 
+        cd build/${{ matrix.configure_as }}/src 
         chmod +x cistem_test_runner
         ./cistem_test_runner
   # console_test:
@@ -95,7 +95,7 @@ jobs:
   #   - name: Download artifact
   #     uses: actions/download-artifact@v2
   #     with:
-  #       name: cistem_binaries_${{ matrix.compile_options }}
+  #       name: cistem_binaries_${{ matrix.configure_as }}
   #   - name: Install fftw3
   #     run: sudo apt-get install -y libfftw3-dev
   #   - name: Fix permissions
@@ -115,7 +115,7 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        compile_option: [debug, release]
+        configure_as: [debug, release]
     name: Samples functional testing
     needs: build
     runs-on: ubuntu-20.04
@@ -123,7 +123,7 @@ jobs:
     - name: Download artifact
       uses: actions/download-artifact@v2
       with:
-        name: cistem_binaries_${{ matrix.compile_options }}
+        name: cistem_binaries_${{ matrix.configure_as }}
     - name: Install fftw3
       run: sudo apt-get install -y libfftw3-dev 
     - name: test samples_functional_testing

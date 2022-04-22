@@ -24,7 +24,9 @@ jobs:
             build_flags: "--disable-staticmode --enable-openmp"
           
     runs-on: ubuntu-20.04
-    container: bhimesbhimes/cistem_build_env:v1.1
+    container: 
+      image: bhimesbhimes/cistem_build_env:v1.1
+      options: --user root
     outputs:
       version: ${{ steps.configure.outputs.version }}
     steps:

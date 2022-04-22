@@ -10,7 +10,7 @@ jobs:
   run_build:
     uses: ./.github/workflows/run_builds.yml
     with:
-      built_type: release
+      build_type: release
       configure_options: "--disable-staticmode --enable-openmp"
       runs_on_os: "ubuntu-20.04"
 

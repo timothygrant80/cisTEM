@@ -10,7 +10,7 @@ jobs:
   run_build:  
     uses: ./.github/workflows/run_builds.yml
     with:
-      built_type: debug
+      build_type: debug
       configure_options: "--disable-staticmode --enable-openmp --enable-debugmode"
       runs_on_os: "ubuntu-20.04"
 

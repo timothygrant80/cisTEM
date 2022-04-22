@@ -10,14 +10,13 @@ on:
 jobs:
   run_build:
     runs-on: ubuntu-20.04
-    steps:
-      - uses: actions/checkout@v2
-        # the macro for CISTEM_VERSION_TEXT needs access to the history.
-        with:
-          fetch-depth: 0    
-      - uses: ./.github/workflows/run_builds.yml
-        with:
-          built_type: release
-          configure_options: "--disable-staticmode --enable-openmp"
-          runs_on_os: "ubuntu-20.04"
+    uses: actions/checkout@v2
+      # the macro for CISTEM_VERSION_TEXT needs access to the history.
+      with:
+        fetch-depth: 0    
+    uses: ./.github/workflows/run_builds.yml
+      with:
+        built_type: release
+        configure_options: "--disable-staticmode --enable-openmp"
+        runs_on_os: "ubuntu-20.04"
 

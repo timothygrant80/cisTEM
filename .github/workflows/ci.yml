@@ -112,24 +112,24 @@ jobs:
   #       name: test_images
   #       path: /tmp/*.mrc
 
-  samples_functional_testing:
-    strategy:
-      fail-fast: true
-      matrix:
-        configure_as: [debug, release]
-    name: Samples functional testing
-    needs: build
-    runs-on: ubuntu-20.04
-    steps:
-    - name: Download artifact
-      uses: actions/download-artifact@v2
-      with:
-        name: cistem_binaries_${{ matrix.configure_as }}
-    - name: Install fftw3
-      run: sudo apt-get install -y libfftw3-dev 
-    - name: test samples_functional_testing
-      continue-on-error: false
-      run: |
-        chmod +x samples_functional_testing
-        ./samples_functional_testing
+  # samples_functional_testing:
+  #   strategy:
+  #     fail-fast: true
+  #     matrix:
+  #       configure_as: [debug, release]
+  #   name: Samples functional testing
+  #   needs: build
+  #   runs-on: ubuntu-20.04
+  #   steps:
+  #   - name: Download artifact
+  #     uses: actions/download-artifact@v2
+  #     with:
+  #       name: cistem_binaries_${{ matrix.configure_as }}
+  #   - name: Install fftw3
+  #     run: sudo apt-get install -y libfftw3-dev 
+  #   - name: test samples_functional_testing
+  #     continue-on-error: false
+  #     run: |
+  #       chmod +x samples_functional_testing
+  #       ./samples_functional_testing
 

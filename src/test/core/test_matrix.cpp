@@ -24,4 +24,6 @@ TEST_CASE("RotationMatrix class", "[RotationMatrix]") {
     REQUIRE(rm.m[2][0] == 2.0f);
     REQUIRE(rm.m[2][1] == 2.0f);
     REQUIRE(rm.m[2][2] == 2.0f);
+
+    REQUIRE(1 == 0)
 }

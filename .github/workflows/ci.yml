@@ -2,9 +2,9 @@ name: cisTEM CI
 
 on:
   push:
-    branches: master
+    branches: main
   pull_request:
-    branches: master
+    branches: main
 
 jobs:
   build:
@@ -12,23 +12,19 @@ jobs:
     strategy:
       fail-fast: true
       matrix:
-        compiler: [icpc,gcc,clang]
+        compile_option: [debug, release]
         include:
-          - compiler: icpc
+          - compile_option: debug
             cxx: icpc
             cc: icc
-            staticmode: "--enable-staticmode --enable-openmp"
-          - compiler: gcc
+            build_flags: "--disable-staticmode --enable-openmp --enable-debugmode"
+          - compile_option: release
             cxx: g++
             cc: gcc
-            staticmode: "--enable-staticmode --enable-openmp"
-          - compiler: clang
-            cxx: clang++
-            cc: clang
-            staticmode: ""
+            build_flags: "--disable-staticmode --enable-openmp"
           
-    runs-on: ubuntu-18.04
-    container: jojoelfe/cistem_ci_${{ matrix.compiler }}
+    runs-on: ubuntu-20.04
+    container: bhimesbhimes/cistem_build_env:v1.1
     outputs:
       version: ${{ steps.configure.outputs.version }}
     steps:
@@ -37,89 +33,96 @@ jobs:
         fetch-depth: 0
     - name: regenerate_project
       run: ./regenerate_project.b
-#    - name: set path
-#      run: | 
-#        echo "/opt/intel/oneapi/compiler/2021.4.0/linux/bin/intel64" >> $GITHUB_PATH
-#        echo "CPATH=/opt/intel/oneapi/vpl/2021.6.0/include:/opt/intel/oneapi/tbb/2021.4.0/env/../include:/opt/intel/oneapi/mpi/2021.4.0//include:/opt/intel/oneapi/mkl/2021.4.0/include:/opt/intel/oneapi/ippcp/2021.4.0/include:/opt/intel/oneapi/ipp/2021.4.0/include:/opt/intel/oneapi/dpl/2021.5.0/linux/include:/opt/intel/oneapi/dnnl/2021.4.0/cpu_dpcpp_gpu_dpcpp/lib:/opt/intel/oneapi/dev-utilities/2021.4.0/include:/opt/intel/oneapi/dal/2021.4.0/include:/opt/intel/oneapi/compiler/2021.4.0/linux/include:/opt/intel/oneapi/ccl/2021.4.0/include/cpu_gpu_dpcpp" >> $GITHUB_ENV
-#        echo "LD_LIBRARY_PATH=/opt/intel/oneapi/vpl/2021.6.0/lib:/opt/intel/oneapi/tbb/2021.4.0/env/../lib/intel64/gcc4.8:/opt/intel/oneapi/mpi/2021.4.0//libfabric/lib:/opt/intel/oneapi/mpi/2021.4.0//lib/release:/opt/intel/oneapi/mpi/2021.4.0//lib:/opt/intel/oneapi/mkl/2021.4.0/lib/intel64:/opt/intel/oneapi/itac/2021.4.0/slib:/opt/intel/oneapi/ippcp/2021.4.0/lib/intel64:/opt/intel/oneapi/ipp/2021.4.0/lib/intel64:/opt/intel/oneapi/dnnl/2021.4.0/cpu_dpcpp_gpu_dpcpp/lib:/opt/intel/oneapi/debugger/10.2.4/gdb/intel64/lib:/opt/intel/oneapi/debugger/10.2.4/libipt/intel64/lib:/opt/intel/oneapi/debugger/10.2.4/dep/lib:/opt/intel/oneapi/dal/2021.4.0/lib/intel64:/opt/intel/oneapi/compiler/2021.4.0/linux/lib:/opt/intel/oneapi/compiler/2021.4.0/linux/lib/x64:/opt/intel/oneapi/compiler/2021.4.0/linux/lib/emu:/opt/intel/oneapi/compiler/2021.4.0/linux/lib/oclfpga/host/linux64/lib:/opt/intel/oneapi/compiler/2021.4.0/linux/lib/oclfpga/linux64/lib:/opt/intel/oneapi/compiler/2021.4.0/linux/compiler/lib/intel64_lin:/opt/intel/oneapi/ccl/2021.4.0/lib/cpu_gpu_dpcpp" >> $GITHUB_ENV
-#        echo "MKLROOT=/opt/intel/oneapi/mkl/2021.4.0" >> $GITHUB_ENV
-#        echo "PKG_CONFIG_PATH=/opt/intel/oneapi/vtune/2021.7.1/include/pkgconfig/lib64:/opt/intel/oneapi/vpl/2021.6.0/lib/pkgconfig:/opt/intel/oneapi/tbb/2021.4.0/env/../lib/pkgconfig:/opt/intel/oneapi/mpi/2021.4.0/lib/pkgconfig:/opt/intel/oneapi/mkl/2021.4.0/lib/pkgconfig:/opt/intel/oneapi/ippcp/2021.4.0/lib/pkgconfig:/opt/intel/oneapi/inspector/2021.4.0/include/pkgconfig/lib64:/opt/intel/oneapi/dpl/2021.5.0/lib/pkgconfig:/opt/intel/oneapi/dal/2021.4.0/lib/pkgconfig:/opt/intel/oneapi/compiler/2021.4.0/lib/pkgconfig:/opt/intel/oneapi/ccl/2021.4.0/lib/pkgconfig:/opt/intel/oneapi/advisor/2021.4.0/include/pkgconfig/lib64:" >> $GITHUB_ENV
-#        echo "LIBRARY_PATH=/opt/intel/oneapi/vpl/2021.6.0/lib:/opt/intel/oneapi/tbb/2021.4.0/env/../lib/intel64/gcc4.8:/opt/intel/oneapi/mpi/2021.4.0//libfabric/lib:/opt/intel/oneapi/mpi/2021.4.0//lib/release:/opt/intel/oneapi/mpi/2021.4.0//lib:/opt/intel/oneapi/mkl/2021.4.0/lib/intel64:/opt/intel/oneapi/ippcp/2021.4.0/lib/intel64:/opt/intel/oneapi/ipp/2021.4.0/lib/intel64:/opt/intel/oneapi/dnnl/2021.4.0/cpu_dpcpp_gpu_dpcpp/lib:/opt/intel/oneapi/dal/2021.4.0/lib/intel64:/opt/intel/oneapi/compiler/2021.4.0/linux/compiler/lib/intel64_lin:/opt/intel/oneapi/compiler/2021.4.0/linux/lib:/opt/intel/oneapi/clck/2021.4.0/lib/intel64:/opt/intel/oneapi/ccl/2021.4.0/lib/cpu_gpu_dpcpp" >> $GITHUB_ENV
-#        echo "NLSPATH=/opt/intel/oneapi/mkl/2021.4.0/lib/intel64/locale/%l_%t/%N" >> $GITHUB_ENV
     - name: configure
       env:
         CC: ${{ matrix.cc }}
         CXX: ${{ matrix.cxx }}
       run: |
-        mkdir -p build/${{ matrix.compiler }} 
-        cd build/${{ matrix.compiler }} 
+        mkdir -p build/${{ matrix.compile_options }} 
+        cd build/${{ matrix.compile_options }} 
         echo $CC
         echo $CXX
-        ../../configure  --enable-experimental ${{matrix.staticmode}} --with-wx-config=wx-config  --enable-samples
+        ../../configure  --enable-experimental ${{matrix.build_flags}} --with-wx-config=wx-config  --enable-samples
         VERSION=$(cat config.log | grep CISTEM_VERSION_TEXT | cut -d' ' -f3 | tr -d '"')
         echo "::set-output name=version::$VERSION" 
     - uses: ammaraskar/gcc-problem-matcher@master
     - name: make 
       run: |
-        cd build/${{ matrix.compiler }}
-        make -j2
-        cp ../../scripts/testing/test_and_benchmark.sh src/
+        scripts/cistem_make.sh build/${{ matrix.compile_options }} -j2
+        cp scripts/testing/test_and_benchmark.sh build/${{ matrix.compile_options }}/src/
     - name: clean up
       run: |
-        cd build/${{ matrix.compiler }}
+        cd build/${{ matrix.compile_options }}
         rm -r src/core
         rm -r src/gui
         rm -r src/programs
     - name: Create binary artifact
       uses: actions/upload-artifact@v2
       with: 
-        name: cistem_binaries_${{ matrix.compiler }}
-        path: build/${{ matrix.compiler }}/src
+        name: cistem_binaries_${{ matrix.compile_options }}
+        path: build/${{ matrix.compile_options }}/src
 
-  console_test:
-    strategy:
-      fail-fast: true
-      matrix:
-        compiler: [icpc,gcc,clang]
-    name: Console test
-    needs: build
-    runs-on: ubuntu-latest
-    steps:
-    - name: Download artifact
-      uses: actions/download-artifact@v2
-      with:
-        name: cistem_binaries_${{ matrix.compiler }}
-    - name: Install fftw3
-      if: ${{ matrix.compiler=='gcc' || matrix.compiler=='clang' }}
-      run: sudo apt-get install -y libfftw3-dev
-    - name: Fix permissions
-      run: chmod +x *
-    - name: test console_test
-      continue-on-error: false
-      run: ./console_test 
-    - name: run benchmark
-      run: ./test_and_benchmark.sh ./
-    - name: Create image artifact
-      uses: actions/upload-artifact@v2
-      with: 
-        name: test_images
-        path: /tmp/*.mrc
+    - name: Console test
+      run: |
+        chmod +x *
+        ./console_test 
+        ./test_and_benchmark.sh ./
+        
+    # chmod is redundant, but to keep this independent of Console test we keep it.
+    - name: Samples functional testing
+      run: |
+        cd build/${{ matrix.compile_options }}/src 
+        chmod +x samples_functional_testing
+        ./samples_functional_testing
+
+    # chmod is redundant, but to keep this independent of Console test we keep it.
+    - name: Unit tests
+      run: |
+        cd build/${{ matrix.compile_options }}/src 
+        chmod +x cistem_test_runner
+        ./cistem_test_runner
+  # console_test:
+  #   strategy:
+  #     fail-fast: true
+  #     matrix:
+  #       compiler: [gcc]
+  #   name: Console test
+  #   needs: build
+  #   runs-on: ubuntu-20.04
+  #   steps:
+  #   - name: Download artifact
+  #     uses: actions/download-artifact@v2
+  #     with:
+  #       name: cistem_binaries_${{ matrix.compile_options }}
+  #   - name: Install fftw3
+  #     run: sudo apt-get install -y libfftw3-dev
+  #   - name: Fix permissions
+  #     run: chmod +x *
+  #   - name: test console_test
+  #     continue-on-error: false
+  #     run: ./console_test 
+  #   - name: run benchmark
+  #     run: ./test_and_benchmark.sh ./
+  #   - name: Create image artifact
+  #     uses: actions/upload-artifact@v2
+  #     with: 
+  #       name: test_images
+  #       path: /tmp/*.mrc
 
   samples_functional_testing:
     strategy:
       fail-fast: true
       matrix:
-        compiler: [icpc,gcc,clang]
+        compile_option: [debug, release]
     name: Samples functional testing
     needs: build
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-20.04
     steps:
     - name: Download artifact
       uses: actions/download-artifact@v2
       with:
-        name: cistem_binaries_${{ matrix.compiler }}
+        name: cistem_binaries_${{ matrix.compile_options }}
     - name: Install fftw3
-      if: ${{ matrix.compiler=='gcc' || matrix.compiler=='clang' }}
       run: sudo apt-get install -y libfftw3-dev 
     - name: test samples_functional_testing
       continue-on-error: false

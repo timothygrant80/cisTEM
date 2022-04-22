@@ -15,8 +15,8 @@ jobs:
         configure_as: [debug, release]
         include:
           - configure_as: debug
-            cxx: icpc
-            cc: icc
+            cxx: g++
+            cc: gcc
             build_flags: "--disable-staticmode --enable-openmp --enable-debugmode"
           - configure_as: release
             cxx: g++

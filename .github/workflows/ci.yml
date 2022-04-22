@@ -50,7 +50,7 @@ jobs:
     - uses: ammaraskar/gcc-problem-matcher@master
     - name: make 
       run: |
-        scripts/cistem_make.sh build/${{ matrix.configure_as }} -j2
+        scripts/cistem_make.sh build/${{ matrix.configure_as }} 2
         cp scripts/testing/test_and_benchmark.sh build/${{ matrix.configure_as }}/src/
     - name: clean up
       run: |

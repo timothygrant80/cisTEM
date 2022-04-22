@@ -3,7 +3,7 @@ name: Run Builds
 on:
   workflow_call:
     inputs:
-      built_type:
+      build_type:
         description: 'A descriptive string of the configure options being build'
         required: true
         type: string
@@ -21,7 +21,7 @@ jobs:
     continue-on-error: false
     strategy:
       fail-fast: true
-    runs-on: ${{ runs_on_os }}
+    runs-on: ${{ inputs.runs_on_os }}
     container: 
       image: bhimesbhimes/cistem_build_env:v1.1
       options: --user root
@@ -39,33 +39,33 @@ jobs:
         CC: gcc
         CXX: g++
       run: |
-        mkdir -p build/${{ build_type }} 
-        cd build/${{ build_type }} 
+        mkdir -p build/${{ inputs.build_type }} 
+        cd build/${{ inputs.build_type }} 
         echo $CC
         echo $CXX
-        ../../configure  --enable-experimental ${{ configure_options }} --with-wx-config=wx-config  --enable-samples
+        ../../configure  --enable-experimental ${{ inputs.configure_options }} --with-wx-config=wx-config  --enable-samples
         VERSION=$(cat config.log | grep CISTEM_VERSION_TEXT | cut -d' ' -f3 | tr -d '"')
         echo "::set-output name=version::$VERSION" 
     - uses: ammaraskar/gcc-problem-matcher@master
     - name: make 
       run: |
-        scripts/cistem_make.sh build/${{ build_type }} 2
-        cp scripts/testing/test_and_benchmark.sh build/${{ build_type }}/src/
+        scripts/cistem_make.sh build/${{ inputs.build_type }} 2
+        cp scripts/testing/test_and_benchmark.sh build/${{ inputs.build_type }}/src/
     - name: clean up
       run: |
-        cd build/${{ build_type }}
+        cd build/${{ inputs.build_type }}
         rm -r src/core
         rm -r src/gui
         rm -r src/programs
     - name: Create binary artifact
       uses: actions/upload-artifact@v2
       with: 
-        name: cistem_binaries_${{ build_type }}
-        path: build/${{ build_type }}/src
+        name: cistem_binaries_${{ inputs.build_type }}
+        path: build/${{ inputs.build_type }}/src
 
     - name: Console test
       run: |
-        cd build/${{ build_type }}/src
+        cd build/${{ inputs.build_type }}/src
         chmod +x *
         ./console_test 
         ./test_and_benchmark.sh ./
@@ -73,14 +73,14 @@ jobs:
     # chmod is redundant, but to keep this independent of Console test we keep it.
     - name: Samples functional testing
       run: |
-        cd build/${{ build_type }}/src 
+        cd build/${{ inputs.build_type }}/src 
         chmod +x samples_functional_testing
         ./samples_functional_testing
 
     # chmod is redundant, but to keep this independent of Console test we keep it.
     - name: Unit tests
       run: |
-        cd build/${{ build_type }}/src 
+        cd build/${{ inputs.build_type }}/src 
         chmod +x unit_test_runner
         ./unit_test_runner
   

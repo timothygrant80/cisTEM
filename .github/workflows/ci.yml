@@ -66,6 +66,7 @@ jobs:
 
     - name: Console test
       run: |
+        cd build/${{ matrix.configure_as }}/src
         chmod +x *
         ./console_test 
         ./test_and_benchmark.sh ./

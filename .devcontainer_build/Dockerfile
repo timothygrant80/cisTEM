@@ -41,6 +41,9 @@ RUN apt-get update && apt-get install -y intel-oneapi-mkl-devel \
 RUN cd  /opt/intel/oneapi/mkl/latest/lib/intel64/ && \
     rm -f *.a libmkl_sycl*
 
+# Set the MKL related variables
+ENTRYPOINT ["/bin/bash","-c","source /opt/intel/oneapi/setvars.sh"]
+
 RUN echo 'alias lt="ls -lrth"' >> /home/cisTEMx/.bashrc
 RUN echo 'alias dU="du -ch --max-depth=1 | sort -h"' >> /home/cisTEMx/.bashrc
 RUN echo 'source /opt/intel/oneapi/setvars.sh' >> /home/cisTEMx/.bashrc

@@ -66,6 +66,7 @@ jobs:
 
     - name: Console test
       run: |
+        . /opt/intel/oneapi/setvars.sh
         cd build/${{ inputs.build_type }}/src
         chmod +x *
         ./console_test 
@@ -74,6 +75,7 @@ jobs:
     # chmod is redundant, but to keep this independent of Console test we keep it.
     - name: Samples functional testing
       run: |
+        . /opt/intel/oneapi/setvars.sh
         cd build/${{ inputs.build_type }}/src 
         chmod +x samples_functional_testing
         ./samples_functional_testing
@@ -81,6 +83,7 @@ jobs:
     # chmod is redundant, but to keep this independent of Console test we keep it.
     - name: Unit tests
       run: |
+        . /opt/intel/oneapi/setvars.sh
         cd build/${{ inputs.build_type }}/src 
         chmod +x unit_test_runner
         ./unit_test_runner

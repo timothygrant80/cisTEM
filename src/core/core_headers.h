@@ -46,7 +46,9 @@ const std::complex<float> I(0.0, 1.0);
 #include <vector>
 #include <random>
 #include <functional>
-#include <fftw3.h>
+// These are in $MKLROOT/include
+#include <fftw/fftw3.h>
+#include <fftw/fftw3_mkl.h>
 #include <math.h>
 #include <chrono>
 #include "sqlite/sqlite3.h"

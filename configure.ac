@@ -9,6 +9,7 @@ AC_CONFIG_MACRO_DIR([m4])
 INPUT_CPPFLAGS="$CPPFLAGS"
 INPUT_CXXFLAGS="$CXXFLAGS"
 
+
 AC_PROG_CC([icc gcc clang])
 AC_PROG_CXX([icpc g++ clang++])
 
@@ -147,12 +148,14 @@ fi
 # MKL
 
 use_mkl=1
-AC_ARG_ENABLE(mkl, AS_HELP_STRING([--disable-mkl],[Do not use the Intel MKL]),
-[
+AC_ARG_ENABLE(mkl, AS_HELP_STRING([--disable-mkl],[Do not use the Intel MKL]), [
  if test "$enableval" = no; then
-        use_mkl=0
+    # LINK_MKL_NOT_FFTW3
+    AC_MSG_NOTICE([     ])
+    AC_MSG_ERROR([You must use the Intel mkl in cisTEM. See FFT_LICENSE_NOTE in the root directory for details.])
+    use_mkl=0
  fi
- ])
+])
 
 
 # Static linking
@@ -163,7 +166,7 @@ AC_ARG_ENABLE(staticmode, AS_HELP_STRING([--enable-staticmode],[Link statically 
 	static_link="true"
 	WXCONFIGFLAGS="--static=yes"
   fi
-  ])
+])
 
 	
 AC_MSG_NOTICE(static_link = $static_link)
@@ -385,39 +388,105 @@ else
         wx_is_available=0
 fi
 
-# Do FFTW3 Checks
+# Link the MKL with a variety of threading options
 
-# Check whether Intel's MKL is available. If not, link against FFTW.
+use_mkl_threads="no"
+use_gnu_threads="no"
+use_mkl_sequential="yes"
+AC_ARG_ENABLE(mkl-threads, AS_HELP_STRING([--enable-mkl-threads],[Compile with MKL threading using Intel threads [default=no]]),[
+    use_mkl_threads="yes"
+    use_mkl_sequential="no"
+
+])
+AC_ARG_ENABLE(gnu-threads, AS_HELP_STRING([--enable-gnu-threads],[Compile with MKL threading using Intel threads [default=no]]),[
+    use_gnu_threads="yes"
+    use_mkl_sequential="no"
+
+])
+
+# Make sure we have the environmental variables set up
+AC_CHECK_FILE("$MKLROOT/include/mkl.h",
+[   ],
+[AC_MSG_ERROR([MKLROOT is not set correctly])
+])
+
+# Compiler options are the same for all threading options (as long as it is gcc)
+AC_DEFINE([MKL_ILP64], [], [Use the MKL ILP64 interface])
+CPPFLAGS="$CPPFLAGS -m64 -I"${MKLROOT}/include""
+CXXFLAGS="$CXXFLAGS -m64 -I"${MKLROOT}/include""
+LDFLAGS="$LDFLAGS -L"${MKLROOT}/lib/intel64""
+
+if test "x$use_mkl_threads" = "xyes" -o "x$use_gnu_threads" = "xyes"; then
+
+    # I added the proper options here along when updating with sequential, which is what cisTEM has always used.
+    # To actually use threaded FFTs, we would need to:
+    # For multithreaded plans, use normal sequence of calls to the fftw_init_threads() and fftw_plan_with_nthreads() functions (refer to FFTW documentation).
+    AC_MSG_NOTICE([      ]) 
+    AC_MSG_ERROR([ Threading with the MKL is not fully supported yet. ])
+    # We can't have both mkl-threads and gnu-threads
+    if test "x$use_mkl_threads" = "xyes" -a "x$use_gnu_threads" = "xyes"; then
+        AC_MSG_ERROR("You can't have both --enable-mkl-threads and --enable-gnu-threads")
+    fi
+
+    # Okay, we have only one of them, so we can use the mkl-threads or gnu-threads
+    if test "x$use_mkl_threads" = "xyes"; then
+        if test "x$static_link" = "xtrue" ; then          
+            LIBS="$LIBS -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a 
+${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -liomp5 -lpthread -lm -ldl ${MKLROOT}/lib/intel64/libmkl_intel_thread.a"
+        else
+            LIBS="$LIBS -Wl,--no-as-needed -lmkl_intel_ilp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread -lm -ldl"
+        fi
+    else
+        if test "x$static_link" = "xtrue" ; then
+            LIBS="$LIBS -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a 
+${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lgomp -lpthread -lm -ldl ${MKLROOT}/lib/intel64/libmkl_gnu_thread.a"
+        else
+            LIBS="$LIBS -Wl,--no-as-needed -lmkl_intel_ilp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl"
+        fi
+    fi
+else    
+    # Use MKL seqential
+    AC_MSG_NOTICE([   Using the MKL sequential interface. ])
+    if test "x$static_link" = "xtrue" ; then
+        LIBS="$LIBS -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a 
+${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl ${MKLROOT}/lib/intel64/libmkl_sequential.a"
+    else
+        LIBS="$LIBS -Wl,--no-as-needed -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl"
+    fi    
+fi
+
+
+# Even though we do not link the FFTW3 libraries, the Intel MKL uses one of FFTW3's headers to maintain parity while defining a wrapper. 
 AC_CHECK_HEADER(fftw3.h, , AC_MSG_ERROR("Can't find fftw3.h"))
-AC_CHECK_LIB([mkl_intel_lp64],[fftwf_malloc],[HAVE_MKL="yes"],[HAVE_MKL="no"],[-lmkl_core -lmkl_sequential -lpthread])
+# AC_CHECK_LIB([mkl_intel_lp64],[fftwf_malloc],[HAVE_MKL="yes"],[HAVE_MKL="no"],[-lmkl_core -lmkl_sequential -lpthread])
 
-if test "x$use_mkl" = "x0"; then
-	HAVE_MKL="no"
-fi
+# if test "x$use_mkl" = "x0"; then
+# 	HAVE_MKL="no"
+# fi
 
-if test "x$HAVE_MKL" = "xyes"; then
+# if test "x$HAVE_MKL" = "xyes"; then
 
-	AC_MSG_NOTICE(Using Intel MKL for fast Fourier transforms)
-	AC_DEFINE([MKL], [], [Use the MKL])
+# 	AC_MSG_NOTICE(Using Intel MKL for fast Fourier transforms)
+    AC_DEFINE([MKL], [], [Use the MKL])
 
-	if test "x$CXX" = "xicpc"; then
-		CPPFLAGS="$CPPFLAGS -mkl=sequential"
-		LIBS="$LIBS -mkl=sequential"
-	else
-		LDFLAGS="$LDFLAGS -L\$(MKLROOT)/lib/intel64"
-		if test "x$static_link" = "xtrue"; then
-			AC_MSG_ERROR("Static builds with Intel MKL are not supported when using the GNU compiler. Please try with the Intel compiler instead.")
-	    else
-#	    	LIBS="$LIBS -lmkl_rt"
-	    	LIBS="$LIBS -lmkl_sequential -lmkl_core -lmkl_intel_lp64"
-	    fi
-	fi
-else
+# 	if test "x$CXX" = "xicpc"; then
+# 		CPPFLAGS="$CPPFLAGS -mkl=sequential"
+# 		LIBS="$LIBS -mkl=sequential"
+# 	else
+# 		LDFLAGS="$LDFLAGS -L\$(MKLROOT)/lib/intel64"
+# 		if test "x$static_link" = "xtrue"; then
+# 			AC_MSG_ERROR("Static builds with Intel MKL are not supported when using the GNU compiler. Please try with the Intel compiler instead.")
+# 	    else
+# #	    	LIBS="$LIBS -lmkl_rt"
+# 	    	LIBS="$LIBS -lmkl_sequential -lmkl_core -lmkl_intel_lp64"
+# 	    fi
+# 	fi
+# else
 
-	AC_CHECK_LIB(fftw3f, fftwf_malloc, [LIBS="$LIBS -lfftw3f"],AC_MSG_ERROR("Can't find FFTW3's libraries. Please check your installation of FFTW3."))
-	AC_MSG_NOTICE(Using FFTW for Fourier transforms)
+# 	AC_CHECK_LIB(fftw3f, fftwf_malloc, [LIBS="$LIBS -lfftw3f"],AC_MSG_ERROR("Can't find FFTW3's libraries. Please check your installation of FFTW3."))
+# 	AC_MSG_NOTICE(Using FFTW for Fourier transforms)
 
-fi
+# fi
 
 #If we're goind a static build with the intel compiler, let's have Intel libraries linked statically also
 # It's importnat that -static-intel be specified after -mkl, otherwise mkl will be linked dynamically

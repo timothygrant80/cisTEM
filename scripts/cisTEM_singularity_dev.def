@@ -1,0 +1,72 @@
+Bootstrap: docker
+From: bhimesbhimes/cistem_build_env:v1.2
+Stage: build
+
+%setup
+#    mkdir ${SINGULARITY_ROOTFS}/cisTEM
+
+%help
+    This container is build to run cisTEM on ubuntu 20.04. The Linux kernel in older distros (e.g. CentOS 6) will not support this container.
+
+    This encapsulates a developmental version of cisTEM that comes with no warrantee and no support. We're happy that you want to try the latest and greatest, and welcome your feedback, but make no promise to chase bugs.
+
+    The source code can be found on github, commit b50d965a56c089488485b45c7431e19dcb038cb1.
+
+    Remember the --nv flag if you plan to use GPUs in template matching
+
+    singularity exec --nv /cisTEM/bin/match_template
+
+%files
+#    /groups/himesb/cisTEM_downstream_bah/build/INTEL-gpu/src/* /cisTEM/bin
+#    /groups/himesb/testGPU_k3image_rot.mrc /cisTEM
+#    /groups/himesb/testGPU_ref.mrc /cisTEM
+
+%environment
+    alias lt='ls -lrth'
+#    alias dU='du -ch --max-depth=1 | sort -h'
+  export othertest="otherone"
+
+%post
+    apt-get update && apt-get install -y libfftw3-dev pkg-config libgtk2.0-dev
+
+    NOW=`date`
+    echo "export NOW=\"${NOW}\"" >> $SINGULARITY_ENVIRONMENT
+    #cp /opt/intel/oneapi/setvars.sh /.singularity.d/env/
+    #chmod a+x /.singularity.d/env/setvars.sh
+
+    # can I get these from sourcing /opt/intel/oneapi/setupvar.sh?
+
+    echo 'export MKLROOT=/opt/intel/oneapi/mkl/2022.0.2' >>$SINGULARITY_ENVIRONMENT
+    echo 'export CPATH=/opt/intel/oneapi/tbb/2021.5.1/env/../include:/opt/intel/oneapi/mkl/2022.0.2/include' >>$SINGULARITY_ENVIRONMENT
+    echo 'export NLSPATH=/opt/intel/oneapi/mkl/2022.0.2/lib/intel64/locale/%l_%t/%N:/opt/intel/oneapi/compiler/2022.0.2/linux/compiler/lib/intel64_lin/locale/%l_%t/%N' >>$SINGULARITY_ENVIRONMENT
+    echo 'export LIBRARY_PATH=/opt/intel/oneapi/tbb/2021.5.1/env/../lib/intel64/gcc4.8:/opt/intel/oneapi/mkl/2022.0.2/lib/intel64:/opt/intel/oneapi/compiler/2022.0.2/linux/compiler/lib/intel64_lin:/opt/intel/oneapi/compiler/2022.0.2/linux/lib' >>$SINGULARITY_ENVIRONMENT
+    echo 'export LD_LIBRARY_PATH=/opt/intel/oneapi/tbb/2021.5.1/env/../lib/intel64/gcc4.8:/opt/intel/oneapi/mkl/2022.0.2/lib/intel64:/opt/intel/oneapi/compiler/2022.0.2/linux/lib:/opt/intel/oneapi/compiler/2022.0.2/linux/lib/x64:/opt/intel/oneapi/compiler/2022.0.2/linux/compiler/lib/intel64_lin' >>$SINGULARITY_ENVIRONMENT
+
+%runscript
+    echo "Container was created $NOW"
+    echo "Arguments received: $*"
+    echo "MKLROOT is $MKLROOT"
+    echo $MKLROOT
+    echo "other test is $othertest"
+    echo $othertest
+    exec echo "$@"
+
+
+%startscript
+    nc -lp $LISTEN_PORT
+
+%test
+    grep -q NAME=\"Ubuntu\" /etc/os-release
+    if [ $? -eq 0 ]; then
+        echo "Container base is Ubuntu as expected."
+    else
+        echo "Container base is not Ubuntu."
+        exit 1
+    fi
+
+#    /cisTEM/bin/console_test
+
+%labels
+    Author BAH
+    Version v1.0.2 (21986909a60d7579dc1dde9c1c977fd033dcdebe)
+

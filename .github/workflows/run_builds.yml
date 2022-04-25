@@ -33,7 +33,7 @@ jobs:
       with:
         fetch-depth: 0
     - name: source_mkl
-      run: source /opt/intel/oneapi/setvars.sh
+      run: . /opt/intel/oneapi/setvars.sh
     - name: regenerate_project
       run: ./regenerate_project.b
     - name: configure

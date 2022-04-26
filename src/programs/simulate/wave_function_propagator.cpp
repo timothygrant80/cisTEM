@@ -690,7 +690,7 @@ void WaveFunctionPropagator::ReturnImageContrast(Image& wave_function_sq_modulus
     Image                 amplitude_spectrum;
     Image                 amplitude_spectrum_masked;
     Image                 buffer;
-    RandomNumberGenerator my_rand(PIf);
+    RandomNumberGenerator my_rand(pi_v<float>);
 
     bool non_unique_id = true;
     int  fileID;
@@ -873,7 +873,7 @@ void WaveFunctionPropagator::ReturnImageContrast(Image& wave_function_sq_modulus
                 if ( is_phase_contrast_image || iFit >= 0.0f ) {
 
                     if ( fabs(iFit - 1.0) < 1e-3 )
-                        iFit = PIf / 2.0f;
+                        iFit = pi_v<float> / 2.0f;
                     else
                         precomputed_amplitude_contrast_term = atanf(iFit / sqrtf(1.0 - powf(iFit, 2)));
                     ctf_for_fitting->SetAdditionalPhaseShift(precomputed_amplitude_contrast_term);

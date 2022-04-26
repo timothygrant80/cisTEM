@@ -9,7 +9,6 @@ AC_CONFIG_MACRO_DIR([m4])
 INPUT_CPPFLAGS="$CPPFLAGS"
 INPUT_CXXFLAGS="$CXXFLAGS"
 
-
 AC_PROG_CC([icc gcc clang])
 AC_PROG_CXX([icpc g++ clang++])
 
@@ -559,11 +558,44 @@ AC_CHECK_FILE("$TOPSRCDIR/.git/HEAD",
   ])
 fi
 
+# submodules
 
-CXXFLAGS="$CXXFLAGS -I$CISTEM_CONFIG_DIR"
-CPPFLAGS="$CPPFLAGS -I$CISTEM_CONFIG_DIR"
-WX_CPPFLAGS="$WX_CPPFLAGS -I$CISTEM_CONFIG_DIR"
-WX_CPPFLAGS_BASE="$WX_CPPFLAGS_BASE -I$CISTEM_CONFIG_DIR"
+# We use submodules because we either want to use a thirdparty library, or at times, wish to test an idea [mostly] in private. 
+# The latter is accomplished by using a submodule that references a private repository.
+SUBMODULE_INCLUDES=""
+
+# Optional FastFFT submodule
+
+# git submodule add https://github.com/bHimes/FastFFT.git src/ext/FastFFT
+use_FastFFT="yes"
+AC_ARG_ENABLE(FastFFT, AS_HELP_STRING([--disable-FastFFT],[Do not use the FastFFT library, even if submodule is present]), [
+    if test "$enableval" = no; then
+        use_FastFFT="no"
+        AC_MSG_NOTICE([Not using the FastFFT Library b/c --disable-FastFFT is configured.])      
+    else
+        AC_MSG_ERROR([FastFFT is enabled by default, if present. Specifying --enable-FastFFT breaks the configuration. If you want to disable FastFFT, please configure with --disable-FastFFT])
+    fi
+], 
+[
+    # Okay, this has not been disabled (explicitly) so let's see if the submodule is in place.
+    AC_CHECK_FILE("$TOPSRCDIR/src/ext/FastFFT/include/FastFFT.h",[use_FastFFT="yes"],[use_FastFFT="no"])
+    if test "x$use_FastFFT" = "xyes"; then
+        # using $CISTEM_CONFIG_DIR/$TOPSRCDIR/ is a bit of a jenky way to get an absolute path. I'm doing this
+        # because TOPSRCDIR defined by autotools srcdir is generally ../.. so a file in src/core would be okay to include, but 
+        # a file in src/program/program name would not find the header.
+        SUBMODULE_INCLUDES="$SUBMODULE_INCLUDES -I$CISTEM_CONFIG_DIR/$TOPSRCDIR/src/ext/FastFFT/include"
+        AC_DEFINE(FastFFT, [], [Use the FasFFT library for GPU FFTs where appropriate.])
+        AC_MSG_NOTICE([Using the FastFFT Library.])
+    else
+        AC_MSG_NOTICE([Not using the FastFFT Library b/c $TOPSRCDIR/src/ext/FastFFT/include/FastFFT.h was not found.])
+    fi   
+])
+
+
+CXXFLAGS="$CXXFLAGS -I$CISTEM_CONFIG_DIR $SUBMODULE_INCLUDES"
+CPPFLAGS="$CPPFLAGS -I$CISTEM_CONFIG_DIR $SUBMODULE_INCLUDES"
+WX_CPPFLAGS="$WX_CPPFLAGS -I$CISTEM_CONFIG_DIR $SUBMODULE_INCLUDES"
+WX_CPPFLAGS_BASE="$WX_CPPFLAGS_BASE -I$CISTEM_CONFIG_DIR $SUBMODULE_INCLUDES"
 
 # Make sure the host compiler gets all flags when called from nvcc
 CUDA_TO_CPP="`echo $CPPFLAGS $WX_CPPFLAGS | sed -e 's/\s\+/,/g' | awk '{print "-Xcompiler " $0}'`"

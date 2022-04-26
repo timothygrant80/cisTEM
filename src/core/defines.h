@@ -1,11 +1,13 @@
 // clang-format off
 
+#include <numbers>
+using namespace std::numbers;
+
 #define INTEGER_DATABASE_VERSION 2
 #define START_PORT 3000
 #define END_PORT 5000
 // Define PI constants
 #define PI 3.14159265359
-#define PIf 3.14159265359f
 #define PISQ 9.869604401089
 #define PISQf 9.869604401089f
 

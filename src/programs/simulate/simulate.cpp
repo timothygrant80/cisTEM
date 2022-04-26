@@ -1026,7 +1026,7 @@ void SimulateApp::DoInteractiveUserInput( ) {
             phase_plate_thickness = minimum_thickness_z;
         }
         else {
-            phase_plate_thickness = (PIf / 2.0f + SURFACE_PHASE_ERROR + BOND_PHASE_ERROR) / (MEAN_INNER_POTENTIAL / (kV * 1000) * (511 + kV) / (2 * 511 + kV) * (2 * PIf / (wavelength * 1e-10))) * 1e10;
+            phase_plate_thickness = (pi_v<float> / 2.0f + SURFACE_PHASE_ERROR + BOND_PHASE_ERROR) / (MEAN_INNER_POTENTIAL / (kV * 1000) * (511 + kV) / (2 * 511 + kV) * (2 * pi_v<float> / (wavelength * 1e-10))) * 1e10;
         }
 
         if ( DO_PRINT ) {
@@ -1125,7 +1125,7 @@ Leave this in until convinced it works ok.
 
 void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
 
-    RandomNumberGenerator my_rand(PIf);
+    RandomNumberGenerator my_rand(pi_v<float>);
     bool                  SCALE_DEFOCUS_TO_MATCH_300 = true;
     float                 scale_defocus              = 1.0f;
 
@@ -2418,7 +2418,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
                 if ( DEBUG_POISSON == false && is_image_loop && DO_PHASE_PLATE == false ) {
                     timer.start("Poisson Noise");
 
-                    RandomNumberGenerator my_rand(PIf);
+                    RandomNumberGenerator my_rand(pi_v<float>);
                     for ( long iPixel = 0; iPixel < img_frame[0].real_memory_allocated; iPixel++ ) {
                         img_frame[0].real_values[iPixel] = my_rand.GetPoissonRandomSTD(img_frame[0].real_values[iPixel]); //distribution(gen);
                     }
@@ -2459,7 +2459,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
                 coords.PadToWantedSize(&sum_phase, wanted_output_size);
                 EmpiricalDistribution phase_shift_distribution = sum_phase.ReturnDistributionOfRealValues( );
                 wxPrintf("\n\tPhase plate shift avg: %3.6f\n\tPhase plate shift std %3.6f\n\tPhase plate shift relative error %3.6f\n",
-                         phase_shift_distribution.GetSampleMean( ), phase_shift_distribution.GetSampleVariance( ), 100.f * std::abs(phase_shift_distribution.GetSampleMean( ) - PIf / 2) / (PIf / 2));
+                         phase_shift_distribution.GetSampleMean( ), phase_shift_distribution.GetSampleVariance( ), 100.f * std::abs(phase_shift_distribution.GetSampleMean( ) - pi_v<float> / 2) / (pi_v<float> / 2));
                 sum_phase.WriteSlices(&mrc_out, 1, 1);
 
                 mrc_out.SetPixelSize(this->wanted_pixel_size);
@@ -2892,7 +2892,7 @@ void SimulateApp::calc_scattering_potential(const PDB*     current_specimen,
 
 #pragma omp simd
         for ( iGaussian = 0; iGaussian < 5; iGaussian++ ) {
-            bPlusB[iGaussian] = 2 * PIf / sqrt(bFactor + sp.ReturnScatteringParamtersB(atom_id, iGaussian));
+            bPlusB[iGaussian] = 2 * pi_v<float> / sqrt(bFactor + sp.ReturnScatteringParamtersB(atom_id, iGaussian));
         }
 
         // For accurate calculations, a thin slab is used, s.t. those atoms outside are the majority. Check this first, but account for the size of the atom, as it may reside in more than one slab.
@@ -3009,7 +3009,7 @@ void SimulateApp::calc_water_potential(Image* projected_water, AtomType wanted_a
 
     // for ions this should be a bigger window but that complicaes things for now FIXME
     for ( iGaussian = 0; iGaussian < 5; iGaussian++ ) {
-        bPlusB[iGaussian] = 2 * PIf / sqrtf(bFactor + sp.ReturnScatteringParamtersB(atom_id, iGaussian));
+        bPlusB[iGaussian] = 2 * pi_v<float> / sqrtf(bFactor + sp.ReturnScatteringParamtersB(atom_id, iGaussian));
     }
 
     int nSubPixCenter = 0;

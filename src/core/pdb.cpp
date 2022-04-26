@@ -788,13 +788,13 @@ void PDB::TransformLocalAndCombine(PDB* pdb_ensemble, int number_of_pdbs, int fr
 
                 if ( pdb_ensemble[current_pdb].generate_noise_atoms && frame_number == 0 ) {
 
-                    RandomNumberGenerator my_rand(PIf);
+                    RandomNumberGenerator my_rand(pi_v<float>);
                     // Set the number of noise particles for this given particle in the stack
                     pdb_ensemble[current_pdb].number_of_noise_particles = myroundint(my_rand.GetUniformRandomSTD(std::max(0, this->max_number_of_noise_particles - 2), this->max_number_of_noise_particles));
                     wxPrintf("\n\n\tSetting pdb %d to %d noise particles of max %d\n\n", current_pdb, pdb_ensemble[current_pdb].number_of_noise_particles, max_number_of_noise_particles);
 
                     // Angular sector size such that noise particles do not overlap. This could be a method.
-                    float sector_size = 1.1f; //2.0*PIf / pdb_ensemble[current_pdb].number_of_noise_particles;
+                    float sector_size = 1.1f; //2.0*pi_v<float> / pdb_ensemble[current_pdb].number_of_noise_particles;
                     float occupied_sectors[this->max_number_of_noise_particles];
                     int   current_sector = 0;
                     bool  non_overlaping_particle_found;
@@ -818,7 +818,7 @@ void PDB::TransformLocalAndCombine(PDB* pdb_ensemble, int number_of_pdbs, int fr
                         float offset_angle;
                         // If we have more than one noise particle, enforce non-overlap
                         if ( iPart == 0 ) {
-                            offset_angle                  = clamp_angular_range_negative_pi_to_pi(my_rand.GetUniformRandomSTD(-PIf, PIf));
+                            offset_angle                  = clamp_angular_range_negative_pi_to_pi(my_rand.GetUniformRandomSTD(-pi_v<float>, pi_v<float>));
                             non_overlaping_particle_found = true;
                             occupied_sectors[0]           = offset_angle;
                         }
@@ -828,7 +828,7 @@ void PDB::TransformLocalAndCombine(PDB* pdb_ensemble, int number_of_pdbs, int fr
                             bool is_too_close = true;
                             while ( is_too_close && iTry < max_tries ) {
                                 iTry += 1;
-                                offset_angle = clamp_angular_range_negative_pi_to_pi(my_rand.GetUniformRandomSTD(-PIf, PIf));
+                                offset_angle = clamp_angular_range_negative_pi_to_pi(my_rand.GetUniformRandomSTD(-pi_v<float>, pi_v<float>));
                                 float dx     = cosf(offset_angle);
                                 float dy     = sinf(offset_angle);
                                 float ang_diff;

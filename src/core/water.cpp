@@ -134,7 +134,7 @@ void Water::SeedWaters3d( ) {
     long   n_waters_possible    = (long)floor(1.1 * n_waters_lower_bound); // maybe make this a real vector so it is extensible.
     // wxPrintf("specimen volume is %3.3e nm expecting %3.3e waters\n",(this->vol_angX * this->vol_angY * this->vol_angZ)/1000,n_waters_lower_bound);
 
-    RandomNumberGenerator my_rand(PIf);
+    RandomNumberGenerator my_rand(pi_v<float>);
 
     // FIXME is the multiplication by pixel size correct? I am not so sure.
     const float random_sigma_cutoff   = 1 - (n_waters_lower_bound / double((this->vol_nX - (this->size_neighborhood * this->pixel_size)) *
@@ -397,8 +397,8 @@ void Water::ReturnPadding(RotationMatrix max_rotation, float in_plane_rotation, 
 
         // Set the 0 position to be the radius
 
-        *padX = myroundint(0.5f * (float)current_nY * fabsf(sinf(in_plane_rotation * PIf / 180.0f)));
-        *padY = myroundint(0.5f * (float)current_nX * fabsf(sinf(in_plane_rotation * PIf / 180.0f)));
+        *padX = myroundint(0.5f * (float)current_nY * fabsf(sinf(in_plane_rotation * pi_v<float> / 180.0f)));
+        *padY = myroundint(0.5f * (float)current_nX * fabsf(sinf(in_plane_rotation * pi_v<float> / 180.0f)));
 
         // TODO start here, change to find the four corners of the box under both rotations, first confirming the order with a simple grid and exit
         // Then determine the padding needed in x and y as a function of this. Also bring in the FFT padding here so the FFT size is also padded with water, which
@@ -418,7 +418,7 @@ void Water::ReturnPadding(RotationMatrix max_rotation, float in_plane_rotation, 
             rotmat.RotateCoords(x0, y0, z0, xf, yf, zf);
 
             *padZ = myroundint(fabsf(2.0f * (xf - x0)));
-            //    	*padZ = myroundint(1.0f*current_nZ*sinf(max_tilt * (float)PIf / 180.0f));
+            //    	*padZ = myroundint(1.0f*current_nZ*sinf(max_tilt * (float)pi_v<float> / 180.0f));
         }
     }
 }

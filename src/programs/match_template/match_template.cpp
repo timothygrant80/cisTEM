@@ -1,6 +1,9 @@
 #include "../../core/core_headers.h"
-
 #include "../../core/cistem_constants.h"
+
+#ifdef FastFFT
+#include <FastFFT.h>
+#endif
 
 // Values for data that are passed around in the results.
 const int number_of_output_images     = 8; //mip, psi, theta, phi, pixel, defocus, sums, sqsums (scaled mip is not sent out)

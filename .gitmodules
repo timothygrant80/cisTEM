@@ -1,0 +1,3 @@
+[submodule "src/ext/FastFFT"]
+	path = src/ext/FastFFT
+	url = https://github.com/bHimes/FastFFT.git

@@ -31,6 +31,23 @@ RUN apt-get --allow-releaseinfo-change update && apt-get install -y libgtk2.0-de
     && rm -rf /var/lib/apt/lists/*
 
 
+# Get the MKL: note, this is 4.4G by default, will try to determine minimal set needed
+RUN wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
+RUN echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
+RUN apt-get update && apt-get install -y intel-oneapi-mkl-devel \
+    && rm -rf /var/lib/apt/lists/*
+
+# Minimize the MKL disk footprint
+RUN cd  /opt/intel/oneapi/mkl/latest/lib/intel64/ && \
+    rm -f *.a libmkl_sycl*
+
+# Set the MKL related variables
+ENTRYPOINT ["/bin/bash","-c","source /opt/intel/oneapi/setvars.sh"]
+
+RUN echo 'alias lt="ls -lrth"' >> /home/cisTEMx/.bashrc
+RUN echo 'alias dU="du -ch --max-depth=1 | sort -h"' >> /home/cisTEMx/.bashrc
+RUN echo 'source /opt/intel/oneapi/setvars.sh' >> /home/cisTEMx/.bashrc
+RUN echo 'bind "set bell-style none"' >> /home/cisTEMx/.bashrc
 
 # wx Formbuilder deps For focal
 # wxWidgets with gtk3 compiles fine but has weird sizing issues. Can prob be sorted easily, but for now, stick with 2.
@@ -95,8 +112,12 @@ RUN echo "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-14 main" | tee -a 
     echo "deb-src http://apt.llvm.org/focal/ llvm-toolchain-focal-14 main" | tee -a /etc/apt/sources.list
 
 RUN wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add -
-RUN apt-get update && apt-get install clang-format-14 -y && \
-    cd /usr/bin && ln -s clang-format-14 clang-format
+RUN apt-get update && apt-get install -y clang-format-14 -y && \
+    cd /usr/bin && ln -s clang-format-14 clang-format \
+    && rm -rf /var/lib/apt/lists/*
+
+
 
 USER cisTEMx
 WORKDIR /home/cisTEMx
+

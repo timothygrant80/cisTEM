@@ -1,0 +1,12 @@
+cisTEM is written to be compatible with the open source, GPL version2 licensed FFTW3 libraries, without actually using those libraries.
+We wish to maintain the more permissive licensing, with a selected limit being the Mozilla version2 license, that applies copy left on a file by file basis.
+
+You must link to the, free to use Intel MKL FFT routines, which are distributed with the permissive Intel Simplified License. 
+
+Note that a version of fftw3.h is used that is distributed with the Intel MKL, by permission granted to that organization. We do not link to any FFTW3 libraries, or files distributed with them, and hence are not subject to the GPL version2 license.
+
+We do support the open sharing of software, and if for you this means accepting the terms of the GNU GPL, and you wish to use FFTW3, you are free to create your own derivative work based on the cisTEM project and remove the precompiled guards. Each of these is prefaced with a comment to facilitate this process. // LINK_MKL_NOT_FFTW3 (or # LINK_MKL_NOT_FFTW3). 
+
+You must be aware that the GNU GPL is not compatible with other licenses the cisTEM project may use through third party libraries.
+
+If you decide to create a derivative work, it is then entirely your responsibility to ensure only libraries with compliant licenses are included. In particular, but not strictly limited to, certain proprietary libraries from Nvidia explicitly forbid being made subject to any GPL licenses, and you must, in such derivative work, remove these dependencies. The authors and contributors of the cisTEM project are not to be held liable for any mistakes made by creators of such a derivative work. Nor are the authors or contributors of the cisTEM project to be held liable for any damages caused by such a derivative work. Finally, it shall be understood that any such endeavour to create a derivative work is at your own risk, and you will receive no advice, support, or warranty from the authors or contributors of the cisTEM project.

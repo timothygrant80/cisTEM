@@ -15,7 +15,7 @@ make -j${n_threads} libmodules.a
 
 # Now do the normal build
 cd ..
-make -j${n_threads}
+make -j${n_threads} 
 
 # Get the top level directory relative to the build dir
 top_srcdir=$(awk '/^top_srcdir/ {print $3}' Makefile)

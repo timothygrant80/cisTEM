@@ -255,26 +255,49 @@ endif
 
 
 if ENABLEGPU_AM
+
+# This rule is used for FastFFT and libGPU
+.cu.o:
+	$(NVCC) $(CUDA_CXXFLAGS) $(WX_CPPFLAGS_BASE) -dc -o $@ $<
+
+if ENABLE_FASTFFT_AM
+
+# libFastFFTcore.a: ext/FastFFT/src/FastFFT.cu
+# 	$(NVCC) --cudart=static $(CUDA_CXXFLAGS) $(WX_CPPFLAGS_BASE) -lib -o $@ $< -lculibos -lcudart_static -lrt
+
+    # noinst_LIBRARIES += libFastFFTcore.a  
+    # libFastFFTcore_a_SOURCES =  ext/FastFFT/src/FastFFT.cu
+    # libFastFFTcore_a_CFLAGS = $(CUDA_CPPFLAGS) $(WX_CPPFLAGS_BASE)
+    # libFastFFTcore_a_CXXFLAGS = $(CUDA_CXXFLAGS) $(WX_CXXFLAGS_BASE)
+    # libFastFFTcore_a_LIBADD = ext/FastFFT/src/FastFFTdevicecode.o
+    # libFastFFTcore_a_AR = $(NVCC) $(CUDA_CXXFLAGS) -lib -o  
+
+ext/FastFFT/src/FastFFT.o: ext/FastFFT/src/FastFFT.cu
+	$(NVCC) $(CUDA_CXXFLAGS) $(WX_CPPFLAGS_BASE) -dc -o $@ $<
+
+ext/FastFFT/src/FastFFTdevicecode.o: ext/FastFFT/src/FastFFT.o
+	$(NVCC) $(CUDA_CXXFLAGS) --device-link $(libFastFFTcore_OBJECTS) -o ext/FastFFT/src/FastFFTdevicecode.o $(CUDA_LIBS)  
+
+endif
+
 bin_PROGRAMS += gpu_util_test gpu_devices
 noinst_LIBRARIES += libgpucore.a  
 
 libgpucore_a_SOURCES =       gpu/Histogram.cu \
                              gpu/TemplateMatchingCore.cu \
                              gpu/DeviceManager.cu \
-                             gpu/GpuImage.cu
-                            
-libgpucore_OBJECTS=$(libgpucore_a_SOURCES:.cu=.o)
+                             gpu/GpuImage.cu 
+
+libgpucore_OBJECTS=$(libgpucore_a_SOURCES:.cu=.o)                                                   
 
 libgpucore_a_CFLAGS = $(CUDA_CPPFLAGS) $(WX_CPPFLAGS_BASE)
 libgpucore_a_CXXFLAGS = $(CUDA_CXXFLAGS) $(WX_CXXFLAGS_BASE)
-libgpucore_a_LIBADD = gpu/gpudevicecode.o
+libgpucore_a_LIBADD = gpu/gpudevicecode.o ext/FastFFT/src/FastFFTdevicecode.o
 libgpucore_a_AR = $(NVCC) $(CUDA_CXXFLAGS) -lib -o
-
-.cu.o:
-	$(NVCC) $(CUDA_CXXFLAGS) $(WX_CPPFLAGS_BASE) -dc -o $@ $<
 
 gpu/gpudevicecode.o: $(libgpucore_OBJECTS)
 	$(NVCC) $(CUDA_CXXFLAGS) --device-link $(libgpucore_OBJECTS) -o gpu/gpudevicecode.o $(CUDA_LIBS)
+
 endif
 
 libcore_a_SOURCES =    core/functions.cpp \
@@ -369,17 +392,24 @@ console_test_SOURCES = programs/console_test/console_test.cpp
 console_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 console_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 
-if MODULES_AM
-noinst_LIBRARIES += libmodules.a 
-libmodules_a_SOURCES = programs/samples/2_modules/hello.cpp \
-                        programs/samples/2_modules/hello2.cpp
-libmodules_a_CXXFLAGS = $(MODULES_CXXFLAGS)
-libmodules_a_CPPFLAGS = $(MODULES_CXXFLAGS)
-
-console_test_LDADD = libmodules.a libcore.a $(WX_LIBS_BASE)
-else
-console_test_LDADD = libcore.a $(WX_LIBS_BASE)
+console_test_LDSTRING=
+if ENABLE_FASTFFT_AM
+    console_test_LDSTRING += libFastFFTcore.a
 endif
+
+if MODULES_AM
+    noinst_LIBRARIES += libmodules.a 
+    libmodules_a_SOURCES = programs/samples/2_modules/hello.cpp \
+                            programs/samples/2_modules/hello2.cpp
+    libmodules_a_CXXFLAGS = $(MODULES_CXXFLAGS)
+    libmodules_a_CPPFLAGS = $(MODULES_CXXFLAGS)
+
+    console_test_LDSTRING += libmodules.a
+endif
+
+console_test_LDADD = $(console_test_LDSTRING) libcore.a $(WX_LIBS_BASE)
+
+
 
 unblur_SOURCES = programs/unblur/unblur.cpp
 unblur_CXXFLAGS = $(WX_CPPFLAGS_BASE)

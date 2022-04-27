@@ -11,8 +11,13 @@
 import hello;
 import hello2;
 #endif
+
+#ifdef ENABLE_FastFFT
+#include <FastFFT.h>
+#endif
+
 // embedded images..
-#define atest
+
 #include "hiv_image_80x80x1.cpp"
 #include "hiv_images_shift_noise_80x80x10.cpp"
 #include "sine_128x128x1.cpp"
@@ -116,6 +121,10 @@ class MyTestApp : public MyApp {
 #ifdef _CISTEM_MODULES
     void TestModules( );
 #endif
+
+#ifdef ENABLE_FastFFT
+    void TestFastFFT( );
+#endif
 };
 
 IMPLEMENT_APP(MyTestApp)
@@ -165,6 +174,10 @@ bool MyTestApp::DoCalculation( ) {
 
 #ifdef _CISTEM_MODULES
     TestModules( );
+#endif
+
+#ifdef ENABLE_FastFFT
+    TestFastFFT( );
 #endif
 
     wxPrintf("\n\n\n");
@@ -1746,6 +1759,56 @@ void MyTestApp::TestModules( ) {
     }
     if ( hello2::test_return_value( ) != 42 ) {
         FailTest;
+    }
+
+    EndTest( );
+}
+#endif
+
+#ifdef ENABLE_FastFFT
+void MyTestApp::TestFastFFT( ) {
+
+    BeginTest("Fast FFT");
+    CheckDependencies({"MRCFile::OpenFile", "MRCFile::ReadSlice"});
+
+    Image input_image;
+    input_image.QuickAndDirtyReadSlice(hiv_image_80x80x1_filename.ToStdString( ), 1);
+
+    if ( input_image.logical_x_dimension == 4096 && input_image.logical_y_dimension == 4096 ) {
+        wxPrintf("Testing FastFFT for a 4K image\n");
+        // Make a copy of the image to transform forward and back on the cpu , which should give a scaled image by N
+        Image copy_of_input;
+        copy_of_input.CopyFrom(&input_image);
+        copy_of_input.ForwardFFT(false); // no scaling
+        copy_of_input.BackwardFFT( );
+        copy_of_input.QuickAndDirtyWriteSlice("/tmp/cpu_fft_ifft.mrc", 1);
+
+        // Make a copy of the image to transform forward and back on the gpu, which should give a scaled image by N
+        copy_of_input.CopyFrom(&input_image);
+
+        // We just make one instance of the FourierTransformer class, with calc type float.
+        FastFFT::FourierTransformer<float, float, float, 2> FT;
+
+        // This is similar to creating an FFT/CUFFT plan, so set these up before doing anything on the GPU
+        // for this test, we know the size is square and 4096 with input and output size equal.
+        FT.SetForwardFFTPlan(4096, 4096, 1, 4096, 4096, 1, true, false);
+        FT.SetInverseFFTPlan(4096, 4096, 1, 4096, 4096, 1, true);
+
+        // The padding (dims.w) is calculated based on the setup
+        short4 dims_in  = FT.ReturnFwdInputDimensions( );
+        short4 dims_out = FT.ReturnFwdOutputDimensions( );
+
+        FT.SetInputPointer(copy_of_input.real_values, false);
+        FT.CopyHostToDevice( );
+        FT.FwdFFT( );
+        FT.InvFFT( );
+        FT.CopyDeviceToHost(true, true);
+        FT.Wait( );
+
+        copy_of_input.QuickAndDirtyWriteSlice("/tmp/gpu_fft_ifft.mrc", 1);
+    }
+    else {
+        wxPrintf("Not testing FastFFT for a %i x %i image\n", input_image.logical_x_dimension, input_image.logical_y_dimension);
     }
 
     EndTest( );

@@ -1,5 +1,4 @@
-#include <numbers>
-using namespace std::numbers;
+#include "defines.h"
 
 void swapbytes(unsigned char* v, size_t n);
 void swapbytes(size_t size, unsigned char* v, size_t n);

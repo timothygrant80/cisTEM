@@ -217,35 +217,39 @@ AC_ARG_ENABLE(debugmode, AS_HELP_STRING([--enable-debugmode],[Compile in debug m
 # BEGIN CUDA CHECKS AND SETS
 ###############################
 
-  	
+
+FastFFT_INCLUDES=""
+use_FastFFT="no"
 if test "$want_cuda" = "yes" ; then
 
-	# ~Runtime about 85% with K3 images, but mips are different - total detection is ~the same. 
-  # Determined this is likely just numerical error. Enabling by default.
-  #  --disable-feature is equivalent to --enable-feature=no. 
-  use_rotated_tm=1
-	AC_ARG_ENABLE(rotated-tm, AS_HELP_STRING([--disable-rotated-tm],[Place power of 2 sized axis on X by rotating 90 deg in template matching for speed [default=no]]),[
-	  if test "$enableval" = no; then
-      use_rotated_tm=0
-	  fi
-	  ])
+    # Call the m4 macro to check and setup for FastFFT if present and requested
+    submodule_FastFFT
 
-  if test "x$use_rotated_tm" = "x1"; then
-    AC_DEFINE([ROTATEFORSPEED], [], [Rotate image for faster FFT in template matching])
-    AC_MSG_NOTICE([Enabling rotated-tm]);
-  fi
+    # ~Runtime about 85% with K3 images, but mips are different - total detection is ~the same. 
+    # Determined this is likely just numerical error. Enabling by default.
+    #    --disable-feature is equivalent to --enable-feature=no. 
+    use_rotated_tm=1
+    AC_ARG_ENABLE(rotated-tm, AS_HELP_STRING([--disable-rotated-tm],[Place power of 2 sized axis on X by rotating 90 deg in template matching for speed [default=no]]),[
+        if test "$enableval" = no; then
+            use_rotated_tm=0
+        fi
+    ])
 
-  AC_MSG_NOTICE([Adding the CUDA includes Setting up NVCC initial flags])
-  CUDA_CPPFLAGS="$CUDA_CFLAGS $NVCCFLAGS"
-  CUDA_CXXFLAGS="$CUDA_CFLAGS $NVCCFLAGS"
-  
-  CXXFLAGS="$CXXFLAGS $use_gpu_cache_hints $CUDA_CFLAGS"
-  CPPFLAGS="$CPPFLAGS $use_gpu_cache_hints $CUDA_CFLAGS"
-  AC_MSG_NOTICE([Using CUDA_CXXFLAGS=$CUDA_CXXFLAGS])
-  AC_MSG_NOTICE([Using CUDA_LIBS=$CUDA_LIBS])
+    if test "x$use_rotated_tm" = "x1"; then
+        AC_DEFINE([ROTATEFORSPEED], [], [Rotate image for faster FFT in template matching])
+        AC_MSG_NOTICE([Enabling rotated-tm]);
+    fi
 
-  AC_DEFINE([ENABLEGPU], [], [Enable gpu codepath])
+    AC_MSG_NOTICE([Adding the CUDA includes Setting up NVCC initial flags])
+    CUDA_CPPFLAGS="$CUDA_CFLAGS $NVCCFLAGS $FastFFT_FLAGS"
+    CUDA_CXXFLAGS="$CUDA_CFLAGS $NVCCFLAGS $FastFFT_FLAGS"
+    
+    CXXFLAGS="$CXXFLAGS $use_gpu_cache_hints $CUDA_CFLAGS"
+    CPPFLAGS="$CPPFLAGS $use_gpu_cache_hints $CUDA_CFLAGS"
+    AC_MSG_NOTICE([Using CUDA_CXXFLAGS=$CUDA_CXXFLAGS])
+    AC_MSG_NOTICE([Using CUDA_LIBS=$CUDA_LIBS])
 
+    AC_DEFINE([ENABLEGPU], [], [Enable gpu codepath])
 fi
 
 ##############################
@@ -253,6 +257,7 @@ fi
 ##############################  
 
 AM_CONDITIONAL([ENABLEGPU_AM], [test "$want_cuda" = "yes"])
+AM_CONDITIONAL([ENABLE_FASTFFT_AM], [test "x$use_FastFFT" = "xyes"])
 
 # fftw
 
@@ -565,34 +570,11 @@ fi
 SUBMODULE_INCLUDES=""
 
 # Optional FastFFT submodule
-
-# git submodule add https://github.com/bHimes/FastFFT.git src/ext/FastFFT
-use_FastFFT="yes"
-AC_ARG_ENABLE(FastFFT, AS_HELP_STRING([--disable-FastFFT],[Do not use the FastFFT library, even if submodule is present]), [
-    if test "$enableval" = no; then
-        use_FastFFT="no"
-        AC_MSG_NOTICE([Not using the FastFFT Library b/c --disable-FastFFT is configured.])      
-    else
-        AC_MSG_ERROR([FastFFT is enabled by default, if present. Specifying --enable-FastFFT breaks the configuration. If you want to disable FastFFT, please configure with --disable-FastFFT])
-    fi
-], 
-[
-    # Okay, this has not been disabled (explicitly) so let's see if the submodule is in place.
-    AC_CHECK_FILE("$TOPSRCDIR/src/ext/FastFFT/include/FastFFT.h",[use_FastFFT="yes"],[use_FastFFT="no"])
-    if test "x$use_FastFFT" = "xyes"; then
-        # using $CISTEM_CONFIG_DIR/$TOPSRCDIR/ is a bit of a jenky way to get an absolute path. I'm doing this
-        # because TOPSRCDIR defined by autotools srcdir is generally ../.. so a file in src/core would be okay to include, but 
-        # a file in src/program/program name would not find the header.
-        SUBMODULE_INCLUDES="$SUBMODULE_INCLUDES -I$CISTEM_CONFIG_DIR/$TOPSRCDIR/src/ext/FastFFT/include"
-        AC_DEFINE(FastFFT, [], [Use the FasFFT library for GPU FFTs where appropriate.])
-        AC_MSG_NOTICE([Using the FastFFT Library.])
-    else
-        AC_MSG_NOTICE([Not using the FastFFT Library b/c $TOPSRCDIR/src/ext/FastFFT/include/FastFFT.h was not found.])
-    fi   
-])
+submodule_FastFFT
 
 
-CXXFLAGS="$CXXFLAGS -I$CISTEM_CONFIG_DIR $SUBMODULE_INCLUDES"
+
+CXXFLAGS="$CXXFLAGS -I$CISTEM_CONFIG_DIR $SUBMODULE_INCLUDES $FastFFT_INCLUDES"
 CPPFLAGS="$CPPFLAGS -I$CISTEM_CONFIG_DIR $SUBMODULE_INCLUDES"
 WX_CPPFLAGS="$WX_CPPFLAGS -I$CISTEM_CONFIG_DIR $SUBMODULE_INCLUDES"
 WX_CPPFLAGS_BASE="$WX_CPPFLAGS_BASE -I$CISTEM_CONFIG_DIR $SUBMODULE_INCLUDES"

@@ -256,30 +256,6 @@ endif
 
 if ENABLEGPU_AM
 
-# This rule is used for FastFFT and libGPU
-.cu.o:
-	$(NVCC) $(CUDA_CXXFLAGS) $(WX_CPPFLAGS_BASE) -dc -o $@ $<
-
-if ENABLE_FASTFFT_AM
-
-# libFastFFTcore.a: ext/FastFFT/src/FastFFT.cu
-# 	$(NVCC) --cudart=static $(CUDA_CXXFLAGS) $(WX_CPPFLAGS_BASE) -lib -o $@ $< -lculibos -lcudart_static -lrt
-
-    # noinst_LIBRARIES += libFastFFTcore.a  
-    # libFastFFTcore_a_SOURCES =  ext/FastFFT/src/FastFFT.cu
-    # libFastFFTcore_a_CFLAGS = $(CUDA_CPPFLAGS) $(WX_CPPFLAGS_BASE)
-    # libFastFFTcore_a_CXXFLAGS = $(CUDA_CXXFLAGS) $(WX_CXXFLAGS_BASE)
-    # libFastFFTcore_a_LIBADD = ext/FastFFT/src/FastFFTdevicecode.o
-    # libFastFFTcore_a_AR = $(NVCC) $(CUDA_CXXFLAGS) -lib -o  
-
-ext/FastFFT/src/FastFFT.o: ext/FastFFT/src/FastFFT.cu
-	$(NVCC) $(CUDA_CXXFLAGS) $(WX_CPPFLAGS_BASE) -dc -o $@ $<
-
-ext/FastFFT/src/FastFFTdevicecode.o: ext/FastFFT/src/FastFFT.o
-	$(NVCC) $(CUDA_CXXFLAGS) --device-link $(libFastFFTcore_OBJECTS) -o ext/FastFFT/src/FastFFTdevicecode.o $(CUDA_LIBS)  
-
-endif
-
 bin_PROGRAMS += gpu_util_test gpu_devices
 noinst_LIBRARIES += libgpucore.a  
 
@@ -287,14 +263,20 @@ libgpucore_a_SOURCES =       gpu/Histogram.cu \
                              gpu/TemplateMatchingCore.cu \
                              gpu/DeviceManager.cu \
                              gpu/GpuImage.cu 
+if ENABLE_FASTFFT_AM
+    libgpucore_a_SOURCES += ext/FastFFT/src/FastFFT.cu
+endif
 
 libgpucore_OBJECTS=$(libgpucore_a_SOURCES:.cu=.o)                                                   
 
 libgpucore_a_CFLAGS = $(CUDA_CPPFLAGS) $(WX_CPPFLAGS_BASE)
 libgpucore_a_CXXFLAGS = $(CUDA_CXXFLAGS) $(WX_CXXFLAGS_BASE)
-libgpucore_a_LIBADD = gpu/gpudevicecode.o ext/FastFFT/src/FastFFTdevicecode.o
+libgpucore_a_LIBADD = gpu/gpudevicecode.o 
 libgpucore_a_AR = $(NVCC) $(CUDA_CXXFLAGS) -lib -o
 
+.cu.o:
+	$(NVCC) $(CUDA_CXXFLAGS) $(WX_CPPFLAGS_BASE) -dc -o $@ $<
+    
 gpu/gpudevicecode.o: $(libgpucore_OBJECTS)
 	$(NVCC) $(CUDA_CXXFLAGS) --device-link $(libgpucore_OBJECTS) -o gpu/gpudevicecode.o $(CUDA_LIBS)
 
@@ -386,7 +368,7 @@ cisTEM_LDADD = libguicore.a libcore.a $(WX_LIBS)
 cisTEM_job_control_SOURCES = programs/guix_job_control/guix_job_control.cpp 
 cisTEM_job_control_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 cisTEM_job_control_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-cisTEM_job_control_LDADD = libcore.a $(WX_LIBS_BASE)
+cisTEM_job_control_LDADD = libcore.a $(WX_LIBS_BASE) 
 
 console_test_SOURCES = programs/console_test/console_test.cpp 
 console_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
@@ -394,7 +376,7 @@ console_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 
 console_test_LDSTRING=
 if ENABLE_FASTFFT_AM
-    console_test_LDSTRING += libFastFFTcore.a
+    console_test_LDSTRING += libgpucore.a
 endif
 
 if MODULES_AM
@@ -407,7 +389,7 @@ if MODULES_AM
     console_test_LDSTRING += libmodules.a
 endif
 
-console_test_LDADD = $(console_test_LDSTRING) libcore.a $(WX_LIBS_BASE)
+console_test_LDADD = $(console_test_LDSTRING) libcore.a $(WX_LIBS_BASE) $(CUDA_LIBS)
 
 
 

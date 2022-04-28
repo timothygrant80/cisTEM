@@ -1774,7 +1774,9 @@ void MyTestApp::TestFastFFT( ) {
     Image input_image;
     input_image.QuickAndDirtyReadSlice(hiv_image_80x80x1_filename.ToStdString( ), 1);
 
-    if ( input_image.logical_x_dimension == 4096 && input_image.logical_y_dimension == 4096 ) {
+    input_image.Resize(64, 64, 1);
+
+    if ( input_image.logical_x_dimension == 64 && input_image.logical_y_dimension == 64 ) {
         wxPrintf("Testing FastFFT for a 4K image\n");
         // Make a copy of the image to transform forward and back on the cpu , which should give a scaled image by N
         Image copy_of_input;

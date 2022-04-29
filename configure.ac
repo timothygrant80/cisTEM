@@ -9,7 +9,6 @@ AC_CONFIG_MACRO_DIR([m4])
 INPUT_CPPFLAGS="$CPPFLAGS"
 INPUT_CXXFLAGS="$CXXFLAGS"
 
-
 AC_PROG_CC([icc gcc clang])
 AC_PROG_CXX([icpc g++ clang++])
 
@@ -218,35 +217,39 @@ AC_ARG_ENABLE(debugmode, AS_HELP_STRING([--enable-debugmode],[Compile in debug m
 # BEGIN CUDA CHECKS AND SETS
 ###############################
 
-  	
+
+FastFFT_INCLUDES=""
+use_FastFFT="no"
 if test "$want_cuda" = "yes" ; then
 
-	# ~Runtime about 85% with K3 images, but mips are different - total detection is ~the same. 
-  # Determined this is likely just numerical error. Enabling by default.
-  #  --disable-feature is equivalent to --enable-feature=no. 
-  use_rotated_tm=1
-	AC_ARG_ENABLE(rotated-tm, AS_HELP_STRING([--disable-rotated-tm],[Place power of 2 sized axis on X by rotating 90 deg in template matching for speed [default=no]]),[
-	  if test "$enableval" = no; then
-      use_rotated_tm=0
-	  fi
-	  ])
+    # Call the m4 macro to check and setup for FastFFT if present and requested
+    submodule_FastFFT
 
-  if test "x$use_rotated_tm" = "x1"; then
-    AC_DEFINE([ROTATEFORSPEED], [], [Rotate image for faster FFT in template matching])
-    AC_MSG_NOTICE([Enabling rotated-tm]);
-  fi
+    # ~Runtime about 85% with K3 images, but mips are different - total detection is ~the same. 
+    # Determined this is likely just numerical error. Enabling by default.
+    #    --disable-feature is equivalent to --enable-feature=no. 
+    use_rotated_tm=1
+    AC_ARG_ENABLE(rotated-tm, AS_HELP_STRING([--disable-rotated-tm],[Place power of 2 sized axis on X by rotating 90 deg in template matching for speed [default=no]]),[
+        if test "$enableval" = no; then
+            use_rotated_tm=0
+        fi
+    ])
 
-  AC_MSG_NOTICE([Adding the CUDA includes Setting up NVCC initial flags])
-  CUDA_CPPFLAGS="$CUDA_CFLAGS $NVCCFLAGS"
-  CUDA_CXXFLAGS="$CUDA_CFLAGS $NVCCFLAGS"
-  
-  CXXFLAGS="$CXXFLAGS $use_gpu_cache_hints $CUDA_CFLAGS"
-  CPPFLAGS="$CPPFLAGS $use_gpu_cache_hints $CUDA_CFLAGS"
-  AC_MSG_NOTICE([Using CUDA_CXXFLAGS=$CUDA_CXXFLAGS])
-  AC_MSG_NOTICE([Using CUDA_LIBS=$CUDA_LIBS])
+    if test "x$use_rotated_tm" = "x1"; then
+        AC_DEFINE([ROTATEFORSPEED], [], [Rotate image for faster FFT in template matching])
+        AC_MSG_NOTICE([Enabling rotated-tm]);
+    fi
 
-  AC_DEFINE([ENABLEGPU], [], [Enable gpu codepath])
+    AC_MSG_NOTICE([Adding the CUDA includes Setting up NVCC initial flags])
+    CUDA_CPPFLAGS="$CUDA_CFLAGS $NVCCFLAGS $FastFFT_FLAGS"
+    CUDA_CXXFLAGS="$CUDA_CFLAGS $NVCCFLAGS $FastFFT_FLAGS"
+    
+    CXXFLAGS="$CXXFLAGS $use_gpu_cache_hints $CUDA_CFLAGS"
+    CPPFLAGS="$CPPFLAGS $use_gpu_cache_hints $CUDA_CFLAGS"
+    AC_MSG_NOTICE([Using CUDA_CXXFLAGS=$CUDA_CXXFLAGS])
+    AC_MSG_NOTICE([Using CUDA_LIBS=$CUDA_LIBS])
 
+    AC_DEFINE([ENABLEGPU], [], [Enable gpu codepath])
 fi
 
 ##############################
@@ -254,6 +257,7 @@ fi
 ##############################  
 
 AM_CONDITIONAL([ENABLEGPU_AM], [test "$want_cuda" = "yes"])
+AM_CONDITIONAL([ENABLE_FASTFFT_AM], [test "x$use_FastFFT" = "xyes"])
 
 # fftw
 
@@ -559,11 +563,21 @@ AC_CHECK_FILE("$TOPSRCDIR/.git/HEAD",
   ])
 fi
 
+# submodules
 
-CXXFLAGS="$CXXFLAGS -I$CISTEM_CONFIG_DIR"
-CPPFLAGS="$CPPFLAGS -I$CISTEM_CONFIG_DIR"
-WX_CPPFLAGS="$WX_CPPFLAGS -I$CISTEM_CONFIG_DIR"
-WX_CPPFLAGS_BASE="$WX_CPPFLAGS_BASE -I$CISTEM_CONFIG_DIR"
+# We use submodules because we either want to use a thirdparty library, or at times, wish to test an idea [mostly] in private. 
+# The latter is accomplished by using a submodule that references a private repository.
+SUBMODULE_INCLUDES=""
+
+# Optional FastFFT submodule
+submodule_FastFFT
+
+
+
+CXXFLAGS="$CXXFLAGS -I$CISTEM_CONFIG_DIR $SUBMODULE_INCLUDES $FastFFT_INCLUDES"
+CPPFLAGS="$CPPFLAGS -I$CISTEM_CONFIG_DIR $SUBMODULE_INCLUDES"
+WX_CPPFLAGS="$WX_CPPFLAGS -I$CISTEM_CONFIG_DIR $SUBMODULE_INCLUDES"
+WX_CPPFLAGS_BASE="$WX_CPPFLAGS_BASE -I$CISTEM_CONFIG_DIR $SUBMODULE_INCLUDES"
 
 # Make sure the host compiler gets all flags when called from nvcc
 CUDA_TO_CPP="`echo $CPPFLAGS $WX_CPPFLAGS | sed -e 's/\s\+/,/g' | awk '{print "-Xcompiler " $0}'`"

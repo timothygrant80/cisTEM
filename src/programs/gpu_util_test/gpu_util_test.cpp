@@ -399,8 +399,8 @@ void GpuUtilTest::createImageAddOne( ) {
             // Re-use the image and library contexts - this needs to have debug asserts added
             d_image_full.CopyHostToDevice( );
 
-            cpu_work_full.MultiplyByConstant(PIf);
-            d_image_full.MultiplyByConstant(PIf);
+            cpu_work_full.MultiplyByConstant(pi_v<float>);
+            d_image_full.MultiplyByConstant(pi_v<float>);
             d_image_full.Wait( );
 
             wxPrintf("Real sums are cpu: %f gpu: %f\n", cpu_work_full.ReturnSumOfRealValues( ), d_image_full.ReturnSumOfRealValues( ));

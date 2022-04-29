@@ -845,7 +845,7 @@ void Image::AddNoise(NoiseType wanted_noise_type, float noise_param_1, float noi
     MyDebugAssertTrue(wanted_noise_type == EXPONENTIAL ? noise_param_1 > 0 : true, "Mean of an Exponential distribution must be positive");
     MyDebugAssertTrue(wanted_noise_type == GAMMA ? (noise_param_1 > 0 && noise_param_2 > 0) : true, "alpha and beta of a Gamma distribution must be positive");
 
-    RandomNumberGenerator my_rng(PIf);
+    RandomNumberGenerator my_rng(pi_v<float>);
 
     switch ( wanted_noise_type ) {
         case GAUSSIAN:
@@ -11257,8 +11257,8 @@ float Image::ReturnBeamTiltSignificanceScore(Image calculated_beam_tilt) {
     buffer.Binarise(0.00002f);
     calculated_beam_tilt.Binarise(0.0f);
 
-    float mask_radius_local = sqrtf((buffer.ReturnAverageOfRealValues( ) * buffer.logical_x_dimension * buffer.logical_y_dimension) / PIf);
+    float mask_radius_local = sqrtf((buffer.ReturnAverageOfRealValues( ) * buffer.logical_x_dimension * buffer.logical_y_dimension) / pi_v<float>);
     buffer.SubtractImage(&calculated_beam_tilt);
     float binarized_score = buffer.ReturnSumOfSquares(mask_radius_local);
-    return 0.5f * PIf * powf((0.5f - binarized_score) * mask_radius_local, 2);
+    return 0.5f * pi_v<float> * powf((0.5f - binarized_score) * mask_radius_local, 2);
 }

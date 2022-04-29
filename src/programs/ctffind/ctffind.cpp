@@ -2011,13 +2011,13 @@ bool CtffindApp::DoCalculation( ) {
         current_ctf->SetAdditionalPhaseShift(minimum_additional_phase_shift);
 
         // Set up the comparison object
-        comparison_object_2D = new ImageCTFComparison(1, *current_ctf, pixel_size_for_fitting, find_additional_phase_shift && ! fixed_additional_phase_shift, astigmatism_is_known, known_astigmatism / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * PIf, false);
+        comparison_object_2D = new ImageCTFComparison(1, *current_ctf, pixel_size_for_fitting, find_additional_phase_shift && ! fixed_additional_phase_shift, astigmatism_is_known, known_astigmatism / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * pi_v<float>, false);
         comparison_object_2D->SetImage(0, average_spectrum_masked);
         comparison_object_2D->SetupQuickCorrelation( );
 
         if ( defocus_is_known ) {
             profile_timing.start("Calculate Score for known defocus");
-            current_ctf->SetDefocus(known_defocus_1 / pixel_size_for_fitting, known_defocus_2 / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * PIf);
+            current_ctf->SetDefocus(known_defocus_1 / pixel_size_for_fitting, known_defocus_2 / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * pi_v<float>);
             current_ctf->SetAdditionalPhaseShift(known_phase_shift);
             current_ctf->SetHighestFrequencyForFitting(pixel_size_for_fitting / maximum_resolution);
             comparison_object_2D->SetCTF(*current_ctf);
@@ -2123,7 +2123,7 @@ bool CtffindApp::DoCalculation( ) {
                 for ( counter = 0; counter < number_of_search_dimensions; counter++ ) {
                     cg_starting_point[counter] = conjugate_gradient_minimizer->GetBestValue(counter);
                 }
-                current_ctf->SetDefocus(cg_starting_point[0], cg_starting_point[0], estimated_astigmatism_angle / 180.0 * PIf);
+                current_ctf->SetDefocus(cg_starting_point[0], cg_starting_point[0], estimated_astigmatism_angle / 180.0 * pi_v<float>);
                 if ( find_additional_phase_shift ) {
                     if ( fixed_additional_phase_shift ) {
                         current_ctf->SetAdditionalPhaseShift(minimum_additional_phase_shift);
@@ -2179,7 +2179,7 @@ bool CtffindApp::DoCalculation( ) {
 
                         bf_midpoint[0] = minimum_defocus / pixel_size_for_fitting + bf_halfrange[0];
                         bf_midpoint[1] = bf_midpoint[0];
-                        bf_midpoint[2] = estimated_astigmatism_angle / 180.0 * PIf;
+                        bf_midpoint[2] = estimated_astigmatism_angle / 180.0 * pi_v<float>;
                         bf_midpoint[3] = minimum_additional_phase_shift + bf_halfrange[3];
 
                         bf_stepsize[0] = defocus_search_step / pixel_size_for_fitting;
@@ -2266,7 +2266,7 @@ bool CtffindApp::DoCalculation( ) {
 
                 //
                 if ( astigmatism_is_known ) {
-                    current_ctf->SetDefocus(cg_starting_point[0], cg_starting_point[0] - known_astigmatism / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * PIf);
+                    current_ctf->SetDefocus(cg_starting_point[0], cg_starting_point[0] - known_astigmatism / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * pi_v<float>);
                     if ( find_additional_phase_shift ) {
                         if ( fixed_additional_phase_shift ) {
                             current_ctf->SetAdditionalPhaseShift(minimum_additional_phase_shift);
@@ -2300,7 +2300,7 @@ bool CtffindApp::DoCalculation( ) {
             //if (is_running_locally && old_school_input)
             {
                 wxPrintf("      DFMID1      DFMID2      ANGAST          CC\n");
-                wxPrintf("%12.2f%12.2f%12.2f%12.5f\n", current_ctf->GetDefocus1( ) * pixel_size_for_fitting, current_ctf->GetDefocus2( ) * pixel_size_for_fitting, current_ctf->GetAstigmatismAzimuth( ) * 180.0 / PIf, best_score_after_initial_phase);
+                wxPrintf("%12.2f%12.2f%12.2f%12.5f\n", current_ctf->GetDefocus1( ) * pixel_size_for_fitting, current_ctf->GetDefocus2( ) * pixel_size_for_fitting, current_ctf->GetAstigmatismAzimuth( ) * 180.0 / pi_v<float>, best_score_after_initial_phase);
             }
 
             // Now we refine in the neighbourhood by using Powell's conjugate gradient algorithm
@@ -2341,7 +2341,7 @@ bool CtffindApp::DoCalculation( ) {
                 else {
                     // all we have right now is the guessed astigmatism angle from the mirror
                     // trick before any CTF fitting was even tried
-                    cg_starting_point[2] = estimated_astigmatism_angle / 180.0 * PIf;
+                    cg_starting_point[2] = estimated_astigmatism_angle / 180.0 * pi_v<float>;
                 }
 
                 if ( find_additional_phase_shift )
@@ -2366,7 +2366,7 @@ bool CtffindApp::DoCalculation( ) {
                 cg_starting_point[counter] = conjugate_gradient_minimizer->GetBestValue(counter);
             }
             if ( astigmatism_is_known ) {
-                current_ctf->SetDefocus(cg_starting_point[0], cg_starting_point[0] - known_astigmatism / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * PIf);
+                current_ctf->SetDefocus(cg_starting_point[0], cg_starting_point[0] - known_astigmatism / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * pi_v<float>);
                 if ( find_additional_phase_shift ) {
                     if ( fixed_additional_phase_shift ) {
                         current_ctf->SetAdditionalPhaseShift(minimum_additional_phase_shift);
@@ -2391,7 +2391,7 @@ bool CtffindApp::DoCalculation( ) {
 
             // Print results to the terminal
             if ( is_running_locally && old_school_input ) {
-                wxPrintf("%12.2f%12.2f%12.2f%12.5f   Final Values\n", current_ctf->GetDefocus1( ) * pixel_size_for_fitting, current_ctf->GetDefocus2( ) * pixel_size_for_fitting, current_ctf->GetAstigmatismAzimuth( ) * 180.0 / PIf, -conjugate_gradient_minimizer->GetBestScore( ));
+                wxPrintf("%12.2f%12.2f%12.2f%12.5f   Final Values\n", current_ctf->GetDefocus1( ) * pixel_size_for_fitting, current_ctf->GetDefocus2( ) * pixel_size_for_fitting, current_ctf->GetAstigmatismAzimuth( ) * 180.0 / pi_v<float>, -conjugate_gradient_minimizer->GetBestScore( ));
                 if ( find_additional_phase_shift ) {
                     wxPrintf("Final phase shift = %0.3f radians\n", current_ctf->GetAdditionalPhaseShift( ));
                 }
@@ -2614,9 +2614,9 @@ bool CtffindApp::DoCalculation( ) {
             ctffind_timing.print_times( );
             profile_timing.print_times( );
 
-            wxPrintf("\n\nEstimated defocus values        : %0.2f , %0.2f Angstroms\nEstimated azimuth of astigmatism: %0.2f degrees\n", current_ctf->GetDefocus1( ) * pixel_size_for_fitting, current_ctf->GetDefocus2( ) * pixel_size_for_fitting, current_ctf->GetAstigmatismAzimuth( ) / PIf * 180.0);
+            wxPrintf("\n\nEstimated defocus values        : %0.2f , %0.2f Angstroms\nEstimated azimuth of astigmatism: %0.2f degrees\n", current_ctf->GetDefocus1( ) * pixel_size_for_fitting, current_ctf->GetDefocus2( ) * pixel_size_for_fitting, current_ctf->GetAstigmatismAzimuth( ) / pi_v<float> * 180.0);
             if ( find_additional_phase_shift ) {
-                wxPrintf("Additional phase shift          : %0.3f degrees (%0.3f radians) (%0.3f PIf)\n", current_ctf->GetAdditionalPhaseShift( ) / PIf * 180.0, current_ctf->GetAdditionalPhaseShift( ), current_ctf->GetAdditionalPhaseShift( ) / PIf);
+                wxPrintf("Additional phase shift          : %0.3f degrees (%0.3f radians) (%0.3f pi_v<float>)\n", current_ctf->GetAdditionalPhaseShift( ) / pi_v<float> * 180.0, current_ctf->GetAdditionalPhaseShift( ), current_ctf->GetAdditionalPhaseShift( ) / pi_v<float>);
             }
             if ( determine_tilt )
                 wxPrintf("Tilt_axis, tilt angle           : %0.2f , %0.2f degrees\n", tilt_axis, tilt_angle);
@@ -2648,7 +2648,7 @@ bool CtffindApp::DoCalculation( ) {
             values_to_write_out[0] = current_micrograph_number;
             values_to_write_out[1] = current_ctf->GetDefocus1( ) * pixel_size_for_fitting;
             values_to_write_out[2] = current_ctf->GetDefocus2( ) * pixel_size_for_fitting;
-            values_to_write_out[3] = current_ctf->GetAstigmatismAzimuth( ) * 180.0 / PIf;
+            values_to_write_out[3] = current_ctf->GetAstigmatismAzimuth( ) * 180.0 / pi_v<float>;
             values_to_write_out[4] = current_ctf->GetAdditionalPhaseShift( );
             values_to_write_out[5] = final_score;
             if ( compute_extra_stats ) {
@@ -2713,7 +2713,7 @@ bool CtffindApp::DoCalculation( ) {
     float results_array[10];
     results_array[0] = current_ctf->GetDefocus1( ) * pixel_size_for_fitting; // Defocus 1 (Angstroms)
     results_array[1] = current_ctf->GetDefocus2( ) * pixel_size_for_fitting; // Defocus 2 (Angstroms)
-    results_array[2] = current_ctf->GetAstigmatismAzimuth( ) * 180.0 / PIf; // Astigmatism angle (degrees)
+    results_array[2] = current_ctf->GetAstigmatismAzimuth( ) * 180.0 / pi_v<float>; // Astigmatism angle (degrees)
     results_array[3] = current_ctf->GetAdditionalPhaseShift( ); // Additional phase shift (e.g. from phase plate) (radians)
     results_array[4] = final_score; // CTFFIND score
 
@@ -3355,14 +3355,14 @@ void ComputeEquiPhaseAverageOfPowerSpectrum(Image* spectrum, CTF* ctf, Curve* ep
 }
 
 float ReturnAzimuthToUseFor1DPlots(CTF* ctf) {
-    const float min_angular_distances_from_axes_radians = 10.0 / 180.0 * PIf;
+    const float min_angular_distances_from_axes_radians = 10.0 / 180.0 * pi_v<float>;
     float       azimuth_of_mid_defocus;
     float       angular_distance_from_axes;
 
     // We choose the azimuth to be mid way between the two defoci of the astigmatic CTF
-    azimuth_of_mid_defocus = ctf->GetAstigmatismAzimuth( ) + PIf * 0.25f;
+    azimuth_of_mid_defocus = ctf->GetAstigmatismAzimuth( ) + pi_v<float> * 0.25f;
     // We don't want the azimuth too close to the axes, which may have been blanked by the central-cross-artefact-suppression-system (tm)
-    angular_distance_from_axes = fmod(azimuth_of_mid_defocus, PIf * 0.5f);
+    angular_distance_from_axes = fmod(azimuth_of_mid_defocus, pi_v<float> * 0.5f);
     if ( fabs(angular_distance_from_axes) < min_angular_distances_from_axes_radians ) {
         if ( angular_distance_from_axes > 0.0f ) {
             azimuth_of_mid_defocus = min_angular_distances_from_axes_radians;
@@ -3371,12 +3371,12 @@ float ReturnAzimuthToUseFor1DPlots(CTF* ctf) {
             azimuth_of_mid_defocus = -min_angular_distances_from_axes_radians;
         }
     }
-    if ( fabs(angular_distance_from_axes) > 0.5f * PIf - min_angular_distances_from_axes_radians ) {
+    if ( fabs(angular_distance_from_axes) > 0.5f * pi_v<float> - min_angular_distances_from_axes_radians ) {
         if ( angular_distance_from_axes > 0.0 ) {
-            azimuth_of_mid_defocus = PIf * 0.5f - min_angular_distances_from_axes_radians;
+            azimuth_of_mid_defocus = pi_v<float> * 0.5f - min_angular_distances_from_axes_radians;
         }
         else {
-            azimuth_of_mid_defocus = -PIf * 0.5f + min_angular_distances_from_axes_radians;
+            azimuth_of_mid_defocus = -pi_v<float> * 0.5f + min_angular_distances_from_axes_radians;
         }
     }
 
@@ -3664,7 +3664,7 @@ float FindRotationalAlignmentBetweenTwoStacksOfImages(Image* self, Image* other_
     // Loop over possible rotations
     while ( current_rotation < search_half_range + search_step_size ) {
 
-        current_rotation_rad = current_rotation / 180.0 * PIf;
+        current_rotation_rad = current_rotation / 180.0 * pi_v<float>;
         cc_numerator_dist.Reset( );
         cc_denom_self_dist.Reset( );
         cc_denom_other_dist.Reset( );

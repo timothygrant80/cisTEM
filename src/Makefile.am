@@ -255,26 +255,31 @@ endif
 
 
 if ENABLEGPU_AM
+
 bin_PROGRAMS += gpu_util_test gpu_devices
 noinst_LIBRARIES += libgpucore.a  
 
 libgpucore_a_SOURCES =       gpu/Histogram.cu \
                              gpu/TemplateMatchingCore.cu \
                              gpu/DeviceManager.cu \
-                             gpu/GpuImage.cu
-                            
-libgpucore_OBJECTS=$(libgpucore_a_SOURCES:.cu=.o)
+                             gpu/GpuImage.cu 
+if ENABLE_FASTFFT_AM
+    libgpucore_a_SOURCES += ext/FastFFT/src/FastFFT.cu
+endif
+
+libgpucore_OBJECTS=$(libgpucore_a_SOURCES:.cu=.o)                                                   
 
 libgpucore_a_CFLAGS = $(CUDA_CPPFLAGS) $(WX_CPPFLAGS_BASE)
 libgpucore_a_CXXFLAGS = $(CUDA_CXXFLAGS) $(WX_CXXFLAGS_BASE)
-libgpucore_a_LIBADD = gpu/gpudevicecode.o
+libgpucore_a_LIBADD = gpu/gpudevicecode.o 
 libgpucore_a_AR = $(NVCC) $(CUDA_CXXFLAGS) -lib -o
 
 .cu.o:
 	$(NVCC) $(CUDA_CXXFLAGS) $(WX_CPPFLAGS_BASE) -dc -o $@ $<
-
+    
 gpu/gpudevicecode.o: $(libgpucore_OBJECTS)
 	$(NVCC) $(CUDA_CXXFLAGS) --device-link $(libgpucore_OBJECTS) -o gpu/gpudevicecode.o $(CUDA_LIBS)
+
 endif
 
 libcore_a_SOURCES =    core/functions.cpp \
@@ -363,23 +368,30 @@ cisTEM_LDADD = libguicore.a libcore.a $(WX_LIBS)
 cisTEM_job_control_SOURCES = programs/guix_job_control/guix_job_control.cpp 
 cisTEM_job_control_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 cisTEM_job_control_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-cisTEM_job_control_LDADD = libcore.a $(WX_LIBS_BASE)
+cisTEM_job_control_LDADD = libcore.a $(WX_LIBS_BASE) 
 
 console_test_SOURCES = programs/console_test/console_test.cpp 
 console_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 console_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 
-if MODULES_AM
-noinst_LIBRARIES += libmodules.a 
-libmodules_a_SOURCES = programs/samples/2_modules/hello.cpp \
-                        programs/samples/2_modules/hello2.cpp
-libmodules_a_CXXFLAGS = $(MODULES_CXXFLAGS)
-libmodules_a_CPPFLAGS = $(MODULES_CXXFLAGS)
-
-console_test_LDADD = libmodules.a libcore.a $(WX_LIBS_BASE)
-else
-console_test_LDADD = libcore.a $(WX_LIBS_BASE)
+console_test_LDSTRING=
+if ENABLE_FASTFFT_AM
+    console_test_LDSTRING += libgpucore.a
 endif
+
+if MODULES_AM
+    noinst_LIBRARIES += libmodules.a 
+    libmodules_a_SOURCES = programs/samples/2_modules/hello.cpp \
+                            programs/samples/2_modules/hello2.cpp
+    libmodules_a_CXXFLAGS = $(MODULES_CXXFLAGS)
+    libmodules_a_CPPFLAGS = $(MODULES_CXXFLAGS)
+
+    console_test_LDSTRING += libmodules.a
+endif
+
+console_test_LDADD = $(console_test_LDSTRING) libcore.a $(WX_LIBS_BASE) $(CUDA_LIBS)
+
+
 
 unblur_SOURCES = programs/unblur/unblur.cpp
 unblur_CXXFLAGS = $(WX_CPPFLAGS_BASE)

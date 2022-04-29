@@ -1,6 +1,9 @@
 #include "../../core/core_headers.h"
-
 #include "../../core/cistem_constants.h"
+
+#ifdef ENABLE_FastFFT
+#include <FastFFT.h>
+#endif
 
 // Values for data that are passed around in the results.
 const int number_of_output_images     = 8; //mip, psi, theta, phi, pixel, defocus, sums, sqsums (scaled mip is not sent out)
@@ -485,7 +488,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     factorizable_y         = input_image.logical_y_dimension;
 
     bool      DO_FACTORIZATION                       = true;
-    bool      MUST_BE_POWER_OF_TWO                   = false; // Required for half-preicision xforms
+    bool      MUST_BE_POWER_OF_TWO                   = false; // Required for half-precision xforms
     bool      MUST_BE_FACTOR_OF_FOUR                 = true; // May be faster
     const int max_number_primes                      = 6;
     int       primes[max_number_primes]              = {2, 3, 5, 7, 9, 13};

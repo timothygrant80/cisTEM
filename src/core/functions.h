@@ -1,3 +1,4 @@
+#include "defines.h"
 
 void swapbytes(unsigned char* v, size_t n);
 void swapbytes(size_t size, unsigned char* v, size_t n);
@@ -425,11 +426,11 @@ inline bool is_power_of_two(int n) {
 }
 
 inline float rad_2_deg(float radians) {
-    return radians / (PIf / 180.);
+    return radians / (pi_v<float> / 180.);
 }
 
 inline float deg_2_rad(float degrees) {
-    return degrees * PIf / 180.;
+    return degrees * pi_v<float> / 180.;
 }
 
 inline float clamp_angular_range_0_to_2pi(float angle, bool units_are_degrees = false) {
@@ -438,7 +439,7 @@ inline float clamp_angular_range_0_to_2pi(float angle, bool units_are_degrees = 
         angle = fmodf(angle, 360.0f);
     }
     else {
-        angle = fmodf(angle, 2.0f * PIf);
+        angle = fmodf(angle, 2.0f * pi_v<float>);
     }
     return angle;
 }
@@ -454,11 +455,11 @@ inline float clamp_angular_range_negative_pi_to_pi(float angle, bool units_are_d
         ;
     }
     else {
-        angle = fmodf(angle, 2.0f * PIf);
-        if ( angle > PIf )
-            angle -= 2.0f * PIf;
-        if ( angle <= -PIf )
-            angle += 2.0f * PIf;
+        angle = fmodf(angle, 2.0f * pi_v<float>);
+        if ( angle > pi_v<float> )
+            angle -= 2.0f * pi_v<float>;
+        if ( angle <= -pi_v<float> )
+            angle += 2.0f * pi_v<float>;
     }
     return angle;
 }

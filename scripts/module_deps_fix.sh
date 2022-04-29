@@ -23,5 +23,7 @@ if [ $record_length -gt 0 ] ; then
     awk '{if(/.c\+\+m/ && !/^CXX_IMPORTS/) ; else print $0}' $Po_name > $my_tmp
     echo "$modified_dependency" >> $my_tmp
     mv $my_tmp $Po_name
+else    
+    rm -f $my_tmp
 fi
 

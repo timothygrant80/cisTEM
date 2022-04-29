@@ -1,11 +1,23 @@
+#ifndef _src_core_defines_h_
+#define _src_core_defines_h_
 // clang-format off
+
+#if __cplusplus > 201703L
+#include <numbers>
+using namespace std::numbers;
+#else
+// For now we do not have c++20 in compiling gpu code so we need to define this for constants. Modified from /usr/include/c++/11/numbers
+/// pi
+template <typename _Tp>
+// inline constexpr _Tp pi_v = _Enable_if_floating<_Tp>(3.141592653589793238462643383279502884L);
+inline constexpr _Tp pi_v = 3.141592653589793238462643383279502884L;
+#endif
 
 #define INTEGER_DATABASE_VERSION 2
 #define START_PORT 3000
 #define END_PORT 5000
 // Define PI constants
 #define PI 3.14159265359
-#define PIf 3.14159265359f
 #define PISQ 9.869604401089
 #define PISQf 9.869604401089f
 
@@ -93,3 +105,5 @@ WX_DECLARE_OBJARRAY(float, wxArrayFloat);
 WX_DECLARE_OBJARRAY(bool, wxArrayBool);
 
 // clang-format on
+
+#endif

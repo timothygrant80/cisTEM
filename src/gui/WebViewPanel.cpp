@@ -15,5 +15,5 @@ WebViewPanel::WebViewPanel(wxWindow* parent)
     : WebViewPanelParent(parent) {
     // Set variables
     m_browser = wxWebView::New(this, wxID_ANY, "http://jojoelfe.github.io/webgl-ctf");
-    bSizer43->Add(m_browser, wxSizerFlags().Expand().Proportion(1));
+    bSizer43->Add(m_browser, wxSizerFlags( ).Expand( ).Proportion(1));
 }

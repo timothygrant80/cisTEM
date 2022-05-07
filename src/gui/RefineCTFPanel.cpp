@@ -274,12 +274,12 @@ void RefineCTFPanel::OnUpdateUI(wxUpdateUIEvent& event) {
 
         if ( ReconstructionRunProfileComboBox->GetCount( ) > 0 ) {
             ReconstructionRunProfileComboBox->Clear( );
-            ReconstructionRunProfileComboBox->ChangeValue("");
+            //ReconstructionRunProfileComboBox->ChangeValue("");
         }
 
         if ( RefinementRunProfileComboBox->GetCount( ) > 0 ) {
             RefinementRunProfileComboBox->Clear( );
-            RefinementRunProfileComboBox->ChangeValue("");
+            //RefinementRunProfileComboBox->ChangeValue("");
         }
 
         if ( PleaseCreateRefinementPackageText->IsShown( ) ) {
@@ -318,7 +318,7 @@ void RefineCTFPanel::OnUpdateUI(wxUpdateUIEvent& event) {
                     MaskSelectPanel->Enable(false);
                     if ( MaskSelectPanel->GetCount( ) > 0 ) {
                         MaskSelectPanel->Clear( );
-                        MaskSelectPanel->AssetComboBox->ChangeValue("");
+                        //MaskSelectPanel->AssetComboBox->ChangeValue("");
                     }
                 }
 
@@ -330,7 +330,7 @@ void RefineCTFPanel::OnUpdateUI(wxUpdateUIEvent& event) {
             else {
                 UseMaskCheckBox->Enable(false);
                 MaskSelectPanel->Enable(false);
-                MaskSelectPanel->AssetComboBox->ChangeValue("");
+                //MaskSelectPanel->AssetComboBox->ChangeValue("");
                 RefinementPackageComboBox->ChangeValue("");
                 RefinementPackageComboBox->Enable(false);
                 InputParametersComboBox->ChangeValue("");

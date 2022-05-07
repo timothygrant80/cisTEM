@@ -374,7 +374,7 @@ if test -n "$vers" && test "$vers" -ge 3000004; then
 
         WX_CPPFLAGS="`$WXCONFIG $WXCONFIGFLAGS --cppflags`"
         WX_CXXFLAGS="`$WXCONFIG $WXCONFIGFLAGS --cxxflags | sed -e 's/-fno-exceptions//'`"
-        WX_LIBS="`$WXCONFIG $WXCONFIGFLAGS --libs richtext,std,aui`"
+        WX_LIBS="`$WXCONFIG $WXCONFIGFLAGS --libs richtext,std,aui,webview`"
 
         if test "$build_mac" =  "yes"; then
           WX_CPPFLAGS_BASE="`$WXCONFIG $WXCONFIGFLAGS --cppflags`"

@@ -267,7 +267,7 @@ void Generate3DPanel::OnUpdateUI(wxUpdateUIEvent& event) {
 
         if ( ReconstructionRunProfileComboBox->GetCount( ) > 0 ) {
             ReconstructionRunProfileComboBox->Clear( );
-            ReconstructionRunProfileComboBox->ChangeValue("");
+            //ReconstructionRunProfileComboBox->ChangeValue("");
         }
 
         if ( PleaseCreateRefinementPackageText->IsShown( ) ) {

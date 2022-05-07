@@ -142,7 +142,7 @@ void MyRefine2DPanel::OnUpdateUI(wxUpdateUIEvent& event) {
 
         if ( RefinementRunProfileComboBox->GetCount( ) > 0 ) {
             RefinementRunProfileComboBox->Clear( );
-            RefinementRunProfileComboBox->ChangeValue("");
+            //RefinementRunProfileComboBox->ChangeValue("");
         }
 
         if ( PleaseCreateRefinementPackageText->IsShown( ) ) {

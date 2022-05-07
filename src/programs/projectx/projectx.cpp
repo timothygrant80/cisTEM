@@ -175,15 +175,17 @@ bool MyGuiApp::OnInit( ) {
 #endif
 
     // Setup list books
-    MenuBookIconImages       = new wxImageList( );
-    ActionsSpaBookIconImages = new wxImageList( );
-    ActionsTmBookIconImages  = new wxImageList( );
-    AssetsBookIconImages     = new wxImageList( );
-    ResultsBookIconImages    = new wxImageList( );
-    SettingsBookIconImages   = new wxImageList( );
+    // Since wx 3.1 the resolution of the images needs to be declared when creating the image list
+
+    MenuBookIconImages       = new wxImageList(80, 80);
+    ActionsSpaBookIconImages = new wxImageList(48, 48);
+    ActionsTmBookIconImages  = new wxImageList(48, 48);
+    AssetsBookIconImages     = new wxImageList(48, 48);
+    ResultsBookIconImages    = new wxImageList(48, 48);
+    SettingsBookIconImages   = new wxImageList(48, 48);
 
 #ifdef EXPERIMENTAL
-    ExperimentalBookIconImages = new wxImageList( );
+    ExperimentalBookIconImages = new wxImageList(48, 48);
 #endif
     wxLogNull* suppress_png_warnings = new wxLogNull;
 

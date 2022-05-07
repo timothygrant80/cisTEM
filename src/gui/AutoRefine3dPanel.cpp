@@ -415,12 +415,12 @@ void AutoRefine3DPanel::OnUpdateUI(wxUpdateUIEvent& event) {
 
         if ( ReconstructionRunProfileComboBox->GetCount( ) > 0 ) {
             ReconstructionRunProfileComboBox->Clear( );
-            ReconstructionRunProfileComboBox->ChangeValue("");
+            //ReconstructionRunProfileComboBox->ChangeValue("");
         }
 
         if ( RefinementRunProfileComboBox->GetCount( ) > 0 ) {
             RefinementRunProfileComboBox->Clear( );
-            RefinementRunProfileComboBox->ChangeValue("");
+            //RefinementRunProfileComboBox->ChangeValue("");
         }
 
         if ( PleaseCreateRefinementPackageText->IsShown( ) ) {
@@ -451,7 +451,7 @@ void AutoRefine3DPanel::OnUpdateUI(wxUpdateUIEvent& event) {
                 }
                 else {
                     MaskSelectPanel->Enable(false);
-                    MaskSelectPanel->AssetComboBox->ChangeValue("");
+                    //MaskSelectPanel->AssetComboBox->ChangeValue("");
                 }
 
                 if ( PleaseCreateRefinementPackageText->IsShown( ) ) {
@@ -462,7 +462,7 @@ void AutoRefine3DPanel::OnUpdateUI(wxUpdateUIEvent& event) {
             else {
                 UseMaskCheckBox->Enable(false);
                 MaskSelectPanel->Enable(false);
-                MaskSelectPanel->AssetComboBox->ChangeValue("");
+                //MaskSelectPanel->AssetComboBox->ChangeValue("");
                 RefinementPackageSelectPanel->ChangeValue("");
                 RefinementPackageSelectPanel->Enable(false);
                 //				InputParametersComboBox->ChangeValue("");

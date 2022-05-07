@@ -17,7 +17,10 @@ AngularDistributionPlotPanel::AngularDistributionPlotPanel(wxWindow* parent, wxW
     int client_y;
 
     GetClientSize(&client_x, &client_y);
-    buffer_bitmap.Create(wxSize(client_x, client_y));
+    // This ensures no 0 size bitmap is created
+    wxSize client_size = wxSize(client_x, client_y);
+    client_size.IncTo(wxSize(1, 1));
+    buffer_bitmap.Create(client_size);
     UpdateScalingAndDimensions( );
     SetupBitmap( );
 
@@ -42,8 +45,10 @@ void AngularDistributionPlotPanel::Clear( ) {
     int client_y;
 
     GetClientSize(&client_x, &client_y);
-    buffer_bitmap.Create(wxSize(client_x, client_y));
-
+    // This ensures no 0 size bitmap is created
+    wxSize client_size = wxSize(client_x, client_y);
+    client_size.IncTo(wxSize(1, 1));
+    buffer_bitmap.Create(client_size);
     UpdateScalingAndDimensions( );
     SetupBitmap( );
     Refresh( );
@@ -431,9 +436,10 @@ void AngularDistributionPlotPanel::DrawBlueDot(RefinementResult& refinement_resu
 void AngularDistributionPlotPanel::UpdateScalingAndDimensions( ) {
     int panel_dim_x, panel_dim_y;
     GetClientSize(&panel_dim_x, &panel_dim_y);
-
-    buffer_bitmap.Create(wxSize(panel_dim_x, panel_dim_y));
-
+    // This ensures no 0 size bitmap is created
+    wxSize panel_size = wxSize(panel_dim_x, panel_dim_y);
+    panel_size.IncTo(wxSize(1, 1));
+    buffer_bitmap.Create(panel_size);
     if ( draw_axis_overlay_instead_of_underlay == false ) {
         circle_radius   = std::min(panel_dim_x / 2.0f, panel_dim_y / 2.0f) * 0.7;
         circle_center_x = panel_dim_x / 2;
@@ -787,8 +793,10 @@ void AngularDistributionPlotPanelHistogram::DrawPlot(int min_value, int max_valu
 void AngularDistributionPlotPanelHistogram::UpdateScalingAndDimensions( ) {
     int panel_dim_x, panel_dim_y;
     GetClientSize(&panel_dim_x, &panel_dim_y);
-
-    buffer_bitmap.Create(wxSize(panel_dim_x, panel_dim_y));
+    // This ensures no 0 size bitmap is created
+    wxSize panel_size = wxSize(panel_dim_x, panel_dim_y);
+    panel_size.IncTo(wxSize(1, 1));
+    buffer_bitmap.Create(panel_size);
     circle_radius = std::min(panel_dim_x * 0.4f, panel_dim_y / 2.0f) * 0.7;
 
     bar_width  = circle_radius * 0.2;

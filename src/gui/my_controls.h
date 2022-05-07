@@ -26,7 +26,7 @@ class NoFocusBitmapButton : public wxBitmapButton {
     } // nasty hack, I don't want these buttons to focus
 };
 
-class MemoryComboBox : public wxOwnerDrawnComboBox {
+class MemoryComboBox : public wxChoice {
   public:
     MemoryComboBox(wxWindow* parent, wxWindowID id, const wxString& value = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, int n = 0, const wxString choices[] = NULL, long style = 0, const wxValidator& validator = wxDefaultValidator, const wxString& name = wxComboBoxNameStr);
     ~MemoryComboBox( );

@@ -23,6 +23,7 @@ enum Enum : int {
 };
 
 } // namespace job_type
+
 namespace workflow {
 enum Enum : int { single_particle,
                   template_matching };

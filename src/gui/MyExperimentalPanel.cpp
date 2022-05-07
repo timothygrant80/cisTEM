@@ -14,7 +14,7 @@ MyExperimentalPanel::MyExperimentalPanel(wxWindow* parent, wxWindowID id, const 
 
 void MyExperimentalPanel::OnExperimentalBookPageChanged(wxBookCtrlEvent& event) {
     extern RefineTemplateDevPanel* refine_template_dev_panel;
-    extern WebViewPanel* web_view_panel;
+    extern WebViewPanel*           web_view_panel;
 
 #ifdef __WXOSX__
     // Necessary for MacOS to refresh the panels

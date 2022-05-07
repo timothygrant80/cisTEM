@@ -3,9 +3,9 @@
 class DeviceManager {
 
   public:
-    int   nGPUs;
-    int   gpuIDX;
-    bool  is_manager_initialized = false;
+    int  nGPUs;
+    int  gpuIDX;
+    bool is_manager_initialized = false;
 
     DeviceManager( );
     DeviceManager(int wanted_number_of_gpus);

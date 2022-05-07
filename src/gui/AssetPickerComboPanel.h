@@ -24,7 +24,7 @@ class AssetPickerComboPanel : public AssetPickerComboPanelParent {
 
     void Clear( ) { AssetComboBox->Clear( ); }
 
-    void ChangeValue(wxString value_to_set) { AssetComboBox->ChangeValue(value_to_set); }
+    void ChangeValue(wxString value_to_set) {}
 
     virtual void GetAssetFromPopup( );
     //virtual bool FillComboBox() = 0;

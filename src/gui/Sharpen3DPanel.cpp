@@ -267,7 +267,7 @@ void Sharpen3DPanel::OnUpdateUI(wxUpdateUIEvent& event) {
 
             if ( MaskSelectPanel->AssetComboBox->GetCount( ) > 0 ) {
                 MaskSelectPanel->AssetComboBox->Clear( );
-                MaskSelectPanel->AssetComboBox->ChangeValue("");
+                //MaskSelectPanel->AssetComboBox->ChangeValue("");
             }
 
             InnerMaskRadiusStaticText->Enable(true);

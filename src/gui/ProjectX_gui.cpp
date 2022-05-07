@@ -40,6 +40,8 @@ MainFrame::MainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	bSizer8 = new wxBoxSizer( wxVERTICAL );
 
 	MenuBook = new wxListbook( LeftPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLB_LEFT );
+	MenuBook->SetForegroundColour( wxSystemSettings::GetColour( wxSYS_COLOUR_WINDOWTEXT ) );
+
 	#ifdef __WXGTK__ // Small icon style not supported in GTK
 	wxListView* MenuBookListView = MenuBook->GetListView();
 	long MenuBookFlags = MenuBookListView->GetWindowStyleFlag();
@@ -138,33 +140,32 @@ AssetPickerComboPanelParent::AssetPickerComboPanelParent( wxWindow* parent, wxWi
 	bSizer436 = new wxBoxSizer( wxHORIZONTAL );
 
 	AssetComboBox = new MemoryComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
-	bSizer436->Add( AssetComboBox, 100, wxALIGN_CENTER_VERTICAL|wxEXPAND, 0 );
+	bSizer436->Add( AssetComboBox, 100, wxEXPAND, 0 );
 
 	wxBoxSizer* bSizer494;
 	bSizer494 = new wxBoxSizer( wxVERTICAL );
 
-	PreviousButton = new NoFocusBitmapButton( this, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBU_AUTODRAW|0 );
+	PreviousButton = new wxButton( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize( -1,16 ), wxBU_EXACTFIT|wxBU_NOTEXT );
 
-	PreviousButton->SetDefault();
-	bSizer494->Add( PreviousButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 0 );
+	PreviousButton->SetBitmapMargins( wxSize( 0,0 ) );
+	bSizer494->Add( PreviousButton, 0, 0, 5 );
 
-	NextButton = new NoFocusBitmapButton( this, wxID_ADD, wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBU_AUTODRAW|0 );
+	NextButton = new wxButton( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize( -1,16 ), wxBU_EXACTFIT|wxBU_NOTEXT );
 
-	NextButton->SetDefault();
-	bSizer494->Add( NextButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 0 );
+	NextButton->SetBitmapMargins( wxSize( 0,0 ) );
+	bSizer494->Add( NextButton, 0, 0, 5 );
 
 
 	bSizer436->Add( bSizer494, 0, wxALIGN_CENTER_VERTICAL, 5 );
 
-	WindowSelectButton = new NoFocusBitmapButton( this, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBU_AUTODRAW|0 );
+	WindowSelectButton = new wxButton( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxBU_EXACTFIT );
 
-	WindowSelectButton->SetDefault();
+	WindowSelectButton->SetBitmapMargins( wxSize( 0,0 ) );
 	bSizer436->Add( WindowSelectButton, 0, wxALIGN_CENTER_VERTICAL|wxLEFT, 5 );
 
 
 	this->SetSizer( bSizer436 );
 	this->Layout();
-	bSizer436->Fit( this );
 
 	// Connect Events
 	this->Connect( wxEVT_SIZE, wxSizeEventHandler( AssetPickerComboPanelParent::OnSize ) );
@@ -196,7 +197,7 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 
 	ImageOrClassAverageStaticText = new wxStaticText( this, wxID_ANY, wxT("Use Images or Class Averages? :"), wxDefaultPosition, wxDefaultSize, 0 );
 	ImageOrClassAverageStaticText->Wrap( -1 );
-	bSizer504->Add( ImageOrClassAverageStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	bSizer504->Add( ImageOrClassAverageStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	wxBoxSizer* bSizer502;
 	bSizer502 = new wxBoxSizer( wxHORIZONTAL );
@@ -394,7 +395,7 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	NoMovieFramesStaticText->Wrap( -1 );
 	fgSizer1->Add( NoMovieFramesStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	InitialResolutionLimitTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("40.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	InitialResolutionLimitTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("40.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( InitialResolutionLimitTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText196 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Final Resolution Limit (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -492,7 +493,7 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	bSizer26611->Add( AlwaysApplySymmetryNoButton, 0, wxALL, 5 );
 
 
-	fgSizer1->Add( bSizer26611, 1, wxALIGN_CENTER_VERTICAL|wxEXPAND, 5 );
+	fgSizer1->Add( bSizer26611, 1, wxEXPAND, 5 );
 
 	m_staticText532 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("3D Reconstruction"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText532->Wrap( -1 );
@@ -523,7 +524,7 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	SmoothingFactorStaticText->Wrap( -1 );
 	fgSizer1->Add( SmoothingFactorStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	SmoothingFactorTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("1.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	SmoothingFactorTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("1.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( SmoothingFactorTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText662 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Class Averages"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -636,15 +637,15 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 
 	NumberConnectedText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("o"), wxDefaultPosition, wxDefaultSize, 0 );
 	NumberConnectedText->Wrap( -1 );
-	bSizer59->Add( NumberConnectedText, 0, wxALIGN_CENTER|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( NumberConnectedText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	ProgressBar = new wxGauge( ProgressPanel, wxID_ANY, 100, wxDefaultPosition, wxDefaultSize, wxGA_HORIZONTAL );
 	ProgressBar->SetValue( 0 );
-	bSizer59->Add( ProgressBar, 100, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	bSizer59->Add( ProgressBar, 100, wxALL|wxEXPAND, 5 );
 
 	TimeRemainingText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("Time Remaining : ???h:??m:??s   "), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_HORIZONTAL );
 	TimeRemainingText->Wrap( -1 );
-	bSizer59->Add( TimeRemainingText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	bSizer59->Add( TimeRemainingText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	m_staticline60 = new wxStaticLine( ProgressPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	bSizer59->Add( m_staticline60, 0, wxEXPAND | wxALL, 5 );
@@ -652,10 +653,10 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	FinishButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Finish"), wxDefaultPosition, wxDefaultSize, 0 );
 	FinishButton->Hide();
 
-	bSizer59->Add( FinishButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( FinishButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	CancelAlignmentButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Terminate Job"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer59->Add( CancelAlignmentButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( CancelAlignmentButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	CurrentLineOne = new wxStaticLine( ProgressPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	bSizer59->Add( CurrentLineOne, 0, wxEXPAND | wxALL, 5 );
@@ -697,7 +698,7 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	bSizer267->Add( RunProfileText, 20, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	RefinementRunProfileComboBox = new MemoryComboBox( StartPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
-	bSizer267->Add( RefinementRunProfileComboBox, 50, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	bSizer267->Add( RefinementRunProfileComboBox, 50, wxALL|wxEXPAND, 5 );
 
 
 	bSizer268->Add( bSizer267, 50, wxEXPAND, 5 );
@@ -710,7 +711,7 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	bSizer2671->Add( RunProfileText1, 20, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	ReconstructionRunProfileComboBox = new MemoryComboBox( StartPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
-	bSizer2671->Add( ReconstructionRunProfileComboBox, 50, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	bSizer2671->Add( ReconstructionRunProfileComboBox, 50, wxALL|wxEXPAND, 5 );
 
 
 	bSizer268->Add( bSizer2671, 0, wxEXPAND, 5 );
@@ -849,7 +850,7 @@ Refine2DPanel::Refine2DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 
 	m_staticText264 = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("No. of Cycles to Run :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText264->Wrap( -1 );
-	bSizer216->Add( m_staticText264, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	bSizer216->Add( m_staticText264, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	NumberRoundsSpinCtrl = new wxSpinCtrl( InputParamsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 100, 20 );
 	NumberRoundsSpinCtrl->SetMinSize( wxSize( 100,-1 ) );
@@ -976,21 +977,21 @@ Refine2DPanel::Refine2DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	NoMovieFramesStaticText->Wrap( -1 );
 	fgSizer1->Add( NoMovieFramesStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	LowResolutionLimitTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("300.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	LowResolutionLimitTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("300.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( LowResolutionLimitTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText188 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("High-Res. Limit (start)  (Å) : "), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText188->Wrap( -1 );
 	fgSizer1->Add( m_staticText188, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	HighResolutionLimitStartTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("40.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	HighResolutionLimitStartTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("40.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( HighResolutionLimitStartTextCtrl, 1, wxALL|wxEXPAND, 5 );
 
 	m_staticText1881 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("High-Res. Limit (finish) (Å) : "), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText1881->Wrap( -1 );
 	fgSizer1->Add( m_staticText1881, 0, wxALL, 5 );
 
-	HighResolutionLimitFinishTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("8.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	HighResolutionLimitFinishTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("8.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( HighResolutionLimitFinishTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText196 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Mask Radius (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -1018,7 +1019,7 @@ Refine2DPanel::Refine2DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	m_staticText330->Wrap( -1 );
 	fgSizer1->Add( m_staticText330, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	SmoothingFactorTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("1"), wxDefaultPosition, wxDefaultSize, 0 );
+	SmoothingFactorTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("1"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( SmoothingFactorTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	PhaseShiftStepStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Exclude Blank Edges?"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -1059,7 +1060,7 @@ Refine2DPanel::Refine2DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 
 	fgSizer1->Add( PercentUsedStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	PercentUsedTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("100.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	PercentUsedTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("100.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	PercentUsedTextCtrl->Enable( false );
 
 	fgSizer1->Add( PercentUsedTextCtrl, 0, wxALL, 5 );
@@ -1162,15 +1163,15 @@ Refine2DPanel::Refine2DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 
 	NumberConnectedText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("o"), wxDefaultPosition, wxDefaultSize, 0 );
 	NumberConnectedText->Wrap( -1 );
-	bSizer59->Add( NumberConnectedText, 0, wxALIGN_CENTER|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( NumberConnectedText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	ProgressBar = new wxGauge( ProgressPanel, wxID_ANY, 100, wxDefaultPosition, wxDefaultSize, wxGA_HORIZONTAL );
 	ProgressBar->SetValue( 0 );
-	bSizer59->Add( ProgressBar, 100, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	bSizer59->Add( ProgressBar, 100, wxALL|wxEXPAND, 5 );
 
 	TimeRemainingText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("Time Remaining : ???h:??m:??s   "), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_HORIZONTAL );
 	TimeRemainingText->Wrap( -1 );
-	bSizer59->Add( TimeRemainingText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	bSizer59->Add( TimeRemainingText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	m_staticline60 = new wxStaticLine( ProgressPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	bSizer59->Add( m_staticline60, 0, wxEXPAND | wxALL, 5 );
@@ -1178,10 +1179,10 @@ Refine2DPanel::Refine2DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	FinishButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Finish"), wxDefaultPosition, wxDefaultSize, 0 );
 	FinishButton->Hide();
 
-	bSizer59->Add( FinishButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( FinishButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	CancelAlignmentButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Terminate Job"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer59->Add( CancelAlignmentButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( CancelAlignmentButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 
 	bSizer57->Add( bSizer59, 1, wxEXPAND, 5 );
@@ -1207,7 +1208,7 @@ Refine2DPanel::Refine2DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	bSizer267->Add( RunProfileText, 20, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	RefinementRunProfileComboBox = new MemoryComboBox( StartPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
-	bSizer267->Add( RefinementRunProfileComboBox, 50, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	bSizer267->Add( RefinementRunProfileComboBox, 50, wxALL|wxEXPAND, 5 );
 
 
 	bSizer268->Add( bSizer267, 50, wxEXPAND, 5 );
@@ -1278,7 +1279,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	wxBoxSizer* bSizer202;
 	bSizer202 = new wxBoxSizer( wxVERTICAL );
 
-	m_splitter7 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
+	m_splitter7 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_LIVE_UPDATE );
 	m_splitter7->SetSashGravity( 0.5 );
 	m_splitter7->SetSashSize( 10 );
 	m_splitter7->Connect( wxEVT_IDLE, wxIdleEventHandler( RefinementResultsPanel::m_splitter7OnIdle ), NULL, this );
@@ -1301,7 +1302,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	RefinementPackageComboBox->SetMinSize( wxSize( 350,-1 ) );
 	RefinementPackageComboBox->SetMaxSize( wxSize( 350,-1 ) );
 
-	fgSizer11->Add( RefinementPackageComboBox, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	fgSizer11->Add( RefinementPackageComboBox, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText285 = new wxStaticText( m_panel49, wxID_ANY, wxT("Select Input Parameters :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText285->Wrap( -1 );
@@ -1311,12 +1312,12 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	InputParametersComboBox->SetMinSize( wxSize( 350,-1 ) );
 	InputParametersComboBox->SetMaxSize( wxSize( 350,-1 ) );
 
-	fgSizer11->Add( InputParametersComboBox, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	fgSizer11->Add( InputParametersComboBox, 0, wxALL|wxEXPAND, 5 );
 
 
 	bSizer206->Add( fgSizer11, 0, wxEXPAND, 5 );
 
-	m_splitter16 = new wxSplitterWindow( m_panel49, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
+	m_splitter16 = new wxSplitterWindow( m_panel49, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_LIVE_UPDATE );
 	m_splitter16->SetSashGravity( 0.5 );
 	m_splitter16->Connect( wxEVT_IDLE, wxIdleEventHandler( RefinementResultsPanel::m_splitter16OnIdle ), NULL, this );
 
@@ -1886,7 +1887,7 @@ ShowCTFResultsPanelParent::ShowCTFResultsPanelParent( wxWindow* parent, wxWindow
 	wxBoxSizer* bSizer92;
 	bSizer92 = new wxBoxSizer( wxVERTICAL );
 
-	m_splitter16 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
+	m_splitter16 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_LIVE_UPDATE );
 	m_splitter16->SetSashGravity( 0.5 );
 	m_splitter16->Connect( wxEVT_IDLE, wxIdleEventHandler( ShowCTFResultsPanelParent::m_splitter16OnIdle ), NULL, this );
 
@@ -1894,7 +1895,7 @@ ShowCTFResultsPanelParent::ShowCTFResultsPanelParent( wxWindow* parent, wxWindow
 	wxBoxSizer* bSizer301;
 	bSizer301 = new wxBoxSizer( wxVERTICAL );
 
-	m_splitter15 = new wxSplitterWindow( m_panel87, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
+	m_splitter15 = new wxSplitterWindow( m_panel87, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_LIVE_UPDATE );
 	m_splitter15->SetSashGravity( 0.5 );
 	m_splitter15->Connect( wxEVT_IDLE, wxIdleEventHandler( ShowCTFResultsPanelParent::m_splitter15OnIdle ), NULL, this );
 
@@ -2121,7 +2122,7 @@ ShowTemplateMatchResultsPanelParent::ShowTemplateMatchResultsPanelParent( wxWind
 	wxBoxSizer* bSizer92;
 	bSizer92 = new wxBoxSizer( wxVERTICAL );
 
-	m_splitter16 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
+	m_splitter16 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_LIVE_UPDATE );
 	m_splitter16->SetSashGravity( 0.5 );
 	m_splitter16->Connect( wxEVT_IDLE, wxIdleEventHandler( ShowTemplateMatchResultsPanelParent::m_splitter16OnIdle ), NULL, this );
 
@@ -2129,7 +2130,7 @@ ShowTemplateMatchResultsPanelParent::ShowTemplateMatchResultsPanelParent( wxWind
 	wxBoxSizer* bSizer301;
 	bSizer301 = new wxBoxSizer( wxVERTICAL );
 
-	m_splitter15 = new wxSplitterWindow( m_panel87, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
+	m_splitter15 = new wxSplitterWindow( m_panel87, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_LIVE_UPDATE );
 	m_splitter15->SetSashGravity( 0.5 );
 	m_splitter15->Connect( wxEVT_IDLE, wxIdleEventHandler( ShowTemplateMatchResultsPanelParent::m_splitter15OnIdle ), NULL, this );
 
@@ -2280,7 +2281,7 @@ Refine2DResultsPanelParent::Refine2DResultsPanelParent( wxWindow* parent, wxWind
 
 	bSizer202->Add( bSizer265, 0, wxEXPAND, 5 );
 
-	m_splitter7 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_3DBORDER|wxSP_3DSASH|wxSP_BORDER );
+	m_splitter7 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_LIVE_UPDATE|wxSP_3DBORDER|wxSP_3DSASH|wxSP_BORDER );
 	m_splitter7->SetSashGravity( 0.5 );
 	m_splitter7->Connect( wxEVT_IDLE, wxIdleEventHandler( Refine2DResultsPanelParent::m_splitter7OnIdle ), NULL, this );
 
@@ -2324,7 +2325,7 @@ Refine2DResultsPanelParent::Refine2DResultsPanelParent( wxWindow* parent, wxWind
 	fgSizer11->Add( fgSizer16, 0, wxEXPAND, 5 );
 
 
-	bSizer203->Add( fgSizer11, 0, wxALIGN_CENTER_VERTICAL|wxEXPAND, 5 );
+	bSizer203->Add( fgSizer11, 0, wxEXPAND, 5 );
 
 	m_staticline66 = new wxStaticLine( LeftPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	bSizer203->Add( m_staticline66, 0, wxEXPAND | wxALL, 5 );
@@ -2681,19 +2682,19 @@ PickingResultsDisplayPanelParent::PickingResultsDisplayPanelParent( wxWindow* pa
 	CirclesAroundParticlesCheckBox->SetValue(true);
 	CirclesAroundParticlesCheckBox->SetToolTip( wxT("Draw circles around picked particles") );
 
-	bSizer94->Add( CirclesAroundParticlesCheckBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer94->Add( CirclesAroundParticlesCheckBox, 0, wxALL, 5 );
 
 	ScaleBarCheckBox = new wxCheckBox( this, wxID_ANY, wxT("Scale"), wxDefaultPosition, wxDefaultSize, 0 );
 	ScaleBarCheckBox->SetValue(true);
 	ScaleBarCheckBox->SetToolTip( wxT("Display a scale bar") );
 
-	bSizer94->Add( ScaleBarCheckBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer94->Add( ScaleBarCheckBox, 0, wxALL, 5 );
 
 	HighPassFilterCheckBox = new wxCheckBox( this, wxID_ANY, wxT("High-pass"), wxDefaultPosition, wxDefaultSize, 0 );
 	HighPassFilterCheckBox->SetValue(true);
 	HighPassFilterCheckBox->SetToolTip( wxT("Filter the image to remove density ramps") );
 
-	bSizer94->Add( HighPassFilterCheckBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer94->Add( HighPassFilterCheckBox, 0, wxALL, 5 );
 
 	wxBoxSizer* bSizer487;
 	bSizer487 = new wxBoxSizer( wxHORIZONTAL );
@@ -2721,7 +2722,7 @@ PickingResultsDisplayPanelParent::PickingResultsDisplayPanelParent( wxWindow* pa
 	WienerFilterCheckBox->SetValue(true);
 	WienerFilterCheckBox->SetToolTip( wxT("Filter the image to remove density ramps") );
 
-	bSizer94->Add( WienerFilterCheckBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer94->Add( WienerFilterCheckBox, 0, wxALL, 5 );
 
 	m_staticline831 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	bSizer94->Add( m_staticline831, 0, wxEXPAND | wxALL, 5 );
@@ -2764,7 +2765,7 @@ PickingResultsDisplayPanelParent::PickingResultsDisplayPanelParent( wxWindow* pa
 	bSizer94->Add( bSizer488, 0, wxEXPAND, 5 );
 
 
-	bSizer93->Add( bSizer94, 1, wxALIGN_CENTER|wxEXPAND, 5 );
+	bSizer93->Add( bSizer94, 1, wxEXPAND, 5 );
 
 	m_staticline26 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	bSizer93->Add( m_staticline26, 0, wxEXPAND | wxALL, 5 );
@@ -2811,7 +2812,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	m_staticline25 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	bSizer63->Add( m_staticline25, 0, wxEXPAND | wxALL, 5 );
 
-	m_splitter4 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
+	m_splitter4 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_LIVE_UPDATE );
 	m_splitter4->SetSashGravity( 0.5 );
 	m_splitter4->Connect( wxEVT_IDLE, wxIdleEventHandler( FindCTFResultsPanel::m_splitter4OnIdle ), NULL, this );
 
@@ -2845,7 +2846,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	bSizer64->Add( PlotResultsButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	JobDetailsToggleButton = new wxToggleButton( m_panel13, wxID_ANY, wxT("Show Job Details"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer64->Add( JobDetailsToggleButton, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	bSizer64->Add( JobDetailsToggleButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 
 	bSizer66->Add( bSizer64, 0, wxEXPAND, 5 );
@@ -3200,7 +3201,7 @@ MatchTemplateResultsPanelParent::MatchTemplateResultsPanelParent( wxWindow* pare
 	m_staticline25 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	bSizer63->Add( m_staticline25, 0, wxEXPAND | wxALL, 5 );
 
-	m_splitter4 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
+	m_splitter4 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_LIVE_UPDATE );
 	m_splitter4->SetSashGravity( 0.5 );
 	m_splitter4->Connect( wxEVT_IDLE, wxIdleEventHandler( MatchTemplateResultsPanelParent::m_splitter4OnIdle ), NULL, this );
 
@@ -3228,7 +3229,7 @@ MatchTemplateResultsPanelParent::MatchTemplateResultsPanelParent( wxWindow* pare
 	bSizer64->Add( m_staticline77, 0, wxEXPAND | wxALL, 5 );
 
 	JobDetailsToggleButton = new wxToggleButton( m_panel13, wxID_ANY, wxT("Show Job Details"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer64->Add( JobDetailsToggleButton, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	bSizer64->Add( JobDetailsToggleButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 
 	bSizer66->Add( bSizer64, 0, wxEXPAND, 5 );
@@ -3605,7 +3606,7 @@ PickingResultsPanel::PickingResultsPanel( wxWindow* parent, wxWindowID id, const
 	m_staticline25 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	bSizer63->Add( m_staticline25, 0, wxEXPAND | wxALL, 5 );
 
-	m_splitter4 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
+	m_splitter4 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_LIVE_UPDATE );
 	m_splitter4->SetSashGravity( 0.5 );
 	m_splitter4->Connect( wxEVT_IDLE, wxIdleEventHandler( PickingResultsPanel::m_splitter4OnIdle ), NULL, this );
 
@@ -3636,7 +3637,7 @@ PickingResultsPanel::PickingResultsPanel( wxWindow* parent, wxWindowID id, const
 	bSizer64->Add( 0, 0, 1, wxEXPAND, 5 );
 
 	JobDetailsToggleButton = new wxToggleButton( m_panel13, wxID_ANY, wxT("Show Job Details"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer64->Add( JobDetailsToggleButton, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	bSizer64->Add( JobDetailsToggleButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 
 	bSizer66->Add( bSizer64, 0, wxEXPAND, 5 );
@@ -3856,7 +3857,7 @@ PickingResultsPanel::PickingResultsPanel( wxWindow* parent, wxWindowID id, const
 	bSizer69->Add( GroupComboBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 
-	bSizer681->Add( bSizer69, 0, wxALIGN_RIGHT|wxEXPAND, 5 );
+	bSizer681->Add( bSizer69, 0, wxEXPAND, 5 );
 
 
 	RightPanel->SetSizer( bSizer681 );
@@ -3904,7 +3905,7 @@ MovieAlignResultsPanel::MovieAlignResultsPanel( wxWindow* parent, wxWindowID id,
 	m_staticline25 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	bSizer63->Add( m_staticline25, 0, wxEXPAND | wxALL, 5 );
 
-	m_splitter4 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
+	m_splitter4 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_LIVE_UPDATE );
 	m_splitter4->SetSashGravity( 0.5 );
 	m_splitter4->Connect( wxEVT_IDLE, wxIdleEventHandler( MovieAlignResultsPanel::m_splitter4OnIdle ), NULL, this );
 
@@ -3933,7 +3934,7 @@ MovieAlignResultsPanel::MovieAlignResultsPanel( wxWindow* parent, wxWindowID id,
 	bSizer64->Add( m_staticline76, 0, wxEXPAND | wxALL, 5 );
 
 	JobDetailsToggleButton = new wxToggleButton( m_panel13, wxID_ANY, wxT("Show Job Details"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer64->Add( JobDetailsToggleButton, 0, wxALIGN_CENTER|wxALIGN_RIGHT|wxALL|wxEXPAND, 5 );
+	bSizer64->Add( JobDetailsToggleButton, 0, wxALL|wxEXPAND, 5 );
 
 
 	bSizer66->Add( bSizer64, 0, wxEXPAND, 5 );
@@ -4460,7 +4461,7 @@ OverviewPanel::OverviewPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	bSizer198->Add( WelcomePanel, 1, wxEXPAND | wxALL, 5 );
 
 
-	bSizer10->Add( bSizer198, 1, wxALIGN_CENTER|wxEXPAND, 5 );
+	bSizer10->Add( bSizer198, 1, wxEXPAND, 5 );
 
 
 	this->SetSizer( bSizer10 );
@@ -4545,7 +4546,7 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	m_staticline10 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	bSizer43->Add( m_staticline10, 0, wxEXPAND | wxALL, 5 );
 
-	FindParticlesSplitterWindow = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_PERMIT_UNSPLIT );
+	FindParticlesSplitterWindow = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_LIVE_UPDATE|wxSP_PERMIT_UNSPLIT|wxSP_LIVE_UPDATE );
 	FindParticlesSplitterWindow->Connect( wxEVT_IDLE, wxIdleEventHandler( FindParticlesPanel::FindParticlesSplitterWindowOnIdle ), NULL, this );
 	FindParticlesSplitterWindow->SetMinimumPaneSize( 10 );
 
@@ -4613,7 +4614,7 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	ImageComboBox->SetMinSize( wxSize( 350,-1 ) );
 	ImageComboBox->SetMaxSize( wxSize( 350,-1 ) );
 
-	InputSizer->Add( ImageComboBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	InputSizer->Add( ImageComboBox, 0, wxALL, 5 );
 
 	wxBoxSizer* bSizer212;
 	bSizer212 = new wxBoxSizer( wxHORIZONTAL );
@@ -4651,7 +4652,7 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 
 	HighestResolutionStaticText = new wxStaticText( ExpertOptionsPanel, wxID_ANY, wxT("Highest resolution used (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	HighestResolutionStaticText->Wrap( -1 );
-	ExpertOptionsSizer->Add( HighestResolutionStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	ExpertOptionsSizer->Add( HighestResolutionStaticText, 0, wxALL|wxEXPAND, 5 );
 
 	HighestResolutionNumericCtrl = new NumericTextCtrl( ExpertOptionsPanel, wxID_ANY, wxT("30.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	ExpertOptionsSizer->Add( HighestResolutionNumericCtrl, 0, wxALL|wxEXPAND, 5 );
@@ -4683,14 +4684,14 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 
 	m_staticText170 = new wxStaticText( ExpertOptionsPanel, wxID_ANY, wxT("Number of background boxes : "), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText170->Wrap( -1 );
-	ExpertOptionsSizer->Add( m_staticText170, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	ExpertOptionsSizer->Add( m_staticText170, 0, wxALL|wxEXPAND, 5 );
 
 	NumberOfBackgroundBoxesSpinCtrl = new wxSpinCtrl( ExpertOptionsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 999, 50 );
 	ExpertOptionsSizer->Add( NumberOfBackgroundBoxesSpinCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText169 = new wxStaticText( ExpertOptionsPanel, wxID_ANY, wxT("Find background areas by : "), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText169->Wrap( -1 );
-	ExpertOptionsSizer->Add( m_staticText169, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	ExpertOptionsSizer->Add( m_staticText169, 0, wxALL|wxEXPAND, 5 );
 
 	wxString AlgorithmToFindBackgroundChoiceChoices[] = { wxT("Lowest variance"), wxT("Variance near mode") };
 	int AlgorithmToFindBackgroundChoiceNChoices = sizeof( AlgorithmToFindBackgroundChoiceChoices ) / sizeof( wxString );
@@ -4799,15 +4800,15 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 
 	NumberConnectedText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("o"), wxDefaultPosition, wxDefaultSize, 0 );
 	NumberConnectedText->Wrap( -1 );
-	bSizer59->Add( NumberConnectedText, 0, wxALIGN_CENTER|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( NumberConnectedText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	ProgressBar = new wxGauge( ProgressPanel, wxID_ANY, 100, wxDefaultPosition, wxDefaultSize, wxGA_HORIZONTAL );
 	ProgressBar->SetValue( 0 );
-	bSizer59->Add( ProgressBar, 100, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	bSizer59->Add( ProgressBar, 100, wxALL|wxEXPAND, 5 );
 
 	TimeRemainingText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("Time Remaining : ???h:??m:??s   "), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_HORIZONTAL );
 	TimeRemainingText->Wrap( -1 );
-	bSizer59->Add( TimeRemainingText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	bSizer59->Add( TimeRemainingText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	m_staticline60 = new wxStaticLine( ProgressPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	bSizer59->Add( m_staticline60, 0, wxEXPAND | wxALL, 5 );
@@ -4815,10 +4816,10 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	FinishButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Finish"), wxDefaultPosition, wxDefaultSize, 0 );
 	FinishButton->Hide();
 
-	bSizer59->Add( FinishButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( FinishButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	CancelAlignmentButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Terminate Job"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer59->Add( CancelAlignmentButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( CancelAlignmentButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 
 	bSizer57->Add( bSizer59, 1, wxEXPAND, 5 );
@@ -4841,7 +4842,7 @@ FindParticlesPanel::FindParticlesPanel( wxWindow* parent, wxWindowID id, const w
 	bSizer58->Add( RunProfileText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	RunProfileComboBox = new MemoryComboBox( StartPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
-	bSizer58->Add( RunProfileComboBox, 50, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	bSizer58->Add( RunProfileComboBox, 50, wxALL|wxEXPAND, 5 );
 
 	wxBoxSizer* bSizer60;
 	bSizer60 = new wxBoxSizer( wxVERTICAL );
@@ -5286,7 +5287,7 @@ MovieImportDialog::MovieImportDialog( wxWindow* parent, wxWindowID id, const wxS
 
 	bSizer2291->Add( DesiredPixelSizeStaticText, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	DesiredPixelSizeTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("1.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	DesiredPixelSizeTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("1.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	DesiredPixelSizeTextCtrl->Enable( false );
 
 	bSizer2291->Add( DesiredPixelSizeTextCtrl, 50, wxALL, 5 );
@@ -5309,7 +5310,7 @@ MovieImportDialog::MovieImportDialog( wxWindow* parent, wxWindowID id, const wxS
 
 	bSizer283->Add( DistortionAngleStaticText, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	DistortionAngleTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	DistortionAngleTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	DistortionAngleTextCtrl->Enable( false );
 
 	bSizer283->Add( DistortionAngleTextCtrl, 50, wxALL, 5 );
@@ -5326,7 +5327,7 @@ MovieImportDialog::MovieImportDialog( wxWindow* parent, wxWindowID id, const wxS
 
 	bSizer2831->Add( MajorScaleStaticText, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	MajorScaleTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("1.000"), wxDefaultPosition, wxDefaultSize, 0 );
+	MajorScaleTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("1.000"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	MajorScaleTextCtrl->Enable( false );
 
 	bSizer2831->Add( MajorScaleTextCtrl, 50, wxALL, 5 );
@@ -5343,7 +5344,7 @@ MovieImportDialog::MovieImportDialog( wxWindow* parent, wxWindowID id, const wxS
 
 	bSizer28311->Add( MinorScaleStaticText, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	MinorScaleTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("1.000"), wxDefaultPosition, wxDefaultSize, 0 );
+	MinorScaleTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("1.000"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	MinorScaleTextCtrl->Enable( false );
 
 	bSizer28311->Add( MinorScaleTextCtrl, 50, wxALL, 5 );
@@ -5557,7 +5558,7 @@ ImageImportDialog::ImageImportDialog( wxWindow* parent, wxWindowID id, const wxS
 	bSizer3212->Add( SaveScaledSumCheckbox, 0, wxALL, 5 );
 
 	ImagesHaveInvertedContrast = new wxCheckBox( this, wxID_ANY, wxT("Particles are white"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer3212->Add( ImagesHaveInvertedContrast, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer3212->Add( ImagesHaveInvertedContrast, 50, wxALL, 5 );
 
 
 	bSizer26->Add( bSizer3212, 1, wxEXPAND, 5 );
@@ -5637,7 +5638,7 @@ AssetPanelParent::AssetPanelParent( wxWindow* parent, wxWindowID id, const wxPoi
 	wxBoxSizer* bSizer20;
 	bSizer20 = new wxBoxSizer( wxHORIZONTAL );
 
-	SplitterWindow = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
+	SplitterWindow = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_LIVE_UPDATE );
 	SplitterWindow->SetSashGravity( 0.2 );
 	SplitterWindow->Connect( wxEVT_IDLE, wxIdleEventHandler( AssetPanelParent::SplitterWindowOnIdle ), NULL, this );
 
@@ -5974,7 +5975,7 @@ RunProfilesPanel::RunProfilesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	m_staticline12 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	bSizer56->Add( m_staticline12, 0, wxEXPAND | wxALL, 5 );
 
-	m_splitter5 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
+	m_splitter5 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_LIVE_UPDATE );
 	m_splitter5->Connect( wxEVT_IDLE, wxIdleEventHandler( RunProfilesPanel::m_splitter5OnIdle ), NULL, this );
 	m_splitter5->SetMinimumPaneSize( 200 );
 
@@ -6045,7 +6046,7 @@ RunProfilesPanel::RunProfilesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 
 	m_staticText36 = new wxStaticText( CommandsPanel, wxID_ANY, wxT("Manager Command :-"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText36->Wrap( -1 );
-	bSizer38->Add( m_staticText36, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer38->Add( m_staticText36, 50, wxALL, 5 );
 
 	ManagerTextCtrl = new wxTextCtrl( CommandsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxHSCROLL|wxTE_WORDWRAP|wxALWAYS_SHOW_SB|wxHSCROLL );
 	bSizer38->Add( ManagerTextCtrl, 0, wxALL|wxEXPAND, 5 );
@@ -6529,15 +6530,15 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 
 	NumberConnectedText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("o"), wxDefaultPosition, wxDefaultSize, 0 );
 	NumberConnectedText->Wrap( -1 );
-	bSizer59->Add( NumberConnectedText, 0, wxALIGN_CENTER|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( NumberConnectedText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	ProgressBar = new wxGauge( ProgressPanel, wxID_ANY, 100, wxDefaultPosition, wxDefaultSize, wxGA_HORIZONTAL );
 	ProgressBar->SetValue( 0 );
-	bSizer59->Add( ProgressBar, 100, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	bSizer59->Add( ProgressBar, 100, wxALL|wxEXPAND, 5 );
 
 	TimeRemainingText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("Time Remaining : ???h:??m:??s   "), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_HORIZONTAL );
 	TimeRemainingText->Wrap( -1 );
-	bSizer59->Add( TimeRemainingText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	bSizer59->Add( TimeRemainingText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	m_staticline60 = new wxStaticLine( ProgressPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	bSizer59->Add( m_staticline60, 0, wxEXPAND | wxALL, 5 );
@@ -6545,10 +6546,10 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	FinishButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Finish"), wxDefaultPosition, wxDefaultSize, 0 );
 	FinishButton->Hide();
 
-	bSizer59->Add( FinishButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( FinishButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	CancelAlignmentButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Terminate Job"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer59->Add( CancelAlignmentButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( CancelAlignmentButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 
 	bSizer57->Add( bSizer59, 1, wxEXPAND, 5 );
@@ -6571,7 +6572,7 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	bSizer58->Add( RunProfileText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	RunProfileComboBox = new MemoryComboBox( StartPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
-	bSizer58->Add( RunProfileComboBox, 50, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	bSizer58->Add( RunProfileComboBox, 50, wxALL|wxEXPAND, 5 );
 
 	wxBoxSizer* bSizer60;
 	bSizer60 = new wxBoxSizer( wxVERTICAL );
@@ -6689,10 +6690,10 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	bSizer215 = new wxBoxSizer( wxHORIZONTAL );
 
 	LocalRefinementRadio = new wxRadioButton( InputParamsPanel, wxID_ANY, wxT("Local Refinement"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer215->Add( LocalRefinementRadio, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	bSizer215->Add( LocalRefinementRadio, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	GlobalRefinementRadio = new wxRadioButton( InputParamsPanel, wxID_ANY, wxT("Global Search"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer215->Add( GlobalRefinementRadio, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	bSizer215->Add( GlobalRefinementRadio, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 
 	bSizer215->Add( 0, 0, 1, wxEXPAND, 5 );
@@ -6712,14 +6713,14 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	NumberRoundsSpinCtrl = new wxSpinCtrl( InputParamsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 100, 1 );
 	NumberRoundsSpinCtrl->SetMinSize( wxSize( 100,-1 ) );
 
-	fgSizer22->Add( NumberRoundsSpinCtrl, 1, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	fgSizer22->Add( NumberRoundsSpinCtrl, 1, wxALL|wxEXPAND, 5 );
 
 	HiResLimitStaticText = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("Hi-Res Limit (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	HiResLimitStaticText->Wrap( -1 );
-	fgSizer22->Add( HiResLimitStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	fgSizer22->Add( HiResLimitStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	HighResolutionLimitTextCtrl = new NumericTextCtrl( InputParamsPanel, wxID_ANY, wxT("30.00"), wxDefaultPosition, wxDefaultSize, 0 );
-	fgSizer22->Add( HighResolutionLimitTextCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	HighResolutionLimitTextCtrl = new NumericTextCtrl( InputParamsPanel, wxID_ANY, wxT("30.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer22->Add( HighResolutionLimitTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 
 	bSizer357->Add( fgSizer22, 1, wxEXPAND, 5 );
@@ -6728,7 +6729,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	bSizer358 = new wxBoxSizer( wxHORIZONTAL );
 
 	ExpertToggleButton = new wxToggleButton( InputParamsPanel, wxID_ANY, wxT("Show Expert Options"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer358->Add( ExpertToggleButton, 0, wxALIGN_BOTTOM|wxALIGN_CENTER|wxALL, 5 );
+	bSizer358->Add( ExpertToggleButton, 0, wxALIGN_BOTTOM|wxALL, 5 );
 
 
 	bSizer357->Add( bSizer358, 0, wxALIGN_CENTER, 5 );
@@ -6863,7 +6864,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	NoMovieFramesStaticText->Wrap( -1 );
 	fgSizer1->Add( NoMovieFramesStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	LowResolutionLimitTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("300.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	LowResolutionLimitTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("300.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( LowResolutionLimitTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText196 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Outer Mask Radius (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -6877,21 +6878,21 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	m_staticText331->Wrap( -1 );
 	fgSizer1->Add( m_staticText331, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	InnerMaskRadiusTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	InnerMaskRadiusTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( InnerMaskRadiusTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText317 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Signed CC Resolution Limit (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText317->Wrap( -1 );
 	fgSizer1->Add( m_staticText317, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	SignedCCResolutionTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	SignedCCResolutionTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( SignedCCResolutionTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText362 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Percent Used (%) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText362->Wrap( -1 );
 	fgSizer1->Add( m_staticText362, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	PercentUsedTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("100.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	PercentUsedTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("100.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( PercentUsedTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText201 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Global Search"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -6999,7 +7000,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 
 	fgSizer1->Add( SphereXStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	SphereXTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	SphereXTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	SphereXTextCtrl->Enable( false );
 
 	fgSizer1->Add( SphereXTextCtrl, 0, wxALL|wxEXPAND, 5 );
@@ -7010,7 +7011,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 
 	fgSizer1->Add( SphereYStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	SphereYTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	SphereYTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	SphereYTextCtrl->Enable( false );
 
 	fgSizer1->Add( SphereYTextCtrl, 0, wxALL|wxEXPAND, 5 );
@@ -7021,7 +7022,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 
 	fgSizer1->Add( SphereZStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_LEFT|wxALL, 5 );
 
-	SphereZTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	SphereZTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	SphereZTextCtrl->Enable( false );
 
 	fgSizer1->Add( SphereZTextCtrl, 0, wxALL|wxEXPAND, 5 );
@@ -7032,7 +7033,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 
 	fgSizer1->Add( SphereRadiusStaticText, 0, wxALIGN_LEFT|wxALL, 5 );
 
-	SphereRadiusTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	SphereRadiusTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	SphereRadiusTextCtrl->Enable( false );
 
 	fgSizer1->Add( SphereRadiusTextCtrl, 0, wxALL|wxEXPAND, 5 );
@@ -7068,7 +7069,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 
 	fgSizer1->Add( DefocusSearchRangeStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	DefocusSearchRangeTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("500.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	DefocusSearchRangeTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("500.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	DefocusSearchRangeTextCtrl->Enable( false );
 
 	fgSizer1->Add( DefocusSearchRangeTextCtrl, 0, wxALL|wxEXPAND, 5 );
@@ -7079,7 +7080,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 
 	fgSizer1->Add( DefocusSearchStepStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	DefocusSearchStepTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("100.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	DefocusSearchStepTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("100.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	DefocusSearchStepTextCtrl->Enable( false );
 
 	fgSizer1->Add( DefocusSearchStepTextCtrl, 0, wxALL|wxEXPAND, 5 );
@@ -7097,8 +7098,8 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	m_staticText332->Wrap( -1 );
 	fgSizer1->Add( m_staticText332, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	ScoreToWeightConstantTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("5.00"), wxDefaultPosition, wxDefaultSize, 0 );
-	fgSizer1->Add( ScoreToWeightConstantTextCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	ScoreToWeightConstantTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("5.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( ScoreToWeightConstantTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText335 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Adjust Score for Defocus?"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText335->Wrap( -1 );
@@ -7120,15 +7121,15 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	m_staticText333->Wrap( -1 );
 	fgSizer1->Add( m_staticText333, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	ReconstructionScoreThreshold = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("-1.0"), wxDefaultPosition, wxDefaultSize, 0 );
+	ReconstructionScoreThreshold = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("-1.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( ReconstructionScoreThreshold, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText334 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Resolution Limit (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText334->Wrap( -1 );
 	fgSizer1->Add( m_staticText334, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	ReconstructionResolutionLimitTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, 0 );
-	fgSizer1->Add( ReconstructionResolutionLimitTextCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	ReconstructionResolutionLimitTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( ReconstructionResolutionLimitTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText336 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Autocrop Images?"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText336->Wrap( -1 );
@@ -7166,7 +7167,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	SmoothingFactorStaticText->Wrap( -1 );
 	fgSizer1->Add( SmoothingFactorStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	SmoothingFactorTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("1.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	SmoothingFactorTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("1.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( SmoothingFactorTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	AutoCenterStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Autocenter reconstruction?"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -7214,14 +7215,14 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	MaskEdgeStaticText->Wrap( -1 );
 	fgSizer1->Add( MaskEdgeStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	MaskEdgeTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("10.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	MaskEdgeTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("10.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( MaskEdgeTextCtrl, 0, wxALL, 5 );
 
 	MaskWeightStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Outside Weight :"), wxDefaultPosition, wxDefaultSize, 0 );
 	MaskWeightStaticText->Wrap( -1 );
 	fgSizer1->Add( MaskWeightStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	MaskWeightTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	MaskWeightTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( MaskWeightTextCtrl, 0, wxALL, 5 );
 
 	LowPassYesNoStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Low-Pass Filter Outside Mask?"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -7244,7 +7245,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	FilterResolutionStaticText->Wrap( -1 );
 	fgSizer1->Add( FilterResolutionStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	MaskFilterResolutionText = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("20.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	MaskFilterResolutionText = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("20.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( MaskFilterResolutionText, 0, wxALL, 5 );
 
 
@@ -7330,15 +7331,15 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 
 	NumberConnectedText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("o"), wxDefaultPosition, wxDefaultSize, 0 );
 	NumberConnectedText->Wrap( -1 );
-	bSizer59->Add( NumberConnectedText, 0, wxALIGN_CENTER|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( NumberConnectedText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	ProgressBar = new wxGauge( ProgressPanel, wxID_ANY, 100, wxDefaultPosition, wxDefaultSize, wxGA_HORIZONTAL );
 	ProgressBar->SetValue( 0 );
-	bSizer59->Add( ProgressBar, 100, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	bSizer59->Add( ProgressBar, 100, wxALL|wxEXPAND, 5 );
 
 	TimeRemainingText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("Time Remaining : ???h:??m:??s   "), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_HORIZONTAL );
 	TimeRemainingText->Wrap( -1 );
-	bSizer59->Add( TimeRemainingText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	bSizer59->Add( TimeRemainingText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	m_staticline60 = new wxStaticLine( ProgressPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	bSizer59->Add( m_staticline60, 0, wxEXPAND | wxALL, 5 );
@@ -7346,10 +7347,10 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	FinishButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Finish"), wxDefaultPosition, wxDefaultSize, 0 );
 	FinishButton->Hide();
 
-	bSizer59->Add( FinishButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( FinishButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	CancelAlignmentButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Terminate Job"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer59->Add( CancelAlignmentButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( CancelAlignmentButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 
 	bSizer57->Add( bSizer59, 1, wxEXPAND, 5 );
@@ -7378,7 +7379,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	bSizer267->Add( RunProfileText, 20, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	RefinementRunProfileComboBox = new MemoryComboBox( StartPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
-	bSizer267->Add( RefinementRunProfileComboBox, 50, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	bSizer267->Add( RefinementRunProfileComboBox, 50, wxALL|wxEXPAND, 5 );
 
 
 	bSizer268->Add( bSizer267, 50, wxEXPAND, 5 );
@@ -7391,7 +7392,7 @@ Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& po
 	bSizer2671->Add( RunProfileText1, 20, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	ReconstructionRunProfileComboBox = new MemoryComboBox( StartPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
-	bSizer2671->Add( ReconstructionRunProfileComboBox, 50, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	bSizer2671->Add( ReconstructionRunProfileComboBox, 50, wxALL|wxEXPAND, 5 );
 
 
 	bSizer268->Add( bSizer2671, 0, wxEXPAND, 5 );
@@ -7545,10 +7546,10 @@ RefineCTFPanelParent::RefineCTFPanelParent( wxWindow* parent, wxWindowID id, con
 
 	HiResLimitStaticText = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("Hi-Res Limit (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	HiResLimitStaticText->Wrap( -1 );
-	bSizer520->Add( HiResLimitStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	bSizer520->Add( HiResLimitStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	HighResolutionLimitTextCtrl = new NumericTextCtrl( InputParamsPanel, wxID_ANY, wxT("3.5"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer520->Add( HighResolutionLimitTextCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	HighResolutionLimitTextCtrl = new NumericTextCtrl( InputParamsPanel, wxID_ANY, wxT("3.5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	bSizer520->Add( HighResolutionLimitTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 
 	bSizer215->Add( bSizer520, 1, wxEXPAND, 5 );
@@ -7571,7 +7572,7 @@ RefineCTFPanelParent::RefineCTFPanelParent( wxWindow* parent, wxWindowID id, con
 	bSizer358 = new wxBoxSizer( wxHORIZONTAL );
 
 	ExpertToggleButton = new wxToggleButton( InputParamsPanel, wxID_ANY, wxT("Show Expert Options"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer358->Add( ExpertToggleButton, 0, wxALIGN_BOTTOM|wxALIGN_CENTER|wxALL, 5 );
+	bSizer358->Add( ExpertToggleButton, 0, wxALIGN_BOTTOM|wxALL, 5 );
 
 
 	bSizer357->Add( bSizer358, 0, wxALIGN_CENTER, 5 );
@@ -7676,7 +7677,7 @@ RefineCTFPanelParent::RefineCTFPanelParent( wxWindow* parent, wxWindowID id, con
 	NoMovieFramesStaticText->Wrap( -1 );
 	fgSizer1->Add( NoMovieFramesStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	LowResolutionLimitTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("300.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	LowResolutionLimitTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("300.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( LowResolutionLimitTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText196 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Outer Mask Radius (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -7690,28 +7691,28 @@ RefineCTFPanelParent::RefineCTFPanelParent( wxWindow* parent, wxWindowID id, con
 	m_staticText331->Wrap( -1 );
 	fgSizer1->Add( m_staticText331, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	InnerMaskRadiusTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	InnerMaskRadiusTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( InnerMaskRadiusTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText317 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Signed CC Resolution Limit (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText317->Wrap( -1 );
 	fgSizer1->Add( m_staticText317, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	SignedCCResolutionTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	SignedCCResolutionTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( SignedCCResolutionTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	DefocusSearchRangeStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Defocus Search Range (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	DefocusSearchRangeStaticText->Wrap( -1 );
 	fgSizer1->Add( DefocusSearchRangeStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	DefocusSearchRangeTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("500.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	DefocusSearchRangeTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("500.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( DefocusSearchRangeTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	DefocusSearchStepStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Defocus Search Step (Å) : "), wxDefaultPosition, wxDefaultSize, 0 );
 	DefocusSearchStepStaticText->Wrap( -1 );
 	fgSizer1->Add( DefocusSearchStepStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	DefocusSearchStepTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("100.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	DefocusSearchStepTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("100.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( DefocusSearchStepTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText329 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Reconstruction"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -7727,8 +7728,8 @@ RefineCTFPanelParent::RefineCTFPanelParent( wxWindow* parent, wxWindowID id, con
 	m_staticText332->Wrap( -1 );
 	fgSizer1->Add( m_staticText332, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	ScoreToWeightConstantTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("5.00"), wxDefaultPosition, wxDefaultSize, 0 );
-	fgSizer1->Add( ScoreToWeightConstantTextCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	ScoreToWeightConstantTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("5.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( ScoreToWeightConstantTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText335 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Adjust Score for Defocus?"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText335->Wrap( -1 );
@@ -7750,15 +7751,15 @@ RefineCTFPanelParent::RefineCTFPanelParent( wxWindow* parent, wxWindowID id, con
 	m_staticText333->Wrap( -1 );
 	fgSizer1->Add( m_staticText333, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	ReconstructionScoreThreshold = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("-1.0"), wxDefaultPosition, wxDefaultSize, 0 );
+	ReconstructionScoreThreshold = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("-1.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( ReconstructionScoreThreshold, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText334 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Resolution Limit (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText334->Wrap( -1 );
 	fgSizer1->Add( m_staticText334, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	ReconstructionResolutionLimitTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, 0 );
-	fgSizer1->Add( ReconstructionResolutionLimitTextCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	ReconstructionResolutionLimitTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( ReconstructionResolutionLimitTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText336 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Autocrop Images?"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText336->Wrap( -1 );
@@ -7796,7 +7797,7 @@ RefineCTFPanelParent::RefineCTFPanelParent( wxWindow* parent, wxWindowID id, con
 	SmoothingFactorStaticText->Wrap( -1 );
 	fgSizer1->Add( SmoothingFactorStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	SmoothingFactorTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("1.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	SmoothingFactorTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("1.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( SmoothingFactorTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText405 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Masking"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -7828,14 +7829,14 @@ RefineCTFPanelParent::RefineCTFPanelParent( wxWindow* parent, wxWindowID id, con
 	MaskEdgeStaticText->Wrap( -1 );
 	fgSizer1->Add( MaskEdgeStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	MaskEdgeTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("10.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	MaskEdgeTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("10.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( MaskEdgeTextCtrl, 0, wxALL, 5 );
 
 	MaskWeightStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Outside Weight :"), wxDefaultPosition, wxDefaultSize, 0 );
 	MaskWeightStaticText->Wrap( -1 );
 	fgSizer1->Add( MaskWeightStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	MaskWeightTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	MaskWeightTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( MaskWeightTextCtrl, 0, wxALL, 5 );
 
 	LowPassYesNoStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Low-Pass Filter Outside Mask?"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -7858,7 +7859,7 @@ RefineCTFPanelParent::RefineCTFPanelParent( wxWindow* parent, wxWindowID id, con
 	FilterResolutionStaticText->Wrap( -1 );
 	fgSizer1->Add( FilterResolutionStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	MaskFilterResolutionText = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("20.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	MaskFilterResolutionText = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("20.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( MaskFilterResolutionText, 0, wxALL, 5 );
 
 
@@ -7944,15 +7945,15 @@ RefineCTFPanelParent::RefineCTFPanelParent( wxWindow* parent, wxWindowID id, con
 
 	NumberConnectedText = new wxStaticText( ProgressPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	NumberConnectedText->Wrap( -1 );
-	bSizer59->Add( NumberConnectedText, 0, wxALIGN_CENTER|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( NumberConnectedText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	ProgressBar = new wxGauge( ProgressPanel, wxID_ANY, 100, wxDefaultPosition, wxDefaultSize, wxGA_HORIZONTAL );
 	ProgressBar->SetValue( 0 );
-	bSizer59->Add( ProgressBar, 100, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	bSizer59->Add( ProgressBar, 100, wxALL|wxEXPAND, 5 );
 
 	TimeRemainingText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("Time Remaining : ???h:??m:??s   "), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_HORIZONTAL );
 	TimeRemainingText->Wrap( -1 );
-	bSizer59->Add( TimeRemainingText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	bSizer59->Add( TimeRemainingText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	m_staticline60 = new wxStaticLine( ProgressPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	bSizer59->Add( m_staticline60, 0, wxEXPAND | wxALL, 5 );
@@ -7960,10 +7961,10 @@ RefineCTFPanelParent::RefineCTFPanelParent( wxWindow* parent, wxWindowID id, con
 	FinishButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Finish"), wxDefaultPosition, wxDefaultSize, 0 );
 	FinishButton->Hide();
 
-	bSizer59->Add( FinishButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( FinishButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	CancelAlignmentButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Terminate Job"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer59->Add( CancelAlignmentButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( CancelAlignmentButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 
 	bSizer57->Add( bSizer59, 1, wxEXPAND, 5 );
@@ -7992,7 +7993,7 @@ RefineCTFPanelParent::RefineCTFPanelParent( wxWindow* parent, wxWindowID id, con
 	bSizer267->Add( RunProfileText, 20, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	RefinementRunProfileComboBox = new MemoryComboBox( StartPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
-	bSizer267->Add( RefinementRunProfileComboBox, 50, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	bSizer267->Add( RefinementRunProfileComboBox, 50, wxALL|wxEXPAND, 5 );
 
 
 	bSizer268->Add( bSizer267, 50, wxEXPAND, 5 );
@@ -8005,7 +8006,7 @@ RefineCTFPanelParent::RefineCTFPanelParent( wxWindow* parent, wxWindowID id, con
 	bSizer2671->Add( RunProfileText1, 20, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	ReconstructionRunProfileComboBox = new MemoryComboBox( StartPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
-	bSizer2671->Add( ReconstructionRunProfileComboBox, 50, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	bSizer2671->Add( ReconstructionRunProfileComboBox, 50, wxALL|wxEXPAND, 5 );
 
 
 	bSizer268->Add( bSizer2671, 0, wxEXPAND, 5 );
@@ -8096,7 +8097,7 @@ Sharpen3DPanelParent::Sharpen3DPanelParent( wxWindow* parent, wxWindowID id, con
 	MaskSelectPanel = new VolumeAssetPickerComboPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	MaskSelectPanel->SetMinSize( wxSize( 350,-1 ) );
 
-	fgSizer15->Add( MaskSelectPanel, 1, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	fgSizer15->Add( MaskSelectPanel, 1, wxALL|wxEXPAND, 5 );
 
 
 	bSizer589->Add( fgSizer15, 0, wxEXPAND, 5 );
@@ -8139,35 +8140,35 @@ Sharpen3DPanelParent::Sharpen3DPanelParent( wxWindow* parent, wxWindowID id, con
 	m_staticText1007->Wrap( -1 );
 	fgSizer1->Add( m_staticText1007, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 
-	FlattenFromTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("8.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	FlattenFromTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("8.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( FlattenFromTextCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	m_staticText10081 = new wxStaticText( this, wxID_ANY, wxT("Resolution Cut-Off (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText10081->Wrap( -1 );
 	fgSizer1->Add( m_staticText10081, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 
-	CutOffResTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	CutOffResTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( CutOffResTextCtrl, 0, wxALL, 5 );
 
 	m_staticText638 = new wxStaticText( this, wxID_ANY, wxT("Pre-Cut-Off B-Factor (Å²) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText638->Wrap( -1 );
 	fgSizer1->Add( m_staticText638, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 
-	AdditionalLowBFactorTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("-90.0"), wxDefaultPosition, wxDefaultSize, 0 );
+	AdditionalLowBFactorTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("-90.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( AdditionalLowBFactorTextCtrl, 0, wxALL, 5 );
 
 	m_staticText600 = new wxStaticText( this, wxID_ANY, wxT("Post-Cut-Off B-Factor (Å²) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText600->Wrap( -1 );
 	fgSizer1->Add( m_staticText600, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 
-	AdditionalHighBFactorTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	AdditionalHighBFactorTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( AdditionalHighBFactorTextCtrl, 0, wxALL, 5 );
 
 	m_staticText10111 = new wxStaticText( this, wxID_ANY, wxT("Filter Edge-Width (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText10111->Wrap( -1 );
 	fgSizer1->Add( m_staticText10111, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 
-	FilterEdgeWidthTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("20.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	FilterEdgeWidthTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("20.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( FilterEdgeWidthTextCtrl, 0, wxALL, 5 );
 
 	UseFSCWeightingStaticText = new wxStaticText( this, wxID_ANY, wxT("Use FOM Weighting? :"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -8190,7 +8191,7 @@ Sharpen3DPanelParent::Sharpen3DPanelParent( wxWindow* parent, wxWindowID id, con
 	SSNRScaleFactorText->Wrap( -1 );
 	fgSizer1->Add( SSNRScaleFactorText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	SSNRScaleFactorTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("1.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	SSNRScaleFactorTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("1.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( SSNRScaleFactorTextCtrl, 0, wxALL, 5 );
 
 
@@ -8217,7 +8218,7 @@ Sharpen3DPanelParent::Sharpen3DPanelParent( wxWindow* parent, wxWindowID id, con
 	InnerMaskRadiusStaticText->Wrap( -1 );
 	fgSizer11->Add( InnerMaskRadiusStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 
-	InnerMaskRadiusTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	InnerMaskRadiusTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer11->Add( InnerMaskRadiusTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	OuterMaskRadiusStaticText = new wxStaticText( this, wxID_ANY, wxT("Outer Mask Radius (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -8312,7 +8313,7 @@ Sharpen3DPanelParent::Sharpen3DPanelParent( wxWindow* parent, wxWindowID id, con
 	GuinierPlot->SetMinSize( wxSize( -1,300 ) );
 	GuinierPlot->SetMaxSize( wxSize( -1,400 ) );
 
-	InputSizer->Add( GuinierPlot, 100, wxALIGN_BOTTOM|wxALL|wxEXPAND, 5 );
+	InputSizer->Add( GuinierPlot, 100, wxALL|wxEXPAND, 5 );
 
 
 	bSizer488->Add( InputSizer, 0, wxEXPAND, 5 );
@@ -8486,7 +8487,7 @@ Generate3DPanelParent::Generate3DPanelParent( wxWindow* parent, wxWindowID id, c
 	bSizer358 = new wxBoxSizer( wxHORIZONTAL );
 
 	ExpertToggleButton = new wxToggleButton( InputParamsPanel, wxID_ANY, wxT("Show Expert Options"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer358->Add( ExpertToggleButton, 0, wxALIGN_BOTTOM|wxALIGN_CENTER|wxALL, 5 );
+	bSizer358->Add( ExpertToggleButton, 0, wxALIGN_BOTTOM|wxALL, 5 );
 
 
 	bSizer357->Add( bSizer358, 0, wxALIGN_CENTER, 5 );
@@ -8569,15 +8570,15 @@ Generate3DPanelParent::Generate3DPanelParent( wxWindow* parent, wxWindowID id, c
 	m_staticText331->Wrap( -1 );
 	fgSizer1->Add( m_staticText331, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	InnerMaskRadiusTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	InnerMaskRadiusTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( InnerMaskRadiusTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText332 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Score to Weight Constant (Å²) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText332->Wrap( -1 );
 	fgSizer1->Add( m_staticText332, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	ScoreToWeightConstantTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("5.00"), wxDefaultPosition, wxDefaultSize, 0 );
-	fgSizer1->Add( ScoreToWeightConstantTextCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	ScoreToWeightConstantTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("5.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( ScoreToWeightConstantTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText335 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Adjust Score for Defocus?"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText335->Wrap( -1 );
@@ -8599,15 +8600,15 @@ Generate3DPanelParent::Generate3DPanelParent( wxWindow* parent, wxWindowID id, c
 	m_staticText333->Wrap( -1 );
 	fgSizer1->Add( m_staticText333, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	ReconstructionScoreThreshold = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("-1.0"), wxDefaultPosition, wxDefaultSize, 0 );
+	ReconstructionScoreThreshold = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("-1.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( ReconstructionScoreThreshold, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText334 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Resolution Limit (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText334->Wrap( -1 );
 	fgSizer1->Add( m_staticText334, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	ReconstructionResolutionLimitTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, 0 );
-	fgSizer1->Add( ReconstructionResolutionLimitTextCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	ReconstructionResolutionLimitTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( ReconstructionResolutionLimitTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText336 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Autocrop Images?"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText336->Wrap( -1 );
@@ -8772,15 +8773,15 @@ Generate3DPanelParent::Generate3DPanelParent( wxWindow* parent, wxWindowID id, c
 
 	NumberConnectedText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("o"), wxDefaultPosition, wxDefaultSize, 0 );
 	NumberConnectedText->Wrap( -1 );
-	bSizer59->Add( NumberConnectedText, 0, wxALIGN_CENTER|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( NumberConnectedText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	ProgressBar = new wxGauge( ProgressPanel, wxID_ANY, 100, wxDefaultPosition, wxDefaultSize, wxGA_HORIZONTAL );
 	ProgressBar->SetValue( 0 );
-	bSizer59->Add( ProgressBar, 100, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	bSizer59->Add( ProgressBar, 100, wxALL|wxEXPAND, 5 );
 
 	TimeRemainingText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("Time Remaining : ???h:??m:??s   "), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_HORIZONTAL );
 	TimeRemainingText->Wrap( -1 );
-	bSizer59->Add( TimeRemainingText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	bSizer59->Add( TimeRemainingText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	m_staticline60 = new wxStaticLine( ProgressPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	bSizer59->Add( m_staticline60, 0, wxEXPAND | wxALL, 5 );
@@ -8788,10 +8789,10 @@ Generate3DPanelParent::Generate3DPanelParent( wxWindow* parent, wxWindowID id, c
 	FinishButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Finish"), wxDefaultPosition, wxDefaultSize, 0 );
 	FinishButton->Hide();
 
-	bSizer59->Add( FinishButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( FinishButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	CancelAlignmentButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Terminate Job"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer59->Add( CancelAlignmentButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( CancelAlignmentButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 
 	bSizer57->Add( bSizer59, 1, wxEXPAND, 5 );
@@ -8817,7 +8818,7 @@ Generate3DPanelParent::Generate3DPanelParent( wxWindow* parent, wxWindowID id, c
 	bSizer268->Add( RunProfileText1, 20, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	ReconstructionRunProfileComboBox = new MemoryComboBox( StartPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
-	bSizer268->Add( ReconstructionRunProfileComboBox, 50, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	bSizer268->Add( ReconstructionRunProfileComboBox, 50, wxALL|wxEXPAND, 5 );
 
 
 	bSizer58->Add( bSizer268, 50, wxALIGN_CENTER_VERTICAL, 5 );
@@ -8938,9 +8939,9 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 
 	InitialResLimitStaticText = new wxStaticText( InputParamsPanel, wxID_ANY, wxT("Initial Res. Limit (Å) : "), wxDefaultPosition, wxDefaultSize, 0 );
 	InitialResLimitStaticText->Wrap( -1 );
-	bSizer214->Add( InitialResLimitStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	bSizer214->Add( InitialResLimitStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	HighResolutionLimitTextCtrl = new NumericTextCtrl( InputParamsPanel, wxID_ANY, wxT("30.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	HighResolutionLimitTextCtrl = new NumericTextCtrl( InputParamsPanel, wxID_ANY, wxT("30.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	bSizer214->Add( HighResolutionLimitTextCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 
@@ -9026,7 +9027,7 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 	NoMovieFramesStaticText->Wrap( -1 );
 	fgSizer1->Add( NoMovieFramesStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	LowResolutionLimitTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("300.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	LowResolutionLimitTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("300.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( LowResolutionLimitTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText196 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Outer Mask Radius (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -9040,7 +9041,7 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 	m_staticText330->Wrap( -1 );
 	fgSizer1->Add( m_staticText330, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	InnerMaskRadiusTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	InnerMaskRadiusTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( InnerMaskRadiusTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText201 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Global Search"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -9125,7 +9126,7 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 	SmoothingFactorStaticText->Wrap( -1 );
 	fgSizer1->Add( SmoothingFactorStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	SmoothingFactorTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("1.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	SmoothingFactorTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("1.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( SmoothingFactorTextCtrl, 0, wxALL|wxEXPAND, 5 );
 
 	AutoCenterStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Autocenter reconstruction?"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -9173,14 +9174,14 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 	MaskEdgeStaticText->Wrap( -1 );
 	fgSizer1->Add( MaskEdgeStaticText, 0, wxALL, 5 );
 
-	MaskEdgeTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("10.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	MaskEdgeTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("10.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( MaskEdgeTextCtrl, 0, wxALL, 5 );
 
 	MaskWeightStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Outside Weight :"), wxDefaultPosition, wxDefaultSize, 0 );
 	MaskWeightStaticText->Wrap( -1 );
 	fgSizer1->Add( MaskWeightStaticText, 0, wxALL, 5 );
 
-	MaskWeightTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	MaskWeightTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( MaskWeightTextCtrl, 0, wxALL, 5 );
 
 	LowPassYesNoStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Low-Pass Filter Outside Mask?"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -9203,7 +9204,7 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 	FilterResolutionStaticText->Wrap( -1 );
 	fgSizer1->Add( FilterResolutionStaticText, 0, wxALL, 5 );
 
-	MaskFilterResolutionText = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("20.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	MaskFilterResolutionText = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("20.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( MaskFilterResolutionText, 0, wxALL, 5 );
 
 
@@ -9289,15 +9290,15 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 
 	NumberConnectedText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("o"), wxDefaultPosition, wxDefaultSize, 0 );
 	NumberConnectedText->Wrap( -1 );
-	bSizer59->Add( NumberConnectedText, 0, wxALIGN_CENTER|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( NumberConnectedText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	ProgressBar = new wxGauge( ProgressPanel, wxID_ANY, 100, wxDefaultPosition, wxDefaultSize, wxGA_HORIZONTAL );
 	ProgressBar->SetValue( 0 );
-	bSizer59->Add( ProgressBar, 100, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	bSizer59->Add( ProgressBar, 100, wxALL|wxEXPAND, 5 );
 
 	TimeRemainingText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("Time Remaining : ???h:??m:??s   "), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_HORIZONTAL );
 	TimeRemainingText->Wrap( -1 );
-	bSizer59->Add( TimeRemainingText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	bSizer59->Add( TimeRemainingText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	m_staticline60 = new wxStaticLine( ProgressPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	bSizer59->Add( m_staticline60, 0, wxEXPAND | wxALL, 5 );
@@ -9305,10 +9306,10 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 	FinishButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Finish"), wxDefaultPosition, wxDefaultSize, 0 );
 	FinishButton->Hide();
 
-	bSizer59->Add( FinishButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( FinishButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	CancelAlignmentButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Terminate Job"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer59->Add( CancelAlignmentButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( CancelAlignmentButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 
 	bSizer57->Add( bSizer59, 1, wxEXPAND, 5 );
@@ -9337,7 +9338,7 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 	bSizer267->Add( RunProfileText, 20, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	RefinementRunProfileComboBox = new MemoryComboBox( StartPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
-	bSizer267->Add( RefinementRunProfileComboBox, 50, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	bSizer267->Add( RefinementRunProfileComboBox, 50, wxALL|wxEXPAND, 5 );
 
 
 	bSizer268->Add( bSizer267, 50, wxEXPAND, 5 );
@@ -9350,7 +9351,7 @@ AutoRefine3DPanelParent::AutoRefine3DPanelParent( wxWindow* parent, wxWindowID i
 	bSizer2671->Add( RunProfileText1, 20, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	ReconstructionRunProfileComboBox = new MemoryComboBox( StartPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
-	bSizer2671->Add( ReconstructionRunProfileComboBox, 50, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	bSizer2671->Add( ReconstructionRunProfileComboBox, 50, wxALL|wxEXPAND, 5 );
 
 
 	bSizer268->Add( bSizer2671, 0, wxEXPAND, 5 );
@@ -9721,15 +9722,15 @@ FindCTFPanel::FindCTFPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos,
 
 	NumberConnectedText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("o"), wxDefaultPosition, wxDefaultSize, 0 );
 	NumberConnectedText->Wrap( -1 );
-	bSizer59->Add( NumberConnectedText, 0, wxALIGN_CENTER|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( NumberConnectedText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	ProgressBar = new wxGauge( ProgressPanel, wxID_ANY, 100, wxDefaultPosition, wxDefaultSize, wxGA_HORIZONTAL );
 	ProgressBar->SetValue( 0 );
-	bSizer59->Add( ProgressBar, 100, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	bSizer59->Add( ProgressBar, 100, wxALL|wxEXPAND, 5 );
 
 	TimeRemainingText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("Time Remaining : ???h:??m:??s   "), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_HORIZONTAL );
 	TimeRemainingText->Wrap( -1 );
-	bSizer59->Add( TimeRemainingText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	bSizer59->Add( TimeRemainingText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	m_staticline60 = new wxStaticLine( ProgressPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	bSizer59->Add( m_staticline60, 0, wxEXPAND | wxALL, 5 );
@@ -9737,10 +9738,10 @@ FindCTFPanel::FindCTFPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos,
 	FinishButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Finish"), wxDefaultPosition, wxDefaultSize, 0 );
 	FinishButton->Hide();
 
-	bSizer59->Add( FinishButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( FinishButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	CancelAlignmentButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Terminate Job"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer59->Add( CancelAlignmentButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( CancelAlignmentButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 
 	bSizer57->Add( bSizer59, 1, wxEXPAND, 5 );
@@ -10097,15 +10098,15 @@ MatchTemplatePanelParent::MatchTemplatePanelParent( wxWindow* parent, wxWindowID
 
 	NumberConnectedText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("o"), wxDefaultPosition, wxDefaultSize, 0 );
 	NumberConnectedText->Wrap( -1 );
-	bSizer59->Add( NumberConnectedText, 0, wxALIGN_CENTER|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( NumberConnectedText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	ProgressBar = new wxGauge( ProgressPanel, wxID_ANY, 100, wxDefaultPosition, wxDefaultSize, wxGA_HORIZONTAL );
 	ProgressBar->SetValue( 0 );
-	bSizer59->Add( ProgressBar, 100, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	bSizer59->Add( ProgressBar, 100, wxALL|wxEXPAND, 5 );
 
 	TimeRemainingText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("Time Remaining : ???h:??m:??s   "), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_HORIZONTAL );
 	TimeRemainingText->Wrap( -1 );
-	bSizer59->Add( TimeRemainingText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	bSizer59->Add( TimeRemainingText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	m_staticline60 = new wxStaticLine( ProgressPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	bSizer59->Add( m_staticline60, 0, wxEXPAND | wxALL, 5 );
@@ -10113,10 +10114,10 @@ MatchTemplatePanelParent::MatchTemplatePanelParent( wxWindow* parent, wxWindowID
 	FinishButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Finish"), wxDefaultPosition, wxDefaultSize, 0 );
 	FinishButton->Hide();
 
-	bSizer59->Add( FinishButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( FinishButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	CancelAlignmentButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Terminate Job"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer59->Add( CancelAlignmentButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( CancelAlignmentButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 
 	bSizer57->Add( bSizer59, 1, wxEXPAND, 5 );
@@ -10517,15 +10518,15 @@ RefineTemplatePanelParent::RefineTemplatePanelParent( wxWindow* parent, wxWindow
 
 	NumberConnectedText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("o"), wxDefaultPosition, wxDefaultSize, 0 );
 	NumberConnectedText->Wrap( -1 );
-	bSizer59->Add( NumberConnectedText, 0, wxALIGN_CENTER|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( NumberConnectedText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	ProgressBar = new wxGauge( ProgressPanel, wxID_ANY, 100, wxDefaultPosition, wxDefaultSize, wxGA_HORIZONTAL );
 	ProgressBar->SetValue( 0 );
-	bSizer59->Add( ProgressBar, 100, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	bSizer59->Add( ProgressBar, 100, wxALL|wxEXPAND, 5 );
 
 	TimeRemainingText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("Time Remaining : ???h:??m:??s   "), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_HORIZONTAL );
 	TimeRemainingText->Wrap( -1 );
-	bSizer59->Add( TimeRemainingText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	bSizer59->Add( TimeRemainingText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	m_staticline60 = new wxStaticLine( ProgressPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	bSizer59->Add( m_staticline60, 0, wxEXPAND | wxALL, 5 );
@@ -10533,10 +10534,10 @@ RefineTemplatePanelParent::RefineTemplatePanelParent( wxWindow* parent, wxWindow
 	FinishButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Finish"), wxDefaultPosition, wxDefaultSize, 0 );
 	FinishButton->Hide();
 
-	bSizer59->Add( FinishButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( FinishButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	CancelAlignmentButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Terminate Job"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer59->Add( CancelAlignmentButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( CancelAlignmentButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 
 	bSizer57->Add( bSizer59, 1, wxEXPAND, 5 );
@@ -10930,15 +10931,15 @@ RefineTemplateDevPanelParent::RefineTemplateDevPanelParent( wxWindow* parent, wx
 
 	NumberConnectedText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("o"), wxDefaultPosition, wxDefaultSize, 0 );
 	NumberConnectedText->Wrap( -1 );
-	bSizer59->Add( NumberConnectedText, 0, wxALIGN_CENTER|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( NumberConnectedText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	ProgressBar = new wxGauge( ProgressPanel, wxID_ANY, 100, wxDefaultPosition, wxDefaultSize, wxGA_HORIZONTAL );
 	ProgressBar->SetValue( 0 );
-	bSizer59->Add( ProgressBar, 100, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	bSizer59->Add( ProgressBar, 100, wxALL|wxEXPAND, 5 );
 
 	TimeRemainingText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("Time Remaining : ???h:??m:??s   "), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_HORIZONTAL );
 	TimeRemainingText->Wrap( -1 );
-	bSizer59->Add( TimeRemainingText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	bSizer59->Add( TimeRemainingText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	m_staticline60 = new wxStaticLine( ProgressPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	bSizer59->Add( m_staticline60, 0, wxEXPAND | wxALL, 5 );
@@ -10946,10 +10947,10 @@ RefineTemplateDevPanelParent::RefineTemplateDevPanelParent( wxWindow* parent, wx
 	FinishButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Finish"), wxDefaultPosition, wxDefaultSize, 0 );
 	FinishButton->Hide();
 
-	bSizer59->Add( FinishButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( FinishButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	CancelAlignmentButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Terminate Job"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer59->Add( CancelAlignmentButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer59->Add( CancelAlignmentButton, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 
 	bSizer57->Add( bSizer59, 1, wxEXPAND, 5 );
@@ -11053,7 +11054,7 @@ NewProjectWizard::NewProjectWizard( wxWindow* parent, wxWindowID id, const wxStr
 
 	m_staticText41 = new wxStaticText( m_wizPage1, wxID_ANY, wxT("Project Name :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText41->Wrap( -1 );
-	bSizer47->Add( m_staticText41, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer47->Add( m_staticText41, 0, wxALL, 5 );
 
 	ProjectNameTextCtrl = new wxTextCtrl( m_wizPage1, wxID_ANY, wxT("New_Project"), wxDefaultPosition, wxSize( -1,-1 ), 0 );
 	ProjectNameTextCtrl->SetMinSize( wxSize( 500,-1 ) );
@@ -11062,7 +11063,7 @@ NewProjectWizard::NewProjectWizard( wxWindow* parent, wxWindowID id, const wxStr
 
 	m_staticText42 = new wxStaticText( m_wizPage1, wxID_ANY, wxT("Project Parent Directory :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText42->Wrap( -1 );
-	bSizer47->Add( m_staticText42, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer47->Add( m_staticText42, 0, wxALL, 5 );
 
 	wxBoxSizer* bSizer50;
 	bSizer50 = new wxBoxSizer( wxHORIZONTAL );
@@ -11211,7 +11212,7 @@ ExportRefinementPackageWizardParent::ExportRefinementPackageWizardParent( wxWind
 
 	m_staticText411 = new wxStaticText( GetPathPage, wxID_ANY, wxT("Output Particle Stack Filename :-"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText411->Wrap( -1 );
-	bSizer471->Add( m_staticText411, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer471->Add( m_staticText411, 0, wxALL, 5 );
 
 	wxBoxSizer* bSizer5011;
 	bSizer5011 = new wxBoxSizer( wxHORIZONTAL );
@@ -11227,7 +11228,7 @@ ExportRefinementPackageWizardParent::ExportRefinementPackageWizardParent( wxWind
 
 	MetaFilenameStaticText = new wxStaticText( GetPathPage, wxID_ANY, wxT("Output PAR / STAR Filename :-"), wxDefaultPosition, wxDefaultSize, 0 );
 	MetaFilenameStaticText->Wrap( -1 );
-	bSizer471->Add( MetaFilenameStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer471->Add( MetaFilenameStaticText, 0, wxALL, 5 );
 
 	wxBoxSizer* bSizer502;
 	bSizer502 = new wxBoxSizer( wxHORIZONTAL );
@@ -11335,7 +11336,7 @@ ImportRefinementPackageWizardParent::ImportRefinementPackageWizardParent( wxWind
 
 	m_staticText41 = new wxStaticText( GetPathPage, wxID_ANY, wxT("Particle Stack Filename :-"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText41->Wrap( -1 );
-	bSizer47->Add( m_staticText41, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer47->Add( m_staticText41, 0, wxALL, 5 );
 
 	wxBoxSizer* bSizer501;
 	bSizer501 = new wxBoxSizer( wxHORIZONTAL );
@@ -11351,7 +11352,7 @@ ImportRefinementPackageWizardParent::ImportRefinementPackageWizardParent( wxWind
 
 	MetaFilenameStaticText = new wxStaticText( GetPathPage, wxID_ANY, wxT("PAR / STAR Filename :-"), wxDefaultPosition, wxDefaultSize, 0 );
 	MetaFilenameStaticText->Wrap( -1 );
-	bSizer47->Add( MetaFilenameStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer47->Add( MetaFilenameStaticText, 0, wxALL, 5 );
 
 	wxBoxSizer* bSizer50;
 	bSizer50 = new wxBoxSizer( wxHORIZONTAL );
@@ -11391,7 +11392,7 @@ ImportRefinementPackageWizardParent::ImportRefinementPackageWizardParent( wxWind
 	PixelSizeTextCtrlLabel->Wrap( -1 );
 	fgSizer23->Add( PixelSizeTextCtrlLabel, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 
-	PixelSizeTextCtrl = new NumericTextCtrl( GetParametersPage, wxID_ANY, wxT("1.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	PixelSizeTextCtrl = new NumericTextCtrl( GetParametersPage, wxID_ANY, wxT("1.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	PixelSizeTextCtrl->SetMinSize( wxSize( 100,-1 ) );
 
 	fgSizer23->Add( PixelSizeTextCtrl, 0, wxALL, 5 );
@@ -11400,7 +11401,7 @@ ImportRefinementPackageWizardParent::ImportRefinementPackageWizardParent( wxWind
 	MicroscopeVoltageTextCtrlLabel->Wrap( -1 );
 	fgSizer23->Add( MicroscopeVoltageTextCtrlLabel, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 
-	MicroscopeVoltageTextCtrl = new NumericTextCtrl( GetParametersPage, wxID_ANY, wxT("300.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	MicroscopeVoltageTextCtrl = new NumericTextCtrl( GetParametersPage, wxID_ANY, wxT("300.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	MicroscopeVoltageTextCtrl->SetMinSize( wxSize( 100,-1 ) );
 
 	fgSizer23->Add( MicroscopeVoltageTextCtrl, 0, wxALL, 5 );
@@ -11409,7 +11410,7 @@ ImportRefinementPackageWizardParent::ImportRefinementPackageWizardParent( wxWind
 	m_staticText479->Wrap( -1 );
 	fgSizer23->Add( m_staticText479, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 
-	SphericalAberrationTextCtrl = new NumericTextCtrl( GetParametersPage, wxID_ANY, wxT("2.70"), wxDefaultPosition, wxDefaultSize, 0 );
+	SphericalAberrationTextCtrl = new NumericTextCtrl( GetParametersPage, wxID_ANY, wxT("2.70"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	SphericalAberrationTextCtrl->SetMinSize( wxSize( 100,-1 ) );
 
 	fgSizer23->Add( SphericalAberrationTextCtrl, 0, wxALL, 5 );
@@ -11418,7 +11419,7 @@ ImportRefinementPackageWizardParent::ImportRefinementPackageWizardParent( wxWind
 	AmplitudeContrastTextCtrlLabel->Wrap( -1 );
 	fgSizer23->Add( AmplitudeContrastTextCtrlLabel, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 
-	AmplitudeContrastTextCtrl = new NumericTextCtrl( GetParametersPage, wxID_ANY, wxT("0.07"), wxDefaultPosition, wxDefaultSize, 0 );
+	AmplitudeContrastTextCtrl = new NumericTextCtrl( GetParametersPage, wxID_ANY, wxT("0.07"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	AmplitudeContrastTextCtrl->SetMinSize( wxSize( 100,-1 ) );
 
 	fgSizer23->Add( AmplitudeContrastTextCtrl, 0, wxALL, 5 );
@@ -11436,7 +11437,7 @@ ImportRefinementPackageWizardParent::ImportRefinementPackageWizardParent( wxWind
 	m_staticText460->Wrap( -1 );
 	fgSizer23->Add( m_staticText460, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 
-	MolecularWeightTextCtrl = new NumericTextCtrl( GetParametersPage, wxID_ANY, wxT("400.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	MolecularWeightTextCtrl = new NumericTextCtrl( GetParametersPage, wxID_ANY, wxT("400.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	MolecularWeightTextCtrl->SetMinSize( wxSize( 100,-1 ) );
 
 	fgSizer23->Add( MolecularWeightTextCtrl, 0, wxALL, 5 );
@@ -11445,7 +11446,7 @@ ImportRefinementPackageWizardParent::ImportRefinementPackageWizardParent( wxWind
 	m_staticText214->Wrap( -1 );
 	fgSizer23->Add( m_staticText214, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 
-	LargestDimensionTextCtrl = new NumericTextCtrl( GetParametersPage, wxID_ANY, wxT("150.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	LargestDimensionTextCtrl = new NumericTextCtrl( GetParametersPage, wxID_ANY, wxT("150.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	LargestDimensionTextCtrl->SetMinSize( wxSize( 100,-1 ) );
 
 	fgSizer23->Add( LargestDimensionTextCtrl, 0, wxALL, 5 );
@@ -12250,7 +12251,7 @@ RelionExportDialog::RelionExportDialog( wxWindow* parent, wxWindowID id, const w
 
 	FileNameStaticText = new wxStaticText( sbSizer4->GetStaticBox(), wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	FileNameStaticText->Wrap( -1 );
-	bSizer229->Add( FileNameStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+	bSizer229->Add( FileNameStaticText, 0, wxALL|wxEXPAND, 5 );
 
 
 	sbSizer4->Add( bSizer229, 1, wxEXPAND, 5 );
@@ -12327,7 +12328,7 @@ RefinementPackageAssetPanel::RefinementPackageAssetPanel( wxWindow* parent, wxWi
 	m_staticline52 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	bSizer187->Add( m_staticline52, 0, wxEXPAND | wxALL, 5 );
 
-	m_splitter11 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
+	m_splitter11 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_LIVE_UPDATE );
 	m_splitter11->Connect( wxEVT_IDLE, wxIdleEventHandler( RefinementPackageAssetPanel::m_splitter11OnIdle ), NULL, this );
 
 	m_panel50 = new wxPanel( m_splitter11, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
@@ -12725,7 +12726,7 @@ MolecularWeightWizardPanel::MolecularWeightWizardPanel( wxWindow* parent, wxWind
 	m_staticText214->Wrap( -1 );
 	bSizer147->Add( m_staticText214, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	MolecularWeightTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, 0 );
+	MolecularWeightTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	bSizer147->Add( MolecularWeightTextCtrl, 1, wxALL, 5 );
 
 
@@ -12792,7 +12793,7 @@ LargestDimensionWizardPanel::LargestDimensionWizardPanel( wxWindow* parent, wxWi
 	m_staticText214->Wrap( -1 );
 	bSizer147->Add( m_staticText214, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	LargestDimensionTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, 0 );
+	LargestDimensionTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	bSizer147->Add( LargestDimensionTextCtrl, 1, wxALL, 5 );
 
 
@@ -12826,7 +12827,7 @@ OutputPixelSizeWizardPanel::OutputPixelSizeWizardPanel( wxWindow* parent, wxWind
 	m_staticText214->Wrap( -1 );
 	bSizer147->Add( m_staticText214, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	OutputPixelSizeTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, 0 );
+	OutputPixelSizeTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	bSizer147->Add( OutputPixelSizeTextCtrl, 1, wxALL, 5 );
 
 
@@ -13091,7 +13092,7 @@ RemoveDuplicateThresholdWizardPanel::RemoveDuplicateThresholdWizardPanel( wxWind
 	m_staticText214->Wrap( -1 );
 	bSizer147->Add( m_staticText214, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	DuplicatePickThresholdTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, 0 );
+	DuplicatePickThresholdTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	bSizer147->Add( DuplicatePickThresholdTextCtrl, 1, wxALL, 5 );
 
 
@@ -13123,7 +13124,7 @@ ClassesSetupWizardPanelB::ClassesSetupWizardPanelB( wxWindow* parent, wxWindowID
 
 	m_staticText21411 = new wxStaticText( this, wxID_ANY, wxT("Carry over particles from which classes? :-"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText21411->Wrap( -1 );
-	bSizer14711->Add( m_staticText21411, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer14711->Add( m_staticText21411, 0, wxALL, 5 );
 
 	m_staticline103 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	bSizer14711->Add( m_staticline103, 0, wxEXPAND | wxALL, 5 );
@@ -13160,7 +13161,7 @@ ClassesSetupWizardPanelC::ClassesSetupWizardPanelC( wxWindow* parent, wxWindowID
 
 	m_staticText21411 = new wxStaticText( this, wxID_ANY, wxT("How should the new classes be created? :-"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText21411->Wrap( -1 );
-	bSizer14711->Add( m_staticText21411, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer14711->Add( m_staticText21411, 0, wxALL, 5 );
 
 	m_staticline104 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	bSizer14711->Add( m_staticline104, 0, wxEXPAND | wxALL, 5 );
@@ -13222,7 +13223,7 @@ ClassesSetupWizardPanelD::ClassesSetupWizardPanelD( wxWindow* parent, wxWindowID
 
 	m_staticText21411 = new wxStaticText( this, wxID_ANY, wxT("Which parameters should be used when combining classes? :- "), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText21411->Wrap( -1 );
-	bSizer14711->Add( m_staticText21411, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer14711->Add( m_staticText21411, 0, wxALL, 5 );
 
 	wxBoxSizer* bSizer367;
 	bSizer367 = new wxBoxSizer( wxHORIZONTAL );
@@ -13265,7 +13266,7 @@ ClassesSetupWizardPanelE::ClassesSetupWizardPanelE( wxWindow* parent, wxWindowID
 
 	m_staticText21411 = new wxStaticText( this, wxID_ANY, wxT("How should the new occupancies be set? :- "), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText21411->Wrap( -1 );
-	bSizer14711->Add( m_staticText21411, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	bSizer14711->Add( m_staticText21411, 0, wxALL, 5 );
 
 	wxBoxSizer* bSizer367;
 	bSizer367 = new wxBoxSizer( wxHORIZONTAL );
@@ -13309,18 +13310,18 @@ FSCPanel::FSCPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const w
 	TitleStaticText->Wrap( -1 );
 	TitleStaticText->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
 
-	TitleSizer->Add( TitleStaticText, 0, wxALIGN_BOTTOM|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	TitleSizer->Add( TitleStaticText, 0, wxALIGN_BOTTOM|wxALL, 5 );
 
 
 	TitleSizer->Add( 0, 0, 1, wxEXPAND, 5 );
 
 	EstimatedResolutionLabel = new wxStaticText( this, wxID_ANY, wxT("Best Est. Resolution : "), wxDefaultPosition, wxDefaultSize, 0 );
 	EstimatedResolutionLabel->Wrap( -1 );
-	TitleSizer->Add( EstimatedResolutionLabel, 0, wxALIGN_BOTTOM|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	TitleSizer->Add( EstimatedResolutionLabel, 0, wxALIGN_BOTTOM|wxALL, 5 );
 
 	EstimatedResolutionText = new wxStaticText( this, wxID_ANY, wxT("00.00  ‎Å"), wxDefaultPosition, wxDefaultSize, 0 );
 	EstimatedResolutionText->Wrap( -1 );
-	TitleSizer->Add( EstimatedResolutionText, 0, wxALIGN_BOTTOM|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	TitleSizer->Add( EstimatedResolutionText, 0, wxALIGN_BOTTOM|wxALL, 5 );
 
 	m_staticline104 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
 	TitleSizer->Add( m_staticline104, 0, wxEXPAND | wxALL, 5 );
@@ -13668,14 +13669,14 @@ UnblurResultsPanelParent::UnblurResultsPanelParent( wxWindow* parent, wxWindowID
 {
 	MainSizer = new wxBoxSizer( wxHORIZONTAL );
 
-	m_splitter13 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
+	m_splitter13 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_LIVE_UPDATE );
 	m_splitter13->SetSashGravity( 0.5 );
 	m_splitter13->Connect( wxEVT_IDLE, wxIdleEventHandler( UnblurResultsPanelParent::m_splitter13OnIdle ), NULL, this );
 
 	m_panel80 = new wxPanel( m_splitter13, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	SplitSizer = new wxBoxSizer( wxVERTICAL );
 
-	m_splitter14 = new wxSplitterWindow( m_panel80, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
+	m_splitter14 = new wxSplitterWindow( m_panel80, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_LIVE_UPDATE );
 	m_splitter14->SetSashGravity( 0.5 );
 	m_splitter14->Connect( wxEVT_IDLE, wxIdleEventHandler( UnblurResultsPanelParent::m_splitter14OnIdle ), NULL, this );
 
@@ -13719,7 +13720,7 @@ UnblurResultsPanelParent::UnblurResultsPanelParent( wxWindow* parent, wxWindowID
 	m_staticText373->Wrap( -1 );
 	m_staticText373->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
 
-	bSizer288->Add( m_staticText373, 0, wxALIGN_BOTTOM|wxALL, 5 );
+	bSizer288->Add( m_staticText373, 0, wxALL, 5 );
 
 	m_staticline74 = new wxStaticLine( m_panel83, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	bSizer288->Add( m_staticline74, 0, wxEXPAND | wxALL, 5 );
@@ -13833,7 +13834,7 @@ DisplayRefinementResultsPanelParent::DisplayRefinementResultsPanelParent( wxWind
 	wxBoxSizer* bSizer92;
 	bSizer92 = new wxBoxSizer( wxVERTICAL );
 
-	LeftRightSplitter = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_PERMIT_UNSPLIT );
+	LeftRightSplitter = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_LIVE_UPDATE|wxSP_PERMIT_UNSPLIT );
 	LeftRightSplitter->SetSashGravity( 0.5 );
 	LeftRightSplitter->Connect( wxEVT_IDLE, wxIdleEventHandler( DisplayRefinementResultsPanelParent::LeftRightSplitterOnIdle ), NULL, this );
 
@@ -13841,7 +13842,7 @@ DisplayRefinementResultsPanelParent::DisplayRefinementResultsPanelParent( wxWind
 	wxBoxSizer* bSizer301;
 	bSizer301 = new wxBoxSizer( wxVERTICAL );
 
-	TopBottomSplitter = new wxSplitterWindow( LeftPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_PERMIT_UNSPLIT );
+	TopBottomSplitter = new wxSplitterWindow( LeftPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_LIVE_UPDATE|wxSP_PERMIT_UNSPLIT );
 	TopBottomSplitter->SetSashGravity( 0.5 );
 	TopBottomSplitter->Connect( wxEVT_IDLE, wxIdleEventHandler( DisplayRefinementResultsPanelParent::TopBottomSplitterOnIdle ), NULL, this );
 
@@ -13931,7 +13932,7 @@ DisplayCTFRefinementResultsPanelParent::DisplayCTFRefinementResultsPanelParent( 
 	wxBoxSizer* bSizer92;
 	bSizer92 = new wxBoxSizer( wxVERTICAL );
 
-	LeftRightSplitter = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_PERMIT_UNSPLIT );
+	LeftRightSplitter = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_LIVE_UPDATE|wxSP_PERMIT_UNSPLIT );
 	LeftRightSplitter->SetSashGravity( 0.5 );
 	LeftRightSplitter->Connect( wxEVT_IDLE, wxIdleEventHandler( DisplayCTFRefinementResultsPanelParent::LeftRightSplitterOnIdle ), NULL, this );
 
@@ -13939,7 +13940,7 @@ DisplayCTFRefinementResultsPanelParent::DisplayCTFRefinementResultsPanelParent( 
 	wxBoxSizer* bSizer301;
 	bSizer301 = new wxBoxSizer( wxVERTICAL );
 
-	TopBottomSplitter = new wxSplitterWindow( LeftPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_PERMIT_UNSPLIT );
+	TopBottomSplitter = new wxSplitterWindow( LeftPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_LIVE_UPDATE|wxSP_PERMIT_UNSPLIT );
 	TopBottomSplitter->SetSashGravity( 0.5 );
 	TopBottomSplitter->Connect( wxEVT_IDLE, wxIdleEventHandler( DisplayCTFRefinementResultsPanelParent::TopBottomSplitterOnIdle ), NULL, this );
 

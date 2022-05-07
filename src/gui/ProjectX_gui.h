@@ -64,7 +64,6 @@ class VolumeAssetPickerComboPanel;
 #include <wx/menu.h>
 #include <wx/frame.h>
 #include <wx/combobox.h>
-#include <wx/bmpbuttn.h>
 #include <wx/button.h>
 #include <wx/statline.h>
 #include <wx/stattext.h>
@@ -75,6 +74,7 @@ class VolumeAssetPickerComboPanel;
 #include <wx/scrolwin.h>
 #include <wx/richtext/richtextctrl.h>
 #include <wx/gauge.h>
+#include <wx/bmpbuttn.h>
 #include <wx/splitter.h>
 #include <wx/checkbox.h>
 #include <wx/dataview.h>
@@ -138,6 +138,9 @@ class AssetPickerComboPanelParent : public wxPanel
 	private:
 
 	protected:
+		wxButton* PreviousButton;
+		wxButton* NextButton;
+		wxButton* WindowSelectButton;
 
 		// Virtual event handlers, override them in your derived class
 		virtual void OnSize( wxSizeEvent& event ) { event.Skip(); }
@@ -148,11 +151,8 @@ class AssetPickerComboPanelParent : public wxPanel
 
 	public:
 		MemoryComboBox* AssetComboBox;
-		NoFocusBitmapButton* PreviousButton;
-		NoFocusBitmapButton* NextButton;
-		NoFocusBitmapButton* WindowSelectButton;
 
-		AssetPickerComboPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+		AssetPickerComboPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 204,56 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 
 		~AssetPickerComboPanelParent();
 

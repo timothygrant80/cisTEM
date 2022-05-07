@@ -484,12 +484,12 @@ void AbInitio3DPanel::OnUpdateUI(wxUpdateUIEvent& event) {
 
         if ( ReconstructionRunProfileComboBox->GetCount( ) > 0 ) {
             ReconstructionRunProfileComboBox->Clear( );
-            ReconstructionRunProfileComboBox->ChangeValue("");
+            //ReconstructionRunProfileComboBox->ChangeValue("");
         }
 
         if ( RefinementRunProfileComboBox->GetCount( ) > 0 ) {
             RefinementRunProfileComboBox->Clear( );
-            RefinementRunProfileComboBox->ChangeValue("");
+            //RefinementRunProfileComboBox->ChangeValue("");
         }
 
         if ( PleaseCreateRefinementPackageText->IsShown( ) ) {

@@ -10,16 +10,16 @@ wxDEFINE_EVENT(wxEVT_MULTIPLY3DMASKTHREAD_COMPLETED, wxThreadEvent);
 wxDEFINE_EVENT(wxEVT_WRITECLASSIFICATIONSTARFILETHREAD_COMPLETED, wxThreadEvent);
 
 MemoryComboBox::MemoryComboBox(wxWindow* parent, wxWindowID id, const wxString& value, const wxPoint& pos, const wxSize& size, int n, const wxString choices[], long style, const wxValidator& validator, const wxString& name)
-    : wxOwnerDrawnComboBox(parent, id, value, pos, size, n, choices, style, validator, name) {
+    : wxChoice(parent, id, pos, size, n, choices, style, validator, name) {
     associated_ids.clear( );
     selected_id_on_last_clear = -10;
     currently_selected_id     = -10;
 
-    Bind(wxEVT_COMBOBOX, &MemoryComboBox::OnComboBox, this);
+    Bind(wxEVT_CHOICE, &MemoryComboBox::OnComboBox, this);
 }
 
 MemoryComboBox::~MemoryComboBox( ) {
-    Unbind(wxEVT_COMBOBOX, &MemoryComboBox::OnComboBox, this);
+    Unbind(wxEVT_CHOICE, &MemoryComboBox::OnComboBox, this);
 }
 
 void MemoryComboBox::OnComboBox(wxCommandEvent& event) {
@@ -34,7 +34,7 @@ void MemoryComboBox::SetSelection(int n) {
         currently_selected_id = associated_ids.Item(n);
     }
 
-    wxOwnerDrawnComboBox::SetSelection(n);
+    wxChoice::SetSelection(n);
 }
 
 void MemoryComboBox::SetSelectionWithEvent(int n) {
@@ -42,9 +42,9 @@ void MemoryComboBox::SetSelectionWithEvent(int n) {
         currently_selected_id = associated_ids.Item(n);
     }
 
-    wxOwnerDrawnComboBox::SetSelection(n);
+    wxChoice::SetSelection(n);
 
-    wxCommandEvent* change_event = new wxCommandEvent(wxEVT_COMBOBOX);
+    wxCommandEvent* change_event = new wxCommandEvent(wxEVT_CHOICE);
     GetEventHandler( )->QueueEvent(change_event);
 }
 
@@ -54,8 +54,8 @@ void MemoryComboBox::Clear( ) {
         associated_text.clear( );
         selected_id_on_last_clear = currently_selected_id;
         currently_selected_id     = -10;
-        wxOwnerDrawnComboBox::Clear( );
-        wxOwnerDrawnComboBox::ChangeValue("");
+        wxChoice::Clear( );
+        //wxOwnerDrawnComboBox::ChangeValue("");
     }
 }
 
@@ -64,8 +64,8 @@ void MemoryComboBox::Reset( ) {
     associated_text.clear( );
     selected_id_on_last_clear = -10;
     currently_selected_id     = -10;
-    wxOwnerDrawnComboBox::Clear( );
-    wxOwnerDrawnComboBox::ChangeValue("");
+    wxChoice::Clear( );
+    // wxOwnerDrawnComboBox::ChangeValue("");
 }
 
 void MemoryComboBox::AddMemoryItem(wxString wanted_text, long wanted_id) {
@@ -88,7 +88,7 @@ bool MemoryComboBox::FillWithRunProfiles( ) {
 
     Freeze( );
     Clear( );
-    ChangeValue("");
+    //ChangeValue("");
 
     long new_selection = 0;
     long new_id        = -1;
@@ -120,7 +120,7 @@ bool MemoryComboBox::FillWithMovieGroups(bool include_all_movies_group) {
 
     Freeze( );
     Clear( );
-    ChangeValue("");
+    //ChangeValue("");
 
     long new_selection = 0;
     long new_id        = -1;
@@ -161,7 +161,7 @@ bool MemoryComboBox::FillWithImages(long wanted_image_group) {
 
     Freeze( );
     Clear( );
-    ChangeValue("");
+    //ChangeValue("");
 
     long new_selection = 0;
     long new_id        = -1;
@@ -195,7 +195,7 @@ bool MemoryComboBox::FillWithImageGroups(bool include_all_images_group) {
 
     Freeze( );
     Clear( );
-    ChangeValue("");
+    //ChangeValue("");
 
     long new_selection = 0;
     long new_id        = -1;
@@ -235,7 +235,7 @@ bool MemoryComboBox::FillWithRefinementPackages( ) {
     extern MyRefinementPackageAssetPanel* refinement_package_asset_panel;
     Freeze( );
     Clear( );
-    ChangeValue("");
+    //ChangeValue("");
 
     long new_selection = -1;
     long new_id        = -1;
@@ -269,7 +269,7 @@ bool MemoryComboBox::FillWithVolumeAssets(bool include_generate_from_params, boo
 
     Freeze( );
     Clear( );
-    ChangeValue("");
+    //ChangeValue("");
 
     long new_selection = -1;
     long new_id        = -1;
@@ -322,7 +322,7 @@ bool MemoryComboBox::FillWithAtomicCoordinatesAssets(bool include_generate_from_
 
     Freeze( );
     Clear( );
-    ChangeValue("");
+    //ChangeValue("");
 
     long new_selection = -1;
     long new_id        = -1;
@@ -373,7 +373,7 @@ bool MemoryComboBox::FillWithClassifications(long wanted_refinement_package, boo
     extern MyRefinementPackageAssetPanel* refinement_package_asset_panel;
     Freeze( );
     Clear( );
-    ChangeValue("");
+    //ChangeValue("");
 
     long new_selection = -1;
     long new_id        = -1;
@@ -413,7 +413,7 @@ bool MemoryComboBox::FillWithRefinements(long wanted_refinement_package, bool al
     extern MyRefinementPackageAssetPanel* refinement_package_asset_panel;
     Freeze( );
     Clear( );
-    ChangeValue("");
+    //ChangeValue("");
 
     long new_selection = -1;
     long new_id        = -1;
@@ -447,7 +447,7 @@ bool MemoryComboBox::FillWithClassAverageSelections(bool always_select_newest, l
 {
     Freeze( );
     Clear( );
-    ChangeValue("");
+    //ChangeValue("");
 
     extern MyRefinementPackageAssetPanel* refinement_package_asset_panel;
 

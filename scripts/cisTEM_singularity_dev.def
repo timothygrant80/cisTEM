@@ -1,5 +1,5 @@
 Bootstrap: docker
-From: bhimesbhimes/cistem_build_env:v1.2
+From: bhimesbhimes/cistem_build_env:v1.3
 Stage: build
 
 %setup

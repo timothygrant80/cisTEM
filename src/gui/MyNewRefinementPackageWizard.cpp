@@ -671,7 +671,7 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
 
 	wxArrayLong current_images;
 
-	if (template_page->my_panel->GroupComboBox->GetSelection() == 0) // This is a new package
+	if (template_page->my_panel->GroupComboBox->GetSelection() == 0) // This is a new package ////////////////
 	{
 		long number_of_particles;
 		number_of_particles = particle_position_asset_panel->ReturnGroupSize(particle_group_page->my_panel->ParticlePositionsGroupComboBox->GetSelection());
@@ -2019,8 +2019,8 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
    {
   	wizard_pointer = parent;
   	wxBoxSizer* main_sizer;
-  	my_panel = new SymmetryWizardPanel(this);
-  	my_panel->SymmetryComboBox->Append("C1");
+  	my_panel = new SymmetryWizardPanel(this); // Declaring the new panel
+  	my_panel->SymmetryComboBox->Append("C1"); // Filling in symmetry options
   	my_panel->SymmetryComboBox->Append("C2");
   	my_panel->SymmetryComboBox->Append("C3");
   	my_panel->SymmetryComboBox->Append("C4");
@@ -2034,10 +2034,10 @@ void MyNewRefinementPackageWizard::OnFinished( wxWizardEvent& event )
   	my_panel->SymmetryComboBox->Append("T2");
   	my_panel->SymmetryComboBox->ChangeValue("0");
 
-  	main_sizer = new wxBoxSizer( wxVERTICAL );
- 	this->SetSizer(main_sizer);
+  	main_sizer = new wxBoxSizer( wxVERTICAL ); // Creating the sizer
+ 	this->SetSizer(main_sizer);	// sets the page to have the sizer
  	main_sizer->Fit(this);
-  	main_sizer->Add(my_panel);
+  	main_sizer->Add(my_panel); // Adds panel to the sizer
  //	my_panel->InfoText->AutoWrap();
    }
 

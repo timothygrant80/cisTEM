@@ -52,13 +52,10 @@ void MyRefinementPackageAssetPanel::OnRenameClick( wxCommandEvent& event )
 
 void MyRefinementPackageAssetPanel::OnCombineClick( wxCommandEvent& event )
 {
-	CombineRefinementPackagesDialog *combine_packages = new CombineRefinementPackagesDialog(this);
+	CombineRefinementPackagesWizard *my_wizard = new CombineRefinementPackagesWizard(this);
+	my_wizard->RunWizard(my_wizard->package_selection_page);
+	my_wizard->Destroy();
 
-
-	if (combine_packages->ShowModal() == wxID_OK){
-		//TODO: insert code for combining extant packages
-		combine_packages->Destroy();
-	}
 }
 
 

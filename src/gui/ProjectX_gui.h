@@ -75,10 +75,10 @@ class VolumeAssetPickerComboPanel;
 #include <wx/scrolwin.h>
 #include <wx/richtext/richtextctrl.h>
 #include <wx/gauge.h>
+#include <wx/choice.h>
 #include <wx/splitter.h>
 #include <wx/checkbox.h>
 #include <wx/dataview.h>
-#include <wx/choice.h>
 #include <wx/dialog.h>
 #include <wx/filepicker.h>
 #include <wx/wizard.h>
@@ -267,6 +267,25 @@ class AbInitio3DPanelParent : public JobPanel
 
 		AbInitio3DPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1631,686 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~AbInitio3DPanelParent();
+
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class CombinedPackageClassPicker
+///////////////////////////////////////////////////////////////////////////////
+class CombinedPackageClassPicker : public wxPanel
+{
+	private:
+
+	protected:
+
+	public:
+		wxBoxSizer* ClassSelectSizer;
+		wxStaticText* PackageLabel;
+		wxChoice* ClassSelectBox;
+
+		CombinedPackageClassPicker( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+		~CombinedPackageClassPicker();
 
 };
 
@@ -2625,6 +2644,29 @@ class NewProjectWizard : public wxWizard
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+/// Class CombineRefinementPackagesWizardParent
+///////////////////////////////////////////////////////////////////////////////
+class CombineRefinementPackagesWizardParent : public wxWizard
+{
+	private:
+
+	protected:
+
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnFinished( wxWizardEvent& event ) { event.Skip(); }
+		virtual void PageChanged( wxWizardEvent& event ) { event.Skip(); }
+		virtual void PageChanging( wxWizardEvent& event ) { event.Skip(); }
+
+
+	public:
+
+		CombineRefinementPackagesWizardParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Combine Refinement Packages"), const wxBitmap& bitmap = wxNullBitmap, const wxPoint& pos = wxDefaultPosition, long style = wxDEFAULT_DIALOG_STYLE );
+		WizardPages m_pages;
+		~CombineRefinementPackagesWizardParent();
+
+};
+
+///////////////////////////////////////////////////////////////////////////////
 /// Class ExportRefinementPackageWizardParent
 ///////////////////////////////////////////////////////////////////////////////
 class ExportRefinementPackageWizardParent : public wxWizard
@@ -3058,28 +3100,74 @@ class RefinementPackageAssetPanel : public wxPanel
 };
 
 ///////////////////////////////////////////////////////////////////////////////
-/// Class CombineRefinementPackagesDialogParent
+/// Class PackageSelectionPanel
 ///////////////////////////////////////////////////////////////////////////////
-class CombineRefinementPackagesDialogParent : public wxDialog
+class PackageSelectionPanel : public wxPanel
 {
 	private:
 
 	protected:
-		wxCheckListBox* RefinementPackagesCheckListBox;
 		wxStaticText* ErrorStaticText;
-		wxStaticLine* m_staticline14;
-		wxButton* CancelButton;
-		wxButton* CombineButton;
+		wxStaticLine* m_staticline158;
+		wxStaticText* m_staticText798;
+		wxStaticText* m_staticText214;
+		wxStaticText* m_staticText2141;
+		wxStaticText* m_staticText2143;
 
 		// Virtual event handlers, overide them in your derived class
-		virtual void OnCancelClick( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnCombineClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void PackageClassSelection( wxCommandEvent& event ) { event.Skip(); }
 
 
 	public:
+		wxCheckListBox* RefinementPackagesCheckListBox;
+		wxCheckBox* RemoveDuplicatesCheckbox;
+		wxStaticText* ImportedParamsWarning;
+		NumericTextCtrl* MolecularWeightTextCtrl;
+		NumericTextCtrl* LargestDimensionTextCtrl;
+		wxComboBox* SymmetryComboBox;
 
-		CombineRefinementPackagesDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Select Packages to Combine..."), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE );
-		~CombineRefinementPackagesDialogParent();
+		PackageSelectionPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+		~PackageSelectionPanel();
+
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class ClassesSetupWizardPanelA
+///////////////////////////////////////////////////////////////////////////////
+class ClassesSetupWizardPanelA : public wxPanel
+{
+	private:
+
+	protected:
+		wxStaticText* m_staticText21411;
+		wxRadioButton* m_radioBtn40;
+
+	public:
+		wxRadioButton* CarryOverYesButton;
+		AutoWrapStaticText* InfoText;
+
+		ClassesSetupWizardPanelA( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+		~ClassesSetupWizardPanelA();
+
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class CombinedClassSelectionPanel
+///////////////////////////////////////////////////////////////////////////////
+class CombinedClassSelectionPanel : public wxPanel
+{
+	private:
+
+	protected:
+		wxStaticText* m_staticText883;
+		wxStaticLine* m_staticline187;
+
+	public:
+		wxScrolledWindow* class_selector;
+		wxBoxSizer* ScrollSizer;
+
+		CombinedClassSelectionPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+		~CombinedClassSelectionPanel();
 
 };
 
@@ -3292,26 +3380,6 @@ class NumberofClassesWizardPanel : public wxPanel
 
 		NumberofClassesWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~NumberofClassesWizardPanel();
-
-};
-
-///////////////////////////////////////////////////////////////////////////////
-/// Class ClassesSetupWizardPanelA
-///////////////////////////////////////////////////////////////////////////////
-class ClassesSetupWizardPanelA : public wxPanel
-{
-	private:
-
-	protected:
-		wxStaticText* m_staticText21411;
-		wxRadioButton* m_radioBtn40;
-
-	public:
-		wxRadioButton* CarryOverYesButton;
-		AutoWrapStaticText* InfoText;
-
-		ClassesSetupWizardPanelA( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
-		~ClassesSetupWizardPanelA();
 
 };
 

@@ -100,5 +100,6 @@ private:
 
 	bool CheckIfDuplicate (int comparison_original_particle_position_asset_id, RefinementPackage* combined_package);
 	int number_of_visits;
+	int checked_counter;
 };
 #endif

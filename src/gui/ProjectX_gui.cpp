@@ -12056,7 +12056,6 @@ PackageSelectionPanel::PackageSelectionPanel( wxWindow* parent, wxWindowID id, c
 	wxBoxSizer* mainSizer;
 	mainSizer = new wxBoxSizer( wxVERTICAL );
 
-	mainSizer->SetMinSize( wxSize( 600,400 ) );
 	wxFlexGridSizer* packageSelectionSizer;
 	packageSelectionSizer = new wxFlexGridSizer( 0, 2, 0, 0 );
 	packageSelectionSizer->AddGrowableCol( 1 );
@@ -12077,12 +12076,6 @@ PackageSelectionPanel::PackageSelectionPanel( wxWindow* parent, wxWindowID id, c
 
 	mainSizer->Add( ErrorStaticText, 0, wxALIGN_CENTER|wxALL, 5 );
 
-	wxBoxSizer* duplicatesSizer;
-	duplicatesSizer = new wxBoxSizer( wxHORIZONTAL );
-
-
-	mainSizer->Add( duplicatesSizer, 0, wxALIGN_CENTER, 5 );
-
 	RemoveDuplicatesCheckbox = new wxCheckBox( this, wxID_ANY, wxT("Remove Duplicate Particles"), wxDefaultPosition, wxDefaultSize, 0 );
 	mainSizer->Add( RemoveDuplicatesCheckbox, 0, wxALL|wxEXPAND, 5 );
 
@@ -12099,9 +12092,13 @@ PackageSelectionPanel::PackageSelectionPanel( wxWindow* parent, wxWindowID id, c
 	m_staticText798->Wrap( -1 );
 	mainSizer->Add( m_staticText798, 0, wxALL|wxALIGN_CENTER_HORIZONTAL, 5 );
 
+	wxBoxSizer* bSizer587;
+	bSizer587 = new wxBoxSizer( wxVERTICAL );
+
 	wxBoxSizer* molecularWeightSizer;
 	molecularWeightSizer = new wxBoxSizer( wxHORIZONTAL );
 
+	molecularWeightSizer->SetMinSize( wxSize( 1,-1 ) );
 	m_staticText214 = new wxStaticText( this, wxID_ANY, wxT("Estimated Molecular Weight (kDa) :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText214->Wrap( -1 );
 	molecularWeightSizer->Add( m_staticText214, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
@@ -12110,7 +12107,7 @@ PackageSelectionPanel::PackageSelectionPanel( wxWindow* parent, wxWindowID id, c
 	molecularWeightSizer->Add( MolecularWeightTextCtrl, 1, wxALL|wxALIGN_CENTER_VERTICAL, 5 );
 
 
-	mainSizer->Add( molecularWeightSizer, 1, wxEXPAND, 5 );
+	bSizer587->Add( molecularWeightSizer, 1, wxALIGN_CENTER_HORIZONTAL|wxEXPAND, 5 );
 
 	wxBoxSizer* largestDimensionSizer;
 	largestDimensionSizer = new wxBoxSizer( wxHORIZONTAL );
@@ -12123,7 +12120,7 @@ PackageSelectionPanel::PackageSelectionPanel( wxWindow* parent, wxWindowID id, c
 	largestDimensionSizer->Add( LargestDimensionTextCtrl, 1, wxALL|wxALIGN_CENTER_VERTICAL, 5 );
 
 
-	mainSizer->Add( largestDimensionSizer, 1, wxEXPAND, 5 );
+	bSizer587->Add( largestDimensionSizer, 1, wxEXPAND|wxALIGN_CENTER_HORIZONTAL, 5 );
 
 	wxBoxSizer* symmetrySizer;
 	symmetrySizer = new wxBoxSizer( wxHORIZONTAL );
@@ -12147,15 +12144,17 @@ PackageSelectionPanel::PackageSelectionPanel( wxWindow* parent, wxWindowID id, c
 	SymmetryComboBox->Append( wxT("T2") );
 	SymmetryComboBox->Append( wxT("C1") );
 	SymmetryComboBox->SetSelection( 0 );
-	symmetrySizer->Add( SymmetryComboBox, 1, wxALL|wxALIGN_CENTER_VERTICAL, 5 );
+	symmetrySizer->Add( SymmetryComboBox, 1, wxALL|wxALIGN_CENTER_VERTICAL, 0 );
 
 
-	mainSizer->Add( symmetrySizer, 1, wxEXPAND, 5 );
+	bSizer587->Add( symmetrySizer, 1, wxEXPAND|wxALIGN_CENTER_HORIZONTAL, 5 );
+
+
+	mainSizer->Add( bSizer587, 1, wxEXPAND, 0 );
 
 
 	this->SetSizer( mainSizer );
 	this->Layout();
-	mainSizer->Fit( this );
 
 	// Connect Events
 	RefinementPackagesCheckListBox->Connect( wxEVT_COMMAND_CHECKLISTBOX_TOGGLED, wxCommandEventHandler( PackageSelectionPanel::PackageClassSelection ), NULL, this );
@@ -12216,7 +12215,7 @@ CombinedClassSelectionPanel::CombinedClassSelectionPanel( wxWindow* parent, wxWi
 	wxBoxSizer* bSizer686;
 	bSizer686 = new wxBoxSizer( wxVERTICAL );
 
-	m_staticText883 = new wxStaticText( this, wxID_ANY, wxT("Select a class from each package"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText883 = new wxStaticText( this, wxID_ANY, wxT("Select a class from each package:"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText883->Wrap( -1 );
 	bSizer686->Add( m_staticText883, 0, wxALL, 5 );
 

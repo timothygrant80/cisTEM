@@ -12,9 +12,11 @@ CombineRefinementPackagesWizard::CombineRefinementPackagesWizard(wxWindow *paren
 		CombineRefinementPackagesWizardParent( parent )
 {
 	number_of_visits = 0;
+	checked_counter = refinement_package_asset_panel->all_refinement_packages.GetCount();
 	package_selection_page = new PackageSelectionPage(this);
 	combined_class_selection_page = new CombinedClassSelectionPage(this);
 
+	GetPageAreaSizer()->Add(package_selection_page);
 	Bind(wxEVT_UPDATE_UI, wxUpdateUIEventHandler( CombineRefinementPackagesWizard::OnUpdateUI), this);
 }
 
@@ -25,6 +27,7 @@ CombineRefinementPackagesWizard::~CombineRefinementPackagesWizard()
 
 void CombineRefinementPackagesWizard::OnUpdateUI(wxUpdateUIEvent& event)
 {
+	checked_counter = refinement_package_asset_panel->all_refinement_packages.GetCount();
 	if (GetCurrentPage() == package_selection_page)
 	{
 		package_selection_page->package_selection_panel->ImportedParamsWarning->Hide();
@@ -50,14 +53,15 @@ void CombineRefinementPackagesWizard::OnUpdateUI(wxUpdateUIEvent& event)
 			else { // Nothing is checked so have the button enabled by default.
 				package_selection_page->package_selection_panel->RemoveDuplicatesCheckbox->Enable();
 				package_selection_page->package_selection_panel->ImportedParamsWarning->Hide();
+				checked_counter--; // package is not checked, so -1 from the counter
 			}
 		}
-		if (!(package_selection_page->package_selection_panel->MolecularWeightTextCtrl->ReturnValue() > 0.00 || !(package_selection_page->package_selection_panel->LargestDimensionTextCtrl->ReturnValue() > 0.00) ))
+		if (!(package_selection_page->package_selection_panel->MolecularWeightTextCtrl->ReturnValue() > 0.00
+				&& (package_selection_page->package_selection_panel->LargestDimensionTextCtrl->ReturnValue() > 0.00) && (checked_counter >= 2))) // Don't advance the page unless the user has input possible package parameters
 		{
 			DisableNextButton();
 		}
 		else EnableNextButton();
-
 	}
 
 	if (GetCurrentPage() == combined_class_selection_page)
@@ -77,7 +81,6 @@ void CombineRefinementPackagesWizard::OnUpdateUI(wxUpdateUIEvent& event)
 				EnableNextButton();
 			}
 		}
-
 	}
 }
 void CombineRefinementPackagesWizard::OnCancelClick( wxWizardEvent& event )
@@ -132,14 +135,12 @@ void CombineRefinementPackagesWizard::PageChanged(wxWizardEvent& event)
 		}
 
 		package_selection_page->package_selection_panel->RefinementPackagesCheckListBox->InsertItems(refinement_names, 0);
-		package_selection_page->Thaw();
 
 	}
 	if (event.GetPage() == combined_class_selection_page)
 	{
 		combined_class_selection_page->Freeze();
 		combined_class_selection_page->combined_class_selection_panel->ScrollSizer->Clear(true);
-
 
 		int number_of_packages = 0;
 		for (int i = 0; i < refinement_package_asset_panel->all_refinement_packages.GetCount(); i++)
@@ -160,6 +161,7 @@ void CombineRefinementPackagesWizard::PageChanged(wxWizardEvent& event)
 				panel1->FillSelectionBox(i);
 			}
 		}
+		combined_class_selection_page->Layout();
 		combined_class_selection_page->Thaw();
 	}
 }
@@ -229,6 +231,7 @@ void CombineRefinementPackagesWizard::OnFinished( wxWizardEvent& event )
 			long refinement_id = main_frame->current_project.database.ReturnHighestRefinementID() + 1;
 			temp_combined_refinement_package->refinement_ids.Add(refinement_id);
 			temp_combined_refinement_package->last_refinment_id = -1;
+			temp_combined_refinement_package->references_for_next_refinement = array_of_packages_to_combine[0].references_for_next_refinement;
 			temp_combined_refinement_package->asset_id = refinement_package_asset_panel->all_refinement_packages.GetCount() + 1;  // In database, does index of the list start at 0 or 1? i.e., should this be + 1?
 			temp_combined_refinement_package->name = wxString::Format("Refinement Package #%li", refinement_package_asset_panel->current_asset_number);
 
@@ -236,7 +239,7 @@ void CombineRefinementPackagesWizard::OnFinished( wxWizardEvent& event )
 			temp_combined_refinement.refinement_package_asset_id = temp_combined_refinement_package->asset_id;
 			temp_combined_refinement.number_of_classes = 1;
 			temp_combined_refinement.resolution_statistics_are_generated = true;  // Where class resolution statistics come from; so no need to assign per particle, they're generated
-			temp_combined_refinement.name = "Combined Parameters";  // May want to update this the same way refinement package is named
+			temp_combined_refinement.name = "Combined Package Parameters";  // May want to update this the same way refinement package is named
 			temp_combined_refinement.datetime_of_run = wxDateTime::Now();
 			temp_combined_refinement.starting_refinement_id = -1;
 			temp_combined_refinement.percent_used = 100.0f;
@@ -246,6 +249,7 @@ void CombineRefinementPackagesWizard::OnFinished( wxWizardEvent& event )
 	// Make sure the smallest pixel size is being used in the combined package
 	for (counter = 0; counter < array_of_packages_to_combine.GetCount(); counter++)
 	{
+		smallest_pixel_size = array_of_packages_to_combine[0].output_pixel_size;
 		if (array_of_packages_to_combine[counter].output_pixel_size < smallest_pixel_size)
 		{
 			smallest_pixel_size = array_of_packages_to_combine[counter].output_pixel_size;
@@ -418,13 +422,13 @@ PackageSelectionPage::PackageSelectionPage(CombineRefinementPackagesWizard *pare
 	Freeze();
 	wizard_pointer = parent;
 	wxBoxSizer* main_sizer;
-
 	package_selection_panel = new PackageSelectionPanel(this);
 
 	main_sizer = new wxBoxSizer(wxVERTICAL);
 	this->SetSizer(main_sizer);
 	main_sizer->Fit(this);
 	main_sizer->Add(package_selection_panel);
+	Thaw();
 
 }
 
@@ -457,6 +461,7 @@ CombinedClassSelectionPage::CombinedClassSelectionPage(CombineRefinementPackages
 	this->SetSizer(bSizer686);
 	bSizer686->Fit(this);
 	bSizer686->Add(combined_class_selection_panel);
+	Thaw();
 
 }
 
@@ -477,7 +482,7 @@ wxWizardPage * CombinedClassSelectionPage::GetPrev () const
 
 ///////////////////////////////
 
-// CombinedPackageClassSelectPanel
+// CLASS SELECT PANEL
 
 ///////////////////////////////
 
@@ -504,6 +509,12 @@ ClassSelectPanel::~ClassSelectPanel ()
 {
 
 }
+
+/////////////////////////////
+
+// CLASS SELECT CHOICE BOX
+
+/////////////////////////////
 
 void CombinedPackageClassPanel::FillSelectionBox(int package_number)
 {

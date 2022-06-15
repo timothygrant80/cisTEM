@@ -3126,7 +3126,7 @@ class PackageSelectionPanel : public wxPanel
 		NumericTextCtrl* LargestDimensionTextCtrl;
 		wxComboBox* SymmetryComboBox;
 
-		PackageSelectionPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+		PackageSelectionPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~PackageSelectionPanel();
 
 };

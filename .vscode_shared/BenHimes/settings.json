@@ -23,7 +23,9 @@
         "string": "cpp",
         "filesystem": "cpp",
         "iostream": "cpp",
-        "numbers": "cpp"
+        "numbers": "cpp",
+        "bitset": "cpp",
+        "cmath": "cpp"
     },
     "C_Cpp.clang_format_path": "/usr/bin/clang-format-14",
     "editor.formatOnSave": true,

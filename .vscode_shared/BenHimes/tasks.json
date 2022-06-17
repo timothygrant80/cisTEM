@@ -4,18 +4,13 @@
     "version": "2.0.0",
     "options": {
         "env": {
-            "cuda_dir": "/groups/cryoadmin/software/CUDA-TOOLKIT/cuda_11.6.0",
+            "cuda_dir": "/usr/local/cuda",
             "wx_dir": "/groups/cryoadmin/software/WX/wx_static_3.05_",
             "build_dir": "${workspaceFolder}/build",
-            "compile_cores": "48"
+            "compile_cores": "12"
         }
     },
     "tasks": [
-        {
-            "label": "echo",
-            "type": "shell",
-            "command": "echo --with-wx-config=${wx_dir}"
-        },
         {
             "label": "CONFIG intel,debug,samples",
             "type": "shell",
@@ -29,7 +24,7 @@
         {
             "label": "CONFIG intel,gpu,debug",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/Intel-gpu-debug && cd ${build_dir}/Intel-gpu-debug && CC=icc CXX=icpc ../../configure  --enable-debugmode --enable-experimental --with-cuda=${cuda_dir} --enable-staticmode --enable-openmp  --with-wx-config=${wx_dir}INTEL/bin/wx-config"
+            "command": "mkdir -p ${build_dir}/Intel-gpu-debug && cd ${build_dir}/Intel-gpu-debug && CC=icc CXX=icpc ../../configure  --enable-debugmode --enable-experimental --with-cuda=${cuda_dir} --enable-openmp"
         },
         {
             "label": "BUILD intel,gpu,debug",
@@ -47,19 +42,9 @@
             "command": "cd ${build_dir}/Intel-gpu-debug-noexp && make -j${compile_cores}"
         },
         {
-            "label": "CONFIG intel,gpu,debug,rotate",
-            "type": "shell",
-            "command": "mkdir -p ${build_dir}/Intel-gpu-debug-rotate && cd ${build_dir}/Intel-gpu-debug-rotate && CC=icc CXX=icpc ../../configure --enable-rotated-tm --enable-debugmode --enable-experimental --with-cuda=${cuda_dir} --enable-staticmode --enable-openmp  --with-wx-config=${wx_dir}INTEL/bin/wx-config"
-        },
-        {
-            "label": "BUILD intel,gpu,debug,rotate",
-            "type": "shell",
-            "command": "cd ${build_dir}/Intel-gpu-debug-rotate && make -j${compile_cores}"
-        },
-        {
             "label": "CONFIG intel,gpu",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/Intel-gpu && cd ${build_dir}/Intel-gpu && CC=icc CXX=icpc ../../configure  --enable-experimental --with-cuda=${cuda_dir} --enable-staticmode --enable-openmp  --with-wx-config=${wx_dir}INTEL/bin/wx-config"
+            "command": "mkdir -p ${build_dir}/Intel-gpu && cd ${build_dir}/Intel-gpu && CC=icc CXX=icpc ../../configure --enable-staticmode --enable-experimental --with-cuda=${cuda_dir} --enable-openmp"
         },
         {
             "label": "BUILD intel,gpu",
@@ -95,6 +80,16 @@
             "label": "BUILD GNU,gpu",
             "type": "shell",
             "command": "${workspaceFolder}/scripts/cistem_make.sh ${build_dir}/GNU-gpu ${compile_cores}"
+        },
+        {
+            "label": "CONFIG GNU,gpu, debug",
+            "type": "shell",
+            "command": "mkdir -p ${build_dir}/GNU-gpu-debug && cd ${build_dir}/GNU-gpu-debug && CC=gcc CXX=g++ ../../configure --enable-samples --enable-debugmode --enable-experimental --with-cuda=/usr/local/cuda --disable-staticmode --enable-openmp"
+        },
+        {
+            "label": "BUILD GNU,gpu, debug",
+            "type": "shell",
+            "command": "${workspaceFolder}/scripts/cistem_make.sh ${build_dir}/GNU-gpu-debug ${compile_cores}"
         },
         {
             // This doesn't work - spaces, ugh

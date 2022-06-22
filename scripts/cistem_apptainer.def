@@ -1,0 +1,143 @@
+Bootstrap: docker
+From: ubuntu:20.04
+#Stage: spython-base
+
+%post -c /bin/bash
+
+# /groups/himesb/.config/Code\ -\ Insiders/User/globalStorage/ms-vscode-remote.remote-containers/cli-bin/code-insiders build --image-name bhimesbhimes/cistem_build_env:latest ./.devcontainer_build
+
+
+DEBIAN_FRONTEND=noninteractive
+TZ=America/New_York
+GCC_VER=11
+n_threads=12
+
+apt-get update && apt-get -y install tzdata
+
+apt-get install -y locales && rm -rf /var/lib/apt/lists/* \
+&& localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8
+
+LANG=en_US.utf8
+
+apt-get update && apt-get install -y sudo
+
+
+# Install useful ubuntu packages
+apt-get --allow-releaseinfo-change update && apt-get install -y libgtk2.0-dev \
+nano gedit meld cmake \
+fftw3-dev software-properties-common libffi-dev \
+libbz2-dev libsqlite3-dev zlib1g-dev libjpeg-dev libtiff-dev \
+libreadline-dev liblzma-dev libssl-dev libncursesw5-dev wget \
+git xauth zip unzip parallel sqlite3 python3 python3-pip curl  \
+&& rm -rf /var/lib/apt/lists/*
+
+
+# Get the MKL and intel compiler: note, this is 19G by default, will try to determine minimal set needed huge waste but works well enough for now, final size is ~5gb
+wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
+echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
+apt-get update && apt-get install -y  intel-oneapi-mkl-2021.4.0 \
+&& rm -rf /var/lib/apt/lists/*
+
+# Install wxWidgets 3.0.5 dynamic libs
+wget -q https://github.com/wxWidgets/wxWidgets/releases/download/v3.0.5/wxWidgets-3.0.5.tar.bz2 -O /tmp/wxwidgets.tar.bz2 && \
+echo 'Installing wxWidgets' && \
+tar -xf /tmp/wxwidgets.tar.bz2 -C /tmp && \
+cd /tmp/wxWidgets-3.0.5  && \
+mkdir /opt/WX 
+
+# Now build with out static
+. /opt/intel/oneapi/setvars.sh  && cd /tmp/wxWidgets-3.0.5 && CXX=icpc CC=icc CXXFLAGS=-fPIC CFLAGS=-fPIC  ./configure --disable-precomp-headers --prefix=/opt/WX/intel-dynamic --with-libnotify=no  \
+    --without-gtkprint --with-libjpeg=builtin --with-libpng=builtin --with-libtiff=builtin --with-zlib=builtin --with-expat=builtin \
+    --disable-compat28 --without-liblzma --without-libjbig --with-gtk=2 --disable-sys-libs  && \
+    make -j$n_threads && \
+    make install && \
+    rm -rf /tmp/wxWidgets-3.0.5 /tmp/wxwidgets.tar.bz2
+
+
+# Install wxWidgets 3.1.5
+wget -qO - https://repos.codelite.org/CodeLite.asc | apt-key add - && \
+apt-add-repository 'deb https://repos.codelite.org/wx3.1.5/ubuntu/ groovy universe' && \
+apt-get update && apt-get install -y libwxbase3.1-0-unofficial \
+libwxbase3.1unofficial-dev \
+libwxgtk3.1-0-unofficial \
+libwxgtk3.1unofficial-dev \
+wx3.1-headers \
+wx-common \
+libwxgtk-media3.1-0-unofficial \
+libwxgtk-media3.1unofficial-dev \
+libwxgtk-webview3.1-0-unofficial \
+libwxgtk-webview3.1unofficial-dev \
+libwxgtk-webview3.1-0-unofficial-dbg \
+libwxbase3.1-0-unofficial-dbg \
+libwxgtk3.1-0-unofficial-dbg \
+libwxgtk-media3.1-0-unofficial-dbg \
+&& rm -rf /var/lib/apt/lists/*
+
+
+# FIXME: these smaller runtime libraries would be nice, but how to match dev environment? 
+# These install so.2 and the above (from docker file) installs .so.1
+# intel-oneapi-runtime-mkl-common intel-oneapi-runtime-openmp
+
+# Install newest gcc (needed for the glibc to match the dev container)
+add-apt-repository ppa:ubuntu-toolchain-r/test -y && \
+    apt-get --allow-releaseinfo-change  update && apt install -y gcc-${GCC_VER} g++-${GCC_VER} \
+    && update-alternatives --install /usr/bin/gcc gcc /usr/bin/gcc-${GCC_VER} 100 --slave \
+    /usr/bin/g++ g++ /usr/bin/g++-${GCC_VER} --slave /usr/bin/gcov gcov /usr/bin/gcov-${GCC_VER} \
+    && rm -rf /var/lib/apt/lists/*
+
+
+
+# TODO: Do we need this in the run environment?
+# Install Node 16 
+curl -sL https://deb.nodesource.com/setup_16.x | bash - && \
+apt-get update && apt-get install -y nodejs && \
+rm -rf /var/lib/apt/lists/*  && \
+npm install -g pnpm
+
+# Install pytorch
+cd /tmp && wget https://download.pytorch.org/libtorch/cu113/libtorch-cxx11-abi-shared-with-deps-1.11.0%2Bcu113.zip && \
+unzip libtorch-cxx11-abi-shared-with-deps-1.11.0+cu113.zip && \
+rm libtorch-cxx11-abi-shared-with-deps-1.11.0+cu113.zip && \
+mv libtorch /opt
+
+# Include the lib path in LD_RUN_PATH so on linking, the correct path is known 
+LD_RUN_PATH=/opt/libtorch/lib:${LD_RUN_PATH}
+
+
+# First noticed outside container with g++9, several errors in longlong.h seem to be fixed by this extra include  /usr/include/wx-3.1-unofficial
+tf=`tempfile` && cp /opt/WX/intel-dynamic/include/wx-3.0/wx/longlong.h /opt/WX/intel-dynamic/include/wx-3.0/wx/longlong.h.orig && \
+awk '{if(/#include "wx\/defs.h"/){ print $0 ;print "#include <wx/txtstrm.h>"} else print $0}' /opt/WX/intel-dynamic/include/wx-3.0/wx/longlong.h.orig > $tf && \
+mv $tf /opt/WX/intel-dynamic/include/wx-3.0/wx/longlong.h && \
+chmod a+r /opt/WX/intel-dynamic/include/wx-3.0/wx/longlong.h
+
+# # First noticed outside container with g++9, several errors in longlong.h seem to be fixed by this extra include  /usr/include/wx-3.1-unofficial
+# tf=`tempfile` && cp /usr/include/wx-3.1-unofficial/wx/longlong.h /usr/include/wx-3.1-unofficial/wx/longlong.h.orig && \
+# awk '{if(/#include "wx\/defs.h"/){ print $0 ;print "#include <wx/txtstrm.h>"} else print $0}' /usr/include/wx-3.1-unofficial/wx/longlong.h.orig > $tf && \
+# mv $tf /usr/include/wx-3.1-unofficial/wx/longlong.h && \
+# chmod a+r /usr/include/wx-3.1-unofficial/wx/longlong.h
+
+
+# FIXME - neither of these actually end up in the environment, though I think the should. Manually add them to the environment for now.
+# # Add a script that should be called when the container goes live
+# echo 'alias lt="ls -lrth"' >> /.singularity.d/env/99_ZZ-cistem.sh
+# echo '. /opt/intel/oneapi/setvars.sh intel64' >> /.singularity.d/env/99_ZZ-cistem.sh
+echo 'export MKLROOT=/opt/intel/oneapi/mkl/2021.4.0/' >>$SINGULARITY_ENVIRONMENT
+echo 'export NLSPATH=/opt/intel/oneapi/mkl/2021.4.0/lib/intel64/locale/%l_%t/%N' >>$SINGULARITY_ENVIRONMENT
+echo 'export CPATH=/opt/intel/oneapi/tbb/2021.4.0/env/../include:/opt/intel/oneapi/mkl/2021.4.0/include:/opt/intel/oneapi/compiler/2021.4.0/linux/include' >>$SINGULARITY_ENVIRONMENT
+echo 'export LIBRARY_PATH=/opt/intel/oneapi/tbb/2021.4.0/env/../lib/intel64/gcc4.8:/opt/intel/oneapi/mkl/2021.4.0/lib/intel64:/opt/intel/oneapi/compiler/2021.4.0/linux/compiler/lib/intel64_lin:/opt/intel/oneapi/compiler/2021.4.0/linux/lib' >>$SINGULARITY_ENVIRONMENT
+echo 'export LD_LIBRARY_PATH=/opt/intel/oneapi/tbb/2021.4.0/env/../lib/intel64/gcc4.8:/opt/intel/oneapi/mkl/2021.4.0/lib/intel64:/opt/intel/oneapi/compiler/2021.4.0/linux/lib:/opt/intel/oneapi/compiler/2021.4.0/linux/lib/x64:/opt/intel/oneapi/compiler/2021.4.0/linux/lib/emu:/opt/intel/oneapi/compiler/2021.4.0/linux/compiler/lib/intel64_lin:/.singularity.d/libs' >>$SINGULARITY_ENVIRONMENT
+
+%environment
+
+export LANG=en_US.utf8
+export LD_RUN_PATH=/opt/libtorch/lib:${LD_RUN_PATH}
+
+%runscript
+
+# cd /home/cisTEMx
+# exec /bin/bash "$@"
+
+%startscript
+
+# cd /home/cisTEMx
+# exec /bin/bash "$@"

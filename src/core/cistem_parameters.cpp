@@ -2090,7 +2090,8 @@ int cisTEMParameters::ReturnMaxPositionInStack(bool exclude_negative_film_number
 
 static int wxCMPFUNC_CONV SortByReference3DFilenameCompareFunction(cisTEMParameterLine** a, cisTEMParameterLine** b) // function for sorting the classum selections by parent_image_id - this makes cutting them out more efficient
 {
-    return wxStringSortAscending((*a)->reference_3d_filename, (*b)->reference_3d_filename);
+    // In versions around wx 3.1.5 the args change form pointers to reference
+    return wxStringSortAscending(&(*a)->reference_3d_filename, &(*b)->reference_3d_filename);
 };
 
 void cisTEMParameters::SortByReference3DFilename( ) {

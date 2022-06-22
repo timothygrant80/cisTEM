@@ -256,7 +256,7 @@ endif
 
 if ENABLEGPU_AM
 
-bin_PROGRAMS += gpu_util_test gpu_devices
+bin_PROGRAMS +=  gpu_devices
 noinst_LIBRARIES += libgpucore.a  
 
 libgpucore_a_SOURCES =       gpu/Histogram.cu \
@@ -357,8 +357,12 @@ libguicore_a_CPPFLAGS = $(WX_CPPFLAGS)
 
 cisTEM_SOURCES = programs/projectx/projectx.cpp gui/gui_globals.cpp gui/MyFSCPanel.cpp gui/MyRefinementResultsPanel.cpp gui/PlotFSCPanel.cpp gui/gui_functions.cpp gui/my_controls.cpp gui/MyRenameDialog.cpp gui/BitmapPanel.cpp gui/PickingBitmapPanel.cpp gui/job_panel.cpp gui/ProjectX_gui.cpp gui/ResultsDataViewListCtrl.cpp gui/MyMovieFilterDialog.cpp gui/MainFrame.cpp gui/MyAssetPanelParent.cpp gui/MyMovieAssetPanel.cpp gui/MyImageAssetPanel.cpp gui/MyParticlePositionAssetPanel.cpp gui/MyVolumeChooserDialog.cpp gui/MovieImportDialog.cpp gui/MyImageImportDialog.cpp gui/MyVolumeImportDialog.cpp gui/ErrorDialog.cpp gui/AlignMoviesPanel.cpp gui/MyRunProfilesPanel.cpp gui/mathplot.cpp gui/MyMovieAlignResultsPanel.cpp gui/MyFindCTFResultsPanel.cpp gui/PickingResultsPanel.cpp gui/MyAddRunCommandDialog.cpp gui/MyNewProjectWizard.cpp gui/MyNewRefinementPackageWizard.cpp gui/UnblurResultsPanel.cpp gui/ShowCTFResultsPanel.cpp gui/PickingResultsDisplayPanel.cpp gui/CTF1DPanel.cpp gui/FindCTFPanel.cpp gui/FindParticlesPanel.cpp gui/MyVolumeAssetPanel.cpp gui/MyResultsPanel.cpp gui/MyAssetsPanel.cpp gui/ActionsPanelSpa.cpp gui/ActionsPanelTm.cpp gui/MySettingsPanel.cpp gui/MyParticlePositionExportDialog.cpp gui/MyFrealignExportDialog.cpp gui/MyRelionExportDialog.cpp gui/MyRefinementPackageAssetPanel.cpp gui/MyRefine3DPanel.cpp gui/MyRefine2DPanel.cpp gui/ClassificationPlotPanel.cpp gui/AbInitioPlotPanel.cpp gui/Refine2DResultsPanel.cpp gui/AngularDistributionPlotPanel.cpp core/particle_finder.cpp gui/DisplayPanel.cpp gui/ClassumSelectionCopyFromDialog.cpp gui/MyOverviewPanel.cpp gui/AbInitio3DPanel.cpp gui/AssetPickerComboPanel.cpp gui/AutoRefine3dPanel.cpp gui/DisplayRefinementResultsPanel.cpp gui/ImportRefinementPackageWizard.cpp gui/PopupTextDialog.cpp gui/ExportRefinementPackageWizard.cpp gui/Generate3DPanel.cpp gui/LargeAngularPlotDialog.cpp gui/RefinementParametersDialog.cpp gui/Sharpen3DPanel.cpp gui/PlotCurvePanel.cpp gui/DistributionPlotDialog.cpp gui/RefineCTFPanel.cpp gui/ShowTemplateMatchResultsPanel.cpp gui/MatchTemplatePanel.cpp gui/MatchTemplateResultsPanel.cpp gui/RefineTemplatePanel.cpp
 
+if ENABLE_WEBVIEW_AM
+cisTEM_SOURCES += gui/WebViewPanel.cpp
+endif
+
 if EXPERIMENTAL_AM
-cisTEM_SOURCES +=  gui/WebViewPanel.cpp gui/RefineTemplateDevPanel.cpp gui/MyExperimentalPanel.cpp gui/AtomicCoordinatesAssetPanel.cpp gui/AtomicCoordinatesChooserDialog.cpp gui/AtomicCoordinatesImportDialog.cpp
+cisTEM_SOURCES +=  gui/RefineTemplateDevPanel.cpp gui/MyExperimentalPanel.cpp gui/AtomicCoordinatesAssetPanel.cpp gui/AtomicCoordinatesChooserDialog.cpp gui/AtomicCoordinatesImportDialog.cpp
 endif
 
 cisTEM_CXXFLAGS = $(WX_CPPFLAGS)
@@ -786,11 +790,6 @@ endif
 
 if ENABLEGPU_AM
 
-gpu_util_test_SUFFIXES = .cpp
-gpu_util_test_SOURCES =  programs/gpu_util_test/gpu_util_test.cpp
-gpu_util_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
-gpu_util_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-gpu_util_test_LDADD =  libgpucore.a libcore.a $(WX_LIBS_BASE) $(CUDA_LIBS)
 
 gpu_devices_SUFFIXES = .cpp
 gpu_devices_SOURCES =  programs/gpu_devices/gpu_devices.cpp

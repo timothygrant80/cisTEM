@@ -5,71 +5,92 @@
     "options": {
         "env": {
             "cuda_dir": "/usr/local/cuda",
-            "wx_dir": "/groups/cryoadmin/software/WX/wx_static_3.05_",
+            "wx_dir_dynamic": "/opt/WX/intel-dynamic/bin/wx-config",
+            "wx_dir_static": "/opt/WX/intel-static/bin/wx-config",
             "build_dir": "${workspaceFolder}/build",
             "compile_cores": "12"
         }
     },
     "tasks": [
         {
-            "label": "CONFIG intel,debug,samples",
+            "label": "CONFIG intel,debug,static",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/Intel-samples-debug && cd ${build_dir}/Intel-samples-debug && CC=icc CXX=icpc ../../configure  --enable-samples --enable-debugmode --enable-experimental --enable-staticmode --enable-openmp  --with-wx-config=${wx_dir}INTEL/bin/wx-config"
+            "command": "mkdir -p ${build_dir}/intel-debug-static && cd ${build_dir}/intel-debug-static && CC=icc CXX=icpc ../../configure  --enable-debugmode --enable-staticmode --enable-samples --enable-experimental --enable-openmp --with-wx-config=${wx_dir_static}"
         },
         {
-            "label": "BUILD intel,debug,samples",
+            "label": "BUILD intel,debug,static",
             "type": "shell",
-            "command": "cd ${build_dir}/Intel-samples-debug && make -j${compile_cores}"
+            "command": "cd ${build_dir}/intel-debug-static && make -j${compile_cores}"
         },
         {
-            "label": "CONFIG intel,gpu,debug",
+            "label": "CONFIG intel,static",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/Intel-gpu-debug && cd ${build_dir}/Intel-gpu-debug && CC=icc CXX=icpc ../../configure  --enable-debugmode --enable-experimental --with-cuda=${cuda_dir} --enable-openmp"
+            "command": "mkdir -p ${build_dir}/intel-static && cd ${build_dir}/intel-static && CC=icc CXX=icpc ../../configure  --enable-staticmode --enable-experimental --enable-samples  --enable-openmp --with-wx-config=${wx_dir_static}"
         },
         {
-            "label": "BUILD intel,gpu,debug",
+            "label": "BUILD intel,static",
             "type": "shell",
-            "command": "cd ${build_dir}/Intel-gpu-debug && make -j${compile_cores}"
+            "command": "cd ${build_dir}/intel-static && make -j${compile_cores}"
         },
         {
-            "label": "CONFIG intel,gpu,debug,noexp",
+            "label": "CONFIG intel,gpu,debug,static",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/Intel-gpu-debug-noexp && cd ${build_dir}/Intel-gpu-debug-noexp && CC=icc CXX=icpc ../../configure  --enable-debugmode  --with-cuda=${cuda_dir} --enable-staticmode --enable-openmp  --with-wx-config=${wx_dir}INTEL/bin/wx-config"
+            "command": "mkdir -p ${build_dir}/intel-gpu-debug-static && cd ${build_dir}/intel-gpu-debug-static && CC=icc CXX=icpc ../../configure  --enable-debugmode --enable-staticmode --enable-samples --enable-experimental --enable-openmp --with-wx-config=${wx_dir_static}"
         },
         {
-            "label": "BUILD intel,gpu,debug,noexp",
+            "label": "BUILD intel,gpu,debug,static",
             "type": "shell",
-            "command": "cd ${build_dir}/Intel-gpu-debug-noexp && make -j${compile_cores}"
+            "command": "cd ${build_dir}/intel-gpu-debug-static && make -j${compile_cores}"
         },
         {
-            "label": "CONFIG intel,gpu",
+            "label": "CONFIG intel,gpu,static",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/Intel-gpu && cd ${build_dir}/Intel-gpu && CC=icc CXX=icpc ../../configure --enable-staticmode --enable-experimental --with-cuda=${cuda_dir} --enable-openmp"
+            "command": "mkdir -p ${build_dir}/intel-gpu-static && cd ${build_dir}/intel-gpu-static && CC=icc CXX=icpc ../../configure  --enable-staticmode --enable-experimental --enable-samples  --enable-openmp --with-wx-config=${wx_dir_static}"
         },
         {
-            "label": "BUILD intel,gpu",
+            "label": "BUILD intel,gpu,static",
             "type": "shell",
-            "command": "cd ${build_dir}/Intel-gpu && make -j${compile_cores}"
+            "command": "cd ${build_dir}/intel-gpu-static && make -j${compile_cores}"
         },
         {
-            "label": "CONFIG intel,gpu,samples,debug",
+            "label": "CONFIG intel,debug,dynamic",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/Intel-gpu-samples-debug && cd ${build_dir}/Intel-gpu-samples-debug && CC=icc CXX=icpc ../../configure --enable-samples --enable-debugmode --enable-experimental --with-cuda=${cuda_dir} --enable-staticmode --enable-openmp  --with-wx-config=${wx_dir}INTEL/bin/wx-config"
+            "command": "mkdir -p ${build_dir}/intel-debug-dynamic && cd ${build_dir}/intel-debug-dynamic && CC=icc CXX=icpc ../../configure  --enable-debugmode  --enable-samples --enable-experimental --enable-openmp --with-wx-config=${wx_dir_dynamic}"
         },
         {
-            "label": "BUILD intel,gpu,samples,debug",
+            "label": "BUILD intel,debug,dynamic",
             "type": "shell",
-            "command": "cd ${build_dir}/Intel-gpu-samples-debug && make -j${compile_cores}"
+            "command": "cd ${build_dir}/intel-debug-dynamic && make -j${compile_cores}"
         },
         {
-            "label": "CONFIG intel,gpu,device-lto",
+            "label": "CONFIG intel,dynamic",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/Intel-gpu-lto && cd ${build_dir}/Intel-gpu-lto && CC=icc CXX=icpc ../../configure  --with-oldest-gpu-arch=80 --with-target-gpu-arch=80 --enable-experimental --with-cuda=${cuda_dir} --enable-staticmode --enable-openmp  --with-wx-config=${wx_dir}INTEL/bin/wx-config"
+            "command": "mkdir -p ${build_dir}/intel-dynamic && cd ${build_dir}/intel-dynamic && CC=icc CXX=icpc ../../configure   --enable-experimental --enable-samples  --enable-openmp --with-wx-config=${wx_dir_dynamic}"
         },
         {
-            "label": "BUILD intel,gpu,device-lto",
+            "label": "BUILD intel,dynamic",
             "type": "shell",
-            "command": "cd ${build_dir}/Intel-gpu-lto && make -j${compile_cores}"
+            "command": "cd ${build_dir}/intel-dynamic && make -j${compile_cores}"
+        },
+        {
+            "label": "CONFIG intel,gpu,debug,dynamic",
+            "type": "shell",
+            "command": "mkdir -p ${build_dir}/intel-gpu-debug-dynamic && cd ${build_dir}/intel-gpu-debug-dynamic && CC=icc CXX=icpc ../../configure  --enable-debugmode  --enable-samples --enable-experimental --enable-openmp --with-wx-config=${wx_dir_dynamic}"
+        },
+        {
+            "label": "BUILD intel,gpu,debug,dynamic",
+            "type": "shell",
+            "command": "cd ${build_dir}/intel-gpu-debug-dynamic && export LD_LIBRARY_PATH=/opt/WX/intel-dynamic/include/wx-3.0/:$LD_LIBRARY_PATH && make -j${compile_cores}"
+        },
+        {
+            "label": "CONFIG intel,gpu,dynamic",
+            "type": "shell",
+            "command": "mkdir -p ${build_dir}/intel-gpu-dynamic && cd ${build_dir}/intel-gpu-dynamic && CC=icc CXX=icpc ../../configure   --enable-experimental --enable-samples  --enable-openmp --with-wx-config=${wx_dir_dynamic}"
+        },
+        {
+            "label": "BUILD intel,gpu,dynamic",
+            "type": "shell",
+            "command": "cd ${build_dir}/intel-gpu-dynamic && make -j${compile_cores}"
         },
         {
             "label": "CONFIG GNU ,gpu",

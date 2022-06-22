@@ -1,5 +1,6 @@
 #include "../core/gui_core_headers.h"
-#ifdef EXPERIMENTAL
+
+#ifdef ENABLE_WEBVIEW
 #include "wx/webview.h"
 #include "WebViewPanel.h"
 #endif
@@ -14,7 +15,9 @@ MyExperimentalPanel::MyExperimentalPanel(wxWindow* parent, wxWindowID id, const 
 
 void MyExperimentalPanel::OnExperimentalBookPageChanged(wxBookCtrlEvent& event) {
     extern RefineTemplateDevPanel* refine_template_dev_panel;
-    extern WebViewPanel*           web_view_panel;
+#ifdef ENABLE_WEBVIEW
+    extern WebViewPanel* web_view_panel;
+#endif
 
 #ifdef __WXOSX__
     // Necessary for MacOS to refresh the panels

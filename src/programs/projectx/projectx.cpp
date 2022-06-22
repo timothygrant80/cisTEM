@@ -1,6 +1,6 @@
 //#include "../../core/core_headers.h"
 #include "../../core/gui_core_headers.h"
-#ifdef EXPERIMENTAL
+#ifdef ENABLE_WEBVIEW
 #include "wx/webview.h"
 #include "../../gui/WebViewPanel.h"
 #endif
@@ -40,7 +40,10 @@ RefineTemplatePanel*       refine_template_panel;
 #ifdef EXPERIMENTAL
 ExperimentalPanel*      experimental_panel;
 RefineTemplateDevPanel* refine_template_dev_panel;
-WebViewPanel*           web_view_panel;
+#endif
+
+#ifdef ENABLE_WEBVIEW
+WebViewPanel* web_view_panel;
 #endif
 
 MyMovieAssetPanel*            movie_asset_panel;
@@ -171,7 +174,10 @@ bool MyGuiApp::OnInit( ) {
     refine_template_panel        = new RefineTemplatePanel(actions_panel_tm->ActionsBook);
 #ifdef EXPERIMENTAL
     refine_template_dev_panel = new RefineTemplateDevPanel(experimental_panel->ExperimentalBook);
-    web_view_panel            = new WebViewPanel(experimental_panel->ExperimentalBook);
+#endif
+
+#ifdef ENABLE_WEBVIEW
+    web_view_panel = new WebViewPanel(experimental_panel->ExperimentalBook);
 #endif
 
     // Setup list books
@@ -335,10 +341,11 @@ bool MyGuiApp::OnInit( ) {
 
 #ifdef EXPERIMENTAL
     experimental_panel->ExperimentalBook->AddPage(refine_template_dev_panel, "Refine Templates", true, 0);
-    experimental_panel->ExperimentalBook->AddPage(web_view_panel, "Web View", true, 0);
-
 #endif
 
+#ifdef ENABLE_WEBVIEW
+    experimental_panel->ExperimentalBook->AddPage(web_view_panel, "Web View", true, 0);
+#endif
     // Setup Movie Panel
 
     //movie_asset_panel->GroupListBox->InsertItem(0, "All Movies", 0);

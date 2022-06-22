@@ -45,11 +45,6 @@ RUN apt-get update && apt-get install -y intel-oneapi-compiler-dpcpp-cpp-and-cpp
     && cd /opt/intel/oneapi/ && rm -rf debugger/ conda_channel/ mkl/latest/lib/intel64/*_sycl* \
     && rm -rf /var/lib/apt/lists/* 
 
-# Minimize the MKL disk footprint
-# cd  /opt/intel/oneapi/mkl/latest/lib/intel64/ && \
-# rm -f *.a libmkl_sycl*
-# Install wxWidgets 3.0.5 for multiple compilers and static linking with only gtk2 deps
-
 
 RUN wget -q https://github.com/wxWidgets/wxWidgets/releases/download/v3.0.5/wxWidgets-3.0.5.tar.bz2 -O /tmp/wxwidgets.tar.bz2 && \
     echo 'Installing wxWidgets' && \
@@ -58,11 +53,11 @@ RUN wget -q https://github.com/wxWidgets/wxWidgets/releases/download/v3.0.5/wxWi
     mkdir /opt/WX 
 
 # Here for the record if you want to build and link static binaries to avoid the cointainerized distribution
-# RUN . /opt/intel/oneapi/setvars.sh  &&  cd /tmp/wxWidgets-3.0.5 && CXX=icpc CC=icc CXXFLAGS=-fPIC CFLAGS=-fPIC  ./configure --disable-precomp-headers --prefix=/opt/WX/intel-static --with-libnotify=no --disable-shared \
-#     --without-gtkprint --with-libjpeg=builtin --with-libpng=builtin --with-libtiff=builtin --with-zlib=builtin --with-expat=builtin \
-#     --disable-compat28 --without-liblzma --without-libjbig --with-gtk=2 --disable-sys-libs  && \
-#     make -j$n_threads && \
-#     make install && make clean 
+RUN . /opt/intel/oneapi/setvars.sh  &&  cd /tmp/wxWidgets-3.0.5 && CXX=icpc CC=icc CXXFLAGS=-fPIC CFLAGS=-fPIC  ./configure --disable-precomp-headers --prefix=/opt/WX/intel-static --with-libnotify=no --disable-shared \
+    --without-gtkprint --with-libjpeg=builtin --with-libpng=builtin --with-libtiff=builtin --with-zlib=builtin --with-expat=builtin \
+    --disable-compat28 --without-liblzma --without-libjbig --with-gtk=2 --disable-sys-libs  && \
+    make -j$n_threads && \
+    make install && make clean 
 
 # Now build with out static
 RUN . /opt/intel/oneapi/setvars.sh  && cd /tmp/wxWidgets-3.0.5 && CXX=icpc CC=icc CXXFLAGS=-fPIC CFLAGS=-fPIC  ./configure --disable-precomp-headers --prefix=/opt/WX/intel-dynamic --with-libnotify=no  \
@@ -73,25 +68,25 @@ RUN . /opt/intel/oneapi/setvars.sh  && cd /tmp/wxWidgets-3.0.5 && CXX=icpc CC=ic
     rm -rf /tmp/wxWidgets-3.0.5 /tmp/wxwidgets.tar.bz2
 
 
-# # Install wxWidgets 3.1.5 - this is used when webview is built (and must be configured as such TODO add check)
-# RUN wget -qO - https://repos.codelite.org/CodeLite.asc | apt-key add - && \
-#     apt-add-repository 'deb https://repos.codelite.org/wx3.1.5/ubuntu/ groovy universe' && \
-#     apt-get update && apt-get install -y \
-#     libwxbase3.1-0-unofficial \
-#     libwxbase3.1unofficial-dev \
-#     libwxgtk3.1-0-unofficial \
-#     libwxgtk3.1unofficial-dev \
-#     wx3.1-headers \
-#     wx-common \
-#     libwxgtk-media3.1-0-unofficial \
-#     libwxgtk-media3.1unofficial-dev \
-#     libwxgtk-webview3.1-0-unofficial \ 
-#     libwxgtk-webview3.1unofficial-dev \ 
-#     libwxgtk-webview3.1-0-unofficial-dbg \ 
-#     libwxbase3.1-0-unofficial-dbg \
-#     libwxgtk3.1-0-unofficial-dbg \
-#     libwxgtk-media3.1-0-unofficial-dbg \
-#     && rm -rf /var/lib/apt/lists/*
+# Install wxWidgets 3.1.5 - this is used when webview is built (and must be configured as such TODO add check)
+RUN wget -qO - https://repos.codelite.org/CodeLite.asc | apt-key add - && \
+    apt-add-repository 'deb https://repos.codelite.org/wx3.1.5/ubuntu/ groovy universe' && \
+    apt-get update && apt-get install -y \
+    libwxbase3.1-0-unofficial \
+    libwxbase3.1unofficial-dev \
+    libwxgtk3.1-0-unofficial \
+    libwxgtk3.1unofficial-dev \
+    wx3.1-headers \
+    wx-common \
+    libwxgtk-media3.1-0-unofficial \
+    libwxgtk-media3.1unofficial-dev \
+    libwxgtk-webview3.1-0-unofficial \ 
+    libwxgtk-webview3.1unofficial-dev \ 
+    libwxgtk-webview3.1-0-unofficial-dbg \ 
+    libwxbase3.1-0-unofficial-dbg \
+    libwxgtk3.1-0-unofficial-dbg \
+    libwxgtk-media3.1-0-unofficial-dbg \
+    && rm -rf /var/lib/apt/lists/*
 
 
 # Install wxFormbuilder
@@ -119,6 +114,7 @@ RUN cd /tmp && wget https://download.pytorch.org/libtorch/cu113/libtorch-cxx11-a
     unzip libtorch-cxx11-abi-shared-with-deps-1.11.0+cu113.zip && \
     rm libtorch-cxx11-abi-shared-with-deps-1.11.0+cu113.zip && \
     mv libtorch /opt
+
 # Include the lib path in LD_RUN_PATH so on linking, the correct path is known 
 ENV LD_RUN_PATH=/opt/libtorch/lib:${LD_RUN_PATH}
 
@@ -147,16 +143,20 @@ RUN tf=`tempfile` && cp /opt/WX/intel-dynamic/include/wx-3.0/wx/longlong.h /opt/
     mv $tf /opt/WX/intel-dynamic/include/wx-3.0/wx/longlong.h && \
     chmod a+r /opt/WX/intel-dynamic/include/wx-3.0/wx/longlong.h
 
-# RUN tf=`tempfile` && cp /opt/WX/intel-static/include/wx-3.0/wx/longlong.h /opt/WX/intel-static/include/wx-3.0/wx/longlong.h.orig && \
-#     awk '{if(/#include "wx\/defs.h"/){ print $0 ;print "#include <wx/txtstrm.h>"} else print $0}' /opt/WX/intel-static/include/wx-3.0/wx/longlong.h.orig > $tf && \
-#     mv $tf /opt/WX/intel-static/include/wx-3.0/wx/longlong.h && \
-#     chmod a+r /opt/WX/intel-static/include/wx-3.0/wx/longlong.h
+RUN tf=`tempfile` && cp /opt/WX/intel-static/include/wx-3.0/wx/longlong.h /opt/WX/intel-static/include/wx-3.0/wx/longlong.h.orig && \
+    awk '{if(/#include "wx\/defs.h"/){ print $0 ;print "#include <wx/txtstrm.h>"} else print $0}' /opt/WX/intel-static/include/wx-3.0/wx/longlong.h.orig > $tf && \
+    mv $tf /opt/WX/intel-static/include/wx-3.0/wx/longlong.h && \
+    chmod a+r /opt/WX/intel-static/include/wx-3.0/wx/longlong.h
 
-# # First noticed outside container with g++9, several errors in longlong.h seem to be fixed by this extra include  /usr/include/wx-3.1-unofficial
-# RUN tf=`tempfile` && cp /usr/include/wx-3.1-unofficial/wx/longlong.h /usr/include/wx-3.1-unofficial/wx/longlong.h.orig && \
-#     awk '{if(/#include "wx\/defs.h"/){ print $0 ;print "#include <wx/txtstrm.h>"} else print $0}' /usr/include/wx-3.1-unofficial/wx/longlong.h.orig > $tf && \
-#     mv $tf /usr/include/wx-3.1-unofficial/wx/longlong.h && \
-#     chmod a+r /usr/include/wx-3.1-unofficial/wx/longlong.h    
+# First noticed outside container with g++9, several errors in longlong.h seem to be fixed by this extra include  /usr/include/wx-3.1-unofficial
+RUN tf=`tempfile` && cp /usr/include/wx-3.1-unofficial/wx/longlong.h /usr/include/wx-3.1-unofficial/wx/longlong.h.orig && \
+    awk '{if(/#include "wx\/defs.h"/){ print $0 ;print "#include <wx/txtstrm.h>"} else print $0}' /usr/include/wx-3.1-unofficial/wx/longlong.h.orig > $tf && \
+    mv $tf /usr/include/wx-3.1-unofficial/wx/longlong.h && \
+    chmod a+r /usr/include/wx-3.1-unofficial/wx/longlong.h    
+
+# For the static and system installs, we don't need to worry about libs being found. For the dynamic install, we need to add the lib path to LD_LIBRARY_PATH
+# Include the lib path in LD_RUN_PATH so on linking, the correct path is known 
+ENV LD_LIBRARY_PATH=/opt/WX/intel-dynamic/lib/:${LD_LIBRARY_PATH}
 
 USER cisTEMx
 WORKDIR /home/cisTEMx

@@ -125,7 +125,8 @@ echo 'export MKLROOT=/opt/intel/oneapi/mkl/2021.4.0/' >>$SINGULARITY_ENVIRONMENT
 echo 'export NLSPATH=/opt/intel/oneapi/mkl/2021.4.0/lib/intel64/locale/%l_%t/%N' >>$SINGULARITY_ENVIRONMENT
 echo 'export CPATH=/opt/intel/oneapi/tbb/2021.4.0/env/../include:/opt/intel/oneapi/mkl/2021.4.0/include:/opt/intel/oneapi/compiler/2021.4.0/linux/include' >>$SINGULARITY_ENVIRONMENT
 echo 'export LIBRARY_PATH=/opt/intel/oneapi/tbb/2021.4.0/env/../lib/intel64/gcc4.8:/opt/intel/oneapi/mkl/2021.4.0/lib/intel64:/opt/intel/oneapi/compiler/2021.4.0/linux/compiler/lib/intel64_lin:/opt/intel/oneapi/compiler/2021.4.0/linux/lib' >>$SINGULARITY_ENVIRONMENT
-echo 'export LD_LIBRARY_PATH=/opt/intel/oneapi/tbb/2021.4.0/env/../lib/intel64/gcc4.8:/opt/intel/oneapi/mkl/2021.4.0/lib/intel64:/opt/intel/oneapi/compiler/2021.4.0/linux/lib:/opt/intel/oneapi/compiler/2021.4.0/linux/lib/x64:/opt/intel/oneapi/compiler/2021.4.0/linux/lib/emu:/opt/intel/oneapi/compiler/2021.4.0/linux/compiler/lib/intel64_lin:/.singularity.d/libs' >>$SINGULARITY_ENVIRONMENT
+# NOTE: this also has the wx dynamic in it
+echo 'export LD_LIBRARY_PATH=/opt/WX/intel-dynamic/lib/:/opt/intel/oneapi/tbb/2021.4.0/env/../lib/intel64/gcc4.8:/opt/intel/oneapi/mkl/2021.4.0/lib/intel64:/opt/intel/oneapi/compiler/2021.4.0/linux/lib:/opt/intel/oneapi/compiler/2021.4.0/linux/lib/x64:/opt/intel/oneapi/compiler/2021.4.0/linux/lib/emu:/opt/intel/oneapi/compiler/2021.4.0/linux/compiler/lib/intel64_lin:/.singularity.d/libs' >>$SINGULARITY_ENVIRONMENT
 
 %environment
 

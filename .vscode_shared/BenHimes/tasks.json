@@ -75,7 +75,7 @@
         {
             "label": "CONFIG intel,gpu,debug,dynamic",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/intel-gpu-debug-dynamic && cd ${build_dir}/intel-gpu-debug-dynamic && CC=icc CXX=icpc ../../configure  --enable-debugmode  --enable-samples --enable-experimental --enable-openmp --with-wx-config=${wx_dir_dynamic}"
+            "command": "mkdir -p ${build_dir}/intel-gpu-debug-dynamic && cd ${build_dir}/intel-gpu-debug-dynamic && CC=icc CXX=icpc ../../configure  --enable-debugmode  --with-cuda=${cuda_dir} --enable-samples --enable-experimental --enable-openmp --with-wx-config=${wx_dir_dynamic}"
         },
         {
             "label": "BUILD intel,gpu,debug,dynamic",
@@ -85,7 +85,7 @@
         {
             "label": "CONFIG intel,gpu,dynamic",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/intel-gpu-dynamic && cd ${build_dir}/intel-gpu-dynamic && CC=icc CXX=icpc ../../configure   --enable-experimental --enable-samples  --enable-openmp --with-wx-config=${wx_dir_dynamic}"
+            "command": "mkdir -p ${build_dir}/intel-gpu-dynamic && cd ${build_dir}/intel-gpu-dynamic && CC=icc CXX=icpc ../../configure   --with-cuda=${cuda_dir} --enable-experimental --enable-samples  --enable-openmp --with-wx-config=${wx_dir_dynamic}"
         },
         {
             "label": "BUILD intel,gpu,dynamic",
@@ -95,7 +95,7 @@
         {
             "label": "CONFIG GNU ,gpu",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/GNU-gpu && cd ${build_dir}/GNU-gpu && CC=gcc CXX=g++ ../../configure --enable-samples --enable-experimental --with-cuda=/usr/local/cuda --disable-staticmode --enable-openmp"
+            "command": "mkdir -p ${build_dir}/GNU-gpu && cd ${build_dir}/GNU-gpu && CC=gcc CXX=g++ ../../configure --enable-samples --enable-experimental --with-cuda=${cuda_dir} --disable-staticmode --enable-openmp"
         },
         {
             "label": "BUILD GNU,gpu",

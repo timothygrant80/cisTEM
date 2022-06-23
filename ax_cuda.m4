@@ -89,8 +89,9 @@ if test "$want_cuda" = "yes" ; then
 	# test if nvcc version is >= 2.3
 	NVCC_VERSION=`$NVCC --version | grep release | awk 'gsub(/,/, "") {print [$]5}'`
 	AC_MSG_RESULT([nvcc version : $NVCC_VERSION $NVCC_VERSION])
-  # I don't like relying on parsing strings, but this works fine for cuda 8-11.3
-  is_cuda_ge_11=`echo $NVCC_VERSION | awk '{if([$]1 < 11.0) print 0 ; else print 1}'`
+	
+	# I don't like relying on parsing strings, but this works fine for cuda 8-11.3
+	is_cuda_ge_11=`echo $NVCC_VERSION | awk '{if([$]1 < 11.0) print 0 ; else print 1}'`
 	
  	# we'll only use 64 bit arch
   	libdir=lib64

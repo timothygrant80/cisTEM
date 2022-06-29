@@ -28,7 +28,7 @@ nano gedit meld cmake \
 fftw3-dev software-properties-common libffi-dev \
 libbz2-dev libsqlite3-dev zlib1g-dev libjpeg-dev libtiff-dev \
 libreadline-dev liblzma-dev libssl-dev libncursesw5-dev wget \
-git xauth zip unzip parallel sqlite3 python3 python3-pip curl  \
+git xauth zip unzip parallel sqlite3 python3 python3-pip curl gdb \
 && rm -rf /var/lib/apt/lists/*
 
 
@@ -95,6 +95,15 @@ apt-get update && apt-get install -y nodejs && \
 rm -rf /var/lib/apt/lists/*  && \
 npm install -g pnpm
 
+# Install cuda (when the web is live)
+cd /tmp && wget https://developer.download.nvidia.com/compute/cuda/11.7.0/local_installers/cuda_11.7.0_515.43.04_linux.run && \
+sh cuda_11.7.0_515.43.04_linux.run --silent --toolkit && \
+rm cuda_11.7.0_515.43.04_linux.run && \
+# We currently don't need a bunch of things in the cuda toolkit, which installed is something like ~6.4Gb, this reduces to 1.9
+cd /usr/local/cuda && rm -rf nsight* extras && \
+cd lib64 && rm libcublas* libcuspars* libcusolver*
+
+
 # Install pytorch
 cd /tmp && wget https://download.pytorch.org/libtorch/cu113/libtorch-cxx11-abi-shared-with-deps-1.11.0%2Bcu113.zip && \
 unzip libtorch-cxx11-abi-shared-with-deps-1.11.0+cu113.zip && \
@@ -128,6 +137,7 @@ echo 'export CPATH=/opt/intel/oneapi/tbb/2021.4.0/env/../include:/opt/intel/onea
 echo 'export LIBRARY_PATH=/opt/intel/oneapi/tbb/2021.4.0/env/../lib/intel64/gcc4.8:/opt/intel/oneapi/mkl/2021.4.0/lib/intel64:/opt/intel/oneapi/compiler/2021.4.0/linux/compiler/lib/intel64_lin:/opt/intel/oneapi/compiler/2021.4.0/linux/lib' >>$SINGULARITY_ENVIRONMENT
 # NOTE: this also has the wx dynamic in it
 echo 'export LD_LIBRARY_PATH=/opt/WX/intel-dynamic/lib/:/opt/intel/oneapi/tbb/2021.4.0/env/../lib/intel64/gcc4.8:/opt/intel/oneapi/mkl/2021.4.0/lib/intel64:/opt/intel/oneapi/compiler/2021.4.0/linux/lib:/opt/intel/oneapi/compiler/2021.4.0/linux/lib/x64:/opt/intel/oneapi/compiler/2021.4.0/linux/lib/emu:/opt/intel/oneapi/compiler/2021.4.0/linux/compiler/lib/intel64_lin:/.singularity.d/libs' >>$SINGULARITY_ENVIRONMENT
+
 
 %environment
 

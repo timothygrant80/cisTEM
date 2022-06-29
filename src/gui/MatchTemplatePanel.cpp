@@ -464,6 +464,10 @@ void MatchTemplatePanel::SetInputsForPossibleReRun(bool set_up_to_resume_job, Te
 
     this->set_up_to_resume_job = set_up_to_resume_job;
     bool enable_value;
+
+    // FIXME: If the project is moved, the reference volume will have anew path and we aren't allowing updates to the reference.
+    // Probably the right solution is to be able to update the path to the reference when updating the project. Or alternatively
+    // to have a dialog pop up when a reference is NOT found and ask if the user wants to update the reference.
     if ( set_up_to_resume_job ) {
         // We want to disable user inputs so the job run matches the intial state.
         enable_value = false;

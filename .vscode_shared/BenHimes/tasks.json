@@ -75,7 +75,7 @@
         {
             "label": "CONFIG intel,gpu,debug,dynamic",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/intel-gpu-debug-dynamic && cd ${build_dir}/intel-gpu-debug-dynamic && CC=icc CXX=icpc ../../configure  --enable-debugmode  --with-cuda=${cuda_dir} --enable-samples --enable-experimental --enable-openmp --with-wx-config=${wx_dir_dynamic}"
+            "command": "mkdir -p ${build_dir}/intel-gpu-debug-dynamic && cd ${build_dir}/intel-gpu-debug-dynamic && CC=icc CXX=icpc ../../configure  --enable-gpu-debug --enable-debugmode  --with-cuda=${cuda_dir} --enable-samples --enable-experimental --enable-openmp --with-wx-config=${wx_dir_dynamic}"
         },
         {
             "label": "BUILD intel,gpu,debug,dynamic",

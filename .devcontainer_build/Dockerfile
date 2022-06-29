@@ -118,13 +118,22 @@ RUN cd /tmp && wget https://download.pytorch.org/libtorch/cu113/libtorch-cxx11-a
 # Include the lib path in LD_RUN_PATH so on linking, the correct path is known 
 ENV LD_RUN_PATH=/opt/libtorch/lib:${LD_RUN_PATH}
 
-# Install CUDA
-RUN cd /tmp && wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1uNiD5k9fkMiC6JfR6Gqi5LthMe0VA_h0' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1uNiD5k9fkMiC6JfR6Gqi5LthMe0VA_h0" -O cuda_11.6.0_510.39.01_linux.run && rm -rf /tmp/cookies.txt && \
-    sh cuda_11.6.0_510.39.01_linux.run --silent --toolkit && \
-    rm cuda_11.6.0_510.39.01_linux.run && \
+
+# Install cuda (when the web is live)
+RUN cd /tmp && wget https://developer.download.nvidia.com/compute/cuda/11.7.0/local_installers/cuda_11.7.0_515.43.04_linux.run && \
+    sh cuda_11.7.0_515.43.04_linux.run --silent --toolkit && \
+    rm cuda_11.7.0_515.43.04_linux.run && \
     # We currently don't need a bunch of things in the cuda toolkit, which installed is something like ~6.4Gb, this reduces to 1.9
     cd /usr/local/cuda && rm -rf nsight* extras && \
     cd lib64 && rm libcublas* libcuspars* libcusolver*
+
+# # Install CUDA
+# RUN cd /tmp && wget --load-cookies /tmp/cookies.txt "https://docs.google.com/uc?export=download&confirm=$(wget --quiet --save-cookies /tmp/cookies.txt --keep-session-cookies --no-check-certificate 'https://docs.google.com/uc?export=download&id=1uNiD5k9fkMiC6JfR6Gqi5LthMe0VA_h0' -O- | sed -rn 's/.*confirm=([0-9A-Za-z_]+).*/\1\n/p')&id=1uNiD5k9fkMiC6JfR6Gqi5LthMe0VA_h0" -O cuda_11.6.0_510.39.01_linux.run && rm -rf /tmp/cookies.txt && \
+#     sh cuda_11.6.0_510.39.01_linux.run --silent --toolkit && \
+#     rm cuda_11.6.0_510.39.01_linux.run && \
+#     # We currently don't need a bunch of things in the cuda toolkit, which installed is something like ~6.4Gb, this reduces to 1.9
+#     cd /usr/local/cuda && rm -rf nsight* extras && \
+#     cd lib64 && rm libcublas* libcuspars* libcusolver*
 
 RUN echo 'alias lt="ls -lrth"' >> /home/cisTEMx/.bashrc && \
     echo 'alias dU="du -ch --max-depth=1 | sort -h"' >> /home/cisTEMx/.bashrc && \

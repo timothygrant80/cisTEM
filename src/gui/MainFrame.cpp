@@ -1,7 +1,7 @@
 //#include "../core/core_headers.h"
 #include "../core/gui_core_headers.h"
 #include <wx/richmsgdlg.h>
-#ifdef EXPERIMENTAL
+#ifdef ENABLE_WEBVIEW
 #include "wx/webview.h"
 #include "WebViewPanel.h"
 #endif
@@ -48,7 +48,10 @@ extern RefineTemplatePanel*       refine_template_panel;
 #ifdef EXPERIMENTAL
 extern MyExperimentalPanel*    experimental_panel;
 extern RefineTemplateDevPanel* refine_template_dev_panel;
-extern WebViewPanel*           web_view_panel;
+#endif
+
+#ifdef ENABLE_WEBVIEW
+extern WebViewPanel* web_view_panel;
 #endif
 
 extern MyOverviewPanel* overview_panel;

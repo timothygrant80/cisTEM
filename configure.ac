@@ -35,29 +35,37 @@ CPPFLAGS="$INPUT_CPPFLAGS"
 AC_MSG_NOTICE([Setting up initial flags])
 
 #
-# Check CUDA at the top, b/c it needs at least c++14 so we are now using c++17, let cpu only builds stay on c++11 until other devs are okay with modernizing.
+# Check CUDA at the top
 #
 want_cuda="no"
 AX_CUDA 
 
+#
+# Check to see if any special requests are made for the cpp standard. 
+#
 want_modules="no"
+CPP_STANDARD=17
+AC_ARG_WITH(c++std,
+AS_HELP_STRING([--with-c++std=YEAR],[cisTEM requires a minimum of c++17, experimental features with c++20 may be tried.]),
+[
+    if test "$withval" = "17"; then
+        CPP_STANDARD=17
+    elif test "$withval" = "20"; then
+      if test "x$CXX" != "xg++"; then
+        AC_MSG_ERROR([cisTEM requires g++ to be used with c++20])
+      else
+        AC_MSG_NOTICE([cisTEM will use c++20 modules])
+        CPP_STANDARD=20
+        AC_DEFINE([_CISTEM_MODULES], [], [Define whether we build with modules or not])  
+        want_modules="yes"         
+      fi
+    fi
+])
 
-if test "x$CXX" != "xg++"; then
-    CPP_STANDARD=17
-else
-    CPP_STANDARD=20
-    AC_DEFINE([_CISTEM_MODULES], [], [Define whether we build with modules or not])  
-    want_modules="yes"  
-fi
-
-AM_CONDITIONAL([MODULES_AM], [test "$want_modules" = "yes"])
-
+AM_CONDITIONAL([MODULES_AM], [test "x$want_modules" = "xyes"])
 
 # TODO: this is not used, currently AX_CUDA checks std=c++ = cuda > 11.0 ? 17 : 11
 CUDA_CPP_STANDARD=17
-
-
-
 
 # check to see if compiler warnings are desired.
 
@@ -88,6 +96,9 @@ AC_ARG_ENABLE([warnings], AS_HELP_STRING([--disable compiler warnings], [Default
 if test "x$CXX" = "xicpc"; then		
 	CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -no-prec-sqrt $WARNINGS_ON -wd1125"
 	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -no-prec-sqrt $WARNINGS_ON"
+  # This may only be needed for dynamic linking
+  
+  LIBS="$LIBS -lz"
 else 
   if test "x$CXX" = "xclang++"; then
     # Clang needs the -no-c++11-narrowing suppression to compile
@@ -96,7 +107,7 @@ else
   else 
 	  CXXFLAGS="$CXXFLAGS -fmodules-ts -flang-info-module-cmi -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations" 		
 	  CPPFLAGS="$CPPFLAGS -fmodules-ts -flang-info-module-cmi -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations"
-
+  # If compiling with g++ uusing arch specific ISX makes a sizeable improvement. e.g. -march=znver3
 	  #sqlite needs dl on gcc
 	
 	  LIBS="$LIBS -ldl -lz"
@@ -163,7 +174,7 @@ static_link="false"
 AC_ARG_ENABLE(staticmode, AS_HELP_STRING([--enable-staticmode],[Link statically [default=no]]),[
   if test "$enableval" = yes; then
 	static_link="true"
-	WXCONFIGFLAGS="--static=yes"
+	WXCONFIGFLAGS="--static=yes "
   fi
 ])
 
@@ -295,6 +306,19 @@ AC_ARG_ENABLE(profiling, AS_HELP_STRING([--enable-profiling],[Include fine-grain
 
 AM_CONDITIONAL([ENABLEPROFILING_AM], [test x$want_profiling = xtrue])
 
+
+want_webview="no"
+AC_ARG_ENABLE(wx-webview, AS_HELP_STRING([--enable-wx-webview],[Compile with experimental webview panel]),[
+  if test "$enableval" = yes; then
+    AC_DEFINE([ENABLE_WEBVIEW], [], [Define the webview flag])
+  	want_webview="true"
+  	AC_MSG_NOTICE([Compiling with webview enabled])	
+  fi
+  ]) 
+AM_CONDITIONAL([ENABLE_WEBVIEW_AM], [test x$want_profiling = xtrue])
+
+
+
 AC_ARG_ENABLE(gpu-debug, AS_HELP_STRING([--enable-gpu-debug],[Compile heavy synchronous checking [default=no]]),[
   if test "$enableval" = yes; then
     AC_DEFINE([ENABLE_GPU_DEBUG],[], [use the gpu or not])
@@ -374,7 +398,11 @@ if test -n "$vers" && test "$vers" -ge 3000004; then
 
         WX_CPPFLAGS="`$WXCONFIG $WXCONFIGFLAGS --cppflags`"
         WX_CXXFLAGS="`$WXCONFIG $WXCONFIGFLAGS --cxxflags | sed -e 's/-fno-exceptions//'`"
-        WX_LIBS="`$WXCONFIG $WXCONFIGFLAGS --libs richtext,std,aui,webview`"
+        if test "x$want_webview" = "xyes"; then
+          WX_LIBS="`$WXCONFIG $WXCONFIGFLAGS --libs richtext,std,aui,webview`"
+        else
+          WX_LIBS="`$WXCONFIG $WXCONFIGFLAGS --libs richtext,std,aui`"
+        fi
 
         if test "$build_mac" =  "yes"; then
           WX_CPPFLAGS_BASE="`$WXCONFIG $WXCONFIGFLAGS --cppflags`"
@@ -385,12 +413,16 @@ if test -n "$vers" && test "$vers" -ge 3000004; then
           WX_CXXFLAGS_BASE="`$WXCONFIG $WXCONFIGFLAGS --cxxflags base | sed -e 's/-fno-exceptions//'`"
           WX_LIBS_BASE="`$WXCONFIG $WXCONFIGFLAGS --libs base,net,xml`"
         fi
-        
+                AC_MSG_NOTICE([wxWidgets libsbase $WX_LIBS])
+
+        AC_MSG_NOTICE([wxWidgets libsbase $WX_LIBS_BASE])
         wx_is_available=1
 else
         AC_MSG_ERROR("Only wxWidgets version 3.0.4+ is currently supported.")
         wx_is_available=0
 fi
+
+
 
 # Link the MKL with a variety of threading options
 
@@ -435,15 +467,13 @@ if test "x$use_mkl_threads" = "xyes" -o "x$use_gnu_threads" = "xyes"; then
     # Okay, we have only one of them, so we can use the mkl-threads or gnu-threads
     if test "x$use_mkl_threads" = "xyes"; then
         if test "x$static_link" = "xtrue" ; then          
-            LIBS="$LIBS -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a 
-${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -liomp5 -lpthread -lm -ldl ${MKLROOT}/lib/intel64/libmkl_intel_thread.a"
+            LIBS="$LIBS -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -liomp5 -lpthread -lm -ldl ${MKLROOT}/lib/intel64/libmkl_intel_thread.a"
         else
             LIBS="$LIBS -Wl,--no-as-needed -lmkl_intel_ilp64 -lmkl_intel_thread -lmkl_core -liomp5 -lpthread -lm -ldl"
         fi
     else
         if test "x$static_link" = "xtrue" ; then
-            LIBS="$LIBS -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a 
-${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lgomp -lpthread -lm -ldl ${MKLROOT}/lib/intel64/libmkl_gnu_thread.a"
+            LIBS="$LIBS -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lgomp -lpthread -lm -ldl ${MKLROOT}/lib/intel64/libmkl_gnu_thread.a"
         else
             LIBS="$LIBS -Wl,--no-as-needed -lmkl_intel_ilp64 -lmkl_gnu_thread -lmkl_core -lgomp -lpthread -lm -ldl"
         fi
@@ -451,9 +481,11 @@ ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lgomp -lpthread -lm -ldl $
 else    
     # Use MKL seqential
     AC_MSG_NOTICE([   Using the MKL sequential interface. ])
+    CPPFLAGS="$CPPFLAGS -qmkl=sequential"
+
     if test "x$static_link" = "xtrue" ; then
-        LIBS="$LIBS -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a 
-${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl ${MKLROOT}/lib/intel64/libmkl_sequential.a"
+        #LIBS="$LIBS -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_intel_thread.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -liomp5 -lpthread -lm -ldl"               
+        LIBS="$LIBS -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_cdft_core.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl"
     else
         LIBS="$LIBS -Wl,--no-as-needed -lmkl_intel_ilp64 -lmkl_sequential -lmkl_core -lpthread -lm -ldl"
     fi    
@@ -462,7 +494,7 @@ fi
 
 # Even though we do not link the FFTW3 libraries, the Intel MKL uses one of FFTW3's headers to maintain parity while defining a wrapper. 
 AC_CHECK_HEADER(fftw3.h, , AC_MSG_ERROR("Can't find fftw3.h"))
-# AC_CHECK_LIB([mkl_intel_lp64],[fftwf_malloc],[HAVE_MKL="yes"],[HAVE_MKL="no"],[-lmkl_core -lmkl_sequential -lpthread])
+AC_CHECK_LIB([mkl_intel_lp64],[fftwf_malloc],[HAVE_MKL="yes"],[HAVE_MKL="no"],[-lmkl_core -lmkl_sequential -lpthread])
 
 # if test "x$use_mkl" = "x0"; then
 # 	HAVE_MKL="no"
@@ -473,19 +505,7 @@ AC_CHECK_HEADER(fftw3.h, , AC_MSG_ERROR("Can't find fftw3.h"))
 # 	AC_MSG_NOTICE(Using Intel MKL for fast Fourier transforms)
     AC_DEFINE([MKL], [], [Use the MKL])
 
-# 	if test "x$CXX" = "xicpc"; then
-# 		CPPFLAGS="$CPPFLAGS -mkl=sequential"
-# 		LIBS="$LIBS -mkl=sequential"
-# 	else
-# 		LDFLAGS="$LDFLAGS -L\$(MKLROOT)/lib/intel64"
-# 		if test "x$static_link" = "xtrue"; then
-# 			AC_MSG_ERROR("Static builds with Intel MKL are not supported when using the GNU compiler. Please try with the Intel compiler instead.")
-# 	    else
-# #	    	LIBS="$LIBS -lmkl_rt"
-# 	    	LIBS="$LIBS -lmkl_sequential -lmkl_core -lmkl_intel_lp64"
-# 	    fi
-# 	fi
-# else
+
 
 # 	AC_CHECK_LIB(fftw3f, fftwf_malloc, [LIBS="$LIBS -lfftw3f"],AC_MSG_ERROR("Can't find FFTW3's libraries. Please check your installation of FFTW3."))
 # 	AC_MSG_NOTICE(Using FFTW for Fourier transforms)
@@ -599,7 +619,7 @@ if test "x$CXX" = "xg++"; then
         MODULES_CPPFLAGS="$CPPFLAGS -fmodules-ts -flang-info-module-cmi -x c++" 
     fi
 fi
-AC_MSG_NOTICE([check flags is g++ want modules value is $MODULES_CXXFLAGS])
+AC_MSG_NOTICE([check flags is g++ want modules value is ($MODULES_CXXFLAGS )])
 
 AC_SUBST(MODULES_CXXFLAGS)
 AC_SUBST(MODULES_CPPFLAGS)

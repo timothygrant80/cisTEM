@@ -23,7 +23,7 @@ jobs:
       fail-fast: true
     runs-on: ${{ inputs.runs_on_os }}
     container: 
-      image: bhimesbhimes/cistem_build_env:v1.3
+      image: bhimesbhimes/cistem_build_env:v1.3.8
       options: --user root
     outputs:
       version: ${{ steps.configure.outputs.version }}
@@ -32,6 +32,7 @@ jobs:
       # the macro for CISTEM_VERSION_TEXT needs access to the history.
       with:
         fetch-depth: 0
+        
     - name: regenerate_project
       run: ./regenerate_project.b
     - name: configure

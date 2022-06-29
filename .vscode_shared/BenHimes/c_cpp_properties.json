@@ -4,7 +4,11 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/groups/himesb/git/gemmi/include/**"
+                // Find these with wx-config --cxxflags so that intellisense works
+                // "/usr/lib/x86_64-linux-gnu/wx/include/gtk3-unicode-3.1-unofficial",
+                // "/usr/include/wx-3.1-unofficial",
+                "/opt/WX/intel-dynamic/include/wx-3.0/",
+                "/usr/local/cuda/include"
             ],
             "defines": [
                 "_FILE_OFFSET_BITS=64",

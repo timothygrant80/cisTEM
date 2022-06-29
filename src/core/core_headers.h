@@ -67,6 +67,9 @@ const std::complex<float> I(0.0, 1.0);
 #include <wx/stackwalk.h>
 #include <wx/xml/xml.h>
 #include <wx/msgqueue.h>
+#ifdef ENABLE_WEBVIEW
+#include <wx/webview.h>
+#endif
 
 class StackDump : public wxStackWalker // so we can give backtraces..
 {

@@ -760,24 +760,32 @@ AbInitio3DPanelParent::~AbInitio3DPanelParent()
 
 }
 
-CombinedPackageClassPicker::CombinedPackageClassPicker( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
+CombinedPackageItemPicker::CombinedPackageItemPicker( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
 {
 	ClassSelectSizer = new wxBoxSizer( wxHORIZONTAL );
 
-	PackageLabel = new wxStaticText( this, wxID_ANY, wxT("Refinement Package:"), wxDefaultPosition, wxDefaultSize, 0 );
-	PackageLabel->Wrap( -1 );
-	ClassSelectSizer->Add( PackageLabel, 0, wxALL|wxALIGN_CENTER_VERTICAL, 5 );
-
-	wxArrayString ClassSelectBoxChoices;
-	ClassSelectBox = new wxChoice( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, ClassSelectBoxChoices, 0 );
-	ClassSelectBox->SetSelection( 0 );
-	ClassSelectSizer->Add( ClassSelectBox, 0, wxALL|wxALIGN_CENTER_VERTICAL, 5 );
-
 	wxBoxSizer* bSizer494;
-	bSizer494 = new wxBoxSizer( wxVERTICAL );
+	bSizer494 = new wxBoxSizer( wxHORIZONTAL );
+
+	ItemLabel = new wxStaticText( this, wxID_ANY, wxT("Refinement Package:"), wxDefaultPosition, wxDefaultSize, 0 );
+	ItemLabel->Wrap( 1 );
+	bSizer494->Add( ItemLabel, 1, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 
 
-	ClassSelectSizer->Add( bSizer494, 0, wxALIGN_CENTER_VERTICAL, 5 );
+	ClassSelectSizer->Add( bSizer494, 1, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT, 5 );
+
+	wxBoxSizer* bSizer587;
+	bSizer587 = new wxBoxSizer( wxHORIZONTAL );
+
+	wxArrayString ItemSelectBoxChoices;
+	ItemSelectBox = new wxChoice( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, ItemSelectBoxChoices, 0 );
+	ItemSelectBox->SetSelection( 0 );
+	ItemSelectBox->SetMaxSize( wxSize( 150,150 ) );
+
+	bSizer587->Add( ItemSelectBox, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_LEFT|wxEXPAND, 5 );
+
+
+	ClassSelectSizer->Add( bSizer587, 1, wxALIGN_CENTER|wxALIGN_CENTER_VERTICAL|wxALIGN_LEFT, 5 );
 
 
 	this->SetSizer( ClassSelectSizer );
@@ -785,7 +793,7 @@ CombinedPackageClassPicker::CombinedPackageClassPicker( wxWindow* parent, wxWind
 	ClassSelectSizer->Fit( this );
 }
 
-CombinedPackageClassPicker::~CombinedPackageClassPicker()
+CombinedPackageItemPicker::~CombinedPackageItemPicker()
 {
 }
 
@@ -12051,122 +12059,6 @@ RefinementPackageAssetPanel::~RefinementPackageAssetPanel()
 
 }
 
-PackageSelectionPanel::PackageSelectionPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
-{
-	wxBoxSizer* mainSizer;
-	mainSizer = new wxBoxSizer( wxVERTICAL );
-
-	wxFlexGridSizer* packageSelectionSizer;
-	packageSelectionSizer = new wxFlexGridSizer( 0, 2, 0, 0 );
-	packageSelectionSizer->AddGrowableCol( 1 );
-	packageSelectionSizer->SetFlexibleDirection( wxBOTH );
-	packageSelectionSizer->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
-
-	wxArrayString RefinementPackagesCheckListBoxChoices;
-	RefinementPackagesCheckListBox = new wxCheckListBox( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, RefinementPackagesCheckListBoxChoices, wxLB_MULTIPLE|wxLB_NEEDED_SB );
-	packageSelectionSizer->Add( RefinementPackagesCheckListBox, 0, wxALIGN_CENTER|wxALL|wxALIGN_CENTER_VERTICAL|wxALIGN_CENTER_HORIZONTAL, 5 );
-
-
-	mainSizer->Add( packageSelectionSizer, 0, wxALIGN_CENTER|wxALIGN_CENTER_VERTICAL|wxEXPAND, 5 );
-
-	ErrorStaticText = new wxStaticText( this, wxID_ANY, wxT("Oops! - Command must contain \"$command\""), wxDefaultPosition, wxDefaultSize, 0 );
-	ErrorStaticText->Wrap( -1 );
-	ErrorStaticText->SetForegroundColour( wxColour( 180, 0, 0 ) );
-	ErrorStaticText->Hide();
-
-	mainSizer->Add( ErrorStaticText, 0, wxALIGN_CENTER|wxALL, 5 );
-
-	RemoveDuplicatesCheckbox = new wxCheckBox( this, wxID_ANY, wxT("Remove Duplicate Particles"), wxDefaultPosition, wxDefaultSize, 0 );
-	mainSizer->Add( RemoveDuplicatesCheckbox, 0, wxALL|wxEXPAND, 5 );
-
-	ImportedParamsWarning = new wxStaticText( this, wxID_ANY, wxT("*Removing duplicates from packages containing imported parameters is not possible."), wxDefaultPosition, wxDefaultSize, 0 );
-	ImportedParamsWarning->Wrap( -1 );
-	ImportedParamsWarning->SetForegroundColour( wxColour( 251, 8, 8 ) );
-
-	mainSizer->Add( ImportedParamsWarning, 0, wxALL|wxEXPAND, 5 );
-
-	m_staticline158 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
-	mainSizer->Add( m_staticline158, 0, wxEXPAND | wxALL, 5 );
-
-	m_staticText798 = new wxStaticText( this, wxID_ANY, wxT("Specify Combined Package Parameters"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText798->Wrap( -1 );
-	mainSizer->Add( m_staticText798, 0, wxALL|wxALIGN_CENTER_HORIZONTAL, 5 );
-
-	wxBoxSizer* bSizer587;
-	bSizer587 = new wxBoxSizer( wxVERTICAL );
-
-	wxBoxSizer* molecularWeightSizer;
-	molecularWeightSizer = new wxBoxSizer( wxHORIZONTAL );
-
-	molecularWeightSizer->SetMinSize( wxSize( 1,-1 ) );
-	m_staticText214 = new wxStaticText( this, wxID_ANY, wxT("Estimated Molecular Weight (kDa) :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText214->Wrap( -1 );
-	molecularWeightSizer->Add( m_staticText214, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-
-	MolecularWeightTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, 0 );
-	molecularWeightSizer->Add( MolecularWeightTextCtrl, 1, wxALL|wxALIGN_CENTER_VERTICAL, 5 );
-
-
-	bSizer587->Add( molecularWeightSizer, 1, wxALIGN_CENTER_HORIZONTAL|wxEXPAND, 5 );
-
-	wxBoxSizer* largestDimensionSizer;
-	largestDimensionSizer = new wxBoxSizer( wxHORIZONTAL );
-
-	m_staticText2141 = new wxStaticText( this, wxID_ANY, wxT("Estimated Largest Dimension / Diameter (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText2141->Wrap( -1 );
-	largestDimensionSizer->Add( m_staticText2141, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-
-	LargestDimensionTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, 0 );
-	largestDimensionSizer->Add( LargestDimensionTextCtrl, 1, wxALL|wxALIGN_CENTER_VERTICAL, 5 );
-
-
-	bSizer587->Add( largestDimensionSizer, 1, wxEXPAND|wxALIGN_CENTER_HORIZONTAL, 5 );
-
-	wxBoxSizer* symmetrySizer;
-	symmetrySizer = new wxBoxSizer( wxHORIZONTAL );
-
-	m_staticText2143 = new wxStaticText( this, wxID_ANY, wxT("Wanted Pointgroup Symmetry :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText2143->Wrap( -1 );
-	symmetrySizer->Add( m_staticText2143, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-
-	SymmetryComboBox = new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, 0 );
-	SymmetryComboBox->Append( wxT("C1") );
-	SymmetryComboBox->Append( wxT("C2") );
-	SymmetryComboBox->Append( wxT("C3") );
-	SymmetryComboBox->Append( wxT("C4") );
-	SymmetryComboBox->Append( wxT("D2") );
-	SymmetryComboBox->Append( wxT("D3") );
-	SymmetryComboBox->Append( wxT("D4") );
-	SymmetryComboBox->Append( wxT("I") );
-	SymmetryComboBox->Append( wxT("I2") );
-	SymmetryComboBox->Append( wxT("O") );
-	SymmetryComboBox->Append( wxT("T") );
-	SymmetryComboBox->Append( wxT("T2") );
-	SymmetryComboBox->Append( wxT("C1") );
-	SymmetryComboBox->SetSelection( 0 );
-	symmetrySizer->Add( SymmetryComboBox, 1, wxALL|wxALIGN_CENTER_VERTICAL, 0 );
-
-
-	bSizer587->Add( symmetrySizer, 1, wxEXPAND|wxALIGN_CENTER_HORIZONTAL, 5 );
-
-
-	mainSizer->Add( bSizer587, 1, wxEXPAND, 0 );
-
-
-	this->SetSizer( mainSizer );
-	this->Layout();
-
-	// Connect Events
-	RefinementPackagesCheckListBox->Connect( wxEVT_COMMAND_CHECKLISTBOX_TOGGLED, wxCommandEventHandler( PackageSelectionPanel::PackageClassSelection ), NULL, this );
-}
-
-PackageSelectionPanel::~PackageSelectionPanel()
-{
-	// Disconnect Events
-	RefinementPackagesCheckListBox->Disconnect( wxEVT_COMMAND_CHECKLISTBOX_TOGGLED, wxCommandEventHandler( PackageSelectionPanel::PackageClassSelection ), NULL, this );
-
-}
-
 ClassesSetupWizardPanelA::ClassesSetupWizardPanelA( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
 {
 	wxBoxSizer* bSizer15311;
@@ -12210,6 +12102,184 @@ ClassesSetupWizardPanelA::~ClassesSetupWizardPanelA()
 {
 }
 
+PackageSelectionPanel::PackageSelectionPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
+{
+	wxBoxSizer* mainSizer;
+	mainSizer = new wxBoxSizer( wxVERTICAL );
+
+	wxBoxSizer* PackageSelectionSizer;
+	PackageSelectionSizer = new wxBoxSizer( wxVERTICAL );
+
+	wxArrayString RefinementPackagesCheckListBoxChoices;
+	RefinementPackagesCheckListBox = new wxCheckListBox( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, RefinementPackagesCheckListBoxChoices, wxLB_MULTIPLE|wxLB_NEEDED_SB );
+	PackageSelectionSizer->Add( RefinementPackagesCheckListBox, 100, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+
+
+	mainSizer->Add( PackageSelectionSizer, 1, wxEXPAND, 5 );
+
+	ErrorStaticText = new wxStaticText( this, wxID_ANY, wxT("Oops! - Command must contain \"$command\""), wxDefaultPosition, wxDefaultSize, 0 );
+	ErrorStaticText->Wrap( -1 );
+	ErrorStaticText->SetForegroundColour( wxColour( 180, 0, 0 ) );
+	ErrorStaticText->Hide();
+
+	mainSizer->Add( ErrorStaticText, 0, wxALIGN_CENTER|wxALL, 5 );
+
+	RemoveDuplicatesCheckbox = new wxCheckBox( this, wxID_ANY, wxT("Remove Duplicate Particles"), wxDefaultPosition, wxDefaultSize, 0 );
+	mainSizer->Add( RemoveDuplicatesCheckbox, 0, wxALL|wxEXPAND, 5 );
+
+	ImportedParamsWarning = new wxStaticText( this, wxID_ANY, wxT("*Removing duplicates from packages containing imported parameters is not possible."), wxDefaultPosition, wxDefaultSize, 0 );
+	ImportedParamsWarning->Wrap( -1 );
+	ImportedParamsWarning->SetForegroundColour( wxColour( 251, 8, 8 ) );
+
+	mainSizer->Add( ImportedParamsWarning, 0, wxALL|wxEXPAND, 5 );
+
+	m_staticline158 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	mainSizer->Add( m_staticline158, 0, wxEXPAND | wxALL, 5 );
+
+	m_staticText798 = new wxStaticText( this, wxID_ANY, wxT("Specify Combined Package Parameters"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText798->Wrap( -1 );
+	mainSizer->Add( m_staticText798, 0, wxALL|wxALIGN_CENTER_HORIZONTAL, 5 );
+
+	wxBoxSizer* bSizer587;
+	bSizer587 = new wxBoxSizer( wxVERTICAL );
+
+	wxBoxSizer* bSizer584;
+	bSizer584 = new wxBoxSizer( wxHORIZONTAL );
+
+	wxBoxSizer* symmetrySizer;
+	symmetrySizer = new wxBoxSizer( wxHORIZONTAL );
+
+	m_staticText792 = new wxStaticText( this, wxID_ANY, wxT("Wanted Pointgroup Symmetry:"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText792->Wrap( -1 );
+	symmetrySizer->Add( m_staticText792, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+
+	bSizer584->Add( symmetrySizer, 1, wxALIGN_CENTER_VERTICAL, 5 );
+
+	wxBoxSizer* bSizer582;
+	bSizer582 = new wxBoxSizer( wxHORIZONTAL );
+
+	SymmetryComboBox = new wxComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, 0 );
+	SymmetryComboBox->Append( wxT("C1") );
+	SymmetryComboBox->Append( wxT("C2") );
+	SymmetryComboBox->Append( wxT("C3") );
+	SymmetryComboBox->Append( wxT("C4") );
+	SymmetryComboBox->Append( wxT("D2") );
+	SymmetryComboBox->Append( wxT("D3") );
+	SymmetryComboBox->Append( wxT("D4") );
+	SymmetryComboBox->Append( wxT("I") );
+	SymmetryComboBox->Append( wxT("I2") );
+	SymmetryComboBox->Append( wxT("O") );
+	SymmetryComboBox->Append( wxT("T") );
+	SymmetryComboBox->Append( wxT("T2") );
+	SymmetryComboBox->SetSelection( 0 );
+	bSizer582->Add( SymmetryComboBox, 1, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL|wxFIXED_MINSIZE, 0 );
+
+
+	bSizer584->Add( bSizer582, 1, wxEXPAND, 5 );
+
+
+	bSizer587->Add( bSizer584, 1, wxEXPAND, 5 );
+
+	wxBoxSizer* bSizer585;
+	bSizer585 = new wxBoxSizer( wxHORIZONTAL );
+
+	wxBoxSizer* molecularWeightSizer;
+	molecularWeightSizer = new wxBoxSizer( wxHORIZONTAL );
+
+	molecularWeightSizer->SetMinSize( wxSize( 1,-1 ) );
+	m_staticText214 = new wxStaticText( this, wxID_ANY, wxT("Estimated Molecular Weight (kDa) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText214->Wrap( -1 );
+	molecularWeightSizer->Add( m_staticText214, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+
+	bSizer585->Add( molecularWeightSizer, 1, wxALIGN_CENTER_HORIZONTAL|wxEXPAND, 5 );
+
+	wxBoxSizer* bSizer580;
+	bSizer580 = new wxBoxSizer( wxHORIZONTAL );
+
+	MolecularWeightTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer580->Add( MolecularWeightTextCtrl, 1, wxALIGN_CENTER_VERTICAL|wxALIGN_LEFT|wxALIGN_RIGHT|wxALL|wxFIXED_MINSIZE, 5 );
+
+
+	bSizer585->Add( bSizer580, 1, wxEXPAND, 5 );
+
+
+	bSizer587->Add( bSizer585, 1, wxEXPAND, 5 );
+
+	wxBoxSizer* bSizer586;
+	bSizer586 = new wxBoxSizer( wxHORIZONTAL );
+
+	wxBoxSizer* largestDimensionSizer;
+	largestDimensionSizer = new wxBoxSizer( wxHORIZONTAL );
+
+	m_staticText2141 = new wxStaticText( this, wxID_ANY, wxT("Estimated Largest Dimension / Diameter (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText2141->Wrap( -1 );
+	largestDimensionSizer->Add( m_staticText2141, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+
+	bSizer586->Add( largestDimensionSizer, 1, wxALIGN_CENTER_VERTICAL|wxEXPAND, 5 );
+
+	wxBoxSizer* bSizer581;
+	bSizer581 = new wxBoxSizer( wxHORIZONTAL );
+
+	LargestDimensionTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("0.0"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer581->Add( LargestDimensionTextCtrl, 1, wxALIGN_CENTER_VERTICAL|wxALIGN_LEFT|wxALIGN_RIGHT|wxALL, 5 );
+
+
+	bSizer586->Add( bSizer581, 1, wxEXPAND, 5 );
+
+
+	bSizer587->Add( bSizer586, 1, wxEXPAND, 5 );
+
+
+	mainSizer->Add( bSizer587, 1, wxEXPAND, 0 );
+
+
+	this->SetSizer( mainSizer );
+	this->Layout();
+	mainSizer->Fit( this );
+
+	// Connect Events
+	RefinementPackagesCheckListBox->Connect( wxEVT_COMMAND_CHECKLISTBOX_TOGGLED, wxCommandEventHandler( PackageSelectionPanel::PackageClassSelection ), NULL, this );
+}
+
+PackageSelectionPanel::~PackageSelectionPanel()
+{
+	// Disconnect Events
+	RefinementPackagesCheckListBox->Disconnect( wxEVT_COMMAND_CHECKLISTBOX_TOGGLED, wxCommandEventHandler( PackageSelectionPanel::PackageClassSelection ), NULL, this );
+
+}
+
+CombinedPackageRefinementPanel::CombinedPackageRefinementPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
+{
+	wxBoxSizer* bSizer686;
+	bSizer686 = new wxBoxSizer( wxVERTICAL );
+
+	SelectRefinementText = new wxStaticText( this, wxID_ANY, wxT("Select a previously used Refinement to apply, or select Random Parameters to generate from random parameters:"), wxDefaultPosition, wxDefaultSize, 0 );
+	SelectRefinementText->Wrap( -1 );
+	bSizer686->Add( SelectRefinementText, 0, wxALL, 5 );
+
+	m_staticline187 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer686->Add( m_staticline187, 0, wxEXPAND | wxALL, 5 );
+
+	bSizer589 = new wxBoxSizer( wxHORIZONTAL );
+
+	RefinementsListBox = new wxListBox( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0, NULL, wxLB_NEEDED_SB|wxLB_SINGLE );
+	bSizer589->Add( RefinementsListBox, 1, wxALL|wxEXPAND, 5 );
+
+
+	bSizer686->Add( bSizer589, 1, wxALL|wxEXPAND, 5 );
+
+
+	this->SetSizer( bSizer686 );
+	this->Layout();
+}
+
+CombinedPackageRefinementPanel::~CombinedPackageRefinementPanel()
+{
+}
+
 CombinedClassSelectionPanel::CombinedClassSelectionPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
 {
 	wxBoxSizer* bSizer686;
@@ -12222,7 +12292,7 @@ CombinedClassSelectionPanel::CombinedClassSelectionPanel( wxWindow* parent, wxWi
 	m_staticline187 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	bSizer686->Add( m_staticline187, 0, wxEXPAND | wxALL, 5 );
 
-	class_selector = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHSCROLL|wxVSCROLL );
+	class_selector = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL );
 	class_selector->SetScrollRate( 5, 5 );
 	ScrollSizer = new wxBoxSizer( wxVERTICAL );
 

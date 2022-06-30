@@ -3,7 +3,7 @@
 
 
 #include "ProjectX_gui.h"
-#include "AssetPickerComboPanel.h"
+#include "my_controls.h"
 
 class CombineRefinementPackagesWizard; //: public CombineRefinementPackagesWizardParent
 //{
@@ -41,12 +41,17 @@ public:
 	wxWizardPage * GetPrev () const {return NULL;};
 };
 
-class CombinedPackageClassPanel : public CombinedPackageClassPicker
+class CombinedPackageItemPanel : public CombinedPackageItemPicker
 {
 	public:
-	CombinedPackageClassPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
-	~CombinedPackageClassPanel();
-	void FillSelectionBox(int package_number);
+	CombinedPackageItemPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
+	~CombinedPackageItemPanel();
+	void FillClassSelectionBox(int package_number);
+	void FillRefinementSelectionBox();
+
+	private:
+	bool has_random_parameters;
+
 };
 
 
@@ -64,18 +69,32 @@ public:
 	wxWizardPage * GetPrev () const;
 };
 
-class ClassSelectPanel : public wxPanel
+class ItemSelectPanel : public wxPanel
 {
 public:
 
-	CombinedPackageClassPanel* ClassSelectBoxPanel;
+	CombinedPackageItemPanel* ItemSelectBoxPanel;
 	wxStaticText* ClassText;
 	wxBoxSizer* MainSizer;
 	wxBoxSizer* bSizer989;
 
-	ClassSelectPanel (wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
-	~ClassSelectPanel();
+	ItemSelectPanel (wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
+	~ItemSelectPanel();
 
+};
+
+class RefinementSelectPage : public wxWizardPage
+{
+	CombineRefinementPackagesWizard *wizard_pointer;
+
+public:
+	CombinedPackageRefinementPanel *combined_package_refinement_selection_panel;
+
+	RefinementSelectPage(CombineRefinementPackagesWizard *parent, const wxBitmap &bitmap=wxNullBitmap);
+	~RefinementSelectPage();
+
+	wxWizardPage * GetNext() const;
+	wxWizardPage * GetPrev() const;
 };
 
 class CombineRefinementPackagesWizard : public CombineRefinementPackagesWizardParent
@@ -95,11 +114,17 @@ public:
 
 	PackageSelectionPage *package_selection_page;
 	CombinedClassSelectionPage *combined_class_selection_page;
+	RefinementSelectPage *refinement_select_page;
 
 private:
 
 	bool CheckIfDuplicate (int comparison_original_particle_position_asset_id, RefinementPackage* combined_package);
 	int number_of_visits;
 	int checked_counter;
+	int selected_refinement_id;
+	bool refinements_page_has_been_visited;
+	bool imported_params_found;
+	bool classes_selected;
+	wxArrayString refinement_names;
 };
 #endif

@@ -311,7 +311,7 @@ void CombineRefinementPackagesWizard::OnFinished( wxWizardEvent& event )
 
 			for (int i = 0; i < refinement_package_asset_panel->all_refinement_short_infos.GetCount(); i++)
 			{
-				if (refinement_package_asset_panel->all_refinement_short_infos[i].name.IsSameAs(refinement_names[refinement_select_page->combined_package_refinement_selection_panel->RefinementsListBox->GetSelection()])) // if the refinement info name is the same as the selected name, use this refinement ID
+				if (refinement_package_asset_panel->all_refinement_short_infos[i].name.IsSameAs(refinement_select_page->combined_package_refinement_selection_panel->RefinementsListBox->GetString(refinement_select_page->combined_package_refinement_selection_panel->RefinementsListBox->GetSelection()))) // if the refinement info name is the same as the selected name, use this refinement ID
 				selected_refinement_id = refinement_package_asset_panel->all_refinement_short_infos[i].refinement_id;
 			}
 

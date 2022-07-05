@@ -1,0 +1,27 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "options": {
+        "env": {
+            "cuda_dir": "/usr/local/cuda",
+            "wx_dir_dynamic": "/opt/WX/intel-dynamic/bin/wx-config",
+            "wx_dir_static": "/opt/WX/intel-static/bin/wx-config",
+            "build_dir": "${workspaceFolder}/build",
+            "compile_cores": "12",
+            "GIT_BRANCH": "git rev-parse --abbrev-ref HEAD"
+        }
+    },
+    "tasks": [
+        {
+            "label": "CONFIG intel,gpu,debug,static",
+            "type": "shell",
+            "command": "mkdir -p ${build_dir}/$(${GIT_BRANCH})_Intel-gpu-debug-static && cd ${build_dir}/$(${GIT_BRANCH})_Intel-gpu-debug-static && CC=icc CXX=icpc ../../configure  --enable-debugmode --enable-staticmode --enable-samples --enable-experimental --enable-openmp --with-wx-config=${wx_dir_static}"
+        },
+        {
+            "label": "BUILD intel,gpu,debug,static",
+            "type": "shell",
+            "command": "cd ${build_dir}/$(${GIT_BRANCH})_Intel-gpu-debug-static && make -j${compile_cores}"
+        },
+    ]
+}

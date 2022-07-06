@@ -167,6 +167,12 @@ RUN tf=`tempfile` && cp /usr/include/wx-3.1-unofficial/wx/longlong.h /usr/includ
 # Include the lib path in LD_RUN_PATH so on linking, the correct path is known 
 ENV LD_LIBRARY_PATH=/opt/WX/intel-dynamic/lib/:${LD_LIBRARY_PATH}
 
+RUN echo 'int mkl_serv_intel_cpu_true() {return 1;}' > /opt/intel/fakeIntel.c && \
+    gcc -shared -fPIC -o /opt/intel/libfakeIntel.so /opt/intel/fakeIntel.c 
+
+ENV LD_LOAD=/opt/intel/libfakeIntel.so
+
+
 USER cisTEMx
 WORKDIR /home/cisTEMx
 

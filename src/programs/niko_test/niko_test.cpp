@@ -15,39 +15,137 @@ IMPLEMENT_APP(NikoTestApp)
 // override the DoInteractiveUserInput
 
 void NikoTestApp::DoInteractiveUserInput( ) {
+    UserInput* my_input = new UserInput("ApplyMask", 1.0);
+
+    wxString input_image = my_input->GetFilenameFromUser("Input image file name", "Name of input image file *.mrc", "input.mrc", true);
+    // wxString input_mask        = my_input->GetFilenameFromUser("Input mask file name", "Name of input image file", "mask.mrc", true);
+    // wxString output_volume     = my_input->GetFilenameFromUser("Output masked image/volume file name", "Name of output image with mask applied", "output.mrc", false);
+    // float    pixel_size        = my_input->GetFloatFromUser("Pixel size of images (A)", "Pixel size of input images in Angstroms", "1.0", 0.000001);
+    float X_maskcenter   = my_input->GetFloatFromUser("center of the square along X:", "the square mask center X coordinate on the input image", "0,0");
+    float Y_maskcenter   = my_input->GetFloatFromUser("center of the square along Y:", "the square mask center Y coordinate on the input image", "0,0");
+    float SquareMaskSize = my_input->GetFloatFromUser("Size of the Square: ", "the square mask size in pixel number", "10,0", 5.0);
+
+    // float cosine_edge       = my_input->GetFloatFromUser("Width of cosine edge (A)", "Width of the smooth edge to add to the mask in Angstroms", "10.0", 0.0);
+    // float outside_weight    = my_input->GetFloatFromUser("Weight of density outside mask", "Factor to multiply density outside of the mask", "0.0", 0.0, 1.0);
+    // float filter_radius     = my_input->GetFloatFromUser("Low-pass filter outside mask (A)", "Low-pass filter to be applied to the density outside the mask", "0.0", 0.0);
+    // float outside_value     = my_input->GetFloatFromUser("Outside mask value", "Value used to set density outside the mask", "0.0", 0.0);
+    // bool  use_outside_value = my_input->GetYesNoFromUser("Use outside mask value", "Should the density outside the mask be set to the user-provided value", "No");
+
+    delete my_input;
+
+    //	my_current_job.Reset(9);
+    // my_current_job.ManualSetArguments("tttfffffb", input_volume.ToUTF8( ).data( ), input_mask.ToUTF8( ).data( ), output_volume.ToUTF8( ).data( ), pixel_size, cosine_edge, outside_weight, filter_radius, outside_value, use_outside_value);
+    my_current_job.ManualSetArguments("tttfffffb", input_image.ToUTF8( ).data( ), X_maskcenter, Y_maskcenter, SquareMaskSize);
 }
 
 // override the do calculation method which will be what is actually run..
 
 bool NikoTestApp::DoCalculation( ) {
-    int   i, j;
-    int   count;
-    int   padded_dimensions_x;
-    int   padded_dimensions_y;
-    int   pad_factor = 6;
-    float sigma;
-    float peak;
-    float sum_of_peaks;
 
-    MRCFile input_file_3d("input3d.mrc", false);
-    MRCFile input_file_2d("input2d.mrc", false);
-    MRCFile output_file("output.mrc", true);
-    Image   input_volume;
+    // int   i, j;
+    // int   count;
+    // int   padded_dimensions_x;
+    // int   padded_dimensions_y;
+    // int   pad_factor = 6;
+    // float sigma;
+    // float peak;
+    // float sum_of_peaks;
+
+    // MRCFile input_file_3d("input3d.mrc", false);
+    // MRCFile input_file_2d("/groups/lingli/Documents/TestData0718/zz-41.mrc", false);
+    // MRCFile output_file("output.mrc", true);
+    // MRCFile output_file_tmp("output1.mrc", true);
+    // MRCFile mask_file_2d("/groups/lingli/Documents/cisTEM/build/test_Intel-gpu-debug-static/src/circlemaskn10.mrc", false);
+    // Image   input_volume;
+    // Image   input_image;
+    // Image   padded_image;
+    // Image   output_image;
+    // Image   temp_image;
+    // Image   temp_image2;
+
+    Image masked_image;
+    Image circlemask_image;
+    Image squaremask;
+    wxPrintf("Hello world\n");
+
+    wxString input_image    = my_current_job.arguments[0].ReturnStringArgument( );
+    float    X_maskcenter   = my_current_job.arguments[1].ReturnFloatArgument( );
+    float    Y_maskcenter   = my_current_job.arguments[2].ReturnFloatArgument( );
+    float    SquareMaskSize = my_current_job.arguments[3].ReturnFloatArgument( );
+
+    MRCFile input_file_2d(input_image.ToStdString( ), false);
     Image   input_image;
-    Image   padded_image;
-    Image   output_image;
-    Image   temp_image;
-    Image   temp_image2;
 
-    padded_dimensions_x = ReturnClosestFactorizedUpper(pad_factor * input_file_2d.ReturnXSize( ), 3);
-    padded_dimensions_y = ReturnClosestFactorizedUpper(pad_factor * input_file_2d.ReturnYSize( ), 3);
-    input_volume.Allocate(input_file_3d.ReturnXSize( ), input_file_3d.ReturnYSize( ), input_file_3d.ReturnZSize( ), true);
-    input_image.Allocate(input_file_2d.ReturnXSize( ), input_file_2d.ReturnYSize( ), true);
-    padded_image.Allocate(padded_dimensions_x, padded_dimensions_y, true);
+    int X_dim, Y_dim;
+    // int X_maskcenter, Y_maskcenter;
+    X_dim = input_file_2d.ReturnXSize( );
+    Y_dim = input_file_2d.ReturnYSize( );
+    // X_maskcenter = X_dim / 4;
+    // Y_maskcenter = Y_dim / 4;
+    wxPrintf("X_dim = %i, Y_dim = %i \n", X_dim, Y_dim);
+    wxPrintf("X_maskcenter = %i, Y_maskcenter = %i \n\n", X_maskcenter, Y_maskcenter);
+    float zz;
 
-    input_volume.ReadSlices(&input_file_3d, 1, input_file_3d.ReturnZSize( ));
+    // padded_dimensions_x = ReturnClosestFactorizedUpper(pad_factor * input_file_2d.ReturnXSize( ), 3);
+    // padded_dimensions_y = ReturnClosestFactorizedUpper(pad_factor * input_file_2d.ReturnYSize( ), 3);
+
+    //   input_volume.Allocate(input_file_3d.ReturnXSize( ), input_file_3d.ReturnYSize( ), input_file_3d.ReturnZSize( ), true);
+    // circlemask_image.Allocate(X_dim, Y_dim, true);
+    input_image.Allocate(X_dim, Y_dim, true);
     input_image.ReadSlice(&input_file_2d, 1);
-    sigma = sqrtf(input_image.ReturnVarianceOfRealValues( ));
+
+    squaremask.Allocate(X_dim, Y_dim, true);
+    squaremask.SetToConstant(1.0);
+    squaremask.SquareMaskWithValue(300, 0.0, false, X_maskcenter, Y_maskcenter, 0);
+    // GaussianLowPassFilter(float sigma)
+    squaremask.ForwardFFT( );
+    squaremask.GaussianLowPassFilter(0.01);
+    squaremask.BackwardFFT( );
+
+    masked_image.CopyFrom(&input_image);
+    masked_image.Normalize(10.0);
+    masked_image.WriteSlicesAndFillHeader("normalized.mrc", 1);
+
+    // masked_image.ForwardFFT( );
+    // squaremask.ForwardFFT( );
+    masked_image.MultiplyPixelWise(squaremask);
+
+    // zz = masked_image.ApplyMask(squaremask, 80, 10, 0.5, 10);
+    masked_image.WriteSlicesAndFillHeader("imageapplysquaremask.mrc", 1);
+    squaremask.WriteSlicesAndFillHeader("squaretest.mrc", 1);
+
+    // padded_image.Allocate(padded_dimensions_x, padded_dimensions_y, true);
+
+    // masked_image.Allocate(input_file_2d.ReturnXSize( ), input_file_2d.ReturnYSize( ), true);
+
+    // //  input_volume.ReadSlices(&input_file_3d, 1, input_file_3d.ReturnZSize( ));
+    // input_image.ReadSlice(&input_file_2d, 1);
+    // input_image.Normalize(10);
+
+    // circlemask_image.ReadSlice(&mask_file_2d, 1);
+
+    // sigma = sqrtf(input_image.ReturnVarianceOfRealValues( ));
+    // // temp
+    // wxPrintf("xdim= %i mean=%g \n\n", input_file_2d.ReturnXSize( ), input_image.ReturnAverageOfRealValues( ));
+    // wxPrintf("sigma= %g \n\n", sigma);
+
+    // masked_image.CopyFrom(&input_image);
+    // float zz;
+    // zz = masked_image.ApplyMask( );
+
+    //masked_image.SquareMaskWithValue(500, 0);
+    // masked_image.TriangleMask(300); //this create a mask, not apply mask to the image
+    // masked_image.CircleMask(200); //this mask the original image by a circle
+    // masked_image.WriteSlicesAndFillHeader("circlemask.mrc", 1);
+    // masked_image.CircleMaskWithValue(200, -10); //this mask the original image by a circle
+    // masked_image.WriteSlicesAndFillHeader("circlemaskn10.mrc", 1);
+    // float zz;
+    // zz = masked_image.ApplyMask(masked_image, 20);
+    // zz = masked_image.ApplyMask(circlemask_image, 80, 10, 0.5, 10);
+    // masked_image.WriteSlicesAndFillHeader("imageapplymask.mrc", 1);
+    // wxPrintf("zzzzzzzzz%g\n\n", zz);
+
+    /*    ///-----------------------------------------------------------------------------------------------------------
     input_image.ClipIntoLargerRealSpace2D(&padded_image);
     padded_image.AddGaussianNoise(10.0 * sigma);
     padded_image.WriteSlice(&output_file, 1);
@@ -112,6 +210,7 @@ bool NikoTestApp::DoCalculation( ) {
         output_image.WriteSlice(&output_file, 1 + count);
     }
     wxPrintf("\nSum of slice peaks = %g\n", sum_of_peaks);
+    ///------------------------------- */
 
     /*	wxPrintf("\nDoing 1000 FFTs %i x %i\n", output_image.logical_x_dimension, output_image.logical_y_dimension);
 	for (i = 0; i < 1000; i++)

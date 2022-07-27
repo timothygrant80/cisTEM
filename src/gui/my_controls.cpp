@@ -1695,6 +1695,85 @@ ClassVolumeSelectPanel::~ClassVolumeSelectPanel()
 }
 
 
+CombinedPackageClassSelectionPanel::CombinedPackageClassSelectionPanel (wxWindow *parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
+: wxPanel (parent, id, pos, size, style)
+{
+	MainSizer = new wxBoxSizer( wxHORIZONTAL );
+
+	wxBoxSizer* ClassSelectSizer;
+	ClassSelectSizer = new wxBoxSizer( wxHORIZONTAL );
+
+	ClassText = new wxStaticText( this, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, 0 );
+	ClassText->Wrap( 1 );
+	ClassSelectSizer->Add( ClassText, 1, wxALIGN_CENTER_VERTICAL | wxALL, 5 );
+
+	ClassComboBox = new wxComboBox(this, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, 0, NULL, 0 );
+
+	ClassSelectSizer->Add( ClassComboBox, 1, wxALL, 5 );
+	MainSizer->Add( ClassSelectSizer, 1, 0, 5 );
+
+	this->SetSizer( MainSizer );
+	this->Layout();
+}
+
+CombinedPackageClassSelectionPanel::~CombinedPackageClassSelectionPanel ()
+{
+
+}
+
+CombinedPackageRefinementSelectPanel::CombinedPackageRefinementSelectPanel (wxWindow *parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
+: wxPanel (parent, id, pos, size, style)
+{
+	MainSizer = new wxBoxSizer( wxHORIZONTAL );
+
+	wxBoxSizer* RefinementSelectSizer;
+	RefinementSelectSizer = new wxBoxSizer( wxHORIZONTAL );
+
+	RefinementText = new wxStaticText( this, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, 0 );
+	RefinementText->Wrap( 0 );
+	RefinementSelectSizer->Add( RefinementText, 1, wxALIGN_CENTER | wxALIGN_CENTER_VERTICAL, 5 );
+
+	RefinementComboBox = new RefinementPickerComboPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+
+	RefinementSelectSizer->Add(RefinementComboBox, 1, 0, 5);
+	MainSizer->Add( RefinementSelectSizer, 1, 0, 5 );
+
+	this->SetSizer( MainSizer );
+	this->Layout();
+}
+
+CombinedPackageRefinementSelectPanel::~CombinedPackageRefinementSelectPanel()
+{
+
+}
+/*
+CombinedPackageVolumeSelectPanel::CombinedPackageVolumeSelectPanel(wxWindow *parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
+: wxPanel (parent, id, pos, size, style)
+{
+	MainSizer = new wxBoxSizer( wxHORIZONTAL );
+
+	wxBoxSizer* VolumeTextSizer;
+	VolumeTextSizer = new wxBoxSizer( wxHORIZONTAL );
+
+	VolumeText = new wxStaticText( this, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, 0 );
+	VolumeText->Wrap( -1 );
+	VolumeTextSizer->Add( VolumeText, 0, wxALIGN_LEFT, 5 );
+
+	wxBoxSizer* VolumeSelectionSizer = new wxBoxSizer(wxHORIZONTAL);
+	VolumeComboBox = new VolumeAssetPickerComboPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+
+	VolumeSelectionSizer->Add(VolumeComboBox, 1, 0, 5);
+	MainSizer->Add( VolumeTextSizer, 1, 0, 5 );
+	MainSizer->Add( VolumeSelectionSizer, 1, 0, 5);
+
+	this->SetSizer( MainSizer );
+	this->Layout();
+}
+
+CombinedPackageVolumeSelectPanel::~CombinedPackageVolumeSelectPanel()
+{
+
+}*/
 wxThread::ExitCode AutoMaskerThread::Entry()
 {
 	//  Read in the files, threshold them write them out again...

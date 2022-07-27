@@ -190,8 +190,6 @@ ImagesPickerComboPanel::ImagesPickerComboPanel(wxWindow* parent, wxWindowID id, 
 
 
 
-
-
 /*
 void VolumeAssetPickerComboPanel::GetAssetFromPopup()
 {

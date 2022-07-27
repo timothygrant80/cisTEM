@@ -4,16 +4,15 @@
 
 
 extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
+extern MyVolumeAssetPanel *volume_asset_panel;
 //extern MyNewRefinementPackageWizard *refinement_package_wizard;
 
 
 CombineRefinementPackagesWizard::CombineRefinementPackagesWizard(wxWindow *parent)
-:
-CombineRefinementPackagesWizardParent( parent )
+: CombineRefinementPackagesWizardParent( parent )
 {
 
 	number_of_visits = 0;
-	selected_refinement_id = 0;
 	imported_params_found = false;
 	classes_selected = false;
 	refinements_page_has_been_visited = false;
@@ -21,7 +20,8 @@ CombineRefinementPackagesWizardParent( parent )
 
 	package_selection_page = new PackageSelectionPage(this);
 	combined_class_selection_page = new CombinedClassSelectionPage(this);
-	refinement_select_page = new RefinementSelectPage(this);
+	refinement_selection_page = new RefinementSelectPage(this);
+	//volume_selection_page = new VolumeSelectionPage(this);
 
 
 	GetPageAreaSizer()->Add(package_selection_page);
@@ -84,12 +84,12 @@ void CombineRefinementPackagesWizard::OnUpdateUI(wxUpdateUIEvent& event)
 
 	if (GetCurrentPage() == combined_class_selection_page)
 	{
-		wxWindowList all_children = combined_class_selection_page->combined_class_selection_panel->class_selector->GetChildren();
-		CombinedPackageItemPanel *panel_pointer;
+		wxWindowList all_children = combined_class_selection_page->combined_class_selection_panel->CombinedClassScrollWindow->GetChildren();
+		CombinedPackageClassSelectionPanel *panel_pointer;
 		for (int i = 0; i < all_children.GetCount(); i++)
 		{
-			panel_pointer = reinterpret_cast <CombinedPackageItemPanel *> (all_children.Item(i)->GetData());
-			if (panel_pointer->ItemSelectBox->GetSelection() == -1) // Don't let user finish without selecting classes
+			panel_pointer = reinterpret_cast <CombinedPackageClassSelectionPanel *> (all_children.Item(i)->GetData());
+			if (panel_pointer->ClassComboBox->GetSelection() == -1) // Don't let user continue without selecting classes for each package
 			{
 				classes_selected = false;
 				break;
@@ -167,76 +167,70 @@ void CombineRefinementPackagesWizard::PageChanged(wxWizardEvent& event)
 	}
 	if (event.GetPage() == combined_class_selection_page)
 	{
+		if (classes_page_has_been_visited == true) combined_class_selection_page->combined_class_selection_panel->CombinedClassScrollWindow->DestroyChildren();
+
 		combined_class_selection_page->Freeze();
-		combined_class_selection_page->combined_class_selection_panel->ScrollSizer->Clear(true);
 
-		int number_of_packages = 0;
-		for (int i = 0; i < refinement_package_asset_panel->all_refinement_packages.GetCount(); i++)
-		{
-			if (package_selection_page->package_selection_panel->RefinementPackagesCheckListBox->IsChecked(i))
-			{
-				number_of_packages++;
-			}
-		}
 
 		for (int i = 0; i < refinement_package_asset_panel->all_refinement_packages.GetCount(); i++)
 		{
-			if (package_selection_page->package_selection_panel->RefinementPackagesCheckListBox->IsChecked(i))
+			if (package_selection_page->package_selection_panel->RefinementPackagesCheckListBox->IsChecked(i)) // If the refinement package is checked, add a selection box for it.
 			{
-				CombinedPackageItemPanel *panel1 = new CombinedPackageItemPanel(combined_class_selection_page->combined_class_selection_panel->class_selector, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-				panel1->ItemLabel->SetLabel(wxString::Format("Class from " + refinement_package_asset_panel->all_refinement_packages[i].name + ": "));
-				combined_class_selection_page->combined_class_selection_panel->ScrollSizer->Add( panel1, 0, wxEXPAND | wxALL, 5 ); // Add ONE classes panel to the combined_class_selection_panel...each box is a new panel?
-				panel1->FillClassSelectionBox(i);
+				CombinedPackageClassSelectionPanel *panel1 = new CombinedPackageClassSelectionPanel(combined_class_selection_page->combined_class_selection_panel->CombinedClassScrollWindow, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+				panel1->ClassText->SetLabel("Class from " + refinement_package_asset_panel->all_refinement_packages[i].name + ": ");
+				panel1->ClassText->Wrap(300);
+				panel1->FillComboBox(i);
+				combined_class_selection_page->combined_class_selection_panel->CombinedClassScrollSizer->Add(panel1, 0, wxALL | wxEXPAND, 5);
 			}
 		}
+
+		classes_page_has_been_visited = true;
 		combined_class_selection_page->Layout();
 		combined_class_selection_page->Thaw();
 	}
 
-
+	//TODO: change this code to fit new build
 	wxString refinement_name;
-	if (event.GetPage() == refinement_select_page)
+	if (event.GetPage() == refinement_selection_page)
 	{
-		refinement_select_page->Freeze();
+		refinement_selection_page->Freeze();
 
-		if (refinements_page_has_been_visited == false)
+		if (refinements_page_has_been_visited == true) refinement_selection_page->combined_package_refinement_selection_panel->CombinedRefinementScrollWindow->DestroyChildren();
+
+		for (int i = 0; i < refinement_package_asset_panel->all_refinement_packages.GetCount(); i++)
 		{
-			refinement_names.Add("Placeholder");
-			for (int i = 0; i < refinement_package_asset_panel->all_refinement_short_infos.GetCount(); i++)
+			if (package_selection_page->package_selection_panel->RefinementPackagesCheckListBox->IsChecked(i))
 			{
-				refinement_name = refinement_package_asset_panel->all_refinement_short_infos[i].name;
-				for (int j = 0; j < refinement_names.GetCount(); j++)
-				{
-					if (refinement_names[j].IsSameAs(refinement_name))
-					{
-						break;
-					}
-					else if (j == refinement_names.GetCount() - 1)
-					{
-						if (refinement_names[0].IsSameAs("Placeholder"))
-						{
-							refinement_names.Remove("Placeholder");
-							refinement_names.Add(refinement_name);
-						}
-						else
-						{
-							refinement_names.Add(refinement_name);
-						}
-					}
-				}
-
+				CombinedPackageRefinementSelectPanel *panel1 = new CombinedPackageRefinementSelectPanel(refinement_selection_page->combined_package_refinement_selection_panel->CombinedRefinementScrollWindow, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+				panel1->RefinementText->SetLabel("Refinement from " + refinement_package_asset_panel->all_refinement_packages[i].name + ": ");
+				panel1->RefinementText->Wrap(300);
+				panel1->RefinementComboBox->FillComboBox(i, false);
+				refinement_selection_page->combined_package_refinement_selection_panel->CombinedRefinementScrollSizer->Add(panel1, 0, wxEXPAND | wxALL, 5);
 			}
-
-			refinement_select_page->combined_package_refinement_selection_panel->SelectRefinementText->Wrap(this->GetClientSize().GetWidth());
-			refinement_select_page->combined_package_refinement_selection_panel->RefinementsListBox->InsertItems(refinement_names, 0);
-			refinement_select_page->Layout();
-			refinement_select_page->Thaw();
-			refinements_page_has_been_visited = true;
 		}
-	}
-	//}
-	//}
 
+		refinement_selection_page->combined_package_refinement_selection_panel->SelectRefinementText->Wrap(this->GetClientSize().GetWidth());
+		refinement_selection_page->Layout();
+		refinement_selection_page->Thaw();
+		refinements_page_has_been_visited = true;
+	}
+
+	/*if (event.GetPage() == volume_selection_page)
+	{
+		volume_selection_page->Freeze();
+
+		if (volume_selection_page_has_been_visited == true) volume_selection_page->volume_selection_panel->CombinedVolumeScrollWindow->DestroyChildren();
+
+		CombinedPackageVolumeSelectPanel *panel1 = new CombinedPackageVolumeSelectPanel(volume_selection_page->volume_selection_panel->CombinedVolumeScrollWindow, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
+		panel1->VolumeText->SetLabel("Select a volume to use: ");
+		panel1->VolumeComboBox->FillComboBox(true, true);
+		volume_selection_page->volume_selection_panel->CombinedVolumeScrollSizer->Add(panel1, 0, wxEXPAND | wxALL, 5);
+
+		volume_selection_page->volume_selection_panel->SelectVolumeText->Wrap(this->GetClientSize().GetWidth());
+		volume_selection_page->Layout();
+		volume_selection_page->Thaw();
+		volume_selection_page_has_been_visited = true;
+	}*/
 }
 
 
@@ -277,10 +271,8 @@ void CombineRefinementPackagesWizard::OnFinished( wxWizardEvent& event )
 			output_particle_counter = output_particle_counter + refinement_package_asset_panel->all_refinement_packages[counter].contained_particles.GetCount();
 		}
 	}
-
 	temp_combined_refinement->number_of_particles = output_particle_counter;
 	temp_combined_refinement->SizeAndFillWithEmpty(output_particle_counter, 1);
-
 	for (counter = 0; counter < refinement_package_asset_panel->all_refinement_packages.GetCount(); counter++)
 	{
 		if (package_selection_page->package_selection_panel->RefinementPackagesCheckListBox->IsChecked(counter) == true)
@@ -309,19 +301,10 @@ void CombineRefinementPackagesWizard::OnFinished( wxWizardEvent& event )
 			temp_combined_refinement_package->asset_id = refinement_package_asset_panel->all_refinement_packages.GetCount() + 1;  // In database, does index of the list start at 0 or 1? i.e., should this be + 1?
 			temp_combined_refinement_package->name = wxString::Format("Refinement Package #%li", refinement_package_asset_panel->current_asset_number);
 
-			for (int i = 0; i < refinement_package_asset_panel->all_refinement_short_infos.GetCount(); i++)
-			{
-				if (refinement_package_asset_panel->all_refinement_short_infos[i].name.IsSameAs(refinement_select_page->combined_package_refinement_selection_panel->RefinementsListBox->GetString(refinement_select_page->combined_package_refinement_selection_panel->RefinementsListBox->GetSelection()))) // if the refinement info name is the same as the selected name, use this refinement ID
-				selected_refinement_id = refinement_package_asset_panel->all_refinement_short_infos[i].refinement_id;
-			}
-
-			temp_combined_refinement->name = main_frame->current_project.database.GetRefinementByID(selected_refinement_id)->name;
-			temp_combined_refinement->resolution_statistics_box_size = main_frame->current_project.database.GetRefinementByID(selected_refinement_id)->resolution_statistics_box_size;
-			temp_combined_refinement->resolution_statistics_are_generated = main_frame->current_project.database.GetRefinementByID(selected_refinement_id)->resolution_statistics_are_generated;
-			temp_combined_refinement->resolution_statistics_pixel_size = main_frame->current_project.database.GetRefinementByID(selected_refinement_id)->resolution_statistics_pixel_size;
-
-			temp_combined_refinement->starting_refinement_id = main_frame->current_project.database.GetRefinementByID(selected_refinement_id)->starting_refinement_id;
-			temp_combined_refinement->percent_used = main_frame->current_project.database.GetRefinementByID(selected_refinement_id)->percent_used;
+			temp_combined_refinement->name = wxString::Format("Combined Parameters - ID #%li", new_refinement_id);
+			temp_combined_refinement->resolution_statistics_box_size = temp_combined_refinement_package->stack_box_size;
+			temp_combined_refinement->starting_refinement_id = new_refinement_id;
+			temp_combined_refinement->percent_used = 100.0f;
 			temp_combined_refinement->refinement_id = new_refinement_id;
 			temp_combined_refinement->datetime_of_run = wxDateTime::Now();
 			temp_combined_refinement->number_of_classes = 1;
@@ -338,28 +321,66 @@ void CombineRefinementPackagesWizard::OnFinished( wxWizardEvent& event )
 		}
 	}
 	temp_combined_refinement_package->output_pixel_size = smallest_pixel_size;
+	temp_combined_refinement->resolution_statistics_pixel_size = smallest_pixel_size;
 
 	// Now loop through the existing MRC filenames to get to the files; open, read through, then write each particle to new MRC file, close.
 	output_particle_counter = 0;  // Return output_partice_counter to 0 before executing the read/write stack functions
-
-	wxWindowList all_children = combined_class_selection_page->combined_class_selection_panel->class_selector->GetChildren(); // Get the window's children for pulling user selected classes
-	CombinedPackageItemPanel *panel_pointer;
-	int package_classes[all_children.GetCount()];
-
+	wxWindowList all_children = refinement_selection_page->combined_package_refinement_selection_panel->CombinedRefinementScrollWindow->GetChildren(); // Get the window's children for pulling user selected classes
+	CombinedPackageRefinementSelectPanel *panel_pointer;
+	wxArrayLong corresponding_refinement_ids[all_children.GetCount()];
+	//TODO: check over how this is being pulled; may not want to go this route
 	for (int i = 0; i < all_children.GetCount(); i++)
 	{
-		panel_pointer = reinterpret_cast <CombinedPackageItemPanel *> (all_children.Item(i)->GetData());
-
 		if (all_children.Item(i)->GetData()->GetClassInfo()->GetClassName() == wxString("wxPanel"))
 		{
-			package_classes[i] = panel_pointer->ItemSelectBox->GetSelection();
+			panel_pointer = reinterpret_cast <CombinedPackageRefinementSelectPanel *> (all_children.Item(i)->GetData());
+			for (int j = 0; j < refinement_package_asset_panel->all_refinement_packages.GetCount(); j++)
+			{
+				// If this package is the correct package, then check the selection and grab the proper refinement_id
+				if (panel_pointer->RefinementText->GetLabel().Contains(refinement_package_asset_panel->all_refinement_packages[j].name))
+				{
+
+					if(panel_pointer->RefinementComboBox->GetSelection() == 0)
+						corresponding_refinement_ids->Add(refinement_package_asset_panel->all_refinement_packages[j].refinement_ids[refinement_package_asset_panel->all_refinement_packages[i].refinement_ids.GetCount() - 1]);
+
+					else
+					{
+						corresponding_refinement_ids->Add(refinement_package_asset_panel->all_refinement_packages[j].refinement_ids[panel_pointer->RefinementComboBox->GetSelection()]);
+					}
+				}
+			}
 		}
 	}
+
+	wxWindowList class_page_children = combined_class_selection_page->combined_class_selection_panel->CombinedClassScrollWindow->GetChildren();
+	CombinedPackageClassSelectionPanel *panel_pointer2;
+	int package_classes[all_children.GetCount()];
+	for (int i = 0; i < class_page_children.GetCount(); i++)
+	{
+		if (all_children.Item(i)->GetData()->GetClassInfo()->GetClassName() == wxString("wxPanel"))
+		{
+			panel_pointer2 = reinterpret_cast <CombinedPackageClassSelectionPanel *> (class_page_children.Item(i)->GetData());
+			package_classes[i] = panel_pointer2->ClassComboBox->GetSelection();
+		}
+	}
+
+/*	wxWindowList volume_page_child = volume_selection_page->volume_selection_panel->CombinedVolumeScrollWindow->GetChildren();
+	CombinedPackageVolumeSelectPanel *panel_pointer3;
+	panel_pointer3 = reinterpret_cast <CombinedPackageVolumeSelectPanel *> (volume_page_child.Item(0)->GetData());
+	if (panel_pointer3->VolumeComboBox->GetSelection() == 0)
+	{
+		temp_combined_refinement_package->references_for_next_refinement.Add(-1);
+	}
+	else
+	{
+		temp_combined_refinement_package->references_for_next_refinement.Add(volume_asset_panel->all_assets_list->ReturnVolumeAssetPointer(panel_pointer3->VolumeComboBox->GetSelection() - 1)->asset_id);
+	}
+	*/
 
 	for (counter = 0; counter < array_of_packages_to_combine.GetCount(); counter++)
 	{
 		MRCFile input_file(array_of_packages_to_combine[counter].stack_filename.ToStdString(), false);
-		Refinement *old_refinement = main_frame->current_project.database.GetRefinementByID(array_of_packages_to_combine[counter].refinement_ids[array_of_packages_to_combine[counter].refinement_ids.GetCount() - 1]); // For assigning refinement statistics to infos based on the stack they come from
+		Refinement *old_refinement = main_frame->current_project.database.GetRefinementByID(corresponding_refinement_ids->Item(counter));
 
 		for (input_particle_counter = 0; input_particle_counter < array_of_packages_to_combine[counter].contained_particles.GetCount(); input_particle_counter++)
 		{
@@ -406,7 +427,6 @@ void CombineRefinementPackagesWizard::OnFinished( wxWizardEvent& event )
 					temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].beam_tilt_y = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].beam_tilt_y;
 					temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].image_shift_x = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].image_shift_x;
 					temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].image_shift_y = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].image_shift_y;
-
 				}
 			}
 
@@ -453,8 +473,6 @@ void CombineRefinementPackagesWizard::OnFinished( wxWizardEvent& event )
 
 	combined_stacks_file.CloseFile();
 
-	//wxPrintf("Contained particles = %li\n" , temp_combined_refinement_package->contained_particles.GetCount());
-
 	main_frame->current_project.database.Begin(); // Have to add the newly combined package and its refinement to the database
 	refinement_package_asset_panel->AddAsset(temp_combined_refinement_package);
 	main_frame->current_project.database.AddRefinementPackageAsset(temp_combined_refinement_package);
@@ -466,13 +484,12 @@ void CombineRefinementPackagesWizard::OnFinished( wxWizardEvent& event )
 	}
 
 	main_frame->current_project.database.AddRefinement(temp_combined_refinement);
-
 	ArrayofAngularDistributionHistograms all_histograms = temp_combined_refinement->ReturnAngularDistributions(temp_combined_refinement_package->symmetry);
+
 	for (class_counter = 1; class_counter <= temp_combined_refinement->number_of_classes; class_counter++)
 	{
 		main_frame->current_project.database.AddRefinementAngularDistribution(all_histograms[class_counter - 1], temp_combined_refinement->refinement_id, class_counter);
 	}
-
 	ShortRefinementInfo temp_info;
 	temp_info = temp_combined_refinement;
 
@@ -556,7 +573,7 @@ CombinedClassSelectionPage::~CombinedClassSelectionPage()
 
 wxWizardPage * CombinedClassSelectionPage::GetNext () const
 {
-	return wizard_pointer->refinement_select_page;
+	return wizard_pointer->refinement_selection_page;
 }
 
 wxWizardPage * CombinedClassSelectionPage::GetPrev () const
@@ -564,63 +581,21 @@ wxWizardPage * CombinedClassSelectionPage::GetPrev () const
 	return wizard_pointer->package_selection_page;
 }
 
-///////////////////////////////
 
-// ITEM SELECT PANEL
-
-///////////////////////////////
-
-ItemSelectPanel::ItemSelectPanel (wxWindow *parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style) : wxPanel ()
+void CombinedPackageClassSelectionPanel::FillComboBox(long wanted_refinement_package)
 {
-	MainSizer = new wxBoxSizer( wxHORIZONTAL );
-
-	wxBoxSizer* bSizer989;
-	bSizer989 = new wxBoxSizer( wxHORIZONTAL );
-
-	//ClassText = new wxStaticText( this, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, 0 );
-	//ClassText->Wrap( -1 );
-	//bSizer989->Add( ClassText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-
-	ItemSelectBoxPanel = new CombinedPackageItemPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-	bSizer989->Add(ItemSelectBoxPanel, 1, wxALL, 5 );
-	MainSizer->Add( bSizer989, 1, 0, 5 );
-
-	this->SetSizer( MainSizer );
-	this->Layout();
-}
-
-ItemSelectPanel::~ItemSelectPanel ()
-{
-
-}
-
-/////////////////////////////
-
-// CLASS SELECT CHOICE BOX
-
-/////////////////////////////
-
-void CombinedPackageItemPanel::FillClassSelectionBox(int package_number)
-{
-	for (int i = 0; i < refinement_package_asset_panel->all_refinement_packages[package_number].number_of_classes; i++)
+	for (int i = 1; i <= refinement_package_asset_panel->all_refinement_packages[wanted_refinement_package].number_of_classes; i++)
 	{
-		wxString temp = wxString::Format(wxT("%i"), i + 1);
-		this->ItemSelectBox->Append(temp);
+		this->ClassComboBox->Append(wxString::Format("%i", i));
+		this->ClassComboBox->SetSelection(0);
 	}
-	this->ItemSelectBox->Select(0);
 }
 
+////////////////////////////
 
-CombinedPackageItemPanel::CombinedPackageItemPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
-: CombinedPackageItemPicker (parent, id, pos, size, style)
-{
+// SELECT REFINEMENTS PAGE
 
-}
-
-CombinedPackageItemPanel::~CombinedPackageItemPanel()
-{
-
-}
+////////////////////////////
 
 RefinementSelectPage::RefinementSelectPage(CombineRefinementPackagesWizard *parent, const wxBitmap &bitmap)
 : wxWizardPage(parent, bitmap)
@@ -652,4 +627,34 @@ wxWizardPage * RefinementSelectPage::GetPrev() const
 	return wizard_pointer->combined_class_selection_page;
 }
 
+
+/*VolumeSelectionPage::VolumeSelectionPage(CombineRefinementPackagesWizard *parent, const wxBitmap &bitmap)
+: wxWizardPage(parent, bitmap)
+{
+	Freeze();
+	wizard_pointer = parent;
+	wxBoxSizer* bSizer686;
+	volume_selection_panel = new CombinedPackageVolumePanel(this);
+
+	bSizer686 = new wxBoxSizer(wxVERTICAL);
+	this->SetSizer(bSizer686);
+	bSizer686->Fit(this);
+	bSizer686->Add(volume_selection_panel);
+	Thaw();
+}
+
+VolumeSelectionPage::~VolumeSelectionPage()
+{
+
+}
+
+wxWizardPage * VolumeSelectionPage::GetNext() const
+{
+	return NULL;
+}
+
+wxWizardPage * VolumeSelectionPage::GetPrev() const
+{
+	return wizard_pointer->refinement_selection_page;
+}*/
 

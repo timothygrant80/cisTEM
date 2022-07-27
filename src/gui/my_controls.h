@@ -321,4 +321,49 @@ class OneSecondProgressDialog: public wxProgressDialog {
 	bool Update	(int value, const wxString & newmsg = wxEmptyString, bool * skip = NULL);
 };
 
+
+
+class CombinedPackageClassSelectionPanel : public wxPanel //TODO: find proper name for this panel
+{
+public:
+
+	wxComboBox* ClassComboBox;
+	wxStaticText* ClassText;
+	wxBoxSizer* MainSizer;
+	wxBoxSizer* bSizer989;
+
+	CombinedPackageClassSelectionPanel (wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
+	~CombinedPackageClassSelectionPanel();
+	void FillComboBox(long wanted_refinement_package);
+
+};
+
+class CombinedPackageRefinementSelectPanel : public wxPanel
+{
+	public:
+	RefinementPickerComboPanel* RefinementComboBox;
+	wxStaticText* RefinementText;
+	wxBoxSizer* MainSizer;
+	wxBoxSizer* bSizer989;
+
+	CombinedPackageRefinementSelectPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
+	~CombinedPackageRefinementSelectPanel();
+
+	private:
+	bool has_random_parameters;
+
+};
+
+/*class CombinedPackageVolumeSelectPanel : public wxPanel
+{
+public:
+	VolumeAssetPickerComboPanel* VolumeComboBox;
+	wxStaticText* VolumeText;
+	wxBoxSizer* MainSizer;
+	wxBoxSizer* bSizer989;
+
+	CombinedPackageVolumeSelectPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
+	~CombinedPackageVolumeSelectPanel();
+};
+*/
 #endif

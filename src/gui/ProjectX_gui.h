@@ -75,10 +75,10 @@ class VolumeAssetPickerComboPanel;
 #include <wx/scrolwin.h>
 #include <wx/richtext/richtextctrl.h>
 #include <wx/gauge.h>
-#include <wx/choice.h>
 #include <wx/splitter.h>
 #include <wx/checkbox.h>
 #include <wx/dataview.h>
+#include <wx/choice.h>
 #include <wx/dialog.h>
 #include <wx/filepicker.h>
 #include <wx/wizard.h>
@@ -86,7 +86,6 @@ class VolumeAssetPickerComboPanel;
 WX_DEFINE_ARRAY_PTR( wxWizardPageSimple*, WizardPages );
 #include <wx/statbox.h>
 #include <wx/checklst.h>
-#include <wx/listbox.h>
 #include <wx/toolbar.h>
 #include <wx/aui/auibook.h>
 #include <wx/statbmp.h>
@@ -144,7 +143,9 @@ class AssetPickerComboPanelParent : public wxPanel
 
 
 	public:
+		wxBoxSizer* bSizer436;
 		MemoryComboBox* AssetComboBox;
+		wxBoxSizer* bSizer494;
 		NoFocusBitmapButton* PreviousButton;
 		NoFocusBitmapButton* NextButton;
 		NoFocusBitmapButton* WindowSelectButton;
@@ -268,25 +269,6 @@ class AbInitio3DPanelParent : public JobPanel
 
 		AbInitio3DPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1631,686 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~AbInitio3DPanelParent();
-
-};
-
-///////////////////////////////////////////////////////////////////////////////
-/// Class CombinedPackageItemPicker
-///////////////////////////////////////////////////////////////////////////////
-class CombinedPackageItemPicker : public wxPanel
-{
-	private:
-
-	protected:
-
-	public:
-		wxBoxSizer* ClassSelectSizer;
-		wxStaticText* ItemLabel;
-		wxChoice* ItemSelectBox;
-
-		CombinedPackageItemPicker( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
-		~CombinedPackageItemPicker();
 
 };
 
@@ -3147,28 +3129,8 @@ class PackageSelectionPanel : public wxPanel
 		NumericTextCtrl* MolecularWeightTextCtrl;
 		NumericTextCtrl* LargestDimensionTextCtrl;
 
-		PackageSelectionPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+		PackageSelectionPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 700,500 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~PackageSelectionPanel();
-
-};
-
-///////////////////////////////////////////////////////////////////////////////
-/// Class CombinedPackageRefinementPanel
-///////////////////////////////////////////////////////////////////////////////
-class CombinedPackageRefinementPanel : public wxPanel
-{
-	private:
-
-	protected:
-		wxStaticLine* m_staticline187;
-
-	public:
-		wxStaticText* SelectRefinementText;
-		wxBoxSizer* bSizer589;
-		wxListBox* RefinementsListBox;
-
-		CombinedPackageRefinementPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
-		~CombinedPackageRefinementPanel();
 
 };
 
@@ -3184,11 +3146,51 @@ class CombinedClassSelectionPanel : public wxPanel
 		wxStaticLine* m_staticline187;
 
 	public:
-		wxScrolledWindow* class_selector;
-		wxBoxSizer* ScrollSizer;
+		wxScrolledWindow* CombinedClassScrollWindow;
+		wxBoxSizer* CombinedClassScrollSizer;
 
-		CombinedClassSelectionPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+		CombinedClassSelectionPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 700,500 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 		~CombinedClassSelectionPanel();
+
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class CombinedPackageRefinementPanel
+///////////////////////////////////////////////////////////////////////////////
+class CombinedPackageRefinementPanel : public wxPanel
+{
+	private:
+
+	protected:
+		wxStaticLine* m_staticline187;
+
+	public:
+		wxStaticText* SelectRefinementText;
+		wxScrolledWindow* CombinedRefinementScrollWindow;
+		wxBoxSizer* CombinedRefinementScrollSizer;
+
+		CombinedPackageRefinementPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 700,500 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+		~CombinedPackageRefinementPanel();
+
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class CombinedPackageVolumePanel
+///////////////////////////////////////////////////////////////////////////////
+class CombinedPackageVolumePanel : public wxPanel
+{
+	private:
+
+	protected:
+		wxStaticLine* m_staticline187;
+
+	public:
+		wxStaticText* SelectVolumeText;
+		wxScrolledWindow* CombinedVolumeScrollWindow;
+		wxBoxSizer* CombinedVolumeScrollSizer;
+
+		CombinedPackageVolumePanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 700,500 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+		~CombinedPackageVolumePanel();
 
 };
 

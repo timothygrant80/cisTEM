@@ -120,13 +120,11 @@ MainFrame::~MainFrame()
 
 AssetPickerComboPanelParent::AssetPickerComboPanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
 {
-	wxBoxSizer* bSizer436;
 	bSizer436 = new wxBoxSizer( wxHORIZONTAL );
 
 	AssetComboBox = new MemoryComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
 	bSizer436->Add( AssetComboBox, 100, wxALIGN_CENTER_VERTICAL|wxEXPAND, 0 );
 
-	wxBoxSizer* bSizer494;
 	bSizer494 = new wxBoxSizer( wxVERTICAL );
 
 	PreviousButton = new NoFocusBitmapButton( this, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBU_AUTODRAW|0 );
@@ -758,43 +756,6 @@ AbInitio3DPanelParent::~AbInitio3DPanelParent()
 	TakeLastStartResultButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AbInitio3DPanelParent::TakeLastStartClicked ), NULL, this );
 	StartRefinementButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AbInitio3DPanelParent::StartRefinementClick ), NULL, this );
 
-}
-
-CombinedPackageItemPicker::CombinedPackageItemPicker( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
-{
-	ClassSelectSizer = new wxBoxSizer( wxHORIZONTAL );
-
-	wxBoxSizer* bSizer494;
-	bSizer494 = new wxBoxSizer( wxHORIZONTAL );
-
-	ItemLabel = new wxStaticText( this, wxID_ANY, wxT("Refinement Package:"), wxDefaultPosition, wxDefaultSize, 0 );
-	ItemLabel->Wrap( 1 );
-	bSizer494->Add( ItemLabel, 1, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
-
-
-	ClassSelectSizer->Add( bSizer494, 1, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT, 5 );
-
-	wxBoxSizer* bSizer587;
-	bSizer587 = new wxBoxSizer( wxHORIZONTAL );
-
-	wxArrayString ItemSelectBoxChoices;
-	ItemSelectBox = new wxChoice( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, ItemSelectBoxChoices, 0 );
-	ItemSelectBox->SetSelection( 0 );
-	ItemSelectBox->SetMaxSize( wxSize( 150,150 ) );
-
-	bSizer587->Add( ItemSelectBox, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_LEFT|wxEXPAND, 5 );
-
-
-	ClassSelectSizer->Add( bSizer587, 1, wxALIGN_CENTER|wxALIGN_CENTER_VERTICAL|wxALIGN_LEFT, 5 );
-
-
-	this->SetSizer( ClassSelectSizer );
-	this->Layout();
-	ClassSelectSizer->Fit( this );
-}
-
-CombinedPackageItemPicker::~CombinedPackageItemPicker()
-{
 }
 
 Refine2DPanel::Refine2DPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : JobPanel( parent, id, pos, size, style, name )
@@ -12238,7 +12199,6 @@ PackageSelectionPanel::PackageSelectionPanel( wxWindow* parent, wxWindowID id, c
 
 	this->SetSizer( mainSizer );
 	this->Layout();
-	mainSizer->Fit( this );
 
 	// Connect Events
 	RefinementPackagesCheckListBox->Connect( wxEVT_COMMAND_CHECKLISTBOX_TOGGLED, wxCommandEventHandler( PackageSelectionPanel::PackageClassSelection ), NULL, this );
@@ -12249,35 +12209,6 @@ PackageSelectionPanel::~PackageSelectionPanel()
 	// Disconnect Events
 	RefinementPackagesCheckListBox->Disconnect( wxEVT_COMMAND_CHECKLISTBOX_TOGGLED, wxCommandEventHandler( PackageSelectionPanel::PackageClassSelection ), NULL, this );
 
-}
-
-CombinedPackageRefinementPanel::CombinedPackageRefinementPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
-{
-	wxBoxSizer* bSizer686;
-	bSizer686 = new wxBoxSizer( wxVERTICAL );
-
-	SelectRefinementText = new wxStaticText( this, wxID_ANY, wxT("Select a previously used Refinement to apply, or select Random Parameters to generate from random parameters:"), wxDefaultPosition, wxDefaultSize, 0 );
-	SelectRefinementText->Wrap( -1 );
-	bSizer686->Add( SelectRefinementText, 0, wxALL, 5 );
-
-	m_staticline187 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
-	bSizer686->Add( m_staticline187, 0, wxEXPAND | wxALL, 5 );
-
-	bSizer589 = new wxBoxSizer( wxHORIZONTAL );
-
-	RefinementsListBox = new wxListBox( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0, NULL, wxLB_NEEDED_SB|wxLB_SINGLE );
-	bSizer589->Add( RefinementsListBox, 1, wxALL|wxEXPAND, 5 );
-
-
-	bSizer686->Add( bSizer589, 1, wxALL|wxEXPAND, 5 );
-
-
-	this->SetSizer( bSizer686 );
-	this->Layout();
-}
-
-CombinedPackageRefinementPanel::~CombinedPackageRefinementPanel()
-{
 }
 
 CombinedClassSelectionPanel::CombinedClassSelectionPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
@@ -12292,15 +12223,15 @@ CombinedClassSelectionPanel::CombinedClassSelectionPanel( wxWindow* parent, wxWi
 	m_staticline187 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	bSizer686->Add( m_staticline187, 0, wxEXPAND | wxALL, 5 );
 
-	class_selector = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL );
-	class_selector->SetScrollRate( 5, 5 );
-	ScrollSizer = new wxBoxSizer( wxVERTICAL );
+	CombinedClassScrollWindow = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHSCROLL|wxVSCROLL );
+	CombinedClassScrollWindow->SetScrollRate( 5, 5 );
+	CombinedClassScrollSizer = new wxBoxSizer( wxVERTICAL );
 
 
-	class_selector->SetSizer( ScrollSizer );
-	class_selector->Layout();
-	ScrollSizer->Fit( class_selector );
-	bSizer686->Add( class_selector, 1, wxEXPAND | wxALL, 5 );
+	CombinedClassScrollWindow->SetSizer( CombinedClassScrollSizer );
+	CombinedClassScrollWindow->Layout();
+	CombinedClassScrollSizer->Fit( CombinedClassScrollWindow );
+	bSizer686->Add( CombinedClassScrollWindow, 1, wxEXPAND | wxALL, 5 );
 
 
 	this->SetSizer( bSizer686 );
@@ -12308,6 +12239,68 @@ CombinedClassSelectionPanel::CombinedClassSelectionPanel( wxWindow* parent, wxWi
 }
 
 CombinedClassSelectionPanel::~CombinedClassSelectionPanel()
+{
+}
+
+CombinedPackageRefinementPanel::CombinedPackageRefinementPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
+{
+	wxBoxSizer* bSizer686;
+	bSizer686 = new wxBoxSizer( wxVERTICAL );
+
+	SelectRefinementText = new wxStaticText( this, wxID_ANY, wxT("Select a previously used Refinement to apply, or select Random Parameters to generate from random parameters:"), wxDefaultPosition, wxDefaultSize, 0 );
+	SelectRefinementText->Wrap( -1 );
+	bSizer686->Add( SelectRefinementText, 0, wxALL, 5 );
+
+	m_staticline187 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer686->Add( m_staticline187, 0, wxEXPAND | wxALL, 5 );
+
+	CombinedRefinementScrollWindow = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHSCROLL|wxVSCROLL );
+	CombinedRefinementScrollWindow->SetScrollRate( 5, 5 );
+	CombinedRefinementScrollSizer = new wxBoxSizer( wxVERTICAL );
+
+
+	CombinedRefinementScrollWindow->SetSizer( CombinedRefinementScrollSizer );
+	CombinedRefinementScrollWindow->Layout();
+	CombinedRefinementScrollSizer->Fit( CombinedRefinementScrollWindow );
+	bSizer686->Add( CombinedRefinementScrollWindow, 1, wxEXPAND | wxALL, 5 );
+
+
+	this->SetSizer( bSizer686 );
+	this->Layout();
+}
+
+CombinedPackageRefinementPanel::~CombinedPackageRefinementPanel()
+{
+}
+
+CombinedPackageVolumePanel::CombinedPackageVolumePanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
+{
+	wxBoxSizer* bSizer686;
+	bSizer686 = new wxBoxSizer( wxVERTICAL );
+
+	SelectVolumeText = new wxStaticText( this, wxID_ANY, wxT("Select a 3D Volume to use from each package:"), wxDefaultPosition, wxDefaultSize, 0 );
+	SelectVolumeText->Wrap( -1 );
+	bSizer686->Add( SelectVolumeText, 0, wxALL, 5 );
+
+	m_staticline187 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer686->Add( m_staticline187, 0, wxEXPAND | wxALL, 5 );
+
+	CombinedVolumeScrollWindow = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHSCROLL|wxVSCROLL );
+	CombinedVolumeScrollWindow->SetScrollRate( 5, 5 );
+	CombinedVolumeScrollSizer = new wxBoxSizer( wxVERTICAL );
+
+
+	CombinedVolumeScrollWindow->SetSizer( CombinedVolumeScrollSizer );
+	CombinedVolumeScrollWindow->Layout();
+	CombinedVolumeScrollSizer->Fit( CombinedVolumeScrollWindow );
+	bSizer686->Add( CombinedVolumeScrollWindow, 1, wxEXPAND | wxALL, 5 );
+
+
+	this->SetSizer( bSizer686 );
+	this->Layout();
+}
+
+CombinedPackageVolumePanel::~CombinedPackageVolumePanel()
 {
 }
 

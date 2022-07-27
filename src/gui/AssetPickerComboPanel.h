@@ -96,5 +96,4 @@ class AssetPickerListCtrl: public wxListCtrl{
 };
 
 
-
 #endif

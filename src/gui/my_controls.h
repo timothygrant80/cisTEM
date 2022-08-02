@@ -323,7 +323,7 @@ class OneSecondProgressDialog: public wxProgressDialog {
 
 
 
-class CombinedPackageClassSelectionPanel : public wxPanel //TODO: find proper name for this panel
+class CombinedPackageClassSelectionPanel : public wxPanel
 {
 public:
 
@@ -354,16 +354,4 @@ class CombinedPackageRefinementSelectPanel : public wxPanel
 
 };
 
-/*class CombinedPackageVolumeSelectPanel : public wxPanel
-{
-public:
-	VolumeAssetPickerComboPanel* VolumeComboBox;
-	wxStaticText* VolumeText;
-	wxBoxSizer* MainSizer;
-	wxBoxSizer* bSizer989;
-
-	CombinedPackageVolumeSelectPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
-	~CombinedPackageVolumeSelectPanel();
-};
-*/
 #endif

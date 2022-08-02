@@ -322,8 +322,8 @@ void CombineRefinementPackagesWizard::OnFinished( wxWizardEvent& event )
 	temp_combined_refinement_package->output_pixel_size = smallest_pixel_size;
 	temp_combined_refinement->resolution_statistics_pixel_size = smallest_pixel_size;
 
-	// Now loop through the existing MRC filenames to get to the files; open, read through, then write each particle to new MRC file, close.
-	output_particle_counter = 0;  // Return output_partice_counter to 0 before executing the read/write stack functions
+
+
 	wxWindowList all_children = refinement_selection_page->combined_package_refinement_selection_panel->CombinedRefinementScrollWindow->GetChildren(); // Get the window's children for pulling user selected classes
 	CombinedPackageRefinementSelectPanel *panel_pointer;
 	wxArrayLong corresponding_refinement_ids[all_children.GetCount()];
@@ -338,22 +338,6 @@ void CombineRefinementPackagesWizard::OnFinished( wxWizardEvent& event )
 		}
 	}
 
-	for (int i = 0; i < refinement_package_asset_panel->all_refinement_packages.GetCount(); i++)
-	{
-		if (package_selection_page->package_selection_panel->RefinementPackagesCheckListBox->IsChecked(i))
-		{
-			wxPrintf("Package Refinement IDs: %li \n", refinement_package_asset_panel->all_refinement_packages[i].refinement_ids[0]);
-		}
-	}
-
-
-	wxPrintf("Count: %li \n", corresponding_refinement_ids->GetCount());
-
-	for (int i = 0; i < corresponding_refinement_ids->GetCount(); i++)
-	{
-		wxPrintf("Refinement ID: %li \n", corresponding_refinement_ids->Item(i));
-	}
-
 	wxWindowList class_page_children = combined_class_selection_page->combined_class_selection_panel->CombinedClassScrollWindow->GetChildren();
 	CombinedPackageClassSelectionPanel *panel_pointer2;
 	int package_classes[all_children.GetCount()];
@@ -366,19 +350,9 @@ void CombineRefinementPackagesWizard::OnFinished( wxWizardEvent& event )
 		}
 	}
 
-	/*	wxWindowList volume_page_child = volume_selection_page->volume_selection_panel->CombinedVolumeScrollWindow->GetChildren();
-	CombinedPackageVolumeSelectPanel *panel_pointer3;
-	panel_pointer3 = reinterpret_cast <CombinedPackageVolumeSelectPanel *> (volume_page_child.Item(0)->GetData());
-	if (panel_pointer3->VolumeComboBox->GetSelection() == 0)
-	{
-		temp_combined_refinement_package->references_for_next_refinement.Add(-1);
-	}
-	else
-	{
-		temp_combined_refinement_package->references_for_next_refinement.Add(volume_asset_panel->all_assets_list->ReturnVolumeAssetPointer(panel_pointer3->VolumeComboBox->GetSelection() - 1)->asset_id);
-	}
-	 */
+	output_particle_counter = 0;  // Return output_partice_counter to 0 before executing the read/write stack functions
 
+	// Now loop through the existing MRC filenames to get to the files; open, read through, then write each particle to new MRC file, close.
 	for (counter = 0; counter < array_of_packages_to_combine.GetCount(); counter++)
 	{
 		MRCFile input_file(array_of_packages_to_combine[counter].stack_filename.ToStdString(), false);
@@ -627,36 +601,4 @@ wxWizardPage * RefinementSelectPage::GetNext() const
 wxWizardPage * RefinementSelectPage::GetPrev() const
 {
 	return wizard_pointer->combined_class_selection_page;
-}
-
-
-/*VolumeSelectionPage::VolumeSelectionPage(CombineRefinementPackagesWizard *parent, const wxBitmap &bitmap)
-: wxWizardPage(parent, bitmap)
-{
-	Freeze();
-	wizard_pointer = parent;
-	wxBoxSizer* bSizer686;
-	volume_selection_panel = new CombinedPackageVolumePanel(this);
-
-	bSizer686 = new wxBoxSizer(wxVERTICAL);
-	this->SetSizer(bSizer686);
-	bSizer686->Fit(this);
-	bSizer686->Add(volume_selection_panel);
-	Thaw();
-}
-
-VolumeSelectionPage::~VolumeSelectionPage()
-{
-
-}
-
-wxWizardPage * VolumeSelectionPage::GetNext() const
-{
-	return NULL;
-}
-
-wxWizardPage * VolumeSelectionPage::GetPrev() const
-{
-	return wizard_pointer->refinement_selection_page;
-}*/
 

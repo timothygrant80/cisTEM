@@ -35,7 +35,7 @@ public:
 
 	wxStaticText* ClassText;
 
-	wxWizardPage * GetNext () const; // this will have to be changed
+	wxWizardPage * GetNext () const;
 	wxWizardPage * GetPrev () const;
 
 };
@@ -87,7 +87,6 @@ public:
 	PackageSelectionPage *package_selection_page;
 	CombinedClassSelectionPage *combined_class_selection_page;
 	RefinementSelectPage *refinement_selection_page;
-	//VolumeSelectionPage *volume_selection_page;
 
 private:
 

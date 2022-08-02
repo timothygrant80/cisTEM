@@ -1746,34 +1746,8 @@ CombinedPackageRefinementSelectPanel::~CombinedPackageRefinementSelectPanel()
 {
 
 }
-/*
-CombinedPackageVolumeSelectPanel::CombinedPackageVolumeSelectPanel(wxWindow *parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
-: wxPanel (parent, id, pos, size, style)
-{
-	MainSizer = new wxBoxSizer( wxHORIZONTAL );
 
-	wxBoxSizer* VolumeTextSizer;
-	VolumeTextSizer = new wxBoxSizer( wxHORIZONTAL );
 
-	VolumeText = new wxStaticText( this, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, 0 );
-	VolumeText->Wrap( -1 );
-	VolumeTextSizer->Add( VolumeText, 0, wxALIGN_LEFT, 5 );
-
-	wxBoxSizer* VolumeSelectionSizer = new wxBoxSizer(wxHORIZONTAL);
-	VolumeComboBox = new VolumeAssetPickerComboPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-
-	VolumeSelectionSizer->Add(VolumeComboBox, 1, 0, 5);
-	MainSizer->Add( VolumeTextSizer, 1, 0, 5 );
-	MainSizer->Add( VolumeSelectionSizer, 1, 0, 5);
-
-	this->SetSizer( MainSizer );
-	this->Layout();
-}
-
-CombinedPackageVolumeSelectPanel::~CombinedPackageVolumeSelectPanel()
-{
-
-}*/
 wxThread::ExitCode AutoMaskerThread::Entry()
 {
 	//  Read in the files, threshold them write them out again...

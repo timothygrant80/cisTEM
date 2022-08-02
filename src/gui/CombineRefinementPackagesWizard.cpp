@@ -4,7 +4,6 @@
 
 
 extern MyRefinementPackageAssetPanel *refinement_package_asset_panel;
-extern MyVolumeAssetPanel *volume_asset_panel;
 //extern MyNewRefinementPackageWizard *refinement_package_wizard;
 
 
@@ -328,28 +327,31 @@ void CombineRefinementPackagesWizard::OnFinished( wxWizardEvent& event )
 	wxWindowList all_children = refinement_selection_page->combined_package_refinement_selection_panel->CombinedRefinementScrollWindow->GetChildren(); // Get the window's children for pulling user selected classes
 	CombinedPackageRefinementSelectPanel *panel_pointer;
 	wxArrayLong corresponding_refinement_ids[all_children.GetCount()];
-	//TODO: check over how this is being pulled; may not want to go this route
+	// all_children is parallel to array_of_packages_to_combine; can use this to add to corresponding_refinement_ids
 	for (int i = 0; i < all_children.GetCount(); i++)
 	{
 		if (all_children.Item(i)->GetData()->GetClassInfo()->GetClassName() == wxString("wxPanel"))
 		{
 			panel_pointer = reinterpret_cast <CombinedPackageRefinementSelectPanel *> (all_children.Item(i)->GetData());
-			for (int j = 0; j < refinement_package_asset_panel->all_refinement_packages.GetCount(); j++)
-			{
-				// If this package is the correct package, then check the selection and grab the proper refinement_id
-				if (panel_pointer->RefinementText->GetLabel().Contains(refinement_package_asset_panel->all_refinement_packages[j].name))
-				{
 
-					if(panel_pointer->RefinementComboBox->GetSelection() == 0)
-						corresponding_refinement_ids->Add(refinement_package_asset_panel->all_refinement_packages[j].refinement_ids[refinement_package_asset_panel->all_refinement_packages[i].refinement_ids.GetCount() - 1]);
-
-					else
-					{
-						corresponding_refinement_ids->Add(refinement_package_asset_panel->all_refinement_packages[j].refinement_ids[panel_pointer->RefinementComboBox->GetSelection()]);
-					}
-				}
-			}
+			corresponding_refinement_ids->Add(array_of_packages_to_combine[i].refinement_ids[panel_pointer->RefinementComboBox->GetSelection()]);
 		}
+	}
+
+	for (int i = 0; i < refinement_package_asset_panel->all_refinement_packages.GetCount(); i++)
+	{
+		if (package_selection_page->package_selection_panel->RefinementPackagesCheckListBox->IsChecked(i))
+		{
+			wxPrintf("Package Refinement IDs: %li \n", refinement_package_asset_panel->all_refinement_packages[i].refinement_ids[0]);
+		}
+	}
+
+
+	wxPrintf("Count: %li \n", corresponding_refinement_ids->GetCount());
+
+	for (int i = 0; i < corresponding_refinement_ids->GetCount(); i++)
+	{
+		wxPrintf("Refinement ID: %li \n", corresponding_refinement_ids->Item(i));
 	}
 
 	wxWindowList class_page_children = combined_class_selection_page->combined_class_selection_panel->CombinedClassScrollWindow->GetChildren();
@@ -364,7 +366,7 @@ void CombineRefinementPackagesWizard::OnFinished( wxWizardEvent& event )
 		}
 	}
 
-/*	wxWindowList volume_page_child = volume_selection_page->volume_selection_panel->CombinedVolumeScrollWindow->GetChildren();
+	/*	wxWindowList volume_page_child = volume_selection_page->volume_selection_panel->CombinedVolumeScrollWindow->GetChildren();
 	CombinedPackageVolumeSelectPanel *panel_pointer3;
 	panel_pointer3 = reinterpret_cast <CombinedPackageVolumeSelectPanel *> (volume_page_child.Item(0)->GetData());
 	if (panel_pointer3->VolumeComboBox->GetSelection() == 0)
@@ -375,7 +377,7 @@ void CombineRefinementPackagesWizard::OnFinished( wxWizardEvent& event )
 	{
 		temp_combined_refinement_package->references_for_next_refinement.Add(volume_asset_panel->all_assets_list->ReturnVolumeAssetPointer(panel_pointer3->VolumeComboBox->GetSelection() - 1)->asset_id);
 	}
-	*/
+	 */
 
 	for (counter = 0; counter < array_of_packages_to_combine.GetCount(); counter++)
 	{

@@ -5,6 +5,7 @@
 
 class CombineRefinementPackagesWizard;
 
+
 class PackageSelectionPage : public wxWizardPage
 {
 	CombineRefinementPackagesWizard *wizard_pointer;
@@ -19,8 +20,6 @@ public:
 	wxWizardPage * GetNext () const;
 	wxWizardPage * GetPrev () const {return NULL;};
 };
-
-
 
 
 class CombinedClassSelectionPage : public wxWizardPage
@@ -40,6 +39,7 @@ public:
 
 };
 
+
 class RefinementSelectPage : public wxWizardPage
 {
 	CombineRefinementPackagesWizard *wizard_pointer;
@@ -54,19 +54,6 @@ public:
 	wxWizardPage * GetPrev() const;
 };
 
-class VolumeSelectionPage : public wxWizardPage
-{
-	CombineRefinementPackagesWizard *wizard_pointer;
-
-public:
-
-	VolumeSelectionPage(CombineRefinementPackagesWizard *parent, const wxBitmap &bitmap=wxNullBitmap);
-	~VolumeSelectionPage();
-
-	wxWizardPage * GetNext() const;
-	wxWizardPage * GetPrev() const;
-
-};
 
 class CombineRefinementPackagesWizard : public CombineRefinementPackagesWizardParent
 {

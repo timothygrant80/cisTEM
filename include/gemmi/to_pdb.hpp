@@ -436,6 +436,7 @@ inline void write_header(const Structure& st, std::ostream& os,
     for (size_t i = 0; i != entity_list.size(); ++i)
       if (const Entity* entity = entity_list[i]) {
         const Chain& ch = st.models[0].chains[i];
+        const char* dbref_entry_id = entry_id.size() <= 4 ? entry_id.c_str() : "";
         for (const Entity::DbRef& dbref : entity->dbrefs) {
           bool short_record = *dbref.db_end.num < 100000 &&
                               dbref.accession_code.size() < 9 &&
@@ -450,11 +451,14 @@ inline void write_header(const Structure& st, std::ostream& os,
           char buf8[8];
           char buf8a[8];
           gf_snprintf(buf, 82, "DBREF  %4s%2s %5s %5s %-6s  ",
-                      entry_id.c_str(), ch.name.c_str(),
+                      dbref_entry_id, ch.name.c_str(),
                       impl::write_seq_id(buf8, begin),
                       impl::write_seq_id(buf8a, end),
                       dbref.db_name.c_str());
-          if (!(dbref.db_name == "PDB" && dbref.id_code == entry_id)) {
+          if (dbref.db_name == "PDB" && dbref.id_code == entry_id) {
+            // PDB uses self-reference for fragments that don't have real
+            // reference. No idea why. In such case the same begin/end is used.
+          } else {
             begin = dbref.db_begin;
             end = dbref.db_end;
           }
@@ -463,14 +467,14 @@ inline void write_header(const Structure& st, std::ostream& os,
                         dbref.accession_code.c_str(), dbref.id_code.c_str(),
                         *begin.num, begin.icode, *end.num, end.icode);
           } else {
-            buf[5] = '1';
+            buf[5] = '1';  // -> DBREF1
             gf_snprintf(buf+33, 82-33, "              %-33s\n",
                         dbref.id_code.c_str());
           }
           os.write(buf, 81);
           if (!short_record)
             WRITE("DBREF2 %4s%2s     %-22s     %10d  %10d             ",
-                  entry_id.c_str(), ch.name.c_str(),
+                  dbref_entry_id, ch.name.c_str(),
                   dbref.accession_code.c_str(), *begin.num, *end.num);
         }
       }
@@ -558,8 +562,8 @@ inline void write_header(const Structure& st, std::ostream& os,
           const_CRA cra2 = st.models[0].find_cra(con.partner2, true);
           if (!cra1.atom || !cra2.atom)
             continue;
-          SymImage im = st.cell.find_nearest_image(cra1.atom->pos,
-                                                   cra2.atom->pos, con.asu);
+          NearestImage im = st.cell.find_nearest_image(cra1.atom->pos,
+                                                       cra2.atom->pos, con.asu);
           if (++counter == 10000)
             counter = 0;
           WRITE("SSBOND%4d %3s%2s %5s %5s%2s %5s %28s %6s %5.2f  ",
@@ -568,7 +572,7 @@ inline void write_header(const Structure& st, std::ostream& os,
              write_seq_id(buf8, cra1.residue->seqid),
              cra2.residue->name.c_str(), cra2.chain->name.c_str(),
              write_seq_id(buf8a, cra2.residue->seqid),
-             "1555", im.pdb_symbol(false).c_str(), im.dist());
+             "1555", im.symmetry_code(false).c_str(), im.dist());
         }
     }
 
@@ -582,12 +586,12 @@ inline void write_header(const Structure& st, std::ostream& os,
           // In special cases (LINKR gap) atoms are not there.
           if (!cra1.residue || !cra2.residue)
             continue;
-          std::string im_pdb_symbol = "", im_dist_str = "";
+          std::string im_pdb_symbol, im_dist_str;
           bool im_same_asu = true;
           if (cra1.atom && cra2.atom) {
-            SymImage im = st.cell.find_nearest_image(cra1.atom->pos,
-                                                     cra2.atom->pos, con.asu);
-            im_pdb_symbol = im.pdb_symbol(false);
+            NearestImage im = st.cell.find_nearest_image(cra1.atom->pos,
+                                                         cra2.atom->pos, con.asu);
+            im_pdb_symbol = im.symmetry_code(false);
             im_dist_str = to_str_prec<2>(im.dist());
             im_same_asu = im.same_asu();
           }

@@ -49,8 +49,7 @@ AC_DEFUN([AX_CUDA],
 default_cuda_home_path="/usr/local/cuda"
 
 # In Thrust 1.10 c++11 is deprecated. Not using those libs now, so squash warnings, but we should consider switching to a newer standard
-AC_DEFINE(THRUST_IGNORE_DEPRECATED_CPP_11,true)
-
+AC_DEFINE(THRUST_IGNORE_DEPRECATED_CPP_11, [], true)
 AC_MSG_NOTICE([Checking for gpu request and vars])
 AC_ARG_WITH([cuda], AS_HELP_STRING([--with-cuda@<:@=yes|no|DIR@:>@], [prefix where cuda is installed (default=no)]),
 [
@@ -99,11 +98,11 @@ if test "$want_cuda" = "yes" ; then
 	# set CUDA flags for static compilation. This is required for cufft callbacks.
 	if test -n "$cuda_home_path"
 	then
-	  CUDA_CFLAGS="-I$cuda_home_path/include  -I$cuda_home_path/samples/common/inc/"
-      CUDA_LIBS="-L$cuda_home_path/$libdir -lcufft_static -lnppial_static -lnppist_static -lnppc_static -lcurand_static -lculibos -lcudart_static -lrt"
+	  CUDA_CFLAGS="-I$cuda_home_path/include "
+      CUDA_LIBS="-L$cuda_home_path/$libdir -lcufft_static -lnppial_static -lnppist_static -lnppc_static -lnppidei_static -lcurand_static -lculibos -lcudart_static -lrt"
 	else
-	  CUDA_CFLAGS="-I/usr/local/cuda/include  -I/usr/local/cuda/samples/common/inc/"
-	  CUDA_LIBS="-L/usr/local/cuda/$libdir -lcufft_static -lnppial_static -lnppist_static -lnppc_static -lcurand_static -lculibos -lcudart_static -lrt"
+	  CUDA_CFLAGS="-I/usr/local/cuda/include "
+	  CUDA_LIBS="-L/usr/local/cuda/$libdir -lcufft_static -lnppial_static -lnppist_static -lnppc_static -lnppidei_static -lcurand_static -lculibos -lcudart_static -lrt"
 	fi
 
 
@@ -140,45 +139,17 @@ if test "$want_cuda" = "yes" ; then
 		AC_MSG_RESULT([not found])
 	])
 
-	AC_MSG_CHECKING([for Cuda libraries])
-	AC_LINK_IFELSE(
-	[
-		AC_LANG_PROGRAM([@%:@include <cuda.h>],
-		[
-			CUmodule cuModule;
-			cuModuleLoad(&cuModule, "myModule.cubin");
-			CUdeviceptr devPtr;
-			CUfunction cuFunction;
-			unsigned pitch, width = 250, height = 500;
-			cuMemAllocPitch(&devPtr, &pitch,width * sizeof(float), height, 4);
-			cuModuleGetFunction(&cuFunction, cuModule, "myKernel");
-			cuFuncSetBlockShape(cuFunction, 512, 1, 1);
-			cuParamSeti(cuFunction, 0, devPtr);
-			cuParamSetSize(cuFunction, sizeof(devPtr));
-			cuLaunchGrid(cuFunction, 100, 1);
-		])
-	],
-	[
-		have_cuda_libs="yes"
-		AC_MSG_RESULT([yes])
-	],
-	[
-		have_cuda_libs="no"
-		AC_MSG_RESULT([not found])
-	])
+
 	AC_LANG_POP(C)
 
 	CPPFLAGS=$saved_CPPFLAGS
 	LIBS=$saved_LIBS
   	CUDA_LIBS=$saved_CUDA_LIBS
 	
-	if test "$have_cuda_headers" = "yes" -a "$have_cuda_libs" = "yes" -a "$have_nvcc" = "yes"
-	then
+
+
 		have_cuda="yes"
-	else
-		have_cuda="no"
-		AC_MSG_ERROR([Cuda is requested but not available])
-	fi
+
 fi
 
 # This is the code that will be generated at compile time and should be specified for the most used gpu 
@@ -249,7 +220,7 @@ else
 		
 fi
 
-if test "x$is_cuda_ge_11" -eq "x1" ; then
+if test "x$is_cuda_ge_11" == "x1" ; then
   AC_MSG_NOTICE([CUDA >= 11.0, enabling --extra-device-vectorization])
   NVCCFLAGS+=" --extra-device-vectorization -std=c++17" 
 else
@@ -257,7 +228,8 @@ else
 fi
   
 #--extra-device-vectorization
-NVCCFLAGS+=" --default-stream per-thread -m64 -O3 --use_fast_math  -Xptxas --warn-on-local-memory-usage,--warn-on-spills, --generate-line-info -Xcompiler= -DGPU -DSTDC_HEADERS=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_MEMORY_H=1 -DHAVE_STRINGS_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_UNISTD_H=1 -DHAVE_DLFCN_H=1"
+# -Xcompiler= -DGPU -DSTDC_HEADERS=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_MEMORY_H=1 -DHAVE_STRINGS_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_UNISTD_H=1 -DHAVE_DLFCN_H=1"
+NVCCFLAGS+=" --default-stream per-thread -m64 -O3 --use_fast_math  -Xptxas --warn-on-local-memory-usage,--warn-on-spills, --generate-line-info "
 
 AC_ARG_ENABLE(gpu-cache-hints, AS_HELP_STRING([--disable-gpu-cache-hints],[Do not use the intrinsics for cache hints]),[
   if test "$enableval" = no; then

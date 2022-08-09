@@ -26,6 +26,8 @@
         "string": "cpp",
         "filesystem": "cpp"
     },
+    "C_Cpp.clang_format_path": "/usr/bin/clang-format-14",
+    "editor.formatOnSave": true,
     "DockerRun.DisableDockerrc": true,
     "html.format.endWithNewline": true
 }

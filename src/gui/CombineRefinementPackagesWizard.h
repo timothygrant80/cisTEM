@@ -59,7 +59,6 @@ class VolumeSelectionPage : public wxWizardPage
 	CombineRefinementPackagesWizard *wizard_pointer;
 
 public:
-	CombinedPackageVolumePanel *volume_selection_panel;
 
 	VolumeSelectionPage(CombineRefinementPackagesWizard *parent, const wxBitmap &bitmap=wxNullBitmap);
 	~VolumeSelectionPage();

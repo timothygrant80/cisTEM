@@ -74,7 +74,7 @@ noinst_HEADERS = core/asset_group.h \
                  gui/my_controls.h \
                  gui/UnblurResultsPanel.h \
                  gui/CTF1DPanel.h \
-                 gui/MyAssetParentPanel.h \
+                 gui/MyAssetPanelParent.h \
                  gui/MyImageAssetPanel.h \
                  gui/MyParticlePositionAssetPanel.h \
                  gui/MyVolumeAssetPanel.h \
@@ -93,7 +93,8 @@ noinst_HEADERS = core/asset_group.h \
                  gui/MyNewRefinementPackageWizard.h \
                  gui/MyResultsPanel.h \
                  gui/MyAssetsPanel.h \
-                 gui/MyActionsPanel.h \
+                 gui/ActionsPanelSpa.h \
+                 gui/ActionsPanelTm.h \
                  gui/MySettingsPanel.h \
                  gui/PickingResultsPanel.h \
                  gui/MyParticlePositionExportDialog.h \
@@ -140,6 +141,7 @@ noinst_HEADERS = core/asset_group.h \
                  gui/ShowTemplateMatchResultsPanel.h \
                  gui/MyExperimentalPanel.h \
                  gui/MatchTemplateResultsPanel.h \
+                 gui/MatchTemplatePanel.h \
                  gui/RefineTemplatePanel.h \
                  gui/icons/action_icon.cpp \
                  gui/icons/assets_icon.cpp \
@@ -208,38 +210,41 @@ noinst_HEADERS = core/asset_group.h \
                  programs/console_test/hiv_image_80x80x1.cpp \
                  programs/console_test/hiv_images_shift_noise_80x80x10.cpp \
                  programs/console_test/sine_128x128x1.cpp \
-                 programs/simulate/wave_function_propagator.h \
-                 programs/simulate/scattering_potential.h 
+                 gui/icons/match_template_icon.cpp 
+                 
+
                  
 if EXPERIMENTAL_AM
-noinst_HEADERS += 	gui/MatchTemplatePanel.h \
-					gui/icons/experimental_icon.cpp \
-					gui/icons/match_template_icon.cpp 
-					
-					
+noinst_HEADERS += 	gui/icons/experimental_icon.cpp \
+                    gui/AtomicCoordinatesAssetPanel.h \
+                    gui/AtomicCoordinatesChooserDialog.h \
+                    gui/AtomicCoordinatesImportDialog.h 
+
 endif      
 
 if EXPERIMENTAL_AM
 noinst_HEADERS += core/water.h \
-                  core/pdb.h 
+                  core/pdb.h \
+                  programs/simulate/wave_function_propagator.h \
+                  programs/simulate/scattering_potential.h 
 endif
 
 if ENABLESAMPLES_AM
 noinst_HEADERS +=  programs/samples/samples_functional_testing.h 
+noinst_HEADERS +=  programs/samples/common/helper_functions.h programs/samples/common/embedded_test_file.h programs/samples/common/numeric_test_file.h
+noinst_HEADERS +=  programs/samples/common/common.h programs/samples/0_simple/simple.h 
+if ENABLEGPU_AM
+noinst_HEADERS += programs/samples/1_cpu_gpu_comparison/cpu_gpu_comparison.h
+endif
 endif
 	
 
-if EXPERIMENTAL_AM
-noinst_HEADERS += core/water.h \
-                  core/pdb.h 
-endif
-
 noinst_LIBRARIES = libcore.a libguicore.a
 
-bin_PROGRAMS = unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan make_orth_views sharpen_map calculate_fsc make_size_map prepare_stack prepare_stack_classaverage align_symmetry subtract_from_stack binarize  move_volume_xyz  symmetry_expand_stack_and_par fft local_resolution local_resolution_finalize local_resolution_filter subtract_two_stacks add_two_stacks multiply_two_stacks divide_two_stacks invert_stack convert_par_to_star align_coordinates find_dqe combine_via_max refine_ctf estimate_beamtilt remove_relion_stripes warp_to_cistem create_mask invert_hand niko_test append_stacks cisTEM convert_star_to_binary convert_binary_to_star convert_eer_to_mrc azimuthal_average normalize_stack print_stack_statistics combine_stacks_by_star
+bin_PROGRAMS = unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan make_orth_views sharpen_map calculate_fsc make_size_map prepare_stack prepare_stack_classaverage align_symmetry subtract_from_stack binarize  move_volume_xyz  symmetry_expand_stack_and_par fft local_resolution local_resolution_finalize local_resolution_filter subtract_two_stacks add_two_stacks multiply_two_stacks divide_two_stacks invert_stack convert_par_to_star align_coordinates find_dqe combine_via_max refine_ctf estimate_beamtilt remove_relion_stripes warp_to_cistem create_mask invert_hand niko_test append_stacks cisTEM convert_star_to_binary convert_binary_to_star convert_eer_to_mrc azimuthal_average normalize_stack print_stack_statistics combine_stacks_by_star match_template refine_template make_template_result prepare_stack_matchtemplate
 
 if EXPERIMENTAL_AM   
-bin_PROGRAMS += match_template refine_template make_template_result prepare_stack_matchtemplate simulate sum_all_power_spectra
+bin_PROGRAMS += refine_template_dev simulate sum_all_power_spectra
 endif
 
 if ENABLESAMPLES_AM
@@ -342,10 +347,10 @@ libguicore_a_SOURCES =  core/gui_job_controller.cpp
 libguicore_a_CXXFLAGS = $(WX_CPPFLAGS)
 libguicore_a_CPPFLAGS = $(WX_CPPFLAGS)
 
-cisTEM_SOURCES = programs/projectx/projectx.cpp gui/gui_globals.cpp gui/MyFSCPanel.cpp gui/MyRefinementResultsPanel.cpp gui/PlotFSCPanel.cpp gui/gui_functions.cpp gui/my_controls.cpp gui/MyRenameDialog.cpp gui/BitmapPanel.cpp gui/PickingBitmapPanel.cpp gui/job_panel.cpp gui/ProjectX_gui.cpp gui/ResultsDataViewListCtrl.cpp gui/MyMovieFilterDialog.cpp gui/MainFrame.cpp gui/MyAssetParentPanel.cpp gui/MyMovieAssetPanel.cpp gui/MyImageAssetPanel.cpp gui/MyParticlePositionAssetPanel.cpp gui/MyVolumeChooserDialog.cpp gui/MovieImportDialog.cpp gui/MyImageImportDialog.cpp gui/MyVolumeImportDialog.cpp gui/ErrorDialog.cpp gui/AlignMoviesPanel.cpp gui/MyRunProfilesPanel.cpp gui/mathplot.cpp gui/MyMovieAlignResultsPanel.cpp gui/MyFindCTFResultsPanel.cpp gui/PickingResultsPanel.cpp gui/MyAddRunCommandDialog.cpp gui/MyNewProjectWizard.cpp gui/MyNewRefinementPackageWizard.cpp gui/UnblurResultsPanel.cpp gui/ShowCTFResultsPanel.cpp gui/PickingResultsDisplayPanel.cpp gui/CTF1DPanel.cpp gui/FindCTFPanel.cpp gui/FindParticlesPanel.cpp gui/MyVolumeAssetPanel.cpp gui/MyResultsPanel.cpp gui/MyAssetsPanel.cpp gui/MyActionsPanel.cpp gui/MySettingsPanel.cpp gui/MyParticlePositionExportDialog.cpp gui/MyFrealignExportDialog.cpp gui/MyRelionExportDialog.cpp gui/MyRefinementPackageAssetPanel.cpp gui/MyRefine3DPanel.cpp gui/MyRefine2DPanel.cpp gui/ClassificationPlotPanel.cpp gui/AbInitioPlotPanel.cpp gui/Refine2DResultsPanel.cpp gui/AngularDistributionPlotPanel.cpp core/particle_finder.cpp gui/DisplayPanel.cpp gui/ClassumSelectionCopyFromDialog.cpp gui/MyOverviewPanel.cpp gui/AbInitio3DPanel.cpp gui/AssetPickerComboPanel.cpp gui/AutoRefine3dPanel.cpp gui/DisplayRefinementResultsPanel.cpp gui/ImportRefinementPackageWizard.cpp gui/PopupTextDialog.cpp gui/ExportRefinementPackageWizard.cpp gui/Generate3DPanel.cpp gui/LargeAngularPlotDialog.cpp gui/RefinementParametersDialog.cpp gui/Sharpen3DPanel.cpp gui/PlotCurvePanel.cpp gui/DistributionPlotDialog.cpp gui/RefineCTFPanel.cpp gui/ShowTemplateMatchResultsPanel.cpp gui/CombineRefinementPackagesWizard.cpp
+cisTEM_SOURCES = programs/projectx/projectx.cpp gui/gui_globals.cpp gui/MyFSCPanel.cpp gui/MyRefinementResultsPanel.cpp gui/PlotFSCPanel.cpp gui/gui_functions.cpp gui/my_controls.cpp gui/MyRenameDialog.cpp gui/BitmapPanel.cpp gui/PickingBitmapPanel.cpp gui/job_panel.cpp gui/ProjectX_gui.cpp gui/ResultsDataViewListCtrl.cpp gui/MyMovieFilterDialog.cpp gui/MainFrame.cpp gui/MyAssetPanelParent.cpp gui/MyMovieAssetPanel.cpp gui/MyImageAssetPanel.cpp gui/MyParticlePositionAssetPanel.cpp gui/MyVolumeChooserDialog.cpp gui/MovieImportDialog.cpp gui/MyImageImportDialog.cpp gui/MyVolumeImportDialog.cpp gui/ErrorDialog.cpp gui/AlignMoviesPanel.cpp gui/MyRunProfilesPanel.cpp gui/mathplot.cpp gui/MyMovieAlignResultsPanel.cpp gui/MyFindCTFResultsPanel.cpp gui/PickingResultsPanel.cpp gui/MyAddRunCommandDialog.cpp gui/MyNewProjectWizard.cpp gui/MyNewRefinementPackageWizard.cpp gui/UnblurResultsPanel.cpp gui/ShowCTFResultsPanel.cpp gui/PickingResultsDisplayPanel.cpp gui/CTF1DPanel.cpp gui/FindCTFPanel.cpp gui/FindParticlesPanel.cpp gui/MyVolumeAssetPanel.cpp gui/MyResultsPanel.cpp gui/MyAssetsPanel.cpp gui/ActionsPanelSpa.cpp gui/ActionsPanelTm.cpp gui/MySettingsPanel.cpp gui/MyParticlePositionExportDialog.cpp gui/MyFrealignExportDialog.cpp gui/MyRelionExportDialog.cpp gui/MyRefinementPackageAssetPanel.cpp gui/MyRefine3DPanel.cpp gui/MyRefine2DPanel.cpp gui/ClassificationPlotPanel.cpp gui/AbInitioPlotPanel.cpp gui/Refine2DResultsPanel.cpp gui/AngularDistributionPlotPanel.cpp core/particle_finder.cpp gui/DisplayPanel.cpp gui/ClassumSelectionCopyFromDialog.cpp gui/MyOverviewPanel.cpp gui/AbInitio3DPanel.cpp gui/AssetPickerComboPanel.cpp gui/AutoRefine3dPanel.cpp gui/DisplayRefinementResultsPanel.cpp gui/ImportRefinementPackageWizard.cpp gui/PopupTextDialog.cpp gui/ExportRefinementPackageWizard.cpp gui/Generate3DPanel.cpp gui/LargeAngularPlotDialog.cpp gui/RefinementParametersDialog.cpp gui/Sharpen3DPanel.cpp gui/PlotCurvePanel.cpp gui/DistributionPlotDialog.cpp gui/RefineCTFPanel.cpp gui/ShowTemplateMatchResultsPanel.cpp gui/MatchTemplatePanel.cpp gui/MatchTemplateResultsPanel.cpp gui/RefineTemplatePanel.cpp gui/CombineRefinementPackagesWizard.cpp
 
 if EXPERIMENTAL_AM
-cisTEM_SOURCES += gui/MatchTemplatePanel.cpp gui/MatchTemplateResultsPanel.cpp gui/RefineTemplatePanel.cpp gui/MyExperimentalPanel.cpp
+cisTEM_SOURCES +=  gui/RefineTemplateDevPanel.cpp gui/MyExperimentalPanel.cpp gui/AtomicCoordinatesAssetPanel.cpp gui/AtomicCoordinatesChooserDialog.cpp gui/AtomicCoordinatesImportDialog.cpp
 endif
 
 cisTEM_CXXFLAGS = $(WX_CPPFLAGS)
@@ -688,7 +693,12 @@ combine_stacks_by_star_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 combine_stacks_by_star_LDADD = libcore.a $(WX_LIBS_BASE)
 
 if ENABLESAMPLES_AM
-samples_functional_testing_SOURCES = programs/samples/samples_functional_testing.cpp
+samples_functional_testing_SOURCES  = programs/samples/samples_functional_testing.cpp 
+samples_functional_testing_SOURCES += programs/samples/common/helper_functions.cpp programs/samples/common/embedded_test_file.cpp programs/samples/common/numeric_test_file.cpp
+samples_functional_testing_SOURCES += programs/samples/0_simple/disk_io_image.cpp  
+if ENABLEGPU_AM
+samples_functional_testing_SOURCES += programs/samples/1_cpu_gpu_comparison/resize_comparison.cpp 
+endif
 samples_functional_testing_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 samples_functional_testing_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 if ENABLEGPU_AM 
@@ -698,7 +708,7 @@ samples_functional_testing_LDADD = libcore.a $(WX_LIBS_BASE)
 endif
 endif 
 
-if EXPERIMENTAL_AM
+
 match_template_SOURCES = programs/match_template/match_template.cpp
 match_template_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 match_template_CPPFLAGS = $(WX_CPPFLAGS_BASE)
@@ -735,7 +745,13 @@ refine_template_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 refine_template_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 refine_template_LDADD = libcore.a $(WX_LIBS_BASE)
 
+if EXPERIMENTAL_AM   
+    refine_template_dev_SOURCES = programs/refine_template_dev/refine_template_dev.cpp
+    refine_template_dev_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+    refine_template_dev_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+    refine_template_dev_LDADD = libcore.a $(WX_LIBS_BASE)
 endif
+
 
 if ENABLEGPU_AM
 

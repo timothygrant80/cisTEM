@@ -3,33 +3,24 @@
 
 #include <wx/panel.h>
 
+class BitmapPanel : public wxPanel {
+  public:
+    Image PanelImage;
+    //wxBitmap PanelBitmap; // buffer for the panel size
+    wxString panel_text;
+    wxString title_text;
+    bool     use_auto_contrast;
 
-class BitmapPanel : public wxPanel
-{
-public :
+    BitmapPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxPanelNameStr);
+    ~BitmapPanel( );
 
-	Image PanelImage;
-	//wxBitmap PanelBitmap; // buffer for the panel size
-	wxString panel_text;
-	wxString title_text;
-	bool use_auto_contrast;
+    void OnPaint(wxPaintEvent& evt);
+    void OnEraseBackground(wxEraseEvent& event);
+    //	void SetupPanelBitmap();
+    void Clear( );
 
-
-	BitmapPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL, const wxString& name = wxPanelNameStr);
-	~BitmapPanel();
-
-	void OnPaint(wxPaintEvent & evt);
-	void OnEraseBackground(wxEraseEvent& event);
-//	void SetupPanelBitmap();
-	void Clear();
-
-	bool should_show;
-	float font_size_multiplier;
-
-
+    bool  should_show;
+    float font_size_multiplier;
 };
-
-
-
 
 #endif

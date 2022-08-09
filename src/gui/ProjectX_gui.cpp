@@ -83,6 +83,18 @@ MainFrame::MainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 
 	m_menubar1->Append( FileMenu, wxT("Project") );
 
+	WorkflowMenu = new wxMenu();
+	WorkflowSingleParticle = new wxMenuItem( WorkflowMenu, wxID_ANY, wxString( wxT("Single Particle ") ) , wxEmptyString, wxITEM_RADIO );
+	WorkflowMenu->Append( WorkflowSingleParticle );
+	WorkflowSingleParticle->Check( true );
+
+	WorkflowTemplateMatching = new wxMenuItem( WorkflowMenu, wxID_ANY, wxString( wxT("Template Matching") ) , wxEmptyString, wxITEM_RADIO );
+	WorkflowMenu->Append( WorkflowTemplateMatching );
+
+	WorkflowMenu->AppendSeparator();
+
+	m_menubar1->Append( WorkflowMenu, wxT("Workflow") );
+
 	HelpMenu = new wxMenu();
 	wxMenuItem* OnlineHelpLaunch;
 	OnlineHelpLaunch = new wxMenuItem( HelpMenu, wxID_ANY, wxString( wxT("Online Help") ) , wxEmptyString, wxITEM_NORMAL );
@@ -106,6 +118,8 @@ MainFrame::MainFrame( wxWindow* parent, wxWindowID id, const wxString& title, co
 	FileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileOpenProject ), this, FileOpenProject->GetId());
 	FileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileCloseProject ), this, FileCloseProject->GetId());
 	FileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnFileExit ), this, FileExit->GetId());
+	WorkflowMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnSingleParticleWorkflow ), this, WorkflowSingleParticle->GetId());
+	WorkflowMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnTemplateMatchingWorkflow ), this, WorkflowTemplateMatching->GetId());
 	HelpMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnHelpLaunch ), this, OnlineHelpLaunch->GetId());
 	HelpMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( MainFrame::OnAboutLaunch ), this, AboutLaunch->GetId());
 }
@@ -1865,14 +1879,14 @@ RefinementResultsPanel::~RefinementResultsPanel()
 
 }
 
-ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
+ShowCTFResultsPanelParent::ShowCTFResultsPanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
 {
 	wxBoxSizer* bSizer92;
 	bSizer92 = new wxBoxSizer( wxVERTICAL );
 
 	m_splitter16 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
 	m_splitter16->SetSashGravity( 0.5 );
-	m_splitter16->Connect( wxEVT_IDLE, wxIdleEventHandler( ShowCTFResultsParentPanel::m_splitter16OnIdle ), NULL, this );
+	m_splitter16->Connect( wxEVT_IDLE, wxIdleEventHandler( ShowCTFResultsPanelParent::m_splitter16OnIdle ), NULL, this );
 
 	m_panel87 = new wxPanel( m_splitter16, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	wxBoxSizer* bSizer301;
@@ -1880,7 +1894,7 @@ ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindow
 
 	m_splitter15 = new wxSplitterWindow( m_panel87, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
 	m_splitter15->SetSashGravity( 0.5 );
-	m_splitter15->Connect( wxEVT_IDLE, wxIdleEventHandler( ShowCTFResultsParentPanel::m_splitter15OnIdle ), NULL, this );
+	m_splitter15->Connect( wxEVT_IDLE, wxIdleEventHandler( ShowCTFResultsPanelParent::m_splitter15OnIdle ), NULL, this );
 
 	m_panel88 = new wxPanel( m_splitter15, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	wxBoxSizer* bSizer302;
@@ -2096,18 +2110,18 @@ ShowCTFResultsParentPanel::ShowCTFResultsParentPanel( wxWindow* parent, wxWindow
 	this->Layout();
 }
 
-ShowCTFResultsParentPanel::~ShowCTFResultsParentPanel()
+ShowCTFResultsPanelParent::~ShowCTFResultsPanelParent()
 {
 }
 
-ShowTemplateMatchResultsParentPanel::ShowTemplateMatchResultsParentPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
+ShowTemplateMatchResultsPanelParent::ShowTemplateMatchResultsPanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
 {
 	wxBoxSizer* bSizer92;
 	bSizer92 = new wxBoxSizer( wxVERTICAL );
 
 	m_splitter16 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
 	m_splitter16->SetSashGravity( 0.5 );
-	m_splitter16->Connect( wxEVT_IDLE, wxIdleEventHandler( ShowTemplateMatchResultsParentPanel::m_splitter16OnIdle ), NULL, this );
+	m_splitter16->Connect( wxEVT_IDLE, wxIdleEventHandler( ShowTemplateMatchResultsPanelParent::m_splitter16OnIdle ), NULL, this );
 
 	m_panel87 = new wxPanel( m_splitter16, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	wxBoxSizer* bSizer301;
@@ -2115,7 +2129,7 @@ ShowTemplateMatchResultsParentPanel::ShowTemplateMatchResultsParentPanel( wxWind
 
 	m_splitter15 = new wxSplitterWindow( m_panel87, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
 	m_splitter15->SetSashGravity( 0.5 );
-	m_splitter15->Connect( wxEVT_IDLE, wxIdleEventHandler( ShowTemplateMatchResultsParentPanel::m_splitter15OnIdle ), NULL, this );
+	m_splitter15->Connect( wxEVT_IDLE, wxIdleEventHandler( ShowTemplateMatchResultsPanelParent::m_splitter15OnIdle ), NULL, this );
 
 	m_panel89 = new wxPanel( m_splitter15, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	wxBoxSizer* bSizer303;
@@ -2240,13 +2254,13 @@ ShowTemplateMatchResultsParentPanel::ShowTemplateMatchResultsParentPanel( wxWind
 	this->Layout();
 
 	// Connect Events
-	SaveButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ShowTemplateMatchResultsParentPanel::OnSavePeaksClick ), NULL, this );
+	SaveButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ShowTemplateMatchResultsPanelParent::OnSavePeaksClick ), NULL, this );
 }
 
-ShowTemplateMatchResultsParentPanel::~ShowTemplateMatchResultsParentPanel()
+ShowTemplateMatchResultsPanelParent::~ShowTemplateMatchResultsPanelParent()
 {
 	// Disconnect Events
-	SaveButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ShowTemplateMatchResultsParentPanel::OnSavePeaksClick ), NULL, this );
+	SaveButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ShowTemplateMatchResultsPanelParent::OnSavePeaksClick ), NULL, this );
 
 }
 
@@ -2647,7 +2661,7 @@ Refine2DResultsPanelParent::~Refine2DResultsPanelParent()
 
 }
 
-PickingResultsDisplayParentPanel::PickingResultsDisplayParentPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
+PickingResultsDisplayPanelParent::PickingResultsDisplayPanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
 {
 	wxBoxSizer* bSizer92;
 	bSizer92 = new wxBoxSizer( wxHORIZONTAL );
@@ -2761,29 +2775,29 @@ PickingResultsDisplayParentPanel::PickingResultsDisplayParentPanel( wxWindow* pa
 	this->Layout();
 
 	// Connect Events
-	CirclesAroundParticlesCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnCirclesAroundParticlesCheckBox ), NULL, this );
-	ScaleBarCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnScaleBarCheckBox ), NULL, this );
-	HighPassFilterCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnHighPassFilterCheckBox ), NULL, this );
-	LowPassFilterCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnLowPassFilterCheckBox ), NULL, this );
-	LowResFilterTextCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( PickingResultsDisplayParentPanel::OnLowPassKillFocus ), NULL, this );
-	LowResFilterTextCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnLowPassEnter ), NULL, this );
-	WienerFilterCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnWienerFilterCheckBox ), NULL, this );
-	UndoButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnUndoButtonClick ), NULL, this );
-	RedoButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnRedoButtonClick ), NULL, this );
+	CirclesAroundParticlesCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnCirclesAroundParticlesCheckBox ), NULL, this );
+	ScaleBarCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnScaleBarCheckBox ), NULL, this );
+	HighPassFilterCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnHighPassFilterCheckBox ), NULL, this );
+	LowPassFilterCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnLowPassFilterCheckBox ), NULL, this );
+	LowResFilterTextCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( PickingResultsDisplayPanelParent::OnLowPassKillFocus ), NULL, this );
+	LowResFilterTextCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnLowPassEnter ), NULL, this );
+	WienerFilterCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnWienerFilterCheckBox ), NULL, this );
+	UndoButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnUndoButtonClick ), NULL, this );
+	RedoButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnRedoButtonClick ), NULL, this );
 }
 
-PickingResultsDisplayParentPanel::~PickingResultsDisplayParentPanel()
+PickingResultsDisplayPanelParent::~PickingResultsDisplayPanelParent()
 {
 	// Disconnect Events
-	CirclesAroundParticlesCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnCirclesAroundParticlesCheckBox ), NULL, this );
-	ScaleBarCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnScaleBarCheckBox ), NULL, this );
-	HighPassFilterCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnHighPassFilterCheckBox ), NULL, this );
-	LowPassFilterCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnLowPassFilterCheckBox ), NULL, this );
-	LowResFilterTextCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( PickingResultsDisplayParentPanel::OnLowPassKillFocus ), NULL, this );
-	LowResFilterTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnLowPassEnter ), NULL, this );
-	WienerFilterCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnWienerFilterCheckBox ), NULL, this );
-	UndoButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnUndoButtonClick ), NULL, this );
-	RedoButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayParentPanel::OnRedoButtonClick ), NULL, this );
+	CirclesAroundParticlesCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnCirclesAroundParticlesCheckBox ), NULL, this );
+	ScaleBarCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnScaleBarCheckBox ), NULL, this );
+	HighPassFilterCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnHighPassFilterCheckBox ), NULL, this );
+	LowPassFilterCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnLowPassFilterCheckBox ), NULL, this );
+	LowResFilterTextCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( PickingResultsDisplayPanelParent::OnLowPassKillFocus ), NULL, this );
+	LowResFilterTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnLowPassEnter ), NULL, this );
+	WienerFilterCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnWienerFilterCheckBox ), NULL, this );
+	UndoButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnUndoButtonClick ), NULL, this );
+	RedoButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnRedoButtonClick ), NULL, this );
 
 }
 
@@ -4251,7 +4265,7 @@ MovieAlignResultsPanel::~MovieAlignResultsPanel()
 
 }
 
-ActionsPanel::ActionsPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
+ActionsPanelParent::ActionsPanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
 {
 	wxBoxSizer* bSizer12;
 	bSizer12 = new wxBoxSizer( wxHORIZONTAL );
@@ -4277,13 +4291,13 @@ ActionsPanel::ActionsPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos,
 	this->Layout();
 
 	// Connect Events
-	ActionsBook->Connect( wxEVT_COMMAND_LISTBOOK_PAGE_CHANGED, wxListbookEventHandler( ActionsPanel::OnActionsBookPageChanged ), NULL, this );
+	ActionsBook->Connect( wxEVT_COMMAND_LISTBOOK_PAGE_CHANGED, wxListbookEventHandler( ActionsPanelParent::OnActionsBookPageChanged ), NULL, this );
 }
 
-ActionsPanel::~ActionsPanel()
+ActionsPanelParent::~ActionsPanelParent()
 {
 	// Disconnect Events
-	ActionsBook->Disconnect( wxEVT_COMMAND_LISTBOOK_PAGE_CHANGED, wxListbookEventHandler( ActionsPanel::OnActionsBookPageChanged ), NULL, this );
+	ActionsBook->Disconnect( wxEVT_COMMAND_LISTBOOK_PAGE_CHANGED, wxListbookEventHandler( ActionsPanelParent::OnActionsBookPageChanged ), NULL, this );
 
 }
 
@@ -5031,6 +5045,88 @@ VolumeImportDialog::~VolumeImportDialog()
 
 }
 
+AtomicCoordinatesImportDialogParent::AtomicCoordinatesImportDialogParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
+{
+	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
+
+	wxBoxSizer* bSizer26;
+	bSizer26 = new wxBoxSizer( wxVERTICAL );
+
+	PathListCtrl = new wxListCtrl( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_LIST|wxLC_NO_HEADER|wxLC_REPORT|wxVSCROLL );
+	bSizer26->Add( PathListCtrl, 100, wxALL|wxEXPAND, 5 );
+
+	wxBoxSizer* bSizer27;
+	bSizer27 = new wxBoxSizer( wxHORIZONTAL );
+
+	m_button10 = new wxButton( this, wxID_ANY, wxT("Add Files"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer27->Add( m_button10, 33, wxALL, 5 );
+
+	m_button11 = new wxButton( this, wxID_ANY, wxT("Add Directory"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer27->Add( m_button11, 33, wxALL, 5 );
+
+	ClearButton = new wxButton( this, wxID_ANY, wxT("Clear"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer27->Add( ClearButton, 33, wxALL, 5 );
+
+
+	bSizer26->Add( bSizer27, 0, wxEXPAND, 5 );
+
+	m_staticline7 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer26->Add( m_staticline7, 0, wxEXPAND | wxALL, 5 );
+
+	wxBoxSizer* bSizer29;
+	bSizer29 = new wxBoxSizer( wxHORIZONTAL );
+
+
+	bSizer26->Add( bSizer29, 0, wxEXPAND, 5 );
+
+	m_staticline8 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer26->Add( m_staticline8, 0, wxEXPAND | wxALL, 5 );
+
+	wxBoxSizer* bSizer33;
+	bSizer33 = new wxBoxSizer( wxHORIZONTAL );
+
+	m_button13 = new wxButton( this, wxID_ANY, wxT("Cancel"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer33->Add( m_button13, 0, wxALL, 5 );
+
+
+	bSizer33->Add( 0, 0, 1, wxEXPAND, 5 );
+
+
+	bSizer33->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	ImportButton = new wxButton( this, wxID_ANY, wxT("Import"), wxDefaultPosition, wxDefaultSize, 0 );
+	ImportButton->Enable( false );
+
+	bSizer33->Add( ImportButton, 0, wxALL, 5 );
+
+
+	bSizer26->Add( bSizer33, 1, wxEXPAND, 5 );
+
+
+	this->SetSizer( bSizer26 );
+	this->Layout();
+
+	this->Centre( wxBOTH );
+
+	// Connect Events
+	m_button10->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialogParent::AddFilesClick ), NULL, this );
+	m_button11->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialogParent::AddDirectoryClick ), NULL, this );
+	ClearButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialogParent::ClearClick ), NULL, this );
+	m_button13->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialogParent::CancelClick ), NULL, this );
+	ImportButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialogParent::ImportClick ), NULL, this );
+}
+
+AtomicCoordinatesImportDialogParent::~AtomicCoordinatesImportDialogParent()
+{
+	// Disconnect Events
+	m_button10->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialogParent::AddFilesClick ), NULL, this );
+	m_button11->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialogParent::AddDirectoryClick ), NULL, this );
+	ClearButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialogParent::ClearClick ), NULL, this );
+	m_button13->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialogParent::CancelClick ), NULL, this );
+	ImportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesImportDialogParent::ImportClick ), NULL, this );
+
+}
+
 MovieImportDialog::MovieImportDialog( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
 {
 	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
@@ -5538,7 +5634,7 @@ ImageImportDialog::~ImageImportDialog()
 
 }
 
-AssetParentPanel::AssetParentPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
+AssetPanelParent::AssetPanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
 {
 	this->SetMinSize( wxSize( 680,400 ) );
 
@@ -5553,7 +5649,7 @@ AssetParentPanel::AssetParentPanel( wxWindow* parent, wxWindowID id, const wxPoi
 
 	SplitterWindow = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
 	SplitterWindow->SetSashGravity( 0.2 );
-	SplitterWindow->Connect( wxEVT_IDLE, wxIdleEventHandler( AssetParentPanel::SplitterWindowOnIdle ), NULL, this );
+	SplitterWindow->Connect( wxEVT_IDLE, wxIdleEventHandler( AssetPanelParent::SplitterWindowOnIdle ), NULL, this );
 
 	LeftPanel = new wxPanel( SplitterWindow, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
 	wxBoxSizer* bSizer27;
@@ -5792,89 +5888,89 @@ AssetParentPanel::AssetParentPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	this->Layout();
 
 	// Connect Events
-	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( AssetParentPanel::OnUpdateUI ) );
-	GroupListBox->Connect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( AssetParentPanel::MouseCheckGroupsVeto ), NULL, this );
-	GroupListBox->Connect( wxEVT_LEFT_DOWN, wxMouseEventHandler( AssetParentPanel::MouseCheckGroupsVeto ), NULL, this );
-	GroupListBox->Connect( wxEVT_LEFT_UP, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	GroupListBox->Connect( wxEVT_COMMAND_LIST_BEGIN_LABEL_EDIT, wxListEventHandler( AssetParentPanel::OnBeginEdit ), NULL, this );
-	GroupListBox->Connect( wxEVT_COMMAND_LIST_END_LABEL_EDIT, wxListEventHandler( AssetParentPanel::OnEndEdit ), NULL, this );
-	GroupListBox->Connect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( AssetParentPanel::OnGroupActivated ), NULL, this );
-	GroupListBox->Connect( wxEVT_COMMAND_LIST_ITEM_FOCUSED, wxListEventHandler( AssetParentPanel::OnGroupFocusChange ), NULL, this );
-	GroupListBox->Connect( wxEVT_MIDDLE_DCLICK, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	GroupListBox->Connect( wxEVT_MIDDLE_DOWN, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	GroupListBox->Connect( wxEVT_MIDDLE_UP, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	GroupListBox->Connect( wxEVT_MOTION, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	GroupListBox->Connect( wxEVT_RIGHT_DCLICK, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	GroupListBox->Connect( wxEVT_RIGHT_DOWN, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	GroupListBox->Connect( wxEVT_RIGHT_UP, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	AddGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::NewGroupClick ), NULL, this );
-	RenameGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::RenameGroupClick ), NULL, this );
-	RemoveGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::RemoveGroupClick ), NULL, this );
-	InvertGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::InvertGroupClick ), NULL, this );
-	NewFromParentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::NewFromParentClick ), NULL, this );
-	ContentsListBox->Connect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( AssetParentPanel::MouseCheckContentsVeto ), NULL, this );
-	ContentsListBox->Connect( wxEVT_LEFT_DOWN, wxMouseEventHandler( AssetParentPanel::MouseCheckContentsVeto ), NULL, this );
-	ContentsListBox->Connect( wxEVT_LEFT_UP, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	ContentsListBox->Connect( wxEVT_COMMAND_LIST_BEGIN_DRAG, wxListEventHandler( AssetParentPanel::OnBeginContentsDrag ), NULL, this );
-	ContentsListBox->Connect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( AssetParentPanel::OnAssetActivated ), NULL, this );
-	ContentsListBox->Connect( wxEVT_COMMAND_LIST_ITEM_SELECTED, wxListEventHandler( AssetParentPanel::OnContentsSelected ), NULL, this );
-	ContentsListBox->Connect( wxEVT_MIDDLE_DCLICK, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	ContentsListBox->Connect( wxEVT_MIDDLE_DOWN, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	ContentsListBox->Connect( wxEVT_MIDDLE_UP, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	ContentsListBox->Connect( wxEVT_MOTION, wxMouseEventHandler( AssetParentPanel::OnMotion ), NULL, this );
-	ContentsListBox->Connect( wxEVT_RIGHT_DCLICK, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	ContentsListBox->Connect( wxEVT_RIGHT_DOWN, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	ContentsListBox->Connect( wxEVT_RIGHT_UP, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	ImportAsset->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::ImportAssetClick ), NULL, this );
-	RemoveSelectedAssetButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::RemoveAssetClick ), NULL, this );
-	RemoveAllAssetsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::RemoveAllAssetsClick ), NULL, this );
-	RenameAssetButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::RenameAssetClick ), NULL, this );
-	AddSelectedAssetButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::AddSelectedAssetClick ), NULL, this );
-	DisplayButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::OnDisplayButtonClick ), NULL, this );
+	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( AssetPanelParent::OnUpdateUI ) );
+	GroupListBox->Connect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( AssetPanelParent::MouseCheckGroupsVeto ), NULL, this );
+	GroupListBox->Connect( wxEVT_LEFT_DOWN, wxMouseEventHandler( AssetPanelParent::MouseCheckGroupsVeto ), NULL, this );
+	GroupListBox->Connect( wxEVT_LEFT_UP, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	GroupListBox->Connect( wxEVT_COMMAND_LIST_BEGIN_LABEL_EDIT, wxListEventHandler( AssetPanelParent::OnBeginEdit ), NULL, this );
+	GroupListBox->Connect( wxEVT_COMMAND_LIST_END_LABEL_EDIT, wxListEventHandler( AssetPanelParent::OnEndEdit ), NULL, this );
+	GroupListBox->Connect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( AssetPanelParent::OnGroupActivated ), NULL, this );
+	GroupListBox->Connect( wxEVT_COMMAND_LIST_ITEM_FOCUSED, wxListEventHandler( AssetPanelParent::OnGroupFocusChange ), NULL, this );
+	GroupListBox->Connect( wxEVT_MIDDLE_DCLICK, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	GroupListBox->Connect( wxEVT_MIDDLE_DOWN, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	GroupListBox->Connect( wxEVT_MIDDLE_UP, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	GroupListBox->Connect( wxEVT_MOTION, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	GroupListBox->Connect( wxEVT_RIGHT_DCLICK, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	GroupListBox->Connect( wxEVT_RIGHT_DOWN, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	GroupListBox->Connect( wxEVT_RIGHT_UP, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	AddGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::NewGroupClick ), NULL, this );
+	RenameGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::RenameGroupClick ), NULL, this );
+	RemoveGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::RemoveGroupClick ), NULL, this );
+	InvertGroupButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::InvertGroupClick ), NULL, this );
+	NewFromParentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::NewFromParentClick ), NULL, this );
+	ContentsListBox->Connect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( AssetPanelParent::MouseCheckContentsVeto ), NULL, this );
+	ContentsListBox->Connect( wxEVT_LEFT_DOWN, wxMouseEventHandler( AssetPanelParent::MouseCheckContentsVeto ), NULL, this );
+	ContentsListBox->Connect( wxEVT_LEFT_UP, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	ContentsListBox->Connect( wxEVT_COMMAND_LIST_BEGIN_DRAG, wxListEventHandler( AssetPanelParent::OnBeginContentsDrag ), NULL, this );
+	ContentsListBox->Connect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( AssetPanelParent::OnAssetActivated ), NULL, this );
+	ContentsListBox->Connect( wxEVT_COMMAND_LIST_ITEM_SELECTED, wxListEventHandler( AssetPanelParent::OnContentsSelected ), NULL, this );
+	ContentsListBox->Connect( wxEVT_MIDDLE_DCLICK, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	ContentsListBox->Connect( wxEVT_MIDDLE_DOWN, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	ContentsListBox->Connect( wxEVT_MIDDLE_UP, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	ContentsListBox->Connect( wxEVT_MOTION, wxMouseEventHandler( AssetPanelParent::OnMotion ), NULL, this );
+	ContentsListBox->Connect( wxEVT_RIGHT_DCLICK, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	ContentsListBox->Connect( wxEVT_RIGHT_DOWN, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	ContentsListBox->Connect( wxEVT_RIGHT_UP, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	ImportAsset->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::ImportAssetClick ), NULL, this );
+	RemoveSelectedAssetButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::RemoveAssetClick ), NULL, this );
+	RemoveAllAssetsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::RemoveAllAssetsClick ), NULL, this );
+	RenameAssetButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::RenameAssetClick ), NULL, this );
+	AddSelectedAssetButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::AddSelectedAssetClick ), NULL, this );
+	DisplayButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::OnDisplayButtonClick ), NULL, this );
 }
 
-AssetParentPanel::~AssetParentPanel()
+AssetPanelParent::~AssetPanelParent()
 {
 	// Disconnect Events
-	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( AssetParentPanel::OnUpdateUI ) );
-	GroupListBox->Disconnect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( AssetParentPanel::MouseCheckGroupsVeto ), NULL, this );
-	GroupListBox->Disconnect( wxEVT_LEFT_DOWN, wxMouseEventHandler( AssetParentPanel::MouseCheckGroupsVeto ), NULL, this );
-	GroupListBox->Disconnect( wxEVT_LEFT_UP, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	GroupListBox->Disconnect( wxEVT_COMMAND_LIST_BEGIN_LABEL_EDIT, wxListEventHandler( AssetParentPanel::OnBeginEdit ), NULL, this );
-	GroupListBox->Disconnect( wxEVT_COMMAND_LIST_END_LABEL_EDIT, wxListEventHandler( AssetParentPanel::OnEndEdit ), NULL, this );
-	GroupListBox->Disconnect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( AssetParentPanel::OnGroupActivated ), NULL, this );
-	GroupListBox->Disconnect( wxEVT_COMMAND_LIST_ITEM_FOCUSED, wxListEventHandler( AssetParentPanel::OnGroupFocusChange ), NULL, this );
-	GroupListBox->Disconnect( wxEVT_MIDDLE_DCLICK, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	GroupListBox->Disconnect( wxEVT_MIDDLE_DOWN, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	GroupListBox->Disconnect( wxEVT_MIDDLE_UP, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	GroupListBox->Disconnect( wxEVT_MOTION, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	GroupListBox->Disconnect( wxEVT_RIGHT_DCLICK, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	GroupListBox->Disconnect( wxEVT_RIGHT_DOWN, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	GroupListBox->Disconnect( wxEVT_RIGHT_UP, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	AddGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::NewGroupClick ), NULL, this );
-	RenameGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::RenameGroupClick ), NULL, this );
-	RemoveGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::RemoveGroupClick ), NULL, this );
-	InvertGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::InvertGroupClick ), NULL, this );
-	NewFromParentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::NewFromParentClick ), NULL, this );
-	ContentsListBox->Disconnect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( AssetParentPanel::MouseCheckContentsVeto ), NULL, this );
-	ContentsListBox->Disconnect( wxEVT_LEFT_DOWN, wxMouseEventHandler( AssetParentPanel::MouseCheckContentsVeto ), NULL, this );
-	ContentsListBox->Disconnect( wxEVT_LEFT_UP, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	ContentsListBox->Disconnect( wxEVT_COMMAND_LIST_BEGIN_DRAG, wxListEventHandler( AssetParentPanel::OnBeginContentsDrag ), NULL, this );
-	ContentsListBox->Disconnect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( AssetParentPanel::OnAssetActivated ), NULL, this );
-	ContentsListBox->Disconnect( wxEVT_COMMAND_LIST_ITEM_SELECTED, wxListEventHandler( AssetParentPanel::OnContentsSelected ), NULL, this );
-	ContentsListBox->Disconnect( wxEVT_MIDDLE_DCLICK, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	ContentsListBox->Disconnect( wxEVT_MIDDLE_DOWN, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	ContentsListBox->Disconnect( wxEVT_MIDDLE_UP, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	ContentsListBox->Disconnect( wxEVT_MOTION, wxMouseEventHandler( AssetParentPanel::OnMotion ), NULL, this );
-	ContentsListBox->Disconnect( wxEVT_RIGHT_DCLICK, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	ContentsListBox->Disconnect( wxEVT_RIGHT_DOWN, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	ContentsListBox->Disconnect( wxEVT_RIGHT_UP, wxMouseEventHandler( AssetParentPanel::MouseVeto ), NULL, this );
-	ImportAsset->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::ImportAssetClick ), NULL, this );
-	RemoveSelectedAssetButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::RemoveAssetClick ), NULL, this );
-	RemoveAllAssetsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::RemoveAllAssetsClick ), NULL, this );
-	RenameAssetButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::RenameAssetClick ), NULL, this );
-	AddSelectedAssetButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::AddSelectedAssetClick ), NULL, this );
-	DisplayButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetParentPanel::OnDisplayButtonClick ), NULL, this );
+	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( AssetPanelParent::OnUpdateUI ) );
+	GroupListBox->Disconnect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( AssetPanelParent::MouseCheckGroupsVeto ), NULL, this );
+	GroupListBox->Disconnect( wxEVT_LEFT_DOWN, wxMouseEventHandler( AssetPanelParent::MouseCheckGroupsVeto ), NULL, this );
+	GroupListBox->Disconnect( wxEVT_LEFT_UP, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	GroupListBox->Disconnect( wxEVT_COMMAND_LIST_BEGIN_LABEL_EDIT, wxListEventHandler( AssetPanelParent::OnBeginEdit ), NULL, this );
+	GroupListBox->Disconnect( wxEVT_COMMAND_LIST_END_LABEL_EDIT, wxListEventHandler( AssetPanelParent::OnEndEdit ), NULL, this );
+	GroupListBox->Disconnect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( AssetPanelParent::OnGroupActivated ), NULL, this );
+	GroupListBox->Disconnect( wxEVT_COMMAND_LIST_ITEM_FOCUSED, wxListEventHandler( AssetPanelParent::OnGroupFocusChange ), NULL, this );
+	GroupListBox->Disconnect( wxEVT_MIDDLE_DCLICK, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	GroupListBox->Disconnect( wxEVT_MIDDLE_DOWN, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	GroupListBox->Disconnect( wxEVT_MIDDLE_UP, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	GroupListBox->Disconnect( wxEVT_MOTION, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	GroupListBox->Disconnect( wxEVT_RIGHT_DCLICK, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	GroupListBox->Disconnect( wxEVT_RIGHT_DOWN, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	GroupListBox->Disconnect( wxEVT_RIGHT_UP, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	AddGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::NewGroupClick ), NULL, this );
+	RenameGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::RenameGroupClick ), NULL, this );
+	RemoveGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::RemoveGroupClick ), NULL, this );
+	InvertGroupButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::InvertGroupClick ), NULL, this );
+	NewFromParentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::NewFromParentClick ), NULL, this );
+	ContentsListBox->Disconnect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( AssetPanelParent::MouseCheckContentsVeto ), NULL, this );
+	ContentsListBox->Disconnect( wxEVT_LEFT_DOWN, wxMouseEventHandler( AssetPanelParent::MouseCheckContentsVeto ), NULL, this );
+	ContentsListBox->Disconnect( wxEVT_LEFT_UP, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	ContentsListBox->Disconnect( wxEVT_COMMAND_LIST_BEGIN_DRAG, wxListEventHandler( AssetPanelParent::OnBeginContentsDrag ), NULL, this );
+	ContentsListBox->Disconnect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( AssetPanelParent::OnAssetActivated ), NULL, this );
+	ContentsListBox->Disconnect( wxEVT_COMMAND_LIST_ITEM_SELECTED, wxListEventHandler( AssetPanelParent::OnContentsSelected ), NULL, this );
+	ContentsListBox->Disconnect( wxEVT_MIDDLE_DCLICK, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	ContentsListBox->Disconnect( wxEVT_MIDDLE_DOWN, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	ContentsListBox->Disconnect( wxEVT_MIDDLE_UP, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	ContentsListBox->Disconnect( wxEVT_MOTION, wxMouseEventHandler( AssetPanelParent::OnMotion ), NULL, this );
+	ContentsListBox->Disconnect( wxEVT_RIGHT_DCLICK, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	ContentsListBox->Disconnect( wxEVT_RIGHT_DOWN, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	ContentsListBox->Disconnect( wxEVT_RIGHT_UP, wxMouseEventHandler( AssetPanelParent::MouseVeto ), NULL, this );
+	ImportAsset->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::ImportAssetClick ), NULL, this );
+	RemoveSelectedAssetButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::RemoveAssetClick ), NULL, this );
+	RemoveAllAssetsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::RemoveAllAssetsClick ), NULL, this );
+	RenameAssetButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::RenameAssetClick ), NULL, this );
+	AddSelectedAssetButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::AddSelectedAssetClick ), NULL, this );
+	DisplayButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::OnDisplayButtonClick ), NULL, this );
 
 }
 
@@ -7371,7 +7467,7 @@ Refine3DPanel::~Refine3DPanel()
 
 }
 
-RefineCTFParentPanel::RefineCTFParentPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : JobPanel( parent, id, pos, size, style, name )
+RefineCTFPanelParent::RefineCTFPanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : JobPanel( parent, id, pos, size, style, name )
 {
 	wxBoxSizer* bSizer43;
 	bSizer43 = new wxBoxSizer( wxVERTICAL );
@@ -7953,35 +8049,35 @@ RefineCTFParentPanel::RefineCTFParentPanel( wxWindow* parent, wxWindowID id, con
 	this->Layout();
 
 	// Connect Events
-	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RefineCTFParentPanel::OnUpdateUI ) );
-	UseMaskCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( RefineCTFParentPanel::OnUseMaskCheckBox ), NULL, this );
-	HighResolutionLimitTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( RefineCTFParentPanel::OnHighResLimitChange ), NULL, this );
-	ExpertToggleButton->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( RefineCTFParentPanel::OnExpertOptionsToggle ), NULL, this );
-	Active3DReferencesListCtrl->Connect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( RefineCTFParentPanel::OnVolumeListItemActivated ), NULL, this );
-	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFParentPanel::ResetAllDefaultsClick ), NULL, this );
-	AutoMaskYesRadioButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( RefineCTFParentPanel::OnAutoMaskButton ), NULL, this );
-	AutoMaskNoRadioButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( RefineCTFParentPanel::OnAutoMaskButton ), NULL, this );
-	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( RefineCTFParentPanel::OnInfoURL ), NULL, this );
-	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFParentPanel::FinishButtonClick ), NULL, this );
-	CancelAlignmentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFParentPanel::TerminateButtonClick ), NULL, this );
-	StartRefinementButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFParentPanel::StartRefinementClick ), NULL, this );
+	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RefineCTFPanelParent::OnUpdateUI ) );
+	UseMaskCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( RefineCTFPanelParent::OnUseMaskCheckBox ), NULL, this );
+	HighResolutionLimitTextCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( RefineCTFPanelParent::OnHighResLimitChange ), NULL, this );
+	ExpertToggleButton->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( RefineCTFPanelParent::OnExpertOptionsToggle ), NULL, this );
+	Active3DReferencesListCtrl->Connect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( RefineCTFPanelParent::OnVolumeListItemActivated ), NULL, this );
+	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFPanelParent::ResetAllDefaultsClick ), NULL, this );
+	AutoMaskYesRadioButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( RefineCTFPanelParent::OnAutoMaskButton ), NULL, this );
+	AutoMaskNoRadioButton->Connect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( RefineCTFPanelParent::OnAutoMaskButton ), NULL, this );
+	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( RefineCTFPanelParent::OnInfoURL ), NULL, this );
+	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFPanelParent::FinishButtonClick ), NULL, this );
+	CancelAlignmentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFPanelParent::TerminateButtonClick ), NULL, this );
+	StartRefinementButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFPanelParent::StartRefinementClick ), NULL, this );
 }
 
-RefineCTFParentPanel::~RefineCTFParentPanel()
+RefineCTFPanelParent::~RefineCTFPanelParent()
 {
 	// Disconnect Events
-	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RefineCTFParentPanel::OnUpdateUI ) );
-	UseMaskCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( RefineCTFParentPanel::OnUseMaskCheckBox ), NULL, this );
-	HighResolutionLimitTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( RefineCTFParentPanel::OnHighResLimitChange ), NULL, this );
-	ExpertToggleButton->Disconnect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( RefineCTFParentPanel::OnExpertOptionsToggle ), NULL, this );
-	Active3DReferencesListCtrl->Disconnect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( RefineCTFParentPanel::OnVolumeListItemActivated ), NULL, this );
-	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFParentPanel::ResetAllDefaultsClick ), NULL, this );
-	AutoMaskYesRadioButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( RefineCTFParentPanel::OnAutoMaskButton ), NULL, this );
-	AutoMaskNoRadioButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( RefineCTFParentPanel::OnAutoMaskButton ), NULL, this );
-	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( RefineCTFParentPanel::OnInfoURL ), NULL, this );
-	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFParentPanel::FinishButtonClick ), NULL, this );
-	CancelAlignmentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFParentPanel::TerminateButtonClick ), NULL, this );
-	StartRefinementButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFParentPanel::StartRefinementClick ), NULL, this );
+	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RefineCTFPanelParent::OnUpdateUI ) );
+	UseMaskCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( RefineCTFPanelParent::OnUseMaskCheckBox ), NULL, this );
+	HighResolutionLimitTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( RefineCTFPanelParent::OnHighResLimitChange ), NULL, this );
+	ExpertToggleButton->Disconnect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( RefineCTFPanelParent::OnExpertOptionsToggle ), NULL, this );
+	Active3DReferencesListCtrl->Disconnect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( RefineCTFPanelParent::OnVolumeListItemActivated ), NULL, this );
+	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFPanelParent::ResetAllDefaultsClick ), NULL, this );
+	AutoMaskYesRadioButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( RefineCTFPanelParent::OnAutoMaskButton ), NULL, this );
+	AutoMaskNoRadioButton->Disconnect( wxEVT_COMMAND_RADIOBUTTON_SELECTED, wxCommandEventHandler( RefineCTFPanelParent::OnAutoMaskButton ), NULL, this );
+	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( RefineCTFPanelParent::OnInfoURL ), NULL, this );
+	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFPanelParent::FinishButtonClick ), NULL, this );
+	CancelAlignmentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFPanelParent::TerminateButtonClick ), NULL, this );
+	StartRefinementButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineCTFPanelParent::StartRefinementClick ), NULL, this );
 
 }
 
@@ -9736,7 +9832,7 @@ FindCTFPanel::~FindCTFPanel()
 
 }
 
-MatchTemplateParentPanel::MatchTemplateParentPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : JobPanel( parent, id, pos, size, style, name )
+MatchTemplatePanelParent::MatchTemplatePanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : JobPanel( parent, id, pos, size, style, name )
 {
 	wxBoxSizer* bSizer43;
 	bSizer43 = new wxBoxSizer( wxVERTICAL );
@@ -10068,6 +10164,11 @@ MatchTemplateParentPanel::MatchTemplateParentPanel( wxWindow* parent, wxWindowID
 
 	bSizer58->Add( bSizer60, 50, wxEXPAND, 5 );
 
+	ResumeRunCheckBox = new wxCheckBox( StartPanel, wxID_ANY, wxT("Resume Run"), wxDefaultPosition, wxDefaultSize, 0 );
+	ResumeRunCheckBox->Enable( false );
+
+	bSizer58->Add( ResumeRunCheckBox, 0, wxALL|wxEXPAND, 5 );
+
 
 	StartPanel->SetSizer( bSizer58 );
 	StartPanel->Layout();
@@ -10082,27 +10183,29 @@ MatchTemplateParentPanel::MatchTemplateParentPanel( wxWindow* parent, wxWindowID
 	this->Layout();
 
 	// Connect Events
-	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( MatchTemplateParentPanel::OnUpdateUI ) );
-	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::ResetAllDefaultsClick ), NULL, this );
-	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( MatchTemplateParentPanel::OnInfoURL ), NULL, this );
-	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::FinishButtonClick ), NULL, this );
-	CancelAlignmentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::TerminateButtonClick ), NULL, this );
-	StartEstimationButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::StartEstimationClick ), NULL, this );
+	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( MatchTemplatePanelParent::OnUpdateUI ) );
+	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplatePanelParent::ResetAllDefaultsClick ), NULL, this );
+	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( MatchTemplatePanelParent::OnInfoURL ), NULL, this );
+	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplatePanelParent::FinishButtonClick ), NULL, this );
+	CancelAlignmentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplatePanelParent::TerminateButtonClick ), NULL, this );
+	StartEstimationButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplatePanelParent::StartEstimationClick ), NULL, this );
+	ResumeRunCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( MatchTemplatePanelParent::ResumeRunCheckBoxOnCheckBox ), NULL, this );
 }
 
-MatchTemplateParentPanel::~MatchTemplateParentPanel()
+MatchTemplatePanelParent::~MatchTemplatePanelParent()
 {
 	// Disconnect Events
-	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( MatchTemplateParentPanel::OnUpdateUI ) );
-	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::ResetAllDefaultsClick ), NULL, this );
-	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( MatchTemplateParentPanel::OnInfoURL ), NULL, this );
-	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::FinishButtonClick ), NULL, this );
-	CancelAlignmentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::TerminateButtonClick ), NULL, this );
-	StartEstimationButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplateParentPanel::StartEstimationClick ), NULL, this );
+	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( MatchTemplatePanelParent::OnUpdateUI ) );
+	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplatePanelParent::ResetAllDefaultsClick ), NULL, this );
+	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( MatchTemplatePanelParent::OnInfoURL ), NULL, this );
+	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplatePanelParent::FinishButtonClick ), NULL, this );
+	CancelAlignmentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplatePanelParent::TerminateButtonClick ), NULL, this );
+	StartEstimationButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( MatchTemplatePanelParent::StartEstimationClick ), NULL, this );
+	ResumeRunCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( MatchTemplatePanelParent::ResumeRunCheckBoxOnCheckBox ), NULL, this );
 
 }
 
-RefineTemplateParentPanel::RefineTemplateParentPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : JobPanel( parent, id, pos, size, style, name )
+RefineTemplatePanelParent::RefineTemplatePanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : JobPanel( parent, id, pos, size, style, name )
 {
 	wxBoxSizer* bSizer43;
 	bSizer43 = new wxBoxSizer( wxVERTICAL );
@@ -10491,23 +10594,436 @@ RefineTemplateParentPanel::RefineTemplateParentPanel( wxWindow* parent, wxWindow
 	this->Layout();
 
 	// Connect Events
-	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RefineTemplateParentPanel::OnUpdateUI ) );
-	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateParentPanel::ResetAllDefaultsClick ), NULL, this );
-	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( RefineTemplateParentPanel::OnInfoURL ), NULL, this );
-	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateParentPanel::FinishButtonClick ), NULL, this );
-	CancelAlignmentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateParentPanel::TerminateButtonClick ), NULL, this );
-	StartEstimationButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateParentPanel::StartEstimationClick ), NULL, this );
+	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RefineTemplatePanelParent::OnUpdateUI ) );
+	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplatePanelParent::ResetAllDefaultsClick ), NULL, this );
+	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( RefineTemplatePanelParent::OnInfoURL ), NULL, this );
+	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplatePanelParent::FinishButtonClick ), NULL, this );
+	CancelAlignmentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplatePanelParent::TerminateButtonClick ), NULL, this );
+	StartEstimationButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplatePanelParent::StartEstimationClick ), NULL, this );
 }
 
-RefineTemplateParentPanel::~RefineTemplateParentPanel()
+RefineTemplatePanelParent::~RefineTemplatePanelParent()
 {
 	// Disconnect Events
-	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RefineTemplateParentPanel::OnUpdateUI ) );
-	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateParentPanel::ResetAllDefaultsClick ), NULL, this );
-	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( RefineTemplateParentPanel::OnInfoURL ), NULL, this );
-	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateParentPanel::FinishButtonClick ), NULL, this );
-	CancelAlignmentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateParentPanel::TerminateButtonClick ), NULL, this );
-	StartEstimationButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateParentPanel::StartEstimationClick ), NULL, this );
+	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RefineTemplatePanelParent::OnUpdateUI ) );
+	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplatePanelParent::ResetAllDefaultsClick ), NULL, this );
+	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( RefineTemplatePanelParent::OnInfoURL ), NULL, this );
+	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplatePanelParent::FinishButtonClick ), NULL, this );
+	CancelAlignmentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplatePanelParent::TerminateButtonClick ), NULL, this );
+	StartEstimationButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplatePanelParent::StartEstimationClick ), NULL, this );
+
+}
+
+RefineTemplateDevPanelParent::RefineTemplateDevPanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : JobPanel( parent, id, pos, size, style, name )
+{
+	wxBoxSizer* bSizer43;
+	bSizer43 = new wxBoxSizer( wxVERTICAL );
+
+	m_staticline149 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer43->Add( m_staticline149, 0, wxEXPAND | wxALL, 5 );
+
+	InputPanel = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer534;
+	bSizer534 = new wxBoxSizer( wxVERTICAL );
+
+	wxBoxSizer* bSizer45;
+	bSizer45 = new wxBoxSizer( wxHORIZONTAL );
+
+	wxBoxSizer* bSizer557;
+	bSizer557 = new wxBoxSizer( wxHORIZONTAL );
+
+	wxFlexGridSizer* fgSizer15;
+	fgSizer15 = new wxFlexGridSizer( 0, 2, 0, 0 );
+	fgSizer15->SetFlexibleDirection( wxHORIZONTAL );
+	fgSizer15->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
+
+	m_staticText262 = new wxStaticText( InputPanel, wxID_ANY, wxT("Input Image Group :"), wxDefaultPosition, wxSize( -1,-1 ), 0 );
+	m_staticText262->Wrap( -1 );
+	fgSizer15->Add( m_staticText262, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+
+	GroupComboBox = new ImageGroupPickerComboPanel( InputPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	GroupComboBox->SetMinSize( wxSize( 350,-1 ) );
+	GroupComboBox->SetMaxSize( wxSize( 350,-1 ) );
+
+	fgSizer15->Add( GroupComboBox, 1, wxEXPAND | wxALL, 5 );
+
+	m_staticText478 = new wxStaticText( InputPanel, wxID_ANY, wxT("Reference Volume :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText478->Wrap( -1 );
+	fgSizer15->Add( m_staticText478, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+
+	ReferenceSelectPanel = new VolumeAssetPickerComboPanel( InputPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	ReferenceSelectPanel->SetMinSize( wxSize( 350,-1 ) );
+	ReferenceSelectPanel->SetMaxSize( wxSize( 350,-1 ) );
+
+	fgSizer15->Add( ReferenceSelectPanel, 100, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+
+	bSizer557->Add( fgSizer15, 0, wxEXPAND, 5 );
+
+
+	bSizer45->Add( bSizer557, 1, wxEXPAND, 5 );
+
+
+	bSizer534->Add( bSizer45, 1, wxEXPAND, 5 );
+
+	InputErrorText = new wxStaticText( InputPanel, wxID_ANY, wxT("Please run Match Template on all images in this group before running refine."), wxDefaultPosition, wxDefaultSize, 0 );
+	InputErrorText->Wrap( -1 );
+	InputErrorText->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	InputErrorText->SetForegroundColour( wxColour( 180, 0, 0 ) );
+
+	bSizer534->Add( InputErrorText, 0, wxALL, 5 );
+
+	m_staticline151 = new wxStaticLine( InputPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer534->Add( m_staticline151, 0, wxEXPAND | wxALL, 5 );
+
+
+	InputPanel->SetSizer( bSizer534 );
+	InputPanel->Layout();
+	bSizer534->Fit( InputPanel );
+	bSizer43->Add( InputPanel, 0, wxEXPAND | wxALL, 5 );
+
+	wxBoxSizer* bSizer46;
+	bSizer46 = new wxBoxSizer( wxHORIZONTAL );
+
+	ExpertPanel = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxSize( -1,-1 ), wxVSCROLL );
+	ExpertPanel->SetScrollRate( 5, 5 );
+	InputSizer = new wxBoxSizer( wxVERTICAL );
+
+	wxFlexGridSizer* fgSizer1;
+	fgSizer1 = new wxFlexGridSizer( 0, 2, 0, 0 );
+	fgSizer1->SetFlexibleDirection( wxBOTH );
+	fgSizer1->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
+
+	m_staticText847 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Peak Selection"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText847->Wrap( -1 );
+	m_staticText847->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxT("Sans") ) );
+
+	fgSizer1->Add( m_staticText847, 0, wxALIGN_BOTTOM|wxALL, 5 );
+
+	ResetAllDefaultsButton = new wxButton( ExpertPanel, wxID_ANY, wxT("Reset All Defaults"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer1->Add( ResetAllDefaultsButton, 0, wxALIGN_RIGHT|wxALL, 5 );
+
+	m_staticText849 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Minimum peak radius (px.) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText849->Wrap( -1 );
+	fgSizer1->Add( m_staticText849, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	MinPeakRadiusNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("10"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( MinPeakRadiusNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+
+	m_staticText846 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Threshold for Peak Selection : "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText846->Wrap( -1 );
+	fgSizer1->Add( m_staticText846, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	PeakSelectionThresholdNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("2.5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( PeakSelectionThresholdNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+
+	m_staticText848 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Threshold for Results :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText848->Wrap( -1 );
+	fgSizer1->Add( m_staticText848, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	PeakPlottingThresholdNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("2.5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( PeakPlottingThresholdNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+
+	mask_radius = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Remove Highly Shifted Peaks?"), wxDefaultPosition, wxDefaultSize, 0 );
+	mask_radius->Wrap( -1 );
+	fgSizer1->Add( mask_radius, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	wxBoxSizer* bSizer2652;
+	bSizer2652 = new wxBoxSizer( wxHORIZONTAL );
+
+	RemoveShiftedPeaksYesRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer2652->Add( RemoveShiftedPeaksYesRadio, 0, wxALL, 5 );
+
+	RemoveShiftedPeaksNoRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer2652->Add( RemoveShiftedPeaksNoRadio, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( bSizer2652, 1, wxEXPAND, 5 );
+
+	ShiftThresholdStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tShift Threshold (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	ShiftThresholdStaticText->Wrap( -1 );
+	ShiftThresholdStaticText->Enable( false );
+
+	fgSizer1->Add( ShiftThresholdStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	PeakChangeThresholdNumericTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("2.5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	PeakChangeThresholdNumericTextCtrl->Enable( false );
+
+	fgSizer1->Add( PeakChangeThresholdNumericTextCtrl, 0, wxALL|wxEXPAND, 5 );
+
+	m_staticText201 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Search Limits"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText201->Wrap( -1 );
+	m_staticText201->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxEmptyString ) );
+
+	fgSizer1->Add( m_staticText201, 0, wxALIGN_BOTTOM|wxALL, 5 );
+
+
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	m_staticText852 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Mask Radius (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText852->Wrap( -1 );
+	fgSizer1->Add( m_staticText852, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	MaskRadiusNumericTextCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("2.5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( MaskRadiusNumericTextCtrl, 0, wxALL|wxEXPAND, 5 );
+
+	m_staticText189 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Out of Plane Angular Step (°) : "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText189->Wrap( -1 );
+	fgSizer1->Add( m_staticText189, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	OutofPlaneStepNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("2.5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( OutofPlaneStepNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+
+	m_staticText190 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("In Plane Angular Step (°) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText190->Wrap( -1 );
+	fgSizer1->Add( m_staticText190, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	InPlaneStepNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("1.5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( InPlaneStepNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+
+	m_staticText190211 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("High-Resolution Limit (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText190211->Wrap( -1 );
+	fgSizer1->Add( m_staticText190211, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	HighResolutionLimitNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("2.0"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	fgSizer1->Add( HighResolutionLimitNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+
+	m_staticText698 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Perform Defocus Search? "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText698->Wrap( -1 );
+	fgSizer1->Add( m_staticText698, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	wxBoxSizer* bSizer265;
+	bSizer265 = new wxBoxSizer( wxHORIZONTAL );
+
+	DefocusSearchYesRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer265->Add( DefocusSearchYesRadio, 0, wxALL, 5 );
+
+	DefocusSearchNoRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer265->Add( DefocusSearchNoRadio, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( bSizer265, 1, wxEXPAND, 5 );
+
+	DefocusRangeStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tDefocus Range (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	DefocusRangeStaticText->Wrap( -1 );
+	DefocusRangeStaticText->Enable( false );
+
+	fgSizer1->Add( DefocusRangeStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	DefocusSearchRangeNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("200"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	DefocusSearchRangeNumericCtrl->Enable( false );
+
+	fgSizer1->Add( DefocusSearchRangeNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+
+	DefocusStepStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tDefocus Step (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	DefocusStepStaticText->Wrap( -1 );
+	DefocusStepStaticText->Enable( false );
+
+	fgSizer1->Add( DefocusStepStaticText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	DefocusSearchStepNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("10"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	DefocusSearchStepNumericCtrl->Enable( false );
+
+	fgSizer1->Add( DefocusSearchStepNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+
+	m_staticText699 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Refine Astigmatism?"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText699->Wrap( -1 );
+	fgSizer1->Add( m_staticText699, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	wxBoxSizer* bSizer2651;
+	bSizer2651 = new wxBoxSizer( wxHORIZONTAL );
+
+	AstigmatismSearchYesRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer2651->Add( AstigmatismSearchYesRadio, 0, wxALL, 5 );
+
+	AstigmatismSearchNoRadio = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	AstigmatismSearchNoRadio->SetValue( true );
+	bSizer2651->Add( AstigmatismSearchNoRadio, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( bSizer2651, 1, wxEXPAND, 5 );
+
+	AstigmatismConstraint = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tConstrain by N-neighbors :"), wxDefaultPosition, wxDefaultSize, 0 );
+	AstigmatismConstraint->Wrap( -1 );
+	AstigmatismConstraint->Enable( false );
+
+	fgSizer1->Add( AstigmatismConstraint, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	PixelSizeSearchRangeNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("0.05"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	PixelSizeSearchRangeNumericCtrl->Enable( false );
+
+	fgSizer1->Add( PixelSizeSearchRangeNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+
+	m_staticText6992 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Refine Beam Tilt?"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText6992->Wrap( -1 );
+	fgSizer1->Add( m_staticText6992, 0, wxALL, 5 );
+
+	wxBoxSizer* bSizer26511;
+	bSizer26511 = new wxBoxSizer( wxHORIZONTAL );
+
+	BeamTiltSearchYesRadio1 = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer26511->Add( BeamTiltSearchYesRadio1, 0, wxALL, 5 );
+
+	BeamTiltSearchNoRadio1 = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	BeamTiltSearchNoRadio1->SetValue( true );
+	bSizer26511->Add( BeamTiltSearchNoRadio1, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( bSizer26511, 1, wxEXPAND, 5 );
+
+
+	InputSizer->Add( fgSizer1, 1, wxEXPAND, 5 );
+
+
+	ExpertPanel->SetSizer( InputSizer );
+	ExpertPanel->Layout();
+	InputSizer->Fit( ExpertPanel );
+	bSizer46->Add( ExpertPanel, 0, wxALL|wxEXPAND, 5 );
+
+	m_staticText6991 = new wxStaticText( this, wxID_ANY, wxT("Perform Pixel Size Search? "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText6991->Wrap( -1 );
+	bSizer46->Add( m_staticText6991, 0, wxALL, 5 );
+
+	OutputTextPanel = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	OutputTextPanel->Hide();
+
+	wxBoxSizer* bSizer56;
+	bSizer56 = new wxBoxSizer( wxVERTICAL );
+
+	output_textctrl = new wxTextCtrl( OutputTextPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE|wxTE_READONLY );
+	bSizer56->Add( output_textctrl, 1, wxALL|wxEXPAND, 5 );
+
+
+	OutputTextPanel->SetSizer( bSizer56 );
+	OutputTextPanel->Layout();
+	bSizer56->Fit( OutputTextPanel );
+	bSizer46->Add( OutputTextPanel, 20, wxEXPAND | wxALL, 5 );
+
+	InfoPanel = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer61;
+	bSizer61 = new wxBoxSizer( wxVERTICAL );
+
+	InfoText = new wxRichTextCtrl( InfoPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_READONLY|wxHSCROLL|wxVSCROLL );
+	bSizer61->Add( InfoText, 1, wxEXPAND | wxALL, 5 );
+
+
+	InfoPanel->SetSizer( bSizer61 );
+	InfoPanel->Layout();
+	bSizer61->Fit( InfoPanel );
+	bSizer46->Add( InfoPanel, 1, wxEXPAND | wxALL, 5 );
+
+	ResultsPanel = new ShowTemplateMatchResultsPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	ResultsPanel->Hide();
+
+	bSizer46->Add( ResultsPanel, 80, wxEXPAND | wxALL, 5 );
+
+
+	bSizer43->Add( bSizer46, 1, wxEXPAND, 5 );
+
+	m_staticline11 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer43->Add( m_staticline11, 0, wxEXPAND | wxALL, 5 );
+
+	wxBoxSizer* bSizer48;
+	bSizer48 = new wxBoxSizer( wxHORIZONTAL );
+
+	wxBoxSizer* bSizer70;
+	bSizer70 = new wxBoxSizer( wxHORIZONTAL );
+
+	ProgressPanel = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	ProgressPanel->Hide();
+
+	wxBoxSizer* bSizer57;
+	bSizer57 = new wxBoxSizer( wxHORIZONTAL );
+
+	wxBoxSizer* bSizer59;
+	bSizer59 = new wxBoxSizer( wxHORIZONTAL );
+
+	NumberConnectedText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("o"), wxDefaultPosition, wxDefaultSize, 0 );
+	NumberConnectedText->Wrap( -1 );
+	bSizer59->Add( NumberConnectedText, 0, wxALIGN_CENTER|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	ProgressBar = new wxGauge( ProgressPanel, wxID_ANY, 100, wxDefaultPosition, wxDefaultSize, wxGA_HORIZONTAL );
+	ProgressBar->SetValue( 0 );
+	bSizer59->Add( ProgressBar, 100, wxALIGN_CENTER|wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL|wxEXPAND, 5 );
+
+	TimeRemainingText = new wxStaticText( ProgressPanel, wxID_ANY, wxT("Time Remaining : ???h:??m:??s   "), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_HORIZONTAL );
+	TimeRemainingText->Wrap( -1 );
+	bSizer59->Add( TimeRemainingText, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+
+	m_staticline60 = new wxStaticLine( ProgressPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL|wxLI_VERTICAL );
+	bSizer59->Add( m_staticline60, 0, wxEXPAND | wxALL, 5 );
+
+	FinishButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Finish"), wxDefaultPosition, wxDefaultSize, 0 );
+	FinishButton->Hide();
+
+	bSizer59->Add( FinishButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	CancelAlignmentButton = new wxButton( ProgressPanel, wxID_ANY, wxT("Terminate Job"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer59->Add( CancelAlignmentButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+
+	bSizer57->Add( bSizer59, 1, wxEXPAND, 5 );
+
+
+	ProgressPanel->SetSizer( bSizer57 );
+	ProgressPanel->Layout();
+	bSizer57->Fit( ProgressPanel );
+	bSizer70->Add( ProgressPanel, 1, wxEXPAND | wxALL, 5 );
+
+
+	bSizer48->Add( bSizer70, 1, wxEXPAND, 5 );
+
+	StartPanel = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer58;
+	bSizer58 = new wxBoxSizer( wxHORIZONTAL );
+
+	RunProfileText = new wxStaticText( StartPanel, wxID_ANY, wxT("Run Profile :"), wxDefaultPosition, wxDefaultSize, 0 );
+	RunProfileText->Wrap( -1 );
+	bSizer58->Add( RunProfileText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	RunProfileComboBox = new MemoryComboBox( StartPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
+	bSizer58->Add( RunProfileComboBox, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	wxBoxSizer* bSizer60;
+	bSizer60 = new wxBoxSizer( wxVERTICAL );
+
+	StartEstimationButton = new wxButton( StartPanel, wxID_ANY, wxT("Start Search"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer60->Add( StartEstimationButton, 0, wxALL, 5 );
+
+
+	bSizer58->Add( bSizer60, 50, wxEXPAND, 5 );
+
+
+	StartPanel->SetSizer( bSizer58 );
+	StartPanel->Layout();
+	bSizer58->Fit( StartPanel );
+	bSizer48->Add( StartPanel, 1, wxEXPAND | wxALL, 5 );
+
+
+	bSizer43->Add( bSizer48, 0, wxEXPAND, 5 );
+
+
+	this->SetSizer( bSizer43 );
+	this->Layout();
+
+	// Connect Events
+	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RefineTemplateDevPanelParent::OnUpdateUI ) );
+	ResetAllDefaultsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateDevPanelParent::ResetAllDefaultsClick ), NULL, this );
+	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( RefineTemplateDevPanelParent::OnInfoURL ), NULL, this );
+	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateDevPanelParent::FinishButtonClick ), NULL, this );
+	CancelAlignmentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateDevPanelParent::TerminateButtonClick ), NULL, this );
+	StartEstimationButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateDevPanelParent::StartEstimationClick ), NULL, this );
+}
+
+RefineTemplateDevPanelParent::~RefineTemplateDevPanelParent()
+{
+	// Disconnect Events
+	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RefineTemplateDevPanelParent::OnUpdateUI ) );
+	ResetAllDefaultsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateDevPanelParent::ResetAllDefaultsClick ), NULL, this );
+	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( RefineTemplateDevPanelParent::OnInfoURL ), NULL, this );
+	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateDevPanelParent::FinishButtonClick ), NULL, this );
+	CancelAlignmentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateDevPanelParent::TerminateButtonClick ), NULL, this );
+	StartEstimationButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateDevPanelParent::StartEstimationClick ), NULL, this );
 
 }
 
@@ -11342,6 +11858,65 @@ ParticlePositionExportDialog::~ParticlePositionExportDialog()
 	DestinationDirectoryPickerCtrl->Disconnect( wxEVT_COMMAND_DIRPICKER_CHANGED, wxFileDirPickerEventHandler( ParticlePositionExportDialog::OnDirChanged ), NULL, this );
 	CancelButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ParticlePositionExportDialog::OnCancelButtonClick ), NULL, this );
 	ExportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ParticlePositionExportDialog::OnExportButtonClick ), NULL, this );
+
+}
+
+AtomicCoordinatesChooserDialogParent::AtomicCoordinatesChooserDialogParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
+{
+	this->SetSizeHints( wxSize( -1,-1 ), wxDefaultSize );
+
+	MainBoxSizer = new wxBoxSizer( wxVERTICAL );
+
+	m_staticText246 = new wxStaticText( this, wxID_ANY, wxT("Select New Volume :-"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText246->Wrap( -1 );
+	MainBoxSizer->Add( m_staticText246, 0, wxALL, 5 );
+
+	m_staticline18 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	MainBoxSizer->Add( m_staticline18, 0, wxEXPAND | wxALL, 5 );
+
+	ComboBox = new VolumeAssetPickerComboPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	ComboBox->SetMinSize( wxSize( 350,-1 ) );
+
+	MainBoxSizer->Add( ComboBox, 1, wxEXPAND | wxALL, 5 );
+
+	m_staticline19 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	MainBoxSizer->Add( m_staticline19, 0, wxEXPAND | wxALL, 5 );
+
+	wxBoxSizer* bSizer90;
+	bSizer90 = new wxBoxSizer( wxHORIZONTAL );
+
+
+	bSizer90->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	CancelButton = new wxButton( this, wxID_ANY, wxT("Cancel"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer90->Add( CancelButton, 0, wxALL, 5 );
+
+	SetButton = new wxButton( this, wxID_ANY, wxT("Set Reference"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer90->Add( SetButton, 0, wxALL, 5 );
+
+
+	bSizer90->Add( 0, 0, 1, wxEXPAND, 5 );
+
+
+	MainBoxSizer->Add( bSizer90, 0, wxEXPAND, 5 );
+
+
+	this->SetSizer( MainBoxSizer );
+	this->Layout();
+	MainBoxSizer->Fit( this );
+
+	this->Centre( wxBOTH );
+
+	// Connect Events
+	CancelButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesChooserDialogParent::OnCancelClick ), NULL, this );
+	SetButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesChooserDialogParent::OnRenameClick ), NULL, this );
+}
+
+AtomicCoordinatesChooserDialogParent::~AtomicCoordinatesChooserDialogParent()
+{
+	// Disconnect Events
+	CancelButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesChooserDialogParent::OnCancelClick ), NULL, this );
+	SetButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AtomicCoordinatesChooserDialogParent::OnRenameClick ), NULL, this );
 
 }
 
@@ -12270,37 +12845,6 @@ CombinedPackageRefinementPanel::CombinedPackageRefinementPanel( wxWindow* parent
 }
 
 CombinedPackageRefinementPanel::~CombinedPackageRefinementPanel()
-{
-}
-
-CombinedPackageVolumePanel::CombinedPackageVolumePanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
-{
-	wxBoxSizer* bSizer686;
-	bSizer686 = new wxBoxSizer( wxVERTICAL );
-
-	SelectVolumeText = new wxStaticText( this, wxID_ANY, wxT("Select a 3D Volume to use from each package:"), wxDefaultPosition, wxDefaultSize, 0 );
-	SelectVolumeText->Wrap( -1 );
-	bSizer686->Add( SelectVolumeText, 0, wxALL, 5 );
-
-	m_staticline187 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
-	bSizer686->Add( m_staticline187, 0, wxEXPAND | wxALL, 5 );
-
-	CombinedVolumeScrollWindow = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHSCROLL|wxVSCROLL );
-	CombinedVolumeScrollWindow->SetScrollRate( 5, 5 );
-	CombinedVolumeScrollSizer = new wxBoxSizer( wxVERTICAL );
-
-
-	CombinedVolumeScrollWindow->SetSizer( CombinedVolumeScrollSizer );
-	CombinedVolumeScrollWindow->Layout();
-	CombinedVolumeScrollSizer->Fit( CombinedVolumeScrollWindow );
-	bSizer686->Add( CombinedVolumeScrollWindow, 1, wxEXPAND | wxALL, 5 );
-
-
-	this->SetSizer( bSizer686 );
-	this->Layout();
-}
-
-CombinedPackageVolumePanel::~CombinedPackageVolumePanel()
 {
 }
 

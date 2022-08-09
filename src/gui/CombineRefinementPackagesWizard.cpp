@@ -601,4 +601,5 @@ wxWizardPage * RefinementSelectPage::GetNext() const
 wxWizardPage * RefinementSelectPage::GetPrev() const
 {
 	return wizard_pointer->combined_class_selection_page;
+}
 

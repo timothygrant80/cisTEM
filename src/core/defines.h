@@ -1,3 +1,5 @@
+// clang-format off
+
 #define INTEGER_DATABASE_VERSION 2
 #define START_PORT 3000
 #define END_PORT 5000
@@ -23,6 +25,12 @@
 #define VARIABLE_LENGTH  8
 #define INTEGER_UNSIGNED 9
 
+// Types of noise distributions
+namespace cistem {
+
+  enum NoiseType : int { UNIFORM, GAUSSIAN, POISSON, EXPONENTIAL, GAMMA };
+
+}
 
 // From Table 2.2 DeGraff
 #define RELATIVISTIC_VOLTAGE_100 109784.0f // Volts
@@ -49,6 +57,9 @@
 #define ANSI_UNDERLINE_OFF "\e[24m"
 #define ANSI_BLINK_SLOW "\x1b[5m"
 #define ANSI_BLINK_OFF "\x1b[25m"
+#define ANSI_BOLD "\033[1m"
+#define ANSI_BOLD_OFF "\033[0m"
+
 
 #define SCALED_IMAGE_SIZE 1200
 
@@ -81,3 +92,4 @@
 WX_DECLARE_OBJARRAY(float, wxArrayFloat);
 WX_DECLARE_OBJARRAY(bool, wxArrayBool);
 
+// clang-format on

@@ -2,85 +2,77 @@
 #include <wx/dir.h>
 
 class
-RemoveRelionStripes : public MyApp
-{
+        RemoveRelionStripes : public MyApp {
 
-	public:
+  public:
+    bool DoCalculation( );
+    void DoInteractiveUserInput( );
 
-	bool DoCalculation();
-	void DoInteractiveUserInput();
-
-	private:
+  private:
 };
 
-void SetHorizontalLineMaskToOne(Image &image_to_set, int wanted_line);
-void SetVerticalLineMaskToOne(Image &image_to_set, int wanted_line);
+void SetHorizontalLineMaskToOne(Image& image_to_set, int wanted_line);
+void SetVerticalLineMaskToOne(Image& image_to_set, int wanted_line);
 
-float ReturnCorrelationBetweenTwoHorizontalLines(Image &image_to_use, int first_line, int second_line);
-float ReturnCorrelationBetweenTwoVerticalLines(Image &image_to_use, int first_line, int second_line);
-
+float ReturnCorrelationBetweenTwoHorizontalLines(Image& image_to_use, int first_line, int second_line);
+float ReturnCorrelationBetweenTwoVerticalLines(Image& image_to_use, int first_line, int second_line);
 
 IMPLEMENT_APP(RemoveRelionStripes)
 
 // override the DoInteractiveUserInput
 
-void RemoveRelionStripes::DoInteractiveUserInput()
-{
+void RemoveRelionStripes::DoInteractiveUserInput( ) {
 
-	UserInput *my_input = new UserInput("RemoveRelionStripes", 1.0);
+    UserInput* my_input = new UserInput("RemoveRelionStripes", 1.0);
 
-	std::string input_filename			=		my_input->GetFilenameFromUser("Input file name", "Filename of input image", "input.mrc", true );
-	std::string output_filename			=		my_input->GetFilenameFromUser("Output MRC file name", "Filename of output image which should remove repeated edge pixels", "output.mrc", false );
-	float       dot_product_threshold	=		my_input->GetFloatFromUser("Dot Product Threshold", "", "0.9");
-	bool		invert_images			= 		my_input->GetYesNoFromUser("Invert image contrast?", "", "YES");
+    std::string input_filename        = my_input->GetFilenameFromUser("Input file name", "Filename of input image", "input.mrc", true);
+    std::string output_filename       = my_input->GetFilenameFromUser("Output MRC file name", "Filename of output image which should remove repeated edge pixels", "output.mrc", false);
+    float       dot_product_threshold = my_input->GetFloatFromUser("Dot Product Threshold", "", "0.9");
+    bool        invert_images         = my_input->GetYesNoFromUser("Invert image contrast?", "", "YES");
 
+    delete my_input;
 
-	delete my_input;
-
-	my_current_job.ManualSetArguments("ttfb", input_filename.c_str(), output_filename.c_str(), dot_product_threshold, invert_images);
+    my_current_job.ManualSetArguments("ttfb", input_filename.c_str( ), output_filename.c_str( ), dot_product_threshold, invert_images);
 }
 
 // override the do calculation method which will be what is actually run..
 
-bool RemoveRelionStripes::DoCalculation()
-{
+bool RemoveRelionStripes::DoCalculation( ) {
 
+    std::string input_filename        = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string output_filename       = my_current_job.arguments[1].ReturnStringArgument( );
+    float       dot_product_threshold = my_current_job.arguments[2].ReturnFloatArgument( );
+    bool        invert_images         = my_current_job.arguments[3].ReturnBoolArgument( );
 
-	std::string	input_filename 		= my_current_job.arguments[0].ReturnStringArgument();
-	std::string	output_filename 	= my_current_job.arguments[1].ReturnStringArgument();
-	float dot_product_threshold		= my_current_job.arguments[2].ReturnFloatArgument();
-	bool invert_images				= my_current_job.arguments[3].ReturnBoolArgument();
+    ImageFile input_file;
+    MRCFile   output_file;
 
-	ImageFile input_file;
-	MRCFile output_file;
+    Image input_image;
+    Image buffer_image;
+    Image mask_image;
 
-	Image input_image;
-	Image buffer_image;
-	Image mask_image;
+    float current_correlation;
+    int   line_counter;
+    long  pixel_counter;
 
-	float current_correlation;
-	int line_counter;
-	long pixel_counter;
+    int i, j;
 
-	int i,j;
+    input_file.OpenFile(input_filename, false);
+    output_file.OpenFile(output_filename, true);
 
-	input_file.OpenFile(input_filename, false);
-	output_file.OpenFile(output_filename, true);
+    mask_image.Allocate(input_file.ReturnXSize( ), input_file.ReturnYSize( ), 1);
+    buffer_image.Allocate(input_file.ReturnXSize( ), input_file.ReturnYSize( ), 1);
 
-	mask_image.Allocate(input_file.ReturnXSize(), input_file.ReturnYSize(), 1);
-	buffer_image.Allocate(input_file.ReturnXSize(), input_file.ReturnYSize(), 1);
+    wxPrintf("\nRemoving Stripes...\n\n");
 
+    ProgressBar* my_progress = new ProgressBar(input_file.ReturnNumberOfSlices( ));
 
-	wxPrintf("\nRemoving Stripes...\n\n");
+    for ( int counter = 1; counter <= input_file.ReturnNumberOfSlices( ); counter++ ) {
+        input_image.ReadSlice(&input_file, counter);
+        if ( input_image.ContainsRepeatedLineEdges( ) == true )
+            input_image.SetToConstant(0.0f);
 
-	ProgressBar *my_progress = new ProgressBar(input_file.ReturnNumberOfSlices());
-
-	for (int counter = 1; counter <= input_file.ReturnNumberOfSlices(); counter++ )
-	{
-		input_image.ReadSlice(&input_file, counter);
-		if (input_image.ContainsRepeatedLineEdges() == true) input_image.SetToConstant(0.0f);
-
-		/*
+        /*
 
 		if (invert_images == true) input_image.InvertRealValues();
 		mask_image.SetToConstant(0.0f);
@@ -237,100 +229,89 @@ bool RemoveRelionStripes::DoCalculation()
 		}
 
 */
-		input_image.WriteSlice(&output_file, counter);
-		my_progress->Update(counter);
-	}
+        input_image.WriteSlice(&output_file, counter);
+        my_progress->Update(counter);
+    }
 
-	delete my_progress;
+    delete my_progress;
 
-
-	return true;
+    return true;
 }
 
-float ReturnCorrelationBetweenTwoHorizontalLines(Image &image_to_use, int first_line, int second_line)
-{
-	float correlation = 0.0f;
-	float ab_buffer = 0.0f;
-	float aa_buffer = 0.0f;
-	float bb_buffer = 0.0f;
+float ReturnCorrelationBetweenTwoHorizontalLines(Image& image_to_use, int first_line, int second_line) {
+    float correlation = 0.0f;
+    float ab_buffer   = 0.0f;
+    float aa_buffer   = 0.0f;
+    float bb_buffer   = 0.0f;
 
-	float first_line_average = 0.0f;
-	float second_line_average = 0.0f;
+    float first_line_average  = 0.0f;
+    float second_line_average = 0.0f;
 
-	int counter;
+    int counter;
 
-	for (counter = 0; counter < image_to_use.logical_x_dimension; counter++)
-	{
-		first_line_average += image_to_use.real_values[image_to_use.ReturnReal1DAddressFromPhysicalCoord(counter, first_line, 0)];
-		second_line_average += image_to_use.real_values[image_to_use.ReturnReal1DAddressFromPhysicalCoord(counter, second_line, 0)];
-	}
+    for ( counter = 0; counter < image_to_use.logical_x_dimension; counter++ ) {
+        first_line_average += image_to_use.real_values[image_to_use.ReturnReal1DAddressFromPhysicalCoord(counter, first_line, 0)];
+        second_line_average += image_to_use.real_values[image_to_use.ReturnReal1DAddressFromPhysicalCoord(counter, second_line, 0)];
+    }
 
-	first_line_average /= image_to_use.logical_x_dimension;
-	second_line_average /= image_to_use.logical_x_dimension;
+    first_line_average /= image_to_use.logical_x_dimension;
+    second_line_average /= image_to_use.logical_x_dimension;
 
-	for (counter = 0; counter < image_to_use.logical_x_dimension; counter++)
-	{
-		ab_buffer += (image_to_use.real_values[image_to_use.ReturnReal1DAddressFromPhysicalCoord(counter, first_line, 0)] - first_line_average) * (image_to_use.real_values[image_to_use.ReturnReal1DAddressFromPhysicalCoord(counter, second_line, 0)] - second_line_average);
-		aa_buffer += powf(image_to_use.real_values[image_to_use.ReturnReal1DAddressFromPhysicalCoord(counter, first_line, 0)] - first_line_average, 2);
-		bb_buffer += powf(image_to_use.real_values[image_to_use.ReturnReal1DAddressFromPhysicalCoord(counter, second_line, 0)] - second_line_average, 2);
-	}
+    for ( counter = 0; counter < image_to_use.logical_x_dimension; counter++ ) {
+        ab_buffer += (image_to_use.real_values[image_to_use.ReturnReal1DAddressFromPhysicalCoord(counter, first_line, 0)] - first_line_average) * (image_to_use.real_values[image_to_use.ReturnReal1DAddressFromPhysicalCoord(counter, second_line, 0)] - second_line_average);
+        aa_buffer += powf(image_to_use.real_values[image_to_use.ReturnReal1DAddressFromPhysicalCoord(counter, first_line, 0)] - first_line_average, 2);
+        bb_buffer += powf(image_to_use.real_values[image_to_use.ReturnReal1DAddressFromPhysicalCoord(counter, second_line, 0)] - second_line_average, 2);
+    }
 
-	aa_buffer /= image_to_use.logical_x_dimension - 1;
-	bb_buffer /= image_to_use.logical_x_dimension - 1;
+    aa_buffer /= image_to_use.logical_x_dimension - 1;
+    bb_buffer /= image_to_use.logical_x_dimension - 1;
 
-	correlation = ab_buffer / sqrtf(aa_buffer * bb_buffer);
-	return correlation / image_to_use.logical_x_dimension;
+    correlation = ab_buffer / sqrtf(aa_buffer * bb_buffer);
+    return correlation / image_to_use.logical_x_dimension;
 }
 
-float ReturnCorrelationBetweenTwoVerticalLines(Image &image_to_use, int first_line, int second_line)
-{
-	float correlation = 0.0f;
-	float ab_buffer = 0.0f;
-	float aa_buffer = 0.0f;
-	float bb_buffer = 0.0f;
+float ReturnCorrelationBetweenTwoVerticalLines(Image& image_to_use, int first_line, int second_line) {
+    float correlation = 0.0f;
+    float ab_buffer   = 0.0f;
+    float aa_buffer   = 0.0f;
+    float bb_buffer   = 0.0f;
 
-	float first_line_average = 0.0f;
-	float second_line_average = 0.0f;
+    float first_line_average  = 0.0f;
+    float second_line_average = 0.0f;
 
-	int counter;
+    int counter;
 
-	for (counter = 0; counter < image_to_use.logical_y_dimension; counter++)
-	{
-		first_line_average += image_to_use.real_values[image_to_use.ReturnReal1DAddressFromPhysicalCoord(first_line, counter, 0)];
-		second_line_average += image_to_use.real_values[image_to_use.ReturnReal1DAddressFromPhysicalCoord(second_line, counter, 0)];
-	}
+    for ( counter = 0; counter < image_to_use.logical_y_dimension; counter++ ) {
+        first_line_average += image_to_use.real_values[image_to_use.ReturnReal1DAddressFromPhysicalCoord(first_line, counter, 0)];
+        second_line_average += image_to_use.real_values[image_to_use.ReturnReal1DAddressFromPhysicalCoord(second_line, counter, 0)];
+    }
 
-	first_line_average /= image_to_use.logical_y_dimension;
-	second_line_average /= image_to_use.logical_y_dimension;
+    first_line_average /= image_to_use.logical_y_dimension;
+    second_line_average /= image_to_use.logical_y_dimension;
 
-	for (counter = 0; counter < image_to_use.logical_y_dimension; counter++)
-	{
-		ab_buffer += (image_to_use.real_values[image_to_use.ReturnReal1DAddressFromPhysicalCoord(first_line, counter, 0)] - first_line_average) * (image_to_use.real_values[image_to_use.ReturnReal1DAddressFromPhysicalCoord(second_line, counter, 0)] - second_line_average);
-		aa_buffer += powf(image_to_use.real_values[image_to_use.ReturnReal1DAddressFromPhysicalCoord(first_line, counter, 0)] - first_line_average, 2);
-		bb_buffer += powf(image_to_use.real_values[image_to_use.ReturnReal1DAddressFromPhysicalCoord(second_line, counter, 0)] - second_line_average, 2);
-	}
+    for ( counter = 0; counter < image_to_use.logical_y_dimension; counter++ ) {
+        ab_buffer += (image_to_use.real_values[image_to_use.ReturnReal1DAddressFromPhysicalCoord(first_line, counter, 0)] - first_line_average) * (image_to_use.real_values[image_to_use.ReturnReal1DAddressFromPhysicalCoord(second_line, counter, 0)] - second_line_average);
+        aa_buffer += powf(image_to_use.real_values[image_to_use.ReturnReal1DAddressFromPhysicalCoord(first_line, counter, 0)] - first_line_average, 2);
+        bb_buffer += powf(image_to_use.real_values[image_to_use.ReturnReal1DAddressFromPhysicalCoord(second_line, counter, 0)] - second_line_average, 2);
+    }
 
-	aa_buffer /= image_to_use.logical_y_dimension - 1;
-	bb_buffer /= image_to_use.logical_y_dimension - 1;
+    aa_buffer /= image_to_use.logical_y_dimension - 1;
+    bb_buffer /= image_to_use.logical_y_dimension - 1;
 
-	correlation = ab_buffer / sqrtf(aa_buffer * bb_buffer);
-	return correlation  / image_to_use.logical_y_dimension;
+    correlation = ab_buffer / sqrtf(aa_buffer * bb_buffer);
+    return correlation / image_to_use.logical_y_dimension;
 }
 
-void SetHorizontalLineMaskToOne(Image &image_to_set, int wanted_line)
-{
+void SetHorizontalLineMaskToOne(Image& image_to_set, int wanted_line) {
 
-	for (int counter = 0; counter < image_to_set.logical_x_dimension; counter++)
-	{
-		image_to_set.real_values[image_to_set.ReturnReal1DAddressFromPhysicalCoord(counter, wanted_line, 0)] = 1.0f;
-	}
+    for ( int counter = 0; counter < image_to_set.logical_x_dimension; counter++ ) {
+        image_to_set.real_values[image_to_set.ReturnReal1DAddressFromPhysicalCoord(counter, wanted_line, 0)] = 1.0f;
+    }
 }
 
-void SetVerticalLineMaskToOne(Image &image_to_set, int wanted_line)
-{
+void SetVerticalLineMaskToOne(Image& image_to_set, int wanted_line) {
 
-	for (int counter = 0; counter < image_to_set.logical_y_dimension; counter++)
-	{
-		image_to_set.real_values[image_to_set.ReturnReal1DAddressFromPhysicalCoord(wanted_line, counter,  0)] = 1.0f;
-	}
+    for ( int counter = 0; counter < image_to_set.logical_y_dimension; counter++ ) {
+        image_to_set.real_values[image_to_set.ReturnReal1DAddressFromPhysicalCoord(wanted_line, counter, 0)] = 1.0f;
+    }
 }

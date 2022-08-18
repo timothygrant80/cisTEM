@@ -17,128 +17,68 @@ IMPLEMENT_APP(NikoTestApp)
 void NikoTestApp::DoInteractiveUserInput( ) {
     UserInput* my_input = new UserInput("TrimStack", 1.0);
 
-    wxString input_imgstack = my_input->GetFilenameFromUser("Input image file name", "Name of input image file *.mrc", "input.mrc", true);
-    // // wxString output_stack_filename = my_input->GetFilenameFromUser("Filename for output stack of particles.", "A stack of particles will be written to disk", "particles.mrc", false);
-    wxString angle_filename = my_input->GetFilenameFromUser("Tilt Angle filename", "The tilts, *.tlt", "ang.tlt", true);
-    // wxString coordinates_filename  = my_input->GetFilenameFromUser("Coordinates (PLT) filename", "The input particle coordinates, in Imagic-style PLT forlmat", "coos.plt", true);
-    int img_index = my_input->GetIntFromUser("Box size for output candidate particle images (pixels)", "In pixels. Give 0 to skip writing particle images to disk.", "256", 0);
+    wxString input_imgstack        = my_input->GetFilenameFromUser("Input image file name", "Name of input image file *.mrc", "input.mrc", true);
+    wxString output_stack_filename = my_input->GetFilenameFromUser("Filename for output stack of particles.", "A stack of particles will be written to disk", "particles.mrc", false);
+    wxString coordinates_filename  = my_input->GetFilenameFromUser("Coordinates (PLT) filename", "The input particle coordinates, in Imagic-style PLT forlmat", "coos.plt", true);
+    int      output_stack_box_size = my_input->GetIntFromUser("Box size for output candidate particle images (pixels)", "In pixels. Give 0 to skip writing particle images to disk.", "256", 0);
 
     delete my_input;
 
-    my_current_job.Reset(3);
-    my_current_job.ManualSetArguments("tti", input_imgstack.ToUTF8( ).data( ), angle_filename.ToUTF8( ).data( ), img_index);
+    //	my_current_job.Reset(9);
+    my_current_job.ManualSetArguments("ttti", input_imgstack.ToUTF8( ).data( ), output_stack_filename.ToUTF8( ).data( ), coordinates_filename.ToUTF8( ).data( ), output_stack_box_size);
 }
 
 // override the do calculation method which will be what is actually run..
 
 bool NikoTestApp::DoCalculation( ) {
     wxPrintf("Hello world4\n");
-    // // int X_maskcenter          = my_current_job.arguments[1].ReturnIntegerArgument( );
-    wxString input_imgstack = my_current_job.arguments[0].ReturnStringArgument( );
-    // // wxString output_stack_filename = my_current_job.arguments[1].ReturnStringArgument( );
-    wxString angle_filename = my_current_job.arguments[1].ReturnStringArgument( );
-    int      img_index      = my_current_job.arguments[2].ReturnIntegerArgument( );
-    // wxString coordinates_filename  = my_current_job.arguments[2].ReturnStringArgument( );
-    // int      output_stack_box_size = my_current_job.arguments[3].ReturnIntegerArgument( );
+    // int X_maskcenter          = my_current_job.arguments[1].ReturnIntegerArgument( );
+    wxString output_stack_filename = my_current_job.arguments[1].ReturnStringArgument( );
+    wxString coordinates_filename  = my_current_job.arguments[2].ReturnStringArgument( );
+    int      output_stack_box_size = my_current_job.arguments[3].ReturnIntegerArgument( );
 
-    NumericTextFile* tilt_angle_file;
-    tilt_angle_file = new NumericTextFile(angle_filename, OPEN_TO_READ, 1);
+    NumericTextFile* input_coos_file;
+    input_coos_file = new NumericTextFile(coordinates_filename, OPEN_TO_READ, 3);
 
     //stack manipulate
-    // MRCFile input_stack("/groups/lingli/Downloads/CTEM_tomo1/10064/proc_07112022/clip/tomo1_ali.mrc", false);
-    MRCFile input_stack(input_imgstack.ToStdString( ), false);
-    // MRCFile output_stack(output_stack_filename.ToStdString( ), true);
-    // output_stack.OpenFile(output_stack_filename.ToStdString( ), true);
-    int image_no = input_stack.ReturnNumberOfSlices( );
-    // MRCFile input_stack("/groups/lingli/Downloads/CTEM_tomo1/10064/proc_07112022/clip/tomo1_ali.mrc", false);
-    // wxPrintf("image number in the stack: %i\n", image_no);
+    MRCFile input_stack("/groups/lingli/Downloads/CTEM_tomo1/10064/proc_07112022/clip/tomo1_ali.mrc", false);
+    MRCFile output_stack(output_stack_filename.ToStdString( ), true);
+    int     image_no = input_stack.ReturnNumberOfSlices( );
+
+    wxPrintf("image number in the stack: %i", image_no);
 
     Image current_image;
-    Image cos_image;
     // MRCFile      output_file("output.mrc", true);
-    // ProgressBar* my_progress = new ProgressBar(input_stack.ReturnNumberOfSlices( ));
-    int my_x;
-    int my_y;
-    // Image box;
+    ProgressBar* my_progress = new ProgressBar(input_stack.ReturnNumberOfSlices( ));
+    int          my_x;
+    int          my_y;
+    Image        box;
 
-    // box.Allocate(output_stack_box_size, output_stack_box_size, 1, true);
+    box.Allocate(output_stack_box_size, output_stack_box_size, 1, true);
     // int number_of_particles = input_coos_file->number_of_lines;
 
     //write a if statement to judge if the number of coordinates in the coord file equals to image_no
-    // int number_of_patchgroups = input_coos_file->number_of_lines;
-    // float temp_array[3];
-    float temp_angle[1];
-    int   x_at_centertlt, y_at_centertlt;
-    // int   col = 2;
+    int   number_of_particles = input_coos_file->number_of_lines;
+    float temp_array[3];
 
-    // float    temp_array[number_of_patchgroups][2];
-    // MRCFile* patch = new MRCFile[number_of_patchgroups];
-    // for ( int patch_counter = 0; patch_counter < number_of_patchgroups; patch_counter++ ) {
-    //     input_coos_file->ReadLine(temp_array[patch_counter]);
-    //     // string tmpstring = std::to_string(patch_counter);
-    //     // tmpstring = patch_counter.ToStdString( );
-    //     // MRCFile tmpstring(std::to_string(patch_counter) + ".mrc", true);
-    //     // string zz                     = std::to_string(patch_counter) + ".mrc";
-    //     // patch[patch_counter] = MRCFile(wxString::Format("%g.mrc", patch_counter).ToStdString( ), true);
-    //     patch[patch_counter].OpenFile(wxString::Format("%i.mrc", patch_counter).ToStdString( ), true);
-    // }
-
-    //     string zz, zzname;
-    // zz     = std::to_string(patch_counter) + ".mrc";
-    // zzname = std::to_string(patch_counter);
-    // MRCFile zzname(zz, true);
-    // wxPrintf("number of patch groups: %i\n\n", number_of_patchgroups);
-    for ( long image_counter = 0; image_counter < img_index; image_counter++ ) {
-        // current_image.ReadSlice(&input_stack, image_counter + 1);
-        // float image_mean = current_image.ReturnAverageOfRealValues( );
-
-        tilt_angle_file->ReadLine(temp_angle);
+    for ( long image_counter = 0; image_counter < image_no; image_counter++ ) {
+        current_image.ReadSlice(&input_stack, image_counter + 1);
         // my_image.crop( );
+        float image_mean = current_image.ReturnAverageOfRealValues( );
+        input_coos_file->ReadLine(temp_array);
+        my_x = temp_array[1];
+        my_y = temp_array[2];
+        current_image.ClipInto(&box, image_mean, false, 1.0, int(my_x), int(my_y), 0);
+        wxPrintf("x=%i, y=%i", my_x, my_y);
+
+        box.WriteSlice(&output_stack, image_counter + 1);
+        my_progress->Update(image_counter + 1);
     }
-    current_image.ReadSlice(&input_stack, img_index);
-    float xdim     = current_image.logical_x_dimension;
-    float xdim_cos = xdim * cosf(temp_angle[0] / 180.0 * PI);
-    float ydim     = current_image.logical_y_dimension;
-    wxPrintf("dimensions %g %g %g\n", xdim, xdim_cos, ydim);
-    cos_image.Allocate(int(xdim_cos) + 1, int(ydim), 1, true);
-    current_image.ClipInto(&cos_image, 0.0, false, 1.0, int(xdim_cos), int(ydim), 0);
-    wxPrintf("dimensions %i %i\n", cos_image.logical_x_dimension, cos_image.logical_y_dimension);
 
-    float wantedvalue;
-    wantedvalue = 1.0;
-    // cos_image.AddByLinearInterpolationFourier2D( xdim, ydim, 1.0);
+    delete my_progress;
+    delete input_coos_file;
 
-    // cos_image.AddByLinearInterpolationReal(xdim, ydim, wantedvalue, wantedvalue);
-
-    cos_image.WriteSlicesAndFillHeader("costest1.mrc", 1);
-
-    // for ( int patch_counter = 0; patch_counter < number_of_patchgroups; patch_counter++ ) {
-
-    //     // input_coos_file->ReadLine(temp_array);
-    //     // x_at_centertlt = temp_array[0];
-    //     // y_at_centertlt = temp_array[1];
-    //     x_at_centertlt = temp_array[patch_counter][0];
-    //     y_at_centertlt = temp_array[patch_counter][1];
-    //     my_x           = int(x_at_centertlt * cosf(PI * temp_angle[0] / 180.0));
-    //     my_y           = y_at_centertlt;
-    //     current_image.ClipInto(&box, image_mean, false, 1.0, int(my_x), int(my_y), 0);
-
-    //     // wxPrintf("x=%i, y=%i\n", my_x, my_y);
-    //     // string zz = std::to_string(patch_counter) + ".mrc";
-    //     box.WriteSlice(&patch[patch_counter], image_counter + 1);
-    //     // wxPrintf("%.0f .mrc", patch_counter)
-    //     // box.WriteSlice(zz.str( ), image_counter + 1);
-    // }
-    // my_progress->Update(image_counter + 1);
-    return true;
-}
-
-// delete my_progress;
-// delete input_coos_file;
-// delete[] patch;
-// delete temp_array;
-
-/*    square mask part
+    /*    square mask part
     Image masked_image;
     // Image circlemask_image;
     Image squaremask;
@@ -216,38 +156,38 @@ bool NikoTestApp::DoCalculation( ) {
 
        square msk part end */
 
-// padded_image.Allocate(padded_dimensions_x, padded_dimensions_y, true);
+    // padded_image.Allocate(padded_dimensions_x, padded_dimensions_y, true);
 
-// masked_image.Allocate(input_file_2d.ReturnXSize( ), input_file_2d.ReturnYSize( ), true);
+    // masked_image.Allocate(input_file_2d.ReturnXSize( ), input_file_2d.ReturnYSize( ), true);
 
-// //  input_volume.ReadSlices(&input_file_3d, 1, input_file_3d.ReturnZSize( ));
-// input_image.ReadSlice(&input_file_2d, 1);
-// input_image.Normalize(10);
+    // //  input_volume.ReadSlices(&input_file_3d, 1, input_file_3d.ReturnZSize( ));
+    // input_image.ReadSlice(&input_file_2d, 1);
+    // input_image.Normalize(10);
 
-// circlemask_image.ReadSlice(&mask_file_2d, 1);
+    // circlemask_image.ReadSlice(&mask_file_2d, 1);
 
-// sigma = sqrtf(input_image.ReturnVarianceOfRealValues( ));
-// // temp
-// wxPrintf("xdim= %i mean=%g \n\n", input_file_2d.ReturnXSize( ), input_image.ReturnAverageOfRealValues( ));
-// wxPrintf("sigma= %g \n\n", sigma);
+    // sigma = sqrtf(input_image.ReturnVarianceOfRealValues( ));
+    // // temp
+    // wxPrintf("xdim= %i mean=%g \n\n", input_file_2d.ReturnXSize( ), input_image.ReturnAverageOfRealValues( ));
+    // wxPrintf("sigma= %g \n\n", sigma);
 
-// masked_image.CopyFrom(&input_image);
-// float zz;
-// zz = masked_image.ApplyMask( );
+    // masked_image.CopyFrom(&input_image);
+    // float zz;
+    // zz = masked_image.ApplyMask( );
 
-//masked_image.SquareMaskWithValue(500, 0);
-// masked_image.TriangleMask(300); //this create a mask, not apply mask to the image
-// masked_image.CircleMask(200); //this mask the original image by a circle
-// masked_image.WriteSlicesAndFillHeader("circlemask.mrc", 1);
-// masked_image.CircleMaskWithValue(200, -10); //this mask the original image by a circle
-// masked_image.WriteSlicesAndFillHeader("circlemaskn10.mrc", 1);
-// float zz;
-// zz = masked_image.ApplyMask(masked_image, 20);
-// zz = masked_image.ApplyMask(circlemask_image, 80, 10, 0.5, 10);
-// masked_image.WriteSlicesAndFillHeader("imageapplymask.mrc", 1);
-// wxPrintf("zzzzzzzzz%g\n\n", zz);
+    //masked_image.SquareMaskWithValue(500, 0);
+    // masked_image.TriangleMask(300); //this create a mask, not apply mask to the image
+    // masked_image.CircleMask(200); //this mask the original image by a circle
+    // masked_image.WriteSlicesAndFillHeader("circlemask.mrc", 1);
+    // masked_image.CircleMaskWithValue(200, -10); //this mask the original image by a circle
+    // masked_image.WriteSlicesAndFillHeader("circlemaskn10.mrc", 1);
+    // float zz;
+    // zz = masked_image.ApplyMask(masked_image, 20);
+    // zz = masked_image.ApplyMask(circlemask_image, 80, 10, 0.5, 10);
+    // masked_image.WriteSlicesAndFillHeader("imageapplymask.mrc", 1);
+    // wxPrintf("zzzzzzzzz%g\n\n", zz);
 
-/*    ///-----------------------------------------------------------------------------------------------------------
+    /*    ///-----------------------------------------------------------------------------------------------------------
     input_image.ClipIntoLargerRealSpace2D(&padded_image);
     padded_image.AddGaussianNoise(10.0 * sigma);
     padded_image.WriteSlice(&output_file, 1);
@@ -314,7 +254,7 @@ bool NikoTestApp::DoCalculation( ) {
     wxPrintf("\nSum of slice peaks = %g\n", sum_of_peaks);
     ///------------------------------- */
 
-/*	wxPrintf("\nDoing 1000 FFTs %i x %i\n", output_image.logical_x_dimension, output_image.logical_y_dimension);
+    /*	wxPrintf("\nDoing 1000 FFTs %i x %i\n", output_image.logical_x_dimension, output_image.logical_y_dimension);
 	for (i = 0; i < 1000; i++)
 	{
 		output_image.is_in_real_space = false;
@@ -324,7 +264,7 @@ bool NikoTestApp::DoCalculation( ) {
 	wxPrintf("\nFinished\n");
 */
 
-/*	int i, j;
+    /*	int i, j;
 	int slice_thickness;
 	int first_slice, last_slice, middle_slice;
 	long offset;
@@ -467,7 +407,7 @@ bool NikoTestApp::DoCalculation( ) {
 	sum_image.QuickAndDirtyWriteSlice("sum.mrc", 1);
 */
 
-/*	FrealignParameterFile input_par_file("input.par", OPEN_TO_READ);
+    /*	FrealignParameterFile input_par_file("input.par", OPEN_TO_READ);
 	FrealignParameterFile output_par_file("output.par", OPEN_TO_WRITE);
 	input_par_file.ReadFile(true);
 	input_par_file.ReduceAngles();
@@ -482,24 +422,24 @@ bool NikoTestApp::DoCalculation( ) {
 		if (temp_float != 0.0) wxPrintf("phi max, sigma = %i %g %g\n", i, temp_float, input_par_file.ReturnDistributionSigma(3, temp_float, i));
 //		input_par_file.SetParameters(3, temp_float, i);
 	} */
-//	for (i = 1; i <= input_par_file.number_of_lines; i++)
-//	{
-//		input_par_file.ReadLine(input_parameters);
-//		output_par_file.WriteLine(input_parameters);
-//	}
+    //	for (i = 1; i <= input_par_file.number_of_lines; i++)
+    //	{
+    //		input_par_file.ReadLine(input_parameters);
+    //		output_par_file.WriteLine(input_parameters);
+    //	}
 
-//	MRCFile input_file("input.mrc", false);
-//	MRCFile output_file("output.mrc", true);
-//	Image input_image;
-//	Image filtered_image;
-//	Image kernel;
+    //	MRCFile input_file("input.mrc", false);
+    //	MRCFile output_file("output.mrc", true);
+    //	Image input_image;
+    //	Image filtered_image;
+    //	Image kernel;
 
-//	input_image.Allocate(input_file.ReturnXSize(), input_file.ReturnYSize(), input_file.ReturnZSize(), true);
-//	filtered_image.Allocate(input_file.ReturnXSize(), input_file.ReturnYSize(), input_file.ReturnZSize(), true);
-//	kernel.Allocate(input_file.ReturnXSize(), input_file.ReturnYSize(), input_file.ReturnZSize(), true);
-//	input_image.ReadSlices(&input_file,1,input_image.logical_z_dimension);
+    //	input_image.Allocate(input_file.ReturnXSize(), input_file.ReturnYSize(), input_file.ReturnZSize(), true);
+    //	filtered_image.Allocate(input_file.ReturnXSize(), input_file.ReturnYSize(), input_file.ReturnZSize(), true);
+    //	kernel.Allocate(input_file.ReturnXSize(), input_file.ReturnYSize(), input_file.ReturnZSize(), true);
+    //	input_image.ReadSlices(&input_file,1,input_image.logical_z_dimension);
 
-/*	kernel.SetToConstant(1.0);
+    /*	kernel.SetToConstant(1.0);
 	kernel.CosineMask(8.0, 8.0, false, true, 0.0);
 //	kernel.real_values[0] = 1.0;
 	temp_float = kernel.ReturnAverageOfRealValues() * kernel.number_of_real_space_pixels;
@@ -519,12 +459,12 @@ bool NikoTestApp::DoCalculation( ) {
 //	filtered_image.MultiplyByConstant(0.3);
 	input_image.SubtractImage(&filtered_image);
 */
-//	input_image.SetToConstant(1.0);
-//	input_image.CorrectSinc(45.0, 1.0, true, 0.0);
-//	for (i = 0; i < input_image.real_memory_allocated; i++) if (input_image.real_values[i] < 0.0) input_image.real_values[i] = -log(-input_image.real_values[i] + 1.0);
-//	input_image.WriteSlices(&output_file,1,input_image.logical_z_dimension);
-//	temp_float = -420.5; wxPrintf("%g\n", fmodf(temp_float, 360.0));
-//	filtered_image.WriteSlices(&output_file,1,input_image.logical_z_dimension);
+    //	input_image.SetToConstant(1.0);
+    //	input_image.CorrectSinc(45.0, 1.0, true, 0.0);
+    //	for (i = 0; i < input_image.real_memory_allocated; i++) if (input_image.real_values[i] < 0.0) input_image.real_values[i] = -log(-input_image.real_values[i] + 1.0);
+    //	input_image.WriteSlices(&output_file,1,input_image.logical_z_dimension);
+    //	temp_float = -420.5; wxPrintf("%g\n", fmodf(temp_float, 360.0));
+    //	filtered_image.WriteSlices(&output_file,1,input_image.logical_z_dimension);
 
-// return true;
-// }
+    return true;
+}

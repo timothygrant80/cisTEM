@@ -1160,6 +1160,63 @@ void Image::Whiten(float resolution_limit, Curve* whitening_filter) {
     delete[] non_zero_count;
 }
 
+void Image::MultiplyByWeightsCurveReal(Curve& weights, float scale_factor) {
+    MyDebugAssertTrue(is_in_real_space == true, "Image to filter not in real space");
+    MyDebugAssertTrue(weights.number_of_points > 0, "weights curve not calculated");
+
+    int i;
+    int j;
+    int k;
+    int bin;
+
+    float x;
+    float y;
+    float z;
+
+    float distance_from_center_squared;
+
+    // int number_of_bins2 = ReturnLargestLogicalDimension( );
+    int   number_of_bins       = weights.number_of_points;
+    float distance_from_center = (ReturnLargestLogicalDimension( ) / 2.0 + 1.0) * sqrtf(2);
+
+    // wxPrintf("distance from center %g", distance_from_center);
+
+    long pixel_counter = 0;
+    // for ( k = 0; k < logical_z_dimension; k++ ) {
+    for ( k = 0; k < logical_z_dimension; k++ ) {
+        // for ( k = 0; k < 1; k++ ) {
+        z = powf(k - physical_address_of_box_center_z, 2);
+
+        for ( j = 0; j < logical_y_dimension; j++ ) {
+            // for ( j = 0; j < 1; j++ ) {
+            // for ( j = int(logical_y_dimension / 2.0) + 1; j < int(logical_y_dimension / 2.0 + 2); j++ ) {
+            y = powf(j - physical_address_of_box_center_y, 2);
+
+            for ( i = 0; i < logical_x_dimension; i++ ) {
+                // for ( i = 0; i < 2; i++ ) {
+                x = powf(i - physical_address_of_box_center_x, 2);
+
+                distance_from_center_squared = x + y + z;
+
+                // wxPrintf("distance from center squared %g", distance_from_center);
+                bin = round(sqrtf(distance_from_center_squared) / distance_from_center * number_of_bins);
+                // wxPrintf("the bin: %i \n", bin);
+
+                if ( (bin < weights.number_of_points) ) {
+                    // wxPrintf("bin %i, value, %g", bin, real_values[pixel_counter]);
+                    real_values[pixel_counter] = real_values[pixel_counter] * weights.data_y[bin] * scale_factor;
+                    // wxPrintf(" weights %g, weighted_value %g\n", weights.data_y[bin], real_values[pixel_counter]);
+                }
+                else {
+                    wxPrintf(" Weighting points not enough. Weighting points: %i, Weighting points needed: %i \n", number_of_bins, bin + 1);
+                }
+                pixel_counter++;
+            }
+            pixel_counter += padding_jump_value;
+        }
+    }
+}
+
 void Image::MultiplyByWeightsCurve(Curve& weights, float scale_factor) {
     MyDebugAssertTrue(is_in_real_space == false, "Image to filter not in Fourier space");
     MyDebugAssertTrue(weights.number_of_points > 0, "weights curve not calculated");
@@ -3357,6 +3414,134 @@ void Image::TriangleMask(float wanted_triangle_half_base_length) {
             pixel_counter += padding_jump_value;
         }
     }
+}
+
+float Image::SquareMaskWithCosineEdge(float wanted_mask_dim, float wanted_mask_edge, bool use_mean_value, int wanted_center_x, int wanted_center_y, int wanted_center_z) {
+    //The center of the square mask can be adjusted
+    MyDebugAssertTrue(is_in_real_space, "Image not in real space");
+    // MyDebugAssertTrue(object_is_centred_in_box, "Object not centered in box");
+
+    long   pixel_counter;
+    int    i, j, k;
+    float  x, y, z;
+    double outer_pixel_sum;
+    long   outer_number_of_pixels;
+    float  distance_from_mask_boundary;
+    float  distance_from_mask_boundary_squared;
+    float  edge;
+    double mask_volume = 0.0;
+
+    if ( wanted_center_x == 0 && wanted_center_y == 0 && wanted_center_z == 0 ) {
+        wanted_center_x = physical_address_of_box_center_x;
+        wanted_center_y = physical_address_of_box_center_y;
+        wanted_center_z = physical_address_of_box_center_z;
+    }
+
+    const int i_min      = wanted_center_x - wanted_mask_dim / 2;
+    const int i_max      = wanted_center_x + (wanted_mask_dim - wanted_mask_dim / 2 - 1);
+    const int j_min      = wanted_center_y - wanted_mask_dim / 2;
+    const int j_max      = wanted_center_y + (wanted_mask_dim - wanted_mask_dim / 2 - 1);
+    const int k_min      = wanted_center_z - wanted_mask_dim / 2;
+    const int k_max      = wanted_center_z + (wanted_mask_dim - wanted_mask_dim / 2 - 1);
+    const int i_min_edge = wanted_center_x - wanted_mask_dim / 2 - wanted_mask_edge;
+    const int i_max_edge = wanted_center_x + (wanted_mask_dim - wanted_mask_dim / 2 - 1) + wanted_mask_edge;
+    const int j_min_edge = wanted_center_y - wanted_mask_dim / 2 - wanted_mask_edge;
+    const int j_max_edge = wanted_center_y + (wanted_mask_dim - wanted_mask_dim / 2 - 1) + wanted_mask_edge;
+    const int k_min_edge = wanted_center_z - wanted_mask_dim / 2 - wanted_mask_edge;
+    const int k_max_edge = wanted_center_z + (wanted_mask_dim - wanted_mask_dim / 2 - 1) + wanted_mask_edge;
+
+    float dis_x_squared;
+    float dis_y_squared;
+    float dis_z_squared;
+
+    outer_pixel_sum        = 0.0;
+    outer_number_of_pixels = 0;
+    pixel_counter          = 0;
+
+    MyDebugAssertTrue(wanted_mask_edge > 1, "Edge width too small: %f\n", wanted_mask_edge);
+
+    // Let's mask
+    pixel_counter = 0;
+    if ( use_mean_value ) {
+        for ( k = 0; k < logical_z_dimension; k++ ) {
+            for ( j = 0; j < logical_y_dimension; j++ ) {
+                for ( i = 0; i < logical_x_dimension; i++ ) {
+                    // if ( invert ) {
+                    //     if ( i >= i_min && i <= i_max && j >= j_min && j <= j_max && k >= k_min && k <= k_max ) {
+                    //         real_values[pixel_counter] = wanted_mask_value;
+                    //     }
+                    // }
+                    // else {
+                    if ( i < i_min_edge || i > i_max_edge || j < j_min_edge || j > j_max_edge || k < k_min_edge || k > k_max_edge ) {
+                        // real_values[pixel_counter] = wanted_mask_value;
+                        outer_pixel_sum = outer_pixel_sum + real_values[pixel_counter];
+                        outer_number_of_pixels++;
+                    }
+                    // }
+                    pixel_counter++;
+                }
+                pixel_counter += padding_jump_value;
+            }
+        }
+        if ( pixel_counter > 0 ) {
+            outer_pixel_sum /= outer_number_of_pixels;
+        }
+    }
+    else {
+        outer_pixel_sum = 0;
+    }
+
+    pixel_counter = 0;
+    for ( k = 0; k < logical_z_dimension; k++ ) {
+        z = powf(k - wanted_center_z, 2);
+
+        for ( j = 0; j < logical_y_dimension; j++ ) {
+            y = powf(j - wanted_center_y, 2);
+
+            for ( i = 0; i < logical_x_dimension; i++ ) {
+                x = powf(i - wanted_center_x, 2);
+
+                if ( i >= i_min_edge && i <= i_max_edge && j >= j_min_edge && j <= j_max_edge && k >= k_min_edge && k <= k_max_edge ) {
+                    if ( i <= i_min || i >= i_max ) {
+                        dis_x_squared = std::min(powf(i - i_min, 2), powf(i - i_max, 2));
+                    }
+                    else {
+                        dis_x_squared = 0.0;
+                    }
+                    if ( j <= j_min || j >= j_max ) {
+                        dis_y_squared = std::min(powf(j - j_min, 2), powf(j - j_max, 2));
+                    }
+                    else {
+                        dis_y_squared = 0.0;
+                    }
+                    if ( k <= k_min || k >= k_max ) {
+                        dis_z_squared = std::min(powf(k - k_min, 2), powf(k - k_max, 2));
+                    }
+                    else {
+                        dis_z_squared = 0.0;
+                    }
+                    distance_from_mask_boundary_squared = dis_x_squared + dis_y_squared + dis_z_squared;
+                    distance_from_mask_boundary         = sqrtf(distance_from_mask_boundary_squared);
+                    if ( distance_from_mask_boundary <= wanted_mask_edge ) {
+                        edge                       = (1.0 + cosf(PI * distance_from_mask_boundary / wanted_mask_edge)) / 2.0;
+                        real_values[pixel_counter] = real_values[pixel_counter] * edge + (1.0 - edge) * outer_pixel_sum;
+                        mask_volume += powf(edge, 2);
+                    }
+                    else {
+                        real_values[pixel_counter] = outer_pixel_sum;
+                        mask_volume += 1.0;
+                    }
+                }
+                else {
+                    real_values[pixel_counter] = outer_pixel_sum;
+                    mask_volume += 1.0;
+                }
+                pixel_counter++;
+            }
+            pixel_counter += padding_jump_value;
+        }
+    }
+    return mask_volume;
 }
 
 void Image::SquareMaskWithValue(float wanted_mask_dim, float wanted_mask_value, bool invert, int wanted_center_x, int wanted_center_y, int wanted_center_z) {

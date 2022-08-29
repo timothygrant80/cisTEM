@@ -183,7 +183,9 @@ class Image {
     void                ConvertToAutoMask(float pixel_size, float outer_mask_radius_in_angstroms, float filter_resolution_in_angstroms, float rebin_value, bool auto_estimate_initial_bin_value = true, float wanted_initial_bin_value = 0.0f);
     void                LocalResSignificanceFilter(float pixel_size, float starting_resolution, float mask_radius_in_angstroms);
     void                GaussianLowPassFilter(float sigma);
+    void                GaussianLowPassRadiusFilter(float radius, float sigma);
     void                GaussianHighPassFilter(float sigma);
+    void                GaussianHighPassRadiusFilter(float radius, float sigma);
     void                ApplyLocalResolutionFilter(Image& local_resolution_map, float pixel_size, int wanted_number_of_levels);
     void                CircleMask(float wanted_mask_radius, bool invert = false);
     void                CircleMaskWithValue(float wanted_mask_radius, float wanted_mask_value, bool invert = false);

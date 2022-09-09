@@ -8,7 +8,7 @@
     "cmake.configureSettings": {
         "BUILD_EXPERIMENTAL_FEATURES":true,
         "BUILD_STATIC_BINARIES":false,
-        "BUILD_OpenMP":true,
+        "USE_OpenMP":true,
     },
     //"cmake.configureEnvironment": {
     //    "WX_CONFIG":"/path/to/your/wx/bin/wx-config",

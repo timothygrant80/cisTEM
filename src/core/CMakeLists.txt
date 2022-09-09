@@ -71,8 +71,13 @@ endif(BUILD_EXPERIMENTAL_FEATURES)
 
 target_link_libraries(cisTEM_core ${CMAKE_DL_LIBS})
 target_link_libraries(cisTEM_core ${FFTW_LIBRARIES})
+target_link_libraries(cisTEM_core ${MPI_LIBRARIES})
 target_link_libraries(cisTEM_core ${wxWidgets_LIBRARIES})
 target_link_libraries(cisTEM_core ${TIFF_LIBRARIES})
+
+if (USE_OpenMP)
+	target_link_libraries(cisTEM_core ${OpenMP_LIBRARIES})
+endif(USE_OpenMP)
 
 target_link_libraries(cisTEM_gui_core ${wxWidgets_LIBRARIES})
 

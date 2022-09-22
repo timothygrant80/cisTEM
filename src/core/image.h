@@ -106,6 +106,10 @@ class Image {
     float ReturnSigmaNoise(Image& matching_projection, float mask_radius = 0.0);
     float ReturnImageScale(Image& matching_projection, float mask_radius = 0.0);
     float ReturnCorrelationCoefficientUnnormalized(Image& other_image, float wanted_mask_radius = 0.0);
+    float ReturnCorrelationCoefficientNormalized(Image& other_image, float wanted_mask_radius = 0.0);
+    float ReturnCorrelationCoefficientNormalizedRectangle(Image& other_image, float wanted_dis_x = 0.0, float wanted_dis_y = 0.0, float wanted_dis_z = 0.0);
+    float ReturnCorrelationCoefficientNormalizedAtPeak(Image& other_image, int* pixel_used, int peak_x, int peak_y, int peak_z, float wanted_dis_x = 0.0, float wanted_dis_y = 0.0, float wanted_dis_z = 0.0);
+
     float ReturnBeamTiltSignificanceScore(Image calculated_beam_tilt);
     float ReturnPixelWiseProduct(Image& other_image);
     float GetWeightedCorrelationWithImage(Image& projection_image, int* bins, float signed_CC_limit);
@@ -180,6 +184,7 @@ class Image {
     float               CosineRingMask(float wanted_inner_radius, float wanted_outer_radius, float wanted_mask_edge);
     float               CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool invert = false, bool force_mask_value = false, float wanted_mask_value = 0.0);
     float               CosineRectangularMask(float wanted_mask_radius_x, float wanted_mask_radius_y, float wanted_mask_radius_z, float wanted_mask_edge, bool invert = false, bool force_mask_value = false, float wanted_mask_value = 0.0);
+    void                TaperLinear(float wanted_taper_edge_x, float wanted_taper_edge_y, float wanted_taper_edge_z, float wanted_mask_radius_x = 0.0, float wanted_mask_radius_y = 0.0, float wanted_mask_radius_z = 0.0);
     void                ConvertToAutoMask(float pixel_size, float outer_mask_radius_in_angstroms, float filter_resolution_in_angstroms, float rebin_value, bool auto_estimate_initial_bin_value = true, float wanted_initial_bin_value = 0.0f);
     void                LocalResSignificanceFilter(float pixel_size, float starting_resolution, float mask_radius_in_angstroms);
     void                GaussianLowPassFilter(float sigma);
@@ -320,9 +325,13 @@ class Image {
     bool FourierComponentHasExplicitHermitianMate(int physical_index_x, int physical_index_y, int physical_index_z);
     bool FourierComponentIsExplicitHermitianMate(int physical_index_x, int physical_index_y, int physical_index_z);
 
-    inline void NormalizeFT( ) { MultiplyByConstant(ft_normalization_factor); }
+    inline void NormalizeFT( ) {
+        MultiplyByConstant(ft_normalization_factor);
+    }
 
-    inline void NormalizeFTAndInvertRealValues( ) { MultiplyByConstant(-ft_normalization_factor); }
+    inline void NormalizeFTAndInvertRealValues( ) {
+        MultiplyByConstant(-ft_normalization_factor);
+    }
 
     void DivideByConstant(float constant_to_divide_by);
     void MultiplyByConstant(float constant_to_multiply_by);

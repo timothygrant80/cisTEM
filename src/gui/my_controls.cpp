@@ -1003,7 +1003,7 @@ wxString RefinementPackageListControl::OnGetItemText(long item, long column) con
 
     MyRefinementPackageAssetPanel* parent_panel = reinterpret_cast<MyRefinementPackageAssetPanel*>(m_parent->GetParent( )->GetParent( )); // not very nice code!
 
-    if ( parent_panel->all_refinement_packages.GetCount( ) > 0 ) {
+    if ( parent_panel->all_refinement_packages.GetCount( ) > 0 && item < parent_panel->all_refinement_packages.GetCount()) {
         return parent_panel->all_refinement_packages.Item(item).name;
     }
     else

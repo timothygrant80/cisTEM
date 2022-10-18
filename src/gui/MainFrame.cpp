@@ -915,7 +915,7 @@ void MyMainFrame::SetSingleParticleWorkflow(bool triggered_by_gui_event) {
             }
         }
         current_workflow = cistem::workflow::single_particle;
-        current_project.RecordCurrentWorkflowInDB(current_workflow);
+        if (current_project.is_open == true) current_project.RecordCurrentWorkflowInDB(current_workflow);
         // If not called from the GUI, we need to update the menu.
         if ( ! triggered_by_gui_event ) {
             ManuallyUpdateWorkflowMenuCheckBox( );
@@ -932,7 +932,7 @@ void MyMainFrame::SetTemplateMatchingWorkflow(bool triggered_by_gui_event) {
         previous_workflow = current_workflow;
         UpdateWorkflow(actions_panel_spa, actions_panel_tm, "Actions");
         current_workflow = cistem::workflow::template_matching;
-        current_project.RecordCurrentWorkflowInDB(current_workflow);
+        if (current_project.is_open == true) current_project.RecordCurrentWorkflowInDB(current_workflow);
 
         // If not called from the GUI, we need to update the menu.
         if ( ! triggered_by_gui_event ) {

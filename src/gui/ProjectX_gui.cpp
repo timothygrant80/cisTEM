@@ -13220,49 +13220,6 @@ NumberofClassesWizardPanel::~NumberofClassesWizardPanel()
 {
 }
 
-ClassesSetupWizardPanelA::ClassesSetupWizardPanelA( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
-{
-	wxBoxSizer* bSizer15311;
-	bSizer15311 = new wxBoxSizer( wxVERTICAL );
-
-	wxBoxSizer* bSizer14711;
-	bSizer14711 = new wxBoxSizer( wxHORIZONTAL );
-
-	m_staticText21411 = new wxStaticText( this, wxID_ANY, wxT("Carry over all Particles? : "), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText21411->Wrap( -1 );
-	bSizer14711->Add( m_staticText21411, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-
-	wxBoxSizer* bSizer367;
-	bSizer367 = new wxBoxSizer( wxHORIZONTAL );
-
-	CarryOverYesButton = new wxRadioButton( this, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer367->Add( CarryOverYesButton, 0, wxALL, 5 );
-
-	m_radioBtn40 = new wxRadioButton( this, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer367->Add( m_radioBtn40, 0, wxALL, 5 );
-
-
-	bSizer14711->Add( bSizer367, 1, wxEXPAND, 5 );
-
-
-	bSizer15311->Add( bSizer14711, 0, wxEXPAND, 5 );
-
-
-	bSizer15311->Add( 0, 0, 1, wxEXPAND, 5 );
-
-	InfoText = new AutoWrapStaticText( this, wxID_ANY, wxT("Do you want to carry over all particles from the template refinement package to the new refinement package?  If No, you will be able to select the classes from which particles should be carried over (based on which class has the highest occupancy for that particle), and a new particle stack will be created. If yes all the particles will be included in the new refinement package."), wxDefaultPosition, wxDefaultSize, 0 );
-	InfoText->Wrap( -1 );
-	bSizer15311->Add( InfoText, 0, wxALL|wxEXPAND, 5 );
-
-
-	this->SetSizer( bSizer15311 );
-	this->Layout();
-}
-
-ClassesSetupWizardPanelA::~ClassesSetupWizardPanelA()
-{
-}
-
 RecentrePicksWizardPanel::RecentrePicksWizardPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
 {
 	wxBoxSizer* bSizer15311;

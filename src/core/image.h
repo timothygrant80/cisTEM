@@ -197,10 +197,12 @@ class Image {
     void                SquareMaskWithValue(float wanted_mask_dim, float wanted_mask_value, bool invert = false, int wanted_center_x = 0, int wanted_center_y = 0, int wanted_center_z = 0);
     float               SquareMaskWithCosineEdge(float wanted_mask_dim, float wanted_mask_edge, bool use_mean_value, int wanted_center_x, int wanted_center_y, int wanted_center_z);
 
-    void  TriangleMask(float wanted_triangle_half_base_length);
-    void  CalculateCTFImage(CTF& ctf_of_image, bool calculate_complex_ctf = false, bool apply_coherence_envelope = false);
-    void  CalculateBeamTiltImage(CTF& ctf_of_image, bool output_phase_shifts = false);
-    bool  ContainsBlankEdges(float mask_radius = 0.0);
+    void TriangleMask(float wanted_triangle_half_base_length);
+    void CalculateCTFImage(CTF& ctf_of_image, bool calculate_complex_ctf = false, bool apply_coherence_envelope = false);
+    void CalculateBeamTiltImage(CTF& ctf_of_image, bool output_phase_shifts = false);
+    bool ContainsBlankEdges(float mask_radius = 0.0);
+
+    void  Distortion(Image* interp_img, float* shifted_mapx, float* shifted_mapy);
     void  CorrectMagnificationDistortion(float distortion_angle, float distortion_major_axis, float distortion_minor_axis);
     float ApplyMask(Image& mask_file, float cosine_edge_width, float weight_outside_mask, float low_pass_filter_outside, float filter_cosine_edge_width, float outside_mask_value = 0.0, bool use_outside_mask_value = false);
     Peak  CenterOfMass(float threshold = 0.0, bool apply_threshold = false);
@@ -483,6 +485,9 @@ class Image {
 
     Peak FindPeakAtOriginFast2D(int max_pix_x, int max_pix_y);
     Peak FindPeakWithIntegerCoordinates(float wanted_min_radius = 0.0, float wanted_max_radius = FLT_MAX, int wanted_min_distance_from_edges = 0);
+    void XCorrPeakFindWidth(int nxdim, int ny, float* xpeak, float* ypeak,
+                            float* peak, float* width, float* widthMin, int maxPeaks,
+                            float minStrength);
     Peak FindPeakWithParabolaFit(float wanted_min_radius = 0.0, float wanted_max_radius = FLT_MAX);
 
     void SubSampleWithNoisyResampling(Image* first_sampled_image, Image* second_sampled_image);

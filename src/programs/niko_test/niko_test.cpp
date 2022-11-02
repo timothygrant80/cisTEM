@@ -1,4 +1,7 @@
 #include "../../core/core_headers.h"
+#include <iostream>
+#include <string>
+#include <fstream>
 
 class
         NikoTestApp : public MyApp {
@@ -14,20 +17,20 @@ IMPLEMENT_APP(NikoTestApp)
 
 // override the DoInteractiveUserInput
 
-void NikoTestApp::DoInteractiveUserInput( ) {
-    //     UserInput* my_input = new UserInput("TrimStack", 1.0);
+// void NikoTestApp::DoInteractiveUserInput( ) {
+//     UserInput* my_input = new UserInput("TrimStack", 1.0);
 
-    //     wxString input_imgstack = my_input->GetFilenameFromUser("Input image file name", "Name of input image file *.mrc", "input.mrc", true);
-    //     // // wxString output_stack_filename = my_input->GetFilenameFromUser("Filename for output stack of particles.", "A stack of particles will be written to disk", "particles.mrc", false);
-    //     wxString angle_filename = my_input->GetFilenameFromUser("Tilt Angle filename", "The tilts, *.tlt", "ang.tlt", true);
-    //     // wxString coordinates_filename  = my_input->GetFilenameFromUser("Coordinates (PLT) filename", "The input particle coordinates, in Imagic-style PLT forlmat", "coos.plt", true);
-    //     int img_index = my_input->GetIntFromUser("Box size for output candidate particle images (pixels)", "In pixels. Give 0 to skip writing particle images to disk.", "256", 0);
+//     wxString input_imgstack = my_input->GetFilenameFromUser("Input image file name", "Name of input image file *.mrc", "input.mrc", true);
+//     // // wxString output_stack_filename = my_input->GetFilenameFromUser("Filename for output stack of particles.", "A stack of particles will be written to disk", "particles.mrc", false);
+//     wxString angle_filename = my_input->GetFilenameFromUser("Tilt Angle filename", "The tilts, *.tlt", "ang.tlt", true);
+//     // wxString coordinates_filename  = my_input->GetFilenameFromUser("Coordinates (PLT) filename", "The input particle coordinates, in Imagic-style PLT forlmat", "coos.plt", true);
+//     int img_index = my_input->GetIntFromUser("Box size for output candidate particle images (pixels)", "In pixels. Give 0 to skip writing particle images to disk.", "256", 0);
 
-    //     delete my_input;
+//     delete my_input;
 
-    //     my_current_job.Reset(3);
-    //     my_current_job.ManualSetArguments("tti", input_imgstack.ToUTF8( ).data( ), angle_filename.ToUTF8( ).data( ), img_index);
-}
+//     my_current_job.Reset(3);
+//     my_current_job.ManualSetArguments("tti", input_imgstack.ToUTF8( ).data( ), angle_filename.ToUTF8( ).data( ), img_index);
+// }
 
 // override the do calculation method which will be what is actually run..
 
@@ -379,326 +382,702 @@ double sliceEdgeMean(float* array, int nxdim, int ixlo, int ixhi, int iylo,
 //     }
 //     return scale * (float)dist;
 // }
+// shift the stack
+// void readArray( ) {
+//     wxString      inFileName = "/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/peak_analysis/shifted_mapx.txt";
+//     std::ifstream inFile;
+//     inFile.open(inFileName.c_str( ));
+//     if ( inFile.is_open( ) ) {
+//         wxPrintf("file is open\n");
+//         float myarray[10][5760];
+//         for ( int j = 0; j < 2; j++ ) {
+//             for ( int i = 0; i < 5760; i++ ) {
+//                 inFile >> myarray[j][i];
+//                 wxPrintf("j i value %i %i %g\n", j, i, myarray[j][i]);
+//             }
+//         }
+//     }
+// }
+
+void NikoTestApp::DoInteractiveUserInput( ) {
+    UserInput* my_input = new UserInput("TrimStack", 1.0);
+
+    wxString input_image          = my_input->GetFilenameFromUser("Input image file name", "Name of input image file *.mrc", "input.mrc", true);
+    wxString peak_filename        = my_input->GetFilenameFromUser("Peak filename", "The file containing peak for each patch, *.txt", "peak_01.txt", true);
+    wxString coordinates_filename = my_input->GetFilenameFromUser("Coordinates (PLT) filename", "The input particle coordinates, in Imagic-style PLT forlmat", "coos.plt", true);
+    // int      output_stack_box_size = my_input->GetIntFromUser("Box size for output candidate particle images (pixels)", "In pixels. Give 0 to skip writing particle images to disk.", "256", 0);
+    // float    rotation_angle        = my_input->GetFloatFromUser("rotation angle of the tomography", "phi in degrees, 0.0 for none rotation", "0.0");
+    // wxString shifts_filename       = my_input->GetFilenameFromUser("Shifts filename", "The shifts, *.txt", "shifts.txt", true);
+    delete my_input;
+
+    my_current_job.Reset(3);
+    my_current_job.ManualSetArguments("ttt", input_image.ToUTF8( ).data( ), peak_filename.ToUTF8( ).data( ), coordinates_filename.ToUTF8( ).data( ));
+}
 
 bool NikoTestApp::DoCalculation( ) {
-    wxPrintf("hello1\n");
+    wxString input_image = my_current_job.arguments[0].ReturnStringArgument( );
+    wxString peakfile    = my_current_job.arguments[1].ReturnStringArgument( );
+    wxString patchfile   = my_current_job.arguments[2].ReturnStringArgument( );
+    MRCFile  input_test(input_image.ToStdString( ), false);
 
-    Image peak_image, input_image;
-    // MRCFile input_peak("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/Test/peak102_0.050_0.030.mrc", false);
-    // MRCFile input_peak("/groups/lingli/Downloads/TS17/test_coarsealgin/49peak.mrc", false);
-    // MRCFile          input_stack(input_imgstack.ToStdString( ), false)
-    // MRCFile input_peak("/groups/lingli/Downloads/TS17/test_coarsealgin/peaks.mrc", false);
-    MRCFile          input_peak("/groups/lingli/Downloads/TS17/test_coarsealign_1/image_peak.mrc", false);
-    NumericTextFile *tilt_angle_file, *peak_points, *shift_file, *peak_points_raw;
-    // tilt_angle_file = new NumericTextFile('angle_filename/groups/lingli/Downloads/TS17/TS17.rawtlt', OPEN_TO_READ, 1);
-    // peak_points     = new NumericTextFile(outputpath + "peakpoints_newcurved.txt", OPEN_TO_WRITE, 4);
-    // peak_points_raw = new NumericTextFile(outputpath + "peakpoints_pk_img.txt", OPEN_TO_WRITE, 4);
-    // shift_file      = new NumericTextFile(outputpath + "shifts_newcurved.txt", OPEN_TO_WRITE, 3);
+    wxString    outputpath    = "/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/tilt05_peak_analysis/";
+    std::string outputpathstd = "/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/tilt05_peak_analysis/";
+    // MRCFile input_test("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/Test-ximina-20220928/outputstack.mrc", false);
+    // MRCFile input_test("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/peak_analysis/sample_img.mrc", false);
+    // MRCFile input_test("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/unstacked_Ximena_raw/image_000.mrc", false);
+    // wxString coordinates_filename = my_input->GetFilenameFromUser("Coordinates (PLT) filename", "The input particle coordinates, in Imagic-style PLT forlmat", "coos.plt", true);
+    // wxString coordinates_filename = my_current_job.arguments[2].ReturnStringArgument( );
+    NumericTextFile *patch_positions, *peak_positions;
+    // wxString         patchfile = "/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/patchlocations.plt";
+    // wxString         peakfile  = "/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/peak_positions.txt";
+    // wxString patchfile = "/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/coord_TS17.plt";
+    // wxString peakfile  = "/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/peak_01.txt";
 
-    int   image_no = tilt_angle_file->number_of_lines;
-    float tilts[image_no];
-    float stretch[image_no];
+    patch_positions = new NumericTextFile(patchfile, OPEN_TO_READ, 2);
+    peak_positions  = new NumericTextFile(peakfile, OPEN_TO_READ, 2);
 
-    float shifts[image_no][2];
-    float peaks[image_no][2];
-    for ( int i = 0; i < image_no; i++ ) {
-        tilt_angle_file->ReadLine(&tilts[i]);
-        // wxPrintf("angle %i ; % g\n", i, tilts[i]);
-    }
-    for ( int i = 0; i < image_no; i++ )
-        tilts[i] = (tilts[i]) / 180.0 * PI;
+    // NumericTextFile *shift_filex, *shift_filey;
+    // NumericTextFile peak_position;
+    // readArray( );
+    wxPrintf("start\n");
 
-    // wxString angle_filename = my_current_job.arguments[1].ReturnStringArgument( );
-    // MRCFile ref_file("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/Output/ref34_0.030.mrc", false);
-    // MRCFile input_file("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/Output/input35_0.030_R0.000.mrc", false);
+    Image sample_img;
+    Image interp_img, interp_img_tmp;
 
-    //     MRCFile input_stack(input_imgstack.ToStdString( ), false);
-    // int X_maskcenter, Y_maskcenter;
-    // MRCFile input_test("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/Output/input_bf_stretch35_0.030.mrc", false);
+    int image_x_dim, image_y_dim;
+    image_x_dim = input_test.ReturnXSize( );
+    image_y_dim = input_test.ReturnYSize( );
+    int patch_no;
+    patch_no            = patch_positions->number_of_lines;
+    int     patch_x_num = 3, patch_y_num = 2;
+    int     bin      = 1;
+    float** peaks_x  = NULL;
+    float** peaks_y  = NULL;
+    float** patchs_x = NULL;
+    float** patchs_y = NULL;
 
-    int X_dim = input_peak.ReturnXSize( );
-    int Y_dim = input_peak.ReturnYSize( );
+    Allocate2DFloatArray(peaks_x, patch_y_num, patch_x_num);
+    Allocate2DFloatArray(peaks_y, patch_y_num, patch_x_num);
+    Allocate2DFloatArray(patchs_x, patch_y_num, patch_x_num);
+    Allocate2DFloatArray(patchs_y, patch_y_num, patch_x_num);
+    for ( int i = 0; i < patch_y_num; i++ ) {
+        float tmppeak[2];
+        float tmppatch[2];
+        for ( int j = 0; j < patch_x_num; j++ ) {
+            patch_positions->ReadLine(tmppatch);
+            peak_positions->ReadLine(tmppeak);
+            patchs_x[i][j] = tmppatch[0] + 1440;
+            patchs_y[i][j] = tmppatch[1] + 1024;
+            peaks_x[i][j]  = -tmppeak[0] * bin + patchs_x[i][j];
+            peaks_y[i][j]  = -tmppeak[1] * bin + patchs_y[i][j];
 
-    // float input_array[X_dim][Y_dim];
-    float xpeak[10];
-    float ypeak[10];
-    float peak[10];
-    float width;
-    float widthMin;
-    int   maxPeaks    = 10;
-    float minStrength = 0.05;
-    width             = 10;
-    widthMin          = 1;
-    float fs[6], fiv[6];
-    float a11, a12, a21, a22;
-    // float theta = 50.98;
-    // float ref   = 47.99;
-    float phi = 86.3;
-
-    wxPrintf("X_dim = %i, Y_dim = %i \n", X_dim, Y_dim);
-    wxPrintf("hello2\n");
-    // float str = fabs(cosf(ref / 180 * PI) / cosf(theta / 180 * PI));
-    // // float str = fabs(cosf(theta / 180 * PI) / cosf(ref / 180 * PI));
-    // // str = fabs((cosf(ref / 180 * PI)) / cosf(theta / 180 * PI));
-    // wxPrintf("str: %g\n", str);
-    // // rotmagstrToAmat(0, 1.0, str, phi, &a11, &a12, &a21, &a22);
-    // rotmagstrToAmat(0, 1.0, str, phi, &a11, &a12, &a21, &a22);
-    // // rotmagstrToAmat(theta, 1.0, str, phi, &a11, &a12, &a21, &a22);
-    // // rotmagstrToAmat(ref - theta, 1.0, str, phi, &a11, &a12, &a21, &a22);
-    // // rotmagstrToAmat(1.0, 1.0, str, 0.0, &a11, &a12, &a21, &a22);
-    // // fs[0] = a11, fs[1] = a12, fs[2] = 0.0;
-    // // fs[3] = a21, fs[4] = a22, fs[5] = 0.0;
-    // // note that the fortran matrix is column dominate, c++ is row dominate
-    // // fs[0] = a11, fs[1] = a12, fs[4] = 0.0;
-
-    // fs[0] = a11, fs[2] = a12, fs[4] = 0.0;
-    // fs[1] = a21, fs[3] = a22, fs[5] = 0.0;
-
-    // float fs_a[6], fiv_a[6];
-
-    // rotmagstrToAmat(0, 1.0, 1, -phi, &a11, &a12, &a21, &a22);
-    // fs_a[0] = a11, fs_a[2] = a12, fs_a[4] = 0.0;
-    // fs_a[1] = a21, fs_a[3] = a22, fs_a[5] = 0.0;
-
-    // xfInvert(fs_a, fiv_a, 2);
-
-    // // float unX1, unY1;
-    // // float xorg = -1173.334 / 4, yorg = 1680.392 / 4;
-    // // xfApply(fs, 0.0, 0.0, xorg, yorg, &unX1, &unY1, 2);
-    // // wxPrintf("un1, un2 %g, %g, %g, %g\n", unX1, unY1, unX1 * 4, unY1 * 4);
-
-    // xfInvert(fs, fiv, 2);
-
-    // wxPrintf("a11 a12 a21 a22 %g, %g, %g, %g \n", a11, a12, a21, a22);
-    // wxPrintf("fs              %g, %g, %g, %g, %g, %g \n", fs[0], fs[1], fs[2], fs[3], fs[4], fs[5]);
-    // wxPrintf("finv            %g, %g, %g, %g, %g, %g \n", fiv[0], fiv[1], fiv[2], fiv[3], fiv[4], fiv[5]);
-    // wxPrintf("fs_a              %g, %g, %g, %g, %g, %g \n", fs_a[0], fs_a[1], fs_a[2], fs_a[3], fs_a[4], fs_a[5]);
-    // float finv_c[6];
-    // finv_c[0] = fiv[0], finv_c[1] = fiv[2], finv_c[2] = fiv[4];
-    // finv_c[3] = fiv[1], finv_c[4] = fiv[3], finv_c[5] = fiv[5];
-
-    // padded_dimensions_x = ReturnClosestFactorizedUpper(pad_factor * input_file_2d.ReturnXSize( ), 3);
-    // padded_dimensions_y = ReturnClosestFactorizedUpper(pad_factor * input_file_2d.ReturnYSize( ), 3);
-
-    //   input_volume.Allocate(input_file_3d.ReturnXSize( ), input_file_3d.ReturnYSize( ), input_file_3d.ReturnZSize( ), true);
-    // circlemask_image.Allocate(X_dim, Y_dim, true);
-    peak_image.Allocate(X_dim, Y_dim, true);
-    // peak_image.ReadSlice(&input_peak, 1);
-    // wxPrintf("hello3\n");
-    // input_image.Allocate(input_test.ReturnXSize( ), input_test.ReturnYSize( ), true);
-    // input_image.ReadSlice(&input_test, 1);
-    // wxPrintf("hello4\n");
-    // int raw_X_dim = 1440;
-    // int raw_Y_dim = 1023;
-
-    // float mask_radius_x = raw_X_dim / 2.0 - raw_X_dim / 10.0;
-    // float mask_radius_y = raw_Y_dim / 2.0 - raw_Y_dim / 10.0;
-    // float mask_radius_z = 1;
-    // // float mask_edge     = std::max(raw_image_dim_x / bin, raw_image_dim_y / bin) / 4.0;
-    // // float mask_edge = 192;
-    // float mask_edge = std::max(raw_X_dim, raw_Y_dim) / 10.0;
-    // // float wanted_taper_edge_x  = std::max(raw_X_dim, raw_Y_dim) / 10.0;
-    // // float wanted_taper_edge_y  = std::max(raw_X_dim, raw_Y_dim) / 10.0;
-    // float wanted_taper_edge_x  = raw_Y_dim / 10.0;
-    // float wanted_taper_edge_y  = raw_Y_dim / 10.0;
-    // float wanted_mask_radius_x = raw_X_dim / 2.0;
-    // float wanted_mask_radius_y = raw_Y_dim / 2.0;
-    // input_image.TaperLinear(wanted_taper_edge_x, wanted_taper_edge_y, 1, mask_radius_x, mask_radius_y, 0);
-    // // input_image.TaperEdges( );
-    // input_image.WriteSlicesAndFillHeader("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/Output/input_bf_stretch35_0.030_taperLinear.mrc", 1);
-
-    // Image empty_image, padded_image;
-    // empty_image.Allocate(raw_X_dim, raw_Y_dim, true);
-    // empty_image.SetToConstant(1.0);
-    // padded_image.Allocate(X_dim, Y_dim, true);
-    // empty_image.ClipInto(&padded_image);
-    // empty_image.CopyFrom(&padded_image);
-    // empty_image.WriteSlicesAndFillHeader("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/Output/empty.mrc", 1);
-
-    // empty_image.TaperLinear(wanted_taper_edge_x, wanted_taper_edge_y, 1, mask_radius_x, mask_radius_y, 0);
-    // empty_image.WriteSlicesAndFillHeader("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/Output/emptyLinearTaper.mrc", 1);
-    // Peak cistem_peak;
-    // cistem_peak = peak_image.FindPeakWithIntegerCoordinates( );
-    // wxPrintf("cisTEM peak %g, %g, %g,\n", cistem_peak.x, cistem_peak.y, cistem_peak.value);
-    // // wxPrintf("hello3\n");
-    // XCorrPeakFindWidth(&peak_image.real_values[0], X_dim + 2, Y_dim, xpeak, ypeak,
-    //                    peak, &width, &widthMin, maxPeaks,
-    //    minStrength);
-    // //    XCorrPeakFindWidth()
-    // Image image_ref;
-    // Image image_cur, image_shifted;
-    // image_ref.Allocate(ref_file.ReturnXSize( ), ref_file.ReturnYSize( ), true);
-    // image_cur.Allocate(input_file.ReturnXSize( ), input_file.ReturnYSize( ), true);
-    // image_cur.ReadSlice(&input_file, 1);
-    // image_ref.ReadSlice(&ref_file, 1);
-    // float ccc1, ccc2, ccc3, ccc4;
-    // float peakmax = peak[0];
-    float theta = 51;
-    float ref;
-    float tmppeak[4];
-    // float ref   = 48;
-    // for ( int i = 19; i < 35; i++ ) {
-    // for ( int i = 2; i < 19; i++ ) {
-    for ( int i = 0; i < 34; i++ ) {
-        // // if ( theta < 0 ) {
-        // // theta = 0 + (i - 1) * 3;
-        // theta = theta + 3;
-        // ref   = theta - 3;
-        // // }
-
-        // // theta = theta + i * 3;
-        // // ref = ref - (17 - 1 - i) * 3;
-        wxPrintf("--------image %i ----------\n", i);
-        // wxPrintf("current nd ref: %g, %g\n", theta, ref);
-        // float str = fabs(cosf(ref / 180 * PI) / cosf(theta / 180 * PI));
-        // // float str = fabs(cosf(theta / 180 * PI) / cosf(ref / 180 * PI));
-        // // str = fabs((cosf(ref / 180 * PI)) / cosf(theta / 180 * PI));
-        // wxPrintf("str: %g\n", str);
-        // // rotmagstrToAmat(0, 1.0, str, phi, &a11, &a12, &a21, &a22);
-        // rotmagstrToAmat(0, 1.0, str, phi, &a11, &a12, &a21, &a22);
-        // // rotmagstrToAmat(theta, 1.0, str, phi, &a11, &a12, &a21, &a22);
-        // // rotmagstrToAmat(ref - theta, 1.0, str, phi, &a11, &a12, &a21, &a22);
-        // // rotmagstrToAmat(1.0, 1.0, str, 0.0, &a11, &a12, &a21, &a22);
-        // // fs[0] = a11, fs[1] = a12, fs[2] = 0.0;
-        // // fs[3] = a21, fs[4] = a22, fs[5] = 0.0;
-        // // note that the fortran matrix is column dominate, c++ is row dominate
-        // // fs[0] = a11, fs[1] = a12, fs[4] = 0.0;
-
-        // fs[0] = a11, fs[2] = a12, fs[4] = 0.0;
-        // fs[1] = a21, fs[3] = a22, fs[5] = 0.0;
-
-        // // float fs_a[6], fiv_a[6];
-
-        // // rotmagstrToAmat(0, 1.0, 1, -phi, &a11, &a12, &a21, &a22);
-        // // fs_a[0] = a11, fs_a[2] = a12, fs_a[4] = 0.0;
-        // // fs_a[1] = a21, fs_a[3] = a22, fs_a[5] = 0.0;
-
-        // // xfInvert(fs_a, fiv_a, 2);
-
-        // // float unX1, unY1;
-        // // float xorg = -1173.334 / 4, yorg = 1680.392 / 4;
-        // // xfApply(fs, 0.0, 0.0, xorg, yorg, &unX1, &unY1, 2);
-        // // wxPrintf("un1, un2 %g, %g, %g, %g\n", unX1, unY1, unX1 * 4, unY1 * 4);
-
-        // xfInvert(fs, fiv, 2);
-
-        // wxPrintf("a11 a12 a21 a22 %g, %g, %g, %g \n", a11, a12, a21, a22);
-        // wxPrintf("fs              %g, %g, %g, %g, %g, %g \n", fs[0], fs[1], fs[2], fs[3], fs[4], fs[5]);
-        // wxPrintf("finv            %g, %g, %g, %g, %g, %g \n", fiv[0], fiv[1], fiv[2], fiv[3], fiv[4], fiv[5]);
-        // // wxPrintf("fs_a              %g, %g, %g, %g, %g, %g \n", fs_a[0], fs_a[1], fs_a[2], fs_a[3], fs_a[4], fs_a[5]);
-        // float finv_c[6];
-        // finv_c[0] = fiv[0], finv_c[1] = fiv[2], finv_c[2] = fiv[4];
-        // finv_c[3] = fiv[1], finv_c[4] = fiv[3], finv_c[5] = fiv[5];
-
-        peak_image.ReadSlice(&input_peak, i + 1);
-        wxPrintf("hello3\n");
-        Peak cistem_peak;
-        cistem_peak = peak_image.FindPeakWithIntegerCoordinates( );
-        wxPrintf("cisTEM peak %g, %g, %g,\n", cistem_peak.x, cistem_peak.y, cistem_peak.value);
-        // tmppeak[0] = i, tmppeak[1] = peak.x, tmppeak[2] = peak.y, tmppeak[3] = peak.value;
-        // wxPrintf("hello3\n");
-        // XCorrPeakFindWidth(&peak_image.real_values[0], X_dim + 2, Y_dim, xpeak, ypeak,
-        //                    peak, &width, &widthMin, maxPeaks, minStrength);
-        // wxPrintf("peaks: %g, %g, %g\n", xpeak[0] - X_dim / 2, ypeak[0] - Y_dim / 2, peak[i]);
-        // wxPrintf("peaks: %g, %g, %g\n", (xpeak[0] - X_dim / 2) * 4, (ypeak[0] - Y_dim / 2) * 4, peak[0]);
-        // float unX1, unY1, unX2, unY2;
-        // xfApply(fiv, 0.0, 0.0, xpeak[0] - X_dim / 2, ypeak[0] - Y_dim / 2, &unX1, &unY1, 2);
-        // wxPrintf("ind un1, un2 %i %5g %5g %5g %5g\n", i, unX1, unY1, unX1 * 4, unY1 * 4);
-
-        // wxPrintf("peaks: %g, %g, %g\n", xpeak[0], ypeak[0], peak[0]);
-        // // wxPrintf("peaks: %g, %g, %g\n", xpeak[i] - X_dim / 2, ypeak[i] - Y_dim / 2, peak[i]);
-        // // ccc1 = image_cur.ReturnCorrelationCoefficientUnnormalized(image_ref, wxMax(xpeak[i] - X_dim / 2, ypeak[i] - Y_dim / 2));
-        // // image_cur.WriteSlicesAndFillHeader("../src/Output/test1.mrc", 1);
-        // image_shifted.CopyFrom(&image_cur);
-        // image_shifted.PhaseShift(-(xpeak[i] - X_dim / 2), -(ypeak[i] - Y_dim / 2), 0);
-        // image_shifted.WriteSlicesAndFillHeader("shift1_phase.mrc", 1);
-        // // image_shifted.CopyFrom(&image_cur);
-        // // image_shifted.RealSpaceIntegerShift((xpeak[i] - X_dim / 2), (ypeak[i] - Y_dim / 2), 0);
-        // // image_shifted.WriteSlicesAndFillHeader("shift2_real.mrc", 1);
-
-        // // image_shifted.RealSpaceIntegerShift(-(xpeak[i] - X_dim / 2), -(ypeak[i] - Y_dim / 2), 0);
-        // // ccc1        = image_shifted.ReturnCorrelationCoefficientNormalized(image_ref, wxMax(X_dim / 8, Y_dim / 8));
-        // // float sizex = raw_X_dim / 2 - mask_edge - abs(xpeak[i] - X_dim / 2) / 2;
-        // // float sizey = raw_Y_dim / 2 - mask_edge - abs(ypeak[i] - Y_dim / 2) / 2;
-        // float sizex = raw_X_dim / 2 - mask_edge / 2;
-        // float sizey = raw_Y_dim / 2 - mask_edge / 2;
-
-        // wxPrintf("sizex sizey: %g, %g \n", sizex, sizey);
-        // // ccc1 = image_shifted.ReturnCorrelationCoefficientNormalizedRectangle(image_ref, sizex, sizey);
-        // // ccc2 = image_shifted.ReturnCorrelationCoefficientNormalized(image_ref, wxMax(X_dim / 8, Y_dim / 8));
-        // // ccc3 = image_shifted.ReturnCorrelationCoefficientNormalizedRectangle(image_ref, raw_X_dim / 2, raw_Y_dim / 2);
-        // // float testresult[2];
-        // int num, num_tmp;
-        // ccc3 = image_cur.ReturnCorrelationCoefficientNormalizedAtPeak(image_ref, &num, xpeak[i] - X_dim / 2, ypeak[i] - Y_dim / 2, 0, sizex, sizey);
-        // // ccc3 = image_cur.ReturnCorrelationCoefficientNormalizedAtPeak(image_shifted, &num, xpeak[i] - X_dim / 2, ypeak[i] - Y_dim / 2, 0, sizex, sizey);
-        // // overlap = float(nsum) / ((nxPad - 2 * nxCCTrimA) * (nyPad - 2 * nyCCTrimA));
-        // // ccc3               = testresult[0];
-        // // float num;
-
-        // float overlap = num / (2 * sizex) / (2 * sizey);
-
-        // float overlapPower = 6;
-        // float weight       = 1. / (1 + powf(wxMax(0.1, (wxMin(10.0, 0.125 / overlap))), overlapPower));
-        // wxPrintf("num overlap, overlap 0.125/overlap weight %i,%g, %g, %g\n", num, overlap, 0.125 / overlap, weight);
-
-        // float wgtccc3 = ccc3 * 1. / (1.0 + powf(wxMax(0.1, wxMin(10.0, 0.125 / overlap)), overlapPower));
-        // // wxPrintf("overlap overlap power, wgtc")
-        // // float wgtCCC       = ccc * 1. / (1. + &wxMax(0.1, min(10., overlapCrit / overlap)) * *overlapPower);
-        // // ccc1 = image_cur.ReturnCorrelationCoefficientNormalizedRectangle(image_ref, sizex, sizey);
-        // // ccc2 = image_cur.ReturnCorrelationCoefficientNormalized(image_ref, wxMax(X_dim / 8, Y_dim / 8));
-        // // ccc3 = image_cur.ReturnCorrelationCoefficientNormalizedRectangle(image_ref, raw_X_dim / 2, raw_Y_dim / 2);
-
-        // // ccc2 = image_shifted.ReturnCorrelationCoefficientUnnormalized(image_ref, wxMax(abs(xpeak[i] - X_dim / 2), abs(ypeak[i] - Y_dim / 2)));
-        // // image_cur.WriteSlicesAndFillHeader("../src/Output/test2.mrc", 1);
-        // // wxPrintf("coefs 1 2: %g, %g\n", ccc1, ccc2);
-        // float ratio = peak[i] / peakmax;
-        // // wxPrintf("peaks: %5g, %5g, %10.5g, %10.5g, %10.5g, %10.5g,%10.5g,%10.5g\n", xpeak[i] - X_dim / 2, ypeak[i] - Y_dim / 2, peak[i], ccc1, ccc2, ccc3, ccc4, ratio);
-        // wxPrintf("peaks: %5g, %5g, %10.5g, %10.5g, %10.5g,%10.5g\n", xpeak[i] - X_dim / 2, ypeak[i] - Y_dim / 2, peak[i], ccc3, wgtccc3, ratio);
-        // wxPrintf("peaks: %g, %g, %g\n", xpeak[i] - X_dim / 2, ypeak[i] - Y_dim / 2, peak[i]);
-        // wxPrintf("peaks: %g, %g, %g\n", (xpeak[i] - X_dim / 2) * 4, (ypeak[i] - Y_dim / 2) * 4, peak[i]);
-        // wxPrintf("peaks: %g, %g, %g\n", xpeak[i], ypeak[i], peak[i]);
-
-        // wxPrintf("peaks: %g, %g, %g\n", xpeak[0] - X_dim / 2, ypeak[0] - Y_dim / 2, peak[0]);
-        // wxPrintf("peaks: %g, %g, %g\n", xpeak[1] - X_dim / 2, ypeak[1] - Y_dim / 2, peak[1]);
-        // wxPrintf("peaks: %g, %g, %g\n", xpeak[2] - X_dim / 2, ypeak[2] - Y_dim / 2, peak[2]);
-        // wxPrintf("peaks: %g, %g, %g\n", xpeak[3] - X_dim / 2, ypeak[3] - Y_dim / 2, peak[3]);
-        // wxPrintf("peaks: %g, %g, %g\n", xpeak[4] - X_dim / 2, ypeak[4] - Y_dim / 2, peak[4]);
-        // wxPrintf("peaks: %g, %g, %g\n", xpeak[5] - X_dim / 2, ypeak[5] - Y_dim / 2, peak[5]);
-        // wxPrintf("peaks: %g, %g, %g\n", xpeak[6] - X_dim / 2, ypeak[6] - Y_dim / 2, peak[6]);
-        // wxPrintf("peaks: %g, %g, %g\n", xpeak[7] - X_dim / 2, ypeak[7] - Y_dim / 2, peak[7]);
-        // wxPrintf("peaks: %g, %g, %g\n", xpeak[8] - X_dim / 2, ypeak[8] - Y_dim / 2, peak[8]);
-        // wxPrintf("peaks: %g, %g, %g\n", xpeak[9] - X_dim / 2, ypeak[9] - Y_dim / 2, peak[9]);
-        // float unX1, unY1, unX2, unY2;
-
-        // xfApply(fs, 0.0, 0.0, xpeak[i] - X_dim / 2, ypeak[i] - Y_dim / 2, &unX2, &unY2, 2);
-        // // xfApply(fs, 0.0, 0.0, xpeak[i], ypeak[i], &unX2, &unY2, 2);
-        // wxPrintf("un1, un2 %g, %g, %g, %g\n", unX2, unY2, unX2 * 4, unY2 * 4);
-
-        // xfApply(fiv, 0.0, 0.0, xpeak[i] - X_dim / 2, ypeak[i] - Y_dim / 2, &unX1, &unY1, 2);
-        // wxPrintf("un1, un2 %g, %g, %g, %g\n", unX1, unY1, unX1 * 4, unY1 * 4);
-        // xfApply(finv_c, 0.0, 0.0, xpeak[i] - X_dim / 2, ypeak[i] - Y_dim / 2, &unX2, &unY2, 2);
-
-        // xfApply(fs, float(X_dim) / 2.0, float(Y_dim) / 2.0, xpeak[i], ypeak[i], &unX2, &unY2, 2);
-        // wxPrintf("un1, un2 %g, %g, %g, %g\n", unX2, unY2, unX2 * 4, unY2 * 4);
-        // wxPrintf("un1, un2 %g, %g, %g, %g\n", unX2 - X_dim / 2.0, unY2 - Y_dim / 2.0, unX2 * 4, unY2 * 4);
-
-        // xfApply(fiv, float(X_dim) / 2.0, float(Y_dim) / 2.0, xpeak[i], ypeak[i], &unX2, &unY2, 2);
-        // wxPrintf("un1, un2 %g, %g, %g, %g\n", unX2, unY2, unX2 * 4, unY2 * 4);
-        // wxPrintf("un1, un2 %g, %g, %g, %g\n", unX2 - X_dim / 2.0, unY2 - Y_dim / 2.0, unX2 * 4, unY2 * 4);
-        // call xfapply(fsInv, 0., 0., xpeak, ypeak, unstretchDx, unstretchDy)
-
-        // float x1 = unX1, y1 = unY1;
-        // xfApply(fs_a, 0, 0, x1, y1, &unX2, &unY2, 2);
-        // wxPrintf("un1, un2 %g, %g, %g, %g\n", unX2, unY2, unX2 * 4, unY2 * 4);
-        // wxPrintf("un1, un2 %g, %g, %g, %g\n", unX2 - X_dim / 2.0, unY2 - Y_dim / 2.0, unX2 * 4, unY2 * 4);
+            wxPrintf("patchpeaks x y %i, %i, %g, %g, %g, %g\n", i, j, peaks_x[i][j], peaks_y[i][j], patchs_x[i][j], patchs_y[i][j]);
+        }
     }
 
-    // input_array = peak_image.real_values;
-    // delete xpeak;
-    // delete ypeak;
-    // delete peak;
+    float** shifted_map_x;
+    float** shifted_map_y;
+    float** original_map_x;
+    float** original_map_y;
+    Allocate2DFloatArray(shifted_map_x, image_y_dim, image_x_dim);
+    Allocate2DFloatArray(shifted_map_y, image_y_dim, image_x_dim);
+    Allocate2DFloatArray(original_map_x, image_y_dim, image_x_dim);
+    Allocate2DFloatArray(original_map_y, image_y_dim, image_x_dim);
+
+    // initialize the pixel coordinates
+    for ( int i = 0; i < image_y_dim; i++ ) {
+        for ( int j = 0; j < image_x_dim; j++ ) {
+            shifted_map_x[i][j]  = j;
+            original_map_x[i][j] = j;
+            shifted_map_y[i][j]  = i;
+            original_map_y[i][j] = i;
+        }
+    }
+
+    // calculate shifte amount along x
+    for ( int i = 0; i < patch_y_num - 1; i++ ) {
+        for ( int j = 0; j < patch_x_num - 1; j++ ) {
+            int   interval_x_no     = int(patchs_x[i][j + 1] - patchs_x[i][j]);
+            int   interval_y_no     = -int(patchs_y[i + 1][j] - patchs_y[i][j]);
+            float SHX_interval_0_1  = (peaks_x[i][j + 1] - peaks_x[i][j]) / interval_x_no;
+            float SHX_interval_2_3  = (peaks_x[i + 1][j + 1] - peaks_x[i + 1][j]) / interval_x_no;
+            float SHX_interval_diff = (SHX_interval_0_1 - SHX_interval_2_3) / interval_y_no;
+
+            float SHY_interval_2_0  = -(peaks_y[i + 1][j] - peaks_y[i][j]) / interval_y_no;
+            float SHY_interval_3_1  = -(peaks_y[i + 1][j + 1] - peaks_y[i][j + 1]) / interval_y_no;
+            float SHY_interval_diff = (SHY_interval_3_1 - SHY_interval_2_0) / interval_x_no;
+
+            float ref_SHX_interval = SHX_interval_2_3;
+            float ref_SHX_location = peaks_x[i + 1][j];
+            float ref_SHY_interval = SHY_interval_2_0;
+            float ref_SHY_location = peaks_y[i + 1][j];
+
+            float ref_SH_x = peaks_x[i + 1][j];
+            float ref_SH_y = peaks_y[i + 1][j];
+
+            int   ystart       = int(patchs_y[i + 1][j]);
+            int   yend         = int(patchs_y[i][j]);
+            int   xstart       = int(patchs_x[i + 1][j]);
+            int   xend         = int(patchs_x[i + 1][j + 1]);
+            float slop_along_y = (peaks_x[i][j] - peaks_x[i + 1][j]) / (yend - ystart);
+            float slop_along_x = (peaks_y[i + 1][j + 1] - peaks_y[i + 1][j]) / (xend - xstart);
+
+            int yindex_start = ystart;
+            int yindex_end   = yend;
+            int xindex_start = xstart;
+            int xindex_end   = xend;
+            if ( i == 0 )
+                yindex_end = image_y_dim;
+            if ( i == patch_y_num - 2 )
+                yindex_start = 0;
+            if ( j == 0 )
+                xindex_start = 0;
+            if ( j == patch_x_num - 2 )
+                xindex_end = image_x_dim;
+
+            for ( int yindex = yindex_start; yindex < yindex_end; yindex++ ) {
+                float current_interval_x      = ref_SHX_interval + SHX_interval_diff * (yindex - ystart);
+                float current_start_locationx = ref_SH_x + slop_along_y * (yindex - ystart);
+                for ( int xindex = xindex_start; xindex < xindex_end; xindex++ ) {
+                    shifted_map_x[yindex][xindex] = current_start_locationx + (xindex - xstart) * current_interval_x;
+                    shifted_map_y[yindex][xindex] = yindex;
+                    float current_interval_y      = ref_SHY_interval + SHY_interval_diff * (xindex - xstart);
+                    float current_start_locationy = ref_SH_y + slop_along_x * (xindex - xstart);
+                    shifted_map_y[yindex][xindex] = current_start_locationy + (yindex - ystart) * current_interval_y;
+                }
+            }
+        }
+    }
+
+    wxString      shifted_mapx_file = outputpath + "shifted_x.txt";
+    wxString      shifted_mapy_file = outputpath + "shifted_y.txt";
+    std::ofstream xoFile, yoFile;
+
+    // wxPrintf("1\n");
+    // for ( int i = 0; i < 10; i++ ) {
+    //     for ( int j = 0; j < 10; j++ ) {
+    //         shifted_map_x[i][j] = j;
+    //         shifted_map_y[i][j] = i;
+    //     }
+    // }
+
+    xoFile.open(shifted_mapx_file.c_str( ));
+    yoFile.open(shifted_mapy_file.c_str( ));
+    if ( xoFile.is_open( ) && yoFile.is_open( ) ) {
+        wxPrintf("files are open\n");
+        // float myarray[10][5760];
+        for ( int i = 0; i < image_y_dim; i++ ) {
+            for ( int j = 0; j < image_x_dim; j++ ) {
+                xoFile << shifted_map_x[i][j] << '\t';
+                yoFile << shifted_map_y[i][j] << '\t';
+            }
+            xoFile << '\n';
+            yoFile << '\n';
+        }
+    }
+    xoFile.close( );
+    yoFile.close( );
+
+    wxPrintf("1\n");
+    sample_img.ReadSlice(&input_test, 1);
+    // image_no = input_test.ReturnNumberOfSlices( );
+    // image_x_dim = sample_img.logical_x_dimension;
+    // image_y_dim = sample_img.logical_y_dimension;
+    image_x_dim = input_test.ReturnXSize( );
+    image_y_dim = input_test.ReturnYSize( );
+
+    wxPrintf("image dim: %i, %i\n", image_x_dim, image_y_dim);
+    interp_img.Allocate(image_x_dim, image_y_dim, true);
+    interp_img_tmp.Allocate(image_x_dim, image_y_dim, true);
+    interp_img.SetToConstant(sample_img.ReturnAverageOfRealValuesOnEdges( ));
+    interp_img_tmp.SetToConstant(sample_img.ReturnAverageOfRealValuesOnEdges( ));
+    wxPrintf("2\n");
+    // float* shifted_map = new float[image_y_dim][4092][2];
+    wxPrintf("image dim: %i, %i\n", image_x_dim, image_y_dim);
+    int totalpixels = image_x_dim * image_y_dim;
+    wxPrintf("3 total pixels %i\n", totalpixels);
+    // float shifted_mapx[totalpixels], shifted_mapy[totalpixels];
+    float* shifted_mapx      = new float[totalpixels];
+    float* shifted_mapy      = new float[totalpixels];
+    float* interpolated_mapx = new float[totalpixels];
+    float* interpolated_mapy = new float[totalpixels];
+
+    wxPrintf("3\n");
+    wxPrintf("start loading shifted text\n");
+
+    // load array from file
+    // wxString      shift_filex = "/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/peak_analysis/shifted_mapx.txt";
+    // wxString      shift_filey = "/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/peak_analysis/shifted_mapy.txt";
+    wxString      shift_filex = outputpath + "shifted_x.txt";
+    wxString      shift_filey = outputpath + "shifted_y.txt";
+    std::ifstream xFile, yFile;
+
+    wxPrintf("1\n");
+
+    xFile.open(shift_filex.c_str( ));
+    yFile.open(shift_filey.c_str( ));
+
+    if ( xFile.is_open( ) && yFile.is_open( ) ) {
+        wxPrintf("files are open\n");
+        // float myarray[10][5760];
+        for ( int pix = 0; pix < totalpixels; pix++ ) {
+            xFile >> shifted_mapx[pix];
+            yFile >> shifted_mapy[pix];
+        }
+    }
+    wxPrintf("shifting files are loaded \n");
+    xFile.close( );
+    yFile.close( );
+    // load array from file end
+
+    // int len = sizeof(shifted_mapx) / sizeof(shifted_mapx[0]);
+    int len = *(&shifted_mapx + 1) - shifted_mapx;
+    // std::cout << "the size" << std::sizeof(shifted_mapx[0]);
+    // wxPrintf("len %i %i %i\n", sizeof(shifted_mapx), sizeof(shifted_mapx[0]), len);
+    wxPrintf("len %i\n", len);
+    sample_img.Distortion(&interp_img, shifted_mapx, shifted_mapy);
+    interp_img.WriteSlicesAndFillHeader(outputpathstd + "interp.mrc", 1);
+
+    delete &sample_img;
+    delete &interp_img;
+    delete[] shifted_mapx;
+    delete[] shifted_mapy;
+    Deallocate2DFloatArray(shifted_map_x, image_y_dim);
+    Deallocate2DFloatArray(shifted_map_y, image_y_dim);
+    Deallocate2DFloatArray(original_map_x, image_y_dim);
+    Deallocate2DFloatArray(original_map_y, image_y_dim);
+
     return true;
 }
+
+// //-------------------------------------------test the interpolation---------------------------------------
+// bool NikoTestApp::DoCalculation( ) {
+//     // MRCFile input_test("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/Test-ximina-20220928/outputstack.mrc", false);
+//     MRCFile input_test("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/peak_analysis/sample_img.mrc", false);
+//     // NumericTextFile shift_file("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/peak_analysis/newshifts.txt");
+//     // NumericTextFile *shift_filex, *shift_filey;
+//     // readArray( );
+//     wxPrintf("start\n");
+//     // shift_filex = new NumericTextFile("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/peak_analysis/shifted_mapx.txt", OPEN_TO_READ, 5760);
+//     // wxPrintf("1\n");
+//     // shift_filey = new NumericTextFile("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/peak_analysis/shifted_mapy.txt", OPEN_TO_READ, 5760);
+
+//     Image sample_img;
+//     Image interp_img, interp_img_tmp;
+
+//     int image_x_dim, image_y_dim;
+//     int image_no;
+//     wxPrintf("1\n");
+//     sample_img.ReadSlice(&input_test, 1);
+//     image_no = input_test.ReturnNumberOfSlices( );
+//     // image_x_dim = sample_img.logical_x_dimension;
+//     // image_y_dim = sample_img.logical_y_dimension;
+//     image_x_dim = input_test.ReturnXSize( );
+//     image_y_dim = input_test.ReturnYSize( );
+
+//     wxPrintf("image dim: %i, %i\n", image_x_dim, image_y_dim);
+//     interp_img.Allocate(image_x_dim, image_y_dim, true);
+//     interp_img_tmp.Allocate(image_x_dim, image_y_dim, true);
+//     interp_img.SetToConstant(sample_img.ReturnAverageOfRealValuesOnEdges( ));
+//     interp_img_tmp.SetToConstant(sample_img.ReturnAverageOfRealValuesOnEdges( ));
+//     wxPrintf("2\n");
+//     // float* shifted_map = new float[image_y_dim][4092][2];
+//     wxPrintf("image dim: %i, %i\n", image_x_dim, image_y_dim);
+//     int totalpixels = image_x_dim * image_y_dim;
+//     wxPrintf("3 total pixels %i\n", totalpixels);
+//     // float shifted_mapx[totalpixels], shifted_mapy[totalpixels];
+//     float* shifted_mapx      = new float[totalpixels];
+//     float* shifted_mapy      = new float[totalpixels];
+//     float* interpolated_mapx = new float[totalpixels];
+//     float* interpolated_mapy = new float[totalpixels];
+
+//     wxPrintf("3\n");
+//     wxPrintf("start loading shifted text\n");
+
+//     // load array
+//     wxString      shift_filex = "/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/peak_analysis/shifted_mapx.txt";
+//     wxString      shift_filey = "/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/peak_analysis/shifted_mapy.txt";
+//     std::ifstream xFile, yFile;
+
+//     wxPrintf("1\n");
+
+//     xFile.open(shift_filex.c_str( ));
+//     yFile.open(shift_filey.c_str( ));
+
+//     if ( xFile.is_open( ) && yFile.is_open( ) ) {
+//         wxPrintf("files are open\n");
+//         // float myarray[10][5760];
+//         for ( int pix = 0; pix < totalpixels; pix++ ) {
+//             xFile >> shifted_mapx[pix];
+//             yFile >> shifted_mapy[pix];
+//         }
+//     }
+//     wxPrintf("shifting files are loaded \n");
+//     xFile.close( );
+//     yFile.close( );
+//     // int len = sizeof(shifted_mapx) / sizeof(shifted_mapx[0]);
+//     int len = *(&shifted_mapx + 1) - shifted_mapx;
+//     // std::cout << "the size" << std::sizeof(shifted_mapx[0]);
+//     // wxPrintf("len %i %i %i\n", sizeof(shifted_mapx), sizeof(shifted_mapx[0]), len);
+//     wxPrintf("len %i\n", len);
+//     sample_img.Distortion(&interp_img, shifted_mapx, shifted_mapy);
+//     interp_img.WriteSlicesAndFillHeader("interp.mrc", 1);
+
+//     delete[] shifted_mapx;
+//     delete[] shifted_mapy;
+
+//     return true;
+// }
+
+// //------------------------------------------- end test the interpolation---------------------------------------
+
+// // test the rotation operation
+// bool NikoTestApp::DoCalculation( ) {
+//     MRCFile         input_test("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/input_bf_stretch31_0.030.mrc", false);
+//     Image           Test_image;
+//     Image           Small_image;
+//     Image           Rotated_image;
+//     AnglesAndShifts AandS;
+//     Small_image.Allocate(200, 100, true);
+
+//     // Test_image.SetToConstant(1.0);
+//     Test_image.ReadSlice(&input_test, 1);
+//     Test_image.ClipInto(&Small_image, Test_image.ReturnAverageOfRealValues( ));
+//     Small_image.ForwardFFT( );
+//     Small_image.GaussianLowPassRadiusFilter(0.2, 0.01);
+//     Small_image.BackwardFFT( );
+//     Small_image.WriteSlicesAndFillHeader("test.mrc", 1);
+//     // AandS.Init(0, 0, 86.3, 10, 20);
+//     // wxPrintf("phi: %g\n", AandS.ReturnPhiAngle( ));
+//     // Rotated_image.Allocate(200, 200, true);
+//     // Small_image.Rotate2D(Rotated_image, AandS);
+//     // Rotated_image.WriteSlicesAndFillHeader("rotated.mrc", 1);
+//     Small_image.Rotate2DInPlace(86.3);
+//     Small_image.WriteSlicesAndFillHeader("rotated.mrc", 1);
+//     Small_image.RealSpaceIntegerShift(10, 50);
+//     Small_image.WriteSlicesAndFillHeader("rotatedshifted.mrc", 1);
+//     return true;
+// }
+
+// bool NikoTestApp::DoCalculation( ) {
+//     wxPrintf("hello1\n");
+
+//     Image peak_image, input_image;
+//     // MRCFile input_peak("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/Test/peak102_0.050_0.030.mrc", false);
+//     // MRCFile input_peak("/groups/lingli/Downloads/TS17/test_coarsealgin/49peak.mrc", false);
+//     // MRCFile          input_stack(input_imgstack.ToStdString( ), false)
+//     // MRCFile input_peak("/groups/lingli/Downloads/TS17/test_coarsealgin/peaks.mrc", false);
+//     MRCFile          input_peak("/groups/lingli/Downloads/TS17/test_coarsealign_1/image_peak.mrc", false);
+//     NumericTextFile *tilt_angle_file, *peak_points, *shift_file, *peak_points_raw;
+//     // tilt_angle_file = new NumericTextFile('angle_filename/groups/lingli/Downloads/TS17/TS17.rawtlt', OPEN_TO_READ, 1);
+//     // peak_points     = new NumericTextFile(outputpath + "peakpoints_newcurved.txt", OPEN_TO_WRITE, 4);
+//     // peak_points_raw = new NumericTextFile(outputpath + "peakpoints_pk_img.txt", OPEN_TO_WRITE, 4);
+//     // shift_file      = new NumericTextFile(outputpath + "shifts_newcurved.txt", OPEN_TO_WRITE, 3);
+
+//     int   image_no = tilt_angle_file->number_of_lines;
+//     float tilts[image_no];
+//     float stretch[image_no];
+
+//     float shifts[image_no][2];
+//     float peaks[image_no][2];
+//     for ( int i = 0; i < image_no; i++ ) {
+//         tilt_angle_file->ReadLine(&tilts[i]);
+//         // wxPrintf("angle %i ; % g\n", i, tilts[i]);
+//     }
+//     for ( int i = 0; i < image_no; i++ )
+//         tilts[i] = (tilts[i]) / 180.0 * PI;
+
+//     // wxString angle_filename = my_current_job.arguments[1].ReturnStringArgument( );
+//     // MRCFile ref_file("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/Output/ref34_0.030.mrc", false);
+//     // MRCFile input_file("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/Output/input35_0.030_R0.000.mrc", false);
+
+//     //     MRCFile input_stack(input_imgstack.ToStdString( ), false);
+//     // int X_maskcenter, Y_maskcenter;
+//     // MRCFile input_test("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/Output/input_bf_stretch35_0.030.mrc", false);
+
+//     int X_dim = input_peak.ReturnXSize( );
+//     int Y_dim = input_peak.ReturnYSize( );
+
+//     // float input_array[X_dim][Y_dim];
+//     float xpeak[10];
+//     float ypeak[10];
+//     float peak[10];
+//     float width;
+//     float widthMin;
+//     int   maxPeaks    = 10;
+//     float minStrength = 0.05;
+//     width             = 10;
+//     widthMin          = 1;
+//     float fs[6], fiv[6];
+//     float a11, a12, a21, a22;
+//     // float theta = 50.98;
+//     // float ref   = 47.99;
+//     float phi = 86.3;
+
+//     wxPrintf("X_dim = %i, Y_dim = %i \n", X_dim, Y_dim);
+//     wxPrintf("hello2\n");
+//     // float str = fabs(cosf(ref / 180 * PI) / cosf(theta / 180 * PI));
+//     // // float str = fabs(cosf(theta / 180 * PI) / cosf(ref / 180 * PI));
+//     // // str = fabs((cosf(ref / 180 * PI)) / cosf(theta / 180 * PI));
+//     // wxPrintf("str: %g\n", str);
+//     // // rotmagstrToAmat(0, 1.0, str, phi, &a11, &a12, &a21, &a22);
+//     // rotmagstrToAmat(0, 1.0, str, phi, &a11, &a12, &a21, &a22);
+//     // // rotmagstrToAmat(theta, 1.0, str, phi, &a11, &a12, &a21, &a22);
+//     // // rotmagstrToAmat(ref - theta, 1.0, str, phi, &a11, &a12, &a21, &a22);
+//     // // rotmagstrToAmat(1.0, 1.0, str, 0.0, &a11, &a12, &a21, &a22);
+//     // // fs[0] = a11, fs[1] = a12, fs[2] = 0.0;
+//     // // fs[3] = a21, fs[4] = a22, fs[5] = 0.0;
+//     // // note that the fortran matrix is column dominate, c++ is row dominate
+//     // // fs[0] = a11, fs[1] = a12, fs[4] = 0.0;
+
+//     // fs[0] = a11, fs[2] = a12, fs[4] = 0.0;
+//     // fs[1] = a21, fs[3] = a22, fs[5] = 0.0;
+
+//     // float fs_a[6], fiv_a[6];
+
+//     // rotmagstrToAmat(0, 1.0, 1, -phi, &a11, &a12, &a21, &a22);
+//     // fs_a[0] = a11, fs_a[2] = a12, fs_a[4] = 0.0;
+//     // fs_a[1] = a21, fs_a[3] = a22, fs_a[5] = 0.0;
+
+//     // xfInvert(fs_a, fiv_a, 2);
+
+//     // // float unX1, unY1;
+//     // // float xorg = -1173.334 / 4, yorg = 1680.392 / 4;
+//     // // xfApply(fs, 0.0, 0.0, xorg, yorg, &unX1, &unY1, 2);
+//     // // wxPrintf("un1, un2 %g, %g, %g, %g\n", unX1, unY1, unX1 * 4, unY1 * 4);
+
+//     // xfInvert(fs, fiv, 2);
+
+//     // wxPrintf("a11 a12 a21 a22 %g, %g, %g, %g \n", a11, a12, a21, a22);
+//     // wxPrintf("fs              %g, %g, %g, %g, %g, %g \n", fs[0], fs[1], fs[2], fs[3], fs[4], fs[5]);
+//     // wxPrintf("finv            %g, %g, %g, %g, %g, %g \n", fiv[0], fiv[1], fiv[2], fiv[3], fiv[4], fiv[5]);
+//     // wxPrintf("fs_a              %g, %g, %g, %g, %g, %g \n", fs_a[0], fs_a[1], fs_a[2], fs_a[3], fs_a[4], fs_a[5]);
+//     // float finv_c[6];
+//     // finv_c[0] = fiv[0], finv_c[1] = fiv[2], finv_c[2] = fiv[4];
+//     // finv_c[3] = fiv[1], finv_c[4] = fiv[3], finv_c[5] = fiv[5];
+
+//     // padded_dimensions_x = ReturnClosestFactorizedUpper(pad_factor * input_file_2d.ReturnXSize( ), 3);
+//     // padded_dimensions_y = ReturnClosestFactorizedUpper(pad_factor * input_file_2d.ReturnYSize( ), 3);
+
+//     //   input_volume.Allocate(input_file_3d.ReturnXSize( ), input_file_3d.ReturnYSize( ), input_file_3d.ReturnZSize( ), true);
+//     // circlemask_image.Allocate(X_dim, Y_dim, true);
+//     peak_image.Allocate(X_dim, Y_dim, true);
+//     // peak_image.ReadSlice(&input_peak, 1);
+//     // wxPrintf("hello3\n");
+//     // input_image.Allocate(input_test.ReturnXSize( ), input_test.ReturnYSize( ), true);
+//     // input_image.ReadSlice(&input_test, 1);
+//     // wxPrintf("hello4\n");
+//     // int raw_X_dim = 1440;
+//     // int raw_Y_dim = 1023;
+
+//     // float mask_radius_x = raw_X_dim / 2.0 - raw_X_dim / 10.0;
+//     // float mask_radius_y = raw_Y_dim / 2.0 - raw_Y_dim / 10.0;
+//     // float mask_radius_z = 1;
+//     // // float mask_edge     = std::max(raw_image_dim_x / bin, raw_image_dim_y / bin) / 4.0;
+//     // // float mask_edge = 192;
+//     // float mask_edge = std::max(raw_X_dim, raw_Y_dim) / 10.0;
+//     // // float wanted_taper_edge_x  = std::max(raw_X_dim, raw_Y_dim) / 10.0;
+//     // // float wanted_taper_edge_y  = std::max(raw_X_dim, raw_Y_dim) / 10.0;
+//     // float wanted_taper_edge_x  = raw_Y_dim / 10.0;
+//     // float wanted_taper_edge_y  = raw_Y_dim / 10.0;
+//     // float wanted_mask_radius_x = raw_X_dim / 2.0;
+//     // float wanted_mask_radius_y = raw_Y_dim / 2.0;
+//     // input_image.TaperLinear(wanted_taper_edge_x, wanted_taper_edge_y, 1, mask_radius_x, mask_radius_y, 0);
+//     // // input_image.TaperEdges( );
+//     // input_image.WriteSlicesAndFillHeader("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/Output/input_bf_stretch35_0.030_taperLinear.mrc", 1);
+
+//     // Image empty_image, padded_image;
+//     // empty_image.Allocate(raw_X_dim, raw_Y_dim, true);
+//     // empty_image.SetToConstant(1.0);
+//     // padded_image.Allocate(X_dim, Y_dim, true);
+//     // empty_image.ClipInto(&padded_image);
+//     // empty_image.CopyFrom(&padded_image);
+//     // empty_image.WriteSlicesAndFillHeader("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/Output/empty.mrc", 1);
+
+//     // empty_image.TaperLinear(wanted_taper_edge_x, wanted_taper_edge_y, 1, mask_radius_x, mask_radius_y, 0);
+//     // empty_image.WriteSlicesAndFillHeader("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/Output/emptyLinearTaper.mrc", 1);
+//     // Peak cistem_peak;
+//     // cistem_peak = peak_image.FindPeakWithIntegerCoordinates( );
+//     // wxPrintf("cisTEM peak %g, %g, %g,\n", cistem_peak.x, cistem_peak.y, cistem_peak.value);
+//     // // wxPrintf("hello3\n");
+//     // XCorrPeakFindWidth(&peak_image.real_values[0], X_dim + 2, Y_dim, xpeak, ypeak,
+//     //                    peak, &width, &widthMin, maxPeaks,
+//     //    minStrength);
+//     // //    XCorrPeakFindWidth()
+//     // Image image_ref;
+//     // Image image_cur, image_shifted;
+//     // image_ref.Allocate(ref_file.ReturnXSize( ), ref_file.ReturnYSize( ), true);
+//     // image_cur.Allocate(input_file.ReturnXSize( ), input_file.ReturnYSize( ), true);
+//     // image_cur.ReadSlice(&input_file, 1);
+//     // image_ref.ReadSlice(&ref_file, 1);
+//     // float ccc1, ccc2, ccc3, ccc4;
+//     // float peakmax = peak[0];
+//     float theta = 51;
+//     float ref;
+//     float tmppeak[4];
+//     // float ref   = 48;
+//     // for ( int i = 19; i < 35; i++ ) {
+//     // for ( int i = 2; i < 19; i++ ) {
+//     for ( int i = 0; i < 34; i++ ) {
+//         // // if ( theta < 0 ) {
+//         // // theta = 0 + (i - 1) * 3;
+//         // theta = theta + 3;
+//         // ref   = theta - 3;
+//         // // }
+
+//         // // theta = theta + i * 3;
+//         // // ref = ref - (17 - 1 - i) * 3;
+//         wxPrintf("--------image %i ----------\n", i);
+//         // wxPrintf("current nd ref: %g, %g\n", theta, ref);
+//         // float str = fabs(cosf(ref / 180 * PI) / cosf(theta / 180 * PI));
+//         // // float str = fabs(cosf(theta / 180 * PI) / cosf(ref / 180 * PI));
+//         // // str = fabs((cosf(ref / 180 * PI)) / cosf(theta / 180 * PI));
+//         // wxPrintf("str: %g\n", str);
+//         // // rotmagstrToAmat(0, 1.0, str, phi, &a11, &a12, &a21, &a22);
+//         // rotmagstrToAmat(0, 1.0, str, phi, &a11, &a12, &a21, &a22);
+//         // // rotmagstrToAmat(theta, 1.0, str, phi, &a11, &a12, &a21, &a22);
+//         // // rotmagstrToAmat(ref - theta, 1.0, str, phi, &a11, &a12, &a21, &a22);
+//         // // rotmagstrToAmat(1.0, 1.0, str, 0.0, &a11, &a12, &a21, &a22);
+//         // // fs[0] = a11, fs[1] = a12, fs[2] = 0.0;
+//         // // fs[3] = a21, fs[4] = a22, fs[5] = 0.0;
+//         // // note that the fortran matrix is column dominate, c++ is row dominate
+//         // // fs[0] = a11, fs[1] = a12, fs[4] = 0.0;
+
+//         // fs[0] = a11, fs[2] = a12, fs[4] = 0.0;
+//         // fs[1] = a21, fs[3] = a22, fs[5] = 0.0;
+
+//         // // float fs_a[6], fiv_a[6];
+
+//         // // rotmagstrToAmat(0, 1.0, 1, -phi, &a11, &a12, &a21, &a22);
+//         // // fs_a[0] = a11, fs_a[2] = a12, fs_a[4] = 0.0;
+//         // // fs_a[1] = a21, fs_a[3] = a22, fs_a[5] = 0.0;
+
+//         // // xfInvert(fs_a, fiv_a, 2);
+
+//         // // float unX1, unY1;
+//         // // float xorg = -1173.334 / 4, yorg = 1680.392 / 4;
+//         // // xfApply(fs, 0.0, 0.0, xorg, yorg, &unX1, &unY1, 2);
+//         // // wxPrintf("un1, un2 %g, %g, %g, %g\n", unX1, unY1, unX1 * 4, unY1 * 4);
+
+//         // xfInvert(fs, fiv, 2);
+
+//         // wxPrintf("a11 a12 a21 a22 %g, %g, %g, %g \n", a11, a12, a21, a22);
+//         // wxPrintf("fs              %g, %g, %g, %g, %g, %g \n", fs[0], fs[1], fs[2], fs[3], fs[4], fs[5]);
+//         // wxPrintf("finv            %g, %g, %g, %g, %g, %g \n", fiv[0], fiv[1], fiv[2], fiv[3], fiv[4], fiv[5]);
+//         // // wxPrintf("fs_a              %g, %g, %g, %g, %g, %g \n", fs_a[0], fs_a[1], fs_a[2], fs_a[3], fs_a[4], fs_a[5]);
+//         // float finv_c[6];
+//         // finv_c[0] = fiv[0], finv_c[1] = fiv[2], finv_c[2] = fiv[4];
+//         // finv_c[3] = fiv[1], finv_c[4] = fiv[3], finv_c[5] = fiv[5];
+
+//         peak_image.ReadSlice(&input_peak, i + 1);
+//         wxPrintf("hello3\n");
+//         Peak cistem_peak;
+//         cistem_peak = peak_image.FindPeakWithIntegerCoordinates( );
+//         wxPrintf("cisTEM peak %g, %g, %g,\n", cistem_peak.x, cistem_peak.y, cistem_peak.value);
+//         // tmppeak[0] = i, tmppeak[1] = peak.x, tmppeak[2] = peak.y, tmppeak[3] = peak.value;
+//         // wxPrintf("hello3\n");
+//         // XCorrPeakFindWidth(&peak_image.real_values[0], X_dim + 2, Y_dim, xpeak, ypeak,
+//         //                    peak, &width, &widthMin, maxPeaks, minStrength);
+//         // wxPrintf("peaks: %g, %g, %g\n", xpeak[0] - X_dim / 2, ypeak[0] - Y_dim / 2, peak[i]);
+//         // wxPrintf("peaks: %g, %g, %g\n", (xpeak[0] - X_dim / 2) * 4, (ypeak[0] - Y_dim / 2) * 4, peak[0]);
+//         // float unX1, unY1, unX2, unY2;
+//         // xfApply(fiv, 0.0, 0.0, xpeak[0] - X_dim / 2, ypeak[0] - Y_dim / 2, &unX1, &unY1, 2);
+//         // wxPrintf("ind un1, un2 %i %5g %5g %5g %5g\n", i, unX1, unY1, unX1 * 4, unY1 * 4);
+
+//         // wxPrintf("peaks: %g, %g, %g\n", xpeak[0], ypeak[0], peak[0]);
+//         // // wxPrintf("peaks: %g, %g, %g\n", xpeak[i] - X_dim / 2, ypeak[i] - Y_dim / 2, peak[i]);
+//         // // ccc1 = image_cur.ReturnCorrelationCoefficientUnnormalized(image_ref, wxMax(xpeak[i] - X_dim / 2, ypeak[i] - Y_dim / 2));
+//         // // image_cur.WriteSlicesAndFillHeader("../src/Output/test1.mrc", 1);
+//         // image_shifted.CopyFrom(&image_cur);
+//         // image_shifted.PhaseShift(-(xpeak[i] - X_dim / 2), -(ypeak[i] - Y_dim / 2), 0);
+//         // image_shifted.WriteSlicesAndFillHeader("shift1_phase.mrc", 1);
+//         // // image_shifted.CopyFrom(&image_cur);
+//         // // image_shifted.RealSpaceIntegerShift((xpeak[i] - X_dim / 2), (ypeak[i] - Y_dim / 2), 0);
+//         // // image_shifted.WriteSlicesAndFillHeader("shift2_real.mrc", 1);
+
+//         // // image_shifted.RealSpaceIntegerShift(-(xpeak[i] - X_dim / 2), -(ypeak[i] - Y_dim / 2), 0);
+//         // // ccc1        = image_shifted.ReturnCorrelationCoefficientNormalized(image_ref, wxMax(X_dim / 8, Y_dim / 8));
+//         // // float sizex = raw_X_dim / 2 - mask_edge - abs(xpeak[i] - X_dim / 2) / 2;
+//         // // float sizey = raw_Y_dim / 2 - mask_edge - abs(ypeak[i] - Y_dim / 2) / 2;
+//         // float sizex = raw_X_dim / 2 - mask_edge / 2;
+//         // float sizey = raw_Y_dim / 2 - mask_edge / 2;
+
+//         // wxPrintf("sizex sizey: %g, %g \n", sizex, sizey);
+//         // // ccc1 = image_shifted.ReturnCorrelationCoefficientNormalizedRectangle(image_ref, sizex, sizey);
+//         // // ccc2 = image_shifted.ReturnCorrelationCoefficientNormalized(image_ref, wxMax(X_dim / 8, Y_dim / 8));
+//         // // ccc3 = image_shifted.ReturnCorrelationCoefficientNormalizedRectangle(image_ref, raw_X_dim / 2, raw_Y_dim / 2);
+//         // // float testresult[2];
+//         // int num, num_tmp;
+//         // ccc3 = image_cur.ReturnCorrelationCoefficientNormalizedAtPeak(image_ref, &num, xpeak[i] - X_dim / 2, ypeak[i] - Y_dim / 2, 0, sizex, sizey);
+//         // // ccc3 = image_cur.ReturnCorrelationCoefficientNormalizedAtPeak(image_shifted, &num, xpeak[i] - X_dim / 2, ypeak[i] - Y_dim / 2, 0, sizex, sizey);
+//         // // overlap = float(nsum) / ((nxPad - 2 * nxCCTrimA) * (nyPad - 2 * nyCCTrimA));
+//         // // ccc3               = testresult[0];
+//         // // float num;
+
+//         // float overlap = num / (2 * sizex) / (2 * sizey);
+
+//         // float overlapPower = 6;
+//         // float weight       = 1. / (1 + powf(wxMax(0.1, (wxMin(10.0, 0.125 / overlap))), overlapPower));
+//         // wxPrintf("num overlap, overlap 0.125/overlap weight %i,%g, %g, %g\n", num, overlap, 0.125 / overlap, weight);
+
+//         // float wgtccc3 = ccc3 * 1. / (1.0 + powf(wxMax(0.1, wxMin(10.0, 0.125 / overlap)), overlapPower));
+//         // // wxPrintf("overlap overlap power, wgtc")
+//         // // float wgtCCC       = ccc * 1. / (1. + &wxMax(0.1, min(10., overlapCrit / overlap)) * *overlapPower);
+//         // // ccc1 = image_cur.ReturnCorrelationCoefficientNormalizedRectangle(image_ref, sizex, sizey);
+//         // // ccc2 = image_cur.ReturnCorrelationCoefficientNormalized(image_ref, wxMax(X_dim / 8, Y_dim / 8));
+//         // // ccc3 = image_cur.ReturnCorrelationCoefficientNormalizedRectangle(image_ref, raw_X_dim / 2, raw_Y_dim / 2);
+
+//         // // ccc2 = image_shifted.ReturnCorrelationCoefficientUnnormalized(image_ref, wxMax(abs(xpeak[i] - X_dim / 2), abs(ypeak[i] - Y_dim / 2)));
+//         // // image_cur.WriteSlicesAndFillHeader("../src/Output/test2.mrc", 1);
+//         // // wxPrintf("coefs 1 2: %g, %g\n", ccc1, ccc2);
+//         // float ratio = peak[i] / peakmax;
+//         // // wxPrintf("peaks: %5g, %5g, %10.5g, %10.5g, %10.5g, %10.5g,%10.5g,%10.5g\n", xpeak[i] - X_dim / 2, ypeak[i] - Y_dim / 2, peak[i], ccc1, ccc2, ccc3, ccc4, ratio);
+//         // wxPrintf("peaks: %5g, %5g, %10.5g, %10.5g, %10.5g,%10.5g\n", xpeak[i] - X_dim / 2, ypeak[i] - Y_dim / 2, peak[i], ccc3, wgtccc3, ratio);
+//         // wxPrintf("peaks: %g, %g, %g\n", xpeak[i] - X_dim / 2, ypeak[i] - Y_dim / 2, peak[i]);
+//         // wxPrintf("peaks: %g, %g, %g\n", (xpeak[i] - X_dim / 2) * 4, (ypeak[i] - Y_dim / 2) * 4, peak[i]);
+//         // wxPrintf("peaks: %g, %g, %g\n", xpeak[i], ypeak[i], peak[i]);
+
+//         // wxPrintf("peaks: %g, %g, %g\n", xpeak[0] - X_dim / 2, ypeak[0] - Y_dim / 2, peak[0]);
+//         // wxPrintf("peaks: %g, %g, %g\n", xpeak[1] - X_dim / 2, ypeak[1] - Y_dim / 2, peak[1]);
+//         // wxPrintf("peaks: %g, %g, %g\n", xpeak[2] - X_dim / 2, ypeak[2] - Y_dim / 2, peak[2]);
+//         // wxPrintf("peaks: %g, %g, %g\n", xpeak[3] - X_dim / 2, ypeak[3] - Y_dim / 2, peak[3]);
+//         // wxPrintf("peaks: %g, %g, %g\n", xpeak[4] - X_dim / 2, ypeak[4] - Y_dim / 2, peak[4]);
+//         // wxPrintf("peaks: %g, %g, %g\n", xpeak[5] - X_dim / 2, ypeak[5] - Y_dim / 2, peak[5]);
+//         // wxPrintf("peaks: %g, %g, %g\n", xpeak[6] - X_dim / 2, ypeak[6] - Y_dim / 2, peak[6]);
+//         // wxPrintf("peaks: %g, %g, %g\n", xpeak[7] - X_dim / 2, ypeak[7] - Y_dim / 2, peak[7]);
+//         // wxPrintf("peaks: %g, %g, %g\n", xpeak[8] - X_dim / 2, ypeak[8] - Y_dim / 2, peak[8]);
+//         // wxPrintf("peaks: %g, %g, %g\n", xpeak[9] - X_dim / 2, ypeak[9] - Y_dim / 2, peak[9]);
+//         // float unX1, unY1, unX2, unY2;
+
+//         // xfApply(fs, 0.0, 0.0, xpeak[i] - X_dim / 2, ypeak[i] - Y_dim / 2, &unX2, &unY2, 2);
+//         // // xfApply(fs, 0.0, 0.0, xpeak[i], ypeak[i], &unX2, &unY2, 2);
+//         // wxPrintf("un1, un2 %g, %g, %g, %g\n", unX2, unY2, unX2 * 4, unY2 * 4);
+
+//         // xfApply(fiv, 0.0, 0.0, xpeak[i] - X_dim / 2, ypeak[i] - Y_dim / 2, &unX1, &unY1, 2);
+//         // wxPrintf("un1, un2 %g, %g, %g, %g\n", unX1, unY1, unX1 * 4, unY1 * 4);
+//         // xfApply(finv_c, 0.0, 0.0, xpeak[i] - X_dim / 2, ypeak[i] - Y_dim / 2, &unX2, &unY2, 2);
+
+//         // xfApply(fs, float(X_dim) / 2.0, float(Y_dim) / 2.0, xpeak[i], ypeak[i], &unX2, &unY2, 2);
+//         // wxPrintf("un1, un2 %g, %g, %g, %g\n", unX2, unY2, unX2 * 4, unY2 * 4);
+//         // wxPrintf("un1, un2 %g, %g, %g, %g\n", unX2 - X_dim / 2.0, unY2 - Y_dim / 2.0, unX2 * 4, unY2 * 4);
+
+//         // xfApply(fiv, float(X_dim) / 2.0, float(Y_dim) / 2.0, xpeak[i], ypeak[i], &unX2, &unY2, 2);
+//         // wxPrintf("un1, un2 %g, %g, %g, %g\n", unX2, unY2, unX2 * 4, unY2 * 4);
+//         // wxPrintf("un1, un2 %g, %g, %g, %g\n", unX2 - X_dim / 2.0, unY2 - Y_dim / 2.0, unX2 * 4, unY2 * 4);
+//         // call xfapply(fsInv, 0., 0., xpeak, ypeak, unstretchDx, unstretchDy)
+
+//         // float x1 = unX1, y1 = unY1;
+//         // xfApply(fs_a, 0, 0, x1, y1, &unX2, &unY2, 2);
+//         // wxPrintf("un1, un2 %g, %g, %g, %g\n", unX2, unY2, unX2 * 4, unY2 * 4);
+//         // wxPrintf("un1, un2 %g, %g, %g, %g\n", unX2 - X_dim / 2.0, unY2 - Y_dim / 2.0, unX2 * 4, unY2 * 4);
+//     }
+
+//     // input_array = peak_image.real_values;
+//     // delete xpeak;
+//     // delete ypeak;
+//     // delete peak;
+//     return true;
+// }
 
 // bool NikoTestApp::DoCalculation( ) {
 //     wxPrintf("Hello world4\n");

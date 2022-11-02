@@ -4455,11 +4455,11 @@ void Image::TaperLinear(float wanted_taper_edge_x, float wanted_taper_edge_y, fl
                             tmp_edge = (x - mask_radius_x) / wanted_taper_edge_x;
                         if ( tmp_edge > edge )
                             edge = tmp_edge;
-                        if ( y > mask_radius_y && y < wanted_mask_radius_y )
+                        if ( y >= mask_radius_y && y <= wanted_mask_radius_y )
                             tmp_edge = (y - mask_radius_y) / wanted_taper_edge_y;
                         if ( tmp_edge > edge )
                             edge = tmp_edge;
-                        if ( z > mask_radius_z && z < wanted_mask_radius_z )
+                        if ( z >= mask_radius_z && z <= wanted_mask_radius_z )
                             tmp_edge = (z - mask_radius_z) / wanted_taper_edge_z;
                         if ( tmp_edge > edge )
                             edge = tmp_edge;
@@ -9959,6 +9959,248 @@ Peak Image::FindPeakWithIntegerCoordinates(float wanted_min_radius, float wanted
     return found_peak;
 }
 
+void Image::XCorrPeakFindWidth(int nxdim, int ny, float* xpeak, float* ypeak,
+                               float* peak, float* width, float* widthMin, int maxPeaks,
+                               float minStrength) {
+    float cx, cy, y1, y2, y3, local, val;
+    float widthTemp[4];
+    int   ixpeak, iypeak, ix, iy, ixBlock, iyBlock, ixStart, ixEnd, iyStart, iyEnd;
+    int   i, j, ixm, ixp, iyb, iybm, iybp, idx, idy;
+    int   nx        = nxdim - 2;
+    int   blockSize = 5;
+    int   nBlocksX  = (nx + blockSize - 1) / blockSize;
+    int   nBlocksY  = (ny + blockSize - 1) / blockSize;
+    int   ixTopPeak = 10 * nx;
+    int   iyTopPeak = 10 * ny;
+    float xLimCen, yLimCen, xLimRadSq, yLimRadSq, threshold = 0.;
+
+    float sApplyLimits = -1;
+    float sLimitXlo    = -3000;
+    float sLimitYlo    = -3000;
+    float sLimitXhi    = 3000;
+    float sLimitYhi    = 3000;
+
+    // float array = real_values;
+
+    /* If using elliptical limits, compute center and squares of radii */
+    if ( sApplyLimits < 0 ) {
+        xLimCen = 0.5 * (sLimitXlo + sLimitXhi);
+        // cx        = B3DMAX(1., (sLimitXhi - sLimitXlo) / 2.);
+        cx        = wxMax(1., (sLimitXhi - sLimitXlo) / 2.);
+        xLimRadSq = cx * cx;
+        yLimCen   = 0.5 * (sLimitYlo + sLimitYhi);
+        cy        = wxMax(1., (sLimitYhi - sLimitYlo) / 2.);
+        yLimRadSq = cy * cy;
+    }
+
+    /* find peaks */
+    for ( i = 0; i < maxPeaks; i++ ) {
+        peak[i]  = -1.e30f;
+        xpeak[i] = 0.;
+        ypeak[i] = 0.;
+    }
+
+    /* Look for highest peak if looking for one peak or if there is a minimum strength */
+    if ( maxPeaks < 2 || minStrength > 0. ) {
+
+        /* Find one peak within the limits */
+        if ( sApplyLimits ) {
+            for ( iy = 0; iy < ny; iy++ ) {
+                idy = (iy > ny / 2) ? iy - ny : iy;
+                if ( idy < sLimitYlo || idy > sLimitYhi )
+                    continue;
+                for ( ix = 0; ix < nx; ix++ ) {
+                    idx = (ix > nx / 2) ? ix - nx : ix;
+                    if ( idx >= sLimitXlo && idx <= sLimitXhi && real_values[ix + iy * nxdim] > *peak ) {
+                        if ( sApplyLimits < 0 ) {
+                            cx = idx - xLimCen;
+                            cy = idy - yLimCen;
+                            if ( cx * cx / xLimRadSq + cy * cy / yLimRadSq > 1. )
+                                continue;
+                        }
+                        *peak  = real_values[ix + iy * nxdim];
+                        ixpeak = ix;
+                        iypeak = iy;
+                    }
+                }
+            }
+            if ( *peak > -0.9e30 ) {
+                *xpeak = (float)ixpeak;
+                *ypeak = (float)iypeak;
+            }
+        }
+        else {
+
+            /* Or just find the one peak in the whole area */
+            for ( iy = 0; iy < ny; iy++ ) {
+                for ( ix = iy * nxdim; ix < nx + iy * nxdim; ix++ ) {
+                    if ( real_values[ix] > *peak ) {
+                        *peak  = real_values[ix];
+                        ixpeak = ix - iy * nxdim;
+                        iypeak = iy;
+                    }
+                }
+            }
+            *xpeak = (float)ixpeak;
+            *ypeak = (float)iypeak;
+        }
+        threshold = minStrength * *peak;
+        ixTopPeak = ixpeak;
+        iyTopPeak = iypeak;
+    }
+
+    /* Now find all requested peaks */
+    if ( maxPeaks > 1 ) {
+
+        // Check for local peaks by looking at the highest point in each local
+        // block
+        for ( iyBlock = 0; iyBlock < nBlocksY; iyBlock++ ) {
+
+            // Block start and end in Y
+            iyStart = iyBlock * blockSize;
+            iyEnd   = iyStart + blockSize;
+            if ( iyEnd > ny )
+                iyEnd = ny;
+
+            // Test if entire block is outside limits
+            if ( sApplyLimits && (iyStart > ny / 2 || iyEnd <= ny / 2) ) {
+                idy = (iyStart > ny / 2) ? iyStart - ny : iyStart;
+                if ( idy > sLimitYhi )
+                    continue;
+                idy = (iyEnd > ny / 2) ? iyEnd - ny : iyEnd;
+                if ( idy < sLimitYlo )
+                    continue;
+            }
+
+            // Loop on X blocks, get start and end in Y
+            for ( ixBlock = 0; ixBlock < nBlocksX; ixBlock++ ) {
+                ixStart = ixBlock * blockSize;
+                ixEnd   = ixStart + blockSize;
+                if ( ixEnd > nx )
+                    ixEnd = nx;
+
+                // Test if entire block is outside limits
+                if ( sApplyLimits && (ixStart > nx / 2 || ixEnd <= nx / 2) ) {
+                    idx = (ixStart > nx / 2) ? ixStart - nx : ixStart;
+                    if ( idx > sLimitXhi )
+                        continue;
+                    idx = (ixEnd > nx / 2) ? ixEnd - nx : ixEnd;
+                    if ( idx < sLimitXlo )
+                        continue;
+                }
+
+                // Loop on every pixel in the block; have to test each pixel
+                local = -1.e30f;
+                for ( iy = iyStart; iy < iyEnd; iy++ ) {
+                    if ( sApplyLimits ) {
+                        idy = (iy > ny / 2) ? iy - ny : iy;
+                        if ( idy < sLimitYlo || idy > sLimitYhi )
+                            continue;
+                    }
+                    for ( ix = ixStart; ix < ixEnd; ix++ ) {
+                        if ( sApplyLimits ) {
+                            idx = (ix > nx / 2) ? ix - nx : ix;
+                            if ( idx < sLimitXlo || idx > sLimitXhi )
+                                continue;
+
+                            // Apply elliptical test
+                            if ( sApplyLimits < 0 ) {
+                                cx = idx - xLimCen;
+                                cy = idy - yLimCen;
+                                if ( cx * cx / xLimRadSq + cy * cy / yLimRadSq > 1. )
+                                    continue;
+                            }
+                        }
+                        val = real_values[ix + iy * nxdim];
+                        if ( val > local && val > peak[maxPeaks - 1] && val > threshold ) {
+                            local  = val;
+                            ixpeak = ix;
+                            iypeak = iy;
+                        }
+                    }
+                }
+
+                // evaluate local peak for truly being local.
+                // Allow equality on one side, otherwise identical adjacent values are lost
+                if ( local > -0.9e30 ) {
+                    ixm  = (ixpeak + nx - 1) % nx;
+                    ixp  = (ixpeak + 1) % nx;
+                    iyb  = iypeak * nxdim;
+                    iybp = ((iypeak + 1) % ny) * nxdim;
+                    iybm = ((iypeak + ny - 1) % ny) * nxdim;
+
+                    if ( local > real_values[ixpeak + iybm] && local >= real_values[ixpeak + iybp] &&
+                         local > real_values[ixm + iyb] && local >= real_values[ixp + iyb] &&
+                         local > real_values[ixm + iybp] && local >= real_values[ixp + iybm] &&
+                         local > real_values[ixp + iybp] && local >= real_values[ixm + iybm] &&
+                         (ixpeak != ixTopPeak || iypeak != iyTopPeak) ) {
+
+                        // Insert peak into the list
+                        for ( i = 0; i < maxPeaks; i++ ) {
+                            if ( peak[i] < local ) {
+                                for ( j = maxPeaks - 1; j > i; j-- ) {
+                                    peak[j]  = peak[j - 1];
+                                    xpeak[j] = xpeak[j - 1];
+                                    ypeak[j] = ypeak[j - 1];
+                                }
+                                peak[i]  = local;
+                                xpeak[i] = (float)ixpeak;
+                                ypeak[i] = (float)iypeak;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // for ( i = 0; i < maxPeaks; i++ ) {
+    //     if ( peak[i] < -0.9e30 )
+    //         continue;
+
+    // // Add 0.2 just in case float was less than int assigned to it
+    // ixpeak = (int)(xpeak[i] + 0.2);
+    // iypeak = (int)(ypeak[i] + 0.2);
+
+    // /* simply fit a parabola to the two adjacent points in X or Y */
+
+    // y1 = real_values[(ixpeak + nx - 1) % nx + iypeak * nxdim];
+    // y2 = peak[i];
+    // y3 = real_values[(ixpeak + 1) % nx + iypeak * nxdim];
+    // cx = (float)parabolicFitPosition(y1, y2, y3);
+
+    // y1 = real_values[ixpeak + ((iypeak + ny - 1) % ny) * nxdim];
+    // y3 = real_values[ixpeak + ((iypeak + 1) % ny) * nxdim];
+    // cy = (float)parabolicFitPosition(y1, y2, y3);
+
+    // /*    return adjusted pixel coordinate */
+    // xpeak[i] = ixpeak + cx;
+    // ypeak[i] = iypeak + cy;
+    // if ( xpeak[i] > nx / 2 )
+    //     xpeak[i] = xpeak[i] - nx;
+    // if ( ypeak[i] > ny / 2 )
+    //     ypeak[i] = ypeak[i] - ny;
+
+    // /* Return width if non-NULL */
+    // if ( width && widthMin ) {
+    //     widthTemp[0] = peakHalfWidth(real_values, ixpeak, iypeak, nx, ny, 1, 0) +
+    //                    peakHalfWidth(real_values, ixpeak, iypeak, nx, ny, -1, 0);
+    //     widthTemp[1] = peakHalfWidth(real_values, ixpeak, iypeak, nx, ny, 0, 1) +
+    //                    peakHalfWidth(real_values, ixpeak, iypeak, nx, ny, 0, -1);
+    //     widthTemp[2] = peakHalfWidth(real_values, ixpeak, iypeak, nx, ny, 1, 1) +
+    //                    peakHalfWidth(real_values, ixpeak, iypeak, nx, ny, -1, -1);
+    //     widthTemp[3] = peakHalfWidth(real_values, ixpeak, iypeak, nx, ny, 1, -1) +
+    //                    peakHalfWidth(real_values, ixpeak, iypeak, nx, ny, -1, 1);
+    //     avgSD(widthTemp, 4, &width[i], &cx, &cy);
+    //     widthMin[i] = B3DMIN(widthTemp[0], widthTemp[1]);
+    //     widthMin[i] = B3DMIN(widthMin[i], widthTemp[2]);
+    //     widthMin[i] = B3DMIN(widthMin[i], widthTemp[3]);
+    // }
+    // }
+    sApplyLimits = 0;
+}
+
 float Image::FindBeamTilt(CTF& input_ctf, float pixel_size, Image& phase_error_output, Image& beamtilt_output, Image& difference_image, float& beamtilt_x, float& beamtilt_y, float& particle_shift_x, float& particle_shift_y, float phase_multiplier, bool progress_bar, int first_position_to_search, int last_position_to_search, MyApp* app_for_result) {
     int cycle_counter;
     int counter;
@@ -11260,6 +11502,277 @@ float Image::ReturnNearest2D(float& wanted_physical_x_coordinate, float& wanted_
 
     //	return real_values[(logical_x_dimension + padding_jump_value) * j_nearest + i_nearest] * weight_x * weight_y;
     return real_values[(logical_x_dimension + padding_jump_value) * j_nearest + i_nearest];
+}
+
+void Image::Distortion(Image* interp_img, float* shifted_mapx, float* shifted_mapy) {
+    // interpolation
+    // along x axis, iterat rows
+    // wxPrintf("start interpolate along x\n");
+    // Image interp_img;
+    Image interp_img_tmp;
+
+    interp_img->SetToConstant(ReturnAverageOfRealValuesOnEdges( ));
+    interp_img_tmp.Allocate(logical_x_dimension, logical_y_dimension, true);
+    interp_img_tmp.SetToConstant(ReturnAverageOfRealValuesOnEdges( ));
+    int    totalpixels       = logical_x_dimension * logical_y_dimension;
+    float* interpolated_mapx = new float[totalpixels];
+    float* interpolated_mapy = new float[totalpixels];
+    int    xstart            = 0;
+    int    xend              = logical_x_dimension;
+    int    ystart            = 0;
+    int    yend              = logical_y_dimension;
+
+    for ( int i = ystart; i < yend; i++ ) {
+        // for ( int i = 2046; i < 2047; i++ ) {
+        int jstart;
+        int jend;
+
+        int jjstart = 0;
+        // while ( shifted_map[i][jjstart][0] < 0 ) {
+        while ( shifted_mapx[i * logical_x_dimension + jjstart] < 0 ) {
+            jjstart += 1;
+        }
+        int jjend = logical_x_dimension - 1;
+        // while ( shifted_map[i][jjend][0] > logical_x_dimension - 1 ) {
+        while ( shifted_mapx[i * logical_x_dimension + jjend] > logical_x_dimension - 1 ) {
+            jjend -= 1;
+        }
+        if ( jjend <= jjstart ) {
+            wxPrintf("the current line shall be skipped, it is shifted out of the image boundary\n");
+            continue;
+        }
+        if ( jjstart > 0 ) {
+            jjstart = jjstart - 1;
+        }
+        // jstart = std::ceil(shifted_map[i][jjstart][0]);
+        jstart = std::ceil(shifted_mapx[i * logical_x_dimension + jjstart]);
+        if ( jstart < 0 )
+            jstart = 0;
+        if ( jstart > 0 ) {
+            for ( int tmpj = 0; tmpj < jstart; tmpj++ ) {
+                // interpolated_map[i][tmpj][1]              = -100;
+                // interpolated_map[i][tmpj][0]              = -100;
+                interpolated_mapx[i * logical_x_dimension + tmpj] = -100;
+                interpolated_mapy[i * logical_x_dimension + tmpj] = -100;
+            }
+        }
+        if ( jjend < logical_x_dimension - 1 )
+            jjend = jjend + 1;
+        // jend = std::floor(shifted_map[i][jjend][0]);
+        jend = std::floor(shifted_mapx[i * logical_x_dimension + jjend]);
+        if ( jend > logical_x_dimension - 1 )
+            jend = logical_x_dimension - 1;
+        if ( jend < logical_x_dimension - 1 ) {
+            for ( int tmpj = jend + 1; tmpj < logical_x_dimension; tmpj++ ) {
+                // interpolated_map[i][tmpj][1] = -100;
+                // interpolated_map[i][tmpj][0] = -100;
+                interpolated_mapx[i * logical_x_dimension + tmpj] = -100;
+                interpolated_mapy[i * logical_x_dimension + tmpj] = -100;
+            }
+        }
+        int j = jstart;
+        for ( int jj = jjstart + 1; jj <= jjend; jj++ ) {
+            // if ( shifted_map[i][jj][0] < j )
+            if ( shifted_mapx[i * logical_x_dimension + jj] < j )
+                continue;
+            // else if ( shifted_map[i][jj][0] == j ) {
+            else if ( shifted_mapx[i * logical_x_dimension + jj] == j ) {
+                // interpolated_map[i][j][0]                = j;
+                // interpolated_map[i][j][1]                = shifted_map[i][jj][1];
+
+                interpolated_mapx[i * logical_x_dimension + j] = j;
+                interpolated_mapy[i * logical_x_dimension + j] = shifted_mapy[i * logical_x_dimension + jj];
+                int sample_index                               = (logical_x_dimension + padding_jump_value) * i + jj;
+                int interp_index                               = (interp_img_tmp.logical_x_dimension + interp_img_tmp.padding_jump_value) * i + j;
+                interp_img_tmp.real_values[interp_index]       = real_values[sample_index];
+
+                j = j + 1;
+            }
+            // while ( shifted_map[i][jj][0] > j ) {
+            while ( shifted_mapx[i * logical_x_dimension + jj] > j ) {
+                // if ( shifted_map[i][jj - 1][0] < j ) {
+                if ( shifted_mapx[i * logical_x_dimension + jj - 1] < j ) {
+                    int sample_index = (logical_x_dimension + padding_jump_value) * i + jj - 1;
+                    // float x1           = shifted_map[i][jj - 1][0];
+                    // float y1           = shifted_map[i][jj - 1][1];
+                    float x1 = shifted_mapx[i * logical_x_dimension + jj - 1];
+                    float y1 = shifted_mapy[i * logical_x_dimension + jj - 1];
+                    float z1 = real_values[sample_index];
+                    // float x2           = shifted_map[i][jj][0];
+                    // float y2           = shifted_map[i][jj][1];
+                    float x2       = shifted_mapx[i * logical_x_dimension + jj];
+                    float y2       = shifted_mapy[i * logical_x_dimension + jj];
+                    float z2       = real_values[sample_index + 1];
+                    float x        = j;
+                    float target_y = (x2 - x) / (x2 - x1) * y1 + (x - x1) / (x2 - x1) * y2;
+                    float target_z = (x2 - x) / (x2 - x1) * z1 + (x - x1) / (x2 - x1) * z2;
+                    // interpolated_map[i][j][0]                    = j;
+                    // interpolated_map[i][j][1]                    = target_y;
+                    interpolated_mapx[i * logical_x_dimension + j] = j;
+                    interpolated_mapy[i * logical_x_dimension + j] = target_y;
+                    int interp_img_index                           = (interp_img_tmp.logical_x_dimension + interp_img_tmp.padding_jump_value) * i + j;
+                    interp_img_tmp.real_values[interp_img_index]   = target_z;
+                    j                                              = j + 1;
+                }
+                // else if ( shifted_map[i][jj - 1][0] == j ) {
+                else if ( shifted_mapx[i * logical_x_dimension + jj - 1] == j ) {
+                    // interpolated_map[i][j][0]                = j;
+                    // interpolated_map[i][j][1]                = shifted_map[i][jj - 1][1];
+                    interpolated_mapx[i * logical_x_dimension + j] = j;
+                    interpolated_mapy[i * logical_x_dimension + j] = shifted_mapy[i * logical_x_dimension + jj - 1];
+                    int sample_index                               = (logical_x_dimension + padding_jump_value) * i + jj - 1;
+                    int interp_index                               = (interp_img_tmp.logical_x_dimension + interp_img_tmp.padding_jump_value) * i + j;
+                    interp_img_tmp.real_values[interp_index]       = real_values[sample_index];
+                    j                                              = j + 1;
+                }
+                else {
+                    wxPrintf("deadloop may occur\n");
+                    wxPrintf("current i j ii %i, %i, %i\n", i, j, jj);
+                    // wxPrintf("inter_imgjj,inter_imgjj-1\n", shifted_map[i][jj][0], shifted_map[i][jj - 1][0]);
+                    wxPrintf("inter_imgjj,inter_imgjj-1\n", shifted_mapx[i * logical_x_dimension + jj], shifted_mapy[i * logical_x_dimension + jj - 1]);
+                    break;
+                }
+                if ( j > jend )
+                    break;
+            }
+            if ( j > jend )
+                break;
+            if ( j == jend && jj == jjend ) {
+                interpolated_mapx[i * logical_x_dimension + j] = j;
+                interpolated_mapy[i * logical_x_dimension + j] = shifted_mapy[i * logical_x_dimension + jj];
+                int sample_index                               = (logical_x_dimension + padding_jump_value) * i + jj;
+                int interp_index                               = (interp_img_tmp.logical_x_dimension + interp_img_tmp.padding_jump_value) * i + j;
+                interp_img_tmp.real_values[interp_index]       = real_values[sample_index];
+            }
+        }
+    }
+
+    // along y axis, iterat columns
+    wxPrintf("start interpolate along y\n");
+    for ( int j = xstart; j < xend; j++ ) {
+        int istart = ystart;
+        int iend;
+        int iistart = 0;
+        // while ( interpolated_map[istart][j][1] < 0 )
+        while ( interpolated_mapy[iistart * logical_x_dimension + j] < 0 ) {
+            iistart += 1;
+            // wxPrintf("iistart value: %i %g\n", iistart, interpolated_mapy[])
+            if ( iistart == logical_y_dimension - 1 )
+                break;
+        }
+        int iiend = logical_y_dimension - 1;
+        // while ( interpolated_map[iiend][j][1] > logical_y_dimension - 1 ) {
+        while ( interpolated_mapy[iiend * logical_x_dimension + j] > logical_y_dimension - 1 ) {
+            iiend = iiend - 1;
+            if ( iiend == 0 )
+                break;
+        }
+        // while ( interpolated_map[iiend][j][1] == -100 ) {
+        while ( interpolated_mapy[iiend * logical_x_dimension + j] == -100 ) {
+            iiend = iiend - 1;
+            if ( iiend == 0 )
+                break;
+        }
+        if ( iistart > 0 ) {
+            // if ( interpolated_map[iistart - 1][j][1] != -100 && interpolated_map[iistart - 1][j][0] != -100 ) {
+            if ( interpolated_mapy[(iistart - 1) * logical_x_dimension + j] != -100 && interpolated_mapx[(iistart - 1) * logical_x_dimension + j] != -100 ) {
+                // wxPrintf("start %g %g\n", interpolated_mapy[(iistart - 1) * logical_x_dimension + j], interpolated_mapx[(iistart - 1) * logical_x_dimension + j]);
+                iistart = iistart - 1;
+            }
+        }
+        if ( iiend < logical_y_dimension - 1 ) {
+            // if ( interpolated_map[iiend - 1][j][1] != -100 && interpolated_map[iiend - 1][j][0] != -100 ) {
+            if ( interpolated_mapy[(iiend - 1) * logical_x_dimension + j] != -100 && interpolated_mapx[(iiend - 1) * logical_x_dimension + j] != -100 ) {
+                // wxPrintf("end %g %g \n", interpolated_mapy[(iiend - 1) * logical_x_dimension + j], interpolated_mapx[(iiend - 1) * logical_x_dimension + j]);
+                iiend = iiend + 1;
+            }
+        }
+        // wxPrintf("current loop %i \n", j);
+        if ( iiend <= iistart ) {
+            wxPrintf("the current line shall be skipped\n");
+            // wxPrintf("interpolated_mapx,interpoaltedmapy %g %g \n",interpolated_mapy)
+            // continue;
+            break;
+        }
+        // istart = std::ceil(interpolated_map[iistart][j][1]);
+
+        istart = std::ceil(interpolated_mapy[iistart * logical_x_dimension + j]);
+        if ( istart < 0 )
+            istart = 0;
+        // iend = std::floor(interpolated_map[iiend][j][1]);
+        iend = std::floor(interpolated_mapy[iiend * logical_x_dimension + j]);
+        if ( iend > logical_y_dimension - 1 )
+            iend = logical_y_dimension - 1;
+        if ( istart > iend )
+            continue;
+        if ( istart > logical_y_dimension - 1 )
+            continue;
+        // if ( interpolated_map[iiend][j][1] < 0 )
+        if ( interpolated_mapy[iiend * logical_x_dimension + j] < 0 )
+            continue;
+        int i = istart;
+        // wxPrintf("istart iend %i %i\n", istart, iend);
+        for ( int ii = iistart + 1; ii <= iiend; ii++ ) {
+            // if ( interpolated_map[ii][j][1] < i )
+            if ( interpolated_mapy[ii * logical_x_dimension + j] < i )
+                continue;
+            // else if ( interpolated_map[ii][j][1] == i ) {
+            else if ( interpolated_mapy[ii * logical_x_dimension + j] == i ) {
+                int interp_index                      = (interp_img->logical_x_dimension + interp_img->padding_jump_value) * i + j;
+                int interp_tmp_index                  = (interp_img_tmp.logical_x_dimension + interp_img_tmp.padding_jump_value) * ii + j;
+                interp_img->real_values[interp_index] = interp_img_tmp.real_values[interp_tmp_index];
+                i                                     = i + 1;
+            }
+            // while ( interpolated_map[ii][j][1] > i ) {
+            while ( interpolated_mapy[ii * logical_x_dimension + j] > i ) {
+                // if ( interpolated_map[ii - 1][j][1] < i ) {
+                if ( interpolated_mapy[(ii - 1) * logical_x_dimension + j] < i ) {
+                    if ( interpolated_mapy[(ii - 1) * logical_x_dimension + j] == -100 ) {
+                        i = i + 1;
+                    }
+                    else {
+                        int interp_tmp_ind1 = (interp_img_tmp.logical_x_dimension + interp_img_tmp.padding_jump_value) * (ii - 1) + j;
+                        int interp_tmp_ind2 = (interp_img_tmp.logical_x_dimension + interp_img_tmp.padding_jump_value) * ii + j;
+                        // float y1                             = interpolated_map[ii - 1][j][1];
+                        // float y2                             = interpolated_map[ii][j][1];
+                        float y1                              = interpolated_mapy[(ii - 1) * logical_x_dimension + j];
+                        float z1                              = interp_img_tmp.real_values[interp_tmp_ind1];
+                        float y2                              = interpolated_mapy[ii * logical_x_dimension + j];
+                        float z2                              = interp_img_tmp.real_values[interp_tmp_ind2];
+                        float y                               = i;
+                        float target_z                        = (y2 - y) / (y2 - y1) * z1 + (y - y1) / (y2 - y1) * z2;
+                        int   interp_index                    = (interp_img->logical_x_dimension + interp_img->padding_jump_value) * i + j;
+                        interp_img->real_values[interp_index] = target_z;
+                        i                                     = i + 1;
+                    }
+                }
+                // else if ( interpolated_map[ii - 1][j][1] == i ) {
+                else if ( interpolated_mapy[(ii - 1) * logical_x_dimension + j] == i ) {
+                    int interp_index                      = (interp_img->logical_x_dimension + interp_img->padding_jump_value) * i + j;
+                    int interp_tmp_ind                    = (interp_img_tmp.logical_x_dimension + interp_img_tmp.padding_jump_value) * (ii - 1) + j;
+                    interp_img->real_values[interp_index] = interp_img_tmp.real_values[interp_tmp_ind];
+                    i                                     = i + 1;
+                }
+                else {
+                    wxPrintf("deadloop may occur\n");
+                    wxPrintf("current i j ii %i, %i, %i\n", i, j, ii);
+                    // wxPrintf("inter_imgii,inter_imgii-1\n", shifted_map[ii][j][0], shifted_map[ii - 1][j][0]);
+                    wxPrintf("inter_imgii,inter_imgii-1\n", shifted_mapx[ii * logical_x_dimension + j], shifted_mapx[(ii - 1) * logical_x_dimension + j]);
+                    break;
+                }
+                if ( i > iend )
+                    break;
+            }
+
+            if ( i > iend )
+                break;
+            if ( i == iend && ii == iiend ) {
+                int interp_index                      = (interp_img->logical_x_dimension + interp_img->padding_jump_value) * i + j;
+                int interp_tmp_index                  = (interp_img_tmp.logical_x_dimension + interp_img_tmp.padding_jump_value) * ii + j;
+                interp_img->real_values[interp_index] = interp_img_tmp.real_values[interp_tmp_index];
+            }
+        }
+    }
 }
 
 //BEGIN_FOR_STAND_ALONE_CTFFIND

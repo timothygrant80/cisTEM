@@ -416,6 +416,20 @@ void Curve::Logarithm( ) {
     }
 }
 
+// Replace Y values with their natural logarthm base e
+void Curve::Ln( ) {
+#ifdef CISTEM_DEBUG
+    for ( int counter = 0; counter < number_of_points; counter++ ) {
+        if ( data_y[counter] < 0.0 )
+            MyDebugAssertTrue(false, "This routine assumes all Y values are positive, but value %i is %f\n", counter, data_y[counter]);
+    }
+#endif
+
+    for ( int counter = 0; counter < number_of_points; counter++ ) {
+        data_y[counter] = std::log(data_y[counter]);
+    }
+}
+
 void Curve::SquareRoot( ) {
 #ifdef DEBUG
     for ( int counter = 0; counter < number_of_points; counter++ ) {

@@ -1,5 +1,5 @@
-#ifndef __MyMovieImportDialog__
-#define __MyMovieImportDialog__
+#ifndef __SRC_GUI__MyMovieImportDialog__
+#define __SRC_GUI__MyMovieImportDialog__
 
 /**
 @file
@@ -23,12 +23,15 @@ class MyMovieImportDialog : public MovieImportDialog {
     void OnTextKeyPress(wxKeyEvent& event);
     void CheckImportButtonStatus( );
     void TextChanged(wxCommandEvent& event);
+    void CheckForEERFiles(wxArrayString& filenames, wxString& current_extension, bool& at_least_one_eer_file);
 
     void OnMoviesAreGainCorrectedCheckBox(wxCommandEvent& event);
     void OnCorrectMagDistortionCheckBox(wxCommandEvent& event);
     void OnGainFilePickerChanged(wxFileDirPickerEvent& event);
     void OnResampleMoviesCheckBox(wxCommandEvent& event);
     void OnSkipFullIntegrityCheckCheckBox(wxCommandEvent& event);
+
+    const char* Type( ) const { return "ImportMovieDialog"; };
 };
 
 #endif // __MyMovieImportDialog__

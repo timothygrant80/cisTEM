@@ -6377,8 +6377,8 @@ void Image::Compute1DPowerSpectrumCurve(Curve* curve_with_average_power, Curve* 
     MyDebugAssertFalse(is_in_real_space, "Image not in Fourier space");
     MyDebugAssertTrue(curve_with_average_power->number_of_points > 0, "Curve not setup");
     MyDebugAssertTrue(curve_with_average_power->data_x[0] == 0.0, "Curve does not start at x = 0\n");
-    MyDebugAssertTrue(curve_with_average_power->data_x[curve_with_average_power->number_of_points - 1] >= 0.5, "Curve does not go to at least x = 0.5 (it goes to %f)\n", curve_with_average_power->data_x[curve_with_average_power->number_of_points - 1]);
-    MyDebugAssertTrue(curve_with_average_power->number_of_points == curve_with_number_of_values->number_of_points, "Curves need to have the same number of points");
+   // Using the FloatsAreAlmostEqual criterion |a-b| < 0.0001, otherwise, errors like Curve does not go to at least x = 0.5 (it goes to 0.5)
+    MyDebugAssertTrue(curve_with_average_power->data_x[curve_with_average_power->number_of_points - 1] >= 0.49999, "Curve does not go to at least x = 0.5 (it goes to %f)\n", curve_with_average_power->data_x[curve_with_average_power->number_of_points - 1]);    MyDebugAssertTrue(curve_with_average_power->number_of_points == curve_with_number_of_values->number_of_points, "Curves need to have the same number of points");
     MyDebugAssertTrue(curve_with_average_power->data_x[0] == curve_with_number_of_values->data_x[0], "Curves need to have the same starting point");
     MyDebugAssertTrue(curve_with_average_power->data_x[curve_with_average_power->number_of_points - 1] == curve_with_number_of_values->data_x[curve_with_number_of_values->number_of_points - 1], "Curves need to have the same ending point");
 
@@ -8532,6 +8532,69 @@ void Image::InvertHandedness( ) {
             pixel_counter++;
         }
     }
+}
+
+/**
+ * @brief Image::CalculateBFactor
+ * Calculates the slop of ln(Avg Amplitude of FFT) vs 1/Resolution^2 in Angstroms.
+ * Upper bound on the total b-factor, but the minimal b-factor is unknown a priori.
+ * @param pixel_size
+ * @param low_resolution
+ * @param high_resolution
+*/
+float Image::CalculateBFactor(float pixel_size, float low_resolution, float high_resolution) {
+    MyDebugAssertTrue(low_resolution > high_resolution, "Error: low resolution must be greater than high resolution (entered in Angstroms)");
+    MyDebugAssertTrue(low_resolution > 0.0f, "Error: low resolution must be greater than 0.0");
+    // Currently only setup for cubic or square images
+    MyDebugAssertTrue(IsSquareOrCubic( ), "Error: Currently only setup for cubic or square images");
+    if ( high_resolution > 2.0f * pixel_size )
+        high_resolution = 2.0f * pixel_size;
+
+    bool must_fft = false;
+    if ( is_in_real_space ) {
+        ForwardFFT( );
+        must_fft = true;
+    }
+
+    Curve power_spectrum;
+    Curve number_of_points;
+
+    // These are in fractional pixels so convert our resolution limits from Angstrom to fractional pixels
+    float low_resolution_in_pixels  = pixel_size / low_resolution / 2.0f;
+    float high_resolution_in_pixels = pixel_size / high_resolution / 2.0f;
+
+    // The PowerSpectrumCurve expects 0-> >= 0.5 so do that first then trim the curve, rather than messing with that method.
+    const float to_the_fourier_corner = (logical_z_dimension > 1) ? sqrtf(3.0f) : sqrtf(2.0f);
+    power_spectrum.SetupXAxis(0.0f, 0.5f * to_the_fourier_corner, int((logical_x_dimension / 2.0f + 1.0f) * to_the_fourier_corner + 1.0f));
+    number_of_points.SetupXAxis(0.0f, 0.5f * to_the_fourier_corner, int((logical_x_dimension / 2.0f + 1.0f) * to_the_fourier_corner + 1.0f));
+
+    Compute1DPowerSpectrumCurve(&power_spectrum, &number_of_points, true);
+    power_spectrum.Ln( );
+    // Now get the number of new points
+    int number_in_resolution_range      = 0;
+    int first_index_in_resolution_range = 0;
+    for ( int i = 0; i < power_spectrum.number_of_points; i++ ) {
+        if ( power_spectrum.data_x[i] >= low_resolution_in_pixels && power_spectrum.data_x[i] <= high_resolution_in_pixels ) {
+            if ( first_index_in_resolution_range == 0 )
+                first_index_in_resolution_range = i;
+            number_in_resolution_range++;
+        }
+    }
+
+    // Setup a new curve that only contains the requested resolution range and copy from the original full spectrum.
+    Curve trimmed_power_spectrum;
+    trimmed_power_spectrum.SetupXAxis(low_resolution_in_pixels, high_resolution_in_pixels, number_in_resolution_range);
+    for ( int i = 0; i < trimmed_power_spectrum.number_of_points; i++ ) {
+        trimmed_power_spectrum.data_x[i] = powf(power_spectrum.data_x[i + first_index_in_resolution_range], 2.0f);
+        trimmed_power_spectrum.data_y[i] = isfinite(power_spectrum.data_y[i + first_index_in_resolution_range]) ? power_spectrum.data_y[i + first_index_in_resolution_range] : 0.0f;
+    }
+
+    trimmed_power_spectrum.FitPolynomialToData(1);
+
+    if ( must_fft )
+        BackwardFFT( );
+
+    return 4.f * trimmed_power_spectrum.polynomial_coefficients[1];
 }
 
 void Image::ApplyBFactor(float bfactor) // add real space and windows later, probably to an overloaded function

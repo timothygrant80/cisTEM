@@ -58,11 +58,8 @@ RunProfile::~RunProfile( ) {
     delete[] run_commands;
 }
 
-void RunProfile::AddCommand(RunCommand wanted_command) {
-    // check we have enough memory
-
+void RunProfile::CheckNumberAndGrow( ) {
     RunCommand* buffer;
-
     if ( number_of_run_commands >= number_allocated ) {
         // reallocate..
 
@@ -80,6 +77,12 @@ void RunProfile::AddCommand(RunCommand wanted_command) {
         delete[] run_commands;
         run_commands = buffer;
     }
+}
+
+void RunProfile::AddCommand(RunCommand wanted_command) {
+    // check we have enough memory
+
+    CheckNumberAndGrow( );
 
     // Should be fine for memory, so just add one.
 
@@ -90,25 +93,7 @@ void RunProfile::AddCommand(RunCommand wanted_command) {
 void RunProfile::AddCommand(wxString wanted_command, int wanted_number_of_copies, int wanted_number_of_threads_per_copy, bool wanted_override_total_copies, int wanted_overriden_number_of_copies, int wanted_delay_time_in_ms) {
     // check we have enough memory
 
-    RunCommand* buffer;
-
-    if ( number_of_run_commands >= number_allocated ) {
-        // reallocate..
-
-        if ( number_allocated < 100 )
-            number_allocated *= 2;
-        else
-            number_allocated += 100;
-
-        buffer = new RunCommand[number_allocated];
-
-        for ( long counter = 0; counter < number_of_run_commands; counter++ ) {
-            buffer[counter] = run_commands[counter];
-        }
-
-        delete[] run_commands;
-        run_commands = buffer;
-    }
+    CheckNumberAndGrow( );
 
     // Should be fine for memory, so just add one.
 
@@ -222,25 +207,7 @@ RunProfileManager::~RunProfileManager( ) {
 void RunProfileManager::AddProfile(RunProfile* profile_to_add) {
     // check we have enough memory
 
-    RunProfile* buffer;
-
-    if ( number_of_run_profiles >= number_allocated ) {
-        // reallocate..
-
-        if ( number_allocated < 100 )
-            number_allocated *= 2;
-        else
-            number_allocated += 100;
-
-        buffer = new RunProfile[number_allocated];
-
-        for ( long counter = 0; counter < number_of_run_profiles; counter++ ) {
-            buffer[counter] = run_profiles[counter];
-        }
-
-        delete[] run_profiles;
-        run_profiles = buffer;
-    }
+    profile_to_add->CheckNumberAndGrow( );
 
     // Should be fine for memory, so just add one.
 
@@ -254,25 +221,7 @@ void RunProfileManager::AddProfile(RunProfile* profile_to_add) {
 void RunProfileManager::AddBlankProfile( ) {
     // check we have enough memory
 
-    RunProfile* buffer;
-
-    if ( number_of_run_profiles >= number_allocated ) {
-        // reallocate..
-
-        if ( number_allocated < 100 )
-            number_allocated *= 2;
-        else
-            number_allocated += 100;
-
-        buffer = new RunProfile[number_allocated];
-
-        for ( long counter = 0; counter < number_of_run_profiles; counter++ ) {
-            buffer[counter] = run_profiles[counter];
-        }
-
-        delete[] run_profiles;
-        run_profiles = buffer;
-    }
+    run_profiles->CheckNumberAndGrow( );
 
     current_id_number++;
     run_profiles[number_of_run_profiles].id                     = current_id_number;
@@ -290,25 +239,12 @@ void RunProfileManager::AddBlankProfile( ) {
 void RunProfileManager::AddDefaultLocalProfile( ) {
     // check we have enough memory
 
-    RunProfile* buffer;
+    run_profiles->CheckNumberAndGrow( );
 
-    if ( number_of_run_profiles >= number_allocated ) {
-        // reallocate..
 
-        if ( number_allocated < 100 )
-            number_allocated *= 2;
-        else
-            number_allocated += 100;
 
-        buffer = new RunProfile[number_allocated];
 
-        for ( long counter = 0; counter < number_of_run_profiles; counter++ ) {
-            buffer[counter] = run_profiles[counter];
-        }
 
-        delete[] run_profiles;
-        run_profiles = buffer;
-    }
 
     wxString execution_command = wxStandardPaths::Get( ).GetExecutablePath( );
     execution_command          = execution_command.BeforeLast('/');

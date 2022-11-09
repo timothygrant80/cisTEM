@@ -45,6 +45,8 @@ class RunProfile {
 
     RunProfile& operator=(const RunProfile& t);
     RunProfile& operator=(const RunProfile* t);
+
+    void CheckNumberAndGrow( );
 };
 
 class RunProfileManager {

@@ -1,6 +1,3 @@
-#ifndef __src_core_functions_h__
-#define __src_core_functions_h__
-
 #include "defines.h"
 #include "../constants/constants.h"
 
@@ -625,4 +622,3 @@ bool StripEnclosingSingleQuotesFromString(wxString& string_to_strip); // returns
 
 void ActivateMKLDebugForNonIntelCPU( ); // will activate MKL debug environment variable if running on an AMD that supports high level features.  This works on my version on intel MKL - it is disabled in the released MKL (although setting it should not break anything)
 
-#endif

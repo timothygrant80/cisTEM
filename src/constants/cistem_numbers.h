@@ -1,5 +1,5 @@
-#ifndef _SRC_CONSTANTS_CISTEM_NUMBERS_H_
-#define _SRC_CONSTANTS_CISTEM_NUMBERS_H_
+#ifndef __src_core_constants_cistem_numbers_h__
+#define __src_core_constants_cistem_numbers_h__
 
 #include <complex>
 
@@ -50,8 +50,9 @@ inline constexpr _Tp sqrt3_v = static_cast<_Tp>(1.732050807568877293527446341505
 template <typename _Tp>
 inline constexpr _Tp inv_sqrt3_v = _Tp(1) / sqrt3_v<_Tp>;
 
+
+#endif
+
 constexpr std::complex<float> I(0.0, 1.0);
 
-#endif
-
-#endif
+#endif 

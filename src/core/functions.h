@@ -1,6 +1,7 @@
 #ifndef __src_core_functions_h__
 #define __src_core_functions_h__
 
+#include "defines.h"
 #include "../constants/constants.h"
 
 void swapbytes(unsigned char* v, size_t n);

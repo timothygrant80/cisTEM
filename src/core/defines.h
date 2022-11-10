@@ -1,3 +1,6 @@
+#ifndef _src_core_defines_h_
+#define _src_core_defines_h_
+
 // clang-format off
 
 #define INTEGER_DATABASE_VERSION 2
@@ -93,3 +96,5 @@ WX_DECLARE_OBJARRAY(float, wxArrayFloat);
 WX_DECLARE_OBJARRAY(bool, wxArrayBool);
 
 // clang-format on
+
+#endif /* defines.h */

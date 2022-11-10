@@ -1,3 +1,7 @@
+#ifndef __src_core_functions_h__
+#define __src_core_functions_h__
+
+#include "../constants/constants.h"
 
 void swapbytes(unsigned char* v, size_t n);
 void swapbytes(size_t size, unsigned char* v, size_t n);
@@ -619,3 +623,5 @@ double cisTEM_erfcinv(double x);
 bool StripEnclosingSingleQuotesFromString(wxString& string_to_strip); // returns true if it was done, false if first and last characters are not '
 
 void ActivateMKLDebugForNonIntelCPU( ); // will activate MKL debug environment variable if running on an AMD that supports high level features.  This works on my version on intel MKL - it is disabled in the released MKL (although setting it should not break anything)
+
+#endif

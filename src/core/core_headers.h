@@ -30,6 +30,7 @@ typedef struct CurvePoint {
 #define _FILE_OFFSET_BITS 64
 #endif
 
+#include "../constants/constants.h"
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -40,7 +41,6 @@ typedef struct CurvePoint {
 #include <cstdarg>
 #include <cfloat>
 #include <complex>
-const std::complex<float> I(0.0, 1.0);
 #include <iterator>
 #include <utility>
 #include <vector>

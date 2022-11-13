@@ -12,6 +12,21 @@ RunCommand::RunCommand( ) {
 RunCommand::~RunCommand( ) {
 }
 
+bool RunCommand::operator==(const RunCommand &other) const {
+    if (command_to_run             != other.command_to_run)             { return false; }
+    if (number_of_copies           != other.number_of_copies)           { return false; }
+    if (delay_time_in_ms           != other.delay_time_in_ms)           { return false; }
+    if (number_of_threads_per_copy != other.number_of_threads_per_copy) { return false; }
+    if (override_total_copies      != other.override_total_copies)      { return false; }
+    if (overriden_number_of_copies != other.overriden_number_of_copies) { return false; }
+
+    return true;
+}
+
+bool RunCommand::operator!=(const RunCommand &other) const {
+    return !(*this == other);
+}
+
 void RunCommand::SetCommand(wxString wanted_command, int wanted_number_of_copies, int wanted_number_of_threads_per_copy, bool wanted_override_total_copies, int wanted_overriden_number_of_copies, int wanted_delay_time_in_ms) {
     command_to_run             = wanted_command;
     number_of_copies           = wanted_number_of_copies;
@@ -167,6 +182,27 @@ RunProfile& RunProfile::operator=(const RunProfile& t) {
     return *this;
 }
 
+bool RunProfile::operator==(const RunProfile& t) {
+    if (this == &t) return true;
+
+    if ( this->name != t.name ) return false;
+    if ( this->number_of_run_commands != t.number_of_run_commands ) return false;
+    if ( this->manager_command != t.manager_command ) return false;
+    if ( this->executable_name != t.executable_name ) return false;
+    if ( this->gui_address != t.gui_address ) return false;
+    if ( this->controller_address != t.controller_address ) return false;
+
+    for ( long counter = 0; counter < t.number_of_run_commands; counter++ ) {
+        if ( this->run_commands[counter] != t.run_commands[counter] ) return false;
+    }
+
+    return true;
+}
+
+bool RunProfile::operator!=(const RunProfile& t) {
+    return !(*this == t);
+}
+
 RunProfile& RunProfile::operator=(const RunProfile* t) {
     // Check for self assignment
     if ( this != t ) {
@@ -191,6 +227,27 @@ RunProfile& RunProfile::operator=(const RunProfile* t) {
     }
 
     return *this;
+}
+
+bool RunProfile::operator==(const RunProfile* t) {
+    if (this == t) return true;
+
+    if ( this->name != t->name ) return false;
+    if ( this->number_of_run_commands != t->number_of_run_commands ) return false;
+    if ( this->manager_command != t->manager_command ) return false;
+    if ( this->executable_name != t->executable_name ) return false;
+    if ( this->gui_address != t->gui_address ) return false;
+    if ( this->controller_address != t->controller_address ) return false;
+
+    for ( long counter = 0; counter < t->number_of_run_commands; counter++ ) {
+        if ( this->run_commands[counter] != t->run_commands[counter] ) return false;
+    }
+
+    return true;
+}
+
+bool RunProfile::operator!=(const RunProfile* t) {
+    return !(*this == t);
 }
 
 RunProfileManager::RunProfileManager( ) {
@@ -425,8 +482,6 @@ bool RunProfileManager::ImportRunProfilesFromDisk(wxString filename) {
         if ( success == false )
             return false;
 
-        wxPrintf("Got here\n");
-
         for ( command_counter = 0; command_counter < buffer_number_of_run_commands; command_counter++ ) {
             line_buffer = input_file.GetNextLine( );
             if ( line_buffer.Replace(wxString::Format("profile_%i_command_%i_command_to_run=\"", profile_counter, command_counter), "") != 1 )
@@ -477,7 +532,6 @@ bool RunProfileManager::ImportRunProfilesFromDisk(wxString filename) {
     for ( profile_counter = 0; profile_counter < number_of_profiles; profile_counter++ ) {
         profiles_buffer[profile_counter].id = current_id_number;
         AddProfile(&profiles_buffer[profile_counter]);
-        main_frame->current_project.database.AddOrReplaceRunProfile(ReturnLastProfilePointer( ));
         profiles_buffer[profile_counter].id = current_id_number++;
     }
 

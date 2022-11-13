@@ -1730,6 +1730,8 @@ void MyTestApp::TestFFTFunctions( ) {
 }
 
 void MyTestApp::TestRunProfileDiskOperations( ) {
+    BeginTest("RunProfileManager Disk Operations");
+    
     RunProfileManager run_profile_manager;
 
     // Add run profiles

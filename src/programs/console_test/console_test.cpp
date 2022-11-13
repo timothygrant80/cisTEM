@@ -1732,6 +1732,7 @@ void MyTestApp::TestFFTFunctions( ) {
 void MyTestApp::TestRunProfileDiskOperations( ) {
     RunProfileManager run_profile_manager;
 
+    // Add run profiles
     run_profile_manager.AddDefaultLocalProfile( );
     run_profile_manager.AddBlankProfile( );
 
@@ -1741,6 +1742,7 @@ void MyTestApp::TestRunProfileDiskOperations( ) {
     run_profile_manager.run_profiles[num-1].name = wxString::Format("This_is_a_name_string_with_a_random_number_:_%f", global_random_number_generator.GetUniformRandom( ) * 100000);
     run_profile_manager.run_profiles[num-1].AddCommand("$command", 2, 1, false, 0, 10);
     
+    // Write out to disk
     temp_directory = wxFileName::GetTempDir( );
     
     wxArrayInt to_write;
@@ -1749,6 +1751,7 @@ void MyTestApp::TestRunProfileDiskOperations( ) {
     
     run_profile_manager.WriteRunProfilesToDisk(temp_directory + "/run_profiles.txt", to_write);
 
+    // Ensure that run profiles are equal upon reading them back in
     RunProfileManager run_profile_manager2;
     run_profile_manager2.ImportRunProfilesFromDisk(temp_directory + "/run_profiles.txt");
 
@@ -1764,8 +1767,8 @@ void MyTestApp::TestRunProfileDiskOperations( ) {
         FailTest;
     }
 
+    // Ensure that the equality operator works by changing the run profiles
     run_profile_manager2.run_profiles[0].name = "This is a new name";
-
     run_profile_manager2.run_profiles[1].AddCommand("$command", 2, 1, false, 0, 10);
 
     if ( run_profile_manager2.run_profiles[0] == run_profile_manager.run_profiles[0] ) {
@@ -1775,8 +1778,6 @@ void MyTestApp::TestRunProfileDiskOperations( ) {
     if ( run_profile_manager2.run_profiles[1] == run_profile_manager.run_profiles[1] ) {
         FailTest;
     }
-
-
 
     EndTest( );
 }

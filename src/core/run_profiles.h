@@ -71,6 +71,9 @@ class RunProfileManager {
     long     ReturnProfileID(long wanted_profile);
     long     ReturnTotalJobs(long wanted_profile);
 
+    void WriteRunProfilesToDisk(wxString filename, wxArrayInt profiles_to_write);
+    bool ImportRunProfilesFromDisk(wxString filename)
+
     RunProfileManager( );
     ~RunProfileManager( );
 };

@@ -11,6 +11,9 @@ class RunCommand {
     int      overriden_number_of_copies;
     int      delay_time_in_ms;
 
+    bool operator==(const RunCommand &other) const;
+    bool operator!=(const RunCommand &other) const;
+    
     void SetCommand(wxString wanted_command, int wanted_number_of_copies, int wanted_number_of_threads_per_copy, bool wanted_override_total_copies, int wanted_overriden_number_of_copies, int wanted_delay_time_in_ms);
 };
 
@@ -45,6 +48,10 @@ class RunProfile {
 
     RunProfile& operator=(const RunProfile& t);
     RunProfile& operator=(const RunProfile* t);
+    bool operator==(const RunProfile& t);
+    bool operator==(const RunProfile* t);
+    bool operator!=(const RunProfile& t);
+    bool operator!=(const RunProfile* t);
 
     void CheckNumberAndGrow( );
 };
@@ -72,7 +79,7 @@ class RunProfileManager {
     long     ReturnTotalJobs(long wanted_profile);
 
     void WriteRunProfilesToDisk(wxString filename, wxArrayInt profiles_to_write);
-    bool ImportRunProfilesFromDisk(wxString filename)
+    bool ImportRunProfilesFromDisk(wxString filename);
 
     RunProfileManager( );
     ~RunProfileManager( );

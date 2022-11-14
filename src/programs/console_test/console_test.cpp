@@ -1781,6 +1781,12 @@ void MyTestApp::TestRunProfileDiskOperations( ) {
         FailTest;
     }
 
+    run_profile_manager2.AddBlankProfile();
+    run_profile_manager2.AddBlankProfile();
+    run_profile_manager2.AddBlankProfile();
+    run_profile_manager2.AddBlankProfile();
+
+
     EndTest( );
 }
 

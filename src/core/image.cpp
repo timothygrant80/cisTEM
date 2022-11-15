@@ -6377,8 +6377,9 @@ void Image::Compute1DPowerSpectrumCurve(Curve* curve_with_average_power, Curve* 
     MyDebugAssertFalse(is_in_real_space, "Image not in Fourier space");
     MyDebugAssertTrue(curve_with_average_power->number_of_points > 0, "Curve not setup");
     MyDebugAssertTrue(curve_with_average_power->data_x[0] == 0.0, "Curve does not start at x = 0\n");
-   // Using the FloatsAreAlmostEqual criterion |a-b| < 0.0001, otherwise, errors like Curve does not go to at least x = 0.5 (it goes to 0.5)
-    MyDebugAssertTrue(curve_with_average_power->data_x[curve_with_average_power->number_of_points - 1] >= 0.49999, "Curve does not go to at least x = 0.5 (it goes to %f)\n", curve_with_average_power->data_x[curve_with_average_power->number_of_points - 1]);    MyDebugAssertTrue(curve_with_average_power->number_of_points == curve_with_number_of_values->number_of_points, "Curves need to have the same number of points");
+    // Using the FloatsAreAlmostEqual criterion |a-b| < 0.0001, otherwise, errors like Curve does not go to at least x = 0.5 (it goes to 0.5)
+    MyDebugAssertTrue(curve_with_average_power->data_x[curve_with_average_power->number_of_points - 1] >= 0.49999, "Curve does not go to at least x = 0.5 (it goes to %f)\n", curve_with_average_power->data_x[curve_with_average_power->number_of_points - 1]);
+    MyDebugAssertTrue(curve_with_average_power->number_of_points == curve_with_number_of_values->number_of_points, "Curves need to have the same number of points");
     MyDebugAssertTrue(curve_with_average_power->data_x[0] == curve_with_number_of_values->data_x[0], "Curves need to have the same starting point");
     MyDebugAssertTrue(curve_with_average_power->data_x[curve_with_average_power->number_of_points - 1] == curve_with_number_of_values->data_x[curve_with_number_of_values->number_of_points - 1], "Curves need to have the same ending point");
 

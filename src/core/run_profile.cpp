@@ -1,26 +1,5 @@
 #include "core_headers.h"
 
-RunCommand::RunCommand( ) {
-    command_to_run             = "";
-    number_of_copies           = 0;
-    delay_time_in_ms           = 0;
-    number_of_threads_per_copy = 0;
-    override_total_copies      = false;
-    overriden_number_of_copies = true;
-}
-
-RunCommand::~RunCommand( ) {
-}
-
-void RunCommand::SetCommand(wxString wanted_command, int wanted_number_of_copies, int wanted_number_of_threads_per_copy, bool wanted_override_total_copies, int wanted_overriden_number_of_copies, int wanted_delay_time_in_ms) {
-    command_to_run             = wanted_command;
-    number_of_copies           = wanted_number_of_copies;
-    number_of_threads_per_copy = wanted_number_of_threads_per_copy;
-    override_total_copies      = wanted_override_total_copies;
-    overriden_number_of_copies = false;
-    delay_time_in_ms           = wanted_delay_time_in_ms;
-}
-
 RunProfile::RunProfile( ) {
     id                     = 1;
     number_of_run_commands = 0;
@@ -167,6 +146,35 @@ RunProfile& RunProfile::operator=(const RunProfile& t) {
     return *this;
 }
 
+bool RunProfile::operator==(const RunProfile& t) {
+    if ( this == &t )
+        return true;
+
+    if ( this->name != t.name )
+        return false;
+    if ( this->number_of_run_commands != t.number_of_run_commands )
+        return false;
+    if ( this->manager_command != t.manager_command )
+        return false;
+    if ( this->executable_name != t.executable_name )
+        return false;
+    if ( this->gui_address != t.gui_address )
+        return false;
+    if ( this->controller_address != t.controller_address )
+        return false;
+
+    for ( long counter = 0; counter < t.number_of_run_commands; counter++ ) {
+        if ( this->run_commands[counter] != t.run_commands[counter] )
+            return false;
+    }
+
+    return true;
+}
+
+bool RunProfile::operator!=(const RunProfile& t) {
+    return ! (*this == t);
+}
+
 RunProfile& RunProfile::operator=(const RunProfile* t) {
     // Check for self assignment
     if ( this != t ) {
@@ -193,135 +201,31 @@ RunProfile& RunProfile::operator=(const RunProfile* t) {
     return *this;
 }
 
-RunProfileManager::RunProfileManager( ) {
-    current_id_number      = 0;
-    number_of_run_profiles = 0;
-    run_profiles           = new RunProfile[5];
-    number_allocated       = 5;
-}
+bool RunProfile::operator==(const RunProfile* t) {
+    if ( this == t )
+        return true;
 
-RunProfileManager::~RunProfileManager( ) {
-    delete[] run_profiles;
-}
+    if ( this->name != t->name )
+        return false;
+    if ( this->number_of_run_commands != t->number_of_run_commands )
+        return false;
+    if ( this->manager_command != t->manager_command )
+        return false;
+    if ( this->executable_name != t->executable_name )
+        return false;
+    if ( this->gui_address != t->gui_address )
+        return false;
+    if ( this->controller_address != t->controller_address )
+        return false;
 
-void RunProfileManager::AddProfile(RunProfile* profile_to_add) {
-    // check we have enough memory
-
-    profile_to_add->CheckNumberAndGrow( );
-
-    // Should be fine for memory, so just add one.
-
-    run_profiles[number_of_run_profiles] = profile_to_add;
-    number_of_run_profiles++;
-
-    if ( profile_to_add->id > current_id_number )
-        current_id_number = profile_to_add->id;
-}
-
-void RunProfileManager::AddBlankProfile( ) {
-    // check we have enough memory
-
-    run_profiles->CheckNumberAndGrow( );
-
-    current_id_number++;
-    run_profiles[number_of_run_profiles].id                     = current_id_number;
-    run_profiles[number_of_run_profiles].name                   = "New Profile";
-    run_profiles[number_of_run_profiles].number_of_run_commands = 0;
-    run_profiles[number_of_run_profiles].manager_command        = "$command";
-    run_profiles[number_of_run_profiles].gui_address            = "";
-    run_profiles[number_of_run_profiles].controller_address     = "";
-
-    run_profiles[number_of_run_profiles].AddCommand("$command", 2, 1, false, 0, 10);
-
-    number_of_run_profiles++;
-}
-
-void RunProfileManager::AddDefaultLocalProfile( ) {
-    // check we have enough memory
-
-    run_profiles->CheckNumberAndGrow( );
-
-
-
-
-
-
-    wxString execution_command = wxStandardPaths::Get( ).GetExecutablePath( );
-    execution_command          = execution_command.BeforeLast('/');
-    execution_command += "/$command";
-
-    current_id_number++;
-    run_profiles[number_of_run_profiles].id                     = current_id_number;
-    run_profiles[number_of_run_profiles].name                   = "Default Local";
-    run_profiles[number_of_run_profiles].number_of_run_commands = 0;
-    run_profiles[number_of_run_profiles].manager_command        = execution_command;
-    run_profiles[number_of_run_profiles].gui_address            = "";
-    run_profiles[number_of_run_profiles].controller_address     = "";
-
-    int number_of_cores = wxThread::GetCPUCount( );
-    if ( number_of_cores == -1 )
-        number_of_cores = 1;
-    number_of_cores++;
-
-    run_profiles[number_of_run_profiles].AddCommand(execution_command, number_of_cores, 1, false, 0, 10);
-    number_of_run_profiles++;
-
-    bool make_recon = false;
-    if ( make_recon ) {
-        current_id_number++;
-        run_profiles[number_of_run_profiles].id                     = current_id_number;
-        run_profiles[number_of_run_profiles].name                   = "Default Reconstruction";
-        run_profiles[number_of_run_profiles].number_of_run_commands = 0;
-        run_profiles[number_of_run_profiles].manager_command        = execution_command;
-        run_profiles[number_of_run_profiles].gui_address            = "";
-        run_profiles[number_of_run_profiles].controller_address     = "";
-
-        int number_of_cores = wxThread::GetCPUCount( );
-        if ( number_of_cores == -1 )
-            number_of_cores = 1;
-        number_of_cores++;
-
-        run_profiles[number_of_run_profiles].AddCommand(execution_command, 1, (number_of_cores / 2), false, 0, 10);
-        number_of_run_profiles++;
-    }
-}
-
-RunProfile* RunProfileManager::ReturnLastProfilePointer( ) {
-    return &run_profiles[number_of_run_profiles - 1];
-}
-
-RunProfile* RunProfileManager::ReturnProfilePointer(int wanted_profile) {
-    return &run_profiles[wanted_profile];
-}
-
-void RunProfileManager::RemoveProfile(int number_to_remove) {
-    MyDebugAssertTrue(number_to_remove >= 0 && number_to_remove < number_of_run_profiles, "Error: Trying to remove a profile that doesnt't exist");
-
-    for ( long counter = number_to_remove; counter < number_of_run_profiles - 1; counter++ ) {
-        run_profiles[counter] = run_profiles[counter + 1];
+    for ( long counter = 0; counter < t->number_of_run_commands; counter++ ) {
+        if ( this->run_commands[counter] != t->run_commands[counter] )
+            return false;
     }
 
-    number_of_run_profiles--;
+    return true;
 }
 
-void RunProfileManager::RemoveAllProfiles( ) {
-    number_of_run_profiles = 0;
-
-    if ( number_allocated > 100 ) {
-        delete[] run_profiles;
-        number_allocated = 100;
-        run_profiles     = new RunProfile[number_allocated];
-    }
-}
-
-wxString RunProfileManager::ReturnProfileName(long wanted_profile) {
-    return run_profiles[wanted_profile].name;
-}
-
-long RunProfileManager::ReturnProfileID(long wanted_profile) {
-    return run_profiles[wanted_profile].id;
-}
-
-long RunProfileManager::ReturnTotalJobs(long wanted_profile) {
-    return run_profiles[wanted_profile].ReturnTotalJobs( );
+bool RunProfile::operator!=(const RunProfile* t) {
+    return ! (*this == t);
 }

@@ -23,7 +23,9 @@ noinst_HEADERS = core/asset_group.h \
                  core/particle.h \
                  core/reconstruct_3d.h \
                  core/electron_dose.h \
-                 core/run_profiles.h \
+                 core/run_command.h \
+                 core/run_profile.h \
+                 core/run_profile_manager.h \
                  core/refinement_package.h \
                  core/refinement.h \
                  core/database.h \
@@ -302,7 +304,9 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/particle.cpp \
                        core/job_packager.cpp \
                        core/job_tracker.cpp \
-                       core/run_profiles.cpp \
+                       core/run_command.cpp \
+                       core/run_profile.cpp \
+                       core/run_profile_manager.cpp \
                        core/myapp.cpp \
                        core/empirical_distribution.cpp \
                        core/ctf.cpp \

@@ -111,7 +111,7 @@ bool GetMRCDetails(const char* filename, int& x_size, int& y_size, int& number_o
             return false;
         }
 
-        bytes_per_slice = long(float(number_of_pixels) * bytes_per_pixel + 0.5f + pad_bytes);
+        bytes_per_slice = long(double(number_of_pixels) * bytes_per_pixel + 0.5f + pad_bytes);
 
         // now we need to know the number of bytes in the extended header...
 

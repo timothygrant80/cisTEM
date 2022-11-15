@@ -460,7 +460,7 @@ void MyTestApp::TestClipIntoFourier( ) {
 void MyTestApp::TestDatabase( ) {
     BeginTest("Database");
 
-    temp_directory = wxFileName::GetTempDir( );
+    temp_directory             = wxFileName::GetTempDir( );
     wxString database_filename = temp_directory + "/1_0_test/1_0_test.db";
     Project  project;
     Database database;
@@ -1731,26 +1731,26 @@ void MyTestApp::TestFFTFunctions( ) {
 
 void MyTestApp::TestRunProfileDiskOperations( ) {
     BeginTest("RunProfileManager Disk Operations");
-    
+
     RunProfileManager run_profile_manager;
 
     // Add run profiles
     run_profile_manager.AddDefaultLocalProfile( );
     run_profile_manager.AddBlankProfile( );
 
-    int num = run_profile_manager.number_of_run_profiles;
-    run_profile_manager.run_profiles[num-1].name = wxString::Format("This_is_a_name_string_with_a_random_number_:_%f", global_random_number_generator.GetUniformRandom( ) * 100000);
-    run_profile_manager.run_profiles[num-1].manager_command = wxString::Format("This_is_a $command string_with_a_random_number_:_%f", global_random_number_generator.GetUniformRandom( ) * 100000);
-    run_profile_manager.run_profiles[num-1].name = wxString::Format("This_is_a_name_string_with_a_random_number_:_%f", global_random_number_generator.GetUniformRandom( ) * 100000);
-    run_profile_manager.run_profiles[num-1].AddCommand("$command", 2, 1, false, 0, 10);
-    
+    int num                                                   = run_profile_manager.number_of_run_profiles;
+    run_profile_manager.run_profiles[num - 1].name            = wxString::Format("This_is_a_name_string_with_a_random_number_:_%f", global_random_number_generator.GetUniformRandom( ) * 100000);
+    run_profile_manager.run_profiles[num - 1].manager_command = wxString::Format("This_is_a $command string_with_a_random_number_:_%f", global_random_number_generator.GetUniformRandom( ) * 100000);
+    run_profile_manager.run_profiles[num - 1].name            = wxString::Format("This_is_a_name_string_with_a_random_number_:_%f", global_random_number_generator.GetUniformRandom( ) * 100000);
+    run_profile_manager.run_profiles[num - 1].AddCommand("$command", 2, 1, false, 0, 10);
+
     // Write out to disk
     temp_directory = wxFileName::GetTempDir( );
-    
+
     wxArrayInt to_write;
     to_write.Add(0);
     to_write.Add(1);
-    
+
     run_profile_manager.WriteRunProfilesToDisk(temp_directory + "/run_profiles.txt", to_write);
 
     // Ensure that run profiles are equal upon reading them back in
@@ -1781,11 +1781,10 @@ void MyTestApp::TestRunProfileDiskOperations( ) {
         FailTest;
     }
 
-    run_profile_manager2.AddBlankProfile();
-    run_profile_manager2.AddBlankProfile();
-    run_profile_manager2.AddBlankProfile();
-    run_profile_manager2.AddBlankProfile();
-
+    run_profile_manager2.AddBlankProfile( );
+    run_profile_manager2.AddBlankProfile( );
+    run_profile_manager2.AddBlankProfile( );
+    run_profile_manager2.AddBlankProfile( );
 
     EndTest( );
 }

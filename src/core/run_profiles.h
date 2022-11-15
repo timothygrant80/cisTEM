@@ -81,6 +81,8 @@ class RunProfileManager {
     void WriteRunProfilesToDisk(wxString filename, wxArrayInt profiles_to_write);
     bool ImportRunProfilesFromDisk(wxString filename);
 
+    void CheckNumberAndGrow( );
+
     RunProfileManager( );
     ~RunProfileManager( );
 };

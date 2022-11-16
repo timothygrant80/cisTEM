@@ -27,7 +27,7 @@ jobs:
             cc: clang
             staticmode: ""
           
-    runs-on: ubuntu-18.04
+    runs-on: ubuntu-latest
     container: jojoelfe/cistem_ci_${{ matrix.compiler }}
     outputs:
       version: ${{ steps.configure.outputs.version }}

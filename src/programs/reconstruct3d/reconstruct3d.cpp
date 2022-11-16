@@ -270,6 +270,7 @@ bool Reconstruct3DApp::DoCalculation( ) {
 
     cisTEMParameters input_star_file;
 
+    // Why is exclude_negative_film_values true for binary file and false for regular?
     wxFileName star_filename(input_star_filename);
     if ( star_filename.GetExt( ) == "cistem" )
         input_star_file.ReadFromcisTEMBinaryFile(input_star_filename, true);

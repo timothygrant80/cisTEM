@@ -534,9 +534,15 @@ void cisTEMParameters::ReadFromFrealignParFile(wxString wanted_filename,
 }
 
 void cisTEMParameters::ReadFromcisTEMStarFile(wxString wanted_filename, bool exclude_negative_film_numbers) {
-    all_parameters.Clear( );
-    cisTEMStarFileReader star_reader(wanted_filename, &all_parameters, exclude_negative_film_numbers);
-    parameters_that_were_read = star_reader.parameters_that_were_read;
+    wxFileName star_filename(wanted_filename);
+    if ( star_filename.GetExt( ) == "cistem" ) {
+        ReadFromcisTEMBinaryFile(wanted_filename, exclude_negative_film_numbers);
+    }
+    else {
+        all_parameters.Clear( );
+        cisTEMStarFileReader star_reader(wanted_filename, &all_parameters, exclude_negative_film_numbers);
+        parameters_that_were_read = star_reader.parameters_that_were_read;
+    }
 }
 
 void cisTEMParameters::ReadFromcisTEMBinaryFile(wxString wanted_filename, bool exclude_negative_film_numbers) {

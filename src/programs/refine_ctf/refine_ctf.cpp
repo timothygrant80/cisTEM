@@ -313,11 +313,7 @@ bool RefineCTFApp::DoCalculation( ) {
 
     cisTEMParameters input_star_file;
 
-    wxFileName star_filename(input_star_filename);
-    if ( star_filename.GetExt( ) == "cistem" )
-        input_star_file.ReadFromcisTEMBinaryFile(input_star_filename);
-    else
-        input_star_file.ReadFromcisTEMStarFile(input_star_filename);
+    input_star_file.ReadFromcisTEMStarFile(input_star_filename);
 
     if ( input_star_file.parameters_that_were_read.reference_3d_filename == true ) {
         if ( is_running_locally == true )

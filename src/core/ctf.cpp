@@ -421,7 +421,9 @@ float CTF::Evaluate(float squared_spatial_frequency, float azimuth) {
 }
 
 // Return the value of the CTF at the given squared spatial frequency and azimuth taken into account the sample thickness
-// Formulas according to "TEM bright field imaging of thick specimens: nodes in Thon ring patterns" by Tichelaar, et.al.
+// Formulas according to "TEM bright field imaging of thick specimens: nodes in
+// Thon ring patterns" by Tichelaar, et.al. who got it from McMullan et al. (2015)
+
 float CTF::EvaluateWithThickness(float squared_spatial_frequency, float azimuth) {
     float phase_aberration = PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency, azimuth);
     return 0.5f * (1 - sinc_xi(squared_spatial_frequency) * cosf(2 * phase_aberration));

@@ -9,6 +9,7 @@ class CTF {
     float defocus_half_range;
     float astigmatism_azimuth;
     float additional_phase_shift;
+    float sample_thickness; // pixels
     float beam_tilt_x; // rad
     float beam_tilt_y; // rad
     float beam_tilt; // rad
@@ -48,7 +49,8 @@ class CTF {
         float beam_tilt_x      = 0.0f,
         float beam_tilt_y      = 0.0f,
         float particle_shift_x = 0.0f,
-        float particle_shift_y = 0.0f);
+        float particle_shift_y = 0.0f,
+        float sample_thickness = 0.0f);
 
     CTF(float wanted_acceleration_voltage, // keV
         float wanted_spherical_aberration, // mm
@@ -61,7 +63,8 @@ class CTF {
         float wanted_beam_tilt_x_in_radians        = 0.0f, // rad
         float wanted_beam_tilt_y_in_radians        = 0.0f, // rad
         float wanted_particle_shift_x_in_angstroms = 0.0f, // A
-        float wanted_particle_shift_y_in_angstroms = 0.0f); // A
+        float wanted_particle_shift_y_in_angstroms = 0.0f, // A
+        float wanted_sample_thickness_in_nms       = 0.0f); // nm
 
     ~CTF( );
 
@@ -79,7 +82,8 @@ class CTF {
               float wanted_beam_tilt_x_in_radians        = 0.0f, // rad
               float wanted_beam_tilt_y_in_radians        = 0.0f, // rad
               float wanted_particle_shift_x_in_angstroms = 0.0f, // A
-              float wanted_particle_shift_y_in_angstroms = 0.0f); // A
+              float wanted_particle_shift_y_in_angstroms = 0.0f, // A
+              float wanted_sample_thickness_in_nms       = 0.0f); // nm
 
     void Init(float wanted_acceleration_voltage_in_kV, // keV
               float wanted_spherical_aberration_in_mm, // mm
@@ -88,7 +92,8 @@ class CTF {
               float wanted_defocus_2_in_angstroms, //A
               float wanted_astigmatism_azimuth_in_degrees, // degrees
               float pixel_size_in_angstroms, // A
-              float wanted_additional_phase_shift_in_radians); //rad
+              float wanted_additional_phase_shift_in_radians, // rad
+              float wanted_sample_thickness_in_nms = 0.0f); //nm
 
     void SetDefocus(float wanted_defocus_1_pixels, float wanted_defocus_2_pixels, float wanted_astigmatism_angle_radians);
     void SetAdditionalPhaseShift(float wanted_additional_phase_shift_radians);
@@ -96,12 +101,15 @@ class CTF {
     void SetBeamTilt(float wanted_beam_tilt_x_in_radians, float wanted_beam_tilt_y_in_radians, float wanted_particle_shift_x_in_pixels = 0.0f, float wanted_particle_shift_y_in_pixels = 0.0f);
     void SetHighestFrequencyForFitting(float wanted_highest_frequency_in_reciprocal_pixels);
     void SetLowResolutionContrast(float wanted_low_resolution_contrast);
+    void SetSampleThickness(float wanted_sample_thickness_in_pixels);
 
     inline void SetHighestFrequencyWithGoodFit(float wanted_frequency_in_reciprocal_pixels) { highest_frequency_with_good_fit = wanted_frequency_in_reciprocal_pixels; };
 
     //
     std::complex<float> EvaluateComplex(float squared_spatial_frequency, float azimuth);
     float               Evaluate(float squared_spatial_frequency, float azimuth);
+    float               EvaluateWithThickness(float squared_spatial_frequency, float azimuth);
+
     float               EvaluateWithEnvelope(float squared_spatial_frequency, float azimuth);
     float               PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(float squared_spatial_frequency, float azimuth);
     std::complex<float> EvaluateBeamTiltPhaseShift(float squared_spatial_frequency, float azimuth);
@@ -111,6 +119,18 @@ class CTF {
     float               BeamTiltGivenAzimuth(float azimuth);
     float               ParticleShiftGivenAzimuth(float azimuth);
     float               WavelengthGivenAccelerationVoltage(float acceleration_voltage);
+
+    inline float xi(float squared_spatial_frequency) {
+        return PIf * wavelength * squared_spatial_frequency * sample_thickness;
+    };
+
+    inline float sinc_xi(float squared_spatial_frequency) {
+        if ( sample_thickness < 0.0001 )
+            return 1.0;
+        if ( squared_spatial_frequency < 0.000001 )
+            return 1.0;
+        return sinf(xi(squared_spatial_frequency)) / xi(squared_spatial_frequency);
+    };
 
     inline float GetLowestFrequencyForFitting( ) { return lowest_frequency_for_fitting; };
 

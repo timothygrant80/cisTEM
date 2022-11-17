@@ -102,6 +102,7 @@ class
     void TestIntegerShifts( );
     void TestDatabase( );
     void TestRunProfileDiskOperations( );
+    void TestCTFNodes( );
 
     void BeginTest(const char* test_name);
     void EndTest( );
@@ -158,6 +159,7 @@ bool MyTestApp::DoCalculation( ) {
     TestRandomVariableFunctions( );
     TestIntegerShifts( );
     TestRunProfileDiskOperations( );
+    TestCTFNodes( );
 
     wxPrintf("\n\n\n");
 
@@ -1785,6 +1787,72 @@ void MyTestApp::TestRunProfileDiskOperations( ) {
     run_profile_manager2.AddBlankProfile( );
     run_profile_manager2.AddBlankProfile( );
     run_profile_manager2.AddBlankProfile( );
+
+    EndTest( );
+}
+
+void MyTestApp::TestCTFNodes( ) {
+    BeginTest("CTF Nodes");
+
+    Curve ctf_curve1;
+    Curve ctf_curve2;
+    ctf_curve1.SetupXAxis(0.0, 0.5, 500);
+    ctf_curve2.SetupXAxis(0.0, 0.5, 500);
+
+    CTF ctf1(300, 2.7, 0.07, 5000, 5000, 0, 1.0, 0.0);
+
+    ctf_curve1.SetYToConstant(1.0);
+    ctf_curve2.SetYToConstant(1.0);
+    ctf_curve1.ApplyCTF(ctf1);
+    // Apply wwith Thicknes returns power of two
+    ctf_curve1.MultiplyBy(ctf_curve1);
+    ctf_curve2.ApplyCTFWithThickness(ctf1);
+
+    if ( ctf_curve1.YIsAlmostEqual(ctf_curve2) == false ) {
+        FailTest;
+    }
+
+    CTF ctf2;
+    // CTF with a sample thickness parameter of 100.0
+    ctf2.Init(300, 2.7, 0.07, 5000, 5000, 0, 1.0, 0.0, 100.0);
+
+    ctf_curve1.SetYToConstant(1.0);
+    ctf_curve2.SetYToConstant(1.0);
+    ctf_curve1.ApplyCTF(ctf2);
+    // Apply wwith Thicknes returns power of two
+    ctf_curve1.MultiplyBy(ctf_curve1);
+
+    ctf_curve2.ApplyCTFWithThickness(ctf2);
+
+    // CTF is different when thickness is 100
+    if ( ctf_curve1.YIsAlmostEqual(ctf_curve2) == true ) {
+        FailTest;
+    }
+
+    // Test manually integrating ctf and compare with thickness formula
+    ctf_curve1.SetYToConstant(0.0);
+    Curve ctf_curve3;
+    ctf_curve3.SetupXAxis(0.0, 0.5, 500);
+    int counter = 0;
+
+    for ( float z_level = -495.0; z_level < 500.0; z_level = z_level + 10.0f ) {
+        ctf1.Init(300, 2.7, 0.07, 5000 + z_level, 5000 + z_level, 0, 1.0, 0.0, 0.0);
+        counter++;
+        ctf_curve3.SetYToConstant(1.0);
+        ctf_curve3.ApplyCTF(ctf1);
+        ctf_curve3.MultiplyBy(ctf_curve3);
+        ctf_curve1.AddWith(&ctf_curve3);
+    }
+
+    // Now want to compare ctf_curve1 with ctf_curve2, but FloatIsAlmostEqual is to stringent.
+    // The code below is a hack to get around this. Ideally, FloatIsAlmostEqual should be modified to allow custom tolerances.
+    ctf_curve1.MultiplyByConstant(-1.0f / counter);
+    ctf_curve1.AddWith(&ctf_curve2);
+    float min, max;
+    ctf_curve1.GetYMinMax(min, max);
+    if ( min < -0.001f || max > 0.001f ) {
+        FailTest;
+    }
 
     EndTest( );
 }

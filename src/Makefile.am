@@ -392,11 +392,6 @@ ctffind_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_LDADD = libcore.a $(WX_LIBS_BASE)
 
-ctfplot_SOURCES = programs/ctffind/ctfplot.cpp
-ctfplot_CXXFLAGS = $(WX_CPPFLAGS_BASE)
-ctfplot_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-ctfplot_LDADD = libcore.a $(WX_LIBS_BASE)
-
 reconstruct3d_SOURCES = programs/reconstruct3d/reconstruct3d.cpp
 reconstruct3d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 reconstruct3d_CPPFLAGS = $(WX_CPPFLAGS_BASE)

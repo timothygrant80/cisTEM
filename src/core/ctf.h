@@ -108,7 +108,7 @@ class CTF {
     //
     std::complex<float> EvaluateComplex(float squared_spatial_frequency, float azimuth);
     float               Evaluate(float squared_spatial_frequency, float azimuth);
-    float               EvaluateWithThickness(float squared_spatial_frequency, float azimuth);
+    float               EvaluatePowerspectrumWithThickness(float squared_spatial_frequency, float azimuth);
 
     float               EvaluateWithEnvelope(float squared_spatial_frequency, float azimuth);
     float               PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(float squared_spatial_frequency, float azimuth);
@@ -120,16 +120,8 @@ class CTF {
     float               ParticleShiftGivenAzimuth(float azimuth);
     float               WavelengthGivenAccelerationVoltage(float acceleration_voltage);
 
-    inline float xi(float squared_spatial_frequency) {
-        return PIf * wavelength * squared_spatial_frequency * sample_thickness;
-    };
-
-    inline float sinc_xi(float squared_spatial_frequency) {
-        if ( sample_thickness < 0.0001 )
-            return 1.0;
-        if ( squared_spatial_frequency < 0.000001 )
-            return 1.0;
-        return sinf(xi(squared_spatial_frequency)) / xi(squared_spatial_frequency);
+    inline float ThonRingModulator(float squared_spatial_frequency) {
+        return sinc(PIf * wavelength * squared_spatial_frequency * sample_thickness);
     };
 
     inline float GetLowestFrequencyForFitting( ) { return lowest_frequency_for_fitting; };

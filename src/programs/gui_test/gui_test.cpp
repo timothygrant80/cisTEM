@@ -41,7 +41,7 @@ GuiTestMainFrame::GuiTestMainFrame(const wxString& title, const wxPoint& pos, co
     ctf_curve.SetupXAxis(0.0, 0.5, 500);
     ctf_curve.SetYToConstant(1.0);
 
-    ctf_curve.ApplyCTFWithThickness(ctf, 0.0);
+    ctf_curve.ApplyPowerspectrumWithThickness(ctf, 0.0);
 
     Curve ctf_curve3, ctf_curve1;
     ctf_curve3.SetupXAxis(0.0, 0.5, 500);

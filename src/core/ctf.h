@@ -120,7 +120,8 @@ class CTF {
     float               ParticleShiftGivenAzimuth(float azimuth);
     float               WavelengthGivenAccelerationVoltage(float acceleration_voltage);
 
-    inline float ThonRingModulator(float squared_spatial_frequency) {
+    // This is the sinc(xi) term derived in the supplemental of McMullan et al. (2015)
+    inline float IntegratedDefocusModulation(float squared_spatial_frequency) {
         return sinc(PIf * wavelength * squared_spatial_frequency * sample_thickness);
     };
 

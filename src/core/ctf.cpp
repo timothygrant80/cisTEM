@@ -426,7 +426,7 @@ float CTF::Evaluate(float squared_spatial_frequency, float azimuth) {
 
 float CTF::EvaluatePowerspectrumWithThickness(float squared_spatial_frequency, float azimuth) {
     float phase_aberration = PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency, azimuth);
-    return 0.5f * (1 - ThonRingModulator(squared_spatial_frequency) * cosf(2 * phase_aberration));
+    return 0.5f * (1 - IntegratedDefocusModulation(squared_spatial_frequency) * cosf(2 * phase_aberration));
 }
 
 // Return the value of the CTF at the given squared spatial frequency and azimuth

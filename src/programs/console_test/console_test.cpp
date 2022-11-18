@@ -1804,9 +1804,9 @@ void MyTestApp::TestCTFNodes( ) {
     ctf_curve1.SetYToConstant(1.0);
     ctf_curve2.SetYToConstant(1.0);
     ctf_curve1.ApplyCTF(ctf1);
-    // Apply wwith Thicknes returns power of two
+    // Generate Powerspectrum
     ctf_curve1.MultiplyBy(ctf_curve1);
-    ctf_curve2.ApplyCTFWithThickness(ctf1);
+    ctf_curve2.ApplyPowerspectrumWithThickness(ctf1);
 
     if ( ctf_curve1.YIsAlmostEqual(ctf_curve2) == false ) {
         FailTest;
@@ -1819,10 +1819,10 @@ void MyTestApp::TestCTFNodes( ) {
     ctf_curve1.SetYToConstant(1.0);
     ctf_curve2.SetYToConstant(1.0);
     ctf_curve1.ApplyCTF(ctf2);
-    // Apply wwith Thicknes returns power of two
+    // Generate powerspectrum
     ctf_curve1.MultiplyBy(ctf_curve1);
 
-    ctf_curve2.ApplyCTFWithThickness(ctf2);
+    ctf_curve2.ApplyPowerspectrumWithThickness(ctf2);
 
     // CTF is different when thickness is 100
     if ( ctf_curve1.YIsAlmostEqual(ctf_curve2) == true ) {

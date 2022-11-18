@@ -644,11 +644,11 @@ void Curve::ApplyCTF(CTF ctf_to_apply, float azimuth_in_radians) {
     }
 }
 
-void Curve::ApplyCTFWithThickness(CTF ctf_to_apply, float azimuth_in_radians) {
+void Curve::ApplyPowerspectrumWithThickness(CTF ctf_to_apply, float azimuth_in_radians) {
     MyDebugAssertTrue(number_of_points > 0, "No points in curve");
 
     for ( int counter = 0; counter < number_of_points; counter++ ) {
-        data_y[counter] *= ctf_to_apply.EvaluateWithThickness(powf(data_x[counter], 2), azimuth_in_radians);
+        data_y[counter] *= ctf_to_apply.EvaluatePowerspectrumWithThickness(powf(data_x[counter], 2), azimuth_in_radians);
     }
 }
 

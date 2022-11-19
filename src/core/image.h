@@ -418,6 +418,7 @@ class Image {
     void  InvertHandedness( );
     void  ApplyCTFPhaseFlip(CTF ctf_to_apply);
     void  ApplyCTF(CTF ctf_to_apply, bool absolute = false, bool apply_beam_tilt = false, bool apply_envelope = false);
+    void  ApplyPowerspectrumWithThickness(CTF ctf_to_apply);
     void  ApplyCurveFilter(Curve* filter_to_apply, float resolution_limit = 1.0);
     void  ApplyCurveFilterUninterpolated(Curve* filter_to_apply, float resolution_limit = 1.0f, float scale = 0.0f);
     void  MaskCentralCross(int vertical_half_width = 1, int horizontal_half_width = 1);

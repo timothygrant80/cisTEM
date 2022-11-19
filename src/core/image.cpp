@@ -8409,6 +8409,43 @@ void Image::ApplyCTF(CTF ctf_to_apply, bool absolute, bool apply_beam_tilt, bool
     //	exit(0);
 }
 
+// This function assumes the image is in real space and multiplies it with the
+// power spectrum of the CTF taking thon ring modulation caused by thick samples
+// into account.
+
+void Image::ApplyPowerspectrumWithThickness(CTF ctf_to_apply) {
+    MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+    MyDebugAssertTrue(is_in_real_space == true, "image not in real space");
+    MyDebugAssertTrue(logical_z_dimension == 1, "Volumes not supported");
+
+    int         i, j;
+    float       j_logi, j_logi_sq, i_logi, i_logi_sq;
+    float       current_spatial_frequency_squared;
+    long        address                     = 0;
+    const float inverse_logical_x_dimension = 1.0 / float(logical_x_dimension);
+    const float inverse_logical_y_dimension = 1.0 / float(logical_y_dimension);
+    float       current_azimuth;
+    float       current_ctf_value;
+
+    for ( j = 0; j < logical_y_dimension; j++ ) {
+        address   = j * (padding_jump_value + 2 * physical_address_of_box_center_x);
+        j_logi    = float(j - physical_address_of_box_center_y) * inverse_logical_y_dimension;
+        j_logi_sq = powf(j_logi, 2);
+        for ( i = 0; i < logical_x_dimension; i++ ) {
+            i_logi    = float(i - physical_address_of_box_center_x) * inverse_logical_x_dimension;
+            i_logi_sq = powf(i_logi, 2);
+
+            // Where are we?
+            current_spatial_frequency_squared = j_logi_sq + i_logi_sq;
+
+            current_azimuth   = atan2f(j_logi, i_logi);
+            current_ctf_value = ctf_to_apply.EvaluatePowerspectrumWithThickness(current_spatial_frequency_squared, current_azimuth);
+            // Apply powespectrum
+            real_values[address + i] *= current_ctf_value;
+        }
+    }
+}
+
 void Image::SharpenMap(float pixel_size, float resolution_limit, bool invert_hand, float inner_mask_radius, float outer_mask_radius, float start_res_for_whitening, float additional_bfactor_low, float additional_bfactor_high, float filter_edge, bool should_auto_mask, Image* input_mask, ResolutionStatistics* input_resolution_statistics, float statistics_scale_factor, Curve* original_log_plot, Curve* sharpened_log_plot) {
 
     float cosine_edge = 10.0;

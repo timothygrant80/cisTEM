@@ -560,6 +560,7 @@ bool MatchTemplateApp::DoCalculation( ) {
             if ( ReturnThreadNumberOfCurrentThread( ) == 0 ) {
                 wxPrintf("Not rotating the search image for speed even though it is enabled\n");
             }
+            is_rotated_by_90 = false;
         }
 #endif
     }

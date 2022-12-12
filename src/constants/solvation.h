@@ -1,0 +1,4 @@
+#ifndef _SRC_CONSTANTS_SOLVATION_H_
+#define _SRC_CONSTANTS_SOLVATION_H_
+
+#endif

@@ -1,6 +1,6 @@
 #include "../../core/core_headers.h"
 
-#include "../../core/cistem_constants.h"
+#include "../../constants/constants.h"
 
 class
         MakeTemplateResult : public MyApp {

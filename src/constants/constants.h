@@ -1,5 +1,5 @@
-#ifndef _src_core_cistem_constants_h_
-#define _src_core_cistem_constants_h_
+#ifndef _src_constants_constants_h_
+#define _src_constants_constants_h_
 
 #include <array>
 #include <string_view>

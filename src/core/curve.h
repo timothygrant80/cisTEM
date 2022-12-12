@@ -71,6 +71,7 @@ class Curve {
     void       Ln( );
     void       ZeroYData( );
     void       ApplyCTF(CTF ctf_to_apply, float azimuth_in_radians = 0.0);
+    void       ApplyPowerspectrumWithThickness(CTF ctf_to_apply, float azimuth_in_radians = 0.0);
     void       SquareRoot( );
     void       Reciprocal( );
     void       DivideBy(Curve& other_curve);
@@ -80,6 +81,9 @@ class Curve {
     float      ReturnAverageValue( );
     void       ApplyCosineMask(float wanted_x_of_cosine_start, float wanted_cosine_width_in_x, bool undo = false);
     void       ApplyGaussianLowPassFilter(float sigma); // Assumption is that X is recipricoal pixels
+    void       Absolute( );
+    bool       YIsAlmostEqual(Curve& other_curve);
+    void       AddConstant(float constant_to_add);
 
     void GetXMinMax(float& min_value, float& max_value);
     void GetYMinMax(float& min_value, float& max_value);

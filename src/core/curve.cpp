@@ -644,6 +644,14 @@ void Curve::ApplyCTF(CTF ctf_to_apply, float azimuth_in_radians) {
     }
 }
 
+void Curve::ApplyPowerspectrumWithThickness(CTF ctf_to_apply, float azimuth_in_radians) {
+    MyDebugAssertTrue(number_of_points > 0, "No points in curve");
+
+    for ( int counter = 0; counter < number_of_points; counter++ ) {
+        data_y[counter] *= ctf_to_apply.EvaluatePowerspectrumWithThickness(powf(data_x[counter], 2), azimuth_in_radians);
+    }
+}
+
 void Curve::ApplyGaussianLowPassFilter(float sigma) // Assumption is that X is recipricoal pixels
 {
     float frequency_squared;
@@ -945,6 +953,28 @@ void Curve::Reciprocal( ) {
     for ( int counter = 0; counter < number_of_points; counter++ ) {
         if ( data_y[counter] != 0.0 )
             data_y[counter] = 1.0 / data_y[counter];
+    }
+}
+
+void Curve::Absolute( ) {
+    for ( int counter = 0; counter < number_of_points; counter++ ) {
+        data_y[counter] = fabs(data_y[counter]);
+    }
+}
+
+bool Curve::YIsAlmostEqual(Curve& other_curve) {
+    MyDebugAssertTrue(number_of_points > 0, "No points in curve");
+    MyDebugAssertTrue(number_of_points == other_curve.number_of_points, "Number of points in curves not equal");
+    for ( int counter = 0; counter < number_of_points; counter++ ) {
+        if ( ! FloatsAreAlmostTheSame(data_y[counter], other_curve.data_y[counter]) )
+            return false;
+    }
+    return true;
+}
+
+void Curve::AddConstant(float constant_to_add) {
+    for ( int counter = 0; counter < number_of_points; counter++ ) {
+        data_y[counter] += constant_to_add;
     }
 }
 

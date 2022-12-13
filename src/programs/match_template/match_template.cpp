@@ -52,7 +52,7 @@ class
     ArrayOfAggregatedTemplateResults aggregated_results;
     bool                             is_rotated_by_90 = false;
 
-    float GetMaxJobWaitTimeInSeconds( ) { return 120.0f; }
+    float GetMaxJobWaitTimeInSeconds( ) { return 360.0f; }
 
   private:
 };
@@ -560,6 +560,7 @@ bool MatchTemplateApp::DoCalculation( ) {
             if ( ReturnThreadNumberOfCurrentThread( ) == 0 ) {
                 wxPrintf("Not rotating the search image for speed even though it is enabled\n");
             }
+            is_rotated_by_90 = false;
         }
 #endif
     }

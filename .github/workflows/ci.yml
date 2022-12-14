@@ -110,6 +110,7 @@ jobs:
   samples_functional_testing:
     strategy:
       fail-fast: true
+      matrix:
         compiler: [icpc,gcc,clang]
     name: Samples functional testing
     needs: build

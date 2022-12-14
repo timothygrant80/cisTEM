@@ -129,7 +129,7 @@ jobs:
         ./samples_functional_testing
   
   gui_test:
-    name: GUI Test
+    name: GUI Test with screenshots
     needs: build
     runs-on: ubuntu-latest
     steps:

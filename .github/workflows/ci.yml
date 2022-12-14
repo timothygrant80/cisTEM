@@ -109,7 +109,7 @@ jobs:
 
   samples_functional_testing:
     strategy:
-      fail-fast: true>
+      fail-fast: true
         compiler: [icpc,gcc,clang]
     name: Samples functional testing
     needs: build

@@ -133,12 +133,14 @@ jobs:
     name: GUI Test with screenshots
     needs: build
     runs-on: ubuntu-latest
-    container: jojoelfe/cistem_ci_icpc
     steps:
     - name: Download artifact
       uses: actions/download-artifact@v2
       with:
         name: cistem_binaries_icpc
+    - name: Install gtk
+      run: |
+        sudo apt-get install -y gtk2.0-dev
     - uses: iterative/setup-cml@v1
     - name: Run headless gui_test
       uses: GabrielBB/xvfb-action@v1

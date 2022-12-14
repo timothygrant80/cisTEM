@@ -133,14 +133,26 @@ jobs:
     name: GUI Test with screenshots
     needs: build
     runs-on: ubuntu-latest
+    container: jojoelfe/cistem_ci_icpc
     steps:
     - name: Download artifact
       uses: actions/download-artifact@v2
       with:
         name: cistem_binaries_icpc
-    - name: gui_test
-      continue-on-error: false
-      run: |
-        chmod +x gui_test
-        ./gui_test --ci
+    - uses: iterative/setup-cml@v1
+    - name: Run headless gui_test
+        uses: GabrielBB/xvfb-action@v1
+        with:
+          run: |
+            chmod +x gui_test
+            ./gui_test --ci
+    - name: Write  report
+        env:
+          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # Post reports as comments in GitHub PRs
+          echo "## GUI Test Screenshots" > report.md
+          cml-publish screenshot.png --md >> report.md
+          cml-send-comment report.md
+    
 

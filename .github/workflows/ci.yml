@@ -147,12 +147,12 @@ jobs:
           chmod +x gui_test
           ./gui_test --ci
     - name: Write  report
-        env:
-          REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        run: |
-          # Post reports as comments in GitHub PRs
-          echo "## GUI Test Screenshots" > report.md
-          cml-publish screenshot.png --md >> report.md
-          cml-send-comment report.md
+      env:
+        REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Post reports as comments in GitHub PRs
+        echo "## GUI Test Screenshots" > report.md
+        cml-publish screenshot.png --md >> report.md
+        cml-send-comment report.md
     
 

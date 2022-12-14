@@ -141,11 +141,11 @@ jobs:
         name: cistem_binaries_icpc
     - uses: iterative/setup-cml@v1
     - name: Run headless gui_test
-        uses: GabrielBB/xvfb-action@v1
-        with:
-          run: |
-            chmod +x gui_test
-            ./gui_test --ci
+      uses: GabrielBB/xvfb-action@v1
+      with:
+        run: |
+          chmod +x gui_test
+          ./gui_test --ci
     - name: Write  report
         env:
           REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}

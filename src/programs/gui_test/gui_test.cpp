@@ -59,19 +59,6 @@ wxImageList* SettingsBookIconImages;
 
 //
 
-class GuiTestMainFrame : public wxFrame {
-  public:
-    GuiTestMainFrame(const wxString& title, const wxPoint& pos, const wxSize& size);
-
-  private:
-    wxTimer m_timer;
-    void    OnTimer(wxTimerEvent& event);
-    //void OnHello(wxCommandEvent& event);
-    //void OnExit(wxCommandEvent& event);
-    //void OnAbout(wxCommandEvent& event);
-    wxDECLARE_EVENT_TABLE( );
-};
-
 wxBEGIN_EVENT_TABLE(GuiTestMainFrame, wxFrame)
         EVT_TIMER(1, GuiTestMainFrame::OnTimer)
                 wxEND_EVENT_TABLE( )
@@ -119,12 +106,32 @@ void GuiTestMainFrame::OnTimer(wxTimerEvent& event) {
     memDC.SelectObject(wxNullBitmap);
     //Our Bitmap now has the screenshot, so let's save it :-)
     screenshot.SaveFile("screenshot.png", wxBITMAP_TYPE_PNG);
+    // Test if app is in ci_mode
+    if ( ci_mode ) {
+        // Exit the app
+        wxExit( );
+    }
 }
 
 bool GuiTestApp::OnInit( ) {
-    gui_test_main_frame = new GuiTestMainFrame("GUI Test", wxPoint(150, 150), wxSize(1024, 500));
+    if ( ! wxApp::OnInit( ) )
+        return false;
+    gui_test_main_frame          = new GuiTestMainFrame("GUI Test", wxPoint(150, 150), wxSize(1024, 500));
+    gui_test_main_frame->ci_mode = ci_mode;
     gui_test_main_frame->Show(true);
     gui_test_main_frame->Layout( );
+    return true;
+}
+
+void GuiTestApp::OnInitCmdLine(wxCmdLineParser& parser) {
+    parser.SetDesc(g_cmdLineDesc);
+    // must refuse '/' as parameter starter or cannot use "/path" style paths
+    parser.SetSwitchChars(wxT("-"));
+}
+
+bool GuiTestApp::OnCmdLineParsed(wxCmdLineParser& parser) {
+    ci_mode = parser.Found(wxT("c"));
+
     return true;
 }
 

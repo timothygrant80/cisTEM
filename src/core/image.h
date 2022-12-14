@@ -116,6 +116,7 @@ class Image {
     void  ComputeFSCVectorized(Image* other_image, Image* work_this_image_squared, Image* work_other_image_squared, Image* work_cross_product_image, int number_of_shells, int* shell_number, float* computed_fsc, double* work_sum_of_squares, double* work_sum_of_other_squares, double* work_sum_of_cross_products);
     void  ComputeFSC(Image* other_image, int number_of_shells, int* shell_number, float* computed_fsc, double* work_sum_of_squares, double* work_sum_of_other_squares, double* work_sum_of_cross_products);
     void  DividePixelWise(Image& other_image);
+    bool  IsAlmostEqual(Image& other_image, bool print_if_failed = true, float epsilon = 0.0001f);
     void  AddGaussianNoise(float wanted_sigma_value = 1.0, RandomNumberGenerator* provided_generator = NULL);
     // using cistem::NoiseType from defines.h
     void AddNoise(NoiseType wanted_noise_type, float noise_param_1, float noise_param_2);

@@ -823,6 +823,36 @@ void Image::DividePixelWise(Image& other_image) {
     }
 }
 
+bool Image::IsAlmostEqual(Image& other_image, bool print_if_failed, float epsilon) {
+    MyDebugAssertTrue(is_in_memory, "Image memory not allocated");
+    MyDebugAssertTrue(other_image.is_in_memory, "Other image memory not allocated");
+    MyDebugAssertTrue(is_in_real_space == other_image.is_in_real_space, "Both images need to be in same space");
+    MyDebugAssertTrue(HasSameDimensionsAs(&other_image), "Images should have same dimensions, but they don't: %i %i %i        %i %i %i", logical_x_dimension, logical_y_dimension, logical_z_dimension, other_image.logical_x_dimension, other_image.logical_y_dimension, other_image.logical_z_dimension);
+
+    long pixel_counter;
+
+    if ( is_in_real_space ) {
+        for ( pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++ ) {
+            if ( ! RelativeErrorIsLessThanEpsilon(real_values[pixel_counter], other_image.real_values[pixel_counter], epsilon, print_if_failed) ) {
+                return false;
+            }
+        }
+    }
+    else {
+        // Iterate through forier space
+        for ( pixel_counter = 0; pixel_counter < real_memory_allocated / 2; pixel_counter++ ) {
+            if ( ! RelativeErrorIsLessThanEpsilon(real(complex_values[pixel_counter]), real(other_image.complex_values[pixel_counter]), epsilon, print_if_failed) ) {
+                return false;
+            }
+            if ( ! RelativeErrorIsLessThanEpsilon(imag(complex_values[pixel_counter]), imag(other_image.complex_values[pixel_counter]), epsilon, print_if_failed) ) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
 void Image::AddGaussianNoise(float wanted_sigma_value, RandomNumberGenerator* provided_generator) {
     MyDebugAssertTrue(is_in_real_space == true, "Image must be in real space");
 

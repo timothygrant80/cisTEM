@@ -82,7 +82,7 @@ class Curve {
     void       ApplyCosineMask(float wanted_x_of_cosine_start, float wanted_cosine_width_in_x, bool undo = false);
     void       ApplyGaussianLowPassFilter(float sigma); // Assumption is that X is recipricoal pixels
     void       Absolute( );
-    bool       YIsAlmostEqual(Curve& other_curve);
+    bool       YIsAlmostEqual(Curve& other_curve, bool print_if_failed = true, float epsilon = 0.0001f);
     void       AddConstant(float constant_to_add);
 
     void GetXMinMax(float& min_value, float& max_value);

@@ -529,9 +529,33 @@ inline bool FloatsAreAlmostTheSame(float a, float b) {
 }
 
 template <typename T>
-inline bool RelativeErrorIsLessThanEpsilon(T reference, T test_value, T epsilon = 0.0001) {
-    return (std::abs((reference - test_value) / reference) < epsilon);
-}
+bool RelativeErrorIsLessThanEpsilon(T reference, T test_value, T epsilon = 0.0001, bool print_if_failed = true) {
+
+    bool ret_val;
+    // I'm not sure if this is the best way to guard against very small division
+    if ( abs(reference) < epsilon || abs(test_value) < epsilon )
+        ret_val = (std::abs((reference - test_value)) < epsilon);
+    else
+        ret_val = (std::abs((reference - test_value) / reference) < epsilon);
+
+    if ( print_if_failed && ! ret_val ) {
+        std::cerr << "RelativeErrorIsLessThanEpsilon failed: " << reference << " " << test_value << " " << epsilon << " " << std::abs((reference - test_value) / reference) << std::endl;
+    }
+    return ret_val;
+};
+
+template <typename T>
+bool AbsoluteErrorIsLessThanEpsilon(T reference, T test_value, T epsilon = 0.0001, bool print_if_failed = true) {
+
+    bool ret_val;
+
+    ret_val = (std::abs(reference - test_value) < epsilon);
+
+    if ( print_if_failed && ! ret_val ) {
+        std::cerr << "AbsoluteErrorIsLessThanEpsilon failed: " << reference << " " << test_value << " " << epsilon << " " << std::abs(reference - test_value) << std::endl;
+    }
+    return ret_val;
+};
 
 inline bool InputIsATerminal( ) {
     return isatty(fileno(stdin));

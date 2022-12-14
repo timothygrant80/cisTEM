@@ -4,7 +4,9 @@ on:
   push:
     branches: master
   pull_request:
-    branches: master
+    branches: 
+      - master
+      - main
 
 jobs:
   build:
@@ -126,4 +128,33 @@ jobs:
       run: |
         chmod +x samples_functional_testing
         ./samples_functional_testing
+  
+  gui_test:
+    name: GUI Test with screenshots
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v2
+      with:
+        name: cistem_binaries_icpc
+    - name: Install gtk
+      run: |
+        sudo apt-get install -y gtk2.0-dev
+    - uses: iterative/setup-cml@v1
+    - name: Run headless gui_test
+      uses: GabrielBB/xvfb-action@v1
+      with:
+        run: |
+          chmod +x gui_test
+          ./gui_test --ci
+    - name: Write  report
+      env:
+        REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Post reports as comments in GitHub PRs
+        echo "## GUI Test Screenshots" > report.md
+        cml-publish screenshot.png --md >> report.md
+        cml-send-comment report.md
+    
 

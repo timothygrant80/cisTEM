@@ -55,9 +55,10 @@ jobs:
 #        echo "NLSPATH=/opt/intel/oneapi/mkl/2021.4.0/lib/intel64/locale/%l_%t/%N" >> $GITHUB_ENV
     - name: configure
       env:
-        CC: ccache ${{ matrix.cc }}
-        CXX: ccache ${{ matrix.cxx }}
+        CC: ${{ matrix.cc }}
+        CXX: ${{ matrix.cxx }}
       run: |
+        export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
         mkdir -p build/${{ matrix.compiler }} 
         cd build/${{ matrix.compiler }} 
         echo $CC
@@ -68,6 +69,7 @@ jobs:
     - uses: ammaraskar/gcc-problem-matcher@master
     - name: make 
       run: |
+        export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
         cd build/${{ matrix.compiler }}
         make -j2
         cp ../../scripts/testing/test_and_benchmark.sh src/

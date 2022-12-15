@@ -58,6 +58,10 @@ jobs:
         CC: ${{ matrix.cc }}
         CXX: ${{ matrix.cxx }}
       run: |
+        ln -s /usr/bin/ccache /usr/lib/ccache/icpc
+        ln -s /usr/bin/ccache /usr/lib/ccache/icc
+        ln -s /usr/bin/ccache /usr/lib/ccache/clang
+        ln -s /usr/bin/ccache /usr/lib/ccache/clang++
         export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
         mkdir -p build/${{ matrix.compiler }} 
         cd build/${{ matrix.compiler }} 

@@ -37,6 +37,11 @@ jobs:
     - uses: actions/checkout@v2
       with:
         fetch-depth: 0
+    - run: apt update
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+          key: ${{ github.job }}-${{ matrix.compiler }}
     - name: regenerate_project
       run: ./regenerate_project.b
 #    - name: set path
@@ -50,8 +55,8 @@ jobs:
 #        echo "NLSPATH=/opt/intel/oneapi/mkl/2021.4.0/lib/intel64/locale/%l_%t/%N" >> $GITHUB_ENV
     - name: configure
       env:
-        CC: ${{ matrix.cc }}
-        CXX: ${{ matrix.cxx }}
+        CC: ccache ${{ matrix.cc }}
+        CXX: ccache ${{ matrix.cxx }}
       run: |
         mkdir -p build/${{ matrix.compiler }} 
         cd build/${{ matrix.compiler }} 

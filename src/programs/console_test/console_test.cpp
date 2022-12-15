@@ -1808,7 +1808,7 @@ void MyTestApp::TestCTFNodes( ) {
     ctf_curve1.MultiplyBy(ctf_curve1);
     ctf_curve2.ApplyPowerspectrumWithThickness(ctf1);
 
-    if ( ctf_curve1.YIsAlmostEqual(ctf_curve2, true, 0.001) == false ) {
+    if ( ctf_curve1.YIsAlmostEqual(ctf_curve2, true, 0.005) == false ) {
         FailTest;
     }
 

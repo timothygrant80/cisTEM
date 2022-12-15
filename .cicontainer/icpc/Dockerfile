@@ -1,4 +1,4 @@
-FROM intel/oneapi-hpckit
+FROM intel/oneapi-hpckit:devel-ubuntu18.04
 
 RUN apt-get update && DEBIAN_FRONTEND=noninteractive apt-get install -y locales
 
@@ -15,7 +15,7 @@ RUN apt-get --allow-releaseinfo-change update && \
         libreadline-dev liblzma-dev libssl-dev libncursesw5-dev wget 
 
 #Need newer git for Github actions
-RUN add-apt-repository ppa:git-core/ppa -y && apt-get --allow-releaseinfo-change update && apt-get install -y git
+# RUN add-apt-repository ppa:git-core/ppa -y && apt-get --allow-releaseinfo-change update && apt-get install -y git
 
 RUN wget -q https://github.com/wxWidgets/wxWidgets/releases/download/v3.0.5/wxWidgets-3.0.5.tar.bz2 -O /tmp/wxwidgets.tar.bz2 && \
     echo 'Installing wxWidgets' && \

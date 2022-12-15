@@ -155,7 +155,7 @@ jobs:
       run: |
         # Post reports as comments in GitHub PRs
         echo "## GUI Test Screenshots" > report.md
-        cml-publish screenshot.png --md >> report.md
-        cml-send-comment report.md
+        cml asset publish screenshot.png --md >> report.md
+        cml comment update --pr report.md
     
 

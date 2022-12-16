@@ -823,6 +823,7 @@ class ImageCTFComparison {
     ~ImageCTFComparison( );
     void  SetImage(int wanted_image_number, Image* new_image);
     void  SetCTF(CTF new_ctf);
+    void  SetFitWithThicknessNodes(bool wanted_fit_with_thickness_nodes);
     CTF   ReturnCTF( );
     bool  AstigmatismIsKnown( );
     float ReturnKnownAstigmatism( );
@@ -838,12 +839,14 @@ class ImageCTFComparison {
     float* azimuths;
     float* spatial_frequency_squared;
     int*   addresses;
+    bool   fit_with_thickness_nodes;
 
   private:
     CTF   ctf;
     float pixel_size;
     bool  find_phase_shift;
     bool  astigmatism_is_known;
+
     float known_astigmatism;
     float known_astigmatism_angle;
     bool  fit_defocus_sweep;
@@ -870,6 +873,7 @@ ImageCTFComparison::ImageCTFComparison(int wanted_number_of_images, CTF wanted_c
     known_astigmatism         = wanted_known_astigmatism;
     known_astigmatism_angle   = wanted_known_astigmatism_angle;
     fit_defocus_sweep         = should_fit_defocus_sweep;
+    fit_with_thickness_nodes  = false;
     azimuths                  = NULL;
     spatial_frequency_squared = NULL;
     addresses                 = NULL;
@@ -896,6 +900,10 @@ void ImageCTFComparison::SetImage(int wanted_image_number, Image* new_image) {
 
 void ImageCTFComparison::SetCTF(CTF new_ctf) {
     ctf = new_ctf;
+}
+
+void ImageCTFComparison::SetFitWithThicknessNodes(bool wanted_fit_with_thickness_nodes) {
+    this->fit_with_thickness_nodes = wanted_fit_with_thickness_nodes;
 }
 
 void ImageCTFComparison::SetupQuickCorrelation( ) {
@@ -931,7 +939,10 @@ float CtffindObjectiveFunction(void* scoring_parameters, float array_of_values[]
     else {
         my_ctf.SetDefocus(array_of_values[0], array_of_values[1], array_of_values[2]);
     }
-    if ( comparison_object->FindPhaseShift( ) ) {
+    if ( comparison_object->fit_with_thickness_nodes ) {
+        my_ctf.SetSampleThickness(array_of_values[3]);
+    }
+    if ( comparison_object->FindPhaseShift( ) && ! comparison_object->fit_with_thickness_nodes ) {
         if ( comparison_object->AstigmatismIsKnown( ) ) {
             my_ctf.SetAdditionalPhaseShift(array_of_values[1]);
         }
@@ -948,7 +959,10 @@ float CtffindObjectiveFunction(void* scoring_parameters, float array_of_values[]
     }
     else {
         if ( comparison_object->number_to_correlate ) {
-            score = -comparison_object->img[0].QuickCorrelationWithCTF(my_ctf, comparison_object->number_to_correlate, comparison_object->norm_image, comparison_object->image_mean, comparison_object->addresses, comparison_object->spatial_frequency_squared, comparison_object->azimuths);
+            if ( comparison_object->fit_with_thickness_nodes )
+                score = -comparison_object->img[0].QuickCorrelationWithCTFThickness(my_ctf, comparison_object->number_to_correlate, comparison_object->norm_image, comparison_object->image_mean, comparison_object->addresses, comparison_object->spatial_frequency_squared, comparison_object->azimuths);
+            else
+                score = -comparison_object->img[0].QuickCorrelationWithCTF(my_ctf, comparison_object->number_to_correlate, comparison_object->norm_image, comparison_object->image_mean, comparison_object->addresses, comparison_object->spatial_frequency_squared, comparison_object->azimuths);
         }
         else {
             score = -comparison_object->img[0].GetCorrelationWithCTF(my_ctf);
@@ -1576,7 +1590,7 @@ bool CtffindApp::DoCalculation( ) {
     int               desired_number_of_threads          = my_current_job.arguments[37].ReturnIntegerArgument( );
     int               eer_frames_per_image               = my_current_job.arguments[38].ReturnIntegerArgument( );
     int               eer_super_res_factor               = my_current_job.arguments[39].ReturnIntegerArgument( );
-
+    bool              fit_nodes                          = true;
     // if we are applying a mag distortion, it can change the pixel size, so do that here to make sure it is used forever onwards..
 
     if ( input_is_a_movie && correct_movie_mag_distortion ) {
@@ -1611,7 +1625,7 @@ bool CtffindApp::DoCalculation( ) {
     const float maximum_resolution_for_initial_search = 5.0;
 
     // Debugging
-    const bool dump_debug_files = false;
+    const bool dump_debug_files = true;
 
     /*
 	 *  Scoring function
@@ -2581,6 +2595,71 @@ bool CtffindApp::DoCalculation( ) {
             last_bin_with_good_fit = 1;
         }
 #endif
+        // Start of Node fitting
+        if ( fit_nodes ) {
+            float first_thickness_estimate = current_ctf->ThicknessWhereIntegrateDefocusModulationIsZero(spatial_frequency[last_bin_with_good_fit] * spatial_frequency[last_bin_with_good_fit]);
+            wxPrintf("First thickness estimate = %f Angstroms\n", first_thickness_estimate * pixel_size_for_fitting);
+            CTF ctf_with_thickness;
+            ctf_with_thickness.CopyFrom(*current_ctf);
+            ctf_with_thickness.SetSampleThickness(first_thickness_estimate);
+            // Repace roational_average_astig with powerspectrum
+            float current_sq_sf;
+            float azimuth_for_1d_plots         = ReturnAzimuthToUseFor1DPlots(current_ctf);
+            float defocus_for_1d_plots         = current_ctf->DefocusGivenAzimuth(azimuth_for_1d_plots);
+            float sq_sf_of_phase_shift_maximum = current_ctf->ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(defocus_for_1d_plots);
+            Curve rotational_average_astig_curve;
+            for ( counter = 1; counter < number_of_bins_in_1d_spectra; counter++ ) {
+                current_sq_sf = powf(spatial_frequency[counter], 2);
+                if ( current_sq_sf <= sq_sf_of_phase_shift_maximum ) {
+                    rotational_average_astig[counter] = equiphase_average_pre_max.ReturnLinearInterpolationFromX(current_ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(current_sq_sf, defocus_for_1d_plots));
+                }
+                else {
+                    rotational_average_astig[counter] = equiphase_average_post_max.ReturnLinearInterpolationFromX(current_ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(current_sq_sf, defocus_for_1d_plots));
+                }
+                rotational_average_astig_curve.AddPoint(spatial_frequency[counter], rotational_average_astig[counter]);
+            }
+            rotational_average_astig_curve.FitPolynomialToData(3);
+            // Subtract polynomial fit from rotational_average_astig and add 0.5
+            for ( counter = 1; counter < number_of_bins_in_1d_spectra; counter++ ) {
+                rotational_average_astig[counter] -= rotational_average_astig_curve.polynomial_fit[counter];
+                rotational_average_astig[counter] += 0.5;
+            }
+            // Do the actual 2D fit
+            number_of_search_dimensions = 4;
+            cg_accuracy[0]              = 100.0; //TODO: try defocus_search_step  / pix_size_for_fitting / 10.0
+            cg_accuracy[1]              = 100.0;
+            cg_accuracy[2]              = 0.025;
+            cg_accuracy[3]              = 10.0;
+
+            cg_starting_point[0] = current_ctf->GetDefocus1( );
+            cg_starting_point[1] = current_ctf->GetDefocus2( );
+            cg_starting_point[2] = current_ctf->GetAstigmatismAzimuth( );
+            cg_starting_point[3] = first_thickness_estimate;
+
+            comparison_object_2D->SetCTF(ctf_with_thickness);
+            comparison_object_2D->SetFitWithThicknessNodes(true);
+            conjugate_gradient_minimizer = new ConjugateGradient( );
+            conjugate_gradient_minimizer->Init(&CtffindObjectiveFunction, comparison_object_2D, number_of_search_dimensions, cg_starting_point, cg_accuracy);
+            conjugate_gradient_minimizer->Run( );
+            profile_timing.lap("Peform 2D search optimization");
+            // Remember the results of the refinement
+            for ( counter = 0; counter < number_of_search_dimensions; counter++ ) {
+                cg_starting_point[counter] = conjugate_gradient_minimizer->GetBestValue(counter);
+            }
+            wxPrintf("2D search results: %f %f %f %f\n", cg_starting_point[0] * pixel_size_for_fitting, cg_starting_point[1] * pixel_size_for_fitting, cg_starting_point[2], cg_starting_point[3] * pixel_size_for_fitting);
+
+            ctf_with_thickness.SetDefocus(cg_starting_point[0], cg_starting_point[1], cg_starting_point[2]);
+
+            ctf_with_thickness.SetSampleThickness(cg_starting_point[3]);
+            current_ctf->CopyFrom(ctf_with_thickness);
+            current_ctf->SetSampleThickness(cg_starting_point[3]);
+            // Replace rotational_average_astig_fit with thickness model
+
+            for ( counter = 0; counter < number_of_bins_in_1d_spectra; counter++ ) {
+                current_sq_sf                         = powf(spatial_frequency[counter], 2);
+                rotational_average_astig_fit[counter] = ctf_with_thickness.EvaluatePowerspectrumWithThickness(current_sq_sf, azimuth_for_1d_plots);
+            }
+        }
 
         // Prepare output diagnostic image
         //average_spectrum->AddConstant(- average_spectrum->ReturnAverageOfRealValuesOnEdges()); // this used to be done in OverlayCTF / CTFOperation in the Fortran code
@@ -2588,7 +2667,7 @@ bool CtffindApp::DoCalculation( ) {
         if ( dump_debug_files )
             average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_rescaling.mrc", 1);
         profile_timing.start("Write diagnostic image");
-        if ( compute_extra_stats ) {
+        if ( compute_extra_stats && ! fit_nodes ) {
             RescaleSpectrumAndRotationalAverage(average_spectrum, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, rotational_average_astig_fit, number_of_extrema_profile, ctf_values_profile, last_bin_without_aliasing, last_bin_with_good_fit);
         }
         //average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_thresholding.mrc",1);
@@ -2710,7 +2789,7 @@ bool CtffindApp::DoCalculation( ) {
     }
 
     // Send results back
-    float results_array[10];
+    float results_array[11];
     results_array[0] = current_ctf->GetDefocus1( ) * pixel_size_for_fitting; // Defocus 1 (Angstroms)
     results_array[1] = current_ctf->GetDefocus2( ) * pixel_size_for_fitting; // Defocus 2 (Angstroms)
     results_array[2] = current_ctf->GetAstigmatismAzimuth( ) * 180.0 / PIf; // Astigmatism angle (degrees)
@@ -2730,11 +2809,12 @@ bool CtffindApp::DoCalculation( ) {
         results_array[6] = pixel_size_for_fitting / spatial_frequency[last_bin_without_aliasing]; //	The resolution (Angstroms) at which aliasing was just detected
     }
 
-    results_array[7] = average_spectrum->ReturnIcinessOfSpectrum(pixel_size_for_fitting);
-    results_array[8] = tilt_angle;
-    results_array[9] = tilt_axis;
+    results_array[7]  = average_spectrum->ReturnIcinessOfSpectrum(pixel_size_for_fitting);
+    results_array[8]  = tilt_angle;
+    results_array[9]  = tilt_axis;
+    results_array[10] = current_ctf->GetSampleThickness( ) * pixel_size_for_fitting; // Sample thickness (Angstroms)
 
-    my_result.SetResult(10, results_array);
+    my_result.SetResult(11, results_array);
 
     // Cleanup
     delete current_ctf;

@@ -932,7 +932,7 @@ void MyFindCTFPanel::ProcessResult(JobResult* result_to_process) // this will ha
 
         wxString image_filename = image_asset_panel->ReturnAssetPointer(active_group.members[result_to_process->job_number])->filename.GetFullPath( );
 
-        CTFResultsPanel->Draw(current_job_package.jobs[result_to_process->job_number].arguments[3].ReturnStringArgument( ), current_job_package.jobs[result_to_process->job_number].arguments[16].ReturnBoolArgument( ), result_to_process->result_data[0], result_to_process->result_data[1], result_to_process->result_data[2], result_to_process->result_data[3], result_to_process->result_data[4], result_to_process->result_data[5], result_to_process->result_data[6], result_to_process->result_data[7], result_to_process->result_data[8], result_to_process->result_data[9], image_filename);
+        CTFResultsPanel->Draw(current_job_package.jobs[result_to_process->job_number].arguments[3].ReturnStringArgument( ), current_job_package.jobs[result_to_process->job_number].arguments[16].ReturnBoolArgument( ), result_to_process->result_data[0], result_to_process->result_data[1], result_to_process->result_data[2], result_to_process->result_data[3], result_to_process->result_data[4], result_to_process->result_data[5], result_to_process->result_data[6], result_to_process->result_data[7], result_to_process->result_data[8], result_to_process->result_data[9], result_to_process->result_data[10], image_filename);
         time_of_last_result_update = time(NULL);
     }
 
@@ -1038,7 +1038,8 @@ void MyFindCTFPanel::WriteResultToDataBase( ) {
                                                           "LARGE_ASTIGMATISM_EXPECTED",
                                                           "ICINESS",
                                                           "TILT_ANGLE",
-                                                          "TILT_AXIS");
+                                                          "TILT_AXIS",
+                                                          "SAMPLE_THICKNESS");
 
     wxDateTime now                    = wxDateTime::Now( );
     counter_aliasing_within_fit_range = 0;
@@ -1100,7 +1101,8 @@ void MyFindCTFPanel::WriteResultToDataBase( ) {
                                                               current_job_package.jobs[counter].arguments[14].ReturnBoolArgument( ), // large astigmatism expected
                                                               buffered_results[counter].result_data[7], // iciness
                                                               buffered_results[counter].result_data[8], // tilt angle
-                                                              buffered_results[counter].result_data[9]); // tilt axis
+                                                              buffered_results[counter].result_data[9], // tilt axis
+                                                              buffered_results[counter].result_data[10]); // sample thickness
         ctf_estimation_id++;
         my_progress_dialog->Update(counter + 1);
 

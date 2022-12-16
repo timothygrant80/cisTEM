@@ -125,6 +125,10 @@ class CTF {
         return sinc(PIf * wavelength * squared_spatial_frequency * sample_thickness);
     };
 
+    inline float ThicknessWhereIntegrateDefocusModulationIsZero(float squared_spatial_frequency) {
+        return 1.0 / (wavelength * squared_spatial_frequency);
+    };
+
     inline float GetLowestFrequencyForFitting( ) { return lowest_frequency_for_fitting; };
 
     inline float GetHighestFrequencyForFitting( ) { return highest_frequency_for_fitting; };
@@ -159,6 +163,8 @@ class CTF {
     inline float GetAdditionalPhaseShift( ) { return additional_phase_shift; };
 
     inline float GetWavelength( ) { return wavelength; };
+
+    inline float GetSampleThickness( ) { return sample_thickness; };
 
     int   ReturnNumberOfExtremaBeforeSquaredSpatialFrequency(float squared_spatial_frequency, float azimuth);
     float ReturnSquaredSpatialFrequencyGivenPhaseShiftAndAzimuth(float phase_shift, float azimuth);

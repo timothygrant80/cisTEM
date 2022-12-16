@@ -6089,6 +6089,37 @@ float Image::QuickCorrelationWithCTF(CTF ctf, int number_of_values, double norm_
     return (cross_product - image_mean * ctf_sum) / sqrt(norm_image * (norm_ctf - ctf_sum * ctf_sum / number_of_values)) - astigmatism_penalty;
 }
 
+float Image::QuickCorrelationWithCTFThickness(CTF ctf, int number_of_values, double norm_image, double image_mean, int* addresses, float* spatial_frequency_squared, float* azimuth) {
+
+    // Local variables
+    int    i, j;
+    double cross_product = 0.0;
+    double norm_ctf      = 0.0;
+    double ctf_sum       = 0.;
+    float  current_ctf_value;
+    float  astigmatism_penalty;
+
+    for ( i = 0; i < number_of_values; i++ ) {
+        j = addresses[i];
+        // Center it around 0 by subtracting 0.5
+        current_ctf_value = ctf.EvaluatePowerspectrumWithThickness(spatial_frequency_squared[i], azimuth[i]) - 0.5;
+        cross_product += real_values[j] * current_ctf_value;
+        norm_ctf += pow(current_ctf_value, 2);
+        ctf_sum += current_ctf_value;
+    }
+
+    // Compute the penalty due to astigmatism
+    if ( ctf.GetAstigmatismTolerance( ) > 0.0 ) {
+        astigmatism_penalty = powf(ctf.GetAstigmatism( ), 2) * 0.5 / powf(ctf.GetAstigmatismTolerance( ), 2) / float(number_of_values);
+    }
+    else {
+        astigmatism_penalty = 0.0;
+    }
+
+    // The final score: norm_image is already a sum of squared deviations from mean; norm_ctf requires adjustment to give true CC
+    return (cross_product - image_mean * ctf_sum) / sqrt(norm_image * (norm_ctf - ctf_sum * ctf_sum / number_of_values)) - astigmatism_penalty;
+}
+
 void Image::ApplyMirrorAlongY( ) {
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
     MyDebugAssertTrue(is_in_real_space, "Not in real space");

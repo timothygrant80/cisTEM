@@ -15,7 +15,7 @@ class
 
     void OnFitTypeRadioButton(wxCommandEvent& event);
     void Clear( );
-    void Draw(wxString diagnostic_filename, bool find_additional_phase_shift, float defocus1, float defocus2, float defocus_angle, float phase_shift, float score, float fit_res, float alias_res, float iciness, float tilt_angle, float tilt_axis, wxString ImageFile);
+    void Draw(wxString diagnostic_filename, bool find_additional_phase_shift, float defocus1, float defocus2, float defocus_angle, float phase_shift, float score, float fit_res, float alias_res, float iciness, float tilt_angle, float tilt_axis, float sample_thickness, wxString ImageFile);
 };
 
 #endif

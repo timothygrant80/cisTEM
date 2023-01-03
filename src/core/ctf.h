@@ -100,6 +100,8 @@ class CTF {
     void SetEnvelope(float wanted_acceleration_voltage, float wanted_pixel_size_angstrom, float dose_rate);
     void SetBeamTilt(float wanted_beam_tilt_x_in_radians, float wanted_beam_tilt_y_in_radians, float wanted_particle_shift_x_in_pixels = 0.0f, float wanted_particle_shift_y_in_pixels = 0.0f);
     void SetHighestFrequencyForFitting(float wanted_highest_frequency_in_reciprocal_pixels);
+    void SetLowestFrequencyForFitting(float wanted_lowest_frequency_in_reciprocal_pixels);
+
     void SetLowResolutionContrast(float wanted_low_resolution_contrast);
     void SetSampleThickness(float wanted_sample_thickness_in_pixels);
 

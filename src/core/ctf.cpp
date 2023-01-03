@@ -379,6 +379,10 @@ void CTF::SetHighestFrequencyForFitting(float wanted_highest_frequency_in_recipr
     highest_frequency_for_fitting = wanted_highest_frequency_in_reciprocal_pixels;
 }
 
+void CTF::SetLowestFrequencyForFitting(float wanted_lowest_frequency_in_reciprocal_pixels) {
+    lowest_frequency_for_fitting = wanted_lowest_frequency_in_reciprocal_pixels;
+}
+
 void CTF::SetLowResolutionContrast(float wanted_low_resolution_contrast) {
     MyDebugAssertTrue(wanted_low_resolution_contrast >= 0.0f && wanted_low_resolution_contrast <= 1.0f, "Bad low_resolution_contrast: %f", wanted_low_resolution_contrast);
     low_resolution_contrast = asin(wanted_low_resolution_contrast);

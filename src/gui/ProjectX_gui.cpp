@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Oct 26 2018)
+// C++ code generated with wxFormBuilder (version 3.10.1-0-g8feb16b)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO *NOT* EDIT THIS FILE!
@@ -2014,7 +2014,7 @@ ShowCTFResultsPanelParent::ShowCTFResultsPanelParent( wxWindow* parent, wxWindow
 	AngleText->Wrap( -1 );
 	gSizer14->Add( AngleText, 0, wxALL, 5 );
 
-	m_staticText393 = new wxStaticText( m_panel86, wxID_ANY, wxT("Alias Res. : "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText393 = new wxStaticText( m_panel86, wxID_ANY, wxT("Alias Res. :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText393->Wrap( -1 );
 	m_staticText393->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
 
@@ -2063,6 +2063,22 @@ ShowCTFResultsPanelParent::ShowCTFResultsPanelParent( wxWindow* parent, wxWindow
 	TiltAxisStaticText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	TiltAxisStaticText->Wrap( -1 );
 	gSizer14->Add( TiltAxisStaticText, 0, wxALL, 5 );
+
+
+	gSizer14->Add( 0, 0, 10, wxALL, 5 );
+
+
+	gSizer14->Add( 0, 0, 0, wxALL, 5 );
+
+	m_staticText8681 = new wxStaticText( m_panel86, wxID_ANY, wxT("Est. Sample Thickness : "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText8681->Wrap( -1 );
+	m_staticText8681->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+
+	gSizer14->Add( m_staticText8681, 0, wxALL, 5 );
+
+	ThicknessStaticText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	ThicknessStaticText->Wrap( -1 );
+	gSizer14->Add( ThicknessStaticText, 0, wxALL, 5 );
 
 
 	bSizer305->Add( gSizer14, 0, 0, 5 );
@@ -11032,6 +11048,7 @@ RefineTemplateDevPanelParent::~RefineTemplateDevPanelParent()
 NewProjectWizard::NewProjectWizard( wxWindow* parent, wxWindowID id, const wxString& title, const wxBitmap& bitmap, const wxPoint& pos, long style )
 {
 	this->Create( parent, id, title, bitmap, pos, style );
+
 	this->SetSizeHints( wxSize( 500,350 ), wxDefaultSize );
 
 	wxWizardPageSimple* m_wizPage1 = new wxWizardPageSimple( this );
@@ -11114,6 +11131,7 @@ NewProjectWizard::~NewProjectWizard()
 ExportRefinementPackageWizardParent::ExportRefinementPackageWizardParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxBitmap& bitmap, const wxPoint& pos, long style )
 {
 	this->Create( parent, id, title, bitmap, pos, style );
+
 	this->SetSizeHints( wxSize( 700,400 ), wxDefaultSize );
 
 	wxWizardPageSimple* ChooseParamsPage = new wxWizardPageSimple( this );
@@ -11271,6 +11289,7 @@ ExportRefinementPackageWizardParent::~ExportRefinementPackageWizardParent()
 ImportRefinementPackageWizardParent::ImportRefinementPackageWizardParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxBitmap& bitmap, const wxPoint& pos, long style )
 {
 	this->Create( parent, id, title, bitmap, pos, style );
+
 	this->SetSizeHints( wxSize( 700,400 ), wxDefaultSize );
 
 	wxWizardPageSimple* ImportTypePage = new wxWizardPageSimple( this );
@@ -11671,6 +11690,7 @@ RenameDialog::~RenameDialog()
 NewRefinementPackageWizard::NewRefinementPackageWizard( wxWindow* parent, wxWindowID id, const wxString& title, const wxBitmap& bitmap, const wxPoint& pos, long style )
 {
 	this->Create( parent, id, title, bitmap, pos, style );
+
 	this->SetSizeHints( wxSize( -1,-1 ), wxDefaultSize );
 
 

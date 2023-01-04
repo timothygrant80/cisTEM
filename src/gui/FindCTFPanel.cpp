@@ -1004,7 +1004,7 @@ void MyFindCTFPanel::WriteResultToDataBase( ) {
     main_frame->current_project.database.Begin( );
 
     // loop over all the jobs, and add them..
-    main_frame->current_project.database.BeginBatchInsert("ESTIMATED_CTF_PARAMETERS", 34,
+    main_frame->current_project.database.BeginBatchInsert("ESTIMATED_CTF_PARAMETERS", 36,
                                                           "CTF_ESTIMATION_ID",
                                                           "CTF_ESTIMATION_JOB_ID",
                                                           "DATETIME_OF_RUN",
@@ -1039,7 +1039,8 @@ void MyFindCTFPanel::WriteResultToDataBase( ) {
                                                           "ICINESS",
                                                           "TILT_ANGLE",
                                                           "TILT_AXIS",
-                                                          "SAMPLE_THICKNESS");
+                                                          "SAMPLE_THICKNESS",
+                                                          "SAMPLE_THICKNESS_JSON");
 
     wxDateTime now                    = wxDateTime::Now( );
     counter_aliasing_within_fit_range = 0;
@@ -1068,7 +1069,7 @@ void MyFindCTFPanel::WriteResultToDataBase( ) {
             phase_shift_step            = 0;
         }
 
-        main_frame->current_project.database.AddToBatchInsert("iiliirrrrirrrrririrrrrrrrrrrtiirrr", ctf_estimation_id,
+        main_frame->current_project.database.AddToBatchInsert("iiliirrrrirrrrririrrrrrrrrrrtiirrrrt", ctf_estimation_id,
                                                               ctf_estimation_job_id,
                                                               (long int)now.GetAsDOS( ),
                                                               image_asset_id,
@@ -1102,7 +1103,8 @@ void MyFindCTFPanel::WriteResultToDataBase( ) {
                                                               buffered_results[counter].result_data[7], // iciness
                                                               buffered_results[counter].result_data[8], // tilt angle
                                                               buffered_results[counter].result_data[9], // tilt axis
-                                                              buffered_results[counter].result_data[10]); // sample thickness
+                                                              buffered_results[counter].result_data[10],
+                                                              ""); // sample thickness
         ctf_estimation_id++;
         my_progress_dialog->Update(counter + 1);
 

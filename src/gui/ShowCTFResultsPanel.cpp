@@ -84,7 +84,7 @@ void ShowCTFResultsPanel::Draw(wxString diagnostic_filename, bool find_additiona
     IcinessStaticText->SetLabel(wxString::Format(wxT("%.2f"), iciness));
     TiltAngleStaticText->SetLabel(wxString::Format(wxT("%.2f  °"), tilt_angle));
     TiltAxisStaticText->SetLabel(wxString::Format(wxT("%.2f  °"), tilt_axis));
-    //SampleThicknessStaticText->SetLabel(wxString::Format(wxT("%.2f  Å"), sample_thickness));
+    ThicknessStaticText->SetLabel(wxString::Format(wxT("%.2f  Å"), sample_thickness));
     if ( DoesFileExist(diagnostic_filename) == true ) {
         CTF2DResultsPanel->PanelImage.QuickAndDirtyReadSlice(diagnostic_filename.ToStdString( ), 1);
         CTF2DResultsPanel->should_show = true;

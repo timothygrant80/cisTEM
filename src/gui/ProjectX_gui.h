@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version 3.10.1-0-g8feb16b)
+// C++ code generated with wxFormBuilder (version 3.10.0-4761b0c)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO *NOT* EDIT THIS FILE!
@@ -563,7 +563,7 @@ class ShowCTFResultsPanelParent : public wxPanel
 		CTF1DPanel* CTFPlotPanel;
 		DisplayPanel* ImageDisplayPanel;
 
-		ShowCTFResultsPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 952,539 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+		ShowCTFResultsPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 952,643 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 
 		~ShowCTFResultsPanelParent();
 
@@ -2450,6 +2450,14 @@ class FindCTFPanel : public JobPanel
 		NumericTextCtrl* MaxPhaseShiftNumericCtrl;
 		wxStaticText* PhaseShiftStepStaticText;
 		NumericTextCtrl* PhaseShiftStepNumericCtrl;
+		wxStaticText* m_staticText2001;
+		wxCheckBox* FitNodesCheckBox;
+		wxCheckBox* FitNodes1DCheckBox;
+		wxCheckBox* FitNodes2DCheckBox;
+		wxStaticText* FitNodesMinResStaticText;
+		NumericTextCtrl* FitNodesMinResNumericCtrl;
+		wxStaticText* FitNodesMaxResStaticText;
+		NumericTextCtrl* FitNodesMaxResNumericCtrl;
 		wxPanel* OutputTextPanel;
 		wxTextCtrl* output_textctrl;
 		wxPanel* InfoPanel;
@@ -2475,6 +2483,7 @@ class FindCTFPanel : public JobPanel
 		virtual void OnLargeAstigmatismExpectedCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnRestrainAstigmatismCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnFindAdditionalPhaseCheckBox( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnFitNodesCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnInfoURL( wxTextUrlEvent& event ) { event.Skip(); }
 		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }

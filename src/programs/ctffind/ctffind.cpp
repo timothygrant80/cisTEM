@@ -573,7 +573,7 @@ void CtffindApp::DoInteractiveUserInput( ) {
     }
 
     //	my_current_job.Reset(39);
-    my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbsbfffbfffbiii", input_filename.c_str( ), //1
+    my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbsbfffbfffbiiibbbff", input_filename.c_str( ), //1
                                       input_is_a_movie,
                                       number_of_frames_to_average,
                                       output_diagnostic_filename.c_str( ),
@@ -612,7 +612,12 @@ void CtffindApp::DoInteractiveUserInput( ) {
                                       determine_tilt,
                                       desired_number_of_threads,
                                       eer_frames_per_image,
-                                      eer_super_res_factor);
+                                      eer_super_res_factor,
+                                      false,
+                                      false,
+                                      false,
+                                      10.0,
+                                      3.0);
 }
 
 // Optional command-line stuff
@@ -674,11 +679,11 @@ bool CtffindApp::DoCalculation( ) {
     int               desired_number_of_threads          = my_current_job.arguments[37].ReturnIntegerArgument( );
     int               eer_frames_per_image               = my_current_job.arguments[38].ReturnIntegerArgument( );
     int               eer_super_res_factor               = my_current_job.arguments[39].ReturnIntegerArgument( );
-    bool              fit_nodes                          = true;
-    bool              fit_nodes_1D_brute_force           = true;
-    bool              fit_nodes_2D_refine                = true;
-    float             fit_nodes_low_resolution_limit     = 10.0;
-    float             fit_nodes_high_resolution_limit    = 3.0;
+    bool              fit_nodes                          = my_current_job.arguments[40].ReturnBoolArgument( );
+    bool              fit_nodes_1D_brute_force           = my_current_job.arguments[41].ReturnBoolArgument( );
+    bool              fit_nodes_2D_refine                = my_current_job.arguments[42].ReturnBoolArgument( );
+    float             fit_nodes_low_resolution_limit     = my_current_job.arguments[43].ReturnFloatArgument( );
+    float             fit_nodes_high_resolution_limit    = my_current_job.arguments[44].ReturnFloatArgument( );
     // if we are applying a mag distortion, it can change the pixel size, so do that here to make sure it is used forever onwards..
 
     if ( input_is_a_movie && correct_movie_mag_distortion ) {
@@ -1730,7 +1735,7 @@ bool CtffindApp::DoCalculation( ) {
 
         average_spectrum->SetMinimumAndMaximumValues(average - sigma, average + 2.0 * sigma);
         //average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_overlay.mrc",1);
-        OverlayCTF(average_spectrum, current_ctf, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, number_of_extrema_profile, ctf_values_profile, &equiphase_average_pre_max, &equiphase_average_post_max);
+        OverlayCTF(average_spectrum, current_ctf, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, number_of_extrema_profile, ctf_values_profile, &equiphase_average_pre_max, &equiphase_average_post_max, fit_nodes);
 
         average_spectrum->WriteSlice(&output_diagnostic_file, current_output_location);
         output_diagnostic_file.SetDensityStatistics(average_spectrum->ReturnMinimumValue( ), average_spectrum->ReturnMaximumValue( ), average_spectrum->ReturnAverageOfRealValues( ), 0.1);

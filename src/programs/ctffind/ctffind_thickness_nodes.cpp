@@ -235,7 +235,10 @@ CTFNodeFitOuput fit_thickness_nodes(CTFNodeFitInput* input) {
     float*  number_of_extrema_profile             = new float[input->number_of_bins_in_1d_spectra];
     recalculate_1D_spectra(input, rotational_average_astig_renormalized, number_of_extrema_profile, debug_json_output);
     int last_bin_with_good_fit = calculate_new_frc(input, rotational_average_astig_renormalized, number_of_extrema_profile, debug_json_output);
-
+    for ( counter = 1; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
+        input->rotational_average_astig[counter] -= rotational_average_astig_curve.polynomial_fit[counter];
+        input->rotational_average_astig[counter] += 0.5;
+    }
     // Write out the json debug file
     wxJSONWriter writer;
     wxString     json_string;

@@ -454,6 +454,29 @@ void MyFindCTFPanel::OnFindAdditionalPhaseCheckBox(wxCommandEvent& event) {
     }
 }
 
+void MyFindCTFPanel::OnFitNodesCheckBox(wxCommandEvent& event) {
+    if ( FitNodesCheckBox->IsChecked( ) == true ) {
+        Freeze( );
+        FitNodes1DCheckBox->Enable(true);
+        FitNodes2DCheckBox->Enable(true);
+        FitNodesMinResStaticText->Enable(true);
+        FitNodesMinResNumericCtrl->Enable(true);
+        FitNodesMaxResStaticText->Enable(true);
+        FitNodesMaxResNumericCtrl->Enable(true);
+        Thaw( );
+    }
+    else {
+        Freeze( );
+        FitNodes1DCheckBox->Enable(false);
+        FitNodes2DCheckBox->Enable(false);
+        FitNodesMinResStaticText->Enable(false);
+        FitNodesMinResNumericCtrl->Enable(false);
+        FitNodesMaxResStaticText->Enable(false);
+        FitNodesMaxResNumericCtrl->Enable(false);
+        Thaw( );
+    }
+}
+
 void MyFindCTFPanel::OnRestrainAstigmatismCheckBox(wxCommandEvent& event) {
     if ( RestrainAstigmatismCheckBox->IsChecked( ) == true ) {
         Freeze( );
@@ -551,6 +574,12 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
     int current_eer_frames_per_image = 0;
     int current_eer_super_res_factor = 1;
 
+    bool  fit_nodes;
+    bool  fit_nodes_1d;
+    bool  fit_nodes_2d;
+    float fit_nodes_min_res;
+    float fit_nodes_max_res;
+
     // allocate space for the buffered results..
 
     buffered_results = new JobResult[number_of_jobs];
@@ -592,6 +621,30 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
         additional_phase_shift_search_step = 0.0f;
     }
 
+    if ( FitNodesCheckBox->IsChecked( ) == true ) {
+        fit_nodes         = true;
+        fit_nodes_min_res = FitNodesMinResNumericCtrl->ReturnValue( );
+        fit_nodes_max_res = FitNodesMaxResNumericCtrl->ReturnValue( );
+        if ( FitNodes1DCheckBox->IsChecked( ) == true ) {
+            fit_nodes_1d = true;
+        }
+        else {
+            fit_nodes_1d = false;
+        }
+        if ( FitNodes2DCheckBox->IsChecked( ) == true ) {
+            fit_nodes_2d = true;
+        }
+        else {
+            fit_nodes_2d = false;
+        }
+    }
+    else {
+        fit_nodes         = false;
+        fit_nodes_min_res = 10.0f;
+        fit_nodes_max_res = 3.0f;
+        fit_nodes_1d      = false;
+        fit_nodes_2d      = false;
+    }
     OneSecondProgressDialog* my_progress_dialog = new OneSecondProgressDialog("Preparing Job", "Preparing Job...", number_of_jobs, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE | wxPD_APP_MODAL);
     current_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection( )], "ctffind", number_of_jobs);
 
@@ -698,7 +751,7 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
 
         const int number_of_threads = 1;
 
-        current_job_package.AddJob("sbisffffifffffbfbfffbffbbsbsbfffbfffbiii", input_filename.c_str( ), // 0
+        current_job_package.AddJob("sbisffffifffffbfbfffbffbbsbsbfffbfffbiiibbbff", input_filename.c_str( ), // 0
                                    input_is_a_movie, // 1
                                    number_of_frames_to_average, //2
                                    output_diagnostic_filename.c_str( ), // 3
@@ -737,7 +790,12 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
                                    determine_tilt,
                                    number_of_threads,
                                    current_eer_frames_per_image,
-                                   current_eer_super_res_factor);
+                                   current_eer_super_res_factor,
+                                   fit_nodes,
+                                   fit_nodes_1d,
+                                   fit_nodes_2d,
+                                   fit_nodes_min_res,
+                                   fit_nodes_max_res);
 
         my_progress_dialog->Update(counter + 1);
     }

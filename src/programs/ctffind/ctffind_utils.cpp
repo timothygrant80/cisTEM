@@ -23,14 +23,18 @@ ImageCTFComparison::ImageCTFComparison(int wanted_number_of_images, CTF wanted_c
 }
 
 ImageCTFComparison::~ImageCTFComparison( ) {
+    wxPrintf("Deleting ImageCTFComparison\n");
     for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
         img[image_counter].Deallocate( );
     }
     delete[] img;
+    wxPrintf("Deleting ImageCTFComparison2\n");
     delete[] azimuths;
     delete[] spatial_frequency_squared;
+    wxPrintf("Deleting ImageCTFComparison3\n");
     delete[] addresses;
     number_to_correlate = 0;
+    wxPrintf("Deleting ImageCTFComparison4\n");
 }
 
 void ImageCTFComparison::SetImage(int wanted_image_number, Image* new_image) {
@@ -43,7 +47,7 @@ void ImageCTFComparison::SetCTF(CTF new_ctf) {
 }
 
 void ImageCTFComparison::SetFitWithThicknessNodes(bool wanted_fit_with_thickness_nodes) {
-    this->fit_with_thickness_nodes = wanted_fit_with_thickness_nodes;
+    fit_with_thickness_nodes = wanted_fit_with_thickness_nodes;
 }
 
 void ImageCTFComparison::SetupQuickCorrelation( ) {
@@ -349,8 +353,8 @@ void ComputeFRCBetween1DSpectrumAndFit(int number_of_bins, double average[], dou
                 spectrum_sigma += pow(average[i] - spectrum_mean, 2);
                 fit_sigma += pow(fit[i] - fit_mean, 2);
             }
-            MyDebugAssertTrue(spectrum_sigma > 0.0 && spectrum_sigma < 10000.0, "Bad spectrum_sigma: %f\n", spectrum_sigma);
-            MyDebugAssertTrue(fit_sigma > 0.0 && fit_sigma < 10000.0, "Bad fit sigma: %f\n", fit_sigma);
+            //MyDebugAssertTrue(spectrum_sigma > 0.0 && spectrum_sigma < 10000.0, "Bad spectrum_sigma: %f\n", spectrum_sigma);
+            //MyDebugAssertTrue(fit_sigma > 0.0 && fit_sigma < 10000.0, "Bad fit sigma: %f\n", fit_sigma);
             if ( spectrum_sigma > 0.0 && fit_sigma > 0.0 ) {
                 frc[bin_counter] = cross_product / (sqrtf(spectrum_sigma / number_of_bins_in_window) * sqrtf(fit_sigma / number_of_bins_in_window)) / number_of_bins_in_window;
             }

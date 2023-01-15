@@ -1,7 +1,7 @@
 #include "../../core/core_headers.h"
 #include "./ctffind.h"
 
-void write_fit_result_JSON_debug(wxJSONValue debug_json_output, char* name, int number_of_bins_in_1d_spectra, double* rotational_average_astig, double* rotational_average_astig_fit, double* spatial_frequency = nullptr) {
+void write_fit_result_JSON_debug(wxJSONValue& debug_json_output, char* name, int number_of_bins_in_1d_spectra, double* rotational_average_astig, double* rotational_average_astig_fit, double* spatial_frequency = nullptr) {
     if ( spatial_frequency != nullptr ) {
         debug_json_output["spatial_frequency"] = wxJSONValue(wxJSONTYPE_ARRAY);
         for ( int counter = 0; counter < number_of_bins_in_1d_spectra; counter++ ) {
@@ -20,16 +20,16 @@ void write_fit_result_JSON_debug(wxJSONValue debug_json_output, char* name, int 
     }
 }
 
-void do_1D_bruteforce(CTFNodeFitInput* input, wxJSONValue debug_json_output) {
+void do_1D_bruteforce(CTFNodeFitInput* input, wxJSONValue& debug_json_output) {
     int   counter;
     float current_sq_sf;
     float azimuth_for_1d_plots = ReturnAzimuthToUseFor1DPlots(input->current_ctf);
     for ( counter = 0; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
-        input->comparison_object_1D.curve[counter] = input->rotational_average_astig[counter];
+        input->comparison_object_1D->curve[counter] = input->rotational_average_astig[counter];
     }
-    input->comparison_object_1D.find_phase_shift     = false;
-    input->comparison_object_1D.find_thickness_nodes = true;
-    input->comparison_object_1D.ctf                  = *(input->current_ctf);
+    input->comparison_object_1D->find_phase_shift     = false;
+    input->comparison_object_1D->find_thickness_nodes = true;
+    input->comparison_object_1D->ctf                  = *(input->current_ctf);
 
     // We can now look for the defocus value
     float bf_halfrange[1] = {1750 / input->pixel_size_for_fitting};
@@ -42,7 +42,7 @@ void do_1D_bruteforce(CTFNodeFitInput* input, wxJSONValue debug_json_output) {
 
     // Actually run the BF search
     BruteForceSearch* brute_force_search = new BruteForceSearch( );
-    brute_force_search->Init(&CtffindCurveObjectiveFunction, &(input->comparison_object_1D), number_of_search_dimensions, bf_midpoint, bf_halfrange, bf_stepsize, false, false, 1);
+    brute_force_search->Init(&CtffindCurveObjectiveFunction, input->comparison_object_1D, number_of_search_dimensions, bf_midpoint, bf_halfrange, bf_stepsize, false, false, 1);
     float* all_values = nullptr;
     float* all_scores = nullptr;
     int    num_values;
@@ -66,12 +66,14 @@ void do_1D_bruteforce(CTFNodeFitInput* input, wxJSONValue debug_json_output) {
         current_sq_sf                                = powf(input->spatial_frequency[counter], 2);
         input->rotational_average_astig_fit[counter] = input->current_ctf->EvaluatePowerspectrumWithThickness(current_sq_sf, azimuth_for_1d_plots);
     }
-    write_fit_result_JSON_debug(debug_json_output, "after_1D_brute_force", input->number_of_bins_in_1d_spectra, input->rotational_average_astig, input->rotational_average_astig_fit, nullptr);
-
-    debug_json_output["thickness_estimates"]["after_1D_brute_force"] = brute_force_search->GetBestValue(0) * input->pixel_size_for_fitting;
+    if ( input->debug ) {
+        write_fit_result_JSON_debug(debug_json_output, "after_1D_brute_force", input->number_of_bins_in_1d_spectra, input->rotational_average_astig, input->rotational_average_astig_fit, nullptr);
+        debug_json_output["thickness_estimates"]["after_1D_brute_force"] = brute_force_search->GetBestValue(0) * input->pixel_size_for_fitting;
+    }
+    delete brute_force_search;
 }
 
-void do_2D_refinement(CTFNodeFitInput* input, wxJSONValue debug_json_output) {
+void do_2D_refinement(CTFNodeFitInput* input, wxJSONValue& debug_json_output) {
     int   counter;
     float current_sq_sf;
     float azimuth_for_1d_plots = ReturnAzimuthToUseFor1DPlots(input->current_ctf);
@@ -80,11 +82,11 @@ void do_2D_refinement(CTFNodeFitInput* input, wxJSONValue debug_json_output) {
     float cg_accuracy[4]              = {100.0, 100.0, 0.05, 10.0}; //TODO: try defocus_search_step  / pix_size_for_fitting / 10.0
     float cg_starting_point[4]        = {input->current_ctf->GetDefocus1( ), input->current_ctf->GetDefocus2( ), input->current_ctf->GetAstigmatismAzimuth( ), input->current_ctf->GetSampleThickness( )};
 
-    input->comparison_object_2D.SetCTF(*(input->current_ctf));
-    input->comparison_object_2D.SetFitWithThicknessNodes(true);
-    input->comparison_object_2D.SetupQuickCorrelation( );
+    input->comparison_object_2D->SetCTF(*(input->current_ctf));
+    input->comparison_object_2D->SetFitWithThicknessNodes(true);
+    input->comparison_object_2D->SetupQuickCorrelation( );
     ConjugateGradient* conjugate_gradient_minimizer = new ConjugateGradient( );
-    conjugate_gradient_minimizer->Init(&CtffindObjectiveFunction, &(input->comparison_object_2D), number_of_search_dimensions, cg_starting_point, cg_accuracy);
+    conjugate_gradient_minimizer->Init(&CtffindObjectiveFunction, input->comparison_object_2D, number_of_search_dimensions, cg_starting_point, cg_accuracy);
 
     conjugate_gradient_minimizer->Run( );
 
@@ -101,10 +103,11 @@ void do_2D_refinement(CTFNodeFitInput* input, wxJSONValue debug_json_output) {
         current_sq_sf                                = powf(input->spatial_frequency[counter], 2);
         input->rotational_average_astig_fit[counter] = input->current_ctf->EvaluatePowerspectrumWithThickness(current_sq_sf, azimuth_for_1d_plots);
     }
-
-    write_fit_result_JSON_debug(debug_json_output, "after_2D_refine", input->number_of_bins_in_1d_spectra, input->rotational_average_astig, input->rotational_average_astig_fit, nullptr);
-
-    debug_json_output["thickness_estimates"]["after_2D_refine"] = cg_starting_point[3] * input->pixel_size_for_fitting;
+    if ( input->debug ) {
+        write_fit_result_JSON_debug(debug_json_output, "after_2D_refine", input->number_of_bins_in_1d_spectra, input->rotational_average_astig, input->rotational_average_astig_fit, nullptr);
+        debug_json_output["thickness_estimates"]["after_2D_refine"] = cg_starting_point[3] * input->pixel_size_for_fitting;
+    }
+    delete conjugate_gradient_minimizer;
 }
 
 void recalculate_1D_spectra(CTFNodeFitInput* input, double* rotational_average_astig_renormalized, float* number_of_extrema_profile, wxJSONValue debug_json_output) {
@@ -144,6 +147,9 @@ int calculate_new_frc(CTFNodeFitInput* input, double* rotational_average_astig_r
     int          number_of_bins_above_high_threshold         = 0;
     int          first_bin_to_check                          = 0.1 * input->number_of_bins_in_1d_spectra;
     int          counter;
+    float        sq_spatial_frequency;
+
+    MyDebugPrint("Startign FRC calc");
 
     int first_fit_bin = 0;
     for ( int bin_counter = input->number_of_bins_in_1d_spectra - 1; bin_counter >= 0; bin_counter-- ) {
@@ -154,6 +160,52 @@ int calculate_new_frc(CTFNodeFitInput* input, double* rotational_average_astig_r
     MyDebugAssertTrue(first_bin_to_check >= 0 && first_bin_to_check < input->number_of_bins_in_1d_spectra, "Bad first bin to check\n");
     //wxPrintf("Will only check from bin %i of %i onwards\n", first_bin_to_check, number_of_bins_in_1d_spectra);
     last_bin_with_good_fit = -1;
+    // Set FRC to 1.0 in the nodes where there is not modulation
+    double prev_value;
+    double after_value;
+    bool   in_node     = false;
+    bool   out_of_node = false;
+    if ( false ) {
+        for ( counter = first_bin_to_check; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
+            sq_spatial_frequency = powf(input->spatial_frequency[counter], 2);
+            if ( fabsf(input->current_ctf->IntegratedDefocusModulation(sq_spatial_frequency)) < 0.1 ) {
+                prev_value = input->fit_frc[counter - 1];
+                in_node    = true;
+                // Go ahead until we are out of the node to figure out the value after the node
+                out_of_node     = false;
+                int start_count = counter;
+                int end_count;
+                for ( int node_counter = counter; node_counter < input->number_of_bins_in_1d_spectra; node_counter++ ) {
+                    sq_spatial_frequency = powf(input->spatial_frequency[node_counter], 2);
+                    if ( fabsf(input->current_ctf->IntegratedDefocusModulation(sq_spatial_frequency)) >= 0.1 ) {
+                        after_value = input->fit_frc[node_counter];
+                        out_of_node = true;
+                        end_count   = counter - start_count;
+                        break;
+                    }
+                }
+                // Now interpolate between the values before and after the node or
+                // set to 0 if we are at the end of the spectrum
+
+                for ( ; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
+                    sq_spatial_frequency = powf(input->spatial_frequency[counter], 2);
+                    if ( ! out_of_node ) {
+                        input->fit_frc[counter] = 0.0;
+                    }
+                    else {
+                        input->fit_frc[counter] = prev_value + (after_value - prev_value) * (counter - start_count) / (end_count);
+                    }
+                    if ( fabsf(input->current_ctf->IntegratedDefocusModulation(sq_spatial_frequency)) >= 0.1 ) {
+
+                        break;
+                    }
+                }
+
+                input->fit_frc[counter] = 1.0;
+            }
+        }
+    }
+
     for ( counter = first_bin_to_check; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
         //wxPrintf("On bin %i, fit_frc = %f, rot averate astig = %f\n", counter, fit_frc[counter], rotational_average_astig[counter]);
         at_last_bin_with_good_fit = ((number_of_bins_above_low_threshold > 3) && (input->fit_frc[counter] < low_threshold)) ||
@@ -176,6 +228,7 @@ int calculate_new_frc(CTFNodeFitInput* input, double* rotational_average_astig_r
     if ( number_of_bins_above_significance_threshold == 0 )
         last_bin_with_good_fit = 1;
     last_bin_with_good_fit = std::min(last_bin_with_good_fit, input->number_of_bins_in_1d_spectra);
+    MyDebugPrint(" Done!\n");
     return last_bin_with_good_fit;
 }
 
@@ -184,11 +237,11 @@ CTFNodeFitOuput fit_thickness_nodes(CTFNodeFitInput* input) {
     wxJSONValue debug_json_output;
 
     float first_thickness_estimate = input->current_ctf->ThicknessWhereIntegrateDefocusModulationIsZero(powf(input->spatial_frequency[input->last_bin_with_good_fit], 2.0));
-
-    debug_json_output["thickness_estimates"]            = wxJSONValue(wxJSONTYPE_OBJECT);
-    debug_json_output["thickness_estimates"]["initial"] = first_thickness_estimate * input->pixel_size_for_fitting;
-    write_fit_result_JSON_debug(debug_json_output, "initial_fit", input->number_of_bins_in_1d_spectra, input->rotational_average_astig, input->rotational_average_astig_fit, input->spatial_frequency);
-
+    if ( input->debug ) {
+        debug_json_output["thickness_estimates"]            = wxJSONValue(wxJSONTYPE_OBJECT);
+        debug_json_output["thickness_estimates"]["initial"] = first_thickness_estimate * input->pixel_size_for_fitting;
+        write_fit_result_JSON_debug(debug_json_output, "initial_fit", input->number_of_bins_in_1d_spectra, input->rotational_average_astig, input->rotational_average_astig_fit, input->spatial_frequency);
+    }
     input->current_ctf->SetSampleThickness(first_thickness_estimate);
     // Recalculate spectra and fit using the initial estimate
     int   counter;
@@ -221,7 +274,8 @@ CTFNodeFitOuput fit_thickness_nodes(CTFNodeFitInput* input) {
     }
 
     // Write the initial fit to the debug JSON object
-    write_fit_result_JSON_debug(debug_json_output, "after_first_estimate", input->number_of_bins_in_1d_spectra, input->rotational_average_astig, input->rotational_average_astig_fit, nullptr);
+    if ( input->debug )
+        write_fit_result_JSON_debug(debug_json_output, "after_first_estimate", input->number_of_bins_in_1d_spectra, input->rotational_average_astig, input->rotational_average_astig_fit, nullptr);
 
     input->current_ctf->SetLowestFrequencyForFitting(1.0 / input->low_resolution_limit * input->pixel_size_for_fitting);
     input->current_ctf->SetHighestFrequencyForFitting(1.0 / input->high_resolution_limit * input->pixel_size_for_fitting);
@@ -235,18 +289,28 @@ CTFNodeFitOuput fit_thickness_nodes(CTFNodeFitInput* input) {
     float*  number_of_extrema_profile             = new float[input->number_of_bins_in_1d_spectra];
     recalculate_1D_spectra(input, rotational_average_astig_renormalized, number_of_extrema_profile, debug_json_output);
     int last_bin_with_good_fit = calculate_new_frc(input, rotational_average_astig_renormalized, number_of_extrema_profile, debug_json_output);
+    MyDebugPrint("Offesting spectrum\n");
     for ( counter = 1; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
         input->rotational_average_astig[counter] -= rotational_average_astig_curve.polynomial_fit[counter];
         input->rotational_average_astig[counter] += 0.5;
     }
-    // Write out the json debug file
-    wxJSONWriter writer;
-    wxString     json_string;
-    writer.Write(debug_json_output, json_string);
-    wxFile debug_file;
-    debug_file.Open("debug.json", wxFile::write);
-    debug_file.Write(json_string);
-    debug_file.Close( );
+
+    if ( input->debug ) {
+        // Write out the json debug file
+        MyDebugPrint("Print out debug");
+        wxJSONWriter writer;
+        wxString     json_string;
+        writer.Write(debug_json_output, json_string);
+        wxFile debug_file;
+        debug_file.Open(input->debug_filename + "thickness.json", wxFile::write);
+        debug_file.Write(json_string);
+        debug_file.Close( );
+    }
     CTFNodeFitOuput output = {last_bin_with_good_fit};
+    MyDebugPrint("Cleaning up\n");
+    delete[] rotational_average_astig_renormalized;
+    MyDebugPrint("Cleaning up2\n");
+    delete[] number_of_extrema_profile;
+    MyDebugPrint("Cleaning up3\n");
     return output;
 }

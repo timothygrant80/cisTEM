@@ -2,7 +2,8 @@
 #include "./ctffind.h"
 
 CTFTilt::CTFTilt(ImageFile& wanted_input_file, float wanted_high_res_limit_ctf_fit, float wanted_high_res_limit_tilt_fit, float wanted_minimum_defocus, float wanted_maximum_defocus,
-                 float wanted_pixel_size, float wanted_acceleration_voltage_in_kV, float wanted_spherical_aberration_in_mm, float wanted_amplitude_contrast, float wanted_additional_phase_shift_in_radians) {
+                 float wanted_pixel_size, float wanted_acceleration_voltage_in_kV, float wanted_spherical_aberration_in_mm, float wanted_amplitude_contrast, float wanted_additional_phase_shift_in_radians,
+                 bool wanted_debug, std::string wanted_debug_json_output_filename) {
     box_size                       = 128;
     n_sections                     = 3;
     n_steps                        = 4;
@@ -85,10 +86,23 @@ CTFTilt::CTFTilt(ImageFile& wanted_input_file, float wanted_high_res_limit_ctf_f
             section_counter++;
         }
     }
+
+    debug                      = wanted_debug;
+    debug_json_output_filename = wanted_debug_json_output_filename;
     //	CalculatePowerSpectra(true);
 }
 
 CTFTilt::~CTFTilt( ) {
+    // Write out the json file
+    if ( debug ) {
+        wxJSONWriter writer;
+        wxString     json_string;
+        writer.Write(debug_json_output, json_string);
+        wxFile debug_file;
+        debug_file.Open(debug_json_output_filename, wxFile::write);
+        debug_file.Write(json_string);
+        debug_file.Close( );
+    }
     delete[] input_image_buffer;
     delete[] resampled_power_spectra;
 }
@@ -273,14 +287,21 @@ float CTFTilt::SearchTiltAxisAndAngle( ) {
     //	if (! power_spectra_calculated) CalculatePowerSpectra();
 
     refine_mode = 1;
-
-    for ( tilt_angle = 0.0f; tilt_angle <= 60.0f; tilt_angle += angle_step ) {
+    if ( debug ) {
+        debug_json_output["tilt_axis_and_angle_search"] = wxJSONValue(wxJSONTYPE_ARRAY);
+    }
+    for ( tilt_angle = 0.0f; tilt_angle <= 80.0f; tilt_angle += angle_step ) {
         for ( tilt_axis = 0.0f; tilt_axis < 360.0f; tilt_axis += axis_step ) {
             start_values[1] = tilt_axis;
             start_values[2] = tilt_angle;
             start_values[3] = average_defocus;
             variance        = -ScoreValues(start_values);
-
+            if ( debug ) {
+                debug_json_output["tilt_axis_and_angle_search"].Append(wxJSONValue(wxJSONTYPE_ARRAY));
+                debug_json_output["tilt_axis_and_angle_search"][debug_json_output["tilt_axis_and_angle_search"].Size( ) - 1].Append(tilt_axis);
+                debug_json_output["tilt_axis_and_angle_search"][debug_json_output["tilt_axis_and_angle_search"].Size( ) - 1].Append(tilt_angle);
+                debug_json_output["tilt_axis_and_angle_search"][debug_json_output["tilt_axis_and_angle_search"].Size( ) - 1].Append(variance);
+            }
             if ( variance > variance_max ) {
                 variance_max    = variance;
                 best_tilt_axis  = tilt_axis;
@@ -410,6 +431,7 @@ float CTFTilt::CalculateTiltCorrectedSpectra(bool resample_if_pixel_too_small, f
     counts_per_pixel.SetToConstant(0.0f);
 
     //	int section_counter = 0;
+    MyDebugPrint("Calculating tilt corrected spectra with image_buffer_counter = %i, n_sec = %i, n_stp = %i\n", image_buffer_counter, n_sec, n_stp);
     for ( image_counter = 0; image_counter < image_buffer_counter; image_counter++ ) {
         //		wxPrintf("working on frame %i\n", image_counter);
         for ( iy = -(n_sec - 1) * n_stp / 2; iy <= (n_sec - 1) * n_stp / 2; iy++ ) {

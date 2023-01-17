@@ -34,8 +34,8 @@ MyFindCTFPanel::MyFindCTFPanel(wxWindow* parent)
     ExpertPanel->SetSize(input_size);
 
     AmplitudeContrastNumericCtrl->SetMinMaxValue(0.0f, 1.0f);
-    MinResNumericCtrl->SetMinMaxValue(0.0f, 50.0f);
-    MaxResNumericCtrl->SetMinMaxValue(0.0f, 50.0f);
+    MinResNumericCtrl->SetMinMaxValue(0.0f, FLT_MAX);
+    MaxResNumericCtrl->SetMinMaxValue(0.0f, FLT_MAX);
     DefocusStepNumericCtrl->SetMinMaxValue(1.0f, FLT_MAX);
     ToleratedAstigmatismNumericCtrl->SetMinMaxValue(0.0f, FLT_MAX);
     MinPhaseShiftNumericCtrl->SetMinMaxValue(-190, 190);

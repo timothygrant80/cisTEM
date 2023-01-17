@@ -127,6 +127,24 @@ class CTF {
         return sinc(PIf * wavelength * squared_spatial_frequency * sample_thickness);
     };
 
+    // This produces a rounded square wave. When used instead of a sinc function
+    // it maintains a power spectrum between 0 and 1 and set values at the nodes
+    // to 0. Factor and exponent control the rounding at the nodes. Both should
+    // be odd numbers.
+    inline float rounded_square(float x, float factor = 5.0f, float exponent = 1.0f) {
+        float sin_x = sin(x);
+        if ( fabs(sin_x) > sin(PIf / (2.f * factor)) ) {
+            return copysignf(1.0, sin_x);
+        }
+        else {
+            return powf(sin(factor * x), exponent);
+        }
+    }
+
+    inline float IntegratedDefocusModulationRoundedSquare(float squared_spatial_frequency) {
+        return rounded_square(PIf * wavelength * squared_spatial_frequency * sample_thickness);
+    };
+
     inline float ThicknessWhereIntegrateDefocusModulationIsZero(float squared_spatial_frequency) {
         return 1.0 / (wavelength * squared_spatial_frequency);
     };
@@ -176,3 +194,4 @@ class CTF {
     float ReturnPhaseAberrationMaximum( );
     float ReturnPhaseAberrationMaximumGivenDefocus(float defocus);
 };
+

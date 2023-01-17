@@ -428,8 +428,12 @@ float CTF::Evaluate(float squared_spatial_frequency, float azimuth) {
 // Formulas according to "TEM bright field imaging of thick specimens: nodes in
 // Thon ring patterns" by Tichelaar, et.al. who got it from McMullan et al. (2015)
 
-float CTF::EvaluatePowerspectrumWithThickness(float squared_spatial_frequency, float azimuth) {
+float CTF::EvaluatePowerspectrumWithThickness(float squared_spatial_frequency, float azimuth, bool use_rounded_square) {
     float phase_aberration = PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency, azimuth);
+    if ( use_rounded_square ) {
+        return 0.5f * (1 - IntegratedDefocusModulationRoundedSquare(squared_spatial_frequency) * cosf(2 * phase_aberration));
+    }
+
     return 0.5f * (1 - IntegratedDefocusModulation(squared_spatial_frequency) * cosf(2 * phase_aberration));
 }
 

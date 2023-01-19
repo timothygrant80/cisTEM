@@ -110,7 +110,7 @@ class CTF {
     //
     std::complex<float> EvaluateComplex(float squared_spatial_frequency, float azimuth);
     float               Evaluate(float squared_spatial_frequency, float azimuth);
-    float               EvaluatePowerspectrumWithThickness(float squared_spatial_frequency, float azimuth);
+    float               EvaluatePowerspectrumWithThickness(float squared_spatial_frequency, float azimuth, bool use_rounded_square = true);
 
     float               EvaluateWithEnvelope(float squared_spatial_frequency, float azimuth);
     float               PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(float squared_spatial_frequency, float azimuth);
@@ -141,8 +141,8 @@ class CTF {
         }
     }
 
-    inline float IntegratedDefocusModulationRoundedSquare(float squared_spatial_frequency) {
-        return rounded_square(PIf * wavelength * squared_spatial_frequency * sample_thickness);
+    inline float IntegratedDefocusModulationRoundedSquare(float squared_spatial_frequency, float factor = 5.0f, float exponent = 1.0f) {
+        return rounded_square(PIf * wavelength * squared_spatial_frequency * sample_thickness, factor, exponent);
     };
 
     inline float ThicknessWhereIntegrateDefocusModulationIsZero(float squared_spatial_frequency) {
@@ -194,4 +194,3 @@ class CTF {
     float ReturnPhaseAberrationMaximum( );
     float ReturnPhaseAberrationMaximumGivenDefocus(float defocus);
 };
-

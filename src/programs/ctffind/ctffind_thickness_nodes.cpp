@@ -288,6 +288,13 @@ CTFNodeFitOuput fit_thickness_nodes(CTFNodeFitInput* input) {
     double* rotational_average_astig_renormalized = new double[input->number_of_bins_in_1d_spectra];
     float*  number_of_extrema_profile             = new float[input->number_of_bins_in_1d_spectra];
     recalculate_1D_spectra(input, rotational_average_astig_renormalized, number_of_extrema_profile, debug_json_output);
+    if ( input->debug ) {
+        debug_json_output["frc"]                          = wxJSONValue(wxJSONTYPE_OBJECT);
+        debug_json_output["frc"]["renormalized_spectrum"] = wxJSONValue(wxJSONTYPE_ARRAY);
+        for ( int counter = 0; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
+            debug_json_output["frc"]["renormalized_spectrum"].Append(rotational_average_astig_renormalized[counter]);
+        }
+    }
     int last_bin_with_good_fit = calculate_new_frc(input, rotational_average_astig_renormalized, number_of_extrema_profile, debug_json_output);
     MyDebugPrint("Offesting spectrum\n");
     for ( counter = 1; counter < input->number_of_bins_in_1d_spectra; counter++ ) {

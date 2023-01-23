@@ -9556,6 +9556,23 @@ FindCTFPanel::FindCTFPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos,
 
 	fgSizer1->Add( bSizer1231, 1, wxEXPAND, 5 );
 
+	ResampleStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Resample Pixel Size (Å)"), wxDefaultPosition, wxDefaultSize, 0 );
+	ResampleStaticText->Wrap( -1 );
+	fgSizer1->Add( ResampleStaticText, 0, wxALL, 5 );
+
+	wxBoxSizer* bSizer12311;
+	bSizer12311 = new wxBoxSizer( wxHORIZONTAL );
+
+	ResamplePixelSizeCheckBox = new wxCheckBox( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	ResamplePixelSizeCheckBox->SetValue(true);
+	bSizer12311->Add( ResamplePixelSizeCheckBox, 0, wxALL, 5 );
+
+	ResamplePixelSizeNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("1.4"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	bSizer12311->Add( ResamplePixelSizeNumericCtrl, 1, wxALL, 5 );
+
+
+	fgSizer1->Add( bSizer12311, 1, wxEXPAND, 5 );
+
 	m_staticText201 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Search Limits"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText201->Wrap( -1 );
 	m_staticText201->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxEmptyString ) );

@@ -573,7 +573,7 @@ void CtffindApp::DoInteractiveUserInput( ) {
     }
 
     //	my_current_job.Reset(39);
-    my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbsbfffbfffbiiibbbff", input_filename.c_str( ), //1
+    my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbsbfffbfffbiiibbbfff", input_filename.c_str( ), //1
                                       input_is_a_movie,
                                       number_of_frames_to_average,
                                       output_diagnostic_filename.c_str( ),
@@ -617,7 +617,8 @@ void CtffindApp::DoInteractiveUserInput( ) {
                                       false,
                                       false,
                                       10.0,
-                                      3.0);
+                                      3.0,
+                                      1.4);
 }
 
 // Optional command-line stuff
@@ -685,6 +686,7 @@ bool CtffindApp::DoCalculation( ) {
     bool              fit_nodes_2D_refine                = my_current_job.arguments[42].ReturnBoolArgument( );
     float             fit_nodes_low_resolution_limit     = my_current_job.arguments[43].ReturnFloatArgument( );
     float             fit_nodes_high_resolution_limit    = my_current_job.arguments[44].ReturnFloatArgument( );
+    float             target_pixel_size_after_resampling = my_current_job.arguments[45].ReturnFloatArgument( );
     // if we are applying a mag distortion, it can change the pixel size, so do that here to make sure it is used forever onwards..
 
     if ( input_is_a_movie && correct_movie_mag_distortion ) {
@@ -704,10 +706,13 @@ bool CtffindApp::DoCalculation( ) {
     }
 
     // Resampling of input images to ensure that the pixel size isn't too small
-    const float target_nyquist_after_resampling    = 2.8; // Angstroms
-    const float target_pixel_size_after_resampling = 0.5 * target_nyquist_after_resampling;
-    float       pixel_size_for_fitting             = pixel_size_of_input_image;
-    int         temporary_box_size;
+    if ( target_pixel_size_after_resampling <= 0.0 ) {
+        target_pixel_size_after_resampling = 1.4f;
+    }
+    const float target_nyquist_after_resampling = 2 * target_pixel_size_after_resampling; // Angstroms
+    // const float target_pixel_size_after_resampling = 0.5 * target_nyquist_after_resampling;
+    float pixel_size_for_fitting = pixel_size_of_input_image;
+    int   temporary_box_size;
 
     // Maybe the user wants to hold the phase shift value (which they can do by giving the same value for min and max)
     const bool fixed_additional_phase_shift = fabs(maximum_additional_phase_shift - minimum_additional_phase_shift) < 0.01;

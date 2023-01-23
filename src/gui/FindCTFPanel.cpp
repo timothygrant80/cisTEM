@@ -552,6 +552,7 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
     float       known_defocus_2;
     float       known_phase_shift;
     bool        resample_if_pixel_too_small;
+    float       resample_pixel_size;
     bool        large_astigmatism_expected;
 
     wxString current_dark_filename;
@@ -645,6 +646,9 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
         fit_nodes_1d      = false;
         fit_nodes_2d      = false;
     }
+
+    resample_if_pixel_too_small                 = ResamplePixelSizeCheckBox->IsChecked( );
+    resample_pixel_size                         = ResamplePixelSizeNumericCtrl->ReturnValue( );
     OneSecondProgressDialog* my_progress_dialog = new OneSecondProgressDialog("Preparing Job", "Preparing Job...", number_of_jobs, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE | wxPD_APP_MODAL);
     current_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection( )], "ctffind", number_of_jobs);
 
@@ -706,14 +710,14 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
         output_diagnostic_filename = buffer_filename.ToStdString( );
 
         // These parameters are not presented in the GUI (yet?)
-        astigmatism_is_known        = false;
-        defocus_is_known            = false;
-        known_astigmatism           = 0.0;
-        known_astigmatism_angle     = 0.0;
-        known_defocus_1             = 0.0;
-        known_defocus_2             = 0.0;
-        known_phase_shift           = 0.0;
-        resample_if_pixel_too_small = true;
+        astigmatism_is_known    = false;
+        defocus_is_known        = false;
+        known_astigmatism       = 0.0;
+        known_astigmatism_angle = 0.0;
+        known_defocus_1         = 0.0;
+        known_defocus_2         = 0.0;
+        known_phase_shift       = 0.0;
+        // resample_if_pixel_too_small = true;
 
         if ( input_is_a_movie ) {
             parent_asset_id           = image_asset_panel->ReturnAssetPointer(active_group.members[counter])->parent_id;
@@ -751,7 +755,7 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
 
         const int number_of_threads = 1;
 
-        current_job_package.AddJob("sbisffffifffffbfbfffbffbbsbsbfffbfffbiiibbbff", input_filename.c_str( ), // 0
+        current_job_package.AddJob("sbisffffifffffbfbfffbffbbsbsbfffbfffbiiibbbfff", input_filename.c_str( ), // 0
                                    input_is_a_movie, // 1
                                    number_of_frames_to_average, //2
                                    output_diagnostic_filename.c_str( ), // 3
@@ -795,7 +799,8 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
                                    fit_nodes_1d,
                                    fit_nodes_2d,
                                    fit_nodes_min_res,
-                                   fit_nodes_max_res);
+                                   fit_nodes_max_res,
+                                   resample_pixel_size);
 
         my_progress_dialog->Update(counter + 1);
     }

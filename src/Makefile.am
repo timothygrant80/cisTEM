@@ -23,7 +23,9 @@ noinst_HEADERS = core/asset_group.h \
                  core/particle.h \
                  core/reconstruct_3d.h \
                  core/electron_dose.h \
-                 core/run_profiles.h \
+                 core/run_command.h \
+                 core/run_profile.h \
+                 core/run_profile_manager.h \
                  core/refinement_package.h \
                  core/refinement.h \
                  core/database.h \
@@ -241,7 +243,7 @@ endif
 
 noinst_LIBRARIES = libcore.a libguicore.a
 
-bin_PROGRAMS = unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan make_orth_views sharpen_map calculate_fsc make_size_map prepare_stack prepare_stack_classaverage align_symmetry subtract_from_stack binarize  move_volume_xyz  symmetry_expand_stack_and_par fft local_resolution local_resolution_finalize local_resolution_filter subtract_two_stacks add_two_stacks multiply_two_stacks divide_two_stacks invert_stack convert_par_to_star align_coordinates find_dqe combine_via_max refine_ctf estimate_beamtilt remove_relion_stripes warp_to_cistem create_mask invert_hand niko_test append_stacks cisTEM convert_star_to_binary convert_binary_to_star convert_eer_to_mrc azimuthal_average normalize_stack print_stack_statistics combine_stacks_by_star match_template refine_template make_template_result prepare_stack_matchtemplate
+bin_PROGRAMS = unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan make_orth_views sharpen_map calculate_fsc make_size_map prepare_stack prepare_stack_classaverage align_symmetry subtract_from_stack binarize  move_volume_xyz  symmetry_expand_stack_and_par fft local_resolution local_resolution_finalize local_resolution_filter subtract_two_stacks add_two_stacks multiply_two_stacks divide_two_stacks invert_stack convert_par_to_star align_coordinates find_dqe combine_via_max refine_ctf estimate_beamtilt remove_relion_stripes warp_to_cistem create_mask invert_hand niko_test append_stacks cisTEM gui_test convert_star_to_binary convert_binary_to_star convert_eer_to_mrc azimuthal_average normalize_stack print_stack_statistics combine_stacks_by_star match_template refine_template make_template_result prepare_stack_matchtemplate
 
 if EXPERIMENTAL_AM   
 bin_PROGRAMS += refine_template_dev simulate sum_all_power_spectra
@@ -302,7 +304,9 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/particle.cpp \
                        core/job_packager.cpp \
                        core/job_tracker.cpp \
-                       core/run_profiles.cpp \
+                       core/run_command.cpp \
+                       core/run_profile.cpp \
+                       core/run_profile_manager.cpp \
                        core/myapp.cpp \
                        core/empirical_distribution.cpp \
                        core/ctf.cpp \
@@ -356,6 +360,12 @@ endif
 cisTEM_CXXFLAGS = $(WX_CPPFLAGS)
 cisTEM_CPPFLAGS = $(WX_CPPFLAGS)
 cisTEM_LDADD = libguicore.a libcore.a $(WX_LIBS)
+
+gui_test_SOURCES = programs/gui_test/gui_test.cpp gui/PlotCurvePanel.cpp gui/mathplot.cpp
+
+gui_test_CXXFLAGS = $(WX_CPPFLAGS)
+gui_test_CPPFLAGS = $(WX_CPPFLAGS)
+gui_test_LDADD = libguicore.a libcore.a $(WX_LIBS)
 
 cisTEM_job_control_SOURCES = programs/guix_job_control/guix_job_control.cpp 
 cisTEM_job_control_CXXFLAGS = $(WX_CPPFLAGS_BASE)

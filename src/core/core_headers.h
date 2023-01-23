@@ -30,6 +30,7 @@ typedef struct CurvePoint {
 #define _FILE_OFFSET_BITS 64
 #endif
 
+#include "../constants/constants.h"
 #include <string>
 #include <iostream>
 #include <fstream>
@@ -40,7 +41,6 @@ typedef struct CurvePoint {
 #include <cstdarg>
 #include <cfloat>
 #include <complex>
-const std::complex<float> I(0.0, 1.0);
 #include <iterator>
 #include <utility>
 #include <vector>
@@ -114,7 +114,9 @@ class StackDump : public wxStackWalker // so we can give backtraces..
 #include "socket_codes.h"
 #include "template_matching.h"
 #include "functions.h"
-#include "run_profiles.h"
+#include "run_command.h"
+#include "run_profile.h"
+#include "run_profile_manager.h"
 #include "job_packager.h"
 #include "ctf.h"
 #include "curve.h"

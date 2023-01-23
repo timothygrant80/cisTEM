@@ -525,7 +525,7 @@ class SimulateApp : public MyApp {
     void apply_sqrt_DQE_or_NTF(Image* image_in, int iTilt_IDX, bool do_root_DQE);
 
     inline float return_bfactor(float pdb_bfactor) {
-        return 0.25f * (this->min_bFactor + pdb_bfactor * this->bFactor_scaling);
+        return (this->min_bFactor + pdb_bfactor * this->bFactor_scaling);
     }
 
     inline float return_scattering_potential(corners& R, float* bPlusB, AtomType& atom_id) {

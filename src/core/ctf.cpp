@@ -16,6 +16,7 @@ CTF::CTF( ) {
     particle_shift_x       = 0;
     particle_shift_y       = 0;
     particle_shift         = 0;
+    sample_thickness       = 0;
     particle_shift_azimuth = 0;
     // Fitting parameters
     lowest_frequency_for_fitting    = 0;
@@ -46,9 +47,10 @@ CTF::CTF(float wanted_acceleration_voltage, // keV
          float wanted_beam_tilt_x_in_radians, // rad
          float wanted_beam_tilt_y_in_radians, // rad
          float wanted_particle_shift_x_in_angstroms, // A
-         float wanted_particle_shift_y_in_angstroms) // A
+         float wanted_particle_shift_y_in_angstroms, // A
+         float wanted_sample_thickness_in_nm) // nm
 {
-    Init(wanted_acceleration_voltage, wanted_spherical_aberration, wanted_amplitude_contrast, wanted_defocus_1_in_angstroms, wanted_defocus_2_in_angstroms, wanted_astigmatism_azimuth, wanted_lowest_frequency_for_fitting, wanted_highest_frequency_for_fitting, wanted_astigmatism_tolerance, pixel_size, wanted_additional_phase_shift_in_radians, wanted_beam_tilt_x_in_radians, wanted_beam_tilt_y_in_radians, wanted_particle_shift_x_in_angstroms, wanted_particle_shift_y_in_angstroms);
+    Init(wanted_acceleration_voltage, wanted_spherical_aberration, wanted_amplitude_contrast, wanted_defocus_1_in_angstroms, wanted_defocus_2_in_angstroms, wanted_astigmatism_azimuth, wanted_lowest_frequency_for_fitting, wanted_highest_frequency_for_fitting, wanted_astigmatism_tolerance, pixel_size, wanted_additional_phase_shift_in_radians, wanted_beam_tilt_x_in_radians, wanted_beam_tilt_y_in_radians, wanted_particle_shift_x_in_angstroms, wanted_particle_shift_y_in_angstroms, wanted_sample_thickness_in_nm);
 }
 
 CTF::CTF(float wanted_acceleration_voltage, // keV
@@ -62,9 +64,10 @@ CTF::CTF(float wanted_acceleration_voltage, // keV
          float wanted_beam_tilt_x_in_radians, // rad
          float wanted_beam_tilt_y_in_radians, // rad
          float wanted_particle_shift_x_in_angstroms, // A
-         float wanted_particle_shift_y_in_angstroms) // A
+         float wanted_particle_shift_y_in_angstroms, // A
+         float wanted_samples_thickness_in_nm) // nm
 {
-    Init(wanted_acceleration_voltage, wanted_spherical_aberration, wanted_amplitude_contrast, wanted_defocus_1_in_angstroms, wanted_defocus_2_in_angstroms, wanted_astigmatism_azimuth, 0.0, 1.0 / (2.0 * pixel_size), -10.0, pixel_size, wanted_additional_phase_shift_in_radians, wanted_beam_tilt_x_in_radians, wanted_beam_tilt_y_in_radians, wanted_particle_shift_x_in_angstroms, wanted_particle_shift_y_in_angstroms);
+    Init(wanted_acceleration_voltage, wanted_spherical_aberration, wanted_amplitude_contrast, wanted_defocus_1_in_angstroms, wanted_defocus_2_in_angstroms, wanted_astigmatism_azimuth, 0.0, 1.0 / (2.0 * pixel_size), -10.0, pixel_size, wanted_additional_phase_shift_in_radians, wanted_beam_tilt_x_in_radians, wanted_beam_tilt_y_in_radians, wanted_particle_shift_x_in_angstroms, wanted_particle_shift_y_in_angstroms, wanted_samples_thickness_in_nm);
 }
 
 CTF::~CTF( ) {
@@ -78,9 +81,10 @@ void CTF::Init(float wanted_acceleration_voltage_in_kV, // keV
                float wanted_defocus_2_in_angstroms, // A
                float wanted_astigmatism_azimuth_in_degrees, // degrees
                float pixel_size_in_angstroms, // A
-               float wanted_additional_phase_shift_in_radians) // rad
+               float wanted_additional_phase_shift_in_radians, // rad
+               float wanted_sample_thickness_in_nm) // nm
 {
-    Init(wanted_acceleration_voltage_in_kV, wanted_spherical_aberration_in_mm, wanted_amplitude_contrast, wanted_defocus_1_in_angstroms, wanted_defocus_2_in_angstroms, wanted_astigmatism_azimuth_in_degrees, 0.0, 1.0 / (2.0 * pixel_size_in_angstroms), -10.0, pixel_size_in_angstroms, wanted_additional_phase_shift_in_radians, 0.0f, 0.0f, 0.0f, 0.0f);
+    Init(wanted_acceleration_voltage_in_kV, wanted_spherical_aberration_in_mm, wanted_amplitude_contrast, wanted_defocus_1_in_angstroms, wanted_defocus_2_in_angstroms, wanted_astigmatism_azimuth_in_degrees, 0.0, 1.0 / (2.0 * pixel_size_in_angstroms), -10.0, pixel_size_in_angstroms, wanted_additional_phase_shift_in_radians, 0.0f, 0.0f, 0.0f, 0.0f, wanted_sample_thickness_in_nm);
 }
 
 // Initialise a CTF object
@@ -98,7 +102,8 @@ void CTF::Init(float wanted_acceleration_voltage_in_kV, // keV
                float wanted_beam_tilt_x_in_radians, // rad
                float wanted_beam_tilt_y_in_radians, // rad
                float wanted_particle_shift_x_in_angstroms, // A
-               float wanted_particle_shift_y_in_angstroms) // A
+               float wanted_particle_shift_y_in_angstroms, // A
+               float wanted_sample_thickness_in_nm) // nm
 {
     wavelength                    = WavelengthGivenAccelerationVoltage(wanted_acceleration_voltage_in_kV) / pixel_size_in_angstroms;
     squared_wavelength            = powf(wavelength, 2);
@@ -112,6 +117,7 @@ void CTF::Init(float wanted_acceleration_voltage_in_kV, // keV
     lowest_frequency_for_fitting  = wanted_lowest_frequency_for_fitting_in_reciprocal_angstroms * pixel_size_in_angstroms;
     highest_frequency_for_fitting = wanted_highest_frequency_for_fitting_in_reciprocal_angstroms * pixel_size_in_angstroms;
     astigmatism_tolerance         = wanted_astigmatism_tolerance_in_angstroms / pixel_size_in_angstroms;
+    sample_thickness              = wanted_sample_thickness_in_nm * 10.0 / pixel_size_in_angstroms;
 
     // gcc catches the zero division somehow, but intel returns a nan. Needed for handling the real and complex terms of the CTF separately.
     if ( fabs(amplitude_contrast - 1.0) < 1e-3 )
@@ -378,6 +384,10 @@ void CTF::SetLowResolutionContrast(float wanted_low_resolution_contrast) {
     low_resolution_contrast = asin(wanted_low_resolution_contrast);
 }
 
+void CTF::SetSampleThickness(float wanted_sample_thickness_in_pixels) {
+    sample_thickness = wanted_sample_thickness_in_pixels;
+}
+
 // Return the value of the CTF at the given squared spatial frequency and azimuth
 std::complex<float> CTF::EvaluateComplex(float squared_spatial_frequency, float azimuth) {
     float phase_aberration = PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency, azimuth);
@@ -408,6 +418,15 @@ float CTF::Evaluate(float squared_spatial_frequency, float azimuth) {
                 return -sinf(phase_shift + low_resolution_contrast * (threshold - phase_shift) / threshold);
         }
     }
+}
+
+// Return the value of the powerspectrum at the given squared spatial frequency and azimuth taken into account the sample thickness
+// Formulas according to "TEM bright field imaging of thick specimens: nodes in
+// Thon ring patterns" by Tichelaar, et.al. who got it from McMullan et al. (2015)
+
+float CTF::EvaluatePowerspectrumWithThickness(float squared_spatial_frequency, float azimuth) {
+    float phase_aberration = PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency, azimuth);
+    return 0.5f * (1 - IntegratedDefocusModulation(squared_spatial_frequency) * cosf(2 * phase_aberration));
 }
 
 // Return the value of the CTF at the given squared spatial frequency and azimuth

@@ -287,6 +287,10 @@ class Image {
         return (logical_x_dimension == logical_y_dimension);
     }
 
+    inline bool IsSquareOrCubic( ) {
+        return (logical_x_dimension == logical_y_dimension && (logical_z_dimension > 1) ? (logical_y_dimension == logical_z_dimension) : true);
+    }
+
     inline void ReturnCosineMaskBandpassResolution(float pixel_size_in_angstrom, float& wanted_cutoff_in_angstrom, float& wanted_falloff_in_number_of_fourier_space_voxels) {
         // For example, if you want a cutoff at 2 Angstrom res, with a 14 pixel fall off, and your image is at 1.2 apix, inputs will be 1.2, 2, 14
         // output in the last two args will be the mask_outer_radius, and mask_edge that are passed to CosineRingMask.
@@ -406,6 +410,7 @@ class Image {
     void  AddImage(Image* other_image);
     void  SubtractImage(Image* other_image);
     void  SubtractSquaredImage(Image* other_image);
+    float CalculateBFactor(float pixel_size, float low_resolution = 10.f, float high_resolution = 4.0f);
     void  ApplyBFactor(float bfactor);
     void  ApplyBFactorAndWhiten(Curve& power_spectrum, float bfactor_low, float bfactor_high, float bfactor_res_limit);
     void  CalculateDerivative(float direction_in_x = 0.0f, float direction_in_y = 0.0f, float direction_in_z = 0.0f);

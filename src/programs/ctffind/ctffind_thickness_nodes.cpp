@@ -20,6 +20,83 @@ void write_fit_result_JSON_debug(wxJSONValue& debug_json_output, char* name, int
     }
 }
 
+float CtffindNodesObjectiveFunction(void* scoring_parameters, float array_of_values[]) {
+    ImageCTFComparison* comparison_object = reinterpret_cast<ImageCTFComparison*>(scoring_parameters);
+
+    MyDebugAssertFalse(std::isnan(array_of_values[0]), "DF1 is NaN!");
+    MyDebugAssertFalse(std::isnan(array_of_values[1]), "DF2 is NaN!");
+
+    CTF my_ctf = comparison_object->ReturnCTF( );
+    if ( comparison_object->AstigmatismIsKnown( ) ) {
+        MyDebugAssertTrue(comparison_object->ReturnKnownAstigmatism( ) >= 0.0, "Known asitgmatism must be >= 0.0");
+        my_ctf.SetDefocus(array_of_values[0], array_of_values[0] - comparison_object->ReturnKnownAstigmatism( ), comparison_object->ReturnKnownAstigmatismAngle( ));
+    }
+    else {
+        my_ctf.SetDefocus(array_of_values[0], array_of_values[1], array_of_values[2]);
+    }
+    if ( array_of_values[3] < 500.0f ) {
+        array_of_values[3] = 500.0f;
+    }
+    my_ctf.SetSampleThickness(array_of_values[3]);
+
+    // Evaluate the function
+    float score;
+    if ( my_ctf.GetDefocus1( ) == 0.0f && my_ctf.GetDefocus2( ) == 0.0f && my_ctf.GetSphericalAberration( ) == 0.0f ) {
+        // When defocus = 0.0 and cs = 0.0, CTF is constant and the scoring function breaks down
+        score = 0.0;
+    }
+    else {
+        float weights[comparison_object->number_to_correlate];
+        int   adress = 0;
+        float squared_spatial_frequency;
+        for ( int i = 0; i < comparison_object->number_to_correlate; i++ ) {
+            weights[i] = 1.0f;
+            //weights[i] = my_ctf.IntegratedDefocusModulationRoundedSquare(comparison_object->spatial_frequency_squared[i]);
+        }
+        /*  float     weights[comparison_object->number_to_correlate];
+        int       number_to_correlate      = 0;
+        const int central_cross_half_width = 10;
+        int       i, j;
+        float     i_logi, j_logi;
+        float     i_logi_sq, j_logi_sq;
+        int       address          = 0;
+        int       number_of_values = 0;
+        for ( int j = 0; j < comparison_object->img->logical_y_dimension; j++ ) {
+            if ( j < comparison_object->img->physical_address_of_box_center_y - central_cross_half_width || j > comparison_object->img->physical_address_of_box_center_y + central_cross_half_width ) {
+                address   = j * (comparison_object->img->padding_jump_value + 2 * comparison_object->img->physical_address_of_box_center_x);
+                j_logi    = float(j - comparison_object->img->physical_address_of_box_center_y) * comparison_object->img->inverse_logical_y_dimension;
+                j_logi_sq = powf(j_logi, 2);
+                for ( int i = 0; i < comparison_object->img->physical_address_of_box_center_x - central_cross_half_width; i++ ) {
+                    i_logi    = float(i - comparison_object->img->physical_address_of_box_center_x) * inverse_logical_x_dimension;
+                    i_logi_sq = powf(i_logi, 2);
+
+                    // Where are we?
+                    current_spatial_frequency_squared = j_logi_sq + i_logi_sq;
+
+                    if ( current_spatial_frequency_squared > lowest_freq && current_spatial_frequency_squared < highest_freq ) {
+                        current_azimuth = atan2f(j_logi, i_logi);
+                        if ( addresses ) {
+
+                            image_sum -= real_values[address + i];
+                        }
+                        number_of_values++;
+                    } // end of test whether within min,max frequency range
+                }
+            }
+        } */
+        if ( comparison_object->number_to_correlate ) {
+            score = -comparison_object->img[0].QuickCorrelationWithCTFThickness(my_ctf, comparison_object->number_to_correlate, comparison_object->norm_image, comparison_object->image_mean, comparison_object->addresses, comparison_object->spatial_frequency_squared, comparison_object->azimuths, weights);
+        }
+        else {
+            score = -comparison_object->img[0].GetCorrelationWithCTF(my_ctf);
+        }
+    }
+
+    MyDebugPrint("(CtffindObjectiveFunction) D1 = %6.2f pxl D2 = %6.2f pxl, PhaseShift = %6.3f rad, Ast = %5.2f rad, Low freq = %f 1/pxl, High freq = %f 1/pxl, Thickness = %f pxl,  Score = %g\n", my_ctf.GetDefocus1( ), my_ctf.GetDefocus2( ), my_ctf.GetAdditionalPhaseShift( ), my_ctf.GetAstigmatismAzimuth( ), my_ctf.GetLowestFrequencyForFitting( ), my_ctf.GetHighestFrequencyForFitting( ), my_ctf.GetSampleThickness( ), score);
+    MyDebugAssertFalse(std::isnan(score), "Score is NaN!");
+    return score;
+}
+
 void do_1D_bruteforce(CTFNodeFitInput* input, wxJSONValue& debug_json_output) {
     int   counter;
     float current_sq_sf;
@@ -86,7 +163,7 @@ void do_2D_refinement(CTFNodeFitInput* input, wxJSONValue& debug_json_output) {
     input->comparison_object_2D->SetFitWithThicknessNodes(true);
     input->comparison_object_2D->SetupQuickCorrelation( );
     ConjugateGradient* conjugate_gradient_minimizer = new ConjugateGradient( );
-    conjugate_gradient_minimizer->Init(&CtffindObjectiveFunction, input->comparison_object_2D, number_of_search_dimensions, cg_starting_point, cg_accuracy);
+    conjugate_gradient_minimizer->Init(&CtffindNodesObjectiveFunction, input->comparison_object_2D, number_of_search_dimensions, cg_starting_point, cg_accuracy);
 
     conjugate_gradient_minimizer->Run( );
 
@@ -121,7 +198,9 @@ void recalculate_1D_spectra(CTFNodeFitInput* input, double* rotational_average_a
         float defocus_for_1d_plots         = input->current_ctf->DefocusGivenAzimuth(azimuth_for_1d_plots);
         float sq_sf_of_phase_shift_maximum = input->current_ctf->ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(defocus_for_1d_plots);
         //float* number_of_extrema_profile    = new float[input->number_of_bins_in_1d_spectra];
-
+        int number_of_extrema = 0;
+        int prev_slope        = 0;
+        int slope;
         for ( counter = 1; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
             current_sq_sf = powf(input->spatial_frequency[counter], 2);
             if ( current_sq_sf <= sq_sf_of_phase_shift_maximum ) {
@@ -131,8 +210,114 @@ void recalculate_1D_spectra(CTFNodeFitInput* input, double* rotational_average_a
                 input->rotational_average_astig[counter] = input->equiphase_average_post_max.ReturnLinearInterpolationFromX(input->current_ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(current_sq_sf, defocus_for_1d_plots));
             }
             rotational_average_astig_renormalized[counter] = input->rotational_average_astig[counter];
+            slope                                          = (input->rotational_average_astig_fit[counter] > input->rotational_average_astig_fit[counter - 1]) ? 1 : -1;
+            // Add extrema when rising slope changes to falling slope
+            if ( slope - prev_slope == -2 ) {
+                number_of_extrema++;
+            }
+            prev_slope                         = slope;
+            number_of_extrema_profile[counter] = number_of_extrema;
         }
+        number_of_extrema_profile[0] = 0;
         Renormalize1DSpectrumForFRC(input->number_of_bins_in_1d_spectra, rotational_average_astig_renormalized, input->rotational_average_astig_fit, number_of_extrema_profile);
+        // I should sqrt rotational_average_astig_renormalized to amke it look
+        // like the abs and not the power of 2
+        for ( counter = 0; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
+            input->rotational_average_astig_fit[counter] = sqrt(input->rotational_average_astig_fit[counter]);
+        }
+    }
+}
+
+void ComputeFRCBetween1DSpectrumAndFitNodes(int number_of_bins, double average[], double fit[], float number_of_extrema_profile[], double frc[], double frc_sigma[], int first_fit_bin) {
+
+    MyDebugAssertTrue(first_fit_bin >= 0, "Bad first fit bin on entry: %i", first_fit_bin);
+
+    int    bin_counter;
+    int    half_window_width[number_of_bins];
+    int    bin_of_previous_extremum;
+    int    i;
+    int    first_bin, last_bin;
+    double spectrum_mean, fit_mean;
+    double spectrum_sigma, fit_sigma;
+    double cross_product;
+    float  number_of_bins_in_window;
+
+    const int minimum_window_half_width = number_of_bins / 40;
+
+    // First, work out the size of the window over which we'll compute the FRC value
+    bin_of_previous_extremum = 0;
+    for ( bin_counter = 1; bin_counter < number_of_bins; bin_counter++ ) {
+        if ( number_of_extrema_profile[bin_counter] != number_of_extrema_profile[bin_counter - 1] ) {
+            for ( i = bin_of_previous_extremum; i < bin_counter; i++ ) {
+                half_window_width[i] = std::max(minimum_window_half_width, int((1.0 + 0.1 * float(number_of_extrema_profile[bin_counter])) * float(bin_counter - bin_of_previous_extremum + 1)));
+                half_window_width[i] = std::min(half_window_width[i], number_of_bins / 2 - 1);
+                MyDebugAssertTrue(half_window_width[i] < number_of_bins / 2, "Bad half window width: %i. Number of bins: %i\n", half_window_width[i], number_of_bins);
+            }
+            bin_of_previous_extremum = bin_counter;
+        }
+    }
+    half_window_width[0] = half_window_width[1];
+    for ( bin_counter = bin_of_previous_extremum; bin_counter < number_of_bins; bin_counter++ ) {
+        half_window_width[bin_counter] = half_window_width[bin_of_previous_extremum - 1];
+    }
+    // Dirty hack. We just increase the window where FRC gets computed to make
+    // it more robust in the nodes where noise domintaes
+    for ( bin_counter = 0; bin_counter < number_of_bins; bin_counter++ ) {
+        half_window_width[bin_counter] *= 1.5;
+    }
+
+    // Now compute the FRC for each bin
+    for ( bin_counter = 0; bin_counter < number_of_bins; bin_counter++ ) {
+        if ( bin_counter < first_fit_bin ) {
+            frc[bin_counter]       = 1.0;
+            frc_sigma[bin_counter] = 0.0;
+        }
+        else {
+            spectrum_mean  = 0.0;
+            fit_mean       = 0.0;
+            spectrum_sigma = 0.0;
+            fit_sigma      = 0.0;
+            cross_product  = 0.0;
+            // Work out the boundaries
+            first_bin = bin_counter - half_window_width[bin_counter];
+            last_bin  = bin_counter + half_window_width[bin_counter];
+            if ( first_bin < first_fit_bin ) {
+                first_bin = first_fit_bin;
+                last_bin  = first_bin + 2 * half_window_width[bin_counter] + 1;
+            }
+            if ( last_bin >= number_of_bins ) {
+                last_bin  = number_of_bins - 1;
+                first_bin = last_bin - 2 * half_window_width[bin_counter] - 1;
+            }
+            MyDebugAssertTrue(first_bin >= 0 && first_bin < number_of_bins, "Bad first_bin: %i", first_bin);
+            MyDebugAssertTrue(last_bin >= 0 && last_bin < number_of_bins, "Bad last_bin: %i", last_bin);
+            // First pass
+            for ( i = first_bin; i <= last_bin; i++ ) {
+                spectrum_mean += average[i];
+                fit_mean += fit[i];
+            }
+            number_of_bins_in_window = float(2 * half_window_width[bin_counter] + 1);
+            //wxPrintf("bin %03i, number of extrema: %f, number of bins in window: %f , spectrum_sum = %f\n", bin_counter, number_of_extrema_profile[bin_counter], number_of_bins_in_window,spectrum_mean);
+            spectrum_mean /= number_of_bins_in_window;
+            fit_mean /= number_of_bins_in_window;
+            // Second pass
+            for ( i = first_bin; i <= last_bin; i++ ) {
+                cross_product += (average[i] - spectrum_mean) * (fit[i] - fit_mean);
+                spectrum_sigma += pow(average[i] - spectrum_mean, 2);
+                fit_sigma += pow(fit[i] - fit_mean, 2);
+            }
+            //MyDebugAssertTrue(spectrum_sigma > 0.0 && spectrum_sigma < 10000.0, "Bad spectrum_sigma: %f\n", spectrum_sigma);
+            //MyDebugAssertTrue(fit_sigma > 0.0 && fit_sigma < 10000.0, "Bad fit sigma: %f\n", fit_sigma);
+            if ( spectrum_sigma > 0.0 && fit_sigma > 0.0 ) {
+                frc[bin_counter] = cross_product / (sqrtf(spectrum_sigma / number_of_bins_in_window) * sqrtf(fit_sigma / number_of_bins_in_window)) / number_of_bins_in_window;
+            }
+            else {
+                frc[bin_counter] = 0.0;
+            }
+            frc_sigma[bin_counter] = 2.0 / sqrtf(number_of_bins_in_window);
+        }
+        //wxPrintf("First fit bin: %i\n", first_fit_bin);
+        MyDebugAssertTrue(frc[bin_counter] > -1.01 && frc[bin_counter] < 1.01, "Bad FRC value: %f", frc[bin_counter]);
     }
 }
 
@@ -156,7 +341,7 @@ int calculate_new_frc(CTFNodeFitInput* input, double* rotational_average_astig_r
         if ( input->spatial_frequency[bin_counter] >= input->current_ctf->GetLowestFrequencyForFitting( ) )
             first_fit_bin = bin_counter;
     }
-    ComputeFRCBetween1DSpectrumAndFit(input->number_of_bins_in_1d_spectra, rotational_average_astig_renormalized, input->rotational_average_astig_fit, number_of_extrema_profile, input->fit_frc, input->fit_frc_sigma, first_fit_bin);
+    ComputeFRCBetween1DSpectrumAndFitNodes(input->number_of_bins_in_1d_spectra, rotational_average_astig_renormalized, input->rotational_average_astig_fit, number_of_extrema_profile, input->fit_frc, input->fit_frc_sigma, first_fit_bin);
     MyDebugAssertTrue(first_bin_to_check >= 0 && first_bin_to_check < input->number_of_bins_in_1d_spectra, "Bad first bin to check\n");
     //wxPrintf("Will only check from bin %i of %i onwards\n", first_bin_to_check, number_of_bins_in_1d_spectra);
     last_bin_with_good_fit = -1;
@@ -293,6 +478,13 @@ CTFNodeFitOuput fit_thickness_nodes(CTFNodeFitInput* input) {
         debug_json_output["frc"]["renormalized_spectrum"] = wxJSONValue(wxJSONTYPE_ARRAY);
         for ( int counter = 0; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
             debug_json_output["frc"]["renormalized_spectrum"].Append(rotational_average_astig_renormalized[counter]);
+        }
+        for ( int counter = 0; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
+            debug_json_output["frc"]["fit"].Append(input->rotational_average_astig_fit[counter]);
+        }
+        debug_json_output["frc"]["number_of_extrema_profile"] = wxJSONValue(wxJSONTYPE_ARRAY);
+        for ( int counter = 0; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
+            debug_json_output["frc"]["number_of_extrema_profile"].Append(number_of_extrema_profile[counter]);
         }
     }
     int last_bin_with_good_fit = calculate_new_frc(input, rotational_average_astig_renormalized, number_of_extrema_profile, debug_json_output);

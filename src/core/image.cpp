@@ -6089,7 +6089,7 @@ float Image::QuickCorrelationWithCTF(CTF ctf, int number_of_values, double norm_
     return (cross_product - image_mean * ctf_sum) / sqrt(norm_image * (norm_ctf - ctf_sum * ctf_sum / number_of_values)) - astigmatism_penalty;
 }
 
-float Image::QuickCorrelationWithCTFThickness(CTF ctf, int number_of_values, double norm_image, double image_mean, int* addresses, float* spatial_frequency_squared, float* azimuth) {
+float Image::QuickCorrelationWithCTFThickness(CTF ctf, int number_of_values, double norm_image, double image_mean, int* addresses, float* spatial_frequency_squared, float* azimuth, float* weights) {
 
     // Local variables
     int    i, j;
@@ -6100,6 +6100,8 @@ float Image::QuickCorrelationWithCTFThickness(CTF ctf, int number_of_values, dou
     float  astigmatism_penalty;
 
     for ( i = 0; i < number_of_values; i++ ) {
+        if ( weights != nullptr && weights[i] <= 0.9 )
+            continue;
         j = addresses[i];
         // Center it around 0 by subtracting 0.5
         current_ctf_value = ctf.EvaluatePowerspectrumWithThickness(spatial_frequency_squared[i], azimuth[i]) - 0.5;

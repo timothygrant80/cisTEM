@@ -469,7 +469,7 @@ class Image {
     float GetCorrelationWithCTF(CTF ctf);
     void  SetupQuickCorrelationWithCTF(CTF ctf, int& number_of_values, double& norm_image, double& image_mean, int* addresses, float* spatial_frequency_squared, float* azimuth);
     float QuickCorrelationWithCTF(CTF ctf, int number_of_values, double norm_image, double image_mean, int* addresses, float* spatial_frequency_squared, float* azimuth);
-    float QuickCorrelationWithCTFThickness(CTF ctf, int number_of_values, double norm_image, double image_mean, int* addresses, float* spatial_frequency_squared, float* azimuth);
+    float QuickCorrelationWithCTFThickness(CTF ctf, int number_of_values, double norm_image, double image_mean, int* addresses, float* spatial_frequency_squared, float* azimuth, float* weights);
 
     float ReturnIcinessOfSpectrum(float pixel_size_in_Angstroms);
 

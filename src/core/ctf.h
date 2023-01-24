@@ -110,7 +110,7 @@ class CTF {
     //
     std::complex<float> EvaluateComplex(float squared_spatial_frequency, float azimuth);
     float               Evaluate(float squared_spatial_frequency, float azimuth);
-    float               EvaluatePowerspectrumWithThickness(float squared_spatial_frequency, float azimuth, bool use_rounded_square = true);
+    float               EvaluatePowerspectrumWithThickness(float squared_spatial_frequency, float azimuth, bool use_rounded_square = false);
 
     float               EvaluateWithEnvelope(float squared_spatial_frequency, float azimuth);
     float               PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(float squared_spatial_frequency, float azimuth);

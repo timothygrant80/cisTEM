@@ -2461,6 +2461,8 @@ class FindCTFPanel : public JobPanel
 		NumericTextCtrl* FitNodesMinResNumericCtrl;
 		wxStaticText* FitNodesMaxResStaticText;
 		NumericTextCtrl* FitNodesMaxResNumericCtrl;
+		wxCheckBox* FitNodesRoundedSquareCheckBox;
+		wxCheckBox* FitNodesWeightsCheckBox;
 		wxPanel* OutputTextPanel;
 		wxTextCtrl* output_textctrl;
 		wxPanel* InfoPanel;

@@ -9739,6 +9739,22 @@ FindCTFPanel::FindCTFPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos,
 
 	fgSizer1->Add( FitNodesMaxResNumericCtrl, 0, wxALL, 5 );
 
+	FitNodesRoundedSquareCheckBox = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Use no-decay model"), wxDefaultPosition, wxDefaultSize, 0 );
+	FitNodesRoundedSquareCheckBox->Enable( false );
+
+	fgSizer1->Add( FitNodesRoundedSquareCheckBox, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	FitNodesWeightsCheckBox = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Ignore spectrum in nodes"), wxDefaultPosition, wxDefaultSize, 0 );
+	FitNodesWeightsCheckBox->Enable( false );
+
+	fgSizer1->Add( FitNodesWeightsCheckBox, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+
 
 	InputSizer->Add( fgSizer1, 1, wxEXPAND, 5 );
 
@@ -9901,6 +9917,8 @@ FindCTFPanel::FindCTFPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos,
 	FitNodesCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnFitNodesCheckBox ), NULL, this );
 	FitNodes1DCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnFindAdditionalPhaseCheckBox ), NULL, this );
 	FitNodes2DCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnFindAdditionalPhaseCheckBox ), NULL, this );
+	FitNodesRoundedSquareCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnFindAdditionalPhaseCheckBox ), NULL, this );
+	FitNodesWeightsCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnFindAdditionalPhaseCheckBox ), NULL, this );
 	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( FindCTFPanel::OnInfoURL ), NULL, this );
 	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFPanel::FinishButtonClick ), NULL, this );
 	CancelAlignmentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFPanel::TerminateButtonClick ), NULL, this );
@@ -9922,6 +9940,8 @@ FindCTFPanel::~FindCTFPanel()
 	FitNodesCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnFitNodesCheckBox ), NULL, this );
 	FitNodes1DCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnFindAdditionalPhaseCheckBox ), NULL, this );
 	FitNodes2DCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnFindAdditionalPhaseCheckBox ), NULL, this );
+	FitNodesRoundedSquareCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnFindAdditionalPhaseCheckBox ), NULL, this );
+	FitNodesWeightsCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnFindAdditionalPhaseCheckBox ), NULL, this );
 	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( FindCTFPanel::OnInfoURL ), NULL, this );
 	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFPanel::FinishButtonClick ), NULL, this );
 	CancelAlignmentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFPanel::TerminateButtonClick ), NULL, this );

@@ -103,10 +103,7 @@ float CtffindObjectiveFunction(void* scoring_parameters, float array_of_values[]
     }
     else {
         if ( comparison_object->number_to_correlate ) {
-            if ( comparison_object->fit_with_thickness_nodes )
-                score = -comparison_object->img[0].QuickCorrelationWithCTFThickness(my_ctf, comparison_object->number_to_correlate, comparison_object->norm_image, comparison_object->image_mean, comparison_object->addresses, comparison_object->spatial_frequency_squared, comparison_object->azimuths, nullptr);
-            else
-                score = -comparison_object->img[0].QuickCorrelationWithCTF(my_ctf, comparison_object->number_to_correlate, comparison_object->norm_image, comparison_object->image_mean, comparison_object->addresses, comparison_object->spatial_frequency_squared, comparison_object->azimuths);
+            score = -comparison_object->img[0].QuickCorrelationWithCTF(my_ctf, comparison_object->number_to_correlate, comparison_object->norm_image, comparison_object->image_mean, comparison_object->addresses, comparison_object->spatial_frequency_squared, comparison_object->azimuths);
         }
         else {
             score = -comparison_object->img[0].GetCorrelationWithCTF(my_ctf);

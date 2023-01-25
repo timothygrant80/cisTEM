@@ -52,14 +52,14 @@ class CTFTilt {
     bool defocus_astigmatism_determined;
     bool power_spectra_calculated;
 
-    bool debug;
+    bool        debug;
     wxJSONValue debug_json_output;
     std::string debug_json_output_filename;
 
   public:
     CTFTilt(ImageFile& wanted_input_file, float wanted_high_res_limit_ctf_fit, float wanted_high_res_limit_tilt_fit, float wanted_minimum_defocus, float wanted_maximum_defocus,
             float wanted_pixel_size, float wanted_acceleration_voltage_in_kV, float wanted_spherical_aberration_in_mm, float wanted_amplitude_contrast, float wanted_additional_phase_shift_in_radians,
-            bool wanted_debug=false, std::string wanted_debug_json_output_filename="");
+            bool wanted_debug = false, std::string wanted_debug_json_output_filename = "");
     ~CTFTilt( );
     void   CalculatePowerSpectra(bool subtract_average = false);
     void   UpdateInputImage(Image* wanted_input_image);
@@ -101,6 +101,8 @@ class ImageCTFComparison {
     float* spatial_frequency_squared;
     int*   addresses;
     bool   fit_with_thickness_nodes;
+    bool   fit_nodes_downweight_nodes = false;
+    bool   fit_nodes_rounded_square   = false;
 
   private:
     CTF   ctf;
@@ -157,6 +159,8 @@ struct CTFNodeFitInput {
     Image*              average_spectrum;
     bool                debug;
     std::string         debug_filename;
+    bool                use_rounded_square;
+    bool                downweight_nodes;
 };
 
 struct CTFNodeFitOuput {

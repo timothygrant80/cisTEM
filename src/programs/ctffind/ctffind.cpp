@@ -573,7 +573,7 @@ void CtffindApp::DoInteractiveUserInput( ) {
     }
 
     //	my_current_job.Reset(39);
-    my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbsbfffbfffbiiibbbfff", input_filename.c_str( ), //1
+    my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbsbfffbfffbiiibbbfffbb", input_filename.c_str( ), //1
                                       input_is_a_movie,
                                       number_of_frames_to_average,
                                       output_diagnostic_filename.c_str( ),
@@ -618,7 +618,9 @@ void CtffindApp::DoInteractiveUserInput( ) {
                                       false,
                                       10.0,
                                       3.0,
-                                      1.4);
+                                      1.4,
+                                      false,
+                                      false);
 }
 
 // Optional command-line stuff
@@ -687,6 +689,9 @@ bool CtffindApp::DoCalculation( ) {
     float             fit_nodes_low_resolution_limit     = my_current_job.arguments[43].ReturnFloatArgument( );
     float             fit_nodes_high_resolution_limit    = my_current_job.arguments[44].ReturnFloatArgument( );
     float             target_pixel_size_after_resampling = my_current_job.arguments[45].ReturnFloatArgument( );
+    bool              fit_nodes_use_rounded_square       = my_current_job.arguments[46].ReturnBoolArgument( );
+    MyDebugPrint("fit_nodes_use_rounded_square = %i", fit_nodes_use_rounded_square);
+    bool fit_nodes_downweight_nodes = my_current_job.arguments[47].ReturnBoolArgument( );
     // if we are applying a mag distortion, it can change the pixel size, so do that here to make sure it is used forever onwards..
 
     if ( input_is_a_movie && correct_movie_mag_distortion ) {
@@ -1731,7 +1736,9 @@ bool CtffindApp::DoCalculation( ) {
                     fit_frc_sigma,
                     average_spectrum,
                     dump_debug_files,
-                    debug_file_prefix};
+                    debug_file_prefix,
+                    fit_nodes_use_rounded_square,
+                    fit_nodes_downweight_nodes};
 
             node_output = fit_thickness_nodes(&node_fit_input);
             MyDebugPrint("Got out of the function\n");

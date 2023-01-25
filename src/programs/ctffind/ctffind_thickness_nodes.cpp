@@ -1,6 +1,7 @@
 #include "../../core/core_headers.h"
 #include "./ctffind.h"
 
+// Helper function to write the current spectrum and fit into the debug json object
 void write_fit_result_JSON_debug(wxJSONValue& debug_json_output, char* name, int number_of_bins_in_1d_spectra, double* rotational_average_astig, double* rotational_average_astig_fit, double* spatial_frequency = nullptr) {
     if ( spatial_frequency != nullptr ) {
         debug_json_output["spatial_frequency"] = wxJSONValue(wxJSONTYPE_ARRAY);
@@ -20,6 +21,7 @@ void write_fit_result_JSON_debug(wxJSONValue& debug_json_output, char* name, int
     }
 }
 
+// This is a copy of the objective function of Ctffind with some adaptions for the node fitting
 float CtffindNodesObjectiveFunction(void* scoring_parameters, float array_of_values[]) {
     ImageCTFComparison* comparison_object = reinterpret_cast<ImageCTFComparison*>(scoring_parameters);
 
@@ -51,41 +53,12 @@ float CtffindNodesObjectiveFunction(void* scoring_parameters, float array_of_val
         float squared_spatial_frequency;
         for ( int i = 0; i < comparison_object->number_to_correlate; i++ ) {
             weights[i] = 1.0f;
-            //weights[i] = my_ctf.IntegratedDefocusModulationRoundedSquare(comparison_object->spatial_frequency_squared[i]);
+            if ( comparison_object->fit_nodes_downweight_nodes )
+                weights[i] = fabs(my_ctf.IntegratedDefocusModulationRoundedSquare(comparison_object->spatial_frequency_squared[i])) > 0.99 ? 1.0f : 0.0f;
         }
-        /*  float     weights[comparison_object->number_to_correlate];
-        int       number_to_correlate      = 0;
-        const int central_cross_half_width = 10;
-        int       i, j;
-        float     i_logi, j_logi;
-        float     i_logi_sq, j_logi_sq;
-        int       address          = 0;
-        int       number_of_values = 0;
-        for ( int j = 0; j < comparison_object->img->logical_y_dimension; j++ ) {
-            if ( j < comparison_object->img->physical_address_of_box_center_y - central_cross_half_width || j > comparison_object->img->physical_address_of_box_center_y + central_cross_half_width ) {
-                address   = j * (comparison_object->img->padding_jump_value + 2 * comparison_object->img->physical_address_of_box_center_x);
-                j_logi    = float(j - comparison_object->img->physical_address_of_box_center_y) * comparison_object->img->inverse_logical_y_dimension;
-                j_logi_sq = powf(j_logi, 2);
-                for ( int i = 0; i < comparison_object->img->physical_address_of_box_center_x - central_cross_half_width; i++ ) {
-                    i_logi    = float(i - comparison_object->img->physical_address_of_box_center_x) * inverse_logical_x_dimension;
-                    i_logi_sq = powf(i_logi, 2);
 
-                    // Where are we?
-                    current_spatial_frequency_squared = j_logi_sq + i_logi_sq;
-
-                    if ( current_spatial_frequency_squared > lowest_freq && current_spatial_frequency_squared < highest_freq ) {
-                        current_azimuth = atan2f(j_logi, i_logi);
-                        if ( addresses ) {
-
-                            image_sum -= real_values[address + i];
-                        }
-                        number_of_values++;
-                    } // end of test whether within min,max frequency range
-                }
-            }
-        } */
         if ( comparison_object->number_to_correlate ) {
-            score = -comparison_object->img[0].QuickCorrelationWithCTFThickness(my_ctf, comparison_object->number_to_correlate, comparison_object->norm_image, comparison_object->image_mean, comparison_object->addresses, comparison_object->spatial_frequency_squared, comparison_object->azimuths, weights);
+            score = -comparison_object->img[0].QuickCorrelationWithCTFThickness(my_ctf, comparison_object->number_to_correlate, comparison_object->norm_image, comparison_object->image_mean, comparison_object->addresses, comparison_object->spatial_frequency_squared, comparison_object->azimuths, weights, comparison_object->fit_nodes_rounded_square);
         }
         else {
             score = -comparison_object->img[0].GetCorrelationWithCTF(my_ctf);
@@ -101,12 +74,15 @@ void do_1D_bruteforce(CTFNodeFitInput* input, wxJSONValue& debug_json_output) {
     int   counter;
     float current_sq_sf;
     float azimuth_for_1d_plots = ReturnAzimuthToUseFor1DPlots(input->current_ctf);
+    CTF   my_ctf;
+    my_ctf.CopyFrom(*(input->current_ctf));
+    input->comparison_object_1D->curve = new float[input->number_of_bins_in_1d_spectra];
     for ( counter = 0; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
         input->comparison_object_1D->curve[counter] = input->rotational_average_astig[counter];
     }
     input->comparison_object_1D->find_phase_shift     = false;
     input->comparison_object_1D->find_thickness_nodes = true;
-    input->comparison_object_1D->ctf                  = *(input->current_ctf);
+    input->comparison_object_1D->ctf                  = my_ctf;
 
     // We can now look for the defocus value
     float bf_halfrange[1] = {1750 / input->pixel_size_for_fitting};
@@ -135,19 +111,20 @@ void do_1D_bruteforce(CTFNodeFitInput* input, wxJSONValue& debug_json_output) {
     for ( int counter = 0; counter < num_scores; counter++ ) {
         debug_json_output["1D_brute_force_search"]["all_scores"].Append(all_scores[counter]);
     }
-    delete[] all_values;
-    delete[] all_scores;
+    //delete[] all_values;
+    //delete[] all_scores;
 
     input->current_ctf->SetSampleThickness(brute_force_search->GetBestValue(0));
     for ( counter = 0; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
         current_sq_sf                                = powf(input->spatial_frequency[counter], 2);
-        input->rotational_average_astig_fit[counter] = input->current_ctf->EvaluatePowerspectrumWithThickness(current_sq_sf, azimuth_for_1d_plots);
+        input->rotational_average_astig_fit[counter] = input->current_ctf->EvaluatePowerspectrumWithThickness(current_sq_sf, azimuth_for_1d_plots, input->use_rounded_square);
     }
     if ( input->debug ) {
         write_fit_result_JSON_debug(debug_json_output, "after_1D_brute_force", input->number_of_bins_in_1d_spectra, input->rotational_average_astig, input->rotational_average_astig_fit, nullptr);
         debug_json_output["thickness_estimates"]["after_1D_brute_force"] = brute_force_search->GetBestValue(0) * input->pixel_size_for_fitting;
     }
     delete brute_force_search;
+    delete input->comparison_object_1D->curve;
 }
 
 void do_2D_refinement(CTFNodeFitInput* input, wxJSONValue& debug_json_output) {
@@ -162,6 +139,9 @@ void do_2D_refinement(CTFNodeFitInput* input, wxJSONValue& debug_json_output) {
     input->comparison_object_2D->SetCTF(*(input->current_ctf));
     input->comparison_object_2D->SetFitWithThicknessNodes(true);
     input->comparison_object_2D->SetupQuickCorrelation( );
+    input->comparison_object_2D->fit_nodes_downweight_nodes = input->downweight_nodes;
+    input->comparison_object_2D->fit_nodes_rounded_square   = input->use_rounded_square;
+    MyDebugPrint("fit_nodes_rounded_square = %i", input->comparison_object_2D->fit_nodes_rounded_square);
     ConjugateGradient* conjugate_gradient_minimizer = new ConjugateGradient( );
     conjugate_gradient_minimizer->Init(&CtffindNodesObjectiveFunction, input->comparison_object_2D, number_of_search_dimensions, cg_starting_point, cg_accuracy);
 
@@ -178,7 +158,7 @@ void do_2D_refinement(CTFNodeFitInput* input, wxJSONValue& debug_json_output) {
 
     for ( counter = 0; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
         current_sq_sf                                = powf(input->spatial_frequency[counter], 2);
-        input->rotational_average_astig_fit[counter] = input->current_ctf->EvaluatePowerspectrumWithThickness(current_sq_sf, azimuth_for_1d_plots);
+        input->rotational_average_astig_fit[counter] = input->current_ctf->EvaluatePowerspectrumWithThickness(current_sq_sf, azimuth_for_1d_plots, input->use_rounded_square);
     }
     if ( input->debug ) {
         write_fit_result_JSON_debug(debug_json_output, "after_2D_refine", input->number_of_bins_in_1d_spectra, input->rotational_average_astig, input->rotational_average_astig_fit, nullptr);
@@ -222,8 +202,10 @@ void recalculate_1D_spectra(CTFNodeFitInput* input, double* rotational_average_a
         Renormalize1DSpectrumForFRC(input->number_of_bins_in_1d_spectra, rotational_average_astig_renormalized, input->rotational_average_astig_fit, number_of_extrema_profile);
         // I should sqrt rotational_average_astig_renormalized to amke it look
         // like the abs and not the power of 2
-        for ( counter = 0; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
-            input->rotational_average_astig_fit[counter] = sqrt(input->rotational_average_astig_fit[counter]);
+        if ( input->use_rounded_square ) {
+            for ( counter = 0; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
+                input->rotational_average_astig_fit[counter] = sqrt(input->rotational_average_astig_fit[counter]);
+            }
         }
     }
 }
@@ -455,7 +437,7 @@ CTFNodeFitOuput fit_thickness_nodes(CTFNodeFitInput* input) {
     }
     for ( counter = 0; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
         current_sq_sf                                = powf(input->spatial_frequency[counter], 2);
-        input->rotational_average_astig_fit[counter] = input->current_ctf->EvaluatePowerspectrumWithThickness(current_sq_sf, azimuth_for_1d_plots);
+        input->rotational_average_astig_fit[counter] = input->current_ctf->EvaluatePowerspectrumWithThickness(current_sq_sf, azimuth_for_1d_plots, input->use_rounded_square);
     }
 
     // Write the initial fit to the debug JSON object

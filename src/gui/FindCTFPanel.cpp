@@ -463,6 +463,8 @@ void MyFindCTFPanel::OnFitNodesCheckBox(wxCommandEvent& event) {
         FitNodesMinResNumericCtrl->Enable(true);
         FitNodesMaxResStaticText->Enable(true);
         FitNodesMaxResNumericCtrl->Enable(true);
+        FitNodesRoundedSquareCheckBox->Enable(true);
+        FitNodesWeightsCheckBox->Enable(true);
         Thaw( );
     }
     else {
@@ -473,6 +475,8 @@ void MyFindCTFPanel::OnFitNodesCheckBox(wxCommandEvent& event) {
         FitNodesMinResNumericCtrl->Enable(false);
         FitNodesMaxResStaticText->Enable(false);
         FitNodesMaxResNumericCtrl->Enable(false);
+        FitNodesRoundedSquareCheckBox->Enable(false);
+        FitNodesWeightsCheckBox->Enable(false);
         Thaw( );
     }
 }
@@ -580,6 +584,8 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
     bool  fit_nodes_2d;
     float fit_nodes_min_res;
     float fit_nodes_max_res;
+    bool  fit_nodes_rounded_square;
+    bool  fit_nodes_weights;
 
     // allocate space for the buffered results..
 
@@ -623,21 +629,13 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
     }
 
     if ( FitNodesCheckBox->IsChecked( ) == true ) {
-        fit_nodes         = true;
-        fit_nodes_min_res = FitNodesMinResNumericCtrl->ReturnValue( );
-        fit_nodes_max_res = FitNodesMaxResNumericCtrl->ReturnValue( );
-        if ( FitNodes1DCheckBox->IsChecked( ) == true ) {
-            fit_nodes_1d = true;
-        }
-        else {
-            fit_nodes_1d = false;
-        }
-        if ( FitNodes2DCheckBox->IsChecked( ) == true ) {
-            fit_nodes_2d = true;
-        }
-        else {
-            fit_nodes_2d = false;
-        }
+        fit_nodes                = true;
+        fit_nodes_min_res        = FitNodesMinResNumericCtrl->ReturnValue( );
+        fit_nodes_max_res        = FitNodesMaxResNumericCtrl->ReturnValue( );
+        fit_nodes_1d             = FitNodes1DCheckBox->IsChecked( );
+        fit_nodes_2d             = FitNodes2DCheckBox->IsChecked( );
+        fit_nodes_rounded_square = FitNodesRoundedSquareCheckBox->IsChecked( );
+        fit_nodes_weights        = FitNodesWeightsCheckBox->IsChecked( );
     }
     else {
         fit_nodes         = false;
@@ -755,7 +753,7 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
 
         const int number_of_threads = 1;
 
-        current_job_package.AddJob("sbisffffifffffbfbfffbffbbsbsbfffbfffbiiibbbfff", input_filename.c_str( ), // 0
+        current_job_package.AddJob("sbisffffifffffbfbfffbffbbsbsbfffbfffbiiibbbfffbb", input_filename.c_str( ), // 0
                                    input_is_a_movie, // 1
                                    number_of_frames_to_average, //2
                                    output_diagnostic_filename.c_str( ), // 3
@@ -800,7 +798,9 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
                                    fit_nodes_2d,
                                    fit_nodes_min_res,
                                    fit_nodes_max_res,
-                                   resample_pixel_size);
+                                   resample_pixel_size,
+                                   fit_nodes_rounded_square,
+                                   fit_nodes_weights);
 
         my_progress_dialog->Update(counter + 1);
     }

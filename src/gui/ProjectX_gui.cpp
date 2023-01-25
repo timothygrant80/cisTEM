@@ -134,13 +134,11 @@ MainFrame::~MainFrame()
 
 AssetPickerComboPanelParent::AssetPickerComboPanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
 {
-	wxBoxSizer* bSizer436;
 	bSizer436 = new wxBoxSizer( wxHORIZONTAL );
 
 	AssetComboBox = new MemoryComboBox( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
 	bSizer436->Add( AssetComboBox, 100, wxALIGN_CENTER_VERTICAL|wxEXPAND, 0 );
 
-	wxBoxSizer* bSizer494;
 	bSizer494 = new wxBoxSizer( wxVERTICAL );
 
 	PreviousButton = new NoFocusBitmapButton( this, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBU_AUTODRAW|0 );
@@ -11777,6 +11775,92 @@ VolumeChooserDialog::~VolumeChooserDialog()
 
 }
 
+ParticlePositionExportDialog::ParticlePositionExportDialog( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
+{
+	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
+
+	wxBoxSizer* bSizer133;
+	bSizer133 = new wxBoxSizer( wxVERTICAL );
+
+	m_panel38 = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer135;
+	bSizer135 = new wxBoxSizer( wxVERTICAL );
+
+	wxStaticBoxSizer* sbSizer3;
+	sbSizer3 = new wxStaticBoxSizer( new wxStaticBox( m_panel38, wxID_ANY, wxT("Export from these images") ), wxVERTICAL );
+
+	GroupComboBox = new wxComboBox( sbSizer3->GetStaticBox(), wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
+	sbSizer3->Add( GroupComboBox, 0, wxALL|wxEXPAND, 5 );
+
+
+	bSizer135->Add( sbSizer3, 0, wxEXPAND, 25 );
+
+	wxStaticBoxSizer* sbSizer4;
+	sbSizer4 = new wxStaticBoxSizer( new wxStaticBox( m_panel38, wxID_ANY, wxT("Destination directory") ), wxVERTICAL );
+
+	DestinationDirectoryPickerCtrl = new wxDirPickerCtrl( sbSizer4->GetStaticBox(), wxID_ANY, wxEmptyString, wxT("Select a folder"), wxDefaultPosition, wxDefaultSize, wxDIRP_DEFAULT_STYLE );
+	sbSizer4->Add( DestinationDirectoryPickerCtrl, 0, wxALL|wxEXPAND, 5 );
+
+
+	bSizer135->Add( sbSizer4, 0, wxEXPAND, 5 );
+
+
+	bSizer135->Add( 0, 0, 0, wxEXPAND, 5 );
+
+	WarningText = new wxStaticText( m_panel38, wxID_ANY, wxT("Warning: running jobs \nmay affect exported coordinates"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_HORIZONTAL );
+	WarningText->Wrap( -1 );
+	WarningText->SetForegroundColour( wxColour( 180, 0, 0 ) );
+	WarningText->Hide();
+
+	bSizer135->Add( WarningText, 0, wxALL, 5 );
+
+	wxBoxSizer* bSizer137;
+	bSizer137 = new wxBoxSizer( wxHORIZONTAL );
+
+
+	bSizer137->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	CancelButton = new wxButton( m_panel38, wxID_ANY, wxT("Cancel"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer137->Add( CancelButton, 0, wxALL, 5 );
+
+	ExportButton = new wxButton( m_panel38, wxID_ANY, wxT("Export"), wxDefaultPosition, wxDefaultSize, 0 );
+
+	ExportButton->SetDefault();
+	ExportButton->Enable( false );
+
+	bSizer137->Add( ExportButton, 0, wxALL, 5 );
+
+
+	bSizer135->Add( bSizer137, 0, wxEXPAND, 5 );
+
+
+	m_panel38->SetSizer( bSizer135 );
+	m_panel38->Layout();
+	bSizer135->Fit( m_panel38 );
+	bSizer133->Add( m_panel38, 0, wxEXPAND | wxALL, 5 );
+
+
+	this->SetSizer( bSizer133 );
+	this->Layout();
+	bSizer133->Fit( this );
+
+	this->Centre( wxBOTH );
+
+	// Connect Events
+	DestinationDirectoryPickerCtrl->Connect( wxEVT_COMMAND_DIRPICKER_CHANGED, wxFileDirPickerEventHandler( ParticlePositionExportDialog::OnDirChanged ), NULL, this );
+	CancelButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ParticlePositionExportDialog::OnCancelButtonClick ), NULL, this );
+	ExportButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ParticlePositionExportDialog::OnExportButtonClick ), NULL, this );
+}
+
+ParticlePositionExportDialog::~ParticlePositionExportDialog()
+{
+	// Disconnect Events
+	DestinationDirectoryPickerCtrl->Disconnect( wxEVT_COMMAND_DIRPICKER_CHANGED, wxFileDirPickerEventHandler( ParticlePositionExportDialog::OnDirChanged ), NULL, this );
+	CancelButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ParticlePositionExportDialog::OnCancelButtonClick ), NULL, this );
+	ExportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ParticlePositionExportDialog::OnExportButtonClick ), NULL, this );
+
+}
+
 AtomicCoordinatesChooserDialogParent::AtomicCoordinatesChooserDialogParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
 {
 	this->SetSizeHints( wxSize( -1,-1 ), wxDefaultSize );
@@ -11918,92 +12002,6 @@ FilterDialog::~FilterDialog()
 	// Disconnect Events
 	CancelButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FilterDialog::OnCancelClick ), NULL, this );
 	FilterButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FilterDialog::OnFilterClick ), NULL, this );
-
-}
-
-ParticlePositionExportDialog::ParticlePositionExportDialog( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
-{
-	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
-
-	wxBoxSizer* bSizer133;
-	bSizer133 = new wxBoxSizer( wxVERTICAL );
-
-	m_panel38 = new wxPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-	wxBoxSizer* bSizer135;
-	bSizer135 = new wxBoxSizer( wxVERTICAL );
-
-	wxStaticBoxSizer* sbSizer3;
-	sbSizer3 = new wxStaticBoxSizer( new wxStaticBox( m_panel38, wxID_ANY, wxT("Export from these images") ), wxVERTICAL );
-
-	GroupComboBox = new wxComboBox( sbSizer3->GetStaticBox(), wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
-	sbSizer3->Add( GroupComboBox, 0, wxALL|wxEXPAND, 5 );
-
-
-	bSizer135->Add( sbSizer3, 0, wxEXPAND, 25 );
-
-	wxStaticBoxSizer* sbSizer4;
-	sbSizer4 = new wxStaticBoxSizer( new wxStaticBox( m_panel38, wxID_ANY, wxT("Destination directory") ), wxVERTICAL );
-
-	DestinationDirectoryPickerCtrl = new wxDirPickerCtrl( sbSizer4->GetStaticBox(), wxID_ANY, wxEmptyString, wxT("Select a folder"), wxDefaultPosition, wxDefaultSize, wxDIRP_DEFAULT_STYLE );
-	sbSizer4->Add( DestinationDirectoryPickerCtrl, 0, wxALL|wxEXPAND, 5 );
-
-
-	bSizer135->Add( sbSizer4, 0, wxEXPAND, 5 );
-
-
-	bSizer135->Add( 0, 0, 0, wxEXPAND, 5 );
-
-	WarningText = new wxStaticText( m_panel38, wxID_ANY, wxT("Warning: running jobs \nmay affect exported coordinates"), wxDefaultPosition, wxDefaultSize, wxALIGN_CENTER_HORIZONTAL );
-	WarningText->Wrap( -1 );
-	WarningText->SetForegroundColour( wxColour( 180, 0, 0 ) );
-	WarningText->Hide();
-
-	bSizer135->Add( WarningText, 0, wxALL, 5 );
-
-	wxBoxSizer* bSizer137;
-	bSizer137 = new wxBoxSizer( wxHORIZONTAL );
-
-
-	bSizer137->Add( 0, 0, 1, wxEXPAND, 5 );
-
-	CancelButton = new wxButton( m_panel38, wxID_ANY, wxT("Cancel"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer137->Add( CancelButton, 0, wxALL, 5 );
-
-	ExportButton = new wxButton( m_panel38, wxID_ANY, wxT("Export"), wxDefaultPosition, wxDefaultSize, 0 );
-
-	ExportButton->SetDefault();
-	ExportButton->Enable( false );
-
-	bSizer137->Add( ExportButton, 0, wxALL, 5 );
-
-
-	bSizer135->Add( bSizer137, 0, wxEXPAND, 5 );
-
-
-	m_panel38->SetSizer( bSizer135 );
-	m_panel38->Layout();
-	bSizer135->Fit( m_panel38 );
-	bSizer133->Add( m_panel38, 0, wxEXPAND | wxALL, 5 );
-
-
-	this->SetSizer( bSizer133 );
-	this->Layout();
-	bSizer133->Fit( this );
-
-	this->Centre( wxBOTH );
-
-	// Connect Events
-	DestinationDirectoryPickerCtrl->Connect( wxEVT_COMMAND_DIRPICKER_CHANGED, wxFileDirPickerEventHandler( ParticlePositionExportDialog::OnDirChanged ), NULL, this );
-	CancelButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ParticlePositionExportDialog::OnCancelButtonClick ), NULL, this );
-	ExportButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ParticlePositionExportDialog::OnExportButtonClick ), NULL, this );
-}
-
-ParticlePositionExportDialog::~ParticlePositionExportDialog()
-{
-	// Disconnect Events
-	DestinationDirectoryPickerCtrl->Disconnect( wxEVT_COMMAND_DIRPICKER_CHANGED, wxFileDirPickerEventHandler( ParticlePositionExportDialog::OnDirChanged ), NULL, this );
-	CancelButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ParticlePositionExportDialog::OnCancelButtonClick ), NULL, this );
-	ExportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ParticlePositionExportDialog::OnExportButtonClick ), NULL, this );
 
 }
 

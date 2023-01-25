@@ -148,6 +148,7 @@ class AssetPickerComboPanelParent : public wxPanel
 
 
 	public:
+		wxBoxSizer* bSizer436;
 		MemoryComboBox* AssetComboBox;
 		wxBoxSizer* bSizer494;
 		NoFocusBitmapButton* PreviousButton;
@@ -3000,6 +3001,34 @@ class VolumeChooserDialog : public wxDialog
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+/// Class ParticlePositionExportDialog
+///////////////////////////////////////////////////////////////////////////////
+class ParticlePositionExportDialog : public wxDialog
+{
+	private:
+
+	protected:
+		wxPanel* m_panel38;
+		wxComboBox* GroupComboBox;
+		wxDirPickerCtrl* DestinationDirectoryPickerCtrl;
+		wxStaticText* WarningText;
+		wxButton* CancelButton;
+		wxButton* ExportButton;
+
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnDirChanged( wxFileDirPickerEvent& event ) { event.Skip(); }
+		virtual void OnCancelButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnExportButtonClick( wxCommandEvent& event ) { event.Skip(); }
+
+
+	public:
+
+		ParticlePositionExportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Export particle positions"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE );
+		~ParticlePositionExportDialog();
+
+};
+
+///////////////////////////////////////////////////////////////////////////////
 /// Class AtomicCoordinatesChooserDialogParent
 ///////////////////////////////////////////////////////////////////////////////
 class AtomicCoordinatesChooserDialogParent : public wxDialog
@@ -3057,34 +3086,6 @@ class FilterDialog : public wxDialog
 
 		FilterDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Filter / Sort Movies"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxDEFAULT_DIALOG_STYLE );
 		~FilterDialog();
-
-};
-
-///////////////////////////////////////////////////////////////////////////////
-/// Class ParticlePositionExportDialog
-///////////////////////////////////////////////////////////////////////////////
-class ParticlePositionExportDialog : public wxDialog
-{
-	private:
-
-	protected:
-		wxPanel* m_panel38;
-		wxComboBox* GroupComboBox;
-		wxDirPickerCtrl* DestinationDirectoryPickerCtrl;
-		wxStaticText* WarningText;
-		wxButton* CancelButton;
-		wxButton* ExportButton;
-
-		// Virtual event handlers, overide them in your derived class
-		virtual void OnDirChanged( wxFileDirPickerEvent& event ) { event.Skip(); }
-		virtual void OnCancelButtonClick( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnExportButtonClick( wxCommandEvent& event ) { event.Skip(); }
-
-
-	public:
-
-		ParticlePositionExportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Export particle positions"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE );
-		~ParticlePositionExportDialog();
 
 };
 

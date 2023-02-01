@@ -39,6 +39,10 @@ float CtffindNodesObjectiveFunction(void* scoring_parameters, float array_of_val
     if ( array_of_values[3] < 500.0f ) {
         array_of_values[3] = 500.0f;
     }
+    if ( array_of_values[3] > 50000.0f ) {
+        array_of_values[3] = 50000.0f;
+    }
+
     my_ctf.SetSampleThickness(array_of_values[3]);
 
     // Evaluate the function

@@ -146,8 +146,8 @@ struct CTFNodeFitInput {
     double*             spatial_frequency;
     double*             rotational_average_astig;
     double*             rotational_average_astig_fit;
-    Curve               equiphase_average_pre_max;
-    Curve               equiphase_average_post_max;
+    Curve&              equiphase_average_pre_max;
+    Curve&              equiphase_average_post_max;
     CurveCTFComparison* comparison_object_1D;
     ImageCTFComparison* comparison_object_2D;
     bool                bruteforce_1D;

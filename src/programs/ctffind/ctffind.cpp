@@ -2,7 +2,6 @@
 #include "./ctffind.h"
 
 //#define threshold_spectrum
-#define use_epa_rather_than_zero_counting
 
 // The timing that ctffind originally tracks is always on, by direct reference to cistem_timer::StopWatch
 // The profiling for development is under conrtol of --enable-profiling.

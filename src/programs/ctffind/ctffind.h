@@ -1,6 +1,8 @@
 #ifndef PROGRAMS_CTFFIND_CTFFIND_H_
 #define PROGRAMS_CTFFIND_CTFFIND_H_
 
+#define use_epa_rather_than_zero_counting
+
 class CTFTilt {
     int   refine_mode;
     int   micrograph_subregion_dimension;

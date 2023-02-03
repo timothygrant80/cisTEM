@@ -1,6 +1,8 @@
 #ifndef SRC_PROGRAMS_CTFFIND_CTFFIND_H_
 #define SRC_PROGRAMS_CTFFIND_CTFFIND_H_
 
+#define use_epa_rather_than_zero_counting
+
 double SampleTiltScoreFunctionForSimplex(void* pt2Object, double values[]);
 //TODO: gives this function a good name that describes what it actually does (it actually rescales the power spectrum!)
 float PixelSizeForFitting(bool resample_if_pixel_too_small, float pixel_size_of_input_image, float target_pixel_size_after_resampling,

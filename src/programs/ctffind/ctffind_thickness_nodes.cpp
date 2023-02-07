@@ -84,18 +84,19 @@ void do_1D_bruteforce(CTFNodeFitInput* input, wxJSONValue& debug_json_output) {
     for ( counter = 0; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
         input->comparison_object_1D->curve[counter] = input->rotational_average_astig[counter];
     }
-    input->comparison_object_1D->find_phase_shift     = false;
-    input->comparison_object_1D->find_thickness_nodes = true;
-    input->comparison_object_1D->ctf                  = my_ctf;
+    input->comparison_object_1D->find_phase_shift         = false;
+    input->comparison_object_1D->find_thickness_nodes     = true;
+    input->comparison_object_1D->ctf                      = my_ctf;
+    input->comparison_object_1D->fit_nodes_rounded_square = input->use_rounded_square;
 
     // We can now look for the defocus value
-    float bf_halfrange[1] = {1750 / input->pixel_size_for_fitting};
+    float bf_halfrange[2] = {1750 / input->pixel_size_for_fitting, 1000 / input->pixel_size_for_fitting};
 
-    float bf_midpoint[1] = {500 / input->pixel_size_for_fitting + bf_halfrange[0]};
+    float bf_midpoint[2] = {500 / input->pixel_size_for_fitting + bf_halfrange[0], my_ctf.DefocusGivenAzimuth(azimuth_for_1d_plots)};
 
-    float bf_stepsize[1] = {50 / input->pixel_size_for_fitting};
+    float bf_stepsize[2] = {10 / input->pixel_size_for_fitting, 10 / input->pixel_size_for_fitting};
 
-    int number_of_search_dimensions = 1;
+    int number_of_search_dimensions = 2;
 
     // Actually run the BF search
     BruteForceSearch* brute_force_search = new BruteForceSearch( );
@@ -119,6 +120,7 @@ void do_1D_bruteforce(CTFNodeFitInput* input, wxJSONValue& debug_json_output) {
     //delete[] all_scores;
 
     input->current_ctf->SetSampleThickness(brute_force_search->GetBestValue(0));
+    input->current_ctf->SetDefocus(brute_force_search->GetBestValue(1), brute_force_search->GetBestValue(1), input->current_ctf->GetAstigmatismAzimuth( ));
     for ( counter = 0; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
         current_sq_sf                                = powf(input->spatial_frequency[counter], 2);
         input->rotational_average_astig_fit[counter] = input->current_ctf->EvaluatePowerspectrumWithThickness(current_sq_sf, azimuth_for_1d_plots, input->use_rounded_square);

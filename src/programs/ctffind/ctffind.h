@@ -124,7 +124,8 @@ class CurveCTFComparison {
     float  reciprocal_pixel_size; // In reciprocal pixels
     CTF    ctf;
     bool   find_phase_shift;
-    bool   find_thickness_nodes = false;
+    bool   find_thickness_nodes     = false;
+    bool   fit_nodes_rounded_square = false;
 };
 
 float FindRotationalAlignmentBetweenTwoStacksOfImages(Image* self, Image* other_image, int number_of_images, float search_half_range, float search_step_size, float minimum_radius, float maximum_radius);

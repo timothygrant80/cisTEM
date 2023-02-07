@@ -125,6 +125,7 @@ float CtffindCurveObjectiveFunction(void* scoring_parameters, float array_of_val
     CTF my_ctf = comparison_object->ctf;
     if ( comparison_object->find_thickness_nodes ) {
         my_ctf.SetSampleThickness(array_of_values[0]);
+        my_ctf.SetDefocus(array_of_values[1], array_of_values[1], 0.0);
     }
     else {
         my_ctf.SetDefocus(array_of_values[0], array_of_values[0], 0.0);
@@ -149,7 +150,7 @@ float CtffindCurveObjectiveFunction(void* scoring_parameters, float array_of_val
         if ( current_spatial_frequency_squared > lowest_freq && current_spatial_frequency_squared < highest_freq ) {
             current_ctf_value = fabsf(my_ctf.Evaluate(current_spatial_frequency_squared, 0.0));
             if ( comparison_object->find_thickness_nodes ) {
-                current_ctf_value = my_ctf.EvaluatePowerspectrumWithThickness(current_spatial_frequency_squared, 0.0);
+                current_ctf_value = my_ctf.EvaluatePowerspectrumWithThickness(current_spatial_frequency_squared, 0.0, comparison_object->fit_nodes_rounded_square);
             }
             MyDebugAssertTrue(current_ctf_value >= -1.0 && current_ctf_value <= 1.0, "Bad ctf value: %f", current_ctf_value);
             number_of_values++;

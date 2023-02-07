@@ -2,7 +2,7 @@
 // https://github.com/microsoft/vscode-dev-containers/tree/v0.230.0/containers/ubuntu
 {
     // "name": "cisTEMx-0.1",
-    "image": "ghcr.io/grigoriefflab2/cistem_build_env:v1.3.8",
+    "image": "ghcr.io/grigoriefflab/cistem_build_env:v1.3.8",
     // Set *default* container specific settings.json values on container create.
     "settings": {},
     // Add the IDs of extensions you want installed when the container is created.

@@ -8958,6 +8958,78 @@ void Image::RealSpaceIntegerShift(int wanted_x_shift, int wanted_y_shift, int wa
     delete[] buffer;
 }
 
+void Image::RealSpaceShift(int wanted_x_shift, int wanted_y_shift, int wanted_z_shift) {
+    MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+    MyDebugAssertTrue(is_in_real_space, "Not in real space");
+
+    int    i, j, k;
+    long   pixel_counter = 0;
+    long   shifted_counter;
+    float* buffer        = new float[number_of_real_space_pixels];
+    float  padding_value = ReturnAverageOfRealValuesOnEdges( );
+
+    int padding_x_start = 0;
+    int padding_y_start = 0;
+    int padding_z_start = 0;
+    int padding_x_end   = wanted_x_shift - 1;
+    int padding_y_end   = wanted_y_shift - 1;
+    int padding_z_end   = wanted_z_shift - 1;
+
+    if ( wanted_x_shift < 0 ) {
+        padding_x_start = logical_x_dimension + wanted_x_shift - 1;
+        padding_x_end   = logical_x_dimension - 1;
+    }
+    if ( wanted_y_shift < 0 ) {
+        padding_y_start = logical_y_dimension + wanted_y_shift - 1;
+        padding_y_end   = logical_y_dimension - 1;
+    }
+    if ( wanted_z_shift < 0 ) {
+        padding_z_start = logical_z_dimension + wanted_z_shift - 1;
+        padding_z_end   = logical_z_dimension - 1;
+    }
+
+    shifted_counter = wanted_x_shift + logical_x_dimension * (wanted_y_shift + logical_y_dimension * wanted_z_shift);
+    shifted_counter = remainderf(float(shifted_counter), float(number_of_real_space_pixels));
+
+    if ( shifted_counter < 0 )
+        shifted_counter += number_of_real_space_pixels;
+
+    int buffer_index = 0;
+    for ( k = 0; k < logical_z_dimension; k++ ) {
+        for ( j = 0; j < logical_y_dimension; j++ ) {
+            for ( i = 0; i < logical_x_dimension; i++ ) {
+                buffer[shifted_counter] = real_values[pixel_counter];
+                pixel_counter++;
+                shifted_counter++;
+                if ( shifted_counter >= number_of_real_space_pixels ) {
+                    shifted_counter -= number_of_real_space_pixels;
+                }
+            }
+            pixel_counter += padding_jump_value;
+        }
+    }
+    shifted_counter = 0;
+    pixel_counter   = 0;
+    for ( k = 0; k < logical_z_dimension; k++ ) {
+        for ( j = 0; j < logical_y_dimension; j++ ) {
+            for ( i = 0; i < logical_x_dimension; i++ ) {
+                if ( k >= padding_z_start && k <= padding_z_end )
+                    real_values[pixel_counter] = padding_value;
+                else if ( j >= padding_y_start && j <= padding_y_end )
+                    real_values[pixel_counter] = padding_value;
+                else if ( i >= padding_x_start && i <= padding_x_end )
+                    real_values[pixel_counter] = padding_value;
+                else
+                    real_values[pixel_counter] = buffer[shifted_counter];
+                pixel_counter++;
+                shifted_counter++;
+            }
+            pixel_counter += padding_jump_value;
+        }
+    }
+    delete[] buffer;
+}
+
 void Image::DilateBinarizedMask(float dilation_radius) {
     // To get a ring of new pixels 1 pixel wide, a value of 2.0 must be used for dilation_radius. I do not know why. FIXME
 
@@ -11653,6 +11725,7 @@ void Image::Distortion(Image* interp_img, float* shifted_mapx, float* shifted_ma
         int istart = ystart;
         int iend;
         int iistart = 0;
+        // wxPrintf("j index: %i flag 1\n", j);
         // while ( interpolated_map[istart][j][1] < 0 )
         while ( interpolated_mapy[iistart * logical_x_dimension + j] < 0 ) {
             iistart += 1;
@@ -11661,19 +11734,25 @@ void Image::Distortion(Image* interp_img, float* shifted_mapx, float* shifted_ma
                 break;
         }
         int iiend = logical_y_dimension - 1;
+        // wxPrintf("iiend initial %i\n", iiend);
         // while ( interpolated_map[iiend][j][1] > logical_y_dimension - 1 ) {
         while ( interpolated_mapy[iiend * logical_x_dimension + j] > logical_y_dimension - 1 ) {
             iiend = iiend - 1;
             if ( iiend == 0 )
                 break;
         }
+        // wxPrintf("iiend 1 %i\n", iiend);
         // while ( interpolated_map[iiend][j][1] == -100 ) {
         while ( interpolated_mapy[iiend * logical_x_dimension + j] == -100 ) {
             iiend = iiend - 1;
             if ( iiend == 0 )
                 break;
         }
+        // wxPrintf("iiend 2 %i\n", iiend);
+        if ( iiend == 0 )
+            continue;
         if ( iistart > 0 ) {
+            // wxPrintf("j index: %i flag 2\n", j);
             // if ( interpolated_map[iistart - 1][j][1] != -100 && interpolated_map[iistart - 1][j][0] != -100 ) {
             if ( interpolated_mapy[(iistart - 1) * logical_x_dimension + j] != -100 && interpolated_mapx[(iistart - 1) * logical_x_dimension + j] != -100 ) {
                 // wxPrintf("start %g %g\n", interpolated_mapy[(iistart - 1) * logical_x_dimension + j], interpolated_mapx[(iistart - 1) * logical_x_dimension + j]);
@@ -11681,15 +11760,21 @@ void Image::Distortion(Image* interp_img, float* shifted_mapx, float* shifted_ma
             }
         }
         if ( iiend < logical_y_dimension - 1 ) {
+            // wxPrintf("j index: %i flag 3\n", j);
+            // wxPrintf("iiend initial %i\n", iiend);
             // if ( interpolated_map[iiend - 1][j][1] != -100 && interpolated_map[iiend - 1][j][0] != -100 ) {
             if ( interpolated_mapy[(iiend - 1) * logical_x_dimension + j] != -100 && interpolated_mapx[(iiend - 1) * logical_x_dimension + j] != -100 ) {
                 // wxPrintf("end %g %g \n", interpolated_mapy[(iiend - 1) * logical_x_dimension + j], interpolated_mapx[(iiend - 1) * logical_x_dimension + j]);
                 iiend = iiend + 1;
+                // wxPrintf("j index: %i flag 3_1\n", j);
+                // wxPrintf("iiend %i\n", iiend);
             }
+            // wxPrintf("j index: %i flag 3_2\n", j);
         }
         // wxPrintf("current loop %i \n", j);
         if ( iiend <= iistart ) {
-            wxPrintf("the current line shall be skipped\n");
+            // wxPrintf("j index: %i flag 4\n", j);
+            // wxPrintf("the current line shall be skipped\n");
             // wxPrintf("interpolated_mapx,interpoaltedmapy %g %g \n",interpolated_mapy)
             // continue;
             break;
@@ -11700,7 +11785,9 @@ void Image::Distortion(Image* interp_img, float* shifted_mapx, float* shifted_ma
         if ( istart < 0 )
             istart = 0;
         // iend = std::floor(interpolated_map[iiend][j][1]);
+        // wxPrintf("j index, istart: %i, %i flag 4\n", j, istart);
         iend = std::floor(interpolated_mapy[iiend * logical_x_dimension + j]);
+        // wxPrintf("j index: %i, %i flag 5\n", j, iend);
         if ( iend > logical_y_dimension - 1 )
             iend = logical_y_dimension - 1;
         if ( istart > iend )

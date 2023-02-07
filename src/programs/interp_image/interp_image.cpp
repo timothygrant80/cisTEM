@@ -4,7 +4,7 @@
 #include <fstream>
 
 class
-        NikoTestApp : public MyApp {
+        InterpImageApp : public MyApp {
 
   public:
     bool DoCalculation( );
@@ -13,640 +13,144 @@ class
   private:
 };
 
-IMPLEMENT_APP(NikoTestApp)
+IMPLEMENT_APP(InterpImageApp)
 
-// override the DoInteractiveUserInput
-
-// void NikoTestApp::DoInteractiveUserInput( ) {
-//     UserInput* my_input = new UserInput("TrimStack", 1.0);
-
-//     wxString input_imgstack = my_input->GetFilenameFromUser("Input image file name", "Name of input image file *.mrc", "input.mrc", true);
-//     // // wxString output_stack_filename = my_input->GetFilenameFromUser("Filename for output stack of particles.", "A stack of particles will be written to disk", "particles.mrc", false);
-//     wxString angle_filename = my_input->GetFilenameFromUser("Tilt Angle filename", "The tilts, *.tlt", "ang.tlt", true);
-//     // wxString coordinates_filename  = my_input->GetFilenameFromUser("Coordinates (PLT) filename", "The input particle coordinates, in Imagic-style PLT forlmat", "coos.plt", true);
-//     int img_index = my_input->GetIntFromUser("Box size for output candidate particle images (pixels)", "In pixels. Give 0 to skip writing particle images to disk.", "256", 0);
-
-//     delete my_input;
-
-//     my_current_job.Reset(3);
-//     my_current_job.ManualSetArguments("tti", input_imgstack.ToUTF8( ).data( ), angle_filename.ToUTF8( ).data( ), img_index);
-// }
-
-// override the do calculation method which will be what is actually run..
-
-/*!
- * Finds the coordinates of up to the [maxPeaks] highest peaks in [array], which is 
- * dimensioned to [nxdim] by [ny], and returns the positions in [xpeak], [ypeak], and the 
- * peak values in [peak].  If [minStrength] is greater than 0, then only those peaks that
- * are greater than that fraction of the highest peak will be returned.  In addition, if 
- * [width] and [widthMin] are not NULL, the distance from the
- * peak to the position at half of the peak height is measured in 8 directions, the 
- * overall mean width of the peak is returned in [width], and the minimum width along one
- * of the four axes is returned in [widthMin].  The X size of the 
- * image is assumed to be [nxdim] - 2.  The sub-pixel position is determined by fitting
- * a parabola separately in X and Y to the peak and 2 adjacent points.  Positions
- * are numbered from zero and coordinates bigger than half the image size are
- * shifted to be negative.  The positions are thus the amount to shift a second
- * image in a correlation to align it to the first.  If fewer than [maxPeaks]
- * peaks are found, then the remaining values in [peaks] will be -1.e30.
- */
-#define B3DMIN(a, b) ((a) < (b) ? (a) : (b))
-#define B3DMAX(a, b) ((a) > (b) ? (a) : (b))
-#define B3DCLAMP(a, b, c) a = B3DMAX((b), B3DMIN((c), (a)))
-
-void XCorrPeakFindWidth(float* array, int nxdim, int ny, float* xpeak, float* ypeak,
-                        float* peak, float* width, float* widthMin, int maxPeaks,
-                        float minStrength) {
-    float cx, cy, y1, y2, y3, local, val;
-    float widthTemp[4];
-    int   ixpeak, iypeak, ix, iy, ixBlock, iyBlock, ixStart, ixEnd, iyStart, iyEnd;
-    int   i, j, ixm, ixp, iyb, iybm, iybp, idx, idy;
-    int   nx        = nxdim - 2;
-    int   blockSize = 5;
-    int   nBlocksX  = (nx + blockSize - 1) / blockSize;
-    int   nBlocksY  = (ny + blockSize - 1) / blockSize;
-    int   ixTopPeak = 10 * nx;
-    int   iyTopPeak = 10 * ny;
-    float xLimCen, yLimCen, xLimRadSq, yLimRadSq, threshold = 0.;
-
-    float sApplyLimits = -1;
-    float sLimitXlo    = -3000;
-    float sLimitYlo    = -3000;
-    float sLimitXhi    = 3000;
-    float sLimitYhi    = 3000;
-
-    /* If using elliptical limits, compute center and squares of radii */
-    if ( sApplyLimits < 0 ) {
-        xLimCen   = 0.5 * (sLimitXlo + sLimitXhi);
-        cx        = B3DMAX(1., (sLimitXhi - sLimitXlo) / 2.);
-        xLimRadSq = cx * cx;
-        yLimCen   = 0.5 * (sLimitYlo + sLimitYhi);
-        cy        = B3DMAX(1., (sLimitYhi - sLimitYlo) / 2.);
-        yLimRadSq = cy * cy;
-    }
-
-    /* find peaks */
-    for ( i = 0; i < maxPeaks; i++ ) {
-        peak[i]  = -1.e30f;
-        xpeak[i] = 0.;
-        ypeak[i] = 0.;
-    }
-
-    /* Look for highest peak if looking for one peak or if there is a minimum strength */
-    if ( maxPeaks < 2 || minStrength > 0. ) {
-
-        /* Find one peak within the limits */
-        if ( sApplyLimits ) {
-            for ( iy = 0; iy < ny; iy++ ) {
-                idy = (iy > ny / 2) ? iy - ny : iy;
-                if ( idy < sLimitYlo || idy > sLimitYhi )
-                    continue;
-                for ( ix = 0; ix < nx; ix++ ) {
-                    idx = (ix > nx / 2) ? ix - nx : ix;
-                    if ( idx >= sLimitXlo && idx <= sLimitXhi && array[ix + iy * nxdim] > *peak ) {
-                        if ( sApplyLimits < 0 ) {
-                            cx = idx - xLimCen;
-                            cy = idy - yLimCen;
-                            if ( cx * cx / xLimRadSq + cy * cy / yLimRadSq > 1. )
-                                continue;
-                        }
-                        *peak  = array[ix + iy * nxdim];
-                        ixpeak = ix;
-                        iypeak = iy;
-                    }
-                }
-            }
-            if ( *peak > -0.9e30 ) {
-                *xpeak = (float)ixpeak;
-                *ypeak = (float)iypeak;
-            }
-        }
-        else {
-
-            /* Or just find the one peak in the whole area */
-            for ( iy = 0; iy < ny; iy++ ) {
-                for ( ix = iy * nxdim; ix < nx + iy * nxdim; ix++ ) {
-                    if ( array[ix] > *peak ) {
-                        *peak  = array[ix];
-                        ixpeak = ix - iy * nxdim;
-                        iypeak = iy;
-                    }
-                }
-            }
-            *xpeak = (float)ixpeak;
-            *ypeak = (float)iypeak;
-        }
-        threshold = minStrength * *peak;
-        ixTopPeak = ixpeak;
-        iyTopPeak = iypeak;
-    }
-
-    /* Now find all requested peaks */
-    if ( maxPeaks > 1 ) {
-
-        // Check for local peaks by looking at the highest point in each local
-        // block
-        for ( iyBlock = 0; iyBlock < nBlocksY; iyBlock++ ) {
-
-            // Block start and end in Y
-            iyStart = iyBlock * blockSize;
-            iyEnd   = iyStart + blockSize;
-            if ( iyEnd > ny )
-                iyEnd = ny;
-
-            // Test if entire block is outside limits
-            if ( sApplyLimits && (iyStart > ny / 2 || iyEnd <= ny / 2) ) {
-                idy = (iyStart > ny / 2) ? iyStart - ny : iyStart;
-                if ( idy > sLimitYhi )
-                    continue;
-                idy = (iyEnd > ny / 2) ? iyEnd - ny : iyEnd;
-                if ( idy < sLimitYlo )
-                    continue;
-            }
-
-            // Loop on X blocks, get start and end in Y
-            for ( ixBlock = 0; ixBlock < nBlocksX; ixBlock++ ) {
-                ixStart = ixBlock * blockSize;
-                ixEnd   = ixStart + blockSize;
-                if ( ixEnd > nx )
-                    ixEnd = nx;
-
-                // Test if entire block is outside limits
-                if ( sApplyLimits && (ixStart > nx / 2 || ixEnd <= nx / 2) ) {
-                    idx = (ixStart > nx / 2) ? ixStart - nx : ixStart;
-                    if ( idx > sLimitXhi )
-                        continue;
-                    idx = (ixEnd > nx / 2) ? ixEnd - nx : ixEnd;
-                    if ( idx < sLimitXlo )
-                        continue;
-                }
-
-                // Loop on every pixel in the block; have to test each pixel
-                local = -1.e30f;
-                for ( iy = iyStart; iy < iyEnd; iy++ ) {
-                    if ( sApplyLimits ) {
-                        idy = (iy > ny / 2) ? iy - ny : iy;
-                        if ( idy < sLimitYlo || idy > sLimitYhi )
-                            continue;
-                    }
-                    for ( ix = ixStart; ix < ixEnd; ix++ ) {
-                        if ( sApplyLimits ) {
-                            idx = (ix > nx / 2) ? ix - nx : ix;
-                            if ( idx < sLimitXlo || idx > sLimitXhi )
-                                continue;
-
-                            // Apply elliptical test
-                            if ( sApplyLimits < 0 ) {
-                                cx = idx - xLimCen;
-                                cy = idy - yLimCen;
-                                if ( cx * cx / xLimRadSq + cy * cy / yLimRadSq > 1. )
-                                    continue;
-                            }
-                        }
-                        val = array[ix + iy * nxdim];
-                        if ( val > local && val > peak[maxPeaks - 1] && val > threshold ) {
-                            local  = val;
-                            ixpeak = ix;
-                            iypeak = iy;
-                        }
-                    }
-                }
-
-                // evaluate local peak for truly being local.
-                // Allow equality on one side, otherwise identical adjacent values are lost
-                if ( local > -0.9e30 ) {
-                    ixm  = (ixpeak + nx - 1) % nx;
-                    ixp  = (ixpeak + 1) % nx;
-                    iyb  = iypeak * nxdim;
-                    iybp = ((iypeak + 1) % ny) * nxdim;
-                    iybm = ((iypeak + ny - 1) % ny) * nxdim;
-
-                    if ( local > array[ixpeak + iybm] && local >= array[ixpeak + iybp] &&
-                         local > array[ixm + iyb] && local >= array[ixp + iyb] &&
-                         local > array[ixm + iybp] && local >= array[ixp + iybm] &&
-                         local > array[ixp + iybp] && local >= array[ixm + iybm] &&
-                         (ixpeak != ixTopPeak || iypeak != iyTopPeak) ) {
-
-                        // Insert peak into the list
-                        for ( i = 0; i < maxPeaks; i++ ) {
-                            if ( peak[i] < local ) {
-                                for ( j = maxPeaks - 1; j > i; j-- ) {
-                                    peak[j]  = peak[j - 1];
-                                    xpeak[j] = xpeak[j - 1];
-                                    ypeak[j] = ypeak[j - 1];
-                                }
-                                peak[i]  = local;
-                                xpeak[i] = (float)ixpeak;
-                                ypeak[i] = (float)iypeak;
-                                break;
-                            }
-                        }
-                    }
-                }
-            }
-        }
-    }
-
-    // for ( i = 0; i < maxPeaks; i++ ) {
-    //     if ( peak[i] < -0.9e30 )
-    //         continue;
-
-    // // Add 0.2 just in case float was less than int assigned to it
-    // ixpeak = (int)(xpeak[i] + 0.2);
-    // iypeak = (int)(ypeak[i] + 0.2);
-
-    // /* simply fit a parabola to the two adjacent points in X or Y */
-
-    // y1 = array[(ixpeak + nx - 1) % nx + iypeak * nxdim];
-    // y2 = peak[i];
-    // y3 = array[(ixpeak + 1) % nx + iypeak * nxdim];
-    // cx = (float)parabolicFitPosition(y1, y2, y3);
-
-    // y1 = array[ixpeak + ((iypeak + ny - 1) % ny) * nxdim];
-    // y3 = array[ixpeak + ((iypeak + 1) % ny) * nxdim];
-    // cy = (float)parabolicFitPosition(y1, y2, y3);
-
-    // /*    return adjusted pixel coordinate */
-    // xpeak[i] = ixpeak + cx;
-    // ypeak[i] = iypeak + cy;
-    // if ( xpeak[i] > nx / 2 )
-    //     xpeak[i] = xpeak[i] - nx;
-    // if ( ypeak[i] > ny / 2 )
-    //     ypeak[i] = ypeak[i] - ny;
-
-    // /* Return width if non-NULL */
-    // if ( width && widthMin ) {
-    //     widthTemp[0] = peakHalfWidth(array, ixpeak, iypeak, nx, ny, 1, 0) +
-    //                    peakHalfWidth(array, ixpeak, iypeak, nx, ny, -1, 0);
-    //     widthTemp[1] = peakHalfWidth(array, ixpeak, iypeak, nx, ny, 0, 1) +
-    //                    peakHalfWidth(array, ixpeak, iypeak, nx, ny, 0, -1);
-    //     widthTemp[2] = peakHalfWidth(array, ixpeak, iypeak, nx, ny, 1, 1) +
-    //                    peakHalfWidth(array, ixpeak, iypeak, nx, ny, -1, -1);
-    //     widthTemp[3] = peakHalfWidth(array, ixpeak, iypeak, nx, ny, 1, -1) +
-    //                    peakHalfWidth(array, ixpeak, iypeak, nx, ny, -1, 1);
-    //     avgSD(widthTemp, 4, &width[i], &cx, &cy);
-    //     widthMin[i] = B3DMIN(widthTemp[0], widthTemp[1]);
-    //     widthMin[i] = B3DMIN(widthMin[i], widthTemp[2]);
-    //     widthMin[i] = B3DMIN(widthMin[i], widthTemp[3]);
-    // }
-    // }
-    sApplyLimits = 0;
-}
-
-void rotmagstrToAmat(float theta, float smag, float str, float phi, float* a11,
-                     float* a12, float* a21, float* a22) {
-    double ator = 0.0174532925;
-    float  sinth, costh, sinphi, cosphi, sinphisq, cosphisq, f1, f2, f3;
-
-    costh    = (float)cos(ator * theta);
-    sinth    = (float)sin(ator * theta);
-    cosphi   = (float)cos(ator * phi);
-    sinphi   = (float)sin(ator * phi);
-    cosphisq = cosphi * cosphi;
-    sinphisq = sinphi * sinphi;
-    f1       = smag * (str * cosphisq + sinphisq);
-    f2       = smag * (str - 1.) * cosphi * sinphi;
-    f3       = smag * (str * sinphisq + cosphisq);
-    *a11     = f1 * costh - f2 * sinth;
-    *a12     = f2 * costh - f3 * sinth;
-    *a21     = f1 * sinth + f2 * costh;
-    *a22     = f2 * sinth + f3 * costh;
-}
-
-/*!
- * Takes the inverse of transform [f] and returns the result in [finv], which can be the 
- * same as [f].
- */
-void xfInvert(float* f, float* finv, int rows) {
-    float tmp[9];
-    float denom   = f[0] * f[rows + 1] - f[rows] * f[1];
-    int   idx     = 2 * rows;
-    int   idy     = 2 * rows + 1;
-    tmp[0]        = f[rows + 1] / denom;
-    tmp[rows]     = -f[rows] / denom;
-    tmp[1]        = -f[1] / denom;
-    tmp[rows + 1] = f[0] / denom;
-    tmp[idx]      = -(tmp[0] * f[idx] + tmp[rows] * f[idy]);
-    tmp[idy]      = -(tmp[1] * f[idx] + tmp[rows + 1] * f[idy]);
-    if ( rows > 2 ) {
-        tmp[2] = tmp[5] = 0.;
-        tmp[8]          = 1.;
-    }
-    for ( idx = 0; idx < 3 * rows; idx++ )
-        finv[idx] = tmp[idx];
-}
-
-/*!
- * Applies transform [f] to the point [x], [y], with the center of transformation at
- * [xcen], [ycen], and returns the result in [xp], [yp], which can be the same as
- * [x], [y].
- */
-void xfApply(float* f, float xcen, float ycen, float x, float y, float* xp, float* yp,
-             int rows) {
-    float xadj = x - xcen;
-    float yadj = y - ycen;
-    *xp        = f[0] * xadj + f[rows] * yadj + f[2 * rows] + xcen;
-    *yp        = f[1] * xadj + f[rows + 1] * yadj + f[2 * rows + 1] + ycen;
-}
-
-double sliceEdgeMean(float* array, int nxdim, int ixlo, int ixhi, int iylo,
-                     int iyhi) {
-    double dmean, sum = 0.;
-    int    ix, iy;
-    for ( ix = ixlo; ix <= ixhi; ix++ )
-        sum += array[ix + iylo * nxdim] + array[ix + iyhi * nxdim];
-
-    for ( iy = iylo + 1; iy < iyhi; iy++ )
-        sum += array[ixlo + iy * nxdim] + array[ixhi + iy * nxdim];
-
-    dmean = sum / (2 * (ixhi - ixlo + iyhi - iylo));
-    return dmean;
-}
-
-// /* Find the point in one direction away from the peak pixel where it falls by half */
-// static float peakHalfWidth(float* array, int ixPeak, int iyPeak, int nx, int ny, int delx,
-//                            int dely) {
-//     int   nxdim = nx + 2;
-//     float peak  = array[ixPeak + iyPeak * nxdim];
-//     int   dist, ix, iy;
-//     float scale   = (float)sqrt((double)delx * delx + dely * dely);
-//     float lastVal = peak, val;
-
-//     for ( dist = 1; dist < B3DMIN(nx, ny) / 4; dist++ ) {
-//         ix  = (ixPeak + dist * delx + nx) % nx;
-//         iy  = (iyPeak + dist * dely + ny) % ny;
-//         val = array[ix + iy * nxdim];
-//         if ( val < peak / 2. )
-//             return scale * (float)(dist + (lastVal - peak / 2.) / (lastVal - val) - 1.);
-//         lastVal = val;
-//     }
-//     return scale * (float)dist;
-// }
-// shift the stack
-// void readArray( ) {
-//     wxString      inFileName = "/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/peak_analysis/shifted_mapx.txt";
-//     std::ifstream inFile;
-//     inFile.open(inFileName.c_str( ));
-//     if ( inFile.is_open( ) ) {
-//         wxPrintf("file is open\n");
-//         float myarray[10][5760];
-//         for ( int j = 0; j < 2; j++ ) {
-//             for ( int i = 0; i < 5760; i++ ) {
-//                 inFile >> myarray[j][i];
-//                 wxPrintf("j i value %i %i %g\n", j, i, myarray[j][i]);
-//             }
-//         }
-//     }
-// }
-
-void NikoTestApp::DoInteractiveUserInput( ) {
-    UserInput* my_input = new UserInput("TrimStack", 1.0);
-
-    wxString input_image          = my_input->GetFilenameFromUser("Input image file name", "Name of input image file *.mrc", "input.mrc", true);
-    wxString peak_filename        = my_input->GetFilenameFromUser("Peak filename", "The file containing peak for each patch, *.txt", "peak_01.txt", true);
-    wxString coordinates_filename = my_input->GetFilenameFromUser("Coordinates (PLT) filename", "The input particle coordinates, in Imagic-style PLT forlmat", "coos.plt", true);
+void InterpImageApp::DoInteractiveUserInput( ) {
+    UserInput* my_input       = new UserInput("InterpImage", 1.0);
+    wxString   input_imgstack = my_input->GetFilenameFromUser("Input image file name", "Name of input image file *.mrc", "input.mrc", true);
+    // wxString   input_file     = my_input->GetFilenameFromUser("Input image file name", "Name of input image file *.mrc", "input.mrc", true);
+    wxString shift_filex      = my_input->GetStringFromUser("txt file name pattern storing the shift along x", "shifted_x", "shifted_x");
+    wxString shift_filey      = my_input->GetStringFromUser("txt file name pattern storing the shift along y", "shifted_y", "shifted_y");
+    wxString input_shift_path = my_input->GetStringFromUser("txt file path", "/data/path/", "/data/lingli/");
+    wxString output_path      = my_input->GetStringFromUser("output file path", "/data/path/", "/data/lingli/");
     // int      output_stack_box_size = my_input->GetIntFromUser("Box size for output candidate particle images (pixels)", "In pixels. Give 0 to skip writing particle images to disk.", "256", 0);
     // float    rotation_angle        = my_input->GetFloatFromUser("rotation angle of the tomography", "phi in degrees, 0.0 for none rotation", "0.0");
     // wxString shifts_filename       = my_input->GetFilenameFromUser("Shifts filename", "The shifts, *.txt", "shifts.txt", true);
     delete my_input;
 
-    my_current_job.Reset(3);
-    my_current_job.ManualSetArguments("ttt", input_image.ToUTF8( ).data( ), peak_filename.ToUTF8( ).data( ), coordinates_filename.ToUTF8( ).data( ));
+    my_current_job.Reset(5);
+    my_current_job.ManualSetArguments("tssss", input_imgstack.ToUTF8( ).data( ), shift_filex.ToUTF8( ).data( ), shift_filey.ToUTF8( ).data( ), input_shift_path.ToUTF8( ).data( ), output_path.ToUTF8( ).data( ));
 }
 
-bool NikoTestApp::DoCalculation( ) {
-    wxString input_image = my_current_job.arguments[0].ReturnStringArgument( );
-    wxString peakfile    = my_current_job.arguments[1].ReturnStringArgument( );
-    wxString patchfile   = my_current_job.arguments[2].ReturnStringArgument( );
-    MRCFile  input_test(input_image.ToStdString( ), false);
+bool InterpImageApp::DoCalculation( ) {
 
-    wxString    outputpath    = "/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/tilt04_shift_analysis/";
-    std::string outputpathstd = "/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/tilt04_shift_analysis/";
-    // MRCFile input_test("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/Test-ximina-20220928/outputstack.mrc", false);
-    // MRCFile input_test("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/peak_analysis/sample_img.mrc", false);
-    // MRCFile input_test("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/unstacked_Ximena_raw/image_000.mrc", false);
-    // wxString coordinates_filename = my_input->GetFilenameFromUser("Coordinates (PLT) filename", "The input particle coordinates, in Imagic-style PLT forlmat", "coos.plt", true);
-    // wxString coordinates_filename = my_current_job.arguments[2].ReturnStringArgument( );
-    NumericTextFile *patch_positions, *peak_positions;
-    // wxString         patchfile = "/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/patchlocations.plt";
-    // wxString         peakfile  = "/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/peak_positions.txt";
-    // wxString patchfile = "/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/coord_TS17.plt";
-    // wxString peakfile  = "/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/peak_01.txt";
+    wxString input_imgstack = my_current_job.arguments[0].ReturnStringArgument( );
+    wxString shift_file_x   = my_current_job.arguments[1].ReturnStringArgument( );
+    wxString shift_file_y   = my_current_job.arguments[2].ReturnStringArgument( );
+    wxString input_path     = my_current_job.arguments[3].ReturnStringArgument( );
+    wxString outputpath     = my_current_job.arguments[4].ReturnStringArgument( );
+    MRCFile  input_stack(input_imgstack.ToStdString( ), false);
 
-    patch_positions = new NumericTextFile(patchfile, OPEN_TO_READ, 2);
-    peak_positions  = new NumericTextFile(peakfile, OPEN_TO_READ, 2);
+    // wxString    outputpath    = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/TestInterp_1/";
+    // std::string outputpathstd =
 
-    // NumericTextFile *shift_filex, *shift_filey;
-    // NumericTextFile peak_position;
-    // readArray( );
-    wxPrintf("start\n");
+    Image   sample_img;
+    Image   interp_img, interp_img_tmp;
+    MRCFile output_stack;
+    output_stack.OpenFile(outputpath.ToStdString( ) + "outputstack.mrc", true);
 
-    Image sample_img;
-    Image interp_img, interp_img_tmp;
+    int image_x_dim, image_y_dim, image_no;
+    image_x_dim = input_stack.ReturnXSize( );
+    image_y_dim = input_stack.ReturnYSize( );
+    image_no    = input_stack.ReturnNumberOfSlices( );
+    // image_no = 3;
 
-    int image_x_dim, image_y_dim;
-    image_x_dim = input_test.ReturnXSize( );
-    image_y_dim = input_test.ReturnYSize( );
-    int patch_no;
-    patch_no            = patch_positions->number_of_lines;
-    int     patch_x_num = 6, patch_y_num = 4;
-    int     bin      = 1;
-    float** peaks_x  = NULL;
-    float** peaks_y  = NULL;
-    float** patchs_x = NULL;
-    float** patchs_y = NULL;
+    // wxString      shifted_mapx_file = outputpath + "shifted_x.txt";
+    // wxString      shifted_mapy_file = outputpath + "shifted_y.txt";
+    // std::ofstream xoFile, yoFile;
 
-    Allocate2DFloatArray(peaks_x, patch_y_num, patch_x_num);
-    Allocate2DFloatArray(peaks_y, patch_y_num, patch_x_num);
-    Allocate2DFloatArray(patchs_x, patch_y_num, patch_x_num);
-    Allocate2DFloatArray(patchs_y, patch_y_num, patch_x_num);
-    for ( int i = 0; i < patch_y_num; i++ ) {
-        float tmppeak[2];
-        float tmppatch[2];
-        for ( int j = 0; j < patch_x_num; j++ ) {
-            patch_positions->ReadLine(tmppatch);
-            peak_positions->ReadLine(tmppeak);
-            patchs_x[i][j] = tmppatch[0] + image_x_dim / 2;
-            patchs_y[i][j] = tmppatch[1] + image_y_dim / 2;
-            peaks_x[i][j]  = tmppeak[0] * bin + patchs_x[i][j];
-            peaks_y[i][j]  = tmppeak[1] * bin + patchs_y[i][j];
-
-            wxPrintf("patchpeaks x y %i, %i, %g, %g, %g, %g\n", i, j, peaks_x[i][j], peaks_y[i][j], patchs_x[i][j], patchs_y[i][j]);
-        }
-    }
-
-    float** shifted_map_x;
-    float** shifted_map_y;
-    float** original_map_x;
-    float** original_map_y;
-    Allocate2DFloatArray(shifted_map_x, image_y_dim, image_x_dim);
-    Allocate2DFloatArray(shifted_map_y, image_y_dim, image_x_dim);
-    Allocate2DFloatArray(original_map_x, image_y_dim, image_x_dim);
-    Allocate2DFloatArray(original_map_y, image_y_dim, image_x_dim);
-
-    // initialize the pixel coordinates
-    for ( int i = 0; i < image_y_dim; i++ ) {
-        for ( int j = 0; j < image_x_dim; j++ ) {
-            shifted_map_x[i][j]  = j;
-            original_map_x[i][j] = j;
-            shifted_map_y[i][j]  = i;
-            original_map_y[i][j] = i;
-        }
-    }
-
-    // calculate shifte amount along x
-    for ( int i = 0; i < patch_y_num - 1; i++ ) {
-        for ( int j = 0; j < patch_x_num - 1; j++ ) {
-            int   interval_x_no     = int(patchs_x[i][j + 1] - patchs_x[i][j]);
-            int   interval_y_no     = -int(patchs_y[i + 1][j] - patchs_y[i][j]);
-            float SHX_interval_0_1  = (peaks_x[i][j + 1] - peaks_x[i][j]) / interval_x_no;
-            float SHX_interval_2_3  = (peaks_x[i + 1][j + 1] - peaks_x[i + 1][j]) / interval_x_no;
-            float SHX_interval_diff = (SHX_interval_0_1 - SHX_interval_2_3) / interval_y_no;
-
-            float SHY_interval_2_0  = -(peaks_y[i + 1][j] - peaks_y[i][j]) / interval_y_no;
-            float SHY_interval_3_1  = -(peaks_y[i + 1][j + 1] - peaks_y[i][j + 1]) / interval_y_no;
-            float SHY_interval_diff = (SHY_interval_3_1 - SHY_interval_2_0) / interval_x_no;
-
-            float ref_SHX_interval = SHX_interval_2_3;
-            float ref_SHX_location = peaks_x[i + 1][j];
-            float ref_SHY_interval = SHY_interval_2_0;
-            float ref_SHY_location = peaks_y[i + 1][j];
-
-            float ref_SH_x = peaks_x[i + 1][j];
-            float ref_SH_y = peaks_y[i + 1][j];
-
-            int   ystart       = int(patchs_y[i + 1][j]);
-            int   yend         = int(patchs_y[i][j]);
-            int   xstart       = int(patchs_x[i + 1][j]);
-            int   xend         = int(patchs_x[i + 1][j + 1]);
-            float slop_along_y = (peaks_x[i][j] - peaks_x[i + 1][j]) / (yend - ystart);
-            float slop_along_x = (peaks_y[i + 1][j + 1] - peaks_y[i + 1][j]) / (xend - xstart);
-
-            int yindex_start = ystart;
-            int yindex_end   = yend;
-            int xindex_start = xstart;
-            int xindex_end   = xend;
-            if ( i == 0 )
-                yindex_end = image_y_dim;
-            if ( i == patch_y_num - 2 )
-                yindex_start = 0;
-            if ( j == 0 )
-                xindex_start = 0;
-            if ( j == patch_x_num - 2 )
-                xindex_end = image_x_dim;
-
-            for ( int yindex = yindex_start; yindex < yindex_end; yindex++ ) {
-                float current_interval_x      = ref_SHX_interval + SHX_interval_diff * (yindex - ystart);
-                float current_start_locationx = ref_SH_x + slop_along_y * (yindex - ystart);
-                for ( int xindex = xindex_start; xindex < xindex_end; xindex++ ) {
-                    shifted_map_x[yindex][xindex] = current_start_locationx + (xindex - xstart) * current_interval_x;
-                    shifted_map_y[yindex][xindex] = yindex;
-                    float current_interval_y      = ref_SHY_interval + SHY_interval_diff * (xindex - xstart);
-                    float current_start_locationy = ref_SH_y + slop_along_x * (xindex - xstart);
-                    shifted_map_y[yindex][xindex] = current_start_locationy + (yindex - ystart) * current_interval_y;
-                }
-            }
-        }
-    }
-
-    wxString      shifted_mapx_file = outputpath + "shifted_x.txt";
-    wxString      shifted_mapy_file = outputpath + "shifted_y.txt";
-    std::ofstream xoFile, yoFile;
-
-    // wxPrintf("1\n");
-    // for ( int i = 0; i < 10; i++ ) {
-    //     for ( int j = 0; j < 10; j++ ) {
-    //         shifted_map_x[i][j] = j;
-    //         shifted_map_y[i][j] = i;
-    //     }
-    // }
-
-    xoFile.open(shifted_mapx_file.c_str( ));
-    yoFile.open(shifted_mapy_file.c_str( ));
-    if ( xoFile.is_open( ) && yoFile.is_open( ) ) {
-        wxPrintf("files are open\n");
-        // float myarray[10][5760];
-        for ( int i = 0; i < image_y_dim; i++ ) {
-            for ( int j = 0; j < image_x_dim; j++ ) {
-                xoFile << shifted_map_x[i][j] << '\t';
-                yoFile << shifted_map_y[i][j] << '\t';
-            }
-            xoFile << '\n';
-            yoFile << '\n';
-        }
-    }
-    xoFile.close( );
-    yoFile.close( );
-
-    wxPrintf("1\n");
-    sample_img.ReadSlice(&input_test, 1);
     // image_no = input_test.ReturnNumberOfSlices( );
     // image_x_dim = sample_img.logical_x_dimension;
     // image_y_dim = sample_img.logical_y_dimension;
     // image_x_dim = input_test.ReturnXSize( );
     // image_y_dim = input_test.ReturnYSize( );
-
-    wxPrintf("image dim: %i, %i\n", image_x_dim, image_y_dim);
-    interp_img.Allocate(image_x_dim, image_y_dim, true);
-    interp_img_tmp.Allocate(image_x_dim, image_y_dim, true);
-    interp_img.SetToConstant(sample_img.ReturnAverageOfRealValuesOnEdges( ));
-    interp_img_tmp.SetToConstant(sample_img.ReturnAverageOfRealValuesOnEdges( ));
-    wxPrintf("2\n");
-    // float* shifted_map = new float[image_y_dim][4092][2];
-    wxPrintf("image dim: %i, %i\n", image_x_dim, image_y_dim);
-    int totalpixels = image_x_dim * image_y_dim;
-    wxPrintf("3 total pixels %i\n", totalpixels);
-    // float shifted_mapx[totalpixels], shifted_mapy[totalpixels];
+    int    totalpixels       = image_x_dim * image_y_dim;
     float* shifted_mapx      = new float[totalpixels];
     float* shifted_mapy      = new float[totalpixels];
     float* interpolated_mapx = new float[totalpixels];
     float* interpolated_mapy = new float[totalpixels];
 
-    wxPrintf("3\n");
-    wxPrintf("start loading shifted text\n");
-
-    // load array from file
-    // wxString      shift_filex = "/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/peak_analysis/shifted_mapx.txt";
-    // wxString      shift_filey = "/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/peak_analysis/shifted_mapy.txt";
-    wxString      shift_filex = outputpath + "shifted_x.txt";
-    wxString      shift_filey = outputpath + "shifted_y.txt";
     std::ifstream xFile, yFile;
+    wxString      shift_filex;
+    wxString      shift_filey;
+    for ( int image_index = 1; image_index < image_no + 1; image_index++ ) {
+        wxPrintf("processing image %i\n", image_index);
+        int shift_file_index = image_index - 1;
+        // int shift_file_index = 74;
 
-    wxPrintf("1\n");
+        sample_img.ReadSlice(&input_stack, image_index);
+        wxPrintf("image dim: %i, %i\n", image_x_dim, image_y_dim);
+        interp_img.Allocate(image_x_dim, image_y_dim, true);
+        interp_img_tmp.Allocate(image_x_dim, image_y_dim, true);
+        interp_img.SetToConstant(sample_img.ReturnAverageOfRealValuesOnEdges( ));
+        interp_img_tmp.SetToConstant(sample_img.ReturnAverageOfRealValuesOnEdges( ));
+        wxPrintf("2\n");
+        // float* shifted_map = new float[image_y_dim][4092][2];
+        wxPrintf("image dim: %i, %i\n", image_x_dim, image_y_dim);
 
-    xFile.open(shift_filex.c_str( ));
-    yFile.open(shift_filey.c_str( ));
+        wxPrintf("3 total pixels %i\n", totalpixels);
+        // float shifted_mapx[totalpixels], shifted_mapy[totalpixels];
 
-    if ( xFile.is_open( ) && yFile.is_open( ) ) {
-        wxPrintf("files are open\n");
-        // float myarray[10][5760];
-        for ( int pix = 0; pix < totalpixels; pix++ ) {
-            xFile >> shifted_mapx[pix];
-            yFile >> shifted_mapy[pix];
+        wxPrintf("3\n");
+        wxPrintf("start loading shifted text\n");
+
+        // wxPrintf("shiftfiles are %s, %s, \n", shift_filex.c_str( ), shift_filey.c_str( ));
+
+        // load array from file
+        shift_filex = wxString::Format(input_path + "%02i_" + shift_file_x + ".txt", shift_file_index);
+        shift_filey = wxString::Format(input_path + "%02i_" + shift_file_y + ".txt", shift_file_index);
+        wxPrintf("shiftfiles are %s, %s, \n", shift_filex, shift_filey);
+        xFile.open(shift_filex.c_str( ));
+        yFile.open(shift_filey.c_str( ));
+
+        if ( xFile.is_open( ) && yFile.is_open( ) ) {
+            wxPrintf("files are open\n");
+            // float myarray[10][5760];
+            for ( int pix = 0; pix < totalpixels; pix++ ) {
+                xFile >> shifted_mapx[pix];
+                yFile >> shifted_mapy[pix];
+            }
         }
+        wxPrintf("first shift x ,y %f, %f \n", shifted_mapx[0], shifted_mapy[0]);
+        for ( int i = 0; i < image_y_dim; i++ ) {
+            for ( int j = 0; j < image_x_dim; j++ ) {
+                shifted_mapx[i * image_x_dim + j] += j;
+                shifted_mapy[i * image_x_dim + j] += i;
+            }
+        }
+        wxPrintf("adjusted first pix position x ,y %f, %f \n", shifted_mapx[0], shifted_mapy[0]);
+        wxPrintf("shifting files are loaded \n");
+        xFile.close( );
+        yFile.close( );
+        // load array from file end
+
+        // int len = sizeof(shifted_mapx) / sizeof(shifted_mapx[0]);
+        int len = *(&shifted_mapx + 1) - shifted_mapx;
+        // std::cout << "the size" << std::sizeof(shifted_mapx[0]);
+        // wxPrintf("len %i %i %i\n", sizeof(shifted_mapx), sizeof(shifted_mapx[0]), len);
+        wxPrintf("len %i\n", len);
+        sample_img.Distortion(&interp_img, shifted_mapx, shifted_mapy);
+        interp_img.WriteSlice(&output_stack, image_index);
+
+        // interp_img.WriteSlicesAndFillHeader(outputpathstd + "interp.mrc", 1);
     }
-    wxPrintf("shifting files are loaded \n");
-    xFile.close( );
-    yFile.close( );
-    // load array from file end
+    Image sum_image;
+    Image tmp_image;
+    tmp_image.Allocate(image_x_dim, image_y_dim, true);
+    tmp_image.SetToConstant(0.0);
+    sum_image.Allocate(image_x_dim, image_y_dim, true);
+    sum_image.SetToConstant(0.0);
+    for ( int image_index = 1; image_index < image_no + 1; image_index++ ) {
+        tmp_image.ReadSlice(&output_stack, image_index);
+        sum_image.AddImage(&tmp_image);
+    }
+    output_stack.CloseFile( );
+    // sum_image.WriteSlicesAndFillHeader(outputpathstd + "sum_image.mrc", 1);
+    // sum_image.WriteSlicesAndFillHeader(outputpath.ToStdString( ) + "sum_image.mrc", 1);
+    sum_image.WriteSlicesAndFillHeader(outputpath.ToStdString( ) + "sum_image.mrc", 1);
 
-    // int len = sizeof(shifted_mapx) / sizeof(shifted_mapx[0]);
-    int len = *(&shifted_mapx + 1) - shifted_mapx;
-    // std::cout << "the size" << std::sizeof(shifted_mapx[0]);
-    // wxPrintf("len %i %i %i\n", sizeof(shifted_mapx), sizeof(shifted_mapx[0]), len);
-    wxPrintf("len %i\n", len);
-    sample_img.Distortion(&interp_img, shifted_mapx, shifted_mapy);
-    interp_img.WriteSlicesAndFillHeader(outputpathstd + "interp.mrc", 1);
-
-    // delete &sample_img;
-    // delete &interp_img;
     delete[] shifted_mapx;
     delete[] shifted_mapy;
-    Deallocate2DFloatArray(shifted_map_x, image_y_dim);
-    Deallocate2DFloatArray(shifted_map_y, image_y_dim);
-    Deallocate2DFloatArray(original_map_x, image_y_dim);
-    Deallocate2DFloatArray(original_map_y, image_y_dim);
-
     return true;
 }
 

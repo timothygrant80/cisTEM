@@ -185,114 +185,25 @@ Image CosStretch(Image input_image, float phi, float trim_ratio) {
     return stretched_img;
 }
 
-void NikoTestApp::DoInteractiveUserInput( ) {
-    UserInput* my_input = new UserInput("Coarse Align", 1.0);
+float** CoarseAlign(MRCFile* input_stack, float* tilts, float phi_ang, wxString outputpath, float sigma_l, float sigma_h, float radius_l, float radius_h) {
 
-    wxString input_imgstack      = my_input->GetFilenameFromUser("Input image file name", "Name of input image file *.mrc", "input.mrc", true);
-    wxString angle_filename      = my_input->GetFilenameFromUser("Tilt Angle filename", "The tilts, *.tlt", "ang.tlt", true);
-    float    rotation_angle      = my_input->GetFloatFromUser("rotation angle of the tomography", "phi in degrees, 0.0 for none rotation", "0.0");
-    float    sigma_lowpass       = my_input->GetFloatFromUser("sigma of low pass filter", "sigma_lowpass, 0.0 for no gradient at low pass cutoff radius", "0.0");
-    float    sigma_highpass      = my_input->GetFloatFromUser("sigma of high pass filter", "sigma_highpass, 0.0 for no gradient at high pass cutoff radius", "0.0");
-    float    radius_lowpass      = my_input->GetFloatFromUser("cutoff radius for low pass filter", "lowpass filter radius, 0.5*sqrt(2) for no lowpass", "0.5", 0.0, 0.5 * 0.707);
-    float    radius_highpass     = my_input->GetFloatFromUser("cutoff radius for high pass filter", "highpass filter radius, 0.5*sqrt(2) for no highpass", "0.0", 0.0, 0.5 * 0.707);
-    bool     write_aligned_stack = my_input->GetYesNoFromUser("Do you want to write the aligned stack?", "Answer yes if you do", "No");
-
-    // float sigma_l  = 0.05; // sigma regarding gaussian distribution. at 3 sigma, the probability down to 0.00135
-    // float sigma_h  = 0.03;
-    // float radius_l = 0.25 / 1.414;
-    // float radius_h = 0.0;
-
-    // wxString coordinates_filename  = my_input->GetFilenameFromUser("Coordinates (PLT) filename", "The input particle coordinates, in Imagic-style PLT forlmat", "coos.plt", true);
-    // int output_stack_box_size = my_input->GetIntFromUser("Box size for output candidate particle images (pixels)", "In pixels. Give 0 to skip writing particle images to disk.", "256", 0);
-    // wxString input_parameters = my_input->GetFilenameFromUser("Input Paramter filename", "input parameters, *.par", "input_para.txt", true);
-    delete my_input;
-
-    my_current_job.Reset(8);
-    my_current_job.ManualSetArguments("ttfffffb", input_imgstack.ToUTF8( ).data( ), angle_filename.ToUTF8( ).data( ), rotation_angle, sigma_lowpass, sigma_highpass, radius_lowpass, radius_highpass, write_aligned_stack);
-}
-
-bool NikoTestApp::DoCalculation( ) {
-    wxPrintf("Hello world4\n");
-    // ===========================image stack parameters initialization======================================
-    // user passed parameters-------------
-    wxString input_imgstack      = my_current_job.arguments[0].ReturnStringArgument( );
-    wxString angle_filename      = my_current_job.arguments[1].ReturnStringArgument( );
-    float    phi_ang             = my_current_job.arguments[2].ReturnFloatArgument( );
-    float    sigma_l             = my_current_job.arguments[3].ReturnFloatArgument( ); // sigma regarding gaussian distribution. at 3 sigma, the probability down to 0.00135
-    float    sigma_h             = my_current_job.arguments[4].ReturnFloatArgument( );
-    float    radius_l            = my_current_job.arguments[5].ReturnFloatArgument( );
-    float    radius_h            = my_current_job.arguments[6].ReturnFloatArgument( );
-    bool     write_aligned_stack = my_current_job.arguments[7].ReturnBoolArgument( );
-
-    // wxString input_parameters = my_current_job.arguments[2].ReturnStringArgument( );
-    wxString weightname = "weighttest----------";
-    // wxString    outputpath     = "/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/Output/";
-    // std::string outputpathstd  = "/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/Output/";
-    wxString    outputpath    = "/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/Test/";
-    std::string outputpathstd = "/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/Test/";
-
-    // float phi = 86.3 / 180 * PI;
-    float phi = deg_2_rad(phi_ang);
-    // float phi     = 0.0 / 180 * PI;
-    // float phi_ang = 86.3;
-    float rone   = 0.0 / 180 * PI;
-    float cosphi = cosf(phi);
-    float sinphi = sinf(phi);
-    // FILE
-
-    // local parameters-------------------
-    MRCFile          input_stack(input_imgstack.ToStdString( ), false), stretched_stack;
-    NumericTextFile *input_coos_file, *tilt_angle_file, *peak_points, *shift_file, *peak_points_raw;
-    NumericTextFile *imod_peak_points, *imod_peak_points_raw, *imod_peak_file, *imod_shift_file;
-    NumericTextFile* input_par_file;
-    tilt_angle_file = new NumericTextFile(angle_filename, OPEN_TO_READ, 1);
-    // imod_peak_file  = new NumericTextFile("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/cisTEM_peaks/peaks_in_order.txt", OPEN_TO_READ, 3);
-    imod_peak_file = new NumericTextFile("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/cisTEM_peaks/imodrawpeaks_in_order.txt", OPEN_TO_READ, 3);
-    // input_par_file  = new NumericTextFile(input_parameters, OPEN_TO_READ, 1);
+    int      image_no         = input_stack->ReturnNumberOfSlices( );
+    MRCFile* stretch_check_st = new MRCFile[image_no];
+    // wxPrintf("images: %d", img_no);
+    // float** a = NULL;
+    // Allocate2DFloatArray(a, img_no, 2);
+    // for ( int i = 0; i < img_no; i++ ) {
+    //     a[i][0] = i;
+    //     a[i][1] = i * i;
+    // }
+    // return a;
+    NumericTextFile *shift_file, *peak_points, *peak_points_raw;
+    shift_file      = new NumericTextFile(outputpath + "shifts_newcurved.txt", OPEN_TO_WRITE, 3);
     peak_points     = new NumericTextFile(outputpath + "peakpoints_newcurved.txt", OPEN_TO_WRITE, 4);
     peak_points_raw = new NumericTextFile(outputpath + "peakpoints_pk_img.txt", OPEN_TO_WRITE, 4);
-    // imod_peak_points     = new NumericTextFile(outputpath + "imod_peakpoints_newcurved.txt", OPEN_TO_WRITE, 4);
-    // imod_peak_points_raw = new NumericTextFile(outputpath + "imod_peakpoints_pk_img.txt", OPEN_TO_WRITE, 4);
-    shift_file = new NumericTextFile(outputpath + "shifts_newcurved.txt", OPEN_TO_WRITE, 3);
-    // imod_shift_file      = new NumericTextFile(outputpath + "imod_shift_file.txt", OPEN_TO_WRITE, 3);
-
-    int      image_no = input_stack.ReturnNumberOfSlices( );
-    MRCFile* peakfile = new MRCFile[image_no];
-
-    MRCFile* stretch_check_st = new MRCFile[image_no];
-
-    int   center_index;
-    float tilts[image_no], start_angle, tilt_step; // angle related
-    float stretch[image_no];
-    float shifts[image_no][2];
-    float shifts_imod[image_no][2];
-    float peaks[image_no][2];
-    float imodpeaks[image_no][3];
-    float imodpeaks_cor[image_no][2];
-    // float imodpeak_tmp[3];
-
-    ProgressBar* my_progress = new ProgressBar(input_stack.ReturnNumberOfSlices( ));
-    Image        current_image, ref_image;
-
     Image weightingmap_image;
+    Image current_image, ref_image;
     Image tmp_image;
-    // loading 3D images:
-    // Image        input_imagest;
-    // input_imagest.ReadSlices(&input_stack, 1.0, long(image_no));
-    // wxPrintf("x, y, z: %i, %i, %i\n", input_imagest.logical_x_dimension, input_imagest.logical_y_dimension, input_imagest.logical_z_dimension);
-
-    // float        input_par[1];
-    //---------------------------------- loading the input parameters-------------------------
-    // wxPrintf("reading\n");
-
-    // for ( int i = 0; i < input_par_file->number_of_lines; i++ ) {
-    //     input_par_file->ReadLine(input_par);
-    //     wxPrintf("line  %g\n", input_par[0]);
-    // }
-    // wxPrintf("reading finish\n");
-    // /* test input
-    // Default Parameters Setting---------------------------------
-
     // dimension parameters ----------------------------------
     int raw_image_dim_x, raw_image_dim_y;
     int B_image_dim_x, B_image_dim_y;
@@ -302,8 +213,20 @@ bool NikoTestApp::DoCalculation( ) {
     int trim_dim_X, trim_dim_Y;
     int pad_dim;
     int bin;
-    raw_image_dim_x = input_stack.ReturnXSize( );
-    raw_image_dim_y = input_stack.ReturnYSize( );
+    // float rone;
+    float phi = deg_2_rad(phi_ang);
+    // float phi     = 0.0 / 180 * PI;
+    // float phi_ang = 86.3;
+    float rone      = 0.0 / 180 * PI;
+    float cosphi    = cosf(phi);
+    float sinphi    = sinf(phi);
+    raw_image_dim_x = input_stack->ReturnXSize( );
+    raw_image_dim_y = input_stack->ReturnYSize( );
+    float stretch[image_no];
+    // float shifts[image_no][2];
+    float   peaks[image_no][2];
+    float** shifts = NULL;
+    Allocate2DFloatArray(shifts, image_no, 2);
 
     if ( wxMin(raw_image_dim_x, raw_image_dim_y) <= 1024 ) {
         bin = 1;
@@ -353,17 +276,17 @@ bool NikoTestApp::DoCalculation( ) {
     // float radius_l = 0.25 / 1.414;
     // float radius_h = 0.0;
 
-    //---------------------------------- loading the tilts into an array -------------------------
-    for ( int i = 0; i < image_no; i++ ) {
-        tilt_angle_file->ReadLine(&tilts[i]);
-        // wxPrintf("angle %i ; % g\n", i, tilts[i]);
-    }
+    // //---------------------------------- loading the tilts into an array -------------------------
+    // for ( int i = 0; i < image_no; i++ ) {
+    //     tilt_angle_file->ReadLine(&tilts[i]);
+    //     // wxPrintf("angle %i ; % g\n", i, tilts[i]);
+    // }
     // for ( int i = 0; i < image_no; i++ ) {
     //     imod_peak_file->ReadLine(imodpeaks[i]);
     // }
-    start_angle  = tilts[0];
-    tilt_step    = tilts[1] - tilts[0];
-    center_index = int(-start_angle / tilt_step) + 1;
+    float start_angle  = tilts[0];
+    float tilt_step    = tilts[1] - tilts[0];
+    int   center_index = int(-start_angle / tilt_step) + 1;
 
     for ( int i = 0; i < image_no; i++ )
         tilts[i] = (tilts[i]) / 180.0 * PI;
@@ -479,8 +402,8 @@ bool NikoTestApp::DoCalculation( ) {
             ref_index     = i - 1;
         }
         wxPrintf("--------image index-----------%i\n", current_index);
-        current_image.ReadSlice(&input_stack, current_index);
-        ref_image.ReadSlice(&input_stack, ref_index);
+        current_image.ReadSlice(input_stack, current_index);
+        ref_image.ReadSlice(input_stack, ref_index);
 
         // preprocessing: remove outlier and binning ------------------------------------------------------------------------
         // current_image = ImageProc(current_image, bin);
@@ -695,7 +618,6 @@ bool NikoTestApp::DoCalculation( ) {
             tmppeak[0] = arr_center_index + i + 1, tmppeak[1] = shifts[arr_center_index + i][0], tmppeak[2] = shifts[arr_center_index + i][1];
             shift_file->WriteLine(tmppeak);
             // imod_shift_file->WriteLine(tmppeak);
-
             // #cumXrot = xFromCen * cosPhi + yFromCen * sinPhi
             // #xAdjust = cumXrot * (cosRatio - 1.)
             // #xshift  = xshift + xAdjust * cosPhi
@@ -715,19 +637,122 @@ bool NikoTestApp::DoCalculation( ) {
         }
         // wxPrintf
     }
+    return shifts;
+}
+
+void NikoTestApp::DoInteractiveUserInput( ) {
+    UserInput* my_input = new UserInput("Coarse Align", 1.0);
+
+    wxString input_imgstack      = my_input->GetFilenameFromUser("Input image file name", "Name of input image file *.mrc", "input.mrc", true);
+    wxString angle_filename      = my_input->GetFilenameFromUser("Tilt Angle filename", "The tilts, *.tlt", "ang.tlt", true);
+    float    rotation_angle      = my_input->GetFloatFromUser("rotation angle of the tomography", "phi in degrees, 0.0 for none rotation", "0.0");
+    float    sigma_lowpass       = my_input->GetFloatFromUser("sigma of low pass filter", "sigma_lowpass, 0.0 for no gradient at low pass cutoff radius", "0.0");
+    float    sigma_highpass      = my_input->GetFloatFromUser("sigma of high pass filter", "sigma_highpass, 0.0 for no gradient at high pass cutoff radius", "0.0");
+    float    radius_lowpass      = my_input->GetFloatFromUser("cutoff radius for low pass filter", "lowpass filter radius, 0.5*sqrt(2) for no lowpass", "0.5", 0.0, 0.5 * 0.707);
+    float    radius_highpass     = my_input->GetFloatFromUser("cutoff radius for high pass filter", "highpass filter radius, 0.5*sqrt(2) for no highpass", "0.0", 0.0, 0.5 * 0.707);
+    bool     write_aligned_stack = my_input->GetYesNoFromUser("Do you want to write the aligned stack?", "Answer yes if you do", "No");
+
+    // float sigma_l  = 0.05; // sigma regarding gaussian distribution. at 3 sigma, the probability down to 0.00135
+    // float sigma_h  = 0.03;
+    // float radius_l = 0.25 / 1.414;
+    // float radius_h = 0.0;
+
+    // wxString coordinates_filename  = my_input->GetFilenameFromUser("Coordinates (PLT) filename", "The input particle coordinates, in Imagic-style PLT forlmat", "coos.plt", true);
+    // int output_stack_box_size = my_input->GetIntFromUser("Box size for output candidate particle images (pixels)", "In pixels. Give 0 to skip writing particle images to disk.", "256", 0);
+    // wxString input_parameters = my_input->GetFilenameFromUser("Input Paramter filename", "input parameters, *.par", "input_para.txt", true);
+    delete my_input;
+
+    my_current_job.Reset(8);
+    my_current_job.ManualSetArguments("ttfffffb", input_imgstack.ToUTF8( ).data( ), angle_filename.ToUTF8( ).data( ), rotation_angle, sigma_lowpass, sigma_highpass, radius_lowpass, radius_highpass, write_aligned_stack);
+}
+
+bool NikoTestApp::DoCalculation( ) {
+    wxPrintf("Hello world4\n");
+    // ===========================image stack parameters initialization======================================
+    // user passed parameters-------------
+    wxString input_imgstack      = my_current_job.arguments[0].ReturnStringArgument( );
+    wxString angle_filename      = my_current_job.arguments[1].ReturnStringArgument( );
+    float    phi_ang             = my_current_job.arguments[2].ReturnFloatArgument( );
+    float    sigma_l             = my_current_job.arguments[3].ReturnFloatArgument( ); // sigma regarding gaussian distribution. at 3 sigma, the probability down to 0.00135
+    float    sigma_h             = my_current_job.arguments[4].ReturnFloatArgument( );
+    float    radius_l            = my_current_job.arguments[5].ReturnFloatArgument( );
+    float    radius_h            = my_current_job.arguments[6].ReturnFloatArgument( );
+    bool     write_aligned_stack = my_current_job.arguments[7].ReturnBoolArgument( );
+
+    // wxString outputpath = "/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/Test/";
+    wxString outputpath = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/AlignTest1";
+
+    float phi    = deg_2_rad(phi_ang);
+    float rone   = 0.0 / 180 * PI;
+    float cosphi = cosf(phi);
+    float sinphi = sinf(phi);
+
+    // local parameters-------------------
+    MRCFile          input_stack(input_imgstack.ToStdString( ), false), stretched_stack;
+    NumericTextFile *input_coos_file, *tilt_angle_file, *peak_points, *shift_file, *peak_points_raw;
+    NumericTextFile *imod_peak_points, *imod_peak_points_raw, *imod_peak_file, *imod_shift_file;
+    NumericTextFile* input_par_file;
+    tilt_angle_file = new NumericTextFile(angle_filename, OPEN_TO_READ, 1);
+    // imod_peak_file  = new NumericTextFile("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/cisTEM_peaks/peaks_in_order.txt", OPEN_TO_READ, 3);
+    imod_peak_file = new NumericTextFile("/groups/lingli/Documents/cisTEM/build/tomoalign_Intel-gpu-debug-static/src/cisTEM_peaks/imodrawpeaks_in_order.txt", OPEN_TO_READ, 3);
+    // input_par_file  = new NumericTextFile(input_parameters, OPEN_TO_READ, 1);
+    peak_points     = new NumericTextFile(outputpath + "peakpoints_newcurved.txt", OPEN_TO_WRITE, 4);
+    peak_points_raw = new NumericTextFile(outputpath + "peakpoints_pk_img.txt", OPEN_TO_WRITE, 4);
+    // imod_peak_points     = new NumericTextFile(outputpath + "imod_peakpoints_newcurved.txt", OPEN_TO_WRITE, 4);
+    // imod_peak_points_raw = new NumericTextFile(outputpath + "imod_peakpoints_pk_img.txt", OPEN_TO_WRITE, 4);
+    shift_file = new NumericTextFile(outputpath + "shifts_newcurved.txt", OPEN_TO_WRITE, 3);
+    // imod_shift_file      = new NumericTextFile(outputpath + "imod_shift_file.txt", OPEN_TO_WRITE, 3);
+
+    int      image_no = input_stack.ReturnNumberOfSlices( );
+    MRCFile* peakfile = new MRCFile[image_no];
+
+    int   center_index;
+    float tilts[image_no], start_angle, tilt_step; // angle related
+    float stretch[image_no];
+    // float shifts[image_no][2];
+    float shifts_imod[image_no][2];
+    float peaks[image_no][2];
+    float imodpeaks[image_no][3];
+    float imodpeaks_cor[image_no][2];
+    // float imodpeak_tmp[3];
+
+    ProgressBar* my_progress = new ProgressBar(input_stack.ReturnNumberOfSlices( ));
+    Image        current_image, ref_image;
+
+    Image weightingmap_image;
+    Image tmp_image;
+
+    //---------------------------------- loading the tilts into an array -------------------------
+    for ( int i = 0; i < image_no; i++ ) {
+        tilt_angle_file->ReadLine(&tilts[i]);
+        // wxPrintf("angle %i ; % g\n", i, tilts[i]);
+    }
+
+    // cross correlation alignment========================================================================
+    float** shifts = NULL;
+    Allocate2DFloatArray(shifts, image_no, 2);
+    shifts = CoarseAlign(&input_stack, tilts, phi_ang, outputpath, sigma_l, sigma_h, radius_l, radius_h);
 
     //image stack shift ========================================================================
     if ( write_aligned_stack ) {
         MRCFile output_stack;
-        output_stack.OpenFile(outputpathstd + "outputstack.mrc", true);
+        // output_stack.OpenFile(outputpathstd + "outputstack.mrc", true);
+        output_stack.OpenFile(outputpath.ToStdString( ) + "outputstack.mrc", true);
         MRCFile rotated_stack;
-        rotated_stack.OpenFile(outputpathstd + "rotatedstack.mrc", true);
+
+        // rotated_stack.OpenFile(outputpathstd + "rotatedstack.mrc", true);
+        rotated_stack.OpenFile(outputpath.ToStdString( ) + "rotatedstack.mrc", true);
         for ( int i = 0; i < image_no; i++ ) {
             current_image.ReadSlice(&input_stack, i + 1);
-            current_image.PhaseShift(shifts[i][0], shifts[i][1], 0);
+            current_image.TaperEdges( );
+            current_image.ReplaceOutliersWithMean(3.0f);
+            current_image.ZeroFloatAndNormalize(10.0);
+            // current_image.PhaseShift(shifts[i][0], shifts[i][1], 0);
+            current_image.RealSpaceShift(myroundint(shifts[i][0]), myroundint(shifts[i][1]), 0);
             current_image.WriteSlice(&output_stack, i + 1);
             current_image.Rotate2DInPlace(phi_ang);
             current_image.WriteSlice(&rotated_stack, i + 1);
+            // wxPrintf("current slice: %d\n", i);
             // tmppeak[0] = i, tmppeak[1] = shifts[i][0], tmppeak[2] = shifts[i][1];
             // shift_file->WriteLine(tmppeak);
             // current_image.Rotate2D
@@ -735,56 +760,59 @@ bool NikoTestApp::DoCalculation( ) {
         output_stack.CloseFile( );
         rotated_stack.CloseFile( );
     }
-    /*
-    * /
-            // whole block
 
-            // //some image operations testing===============================================
-            // Image sample_image;
-            // // load a sample image:
-            // sample_image.ReadSlice(&input_stack, 4);
-            // sample_image.WriteSlicesAndFillHeader(outputpathstd + "img_original.mrc", 1);
+    // whole block
 
-            // // test bin:
-            // // ref_image.RealSpaceBinning(bin, bin, 1);
-            // sample_image           = ImageProc(sample_image, bin);
-            // int binned_image_dim_x = sample_image.logical_x_dimension;
-            // int binned_image_dim_y = sample_image.logical_y_dimension;
-            // wxPrintf("image dimension after binning: %i, %i\n", binned_image_dim_x, binned_image_dim_y);
-            // sample_image.WriteSlicesAndFillHeader(outputpathstd + "img_binned.mrc", 1);
+    // //some image operations testing===============================================
+    // Image sample_image;
+    // // load a sample image:
+    // sample_image.ReadSlice(&input_stack, 4);
+    // sample_image.WriteSlicesAndFillHeader(outputpath.ToStdString( ) + "img_original.mrc", 1);
+    // sample_image.RealSpaceShift(500, -40, 0);
+    // sample_image.WriteSlicesAndFillHeader(outputpath.ToStdString( ) + "img_shifted.mrc", 1);
 
-            // // // // test padding/stretching
-            // Image padded_image;
-            // pad_dim = 1120;
-            // padded_image.Allocate(pad_dim, pad_dim, true);
-            // // sample_image.ForwardFFT( );
-            // sample_image.ClipInto(&padded_image, sample_image.ReturnAverageOfRealValues( ));
-            // // padded_image.BackwardFFT( );
+    // // test bin:
+    // // ref_image.RealSpaceBinning(bin, bin, 1);
+    // sample_image           = ImageProc(sample_image, bin);
+    // int binned_image_dim_x = sample_image.logical_x_dimension;
+    // int binned_image_dim_y = sample_image.logical_y_dimension;
+    // wxPrintf("image dimension after binning: %i, %i\n", binned_image_dim_x, binned_image_dim_y);
+    // sample_image.WriteSlicesAndFillHeader(outputpathstd + "img_binned.mrc", 1);
 
-            // // pad_dim      = 1120;
-            // // sample_image = ImageStretch(sample_image, pad_dim, pad_dim, 0);
-            // padded_image.WriteSlicesAndFillHeader(outputpathstd + "img_binned_padded.mrc", 1);
+    // // // // test padding/stretching
+    // Image padded_image;
+    // pad_dim = 1120;
+    // padded_image.Allocate(pad_dim, pad_dim, true);
+    // // sample_image.ForwardFFT( );
+    // sample_image.ClipInto(&padded_image, sample_image.ReturnAverageOfRealValues( ));
+    // // padded_image.BackwardFFT( );
 
-            // //to end-----------------------
-            // // // test filter
-            // // sample_image = ImageFilter(sample_image, radius_l, sigma_l, radius_h, sigma_h);
-            // // sample_image.WriteSlicesAndFillHeader(outputpathstd + "filteredimg.mrc", 1);
+    // // pad_dim      = 1120;
+    // // sample_image = ImageStretch(sample_image, pad_dim, pad_dim, 0);
+    // padded_image.WriteSlicesAndFillHeader(outputpathstd + "img_binned_padded.mrc", 1);
 
-            // // test square mask:
-            // sample_image.CosineRectangularMask(mask_radius_x, mask_radius_y, mask_radius_z, mask_edge);
-            // sample_image.WriteSlicesAndFillHeader(outputpathstd + "squaremsked.mrc", 1);
+    // //to end-----------------------
+    // // // test filter
+    // // sample_image = ImageFilter(sample_image, radius_l, sigma_l, radius_h, sigma_h);
+    // // sample_image.WriteSlicesAndFillHeader(outputpathstd + "filteredimg.mrc", 1);
 
-            // //to end-----------------------
-            // // // test filter
-            // sample_image = ImageFilter(sample_image, radius_l, sigma_l, radius_h, sigma_h);
-            // sample_image.WriteSlicesAndFillHeader(outputpathstd + "filteredimg.mrc", 1);
+    // // test square mask:
+    // sample_image.CosineRectangularMask(mask_radius_x, mask_radius_y, mask_radius_z, mask_edge);
+    // sample_image.WriteSlicesAndFillHeader(outputpathstd + "squaremsked.mrc", 1);
 
-            // // //testing end ===============================================
-            // test input   */
+    // //to end-----------------------
+    // // // test filter
+    // sample_image = ImageFilter(sample_image, radius_l, sigma_l, radius_h, sigma_h);
+    // sample_image.WriteSlicesAndFillHeader(outputpathstd + "filteredimg.mrc", 1);
+
+    // // //testing end ===============================================
+    // test input
+
     delete my_progress;
     // delete input_coos_file;
     delete[] peakfile;
-    delete[] stretch_check_st;
+    // delete[] stretch_check_st;
+
     // delete[] shift_file;
     // delete[] tmpang;
     // delete[] tilt_angle_file;

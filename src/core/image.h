@@ -412,6 +412,7 @@ class Image {
     void  CopyLoopingAndAddressingFrom(Image* other_image);
     void  Consume(Image* other_image);
     void  RealSpaceIntegerShift(int wanted_x_shift, int wanted_y_shift, int wanted_z_shift = 0);
+    void  RealSpaceShift(int wanted_x_shift, int wanted_y_shift, int wanted_z_shift = 0);
     void  DilateBinarizedMask(float dilation_radius);
     void  ErodeBinarizedMask(float erosion_radius);
 

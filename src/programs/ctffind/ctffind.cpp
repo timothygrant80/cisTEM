@@ -1608,7 +1608,12 @@ bool CtffindApp::DoCalculation( ) {
             }
             ComputeRotationalAverageOfPowerSpectrum(average_spectrum, current_ctf, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, rotational_average_astig_fit, rotational_average_astig_renormalized, number_of_extrema_profile, ctf_values_profile);
 #ifdef use_epa_rather_than_zero_counting
-            ComputeEquiPhaseAverageOfPowerSpectrum(average_spectrum_masked, current_ctf, &equiphase_average_pre_max, &equiphase_average_post_max);
+            if ( fit_nodes ) {
+                ComputeEquiPhaseAverageOfPowerSpectrum(average_spectrum_masked, current_ctf, &equiphase_average_pre_max, &equiphase_average_post_max);
+            }
+            else {
+                ComputeEquiPhaseAverageOfPowerSpectrum(average_spectrum, current_ctf, &equiphase_average_pre_max, &equiphase_average_post_max);
+            }
             // Replace the old curve with EPA values
             {
                 float current_sq_sf;

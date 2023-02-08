@@ -1067,7 +1067,7 @@ void MyFindCTFPanel::WriteResultToDataBase( ) {
     main_frame->current_project.database.Begin( );
 
     // loop over all the jobs, and add them..
-    main_frame->current_project.database.BeginBatchInsert("ESTIMATED_CTF_PARAMETERS", 36,
+    main_frame->current_project.database.BeginBatchInsert("ESTIMATED_CTF_PARAMETERS", 46,
                                                           "CTF_ESTIMATION_ID",
                                                           "CTF_ESTIMATION_JOB_ID",
                                                           "DATETIME_OF_RUN",
@@ -1103,7 +1103,17 @@ void MyFindCTFPanel::WriteResultToDataBase( ) {
                                                           "TILT_ANGLE",
                                                           "TILT_AXIS",
                                                           "SAMPLE_THICKNESS",
-                                                          "SAMPLE_THICKNESS_JSON");
+                                                          "SAMPLE_THICKNESS_JSON",
+                                                          "DETERMINE_TILT",
+                                                          "FIT_NODES",
+                                                          "FIT_NODES_1D",
+                                                          "FIT_NODES_2D",
+                                                          "FIT_NODES_LOW_LIMIT",
+                                                          "FIT_NODES_HIGH_LIMIT",
+                                                          "FIT_NODES_ROUNDED_SQUARE",
+                                                          "FIT_NODES_DOWNWEIGHT_NODES",
+                                                          "RESAMPLE_IF_NESCESSARY",
+                                                          "TARGET_PIXEL_SIZE");
 
     wxDateTime now                    = wxDateTime::Now( );
     counter_aliasing_within_fit_range = 0;
@@ -1132,7 +1142,7 @@ void MyFindCTFPanel::WriteResultToDataBase( ) {
             phase_shift_step            = 0;
         }
 
-        main_frame->current_project.database.AddToBatchInsert("iiliirrrrirrrrririrrrrrrrrrrtiirrrrt", ctf_estimation_id,
+        main_frame->current_project.database.AddToBatchInsert("iiliirrrrirrrrririrrrrrrrrrrtiirrrrtiiiirriiir", ctf_estimation_id,
                                                               ctf_estimation_job_id,
                                                               (long int)now.GetAsDOS( ),
                                                               image_asset_id,
@@ -1166,8 +1176,19 @@ void MyFindCTFPanel::WriteResultToDataBase( ) {
                                                               buffered_results[counter].result_data[7], // iciness
                                                               buffered_results[counter].result_data[8], // tilt angle
                                                               buffered_results[counter].result_data[9], // tilt axis
-                                                              buffered_results[counter].result_data[10],
-                                                              ""); // sample thickness
+                                                              buffered_results[counter].result_data[10], // sample thickness
+                                                              "",
+                                                              current_job_package.jobs[counter].arguments[36].ReturnBoolArgument( ), // Determine tilt,
+                                                              current_job_package.jobs[counter].arguments[40].ReturnBoolArgument( ), // Fit nodes,
+                                                              current_job_package.jobs[counter].arguments[41].ReturnBoolArgument( ), // Fit nodes 1D search
+                                                              current_job_package.jobs[counter].arguments[42].ReturnBoolArgument( ), // Fit nodes 2D search
+                                                              current_job_package.jobs[counter].arguments[43].ReturnFloatArgument( ), // Fit nodes low resolution limit
+                                                              current_job_package.jobs[counter].arguments[44].ReturnFloatArgument( ), // Fit nodes high resolution limit
+                                                              current_job_package.jobs[counter].arguments[46].ReturnBoolArgument( ), // Fit nodes use rounded square model
+                                                              current_job_package.jobs[counter].arguments[47].ReturnBoolArgument( ), // Fit nodes downweight signla in nodes
+                                                              current_job_package.jobs[counter].arguments[23].ReturnBoolArgument( ), // Resample if pixel size is too small
+                                                              current_job_package.jobs[counter].arguments[45].ReturnFloatArgument( ) // Target pixel size
+        );
         ctf_estimation_id++;
         my_progress_dialog->Update(counter + 1);
 

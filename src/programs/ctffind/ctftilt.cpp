@@ -64,7 +64,8 @@ CTFTilt::CTFTilt(ImageFile& wanted_input_file, float wanted_high_res_limit_ctf_f
 
     resampled_power_spectra = new Image[((n_sections - 1) * n_steps + 1) * ((n_sections - 1) * n_steps + 1)];
     tilt_binning_factor     = 0.5f * high_res_limit_tilt_fit / original_pixel_size;
-    tilt_fit_pixel_size     = original_pixel_size * tilt_binning_factor;
+    MyDebugPrint("Tilt binning factor = %f", tilt_binning_factor);
+    tilt_fit_pixel_size = original_pixel_size * tilt_binning_factor;
 
     int ix, iy;
     int sub_section_dimension;
@@ -105,6 +106,7 @@ CTFTilt::~CTFTilt( ) {
     }
     delete[] input_image_buffer;
     delete[] resampled_power_spectra;
+    wxPrintf("Deallocated memory for CTFTilt\n");
 }
 
 void CTFTilt::CalculatePowerSpectra(bool subtract_average) {
@@ -151,13 +153,24 @@ void CTFTilt::CalculatePowerSpectra(bool subtract_average) {
     input_image.Resize(myroundint(input_image.logical_x_dimension / tilt_binning_factor), myroundint(input_image.logical_y_dimension / tilt_binning_factor), 1);
     input_image.complex_values[0] = 0.0f + I * 0.0f;
     input_image.BackwardFFT( );
-
+    if ( debug && subtract_average ) {
+        debug_json_output["search_tiles"] = wxJSONValue(wxJSONTYPE_ARRAY);
+    }
     for ( iy = -(n_sections - 1) * n_steps / 2; iy <= (n_sections - 1) * n_steps / 2; iy++ ) {
         for ( ix = -(n_sections - 1) * n_steps / 2; ix <= (n_sections - 1) * n_steps / 2; ix++ ) {
             //			pointer_to_original_image->QuickAndDirtyWriteSlice("binned_input_image.mrc", 1);
             input_image.ClipInto(&sub_section, 0.0f, false, 0.0f, float(ix) * sub_section_dimension_x / float(n_steps), float(iy) * sub_section_dimension_y / float(n_steps), 0);
+            if ( debug && subtract_average ) {
+                debug_json_output["search_tiles"].Append(wxJSONValue(wxJSONTYPE_OBJECT));
+                debug_json_output["search_tiles"][debug_json_output["search_tiles"].Size( ) - 1]["x"]      = float(ix) * sub_section_dimension_x / float(n_steps);
+                debug_json_output["search_tiles"][debug_json_output["search_tiles"].Size( ) - 1]["y"]      = float(iy) * sub_section_dimension_y / float(n_steps);
+                debug_json_output["search_tiles"][debug_json_output["search_tiles"].Size( ) - 1]["width"]  = sub_section_dimension_x;
+                debug_json_output["search_tiles"][debug_json_output["search_tiles"].Size( ) - 1]["height"] = sub_section_dimension_y;
+            }
             sub_section.CosineRectangularMask(0.9f * sub_section.physical_address_of_box_center_x, 0.9f * sub_section.physical_address_of_box_center_y, 0.0f, 0.1f * sub_section.logical_x_dimension);
-            //			sub_section.QuickAndDirtyWriteSlice("sub_sections.mrc", 1 + section_counter);
+            if ( debug ) {
+                sub_section.QuickAndDirtyWriteSlice("sub_section.mrc", 1 + section_counter);
+            }
             sub_section.MultiplyByConstant(sqrtf(1.0f / sub_section.ReturnVarianceOfRealValues( )));
             sub_section.ForwardFFT( );
             sub_section.ComputeAmplitudeSpectrumFull2D(&power_spectrum_sub_section);
@@ -183,7 +196,7 @@ void CTFTilt::CalculatePowerSpectra(bool subtract_average) {
 void CTFTilt::UpdateInputImage(Image* wanted_input_image) {
     MyDebugAssertTrue(input_image_x_dimension == wanted_input_image->logical_x_dimension && input_image_y_dimension == wanted_input_image->logical_y_dimension, "Error: Image dimensions do not match\n");
 
-    input_image_buffer[image_buffer_counter].Allocate(wanted_input_image->logical_x_dimension, wanted_input_image->logical_y_dimension, 1, true);
+    // input_image_buffer[image_buffer_counter].Allocate(wanted_input_image->logical_x_dimension, wanted_input_image->logical_y_dimension, 1, true);
     input_image_buffer[image_buffer_counter].CopyFrom(wanted_input_image);
     image_buffer_counter++;
     input_image.CopyFrom(wanted_input_image);

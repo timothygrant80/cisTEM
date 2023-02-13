@@ -2905,8 +2905,6 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	bSizer73 = new wxBoxSizer( wxVERTICAL );
 
 	JobDetailsPanel = new wxPanel( RightPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-	JobDetailsPanel->Hide();
-
 	wxBoxSizer* bSizer101;
 	bSizer101 = new wxBoxSizer( wxVERTICAL );
 
@@ -2973,6 +2971,36 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	PixelSizeStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	PixelSizeStaticText->Wrap( -1 );
 	InfoSizer->Add( PixelSizeStaticText, 0, wxALIGN_LEFT|wxALL, 5 );
+
+	m_staticText781 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Resample Pixel Size? :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText781->Wrap( -1 );
+	m_staticText781->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+
+	InfoSizer->Add( m_staticText781, 0, wxALIGN_RIGHT|wxALL, 5 );
+
+	ResampleStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	ResampleStaticText->Wrap( -1 );
+	InfoSizer->Add( ResampleStaticText, 0, wxALL, 5 );
+
+	m_staticText7811 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Pixel Size Target :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText7811->Wrap( -1 );
+	m_staticText7811->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+
+	InfoSizer->Add( m_staticText7811, 0, wxALIGN_RIGHT|wxALL, 5 );
+
+	PixelSizeTargetStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	PixelSizeTargetStaticText->Wrap( -1 );
+	InfoSizer->Add( PixelSizeTargetStaticText, 0, wxALL, 5 );
+
+	m_staticText78111 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Estimate Tilt? :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText78111->Wrap( -1 );
+	m_staticText78111->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+
+	InfoSizer->Add( m_staticText78111, 0, wxALIGN_RIGHT|wxALL, 5 );
+
+	EstimateTiltStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	EstimateTiltStaticText->Wrap( -1 );
+	InfoSizer->Add( EstimateTiltStaticText, 0, wxALL, 5 );
 
 	m_staticText96 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Amp. Contrast :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText96->Wrap( -1 );
@@ -3078,7 +3106,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	NumberOfAveragedFramesLabel->Wrap( -1 );
 	NumberOfAveragedFramesLabel->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
 
-	InfoSizer->Add( NumberOfAveragedFramesLabel, 0, wxALL, 5 );
+	InfoSizer->Add( NumberOfAveragedFramesLabel, 0, wxALIGN_RIGHT|wxALL, 5 );
 
 	NumberOfAveragedFramesStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	NumberOfAveragedFramesStaticText->Wrap( -1 );
@@ -3124,9 +3152,75 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	PhaseShiftStepStaticText->Wrap( -1 );
 	InfoSizer->Add( PhaseShiftStepStaticText, 0, wxALL, 5 );
 
-	IcinessStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-	IcinessStaticText->Wrap( -1 );
-	InfoSizer->Add( IcinessStaticText, 0, wxALL, 5 );
+	PhaseShiftStepLabel1 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Estimate Thickness? :"), wxDefaultPosition, wxDefaultSize, 0 );
+	PhaseShiftStepLabel1->Wrap( -1 );
+	PhaseShiftStepLabel1->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+
+	InfoSizer->Add( PhaseShiftStepLabel1, 0, wxALIGN_RIGHT|wxALL, 5 );
+
+	EstimateThicknessStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	EstimateThicknessStaticText->Wrap( -1 );
+	InfoSizer->Add( EstimateThicknessStaticText, 0, wxALL, 5 );
+
+	ThicknessLabel1 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Thickness 1D search? :"), wxDefaultPosition, wxDefaultSize, 0 );
+	ThicknessLabel1->Wrap( -1 );
+	ThicknessLabel1->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+
+	InfoSizer->Add( ThicknessLabel1, 0, wxALIGN_RIGHT|wxALL, 5 );
+
+	Thickness1DStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	Thickness1DStaticText->Wrap( -1 );
+	InfoSizer->Add( Thickness1DStaticText, 0, wxALL, 5 );
+
+	ThicknessLabel2 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Thickness 2D search? :"), wxDefaultPosition, wxDefaultSize, 0 );
+	ThicknessLabel2->Wrap( -1 );
+	ThicknessLabel2->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+
+	InfoSizer->Add( ThicknessLabel2, 0, wxALIGN_RIGHT|wxALL, 5 );
+
+	Thickness2DStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	Thickness2DStaticText->Wrap( -1 );
+	InfoSizer->Add( Thickness2DStaticText, 0, wxALL, 5 );
+
+	ThicknessLabel3 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Thickness Min. Res. :"), wxDefaultPosition, wxDefaultSize, 0 );
+	ThicknessLabel3->Wrap( -1 );
+	ThicknessLabel3->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+
+	InfoSizer->Add( ThicknessLabel3, 0, wxALIGN_RIGHT|wxALL, 5 );
+
+	ThicknessMinResText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	ThicknessMinResText->Wrap( -1 );
+	InfoSizer->Add( ThicknessMinResText, 0, wxALL, 5 );
+
+	ThicknessLabel4 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Thickness Max. Res. :"), wxDefaultPosition, wxDefaultSize, 0 );
+	ThicknessLabel4->Wrap( -1 );
+	ThicknessLabel4->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+
+	InfoSizer->Add( ThicknessLabel4, 0, wxALIGN_RIGHT|wxALL, 5 );
+
+	ThicknessMaxResStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	ThicknessMaxResStaticText->Wrap( -1 );
+	InfoSizer->Add( ThicknessMaxResStaticText, 0, wxALL, 5 );
+
+	ThicknessLabel5 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("No-decay model? :"), wxDefaultPosition, wxDefaultSize, 0 );
+	ThicknessLabel5->Wrap( -1 );
+	ThicknessLabel5->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+
+	InfoSizer->Add( ThicknessLabel5, 0, wxALIGN_RIGHT|wxALL, 5 );
+
+	ThicknessNoDecayStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	ThicknessNoDecayStaticText->Wrap( -1 );
+	InfoSizer->Add( ThicknessNoDecayStaticText, 0, wxALL, 5 );
+
+	ThicknessLabel6 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Downweight nodes? :"), wxDefaultPosition, wxDefaultSize, 0 );
+	ThicknessLabel6->Wrap( -1 );
+	ThicknessLabel6->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+
+	InfoSizer->Add( ThicknessLabel6, 0, wxALIGN_RIGHT|wxALL, 5 );
+
+	ThicknessDownweightNodesStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	ThicknessDownweightNodesStaticText->Wrap( -1 );
+	InfoSizer->Add( ThicknessDownweightNodesStaticText, 0, wxALIGN_RIGHT|wxALL, 5 );
 
 
 	bSizer101->Add( InfoSizer, 1, wxEXPAND, 5 );
@@ -9487,6 +9581,8 @@ FindCTFPanel::FindCTFPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos,
 
 	ExpertPanel = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxSize( -1,-1 ), wxVSCROLL );
 	ExpertPanel->SetScrollRate( 5, 5 );
+	ExpertPanel->Hide();
+
 	InputSizer = new wxBoxSizer( wxVERTICAL );
 
 	wxFlexGridSizer* fgSizer1;
@@ -9723,7 +9819,7 @@ FindCTFPanel::FindCTFPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos,
 
 	fgSizer1->Add( FitNodesMinResStaticText, 0, wxALL, 5 );
 
-	FitNodesMinResNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("10.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	FitNodesMinResNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("30.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	FitNodesMinResNumericCtrl->Enable( false );
 
 	fgSizer1->Add( FitNodesMinResNumericCtrl, 0, wxALL, 5 );

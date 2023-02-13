@@ -1761,15 +1761,17 @@ bool CtffindApp::DoCalculation( ) {
         if ( compute_extra_stats && ! fit_nodes ) {
             RescaleSpectrumAndRotationalAverage(average_spectrum, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, rotational_average_astig_fit, number_of_extrema_profile, ctf_values_profile, last_bin_without_aliasing, last_bin_with_good_fit);
         }
-        //average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_thresholding.mrc",1);
-
+        
         normalization_radius_max = std::max(normalization_radius_max, float(average_spectrum->logical_x_dimension * spatial_frequency[last_bin_with_good_fit]));
         average_spectrum->ComputeAverageAndSigmaOfValuesInSpectrum(normalization_radius_min,
                                                                    normalization_radius_max,
                                                                    average, sigma);
 
         average_spectrum->SetMinimumAndMaximumValues(average - sigma, average + 2.0 * sigma);
-        //average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_overlay.mrc",1);
+        average_spectrum->AddConstant( - (average - sigma));
+        average_spectrum->MultiplyByConstant(1.0 / ((average + 2.0 * sigma) - (average - sigma)));
+        if ( dump_debug_files )
+            average_spectrum->QuickAndDirtyWriteSlice(debug_file_prefix + "dbg_spec_before_overlay.mrc", 1);
         OverlayCTF(average_spectrum, current_ctf, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, number_of_extrema_profile, ctf_values_profile, &equiphase_average_pre_max, &equiphase_average_post_max, fit_nodes);
 
         average_spectrum->WriteSlice(&output_diagnostic_file, current_output_location);

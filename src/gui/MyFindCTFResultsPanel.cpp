@@ -404,11 +404,21 @@ void MyFindCTFResultsPanel::FillResultsPanelAndDetails(int row, int column) {
     double   tilt_axis;
     double   tilt_angle;
     double   sample_thickness;
-    //wxString input_filename;
+    wxString sample_thickness_json;
+    int      determine_tilt;
+    int      fit_nodes;
+    int      fit_nodes_1D_search;
+    int      fit_nodes_2D_search;
+    double   fit_nodes_min_resolution;
+    double   fit_nodes_max_resolution;
+    int      fit_nodes_rounded_square;
+    int      fit_nodes_downweight_nodes;
+    int      resample_if_nescessary;
+    double   target_pixel_size;
 
     // get the alignment_id and all the other details..;
 
-    should_continue = main_frame->current_project.database.BeginBatchSelect(wxString::Format("SELECT * FROM ESTIMATED_CTF_PARAMETERS WHERE IMAGE_ASSET_ID=%i AND CTF_ESTIMATION_JOB_ID=%i", current_image_id, current_ctf_estimation_job_id));
+    should_continue = main_frame->current_project.database.BeginBatchSelect(wxString::Format("SELECT CTF_ESTIMATION_ID, CTF_ESTIMATION_JOB_ID, DATETIME_OF_RUN, IMAGE_ASSET_ID, ESTIMATED_ON_MOVIE_FRAMES, VOLTAGE, SPHERICAL_ABERRATION, PIXEL_SIZE, AMPLITUDE_CONTRAST, BOX_SIZE, MIN_RESOLUTION, MAX_RESOLUTION, MIN_DEFOCUS, MAX_DEFOCUS, DEFOCUS_STEP, RESTRAIN_ASTIGMATISM, TOLERATED_ASTIGMATISM, FIND_ADDITIONAL_PHASE_SHIFT, MIN_PHASE_SHIFT, MAX_PHASE_SHIFT, PHASE_SHIFT_STEP, DEFOCUS1, DEFOCUS2, DEFOCUS_ANGLE, ADDITIONAL_PHASE_SHIFT, SCORE, DETECTED_RING_RESOLUTION, DETECTED_ALIAS_RESOLUTION, OUTPUT_DIAGNOSTIC_FILE, NUMBER_OF_FRAMES_AVERAGED, LARGE_ASTIGMATISM_EXPECTED, ICINESS, TILT_ANGLE, TILT_AXIS, SAMPLE_THICKNESS, SAMPLE_THICKNESS_JSON, DETERMINE_TILT, FIT_NODES, FIT_NODES_1D, FIT_NODES_2D, FIT_NODES_LOW_LIMIT, FIT_NODES_HIGH_LIMIT, FIT_NODES_ROUNDED_SQUARE, FIT_NODES_DOWNWEIGHT_NODES, RESAMPLE_IF_NESCESSARY, TARGET_PIXEL_SIZE FROM ESTIMATED_CTF_PARAMETERS WHERE IMAGE_ASSET_ID=%i AND CTF_ESTIMATION_JOB_ID=%i", current_image_id, current_ctf_estimation_job_id));
 
     //wxPrintf("SELECT * FROM ESTIMATED_CTF_PARAMETERS WHERE IMAGE_ASSET_ID=%i AND CTF_ESTIMATION_JOB_ID=%i\n", current_image_id, current_ctf_estimation_job_id);
 
@@ -417,7 +427,8 @@ void MyFindCTFResultsPanel::FillResultsPanelAndDetails(int row, int column) {
                 DEBUG_ABORT;
     }
 
-    main_frame->current_project.database.GetFromBatchSelect("iiliirrrrirrrrririrrrrrrrrrrtiirrrr", &ctf_estimation_id, &ctf_estimation_job_id, &datetime_of_run, &image_asset_id, &estimated_on_movie_frames, &voltage, &spherical_aberration, &pixel_size, &amplitude_contrast, &box_size, &min_resolution, &max_resolution, &min_defocus, &max_defocus, &defocus_step, &restrain_astigmatism, &tolerated_astigmatism, &find_additional_phase_shift, &min_phase_shift, &max_phase_shift, &phase_shift_step, &defocus1, &defocus2, &defocus_angle, &additional_phase_shift, &score, &detected_ring_resolution, &detected_alias_resolution, &output_diagnostic_file, &number_of_frames_averaged, &large_astigmatism_expected, &iciness, &tilt_angle, &tilt_axis, &sample_thickness);
+    main_frame->current_project.database.GetFromBatchSelect("iiliirrrrirrrrririrrrrrrrrrrtiirrrrtiiiirriiir", &ctf_estimation_id, &ctf_estimation_job_id, &datetime_of_run, &image_asset_id, &estimated_on_movie_frames, &voltage, &spherical_aberration, &pixel_size, &amplitude_contrast, &box_size, &min_resolution, &max_resolution, &min_defocus, &max_defocus, &defocus_step, &restrain_astigmatism, &tolerated_astigmatism, &find_additional_phase_shift, &min_phase_shift, &max_phase_shift, &phase_shift_step, &defocus1, &defocus2, &defocus_angle, &additional_phase_shift, &score, &detected_ring_resolution, &detected_alias_resolution, &output_diagnostic_file, &number_of_frames_averaged, &large_astigmatism_expected, &iciness, &tilt_angle, &tilt_axis, &sample_thickness, &sample_thickness_json, &determine_tilt, &fit_nodes, &fit_nodes_1D_search, &fit_nodes_2D_search, &fit_nodes_min_resolution, &fit_nodes_max_resolution, &fit_nodes_rounded_square, &fit_nodes_downweight_nodes, &resample_if_nescessary, &target_pixel_size);
+    wxPrintf("%f,%f,%i,%i,%f \n", fit_nodes_min_resolution, fit_nodes_max_resolution, fit_nodes_downweight_nodes, resample_if_nescessary, target_pixel_size);
     //wxPrintf("%i,%i,%li,%i,%i,%f,%f,%f,%f,%i,%f,%f,%f,%f,%f,%i,%f,%i,%f,%f,%f,%f,%f,%f,%f,%f,%f,%f,%s\n", ctf_estimation_id, ctf_estimation_job_id,datetime_of_run, image_asset_id, estimated_on_movie_frames, voltage, spherical_aberration, pixel_size, amplitude_contrast, box_size, min_resolution, max_resolution, min_defocus, max_defocus, defocus_step, restrain_astigmatism, tolerated_astigmatism, find_additional_phase_shift, min_phase_shift, max_phase_shift, phase_shift_step, defocus1, defocus2, defocus_angle, additional_phase_shift, score, detected_ring_resolution, detected_alias_resolution, output_diagnostic_file);
     main_frame->current_project.database.EndBatchSelect( );
 
@@ -435,6 +446,21 @@ void MyFindCTFResultsPanel::FillResultsPanelAndDetails(int row, int column) {
     BoxSizeStaticText->SetLabel(wxString::Format(wxT("%i"), box_size));
     MinResStaticText->SetLabel(wxString::Format(wxT("%.2f Å"), min_resolution));
     MaxResStaticText->SetLabel(wxString::Format(wxT("%.2f Å"), max_resolution));
+    if ( resample_if_nescessary == 1 ) {
+        ResampleStaticText->SetLabel("Yes");
+        PixelSizeTargetStaticText->SetLabel(wxString::Format(wxT("%.2f Å"), target_pixel_size));
+        PixelSizeTargetStaticText->Show(true);
+        m_staticText7811->Show(true);
+    }
+    else {
+        ResampleStaticText->SetLabel("No");
+        PixelSizeTargetStaticText->Show(false);
+        m_staticText7811->Show(false);
+    }
+    if ( determine_tilt == 1 )
+        EstimateTiltStaticText->SetLabel("Yes");
+    else
+        EstimateTiltStaticText->SetLabel("No");
     MinDefocusStaticText->SetLabel(wxString::Format(wxT("%.2f Å"), min_defocus));
     MaxDefocusStaticText->SetLabel(wxString::Format(wxT("%.2f Å"), max_defocus));
     DefocusStepStaticText->SetLabel(wxString::Format(wxT("%.2f Å"), defocus_step));
@@ -486,6 +512,55 @@ void MyFindCTFResultsPanel::FillResultsPanelAndDetails(int row, int column) {
         MaxPhaseShiftLabel->Show(false);
         PhaseShiftStepStaticText->Show(false);
         PhaseShiftStepLabel->Show(false);
+    }
+
+    if ( fit_nodes == 1 ) {
+        EstimateThicknessStaticText->SetLabel("Yes");
+        ThicknessLabel1->Show(true);
+        Thickness1DStaticText->Show(true);
+        if ( fit_nodes_1D_search == 1 )
+            Thickness1DStaticText->SetLabel("Yes");
+        else
+            Thickness1DStaticText->SetLabel("No");
+        ThicknessLabel2->Show(true);
+        Thickness2DStaticText->Show(true);
+        if ( fit_nodes_2D_search == 1 )
+            Thickness2DStaticText->SetLabel("Yes");
+        else
+            Thickness2DStaticText->SetLabel("No");
+        ThicknessLabel3->Show(true);
+        ThicknessMinResText->Show(true);
+        ThicknessMinResText->SetLabel(wxString::Format(wxT("%.2f Å"), fit_nodes_min_resolution));
+        ThicknessLabel4->Show(true);
+        ThicknessMaxResStaticText->Show(true);
+        ThicknessMaxResStaticText->SetLabel(wxString::Format(wxT("%.2f Å"), fit_nodes_max_resolution));
+        ThicknessLabel5->Show(true);
+        ThicknessNoDecayStaticText->Show(true);
+        if ( fit_nodes_rounded_square == 1 )
+            ThicknessNoDecayStaticText->SetLabel("Yes");
+        else
+            ThicknessNoDecayStaticText->SetLabel("No");
+        ThicknessLabel6->Show(true);
+        ThicknessDownweightNodesStaticText->Show(true);
+        if ( fit_nodes_downweight_nodes == 1 )
+            ThicknessDownweightNodesStaticText->SetLabel("Yes");
+        else
+            ThicknessDownweightNodesStaticText->SetLabel("No");
+    }
+    else {
+        EstimateThicknessStaticText->SetLabel("No");
+        ThicknessLabel1->Show(false);
+        Thickness1DStaticText->Show(false);
+        ThicknessLabel2->Show(false);
+        Thickness2DStaticText->Show(false);
+        ThicknessLabel3->Show(false);
+        ThicknessMinResText->Show(false);
+        ThicknessLabel4->Show(false);
+        ThicknessMaxResStaticText->Show(false);
+        ThicknessLabel5->Show(false);
+        ThicknessNoDecayStaticText->Show(false);
+        ThicknessLabel6->Show(false);
+        ThicknessDownweightNodesStaticText->Show(false);
     }
 
     // now get the result, and draw it as we go..

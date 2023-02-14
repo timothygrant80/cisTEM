@@ -15,7 +15,7 @@ namespace cistem {
 
 // The default border to exclude when choosing peaks, e.g. in match_template, refine_template, prepare_stack_matchtemplate, make_template_result.
 constexpr const int fraction_of_box_size_to_exclude_for_border = 4;
-constexpr const int maximum_number_of_detections               = 1000;
+constexpr const int maximum_number_of_detections               = 50000;
 
 namespace physical_constants {
 

@@ -541,7 +541,7 @@ bool MatchTemplateApp::DoCalculation( ) {
         if ( padding != 1.0f ) {
             input_reconstruction.Resize(input_reconstruction.logical_x_dimension * padding, input_reconstruction.logical_y_dimension * padding, input_reconstruction.logical_z_dimension * padding, input_reconstruction.ReturnAverageOfRealValuesOnEdges( ));
         }
-
+#undef ROTATEFORSPEED
 #ifdef ROTATEFORSPEED
         if ( ! is_power_of_two(factorizable_x) && is_power_of_two(factorizable_y) ) {
             // The speedup in the FFT for better factorization is also dependent on the dimension. The full transform (in cufft anyway) is faster if the best dimension is on X.

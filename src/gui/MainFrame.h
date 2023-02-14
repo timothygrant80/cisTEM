@@ -2,6 +2,15 @@
 #define _gui_MainFrame_h_
 
 /** Implementing MainFrame */
+
+class DatabaseUpgradeDialog : public DatabaseUpgradeDialogParent {
+
+public:
+	DatabaseUpgradeDialog(MainFrame * parent);
+	void OnUpdateClick(wxCommandEvent& event) {EndModal(wxID_YES);}
+	void OnCloseClick(wxCommandEvent& event) {EndModal(wxID_NO);}
+
+};
 class MyMainFrame : public MainFrame, public SocketCommunicator {
     bool                   is_fullscreen;
     cistem::workflow::Enum current_workflow;

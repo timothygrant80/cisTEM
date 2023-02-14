@@ -551,13 +551,19 @@ void MyMainFrame::OpenProject(wxString project_filename) {
                     changes += wxString::Format("In Table: \t %s \tadd column: \t %s\n", std::get<0>(column), std::get<1>(column));
                 }
             }
-            wxRichMessageDialog* my_dialog = new wxRichMessageDialog(this, wxString::Format("This project was last opened by a different cisTEM version :-\n\nCurrent Version: \t %s\nProject Version: \t %s\n\n%s", CISTEM_VERSION_TEXT, current_project.cistem_version_text, message), "Database from different cisTEM version?", wxICON_ERROR | wxYES_NO | wxNO_DEFAULT);
-            my_dialog->SetYesNoLabels(button, "Close");
-            if ( changes != wxString("") ) {
-                my_dialog->ShowDetailedText(changes);
-            }
+           // wxRichMessageDialog* my_dialog = new wxRichMessageDialog(this, wxString::Format("This project was last opened by a different cisTEM version :-\n\nCurrent Version: \t %s\nProject Version: \t %s\n\n%s", CISTEM_VERSION_TEXT, current_project.cistem_version_text, message), "Database from different cisTEM version?", wxICON_ERROR | wxYES_NO | wxNO_DEFAULT);
+        	DatabaseUpgradeDialog *my_dialog = new DatabaseUpgradeDialog(this);
+        	my_dialog->current_version_statictext->SetLabel(CISTEM_VERSION_TEXT);
+        	my_dialog->project_version_statictext->SetLabel(current_project.cistem_version_text);
+		    my_dialog->DetailsTextControl->AppendText(changes);
+           // my_dialog->SetYesNoLabels(button, "Close");
+
+		//    if ( changes != wxString("") ) {
+         //       my_dialog->ShowDetailedText(changes);
+            //}
             if ( my_dialog->ShowModal( ) == wxID_YES ) {
                 my_dialog->Destroy( );
+                BeginCommitLocker commit_locker(&current_project.database);
                 current_project.database.UpdateSchema(schema_comparison.second);
             }
             else {
@@ -943,4 +949,8 @@ void MyMainFrame::SetTemplateMatchingWorkflow(bool triggered_by_gui_event) {
 
 void MyMainFrame::OnTemplateMatchingWorkflow(wxCommandEvent& event) {
     SetTemplateMatchingWorkflow(true);
+}
+
+DatabaseUpgradeDialog::DatabaseUpgradeDialog(MainFrame* parent)
+    : DatabaseUpgradeDialogParent(parent) {
 }

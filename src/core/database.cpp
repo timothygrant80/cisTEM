@@ -2301,12 +2301,72 @@ bool Database::UpdateSchema(ColumnChanges columns) {
     CreateAllTables( );
     char     format;
     wxString column_format;
+    int col_counter;
+    bool output_pixel_size_added = false;
+
     for ( ColumnChange& column : columns ) {
         format        = std::get<COLUMN_CHANGE_TYPE>(column);
         column_format = map_type_char_to_sqlite_string(format);
         ExecuteSQL(wxString::Format("ALTER TABLE %s ADD COLUMN %s %s;", std::get<COLUMN_CHANGE_TABLE>(column), std::get<COLUMN_CHANGE_NAME>(column), column_format));
+
+        // checks for specific problem :-
+        // output pixel size was not added onto the end, and it needs to have a value set.
+
+        if (std::get<COLUMN_CHANGE_NAME>(column) == "OUTPUT_PIXEL_SIZE") output_pixel_size_added = true;
+
     }
+
     UpdateVersion( );
+
+    // do the more complicated post work..
+
+    if (output_pixel_size_added == true)
+    {
+    	ExecuteSQL("drop table if exists cistem_schema_update_temp_table");
+    	ExecuteSQL("alter table REFINEMENT_PACKAGE_ASSETS rename to cistem_schema_update_temp_table");
+    	CreateAllTables(); // should now be correct order but blank..
+
+    	std::vector<wxString> all_columns;
+
+    	for ( TableData& table : static_tables ) {
+
+          if (std::get<TABLE_NAME>(table) == "REFINEMENT_PACKAGE_ASSETS") {
+        	  for ( col_counter = 0; col_counter < std::get<TABLE_COLUMNS>(table).size( ); col_counter++ ) {
+        	         all_columns.push_back(std::get<TABLE_COLUMNS>(table)[col_counter]);
+        	  }
+
+          }
+    	}
+
+    	wxString sql_command;
+    	sql_command = "insert into REFINEMENT_PACKAGE_ASSETS select ";
+
+    	for ( col_counter = 0; col_counter < all_columns.size( ); col_counter++ ) {
+    		sql_command += all_columns[col_counter];
+
+    		if ( col_counter < all_columns.size( ) - 1 )
+   	            sql_command += ", ";
+    		else
+   	            sql_command += " from cistem_schema_update_temp_table;";
+
+    	}
+
+    	ExecuteSQL(sql_command);
+    	ExecuteSQL("drop table if exists cistem_schema_update_temp_table");
+
+    	// now we need to go and set this value to the output pixel size..
+    	wxArrayInt refinement_package_asset_ids = ReturnIntArrayFromSelectCommand("SELECT REFINEMENT_PACKAGE_ASSET_ID FROM REFINEMENT_PACKAGE_ASSETS");
+    	double current_pixel_size;
+
+     	for (int refinement_package_counter = 0; refinement_package_counter < refinement_package_asset_ids.GetCount(); refinement_package_counter++)
+     	{
+     		current_pixel_size = ReturnSingleDoubleFromSelectCommand(wxString::Format("select pixel_size from refinement_package_contained_particles_%i", refinement_package_asset_ids[refinement_package_counter]));
+     		ExecuteSQL(wxString::Format("update refinement_package_assets set output_pixel_size = %f where refinement_package_asset_id = %i", current_pixel_size, refinement_package_asset_ids[refinement_package_counter]));
+     	}
+
+    }
+
+
     return true;
 }
 

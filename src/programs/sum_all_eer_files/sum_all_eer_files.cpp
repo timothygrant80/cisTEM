@@ -17,7 +17,6 @@ IMPLEMENT_APP(SumAllEer)
 
 void SumAllEer::DoInteractiveUserInput( ) {
 
-    int         new_z_size = 1;
     int         max_threads;
     std::string output_dark_filename;
     std::string output_gain_filename;
@@ -42,7 +41,13 @@ void SumAllEer::DoInteractiveUserInput( ) {
     delete my_input;
 
     my_current_job.Reset(7);
-    my_current_job.ManualSetArguments("tbttiii", output_filename.c_str( ), make_dark_and_gain, output_dark_filename.c_str( ), output_gain_filename.c_str( ), max_threads, eer_super_res_factor, eer_frames_per_image);
+    my_current_job.ManualSetArguments("tbttiii", output_filename.c_str( ),
+    		make_dark_and_gain,
+			output_dark_filename.c_str( ),
+			output_gain_filename.c_str( ),
+			max_threads,
+			eer_super_res_factor,
+			eer_frames_per_image);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -98,7 +103,7 @@ bool SumAllEer::DoCalculation( ) {
     delete current_input_file;
 
     output_sum_image.Allocate(file_x_size, file_y_size, 1);
-    output_sum_image.SetToConstant(0.0);
+    output_sum_image.SetToConstant(0.0f);
 
     if ( make_dark_and_gain == true ) {
         output_dark_image.Allocate(file_x_size, file_y_size, 1);
@@ -136,7 +141,7 @@ bool SumAllEer::DoCalculation( ) {
 #pragma omp for
         for ( file_counter = 0; file_counter < all_files.GetCount( ); file_counter++ ) {
             //wxPrintf("Summing file %s...\n", all_files.Item(file_counter));
-        	wxPrintf("Summing File %ld\n", file_counter);
+        	//wxPrintf("Summing File %ld\n", file_counter);
         	current_input_file = new EerFile();
         	current_input_file->OpenFile(all_files.Item(file_counter).ToStdString( ), false, false, false, eer_super_res_factor, eer_frames_per_image);
 

@@ -185,7 +185,7 @@ void EerFile::ReadSlicesFromDisk(int start_slice, int end_slice, float* output_a
     if ( buf == NULL )
         ReadWholeFileIntoBuffer( );
 
-    long start_pos_in_output_array;
+    long start_pos_in_output_array = 0;
 
     // Loop over output slices
     for ( int slice_counter = start_slice; slice_counter <= end_slice; slice_counter++ ) {
@@ -232,7 +232,7 @@ void EerFile::DecodeToFloatArray(int start_eer_frame, int finish_eer_frame, floa
         long long     pos     = frame_starts[iframe];
         unsigned int  npixels = 0, nelectrons = 0;
         unsigned int  bit_pos = 0; // 4 K * 4 K * 11 bit << 2 ** 32
-        unsigned char rle, subpixel = 0;
+        unsigned char rle, subpixel;
         long long     first_byte;
         unsigned int  bit_offset_in_first_byte;
         unsigned int  chunk;

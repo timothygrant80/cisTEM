@@ -17,7 +17,6 @@ IMPLEMENT_APP(SumAllMRC)
 
 void SumAllMRC::DoInteractiveUserInput( ) {
 
-    int         new_z_size = 1;
     int         max_threads;
     std::string output_dark_filename;
     std::string output_gain_filename;
@@ -38,7 +37,11 @@ void SumAllMRC::DoInteractiveUserInput( ) {
     delete my_input;
 
     my_current_job.Reset(5);
-    my_current_job.ManualSetArguments("tbtti", output_filename.c_str( ), make_dark_and_gain, output_dark_filename.c_str( ), output_gain_filename.c_str( ), max_threads);
+    my_current_job.ManualSetArguments("tbtti", output_filename.c_str( ),
+    		make_dark_and_gain,
+			output_dark_filename.c_str( ),
+			output_gain_filename.c_str( ),
+			max_threads);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -91,7 +94,7 @@ bool SumAllMRC::DoCalculation( ) {
     delete current_input_file;
 
     output_sum_image.Allocate(file_x_size, file_y_size, 1);
-    output_sum_image.SetToConstant(0.0);
+    output_sum_image.SetToConstant(0.0f);
 
     if ( make_dark_and_gain == true ) {
         output_dark_image.Allocate(file_x_size, file_y_size, 1);

@@ -136,7 +136,7 @@ bool SumAllEer::DoCalculation( ) {
 #pragma omp for
         for ( file_counter = 0; file_counter < all_files.GetCount( ); file_counter++ ) {
             //wxPrintf("Summing file %s...\n", all_files.Item(file_counter));
-        	wxPrintf("Summing File %ld", file_counter);
+        	wxPrintf("Summing File %ld\n", file_counter);
         	current_input_file = new EerFile();
         	current_input_file->OpenFile(all_files.Item(file_counter).ToStdString( ), false, false, false, eer_super_res_factor, eer_frames_per_image);
 

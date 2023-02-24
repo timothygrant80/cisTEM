@@ -2,7 +2,7 @@
 #include <wx/dir.h>
 
 class
-        SumAllMRC : public MyApp {
+        SumAllEer : public MyApp {
 
   public:
     bool DoCalculation( );
@@ -11,17 +11,19 @@ class
   private:
 };
 
-IMPLEMENT_APP(SumAllMRC)
+IMPLEMENT_APP(SumAllEer)
 
 // override the DoInteractiveUserInput
 
-void SumAllMRC::DoInteractiveUserInput( ) {
+void SumAllEer::DoInteractiveUserInput( ) {
 
     int         max_threads;
     std::string output_dark_filename;
     std::string output_gain_filename;
+    int eer_super_res_factor;
+	int eer_frames_per_image;
 
-    UserInput* my_input = new UserInput("SumAllMRCiles", 1.0);
+    UserInput* my_input = new UserInput("SumAllEerfiles", 1.0);
 
     std::string output_filename = my_input->GetFilenameFromUser("Output sum file name", "Filename of output image", "output.mrc", false);
     //bool invert_and_scale         =       my_input->GetYesNoFromUser("Take Reciprocal and Scale?", "If yes, the image will be 1/image and scaled to max density 1.", "YES");
@@ -33,20 +35,24 @@ void SumAllMRC::DoInteractiveUserInput( ) {
     }
 
     max_threads = my_input->GetIntFromUser("Max number of threads to use", "maximum number of threads to use for processing.", "1", 1);
+    eer_super_res_factor = my_input-> GetIntFromUser("EER super resolution factor", "super resolution factor for pixels.", "1", 1);
+    eer_frames_per_image = my_input->GetIntFromUser("EER frames per image", "frames per image in eer file type", "0", 0);
 
     delete my_input;
 
-    my_current_job.Reset(5);
-    my_current_job.ManualSetArguments("tbtti", output_filename.c_str( ),
+    my_current_job.Reset(7);
+    my_current_job.ManualSetArguments("tbttiii", output_filename.c_str( ),
     		make_dark_and_gain,
 			output_dark_filename.c_str( ),
 			output_gain_filename.c_str( ),
-			max_threads);
+			max_threads,
+			eer_super_res_factor,
+			eer_frames_per_image);
 }
 
 // override the do calculation method which will be what is actually run..
 
-bool SumAllMRC::DoCalculation( ) {
+bool SumAllEer::DoCalculation( ) {
 
     long frame_counter;
     long file_counter;
@@ -61,12 +67,14 @@ bool SumAllMRC::DoCalculation( ) {
     std::string output_dark_filename = my_current_job.arguments[2].ReturnStringArgument( );
     std::string output_gain_filename = my_current_job.arguments[3].ReturnStringArgument( );
     int         max_threads          = my_current_job.arguments[4].ReturnIntegerArgument( );
+    int			eer_super_res_factor = my_current_job.arguments[5].ReturnIntegerArgument( );
+    int 		eer_frames_per_image = my_current_job.arguments[6].ReturnIntegerArgument( );
 
     wxArrayString all_files;
-    wxDir::GetAllFiles(".", &all_files, "*.mrc", wxDIR_FILES);
+    wxDir::GetAllFiles(".", &all_files, "*.eer", wxDIR_FILES);
     all_files.Sort( );
 
-    MRCFile* current_input_file;
+    EerFile* current_input_file;
 
     Image output_sum_image;
     Image output_dark_image;
@@ -80,11 +88,12 @@ bool SumAllMRC::DoCalculation( ) {
     double* sum_image;
     double* sum_squares_image;
 
-    // find all the mrc files in the current directory..
+    // find all the Eer files in the current directory..
 
-    wxPrintf("\nThere are %li MRC files in this directory.\n", all_files.GetCount( ));
+    wxPrintf("\nThere are %li eer files in this directory.\n", all_files.GetCount( ));
 
-    current_input_file = new MRCFile(all_files.Item(0).ToStdString( ), false);
+    current_input_file = new EerFile();
+    current_input_file->OpenFile(all_files.Item(0).ToStdString( ), false, false, false, eer_super_res_factor, eer_frames_per_image);
 
     file_x_size = current_input_file->ReturnXSize( );
     file_y_size = current_input_file->ReturnYSize( );
@@ -116,7 +125,7 @@ bool SumAllMRC::DoCalculation( ) {
 
     int number_processed = 0;
     // thread if available
-#pragma omp parallel default(none) num_threads(max_threads) shared(make_dark_and_gain, global_sum_image, global_sum_squares_image, output_sum_image, all_files, total_summed, number_processed, my_progress) private(file_counter, current_input_file, frame_counter, sum_image, sum_squares_image, pixel_counter)
+#pragma omp parallel default(none) num_threads(max_threads) shared(make_dark_and_gain, global_sum_image, global_sum_squares_image, output_sum_image, all_files, total_summed, number_processed, my_progress, eer_super_res_factor, eer_frames_per_image) private(file_counter, current_input_file, frame_counter, sum_image, sum_squares_image, pixel_counter)
     { // bracket for omp
 
         Image buffer_image;
@@ -132,8 +141,9 @@ bool SumAllMRC::DoCalculation( ) {
 #pragma omp for
         for ( file_counter = 0; file_counter < all_files.GetCount( ); file_counter++ ) {
             //wxPrintf("Summing file %s...\n", all_files.Item(file_counter));
-
-            current_input_file = new MRCFile(all_files.Item(file_counter).ToStdString( ), false);
+        	//wxPrintf("Summing File %ld\n", file_counter);
+        	current_input_file = new EerFile();
+        	current_input_file->OpenFile(all_files.Item(file_counter).ToStdString( ), false, false, false, eer_super_res_factor, eer_frames_per_image);
 
             for ( frame_counter = 0; frame_counter < current_input_file->ReturnNumberOfSlices( ); frame_counter++ ) {
                 buffer_image.ReadSlice(current_input_file, frame_counter + 1);
@@ -204,7 +214,7 @@ bool SumAllMRC::DoCalculation( ) {
 
     delete my_progress;
 
-    wxPrintf("\n\nSum All MRC File finished Cleanly!\n\n");
+    wxPrintf("\n\nSum All Eer File finished Cleanly!\n\n");
 
     return true;
 }

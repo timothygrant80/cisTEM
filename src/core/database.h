@@ -310,7 +310,12 @@ class Database {
     void               BeginAllRefinementPackagesSelect( );
     RefinementPackage* GetNextRefinementPackage( );
 
+    void                    BeginAllTemplateMatchesPackagesSelect( );
+    TemplateMatchesPackage* GetNextTemplateMatchesPackage( );
+
     void EndAllRefinementPackagesSelect( ) { EndBatchSelect( ); };
+
+    void EndAllTemplateMatchesPackagesSelect( ) { EndBatchSelect( ); };
 
     void AddStartupJob(long startup_job_id, long refinement_package_asset_id, wxString name, int number_of_starts, int number_of_cycles, float initial_res_limit, float final_res_limit, bool auto_mask, bool auto_percent_used, float initial_percent_used, float final_percent_used, float mask_radius, bool apply_blurring, float smoothing_factor, wxArrayLong result_volume_ids);
     void AddReconstructionJob(long reconstruction_id, long refinement_package_asset_id, long refinement_id, wxString name, float inner_mask_radius, float outer_mask_radius, float resolution_limit, float score_weight_conversion, bool should_adjust_score, bool should_crop_images, bool should_save_half_maps, bool should_likelihood_blur, float smoothing_factor, int class_number, long volume_asset_id);

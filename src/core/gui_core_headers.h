@@ -86,6 +86,7 @@
 #include "../gui/ImportRefinementPackageWizard.h"
 #include "../gui/ExportRefinementPackageWizard.h"
 #include "../gui/MyNewRefinementPackageWizard.h"
+#include "../gui/NewTemplateMatchesPackageWizard.h"
 #include "../gui/MyResultsPanel.h"
 #include "../gui/ActionsPanelSpa.h"
 #include "../gui/ActionsPanelTm.h"

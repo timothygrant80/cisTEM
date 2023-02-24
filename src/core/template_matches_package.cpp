@@ -28,17 +28,18 @@ RefinementPackageParticleInfo::~RefinementPackageParticleInfo( ) {
 } */
 
 TemplateMatchesPackage::TemplateMatchesPackage( ) {
-    asset_id          = -1;
-    starfile_filename = "";
-    name              = "";
+    asset_id              = -1;
+    starfile_filename     = "";
+    name                  = "";
+    contained_match_count = 0;
 }
 
-RefinementPackage::~RefinementPackage( ) {
+TemplateMatchesPackage::~TemplateMatchesPackage( ) {
 }
 
-long RefinementPackage::ReturnLastRefinementID( ) {
+/* long TemplateMatchesPackage::ReturnLastRefinementID( ) {
     return refinement_ids.Item(refinement_ids.GetCount( ) - 1);
-}
+} */
 
 /* RefinementPackageParticleInfo RefinementPackage::ReturnParticleInfoByPositionInStack(long wanted_position_in_stack) {
     for ( long counter = wanted_position_in_stack - 1; counter < contained_particles.GetCount( ); counter++ ) {

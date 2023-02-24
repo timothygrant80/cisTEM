@@ -16,8 +16,8 @@ TemplateMatchesPackageAssetPanel::TemplateMatchesPackageAssetPanel(wxWindow* par
 }
 
 void TemplateMatchesPackageAssetPanel::OnCreateClick(wxCommandEvent& event) {
-    MyNewRefinementPackageWizard* my_wizard = new MyNewRefinementPackageWizard(this);
-    my_wizard->RunWizard(my_wizard->template_page);
+    NewTemplateMatchesPackageWizard* my_wizard = new NewTemplateMatchesPackageWizard(this);
+    my_wizard->RunWizard(my_wizard->page);
     my_wizard->Destroy( );
 }
 
@@ -147,7 +147,7 @@ void TemplateMatchesPackageAssetPanel::FillRefinementPackages( ) {
         //	ContainedParticlesListCtrl->InsertColumn(13, "Init. X-shift", wxLIST_FORMAT_LEFT);
         //	ContainedParticlesListCtrl->InsertColumn(14, "Init. Y-Shift", wxLIST_FORMAT_LEFT);
 
-        ContainedParticlesListCtrl->SetItemCount(all_template_matches_packages.Item(selected_refinement_package).contained_particles.GetCount( ));
+        /* ContainedParticlesListCtrl->SetItemCount(all_template_matches_packages.Item(selected_refinement_package).contained_particles.GetCount( ));
 
         if ( all_template_matches_packages.Item(selected_refinement_package).contained_particles.GetCount( ) > 0 ) {
             ContainedParticlesListCtrl->RefreshItems(0, all_template_matches_packages.Item(selected_refinement_package).contained_particles.GetCount( ) - 1);
@@ -170,7 +170,7 @@ void TemplateMatchesPackageAssetPanel::FillRefinementPackages( ) {
 
         // 3D references..
 
-        ReDrawActiveReferences( );
+        ReDrawActiveReferences( ); */
     }
     else {
         RefinementPackageListCtrl->SetItemCount(0);
@@ -190,7 +190,7 @@ void TemplateMatchesPackageAssetPanel::FillRefinementPackages( ) {
     Thaw( );
 }
 
-void TemplateMatchesPackageAssetPanel::ReDrawActiveReferences( ) {
+/*void TemplateMatchesPackageAssetPanel::ReDrawActiveReferences( ) {
 
     Active3DReferencesListCtrl->ClearAll( );
     Active3DReferencesListCtrl->InsertColumn(0, "Class No.", wxLIST_FORMAT_LEFT);
@@ -204,7 +204,7 @@ void TemplateMatchesPackageAssetPanel::ReDrawActiveReferences( ) {
         Active3DReferencesListCtrl->SetColumnWidth(0, Active3DReferencesListCtrl->ReturnGuessAtColumnTextWidth(0));
         Active3DReferencesListCtrl->SetColumnWidth(1, Active3DReferencesListCtrl->ReturnGuessAtColumnTextWidth(1));
     }
-}
+} */
 
 void TemplateMatchesPackageAssetPanel::OnUpdateUI(wxUpdateUIEvent& event) {
     if ( main_frame->current_project.is_open == true ) {
@@ -233,30 +233,26 @@ void TemplateMatchesPackageAssetPanel::OnUpdateUI(wxUpdateUIEvent& event) {
 }
 
 void TemplateMatchesPackageAssetPanel::ImportAllFromDatabase( ) {
-    int                counter;
-    RefinementPackage* temp_package;
+    int                     counter;
+    TemplateMatchesPackage* temp_package;
 
     all_template_matches_packages.Clear( );
 
     // Now the groups..
 
-    main_frame->current_project.database.BeginAllRefinementPackagesSelect( );
+    main_frame->current_project.database.BeginAllTemplateMatchesPackagesSelect( );
 
     while ( main_frame->current_project.database.last_return_code == SQLITE_ROW ) {
-        temp_package = main_frame->current_project.database.GetNextRefinementPackage( );
+        temp_package = main_frame->current_project.database.GetNextTemplateMatchesPackage( );
         if ( temp_package->asset_id > current_asset_number )
             current_asset_number = temp_package->asset_id;
 
         all_template_matches_packages.Add(temp_package);
     }
 
-    main_frame->current_project.database.EndAllRefinementPackagesSelect( );
+    main_frame->current_project.database.EndAllTemplateMatchesPackagesSelect( );
 
-    ImportAllRefinementInfosFromDatabase( );
-    ImportAllClassificationInfosFromDatabase( );
-    ImportAllClassificationSelectionsFromDatabase( );
-
-    main_frame->DirtyRefinementPackages( );
+    main_frame->DirtyTemplateMatchesPackages( );
 }
 
 void TemplateMatchesPackageAssetPanel::MouseVeto(wxMouseEvent& event) {
@@ -295,10 +291,10 @@ void TemplateMatchesPackageAssetPanel::OnPackageFocusChange(wxListEvent& event) 
         is_dirty                    = true;
 
         if ( selected_refinement_package >= 0 ) {
-            ContainedParticlesStaticText->SetLabel(wxString::Format("Contained Particles (%li) : ", all_template_matches_packages.Item(selected_refinement_package).contained_particles.GetCount( )));
+            ContainedParticlesStaticText->SetLabel(wxString::Format("Contained Matches (%li) : ", all_template_matches_packages.Item(selected_refinement_package).contained_match_count));
         }
         else
-            ContainedParticlesStaticText->SetLabel("Contained Particles : ");
+            ContainedParticlesStaticText->SetLabel("Contained Matches : ");
     }
 
     //wxPrintf("Selected refinement package = %li\n", selected_refinement_package);
@@ -310,7 +306,7 @@ void TemplateMatchesPackageAssetPanel::OnPackageActivated(wxListEvent& event) {
     RefinementPackageListCtrl->EditLabel(event.GetIndex( ));
 }
 
-void TemplateMatchesPackageAssetPanel::OnVolumeListItemActivated(wxListEvent& event) {
+/*void TemplateMatchesPackageAssetPanel::OnVolumeListItemActivated(wxListEvent& event) {
     MyVolumeChooserDialog* dialog = new MyVolumeChooserDialog(this);
 
     dialog->ComboBox->SetSelection(volume_asset_panel->ReturnArrayPositionFromAssetID(all_template_matches_packages.Item(selected_refinement_package).references_for_next_refinement.Item(event.GetIndex( ))) + 1);
@@ -325,7 +321,7 @@ void TemplateMatchesPackageAssetPanel::OnVolumeListItemActivated(wxListEvent& ev
         }
     }
     dialog->Destroy( );
-}
+}*/
 
 void TemplateMatchesPackageAssetPanel::OnBeginEdit(wxListEvent& event) {
     event.Skip( );
@@ -348,10 +344,10 @@ void TemplateMatchesPackageAssetPanel::OnEndEdit(wxListEvent& event) {
             //escape apostrophes
             safe_name.Replace("'", "''");
 
-            wxString sql_command = wxString::Format("UPDATE REFINEMENT_PACKAGE_ASSETS SET NAME='%s' WHERE REFINEMENT_PACKAGE_ASSET_ID=%li", safe_name, all_template_matches_packages.Item(event.GetIndex( )).asset_id);
+            wxString sql_command = wxString::Format("UPDATE TEMPLATE_MATCHES_PACKAGE_ASSETS SET NAME='%s' WHERE TEMPLATE_MATCHES_PACKAGE_ASSET_ID=%li", safe_name, all_template_matches_packages.Item(event.GetIndex( )).asset_id);
             main_frame->current_project.database.ExecuteSQL(sql_command.ToUTF8( ).data( ));
 
-            main_frame->DirtyRefinementPackages( );
+            main_frame->DirtyTemplateMatchesPackages( );
             event.Skip( );
         }
         else
@@ -361,7 +357,7 @@ void TemplateMatchesPackageAssetPanel::OnEndEdit(wxListEvent& event) {
 
 void TemplateMatchesPackageAssetPanel::Reset( ) {
     all_template_matches_packages.Clear( );
-    main_frame->DirtyRefinementPackages( );
+    main_frame->DirtyTemplateMatchesPackages( );
     ContainedParticlesStaticText->SetLabel("Contained Particles : ");
 }
 

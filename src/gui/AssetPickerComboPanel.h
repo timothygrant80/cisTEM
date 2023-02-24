@@ -81,6 +81,13 @@ class ImageGroupPickerComboPanel : public AssetPickerComboPanel {
     bool FillComboBox(bool include_all_images_group) { return AssetComboBox->FillWithImageGroups(include_all_images_group); }
 };
 
+class TMJobPickerComboPanel : public AssetPickerComboPanel {
+  public:
+    TMJobPickerComboPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
+
+    bool FillComboBox(bool include_all_images_group) { return AssetComboBox->FillWithTMJobs(include_all_images_group); }
+};
+
 class MovieGroupPickerComboPanel : public AssetPickerComboPanel {
   public:
     MovieGroupPickerComboPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);

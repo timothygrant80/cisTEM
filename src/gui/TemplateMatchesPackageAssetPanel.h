@@ -40,7 +40,7 @@ class TemplateMatchesPackageAssetPanel : public TemplateMatchesPackageAssetPanel
     void OnPackageActivated(wxListEvent& event);
     void OnBeginEdit(wxListEvent& event);
     void OnEndEdit(wxListEvent& event);
-    void OnVolumeListItemActivated(wxListEvent& event);
+    //void OnVolumeListItemActivated(wxListEvent& event);
     void ReDrawActiveReferences( );
 
     //void RemoveVolumeFromAllRefinementPackages(long wanted_volume_asset_id);

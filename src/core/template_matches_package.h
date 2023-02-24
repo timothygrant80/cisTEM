@@ -31,8 +31,9 @@ class TemplateMatchesPackage {
     long     asset_id;
     wxString starfile_filename;
     wxString name;
+    long     contained_match_count;
 
-    wxArrayLong match_tempalte_result_ids;
+    wxArrayLong match_template_result_ids;
 };
 
 WX_DECLARE_OBJARRAY(TemplateMatchesPackage, ArrayOfTemplateMatchesPackages);

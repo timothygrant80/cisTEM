@@ -11721,6 +11721,32 @@ NewRefinementPackageWizard::~NewRefinementPackageWizard()
 	m_pages.Clear();
 }
 
+NewTemplateMatchesPackageWizardParent::NewTemplateMatchesPackageWizardParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxBitmap& bitmap, const wxPoint& pos, long style )
+{
+	this->Create( parent, id, title, bitmap, pos, style );
+
+	this->SetSizeHints( wxSize( -1,-1 ), wxDefaultSize );
+
+
+	this->Centre( wxBOTH );
+
+
+	// Connect Events
+	this->Connect( wxID_ANY, wxEVT_WIZARD_FINISHED, wxWizardEventHandler( NewTemplateMatchesPackageWizardParent::OnFinished ) );
+	this->Connect( wxID_ANY, wxEVT_WIZARD_PAGE_CHANGED, wxWizardEventHandler( NewTemplateMatchesPackageWizardParent::PageChanged ) );
+	this->Connect( wxID_ANY, wxEVT_WIZARD_PAGE_CHANGING, wxWizardEventHandler( NewTemplateMatchesPackageWizardParent::PageChanging ) );
+}
+
+NewTemplateMatchesPackageWizardParent::~NewTemplateMatchesPackageWizardParent()
+{
+	// Disconnect Events
+	this->Disconnect( wxID_ANY, wxEVT_WIZARD_FINISHED, wxWizardEventHandler( NewTemplateMatchesPackageWizardParent::OnFinished ) );
+	this->Disconnect( wxID_ANY, wxEVT_WIZARD_PAGE_CHANGED, wxWizardEventHandler( NewTemplateMatchesPackageWizardParent::PageChanged ) );
+	this->Disconnect( wxID_ANY, wxEVT_WIZARD_PAGE_CHANGING, wxWizardEventHandler( NewTemplateMatchesPackageWizardParent::PageChanging ) );
+
+	m_pages.Clear();
+}
+
 VolumeChooserDialog::VolumeChooserDialog( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
 {
 	this->SetSizeHints( wxSize( -1,-1 ), wxDefaultSize );
@@ -13157,6 +13183,59 @@ TemplateWizardPanel::TemplateWizardPanel( wxWindow* parent, wxWindowID id, const
 }
 
 TemplateWizardPanel::~TemplateWizardPanel()
+{
+}
+
+TemplateMatchesWizardPanel::TemplateMatchesWizardPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
+{
+	wxBoxSizer* bSizer153;
+	bSizer153 = new wxBoxSizer( wxVERTICAL );
+
+	wxBoxSizer* bSizer147;
+	bSizer147 = new wxBoxSizer( wxHORIZONTAL );
+
+	m_staticText214 = new wxStaticText( this, wxID_ANY, wxT("Image Group"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText214->Wrap( -1 );
+	bSizer147->Add( m_staticText214, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	ImageGroupComboBox = new ImageGroupPickerComboPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	ImageGroupComboBox->SetMinSize( wxSize( 350,-1 ) );
+	ImageGroupComboBox->SetMaxSize( wxSize( 350,-1 ) );
+
+	bSizer147->Add( ImageGroupComboBox, 1, wxEXPAND | wxALL, 5 );
+
+
+	bSizer153->Add( bSizer147, 0, wxEXPAND, 5 );
+
+	wxBoxSizer* bSizer1471;
+	bSizer1471 = new wxBoxSizer( wxHORIZONTAL );
+
+	m_staticText2141 = new wxStaticText( this, wxID_ANY, wxT("Match Template Job"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText2141->Wrap( -1 );
+	bSizer1471->Add( m_staticText2141, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	TMJobComboBox = new TMJobPickerComboPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	TMJobComboBox->SetMinSize( wxSize( 350,-1 ) );
+	TMJobComboBox->SetMaxSize( wxSize( 350,-1 ) );
+
+	bSizer1471->Add( TMJobComboBox, 1, wxEXPAND | wxALL, 5 );
+
+
+	bSizer153->Add( bSizer1471, 0, wxEXPAND, 5 );
+
+
+	bSizer153->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	InfoText = new AutoWrapStaticText( this, wxID_ANY, wxT("Select the images you want to collect matches from and the template match job"), wxDefaultPosition, wxDefaultSize, 0 );
+	InfoText->Wrap( -1 );
+	bSizer153->Add( InfoText, 0, wxALL|wxEXPAND, 5 );
+
+
+	this->SetSizer( bSizer153 );
+	this->Layout();
+}
+
+TemplateMatchesWizardPanel::~TemplateMatchesWizardPanel()
 {
 }
 

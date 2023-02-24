@@ -45,6 +45,7 @@ class RefinementPickerComboPanel;
 class ResultsDataViewListCtrl;
 class ShowCTFResultsPanel;
 class ShowTemplateMatchResultsPanel;
+class TMJobPickerComboPanel;
 class UnblurResultsPanel;
 class VolumeAssetPickerComboPanel;
 
@@ -3015,6 +3016,30 @@ class NewRefinementPackageWizard : public wxWizard
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+/// Class NewTemplateMatchesPackageWizardParent
+///////////////////////////////////////////////////////////////////////////////
+class NewTemplateMatchesPackageWizardParent : public wxWizard
+{
+	private:
+
+	protected:
+
+		// Virtual event handlers, override them in your derived class
+		virtual void OnFinished( wxWizardEvent& event ) { event.Skip(); }
+		virtual void PageChanged( wxWizardEvent& event ) { event.Skip(); }
+		virtual void PageChanging( wxWizardEvent& event ) { event.Skip(); }
+
+
+	public:
+
+		NewTemplateMatchesPackageWizardParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Create New Refinement Package"), const wxBitmap& bitmap = wxNullBitmap, const wxPoint& pos = wxDefaultPosition, long style = wxDEFAULT_DIALOG_STYLE );
+		WizardPages m_pages;
+
+		~NewTemplateMatchesPackageWizardParent();
+
+};
+
+///////////////////////////////////////////////////////////////////////////////
 /// Class VolumeChooserDialog
 ///////////////////////////////////////////////////////////////////////////////
 class VolumeChooserDialog : public wxDialog
@@ -3478,6 +3503,28 @@ class TemplateWizardPanel : public wxPanel
 		TemplateWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 
 		~TemplateWizardPanel();
+
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class TemplateMatchesWizardPanel
+///////////////////////////////////////////////////////////////////////////////
+class TemplateMatchesWizardPanel : public wxPanel
+{
+	private:
+
+	protected:
+		wxStaticText* m_staticText214;
+		wxStaticText* m_staticText2141;
+
+	public:
+		ImageGroupPickerComboPanel* ImageGroupComboBox;
+		TMJobPickerComboPanel* TMJobComboBox;
+		AutoWrapStaticText* InfoText;
+
+		TemplateMatchesWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+
+		~TemplateMatchesWizardPanel();
 
 };
 

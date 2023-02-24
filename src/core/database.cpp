@@ -1235,6 +1235,10 @@ void Database::BeginAllRefinementPackagesSelect( ) {
     BeginBatchSelect("SELECT * FROM REFINEMENT_PACKAGE_ASSETS;");
 }
 
+void Database::BeginAllTemplateMatchesPackagesSelect( ) {
+    BeginBatchSelect("SELECT * FROM TEMPLATE_MATCHES_PACKAGE_ASSETS;");
+}
+
 void Database::BeginAllRunProfilesSelect( ) {
     BeginBatchSelect("SELECT * FROM RUN_PROFILES;");
 }
@@ -1415,6 +1419,16 @@ RefinementPackage* Database::GetNextRefinementPackage( ) {
     MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code);
 
     Finalize(list_statement);
+
+    return temp_package;
+}
+
+TemplateMatchesPackage* Database::GetNextTemplateMatchesPackage( ) {
+    TemplateMatchesPackage* temp_package;
+
+    temp_package = new TemplateMatchesPackage;
+
+    GetFromBatchSelect("ltt", &temp_package->asset_id, &temp_package->name, &temp_package->starfile_filename);
 
     return temp_package;
 }

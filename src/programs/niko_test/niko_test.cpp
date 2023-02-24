@@ -1,7 +1,11 @@
 #include "../../core/core_headers.h"
 #include <iostream>
+
 #include <string>
 #include <fstream>
+#include "../../core/dlib/optimization.h"
+// #include <iostream>
+#include <vector>
 
 class
         NikoTestApp : public MyApp {
@@ -17,20 +21,20 @@ IMPLEMENT_APP(NikoTestApp)
 
 // override the DoInteractiveUserInput
 
-// void NikoTestApp::DoInteractiveUserInput( ) {
-//     UserInput* my_input = new UserInput("TrimStack", 1.0);
+void NikoTestApp::DoInteractiveUserInput( ) {
+    //     UserInput* my_input = new UserInput("TrimStack", 1.0);
 
-//     wxString input_imgstack = my_input->GetFilenameFromUser("Input image file name", "Name of input image file *.mrc", "input.mrc", true);
-//     // // wxString output_stack_filename = my_input->GetFilenameFromUser("Filename for output stack of particles.", "A stack of particles will be written to disk", "particles.mrc", false);
-//     wxString angle_filename = my_input->GetFilenameFromUser("Tilt Angle filename", "The tilts, *.tlt", "ang.tlt", true);
-//     // wxString coordinates_filename  = my_input->GetFilenameFromUser("Coordinates (PLT) filename", "The input particle coordinates, in Imagic-style PLT forlmat", "coos.plt", true);
-//     int img_index = my_input->GetIntFromUser("Box size for output candidate particle images (pixels)", "In pixels. Give 0 to skip writing particle images to disk.", "256", 0);
+    //     wxString input_imgstack = my_input->GetFilenameFromUser("Input image file name", "Name of input image file *.mrc", "input.mrc", true);
+    //     // // wxString output_stack_filename = my_input->GetFilenameFromUser("Filename for output stack of particles.", "A stack of particles will be written to disk", "particles.mrc", false);
+    //     wxString angle_filename = my_input->GetFilenameFromUser("Tilt Angle filename", "The tilts, *.tlt", "ang.tlt", true);
+    //     // wxString coordinates_filename  = my_input->GetFilenameFromUser("Coordinates (PLT) filename", "The input particle coordinates, in Imagic-style PLT forlmat", "coos.plt", true);
+    //     int img_index = my_input->GetIntFromUser("Box size for output candidate particle images (pixels)", "In pixels. Give 0 to skip writing particle images to disk.", "256", 0);
 
-//     delete my_input;
+    //     delete my_input;
 
-//     my_current_job.Reset(3);
-//     my_current_job.ManualSetArguments("tti", input_imgstack.ToUTF8( ).data( ), angle_filename.ToUTF8( ).data( ), img_index);
-// }
+    //     my_current_job.Reset(3);
+    //     my_current_job.ManualSetArguments("tti", input_imgstack.ToUTF8( ).data( ), angle_filename.ToUTF8( ).data( ), img_index);
+}
 
 // override the do calculation method which will be what is actually run..
 
@@ -398,6 +402,467 @@ double sliceEdgeMean(float* array, int nxdim, int ixlo, int ixhi, int iylo,
 //         }
 //     }
 // }
+using namespace std;
+using namespace dlib;
+
+// ----------------------------------------------------------------------------------------
+
+typedef matrix<double, 3, 1>  input_vector;
+typedef matrix<double, 18, 1> parameter_vector;
+
+// ----------------------------------------------------------------------------------------
+
+// We will use this function to generate data.  It represents a function of 2 variables
+// and 3 parameters.   The least squares procedure will be used to infer the values of
+// the 3 parameters based on a set of input/output pairs.
+double model(
+        const input_vector&     input,
+        const parameter_vector& params) {
+    const double p0 = params(0);
+    const double p1 = params(1);
+    const double p2 = params(2);
+
+    const double i0 = input(0);
+    const double i1 = input(1);
+
+    const double temp = p0 * i0 + p1 * i1 + p2;
+
+    return temp * temp;
+    // return temp;
+}
+
+double modeltest(
+        const input_vector&     input,
+        const parameter_vector& params) {
+    const double c0 = params(0);
+    const double c1 = params(1);
+    const double c2 = params(2), c3 = params(3), c4 = params(4), c5 = params(5), c6 = params(6), c7 = params(7);
+    const double c8 = params(8), c9 = params(9), c10 = params(10), c11 = params(11), c12 = params(12), c13 = params(13);
+    const double c14 = params(14), c15 = params(15), c16 = params(16), c17 = params(17);
+
+    const double x = input(0);
+    const double y = input(1);
+    const double t = input(2);
+
+    const double temp = c0 * t + c1 * pow(t, 2) + c2 * pow(t, 3) + c3 * x * t + c4 * x * pow(t, 2) + c5 * x * pow(t, 3) + c6 * pow(x, 2) * t + c7 * pow(x, 2) * pow(t, 2) + c8 * pow(x, 2) * pow(t, 3) + c9 * y * t + c10 * y * pow(t, 2) + c11 * y * pow(t, 3) + c12 * pow(y, 2) * t + c13 * pow(y, 2) * pow(t, 2) + c14 * pow(y, 2) * pow(t, 3) + c15 * x * y * t + c16 * x * y * pow(t, 2) + c17 * x * y * pow(t, 3);
+
+    return temp;
+}
+
+double residual_test(
+        const std::pair<input_vector, double>& data,
+        const parameter_vector&                params) {
+    return modeltest(data.first, params) - data.second;
+}
+
+parameter_vector residual_derivative_test(
+        const std::pair<input_vector, double>& data,
+        const parameter_vector&                params) {
+    parameter_vector der;
+
+    const double c0 = params(0);
+    const double c1 = params(1);
+    const double c2 = params(2), c3 = params(3), c4 = params(4), c5 = params(5), c6 = params(6), c7 = params(7);
+    const double c8 = params(8), c9 = params(9), c10 = params(10), c11 = params(11), c12 = params(12), c13 = params(13);
+    const double c14 = params(14), c15 = params(15), c16 = params(16), c17 = params(17);
+
+    const double x = data.first(0);
+    const double y = data.first(1);
+    const double t = data.first(2);
+
+    const double temp = c0 * t + c1 * pow(t, 2) + c2 * pow(t, 3) + c3 * x * t + c4 * x * pow(t, 2) + c5 * x * pow(t, 3) + c6 * pow(x, 2) * t + c7 * pow(x, 2) * pow(t, 2) + c8 * pow(x, 2) * pow(t, 3) + c9 * y * t + c10 * y * pow(t, 2) + c11 * y * pow(t, 3) + c12 * pow(y, 2) * t + c13 * pow(y, 2) * pow(t, 2) + c14 * pow(y, 2) * pow(t, 3) + c15 * x * y * t + c16 * x * y * pow(t, 2) + c17 * x * y * pow(t, 3);
+    der(0)            = t;
+    der(1)            = pow(t, 2);
+    der(2)            = pow(t, 3);
+    der(3)            = x * t;
+    der(4)            = x * pow(t, 2);
+    der(5)            = x * pow(t, 3);
+    der(6)            = pow(x, 2) * t;
+    der(7)            = pow(x, 2) * pow(t, 2);
+    der(8)            = pow(x, 2) * pow(t, 3);
+    der(9)            = y * t;
+    der(10)           = y * pow(t, 2);
+    der(11)           = y * pow(t, 3);
+    der(12)           = pow(y, 2) * t;
+    der(13)           = pow(y, 2) * pow(t, 2);
+    der(14)           = pow(y, 2) * pow(t, 3);
+    der(15)           = x * y * t;
+    der(16)           = x * y * pow(t, 2);
+    der(17)           = x * y * pow(t, 3);
+    // der(0) = i0 * 2;
+    // der(1) = i1 * 2;
+    // der(2) = 1;
+
+    return der;
+}
+
+double residual(
+        const std::pair<input_vector, double>& data,
+        const parameter_vector&                params) {
+    return model(data.first, params) - data.second;
+}
+
+// ----------------------------------------------------------------------------------------
+
+// This function is the derivative of the residual() function with respect to the parameters.
+parameter_vector residual_derivative(
+        const std::pair<input_vector, double>& data,
+        const parameter_vector&                params) {
+    parameter_vector der;
+
+    const double p0 = params(0);
+    const double p1 = params(1);
+    const double p2 = params(2);
+
+    const double i0 = data.first(0);
+    const double i1 = data.first(1);
+
+    const double temp = p0 * i0 + p1 * i1 + p2;
+
+    der(0) = i0 * 2 * temp;
+    der(1) = i1 * 2 * temp;
+    der(2) = 2 * temp;
+    // der(0) = i0 * 2;
+    // der(1) = i1 * 2;
+    // der(2) = 1;
+
+    return der;
+}
+
+bool NikoTestApp::DoCalculation( ) {
+    // wxString patch_shifts;
+
+    // wxString input_path  = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/PatchMovies_gain/";
+    // wxString output_path = "/data/lingli/Lingli_20221028/draft_tmp";
+    wxString input_path  = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/TestPatch/";
+    wxString output_path = "/data/lingli/Lingli_20221028/TestPatch/";
+    int      image_no    = 75;
+    int      patch_num_x = 6;
+    int      patch_num_y = 4;
+    int      patch_no    = patch_num_x * patch_num_y;
+    float**  shiftsx     = NULL;
+    float**  shiftsy     = NULL;
+
+    Allocate2DFloatArray(shiftsx, image_no, patch_no);
+    Allocate2DFloatArray(shiftsy, image_no, patch_no);
+    wxString         shift_file;
+    NumericTextFile* shiftfile;
+    float            shifts[2];
+    float            patch_locations[patch_no][2];
+    for ( int patch_index = 0; patch_index < patch_no; patch_index++ ) {
+        shift_file = wxString::Format(input_path + "%02i_" + "shift.txt", patch_index);
+        shiftfile  = new NumericTextFile(shift_file, OPEN_TO_READ, 2);
+        for ( int image_index = 0; image_index < image_no; image_index++ ) {
+            shiftfile->ReadLine(shifts);
+            shiftsx[image_index][patch_index] = shifts[0];
+            shiftsy[image_index][patch_index] = shifts[1];
+            // wxPrintf("shifts: %f, %f\n", shiftsx[image_index][patch_index], shiftsy[image_index][patch_index]);
+        }
+    }
+    int image_dim_x = 5760;
+    int image_dim_y = 4092;
+    int step_size_x = myroundint(float(image_dim_x) / float(patch_num_x) / 2);
+    int step_size_y = myroundint(float(image_dim_y) / float(patch_num_y) / 2);
+    for ( int patch_y_ind = 0; patch_y_ind < patch_num_y; patch_y_ind++ ) {
+        for ( int patch_x_ind = 0; patch_x_ind < patch_num_x; patch_x_ind++ ) {
+            patch_locations[patch_num_x * patch_y_ind + patch_x_ind][0] = patch_x_ind * step_size_x * 2 + step_size_x;
+            patch_locations[patch_num_x * patch_y_ind + patch_x_ind][1] = image_dim_y - patch_y_ind * step_size_y * 2 - step_size_y;
+            wxPrintf("patch locations: %f, %f\n", patch_locations[patch_num_x * patch_y_ind + patch_x_ind][0], patch_locations[patch_num_x * patch_y_ind + patch_x_ind][1]);
+        }
+    }
+    input_vector                                 input;
+    std::vector<std::pair<input_vector, double>> data_x, data_y;
+    for ( int image_index = 0; image_index < image_no; image_index++ ) {
+        for ( int patch_index = 0; patch_index < patch_no; patch_index++ ) {
+            float time;
+            time     = image_index;
+            input(0) = patch_locations[patch_index][0];
+            input(1) = patch_locations[patch_index][1];
+            input(2) = time;
+            // double outputx = shiftsx[image_index][patch_index];
+            // double outputy = shiftsy[image_index][patch_index];
+            // the following is to set the first image has no shift
+            double outputx = shiftsx[image_index][patch_index] - shiftsx[0][patch_index];
+            double outputy = shiftsy[image_index][patch_index] - shiftsy[0][patch_index];
+            data_x.push_back(make_pair(input, outputx));
+            data_y.push_back(make_pair(input, outputy));
+        }
+    }
+    parameter_vector x, y;
+    x = 1;
+    y = 1;
+
+    solve_least_squares_lm(objective_delta_stop_strategy(1e-7).be_verbose( ),
+                           residual_test,
+                           residual_derivative_test,
+                           data_x,
+                           x);
+    wxPrintf("x fitted parameters: %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f\n", x(0), x(1), x(2), x(3), x(4), x(5), x(6), x(7), x(8), x(9), x(10), x(11), x(12), x(13), x(14), x(15), x(16), x(17));
+
+    solve_least_squares_lm(objective_delta_stop_strategy(1e-7).be_verbose( ),
+                           residual_test,
+                           residual_derivative_test,
+                           data_y,
+                           y);
+    wxPrintf("y fitted parameters: %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f\n", y(0), y(1), y(2), y(3), y(4), y(5), y(6), y(7), y(8), y(9), y(10), y(11), y(12), y(13), y(14), y(15), y(16), y(17));
+
+    // readin stack and apply distortion
+
+    // int    image_dim_x    = input_stack[0].logical_x_dimension;
+    // int    image_dim_y    = input_stack[0].logical_y_dimension;
+    int      number_of_images = image_no;
+    wxString inputstack       = input_path + "records_19_b2_gain_div_aligned_frames.mrc";
+    int      totalpixels      = image_dim_x * image_dim_y;
+
+    float* original_map_x = new float[totalpixels];
+    float* original_map_y = new float[totalpixels];
+    float* shifted_map_x  = new float[totalpixels];
+
+    float*  shifted_map_y = new float[totalpixels];
+    Image*  input_stack   = new Image[image_no];
+    Image*  distorted_stack;
+    MRCFile input_file(inputstack.ToStdString( ), false);
+    distorted_stack = new Image[image_no];
+
+    for ( int image_counter = 0; image_counter < image_no; image_counter++ ) {
+        input_stack[image_counter].ReadSlice(&input_file, image_counter + 1);
+    }
+
+    // initialize the pixel coordinates
+    for ( int i = 0; i < image_dim_y; i++ ) {
+        for ( int j = 0; j < image_dim_x; j++ ) {
+            original_map_x[i * image_dim_x + j] = j;
+            original_map_y[i * image_dim_x + j] = i;
+        }
+    }
+    // input_vector     input;
+    float            time;
+    parameter_vector params_x   = x;
+    parameter_vector params_y   = y;
+    wxString         outputpath = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/TestPatch/";
+    for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
+        // for ( int image_counter = 10; image_counter < 11; image_counter++ ) {
+        time     = image_counter;
+        input(2) = time;
+        for ( int pix = 0; pix < totalpixels; pix++ ) {
+            input(0)           = original_map_x[pix];
+            input(1)           = original_map_y[pix];
+            shifted_map_x[pix] = modeltest(input, params_x) + original_map_x[pix];
+            shifted_map_y[pix] = modeltest(input, params_y) + original_map_y[pix];
+            if ( pix < 20 ) {
+                wxPrintf("%f %f %f %f\n", shifted_map_x[pix], shifted_map_y[pix], original_map_x[pix], original_map_y[pix]);
+            }
+        }
+        // distorted_stack[image_counter].Allocate(input_stack[image_counter].logical_x_dimension, input_stack[image_counter].logical_y_dimension, 1, false);
+        distorted_stack[image_counter].Allocate(input_stack[image_counter].logical_x_dimension, input_stack[image_counter].logical_y_dimension, 1, true);
+        distorted_stack[image_counter].SetToConstant(input_stack[image_counter].ReturnAverageOfRealValuesOnEdges( ));
+        // input_stack[image_counter].BackwardFFT( );
+        // input_stack[image_counter].ZeroCentralPixel( );
+        input_stack[image_counter].Distortion(&distorted_stack[image_counter], shifted_map_x, shifted_map_y);
+    }
+
+    Image sum_image_fixed, distorted_fixed;
+    // sum_image_fixed.Allocate(input_stack[0].logical_x_dimension, input_stack[0].logical_y_dimension, false);
+    // distorted_fixed.Allocate(input_stack[0].logical_x_dimension, input_stack[0].logical_y_dimension, false);
+    sum_image_fixed.Allocate(input_stack[0].logical_x_dimension, input_stack[0].logical_y_dimension, true);
+    distorted_fixed.Allocate(input_stack[0].logical_x_dimension, input_stack[0].logical_y_dimension, true);
+    sum_image_fixed.SetToConstant(0.0);
+    distorted_fixed.SetToConstant(0.0);
+    for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
+        sum_image_fixed.AddImage(&input_stack[image_counter]);
+        distorted_fixed.AddImage(&distorted_stack[image_counter]);
+        input_stack[image_counter].QuickAndDirtyWriteSlice(outputpath.ToStdString( ) + "original_frames.mrc", image_counter + 1);
+        distorted_stack[image_counter].QuickAndDirtyWriteSlice(outputpath.ToStdString( ) + "fixed_frames.mrc", image_counter + 1);
+    }
+    // sum_image_fixed.BackwardFFT( );
+    // distorted_fixed.BackwardFFT( );
+    sum_image_fixed.WriteSlicesAndFillHeader(outputpath.ToStdString( ) + "original.mrc", 1);
+    distorted_fixed.WriteSlicesAndFillHeader(outputpath.ToStdString( ) + "fixed.mrc", 1);
+
+    delete shiftfile;
+    return true;
+}
+
+/*
+
+bool NikoTestApp::DoCalculation( ) {
+    // ----------------------------------------------------------------------------------------
+
+    // int main( ) {
+    // try {
+    // randomly pick a set of parameters to use in this example
+    const parameter_vector params = 100 * randm(3, 1);
+    // shift_filex = wxString::Format(input_path + "%02i_" + shift_file_x + ".txt", shift_file_index);
+    // shift_filey = wxString::Format(input_path + "%02i_" + shift_file_y + ".txt", shift_file_index);
+    // wxPrintf("shiftfiles are %s, %s, \n", shift_filex, shift_filey);
+    // xFile.open(shift_filex.c_str( ));
+    // yFile.open(shift_filey.c_str( ));
+
+    // if ( xFile.is_open( ) && yFile.is_open( ) ) {
+    //     wxPrintf("files are open\n");
+    //     // float myarray[10][5760];
+    //     for ( int pix = 0; pix < totalpixels; pix++ ) {
+    //         xFile >> shifted_mapx[pix];
+    //         yFile >> shifted_mapy[pix];
+    //     }
+    // }
+    // wxPrintf("first shift x ,y %f, %f \n", shifted_mapx[0], shifted_mapy[0]);
+    // for ( int i = 0; i < image_y_dim; i++ ) {
+    //     for ( int j = 0; j < image_x_dim; j++ ) {
+    //         shifted_mapx[i * image_x_dim + j] += j;
+    //         shifted_mapy[i * image_x_dim + j] += i;
+    //     }
+    // }
+    // wxPrintf("adjusted first pix position x ,y %f, %f \n", shifted_mapx[0], shifted_mapy[0]);
+    // wxPrintf("shifting files are loaded \n");
+    // xFile.close( );
+    // yFile.close( );
+    wxPrintf("test 1\n");
+    wxPrintf("parames %f\n", trans(params)(0));
+    std::cout << "params: " << trans(params) << endl;
+    std::cout.flush( ); // explicitly flush here
+    // Now let's generate a bunch of input/output pairs according to our model.
+    std::vector<std::pair<input_vector, double>> data_samples;
+    input_vector                                 input;
+    // for ( int i = 0; i < 10; ++i ) {
+    //     input               = 100 * randm(2, 1);
+    //     const double output = model(input, params);
+
+    //     // save the pair
+    //     data_samples.push_back(make_pair(input, output));
+    // }
+
+    for ( int i = 1; i < 5; i++ ) {
+        // wxPrintf("i is %i \n", i);
+        // input               = (i, i + 1);
+        // input(0)            = i / 100;
+        // input(1)            = (i + 1) / 100;
+        // int j = i + 1;
+        for ( int j = 1; j < 5; j++ ) {
+
+            // if ( i % 2 == 0 ) {
+            //     input = (float(i) / 10.0),
+            //     (float(j) / 10.0); // the decimal interval cannot be evenly distribution. other wise it fail. so I used /10.0 and /100.0
+            // }
+            // else {
+            //     input = (float(i) / 100.0),
+            //     (float(j) / 100.0);
+            // }
+            input = (float(i) / 10.0),
+            (float(j) / 10.0);
+
+            // input(0) = 10 * randm(1, 1);
+            // input(1) = 10 * randm(1, 1);
+            wxPrintf("test %f\n", 10 * randm(1, 1)(0));
+            const double output = model(input, params);
+            // }
+            data_samples.push_back(make_pair(input, output));
+        }
+    }
+    // wxPrintf("input 1 %f\n", input(1)[1]);
+    wxPrintf("input 0 %f\n", input(0));
+    wxPrintf("data_sample 3 %f\n", data_samples[0].first(0));
+    wxPrintf("data_sample 3 %f\n", data_samples[0].first(1));
+    wxPrintf("data_sample 3 %f\n", data_samples[1].first(0));
+    wxPrintf("data_sample 3 %f\n", data_samples[1].first(1));
+    wxPrintf("data_sample 3 %f\n", data_samples[1].second);
+    // wxPrintf("data_sample 3 %f\n", data_samples[0].first(2));
+    // wxPrintf("data_sample 5 %f", data_samples[5]);
+    // Before we do anything, let's make sure that our derivative function defined above matches
+    // the approximate derivative computed using central differences (via derivative()).
+    // If this value is big then it means we probably typed the derivative function incorrectly.
+    cout << "derivative error: " << length(residual_derivative(data_samples[0], params) - derivative(residual)(data_samples[0], params)) << endl;
+    wxPrintf("derivative error: %f,\n", length(residual_derivative(data_samples[0], params) - derivative(residual)(data_samples[0], params)));
+    // Now let's use the solve_least_squares_lm() routine to figure out what the
+    // parameters are based on just the data_samples.
+    parameter_vector x;
+    x = 1;
+    // x = 100;
+    // x(0) = 15;
+    // x(1) = 15;
+    // x(2) = 70;
+
+    cout << "Use Levenberg-Marquardt" << endl;
+
+    // Use the Levenberg-Marquardt method to determine the parameters which
+    // minimize the sum of all squared residuals.
+    // solve_least_squares_lm(objective_delta_stop_strategy(1e-7).be_verbose( ),
+    //                        residual,
+    //                        residual_derivative,
+    //                        data_samples,
+    //                        x);
+    solve_least_squares_lm(gradient_norm_stop_strategy(1e-7).be_verbose( ),
+                           residual,
+                           residual_derivative,
+                           data_samples,
+                           x);
+
+    // Now x contains the solution.  If everything worked it will be equal to params.
+    cout << "inferred parameters: " << trans(x) << endl;
+    cout << "solution error:      " << length(x - params) << endl;
+    cout << endl;
+    wxPrintf("stopstrategy results %f, %f, %f, \n", x(0), x(1), x(2));
+    wxPrintf("solution error %f\n", length(x - params));
+
+    solve_least_squares_lm(objective_delta_stop_strategy(10).be_verbose( ),
+                           residual,
+                           residual_derivative,
+                           data_samples,
+                           x);
+
+    // Now x contains the solution.  If everything worked it will be equal to params.
+    cout << "inferred parameters: " << trans(x) << endl;
+    cout << "solution error:      " << length(x - params) << endl;
+    cout << endl;
+    wxPrintf("1 results %f, %f, %f, \n", x(0), x(1), x(2));
+    wxPrintf("solution error %f\n", length(x - params));
+    // x = 1;
+    x(0) = 15;
+    x(1) = 15;
+    x(2) = 55;
+    cout << "Use Levenberg-Marquardt, approximate derivatives" << endl;
+    // If we didn't create the residual_derivative function then we could
+    // have used this method which numerically approximates the derivatives for you.
+    solve_least_squares_lm(objective_delta_stop_strategy(1e-7).be_verbose( ),
+                           residual,
+                           derivative(residual),
+                           data_samples,
+                           x);
+
+    // Now x contains the solution.  If everything worked it will be equal to params.
+    cout << "inferred parameters: " << trans(x) << endl;
+    cout << "solution error:      " << length(x - params) << endl;
+    cout << endl;
+    wxPrintf("2 results %f, %f, %f \n", x(0), x(1), x(2));
+    wxPrintf("solution error %f\n", length(x - params));
+    // x = 1;
+    x(0) = 15;
+    x(1) = 15;
+    x(2) = 55;
+    cout << "Use Levenberg-Marquardt/quasi-newton hybrid" << endl;
+    // This version of the solver uses a method which is appropriate for problems
+    // where the residuals don't go to zero at the solution.  So in these cases
+    // it may provide a better answer.
+    solve_least_squares(objective_delta_stop_strategy(1e-3).be_verbose( ),
+                        residual,
+                        residual_derivative,
+                        data_samples,
+                        x, 20.0);
+
+    // Now x contains the solution.  If everything worked it will be equal to params.
+    cout << "inferred parameters: " << trans(x) << endl;
+    cout << "solution error:      " << length(x - params) << endl;
+    wxPrintf("3 results %f, %f, %f, \n", x(0), x(1), x(2));
+    wxPrintf("solution error %f\n", length(x - params));
+    // } catch ( std::exception& e ) {
+    //     cout << e.what( ) << endl;
+    // }
+
+    return true;
+    // }
+}
+*/
+/*
 
 void NikoTestApp::DoInteractiveUserInput( ) {
     UserInput* my_input = new UserInput("TrimStack", 1.0);
@@ -649,6 +1114,8 @@ bool NikoTestApp::DoCalculation( ) {
 
     return true;
 }
+
+*/
 
 // //-------------------------------------------test the interpolation---------------------------------------
 // bool NikoTestApp::DoCalculation( ) {

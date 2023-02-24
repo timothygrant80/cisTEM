@@ -336,6 +336,9 @@ void MyMainFrame::DirtyRefinementPackages( ) {
     generate_3d_panel->refinement_package_combo_is_dirty      = true;
 }
 
+void MyMainFrame::DirtyTemplateMatchesPackages( ) {
+}
+
 void MyMainFrame::DirtyRefinements( ) {
     refine_3d_panel->input_params_combo_is_dirty     = true;
     refine_ctf_panel->input_params_combo_is_dirty    = true;

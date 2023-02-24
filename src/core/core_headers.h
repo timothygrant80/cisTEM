@@ -144,6 +144,7 @@ class StackDump : public wxStackWalker // so we can give backtraces..
 #include "electron_dose.h"
 #include "angular_distribution_histogram.h"
 #include "refinement_package.h"
+#include "template_matches_package.h"
 #include "refinement.h"
 #include "classification.h"
 #include "classification_selection.h"

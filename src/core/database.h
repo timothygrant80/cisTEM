@@ -157,6 +157,7 @@ class Database {
     void GetActiveDefocusValuesByImageID(long wanted_image_id, float& defocus_1, float& defocus_2, float& defocus_angle, float& phase_shift, float& amplitude_contrast, float& tilt_angle, float& tilt_axis);
 
     void AddRefinementPackageAsset(RefinementPackage* asset_to_add);
+    void AddTemplateMatchesPackageAsset(TemplateMatchesPackage* asset_to_add);
 
     wxArrayLong Return2DClassMembers(long wanted_classifiction_id, int wanted_class);
     int         ReturnNumberOf2DClassMembers(long wanted_classification_id, int wanted_class_number);

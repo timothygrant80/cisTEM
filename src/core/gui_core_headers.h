@@ -96,6 +96,7 @@
 #include "../gui/MyFrealignExportDialog.h"
 #include "../gui/MyRelionExportDialog.h"
 #include "../gui/MyRefinementPackageAssetPanel.h"
+#include "../gui/TemplateMatchesPackageAssetPanel.h"
 #include "../gui/CombineRefinementPackagesWizard.h"
 #include "../gui/MyRenameDialog.h"
 #include "../gui/MyVolumeChooserDialog.h"

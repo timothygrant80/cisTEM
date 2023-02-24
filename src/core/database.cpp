@@ -1682,6 +1682,11 @@ void Database::AddRefinementPackageAsset(RefinementPackage* asset_to_add) {
     EndBatchInsert( );
 }
 
+void Database::AddTemplateMatchesPackageAsset(TemplateMatchesPackage* asset_to_add) {
+    BeginCommitLocker active_locker(this);
+    InsertOrReplace("TEMPLATE_MATCHES_PACKAGE_ASSETS", "Ptt", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "STARFILE_FILENAME", asset_to_add->asset_id, asset_to_add->name.ToUTF8( ).data( ), asset_to_add->starfile_filename.ToUTF8( ).data( ));
+}
+
 void Database::AddStartupJob(long startup_job_id, long refinement_package_asset_id, wxString name, int number_of_starts, int number_of_cycles, float initial_res_limit, float final_res_limit, bool auto_mask, bool auto_percent_used, float initial_percent_used, float final_percent_used, float mask_radius, bool apply_blurring, float smoothing_factor, wxArrayLong result_volume_ids) {
     BeginCommitLocker active_locker(this);
     InsertOrReplace("STARTUP_LIST", "Pltiirriirrrir", "STARTUP_ID", "REFINEMENT_PACKAGE_ASSET_ID", "NAME", "NUMBER_OF_STARTS", "NUMBER_OF_CYCLES", "INITIAL_RES_LIMIT", "FINAL_RES_LIMIT", "AUTO_MASK", "AUTO_PERCENT_USED", "INITIAL_PERCENT_USED", "FINAL_PERCENT_USED", "MASK_RADIUS", "APPLY_LIKELIHOOD_BLURRING", "SMOOTHING_FACTOR", startup_job_id, refinement_package_asset_id, name.ToUTF8( ).data( ), number_of_starts, number_of_cycles, initial_res_limit, final_res_limit, int(auto_mask), int(auto_percent_used), initial_percent_used, final_percent_used, mask_radius, int(apply_blurring), smoothing_factor);

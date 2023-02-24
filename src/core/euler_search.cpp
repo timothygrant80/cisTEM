@@ -193,6 +193,9 @@ void EulerSearch::CalculateGridSearchPositions(bool random_start_angle) {
             theta_start_local = fabsf(theta_step / 2.0f * global_random_number_generator.GetUniformRandom( ));
         else
             theta_start_local = 0.0f;
+        if ( for_mt ) {
+            theta_start_local = theta_start;
+        }
     }
     else {
         theta_start_local = theta_start;
@@ -252,6 +255,9 @@ void EulerSearch::CalculateGridSearchPositions(bool random_start_angle) {
                     phi_start_local = phi_step / 2.0 * global_random_number_generator.GetUniformRandom( );
                 else
                     phi_start_local = 0.0f;
+                if ( for_mt ) {
+                    phi_start_local = phi_start;
+                }
             }
         }
         for ( phi = 0.0; phi < phi_max; phi += phi_step ) {

@@ -660,7 +660,7 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
     current_image              = image_asset_panel->ReturnAssetPointer(active_group.members[0]);
     current_image_euler_search = new EulerSearch;
     // WARNING: resolution_limit below is used before its value is set
-    current_image_euler_search->InitGrid(wanted_symmetry, wanted_out_of_plane_angular_step, 0.0, 0.0, 360.0, wanted_in_plane_angular_step, 0.0, current_image->pixel_size / resolution_limit, parameter_map, 1);
+    current_image_euler_search->InitGrid(wanted_symmetry, wanted_out_of_plane_angular_step, 20.0, 80.0, 360.0, wanted_in_plane_angular_step, 0.0, current_image->pixel_size / resolution_limit, parameter_map, 1);
 
     if ( wanted_symmetry.StartsWith("C") ) {
         if ( current_image_euler_search->test_mirror == true ) // otherwise the theta max is set to 90.0 and test_mirror is set to true.  However, I don't want to have to test the mirrors.
@@ -668,7 +668,9 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
             current_image_euler_search->theta_max = 180.0f;
         }
     }
-
+    current_image_euler_search->theta_max = 100.0;
+    current_image_euler_search->phi_max   = 15.0;
+    current_image_euler_search->for_mt    = true;
     current_image_euler_search->CalculateGridSearchPositions(false);
 
     if ( use_gpu ) {
@@ -733,13 +735,17 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
 
         resolution_limit           = current_image->pixel_size * 2.0f;
         current_image_euler_search = new EulerSearch;
-        current_image_euler_search->InitGrid(wanted_symmetry, wanted_out_of_plane_angular_step, 0.0, 0.0, 360.0, wanted_in_plane_angular_step, 0.0, current_image->pixel_size / resolution_limit, parameter_map, 1);
+        current_image_euler_search->InitGrid(wanted_symmetry, wanted_out_of_plane_angular_step, 20.0, 80.0, 360.0, wanted_in_plane_angular_step, 0.0, current_image->pixel_size / resolution_limit, parameter_map, 1);
         if ( wanted_symmetry.StartsWith("C") ) {
             if ( current_image_euler_search->test_mirror == true ) // otherwise the theta max is set to 90.0 and test_mirror is set to true.  However, I don't want to have to test the mirrors.
             {
                 current_image_euler_search->theta_max = 180.0f;
             }
         }
+        current_image_euler_search->theta_max = 100.0;
+        current_image_euler_search->phi_max   = 15.0f;
+
+        current_image_euler_search->for_mt = true;
         current_image_euler_search->CalculateGridSearchPositions(false);
 
         if ( DefocusSearchYesRadio->GetValue( ) == true )

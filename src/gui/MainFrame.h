@@ -70,6 +70,7 @@ class MyMainFrame : public MainFrame, public SocketCommunicator {
     void DirtyParticlePositionGroups( );
     void DirtyRunProfiles( );
     void DirtyRefinementPackages( );
+    void DirtyTemplateMatchesPackages( );
     void DirtyRefinements( );
     void DirtyClassificationSelections( );
     void DirtyClassifications( );

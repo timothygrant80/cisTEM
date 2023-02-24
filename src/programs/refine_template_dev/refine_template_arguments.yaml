@@ -1,0 +1,18 @@
+---
+name: RefineTemplateArguments
+arguments: 
+  - name: input_starfile
+    type: std::string
+    description: The starfile describing the matches that should be defined
+    default: input.star
+    advanced: false
+  - name: output_starfile
+    type: std::string
+    description: The starfile describing the matches that should be defined
+    default: output.star
+    advenced: false
+  - name: input_template
+    type: std::string
+    description: The template to be refined
+    default: input.mrc
+    advanced: false

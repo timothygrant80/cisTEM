@@ -1,7 +1,3 @@
-from code_generation.cpp_class import CppClass
-from code_generation.cpp_variable import CppVariable
-from code_generation.cpp_function import CppFunction
-from code_generation.code_generator import CppFile
 from yaml import load, dump
 try:
     from yaml import CLoader as Loader, CDumper as Dumper
@@ -11,13 +7,56 @@ import sys
 
 description = load(open(sys.argv[1]), Loader=Loader)
 
-class_o = CppClass(name=description['name'])
+rec_function_dict = {
+    "std::string": "ReturnStringArgument",
+}
+
+def user_input_function(argument):
+    if argument['type'] == "std::string":
+        return f"GetFilenameFromUser(\"{argument['description']}\", \"{argument['description']}\", \"{argument['default']}\", false)"
+    else:
+        raise Exception(f"Unknown type {argument['type']}")
+
+def generate_type_string(arguments):
+    type_string = "\""
+    for argument in arguments:
+        if argument['type'] == "std::string":
+            type_string += "t"
+        else:
+            raise Exception(f"Unknown type {argument['type']}")
+    type_string += "\""
+    return type_string
+
+print(f"class {description['name']} {{\n public:\n")
 
 for argument in description['arguments']:
-    class_o.add_variable(CppVariable(name=argument['name'], type=argument['type']))
-    class_o.add_method(CppClass.CppMethod(name="get_"+argument['name'], ret_type=argument['type'], implementation_handle=lambda self, cpp: cpp("return " + argument['name'] + ";")))
-h = CppFile("test.h")
+    print(f"  {argument['type']} {argument['name']};\n")
 
-print(class_o.render_to_string_declaration(h))
-c = CppFile("test.cpp")
-print(class_o.render_to_string_implementation(c))
+
+print(f"{description['name']}() {{\n")
+for argument in description['arguments']:
+    print(f"  {argument['name']} = \"{argument['default']}\";\n")
+print("};")
+
+print(f"void recieve(RunArgument* arguments) {{\n")
+for i, argument in enumerate(description['arguments']):
+    print(f"  {argument['name']} = arguments[{i}].{rec_function_dict[argument['type']]}( );\n")
+print("};")
+
+print(f"void userinput() {{\n")
+print(f"UserInput* my_input = new UserInput(\"{description['name']}\", 1.00);\n")
+for i, argument in enumerate(description['arguments']):
+    
+    print(f"  {argument['name']} = my_input->{user_input_function(argument)};\n")
+print("delete my_input;\n};")
+
+print(f"void setargument(RunJob& my_current_job) {{\n")
+print("my_current_job.ManualSetArguments(",end='')
+print(generate_type_string(description['arguments']))
+print
+for i, argument in enumerate(description['arguments']):
+    print(f",{argument['name']}.c_str()")
+print(");\n};")
+
+
+print("};")

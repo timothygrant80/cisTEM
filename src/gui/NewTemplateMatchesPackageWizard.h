@@ -13,6 +13,7 @@ class TemplateMatchesWizardPage : public wxWizardPage {
 
     TemplateMatchesWizardPage(NewTemplateMatchesPackageWizard* parent, const wxBitmap& bitmap = wxNullBitmap);
     ~TemplateMatchesWizardPage( );
+    void SelectionChanged(wxCommandEvent& event);
 
     wxWizardPage* GetNext( ) const { return NULL; };
 
@@ -33,6 +34,10 @@ class NewTemplateMatchesPackageWizard : public NewTemplateMatchesPackageWizardPa
     void OnUpdateUI(wxUpdateUIEvent& event);
     void PageChanging(wxWizardEvent& event);
     void PageChanged(wxWizardEvent& event);
+
+    long       num_selected_matches;
+    wxArrayInt tm_ids;
+    wxArrayInt image_ids;
 };
 
 #endif

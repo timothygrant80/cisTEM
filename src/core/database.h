@@ -99,9 +99,10 @@ class Database {
     int  Finalize(sqlite3_stmt* current_statement);
     void CheckBindCode(int return_code);
 
-    int    ReturnSingleIntFromSelectCommand(wxString select_command);
-    long   ReturnSingleLongFromSelectCommand(wxString select_command);
-    double ReturnSingleDoubleFromSelectCommand(wxString select_command);
+    int      ReturnSingleIntFromSelectCommand(wxString select_command);
+    long     ReturnSingleLongFromSelectCommand(wxString select_command);
+    double   ReturnSingleDoubleFromSelectCommand(wxString select_command);
+    wxString ReturnSingleStringFromSelectCommand(wxString select_command);
 
     wxArrayInt    ReturnIntArrayFromSelectCommand(wxString select_command);
     wxArrayLong   ReturnLongArrayFromSelectCommand(wxString select_command);

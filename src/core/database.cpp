@@ -233,6 +233,23 @@ double Database::ReturnSingleDoubleFromSelectCommand(wxString select_command) {
     return value;
 }
 
+wxString Database::ReturnSingleStringFromSelectCommand(wxString select_command) {
+    MyDebugAssertTrue(is_open == true, "database not open!");
+
+    int           return_code;
+    sqlite3_stmt* current_statement;
+    wxString      value;
+
+    Prepare(select_command, &current_statement);
+    Step(current_statement);
+
+    value = sqlite3_column_text(current_statement, 0);
+
+    Finalize(current_statement);
+
+    return value;
+}
+
 long Database::ReturnHighestRefinementID( ) {
     return ReturnSingleLongFromSelectCommand("SELECT MAX(REFINEMENT_ID) FROM REFINEMENT_LIST");
 }

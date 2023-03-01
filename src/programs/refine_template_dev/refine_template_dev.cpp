@@ -13,7 +13,10 @@ class
 class TemplateComparisonObject {
   public:
     Image *          input_reconstruction, *windowed_particle, *projection_filter;
+    CTF*             orig_ctf;
+    CTF*             optim_ctf;
     AnglesAndShifts* angles;
+    Curve*           whitening_filter;
 };
 
 // This is the function which will be minimized
@@ -43,6 +46,19 @@ Peak TemplateScore(void* scoring_parameters) {
     return current_projection.FindPeakWithIntegerCoordinates( );
 }
 
+float PerMatchObjectiveFunction(void* scoring_parameters, float* parameters_to_optimize) {
+    TemplateComparisonObject* comparison_object = reinterpret_cast<TemplateComparisonObject*>(scoring_parameters);
+    Image                     current_projection;
+    //	Peak box_peak;
+    comparison_object->angles->Init(parameters_to_optimize[0], parameters_to_optimize[1], parameters_to_optimize[2], 0.0f, 0.0f);
+    comparison_object->optim_ctf->CopyFrom(*comparison_object->orig_ctf);
+    comparison_object->optim_ctf->SetDefocus(comparison_object->orig_ctf->GetDefocus1( ) + parameters_to_optimize[3], comparison_object->orig_ctf->GetDefocus2( ) + parameters_to_optimize[3], comparison_object->orig_ctf->GetAstigmatismAzimuth( ));
+    comparison_object->projection_filter->CalculateCTFImage(*(comparison_object->optim_ctf));
+    comparison_object->projection_filter->ApplyCurveFilter(comparison_object->whitening_filter);
+    Peak p = TemplateScore(comparison_object);
+    return -p.value;
+}
+
 IMPLEMENT_APP(RefineTemplateDevApp)
 
 // override the DoInteractiveUserInput
@@ -58,13 +74,13 @@ void RefineTemplateDevApp::DoInteractiveUserInput( ) {
 bool RefineTemplateDevApp::DoCalculation( ) {
     wxDateTime               start_time = wxDateTime::Now( );
     cisTEMParameters         input_matches;
-    cisTEMParameters         output_matches;
     std::string              current_image_filename;
     ImageFile                current_image_file;
     Image                    current_image;
     ImageFile                input_template_file;
     Image                    input_template;
     CTF                      ctf;
+    CTF                      optim_ctf;
     Curve                    whitening_filter;
     Curve                    number_of_terms;
     Image                    windowed_particle;
@@ -73,14 +89,16 @@ bool RefineTemplateDevApp::DoCalculation( ) {
     TemplateComparisonObject comparison_object;
     AnglesAndShifts          angles;
     Peak                     template_peak;
+    double                   starting_score;
+    ConjugateGradient        conjugate_gradient_minizer;
+    float                    cg_match_starting_values[4];
+    float                    cg_match_accuracy[4];
 
     RefineTemplateArguments arguments;
     float                   padding = 1.0f;
     arguments.recieve(my_current_job.arguments);
-
     input_matches.ReadFromcisTEMStarFile(arguments.input_starfile);
-    output_matches.parameters_to_write.SetActiveParameters(PSI | THETA | PHI | X_SHIFT | Y_SHIFT | DEFOCUS_1 | DEFOCUS_2 | DEFOCUS_ANGLE | SCORE | MICROSCOPE_VOLTAGE | MICROSCOPE_CS | AMPLITUDE_CONTRAST | BEAM_TILT_X | BEAM_TILT_Y | IMAGE_SHIFT_X | IMAGE_SHIFT_Y | ORIGINAL_IMAGE_FILENAME);
-    output_matches.PreallocateMemoryAndBlank(input_matches.all_parameters.GetCount( ));
+    input_matches.parameters_to_write.SetActiveParameters(PSI | THETA | PHI | X_SHIFT | Y_SHIFT | DEFOCUS_1 | DEFOCUS_2 | DEFOCUS_ANGLE | SCORE | MICROSCOPE_VOLTAGE | MICROSCOPE_CS | AMPLITUDE_CONTRAST | BEAM_TILT_X | BEAM_TILT_Y | IMAGE_SHIFT_X | IMAGE_SHIFT_Y | ORIGINAL_IMAGE_FILENAME | SCORE_CHANGE | PIXEL_SIZE);
 
     // Read template
     input_template_file.OpenFile(arguments.input_template, false);
@@ -96,6 +114,9 @@ bool RefineTemplateDevApp::DoCalculation( ) {
     comparison_object.windowed_particle    = &windowed_particle;
     comparison_object.projection_filter    = &projection_filter;
     comparison_object.angles               = &angles;
+    comparison_object.optim_ctf            = &optim_ctf;
+    comparison_object.orig_ctf             = &ctf;
+    comparison_object.whitening_filter     = &whitening_filter;
 
     // Iterate over all the particles in the input starfile
     for ( long match_id = 0; match_id < input_matches.all_parameters.GetCount( ); match_id++ ) {
@@ -137,6 +158,7 @@ bool RefineTemplateDevApp::DoCalculation( ) {
                  0.0,
                  input_matches.all_parameters[match_id].pixel_size,
                  deg_2_rad(input_matches.all_parameters[match_id].phase_shift));
+        optim_ctf.CopyFrom(ctf);
 
         windowed_particle.Allocate(input_template_file.ReturnXSize( ), input_template_file.ReturnXSize( ), true);
         projection_filter.Allocate(input_template_file.ReturnXSize( ), input_template_file.ReturnXSize( ), false);
@@ -150,13 +172,29 @@ bool RefineTemplateDevApp::DoCalculation( ) {
         angles.Init(input_matches.all_parameters[match_id].phi, input_matches.all_parameters[match_id].theta, input_matches.all_parameters[match_id].psi, 0.0, 0.0);
         projection_filter.CalculateCTFImage(ctf);
         projection_filter.ApplyCurveFilter(&whitening_filter);
-        template_peak         = TemplateScore(&comparison_object);
-        double starting_score = template_peak.value * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension);
-        double delta          = starting_score - input_matches.all_parameters[match_id].score;
-        if ( delta < -2.0f ) {
-            MyDebugPrint("Template peak of match %li delta is %f at %i, %i", match_id, delta, static_cast<int>(input_matches.all_parameters[match_id].x_shift / input_matches.all_parameters[match_id].pixel_size), static_cast<int>(input_matches.all_parameters[match_id].y_shift / input_matches.all_parameters[match_id].pixel_size));
-        }
+        template_peak  = TemplateScore(&comparison_object);
+        starting_score = template_peak.value * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension);
+        //input_matches.all_parameters[match_id].score             = starting_score;
+        input_matches.all_parameters[match_id].position_in_stack = 1;
+        cg_match_starting_values[0]                              = input_matches.all_parameters[match_id].phi;
+        cg_match_starting_values[1]                              = input_matches.all_parameters[match_id].theta;
+        cg_match_starting_values[2]                              = input_matches.all_parameters[match_id].psi;
+        cg_match_starting_values[3]                              = 0.0f;
+        cg_match_accuracy[0]                                     = 1.0f;
+        cg_match_accuracy[1]                                     = 1.0f;
+        cg_match_accuracy[2]                                     = 1.0f;
+        cg_match_accuracy[3]                                     = 0.1f;
+        float x                                                  = conjugate_gradient_minizer.Init(&PerMatchObjectiveFunction, &comparison_object, 4, cg_match_starting_values, cg_match_accuracy);
+        float y                                                  = conjugate_gradient_minizer.Run( );
+        MyDebugPrint("Starting score = %f, ending score = %f", starting_score, -y * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension));
+        MyDebugPrint("Phi: %f -> %f, Theta %f -> %f, Psi %f -> %f", input_matches.all_parameters[match_id].phi, conjugate_gradient_minizer.GetBestValue(0), input_matches.all_parameters[match_id].theta, conjugate_gradient_minizer.GetBestValue(1), input_matches.all_parameters[match_id].psi, conjugate_gradient_minizer.GetBestValue(2));
+        MyDebugPrint("DefocusChange: %f", conjugate_gradient_minizer.GetBestValue(3));
+        input_matches.all_parameters[match_id].phi   = cg_match_starting_values[0];
+        input_matches.all_parameters[match_id].theta = cg_match_starting_values[1];
+        input_matches.all_parameters[match_id].psi   = cg_match_starting_values[2];
+        input_matches.all_parameters[match_id].score = -y * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension);
     }
+    input_matches.WriteTocisTEMStarFile(arguments.output_starfile, -1, -1, -1, -1);
 
     return true;
 }

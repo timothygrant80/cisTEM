@@ -41,6 +41,17 @@ class InputParameterWizardPage : public wxWizardPage {
     wxWizardPage* GetPrev( ) const;
 };
 
+class InputTemplateMatchesPackageWizardPage : public wxWizardPage {
+    MyNewRefinementPackageWizard* wizard_pointer;
+
+  public:
+    InputTemplateMatchesPackageWizardPanel* my_panel;
+
+    InputTemplateMatchesPackageWizardPage(MyNewRefinementPackageWizard* parent, const wxBitmap& bitmap = wxNullBitmap);
+    wxWizardPage* GetNext( ) const;
+    wxWizardPage* GetPrev( ) const;
+};
+
 class ParticleGroupWizardPage : public wxWizardPage {
     MyNewRefinementPackageWizard* wizard_pointer;
 
@@ -280,17 +291,18 @@ class MyNewRefinementPackageWizard : public NewRefinementPackageWizard {
     MyNewRefinementPackageWizard(wxWindow* parent);
     ~MyNewRefinementPackageWizard( );
 
-    TemplateWizardPage*          template_page;
-    InputParameterWizardPage*    parameter_page;
-    ParticleGroupWizardPage*     particle_group_page;
-    NumberofClassesWizardPage*   number_of_classes_page;
-    BoxSizeWizardPage*           box_size_page;
-    InitialReferencesWizardPage* initial_reference_page;
-    SymmetryWizardPage*          symmetry_page;
-    MolecularWeightWizardPage*   molecular_weight_page;
-    LargestDimensionWizardPage*  largest_dimension_page;
-    ClassSelectionWizardPage*    class_selection_page;
-    OutputPixelSizeWizardPage*   output_pixel_size_page;
+    TemplateWizardPage*                    template_page;
+    InputParameterWizardPage*              parameter_page;
+    InputTemplateMatchesPackageWizardPage* template_matches_page;
+    ParticleGroupWizardPage*               particle_group_page;
+    NumberofClassesWizardPage*             number_of_classes_page;
+    BoxSizeWizardPage*                     box_size_page;
+    InitialReferencesWizardPage*           initial_reference_page;
+    SymmetryWizardPage*                    symmetry_page;
+    MolecularWeightWizardPage*             molecular_weight_page;
+    LargestDimensionWizardPage*            largest_dimension_page;
+    ClassSelectionWizardPage*              class_selection_page;
+    OutputPixelSizeWizardPage*             output_pixel_size_page;
 
     RecentrePicksWizardPage*            recentre_picks_page;
     RemoveDuplicatesWizardPage*         remove_duplicate_picks_page;

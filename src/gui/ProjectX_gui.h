@@ -3549,6 +3549,26 @@ class InputParameterWizardPanel : public wxPanel
 };
 
 ///////////////////////////////////////////////////////////////////////////////
+/// Class InputTemplateMatchesPackageWizardPanel
+///////////////////////////////////////////////////////////////////////////////
+class InputTemplateMatchesPackageWizardPanel : public wxPanel
+{
+	private:
+
+	protected:
+		wxStaticText* m_staticText214;
+
+	public:
+		wxComboBox* GroupComboBox;
+		AutoWrapStaticText* InfoText;
+
+		InputTemplateMatchesPackageWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+
+		~InputTemplateMatchesPackageWizardPanel();
+
+};
+
+///////////////////////////////////////////////////////////////////////////////
 /// Class ClassSelectionWizardPanel
 ///////////////////////////////////////////////////////////////////////////////
 class ClassSelectionWizardPanel : public wxPanel

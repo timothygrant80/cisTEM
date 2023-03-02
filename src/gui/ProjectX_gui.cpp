@@ -13273,6 +13273,40 @@ InputParameterWizardPanel::~InputParameterWizardPanel()
 {
 }
 
+InputTemplateMatchesPackageWizardPanel::InputTemplateMatchesPackageWizardPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
+{
+	wxBoxSizer* bSizer153;
+	bSizer153 = new wxBoxSizer( wxVERTICAL );
+
+	wxBoxSizer* bSizer147;
+	bSizer147 = new wxBoxSizer( wxHORIZONTAL );
+
+	m_staticText214 = new wxStaticText( this, wxID_ANY, wxT("Template Matches Package : "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText214->Wrap( -1 );
+	bSizer147->Add( m_staticText214, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	GroupComboBox = new wxComboBox( this, wxID_ANY, wxT("Combo!"), wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
+	bSizer147->Add( GroupComboBox, 1, wxALL, 5 );
+
+
+	bSizer153->Add( bSizer147, 0, wxEXPAND, 5 );
+
+
+	bSizer153->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	InfoText = new AutoWrapStaticText( this, wxID_ANY, wxT("Please select the Template Matches Package to use to create the new refinement package."), wxDefaultPosition, wxDefaultSize, 0 );
+	InfoText->Wrap( -1 );
+	bSizer153->Add( InfoText, 0, wxALL|wxEXPAND, 5 );
+
+
+	this->SetSizer( bSizer153 );
+	this->Layout();
+}
+
+InputTemplateMatchesPackageWizardPanel::~InputTemplateMatchesPackageWizardPanel()
+{
+}
+
 ClassSelectionWizardPanel::ClassSelectionWizardPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
 {
 	wxBoxSizer* bSizer153;

@@ -689,8 +689,7 @@ bool CtffindApp::DoCalculation( ) {
     float             fit_nodes_high_resolution_limit    = my_current_job.arguments[44].ReturnFloatArgument( );
     float             target_pixel_size_after_resampling = my_current_job.arguments[45].ReturnFloatArgument( );
     bool              fit_nodes_use_rounded_square       = my_current_job.arguments[46].ReturnBoolArgument( );
-    MyDebugPrint("fit_nodes_use_rounded_square = %i", fit_nodes_use_rounded_square);
-    bool fit_nodes_downweight_nodes = my_current_job.arguments[47].ReturnBoolArgument( );
+    bool              fit_nodes_downweight_nodes         = my_current_job.arguments[47].ReturnBoolArgument( );
     // if we are applying a mag distortion, it can change the pixel size, so do that here to make sure it is used forever onwards..
 
     if ( input_is_a_movie && correct_movie_mag_distortion ) {
@@ -730,11 +729,9 @@ bool CtffindApp::DoCalculation( ) {
     // Debugging
     const bool dump_debug_files = command_line_parser.FoundSwitch("debug");
     if ( dump_debug_files ) {
-        MyDebugPrint("Print debug info\n");
+        MyDebugPrint("Printing debug info\n");
     }
-    else {
-        MyDebugPrint("No info here\n");
-    }
+
     std::string debug_file_prefix = output_diagnostic_filename.substr(0, output_diagnostic_filename.find_last_of('.')) + "_debug_";
 
     /*
@@ -1744,13 +1741,10 @@ bool CtffindApp::DoCalculation( ) {
                     fit_nodes_use_rounded_square,
                     fit_nodes_downweight_nodes};
 
-            node_output = fit_thickness_nodes(&node_fit_input);
-            MyDebugPrint("Got out of the function\n");
+            node_output            = fit_thickness_nodes(&node_fit_input);
             last_bin_with_good_fit = node_output.last_bin_with_good_fit;
             profile_timing.lap("Thickness estimation");
-            MyDebugPrint("Done!\n");
         }
-        wxPrintf("Or here\n");
 
         // Prepare output diagnostic image
         //average_spectrum->AddConstant(- average_spectrum->ReturnAverageOfRealValuesOnEdges()); // this used to be done in OverlayCTF / CTFOperation in the Fortran code
@@ -1761,14 +1755,14 @@ bool CtffindApp::DoCalculation( ) {
         if ( compute_extra_stats && ! fit_nodes ) {
             RescaleSpectrumAndRotationalAverage(average_spectrum, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, rotational_average_astig_fit, number_of_extrema_profile, ctf_values_profile, last_bin_without_aliasing, last_bin_with_good_fit);
         }
-        
+
         normalization_radius_max = std::max(normalization_radius_max, float(average_spectrum->logical_x_dimension * spatial_frequency[last_bin_with_good_fit]));
         average_spectrum->ComputeAverageAndSigmaOfValuesInSpectrum(normalization_radius_min,
                                                                    normalization_radius_max,
                                                                    average, sigma);
 
         average_spectrum->SetMinimumAndMaximumValues(average - sigma, average + 2.0 * sigma);
-        average_spectrum->AddConstant( - (average - sigma));
+        average_spectrum->AddConstant(-(average - sigma));
         average_spectrum->MultiplyByConstant(1.0 / ((average + 2.0 * sigma) - (average - sigma)));
         if ( dump_debug_files )
             average_spectrum->QuickAndDirtyWriteSlice(debug_file_prefix + "dbg_spec_before_overlay.mrc", 1);
@@ -1853,10 +1847,8 @@ bool CtffindApp::DoCalculation( ) {
             output_text_avrot->WriteLine(fit_frc_sigma);
             delete[] spatial_frequency_in_reciprocal_angstroms;
         }
-        wxPrintf("Cleaning up comparison object... do not\n");
         //delete comparison_object_2D;
     } // End of loop over micrographs
-    wxPrintf("I'm back...\n");
     if ( is_running_locally && (! old_school_input) && number_of_micrographs > 1 ) {
         delete my_progress_bar;
         wxPrintf("\n");
@@ -1876,7 +1868,6 @@ bool CtffindApp::DoCalculation( ) {
     }
 
     // Send results back
-    wxPrintf("Sending results back...\n");
     float results_array[11];
     results_array[0] = current_ctf->GetDefocus1( ) * pixel_size_for_fitting; // Defocus 1 (Angstroms)
     results_array[1] = current_ctf->GetDefocus2( ) * pixel_size_for_fitting; // Defocus 2 (Angstroms)
@@ -1903,7 +1894,6 @@ bool CtffindApp::DoCalculation( ) {
     results_array[10] = current_ctf->GetSampleThickness( ) * pixel_size_for_fitting; // Sample thickness (Angstroms)
     my_result.SetResult(11, results_array);
     // Cleanup
-    wxPrintf("Cleaning up memory...\n");
     delete current_ctf;
     delete average_spectrum;
     delete average_spectrum_masked;

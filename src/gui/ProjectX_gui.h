@@ -4176,3 +4176,40 @@ class DistributionPlotDialogParent : public wxDialog
 
 };
 
+///////////////////////////////////////////////////////////////////////////////
+/// Class DatabaseUpgradeDialogParent
+///////////////////////////////////////////////////////////////////////////////
+class DatabaseUpgradeDialogParent : public wxDialog
+{
+	private:
+
+	protected:
+		enum
+		{
+			wxID = 1000
+		};
+
+		wxStaticText* m_staticText809;
+		wxStaticText* m_staticText815;
+		wxStaticText* m_staticText817;
+		wxStaticText* m_staticText819;
+		wxStaticText* m_staticText820;
+		wxStaticLine* m_staticline165;
+		wxButton* m_button173;
+		wxButton* m_button174;
+
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnCloseClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnUpdateClick( wxCommandEvent& event ) { event.Skip(); }
+
+
+	public:
+		wxStaticText* current_version_statictext;
+		wxStaticText* project_version_statictext;
+		wxTextCtrl* DetailsTextControl;
+
+		DatabaseUpgradeDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Database from a different cisTEM version?"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 698,661 ), long style = wxDEFAULT_DIALOG_STYLE );
+		~DatabaseUpgradeDialogParent();
+
+};
+

@@ -14637,3 +14637,85 @@ DistributionPlotDialogParent::~DistributionPlotDialogParent()
 	SavePNGButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DistributionPlotDialogParent::OnSavePNGButtonClick ), NULL, this );
 
 }
+
+DatabaseUpgradeDialogParent::DatabaseUpgradeDialogParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
+{
+	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
+
+	wxBoxSizer* bSizer594;
+	bSizer594 = new wxBoxSizer( wxVERTICAL );
+
+	m_staticText809 = new wxStaticText( this, wxID_ANY, wxT("This project was last opened by a different cisTEM version :-\n"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText809->Wrap( -1 );
+	bSizer594->Add( m_staticText809, 0, wxALL, 5 );
+
+	wxFlexGridSizer* fgSizer43;
+	fgSizer43 = new wxFlexGridSizer( 0, 2, 0, 0 );
+	fgSizer43->SetFlexibleDirection( wxBOTH );
+	fgSizer43->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
+
+	m_staticText815 = new wxStaticText( this, wxID_ANY, wxT("Current Version :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText815->Wrap( -1 );
+	fgSizer43->Add( m_staticText815, 0, wxALIGN_RIGHT|wxALL, 5 );
+
+	current_version_statictext = new wxStaticText( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	current_version_statictext->Wrap( -1 );
+	fgSizer43->Add( current_version_statictext, 0, wxALL, 5 );
+
+	m_staticText817 = new wxStaticText( this, wxID_ANY, wxT("Project Version :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText817->Wrap( -1 );
+	fgSizer43->Add( m_staticText817, 0, wxALIGN_RIGHT|wxALL, 5 );
+
+	project_version_statictext = new wxStaticText( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	project_version_statictext->Wrap( -1 );
+	fgSizer43->Add( project_version_statictext, 0, wxALL, 5 );
+
+
+	bSizer594->Add( fgSizer43, 0, wxEXPAND, 5 );
+
+	m_staticText819 = new wxStaticText( this, wxID_ANY, wxT("\ncisTEM can try to update the format.  You should make a backup of the .db first!\n\nAttempt to update?"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText819->Wrap( -1 );
+	bSizer594->Add( m_staticText819, 0, wxALL, 5 );
+
+	m_staticText820 = new wxStaticText( this, wxID_ANY, wxT("\nDetails"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText820->Wrap( -1 );
+	m_staticText820->SetFont( wxFont( 11, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxT("Sans") ) );
+
+	bSizer594->Add( m_staticText820, 0, wxALL|wxEXPAND, 5 );
+
+	DetailsTextControl = new wxTextCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_DONTWRAP|wxTE_MULTILINE|wxTE_READONLY );
+	bSizer594->Add( DetailsTextControl, 10, wxALL|wxEXPAND, 5 );
+
+	m_staticline165 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer594->Add( m_staticline165, 0, wxEXPAND | wxALL, 5 );
+
+	wxBoxSizer* bSizer596;
+	bSizer596 = new wxBoxSizer( wxHORIZONTAL );
+
+	m_button173 = new wxButton( this, wxID, wxT("Close"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer596->Add( m_button173, 0, wxALL, 5 );
+
+	m_button174 = new wxButton( this, wxID_ANY, wxT("Update"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer596->Add( m_button174, 0, wxALL, 5 );
+
+
+	bSizer594->Add( bSizer596, 0, wxALIGN_RIGHT, 5 );
+
+
+	this->SetSizer( bSizer594 );
+	this->Layout();
+
+	this->Centre( wxBOTH );
+
+	// Connect Events
+	m_button173->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DatabaseUpgradeDialogParent::OnCloseClick ), NULL, this );
+	m_button174->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DatabaseUpgradeDialogParent::OnUpdateClick ), NULL, this );
+}
+
+DatabaseUpgradeDialogParent::~DatabaseUpgradeDialogParent()
+{
+	// Disconnect Events
+	m_button173->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DatabaseUpgradeDialogParent::OnCloseClick ), NULL, this );
+	m_button174->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DatabaseUpgradeDialogParent::OnUpdateClick ), NULL, this );
+
+}

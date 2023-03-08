@@ -155,6 +155,10 @@ TMJobPickerComboPanel::TMJobPickerComboPanel(wxWindow* parent, wxWindowID id, co
     : AssetPickerComboPanel(parent, id, pos, size, style) {
 }
 
+TMPackagePickerComboPanel::TMPackagePickerComboPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
+    : AssetPickerComboPanel(parent, id, pos, size, style) {
+}
+
 MovieGroupPickerComboPanel::MovieGroupPickerComboPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
     : AssetPickerComboPanel(parent, id, pos, size, style) {
 }

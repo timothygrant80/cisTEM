@@ -231,7 +231,7 @@ bool MemoryComboBox::FillWithImageGroups(bool include_all_images_group) {
         return false;
 }
 
-bool MemoryComboBox::FillWithTMJobs(bool include_all_images_group) {
+bool MemoryComboBox::FillWithTMJobs( ) {
     Freeze( );
     Clear( );
     ChangeValue("");
@@ -243,6 +243,24 @@ bool MemoryComboBox::FillWithTMJobs(bool include_all_images_group) {
         wxString name;
         more_data = main_frame->current_project.database.GetFromBatchSelect("it", &id, &name);
         AddMemoryItem(wxString::Format("#%i : %s", id, name), id);
+    }
+    main_frame->current_project.database.EndBatchSelect( );
+    Thaw( );
+    return true;
+}
+
+bool MemoryComboBox::FillWithTMPackages( ) {
+    Freeze( );
+    Clear( );
+    ChangeValue("");
+    bool more_data;
+
+    more_data = main_frame->current_project.database.BeginBatchSelect("SELECT TEMPLATE_MATCHES_PACKAGE_ASSET_ID, NAME FROM TEMPLATE_MATCHES_PACKAGE_ASSETS");
+    while ( more_data ) {
+        int      id;
+        wxString name;
+        more_data = main_frame->current_project.database.GetFromBatchSelect("it", &id, &name);
+        AddMemoryItem(wxString::Format("%s", name), id);
     }
     main_frame->current_project.database.EndBatchSelect( );
     Thaw( );
@@ -1029,6 +1047,58 @@ wxString RefinementPackageListControl::OnGetItemText(long item, long column) con
 }
 
 int RefinementPackageListControl::ReturnGuessAtColumnTextWidth( ) {
+
+    wxClientDC dc(this);
+    long       counter;
+    int        client_height;
+    int        client_width;
+
+    int current_width;
+
+    GetClientSize(&client_width, &client_height);
+    int max_width = client_width;
+
+    if ( GetItemCount( ) < 100 ) {
+        for ( counter = 0; counter < GetItemCount( ); counter++ ) {
+            if ( dc.GetTextExtent(OnGetItemText(counter, 0)).x + 20 > max_width )
+                max_width = dc.GetTextExtent(OnGetItemText(counter, 0)).x + 20;
+        }
+    }
+    else {
+        for ( counter = 0; counter < 50; counter++ ) {
+            if ( dc.GetTextExtent(OnGetItemText(counter, 0)).x + 20 > max_width )
+                max_width = dc.GetTextExtent(OnGetItemText(counter, 0)).x + 20;
+        }
+
+        for ( counter = GetItemCount( ) - 50; counter < GetItemCount( ); counter++ ) {
+            if ( dc.GetTextExtent(OnGetItemText(counter, 0)).x + 20 > max_width )
+                max_width = dc.GetTextExtent(OnGetItemText(counter, 0)).x + 20;
+        }
+    }
+
+    return max_width;
+}
+
+// Tempalte Matches PACKAGE LIST
+
+TemplateMatchesPackageListControl::TemplateMatchesPackageListControl(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxValidator& validator, const wxString& name)
+    : wxListCtrl(parent, id, pos, size, style, validator, name) {
+}
+
+wxString TemplateMatchesPackageListControl::OnGetItemText(long item, long column) const {
+    MyDebugAssertTrue(column == 0, "Asking for column that shouldn't exist (%li)", column);
+
+    TemplateMatchesPackageAssetPanel* parent_panel = reinterpret_cast<TemplateMatchesPackageAssetPanel*>(m_parent->GetParent( )->GetParent( )); // not very nice code!
+
+    if ( parent_panel->all_template_matches_packages.GetCount( ) > 0 && item < parent_panel->all_template_matches_packages.GetCount( ) ) {
+        MyDebugPrint(":%s", parent_panel->all_template_matches_packages.Item(item).name.c_str( ));
+        return parent_panel->all_template_matches_packages.Item(item).name;
+    }
+    else
+        return "";
+}
+
+int TemplateMatchesPackageListControl::ReturnGuessAtColumnTextWidth( ) {
 
     wxClientDC dc(this);
     long       counter;

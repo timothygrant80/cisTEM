@@ -281,6 +281,11 @@ void MyNewRefinementPackageWizard::PageChanged(wxWizardEvent& event) {
 
                 output_pixel_size_page->my_panel->OutputPixelSizeTextCtrl->ChangeValueFloat(first_particle_image->pixel_size);
             }
+            else if ( template_page->my_panel->GroupComboBox->GetSelection( ) == 2 ) // new, we should do largest_dimension * 2, scaled up to factorizable.
+            {
+
+                output_pixel_size_page->my_panel->OutputPixelSizeTextCtrl->ChangeValueFloat(1.0);
+            }
             else // from class selection
             { // take the stack size of the refinement package of the first selected class selection
 
@@ -842,6 +847,7 @@ void MyNewRefinementPackageWizard::OnFinished(wxWizardEvent& event) {
     }
     else if ( template_page->my_panel->GroupComboBox->GetSelection( ) == 2 ) // This is a package from a template matches package
     {
+        MyDebugPrint("Creating refinement package from template matches package\n");
         // Open the template matches package
         cisTEMParameters import_parameters;
         import_parameters.ReadFromcisTEMStarFile(main_frame->current_project.template_matching_asset_directory.GetFullPath( ) + "/test.star");
@@ -862,9 +868,9 @@ void MyNewRefinementPackageWizard::OnFinished(wxWizardEvent& event) {
         temp_refinement.resolution_statistics_pixel_size = output_pixel_size_page->my_panel->OutputPixelSizeTextCtrl->ReturnValue( );
         temp_refinement.refinement_package_asset_id      = refinement_package_asset_panel->current_asset_number + 1;
 
-        long current_particle_parent_image_id = 0;
-        long current_loaded_image_id          = -1;
-        long position_in_stack                = 0;
+        long        current_particle_parent_image_id = 0;
+        std::string currently_loaded_image_filename  = "";
+        long        position_in_stack                = 0;
 
         int current_x_pos;
         int current_y_pos;
@@ -905,7 +911,7 @@ void MyNewRefinementPackageWizard::OnFinished(wxWizardEvent& event) {
 
         // setup the 3ds
 
-        /*wxWindowList all_children = initial_reference_page->my_panel->ScrollWindow->GetChildren( );
+        wxWindowList all_children = initial_reference_page->my_panel->ScrollWindow->GetChildren( );
 
         ClassVolumeSelectPanel* panel_pointer;
 
@@ -921,7 +927,6 @@ void MyNewRefinementPackageWizard::OnFinished(wxWizardEvent& event) {
                 }
             }
         }
-        */
 
         // size the box..
 
@@ -943,79 +948,58 @@ void MyNewRefinementPackageWizard::OnFinished(wxWizardEvent& event) {
         //temp_refinement.class_refinement_results.Alloc(temp_refinement_package->number_of_classes);
 
         //temp_refinement.class_refinement_results.Add(junk_class_results, temp_refinement_package->number_of_classes);
-
+        int img_counter = 0;
         for ( class_counter = 0; class_counter < temp_refinement_package->number_of_classes; class_counter++ ) {
             temp_refinement.class_refinement_results[class_counter].average_occupancy = 100.0 / temp_refinement_package->number_of_classes;
         }
-
+        MyDebugPrint("Starting particle loop\n");
         for ( counter = 0; counter < number_of_particles; counter++ ) {
             // current particle, what image is it from?
 
-            current_particle_position_asset  = particle_position_asset_panel->ReturnAssetPointer(particle_position_asset_panel->ReturnGroupMember(particle_group_page->my_panel->ParticlePositionsGroupComboBox->GetSelection( ), counter));
-            current_particle_parent_image_id = current_particle_position_asset->parent_id;
-
-            if ( current_loaded_image_id != current_particle_parent_image_id ) {
+            if ( currently_loaded_image_filename.compare(import_parameters.all_parameters[counter].original_image_filename.ToStdString( )) != 0 ) {
                 // load it..
 
-                current_image_asset = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnArrayPositionFromAssetID(current_particle_parent_image_id));
-                current_image.QuickAndDirtyReadSlice(current_image_asset->filename.GetFullPath( ).ToStdString( ), 1);
+                current_image.QuickAndDirtyReadSlice(import_parameters.all_parameters[counter].original_image_filename.ToStdString( ), 1);
 
                 // take out weird values..
 
                 current_image.ReplaceOutliersWithMean(6);
 
-                current_loaded_image_id = current_particle_parent_image_id;
-                average_value_at_edges  = current_image.ReturnAverageOfRealValuesOnEdges( );
-
-                // we have to get the defocus stuff from the database..
-
-                main_frame->current_project.database.GetActiveDefocusValuesByImageID(current_particle_parent_image_id, image_defocus_1, image_defocus_2, image_defocus_angle, image_phase_shift, image_amplitude_contrast, image_tilt_angle, image_tilt_axis);
+                currently_loaded_image_filename = import_parameters.all_parameters[counter].original_image_filename.ToStdString( );
+                average_value_at_edges          = current_image.ReturnAverageOfRealValuesOnEdges( );
+                img_counter++;
+                MyDebugPrint("Loaded image\n");
             }
 
             // do the cutting..
 
             position_in_stack++;
 
-            current_x_pos = myround(current_particle_position_asset->x_position / current_image_asset->pixel_size) - current_image.physical_address_of_box_center_x;
-            current_y_pos = myround(current_particle_position_asset->y_position / current_image_asset->pixel_size) - current_image.physical_address_of_box_center_y;
+            current_x_pos = myround(import_parameters.all_parameters[counter].x_shift / import_parameters.all_parameters[counter].pixel_size) - current_image.physical_address_of_box_center_x;
+            current_y_pos = myround(import_parameters.all_parameters[counter].y_shift / import_parameters.all_parameters[counter].pixel_size) - current_image.physical_address_of_box_center_y;
+            MyDebugPrint("Cutting particle at %i, %i\n", current_x_pos, current_y_pos);
 
             current_image.ClipInto(&cut_particle, average_value_at_edges, false, 1.0, current_x_pos, current_y_pos, 0);
             cut_particle.ZeroFloatAndNormalize( );
-            if ( current_image_asset->protein_is_white )
-                cut_particle.InvertRealValues( );
-            cut_particle.WriteSlice(&output_stack, position_in_stack);
 
+            cut_particle.WriteSlice(&output_stack, position_in_stack);
+            MyDebugPrint("Wrote Slice\n");
             // set the contained particles..
 
-            temp_particle_info.spherical_aberration                = current_image_asset->spherical_aberration;
-            temp_particle_info.microscope_voltage                  = current_image_asset->microscope_voltage;
-            temp_particle_info.parent_image_id                     = current_particle_parent_image_id;
-            temp_particle_info.pixel_size                          = current_image_asset->pixel_size;
+            temp_particle_info.spherical_aberration                = import_parameters.all_parameters[counter].microscope_spherical_aberration_mm;
+            temp_particle_info.microscope_voltage                  = import_parameters.all_parameters[counter].microscope_voltage_kv;
+            temp_particle_info.parent_image_id                     = img_counter;
+            temp_particle_info.pixel_size                          = import_parameters.all_parameters[counter].pixel_size;
             temp_particle_info.position_in_stack                   = position_in_stack;
-            temp_particle_info.defocus_angle                       = image_defocus_angle;
-            temp_particle_info.phase_shift                         = image_phase_shift;
-            temp_particle_info.amplitude_contrast                  = image_amplitude_contrast;
-            temp_particle_info.x_pos                               = current_particle_position_asset->x_position;
-            temp_particle_info.y_pos                               = current_particle_position_asset->y_position;
-            temp_particle_info.original_particle_position_asset_id = current_particle_position_asset->asset_id;
+            temp_particle_info.defocus_angle                       = import_parameters.all_parameters[counter].defocus_angle;
+            temp_particle_info.phase_shift                         = import_parameters.all_parameters[counter].phase_shift;
+            temp_particle_info.amplitude_contrast                  = import_parameters.all_parameters[counter].amplitude_contrast;
+            temp_particle_info.x_pos                               = import_parameters.all_parameters[counter].x_shift;
+            temp_particle_info.y_pos                               = import_parameters.all_parameters[counter].y_shift;
+            temp_particle_info.original_particle_position_asset_id = -1;
 
-            if ( image_tilt_angle == 0.0f && image_tilt_axis == 0.0f ) {
-                temp_particle_info.defocus_1 = image_defocus_1;
-                temp_particle_info.defocus_2 = image_defocus_2;
-            }
-            else // calculate a defocus value based on tilt..
-            {
-                rotation_angle.GenerateRotationMatrix2D(image_tilt_axis);
-                image_x_position = current_x_pos * current_image_asset->pixel_size;
-                image_y_position = current_y_pos * current_image_asset->pixel_size;
-
-                rotation_angle.euler_matrix.RotateCoords2D(image_x_position, image_y_position, x_rotated, y_rotated);
-                tilt_based_height            = y_rotated * tanf(deg_2_rad(image_tilt_angle));
-                temp_particle_info.defocus_1 = image_defocus_1 + tilt_based_height;
-                temp_particle_info.defocus_2 = image_defocus_2 + tilt_based_height;
-
-                //wxPrintf("axis = %f, angle = %f, height = %f\n", image_tilt_axis, image_tilt_angle, tilt_based_height);
-            }
+            temp_particle_info.defocus_1 = import_parameters.all_parameters[counter].defocus_1;
+            temp_particle_info.defocus_2 = import_parameters.all_parameters[counter].defocus_2;
 
             temp_refinement_package->contained_particles.Add(temp_particle_info);
 
@@ -1023,8 +1007,8 @@ void MyNewRefinementPackageWizard::OnFinished(wxWizardEvent& event) {
                 temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].position_in_stack = counter + 1;
                 temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].defocus1          = temp_particle_info.defocus_1;
                 temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].defocus2          = temp_particle_info.defocus_2;
-                temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].defocus_angle     = image_defocus_angle;
-                temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].phase_shift       = image_phase_shift;
+                temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].defocus_angle     = import_parameters.all_parameters[counter].defocus_angle;
+                temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].phase_shift       = import_parameters.all_parameters[counter].phase_shift;
                 temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].logp              = 0.0;
 
                 if ( temp_refinement_package->number_of_classes == 1 )
@@ -1032,16 +1016,16 @@ void MyNewRefinementPackageWizard::OnFinished(wxWizardEvent& event) {
                 else
                     temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].occupancy = fabsf(global_random_number_generator.GetUniformRandom( ) * (200.0f / float(temp_refinement_package->number_of_classes)));
 
-                temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].phi                                = global_random_number_generator.GetUniformRandom( ) * 180.0;
-                temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].theta                              = rad_2_deg(acosf(2.0f * fabsf(global_random_number_generator.GetUniformRandom( )) - 1.0f));
-                temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].psi                                = global_random_number_generator.GetUniformRandom( ) * 180.0;
-                temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].score                              = 0.0;
+                temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].phi                                = import_parameters.all_parameters[counter].phi;
+                temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].theta                              = import_parameters.all_parameters[counter].theta;
+                temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].psi                                = import_parameters.all_parameters[counter].psi;
+                temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].score                              = import_parameters.all_parameters[counter].score;
                 temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_is_active                    = 1;
                 temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].sigma                              = 1.0;
-                temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].pixel_size                         = current_image_asset->pixel_size;
-                temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].microscope_voltage_kv              = current_image_asset->microscope_voltage;
-                temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].microscope_spherical_aberration_mm = current_image_asset->spherical_aberration;
-                temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].amplitude_contrast                 = image_amplitude_contrast;
+                temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].pixel_size                         = import_parameters.all_parameters[counter].pixel_size;
+                temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].microscope_voltage_kv              = import_parameters.all_parameters[counter].microscope_voltage_kv;
+                temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].microscope_spherical_aberration_mm = import_parameters.all_parameters[counter].microscope_spherical_aberration_mm;
+                temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].amplitude_contrast                 = import_parameters.all_parameters[counter].amplitude_contrast;
                 temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].beam_tilt_x                        = 0.0f;
                 temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].beam_tilt_y                        = 0.0f;
                 temp_refinement.class_refinement_results[class_counter].particle_refinement_results[counter].image_shift_x                      = 0.0f;

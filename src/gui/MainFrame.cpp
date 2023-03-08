@@ -11,7 +11,8 @@ extern MyImageAssetPanel*            image_asset_panel;
 extern MyParticlePositionAssetPanel* particle_position_asset_panel;
 extern MyVolumeAssetPanel*           volume_asset_panel;
 #ifdef EXPERIMENTAL
-extern AtomicCoordinatesAssetPanel* atomic_coordinates_asset_panel;
+extern AtomicCoordinatesAssetPanel*      atomic_coordinates_asset_panel;
+extern TemplateMatchesPackageAssetPanel* template_matches_package_asset_panel;
 #endif
 extern MyRefinementPackageAssetPanel* refinement_package_asset_panel;
 
@@ -238,6 +239,7 @@ void MyMainFrame::ResetAllPanels( ) {
     volume_asset_panel->Reset( );
 #ifdef EXPERIMENTAL
     atomic_coordinates_asset_panel->Reset( );
+    template_matches_package_asset_panel->Reset( );
 #endif
     particle_position_asset_panel->Reset( );
     refinement_package_asset_panel->Reset( );
@@ -337,6 +339,7 @@ void MyMainFrame::DirtyRefinementPackages( ) {
 }
 
 void MyMainFrame::DirtyTemplateMatchesPackages( ) {
+    template_matches_package_asset_panel->is_dirty = true;
 }
 
 void MyMainFrame::DirtyRefinements( ) {
@@ -609,7 +612,7 @@ void MyMainFrame::OpenProject(wxString project_filename) {
 
         int counter;
         // Note: the second to last arg must be incremented if additional actions are added below.
-        OneSecondProgressDialog* my_dialog = new OneSecondProgressDialog("Open Project", "Opening Project", 11, this);
+        OneSecondProgressDialog* my_dialog = new OneSecondProgressDialog("Open Project", "Opening Project", 12, this);
 
         movie_asset_panel->ImportAllFromDatabase( );
         my_dialog->Update(1, "Opening project (loading image assets...)");
@@ -634,11 +637,13 @@ void MyMainFrame::OpenProject(wxString project_filename) {
         match_template_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT IMAGE_ASSET_ID FROM TEMPLATE_MATCH_LIST");
         my_dialog->Update(9, "Opening project (loading atomic coordinates assets...)");
         atomic_coordinates_asset_panel->ImportAllFromDatabase( );
+        my_dialog->Update(10, "Opening project (loading Template Matches Packages...)");
+        template_matches_package_asset_panel->ImportAllFromDatabase( );
 #endif
 
-        my_dialog->Update(10, "Opening project (finishing...)");
+        my_dialog->Update(11, "Opening project (finishing...)");
         picking_results_panel->OnProjectOpen( );
-        my_dialog->Update(11, "Opening project (all done)");
+        my_dialog->Update(12, "Opening project (all done)");
 
         SetTitle("cisTEM - [" + current_project.project_name + "]");
         DirtyEverything( );

@@ -133,6 +133,7 @@ class Database {
 
     int  ReturnHighestTemplateMatchID( );
     int  ReturnHighestTemplateMatchJobID( );
+    int  ReturnHighestTemplateMatchesPackageID( );
     void SetActiveTemplateMatchJobForGivenImageAssetID(long image_asset, long template_match_job_id);
 
     int ReturnNumberOfPreviousMovieAlignmentsByAssetID(int wanted_asset_id);

@@ -1,8 +1,9 @@
 //#include "../core/core_headers.h"
 #include "../core/gui_core_headers.h"
 
-extern MyImageAssetPanel*  image_asset_panel;
-extern MyVolumeAssetPanel* volume_asset_panel;
+extern MyImageAssetPanel*                image_asset_panel;
+extern MyVolumeAssetPanel*               volume_asset_panel;
+extern TemplateMatchesPackageAssetPanel* template_matches_package_asset_panel;
 
 NewTemplateMatchesPackageWizard::NewTemplateMatchesPackageWizard(wxWindow* parent)
     : NewTemplateMatchesPackageWizardParent(parent) {
@@ -109,7 +110,19 @@ void NewTemplateMatchesPackageWizard::OnFinished(wxWizardEvent& event) {
         }
         main_frame->current_project.database.EndBatchSelect( );
     }
-    output_params.WriteTocisTEMStarFile(main_frame->current_project.template_matching_asset_directory.GetFullPath( ) + "/test.star", -1, -1, 0, -1);
+    MyDebugPrint("Writing %li matches to cisTEM star file", match_counter);
+    int                    id                = main_frame->current_project.database.ReturnHighestTemplateMatchesPackageID( ) + 1;
+    std::string            starfile_filename = std::string((main_frame->current_project.template_matching_asset_directory.GetFullPath( ) + wxString::Format("/template_matches_package_%i.star", id)).mb_str( ));
+    TemplateMatchesPackage temp_package;
+    temp_package.name                  = wxString::Format("Template Matches Package %i", id);
+    temp_package.starfile_filename     = starfile_filename;
+    temp_package.contained_match_count = match_counter;
+    temp_package.asset_id              = id;
+    MyDebugPrint("Doing actual write");
+    main_frame->current_project.database.AddTemplateMatchesPackageAsset(&temp_package);
+    output_params.WriteTocisTEMStarFile(starfile_filename, -1, -1, 0, -1);
+    template_matches_package_asset_panel->ImportAllFromDatabase( );
+    //main_frame->DirtyTemplateMatchesPackages( );
 }
 
 ////////////////
@@ -131,7 +144,7 @@ TemplateMatchesWizardPage::TemplateMatchesWizardPage(NewTemplateMatchesPackageWi
     main_sizer->Add(my_panel);
 
     my_panel->ImageGroupComboBox->FillComboBox(true);
-    my_panel->TMJobComboBox->FillComboBox(true);
+    my_panel->TMJobComboBox->FillComboBox( );
     Thaw( );
 
     my_panel->ImageGroupComboBox->Bind(wxEVT_COMBOBOX, wxCommandEventHandler(TemplateMatchesWizardPage::SelectionChanged), this);

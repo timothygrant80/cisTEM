@@ -53,7 +53,8 @@ class MemoryComboBox : public wxOwnerDrawnComboBox {
 #endif
     bool FillWithMovieGroups(bool include_all_movies_group = true);
     bool FillWithImageGroups(bool include_all_images_group = true);
-    bool FillWithTMJobs(bool include_all_images_group = true);
+    bool FillWithTMJobs( );
+    bool FillWithTMPackages( );
     bool FillWithImages(long wanted_image_group);
     bool FillWithClassifications(long wanted_refinement_package, bool include_new_classification, bool always_select_newest = false);
     bool FillWithRefinements(long wanted_refinement_package, bool always_select_newest = false);
@@ -216,6 +217,14 @@ class ContentsList : public wxListCtrl {
 class RefinementPackageListControl : public wxListCtrl {
   public:
     RefinementPackageListControl(wxWindow* parent, wxWindowID id, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxLC_ICON, const wxValidator& validator = wxDefaultValidator, const wxString& name = wxListCtrlNameStr);
+    wxString OnGetItemText(long item, long column) const;
+
+    int ReturnGuessAtColumnTextWidth( );
+};
+
+class TemplateMatchesPackageListControl : public wxListCtrl {
+  public:
+    TemplateMatchesPackageListControl(wxWindow* parent, wxWindowID id, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxLC_ICON, const wxValidator& validator = wxDefaultValidator, const wxString& name = wxListCtrlNameStr);
     wxString OnGetItemText(long item, long column) const;
 
     int ReturnGuessAtColumnTextWidth( );

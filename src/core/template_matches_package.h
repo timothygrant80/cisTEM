@@ -28,10 +28,10 @@ class TemplateMatchesPackage {
     TemplateMatchesPackage( );
     ~TemplateMatchesPackage( );
 
-    long     asset_id;
-    wxString starfile_filename;
-    wxString name;
-    long     contained_match_count;
+    long        asset_id;
+    std::string starfile_filename;
+    wxString    name;
+    long        contained_match_count;
 
     wxArrayLong match_template_result_ids;
 };

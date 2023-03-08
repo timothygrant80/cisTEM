@@ -17,6 +17,7 @@ class TemplateComparisonObject {
     CTF*             optim_ctf;
     AnglesAndShifts* angles;
     Curve*           whitening_filter;
+    Peak             result_peak;
 };
 
 // This is the function which will be minimized
@@ -43,7 +44,7 @@ Peak TemplateScore(void* scoring_parameters) {
 #endif
     current_projection.BackwardFFT( );
 
-    return current_projection.FindPeakWithIntegerCoordinates( );
+    return current_projection.FindPeakWithIntegerCoordinates(0.0F, 5.0F);
 }
 
 float PerMatchObjectiveFunction(void* scoring_parameters, float* parameters_to_optimize) {
@@ -55,8 +56,8 @@ float PerMatchObjectiveFunction(void* scoring_parameters, float* parameters_to_o
     comparison_object->optim_ctf->SetDefocus(comparison_object->orig_ctf->GetDefocus1( ) + parameters_to_optimize[3], comparison_object->orig_ctf->GetDefocus2( ) + parameters_to_optimize[3], comparison_object->orig_ctf->GetAstigmatismAzimuth( ));
     comparison_object->projection_filter->CalculateCTFImage(*(comparison_object->optim_ctf));
     comparison_object->projection_filter->ApplyCurveFilter(comparison_object->whitening_filter);
-    Peak p = TemplateScore(comparison_object);
-    return -p.value;
+    comparison_object->result_peak = TemplateScore(comparison_object);
+    return -(comparison_object->result_peak.value);
 }
 
 IMPLEMENT_APP(RefineTemplateDevApp)
@@ -184,15 +185,19 @@ bool RefineTemplateDevApp::DoCalculation( ) {
         cg_match_accuracy[1]                                     = 1.0f;
         cg_match_accuracy[2]                                     = 1.0f;
         cg_match_accuracy[3]                                     = 0.1f;
-        float x                                                  = conjugate_gradient_minizer.Init(&PerMatchObjectiveFunction, &comparison_object, 4, cg_match_starting_values, cg_match_accuracy);
-        float y                                                  = conjugate_gradient_minizer.Run( );
+        float  x                                                 = conjugate_gradient_minizer.Init(&PerMatchObjectiveFunction, &comparison_object, 4, cg_match_starting_values, cg_match_accuracy);
+        float  y                                                 = conjugate_gradient_minizer.Run( );
+        float* result_array                                      = conjugate_gradient_minizer.GetPointerToBestValues( );
         MyDebugPrint("Starting score = %f, ending score = %f", starting_score, -y * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension));
         MyDebugPrint("Phi: %f -> %f, Theta %f -> %f, Psi %f -> %f", input_matches.all_parameters[match_id].phi, conjugate_gradient_minizer.GetBestValue(0), input_matches.all_parameters[match_id].theta, conjugate_gradient_minizer.GetBestValue(1), input_matches.all_parameters[match_id].psi, conjugate_gradient_minizer.GetBestValue(2));
         MyDebugPrint("DefocusChange: %f", conjugate_gradient_minizer.GetBestValue(3));
-        input_matches.all_parameters[match_id].phi   = cg_match_starting_values[0];
-        input_matches.all_parameters[match_id].theta = cg_match_starting_values[1];
-        input_matches.all_parameters[match_id].psi   = cg_match_starting_values[2];
-        input_matches.all_parameters[match_id].score = -y * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension);
+        PerMatchObjectiveFunction(&comparison_object, result_array);
+        MyDebugPrint("X shift: %f, Y shift: %f", comparison_object.result_peak.x, comparison_object.result_peak.y);
+        input_matches.all_parameters[match_id].phi          = result_array[0];
+        input_matches.all_parameters[match_id].theta        = result_array[1];
+        input_matches.all_parameters[match_id].psi          = result_array[2];
+        input_matches.all_parameters[match_id].score        = -y * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension);
+        input_matches.all_parameters[match_id].score_change = input_matches.all_parameters[match_id].score - starting_score;
     }
     input_matches.WriteTocisTEMStarFile(arguments.output_starfile, -1, -1, -1, -1);
 

@@ -102,7 +102,6 @@ void TemplateMatchesPackageAssetPanel::FillRefinementPackages( ) {
     Freeze( );
 
     if ( all_template_matches_packages.GetCount( ) > 0 ) {
-
         RefinementPackageListCtrl->SetItemCount(all_template_matches_packages.GetCount( ));
         RefinementPackageListCtrl->SetColumnWidth(0, RefinementPackageListCtrl->ReturnGuessAtColumnTextWidth( ));
 

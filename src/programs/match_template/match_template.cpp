@@ -642,7 +642,7 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     // search grid
 
-    global_euler_search.InitGrid(my_symmetry, angular_step, 20.0f, 80.0f, psi_max, psi_step, psi_start, pixel_size / high_resolution_limit_search, parameter_map, best_parameters_to_keep);
+    global_euler_search.InitGrid(my_symmetry, angular_step, 0.0f, 80.0f, psi_max, psi_step, psi_start, pixel_size / high_resolution_limit_search, parameter_map, best_parameters_to_keep);
     if ( my_symmetry.StartsWith("C") ) // TODO 2x check me - w/o this O symm at least is broken
     {
         if ( global_euler_search.test_mirror == true ) // otherwise the theta max is set to 90.0 and test_mirror is set to true.  However, I don't want to have to test the mirrors.
@@ -651,8 +651,8 @@ bool MatchTemplateApp::DoCalculation( ) {
         }
     }
     global_euler_search.theta_max = 100.0f;
-    global_euler_search.phi_max   = 15.0f;
-    global_euler_search.for_mt    = true;
+    //global_euler_search.phi_max   = 15.0f;
+    global_euler_search.for_mt = true;
     global_euler_search.CalculateGridSearchPositions(false);
 
     // for now, I am assuming the MTF has been applied already.

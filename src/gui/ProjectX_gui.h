@@ -46,6 +46,7 @@ class ResultsDataViewListCtrl;
 class ShowCTFResultsPanel;
 class ShowTemplateMatchResultsPanel;
 class TMJobPickerComboPanel;
+class TemplateMatchesPackageListControl;
 class UnblurResultsPanel;
 class VolumeAssetPickerComboPanel;
 
@@ -3332,7 +3333,7 @@ class TemplateMatchesPackageAssetPanelParent : public wxPanel
 		wxButton* ImportButton;
 		wxButton* ExportButton;
 		wxButton* CombineButton;
-		RefinementPackageListControl* RefinementPackageListCtrl;
+		TemplateMatchesPackageListControl* RefinementPackageListCtrl;
 		wxPanel* m_panel51;
 		wxStaticText* ContainedParticlesStaticText;
 		ContainedParticleListControl* ContainedParticlesListCtrl;

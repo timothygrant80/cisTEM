@@ -12681,7 +12681,7 @@ TemplateMatchesPackageAssetPanelParent::TemplateMatchesPackageAssetPanelParent( 
 
 	bSizer145->Add( bSizer193, 0, wxEXPAND, 5 );
 
-	RefinementPackageListCtrl = new RefinementPackageListControl( m_panel50, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_EDIT_LABELS|wxLC_NO_HEADER|wxLC_REPORT|wxLC_SINGLE_SEL|wxLC_VIRTUAL );
+	RefinementPackageListCtrl = new TemplateMatchesPackageListControl( m_panel50, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_EDIT_LABELS|wxLC_NO_HEADER|wxLC_REPORT|wxLC_SINGLE_SEL|wxLC_VIRTUAL );
 	bSizer145->Add( RefinementPackageListCtrl, 1, wxALL|wxEXPAND, 5 );
 
 

@@ -12702,25 +12702,6 @@ TemplateMatchesPackageAssetPanelParent::TemplateMatchesPackageAssetPanelParent( 
 	ContainedParticlesListCtrl = new ContainedParticleListControl( m_panel51, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT|wxLC_SINGLE_SEL|wxLC_VIRTUAL );
 	bSizer191->Add( ContainedParticlesListCtrl, 1, wxALL|wxEXPAND, 5 );
 
-	wxBoxSizer* bSizer199;
-	bSizer199 = new wxBoxSizer( wxHORIZONTAL );
-
-	m_staticText230 = new wxStaticText( m_panel51, wxID_ANY, wxT("Active 3D References :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText230->Wrap( -1 );
-	bSizer199->Add( m_staticText230, 0, wxALIGN_BOTTOM|wxALL, 5 );
-
-
-	bSizer199->Add( 0, 0, 1, wxEXPAND, 5 );
-
-	DisplayStackButton = new wxButton( m_panel51, wxID_ANY, wxT("Display Stack"), wxDefaultPosition, wxDefaultSize, 0 );
-	bSizer199->Add( DisplayStackButton, 0, wxALL, 5 );
-
-
-	bSizer191->Add( bSizer199, 0, wxEXPAND, 5 );
-
-	Active3DReferencesListCtrl = new ReferenceVolumesListControl( m_panel51, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT|wxLC_SINGLE_SEL|wxLC_VIRTUAL );
-	bSizer191->Add( Active3DReferencesListCtrl, 0, wxALL|wxEXPAND, 5 );
-
 
 	m_panel51->SetSizer( bSizer191 );
 	m_panel51->Layout();
@@ -12737,13 +12718,13 @@ TemplateMatchesPackageAssetPanelParent::TemplateMatchesPackageAssetPanelParent( 
 	wxGridSizer* gSizer12;
 	gSizer12 = new wxGridSizer( 0, 6, 0, 0 );
 
-	m_staticText319 = new wxStaticText( this, wxID_ANY, wxT("Stack Filename :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText319 = new wxStaticText( this, wxID_ANY, wxT("Starfile Filename :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText319->Wrap( -1 );
 	gSizer12->Add( m_staticText319, 0, wxALIGN_RIGHT|wxALL, 5 );
 
-	StackFileNameText = new wxStaticText( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-	StackFileNameText->Wrap( -1 );
-	gSizer12->Add( StackFileNameText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	StarFileNameText = new wxStaticText( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	StarFileNameText->Wrap( -1 );
+	gSizer12->Add( StarFileNameText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 
 	gSizer12->Add( 0, 0, 1, wxEXPAND, 5 );
@@ -12756,62 +12737,6 @@ TemplateMatchesPackageAssetPanelParent::TemplateMatchesPackageAssetPanelParent( 
 
 
 	gSizer12->Add( 0, 0, 1, wxEXPAND, 5 );
-
-	m_staticText210 = new wxStaticText( this, wxID_ANY, wxT("Stack Box Size :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText210->Wrap( -1 );
-	gSizer12->Add( m_staticText210, 0, wxALIGN_RIGHT|wxALL, 5 );
-
-	StackBoxSizeText = new wxStaticText( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-	StackBoxSizeText->Wrap( -1 );
-	gSizer12->Add( StackBoxSizeText, 0, wxALL, 5 );
-
-	m_staticText315 = new wxStaticText( this, wxID_ANY, wxT("No. Classes :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText315->Wrap( -1 );
-	gSizer12->Add( m_staticText315, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
-
-	NumberofClassesText = new wxStaticText( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-	NumberofClassesText->Wrap( -1 );
-	gSizer12->Add( NumberofClassesText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-
-	m_staticText279 = new wxStaticText( this, wxID_ANY, wxT("Symmetry :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText279->Wrap( -1 );
-	gSizer12->Add( m_staticText279, 0, wxALIGN_RIGHT|wxALL, 5 );
-
-	SymmetryText = new wxStaticText( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-	SymmetryText->Wrap( -1 );
-	gSizer12->Add( SymmetryText, 0, wxALL, 5 );
-
-	m_staticText281 = new wxStaticText( this, wxID_ANY, wxT("M.W. :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText281->Wrap( -1 );
-	gSizer12->Add( m_staticText281, 0, wxALIGN_RIGHT|wxALL, 5 );
-
-	MolecularWeightText = new wxStaticText( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-	MolecularWeightText->Wrap( -1 );
-	gSizer12->Add( MolecularWeightText, 0, wxALL, 5 );
-
-	m_staticText283 = new wxStaticText( this, wxID_ANY, wxT("Largest Dimension :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText283->Wrap( -1 );
-	gSizer12->Add( m_staticText283, 0, wxALIGN_RIGHT|wxALL, 5 );
-
-	LargestDimensionText = new wxStaticText( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-	LargestDimensionText->Wrap( -1 );
-	gSizer12->Add( LargestDimensionText, 0, wxALL, 5 );
-
-	m_staticText317 = new wxStaticText( this, wxID_ANY, wxT("No. Refinements :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText317->Wrap( -1 );
-	gSizer12->Add( m_staticText317, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
-
-	NumberofRefinementsText = new wxStaticText( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-	NumberofRefinementsText->Wrap( -1 );
-	gSizer12->Add( NumberofRefinementsText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-
-	m_staticText212 = new wxStaticText( this, wxID_ANY, wxT("Last Refinement ID :"), wxDefaultPosition, wxDefaultSize, 0 );
-	m_staticText212->Wrap( -1 );
-	gSizer12->Add( m_staticText212, 0, wxALIGN_RIGHT|wxALL, 5 );
-
-	LastRefinementIDText = new wxStaticText( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-	LastRefinementIDText->Wrap( -1 );
-	gSizer12->Add( LastRefinementIDText, 0, wxALL, 5 );
 
 
 	bSizer192->Add( gSizer12, 1, wxEXPAND, 5 );
@@ -12856,8 +12781,6 @@ TemplateMatchesPackageAssetPanelParent::TemplateMatchesPackageAssetPanelParent( 
 	ContainedParticlesListCtrl->Connect( wxEVT_RIGHT_DCLICK, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
 	ContainedParticlesListCtrl->Connect( wxEVT_RIGHT_DOWN, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
 	ContainedParticlesListCtrl->Connect( wxEVT_RIGHT_UP, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
-	DisplayStackButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( TemplateMatchesPackageAssetPanelParent::OnDisplayStackButton ), NULL, this );
-	Active3DReferencesListCtrl->Connect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( TemplateMatchesPackageAssetPanelParent::OnVolumeListItemActivated ), NULL, this );
 }
 
 TemplateMatchesPackageAssetPanelParent::~TemplateMatchesPackageAssetPanelParent()
@@ -12894,8 +12817,6 @@ TemplateMatchesPackageAssetPanelParent::~TemplateMatchesPackageAssetPanelParent(
 	ContainedParticlesListCtrl->Disconnect( wxEVT_RIGHT_DCLICK, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
 	ContainedParticlesListCtrl->Disconnect( wxEVT_RIGHT_DOWN, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
 	ContainedParticlesListCtrl->Disconnect( wxEVT_RIGHT_UP, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
-	DisplayStackButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( TemplateMatchesPackageAssetPanelParent::OnDisplayStackButton ), NULL, this );
-	Active3DReferencesListCtrl->Disconnect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( TemplateMatchesPackageAssetPanelParent::OnVolumeListItemActivated ), NULL, this );
 
 }
 
@@ -13285,8 +13206,8 @@ InputTemplateMatchesPackageWizardPanel::InputTemplateMatchesPackageWizardPanel( 
 	m_staticText214->Wrap( -1 );
 	bSizer147->Add( m_staticText214, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
-	GroupComboBox = new wxComboBox( this, wxID_ANY, wxT("Combo!"), wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
-	bSizer147->Add( GroupComboBox, 1, wxALL, 5 );
+	TemplateMatchesPackageComboBox = new TMPackagePickerComboPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	bSizer147->Add( TemplateMatchesPackageComboBox, 1, wxEXPAND | wxALL, 5 );
 
 
 	bSizer153->Add( bSizer147, 0, wxEXPAND, 5 );

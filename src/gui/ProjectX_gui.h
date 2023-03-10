@@ -46,6 +46,7 @@ class ResultsDataViewListCtrl;
 class ShowCTFResultsPanel;
 class ShowTemplateMatchResultsPanel;
 class TMJobPickerComboPanel;
+class TMPackagePickerComboPanel;
 class TemplateMatchesPackageListControl;
 class UnblurResultsPanel;
 class VolumeAssetPickerComboPanel;
@@ -3337,26 +3338,9 @@ class TemplateMatchesPackageAssetPanelParent : public wxPanel
 		wxPanel* m_panel51;
 		wxStaticText* ContainedParticlesStaticText;
 		ContainedParticleListControl* ContainedParticlesListCtrl;
-		wxStaticText* m_staticText230;
-		wxButton* DisplayStackButton;
-		ReferenceVolumesListControl* Active3DReferencesListCtrl;
 		wxStaticLine* m_staticline53;
 		wxStaticText* m_staticText319;
-		wxStaticText* StackFileNameText;
-		wxStaticText* m_staticText210;
-		wxStaticText* StackBoxSizeText;
-		wxStaticText* m_staticText315;
-		wxStaticText* NumberofClassesText;
-		wxStaticText* m_staticText279;
-		wxStaticText* SymmetryText;
-		wxStaticText* m_staticText281;
-		wxStaticText* MolecularWeightText;
-		wxStaticText* m_staticText283;
-		wxStaticText* LargestDimensionText;
-		wxStaticText* m_staticText317;
-		wxStaticText* NumberofRefinementsText;
-		wxStaticText* m_staticText212;
-		wxStaticText* LastRefinementIDText;
+		wxStaticText* StarFileNameText;
 
 		// Virtual event handlers, override them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
@@ -3373,8 +3357,6 @@ class TemplateMatchesPackageAssetPanelParent : public wxPanel
 		virtual void OnPackageActivated( wxListEvent& event ) { event.Skip(); }
 		virtual void OnPackageFocusChange( wxListEvent& event ) { event.Skip(); }
 		virtual void MouseCheckParticlesVeto( wxMouseEvent& event ) { event.Skip(); }
-		virtual void OnDisplayStackButton( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnVolumeListItemActivated( wxListEvent& event ) { event.Skip(); }
 
 
 	public:
@@ -3560,7 +3542,7 @@ class InputTemplateMatchesPackageWizardPanel : public wxPanel
 		wxStaticText* m_staticText214;
 
 	public:
-		wxComboBox* GroupComboBox;
+		TMPackagePickerComboPanel* TemplateMatchesPackageComboBox;
 		AutoWrapStaticText* InfoText;
 
 		InputTemplateMatchesPackageWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );

@@ -472,9 +472,10 @@ class Image {
     // Interpolation
     void GetRealValueByLinearInterpolationNoBoundsCheckImage(float& x, float& y, float& interpolated_value);
 
-    Peak FindPeakAtOriginFast2D(int max_pix_x, int max_pix_y);
-    Peak FindPeakWithIntegerCoordinates(float wanted_min_radius = 0.0, float wanted_max_radius = FLT_MAX, int wanted_min_distance_from_edges = 0);
-    Peak FindPeakWithParabolaFit(float wanted_min_radius = 0.0, float wanted_max_radius = FLT_MAX);
+    Peak              FindPeakAtOriginFast2D(int max_pix_x, int max_pix_y);
+    Peak              FindPeakWithIntegerCoordinates(float wanted_min_radius = 0.0, float wanted_max_radius = FLT_MAX, int wanted_min_distance_from_edges = 0);
+    Peak              FindPeakWithParabolaFit(float wanted_min_radius = 0.0, float wanted_max_radius = FLT_MAX);
+    std::vector<Peak> FindPeaksAboveThreshold(float wanted_threshold, float wanted_min_distance);
 
     void SubSampleWithNoisyResampling(Image* first_sampled_image, Image* second_sampled_image);
     void SubSampleMask(Image* first_sampled_image, Image* second_sampled_image);

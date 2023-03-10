@@ -183,8 +183,8 @@ void MyNewRefinementPackageWizard::PageChanged(wxWizardEvent& event) {
 
         //	wxPrintf("filling\n");
         parameter_page->my_panel->GroupComboBox->Clear( );
-        for ( int counter = 0; counter < refinement_package_asset_panel->all_refinement_packages.Item(template_page->my_panel->GroupComboBox->GetSelection( ) - 3).refinement_ids.GetCount( ); counter++ ) {
-            parameter_page->my_panel->GroupComboBox->Append(refinement_package_asset_panel->ReturnPointerToShortRefinementInfoByRefinementID(refinement_package_asset_panel->all_refinement_packages.Item(template_page->my_panel->GroupComboBox->GetSelection( ) - 3).refinement_ids[counter])->name);
+        for ( int counter = 0; counter < refinement_package_asset_panel->all_refinement_packages.Item(template_page->my_panel->GroupComboBox->GetSelection( ) - 4).refinement_ids.GetCount( ); counter++ ) {
+            parameter_page->my_panel->GroupComboBox->Append(refinement_package_asset_panel->ReturnPointerToShortRefinementInfoByRefinementID(refinement_package_asset_panel->all_refinement_packages.Item(template_page->my_panel->GroupComboBox->GetSelection( ) - 4).refinement_ids[counter])->name);
         }
         //	 wxPrintf("filled\n");
 
@@ -216,7 +216,7 @@ void MyNewRefinementPackageWizard::PageChanged(wxWizardEvent& event) {
         }
 
         if ( template_page->my_panel->GroupComboBox->GetSelection( ) > 2 && box_size_page->my_panel->BoxSizeSpinCtrl->GetValue( ) == 1 ) {
-            RefinementPackage* template_package = &refinement_package_asset_panel->all_refinement_packages.Item(template_page->my_panel->GroupComboBox->GetSelection( ) - 3);
+            RefinementPackage* template_package = &refinement_package_asset_panel->all_refinement_packages.Item(template_page->my_panel->GroupComboBox->GetSelection( ) - 4);
             box_size_page->my_panel->BoxSizeSpinCtrl->SetValue(template_package->stack_box_size);
         }
         else if ( box_size_page->my_panel->BoxSizeSpinCtrl->GetValue( ) == 1 ) {
@@ -262,7 +262,7 @@ void MyNewRefinementPackageWizard::PageChanged(wxWizardEvent& event) {
         }
 
         if ( template_page->my_panel->GroupComboBox->GetSelection( ) > 2 && box_size_page->my_panel->BoxSizeSpinCtrl->GetValue( ) == 1 ) {
-            RefinementPackage* template_package = &refinement_package_asset_panel->all_refinement_packages.Item(template_page->my_panel->GroupComboBox->GetSelection( ) - 3);
+            RefinementPackage* template_package = &refinement_package_asset_panel->all_refinement_packages.Item(template_page->my_panel->GroupComboBox->GetSelection( ) - 4);
             output_pixel_size_page->my_panel->OutputPixelSizeTextCtrl->ChangeValueFloat(template_package->output_pixel_size);
         }
         else if ( output_pixel_size_page->my_panel->OutputPixelSizeTextCtrl->ReturnValue( ) == 0.0f ) {
@@ -328,7 +328,7 @@ void MyNewRefinementPackageWizard::PageChanged(wxWizardEvent& event) {
         }
 
         if ( template_page->my_panel->GroupComboBox->GetSelection( ) > 2 && symmetry_page->my_panel->SymmetryComboBox->GetValue( ) == "0" ) {
-            RefinementPackage* template_package = &refinement_package_asset_panel->all_refinement_packages.Item(template_page->my_panel->GroupComboBox->GetSelection( ) - 3);
+            RefinementPackage* template_package = &refinement_package_asset_panel->all_refinement_packages.Item(template_page->my_panel->GroupComboBox->GetSelection( ) - 4);
             symmetry_page->my_panel->SymmetryComboBox->SetValue(template_package->symmetry);
         }
         else if ( symmetry_page->my_panel->SymmetryComboBox->GetValue( ) == "0" ) {
@@ -353,7 +353,7 @@ void MyNewRefinementPackageWizard::PageChanged(wxWizardEvent& event) {
         }
 
         if ( template_page->my_panel->GroupComboBox->GetSelection( ) > 2 && molecular_weight_page->my_panel->MolecularWeightTextCtrl->ReturnValue( ) == 0.0 ) {
-            RefinementPackage* template_package = &refinement_package_asset_panel->all_refinement_packages.Item(template_page->my_panel->GroupComboBox->GetSelection( ) - 3);
+            RefinementPackage* template_package = &refinement_package_asset_panel->all_refinement_packages.Item(template_page->my_panel->GroupComboBox->GetSelection( ) - 4);
             molecular_weight_page->my_panel->MolecularWeightTextCtrl->ChangeValueFloat(template_package->estimated_particle_weight_in_kda);
         }
         else if ( molecular_weight_page->my_panel->MolecularWeightTextCtrl->ReturnValue( ) == 0.0 ) {
@@ -378,7 +378,7 @@ void MyNewRefinementPackageWizard::PageChanged(wxWizardEvent& event) {
         }
 
         if ( template_page->my_panel->GroupComboBox->GetSelection( ) > 2 && largest_dimension_page->my_panel->LargestDimensionTextCtrl->ReturnValue( ) == 0.0 ) {
-            RefinementPackage* template_package = &refinement_package_asset_panel->all_refinement_packages.Item(template_page->my_panel->GroupComboBox->GetSelection( ) - 3);
+            RefinementPackage* template_package = &refinement_package_asset_panel->all_refinement_packages.Item(template_page->my_panel->GroupComboBox->GetSelection( ) - 4);
             largest_dimension_page->my_panel->LargestDimensionTextCtrl->ChangeValueFloat(template_package->estimated_particle_size_in_angstroms);
         }
         else if ( largest_dimension_page->my_panel->LargestDimensionTextCtrl->ReturnValue( ) == 0.0 ) {
@@ -428,9 +428,9 @@ void MyNewRefinementPackageWizard::PageChanged(wxWizardEvent& event) {
             class_setup_pageB->my_panel->ClassListCtrl->InsertColumn(1, wxT("Average Occupancy"), wxLIST_FORMAT_CENTRE, wxLIST_AUTOSIZE_USEHEADER);
             class_setup_pageB->my_panel->ClassListCtrl->InsertColumn(2, wxT("Est. Resolution"), wxLIST_FORMAT_CENTRE, wxLIST_AUTOSIZE_USEHEADER);
 
-            ShortRefinementInfo* selected_refinement = refinement_package_asset_panel->ReturnPointerToShortRefinementInfoByRefinementID(refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection( ) - 3].refinement_ids[parameter_page->my_panel->GroupComboBox->GetSelection( )]);
+            ShortRefinementInfo* selected_refinement = refinement_package_asset_panel->ReturnPointerToShortRefinementInfoByRefinementID(refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection( ) - 4].refinement_ids[parameter_page->my_panel->GroupComboBox->GetSelection( )]);
             wxPrintf("refinement_id = %li, number_of_occ = %li\n", selected_refinement->refinement_id, selected_refinement->average_occupancy.GetCount( ));
-            for ( int counter = 0; counter < refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection( ) - 3].number_of_classes; counter++ ) {
+            for ( int counter = 0; counter < refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection( ) - 4].number_of_classes; counter++ ) {
                 class_setup_pageB->my_panel->ClassListCtrl->InsertItem(counter, wxString::Format("Class #%2i", counter + 1));
                 class_setup_pageB->my_panel->ClassListCtrl->SetItem(counter, 1, wxString::Format("%.2f %%", selected_refinement->average_occupancy[counter]));
 
@@ -464,7 +464,7 @@ void MyNewRefinementPackageWizard::PageChanged(wxWizardEvent& event) {
                 number_of_classes_to_select_from = class_setup_pageB->my_panel->ClassListCtrl->GetSelectedItemCount( );
             }
             else {
-                number_of_classes_to_select_from = refinement_package_asset_panel->ReturnPointerToShortRefinementInfoByRefinementID(refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection( ) - 3].refinement_ids[parameter_page->my_panel->GroupComboBox->GetSelection( )])->number_of_classes;
+                number_of_classes_to_select_from = refinement_package_asset_panel->ReturnPointerToShortRefinementInfoByRefinementID(refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection( ) - 4].refinement_ids[parameter_page->my_panel->GroupComboBox->GetSelection( )])->number_of_classes;
             }
 
             temp_classes_to_select_from.class_selection.Add(false, number_of_classes_to_select_from);
@@ -850,7 +850,10 @@ void MyNewRefinementPackageWizard::OnFinished(wxWizardEvent& event) {
         MyDebugPrint("Creating refinement package from template matches package\n");
         // Open the template matches package
         cisTEMParameters import_parameters;
-        import_parameters.ReadFromcisTEMStarFile(main_frame->current_project.template_matching_asset_directory.GetFullPath( ) + "/test.star");
+        wxString         starfile_filename = main_frame->current_project.database.ReturnSingleStringFromSelectCommand(wxString::Format(
+                        "SELECT STARFILE_FILENAME FROM TEMPLATE_MATCHES_PACKAGE_ASSETS WHERE TEMPLATE_MATCHES_PACKAGE_ASSET_ID = %li",
+                        template_matches_page->my_panel->TemplateMatchesPackageComboBox->AssetComboBox->currently_selected_id));
+        import_parameters.ReadFromcisTEMStarFile(starfile_filename);
         long number_of_particles;
         number_of_particles = import_parameters.all_parameters.GetCount( );
 
@@ -996,7 +999,7 @@ void MyNewRefinementPackageWizard::OnFinished(wxWizardEvent& event) {
             temp_particle_info.amplitude_contrast                  = import_parameters.all_parameters[counter].amplitude_contrast;
             temp_particle_info.x_pos                               = import_parameters.all_parameters[counter].x_shift;
             temp_particle_info.y_pos                               = import_parameters.all_parameters[counter].y_shift;
-            temp_particle_info.original_particle_position_asset_id = -1;
+            temp_particle_info.original_particle_position_asset_id = counter;
 
             temp_particle_info.defocus_1 = import_parameters.all_parameters[counter].defocus_1;
             temp_particle_info.defocus_2 = import_parameters.all_parameters[counter].defocus_2;
@@ -1543,8 +1546,8 @@ void MyNewRefinementPackageWizard::OnFinished(wxWizardEvent& event) {
         int   input_class_counter;
         float highest_occupancy;
 
-        RefinementPackage* template_refinement_package = &refinement_package_asset_panel->all_refinement_packages.Item(template_page->my_panel->GroupComboBox->GetSelection( ) - 3);
-        Refinement*        refinement_to_copy          = main_frame->current_project.database.GetRefinementByID(refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection( ) - 3].refinement_ids[parameter_page->my_panel->GroupComboBox->GetSelection( )]);
+        RefinementPackage* template_refinement_package = &refinement_package_asset_panel->all_refinement_packages.Item(template_page->my_panel->GroupComboBox->GetSelection( ) - 4);
+        Refinement*        refinement_to_copy          = main_frame->current_project.database.GetRefinementByID(refinement_package_asset_panel->all_refinement_packages[template_page->my_panel->GroupComboBox->GetSelection( ) - 4].refinement_ids[parameter_page->my_panel->GroupComboBox->GetSelection( )]);
 
         // this stuff should always apply..
 
@@ -1912,8 +1915,8 @@ InputTemplateMatchesPackageWizardPage::InputTemplateMatchesPackageWizardPage(MyN
     main_sizer->Fit(this);
     main_sizer->Add(my_panel);
 
-    my_panel->GroupComboBox->ChangeValue("");
-    my_panel->GroupComboBox->Clear( );
+    my_panel->TemplateMatchesPackageComboBox->Clear( );
+    my_panel->TemplateMatchesPackageComboBox->FillComboBox( );
 
     Thaw( );
 }
@@ -2200,7 +2203,7 @@ wxWizardPage* NumberofClassesWizardPage::GetNext( ) const {
 
     // wxPrintf("Number classes Next\n");
     if ( wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection( ) > 2 ) {
-        RefinementPackage* input_package = &refinement_package_asset_panel->all_refinement_packages.Item(wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection( ) - 3);
+        RefinementPackage* input_package = &refinement_package_asset_panel->all_refinement_packages.Item(wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection( ) - 4);
 
         if ( input_package->number_of_classes == 1 ) // if there is only 1 input class, there is no fancy class setup so we can just skip to initial references
         {
@@ -2255,7 +2258,7 @@ wxWizardPage* InitialReferencesWizardPage::GetNext( ) const {
 wxWizardPage* InitialReferencesWizardPage::GetPrev( ) const {
     // wxPrintf("Initial Prev\n");
     if ( wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection( ) > 2 ) {
-        RefinementPackage* input_package = &refinement_package_asset_panel->all_refinement_packages.Item(wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection( ) - 3);
+        RefinementPackage* input_package = &refinement_package_asset_panel->all_refinement_packages.Item(wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection( ) - 4);
         if ( input_package->number_of_classes == 1 )
             return wizard_pointer->number_of_classes_page;
         else
@@ -2358,7 +2361,7 @@ wxWizardPage* ClassesSetupWizardPageA::GetNext( ) const {
         // we are carrying over all particles.  Do we need to work out how the classes should be assigned?
         // e.g. if there is only one input class, there is no setup to do..
         return wizard_pointer->class_setup_pageB;
-        RefinementPackage* input_package = &refinement_package_asset_panel->all_refinement_packages.Item(wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection( ) - 3);
+        RefinementPackage* input_package = &refinement_package_asset_panel->all_refinement_packages.Item(wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection( ) - 4);
     }
     else
         return wizard_pointer->class_setup_pageC;
@@ -2492,7 +2495,7 @@ void ClassesSetupWizardPageC::DrawClassSelections( ) {
     if ( selected_class >= 0 ) {
 
         int                  counter;
-        ShortRefinementInfo* selected_refinement = refinement_package_asset_panel->ReturnPointerToShortRefinementInfoByRefinementID(refinement_package_asset_panel->all_refinement_packages[wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection( ) - 3].refinement_ids[wizard_pointer->parameter_page->my_panel->GroupComboBox->GetSelection( )]);
+        ShortRefinementInfo* selected_refinement = refinement_package_asset_panel->ReturnPointerToShortRefinementInfoByRefinementID(refinement_package_asset_panel->all_refinement_packages[wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection( ) - 4].refinement_ids[wizard_pointer->parameter_page->my_panel->GroupComboBox->GetSelection( )]);
 
         if ( wizard_pointer->class_setup_pageA->my_panel->CarryOverYesButton->GetValue( ) == false ) {
             // we need to work out which classes are being carried over..
@@ -2663,7 +2666,7 @@ wxWizardPage* ClassesSetupWizardPageE::GetNext( ) const {
 }
 
 wxWizardPage* ClassesSetupWizardPageE::GetPrev( ) const {
-    RefinementPackage* input_package = &refinement_package_asset_panel->all_refinement_packages.Item(wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection( ) - 3);
+    RefinementPackage* input_package = &refinement_package_asset_panel->all_refinement_packages.Item(wizard_pointer->template_page->my_panel->GroupComboBox->GetSelection( ) - 4);
 
     if ( input_package->number_of_classes == 1 ) // if there is only 1 input class, there is no fancy class setup so we can just skip to whether to randomise occupancies
     {

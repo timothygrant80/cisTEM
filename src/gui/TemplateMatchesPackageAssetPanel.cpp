@@ -174,13 +174,8 @@ void TemplateMatchesPackageAssetPanel::FillRefinementPackages( ) {
     else {
         RefinementPackageListCtrl->SetItemCount(0);
         ContainedParticlesListCtrl->SetItemCount(0);
-        Active3DReferencesListCtrl->SetItemCount(0);
 
-        StackFileNameText->SetLabel("");
-        StackBoxSizeText->SetLabel("");
-        NumberofClassesText->SetLabel("");
-        NumberofRefinementsText->SetLabel("");
-        LastRefinementIDText->SetLabel("");
+        StarFileNameText->SetLabel("");
 
         ContainedParticlesStaticText->SetLabel("Contained Particles : ");
     }
@@ -218,13 +213,11 @@ void TemplateMatchesPackageAssetPanel::OnUpdateUI(wxUpdateUIEvent& event) {
             RenameButton->Enable(true);
             DeleteButton->Enable(true);
             ExportButton->Enable(true);
-            DisplayStackButton->Enable(true);
         }
         else {
             RenameButton->Enable(false);
             DeleteButton->Enable(false);
             ExportButton->Enable(false);
-            DisplayStackButton->Enable(false);
         }
     }
     else

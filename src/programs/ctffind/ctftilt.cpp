@@ -4,9 +4,10 @@
 CTFTilt::CTFTilt(ImageFile& wanted_input_file, float wanted_high_res_limit_ctf_fit, float wanted_high_res_limit_tilt_fit, float wanted_minimum_defocus, float wanted_maximum_defocus,
                  float wanted_pixel_size, float wanted_acceleration_voltage_in_kV, float wanted_spherical_aberration_in_mm, float wanted_amplitude_contrast, float wanted_additional_phase_shift_in_radians,
                  bool wanted_debug, std::string wanted_debug_json_output_filename) {
-    box_size                       = 128;
-    n_sections                     = 3;
-    n_steps                        = 4;
+    box_size   = 128; //the default is 128, the test:128,64,384,512,wrong,wrong,640,1024,(1024 with defocus size 1024),(1024 with pre pixel size 3),768,(128 with start_values[0] = 1.0f;),(768  penalize greater than 85),(13: 512.angle step 3)(14:512.angle step 3, axis step 5),(15:512.angle step 1, axis step 1),(16:128. anglestep 5, axis step 10 recovered.)(17: but return *(-1) in SampleTiltScoreFunctionForSimplex)
+    n_sections = 21; //previously force dimension 128, n_section=21, n_steps=2
+    // check below for n_sections
+    n_steps                        = 2;
     rough_defocus_determined       = false;
     defocus_astigmatism_determined = false;
     power_spectra_calculated       = false;
@@ -56,27 +57,39 @@ CTFTilt::CTFTilt(ImageFile& wanted_input_file, float wanted_high_res_limit_ctf_f
     ctf_image.Allocate(box_size, box_size, 1);
 
     micrograph_subregion_dimension = 2000.0f / ctf_fit_pixel_size;
+    wxPrintf("micrograph_subregion_dimension: %d\n", micrograph_subregion_dimension);
     micrograph_subregion_dimension = ReturnClosestFactorizedLower(micrograph_subregion_dimension, 5);
+    wxPrintf("micrograph_subregion_dimension factorized: %d\n", micrograph_subregion_dimension);
     if ( micrograph_subregion_dimension < micrograph_binned_dimension_for_ctf )
         power_spectrum_binned_image.Allocate(micrograph_subregion_dimension, micrograph_subregion_dimension, 1);
     else
         power_spectrum_binned_image.Allocate(micrograph_binned_dimension_for_ctf, micrograph_binned_dimension_for_ctf, 1);
 
-    resampled_power_spectra = new Image[((n_sections - 1) * n_steps + 1) * ((n_sections - 1) * n_steps + 1)];
-    tilt_binning_factor     = 0.5f * high_res_limit_tilt_fit / original_pixel_size;
+    tilt_binning_factor = 0.5f * high_res_limit_tilt_fit / original_pixel_size;
     MyDebugPrint("Tilt binning factor = %f", tilt_binning_factor);
     tilt_fit_pixel_size = original_pixel_size * tilt_binning_factor;
-
+    // n_sections          = std::min(wanted_input_file.ReturnXSize( ), wanted_input_file.ReturnYSize( )) / box_size / tilt_binning_factor;
+    // if ( ! IsOdd((n_sections)) )
+    //     n_sections--;
+    // wxPrintf("n_sections %d\n", n_sections);
+    resampled_power_spectra = new Image[((n_sections - 1) * n_steps + 1) * ((n_sections - 1) * n_steps + 1)];
     int ix, iy;
     int sub_section_dimension;
     int section_counter     = 0;
     sub_section_dimension_x = myroundint(input_image_x_dimension / tilt_binning_factor) / n_sections;
+
     if ( IsOdd(sub_section_dimension_x) )
         sub_section_dimension_x--;
     sub_section_dimension_y = myroundint(input_image_y_dimension / tilt_binning_factor) / n_sections;
     if ( IsOdd(sub_section_dimension_y) )
         sub_section_dimension_y--;
     sub_section_dimension = std::min(sub_section_dimension_x, sub_section_dimension_y);
+    wxPrintf("the sub_section_dimension_x, tilt_binning_factor: %d, %f\n", sub_section_dimension_x, tilt_binning_factor);
+    wxPrintf("subsection dim, subsection_dim_x, subsection_dim_y %d, %d, %d\n", sub_section_dimension, sub_section_dimension_x, sub_section_dimension_y);
+    sub_section_dimension   = 128;
+    sub_section_dimension_x = 128;
+    sub_section_dimension_y = 128; //here is just for test.
+    // n_sections -= 2;
     sub_section.Allocate(sub_section_dimension, sub_section_dimension, 1, true);
     power_spectrum_sub_section.Allocate(sub_section_dimension, sub_section_dimension, 1);
 
@@ -237,7 +250,8 @@ float CTFTilt::FindDefocusAstigmatism( ) {
 
     DownhillSimplex simplex_minimzer(3);
 
-    float  average_defocus = (defocus_1 + defocus_2) / 2.0f;
+    float average_defocus = (defocus_1 + defocus_2) / 2.0f;
+
     double ranges[4];
     double start_values[4];
     double min_values[4];
@@ -271,7 +285,7 @@ float CTFTilt::FindDefocusAstigmatism( ) {
     simplex_minimzer.initial_values[4][1] = start_values[1] * simplex_minimzer.value_scalers[1];
     simplex_minimzer.initial_values[4][2] = start_values[2] * simplex_minimzer.value_scalers[2];
     simplex_minimzer.initial_values[4][3] = start_values[3] * simplex_minimzer.value_scalers[3] + ranges[3] * simplex_minimzer.value_scalers[3];
-
+    wxPrintf("scalers %f, %f, %f\n", simplex_minimzer.value_scalers[1], simplex_minimzer.value_scalers[2], simplex_minimzer.value_scalers[3]);
     simplex_minimzer.MinimizeFunction(this, SampleTiltScoreFunctionForSimplex);
     simplex_minimzer.GetMinimizedValues(min_values);
 
@@ -319,19 +333,72 @@ float CTFTilt::SearchTiltAxisAndAngle( ) {
                 variance_max    = variance;
                 best_tilt_axis  = tilt_axis;
                 best_tilt_angle = tilt_angle;
-                //				wxPrintf("tilt axis, angle, var = %g %g %g\n", best_tilt_axis, best_tilt_angle, variance_max);
+                wxPrintf("tilt axis, angle, var = %g %g %g\n", best_tilt_axis, best_tilt_angle, variance_max);
             }
         }
     }
     return variance_max;
 }
 
+// // just refine the tilt and axis direction
+// float CTFTilt::RefineTiltAxisAndAngle( ) {
+//     MyDebugAssertTrue(power_spectra_calculated, "Error: Power spectra not calculated\n");
+//     MyDebugAssertTrue(defocus_astigmatism_determined, "Error: Defocus astigmatism not yet determined\n");
+
+//     DownhillSimplex simplex_minimzer(2);
+
+//     double ranges[3];
+//     double start_values[3];
+//     double min_values[3];
+
+//     //	if (! power_spectra_calculated) CalculatePowerSpectra();
+
+//     // refine_mode = 1;
+
+//     ranges[0] = 0.0f;
+//     // ranges[1] = 40.0f;
+//     // ranges[2] = 20.0f;
+//     ranges[1] = 20.0f;
+//     ranges[2] = 10.0f;
+
+//     start_values[0] = 0.0f;
+//     start_values[1] = best_tilt_axis;
+//     start_values[2] = best_tilt_angle;
+
+//     // wxPrintf("scalers1 %f, %f, %f\n", simplex_minimzer.value_scalers[1], simplex_minimzer.value_scalers[2], simplex_minimzer.value_scalers[3]);
+
+//     simplex_minimzer.SetIinitalValues(start_values, ranges);
+//     // wxPrintf("scalers1 %f, %f, %f\n", simplex_minimzer.value_scalers[1], simplex_minimzer.value_scalers[2], simplex_minimzer.value_scalers[3]);
+
+//     simplex_minimzer.initial_values[1][1] = start_values[1] * simplex_minimzer.value_scalers[1] + ranges[1] * simplex_minimzer.value_scalers[1];
+//     simplex_minimzer.initial_values[1][2] = start_values[2] * simplex_minimzer.value_scalers[2];
+
+//     simplex_minimzer.initial_values[2][1] = start_values[1] * simplex_minimzer.value_scalers[1] - ranges[1] * simplex_minimzer.value_scalers[1] / 2.0f;
+//     simplex_minimzer.initial_values[2][2] = start_values[2] * simplex_minimzer.value_scalers[2] + ranges[2] * simplex_minimzer.value_scalers[2] * sqrtf(3.0f / 4.0f);
+
+//     simplex_minimzer.initial_values[3][1] = start_values[1] * simplex_minimzer.value_scalers[1] - ranges[1] * simplex_minimzer.value_scalers[1] / 2.0f;
+//     simplex_minimzer.initial_values[3][2] = start_values[2] * simplex_minimzer.value_scalers[2] - ranges[2] * simplex_minimzer.value_scalers[2] * sqrtf(3.0f / 4.0f);
+
+//     wxPrintf("initial values %f, %f, %f\n", simplex_minimzer.initial_values[4][1], simplex_minimzer.initial_values[4][2], simplex_minimzer.initial_values[4][3]);
+
+//     simplex_minimzer.MinimizeFunction(this, SampleTiltScoreFunctionForSimplexTiltAxis);
+//     simplex_minimzer.GetMinimizedValues(min_values);
+//     // defocus_1       = defocus_1 + min_values[3] - average_defocus;
+//     // defocus_2       = defocus_2 + min_values[3] - average_defocus;
+//     best_tilt_axis  = min_values[1];
+//     best_tilt_angle = min_values[2];
+
+//     return -ScoreValues(min_values);
+// }
+
+// refine the tilt, tilt axis, and defocus
 float CTFTilt::RefineTiltAxisAndAngle( ) {
     MyDebugAssertTrue(power_spectra_calculated, "Error: Power spectra not calculated\n");
     MyDebugAssertTrue(defocus_astigmatism_determined, "Error: Defocus astigmatism not yet determined\n");
 
     DownhillSimplex simplex_minimzer(3);
-
+    // defocus_1              = 20884.36;
+    // defocus_2              = 24401.83;
     float  average_defocus = (defocus_1 + defocus_2) / 2.0f;
     double ranges[4];
     double start_values[4];
@@ -342,16 +409,45 @@ float CTFTilt::RefineTiltAxisAndAngle( ) {
     refine_mode = 1;
 
     ranges[0] = 0.0f;
-    ranges[1] = 40.0f;
-    ranges[2] = 20.0f;
-    ranges[3] = 1000.0f;
+    // ranges[1] = 40.0f;
+    // ranges[2] = 20.0f;
+    ranges[1] = 20.0f;
+    ranges[2] = 10.0f;
+    ranges[3] = 2000.0f;
+    // ranges[3] = 0.0f;
 
     start_values[0] = 0.0f;
     start_values[1] = best_tilt_axis;
     start_values[2] = best_tilt_angle;
+    // start_values[1] = 90;
+    // start_values[2] = 55;
     start_values[3] = average_defocus;
+    // wxPrintf("scalers1 %f, %f, %f\n", simplex_minimzer.value_scalers[1], simplex_minimzer.value_scalers[2], simplex_minimzer.value_scalers[3]);
 
     simplex_minimzer.SetIinitalValues(start_values, ranges);
+    wxPrintf("scalers1 %f, %f, %f\n", simplex_minimzer.value_scalers[1], simplex_minimzer.value_scalers[2], simplex_minimzer.value_scalers[3]);
+
+    // simplex_minimzer.initial_values[1][1] = start_values[1] * simplex_minimzer.value_scalers[1] + ranges[1] * simplex_minimzer.value_scalers[1];
+    // simplex_minimzer.initial_values[1][2] = start_values[2] * simplex_minimzer.value_scalers[2] + ranges[2] * simplex_minimzer.value_scalers[2];
+    // simplex_minimzer.initial_values[1][3] = start_values[3] * simplex_minimzer.value_scalers[3];
+    // wxPrintf("initial values %f, %f, %f\n", simplex_minimzer.initial_values[1][1], simplex_minimzer.initial_values[1][2], simplex_minimzer.initial_values[1][3]);
+
+    // simplex_minimzer.initial_values[2][1] = start_values[1] * simplex_minimzer.value_scalers[1] - ranges[1] * simplex_minimzer.value_scalers[1]; // / 2.0f;
+    // simplex_minimzer.initial_values[2][2] = start_values[2] * simplex_minimzer.value_scalers[2] + ranges[2] * simplex_minimzer.value_scalers[2]; // * sqrtf(3.0f / 4.0f);
+    // simplex_minimzer.initial_values[2][3] = start_values[3] * simplex_minimzer.value_scalers[3];
+    // wxPrintf("initial values %f, %f, %f\n", simplex_minimzer.initial_values[2][1], simplex_minimzer.initial_values[2][2], simplex_minimzer.initial_values[2][3]);
+
+    // simplex_minimzer.initial_values[3][1] = start_values[1] * simplex_minimzer.value_scalers[1] + ranges[1] * simplex_minimzer.value_scalers[1]; // / 2.0f;
+    // simplex_minimzer.initial_values[3][2] = start_values[2] * simplex_minimzer.value_scalers[2] - ranges[2] * simplex_minimzer.value_scalers[2]; // * sqrtf(3.0f / 4.0f);
+    // simplex_minimzer.initial_values[3][3] = start_values[3] * simplex_minimzer.value_scalers[3];
+    // wxPrintf("initial values %f, %f, %f\n", simplex_minimzer.initial_values[3][1], simplex_minimzer.initial_values[3][2], simplex_minimzer.initial_values[3][3]);
+
+    // simplex_minimzer.initial_values[4][1] = start_values[1] * simplex_minimzer.value_scalers[1] - ranges[1] * simplex_minimzer.value_scalers[1];
+    // simplex_minimzer.initial_values[4][2] = start_values[2] * simplex_minimzer.value_scalers[2] - ranges[2] * simplex_minimzer.value_scalers[2];
+    // simplex_minimzer.initial_values[4][3] = start_values[3] * simplex_minimzer.value_scalers[3]; // + ranges[3] * simplex_minimzer.value_scalers[3];
+    // wxPrintf("initial values %f, %f, %f\n", simplex_minimzer.initial_values[4][1], simplex_minimzer.initial_values[4][2], simplex_minimzer.initial_values[4][3]);
+
+    // wxPrintf("scalers2 %f, %f, %f\n", simplex_minimzer.value_scalers[1], simplex_minimzer.value_scalers[2], simplex_minimzer.value_scalers[3]);
 
     simplex_minimzer.initial_values[1][1] = start_values[1] * simplex_minimzer.value_scalers[1] + ranges[1] * simplex_minimzer.value_scalers[1] * sqrtf(8.0f / 9.0f);
     simplex_minimzer.initial_values[1][2] = start_values[2] * simplex_minimzer.value_scalers[2];
@@ -629,8 +725,10 @@ double CTFTilt::ScoreValues(double input_values[]) {
             sum_ctf_power /= counter;
             correlation_coefficient = (sum_ctf_power - sum_ctf * sum_power) / sqrt(sum_ctf_squared - pow(sum_ctf, 2)) / sqrt(sum_power_squared - pow(sum_power, 2));
             // Penalize tilt angles larger than 65 deg
-            if ( fabsf(float(input_values[2])) > 65.0f )
-                correlation_coefficient -= (fabsf(float(input_values[2])) - 65.0f) / 5.0f;
+            // if ( fabsf(float(input_values[2])) > 65.0f )
+            //     correlation_coefficient -= (fabsf(float(input_values[2])) - 65.0f) / 5.0f;
+            if ( fabsf(float(input_values[2])) > 85.0f )
+                correlation_coefficient -= (fabsf(float(input_values[2])) - 85.0f) / 5.0f;
 
             break;
     }
@@ -638,9 +736,162 @@ double CTFTilt::ScoreValues(double input_values[]) {
     return -correlation_coefficient;
 }
 
+double CTFTilt::ScoreValuesFixedDefocus(double input_values[]) {
+    // 0 = ignore, stupid code conversion
+
+    // refine_mode = 0
+    // 1 = defocus_1
+    // 2 = defocus_2
+    // 3 = astigmatic_angle
+
+    // refine_mode = 1
+    // 1 = tilt_axis
+    // 2 = tilt_angle
+    // 3 = average_defocus
+    // wxPrintf("defocus1 defocus2 %f %f\n", defocus_1, defocus_2);
+
+    int    i, j;
+    int    ix, iy;
+    long   pointer;
+    long   counter         = 0;
+    int    section_counter = 0;
+    float  fraction_of_nonzero_pixels;
+    float  minimum_radius_sq;
+    float  radius_sq;
+    float  average_defocus;
+    float  original_average_defocus = (defocus_1 + defocus_2) / 2.0f;
+    float  ddefocus;
+    float  height;
+    float  variance;
+    float  x_coordinate_2d;
+    float  y_coordinate_2d;
+    float  x_rotated;
+    float  y_rotated;
+    double sum_ctf           = 0.0;
+    double sum_power         = 0.0;
+    double sum_ctf_squared   = 0.0;
+    double sum_power_squared = 0.0;
+    double sum_ctf_power     = 0.0;
+    double correlation_coefficient;
+
+    AnglesAndShifts rotation_angle;
+
+    CTF input_ctf;
+
+    // switch ( refine_mode ) {
+    // Fitting defocus 1, defocus 2, astigmatic angle
+    // case 0:
+    //     minimum_radius_sq = powf(float(resampled_power_spectrum.logical_x_dimension) * ctf_fit_pixel_size / low_res_limit, 2);
+    //     average_defocus   = (input_values[1] + input_values[2]) / 2.0f;
+    //     input_ctf.Init(acceleration_voltage_in_kV, spherical_aberration_in_mm, amplitude_contrast, input_values[1], input_values[2], input_values[3], ctf_fit_pixel_size, additional_phase_shift_in_radians);
+    //     ctf_transform.CalculateCTFImage(input_ctf);
+    //     ctf_transform.ComputeAmplitudeSpectrumFull2D(&ctf_image);
+    //     //			ctf_image.CosineMask(ctf_image.logical_x_dimension * 0.4f, ctf_image.logical_x_dimension * 0.2f);
+    //     for ( i = 0; i < ctf_image.real_memory_allocated; i++ )
+    //         ctf_image.real_values[i] = powf(ctf_image.real_values[i], 4);
+    //     resampled_power_spectrum.CopyFrom(&resampled_power_spectrum_binned_image);
+    //     //			ctf_image.QuickAndDirtyWriteSlice("junk1.mrc", 1);
+    //     //			resampled_power_spectrum.QuickAndDirtyWriteSlice("junk2.mrc", 1);
+
+    //     pointer = 0;
+    //     for ( j = 0; j < ctf_image.logical_y_dimension; j++ ) {
+    //         for ( i = 0; i < ctf_image.logical_x_dimension; i++ ) {
+    //             radius_sq = float((i - ctf_image.physical_address_of_box_center_x) * (i - ctf_image.physical_address_of_box_center_x) + (j - ctf_image.physical_address_of_box_center_y) * (j - ctf_image.physical_address_of_box_center_y));
+    //             if ( radius_sq > minimum_radius_sq ) {
+    //                 sum_ctf += ctf_image.real_values[pointer];
+    //                 sum_ctf_squared += pow(ctf_image.real_values[pointer], 2);
+    //                 sum_power += resampled_power_spectrum.real_values[pointer];
+    //                 sum_power_squared += pow(resampled_power_spectrum.real_values[pointer], 2);
+    //                 sum_ctf_power += ctf_image.real_values[pointer] * resampled_power_spectrum.real_values[pointer];
+    //                 counter++;
+    //             }
+    //             pointer++;
+    //         }
+    //         pointer += ctf_image.padding_jump_value;
+    //     }
+
+    //     sum_ctf /= counter;
+    //     sum_ctf_squared /= counter;
+    //     sum_power /= counter;
+    //     sum_power_squared /= counter;
+    //     sum_ctf_power /= counter;
+    //     correlation_coefficient = (sum_ctf_power - sum_ctf * sum_power) / sqrt(sum_ctf_squared - pow(sum_ctf, 2)) / sqrt(sum_power_squared - pow(sum_power, 2));
+
+    //     break;
+
+    // Fitting tilt axis, tilt angle, average defocus
+    // case 1:
+    MyDebugAssertTrue(sub_section_dimension_x > 0 && sub_section_dimension_y > 0, "Error: sub_section_dimensions not set\n");
+
+    minimum_radius_sq = powf(float(resampled_power_spectrum.logical_x_dimension) * tilt_fit_pixel_size / low_res_limit, 2);
+    rotation_angle.GenerateRotationMatrix2D(input_values[1]);
+
+    for ( iy = -(n_sections - 1) * n_steps / 2; iy <= (n_sections - 1) * n_steps / 2; iy++ ) {
+        for ( ix = -(n_sections - 1) * n_steps / 2; ix <= (n_sections - 1) * n_steps / 2; ix++ ) {
+            x_coordinate_2d = float(ix) * sub_section_dimension_x / float(n_steps) * tilt_fit_pixel_size;
+            y_coordinate_2d = float(iy) * sub_section_dimension_y / float(n_steps) * tilt_fit_pixel_size;
+            rotation_angle.euler_matrix.RotateCoords2D(x_coordinate_2d, y_coordinate_2d, x_rotated, y_rotated);
+            height = y_rotated * tanf(deg_2_rad(input_values[2]));
+            ;
+
+            average_defocus = original_average_defocus + height;
+            ddefocus        = average_defocus - (defocus_1 + defocus_2) / 2.0f;
+            input_ctf.Init(acceleration_voltage_in_kV, spherical_aberration_in_mm, amplitude_contrast, defocus_1 + ddefocus, defocus_2 + ddefocus, astigmatic_angle, tilt_fit_pixel_size, additional_phase_shift_in_radians);
+            ctf_transform.CalculateCTFImage(input_ctf);
+            ctf_transform.ComputeAmplitudeSpectrumFull2D(&ctf_image);
+            //					ctf_image.QuickAndDirtyWriteSlice("ctf_images.mrc", 1 + section_counter);
+            for ( i = 0; i < ctf_image.real_memory_allocated; i++ )
+                ctf_image.real_values[i] = powf(ctf_image.real_values[i], 2);
+
+            pointer = 0;
+            for ( j = 0; j < ctf_image.logical_y_dimension; j++ ) {
+                for ( i = 0; i < ctf_image.logical_x_dimension; i++ ) {
+                    radius_sq = float((i - ctf_image.physical_address_of_box_center_x) * (i - ctf_image.physical_address_of_box_center_x) + (j - ctf_image.physical_address_of_box_center_y) * (j - ctf_image.physical_address_of_box_center_y));
+                    if ( radius_sq > minimum_radius_sq ) {
+                        sum_ctf += ctf_image.real_values[pointer];
+                        sum_ctf_squared += pow(ctf_image.real_values[pointer], 2);
+                        sum_power += resampled_power_spectra[section_counter].real_values[pointer];
+                        sum_power_squared += pow(resampled_power_spectra[section_counter].real_values[pointer], 2);
+                        sum_ctf_power += ctf_image.real_values[pointer] * resampled_power_spectra[section_counter].real_values[pointer];
+                        counter++;
+                    }
+                    pointer++;
+                }
+                pointer += ctf_image.padding_jump_value;
+            }
+            section_counter++;
+        }
+    }
+
+    sum_ctf /= counter;
+    sum_ctf_squared /= counter;
+    sum_power /= counter;
+    sum_power_squared /= counter;
+    sum_ctf_power /= counter;
+    correlation_coefficient = (sum_ctf_power - sum_ctf * sum_power) / sqrt(sum_ctf_squared - pow(sum_ctf, 2)) / sqrt(sum_power_squared - pow(sum_power, 2));
+    // Penalize tilt angles larger than 65 deg
+    // if ( fabsf(float(input_values[2])) > 65.0f )
+    //     correlation_coefficient -= (fabsf(float(input_values[2])) - 65.0f) / 5.0f;
+    if ( fabsf(float(input_values[2])) > 85.0f )
+        correlation_coefficient -= (fabsf(float(input_values[2])) - 85.0f) / 5.0f;
+
+    // break;
+    // }
+
+    return -correlation_coefficient;
+}
+
 double SampleTiltScoreFunctionForSimplex(void* pt2Object, double values[]) {
     CTFTilt* scorer_to_use = reinterpret_cast<CTFTilt*>(pt2Object);
-    //	float score = scorer_to_use->ScoreValues(values);
-    //	wxPrintf("%f, %f, %f, %f = %f\n", values[1], values[2], values[3], values[4], score);
+    float    score         = scorer_to_use->ScoreValues(values);
+    wxPrintf("%f, %f, %f, %f = %f\n", values[1], values[2], values[3], values[4], score);
     return scorer_to_use->ScoreValues(values);
+}
+
+double SampleTiltScoreFunctionForSimplexTiltAxis(void* pt2Object, double values[]) {
+    CTFTilt* scorer_to_use = reinterpret_cast<CTFTilt*>(pt2Object);
+    // wxPrintf("average_defocus: %f\n",average_defocus);
+    float score = scorer_to_use->ScoreValues(values);
+    wxPrintf("%f, %f, %f = %f\n", values[1], values[2], values[3], score);
+    return scorer_to_use->ScoreValuesFixedDefocus(values);
 }

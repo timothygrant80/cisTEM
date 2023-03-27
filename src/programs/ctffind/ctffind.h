@@ -105,12 +105,12 @@ class ImageCTFComparison {
     bool   fit_with_thickness_nodes;
     bool   fit_nodes_downweight_nodes = false;
     bool   fit_nodes_rounded_square   = false;
+    float  pixel_size;
 
   private:
-    CTF   ctf;
-    float pixel_size;
-    bool  find_phase_shift;
-    bool  astigmatism_is_known;
+    CTF  ctf;
+    bool find_phase_shift;
+    bool astigmatism_is_known;
 
     float known_astigmatism;
     float known_astigmatism_angle;

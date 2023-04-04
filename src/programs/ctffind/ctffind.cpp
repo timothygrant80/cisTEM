@@ -996,7 +996,7 @@ bool CtffindApp::DoCalculation( ) {
                         profile_timing.lap("Correct mag distortion");
                     }
                     // Make the image square
-                    profile_timing.start("Crop image to shortest dimension");
+                    profile_timing.start("Crop image to largest dimension");
                     micrograph_square_dimension = std::max(current_input_image->logical_x_dimension, current_input_image->logical_y_dimension);
                     if ( IsOdd((micrograph_square_dimension)) )
                         micrograph_square_dimension++;
@@ -1006,7 +1006,7 @@ bool CtffindApp::DoCalculation( ) {
                         current_input_image->ClipIntoLargerRealSpace2D(current_input_image_square, current_input_image->ReturnAverageOfRealValues( ));
                         current_input_image->Consume(current_input_image_square);
                     }
-                    profile_timing.lap("Crop image to shortest dimension");
+                    profile_timing.lap("Crop image to largest dimension");
                     //
                     profile_timing.start("Average frames");
                     if ( current_frame_within_average == 1 ) {
@@ -1761,14 +1761,14 @@ bool CtffindApp::DoCalculation( ) {
         if ( compute_extra_stats && ! fit_nodes ) {
             RescaleSpectrumAndRotationalAverage(average_spectrum, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, rotational_average_astig_fit, number_of_extrema_profile, ctf_values_profile, last_bin_without_aliasing, last_bin_with_good_fit);
         }
-        
+
         normalization_radius_max = std::max(normalization_radius_max, float(average_spectrum->logical_x_dimension * spatial_frequency[last_bin_with_good_fit]));
         average_spectrum->ComputeAverageAndSigmaOfValuesInSpectrum(normalization_radius_min,
                                                                    normalization_radius_max,
                                                                    average, sigma);
 
         average_spectrum->SetMinimumAndMaximumValues(average - sigma, average + 2.0 * sigma);
-        average_spectrum->AddConstant( - (average - sigma));
+        average_spectrum->AddConstant(-(average - sigma));
         average_spectrum->MultiplyByConstant(1.0 / ((average + 2.0 * sigma) - (average - sigma)));
         if ( dump_debug_files )
             average_spectrum->QuickAndDirtyWriteSlice(debug_file_prefix + "dbg_spec_before_overlay.mrc", 1);

@@ -225,9 +225,10 @@ void EerFile::DecodeToFloatArray(int start_eer_frame, int finish_eer_frame, floa
     /*
 	 * Decode into a list of events
 	 */
-    unsigned int*  positions = new unsigned int[max_electrons];
-    unsigned char* symbols   = new unsigned char[max_electrons];
-    for ( int iframe = start_eer_frame; iframe <= finish_eer_frame; iframe++ ) {
+   // wxPrintf("max electrons = %llu\n", max_electrons);
+    unsigned int *positions = new unsigned int[max_electrons]();
+    unsigned char *symbols   = new unsigned char[max_electrons]();
+    for ( int iframe = start_eer_frame; iframe < finish_eer_frame; iframe++ ) {
         long long     pos     = frame_starts[iframe];
         unsigned int  npixels = 0, nelectrons = 0;
         unsigned int  bit_pos = 0; // 4 K * 4 K * 11 bit << 2 ** 32
@@ -247,17 +248,21 @@ void EerFile::DecodeToFloatArray(int start_eer_frame, int finish_eer_frame, floa
                     break;
                 if ( rle == 127 )
                     continue; // this should be rare.
+                if (nelectrons > max_electrons)
+                	break;
 
                 first_byte               = pos + (bit_pos >> 3);
                 bit_offset_in_first_byte = bit_pos & 7;
                 chunk                    = *(unsigned int*)(buf + first_byte);
                 subpixel                 = (unsigned char)((chunk >> bit_offset_in_first_byte) & 15) ^ 0x0A; // 15 = 00001111; 0x0A = 00001010
                 bit_pos += 4;
+      //          wxPrintf("nelectrons = %u / %llu\n", nelectrons, max_electrons);
                 positions[nelectrons] = npixels;
                 symbols[nelectrons]   = subpixel;
                 nelectrons++;
                 npixels++;
             }
+
         }
         else {
             while ( true ) {
@@ -271,6 +276,8 @@ void EerFile::DecodeToFloatArray(int start_eer_frame, int finish_eer_frame, floa
                     break;
                 if ( rle == 255 )
                     continue; // this should be rare.
+                if (nelectrons > max_electrons)
+                    break;
 
                 first_byte               = pos + (bit_pos >> 3);
                 bit_offset_in_first_byte = bit_pos & 7;
@@ -283,6 +290,7 @@ void EerFile::DecodeToFloatArray(int start_eer_frame, int finish_eer_frame, floa
                 nelectrons++;
                 npixels++;
             }
+
         }
 
         /*

@@ -16,3 +16,13 @@ arguments:
     description: The template to be refined
     default: input.mrc
     advanced: false
+  - name: start_position
+    type: int
+    description: The position in the starfile to start refining from
+    default: 0
+    advanced: true
+  - name: end_position
+    type: int
+    description: The position in the starfile to end refining at
+    default: -1
+    advanced: true

@@ -111,93 +111,108 @@ bool RefineTemplateDevApp::DoCalculation( ) {
     input_template.ZeroCentralPixel( );
     input_template.SwapRealSpaceQuadrants( );
 
-    comparison_object.input_reconstruction = &input_template;
-    comparison_object.windowed_particle    = &windowed_particle;
-    comparison_object.projection_filter    = &projection_filter;
-    comparison_object.angles               = &angles;
-    comparison_object.optim_ctf            = &optim_ctf;
-    comparison_object.orig_ctf             = &ctf;
-    comparison_object.whitening_filter     = &whitening_filter;
+    if ( arguments.start_position < 1 )
+        arguments.start_position = 1;
+    if ( arguments.end_position > input_matches.all_parameters.GetCount( ) or arguments.end_position < 1 )
+        arguments.end_position = input_matches.all_parameters.GetCount( );
+    if ( arguments.num_threads > arguments.end_position - arguments.start_position + 1 )
+        arguments.num_threads = arguments.end_position - arguments.start_position + 1;
 
+#pragma omp parallel num_threads(arguments.num_threads) default(none) shared(arguments, input_matches, input_template_file, input_template) private(current_image_filename, current_image_file, current_image, whitening_filter, number_of_terms, ctf, optim_ctf, windowed_particle, projection_filter, padded_reference, angles, template_peak, starting_score, conjugate_gradient_minizer, cg_match_starting_values, cg_match_accuracy, comparison_object)
     // Iterate over all the particles in the input starfile
-    for ( long match_id = 0; match_id < input_matches.all_parameters.GetCount( ); match_id++ ) {
-        // If the current image is different from the previous image, then load the image
-        if ( current_image_filename.compare(input_matches.all_parameters[match_id].original_image_filename.ToStdString( )) != 0 ) {
-            current_image_file.OpenFile(input_matches.all_parameters[match_id].original_image_filename.ToStdString( ), false);
-            current_image_filename = input_matches.all_parameters[match_id].original_image_filename.ToStdString( );
-            MyDebugPrint("Reading image %s", input_matches.all_parameters[match_id].original_image_filename.ToStdString( ));
-            current_image.ReadSlice(&current_image_file, 1);
-            whitening_filter.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((current_image.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
-            number_of_terms.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((current_image.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
+    {
+        comparison_object.input_reconstruction = &input_template;
+        comparison_object.windowed_particle    = &windowed_particle;
+        comparison_object.projection_filter    = &projection_filter;
+        comparison_object.angles               = &angles;
+        comparison_object.optim_ctf            = &optim_ctf;
+        comparison_object.orig_ctf             = &ctf;
+        comparison_object.whitening_filter     = &whitening_filter;
+#pragma omp for schedule(dynamic, 100)
+        for ( long match_id = arguments.start_position - 1; match_id < arguments.end_position; match_id++ ) {
+            // If the current image is different from the previous image, then load the image
+            if ( current_image_filename.compare(input_matches.all_parameters[match_id].original_image_filename.ToStdString( )) != 0 ) {
+                current_image_file.OpenFile(input_matches.all_parameters[match_id].original_image_filename.ToStdString( ), false);
+                current_image_filename = input_matches.all_parameters[match_id].original_image_filename.ToStdString( );
+                MyDebugPrint("Reading image %s", input_matches.all_parameters[match_id].original_image_filename.ToStdString( ));
+                current_image.ReadSlice(&current_image_file, 1);
+                MyDebugPrint("Image size is %i x %i", current_image.logical_x_dimension, current_image.logical_y_dimension);
+                whitening_filter.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((current_image.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
+                number_of_terms.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((current_image.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
 
-            // remove outliers
+                // remove outliers
 
-            current_image.ReplaceOutliersWithMean(5.0f);
-            current_image.ForwardFFT( );
+                current_image.ReplaceOutliersWithMean(5.0f);
+                current_image.ForwardFFT( );
 
-            current_image.ZeroCentralPixel( );
-            current_image.Compute1DPowerSpectrumCurve(&whitening_filter, &number_of_terms);
-            whitening_filter.SquareRoot( );
-            whitening_filter.Reciprocal( );
-            whitening_filter.MultiplyByConstant(1.0f / whitening_filter.ReturnMaximumValue( ));
+                current_image.ZeroCentralPixel( );
+                current_image.Compute1DPowerSpectrumCurve(&whitening_filter, &number_of_terms);
+                whitening_filter.SquareRoot( );
+                whitening_filter.Reciprocal( );
+                whitening_filter.MultiplyByConstant(1.0f / whitening_filter.ReturnMaximumValue( ));
 
-            current_image.ApplyCurveFilter(&whitening_filter);
-            current_image.ZeroCentralPixel( );
-            current_image.DivideByConstant(sqrt(current_image.ReturnSumOfSquares( )));
-            current_image.BackwardFFT( );
+                current_image.ApplyCurveFilter(&whitening_filter);
+                current_image.ZeroCentralPixel( );
+                current_image.DivideByConstant(sqrt(current_image.ReturnSumOfSquares( )));
+                current_image.BackwardFFT( );
+            }
+
+            // Setup the ctf
+            ctf.Init(input_matches.all_parameters[match_id].microscope_voltage_kv,
+                     input_matches.all_parameters[match_id].microscope_spherical_aberration_mm,
+                     input_matches.all_parameters[match_id].amplitude_contrast,
+                     input_matches.all_parameters[match_id].defocus_1,
+                     input_matches.all_parameters[match_id].defocus_2,
+                     input_matches.all_parameters[match_id].defocus_angle,
+                     0.0,
+                     0.0,
+                     0.0,
+                     input_matches.all_parameters[match_id].pixel_size,
+                     deg_2_rad(input_matches.all_parameters[match_id].phase_shift));
+            optim_ctf.CopyFrom(ctf);
+
+            windowed_particle.Allocate(input_template_file.ReturnXSize( ), input_template_file.ReturnXSize( ), true);
+            projection_filter.Allocate(input_template_file.ReturnXSize( ), input_template_file.ReturnXSize( ), false);
+            padded_reference.CopyFrom(&current_image);
+            //padded_reference.RealSpaceIntegerShift(input_matches.all_parameters[match_id].x_shift / input_matches.all_parameters[match_id].pixel_size, input_matches.all_parameters[match_id].y_shift / input_matches.all_parameters[match_id].pixel_size);
+            padded_reference.ClipInto(&windowed_particle, 0.0f, false, 1.0f, input_matches.all_parameters[match_id].x_shift / input_matches.all_parameters[match_id].pixel_size - current_image.physical_address_of_box_center_x, input_matches.all_parameters[match_id].y_shift / input_matches.all_parameters[match_id].pixel_size - current_image.physical_address_of_box_center_y);
+
+            windowed_particle.ForwardFFT( );
+            windowed_particle.SwapRealSpaceQuadrants( );
+
+            angles.Init(input_matches.all_parameters[match_id].phi, input_matches.all_parameters[match_id].theta, input_matches.all_parameters[match_id].psi, 0.0, 0.0);
+            projection_filter.CalculateCTFImage(ctf);
+            projection_filter.ApplyCurveFilter(&whitening_filter);
+            template_peak  = TemplateScore(&comparison_object);
+            starting_score = template_peak.value * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension);
+            //input_matches.all_parameters[match_id].score             = starting_score;
+            input_matches.all_parameters[match_id].position_in_stack = 1;
+            cg_match_starting_values[0]                              = input_matches.all_parameters[match_id].phi;
+            cg_match_starting_values[1]                              = input_matches.all_parameters[match_id].theta;
+            cg_match_starting_values[2]                              = input_matches.all_parameters[match_id].psi;
+            cg_match_starting_values[3]                              = 0.0f;
+            cg_match_accuracy[0]                                     = 1.0f;
+            cg_match_accuracy[1]                                     = 1.0f;
+            cg_match_accuracy[2]                                     = 1.0f;
+            cg_match_accuracy[3]                                     = 0.1f;
+            float  x                                                 = conjugate_gradient_minizer.Init(&PerMatchObjectiveFunction, &comparison_object, 4, cg_match_starting_values, cg_match_accuracy);
+            float  y                                                 = conjugate_gradient_minizer.Run( );
+            float* result_array                                      = conjugate_gradient_minizer.GetPointerToBestValues( );
+            MyDebugPrint("Starting score = %f, ending score = %f", starting_score, -y * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension));
+            MyDebugPrint("Phi: %f -> %f, Theta %f -> %f, Psi %f -> %f", input_matches.all_parameters[match_id].phi, conjugate_gradient_minizer.GetBestValue(0), input_matches.all_parameters[match_id].theta, conjugate_gradient_minizer.GetBestValue(1), input_matches.all_parameters[match_id].psi, conjugate_gradient_minizer.GetBestValue(2));
+            MyDebugPrint("DefocusChange: %f", conjugate_gradient_minizer.GetBestValue(3));
+            PerMatchObjectiveFunction(&comparison_object, result_array);
+            MyDebugPrint("X shift: %f, Y shift: %f", comparison_object.result_peak.x, comparison_object.result_peak.y);
+            input_matches.all_parameters[match_id].phi          = result_array[0];
+            input_matches.all_parameters[match_id].theta        = result_array[1];
+            input_matches.all_parameters[match_id].psi          = result_array[2];
+            input_matches.all_parameters[match_id].score        = -y * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension);
+            input_matches.all_parameters[match_id].score_change = input_matches.all_parameters[match_id].score - starting_score;
+            input_matches.all_parameters[match_id].x_shift += comparison_object.result_peak.x * input_matches.all_parameters[match_id].pixel_size;
+            input_matches.all_parameters[match_id].y_shift += comparison_object.result_peak.y * input_matches.all_parameters[match_id].pixel_size;
+            input_matches.all_parameters[match_id].defocus_1 += result_array[3];
+            input_matches.all_parameters[match_id].defocus_2 += result_array[3];
         }
-
-        // Setup the ctf
-        ctf.Init(input_matches.all_parameters[match_id].microscope_voltage_kv,
-                 input_matches.all_parameters[match_id].microscope_spherical_aberration_mm,
-                 input_matches.all_parameters[match_id].amplitude_contrast,
-                 input_matches.all_parameters[match_id].defocus_1,
-                 input_matches.all_parameters[match_id].defocus_2,
-                 input_matches.all_parameters[match_id].defocus_angle,
-                 0.0,
-                 0.0,
-                 0.0,
-                 input_matches.all_parameters[match_id].pixel_size,
-                 deg_2_rad(input_matches.all_parameters[match_id].phase_shift));
-        optim_ctf.CopyFrom(ctf);
-
-        windowed_particle.Allocate(input_template_file.ReturnXSize( ), input_template_file.ReturnXSize( ), true);
-        projection_filter.Allocate(input_template_file.ReturnXSize( ), input_template_file.ReturnXSize( ), false);
-        padded_reference.CopyFrom(&current_image);
-        //padded_reference.RealSpaceIntegerShift(input_matches.all_parameters[match_id].x_shift / input_matches.all_parameters[match_id].pixel_size, input_matches.all_parameters[match_id].y_shift / input_matches.all_parameters[match_id].pixel_size);
-        padded_reference.ClipInto(&windowed_particle, 0.0f, false, 1.0f, input_matches.all_parameters[match_id].x_shift / input_matches.all_parameters[match_id].pixel_size - current_image.physical_address_of_box_center_x, input_matches.all_parameters[match_id].y_shift / input_matches.all_parameters[match_id].pixel_size - current_image.physical_address_of_box_center_y);
-
-        windowed_particle.ForwardFFT( );
-        windowed_particle.SwapRealSpaceQuadrants( );
-
-        angles.Init(input_matches.all_parameters[match_id].phi, input_matches.all_parameters[match_id].theta, input_matches.all_parameters[match_id].psi, 0.0, 0.0);
-        projection_filter.CalculateCTFImage(ctf);
-        projection_filter.ApplyCurveFilter(&whitening_filter);
-        template_peak  = TemplateScore(&comparison_object);
-        starting_score = template_peak.value * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension);
-        //input_matches.all_parameters[match_id].score             = starting_score;
-        input_matches.all_parameters[match_id].position_in_stack = 1;
-        cg_match_starting_values[0]                              = input_matches.all_parameters[match_id].phi;
-        cg_match_starting_values[1]                              = input_matches.all_parameters[match_id].theta;
-        cg_match_starting_values[2]                              = input_matches.all_parameters[match_id].psi;
-        cg_match_starting_values[3]                              = 0.0f;
-        cg_match_accuracy[0]                                     = 1.0f;
-        cg_match_accuracy[1]                                     = 1.0f;
-        cg_match_accuracy[2]                                     = 1.0f;
-        cg_match_accuracy[3]                                     = 0.1f;
-        float  x                                                 = conjugate_gradient_minizer.Init(&PerMatchObjectiveFunction, &comparison_object, 4, cg_match_starting_values, cg_match_accuracy);
-        float  y                                                 = conjugate_gradient_minizer.Run( );
-        float* result_array                                      = conjugate_gradient_minizer.GetPointerToBestValues( );
-        MyDebugPrint("Starting score = %f, ending score = %f", starting_score, -y * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension));
-        MyDebugPrint("Phi: %f -> %f, Theta %f -> %f, Psi %f -> %f", input_matches.all_parameters[match_id].phi, conjugate_gradient_minizer.GetBestValue(0), input_matches.all_parameters[match_id].theta, conjugate_gradient_minizer.GetBestValue(1), input_matches.all_parameters[match_id].psi, conjugate_gradient_minizer.GetBestValue(2));
-        MyDebugPrint("DefocusChange: %f", conjugate_gradient_minizer.GetBestValue(3));
-        PerMatchObjectiveFunction(&comparison_object, result_array);
-        MyDebugPrint("X shift: %f, Y shift: %f", comparison_object.result_peak.x, comparison_object.result_peak.y);
-        input_matches.all_parameters[match_id].phi          = result_array[0];
-        input_matches.all_parameters[match_id].theta        = result_array[1];
-        input_matches.all_parameters[match_id].psi          = result_array[2];
-        input_matches.all_parameters[match_id].score        = -y * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension);
-        input_matches.all_parameters[match_id].score_change = input_matches.all_parameters[match_id].score - starting_score;
     }
     input_matches.WriteTocisTEMStarFile(arguments.output_starfile, -1, -1, -1, -1);
 

@@ -9,11 +9,15 @@ description = load(open(sys.argv[1]), Loader=Loader)
 
 rec_function_dict = {
     "std::string": "ReturnStringArgument",
+    "int": "ReturnIntegerArgument",
 }
 
 def user_input_function(argument):
     if argument['type'] == "std::string":
         return f"GetFilenameFromUser(\"{argument['description']}\", \"{argument['description']}\", \"{argument['default']}\", false)"
+    elif argument['type'] == "int":
+        return f"GetIntFromUser(\"{argument['description']}\", \"{argument['description']}\", \"{argument['default']}\")"
+
     else:
         raise Exception(f"Unknown type {argument['type']}")
 
@@ -22,6 +26,8 @@ def generate_type_string(arguments):
     for argument in arguments:
         if argument['type'] == "std::string":
             type_string += "t"
+        elif argument['type'] == "int":
+            type_string += "i"
         else:
             raise Exception(f"Unknown type {argument['type']}")
     type_string += "\""

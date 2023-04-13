@@ -669,7 +669,7 @@ void MyAlignMoviesPanel::StartAlignmentClick(wxCommandEvent& event) {
         std::string aligned_frames_filename = "/dev/null";
         std::string output_shift_text_file  = "/dev/null";
 
-        current_job_package.AddJob("ssfffbbfifbiifffbsbsfbfffbtbtiiiibttii", current_filename.c_str( ), //0
+        current_job_package.AddJob("ssfffbbfifbiifffbsbsfbfffbtbtiiiibttiibiiiibfbff", current_filename.c_str( ), //0
                                    output_filename.ToUTF8( ).data( ),
                                    current_pixel_size,
                                    float(minimum_shift),
@@ -706,7 +706,17 @@ void MyAlignMoviesPanel::StartAlignmentClick(wxCommandEvent& event) {
                                    aligned_frames_filename.c_str( ),
                                    output_shift_text_file.c_str( ),
                                    current_eer_frames_per_image,
-                                   current_eer_super_res_factor);
+                                   current_eer_super_res_factor,
+                                   true,
+                                   0,
+                                   0,
+                                   1060,
+                                   1060,
+                                   true,
+                                   0.1,
+                                   true,
+                                   0.0,
+                                   0.0);
 
         my_progress_dialog->Update(counter + 1);
     }
@@ -880,7 +890,7 @@ void MyAlignMoviesPanel::ProcessResult(JobResult* result_to_process) // this wil
     // ok the result should be x-shifts, followed by y-shifts..
     //WriteInfoText(wxString::Format("Job #%i finished.", job_number));
 
-    number_of_frames = result_to_process->result_size / 2;
+    number_of_frames = (result_to_process->result_size - 4) / 2;
 
     if ( current_time - time_of_last_graph_update > 1 ) {
         GraphPanel->ClearGraph( );
@@ -1001,14 +1011,14 @@ void MyAlignMoviesPanel::WriteResultToDataBase( ) {
 
     // loop over all the jobs, and add them..
 
-    main_frame->current_project.database.BeginBatchInsert("MOVIE_ALIGNMENT_LIST", 22, "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "OUTPUT_FILE", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK", "SHOULD_INCLUDE_ALL_FRAMES_IN_SUM", "FIRST_FRAME_TO_SUM", "LAST_FRAME_TO_SUM");
+    main_frame->current_project.database.BeginBatchInsert("MOVIE_ALIGNMENT_LIST", 26, "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "OUTPUT_FILE", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK", "SHOULD_INCLUDE_ALL_FRAMES_IN_SUM", "FIRST_FRAME_TO_SUM", "LAST_FRAME_TO_SUM", "ORIGINAL_X_SIZE", "ORIGINAL_Y_SIZE", "CROP_CENTER_X", "CROP_CENTER_Y");
 
     wxDateTime now = wxDateTime::Now( );
 
     OneSecondProgressDialog* my_progress_dialog = new OneSecondProgressDialog("Write Results", "Writing results to the database...", my_job_tracker.total_number_of_jobs * 3, this, wxPD_APP_MODAL);
 
     for ( counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++ ) {
-        main_frame->current_project.database.AddToBatchInsert("iliitrrrrrriiriiiiiiii", alignment_id,
+        main_frame->current_project.database.AddToBatchInsert("iliitrrrrrriiriiiiiiiiiiii", alignment_id,
                                                               (long int)now.GetAsDOS( ),
                                                               alignment_job_id,
                                                               movie_asset_panel->ReturnAssetID(active_group.members[counter]),
@@ -1029,7 +1039,11 @@ void MyAlignMoviesPanel::WriteResultToDataBase( ) {
                                                               current_job_package.jobs[counter].arguments[12].ReturnIntegerArgument( ), // vertical mask
                                                               include_all_frames_checkbox->GetValue( ), // include all frames
                                                               current_job_package.jobs[counter].arguments[29].ReturnIntegerArgument( ), // first_frame
-                                                              current_job_package.jobs[counter].arguments[30].ReturnIntegerArgument( ) // last_frame
+                                                              current_job_package.jobs[counter].arguments[30].ReturnIntegerArgument( ), // last_frame
+                                                              static_cast<int>(buffered_results[counter].result_data[buffered_results[counter].result_size - 4]), //origin x size
+                                                              static_cast<int>(buffered_results[counter].result_data[buffered_results[counter].result_size - 3]), //original y size
+                                                              static_cast<int>(buffered_results[counter].result_data[buffered_results[counter].result_size - 2]), // crop x
+                                                              static_cast<int>(buffered_results[counter].result_data[buffered_results[counter].result_size - 1]) // crop y
         );
 
         alignment_id++;
@@ -1048,8 +1062,8 @@ void MyAlignMoviesPanel::WriteResultToDataBase( ) {
         main_frame->current_project.database.CreateTable(current_table_name, "prr", "FRAME_NUMBER", "X_SHIFT", "Y_SHIFT");
         main_frame->current_project.database.BeginBatchInsert(current_table_name, 3, "FRAME_NUMBER", "X_SHIFT", "Y_SHIFT");
 
-        for ( frame_counter = 0; frame_counter < buffered_results[counter].result_size / 2; frame_counter++ ) {
-            main_frame->current_project.database.AddToBatchInsert("irr", frame_counter + 1, buffered_results[counter].result_data[frame_counter], buffered_results[counter].result_data[frame_counter + buffered_results[counter].result_size / 2]);
+        for ( frame_counter = 0; frame_counter < (buffered_results[counter].result_size - 4) / 2; frame_counter++ ) {
+            main_frame->current_project.database.AddToBatchInsert("irr", frame_counter + 1, buffered_results[counter].result_data[frame_counter], buffered_results[counter].result_data[frame_counter + (buffered_results[counter].result_size - 4) / 2]);
         }
 
         main_frame->current_project.database.EndBatchInsert( );
@@ -1061,7 +1075,7 @@ void MyAlignMoviesPanel::WriteResultToDataBase( ) {
     // now that unblur actually checked the file, we have an accurate number of frames for each movie
     int number_of_frames_for_current_movie;
     for ( counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++ ) {
-        number_of_frames_for_current_movie = buffered_results[counter].result_size / 2;
+        number_of_frames_for_current_movie = (buffered_results[counter].result_size - 4) / 2;
         main_frame->current_project.database.UpdateNumberOfFramesForAMovieAsset(movie_asset_panel->ReturnAssetID(active_group.members[counter]), number_of_frames_for_current_movie);
         movie_asset_panel->all_assets_list->ReturnMovieAssetPointer(active_group.members[counter])->number_of_frames = number_of_frames_for_current_movie;
     }
@@ -1083,8 +1097,8 @@ void MyAlignMoviesPanel::WriteResultToDataBase( ) {
             // work out the corrected pixel size
             // so the bin amount, might not be exactly the specified amount, as it is fixed by integer resizing of the image.
 
-            x_bin_factor       = float(movie_asset_panel->all_assets_list->ReturnMovieAssetPointer(active_group.members[counter])->x_size) / float(temp_asset.x_size);
-            y_bin_factor       = float(movie_asset_panel->all_assets_list->ReturnMovieAssetPointer(active_group.members[counter])->y_size) / float(temp_asset.y_size);
+            x_bin_factor       = float(movie_asset_panel->all_assets_list->ReturnMovieAssetPointer(active_group.members[counter])->x_size) / buffered_results[counter].result_data[buffered_results[counter].result_size - 4];
+            y_bin_factor       = float(movie_asset_panel->all_assets_list->ReturnMovieAssetPointer(active_group.members[counter])->y_size) / buffered_results[counter].result_data[buffered_results[counter].result_size - 3];
             average_bin_factor = (x_bin_factor + y_bin_factor) / 2.0;
 
             corrected_pixel_size = current_job_package.jobs[counter].arguments[2].ReturnFloatArgument( ) * average_bin_factor;
@@ -1114,7 +1128,10 @@ void MyAlignMoviesPanel::WriteResultToDataBase( ) {
                 temp_asset.spherical_aberration = movie_asset_panel->ReturnAssetSphericalAbberation(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_id));
                 temp_asset.protein_is_white     = movie_asset_panel->ReturnAssetProteinIsWhite(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_id));
                 image_asset_panel->AddAsset(&temp_asset);
-                main_frame->current_project.database.AddNextImageAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath( ), temp_asset.position_in_stack, temp_asset.parent_id, alignment_id, -1, temp_asset.x_size, temp_asset.y_size, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.spherical_aberration, temp_asset.protein_is_white);
+                main_frame->current_project.database.AddNextImageAsset(temp_asset.asset_id, temp_asset.asset_name, temp_asset.filename.GetFullPath( ), temp_asset.position_in_stack, temp_asset.parent_id, alignment_id, -1, temp_asset.x_size, temp_asset.y_size, temp_asset.microscope_voltage, temp_asset.pixel_size, temp_asset.spherical_aberration, temp_asset.protein_is_white, static_cast<int>(buffered_results[counter].result_data[buffered_results[counter].result_size - 4]),
+                                                                       static_cast<int>(buffered_results[counter].result_data[buffered_results[counter].result_size - 3]),
+                                                                       static_cast<int>(buffered_results[counter].result_data[buffered_results[counter].result_size - 2]),
+                                                                       static_cast<int>(buffered_results[counter].result_data[buffered_results[counter].result_size - 1]));
             }
             else { // TODO:: Rewrite this to use return asset pointer..//
                 reinterpret_cast<ImageAsset*>(image_asset_panel->all_assets_list->assets)[array_location].filename             = current_job_package.jobs[counter].arguments[1].ReturnStringArgument( );
@@ -1137,7 +1154,11 @@ void MyAlignMoviesPanel::WriteResultToDataBase( ) {
                                                                        reinterpret_cast<ImageAsset*>(image_asset_panel->all_assets_list->assets)[array_location].microscope_voltage,
                                                                        reinterpret_cast<ImageAsset*>(image_asset_panel->all_assets_list->assets)[array_location].pixel_size,
                                                                        reinterpret_cast<ImageAsset*>(image_asset_panel->all_assets_list->assets)[array_location].spherical_aberration,
-                                                                       reinterpret_cast<ImageAsset*>(image_asset_panel->all_assets_list->assets)[array_location].protein_is_white);
+                                                                       reinterpret_cast<ImageAsset*>(image_asset_panel->all_assets_list->assets)[array_location].protein_is_white,
+                                                                       static_cast<int>(buffered_results[counter].result_data[buffered_results[counter].result_size - 4]),
+                                                                       static_cast<int>(buffered_results[counter].result_data[buffered_results[counter].result_size - 3]),
+                                                                       static_cast<int>(buffered_results[counter].result_data[buffered_results[counter].result_size - 2]),
+                                                                       static_cast<int>(buffered_results[counter].result_data[buffered_results[counter].result_size - 1]));
 
                 image_asset_panel->current_asset_number++;
             }

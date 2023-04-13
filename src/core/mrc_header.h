@@ -152,6 +152,7 @@ class MRCHeader {
     void SetNumberOfVolumes(int wanted_number_of_volumes);
     void SetDensityStatistics(float wanted_min, float wanted_max, float wanted_mean, float wanted_rms);
     void SetOrigin(float wanted_x, float wanted_y, float wanted_z);
+    void SetMode(int wanted_mode);
 
     inline float BytesPerPixel( ) { return bytes_per_pixel; };
 

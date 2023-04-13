@@ -179,7 +179,7 @@ class Database {
     void UpdateNumberOfFramesForAMovieAsset(int movie_asset_id, int new_number_of_frames);
 
     void BeginImageAssetInsert( );
-    void AddNextImageAsset(int image_asset_id, wxString name, wxString filename, int position_in_stack, int parent_movie_id, int alignment_id, int ctf_estimation_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration, int protein_is_white);
+    void AddNextImageAsset(int image_asset_id, wxString name, wxString filename, int position_in_stack, int parent_movie_id, int alignment_id, int ctf_estimation_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration, int protein_is_white, int original_x_size = 0, int original_y_size = 0, int crop_center_x = 0, int crop_center_y = 0);
 
     void EndImageAssetInsert( ) { EndBatchInsert( ); };
 

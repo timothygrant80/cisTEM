@@ -62,6 +62,18 @@ void UnBlurApp::DoInteractiveUserInput( ) {
     int   eer_frames_per_image = 0;
     int   eer_super_res_factor = 1;
 
+    bool align_on_cropped_area = false; // Should Unblur only align on a subarea of the movie
+    int  cropped_area_center_x = 0; // Center of the subarea, expressed as offset from image center
+    int  cropped_area_center_y = 0; // Center of the subarea, expressed as offset from image center
+    int  cropped_area_size_x   = -1; // Size of the subarea, -1 means the half of image dimension
+    int  cropped_area_size_y   = -1; // Size of the subarea, -1 means the half of image dimension
+
+    bool  replace_dark_areas_with_gaussian_noise       = false;
+    float threshold_for_gaussian_noise                 = 0.0;
+    bool  measure_mean_and_variance_for_gaussian_noise = true;
+    float variance_for_gaussian_noise                  = 0.0;
+    float mean_for_gaussian_noise                      = 0.0;
+
     bool save_aligned_frames;
 
     UserInput* my_input = new UserInput("Unblur", 2.0);
@@ -183,7 +195,7 @@ void UnBlurApp::DoInteractiveUserInput( ) {
     bool        write_out_small_sum_image    = false;
     std::string small_sum_image_filename     = "/dev/null";
 
-    my_current_job.ManualSetArguments("ttfffbbfifbiifffbsbsfbfffbtbtiiiibttii", input_filename.c_str( ),
+    my_current_job.ManualSetArguments("ttfffbbfifbiifffbsbsfbfffbtbtiiiibttiibiiiibfbff", input_filename.c_str( ),
                                       output_filename.c_str( ),
                                       original_pixel_size,
                                       minimum_shift_in_angstroms,
@@ -220,7 +232,17 @@ void UnBlurApp::DoInteractiveUserInput( ) {
                                       aligned_frames_filename.c_str( ),
                                       output_shift_text_file.c_str( ),
                                       eer_frames_per_image,
-                                      eer_super_res_factor);
+                                      eer_super_res_factor,
+                                      align_on_cropped_area,
+                                      cropped_area_center_x,
+                                      cropped_area_center_y,
+                                      cropped_area_size_x,
+                                      cropped_area_size_y,
+                                      replace_dark_areas_with_gaussian_noise,
+                                      threshold_for_gaussian_noise,
+                                      measure_mean_and_variance_for_gaussian_noise,
+                                      mean_for_gaussian_noise,
+                                      variance_for_gaussian_noise);
 }
 
 // overide the do calculation method which will be what is actually run..
@@ -242,44 +264,54 @@ bool UnBlurApp::DoCalculation( ) {
 
     // get the arguments for this job..
 
-    std::string input_filename                       = my_current_job.arguments[0].ReturnStringArgument( );
-    std::string output_filename                      = my_current_job.arguments[1].ReturnStringArgument( );
-    float       original_pixel_size                  = my_current_job.arguments[2].ReturnFloatArgument( );
-    float       minumum_shift_in_angstroms           = my_current_job.arguments[3].ReturnFloatArgument( );
-    float       maximum_shift_in_angstroms           = my_current_job.arguments[4].ReturnFloatArgument( );
-    bool        should_dose_filter                   = my_current_job.arguments[5].ReturnBoolArgument( );
-    bool        should_restore_power                 = my_current_job.arguments[6].ReturnBoolArgument( );
-    float       termination_threshold_in_angstoms    = my_current_job.arguments[7].ReturnFloatArgument( );
-    int         max_iterations                       = my_current_job.arguments[8].ReturnIntegerArgument( );
-    float       bfactor_in_angstoms                  = my_current_job.arguments[9].ReturnFloatArgument( );
-    bool        should_mask_central_cross            = my_current_job.arguments[10].ReturnBoolArgument( );
-    int         horizontal_mask_size                 = my_current_job.arguments[11].ReturnIntegerArgument( );
-    int         vertical_mask_size                   = my_current_job.arguments[12].ReturnIntegerArgument( );
-    float       acceleration_voltage                 = my_current_job.arguments[13].ReturnFloatArgument( );
-    float       exposure_per_frame                   = my_current_job.arguments[14].ReturnFloatArgument( );
-    float       pre_exposure_amount                  = my_current_job.arguments[15].ReturnFloatArgument( );
-    bool        movie_is_gain_corrected              = my_current_job.arguments[16].ReturnBoolArgument( );
-    wxString    gain_filename                        = my_current_job.arguments[17].ReturnStringArgument( );
-    bool        movie_is_dark_corrected              = my_current_job.arguments[18].ReturnBoolArgument( );
-    wxString    dark_filename                        = my_current_job.arguments[19].ReturnStringArgument( );
-    float       output_binning_factor                = my_current_job.arguments[20].ReturnFloatArgument( );
-    bool        correct_mag_distortion               = my_current_job.arguments[21].ReturnBoolArgument( );
-    float       mag_distortion_angle                 = my_current_job.arguments[22].ReturnFloatArgument( );
-    float       mag_distortion_major_scale           = my_current_job.arguments[23].ReturnFloatArgument( );
-    float       mag_distortion_minor_scale           = my_current_job.arguments[24].ReturnFloatArgument( );
-    bool        write_out_amplitude_spectrum         = my_current_job.arguments[25].ReturnBoolArgument( );
-    std::string amplitude_spectrum_filename          = my_current_job.arguments[26].ReturnStringArgument( );
-    bool        write_out_small_sum_image            = my_current_job.arguments[27].ReturnBoolArgument( );
-    std::string small_sum_image_filename             = my_current_job.arguments[28].ReturnStringArgument( );
-    int         first_frame                          = my_current_job.arguments[29].ReturnIntegerArgument( );
-    int         last_frame                           = my_current_job.arguments[30].ReturnIntegerArgument( );
-    int         number_of_frames_for_running_average = my_current_job.arguments[31].ReturnIntegerArgument( );
-    int         max_threads                          = my_current_job.arguments[32].ReturnIntegerArgument( );
-    bool        saved_aligned_frames                 = my_current_job.arguments[33].ReturnBoolArgument( );
-    std::string aligned_frames_filename              = my_current_job.arguments[34].ReturnStringArgument( );
-    std::string output_shift_text_file               = my_current_job.arguments[35].ReturnStringArgument( );
-    int         eer_frames_per_image                 = my_current_job.arguments[36].ReturnIntegerArgument( );
-    int         eer_super_res_factor                 = my_current_job.arguments[37].ReturnIntegerArgument( );
+    std::string input_filename                               = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string output_filename                              = my_current_job.arguments[1].ReturnStringArgument( );
+    float       original_pixel_size                          = my_current_job.arguments[2].ReturnFloatArgument( );
+    float       minumum_shift_in_angstroms                   = my_current_job.arguments[3].ReturnFloatArgument( );
+    float       maximum_shift_in_angstroms                   = my_current_job.arguments[4].ReturnFloatArgument( );
+    bool        should_dose_filter                           = my_current_job.arguments[5].ReturnBoolArgument( );
+    bool        should_restore_power                         = my_current_job.arguments[6].ReturnBoolArgument( );
+    float       termination_threshold_in_angstoms            = my_current_job.arguments[7].ReturnFloatArgument( );
+    int         max_iterations                               = my_current_job.arguments[8].ReturnIntegerArgument( );
+    float       bfactor_in_angstoms                          = my_current_job.arguments[9].ReturnFloatArgument( );
+    bool        should_mask_central_cross                    = my_current_job.arguments[10].ReturnBoolArgument( );
+    int         horizontal_mask_size                         = my_current_job.arguments[11].ReturnIntegerArgument( );
+    int         vertical_mask_size                           = my_current_job.arguments[12].ReturnIntegerArgument( );
+    float       acceleration_voltage                         = my_current_job.arguments[13].ReturnFloatArgument( );
+    float       exposure_per_frame                           = my_current_job.arguments[14].ReturnFloatArgument( );
+    float       pre_exposure_amount                          = my_current_job.arguments[15].ReturnFloatArgument( );
+    bool        movie_is_gain_corrected                      = my_current_job.arguments[16].ReturnBoolArgument( );
+    wxString    gain_filename                                = my_current_job.arguments[17].ReturnStringArgument( );
+    bool        movie_is_dark_corrected                      = my_current_job.arguments[18].ReturnBoolArgument( );
+    wxString    dark_filename                                = my_current_job.arguments[19].ReturnStringArgument( );
+    float       output_binning_factor                        = my_current_job.arguments[20].ReturnFloatArgument( );
+    bool        correct_mag_distortion                       = my_current_job.arguments[21].ReturnBoolArgument( );
+    float       mag_distortion_angle                         = my_current_job.arguments[22].ReturnFloatArgument( );
+    float       mag_distortion_major_scale                   = my_current_job.arguments[23].ReturnFloatArgument( );
+    float       mag_distortion_minor_scale                   = my_current_job.arguments[24].ReturnFloatArgument( );
+    bool        write_out_amplitude_spectrum                 = my_current_job.arguments[25].ReturnBoolArgument( );
+    std::string amplitude_spectrum_filename                  = my_current_job.arguments[26].ReturnStringArgument( );
+    bool        write_out_small_sum_image                    = my_current_job.arguments[27].ReturnBoolArgument( );
+    std::string small_sum_image_filename                     = my_current_job.arguments[28].ReturnStringArgument( );
+    int         first_frame                                  = my_current_job.arguments[29].ReturnIntegerArgument( );
+    int         last_frame                                   = my_current_job.arguments[30].ReturnIntegerArgument( );
+    int         number_of_frames_for_running_average         = my_current_job.arguments[31].ReturnIntegerArgument( );
+    int         max_threads                                  = my_current_job.arguments[32].ReturnIntegerArgument( );
+    bool        saved_aligned_frames                         = my_current_job.arguments[33].ReturnBoolArgument( );
+    std::string aligned_frames_filename                      = my_current_job.arguments[34].ReturnStringArgument( );
+    std::string output_shift_text_file                       = my_current_job.arguments[35].ReturnStringArgument( );
+    int         eer_frames_per_image                         = my_current_job.arguments[36].ReturnIntegerArgument( );
+    int         eer_super_res_factor                         = my_current_job.arguments[37].ReturnIntegerArgument( );
+    bool        align_on_cropped_area                        = my_current_job.arguments[38].ReturnBoolArgument( );
+    int         cropped_area_center_x                        = my_current_job.arguments[39].ReturnIntegerArgument( );
+    int         cropped_area_center_y                        = my_current_job.arguments[40].ReturnIntegerArgument( );
+    int         cropped_area_size_x                          = my_current_job.arguments[41].ReturnIntegerArgument( );
+    int         cropped_area_size_y                          = my_current_job.arguments[42].ReturnIntegerArgument( );
+    bool        replace_dark_areas_with_gaussian_noise       = my_current_job.arguments[43].ReturnBoolArgument( );
+    float       threshold_for_gaussian_noise                 = my_current_job.arguments[44].ReturnFloatArgument( );
+    bool        measure_mean_and_variance_for_gaussian_noise = my_current_job.arguments[45].ReturnBoolArgument( );
+    float       mean_for_gaussian_noise                      = my_current_job.arguments[46].ReturnFloatArgument( );
+    float       variance_for_gaussian_noise                  = my_current_job.arguments[47].ReturnFloatArgument( );
 
     if ( is_running_locally == false )
         max_threads = number_of_threads_requested_on_command_line; // OVERRIDE FOR THE GUI, AS IT HAS TO BE SET ON THE COMMAND LINE...
@@ -341,6 +373,7 @@ bool UnBlurApp::DoCalculation( ) {
     long slice_byte_size;
 
     Image* unbinned_image_stack; // We will allocate this later depending on if we are binning or not.
+    Image* cropped_image_stack;
     Image* image_stack = new Image[number_of_input_images];
     Image* running_average_stack; // we will allocate this later if necessary;
 
@@ -419,7 +452,6 @@ bool UnBlurApp::DoCalculation( ) {
     }
 
     // Read in, gain-correct, FFT and resample all the images..
-
     unblur_timing.start("read frames");
     // big loop over number of threads, so that far large number of frames you might save some memory..
 
@@ -519,9 +551,15 @@ bool UnBlurApp::DoCalculation( ) {
     if ( pre_binning_factor > 1 ) {
         unbinned_image_stack = image_stack;
         image_stack          = new Image[number_of_input_images];
-        pixel_size           = output_pixel_size * pre_binning_factor;
+        if ( align_on_cropped_area ) {
+            cropped_image_stack = new Image[number_of_input_images];
+        }
+        pixel_size = output_pixel_size * pre_binning_factor;
     }
     else {
+        if ( align_on_cropped_area ) {
+            cropped_image_stack = new Image[number_of_input_images];
+        }
         pixel_size = output_pixel_size;
     }
 
@@ -542,8 +580,28 @@ bool UnBlurApp::DoCalculation( ) {
         profile_timing.start("make prebinned stack");
 #pragma omp parallel for default(shared) num_threads(max_threads) private(image_counter)
         for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
-            image_stack[image_counter].Allocate(unbinned_image_stack[image_counter].logical_x_dimension / pre_binning_factor, unbinned_image_stack[image_counter].logical_y_dimension / pre_binning_factor, 1, false);
-            unbinned_image_stack[image_counter].ClipInto(&image_stack[image_counter]);
+            if ( align_on_cropped_area ) {
+                if ( cropped_area_size_x < 0 ) {
+                    cropped_area_size_x = unbinned_image_stack[image_counter].logical_x_dimension / 2;
+                }
+                if ( cropped_area_size_y < 0 ) {
+                    cropped_area_size_y = unbinned_image_stack[image_counter].logical_y_dimension / 2;
+                }
+                cropped_image_stack[image_counter].Allocate(cropped_area_size_x, cropped_area_size_y, 1, true);
+                unbinned_image_stack[image_counter].BackwardFFT( );
+                unbinned_image_stack[image_counter].ClipInto(&cropped_image_stack[image_counter], 0.0F, false, 1.0F, cropped_area_center_x, cropped_area_center_y);
+
+                unbinned_image_stack[image_counter].ForwardFFT( );
+                cropped_image_stack[image_counter].ForwardFFT( );
+                cropped_image_stack[image_counter].ZeroCentralPixel( );
+
+                image_stack[image_counter].Allocate(cropped_image_stack[image_counter].logical_x_dimension / pre_binning_factor, cropped_image_stack[image_counter].logical_y_dimension / pre_binning_factor, 1, false);
+                cropped_image_stack[image_counter].ClipInto(&image_stack[image_counter]);
+            }
+            else {
+                image_stack[image_counter].Allocate(unbinned_image_stack[image_counter].logical_x_dimension / pre_binning_factor, unbinned_image_stack[image_counter].logical_y_dimension / pre_binning_factor, 1, false);
+                unbinned_image_stack[image_counter].ClipInto(&image_stack[image_counter]);
+            }
             //image_stack[image_counter].QuickAndDirtyWriteSlice("binned.mrc", image_counter + 1);
         }
         profile_timing.lap("make prebinned stack");
@@ -551,6 +609,25 @@ bool UnBlurApp::DoCalculation( ) {
 
         if ( termination_threshold_in_pixels < 1 && pre_binning_factor > 1 )
             termination_threshold_in_pixels = 1;
+    }
+    else {
+        if ( align_on_cropped_area ) {
+            if ( cropped_area_size_x < 0 ) {
+                cropped_area_size_x = unbinned_image_stack[image_counter].logical_x_dimension / 2;
+            }
+            if ( cropped_area_size_y < 0 ) {
+                cropped_area_size_y = unbinned_image_stack[image_counter].logical_y_dimension / 2;
+            }
+            cropped_image_stack[image_counter].Allocate(cropped_area_size_x, cropped_area_size_y, 1, true);
+            image_stack[image_counter].BackwardFFT( );
+            image_stack[image_counter].ClipInto(&cropped_image_stack[image_counter], 0.0F, false, 1.0F, cropped_area_center_x, cropped_area_center_y);
+
+            image_stack[image_counter].ForwardFFT( );
+            cropped_image_stack[image_counter].ForwardFFT( );
+            cropped_image_stack[image_counter].ZeroCentralPixel( );
+            unbinned_image_stack = image_stack; // Use unbinned_image_stack to store uncropped image stack
+            image_stack          = cropped_image_stack;
+        }
     }
 
     // do the initial refinement (only 1 round - with the min shift)
@@ -568,16 +645,20 @@ bool UnBlurApp::DoCalculation( ) {
     unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts, profile_timing_refinement_method);
     unblur_timing.lap("main refine");
     profile_timing.lap("main refine");
-
     // if we have been using pre-binning, we need to do a refinment on the unbinned data..
     unblur_timing.start("final refine");
     if ( pre_binning_factor > 1 ) {
         // we don't need the binned images anymore..
 
         delete[] image_stack;
-        image_stack = unbinned_image_stack;
-        pixel_size  = output_pixel_size;
-
+        // delete [] cropped_image_stack;
+        if ( align_on_cropped_area ) {
+            image_stack = cropped_image_stack;
+        }
+        else {
+            image_stack = unbinned_image_stack;
+        }
+        pixel_size = output_pixel_size;
         // Adjust the shifts, then phase shift the original images
         profile_timing.start("apply shifts 1");
 #pragma omp parallel for default(shared) num_threads(max_threads) private(image_counter)
@@ -605,9 +686,18 @@ bool UnBlurApp::DoCalculation( ) {
         unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, output_pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts, profile_timing_refinement_method);
         profile_timing.lap("final refine");
         // if allocated delete the binned stack, and swap the unbinned to image_stack - so that no matter what is happening we can just use image_stack
+        delete[] cropped_image_stack;
+        if ( align_on_cropped_area ) {
+            image_stack = unbinned_image_stack;
+
+#pragma omp parallel for default(shared) num_threads(max_threads) private(image_counter)
+            for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+
+                image_stack[image_counter].PhaseShift(x_shifts[image_counter], y_shifts[image_counter], 0.0);
+            }
+        }
     }
     unblur_timing.lap("final refine");
-
     // we should be finished with alignment, now we just need to make the final sum..
 
     sum_image.Allocate(image_stack[0].logical_x_dimension, image_stack[0].logical_y_dimension, false);
@@ -678,6 +768,7 @@ bool UnBlurApp::DoCalculation( ) {
 
         } // end omp section
         profile_timing.start("final sum");
+
         for ( image_counter = first_frame - 1; image_counter < last_frame; image_counter++ ) {
             sum_image.AddImage(&image_stack[image_counter]);
 
@@ -690,6 +781,7 @@ bool UnBlurApp::DoCalculation( ) {
     else // just add them
     {
         profile_timing.start("final sum");
+
         for ( image_counter = first_frame - 1; image_counter < last_frame; image_counter++ ) {
             sum_image.AddImage(&image_stack[image_counter]);
 
@@ -711,7 +803,6 @@ bool UnBlurApp::DoCalculation( ) {
         }
         profile_timing.lap("restore power");
     }
-
     // do we need to write out the amplitude spectra
 
     if ( write_out_amplitude_spectrum == true ) {
@@ -789,6 +880,16 @@ bool UnBlurApp::DoCalculation( ) {
 
     //  Shall we write out a scaled image?
 
+    sum_image.BackwardFFT( );
+    float                original_x    = sum_image.logical_x_dimension;
+    float                original_y    = sum_image.logical_y_dimension;
+    std::tuple<int, int> crop_location = {0, 0};
+    if ( replace_dark_areas_with_gaussian_noise ) {
+        std::string mask_filename = output_filename.substr(0, output_filename.size( ) - 4) + "_mask.mrc";
+        crop_location             = sum_image.CropAndAddGaussianNoiseToDarkAreas(0.01, threshold_for_gaussian_noise, 20, 0.01, measure_mean_and_variance_for_gaussian_noise, variance_for_gaussian_noise, mean_for_gaussian_noise, true, mask_filename);
+    }
+
+    sum_image.ForwardFFT( );
     if ( write_out_small_sum_image == true ) {
         profile_timing.start("write out small sum image");
         // work out a good size..
@@ -806,8 +907,10 @@ bool UnBlurApp::DoCalculation( ) {
 
     // now we just need to write out the final sum..
     profile_timing.start("write out sum image");
-    MRCFile output_file(output_filename, true);
+
     sum_image.BackwardFFT( );
+    MRCFile output_file(output_filename, true);
+
     sum_image.WriteSlice(&output_file, 1); // I made this change as the file is only used once, and this way it is not created until it is actually written, which is cleaner for cancelled / crashed jobs
     output_file.SetPixelSize(output_pixel_size);
     EmpiricalDistribution density_distribution;
@@ -815,11 +918,11 @@ bool UnBlurApp::DoCalculation( ) {
     output_file.SetDensityStatistics(density_distribution.GetMinimum( ), density_distribution.GetMaximum( ), density_distribution.GetSampleMean( ), sqrtf(density_distribution.GetSampleVariance( )));
     output_file.CloseFile( );
     profile_timing.lap("write out sum image");
-
     // fill the result..
 
     profile_timing.start("fill result");
-    float* result_array = new float[number_of_input_images * 2];
+
+    float* result_array = new float[number_of_input_images * 2 + 4];
 
     if ( is_running_locally == true ) {
         NumericTextFile shifts_file(output_shift_text_file, OPEN_TO_WRITE, 2);
@@ -839,11 +942,17 @@ bool UnBlurApp::DoCalculation( ) {
             result_array[image_counter]                          = x_shifts[image_counter] * output_pixel_size;
             result_array[image_counter + number_of_input_images] = y_shifts[image_counter] * output_pixel_size;
         }
+        result_array[2 * number_of_input_images]     = original_x;
+        result_array[2 * number_of_input_images + 1] = original_y;
+        result_array[2 * number_of_input_images + 2] = static_cast<float>(std::get<0>(crop_location));
+        result_array[2 * number_of_input_images + 3] = static_cast<float>(std::get<1>(crop_location));
     }
 
-    my_result.SetResult(number_of_input_images * 2, result_array);
     profile_timing.lap("fill result");
     profile_timing.start("cleanup");
+
+    my_result.SetResult(number_of_input_images * 2 + 4, result_array);
+
     delete[] result_array;
     delete[] x_shifts;
     delete[] y_shifts;

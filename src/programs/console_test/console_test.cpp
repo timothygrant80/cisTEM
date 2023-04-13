@@ -531,6 +531,8 @@ void MyTestApp::TestStarToBinaryFileConversion( ) {
         temp_line.total_exposure                     = global_random_number_generator.GetUniformRandom( ) * 100;
         temp_line.x_shift                            = global_random_number_generator.GetUniformRandom( ) * 50;
         temp_line.y_shift                            = global_random_number_generator.GetUniformRandom( ) * 50;
+        temp_line.original_x_position                = global_random_number_generator.GetUniformRandom( ) * 4000;
+        temp_line.original_y_position                = global_random_number_generator.GetUniformRandom( ) * 4000;
 
         test_parameters.all_parameters.Add(temp_line);
     }

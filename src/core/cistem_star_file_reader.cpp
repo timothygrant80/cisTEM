@@ -76,6 +76,8 @@ void cisTEMStarFileReader::ResetColumnPositions( ) {
     original_image_filename_column            = -1;
     reference_3d_filename_column              = -1;
     stack_filename_column                     = -1;
+    original_x_position_column                = -1;
+    original_y_position_column                = -1;
 }
 
 cisTEMStarFileReader::~cisTEMStarFileReader( ) {
@@ -604,6 +606,36 @@ bool cisTEMStarFileReader::ExtractParametersFromLine(wxString& wanted_line, wxSt
         temp_parameters.total_exposure = float(temp_double);
     }
 
+    // original x position
+
+    if ( original_x_position_column == -1 )
+        temp_parameters.original_x_position = 0.0f;
+    else {
+        if ( all_tokens[original_x_position_column].ToDouble(&temp_double) == false ) {
+            MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[original_x_position_column]);
+            if ( error_string != NULL )
+                *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[original_x_position_column]);
+            return false;
+        }
+
+        temp_parameters.original_x_position = float(temp_double);
+    }
+
+    // original y position
+
+    if ( original_y_position_column == -1 )
+        temp_parameters.original_y_position = 0.0f;
+    else {
+        if ( all_tokens[original_y_position_column].ToDouble(&temp_double) == false ) {
+            MyPrintWithDetails("Error: Converting to a number (%s)\n", all_tokens[original_y_position_column]);
+            if ( error_string != NULL )
+                *error_string = wxString::Format("Error: Converting to a number (%s)\n", all_tokens[original_y_position_column]);
+            return false;
+        }
+
+        temp_parameters.original_y_position = float(temp_double);
+    }
+
     // stack filename
 
     if ( stack_filename_column == -1 )
@@ -899,6 +931,18 @@ bool cisTEMStarFileReader::ReadTextFile(wxString wanted_filename, wxString* erro
                 wxPrintf("Warning :: _cisTEMTotalExposure occurs more than once. I will take the last occurrence\n");
             total_exposure_column                    = current_column;
             parameters_that_were_read.total_exposure = true;
+        }
+        else if ( current_line.StartsWith("_cisTEMOriginalXPosition") == true ) {
+            if ( original_x_position_column != -1 )
+                wxPrintf("Warning :: _cisTEMOriginalXPosition occurs more than once. I will take the last occurrence\n");
+            original_x_position_column                    = current_column;
+            parameters_that_were_read.original_x_position = true;
+        }
+        else if ( current_line.StartsWith("_cisTEMOriginalYPosition") == true ) {
+            if ( original_y_position_column != -1 )
+                wxPrintf("Warning :: _cisTEMOriginalYPosition occurs more than once. I will take the last occurrence\n");
+            original_y_position_column                    = current_column;
+            parameters_that_were_read.original_y_position = true;
         }
         else if ( current_line.StartsWith("_cisTEMReference3DFilename ") == true ) {
             if ( reference_3d_filename_column != -1 )
@@ -1233,6 +1277,18 @@ bool cisTEMStarFileReader::ReadBinaryFile(wxString wanted_filename, ArrayOfcisTE
             total_exposure_column                    = current_column;
             parameters_that_were_read.total_exposure = true;
         }
+        else if ( column_order_buffer[current_column] == ORIGINAL_X_POSITION ) {
+            if ( original_x_position_column != -1 )
+                wxPrintf("Warning :: _cisTEMOriginalXPosition occurs more than once. I will take the last occurrence\n");
+            original_x_position_column                    = current_column;
+            parameters_that_were_read.original_x_position = true;
+        }
+        else if ( column_order_buffer[current_column] == ORIGINAL_Y_POSITION ) {
+            if ( original_y_position_column != -1 )
+                wxPrintf("Warning :: _cisTEMOriginalYPosition occurs more than once. I will take the last occurrence\n");
+            original_y_position_column                    = current_column;
+            parameters_that_were_read.original_y_position = true;
+        }
         else if ( column_order_buffer[current_column] == REFERENCE_3D_FILENAME ) {
             if ( reference_3d_filename_column != -1 )
                 wxPrintf("Warning :: _cisTEMReference3DFilename occurs more than once. I will take the last occurrence\n");
@@ -1456,6 +1512,14 @@ bool cisTEMStarFileReader::ReadBinaryFile(wxString wanted_filename, ArrayOfcisTE
             }
             else if ( column_order_buffer[current_column] == TOTAL_EXPOSURE ) {
                 if ( SafelyReadFromBinaryBufferIntoFloat(temp_parameters.total_exposure) == false )
+                    return false;
+            }
+            else if ( column_order_buffer[current_column] == ORIGINAL_X_POSITION ) {
+                if ( SafelyReadFromBinaryBufferIntoFloat(temp_parameters.original_x_position) == false )
+                    return false;
+            }
+            else if ( column_order_buffer[current_column] == ORIGINAL_Y_POSITION ) {
+                if ( SafelyReadFromBinaryBufferIntoFloat(temp_parameters.original_y_position) == false )
                     return false;
             }
             else // We do not recongnize this column type

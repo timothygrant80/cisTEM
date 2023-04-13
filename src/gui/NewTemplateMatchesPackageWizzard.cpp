@@ -71,7 +71,7 @@ void NewTemplateMatchesPackageWizard::PageChanged(wxWizardEvent& event) {
 
 void NewTemplateMatchesPackageWizard::OnFinished(wxWizardEvent& event) {
     cisTEMParameters output_params;
-    output_params.parameters_to_write.SetActiveParameters(PSI | THETA | PHI | X_SHIFT | Y_SHIFT | DEFOCUS_1 | DEFOCUS_2 | DEFOCUS_ANGLE | SCORE | MICROSCOPE_VOLTAGE | MICROSCOPE_CS | AMPLITUDE_CONTRAST | BEAM_TILT_X | BEAM_TILT_Y | IMAGE_SHIFT_X | IMAGE_SHIFT_Y | ORIGINAL_IMAGE_FILENAME | PIXEL_SIZE);
+    output_params.parameters_to_write.SetActiveParameters(PSI | THETA | PHI | ORIGINAL_X_POSITION | ORIGINAL_Y_POSITION | DEFOCUS_1 | DEFOCUS_2 | DEFOCUS_ANGLE | SCORE | MICROSCOPE_VOLTAGE | MICROSCOPE_CS | AMPLITUDE_CONTRAST | BEAM_TILT_X | BEAM_TILT_Y | IMAGE_SHIFT_X | IMAGE_SHIFT_Y | ORIGINAL_IMAGE_FILENAME | PIXEL_SIZE);
     output_params.PreallocateMemoryAndBlank(num_selected_matches);
 
     long     match_counter = 0;
@@ -97,8 +97,8 @@ void NewTemplateMatchesPackageWizard::OnFinished(wxWizardEvent& event) {
             output_params.all_parameters[match_counter].defocus_angle                      = defocus_angle;
             output_params.all_parameters[match_counter].phase_shift                        = additional_phase_shift;
             more_data                                                                      = main_frame->current_project.database.GetFromBatchSelect("rrrrrrr", &x_shift, &y_shift, &psi, &theta, &phi, &defocus, &score);
-            output_params.all_parameters[match_counter].x_shift                            = x_shift;
-            output_params.all_parameters[match_counter].y_shift                            = y_shift;
+            output_params.all_parameters[match_counter].original_x_position                = x_shift;
+            output_params.all_parameters[match_counter].original_y_position                = y_shift;
             output_params.all_parameters[match_counter].psi                                = psi;
             output_params.all_parameters[match_counter].theta                              = theta;
             output_params.all_parameters[match_counter].phi                                = phi;

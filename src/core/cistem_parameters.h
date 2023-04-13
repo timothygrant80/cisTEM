@@ -76,6 +76,8 @@ class cisTEMParameterLine {
     int          assigned_subset; // used for example to assign particles to half-datasets, half-maps for the purposes of FSCs
     float        pre_exposure;
     float        total_exposure;
+    float        original_x_position;
+    float        original_y_position;
 
     //void SwapPsiAndPhi(); shouldn't need
     void Add(cisTEMParameterLine& line_to_add);
@@ -126,6 +128,8 @@ class cisTEMParameterMask {
     bool assigned_subset;
     bool pre_exposure;
     bool total_exposure;
+    bool original_x_position;
+    bool original_y_position;
 
     void SetAllToTrue( );
     void SetAllToFalse( );
@@ -250,6 +254,10 @@ class cisTEMParameters {
     inline float ReturnPreExposure(int line_number) { return all_parameters.Item(line_number).pre_exposure; }
 
     inline float ReturnTotalExposure(int line_number) { return all_parameters.Item(line_number).total_exposure; }
+
+    inline float ReturnOriginalXPosition(int line_number) { return all_parameters.Item(line_number).original_x_position; }
+
+    inline float ReturnOriginalYPosition(int line_number) { return all_parameters.Item(line_number).original_y_position; }
 
     float ReturnAverageSigma(bool exclude_negative_film_numbers = false);
     float ReturnAverageOccupancy(bool exclude_negative_film_numbers = false);

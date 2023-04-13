@@ -978,8 +978,8 @@ void MyNewRefinementPackageWizard::OnFinished(wxWizardEvent& event) {
 
             position_in_stack++;
 
-            current_x_pos = myround(import_parameters.all_parameters[counter].x_shift / import_parameters.all_parameters[counter].pixel_size) - current_image.physical_address_of_box_center_x;
-            current_y_pos = myround(import_parameters.all_parameters[counter].y_shift / import_parameters.all_parameters[counter].pixel_size) - current_image.physical_address_of_box_center_y;
+            current_x_pos = myround(import_parameters.all_parameters[counter].original_x_position / import_parameters.all_parameters[counter].pixel_size) - current_image.physical_address_of_box_center_x;
+            current_y_pos = myround(import_parameters.all_parameters[counter].original_y_position / import_parameters.all_parameters[counter].pixel_size) - current_image.physical_address_of_box_center_y;
             MyDebugPrint("Cutting particle at %i, %i\n", current_x_pos, current_y_pos);
 
             current_image.ClipInto(&cut_particle, average_value_at_edges, false, 1.0, current_x_pos, current_y_pos, 0);
@@ -997,8 +997,8 @@ void MyNewRefinementPackageWizard::OnFinished(wxWizardEvent& event) {
             temp_particle_info.defocus_angle                       = import_parameters.all_parameters[counter].defocus_angle;
             temp_particle_info.phase_shift                         = import_parameters.all_parameters[counter].phase_shift;
             temp_particle_info.amplitude_contrast                  = import_parameters.all_parameters[counter].amplitude_contrast;
-            temp_particle_info.x_pos                               = import_parameters.all_parameters[counter].x_shift;
-            temp_particle_info.y_pos                               = import_parameters.all_parameters[counter].y_shift;
+            temp_particle_info.x_pos                               = import_parameters.all_parameters[counter].original_x_position;
+            temp_particle_info.y_pos                               = import_parameters.all_parameters[counter].original_y_position;
             temp_particle_info.original_particle_position_asset_id = counter;
 
             temp_particle_info.defocus_1 = import_parameters.all_parameters[counter].defocus_1;

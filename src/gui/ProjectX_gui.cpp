@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Oct 26 2018)
+// C++ code generated with wxFormBuilder (version 3.10.0-4761b0c)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO *NOT* EDIT THIS FILE!
@@ -6304,8 +6304,6 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 
 	ExpertPanel = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxSize( -1,-1 ), wxVSCROLL );
 	ExpertPanel->SetScrollRate( 5, 5 );
-	ExpertPanel->Hide();
-
 	InputSizer = new wxBoxSizer( wxVERTICAL );
 
 	wxFlexGridSizer* fgSizer1;
@@ -6379,7 +6377,7 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	m_staticText47->Wrap( -1 );
 	fgSizer1->Add( m_staticText47, 0, wxALL, 5 );
 
-	max_iterations_spinctrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 50, 10 );
+	max_iterations_spinctrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 50, 1 );
 	fgSizer1->Add( max_iterations_spinctrl, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText48 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Filter"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -6395,7 +6393,7 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	m_staticText49->Wrap( -1 );
 	fgSizer1->Add( m_staticText49, 0, wxALL, 5 );
 
-	bfactor_spinctrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 5000, 1500 );
+	bfactor_spinctrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 5000, 1422 );
 	fgSizer1->Add( bfactor_spinctrl, 0, wxALL|wxEXPAND, 5 );
 
 	mask_central_cross_checkbox = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Mask Central Cross?"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -6452,6 +6450,55 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	SaveScaledSumCheckbox = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Also Save Scaled Sum?"), wxDefaultPosition, wxDefaultSize, 0 );
 	SaveScaledSumCheckbox->SetValue(true);
 	fgSizer1->Add( SaveScaledSumCheckbox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	m_staticText4811 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Condensed Beam"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText4811->Wrap( -1 );
+	m_staticText4811->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxEmptyString ) );
+
+	fgSizer1->Add( m_staticText4811, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	AlignCroppedAreaCheckbox1 = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Align using a cropped area?"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer1->Add( AlignCroppedAreaCheckbox1, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	size_x_static_text1 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tSize X (Pixels) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	size_x_static_text1->Wrap( -1 );
+	fgSizer1->Add( size_x_static_text1, 0, wxALL, 5 );
+
+	first_frame_spin_ctrl1 = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -1, 10000, -1 );
+	fgSizer1->Add( first_frame_spin_ctrl1, 0, wxALL, 5 );
+
+	size_x_static_text11 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tSize Y (Pixels) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	size_x_static_text11->Wrap( -1 );
+	fgSizer1->Add( size_x_static_text11, 0, wxALL, 5 );
+
+	first_frame_spin_ctrl11 = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, -1, 10000, -1 );
+	fgSizer1->Add( first_frame_spin_ctrl11, 0, wxALL, 5 );
+
+	size_x_static_text12 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tCenter X (Pixels) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	size_x_static_text12->Wrap( -1 );
+	fgSizer1->Add( size_x_static_text12, 0, wxALL, 5 );
+
+	first_frame_spin_ctrl12 = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 10000, 0 );
+	fgSizer1->Add( first_frame_spin_ctrl12, 0, wxALL, 5 );
+
+	size_x_static_text13 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tCenter Y (Pixels) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	size_x_static_text13->Wrap( -1 );
+	fgSizer1->Add( size_x_static_text13, 0, wxALL, 5 );
+
+	first_frame_spin_ctrl13 = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 10000, 0 );
+	fgSizer1->Add( first_frame_spin_ctrl13, 0, wxALL, 5 );
+
+	CropBeamCheckbox11 = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Crop to illuminated area?"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer1->Add( CropBeamCheckbox11, 0, wxALL, 5 );
 
 
 	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
@@ -11030,6 +11077,7 @@ RefineTemplateDevPanelParent::~RefineTemplateDevPanelParent()
 NewProjectWizard::NewProjectWizard( wxWindow* parent, wxWindowID id, const wxString& title, const wxBitmap& bitmap, const wxPoint& pos, long style )
 {
 	this->Create( parent, id, title, bitmap, pos, style );
+
 	this->SetSizeHints( wxSize( 500,350 ), wxDefaultSize );
 
 	wxWizardPageSimple* m_wizPage1 = new wxWizardPageSimple( this );
@@ -11112,6 +11160,7 @@ NewProjectWizard::~NewProjectWizard()
 CombineRefinementPackagesWizardParent::CombineRefinementPackagesWizardParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxBitmap& bitmap, const wxPoint& pos, long style )
 {
 	this->Create( parent, id, title, bitmap, pos, style );
+
 	this->SetSizeHints( wxSize( -1,-1 ), wxSize( -1,-1 ) );
 
 
@@ -11137,6 +11186,7 @@ CombineRefinementPackagesWizardParent::~CombineRefinementPackagesWizardParent()
 ExportRefinementPackageWizardParent::ExportRefinementPackageWizardParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxBitmap& bitmap, const wxPoint& pos, long style )
 {
 	this->Create( parent, id, title, bitmap, pos, style );
+
 	this->SetSizeHints( wxSize( 700,400 ), wxDefaultSize );
 
 	wxWizardPageSimple* ChooseParamsPage = new wxWizardPageSimple( this );
@@ -11294,6 +11344,7 @@ ExportRefinementPackageWizardParent::~ExportRefinementPackageWizardParent()
 ImportRefinementPackageWizardParent::ImportRefinementPackageWizardParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxBitmap& bitmap, const wxPoint& pos, long style )
 {
 	this->Create( parent, id, title, bitmap, pos, style );
+
 	this->SetSizeHints( wxSize( 700,400 ), wxDefaultSize );
 
 	wxWizardPageSimple* ImportTypePage = new wxWizardPageSimple( this );
@@ -11694,6 +11745,7 @@ RenameDialog::~RenameDialog()
 NewRefinementPackageWizard::NewRefinementPackageWizard( wxWindow* parent, wxWindowID id, const wxString& title, const wxBitmap& bitmap, const wxPoint& pos, long style )
 {
 	this->Create( parent, id, title, bitmap, pos, style );
+
 	this->SetSizeHints( wxSize( -1,-1 ), wxDefaultSize );
 
 

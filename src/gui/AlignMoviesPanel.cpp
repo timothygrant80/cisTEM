@@ -524,6 +524,13 @@ void MyAlignMoviesPanel::StartAlignmentClick(wxCommandEvent& event) {
     float mag_distortion_major_axis_scale;
     float mag_distortion_minor_axis_scale;
 
+    bool align_on_cropped;
+    int  align_crop_size_x;
+    int  align_crop_size_y;
+    int  align_crop_center_x;
+    int  align_crop_center_y;
+    bool crop_and_fill_with_noise;
+
     // read the options form the gui..
 
     // min_shift
@@ -575,6 +582,12 @@ void MyAlignMoviesPanel::StartAlignmentClick(wxCommandEvent& event) {
         last_frame  = last_frame_spin_ctrl->GetValue( );
     }
 
+    align_on_cropped         = AlignCroppedAreaCheckbox1->GetValue( );
+    align_crop_size_x        = first_frame_spin_ctrl1->GetValue( );
+    align_crop_size_y        = first_frame_spin_ctrl11->GetValue( );
+    align_crop_center_x      = first_frame_spin_ctrl12->GetValue( );
+    align_crop_center_y      = first_frame_spin_ctrl13->GetValue( );
+    crop_and_fill_with_noise = CropBeamCheckbox11->GetValue( );
     // allocate space for the buffered results..
 
     buffered_results = new JobResult[number_of_jobs];
@@ -707,12 +720,12 @@ void MyAlignMoviesPanel::StartAlignmentClick(wxCommandEvent& event) {
                                    output_shift_text_file.c_str( ),
                                    current_eer_frames_per_image,
                                    current_eer_super_res_factor,
-                                   true,
-                                   0,
-                                   0,
-                                   1060,
-                                   1060,
-                                   true,
+                                   align_on_cropped,
+                                   align_crop_center_x,
+                                   align_crop_center_y,
+                                   align_crop_size_x,
+                                   align_crop_size_y,
+                                   crop_and_fill_with_noise,
                                    0.1,
                                    true,
                                    0.0,

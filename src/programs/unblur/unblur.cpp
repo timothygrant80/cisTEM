@@ -581,11 +581,12 @@ bool UnBlurApp::DoCalculation( ) {
 #pragma omp parallel for default(shared) num_threads(max_threads) private(image_counter)
         for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
             if ( align_on_cropped_area ) {
+                int smallest_dimension = std::min(unbinned_image_stack[image_counter].logical_x_dimension, unbinned_image_stack[image_counter].logical_y_dimension);
                 if ( cropped_area_size_x < 0 ) {
-                    cropped_area_size_x = unbinned_image_stack[image_counter].logical_x_dimension / 2;
+                    cropped_area_size_x = smallest_dimension / 2;
                 }
                 if ( cropped_area_size_y < 0 ) {
-                    cropped_area_size_y = unbinned_image_stack[image_counter].logical_y_dimension / 2;
+                    cropped_area_size_y = smallest_dimension / 2;
                 }
                 cropped_image_stack[image_counter].Allocate(cropped_area_size_x, cropped_area_size_y, 1, true);
                 unbinned_image_stack[image_counter].BackwardFFT( );
@@ -612,11 +613,12 @@ bool UnBlurApp::DoCalculation( ) {
     }
     else {
         if ( align_on_cropped_area ) {
+            int smallest_dimension = std::min(image_stack[image_counter].logical_x_dimension, image_stack[image_counter].logical_y_dimension);
             if ( cropped_area_size_x < 0 ) {
-                cropped_area_size_x = unbinned_image_stack[image_counter].logical_x_dimension / 2;
+                cropped_area_size_x = smallest_dimension / 2;
             }
             if ( cropped_area_size_y < 0 ) {
-                cropped_area_size_y = unbinned_image_stack[image_counter].logical_y_dimension / 2;
+                cropped_area_size_y = smallest_dimension / 2;
             }
             cropped_image_stack[image_counter].Allocate(cropped_area_size_x, cropped_area_size_y, 1, true);
             image_stack[image_counter].BackwardFFT( );
@@ -629,7 +631,7 @@ bool UnBlurApp::DoCalculation( ) {
             image_stack          = cropped_image_stack;
         }
     }
-
+    MyDebugPrint("Aligning on %i x %i images", image_stack[0].logical_x_dimension, image_stack[0].logical_y_dimension);
     // do the initial refinement (only 1 round - with the min shift)
     unblur_timing.start("initial refine");
     profile_timing.start("initial refine");

@@ -99,7 +99,7 @@ bool RefineTemplateDevApp::DoCalculation( ) {
     float                   padding = 1.0f;
     arguments.recieve(my_current_job.arguments);
     input_matches.ReadFromcisTEMStarFile(arguments.input_starfile);
-    input_matches.parameters_to_write.SetActiveParameters(PSI | THETA | PHI | X_SHIFT | Y_SHIFT | DEFOCUS_1 | DEFOCUS_2 | DEFOCUS_ANGLE | SCORE | MICROSCOPE_VOLTAGE | MICROSCOPE_CS | AMPLITUDE_CONTRAST | BEAM_TILT_X | BEAM_TILT_Y | IMAGE_SHIFT_X | IMAGE_SHIFT_Y | ORIGINAL_IMAGE_FILENAME | SCORE_CHANGE | PIXEL_SIZE);
+    input_matches.parameters_to_write.SetActiveParameters(PSI | THETA | PHI | ORIGINAL_X_POSITION | ORIGINAL_Y_POSITION | DEFOCUS_1 | DEFOCUS_2 | DEFOCUS_ANGLE | SCORE | MICROSCOPE_VOLTAGE | MICROSCOPE_CS | AMPLITUDE_CONTRAST | BEAM_TILT_X | BEAM_TILT_Y | IMAGE_SHIFT_X | IMAGE_SHIFT_Y | ORIGINAL_IMAGE_FILENAME | SCORE_CHANGE | PIXEL_SIZE);
 
     // Read template
     input_template_file.OpenFile(arguments.input_template, false);
@@ -174,8 +174,7 @@ bool RefineTemplateDevApp::DoCalculation( ) {
             windowed_particle.Allocate(input_template_file.ReturnXSize( ), input_template_file.ReturnXSize( ), true);
             projection_filter.Allocate(input_template_file.ReturnXSize( ), input_template_file.ReturnXSize( ), false);
             padded_reference.CopyFrom(&current_image);
-            //padded_reference.RealSpaceIntegerShift(input_matches.all_parameters[match_id].x_shift / input_matches.all_parameters[match_id].pixel_size, input_matches.all_parameters[match_id].y_shift / input_matches.all_parameters[match_id].pixel_size);
-            padded_reference.ClipInto(&windowed_particle, 0.0f, false, 1.0f, input_matches.all_parameters[match_id].x_shift / input_matches.all_parameters[match_id].pixel_size - current_image.physical_address_of_box_center_x, input_matches.all_parameters[match_id].y_shift / input_matches.all_parameters[match_id].pixel_size - current_image.physical_address_of_box_center_y);
+            padded_reference.ClipInto(&windowed_particle, 0.0f, false, 1.0f, input_matches.all_parameters[match_id].original_x_position / input_matches.all_parameters[match_id].pixel_size - current_image.physical_address_of_box_center_x, input_matches.all_parameters[match_id].original_y_position / input_matches.all_parameters[match_id].pixel_size - current_image.physical_address_of_box_center_y);
 
             windowed_particle.ForwardFFT( );
             windowed_particle.SwapRealSpaceQuadrants( );
@@ -208,8 +207,8 @@ bool RefineTemplateDevApp::DoCalculation( ) {
             input_matches.all_parameters[match_id].psi          = result_array[2];
             input_matches.all_parameters[match_id].score        = -y * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension);
             input_matches.all_parameters[match_id].score_change = input_matches.all_parameters[match_id].score - starting_score;
-            input_matches.all_parameters[match_id].x_shift += comparison_object.result_peak.x * input_matches.all_parameters[match_id].pixel_size;
-            input_matches.all_parameters[match_id].y_shift += comparison_object.result_peak.y * input_matches.all_parameters[match_id].pixel_size;
+            input_matches.all_parameters[match_id].original_x_position += comparison_object.result_peak.x * input_matches.all_parameters[match_id].pixel_size;
+            input_matches.all_parameters[match_id].original_y_position += comparison_object.result_peak.y * input_matches.all_parameters[match_id].pixel_size;
             input_matches.all_parameters[match_id].defocus_1 += result_array[3];
             input_matches.all_parameters[match_id].defocus_2 += result_array[3];
         }

@@ -103,6 +103,7 @@ class
     void TestDatabase( );
     void TestRunProfileDiskOperations( );
     void TestCTFNodes( );
+    void TestSpectrumImageMethods( );
 
     void BeginTest(const char* test_name);
     void EndTest( );
@@ -160,6 +161,7 @@ bool MyTestApp::DoCalculation( ) {
     TestIntegerShifts( );
     TestRunProfileDiskOperations( );
     TestCTFNodes( );
+    TestSpectrumImageMethods( );
 
     wxPrintf("\n\n\n");
 
@@ -1851,6 +1853,31 @@ void MyTestApp::TestCTFNodes( ) {
     float min, max;
     ctf_curve1.GetYMinMax(min, max);
     if ( min < -0.001f || max > 0.001f ) {
+        FailTest;
+    }
+
+    EndTest( );
+}
+
+void MyTestApp::TestSpectrumImageMethods( ) {
+    BeginTest("Spectrum Image Methods");
+    // FindRotationalAlignmentBetweenTwoStacksOfImages
+    SpectrumImage test_image = SpectrumImage( );
+    test_image.Allocate(512, 512, 1);
+    test_image.SetToConstant(1.0f);
+
+    // CTF with an astigmatisim angle of 25.0
+    CTF ctf1(300, 2.7, 0.07, 10000, 15000, 25.0, 1.0, 0.0);
+
+    test_image.GeneratePowerspectrum(ctf1);
+
+    Image temp_image;
+    temp_image.CopyFrom(&test_image);
+    temp_image.ApplyMirrorAlongY( );
+
+    float estimated_astigmatism_angle = 0.5 * test_image.FindRotationalAlignmentBetweenTwoStacksOfImages(&temp_image, 1, 90.0, 5.0, 0.1, 0.5);
+
+    if ( fabs(estimated_astigmatism_angle - 25.0) > 5.1 ) {
         FailTest;
     }
 

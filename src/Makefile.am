@@ -3,6 +3,7 @@ noinst_HEADERS = core/asset_group.h \
                  core/defines.h \
                  core/functions.h \
                  core/image.h \
+                 core/spectrum_image.h \
                  core/mrc_file.h \
                  core/mrc_header.h \
                  core/dm_file.h \
@@ -286,6 +287,7 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/asset_group.cpp \
                        core/curve.cpp \
                        core/image.cpp \
+                       core/spectrum_image.cpp \
                        core/electron_dose.cpp \
                        core/matrix.cpp \
                        core/symmetry_matrix.cpp \

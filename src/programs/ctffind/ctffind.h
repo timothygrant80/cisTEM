@@ -118,7 +118,6 @@ float CtffindCurveObjectiveFunction(void* scoring_parameters, float array_of_val
 
 float DilatePowerspectrumToNewPixelSize(bool resample_if_pixel_too_small, float pixel_size_of_input_image, float target_pixel_size_after_resampling,
                                         int box_size, Image* current_power_spectrum, Image* resampled_power_spectrum, bool do_resampling = true, float stretch_factor = 1.0f);
-float FindRotationalAlignmentBetweenTwoStacksOfImages(Image* self, Image* other_image, int number_of_images, float search_half_range, float search_step_size, float minimum_radius, float maximum_radius);
 void  ComputeImagesWithNumberOfExtremaAndCTFValues(CTF* ctf, Image* number_of_extrema, Image* ctf_values);
 int   ReturnSpectrumBinNumber(int number_of_bins, float number_of_extrema_profile[], Image* number_of_extrema, long address, Image* ctf_values, float ctf_values_profile[]);
 void  ComputeRotationalAverageOfPowerSpectrum(Image* spectrum, CTF* ctf, Image* number_of_extrema, Image* ctf_values, int number_of_bins, double spatial_frequency[], double average[], double average_fit[], double average_renormalized[], float number_of_extrema_profile[], float ctf_values_profile[]);

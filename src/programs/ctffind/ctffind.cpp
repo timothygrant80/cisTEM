@@ -1511,7 +1511,7 @@ bool CtffindApp::DoCalculation( ) {
             // Replace the old curve with EPA values
             {
                 float current_sq_sf;
-                float azimuth_for_1d_plots         = ReturnAzimuthToUseFor1DPlots(current_ctf);
+                float azimuth_for_1d_plots         = current_ctf->ReturnAzimuthToUseFor1DPlots( );
                 float defocus_for_1d_plots         = current_ctf->DefocusGivenAzimuth(azimuth_for_1d_plots);
                 float sq_sf_of_phase_shift_maximum = current_ctf->ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(defocus_for_1d_plots);
                 for ( counter = 1; counter < number_of_bins_in_1d_spectra; counter++ ) {

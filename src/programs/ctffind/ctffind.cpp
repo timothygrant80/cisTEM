@@ -650,7 +650,7 @@ bool CtffindApp::DoCalculation( ) {
     int                 number_of_movie_frames;
     int                 number_of_micrographs;
     ImageFile           input_file;
-    Image*              average_spectrum        = new Image( );
+    SpectrumImage*      average_spectrum        = new SpectrumImage( );
     Image*              average_spectrum_masked = new Image( );
     wxString            output_text_fn;
     ProgressBar*        my_progress_bar;
@@ -1070,7 +1070,7 @@ bool CtffindApp::DoCalculation( ) {
                 temp_image->CopyFrom(average_spectrum);
                 temp_image->ApplyMirrorAlongY( );
                 //temp_image.QuickAndDirtyWriteSlice("dbg_spec_y.mrc",1);
-                estimated_astigmatism_angle = 0.5 * FindRotationalAlignmentBetweenTwoStacksOfImages(average_spectrum, temp_image, 1, 90.0, 5.0, pixel_size_for_fitting / minimum_resolution, pixel_size_for_fitting / std::max(maximum_resolution, maximum_resolution_for_initial_search));
+                estimated_astigmatism_angle = 0.5 * average_spectrum->FindRotationalAlignmentBetweenTwoStacksOfImages(temp_image, 1, 90.0, 5.0, pixel_size_for_fitting / minimum_resolution, pixel_size_for_fitting / std::max(maximum_resolution, maximum_resolution_for_initial_search));
                 profile_timing.lap("Estimate initial astigmatism");
             }
 

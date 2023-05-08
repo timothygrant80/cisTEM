@@ -612,3 +612,32 @@ void CTF::ChangePixelSize(float old_pixel_size, float new_pixel_size) {
     squared_wavelength = powf(wavelength, 2);
     cubed_wavelength   = powf(wavelength, 3);
 }
+
+float CTF::ReturnAzimuthToUseFor1DPlots( ) {
+    const float min_angular_distances_from_axes_radians = 10.0 / 180.0 * PIf;
+    float       azimuth_of_mid_defocus;
+    float       angular_distance_from_axes;
+
+    // We choose the azimuth to be mid way between the two defoci of the astigmatic CTF
+    azimuth_of_mid_defocus = this->GetAstigmatismAzimuth( ) + PIf * 0.25f;
+    // We don't want the azimuth too close to the axes, which may have been blanked by the central-cross-artefact-suppression-system (tm)
+    angular_distance_from_axes = fmod(azimuth_of_mid_defocus, PIf * 0.5f);
+    if ( fabs(angular_distance_from_axes) < min_angular_distances_from_axes_radians ) {
+        if ( angular_distance_from_axes > 0.0f ) {
+            azimuth_of_mid_defocus = min_angular_distances_from_axes_radians;
+        }
+        else {
+            azimuth_of_mid_defocus = -min_angular_distances_from_axes_radians;
+        }
+    }
+    if ( fabs(angular_distance_from_axes) > 0.5f * PIf - min_angular_distances_from_axes_radians ) {
+        if ( angular_distance_from_axes > 0.0 ) {
+            azimuth_of_mid_defocus = PIf * 0.5f - min_angular_distances_from_axes_radians;
+        }
+        else {
+            azimuth_of_mid_defocus = -PIf * 0.5f + min_angular_distances_from_axes_radians;
+        }
+    }
+
+    return azimuth_of_mid_defocus;
+}

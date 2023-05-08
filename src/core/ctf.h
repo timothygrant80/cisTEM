@@ -167,4 +167,5 @@ class CTF {
     float ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(float defocus);
     float ReturnPhaseAberrationMaximum( );
     float ReturnPhaseAberrationMaximumGivenDefocus(float defocus);
+    float ReturnAzimuthToUseFor1DPlots( );
 };

@@ -389,7 +389,7 @@ applyctf_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 applyctf_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 applyctf_LDADD = libcore.a $(WX_LIBS_BASE)
 
-ctffind_SOURCES = programs/ctffind/ctffind.cpp programs/ctffind/ctffind_image_ctf_comparison.cpp programs/ctffind/ctffind_objective_functions.cpp programs/ctffind/ctffind_tilt.cpp programs/ctffind/ctffind_utils.cpp
+ctffind_SOURCES = programs/ctffind/ctffind.cpp programs/ctffind/ctffind_image_ctf_comparison.cpp programs/ctffind/ctffind_objective_functions.cpp programs/ctffind/ctffind_tilt.cpp
 ctffind_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_LDADD = libcore.a $(WX_LIBS_BASE)

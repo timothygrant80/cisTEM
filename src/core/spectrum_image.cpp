@@ -1,68 +1,5 @@
 #include "core_headers.h"
 
-int ReturnSpectrumBinNumber(int number_of_bins, float number_of_extrema_profile[], Image* number_of_extrema, long address, Image* ctf_values, float ctf_values_profile[]) {
-    int   current_bin;
-    float diff_number_of_extrema;
-    float diff_number_of_extrema_previous;
-    float diff_number_of_extrema_next;
-    float ctf_diff_from_current_bin;
-    float ctf_diff_from_current_bin_old;
-    int   chosen_bin;
-    //
-    //MyDebugPrint("address: %li - number of extrema: %f - ctf_value: %f\n", address, number_of_extrema->real_values[address], ctf_values->real_values[address]);
-    MyDebugAssertTrue(address < number_of_extrema->real_memory_allocated, "Oops, bad address: %li\n", address);
-    // Let's find the bin which has the same number of preceding extrema and the most similar ctf value
-    ctf_diff_from_current_bin = std::numeric_limits<float>::max( );
-    chosen_bin                = -1;
-    for ( current_bin = 0; current_bin < number_of_bins; current_bin++ ) {
-        diff_number_of_extrema = fabs(number_of_extrema->real_values[address] - number_of_extrema_profile[current_bin]);
-        if ( current_bin > 0 ) {
-            diff_number_of_extrema_previous = fabs(number_of_extrema->real_values[address] - number_of_extrema_profile[current_bin - 1]);
-        }
-        else {
-            diff_number_of_extrema_previous = std::numeric_limits<float>::max( );
-        }
-        if ( current_bin < number_of_bins - 1 ) {
-            diff_number_of_extrema_next = fabs(number_of_extrema->real_values[address] - number_of_extrema_profile[current_bin + 1]);
-        }
-        else {
-            diff_number_of_extrema_next = std::numeric_limits<float>::max( );
-        }
-        //
-        if ( number_of_extrema->real_values[address] > number_of_extrema_profile[number_of_bins - 1] ) {
-            chosen_bin = number_of_bins - 1;
-        }
-        else {
-            if ( diff_number_of_extrema <= 0.01 || (diff_number_of_extrema < diff_number_of_extrema_previous &&
-                                                    diff_number_of_extrema <= diff_number_of_extrema_next &&
-                                                    number_of_extrema_profile[std::max(current_bin - 1, 0)] != number_of_extrema_profile[std::min(current_bin + 1, number_of_bins - 1)]) ) {
-                // We're nearly there
-                // Let's look for the position for the nearest CTF value
-                ctf_diff_from_current_bin_old = ctf_diff_from_current_bin;
-                ctf_diff_from_current_bin     = fabs(ctf_values->real_values[address] - ctf_values_profile[current_bin]);
-                if ( ctf_diff_from_current_bin < ctf_diff_from_current_bin_old ) {
-                    //MyDebugPrint("new chosen bin: %i\n",current_bin);
-                    chosen_bin = current_bin;
-                }
-            }
-        }
-    }
-    if ( chosen_bin == -1 ) {
-        //TODO: return false
-#ifdef DEBUG
-        MyPrintfRed("Could not find bin\n");
-        DEBUG_ABORT;
-#endif
-    }
-    else {
-        //MyDebugAssertTrue(chosen_bin > 0 && chosen_bin < number_of_bins,"Oops, bad chosen bin number: %i (number of bins = %i)\n",chosen_bin,number_of_bins);
-        //MyDebugPrint("final chosen bin = %i\n", chosen_bin);
-        return chosen_bin;
-    }
-
-    return -1;
-}
-
 // Align rotationally a (stack) of image(s) against another image. Return the rotation angle that gives the best normalised cross-correlation.
 float SpectrumImage::FindRotationalAlignmentBetweenTwoStacksOfImages(Image* other_image, int number_of_images, float search_half_range, float search_step_size, float minimum_radius, float maximum_radius) {
     MyDebugAssertTrue(this[0].is_in_memory, "Memory not allocated");
@@ -382,3 +319,353 @@ void SpectrumImage::ComputeRotationalAverageOfPowerSpectrum(CTF* ctf, Image* num
         MyDebugAssertFalse(std::isnan(average_rank[counter]), "AverageRank is NaN for bin %i\n", counter);
     }
 }
+
+// Rescale the spectrum and its 1D rotational avereage so that the peaks and troughs are at 0.0 and 1.0. The location of peaks and troughs are worked out
+// by parsing the suppilied 1D average_fit array
+void SpectrumImage::RescaleSpectrumAndRotationalAverage(Image* number_of_extrema, Image* ctf_values, int number_of_bins, double spatial_frequency[], double average[], double average_fit[], float number_of_extrema_profile[], float ctf_values_profile[], int last_bin_without_aliasing, int last_bin_with_good_fit) {
+    MyDebugAssertTrue(this->is_in_memory, "Spectrum memory not allocated");
+    MyDebugAssertTrue(number_of_bins > 1, "Bad number of bins: %i\n", number_of_bins);
+
+    //
+    const bool spectrum_is_blank               = this->IsConstant( );
+    const int  rescale_based_on_maximum_number = 2; // This peak will be used as a renormalization.
+    const int  sg_width                        = 7;
+    const int  sg_order                        = 2;
+    const bool rescale_peaks                   = false; // if this is false, only the background will be subtracted, the Thon rings "heights" will be unaffected
+    float      background[number_of_bins];
+    float      peak[number_of_bins];
+    int        bin_counter;
+    bool       at_a_maximum, at_a_minimum, maximum_at_previous_bin, minimum_at_previous_bin;
+    int        location_of_previous_maximum, location_of_previous_minimum;
+    int        current_maximum_number = 0;
+    int        normalisation_bin_number;
+    int        i;
+    int        j;
+    bool       actually_do_rescaling;
+    int        chosen_bin;
+    long       address;
+    int        last_bin_to_rescale;
+    float      min_scale_factor;
+    float      scale_factor;
+    float      rescale_peaks_to;
+
+    Curve* minima_curve = new Curve;
+    Curve* maxima_curve = new Curve;
+
+    // Initialise arrays and variables
+    for ( bin_counter = 0; bin_counter < number_of_bins; bin_counter++ ) {
+        background[bin_counter] = 0.0;
+        peak[bin_counter]       = 0.0;
+    }
+    location_of_previous_maximum = 0;
+    location_of_previous_minimum = 0;
+    current_maximum_number       = 0;
+    at_a_maximum                 = false;
+    at_a_minimum                 = true; // Note, this may not be true if we have the perfect phase plate
+
+    //
+    if ( ! spectrum_is_blank ) {
+        for ( bin_counter = 1; bin_counter < number_of_bins - 1; bin_counter++ ) {
+            // Remember where we were before - minimum, maximum or neither
+            maximum_at_previous_bin = at_a_maximum;
+            minimum_at_previous_bin = at_a_minimum;
+            // Are we at a CTF min or max?
+            at_a_minimum = (average_fit[bin_counter] <= average_fit[bin_counter - 1]) && (average_fit[bin_counter] <= average_fit[bin_counter + 1]);
+            at_a_maximum = (average_fit[bin_counter] >= average_fit[bin_counter - 1]) && (average_fit[bin_counter] >= average_fit[bin_counter + 1]);
+            // It could be that the CTF is constant in this region, in which case we stay at a minimum if we were there
+            if ( at_a_maximum && at_a_minimum ) {
+                at_a_minimum = minimum_at_previous_bin;
+                at_a_maximum = maximum_at_previous_bin;
+            }
+            // Fill in values for the background or peak by linear interpolation
+            if ( at_a_minimum ) {
+                for ( i = location_of_previous_minimum + 1; i <= bin_counter; i++ ) {
+                    // Linear interpolation of average values at the peaks and troughs of the CTF
+                    background[i] = average[location_of_previous_minimum] * float(bin_counter - i) / float(bin_counter - location_of_previous_minimum) + average[bin_counter] * float(i - location_of_previous_minimum) / float(bin_counter - location_of_previous_minimum);
+                }
+                location_of_previous_minimum = bin_counter;
+                minima_curve->AddPoint(spatial_frequency[bin_counter], average[bin_counter]);
+            }
+            if ( at_a_maximum ) {
+                if ( (! maximum_at_previous_bin) && (average_fit[bin_counter] > 0.7) )
+                    current_maximum_number = current_maximum_number + 1;
+                for ( i = location_of_previous_maximum + 1; i <= bin_counter; i++ ) {
+                    // Linear interpolation of average values at the peaks and troughs of the CTF
+                    peak[i] = average[location_of_previous_maximum] * float(bin_counter - i) / float(bin_counter - location_of_previous_maximum) + average[bin_counter] * float(i - location_of_previous_maximum) / float(bin_counter - location_of_previous_maximum);
+                    //
+                    if ( current_maximum_number == rescale_based_on_maximum_number )
+                        normalisation_bin_number = bin_counter;
+                }
+                location_of_previous_maximum = bin_counter;
+                maxima_curve->AddPoint(spatial_frequency[bin_counter], average[bin_counter]);
+            }
+            if ( at_a_maximum && at_a_minimum ) {
+                MyPrintfRed("Rescale spectrum: Error. At a minimum and a maximum simultaneously.");
+                //TODO: return false instead
+                DEBUG_ABORT;
+            }
+        }
+
+        // Fit the minima and maximum curves using Savitzky-Golay smoothing
+        if ( maxima_curve->number_of_points > sg_width )
+            maxima_curve->FitSavitzkyGolayToData(sg_width, sg_order);
+        if ( minima_curve->number_of_points > sg_width )
+            minima_curve->FitSavitzkyGolayToData(sg_width, sg_order);
+
+        // Replace the background and peak envelopes with the smooth min/max curves
+        for ( bin_counter = 0; bin_counter < number_of_bins; bin_counter++ ) {
+            if ( minima_curve->number_of_points > sg_width )
+                background[bin_counter] = minima_curve->ReturnSavitzkyGolayInterpolationFromX(spatial_frequency[bin_counter]);
+            if ( maxima_curve->number_of_points > sg_width )
+                peak[bin_counter] = maxima_curve->ReturnSavitzkyGolayInterpolationFromX(spatial_frequency[bin_counter]);
+        }
+
+        // Now that we have worked out a background and a peak envelope, let's do the actual rescaling
+        actually_do_rescaling = (peak[normalisation_bin_number] - background[normalisation_bin_number]) > 0.0;
+        if ( last_bin_without_aliasing != 0 ) {
+            last_bin_to_rescale = std::min(last_bin_with_good_fit, last_bin_without_aliasing);
+        }
+        else {
+            last_bin_to_rescale = last_bin_with_good_fit;
+        }
+        if ( actually_do_rescaling ) {
+            min_scale_factor = 0.2;
+            rescale_peaks_to = 0.75;
+            address          = 0;
+            for ( j = 0; j < this->logical_y_dimension; j++ ) {
+                for ( i = 0; i < this->logical_x_dimension; i++ ) {
+                    chosen_bin = ReturnSpectrumBinNumber(number_of_bins, number_of_extrema_profile, number_of_extrema, address, ctf_values, ctf_values_profile);
+                    if ( chosen_bin >= 0 ) {
+                        if ( chosen_bin <= last_bin_to_rescale ) {
+                            this->real_values[address] -= background[chosen_bin]; // This alone makes the spectrum look very nice already
+                            if ( rescale_peaks )
+                                this->real_values[address] /= std::min(1.0f, std::max(min_scale_factor, peak[chosen_bin] - background[chosen_bin])) / rescale_peaks_to; // This is supposed to help "boost" weak Thon rings
+                        }
+                        else {
+                            this->real_values[address] -= background[last_bin_to_rescale];
+                            if ( rescale_peaks )
+                                this->real_values[address] /= std::min(1.0f, std::max(min_scale_factor, peak[last_bin_to_rescale] - background[last_bin_to_rescale])) / rescale_peaks_to;
+                        }
+                    }
+                    else {
+                        //TODO: return false
+                    }
+                    //
+                    address++;
+                }
+                address += this->padding_jump_value;
+            }
+        }
+        else {
+            MyDebugPrint("(RescaleSpectrumAndRotationalAverage) Warning: bad peak/background detection");
+        }
+
+        // Rescale the 1D average
+        if ( peak[normalisation_bin_number] > background[normalisation_bin_number] ) {
+            for ( bin_counter = 0; bin_counter < number_of_bins; bin_counter++ ) {
+
+                average[bin_counter] = (average[bin_counter] - background[bin_counter]) / (peak[normalisation_bin_number] - background[normalisation_bin_number]) * 0.95;
+                // We want peaks to reach at least 0.1
+                if ( ((peak[bin_counter] - background[bin_counter]) < 0.1) && (fabs(peak[bin_counter] - background[bin_counter]) > 0.000001) && bin_counter <= last_bin_without_aliasing ) {
+                    average[bin_counter] = average[bin_counter] / (peak[bin_counter] - background[bin_counter]) * (peak[normalisation_bin_number] - background[normalisation_bin_number]) * 0.1;
+                }
+            }
+        }
+        else {
+            MyDebugPrint("(RescaleSpectrumAndRotationalAverage): unable to rescale 1D average experimental spectrum\n");
+        }
+
+    } // end of test of spectrum_is_blank
+
+    // Cleanup
+    delete minima_curve;
+    delete maxima_curve;
+}
+
+/*
+ * Stretch or shrink the powerspectrum to maintain the same bix size, but represent a new physical pixel size (target_pixel_size_after_resampling).
+ * Returns the actual new pixel size, which might be sligthly different.
+ */
+float SpectrumImage::DilatePowerspectrumToNewPixelSize(bool resample_if_pixel_too_small, float pixel_size_of_input_image, float target_pixel_size_after_resampling,
+                                                       int box_size, Image* resampled_power_spectrum, bool do_resampling, float stretch_factor) {
+    int   temporary_box_size;
+    int   stretched_dimension;
+    float pixel_size_for_fitting;
+    bool  resampling_is_necessary;
+
+    Image temp_image;
+
+    // Resample the amplitude spectrum
+    if ( resample_if_pixel_too_small && pixel_size_of_input_image < target_pixel_size_after_resampling ) {
+        // The input pixel was too small, so let's resample the amplitude spectrum into a large temporary box, before clipping the center out for fitting
+        temporary_box_size = round(float(box_size) / pixel_size_of_input_image * target_pixel_size_after_resampling);
+        if ( IsOdd(temporary_box_size) )
+            temporary_box_size++;
+        resampling_is_necessary = this->logical_x_dimension != box_size || this->logical_y_dimension != box_size;
+        if ( do_resampling ) {
+            if ( resampling_is_necessary || stretch_factor != 1.0f ) {
+                stretched_dimension = myroundint(temporary_box_size * stretch_factor);
+                if ( IsOdd(stretched_dimension) )
+                    stretched_dimension++;
+                if ( fabsf(stretched_dimension - temporary_box_size * stretch_factor) > fabsf(stretched_dimension - 2 - temporary_box_size * stretch_factor) )
+                    stretched_dimension -= 2;
+
+                this->ForwardFFT(false);
+                resampled_power_spectrum->Allocate(stretched_dimension, stretched_dimension, 1, false);
+                this->ClipInto(resampled_power_spectrum);
+                resampled_power_spectrum->BackwardFFT( );
+                temp_image.Allocate(box_size, box_size, 1, true);
+                temp_image.SetToConstant(0.0); // To avoid valgrind uninitialised errors, but maybe this is a waste?
+                resampled_power_spectrum->ClipInto(&temp_image);
+                resampled_power_spectrum->Consume(&temp_image);
+            }
+            else {
+                resampled_power_spectrum->CopyFrom(this);
+            }
+        }
+        pixel_size_for_fitting = pixel_size_of_input_image * float(temporary_box_size) / float(box_size);
+    }
+    else {
+        // The regular way (the input pixel size was large enough)
+        resampling_is_necessary = this->logical_x_dimension != box_size || this->logical_y_dimension != box_size;
+        if ( do_resampling ) {
+            if ( resampling_is_necessary || stretch_factor != 1.0f ) {
+                stretched_dimension = myroundint(box_size * stretch_factor);
+                if ( IsOdd(stretched_dimension) )
+                    stretched_dimension++;
+                if ( fabsf(stretched_dimension - box_size * stretch_factor) > fabsf(stretched_dimension - 2 - box_size * stretch_factor) )
+                    stretched_dimension -= 2;
+
+                this->ForwardFFT(false);
+                resampled_power_spectrum->Allocate(stretched_dimension, stretched_dimension, 1, false);
+                this->ClipInto(resampled_power_spectrum);
+                resampled_power_spectrum->BackwardFFT( );
+                temp_image.Allocate(box_size, box_size, 1, true);
+                temp_image.SetToConstant(0.0); // To avoid valgrind uninitialised errors, but maybe this is a waste?
+                resampled_power_spectrum->ClipInto(&temp_image);
+                resampled_power_spectrum->Consume(&temp_image);
+            }
+            else {
+                resampled_power_spectrum->CopyFrom(this);
+            }
+        }
+        pixel_size_for_fitting = pixel_size_of_input_image;
+    }
+
+    return pixel_size_for_fitting;
+}
+
+/*
+ * Compute average value in power spectrum as a function of wave function aberration. This allows for averaging even when
+ * there is significant astigmatism.
+ * This should be nicer than counting zeros and looking for nearest CTF value as described in the original ctffind4 manuscript.
+ * Inspired by gctf and others, but I think more robust because it takes into account that the aberration decreases again at
+ * very high spatial frequencies, when Cs takes over from defocus.
+ */
+void SpectrumImage::ComputeEquiPhaseAverageOfPowerSpectrum(CTF* ctf, Curve* epa_pre_max, Curve* epa_post_max) {
+    MyDebugAssertTrue(this->is_in_memory, "Spectrum memory not allocated");
+
+    const bool spectrum_is_blank = this->IsConstant( );
+
+    const int  curve_oversampling_factor = 3;
+    const bool curve_x_is_linear         = true;
+
+    /*
+	 * Initialize the curve objects. One keeps track of EPA pre phase aberration maximum (before Cs term takes over), the other post.
+	 * In the case where we are overfocus (negative defocus value), the phase aberration starts at 0.0 at the origin
+	 * and just gets more and more negative
+	 *
+	 * This is one of the messiest parts of the code. I really need to come up with a cleaner way to decide how many points
+	 * to give each curve. This is a goldilocks problem: too few or too many both give worse curves and FRCs.
+	 */
+    if ( curve_x_is_linear ) {
+        float maximum_aberration_in_ctf            = ctf->ReturnPhaseAberrationMaximum( );
+        float maximum_sq_freq_in_spectrum          = powf(this->fourier_voxel_size_x * this->logical_lower_bound_complex_x, 2) + powf(this->fourier_voxel_size_y * this->logical_lower_bound_complex_y, 2);
+        float lowest_sq_freq_of_ctf_aberration_max = std::min(fabs(ctf->ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(ctf->GetDefocus1( ))),
+                                                              fabs(ctf->ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(ctf->GetDefocus2( ))));
+
+        float maximum_abs_aberration_in_spectrum = std::max(fabs(ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(maximum_sq_freq_in_spectrum, ctf->GetDefocus1( ))),
+                                                            fabs(ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(maximum_sq_freq_in_spectrum, ctf->GetDefocus2( ))));
+
+        /*
+		 * Minimum phase aberration might be 0.0 + additional_phase_shift (at the origin), or if the phase aberration function
+		 * peaks before Nyquist, it might be at the edge of the spectrum
+		 */
+        float minimum_aberration_in_ctf_at_edges = std::min(ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(maximum_sq_freq_in_spectrum, ctf->GetDefocus1( )),
+                                                            ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(maximum_sq_freq_in_spectrum, ctf->GetDefocus2( )));
+
+        // Watch out: messy heuristics
+        int number_of_points_pre_max  = std::max(2, myroundint(this->ReturnMaximumDiagonalRadius( ) * curve_oversampling_factor * maximum_aberration_in_ctf / maximum_abs_aberration_in_spectrum));
+        int number_of_points_post_max = std::max(2, myroundint(this->ReturnMaximumDiagonalRadius( ) * curve_oversampling_factor));
+
+        epa_pre_max->SetupXAxis(ctf->GetAdditionalPhaseShift( ), maximum_aberration_in_ctf, number_of_points_pre_max);
+        epa_post_max->SetupXAxis(std::min(maximum_aberration_in_ctf, minimum_aberration_in_ctf_at_edges - 0.5f * fabsf(minimum_aberration_in_ctf_at_edges)), maximum_aberration_in_ctf, number_of_points_post_max);
+    }
+    else {
+        MyDebugAssertTrue(false, "Not implemented");
+    }
+    epa_pre_max->SetYToConstant(0.0);
+    epa_post_max->SetYToConstant(0.0);
+
+    /*
+	 * We'll also need to keep track of the number of values
+	 */
+    Curve* count_pre_max  = new Curve;
+    Curve* count_post_max = new Curve;
+    count_pre_max->CopyFrom(epa_pre_max);
+    count_post_max->CopyFrom(epa_post_max);
+
+    if ( ! spectrum_is_blank ) {
+        long  address = 0;
+        int   i, j;
+        float i_logi, j_logi;
+        float i_logi_sq, j_logi_sq;
+        float current_spatial_frequency_squared;
+        float current_azimuth;
+        float current_phase_aberration;
+        float sq_sf_of_phase_aberration_maximum;
+        float current_defocus;
+        for ( j = 0; j < this->logical_y_dimension; j++ ) {
+            j_logi    = float(j - this->physical_address_of_box_center_y) * this->fourier_voxel_size_y;
+            j_logi_sq = powf(j_logi, 2);
+            for ( i = 0; i < this->logical_x_dimension; i++ ) {
+                i_logi    = float(i - this->physical_address_of_box_center_x) * this->fourier_voxel_size_x;
+                i_logi_sq = powf(i_logi, 2);
+                //
+                current_spatial_frequency_squared = j_logi_sq + i_logi_sq;
+                current_azimuth                   = atan2(j_logi, i_logi);
+                current_defocus                   = ctf->DefocusGivenAzimuth(current_azimuth);
+                current_phase_aberration          = ctf->PhaseShiftGivenSquaredSpatialFrequencyAndDefocus(current_spatial_frequency_squared, current_defocus);
+                //
+                sq_sf_of_phase_aberration_maximum = ctf->ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(current_defocus);
+                //
+                if ( current_spatial_frequency_squared <= sq_sf_of_phase_aberration_maximum ) {
+                    // Add to pre-max
+                    epa_pre_max->AddValueAtXUsingLinearInterpolation(current_phase_aberration, this->real_values[address], curve_x_is_linear);
+                    count_pre_max->AddValueAtXUsingLinearInterpolation(current_phase_aberration, 1.0, curve_x_is_linear);
+                }
+                else {
+                    /*
+					 * We are after the maximum phase aberration (i.e. the Cs term has taken over, phase aberration is decreasing as a function of sf)
+					 */
+                    // Add to post-max
+                    epa_post_max->AddValueAtXUsingLinearInterpolation(current_phase_aberration, this->real_values[address], curve_x_is_linear);
+                    count_post_max->AddValueAtXUsingLinearInterpolation(current_phase_aberration, 1.0, curve_x_is_linear);
+                }
+                //
+                address++;
+            }
+            address += this->padding_jump_value;
+        }
+
+        /*
+		 * Do the averaging
+		 */
+        epa_pre_max->DivideBy(count_pre_max);
+        epa_post_max->DivideBy(count_post_max);
+    }
+
+    delete count_pre_max;
+    delete count_post_max;
+}
+

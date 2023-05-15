@@ -116,12 +116,4 @@ class CurveCTFComparison {
 float CtffindObjectiveFunction(void* scoring_parameters, float array_of_values[]);
 float CtffindCurveObjectiveFunction(void* scoring_parameters, float array_of_values[]);
 
-float DilatePowerspectrumToNewPixelSize(bool resample_if_pixel_too_small, float pixel_size_of_input_image, float target_pixel_size_after_resampling,
-                                        int box_size, Image* current_power_spectrum, Image* resampled_power_spectrum, bool do_resampling = true, float stretch_factor = 1.0f);
-void  ComputeImagesWithNumberOfExtremaAndCTFValues(CTF* ctf, Image* number_of_extrema, Image* ctf_values);
-void  ComputeEquiPhaseAverageOfPowerSpectrum(Image* spectrum, CTF* ctf, Curve* epa_pre_max, Curve* epa_post_max);
-void  ComputeFRCBetween1DSpectrumAndFit(int number_of_bins, double average[], double fit[], float number_of_extrema_profile[], double frc[], double frc_sigma[], int first_fit_bin);
-void  RescaleSpectrumAndRotationalAverage(Image* spectrum, Image* number_of_extrema, Image* ctf_values, int number_of_bins, double spatial_frequency[], double average[], double average_fit[], float number_of_extrema_profile[], float ctf_values_profile[], int last_bin_without_aliasing, int last_bin_with_good_fit);
-void  Renormalize1DSpectrumForFRC(int number_of_bins, double average[], double fit[], float number_of_extrema_profile[]);
-
 #endif /* PROGRAMS_CTFFIND_CTFFIND_H_ */

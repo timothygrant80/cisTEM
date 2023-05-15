@@ -658,7 +658,7 @@ bool CtffindApp::DoCalculation( ) {
     NumericTextFile*    output_text_avrot;
     int                 current_micrograph_number;
     int                 number_of_tiles_used;
-    Image*              current_power_spectrum = new Image( );
+    SpectrumImage*      current_power_spectrum = new SpectrumImage( );
     int                 current_first_frame_within_average;
     int                 current_frame_within_average;
     int                 current_input_location;
@@ -948,7 +948,7 @@ bool CtffindApp::DoCalculation( ) {
                     current_power_spectrum->real_values[current_power_spectrum->ReturnReal1DAddressFromPhysicalCoord(current_power_spectrum->physical_address_of_box_center_x, current_power_spectrum->physical_address_of_box_center_y, current_power_spectrum->physical_address_of_box_center_z)] = 0.0;
 
                     // Resample the amplitude spectrum
-                    pixel_size_for_fitting = DilatePowerspectrumToNewPixelSize(resample_if_pixel_too_small, pixel_size_of_input_image, target_pixel_size_after_resampling, box_size, current_power_spectrum, resampled_power_spectrum);
+                    pixel_size_for_fitting = current_power_spectrum->DilatePowerspectrumToNewPixelSize(resample_if_pixel_too_small, pixel_size_of_input_image, target_pixel_size_after_resampling, box_size, resampled_power_spectrum);
 
                     average_spectrum->AddImage(resampled_power_spectrum);
                     profile_timing.lap("Compute amplitude spectrum");
@@ -1499,15 +1499,15 @@ bool CtffindApp::DoCalculation( ) {
             ctf_values_profile                    = new float[number_of_bins_in_1d_spectra];
             fit_frc                               = new double[number_of_bins_in_1d_spectra];
             fit_frc_sigma                         = new double[number_of_bins_in_1d_spectra];
-            ComputeImagesWithNumberOfExtremaAndCTFValues(current_ctf, number_of_extrema_image, ctf_values_image);
+            current_ctf->ComputeImagesWithNumberOfExtremaAndCTFValues(number_of_extrema_image, ctf_values_image);
             //ctf_values_image.QuickAndDirtyWriteSlice("dbg_ctf_values.mrc",1);
             if ( dump_debug_files ) {
                 average_spectrum->QuickAndDirtyWriteSlice("dbg_spectrum_before_1dave.mrc", 1);
                 number_of_extrema_image->QuickAndDirtyWriteSlice("dbg_num_extrema.mrc", 1);
             }
-            ComputeRotationalAverageOfPowerSpectrum(average_spectrum, current_ctf, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, rotational_average_astig_fit, rotational_average_astig_renormalized, number_of_extrema_profile, ctf_values_profile);
+            average_spectrum->ComputeRotationalAverageOfPowerSpectrum(current_ctf, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, rotational_average_astig_fit, rotational_average_astig_renormalized, number_of_extrema_profile, ctf_values_profile);
 #ifdef use_epa_rather_than_zero_counting
-            ComputeEquiPhaseAverageOfPowerSpectrum(average_spectrum, current_ctf, &equiphase_average_pre_max, &equiphase_average_post_max);
+            average_spectrum->ComputeEquiPhaseAverageOfPowerSpectrum(current_ctf, &equiphase_average_pre_max, &equiphase_average_post_max);
             // Replace the old curve with EPA values
             {
                 float current_sq_sf;
@@ -1617,7 +1617,7 @@ bool CtffindApp::DoCalculation( ) {
             average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_rescaling.mrc", 1);
         profile_timing.start("Write diagnostic image");
         if ( compute_extra_stats ) {
-            RescaleSpectrumAndRotationalAverage(average_spectrum, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, rotational_average_astig_fit, number_of_extrema_profile, ctf_values_profile, last_bin_without_aliasing, last_bin_with_good_fit);
+            average_spectrum->RescaleSpectrumAndRotationalAverage(number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, rotational_average_astig_fit, number_of_extrema_profile, ctf_values_profile, last_bin_without_aliasing, last_bin_with_good_fit);
         }
         //average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_thresholding.mrc",1);
 
@@ -1629,7 +1629,7 @@ bool CtffindApp::DoCalculation( ) {
         average_spectrum->SetMinimumAndMaximumValues(average - sigma, average + 2.0 * sigma);
 
         //average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_overlay.mrc",1);
-        OverlayCTF(average_spectrum, current_ctf, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, number_of_extrema_profile, ctf_values_profile, &equiphase_average_pre_max, &equiphase_average_post_max);
+        average_spectrum->OverlayCTF(current_ctf, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, number_of_extrema_profile, ctf_values_profile, &equiphase_average_pre_max, &equiphase_average_post_max);
 
         average_spectrum->WriteSlice(&output_diagnostic_file, current_output_location);
         output_diagnostic_file.SetDensityStatistics(average_spectrum->ReturnMinimumValue( ), average_spectrum->ReturnMaximumValue( ), average_spectrum->ReturnAverageOfRealValues( ), 0.1);

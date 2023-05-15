@@ -377,11 +377,11 @@ float CTFTilt::CalculateTiltCorrectedSpectra(bool resample_if_pixel_too_small, f
     AnglesAndShifts rotation_angle;
     Image           section;
     Image           stretched_section;
-    Image           power_spectrum;
+    SpectrumImage   power_spectrum;
     Image           resampled_power_spectrum;
     Image           counts_per_pixel;
 
-    pixel_size_for_fitting = DilatePowerspectrumToNewPixelSize(resample_if_pixel_too_small, pixel_size_of_input_image, target_pixel_size_after_resampling, box_size, &power_spectrum, &resampled_power_spectrum, false);
+    pixel_size_for_fitting = power_spectrum.DilatePowerspectrumToNewPixelSize(resample_if_pixel_too_small, pixel_size_of_input_image, target_pixel_size_after_resampling, box_size, &resampled_power_spectrum, false);
 
     n_sec = std::max(input_image_buffer[0].logical_x_dimension / resampled_spectrum->logical_x_dimension, input_image_buffer[0].logical_y_dimension / resampled_spectrum->logical_y_dimension);
     if ( IsEven(n_sec) )
@@ -438,7 +438,7 @@ float CTFTilt::CalculateTiltCorrectedSpectra(bool resample_if_pixel_too_small, f
                 //				section_counter++;
                 //				for (i = 0; i < power_spectrum_sub_section.real_memory_allocated; i++) power_spectrum_sub_section.real_values[i] = powf(power_spectrum_sub_section.real_values[i], 2);
 
-                DilatePowerspectrumToNewPixelSize(resample_if_pixel_too_small, pixel_size_of_input_image, target_pixel_size_after_resampling, box_size, &power_spectrum, &resampled_power_spectrum, true, stretch_factor);
+                power_spectrum.DilatePowerspectrumToNewPixelSize(resample_if_pixel_too_small, pixel_size_of_input_image, target_pixel_size_after_resampling, box_size, &resampled_power_spectrum, true, stretch_factor);
 
                 //				power_spectrum.ForwardFFT();
                 //				stretched_dimension = myroundint(resampled_spectrum->logical_x_dimension * stretch_factor);

@@ -133,6 +133,7 @@ class StackDump : public wxStackWalker // so we can give backtraces..
 #include "empirical_distribution.h"
 #include "randomnumbergenerator.h"
 #include "image.h"
+#include "spectrum_image.h"
 #include "socket_communicator.h"
 #include "userinput.h"
 #include "symmetry_matrix.h"

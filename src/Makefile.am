@@ -3,6 +3,7 @@ noinst_HEADERS = core/asset_group.h \
                  core/defines.h \
                  core/functions.h \
                  core/image.h \
+                 core/spectrum_image.h \
                  core/mrc_file.h \
                  core/mrc_header.h \
                  core/dm_file.h \
@@ -285,6 +286,7 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/asset_group.cpp \
                        core/curve.cpp \
                        core/image.cpp \
+                       core/spectrum_image.cpp \
                        core/electron_dose.cpp \
                        core/matrix.cpp \
                        core/symmetry_matrix.cpp \
@@ -386,7 +388,7 @@ applyctf_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 applyctf_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 applyctf_LDADD = libcore.a $(WX_LIBS_BASE)
 
-ctffind_SOURCES = programs/ctffind/ctffind.cpp
+ctffind_SOURCES = programs/ctffind/ctffind.cpp programs/ctffind/ctffind_image_ctf_comparison.cpp programs/ctffind/ctffind_objective_functions.cpp programs/ctffind/ctffind_tilt.cpp
 ctffind_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_LDADD = libcore.a $(WX_LIBS_BASE)

@@ -120,7 +120,7 @@ void SpectrumImage::GeneratePowerspectrum(CTF ctf_to_apply) {
 
 // Overlays an rotationally averaged sector and an model based sector on the
 // power spectrum
-void SpectrumImage::OverlayCTF(CTF* ctf, Image* number_of_extrema, Image* ctf_values, int number_of_bins_in_1d_spectra, double spatial_frequency[], double rotational_average_astig[], float number_of_extrema_profile[], float ctf_values_profile[], Curve* epa_pre_max, Curve* epa_post_max) {
+void SpectrumImage::OverlayCTF(CTF* ctf, Image* number_of_extrema, Image* ctf_values, int number_of_bins_in_1d_spectra, double spatial_frequency[], double rotational_average_astig[], float number_of_extrema_profile[], float ctf_values_profile[], Curve* epa_pre_max, Curve* epa_post_max, bool fit_nodes) {
     MyDebugAssertTrue(this->is_in_memory, "Spectrum memory not allocated");
 
     //
@@ -179,6 +179,9 @@ void SpectrumImage::OverlayCTF(CTF* ctf, Image* number_of_extrema, Image* ctf_va
             if ( current_spatial_frequency_squared > lowest_freq && current_spatial_frequency_squared <= highest_freq ) {
                 current_azimuth   = atan2(j_logi, i_logi);
                 current_ctf_value = fabs(ctf->Evaluate(current_spatial_frequency_squared, current_azimuth));
+                if ( fit_nodes ) {
+                    current_ctf_value = ctf->EvaluatePowerspectrumWithThickness(current_spatial_frequency_squared, current_azimuth);
+                }
                 if ( current_ctf_value > 0.5 )
                     values_in_rings.AddSampleValue(this->real_values[address]);
                 values_in_fitting_range.AddSampleValue(this->real_values[address]);
@@ -668,4 +671,3 @@ void SpectrumImage::ComputeEquiPhaseAverageOfPowerSpectrum(CTF* ctf, Curve* epa_
     delete count_pre_max;
     delete count_post_max;
 }
-

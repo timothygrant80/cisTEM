@@ -680,7 +680,7 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
 
         if ( input_is_a_movie == true ) {
             parent_asset_id = image_asset_panel->ReturnAssetPointer(active_group.members[counter])->parent_id;
-            input_filename  = movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->filename.GetFullPath( ).ToStdString( );
+            input_filename  = movie_asset_panel->ReturnAssetPointer(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_asset_id))->filename.GetFullPath( ).ToStdString( );
             pixel_size      = movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->pixel_size;
 
             current_movie_size = (float(movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->x_size) / movie_asset_panel->ReturnAssetBinningFactor(active_group.members[counter])) * (float(movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->y_size) / movie_asset_panel->ReturnAssetBinningFactor(active_group.members[counter]));

@@ -823,6 +823,36 @@ void Image::DividePixelWise(Image& other_image) {
     }
 }
 
+bool Image::IsAlmostEqual(Image& other_image, bool print_if_failed, float epsilon) {
+    MyDebugAssertTrue(is_in_memory, "Image memory not allocated");
+    MyDebugAssertTrue(other_image.is_in_memory, "Other image memory not allocated");
+    MyDebugAssertTrue(is_in_real_space == other_image.is_in_real_space, "Both images need to be in same space");
+    MyDebugAssertTrue(HasSameDimensionsAs(&other_image), "Images should have same dimensions, but they don't: %i %i %i        %i %i %i", logical_x_dimension, logical_y_dimension, logical_z_dimension, other_image.logical_x_dimension, other_image.logical_y_dimension, other_image.logical_z_dimension);
+
+    long pixel_counter;
+
+    if ( is_in_real_space ) {
+        for ( pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++ ) {
+            if ( ! RelativeErrorIsLessThanEpsilon(real_values[pixel_counter], other_image.real_values[pixel_counter], epsilon, print_if_failed) ) {
+                return false;
+            }
+        }
+    }
+    else {
+        // Iterate through forier space
+        for ( pixel_counter = 0; pixel_counter < real_memory_allocated / 2; pixel_counter++ ) {
+            if ( ! RelativeErrorIsLessThanEpsilon(real(complex_values[pixel_counter]), real(other_image.complex_values[pixel_counter]), epsilon, print_if_failed) ) {
+                return false;
+            }
+            if ( ! RelativeErrorIsLessThanEpsilon(imag(complex_values[pixel_counter]), imag(other_image.complex_values[pixel_counter]), epsilon, print_if_failed) ) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
 void Image::AddGaussianNoise(float wanted_sigma_value, RandomNumberGenerator* provided_generator) {
     MyDebugAssertTrue(is_in_real_space == true, "Image must be in real space");
 
@@ -6158,6 +6188,39 @@ float Image::QuickCorrelationWithCTF(CTF ctf, int number_of_values, double norm_
     return (cross_product - image_mean * ctf_sum) / sqrt(norm_image * (norm_ctf - ctf_sum * ctf_sum / number_of_values)) - astigmatism_penalty;
 }
 
+float Image::QuickCorrelationWithCTFThickness(CTF ctf, int number_of_values, double norm_image, double image_mean, int* addresses, float* spatial_frequency_squared, float* azimuth, float* weights, bool use_rounded_square) {
+
+    // Local variables
+    int    i, j;
+    double cross_product = 0.0;
+    double norm_ctf      = 0.0;
+    double ctf_sum       = 0.;
+    float  current_ctf_value;
+    float  astigmatism_penalty;
+
+    for ( i = 0; i < number_of_values; i++ ) {
+        if ( weights != nullptr && weights[i] <= 0.9 )
+            continue;
+        j = addresses[i];
+        // Center it around 0 by subtracting 0.5
+        current_ctf_value = ctf.EvaluatePowerspectrumWithThickness(spatial_frequency_squared[i], azimuth[i], use_rounded_square) - 0.5;
+        cross_product += real_values[j] * current_ctf_value;
+        norm_ctf += pow(current_ctf_value, 2);
+        ctf_sum += current_ctf_value;
+    }
+
+    // Compute the penalty due to astigmatism
+    if ( ctf.GetAstigmatismTolerance( ) > 0.0 ) {
+        astigmatism_penalty = powf(ctf.GetAstigmatism( ), 2) * 0.5 / powf(ctf.GetAstigmatismTolerance( ), 2) / float(number_of_values);
+    }
+    else {
+        astigmatism_penalty = 0.0;
+    }
+
+    // The final score: norm_image is already a sum of squared deviations from mean; norm_ctf requires adjustment to give true CC
+    return (cross_product - image_mean * ctf_sum) / sqrt(norm_image * (norm_ctf - ctf_sum * ctf_sum / number_of_values)) - astigmatism_penalty;
+}
+
 void Image::ApplyMirrorAlongY( ) {
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
     MyDebugAssertTrue(is_in_real_space, "Not in real space");
@@ -8506,6 +8569,43 @@ void Image::ApplyCTF(CTF ctf_to_apply, bool absolute, bool apply_beam_tilt, bool
     //	ComputeAmplitudeSpectrumFull2D(&temp_image, true);
     //	temp_image.QuickAndDirtyWriteSlice("junk.mrc", 1);
     //	exit(0);
+}
+
+// This function assumes the image is in real space and multiplies it with the
+// power spectrum of the CTF taking thon ring modulation caused by thick samples
+// into account.
+
+void Image::ApplyPowerspectrumWithThickness(CTF ctf_to_apply) {
+    MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+    MyDebugAssertTrue(is_in_real_space == true, "image not in real space");
+    MyDebugAssertTrue(logical_z_dimension == 1, "Volumes not supported");
+
+    int         i, j;
+    float       j_logi, j_logi_sq, i_logi, i_logi_sq;
+    float       current_spatial_frequency_squared;
+    long        address                     = 0;
+    const float inverse_logical_x_dimension = 1.0 / float(logical_x_dimension);
+    const float inverse_logical_y_dimension = 1.0 / float(logical_y_dimension);
+    float       current_azimuth;
+    float       current_ctf_value;
+
+    for ( j = 0; j < logical_y_dimension; j++ ) {
+        address   = j * (padding_jump_value + 2 * physical_address_of_box_center_x);
+        j_logi    = float(j - physical_address_of_box_center_y) * inverse_logical_y_dimension;
+        j_logi_sq = powf(j_logi, 2);
+        for ( i = 0; i < logical_x_dimension; i++ ) {
+            i_logi    = float(i - physical_address_of_box_center_x) * inverse_logical_x_dimension;
+            i_logi_sq = powf(i_logi, 2);
+
+            // Where are we?
+            current_spatial_frequency_squared = j_logi_sq + i_logi_sq;
+
+            current_azimuth   = atan2f(j_logi, i_logi);
+            current_ctf_value = ctf_to_apply.EvaluatePowerspectrumWithThickness(current_spatial_frequency_squared, current_azimuth);
+            // Apply powespectrum
+            real_values[address + i] *= current_ctf_value;
+        }
+    }
 }
 
 void Image::SharpenMap(float pixel_size, float resolution_limit, bool invert_hand, float inner_mask_radius, float outer_mask_radius, float start_res_for_whitening, float additional_bfactor_low, float additional_bfactor_high, float filter_edge, bool should_auto_mask, Image* input_mask, ResolutionStatistics* input_resolution_statistics, float statistics_scale_factor, Curve* original_log_plot, Curve* sharpened_log_plot) {

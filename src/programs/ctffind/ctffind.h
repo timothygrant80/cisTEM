@@ -116,4 +116,35 @@ class CurveCTFComparison {
 float CtffindObjectiveFunction(void* scoring_parameters, float array_of_values[]);
 float CtffindCurveObjectiveFunction(void* scoring_parameters, float array_of_values[]);
 
+struct CTFNodeFitInput {
+    CTF*                current_ctf;
+    int                 last_bin_with_good_fit;
+    int                 number_of_bins_in_1d_spectra;
+    float               pixel_size_for_fitting;
+    double*             spatial_frequency;
+    double*             rotational_average_astig;
+    double*             rotational_average_astig_fit;
+    Curve&              equiphase_average_pre_max;
+    Curve&              equiphase_average_post_max;
+    CurveCTFComparison* comparison_object_1D;
+    ImageCTFComparison* comparison_object_2D;
+    bool                bruteforce_1D;
+    bool                refine_2D;
+    float               low_resolution_limit;
+    float               high_resolution_limit;
+    double*             fit_frc;
+    double*             fit_frc_sigma;
+    Image*              average_spectrum;
+    bool                debug;
+    std::string         debug_filename;
+    bool                use_rounded_square;
+    bool                downweight_nodes;
+};
+
+struct CTFNodeFitOuput {
+    int last_bin_with_good_fit;
+};
+
+CTFNodeFitOuput fit_thickness_nodes(CTFNodeFitInput* input);
+
 #endif /* PROGRAMS_CTFFIND_CTFFIND_H_ */

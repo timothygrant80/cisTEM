@@ -102,6 +102,8 @@ class CTF {
     void SetEnvelope(float wanted_acceleration_voltage, float wanted_pixel_size_angstrom, float dose_rate);
     void SetBeamTilt(float wanted_beam_tilt_x_in_radians, float wanted_beam_tilt_y_in_radians, float wanted_particle_shift_x_in_pixels = 0.0f, float wanted_particle_shift_y_in_pixels = 0.0f);
     void SetHighestFrequencyForFitting(float wanted_highest_frequency_in_reciprocal_pixels);
+    void SetLowestFrequencyForFitting(float wanted_lowest_frequency_in_reciprocal_pixels);
+
     void SetLowResolutionContrast(float wanted_low_resolution_contrast);
     void SetSampleThickness(float wanted_sample_thickness_in_pixels);
 
@@ -110,7 +112,7 @@ class CTF {
     //
     std::complex<float> EvaluateComplex(float squared_spatial_frequency, float azimuth);
     float               Evaluate(float squared_spatial_frequency, float azimuth);
-    float               EvaluatePowerspectrumWithThickness(float squared_spatial_frequency, float azimuth);
+    float               EvaluatePowerspectrumWithThickness(float squared_spatial_frequency, float azimuth, bool use_rounded_square = false);
 
     float               EvaluateWithEnvelope(float squared_spatial_frequency, float azimuth);
     float               PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(float squared_spatial_frequency, float azimuth);
@@ -125,6 +127,29 @@ class CTF {
     // This is the sinc(xi) term derived in the supplemental of McMullan et al. (2015)
     inline float IntegratedDefocusModulation(float squared_spatial_frequency) {
         return sinc(PIf * wavelength * squared_spatial_frequency * sample_thickness);
+    };
+
+    // This produces a rounded square wave. When used instead of a sinc function
+    // it maintains a power spectrum between 0 and 1 and set values at the nodes
+    // to 0. Factor and exponent control the rounding at the nodes. Both should
+    // be odd numbers.
+    inline float rounded_square(float x, float factor = 5.0f, float exponent = 1.0f) {
+        if (x < PIf/2.f) { return 1.0f;}
+        float sin_x = sin(x);
+        if ( fabs(sin_x) > sin(PIf / (2.f * factor)) ) {
+            return copysignf(1.0, sin_x);
+        }
+        else {
+            return powf(sin(factor * x), exponent);
+        }
+    }
+
+    inline float IntegratedDefocusModulationRoundedSquare(float squared_spatial_frequency, float factor = 5.0f, float exponent = 1.0f) {
+        return rounded_square(PIf * wavelength * squared_spatial_frequency * sample_thickness, factor, exponent);
+    };
+
+    inline float ThicknessWhereIntegrateDefocusModulationIsZero(float squared_spatial_frequency) {
+        return 1.0 / (wavelength * squared_spatial_frequency);
     };
 
     inline float GetLowestFrequencyForFitting( ) { return lowest_frequency_for_fitting; };
@@ -161,6 +186,8 @@ class CTF {
     inline float GetAdditionalPhaseShift( ) { return additional_phase_shift; };
 
     inline float GetWavelength( ) { return wavelength; };
+
+    inline float GetSampleThickness( ) { return sample_thickness; };
 
     int   ReturnNumberOfExtremaBeforeSquaredSpatialFrequency(float squared_spatial_frequency, float azimuth);
     float ReturnSquaredSpatialFrequencyGivenPhaseShiftAndAzimuth(float phase_shift, float azimuth);

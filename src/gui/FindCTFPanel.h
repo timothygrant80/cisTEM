@@ -28,6 +28,7 @@ class MyFindCTFPanel : public FindCTFPanel {
     void OnMovieRadioButton(wxCommandEvent& event);
     void OnImageRadioButton(wxCommandEvent& event);
     void OnFindAdditionalPhaseCheckBox(wxCommandEvent& event);
+    void OnFitNodesCheckBox(wxCommandEvent& event);
     void OnRestrainAstigmatismCheckBox(wxCommandEvent& event);
     void WriteResultToDataBase( );
     void OnExpertOptionsToggle(wxCommandEvent& event);

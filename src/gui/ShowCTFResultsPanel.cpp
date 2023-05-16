@@ -53,7 +53,7 @@ void ShowCTFResultsPanel::Clear( ) {
     Refresh( );
 }
 
-void ShowCTFResultsPanel::Draw(wxString diagnostic_filename, bool find_additional_phase_shift, float defocus1, float defocus2, float defocus_angle, float phase_shift, float score, float fit_res, float alias_res, float iciness, float tilt_angle, float tilt_axis, wxString ImageFile) {
+void ShowCTFResultsPanel::Draw(wxString diagnostic_filename, bool find_additional_phase_shift, float defocus1, float defocus2, float defocus_angle, float phase_shift, float score, float fit_res, float alias_res, float iciness, float tilt_angle, float tilt_axis, float sample_thickness, wxString ImageFile) {
     Image    result_image;
     wxString avrot_filename;
 
@@ -84,7 +84,7 @@ void ShowCTFResultsPanel::Draw(wxString diagnostic_filename, bool find_additiona
     IcinessStaticText->SetLabel(wxString::Format(wxT("%.2f"), iciness));
     TiltAngleStaticText->SetLabel(wxString::Format(wxT("%.2f  °"), tilt_angle));
     TiltAxisStaticText->SetLabel(wxString::Format(wxT("%.2f  °"), tilt_axis));
-
+    ThicknessStaticText->SetLabel(wxString::Format(wxT("%.2f  Å"), sample_thickness));
     if ( DoesFileExist(diagnostic_filename) == true ) {
         CTF2DResultsPanel->PanelImage.QuickAndDirtyReadSlice(diagnostic_filename.ToStdString( ), 1);
         CTF2DResultsPanel->should_show = true;

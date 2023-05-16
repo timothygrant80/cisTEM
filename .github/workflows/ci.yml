@@ -4,7 +4,9 @@ on:
   push:
     branches: master
   pull_request:
-    branches: master
+    branches: 
+      - master
+      - main
 
 jobs:
   build:
@@ -35,6 +37,11 @@ jobs:
     - uses: actions/checkout@v2
       with:
         fetch-depth: 0
+    - run: apt update
+    - name: ccache
+      uses: hendrikmuhs/ccache-action@v1.2
+      with:
+          key: ${{ github.job }}-${{ matrix.compiler }}
     - name: regenerate_project
       run: ./regenerate_project.b
 #    - name: set path
@@ -51,6 +58,11 @@ jobs:
         CC: ${{ matrix.cc }}
         CXX: ${{ matrix.cxx }}
       run: |
+        ln -s /usr/bin/ccache /usr/lib/ccache/icpc
+        ln -s /usr/bin/ccache /usr/lib/ccache/icc
+        ln -s /usr/bin/ccache /usr/lib/ccache/clang
+        ln -s /usr/bin/ccache /usr/lib/ccache/clang++
+        export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
         mkdir -p build/${{ matrix.compiler }} 
         cd build/${{ matrix.compiler }} 
         echo $CC
@@ -61,6 +73,7 @@ jobs:
     - uses: ammaraskar/gcc-problem-matcher@master
     - name: make 
       run: |
+        export PATH="/usr/lib/ccache:/usr/local/opt/ccache/libexec:$PATH"
         cd build/${{ matrix.compiler }}
         make -j2
         cp ../../scripts/testing/test_and_benchmark.sh src/
@@ -126,4 +139,36 @@ jobs:
       run: |
         chmod +x samples_functional_testing
         ./samples_functional_testing
+  
+  gui_test:
+    name: GUI Test with screenshots
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        ref: ${{ github.event.pull_request.head.sha }}
+    - name: Download artifact
+      uses: actions/download-artifact@v2
+      with:
+        name: cistem_binaries_icpc
+    - name: Install gtk
+      run: |
+        sudo apt-get install -y gtk2.0-dev
+    - uses: iterative/setup-cml@v1
+    - name: Run headless gui_test
+      uses: GabrielBB/xvfb-action@v1
+      with:
+        run: |
+          chmod +x gui_test
+          ./gui_test --ci
+    - name: Write  report
+      env:
+        REPO_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      run: |
+        # Post reports as comments in GitHub PRs
+        echo "## GUI Test Screenshots" > report.md
+        cml asset publish screenshot.png --md >> report.md
+        cml comment update --pr report.md
+    
 

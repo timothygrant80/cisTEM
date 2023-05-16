@@ -1959,114 +1959,133 @@ ShowCTFResultsPanelParent::ShowCTFResultsPanelParent( wxWindow* parent, wxWindow
 	wxBoxSizer* bSizer305;
 	bSizer305 = new wxBoxSizer( wxHORIZONTAL );
 
-	wxGridSizer* gSizer14;
-	gSizer14 = new wxGridSizer( 0, 4, 0, 0 );
+	wxFlexGridSizer* fgSizer43;
+	fgSizer43 = new wxFlexGridSizer( 0, 4, 0, 0 );
+	fgSizer43->SetFlexibleDirection( wxBOTH );
+	fgSizer43->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
 
 	m_staticText380 = new wxStaticText( m_panel86, wxID_ANY, wxT("\tDefocus 1 :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText380->Wrap( -1 );
 	m_staticText380->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
 
-	gSizer14->Add( m_staticText380, 0, wxALIGN_RIGHT|wxALL, 5 );
+	fgSizer43->Add( m_staticText380, 0, wxALIGN_RIGHT|wxALL, 5 );
 
 	Defocus1Text = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	Defocus1Text->Wrap( -1 );
-	gSizer14->Add( Defocus1Text, 0, wxALIGN_LEFT|wxALL, 5 );
+	Defocus1Text->SetMinSize( wxSize( 50,-1 ) );
+
+	fgSizer43->Add( Defocus1Text, 0, wxALIGN_LEFT|wxALL, 5 );
 
 	m_staticText389 = new wxStaticText( m_panel86, wxID_ANY, wxT("Score :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText389->Wrap( -1 );
 	m_staticText389->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
 
-	gSizer14->Add( m_staticText389, 0, wxALIGN_RIGHT|wxALL, 5 );
+	fgSizer43->Add( m_staticText389, 0, wxALIGN_RIGHT|wxALL, 5 );
 
 	ScoreText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	ScoreText->Wrap( -1 );
-	gSizer14->Add( ScoreText, 0, wxALL, 5 );
+	ScoreText->SetMinSize( wxSize( 50,-1 ) );
+
+	fgSizer43->Add( ScoreText, 0, wxALL, 5 );
 
 	m_staticText382 = new wxStaticText( m_panel86, wxID_ANY, wxT("Defocus 2 :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText382->Wrap( -1 );
 	m_staticText382->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
 
-	gSizer14->Add( m_staticText382, 0, wxALIGN_RIGHT|wxALL, 5 );
+	fgSizer43->Add( m_staticText382, 0, wxALIGN_RIGHT|wxALL, 5 );
 
 	Defocus2Text = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	Defocus2Text->Wrap( -1 );
-	gSizer14->Add( Defocus2Text, 0, wxALL, 5 );
+	fgSizer43->Add( Defocus2Text, 0, wxALL, 5 );
 
 	m_staticText391 = new wxStaticText( m_panel86, wxID_ANY, wxT("Fit Res. :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText391->Wrap( -1 );
 	m_staticText391->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
 
-	gSizer14->Add( m_staticText391, 0, wxALIGN_RIGHT|wxALL, 5 );
+	fgSizer43->Add( m_staticText391, 0, wxALIGN_RIGHT|wxALL, 5 );
 
 	FitResText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	FitResText->Wrap( -1 );
-	gSizer14->Add( FitResText, 0, wxALL, 5 );
+	fgSizer43->Add( FitResText, 0, wxALL, 5 );
 
 	m_staticText384 = new wxStaticText( m_panel86, wxID_ANY, wxT("Angle :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText384->Wrap( -1 );
 	m_staticText384->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
 
-	gSizer14->Add( m_staticText384, 0, wxALIGN_RIGHT|wxALL, 5 );
+	fgSizer43->Add( m_staticText384, 0, wxALIGN_RIGHT|wxALL, 5 );
 
 	AngleText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	AngleText->Wrap( -1 );
-	gSizer14->Add( AngleText, 0, wxALL, 5 );
+	fgSizer43->Add( AngleText, 0, wxALL, 5 );
 
-	m_staticText393 = new wxStaticText( m_panel86, wxID_ANY, wxT("Alias Res. : "), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText393 = new wxStaticText( m_panel86, wxID_ANY, wxT("Alias Res. :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText393->Wrap( -1 );
 	m_staticText393->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
 
-	gSizer14->Add( m_staticText393, 0, wxALIGN_RIGHT|wxALL, 5 );
+	fgSizer43->Add( m_staticText393, 0, wxALIGN_RIGHT|wxALL, 5 );
 
 	AliasResText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	AliasResText->Wrap( -1 );
-	gSizer14->Add( AliasResText, 0, wxALL, 5 );
+	fgSizer43->Add( AliasResText, 0, wxALL, 5 );
 
 	m_staticText386 = new wxStaticText( m_panel86, wxID_ANY, wxT("Phase Shift :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText386->Wrap( -1 );
 	m_staticText386->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
 
-	gSizer14->Add( m_staticText386, 0, wxALIGN_RIGHT|wxALL, 5 );
+	fgSizer43->Add( m_staticText386, 0, wxALIGN_RIGHT|wxALL, 5 );
 
 	PhaseShiftText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	PhaseShiftText->Wrap( -1 );
-	gSizer14->Add( PhaseShiftText, 0, wxALL, 5 );
+	fgSizer43->Add( PhaseShiftText, 0, wxALL, 5 );
 
 	IcinessLabel = new wxStaticText( m_panel86, wxID_ANY, wxT("Iciness :"), wxDefaultPosition, wxDefaultSize, 0 );
 	IcinessLabel->Wrap( -1 );
 	IcinessLabel->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
 
-	gSizer14->Add( IcinessLabel, 0, wxALIGN_RIGHT|wxALL, 5 );
+	fgSizer43->Add( IcinessLabel, 0, wxALIGN_RIGHT|wxALL, 5 );
 
 	IcinessStaticText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	IcinessStaticText->Wrap( -1 );
-	gSizer14->Add( IcinessStaticText, 0, wxALL, 5 );
+	fgSizer43->Add( IcinessStaticText, 0, wxALL, 5 );
 
 	m_staticText866 = new wxStaticText( m_panel86, wxID_ANY, wxT("Tilt Angle :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText866->Wrap( -1 );
 	m_staticText866->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
 
-	gSizer14->Add( m_staticText866, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	fgSizer43->Add( m_staticText866, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 
 	TiltAngleStaticText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	TiltAngleStaticText->Wrap( -1 );
-	gSizer14->Add( TiltAngleStaticText, 0, wxALL, 5 );
+	fgSizer43->Add( TiltAngleStaticText, 0, wxALL, 5 );
 
 	m_staticText868 = new wxStaticText( m_panel86, wxID_ANY, wxT("Tilt Axis :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText868->Wrap( -1 );
 	m_staticText868->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
 
-	gSizer14->Add( m_staticText868, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+	fgSizer43->Add( m_staticText868, 0, wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 
 	TiltAxisStaticText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	TiltAxisStaticText->Wrap( -1 );
-	gSizer14->Add( TiltAxisStaticText, 0, wxALL, 5 );
+	fgSizer43->Add( TiltAxisStaticText, 0, wxALL, 5 );
 
 
-	bSizer305->Add( gSizer14, 0, 0, 5 );
+	fgSizer43->Add( 0, 0, 10, wxALL, 5 );
 
 
-	bSizer305->Add( 0, 0, 1, wxEXPAND, 5 );
+	fgSizer43->Add( 0, 0, 0, wxALL, 5 );
+
+	m_staticText8681 = new wxStaticText( m_panel86, wxID_ANY, wxT("Est. Sample Thickness :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText8681->Wrap( -1 );
+	m_staticText8681->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+
+	fgSizer43->Add( m_staticText8681, 0, wxALL, 5 );
+
+	ThicknessStaticText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	ThicknessStaticText->Wrap( -1 );
+	fgSizer43->Add( ThicknessStaticText, 0, wxALL, 5 );
+
+
+	bSizer305->Add( fgSizer43, 1, wxEXPAND, 5 );
 
 
 	bSizer304->Add( bSizer305, 0, wxEXPAND, 5 );
@@ -2884,8 +2903,6 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	bSizer73 = new wxBoxSizer( wxVERTICAL );
 
 	JobDetailsPanel = new wxPanel( RightPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-	JobDetailsPanel->Hide();
-
 	wxBoxSizer* bSizer101;
 	bSizer101 = new wxBoxSizer( wxVERTICAL );
 
@@ -2952,6 +2969,36 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	PixelSizeStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	PixelSizeStaticText->Wrap( -1 );
 	InfoSizer->Add( PixelSizeStaticText, 0, wxALIGN_LEFT|wxALL, 5 );
+
+	m_staticText781 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Resample Pixel Size? :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText781->Wrap( -1 );
+	m_staticText781->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+
+	InfoSizer->Add( m_staticText781, 0, wxALIGN_RIGHT|wxALL, 5 );
+
+	ResampleStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	ResampleStaticText->Wrap( -1 );
+	InfoSizer->Add( ResampleStaticText, 0, wxALL, 5 );
+
+	m_staticText7811 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Pixel Size Target :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText7811->Wrap( -1 );
+	m_staticText7811->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+
+	InfoSizer->Add( m_staticText7811, 0, wxALIGN_RIGHT|wxALL, 5 );
+
+	PixelSizeTargetStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	PixelSizeTargetStaticText->Wrap( -1 );
+	InfoSizer->Add( PixelSizeTargetStaticText, 0, wxALL, 5 );
+
+	m_staticText78111 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Estimate Tilt? :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText78111->Wrap( -1 );
+	m_staticText78111->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+
+	InfoSizer->Add( m_staticText78111, 0, wxALIGN_RIGHT|wxALL, 5 );
+
+	EstimateTiltStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	EstimateTiltStaticText->Wrap( -1 );
+	InfoSizer->Add( EstimateTiltStaticText, 0, wxALL, 5 );
 
 	m_staticText96 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Amp. Contrast :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText96->Wrap( -1 );
@@ -3057,7 +3104,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	NumberOfAveragedFramesLabel->Wrap( -1 );
 	NumberOfAveragedFramesLabel->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
 
-	InfoSizer->Add( NumberOfAveragedFramesLabel, 0, wxALL, 5 );
+	InfoSizer->Add( NumberOfAveragedFramesLabel, 0, wxALIGN_RIGHT|wxALL, 5 );
 
 	NumberOfAveragedFramesStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	NumberOfAveragedFramesStaticText->Wrap( -1 );
@@ -3103,9 +3150,75 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	PhaseShiftStepStaticText->Wrap( -1 );
 	InfoSizer->Add( PhaseShiftStepStaticText, 0, wxALL, 5 );
 
-	IcinessStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-	IcinessStaticText->Wrap( -1 );
-	InfoSizer->Add( IcinessStaticText, 0, wxALL, 5 );
+	PhaseShiftStepLabel1 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Estimate Thickness? :"), wxDefaultPosition, wxDefaultSize, 0 );
+	PhaseShiftStepLabel1->Wrap( -1 );
+	PhaseShiftStepLabel1->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+
+	InfoSizer->Add( PhaseShiftStepLabel1, 0, wxALIGN_RIGHT|wxALL, 5 );
+
+	EstimateThicknessStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	EstimateThicknessStaticText->Wrap( -1 );
+	InfoSizer->Add( EstimateThicknessStaticText, 0, wxALL, 5 );
+
+	ThicknessLabel1 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Thickness 1D search? :"), wxDefaultPosition, wxDefaultSize, 0 );
+	ThicknessLabel1->Wrap( -1 );
+	ThicknessLabel1->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+
+	InfoSizer->Add( ThicknessLabel1, 0, wxALIGN_RIGHT|wxALL, 5 );
+
+	Thickness1DStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	Thickness1DStaticText->Wrap( -1 );
+	InfoSizer->Add( Thickness1DStaticText, 0, wxALL, 5 );
+
+	ThicknessLabel2 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Thickness 2D search? :"), wxDefaultPosition, wxDefaultSize, 0 );
+	ThicknessLabel2->Wrap( -1 );
+	ThicknessLabel2->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+
+	InfoSizer->Add( ThicknessLabel2, 0, wxALIGN_RIGHT|wxALL, 5 );
+
+	Thickness2DStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	Thickness2DStaticText->Wrap( -1 );
+	InfoSizer->Add( Thickness2DStaticText, 0, wxALL, 5 );
+
+	ThicknessLabel3 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Thickness Min. Res. :"), wxDefaultPosition, wxDefaultSize, 0 );
+	ThicknessLabel3->Wrap( -1 );
+	ThicknessLabel3->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+
+	InfoSizer->Add( ThicknessLabel3, 0, wxALIGN_RIGHT|wxALL, 5 );
+
+	ThicknessMinResText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	ThicknessMinResText->Wrap( -1 );
+	InfoSizer->Add( ThicknessMinResText, 0, wxALL, 5 );
+
+	ThicknessLabel4 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Thickness Max. Res. :"), wxDefaultPosition, wxDefaultSize, 0 );
+	ThicknessLabel4->Wrap( -1 );
+	ThicknessLabel4->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+
+	InfoSizer->Add( ThicknessLabel4, 0, wxALIGN_RIGHT|wxALL, 5 );
+
+	ThicknessMaxResStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	ThicknessMaxResStaticText->Wrap( -1 );
+	InfoSizer->Add( ThicknessMaxResStaticText, 0, wxALL, 5 );
+
+	ThicknessLabel5 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("No-decay model? :"), wxDefaultPosition, wxDefaultSize, 0 );
+	ThicknessLabel5->Wrap( -1 );
+	ThicknessLabel5->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+
+	InfoSizer->Add( ThicknessLabel5, 0, wxALIGN_RIGHT|wxALL, 5 );
+
+	ThicknessNoDecayStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	ThicknessNoDecayStaticText->Wrap( -1 );
+	InfoSizer->Add( ThicknessNoDecayStaticText, 0, wxALL, 5 );
+
+	ThicknessLabel6 = new wxStaticText( JobDetailsPanel, wxID_ANY, wxT("Downweight nodes? :"), wxDefaultPosition, wxDefaultSize, 0 );
+	ThicknessLabel6->Wrap( -1 );
+	ThicknessLabel6->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+
+	InfoSizer->Add( ThicknessLabel6, 0, wxALIGN_RIGHT|wxALL, 5 );
+
+	ThicknessDownweightNodesStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	ThicknessDownweightNodesStaticText->Wrap( -1 );
+	InfoSizer->Add( ThicknessDownweightNodesStaticText, 0, wxALIGN_RIGHT|wxALL, 5 );
 
 
 	bSizer101->Add( InfoSizer, 1, wxEXPAND, 5 );
@@ -9584,6 +9697,23 @@ FindCTFPanel::FindCTFPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos,
 
 	fgSizer1->Add( bSizer1231, 1, wxEXPAND, 5 );
 
+	ResampleStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Resample Pixel Size (Å)"), wxDefaultPosition, wxDefaultSize, 0 );
+	ResampleStaticText->Wrap( -1 );
+	fgSizer1->Add( ResampleStaticText, 0, wxALL, 5 );
+
+	wxBoxSizer* bSizer12311;
+	bSizer12311 = new wxBoxSizer( wxHORIZONTAL );
+
+	ResamplePixelSizeCheckBox = new wxCheckBox( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	ResamplePixelSizeCheckBox->SetValue(true);
+	bSizer12311->Add( ResamplePixelSizeCheckBox, 0, wxALL, 5 );
+
+	ResamplePixelSizeNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("1.4"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	bSizer12311->Add( ResamplePixelSizeNumericCtrl, 1, wxALL, 5 );
+
+
+	fgSizer1->Add( bSizer12311, 1, wxEXPAND, 5 );
+
 	m_staticText201 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Search Limits"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText201->Wrap( -1 );
 	m_staticText201->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxEmptyString ) );
@@ -9694,6 +9824,77 @@ FindCTFPanel::FindCTFPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos,
 	PhaseShiftStepNumericCtrl->Enable( false );
 
 	fgSizer1->Add( PhaseShiftStepNumericCtrl, 0, wxALL|wxEXPAND, 5 );
+
+	m_staticText2001 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Estimate Sample Thickness"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText2001->Wrap( -1 );
+	m_staticText2001->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxT("Sans") ) );
+
+	fgSizer1->Add( m_staticText2001, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	FitNodesCheckBox = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Estimate Sample Thickness?"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer1->Add( FitNodesCheckBox, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	FitNodes1DCheckBox = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Do a brute-force search for sample thickness?"), wxDefaultPosition, wxDefaultSize, 0 );
+	FitNodes1DCheckBox->SetValue(true);
+	FitNodes1DCheckBox->Enable( false );
+
+	fgSizer1->Add( FitNodes1DCheckBox, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	FitNodes2DCheckBox = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Refine CTF and Astigmatism?"), wxDefaultPosition, wxDefaultSize, 0 );
+	FitNodes2DCheckBox->SetValue(true);
+	FitNodes2DCheckBox->Enable( false );
+
+	fgSizer1->Add( FitNodes2DCheckBox, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	FitNodesMinResStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Min. Resolution of Fit (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	FitNodesMinResStaticText->Wrap( -1 );
+	FitNodesMinResStaticText->Enable( false );
+
+	fgSizer1->Add( FitNodesMinResStaticText, 0, wxALL, 5 );
+
+	FitNodesMinResNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("30.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	FitNodesMinResNumericCtrl->Enable( false );
+
+	fgSizer1->Add( FitNodesMinResNumericCtrl, 0, wxALL, 5 );
+
+	FitNodesMaxResStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Max. Resolution of Fit (Å) :"), wxDefaultPosition, wxDefaultSize, 0 );
+	FitNodesMaxResStaticText->Wrap( -1 );
+	FitNodesMaxResStaticText->Enable( false );
+
+	fgSizer1->Add( FitNodesMaxResStaticText, 0, wxALL, 5 );
+
+	FitNodesMaxResNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("3.00"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
+	FitNodesMaxResNumericCtrl->Enable( false );
+
+	fgSizer1->Add( FitNodesMaxResNumericCtrl, 0, wxALL, 5 );
+
+	FitNodesRoundedSquareCheckBox = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Use no-decay model"), wxDefaultPosition, wxDefaultSize, 0 );
+	FitNodesRoundedSquareCheckBox->Enable( false );
+
+	fgSizer1->Add( FitNodesRoundedSquareCheckBox, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	FitNodesWeightsCheckBox = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Ignore spectrum in nodes"), wxDefaultPosition, wxDefaultSize, 0 );
+	FitNodesWeightsCheckBox->Enable( false );
+
+	fgSizer1->Add( FitNodesWeightsCheckBox, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
 
 
 	InputSizer->Add( fgSizer1, 1, wxEXPAND, 5 );
@@ -9854,6 +10055,11 @@ FindCTFPanel::FindCTFPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos,
 	LargeAstigmatismExpectedCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnLargeAstigmatismExpectedCheckBox ), NULL, this );
 	RestrainAstigmatismCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnRestrainAstigmatismCheckBox ), NULL, this );
 	AdditionalPhaseShiftCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnFindAdditionalPhaseCheckBox ), NULL, this );
+	FitNodesCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnFitNodesCheckBox ), NULL, this );
+	FitNodes1DCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnFindAdditionalPhaseCheckBox ), NULL, this );
+	FitNodes2DCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnFindAdditionalPhaseCheckBox ), NULL, this );
+	FitNodesRoundedSquareCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnFindAdditionalPhaseCheckBox ), NULL, this );
+	FitNodesWeightsCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnFindAdditionalPhaseCheckBox ), NULL, this );
 	InfoText->Connect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( FindCTFPanel::OnInfoURL ), NULL, this );
 	FinishButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFPanel::FinishButtonClick ), NULL, this );
 	CancelAlignmentButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFPanel::TerminateButtonClick ), NULL, this );
@@ -9872,6 +10078,11 @@ FindCTFPanel::~FindCTFPanel()
 	LargeAstigmatismExpectedCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnLargeAstigmatismExpectedCheckBox ), NULL, this );
 	RestrainAstigmatismCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnRestrainAstigmatismCheckBox ), NULL, this );
 	AdditionalPhaseShiftCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnFindAdditionalPhaseCheckBox ), NULL, this );
+	FitNodesCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnFitNodesCheckBox ), NULL, this );
+	FitNodes1DCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnFindAdditionalPhaseCheckBox ), NULL, this );
+	FitNodes2DCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnFindAdditionalPhaseCheckBox ), NULL, this );
+	FitNodesRoundedSquareCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnFindAdditionalPhaseCheckBox ), NULL, this );
+	FitNodesWeightsCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( FindCTFPanel::OnFindAdditionalPhaseCheckBox ), NULL, this );
 	InfoText->Disconnect( wxEVT_COMMAND_TEXT_URL, wxTextUrlEventHandler( FindCTFPanel::OnInfoURL ), NULL, this );
 	FinishButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFPanel::FinishButtonClick ), NULL, this );
 	CancelAlignmentButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( FindCTFPanel::TerminateButtonClick ), NULL, this );

@@ -3,6 +3,7 @@
 	for processing images that contain power spectra
 
 */
+#define use_epa_rather_than_zero_counting
 
 class SpectrumImage : public Image {
   public:

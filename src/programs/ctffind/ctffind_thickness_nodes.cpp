@@ -78,7 +78,7 @@ float CtffindNodesObjectiveFunction(void* scoring_parameters, float array_of_val
 void do_1D_bruteforce(CTFNodeFitInput* input, wxJSONValue& debug_json_output) {
     int   counter;
     float current_sq_sf;
-    float azimuth_for_1d_plots = ReturnAzimuthToUseFor1DPlots(input->current_ctf);
+    float azimuth_for_1d_plots = input->current_ctf->ReturnAzimuthToUseFor1DPlots( );
     CTF   my_ctf;
     my_ctf.CopyFrom(*(input->current_ctf));
     input->comparison_object_1D->curve = new float[input->number_of_bins_in_1d_spectra];
@@ -166,7 +166,7 @@ void do_2D_refinement(CTFNodeFitInput* input, wxJSONValue& debug_json_output) {
     input->current_ctf->EnforceConvention( );
 
     // Replace rotational_average_astig_fit with thickness model
-    float azimuth_for_1d_plots = ReturnAzimuthToUseFor1DPlots(input->current_ctf);
+    float azimuth_for_1d_plots = input->current_ctf->ReturnAzimuthToUseFor1DPlots( );
     for ( counter = 0; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
         current_sq_sf                                = powf(input->spatial_frequency[counter], 2);
         input->rotational_average_astig_fit[counter] = input->current_ctf->EvaluatePowerspectrumWithThickness(current_sq_sf, azimuth_for_1d_plots, input->use_rounded_square);
@@ -179,13 +179,13 @@ void do_2D_refinement(CTFNodeFitInput* input, wxJSONValue& debug_json_output) {
 }
 
 void recalculate_1D_spectra(CTFNodeFitInput* input, double* rotational_average_astig_renormalized, float* number_of_extrema_profile, wxJSONValue debug_json_output) {
-    ComputeEquiPhaseAverageOfPowerSpectrum(input->average_spectrum, input->current_ctf, &(input->equiphase_average_pre_max), &(input->equiphase_average_post_max));
+    input->average_spectrum->ComputeEquiPhaseAverageOfPowerSpectrum(input->current_ctf, &(input->equiphase_average_pre_max), &(input->equiphase_average_post_max));
     // Replace the old curve with EPA values
     //double* rotational_average_astig_renormalized = new double[input->number_of_bins_in_1d_spectra];
     {
         int   counter;
         float current_sq_sf;
-        float azimuth_for_1d_plots         = ReturnAzimuthToUseFor1DPlots(input->current_ctf);
+        float azimuth_for_1d_plots         = input->current_ctf->ReturnAzimuthToUseFor1DPlots( );
         float defocus_for_1d_plots         = input->current_ctf->DefocusGivenAzimuth(azimuth_for_1d_plots);
         float sq_sf_of_phase_shift_maximum = input->current_ctf->ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(defocus_for_1d_plots);
         //float* number_of_extrema_profile    = new float[input->number_of_bins_in_1d_spectra];
@@ -424,7 +424,7 @@ CTFNodeFitOuput fit_thickness_nodes(CTFNodeFitInput* input) {
     // Recalculate spectra and fit using the initial estimate
     int   counter;
     float current_sq_sf;
-    float azimuth_for_1d_plots         = ReturnAzimuthToUseFor1DPlots(input->current_ctf);
+    float azimuth_for_1d_plots         = input->current_ctf->ReturnAzimuthToUseFor1DPlots( );
     float defocus_for_1d_plots         = input->current_ctf->DefocusGivenAzimuth(azimuth_for_1d_plots);
     float sq_sf_of_phase_shift_maximum = input->current_ctf->ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(defocus_for_1d_plots);
     Curve rotational_average_astig_curve;

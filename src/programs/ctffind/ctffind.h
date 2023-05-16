@@ -49,9 +49,13 @@ class CTFTilt {
     bool defocus_astigmatism_determined;
     bool power_spectra_calculated;
 
+    bool        debug;
+    wxJSONValue debug_json_output;
+    std::string debug_json_output_filename;
+
   public:
     CTFTilt(ImageFile& wanted_input_file, float wanted_high_res_limit_ctf_fit, float wanted_high_res_limit_tilt_fit, float wanted_minimum_defocus, float wanted_maximum_defocus,
-            float wanted_pixel_size, float wanted_acceleration_voltage_in_kV, float wanted_spherical_aberration_in_mm, float wanted_amplitude_contrast, float wanted_additional_phase_shift_in_radians);
+            float wanted_pixel_size, float wanted_acceleration_voltage_in_kV, float wanted_spherical_aberration_in_mm, float wanted_amplitude_contrast, float wanted_additional_phase_shift_in_radians, bool wanted_debug, std::string wanted_debug_json_output_filename);
     ~CTFTilt( );
     void   CalculatePowerSpectra(bool subtract_average = false);
     void   UpdateInputImage(Image* wanted_input_image);
@@ -78,6 +82,7 @@ class ImageCTFComparison {
     ~ImageCTFComparison( );
     void  SetImage(int wanted_image_number, Image* new_image);
     void  SetCTF(CTF new_ctf);
+    void  SetFitWithThicknessNodes(bool wanted_fit_with_thickness_nodes);
     CTF   ReturnCTF( );
     bool  AstigmatismIsKnown( );
     float ReturnKnownAstigmatism( );
@@ -93,10 +98,13 @@ class ImageCTFComparison {
     float* azimuths;
     float* spatial_frequency_squared;
     int*   addresses;
+    bool   fit_with_thickness_nodes;
+    bool   fit_nodes_downweight_nodes = false;
+    bool   fit_nodes_rounded_square   = false;
+    float  pixel_size;
 
   private:
     CTF   ctf;
-    float pixel_size;
     bool  find_phase_shift;
     bool  astigmatism_is_known;
     float known_astigmatism;
@@ -111,6 +119,8 @@ class CurveCTFComparison {
     float  reciprocal_pixel_size; // In reciprocal pixels
     CTF    ctf;
     bool   find_phase_shift;
+    bool   find_thickness_nodes     = false;
+    bool   fit_nodes_rounded_square = false;
 };
 
 float CtffindObjectiveFunction(void* scoring_parameters, float array_of_values[]);
@@ -134,7 +144,7 @@ struct CTFNodeFitInput {
     float               high_resolution_limit;
     double*             fit_frc;
     double*             fit_frc_sigma;
-    Image*              average_spectrum;
+    SpectrumImage*      average_spectrum;
     bool                debug;
     std::string         debug_filename;
     bool                use_rounded_square;

@@ -2,7 +2,8 @@
 #include "./ctffind.h"
 
 CTFTilt::CTFTilt(ImageFile& wanted_input_file, float wanted_high_res_limit_ctf_fit, float wanted_high_res_limit_tilt_fit, float wanted_minimum_defocus, float wanted_maximum_defocus,
-                 float wanted_pixel_size, float wanted_acceleration_voltage_in_kV, float wanted_spherical_aberration_in_mm, float wanted_amplitude_contrast, float wanted_additional_phase_shift_in_radians) {
+                 float wanted_pixel_size, float wanted_acceleration_voltage_in_kV, float wanted_spherical_aberration_in_mm, float wanted_amplitude_contrast, float wanted_additional_phase_shift_in_radians,
+                 bool wanted_debug, std::string wanted_debug_json_output_filename) {
     box_size                       = 128;
     n_sections                     = 3;
     n_steps                        = 4;
@@ -63,7 +64,8 @@ CTFTilt::CTFTilt(ImageFile& wanted_input_file, float wanted_high_res_limit_ctf_f
 
     resampled_power_spectra = new Image[((n_sections - 1) * n_steps + 1) * ((n_sections - 1) * n_steps + 1)];
     tilt_binning_factor     = 0.5f * high_res_limit_tilt_fit / original_pixel_size;
-    tilt_fit_pixel_size     = original_pixel_size * tilt_binning_factor;
+    MyDebugPrint("Tilt binning factor = %f", tilt_binning_factor);
+    tilt_fit_pixel_size = original_pixel_size * tilt_binning_factor;
 
     int ix, iy;
     int sub_section_dimension;
@@ -85,12 +87,26 @@ CTFTilt::CTFTilt(ImageFile& wanted_input_file, float wanted_high_res_limit_ctf_f
             section_counter++;
         }
     }
+
+    debug                      = wanted_debug;
+    debug_json_output_filename = wanted_debug_json_output_filename;
     //	CalculatePowerSpectra(true);
 }
 
 CTFTilt::~CTFTilt( ) {
+    // Write out the json file
+    if ( debug ) {
+        wxJSONWriter writer;
+        wxString     json_string;
+        writer.Write(debug_json_output, json_string);
+        wxFile debug_file;
+        debug_file.Open(debug_json_output_filename, wxFile::write);
+        debug_file.Write(json_string);
+        debug_file.Close( );
+    }
     delete[] input_image_buffer;
     delete[] resampled_power_spectra;
+    wxPrintf("Deallocated memory for CTFTilt\n");
 }
 
 void CTFTilt::CalculatePowerSpectra(bool subtract_average) {
@@ -137,13 +153,24 @@ void CTFTilt::CalculatePowerSpectra(bool subtract_average) {
     input_image.Resize(myroundint(input_image.logical_x_dimension / tilt_binning_factor), myroundint(input_image.logical_y_dimension / tilt_binning_factor), 1);
     input_image.complex_values[0] = 0.0f + I * 0.0f;
     input_image.BackwardFFT( );
-
+    if ( debug && subtract_average ) {
+        debug_json_output["search_tiles"] = wxJSONValue(wxJSONTYPE_ARRAY);
+    }
     for ( iy = -(n_sections - 1) * n_steps / 2; iy <= (n_sections - 1) * n_steps / 2; iy++ ) {
         for ( ix = -(n_sections - 1) * n_steps / 2; ix <= (n_sections - 1) * n_steps / 2; ix++ ) {
             //			pointer_to_original_image->QuickAndDirtyWriteSlice("binned_input_image.mrc", 1);
             input_image.ClipInto(&sub_section, 0.0f, false, 0.0f, float(ix) * sub_section_dimension_x / float(n_steps), float(iy) * sub_section_dimension_y / float(n_steps), 0);
+            if ( debug && subtract_average ) {
+                debug_json_output["search_tiles"].Append(wxJSONValue(wxJSONTYPE_OBJECT));
+                debug_json_output["search_tiles"][debug_json_output["search_tiles"].Size( ) - 1]["x"]      = float(ix) * sub_section_dimension_x / float(n_steps);
+                debug_json_output["search_tiles"][debug_json_output["search_tiles"].Size( ) - 1]["y"]      = float(iy) * sub_section_dimension_y / float(n_steps);
+                debug_json_output["search_tiles"][debug_json_output["search_tiles"].Size( ) - 1]["width"]  = sub_section_dimension_x;
+                debug_json_output["search_tiles"][debug_json_output["search_tiles"].Size( ) - 1]["height"] = sub_section_dimension_y;
+            }
             sub_section.CosineRectangularMask(0.9f * sub_section.physical_address_of_box_center_x, 0.9f * sub_section.physical_address_of_box_center_y, 0.0f, 0.1f * sub_section.logical_x_dimension);
-            //			sub_section.QuickAndDirtyWriteSlice("sub_sections.mrc", 1 + section_counter);
+            if ( debug ) {
+                sub_section.QuickAndDirtyWriteSlice("sub_section.mrc", 1 + section_counter);
+            }
             sub_section.MultiplyByConstant(sqrtf(1.0f / sub_section.ReturnVarianceOfRealValues( )));
             sub_section.ForwardFFT( );
             sub_section.ComputeAmplitudeSpectrumFull2D(&power_spectrum_sub_section);
@@ -169,7 +196,7 @@ void CTFTilt::CalculatePowerSpectra(bool subtract_average) {
 void CTFTilt::UpdateInputImage(Image* wanted_input_image) {
     MyDebugAssertTrue(input_image_x_dimension == wanted_input_image->logical_x_dimension && input_image_y_dimension == wanted_input_image->logical_y_dimension, "Error: Image dimensions do not match\n");
 
-    input_image_buffer[image_buffer_counter].Allocate(wanted_input_image->logical_x_dimension, wanted_input_image->logical_y_dimension, 1, true);
+    // input_image_buffer[image_buffer_counter].Allocate(wanted_input_image->logical_x_dimension, wanted_input_image->logical_y_dimension, 1, true);
     input_image_buffer[image_buffer_counter].CopyFrom(wanted_input_image);
     image_buffer_counter++;
     input_image.CopyFrom(wanted_input_image);
@@ -273,14 +300,21 @@ float CTFTilt::SearchTiltAxisAndAngle( ) {
     //	if (! power_spectra_calculated) CalculatePowerSpectra();
 
     refine_mode = 1;
-
-    for ( tilt_angle = 0.0f; tilt_angle <= 60.0f; tilt_angle += angle_step ) {
+    if ( debug ) {
+        debug_json_output["tilt_axis_and_angle_search"] = wxJSONValue(wxJSONTYPE_ARRAY);
+    }
+    for ( tilt_angle = 0.0f; tilt_angle <= 80.0f; tilt_angle += angle_step ) {
         for ( tilt_axis = 0.0f; tilt_axis < 360.0f; tilt_axis += axis_step ) {
             start_values[1] = tilt_axis;
             start_values[2] = tilt_angle;
             start_values[3] = average_defocus;
             variance        = -ScoreValues(start_values);
-
+            if ( debug ) {
+                debug_json_output["tilt_axis_and_angle_search"].Append(wxJSONValue(wxJSONTYPE_ARRAY));
+                debug_json_output["tilt_axis_and_angle_search"][debug_json_output["tilt_axis_and_angle_search"].Size( ) - 1].Append(tilt_axis);
+                debug_json_output["tilt_axis_and_angle_search"][debug_json_output["tilt_axis_and_angle_search"].Size( ) - 1].Append(tilt_angle);
+                debug_json_output["tilt_axis_and_angle_search"][debug_json_output["tilt_axis_and_angle_search"].Size( ) - 1].Append(variance);
+            }
             if ( variance > variance_max ) {
                 variance_max    = variance;
                 best_tilt_axis  = tilt_axis;
@@ -382,8 +416,7 @@ float CTFTilt::CalculateTiltCorrectedSpectra(bool resample_if_pixel_too_small, f
     Image           counts_per_pixel;
 
     pixel_size_for_fitting = power_spectrum.DilatePowerspectrumToNewPixelSize(resample_if_pixel_too_small, pixel_size_of_input_image, target_pixel_size_after_resampling, box_size, &resampled_power_spectrum, false);
-
-    n_sec = std::max(input_image_buffer[0].logical_x_dimension / resampled_spectrum->logical_x_dimension, input_image_buffer[0].logical_y_dimension / resampled_spectrum->logical_y_dimension);
+    n_sec                  = std::max(input_image_buffer[0].logical_x_dimension / resampled_spectrum->logical_x_dimension, input_image_buffer[0].logical_y_dimension / resampled_spectrum->logical_y_dimension);
     if ( IsEven(n_sec) )
         n_sec++;
     //	wxPrintf("n_sec, n_stp = %i %i\n", n_sec, n_stp);
@@ -410,6 +443,7 @@ float CTFTilt::CalculateTiltCorrectedSpectra(bool resample_if_pixel_too_small, f
     counts_per_pixel.SetToConstant(0.0f);
 
     //	int section_counter = 0;
+    MyDebugPrint("Calculating tilt corrected spectra with image_buffer_counter = %i, n_sec = %i, n_stp = %i\n", image_buffer_counter, n_sec, n_stp);
     for ( image_counter = 0; image_counter < image_buffer_counter; image_counter++ ) {
         //		wxPrintf("working on frame %i\n", image_counter);
         for ( iy = -(n_sec - 1) * n_stp / 2; iy <= (n_sec - 1) * n_stp / 2; iy++ ) {

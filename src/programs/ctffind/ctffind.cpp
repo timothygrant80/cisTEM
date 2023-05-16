@@ -675,7 +675,7 @@ bool CtffindApp::DoCalculation( ) {
     int                 number_of_micrographs;
     ImageFile           input_file;
     SpectrumImage*      average_spectrum        = new SpectrumImage( );
-    Image*              average_spectrum_masked = new Image( );
+    SpectrumImage*      average_spectrum_masked = new SpectrumImage( );
     wxString            output_text_fn;
     ProgressBar*        my_progress_bar;
     NumericTextFile*    output_text;
@@ -1692,7 +1692,6 @@ bool CtffindApp::DoCalculation( ) {
         average_spectrum->MultiplyByConstant(1.0 / ((average + 2.0 * sigma) - (average - sigma)));
         if ( dump_debug_files )
             average_spectrum->QuickAndDirtyWriteSlice(debug_file_prefix + "dbg_spec_before_overlay.mrc", 1);
-        OverlayCTF(average_spectrum, current_ctf, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, number_of_extrema_profile, ctf_values_profile, &equiphase_average_pre_max, &equiphase_average_post_max, fit_nodes);
 
         //average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_overlay.mrc",1);
         average_spectrum->OverlayCTF(current_ctf, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, number_of_extrema_profile, ctf_values_profile, &equiphase_average_pre_max, &equiphase_average_post_max);

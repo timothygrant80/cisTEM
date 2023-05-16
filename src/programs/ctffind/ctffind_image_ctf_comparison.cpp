@@ -41,6 +41,10 @@ void ImageCTFComparison::SetCTF(CTF new_ctf) {
     ctf = new_ctf;
 }
 
+void ImageCTFComparison::SetFitWithThicknessNodes(bool wanted_fit_with_thickness_nodes) {
+    fit_with_thickness_nodes = wanted_fit_with_thickness_nodes;
+}
+
 void ImageCTFComparison::SetupQuickCorrelation( ) {
     img[0].SetupQuickCorrelationWithCTF(ctf, number_to_correlate, norm_image, image_mean, NULL, NULL, NULL);
     azimuths                  = new float[number_to_correlate];

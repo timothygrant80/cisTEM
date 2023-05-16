@@ -1972,8 +1972,6 @@ ShowCTFResultsPanelParent::ShowCTFResultsPanelParent( wxWindow* parent, wxWindow
 
 	Defocus1Text = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	Defocus1Text->Wrap( -1 );
-	Defocus1Text->SetMinSize( wxSize( 50,-1 ) );
-
 	fgSizer43->Add( Defocus1Text, 0, wxALIGN_LEFT|wxALL, 5 );
 
 	m_staticText389 = new wxStaticText( m_panel86, wxID_ANY, wxT("Score :"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -1984,8 +1982,6 @@ ShowCTFResultsPanelParent::ShowCTFResultsPanelParent( wxWindow* parent, wxWindow
 
 	ScoreText = new wxStaticText( m_panel86, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	ScoreText->Wrap( -1 );
-	ScoreText->SetMinSize( wxSize( 50,-1 ) );
-
 	fgSizer43->Add( ScoreText, 0, wxALL, 5 );
 
 	m_staticText382 = new wxStaticText( m_panel86, wxID_ANY, wxT("Defocus 2 :"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -2903,6 +2899,8 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	bSizer73 = new wxBoxSizer( wxVERTICAL );
 
 	JobDetailsPanel = new wxPanel( RightPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	JobDetailsPanel->Hide();
+
 	wxBoxSizer* bSizer101;
 	bSizer101 = new wxBoxSizer( wxVERTICAL );
 
@@ -3104,7 +3102,7 @@ FindCTFResultsPanel::FindCTFResultsPanel( wxWindow* parent, wxWindowID id, const
 	NumberOfAveragedFramesLabel->Wrap( -1 );
 	NumberOfAveragedFramesLabel->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
 
-	InfoSizer->Add( NumberOfAveragedFramesLabel, 0, wxALIGN_RIGHT|wxALL, 5 );
+	InfoSizer->Add( NumberOfAveragedFramesLabel, 0, wxALL, 5 );
 
 	NumberOfAveragedFramesStaticText = new wxStaticText( JobDetailsPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
 	NumberOfAveragedFramesStaticText->Wrap( -1 );
@@ -9626,8 +9624,6 @@ FindCTFPanel::FindCTFPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos,
 
 	ExpertPanel = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxSize( -1,-1 ), wxVSCROLL );
 	ExpertPanel->SetScrollRate( 5, 5 );
-	ExpertPanel->Hide();
-
 	InputSizer = new wxBoxSizer( wxVERTICAL );
 
 	wxFlexGridSizer* fgSizer1;

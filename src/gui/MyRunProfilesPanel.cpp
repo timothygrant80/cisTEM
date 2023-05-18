@@ -509,7 +509,9 @@ void MyRunProfilesPanel::OnAddProfileClick(wxCommandEvent& event) {
 
 void MyRunProfilesPanel::AddDefaultLocalProfile( ) {
     run_profile_manager.AddDefaultLocalProfile( );
-    main_frame->current_project.database.AddOrReplaceRunProfile(run_profile_manager.ReturnLastProfilePointer( ));
+    for ( int counter = 0; counter < run_profile_manager.number_of_run_profiles; counter++ ) {
+        main_frame->current_project.database.AddOrReplaceRunProfile(&run_profile_manager.run_profiles[counter]);
+    }
     main_frame->DirtyRunProfiles( );
 
     FillProfilesBox( );

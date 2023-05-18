@@ -237,11 +237,7 @@ bool Refine2DApp::DoCalculation( ) {
 
     cisTEMParameters input_star_file;
 
-    wxFileName star_filename(input_star_filename);
-    if ( star_filename.GetExt( ) == "cistem" )
-        input_star_file.ReadFromcisTEMBinaryFile(input_star_filename);
-    else
-        input_star_file.ReadFromcisTEMStarFile(input_star_filename);
+    input_star_file.ReadFromcisTEMStarFile(input_star_filename);
 
     // Read whole parameter file to work out average values and variances
 

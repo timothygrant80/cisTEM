@@ -22,7 +22,9 @@ noinst_HEADERS = 	src/core/asset_group.h \
                  src/core/particle.h \
                  src/core/reconstruct_3d.h \
                  src/core/electron_dose.h \
-                 src/core/run_profiles.h \
+                 src/core/run_command.h \
+                 src/core/run_profile.h \
+                 src/core/run_profile_manager.h \
                  src/core/database.h \
                  src/core/project.h \
                  src/core/job_packager.h \
@@ -99,7 +101,9 @@ ctffind_SOURCES = src/programs/ctffind/ctffind.cpp \
                        src/core/image_file.cpp \
                        src/core/job_packager.cpp \
                        src/core/job_tracker.cpp \
-                       src/core/run_profiles.cpp \
+                       src/core/run_command.cpp \
+                       src/core/run_profile.cpp \
+                       src/core/run_profile_manager.cpp \
                        src/core/myapp.cpp \
                        src/core/empirical_distribution.cpp \
                        src/core/ctf.cpp \

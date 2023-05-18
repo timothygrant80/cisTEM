@@ -1003,7 +1003,7 @@ wxString RefinementPackageListControl::OnGetItemText(long item, long column) con
 
     MyRefinementPackageAssetPanel* parent_panel = reinterpret_cast<MyRefinementPackageAssetPanel*>(m_parent->GetParent( )->GetParent( )); // not very nice code!
 
-    if ( parent_panel->all_refinement_packages.GetCount( ) > 0 ) {
+    if ( parent_panel->all_refinement_packages.GetCount( ) > 0 && item < parent_panel->all_refinement_packages.GetCount( ) ) {
         return parent_panel->all_refinement_packages.Item(item).name;
     }
     else
@@ -1527,8 +1527,63 @@ ClassVolumeSelectPanel::ClassVolumeSelectPanel(wxWindow* parent, wxWindowID id, 
 ClassVolumeSelectPanel::~ClassVolumeSelectPanel( ) {
 }
 
-wxThread::ExitCode AutoMaskerThread::Entry( ) {
-    //  Read in the files, threshold them write them out again...
+
+CombinedPackageClassSelectionPanel::CombinedPackageClassSelectionPanel (wxWindow *parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
+: wxPanel (parent, id, pos, size, style)
+{
+	MainSizer = new wxBoxSizer( wxHORIZONTAL );
+
+	wxBoxSizer* ClassSelectSizer;
+	ClassSelectSizer = new wxBoxSizer( wxHORIZONTAL );
+
+	ClassText = new wxStaticText( this, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, 0 );
+	ClassText->Wrap( 1 );
+	ClassSelectSizer->Add( ClassText, 1, wxALIGN_CENTER_VERTICAL | wxALL, 5 );
+
+	ClassComboBox = new wxComboBox(this, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, 0, NULL, 0 );
+
+	ClassSelectSizer->Add( ClassComboBox, 1, wxALL, 5 );
+	MainSizer->Add( ClassSelectSizer, 1, 0, 5 );
+
+	this->SetSizer( MainSizer );
+	this->Layout();
+}
+
+CombinedPackageClassSelectionPanel::~CombinedPackageClassSelectionPanel ()
+{
+
+}
+
+CombinedPackageRefinementSelectPanel::CombinedPackageRefinementSelectPanel (wxWindow *parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
+: wxPanel (parent, id, pos, size, style)
+{
+	MainSizer = new wxBoxSizer( wxHORIZONTAL );
+
+	wxBoxSizer* RefinementSelectSizer;
+	RefinementSelectSizer = new wxBoxSizer( wxHORIZONTAL );
+
+	RefinementText = new wxStaticText( this, wxID_ANY, wxT(""), wxDefaultPosition, wxDefaultSize, 0 );
+	RefinementText->Wrap( 0 );
+	RefinementSelectSizer->Add( RefinementText, 1, wxALIGN_CENTER | wxALIGN_CENTER_VERTICAL, 5 );
+
+	RefinementComboBox = new RefinementPickerComboPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+
+	RefinementSelectSizer->Add(RefinementComboBox, 1, 0, 5);
+	MainSizer->Add( RefinementSelectSizer, 1, 0, 5 );
+
+	this->SetSizer( MainSizer );
+	this->Layout();
+}
+
+CombinedPackageRefinementSelectPanel::~CombinedPackageRefinementSelectPanel()
+{
+
+}
+
+
+wxThread::ExitCode AutoMaskerThread::Entry()
+{
+	//  Read in the files, threshold them write them out again...
 
     Image     input_image;
     Image     buffer_image;

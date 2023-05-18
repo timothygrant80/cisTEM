@@ -40,6 +40,12 @@ void MyRefinementPackageAssetPanel::OnRenameClick(wxCommandEvent& event) {
     }
 }
 
+void MyRefinementPackageAssetPanel::OnCombineClick(wxCommandEvent& event) {
+    CombineRefinementPackagesWizard* my_wizard = new CombineRefinementPackagesWizard(this);
+    my_wizard->RunWizard(my_wizard->package_selection_page);
+    my_wizard->Destroy( );
+}
+
 void MyRefinementPackageAssetPanel::OnImportClick(wxCommandEvent& event) {
     ImportRefinementPackageWizard* my_wizard = new ImportRefinementPackageWizard(this);
     my_wizard->GetPageAreaSizer( )->Add(my_wizard->m_pages.Item(0));

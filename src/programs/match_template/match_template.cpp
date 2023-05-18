@@ -1,6 +1,6 @@
 #include "../../core/core_headers.h"
 
-#include "../../core/cistem_constants.h"
+#include "../../constants/constants.h"
 
 // Values for data that are passed around in the results.
 const int number_of_output_images     = 8; //mip, psi, theta, phi, pixel, defocus, sums, sqsums (scaled mip is not sent out)
@@ -52,7 +52,7 @@ class
     ArrayOfAggregatedTemplateResults aggregated_results;
     bool                             is_rotated_by_90 = false;
 
-    float GetMaxJobWaitTimeInSeconds( ) { return 120.0f; }
+    float GetMaxJobWaitTimeInSeconds( ) { return 360.0f; }
 
   private:
 };
@@ -250,7 +250,7 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
                                       best_defocus_output_file.ToUTF8( ).data( ),
                                       best_pixel_size_output_file.ToUTF8( ).data( ),
                                       scaled_mip_output_file.ToUTF8( ).data( ),
-                                      correlation_std_output_file.ToUTF8( ).data( ),
+                                      correlation_avg_output_file.ToUTF8( ).data( ),
                                       my_symmetry.ToUTF8( ).data( ),
                                       in_plane_angular_step,
                                       output_histogram_file.ToUTF8( ).data( ),
@@ -258,7 +258,7 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
                                       last_search_position,
                                       image_number_for_gui,
                                       number_of_jobs_per_image_in_gui,
-                                      correlation_avg_output_file.ToUTF8( ).data( ),
+                                      correlation_std_output_file.ToUTF8( ).data( ),
                                       directory_for_results.ToUTF8( ).data( ),
                                       result_filename.ToUTF8( ).data( ),
                                       min_peak_radius,
@@ -560,6 +560,7 @@ bool MatchTemplateApp::DoCalculation( ) {
             if ( ReturnThreadNumberOfCurrentThread( ) == 0 ) {
                 wxPrintf("Not rotating the search image for speed even though it is enabled\n");
             }
+            is_rotated_by_90 = false;
         }
 #endif
     }

@@ -402,6 +402,313 @@ float Image::ReturnCorrelationCoefficientUnnormalized(Image& other_image, float 
     return float(cross_terms / number_of_pixels - average1 / number_of_pixels * average2 / number_of_pixels);
 }
 
+// Returns the correlation coefficient of the floated images normalized
+float Image::ReturnCorrelationCoefficientNormalized(Image& other_image, float wanted_mask_radius) {
+    MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+    MyDebugAssertTrue(is_in_real_space, "Not in real space");
+    MyDebugAssertTrue(other_image.is_in_memory, "Other image memory not allocated");
+    MyDebugAssertTrue(other_image.is_in_real_space == is_in_real_space, "Images not in the same space");
+
+    int  i;
+    int  j;
+    int  k;
+    long number_of_pixels = 0;
+
+    float x;
+    float y;
+    float z;
+
+    long pixel_counter = 0;
+
+    float  distance_from_center_squared;
+    float  mask_radius_squared;
+    float  edge;
+    double average1    = 0.0;
+    double average2    = 0.0;
+    double var1        = 0.0;
+    double var2        = 0.0;
+    double cross_terms = 0.0;
+    double ccc;
+
+    if ( wanted_mask_radius > 0.0 ) {
+        mask_radius_squared = powf(wanted_mask_radius, 2);
+        for ( k = 0; k < logical_z_dimension; k++ ) {
+            z = powf(k - physical_address_of_box_center_z, 2);
+
+            for ( j = 0; j < logical_y_dimension; j++ ) {
+                y = powf(j - physical_address_of_box_center_y, 2);
+
+                for ( i = 0; i < logical_x_dimension; i++ ) {
+                    x = powf(i - physical_address_of_box_center_x, 2);
+
+                    distance_from_center_squared = x + y + z;
+
+                    if ( distance_from_center_squared <= mask_radius_squared ) {
+                        cross_terms += real_values[pixel_counter] * other_image.real_values[pixel_counter];
+                        average1 += real_values[pixel_counter];
+                        average2 += other_image.real_values[pixel_counter];
+                        var1 += real_values[pixel_counter] * real_values[pixel_counter];
+                        var2 += other_image.real_values[pixel_counter] * other_image.real_values[pixel_counter];
+                        number_of_pixels++;
+                    }
+                    pixel_counter++;
+                }
+                pixel_counter += padding_jump_value;
+            }
+        }
+    }
+    else {
+        for ( k = 0; k < logical_z_dimension; k++ ) {
+            for ( j = 0; j < logical_y_dimension; j++ ) {
+                for ( i = 0; i < logical_x_dimension; i++ ) {
+                    cross_terms += real_values[pixel_counter] * other_image.real_values[pixel_counter];
+                    average1 += real_values[pixel_counter];
+                    average2 += other_image.real_values[pixel_counter];
+                    var1 += real_values[pixel_counter] * real_values[pixel_counter];
+                    var2 += other_image.real_values[pixel_counter] * other_image.real_values[pixel_counter];
+                    pixel_counter++;
+                }
+                pixel_counter += padding_jump_value;
+            }
+        }
+        number_of_pixels = long(logical_x_dimension) * long(logical_y_dimension) * long(logical_z_dimension);
+    }
+    average1 /= number_of_pixels;
+    average2 /= number_of_pixels;
+    var1 = var1 / number_of_pixels - average1 * average1;
+    var2 = var2 / number_of_pixels - average2 * average2;
+
+    // wxPrintf("average1 average2 var1 var2: %g %g %g %g\n", average1, average2, var1, var2);
+
+    ccc = cross_terms / number_of_pixels - average1 * average2;
+    return float(ccc / sqrt(var1 * var2));
+}
+
+float Image::ReturnCorrelationCoefficientNormalizedAtPeak(Image& other_image, int* pixel_used, int peak_x, int peak_y, int peak_z, float wanted_dis_x, float wanted_dis_y, float wanted_dis_z) {
+    MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+    MyDebugAssertTrue(is_in_real_space, "Not in real space");
+    MyDebugAssertTrue(other_image.is_in_memory, "Other image memory not allocated");
+    MyDebugAssertTrue(other_image.is_in_real_space == is_in_real_space, "Images not in the same space");
+
+    int  i;
+    int  j;
+    int  k;
+    long number_of_pixels = 0;
+
+    float x;
+    float y;
+    float z;
+    float x_low_bd, x_high_bd;
+    float y_low_bd, y_high_bd, tmp;
+    float z_low_bd, z_high_bd;
+
+    // x_low_bd  = wxMax(logical_x_dimension / 2 - wanted_dis_x - peak_x, 0);
+    // x_high_bd = wxMin(logical_x_dimension - 1, logical_x_dimension / 2 + wanted_dis_x - peak_x - 1);
+    // y_low_bd  = wxMax(logical_y_dimension / 2 - wanted_dis_y - peak_y, 0);
+    // y_high_bd = wxMin(logical_y_dimension - 1, logical_y_dimension / 2 + wanted_dis_y - peak_y - 1);
+    if ( wanted_dis_x > 0 ) {
+        x_low_bd  = wxMax(logical_x_dimension / 2 - wanted_dis_x - peak_x, logical_x_dimension / 2 - wanted_dis_x);
+        x_high_bd = wxMin(logical_x_dimension / 2 + wanted_dis_x - 1, logical_x_dimension / 2 + wanted_dis_x - peak_x - 1);
+    }
+    else {
+        x_low_bd  = 0;
+        x_high_bd = logical_x_dimension - 1;
+    }
+    if ( wanted_dis_y > 0 ) {
+        y_low_bd  = wxMax(logical_y_dimension / 2 - wanted_dis_y - peak_y, logical_y_dimension / 2 - wanted_dis_y);
+        y_high_bd = wxMin(logical_y_dimension / 2 + wanted_dis_y - 1, logical_y_dimension / 2 + wanted_dis_y - peak_y - 1);
+    }
+    else {
+        y_low_bd  = 0;
+        y_high_bd = logical_y_dimension - 1;
+    }
+    if ( wanted_dis_z > 0 ) {
+        z_low_bd  = wxMax(logical_z_dimension / 2 - wanted_dis_z - peak_z, logical_z_dimension / 2 - wanted_dis_z);
+        z_high_bd = wxMin(logical_z_dimension / 2 + wanted_dis_z - 1, logical_z_dimension / 2 + wanted_dis_z - peak_z - 1);
+    }
+    else {
+        z_low_bd  = 0;
+        z_high_bd = logical_z_dimension - 1;
+    }
+
+    // tmp       = y_low_bd;
+    // tmp       = logical_y_dimension - y_high_bd - 1;
+    // y_high_bd = logical_y_dimension - y_low_bd - 1;
+    // y_low_bd  = tmp;
+    // z_low_bd  = wxMax(logical_z_dimension / 2 - wanted_dis_z - peak_z, logical_z_dimension / 2 - wanted_dis_z);
+    // z_high_bd = wxMin(logical_z_dimension - 1, logical_z_dimension / 2 + wanted_dis_z - peak_z - 1);
+    // z_low_bd  = wxMax(logical_z_dimension / 2 - wanted_dis_z - peak_z, logical_z_dimension / 2 - wanted_dis_z);
+    // z_high_bd = wxMin(logical_z_dimension / 2 + wanted_dis_z - 1, logical_z_dimension / 2 + wanted_dis_z - peak_z - 1);
+
+    wxPrintf("x bound, %g, %g\n", x_low_bd, x_high_bd);
+    wxPrintf("y bound, %g, %g\n", y_low_bd, y_high_bd);
+    wxPrintf("z bound, %g, %g\n", z_low_bd, z_high_bd);
+
+    long pixel_counter = 0;
+
+    float  mask_radius_squared;
+    float  edge;
+    double average1    = 0.0;
+    double average2    = 0.0;
+    double var1        = 0.0;
+    double var2        = 0.0;
+    double cross_terms = 0.0;
+    double ccc;
+
+    PhaseShift(-peak_x, -peak_y);
+    if ( wanted_dis_x > 0.0 || wanted_dis_y > 0.0 || wanted_dis_z > 0.0 ) {
+        // mask_radius_squared = powf(wanted_mask_radius, 2);
+        // float dis_x_square = powf(wanted_dis_x, 2);
+        // float dis_y_square = powf(wanted_dis_y, 2);
+        // float dis_z_square = powf(wanted_dis_z, 2);
+        for ( k = 0; k < logical_z_dimension; k++ ) {
+            // z = powf(k - physical_address_of_box_center_z, 2);
+
+            for ( j = 0; j < logical_y_dimension; j++ ) {
+                // y = powf(j - physical_address_of_box_center_y, 2);
+
+                for ( i = 0; i < logical_x_dimension; i++ ) {
+                    // x = powf(i - physical_address_of_box_center_x, 2);
+
+                    // distance_from_center_squared = x + y + z;
+
+                    // if ( distance_from_center_squared <= mask_radius_squared ) {
+                    if ( i >= x_low_bd && i <= x_high_bd && j >= y_low_bd && j <= y_high_bd && k >= z_low_bd && k <= z_high_bd ) {
+                        // if ( x <= dis_x_square && y <= dis_y_square && z <= dis_z_square ) {
+                        cross_terms += real_values[pixel_counter] * other_image.real_values[pixel_counter];
+                        average1 += real_values[pixel_counter];
+                        average2 += other_image.real_values[pixel_counter];
+                        var1 += real_values[pixel_counter] * real_values[pixel_counter];
+                        var2 += other_image.real_values[pixel_counter] * other_image.real_values[pixel_counter];
+                        number_of_pixels++;
+                    }
+                    pixel_counter++;
+                }
+                pixel_counter += padding_jump_value;
+            }
+        }
+    }
+    else {
+        for ( k = 0; k < logical_z_dimension; k++ ) {
+            for ( j = 0; j < logical_y_dimension; j++ ) {
+                for ( i = 0; i < logical_x_dimension; i++ ) {
+                    cross_terms += real_values[pixel_counter] * other_image.real_values[pixel_counter];
+                    average1 += real_values[pixel_counter];
+                    average2 += other_image.real_values[pixel_counter];
+                    var1 += real_values[pixel_counter] * real_values[pixel_counter];
+                    var2 += other_image.real_values[pixel_counter] * other_image.real_values[pixel_counter];
+                    pixel_counter++;
+                }
+                pixel_counter += padding_jump_value;
+            }
+        }
+        number_of_pixels = long(logical_x_dimension) * long(logical_y_dimension) * long(logical_z_dimension);
+    }
+    average1 /= number_of_pixels;
+    average2 /= number_of_pixels;
+    var1 = var1 / number_of_pixels - average1 * average1;
+    var2 = var2 / number_of_pixels - average2 * average2;
+
+    // wxPrintf("average1 average2 var1 var2: %g %g %g %g\n", average1, average2, var1, var2);
+
+    ccc = cross_terms / number_of_pixels - average1 * average2;
+
+    PhaseShift(peak_x, peak_y);
+    // float result[2];
+    // result[0] = float(ccc / sqrt(var1 * var2));
+    // result[1] = float(number_of_pixels);
+    wxPrintf("number of pixels %i\n", int(number_of_pixels));
+    *pixel_used = int(number_of_pixels);
+    return float(ccc / sqrt(var1 * var2));
+
+    // return result;
+}
+
+float Image::ReturnCorrelationCoefficientNormalizedRectangle(Image& other_image, float wanted_dis_x, float wanted_dis_y, float wanted_dis_z) {
+    MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+    MyDebugAssertTrue(is_in_real_space, "Not in real space");
+    MyDebugAssertTrue(other_image.is_in_memory, "Other image memory not allocated");
+    MyDebugAssertTrue(other_image.is_in_real_space == is_in_real_space, "Images not in the same space");
+
+    int  i;
+    int  j;
+    int  k;
+    long number_of_pixels = 0;
+
+    float x;
+    float y;
+    float z;
+
+    long pixel_counter = 0;
+
+    float  distance_from_center_squared;
+    float  mask_radius_squared;
+    float  edge;
+    double average1    = 0.0;
+    double average2    = 0.0;
+    double var1        = 0.0;
+    double var2        = 0.0;
+    double cross_terms = 0.0;
+    double ccc;
+
+    if ( wanted_dis_x > 0.0 || wanted_dis_y > 0.0 || wanted_dis_z > 0.0 ) {
+        // mask_radius_squared = powf(wanted_mask_radius, 2);
+        float dis_x_square = powf(wanted_dis_x, 2);
+        float dis_y_square = powf(wanted_dis_y, 2);
+        float dis_z_square = powf(wanted_dis_z, 2);
+        for ( k = 0; k < logical_z_dimension; k++ ) {
+            z = powf(k - physical_address_of_box_center_z, 2);
+
+            for ( j = 0; j < logical_y_dimension; j++ ) {
+                y = powf(j - physical_address_of_box_center_y, 2);
+
+                for ( i = 0; i < logical_x_dimension; i++ ) {
+                    x = powf(i - physical_address_of_box_center_x, 2);
+
+                    // distance_from_center_squared = x + y + z;
+
+                    // if ( distance_from_center_squared <= mask_radius_squared ) {
+                    if ( x <= dis_x_square && y <= dis_y_square && z <= dis_z_square ) {
+                        cross_terms += real_values[pixel_counter] * other_image.real_values[pixel_counter];
+                        average1 += real_values[pixel_counter];
+                        average2 += other_image.real_values[pixel_counter];
+                        var1 += real_values[pixel_counter] * real_values[pixel_counter];
+                        var2 += other_image.real_values[pixel_counter] * other_image.real_values[pixel_counter];
+                        number_of_pixels++;
+                    }
+                    pixel_counter++;
+                }
+                pixel_counter += padding_jump_value;
+            }
+        }
+    }
+    else {
+        for ( k = 0; k < logical_z_dimension; k++ ) {
+            for ( j = 0; j < logical_y_dimension; j++ ) {
+                for ( i = 0; i < logical_x_dimension; i++ ) {
+                    cross_terms += real_values[pixel_counter] * other_image.real_values[pixel_counter];
+                    average1 += real_values[pixel_counter];
+                    average2 += other_image.real_values[pixel_counter];
+                    var1 += real_values[pixel_counter] * real_values[pixel_counter];
+                    var2 += other_image.real_values[pixel_counter] * other_image.real_values[pixel_counter];
+                    pixel_counter++;
+                }
+                pixel_counter += padding_jump_value;
+            }
+        }
+        number_of_pixels = long(logical_x_dimension) * long(logical_y_dimension) * long(logical_z_dimension);
+    }
+    average1 /= number_of_pixels;
+    average2 /= number_of_pixels;
+    var1 = var1 / number_of_pixels - average1 * average1;
+    var2 = var2 / number_of_pixels - average2 * average2;
+
+    // wxPrintf("average1 average2 var1 var2: %g %g %g %g\n", average1, average2, var1, var2);
+
+    ccc = cross_terms / number_of_pixels - average1 * average2;
+    return float(ccc / sqrt(var1 * var2));
+}
+
 float Image::ReturnPixelWiseProduct(Image& other_image) {
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
     MyDebugAssertTrue(is_in_real_space, "Not in real space");
@@ -1158,6 +1465,63 @@ void Image::Whiten(float resolution_limit, Curve* whitening_filter) {
 
     delete[] sum;
     delete[] non_zero_count;
+}
+
+void Image::MultiplyByWeightsCurveReal(Curve& weights, float scale_factor) {
+    MyDebugAssertTrue(is_in_real_space == true, "Image to filter not in real space");
+    MyDebugAssertTrue(weights.number_of_points > 0, "weights curve not calculated");
+
+    int i;
+    int j;
+    int k;
+    int bin;
+
+    float x;
+    float y;
+    float z;
+
+    float distance_from_center_squared;
+
+    // int number_of_bins2 = ReturnLargestLogicalDimension( );
+    int   number_of_bins       = weights.number_of_points;
+    float distance_from_center = (ReturnLargestLogicalDimension( ) / 2.0 + 1.0) * sqrtf(2);
+
+    // wxPrintf("distance from center %g", distance_from_center);
+
+    long pixel_counter = 0;
+    // for ( k = 0; k < logical_z_dimension; k++ ) {
+    for ( k = 0; k < logical_z_dimension; k++ ) {
+        // for ( k = 0; k < 1; k++ ) {
+        z = powf(k - physical_address_of_box_center_z, 2);
+
+        for ( j = 0; j < logical_y_dimension; j++ ) {
+            // for ( j = 0; j < 1; j++ ) {
+            // for ( j = int(logical_y_dimension / 2.0) + 1; j < int(logical_y_dimension / 2.0 + 2); j++ ) {
+            y = powf(j - physical_address_of_box_center_y, 2);
+
+            for ( i = 0; i < logical_x_dimension; i++ ) {
+                // for ( i = 0; i < 2; i++ ) {
+                x = powf(i - physical_address_of_box_center_x, 2);
+
+                distance_from_center_squared = x + y + z;
+
+                // wxPrintf("distance from center squared %g", distance_from_center);
+                bin = round(sqrtf(distance_from_center_squared) / distance_from_center * number_of_bins);
+                // wxPrintf("the bin: %i \n", bin);
+
+                if ( (bin < weights.number_of_points) ) {
+                    // wxPrintf("bin %i, value, %g", bin, real_values[pixel_counter]);
+                    real_values[pixel_counter] = real_values[pixel_counter] * weights.data_y[bin] * scale_factor;
+                    // wxPrintf(" weights %g, weighted_value %g\n", weights.data_y[bin], real_values[pixel_counter]);
+                }
+                else {
+                    wxPrintf(" Weighting points not enough. Weighting points: %i, Weighting points needed: %i \n", number_of_bins, bin + 1);
+                }
+                pixel_counter++;
+            }
+            pixel_counter += padding_jump_value;
+        }
+    }
 }
 
 void Image::MultiplyByWeightsCurve(Curve& weights, float scale_factor) {
@@ -3359,6 +3723,134 @@ void Image::TriangleMask(float wanted_triangle_half_base_length) {
     }
 }
 
+float Image::SquareMaskWithCosineEdge(float wanted_mask_dim, float wanted_mask_edge, bool use_mean_value, int wanted_center_x, int wanted_center_y, int wanted_center_z) {
+    //The center of the square mask can be adjusted
+    MyDebugAssertTrue(is_in_real_space, "Image not in real space");
+    // MyDebugAssertTrue(object_is_centred_in_box, "Object not centered in box");
+
+    long   pixel_counter;
+    int    i, j, k;
+    float  x, y, z;
+    double outer_pixel_sum;
+    long   outer_number_of_pixels;
+    float  distance_from_mask_boundary;
+    float  distance_from_mask_boundary_squared;
+    float  edge;
+    double mask_volume = 0.0;
+
+    if ( wanted_center_x == 0 && wanted_center_y == 0 && wanted_center_z == 0 ) {
+        wanted_center_x = physical_address_of_box_center_x;
+        wanted_center_y = physical_address_of_box_center_y;
+        wanted_center_z = physical_address_of_box_center_z;
+    }
+
+    const int i_min      = wanted_center_x - wanted_mask_dim / 2;
+    const int i_max      = wanted_center_x + (wanted_mask_dim - wanted_mask_dim / 2 - 1);
+    const int j_min      = wanted_center_y - wanted_mask_dim / 2;
+    const int j_max      = wanted_center_y + (wanted_mask_dim - wanted_mask_dim / 2 - 1);
+    const int k_min      = wanted_center_z - wanted_mask_dim / 2;
+    const int k_max      = wanted_center_z + (wanted_mask_dim - wanted_mask_dim / 2 - 1);
+    const int i_min_edge = wanted_center_x - wanted_mask_dim / 2 - wanted_mask_edge;
+    const int i_max_edge = wanted_center_x + (wanted_mask_dim - wanted_mask_dim / 2 - 1) + wanted_mask_edge;
+    const int j_min_edge = wanted_center_y - wanted_mask_dim / 2 - wanted_mask_edge;
+    const int j_max_edge = wanted_center_y + (wanted_mask_dim - wanted_mask_dim / 2 - 1) + wanted_mask_edge;
+    const int k_min_edge = wanted_center_z - wanted_mask_dim / 2 - wanted_mask_edge;
+    const int k_max_edge = wanted_center_z + (wanted_mask_dim - wanted_mask_dim / 2 - 1) + wanted_mask_edge;
+
+    float dis_x_squared;
+    float dis_y_squared;
+    float dis_z_squared;
+
+    outer_pixel_sum        = 0.0;
+    outer_number_of_pixels = 0;
+    pixel_counter          = 0;
+
+    MyDebugAssertTrue(wanted_mask_edge > 1, "Edge width too small: %f\n", wanted_mask_edge);
+
+    // Let's mask
+    pixel_counter = 0;
+    if ( use_mean_value ) {
+        for ( k = 0; k < logical_z_dimension; k++ ) {
+            for ( j = 0; j < logical_y_dimension; j++ ) {
+                for ( i = 0; i < logical_x_dimension; i++ ) {
+                    // if ( invert ) {
+                    //     if ( i >= i_min && i <= i_max && j >= j_min && j <= j_max && k >= k_min && k <= k_max ) {
+                    //         real_values[pixel_counter] = wanted_mask_value;
+                    //     }
+                    // }
+                    // else {
+                    if ( i < i_min_edge || i > i_max_edge || j < j_min_edge || j > j_max_edge || k < k_min_edge || k > k_max_edge ) {
+                        // real_values[pixel_counter] = wanted_mask_value;
+                        outer_pixel_sum = outer_pixel_sum + real_values[pixel_counter];
+                        outer_number_of_pixels++;
+                    }
+                    // }
+                    pixel_counter++;
+                }
+                pixel_counter += padding_jump_value;
+            }
+        }
+        if ( pixel_counter > 0 ) {
+            outer_pixel_sum /= outer_number_of_pixels;
+        }
+    }
+    else {
+        outer_pixel_sum = 0;
+    }
+
+    pixel_counter = 0;
+    for ( k = 0; k < logical_z_dimension; k++ ) {
+        z = powf(k - wanted_center_z, 2);
+
+        for ( j = 0; j < logical_y_dimension; j++ ) {
+            y = powf(j - wanted_center_y, 2);
+
+            for ( i = 0; i < logical_x_dimension; i++ ) {
+                x = powf(i - wanted_center_x, 2);
+
+                if ( i >= i_min_edge && i <= i_max_edge && j >= j_min_edge && j <= j_max_edge && k >= k_min_edge && k <= k_max_edge ) {
+                    if ( i <= i_min || i >= i_max ) {
+                        dis_x_squared = std::min(powf(i - i_min, 2), powf(i - i_max, 2));
+                    }
+                    else {
+                        dis_x_squared = 0.0;
+                    }
+                    if ( j <= j_min || j >= j_max ) {
+                        dis_y_squared = std::min(powf(j - j_min, 2), powf(j - j_max, 2));
+                    }
+                    else {
+                        dis_y_squared = 0.0;
+                    }
+                    if ( k <= k_min || k >= k_max ) {
+                        dis_z_squared = std::min(powf(k - k_min, 2), powf(k - k_max, 2));
+                    }
+                    else {
+                        dis_z_squared = 0.0;
+                    }
+                    distance_from_mask_boundary_squared = dis_x_squared + dis_y_squared + dis_z_squared;
+                    distance_from_mask_boundary         = sqrtf(distance_from_mask_boundary_squared);
+                    if ( distance_from_mask_boundary <= wanted_mask_edge ) {
+                        edge                       = (1.0 + cosf(PI * distance_from_mask_boundary / wanted_mask_edge)) / 2.0;
+                        real_values[pixel_counter] = real_values[pixel_counter] * edge + (1.0 - edge) * outer_pixel_sum;
+                        mask_volume += powf(edge, 2);
+                    }
+                    else {
+                        real_values[pixel_counter] = outer_pixel_sum;
+                        mask_volume += 1.0;
+                    }
+                }
+                else {
+                    real_values[pixel_counter] = outer_pixel_sum;
+                    mask_volume += 1.0;
+                }
+                pixel_counter++;
+            }
+            pixel_counter += padding_jump_value;
+        }
+    }
+    return mask_volume;
+}
+
 void Image::SquareMaskWithValue(float wanted_mask_dim, float wanted_mask_value, bool invert, int wanted_center_x, int wanted_center_y, int wanted_center_z) {
     MyDebugAssertTrue(is_in_real_space, "Image not in real space");
     MyDebugAssertTrue(object_is_centred_in_box, "Object not centered in box");
@@ -3400,6 +3892,87 @@ void Image::SquareMaskWithValue(float wanted_mask_dim, float wanted_mask_value, 
                 pixel_counter++;
             }
             pixel_counter += padding_jump_value;
+        }
+    }
+}
+
+void Image::GaussianLowPassRadiusFilter(float radius, float sigma) {
+    MyDebugAssertTrue(is_in_real_space == false, "Image Must Be Complex");
+
+    int i;
+    int j;
+    int k;
+
+    float x;
+    float y;
+    float z;
+
+    long  pixel_counter;
+    float radius_squared             = radius * radius;
+    float one_over_two_sigma_squared = 0.5 / powf(sigma, 2);
+
+    float frequency;
+    float frequency_squared;
+
+    pixel_counter = 0;
+    for ( k = 0; k <= physical_upper_bound_complex_z; k++ ) {
+        z = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z, 2);
+
+        for ( j = 0; j <= physical_upper_bound_complex_y; j++ ) {
+            y = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y, 2);
+
+            for ( i = 0; i <= physical_upper_bound_complex_x; i++ ) {
+                x = powf(i * fourier_voxel_size_x, 2);
+
+                // compute squared radius, in units of reciprocal pixels
+                frequency = sqrtf(x + y + z);
+
+                if ( frequency >= radius ) {
+                    complex_values[pixel_counter] *= expf(-(frequency - radius) * (frequency - radius) * one_over_two_sigma_squared);
+                }
+                pixel_counter++;
+            }
+        }
+    }
+}
+
+void Image::GaussianHighPassRadiusFilter(float radius, float sigma) {
+    MyDebugAssertTrue(is_in_real_space == false, "Image Must Be Complex");
+
+    int i;
+    int j;
+    int k;
+
+    float x;
+    float y;
+    float z;
+
+    long pixel_counter = 0;
+
+    float frequency;
+    float one_over_two_sigma_squared = 0.5 / powf(sigma, 2);
+
+    for ( k = 0; k <= physical_upper_bound_complex_z; k++ ) {
+        z = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z, 2);
+
+        for ( j = 0; j <= physical_upper_bound_complex_y; j++ ) {
+            y = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y, 2);
+
+            for ( i = 0; i <= physical_upper_bound_complex_x; i++ ) {
+                x = powf(i * fourier_voxel_size_x, 2);
+
+                // compute squared radius, in units of reciprocal pixels
+                frequency = sqrtf(x + y + z);
+
+                if ( frequency >= radius ) {
+                    complex_values[pixel_counter] *= 1.0 - expf(-(frequency - radius) * (frequency - radius) * one_over_two_sigma_squared);
+                }
+                else {
+                    complex_values[pixel_counter] *= 0.0;
+                }
+
+                pixel_counter++;
+            }
         }
     }
 }
@@ -3809,6 +4382,244 @@ float Image::CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool i
     }
 
     return float(mask_volume);
+}
+
+void Image::TaperLinear(float wanted_taper_edge_x, float wanted_taper_edge_y, float wanted_taper_edge_z, float wanted_mask_radius_x, float wanted_mask_radius_y, float wanted_mask_radius_z) {
+    // MyDebugAssertTrue(! is_in_real_space || object_is_centred_in_box, "Image in real space but not centered");
+    // if ( is_in_real_space ) {
+    MyDebugAssertTrue(wanted_taper_edge_x >= 1.0f, "Edge_x width too small");
+    MyDebugAssertTrue(wanted_taper_edge_y >= 1.0f, "Edge_y width too small");
+    MyDebugAssertTrue(wanted_taper_edge_z >= 1.0f, "Edge_z width too small");
+    MyDebugAssertTrue(wanted_mask_radius_x <= logical_x_dimension / 2.0f, "Taper range in x too large");
+    MyDebugAssertTrue(wanted_mask_radius_y <= logical_y_dimension / 2.0f, "Taper range in y too large");
+    MyDebugAssertTrue(wanted_mask_radius_z <= logical_z_dimension / 2.0f, "Taper range in z too large");
+    // }
+    // else {
+    //     MyDebugAssertTrue(wanted_mask_edge > 0.0f, "Edge width too small");
+    // }
+
+    int  i;
+    int  j;
+    int  k;
+    int  ii;
+    int  jj;
+    int  kk;
+    long number_of_pixels;
+
+    int   x;
+    int   y;
+    int   z;
+    float float_x;
+    float float_y;
+    float float_z;
+
+    long pixel_counter = 0;
+
+    float distance_from_center;
+    float mask_radius_x;
+    float mask_radius_y;
+    float mask_radius_z;
+    float edge, tmp_edge;
+
+    // mask_radius_x = wanted_mask_radius_x - wanted_mask_edge * 0.5f;
+    // mask_radius_y = wanted_mask_radius_y - wanted_mask_edge * 0.5f;
+    // mask_radius_z = wanted_mask_radius_z - wanted_mask_edge * 0.5f;
+    float edgemean = ReturnAverageOfRealValuesOnEdges( );
+    mask_radius_x  = wanted_mask_radius_x - wanted_taper_edge_x;
+    mask_radius_y  = wanted_mask_radius_y - wanted_taper_edge_y;
+    mask_radius_z  = wanted_mask_radius_z - wanted_taper_edge_z;
+    if ( mask_radius_x < 0.0f )
+        mask_radius_x = 0.0f;
+    if ( mask_radius_y < 0.0f )
+        mask_radius_y = 0.0f;
+    if ( mask_radius_z < 0.0f )
+        mask_radius_z = 0.0f;
+
+    number_of_pixels = 0;
+    if ( is_in_real_space && object_is_centred_in_box ) {
+        pixel_counter = 0.0f;
+        for ( k = 0; k < logical_z_dimension; k++ ) {
+            z = abs(k - physical_address_of_box_center_z);
+
+            for ( j = 0; j < logical_y_dimension; j++ ) {
+                y = abs(j - physical_address_of_box_center_y);
+
+                for ( i = 0; i < logical_x_dimension; i++ ) {
+                    x = abs(i - physical_address_of_box_center_x);
+
+                    if ( ! (x <= mask_radius_x && y <= mask_radius_y && z <= mask_radius_z) && (x <= wanted_mask_radius_x && y <= wanted_mask_radius_y && z <= wanted_mask_radius_z) ) {
+                        // if ( (x >= mask_radius_x && y >= mask_radius_y && z >= mask_radius_z) && (x <= wanted_mask_radius_x && y <= wanted_mask_radius_y && z <= wanted_mask_radius_z) ) {
+
+                        edge = 0.0f;
+                        if ( x >= mask_radius_x && x <= wanted_mask_radius_x )
+                            tmp_edge = (x - mask_radius_x) / wanted_taper_edge_x;
+                        if ( tmp_edge > edge )
+                            edge = tmp_edge;
+                        if ( y >= mask_radius_y && y <= wanted_mask_radius_y )
+                            tmp_edge = (y - mask_radius_y) / wanted_taper_edge_y;
+                        if ( tmp_edge > edge )
+                            edge = tmp_edge;
+                        if ( z >= mask_radius_z && z <= wanted_mask_radius_z )
+                            tmp_edge = (z - mask_radius_z) / wanted_taper_edge_z;
+                        if ( tmp_edge > edge )
+                            edge = tmp_edge;
+                        // if ( invert ) {
+                        //     real_values[pixel_counter] = real_values[pixel_counter] * (1.0f - edge) + edge * pixel_sum;
+                        //     mask_volume += powf(1.0f - edge, 2);
+                        // }
+                        // else {
+                        real_values[pixel_counter] = edge * edgemean + real_values[pixel_counter] * (1.0f - edge);
+
+                        // }
+                    }
+                    // else if ( invert ) {
+                    //     if ( x <= mask_radius_x && y <= mask_radius_y && z <= mask_radius_z ) {
+                    //         real_values[pixel_counter] = pixel_sum;
+                    //     }
+                    //     else {
+                    //         mask_volume += 1.0f;
+                    //     }
+                    // }
+                    else {
+                        if ( ! (x <= wanted_mask_radius_x && y <= wanted_mask_radius_y && z <= wanted_mask_radius_z) )
+                            real_values[pixel_counter] = edgemean;
+                    }
+
+                    pixel_counter++;
+                }
+                pixel_counter += padding_jump_value;
+            }
+        }
+    }
+    else if ( is_in_real_space ) {
+
+        // for ( k = 0; k < logical_z_dimension; k++ ) {
+        //     kk = k;
+        //     if ( kk >= physical_address_of_box_center_z )
+        //         kk -= logical_z_dimension;
+        //     z = abs(kk);
+
+        //     for ( j = 0; j < logical_y_dimension; j++ ) {
+        //         jj = j;
+        //         if ( jj >= physical_address_of_box_center_y )
+        //             jj -= logical_y_dimension;
+        //         y = abs(jj);
+
+        //         for ( i = 0; i < logical_x_dimension; i++ ) {
+        //             ii = i;
+        //             if ( ii >= physical_address_of_box_center_x )
+        //                 ii -= logical_x_dimension;
+        //             x = abs(ii);
+
+        //             if ( ! (x <= mask_radius_x && y <= mask_radius_y && z <= mask_radius_z) && (x <= mask_radius_plus_edge_x && y <= mask_radius_plus_edge_y && z <= mask_radius_plus_edge_z) ) {
+        //                 pixel_sum += real_values[pixel_counter];
+        //                 number_of_pixels++;
+        //             }
+        //             pixel_counter++;
+        //         }
+        //         pixel_counter += padding_jump_value;
+        //     }
+        // }
+        // pixel_sum /= number_of_pixels;
+
+        pixel_counter = 0.0f;
+        for ( k = 0; k < logical_z_dimension; k++ ) {
+            kk = k;
+            if ( kk >= physical_address_of_box_center_z )
+                kk -= logical_z_dimension;
+            z = abs(kk);
+
+            for ( j = 0; j < logical_y_dimension; j++ ) {
+                jj = j;
+                if ( jj >= physical_address_of_box_center_y )
+                    jj -= logical_y_dimension;
+                y = abs(jj);
+
+                for ( i = 0; i < logical_x_dimension; i++ ) {
+                    ii = i;
+                    if ( ii >= physical_address_of_box_center_x )
+                        ii -= logical_x_dimension;
+                    x = abs(ii);
+
+                    if ( ! (x <= mask_radius_x && y <= mask_radius_y && z <= mask_radius_z) && (x <= wanted_mask_radius_x && y <= wanted_mask_radius_y && z <= wanted_mask_radius_z) ) {
+                        // if ( (x >= mask_radius_x && y >= mask_radius_y && z >= mask_radius_z) && (x <= wanted_mask_radius_x && y <= wanted_mask_radius_y && z <= wanted_mask_radius_z) ) {
+
+                        edge = 0.0f;
+                        if ( x >= mask_radius_x && x <= wanted_mask_radius_x )
+                            tmp_edge = (x - mask_radius_x) / wanted_taper_edge_x;
+                        if ( tmp_edge > edge )
+                            edge = tmp_edge;
+                        if ( y > mask_radius_y && y < wanted_mask_radius_y )
+                            tmp_edge = (y - mask_radius_y) / wanted_taper_edge_y;
+                        if ( tmp_edge > edge )
+                            edge = tmp_edge;
+                        if ( z > mask_radius_z && z < wanted_mask_radius_z )
+                            tmp_edge = (z - mask_radius_z) / wanted_taper_edge_z;
+                        if ( tmp_edge > edge )
+                            edge = tmp_edge;
+                        // if ( invert ) {
+                        //     real_values[pixel_counter] = real_values[pixel_counter] * (1.0f - edge) + edge * pixel_sum;
+                        //     mask_volume += powf(1.0f - edge, 2);
+                        // }
+                        // else {
+                        real_values[pixel_counter] = edge * edgemean + real_values[pixel_counter] * (1.0f - edge);
+
+                        // }
+                    }
+                    else {
+                        if ( ! (x <= wanted_mask_radius_x && y <= wanted_mask_radius_y && z <= wanted_mask_radius_z) )
+                            real_values[pixel_counter] = edgemean;
+                    }
+
+                    pixel_counter++;
+                }
+                pixel_counter += padding_jump_value;
+            }
+        }
+    }
+    // else {
+    //     for ( k = 0; k <= physical_upper_bound_complex_z; k++ ) {
+    //         float_z = fabsf(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z);
+
+    //         for ( j = 0; j <= physical_upper_bound_complex_y; j++ ) {
+    //             float_y = fabsf(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y);
+
+    //             for ( i = 0; i <= physical_upper_bound_complex_x; i++ ) {
+    //                 float_x = i * fourier_voxel_size_x;
+
+    //                 // compute squared radius, in units of reciprocal pixels
+
+    //                 if ( ! (float_x <= mask_radius_x && float_y <= mask_radius_y && float_z <= mask_radius_z) && (float_x < mask_radius_plus_edge_x && float_y < mask_radius_plus_edge_y && float_z < mask_radius_plus_edge_z) ) {
+    //                     edge = 1.0f;
+    //                     if ( float_x > mask_radius_x && float_x < mask_radius_plus_edge_x )
+    //                         edge *= (1.0f + cosf(PI * (float_x - mask_radius_x) / wanted_mask_edge)) / 2.0f;
+    //                     if ( float_y > mask_radius_y && float_y < mask_radius_plus_edge_y )
+    //                         edge *= (1.0f + cosf(PI * (float_y - mask_radius_y) / wanted_mask_edge)) / 2.0f;
+    //                     if ( float_z > mask_radius_z && float_z < mask_radius_plus_edge_z )
+    //                         edge *= (1.0f + cosf(PI * (float_z - mask_radius_z) / wanted_mask_edge)) / 2.0f;
+    //                     if ( invert ) {
+    //                         complex_values[pixel_counter] *= (1.0f - edge);
+    //                     }
+    //                     else {
+    //                         complex_values[pixel_counter] *= edge;
+    //                     }
+    //                 }
+    //                 if ( invert ) {
+    //                     if ( float_x <= mask_radius_x && float_y <= mask_radius_y && float_z <= mask_radius_z )
+    //                         complex_values[pixel_counter] = 0.0f + I * 0.0f;
+    //                 }
+    //                 else {
+    //                     if ( float_x >= mask_radius_plus_edge_x || float_y >= mask_radius_plus_edge_y || float_z >= mask_radius_plus_edge_z )
+    //                         complex_values[pixel_counter] = 0.0f + I * 0.0f;
+    //                 }
+
+    //                 pixel_counter++;
+    //             }
+    //         }
+    //     }
+    // }
+
+    // return float(mask_volume);
 }
 
 float Image::CosineRectangularMask(float wanted_mask_radius_x, float wanted_mask_radius_y, float wanted_mask_radius_z, float wanted_mask_edge, bool invert, bool force_mask_value, float wanted_mask_value) {
@@ -8148,6 +8959,78 @@ void Image::RealSpaceIntegerShift(int wanted_x_shift, int wanted_y_shift, int wa
     delete[] buffer;
 }
 
+void Image::RealSpaceShift(int wanted_x_shift, int wanted_y_shift, int wanted_z_shift) {
+    MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+    MyDebugAssertTrue(is_in_real_space, "Not in real space");
+
+    int    i, j, k;
+    long   pixel_counter = 0;
+    long   shifted_counter;
+    float* buffer        = new float[number_of_real_space_pixels];
+    float  padding_value = ReturnAverageOfRealValuesOnEdges( );
+
+    int padding_x_start = 0;
+    int padding_y_start = 0;
+    int padding_z_start = 0;
+    int padding_x_end   = wanted_x_shift - 1;
+    int padding_y_end   = wanted_y_shift - 1;
+    int padding_z_end   = wanted_z_shift - 1;
+
+    if ( wanted_x_shift < 0 ) {
+        padding_x_start = logical_x_dimension + wanted_x_shift - 1;
+        padding_x_end   = logical_x_dimension - 1;
+    }
+    if ( wanted_y_shift < 0 ) {
+        padding_y_start = logical_y_dimension + wanted_y_shift - 1;
+        padding_y_end   = logical_y_dimension - 1;
+    }
+    if ( wanted_z_shift < 0 ) {
+        padding_z_start = logical_z_dimension + wanted_z_shift - 1;
+        padding_z_end   = logical_z_dimension - 1;
+    }
+
+    shifted_counter = wanted_x_shift + logical_x_dimension * (wanted_y_shift + logical_y_dimension * wanted_z_shift);
+    shifted_counter = remainderf(float(shifted_counter), float(number_of_real_space_pixels));
+
+    if ( shifted_counter < 0 )
+        shifted_counter += number_of_real_space_pixels;
+
+    int buffer_index = 0;
+    for ( k = 0; k < logical_z_dimension; k++ ) {
+        for ( j = 0; j < logical_y_dimension; j++ ) {
+            for ( i = 0; i < logical_x_dimension; i++ ) {
+                buffer[shifted_counter] = real_values[pixel_counter];
+                pixel_counter++;
+                shifted_counter++;
+                if ( shifted_counter >= number_of_real_space_pixels ) {
+                    shifted_counter -= number_of_real_space_pixels;
+                }
+            }
+            pixel_counter += padding_jump_value;
+        }
+    }
+    shifted_counter = 0;
+    pixel_counter   = 0;
+    for ( k = 0; k < logical_z_dimension; k++ ) {
+        for ( j = 0; j < logical_y_dimension; j++ ) {
+            for ( i = 0; i < logical_x_dimension; i++ ) {
+                if ( k >= padding_z_start && k <= padding_z_end )
+                    real_values[pixel_counter] = padding_value;
+                else if ( j >= padding_y_start && j <= padding_y_end )
+                    real_values[pixel_counter] = padding_value;
+                else if ( i >= padding_x_start && i <= padding_x_end )
+                    real_values[pixel_counter] = padding_value;
+                else
+                    real_values[pixel_counter] = buffer[shifted_counter];
+                pixel_counter++;
+                shifted_counter++;
+            }
+            pixel_counter += padding_jump_value;
+        }
+    }
+    delete[] buffer;
+}
+
 void Image::DilateBinarizedMask(float dilation_radius) {
     // To get a ring of new pixels 1 pixel wide, a value of 2.0 must be used for dilation_radius. I do not know why. FIXME
 
@@ -9210,6 +10093,248 @@ Peak Image::FindPeakWithIntegerCoordinates(float wanted_min_radius, float wanted
     }
 
     return found_peak;
+}
+
+void Image::XCorrPeakFindWidth(int nxdim, int ny, float* xpeak, float* ypeak,
+                               float* peak, float* width, float* widthMin, int maxPeaks,
+                               float minStrength) {
+    float cx, cy, y1, y2, y3, local, val;
+    float widthTemp[4];
+    int   ixpeak, iypeak, ix, iy, ixBlock, iyBlock, ixStart, ixEnd, iyStart, iyEnd;
+    int   i, j, ixm, ixp, iyb, iybm, iybp, idx, idy;
+    int   nx        = nxdim - 2;
+    int   blockSize = 5;
+    int   nBlocksX  = (nx + blockSize - 1) / blockSize;
+    int   nBlocksY  = (ny + blockSize - 1) / blockSize;
+    int   ixTopPeak = 10 * nx;
+    int   iyTopPeak = 10 * ny;
+    float xLimCen, yLimCen, xLimRadSq, yLimRadSq, threshold = 0.;
+
+    float sApplyLimits = -1;
+    float sLimitXlo    = -3000;
+    float sLimitYlo    = -3000;
+    float sLimitXhi    = 3000;
+    float sLimitYhi    = 3000;
+
+    // float array = real_values;
+
+    /* If using elliptical limits, compute center and squares of radii */
+    if ( sApplyLimits < 0 ) {
+        xLimCen = 0.5 * (sLimitXlo + sLimitXhi);
+        // cx        = B3DMAX(1., (sLimitXhi - sLimitXlo) / 2.);
+        cx        = wxMax(1., (sLimitXhi - sLimitXlo) / 2.);
+        xLimRadSq = cx * cx;
+        yLimCen   = 0.5 * (sLimitYlo + sLimitYhi);
+        cy        = wxMax(1., (sLimitYhi - sLimitYlo) / 2.);
+        yLimRadSq = cy * cy;
+    }
+
+    /* find peaks */
+    for ( i = 0; i < maxPeaks; i++ ) {
+        peak[i]  = -1.e30f;
+        xpeak[i] = 0.;
+        ypeak[i] = 0.;
+    }
+
+    /* Look for highest peak if looking for one peak or if there is a minimum strength */
+    if ( maxPeaks < 2 || minStrength > 0. ) {
+
+        /* Find one peak within the limits */
+        if ( sApplyLimits ) {
+            for ( iy = 0; iy < ny; iy++ ) {
+                idy = (iy > ny / 2) ? iy - ny : iy;
+                if ( idy < sLimitYlo || idy > sLimitYhi )
+                    continue;
+                for ( ix = 0; ix < nx; ix++ ) {
+                    idx = (ix > nx / 2) ? ix - nx : ix;
+                    if ( idx >= sLimitXlo && idx <= sLimitXhi && real_values[ix + iy * nxdim] > *peak ) {
+                        if ( sApplyLimits < 0 ) {
+                            cx = idx - xLimCen;
+                            cy = idy - yLimCen;
+                            if ( cx * cx / xLimRadSq + cy * cy / yLimRadSq > 1. )
+                                continue;
+                        }
+                        *peak  = real_values[ix + iy * nxdim];
+                        ixpeak = ix;
+                        iypeak = iy;
+                    }
+                }
+            }
+            if ( *peak > -0.9e30 ) {
+                *xpeak = (float)ixpeak;
+                *ypeak = (float)iypeak;
+            }
+        }
+        else {
+
+            /* Or just find the one peak in the whole area */
+            for ( iy = 0; iy < ny; iy++ ) {
+                for ( ix = iy * nxdim; ix < nx + iy * nxdim; ix++ ) {
+                    if ( real_values[ix] > *peak ) {
+                        *peak  = real_values[ix];
+                        ixpeak = ix - iy * nxdim;
+                        iypeak = iy;
+                    }
+                }
+            }
+            *xpeak = (float)ixpeak;
+            *ypeak = (float)iypeak;
+        }
+        threshold = minStrength * *peak;
+        ixTopPeak = ixpeak;
+        iyTopPeak = iypeak;
+    }
+
+    /* Now find all requested peaks */
+    if ( maxPeaks > 1 ) {
+
+        // Check for local peaks by looking at the highest point in each local
+        // block
+        for ( iyBlock = 0; iyBlock < nBlocksY; iyBlock++ ) {
+
+            // Block start and end in Y
+            iyStart = iyBlock * blockSize;
+            iyEnd   = iyStart + blockSize;
+            if ( iyEnd > ny )
+                iyEnd = ny;
+
+            // Test if entire block is outside limits
+            if ( sApplyLimits && (iyStart > ny / 2 || iyEnd <= ny / 2) ) {
+                idy = (iyStart > ny / 2) ? iyStart - ny : iyStart;
+                if ( idy > sLimitYhi )
+                    continue;
+                idy = (iyEnd > ny / 2) ? iyEnd - ny : iyEnd;
+                if ( idy < sLimitYlo )
+                    continue;
+            }
+
+            // Loop on X blocks, get start and end in Y
+            for ( ixBlock = 0; ixBlock < nBlocksX; ixBlock++ ) {
+                ixStart = ixBlock * blockSize;
+                ixEnd   = ixStart + blockSize;
+                if ( ixEnd > nx )
+                    ixEnd = nx;
+
+                // Test if entire block is outside limits
+                if ( sApplyLimits && (ixStart > nx / 2 || ixEnd <= nx / 2) ) {
+                    idx = (ixStart > nx / 2) ? ixStart - nx : ixStart;
+                    if ( idx > sLimitXhi )
+                        continue;
+                    idx = (ixEnd > nx / 2) ? ixEnd - nx : ixEnd;
+                    if ( idx < sLimitXlo )
+                        continue;
+                }
+
+                // Loop on every pixel in the block; have to test each pixel
+                local = -1.e30f;
+                for ( iy = iyStart; iy < iyEnd; iy++ ) {
+                    if ( sApplyLimits ) {
+                        idy = (iy > ny / 2) ? iy - ny : iy;
+                        if ( idy < sLimitYlo || idy > sLimitYhi )
+                            continue;
+                    }
+                    for ( ix = ixStart; ix < ixEnd; ix++ ) {
+                        if ( sApplyLimits ) {
+                            idx = (ix > nx / 2) ? ix - nx : ix;
+                            if ( idx < sLimitXlo || idx > sLimitXhi )
+                                continue;
+
+                            // Apply elliptical test
+                            if ( sApplyLimits < 0 ) {
+                                cx = idx - xLimCen;
+                                cy = idy - yLimCen;
+                                if ( cx * cx / xLimRadSq + cy * cy / yLimRadSq > 1. )
+                                    continue;
+                            }
+                        }
+                        val = real_values[ix + iy * nxdim];
+                        if ( val > local && val > peak[maxPeaks - 1] && val > threshold ) {
+                            local  = val;
+                            ixpeak = ix;
+                            iypeak = iy;
+                        }
+                    }
+                }
+
+                // evaluate local peak for truly being local.
+                // Allow equality on one side, otherwise identical adjacent values are lost
+                if ( local > -0.9e30 ) {
+                    ixm  = (ixpeak + nx - 1) % nx;
+                    ixp  = (ixpeak + 1) % nx;
+                    iyb  = iypeak * nxdim;
+                    iybp = ((iypeak + 1) % ny) * nxdim;
+                    iybm = ((iypeak + ny - 1) % ny) * nxdim;
+
+                    if ( local > real_values[ixpeak + iybm] && local >= real_values[ixpeak + iybp] &&
+                         local > real_values[ixm + iyb] && local >= real_values[ixp + iyb] &&
+                         local > real_values[ixm + iybp] && local >= real_values[ixp + iybm] &&
+                         local > real_values[ixp + iybp] && local >= real_values[ixm + iybm] &&
+                         (ixpeak != ixTopPeak || iypeak != iyTopPeak) ) {
+
+                        // Insert peak into the list
+                        for ( i = 0; i < maxPeaks; i++ ) {
+                            if ( peak[i] < local ) {
+                                for ( j = maxPeaks - 1; j > i; j-- ) {
+                                    peak[j]  = peak[j - 1];
+                                    xpeak[j] = xpeak[j - 1];
+                                    ypeak[j] = ypeak[j - 1];
+                                }
+                                peak[i]  = local;
+                                xpeak[i] = (float)ixpeak;
+                                ypeak[i] = (float)iypeak;
+                                break;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    // for ( i = 0; i < maxPeaks; i++ ) {
+    //     if ( peak[i] < -0.9e30 )
+    //         continue;
+
+    // // Add 0.2 just in case float was less than int assigned to it
+    // ixpeak = (int)(xpeak[i] + 0.2);
+    // iypeak = (int)(ypeak[i] + 0.2);
+
+    // /* simply fit a parabola to the two adjacent points in X or Y */
+
+    // y1 = real_values[(ixpeak + nx - 1) % nx + iypeak * nxdim];
+    // y2 = peak[i];
+    // y3 = real_values[(ixpeak + 1) % nx + iypeak * nxdim];
+    // cx = (float)parabolicFitPosition(y1, y2, y3);
+
+    // y1 = real_values[ixpeak + ((iypeak + ny - 1) % ny) * nxdim];
+    // y3 = real_values[ixpeak + ((iypeak + 1) % ny) * nxdim];
+    // cy = (float)parabolicFitPosition(y1, y2, y3);
+
+    // /*    return adjusted pixel coordinate */
+    // xpeak[i] = ixpeak + cx;
+    // ypeak[i] = iypeak + cy;
+    // if ( xpeak[i] > nx / 2 )
+    //     xpeak[i] = xpeak[i] - nx;
+    // if ( ypeak[i] > ny / 2 )
+    //     ypeak[i] = ypeak[i] - ny;
+
+    // /* Return width if non-NULL */
+    // if ( width && widthMin ) {
+    //     widthTemp[0] = peakHalfWidth(real_values, ixpeak, iypeak, nx, ny, 1, 0) +
+    //                    peakHalfWidth(real_values, ixpeak, iypeak, nx, ny, -1, 0);
+    //     widthTemp[1] = peakHalfWidth(real_values, ixpeak, iypeak, nx, ny, 0, 1) +
+    //                    peakHalfWidth(real_values, ixpeak, iypeak, nx, ny, 0, -1);
+    //     widthTemp[2] = peakHalfWidth(real_values, ixpeak, iypeak, nx, ny, 1, 1) +
+    //                    peakHalfWidth(real_values, ixpeak, iypeak, nx, ny, -1, -1);
+    //     widthTemp[3] = peakHalfWidth(real_values, ixpeak, iypeak, nx, ny, 1, -1) +
+    //                    peakHalfWidth(real_values, ixpeak, iypeak, nx, ny, -1, 1);
+    //     avgSD(widthTemp, 4, &width[i], &cx, &cy);
+    //     widthMin[i] = B3DMIN(widthTemp[0], widthTemp[1]);
+    //     widthMin[i] = B3DMIN(widthMin[i], widthTemp[2]);
+    //     widthMin[i] = B3DMIN(widthMin[i], widthTemp[3]);
+    // }
+    // }
+    sApplyLimits = 0;
 }
 
 float Image::FindBeamTilt(CTF& input_ctf, float pixel_size, Image& phase_error_output, Image& beamtilt_output, Image& difference_image, float& beamtilt_x, float& beamtilt_y, float& particle_shift_x, float& particle_shift_y, float phase_multiplier, bool progress_bar, int first_position_to_search, int last_position_to_search, MyApp* app_for_result) {
@@ -10513,6 +11638,292 @@ float Image::ReturnNearest2D(float& wanted_physical_x_coordinate, float& wanted_
 
     //	return real_values[(logical_x_dimension + padding_jump_value) * j_nearest + i_nearest] * weight_x * weight_y;
     return real_values[(logical_x_dimension + padding_jump_value) * j_nearest + i_nearest];
+}
+
+void Image::Distortion(Image* interp_img, float* shifted_mapx, float* shifted_mapy) {
+    // interpolation
+    // along x axis, iterat rows
+    // wxPrintf("start interpolate along x\n");
+    // Image interp_img;
+    Image interp_img_tmp;
+
+    interp_img->SetToConstant(ReturnAverageOfRealValuesOnEdges( ));
+    interp_img_tmp.Allocate(logical_x_dimension, logical_y_dimension, true);
+    interp_img_tmp.SetToConstant(ReturnAverageOfRealValuesOnEdges( ));
+    int    totalpixels       = logical_x_dimension * logical_y_dimension;
+    float* interpolated_mapx = new float[totalpixels];
+    float* interpolated_mapy = new float[totalpixels];
+    int    xstart            = 0;
+    int    xend              = logical_x_dimension;
+    int    ystart            = 0;
+    int    yend              = logical_y_dimension;
+
+    for ( int i = ystart; i < yend; i++ ) {
+        // for ( int i = 2046; i < 2047; i++ ) {
+        int jstart;
+        int jend;
+
+        int jjstart = 0;
+        // while ( shifted_map[i][jjstart][0] < 0 ) {
+        while ( shifted_mapx[i * logical_x_dimension + jjstart] < 0 ) {
+            jjstart += 1;
+        }
+        int jjend = logical_x_dimension - 1;
+        // while ( shifted_map[i][jjend][0] > logical_x_dimension - 1 ) {
+        while ( shifted_mapx[i * logical_x_dimension + jjend] > logical_x_dimension - 1 ) {
+            jjend -= 1;
+        }
+        if ( jjend <= jjstart ) {
+            wxPrintf("the current line shall be skipped, it is shifted out of the image boundary\n");
+            continue;
+        }
+        if ( jjstart > 0 ) {
+            jjstart = jjstart - 1;
+        }
+        // jstart = std::ceil(shifted_map[i][jjstart][0]);
+        jstart = std::ceil(shifted_mapx[i * logical_x_dimension + jjstart]);
+        if ( jstart < 0 )
+            jstart = 0;
+        if ( jstart > 0 ) {
+            for ( int tmpj = 0; tmpj < jstart; tmpj++ ) {
+                // interpolated_map[i][tmpj][1]              = -100;
+                // interpolated_map[i][tmpj][0]              = -100;
+                interpolated_mapx[i * logical_x_dimension + tmpj] = -100;
+                interpolated_mapy[i * logical_x_dimension + tmpj] = -100;
+            }
+        }
+        if ( jjend < logical_x_dimension - 1 )
+            jjend = jjend + 1;
+        // jend = std::floor(shifted_map[i][jjend][0]);
+        jend = std::floor(shifted_mapx[i * logical_x_dimension + jjend]);
+        if ( jend > logical_x_dimension - 1 )
+            jend = logical_x_dimension - 1;
+        if ( jend < logical_x_dimension - 1 ) {
+            for ( int tmpj = jend + 1; tmpj < logical_x_dimension; tmpj++ ) {
+                // interpolated_map[i][tmpj][1] = -100;
+                // interpolated_map[i][tmpj][0] = -100;
+                interpolated_mapx[i * logical_x_dimension + tmpj] = -100;
+                interpolated_mapy[i * logical_x_dimension + tmpj] = -100;
+            }
+        }
+        int j = jstart;
+        for ( int jj = jjstart + 1; jj <= jjend; jj++ ) {
+            // if ( shifted_map[i][jj][0] < j )
+            if ( shifted_mapx[i * logical_x_dimension + jj] < j )
+                continue;
+            // else if ( shifted_map[i][jj][0] == j ) {
+            else if ( shifted_mapx[i * logical_x_dimension + jj] == j ) {
+                // interpolated_map[i][j][0]                = j;
+                // interpolated_map[i][j][1]                = shifted_map[i][jj][1];
+
+                interpolated_mapx[i * logical_x_dimension + j] = j;
+                interpolated_mapy[i * logical_x_dimension + j] = shifted_mapy[i * logical_x_dimension + jj];
+                int sample_index                               = (logical_x_dimension + padding_jump_value) * i + jj;
+                int interp_index                               = (interp_img_tmp.logical_x_dimension + interp_img_tmp.padding_jump_value) * i + j;
+                interp_img_tmp.real_values[interp_index]       = real_values[sample_index];
+
+                j = j + 1;
+            }
+            // while ( shifted_map[i][jj][0] > j ) {
+            while ( shifted_mapx[i * logical_x_dimension + jj] > j ) {
+                // if ( shifted_map[i][jj - 1][0] < j ) {
+                if ( shifted_mapx[i * logical_x_dimension + jj - 1] < j ) {
+                    int sample_index = (logical_x_dimension + padding_jump_value) * i + jj - 1;
+                    // float x1           = shifted_map[i][jj - 1][0];
+                    // float y1           = shifted_map[i][jj - 1][1];
+                    float x1 = shifted_mapx[i * logical_x_dimension + jj - 1];
+                    float y1 = shifted_mapy[i * logical_x_dimension + jj - 1];
+                    float z1 = real_values[sample_index];
+                    // float x2           = shifted_map[i][jj][0];
+                    // float y2           = shifted_map[i][jj][1];
+                    float x2       = shifted_mapx[i * logical_x_dimension + jj];
+                    float y2       = shifted_mapy[i * logical_x_dimension + jj];
+                    float z2       = real_values[sample_index + 1];
+                    float x        = j;
+                    float target_y = (x2 - x) / (x2 - x1) * y1 + (x - x1) / (x2 - x1) * y2;
+                    float target_z = (x2 - x) / (x2 - x1) * z1 + (x - x1) / (x2 - x1) * z2;
+                    // interpolated_map[i][j][0]                    = j;
+                    // interpolated_map[i][j][1]                    = target_y;
+                    interpolated_mapx[i * logical_x_dimension + j] = j;
+                    interpolated_mapy[i * logical_x_dimension + j] = target_y;
+                    int interp_img_index                           = (interp_img_tmp.logical_x_dimension + interp_img_tmp.padding_jump_value) * i + j;
+                    interp_img_tmp.real_values[interp_img_index]   = target_z;
+                    j                                              = j + 1;
+                }
+                // else if ( shifted_map[i][jj - 1][0] == j ) {
+                else if ( shifted_mapx[i * logical_x_dimension + jj - 1] == j ) {
+                    // interpolated_map[i][j][0]                = j;
+                    // interpolated_map[i][j][1]                = shifted_map[i][jj - 1][1];
+                    interpolated_mapx[i * logical_x_dimension + j] = j;
+                    interpolated_mapy[i * logical_x_dimension + j] = shifted_mapy[i * logical_x_dimension + jj - 1];
+                    int sample_index                               = (logical_x_dimension + padding_jump_value) * i + jj - 1;
+                    int interp_index                               = (interp_img_tmp.logical_x_dimension + interp_img_tmp.padding_jump_value) * i + j;
+                    interp_img_tmp.real_values[interp_index]       = real_values[sample_index];
+                    j                                              = j + 1;
+                }
+                else {
+                    wxPrintf("deadloop may occur\n");
+                    wxPrintf("current i j ii %i, %i, %i\n", i, j, jj);
+                    // wxPrintf("inter_imgjj,inter_imgjj-1\n", shifted_map[i][jj][0], shifted_map[i][jj - 1][0]);
+                    wxPrintf("inter_imgjj,inter_imgjj-1\n", shifted_mapx[i * logical_x_dimension + jj], shifted_mapy[i * logical_x_dimension + jj - 1]);
+                    break;
+                }
+                if ( j > jend )
+                    break;
+            }
+            if ( j > jend )
+                break;
+            if ( j == jend && jj == jjend ) {
+                interpolated_mapx[i * logical_x_dimension + j] = j;
+                interpolated_mapy[i * logical_x_dimension + j] = shifted_mapy[i * logical_x_dimension + jj];
+                int sample_index                               = (logical_x_dimension + padding_jump_value) * i + jj;
+                int interp_index                               = (interp_img_tmp.logical_x_dimension + interp_img_tmp.padding_jump_value) * i + j;
+                interp_img_tmp.real_values[interp_index]       = real_values[sample_index];
+            }
+        }
+    }
+
+    // along y axis, iterat columns
+    wxPrintf("start interpolate along y\n");
+    for ( int j = xstart; j < xend; j++ ) {
+        int istart = ystart;
+        int iend;
+        int iistart = 0;
+        // wxPrintf("j index: %i flag 1\n", j);
+        // while ( interpolated_map[istart][j][1] < 0 )
+        while ( interpolated_mapy[iistart * logical_x_dimension + j] < 0 ) {
+            iistart += 1;
+            // wxPrintf("iistart value: %i %g\n", iistart, interpolated_mapy[])
+            if ( iistart == logical_y_dimension - 1 )
+                break;
+        }
+        int iiend = logical_y_dimension - 1;
+        // wxPrintf("iiend initial %i\n", iiend);
+        // while ( interpolated_map[iiend][j][1] > logical_y_dimension - 1 ) {
+        while ( interpolated_mapy[iiend * logical_x_dimension + j] > logical_y_dimension - 1 ) {
+            iiend = iiend - 1;
+            if ( iiend == 0 )
+                break;
+        }
+        // wxPrintf("iiend 1 %i\n", iiend);
+        // while ( interpolated_map[iiend][j][1] == -100 ) {
+        while ( interpolated_mapy[iiend * logical_x_dimension + j] == -100 ) {
+            iiend = iiend - 1;
+            if ( iiend == 0 )
+                break;
+        }
+        // wxPrintf("iiend 2 %i\n", iiend);
+        if ( iiend == 0 )
+            continue;
+        if ( iistart > 0 ) {
+            // wxPrintf("j index: %i flag 2\n", j);
+            // if ( interpolated_map[iistart - 1][j][1] != -100 && interpolated_map[iistart - 1][j][0] != -100 ) {
+            if ( interpolated_mapy[(iistart - 1) * logical_x_dimension + j] != -100 && interpolated_mapx[(iistart - 1) * logical_x_dimension + j] != -100 ) {
+                // wxPrintf("start %g %g\n", interpolated_mapy[(iistart - 1) * logical_x_dimension + j], interpolated_mapx[(iistart - 1) * logical_x_dimension + j]);
+                iistart = iistart - 1;
+            }
+        }
+        if ( iiend < logical_y_dimension - 1 ) {
+            // wxPrintf("j index: %i flag 3\n", j);
+            // wxPrintf("iiend initial %i\n", iiend);
+            // if ( interpolated_map[iiend - 1][j][1] != -100 && interpolated_map[iiend - 1][j][0] != -100 ) {
+            if ( interpolated_mapy[(iiend - 1) * logical_x_dimension + j] != -100 && interpolated_mapx[(iiend - 1) * logical_x_dimension + j] != -100 ) {
+                // wxPrintf("end %g %g \n", interpolated_mapy[(iiend - 1) * logical_x_dimension + j], interpolated_mapx[(iiend - 1) * logical_x_dimension + j]);
+                iiend = iiend + 1;
+                // wxPrintf("j index: %i flag 3_1\n", j);
+                // wxPrintf("iiend %i\n", iiend);
+            }
+            // wxPrintf("j index: %i flag 3_2\n", j);
+        }
+        // wxPrintf("current loop %i \n", j);
+        if ( iiend <= iistart ) {
+            // wxPrintf("j index: %i flag 4\n", j);
+            // wxPrintf("the current line shall be skipped\n");
+            // wxPrintf("interpolated_mapx,interpoaltedmapy %g %g \n",interpolated_mapy)
+            // continue;
+            break;
+        }
+        // istart = std::ceil(interpolated_map[iistart][j][1]);
+
+        istart = std::ceil(interpolated_mapy[iistart * logical_x_dimension + j]);
+        if ( istart < 0 )
+            istart = 0;
+        // iend = std::floor(interpolated_map[iiend][j][1]);
+        // wxPrintf("j index, istart: %i, %i flag 4\n", j, istart);
+        iend = std::floor(interpolated_mapy[iiend * logical_x_dimension + j]);
+        // wxPrintf("j index: %i, %i flag 5\n", j, iend);
+        if ( iend > logical_y_dimension - 1 )
+            iend = logical_y_dimension - 1;
+        if ( istart > iend )
+            continue;
+        if ( istart > logical_y_dimension - 1 )
+            continue;
+        // if ( interpolated_map[iiend][j][1] < 0 )
+        if ( interpolated_mapy[iiend * logical_x_dimension + j] < 0 )
+            continue;
+        int i = istart;
+        // wxPrintf("istart iend %i %i\n", istart, iend);
+        for ( int ii = iistart + 1; ii <= iiend; ii++ ) {
+            // if ( interpolated_map[ii][j][1] < i )
+            if ( interpolated_mapy[ii * logical_x_dimension + j] < i )
+                continue;
+            // else if ( interpolated_map[ii][j][1] == i ) {
+            else if ( interpolated_mapy[ii * logical_x_dimension + j] == i ) {
+                int interp_index                      = (interp_img->logical_x_dimension + interp_img->padding_jump_value) * i + j;
+                int interp_tmp_index                  = (interp_img_tmp.logical_x_dimension + interp_img_tmp.padding_jump_value) * ii + j;
+                interp_img->real_values[interp_index] = interp_img_tmp.real_values[interp_tmp_index];
+                i                                     = i + 1;
+            }
+            // while ( interpolated_map[ii][j][1] > i ) {
+            while ( interpolated_mapy[ii * logical_x_dimension + j] > i ) {
+                // if ( interpolated_map[ii - 1][j][1] < i ) {
+                if ( interpolated_mapy[(ii - 1) * logical_x_dimension + j] < i ) {
+                    if ( interpolated_mapy[(ii - 1) * logical_x_dimension + j] == -100 ) {
+                        i = i + 1;
+                    }
+                    else {
+                        int interp_tmp_ind1 = (interp_img_tmp.logical_x_dimension + interp_img_tmp.padding_jump_value) * (ii - 1) + j;
+                        int interp_tmp_ind2 = (interp_img_tmp.logical_x_dimension + interp_img_tmp.padding_jump_value) * ii + j;
+                        // float y1                             = interpolated_map[ii - 1][j][1];
+                        // float y2                             = interpolated_map[ii][j][1];
+                        float y1                              = interpolated_mapy[(ii - 1) * logical_x_dimension + j];
+                        float z1                              = interp_img_tmp.real_values[interp_tmp_ind1];
+                        float y2                              = interpolated_mapy[ii * logical_x_dimension + j];
+                        float z2                              = interp_img_tmp.real_values[interp_tmp_ind2];
+                        float y                               = i;
+                        float target_z                        = (y2 - y) / (y2 - y1) * z1 + (y - y1) / (y2 - y1) * z2;
+                        int   interp_index                    = (interp_img->logical_x_dimension + interp_img->padding_jump_value) * i + j;
+                        interp_img->real_values[interp_index] = target_z;
+                        i                                     = i + 1;
+                    }
+                }
+                // else if ( interpolated_map[ii - 1][j][1] == i ) {
+                else if ( interpolated_mapy[(ii - 1) * logical_x_dimension + j] == i ) {
+                    int interp_index                      = (interp_img->logical_x_dimension + interp_img->padding_jump_value) * i + j;
+                    int interp_tmp_ind                    = (interp_img_tmp.logical_x_dimension + interp_img_tmp.padding_jump_value) * (ii - 1) + j;
+                    interp_img->real_values[interp_index] = interp_img_tmp.real_values[interp_tmp_ind];
+                    i                                     = i + 1;
+                }
+                else {
+                    wxPrintf("deadloop may occur\n");
+                    wxPrintf("current i j ii %i, %i, %i\n", i, j, ii);
+                    // wxPrintf("inter_imgii,inter_imgii-1\n", shifted_map[ii][j][0], shifted_map[ii - 1][j][0]);
+                    wxPrintf("inter_imgii,inter_imgii-1\n", shifted_mapx[ii * logical_x_dimension + j], shifted_mapx[(ii - 1) * logical_x_dimension + j]);
+                    break;
+                }
+                if ( i > iend )
+                    break;
+            }
+
+            if ( i > iend )
+                break;
+            if ( i == iend && ii == iiend ) {
+                int interp_index                      = (interp_img->logical_x_dimension + interp_img->padding_jump_value) * i + j;
+                int interp_tmp_index                  = (interp_img_tmp.logical_x_dimension + interp_img_tmp.padding_jump_value) * ii + j;
+                interp_img->real_values[interp_index] = interp_img_tmp.real_values[interp_tmp_index];
+            }
+        }
+    }
 }
 
 //BEGIN_FOR_STAND_ALONE_CTFFIND

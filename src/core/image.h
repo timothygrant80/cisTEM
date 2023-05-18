@@ -106,6 +106,10 @@ class Image {
     float ReturnSigmaNoise(Image& matching_projection, float mask_radius = 0.0);
     float ReturnImageScale(Image& matching_projection, float mask_radius = 0.0);
     float ReturnCorrelationCoefficientUnnormalized(Image& other_image, float wanted_mask_radius = 0.0);
+    float ReturnCorrelationCoefficientNormalized(Image& other_image, float wanted_mask_radius = 0.0);
+    float ReturnCorrelationCoefficientNormalizedRectangle(Image& other_image, float wanted_dis_x = 0.0, float wanted_dis_y = 0.0, float wanted_dis_z = 0.0);
+    float ReturnCorrelationCoefficientNormalizedAtPeak(Image& other_image, int* pixel_used, int peak_x, int peak_y, int peak_z, float wanted_dis_x = 0.0, float wanted_dis_y = 0.0, float wanted_dis_z = 0.0);
+
     float ReturnBeamTiltSignificanceScore(Image calculated_beam_tilt);
     float ReturnPixelWiseProduct(Image& other_image);
     float GetWeightedCorrelationWithImage(Image& projection_image, int* bins, float signed_CC_limit);
@@ -143,6 +147,7 @@ class Image {
     void                  Whiten(float resolution_limit = 1.0, Curve* whitening_filter = NULL);
     void                  OptimalFilterBySNRImage(Image& SNR_image, int include_reference_weighting = 1);
     void                  MultiplyByWeightsCurve(Curve& weights, float scale_factor = 1.0);
+    void                  MultiplyByWeightsCurveReal(Curve& weights, float scale_factor);
     void                  WeightBySSNR(Image& ctf_image, float molecular_mass_kDa, float pixel_size, Curve& SSNR, Image& projection_image, bool weight_particle_image, bool weight_projection_image);
     void                  OptimalFilterSSNR(Curve& SSNR);
     void                  OptimalFilterFSC(Curve& FSC);
@@ -179,24 +184,31 @@ class Image {
     float               CosineRingMask(float wanted_inner_radius, float wanted_outer_radius, float wanted_mask_edge);
     float               CosineMask(float wanted_mask_radius, float wanted_mask_edge, bool invert = false, bool force_mask_value = false, float wanted_mask_value = 0.0);
     float               CosineRectangularMask(float wanted_mask_radius_x, float wanted_mask_radius_y, float wanted_mask_radius_z, float wanted_mask_edge, bool invert = false, bool force_mask_value = false, float wanted_mask_value = 0.0);
+    void                TaperLinear(float wanted_taper_edge_x, float wanted_taper_edge_y, float wanted_taper_edge_z, float wanted_mask_radius_x = 0.0, float wanted_mask_radius_y = 0.0, float wanted_mask_radius_z = 0.0);
     void                ConvertToAutoMask(float pixel_size, float outer_mask_radius_in_angstroms, float filter_resolution_in_angstroms, float rebin_value, bool auto_estimate_initial_bin_value = true, float wanted_initial_bin_value = 0.0f);
     void                LocalResSignificanceFilter(float pixel_size, float starting_resolution, float mask_radius_in_angstroms);
     void                GaussianLowPassFilter(float sigma);
+    void                GaussianLowPassRadiusFilter(float radius, float sigma);
     void                GaussianHighPassFilter(float sigma);
+    void                GaussianHighPassRadiusFilter(float radius, float sigma);
     void                ApplyLocalResolutionFilter(Image& local_resolution_map, float pixel_size, int wanted_number_of_levels);
     void                CircleMask(float wanted_mask_radius, bool invert = false);
     void                CircleMaskWithValue(float wanted_mask_radius, float wanted_mask_value, bool invert = false);
     void                SquareMaskWithValue(float wanted_mask_dim, float wanted_mask_value, bool invert = false, int wanted_center_x = 0, int wanted_center_y = 0, int wanted_center_z = 0);
-    void                TriangleMask(float wanted_triangle_half_base_length);
-    void                CalculateCTFImage(CTF& ctf_of_image, bool calculate_complex_ctf = false, bool apply_coherence_envelope = false);
-    void                CalculateBeamTiltImage(CTF& ctf_of_image, bool output_phase_shifts = false);
-    bool                ContainsBlankEdges(float mask_radius = 0.0);
-    void                CorrectMagnificationDistortion(float distortion_angle, float distortion_major_axis, float distortion_minor_axis);
-    float               ApplyMask(Image& mask_file, float cosine_edge_width, float weight_outside_mask, float low_pass_filter_outside, float filter_cosine_edge_width, float outside_mask_value = 0.0, bool use_outside_mask_value = false);
-    Peak                CenterOfMass(float threshold = 0.0, bool apply_threshold = false);
-    Peak                StandardDeviationOfMass(float threshold = 0.0, bool apply_threshold = false, bool invert_densities = false);
-    float               ReturnAverageOfMaxN(int number_of_pixels_to_average = 100, float mask_radius = 0.0);
-    float               ReturnAverageOfMinN(int number_of_pixels_to_average = 100, float mask_radius = 0.0);
+    float               SquareMaskWithCosineEdge(float wanted_mask_dim, float wanted_mask_edge, bool use_mean_value, int wanted_center_x, int wanted_center_y, int wanted_center_z);
+
+    void TriangleMask(float wanted_triangle_half_base_length);
+    void CalculateCTFImage(CTF& ctf_of_image, bool calculate_complex_ctf = false, bool apply_coherence_envelope = false);
+    void CalculateBeamTiltImage(CTF& ctf_of_image, bool output_phase_shifts = false);
+    bool ContainsBlankEdges(float mask_radius = 0.0);
+
+    void  Distortion(Image* interp_img, float* shifted_mapx, float* shifted_mapy);
+    void  CorrectMagnificationDistortion(float distortion_angle, float distortion_major_axis, float distortion_minor_axis);
+    float ApplyMask(Image& mask_file, float cosine_edge_width, float weight_outside_mask, float low_pass_filter_outside, float filter_cosine_edge_width, float outside_mask_value = 0.0, bool use_outside_mask_value = false);
+    Peak  CenterOfMass(float threshold = 0.0, bool apply_threshold = false);
+    Peak  StandardDeviationOfMass(float threshold = 0.0, bool apply_threshold = false, bool invert_densities = false);
+    float ReturnAverageOfMaxN(int number_of_pixels_to_average = 100, float mask_radius = 0.0);
+    float ReturnAverageOfMinN(int number_of_pixels_to_average = 100, float mask_radius = 0.0);
 
     void AddSlices(Image& sum_of_slices, int first_slice = 0, int last_slice = 0, bool calculate_average = false);
 
@@ -319,9 +331,13 @@ class Image {
     bool FourierComponentHasExplicitHermitianMate(int physical_index_x, int physical_index_y, int physical_index_z);
     bool FourierComponentIsExplicitHermitianMate(int physical_index_x, int physical_index_y, int physical_index_z);
 
-    inline void NormalizeFT( ) { MultiplyByConstant(ft_normalization_factor); }
+    inline void NormalizeFT( ) {
+        MultiplyByConstant(ft_normalization_factor);
+    }
 
-    inline void NormalizeFTAndInvertRealValues( ) { MultiplyByConstant(-ft_normalization_factor); }
+    inline void NormalizeFTAndInvertRealValues( ) {
+        MultiplyByConstant(-ft_normalization_factor);
+    }
 
     void DivideByConstant(float constant_to_divide_by);
     void MultiplyByConstant(float constant_to_multiply_by);
@@ -400,6 +416,7 @@ class Image {
     void  CopyLoopingAndAddressingFrom(Image* other_image);
     void  Consume(Image* other_image);
     void  RealSpaceIntegerShift(int wanted_x_shift, int wanted_y_shift, int wanted_z_shift = 0);
+    void  RealSpaceShift(int wanted_x_shift, int wanted_y_shift, int wanted_z_shift = 0);
     void  DilateBinarizedMask(float dilation_radius);
     void  ErodeBinarizedMask(float erosion_radius);
 
@@ -474,6 +491,9 @@ class Image {
 
     Peak FindPeakAtOriginFast2D(int max_pix_x, int max_pix_y);
     Peak FindPeakWithIntegerCoordinates(float wanted_min_radius = 0.0, float wanted_max_radius = FLT_MAX, int wanted_min_distance_from_edges = 0);
+    void XCorrPeakFindWidth(int nxdim, int ny, float* xpeak, float* ypeak,
+                            float* peak, float* width, float* widthMin, int maxPeaks,
+                            float minStrength);
     Peak FindPeakWithParabolaFit(float wanted_min_radius = 0.0, float wanted_max_radius = FLT_MAX);
 
     void SubSampleWithNoisyResampling(Image* first_sampled_image, Image* second_sampled_image);

@@ -466,6 +466,7 @@ inline float clamp_angular_range_negative_pi_to_pi(float angle, bool units_are_d
 }
 
 inline float sinc(float radians) {
+    radians = fabsf(radians);
     if ( radians < 0.00001 )
         return 1.0;
     if ( radians >= 0.01 )

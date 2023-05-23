@@ -27,7 +27,7 @@
         {
             "label": "CONFIG intel,gpu,debug,static",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/intel-gpu-debug-static && cd ${build_dir}/intel-gpu-debug-static && CC=icc CXX=icpc ../../configure --enable-staticmode --with-cuda=${cuda_dir} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+            "command": "mkdir -p ${build_dir}/intel-gpu-debug-static && cd ${build_dir}/intel-gpu-debug-static && CC=icc CXX=icpc ../../configure --enable-debugmode --enable-gpu-debug --enable-staticmode --with-cuda=${cuda_dir} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
         },
         {
             "label": "BUILD ,intel,gpu,debug,static",
@@ -107,7 +107,7 @@
         {
             "label": "CONFIG GNU,gpu, debug",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/GNU-gpu-debug && cd ${build_dir}/GNU-gpu-debug && CC=gcc CXX=g++ ../../configure  --with-c++std=20  --with-cuda=/usr/local/cuda --disable-staticmode ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+            "command": "mkdir -p ${build_dir}/GNU-gpu-debug && cd ${build_dir}/GNU-gpu-debug && CC=gcc CXX=g++ ../../configure  --with-c++std=20  --enable-gpu-debug --enable-debugmode --with-cuda=/usr/local/cuda --disable-staticmode ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
         },
         {
             "label": "BUILD GNU,gpu, debug",

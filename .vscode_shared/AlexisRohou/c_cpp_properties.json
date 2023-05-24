@@ -5,8 +5,8 @@
             "includePath": [
                 "${workspaceFolder}/**",
                 "/usr/local/include",
-                "/usr/local/lib/wx/include/osx_cocoa-unicode-3.0",
-                "/usr/local/include/wx-3.0"
+                "/usr/local/lib/wx/include/osx_cocoa-unicode-3.2",
+                "/usr/local/include/wx-3.2"
             ],
             "defines": [
                 "_FILE_OFFSET_BITS=64",

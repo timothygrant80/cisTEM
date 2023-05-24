@@ -8,7 +8,7 @@
 # or from settings.json in vscode, set same variables
 #
 project(cisTEM)
-cmake_minimum_required(VERSION 3.11)
+cmake_minimum_required(VERSION 3.12)
 set(CMAKE_MODULE_PATH "${PROJECT_SOURCE_DIR}/cmake_modules" ${CMAKE_MODULE_PATH})
 
 # specify the C++ standard
@@ -30,18 +30,38 @@ else()
 
 endif(BUILD_EXPERIMENTAL_FEATURES)
 
-# OpenMP build option
-option(BUILD_OpenMP "Enable OpenMP for multithreading" OFF)
-if (BUILD_OpenMP)
-    find_package(OpenMP)
-    if(OpenMP_FOUND OR OpenMP_CXX_FOUND)
-        set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} ${OpenMP_C_FLAGS}")
-        set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} ${OpenMP_CXX_FLAGS}")
-        set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} ${OpenMP_EXE_LINKER_FLAGS}")
-    else()
-        message(FATAL_ERROR "Build step for OpenMP failed.")
+# OpenMP 
+OPTION (USE_OpenMP "Use OpenMP" ON)
+if (USE_OpenMP)
+    if(APPLE)
+        if(CMAKE_C_COMPILER_ID MATCHES "Clang")
+            set(OpenMP_C "${CMAKE_C_COMPILER}")
+            set(OpenMP_C_FLAGS "-Xpreprocessor -fopenmp -Wno-unused-command-line-argument")
+            set(OpenMP_C_LIB_NAMES "libomp" "libgomp" "libiomp5")
+            set(OpenMP_libomp_LIBRARY ${OpenMP_C_LIB_NAMES})
+            set(OpenMP_libgomp_LIBRARY ${OpenMP_C_LIB_NAMES})
+            set(OpenMP_libiomp5_LIBRARY ${OpenMP_C_LIB_NAMES})
+        endif()
+        if(CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+            set(OpenMP_CXX "${CMAKE_CXX_COMPILER}")
+            set(OpenMP_CXX_FLAGS "-Xpreprocessor -fopenmp -Wno-unused-command-line-argument")
+            set(OpenMP_CXX_LIB_NAMES "libomp" "libgomp" "libiomp5")
+            set(OpenMP_libomp_LIBRARY ${OpenMP_CXX_LIB_NAMES})
+            set(OpenMP_libgomp_LIBRARY ${OpenMP_CXX_LIB_NAMES})
+            set(OpenMP_libiomp5_LIBRARY ${OpenMP_CXX_LIB_NAMES})
+        endif()
     endif()
-endif(BUILD_OpenMP)
+    find_package(OpenMP)
+    if (OpenMP_FOUND)
+        message("OpenMP was found")
+    endif(OpenMP_FOUND)
+    if (OpenMP_CXX_FOUND)
+        message("OpenMP_CXX was found")
+        include_directories(${OpenMP_INCLUDE_DIRS})
+    endif()
+endif(USE_OpenMP)
+
+
 
 #
 # Let's link in static libraries
@@ -99,6 +119,14 @@ else()
     #
     find_package(FFTW REQUIRED COMPONENTS FLOAT_LIB)
     include_directories(${FFTW_INCLUDE_DIRS})
+    message("FFTW libraries = ${FFTW_LIBRARIES}")
+
+    #
+    # MacOS: Seems that the homebrew FFTW expects OpenMPI at runtime, so let's hope we can find it
+    # Shame findFFTW does not do this for us :(
+    #
+    find_package(MPI)
+    message("MPI libraries = ${MPI_LIBRARIES}")
 endif()
 
 
@@ -173,6 +201,17 @@ if(Git_FOUND)
         string(REGEX REPLACE "\n$" "" GIT_COMMIT "${GIT_COMMIT}")
         message("Current Git commit is ${GIT_COMMIT}")
         add_definitions(" -DCISTEM_GIT_COMMIT=\"\\\"${GIT_COMMIT}\\\"\" " )
+
+        execute_process(    COMMAND bash "-c" "${GIT_EXECUTABLE} branch | awk '/^\\*/{print $2}'"
+                            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"
+                            OUTPUT_VARIABLE CISTEM_CURRENT_BRANCH )
+        message("Current branch is ${CISTEM_CURRENT_BRANCH}" )
+        add_definitions(" -DCISTEM_CURRENT_BRANCH=\"\\\"${CISTEM_CURRENT_BRANCH}\\\"\" " )
+        execute_process(    COMMAND bash "-c" "${GIT_EXECUTABLE} rev-list ${version_commit}..HEAD | awk -v NAME=$version_name -v ISDIRTY=$is_dirty 'BEGIN{n=0}{n=n+1}{if(FNR==1) H=$1}END{print NAME\"-\"n-1\"-\"substr(H,1,7)ISDIRTY}'"
+                            WORKING_DIRECTORY "${CMAKE_SOURCE_DIR}"                    
+                            OUTPUT_VARIABLE CISTEM_VERSION_TEXT)
+        message("Version text is ${CISTEM_VERSION_TEXT}" )
+        add_definitions(" -DCISTEM_VERSION_TEXT=\"\\\"${CISTEM_VERSION_TEXT}\\\"\" " )
     endif()
 endif()
 

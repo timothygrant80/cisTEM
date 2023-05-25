@@ -1,0 +1,45 @@
+{
+    // See https://go.microsoft.com/fwlink/?LinkId=733558
+    // for the documentation about the tasks.json format
+    "version": "2.0.0",
+    "options": {
+        "env": {
+            "cuda_dir": "/usr/local/cuda",
+            "build_dir": "${workspaceFolder}/build",
+            "common_flags": " --enable-experimental --enable-openmp",
+            "experimental_algo_flags": "--enable-fp16-particlestacks --enable-smooth-mip --disable-multiple-global-refinements",
+            "common_optional_programs": ""
+            // "common_optional_programs": "--enable-build-sharpen-map --enable-build-convert-binary-to-star --enable-build-convert-eer-to-mrc --enable-build-resize --enable-build-resample --enable-build-sum_all_mrc_files --enable-build-sum_all_tif_files --enable-build-convert_par_to_star --enable-build-quick_test"
+        }
+    },
+    "tasks": [
+        {
+            "label": "Configure cisTEM build",
+            "type": "shell",
+            "command": "mkdir -p ${build_dir}/intel-gpu-static && cd ${build_dir}/intel-gpu-static && CC=icc CXX=icpc ../../configure --with-wx-config=/opt/WX/intel-static/bin/wx-config --enable-staticmode --with-cuda=${cuda_dir} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+        },
+        {
+            "label": "BUILD cisTEM",
+            "type": "shell",
+            "command": "cd ${build_dir}/intel-gpu-static && make -j${input:compile_cores}"
+        },
+        {
+            "label": "Configure cisTEM DEBUG build",
+            "type": "shell",
+            "command": "mkdir -p ${build_dir}/intel-gpu-debug-static && cd ${build_dir}/intel-gpu-debug-static && CC=icc CXX=icpc ../../configure --enable-debugmode --enable-gpu-debug --with-wx-config=/opt/WX/intel-static/bin/wx-config --enable-staticmode --with-cuda=${cuda_dir} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+        },
+        {
+            "label": "BUILD cisTEM DEBUG",
+            "type": "shell",
+            "command": "cd ${build_dir}/intel-gpu-debug-static && make -j${input:compile_cores}"
+        }
+    ],
+    "inputs": [
+        {
+            "type": "promptString",
+            "id": "compile_cores",
+            "description": "Number of threads for compiling.",
+            "default": "8"
+        }
+    ]
+}

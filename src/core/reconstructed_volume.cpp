@@ -648,7 +648,7 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D& reconstruction, Image* 
 
     statistics.CalculateFSC(*density_map_1, *density_map_2, true);
     // TESTING OF LOCAL FILTERING
-    const bool test_locres_filtering = false;
+    const bool test_locres_filtering = true;
     if ( ! test_locres_filtering ) {
         density_map_1->Deallocate( );
         density_map_2->Deallocate( );

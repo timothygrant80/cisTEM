@@ -1,4 +1,5 @@
 #include "core_headers.h"
+#define CISTEM_CURRENT_BRANCH "`git  branch | awk '/^\*/{print $2}'`"
 
 UserInput::UserInput( ) {
     std::cout << "Warning, UserInput Class declared with no program name!" << std::endl

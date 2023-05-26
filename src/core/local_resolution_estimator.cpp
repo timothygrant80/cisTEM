@@ -214,6 +214,7 @@ void LocalResolutionEstimator::ComputeFSCThresholdBasedOnUnbiasedSNREstimator(fl
             fsc_threshold[shell_counter] = fixed_fsc_threshold;
         }
         else {
+
             fsc_threshold[shell_counter] = RhoThreshold(threshold_snr, threshold_confidence_n_sigma, number_of_independent_voxels[shell_counter]);
         }
         if ( fsc_threshold[shell_counter] > nearly_one )

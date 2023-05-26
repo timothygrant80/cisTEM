@@ -7,6 +7,7 @@ class LocalResolutionEstimator {
 
     void SetAllUserParameters(Image*   wanted_input_volume_one,
                               Image*   wanted_input_volume_two,
+							  Image*   wanted_input_original_volume,
                               Image*   wanted_mask_volume,
                               int      wanted_first_slice,
                               int      wanted_last_slice,
@@ -32,6 +33,7 @@ class LocalResolutionEstimator {
     float  maximum_radius_in_Angstroms;
     Image* input_volume_one;
     Image* input_volume_two;
+    Image* input_original_volume;
     Image* input_volume_mask; // don't bother calculating local resolution outside the mask
     int    first_slice; // don't calculate resolution before first slice (xy plane) of the volume
     int    last_slice;
@@ -49,8 +51,10 @@ class LocalResolutionEstimator {
     // Internal
     Image box_one_no_padding;
     Image box_two_no_padding;
+    Image box_original_no_padding;
     Image box_one;
     Image box_two;
+    Image box_original;
     int*  shell_number_lut; // a look-up table: for each voxel in the local_volumes, remember what fsc shell we're in
     bool  shell_number_lut_is_allocated;
     int   sampling_step; // we don't necessarily need to estimate the resolution at every voxel
@@ -65,7 +69,7 @@ class LocalResolutionEstimator {
     void ComputeLocalFSCAndCompareToThreshold(float fsc_threshold[], Image* local_resolution_volume, Image box_mask);
     void AllocateLocalVolumes( );
     void DeallocateLocalVolumes( );
-    void SetInputVolumes(Image* wanted_input_volume_one, Image* wanted_input_volume_two, Image* wanted_mask_volume);
+    void SetInputVolumes(Image* wanted_input_volume_one, Image* wanted_input_volume_two, Image* wanted_input_original_volume, Image* wanted_mask_volume);
 
     inline void SetPixelSize(float wanted_pixel_size_in_Angstroms) { pixel_size_in_Angstroms = wanted_pixel_size_in_Angstroms; };
 

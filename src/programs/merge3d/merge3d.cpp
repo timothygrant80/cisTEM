@@ -210,7 +210,7 @@ bool Merge3DApp::DoCalculation( ) {
 	// MASKING
 
 	const bool test_locres_filtering = true;
-	const int  number_of_threads 	= 88;
+	const int  number_of_threads 	= 1;
 	if ( test_locres_filtering ) {
 
     	/*
@@ -295,7 +295,7 @@ bool Merge3DApp::DoCalculation( ) {
         	temp_filename = output_reconstruction_filtered; // I think this is just setting the filename of the filtered reconstruction (volume_#_#.mrc)
 
 
-        	output_3d.density_map->QuickAndDirtyWriteSlices(wxString::Format("/data/hemme/Filtering_Debug/locres_original_%s", temp_filename.GetFullName()).ToStdString(), 1, output_3d.density_map->logical_z_dimension, true, original_pixel_size);
+        	output_3d.density_map->QuickAndDirtyWriteSlices(wxString::Format("/tmp/locres_original_%s", temp_filename.GetFullName()).ToStdString(), 1, output_3d.density_map->logical_z_dimension, true, original_pixel_size);
         	// Debug out put that needs be changed before this gets pushed to git
 
         	Image size_image;
@@ -346,22 +346,27 @@ bool Merge3DApp::DoCalculation( ) {
         	int   number_averaged   = 0;
 
 
-       		 for ( float current_res = 18.0f; current_res < 37.0f; current_res += 6.0f ) { //set current_res to 18, 24, 30, and 36
+       		 for ( float current_res = 18.0f; current_res < 19.0f; current_res += 6.0f ) { //set current_res to 18, 24, 30, and 36
             	//    float current_res = 24;
         	box_size = current_res / original_pixel_size; //set box size based on current_res and pixel size
             	wxPrintf("box size is %i\n", box_size);
-            	if ( alignment_res > 15 ) // alignment res is obtained from the user then used to set the fixed_FSC_threshold
-                	fixed_fsc_threshold = 0.75;
+            	// TODO: think about whether alignment resolution is good to use here or if there is an alternative
+            	if ( alignment_res > 12 ) // alignment res is obtained from the user then used to set the fixed_FSC_threshold
+                	fixed_fsc_threshold = 0.95;
+            	else if ( alignment_res > 10 )
+                	fixed_fsc_threshold = 0.93;
             	else if ( alignment_res > 8 )
-                	fixed_fsc_threshold = 0.85;
-            	else if ( alignment_res > 6 )
                 	fixed_fsc_threshold = 0.90;
+            	else if ( alignment_res > 6 )
+            		fixed_fsc_threshold = 0.75;
+            	else if ( alignment_res > 4 )
+            	    fixed_fsc_threshold = 0.5;
             	else
-                	fixed_fsc_threshold = 0.95f;
+                	fixed_fsc_threshold = 0.2f;
 
             	local_resolution_volume.SetToConstant(0.0f); // doing this again but within the for loop
 
-#pragma omp parallel default(shared) num_threads(number_of_threads) //run in parralell with a certain number of threads
+#pragma omp parallel default(shared) num_threads(number_of_threads) //run in parallel with a certain number of threads
             	{ // for omp
 
                 	int first_slice = (first_slice_with_data - 1) + myroundint(ReturnThreadNumberOfCurrentThread( ) * slices_per_thread) + 1; // set the first slice
@@ -370,14 +375,16 @@ bool Merge3DApp::DoCalculation( ) {
                 	Image local_resolution_volume_local; //define new image classes
                 	Image input_volume_one_local;
                 	Image input_volume_two_local;
+                	Image input_original_volume;
 
                 	input_volume_one_local.CopyFrom(output_3d1.density_map); // copy half maps to local volumes
                 	input_volume_two_local.CopyFrom(output_3d2.density_map);
+                	input_original_volume.CopyFrom(output_3d.density_map); //Setting up a new image to pull the original volume into the estimator
 
                 	local_resolution_volume_local.Allocate(output_3d.density_map->logical_x_dimension, output_3d.density_map->logical_y_dimension, output_3d.density_map->logical_z_dimension);
                 	local_resolution_volume_local.SetToConstant(0.0f); // allocate and set constant the local volume
                 	LocalResolutionEstimator* estimator = new LocalResolutionEstimator( );
-                	estimator->SetAllUserParameters(&input_volume_one_local, &input_volume_two_local, &size_image, first_slice, last_slice, 1, original_pixel_size, box_size, threshold_snr, threshold_confidence, use_fixed_threshold, fixed_fsc_threshold, my_reconstruction_1.symmetry_matrices.symmetry_symbol, true, 2);
+                	estimator->SetAllUserParameters(&input_volume_one_local, &input_volume_two_local, &input_original_volume, &size_image, first_slice, last_slice, 1, original_pixel_size, box_size, threshold_snr, threshold_confidence, use_fixed_threshold, fixed_fsc_threshold, my_reconstruction_1.symmetry_matrices.symmetry_symbol, false, 2);
                 	//set all inputs for the local res estimator code
                 	estimator->EstimateLocalResolution(&local_resolution_volume_local); // run estimate local resolution on the local volume
                 	delete estimator;
@@ -391,7 +398,7 @@ bool Merge3DApp::DoCalculation( ) {
                 	}
             	} // end omp
 
-      	local_resolution_volume.QuickAndDirtyWriteSlices(wxString::Format("/data/hemme/Filtering_Debug/local_res_%i_%s", int(current_res), temp_filename.GetFullName()).ToStdString(), 1, local_resolution_volume.logical_z_dimension);
+      	local_resolution_volume.QuickAndDirtyWriteSlices(wxString::Format("/tmp/local_res_%i_%s", int(current_res), temp_filename.GetFullName()).ToStdString(), 1, local_resolution_volume.logical_z_dimension);
 
             	// fill in gaps..
 
@@ -423,7 +430,7 @@ bool Merge3DApp::DoCalculation( ) {
         	local_resolution_volume.CopyFrom(&local_resolution_volume_all); // makes the local volume the combined volume
 
 
-       		 local_resolution_volume.QuickAndDirtyWriteSlices(wxString::Format("/data/hemme/Filtering_Debug/locres_current_res_weighting_%s", temp_filename.GetFullName()).ToStdString(), 1, size_image.logical_z_dimension, true, original_pixel_size);
+       		 local_resolution_volume.QuickAndDirtyWriteSlices(wxString::Format("/tmp/locres_current_res_weighting_%s", temp_filename.GetFullName()).ToStdString(), 1, size_image.logical_z_dimension, true, original_pixel_size);
 
         	// get scaler for resolution
 
@@ -444,7 +451,7 @@ bool Merge3DApp::DoCalculation( ) {
             	for ( j = 0; j < local_resolution_volume.logical_y_dimension; j++ ) {
                 	for ( i = 0; i < local_resolution_volume.logical_x_dimension; i++ ) {
                     	if ( size_image.real_values[pixel_counter] == 1.0f ) {
-                        	//if (local_resolution_volume.real_values[pixel_counter] < highest_resolution) highest_resolution = local_resolution_volume.real_values[pixel_counter];
+                        	if (local_resolution_volume.real_values[pixel_counter] < highest_resolution) highest_resolution = local_resolution_volume.real_values[pixel_counter];
                         	average_resolution += local_resolution_volume.real_values[pixel_counter];
                         	voxels_in_the_mask++;
                     	}
@@ -555,7 +562,7 @@ bool Merge3DApp::DoCalculation( ) {
 
    		local_resolution_volume.SetMaximumValue(20.0f);
 
-        	local_resolution_volume.QuickAndDirtyWriteSlices(wxString::Format("/data/hemme/Filtering_Debug/locres_real_value_weighting_%s", temp_filename.GetFullName()).ToStdString(), 1, size_image.logical_z_dimension, true, pixel_size);
+        	local_resolution_volume.QuickAndDirtyWriteSlices(wxString::Format("/tmp/locres_real_value_weighting_%s", temp_filename.GetFullName()).ToStdString(), 1, size_image.logical_z_dimension, true, pixel_size);
 
         	MyDebugPrint("About to apply locres filter\n");
 

@@ -282,6 +282,7 @@ class Image {
     Peak                StandardDeviationOfMass(float threshold = 0.0, bool apply_threshold = false, bool invert_densities = false);
     float               ReturnAverageOfMaxN(int number_of_pixels_to_average = 100, float mask_radius = 0.0);
     float               ReturnAverageOfMinN(int number_of_pixels_to_average = 100, float mask_radius = 0.0);
+    void                AverageRotationally( );
 
     void AddSlices(Image& sum_of_slices, int first_slice = 0, int last_slice = 0, bool calculate_average = false);
 
@@ -508,6 +509,7 @@ class Image {
     void  ApplyCTF(CTF ctf_to_apply, bool absolute = false, bool apply_beam_tilt = false, bool apply_envelope = false);
     void  ApplyCurveFilter(Curve* filter_to_apply, float resolution_limit = 1.0);
     void  ApplyCurveFilterUninterpolated(Curve* filter_to_apply, float resolution_limit = 1.0f, float scale = 0.0f);
+    void  ApplyRampFilter( );
     void  MaskCentralCross(int vertical_half_width = 1, int horizontal_half_width = 1);
     void  ZeroCentralPixel( );
     void  CalculateCrossCorrelationImageWith(Image* other_image);

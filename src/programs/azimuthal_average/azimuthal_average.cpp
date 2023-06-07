@@ -787,7 +787,6 @@ void sum_image_direction(Image* current_image, int dim) {
 // rotational and translational alignment of tubes
 // function similar to unblur_refine_alignment in unblur.cpp with a few differences
 // 1. Does not do smoothing, 2. Does not subtract current image from sum 3. Does not calculate running average (must be set to 1)
-// This function allocates directly to memory
 void azimuthal_alignment(Image* input_stack, Image* input_stack_times_ctf, ImageFile* my_input_file, ctf_parameters* ctf_parameters_stack, bool phase_flip_only, bool if_input_ctf_values_from_text_file, int number_of_images, int max_iterations, float unitless_bfactor, bool mask_central_cross, int width_of_vertical_line, int width_of_horizontal_line, float inner_radius_for_peak_search, float outer_radius_for_peak_search, float max_shift_convergence_threshold, float start_angle_for_peak_search, float end_angle_for_peak_search, float rotation_step_size, float max_rotation_convergence_threshold, float pixel_size, int number_of_frames_for_running_average, bool refine_locally, float refinement_factor, int savitzy_golay_window_size, int max_threads, float* x_shifts, float* y_shifts, float* psi_angles, float* ctf_sum_of_squares, bool use_memory, bool do_fill_sum_of_squares) {
     long pixel_counter;
     long image_counter;
@@ -1704,3 +1703,89 @@ float ReturnDifferenceOfSquares(Image* first_image, Image* second_image) {
 
     return difference_of_squares;
 }
+
+void invert_mask(Image* mask_file) {
+    // inverts binarized mask pixel values (i.e., 0 changes to 1 and 1 changes to 0)
+    for ( long pixel_counter = 0; pixel_counter < mask_file->real_memory_allocated; pixel_counter++ ) {
+        if ( mask_file->real_values[pixel_counter] == 0 )
+            mask_file->real_values[pixel_counter] = 1.0;
+        else
+            mask_file->real_values[pixel_counter] = 0.0;
+    }
+}
+
+// calculates the average of real values on the vertical edges
+float ReturnAverageOfRealValuesOnVerticalEdges(Image* current_image) {
+    double sum;
+    long   number_of_pixels;
+    int    pixel_counter;
+    int    line_counter;
+    int    plane_counter;
+    long   address;
+
+    sum              = 0.0;
+    number_of_pixels = 0;
+    address          = 0;
+
+    if ( current_image->logical_z_dimension == 1 ) {
+        // Two-dimensional image
+        for ( line_counter = 0; line_counter < current_image->logical_y_dimension; line_counter++ ) {
+            sum += current_image->real_values[address];
+            address += current_image->logical_x_dimension - 1;
+            sum += current_image->real_values[address];
+            address += current_image->padding_jump_value + 1;
+            number_of_pixels += 2;
+        }
+    }
+    else {
+        // Three-dimensional volume
+        for ( plane_counter = 0; plane_counter < current_image->logical_z_dimension; plane_counter++ ) {
+            for ( line_counter = 0; line_counter < current_image->logical_y_dimension; line_counter++ ) {
+                if ( line_counter == 0 || line_counter == current_image->logical_y_dimension - 1 ) {
+                    // First and last line of that section
+                    for ( pixel_counter = 0; pixel_counter < current_image->logical_x_dimension; pixel_counter++ ) {
+                        sum += current_image->real_values[address];
+                        address++;
+                    }
+                    address += current_image->padding_jump_value;
+                    number_of_pixels += current_image->logical_x_dimension;
+                }
+                else {
+                    // All other lines (only count first and last pixel)
+                    sum += current_image->real_values[address];
+                    address += current_image->logical_x_dimension - 1;
+                    sum += current_image->real_values[address];
+                    address += current_image->padding_jump_value + 1;
+                    number_of_pixels += 2;
+                }
+            }
+        }
+    }
+
+    return sum / float(number_of_pixels);
+}
+
+// calculates the pixelwise difference of squares between two images
+float ReturnDifferenceOfSquares(Image* first_image, Image* second_image) {
+    float difference_of_squares = 0.0;
+    long  pixel_counter         = 0;
+
+    for ( int j = 0; j < first_image->logical_y_dimension; j++ ) {
+        for ( int i = 0; i < first_image->logical_x_dimension; i++ ) {
+            difference_of_squares += powf(first_image->real_values[pixel_counter] - second_image->real_values[pixel_counter], 2);
+            pixel_counter++;
+        }
+
+        pixel_counter += first_image->padding_jump_value;
+    }
+
+    /*
+	for (pixel_counter = 0; pixel_counter < first_image->real_memory_allocated; pixel_counter++)
+		{
+			difference_of_squares += powf(first_image->real_values[pixel_counter] - second_image->real_values[pixel_counter], 2);
+		}
+*/
+
+    return difference_of_squares;
+}
+

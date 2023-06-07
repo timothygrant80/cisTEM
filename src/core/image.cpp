@@ -11866,3 +11866,146 @@ void Image::AverageRotationally( ) {
     delete[] ring_values;
     delete[] ring_weight;
 }
+
+void Image::AverageRotationally( ) {
+    // image must be in real space
+    bool switchBackToComplex = false;
+    if ( ! this->is_in_real_space ) {
+        this->BackwardFFT( );
+        switchBackToComplex = true;
+    }
+    // max radius in real space is sqrt(2)*0.5*logical_dimension
+    long number_of_rings = this->logical_x_dimension;
+    //float edge_value = current_image->ReturnAverageOfRealValues(std::min(current_image->physical_address_of_box_center_x - 2, current_image->physical_address_of_box_center_y - 2), true);
+    float   edge_value;
+    double* ring_axis   = new double[number_of_rings];
+    double* ring_values = new double[number_of_rings];
+    double* ring_weight = new double[number_of_rings];
+
+    long central_x_pixel = this->physical_address_of_box_center_x;
+    long central_y_pixel = this->physical_address_of_box_center_y;
+    // Add third dimension
+    long central_z_pixel = this->physical_address_of_box_center_z;
+
+    double radius;
+    double difference;
+    long   index_of_bin;
+    long   counter;
+    long   x;
+    long   y;
+    long   z;
+
+    // intialize values and weights (number of bins run from 0 to N-1)
+    // TODO: remove this comment
+    // number_of_rings == dimensions of images in original stack
+    // Divide by number of rings - 1 because of 0 indexing
+    for ( counter = 0; counter < number_of_rings; counter++ ) {
+        ring_axis[counter] = 0.0 + counter * (this->ReturnMaximumDiagonalRadius( ) - 0.0) / float(number_of_rings - 1); // Diagonal because we're using the physical address (0 is the upper left corner)
+        // = counter * (sqrt(pow(physical_address_of_box_center_x, 2) + pow(physical_address_of_box_center_y, 2) + pow(physical_address_of_box_center_z, 2)));
+        ring_values[counter] = 0; // What is this?
+        ring_weight[counter] = 0; // What is this?
+    }
+
+    // edge radius in real space is 0.5*logical_dimension
+    long edge_bin = long((0.5 * this->logical_x_dimension - ring_axis[0]) / (ring_axis[1] - ring_axis[0]));
+
+    // now go through and work out the average;
+
+    counter = 0;
+
+    // z-dim first; that's each image in the volume (looking "through" the image rather than at the side)
+    // Nested loops mean move across the image starting at the first image (z), the first row of pixels, going column by column (left to right across the image, going from top to bottom)
+    for ( z = 0; z < this->logical_z_dimension; z++ ) {
+        for ( y = 0; y < this->logical_y_dimension; y++ ) {
+            for ( x = 0; x < this->logical_x_dimension; x++ ) {
+                radius       = sqrtf(powf(double(central_x_pixel - x), 2) + powf(double(central_y_pixel - y), 2) + powf(double(central_z_pixel - z), 2)); // Here we're moving ring by ring closer to the corner of the image
+                index_of_bin = long((radius - ring_axis[0]) / (ring_axis[1] - ring_axis[0]));
+
+                // Only if the index of the current bin index is greater than that of the edge bin, add the current ring_value to the voxel (real_values array) and give it weight
+                if ( index_of_bin >= edge_bin ) {
+                    ring_values[index_of_bin] += this->real_values[counter];
+                    //ring_values[index_of_bin] += edge_value;
+                    ring_weight[index_of_bin] += 1;
+                }
+                // Otherwise, calculate the difference between the radius and ring_axis (I guess this is finding the "true" radius of the ring?)
+                else {
+                    // Determines the weight of each ring that's less than the maximum of 1?
+                    difference = (radius - ring_axis[index_of_bin]) / (ring_axis[index_of_bin + 1] - ring_axis[index_of_bin]);
+
+                    ring_values[index_of_bin] += this->real_values[counter] * (1 - difference);
+                    ring_values[index_of_bin + 1] += this->real_values[counter] * difference;
+                    ring_weight[index_of_bin] += (1 - difference);
+                    ring_weight[index_of_bin + 1] += difference;
+                }
+
+                counter++;
+            }
+            counter += this->padding_jump_value;
+        }
+    }
+    // divide by number of members...
+
+    for ( counter = 0; counter < number_of_rings; counter++ ) {
+        if ( ring_weight[counter] != 0.0 )
+            ring_values[counter] /= ring_weight[counter];
+    }
+
+    // put the data back into the image
+
+    counter = 0;
+
+    for ( z = 0; z < this->logical_z_dimension; z++ ) {
+        for ( y = 0; y < this->logical_y_dimension; y++ ) {
+            for ( x = 0; x < this->logical_x_dimension; x++ ) {
+
+                radius       = sqrtf(powf(double(central_x_pixel - x), 2) + powf(double(central_y_pixel - y), 2) + powf(double(central_z_pixel - z), 2));
+                index_of_bin = long((radius - ring_axis[0]) / (ring_axis[1] - ring_axis[0]));
+
+                if ( index_of_bin >= edge_bin ) {
+                    // set corner values to average at edge
+                    this->real_values[counter] = ring_values[edge_bin - 1];
+                    //this->real_values[counter] = edge_value;
+                }
+                else {
+                    difference                 = (radius - ring_axis[index_of_bin]) / (ring_axis[index_of_bin + 1] - ring_axis[index_of_bin]);
+                    this->real_values[counter] = (ring_values[index_of_bin] * (1 - difference)) + (ring_values[index_of_bin + 1] * difference);
+                }
+
+                counter++;
+            }
+            counter += this->padding_jump_value;
+        }
+    }
+
+    // All below here moved to DoCalculation in azimuthal_average
+    // padding radial average with edge values
+    //edge_value = this->ReturnAverageOfRealValuesOnEdges( );
+    //this->Resize(this->logical_x_dimension, this->logical_y_dimension, this->logical_z_dimension, edge_value);
+
+    // put the data back into the image and padding with helix in the z-direction
+    /*
+    long pixel_coord_xy  = 0;
+    long pixel_coord_xyz = 0;
+    counter              = 0;
+
+    // This only exists for putting info into the volume
+    for ( z = 0; z < this->logical_z_dimension; z++ ) {
+        for ( y = 0; y < this->logical_y_dimension; y++ ) {
+            for ( x = 0; x < this->logical_x_dimension; x++ ) {
+                pixel_coord_xy = this->ReturnReal1DAddressFromPhysicalCoord(x, y, 0);
+                //pixel_coord_xyz = current_volume->ReturnReal1DAddressFromPhysicalCoord(x, y, z);
+                //current_volume->real_values[pixel_coord_xyz] = current_image->real_values[pixel_coord_xy];
+                this->real_values[counter] = this->real_values[pixel_coord_xy];
+                counter++;
+            }
+            counter += this->padding_jump_value;
+        }
+    }*/
+
+    if ( switchBackToComplex )
+        this->ForwardFFT( );
+
+    delete[] ring_axis;
+    delete[] ring_values;
+    delete[] ring_weight;
+}

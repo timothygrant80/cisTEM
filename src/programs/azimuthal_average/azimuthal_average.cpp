@@ -528,11 +528,7 @@ bool AzimuthalAverage::DoCalculation( ) {
     delete my_progress;
 
     // rotationally averaged 3D reconstruction
-    // assume volume is square/cube (x_size = y_size = z_size)
-    // padding factor for 3D volume
-    // TODO: can we allocate this even when not using memory? Assume yes; it's much smaller than the stack
     Image my_volume;
-    //MRCFile* my_volume_file = new MRCFile("my_averaged_volume.mrc", false);
 
     my_volume.Allocate(padding_factor * sum_image.logical_x_dimension, padding_factor * sum_image.logical_y_dimension, padding_factor * sum_image.logical_x_dimension, true);
     my_volume.SetToConstant(0.0);
@@ -787,82 +783,6 @@ void sum_image_direction(Image* current_image, int dim) {
     directional_image_sum.Deallocate( );
 }
 
-/*
-void sum_image_direction(Image *current_image, Image *directional_image_sum, int dim)
-{
-	// x-direction
-	if (dim == 1)
-	{
-
-		long pixel_coord_y = 0;
-		long pixel_coord_xy = 0;
-		long pixel_counter = 0;
-
-		// sum columns of my_image_sum (NxM) and store in array (1xN)
-		for (int j = 0; j < current_image->logical_y_dimension; j++)
-		{
-			for (int i = 0; i < current_image->logical_x_dimension; i++)
-			{
-				pixel_coord_y = current_image->ReturnReal1DAddressFromPhysicalCoord(0, j, 0);
-				pixel_coord_xy = current_image->ReturnReal1DAddressFromPhysicalCoord(i, j, 0);
-				directional_image_sum->real_values[pixel_coord_y] += current_image->real_values[pixel_coord_xy];
-				pixel_counter++;
-			}
-			pixel_counter += current_image->padding_jump_value;
-		}
-
-		// repeat column sum into my_vertical_sum
-		pixel_counter = 0;
-		for (int j = 0; j < directional_image_sum->logical_y_dimension; j++)
-		{
-			for (int i = 0; i < directional_image_sum->logical_x_dimension; i++)
-			{
-				pixel_coord_y = directional_image_sum->ReturnReal1DAddressFromPhysicalCoord(0, j, 0);
-				pixel_coord_xy = directional_image_sum->ReturnReal1DAddressFromPhysicalCoord(i, j, 0);
-				directional_image_sum->real_values[pixel_coord_xy] = directional_image_sum->real_values[pixel_coord_y];
-				pixel_counter++;
-			}
-			pixel_counter += directional_image_sum->padding_jump_value;
-		}
-	}
-	// y-direction
-	else
-	{
-
-		long pixel_coord_x = 0;
-		long pixel_coord_xy = 0;
-		long pixel_counter = 0;
-
-		// sum columns of my_image_sum (NxM) and store in array (1xN)
-		for (int i = 0; i < current_image->logical_x_dimension; i++)
-		{
-			for (int j = 0; j < current_image->logical_y_dimension; j++)
-			{
-				pixel_coord_x = current_image->ReturnReal1DAddressFromPhysicalCoord(i, 0, 0);
-				pixel_coord_xy = current_image->ReturnReal1DAddressFromPhysicalCoord(i, j, 0);
-				directional_image_sum->real_values[pixel_coord_x] += current_image->real_values[pixel_coord_xy];
-				pixel_counter++;
-			}
-			pixel_counter += current_image->padding_jump_value;
-		}
-
-		// repeat column sum into my_vertical_sum
-		pixel_counter = 0;
-		for (int i = 0; i < directional_image_sum->logical_x_dimension; i++)
-		{
-			for (int j = 0; j < directional_image_sum->logical_y_dimension; j++)
-			{
-				pixel_coord_x = directional_image_sum->ReturnReal1DAddressFromPhysicalCoord(i, 0, 0);
-				pixel_coord_xy = directional_image_sum->ReturnReal1DAddressFromPhysicalCoord(i, j, 0);
-				directional_image_sum->real_values[pixel_coord_xy] = directional_image_sum->real_values[pixel_coord_x];
-				pixel_counter++;
-			}
-			pixel_counter += directional_image_sum->padding_jump_value;
-		}
-	}
-}
-*/
-// FIXME: finish correcting this method to include memory-free aligment
 // rotational and translational alignment of tubes
 // function similar to unblur_refine_alignment in unblur.cpp with a few differences
 // 1. Does not do smoothing, 2. Does not shift in y (vertically), 3. Does not subtract current image from sum 4. Does not calculate running average (must be set to 1)
@@ -1303,16 +1223,6 @@ void azimuthal_alignment(Image* input_stack, Image* input_stack_times_ctf, Image
                     input_stack_times_ctf[image_counter].ForwardFFT( );
                     // then shift
                     input_stack_times_ctf[image_counter].PhaseShift(current_x_shifts[image_counter], current_y_shifts[image_counter], 0.0);
-
-                    // rotate and shift input_stack
-                    /*
-				// rotate first
-				input_stack[image_counter].BackwardFFT();
-				input_stack[image_counter].Rotate2DInPlace(current_psi_angles[image_counter], 0.0); // 0.0 pixel size is mask with radius of half-box size
-				input_stack[image_counter].ForwardFFT();
-				// then shift
-				input_stack[image_counter].PhaseShift(current_x_shifts[image_counter], current_y_shifts[image_counter], 0.0);
-				*/
                 }
             }
 
@@ -1378,8 +1288,7 @@ void azimuthal_alignment(Image* input_stack, Image* input_stack_times_ctf, Image
 }
 
 // projection generated from Central Slice Theorem (i.e., Fourier space) and then subtracts unaligned input stack
-// FIXME: Add code for reading from files rather than memory
-void scale_and_subtract_reference(Image* input_stack, ImageFile* my_input_file, const int number_of_images, float pixel_size, float* x_shifts, float* y_shifts, float* psi_angles, Image* current_volume, Image* masked_volume, int number_of_models, ctf_parameters* ctf_parameters_stack, bool absolute, float padding_factor, int max_threads, bool use_memory) {
+void scale_and_subtract_reference(Image* input_stack, ImageFile* my_input_file, int number_of_images, float pixel_size, float* x_shifts, float* y_shifts, float* psi_angles, Image* current_volume, Image* masked_volume, int number_of_models, ctf_parameters* ctf_parameters_stack, bool absolute, float padding_factor, int max_threads, bool use_memory) {
     CTF                 current_ctf;
     Image               projection_3d;
     Image               projection_image;
@@ -1527,8 +1436,6 @@ void scale_and_subtract_reference(Image* input_stack, ImageFile* my_input_file, 
 
                     pixel_counter += projection_image.padding_jump_value;
                 }
-
-                // TODO: Round the sum_of_squares and sum_of_pixelwise product to a certain decimal place?
 
                 scale_factor                 = sum_of_pixelwise_product / sum_of_squares;
                 scale_factors[image_counter] = scale_factor;
@@ -1796,4 +1703,3 @@ float ReturnDifferenceOfSquares(Image* first_image, Image* second_image) {
 
     return difference_of_squares;
 }
-

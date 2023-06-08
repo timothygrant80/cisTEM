@@ -76,7 +76,7 @@ wxThread::ExitCode SocketServerThread::Entry( ) {
             MyPrintWithDetails("Error: Can't get server lock");
     }
 
-    wxPrintf("After loop, port = %hi, string = %s\n", my_port, my_port_string);
+    //wxPrintf("After loop, port = %hi, string = %s\n", my_port, my_port_string);
     // server should be setup ok..
 
     while ( 1 == 1 ) {
@@ -879,9 +879,6 @@ wxThread::ExitCode SocketClientMonitorThread::Entry( ) {
                                         monitored_sockets.RemoveAt(socket_counter);
                                         socket_counter--;
                                     }
-                                }
-                                else if ( memcmp(socket_input_buffer, socket_remote_control, SOCKET_CODE_SIZE) == 0 ) {
-                                    MyDebugPrint("Received remote control command from socket %s", parent_pointer->ReturnName());
                                 }
                             }
                             else // socket is likely dead

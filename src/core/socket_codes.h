@@ -25,4 +25,5 @@ const unsigned char socket_result_with_image_to_write[]  = "=z4-Y8Ge?vEjh`H^";
 const unsigned char socket_program_defined_result[]      = "e}w<S9hm<3L6Dr+V";
 const unsigned char socket_send_thread_timing[]          = "Kq04etrq1fO2QV4d";
 const unsigned char socket_template_match_result_ready[] = "EP927e$*cQ^egWq'";
+
 #endif

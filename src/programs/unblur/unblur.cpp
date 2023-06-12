@@ -687,9 +687,10 @@ bool UnBlurApp::DoCalculation( ) {
         profile_timing.start("final refine");
         unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, output_pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts, profile_timing_refinement_method);
         profile_timing.lap("final refine");
+
         // if allocated delete the binned stack, and swap the unbinned to image_stack - so that no matter what is happening we can just use image_stack
-        delete[] cropped_image_stack;
         if ( align_on_cropped_area ) {
+            delete[] cropped_image_stack;
             image_stack = unbinned_image_stack;
 
 #pragma omp parallel for default(shared) num_threads(max_threads) private(image_counter)

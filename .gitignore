@@ -21,8 +21,8 @@ RemoteSystemsTempFiles
 /release_build/
 **/build*
 **/.DS_Store
-.vscode
-.devcontainer.json
+#.vscode
+#.devcontainer.json
 devcontainer.json
 cistem_config.in*
 scripts/testing/post_format_test.cpp

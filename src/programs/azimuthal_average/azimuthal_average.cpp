@@ -610,7 +610,8 @@ bool AzimuthalAverage::DoCalculation( ) {
 		image_stack_subtracted[image_counter].QuickAndDirtyWriteSlice("my_subtracted_frames_copy.mrc", image_counter + 1);
 	}
 */
-    // print out scaled 3D reconstruction
+    // print out scaled 3D reconstruction -- also get rid of padding before writing out
+    my_volume.Resize(my_volume.logical_x_dimension / padding_factor, my_volume.logical_y_dimension / padding_factor, my_volume.logical_z_dimension / padding_factor);
     my_volume.QuickAndDirtyWriteSlices("my_averaged_volume.mrc", 1, my_volume.logical_z_dimension);
 
     // save orthogonal views
@@ -785,7 +786,7 @@ void sum_image_direction(Image* current_image, int dim) {
 
 // rotational and translational alignment of tubes
 // function similar to unblur_refine_alignment in unblur.cpp with a few differences
-// 1. Does not do smoothing, 2. Does not shift in y (vertically), 3. Does not subtract current image from sum 4. Does not calculate running average (must be set to 1)
+// 1. Does not do smoothing, 2. Does not subtract current image from sum 3. Does not calculate running average (must be set to 1)
 // This function allocates directly to memory
 void azimuthal_alignment(Image* input_stack, Image* input_stack_times_ctf, ImageFile* my_input_file, ctf_parameters* ctf_parameters_stack, bool phase_flip_only, bool if_input_ctf_values_from_text_file, int number_of_images, int max_iterations, float unitless_bfactor, bool mask_central_cross, int width_of_vertical_line, int width_of_horizontal_line, float inner_radius_for_peak_search, float outer_radius_for_peak_search, float max_shift_convergence_threshold, float start_angle_for_peak_search, float end_angle_for_peak_search, float rotation_step_size, float max_rotation_convergence_threshold, float pixel_size, int number_of_frames_for_running_average, bool refine_locally, float refinement_factor, int savitzy_golay_window_size, int max_threads, float* x_shifts, float* y_shifts, float* psi_angles, float* ctf_sum_of_squares, bool use_memory, bool do_fill_sum_of_squares) {
     long pixel_counter;

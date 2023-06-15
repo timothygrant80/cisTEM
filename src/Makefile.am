@@ -128,6 +128,7 @@ noinst_HEADERS = core/stopwatch.h \
                  gui/ClassumSelectionCopyFromDialog.h \
                  gui/MyOverviewPanel.h \
                  gui/DisplayPanel.h \
+                 gui/DisplayFrame.h \
                  gui/ProjectX_gui.h \
                  gui/gui_globals.h \
                  gui/ImportRefinementPackageWizard.h \
@@ -244,7 +245,6 @@ endif
 	
 
 noinst_LIBRARIES = libcore.a libguicore.a
-
 bin_PROGRAMS =  cisTEM_job_control \
                 unblur \
                 console_test \
@@ -313,6 +313,7 @@ bin_PROGRAMS =  cisTEM_job_control \
                 convert_binary_to_star \
                 convert_eer_to_mrc \
                 azimuthal_average \
+                cisTEM_display \
                 normalize_stack \
                 print_stack_statistics \
                 combine_stacks_by_star \
@@ -516,6 +517,7 @@ cisTEM_SOURCES = programs/projectx/projectx.cpp \
                 gui/AngularDistributionPlotPanel.cpp \
                 core/particle_finder.cpp \
                 gui/DisplayPanel.cpp \
+                gui/DisplayFrame.cpp \
                 gui/ClassumSelectionCopyFromDialog.cpp \
                 gui/MyOverviewPanel.cpp \
                 gui/AbInitio3DPanel.cpp \
@@ -537,7 +539,6 @@ cisTEM_SOURCES = programs/projectx/projectx.cpp \
                 gui/MatchTemplateResultsPanel.cpp \
                 gui/RefineTemplatePanel.cpp \
                 gui/CombineRefinementPackagesWizard.cpp
-                
 
 if EXPERIMENTAL_AM
 cisTEM_SOURCES +=  gui/RefineTemplateDevPanel.cpp gui/MyExperimentalPanel.cpp gui/AtomicCoordinatesAssetPanel.cpp gui/AtomicCoordinatesChooserDialog.cpp gui/AtomicCoordinatesImportDialog.cpp
@@ -551,8 +552,12 @@ cisTEM_CXXFLAGS = $(WX_CPPFLAGS)
 cisTEM_CPPFLAGS = $(WX_CPPFLAGS)
 cisTEM_LDADD    = libguicore.a libcore.a $(WX_LIBS)
 
-gui_test_SOURCES = programs/gui_test/gui_test.cpp gui/PlotCurvePanel.cpp gui/mathplot.cpp
+cisTEM_display_SOURCES = programs/cisTEM_display/cisTEM_display.cpp gui/gui_globals.cpp gui/MyFSCPanel.cpp gui/MyRefinementResultsPanel.cpp gui/PlotFSCPanel.cpp gui/gui_functions.cpp gui/my_controls.cpp gui/MyRenameDialog.cpp gui/BitmapPanel.cpp gui/PickingBitmapPanel.cpp gui/job_panel.cpp gui/ProjectX_gui.cpp gui/ResultsDataViewListCtrl.cpp gui/MyMovieFilterDialog.cpp gui/MainFrame.cpp gui/MyAssetPanelParent.cpp gui/MyMovieAssetPanel.cpp gui/MyImageAssetPanel.cpp gui/MyParticlePositionAssetPanel.cpp gui/MyVolumeChooserDialog.cpp gui/MovieImportDialog.cpp gui/MyImageImportDialog.cpp gui/MyVolumeImportDialog.cpp gui/ErrorDialog.cpp gui/AlignMoviesPanel.cpp gui/MyRunProfilesPanel.cpp gui/mathplot.cpp gui/MyMovieAlignResultsPanel.cpp gui/MyFindCTFResultsPanel.cpp gui/PickingResultsPanel.cpp gui/MyAddRunCommandDialog.cpp gui/MyNewProjectWizard.cpp gui/MyNewRefinementPackageWizard.cpp gui/UnblurResultsPanel.cpp gui/ShowCTFResultsPanel.cpp gui/PickingResultsDisplayPanel.cpp gui/CTF1DPanel.cpp gui/FindCTFPanel.cpp gui/FindParticlesPanel.cpp gui/MyVolumeAssetPanel.cpp gui/MyResultsPanel.cpp gui/MyAssetsPanel.cpp gui/ActionsPanelSpa.cpp gui/ActionsPanelTm.cpp gui/MySettingsPanel.cpp gui/MyParticlePositionExportDialog.cpp gui/MyFrealignExportDialog.cpp gui/MyRelionExportDialog.cpp gui/MyRefinementPackageAssetPanel.cpp gui/MyRefine3DPanel.cpp gui/MyRefine2DPanel.cpp gui/ClassificationPlotPanel.cpp gui/AbInitioPlotPanel.cpp gui/Refine2DResultsPanel.cpp gui/AngularDistributionPlotPanel.cpp core/particle_finder.cpp gui/DisplayPanel.cpp gui/DisplayFrame.cpp gui/ClassumSelectionCopyFromDialog.cpp gui/MyOverviewPanel.cpp gui/AbInitio3DPanel.cpp gui/AssetPickerComboPanel.cpp gui/AutoRefine3dPanel.cpp gui/DisplayRefinementResultsPanel.cpp gui/ImportRefinementPackageWizard.cpp gui/PopupTextDialog.cpp gui/ExportRefinementPackageWizard.cpp gui/Generate3DPanel.cpp gui/LargeAngularPlotDialog.cpp gui/RefinementParametersDialog.cpp gui/Sharpen3DPanel.cpp gui/PlotCurvePanel.cpp gui/DistributionPlotDialog.cpp gui/RefineCTFPanel.cpp gui/ShowTemplateMatchResultsPanel.cpp gui/MatchTemplatePanel.cpp gui/MatchTemplateResultsPanel.cpp gui/RefineTemplatePanel.cpp gui/CombineRefinementPackagesWizard.cpp
+cisTEM_display_CXXFLAGS = $(WX_CPPFLAGS)
+cisTEM_display_CPPFLAGS = $(WX_CPPFLAGS)
+cisTEM_display_LDADD = libguicore.a libcore.a $(WX_LIBS)
 
+gui_test_SOURCES = programs/gui_test/gui_test.cpp gui/PlotCurvePanel.cpp gui/mathplot.cpp
 gui_test_CXXFLAGS = $(WX_CPPFLAGS)
 gui_test_CPPFLAGS = $(WX_CPPFLAGS)
 gui_test_LDADD = libguicore.a libcore.a $(WX_LIBS)

@@ -24,6 +24,7 @@ DisplayPanel::DisplayPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, 
     Bind(wxEVT_MENU, &DisplayPanel::OnFFT, this, Toolbar_FFT);
     Bind(wxEVT_MENU, &DisplayPanel::OnHighQuality, this, Toolbar_High_Quality);
     Bind(wxEVT_MENU, &DisplayPanel::OnInvert, this, Toolbar_Invert);
+    Bind(wxEVT_MENU, &DisplayPanel::OnOpen, this, Toolbar_Open);
 
     Bind(wxEVT_TEXT_ENTER, &DisplayPanel::ChangeLocation, this, Toolbar_Location_Text);
     Bind(wxEVT_TEXT_ENTER, &DisplayPanel::ChangeScaling, this, Toolbar_Scale_Combo_Control);
@@ -382,6 +383,76 @@ void DisplayPanel::OnInvert(wxCommandEvent& WXUNUSED(event)) {
 
     current_panel->should_refresh = true;
     current_panel->ReDrawPanel( );
+}
+
+void DisplayPanel::OnOpen(wxCommandEvent& WXUNUSED(event)) {
+
+    int  filename_length;
+    char InputFilename[500];
+
+    wxString caption = wxT("Choose Image File");
+    //wxString wildcard = wxT("IMG files (*.img)|*.img");
+    wxString wildcard        = wxT("IMG and MRC files (*.img;*.mrc)|*.img;*.mrc|All Files (*.*)|*.*");
+    wxString remember_path   = wxGetCwd( );
+    wxString defaultDir      = remember_path;
+    wxString defaultFilename = wxEmptyString;
+
+    wxFileDialog dialog(NULL, caption, defaultDir, defaultFilename, wildcard, wxFD_FILE_MUST_EXIST);
+    if ( dialog.ShowModal( ) == wxID_OK ) {
+        wxString path            = dialog.GetPath( );
+        remember_path            = dialog.GetDirectory( );
+        wxString   this_filename = dialog.GetFilename( );
+        wxFileName filename      = this_filename;
+
+        // ok, we got a filename - was it an imagic file?.
+
+        wxString extension = this_filename.Mid(this_filename.Len( ) - 4);
+
+        if ( extension.IsSameAs(wxT(".img")) ) {
+            // we're opening an imagic file..
+
+            this_filename.Truncate(this_filename.Len( ) - 4);
+            filename_length = path.Len( );
+
+            //	InputFilename = new char[filename_length];
+
+            for ( int mycounter = 0; mycounter < filename_length - 4; mycounter++ ) {
+                InputFilename[mycounter] = char(path.GetWritableChar(mycounter));
+            }
+
+            InputFilename[filename_length - 4] = 0;
+            //	path.Truncate(path.Len() - 4);
+
+            OpenFile(InputFilename, this_filename);
+        }
+        else {
+            // Perhaps we are opening some kind of mrc file..
+
+            filename_length = path.Len( );
+            //InputFilename = new char[filename_length];
+
+            for ( int mycounter = 0; mycounter < filename_length; mycounter++ ) {
+
+                InputFilename[mycounter] = char(path.GetWritableChar(mycounter));
+            }
+
+            InputFilename[filename_length] = 0;
+
+            // does it seem to be an MRC file? If so, try and open it
+            bool is_valid;
+            //wxStripExtension(&this_filename);
+            if ( filename.GetExt( ).IsSameAs("mrc", false) || filename.GetExt( ).IsSameAs("mrcs", false) ) {
+                is_valid = GetMRCDetails(path, x_size, y_size, number_of_frames); // This is being recognized as valid mrc now; good
+                if ( is_valid ) {
+                    OpenFile(InputFilename, this_filename);
+                }
+                else
+                    wxMessageBox(wxT("This file is not a compatible type! Accepted types are mrc and mrcs."), wxT("Error"), wxOK | wxICON_INFORMATION);
+            }
+        }
+
+        //delete [] InputFilename;
+    }
 }
 
 void DisplayPanel::OnManual(wxCommandEvent& WXUNUSED(event)) {
@@ -846,11 +917,6 @@ void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title,
 		my_panel->image_is_selected[mycounter] = false;
 	}*/
 
-    if ( (style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES ) {
-        my_panel->image_is_selected = new bool[my_panel->my_file.ReturnNumberOfSlices( ) + 1];
-        ClearSelection(false);
-    }
-
     // add the panel
 
     if ( my_panel->panel_image != NULL )
@@ -870,6 +936,13 @@ void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title,
         my_notebook->AddPage(my_panel, wanted_tab_title, false);
         my_notebook->Thaw( );
         my_notebook->SetSelection(my_notebook->GetPageCount( ) - 1);
+    }
+
+    // This was moved here because calling ClearSelection before the panel was added
+    // resulted in a crash from a debug assert -- the current page was still null
+    if ( (style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES ) {
+        my_panel->image_is_selected = new bool[my_panel->my_file.ReturnNumberOfSlices( ) + 1];
+        ClearSelection(false);
     }
 
     // we have switched focus so update toolbar..
@@ -1284,6 +1357,8 @@ DisplayNotebookPanel::DisplayNotebookPanel(wxWindow* parent, wxWindowID id, cons
     image_is_selected          = NULL;
     image_to_display           = NULL;
 
+    coord_tracker = new CoordTracker(this); // Create coord_tracker for use when switching to coords picking
+
     input_is_a_file = true;
 
     number_allocated_for_buffer = 0;
@@ -1382,7 +1457,7 @@ DisplayNotebookPanel::DisplayNotebookPanel(wxWindow* parent, wxWindowID id, cons
     integrate_box_y_pos = -1;
     integrated_value    = -1;
 
-    //	picking_mode = IMAGES_PICK;
+    picking_mode             = IMAGES_PICK; // By default we want to pick images
     have_plt_filename        = false;
     plt_is_saved             = false;
     have_waypoints_filename  = false;
@@ -1838,153 +1913,88 @@ void DisplayNotebookPanel::OnLeftDown(wxMouseEvent& event) {
         return;
     }
 
-    if ( (parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES ) {
+    if ( (parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES && picking_mode == IMAGES_PICK ) {
         if ( x_pos < max_x && y_pos < max_y ) {
             ToggleImageSelected(current_image, true);
         }
     }
 
+    // TODO: Add code for coords selection
+    else if ( (parent_display_panel->style_flags & CAN_SELECT_COORDS) == CAN_SELECT_COORDS && picking_mode == COORDS_PICK ) {
+    }
+
     // check if the CTRL key is down, if so we want to make a selection box...
-    /*
-	if (event.ControlDown() == true && picking_mode == COORDS_PICK) // we want to draw a selection box..
-	{
-		drawing_selection_square = true;
 
-		selection_square_start_x = x_pos;
-		selection_square_start_y = y_pos;
-		selection_square_current_x = x_pos;
-		selection_square_current_y = y_pos;
-		selection_square_image = current_image;
+    /*if ( event.ControlDown( ) == true && picking_mode == COORDS_PICK ) // we want to draw a selection box..
+    {
+        drawing_selection_square = true;
 
-	}
-	else // we are doing a coord or image select
-	{
-		// work out what image (if any) us under the mouse and select / deselect it
+        selection_square_start_x   = x_pos;
+        selection_square_start_y   = y_pos;
+        selection_square_current_x = x_pos;
+        selection_square_current_y = y_pos;
+        selection_square_image     = current_image;
+    }
+    */
+    //else // we are doing a coord or image select
 
-		if (single_image == true)
-		{
-			// perform the relevant action..
+    // work out what image (if any) us under the mouse and select / deselect it
 
-			if (current_x_pos < first_header.x_size && current_x_pos >= 0 && current_y_pos < first_header.y_size && current_y_pos >= 0)
-			{
-				if (current_image <= first_header.number_following + 1)
-				{
-					if (picking_mode == IMAGES_PICK)
-					{
-						if (image_is_selected[current_image] == true)
-						{
-							image_is_selected[current_image] = false;
-							number_of_selections--;
-						}
-						else
-						{
-							image_is_selected[current_image] = true;
-							number_of_selections++;
-						}
+    if ( single_image == true ) {
+        // perform the relevant action..
 
-						SetTabNameUnSaved();
-					}
-					else
-					if (picking_mode == COORDS_PICK)
-					{
-						coord_tracker.ToggleCoord(current_image, current_x_pos, current_y_pos);
-						SetTabNameUnSaved();
-					}
-					else
-					if (picking_mode == WAYPOINTS_PICK)
-					{
-						if (event.ShiftDown() == true)
-						{
-							something_is_being_grabbed = waypoint_tracker.GrabWaypoint(current_image, current_x_pos, current_y_pos);
-						}
-						else
-						{
-							waypoint_tracker.ToggleWaypoint(current_image, current_x_pos, current_y_pos);
-						}
-						SetTabNameUnSaved();
-					}
-					else
-					{
-						if (current_x_pos >= 0 && current_x_pos < first_header.x_size && current_y_pos >= 0 && current_y_pos < first_header.y_size)
-						{
-							integrate_box_x_pos = current_x_pos;
-							integrate_box_y_pos = current_y_pos;
-							integrate_image = 0;
-							CalculateIntegration();
-							UpdateImageStatusInfo(x_pos, y_pos);
-						}
-					}
+        if ( current_x_pos < parent_display_panel->x_size && current_x_pos >= 0 && current_y_pos < parent_display_panel->y_size && current_y_pos >= 0 ) {
+            if ( current_image <= parent_display_panel->number_of_frames - 1 ) {
+                if ( picking_mode == IMAGES_PICK ) {
+                    if ( image_is_selected[current_image] == true ) {
+                        image_is_selected[current_image] = false;
+                        number_of_selections--;
+                    }
+                    else {
+                        image_is_selected[current_image] = true;
+                        number_of_selections++;
+                    }
 
-				Refresh();
-				Update();
-				}
-			}
+                    parent_display_panel->SetTabNameUnSaved( );
+                }
+                else if ( picking_mode == COORDS_PICK ) {
+                    coord_tracker->ToggleCoord(current_image, current_x_pos, current_y_pos);
+                    parent_display_panel->SetTabNameUnSaved( );
+                }
+                Refresh( );
+                Update( );
+            }
+        }
+    }
+    else if ( x_pos < max_x && y_pos < max_y ) {
+        // perform the relevant action..
 
-		}
-		else
-		if (x_pos < max_x && y_pos < max_y)
-		{
-			// perform the relevant action..
+        if ( current_image <= parent_display_panel->number_of_frames - 1 ) {
+            if ( picking_mode == IMAGES_PICK ) {
+                if ( image_is_selected[current_image] == true ) {
+                    image_is_selected[current_image] = false;
+                    number_of_selections--;
+                }
+                else {
+                    image_is_selected[current_image] = true;
+                    number_of_selections++;
+                }
 
-			if (current_image <= first_header.number_following + 1)
-			{
-				if (picking_mode == IMAGES_PICK)
-				{
-					if (image_is_selected[current_image] == true)
-					{
-						image_is_selected[current_image] = false;
-						number_of_selections--;
-					}
-					else
-					{
-						image_is_selected[current_image] = true;
-						number_of_selections++;
-					}
+                parent_display_panel->SetTabNameUnSaved( );
+            }
+            else if ( picking_mode == COORDS_PICK ) {
+                coord_tracker->ToggleCoord(current_image, current_x_pos, current_y_pos);
+                parent_display_panel->SetTabNameUnSaved( );
+            }
 
-					SetTabNameUnSaved();
-				}
-				else
-				if (picking_mode == COORDS_PICK)
-				{
-					coord_tracker.ToggleCoord(current_image, current_x_pos, current_y_pos);
-					SetTabNameUnSaved();
-				}
-				else
-				if (picking_mode == WAYPOINTS_PICK)
-				{
-					if (event.ShiftDown() == true)
-					{
-						something_is_being_grabbed = waypoint_tracker.GrabWaypoint(current_image, current_x_pos, current_y_pos);
-					}
-					else
-					{
-						waypoint_tracker.ToggleWaypoint(current_image, current_x_pos, current_y_pos);
-					}
-					SetTabNameUnSaved();
-				}
-				else
-				{
-					if (current_x_pos >= 0 && current_x_pos < first_header.x_size && current_y_pos >= 0 && current_y_pos < first_header.y_size)
-					{
-						integrate_box_x_pos = current_x_pos;
-						integrate_box_y_pos = current_y_pos;
-						integrate_image = (images_in_x * (image_y_coord)) + image_x_coord;
-						CalculateIntegration();
-						UpdateImageStatusInfo(x_pos, y_pos);
-					}
-				}
+            Refresh( );
+            Update( );
+        }
+    }
 
+    // Refresh StatusInfo for completeness
 
-				Refresh();
-				Update();
-			}
-		}
-	}
-
-	// Refresh StatusInfo for completeness
-
-	UpdateImageStatusInfo(x_pos, y_pos);
-*/
+    UpdateImageStatusInfo(x_pos, y_pos);
 
     event.Skip( );
 }
@@ -3821,4 +3831,220 @@ void DisplayManualDialog::OnPrevious(wxCommandEvent& event) {
 void DisplayManualDialog::OnHighChange(wxCommandEvent& WXUNUSED(event)) {
     Refresh( );
     Update( );
+}
+
+void DisplayPanel::SetTabNameUnSaved( ) {
+    ReturnCurrentPanel( )->plt_is_saved = false;
+    RefreshTabName( );
+}
+
+void DisplayPanel::RefreshTabName( ) {
+    int selected_tab = my_notebook->GetSelection( );
+
+    wxString tab_text;
+
+    if ( ReturnCurrentPanel( )->have_plt_filename == false && ReturnCurrentPanel( )->plt_is_saved == false ) {
+        tab_text = wxT("*") + ReturnCurrentPanel( )->short_image_filename;
+    }
+    else
+        tab_text = ReturnCurrentPanel( )->short_image_filename;
+
+    if ( ReturnCurrentPanel( )->have_plt_filename == true ) {
+        tab_text += wxT(" : ");
+        if ( ReturnCurrentPanel( )->plt_is_saved == false )
+            tab_text += wxT("*");
+        tab_text += ReturnCurrentPanel( )->short_plt_filename;
+    }
+
+    my_notebook->SetPageText(selected_tab, tab_text);
+}
+
+CoordTracker::CoordTracker(wxWindow* parent) {
+    parent_notebook = reinterpret_cast<DisplayNotebookPanel*>(parent);
+    // start off with 1000 coords..
+
+    number_allocated = 1000;
+
+    coords           = new Coord[1000];
+    number_of_coords = 0;
+}
+
+CoordTracker::~CoordTracker( ) {
+    delete[] coords;
+}
+
+void CoordTracker::Clear( ) {
+    number_of_coords = 0;
+
+    if ( number_allocated > 1000 ) {
+        delete[] coords;
+        coords           = new Coord[1000];
+        number_allocated = 1000;
+    }
+}
+
+void CoordTracker::ToggleCoord(long wanted_image, long wanted_x, long wanted_y) {
+    // first check to see if it is already there..
+
+    bool was_found = false;
+
+    for ( long counter = 0; counter < number_of_coords; counter++ ) {
+        if ( wanted_image == coords[counter].image_number ) {
+            // it is on the same image..
+
+            if ( abs(wanted_x - coords[counter].x_pos) < parent_notebook->selected_point_size && abs(wanted_y - coords[counter].y_pos) < parent_notebook->selected_point_size ) {
+                // we are assuming that these two coords, correspond. Thus we want to remove this coord.
+
+                RemoveCoord(counter);
+
+                was_found = true;
+                counter   = number_of_coords;
+            }
+        }
+    }
+
+    // if it wasn't found, then add it.
+
+    if ( was_found == false )
+        AddCoord(wanted_image, wanted_x, wanted_y);
+
+    // we need to know the distance between the last two coords (if possible), so that if
+    // the user selects show_selection_distance - the distance will be displayed.
+
+    // default position is no distance
+    parent_notebook->selected_distance = 0.;
+
+    // first_check there are at least two coords..
+
+    if ( number_of_coords > 1 ) {
+        // now check the last two are on the same image..
+
+        if ( coords[number_of_coords - 1].image_number == coords[number_of_coords - 2].image_number ) {
+            // now calculate distance..
+
+            parent_notebook->selected_distance = sqrt(pow(coords[number_of_coords - 1].x_pos - coords[number_of_coords - 2].x_pos, 2) + pow(coords[number_of_coords - 1].y_pos - coords[number_of_coords - 2].y_pos, 2));
+        }
+    }
+}
+
+void CoordTracker::AddCoord(long wanted_image, long wanted_x, long wanted_y) {
+    long counter;
+
+    number_of_coords++;
+    if ( number_allocated < number_of_coords ) {
+        // have to allocate more space..
+
+        Coord* coord_buffer = new Coord[number_allocated];
+
+        for ( counter = 0; counter < number_allocated; counter++ ) {
+            coord_buffer[counter].image_number = coords[counter].image_number;
+            coord_buffer[counter].x_pos        = coords[counter].x_pos;
+            coord_buffer[counter].y_pos        = coords[counter].y_pos;
+        }
+
+        // now allocate more space and copy back
+
+        delete[] coords;
+        coords = new Coord[number_allocated * 2];
+
+        for ( counter = 0; counter < number_allocated; counter++ ) {
+            coords[counter].image_number = coord_buffer[counter].image_number;
+            coords[counter].x_pos        = coord_buffer[counter].x_pos;
+            coords[counter].y_pos        = coord_buffer[counter].y_pos;
+        }
+
+        delete[] coord_buffer;
+
+        number_allocated *= 2;
+    }
+
+    coords[number_of_coords - 1].image_number = wanted_image;
+    coords[number_of_coords - 1].x_pos        = wanted_x;
+    coords[number_of_coords - 1].y_pos        = wanted_y;
+
+    //parent_display_panel->SetTabNameUnSaved( );
+}
+
+void CoordTracker::RemoveCoord(long coord_to_remove) {
+    // remove the coord, then move all the coords after it up in the list.
+
+    long counter;
+    long buffer_counter = 0;
+
+    //if (coord_to_remove == number_of_coords - 1) number_of_coords--;
+    //else
+    {
+        Coord* coord_buffer = new Coord[(number_of_coords - coord_to_remove) + 5];
+
+        for ( counter = coord_to_remove + 1; counter < number_of_coords; counter++ ) {
+            coord_buffer[buffer_counter].image_number = coords[counter].image_number;
+            coord_buffer[buffer_counter].x_pos        = coords[counter].x_pos;
+            coord_buffer[buffer_counter].y_pos        = coords[counter].y_pos;
+
+            buffer_counter++;
+        }
+
+        // take one off..
+
+        number_of_coords--;
+
+        // copy back..
+
+        buffer_counter = 0.;
+
+        for ( counter = coord_to_remove; counter < number_of_coords; counter++ ) {
+            coords[counter].image_number = coord_buffer[buffer_counter].image_number;
+            coords[counter].x_pos        = coord_buffer[buffer_counter].x_pos;
+            coords[counter].y_pos        = coord_buffer[buffer_counter].y_pos;
+
+            buffer_counter++;
+        }
+
+        delete[] coord_buffer;
+    }
+
+    parent_notebook->parent_display_panel->SetTabNameUnSaved( );
+}
+
+void CoordTracker::RectangleRemoveCoord(long wanted_image, long start_x, long start_y, long end_x, long end_y) {
+    long from_x;
+    long to_x;
+
+    long from_y;
+    long to_y;
+
+    bool removed_any_coords = false;
+
+    if ( end_x < start_x ) {
+        from_x = end_x;
+        to_x   = start_x;
+    }
+    else {
+        from_x = start_x;
+        to_x   = end_x;
+    }
+
+    if ( end_y < start_y ) {
+        from_y = end_y;
+        to_y   = start_y;
+    }
+    else {
+        from_y = start_y;
+        to_y   = end_y;
+    }
+
+    for ( long counter = 0; counter < number_of_coords; counter++ ) {
+        if ( wanted_image == coords[counter].image_number ) {
+            // it is on the same image..
+
+            if ( coords[counter].x_pos > from_x && coords[counter].x_pos < to_x && coords[counter].y_pos > from_y && coords[counter].y_pos < to_y ) {
+                RemoveCoord(counter);
+                counter--;
+                removed_any_coords = true;
+            }
+        }
+    }
+
+    if ( removed_any_coords == true )
+        parent_notebook->parent_display_panel->SetTabNameUnSaved( );
 }

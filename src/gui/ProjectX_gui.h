@@ -4176,3 +4176,104 @@ class DistributionPlotDialogParent : public wxDialog
 
 };
 
+///////////////////////////////////////////////////////////////////////////////
+/// Class DatabaseUpgradeDialogParent
+///////////////////////////////////////////////////////////////////////////////
+class DatabaseUpgradeDialogParent : public wxDialog
+{
+	private:
+
+	protected:
+		enum
+		{
+			wxID = 1000
+		};
+
+		wxStaticText* m_staticText809;
+		wxStaticText* m_staticText815;
+		wxStaticText* m_staticText817;
+		wxStaticText* m_staticText819;
+		wxStaticText* m_staticText820;
+		wxStaticLine* m_staticline165;
+		wxButton* m_button173;
+		wxButton* m_button174;
+
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnCloseClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnUpdateClick( wxCommandEvent& event ) { event.Skip(); }
+
+
+	public:
+		wxStaticText* current_version_statictext;
+		wxStaticText* project_version_statictext;
+		wxTextCtrl* DetailsTextControl;
+
+		DatabaseUpgradeDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Database from a different cisTEM version?"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 698,661 ), long style = wxDEFAULT_DIALOG_STYLE );
+		~DatabaseUpgradeDialogParent();
+
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class DisplayFrameParent
+///////////////////////////////////////////////////////////////////////////////
+class DisplayFrameParent : public wxFrame
+{
+	private:
+
+	protected:
+		wxMenuBar* m_menubar2;
+		wxMenu* DisplayFileMenu;
+		wxMenuItem* DisplayFileOpen;
+		wxMenuItem* DisplayCloseTab;
+		wxMenuItem* DisplayExit;
+		wxMenu* DisplayLabelMenu;
+		wxMenuItem* LabelLocationNumber;
+		wxMenu* DisplaySelectMenu;
+		wxMenuItem* SelectImageSelectionMode;
+		wxMenuItem* SelectCoordsSelectionMode;
+		wxMenuItem* SelectOpenPLT;
+		wxMenuItem* SelectSavePLT;
+		wxMenuItem* SelectSavePLTAs;
+		wxMenuItem* SelectInvertSelection;
+		wxMenuItem* SelectClearSelection;
+		wxMenu* DisplayOptionsMenu;
+		wxMenuItem* OptionsSetPointSize;
+		wxMenuItem* OptionsShowCrossHair;
+		wxMenuItem* OptionsSingleImageMode;
+		wxMenuItem* Options7BitGreyValues;
+		wxMenuItem* OptionsShowSelectionDistances;
+		wxMenuItem* OptionsShowResolution;
+		wxMenu* DisplayHelpMenu;
+		wxMenuItem* HelpAbout;
+
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
+		virtual void OnFileOpenClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnCloseTabClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnExitClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnLocationNumberClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnImageSelectionModeClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnCoordsSelectionModeClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnOpenPLTClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnSavePLTClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnSavePLTAsClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnInvertSelectionClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnClearSelectionClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnSetPointSizeClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnShowCrossHairClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnSingleImageModeClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void On7BitGreyValuesClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnShowSelectionDistancesClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnDocumentationClick( wxCommandEvent& event ) { event.Skip(); }
+
+
+	public:
+		wxBoxSizer* bSizer631;
+		DisplayPanel* cisTEMDisplayPanel;
+
+		DisplayFrameParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("cisTEM Display"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxDEFAULT_FRAME_STYLE|wxTAB_TRAVERSAL );
+
+		~DisplayFrameParent();
+
+};
+

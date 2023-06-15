@@ -19,15 +19,44 @@
 #define CAN_MOVE_TABS 16384
 #define DRAW_IMAGE_SEPARATOR 32768
 #define KEEP_TABS_LINKED_IF_POSSIBLE 65536
+#define CAN_SELECT_COORDS 131072
 
 #define LOCAL_GREYS 0
 #define GLOBAL_GREYS 1
 #define MANUAL_GREYS 2
 #define AUTO_GREYS 3
 
+#define COORDS_PICK 0
+#define IMAGES_PICK 1
+
 class DisplayPopup;
 class DisplayNotebook;
 class DisplayNotebookPanel;
+class CoordTracker;
+
+struct Coord {
+    long image_number;
+    long x_pos;
+    long y_pos;
+};
+
+class CoordTracker {
+
+  public:
+    DisplayNotebookPanel* parent_notebook;
+    long                  number_of_coords;
+    long                  number_allocated;
+    Coord*                coords;
+
+    CoordTracker(wxWindow* parent);
+    ~CoordTracker( );
+
+    void Clear( );
+    void ToggleCoord(long wanted_image, long wanted_x, long wanted_y);
+    void AddCoord(long wanted_image, long wanted_x, long wanted_y);
+    void RemoveCoord(long coord_to_remove);
+    void RectangleRemoveCoord(long wanted_image, long start_x, long start_y, long end_x, long end_y);
+};
 
 class
         DisplayPanel : public DisplayPanelParent {
@@ -49,6 +78,9 @@ class
     bool                  popup_exists;
     DisplayPopup*         popup;
     DisplayNotebookPanel* no_notebook_panel;
+    int                   x_size;
+    int                   y_size;
+    int                   number_of_frames;
 
     DisplayPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
 
@@ -57,6 +89,10 @@ class
     void OpenFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong* wanted_included_image_numbers = NULL, bool keep_scale_and_location_if_possible = false, bool force_local_survey = false);
     void ChangeFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong* wanted_included_image_numbers = NULL);
     void ChangeFileForTabNumber(int wanted_tab_number, wxString wanted_filename, wxString wanted_tab_title, wxArrayLong* wanted_included_image_numbers = NULL);
+
+    void SetTabNameSaved( );
+    void SetTabNameUnSaved( );
+    void RefreshTabName( );
 
     void OpenImage(Image* image_to_view, wxString wanted_tab_title, bool take_ownership = false, wxArrayLong* wanted_included_image_numbers = NULL);
     void ChangeImage(Image* image_to_View, wxString wanted_tab_title, bool take_ownership = false, wxArrayLong* wanted_included_image_numbers = NULL);
@@ -86,6 +122,7 @@ class
     void OnHistogram(wxCommandEvent& event);
     void OnFFT(wxCommandEvent& event);
     void OnInvert(wxCommandEvent& event);
+    void OnOpen(wxCommandEvent& event);
     void OnPrevious(wxCommandEvent& event);
     void ChangeLocation(wxCommandEvent& event);
     void ChangeScaling(wxCommandEvent& event);
@@ -112,6 +149,7 @@ class
     void GotFocus(wxFocusEvent& event);
     void OnEraseBackground(wxEraseEvent& event);
     void OnPaint(wxPaintEvent& evt);
+    void CloseTab(wxCommandEvent& event);
 
     /*
 	void OnRightClick(wxMouseEvent& event);
@@ -179,6 +217,7 @@ class
     void SetImageNotSelected(long wanted_image, bool refresh = true);
     void ToggleImageSelected(long wanted_image, bool refresh = true);
     void ClearSelection(bool refresh = true);
+    void CalculateIntegration( );
 
     void OnPaint(wxPaintEvent& evt);
     void OnEraseBackground(wxEraseEvent& event);
@@ -331,7 +370,7 @@ class
 
     long selected_point_size;
 
-    //CoordTracker coord_tracker;
+    CoordTracker* coord_tracker;
 
     /*
 

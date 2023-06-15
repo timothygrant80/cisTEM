@@ -107,6 +107,7 @@
 #include "../gui/MyRefinementResultsPanel.h"
 #include "../gui/AngularDistributionPlotPanel.h"
 #include "../gui/DisplayPanel.h"
+#include "../gui/DisplayFrame.h"
 #include "../gui/ClassificationPlotPanel.h"
 #include "../gui/AbInitioPlotPanel.h"
 #include "../gui/Refine2DResultsPanel.h"

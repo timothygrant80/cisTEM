@@ -14637,3 +14637,225 @@ DistributionPlotDialogParent::~DistributionPlotDialogParent()
 	SavePNGButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DistributionPlotDialogParent::OnSavePNGButtonClick ), NULL, this );
 
 }
+
+DatabaseUpgradeDialogParent::DatabaseUpgradeDialogParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
+{
+	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
+
+	wxBoxSizer* bSizer594;
+	bSizer594 = new wxBoxSizer( wxVERTICAL );
+
+	m_staticText809 = new wxStaticText( this, wxID_ANY, wxT("This project was last opened by a different cisTEM version :-\n"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText809->Wrap( -1 );
+	bSizer594->Add( m_staticText809, 0, wxALL, 5 );
+
+	wxFlexGridSizer* fgSizer43;
+	fgSizer43 = new wxFlexGridSizer( 0, 2, 0, 0 );
+	fgSizer43->SetFlexibleDirection( wxBOTH );
+	fgSizer43->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
+
+	m_staticText815 = new wxStaticText( this, wxID_ANY, wxT("Current Version :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText815->Wrap( -1 );
+	fgSizer43->Add( m_staticText815, 0, wxALIGN_RIGHT|wxALL, 5 );
+
+	current_version_statictext = new wxStaticText( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	current_version_statictext->Wrap( -1 );
+	fgSizer43->Add( current_version_statictext, 0, wxALL, 5 );
+
+	m_staticText817 = new wxStaticText( this, wxID_ANY, wxT("Project Version :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText817->Wrap( -1 );
+	fgSizer43->Add( m_staticText817, 0, wxALIGN_RIGHT|wxALL, 5 );
+
+	project_version_statictext = new wxStaticText( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
+	project_version_statictext->Wrap( -1 );
+	fgSizer43->Add( project_version_statictext, 0, wxALL, 5 );
+
+
+	bSizer594->Add( fgSizer43, 0, wxEXPAND, 5 );
+
+	m_staticText819 = new wxStaticText( this, wxID_ANY, wxT("\ncisTEM can try to update the format.  You should make a backup of the .db first!\n\nAttempt to update?"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText819->Wrap( -1 );
+	bSizer594->Add( m_staticText819, 0, wxALL, 5 );
+
+	m_staticText820 = new wxStaticText( this, wxID_ANY, wxT("\nDetails"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText820->Wrap( -1 );
+	m_staticText820->SetFont( wxFont( 11, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxT("Sans") ) );
+
+	bSizer594->Add( m_staticText820, 0, wxALL|wxEXPAND, 5 );
+
+	DetailsTextControl = new wxTextCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_DONTWRAP|wxTE_MULTILINE|wxTE_READONLY );
+	bSizer594->Add( DetailsTextControl, 10, wxALL|wxEXPAND, 5 );
+
+	m_staticline165 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer594->Add( m_staticline165, 0, wxEXPAND | wxALL, 5 );
+
+	wxBoxSizer* bSizer596;
+	bSizer596 = new wxBoxSizer( wxHORIZONTAL );
+
+	m_button173 = new wxButton( this, wxID, wxT("Close"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer596->Add( m_button173, 0, wxALL, 5 );
+
+	m_button174 = new wxButton( this, wxID_ANY, wxT("Update"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer596->Add( m_button174, 0, wxALL, 5 );
+
+
+	bSizer594->Add( bSizer596, 0, wxALIGN_RIGHT, 5 );
+
+
+	this->SetSizer( bSizer594 );
+	this->Layout();
+
+	this->Centre( wxBOTH );
+
+	// Connect Events
+	m_button173->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DatabaseUpgradeDialogParent::OnCloseClick ), NULL, this );
+	m_button174->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DatabaseUpgradeDialogParent::OnUpdateClick ), NULL, this );
+}
+
+DatabaseUpgradeDialogParent::~DatabaseUpgradeDialogParent()
+{
+	// Disconnect Events
+	m_button173->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DatabaseUpgradeDialogParent::OnCloseClick ), NULL, this );
+	m_button174->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DatabaseUpgradeDialogParent::OnUpdateClick ), NULL, this );
+
+}
+
+DisplayFrameParent::DisplayFrameParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxFrame( parent, id, title, pos, size, style )
+{
+	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
+
+	m_menubar2 = new wxMenuBar( 0 );
+	DisplayFileMenu = new wxMenu();
+	DisplayFileOpen = new wxMenuItem( DisplayFileMenu, wxID_ANY, wxString( wxT("Open") ) , wxEmptyString, wxITEM_NORMAL );
+	DisplayFileMenu->Append( DisplayFileOpen );
+
+	DisplayCloseTab = new wxMenuItem( DisplayFileMenu, wxID_ANY, wxString( wxT("Close tab") ) , wxEmptyString, wxITEM_NORMAL );
+	DisplayFileMenu->Append( DisplayCloseTab );
+	DisplayCloseTab->Enable( false );
+
+	DisplayFileMenu->AppendSeparator();
+
+	DisplayExit = new wxMenuItem( DisplayFileMenu, wxID_ANY, wxString( wxT("Exit") ) , wxEmptyString, wxITEM_NORMAL );
+	DisplayFileMenu->Append( DisplayExit );
+
+	m_menubar2->Append( DisplayFileMenu, wxT("File") );
+
+	DisplayLabelMenu = new wxMenu();
+	LabelLocationNumber = new wxMenuItem( DisplayLabelMenu, wxID_ANY, wxString( wxT("Location Number") ) , wxEmptyString, wxITEM_CHECK );
+	DisplayLabelMenu->Append( LabelLocationNumber );
+	LabelLocationNumber->Enable( false );
+	LabelLocationNumber->Check( true );
+
+	m_menubar2->Append( DisplayLabelMenu, wxT("Label") );
+
+	DisplaySelectMenu = new wxMenu();
+	SelectImageSelectionMode = new wxMenuItem( DisplaySelectMenu, wxID_ANY, wxString( wxT("Image Selection Mode") ) , wxEmptyString, wxITEM_CHECK );
+	DisplaySelectMenu->Append( SelectImageSelectionMode );
+	SelectImageSelectionMode->Enable( false );
+	SelectImageSelectionMode->Check( true );
+
+	SelectCoordsSelectionMode = new wxMenuItem( DisplaySelectMenu, wxID_ANY, wxString( wxT("Coords Selection Mode") ) , wxEmptyString, wxITEM_CHECK );
+	DisplaySelectMenu->Append( SelectCoordsSelectionMode );
+	SelectCoordsSelectionMode->Enable( false );
+
+	DisplaySelectMenu->AppendSeparator();
+
+	SelectOpenPLT = new wxMenuItem( DisplaySelectMenu, wxID_ANY, wxString( wxT("Open PLT") ) , wxEmptyString, wxITEM_NORMAL );
+	DisplaySelectMenu->Append( SelectOpenPLT );
+	SelectOpenPLT->Enable( false );
+
+	SelectSavePLT = new wxMenuItem( DisplaySelectMenu, wxID_ANY, wxString( wxT("Save PLT") ) , wxEmptyString, wxITEM_NORMAL );
+	DisplaySelectMenu->Append( SelectSavePLT );
+	SelectSavePLT->Enable( false );
+
+	SelectSavePLTAs = new wxMenuItem( DisplaySelectMenu, wxID_ANY, wxString( wxT("Save PLT As") ) , wxEmptyString, wxITEM_NORMAL );
+	DisplaySelectMenu->Append( SelectSavePLTAs );
+	SelectSavePLTAs->Enable( false );
+
+	DisplaySelectMenu->AppendSeparator();
+
+	SelectInvertSelection = new wxMenuItem( DisplaySelectMenu, wxID_ANY, wxString( wxT("Invert Selection") ) , wxEmptyString, wxITEM_NORMAL );
+	DisplaySelectMenu->Append( SelectInvertSelection );
+	SelectInvertSelection->Enable( false );
+
+	SelectClearSelection = new wxMenuItem( DisplaySelectMenu, wxID_ANY, wxString( wxT("Clear Selection") ) , wxEmptyString, wxITEM_NORMAL );
+	DisplaySelectMenu->Append( SelectClearSelection );
+	SelectClearSelection->Enable( false );
+
+	m_menubar2->Append( DisplaySelectMenu, wxT("Select") );
+
+	DisplayOptionsMenu = new wxMenu();
+	OptionsSetPointSize = new wxMenuItem( DisplayOptionsMenu, wxID_ANY, wxString( wxT("Set Point Size") ) , wxEmptyString, wxITEM_NORMAL );
+	DisplayOptionsMenu->Append( OptionsSetPointSize );
+	OptionsSetPointSize->Enable( false );
+
+	OptionsShowCrossHair = new wxMenuItem( DisplayOptionsMenu, wxID_ANY, wxString( wxT("Show Cross Hair") ) , wxEmptyString, wxITEM_NORMAL );
+	DisplayOptionsMenu->Append( OptionsShowCrossHair );
+	OptionsShowCrossHair->Enable( false );
+
+	OptionsSingleImageMode = new wxMenuItem( DisplayOptionsMenu, wxID_ANY, wxString( wxT("Single Image Mode") ) , wxEmptyString, wxITEM_NORMAL );
+	DisplayOptionsMenu->Append( OptionsSingleImageMode );
+	OptionsSingleImageMode->Enable( false );
+
+	Options7BitGreyValues = new wxMenuItem( DisplayOptionsMenu, wxID_ANY, wxString( wxT("7 Bit Grey Values") ) , wxEmptyString, wxITEM_NORMAL );
+	DisplayOptionsMenu->Append( Options7BitGreyValues );
+	Options7BitGreyValues->Enable( false );
+
+	OptionsShowSelectionDistances = new wxMenuItem( DisplayOptionsMenu, wxID_ANY, wxString( wxT("Show Selection Distances") ) , wxEmptyString, wxITEM_NORMAL );
+	DisplayOptionsMenu->Append( OptionsShowSelectionDistances );
+	OptionsShowSelectionDistances->Enable( false );
+
+	DisplayOptionsMenu->AppendSeparator();
+
+	OptionsShowResolution = new wxMenuItem( DisplayOptionsMenu, wxID_ANY, wxString( wxT("Show Resolution Instead of Radius") ) , wxEmptyString, wxITEM_NORMAL );
+	DisplayOptionsMenu->Append( OptionsShowResolution );
+	OptionsShowResolution->Enable( false );
+
+	m_menubar2->Append( DisplayOptionsMenu, wxT("Options") );
+
+	DisplayHelpMenu = new wxMenu();
+	HelpAbout = new wxMenuItem( DisplayHelpMenu, wxID_ANY, wxString( wxT("Documentation") ) , wxEmptyString, wxITEM_NORMAL );
+	DisplayHelpMenu->Append( HelpAbout );
+
+	m_menubar2->Append( DisplayHelpMenu, wxT("Help") );
+
+	this->SetMenuBar( m_menubar2 );
+
+	bSizer631 = new wxBoxSizer( wxVERTICAL );
+
+	cisTEMDisplayPanel = new DisplayPanel( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	bSizer631->Add( cisTEMDisplayPanel, 1, wxEXPAND | wxALL, 5 );
+
+
+	this->SetSizer( bSizer631 );
+	this->Layout();
+
+	this->Centre( wxBOTH );
+
+	// Connect Events
+	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( DisplayFrameParent::OnUpdateUI ) );
+	DisplayFileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnFileOpenClick ), this, DisplayFileOpen->GetId());
+	DisplayFileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnCloseTabClick ), this, DisplayCloseTab->GetId());
+	DisplayFileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnExitClick ), this, DisplayExit->GetId());
+	DisplayLabelMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnLocationNumberClick ), this, LabelLocationNumber->GetId());
+	DisplaySelectMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnImageSelectionModeClick ), this, SelectImageSelectionMode->GetId());
+	DisplaySelectMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnCoordsSelectionModeClick ), this, SelectCoordsSelectionMode->GetId());
+	DisplaySelectMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnOpenPLTClick ), this, SelectOpenPLT->GetId());
+	DisplaySelectMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSavePLTClick ), this, SelectSavePLT->GetId());
+	DisplaySelectMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSavePLTAsClick ), this, SelectSavePLTAs->GetId());
+	DisplaySelectMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnInvertSelectionClick ), this, SelectInvertSelection->GetId());
+	DisplaySelectMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnClearSelectionClick ), this, SelectClearSelection->GetId());
+	DisplayOptionsMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSetPointSizeClick ), this, OptionsSetPointSize->GetId());
+	DisplayOptionsMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnShowCrossHairClick ), this, OptionsShowCrossHair->GetId());
+	DisplayOptionsMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSingleImageModeClick ), this, OptionsSingleImageMode->GetId());
+	DisplayOptionsMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::On7BitGreyValuesClick ), this, Options7BitGreyValues->GetId());
+	DisplayOptionsMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnShowSelectionDistancesClick ), this, OptionsShowSelectionDistances->GetId());
+	DisplayHelpMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnDocumentationClick ), this, HelpAbout->GetId());
+}
+
+DisplayFrameParent::~DisplayFrameParent()
+{
+	// Disconnect Events
+	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( DisplayFrameParent::OnUpdateUI ) );
+
+}

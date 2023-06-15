@@ -210,64 +210,8 @@ bool Merge3DApp::DoCalculation( ) {
 	// MASKING
 
 	const bool test_locres_filtering = true;
-	const int  number_of_threads 	= 1;
+	const int  number_of_threads 	= 64;
 	if ( test_locres_filtering ) {
-
-    	/*
-   	  * Parameters for local resolution estimation & filtering
-   	  */
-
-    	/*
-   	  * Compute a mask
-   	  */
-
-    	// remove disconnected density
-    	/* old_mask
- *
-
-   		 Image buffer_image;
-
-   		 buffer_image.Allocate(output_3d.density_map->logical_x_dimension, output_3d.density_map->logical_y_dimension, output_3d.density_map->logical_z_dimension);
-
-   		 buffer_image.CopyFrom(output_3d.density_map);
-   		 buffer_image.SetMinimumValue(original_average_value);
-   		 buffer_image.ForwardFFT();
-   		 buffer_image.CosineMask(original_pixel_size / 50.0f, original_pixel_size / 10.0f);
-   		 buffer_image.BackwardFFT();
-
-   		 float average_value = buffer_image.ReturnAverageOfRealValues(outer_mask_radius / original_pixel_size, true);
-   		 float average_of_100_max = buffer_image.ReturnAverageOfMaxN(500, outer_mask_radius / original_pixel_size);
-   		 float threshold_value = average_value + ((average_of_100_max - average_value) * 0.03);
-
-   		 buffer_image.CosineMask(outer_mask_radius / original_pixel_size, 1.0, false, true, 0.0);
-   		 buffer_image.Binarise(threshold_value);
-
-   		 MyDebugPrint("About to compute size image\n");
-
-   		 rle3d my_rle3d(buffer_image);
-   		 size_image.Allocate(buffer_image.logical_x_dimension, buffer_image.logical_y_dimension, buffer_image.logical_z_dimension, true);
-   		 my_rle3d.ConnectedSizeDecodeTo(size_image);
-
-   		 MyDebugPrint("About to compute mask\n");
-
-   		 size_image.Binarise(size_image.ReturnMaximumValue() - 1.0f);
-    #ifdef DEBUG
-    size_image.QuickAndDirtyWriteSlices("/tmp/locres_mask.mrc", 1, size_image.logical_z_dimension);
-   	 #endif
-
-   		 for (long address = 0; address < output_3d.density_map->real_memory_allocated; address++)
-   		 {
-   			 if (size_image.real_values[address] == 0.0f) output_3d.density_map->real_values[address] = original_average_value;
-   		 }
-
-    //   	 output_3d.density_map->SetMinimumValue(original_average_value);
-    //   	 output_3d.density_map->CosineMask(outer_mask_radius / original_pixel_size, 1.0, false, true, 0.0);
-
-*/
-
-    	/*
-   	  * Apply a local resolution filter to the reconstruction
-   	  */
     	{
         	Image local_resolution_volume; // define local_resolution_volume image class
         	Image original_volume; // define original_volume image class
@@ -346,7 +290,7 @@ bool Merge3DApp::DoCalculation( ) {
         	int   number_averaged   = 0;
 
 
-       		 for ( float current_res = 18.0f; current_res < 19.0f; current_res += 6.0f ) { //set current_res to 18, 24, 30, and 36
+       		 for ( float current_res = 6.0f; current_res < 7.0f; current_res += 6.0f ) { //set current_res to 18, 24, 30, and 36
             	//    float current_res = 24;
         	box_size = current_res / original_pixel_size; //set box size based on current_res and pixel size
             	wxPrintf("box size is %i\n", box_size);
@@ -398,39 +342,23 @@ bool Merge3DApp::DoCalculation( ) {
                 	}
             	} // end omp
 
-      	local_resolution_volume.QuickAndDirtyWriteSlices(wxString::Format("/tmp/local_res_%i_%s", int(current_res), temp_filename.GetFullName()).ToStdString(), 1, local_resolution_volume.logical_z_dimension);
+      	local_resolution_volume.QuickAndDirtyWriteSlices(wxString::Format("/tmp/local_res_%i", int(current_res)).ToStdString(), 1, local_resolution_volume.logical_z_dimension);
 
             	// fill in gaps..
 
             	float max_res = local_resolution_volume.ReturnMaximumValue( ); //find max value
             	float min_res = local_resolution_volume.ReturnMinimumValue( ); //find min value (this is currently not used but may be in the future so I'll keep it for now)
 
-            	for ( long pixel_counter = 0; pixel_counter < local_resolution_volume.real_memory_allocated; pixel_counter++ ) {
-                	if ( local_resolution_volume.real_values[pixel_counter] < 0.5f )
-                    	local_resolution_volume.real_values[pixel_counter] = max_res; // this gives pixels that have no value a value to basically go into the background
-            	}
-
-            	float weight;
-            	if (current_res <= 6.0f) weight = 1.0f; // these assign arbitrary weight values to the maps based on which map it is
-            	else
-            	if (current_res <= 12.0f) weight = 1.0f;
-            	else
-            	if (current_res <= 18.0f) weight = 1.0f;
-            	else weight = 1.0f;
-           		 local_resolution_volume.MultiplyByConstant(weight); // this multiplies the whole map by the weight
            		 local_resolution_volume_all.AddImage(&local_resolution_volume); // adds the current volume to the all volumes class
-           		 number_averaged+=weight;  //Takes number_averaged and adds the weight value to it
+           		 float box_size_counter = 1;
+           		 number_averaged+=box_size_counter;  //Takes number_averaged and adds the weight value to it
        		 }
-        	//   		 MRCFile junk("/tmp/locres.mrc");
-        	//   		 local_resolution_volume.ReadSlices(&junk, 1, junk.ReturnNumberOfSlices());
 
         	// divide and copy
-
+        	local_resolution_volume_all.QuickAndDirtyWriteSlices(wxString::Format("/tmp/locres_all").ToStdString(), 1, size_image.logical_z_dimension, true, original_pixel_size);
         	local_resolution_volume_all.DivideByConstant(number_averaged); // divides by the number averaged
         	local_resolution_volume.CopyFrom(&local_resolution_volume_all); // makes the local volume the combined volume
-
-
-       		 local_resolution_volume.QuickAndDirtyWriteSlices(wxString::Format("/tmp/locres_current_res_weighting_%s", temp_filename.GetFullName()).ToStdString(), 1, size_image.logical_z_dimension, true, original_pixel_size);
+       		local_resolution_volume.QuickAndDirtyWriteSlices(wxString::Format("/tmp/locres_box_weighting_%s", temp_filename.GetFullName()).ToStdString(), 1, size_image.logical_z_dimension, true, original_pixel_size);
 
         	// get scaler for resolution
 
@@ -465,126 +393,41 @@ bool Merge3DApp::DoCalculation( ) {
         	average_resolution /= voxels_in_the_mask;
         	wxPrintf("Local high / Measured Average / Local Average = %.2f / %.2f / %.2f\n", highest_resolution, measured_resolution, average_resolution);
 
-        	//Scaler code that got removed
-
-   /*     	if ( highest_resolution != 8.0f && measured_resolution != 8.0f ) {
-            	float scaler = (8.0f - measured_resolution) / (8.0f - highest_resolution);
-
-            	pixel_counter = 0;
-            	for ( k = 0; k < local_resolution_volume.logical_z_dimension; k++ ) {
-                	for ( j = 0; j < local_resolution_volume.logical_y_dimension; j++ ) {
-                    	for ( i = 0; i < local_resolution_volume.logical_x_dimension; i++ ) {
-                        	if ( size_image.real_values[pixel_counter] == 1.0f ) {
-                            	if ( local_resolution_volume.real_values[pixel_counter] < 8.0f ) {
-                                	if ( scaler > 1.0f )
-                                    	local_resolution_volume.real_values[pixel_counter] = ((local_resolution_volume.real_values[pixel_counter] - highest_resolution) * scaler) + measured_resolution;
-                                	if ( local_resolution_volume.real_values[pixel_counter] < 5.0f ) {
-                                    	local_resolution_volume.real_values[pixel_counter] = measured_resolution;
-                                	}
-                            	}
-                        	}
-
-                        	pixel_counter++;
-                    	}
-                    	pixel_counter += local_resolution_volume.padding_jump_value;
-                	}
-            	}
-        	}
-
-*/
 
 #ifdef DEBUG
         	local_resolution_volume.QuickAndDirtyWriteSlices("/tmp/locres_scaled.mrc", 1, size_image.logical_z_dimension, true, pixel_size);
 #endif
 
-        	// Apply filter mask..
 
-        	/*   	 Image filter_mask;
-   		 MRCFile filter_mask_file("/tmp/fab_filter_mask.mrc");
-
-   		 filter_mask.ReadSlices(&filter_mask_file, 1, filter_mask_file.ReturnNumberOfSlices());
-
-   		 pixel_counter = 0;
-   		 for ( k = 0; k < local_resolution_volume.logical_z_dimension; k ++ )
-   		 {
-   			 for ( j = 0; j < local_resolution_volume.logical_y_dimension; j ++ )
-   			 {
-   				 for ( i = 0; i < local_resolution_volume.logical_x_dimension; i ++ )
-   				 {
-   					 if (size_image.real_values[pixel_counter] == 1.0f)
-   					 {
-   						 if (filter_mask.real_values[pixel_counter] > local_resolution_volume.real_values[pixel_counter])
-   						 {
-   							 local_resolution_volume.real_values[pixel_counter] = filter_mask.real_values[pixel_counter];
-   						 }
-   					 }
-   					 pixel_counter++;
-   				 }
-   				 pixel_counter += local_resolution_volume.padding_jump_value;
-   			 }
-   		 }
-   		 */
-
-      //  float max_value = local_resolution_volume.ReturnMaximumValue();
-      //  float min_value = local_resolution_volume.ReturnMinimumValue();
-
-    	/* 	for ( k = 0; k < original_volume.logical_z_dimension; k++ ) {
-                              	for ( j = 0; j < original_volume.logical_y_dimension; j++ ) {
-                                     	for ( i = 0; i < original_volume.logical_x_dimension; i++ ) {
-                                         	if ( size_image.real_values[pixel_counter] == 1.0f ) {
-                                            	average_resolution += original_volume.real_values[pixel_counter];
-                                             	voxels_in_the_mask++;
-                                         	}
-
-                                         	pixel_counter++;
-                                    	}
-                                     	pixel_counter += original_volume.padding_jump_value;
-                                	}
-                            	}
-   	 */
-
-
-	/*   	if (measured_resolution < 4.0f) {
-              					for (pixel_counter = 0; pixel_counter < local_resolution_volume.real_memory_allocated; pixel_counter++)
-              				   {
-              				    	if ((original_volume.real_values[pixel_counter] - min_value) / (max_value - min_value) >= 0.2f) local_resolution_volume.real_values[pixel_counter] *= 1.0f;
-              				     	else
-              				      	if ((original_volume.real_values[pixel_counter] - min_value) / (max_value - min_value) >= 0.15f) local_resolution_volume.real_values[pixel_counter] *= 2.0f;
-              				       	else
-              				        	if ((original_volume.real_values[pixel_counter] - min_value) / (max_value - min_value) >= 0.1f) local_resolution_volume.real_values[pixel_counter] *= 3.0f;
-              				       		 else
-              				       		  if ((original_volume.real_values[pixel_counter] - min_value) / (max_value - min_value) >= 0.05f) local_resolution_volume.real_values[pixel_counter] *= 4.0f;
-              				       		   else local_resolution_volume.real_values[pixel_counter] *= 5.0f;
-
-              				    	}
-              				}
-	*/
-
-   		local_resolution_volume.SetMaximumValue(20.0f);
-
-        	local_resolution_volume.QuickAndDirtyWriteSlices(wxString::Format("/tmp/locres_real_value_weighting_%s", temp_filename.GetFullName()).ToStdString(), 1, size_image.logical_z_dimension, true, pixel_size);
+        	local_resolution_volume.QuickAndDirtyWriteSlices(wxString::Format("/tmp/locres_real_value_weighting").ToStdString(), 1, size_image.logical_z_dimension, true, pixel_size);
 
         	MyDebugPrint("About to apply locres filter\n");
 
-        	int number_of_levels = box_size;
-        	output_3d.density_map->ApplyLocalResolutionFilter(local_resolution_volume, original_pixel_size, number_of_levels); // apply the filter
+        //	int number_of_levels = box_size;
+        //	output_3d.density_map->ApplyLocalResolutionFilter(local_resolution_volume, original_pixel_size, number_of_levels); // apply the filter
+
+        	// Need to filter the original map to 20 Angstroms
+
+        	Image filtered_20_volume;
+        	float cosine_falloff_width = 10.0 / float(logical_x_dimension); // 5 Fourier voxels
+			filtered_20_volume.CopyFrom(output_3d.density_map);
+			filtered_20_volume.ForwardFFT();
+            filtered_20_volume.CosineMask(original_pixel_size / 20, cosine_falloff_width);
+            filtered_20_volume.BackwardFFT();
+
+        	filtered_20_volume.QuickAndDirtyWriteSlices(wxString::Format("/tmp/20_A_filtered_original").ToStdString(), 1, size_image.logical_z_dimension, true, pixel_size);
 
         	for ( long address = 0; address < output_3d.density_map->real_memory_allocated; address++ ) {
-            	    if (size_image.real_values[address] == 0.0f) output_3d.density_map->real_values[address] = original_average_value; //If the value equals 0, set it to the average value
+            	    output_3d.density_map->real_values[address] = local_resolution_volume.real_values[address];
+            	    if (output_3d.density_map->real_values[address] == 0) {
+            	    	output_3d.density_map->real_values[address] = filtered_20_volume.real_values[address];
+            	    }
 
-            	// go back to original density if high res.. (taking this out did nothing in 5 cases so I'm not sure how necessary it is)
-
-      	/*  	if ( local_resolution_volume.real_values[address] <= measured_resolution + (measured_resolution * 0.1) ) {
-                	output_3d.density_map->real_values[address] = original_volume.real_values[address];
-            	} */
         	}
+        	output_3d.density_map->QuickAndDirtyWriteSlices(wxString::Format("/tmp/locres_to_output").ToStdString(), 1, size_image.logical_z_dimension, true, pixel_size);
 
-        	//output_3d.density_map->SetMinimumValue(original_average_value);
 
-        	//  MAKE BACKGROUND ZERO - MIGHT BE BAD!!!
-        	//output_3d.density_map->AddConstant(-original_average_value);
-
-        	output_3d.density_map->CosineMask(outer_mask_radius / original_pixel_size, 1.0, false, true, 0.0);
+        //	output_3d.density_map->CosineMask(outer_mask_radius / original_pixel_size, 1.0, false, true, 0.0);
     	}
 
     	output_3d.density_map->WriteSlicesAndFillHeader(output_reconstruction_filtered.ToStdString( ), original_pixel_size);

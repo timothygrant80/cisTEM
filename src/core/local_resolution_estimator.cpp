@@ -35,9 +35,11 @@ LocalResolutionEstimator::~LocalResolutionEstimator( ) {
     box_one.Deallocate( );
     box_two.Deallocate( );
     box_original.Deallocate( );
+    box_combined_half_maps.Deallocate( );
     box_one_no_padding.Deallocate( );
     box_two_no_padding.Deallocate( );
     box_original_no_padding.Deallocate( );
+    box_combined_half_maps_no_padding.Deallocate( );
 }
 
 void LocalResolutionEstimator::SetAllUserParameters(Image* wanted_input_volume_one, Image* wanted_input_volume_two, Image* wanted_input_orignal_volume, Image* wanted_mask_volume, int wanted_first_slice, int wanted_last_slice, int wanted_sampling_step, float input_pixel_size_in_Angstroms, int wanted_box_size, float wanted_threshold_snr, float wanted_threshold_confidence_n_sigma, bool wanted_use_fixed_fsc_threshold, float wanted_fixed_fsc_threshold, wxString wanted_symmetry_symbol, bool wanted_whiten_half_maps, int wanted_padding_factor) {
@@ -60,8 +62,8 @@ void LocalResolutionEstimator::SetAllUserParameters(Image* wanted_input_volume_o
     number_of_fsc_shells = box_size * padding_factor / 2;
 
     // Update based on user-supplied parameter values
-    resolution_value_before_first_shell  = pixel_size_in_Angstroms * box_size * padding_factor; // TODO: check / think about whether the resolution of a shell is computed properly. On average, the frequencies contributing to a shell are not the frequency of the average radius of the shell... Especially relevant in first couple of shells!
-    resolution_value_where_wont_estimate = resolution_value_before_first_shell;
+ //   resolution_value_before_first_shell  = pixel_size_in_Angstroms * box_size * padding_factor; // TODO: check / think about whether the resolution of a shell is computed properly. On average, the frequencies contributing to a shell are not the frequency of the average radius of the shell... Especially relevant in first couple of shells!
+    resolution_value_where_wont_estimate = 0;
 }
 
 void LocalResolutionEstimator::EstimateLocalResolution(Image* local_resolution_volume) {
@@ -127,16 +129,20 @@ void LocalResolutionEstimator::AllocateLocalVolumes( ) {
     box_one_no_padding.Allocate(box_size, box_size, box_size);
     box_two_no_padding.Allocate(box_size, box_size, box_size);
     box_original_no_padding.Allocate(box_size, box_size, box_size);
+    box_combined_half_maps_no_padding.Allocate(box_size, box_size, box_size);
     box_one.Allocate(box_size * padding_factor, box_size * padding_factor, box_size * padding_factor);
     box_two.Allocate(box_size * padding_factor, box_size * padding_factor, box_size * padding_factor);
     box_original.Allocate(box_size * padding_factor, box_size * padding_factor, box_size * padding_factor);
+    box_combined_half_maps.Allocate(box_size * padding_factor, box_size * padding_factor, box_size * padding_factor);
     // This below to calm valgrind down
     box_one.SetToConstant(0.0);
     box_two.SetToConstant(0.0);
     box_original.SetToConstant(0.0);
+    box_combined_half_maps.SetToConstant(0.0);
     box_one_no_padding.SetToConstant(0.0);
     box_two_no_padding.SetToConstant(0.0);
     box_original_no_padding.SetToConstant(0.0);
+    box_combined_half_maps_no_padding.SetToConstant(0.0);
 }
 
 void LocalResolutionEstimator::SetInputVolumes(Image* wanted_input_volume_one, Image* wanted_input_volume_two, Image* wanted_input_original_volume, Image* wanted_mask_volume) {
@@ -256,9 +262,9 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 
     // Debug
 #ifdef DEBUG
-    const int dbg_i = 0;
-    const int dbg_j = 0;
-    const int dbg_k = 0;
+    const int dbg_i = 96;
+    const int dbg_j = 96;
+    const int dbg_k = 96;
 #endif
 
     // Initialisation
@@ -324,6 +330,14 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
     FSC_Filtered_Volume.Allocate(input_volume_one->logical_x_dimension, input_volume_one->logical_y_dimension, input_volume_one->logical_z_dimension);
     FSC_Filtered_Volume.SetToConstant(0.0f);
 
+    Image combined_half_maps;
+    combined_half_maps.Allocate(input_volume_one->logical_x_dimension, input_volume_one->logical_y_dimension, input_volume_one->logical_z_dimension);
+    combined_half_maps.SetToConstant(0.0f);
+    combined_half_maps.CopyFrom(input_volume_one);
+    combined_half_maps.AddImage(input_volume_two);
+
+    Curve FSC_filter;
+
     for ( k = 0; k < input_volume_one->logical_z_dimension; k++ ) {
         if ( k >= first_slice - 1 && k <= last_slice - 1 && k % sampling_step == 0 ) {
             for ( j = 0; j < input_volume_one->logical_y_dimension; j++ ) {
@@ -345,7 +359,9 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
                                     wxPrintf("At debug point, but mask was 0.0\n");
 #endif
                                 local_resolution_volume->real_values[pixel_counter] = resolution_value_where_wont_estimate;
-                            }
+
+                             }
+
                             else {
                                 //TODO: if performance is an issue, write a dedicated method to copy voxels over from large volume into small one, but with padding already done (i.e. not to the edges of small volume)
 
@@ -353,6 +369,7 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
                                 box_one_no_padding.is_in_real_space = true;
                                 box_two_no_padding.is_in_real_space = true;
                                 box_original_no_padding.is_in_real_space = true;
+                                box_combined_half_maps_no_padding.is_in_real_space = true;
                                 input_volume_one->ClipInto(&box_one_no_padding, 0.0, false, 0.0, i - input_volume_one->physical_address_of_box_center_x, j - input_volume_one->physical_address_of_box_center_y, k - input_volume_one->physical_address_of_box_center_z);
                                 box_one_no_padding.MultiplyPixelWise(box_mask);
                                 input_volume_two->ClipInto(&box_two_no_padding, 0.0, false, 0.0, i - input_volume_one->physical_address_of_box_center_x, j - input_volume_one->physical_address_of_box_center_y, k - input_volume_one->physical_address_of_box_center_z);
@@ -360,14 +377,19 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
                                 // added original volume to split as well
                                 input_original_volume->ClipInto(&box_original_no_padding, 0.0, false, 0.0, i - input_volume_one->physical_address_of_box_center_x, j - input_volume_one->physical_address_of_box_center_y, k - input_volume_one->physical_address_of_box_center_z);
                                 box_original_no_padding.MultiplyPixelWise(box_mask);
+                                // trying to use the combined half maps instead of the original volume
+                                combined_half_maps.ClipInto(&box_combined_half_maps_no_padding, 0.0, false, 0.0, i - input_volume_one->physical_address_of_box_center_x, j - input_volume_one->physical_address_of_box_center_y, k - input_volume_one->physical_address_of_box_center_z);
+                                box_combined_half_maps_no_padding.MultiplyPixelWise(box_mask);
 
                                 // Pad the small boxes in real space
                                 box_one.is_in_real_space = true;
                                 box_two.is_in_real_space = true;
                                 box_original.is_in_real_space = true;
+                                box_combined_half_maps.is_in_real_space = true;
                                 box_one_no_padding.ClipInto(&box_one, 0.0);
                                 box_two_no_padding.ClipInto(&box_two, 0.0);
                                 box_original_no_padding.ClipInto(&box_original, 0.0);
+                                box_combined_half_maps_no_padding.ClipInto(&box_combined_half_maps, 0.0);
 
 #ifdef DEBUG
                                 if ( on_dbg_point ) {
@@ -384,21 +406,24 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
                                 //box_one.ComputeFSC(&box_two, number_of_fsc_shells, shell_number_lut, computed_fsc, work_sum_of_squares, work_sum_of_other_squares, work_sum_of_cross_products);
 
                                 // FSC CURVE FILTERING HACK
-
-                                Curve FSC_filter;
                                 FSC_filter.AddPoint(0,1);
 
                                 for ( int shell_counter = 1; shell_counter < number_of_fsc_shells; shell_counter++ ) {
-                                	inverse_resolution = float (shell_counter) / (pixel_size_in_Angstroms * 2.0 * float(number_of_fsc_shells - 1)); //this is set up to be a pixel size of 1
+                                	inverse_resolution = float (shell_counter) / (pixel_size_in_Angstroms * 2.0 * float(number_of_fsc_shells - 1));
+                                	if (computed_fsc[shell_counter] < 0) {
+                                		computed_fsc[shell_counter] = 0;
+                                	}
                                 	FSC_filter.AddPoint(inverse_resolution , computed_fsc[shell_counter]);
                                 }
 
                                 float resolution_limit = inverse_resolution;
-                                FSC_filter.WriteToFile("test_fsc_filtering.txt");
 
+
+                             // Filter using FSC on original volume boxes
+/*
                                 		box_original.WriteSlicesAndFillHeader("dbg_original_box_unfiltered.mrc", pixel_size_in_Angstroms);
 
-                                        box_original.ForwardFFT(false);
+                                        box_original.ForwardFFT();
                                         box_original.ApplyCurveFilter(&FSC_filter, resolution_limit);
                                         box_original.BackwardFFT();
 
@@ -406,120 +431,52 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 
                                 long physical_coord = input_volume_one->ReturnReal1DAddressFromPhysicalCoord(i, j, k);
                                 local_resolution_volume->real_values[physical_coord] = box_original.ReturnRealPixelFromPhysicalCoord(box_original.physical_address_of_box_center_x, box_original.physical_address_of_box_center_y, box_original.physical_address_of_box_center_z);
-                               // local_resolution_volume->real_values[physical_coord] = box_original.ReturnRealPixelFromPhysicalCoord(box_original.physical_address_of_box_center_x, box_original.physical_address_of_box_center_y, box_original.physical_address_of_box_center_z);
+                                local_resolution_volume->real_values[pixel_counter] = local_resolution_volume->real_values[physical_coord];
+*/
+                             // Filter using FSC on combined half maps volume boxes
+
+                                        box_combined_half_maps.WriteSlicesAndFillHeader("/tmp/dbg_combinedhm_box_unfiltered.mrc", pixel_size_in_Angstroms);
+
+                                        box_combined_half_maps.ForwardFFT();
+                                        box_combined_half_maps.ApplyCurveFilter(&FSC_filter, resolution_limit);
+                                        box_combined_half_maps.BackwardFFT();
+
+                                        box_combined_half_maps.WriteSlicesAndFillHeader("/tmp/dbg_combinedhm_box.mrc", pixel_size_in_Angstroms);
+
+                                 long physical_coord = input_volume_one->ReturnReal1DAddressFromPhysicalCoord(i, j, k);
+                                 local_resolution_volume->real_values[physical_coord] = box_combined_half_maps.ReturnRealPixelFromPhysicalCoord(box_combined_half_maps.physical_address_of_box_center_x, box_combined_half_maps.physical_address_of_box_center_y, box_combined_half_maps.physical_address_of_box_center_z);
+                                 local_resolution_volume->real_values[pixel_counter] = local_resolution_volume->real_values[physical_coord];
 
 
 #ifdef DEBUG
                                 // Debug: printout FSC curve
+
                                 if ( on_dbg_point ) {
-                                    wxPrintf("\n\n");
+                                	std::ofstream fsc_curves;
+                                	fsc_curves.open ("/tmp/fsc_curves.txt", std::ios_base::app);
+                                	fsc_curves << "0 0.0 1.0 \n";
                                     for ( int shell_counter = 1; shell_counter < number_of_fsc_shells; shell_counter++ ) {
-                                        current_resolution = pixel_size_in_Angstroms * 2.0 * float(number_of_fsc_shells - 1) / float(shell_counter);
-                                        wxPrintf("%i %.2f %.4f %.4f\n", shell_counter, current_resolution, fsc_threshold[shell_counter], computed_fsc[shell_counter]);
+                                    	inverse_resolution = float (shell_counter) / (pixel_size_in_Angstroms * 2.0 * float(number_of_fsc_shells - 1));
+                                    	wxPrintf("%i %.2f %.4f\n", shell_counter, inverse_resolution, computed_fsc[shell_counter]);
+                                        fsc_curves << shell_counter << " " << inverse_resolution << " " << computed_fsc[shell_counter] << "\n";
                                     }
                                     wxPrintf("\n\n");
+
                                 }
+
 #endif
 
-                                // Walk the FSC curve and check when it crosses our threshold
-                             /*   previous_resolution = 0.0;
-                                for ( shell_counter = 1; shell_counter < number_of_fsc_shells; shell_counter++ ) {
-                                    current_resolution = pixel_size_in_Angstroms * 2.0 * float(number_of_fsc_shells - 1) / float(shell_counter);
-
-                                    // Test: are we below the threshold?
-                                    below_threshold = computed_fsc[shell_counter] < fsc_threshold[shell_counter];
-
-                                    /*
-									 * Maybe it was just a numerical glitch and in fact the FSC curve is staying above threshold.
-									 * This is particularly liable to happen in the very first shells, where N is very low,
-									 * FSC is very high and small numerical errors can have an outsize effect.
-									 * So if we're below threshold now but the next shells are back up above threshold,
-									 * and if we're up above 0.9 anyway, let's assume it's just a glitch in the matrix.
-									 */
-                                    /*						just_a_glitch = false;
-									if (below_threshold && computed_fsc[shell_counter] > 0.9)
-									{
-										if (stringent_mode)
-										{
-											if (shell_counter < number_of_fsc_shells - 2) just_a_glitch = computed_fsc[shell_counter+1] > fsc_threshold[shell_counter+1] && computed_fsc[shell_counter+2] > fsc_threshold[shell_counter+2];
-										}
-										else
-										{
-											if (shell_counter < number_of_fsc_shells - 4) just_a_glitch = computed_fsc[shell_counter+1] > fsc_threshold[shell_counter+1] || (computed_fsc[shell_counter+2] > fsc_threshold[shell_counter+2] && computed_fsc[shell_counter+3] > fsc_threshold[shell_counter+3]);
-										}
-									}
-*/ /*
-                                    if ( ! allow_glitches )
-                                        just_a_glitch = false;
-
-                                    if ( below_threshold && ! just_a_glitch ) {
-
-                                        if ( previous_resolution == 0.0 ) {
-                                            local_resolution_volume->real_values[pixel_counter] = resolution_value_before_first_shell;
-                                        }
-                                        else {
-                                            MyDebugAssertTrue(computed_fsc[shell_counter] <= computed_fsc[shell_counter - 1], "Oops, FSC is not dropping");
-                                            //local_resolution_volume->real_values[pixel_counter] = ReturnResolutionOfIntersectionBetweenFSCAndThreshold(previous_resolution, current_resolution, computed_fsc[shell_counter-1], computed_fsc[shell_counter], fsc_threshold[shell_counter-1], fsc_threshold[shell_counter]);
-                                            local_resolution_volume->real_values[pixel_counter] = previous_resolution;
-                                        }
-#ifdef DEBUG
-                                        if ( on_dbg_point ) {
-                                            wxPrintf("Estimated local resolution: %f Å. Previous resolution: %f Å. Current_resolution: %f Å\n", local_resolution_volume->real_values[pixel_counter], previous_resolution, current_resolution);
-                                        }
-#endif
-                                        break;
-                                    }
-                                    else if ( shell_counter == number_of_fsc_shells - 1 ) {
-                                        local_resolution_volume->real_values[pixel_counter] = current_resolution;
-#ifdef DEBUG
-                                        if ( on_dbg_point )
-                                            wxPrintf("At debug point, but got to last shell\n");
-#endif
-                                    }
-                                    previous_resolution = current_resolution;
-                                }
-*/
-                                //End of For Loop
-
-#ifdef DEBUG
-                                if ( on_dbg_point ) {
-                                    wxPrintf("Estimated local resolution: %f Å\n", local_resolution_volume->real_values[pixel_counter]);
-                                }
-#endif
 
                             }
                         }
-/*
-                        else {
-                            // set the local resolution to indicate we didn't measure it
-                            local_resolution_volume->real_values[pixel_counter] = resolution_value_between_estimation_points;
-#ifdef DEBUG
-                            if ( on_dbg_point )
-                                wxPrintf("At debug point, but between estimation points\n");
-#endif
-                        }
-*/
 
                         pixel_counter++;
                     }
                 }
 
-             /*   else {
-#ifdef DEBUG
-                    if ( on_dbg_point )
-                        wxPrintf("At debug point, but not estimating this line\n");
-#endif
-                    // We are not estimating this line
-                    for ( int i = 0; i < input_volume_one->logical_x_dimension; i++ ) {
-                        // set the local resolution to indicate we didn't measure it
-                        local_resolution_volume->real_values[pixel_counter] = resolution_value_between_estimation_points;
-
-                        pixel_counter++;
-                    }
-                }
-*/
                 pixel_counter += input_volume_one->padding_jump_value;
             }
+
         }
 
         else {
@@ -540,8 +497,10 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 #endif
         }
 
+
     }
-    local_resolution_volume->QuickAndDirtyWriteSlices("FSC_Local_Filtered_Test.mrc", 1, input_volume_one->logical_z_dimension, true);
+    local_resolution_volume->QuickAndDirtyWriteSlices("/tmp/FSC_Local_Filtered_Test.mrc", 1, input_volume_one->logical_z_dimension, true);
+    combined_half_maps.QuickAndDirtyWriteSlices("/tmp/combined_half_maps.mrc", 1, input_volume_one->logical_z_dimension, true);
     delete my_progress_bar;
 }
 

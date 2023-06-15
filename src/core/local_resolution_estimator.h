@@ -52,9 +52,11 @@ class LocalResolutionEstimator {
     Image box_one_no_padding;
     Image box_two_no_padding;
     Image box_original_no_padding;
+    Image box_combined_half_maps_no_padding;
     Image box_one;
     Image box_two;
     Image box_original;
+    Image box_combined_half_maps;
     int*  shell_number_lut; // a look-up table: for each voxel in the local_volumes, remember what fsc shell we're in
     bool  shell_number_lut_is_allocated;
     int   sampling_step; // we don't necessarily need to estimate the resolution at every voxel

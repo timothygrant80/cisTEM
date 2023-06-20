@@ -290,7 +290,7 @@ bool Merge3DApp::DoCalculation( ) {
         	int   number_averaged   = 0;
 
 
-       		 for ( float current_res = 6.0f; current_res < 7.0f; current_res += 6.0f ) { //set current_res to 18, 24, 30, and 36
+       		 for ( float current_res = 18.0f; current_res < 19.0f; current_res += 6.0f ) { //set current_res to 18, 24, 30, and 36
             	//    float current_res = 24;
         	box_size = current_res / original_pixel_size; //set box size based on current_res and pixel size
             	wxPrintf("box size is %i\n", box_size);
@@ -328,7 +328,7 @@ bool Merge3DApp::DoCalculation( ) {
                 	local_resolution_volume_local.Allocate(output_3d.density_map->logical_x_dimension, output_3d.density_map->logical_y_dimension, output_3d.density_map->logical_z_dimension);
                 	local_resolution_volume_local.SetToConstant(0.0f); // allocate and set constant the local volume
                 	LocalResolutionEstimator* estimator = new LocalResolutionEstimator( );
-                	estimator->SetAllUserParameters(&input_volume_one_local, &input_volume_two_local, &input_original_volume, &size_image, first_slice, last_slice, 1, original_pixel_size, box_size, threshold_snr, threshold_confidence, use_fixed_threshold, fixed_fsc_threshold, my_reconstruction_1.symmetry_matrices.symmetry_symbol, false, 2);
+                	estimator->SetAllUserParameters(&input_volume_one_local, &input_volume_two_local, &input_original_volume, &size_image, first_slice, last_slice, 1, original_pixel_size, box_size, threshold_snr, threshold_confidence, use_fixed_threshold, fixed_fsc_threshold, my_reconstruction_1.symmetry_matrices.symmetry_symbol, true, 2);
                 	//set all inputs for the local res estimator code
                 	estimator->EstimateLocalResolution(&local_resolution_volume_local); // run estimate local resolution on the local volume
                 	delete estimator;

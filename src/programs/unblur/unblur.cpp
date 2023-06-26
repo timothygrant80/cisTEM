@@ -187,7 +187,8 @@ void UnBlurApp::DoInteractiveUserInput( ) {
     bool     patchcorrection;
     int      patch_num_x;
     int      patch_num_y;
-    wxString outputpath = "";
+    int      distortion_model = 2;
+    wxString outputpath       = "";
     int      first_frame;
     int      last_frame;
     int      number_of_frames_for_running_average;
@@ -306,9 +307,10 @@ void UnBlurApp::DoInteractiveUserInput( ) {
     patchcorrection = my_input->GetYesNoFromUser("Use Patchbased Distortion Correction?", "If yes, distortion correction will be conducted", "yes");
 
     if ( patchcorrection == true ) {
-        patch_num_x = my_input->GetIntFromUser("Number of Patches along X Axis", "input integer", "6", 6);
-        patch_num_y = my_input->GetIntFromUser("Number of Patches along Y Axis", "input integer", "4", 4);
-        outputpath  = my_input->GetStringFromUser("Output patch and patch shift path", "output movie patchs path", "/data/outpatch/");
+        patch_num_x      = my_input->GetIntFromUser("Number of Patches along X Axis", "input integer", "6", 6);
+        patch_num_y      = my_input->GetIntFromUser("Number of Patches along Y Axis", "input integer", "4", 4);
+        outputpath       = my_input->GetStringFromUser("Output patch and patch shift path", "output movie patchs path", "/data/outpatch/");
+        distortion_model = my_input->GetIntFromUser("1 for linear, 2 for quadratic model", "input integer", "2", 2);
     }
     else {
         patch_num_x = 1;
@@ -329,7 +331,7 @@ void UnBlurApp::DoInteractiveUserInput( ) {
     bool        write_out_small_sum_image    = false;
     std::string small_sum_image_filename     = "/dev/null";
 
-    my_current_job.ManualSetArguments("ttfffbbfifbiifffbsbsfbfffbtbtiiiibttiisbii", input_filename.c_str( ),
+    my_current_job.ManualSetArguments("ttfffbbfifbiifffbsbsfbfffbtbtiiiibttiisbiii", input_filename.c_str( ),
                                       output_filename.c_str( ),
                                       original_pixel_size,
                                       minimum_shift_in_angstroms,
@@ -370,7 +372,8 @@ void UnBlurApp::DoInteractiveUserInput( ) {
                                       outputpath.ToUTF8( ).data( ),
                                       patchcorrection,
                                       patch_num_x,
-                                      patch_num_y);
+                                      patch_num_y,
+                                      distortion_model);
 }
 
 // overide the do calculation method which will be what is actually run..
@@ -434,6 +437,7 @@ bool UnBlurApp::DoCalculation( ) {
     bool        patch_track                          = my_current_job.arguments[39].ReturnBoolArgument( );
     int         patch_num_x                          = my_current_job.arguments[40].ReturnIntegerArgument( );
     int         patch_num_y                          = my_current_job.arguments[41].ReturnIntegerArgument( );
+    int         distortion_model                     = my_current_job.arguments[42].ReturnIntegerArgument( );
 
     if ( is_running_locally == false )
         max_threads = number_of_threads_requested_on_command_line; // OVERRIDE FOR THE GUI, AS IT HAS TO BE SET ON THE COMMAND LINE...

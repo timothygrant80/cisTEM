@@ -749,10 +749,12 @@ bool UnBlurApp::DoCalculation( ) {
             // wxPrintf("size of the image stack in patch tracking: %i,%i\n", unbinned_image_stack[0].logical_x_dimension, unbinned_image_stack[0].logical_y_dimension);
 
             // patch_stack = patch_trimming_independent(image_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath, false);
+            unblur_timing.start("Trimming Patches");
             patch_trimming(image_stack, patch_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath, false);
             if ( image_stack[0].is_in_real_space ) {
                 wxPrintf("after trimming image stack is in real space\n");
             }
+            unblur_timing.lap("Trimming Patches");
             // if ( pre_binning_factor > 1 ) {
 
             //     unbinned_patch_stack = patch_stack;
@@ -774,6 +776,7 @@ bool UnBlurApp::DoCalculation( ) {
             std::ofstream xoFile;
 
             // xoFile.open(patch_shift.c_str( ));
+            unblur_timing.start("Patch Alignment");
             for ( int patch_counter = 0; patch_counter < patch_num; patch_counter++ ) {
                 if ( patch_stack[patch_counter][0].is_in_real_space ) {
                     for ( int image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
@@ -797,7 +800,7 @@ bool UnBlurApp::DoCalculation( ) {
                 patch_shift = wxString::Format(outputpath + "%04i_" + "shift.txt", patch_counter);
                 xoFile.open(patch_shift.c_str( ));
                 if ( xoFile.is_open( ) ) {
-                    wxPrintf("files are open\n");
+                    // wxPrintf("files are open\n");
                     // float myarray[10][5760];
                     for ( int image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
                         xoFile << patch_shift_x[patch_counter][image_counter] << '\t';
@@ -841,8 +844,10 @@ bool UnBlurApp::DoCalculation( ) {
                 //     // if allocated delete the binned stack, and swap the unbinned to image_stack - so that no matter what is happening we can just use image_stack
                 // }
             }
-
+            unblur_timing.lap("Patch Alignment");
             //patch shift fitting-------------------------------------------
+            unblur_timing.start("Distortion Fix");
+            wxPrintf("modeling the distortion \n");
             float patch_locations[patch_num][2];
             int   image_dim_x = image_stack[0].logical_x_dimension;
             int   image_dim_y = image_stack[0].logical_y_dimension;
@@ -925,6 +930,8 @@ bool UnBlurApp::DoCalculation( ) {
                 }
                 apply_fitting_linear(image_stack, number_of_input_images, x, y);
             }
+            unblur_timing.lap("Distortion Fix");
+            wxPrintf("writing the fixed frames \n");
             Image sum_image_fixed;
             sum_image_fixed.Allocate(image_stack[0].logical_x_dimension, image_stack[0].logical_y_dimension, true);
             sum_image_fixed.SetToConstant(0.0);
@@ -968,6 +975,7 @@ bool UnBlurApp::DoCalculation( ) {
             //     delete[] array; // now delete pointer array
             //     array = NULL;
             // }
+            profile_timing.start("patch-based correction cleanup");
             for ( int i = 0; i < patch_num; ++i ) {
                 delete[] patch_stack[i]; // each i-th pointer must be deleted first
             }
@@ -975,28 +983,29 @@ bool UnBlurApp::DoCalculation( ) {
             Deallocate2DFloatArray(patch_shift_y, patch_num);
             delete[] patch_stack; // now delete pointer array
             patch_stack = NULL;
+            profile_timing.lap("patch-based correction cleanup");
             //patches end
             // do another round of patch alignment unblur_refine_alignment
         }
         if ( round_index == 0 ) {
             // do the initial refinement (only 1 round - with the min shift)
-            unblur_timing.start("initial refine");
+            unblur_timing.start("whole frame initial refine");
             profile_timing.start("initial refine");
             //SendInfo(wxString::Format("Doing first alignment on %s\n",input_filename));
             unblur_refine_alignment(image_stack, number_of_input_images, 1, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, min_shift_in_pixels, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts, profile_timing_refinement_method);
-            unblur_timing.lap("initial refine");
+            unblur_timing.lap("whole frame initial refine");
             profile_timing.lap("initial refine");
 
             // now do the actual refinement..
-            unblur_timing.start("main refine");
+            unblur_timing.start("whole frame main refine");
             profile_timing.start("main refine");
             //SendInfo(wxString::Format("Doing main alignment on %s\n",input_filename));
             unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts, profile_timing_refinement_method);
-            unblur_timing.lap("main refine");
+            unblur_timing.lap("whole frame main refine");
             profile_timing.lap("main refine");
 
             // if we have been using pre-binning, we need to do a refinment on the unbinned data..
-            unblur_timing.start("final refine");
+            unblur_timing.start("whole frame final refine");
             if ( pre_binning_factor > 1 ) {
                 // we don't need the binned images anymore..
 
@@ -1032,7 +1041,7 @@ bool UnBlurApp::DoCalculation( ) {
                 profile_timing.lap("final refine");
                 // if allocated delete the binned stack, and swap the unbinned to image_stack - so that no matter what is happening we can just use image_stack
             }
-            unblur_timing.lap("final refine");
+            unblur_timing.lap("whole frame final refine");
 
             // we should be finished with alignment, now we just need to make the final sum..
 
@@ -1269,7 +1278,7 @@ bool UnBlurApp::DoCalculation( ) {
 
             my_result.SetResult(number_of_input_images * 2, result_array);
             profile_timing.lap("fill result");
-            profile_timing.start("cleanup");
+            profile_timing.start("whole frame alignment cleanup");
             delete[] result_array;
             delete[] x_shifts;
             delete[] y_shifts;
@@ -1279,12 +1288,16 @@ bool UnBlurApp::DoCalculation( ) {
                 delete my_electron_dose;
                 delete[] dose_filter_sum_of_squares;
             }
-            profile_timing.lap("cleanup");
-            unblur_timing.print_times( );
-            profile_timing.print_times( );
-            profile_timing_refinement_method.print_times( );
+            profile_timing.lap("whole frame alignment cleanup");
+            // unblur_timing.print_times( );
+            // profile_timing.print_times( );
+            // profile_timing_refinement_method.print_times( );
         }
     }
+
+    unblur_timing.print_times( );
+    profile_timing.print_times( );
+    profile_timing_refinement_method.print_times( );
     delete[] image_stack;
     return true;
 }
@@ -1769,6 +1782,7 @@ void apply_fitting_quadratic(Image* input_stack, int number_of_images, param_vec
     float        time;
     // wxString     outputpath = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/TestPatch_24_16_0626/";
     for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
+        wxPrintf("correcting frame %i \n ", image_counter + 1);
         time     = image_counter;
         input(2) = time;
         for ( int pix = 0; pix < totalpixels; pix++ ) {
@@ -1834,6 +1848,7 @@ void apply_fitting_linear(Image* input_stack, int number_of_images, param_vector
     // wxString     outputpath = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/TestPatch_24_16_0626/";
     // wxString outputpath = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/TestPatch_linear_0626/";
     for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
+        wxPrintf("correcting frame %i \n ", image_counter + 1);
         time     = image_counter;
         input(2) = time;
         for ( int pix = 0; pix < totalpixels; pix++ ) {

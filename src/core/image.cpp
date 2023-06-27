@@ -11673,7 +11673,7 @@ void Image::Distortion(Image* interp_img, float* shifted_mapx, float* shifted_ma
         while ( shifted_mapx[i * logical_x_dimension + jjend] > logical_x_dimension - 1 ) {
             jjend -= 1;
         }
-        if ( jjend <= jjstart ) {
+        if ( jjend < jjstart ) {
             wxPrintf("the current line shall be skipped, it is shifted out of the image boundary\n");
             continue;
         }
@@ -11686,10 +11686,10 @@ void Image::Distortion(Image* interp_img, float* shifted_mapx, float* shifted_ma
             jstart = 0;
         if ( jstart > 0 ) {
             for ( int tmpj = 0; tmpj < jstart; tmpj++ ) {
-                // interpolated_map[i][tmpj][1]              = -100;
-                // interpolated_map[i][tmpj][0]              = -100;
-                interpolated_mapx[i * logical_x_dimension + tmpj] = -100;
-                interpolated_mapy[i * logical_x_dimension + tmpj] = -100;
+                // interpolated_map[i][tmpj][1]              = -10000;
+                // interpolated_map[i][tmpj][0]              = -10000;
+                interpolated_mapx[i * logical_x_dimension + tmpj] = -10000;
+                interpolated_mapy[i * logical_x_dimension + tmpj] = -10000;
             }
         }
         if ( jjend < logical_x_dimension - 1 )
@@ -11700,12 +11700,13 @@ void Image::Distortion(Image* interp_img, float* shifted_mapx, float* shifted_ma
             jend = logical_x_dimension - 1;
         if ( jend < logical_x_dimension - 1 ) {
             for ( int tmpj = jend + 1; tmpj < logical_x_dimension; tmpj++ ) {
-                // interpolated_map[i][tmpj][1] = -100;
-                // interpolated_map[i][tmpj][0] = -100;
-                interpolated_mapx[i * logical_x_dimension + tmpj] = -100;
-                interpolated_mapy[i * logical_x_dimension + tmpj] = -100;
+                // interpolated_map[i][tmpj][1] = -10000;
+                // interpolated_map[i][tmpj][0] = -10000;
+                interpolated_mapx[i * logical_x_dimension + tmpj] = -10000;
+                interpolated_mapy[i * logical_x_dimension + tmpj] = -10000;
             }
         }
+        // wxPrintf("line %i, jjstart jjend jstart jend %i, %i, %i, %i \n",i, jjstart,jjend,jstart,jend);
         int j = jstart;
         for ( int jj = jjstart + 1; jj <= jjend; jj++ ) {
             // if ( shifted_map[i][jj][0] < j )
@@ -11784,7 +11785,7 @@ void Image::Distortion(Image* interp_img, float* shifted_mapx, float* shifted_ma
     }
 
     // along y axis, iterat columns
-    wxPrintf("start interpolate along y\n");
+    // wxPrintf("start interpolate along y\n");
     for ( int j = xstart; j < xend; j++ ) {
         int istart = ystart;
         int iend;
@@ -11793,7 +11794,7 @@ void Image::Distortion(Image* interp_img, float* shifted_mapx, float* shifted_ma
         // while ( interpolated_map[istart][j][1] < 0 )
         while ( interpolated_mapy[iistart * logical_x_dimension + j] < 0 ) {
             iistart += 1;
-            // wxPrintf("iistart value: %i %g\n", iistart, interpolated_mapy[])
+            // wxPrintf("iistart value: %i %g\n", iistart, interpolated_mapy[iistart * logical_x_dimension + j]);
             if ( iistart == logical_y_dimension - 1 )
                 break;
         }
@@ -11806,8 +11807,8 @@ void Image::Distortion(Image* interp_img, float* shifted_mapx, float* shifted_ma
                 break;
         }
         // wxPrintf("iiend 1 %i\n", iiend);
-        // while ( interpolated_map[iiend][j][1] == -100 ) {
-        while ( interpolated_mapy[iiend * logical_x_dimension + j] == -100 ) {
+        // while ( interpolated_map[iiend][j][1] == -10000 ) {
+        while ( interpolated_mapy[iiend * logical_x_dimension + j] == -10000 ) {
             iiend = iiend - 1;
             if ( iiend == 0 )
                 break;
@@ -11817,8 +11818,8 @@ void Image::Distortion(Image* interp_img, float* shifted_mapx, float* shifted_ma
             continue;
         if ( iistart > 0 ) {
             // wxPrintf("j index: %i flag 2\n", j);
-            // if ( interpolated_map[iistart - 1][j][1] != -100 && interpolated_map[iistart - 1][j][0] != -100 ) {
-            if ( interpolated_mapy[(iistart - 1) * logical_x_dimension + j] != -100 && interpolated_mapx[(iistart - 1) * logical_x_dimension + j] != -100 ) {
+            // if ( interpolated_map[iistart - 1][j][1] != -10000 && interpolated_map[iistart - 1][j][0] != -10000 ) {
+            if ( interpolated_mapy[(iistart - 1) * logical_x_dimension + j] != -10000 && interpolated_mapx[(iistart - 1) * logical_x_dimension + j] != -10000 ) {
                 // wxPrintf("start %g %g\n", interpolated_mapy[(iistart - 1) * logical_x_dimension + j], interpolated_mapx[(iistart - 1) * logical_x_dimension + j]);
                 iistart = iistart - 1;
             }
@@ -11826,8 +11827,8 @@ void Image::Distortion(Image* interp_img, float* shifted_mapx, float* shifted_ma
         if ( iiend < logical_y_dimension - 1 ) {
             // wxPrintf("j index: %i flag 3\n", j);
             // wxPrintf("iiend initial %i\n", iiend);
-            // if ( interpolated_map[iiend - 1][j][1] != -100 && interpolated_map[iiend - 1][j][0] != -100 ) {
-            if ( interpolated_mapy[(iiend - 1) * logical_x_dimension + j] != -100 && interpolated_mapx[(iiend - 1) * logical_x_dimension + j] != -100 ) {
+            // if ( interpolated_map[iiend - 1][j][1] != -10000 && interpolated_map[iiend - 1][j][0] != -10000 ) {
+            if ( interpolated_mapy[(iiend - 1) * logical_x_dimension + j] != -10000 && interpolated_mapx[(iiend - 1) * logical_x_dimension + j] != -10000 ) {
                 // wxPrintf("end %g %g \n", interpolated_mapy[(iiend - 1) * logical_x_dimension + j], interpolated_mapx[(iiend - 1) * logical_x_dimension + j]);
                 iiend = iiend + 1;
                 // wxPrintf("j index: %i flag 3_1\n", j);
@@ -11836,9 +11837,10 @@ void Image::Distortion(Image* interp_img, float* shifted_mapx, float* shifted_ma
             // wxPrintf("j index: %i flag 3_2\n", j);
         }
         // wxPrintf("current loop %i \n", j);
-        if ( iiend <= iistart ) {
+        if ( iiend < iistart ) {
             // wxPrintf("j index: %i flag 4\n", j);
             // wxPrintf("the current line shall be skipped\n");
+            // wxPrintf("iiend, iistart %i, %i \n",iistart,iiend);
             // wxPrintf("interpolated_mapx,interpoaltedmapy %g %g \n",interpolated_mapy)
             // continue;
             break;
@@ -11863,6 +11865,7 @@ void Image::Distortion(Image* interp_img, float* shifted_mapx, float* shifted_ma
             continue;
         int i = istart;
         // wxPrintf("istart iend %i %i\n", istart, iend);
+        // wxPrintf("column %i, iistart iiend istart iend %i, %i, %i, %i \n",j, iistart,iiend,istart,iend);
         for ( int ii = iistart + 1; ii <= iiend; ii++ ) {
             // if ( interpolated_map[ii][j][1] < i )
             if ( interpolated_mapy[ii * logical_x_dimension + j] < i )
@@ -11878,7 +11881,7 @@ void Image::Distortion(Image* interp_img, float* shifted_mapx, float* shifted_ma
             while ( interpolated_mapy[ii * logical_x_dimension + j] > i ) {
                 // if ( interpolated_map[ii - 1][j][1] < i ) {
                 if ( interpolated_mapy[(ii - 1) * logical_x_dimension + j] < i ) {
-                    if ( interpolated_mapy[(ii - 1) * logical_x_dimension + j] == -100 ) {
+                    if ( interpolated_mapy[(ii - 1) * logical_x_dimension + j] == -10000 ) {
                         i = i + 1;
                     }
                     else {

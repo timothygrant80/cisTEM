@@ -97,8 +97,8 @@ bool InterpImageApp::DoCalculation( ) {
         // wxPrintf("shiftfiles are %s, %s, \n", shift_filex.c_str( ), shift_filey.c_str( ));
 
         // load array from file
-        shift_filex = wxString::Format(input_path + "%02i_" + shift_file_x + ".txt", shift_file_index);
-        shift_filey = wxString::Format(input_path + "%02i_" + shift_file_y + ".txt", shift_file_index);
+        shift_filex = wxString::Format(input_path + "%04i_" + shift_file_x + ".txt", shift_file_index);
+        shift_filey = wxString::Format(input_path + "%04i_" + shift_file_y + ".txt", shift_file_index);
         wxPrintf("shiftfiles are %s, %s, \n", shift_filex, shift_filey);
         xFile.open(shift_filex.c_str( ));
         yFile.open(shift_filey.c_str( ));

@@ -26,16 +26,17 @@ class
 
 // models
 using namespace dlib;
-typedef matrix<double, 3, 1> input_vector;
-// typedef matrix<double, 18, 1> param_vector_quadratic;
-// typedef matrix<double, 9, 1>  param_vector_linear;
-typedef matrix<double, 18, 1> param_vector;
+typedef matrix<double, 3, 1>  input_vector;
+typedef matrix<double, 18, 1> param_vector_quadratic;
+typedef matrix<double, 9, 1>  param_vector_linear;
+
+// typedef matrix<double, 18, 1> param_vector;
 
 // ----------------------------------------------------------------------------------------
 
 double model_quadratic(
-        const input_vector& input,
-        const param_vector& params) {
+        const input_vector&           input,
+        const param_vector_quadratic& params) {
     const double c0 = params(0);
     const double c1 = params(1);
     const double c2 = params(2), c3 = params(3), c4 = params(4), c5 = params(5), c6 = params(6), c7 = params(7);
@@ -53,14 +54,14 @@ double model_quadratic(
 
 double residual_quadratic(
         const std::pair<input_vector, double>& data,
-        const param_vector&                    params) {
+        const param_vector_quadratic&          params) {
     return model_quadratic(data.first, params) - data.second;
 }
 
-param_vector residual_derivative_quadratic(
+param_vector_quadratic residual_derivative_quadratic(
         const std::pair<input_vector, double>& data,
-        const param_vector&                    params) {
-    param_vector der;
+        const param_vector_quadratic&          params) {
+    param_vector_quadratic der;
 
     const double c0 = params(0);
     const double c1 = params(1);
@@ -95,8 +96,8 @@ param_vector residual_derivative_quadratic(
 }
 
 double model_linear(
-        const input_vector& input,
-        const param_vector& params) {
+        const input_vector&        input,
+        const param_vector_linear& params) {
     const double c0 = params(0);
     const double c1 = params(1);
     const double c2 = params(2), c3 = params(3), c4 = params(4), c5 = params(5), c6 = params(6), c7 = params(7), c8 = params(8);
@@ -112,15 +113,15 @@ double model_linear(
 
 double residual_linear(
         const std::pair<input_vector, double>& data,
-        const param_vector&                    params) {
+        const param_vector_linear&             params) {
     return model_linear(data.first, params) - data.second;
 }
 
 // This function is the derivative of the residual() function with respect to the parameters.
-param_vector residual_derivative_linear(
+param_vector_linear residual_derivative_linear(
         const std::pair<input_vector, double>& data,
-        const param_vector&                    params) {
-    param_vector der;
+        const param_vector_linear&             params) {
+    param_vector_linear der;
 
     const double c0 = params(0);
     const double c1 = params(1);
@@ -149,7 +150,9 @@ param_vector residual_derivative_linear(
 void    unblur_refine_alignment(Image* input_stack, int number_of_images, int max_iterations, float unitless_bfactor, bool mask_central_cross, int width_of_vertical_line, int width_of_horizontal_line, float inner_radius_for_peak_search, float outer_radius_for_peak_search, float max_shift_convergence_threshold, float pixel_size, int number_of_frames_for_running_average, int savitzy_golay_window_size, int max_threads, float* x_shifts, float* y_shifts, StopWatch& profile_timing_refinement_method);
 Image** patch_trimming_independent(Image* input_stack, int number_of_images, int patch_num_x, int patch_num_y, int output_stack_box_size, wxString outpath, bool use_coord_file = false, wxString coordinates_filename = " ");
 void    patch_trimming(Image* input_stack, Image** patch_stack, int number_of_images, int patch_num_x, int patch_num_y, int output_stack_box_size, wxString outpath, bool use_coord_file, wxString coordinates_filename = " ");
-void    apply_fitting(Image* input_stack, int number_of_images, param_vector params_x, param_vector params_y);
+void    apply_fitting_quadratic(Image* input_stack, int number_of_images, param_vector_quadratic params_x, param_vector_quadratic params_y);
+void    apply_fitting_linear(Image* input_stack, int number_of_images, param_vector_linear params_x, param_vector_linear params_y);
+
 IMPLEMENT_APP(UnBlurApp)
 
 // override the DoInteractiveUserInput
@@ -187,8 +190,8 @@ void UnBlurApp::DoInteractiveUserInput( ) {
     bool     patchcorrection;
     int      patch_num_x;
     int      patch_num_y;
-    int      distortion_model = 2;
-    wxString outputpath       = "";
+    int      distortion_model;
+    wxString outputpath = "";
     int      first_frame;
     int      last_frame;
     int      number_of_frames_for_running_average;
@@ -307,14 +310,15 @@ void UnBlurApp::DoInteractiveUserInput( ) {
     patchcorrection = my_input->GetYesNoFromUser("Use Patchbased Distortion Correction?", "If yes, distortion correction will be conducted", "yes");
 
     if ( patchcorrection == true ) {
-        patch_num_x      = my_input->GetIntFromUser("Number of Patches along X Axis", "input integer", "6", 6);
-        patch_num_y      = my_input->GetIntFromUser("Number of Patches along Y Axis", "input integer", "4", 4);
+        patch_num_x      = my_input->GetIntFromUser("Number of Patches along X Axis", "input integer", "6");
+        patch_num_y      = my_input->GetIntFromUser("Number of Patches along Y Axis", "input integer", "4");
         outputpath       = my_input->GetStringFromUser("Output patch and patch shift path", "output movie patchs path", "/data/outpatch/");
-        distortion_model = my_input->GetIntFromUser("1 for linear, 2 for quadratic model", "input integer", "2", 2);
+        distortion_model = my_input->GetIntFromUser("1 for linear, 2 for quadratic model", "input integer", "2");
     }
     else {
-        patch_num_x = 1;
-        patch_num_y = 1;
+        patch_num_x      = 1;
+        patch_num_y      = 1;
+        distortion_model = 2;
     }
 
 #ifdef _OPENMP
@@ -869,29 +873,58 @@ bool UnBlurApp::DoCalculation( ) {
                     data_y.push_back(std::make_pair(input, outputy));
                 }
             }
-            param_vector x, y;
-            x = 1;
-            y = 1;
 
-            solve_least_squares_lm(objective_delta_stop_strategy(1e-7).be_verbose( ),
-                                   residual_quadratic,
-                                   residual_derivative_quadratic,
-                                   data_x,
-                                   x);
-            wxPrintf("x fitted parameters: %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f\n", x(0), x(1), x(2), x(3), x(4), x(5), x(6), x(7), x(8), x(9), x(10), x(11), x(12), x(13), x(14), x(15), x(16), x(17));
+            if ( distortion_model == 2 ) {
 
-            solve_least_squares_lm(objective_delta_stop_strategy(1e-7).be_verbose( ),
-                                   residual_quadratic,
-                                   residual_derivative_quadratic,
-                                   data_y,
-                                   y);
-            wxPrintf("y fitted parameters: %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f\n", y(0), y(1), y(2), y(3), y(4), y(5), y(6), y(7), y(8), y(9), y(10), y(11), y(12), y(13), y(14), y(15), y(16), y(17));
+                param_vector_quadratic x, y;
+                x = 1;
+                y = 1;
 
-            // //apply fitting-------------------------------------------
-            for ( int image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
-                image_stack[image_counter].BackwardFFT( );
+                solve_least_squares_lm(objective_delta_stop_strategy(1e-7).be_verbose( ),
+                                       residual_quadratic,
+                                       residual_derivative_quadratic,
+                                       data_x,
+                                       x);
+                wxPrintf("x fitted parameters: %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f\n", x(0), x(1), x(2), x(3), x(4), x(5), x(6), x(7), x(8), x(9), x(10), x(11), x(12), x(13), x(14), x(15), x(16), x(17));
+
+                solve_least_squares_lm(objective_delta_stop_strategy(1e-7).be_verbose( ),
+                                       residual_quadratic,
+                                       residual_derivative_quadratic,
+                                       data_y,
+                                       y);
+                wxPrintf("y fitted parameters: %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f, %f\n", y(0), y(1), y(2), y(3), y(4), y(5), y(6), y(7), y(8), y(9), y(10), y(11), y(12), y(13), y(14), y(15), y(16), y(17));
+
+                // //apply fitting-------------------------------------------
+                for ( int image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+                    image_stack[image_counter].BackwardFFT( );
+                }
+                apply_fitting_quadratic(image_stack, number_of_input_images, x, y);
             }
-            apply_fitting(image_stack, number_of_input_images, x, y);
+            else if ( distortion_model == 1 ) {
+                param_vector_linear x, y;
+                x = 1;
+                y = 1;
+
+                solve_least_squares_lm(objective_delta_stop_strategy(1e-7).be_verbose( ),
+                                       residual_linear,
+                                       residual_derivative_linear,
+                                       data_x,
+                                       x);
+                wxPrintf("x fitted parameters: %f, %f, %f, %f, %f, %f, %f, %f, %f\n", x(0), x(1), x(2), x(3), x(4), x(5), x(6), x(7), x(8));
+
+                solve_least_squares_lm(objective_delta_stop_strategy(1e-7).be_verbose( ),
+                                       residual_linear,
+                                       residual_derivative_linear,
+                                       data_y,
+                                       y);
+                wxPrintf("y fitted parameters: %f, %f, %f, %f, %f, %f, %f, %f, %f\n", y(0), y(1), y(2), y(3), y(4), y(5), y(6), y(7), y(8));
+
+                // //apply fitting-------------------------------------------
+                for ( int image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+                    image_stack[image_counter].BackwardFFT( );
+                }
+                apply_fitting_linear(image_stack, number_of_input_images, x, y);
+            }
             Image sum_image_fixed;
             sum_image_fixed.Allocate(image_stack[0].logical_x_dimension, image_stack[0].logical_y_dimension, true);
             sum_image_fixed.SetToConstant(0.0);
@@ -1712,7 +1745,7 @@ Image** patch_trimming_independent(Image* input_stack, int number_of_images, int
     return patch_stack;
 }
 
-void apply_fitting(Image* input_stack, int number_of_images, param_vector params_x, param_vector params_y) {
+void apply_fitting_quadratic(Image* input_stack, int number_of_images, param_vector_quadratic params_x, param_vector_quadratic params_y) {
 
     int    image_dim_x    = input_stack[0].logical_x_dimension;
     int    image_dim_y    = input_stack[0].logical_y_dimension;
@@ -1750,6 +1783,113 @@ void apply_fitting(Image* input_stack, int number_of_images, param_vector params
         tmp_img.CopyFrom(&input_stack[image_counter]);
         input_stack[image_counter].SetToConstant(input_stack[image_counter].ReturnAverageOfRealValuesOnEdges( ));
         tmp_img.Distortion(&input_stack[image_counter], shifted_map_x, shifted_map_y);
+    }
+    // delete[] input_stack;
+    // input_stack = distorted_stack; //??? why this doesn't work, what's different from copyfrom
+
+    // Image sum_image_fixed, distorted_fixed;
+    // sum_image_fixed.Allocate(input_stack[0].logical_x_dimension, input_stack[0].logical_y_dimension, true);
+    // distorted_fixed.Allocate(input_stack[0].logical_x_dimension, input_stack[0].logical_y_dimension, true);
+    // sum_image_fixed.SetToConstant(0.0);
+    // distorted_fixed.SetToConstant(0.0);
+    // for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
+    //     sum_image_fixed.AddImage(&input_stack[image_counter]);
+    //     distorted_fixed.AddImage(&distorted_stack[image_counter]);
+    //     input_stack[image_counter].QuickAndDirtyWriteSlice(outputpath.ToStdString( ) + "original_frames.mrc", image_counter + 1);
+    //     distorted_stack[image_counter].QuickAndDirtyWriteSlice(outputpath.ToStdString( ) + "fixed_frames.mrc", image_counter + 1);
+    // }
+    // // sum_image_fixed.BackwardFFT( );
+    // // distorted_fixed.BackwardFFT( );
+    // sum_image_fixed.WriteSlicesAndFillHeader(outputpath.ToStdString( ) + "original.mrc", 1);
+    // distorted_fixed.WriteSlicesAndFillHeader(outputpath.ToStdString( ) + "fixed.mrc", 1);
+    // delete[] input_stack;
+    delete[] original_map_x;
+    delete[] original_map_y;
+    delete[] shifted_map_x;
+    delete[] shifted_map_y;
+}
+
+void apply_fitting_linear(Image* input_stack, int number_of_images, param_vector_linear params_x, param_vector_linear params_y) {
+
+    int    image_dim_x    = input_stack[0].logical_x_dimension;
+    int    image_dim_y    = input_stack[0].logical_y_dimension;
+    int    totalpixels    = image_dim_x * image_dim_y;
+    float* original_map_x = new float[totalpixels];
+    float* original_map_y = new float[totalpixels];
+    float* shifted_map_x  = new float[totalpixels];
+    float* shifted_map_y  = new float[totalpixels];
+    // Image* distorted_stack;
+    // distorted_stack = new Image[number_of_images];
+    Image tmp_img;
+    tmp_img.Allocate(input_stack[0].logical_x_dimension, input_stack[0].logical_y_dimension, 1, true);
+    // initialize the pixel coordinates
+    for ( int i = 0; i < image_dim_y; i++ ) {
+        for ( int j = 0; j < image_dim_x; j++ ) {
+            original_map_x[i * image_dim_x + j] = j;
+            original_map_y[i * image_dim_x + j] = i;
+        }
+    }
+    input_vector input;
+    float        time;
+    // wxString     outputpath = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/TestPatch_24_16_0626/";
+    // wxString outputpath = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/TestPatch_linear_0626/";
+    for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
+        time     = image_counter;
+        input(2) = time;
+        for ( int pix = 0; pix < totalpixels; pix++ ) {
+            input(0)           = original_map_x[pix];
+            input(1)           = original_map_y[pix];
+            shifted_map_x[pix] = model_linear(input, params_x) + original_map_x[pix];
+            shifted_map_y[pix] = model_linear(input, params_y) + original_map_y[pix];
+        }
+        // distorted_stack[image_counter].Allocate(input_stack[image_counter].logical_x_dimension, input_stack[image_counter].logical_y_dimension, 1, true);
+        // distorted_stack[image_counter].SetToConstant(input_stack[image_counter].ReturnAverageOfRealValuesOnEdges( ));
+        // input_stack[image_counter].Distortion(&distorted_stack[image_counter], shifted_map_x, shifted_map_y);
+
+        // input_stack[image_counter].QuickAndDirtyWriteSlice(outputpath.ToStdString( ) + "beforedistortion.mrc", image_counter + 1);
+
+        tmp_img.CopyFrom(&input_stack[image_counter]);
+        // tmp_img.QuickAndDirtyWriteSlice(outputpath.ToStdString( ) + "tmpbeforedistortion.mrc", image_counter + 1);
+        // input_stack[image_counter].SetToConstant(input_stack[image_counter].ReturnAverageOfRealValuesOnEdges( ));
+        tmp_img.Distortion(&input_stack[image_counter], shifted_map_x, shifted_map_y);
+        // input_stack[image_counter].QuickAndDirtyWriteSlice(outputpath.ToStdString( ) + "afterdistortion.mrc", image_counter + 1);
+
+        // // following is to write the shifts for each pixel------
+        // // if ( image_counter == 69 ) {
+        // wxString outputpath = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/TestPatch_linear_0626/";
+        // // wxString shifted_mapx_file = outputpath + "shifted_x.txt";
+        // // wxString shifted_mapy_file = outputpath + "shifted_y.txt";
+        // wxString      shifted_mapx_file = wxString::Format(outputpath + "%04i_" + "shifted_x.txt", image_counter);
+        // wxString      shifted_mapy_file = wxString::Format(outputpath + "%04i_" + "shifted_y.txt", image_counter);
+        // std::ofstream xoFile, yoFile;
+        // tmp_img.QuickAndDirtyWriteSlice(outputpath.ToStdString( ) + "tmpbeforedistortion.mrc", 1);
+        // input_stack[image_counter].QuickAndDirtyWriteSlice(outputpath.ToStdString( ) + "afterdistortion.mrc", 1);
+        // // wxPrintf("1\n");
+        // // for ( int i = 0; i < 10; i++ ) {
+        // //     for ( int j = 0; j < 10; j++ ) {
+        // //         shifted_map_x[i][j] = j;
+        // //         shifted_map_y[i][j] = i;
+        // //     }
+        // // }
+
+        // xoFile.open(shifted_mapx_file.c_str( ));
+        // yoFile.open(shifted_mapy_file.c_str( ));
+        // if ( xoFile.is_open( ) && yoFile.is_open( ) ) {
+        //     wxPrintf("files are open\n");
+        //     // float myarray[10][5760];
+        //     for ( int i = 0; i < image_dim_y; i++ ) {
+        //         for ( int j = 0; j < image_dim_x; j++ ) {
+        //             xoFile << shifted_map_x[i * image_dim_x + j] - original_map_x[i * image_dim_x + j] << '\t';
+        //             yoFile << shifted_map_y[i * image_dim_x + j] - original_map_y[i * image_dim_x + j] << '\t';
+        //         }
+        //         xoFile << '\n';
+        //         yoFile << '\n';
+        //     }
+        // }
+        // xoFile.close( );
+        // yoFile.close( );
+        // // }
+        // // // above is to write the shifts for each pixel------
     }
     // delete[] input_stack;
     // input_stack = distorted_stack; //??? why this doesn't work, what's different from copyfrom

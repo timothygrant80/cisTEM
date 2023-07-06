@@ -40,7 +40,8 @@ MyVolumeAssetPanel*           volume_asset_panel;
 #ifdef EXPERIMENTAL
 AtomicCoordinatesAssetPanel* atomic_coordinates_asset_panel;
 #endif
-MyRefinementPackageAssetPanel* refinement_package_asset_panel;
+MyRefinementPackageAssetPanel*    refinement_package_asset_panel;
+TemplateMatchesPackageAssetPanel* template_matches_package_asset_panel;
 
 MyMovieAlignResultsPanel* movie_results_panel;
 MyFindCTFResultsPanel*    ctf_results_panel;

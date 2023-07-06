@@ -20,6 +20,7 @@ AC_PROG_LIBTOOL
 AC_LANG(C++)
 
 # Set this for the gpu makefile hack
+# TODO: I don't think this is still needed, but I'm not sure.
 TOPSRCDIR=$srcdir
 CISTEM_CONFIG_DIR=`pwd`
 if test "x$TOPSRCDIR" = "x." ; then
@@ -33,6 +34,24 @@ CPPFLAGS="$INPUT_CPPFLAGS"
 
 # set up initial flags
 AC_MSG_NOTICE([Setting up initial flags])
+AC_MSG_NOTICE([CXXFLAGS = $CXXFLAGS])
+AC_MSG_NOTICE([CPPFLAGS = $CPPFLAGS])
+
+#
+# We need to know about static linking prior to setting CUDA flags 
+#
+# NOTE: the variable name "static_link" is tested in ax_cuda.m4 and must be consistent w/ the name here.
+static_link="false"
+AC_ARG_ENABLE(staticmode, AS_HELP_STRING([--enable-staticmode],[Link statically [default=no]]),[
+  if test "$enableval" = yes; then
+  static_link="true"
+  WXCONFIGFLAGS="--static=yes"
+  fi
+])
+
+  
+AC_MSG_NOTICE(static_link = $static_link)
+AM_CONDITIONAL([STATIC_LINKING_AM],[test x$static_link = xtrue])
 
 #
 # Check CUDA at the top, b/c it needs at least c++14 so we are now using c++17, let cpu only builds stay on c++11 until other devs are okay with modernizing.
@@ -80,6 +99,9 @@ AC_ARG_ENABLE([disable-warnings], AS_HELP_STRING([--disable compiler warnings], 
 if test "x$CXX" = "xicpc"; then		
 	CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -no-prec-sqrt $WARNINGS_ON -std=c++${CPP_STANDARD} -wd1125"
 	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -no-prec-sqrt $WARNINGS_ON"
+  # This may only be needed for dynamic linking
+  
+  LIBS="$LIBS -lz"
 else 
   if test "x$CXX" = "xclang++"; then
     # Clang needs the -no-c++11-narrowing suppression to compile
@@ -91,7 +113,7 @@ else
 
 	  #sqlite needs dl on gcc
 	
-	  LIBS="$LIBS -ldl"
+    LIBS="$LIBS -ldl -lz"
   fi
 fi
 
@@ -116,9 +138,12 @@ case "${host_os}" in
         build_mac=yes
         ;;
     *)
-        AC_MSG_ERROR(["OS $host_os is not supported"])
+        # Syntax highlighting wasn't seeing the end quote in VSCODE w/  inline msg
+        msg="OS $host_os is not supported"
+        AC_MSG_ERROR([$msg])
         ;;
 esac
+
 # Pass the conditionals to automake
 AM_CONDITIONAL([LINUX_AM], [test "$build_linux" = "yes"])
 AM_CONDITIONAL([WINDOWS_AM], [test "$build_windows" = "yes"])
@@ -147,19 +172,6 @@ AC_ARG_ENABLE(mkl, AS_HELP_STRING([--disable-mkl],[Do not use the Intel MKL]),
  ])
 
 
-# Static linking
-
-static_link="false"
-AC_ARG_ENABLE(staticmode, AS_HELP_STRING([--enable-staticmode],[Link statically [default=no]]),[
-  if test "$enableval" = yes; then
-	static_link="true"
-	WXCONFIGFLAGS="--static=yes"
-  fi
-  ])
-
-	
-AC_MSG_NOTICE(static_link = $static_link)
-AM_CONDITIONAL([STATIC_LINKING_AM],[test x$static_link = xtrue])
 
 
 # wx-config 
@@ -350,10 +362,10 @@ WXTEST
 
 # Verify minimus requires
 vers=`echo $wxversion | $AWK 'BEGIN { FS = "."; } { printf "% d", ($1  1000 + $2)  1000 + $3;}'`
-if test -n "$vers" && test "$vers" -ge 3000004; then
+if test -n "$vers" && test "$vers" -ge 310001004; then
 
     # TODO: Get all define symbols from WX into cistem_config.h
-    # wx_cxx_defines="`$($WXCONFIG $WXCONFIGFLAGS --cxxflags) | awk  'BEGIN{output_string=""}{ for (i = 1; i <= NF; i++) if($i ~ /^-D/) output_string=output_string" "$i}END{print output_string}'`"   
+    # wx_cxx_defines="`$($WXCONFIG $WXCONFIGFLAGS --cxxflags) | $AWK 'BEGIN{output_string=""}{ for (i = 1; i <= NF; i++) if($i ~ /^-D/) output_string=output_string" "$i}END{print output_string}'`"   
 
         WX_CPPFLAGS="`$WXCONFIG $WXCONFIGFLAGS --cppflags`"
         WX_CXXFLAGS="`$WXCONFIG $WXCONFIGFLAGS --cxxflags | sed -e 's/-fno-exceptions//'`"
@@ -370,6 +382,21 @@ if test -n "$vers" && test "$vers" -ge 3000004; then
         fi
                 
         wx_is_available=1
+
+    # Record whether we are on the stable (3.0.4/5) or development (3.1.5) branch
+    if test -n "$vers" && test "$vers" -gt 310001005; then
+        AC_DEFINE([WXWIDGETS_3_DEV], [], [Define to 1 if wxWidgets version is 3.1.5 or greater])
+    else
+        AC_DEFINE([WXWIDGETS_3_0_5], [], [Define to 1 if wxWidgets version is 3.0.4 or greater])
+    fi
+
+    # Record which gtk version we are using
+    GTK_CONFIG=`$WXCONFIG --selected-config | $AWK 'BEGIN{FS="-"}{if($1=="gtk2") print 2; else print 3}'`
+    # if test -n "$GTK_CONFIG" -ne 2 -a -n "$GTK_CONFIG" -ne 3; then
+    #     AC_MSG_ERROR("Can't determine GTK version")
+    # fi
+    AC_DEFINE_UNQUOTED([GTK_VERSION], $GTK_CONFIG, [Define to 2 if gtk2, 3 if gtk3])
+
 else
         AC_MSG_ERROR("Only wxWidgets version 3.0.4+ is currently supported.")
         wx_is_available=0
@@ -391,14 +418,14 @@ if test "x$HAVE_MKL" = "xyes"; then
 	AC_DEFINE([MKL], [], [Use the MKL])
 
 	if test "x$CXX" = "xicpc"; then
-		CPPFLAGS="$CPPFLAGS -mkl=sequential"
-		LIBS="$LIBS -mkl=sequential"
+    CPPFLAGS="$CPPFLAGS -qmkl=sequential"
+    LIBS="$LIBS -qmkl=sequential"
 	else
 		LDFLAGS="$LDFLAGS -L\$(MKLROOT)/lib/intel64"
 		if test "x$static_link" = "xtrue"; then
 			AC_MSG_ERROR("Static builds with Intel MKL are not supported when using the GNU compiler. Please try with the Intel compiler instead.")
 	    else
-#	    	LIBS="$LIBS -lmkl_rt"
+#        LIBS="$LIBS -lmkl_rt"
 	    	LIBS="$LIBS -lmkl_sequential -lmkl_core -lmkl_intel_lp64"
 	    fi
 	fi

@@ -9624,6 +9624,8 @@ FindCTFPanel::FindCTFPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos,
 
 	ExpertPanel = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxSize( -1,-1 ), wxVSCROLL );
 	ExpertPanel->SetScrollRate( 5, 5 );
+	ExpertPanel->Hide();
+
 	InputSizer = new wxBoxSizer( wxVERTICAL );
 
 	wxFlexGridSizer* fgSizer1;

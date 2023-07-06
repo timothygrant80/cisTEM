@@ -1068,7 +1068,7 @@ void Database::UpdateNumberOfFramesForAMovieAsset(int movie_asset_id, int new_nu
 }
 
 void Database::BeginImageAssetInsert( ) {
-    BeginBatchInsert("IMAGE_ASSETS", 13, "IMAGE_ASSET_ID", "NAME", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "ALIGNMENT_ID", "CTF_ESTIMATION_ID", "X_SIZE", "Y_SIZE", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION", "PROTEIN_IS_WHITE");
+    BeginBatchInsert("IMAGE_ASSETS", 17, "IMAGE_ASSET_ID", "NAME", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "ALIGNMENT_ID", "CTF_ESTIMATION_ID", "X_SIZE", "Y_SIZE", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION", "PROTEIN_IS_WHITE", "ORIGINAL_X_SIZE", "ORIGINAL_Y_SIZE", "CROP_CENTER_X", "CROP_CENTER_Y");
 }
 
 void Database::BeginVolumeAssetInsert( ) {
@@ -1091,8 +1091,8 @@ void Database::AddNextAtomicCoordinatesAsset(const AtomicCoordinatesAsset* asset
 }
 #endif
 
-void Database::AddNextImageAsset(int image_asset_id, wxString name, wxString filename, int position_in_stack, int parent_movie_id, int alignment_id, int ctf_estimation_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration, int protein_is_white) {
-    AddToBatchInsert("ittiiiiiirrri", image_asset_id, name.ToUTF8( ).data( ), filename.ToUTF8( ).data( ), position_in_stack, parent_movie_id, alignment_id, ctf_estimation_id, x_size, y_size, pixel_size, voltage, spherical_aberration, protein_is_white);
+void Database::AddNextImageAsset(int image_asset_id, wxString name, wxString filename, int position_in_stack, int parent_movie_id, int alignment_id, int ctf_estimation_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration, int protein_is_white, int original_x_size, int original_y_size, int crop_center_x, int crop_center_y) {
+    AddToBatchInsert("ittiiiiiirrriiiii", image_asset_id, name.ToUTF8( ).data( ), filename.ToUTF8( ).data( ), position_in_stack, parent_movie_id, alignment_id, ctf_estimation_id, x_size, y_size, pixel_size, voltage, spherical_aberration, protein_is_white, original_x_size, original_y_size, crop_center_x, crop_center_y);
 }
 
 /*

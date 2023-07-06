@@ -16,12 +16,14 @@
         {
             "label": "CONFIG intel,gpu,debug,static",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/$(${GIT_BRANCH})_Intel-gpu-debug-static && cd ${build_dir}/$(${GIT_BRANCH})_Intel-gpu-debug-static && CC=icc CXX=icpc ../../configure  --enable-debugmode --with-cuda=${cuda_dir} --enable-staticmode --enable-samples --enable-experimental --enable-openmp --with-wx-config=${wx_dir_static}"
+            "command": "mkdir -p ${build_dir}/$(${GIT_BRANCH})_Intel-gpu-debug-static && cd ${build_dir}/$(${GIT_BRANCH})_Intel-gpu-debug-static && CC=icc CXX=icpc ../../configure  --enable-debugmode --with-cuda=${cuda_dir} --enable-staticmode --enable-samples --enable-experimental --enable-openmp --with-wx-config=${wx_dir_static}",
+            "problemMatcher": []
         },
         {
             "label": "BUILD intel,gpu,debug,static",
             "type": "shell",
-            "command": "cd ${build_dir}/$(${GIT_BRANCH})_Intel-gpu-debug-static && make -j${compile_cores}"
-        },
+            "command": "cd ${build_dir}/$(${GIT_BRANCH})_Intel-gpu-debug-static && make -j${compile_cores}",
+            "problemMatcher": []
+        }
     ]
 }

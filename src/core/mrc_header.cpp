@@ -74,6 +74,10 @@ float MRCHeader::ReturnPixelSize( ) {
     }
 }
 
+void MRCHeader::SetMode(int wanted_mode) {
+    mode[0] = wanted_mode;
+}
+
 // Make sure to call this after the volume / image dimensions have been set
 void MRCHeader::SetPixelSize(float wanted_pixel_size) {
     cell_a_x[0] = wanted_pixel_size * mx[0];

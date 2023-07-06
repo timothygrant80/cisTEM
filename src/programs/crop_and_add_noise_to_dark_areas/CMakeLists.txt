@@ -1,0 +1,4 @@
+add_executable(crop_and_add_noise_to_dark_areas.cpp)
+add_dependencies(crop_and_add_noise_to_dark_areas cisTEM_core)
+
+target_link_libraries(crop_and_add_noise_to_dark_areas cisTEM_core)

@@ -87,20 +87,28 @@ void MyMovieAlignResultsPanel::OnValueChanged(wxDataViewEvent& event) {
                 int      alignment_id;
                 wxString output_file;
                 bool     should_continue;
+                int      original_x_size;
+                int      original_y_size;
+                int      crop_center_x;
+                int      crop_center_y;
 
-                should_continue = main_frame->current_project.database.BeginBatchSelect(wxString::Format("SELECT ALIGNMENT_ID, OUTPUT_FILE FROM MOVIE_ALIGNMENT_LIST WHERE MOVIE_ASSET_ID=%i AND ALIGNMENT_JOB_ID=%i", movie_asset_id, alignment_job_id));
+                should_continue = main_frame->current_project.database.BeginBatchSelect(wxString::Format("SELECT ALIGNMENT_ID, OUTPUT_FILE, ORIGINAL_X_SIZE,ORIGINAL_Y_SIZE,CROP_CENTER_X,CROP_CENTER_Y FROM MOVIE_ALIGNMENT_LIST WHERE MOVIE_ASSET_ID=%i AND ALIGNMENT_JOB_ID=%i", movie_asset_id, alignment_job_id));
 
                 if ( should_continue == false ) {
                     MyPrintWithDetails("Error getting information about alignment!")
                             DEBUG_ABORT;
                 }
 
-                main_frame->current_project.database.GetFromBatchSelect("it", &alignment_id, &output_file);
+                main_frame->current_project.database.GetFromBatchSelect("itiiii", &alignment_id, &output_file, &original_x_size, &original_y_size, &crop_center_x, &crop_center_y);
                 main_frame->current_project.database.EndBatchSelect( );
                 //				main_frame->current_project.database.InsertOrReplace("IMAGE_ASSETS", "itiiiiirrr", "IMAGE_ASSET_ID", "FILENAME", "POSITION_IN_STACK", "PARENT_MOVIE_ID", "ALIGNMENT_ID", "X_SIZE", "Y_SIZE", "PIXEL_SIZE", "VOLTAGE", "SPHERICAL_ABERRATION", image_asset_id, output_file.ToUTF8().data(), 1, image_asset_panel->ReturnAssetPointer(image_asset)->parent_id,  alignment_id, image_asset_panel->ReturnAssetPointer(image_asset)->x_size, image_asset_panel->ReturnAssetPointer(image_asset)->y_size, image_asset_panel->ReturnAssetPointer(image_asset)->pixel_size, image_asset_panel->ReturnAssetPointer(image_asset)->microscope_voltage, image_asset_panel->ReturnAssetPointer(image_asset)->spherical_aberration);
 
                 main_frame->current_project.database.BeginImageAssetInsert( );
                 main_frame->current_project.database.AddNextImageAsset(image_asset_id, image_asset_panel->ReturnAssetPointer(image_asset)->asset_name, output_file.ToUTF8( ).data( ), image_asset_panel->ReturnAssetPointer(image_asset)->position_in_stack, image_asset_panel->ReturnAssetPointer(image_asset)->parent_id, alignment_id, image_asset_panel->ReturnAssetPointer(image_asset)->ctf_estimation_id, image_asset_panel->ReturnAssetPointer(image_asset)->x_size, image_asset_panel->ReturnAssetPointer(image_asset)->y_size, image_asset_panel->ReturnAssetPointer(image_asset)->microscope_voltage, image_asset_panel->ReturnAssetPointer(image_asset)->pixel_size, image_asset_panel->ReturnAssetPointer(image_asset)->spherical_aberration, image_asset_panel->ReturnAssetPointer(image_asset)->protein_is_white);
+                main_frame->current_project.database.EndImageAssetInsert( );
+
+                main_frame->current_project.database.BeginImageAssetInsert( );
+                main_frame->current_project.database.AddNextImageAsset(image_asset_id, image_asset_panel->ReturnAssetPointer(image_asset)->asset_name, output_file.ToUTF8( ).data( ), image_asset_panel->ReturnAssetPointer(image_asset)->position_in_stack, image_asset_panel->ReturnAssetPointer(image_asset)->parent_id, alignment_id, image_asset_panel->ReturnAssetPointer(image_asset)->ctf_estimation_id, image_asset_panel->ReturnAssetPointer(image_asset)->x_size, image_asset_panel->ReturnAssetPointer(image_asset)->y_size, image_asset_panel->ReturnAssetPointer(image_asset)->microscope_voltage, image_asset_panel->ReturnAssetPointer(image_asset)->pixel_size, image_asset_panel->ReturnAssetPointer(image_asset)->spherical_aberration, image_asset_panel->ReturnAssetPointer(image_asset)->protein_is_white, original_x_size, original_y_size, crop_center_x, crop_center_y);
                 main_frame->current_project.database.EndImageAssetInsert( );
 
                 image_asset_panel->ReturnAssetPointer(image_asset)->filename     = output_file;

@@ -547,7 +547,7 @@ ShortRefinementInfo* MyRefinementPackageAssetPanel::ReturnPointerToShortRefineme
     }
 
     //wxPrintf("returning NULL\n");
-    MyDebugAssertFalse(1 == 1, "Returning NULL here, wanted_id is %li", wanted_id);
+    //MyDebugAssertFalse(1 == 1, "Returning NULL here, wanted_id is %li", wanted_id);
     return NULL;
 }
 

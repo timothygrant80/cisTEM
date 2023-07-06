@@ -1,0 +1,33 @@
+---
+name: RefineTemplateArguments
+arguments: 
+  - name: input_starfile
+    type: std::string
+    description: The starfile describing the matches that should be defined
+    default: input.star
+    advanced: false
+  - name: output_starfile
+    type: std::string
+    description: The starfile describing the matches that should be defined
+    default: output.star
+    advenced: false
+  - name: input_template
+    type: std::string
+    description: The template to be refined
+    default: input.mrc
+    advanced: false
+  - name: start_position
+    type: int
+    description: The position in the starfile to start refining from
+    default: 1
+    advanced: true
+  - name: end_position
+    type: int
+    description: The position in the starfile to end refining at
+    default: -1
+    advanced: true
+  - name: num_threads
+    type: int
+    description: The number of threads to use
+    default: 1
+    advanced: true

@@ -46,7 +46,8 @@ MyVolumeAssetPanel*           volume_asset_panel;
 #ifdef EXPERIMENTAL
 AtomicCoordinatesAssetPanel* atomic_coordinates_asset_panel;
 #endif
-MyRefinementPackageAssetPanel* refinement_package_asset_panel;
+MyRefinementPackageAssetPanel*    refinement_package_asset_panel;
+TemplateMatchesPackageAssetPanel* template_matches_package_asset_panel;
 
 MyMovieAlignResultsPanel* movie_results_panel;
 MyFindCTFResultsPanel*    ctf_results_panel;
@@ -142,17 +143,18 @@ bool MyGuiApp::OnInit( ) {
 #ifdef EXPERIMENTAL
     atomic_coordinates_asset_panel = new AtomicCoordinatesAssetPanel(assets_panel->AssetsBook);
 #endif
-    refinement_package_asset_panel = new MyRefinementPackageAssetPanel(assets_panel->AssetsBook);
-    align_movies_panel             = new MyAlignMoviesPanel(actions_panel_spa->ActionsBook);
-    findctf_panel                  = new MyFindCTFPanel(actions_panel_spa->ActionsBook);
-    findparticles_panel            = new MyFindParticlesPanel(actions_panel_spa->ActionsBook);
-    classification_panel           = new MyRefine2DPanel(actions_panel_spa->ActionsBook);
-    ab_initio_3d_panel             = new AbInitio3DPanel(actions_panel_spa->ActionsBook);
-    auto_refine_3d_panel           = new AutoRefine3DPanel(actions_panel_spa->ActionsBook);
-    refine_3d_panel                = new MyRefine3DPanel(actions_panel_spa->ActionsBook);
-    refine_ctf_panel               = new RefineCTFPanel(actions_panel_spa->ActionsBook);
-    generate_3d_panel              = new Generate3DPanel(actions_panel_spa->ActionsBook);
-    sharpen_3d_panel               = new Sharpen3DPanel(actions_panel_spa->ActionsBook);
+    refinement_package_asset_panel       = new MyRefinementPackageAssetPanel(assets_panel->AssetsBook);
+    template_matches_package_asset_panel = new TemplateMatchesPackageAssetPanel(assets_panel->AssetsBook);
+    align_movies_panel                   = new MyAlignMoviesPanel(actions_panel_spa->ActionsBook);
+    findctf_panel                        = new MyFindCTFPanel(actions_panel_spa->ActionsBook);
+    findparticles_panel                  = new MyFindParticlesPanel(actions_panel_spa->ActionsBook);
+    classification_panel                 = new MyRefine2DPanel(actions_panel_spa->ActionsBook);
+    ab_initio_3d_panel                   = new AbInitio3DPanel(actions_panel_spa->ActionsBook);
+    auto_refine_3d_panel                 = new AutoRefine3DPanel(actions_panel_spa->ActionsBook);
+    refine_3d_panel                      = new MyRefine3DPanel(actions_panel_spa->ActionsBook);
+    refine_ctf_panel                     = new RefineCTFPanel(actions_panel_spa->ActionsBook);
+    generate_3d_panel                    = new Generate3DPanel(actions_panel_spa->ActionsBook);
+    sharpen_3d_panel                     = new Sharpen3DPanel(actions_panel_spa->ActionsBook);
 
     movie_results_panel      = new MyMovieAlignResultsPanel(results_panel->ResultsBook);
     ctf_results_panel        = new MyFindCTFResultsPanel(results_panel->ResultsBook);
@@ -293,6 +295,7 @@ bool MyGuiApp::OnInit( ) {
     assets_panel->AssetsBook->AddPage(particle_position_asset_panel, "Particle Positions", false, 2);
     assets_panel->AssetsBook->AddPage(volume_asset_panel, "3D Volumes", false, 3);
     assets_panel->AssetsBook->AddPage(refinement_package_asset_panel, "Refine Pkgs.", false, 4);
+    assets_panel->AssetsBook->AddPage(template_matches_package_asset_panel, "MT Pkgs.", false, 4);
 #ifdef EXPERIMENTAL
     assets_panel->AssetsBook->AddPage(atomic_coordinates_asset_panel, "Atomic Coordinates", false, 5);
 #endif

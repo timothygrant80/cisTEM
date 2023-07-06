@@ -650,7 +650,9 @@ bool MatchTemplateApp::DoCalculation( ) {
             global_euler_search.theta_max = 180.0f;
         }
     }
-
+    //global_euler_search.theta_max = 100.0f;
+    //global_euler_search.phi_max   = 15.0f;
+    //global_euler_search.for_mt = true;
     global_euler_search.CalculateGridSearchPositions(false);
 
     // for now, I am assuming the MTF has been applied already.

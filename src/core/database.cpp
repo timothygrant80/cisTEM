@@ -233,6 +233,23 @@ double Database::ReturnSingleDoubleFromSelectCommand(wxString select_command) {
     return value;
 }
 
+wxString Database::ReturnSingleStringFromSelectCommand(wxString select_command) {
+    MyDebugAssertTrue(is_open == true, "database not open!");
+
+    int           return_code;
+    sqlite3_stmt* current_statement;
+    wxString      value;
+
+    Prepare(select_command, &current_statement);
+    Step(current_statement);
+
+    value = sqlite3_column_text(current_statement, 0);
+
+    Finalize(current_statement);
+
+    return value;
+}
+
 long Database::ReturnHighestRefinementID( ) {
     return ReturnSingleLongFromSelectCommand("SELECT MAX(REFINEMENT_ID) FROM REFINEMENT_LIST");
 }
@@ -314,6 +331,10 @@ int Database::ReturnHighestAlignmentJobID( ) {
 
 int Database::ReturnHighestTemplateMatchJobID( ) {
     return ReturnSingleIntFromSelectCommand("SELECT MAX(TEMPLATE_MATCH_JOB_ID) FROM TEMPLATE_MATCH_LIST");
+}
+
+int Database::ReturnHighestTemplateMatchesPackageID( ) {
+    return ReturnSingleIntFromSelectCommand("SELECT MAX(TEMPLATE_MATCHES_PACKAGE_ASSET_ID) FROM TEMPLATE_MATCHES_PACKAGE_ASSETS");
 }
 
 int Database::ReturnHighestFindCTFJobID( ) {
@@ -1235,6 +1256,10 @@ void Database::BeginAllRefinementPackagesSelect( ) {
     BeginBatchSelect("SELECT * FROM REFINEMENT_PACKAGE_ASSETS;");
 }
 
+void Database::BeginAllTemplateMatchesPackagesSelect( ) {
+    BeginBatchSelect("SELECT * FROM TEMPLATE_MATCHES_PACKAGE_ASSETS;");
+}
+
 void Database::BeginAllRunProfilesSelect( ) {
     BeginBatchSelect("SELECT * FROM RUN_PROFILES;");
 }
@@ -1415,6 +1440,16 @@ RefinementPackage* Database::GetNextRefinementPackage( ) {
     MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code);
 
     Finalize(list_statement);
+
+    return temp_package;
+}
+
+TemplateMatchesPackage* Database::GetNextTemplateMatchesPackage( ) {
+    TemplateMatchesPackage* temp_package;
+
+    temp_package = new TemplateMatchesPackage;
+
+    GetFromBatchSelect("ltt", &temp_package->asset_id, &temp_package->name, &temp_package->starfile_filename);
 
     return temp_package;
 }
@@ -1680,6 +1715,11 @@ void Database::AddRefinementPackageAsset(RefinementPackage* asset_to_add) {
     }
 
     EndBatchInsert( );
+}
+
+void Database::AddTemplateMatchesPackageAsset(TemplateMatchesPackage* asset_to_add) {
+    BeginCommitLocker active_locker(this);
+    InsertOrReplace("TEMPLATE_MATCHES_PACKAGE_ASSETS", "Ptt", "TEMPLATE_MATCHES_PACKAGE_ASSET_ID", "NAME", "STARFILE_FILENAME", asset_to_add->asset_id, asset_to_add->name.ToUTF8( ).data( ), asset_to_add->starfile_filename.c_str( ));
 }
 
 void Database::AddStartupJob(long startup_job_id, long refinement_package_asset_id, wxString name, int number_of_starts, int number_of_cycles, float initial_res_limit, float final_res_limit, bool auto_mask, bool auto_percent_used, float initial_percent_used, float final_percent_used, float mask_radius, bool apply_blurring, float smoothing_factor, wxArrayLong result_volume_ids) {

@@ -24,6 +24,7 @@ class EulerSearch {
     float        resolution_limit;
     ParameterMap parameter_map;
     bool         test_mirror;
+    bool         for_mt = false;
     wxString     symmetry_symbol;
 
     // Constructors & destructors

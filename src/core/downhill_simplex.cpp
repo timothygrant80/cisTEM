@@ -10,7 +10,8 @@ DownhillSimplex::DownhillSimplex( ) {
 }
 
 DownhillSimplex::DownhillSimplex(long set_number_of_dimensions) {
-    MyDebugAssertTrue(set_number_of_dimensions >= 3, "Simplex must have at least 3 dimensions");
+    // MyDebugAssertTrue(set_number_of_dimensions >= 3, "Simplex must have at least 3 dimensions");
+    MyDebugAssertTrue(set_number_of_dimensions >= 2, "Simplex must have at least 2 dimensions");
     number_of_dimensions = set_number_of_dimensions;
     tolerance            = 1.0e-8;
     Setup( );

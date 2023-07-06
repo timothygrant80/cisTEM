@@ -924,7 +924,7 @@ bool CtffindApp::DoCalculation( ) {
                         profile_timing.lap("Correct mag distortion");
                     }
                     // Make the image square
-                    profile_timing.start("Crop image to shortest dimension");
+                    profile_timing.start("Crop image to largest dimension");
                     micrograph_square_dimension = std::max(current_input_image->logical_x_dimension, current_input_image->logical_y_dimension);
                     if ( IsOdd((micrograph_square_dimension)) )
                         micrograph_square_dimension++;
@@ -934,7 +934,7 @@ bool CtffindApp::DoCalculation( ) {
                         current_input_image->ClipIntoLargerRealSpace2D(current_input_image_square, current_input_image->ReturnAverageOfRealValues( ));
                         current_input_image->Consume(current_input_image_square);
                     }
-                    profile_timing.lap("Crop image to shortest dimension");
+                    profile_timing.lap("Crop image to largest dimension");
                     //
                     profile_timing.start("Average frames");
                     if ( current_frame_within_average == 1 ) {

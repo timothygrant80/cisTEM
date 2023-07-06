@@ -3,19 +3,30 @@
 
 #define use_epa_rather_than_zero_counting
 
+double SampleTiltScoreFunctionForSimplex(void* pt2Object, double values[]);
+double SampleTiltScoreFunctionForSimplexTiltAxis(void* pt2Object, double values[]);
+//TODO: gives this function a good name that describes what it actually does (it actually rescales the power spectrum!)
+float PixelSizeForFitting(bool resample_if_pixel_too_small, float pixel_size_of_input_image, float target_pixel_size_after_resampling,
+                          int box_size, Image* current_power_spectrum, Image* resampled_power_spectrum, bool do_resampling = true, float stretch_factor = 1.0f);
+
 class CTFTilt {
-    int   refine_mode;
-    int   micrograph_subregion_dimension;
-    int   micrograph_binned_dimension_for_ctf;
-    int   micrograph_square_dimension;
-    int   sub_section_dimension_x;
-    int   sub_section_dimension_y;
-    int   box_size;
-    int   n_sections;
-    int   n_steps;
-    int   box_convolution;
-    int   input_image_x_dimension;
-    int   input_image_y_dimension;
+    int refine_mode;
+    int micrograph_subregion_dimension;
+    int micrograph_binned_dimension_for_ctf;
+    int micrograph_square_dimension;
+    int sub_section_dimension_x;
+    int sub_section_dimension_y;
+    int box_size;
+    int tile_size;
+    int n_sections;
+    int n_sections_x;
+    int n_sections_y;
+    int n_steps;
+    int box_convolution;
+    // int   input_image_x_dimension;
+    // int   input_image_y_dimension;
+    int   image_x_dim_forsubsection;
+    int   image_y_dim_forsubsection;
     int   image_buffer_counter;
     float tilt_binning_factor;
     float original_pixel_size;
@@ -66,6 +77,7 @@ class CTFTilt {
     float  CalculateTiltCorrectedSpectra(bool resample_if_pixel_too_small, float pixel_size_of_input_image, float target_pixel_size_after_resampling,
                                          int box_size, Image* resampled_spectrum);
     double ScoreValues(double[]);
+    double ScoreValuesFixedDefocus(double[]);
 
     float defocus_1;
     float defocus_2;

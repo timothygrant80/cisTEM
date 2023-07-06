@@ -298,7 +298,7 @@ void GpuImage::SetupInitialValues( ) {
     insert_into_which_reconstruction = 0;
     hostImage                        = NULL;
 
-    cudaErr(cudaEventCreateWithFlags(&nppCalcEvent, cudaEventDisableTiming);)
+    cudaErr(cudaEventCreateWithFlags(&nppCalcEvent, cudaEventDisableTiming));
 
             cudaErr(cudaGetDevice(&device_idx));
     cudaErr(cudaDeviceGetAttribute(&number_of_streaming_multiprocessors, cudaDevAttrMultiProcessorCount, device_idx));

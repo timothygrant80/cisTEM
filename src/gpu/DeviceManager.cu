@@ -1,19 +1,18 @@
 #include "gpu_core_headers.h"
 
-DeviceManager::DeviceManager( ){
-
-};
+DeviceManager::DeviceManager( ) {
+}
 
 DeviceManager::DeviceManager(int wanted_number_of_gpus) {
 
     Init(wanted_number_of_gpus);
-};
+}
 
 DeviceManager::~DeviceManager( ) {
     if ( is_manager_initialized ) {
         cudaErr(cudaDeviceReset( ));
     }
-};
+}
 
 void DeviceManager::Init(int wanted_number_of_gpus) {
     wxPrintf("requesting %d gpus\n", wanted_number_of_gpus);

@@ -687,9 +687,10 @@ bool UnBlurApp::DoCalculation( ) {
         profile_timing.start("final refine");
         unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, output_pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts, profile_timing_refinement_method);
         profile_timing.lap("final refine");
+
         // if allocated delete the binned stack, and swap the unbinned to image_stack - so that no matter what is happening we can just use image_stack
-        delete[] cropped_image_stack;
         if ( align_on_cropped_area ) {
+            delete[] cropped_image_stack;
             image_stack = unbinned_image_stack;
 
 #pragma omp parallel for default(shared) num_threads(max_threads) private(image_counter)
@@ -880,18 +881,18 @@ bool UnBlurApp::DoCalculation( ) {
         profile_timing.lap("write out amplitude spectrum");
     }
 
-    //  Shall we write out a scaled image?
-
-    sum_image.BackwardFFT( );
     float                original_x    = sum_image.logical_x_dimension;
     float                original_y    = sum_image.logical_y_dimension;
     std::tuple<int, int> crop_location = {0, 0};
     if ( replace_dark_areas_with_gaussian_noise ) {
+        sum_image.BackwardFFT( );
         std::string mask_filename = output_filename.substr(0, output_filename.size( ) - 4) + "_mask.mrc";
         crop_location             = sum_image.CropAndAddGaussianNoiseToDarkAreas(0.01, threshold_for_gaussian_noise, 20, 0.01, measure_mean_and_variance_for_gaussian_noise, variance_for_gaussian_noise, mean_for_gaussian_noise, true, mask_filename);
+        sum_image.ForwardFFT( );
     }
 
-    sum_image.ForwardFFT( );
+    //  Shall we write out a scaled image?
+
     if ( write_out_small_sum_image == true ) {
         profile_timing.start("write out small sum image");
         // work out a good size..

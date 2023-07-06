@@ -178,6 +178,8 @@ void cisTEMParameterMask::SetAllToTrue( ) {
     assigned_subset                    = true;
     pre_exposure                       = true;
     total_exposure                     = true;
+    original_x_position                = true;
+    original_y_position                = true;
 }
 
 void cisTEMParameterMask::SetAllToFalse( ) {
@@ -214,6 +216,8 @@ void cisTEMParameterMask::SetAllToFalse( ) {
     assigned_subset                    = false;
     pre_exposure                       = false;
     total_exposure                     = false;
+    original_x_position                = false;
+    original_y_position                = false;
 }
 
 void cisTEMParameterMask::SetActiveParameters(long parameters_to_set) {
@@ -250,6 +254,8 @@ void cisTEMParameterMask::SetActiveParameters(long parameters_to_set) {
     assigned_subset                    = ((parameters_to_set & ASSIGNED_SUBSET) == ASSIGNED_SUBSET);
     pre_exposure                       = ((parameters_to_set & PRE_EXPOSURE) == PRE_EXPOSURE);
     total_exposure                     = ((parameters_to_set & TOTAL_EXPOSURE) == TOTAL_EXPOSURE);
+    original_x_position                = ((parameters_to_set & ORIGINAL_X_POSITION) == ORIGINAL_X_POSITION);
+    original_y_position                = ((parameters_to_set & ORIGINAL_Y_POSITION) == ORIGINAL_Y_POSITION);
 }
 
 /* Should never be needed actually
@@ -290,6 +296,8 @@ void cisTEMParameterLine::Add(cisTEMParameterLine& line_to_add) {
     assigned_subset += line_to_add.assigned_subset;
     pre_exposure += line_to_add.pre_exposure;
     total_exposure += line_to_add.total_exposure;
+    original_x_position += line_to_add.original_x_position;
+    original_y_position += line_to_add.original_y_position;
 
     // not adding filenames or groups as it doesn't make sense
 }
@@ -324,6 +332,8 @@ void cisTEMParameterLine::Subtract(cisTEMParameterLine& line_to_add) {
     assigned_subset -= line_to_add.assigned_subset;
     pre_exposure -= line_to_add.pre_exposure;
     total_exposure -= line_to_add.total_exposure;
+    original_x_position -= line_to_add.original_x_position;
+    original_y_position -= line_to_add.original_y_position;
 
     // not adding filenames or groups as it doesn't make sense
 }
@@ -358,6 +368,8 @@ void cisTEMParameterLine::AddSquare(cisTEMParameterLine& line_to_add) {
     assigned_subset += powf(line_to_add.assigned_subset, 2);
     pre_exposure += powf(line_to_add.pre_exposure, 2);
     total_exposure += powf(line_to_add.total_exposure, 2);
+    original_x_position += powf(line_to_add.original_x_position, 2);
+    original_y_position += powf(line_to_add.original_y_position, 2);
 
     // not adding filenames or groups as it doesn't make sense
 }
@@ -396,6 +408,8 @@ void cisTEMParameterLine::SetAllToZero( ) {
     assigned_subset                    = 0;
     pre_exposure                       = 0.0f;
     total_exposure                     = 0.0f;
+    original_x_position                = 0.0f;
+    original_y_position                = 0.0f;
 }
 
 void cisTEMParameterLine::ReplaceNanAndInfWithOther(cisTEMParameterLine& other_params) {
@@ -453,6 +467,10 @@ void cisTEMParameterLine::ReplaceNanAndInfWithOther(cisTEMParameterLine& other_p
         pre_exposure = other_params.pre_exposure;
     if ( isnan(total_exposure) || isinf(total_exposure) )
         total_exposure = other_params.total_exposure;
+    if ( isnan(original_x_position) || isinf(original_x_position) )
+        original_x_position = other_params.original_x_position;
+    if ( isnan(original_y_position) || isinf(original_y_position) )
+        original_y_position = other_params.original_y_position;
 }
 
 cisTEMParameterLine::~cisTEMParameterLine( ) {
@@ -722,6 +740,14 @@ int cisTEMParameters::ReturnNumberOfParametersToWrite( ) {
     }
 
     if ( parameters_to_write.total_exposure == true ) {
+        column_counter++;
+    }
+
+    if ( parameters_to_write.original_x_position == true ) {
+        column_counter++;
+    }
+
+    if ( parameters_to_write.original_y_position == true ) {
         column_counter++;
     }
 
@@ -1005,6 +1031,20 @@ void cisTEMParameters::WriteTocisTEMBinaryFile(wxString wanted_filename, int fir
         fwrite(&data_type, sizeof(char), 1, cisTEM_bin_file);
     }
 
+    if ( parameters_to_write.original_x_position == true ) {
+        bitmask_identifier = ORIGINAL_X_POSITION;
+        data_type          = FLOAT;
+        fwrite(&bitmask_identifier, sizeof(long), 1, cisTEM_bin_file);
+        fwrite(&data_type, sizeof(char), 1, cisTEM_bin_file);
+    }
+
+    if ( parameters_to_write.original_y_position == true ) {
+        bitmask_identifier = ORIGINAL_Y_POSITION;
+        data_type          = FLOAT;
+        fwrite(&bitmask_identifier, sizeof(long), 1, cisTEM_bin_file);
+        fwrite(&data_type, sizeof(char), 1, cisTEM_bin_file);
+    }
+
     // now write the data..
 
     for ( int particle_counter = 0; particle_counter < all_parameters.GetCount( ); particle_counter++ ) {
@@ -1090,6 +1130,10 @@ void cisTEMParameters::WriteTocisTEMBinaryFile(wxString wanted_filename, int fir
             fwrite(&all_parameters[particle_counter].pre_exposure, sizeof(float), 1, cisTEM_bin_file);
         if ( parameters_to_write.total_exposure == true )
             fwrite(&all_parameters[particle_counter].total_exposure, sizeof(float), 1, cisTEM_bin_file);
+        if ( parameters_to_write.original_x_position == true )
+            fwrite(&all_parameters[particle_counter].original_x_position, sizeof(float), 1, cisTEM_bin_file);
+        if ( parameters_to_write.original_y_position == true )
+            fwrite(&all_parameters[particle_counter].original_y_position, sizeof(float), 1, cisTEM_bin_file);
     }
 
     fclose(cisTEM_bin_file);
@@ -1306,6 +1350,16 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first
         column_counter++;
     }
 
+    if ( parameters_to_write.original_x_position == true ) {
+        fprintf(cisTEM_star_file, "_cisTEMOriginalXPosition #%i\n", column_counter);
+        column_counter++;
+    }
+
+    if ( parameters_to_write.original_y_position == true ) {
+        fprintf(cisTEM_star_file, "_cisTEMOriginalYPosition #%i\n", column_counter);
+        column_counter++;
+    }
+
     wxString data_line = "";
 
     // header...
@@ -1376,6 +1430,10 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first
         data_line += " PREEXP ";
     if ( parameters_to_write.total_exposure == true )
         data_line += " TOTEXP ";
+    if ( parameters_to_write.original_x_position == true )
+        data_line += " ORIGX ";
+    if ( parameters_to_write.original_y_position == true )
+        data_line += " ORIGY ";
 
     data_line += "\n";
     data_line[0] = '#';
@@ -1455,6 +1513,10 @@ void cisTEMParameters::WriteTocisTEMStarFile(wxString wanted_filename, int first
             data_line += wxString::Format("%7.2f ", all_parameters[particle_counter].pre_exposure);
         if ( parameters_to_write.total_exposure == true )
             data_line += wxString::Format("%7.2f ", all_parameters[particle_counter].total_exposure);
+        if ( parameters_to_write.original_x_position == true )
+            data_line += wxString::Format("%8.2f ", all_parameters[particle_counter].original_x_position);
+        if ( parameters_to_write.original_y_position == true )
+            data_line += wxString::Format("%8.2f ", all_parameters[particle_counter].original_y_position);
 
         data_line += "\n";
 
@@ -2096,7 +2158,12 @@ int cisTEMParameters::ReturnMaxPositionInStack(bool exclude_negative_film_number
 
 static int wxCMPFUNC_CONV SortByReference3DFilenameCompareFunction(cisTEMParameterLine** a, cisTEMParameterLine** b) // function for sorting the classum selections by parent_image_id - this makes cutting them out more efficient
 {
+    // NOTE: this may actually be a GTK_VERSION = 3 need, however, wx > 3.0.5 is assumed to be build on gtk3 not gtk2
+#ifdef WXWIDGETS_3_DEV
+    return wxStringSortAscending((*a)->reference_3d_filename, (*b)->reference_3d_filename);
+#else
     return wxStringSortAscending(&(*a)->reference_3d_filename, &(*b)->reference_3d_filename);
+#endif
 };
 
 void cisTEMParameters::SortByReference3DFilename( ) {

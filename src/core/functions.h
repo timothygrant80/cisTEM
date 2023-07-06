@@ -466,7 +466,8 @@ inline float clamp_angular_range_negative_pi_to_pi(float angle, bool units_are_d
 }
 
 inline float sinc(float radians) {
-    if ( radians == 0.0 )
+    radians = fabsf(radians);
+    if ( radians < 0.00001 )
         return 1.0;
     if ( radians >= 0.01 )
         return sinf(radians) / radians;
@@ -645,4 +646,3 @@ double cisTEM_erfcinv(double x);
 bool StripEnclosingSingleQuotesFromString(wxString& string_to_strip); // returns true if it was done, false if first and last characters are not '
 
 void ActivateMKLDebugForNonIntelCPU( ); // will activate MKL debug environment variable if running on an AMD that supports high level features.  This works on my version on intel MKL - it is disabled in the released MKL (although setting it should not break anything)
-

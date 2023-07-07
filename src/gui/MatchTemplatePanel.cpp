@@ -387,6 +387,7 @@ void MatchTemplatePanel::OnUpdateUI(wxUpdateUIEvent& event) {
             RunProfileComboBox->Enable(true);
             GroupComboBox->Enable(true);
             ReferenceSelectPanel->Enable(true);
+            FastFirstResultCheckBox->Enable(true);
 #ifdef ENABLEGPU
             UseGpuCheckBox->Enable(true);
 #endif
@@ -432,7 +433,8 @@ void MatchTemplatePanel::OnUpdateUI(wxUpdateUIEvent& event) {
             GroupComboBox->Enable(false);
             ReferenceSelectPanel->Enable(false);
             RunProfileComboBox->Enable(false);
-            UseGpuCheckBox->Enable(false); // Doesn't matter if ENABLEGPU
+            UseGpuCheckBox->Enable(false);
+            FastFirstResultCheckBox->Enable(false); // Doesn't matter if ENABLEGPU
             //StartAlignmentButton->SetLabel("Stop Job");
             //StartAlignmentButton->Enable(true);
         }
@@ -673,7 +675,12 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
 
     if ( use_gpu ) {
         //	number_of_jobs_per_image_in_gui = std::max((int)1,number_of_processes / 2); // Using two threads in each job
-        number_of_jobs_per_image_in_gui = number_of_processes; // Using two threads in each job
+        if ( FastFirstResultCheckBox->GetValue( ) == true ) {
+            number_of_jobs_per_image_in_gui = number_of_processes; // Using two threads in each job
+        }
+        else {
+            number_of_jobs_per_image_in_gui = 1;
+        }
 
         number_of_jobs = number_of_jobs_per_image_in_gui * active_group.number_of_members;
 
@@ -681,12 +688,17 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
         delete current_image_euler_search;
     }
     else {
-        if ( active_group.number_of_members >= 5 || current_image_euler_search->number_of_search_positions < number_of_processes * 20 )
-            number_of_jobs_per_image_in_gui = number_of_processes;
-        else if ( current_image_euler_search->number_of_search_positions > number_of_processes * 250 )
-            number_of_jobs_per_image_in_gui = number_of_processes * 10;
-        else
-            number_of_jobs_per_image_in_gui = number_of_processes * 5;
+        if ( FastFirstResultCheckBox->GetValue( ) == true ) {
+            if ( active_group.number_of_members >= 5 || current_image_euler_search->number_of_search_positions < number_of_processes * 20 )
+                number_of_jobs_per_image_in_gui = number_of_processes;
+            else if ( current_image_euler_search->number_of_search_positions > number_of_processes * 250 )
+                number_of_jobs_per_image_in_gui = number_of_processes * 10;
+            else
+                number_of_jobs_per_image_in_gui = number_of_processes * 5;
+        }
+        else {
+            number_of_jobs_per_image_in_gui = 1;
+        }
 
         number_of_jobs = number_of_jobs_per_image_in_gui * active_group.number_of_members;
 

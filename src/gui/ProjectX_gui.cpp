@@ -10411,6 +10411,9 @@ MatchTemplatePanelParent::MatchTemplatePanelParent( wxWindow* parent, wxWindowID
 	UseGpuCheckBox->SetValue(true);
 	bSizer58->Add( UseGpuCheckBox, 0, wxALL|wxEXPAND, 5 );
 
+	FastFirstResultCheckBox = new wxCheckBox( StartPanel, wxID_ANY, wxT("Fast first result"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer58->Add( FastFirstResultCheckBox, 0, wxALL|wxEXPAND, 5 );
+
 	wxBoxSizer* bSizer60;
 	bSizer60 = new wxBoxSizer( wxVERTICAL );
 

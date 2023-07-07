@@ -2600,6 +2600,7 @@ class MatchTemplatePanelParent : public JobPanel
 		wxStaticText* RunProfileText;
 		MemoryComboBox* RunProfileComboBox;
 		wxCheckBox* UseGpuCheckBox;
+		wxCheckBox* FastFirstResultCheckBox;
 		wxButton* StartEstimationButton;
 		wxCheckBox* ResumeRunCheckBox;
 

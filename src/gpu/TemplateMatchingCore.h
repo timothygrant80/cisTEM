@@ -1,55 +1,9 @@
 #ifndef TemplateMatchingCore_H_
 #define TemplateMatchingCore_H_
 
-//typedef
-//struct __align__(8) _Peaks {
-//	// This should be 128 byte words, so good for read access?
-//	__half mip;
-//	__half psi;
-//	__half theta;
-//	__half phi;
-//
-//} Peaks;
-
-//typedef
-//struct __align__(8) _Peaks {
-//	// This should be 128 byte words, so good for read access?
-//	__half mip;
-//	__half psi;
-//	__half theta;
-//	__half phi;
-//
-//} Peaks;
-//typedef
-//struct __align__(16) _Peaks {
-//	// This should be 128 byte words, so good for read access?
-//	float mip;
-//	float psi;
-//	float theta;
-//	float phi;
-//
-//} Peaks;
-
-//typedef
-//struct __align__(16)_Stats{
-//	__half mip;
-//	__half psi;
-//	__half theta;
-//	__half phi;
-//	__half mean;
-//	__half sum_sq_diff;
-//	int N;
-//} Stats;
-//typedef
-//struct __align__(8) _Stats{
-//	cufftReal sum;
-//	cufftReal sq_sum;
-//} Stats;
-//typedef
-//	struct __align__(4) _Stats{
-//__half sum;
-//__half sq_sum;
-//} Stats;
+#include "GpuImage.h"
+#include "DeviceManager.h"
+#include "Histogram.h"
 
 class TemplateMatchingCore {
 
@@ -107,6 +61,7 @@ class TemplateMatchingCore {
     float psi_max;
     float psi_start;
     float psi_step;
+    float minimum_threshold = 20.0f; //  Optionally override this to limit what is considered for refinement
 
     float c_defocus;
     float c_pixel;
@@ -116,6 +71,8 @@ class TemplateMatchingCore {
     int  last_search_position;
     long total_number_of_cccs_calculated;
     long total_correlation_positions;
+
+    int n_global_search_images_to_save;
 
     bool is_running_locally;
 
@@ -134,10 +91,16 @@ class TemplateMatchingCore {
     __half2* my_stats;
     __half2* my_peaks;
     __half2* my_new_peaks; // for passing euler angles to the callback
-    void     SumPixelWise(GpuImage& image);
-    void     MipPixelWise(__half psi, __half theta, __half phi);
-    void     MipToImage( );
-    void     AccumulateSums(__half2* my_stats, GpuImage& sum, GpuImage& sq_sum);
+    __half*  secondary_peaks;
+
+    void SumPixelWise(GpuImage& image);
+    void MipPixelWise(__half psi, __half theta, __half phi);
+    void MipToImage( );
+    void AccumulateSums(__half2* my_stats, GpuImage& sum, GpuImage& sq_sum);
+
+    void UpdateSecondaryPeaks( );
+
+    void SetMinimumThreshold(float wanted_threshold) { minimum_threshold = wanted_threshold; }
 
     void Init(MyApp*           parent_pointer,
               Image&           template_reconstruction,
@@ -163,7 +126,8 @@ class TemplateMatchingCore {
               int              last_search_position,
               ProgressBar*     my_progress,
               long             total_correlation_positions,
-              bool             is_running_locally);
+              bool             is_running_locally,
+              int              number_of_global_search_images_to_save = 1);
 
     void RunInnerLoop(Image& projection_filter, float pixel_i, float defocus_i, int threadIDX, long& current_correlation_position);
 

@@ -389,6 +389,9 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float* output_a
 }
 
 void MRCFile::WriteSlicesToDisk(int start_slice, int end_slice, float* input_array) {
+
+    using half = half_float::half;
+
     if ( ! do_nothing ) {
         MyDebugAssertTrue(my_file->is_open( ), "File not open!");
         MyDebugAssertTrue(start_slice <= end_slice, "Start slice larger than end slice!");

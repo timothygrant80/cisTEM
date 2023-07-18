@@ -1,6 +1,18 @@
+#include <cistem_config.h>
+
+#ifdef ENABLEGPU
+#include "../../gpu/gpu_core_headers.h"
+#include "../../gpu/DeviceManager.h"
+#include "../../gpu/TemplateMatchingCore.h"
+#else
 #include "../../core/core_headers.h"
+#endif
 
 #include "../../constants/constants.h"
+
+#ifdef ENABLE_FastFFT
+#include <FastFFT.h>
+#endif
 
 // Values for data that are passed around in the results.
 const int number_of_output_images     = 8; //mip, psi, theta, phi, pixel, defocus, sums, sqsums (scaled mip is not sent out)
@@ -52,7 +64,9 @@ class
     ArrayOfAggregatedTemplateResults aggregated_results;
     bool                             is_rotated_by_90 = false;
 
-    float GetMaxJobWaitTimeInSeconds( ) { return 360.0f; }
+    float GetMaxJobWaitTimeInSeconds( ) { return 120.0f; }
+
+    float pixel_size = 1.0f;
 
   private:
 };
@@ -146,7 +160,7 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
     wxString correlation_avg_output_file;
     wxString scaled_mip_output_file;
 
-    float pixel_size              = 1.0f;
+    pixel_size                    = 1.0f;
     float voltage_kV              = 300.0f;
     float spherical_aberration_mm = 2.7f;
     float amplitude_contrast      = 0.07f;
@@ -250,7 +264,7 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
                                       best_defocus_output_file.ToUTF8( ).data( ),
                                       best_pixel_size_output_file.ToUTF8( ).data( ),
                                       scaled_mip_output_file.ToUTF8( ).data( ),
-                                      correlation_avg_output_file.ToUTF8( ).data( ),
+                                      correlation_std_output_file.ToUTF8( ).data( ),
                                       my_symmetry.ToUTF8( ).data( ),
                                       in_plane_angular_step,
                                       output_histogram_file.ToUTF8( ).data( ),
@@ -258,7 +272,7 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
                                       last_search_position,
                                       image_number_for_gui,
                                       number_of_jobs_per_image_in_gui,
-                                      correlation_std_output_file.ToUTF8( ).data( ),
+                                      correlation_avg_output_file.ToUTF8( ).data( ),
                                       directory_for_results.ToUTF8( ).data( ),
                                       result_filename.ToUTF8( ).data( ),
                                       min_peak_radius,
@@ -332,13 +346,13 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     wxString input_search_images_filename  = my_current_job.arguments[0].ReturnStringArgument( );
     wxString input_reconstruction_filename = my_current_job.arguments[1].ReturnStringArgument( );
-    float    pixel_size                    = my_current_job.arguments[2].ReturnFloatArgument( );
-    float    voltage_kV                    = my_current_job.arguments[3].ReturnFloatArgument( );
-    float    spherical_aberration_mm       = my_current_job.arguments[4].ReturnFloatArgument( );
-    float    amplitude_contrast            = my_current_job.arguments[5].ReturnFloatArgument( );
-    float    defocus1                      = my_current_job.arguments[6].ReturnFloatArgument( );
-    float    defocus2                      = my_current_job.arguments[7].ReturnFloatArgument( );
-    float    defocus_angle                 = my_current_job.arguments[8].ReturnFloatArgument( );
+    pixel_size                             = my_current_job.arguments[2].ReturnFloatArgument( );
+    float voltage_kV                       = my_current_job.arguments[3].ReturnFloatArgument( );
+    float spherical_aberration_mm          = my_current_job.arguments[4].ReturnFloatArgument( );
+    float amplitude_contrast               = my_current_job.arguments[5].ReturnFloatArgument( );
+    float defocus1                         = my_current_job.arguments[6].ReturnFloatArgument( );
+    float defocus2                         = my_current_job.arguments[7].ReturnFloatArgument( );
+    float defocus_angle                    = my_current_job.arguments[8].ReturnFloatArgument( );
     ;
     float    low_resolution_limit            = my_current_job.arguments[9].ReturnFloatArgument( );
     float    high_resolution_limit_search    = my_current_job.arguments[10].ReturnFloatArgument( );
@@ -485,7 +499,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     factorizable_y         = input_image.logical_y_dimension;
 
     bool      DO_FACTORIZATION                       = true;
-    bool      MUST_BE_POWER_OF_TWO                   = false; // Required for half-preicision xforms
+    bool      MUST_BE_POWER_OF_TWO                   = false; // Required for half-precision xforms
     bool      MUST_BE_FACTOR_OF_FOUR                 = true; // May be faster
     const int max_number_primes                      = 6;
     int       primes[max_number_primes]              = {2, 3, 5, 7, 9, 13};
@@ -560,7 +574,6 @@ bool MatchTemplateApp::DoCalculation( ) {
             if ( ReturnThreadNumberOfCurrentThread( ) == 0 ) {
                 wxPrintf("Not rotating the search image for speed even though it is enabled\n");
             }
-            is_rotated_by_90 = false;
         }
 #endif
     }
@@ -1574,10 +1587,13 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
             aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] = sqrtf(aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] /
                                                                                                          aggregated_results[array_location].total_number_of_ccs -
                                                                                                  powf(aggregated_results[array_location].collated_pixel_sums[pixel_counter], 2));
+#ifndef CISTEM_TEST_FILTERED_MIP
+            // ifdef, we want to modify the avg and stdDev image first
             if ( aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] > 0.0f ) {
 
                 // Save the variance, not the stdDev
                 //                aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] = sqrtf(aggregated_results[array_location].collated_pixel_square_sums[pixel_counter]);
+
                 aggregated_results[array_location].collated_mip_data[pixel_counter] = (aggregated_results[array_location].collated_mip_data[pixel_counter] - aggregated_results[array_location].collated_pixel_sums[pixel_counter]) /
                                                                                       aggregated_results[array_location].collated_pixel_square_sums[pixel_counter];
             }
@@ -1585,8 +1601,62 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
                 aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] = 0.0f;
                 aggregated_results[array_location].collated_mip_data[pixel_counter]          = 0.0f;
             }
+#endif
         }
 
+        std::cerr << "Outside test filtered mip" << std::endl;
+#ifdef CISTEM_TEST_FILTERED_MIP
+        // We assume the user has set the min pixel radius in pixels to match the expected radius of the particle, which is only true if
+        // a) they are aware of this hack
+        // b) the sample is a single particle (layered sample will have a different radius)
+        float estimated_radius_in_pixels = current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[39].ReturnFloatArgument( );
+
+        // The factor of 4 (two particle diameters) is in no way optimized.
+        float objective_aperture_resolution = pixel_size * estimated_radius_in_pixels * 4.0f;
+        float mask_falloff                  = 7.f;
+
+        // std::cerr << "Inside test filtered mip" << std::endl;
+        // std::cerr << "Objective aperture resolution: " << objective_aperture_resolution << std::endl;
+        // std::cerr << "Mask falloff: " << mask_falloff << std::endl;
+        // std::cerr << "Pixel size: " << pixel_size << std::endl;
+        // std::cerr << "Estimated radius in pixels: " << estimated_radius_in_pixels << std::endl;
+
+        Image temp_filtered_img;
+        temp_filtered_img.Allocate(temp_image.logical_x_dimension, temp_image.logical_y_dimension, true);
+        temp_filtered_img.ReturnCosineMaskBandpassResolution(pixel_size, objective_aperture_resolution, mask_falloff);
+
+        // Direct at the avg image first
+        for ( pixel_counter = 0; pixel_counter < int(result_array[2]); pixel_counter++ ) {
+            temp_filtered_img.real_values[pixel_counter] = aggregated_results[array_location].collated_pixel_sums[pixel_counter];
+        }
+
+        temp_filtered_img.ForwardFFT( );
+        temp_filtered_img.CosineRingMask(-1.0f, objective_aperture_resolution, mask_falloff);
+        temp_filtered_img.BackwardFFT( );
+
+        // Now filter, subtracting the means
+        // Direct at the avg image first
+        for ( pixel_counter = 0; pixel_counter < int(result_array[2]); pixel_counter++ ) {
+            aggregated_results[array_location].collated_mip_data[pixel_counter] -= temp_filtered_img.real_values[pixel_counter];
+            aggregated_results[array_location].collated_pixel_sums[pixel_counter] = temp_filtered_img.real_values[pixel_counter];
+        }
+
+        // Direct to the stdDev image
+        for ( pixel_counter = 0; pixel_counter < int(result_array[2]); pixel_counter++ ) {
+            temp_filtered_img.real_values[pixel_counter] = aggregated_results[array_location].collated_pixel_square_sums[pixel_counter];
+        }
+
+        temp_filtered_img.ForwardFFT( );
+        temp_filtered_img.CosineRingMask(-1.0f, objective_aperture_resolution, mask_falloff);
+        temp_filtered_img.BackwardFFT( );
+
+        // Now filter the stdDev
+        for ( pixel_counter = 0; pixel_counter < int(result_array[2]); pixel_counter++ ) {
+            aggregated_results[array_location].collated_mip_data[pixel_counter]          = (temp_filtered_img.real_values[pixel_counter] > 0.00001) ? aggregated_results[array_location].collated_mip_data[pixel_counter] / temp_filtered_img.real_values[pixel_counter] : 0.0f;
+            aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] = temp_filtered_img.real_values[pixel_counter];
+        }
+
+#endif
         for ( pixel_counter = 0; pixel_counter < int(result_array[2]); pixel_counter++ ) {
             temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_mip_data[pixel_counter];
         }
@@ -1706,13 +1776,19 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
 
         // loop until the found peak is below the threshold
 
+#ifdef CISTEM_TEST_FILTERED_MIP
+        int exclusion_radius = pixel_size / objective_aperture_resolution;
+#else
+        int exclusion_radius = input_reconstruction.logical_x_dimension / cistem::fraction_of_box_size_to_exclude_for_border + 1;
+#endif
+
         long nTrys = 0;
         while ( 1 == 1 ) {
             // look for a peak..
             nTrys++;
             //            wxPrintf("Trying the %ld'th peak\n",nTrys);
             // FIXME min-distance from edges would be better to set dynamically.
-            current_peak = scaled_mip.FindPeakWithIntegerCoordinates(0.0, FLT_MAX, input_reconstruction.logical_x_dimension / cistem::fraction_of_box_size_to_exclude_for_border + 1);
+            current_peak = scaled_mip.FindPeakWithIntegerCoordinates(0.0, FLT_MAX, exclusion_radius);
             if ( current_peak.value < expected_threshold )
                 break;
 

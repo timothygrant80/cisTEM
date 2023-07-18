@@ -28,6 +28,7 @@
  *
  *
  */
+#include <cistem_config.h>
 
 #ifdef ENABLEGPU
 #include "../../../gpu/gpu_core_headers.h"
@@ -35,12 +36,23 @@
 #include "../../../core/core_headers.h"
 #endif
 
-#include "../common/helper_functions.h"
+#include "../common/common.h"
 #include "disk_io_image.h"
 
-bool DoDiskIOImageTests(wxString hiv_images_80x80x10_filename, wxString temp_directory) {
+void DiskIOImageRunner(wxString hiv_images_80x80x10_filename, wxString temp_directory) {
 
-    bool passed = true, allPassed = true;
+    SamplesPrintTestStartMessage("Starting disk i/o tests: ", false);
+
+    TEST(DiskIOImageTests(hiv_images_80x80x10_filename, temp_directory));
+
+    SamplesPrintEndMessage( );
+
+    return;
+}
+
+bool DiskIOImageTests(wxString hiv_images_80x80x10_filename, wxString temp_directory) {
+
+    bool passed = true, all_passed = true;
 
     SamplesPrintTestStartMessage("Starting disk I/O image tests", false);
     //MRCFile input_file(std::string(hiv_image_80x80x1_filename.mb_str()), false);
@@ -69,7 +81,7 @@ bool DoDiskIOImageTests(wxString hiv_images_80x80x10_filename, wxString temp_dir
         passed = false;
     }
 
-    allPassed = allPassed && passed;
+    all_passed = passed ? all_passed : false;
     SamplesTestResult(passed);
 
     // At times, we may want to have information about the image, prior to reading
@@ -85,7 +97,7 @@ bool DoDiskIOImageTests(wxString hiv_images_80x80x10_filename, wxString temp_dir
     passed = (input_file.ReturnYSize( ) == 80) && passed;
     passed = (input_file.ReturnZSize( ) == 10) && passed;
     SamplesTestResult(passed);
-    allPassed = allPassed && passed;
+    all_passed = passed ? all_passed : false;
 
     // We can do a little bit more with MRC files, particularly modifying the
     // header information. Here, we'll set the pixel size to 2
@@ -105,7 +117,7 @@ bool DoDiskIOImageTests(wxString hiv_images_80x80x10_filename, wxString temp_dir
     passed = (DoublesAreAlmostTheSame(test_image.real_values[0], -0.340068) != false) && passed;
     passed = (DoublesAreAlmostTheSame(test_image.real_values[test_image.real_memory_allocated - 3], 0.637069) != false) && passed;
 
-    allPassed = allPassed && passed;
+    all_passed = passed ? all_passed : false;
     SamplesTestResult(passed);
 
     // if (passed == false) {
@@ -131,8 +143,8 @@ bool DoDiskIOImageTests(wxString hiv_images_80x80x10_filename, wxString temp_dir
 
     input_file.SetPixelSize(1.0);
 
-    passed    = DoublesAreAlmostTheSame(input_file.ReturnPixelSize( ), 1.0) == true;
-    allPassed = allPassed && passed;
+    passed     = DoublesAreAlmostTheSame(input_file.ReturnPixelSize( ), 1.0) == true;
+    all_passed = passed ? all_passed : false;
     SamplesTestResult(passed);
 
     // We'll skip the quick and dirty write slices, and now write a temporary file
@@ -151,7 +163,7 @@ bool DoDiskIOImageTests(wxString hiv_images_80x80x10_filename, wxString temp_dir
     } catch ( ... ) {
         passed = false;
     }
-    allPassed = allPassed && passed;
+    all_passed = passed ? all_passed : false;
     SamplesTestResult(passed);
 
     // TODO read in both tmp images, and check that the pixel size has been
@@ -160,7 +172,7 @@ bool DoDiskIOImageTests(wxString hiv_images_80x80x10_filename, wxString temp_dir
     output_file.SetPixelSize(2.0);
     passed = (input_file.ReturnPixelSize( ) == 1.0) &&
              (output_file.ReturnPixelSize( ) == 2.0);
-    allPassed = allPassed && passed;
+    all_passed = passed ? all_passed : false;
     SamplesTestResult(passed);
 
     // TODO remove the tmp images from disk
@@ -172,12 +184,12 @@ bool DoDiskIOImageTests(wxString hiv_images_80x80x10_filename, wxString temp_dir
     } catch ( ... ) {
         passed = false;
     }
-    allPassed = allPassed && passed;
+    all_passed = passed ? all_passed : false;
     SamplesTestResult(passed);
     // TODO call end test and ensure the printout indicates this test
     // (disk_io_image) has pass/failed.
     SamplesBeginTest("disk I/O images overall", passed);
-    SamplesPrintResult(allPassed, __LINE__);
+    SamplesPrintResult(all_passed, __LINE__);
     wxPrintf("\n\n");
-    return allPassed;
+    return all_passed;
 }

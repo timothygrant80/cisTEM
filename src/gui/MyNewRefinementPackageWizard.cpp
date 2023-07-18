@@ -3,6 +3,10 @@
 #include <wx/arrimpl.cpp> // this is a magic incantation which must be done!
 WX_DEFINE_OBJARRAY(ArrayofNewRefinementPackageWizardClassSelection);
 
+#ifdef USE_FP16_PARTICLE_STACKS
+#warning "Using half-precision particle stacks"
+#endif
+
 extern MyRefinementPackageAssetPanel* refinement_package_asset_panel;
 extern MyParticlePositionAssetPanel*  particle_position_asset_panel;
 extern MyImageAssetPanel*             image_asset_panel;
@@ -1083,7 +1087,9 @@ void MyNewRefinementPackageWizard::OnFinished(wxWizardEvent& event) {
         // open the output stack
 
         MRCFile output_stack(output_stack_filename.GetFullPath( ).ToStdString( ), true);
-
+#ifdef USE_FP16_PARTICLE_STACKS
+        output_stack.SetOutputToFP16( );
+#endif
         // setup the refinement..
 
         long refinement_id = main_frame->current_project.database.ReturnHighestRefinementID( ) + 1;

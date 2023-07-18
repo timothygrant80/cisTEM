@@ -25,7 +25,7 @@ void NumericTextFile::Open(wxString Filename, long wanted_access_type, long want
     records_per_line = wanted_records_per_line;
     text_filename    = Filename;
 
-    do_nothing = text_filename.IsSameAs("/dev/null");
+    do_nothing = StartsWithDevNull(text_filename.ToStdString( ));
 
     if ( ! do_nothing ) {
         if ( access_type == OPEN_TO_READ ) {

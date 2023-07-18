@@ -3,6 +3,7 @@
 class AnglesAndShifts {
 
   public:
+    // FIXME: This should probably be private as changing it will not update the euler angles stored
     RotationMatrix euler_matrix;
 
     AnglesAndShifts( );

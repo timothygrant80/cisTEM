@@ -117,6 +117,36 @@ void StopWatch::mark_entry_or_exit_point(bool threadsafe) {
     }
 }
 
+float StopWatch::get_ratio_of_times(std::string event_1, std::string event_2, bool threadsafe) {
+    if ( threadsafe && ReturnThreadNumberOfCurrentThread( ) != 0 )
+        return 0.0f;
+
+    bool  found_event_1 = false;
+    bool  found_event_2 = false;
+    float time_1;
+    float time_2;
+    for ( int i = 0; i < event_names.size( ); i++ ) {
+        if ( event_names[i] == event_1 ) {
+            time_1        = elapsed_times[i];
+            found_event_1 = true;
+        }
+        if ( event_names[i] == event_2 ) {
+            time_2        = elapsed_times[i];
+            found_event_2 = true;
+        }
+    }
+
+    if ( ! found_event_1 ) {
+        wxPrintf("Event 1 %s not found in Stopwatch at line %d in file %s\n", event_1.c_str( ), __LINE__, __FILE__);
+        exit(-1);
+    }
+    if ( ! found_event_2 ) {
+        wxPrintf("Event 2 %s not found in Stopwatch at line %d in file %s\n", event_2.c_str( ), __LINE__, __FILE__);
+        exit(-1);
+    }
+    return time_1 / time_2;
+}
+
 void StopWatch::start(std::string name, bool threadsafe) {
     // Typically we only want to track a single thread, which is default. Override this with threadsafe = false;
     if ( threadsafe && ReturnThreadNumberOfCurrentThread( ) != 0 )

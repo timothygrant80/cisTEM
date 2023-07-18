@@ -6,7 +6,7 @@
         "env": {
             "cuda_dir": "/usr/local/cuda",
             "build_dir": "${workspaceFolder}/build",
-            "compile_cores": "24",
+            "compile_cores": "16",
             "common_flags": " --enable-experimental --enable-openmp",
             "experimental_algo_flags": "--enable-fp16-particlestacks --enable-smooth-mip --disable-multiple-global-refinements",
             "common_optional_programs": ""

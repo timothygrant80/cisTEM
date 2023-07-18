@@ -5,7 +5,7 @@
 
 // The timing that ctffind originally tracks is always on, by direct reference to cistem_timer::StopWatch
 // The profiling for development is under conrtol of --enable-profiling.
-#ifdef PROFILING
+#ifdef CISTEM_PROFILING
 using namespace cistem_timer;
 #else
 using namespace cistem_timer_noop;

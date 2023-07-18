@@ -1,4 +1,7 @@
 #include "../../core/core_headers.h"
+#include "../../gpu/DeviceManager.h"
+#include "../../gpu/GpuImage.h"
+#include "../../gpu/TemplateMatchingCore.h"
 
 class
         GpuUtilTest : public MyApp {
@@ -399,8 +402,8 @@ void GpuUtilTest::createImageAddOne( ) {
             // Re-use the image and library contexts - this needs to have debug asserts added
             d_image_full.CopyHostToDevice( );
 
-            cpu_work_full.MultiplyByConstant(PIf);
-            d_image_full.MultiplyByConstant(PIf);
+            cpu_work_full.MultiplyByConstant(pi_v<float>);
+            d_image_full.MultiplyByConstant(pi_v<float>);
             d_image_full.Wait( );
 
             wxPrintf("Real sums are cpu: %f gpu: %f\n", cpu_work_full.ReturnSumOfRealValues( ), d_image_full.ReturnSumOfRealValues( ));
@@ -492,7 +495,7 @@ void GpuUtilTest::createImageAddOne( ) {
         //	GpuImage d_zeros;
         //
         //	wxPrintf("Set up a GpuImage with size %d\n", d_zeros.logical_x_dimension);
-        //	d_zeros.CopyFromCpuImage(zeros);
+        //	d_zeros.Init(zeros);
         //
         //
         //	wxPrintf("copied the Image into the GpuImage with size %d\n", d_zeros.logical_x_dimension);

@@ -1,5 +1,7 @@
 //  \brief  Object for manipulating MRC Files..
 //
+#ifndef _SRC_CORE_MRC_FILE_H_
+#define _SRC_CORE_MRC_FILE_H_
 
 class MRCFile : public AbstractImageFile {
 
@@ -46,6 +48,7 @@ class MRCFile : public AbstractImageFile {
     bool OpenFile(std::string filename, bool overwrite, bool wait_for_file_to_exist = false, bool check_only_the_first_image = false, int eer_super_res_factor = 1, int eer_frames_per_image = 0);
     void CloseFile( );
     void FlushFile( );
+    void SetOutputToFP16( );
 
     inline void ReadSliceFromDisk(int slice_number, float* output_array) { ReadSlicesFromDisk(slice_number, slice_number, output_array); }
 
@@ -63,4 +66,10 @@ class MRCFile : public AbstractImageFile {
     void  SetPixelSize(float wanted_pixel_size);
 
     inline void SetDensityStatistics(float wanted_min, float wanted_max, float wanted_mean, float wanted_rms) { my_header.SetDensityStatistics(wanted_min, wanted_max, wanted_mean, wanted_rms); }
+
+    inline bool HasSameDimensionsAs(MRCFile& other_file) {
+        return (ReturnXSize( ) == other_file.ReturnXSize( ) && ReturnYSize( ) == other_file.ReturnYSize( ) && ReturnZSize( ) == other_file.ReturnZSize( ));
+    }
 };
+
+#endif // _SRC_CORE_MRC_FILE_H_

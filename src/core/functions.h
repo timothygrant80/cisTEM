@@ -622,3 +622,19 @@ double cisTEM_erfcinv(double x);
 bool StripEnclosingSingleQuotesFromString(wxString& string_to_strip); // returns true if it was done, false if first and last characters are not '
 
 void ActivateMKLDebugForNonIntelCPU( ); // will activate MKL debug environment variable if running on an AMD that supports high level features.  This works on my version on intel MKL - it is disabled in the released MKL (although setting it should not break anything)
+
+inline bool StartsWithDevNull(const std::string& wanted_filename) {
+    if ( wanted_filename.size( ) > 8 ) {
+        // It is long enough to point to /dev/null/...
+        constexpr const char* dev_null{"/dev/null"};
+        for ( int iChar = 0; iChar < 9; iChar++ ) {
+            if ( wanted_filename[iChar] != dev_null[iChar] ) {
+                return false;
+            }
+        }
+    }
+    else {
+        return false;
+    }
+    return true;
+}

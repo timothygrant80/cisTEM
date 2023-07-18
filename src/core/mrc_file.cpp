@@ -1,5 +1,7 @@
 #include "core_headers.h"
 
+#include "../../include/ieee-754-half/half.hpp"
+
 MRCFile::MRCFile( ) {
     rewrite_header_on_close                         = false;
     max_number_of_seconds_to_wait_for_file_to_exist = 30;
@@ -19,6 +21,11 @@ MRCFile::MRCFile(std::string filename, bool overwrite, bool wait_for_file_to_exi
     max_number_of_seconds_to_wait_for_file_to_exist = 30;
     my_file                                         = new std::fstream;
     OpenFile(filename, overwrite, wait_for_file_to_exist);
+}
+
+void MRCFile::SetOutputToFP16( ) {
+    MyDebugAssertTrue(my_file->is_open( ), "File not open!");
+    my_header.SetMode(12);
 }
 
 MRCFile::~MRCFile( ) {
@@ -48,8 +55,7 @@ bool MRCFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_fo
     //	MyDebugAssertFalse(my_file->is_open(), "File Already Open: %s",wanted_filename);
     CloseFile( );
 
-    do_nothing = (wanted_filename.compare("/dev/null") == 0);
-
+    do_nothing = StartsWithDevNull(wanted_filename);
     if ( do_nothing ) {
         filename = wanted_filename;
     }
@@ -129,6 +135,9 @@ void MRCFile::SetPixelSize(float wanted_pixel_size) {
 }
 
 void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float* output_array) {
+
+    using half = half_float::half;
+
     if ( ! do_nothing ) {
         MyDebugAssertTrue(my_file->is_open( ), "File not open!");
         MyDebugAssertTrue(start_slice <= ReturnNumberOfSlices( ), "Start slice number larger than total slices!");
@@ -244,6 +253,16 @@ void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float* output_a
             case 2:
                 my_file->read((char*)output_array, records_to_read * 4);
                 break;
+
+            // 2-byte real
+            case 12: {
+                std::vector<half> temp_half_array(records_to_read);
+                my_file->read((char*)temp_half_array.data( ), records_to_read * 2);
+                for ( long counter = 0; counter < records_to_read; counter++ ) {
+                    // float() operator overloaded in half_float namespace
+                    output_array[counter] = float(temp_half_array[counter]);
+                }
+            } break;
 
             // unsigned 2-byte integers
             case 6: {
@@ -417,6 +436,17 @@ void MRCFile::WriteSlicesToDisk(int start_slice, int end_slice, float* input_arr
             case 2:
                 my_file->write((char*)input_array, records_to_read * 4);
                 break;
+
+            case 12: {
+                std::vector<half> temp_half_array(records_to_read);
+
+                for ( long counter = 0; counter < records_to_read; counter++ ) {
+                    temp_half_array[counter] = half(input_array[counter]);
+                }
+
+                my_file->write((char*)temp_half_array.data( ), records_to_read * 2);
+                break;
+            }
 
             default: {
                 MyPrintfRed("Error: mode %i MRC files not currently supported\n", my_header.Mode( ));

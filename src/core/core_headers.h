@@ -47,9 +47,15 @@ typedef struct CurvePoint {
 #include <unordered_map>
 #include <random>
 #include <functional>
+#ifdef __INTEL_COMPILER
 // These are in $MKLROOT/include
 #include <fftw/fftw3.h>
 #include <fftw/fftw3_mkl.h>
+#else
+// These should'nt be used, but are here for completeness.
+// See note on licensing.
+#include <fftw3.h>
+#endif
 #include <math.h>
 #include <chrono>
 #include "sqlite/sqlite3.h"

@@ -9129,7 +9129,7 @@ void Image::CalculatePhaseCrossCorrelationImageWith(Image& other_image, Peak& fo
     vmcMulByConj(real_memory_allocated / 2, reinterpret_cast<MKL_Complex8*>(complex_values), reinterpret_cast<MKL_Complex8*>(other_image.complex_values), reinterpret_cast<MKL_Complex8*>(complex_values), VML_EP | VML_FTZDAZ_ON | VML_ERRMODE_IGNORE);
 #else
     for ( pixel_counter = 0; pixel_counter < real_memory_allocated / 2; pixel_counter++ ) {
-        complex_values[pixel_counter] *= conj(other_image->complex_values[pixel_counter]);
+        complex_values[pixel_counter] *= std::conj(other_image.complex_values[pixel_counter]);
     }
 #endif
 

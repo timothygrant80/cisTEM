@@ -33,9 +33,9 @@ MyAlignMoviesPanel::MyAlignMoviesPanel(wxWindow* parent)
     ExpertPanel->SetMinSize(input_size);
     ExpertPanel->SetSize(input_size);
 
-#ifndef SHOW_CISTEM_GPU_OPTIONS
-    use_gpu_checkboxUnblur->Show(false);
-#endif
+    // #ifndef SHOW_CISTEM_GPU_OPTIONS
+    //     use_gpu_checkboxUnblur->Show(false);
+    // #endif
 
     ResetDefaults( );
 

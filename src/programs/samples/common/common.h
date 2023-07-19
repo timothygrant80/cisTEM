@@ -23,7 +23,7 @@ inline wxString CheckForReferenceImages( ) {
 
         wxPrintf("Failed to resolve the (CISTEM_REF_IMAGES) environment variable.\n", cistem_ref_dir);
         wxPrintf("We can't run the test without images!\n\n");
-        exit(-1);
+        exit(0);
     }
 
     return cistem_ref_dir;

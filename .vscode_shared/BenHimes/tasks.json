@@ -65,14 +65,14 @@
             "command": "cd ${build_dir}/intel-gpu-debug-deterministic-profile && make -j${compile_cores}"
         },
         {
-            "label": "CONFIG intel,gpu,profile",
+            "label": "CONFIG intel,gpu,profile,static",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/intel-gpu-profile && cd ${build_dir}/intel-gpu-profile && CC=icc CXX=icpc ../../configure --enable-profiling --with-cuda=${cuda_dir} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+            "command": "mkdir -p ${build_dir}/intel-gpu-profile-static && cd ${build_dir}/intel-gpu-profile-static && CC=icc CXX=icpc ../../configure --enable-warnings --enable-profiling --enable-staticmode --with-cuda=${cuda_dir} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
         },
         {
-            "label": "BUILD intel,gpu,profile",
+            "label": "BUILD intel,gpu,profile,static",
             "type": "shell",
-            "command": "cd ${build_dir}/intel-gpu-profile && make -j${compile_cores}"
+            "command": "cd ${build_dir}/intel-gpu-profile-static && make -j${compile_cores}"
         },
         {
             "label": "CONFIG intel,gpu,debug",

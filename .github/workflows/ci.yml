@@ -124,5 +124,26 @@ jobs:
         chmod +x samples_functional_testing
         ./samples_functional_testing
 
-    # TODO add unit test runner after next PR
+  unit_tests:
+    strategy:
+      fail-fast: true
+      matrix:
+        compiler: [icpc,gcc,clang]
+    name: Unit Tests
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v2
+      with:
+        name: cistem_binaries_${{ matrix.compiler }}
+    - name: Install fftw3
+      if: ${{ matrix.compiler=='gcc' || matrix.compiler=='clang' }}
+      run: sudo apt-get install -y libfftw3-dev 
+    - name: run unit tests
+      continue-on-error: false
+      run: |
+        chmod +x unit_test_runner
+        ./unit_test_runner
+
 

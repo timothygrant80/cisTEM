@@ -64,7 +64,7 @@ class
     ArrayOfAggregatedTemplateResults aggregated_results;
     bool                             is_rotated_by_90 = false;
 
-    float GetMaxJobWaitTimeInSeconds( ) { return 120.0f; }
+    float GetMaxJobWaitTimeInSeconds( ) { return 360.0f; }
 
     float pixel_size = 1.0f;
 

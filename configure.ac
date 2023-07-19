@@ -70,12 +70,12 @@ CPP_STANDARD=17
 # fi
 
 # check to see if compiler warnings are desired.
-
-AC_ARG_ENABLE([warnings], AS_HELP_STRING([--disable compiler warnings], [Default=false]), 
+# no value or --enable-warnings result in warnings on, --disable-warnings results in warnings off
+AC_ARG_ENABLE([warnings], AS_HELP_STRING([--disable-warnings], [Default=false]), 
 [
 	# If flag do this
 	if test "x$enableval" = "xno" ; then
-		WARNINGS_ON="-w"		
+		WARNINGS_ON=""		
 	else
 		if test "x$CXX" = "xicpc"; then		
 			WARNINGS_ON="-w2"

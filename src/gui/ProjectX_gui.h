@@ -4225,15 +4225,15 @@ class DisplayFrameParent : public wxFrame
 		wxMenu* DisplayFileMenu;
 		wxMenuItem* DisplayFileOpen;
 		wxMenuItem* DisplayCloseTab;
+		wxMenuItem* SelectOpenTxt;
+		wxMenuItem* SelectSaveTxt;
+		wxMenuItem* SelectSaveTxtAs;
 		wxMenuItem* DisplayExit;
 		wxMenu* DisplayLabelMenu;
 		wxMenuItem* LabelLocationNumber;
 		wxMenu* DisplaySelectMenu;
 		wxMenuItem* SelectImageSelectionMode;
 		wxMenuItem* SelectCoordsSelectionMode;
-		wxMenuItem* SelectOpenPLT;
-		wxMenuItem* SelectSavePLT;
-		wxMenuItem* SelectSavePLTAs;
 		wxMenuItem* SelectInvertSelection;
 		wxMenuItem* SelectClearSelection;
 		wxMenu* DisplayOptionsMenu;
@@ -4250,13 +4250,13 @@ class DisplayFrameParent : public wxFrame
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnFileOpenClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnCloseTabClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnOpenTxtClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnSaveTxtClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnSaveTxtAsClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnExitClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnLocationNumberClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnImageSelectionModeClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnCoordsSelectionModeClick( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnOpenPLTClick( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnSavePLTClick( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnSavePLTAsClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnInvertSelectionClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnClearSelectionClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnSetPointSizeClick( wxCommandEvent& event ) { event.Skip(); }
@@ -4264,6 +4264,7 @@ class DisplayFrameParent : public wxFrame
 		virtual void OnSingleImageModeClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void On7BitGreyValuesClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnShowSelectionDistancesClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnShowResolution( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnDocumentationClick( wxCommandEvent& event ) { event.Skip(); }
 
 

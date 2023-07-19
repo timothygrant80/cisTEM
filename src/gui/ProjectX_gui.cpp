@@ -14735,6 +14735,20 @@ DisplayFrameParent::DisplayFrameParent( wxWindow* parent, wxWindowID id, const w
 
 	DisplayFileMenu->AppendSeparator();
 
+	SelectOpenTxt = new wxMenuItem( DisplayFileMenu, wxID_ANY, wxString( wxT("Open Text File") ) , wxEmptyString, wxITEM_NORMAL );
+	DisplayFileMenu->Append( SelectOpenTxt );
+	SelectOpenTxt->Enable( false );
+
+	SelectSaveTxt = new wxMenuItem( DisplayFileMenu, wxID_ANY, wxString( wxT("Save Text File") ) , wxEmptyString, wxITEM_NORMAL );
+	DisplayFileMenu->Append( SelectSaveTxt );
+	SelectSaveTxt->Enable( false );
+
+	SelectSaveTxtAs = new wxMenuItem( DisplayFileMenu, wxID_ANY, wxString( wxT("Save Text File As") ) , wxEmptyString, wxITEM_NORMAL );
+	DisplayFileMenu->Append( SelectSaveTxtAs );
+	SelectSaveTxtAs->Enable( false );
+
+	DisplayFileMenu->AppendSeparator();
+
 	DisplayExit = new wxMenuItem( DisplayFileMenu, wxID_ANY, wxString( wxT("Exit") ) , wxEmptyString, wxITEM_NORMAL );
 	DisplayFileMenu->Append( DisplayExit );
 
@@ -14757,20 +14771,6 @@ DisplayFrameParent::DisplayFrameParent( wxWindow* parent, wxWindowID id, const w
 	SelectCoordsSelectionMode = new wxMenuItem( DisplaySelectMenu, wxID_ANY, wxString( wxT("Coords Selection Mode") ) , wxEmptyString, wxITEM_CHECK );
 	DisplaySelectMenu->Append( SelectCoordsSelectionMode );
 	SelectCoordsSelectionMode->Enable( false );
-
-	DisplaySelectMenu->AppendSeparator();
-
-	SelectOpenPLT = new wxMenuItem( DisplaySelectMenu, wxID_ANY, wxString( wxT("Open PLT") ) , wxEmptyString, wxITEM_NORMAL );
-	DisplaySelectMenu->Append( SelectOpenPLT );
-	SelectOpenPLT->Enable( false );
-
-	SelectSavePLT = new wxMenuItem( DisplaySelectMenu, wxID_ANY, wxString( wxT("Save PLT") ) , wxEmptyString, wxITEM_NORMAL );
-	DisplaySelectMenu->Append( SelectSavePLT );
-	SelectSavePLT->Enable( false );
-
-	SelectSavePLTAs = new wxMenuItem( DisplaySelectMenu, wxID_ANY, wxString( wxT("Save PLT As") ) , wxEmptyString, wxITEM_NORMAL );
-	DisplaySelectMenu->Append( SelectSavePLTAs );
-	SelectSavePLTAs->Enable( false );
 
 	DisplaySelectMenu->AppendSeparator();
 
@@ -14836,13 +14836,13 @@ DisplayFrameParent::DisplayFrameParent( wxWindow* parent, wxWindowID id, const w
 	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( DisplayFrameParent::OnUpdateUI ) );
 	DisplayFileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnFileOpenClick ), this, DisplayFileOpen->GetId());
 	DisplayFileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnCloseTabClick ), this, DisplayCloseTab->GetId());
+	DisplayFileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnOpenTxtClick ), this, SelectOpenTxt->GetId());
+	DisplayFileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSaveTxtClick ), this, SelectSaveTxt->GetId());
+	DisplayFileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSaveTxtAsClick ), this, SelectSaveTxtAs->GetId());
 	DisplayFileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnExitClick ), this, DisplayExit->GetId());
 	DisplayLabelMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnLocationNumberClick ), this, LabelLocationNumber->GetId());
 	DisplaySelectMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnImageSelectionModeClick ), this, SelectImageSelectionMode->GetId());
 	DisplaySelectMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnCoordsSelectionModeClick ), this, SelectCoordsSelectionMode->GetId());
-	DisplaySelectMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnOpenPLTClick ), this, SelectOpenPLT->GetId());
-	DisplaySelectMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSavePLTClick ), this, SelectSavePLT->GetId());
-	DisplaySelectMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSavePLTAsClick ), this, SelectSavePLTAs->GetId());
 	DisplaySelectMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnInvertSelectionClick ), this, SelectInvertSelection->GetId());
 	DisplaySelectMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnClearSelectionClick ), this, SelectClearSelection->GetId());
 	DisplayOptionsMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSetPointSizeClick ), this, OptionsSetPointSize->GetId());
@@ -14850,6 +14850,7 @@ DisplayFrameParent::DisplayFrameParent( wxWindow* parent, wxWindowID id, const w
 	DisplayOptionsMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSingleImageModeClick ), this, OptionsSingleImageMode->GetId());
 	DisplayOptionsMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::On7BitGreyValuesClick ), this, Options7BitGreyValues->GetId());
 	DisplayOptionsMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnShowSelectionDistancesClick ), this, OptionsShowSelectionDistances->GetId());
+	DisplayOptionsMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnShowResolution ), this, OptionsShowResolution->GetId());
 	DisplayHelpMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnDocumentationClick ), this, HelpAbout->GetId());
 }
 

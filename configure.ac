@@ -488,7 +488,8 @@ if test "xis_git_new_enough" == "xno" ; then
   	AC_MSG_NOTICE([your version of git is too old, you can updated on Centos 7 with sudo yum -y install https://packages.endpoint.com/rhel/7/os/x86_64/endpoint-repo-1.7-1.x86_64.rpm
   	])
 else
-	
+
+set_git_versioning_defaults="no"
 AC_CHECK_FILE("$TOPSRCDIR/.git/HEAD",
   [
     if test "x$GIT_CHECK" == "xyes"; then 
@@ -506,13 +507,36 @@ AC_CHECK_FILE("$TOPSRCDIR/.git/HEAD",
       AC_DEFINE_UNQUOTED([CISTEM_TIME_READABLE],["`git show --no-patch --no-notes --pretty='%ci' --date=format:%y%m%d%H%M%S`"], [time of build readable]) 
       
     else
-      AC_MSG_NOTICE([We DO NOT have git on path])
-      AC_DEFINE(CISTEM_VERSION_TEXT, "2.0.0-alpha", [A hard coded version moved in from defines.h]) 
+      set_git_versioning_defaults="yes"
+
     fi
   ], 
   [
-      AC_DEFINE(CISTEM_VERSION_TEXT, "2.0.0-alpha", [A hard coded version moved in from defines.h]) 
+    set_git_versioning_defaults="yes"
   ])
+fi
+
+# Confirm we found the proper git versioning information. This is primarly intended for developers who are actively using multiple versions
+# or who are distributing test debug builds to users, such that they may easily confirm what version they are using from the 
+# overview panel. 
+if test "x$set_git_versioning_defaults" = "xyes" ; then
+  # Check to see if the user has specified the versioning information.
+  if test "x$CISTEM_VERSION_TEXT" = "x" ; then
+    AC_MSG_NOTICE([CISTEM_VERSION_TEXT not specified, using default])
+    AC_DEFINE(CISTEM_VERSION_TEXT, "undefined", [undefined_version]) 
+  fi
+  if test "x$CISTEM_TIME_YYMMDDHHMMSS" = "x" ; then
+    AC_MSG_NOTICE([CISTEM_TIME_YYMMDDHHMMSS not specified, using default])
+    AC_DEFINE(CISTEM_TIME_YYMMDDHHMMSS, "undefined", [undefined_time])
+  fi
+  if test "x$CISTEM_TIME_READABLE" = "x" ; then
+    AC_MSG_NOTICE([CISTEM_TIME_READABLE not specified, using default])
+    AC_DEFINE(CISTEM_TIME_READABLE, "undefined", [undefined_time_readable])
+  fi
+  if test "x$CISTEM_CURRENT_BRANCH" = "x" ; then
+    AC_MSG_NOTICE([CISTEM_CURRENT_BRANCH not specified, using default])
+    AC_DEFINE(CISTEM_CURRENT_BRANCH, "undefined", [undefined_branch])
+  fi
 fi
 
 

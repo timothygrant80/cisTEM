@@ -17,15 +17,18 @@ jobs:
           - compiler: icpc
             cxx: icpc
             cc: icc
-            staticmode: "--enable-staticmode --enable-openmp"
+            config_options: "--enable-staticmode --enable-openmp --enable-experimental --enable-samples --with-wx-config=/opt/WX/intel-static/bin/wx-config"
+            source_cmd: ". /opt/intel/oneapi/setvars.sh"
           - compiler: gcc
             cxx: g++
             cc: gcc
-            staticmode: "--enable-staticmode --enable-openmp"
+            config_options: "--enable-staticmode --enable-openmp --enable-experimental --enable-samples  --with-wx-config=wx-config"
+            source_cmd: ""
           - compiler: clang
             cxx: clang++
             cc: clang
-            staticmode: ""
+            config_options: "--enable-experimental --enable-samples  --with-wx-config=wx-config"
+            source_cmd: ""
           
     runs-on: ubuntu-latest
     container: cistemdashorg/cistem_build_env:ci_${{ matrix.compiler }}
@@ -47,13 +50,14 @@ jobs:
         cd build/${{ matrix.compiler }} 
         echo $CC
         echo $CXX
-        # FIXME: we should be able to get rid of enable-samples as these are default
-        ../../configure  --enable-experimental ${{matrix.staticmode}} --with-wx-config=wx-config  --enable-samples 
+        ${{ matrix.source_cmd }}
+        ../../configure ${{matrix.config_options}}
         VERSION=$(cat config.log | grep CISTEM_VERSION_TEXT | cut -d' ' -f3 | tr -d '"')
         echo "::set-output name=version::$VERSION" 
     - uses: ammaraskar/gcc-problem-matcher@master
     - name: make 
       run: |
+        ${{ matrix.source_cmd }}
         cd build/${{ matrix.compiler }}
         make -j2
         cp ../../scripts/testing/test_and_benchmark.sh src/
@@ -82,9 +86,6 @@ jobs:
       uses: actions/download-artifact@v2
       with:
         name: cistem_binaries_${{ matrix.compiler }}
-    # - name: Install fftw3
-    #   if: ${{ matrix.compiler=='gcc' || matrix.compiler=='clang' }}
-    #   run: sudo apt-get install -y libfftw3-dev
     - name: Fix permissions
       run: chmod +x *
     - name: test console_test
@@ -111,9 +112,7 @@ jobs:
       uses: actions/download-artifact@v2
       with:
         name: cistem_binaries_${{ matrix.compiler }}
-    # - name: Install fftw3
-    #   if: ${{ matrix.compiler=='gcc' || matrix.compiler=='clang' }}
-    #   run: sudo apt-get install -y libfftw3-dev 
+
     - name: test samples_functional_testing
       continue-on-error: false
       run: |

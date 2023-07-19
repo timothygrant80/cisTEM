@@ -1,6 +1,9 @@
 #ifndef __DISPLAYFRAME_H__
 #define __DISPLAYFRAME_H__
 
+// Forward declare DisplayPanel
+class DisplayPanel;
+
 class DisplayFrame : public DisplayFrameParent {
   public:
     // Constructor/destructor
@@ -27,9 +30,9 @@ class DisplayFrame : public DisplayFrameParent {
     // Select menu
     void OnImageSelectionModeClick(wxCommandEvent& event);
     void OnCoordsSelectionModeClick(wxCommandEvent& event);
-    void OnOpenPLTClick(wxCommandEvent& event);
-    void OnSavePLTClick(wxCommandEvent& event);
-    void OnSavePLTAsClick(wxCommandEvent& event);
+    void OnOpenTxtClick(wxCommandEvent& event);
+    void OnSaveTxtClick(wxCommandEvent& event);
+    void OnSaveTxtAsClick(wxCommandEvent& event);
     void OnInvertSelectionClick(wxCommandEvent& event);
     void OnClearSelectionClick(wxCommandEvent& event);
 
@@ -39,6 +42,7 @@ class DisplayFrame : public DisplayFrameParent {
     void OnSingleImageModeClick(wxCommandEvent& event);
     void On7BitGreyValuesClick(wxCommandEvent& event);
     void OnShowSelectionDistancesClick(wxCommandEvent& event);
+    void OnShowResolution(wxCommandEvent& event);
 
     // Help menu
     void OnDocumentationClick(wxCommandEvent& event);
@@ -46,6 +50,9 @@ class DisplayFrame : public DisplayFrameParent {
   private:
     bool is_fullscreen;
     bool image_is_open;
+    bool LoadCoords(wxString current_line, long& x, long& y, long& image_number);
+    bool LoadSelections(wxString current_line);
+    void ClearTextFileFromPanel( );
 };
 
 #endif

@@ -19,13 +19,14 @@
 #define CAN_MOVE_TABS 16384
 #define DRAW_IMAGE_SEPARATOR 32768
 #define KEEP_TABS_LINKED_IF_POSSIBLE 65536
-#define CAN_SELECT_COORDS 131072
 
 #define LOCAL_GREYS 0
 #define GLOBAL_GREYS 1
 #define MANUAL_GREYS 2
 #define AUTO_GREYS 3
 
+// These are only used for the cisTEM_display program
+// Used as a toggle for picking images and coords
 #define COORDS_PICK 0
 #define IMAGES_PICK 1
 
@@ -91,7 +92,7 @@ class
     void ChangeFileForTabNumber(int wanted_tab_number, wxString wanted_filename, wxString wanted_tab_title, wxArrayLong* wanted_included_image_numbers = NULL);
 
     void SetTabNameSaved( );
-    void SetTabNameUnSaved( );
+    void SetTabNameUnsaved( );
     void RefreshTabName( );
 
     void OpenImage(Image* image_to_view, wxString wanted_tab_title, bool take_ownership = false, wxArrayLong* wanted_included_image_numbers = NULL);
@@ -275,21 +276,7 @@ class
     bool SetGlobalGreys( );
 
     wxString short_image_filename;
-    wxString short_plt_filename;
-    wxString short_waypoints_filename;
-
-    //		char Filename[420];
-    //		char PLTFilename[420];
-    //		char WaypointsFilename[420];
-
-    //	TigrisImage first_header;
-    //	TigrisImage image_memory_buffer[5000];
-
-    //	long image_format;
-
-    long original_number_of_images;
-    long original_x_size;
-    long original_y_size;
+    wxString short_txt_filename;
 
     long current_location;
     long blue_selection_square_location;
@@ -350,11 +337,8 @@ class
     bool show_crosshair;
     bool single_image;
 
-    bool plt_is_saved;
-    bool have_plt_filename;
-
-    bool waypoints_is_saved;
-    bool have_waypoints_filename;
+    bool txt_is_saved;
+    bool have_txt_filename;
 
     bool something_is_being_grabbed;
     long selected_filament_number;

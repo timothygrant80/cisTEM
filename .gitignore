@@ -26,3 +26,4 @@ RemoteSystemsTempFiles
 devcontainer.json
 cistem_config.in*
 scripts/testing/post_format_test.cpp
+src/ext/

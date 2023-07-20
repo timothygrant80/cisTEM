@@ -79,9 +79,6 @@ class
     bool                  popup_exists;
     DisplayPopup*         popup;
     DisplayNotebookPanel* no_notebook_panel;
-    int                   x_size;
-    int                   y_size;
-    int                   number_of_frames;
 
     DisplayPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
 
@@ -128,6 +125,7 @@ class
     void ChangeLocation(wxCommandEvent& event);
     void ChangeScaling(wxCommandEvent& event);
     void OnHighQuality(wxCommandEvent& event);
+    void OnMiddleUp(wxCommandEvent& event);
 
     DisplayNotebookPanel* ReturnCurrentPanel( );
 
@@ -218,7 +216,6 @@ class
     void SetImageNotSelected(long wanted_image, bool refresh = true);
     void ToggleImageSelected(long wanted_image, bool refresh = true);
     void ClearSelection(bool refresh = true);
-    void CalculateIntegration( );
 
     void OnPaint(wxPaintEvent& evt);
     void OnEraseBackground(wxEraseEvent& event);
@@ -226,6 +223,7 @@ class
     void OnLeftDown(wxMouseEvent& event);
     void OnRightDown(wxMouseEvent& event);
     void OnRightUp(wxMouseEvent& event);
+    void OnMiddleUp(wxMouseEvent& event);
     void OnMotion(wxMouseEvent& event);
     void OnLeaveWindow(wxMouseEvent& event);
 
@@ -333,6 +331,8 @@ class
 
     int  single_image_x;
     int  single_image_y;
+    long old_mouse_x;
+    long old_mouse_y;
     bool show_label;
     bool show_crosshair;
     bool single_image;
@@ -361,7 +361,7 @@ class
 		void OnLeftDown(wxMouseEvent& event);
 	    void OnLeftUp(wxMouseEvent& event);
 
-		void OnMiddleUp(wxMouseEvent& event);
+		
 
 		void OnMouseWheel(wxMouseEvent& event);
 		void LostMouseCapture(wxMouseCaptureLostEvent& event);

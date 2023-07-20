@@ -97,11 +97,6 @@ void DisplayFrame::OnImageSelectionModeClick(wxCommandEvent& event) {
                 cisTEMDisplayPanel->ReturnCurrentPanel( )->coord_tracker->Clear( );
                 cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode = IMAGES_PICK;
 
-                // Change checkmark if coords mode selected
-                if ( SelectCoordsSelectionMode->IsChecked( ) ) {
-                    SelectCoordsSelectionMode->Check(false);
-                    SelectImageSelectionMode->Check(true);
-                }
                 SelectInvertSelection->Enable(true);
             }
 
@@ -126,11 +121,6 @@ void DisplayFrame::OnCoordsSelectionModeClick(wxCommandEvent& event) {
                 cisTEMDisplayPanel->ClearSelection(false);
                 cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode = COORDS_PICK;
 
-                // Need to make sure the check mark switches
-                if ( SelectImageSelectionMode->IsChecked( ) ) {
-                    SelectImageSelectionMode->Check(false);
-                    SelectCoordsSelectionMode->Check(true); // First, get into image picking mode
-                }
                 SelectInvertSelection->Enable(false);
             }
             // User doesn't want to lose selections; do nothing
@@ -139,14 +129,9 @@ void DisplayFrame::OnCoordsSelectionModeClick(wxCommandEvent& event) {
         }
 
         // No selections
-        else {
+        else
             cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode = COORDS_PICK;
-            // Switch check marks
-            if ( SelectImageSelectionMode->IsChecked( ) ) {
-                SelectImageSelectionMode->Check(false);
-                SelectCoordsSelectionMode->Check(true); // First, get into image picking mode
-            }
-        }
+
         ClearTextFileFromPanel( );
         Refresh( );
         Update( );
@@ -271,7 +256,7 @@ void DisplayFrame::OnSaveTxtClick(wxCommandEvent& event) {
             extant_file.Clear( );
 
             if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode == IMAGES_PICK ) {
-                for ( long i = 0; i < cisTEMDisplayPanel->number_of_frames; i++ ) {
+                for ( long i = 0; i < cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnNumberofImages( ); i++ ) {
                     if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->image_is_selected[i] )
                         extant_file.AddLine(wxString::Format("%li", i));
                 }
@@ -315,7 +300,7 @@ void DisplayFrame::OnSaveTxtAsClick(wxCommandEvent& event) {
         if ( save_dialog->ShowModal( ) == wxID_OK ) {
             default_filename                = save_dialog->GetFilename( );
             wxTextFile* new_selections_file = new wxTextFile(default_filename);
-            for ( long i = 0; i < cisTEMDisplayPanel->number_of_frames; i++ ) {
+            for ( long i = 0; i < cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnNumberofImages( ); i++ ) {
                 if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->image_is_selected[i] )
                     new_selections_file->AddLine(wxString::Format("%li", i));
             }
@@ -369,7 +354,7 @@ void DisplayFrame::OnSaveTxtAsClick(wxCommandEvent& event) {
 }
 
 void DisplayFrame::OnInvertSelectionClick(wxCommandEvent& event) {
-    for ( long image_counter = 1; image_counter <= cisTEMDisplayPanel->number_of_frames; image_counter++ ) {
+    for ( long image_counter = 1; image_counter <= cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnNumberofImages( ); image_counter++ ) {
         cisTEMDisplayPanel->ToggleImageSelected(image_counter, false);
     }
     cisTEMDisplayPanel->RefreshCurrentPanel( );
@@ -392,10 +377,41 @@ void DisplayFrame::OnClearSelectionClick(wxCommandEvent& event) {
 void DisplayFrame::OnSetPointSizeClick(wxCommandEvent& event) {
 }
 
+void DisplayFrame::OnSize3(wxCommandEvent& event) {
+    cisTEMDisplayPanel->ReturnCurrentPanel( )->selected_point_size = 3;
+    Refresh( );
+    Update( );
+}
+
+void DisplayFrame::OnSize5(wxCommandEvent& event) {
+    cisTEMDisplayPanel->ReturnCurrentPanel( )->selected_point_size = 5;
+    Refresh( );
+    Update( );
+}
+
+void DisplayFrame::OnSize7(wxCommandEvent& event) {
+    cisTEMDisplayPanel->ReturnCurrentPanel( )->selected_point_size = 7;
+    Refresh( );
+    Update( );
+}
+
+void DisplayFrame::OnSize10(wxCommandEvent& event) {
+    cisTEMDisplayPanel->ReturnCurrentPanel( )->selected_point_size = 10;
+    Refresh( );
+    Update( );
+}
+
 void DisplayFrame::OnShowCrossHairClick(wxCommandEvent& event) {
 }
 
 void DisplayFrame::OnSingleImageModeClick(wxCommandEvent& event) {
+    if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->single_image )
+        cisTEMDisplayPanel->ReturnCurrentPanel( )->single_image = false;
+    else
+        cisTEMDisplayPanel->ReturnCurrentPanel( )->single_image = true;
+
+    cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_image_has_correct_greys = false;
+    cisTEMDisplayPanel->ReturnCurrentPanel( )->ReDrawPanel( );
 }
 
 void DisplayFrame::On7BitGreyValuesClick(wxCommandEvent& event) {
@@ -404,8 +420,10 @@ void DisplayFrame::On7BitGreyValuesClick(wxCommandEvent& event) {
 void DisplayFrame::OnShowSelectionDistancesClick(wxCommandEvent& event) {
     if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->show_selection_distances )
         cisTEMDisplayPanel->ReturnCurrentPanel( )->show_selection_distances = false;
-    else {
-    }
+    else
+        cisTEMDisplayPanel->ReturnCurrentPanel( )->show_selection_distances = true;
+    Refresh( );
+    Update( );
 }
 
 void DisplayFrame::OnShowResolution(wxCommandEvent& event) {
@@ -414,7 +432,7 @@ void DisplayFrame::OnShowResolution(wxCommandEvent& event) {
     if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->resolution_instead_of_radius )
         cisTEMDisplayPanel->ReturnCurrentPanel( )->resolution_instead_of_radius = false;
     else {
-        wxTextEntryDialog text_dialog(this, wxT("Pixel Size (Angstroms"), wxT("Select Pixel Size"), wxString::Format(wxT("%.2f"), cisTEMDisplayPanel->ReturnCurrentPanel( )->pixel_size), wxOK | wxCANCEL | wxCENTRE, wxDefaultPosition);
+        wxTextEntryDialog text_dialog(this, wxT("Pixel Size (Angstroms)"), wxT("Select Pixel Size"), wxString::Format(wxT("%.2f"), cisTEMDisplayPanel->ReturnCurrentPanel( )->pixel_size), wxOK | wxCANCEL | wxCENTRE, wxDefaultPosition);
         text_dialog.ShowModal( );
 
         wxString current_value = text_dialog.GetValue( );
@@ -449,7 +467,6 @@ void DisplayFrame::DisableAllToolbarButtons( ) {
     SelectClearSelection->Enable(false);
 
     // Options menu
-    OptionsSetPointSize->Enable(false);
     OptionsShowCrossHair->Enable(false);
     Options7BitGreyValues->Enable(false);
     OptionsSingleImageMode->Enable(false);
@@ -474,7 +491,11 @@ void DisplayFrame::EnableAllToolbarButtons( ) {
     else
         SelectSaveTxt->Enable(false);
 
-    SelectSaveTxtAs->Enable(true);
+    if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->number_of_selections > 0 || cisTEMDisplayPanel->ReturnCurrentPanel( )->coord_tracker->number_of_coords > 0 )
+        SelectSaveTxtAs->Enable(true);
+    else
+        SelectSaveTxtAs->Enable(false);
+
     if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode == IMAGES_PICK )
         SelectInvertSelection->Enable(true);
     else
@@ -482,7 +503,6 @@ void DisplayFrame::EnableAllToolbarButtons( ) {
     SelectClearSelection->Enable(true);
 
     // Options menu
-    OptionsSetPointSize->Enable(true);
     OptionsShowCrossHair->Enable(true);
     Options7BitGreyValues->Enable(true);
     OptionsSingleImageMode->Enable(true);
@@ -527,12 +547,12 @@ bool DisplayFrame::LoadCoords(wxString current_line, long& x, long& y, long& ima
     current_line.SubString(prev_whitespace_position + 1, index_of_whitespace - 1).ToLong(&image_number);
 
     // First, check that all coordinates and image numbers are valid for the open image
-    if ( x < cisTEMDisplayPanel->x_size && y < cisTEMDisplayPanel->y_size && image_number < cisTEMDisplayPanel->number_of_frames ) {
+    if ( x < cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnImageXSize( ) && y < cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnImageYSize( ) && image_number < cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnNumberofImages( ) ) {
         cisTEMDisplayPanel->ReturnCurrentPanel( )->coord_tracker->ToggleCoord(image_number, x, y);
         return true;
     }
     else {
-        wxMessageDialog invalid_file_dialog(this, wxString::Format("The selected coordinates exceed the dimensions of the currently opened *.mrc file. Cannot open selected coordinates (Selected x: %li, selected y: %li, image num: %li for image(s) with dimensions x: %i, y: %i, num images: %i). Try checking the selection mode and/or the text file contents.", x, y, image_number, cisTEMDisplayPanel->x_size, cisTEMDisplayPanel->y_size, cisTEMDisplayPanel->number_of_frames), "Invalid Coordinates for Current Image(s)", wxOK | wxOK_DEFAULT | wxICON_EXCLAMATION);
+        wxMessageDialog invalid_file_dialog(this, wxString::Format("The selected coordinates exceed the dimensions of the currently opened *.mrc file. Cannot open selected coordinates (Selected x: %li, selected y: %li, image num: %li for image(s) with dimensions x: %i, y: %i, num images: %i). Try checking the selection mode and/or the text file contents.", x, y, image_number, cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnImageXSize( ), cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnImageYSize( ), cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnNumberofImages( )), "Invalid Coordinates for Current Image(s)", wxOK | wxOK_DEFAULT | wxICON_EXCLAMATION);
         if ( invalid_file_dialog.ShowModal( ) == wxID_OK )
             cisTEMDisplayPanel->ReturnCurrentPanel( )->coord_tracker->Clear( );
         return false;
@@ -553,12 +573,12 @@ bool DisplayFrame::LoadSelections(wxString current_line) {
     current_line.ToLong(&image_number);
 
     // If the value exceeds the possible dimensions don't try to access the index for setting selected
-    if ( image_number < cisTEMDisplayPanel->number_of_frames ) {
+    if ( image_number < cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnNumberofImages( ) ) {
         cisTEMDisplayPanel->ReturnCurrentPanel( )->SetImageSelected(image_number, false);
         return true;
     }
     else {
-        wxMessageDialog invalid_file_dialog(this, wxString::Format("The file being opened contains selected images that exceed the number of images in the current file. Cannot open the selections.(Images in open file: %i. Image index sought: %li)", cisTEMDisplayPanel->number_of_frames, image_number), "Invalid Selection(s) for Current Image(s)", wxOK | wxOK_DEFAULT | wxICON_EXCLAMATION);
+        wxMessageDialog invalid_file_dialog(this, wxString::Format("The file being opened contains selected images that exceed the number of images in the current file. Cannot open the selections.(Images in open file: %i. Image index sought: %li)", cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnNumberofImages( ), image_number), "Invalid Selection(s) for Current Image(s)", wxOK | wxOK_DEFAULT | wxICON_EXCLAMATION);
         cisTEMDisplayPanel->ClearSelection(false);
     }
 }

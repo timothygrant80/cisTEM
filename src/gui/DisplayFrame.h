@@ -38,6 +38,10 @@ class DisplayFrame : public DisplayFrameParent {
 
     // Options Menu
     void OnSetPointSizeClick(wxCommandEvent& event);
+    void OnSize3(wxCommandEvent& event);
+    void OnSize5(wxCommandEvent& event);
+    void OnSize7(wxCommandEvent& event);
+    void OnSize10(wxCommandEvent& event);
     void OnShowCrossHairClick(wxCommandEvent& event);
     void OnSingleImageModeClick(wxCommandEvent& event);
     void On7BitGreyValuesClick(wxCommandEvent& event);

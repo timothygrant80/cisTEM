@@ -13604,10 +13604,16 @@ DisplayPanelParent::DisplayPanelParent( wxWindow* parent, wxWindowID id, const w
 
 	this->SetSizer( MainSizer );
 	this->Layout();
+
+	// Connect Events
+	this->Connect( wxEVT_MIDDLE_UP, wxMouseEventHandler( DisplayPanelParent::OnMiddleUp ) );
 }
 
 DisplayPanelParent::~DisplayPanelParent()
 {
+	// Disconnect Events
+	this->Disconnect( wxEVT_MIDDLE_UP, wxMouseEventHandler( DisplayPanelParent::OnMiddleUp ) );
+
 }
 
 DisplayManualDialogParent::DisplayManualDialogParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
@@ -14763,12 +14769,12 @@ DisplayFrameParent::DisplayFrameParent( wxWindow* parent, wxWindowID id, const w
 	m_menubar2->Append( DisplayLabelMenu, wxT("Label") );
 
 	DisplaySelectMenu = new wxMenu();
-	SelectImageSelectionMode = new wxMenuItem( DisplaySelectMenu, wxID_ANY, wxString( wxT("Image Selection Mode") ) , wxEmptyString, wxITEM_CHECK );
+	SelectImageSelectionMode = new wxMenuItem( DisplaySelectMenu, wxID_ANY, wxString( wxT("Image Selection Mode") ) , wxEmptyString, wxITEM_RADIO );
 	DisplaySelectMenu->Append( SelectImageSelectionMode );
 	SelectImageSelectionMode->Enable( false );
 	SelectImageSelectionMode->Check( true );
 
-	SelectCoordsSelectionMode = new wxMenuItem( DisplaySelectMenu, wxID_ANY, wxString( wxT("Coords Selection Mode") ) , wxEmptyString, wxITEM_CHECK );
+	SelectCoordsSelectionMode = new wxMenuItem( DisplaySelectMenu, wxID_ANY, wxString( wxT("Coords Selection Mode") ) , wxEmptyString, wxITEM_RADIO );
 	DisplaySelectMenu->Append( SelectCoordsSelectionMode );
 	SelectCoordsSelectionMode->Enable( false );
 
@@ -14785,15 +14791,31 @@ DisplayFrameParent::DisplayFrameParent( wxWindow* parent, wxWindowID id, const w
 	m_menubar2->Append( DisplaySelectMenu, wxT("Select") );
 
 	DisplayOptionsMenu = new wxMenu();
-	OptionsSetPointSize = new wxMenuItem( DisplayOptionsMenu, wxID_ANY, wxString( wxT("Set Point Size") ) , wxEmptyString, wxITEM_NORMAL );
-	DisplayOptionsMenu->Append( OptionsSetPointSize );
-	OptionsSetPointSize->Enable( false );
+	OptionsSetPointSize = new wxMenu();
+	wxMenuItem* OptionsSetPointSizeItem = new wxMenuItem( DisplayOptionsMenu, wxID_ANY, wxT("Set Point Size"), wxEmptyString, wxITEM_NORMAL, OptionsSetPointSize );
+	wxMenuItem* CoordSize3;
+	CoordSize3 = new wxMenuItem( OptionsSetPointSize, wxID_ANY, wxString( wxT("3") ) , wxEmptyString, wxITEM_RADIO );
+	OptionsSetPointSize->Append( CoordSize3 );
+
+	wxMenuItem* CoordSize5;
+	CoordSize5 = new wxMenuItem( OptionsSetPointSize, wxID_ANY, wxString( wxT("5") ) , wxEmptyString, wxITEM_RADIO );
+	OptionsSetPointSize->Append( CoordSize5 );
+
+	wxMenuItem* CoordSize7;
+	CoordSize7 = new wxMenuItem( OptionsSetPointSize, wxID_ANY, wxString( wxT("7") ) , wxEmptyString, wxITEM_RADIO );
+	OptionsSetPointSize->Append( CoordSize7 );
+
+	wxMenuItem* CoordSize10;
+	CoordSize10 = new wxMenuItem( OptionsSetPointSize, wxID_ANY, wxString( wxT("10") ) , wxEmptyString, wxITEM_RADIO );
+	OptionsSetPointSize->Append( CoordSize10 );
+
+	DisplayOptionsMenu->Append( OptionsSetPointSizeItem );
 
 	OptionsShowCrossHair = new wxMenuItem( DisplayOptionsMenu, wxID_ANY, wxString( wxT("Show Cross Hair") ) , wxEmptyString, wxITEM_NORMAL );
 	DisplayOptionsMenu->Append( OptionsShowCrossHair );
 	OptionsShowCrossHair->Enable( false );
 
-	OptionsSingleImageMode = new wxMenuItem( DisplayOptionsMenu, wxID_ANY, wxString( wxT("Single Image Mode") ) , wxEmptyString, wxITEM_NORMAL );
+	OptionsSingleImageMode = new wxMenuItem( DisplayOptionsMenu, wxID_ANY, wxString( wxT("Single Image Mode") ) , wxEmptyString, wxITEM_CHECK );
 	DisplayOptionsMenu->Append( OptionsSingleImageMode );
 	OptionsSingleImageMode->Enable( false );
 
@@ -14801,13 +14823,13 @@ DisplayFrameParent::DisplayFrameParent( wxWindow* parent, wxWindowID id, const w
 	DisplayOptionsMenu->Append( Options7BitGreyValues );
 	Options7BitGreyValues->Enable( false );
 
-	OptionsShowSelectionDistances = new wxMenuItem( DisplayOptionsMenu, wxID_ANY, wxString( wxT("Show Selection Distances") ) , wxEmptyString, wxITEM_NORMAL );
+	OptionsShowSelectionDistances = new wxMenuItem( DisplayOptionsMenu, wxID_ANY, wxString( wxT("Show Selection Distances") ) , wxEmptyString, wxITEM_CHECK );
 	DisplayOptionsMenu->Append( OptionsShowSelectionDistances );
 	OptionsShowSelectionDistances->Enable( false );
 
 	DisplayOptionsMenu->AppendSeparator();
 
-	OptionsShowResolution = new wxMenuItem( DisplayOptionsMenu, wxID_ANY, wxString( wxT("Show Resolution Instead of Radius") ) , wxEmptyString, wxITEM_NORMAL );
+	OptionsShowResolution = new wxMenuItem( DisplayOptionsMenu, wxID_ANY, wxString( wxT("Show Resolution Instead of Radius") ) , wxEmptyString, wxITEM_CHECK );
 	DisplayOptionsMenu->Append( OptionsShowResolution );
 	OptionsShowResolution->Enable( false );
 
@@ -14845,7 +14867,10 @@ DisplayFrameParent::DisplayFrameParent( wxWindow* parent, wxWindowID id, const w
 	DisplaySelectMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnCoordsSelectionModeClick ), this, SelectCoordsSelectionMode->GetId());
 	DisplaySelectMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnInvertSelectionClick ), this, SelectInvertSelection->GetId());
 	DisplaySelectMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnClearSelectionClick ), this, SelectClearSelection->GetId());
-	DisplayOptionsMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSetPointSizeClick ), this, OptionsSetPointSize->GetId());
+	OptionsSetPointSize->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSize3 ), this, CoordSize3->GetId());
+	OptionsSetPointSize->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSize5 ), this, CoordSize5->GetId());
+	OptionsSetPointSize->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSize7 ), this, CoordSize7->GetId());
+	OptionsSetPointSize->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSize10 ), this, CoordSize10->GetId());
 	DisplayOptionsMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnShowCrossHairClick ), this, OptionsShowCrossHair->GetId());
 	DisplayOptionsMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSingleImageModeClick ), this, OptionsSingleImageMode->GetId());
 	DisplayOptionsMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::On7BitGreyValuesClick ), this, Options7BitGreyValues->GetId());

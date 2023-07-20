@@ -440,6 +440,7 @@ void DisplayPanel::OnOpen(wxCommandEvent& WXUNUSED(event)) {
 
             // does it seem to be an MRC file? If so, try and open it
             bool is_valid;
+            int  x_size, y_size, number_of_frames;
             //wxStripExtension(&this_filename);
             if ( filename.GetExt( ).IsSameAs("mrc", false) || filename.GetExt( ).IsSameAs("mrcs", false) ) {
                 is_valid = GetMRCDetails(path, x_size, y_size, number_of_frames); // This is being recognized as valid mrc now; good
@@ -1375,6 +1376,7 @@ DisplayNotebookPanel::DisplayNotebookPanel(wxWindow* parent, wxWindowID id, cons
     Bind(wxEVT_RIGHT_DOWN, &DisplayNotebookPanel::OnRightDown, this);
     Bind(wxEVT_LEFT_DOWN, &DisplayNotebookPanel::OnLeftDown, this);
     Bind(wxEVT_RIGHT_UP, &DisplayNotebookPanel::OnRightUp, this);
+    Bind(wxEVT_MIDDLE_UP, &DisplayNotebookPanel::OnMiddleUp, this);
     Bind(wxEVT_MOTION, &DisplayNotebookPanel::OnMotion, this);
     Bind(wxEVT_KEY_DOWN, &DisplayNotebookPanel::OnKeyDown, this);
     Bind(wxEVT_KEY_UP, &DisplayNotebookPanel::OnKeyUp, this);
@@ -1424,6 +1426,8 @@ DisplayNotebookPanel::DisplayNotebookPanel(wxWindow* parent, wxWindowID id, cons
 
     single_image_x = 0.;
     single_image_y = 0.;
+    old_mouse_x    = -9999;
+    old_mouse_y    = -9999;
 
     number_of_selections = 0;
 
@@ -1930,8 +1934,8 @@ void DisplayNotebookPanel::OnLeftDown(wxMouseEvent& event) {
     if ( single_image == true ) {
         // perform the relevant action..
 
-        if ( current_x_pos < parent_display_panel->x_size && current_x_pos >= 0 && current_y_pos < parent_display_panel->y_size && current_y_pos >= 0 ) {
-            if ( current_image <= parent_display_panel->number_of_frames ) {
+        if ( current_x_pos < ReturnImageXSize( ) && current_x_pos >= 0 && current_y_pos < ReturnImageYSize( ) && current_y_pos >= 0 ) {
+            if ( current_image <= ReturnNumberofImages( ) ) {
                 if ( picking_mode == IMAGES_PICK ) {
                     if ( image_is_selected[current_image] == true ) {
                         image_is_selected[current_image] = false;
@@ -1955,7 +1959,7 @@ void DisplayNotebookPanel::OnLeftDown(wxMouseEvent& event) {
     }
     else if ( x_pos < max_x && y_pos < max_y ) {
         // perform the relevant action..
-        if ( current_image <= parent_display_panel->number_of_frames ) {
+        if ( current_image <= ReturnNumberofImages( ) ) {
             if ( picking_mode == IMAGES_PICK ) {
                 ToggleImageSelected(current_image, false);
                 parent_display_panel->SetTabNameUnsaved( );
@@ -2095,40 +2099,40 @@ void DisplayNotebookPanel::OnMotion(wxMouseEvent& event) {
         parent_display_panel->popup->Update( );
         parent_display_panel->Update( );
     }
-    /*	 else
-     if (event.m_middleDown == true && current_panel->single_image == true)
-	 {
-		 if (old_mouse_x == -9999 || old_mouse_y == -9999)
-		 {
-			 old_mouse_x = x_pos;
-			 old_mouse_y = y_pos;
-		 }
-		 else
-		 {
-			 current_panel->single_image_x += (old_mouse_x - x_pos) / actual_scale_factor;
-			 current_panel->single_image_y += (old_mouse_y - y_pos) / actual_scale_factor;
+    else if ( event.m_middleDown && single_image ) {
+        // If the values are still the default, set the initial value
+        if ( old_mouse_x == -9999 || old_mouse_y == -9999 ) {
+            old_mouse_x = x_pos;
+            old_mouse_y = y_pos;
+        }
+        else {
+            single_image_x += (old_mouse_x - x_pos) / actual_scale_factor;
+            single_image_y += (old_mouse_y - y_pos) / actual_scale_factor;
 
-			 if (current_panel->single_image_x < 0) current_panel->single_image_x = 0;
-			 else
-			 if (current_panel->single_image_x > current_panel->first_header.x_size - 1) current_panel->single_image_x = current_panel->first_header.x_size - 1;
+            // Too far left -- set to left border
+            if ( single_image_x < 0 )
+                single_image_x = 0;
 
-			 if (current_panel->single_image_y < 0) current_panel->single_image_y = 0;
-			 else
-			 if (current_panel->single_image_y > current_panel->first_header.y_size - 1) current_panel->single_image_y = current_panel->first_header.y_size - 1;
+            // Too far right -- set to right border
+            else if ( single_image_x > ReturnImageXSize( ) - 1 )
+                single_image_x = ReturnImageXSize( ) - 1;
 
-			 old_mouse_x = x_pos;
-			 old_mouse_y = y_pos;
+            // Too far down -- set to bottom border
+            if ( single_image_y < 0 )
+                single_image_y = 0;
 
+            // Too far up -- set to top border
+            else if ( single_image_y > ReturnImageYSize( ) - 1 )
+                single_image_y = ReturnImageYSize( ) - 1;
 
+            old_mouse_x = x_pos;
+            old_mouse_y = y_pos;
 
-			 current_panel->DrawPanel();
-		 }
-	 }
-     else
+            ReDrawPanel( );
+        }
+    }
 
-
-	 // write the current position to the status bar..
-	*/
+    // write the current position to the status bar..
 
     UpdateImageStatusInfo(x_pos, y_pos);
     event.Skip( );
@@ -2846,6 +2850,11 @@ void DisplayNotebookPanel::OnPaint(wxPaintEvent& evt) {
     }
 
     evt.Skip( );
+}
+
+void DisplayNotebookPanel::OnMiddleUp(wxMouseEvent& event) {
+    old_mouse_x = -9999;
+    old_mouse_y = -9999;
 }
 
 DisplayPopup::DisplayPopup(wxWindow* parent, int flags)

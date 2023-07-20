@@ -3724,6 +3724,10 @@ class DisplayPanelParent : public wxPanel
 		wxBoxSizer* MainSizer;
 		wxToolBar* Toolbar;
 
+		// Virtual event handlers, overide them in your derived class
+		virtual void OnMiddleUp( wxMouseEvent& event ) { event.Skip(); }
+
+
 	public:
 
 		DisplayPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
@@ -4237,7 +4241,7 @@ class DisplayFrameParent : public wxFrame
 		wxMenuItem* SelectInvertSelection;
 		wxMenuItem* SelectClearSelection;
 		wxMenu* DisplayOptionsMenu;
-		wxMenuItem* OptionsSetPointSize;
+		wxMenu* OptionsSetPointSize;
 		wxMenuItem* OptionsShowCrossHair;
 		wxMenuItem* OptionsSingleImageMode;
 		wxMenuItem* Options7BitGreyValues;
@@ -4259,7 +4263,10 @@ class DisplayFrameParent : public wxFrame
 		virtual void OnCoordsSelectionModeClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnInvertSelectionClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnClearSelectionClick( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnSetPointSizeClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnSize3( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnSize5( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnSize7( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnSize10( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnShowCrossHairClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnSingleImageModeClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void On7BitGreyValuesClick( wxCommandEvent& event ) { event.Skip(); }

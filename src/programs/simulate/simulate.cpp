@@ -1573,7 +1573,6 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
 
                 timer.start("Calc Atoms");
                 if ( ! DO_PHASE_PLATE ) {
-                    std::cerr << "Size of neighbor list " << size_neighborhood << std::endl;
                     sp.calc_scattering_potential(&current_specimen, coords, &scattering_slab, &inelastic_slab, &distance_slab,
                                                  rotated_oZ, slabIDX_start, slabIDX_end, iSlab, size_neighborhood, number_of_threads,
                                                  non_water_inelastic_scaling, DO_BEAM_TILT_FULL, beam_tilt_z_X_component, beam_tilt_z_Y_component);

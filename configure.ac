@@ -70,11 +70,11 @@ CPP_STANDARD=17
 # fi
 
 # check to see if compiler warnings are desired.
-
-AC_ARG_ENABLE([disable-warnings], AS_HELP_STRING([--disable compiler warnings], [Default=false]), 
+# no value or --enable-warnings result in warnings on, --disable-warnings results in warnings off
+AC_ARG_ENABLE([warnings], AS_HELP_STRING([--disable-warnings], [Default=false]), 
 [
 	# If flag do this
-	if test "x$enableval" = "no" ; then
+	if test "x$enableval" = "xno" ; then
 		WARNINGS_ON=""		
 	else
 		if test "x$CXX" = "xicpc"; then		
@@ -93,6 +93,12 @@ AC_ARG_ENABLE([disable-warnings], AS_HELP_STRING([--disable compiler warnings], 
 		fi	
 ])
 
+# Noop: Code not yet ported from downstream
+AC_ARG_ENABLE(multiple-global-refinements, AS_HELP_STRING([--disable-multiple-global-refinements],[Only do one global search in AutoRefine3d [default=no]]),[
+	if test "x$enableval" = "xno" ; then
+		AC_DEFINE([DISABLE_MUTLI_GLOBAL_REFINEMENTS], [ ], [Disable multiple rounds of global refinement in AutoRefine3d])
+  fi
+]) # No action needed if flag is not present as multiple global refinements is the default.
 
 # AC_DEFINE_UNQUOTED([_FILE_OFFSET_BITS], [64], [Define the file offset bits])
 # AC_DEFINE([_LARGEFILE_SOURCE], [], [Define the large file source])
@@ -164,12 +170,14 @@ fi
 # MKL
 
 use_mkl=1
-AC_ARG_ENABLE(mkl, AS_HELP_STRING([--disable-mkl],[Do not use the Intel MKL]),
-[
+AC_ARG_ENABLE(mkl, AS_HELP_STRING([--disable-mkl],[Do not use the Intel MKL]), [
  if test "$enableval" = no; then
-        use_mkl=0
+    # LINK_MKL_NOT_FFTW3
+    AC_MSG_NOTICE([     ])
+    AC_MSG_ERROR([You must use the Intel mkl in cisTEM. See FFT_LICENSE_NOTE in the root directory for details.])
+    use_mkl=0
  fi
- ])
+])
 
 
 
@@ -217,42 +225,50 @@ AC_ARG_ENABLE(debugmode, AS_HELP_STRING([--enable-debugmode],[Compile in debug m
 # BEGIN CUDA CHECKS AND SETS
 ###############################
 
-  	
+
+FastFFT_INCLUDES=""
+use_FastFFT="no"
 if test "$want_cuda" = "yes" ; then
 
-	# ~Runtime about 85% with K3 images, but mips are different - total detection is ~the same. 
-  # Determined this is likely just numerical error. Enabling by default.
-  #  --disable-feature is equivalent to --enable-feature=no. 
-  use_rotated_tm=1
-	AC_ARG_ENABLE(rotated-tm, AS_HELP_STRING([--disable-rotated-tm],[Place power of 2 sized axis on X by rotating 90 deg in template matching for speed [default=no]]),[
-	  if test "$enableval" = no; then
-      use_rotated_tm=0
-	  fi
-	  ])
+    # Call the m4 macro to check and setup for FastFFT if present and requested
+    submodule_FastFFT
 
-  if test "x$use_rotated_tm" = "x1"; then
-    AC_DEFINE([ROTATEFORSPEED], [], [Rotate image for faster FFT in template matching])
-    AC_MSG_NOTICE([Enabling rotated-tm]);
-  fi
+    # ~Runtime about 85% with K3 images, but mips are different - total detection is ~the same. 
+    # Determined this is likely just numerical error. Enabling by default.
+    #    --disable-feature is equivalent to --enable-feature=no. 
+    use_rotated_tm=1
+    AC_ARG_ENABLE(rotated-tm, AS_HELP_STRING([--disable-rotated-tm],[Place power of 2 sized axis on X by rotating 90 deg in template matching for speed [default=no]]),[
+        if test "$enableval" = no; then
+            use_rotated_tm=0
+        fi
+    ])
 
-  AC_MSG_NOTICE([Adding the CUDA includes Setting up NVCC initial flags])
-  CUDA_CPPFLAGS="$CUDA_CFLAGS $NVCCFLAGS"
-  CUDA_CXXFLAGS="$CUDA_CFLAGS $NVCCFLAGS"
-  
-  CXXFLAGS="$CXXFLAGS $use_gpu_cache_hints $CUDA_CFLAGS"
-  CPPFLAGS="$CPPFLAGS $use_gpu_cache_hints $CUDA_CFLAGS"
-  AC_MSG_NOTICE([Using CUDA_CXXFLAGS=$CUDA_CXXFLAGS])
-  AC_MSG_NOTICE([Using CUDA_LIBS=$CUDA_LIBS])
+    if test "x$use_rotated_tm" = "x1"; then
+        AC_DEFINE([ROTATEFORSPEED], [], [Rotate image for faster FFT in template matching])
+        AC_MSG_NOTICE([Enabling rotated-tm]);
+    fi
 
-  AC_DEFINE([ENABLEGPU], [], [Enable gpu codepath])
+    AC_MSG_NOTICE([Adding the CUDA includes Setting up NVCC initial flags])
+    CUDA_CPPFLAGS="$CUDA_CFLAGS $NVCCFLAGS $FastFFT_FLAGS"
+    CUDA_CXXFLAGS="$CUDA_CFLAGS $NVCCFLAGS $FastFFT_FLAGS"
+    
+    CXXFLAGS="$CXXFLAGS $use_gpu_cache_hints $CUDA_CFLAGS"
+    CPPFLAGS="$CPPFLAGS $use_gpu_cache_hints $CUDA_CFLAGS"
+    AC_MSG_NOTICE([Using CUDA_CXXFLAGS=$CUDA_CXXFLAGS])
+    AC_MSG_NOTICE([Using CUDA_LIBS=$CUDA_LIBS])
 
+    # This does include any gpu functionality directly, but is used primarily in the GUI to do things like
+    # showing radio buttons to  use/not use gpu functionality that is enabled in the called program.
+    AC_DEFINE([SHOW_CISTEM_GPU_OPTIONS], [], [Enable gpu codepath])
 fi
 
 ##############################
 # END CUDA CHECKS AND SETS
-##############################  
+##############################
 
-AM_CONDITIONAL([ENABLEGPU_AM], [test "$want_cuda" = "yes"])
+# Define WANT_CISTEM_GPU_AM to be used in the Makefile on a per-program basis to then define ENABLEGPU or not.
+AM_CONDITIONAL([WANT_CISTEM_GPU_AM], [test "$want_cuda" = "yes"])
+AM_CONDITIONAL([ENABLE_FASTFFT_AM], [test "x$use_FastFFT" = "xyes"])
 
 # fftw
 
@@ -267,28 +283,41 @@ AS_HELP_STRING([--with-fftw-dir=DIR],[Declare the root directory of fftw3, if it
     fi
 ])
 
-# Compile programs/samples/sample_functional_test.cpp 
-want_samples="no"
-AC_ARG_ENABLE(samples, AS_HELP_STRING([--enable-samples],[Compile with samples [default=no]]),[
-  if test "$enableval" = yes; then
-    want_samples="yes"
-  	AC_MSG_NOTICE([Compiling sample functional tests])	
-  fi
-  ]) 
-AM_CONDITIONAL([ENABLESAMPLES_AM], [test "$want_samples" = "yes"])
 
 # Use fine grained profiling
 
 want_profiling="no"  
 AC_ARG_ENABLE(profiling, AS_HELP_STRING([--enable-profiling],[Include fine-grained profiling [default=no]]),[
   if test "$enableval" = yes; then
-    AC_DEFINE([PROFILING], [], [Define the profiling flag])
+    AC_DEFINE([CISTEM_PROFILING], [], [Define the profiling flag])
   	want_profiling="true"
   	AC_MSG_NOTICE([Compiling with fine-grained profiling])	
   fi
   ]) 
 
 AM_CONDITIONAL([ENABLEPROFILING_AM], [test x$want_profiling = xtrue])
+
+AC_ARG_ENABLE(fp16-particlestacks, AS_HELP_STRING([--enable-fp16-particlestacks],[Save particle stacks in reduced precision. Use with caution  [default=no]]),[
+  if test "$enableval" = yes; then
+    AC_DEFINE([USE_FP16_PARTICLE_STACKS], [], [Save particle stacks in reduced precision])
+  	AC_MSG_NOTICE([Compiling with reduced precision particle stacks])	
+  fi
+  ]) 
+
+
+  
+
+want_webview="no"
+AC_ARG_ENABLE(wx-webview, AS_HELP_STRING([--enable-wx-webview],[Compile with experimental webview panel]),[
+  if test "$enableval" = yes; then
+    AC_DEFINE([ENABLE_WEBVIEW], [], [Define the webview flag])
+  	want_webview="true"
+  	AC_MSG_NOTICE([Compiling with webview enabled])	
+  fi
+ ]) 
+AM_CONDITIONAL([ENABLE_WEBVIEW_AM], [test x$want_webview = xtrue])
+
+
 
 AC_ARG_ENABLE(gpu-debug, AS_HELP_STRING([--enable-gpu-debug],[Compile heavy synchronous checking [default=no]]),[
   if test "$enableval" = yes; then

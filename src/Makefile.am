@@ -1,4 +1,5 @@
-noinst_HEADERS = core/asset_group.h \
+noinst_HEADERS = core/stopwatch.h \
+                 core/asset_group.h \
                  core/core_headers.h \
                  core/defines.h \
                  core/functions.h \
@@ -213,7 +214,10 @@ noinst_HEADERS = core/asset_group.h \
                  programs/console_test/hiv_image_80x80x1.cpp \
                  programs/console_test/hiv_images_shift_noise_80x80x10.cpp \
                  programs/console_test/sine_128x128x1.cpp \
-                 gui/icons/match_template_icon.cpp 
+                 gui/icons/match_template_icon.cpp \
+                 programs/refine3d/ProjectionComparisonObjects.h \
+                 core/scattering_potential.h
+
                  
 
                  
@@ -221,65 +225,150 @@ if EXPERIMENTAL_AM
 noinst_HEADERS += 	gui/icons/experimental_icon.cpp \
                     gui/AtomicCoordinatesAssetPanel.h \
                     gui/AtomicCoordinatesChooserDialog.h \
-                    gui/AtomicCoordinatesImportDialog.h 
+                    gui/AtomicCoordinatesImportDialog.h \
+                    core/water.h \
+                    core/pdb.h \
+                    programs/simulate/wave_function_propagator.h 
 
 endif      
 
-if EXPERIMENTAL_AM
-noinst_HEADERS += core/water.h \
-                  core/pdb.h \
-                  programs/simulate/wave_function_propagator.h \
-                  programs/simulate/scattering_potential.h 
-endif
 
-if ENABLESAMPLES_AM
 noinst_HEADERS +=  programs/samples/samples_functional_testing.h 
 noinst_HEADERS +=  programs/samples/common/helper_functions.h programs/samples/common/embedded_test_file.h programs/samples/common/numeric_test_file.h
 noinst_HEADERS +=  programs/samples/common/common.h programs/samples/0_simple/simple.h 
-if ENABLEGPU_AM
+
+if WANT_CISTEM_GPU_AM
 noinst_HEADERS += programs/samples/1_cpu_gpu_comparison/cpu_gpu_comparison.h
 endif
-endif
+
 	
 
 noinst_LIBRARIES = libcore.a libguicore.a
 
-bin_PROGRAMS = unblur cisTEM_job_control console_test applyctf reconstruct3d merge3d project3d refine3d calc_occ ctffind remove_outlier_pixels resize resample reset_mrc_header estimate_dataset_ssnr find_particles montage extract_particles sum_all_mrc_files sum_all_tif_files apply_gain_ref scale_with_mask refine2d merge2d mag_distortion_correct apply_mask convert_tif_to_mrc remove_inf_and_nan make_orth_views sharpen_map calculate_fsc make_size_map prepare_stack prepare_stack_classaverage align_symmetry subtract_from_stack binarize  move_volume_xyz  symmetry_expand_stack_and_par fft local_resolution local_resolution_finalize local_resolution_filter subtract_two_stacks add_two_stacks multiply_two_stacks divide_two_stacks invert_stack convert_par_to_star align_coordinates find_dqe combine_via_max refine_ctf estimate_beamtilt remove_relion_stripes warp_to_cistem create_mask invert_hand niko_test append_stacks cisTEM gui_test convert_star_to_binary convert_binary_to_star convert_eer_to_mrc azimuthal_average normalize_stack print_stack_statistics combine_stacks_by_star match_template refine_template make_template_result prepare_stack_matchtemplate sum_all_eer_files
+bin_PROGRAMS =  cisTEM_job_control \
+                unblur \
+                console_test \
+                unit_test_runner \
+                samples_functional_testing \
+                applyctf \
+                reconstruct3d \
+                merge3d \
+                project3d \
+                refine3d \
+                calc_occ \
+                ctffind \
+                remove_outlier_pixels \
+                resize \
+                resample \
+                reset_mrc_header \
+                estimate_dataset_ssnr \
+                find_particles \
+                montage \
+                extract_particles \
+                sum_all_mrc_files \
+                sum_all_tif_files \
+                apply_gain_ref \
+                scale_with_mask \
+                refine2d \
+                merge2d \
+                mag_distortion_correct \
+                apply_mask \
+                convert_tif_to_mrc \
+                remove_inf_and_nan \
+                make_orth_views \
+                sharpen_map \
+                calculate_fsc \
+                make_size_map \
+                prepare_stack \
+                prepare_stack_classaverage \
+                align_symmetry \
+                subtract_from_stack \
+                binarize \
+                move_volume_xyz \
+                symmetry_expand_stack_and_par \
+                fft \
+                local_resolution \
+                local_resolution_finalize \
+                local_resolution_filter \
+                subtract_two_stacks \
+                add_two_stacks \
+                multiply_two_stacks \
+                divide_two_stacks \
+                invert_stack \
+                convert_par_to_star \
+                align_coordinates \
+                find_dqe \
+                combine_via_max \
+                refine_ctf \
+                estimate_beamtilt \
+                remove_relion_stripes \
+                warp_to_cistem \
+                create_mask \
+                invert_hand \
+                quick_test \
+                append_stacks \
+                cisTEM \
+                gui_test \
+                convert_star_to_binary \
+                convert_binary_to_star \
+                convert_eer_to_mrc \
+                azimuthal_average \
+                normalize_stack \
+                print_stack_statistics \
+                combine_stacks_by_star \
+                match_template \
+                refine_template \
+                make_template_result \
+                prepare_stack_matchtemplate \
+                sum_all_eer_files
+if WANT_CISTEM_GPU_AM
+    bin_PROGRAMS +=  match_template_gpu 
+    #unblur_gpu global_search_gpu global_search_refinement_gpu
+endif
 
 if EXPERIMENTAL_AM   
 bin_PROGRAMS += refine_template_dev simulate sum_all_power_spectra
 endif
 
-if ENABLESAMPLES_AM
-bin_PROGRAMS +=  samples_functional_testing
-endif 
 
-if ENABLEGPU_AM
-bin_PROGRAMS += gpu_util_test gpu_devices
+
+
+if WANT_CISTEM_GPU_AM
+
+bin_PROGRAMS +=  gpu_devices
 noinst_LIBRARIES += libgpucore.a  
 
-libgpucore_a_SOURCES =       gpu/Histogram.cu \
+libgpucore_a_SOURCES  =      gpu/core_extensions/stop_watch_gpu.cu \
+                             gpu/Histogram.cu \
                              gpu/TemplateMatchingCore.cu \
                              gpu/DeviceManager.cu \
-                             gpu/GpuImage.cu
-                            
-libgpucore_OBJECTS=$(libgpucore_a_SOURCES:.cu=.o)
-
-libgpucore_a_CFLAGS = $(CUDA_CPPFLAGS) $(WX_CPPFLAGS_BASE)
-libgpucore_a_CXXFLAGS = $(CUDA_CXXFLAGS) $(WX_CXXFLAGS_BASE)
-libgpucore_a_LIBADD = gpu/gpudevicecode.o
-libgpucore_a_AR = $(NVCC) $(CUDA_CXXFLAGS) -lib -o
-
-.cu.o:
-	$(NVCC) $(CUDA_CXXFLAGS) $(WX_CPPFLAGS_BASE) -dc -o $@ $<
-
-gpu/gpudevicecode.o: $(libgpucore_OBJECTS)
-	$(NVCC) $(CUDA_CXXFLAGS) --device-link $(libgpucore_OBJECTS) -o gpu/gpudevicecode.o $(CUDA_LIBS)
+                             gpu/TensorManager.cu \
+                             gpu/GpuImage.cu \
+                             programs/refine3d/batched_search.cu \
+                             test/gpu/test_gpu_kernels.cu
+if ENABLE_FASTFFT_AM
+    libgpucore_a_SOURCES += ext/FastFFT/src/FastFFT.cu
 endif
 
-libcore_a_SOURCES =    core/functions.cpp \
-		       core/globals.cpp \
-		       core/randomnumbergenerator.cpp \
+libgpucore_OBJECTS=$(libgpucore_a_SOURCES:.cu=.o)                                                   
+
+libgpucore_a_CFLAGS = -DENABLEGPU $(CUDA_CPPFLAGS) $(WX_CPPFLAGS_BASE)
+libgpucore_a_CXXFLAGS = -DENABLEGPU $(CUDA_CXXFLAGS) $(WX_CXXFLAGS_BASE)
+libgpucore_a_LIBADD = gpu/gpudevicecode.o 
+libgpucore_a_AR = $(NVCC) -DENABLEGPU $(CUDA_CXXFLAGS) -lib -o
+
+.cu.o:
+	$(NVCC) -DENABLEGPU $(CUDA_CXXFLAGS) $(WX_CPPFLAGS_BASE) -dc -o $@ $<
+    
+gpu/gpudevicecode.o: $(libgpucore_OBJECTS)
+	$(NVCC) -DENABLEGPU $(CUDA_CXXFLAGS) --device-link $(libgpucore_OBJECTS) -o gpu/gpudevicecode.o $(CUDA_LIBS)
+
+endif
+
+libcore_a_SOURCES  = core/stopwatch.cpp \
+                     core/functions.cpp \
+		             core/globals.cpp \
+                     core/randomnumbergenerator.cpp \
                        core/userinput.cpp \
                        core/angles_and_shifts.cpp \
                        core/parameter_constraints.cpp \
@@ -335,10 +424,12 @@ libcore_a_SOURCES =    core/functions.cpp \
                        core/json/jsonval.cpp \
                        core/json/jsonreader.cpp \
                        core/json/jsonwriter.cpp \
-                       core/stopwatch.cpp \
                        core/ccl3d.cpp \
                        core/template_matching.cpp \
-                       core/eer_file.cpp
+                       core/eer_file.cpp \
+                       core/scattering_potential.cpp \
+                       core/padded_coordinates.cpp
+
 
 
 if EXPERIMENTAL_AM
@@ -348,20 +439,102 @@ endif
 libcore_a_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 libcore_a_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 
-libguicore_a_SOURCES =  core/gui_job_controller.cpp
+libguicore_a_SOURCES  =  core/gui_job_controller.cpp
 
 libguicore_a_CXXFLAGS = $(WX_CPPFLAGS)
 libguicore_a_CPPFLAGS = $(WX_CPPFLAGS)
 
-cisTEM_SOURCES = programs/projectx/projectx.cpp gui/gui_globals.cpp gui/MyFSCPanel.cpp gui/MyRefinementResultsPanel.cpp gui/PlotFSCPanel.cpp gui/gui_functions.cpp gui/my_controls.cpp gui/MyRenameDialog.cpp gui/BitmapPanel.cpp gui/PickingBitmapPanel.cpp gui/job_panel.cpp gui/ProjectX_gui.cpp gui/ResultsDataViewListCtrl.cpp gui/MyMovieFilterDialog.cpp gui/MainFrame.cpp gui/MyAssetPanelParent.cpp gui/MyMovieAssetPanel.cpp gui/MyImageAssetPanel.cpp gui/MyParticlePositionAssetPanel.cpp gui/MyVolumeChooserDialog.cpp gui/MovieImportDialog.cpp gui/MyImageImportDialog.cpp gui/MyVolumeImportDialog.cpp gui/ErrorDialog.cpp gui/AlignMoviesPanel.cpp gui/MyRunProfilesPanel.cpp gui/mathplot.cpp gui/MyMovieAlignResultsPanel.cpp gui/MyFindCTFResultsPanel.cpp gui/PickingResultsPanel.cpp gui/MyAddRunCommandDialog.cpp gui/MyNewProjectWizard.cpp gui/MyNewRefinementPackageWizard.cpp gui/UnblurResultsPanel.cpp gui/ShowCTFResultsPanel.cpp gui/PickingResultsDisplayPanel.cpp gui/CTF1DPanel.cpp gui/FindCTFPanel.cpp gui/FindParticlesPanel.cpp gui/MyVolumeAssetPanel.cpp gui/MyResultsPanel.cpp gui/MyAssetsPanel.cpp gui/ActionsPanelSpa.cpp gui/ActionsPanelTm.cpp gui/MySettingsPanel.cpp gui/MyParticlePositionExportDialog.cpp gui/MyFrealignExportDialog.cpp gui/MyRelionExportDialog.cpp gui/MyRefinementPackageAssetPanel.cpp gui/MyRefine3DPanel.cpp gui/MyRefine2DPanel.cpp gui/ClassificationPlotPanel.cpp gui/AbInitioPlotPanel.cpp gui/Refine2DResultsPanel.cpp gui/AngularDistributionPlotPanel.cpp core/particle_finder.cpp gui/DisplayPanel.cpp gui/ClassumSelectionCopyFromDialog.cpp gui/MyOverviewPanel.cpp gui/AbInitio3DPanel.cpp gui/AssetPickerComboPanel.cpp gui/AutoRefine3dPanel.cpp gui/DisplayRefinementResultsPanel.cpp gui/ImportRefinementPackageWizard.cpp gui/PopupTextDialog.cpp gui/ExportRefinementPackageWizard.cpp gui/Generate3DPanel.cpp gui/LargeAngularPlotDialog.cpp gui/RefinementParametersDialog.cpp gui/Sharpen3DPanel.cpp gui/PlotCurvePanel.cpp gui/DistributionPlotDialog.cpp gui/RefineCTFPanel.cpp gui/ShowTemplateMatchResultsPanel.cpp gui/MatchTemplatePanel.cpp gui/MatchTemplateResultsPanel.cpp gui/RefineTemplatePanel.cpp gui/CombineRefinementPackagesWizard.cpp gui
+cisTEM_SOURCES = programs/projectx/projectx.cpp \
+                gui/gui_globals.cpp \
+                gui/MyFSCPanel.cpp \
+                gui/MyRefinementResultsPanel.cpp \
+                gui/PlotFSCPanel.cpp  \
+                gui/gui_functions.cpp \
+                gui/my_controls.cpp \
+                gui/MyRenameDialog.cpp \
+                gui/BitmapPanel.cpp \
+                gui/PickingBitmapPanel.cpp \
+                gui/job_panel.cpp \
+                gui/ProjectX_gui.cpp \
+                gui/ResultsDataViewListCtrl.cpp \
+                gui/MyMovieFilterDialog.cpp \
+                gui/MainFrame.cpp \
+                gui/MyAssetPanelParent.cpp \
+                gui/MyMovieAssetPanel.cpp \
+                gui/MyImageAssetPanel.cpp \
+                gui/MyParticlePositionAssetPanel.cpp \
+                gui/MyVolumeChooserDialog.cpp \
+                gui/MovieImportDialog.cpp \
+                gui/MyImageImportDialog.cpp \
+                gui/MyVolumeImportDialog.cpp \
+                gui/ErrorDialog.cpp \
+                gui/AlignMoviesPanel.cpp \
+                gui/MyRunProfilesPanel.cpp \
+                gui/mathplot.cpp \
+                gui/MyMovieAlignResultsPanel.cpp \
+                gui/MyFindCTFResultsPanel.cpp \
+                gui/PickingResultsPanel.cpp \
+                gui/MyAddRunCommandDialog.cpp \
+                gui/MyNewProjectWizard.cpp \
+                gui/MyNewRefinementPackageWizard.cpp \
+                gui/UnblurResultsPanel.cpp \
+                gui/ShowCTFResultsPanel.cpp \
+                gui/PickingResultsDisplayPanel.cpp \
+                gui/CTF1DPanel.cpp \
+                gui/FindCTFPanel.cpp \
+                gui/FindParticlesPanel.cpp \
+                gui/MyVolumeAssetPanel.cpp \
+                gui/MyResultsPanel.cpp \
+                gui/MyAssetsPanel.cpp \
+                gui/ActionsPanelSpa.cpp \
+                gui/ActionsPanelTm.cpp \
+                gui/MySettingsPanel.cpp \
+                gui/MyParticlePositionExportDialog.cpp \
+                gui/MyFrealignExportDialog.cpp \
+                gui/MyRelionExportDialog.cpp \
+                gui/MyRefinementPackageAssetPanel.cpp \
+                gui/MyRefine3DPanel.cpp \
+                gui/MyRefine2DPanel.cpp \
+                gui/ClassificationPlotPanel.cpp \
+                gui/AbInitioPlotPanel.cpp \
+                gui/Refine2DResultsPanel.cpp \
+                gui/AngularDistributionPlotPanel.cpp \
+                core/particle_finder.cpp \
+                gui/DisplayPanel.cpp \
+                gui/ClassumSelectionCopyFromDialog.cpp \
+                gui/MyOverviewPanel.cpp \
+                gui/AbInitio3DPanel.cpp \
+                gui/AssetPickerComboPanel.cpp \
+                gui/AutoRefine3dPanel.cpp \
+                gui/DisplayRefinementResultsPanel.cpp \
+                gui/ImportRefinementPackageWizard.cpp \
+                gui/PopupTextDialog.cpp \
+                gui/ExportRefinementPackageWizard.cpp \
+                gui/Generate3DPanel.cpp \
+                gui/LargeAngularPlotDialog.cpp \
+                gui/RefinementParametersDialog.cpp \
+                gui/Sharpen3DPanel.cpp \
+                gui/PlotCurvePanel.cpp \
+                gui/DistributionPlotDialog.cpp \
+                gui/RefineCTFPanel.cpp \
+                gui/ShowTemplateMatchResultsPanel.cpp \
+                gui/MatchTemplatePanel.cpp \
+                gui/MatchTemplateResultsPanel.cpp \
+                gui/RefineTemplatePanel.cpp \
+                gui/CombineRefinementPackagesWizard.cpp
+                
 
 if EXPERIMENTAL_AM
 cisTEM_SOURCES +=  gui/RefineTemplateDevPanel.cpp gui/MyExperimentalPanel.cpp gui/AtomicCoordinatesAssetPanel.cpp gui/AtomicCoordinatesChooserDialog.cpp gui/AtomicCoordinatesImportDialog.cpp
 endif
 
+if ENABLE_WEBVIEW_AM
+cisTEM_SOURCES += gui/WebViewPanel.cpp
+endif
+
 cisTEM_CXXFLAGS = $(WX_CPPFLAGS)
 cisTEM_CPPFLAGS = $(WX_CPPFLAGS)
-cisTEM_LDADD = libguicore.a libcore.a $(WX_LIBS)
+cisTEM_LDADD    = libguicore.a libcore.a $(WX_LIBS)
 
 gui_test_SOURCES = programs/gui_test/gui_test.cpp gui/PlotCurvePanel.cpp gui/mathplot.cpp
 
@@ -369,398 +542,435 @@ gui_test_CXXFLAGS = $(WX_CPPFLAGS)
 gui_test_CPPFLAGS = $(WX_CPPFLAGS)
 gui_test_LDADD = libguicore.a libcore.a $(WX_LIBS)
 
-cisTEM_job_control_SOURCES = programs/guix_job_control/guix_job_control.cpp 
+cisTEM_job_control_SOURCES  = programs/guix_job_control/guix_job_control.cpp 
 cisTEM_job_control_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 cisTEM_job_control_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-cisTEM_job_control_LDADD = libcore.a $(WX_LIBS_BASE)
+cisTEM_job_control_LDADD    = libcore.a $(WX_LIBS_BASE) 
 
-console_test_SOURCES = programs/console_test/console_test.cpp 
+# unlike other programs where we build program/ program_gpu to maintain
+# both codepaths with the most src code overlap as possible, for console tests
+# we often have to write a distinct enough version of the test for the GPU
+# that we just write seperate methods and use precompiler guards (one binary.)
+console_test_SOURCES  = programs/console_test/console_test.cpp 
+if WANT_CISTEM_GPU_AM 
+console_test_CXXFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
+console_test_CPPFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
+else
 console_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 console_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-console_test_LDADD = libcore.a $(WX_LIBS_BASE)
+endif
 
-unblur_SOURCES = programs/unblur/unblur.cpp
+console_test_LDSTRING=
+if WANT_CISTEM_GPU_AM
+# WANT_CISTEM_GPU_AM also implies ENABLE_FASTFFT_AM 
+    console_test_LDSTRING += libgpucore.a
+endif
+
+
+console_test_LDADD    = $(console_test_LDSTRING) libcore.a $(WX_LIBS_BASE) $(CUDA_LIBS)
+
+
+
+unblur_SOURCES  = programs/unblur/unblur.cpp
 unblur_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 unblur_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-unblur_LDADD = libcore.a $(LIBS) $(WX_LIBS_BASE)
+unblur_LDADD    = libcore.a $(LIBS) $(WX_LIBS_BASE)
 
-applyctf_SOURCES = programs/applyctf/applyctf.cpp
+# if WANT_CISTEM_GPU_AM
+# unblur_gpu_SOURCES  = programs/unblur/unblur.cpp
+# unblur_gpu_CXXFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
+# unblur_gpu_CPPFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
+# unblur_gpu_LDADD    = libgpucore.a libcore.a $(WX_LIBS_BASE) $(CUDA_LIBS)
+# endif
+
+applyctf_SOURCES  = programs/applyctf/applyctf.cpp
 applyctf_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 applyctf_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-applyctf_LDADD = libcore.a $(WX_LIBS_BASE)
+applyctf_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-ctffind_SOURCES = programs/ctffind/ctffind.cpp programs/ctffind/ctffind_image_ctf_comparison.cpp programs/ctffind/ctffind_objective_functions.cpp programs/ctffind/ctffind_tilt.cpp
+ctffind_SOURCES  = programs/ctffind/ctffind.cpp programs/ctffind/ctffind_image_ctf_comparison.cpp programs/ctffind/ctffind_objective_functions.cpp programs/ctffind/ctffind_tilt.cpp
 ctffind_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-ctffind_LDADD = libcore.a $(WX_LIBS_BASE)
+ctffind_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-reconstruct3d_SOURCES = programs/reconstruct3d/reconstruct3d.cpp
+reconstruct3d_SOURCES  = programs/reconstruct3d/reconstruct3d.cpp
 reconstruct3d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 reconstruct3d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-reconstruct3d_LDADD = libcore.a $(WX_LIBS_BASE)
+reconstruct3d_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-merge3d_SOURCES = programs/merge3d/merge3d.cpp
+merge3d_SOURCES  = programs/merge3d/merge3d.cpp
 merge3d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 merge3d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-merge3d_LDADD = libcore.a $(WX_LIBS_BASE)
+merge3d_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-calc_occ_SOURCES = programs/calc_occ/calc_occ.cpp
+calc_occ_SOURCES  = programs/calc_occ/calc_occ.cpp
 calc_occ_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 calc_occ_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-calc_occ_LDADD = libcore.a $(WX_LIBS_BASE)
+calc_occ_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-project3d_SOURCES = programs/project3d/project3d.cpp
+project3d_SOURCES  = programs/project3d/project3d.cpp
 project3d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 project3d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-project3d_LDADD = libcore.a $(WX_LIBS_BASE)
+project3d_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-refine3d_SOURCES = programs/refine3d/refine3d.cpp
+refine3d_SOURCES  = programs/refine3d/refine3d.cpp
 refine3d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 refine3d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-refine3d_LDADD = libcore.a $(WX_LIBS_BASE)
+refine3d_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-remove_outlier_pixels_SOURCES = programs/remove_outlier_pixels/remove_outlier_pixels.cpp
+remove_outlier_pixels_SOURCES  = programs/remove_outlier_pixels/remove_outlier_pixels.cpp
 remove_outlier_pixels_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 remove_outlier_pixels_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-remove_outlier_pixels_LDADD = libcore.a $(WX_LIBS_BASE)
+remove_outlier_pixels_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-resize_SOURCES = programs/resize/resize.cpp
+resize_SOURCES  = programs/resize/resize.cpp
 resize_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 resize_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-resize_LDADD = libcore.a $(WX_LIBS_BASE)
+resize_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-resample_SOURCES = programs/resample/resample.cpp
+resample_SOURCES  = programs/resample/resample.cpp
 resample_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 resample_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-resample_LDADD = libcore.a $(WX_LIBS_BASE)
+resample_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-estimate_dataset_ssnr_SOURCES = programs/estimate_dataset_ssnr/estimate_dataset_ssnr.cpp
+estimate_dataset_ssnr_SOURCES  = programs/estimate_dataset_ssnr/estimate_dataset_ssnr.cpp
 estimate_dataset_ssnr_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 estimate_dataset_ssnr_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-estimate_dataset_ssnr_LDADD = libcore.a $(WX_LIBS_BASE)
+estimate_dataset_ssnr_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-reset_mrc_header_SOURCES = programs/reset_mrc_header/reset_mrc_header.cpp
+reset_mrc_header_SOURCES  = programs/reset_mrc_header/reset_mrc_header.cpp
 reset_mrc_header_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 reset_mrc_header_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-reset_mrc_header_LDADD = libcore.a $(WX_LIBS_BASE)
+reset_mrc_header_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-find_particles_SOURCES = programs/find_particles/find_particles.cpp
+find_particles_SOURCES  = programs/find_particles/find_particles.cpp
 find_particles_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 find_particles_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-find_particles_LDADD = libcore.a $(WX_LIBS_BASE)
+find_particles_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-montage_SOURCES = programs/montage/montage.cpp
+montage_SOURCES  = programs/montage/montage.cpp
 montage_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 montage_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-montage_LDADD = libcore.a $(WX_LIBS_BASE)
+montage_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-extract_particles_SOURCES = programs/extract_particles/extract_particles.cpp
+extract_particles_SOURCES  = programs/extract_particles/extract_particles.cpp
 extract_particles_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 extract_particles_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-extract_particles_LDADD = libcore.a $(WX_LIBS_BASE)
+extract_particles_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-sum_all_mrc_files_SOURCES = programs/sum_all_mrc_files/sum_all_mrc_files.cpp
+sum_all_mrc_files_SOURCES  = programs/sum_all_mrc_files/sum_all_mrc_files.cpp
 sum_all_mrc_files_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 sum_all_mrc_files_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-sum_all_mrc_files_LDADD = libcore.a $(WX_LIBS_BASE)
+sum_all_mrc_files_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-sum_all_eer_files_SOURCES = programs/sum_all_eer_files/sum_all_eer_files.cpp
+sum_all_eer_files_SOURCES  = programs/sum_all_eer_files/sum_all_eer_files.cpp
 sum_all_eer_files_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 sum_all_eer_files_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-sum_all_eer_files_LDADD = libcore.a $(WX_LIBS_BASE)
+sum_all_eer_files_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-sum_all_tif_files_SOURCES = programs/sum_all_tif_files/sum_all_tif_files.cpp
+sum_all_tif_files_SOURCES  = programs/sum_all_tif_files/sum_all_tif_files.cpp
 sum_all_tif_files_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 sum_all_tif_files_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-sum_all_tif_files_LDADD = libcore.a $(WX_LIBS_BASE)
+sum_all_tif_files_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-apply_gain_ref_SOURCES = programs/apply_gain_ref/apply_gain_ref.cpp
+apply_gain_ref_SOURCES  = programs/apply_gain_ref/apply_gain_ref.cpp
 apply_gain_ref_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 apply_gain_ref_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-apply_gain_ref_LDADD = libcore.a $(WX_LIBS_BASE)
+apply_gain_ref_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-scale_with_mask_SOURCES = programs/scale_with_mask/scale_with_mask.cpp
+scale_with_mask_SOURCES  = programs/scale_with_mask/scale_with_mask.cpp
 scale_with_mask_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 scale_with_mask_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-scale_with_mask_LDADD = libcore.a $(WX_LIBS_BASE)
+scale_with_mask_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-refine2d_SOURCES = programs/refine2d/refine2d.cpp
+refine2d_SOURCES  = programs/refine2d/refine2d.cpp
 refine2d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 refine2d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-refine2d_LDADD = libcore.a $(WX_LIBS_BASE)
+refine2d_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-merge2d_SOURCES = programs/merge2d/merge2d.cpp
+merge2d_SOURCES  = programs/merge2d/merge2d.cpp
 merge2d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 merge2d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-merge2d_LDADD = libcore.a $(WX_LIBS_BASE)
+merge2d_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-mag_distortion_correct_SOURCES = programs/mag_distortion_correct/mag_distortion_correct.cpp
+mag_distortion_correct_SOURCES  = programs/mag_distortion_correct/mag_distortion_correct.cpp
 mag_distortion_correct_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 mag_distortion_correct_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-mag_distortion_correct_LDADD = libcore.a $(WX_LIBS_BASE)
+mag_distortion_correct_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-apply_mask_SOURCES = programs/apply_mask/apply_mask.cpp
+apply_mask_SOURCES  = programs/apply_mask/apply_mask.cpp
 apply_mask_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 apply_mask_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-apply_mask_LDADD = libcore.a $(WX_LIBS_BASE)
+apply_mask_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-convert_tif_to_mrc_SOURCES = programs/convert_tif_to_mrc/convert_tif_to_mrc.cpp
+convert_tif_to_mrc_SOURCES  = programs/convert_tif_to_mrc/convert_tif_to_mrc.cpp
 convert_tif_to_mrc_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 convert_tif_to_mrc_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-convert_tif_to_mrc_LDADD = libcore.a $(WX_LIBS_BASE)
+convert_tif_to_mrc_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-remove_inf_and_nan_SOURCES = programs/remove_inf_and_nan/remove_inf_and_nan.cpp
+remove_inf_and_nan_SOURCES  = programs/remove_inf_and_nan/remove_inf_and_nan.cpp
 remove_inf_and_nan_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 remove_inf_and_nan_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-remove_inf_and_nan_LDADD = libcore.a $(WX_LIBS_BASE)
+remove_inf_and_nan_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-make_orth_views_SOURCES = programs/make_orth_views/make_orth_views.cpp
+make_orth_views_SOURCES  = programs/make_orth_views/make_orth_views.cpp
 make_orth_views_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 make_orth_views_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-make_orth_views_LDADD = libcore.a $(WX_LIBS_BASE)
+make_orth_views_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-sharpen_map_SOURCES = programs/sharpen_map/sharpen_map.cpp
+sharpen_map_SOURCES  = programs/sharpen_map/sharpen_map.cpp
 sharpen_map_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 sharpen_map_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-sharpen_map_LDADD = libcore.a $(WX_LIBS_BASE)
+sharpen_map_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-calculate_fsc_SOURCES = programs/calculate_fsc/calculate_fsc.cpp
+calculate_fsc_SOURCES  = programs/calculate_fsc/calculate_fsc.cpp
 calculate_fsc_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 calculate_fsc_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-calculate_fsc_LDADD = libcore.a $(WX_LIBS_BASE)
+calculate_fsc_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-make_size_map_SOURCES = programs/make_size_map/make_size_map.cpp
+make_size_map_SOURCES  = programs/make_size_map/make_size_map.cpp
 make_size_map_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 make_size_map_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-make_size_map_LDADD = libcore.a $(WX_LIBS_BASE)
+make_size_map_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-align_symmetry_SOURCES = programs/align_symmetry/align_symmetry.cpp
+align_symmetry_SOURCES  = programs/align_symmetry/align_symmetry.cpp
 align_symmetry_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 align_symmetry_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-align_symmetry_LDADD = libcore.a $(WX_LIBS_BASE)
+align_symmetry_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-prepare_stack_SOURCES = programs/prepare_stack/prepare_stack.cpp
+prepare_stack_SOURCES  = programs/prepare_stack/prepare_stack.cpp
 prepare_stack_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 prepare_stack_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-prepare_stack_LDADD = libcore.a $(WX_LIBS_BASE)
+prepare_stack_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-prepare_stack_classaverage_SOURCES = programs/prepare_stack_classaverage/prepare_stack_classaverage.cpp
+prepare_stack_classaverage_SOURCES  = programs/prepare_stack_classaverage/prepare_stack_classaverage.cpp
 prepare_stack_classaverage_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 prepare_stack_classaverage_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-prepare_stack_classaverage_LDADD = libcore.a $(WX_LIBS_BASE)
+prepare_stack_classaverage_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-subtract_from_stack_SOURCES = programs/subtract_from_stack/subtract_from_stack.cpp
+subtract_from_stack_SOURCES  = programs/subtract_from_stack/subtract_from_stack.cpp
 subtract_from_stack_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 subtract_from_stack_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-subtract_from_stack_LDADD = libcore.a $(WX_LIBS_BASE)
+subtract_from_stack_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-binarize_SOURCES = programs/binarize/binarize.cpp
+binarize_SOURCES  = programs/binarize/binarize.cpp
 binarize_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 binarize_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-binarize_LDADD = libcore.a $(WX_LIBS_BASE)
+binarize_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-move_volume_xyz_SOURCES = programs/move_volume_xyz/move_volume_xyz.cpp
+move_volume_xyz_SOURCES  = programs/move_volume_xyz/move_volume_xyz.cpp
 move_volume_xyz_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 move_volume_xyz_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-move_volume_xyz_LDADD = libcore.a $(WX_LIBS_BASE)
+move_volume_xyz_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-symmetry_expand_stack_and_par_SOURCES = programs/symmetry_expand_stack_and_par/symmetry_expand_stack_and_par.cpp
+symmetry_expand_stack_and_par_SOURCES  = programs/symmetry_expand_stack_and_par/symmetry_expand_stack_and_par.cpp
 symmetry_expand_stack_and_par_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 symmetry_expand_stack_and_par_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-symmetry_expand_stack_and_par_LDADD = libcore.a $(WX_LIBS_BASE)
+symmetry_expand_stack_and_par_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-fft_SOURCES = programs/fft/fft.cpp
+fft_SOURCES  = programs/fft/fft.cpp
 fft_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 fft_CPPFLAGS = $(WX_CPPFLAGS_BASE)    
-fft_LDADD = libcore.a $(WX_LIBS_BASE)
+fft_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-local_resolution_SOURCES = programs/local_resolution/local_resolution.cpp
+local_resolution_SOURCES  = programs/local_resolution/local_resolution.cpp
 local_resolution_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 local_resolution_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-local_resolution_LDADD = libcore.a $(WX_LIBS_BASE)
+local_resolution_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-local_resolution_finalize_SOURCES = programs/local_resolution/local_resolution_finalize.cpp
+local_resolution_finalize_SOURCES  = programs/local_resolution/local_resolution_finalize.cpp
 local_resolution_finalize_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 local_resolution_finalize_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-local_resolution_finalize_LDADD = libcore.a $(WX_LIBS_BASE)
+local_resolution_finalize_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-niko_test_SOURCES = programs/niko_test/niko_test.cpp
-niko_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
-niko_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-niko_test_LDADD = libcore.a $(WX_LIBS_BASE)
+quick_test_SOURCES  = programs/quick_test/quick_test.cpp
+quick_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+quick_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+quick_test_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-local_resolution_filter_SOURCES = programs/local_resolution_filter/local_resolution_filter.cpp
+local_resolution_filter_SOURCES  = programs/local_resolution_filter/local_resolution_filter.cpp
 local_resolution_filter_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 local_resolution_filter_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-local_resolution_filter_LDADD = libcore.a $(WX_LIBS_BASE)
+local_resolution_filter_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-subtract_two_stacks_SOURCES = programs/subtract_two_stacks/subtract_two_stacks.cpp
+subtract_two_stacks_SOURCES  = programs/subtract_two_stacks/subtract_two_stacks.cpp
 subtract_two_stacks_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 subtract_two_stacks_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-subtract_two_stacks_LDADD = libcore.a $(WX_LIBS_BASE)
+subtract_two_stacks_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-align_coordinates_SOURCES = programs/align_coordinates/align_coordinates.cpp
+align_coordinates_SOURCES  = programs/align_coordinates/align_coordinates.cpp
 align_coordinates_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 align_coordinates_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-align_coordinates_LDADD = libcore.a $(WX_LIBS_BASE)
+align_coordinates_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-add_two_stacks_SOURCES = programs/add_two_stacks/add_two_stacks.cpp
+add_two_stacks_SOURCES  = programs/add_two_stacks/add_two_stacks.cpp
 add_two_stacks_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 add_two_stacks_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-add_two_stacks_LDADD = libcore.a $(WX_LIBS_BASE)
+add_two_stacks_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-azimuthal_average_SOURCES = programs/azimuthal_average/azimuthal_average.cpp
+azimuthal_average_SOURCES  = programs/azimuthal_average/azimuthal_average.cpp
 azimuthal_average_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 azimuthal_average_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-azimuthal_average_LDADD = libcore.a $(WX_LIBS_BASE)
+azimuthal_average_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-multiply_two_stacks_SOURCES = programs/multiply_two_stacks/multiply_two_stacks.cpp
+multiply_two_stacks_SOURCES  = programs/multiply_two_stacks/multiply_two_stacks.cpp
 multiply_two_stacks_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 multiply_two_stacks_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-multiply_two_stacks_LDADD = libcore.a $(WX_LIBS_BASE)
+multiply_two_stacks_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-divide_two_stacks_SOURCES = programs/divide_two_stacks/divide_two_stacks.cpp
+divide_two_stacks_SOURCES  = programs/divide_two_stacks/divide_two_stacks.cpp
 divide_two_stacks_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 divide_two_stacks_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-divide_two_stacks_LDADD = libcore.a $(WX_LIBS_BASE)
+divide_two_stacks_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-invert_stack_SOURCES = programs/invert_stack/invert_stack.cpp
+invert_stack_SOURCES  = programs/invert_stack/invert_stack.cpp
 invert_stack_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 invert_stack_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-invert_stack_LDADD = libcore.a $(WX_LIBS_BASE)
+invert_stack_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-convert_par_to_star_SOURCES = programs/convert_par_to_star/convert_par_to_star.cpp
+convert_par_to_star_SOURCES  = programs/convert_par_to_star/convert_par_to_star.cpp
 convert_par_to_star_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 convert_par_to_star_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-convert_par_to_star_LDADD = libcore.a $(WX_LIBS_BASE)
+convert_par_to_star_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-find_dqe_SOURCES = programs/find_dqe/find_dqe.cpp
+find_dqe_SOURCES  = programs/find_dqe/find_dqe.cpp
 find_dqe_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 find_dqe_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-find_dqe_LDADD = libcore.a $(WX_LIBS_BASE)
+find_dqe_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-combine_via_max_SOURCES = programs/combine_via_max/combine_via_max.cpp
+combine_via_max_SOURCES  = programs/combine_via_max/combine_via_max.cpp
 combine_via_max_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 combine_via_max_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-combine_via_max_LDADD = libcore.a $(WX_LIBS_BASE)
+combine_via_max_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-refine_ctf_SOURCES = programs/refine_ctf/refine_ctf.cpp
+refine_ctf_SOURCES  = programs/refine_ctf/refine_ctf.cpp
 refine_ctf_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 refine_ctf_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-refine_ctf_LDADD = libcore.a $(WX_LIBS_BASE)
+refine_ctf_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-estimate_beamtilt_SOURCES = programs/estimate_beamtilt/estimate_beamtilt.cpp
+estimate_beamtilt_SOURCES  = programs/estimate_beamtilt/estimate_beamtilt.cpp
 estimate_beamtilt_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 estimate_beamtilt_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-estimate_beamtilt_LDADD = libcore.a $(WX_LIBS_BASE)
+estimate_beamtilt_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-remove_relion_stripes_SOURCES = programs/remove_relion_stripes/remove_relion_stripes.cpp
+remove_relion_stripes_SOURCES  = programs/remove_relion_stripes/remove_relion_stripes.cpp
 remove_relion_stripes_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 remove_relion_stripes_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-remove_relion_stripes_LDADD = libcore.a $(WX_LIBS_BASE)
+remove_relion_stripes_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-warp_to_cistem_SOURCES = programs/warp_to_cistem/warp_to_cistem.cpp
+warp_to_cistem_SOURCES  = programs/warp_to_cistem/warp_to_cistem.cpp
 warp_to_cistem_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 warp_to_cistem_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-warp_to_cistem_LDADD = libcore.a $(WX_LIBS_BASE)
+warp_to_cistem_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-create_mask_SOURCES = programs/create_mask/create_mask.cpp
+create_mask_SOURCES  = programs/create_mask/create_mask.cpp
 create_mask_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 create_mask_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-create_mask_LDADD = libcore.a $(WX_LIBS_BASE)
+create_mask_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-invert_hand_SOURCES = programs/invert_hand/invert_hand.cpp
+invert_hand_SOURCES  = programs/invert_hand/invert_hand.cpp
 invert_hand_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 invert_hand_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-invert_hand_LDADD = libcore.a $(WX_LIBS_BASE)
+invert_hand_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-append_stacks_SOURCES = programs/append_stacks/append_stacks.cpp
+append_stacks_SOURCES  = programs/append_stacks/append_stacks.cpp
 append_stacks_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 append_stacks_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-append_stacks_LDADD = libcore.a $(WX_LIBS_BASE)
+append_stacks_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-convert_star_to_binary_SOURCES = programs/convert_star_to_binary/convert_star_to_binary.cpp
+convert_star_to_binary_SOURCES  = programs/convert_star_to_binary/convert_star_to_binary.cpp
 convert_star_to_binary_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 convert_star_to_binary_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-convert_star_to_binary_LDADD = libcore.a $(WX_LIBS_BASE)
+convert_star_to_binary_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-convert_binary_to_star_SOURCES = programs/convert_binary_to_star/convert_binary_to_star.cpp
+convert_binary_to_star_SOURCES  = programs/convert_binary_to_star/convert_binary_to_star.cpp
 convert_binary_to_star_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 convert_binary_to_star_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-convert_binary_to_star_LDADD = libcore.a $(WX_LIBS_BASE)
+convert_binary_to_star_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-convert_eer_to_mrc_SOURCES = programs/convert_eer_to_mrc/convert_eer_to_mrc.cpp
+convert_eer_to_mrc_SOURCES  = programs/convert_eer_to_mrc/convert_eer_to_mrc.cpp
 convert_eer_to_mrc_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 convert_eer_to_mrc_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-convert_eer_to_mrc_LDADD = libcore.a $(WX_LIBS_BASE)
+convert_eer_to_mrc_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-normalize_stack_SOURCES = programs/normalize_stack/normalize_stack.cpp
+normalize_stack_SOURCES  = programs/normalize_stack/normalize_stack.cpp
 normalize_stack_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 normalize_stack_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-normalize_stack_LDADD = libcore.a $(WX_LIBS_BASE)
+normalize_stack_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-print_stack_statistics_SOURCES = programs/print_stack_statistics/print_stack_statistics.cpp
+print_stack_statistics_SOURCES  = programs/print_stack_statistics/print_stack_statistics.cpp
 print_stack_statistics_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 print_stack_statistics_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-print_stack_statistics_LDADD = libcore.a $(WX_LIBS_BASE)
+print_stack_statistics_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-combine_stacks_by_star_SOURCES = programs/combine_stacks_by_star/combine_stacks_by_star.cpp
+combine_stacks_by_star_SOURCES  = programs/combine_stacks_by_star/combine_stacks_by_star.cpp
 combine_stacks_by_star_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 combine_stacks_by_star_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-combine_stacks_by_star_LDADD = libcore.a $(WX_LIBS_BASE)
+combine_stacks_by_star_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-if ENABLESAMPLES_AM
 samples_functional_testing_SOURCES  = programs/samples/samples_functional_testing.cpp 
 samples_functional_testing_SOURCES += programs/samples/common/helper_functions.cpp programs/samples/common/embedded_test_file.cpp programs/samples/common/numeric_test_file.cpp
 samples_functional_testing_SOURCES += programs/samples/0_simple/disk_io_image.cpp  
-if ENABLEGPU_AM
-samples_functional_testing_SOURCES += programs/samples/1_cpu_gpu_comparison/resize_comparison.cpp 
+samples_functional_testing_SOURCES += programs/samples/6_simulation/simple_3d.cpp
+if WANT_CISTEM_GPU_AM
+        samples_functional_testing_SOURCES += programs/samples/1_cpu_gpu_comparison/resize_comparison.cpp programs/samples/1_cpu_gpu_comparison/projection_comparison.cpp programs/samples/1_cpu_gpu_comparison/masking.cpp programs/samples/1_cpu_gpu_comparison/statistical_ops.cpp 
+        # samples_functional_testing_SOURCES += programs/samples/3_tensor_ops/gpu_image_tensor_ops.cpp
+        samples_functional_testing_SOURCES += programs/samples/4_ffts/simple_cufft.cpp
+        samples_functional_testing_SOURCES += programs/samples/5_batched_ops/batched_correlation.cpp
 endif
-samples_functional_testing_CXXFLAGS = $(WX_CPPFLAGS_BASE)
-samples_functional_testing_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-if ENABLEGPU_AM 
-samples_functional_testing_LDADD = libgpucore.a libcore.a $(WX_LIBS_BASE) $(CUDA_LIBS)
+
+if WANT_CISTEM_GPU_AM 
+        samples_functional_testing_CXXFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
+        samples_functional_testing_CPPFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
+        samples_functional_testing_LDADD    = libgpucore.a libcore.a $(WX_LIBS_BASE) $(CUDA_LIBS)
 else
-samples_functional_testing_LDADD = libcore.a $(WX_LIBS_BASE)
+    samples_functional_testing_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+    samples_functional_testing_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+    samples_functional_testing_LDADD    = libcore.a $(WX_LIBS_BASE)
 endif
-endif 
 
 
-match_template_SOURCES = programs/match_template/match_template.cpp
+
+match_template_SOURCES  = programs/match_template/match_template.cpp
 match_template_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 match_template_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+match_template_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-
-prepare_stack_matchtemplate_SOURCES = programs/prepare_stack_matchtemplate/prepare_stack_matchtemplate.cpp
-prepare_stack_matchtemplate_CXXFLAGS = $(WX_CPPFLAGS_BASE)
-prepare_stack_matchtemplate_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-prepare_stack_matchtemplate_LDADD = libcore.a $(WX_LIBS_BASE)
-
-if ENABLEGPU_AM 
-match_template_LDADD = libgpucore.a libcore.a $(WX_LIBS_BASE) $(CUDA_LIBS)
-else
-match_template_LDADD = libcore.a $(WX_LIBS_BASE)
+if WANT_CISTEM_GPU_AM  
+    match_template_gpu_SOURCES  = programs/match_template/match_template.cpp
+    match_template_gpu_CXXFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
+    match_template_gpu_CPPFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
+    match_template_gpu_LDADD    = libgpucore.a libcore.a $(WX_LIBS_BASE) $(CUDA_LIBS)
 endif
 
-make_template_result_SOURCES = programs/make_template_result/make_template_result.cpp
+
+prepare_stack_matchtemplate_SOURCES  = programs/prepare_stack_matchtemplate/prepare_stack_matchtemplate.cpp
+prepare_stack_matchtemplate_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+prepare_stack_matchtemplate_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+prepare_stack_matchtemplate_LDADD    = libcore.a $(WX_LIBS_BASE)
+
+
+
+make_template_result_SOURCES  = programs/make_template_result/make_template_result.cpp
 make_template_result_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 make_template_result_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-make_template_result_LDADD = libcore.a $(WX_LIBS_BASE)
 
-simulate_SOURCES =  programs/simulate/simulate.cpp programs/simulate/wave_function_propagator.cpp programs/simulate/scattering_potential.cpp
+make_template_result_LDADD    = libcore.a $(WX_LIBS_BASE)
+
+simulate_SOURCES  =  programs/simulate/simulate.cpp programs/simulate/wave_function_propagator.cpp 
 simulate_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 simulate_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-simulate_LDADD = libcore.a $(WX_LIBS_BASE)
+simulate_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-sum_all_power_spectra_SOURCES =  programs/sum_all_power_spectra/sum_all_power_spectra.cpp 
+sum_all_power_spectra_SOURCES  =  programs/sum_all_power_spectra/sum_all_power_spectra.cpp 
 sum_all_power_spectra_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 sum_all_power_spectra_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-sum_all_power_spectra_LDADD = libcore.a $(WX_LIBS_BASE)
+sum_all_power_spectra_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-refine_template_SOURCES = programs/refine_template/refine_template.cpp
+refine_template_SOURCES  = programs/refine_template/refine_template.cpp
 refine_template_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 refine_template_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-refine_template_LDADD = libcore.a $(WX_LIBS_BASE)
+refine_template_LDADD    = libcore.a $(WX_LIBS_BASE)
 
 if EXPERIMENTAL_AM   
     refine_template_dev_SOURCES = programs/refine_template_dev/refine_template_dev.cpp
@@ -768,19 +978,26 @@ if EXPERIMENTAL_AM
     refine_template_dev_CPPFLAGS = $(WX_CPPFLAGS_BASE)
     refine_template_dev_LDADD = libcore.a $(WX_LIBS_BASE)
 endif
+    unit_test_runner_SOURCES  = test/unit_test_runner.cpp 
+    unit_test_runner_SOURCES  += test/core/test_matrix.cpp 
+if WANT_CISTEM_GPU_AM
+    unit_test_runner_SOURCES += test/gpu/test_gpu.cpp
+                            
+    unit_test_runner_CXXFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
+    unit_test_runner_CPPFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
+    unit_test_runner_LDADD    =  libgpucore.a libcore.a $(WX_LIBS_BASE) $(CUDA_LIBS)
+else
+    unit_test_runner_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+    unit_test_runner_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+    unit_test_runner_LDADD    = libcore.a $(WX_LIBS_BASE)
+endif
 
 
-if ENABLEGPU_AM
 
-gpu_util_test_SUFFIXES = .cpp
-gpu_util_test_SOURCES =  programs/gpu_util_test/gpu_util_test.cpp
-gpu_util_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
-gpu_util_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-gpu_util_test_LDADD =  libgpucore.a libcore.a $(WX_LIBS_BASE) $(CUDA_LIBS)
-
-gpu_devices_SUFFIXES = .cpp
-gpu_devices_SOURCES =  programs/gpu_devices/gpu_devices.cpp
-gpu_devices_CXXFLAGS = $(WX_CPPFLAGS_BASE)
-gpu_devices_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-gpu_devices_LDADD =  libgpucore.a libcore.a $(WX_LIBS_BASE) $(CUDA_LIBS)
+if WANT_CISTEM_GPU_AM
+    gpu_devices_SUFFIXES = .cpp
+    gpu_devices_SOURCES  =  programs/gpu_devices/gpu_devices.cpp
+    gpu_devices_CXXFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
+    gpu_devices_CPPFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
+    gpu_devices_LDADD    =  libgpucore.a libcore.a $(WX_LIBS_BASE) $(CUDA_LIBS)
 endif

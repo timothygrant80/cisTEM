@@ -1,8 +1,18 @@
+#ifndef _SRC_CORE_WATER_H_
+#define _SRC_CORE_WATER_H_
+
+#include "../constants/electron_scattering.h"
+
+// TODO: this could be a short and half-precision type
 typedef struct __attribute__((packed)) __attribute__((aligned(16))) _AtomPos {
     AtomType atom_id;
     float    x;
     float    y;
     float    z;
+
+    _AtomPos( ) : atom_id(hydrogen), x(0.f), y(0.f), z(0.f) {}
+
+    _AtomPos(AtomType _a, float _x, float _y, float _z) : atom_id(_a), x(_x), y(_y), z(_z) {}
 
 } AtomPos;
 
@@ -20,26 +30,26 @@ class Water {
 
     // data
 
-    long     number_of_waters = 0;
-    int      size_neighborhood;
-    float    pixel_size;
-    float    dose_per_frame;
-    int      records_per_line;
-    int      number_of_time_steps;
-    bool     simulate_phase_plate;
-    bool     keep_time_steps;
-    double   center_of_mass[3];
-    long     number_of_each_atom[NUMBER_OF_ATOM_TYPES];
-    float    atomic_volume;
-    float    vol_angX, vol_angY, vol_angZ;
-    int      vol_nX, vol_nY, vol_nZ;
-    float    vol_oX, vol_oY, vol_oZ;
-    float    offset_z;
-    float    min_z;
-    float    max_z;
-    AtomPos* water_coords;
-    bool     is_allocated_water_coords = false;
-    int      nThreads;
+    long                 number_of_waters = 0;
+    int                  size_neighborhood;
+    float                pixel_size;
+    float                dose_per_frame;
+    int                  records_per_line;
+    int                  number_of_time_steps;
+    bool                 simulate_phase_plate;
+    bool                 keep_time_steps;
+    double               center_of_mass[3];
+    long                 number_of_each_atom[cistem::number_of_atom_types];
+    float                atomic_volume;
+    float                vol_angX, vol_angY, vol_angZ;
+    int                  vol_nX, vol_nY, vol_nZ;
+    float                vol_oX, vol_oY, vol_oZ;
+    float                offset_z;
+    float                min_z;
+    float                max_z;
+    std::vector<AtomPos> water_coords;
+    bool                 is_allocated_water_coords = false;
+    int                  nThreads;
 
     //	void set_initial_trajectories(PDB *pdb_ensemble);
 
@@ -61,3 +71,5 @@ class Water {
         dz = water_coords[current_atom].z - vol_oZ;
     }
 };
+
+#endif // _SRC_CORE_WATER_H_

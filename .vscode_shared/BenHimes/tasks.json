@@ -6,7 +6,7 @@
         "env": {
             "cuda_dir": "/usr/local/cuda",
             "build_dir": "${workspaceFolder}/build",
-            "compile_cores": "24",
+            "compile_cores": "16",
             "common_flags": " --enable-experimental --enable-openmp",
             "experimental_algo_flags": "--enable-fp16-particlestacks --enable-smooth-mip --disable-multiple-global-refinements",
             "common_optional_programs": ""
@@ -65,14 +65,14 @@
             "command": "cd ${build_dir}/intel-gpu-debug-deterministic-profile && make -j${compile_cores}"
         },
         {
-            "label": "CONFIG intel,gpu,profile",
+            "label": "CONFIG intel,gpu,profile,static",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/intel-gpu-profile && cd ${build_dir}/intel-gpu-profile && CC=icc CXX=icpc ../../configure --enable-profiling --with-cuda=${cuda_dir} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+            "command": "mkdir -p ${build_dir}/intel-gpu-profile-static && cd ${build_dir}/intel-gpu-profile-static && CC=icc CXX=icpc ../../configure --enable-warnings --enable-profiling --enable-staticmode --with-cuda=${cuda_dir} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
         },
         {
-            "label": "BUILD intel,gpu,profile",
+            "label": "BUILD intel,gpu,profile,static",
             "type": "shell",
-            "command": "cd ${build_dir}/intel-gpu-profile && make -j${compile_cores}"
+            "command": "cd ${build_dir}/intel-gpu-profile-static && make -j${compile_cores}"
         },
         {
             "label": "CONFIG intel,gpu,debug",
@@ -97,22 +97,22 @@
         {
             "label": "CONFIG GNU ,gpu",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/GNU-gpu && cd ${build_dir}/GNU-gpu && CC=gcc CXX=g++ ../../configure  --with-c++std=20   --with-cuda=${cuda_dir} --disable-staticmode ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+            "command": "mkdir -p ${build_dir}/GNU-gpu && cd ${build_dir}/GNU-gpu && CC=gcc CXX=g++ ../../configure    --with-cuda=${cuda_dir} --disable-staticmode --with-wx-config=/opt/WX/intel-dynamic/bin/wx-config ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
         },
         {
             "label": "BUILD GNU,gpu",
             "type": "shell",
-            "command": "${workspaceFolder}/scripts/cistem_make.sh 20 ${build_dir}/GNU-gpu ${compile_cores}"
+            "command": "cd ${build_dir}/GNU-gpu && make -j${compile_cores}"
         },
         {
             "label": "CONFIG GNU,gpu, debug",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/GNU-gpu-debug && cd ${build_dir}/GNU-gpu-debug && CC=gcc CXX=g++ ../../configure  --with-c++std=20  --enable-gpu-debug --enable-debugmode --with-cuda=/usr/local/cuda --disable-staticmode ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+            "command": "mkdir -p ${build_dir}/GNU-gpu-debug && cd ${build_dir}/GNU-gpu-debug && CC=gcc CXX=g++ ../../configure   --enable-gpu-debug --enable-debugmode --with-cuda=/usr/local/cuda --disable-staticmode --with-wx-config=/opt/WX/intel-dynamic/bin/wx-config ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
         },
         {
             "label": "BUILD GNU,gpu, debug",
             "type": "shell",
-            "command": "${workspaceFolder}/scripts/cistem_make.sh 20 ${build_dir}/GNU-gpu-debug ${compile_cores}"
+            "command": "cd ${build_dir}/GNU-gpu-debug  && make -j${compile_cores}"
         },
         {
             // This doesn't work - spaces, ugh

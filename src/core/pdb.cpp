@@ -1,8 +1,65 @@
 #include "core_headers.h"
 #include <wx/arrimpl.cpp> // this is a magic incantation which must be done!
-WX_DEFINE_OBJARRAY(ArrayOfAtoms);
 WX_DEFINE_OBJARRAY(ArrayOfParticleTrajectories);
-//WX_DEFINE_OBJARRAY(ArrayOfParticleInstances);
+
+// TODO: can these be more local to their usage?
+#include "../../include/gemmi/model.hpp"
+#include "../../include/gemmi/elem.hpp"
+#include "../../include/gemmi/mmread.hpp"
+#include "../../include/gemmi/gz.hpp"
+#include "../../include/gemmi/resinfo.hpp"
+#include "../../include/gemmi/calculate.hpp"
+
+Atom::Atom( ) {
+    name             = "";
+    atom_type        = hydrogen;
+    is_real_particle = true;
+    x_coordinate     = 0.0;
+    y_coordinate     = 0.0;
+    z_coordinate     = 0.0;
+    occupancy        = 0.0;
+    bfactor          = 0.0;
+    charge           = 0.0;
+}
+
+Atom::Atom(const wxString& name, const bool& is_real_particle, const AtomType& atom_type, const float& x, const float& y, const float& z, const float& occ, const float& bfactor, const float& charge) {
+    this->name             = name;
+    this->is_real_particle = is_real_particle;
+    this->atom_type        = atom_type;
+    this->is_real_particle = true;
+    this->x_coordinate     = x;
+    this->y_coordinate     = y;
+    this->z_coordinate     = z;
+    this->occupancy        = occ;
+    this->bfactor          = bfactor;
+    this->charge           = charge;
+}
+
+Atom::~Atom( ) {}
+
+Atom::Atom(const Atom& other_atom) {
+    *this = other_atom;
+}
+
+Atom& Atom::operator=(const Atom& other_atom) {
+    *this = &other_atom;
+    return *this;
+}
+
+Atom& Atom::operator=(const Atom* other_atom) {
+    if ( this != other_atom ) {
+        this->atom_type        = other_atom->atom_type;
+        this->is_real_particle = other_atom->is_real_particle;
+        this->name             = other_atom->name;
+        this->x_coordinate     = other_atom->x_coordinate; // Angstrom
+        this->y_coordinate     = other_atom->y_coordinate; // Angstrom
+        this->z_coordinate     = other_atom->z_coordinate; // Angstrom
+        this->occupancy        = other_atom->occupancy;
+        this->bfactor          = other_atom->bfactor;
+        this->charge           = other_atom->charge;
+    }
+    return *this;
+}
 
 const double MIN_PADDING_Z    = 4;
 const int    MAX_XY_DIMENSION = 4096 * 2;
@@ -37,27 +94,110 @@ const int    MAX_XY_DIMENSION = 4096 * 2;
 #define PARTICLELENGTH 8
 
 PDB::PDB( ) {
+    SetDefaultValues( );
+}
+
+void PDB::SetDefaultValues( ) {
     input_file_stream  = NULL;
     input_text_stream  = NULL;
     output_file_stream = NULL;
     output_text_stream = NULL;
-    Atom dummy_atom;
-
-    my_atoms.Alloc(1);
-    my_atoms.Add(dummy_atom, 1);
 
     SetEmpty( );
 }
 
-PDB::PDB(long number_of_non_water_atoms, float cubic_size, float wanted_pixel_size, int minimum_padding_x_and_y, double minimum_thickness_z,
-         int   max_number_of_noise_particles,
-         float wanted_noise_particle_radius_as_mutliple_of_particle_radius,
-         float wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
-         float wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
-         float wanted_tilt_angle_to_emulate,
-         bool  shift_by_center_of_mass,
-         bool  is_alpha_fold_prediction,
-         bool  use_star_file) {
+PDB::PDB(const PDB& other_pdb) {
+    *this = other_pdb;
+}
+
+PDB& PDB::operator=(const PDB& other_pdb) {
+
+    *this = &other_pdb;
+    return *this;
+}
+
+PDB& PDB::operator=(const PDB* other_pdb) {
+
+    if ( this != other_pdb ) {
+        SetDefaultValues( );
+        this->generate_noise_atoms          = other_pdb->generate_noise_atoms;
+        this->number_of_noise_particles     = other_pdb->number_of_noise_particles;
+        this->max_number_of_noise_particles = other_pdb->max_number_of_noise_particles;
+
+        this->noise_particle_radius_as_mutliple_of_particle_radius                        = other_pdb->noise_particle_radius_as_mutliple_of_particle_radius;
+        this->noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius = other_pdb->noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius;
+        this->noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius = other_pdb->noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius;
+
+        this->emulate_tilt_angle             = other_pdb->emulate_tilt_angle;
+        this->shift_by_center_of_mass        = other_pdb->shift_by_center_of_mass;
+        this->number_of_lines                = other_pdb->number_of_lines;
+        this->number_of_atoms                = other_pdb->number_of_atoms;
+        this->number_of_real_and_noise_atoms = other_pdb->number_of_real_and_noise_atoms;
+        this->number_of_real_atoms           = other_pdb->number_of_real_atoms;
+        this->records_per_line               = other_pdb->records_per_line;
+        this->center_of_mass[0]              = other_pdb->center_of_mass[0];
+        this->center_of_mass[1]              = other_pdb->center_of_mass[1];
+        this->center_of_mass[2]              = other_pdb->center_of_mass[2];
+        this->use_provided_com               = other_pdb->use_provided_com;
+        this->is_alpha_fold_prediction       = other_pdb->is_alpha_fold_prediction;
+        this->pixel_size                     = other_pdb->pixel_size;
+        this->average_bFactor                = other_pdb->average_bFactor;
+        // This will be set in the loop below over Transform Coordintaes
+        // this->number_of_particles_initialized = other_pdb->number_of_particles_initialized;
+
+        for ( int iAtom = 0; iAtom < cistem::number_of_atom_types; iAtom++ ) {
+            this->number_of_each_atom[iAtom] = other_pdb->number_of_each_atom[iAtom];
+        }
+
+        this->atomic_volume        = other_pdb->atomic_volume;
+        this->vol_angX             = other_pdb->vol_angX;
+        this->vol_angY             = other_pdb->vol_angY;
+        this->vol_angZ             = other_pdb->vol_angZ;
+        this->vol_nX               = other_pdb->vol_nX;
+        this->vol_nY               = other_pdb->vol_nY;
+        this->vol_nZ               = other_pdb->vol_nZ;
+        this->vol_oX               = other_pdb->vol_oX;
+        this->vol_oY               = other_pdb->vol_oY;
+        this->vol_oZ               = other_pdb->vol_oZ;
+        this->cubic_size           = other_pdb->cubic_size;
+        this->offset_z             = other_pdb->offset_z;
+        this->min_z                = other_pdb->min_z;
+        this->max_z                = other_pdb->max_z;
+        this->max_radius           = other_pdb->max_radius;
+        this->MIN_PADDING_XY       = other_pdb->MIN_PADDING_XY;
+        this->MIN_THICKNESS        = other_pdb->MIN_THICKNESS;
+        this->star_file_parameters = other_pdb->star_file_parameters;
+        this->use_star_file        = other_pdb->use_star_file;
+
+        this->atoms.reserve(other_pdb->atoms.size( ));
+        for ( long current_atom = 0; current_atom < other_pdb->atoms.size( ); current_atom++ ) {
+            this->atoms.push_back(other_pdb->atoms[current_atom]);
+            // std::cerr << "Atom is " << atoms.back( ).name << " " << current_atom << " " << atoms.back( ).atom_type << " " << atoms.back( ).bfactor << '\n';
+            // if ( isnan(atoms.back( ).bfactor) )
+            //     std::cerr << "Atom is " << atoms.back( ).name << " " << current_atom << " " << atoms.back( ).atom_type << " " << atoms.back( ).bfactor << '\n';
+        }
+
+        for ( int i = 0; i < other_pdb->initial_values.size( ); i++ ) {
+            this->TransformBaseCoordinates(other_pdb->initial_values[i].ox, other_pdb->initial_values[i].oy, other_pdb->initial_values[i].oz,
+                                           other_pdb->initial_values[i].euler1, other_pdb->initial_values[i].euler2, other_pdb->initial_values[i].euler3, i, 0);
+        }
+    }
+    return *this;
+}
+
+PDB::PDB(long   number_of_non_water_atoms,
+         float  cubic_size,
+         float  wanted_pixel_size,
+         int    minimum_padding_x_and_y,
+         double minimum_thickness_z,
+         int    max_number_of_noise_particles,
+         float  wanted_noise_particle_radius_as_mutliple_of_particle_radius,
+         float  wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
+         float  wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
+         float  wanted_tilt_angle_to_emulate,
+         bool   shift_by_center_of_mass,
+         bool   is_alpha_fold_prediction,
+         bool   use_star_file) {
 
     this->use_star_file = use_star_file;
     wxPrintf("IN constructor 1 and use_star_file = %d\n", use_star_file);
@@ -67,9 +207,7 @@ PDB::PDB(long number_of_non_water_atoms, float cubic_size, float wanted_pixel_si
     output_file_stream = NULL;
     output_text_stream = NULL;
     // Create a total PDB object to hold all the atoms in a specimen at a given time in the trajectory
-    Atom dummy_atom;
-    my_atoms.Alloc(number_of_non_water_atoms);
-    my_atoms.Add(dummy_atom, number_of_non_water_atoms);
+    atoms.reserve(number_of_non_water_atoms);
 
     this->cubic_size = cubic_size;
 
@@ -95,7 +233,12 @@ PDB::PDB(long number_of_non_water_atoms, float cubic_size, float wanted_pixel_si
     this->shift_by_center_of_mass                                                     = shift_by_center_of_mass;
 }
 
-PDB::PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, long wanted_records_per_line, int minimum_padding_x_and_y, double minimum_thickness_z,
+PDB::PDB(wxString          Filename,
+         long              wanted_access_type,
+         float             wanted_pixel_size,
+         long              wanted_records_per_line,
+         int               minimum_padding_x_and_y,
+         double            minimum_thickness_z,
          int               max_number_of_noise_particles,
          float             wanted_noise_particle_radius_as_mutliple_of_particle_radius,
          float             wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
@@ -103,7 +246,8 @@ PDB::PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, lo
          float             wanted_tilt_angle_to_emulate,
          bool              shift_by_center_of_mass,
          bool              is_alpha_fold_prediction,
-         cisTEMParameters& wanted_star_file, bool use_star_file) {
+         cisTEMParameters& wanted_star_file,
+         bool              use_star_file) {
 
     star_file_parameters = wanted_star_file;
     this->use_star_file  = use_star_file;
@@ -138,27 +282,40 @@ PDB::PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, lo
     Open(Filename, wanted_access_type, wanted_records_per_line);
 }
 
-PDB::PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, long wanted_records_per_line, int minimum_padding_x_and_y, double minimum_thickness_z, double* COM, bool is_alpha_fold_prediction) {
+PDB::PDB(wxString Filename,
+         long     wanted_access_type,
+         float    wanted_pixel_size,
+         long     wanted_records_per_line,
+         int      minimum_padding_x_and_y,
+         double   minimum_thickness_z,
+         bool     is_alpha_fold_prediction,
+         double*  COM) {
     input_file_stream  = NULL;
     input_text_stream  = NULL;
     output_file_stream = NULL;
     output_text_stream = NULL;
 
     use_star_file = false;
-    wxPrintf("IN constructor 2 and use_star_file = %d\n", use_star_file);
 
-    this->MIN_PADDING_XY = minimum_padding_x_and_y;
-    this->MIN_THICKNESS  = minimum_thickness_z;
+    MIN_PADDING_XY = minimum_padding_x_and_y;
+    MIN_THICKNESS  = minimum_thickness_z;
 
-    this->use_provided_com         = true;
+    use_provided_com               = true;
     this->is_alpha_fold_prediction = is_alpha_fold_prediction;
 
+    if ( COM ) {
     for ( int iCOM = 0; iCOM < 3; iCOM++ ) {
-        this->center_of_mass[iCOM] = COM[iCOM];
+            center_of_mass[iCOM] = COM[iCOM];
         wxPrintf("Using provided center of mass %d %3.3f\n", iCOM, this->center_of_mass[iCOM]);
     }
+    }
+    else {
 
-    shift_by_center_of_mass = false;
+        use_provided_com = false;
+    }
+
+    shift_by_center_of_mass = true;
+
     SetEmpty( );
     this->pixel_size = wanted_pixel_size;
     Open(Filename, wanted_access_type, wanted_records_per_line);
@@ -274,10 +431,6 @@ void PDB::Init( ) {
     // After a phenix ADP refinement + Chimera selection and split, all ATOM --> HETATM. Quick hack to set this until I can figure out why. Generally speaking, this should be left as ATOM
     wxString pdb_atom = "ATOM";
 
-    // test out gemmi
-    wxFFileOutputStream output(stderr);
-    wxTextOutputStream  cout(output);
-
     gemmi::Structure st;
     try {
         st = gemmi::read_structure(gemmi::MaybeGzipped(text_filename.ToStdString( )));
@@ -311,18 +464,17 @@ void PDB::Init( ) {
         number_of_atoms += (number_of_atoms * this->max_number_of_noise_particles);
     }
 
-    wxPrintf("Max particles is %d here\n", max_number_of_noise_particles);
+    // wxPrintf("Max particles is %d here\n", max_number_of_noise_particles);
     // If noie noise atoms, this will always equal number of atoms. Otherwise, number of atoms is at most this, and changes from particle to particle in the stack
     number_of_real_and_noise_atoms = number_of_atoms;
 
-    wxPrintf("\nIn constructor real total current %ld %ld %ld\n", number_of_real_atoms, number_of_real_and_noise_atoms, number_of_atoms);
-
+    // wxPrintf("\nIn constructor real total current %ld %ld %ld\n", number_of_real_atoms, number_of_real_and_noise_atoms, number_of_atoms);
     // Create the atom array, then loop back over the pdb to get the desired info.
-    Atom dummy_atom;
-    my_atoms.Alloc(number_of_real_and_noise_atoms);
-    my_atoms.Add(dummy_atom, number_of_real_and_noise_atoms);
+    atoms.reserve(number_of_real_and_noise_atoms);
 
     // I'm sure there is already something in GEMMI to do an iteration like this.
+    float    i_bfactor;
+    AtomType i_atom_type;
     for ( gemmi::Model& model : st.models ) {
         for ( gemmi::Chain& chain : model.chains ) {
             for ( gemmi::Residue& res : chain.residues ) {
@@ -330,103 +482,99 @@ void PDB::Init( ) {
                 if ( res.het_flag == 'A' ) { // 'A' = ATOM, 'H' = HETATM, 0 = unspecified
                     for ( gemmi::Atom& atom : res.atoms ) {
 
-                        my_atoms.Item(current_atom_number).name             = wxString(atom.name);
-                        my_atoms.Item(current_atom_number).is_real_particle = true;
-
-                        // in gemmi this is a signed char, consider using this as it is smaller and presumably more efficient
-                        my_atoms.Item(current_atom_number).charge = float(atom.charge);
-
-                        my_atoms.Item(current_atom_number).x_coordinate = float(atom.pos.x);
-                        my_atoms.Item(current_atom_number).y_coordinate = float(atom.pos.y);
-                        my_atoms.Item(current_atom_number).z_coordinate = float(atom.pos.z);
-                        my_atoms.Item(current_atom_number).occupancy    = atom.occ;
                         if ( is_alpha_fold_prediction ) {
+                            std::cerr << "Alpha fold prediction not implemented yet" << std::endl;
                             // Convert the confidence score to a bfactor. The formula is adhoc.
                             // Confidence score is 0->100 with higher being more confident.
-                            my_atoms.Item(current_atom_number).bfactor = 4.f + powf(100.f - atom.b_iso, 1.314159f);
-                            // wxPrintf("Confidence score %f, bfactor %f\n",atom.b_iso,my_atoms.Item(current_atom_number).bfactor);
+                            i_bfactor = 4.f + powf(100.f - atom.b_iso, 1.314159f);
+
+                            // atoms[current_atom_number].bfactor = 4.f + powf(100.f - atom.b_iso, 1.314159f);
+                            // wxPrintf("Confidence score %f, bfactor %f\n",atom.b_iso,atoms[current_atom_number].bfactor);
                         }
                         else {
-                            my_atoms.Item(current_atom_number).bfactor = atom.b_iso;
+                            i_bfactor = atom.b_iso;
+
+                            // atoms[current_atom_number].bfactor = atom.b_iso;
                         }
-                        // Will replace this by actually using the element type
+
                         switch ( atom.element.ordinal( ) ) {
 
                             case 0:
-                                MyDebugPrintWithDetails("Error, non-element type, %s\n", my_atoms.Item(current_atom_number).name);
+                                MyDebugPrintWithDetails("Error, non-element type, %s\n", atoms[current_atom_number].name);
                                 exit(-1);
                                 break;
                             case 1:
-                                my_atoms.Item(current_atom_number).atom_type = hydrogen;
+                                i_atom_type = hydrogen;
                                 break;
                             case 6:
-                                my_atoms.Item(current_atom_number).atom_type = carbon;
+                                i_atom_type = carbon;
                                 break;
                             case 7:
-                                my_atoms.Item(current_atom_number).atom_type = nitrogen;
+                                i_atom_type = nitrogen;
                                 break;
                             case 8:
-                                my_atoms.Item(current_atom_number).atom_type = oxygen;
+                                i_atom_type = oxygen;
                                 break;
                             case 9:
-                                my_atoms.Item(current_atom_number).atom_type = fluorine;
+                                i_atom_type = fluorine;
                                 break;
                             case 11:
-                                my_atoms.Item(current_atom_number).atom_type = sodium;
+                                i_atom_type = sodium;
                                 break;
                             case 12:
-                                my_atoms.Item(current_atom_number).atom_type = magnesium;
+                                i_atom_type = magnesium;
                                 break;
                             case 14:
-                                my_atoms.Item(current_atom_number).atom_type = silicon;
+                                i_atom_type = silicon;
                                 break;
                             case 15:
-                                my_atoms.Item(current_atom_number).atom_type = phosphorus;
+                                i_atom_type = phosphorus;
                                 break;
                             case 16:
-                                my_atoms.Item(current_atom_number).atom_type = sulfur;
+                                i_atom_type = sulfur;
                                 break;
                             case 17:
-                                my_atoms.Item(current_atom_number).atom_type = chlorine;
+                                i_atom_type = chlorine;
                                 break;
                             case 19:
-                                my_atoms.Item(current_atom_number).atom_type = potassium;
+                                i_atom_type = potassium;
                                 break;
                             case 20:
-                                my_atoms.Item(current_atom_number).atom_type = calcium;
+                                i_atom_type = calcium;
                                 break;
                             case 25:
-                                my_atoms.Item(current_atom_number).atom_type = manganese;
+                                i_atom_type = manganese;
                                 break;
                             case 27:
-                                my_atoms.Item(current_atom_number).atom_type = iron;
+                                i_atom_type = iron;
                                 break;
                             case 28:
-                                my_atoms.Item(current_atom_number).atom_type = cobalt;
+                                i_atom_type = cobalt;
                                 break;
                             case 30:
-                                my_atoms.Item(current_atom_number).atom_type = zinc;
+                                i_atom_type = zinc;
                                 break;
                             case 34:
-                                my_atoms.Item(current_atom_number).atom_type = selenium;
+                                i_atom_type = selenium;
                                 break;
                             case 79:
-                                my_atoms.Item(current_atom_number).atom_type = gold;
+                                i_atom_type = gold;
                                 break;
                             default:
                                 wxPrintf("Un-coded conversion from gemmi::el to Atom::atom_type\n");
-                                cout << "Element is " << atom.element.name( ) << "and el" << atom.element.ordinal( ) << '\n';
+                                std::cerr << "Element is " << atom.element.name( ) << "and el" << atom.element.ordinal( ) << '\n';
                                 exit(-1);
                                 break;
                         }
 
-                        // cout << "Element is " << atom.element.name() << "and el" << atom.element.ordinal() << '\n' ;
-                        // my_atoms.Item(current_atom_number).atom_type = oxygen;
-
-                        // TODO next, update my enums to use zero as X for unkown and match to those in gemmi/include/elem.hpp
-
+                        atoms.emplace_back(wxString(atom.name), true, i_atom_type, float(atom.pos.x), float(atom.pos.y), float(atom.pos.z), atom.occ, i_bfactor, float(atom.charge));
                         current_atom_number++;
                         n_atoms_in_single_molecule_from_star_file++;
+
+                        if ( isnan(atoms.back( ).bfactor) ) {
+                            std::cerr << "Atom is " << atoms.back( ).name << " " << current_atom_number << " " << atoms.back( ).x_coordinate << atoms.back( ).atom_type << " " << atoms.back( ).bfactor << '\n';
+                            exit(1);
+                        }
                     }
                 }
             }
@@ -435,11 +583,12 @@ void PDB::Init( ) {
 
     if ( use_star_file && star_file_parameters.ReturnNumberofLines( ) > 1 ) {
 
-        // First we need the average defocus to determine offsets in Z (for underfocus, the focal plane is above the specimen in the scope and the undefocus magnitude increases as we move away (down) the column.)
+        // First we need the average defocus to determine offsets in Z
+        // (for underfocus, the focal plane is above the specimen in the scope and the undefocus magnitude increases as we move away (down) the column.)
         star_file_parameters.CalculateDefocusDependence( );
         int current_frame_number = 1;
 
-        // IF there are multiple frames, calling this iParticle doesn't make sense.
+        // FIXME: there are multiple frames, calling this iParticle doesn't make sense.
         for ( int iParticle = 0; iParticle < star_file_parameters.ReturnNumberofLines( ); iParticle++ ) {
             // If particle group is 0 it is written improperly, but safe to assume there is only one frame per particle.
             // Otherwise, we increment the frame numbers until the number reduces again.
@@ -469,15 +618,16 @@ void PDB::Init( ) {
         }
     }
     else {
+
         // Set up the initial trajectory for this particle instance.
         this->TransformBaseCoordinates(0, 0, 0, 0, 0, 0, 0, 0);
     }
     // Finally, calculate the center of mass of the PDB object if it is not provided and is to be applied.
     if ( ! use_provided_com && shift_by_center_of_mass ) {
         for ( current_atom_number = 0; current_atom_number < number_of_real_atoms; current_atom_number++ ) {
-            center_of_mass[0] += my_atoms.Item(current_atom_number).x_coordinate;
-            center_of_mass[1] += my_atoms.Item(current_atom_number).y_coordinate;
-            center_of_mass[2] += my_atoms.Item(current_atom_number).z_coordinate;
+            center_of_mass[0] += atoms[current_atom_number].x_coordinate;
+            center_of_mass[1] += atoms[current_atom_number].y_coordinate;
+            center_of_mass[2] += atoms[current_atom_number].z_coordinate;
         }
 
         for ( current_atom_number = 0; current_atom_number < 3; current_atom_number++ ) {
@@ -490,18 +640,18 @@ void PDB::Init( ) {
     }
 
     if ( shift_by_center_of_mass ) {
-        if ( use_provided_com ) {
-            wxPrintf("\n\nSetting PDB center of mass to that provided %f %f %f (x,y,z Angstrom)\n\n", center_of_mass[0], center_of_mass[1], center_of_mass[2]);
-        }
-        else {
-            wxPrintf("\n\nPDB center of mass at %f %f %f (x,y,z Angstrom)\n\nSetting origin there.\n\n", center_of_mass[0], center_of_mass[1], center_of_mass[2]);
-        }
+        // if ( use_provided_com ) {
+        //     wxPrintf("\n\nSetting PDB center of mass to that provided %f %f %f (x,y,z Angstrom)\n\n", center_of_mass[0], center_of_mass[1], center_of_mass[2]);
+        // }
+        // else {
+        //     wxPrintf("\n\nPDB center of mass at %f %f %f (x,y,z Angstrom)\n\nSetting origin there.\n\n", center_of_mass[0], center_of_mass[1], center_of_mass[2]);
+        // }
 
         // Set the coordinate origin to the calculated or provided center of mass
         for ( current_atom_number = 0; current_atom_number < number_of_real_atoms; current_atom_number++ ) {
-            my_atoms.Item(current_atom_number).x_coordinate -= center_of_mass[0];
-            my_atoms.Item(current_atom_number).y_coordinate -= center_of_mass[1];
-            my_atoms.Item(current_atom_number).z_coordinate -= center_of_mass[2];
+            atoms[current_atom_number].x_coordinate -= center_of_mass[0];
+            atoms[current_atom_number].y_coordinate -= center_of_mass[1];
+            atoms[current_atom_number].z_coordinate -= center_of_mass[2];
         }
     }
 
@@ -509,19 +659,19 @@ void PDB::Init( ) {
         // First get the largest molecular radius of the target molecule (centered)
         for ( current_atom_number = 0; current_atom_number < number_of_real_atoms; current_atom_number++ ) {
             // FIXME number of noise molecules!!
-            if ( fabsf(my_atoms.Item(current_atom_number).x_coordinate) > max_radius )
-                max_radius = fabsf(my_atoms.Item(current_atom_number).x_coordinate);
-            if ( fabsf(my_atoms.Item(current_atom_number).y_coordinate) > max_radius )
-                max_radius = fabsf(my_atoms.Item(current_atom_number).y_coordinate);
-            if ( fabsf(my_atoms.Item(current_atom_number).z_coordinate) > max_radius )
-                max_radius = fabsf(my_atoms.Item(current_atom_number).z_coordinate);
+            if ( fabsf(atoms[current_atom_number].x_coordinate) > max_radius )
+                max_radius = fabsf(atoms[current_atom_number].x_coordinate);
+            if ( fabsf(atoms[current_atom_number].y_coordinate) > max_radius )
+                max_radius = fabsf(atoms[current_atom_number].y_coordinate);
+            if ( fabsf(atoms[current_atom_number].z_coordinate) > max_radius )
+                max_radius = fabsf(atoms[current_atom_number].z_coordinate);
         }
         wxPrintf("Max particles is %d in spot 2\n", max_number_of_noise_particles);
 
         for ( int iPart = 0; iPart < this->max_number_of_noise_particles; iPart++ ) {
             for ( current_atom_number = 0; current_atom_number < number_of_real_atoms; current_atom_number++ ) {
-                my_atoms.Item(current_atom_number + number_of_real_atoms * (1 + iPart))                  = CopyAtom(my_atoms.Item(current_atom_number));
-                my_atoms.Item(current_atom_number + number_of_real_atoms * (1 + iPart)).is_real_particle = false;
+                atoms[current_atom_number + number_of_real_atoms * (1 + iPart)]                  = atoms[current_atom_number];
+                atoms[current_atom_number + number_of_real_atoms * (1 + iPart)].is_real_particle = false;
             }
         }
     }
@@ -644,8 +794,7 @@ void PDB::TransformBaseCoordinates(float wanted_origin_x, float wanted_origin_y,
     ParticleTrajectory dummy_trajectory;
     my_trajectory.Add(dummy_trajectory, 1);
 
-    InitialOrientations temp_orientation(euler1, euler2, euler3, wanted_origin_x, wanted_origin_y, wanted_origin_z);
-    initial_values.push_back(temp_orientation);
+    initial_values.emplace_back(euler1, euler2, euler3, wanted_origin_x, wanted_origin_y, wanted_origin_z);
 
     RotationMatrix rotmat;
 
@@ -675,14 +824,20 @@ void PDB::TransformBaseCoordinates(float wanted_origin_x, float wanted_origin_y,
 
     // Now that a new member is added to the ensemble, increment the counter
     this->number_of_particles_initialized++;
-    wxPrintf("\n\nNumber of particles initialized %d\n", this->number_of_particles_initialized);
+    // wxPrintf("\n\nNumber of particles initialized %d\n", this->number_of_particles_initialized);
+}
+
+void PDB::TransformLocalAndCombine(PDB& clean_copy, int number_of_pdbs, int frame_number, RotationMatrix particle_rot, float shift_z, bool is_single_particle) {
+    clean_copy.TransformLocalAndCombine(this, number_of_pdbs, frame_number, particle_rot, shift_z, is_single_particle);
+    return;
 }
 
 void PDB::TransformLocalAndCombine(PDB* pdb_ensemble, int number_of_pdbs, int frame_number, RotationMatrix particle_rot, float shift_z, bool is_single_particle) {
     /*
      * Take an array of PDB objects and create a single array of atoms transformed according to the timestep
     */
-    wxPrintf("\n\nTransforming local and combining\n");
+    // wxPrintf("\n\nTransforming local and combining\n");
+    // std::cerr << " My size their size " << atoms.size( ) << " dd " << pdb_ensemble->atoms.size( ) << std::endl;
 
     int   current_pdb        = 0;
     int   current_particle   = 0;
@@ -702,12 +857,15 @@ void PDB::TransformLocalAndCombine(PDB* pdb_ensemble, int number_of_pdbs, int fr
     this->average_bFactor = 0;
     RotationMatrix rotmat;
 
-    for ( int iAtom = 0; iAtom < NUMBER_OF_ATOM_TYPES; iAtom++ ) {
+    for ( int iAtom = 0; iAtom < cistem::number_of_atom_types; iAtom++ ) {
         number_of_each_atom[iAtom] = 0;
     }
 
     for ( current_pdb = 0; current_pdb < number_of_pdbs; current_pdb++ ) {
-        wxPrintf("Checking %ld %ld\n", pdb_ensemble[current_pdb].my_atoms.GetCount( ), my_atoms.GetCount( ));
+        if ( this->atoms.capacity( ) < pdb_ensemble[current_pdb].number_of_atoms ) {
+            this->atoms.reserve(pdb_ensemble[current_pdb].number_of_atoms);
+        }
+        // wxPrintf("Checking %ld %ld\n", pdb_ensemble[current_pdb].atoms.size( ), atoms.size( ));
         for ( current_particle = 0; current_particle < pdb_ensemble[current_pdb].number_of_particles_initialized; current_particle++ ) {
             ox = pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[0][0];
             oy = pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[0][1];
@@ -723,7 +881,6 @@ void PDB::TransformLocalAndCombine(PDB* pdb_ensemble, int number_of_pdbs, int fr
                                pdb_ensemble[current_pdb].my_trajectory.Item(current_particle).current_orientation[0][11]);
 
             rotmat *= particle_rot;
-
             // Randomly set noise atoms before copying in. Initially, there is a copy of every real atom, at the same x,y,z coords. For frame zero we
             // want to randomly rotate each noise particle, and offset each particle by a random amount that ensures no overlap with the real particle.
             // The first two noise particles are set to not overlap. Additional particles are able to overlap, which I think is more likely with high crowding (multiple layers of particles.)
@@ -734,12 +891,12 @@ void PDB::TransformLocalAndCombine(PDB* pdb_ensemble, int number_of_pdbs, int fr
                 // Fetch a clean copy of the atomic coordinates for this molecule
                 long current_atom = 0;
                 for ( long intra_mol_current_atom = 0; intra_mol_current_atom < pdb_ensemble[current_pdb].number_of_atoms; intra_mol_current_atom++ ) {
-                    current_atom                      = intra_mol_current_atom + pdb_ensemble[current_pdb].number_of_atoms * current_particle;
-                    this->my_atoms.Item(current_atom) = CopyAtom(pdb_ensemble[current_pdb].my_atoms.Item(intra_mol_current_atom));
+                    current_atom              = intra_mol_current_atom + pdb_ensemble[current_pdb].number_of_atoms * current_particle;
+                    this->atoms[current_atom] = pdb_ensemble[current_pdb].atoms[intra_mol_current_atom];
 
-                    ix = my_atoms.Item(current_atom).x_coordinate;
-                    iy = my_atoms.Item(current_atom).y_coordinate;
-                    iz = my_atoms.Item(current_atom).z_coordinate;
+                    ix = atoms[current_atom].x_coordinate;
+                    iy = atoms[current_atom].y_coordinate;
+                    iz = atoms[current_atom].z_coordinate;
 
                     // Transform the coordinates, but FIXME hard coding zero is shifty
                     AnglesAndShifts my_angles(pdb_ensemble[current_pdb].initial_values[current_particle].euler1,
@@ -747,54 +904,56 @@ void PDB::TransformLocalAndCombine(PDB* pdb_ensemble, int number_of_pdbs, int fr
                                               pdb_ensemble[current_pdb].initial_values[current_particle].euler3, 0.f, 0.f);
                     my_angles.euler_matrix.RotateCoords(ix, iy, iz, tx, ty, tz);
 
-                    this->my_atoms.Item(current_atom).x_coordinate = tx + pdb_ensemble[current_pdb].initial_values[current_particle].ox;
-                    this->my_atoms.Item(current_atom).y_coordinate = ty + pdb_ensemble[current_pdb].initial_values[current_particle].oy;
-                    this->my_atoms.Item(current_atom).z_coordinate = tz + pdb_ensemble[current_pdb].initial_values[current_particle].oz;
+                    this->atoms[current_atom].x_coordinate = tx + pdb_ensemble[current_pdb].initial_values[current_particle].ox;
+                    this->atoms[current_atom].y_coordinate = ty + pdb_ensemble[current_pdb].initial_values[current_particle].oy;
+                    this->atoms[current_atom].z_coordinate = tz + pdb_ensemble[current_pdb].initial_values[current_particle].oz;
 
                     // minMax X
-                    if ( this->my_atoms.Item(current_atom).x_coordinate < min_x ) {
-                        min_x = this->my_atoms.Item(current_atom).x_coordinate;
+                    if ( this->atoms[current_atom].x_coordinate < min_x ) {
+                        min_x = this->atoms[current_atom].x_coordinate;
                     }
-                    if ( this->my_atoms.Item(current_atom).x_coordinate > max_x ) {
-                        max_x = this->my_atoms.Item(current_atom).x_coordinate;
+                    if ( this->atoms[current_atom].x_coordinate > max_x ) {
+                        max_x = this->atoms[current_atom].x_coordinate;
                     }
                     // minMax Y
-                    if ( this->my_atoms.Item(current_atom).y_coordinate < min_y ) {
-                        min_y = this->my_atoms.Item(current_atom).y_coordinate;
+                    if ( this->atoms[current_atom].y_coordinate < min_y ) {
+                        min_y = this->atoms[current_atom].y_coordinate;
                     }
 
-                    if ( this->my_atoms.Item(current_atom).y_coordinate > max_y ) {
-                        max_y = this->my_atoms.Item(current_atom).y_coordinate;
+                    if ( this->atoms[current_atom].y_coordinate > max_y ) {
+                        max_y = this->atoms[current_atom].y_coordinate;
                     }
                     // minMax Z
-                    if ( this->my_atoms.Item(current_atom).z_coordinate < this->min_z ) {
-                        this->min_z = this->my_atoms.Item(current_atom).z_coordinate;
+                    if ( this->atoms[current_atom].z_coordinate < this->min_z ) {
+                        this->min_z = this->atoms[current_atom].z_coordinate;
                     }
 
-                    if ( this->my_atoms.Item(current_atom).z_coordinate > this->max_z ) {
-                        this->max_z = this->my_atoms.Item(current_atom).z_coordinate;
+                    if ( this->atoms[current_atom].z_coordinate > this->max_z ) {
+                        this->max_z = this->atoms[current_atom].z_coordinate;
                     }
 
-                    this->number_of_each_atom[my_atoms.Item(current_atom).atom_type]++;
-                    average_bFactor += my_atoms.Item(current_atom).bfactor;
+                    this->number_of_each_atom[atoms[current_atom].atom_type]++;
+                    average_bFactor += atoms[current_atom].bfactor;
                     current_total_atom++;
                 }
             }
             else {
-
+                // TODO: consider using the assignment instead
+                // this->atoms = pdb_ensemble[current_pdb].atoms;
+                this->atoms.clear( );
                 for ( current_atom = 0; current_atom < pdb_ensemble[current_pdb].number_of_atoms; current_atom++ ) {
-                    this->my_atoms.Item(current_atom) = CopyAtom(pdb_ensemble[current_pdb].my_atoms.Item(current_atom));
+                    this->atoms.push_back(pdb_ensemble[current_pdb].atoms[current_atom]);
                 }
 
                 if ( pdb_ensemble[current_pdb].generate_noise_atoms && frame_number == 0 ) {
 
-                    RandomNumberGenerator my_rand(PIf);
+                    RandomNumberGenerator my_rand(pi_v<float>);
                     // Set the number of noise particles for this given particle in the stack
                     pdb_ensemble[current_pdb].number_of_noise_particles = myroundint(my_rand.GetUniformRandomSTD(std::max(0, this->max_number_of_noise_particles - 2), this->max_number_of_noise_particles));
                     wxPrintf("\n\n\tSetting pdb %d to %d noise particles of max %d\n\n", current_pdb, pdb_ensemble[current_pdb].number_of_noise_particles, max_number_of_noise_particles);
 
                     // Angular sector size such that noise particles do not overlap. This could be a method.
-                    float sector_size = 1.1f; //2.0*PIf / pdb_ensemble[current_pdb].number_of_noise_particles;
+                    float sector_size = 1.1f; //2.0*pi_v<float> / pdb_ensemble[current_pdb].number_of_noise_particles;
                     float occupied_sectors[this->max_number_of_noise_particles];
                     int   current_sector = 0;
                     bool  non_overlaping_particle_found;
@@ -818,7 +977,7 @@ void PDB::TransformLocalAndCombine(PDB* pdb_ensemble, int number_of_pdbs, int fr
                         float offset_angle;
                         // If we have more than one noise particle, enforce non-overlap
                         if ( iPart == 0 ) {
-                            offset_angle                  = clamp_angular_range_negative_pi_to_pi(my_rand.GetUniformRandomSTD(-PIf, PIf));
+                            offset_angle                  = clamp_angular_range_negative_pi_to_pi(my_rand.GetUniformRandomSTD(-pi_v<float>, pi_v<float>));
                             non_overlaping_particle_found = true;
                             occupied_sectors[0]           = offset_angle;
                         }
@@ -828,7 +987,7 @@ void PDB::TransformLocalAndCombine(PDB* pdb_ensemble, int number_of_pdbs, int fr
                             bool is_too_close = true;
                             while ( is_too_close && iTry < max_tries ) {
                                 iTry += 1;
-                                offset_angle = clamp_angular_range_negative_pi_to_pi(my_rand.GetUniformRandomSTD(-PIf, PIf));
+                                offset_angle = clamp_angular_range_negative_pi_to_pi(my_rand.GetUniformRandomSTD(-pi_v<float>, pi_v<float>));
                                 float dx     = cosf(offset_angle);
                                 float dy     = sinf(offset_angle);
                                 float ang_diff;
@@ -876,14 +1035,13 @@ void PDB::TransformLocalAndCombine(PDB* pdb_ensemble, int number_of_pdbs, int fr
                         for ( int current_atom_number = 0; current_atom_number < pdb_ensemble[current_pdb].number_of_real_atoms; current_atom_number++ ) {
 
                             pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].euler_matrix.RotateCoords(
-                                    my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms * (1 + iPart)).x_coordinate,
-                                    my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms * (1 + iPart)).y_coordinate,
-                                    my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms * (1 + iPart)).z_coordinate,
+                                    atoms[current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms * (1 + iPart)].x_coordinate,
+                                    atoms[current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms * (1 + iPart)].y_coordinate,
+                                    atoms[current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms * (1 + iPart)].z_coordinate,
                                     tx, ty, tz);
-
-                            my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms * (1 + iPart)).x_coordinate = tx + pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnShiftX( );
-                            my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms * (1 + iPart)).y_coordinate = ty + pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnShiftY( );
-                            my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms * (1 + iPart)).z_coordinate = tz;
+                            atoms[current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms * (1 + iPart)].x_coordinate = tx + pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnShiftX( );
+                            atoms[current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms * (1 + iPart)].y_coordinate = ty + pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnShiftY( );
+                            atoms[current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms * (1 + iPart)].z_coordinate = tz;
                         }
 
                     } // end of loop over noise particles
@@ -893,58 +1051,59 @@ void PDB::TransformLocalAndCombine(PDB* pdb_ensemble, int number_of_pdbs, int fr
                         for ( int current_atom_number = 0; current_atom_number < pdb_ensemble[current_pdb].number_of_real_atoms; current_atom_number++ ) {
 
                             pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].euler_matrix.RotateCoords(
-                                    my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms * (1 + iPart)).x_coordinate,
-                                    my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms * (1 + iPart)).y_coordinate,
-                                    my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms * (1 + iPart)).z_coordinate,
+                                    atoms[current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms * (1 + iPart)].x_coordinate,
+                                    atoms[current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms * (1 + iPart)].y_coordinate,
+                                    atoms[current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms * (1 + iPart)].z_coordinate,
                                     tx, ty, tz);
 
-                            my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms * (1 + iPart)).x_coordinate = tx + pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnShiftX( );
-                            my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms * (1 + iPart)).y_coordinate = ty + pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnShiftY( );
-                            my_atoms.Item(current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms * (1 + iPart)).z_coordinate = tz;
+                            atoms[current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms * (1 + iPart)].x_coordinate = tx + pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnShiftX( );
+                            atoms[current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms * (1 + iPart)].y_coordinate = ty + pdb_ensemble[current_pdb].my_angles_and_shifts[iPart].ReturnShiftY( );
+                            atoms[current_atom_number + pdb_ensemble[current_pdb].number_of_real_atoms * (1 + iPart)].z_coordinate = tz;
                         }
                     }
                 }
 
                 for ( current_atom = 0; current_atom < pdb_ensemble[current_pdb].number_of_atoms; current_atom++ ) {
-                    if ( my_atoms.Item(current_atom).is_real_particle ) {
+                    if ( atoms[current_atom].is_real_particle ) {
 
-                        ix = my_atoms.Item(current_atom).x_coordinate;
-                        iy = my_atoms.Item(current_atom).y_coordinate;
-                        iz = my_atoms.Item(current_atom).z_coordinate;
+                        ix = atoms[current_atom].x_coordinate;
+                        iy = atoms[current_atom].y_coordinate;
+                        iz = atoms[current_atom].z_coordinate;
 
                         rotmat.RotateCoords(ix, iy, iz, tx, ty, tz); // Why can't I just put the shift operation above inline to the function?
                         // Update the specimen with the transformed coords
 
-                        this->my_atoms.Item(current_atom).x_coordinate = tx + ox;
-                        this->my_atoms.Item(current_atom).y_coordinate = ty + oy;
-                        this->my_atoms.Item(current_atom).z_coordinate = tz + oz;
+                        this->atoms[current_atom].x_coordinate = tx + ox;
+                        this->atoms[current_atom].y_coordinate = ty + oy;
+                        this->atoms[current_atom].z_coordinate = tz + oz;
 
                         // minMax X
-                        if ( this->my_atoms.Item(current_atom).x_coordinate < min_x ) {
-                            min_x = this->my_atoms.Item(current_atom).x_coordinate;
+                        if ( this->atoms[current_atom].x_coordinate < min_x ) {
+                            min_x = this->atoms[current_atom].x_coordinate;
                         }
-                        if ( this->my_atoms.Item(current_atom).x_coordinate > max_x ) {
-                            max_x = this->my_atoms.Item(current_atom).x_coordinate;
+                        if ( this->atoms[current_atom].x_coordinate > max_x ) {
+                            max_x = this->atoms[current_atom].x_coordinate;
                         }
                         // minMax Y
-                        if ( this->my_atoms.Item(current_atom).y_coordinate < min_y ) {
-                            min_y = this->my_atoms.Item(current_atom).y_coordinate;
+                        if ( this->atoms[current_atom].y_coordinate < min_y ) {
+                            min_y = this->atoms[current_atom].y_coordinate;
                         }
 
-                        if ( this->my_atoms.Item(current_atom).y_coordinate > max_y ) {
-                            max_y = this->my_atoms.Item(current_atom).y_coordinate;
+                        if ( this->atoms[current_atom].y_coordinate > max_y ) {
+                            max_y = this->atoms[current_atom].y_coordinate;
                         }
                         // minMax Z
-                        if ( this->my_atoms.Item(current_atom).z_coordinate < this->min_z ) {
-                            this->min_z = this->my_atoms.Item(current_atom).z_coordinate;
+                        if ( this->atoms[current_atom].z_coordinate < this->min_z ) {
+                            this->min_z = this->atoms[current_atom].z_coordinate;
                         }
 
-                        if ( this->my_atoms.Item(current_atom).z_coordinate > this->max_z ) {
-                            this->max_z = this->my_atoms.Item(current_atom).z_coordinate;
+                        if ( this->atoms[current_atom].z_coordinate > this->max_z ) {
+                            this->max_z = this->atoms[current_atom].z_coordinate;
                         }
 
-                        this->number_of_each_atom[pdb_ensemble[current_pdb].my_atoms.Item(current_atom).atom_type]++;
-                        average_bFactor += my_atoms.Item(current_atom).bfactor;
+                        this->number_of_each_atom[pdb_ensemble[current_pdb].atoms[current_atom].atom_type]++;
+                        average_bFactor += atoms[current_atom].bfactor;
+
                         current_total_atom++;
                     } // if on real particles
                 }
@@ -953,9 +1112,14 @@ void PDB::TransformLocalAndCombine(PDB* pdb_ensemble, int number_of_pdbs, int fr
     }
 
     // This is used in the simulator to determine how large a window should be used for the calculation of the atoms.
-    this->average_bFactor /= current_total_atom;
-
-    wxPrintf("\t\t\n\nAVG BFACTOR FROM PDB IS %f\n\n", average_bFactor);
+    if ( current_total_atom > 0 ) {
+        average_bFactor /= current_total_atom;
+    }
+    if ( isnan(average_bFactor) ) {
+        wxPrintf("\n\n\t\tWARNING: average_bFactor is nan setting to zero, this should be fixed, not ignored!\n");
+        average_bFactor = 0;
+    }
+    // wxPrintf("\t\t\n\nAVG BFACTOR FROM PDB IS %f, current_total_atom %ld\n\n", average_bFactor, current_total_atom);
 
     if ( current_total_atom > 2 ) { // for single atom test
         // Again, need a check to make sure all sizes are consistent
@@ -993,13 +1157,13 @@ void PDB::TransformLocalAndCombine(PDB* pdb_ensemble, int number_of_pdbs, int fr
 
     if ( this->cubic_size > 1 ) {
         // Override the dimensions
-        wxPrintf("Cubic size is %d\n", this->cubic_size);
+        // wxPrintf("Cubic size is %d\n", this->cubic_size);
         this->vol_nX = cubic_size;
         this->vol_nY = cubic_size;
         this->vol_nZ = cubic_size;
     }
     else {
-        wxPrintf("Vol ang z is %f\n", this->vol_angZ);
+        // wxPrintf("Vol ang z is %f\n", this->vol_angZ);
         this->vol_nX = myroundint(this->vol_angX / pixel_size);
         this->vol_nY = myroundint(this->vol_angY / pixel_size);
         this->vol_nZ = myroundint(this->vol_angZ / pixel_size);
@@ -1011,30 +1175,28 @@ void PDB::TransformLocalAndCombine(PDB* pdb_ensemble, int number_of_pdbs, int fr
 void PDB::TransformGlobalAndSortOnZ(long number_of_non_water_atoms, float shift_x, float shift_y, float shift_z, RotationMatrix rotmat) {
 
     long  current_atom;
-    float ix, iy, iz; // input coords for current atom
     float tx, ty, tz; // transformed coords for current atom
 
+    std::cerr << "Transforming and sorting on Z\n";
+    std::cerr << "Shift x, y, z: " << shift_x << ", " << shift_y << ", " << shift_z << "\n";
     for ( current_atom = 0; current_atom < number_of_non_water_atoms; current_atom++ ) {
-        ix = shift_x + my_atoms.Item(current_atom).x_coordinate;
-        iy = shift_y + my_atoms.Item(current_atom).y_coordinate;
-        iz = shift_z + my_atoms.Item(current_atom).z_coordinate;
 
-        rotmat.RotateCoords(ix, iy, iz, tx, ty, tz);
+        rotmat.RotateCoords(atoms[current_atom].x_coordinate, atoms[current_atom].y_coordinate, atoms[current_atom].z_coordinate, tx, ty, tz);
 
-        my_atoms.Item(current_atom).x_coordinate = tx;
-        my_atoms.Item(current_atom).y_coordinate = ty;
-        my_atoms.Item(current_atom).z_coordinate = tz;
+        atoms[current_atom].x_coordinate = tx + shift_x;
+        atoms[current_atom].y_coordinate = ty + shift_y;
+        atoms[current_atom].z_coordinate = tz + shift_z;
     }
 
     // I am not sure if putting the conditionals in the last loop would prevent vectorization, so this would be good to look at.
 
     for ( current_atom = 0; current_atom < number_of_non_water_atoms; current_atom++ ) {
-        if ( my_atoms.Item(current_atom).z_coordinate < this->min_z ) {
-            min_z = my_atoms.Item(current_atom).z_coordinate;
+        if ( atoms[current_atom].z_coordinate < this->min_z ) {
+            min_z = atoms[current_atom].z_coordinate;
         }
 
-        if ( my_atoms.Item(current_atom).z_coordinate > this->max_z ) {
-            max_z = my_atoms.Item(current_atom).z_coordinate;
+        if ( atoms[current_atom].z_coordinate > this->max_z ) {
+            max_z = atoms[current_atom].z_coordinate;
         }
     }
 

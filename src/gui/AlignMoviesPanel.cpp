@@ -33,6 +33,10 @@ MyAlignMoviesPanel::MyAlignMoviesPanel(wxWindow* parent)
     ExpertPanel->SetMinSize(input_size);
     ExpertPanel->SetSize(input_size);
 
+    // #ifndef SHOW_CISTEM_GPU_OPTIONS
+    //     use_gpu_checkboxUnblur->Show(false);
+    // #endif
+
     ResetDefaults( );
 
     SetInfo( );
@@ -86,6 +90,12 @@ void MyAlignMoviesPanel::ResetDefaults( ) {
     first_frame_spin_ctrl->SetValue(1);
     last_frame_spin_ctrl->SetValue(1);
     SaveScaledSumCheckbox->SetValue(true);
+
+    // #ifdef SHOW_CISTEM_GPU_OPTIONS
+    //     use_gpu_checkboxUnblur->SetValue(true);
+    // #else
+    //     use_gpu_checkboxUnblur->SetValue(false); // Already disabled, but also set to un-ticked for visual consistency.
+    // #endif
 }
 
 void MyAlignMoviesPanel::OnInfoURL(wxTextUrlEvent& event) {
@@ -381,6 +391,10 @@ void MyAlignMoviesPanel::OnUpdateUI(wxUpdateUIEvent& event) {
             GroupComboBox->Enable(true);
             ExpertToggleButton->Enable(true);
 
+            // #ifdef SHOW_CISTEM_GPU_OPTIONS
+            //             use_gpu_checkboxUnblur->Enable(true);
+            // #endif
+
             if ( RunProfileComboBox->GetCount( ) > 0 ) {
                 if ( movie_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection( )) > 0 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(RunProfileComboBox->GetSelection( )) > 0 ) {
                     StartAlignmentButton->Enable(true);
@@ -524,6 +538,19 @@ void MyAlignMoviesPanel::StartAlignmentClick(wxCommandEvent& event) {
     float mag_distortion_major_axis_scale;
     float mag_distortion_minor_axis_scale;
 
+    bool use_gpu = false;
+
+    // #ifdef SHOW_CISTEM_GPU_OPTIONS
+    //     if ( use_gpu_checkboxUnblur->GetValue( ) == true ) {
+    //         use_gpu = true;
+    //     }
+    //     else {
+    //         use_gpu = false;
+    //     }
+    // #else
+    //     use_gpu = false;
+    // #endif
+
     // read the options form the gui..
 
     // min_shift
@@ -579,7 +606,13 @@ void MyAlignMoviesPanel::StartAlignmentClick(wxCommandEvent& event) {
 
     buffered_results = new JobResult[number_of_jobs];
 
-    current_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection( )], "unblur", number_of_jobs);
+    if ( use_gpu ) {
+        MyAssertTrue(false, "GPU not implemented yet");
+        current_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection( )], "unblur_gpu", number_of_jobs);
+    }
+    else {
+        current_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection( )], "unblur", number_of_jobs);
+    }
 
     OneSecondProgressDialog* my_progress_dialog = new OneSecondProgressDialog("Preparing Job", "Preparing Job...", number_of_jobs, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE | wxPD_APP_MODAL);
 

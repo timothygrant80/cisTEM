@@ -67,7 +67,7 @@ if test "$want_cuda" = "yes" ; then
 	then
       AC_MSG_NOTICE([static linking of cuda libs])
 	  CUDA_CFLAGS="-I$cuda_home_path/include "
-      CUDA_LIBS="-L$cuda_home_path/$libdir -lcufft_static -lnppial_static -lnppist_static -lnppc_static -lnppidei_static -lcurand_static -lculibos -lcudart_static -lrt"
+      CUDA_LIBS="-L$cuda_home_path/$libdir -lcufft_static -lnppial_static -lnppist_static -lnppc_static -lnppidei_static -lnppitc_static -lcurand_static -lculibos -lcudart_static -lrt"
 	else
       AC_MSG_NOTICE([dynamic linking of cuda libs])
       CUDA_CFLAGS="-I$cuda_home_path/include "

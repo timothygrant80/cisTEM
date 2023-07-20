@@ -42,6 +42,13 @@ bool ImageFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_
     bool file_seems_ok = false;
     filename           = wanted_filename;
     SetFileTypeFromExtension( );
+    // FIXME:
+    // The default eer_frames_per_image is being grabbed from the GUI even for tif files.
+    // This causes an encoding error and crash. It really should be fixed there, however,
+    // By overriding it here, all a user has to do is rename their files with eer extension to get around this hack.
+    if ( file_type != EER_FILE ) {
+        eer_frames_per_image = 0;
+    }
     switch ( file_type ) {
         case TIFF_FILE: file_seems_ok = tiff_file.OpenFile(wanted_filename, overwrite, wait_for_file_to_exist, check_only_the_first_image, eer_super_res_factor, eer_frames_per_image); break;
         case MRC_FILE: file_seems_ok = mrc_file.OpenFile(wanted_filename, overwrite, wait_for_file_to_exist, check_only_the_first_image, eer_super_res_factor, eer_frames_per_image); break;

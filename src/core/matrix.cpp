@@ -182,6 +182,10 @@ RotationMatrix RotationMatrix::ReturnTransposed( ) {
     return temp_matrix;
 }
 
+float RotationMatrix::ReturnTrace( ) {
+    return this->m[0][0] + this->m[1][1] + this->m[2][2];
+}
+
 void RotationMatrix::SetToIdentity( ) {
     this->m[0][0] = 1.0;
     this->m[1][0] = 0.0;
@@ -512,4 +516,15 @@ void RotationMatrix::SetToValues(float m00, float m10, float m20, float m01, flo
     this->m[0][2] = m02;
     this->m[1][2] = m12;
     this->m[2][2] = m22;
+}
+
+float RotationMatrix::FrobeniusNorm( ) {
+    return sqrtf(m[0][0] * m[0][0] + m[1][0] * m[1][0] + m[2][0] * m[2][0] + m[0][1] * m[0][1] + m[1][1] * m[1][1] + m[2][1] * m[2][1] + m[0][2] * m[0][2] + m[1][2] * m[1][2] + m[2][2] * m[2][2]);
+}
+
+void RotationMatrix::PrintMatrix( ) {
+    wxPrintf("\n%9.6f,%9.6f,%9.6f\n%9.6f,%9.6f,%9.6f\n%9.6f,%9.6f,%9.6f\n",
+             m[0][0], m[0][1], m[0][2],
+             m[1][0], m[1][1], m[1][2],
+             m[2][0], m[2][1], m[2][2]);
 }

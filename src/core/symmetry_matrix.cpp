@@ -32,6 +32,8 @@ SymmetryMatrix& SymmetryMatrix::operator=(const SymmetryMatrix* other_matrix) {
 }
 
 SymmetryMatrix::SymmetryMatrix(wxString wanted_symmetry_symbol) {
+    rot_mat            = NULL;
+    number_of_matrices = 0;
     Init(wanted_symmetry_symbol);
 }
 

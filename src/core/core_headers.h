@@ -44,13 +44,24 @@ typedef struct CurvePoint {
 #include <iterator>
 #include <utility>
 #include <vector>
+#include <unordered_map>
 #include <random>
 #include <functional>
+#ifdef __INTEL_COMPILER
+// These are in $MKLROOT/include
+#include <fftw/fftw3.h>
+#include <fftw/fftw3_mkl.h>
+#else
+// These should'nt be used, but are here for completeness.
+// See note on licensing.
 #include <fftw3.h>
+#endif
 #include <math.h>
 #include <chrono>
 #include "sqlite/sqlite3.h"
 #include <wx/wx.h>
+#include <wx/txtstrm.h>
+#include <wx/defs.h>
 #include <wx/socket.h>
 #include <wx/cmdline.h>
 #include <wx/stdpaths.h>
@@ -58,12 +69,14 @@ typedef struct CurvePoint {
 #include <wx/dir.h>
 #include <wx/wfstream.h>
 #include <wx/tokenzr.h>
-#include <wx/txtstrm.h>
 #include <wx/textfile.h>
 #include <wx/regex.h>
 #include <wx/stackwalk.h>
 #include <wx/xml/xml.h>
 #include <wx/msgqueue.h>
+#ifdef ENABLE_WEBVIEW
+#include <wx/webview.h>
+#endif
 
 class StackDump : public wxStackWalker // so we can give backtraces..
 {
@@ -107,6 +120,7 @@ class StackDump : public wxStackWalker // so we can give backtraces..
 };
 
 #include "defines.h"
+#include "stopwatch.h"
 #include "cistem_parameters.h"
 #include "cistem_star_file_reader.h"
 #include "assets.h"
@@ -167,7 +181,6 @@ class StackDump : public wxStackWalker // so we can give backtraces..
 #include "json/jsonwriter.h"
 #include "json/jsonreader.h"
 #include "json/jsonval.h"
-#include "stopwatch.h"
 #include "ccl3d.h"
 
 #ifdef EXPERIMENTAL
@@ -185,8 +198,6 @@ class StackDump : public wxStackWalker // so we can give backtraces..
 #ifdef ENABLEGPU
 #include <cuda_runtime.h>
 #include <cuda.h>
-#include <cublas_v2.h>
-#include <cuda_fp16.h>
 #include <cuda_profiler_api.h>
 #include <cufft.h>
 #include <cufftXt.h>
@@ -197,11 +208,6 @@ class StackDump : public wxStackWalker // so we can give backtraces..
 #include <typeinfo>
 #include <limits>
 
-// These headers are need so that gpu specific types can be instantiated outside the if(use_gpu) brackets.
-#include "../gpu/DeviceManager.h"
-#include "../gpu/GpuImage.h"
-#include "../gpu/Histogram.h"
-#include "../gpu/TemplateMatchingCore.h"
 #endif
 
 #ifdef MKL

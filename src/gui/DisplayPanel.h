@@ -275,6 +275,7 @@ class
 
     wxString short_image_filename;
     wxString short_txt_filename;
+    wxString current_file_path;
 
     long current_location;
     long blue_selection_square_location;

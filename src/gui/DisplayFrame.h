@@ -11,7 +11,6 @@ class DisplayFrame : public DisplayFrameParent {
     ~DisplayFrame( );
 
     //Additional functions
-    void OpenFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong* wanted_included_image_numbers = NULL, bool keep_scale_and_location_if_possible = false, bool force_local_survey = false);
     void DisableAllToolbarButtons( );
     void EnableAllToolbarButtons( );
 
@@ -37,7 +36,6 @@ class DisplayFrame : public DisplayFrameParent {
     void OnClearSelectionClick(wxCommandEvent& event);
 
     // Options Menu
-    void OnSetPointSizeClick(wxCommandEvent& event);
     void OnSize3(wxCommandEvent& event);
     void OnSize5(wxCommandEvent& event);
     void OnSize7(wxCommandEvent& event);
@@ -52,11 +50,11 @@ class DisplayFrame : public DisplayFrameParent {
     void OnDocumentationClick(wxCommandEvent& event);
 
   private:
-    bool is_fullscreen;
-    bool image_is_open;
-    bool LoadCoords(wxString current_line, long& x, long& y, long& image_number);
-    bool LoadSelections(wxString current_line);
-    void ClearTextFileFromPanel( );
+    bool     is_fullscreen;
+    wxString remember_path;
+    bool     LoadCoords(wxString current_line, long& x, long& y, long& image_number);
+    bool     LoadSelections(wxString current_line);
+    void     ClearTextFileFromPanel( );
 };
 
 #endif

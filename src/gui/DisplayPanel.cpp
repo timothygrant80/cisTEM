@@ -448,7 +448,7 @@ void DisplayPanel::OnOpen(wxCommandEvent& WXUNUSED(event)) {
                     OpenFile(InputFilename, this_filename);
                 }
                 else
-                    wxMessageBox(wxT("This file is not a compatible type! Accepted types are mrc and mrcs."), wxT("Error"), wxOK | wxICON_INFORMATION);
+                    wxMessageBox(wxT("This file is not a compatible type. Accepted types are mrc and mrcs."), wxT("Error"), wxOK | wxICON_INFORMATION);
             }
         }
         ReturnCurrentPanel( )->short_image_filename = this_filename;

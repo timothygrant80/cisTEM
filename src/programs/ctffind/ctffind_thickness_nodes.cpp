@@ -281,6 +281,10 @@ void ComputeFRCBetween1DSpectrumAndFitNodes(int number_of_bins, double average[]
             if ( last_bin >= number_of_bins ) {
                 last_bin  = number_of_bins - 1;
                 first_bin = last_bin - 2 * half_window_width[bin_counter] - 1;
+                // In some cases nescessary, because the half-window width is too large
+                if ( first_bin < first_fit_bin ) {
+                    first_bin = first_fit_bin;
+                }
             }
             MyDebugAssertTrue(first_bin >= 0 && first_bin < number_of_bins, "Bad first_bin: %i", first_bin);
             MyDebugAssertTrue(last_bin >= 0 && last_bin < number_of_bins, "Bad last_bin: %i", last_bin);

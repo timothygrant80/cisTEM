@@ -4,7 +4,7 @@ DisplayFrame::DisplayFrame(wxWindow* parent, wxWindowID id, const wxString& titl
     : DisplayFrameParent(NULL, wxID_ANY, title, pos, size, style) {
 
     is_fullscreen = false;
-    image_is_open = false;
+    remember_path = wxGetCwd( );
 
     this->cisTEMDisplayPanel->Initialise(CAN_CHANGE_FILE | CAN_CLOSE_TABS | CAN_MOVE_TABS | CAN_FFT);
 
@@ -50,23 +50,15 @@ void DisplayFrame::OnCharHook(wxKeyEvent& event) {
 
 void DisplayFrame::OnFileOpenClick(wxCommandEvent& event) {
     cisTEMDisplayPanel->OnOpen(event);
-    this->image_is_open = true;
-}
-
-void DisplayFrame::OpenFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong* wanted_included_image_numbers, bool keep_scale_and_location_if_possible, bool force_local_survey) {
-    // Open the file
-    cisTEMDisplayPanel->OpenFile(wanted_filename, wanted_tab_title, wanted_included_image_numbers, keep_scale_and_location_if_possible, force_local_survey);
-    cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode = IMAGES_PICK; // Set the newly opened image to image picking by default
-    image_is_open                                           = true;
+    cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode = IMAGES_PICK;
 }
 
 void DisplayFrame::OnCloseTabClick(wxCommandEvent& event) {
-    if ( cisTEMDisplayPanel != NULL && cisTEMDisplayPanel->ReturnCurrentPanel( ) != NULL ) {
+    if ( cisTEMDisplayPanel->ReturnCurrentPanel( ) != NULL ) {
         cisTEMDisplayPanel->my_notebook->DeletePage(cisTEMDisplayPanel->my_notebook->GetSelection( ));
     }
     if ( cisTEMDisplayPanel->my_notebook->GetSelection( ) == wxNOT_FOUND ) {
         DisableAllToolbarButtons( );
-        image_is_open = false;
     }
 }
 
@@ -75,7 +67,7 @@ void DisplayFrame::OnExitClick(wxCommandEvent& event) {
 }
 
 void DisplayFrame::OnLocationNumberClick(wxCommandEvent& event) {
-    if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->show_label == true )
+    if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->show_label )
         cisTEMDisplayPanel->ReturnCurrentPanel( )->show_label = false;
     else
         cisTEMDisplayPanel->ReturnCurrentPanel( )->show_label = true;
@@ -88,12 +80,9 @@ void DisplayFrame::OnImageSelectionModeClick(wxCommandEvent& event) {
     // make a check.
     if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode != IMAGES_PICK ) {
         if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->coord_tracker->number_of_coords > 0 ) {
-            int dialog_result;
+            wxMessageDialog question_dialog(this, "By switching the selection mode, you will lose your current coordinates selections if they are unsaved.\nDo you want to continue?", "Swtich Selection Modes?", wxYES_NO | wxNO_DEFAULT | wxICON_EXCLAMATION);
 
-            wxMessageDialog question_dialog(this, "By switching the selection mode, you will lose your current coordinates selections if they are unsaved!\nAre you sure you want to continue?", "Are you Sure?", wxYES_NO | wxNO_DEFAULT | wxICON_EXCLAMATION);
-            dialog_result = question_dialog.ShowModal( );
-
-            if ( dialog_result == wxID_YES ) {
+            if ( question_dialog.ShowModal( ) == wxID_YES ) {
                 cisTEMDisplayPanel->ReturnCurrentPanel( )->coord_tracker->Clear( );
                 cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode = IMAGES_PICK;
 
@@ -116,7 +105,7 @@ void DisplayFrame::OnImageSelectionModeClick(wxCommandEvent& event) {
 void DisplayFrame::OnCoordsSelectionModeClick(wxCommandEvent& event) {
     if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode != COORDS_PICK ) {
         if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->number_of_selections > 0 ) {
-            wxMessageDialog question_dialog(this, "By switching the selection mode, you will lose your current image selections.\nAre you sure you want to continue?", "Switch Selection Modes?", wxYES_NO | wxNO_DEFAULT | wxICON_EXCLAMATION);
+            wxMessageDialog question_dialog(this, "By switching the selection mode, you will lose your current image selections.\nDo you want to continue?", "Switch Selection Modes?", wxYES_NO | wxNO_DEFAULT | wxICON_EXCLAMATION);
             if ( question_dialog.ShowModal( ) == wxID_YES ) {
                 cisTEMDisplayPanel->ClearSelection(false);
                 cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode = COORDS_PICK;
@@ -139,11 +128,14 @@ void DisplayFrame::OnCoordsSelectionModeClick(wxCommandEvent& event) {
 }
 
 void DisplayFrame::OnOpenTxtClick(wxCommandEvent& event) {
-    // TODO: check the file to see if there's 3 values or not
-    // If there are 2 whitespaces, we know it's a coords file
-    // Also add a similar check when in images_pick mode
     bool     valid_file = true;
     wxString name_of_file;
+    wxString caption;
+    wxString wildcard;
+    wxString default_dir;
+    wxString default_filename;
+    wxString path;
+
     // We want to open image selections if we're in IMAGES_PICK mode
     if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode == IMAGES_PICK ) {
         if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->number_of_selections > 0 ) {
@@ -157,19 +149,17 @@ void DisplayFrame::OnOpenTxtClick(wxCommandEvent& event) {
                 return;
         }
 
-        wxString      caption          = wxT("Open selections from text file");
-        wxString      wildcard         = wxT("TXT files (*.txt)|*.txt");
-        wxString      remember_path    = wxGetCwd( );
-        wxString      default_dir      = remember_path;
-        wxString      default_filename = wxEmptyString;
-        wxFileDialog* open_dialog      = new wxFileDialog(this, caption, default_dir, default_filename, wildcard, wxFD_OPEN);
+        caption                   = wxT("Open selections from text file");
+        wildcard                  = wxT("TXT files (*.txt)|*.txt");
+        default_dir               = remember_path;
+        default_filename          = wxEmptyString;
+        wxFileDialog* open_dialog = new wxFileDialog(this, caption, default_dir, default_filename, wildcard, wxFD_OPEN);
         if ( open_dialog->ShowModal( ) == wxID_OK ) {
             //Start with setting up the file info
-            wxString path            = open_dialog->GetPath( );
+            path                     = open_dialog->GetPath( );
             remember_path            = open_dialog->GetDirectory( );
             name_of_file             = open_dialog->GetFilename( );
-            wxFileName  filename     = name_of_file;
-            wxTextFile* file_to_open = new wxTextFile(name_of_file);
+            wxTextFile* file_to_open = new wxTextFile(path);
 
             // Start reading from the file
             file_to_open->Open( );
@@ -198,19 +188,17 @@ void DisplayFrame::OnOpenTxtClick(wxCommandEvent& event) {
         }
 
         // Now we're definitely in coords mode with no coords selected; let user select file
-        wxString      caption          = wxT("Open coordinates from text file");
-        wxString      wildcard         = wxT("TXT files (*.txt)|*.txt");
-        wxString      remember_path    = wxGetCwd( );
-        wxString      default_dir      = remember_path;
-        wxString      default_filename = wxEmptyString;
-        wxFileDialog* open_dialog      = new wxFileDialog(this, caption, default_dir, default_filename, wildcard, wxFD_OPEN);
+        caption                   = wxT("Open coordinates from text file");
+        wildcard                  = wxT("TXT files (*.txt)|*.txt");
+        default_dir               = remember_path;
+        default_filename          = wxEmptyString;
+        wxFileDialog* open_dialog = new wxFileDialog(this, caption, default_dir, default_filename, wildcard, wxFD_OPEN);
         if ( open_dialog->ShowModal( ) == wxID_OK ) {
             //Start with setting up the file info
-            wxString path            = open_dialog->GetPath( );
+            path                     = open_dialog->GetPath( );
             remember_path            = open_dialog->GetDirectory( );
             name_of_file             = open_dialog->GetFilename( );
-            wxFileName  filename     = name_of_file;
-            wxTextFile* file_to_open = new wxTextFile(name_of_file);
+            wxTextFile* file_to_open = new wxTextFile(path);
 
             // Start reading from the file
             file_to_open->Open( );
@@ -228,6 +216,7 @@ void DisplayFrame::OnOpenTxtClick(wxCommandEvent& event) {
     }
     if ( valid_file ) {
         cisTEMDisplayPanel->ReturnCurrentPanel( )->short_txt_filename = name_of_file;
+        cisTEMDisplayPanel->ReturnCurrentPanel( )->current_file_path  = path;
         cisTEMDisplayPanel->ReturnCurrentPanel( )->have_txt_filename  = true;
         cisTEMDisplayPanel->SetTabNameSaved( );
     }
@@ -241,52 +230,58 @@ void DisplayFrame::OnSaveTxtClick(wxCommandEvent& event) {
         cisTEMDisplayPanel->SetTabNameSaved( ); // Just make sure it's saved and tab name is up to date
         return;
     }
+    // Have unsaved file; update the file with current selections
     else if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->have_txt_filename && ! cisTEMDisplayPanel->ReturnCurrentPanel( )->txt_is_saved ) {
-        // We have a filename and it's not saved, which means there's been changes
-        // to image or coords selections; we want to clear the extant file
-        // and replace it with what's current
-
-        wxTextFile extant_file(cisTEMDisplayPanel->ReturnCurrentPanel( )->short_txt_filename); // Get a wxTextFile from extant file
-        if ( ! extant_file.Exists( ) ) {
+        wxTextFile file_to_update(cisTEMDisplayPanel->ReturnCurrentPanel( )->current_file_path); // Get a wxTextFile from extant file
+        if ( ! file_to_update.Exists( ) ) {
             wxMessageDialog nonexistent_dialog(this, "The text file you're attempting to overwrite does not exist.", "Error: File to save does not exist.", wxOK | wxOK_DEFAULT | wxICON_EXCLAMATION);
             return;
         }
         else {
-            extant_file.Open( );
-            extant_file.Clear( );
+            // Just open, clear, and re-fill
+            file_to_update.Open( );
+            file_to_update.Clear( );
 
             if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode == IMAGES_PICK ) {
                 for ( long i = 0; i < cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnNumberofImages( ); i++ ) {
                     if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->image_is_selected[i] )
-                        extant_file.AddLine(wxString::Format("%li", i));
+                        file_to_update.AddLine(wxString::Format("%li", i));
                 }
             }
 
-            // COORDS_PICK mode
+            // coords mode
             else {
                 for ( int i = 0; i < cisTEMDisplayPanel->ReturnCurrentPanel( )->coord_tracker->number_of_coords; i++ ) {
-                    extant_file.AddLine(wxString::Format("%li %li %li", cisTEMDisplayPanel->ReturnCurrentPanel( )->coord_tracker->coords[i].x_pos, cisTEMDisplayPanel->ReturnCurrentPanel( )->coord_tracker->coords[i].y_pos, cisTEMDisplayPanel->ReturnCurrentPanel( )->coord_tracker->coords[i].image_number));
+                    file_to_update.AddLine(wxString::Format("%li %li %li", cisTEMDisplayPanel->ReturnCurrentPanel( )->coord_tracker->coords[i].x_pos, cisTEMDisplayPanel->ReturnCurrentPanel( )->coord_tracker->coords[i].y_pos, cisTEMDisplayPanel->ReturnCurrentPanel( )->coord_tracker->coords[i].image_number));
                 }
             }
-            extant_file.Write( );
-            extant_file.Close( );
+            file_to_update.Write( );
+            file_to_update.Close( );
         }
         cisTEMDisplayPanel->SetTabNameSaved( );
     }
 }
 
 void DisplayFrame::OnSaveTxtAsClick(wxCommandEvent& event) {
-    if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode == IMAGES_PICK ) {
-        wxString   caption          = wxT("Save image selections as text file");
-        wxString   wildcard         = wxT("TXT files (*.txt)|*.txt");
-        wxString   remember_path    = wxGetCwd( );
-        wxString   default_dir      = remember_path;
-        wxFileName mrc_name         = cisTEMDisplayPanel->ReturnCurrentPanel( )->filename;
-        wxString   default_filename = "selections_" + mrc_name.GetName( ) + ".txt";
-        wxFileName temp_filename    = default_filename;
-        int        temp_int         = 1;
+    wxString   caption;
+    wxString   wildcard;
+    wxString   default_dir;
+    wxString   default_filename;
+    wxString   path;
+    wxFileName mrc_name;
+    wxFileName temp_filename;
+    int        temp_int;
 
-        // If the filename already exists, apppend an integer to default name
+    if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode == IMAGES_PICK ) {
+        caption          = wxT("Save image selections as text file");
+        wildcard         = wxT("TXT files (*.txt)|*.txt");
+        default_dir      = remember_path;
+        mrc_name         = cisTEMDisplayPanel->ReturnCurrentPanel( )->filename;
+        default_filename = "selections_" + mrc_name.GetName( ) + ".txt";
+        temp_filename    = default_filename;
+        temp_int         = 1;
+
+        // If the default filename already exists, apppend an integer to default name
         if ( temp_filename.Exists( ) ) {
             while ( temp_filename.Exists( ) ) {
                 temp_filename = default_filename;
@@ -299,7 +294,9 @@ void DisplayFrame::OnSaveTxtAsClick(wxCommandEvent& event) {
         wxFileDialog* save_dialog = new wxFileDialog(this, caption, default_dir, default_filename, wildcard, wxFD_SAVE);
         if ( save_dialog->ShowModal( ) == wxID_OK ) {
             default_filename                = save_dialog->GetFilename( );
-            wxTextFile* new_selections_file = new wxTextFile(default_filename);
+            path                            = save_dialog->GetPath( );
+            remember_path                   = save_dialog->GetDirectory( );
+            wxTextFile* new_selections_file = new wxTextFile(path);
             for ( long i = 0; i < cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnNumberofImages( ); i++ ) {
                 if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->image_is_selected[i] )
                     new_selections_file->AddLine(wxString::Format("%li", i));
@@ -307,22 +304,17 @@ void DisplayFrame::OnSaveTxtAsClick(wxCommandEvent& event) {
             new_selections_file->Write( );
             new_selections_file->Close( );
         }
-
-        // Track the currently opened file for saving if user selects more images
-        cisTEMDisplayPanel->ReturnCurrentPanel( )->short_txt_filename = default_filename;
-        cisTEMDisplayPanel->ReturnCurrentPanel( )->have_txt_filename  = true;
-        cisTEMDisplayPanel->SetTabNameSaved( );
     }
 
+    // coords mode
     else {
-        wxString   caption          = wxT("Save coordinates as text file");
-        wxString   wildcard         = wxT("TXT files (*.txt)|*.txt");
-        wxString   remember_path    = wxGetCwd( );
-        wxString   default_dir      = remember_path;
-        wxFileName mrc_name         = cisTEMDisplayPanel->ReturnCurrentPanel( )->filename;
-        wxString   default_filename = "coords_" + mrc_name.GetName( ) + ".txt";
-        wxFileName temp_filename    = default_filename;
-        int        temp_int         = 1;
+        caption          = wxT("Save coordinates as text file");
+        wildcard         = wxT("TXT files (*.txt)|*.txt");
+        default_dir      = remember_path;
+        mrc_name         = cisTEMDisplayPanel->ReturnCurrentPanel( )->filename;
+        default_filename = "coords_" + mrc_name.GetName( ) + ".txt";
+        temp_filename    = default_filename;
+        int temp_int     = 1;
 
         // If the filename already exists, apppend an integer to default name
         if ( temp_filename.Exists( ) ) {
@@ -338,19 +330,21 @@ void DisplayFrame::OnSaveTxtAsClick(wxCommandEvent& event) {
         wxFileDialog* save_dialog = new wxFileDialog(NULL, caption, default_dir, default_filename, wildcard, wxFD_SAVE);
         if ( save_dialog->ShowModal( ) == wxID_OK ) {
             default_filename            = save_dialog->GetFilename( );
-            wxTextFile* new_coords_file = new wxTextFile(default_filename);
+            path                        = save_dialog->GetPath( );
+            remember_path               = save_dialog->GetDirectory( );
+            wxTextFile* new_coords_file = new wxTextFile(path);
             for ( int i = 0; i < cisTEMDisplayPanel->ReturnCurrentPanel( )->coord_tracker->number_of_coords; i++ ) {
                 new_coords_file->AddLine(wxString::Format("%li %li %li", cisTEMDisplayPanel->ReturnCurrentPanel( )->coord_tracker->coords[i].x_pos, cisTEMDisplayPanel->ReturnCurrentPanel( )->coord_tracker->coords[i].y_pos, cisTEMDisplayPanel->ReturnCurrentPanel( )->coord_tracker->coords[i].image_number));
             }
             new_coords_file->Write( );
             new_coords_file->Close( );
         }
-
-        // Track the currently opened file for saving if user selects more coords
-        cisTEMDisplayPanel->ReturnCurrentPanel( )->short_txt_filename = default_filename;
-        cisTEMDisplayPanel->ReturnCurrentPanel( )->have_txt_filename  = true;
-        cisTEMDisplayPanel->SetTabNameSaved( );
     }
+    // Track the currently opened file for saving in case user makes further selections
+    cisTEMDisplayPanel->ReturnCurrentPanel( )->short_txt_filename = default_filename;
+    cisTEMDisplayPanel->ReturnCurrentPanel( )->current_file_path  = path;
+    cisTEMDisplayPanel->ReturnCurrentPanel( )->have_txt_filename  = true;
+    cisTEMDisplayPanel->SetTabNameSaved( );
 }
 
 void DisplayFrame::OnInvertSelectionClick(wxCommandEvent& event) {
@@ -372,9 +366,6 @@ void DisplayFrame::OnClearSelectionClick(wxCommandEvent& event) {
     }
     ClearTextFileFromPanel( );
     cisTEMDisplayPanel->RefreshCurrentPanel( );
-}
-
-void DisplayFrame::OnSetPointSizeClick(wxCommandEvent& event) {
 }
 
 void DisplayFrame::OnSize3(wxCommandEvent& event) {
@@ -401,6 +392,7 @@ void DisplayFrame::OnSize10(wxCommandEvent& event) {
     Update( );
 }
 
+// TODO: Determine if wanted
 void DisplayFrame::OnShowCrossHairClick(wxCommandEvent& event) {
 }
 
@@ -412,8 +404,11 @@ void DisplayFrame::OnSingleImageModeClick(wxCommandEvent& event) {
 
     cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_image_has_correct_greys = false;
     cisTEMDisplayPanel->ReturnCurrentPanel( )->ReDrawPanel( );
+    Refresh( );
+    Update( );
 }
 
+// TODO: determine if wanted
 void DisplayFrame::On7BitGreyValuesClick(wxCommandEvent& event) {
 }
 
@@ -486,20 +481,9 @@ void DisplayFrame::EnableAllToolbarButtons( ) {
     SelectImageSelectionMode->Enable(true);
     SelectCoordsSelectionMode->Enable(true);
     SelectOpenTxt->Enable(true);
-    if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->have_txt_filename )
-        SelectSaveTxt->Enable(true);
-    else
-        SelectSaveTxt->Enable(false);
-
-    if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->number_of_selections > 0 || cisTEMDisplayPanel->ReturnCurrentPanel( )->coord_tracker->number_of_coords > 0 )
-        SelectSaveTxtAs->Enable(true);
-    else
-        SelectSaveTxtAs->Enable(false);
-
-    if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode == IMAGES_PICK )
-        SelectInvertSelection->Enable(true);
-    else
-        SelectInvertSelection->Enable(false);
+    SelectSaveTxt->Enable(true);
+    SelectSaveTxtAs->Enable(true);
+    SelectInvertSelection->Enable(true);
     SelectClearSelection->Enable(true);
 
     // Options menu
@@ -511,22 +495,82 @@ void DisplayFrame::EnableAllToolbarButtons( ) {
 }
 
 void DisplayFrame::OnUpdateUI(wxUpdateUIEvent& event) {
-    if ( this->cisTEMDisplayPanel->my_notebook->GetSelection( ) != wxNOT_FOUND )
-        this->EnableAllToolbarButtons( );
-    else
-        this->DisableAllToolbarButtons( );
+    // First, do we have an image open?
+    if ( cisTEMDisplayPanel->my_notebook->GetSelection( ) != wxNOT_FOUND ) {
+        EnableAllToolbarButtons( );
 
-    if ( image_is_open ) {
         // Check that there are coords selected
-        if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->coord_tracker->number_of_coords > 0 ) {
+        if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->coord_tracker->number_of_coords > 0 || cisTEMDisplayPanel->ReturnCurrentPanel( )->number_of_selections > 0 ) {
             SelectSaveTxtAs->Enable(true);
-            SelectSaveTxt->Enable(true);
+            if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->have_txt_filename )
+                SelectSaveTxt->Enable(true);
+            else
+                SelectSaveTxt->Enable(false);
         }
         else {
             SelectSaveTxtAs->Enable(false);
             SelectSaveTxt->Enable(false);
         }
+
+        // Keep picking mode radio buttons visually current
+        if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode == IMAGES_PICK ) {
+            SelectImageSelectionMode->Check(true);
+            SelectInvertSelection->Enable(true);
+        }
+        else {
+            SelectCoordsSelectionMode->Check(true);
+            SelectInvertSelection->Enable(false);
+        }
+
+        // Make sure correct radio is checked for point size selection submenu
+        if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->selected_point_size == 3 )
+            CoordSize3->Check(true);
+        else if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->selected_point_size == 5 )
+            CoordSize5->Check(true);
+        else if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->selected_point_size == 7 )
+            CoordSize7->Check(true);
+        else if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->selected_point_size == 10 )
+            CoordSize10->Check(true);
+
+        // Make sure single image mode is checked/unchecked based on current panel
+        if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->single_image ) {
+            if ( ! OptionsSingleImageMode->IsChecked( ) ) {
+                OptionsSingleImageMode->Check(true);
+            }
+        }
+        else if ( ! cisTEMDisplayPanel->ReturnCurrentPanel( )->single_image ) {
+            if ( OptionsSingleImageMode->IsChecked( ) ) {
+                OptionsSingleImageMode->Check(false);
+            }
+        }
+
+        // Repeat above for res instead of radius
+        if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->resolution_instead_of_radius ) {
+            if ( ! OptionsShowResolution->IsChecked( ) ) {
+                OptionsShowResolution->Check(true);
+            }
+        }
+        else if ( ! cisTEMDisplayPanel->ReturnCurrentPanel( )->resolution_instead_of_radius ) {
+            if ( OptionsShowResolution->IsChecked( ) ) {
+                OptionsShowResolution->Check(false);
+            }
+        }
+
+        // Repeat again for selection distance option
+        if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->show_selection_distances ) {
+            if ( ! OptionsShowSelectionDistances->IsChecked( ) ) {
+                OptionsShowSelectionDistances->Check(true);
+            }
+        }
+        else if ( ! cisTEMDisplayPanel->ReturnCurrentPanel( )->show_selection_distances ) {
+            if ( OptionsShowSelectionDistances->IsChecked( ) ) {
+                OptionsShowSelectionDistances->Check(false);
+            }
+        }
     }
+    // No image -- don't want buttons active
+    else
+        DisableAllToolbarButtons( );
 }
 
 bool DisplayFrame::LoadCoords(wxString current_line, long& x, long& y, long& image_number) {
@@ -552,7 +596,7 @@ bool DisplayFrame::LoadCoords(wxString current_line, long& x, long& y, long& ima
         return true;
     }
     else {
-        wxMessageDialog invalid_file_dialog(this, wxString::Format("The selected coordinates exceed the dimensions of the currently opened *.mrc file. Cannot open selected coordinates (Selected x: %li, selected y: %li, image num: %li for image(s) with dimensions x: %i, y: %i, num images: %i). Try checking the selection mode and/or the text file contents.", x, y, image_number, cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnImageXSize( ), cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnImageYSize( ), cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnNumberofImages( )), "Invalid Coordinates for Current Image(s)", wxOK | wxOK_DEFAULT | wxICON_EXCLAMATION);
+        wxMessageDialog invalid_file_dialog(this, wxString::Format("The selected coordinates exceed the dimensions of the currently opened *.mrc file. Cannot open selected coordinates.\nSelected x: %li, selected y: %li, image num: %li for image(s) with dimensions x: %i, y: %i, num images: %i).\nTry checking the selection mode and/or the text file contents.", x, y, image_number, cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnImageXSize( ), cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnImageYSize( ), cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnNumberofImages( )), "Invalid Coordinates for Current Image(s)", wxOK | wxOK_DEFAULT | wxICON_EXCLAMATION);
         if ( invalid_file_dialog.ShowModal( ) == wxID_OK )
             cisTEMDisplayPanel->ReturnCurrentPanel( )->coord_tracker->Clear( );
         return false;
@@ -586,5 +630,6 @@ bool DisplayFrame::LoadSelections(wxString current_line) {
 void DisplayFrame::ClearTextFileFromPanel( ) {
     cisTEMDisplayPanel->ReturnCurrentPanel( )->have_txt_filename  = false;
     cisTEMDisplayPanel->ReturnCurrentPanel( )->short_txt_filename = wxEmptyString;
+    cisTEMDisplayPanel->ReturnCurrentPanel( )->current_file_path  = wxEmptyString;
     cisTEMDisplayPanel->SetTabNameSaved( );
 }

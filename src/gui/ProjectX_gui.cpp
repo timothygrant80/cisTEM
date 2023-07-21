@@ -14732,7 +14732,7 @@ DisplayFrameParent::DisplayFrameParent( wxWindow* parent, wxWindowID id, const w
 
 	m_menubar2 = new wxMenuBar( 0 );
 	DisplayFileMenu = new wxMenu();
-	DisplayFileOpen = new wxMenuItem( DisplayFileMenu, wxID_ANY, wxString( wxT("Open") ) , wxEmptyString, wxITEM_NORMAL );
+	DisplayFileOpen = new wxMenuItem( DisplayFileMenu, wxID_ANY, wxString( wxT("Open Image") ) , wxEmptyString, wxITEM_NORMAL );
 	DisplayFileMenu->Append( DisplayFileOpen );
 
 	DisplayCloseTab = new wxMenuItem( DisplayFileMenu, wxID_ANY, wxString( wxT("Close tab") ) , wxEmptyString, wxITEM_NORMAL );
@@ -14793,19 +14793,15 @@ DisplayFrameParent::DisplayFrameParent( wxWindow* parent, wxWindowID id, const w
 	DisplayOptionsMenu = new wxMenu();
 	OptionsSetPointSize = new wxMenu();
 	wxMenuItem* OptionsSetPointSizeItem = new wxMenuItem( DisplayOptionsMenu, wxID_ANY, wxT("Set Point Size"), wxEmptyString, wxITEM_NORMAL, OptionsSetPointSize );
-	wxMenuItem* CoordSize3;
 	CoordSize3 = new wxMenuItem( OptionsSetPointSize, wxID_ANY, wxString( wxT("3") ) , wxEmptyString, wxITEM_RADIO );
 	OptionsSetPointSize->Append( CoordSize3 );
 
-	wxMenuItem* CoordSize5;
 	CoordSize5 = new wxMenuItem( OptionsSetPointSize, wxID_ANY, wxString( wxT("5") ) , wxEmptyString, wxITEM_RADIO );
 	OptionsSetPointSize->Append( CoordSize5 );
 
-	wxMenuItem* CoordSize7;
 	CoordSize7 = new wxMenuItem( OptionsSetPointSize, wxID_ANY, wxString( wxT("7") ) , wxEmptyString, wxITEM_RADIO );
 	OptionsSetPointSize->Append( CoordSize7 );
 
-	wxMenuItem* CoordSize10;
 	CoordSize10 = new wxMenuItem( OptionsSetPointSize, wxID_ANY, wxString( wxT("10") ) , wxEmptyString, wxITEM_RADIO );
 	OptionsSetPointSize->Append( CoordSize10 );
 

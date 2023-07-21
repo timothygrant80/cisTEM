@@ -4242,6 +4242,10 @@ class DisplayFrameParent : public wxFrame
 		wxMenuItem* SelectClearSelection;
 		wxMenu* DisplayOptionsMenu;
 		wxMenu* OptionsSetPointSize;
+		wxMenuItem* CoordSize3;
+		wxMenuItem* CoordSize5;
+		wxMenuItem* CoordSize7;
+		wxMenuItem* CoordSize10;
 		wxMenuItem* OptionsShowCrossHair;
 		wxMenuItem* OptionsSingleImageMode;
 		wxMenuItem* Options7BitGreyValues;

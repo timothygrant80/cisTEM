@@ -726,7 +726,7 @@ bool UnBlurApp::DoCalculation( ) {
             // patches
             // int     patch_num_x = 6, patch_num_y = 4;
             int     patch_num             = patch_num_x * patch_num_y;
-            int     output_stack_box_size = 1024;
+            int     output_stack_box_size = 512;
             Image** unbinned_patch_stack;
             Image** patch_stack = new Image*[patch_num];
             for ( int i = 0; i < patch_num; i++ ) {
@@ -931,50 +931,20 @@ bool UnBlurApp::DoCalculation( ) {
                 apply_fitting_linear(image_stack, number_of_input_images, x, y);
             }
             unblur_timing.lap("Distortion Fix");
-            wxPrintf("writing the fixed frames \n");
-            Image sum_image_fixed;
-            sum_image_fixed.Allocate(image_stack[0].logical_x_dimension, image_stack[0].logical_y_dimension, true);
-            sum_image_fixed.SetToConstant(0.0);
-            for ( int image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
-                sum_image_fixed.AddImage(&image_stack[image_counter]);
+            // wxPrintf("writing the fixed frames \n");
+            // Image sum_image_fixed;
+            // sum_image_fixed.Allocate(image_stack[0].logical_x_dimension, image_stack[0].logical_y_dimension, true);
+            // sum_image_fixed.SetToConstant(0.0);
+            // for ( int image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+            //     sum_image_fixed.AddImage(&image_stack[image_counter]);
 
-                if ( saved_aligned_frames == true ) {
-                    image_stack[image_counter].QuickAndDirtyWriteSlice(outputpath.ToStdString( ) + "distortion_corrected_frames.mrc", image_counter + 1);
-                }
-            }
-            // sum_image_fixed.BackwardFFT( );
-            sum_image_fixed.WriteSlicesAndFillHeader(outputpath.ToStdString( ) + "distortion_corrected_image.mrc", 1);
-
-            // float** shifted_map_x;
-            // float** shifted_map_y;
-            // float** original_map_x;
-            // float** original_map_y;
-            // int     totalpixels = image_dim_x * image_dim_y;
-            // Allocate2DFloatArray(shifted_map_x, image_dim_y, image_dim_x);
-            // Allocate2DFloatArray(shifted_map_y, image_dim_y, image_dim_x);
-            // Allocate2DFloatArray(original_map_x, image_dim_y, image_dim_x);
-            // Allocate2DFloatArray(original_map_y, image_dim_y, image_dim_x);
-            // // initialize the pixel coordinates
-            // for ( int i = 0; i < image_dim_y; i++ ) {
-            //     for ( int j = 0; j < image_dim_x; j++ ) {
-            //         shifted_map_x[i][j]  = j;
-            //         original_map_x[i][j] = j;
-            //         shifted_map_y[i][j]  = i;
-            //         original_map_y[i][j] = i;
+            //     if ( saved_aligned_frames == true ) {
+            //         image_stack[image_counter].QuickAndDirtyWriteSlice(outputpath.ToStdString( ) + "distortion_corrected_frames.mrc", image_counter + 1);
             //     }
             // }
+            // // sum_image_fixed.BackwardFFT( );
+            // sum_image_fixed.WriteSlicesAndFillHeader(outputpath.ToStdString( ) + "distortion_corrected_image.mrc", 1);
 
-            // Deallocate2DFloatArray(shifted_map_x, image_dim_y);
-            // Deallocate2DFloatArray(shifted_map_y, image_dim_y);
-            // Deallocate2DFloatArray(original_map_x, image_dim_y);
-            // Deallocate2DFloatArray(original_map_y, image_dim_y);
-            // void Deallocate2DFloatArray(float**& array, int dim1) {
-            //     for ( int i = 0; i < dim1; ++i ) {
-            //         delete[] array[i]; // each i-th pointer must be deleted first
-            //     }
-            //     delete[] array; // now delete pointer array
-            //     array = NULL;
-            // }
             profile_timing.start("patch-based correction cleanup");
             for ( int i = 0; i < patch_num; ++i ) {
                 delete[] patch_stack[i]; // each i-th pointer must be deleted first
@@ -1045,212 +1015,6 @@ bool UnBlurApp::DoCalculation( ) {
 
             // we should be finished with alignment, now we just need to make the final sum..
 
-            sum_image.Allocate(image_stack[0].logical_x_dimension, image_stack[0].logical_y_dimension, false);
-            sum_image.SetToConstant(0.0);
-
-            if ( should_dose_filter == true ) {
-                if ( write_out_amplitude_spectrum == true ) {
-                    profile_timing.start("amplitude spectrum");
-                    sum_image_no_dose_filter.Allocate(image_stack[0].logical_x_dimension, image_stack[0].logical_y_dimension, false);
-                    sum_image_no_dose_filter.SetToConstant(0.0);
-
-                    for ( image_counter = first_frame - 1; image_counter < last_frame; image_counter++ ) {
-                        sum_image_no_dose_filter.AddImage(&image_stack[image_counter]);
-                    }
-                    profile_timing.lap("amplitude spectrum");
-                }
-
-                // allocate arrays for the filter, and the sum of squares..
-                profile_timing.start("setup dose filter");
-                dose_filter_sum_of_squares = new float[image_stack[0].real_memory_allocated / 2];
-                ZeroFloatArray(dose_filter_sum_of_squares, image_stack[0].real_memory_allocated / 2);
-                profile_timing.lap("setup dose filter");
-
-                // We don't want any copying of the timer, so just let them all have a pointer, only thread zero will do anything with it.
-                StopWatch* shared_ptr;
-                shared_ptr = &profile_timing;
-
-#pragma omp parallel default(shared) num_threads(max_threads) shared(shared_ptr) private(image_counter, dose_filter, pixel_counter)
-                { // for omp
-
-                    shared_ptr->start("setup dose filter");
-                    dose_filter = new float[image_stack[0].real_memory_allocated / 2];
-                    ZeroFloatArray(dose_filter, image_stack[0].real_memory_allocated / 2);
-                    float* thread_dose_filter_sum_of_squares = new float[image_stack[0].real_memory_allocated / 2];
-                    ZeroFloatArray(thread_dose_filter_sum_of_squares, image_stack[0].real_memory_allocated / 2);
-                    shared_ptr->lap("setup dose filter");
-
-#pragma omp for
-                    for ( image_counter = first_frame - 1; image_counter < last_frame; image_counter++ ) {
-                        shared_ptr->start("calc dose filter");
-                        my_electron_dose->CalculateDoseFilterAs1DArray(&image_stack[image_counter], dose_filter, (image_counter * exposure_per_frame) + pre_exposure_amount, ((image_counter + 1) * exposure_per_frame) + pre_exposure_amount);
-                        shared_ptr->lap("calc dose filter");
-                        // filter the image, and also calculate the sum of squares..
-
-                        shared_ptr->start("apply dose filter");
-                        for ( pixel_counter = 0; pixel_counter < image_stack[image_counter].real_memory_allocated / 2; pixel_counter++ ) {
-                            image_stack[image_counter].complex_values[pixel_counter] *= dose_filter[pixel_counter];
-                            thread_dose_filter_sum_of_squares[pixel_counter] += powf(dose_filter[pixel_counter], 2);
-                            //if (image_counter == 65) wxPrintf("%f\n", dose_filter[pixel_counter]);
-                        }
-                        shared_ptr->lap("apply dose filter");
-                    }
-
-                    delete[] dose_filter;
-
-                    // copy the local sum of squares to global
-                    shared_ptr->start("copy dose filter sum of squares");
-#pragma omp critical
-                    {
-
-                        for ( pixel_counter = 0; pixel_counter < image_stack[0].real_memory_allocated / 2; pixel_counter++ ) {
-                            dose_filter_sum_of_squares[pixel_counter] += thread_dose_filter_sum_of_squares[pixel_counter];
-                        }
-                    }
-                    shared_ptr->lap("copy dose filter sum of squares");
-
-                    delete[] thread_dose_filter_sum_of_squares;
-
-                } // end omp section
-                profile_timing.start("final sum");
-                for ( image_counter = first_frame - 1; image_counter < last_frame; image_counter++ ) {
-                    sum_image.AddImage(&image_stack[image_counter]);
-
-                    if ( saved_aligned_frames == true ) {
-                        image_stack[image_counter].QuickAndDirtyWriteSlice(aligned_frames_filename, image_counter + 1);
-                    }
-                }
-                profile_timing.lap("final sum");
-            }
-            else // just add them
-            {
-                profile_timing.start("final sum");
-                for ( image_counter = first_frame - 1; image_counter < last_frame; image_counter++ ) {
-                    sum_image.AddImage(&image_stack[image_counter]);
-
-                    if ( saved_aligned_frames == true ) {
-                        image_stack[image_counter].QuickAndDirtyWriteSlice(aligned_frames_filename, image_counter + 1);
-                    }
-                }
-                profile_timing.lap("final sum");
-            }
-
-            // if we are restoring the power - do it here..
-
-            if ( should_dose_filter == true && should_restore_power == true ) {
-                profile_timing.start("restore power");
-                for ( pixel_counter = 0; pixel_counter < sum_image.real_memory_allocated / 2; pixel_counter++ ) {
-                    if ( dose_filter_sum_of_squares[pixel_counter] != 0 ) {
-                        sum_image.complex_values[pixel_counter] /= sqrtf(dose_filter_sum_of_squares[pixel_counter]);
-                    }
-                }
-                profile_timing.lap("restore power");
-            }
-
-            // do we need to write out the amplitude spectra
-
-            if ( write_out_amplitude_spectrum == true ) {
-                profile_timing.start("write out amplitude spectrum");
-                Image current_power_spectrum;
-                current_power_spectrum.Allocate(sum_image.logical_x_dimension, sum_image.logical_y_dimension, true);
-
-                //		if (should_dose_filter == true) sum_image_no_dose_filter.ComputeAmplitudeSpectrumFull2D(&current_power_spectrum);
-                //	else sum_image.ComputeAmplitudeSpectrumFull2D(&current_power_spectrum);
-
-                sum_image.ComputeAmplitudeSpectrumFull2D(&current_power_spectrum);
-
-                // Set origin of amplitude spectrum to 0.0
-                current_power_spectrum.real_values[current_power_spectrum.ReturnReal1DAddressFromPhysicalCoord(current_power_spectrum.physical_address_of_box_center_x, current_power_spectrum.physical_address_of_box_center_y, current_power_spectrum.physical_address_of_box_center_z)] = 0.0;
-
-                // Forward Transform
-                current_power_spectrum.ForwardFFT( );
-
-                // make it square
-
-                int micrograph_square_dimension = std::max(sum_image.logical_x_dimension, sum_image.logical_y_dimension);
-                if ( IsOdd((micrograph_square_dimension)) )
-                    micrograph_square_dimension++;
-
-                if ( sum_image.logical_x_dimension != micrograph_square_dimension || sum_image.logical_y_dimension != micrograph_square_dimension ) {
-                    Image current_input_image_square;
-                    current_input_image_square.Allocate(micrograph_square_dimension, micrograph_square_dimension, false);
-                    current_power_spectrum.ClipInto(&current_input_image_square, 0);
-                    current_power_spectrum.Consume(&current_input_image_square);
-                }
-
-                // how big will the amplitude spectra have to be in total to have the central 512x512 be a 2.8 angstrom Nyquist?
-
-                // this is the (in the amplitudes real space) scale factor to make the nyquist 2.8 (inverse as real space)
-
-                float pixel_size_scale_factor;
-                if ( output_pixel_size < 1.4 )
-                    pixel_size_scale_factor = 1.4 / output_pixel_size;
-                else
-                    pixel_size_scale_factor = 1.0;
-
-                // this is the scale factor to make the box 512
-                float box_size_scale_factor = 512.0 / float(micrograph_square_dimension);
-
-                // overall scale factor
-
-                float overall_scale_factor = pixel_size_scale_factor * box_size_scale_factor;
-
-                {
-                    Image scaled_spectrum;
-                    scaled_spectrum.Allocate(myroundint(micrograph_square_dimension * overall_scale_factor), myroundint(micrograph_square_dimension * overall_scale_factor), false);
-                    current_power_spectrum.ClipInto(&scaled_spectrum, 0);
-                    scaled_spectrum.BackwardFFT( );
-                    current_power_spectrum.Allocate(512, 512, 1, true);
-                    scaled_spectrum.ClipInto(&current_power_spectrum, scaled_spectrum.ReturnAverageOfRealValuesOnEdges( ));
-                }
-
-                // now we need to filter it
-
-                float average;
-                float sigma;
-
-                current_power_spectrum.ComputeAverageAndSigmaOfValuesInSpectrum(float(current_power_spectrum.logical_x_dimension) * 0.5, float(current_power_spectrum.logical_x_dimension), average, sigma, 12);
-                current_power_spectrum.DivideByConstant(sigma);
-                current_power_spectrum.SetMaximumValueOnCentralCross(average / sigma + 10.0);
-                current_power_spectrum.ForwardFFT( );
-                current_power_spectrum.CosineMask(0, 0.05, true);
-                current_power_spectrum.BackwardFFT( );
-                current_power_spectrum.SetMinimumAndMaximumValues(average - 1.0, average + 3.0);
-                //current_power_spectrum.CosineRingMask(0.05,0.45, 0.05);
-                //average_spectrum->QuickAndDirtyWriteSlice("dbg_average_spectrum_before_conv.mrc",1);
-                current_power_spectrum.QuickAndDirtyWriteSlice(amplitude_spectrum_filename, 1, true);
-                profile_timing.lap("write out amplitude spectrum");
-            }
-
-            //  Shall we write out a scaled image?
-
-            if ( write_out_small_sum_image == true ) {
-                profile_timing.start("write out small sum image");
-                // work out a good size..
-                int   largest_dimension = std::max(sum_image.logical_x_dimension, sum_image.logical_y_dimension);
-                float scale_factor      = float(SCALED_IMAGE_SIZE) / float(largest_dimension);
-
-                if ( scale_factor < 1.0 ) {
-                    Image buffer_image;
-                    buffer_image.Allocate(myroundint(sum_image.logical_x_dimension * scale_factor), myroundint(sum_image.logical_y_dimension * scale_factor), 1, false);
-                    sum_image.ClipInto(&buffer_image);
-                    buffer_image.QuickAndDirtyWriteSlice(small_sum_image_filename, 1, true);
-                }
-                profile_timing.lap("write out small sum image");
-            }
-
-            // now we just need to write out the final sum..
-            profile_timing.start("write out sum image");
-            MRCFile output_file(output_filename, true);
-            sum_image.BackwardFFT( );
-            sum_image.WriteSlice(&output_file, 1); // I made this change as the file is only used once, and this way it is not created until it is actually written, which is cleaner for cancelled / crashed jobs
-            output_file.SetPixelSize(output_pixel_size);
-            EmpiricalDistribution density_distribution;
-            sum_image.UpdateDistributionOfRealValues(&density_distribution);
-            output_file.SetDensityStatistics(density_distribution.GetMinimum( ), density_distribution.GetMaximum( ), density_distribution.GetSampleMean( ), sqrtf(density_distribution.GetSampleVariance( )));
-            output_file.CloseFile( );
-            profile_timing.lap("write out sum image");
-
             // fill the result..
 
             profile_timing.start("fill result");
@@ -1275,29 +1039,256 @@ bool UnBlurApp::DoCalculation( ) {
                     result_array[image_counter + number_of_input_images] = y_shifts[image_counter] * output_pixel_size;
                 }
             }
-
+            wxPrintf("mark 1\n");
             my_result.SetResult(number_of_input_images * 2, result_array);
+            wxPrintf("mark 2\n");
             profile_timing.lap("fill result");
-            profile_timing.start("whole frame alignment cleanup");
-            delete[] result_array;
+            wxPrintf("mark 3\n");
+            // delete[] result_array;
             delete[] x_shifts;
             delete[] y_shifts;
-            // delete[] image_stack;
-
-            if ( should_dose_filter == true ) {
-                delete my_electron_dose;
-                delete[] dose_filter_sum_of_squares;
-            }
-            profile_timing.lap("whole frame alignment cleanup");
-            // unblur_timing.print_times( );
-            // profile_timing.print_times( );
-            // profile_timing_refinement_method.print_times( );
         }
-    }
+        // write the final corrected image and frames
+        // if ( round_index == total_rounds - 1 ) {
+        if ( image_stack[0].is_in_real_space ) {
+            for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+                image_stack[image_counter].ForwardFFT(true);
+            }
+        }
 
+        sum_image.Allocate(image_stack[0].logical_x_dimension, image_stack[0].logical_y_dimension, false);
+        sum_image.SetToConstant(0.0);
+        if ( should_dose_filter == true ) {
+            if ( write_out_amplitude_spectrum == true ) {
+                profile_timing.start("amplitude spectrum");
+                sum_image_no_dose_filter.Allocate(image_stack[0].logical_x_dimension, image_stack[0].logical_y_dimension, false);
+                sum_image_no_dose_filter.SetToConstant(0.0);
+
+                for ( image_counter = first_frame - 1; image_counter < last_frame; image_counter++ ) {
+                    sum_image_no_dose_filter.AddImage(&image_stack[image_counter]);
+                }
+                profile_timing.lap("amplitude spectrum");
+            }
+
+            // allocate arrays for the filter, and the sum of squares..
+            profile_timing.start("setup dose filter");
+            dose_filter_sum_of_squares = new float[image_stack[0].real_memory_allocated / 2];
+            ZeroFloatArray(dose_filter_sum_of_squares, image_stack[0].real_memory_allocated / 2);
+            profile_timing.lap("setup dose filter");
+
+            // We don't want any copying of the timer, so just let them all have a pointer, only thread zero will do anything with it.
+            StopWatch* shared_ptr;
+            shared_ptr = &profile_timing;
+
+#pragma omp parallel default(shared) num_threads(max_threads) shared(shared_ptr) private(image_counter, dose_filter, pixel_counter)
+            { // for omp
+
+                shared_ptr->start("setup dose filter");
+                dose_filter = new float[image_stack[0].real_memory_allocated / 2];
+                ZeroFloatArray(dose_filter, image_stack[0].real_memory_allocated / 2);
+                float* thread_dose_filter_sum_of_squares = new float[image_stack[0].real_memory_allocated / 2];
+                ZeroFloatArray(thread_dose_filter_sum_of_squares, image_stack[0].real_memory_allocated / 2);
+                shared_ptr->lap("setup dose filter");
+
+#pragma omp for
+                for ( image_counter = first_frame - 1; image_counter < last_frame; image_counter++ ) {
+                    shared_ptr->start("calc dose filter");
+                    my_electron_dose->CalculateDoseFilterAs1DArray(&image_stack[image_counter], dose_filter, (image_counter * exposure_per_frame) + pre_exposure_amount, ((image_counter + 1) * exposure_per_frame) + pre_exposure_amount);
+                    shared_ptr->lap("calc dose filter");
+                    // filter the image, and also calculate the sum of squares..
+
+                    shared_ptr->start("apply dose filter");
+                    for ( pixel_counter = 0; pixel_counter < image_stack[image_counter].real_memory_allocated / 2; pixel_counter++ ) {
+                        image_stack[image_counter].complex_values[pixel_counter] *= dose_filter[pixel_counter];
+                        thread_dose_filter_sum_of_squares[pixel_counter] += powf(dose_filter[pixel_counter], 2);
+                        //if (image_counter == 65) wxPrintf("%f\n", dose_filter[pixel_counter]);
+                    }
+                    shared_ptr->lap("apply dose filter");
+                }
+
+                delete[] dose_filter;
+
+                // copy the local sum of squares to global
+                shared_ptr->start("copy dose filter sum of squares");
+#pragma omp critical
+                {
+
+                    for ( pixel_counter = 0; pixel_counter < image_stack[0].real_memory_allocated / 2; pixel_counter++ ) {
+                        dose_filter_sum_of_squares[pixel_counter] += thread_dose_filter_sum_of_squares[pixel_counter];
+                    }
+                }
+                shared_ptr->lap("copy dose filter sum of squares");
+
+                delete[] thread_dose_filter_sum_of_squares;
+
+            } // end omp section
+            profile_timing.start("final sum");
+            for ( image_counter = first_frame - 1; image_counter < last_frame; image_counter++ ) {
+                sum_image.AddImage(&image_stack[image_counter]);
+
+                if ( saved_aligned_frames == true ) {
+                    // wxString::Format(outpath + "%04i.mrc", patch_counter).ToStdString( )
+                    // outputpath.ToStdString( ) + "distortion_corrected_frames.mrc";
+                    image_stack[image_counter].QuickAndDirtyWriteSlice(wxString::Format(outputpath + "Unblur_Frames_Round_%04i.mrc", round_index).ToStdString( ), image_counter + 1);
+                }
+            }
+            profile_timing.lap("final sum");
+        }
+        else // just add them
+        {
+            profile_timing.start("final sum");
+            for ( image_counter = first_frame - 1; image_counter < last_frame; image_counter++ ) {
+                sum_image.AddImage(&image_stack[image_counter]);
+
+                if ( saved_aligned_frames == true ) {
+                    // image_stack[image_counter].QuickAndDirtyWriteSlice(aligned_frames_filename, image_counter + 1);
+                    image_stack[image_counter].QuickAndDirtyWriteSlice(wxString::Format(outputpath + "Unblur_Frames_Round_%04i.mrc", round_index).ToStdString( ), image_counter + 1);
+                }
+            }
+            profile_timing.lap("final sum");
+        }
+
+        // if we are restoring the power - do it here..
+
+        if ( should_dose_filter == true && should_restore_power == true ) {
+            profile_timing.start("restore power");
+            for ( pixel_counter = 0; pixel_counter < sum_image.real_memory_allocated / 2; pixel_counter++ ) {
+                if ( dose_filter_sum_of_squares[pixel_counter] != 0 ) {
+                    sum_image.complex_values[pixel_counter] /= sqrtf(dose_filter_sum_of_squares[pixel_counter]);
+                }
+            }
+            profile_timing.lap("restore power");
+        }
+
+        // do we need to write out the amplitude spectra
+
+        if ( write_out_amplitude_spectrum == true ) {
+            profile_timing.start("write out amplitude spectrum");
+            Image current_power_spectrum;
+            current_power_spectrum.Allocate(sum_image.logical_x_dimension, sum_image.logical_y_dimension, true);
+
+            //		if (should_dose_filter == true) sum_image_no_dose_filter.ComputeAmplitudeSpectrumFull2D(&current_power_spectrum);
+            //	else sum_image.ComputeAmplitudeSpectrumFull2D(&current_power_spectrum);
+
+            sum_image.ComputeAmplitudeSpectrumFull2D(&current_power_spectrum);
+
+            // Set origin of amplitude spectrum to 0.0
+            current_power_spectrum.real_values[current_power_spectrum.ReturnReal1DAddressFromPhysicalCoord(current_power_spectrum.physical_address_of_box_center_x, current_power_spectrum.physical_address_of_box_center_y, current_power_spectrum.physical_address_of_box_center_z)] = 0.0;
+
+            // Forward Transform
+            current_power_spectrum.ForwardFFT( );
+
+            // make it square
+
+            int micrograph_square_dimension = std::max(sum_image.logical_x_dimension, sum_image.logical_y_dimension);
+            if ( IsOdd((micrograph_square_dimension)) )
+                micrograph_square_dimension++;
+
+            if ( sum_image.logical_x_dimension != micrograph_square_dimension || sum_image.logical_y_dimension != micrograph_square_dimension ) {
+                Image current_input_image_square;
+                current_input_image_square.Allocate(micrograph_square_dimension, micrograph_square_dimension, false);
+                current_power_spectrum.ClipInto(&current_input_image_square, 0);
+                current_power_spectrum.Consume(&current_input_image_square);
+            }
+
+            // how big will the amplitude spectra have to be in total to have the central 512x512 be a 2.8 angstrom Nyquist?
+
+            // this is the (in the amplitudes real space) scale factor to make the nyquist 2.8 (inverse as real space)
+
+            float pixel_size_scale_factor;
+            if ( output_pixel_size < 1.4 )
+                pixel_size_scale_factor = 1.4 / output_pixel_size;
+            else
+                pixel_size_scale_factor = 1.0;
+
+            // this is the scale factor to make the box 512
+            float box_size_scale_factor = 512.0 / float(micrograph_square_dimension);
+
+            // overall scale factor
+
+            float overall_scale_factor = pixel_size_scale_factor * box_size_scale_factor;
+
+            {
+                Image scaled_spectrum;
+                scaled_spectrum.Allocate(myroundint(micrograph_square_dimension * overall_scale_factor), myroundint(micrograph_square_dimension * overall_scale_factor), false);
+                current_power_spectrum.ClipInto(&scaled_spectrum, 0);
+                scaled_spectrum.BackwardFFT( );
+                current_power_spectrum.Allocate(512, 512, 1, true);
+                scaled_spectrum.ClipInto(&current_power_spectrum, scaled_spectrum.ReturnAverageOfRealValuesOnEdges( ));
+            }
+
+            // now we need to filter it
+
+            float average;
+            float sigma;
+
+            current_power_spectrum.ComputeAverageAndSigmaOfValuesInSpectrum(float(current_power_spectrum.logical_x_dimension) * 0.5, float(current_power_spectrum.logical_x_dimension), average, sigma, 12);
+            current_power_spectrum.DivideByConstant(sigma);
+            current_power_spectrum.SetMaximumValueOnCentralCross(average / sigma + 10.0);
+            current_power_spectrum.ForwardFFT( );
+            current_power_spectrum.CosineMask(0, 0.05, true);
+            current_power_spectrum.BackwardFFT( );
+            current_power_spectrum.SetMinimumAndMaximumValues(average - 1.0, average + 3.0);
+            //current_power_spectrum.CosineRingMask(0.05,0.45, 0.05);
+            //average_spectrum->QuickAndDirtyWriteSlice("dbg_average_spectrum_before_conv.mrc",1);
+            current_power_spectrum.QuickAndDirtyWriteSlice(amplitude_spectrum_filename, 1, true);
+            profile_timing.lap("write out amplitude spectrum");
+        }
+
+        //  Shall we write out a scaled image?
+
+        if ( write_out_small_sum_image == true ) {
+            profile_timing.start("write out small sum image");
+            // work out a good size..
+            int   largest_dimension = std::max(sum_image.logical_x_dimension, sum_image.logical_y_dimension);
+            float scale_factor      = float(SCALED_IMAGE_SIZE) / float(largest_dimension);
+
+            if ( scale_factor < 1.0 ) {
+                Image buffer_image;
+                buffer_image.Allocate(myroundint(sum_image.logical_x_dimension * scale_factor), myroundint(sum_image.logical_y_dimension * scale_factor), 1, false);
+                sum_image.ClipInto(&buffer_image);
+                buffer_image.QuickAndDirtyWriteSlice(small_sum_image_filename, 1, true);
+            }
+            profile_timing.lap("write out small sum image");
+        }
+
+        // now we just need to write out the final sum..
+        profile_timing.start("write out sum image");
+        // MRCFile output_file(output_filename, true);
+        MRCFile output_file(wxString::Format(outputpath + "Unblur_Image_Round_%04i.mrc", round_index).ToStdString( ), true);
+        sum_image.BackwardFFT( );
+        sum_image.WriteSlice(&output_file, 1); // I made this change as the file is only used once, and this way it is not created until it is actually written, which is cleaner for cancelled / crashed jobs
+        output_file.SetPixelSize(output_pixel_size);
+        EmpiricalDistribution density_distribution;
+        sum_image.UpdateDistributionOfRealValues(&density_distribution);
+        output_file.SetDensityStatistics(density_distribution.GetMinimum( ), density_distribution.GetMaximum( ), density_distribution.GetSampleMean( ), sqrtf(density_distribution.GetSampleVariance( )));
+        output_file.CloseFile( );
+        profile_timing.lap("write out sum image");
+
+        // profile_timing.start("whole frame alignment cleanup");
+
+        // delete[] image_stack;
+        wxPrintf("mark 4\n");
+        // if ( should_dose_filter == true ) {
+        //     delete my_electron_dose;
+        //     delete[] dose_filter_sum_of_squares;
+        // }
+        // profile_timing.lap("whole frame alignment cleanup");
+        // unblur_timing.print_times( );
+        // profile_timing.print_times( );
+        // profile_timing_refinement_method.print_times( );
+        // }
+        // }
+    }
+    if ( should_dose_filter == true ) {
+        delete my_electron_dose;
+        delete[] dose_filter_sum_of_squares;
+    }
+    wxPrintf("mark 5\n");
     unblur_timing.print_times( );
     profile_timing.print_times( );
     profile_timing_refinement_method.print_times( );
+    wxPrintf("mark 6\n");
     delete[] image_stack;
     return true;
 }

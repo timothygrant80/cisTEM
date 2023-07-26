@@ -85,7 +85,6 @@ void DisplayFrame::OnImageSelectionModeClick(wxCommandEvent& event) {
             if ( question_dialog.ShowModal( ) == wxID_YES ) {
                 cisTEMDisplayPanel->ReturnCurrentPanel( )->coord_tracker->Clear( );
                 cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode = IMAGES_PICK;
-
                 SelectInvertSelection->Enable(true);
             }
 
@@ -392,24 +391,19 @@ void DisplayFrame::OnSize10(wxCommandEvent& event) {
     Update( );
 }
 
-// TODO: Determine if wanted
-void DisplayFrame::OnShowCrossHairClick(wxCommandEvent& event) {
-}
-
 void DisplayFrame::OnSingleImageModeClick(wxCommandEvent& event) {
-    if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->single_image )
+    if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->single_image ) {
         cisTEMDisplayPanel->ReturnCurrentPanel( )->single_image = false;
-    else
+    }
+    else {
         cisTEMDisplayPanel->ReturnCurrentPanel( )->single_image = true;
+        cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode = COORDS_PICK;
+    }
 
     cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_image_has_correct_greys = false;
     cisTEMDisplayPanel->ReturnCurrentPanel( )->ReDrawPanel( );
     Refresh( );
     Update( );
-}
-
-// TODO: determine if wanted
-void DisplayFrame::On7BitGreyValuesClick(wxCommandEvent& event) {
 }
 
 void DisplayFrame::OnShowSelectionDistancesClick(wxCommandEvent& event) {
@@ -462,8 +456,6 @@ void DisplayFrame::DisableAllToolbarButtons( ) {
     SelectClearSelection->Enable(false);
 
     // Options menu
-    OptionsShowCrossHair->Enable(false);
-    Options7BitGreyValues->Enable(false);
     OptionsSingleImageMode->Enable(false);
     OptionsShowSelectionDistances->Enable(false);
     OptionsShowResolution->Enable(false);
@@ -487,8 +479,6 @@ void DisplayFrame::EnableAllToolbarButtons( ) {
     SelectClearSelection->Enable(true);
 
     // Options menu
-    OptionsShowCrossHair->Enable(true);
-    Options7BitGreyValues->Enable(true);
     OptionsSingleImageMode->Enable(true);
     OptionsShowSelectionDistances->Enable(true);
     OptionsShowResolution->Enable(true);
@@ -534,14 +524,14 @@ void DisplayFrame::OnUpdateUI(wxUpdateUIEvent& event) {
 
         // Make sure single image mode is checked/unchecked based on current panel
         if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->single_image ) {
-            if ( ! OptionsSingleImageMode->IsChecked( ) ) {
+            if ( ! OptionsSingleImageMode->IsChecked( ) )
                 OptionsSingleImageMode->Check(true);
-            }
+            SelectImageSelectionMode->Enable(false);
         }
         else if ( ! cisTEMDisplayPanel->ReturnCurrentPanel( )->single_image ) {
-            if ( OptionsSingleImageMode->IsChecked( ) ) {
+            if ( OptionsSingleImageMode->IsChecked( ) )
                 OptionsSingleImageMode->Check(false);
-            }
+            SelectImageSelectionMode->Enable(true);
         }
 
         // Repeat above for res instead of radius

@@ -40,9 +40,7 @@ class DisplayFrame : public DisplayFrameParent {
     void OnSize5(wxCommandEvent& event);
     void OnSize7(wxCommandEvent& event);
     void OnSize10(wxCommandEvent& event);
-    void OnShowCrossHairClick(wxCommandEvent& event);
     void OnSingleImageModeClick(wxCommandEvent& event);
-    void On7BitGreyValuesClick(wxCommandEvent& event);
     void OnShowSelectionDistancesClick(wxCommandEvent& event);
     void OnShowResolution(wxCommandEvent& event);
 

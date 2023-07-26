@@ -14807,17 +14807,9 @@ DisplayFrameParent::DisplayFrameParent( wxWindow* parent, wxWindowID id, const w
 
 	DisplayOptionsMenu->Append( OptionsSetPointSizeItem );
 
-	OptionsShowCrossHair = new wxMenuItem( DisplayOptionsMenu, wxID_ANY, wxString( wxT("Show Cross Hair") ) , wxEmptyString, wxITEM_NORMAL );
-	DisplayOptionsMenu->Append( OptionsShowCrossHair );
-	OptionsShowCrossHair->Enable( false );
-
 	OptionsSingleImageMode = new wxMenuItem( DisplayOptionsMenu, wxID_ANY, wxString( wxT("Single Image Mode") ) , wxEmptyString, wxITEM_CHECK );
 	DisplayOptionsMenu->Append( OptionsSingleImageMode );
 	OptionsSingleImageMode->Enable( false );
-
-	Options7BitGreyValues = new wxMenuItem( DisplayOptionsMenu, wxID_ANY, wxString( wxT("7 Bit Grey Values") ) , wxEmptyString, wxITEM_NORMAL );
-	DisplayOptionsMenu->Append( Options7BitGreyValues );
-	Options7BitGreyValues->Enable( false );
 
 	OptionsShowSelectionDistances = new wxMenuItem( DisplayOptionsMenu, wxID_ANY, wxString( wxT("Show Selection Distances") ) , wxEmptyString, wxITEM_CHECK );
 	DisplayOptionsMenu->Append( OptionsShowSelectionDistances );
@@ -14867,9 +14859,7 @@ DisplayFrameParent::DisplayFrameParent( wxWindow* parent, wxWindowID id, const w
 	OptionsSetPointSize->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSize5 ), this, CoordSize5->GetId());
 	OptionsSetPointSize->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSize7 ), this, CoordSize7->GetId());
 	OptionsSetPointSize->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSize10 ), this, CoordSize10->GetId());
-	DisplayOptionsMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnShowCrossHairClick ), this, OptionsShowCrossHair->GetId());
 	DisplayOptionsMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSingleImageModeClick ), this, OptionsSingleImageMode->GetId());
-	DisplayOptionsMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::On7BitGreyValuesClick ), this, Options7BitGreyValues->GetId());
 	DisplayOptionsMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnShowSelectionDistancesClick ), this, OptionsShowSelectionDistances->GetId());
 	DisplayOptionsMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnShowResolution ), this, OptionsShowResolution->GetId());
 	DisplayHelpMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnDocumentationClick ), this, HelpAbout->GetId());

@@ -4246,9 +4246,7 @@ class DisplayFrameParent : public wxFrame
 		wxMenuItem* CoordSize5;
 		wxMenuItem* CoordSize7;
 		wxMenuItem* CoordSize10;
-		wxMenuItem* OptionsShowCrossHair;
 		wxMenuItem* OptionsSingleImageMode;
-		wxMenuItem* Options7BitGreyValues;
 		wxMenuItem* OptionsShowSelectionDistances;
 		wxMenuItem* OptionsShowResolution;
 		wxMenu* DisplayHelpMenu;
@@ -4271,9 +4269,7 @@ class DisplayFrameParent : public wxFrame
 		virtual void OnSize5( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnSize7( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnSize10( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnShowCrossHairClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnSingleImageModeClick( wxCommandEvent& event ) { event.Skip(); }
-		virtual void On7BitGreyValuesClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnShowSelectionDistancesClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnShowResolution( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnDocumentationClick( wxCommandEvent& event ) { event.Skip(); }

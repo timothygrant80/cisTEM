@@ -1148,7 +1148,7 @@ void DisplayPanel::OpenImage(Image* image_to_view, wxString wanted_tab_title, bo
     my_panel->input_is_a_file           = false;
     my_panel->do_i_have_image_ownership = take_ownership;
 
-    if ( (style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || ReturnCurrentPanel( )->picking_mode == IMAGES_PICK ) {
+    if ( (style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES ) {
         my_panel->image_is_selected = new bool[image_to_view->logical_z_dimension + 1];
         ClearSelection(false);
     }

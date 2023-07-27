@@ -3296,13 +3296,13 @@ float Image::CosineRingMask(float wanted_inner_radius, float wanted_outer_radius
                     if ( do_inner_masking ) {
                         if ( frequency_squared <= inner_mask_radius_squared && frequency_squared >= inner_mask_radius_minus_edge_squared ) {
                             frequency = sqrtf(frequency_squared);
-                            edge      = (1.0 + cosf(PI * (outer_mask_radius - frequency) / wanted_mask_edge)) / 2.0;
+                            edge      = (1.0 + cosf(PI * (inner_mask_radius - frequency) / wanted_mask_edge)) / 2.0;
                             complex_values[pixel_counter] *= edge;
                         }
-                        if ( frequency_squared <= inner_mask_radius_minus_edge_squared )
-                            complex_values[pixel_counter] = 0.0f + I * 0.0f;
+                        if ( frequency_squared <= inner_mask_radius_minus_edge_squared ) 
+                            complex_values[pixel_counter] = 0.0f + I * 0.0f;     
                     }
-
+                    
                     if ( frequency_squared >= outer_mask_radius_plus_edge_squared )
                         complex_values[pixel_counter] = 0.0f + I * 0.0f;
 

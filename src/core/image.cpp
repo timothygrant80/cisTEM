@@ -7012,7 +7012,14 @@ void Image::ComputeFilteredAmplitudeSpectrumFull2D(Image* average_spectrum_maske
     //			average_spectrum_masked->SetMaximumValue(average_spectrum_masked->ReturnMaximumValue(3,3));
 
     average_spectrum_masked->CopyFrom(this);
-    average_spectrum_masked->CosineMask(float(average_spectrum_masked->logical_x_dimension) * pixel_size_for_fitting / std::max(maximum_resolution, 8.0f), float(average_spectrum_masked->logical_x_dimension) * pixel_size_for_fitting / std::max(maximum_resolution, 4.0f), true);
+
+    // Idea about setting up a cosine mask: The zero should start at minimum_resolution.
+    float min_pixels = pixel_size_for_fitting / minimum_resolution;
+    float max_pixels = pixel_size_for_fitting / maximum_resolution;
+
+    float edge_radius = std::min(min_pixels + 0.25f * (max_pixels - min_pixels), pixel_size_for_fitting / 8.0f);
+    float edge_width  = 2.0f * (edge_radius - min_pixels);
+    average_spectrum_masked->CosineMask(float(average_spectrum_masked->logical_x_dimension) * edge_radius, float(average_spectrum_masked->logical_x_dimension) * edge_width, true);
     //			average_spectrum_masked->QuickAndDirtyWriteSlice("dbg_spec_before_thresh.mrc",1);
     //			average_spectrum_masked->CorrectSinc();
     //			average_spectrum_masked->CorrectSinc(float(average_spectrum_masked->logical_x_dimension)*pixel_size_for_fitting/std::max(maximum_resolution, 8.0f), 0.5, true, 0.0);

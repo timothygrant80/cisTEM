@@ -87,6 +87,14 @@ void CtffindApp::DoInteractiveUserInput( ) {
     float       astigmatism_tolerance              = 0.0;
     bool        find_additional_phase_shift        = false;
     bool        determine_tilt                     = false;
+    bool        fit_nodes                          = false;
+    bool        fit_nodes_1D_brute_force           = true;
+    bool        fit_nodes_2D_refine                = true;
+    float       fit_nodes_low_resolution_limit     = 30.0;
+    float       fit_nodes_high_resolution_limit    = 3.0;
+    float       target_pixel_size_after_resampling = 1.4;
+    bool        fit_nodes_use_rounded_square       = false;
+    bool        fit_nodes_downweight_nodes         = false;
     float       minimum_additional_phase_shift     = 0.0;
     float       maximum_additional_phase_shift     = 0.0;
     float       additional_phase_shift_search_step = 0.0;
@@ -543,14 +551,14 @@ void CtffindApp::DoInteractiveUserInput( ) {
                                       desired_number_of_threads,
                                       eer_frames_per_image,
                                       eer_super_res_factor,
-                                      false,
-                                      false,
-                                      false,
-                                      10.0,
-                                      3.0,
-                                      1.4,
-                                      false,
-                                      false);
+                                      fit_nodes,
+                                      fit_nodes_1D_brute_force,
+                                      fit_nodes_2D_refine,
+                                      fit_nodes_low_resolution_limit,
+                                      fit_nodes_high_resolution_limit,
+                                      target_pixel_size_after_resampling,
+                                      fit_nodes_use_rounded_square,
+                                      fit_nodes_downweight_nodes);
 }
 
 // Optional command-line stuff

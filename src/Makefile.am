@@ -320,7 +320,8 @@ bin_PROGRAMS =  cisTEM_job_control \
                 refine_template \
                 make_template_result \
                 prepare_stack_matchtemplate \
-                sum_all_eer_files
+                sum_all_eer_files \
+                measure_template_bias
 if WANT_CISTEM_GPU_AM
     bin_PROGRAMS +=  match_template_gpu 
     #unblur_gpu global_search_gpu global_search_refinement_gpu
@@ -667,6 +668,11 @@ sum_all_eer_files_SOURCES  = programs/sum_all_eer_files/sum_all_eer_files.cpp
 sum_all_eer_files_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 sum_all_eer_files_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 sum_all_eer_files_LDADD    = libcore.a $(WX_LIBS_BASE)
+
+measure_template_bias_SOURCES  = programs/measure_template_bias/measure_template_bias.cpp
+measure_template_bias_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+measure_template_bias_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+measure_template_bias_LDADD    = libcore.a $(WX_LIBS_BASE)
 
 sum_all_tif_files_SOURCES  = programs/sum_all_tif_files/sum_all_tif_files.cpp
 sum_all_tif_files_CXXFLAGS = $(WX_CPPFLAGS_BASE)

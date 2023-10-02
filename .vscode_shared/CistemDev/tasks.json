@@ -33,6 +33,16 @@
             "type": "shell",
             "command": "cd ${build_dir}/intel-gpu-debug-static && make -j${input:compile_cores}"
         }
+        {
+            "label": "Configure cisTEM DEBUG build, CPU only",
+            "type": "shell",
+            "command": "mkdir -p ${build_dir}/intel-debug-static && cd ${build_dir}/intel-debug-static && CC=icc CXX=icpc ../../configure --enable-debugmode --with-wx-config=/opt/WX/intel-static/bin/wx-config --enable-staticmode ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+        },
+        {
+            "label": "BUILD cisTEM DEBUG, CPU only",
+            "type": "shell",
+            "command": "cd ${build_dir}/intel-debug-static && make -j${input:compile_cores}"
+        }
     ],
     "inputs": [
         {

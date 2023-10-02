@@ -3299,10 +3299,10 @@ float Image::CosineRingMask(float wanted_inner_radius, float wanted_outer_radius
                             edge      = (1.0 + cosf(PI * (inner_mask_radius - frequency) / wanted_mask_edge)) / 2.0;
                             complex_values[pixel_counter] *= edge;
                         }
-                        if ( frequency_squared <= inner_mask_radius_minus_edge_squared ) 
-                            complex_values[pixel_counter] = 0.0f + I * 0.0f;     
+                        if ( frequency_squared <= inner_mask_radius_minus_edge_squared )
+                            complex_values[pixel_counter] = 0.0f + I * 0.0f;
                     }
-                    
+
                     if ( frequency_squared >= outer_mask_radius_plus_edge_squared )
                         complex_values[pixel_counter] = 0.0f + I * 0.0f;
 
@@ -4421,6 +4421,15 @@ void Image::Deallocate( ) {
         fftwf_destroy_plan(plan_bwd);
         planned = false;
     }
+
+#ifdef ENABLEGPU
+    UnRegisterPageLockedMemory( );
+    if ( device_image_ptr ) {
+        // Let an associated GpuImage know that we are being destructed
+        device_image_ptr->host_image_ptr = nullptr;
+        device_image_ptr                 = nullptr;
+    }
+#endif
 }
 
 //!>  \brief  Allocate memory for the Image object.

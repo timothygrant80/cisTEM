@@ -5,6 +5,8 @@
  *      Author: himesb
  */
 
+//is_in_memory
+// real_values
 #ifndef GPUIMAGE_H_
 #define GPUIMAGE_H_
 
@@ -66,17 +68,15 @@ class GpuImage {
     DevicePointerArray<float>   ptr_array_32f;
     DevicePointerArray<float2>  ptr_array_32fc;
 
-    float*               real_values; // !<  Real array to hold values for REAL images.
-    std::complex<float>* complex_values; // !<  Complex array to hold values for COMP images.
-    bool                 is_in_memory; // !<  Whether image values are in-memory, in other words whether the image has memory space allocated to its data array.
-    bool                 image_memory_should_not_be_deallocated; // !< Don't deallocate the memory, generally should only be used when doing something funky with the pointers
-    int                  gpu_plan_id;
+    bool is_in_memory; // !<  Whether image values are in-memory, in other words whether the image has memory space allocated to its data array.
+    bool image_memory_should_not_be_deallocated; // !< Don't deallocate the memory, generally should only be used when doing something funky with the pointers
+    int  gpu_plan_id;
 
     // end  MEMBER VARIABLES FROM THE cpu IMAGE CLASS
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    float*  real_values_gpu; // !<  Real array to hold values for REAL images.
-    float2* complex_values_gpu; // !<  Complex array to hold values for COMP images.
+    float*  real_values; // !<  Real array to hold values for REAL images.
+    float2* complex_values; // !<  Complex array to hold values for COMP images.
 
     // To make it easier to switch between different types of FFT plans we have void pointers for them here
     void* position_space_ptr;
@@ -123,8 +123,6 @@ class GpuImage {
     ImageType img_type;
 
     bool   is_in_memory_gpu; // !<  Whether image values are in-memory, in other words whether the image has memory space allocated to its data array. Default = .FALSE.
-    bool   is_host_memory_pinned; // !<  Is the host memory already page locked (2x bandwith and required for asynchronous xfer);
-    float* pinnedPtr;
     Image* host_image_ptr; // Primarily for access to host image methods for preprocessing.
 
     cudaMemcpy3DParms h_3dparams = {0};
@@ -248,7 +246,6 @@ class GpuImage {
     float ReturnAverageOfRealValuesOnEdges( );
     void  Deallocate( );
 
-    void UnPinHostPointer(float* pinnedPtr);
     void CopyFP32toFP16buffer(bool deallocate_single_precision = true);
     void CopyFP16buffertoFP32(bool deallocate_half_precision = true);
 
@@ -279,10 +276,7 @@ class GpuImage {
 
     void  CopyDeviceToNewHost(Image& cpu_image, bool should_block_until_complete, bool free_gpu_memory, bool unpin_host_memory = true);
     Image CopyDeviceToNewHost(bool should_block_until_complete, bool free_gpu_memory, bool unpin_host_memory = true);
-    // The volume copies with memory coalescing favoring padding are not directly
-    // compatible with the memory layout in Image().
-    void CopyVolumeHostToDevice( );
-    void CopyVolumeDeviceToHost(bool free_gpu_memory = true, bool unpin_host_memory = true);
+
     // Synchronize the full stream.
     void Record( );
     void RecordBlocking( );

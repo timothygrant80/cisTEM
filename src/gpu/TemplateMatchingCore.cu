@@ -211,7 +211,7 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
             //      d_padded_reference.ForwardFFTAndClipInto(d_current_projection,false);
             d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image.complex_values_fp16, true);
 
-            //			d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image.complex_values_gpu, false);
+            //			d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image.complex_values, false);
             //			d_padded_reference.CopyFP32toFP16buffer(false);
 
             if ( DO_HISTOGRAM ) {
@@ -490,10 +490,10 @@ void TemplateMatchingCore::MipToImage( ) {
                                                                             my_new_peaks,
                                                                             secondary_peaks,
                                                                             d_padded_reference.real_memory_allocated,
-                                                                            d_max_intensity_projection.real_values_gpu,
-                                                                            d_best_psi.real_values_gpu,
-                                                                            d_best_theta.real_values_gpu,
-                                                                            d_best_phi.real_values_gpu,
+                                                                            d_max_intensity_projection.real_values,
+                                                                            d_best_psi.real_values,
+                                                                            d_best_theta.real_values,
+                                                                            d_best_phi.real_values,
                                                                             n_global_search_images_to_save);
     postcheck;
 }
@@ -506,7 +506,7 @@ void TemplateMatchingCore::AccumulateSums(__half2* my_stats, GpuImage& sum, GpuI
     dim3 threadsPerBlock = dim3(1024, 1, 1);
     dim3 gridDims        = dim3((sum.real_memory_allocated + threadsPerBlock.x - 1) / threadsPerBlock.x, 1, 1);
 
-    AccumulateSumsKernel<<<gridDims, threadsPerBlock, 0, cudaStreamPerThread>>>(my_stats, sum.real_memory_allocated, sum.real_values_gpu, sq_sum.real_values_gpu);
+    AccumulateSumsKernel<<<gridDims, threadsPerBlock, 0, cudaStreamPerThread>>>(my_stats, sum.real_memory_allocated, sum.real_values, sq_sum.real_values);
     postcheck;
 }
 

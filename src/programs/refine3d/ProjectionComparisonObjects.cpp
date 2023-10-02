@@ -186,7 +186,7 @@ void ProjectionComparisonObjects::GetCleanCopyOfParticleImage(const bool is_for_
     MyDebugAssertTrue(tmp_ptr->is_in_memory_gpu, "Particle image is not in memory!");
 
     // Leave this as a blocking call
-    cudaErr(cudaMemcpy(tmp_ptr->real_values_gpu, clean_copy.real_values_gpu, clean_copy.real_memory_allocated * sizeof(float), cudaMemcpyDeviceToDevice));
+    cudaErr(cudaMemcpy(tmp_ptr->real_values, clean_copy.real_values, clean_copy.real_memory_allocated * sizeof(float), cudaMemcpyDeviceToDevice));
 #endif
 }
 
@@ -358,7 +358,6 @@ float ProjectionComparisonObjects::DoGpuProjection( ) {
 #ifndef CALCULATE_SCORE_ON_CPU_DISABLE_GPU_PARTICLE
     MyDebugAssertTrue(current_particle_image->is_in_memory_gpu, "gpu_particle_image is not allocated");
 #endif
-    // wxPrintf("Is host memory pinned (%d\n)", gpu_projection->is_host_memory_pinned);
 
     current_projection->ExtractSliceShiftAndCtf(current_density_map, &gpu_ctf_image, particle->alignment_parameters, reference_volume->pixel_size, particle->pixel_size / particle->filter_radius_high, true,
                                                 swap_quadrants, apply_shifts, apply_ctf, absolute_ctf);

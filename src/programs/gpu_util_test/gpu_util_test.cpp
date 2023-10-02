@@ -479,45 +479,5 @@ void GpuUtilTest::createImageAddOne( ) {
             d_image_full.Wait( );
         }
 
-        //	wxPrintf("Making an image of zeros in host memory\n");
-        //	Image zeros;
-        //	zeros.Allocate(512,512,512,true);
-        //	zeros.SetToConstant(1.f);
-        //
-        //	Image zeros2;
-        //	zeros2.real_values = zeros.real_values;
-        //
-        //	  wxPrintf("\n\nhost ZEROS2 %p with value %f\n\n", &zeros2.real_values,  zeros2.real_values[0]);
-        //
-        //
-        //	wxPrintf("Initializing a GpuImage\n");
-        //
-        //	GpuImage d_zeros;
-        //
-        //	wxPrintf("Set up a GpuImage with size %d\n", d_zeros.logical_x_dimension);
-        //	d_zeros.Init(zeros);
-        //
-        //
-        //	wxPrintf("copied the Image into the GpuImage with size %d\n", d_zeros.logical_x_dimension);
-        //
-        ////	d_zeros.CopyVolumeHostToDevice();
-        //	d_zeros.CopyHostToDevice();
-        //
-        //	wxPrintf("I copied to the device\n");
-        //
-        //	wxPrintf("Now I'll try to multipy by 5\n");
-        //	d_zeros.MultiplyByScalar(5.0f);
-        //
-        //	wxPrintf("Now I'll try to copy to the host\n");
-        ////	d_zeros.CopyVolumeDeviceToHost();
-        //	d_zeros.CopyDeviceToHost();
-        //
-        //
-        //	wxPrintf("Checking the values in the copied array %f\n",d_zeros.real_values[10]);
-        //
-        //	zeros.real_values = d_zeros.real_values;
-        //
-        //	zeros.QuickAndDirtyWriteSlices("TestGpuOutx5.mrc",1,512);
-
     } // end of parallel omp block
 }

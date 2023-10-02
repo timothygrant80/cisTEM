@@ -127,7 +127,7 @@ void RunBatchedCorrelation(GpuImage& d_ref_img, GpuImage* d_seq_rotation_cache, 
     d_reference_img.Allocate(d_ref_img.dims.x, d_ref_img.dims.y, batch_size, false);
 
     for ( int iTest = 0; iTest < batch_size; iTest++ ) {
-        cudaErr(cudaMemcpy(&d_reference_img.real_values_gpu[batch.stride( ) * iTest], d_ref_img.real_values, sizeof(float) * batch.stride( ), cudaMemcpyDeviceToDevice));
+        cudaErr(cudaMemcpy(&d_reference_img.real_values[batch.stride( ) * iTest], d_ref_img.real_values, sizeof(float) * batch.stride( ), cudaMemcpyDeviceToDevice));
     }
 #endif
     // First loop is to setup the rotation cache with n_batches of <= batchsize 3D images
@@ -140,7 +140,7 @@ void RunBatchedCorrelation(GpuImage& d_ref_img, GpuImage* d_seq_rotation_cache, 
         // std::cerr << "n_images " << batch.n_images_in_this_batch( ) << std::endl;
         rotation_cache[batch.index].Allocate(d_seq_rotation_cache[0].dims.x, d_seq_rotation_cache[0].dims.y, batch.n_images_in_this_batch( ), false);
         for ( int intra_batch_idx = 0; intra_batch_idx < batch.n_images_in_this_batch( ); intra_batch_idx++ ) {
-            cudaErr(cudaMemcpy(&rotation_cache[batch.index].real_values_gpu[batch.stride( ) * intra_batch_idx], d_seq_rotation_cache[counter].real_values, sizeof(float) * batch.stride( ), cudaMemcpyDeviceToDevice));
+            cudaErr(cudaMemcpy(&rotation_cache[batch.index].real_values[batch.stride( ) * intra_batch_idx], d_seq_rotation_cache[counter].real_values, sizeof(float) * batch.stride( ), cudaMemcpyDeviceToDevice));
             counter++;
         }
 

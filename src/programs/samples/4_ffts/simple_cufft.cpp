@@ -171,10 +171,11 @@ bool DoInPlaceR2CandC2RBatched(const wxString& hiv_image_80x80x1_filename, wxStr
     int stride = (cpu_batch.padding_jump_value + cpu_batch.logical_x_dimension) * cpu_batch.logical_y_dimension;
     for ( int i = 0; i < batch_size; i++ ) {
         cpu_individual[i].Allocate(image_size, image_size, 1, should_allocate_in_real_space, should_make_fftw_plan);
+
         cpu_individual[i].real_values    = &cpu_batch.real_values[i * stride];
         cpu_individual[i].complex_values = (std::complex<float>*)cpu_individual[i].real_values;
+        // Since we are re-using the
 
-        // The cpu memory is already pinned
         gpu_individual[i].Init(cpu_individual[i], false, true);
         gpu_individual[i].CopyHostToDeviceAndSynchronize( );
     }
@@ -203,9 +204,9 @@ bool DoInPlaceR2CandC2RBatched(const wxString& hiv_image_80x80x1_filename, wxStr
     tmp_gpu_batch.Init(cpu_individual[0], false, true);
     for ( int i = 0; i < batch_size; i++ ) {
         // if we add the BackwardFFT to the test, we may not want to clear the memory here
-        tmp_ind                       = gpu_individual[i].CopyDeviceToNewHost(true, true, true);
-        tmp_gpu_batch.real_values_gpu = &gpu_batch.real_values_gpu[stride * i];
-        tmp_batch                     = tmp_gpu_batch.CopyDeviceToNewHost(true, false, false);
+        tmp_ind                   = gpu_individual[i].CopyDeviceToNewHost(true, true, true);
+        tmp_gpu_batch.real_values = &gpu_batch.real_values[stride * i];
+        tmp_batch                 = tmp_gpu_batch.CopyDeviceToNewHost(true, false, false);
 
         passed = passed && CompareRealValues(tmp_ind, tmp_batch);
     }
@@ -214,7 +215,7 @@ bool DoInPlaceR2CandC2RBatched(const wxString& hiv_image_80x80x1_filename, wxStr
     // I guess this also means the memory allocated originally is not cleared? I suppose some type of "borrowmemory"
     // Function that upone destruction "returns" the memory (just doesn't free it) and then *does* free it's own memory
     // would be useful.
-    tmp_gpu_batch.real_values_gpu = nullptr;
+    tmp_gpu_batch.real_values = nullptr;
     for ( int i = 0; i < batch_size; i++ ) {
         cpu_individual[i].real_values = nullptr;
     }

@@ -83,7 +83,7 @@ class Image {
     // This could of course be done by replacing the naked pointers by smart pointers.
     // Maybe it would be nice to hide these somewhere else?
     template <typename StorageBaseType>
-    bool is_memory_allocated(StorageBaseType* ptr) {
+    bool IsMemoryAllocated(StorageBaseType* ptr) {
         if constexpr ( std::is_same_v<StorageBaseType, float> )
             return is_in_memory;
         else if constexpr ( std::is_same_v<StorageBaseType, half_float::half> )

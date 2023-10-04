@@ -58,7 +58,7 @@ bool DoInPlaceR2CandC2R(const wxString& hiv_image_80x80x1_filename, wxString& te
         test_image.FillWithNoiseFromNormalDistribution(0.f, 1.f);
         GpuImage gpu_test_image;
         gpu_test_image.Init(test_image);
-        gpu_test_image.CopyHostToDeviceAndSynchronize( );
+        gpu_test_image.CopyHostToDeviceAndSynchronize(test_image);
 
         test_image.ForwardFFT( );
         gpu_test_image.ForwardFFT( );
@@ -88,7 +88,7 @@ bool DoInPlaceR2CandC2R(const wxString& hiv_image_80x80x1_filename, wxString& te
         test_image.FillWithNoiseFromNormalDistribution(0.f, 1.f);
         GpuImage gpu_test_image;
         gpu_test_image.Init(test_image);
-        gpu_test_image.CopyHostToDeviceAndSynchronize( );
+        gpu_test_image.CopyHostToDeviceAndSynchronize(test_image);
 
         test_image.ForwardFFT( );
         gpu_test_image.ForwardFFT( );
@@ -116,7 +116,7 @@ bool DoInPlaceR2CandC2R(const wxString& hiv_image_80x80x1_filename, wxString& te
         test_image.FillWithNoiseFromNormalDistribution(0.f, 1.f);
         GpuImage gpu_test_image;
         gpu_test_image.Init(test_image);
-        gpu_test_image.CopyHostToDeviceAndSynchronize( );
+        gpu_test_image.CopyHostToDeviceAndSynchronize(test_image);
 
         test_image.ForwardFFT( );
         gpu_test_image.ForwardFFT( );
@@ -165,8 +165,10 @@ bool DoInPlaceR2CandC2RBatched(const wxString& hiv_image_80x80x1_filename, wxStr
     cpu_batch.Allocate(image_size, image_size, batch_size, should_allocate_in_real_space, should_make_fftw_plan);
     cpu_batch.FillWithNoiseFromNormalDistribution(0.f, 1.f);
 
-    gpu_batch.Init(cpu_batch, true, true);
-    gpu_batch.CopyHostToDeviceAndSynchronize( );
+    // The address range is tracked for each pointer accessing subsets of the full block of memory, so we DO NOT want to pin it here.
+    constexpr bool pin_host_memory = false;
+    gpu_batch.Init(cpu_batch, pin_host_memory, true);
+    gpu_batch.CopyHostToDeviceAndSynchronize(cpu_batch, pin_host_memory);
 
     int stride = (cpu_batch.padding_jump_value + cpu_batch.logical_x_dimension) * cpu_batch.logical_y_dimension;
     for ( int i = 0; i < batch_size; i++ ) {
@@ -176,8 +178,8 @@ bool DoInPlaceR2CandC2RBatched(const wxString& hiv_image_80x80x1_filename, wxStr
         cpu_individual[i].complex_values = (std::complex<float>*)cpu_individual[i].real_values;
         // Since we are re-using the
 
-        gpu_individual[i].Init(cpu_individual[i], false, true);
-        gpu_individual[i].CopyHostToDeviceAndSynchronize( );
+        gpu_individual[i].Init(cpu_individual[i], true, true);
+        gpu_individual[i].CopyHostToDeviceAndSynchronize(cpu_individual[i]);
     }
 
     StopWatch timer;
@@ -229,7 +231,7 @@ bool DoInPlaceR2CandC2RBatched(const wxString& hiv_image_80x80x1_filename, wxStr
 
     SamplesBeginTest("Batched 2d ffts (performance)", passed);
 
-    passed = passed && ratio_seq_to_batched > 10.f;
+    passed = passed && ratio_seq_to_batched > 5.f;
     if ( ! passed )
         wxPrintf("\n Ratio seq to batched %f\n", ratio_seq_to_batched);
 

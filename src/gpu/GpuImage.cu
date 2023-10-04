@@ -339,7 +339,6 @@ void GpuImage::SetupInitialValues( ) {
     gpu_plan_id = -1;
 
     insert_into_which_reconstruction = 0;
-    host_image_ptr                   = nullptr;
 
     image_buffer = nullptr;
     mask_CSOS    = nullptr;
@@ -363,7 +362,7 @@ void GpuImage::CopyFrom(GpuImage* other_image) {
 */
 template <typename StorageTypeBase>
 void GpuImage::CopyDataFrom(GpuImage& other_image) {
-    MyDebugAssertTrue(dims.x == other_image.dims.x && dims.y == other_image.dims.y && dims.z == other_image.dims.z, "Dimensions do not match");
+    MyDebugAssertTrue(HasSameDimensionsAs<StorageTypeBase>(other_image), "Dimensions do not match");
     MyDebugAssertTrue(real_memory_allocated == other_image.real_memory_allocated, "Memory allocated does not match");
     if constexpr ( std::is_same<StorageTypeBase, float>::value ) {
         MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
@@ -383,11 +382,11 @@ void GpuImage::CopyDataFrom(GpuImage& other_image) {
 template void GpuImage::CopyDataFrom<float>(GpuImage& other_image);
 template void GpuImage::CopyDataFrom<__half>(GpuImage& other_image);
 
+// TODO: replace pin_host_memory with something more flexible since it could be real_values or real_values_16f
 bool GpuImage::InitializeBasedOnCpuImage(Image& cpu_image, bool pin_host_memory, bool allocate_real_values) {
     bool gpu_memory_was_changed = false;
     // First check to see if we have existed before
     if ( is_meta_data_initialized ) {
-        //FIXME: i think using host_image_ptr->device_image_ptr == this may be a better check
         // Okay, the GpuImage has existed, see if it is already pointing at the cpu
         if ( real_memory_allocated != cpu_image.real_memory_allocated && cpu_image.real_memory_allocated > 0 ) {
             Deallocate( );
@@ -408,19 +407,25 @@ bool GpuImage::InitializeBasedOnCpuImage(Image& cpu_image, bool pin_host_memory,
     }
 
     if ( pin_host_memory ) {
-        cpu_image.RegisterPageLockedMemory( );
+        cpu_image.RegisterPageLockedMemory(cpu_image.real_values);
     }
 
     AllocateTmpVarsAndEvents( );
     return gpu_memory_was_changed;
 }
 
-void GpuImage::UpdateCpuFlags( ) {
-    MyDebugAssertFalse(host_image_ptr == nullptr, "Host image pointer not set");
+void GpuImage::UpdateFlagsFromHostImage(Image& host_image) {
     // Call after re-copying. The main image properites are all assumed to be static.
-    is_in_real_space         = host_image_ptr->is_in_real_space;
-    object_is_centred_in_box = host_image_ptr->object_is_centred_in_box;
-    is_fft_centered_in_box   = host_image_ptr->is_fft_centered_in_box;
+    is_in_real_space         = host_image.is_in_real_space;
+    object_is_centred_in_box = host_image.object_is_centred_in_box;
+    is_fft_centered_in_box   = host_image.is_fft_centered_in_box;
+}
+
+void GpuImage::UpdateFlagsFromDeviceImage(Image& host_image) {
+    // Call after re-copying. The main image properites are all assumed to be static.
+    host_image.is_in_real_space         = is_in_real_space;
+    host_image.object_is_centred_in_box = object_is_centred_in_box;
+    host_image.is_fft_centered_in_box   = is_fft_centered_in_box;
 }
 
 void GpuImage::printVal(std::string msg, int idx) {
@@ -2631,34 +2636,45 @@ void GpuImage::Zeros<StorageTypeBase>( ) {
 template void GpuImage::Zeros<float>( );
 template void GpuImage::Zeros<__half>( );
 
-void GpuImage::CopyHostToDevice(bool should_block_until_complete) {
-    MyDebugAssertTrue(host_image_ptr && host_image_ptr->is_in_memory, "Host image not allocated");
+// TODO: Method that takes a pointer and size to copy templated on data type.
+// TODO: Template storage type
+
+void GpuImage::CopyHostToDevice(Image& host_image, bool should_block_until_complete, bool pin_host_memory) {
+    MyDebugAssertTrue(host_image.is_in_memory, "Host image not allocated");
+    if ( is_meta_data_initialized ) {
+        MyDebugAssertTrue(HasSameDimensionsAs(host_image), "Images have different dimensions");
+        UpdateFlagsFromHostImage(host_image);
+    }
+    else
+        CopyCpuImageMetaData(host_image);
+
+    // Assuming the GpuImage is initialized, but possibly without data allocated.
+    // TODO: replaec all is_in_memory_gpu as is_in_memory
     if ( ! is_in_memory_gpu ) {
-        Allocate(dims.x, dims.y, dims.z, host_image_ptr->is_in_real_space);
+        Allocate(dims.x, dims.y, dims.z, host_image.is_in_real_space);
     }
 
-    if ( host_image_ptr->page_locked_ptr != nullptr ) {
-        precheck;
-        cudaErr(cudaMemcpyAsync(real_values, host_image_ptr->page_locked_ptr, real_memory_allocated * sizeof(float), cudaMemcpyHostToDevice, cudaStreamPerThread));
-        postcheck;
-    }
-    else {
-        // FIXME: This is currently needed when copying in a subset of a larger image (batched) where the individual image is not
-        // owning (and shows not page locked.) There should probably be a seperate copy function for a sbuset/betch that takes an offset to the owning memory pointer instead.
-        precheck;
-        cudaErr(cudaMemcpyAsync(real_values, host_image_ptr->real_values, real_memory_allocated * sizeof(float), cudaMemcpyHostToDevice, cudaStreamPerThread));
-        postcheck;
-    }
+    if ( pin_host_memory )
+        // This will be a no-op if host_image is already pinned
+        // For batched images, we do not want the full image to be pinned
+        host_image.RegisterPageLockedMemory(host_image.real_values);
 
-    CopyCpuImageMetaData(*host_image_ptr);
+    cudaErr(cudaMemcpyAsync(real_values, host_image.real_values, real_memory_allocated * sizeof(float), cudaMemcpyHostToDevice, cudaStreamPerThread));
+
     if ( should_block_until_complete ) {
         cudaErr(cudaStreamSynchronize(cudaStreamPerThread));
     }
 }
 
-void GpuImage::CopyHostToDeviceTextureComplex3d( ) {
+void GpuImage::CopyHostToDeviceTextureComplex3d(Image& host_image) {
+    MyDebugAssertTrue(host_image.is_in_memory, "Host image not allocated");
+    if ( is_meta_data_initialized ) {
+        MyDebugAssertTrue(HasSameDimensionsAs(host_image), "Images have different dimensions");
+        UpdateFlagsFromHostImage(host_image);
+    }
+    else
+        CopyCpuImageMetaData(host_image);
 
-    MyDebugAssertTrue(host_image_ptr && host_image_ptr->is_in_memory, "Host memory not allocated");
     MyDebugAssertFalse(is_allocated_texture_cache, "CopyHostToDeviceTextureComplex3d should only be called once");
     MyDebugAssertTrue(dims.x == dims.y && dims.y == dims.z, "CopyHostToDeviceTextureComplex3d only supports cubic 3d host images");
     MyDebugAssertTrue(is_fft_centered_in_box, "CopyHostToDeviceTextureComplex3d only supports fft_centered_in_box");
@@ -2668,9 +2684,9 @@ void GpuImage::CopyHostToDeviceTextureComplex3d( ) {
     float* host_array_real = new float[padded_x_dimension * dims.y * dims.z];
     float* host_array_imag = new float[padded_x_dimension * dims.y * dims.z];
 
-    for ( int complex_address = 0; complex_address < host_image_ptr->real_memory_allocated / 2; complex_address++ ) {
-        host_array_real[complex_address] = real(host_image_ptr->complex_values[complex_address]);
-        host_array_imag[complex_address] = imag(host_image_ptr->complex_values[complex_address]);
+    for ( int complex_address = 0; complex_address < host_image.real_memory_allocated / 2; complex_address++ ) {
+        host_array_real[complex_address] = real(host_image.complex_values[complex_address]);
+        host_array_imag[complex_address] = imag(host_image.complex_values[complex_address]);
     }
 
     // cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc(32, 0, 0, 0, cudaChannelFormatKindFloat);
@@ -2740,24 +2756,26 @@ void GpuImage::CopyHostToDeviceTextureComplex3d( ) {
     delete[] host_array_imag;
 }
 
-void GpuImage::CopyHostToDevice16f(bool should_block_until_finished) {
-    MyDebugAssertTrue(host_image_ptr != nullptr, "Host image not allocated");
-    MyDebugAssertTrue(host_image_ptr->is_in_memory_16f, "Host memory not allocated");
-    MyDebugAssertFalse(host_image_ptr->is_in_real_space, "CopyHostRealPartToDevice should only be called for complex images");
-    MyDebugAssertTrue(host_image_ptr->real_memory_allocated_16f == real_memory_allocated, "Host memory size mismatch");
+// TODO: replace with template version
+void GpuImage::CopyHostToDevice16f(Image& host_image, bool should_block_until_finished) {
+    MyDebugAssertTrue(host_image.is_memory_allocated(real_values_16f), "Host image not allocated");
+    if ( is_meta_data_initialized ) {
+        MyDebugAssertTrue(HasSameDimensionsAs(host_image), "Images have different dimensions");
+        UpdateFlagsFromHostImage(host_image);
+    }
+    else
+        CopyCpuImageMetaData(host_image);
 
-    CopyCpuImageMetaData(*host_image_ptr);
+    MyDebugAssertFalse(host_image.is_in_real_space, "CopyHostRealPartToDevice should only be called for complex images");
+    MyDebugAssertTrue(host_image.real_memory_allocated_16f == real_memory_allocated, "Host memory size mismatch");
 
     BufferInit(b_ctf_16f, real_memory_allocated);
-    half_float::half* tmpPinnedPtr;
 
-    // FIXME for now always pin the memory - this might be a bad choice for single copy or small images, but is required for asynch xfer and is ~2x as fast after pinning
-    cudaErr(cudaHostRegister(host_image_ptr->real_values_16f, sizeof(half_float::half) * real_memory_allocated, cudaHostRegisterDefault));
-    cudaErr(cudaHostGetDevicePointer(&tmpPinnedPtr, host_image_ptr->real_values_16f, 0));
+    host_image.RegisterPageLockedMemory(host_image.real_values_16f);
 
     // always unregister the temporary pointer as it is not associated with a GpuImage
     precheck;
-    cudaErr(cudaMemcpyAsync((void*)ctf_buffer_16f, tmpPinnedPtr, real_memory_allocated * sizeof(half_float::half), cudaMemcpyHostToDevice, cudaStreamPerThread));
+    cudaErr(cudaMemcpyAsync((void*)ctf_buffer_16f, host_image.real_values_16f, real_memory_allocated * sizeof(half_float::half), cudaMemcpyHostToDevice, cudaStreamPerThread));
     postcheck;
 
     if ( should_block_until_finished ) {
@@ -2766,56 +2784,36 @@ void GpuImage::CopyHostToDevice16f(bool should_block_until_finished) {
     else {
         RecordAndWait( );
     }
-    cudaErr(cudaHostUnregister(tmpPinnedPtr));
 }
 
-void GpuImage::CopyDeviceToHostAndSynchronize(bool free_gpu_memory, bool unpin_host_memory) {
-    CopyDeviceToHost(free_gpu_memory, unpin_host_memory);
+void GpuImage::CopyDeviceToHostAndSynchronize(Image& host_image, bool unpin_host_memory) {
+    CopyDeviceToHost(host_image, unpin_host_memory);
     cudaError(cudaStreamSynchronize(cudaStreamPerThread));
 }
 
-void GpuImage::CopyDeviceToHost(bool free_gpu_memory, bool unpin_host_memory) {
-    MyDebugAssertTrue(host_image_ptr != nullptr && host_image_ptr->is_in_memory, "Host image not allocated");
-    MyDebugAssertTrue(host_image_ptr->page_locked_ptr != nullptr, "Host image not page locked");
-    MyDebugAssertTrue(is_in_memory_gpu, "GPU memory not allocated");
-    // TODO other asserts on size etc.
-
-    cudaErr(cudaMemcpyAsync(host_image_ptr->page_locked_ptr, real_values, real_memory_allocated * sizeof(float), cudaMemcpyDeviceToHost, cudaStreamPerThread));
-    //  cudaErr(cudaMemcpyAsync(real_values, real_values, real_memory_allocated*sizeof(float),cudaMemcpyDeviceToHost,cudaStreamPerThread));
-    // TODO add asserts etc.
-    if ( free_gpu_memory ) {
-        Deallocate( );
-    }
-    // If we ran Deallocate, this the memory is already unpinned.
-    if ( unpin_host_memory ) {
-        host_image_ptr->UnRegisterPageLockedMemory( );
-    }
-}
-
-void GpuImage::CopyDeviceToHost(Image& cpu_image, bool should_block_until_complete, bool free_gpu_memory, bool unpin_host_memory) {
+// TODO: template
+void GpuImage::CopyDeviceToHost(Image& cpu_image, bool unpin_host_memory) {
     MyDebugAssertTrue(is_in_memory_gpu, "GPU memory not allocated");
     MyDebugAssertTrue(cpu_image.is_in_memory, "CPU memory not allocated");
     MyDebugAssertTrue(HasSameDimensionsAs(&cpu_image), "CPU image size mismatch");
 
     // TODO other asserts on size etc.
-    cpu_image.RegisterPageLockedMemory( );
+    cpu_image.RegisterPageLockedMemory(cpu_image.real_values);
 
     precheck;
     cudaErr(cudaMemcpyAsync(cpu_image.real_values, real_values, real_memory_allocated * sizeof(float), cudaMemcpyDeviceToHost, cudaStreamPerThread));
     postcheck;
 
-    if ( should_block_until_complete )
-        cudaErr(cudaStreamSynchronize(cudaStreamPerThread));
-    // TODO add asserts etc.
-    if ( free_gpu_memory ) {
-        Deallocate( );
-    }
     if ( unpin_host_memory ) {
-        cpu_image.UnRegisterPageLockedMemory( );
+        cpu_image.UnRegisterPageLockedMemory(cpu_image.real_values);
     }
 }
 
 void GpuImage::CopyDeviceToNewHost(Image& cpu_image, bool should_block_until_complete, bool free_gpu_memory, bool unpin_host_memory) {
+
+    // This is the inverse of CopyCpuIMageMetaData
+    // It is prone to errors if one or the other is modified.
+    // TODO: figure out how to merge into one
     cpu_image.logical_x_dimension = dims.x;
     cpu_image.logical_y_dimension = dims.y;
     cpu_image.logical_z_dimension = dims.z;
@@ -2829,9 +2827,7 @@ void GpuImage::CopyDeviceToNewHost(Image& cpu_image, bool should_block_until_com
     cpu_image.physical_address_of_box_center_y = physical_address_of_box_center.y;
     cpu_image.physical_address_of_box_center_z = physical_address_of_box_center.z;
 
-    // when copied to GPU image, this is set to 0. not sure if required to be copied.
-    //cpu_image.physical_index_of_first_negative_frequency_x = physical_index_of_first_negative_frequency.x;
-
+    // cpu_image.physical_index_of_first_negative_frequency_x = physical_index_of_first_negative_frequency.x;
     cpu_image.physical_index_of_first_negative_frequency_y = physical_index_of_first_negative_frequency.y;
     cpu_image.physical_index_of_first_negative_frequency_z = physical_index_of_first_negative_frequency.z;
 
@@ -2871,11 +2867,15 @@ void GpuImage::CopyDeviceToNewHost(Image& cpu_image, bool should_block_until_com
 
     //cpu_image.real_memory_allocated = real_memory_allocated;
     cpu_image.ft_normalization_factor = ft_normalization_factor;
+    cpu_image.is_in_memory            = true;
+    cpu_image.is_in_real_space        = is_in_real_space;
 
-    CopyDeviceToHost(cpu_image, should_block_until_complete, free_gpu_memory, unpin_host_memory);
-
-    cpu_image.is_in_memory     = true;
-    cpu_image.is_in_real_space = is_in_real_space;
+    if ( should_block_until_complete ) {
+        CopyDeviceToHostAndSynchronize(cpu_image, unpin_host_memory);
+    }
+    else {
+        CopyDeviceToHost(cpu_image, unpin_host_memory);
+    }
 }
 
 // TODO: should the return type be moved, is that handled already by the compiler?
@@ -2915,8 +2915,7 @@ void GpuImage::ForwardFFTBatched(bool should_scale) {
     // cudaErr(cufftExecR2C(this->cuda_plan_forward, position_space_ptr, momentum_space_ptr));
 
     is_in_real_space = false;
-    if ( host_image_ptr )
-        host_image_ptr->is_in_real_space = false;
+
     npp_ROI = npp_ROI_fourier_space;
 }
 
@@ -2963,10 +2962,7 @@ void GpuImage::ForwardFFT(bool should_scale) {
     // cudaErr(cufftExecR2C(this->cuda_plan_forward, position_space_ptr, momentum_space_ptr));
 
     is_in_real_space = false;
-    // FIXME: This doesn't really make sense unless we are sure we will copy the image back to the host
-    // Instead, we should set the host flag appropriately at that time.
-    if ( host_image_ptr )
-        host_image_ptr->is_in_real_space = false;
+
     npp_ROI = npp_ROI_fourier_space;
 }
 
@@ -3019,8 +3015,6 @@ void GpuImage::ForwardFFTAndClipInto(GpuImage& image_to_insert, bool should_scal
     // cudaErr(cufftExecR2C(this->cuda_plan_forward, position_space_ptr, momentum_space_ptr));
 
     is_in_real_space = false;
-    if ( host_image_ptr )
-        host_image_ptr->is_in_real_space = false;
 
     npp_ROI = npp_ROI_fourier_space;
 }
@@ -3043,10 +3037,6 @@ void GpuImage::BackwardFFTBatched(int wanted_batch_size) {
     // cudaErr(cufftExecC2R(this->cuda_plan_inverse, momentum_space_ptr, position_space_ptr));
 
     is_in_real_space = true;
-    // FIXME: This doesn't really make sense unless we are sure we will copy the image back to the host
-    // Instead, we should set the host flag appropriately at that time.
-    if ( host_image_ptr )
-        host_image_ptr->is_in_real_space = true;
 
     npp_ROI = npp_ROI_real_space;
 }
@@ -3065,10 +3055,6 @@ void GpuImage::BackwardFFT( ) {
     // cudaErr(cufftExecC2R(this->cuda_plan_inverse, momentum_space_ptr, position_space_ptr));
 
     is_in_real_space = true;
-    // FIXME: This doesn't really make sense unless we are sure we will copy the image back to the host
-    // Instead, we should set the host flag appropriately at that time.
-    if ( host_image_ptr )
-        host_image_ptr->is_in_real_space = true;
 
     npp_ROI = npp_ROI_real_space;
 }
@@ -3127,10 +3113,7 @@ void GpuImage::BackwardFFTAfterComplexConjMul(LoadType* image_to_multiply, bool 
     // cudaErr(cufftExecC2R(this->cuda_plan_inverse, momentum_space_ptr, position_space_ptr));
 
     is_in_real_space = true;
-    // FIXME: This doesn't really make sense unless we are sure we will copy the image back to the host
-    // Instead, we should set the host flag appropriately at that time.
-    if ( host_image_ptr )
-        host_image_ptr->is_in_real_space = true;
+
     npp_ROI = npp_ROI_real_space;
 }
 
@@ -3759,9 +3742,6 @@ void GpuImage::SetCufftPlan(cistem::fft_type::Enum plan_type, void* input_buffer
 }
 
 void GpuImage::Deallocate( ) {
-    if ( host_image_ptr != nullptr && host_image_ptr->page_locked_ptr != nullptr ) {
-        host_image_ptr->UnRegisterPageLockedMemory( );
-    }
 
     if ( is_in_memory_gpu ) {
 #ifdef USE_ASYNC_MALLOC_FREE
@@ -4424,8 +4404,9 @@ void GpuImage::Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted
 }
 
 void GpuImage::CopyCpuImageMetaData(Image& cpu_image) {
-    host_image_ptr = &cpu_image;
 
+    // Note: Be sure to update the corresponding inverse assignment in
+    // GpuImage::CopyDeviceToNewHost
     dims = make_int4(cpu_image.logical_x_dimension,
                      cpu_image.logical_y_dimension,
                      cpu_image.logical_z_dimension,
@@ -4540,6 +4521,8 @@ void GpuImage::CopyGpuImageMetaData(const GpuImage* other_image) {
  Overwrite current GpuImage with a new image, then deallocate new image.
 */
 // copy the parameters then directly steal the memory of another image, leaving it an empty shell
+// FIXME: With half precision buffers etc, I'm not sure this is still safe, and certainly not complete.
+// Deallocate() may be removing some of those buffers, but not all.
 void GpuImage::Consume(GpuImage* other_image) {
     MyDebugAssertTrue(other_image->is_in_memory_gpu, "Other image Memory not allocated");
 

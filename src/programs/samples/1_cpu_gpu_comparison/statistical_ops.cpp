@@ -64,7 +64,7 @@ bool DoStatsticalMomentsTests(const wxString& hiv_image_80x80x1_filename, wxStri
     for ( auto size : img_size ) {
         wxPrintf("cpu val at zero = %f\n", noise_image[n].real_values[0]);
         test_image.Init(noise_image[n], true, true);
-        test_image.CopyHostToDevice(true);
+        test_image.CopyHostToDevice(noise_image[n], true);
 
         test_image.Mean( );
         passed = passed && FloatsAreAlmostTheSame(test_image.img_mean, my_dist[n].GetSampleMean( ));
@@ -79,7 +79,7 @@ bool DoStatsticalMomentsTests(const wxString& hiv_image_80x80x1_filename, wxStri
     n = 0;
     for ( auto size : img_size ) {
         test_image.Init(noise_image[n], true, true);
-        test_image.CopyHostToDevice( );
+        test_image.CopyHostToDevice(noise_image[n]);
         test_image.MeanStdDev( );
         passed = passed && FloatsAreAlmostTheSame(test_image.img_stdDev, sqrtf(my_dist[n].GetSampleVariance( )));
         test_image.Deallocate( );
@@ -93,7 +93,7 @@ bool DoStatsticalMomentsTests(const wxString& hiv_image_80x80x1_filename, wxStri
     n = 0;
     for ( auto size : img_size ) {
         test_image.Init(noise_image[n], true, true);
-        test_image.CopyHostToDevice( );
+        test_image.CopyHostToDevice(noise_image[n]);
         test_image.Min( );
         passed = passed && FloatsAreAlmostTheSame(test_image.min_value, my_dist[n].GetMinimum( ));
         test_image.Deallocate( );
@@ -107,7 +107,7 @@ bool DoStatsticalMomentsTests(const wxString& hiv_image_80x80x1_filename, wxStri
     n = 0;
     for ( auto size : img_size ) {
         test_image.Init(noise_image[n], true, true);
-        test_image.CopyHostToDevice( );
+        test_image.CopyHostToDevice(noise_image[n]);
         test_image.Min( );
         passed = passed && FloatsAreAlmostTheSame(test_image.max_value, my_dist[n].GetMaximum( ));
         test_image.Deallocate( );
@@ -128,7 +128,7 @@ bool DoStatsticalMomentsTests(const wxString& hiv_image_80x80x1_filename, wxStri
         tmp.MultiplyByConstant(-1.0f);
 
         test_image.Init(tmp, true, true);
-        test_image.CopyHostToDevice( );
+        test_image.CopyHostToDevice(noise_image[n]);
         test_image.MinAndCoords( );
         passed = passed && FloatsAreAlmostTheSame(test_image.min_value, -this_peak.value);
         passed = passed && (test_image.min_idx.x == this_peak.x && test_image.min_idx.y == this_peak.y);
@@ -145,7 +145,7 @@ bool DoStatsticalMomentsTests(const wxString& hiv_image_80x80x1_filename, wxStri
         Peak this_peak = noise_image[n].FindPeakWithIntegerCoordinates( );
 
         test_image.Init(noise_image[n], true, true);
-        test_image.CopyHostToDevice( );
+        test_image.CopyHostToDevice(noise_image[n]);
         test_image.MaxAndCoords( );
         passed = passed && FloatsAreAlmostTheSame(test_image.max_value, this_peak.value);
         passed = passed && (test_image.max_idx.x == this_peak.x && test_image.max_idx.y == this_peak.y);

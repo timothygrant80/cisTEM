@@ -62,7 +62,7 @@ bool DoCPUvsGPURealSpaceResize(wxString hiv_image_80x80x1_filename, wxString tem
     logical_y_start = cpu_image.logical_y_dimension;
 
     gpu_image.Init(gpu_host_image);
-    gpu_image.CopyHostToDevice( );
+    gpu_image.CopyHostToDevice(gpu_host_image);
 
     // Copy back to a new image, blocking until complete and freeing the gpu memory
     Image new_cpu_image_from_gpu = gpu_image.CopyDeviceToNewHost(true, true);
@@ -83,7 +83,7 @@ bool DoCPUvsGPURealSpaceResize(wxString hiv_image_80x80x1_filename, wxString tem
     // Deallocated in CopyDeviceToNewHost call
     gpu_image.Init(gpu_host_image);
 
-    gpu_image.CopyHostToDevice( );
+    gpu_image.CopyHostToDevice(gpu_host_image);
 
     gpu_image.Resize(logical_x_start / 2, logical_y_start / 2, 1, 0.f);
 
@@ -104,7 +104,7 @@ bool DoCPUvsGPURealSpaceResize(wxString hiv_image_80x80x1_filename, wxString tem
     // Deallocated in CopyDeviceToNewHost call
     gpu_image.Init(gpu_host_image);
 
-    gpu_image.CopyHostToDevice( );
+    gpu_image.CopyHostToDevice(gpu_host_image);
 
     gpu_image.Resize(logical_x_start * 2, logical_y_start * 2, 1, 0.f);
 
@@ -141,7 +141,7 @@ bool DoCPUvsGPUFourierResize(wxString hiv_image_80x80x1_filename, wxString temp_
     gpu_host_image.ReadSlice(&input_file, 1);
 
     GpuImage device_image(gpu_host_image);
-    device_image.CopyHostToDevice( );
+    device_image.CopyHostToDevice(gpu_host_image);
 
     device_image.ForwardFFT( );
     device_image.Resize(40, 40, 1, 0);

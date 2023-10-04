@@ -77,7 +77,7 @@ void TemplateMatchingCore::Init(MyApp*           parent_pointer,
     this->current_projection.CopyFrom(&current_projection);
 
     d_input_image.Init(this->input_image);
-    d_input_image.CopyHostToDevice( );
+    d_input_image.CopyHostToDevice(input_image);
 
     d_current_projection.Init(this->current_projection);
 
@@ -193,7 +193,7 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
             cudaStreamWaitEvent(cudaStreamPerThread, projection_is_free_Event, 0);
 
             //// TO THE GPU ////
-            d_current_projection.CopyHostToDevice( );
+            d_current_projection.CopyHostToDevice(current_projection);
 
             d_current_projection.AddConstant(-average_on_edge);
 

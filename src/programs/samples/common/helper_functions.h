@@ -3,6 +3,7 @@
 #define SRC_PROGRAMS_SAMPLES_COMMON_HELPER_FUNCTIONS_H_
 
 #define SamplesTestResult(result) SamplesPrintResult(result, __LINE__);
+#define SamplesTestResultCanFail(result) SamplesPrintResultCanFail(result, __LINE__);
 
 class Image;
 
@@ -25,6 +26,7 @@ void SamplesPrintUnderlined(wxString message);
 void SamplesPrintBold(wxString message);
 
 void SamplesPrintResult(bool result, int line);
+void SamplesPrintResultCanFail(bool passed, int line);
 
 void SamplesBeginPrint(const char* test_name);
 

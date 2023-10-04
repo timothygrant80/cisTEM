@@ -60,7 +60,7 @@ bool DoBatchedCorrelationTest(const wxString& hiv_images_80x80x10_filename, wxSt
         seq_rotation_cache[i].complex_values[0] = 0.f + I * 0.f;
         // seq_rotation_cache[i].QuickAndDirtyWriteSlice("/tmp/seq_rotation_cache_" + std::to_string(i) + ".mrc", 1);
         d_seq_rotation_cache[i].Init(seq_rotation_cache[i]);
-        d_seq_rotation_cache[i].CopyHostToDeviceAndSynchronize( );
+        d_seq_rotation_cache[i].CopyHostToDeviceAndSynchronize(seq_rotation_cache[i]);
     }
 
     // A single reference image is used for all tests. This is to mimimc one iteration of the
@@ -75,7 +75,7 @@ bool DoBatchedCorrelationTest(const wxString& hiv_images_80x80x10_filename, wxSt
     ref_img.ForwardFFT( );
     ref_img.complex_values[0] = 0.f + I * 0.f;
     d_ref_img.Init(ref_img);
-    d_ref_img.CopyHostToDeviceAndSynchronize( );
+    d_ref_img.CopyHostToDeviceAndSynchronize(ref_img);
 
     bool is_for_ground_truth = true;
     // First we'll get the ground truth results

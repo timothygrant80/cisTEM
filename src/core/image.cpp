@@ -4423,12 +4423,8 @@ void Image::Deallocate( ) {
     }
 
 #ifdef ENABLEGPU
-    UnRegisterPageLockedMemory( );
-    if ( device_image_ptr ) {
-        // Let an associated GpuImage know that we are being destructed
-        device_image_ptr->host_image_ptr = nullptr;
-        device_image_ptr                 = nullptr;
-    }
+    UnRegisterPageLockedMemory(real_values);
+    UnRegisterPageLockedMemory(real_values_16f);
 #endif
 }
 

@@ -743,10 +743,10 @@ bool MatchTemplateApp::DoCalculation( ) {
                         Image theta_buffer;
                         theta_buffer.CopyFrom(&max_intensity_projection);
 
-                        GPU[tIDX].d_max_intensity_projection.CopyDeviceToHost(mip_buffer, true, false);
-                        GPU[tIDX].d_best_psi.CopyDeviceToHost(psi_buffer, true, false);
-                        GPU[tIDX].d_best_phi.CopyDeviceToHost(phi_buffer, true, false);
-                        GPU[tIDX].d_best_theta.CopyDeviceToHost(theta_buffer, true, false);
+                        GPU[tIDX].d_max_intensity_projection.CopyDeviceToHostAndSynchronize(mip_buffer, false);
+                        GPU[tIDX].d_best_psi.CopyDeviceToHostAndSynchronize(psi_buffer, false);
+                        GPU[tIDX].d_best_phi.CopyDeviceToHostAndSynchronize(phi_buffer, false);
+                        GPU[tIDX].d_best_theta.CopyDeviceToHostAndSynchronize(theta_buffer, false);
 
                         //                    mip_buffer.QuickAndDirtyWriteSlice("/tmp/tmpMipBuffer.mrc",1,1);
                         // TODO should prob aggregate these across all workers
@@ -760,8 +760,8 @@ bool MatchTemplateApp::DoCalculation( ) {
                         sum.SetToConstant(0.0f);
                         sumSq.SetToConstant(0.0f);
 
-                        GPU[tIDX].d_sum3.CopyDeviceToHost(sum, true, false);
-                        GPU[tIDX].d_sumSq3.CopyDeviceToHost(sumSq, true, false);
+                        GPU[tIDX].d_sum3.CopyDeviceToHostAndSynchronize(sum, false);
+                        GPU[tIDX].d_sumSq3.CopyDeviceToHostAndSynchronize(sumSq, false);
 
                         GPU[tIDX].d_max_intensity_projection.Wait( );
 

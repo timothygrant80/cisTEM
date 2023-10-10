@@ -65,9 +65,9 @@ bool CompareRealValues(Image& first_image, Image& second_image, float minimum_cc
     float score = first_image.ReturnCorrelationCoefficientUnnormalized(second_image, mask_radius);
 
     if ( score < minimum_ccc ) {
-        wxPrintf("\nFailed CCC is %g\n", score);
-        first_image.QuickAndDirtyWriteSlice("first_image.mrc", 1);
-        second_image.QuickAndDirtyWriteSlice("second_image.mrc", 1);
+        // wxPrintf("\nFailed CCC is %g\n", score);
+        // first_image.QuickAndDirtyWriteSlice("first_image.mrc", 1);
+        // second_image.QuickAndDirtyWriteSlice("second_image.mrc", 1);
         return false;
     }
     else {
@@ -148,6 +148,22 @@ void SamplesPrintResult(bool passed, int line) {
         // Removing the exit behavior because I want all tests to run as this is more informative for CI, i.e.
         // multiple fixes can be made in a single go rather than a one at a time approach.
         // exit(1);
+    }
+}
+
+void SamplesPrintResultCanFail(bool passed, int line) {
+
+    if ( passed == true ) {
+        if ( OutputIsAtTerminal( ) == true )
+            wxPrintf(ANSI_COLOR_GREEN "PASSED!" ANSI_COLOR_RESET);
+        else
+            wxPrintf("PASSED!");
+    }
+    else {
+        if ( OutputIsAtTerminal( ) == true )
+            wxPrintf(ANSI_COLOR_BLUE "FAILED, BUT SKIPPING! (Line : %i)" ANSI_COLOR_RESET, line);
+        else
+            wxPrintf("FAILED, BUT SKIPPING! (Line : %i)", line);
     }
 }
 

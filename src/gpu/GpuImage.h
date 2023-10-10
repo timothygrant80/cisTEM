@@ -27,6 +27,8 @@ class GpuImage {
     GpuImage& operator=(const GpuImage& t);
     GpuImage& operator=(const GpuImage* t);
 
+    // FIXME: move constructor?
+
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // START MEMBER VARIABLES FROM THE cpu IMAGE CLASS
 
@@ -60,23 +62,21 @@ class GpuImage {
     // Arrays to hold voxel values
 
     // These arrays can be used to pass pointers for an image stack into a kernel. Initialize each type empty and explicitly
-    // since the GpuImage class itself is not tempalted. TODO: use tempalte parameters when re-writing
+    // since the GpuImage class itself is not templated. TODO: use template parameters when re-writing
     DevicePointerArray<__half>  ptr_array_16f;
     DevicePointerArray<__half2> ptr_array_16fc;
     DevicePointerArray<float>   ptr_array_32f;
     DevicePointerArray<float2>  ptr_array_32fc;
 
-    float*               real_values; // !<  Real array to hold values for REAL images.
-    std::complex<float>* complex_values; // !<  Complex array to hold values for COMP images.
-    bool                 is_in_memory; // !<  Whether image values are in-memory, in other words whether the image has memory space allocated to its data array.
-    bool                 image_memory_should_not_be_deallocated; // !< Don't deallocate the memory, generally should only be used when doing something funky with the pointers
-    int                  gpu_plan_id;
+    bool is_in_memory; // !<  Whether image values are in-memory, in other words whether the image has memory space allocated to its data array.
+    bool image_memory_should_not_be_deallocated; // !< Don't deallocate the memory, generally should only be used when doing something funky with the pointers
+    int  gpu_plan_id;
 
     // end  MEMBER VARIABLES FROM THE cpu IMAGE CLASS
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
-    float*  real_values_gpu; // !<  Real array to hold values for REAL images.
-    float2* complex_values_gpu; // !<  Complex array to hold values for COMP images.
+    float*  real_values; // !<  Real array to hold values for REAL images.
+    float2* complex_values; // !<  Complex array to hold values for COMP images.
 
     // To make it easier to switch between different types of FFT plans we have void pointers for them here
     void* position_space_ptr;
@@ -113,6 +113,7 @@ class GpuImage {
 
     bool is_allocated_texture_cache;
 
+    // TODO: This is currently unused. What was the thinking?
     enum ImageType : size_t { real16f    = sizeof(__half),
                               complex16f = sizeof(__half2),
                               real32f    = sizeof(float),
@@ -122,20 +123,7 @@ class GpuImage {
 
     ImageType img_type;
 
-    bool   is_in_memory_gpu; // !<  Whether image values are in-memory, in other words whether the image has memory space allocated to its data array. Default = .FALSE.
-    bool   is_host_memory_pinned; // !<  Is the host memory already page locked (2x bandwith and required for asynchronous xfer);
-    float* pinnedPtr;
-    Image* host_image_ptr; // Primarily for access to host image methods for preprocessing.
-
-    cudaMemcpy3DParms h_3dparams = {0};
-    cudaExtent        h_extent;
-    cudaPos           h_pos;
-    cudaPitchedPtr    h_pitchedPtr;
-
-    cudaMemcpy3DParms d_3dparams = {0};
-    cudaExtent        d_extent;
-    cudaPos           d_pos;
-    cudaPitchedPtr    d_pitchedPtr;
+    bool is_in_memory_gpu; // !<  Whether image values are in-memory, in other words whether the image has memory space allocated to its data array. Default = .FALSE.
 
     size_t pitch;
 
@@ -241,6 +229,7 @@ class GpuImage {
     void Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted_z_dimension, float wanted_padding_value, bool zero_central_pixel = false);
     void Consume(GpuImage* other_image);
     void CopyCpuImageMetaData(Image& cpu_image);
+    bool InitializeBasedOnCpuImage(Image& cpu_image, bool pin_host_memory, bool allocate_real_values);
     void CopyGpuImageMetaData(const GpuImage* other_image);
     void CopyLoopingAndAddressingFrom(GpuImage* other_image);
 
@@ -248,7 +237,10 @@ class GpuImage {
     float ReturnAverageOfRealValuesOnEdges( );
     void  Deallocate( );
 
-    void UnPinHostPointer(float* pinnedPtr);
+    void CopyFrom(GpuImage* other_image);
+
+    template <typename StorageTypeBase>
+    void CopyDataFrom(GpuImage& other_image);
     void CopyFP32toFP16buffer(bool deallocate_single_precision = true);
     void CopyFP16buffertoFP32(bool deallocate_half_precision = true);
 
@@ -267,22 +259,18 @@ class GpuImage {
     ///// Methods that do not have a counterpart in the image class
     ////////////////////////////////////////////////////////////////////////
 
-    void CopyHostToDevice(bool should_block_until_complete = false);
+    void CopyHostToDevice(Image& host_image, bool should_block_until_complete = false, bool pin_host_memory = true);
 
-    void CopyHostToDeviceAndSynchronize( ) { CopyHostToDevice(true); };
+    void CopyHostToDeviceAndSynchronize(Image& host_image, bool pin_host_memory = true) { CopyHostToDevice(host_image, true, pin_host_memory); };
 
-    void CopyHostToDeviceTextureComplex3d( );
-    void CopyHostToDevice16f(bool should_block_until_finished = false); // CTF images in the ImageClass are stored as complex, even if they only have a real part. This is a waste of memory bandwidth on the GPU
-    void CopyDeviceToHostAndSynchronize(bool free_gpu_memory = true, bool unpin_host_memory = true);
-    void CopyDeviceToHost(bool free_gpu_memory = true, bool unpin_host_memory = true);
-    void CopyDeviceToHost(Image& cpu_image, bool should_block_until_complete = false, bool free_gpu_memory = true, bool unpin_host_memory = true);
+    void CopyHostToDeviceTextureComplex3d(Image& host_image);
+    void CopyHostToDevice16f(Image& host_image, bool should_block_until_finished = false); // CTF images in the ImageClass are stored as complex, even if they only have a real part. This is a waste of memory bandwidth on the GPU
+    void CopyDeviceToHostAndSynchronize(Image& cpu_image, bool unpin_host_memory = true);
+    void CopyDeviceToHost(Image& host_image, bool unpin_host_memory = true);
 
     void  CopyDeviceToNewHost(Image& cpu_image, bool should_block_until_complete, bool free_gpu_memory, bool unpin_host_memory = true);
     Image CopyDeviceToNewHost(bool should_block_until_complete, bool free_gpu_memory, bool unpin_host_memory = true);
-    // The volume copies with memory coalescing favoring padding are not directly
-    // compatible with the memory layout in Image().
-    void CopyVolumeHostToDevice( );
-    void CopyVolumeDeviceToHost(bool free_gpu_memory = true, bool unpin_host_memory = true);
+
     // Synchronize the full stream.
     void Record( );
     void RecordBlocking( );
@@ -370,11 +358,9 @@ class GpuImage {
         gridDims        = dim3(myroundint(N * number_of_streaming_multiprocessors));
     };
 
-    void CopyFrom(GpuImage* other_image);
-    template <typename StorageTypeBase>
-    void CopyDataFrom(GpuImage& other_image);
-    bool InitializeBasedOnCpuImage(Image& cpu_image, bool pin_host_memory, bool allocate_real_values);
-    void UpdateCpuFlags( );
+    void UpdateFlagsFromHostImage(Image& host_image);
+    void UpdateFlagsFromDeviceImage(Image& host_image);
+
     void printVal(std::string msg, int idx);
 
     template <typename StorageBaseType = float>
@@ -384,6 +370,9 @@ class GpuImage {
     bool HasSameDimensionsAs(GpuImage* other_image) { return HasSameDimensionsAs<StorageBaseType>(*other_image); };
 
     bool HasSameDimensionsAs(Image* other_image);
+
+    bool HasSameDimensionsAs(Image& other_image) { return HasSameDimensionsAs(&other_image); };
+
     template <typename StorageTypeBase = float>
     void Zeros( );
 

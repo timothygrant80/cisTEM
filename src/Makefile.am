@@ -340,6 +340,7 @@ bin_PROGRAMS +=  gpu_devices
 noinst_LIBRARIES += libgpucore.a  
 
 libgpucore_a_SOURCES  =      gpu/core_extensions/stop_watch_gpu.cu \
+                             gpu/core_extensions/image.cu \
                              gpu/Histogram.cu \
                              gpu/TemplateMatchingCore.cu \
                              gpu/DeviceManager.cu \

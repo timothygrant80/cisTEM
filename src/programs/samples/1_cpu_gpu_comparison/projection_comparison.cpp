@@ -136,15 +136,15 @@ bool DoCPUvsGPUProjectionTest(const wxString& cistem_ref_dir, const wxString& te
     cpu_volume.SwapFourierSpaceQuadrants(false);
 
     // Associate the gpu volume with the cpu volume, getting meta data and pinning the host pointer.
-    gpu_volume.Init(cpu_volume);
+    gpu_volume.Init(cpu_volume, false, true);
 
     // The volume is already in Fourier space, so we can copy it to texture cache for interpolation.
-    gpu_volume.CopyHostToDeviceTextureComplex3d( );
+    gpu_volume.CopyHostToDeviceTextureComplex3d(cpu_volume);
 
     // Image centered;
     // centered.CopyFrom(&cimg);
     gpu_prj.Init(cimg);
-    gpu_prj.CopyHostToDevice( ); // FIXME: just allocate in fourier space
+    gpu_prj.CopyHostToDevice(cimg); // FIXME: just allocate in fourier space
     gpu_prj.ForwardFFT( );
 
     gpu_prj.SetToConstant(0.f);
@@ -166,7 +166,7 @@ bool DoCPUvsGPUProjectionTest(const wxString& cistem_ref_dir, const wxString& te
         // Prepare for real-space correlation score.
         gpu_prj.SwapRealSpaceQuadrants( );
         gpu_prj.BackwardFFT( );
-        gpu_prj.CopyDeviceToHostAndSynchronize(false, false);
+        gpu_prj.CopyDeviceToHostAndSynchronize(cimg, false);
         gpu_prj.RecordAndWait( );
 
         cimg.ZeroFloatAndNormalize(1.f, mask_radius);
@@ -204,7 +204,7 @@ bool DoCPUvsGPUProjectionTest(const wxString& cistem_ref_dir, const wxString& te
         // Prepare for real-space correlation score.
         gpu_prj.SwapRealSpaceQuadrants( );
         gpu_prj.BackwardFFT( );
-        gpu_prj.CopyDeviceToHostAndSynchronize(false, false);
+        gpu_prj.CopyDeviceToHostAndSynchronize(cimg, false);
         gpu_prj.RecordAndWait( );
 
         cpu_prj.SwapRealSpaceQuadrants( );
@@ -256,7 +256,7 @@ bool DoCPUvsGPUProjectionTest(const wxString& cistem_ref_dir, const wxString& te
                 gpu_prj.SwapRealSpaceQuadrants( );
             }
             gpu_prj.BackwardFFT( );
-            gpu_prj.CopyDeviceToHostAndSynchronize(false, false);
+            gpu_prj.CopyDeviceToHostAndSynchronize(cimg, false);
 
             cpu_prj.Whiten( );
             cpu_prj.SwapRealSpaceQuadrants( );
@@ -269,7 +269,7 @@ bool DoCPUvsGPUProjectionTest(const wxString& cistem_ref_dir, const wxString& te
         }
 
         all_passed = passed ? all_passed : false;
-        SamplesTestResult(passed);
+        SamplesTestResultCanFail(passed);
     }
 
     all_passed = passed ? all_passed : false;

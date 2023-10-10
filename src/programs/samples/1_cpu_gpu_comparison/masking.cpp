@@ -71,7 +71,7 @@ bool DoCosineMaskingTest(const wxString& hiv_image_80x80x1_filename, wxString& t
     gpu_host_image.ReadSlice(&input_file, 1);
 
     gpu_image.Init(gpu_host_image);
-    gpu_image.CopyHostToDevice( );
+    gpu_image.CopyHostToDevice(gpu_host_image);
 
     float wanted_mask_radius;
     float wanted_mask_edge;

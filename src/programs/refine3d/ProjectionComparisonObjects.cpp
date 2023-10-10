@@ -186,7 +186,7 @@ void ProjectionComparisonObjects::GetCleanCopyOfParticleImage(const bool is_for_
     MyDebugAssertTrue(tmp_ptr->is_in_memory_gpu, "Particle image is not in memory!");
 
     // Leave this as a blocking call
-    cudaErr(cudaMemcpy(tmp_ptr->real_values_gpu, clean_copy.real_values_gpu, clean_copy.real_memory_allocated * sizeof(float), cudaMemcpyDeviceToDevice));
+    cudaErr(cudaMemcpy(tmp_ptr->real_values, clean_copy.real_values, clean_copy.real_memory_allocated * sizeof(float), cudaMemcpyDeviceToDevice));
 #endif
 }
 
@@ -227,13 +227,13 @@ void ProjectionComparisonObjects::PrepareGpuVolumeProjection(InputVolumeType& in
     if ( is_for_global_search ) {
         MyDebugAssertFalse(is_allocated_gpu_search_density_map, "Gpu search density map is already allocated");
         gpu_search_density_map.Init(temp_image, false, false);
-        gpu_search_density_map.CopyHostToDeviceTextureComplex3d( );
+        gpu_search_density_map.CopyHostToDeviceTextureComplex3d(temp_image);
         is_allocated_gpu_search_density_map = true;
     }
     else {
         MyDebugAssertFalse(is_allocated_gpu_density_map, "Gpu density map is already allocated");
         gpu_density_map.Init(temp_image, false, false);
-        gpu_density_map.CopyHostToDeviceTextureComplex3d( );
+        gpu_density_map.CopyHostToDeviceTextureComplex3d(temp_image);
         is_allocated_gpu_density_map = true;
     }
 
@@ -265,7 +265,7 @@ void ProjectionComparisonObjects::PrepareGpuImages(Particle& host_particle, Imag
 
             // If we altered the gpu memory, or if the host particle has recorded a change to its underlying data, we need to copy host - > device.
             if ( gpu_memory_was_changed || host_particle_data_has_changed ) {
-                tmp_gpu_particle_image->CopyHostToDeviceAndSynchronize( ); // TODO: does this need to be synchronize?
+                tmp_gpu_particle_image->CopyHostToDeviceAndSynchronize(*host_particle.particle_image); // TODO: does this need to be synchronize?
             }
 
             // Now the same for the projection image, except we only care about it's size and pointer association, not the host data so no need for a copy.
@@ -301,7 +301,7 @@ void ProjectionComparisonObjects::PrepareGpuImages(Particle& host_particle, Imag
 
             // If we altered the gpu memory, or if the host particle has recorded a change to its underlying data, we need to copy host - > device.
             if ( gpu_memory_was_changed || host_particle_data_has_changed ) {
-                tmp_gpu_ctf->CopyHostToDevice16f( );
+                tmp_gpu_ctf->CopyHostToDevice16f(*host_particle.ctf_image);
             }
             host_particle.RecordGpuCTFImageAssociation( );
 
@@ -358,13 +358,12 @@ float ProjectionComparisonObjects::DoGpuProjection( ) {
 #ifndef CALCULATE_SCORE_ON_CPU_DISABLE_GPU_PARTICLE
     MyDebugAssertTrue(current_particle_image->is_in_memory_gpu, "gpu_particle_image is not allocated");
 #endif
-    // wxPrintf("Is host memory pinned (%d\n)", gpu_projection->is_host_memory_pinned);
 
     current_projection->ExtractSliceShiftAndCtf(current_density_map, &gpu_ctf_image, particle->alignment_parameters, reference_volume->pixel_size, particle->pixel_size / particle->filter_radius_high, true,
                                                 swap_quadrants, apply_shifts, apply_ctf, absolute_ctf);
 
 #ifdef CALCULATE_SCORE_ON_CPU_DISABLE_GPU_PARTICLE
-    current_projection->CopyDeviceToHostAndSynchronize(false, false);
+    current_projection->CopyDeviceToHostAndSynchronize(false);
 
     if ( whiten ) {
         particle->particle_image->Whiten(particle->pixel_size / particle->filter_radius_high);

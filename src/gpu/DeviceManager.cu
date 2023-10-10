@@ -64,6 +64,7 @@ void DeviceManager::Init(int wanted_number_of_gpus) {
         //	  wxPrintf("\n");
 
         cudaErr(cudaDeviceGetAttribute(&cuda_compute_mode, cudaDevAttrComputeMode, iGPU));
+
         cudaErr(cudaSetDevice(iGPU));
 
         //	  cudaErr(cudaMemGetInfo(&free_mem,&total_mem));
@@ -146,6 +147,8 @@ void DeviceManager::ListDevices( ) {
 
         cudaDeviceProp prop;
         cudaErr(cudaGetDeviceProperties(&prop, iGPU));
+        int can_use_host_ptr = -1;
+        cudaErr(cudaDeviceGetAttribute(&can_use_host_ptr, cudaDevAttrCanUseHostPointerForRegisteredMem, iGPU));
         wxPrintf("Device number: %d\n", iGPU);
         wxPrintf("  Device name: %s\n", prop.name);
         wxPrintf("  Memory clock cate (KHz): %d\n", prop.memoryClockRate);
@@ -157,6 +160,8 @@ void DeviceManager::ListDevices( ) {
         // wxPrintf("  Memory per multiprocessor (GB): %f\n", float(prop.sharedMemPerMultiprocessor) / 1024 / 1024 / 1024);
         wxPrintf("  Memory on device (GB): %f\n", float(prop.totalGlobalMem) / 1024 / 1024 / 1024);
         wxPrintf("  Free memory (GB): %f\n", float(free_mem) / 1024 / 1024 / 1024);
+        wxPrintf("  cudaDevAttrCanUseHostPointerForRegisteredMem = %i\n", can_use_host_ptr);
+
         // if (cuda_compute_mode == cudaComputeModeProhibited) wxPrintf("  Device incompatible with CUDA\n");
         if ( prop.totalGlobalMem <= min_memory_available )
             wxPrintf("  *** Not enough memory on device, %f GB needed ***\n", float(min_memory_available) / 1024 / 1024 / 1024);

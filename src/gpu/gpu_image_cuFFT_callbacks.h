@@ -1,4 +1,5 @@
-
+#ifndef __GPU_IMAGE_CUFFT_CALLBACKS_H__
+#define __GPU_IMAGE_CUFFT_CALLBACKS_H__
 
 // cuFFT callbacks
 // These must be linked with the static cuFFT library.
@@ -90,3 +91,5 @@ static __device__ cufftReal CB_realLoadAndClipInto(void* dataIn, size_t offset, 
 }
 
 __device__ cufftCallbackLoadR d_realLoadAndClipInto = CB_realLoadAndClipInto;
+
+#endif // __GPU_IMAGE_CUFFT_CALLBACKS_H__

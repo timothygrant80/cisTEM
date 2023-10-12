@@ -1316,7 +1316,32 @@ void MyTestApp::TestAlignmentFunctions( ) {
 
     EndTest( );
 
-    // TODO: Add SwapRealSpaceQuadrants test here. (See note above)
+    // SwapRealSpaceQuadrants
+    BeginTest("Image::SwapRealSpaceQuadrants");
+    // Test for even/odd and 2 and 3D images
+    std::array<int, 2>  test_sizes = {4, 5};
+    std::array<bool, 2> test_3d    = {false, true};
+    int                 size_z     = 0;
+    for ( auto& size : test_sizes ) {
+        for ( auto& is_3d : test_3d ) {
+            if ( is_3d )
+                size_z = size;
+            else
+                size_z = 1;
+            test_image.Allocate(size, size, size_z);
+            test_image.SetToConstant(0.0f);
+            // Set a unit impulse at the centered in the box origin
+            test_image.real_values[test_image.ReturnReal1DAddressFromPhysicalCoord(test_image.physical_address_of_box_center_x, test_image.physical_address_of_box_center_y, test_image.physical_address_of_box_center_z)] = 1.0f;
+            test_image.SwapRealSpaceQuadrants( );
+            if ( ! FloatsAreAlmostTheSame(test_image.real_values[0], 1.0f) )
+                FailTest;
+            // Swapping back should put the impulse back in the center
+            test_image.SwapRealSpaceQuadrants( );
+            if ( ! FloatsAreAlmostTheSame(test_image.ReturnRealPixelFromPhysicalCoord(test_image.physical_address_of_box_center_x, test_image.physical_address_of_box_center_y, test_image.physical_address_of_box_center_z), 1.0f) )
+                FailTest;
+        }
+    }
+    EndTest( );
 
     // CalculateCrossCorrelationImageWith
     BeginTest("Image::CalculateCrossCorrelationImageWith");

@@ -789,6 +789,7 @@ void GpuImage::BufferInit(BufferType bt, int n_elements) {
 
         case b_sum:
             if ( ! is_allocated_sum_buffer ) {
+                MyDebugAssertTrue(is_npp_loaded, "Error: NPP not loaded");
                 int n_elem;
                 nppErr(nppiSumGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem, nppStream));
                 cudaErr(cudaMallocAsync(&this->sum_buffer, n_elem, nppStream.hStream));
@@ -798,6 +799,7 @@ void GpuImage::BufferInit(BufferType bt, int n_elements) {
 
         case b_min:
             if ( ! is_allocated_min_buffer ) {
+                MyDebugAssertTrue(is_npp_loaded, "Error: NPP not loaded");
                 int n_elem;
                 nppErr(nppiMinGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem, nppStream));
                 cudaErr(cudaMallocAsync(&this->min_buffer, n_elem, nppStream.hStream));
@@ -808,6 +810,7 @@ void GpuImage::BufferInit(BufferType bt, int n_elements) {
 
         case b_minIDX:
             if ( ! is_allocated_minIDX_buffer ) {
+                MyDebugAssertTrue(is_npp_loaded, "Error: NPP not loaded");
                 int n_elem;
                 nppErr(nppiMinIndxGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem, nppStream));
                 cudaErr(cudaMallocAsync(&this->minIDX_buffer, n_elem, nppStream.hStream));
@@ -818,6 +821,7 @@ void GpuImage::BufferInit(BufferType bt, int n_elements) {
 
         case b_max:
             if ( ! is_allocated_max_buffer ) {
+                MyDebugAssertTrue(is_npp_loaded, "Error: NPP not loaded");
                 int n_elem;
                 nppErr(nppiMaxGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem, nppStream));
                 cudaErr(cudaMallocAsync(&this->max_buffer, n_elem, nppStream.hStream));
@@ -828,6 +832,7 @@ void GpuImage::BufferInit(BufferType bt, int n_elements) {
 
         case b_maxIDX:
             if ( ! is_allocated_maxIDX_buffer ) {
+                MyDebugAssertTrue(is_npp_loaded, "Error: NPP not loaded");
                 int n_elem;
                 nppErr(nppiMaxIndxGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem, nppStream));
                 cudaErr(cudaMallocAsync(&this->maxIDX_buffer, n_elem, nppStream.hStream));
@@ -838,6 +843,7 @@ void GpuImage::BufferInit(BufferType bt, int n_elements) {
 
         case b_minmax:
             if ( ! is_allocated_minmax_buffer ) {
+                MyDebugAssertTrue(is_npp_loaded, "Error: NPP not loaded");
                 int n_elem;
                 nppErr(nppiMinMaxGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem, nppStream));
                 cudaErr(cudaMallocAsync(&this->minmax_buffer, n_elem, nppStream.hStream));
@@ -848,6 +854,7 @@ void GpuImage::BufferInit(BufferType bt, int n_elements) {
 
         case b_minmaxIDX:
             if ( ! is_allocated_minmaxIDX_buffer ) {
+                MyDebugAssertTrue(is_npp_loaded, "Error: NPP not loaded");
                 int n_elem;
                 nppErr(nppiMinMaxIndxGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem, nppStream));
                 cudaErr(cudaMallocAsync(&this->minmaxIDX_buffer, n_elem, nppStream.hStream));
@@ -858,6 +865,7 @@ void GpuImage::BufferInit(BufferType bt, int n_elements) {
 
         case b_mean:
             if ( ! is_allocated_mean_buffer ) {
+                MyDebugAssertTrue(is_npp_loaded, "Error: NPP not loaded");
                 int n_elem;
                 nppErr(nppiMeanGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem, nppStream));
                 cudaErr(cudaMallocAsync(&this->mean_buffer, n_elem, nppStream.hStream));
@@ -867,6 +875,7 @@ void GpuImage::BufferInit(BufferType bt, int n_elements) {
             break;
         case b_meanstddev:
             if ( ! is_allocated_meanstddev_buffer ) {
+                MyDebugAssertTrue(is_npp_loaded, "Error: NPP not loaded");
                 int n_elem;
                 nppErr(nppiMeanStdDevGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem, nppStream));
                 cudaErr(cudaStreamSynchronize(nppStream.hStream));
@@ -878,6 +887,7 @@ void GpuImage::BufferInit(BufferType bt, int n_elements) {
 
         case b_countinrange:
             if ( ! is_allocated_countinrange_buffer ) {
+                MyDebugAssertTrue(is_npp_loaded, "Error: NPP not loaded");
                 int n_elem;
                 nppErr(nppiCountInRangeGetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem, nppStream));
                 cudaErr(cudaMallocAsync(&this->countinrange_buffer, n_elem, nppStream.hStream));
@@ -888,6 +898,7 @@ void GpuImage::BufferInit(BufferType bt, int n_elements) {
 
         case b_l2norm:
             if ( ! is_allocated_l2norm_buffer ) {
+                MyDebugAssertTrue(is_npp_loaded, "Error: NPP not loaded");
                 int n_elem;
                 nppErr(nppiNormL2GetBufferHostSize_32f_C1R_Ctx(npp_ROI, &n_elem, nppStream));
                 cudaErr(cudaMallocAsync(&this->l2norm_buffer, n_elem, nppStream.hStream));
@@ -898,6 +909,7 @@ void GpuImage::BufferInit(BufferType bt, int n_elements) {
 
         case b_dotproduct:
             if ( ! is_allocated_dotproduct_buffer ) {
+                MyDebugAssertTrue(is_npp_loaded, "Error: NPP not loaded");
                 int n_elem;
                 nppErr(nppiDotProdGetBufferHostSize_32f64f_C1R_Ctx(npp_ROI, &n_elem, nppStream));
                 cudaErr(cudaMallocAsync(&this->dotproduct_buffer, n_elem, nppStream.hStream));
@@ -1081,10 +1093,10 @@ void GpuImage::BufferDestroy( ) {
 float GpuImage::ReturnSumOfSquares( ) {
     // FIXME this assumes padded values are zero which is not strictly true
     MyDebugAssertTrue(is_in_memory_gpu, "Image not allocated");
-    MyDebugAssertTrue(is_in_real_space, "This method is for real space, use ReturnSumSquareModulusComplexValues for Fourier space")
+    MyDebugAssertTrue(is_in_real_space, "This method is for real space, use ReturnSumSquareModulusComplexValues for Fourier space");
 
-            BufferInit(b_l2norm);
     NppInit( );
+    BufferInit(b_l2norm);
 
     nppErr(nppiNorm_L2_32f_C1R_Ctx((Npp32f*)real_values, pitch, npp_ROI,
                                    (Npp64f*)tmpValComplex, (Npp8u*)this->l2norm_buffer, nppStream));
@@ -1186,8 +1198,8 @@ float GpuImage::ReturnSumSquareModulusComplexValues( ) {
     // With real and complex interleaved, treating as real is equivalent to taking the conj dot prod
     precheck;
 
-    BufferInit(b_l2norm);
     NppInit( );
+    BufferInit(b_l2norm);
     nppErr(nppiNorm_L2_32f_C1R_Ctx((Npp32f*)image_buffer->real_values, pitch, npp_ROI_fourier_with_real_functor,
                                    (Npp64f*)tmpValComplex, (Npp8u*)this->l2norm_buffer, nppStream));
 
@@ -2150,8 +2162,8 @@ void GpuImage::Abs( ) {
 void GpuImage::AbsDiff(GpuImage& other_image) {
     MyDebugAssertTrue(HasSameDimensionsAs(&other_image), "Images have different dimension.");
 
-    BufferInit(b_image);
     NppInit( );
+    BufferInit(b_image);
 
     nppErr(nppiAbsDiff_32f_C1R_Ctx((const Npp32f*)real_values, pitch,
                                    (const Npp32f*)other_image.real_values, pitch,
@@ -2346,9 +2358,9 @@ void GpuImage::AddConstant(const float add_val) {
 
 void GpuImage::AddConstant(const Npp32fc add_val) {
     MyDebugAssertTrue(is_in_memory_gpu, "Memory not allocated");
-    MyDebugAssertTrue(is_in_real_space, "Image in real space.")
+    MyDebugAssertTrue(is_in_real_space, "Image in real space.");
 
-            NppInit( );
+    NppInit( );
     nppErr(nppiAddC_32fc_C1IR_Ctx((Npp32fc)add_val, (Npp32fc*)complex_values, pitch, npp_ROI, nppStream));
 }
 
@@ -3146,6 +3158,10 @@ void GpuImage::RecordAndWait( ) {
     Wait( );
 }
 
+/**
+ * @brief Places the origin of the image (N/2) at 0,0,0 in real space. And vice-versa. Applied twice in a row should be a noop.
+ * 
+ */
 template <typename StorageTypeBase>
 void GpuImage::SwapRealSpaceQuadrants( ) {
     if constexpr ( std::is_same<StorageTypeBase, __half>::value ) {
@@ -3162,37 +3178,32 @@ void GpuImage::SwapRealSpaceQuadrants( ) {
     float y_shift_to_apply;
     float z_shift_to_apply;
 
-    if ( is_in_real_space == true ) {
+    if ( is_in_real_space ) {
         must_fft = true;
         ForwardFFT(true);
     }
 
-    if ( object_is_centred_in_box == true ) {
+    if ( object_is_centred_in_box ) {
+        if ( IsEven(dims.x) )
+            x_shift_to_apply = float(physical_address_of_box_center.x);
+        else
+            x_shift_to_apply = float(physical_address_of_box_center.x) + 1.0f;
+
+        if ( IsEven(dims.y) )
+            y_shift_to_apply = float(physical_address_of_box_center.y);
+        else
+            y_shift_to_apply = float(physical_address_of_box_center.y) + 1.0f;
+
+        if ( IsEven(dims.z) )
+            z_shift_to_apply = float(physical_address_of_box_center.z);
+        else
+            z_shift_to_apply = float(physical_address_of_box_center.z) + 1.0f;
+    }
+    else {
+
         x_shift_to_apply = float(physical_address_of_box_center.x);
         y_shift_to_apply = float(physical_address_of_box_center.y);
         z_shift_to_apply = float(physical_address_of_box_center.z);
-    }
-    else {
-        if ( IsEven(dims.x) == true ) {
-            x_shift_to_apply = float(physical_address_of_box_center.x);
-        }
-        else {
-            x_shift_to_apply = float(physical_address_of_box_center.x) - 1.0;
-        }
-
-        if ( IsEven(dims.y) == true ) {
-            y_shift_to_apply = float(physical_address_of_box_center.y);
-        }
-        else {
-            y_shift_to_apply = float(physical_address_of_box_center.y) - 1.0;
-        }
-
-        if ( IsEven(dims.z) == true ) {
-            z_shift_to_apply = float(physical_address_of_box_center.z);
-        }
-        else {
-            z_shift_to_apply = float(physical_address_of_box_center.z) - 1.0;
-        }
     }
 
     if ( dims.z == 1 ) {
@@ -3201,11 +3212,11 @@ void GpuImage::SwapRealSpaceQuadrants( ) {
 
     PhaseShift<StorageTypeBase>(x_shift_to_apply, y_shift_to_apply, z_shift_to_apply);
 
-    if ( must_fft == true )
+    if ( must_fft )
         BackwardFFT( );
 
     // keep track of center;
-    if ( object_is_centred_in_box == true )
+    if ( object_is_centred_in_box )
         object_is_centred_in_box = false;
     else
         object_is_centred_in_box = true;
@@ -3270,6 +3281,15 @@ PhaseShiftKernel(StorageType* d_input,
     }
 }
 
+/**
+ * @brief Shifts an image in Fourier space forward by the given amount in pixels. 
+ * If not in Fourier space, 2 FFTs are performed.
+ * 
+ * @tparam StorageTypeBase 
+ * @param wanted_x_shift 
+ * @param wanted_y_shift 
+ * @param wanted_z_shift 
+ */
 template <typename StorageTypeBase>
 void GpuImage::PhaseShift<StorageTypeBase>(float wanted_x_shift, float wanted_y_shift, float wanted_z_shift) {
     if constexpr ( std::is_same<StorageTypeBase, __half>::value ) {

@@ -9015,6 +9015,10 @@ void Image::SwapFourierSpaceQuadrants(bool also_swap_real_space_quadrants) {
     is_fft_centered_in_box = true;
 }
 
+/**
+ * @brief Places the origin of the image (N/2) at 0,0,0 in real space. And vice-versa. Applied twice in a row should be a noop.
+ * 
+ */
 void Image::SwapRealSpaceQuadrants( ) {
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 
@@ -9024,50 +9028,44 @@ void Image::SwapRealSpaceQuadrants( ) {
     float y_shift_to_apply;
     float z_shift_to_apply;
 
-    if ( is_in_real_space == true ) {
+    if ( is_in_real_space ) {
         must_fft = true;
         ForwardFFT( );
     }
 
-    if ( object_is_centred_in_box == true ) {
+    if ( object_is_centred_in_box ) {
+
+        if ( IsEven(logical_x_dimension) )
+            x_shift_to_apply = float(physical_address_of_box_center_x);
+        else
+            x_shift_to_apply = float(physical_address_of_box_center_x) + 1.0f;
+
+        if ( IsEven(logical_y_dimension) )
+            y_shift_to_apply = float(physical_address_of_box_center_y);
+        else
+            y_shift_to_apply = float(physical_address_of_box_center_y) + 1.0f;
+
+        if ( IsEven(logical_z_dimension) )
+            z_shift_to_apply = float(physical_address_of_box_center_z);
+        else
+            z_shift_to_apply = float(physical_address_of_box_center_z) + 1.0f;
+    }
+    else {
         x_shift_to_apply = float(physical_address_of_box_center_x);
         y_shift_to_apply = float(physical_address_of_box_center_y);
         z_shift_to_apply = float(physical_address_of_box_center_z);
     }
-    else {
-        if ( IsEven(logical_x_dimension) == true ) {
-            x_shift_to_apply = float(physical_address_of_box_center_x);
-        }
-        else {
-            x_shift_to_apply = float(physical_address_of_box_center_x) - 1.0;
-        }
 
-        if ( IsEven(logical_y_dimension) == true ) {
-            y_shift_to_apply = float(physical_address_of_box_center_y);
-        }
-        else {
-            y_shift_to_apply = float(physical_address_of_box_center_y) - 1.0;
-        }
-
-        if ( IsEven(logical_z_dimension) == true ) {
-            z_shift_to_apply = float(physical_address_of_box_center_z);
-        }
-        else {
-            z_shift_to_apply = float(physical_address_of_box_center_z) - 1.0;
-        }
-    }
-
-    if ( logical_z_dimension == 1 ) {
+    if ( logical_z_dimension == 1 )
         z_shift_to_apply = 0.0;
-    }
 
     PhaseShift(x_shift_to_apply, y_shift_to_apply, z_shift_to_apply);
 
-    if ( must_fft == true )
+    if ( must_fft )
         BackwardFFT( );
 
     // keep track of center;
-    if ( object_is_centred_in_box == true )
+    if ( object_is_centred_in_box )
         object_is_centred_in_box = false;
     else
         object_is_centred_in_box = true;

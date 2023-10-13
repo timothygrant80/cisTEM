@@ -1,0 +1,144 @@
+<html><!-- Created using the cpp_pretty_printer from the dlib C++ library.  See http://dlib.net for updates. --><head><title>dlib C++ Library - webp_loader.h</title></head><body bgcolor='white'><pre>
+<font color='#009900'>// Copyright (C) 2022  Davis E. King (davis@dlib.net), Martin Sandsmark, Adrià Arrufat
+</font><font color='#009900'>// License: Boost Software License   See LICENSE.txt for the full license.
+</font><font color='#0000FF'>#ifndef</font> DLIB_WEBP_IMPORT
+<font color='#0000FF'>#define</font> DLIB_WEBP_IMPORT
+
+<font color='#0000FF'>#include</font> <font color='#5555FF'>&lt;</font>vector<font color='#5555FF'>&gt;</font>
+
+<font color='#0000FF'>#include</font> "<a style='text-decoration:none' href='webp_loader_abstract.h.html'>webp_loader_abstract.h</a>"
+<font color='#0000FF'>#include</font> "<a style='text-decoration:none' href='image_loader.h.html'>image_loader.h</a>"
+<font color='#0000FF'>#include</font> "<a style='text-decoration:none' href='../pixel.h.html'>../pixel.h</a>"
+<font color='#0000FF'>#include</font> "<a style='text-decoration:none' href='../dir_nav.h.html'>../dir_nav.h</a>"
+<font color='#0000FF'>#include</font> "<a style='text-decoration:none' href='../test_for_odr_violations.h.html'>../test_for_odr_violations.h</a>"
+
+<font color='#0000FF'>namespace</font> dlib
+<b>{</b>
+
+    <font color='#0000FF'>class</font> <b><a name='webp_loader'></a>webp_loader</b> : noncopyable
+    <b>{</b>
+    <font color='#0000FF'>public</font>:
+
+        <b><a name='webp_loader'></a>webp_loader</b><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> <font color='#0000FF'><u>char</u></font><font color='#5555FF'>*</font> filename<font face='Lucida Console'>)</font>;
+        <b><a name='webp_loader'></a>webp_loader</b><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> std::string<font color='#5555FF'>&amp;</font> filename<font face='Lucida Console'>)</font>;
+        <b><a name='webp_loader'></a>webp_loader</b><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> dlib::file<font color='#5555FF'>&amp;</font> f<font face='Lucida Console'>)</font>;
+        <b><a name='webp_loader'></a>webp_loader</b><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> <font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>char</u></font><font color='#5555FF'>*</font> imgbuffer, <font color='#0000FF'><u>size_t</u></font> buffersize<font face='Lucida Console'>)</font>;
+
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> image_type<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'><u>void</u></font> <b><a name='get_image'></a>get_image</b><font face='Lucida Console'>(</font>image_type<font color='#5555FF'>&amp;</font> image<font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+        <b>{</b>
+<font color='#0000FF'>#ifndef</font> DLIB_WEBP_SUPPORT
+            <font color='#009900'>/* !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+                You are getting this error because you are trying to use the webp_loader
+                object but you haven't defined DLIB_WEBP_SUPPORT.  You must do so to use
+                this object.   You must also make sure you set your build environment
+                to link against the libwebp library.
+            !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!*/</font>
+            <font color='#BB00BB'>static_assert</font><font face='Lucida Console'>(</font><font color='#0000FF'>sizeof</font><font face='Lucida Console'>(</font>image_type<font face='Lucida Console'>)</font> <font color='#5555FF'>=</font><font color='#5555FF'>=</font> <font color='#979000'>0</font>, "<font color='#CC0000'>webp support not enabled.</font>"<font face='Lucida Console'>)</font>;
+<font color='#0000FF'>#endif</font>
+            image_view<font color='#5555FF'>&lt;</font>image_type<font color='#5555FF'>&gt;</font> <font color='#BB00BB'>vimg</font><font face='Lucida Console'>(</font>image<font face='Lucida Console'>)</font>;
+            vimg.<font color='#BB00BB'>set_size</font><font face='Lucida Console'>(</font>height_, width_<font face='Lucida Console'>)</font>;
+            <font color='#0000FF'>typedef</font> <font color='#0000FF'>typename</font> image_traits<font color='#5555FF'>&lt;</font>image_type<font color='#5555FF'>&gt;</font>::pixel_type pixel_type;
+
+            <font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>char</u></font><font color='#5555FF'>*</font> output <font color='#5555FF'>=</font> <font color='#0000FF'>reinterpret_cast</font><font color='#5555FF'>&lt;</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>char</u></font><font color='#5555FF'>*</font><font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><font color='#BB00BB'>image_data</font><font face='Lucida Console'>(</font>vimg<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+            <font color='#0000FF'>const</font> <font color='#0000FF'><u>int</u></font> stride <font color='#5555FF'>=</font> <font color='#BB00BB'>width_step</font><font face='Lucida Console'>(</font>vimg<font face='Lucida Console'>)</font>;
+            <font color='#0000FF'>const</font> <font color='#0000FF'><u>size_t</u></font> output_size <font color='#5555FF'>=</font> stride <font color='#5555FF'>*</font> height_;
+
+            <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>pixel_traits<font color='#5555FF'>&lt;</font>pixel_type<font color='#5555FF'>&gt;</font>::rgb_alpha<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>pixel_traits<font color='#5555FF'>&lt;</font>pixel_type<font color='#5555FF'>&gt;</font>::bgr_layout<font face='Lucida Console'>)</font>
+                    <font color='#BB00BB'>read_bgra</font><font face='Lucida Console'>(</font>output, output_size, stride<font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>else</font>
+                    <font color='#BB00BB'>read_rgba</font><font face='Lucida Console'>(</font>output, output_size, stride<font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>return</font>;
+            <b>}</b>
+            <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>pixel_traits<font color='#5555FF'>&lt;</font>pixel_type<font color='#5555FF'>&gt;</font>::rgb<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>pixel_traits<font color='#5555FF'>&lt;</font>pixel_type<font color='#5555FF'>&gt;</font>::bgr_layout<font face='Lucida Console'>)</font>
+                    <font color='#BB00BB'>read_bgr</font><font face='Lucida Console'>(</font>output, output_size, stride<font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>else</font>
+                    <font color='#BB00BB'>read_rgb</font><font face='Lucida Console'>(</font>output, output_size, stride<font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>return</font>;
+            <b>}</b>
+            <font color='#009900'>// If we end up here, we are out of our fast path, and have to do it manually
+</font>
+            array2d<font color='#5555FF'>&lt;</font>rgb_alpha_pixel<font color='#5555FF'>&gt;</font> decoded;
+            decoded.<font color='#BB00BB'>set_size</font><font face='Lucida Console'>(</font>height_, width_<font face='Lucida Console'>)</font>;
+            <font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>char</u></font><font color='#5555FF'>*</font> output_dec <font color='#5555FF'>=</font> <font color='#0000FF'>reinterpret_cast</font><font color='#5555FF'>&lt;</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>char</u></font><font color='#5555FF'>*</font><font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><font color='#BB00BB'>image_data</font><font face='Lucida Console'>(</font>decoded<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+            <font color='#0000FF'>const</font> <font color='#0000FF'><u>int</u></font> stride_dec <font color='#5555FF'>=</font> <font color='#BB00BB'>width_step</font><font face='Lucida Console'>(</font>decoded<font face='Lucida Console'>)</font>;
+            <font color='#0000FF'>const</font> <font color='#0000FF'><u>size_t</u></font> output_dec_size <font color='#5555FF'>=</font> stride_dec <font color='#5555FF'>*</font> height_;
+
+            <font color='#BB00BB'>read_rgba</font><font face='Lucida Console'>(</font>output_dec, output_dec_size, stride_dec<font face='Lucida Console'>)</font>;
+
+            <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'><u>int</u></font> r <font color='#5555FF'>=</font> <font color='#979000'>0</font>; r <font color='#5555FF'>&lt;</font> height_; r<font color='#5555FF'>+</font><font color='#5555FF'>+</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'><u>int</u></font> c <font color='#5555FF'>=</font> <font color='#979000'>0</font>; c <font color='#5555FF'>&lt;</font> width_; c<font color='#5555FF'>+</font><font color='#5555FF'>+</font><font face='Lucida Console'>)</font>
+                <b>{</b>
+                    <font color='#BB00BB'>assign_pixel</font><font face='Lucida Console'>(</font>vimg[r][c], decoded[r][c]<font face='Lucida Console'>)</font>;
+                <b>}</b>
+            <b>}</b>
+        <b>}</b>
+
+    <font color='#0000FF'>private</font>:
+        <font color='#0000FF'><u>void</u></font> <b><a name='get_info'></a>get_info</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+        <font color='#0000FF'><u>void</u></font> <b><a name='read_bgra'></a>read_bgra</b><font face='Lucida Console'>(</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>char</u></font> <font color='#5555FF'>*</font>out, <font color='#0000FF'>const</font> <font color='#0000FF'><u>size_t</u></font> out_size, <font color='#0000FF'>const</font> <font color='#0000FF'><u>int</u></font> out_stride<font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>;
+        <font color='#0000FF'><u>void</u></font> <b><a name='read_bgr'></a>read_bgr</b><font face='Lucida Console'>(</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>char</u></font> <font color='#5555FF'>*</font>out, <font color='#0000FF'>const</font> <font color='#0000FF'><u>size_t</u></font> out_size, <font color='#0000FF'>const</font> <font color='#0000FF'><u>int</u></font> out_stride<font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>;
+        <font color='#0000FF'><u>void</u></font> <b><a name='read_rgba'></a>read_rgba</b><font face='Lucida Console'>(</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>char</u></font> <font color='#5555FF'>*</font>out, <font color='#0000FF'>const</font> <font color='#0000FF'><u>size_t</u></font> out_size, <font color='#0000FF'>const</font> <font color='#0000FF'><u>int</u></font> out_stride<font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>;
+        <font color='#0000FF'><u>void</u></font> <b><a name='read_rgb'></a>read_rgb</b><font face='Lucida Console'>(</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>char</u></font> <font color='#5555FF'>*</font>out, <font color='#0000FF'>const</font> <font color='#0000FF'><u>size_t</u></font> out_size, <font color='#0000FF'>const</font> <font color='#0000FF'><u>int</u></font> out_stride<font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>;
+        <font color='#0000FF'><u>void</u></font> <b><a name='read_argb'></a>read_argb</b><font face='Lucida Console'>(</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>char</u></font> <font color='#5555FF'>*</font>out, <font color='#0000FF'>const</font> <font color='#0000FF'><u>size_t</u></font> out_size, <font color='#0000FF'>const</font> <font color='#0000FF'><u>int</u></font> out_stride<font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>;
+
+        <font color='#0000FF'><u>int</u></font> height_;
+        <font color='#0000FF'><u>int</u></font> width_;
+        std::vector<font color='#5555FF'>&lt;</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>char</u></font><font color='#5555FF'>&gt;</font> data_;
+    <b>}</b>;
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font>
+        <font color='#0000FF'>typename</font> image_type
+        <font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'><u>void</u></font> <b><a name='load_webp'></a>load_webp</b> <font face='Lucida Console'>(</font>
+        image_type<font color='#5555FF'>&amp;</font> image,
+        <font color='#0000FF'>const</font> std::string<font color='#5555FF'>&amp;</font> file_name
+   <font face='Lucida Console'>)</font>
+    <b>{</b>
+        <font color='#BB00BB'>webp_loader</font><font face='Lucida Console'>(</font>file_name<font face='Lucida Console'>)</font>.<font color='#BB00BB'>get_image</font><font face='Lucida Console'>(</font>image<font face='Lucida Console'>)</font>;
+    <b>}</b>
+
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font>
+        <font color='#0000FF'>typename</font> image_type
+        <font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'><u>void</u></font> <b><a name='load_webp'></a>load_webp</b> <font face='Lucida Console'>(</font>
+        image_type<font color='#5555FF'>&amp;</font> image,
+        <font color='#0000FF'>const</font> <font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>char</u></font><font color='#5555FF'>*</font> imgbuff,
+        <font color='#0000FF'><u>size_t</u></font> imgbuffsize
+   <font face='Lucida Console'>)</font>
+    <b>{</b>
+        <font color='#BB00BB'>webp_loader</font><font face='Lucida Console'>(</font>imgbuff, imgbuffsize<font face='Lucida Console'>)</font>.<font color='#BB00BB'>get_image</font><font face='Lucida Console'>(</font>image<font face='Lucida Console'>)</font>;
+    <b>}</b>
+
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font>
+        <font color='#0000FF'>typename</font> image_type
+        <font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'><u>void</u></font> <b><a name='load_webp'></a>load_webp</b> <font face='Lucida Console'>(</font>
+        image_type<font color='#5555FF'>&amp;</font> image,
+        <font color='#0000FF'>const</font> <font color='#0000FF'><u>char</u></font><font color='#5555FF'>*</font> imgbuff,
+        <font color='#0000FF'><u>size_t</u></font> imgbuffsize
+   <font face='Lucida Console'>)</font>
+    <b>{</b>
+        <font color='#BB00BB'>webp_loader</font><font face='Lucida Console'>(</font><font color='#0000FF'>reinterpret_cast</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>const</font> <font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>char</u></font><font color='#5555FF'>*</font><font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>imgbuff<font face='Lucida Console'>)</font>, imgbuffsize<font face='Lucida Console'>)</font>.<font color='#BB00BB'>get_image</font><font face='Lucida Console'>(</font>image<font face='Lucida Console'>)</font>;
+    <b>}</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+<b>}</b>
+
+<font color='#0000FF'>#ifdef</font> NO_MAKEFILE
+<font color='#0000FF'>#include</font> "<a style='text-decoration:none' href='webp_loader.cpp.html'>webp_loader.cpp</a>"
+<font color='#0000FF'>#endif</font>
+
+<font color='#0000FF'>#endif</font> <font color='#009900'>// DLIB_WEBP_IMPORT
+</font>
+
+
+</pre></body></html>

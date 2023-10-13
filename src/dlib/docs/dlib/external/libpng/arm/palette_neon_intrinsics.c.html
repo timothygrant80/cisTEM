@@ -1,0 +1,152 @@
+<html><!-- Created using the cpp_pretty_printer from the dlib C++ library.  See http://dlib.net for updates. --><head><title>dlib C++ Library - palette_neon_intrinsics.c</title></head><body bgcolor='white'><pre>
+
+<font color='#009900'>/* palette_neon_intrinsics.c - NEON optimised palette expansion functions
+ *
+ * Copyright (c) 2018-2019 Cosmin Truta
+ * Copyright (c) 2017-2018 Arm Holdings. All rights reserved.
+ * Written by Richard Townsend &lt;Richard.Townsend@arm.com&gt;, February 2017.
+ *
+ * This code is released under the libpng license.
+ * For conditions of distribution and use, see the disclaimer
+ * and license in png.h
+ */</font>
+
+<font color='#0000FF'>#include</font> "<a style='text-decoration:none' href='../pngpriv.h.html'>../pngpriv.h</a>"
+
+<font color='#0000FF'>#if</font> PNG_ARM_NEON_IMPLEMENTATION <font color='#5555FF'>=</font><font color='#5555FF'>=</font> <font color='#979000'>1</font>
+
+<font color='#0000FF'>#if</font> defined<font face='Lucida Console'>(</font>_MSC_VER<font face='Lucida Console'>)</font> <font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> defined<font face='Lucida Console'>(</font>_M_ARM64<font face='Lucida Console'>)</font>
+#  include <font color='#5555FF'>&lt;</font>arm64_neon.h<font color='#5555FF'>&gt;</font>
+<font color='#0000FF'>#else</font>
+#  include <font color='#5555FF'>&lt;</font>arm_neon.h<font color='#5555FF'>&gt;</font>
+<font color='#0000FF'>#endif</font>
+
+<font color='#009900'>/* Build an RGBA8 palette from the separate RGB and alpha palettes. */</font>
+<font color='#0000FF'><u>void</u></font>
+<b><a name='png_riffle_palette_neon'></a>png_riffle_palette_neon</b><font face='Lucida Console'>(</font>png_structrp png_ptr<font face='Lucida Console'>)</font>
+<b>{</b>
+   png_const_colorp palette <font color='#5555FF'>=</font> png_ptr<font color='#5555FF'>-</font><font color='#5555FF'>&gt;</font>palette;
+   png_bytep riffled_palette <font color='#5555FF'>=</font> png_ptr<font color='#5555FF'>-</font><font color='#5555FF'>&gt;</font>riffled_palette;
+   png_const_bytep trans_alpha <font color='#5555FF'>=</font> png_ptr<font color='#5555FF'>-</font><font color='#5555FF'>&gt;</font>trans_alpha;
+   <font color='#0000FF'><u>int</u></font> num_trans <font color='#5555FF'>=</font> png_ptr<font color='#5555FF'>-</font><font color='#5555FF'>&gt;</font>num_trans;
+   <font color='#0000FF'><u>int</u></font> i;
+
+   <font color='#BB00BB'>png_debug</font><font face='Lucida Console'>(</font><font color='#979000'>1</font>, "<font color='#CC0000'>in png_riffle_palette_neon</font>"<font face='Lucida Console'>)</font>;
+
+   <font color='#009900'>/* Initially black, opaque. */</font>
+   uint8x16x4_t w <font color='#5555FF'>=</font> <b>{</b><b>{</b>
+      <font color='#BB00BB'>vdupq_n_u8</font><font face='Lucida Console'>(</font><font color='#979000'>0x00</font><font face='Lucida Console'>)</font>,
+      <font color='#BB00BB'>vdupq_n_u8</font><font face='Lucida Console'>(</font><font color='#979000'>0x00</font><font face='Lucida Console'>)</font>,
+      <font color='#BB00BB'>vdupq_n_u8</font><font face='Lucida Console'>(</font><font color='#979000'>0x00</font><font face='Lucida Console'>)</font>,
+      <font color='#BB00BB'>vdupq_n_u8</font><font face='Lucida Console'>(</font><font color='#979000'>0xff</font><font face='Lucida Console'>)</font>,
+   <b>}</b><b>}</b>;
+
+   <font color='#009900'>/* First, riffle the RGB colours into an RGBA8 palette.
+    * The alpha component is set to opaque for now.
+    */</font>
+   <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font>i <font color='#5555FF'>=</font> <font color='#979000'>0</font>; i <font color='#5555FF'>&lt;</font> <font color='#979000'>256</font>; i <font color='#5555FF'>+</font><font color='#5555FF'>=</font> <font color='#979000'>16</font><font face='Lucida Console'>)</font>
+   <b>{</b>
+      uint8x16x3_t v <font color='#5555FF'>=</font> <font color='#BB00BB'>vld3q_u8</font><font face='Lucida Console'>(</font><font face='Lucida Console'>(</font>png_const_bytep<font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>palette <font color='#5555FF'>+</font> i<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+      w.val[<font color='#979000'>0</font>] <font color='#5555FF'>=</font> v.val[<font color='#979000'>0</font>];
+      w.val[<font color='#979000'>1</font>] <font color='#5555FF'>=</font> v.val[<font color='#979000'>1</font>];
+      w.val[<font color='#979000'>2</font>] <font color='#5555FF'>=</font> v.val[<font color='#979000'>2</font>];
+      <font color='#BB00BB'>vst4q_u8</font><font face='Lucida Console'>(</font>riffled_palette <font color='#5555FF'>+</font> <font face='Lucida Console'>(</font>i <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> <font color='#979000'>2</font><font face='Lucida Console'>)</font>, w<font face='Lucida Console'>)</font>;
+   <b>}</b>
+
+   <font color='#009900'>/* Fix up the missing transparency values. */</font>
+   <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font>i <font color='#5555FF'>=</font> <font color='#979000'>0</font>; i <font color='#5555FF'>&lt;</font> num_trans; i<font color='#5555FF'>+</font><font color='#5555FF'>+</font><font face='Lucida Console'>)</font>
+      riffled_palette[<font face='Lucida Console'>(</font>i <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> <font color='#979000'>2</font><font face='Lucida Console'>)</font> <font color='#5555FF'>+</font> <font color='#979000'>3</font>] <font color='#5555FF'>=</font> trans_alpha[i];
+<b>}</b>
+
+<font color='#009900'>/* Expands a palettized row into RGBA8. */</font>
+<font color='#0000FF'><u>int</u></font>
+<b><a name='png_do_expand_palette_rgba8_neon'></a>png_do_expand_palette_rgba8_neon</b><font face='Lucida Console'>(</font>png_structrp png_ptr, png_row_infop row_info,
+    png_const_bytep row, png_bytepp ssp, png_bytepp ddp<font face='Lucida Console'>)</font>
+<b>{</b>
+   png_uint_32 row_width <font color='#5555FF'>=</font> row_info<font color='#5555FF'>-</font><font color='#5555FF'>&gt;</font>width;
+   <font color='#0000FF'>const</font> png_uint_32 <font color='#5555FF'>*</font>riffled_palette <font color='#5555FF'>=</font>
+      <font face='Lucida Console'>(</font><font color='#0000FF'>const</font> png_uint_32 <font color='#5555FF'>*</font><font face='Lucida Console'>)</font>png_ptr<font color='#5555FF'>-</font><font color='#5555FF'>&gt;</font>riffled_palette;
+   <font color='#0000FF'>const</font> png_int_32 pixels_per_chunk <font color='#5555FF'>=</font> <font color='#979000'>4</font>;
+   <font color='#0000FF'><u>int</u></font> i;
+
+   <font color='#BB00BB'>png_debug</font><font face='Lucida Console'>(</font><font color='#979000'>1</font>, "<font color='#CC0000'>in png_do_expand_palette_rgba8_neon</font>"<font face='Lucida Console'>)</font>;
+
+   <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>row_width <font color='#5555FF'>&lt;</font> pixels_per_chunk<font face='Lucida Console'>)</font>
+      <font color='#0000FF'>return</font> <font color='#979000'>0</font>;
+
+   <font color='#009900'>/* This function originally gets the last byte of the output row.
+    * The NEON part writes forward from a given position, so we have
+    * to seek this back by 4 pixels x 4 bytes.
+    */</font>
+   <font color='#5555FF'>*</font>ddp <font color='#5555FF'>=</font> <font color='#5555FF'>*</font>ddp <font color='#5555FF'>-</font> <font face='Lucida Console'>(</font><font face='Lucida Console'>(</font>pixels_per_chunk <font color='#5555FF'>*</font> <font color='#0000FF'>sizeof</font><font face='Lucida Console'>(</font>png_uint_32<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font> <font color='#5555FF'>-</font> <font color='#979000'>1</font><font face='Lucida Console'>)</font>;
+
+   <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font>i <font color='#5555FF'>=</font> <font color='#979000'>0</font>; i <font color='#5555FF'>&lt;</font> row_width; i <font color='#5555FF'>+</font><font color='#5555FF'>=</font> pixels_per_chunk<font face='Lucida Console'>)</font>
+   <b>{</b>
+      uint32x4_t cur;
+      png_bytep sp <font color='#5555FF'>=</font> <font color='#5555FF'>*</font>ssp <font color='#5555FF'>-</font> i, dp <font color='#5555FF'>=</font> <font color='#5555FF'>*</font>ddp <font color='#5555FF'>-</font> <font face='Lucida Console'>(</font>i <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> <font color='#979000'>2</font><font face='Lucida Console'>)</font>;
+      cur <font color='#5555FF'>=</font> <font color='#BB00BB'>vld1q_dup_u32</font> <font face='Lucida Console'>(</font>riffled_palette <font color='#5555FF'>+</font> <font color='#5555FF'>*</font><font face='Lucida Console'>(</font>sp <font color='#5555FF'>-</font> <font color='#979000'>3</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+      cur <font color='#5555FF'>=</font> <font color='#BB00BB'>vld1q_lane_u32</font><font face='Lucida Console'>(</font>riffled_palette <font color='#5555FF'>+</font> <font color='#5555FF'>*</font><font face='Lucida Console'>(</font>sp <font color='#5555FF'>-</font> <font color='#979000'>2</font><font face='Lucida Console'>)</font>, cur, <font color='#979000'>1</font><font face='Lucida Console'>)</font>;
+      cur <font color='#5555FF'>=</font> <font color='#BB00BB'>vld1q_lane_u32</font><font face='Lucida Console'>(</font>riffled_palette <font color='#5555FF'>+</font> <font color='#5555FF'>*</font><font face='Lucida Console'>(</font>sp <font color='#5555FF'>-</font> <font color='#979000'>1</font><font face='Lucida Console'>)</font>, cur, <font color='#979000'>2</font><font face='Lucida Console'>)</font>;
+      cur <font color='#5555FF'>=</font> <font color='#BB00BB'>vld1q_lane_u32</font><font face='Lucida Console'>(</font>riffled_palette <font color='#5555FF'>+</font> <font color='#5555FF'>*</font><font face='Lucida Console'>(</font>sp <font color='#5555FF'>-</font> <font color='#979000'>0</font><font face='Lucida Console'>)</font>, cur, <font color='#979000'>3</font><font face='Lucida Console'>)</font>;
+      <font color='#BB00BB'>vst1q_u32</font><font face='Lucida Console'>(</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>void</u></font> <font color='#5555FF'>*</font><font face='Lucida Console'>)</font>dp, cur<font face='Lucida Console'>)</font>;
+   <b>}</b>
+   <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>i <font color='#5555FF'>!</font><font color='#5555FF'>=</font> row_width<font face='Lucida Console'>)</font>
+   <b>{</b>
+      <font color='#009900'>/* Remove the amount that wasn't processed. */</font>
+      i <font color='#5555FF'>-</font><font color='#5555FF'>=</font> pixels_per_chunk;
+   <b>}</b>
+
+   <font color='#009900'>/* Decrement output pointers. */</font>
+   <font color='#5555FF'>*</font>ssp <font color='#5555FF'>=</font> <font color='#5555FF'>*</font>ssp <font color='#5555FF'>-</font> i;
+   <font color='#5555FF'>*</font>ddp <font color='#5555FF'>=</font> <font color='#5555FF'>*</font>ddp <font color='#5555FF'>-</font> <font face='Lucida Console'>(</font>i <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> <font color='#979000'>2</font><font face='Lucida Console'>)</font>;
+   <font color='#0000FF'>return</font> i;
+<b>}</b>
+
+<font color='#009900'>/* Expands a palettized row into RGB8. */</font>
+<font color='#0000FF'><u>int</u></font>
+<b><a name='png_do_expand_palette_rgb8_neon'></a>png_do_expand_palette_rgb8_neon</b><font face='Lucida Console'>(</font>png_structrp png_ptr, png_row_infop row_info,
+    png_const_bytep row, png_bytepp ssp, png_bytepp ddp<font face='Lucida Console'>)</font>
+<b>{</b>
+   png_uint_32 row_width <font color='#5555FF'>=</font> row_info<font color='#5555FF'>-</font><font color='#5555FF'>&gt;</font>width;
+   png_const_bytep palette <font color='#5555FF'>=</font> <font face='Lucida Console'>(</font>png_const_bytep<font face='Lucida Console'>)</font>png_ptr<font color='#5555FF'>-</font><font color='#5555FF'>&gt;</font>palette;
+   <font color='#0000FF'>const</font> png_uint_32 pixels_per_chunk <font color='#5555FF'>=</font> <font color='#979000'>8</font>;
+   <font color='#0000FF'><u>int</u></font> i;
+
+   <font color='#BB00BB'>png_debug</font><font face='Lucida Console'>(</font><font color='#979000'>1</font>, "<font color='#CC0000'>in png_do_expand_palette_rgb8_neon</font>"<font face='Lucida Console'>)</font>;
+
+   <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>row_width <font color='#5555FF'>&lt;</font><font color='#5555FF'>=</font> pixels_per_chunk<font face='Lucida Console'>)</font>
+      <font color='#0000FF'>return</font> <font color='#979000'>0</font>;
+
+   <font color='#009900'>/* Seeking this back by 8 pixels x 3 bytes. */</font>
+   <font color='#5555FF'>*</font>ddp <font color='#5555FF'>=</font> <font color='#5555FF'>*</font>ddp <font color='#5555FF'>-</font> <font face='Lucida Console'>(</font><font face='Lucida Console'>(</font>pixels_per_chunk <font color='#5555FF'>*</font> <font color='#0000FF'>sizeof</font><font face='Lucida Console'>(</font>png_color<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font> <font color='#5555FF'>-</font> <font color='#979000'>1</font><font face='Lucida Console'>)</font>;
+
+   <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font>i <font color='#5555FF'>=</font> <font color='#979000'>0</font>; i <font color='#5555FF'>&lt;</font> row_width; i <font color='#5555FF'>+</font><font color='#5555FF'>=</font> pixels_per_chunk<font face='Lucida Console'>)</font>
+   <b>{</b>
+      uint8x8x3_t cur;
+      png_bytep sp <font color='#5555FF'>=</font> <font color='#5555FF'>*</font>ssp <font color='#5555FF'>-</font> i, dp <font color='#5555FF'>=</font> <font color='#5555FF'>*</font>ddp <font color='#5555FF'>-</font> <font face='Lucida Console'>(</font><font face='Lucida Console'>(</font>i <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> <font color='#979000'>1</font><font face='Lucida Console'>)</font> <font color='#5555FF'>+</font> i<font face='Lucida Console'>)</font>;
+      cur <font color='#5555FF'>=</font> <font color='#BB00BB'>vld3_dup_u8</font><font face='Lucida Console'>(</font>palette <font color='#5555FF'>+</font> <font color='#0000FF'>sizeof</font><font face='Lucida Console'>(</font>png_color<font face='Lucida Console'>)</font> <font color='#5555FF'>*</font> <font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font face='Lucida Console'>(</font>sp <font color='#5555FF'>-</font> <font color='#979000'>7</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+      cur <font color='#5555FF'>=</font> <font color='#BB00BB'>vld3_lane_u8</font><font face='Lucida Console'>(</font>palette <font color='#5555FF'>+</font> <font color='#0000FF'>sizeof</font><font face='Lucida Console'>(</font>png_color<font face='Lucida Console'>)</font> <font color='#5555FF'>*</font> <font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font face='Lucida Console'>(</font>sp <font color='#5555FF'>-</font> <font color='#979000'>6</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>, cur, <font color='#979000'>1</font><font face='Lucida Console'>)</font>;
+      cur <font color='#5555FF'>=</font> <font color='#BB00BB'>vld3_lane_u8</font><font face='Lucida Console'>(</font>palette <font color='#5555FF'>+</font> <font color='#0000FF'>sizeof</font><font face='Lucida Console'>(</font>png_color<font face='Lucida Console'>)</font> <font color='#5555FF'>*</font> <font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font face='Lucida Console'>(</font>sp <font color='#5555FF'>-</font> <font color='#979000'>5</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>, cur, <font color='#979000'>2</font><font face='Lucida Console'>)</font>;
+      cur <font color='#5555FF'>=</font> <font color='#BB00BB'>vld3_lane_u8</font><font face='Lucida Console'>(</font>palette <font color='#5555FF'>+</font> <font color='#0000FF'>sizeof</font><font face='Lucida Console'>(</font>png_color<font face='Lucida Console'>)</font> <font color='#5555FF'>*</font> <font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font face='Lucida Console'>(</font>sp <font color='#5555FF'>-</font> <font color='#979000'>4</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>, cur, <font color='#979000'>3</font><font face='Lucida Console'>)</font>;
+      cur <font color='#5555FF'>=</font> <font color='#BB00BB'>vld3_lane_u8</font><font face='Lucida Console'>(</font>palette <font color='#5555FF'>+</font> <font color='#0000FF'>sizeof</font><font face='Lucida Console'>(</font>png_color<font face='Lucida Console'>)</font> <font color='#5555FF'>*</font> <font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font face='Lucida Console'>(</font>sp <font color='#5555FF'>-</font> <font color='#979000'>3</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>, cur, <font color='#979000'>4</font><font face='Lucida Console'>)</font>;
+      cur <font color='#5555FF'>=</font> <font color='#BB00BB'>vld3_lane_u8</font><font face='Lucida Console'>(</font>palette <font color='#5555FF'>+</font> <font color='#0000FF'>sizeof</font><font face='Lucida Console'>(</font>png_color<font face='Lucida Console'>)</font> <font color='#5555FF'>*</font> <font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font face='Lucida Console'>(</font>sp <font color='#5555FF'>-</font> <font color='#979000'>2</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>, cur, <font color='#979000'>5</font><font face='Lucida Console'>)</font>;
+      cur <font color='#5555FF'>=</font> <font color='#BB00BB'>vld3_lane_u8</font><font face='Lucida Console'>(</font>palette <font color='#5555FF'>+</font> <font color='#0000FF'>sizeof</font><font face='Lucida Console'>(</font>png_color<font face='Lucida Console'>)</font> <font color='#5555FF'>*</font> <font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font face='Lucida Console'>(</font>sp <font color='#5555FF'>-</font> <font color='#979000'>1</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>, cur, <font color='#979000'>6</font><font face='Lucida Console'>)</font>;
+      cur <font color='#5555FF'>=</font> <font color='#BB00BB'>vld3_lane_u8</font><font face='Lucida Console'>(</font>palette <font color='#5555FF'>+</font> <font color='#0000FF'>sizeof</font><font face='Lucida Console'>(</font>png_color<font face='Lucida Console'>)</font> <font color='#5555FF'>*</font> <font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font face='Lucida Console'>(</font>sp <font color='#5555FF'>-</font> <font color='#979000'>0</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>, cur, <font color='#979000'>7</font><font face='Lucida Console'>)</font>;
+      <font color='#BB00BB'>vst3_u8</font><font face='Lucida Console'>(</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>void</u></font> <font color='#5555FF'>*</font><font face='Lucida Console'>)</font>dp, cur<font face='Lucida Console'>)</font>;
+   <b>}</b>
+
+   <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>i <font color='#5555FF'>!</font><font color='#5555FF'>=</font> row_width<font face='Lucida Console'>)</font>
+   <b>{</b>
+      <font color='#009900'>/* Remove the amount that wasn't processed. */</font>
+      i <font color='#5555FF'>-</font><font color='#5555FF'>=</font> pixels_per_chunk;
+   <b>}</b>
+
+   <font color='#009900'>/* Decrement output pointers. */</font>
+   <font color='#5555FF'>*</font>ssp <font color='#5555FF'>=</font> <font color='#5555FF'>*</font>ssp <font color='#5555FF'>-</font> i;
+   <font color='#5555FF'>*</font>ddp <font color='#5555FF'>=</font> <font color='#5555FF'>*</font>ddp <font color='#5555FF'>-</font> <font face='Lucida Console'>(</font><font face='Lucida Console'>(</font>i <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> <font color='#979000'>1</font><font face='Lucida Console'>)</font> <font color='#5555FF'>+</font> i<font face='Lucida Console'>)</font>;
+   <font color='#0000FF'>return</font> i;
+<b>}</b>
+
+<font color='#0000FF'>#endif</font> <font color='#009900'>/* PNG_ARM_NEON_IMPLEMENTATION */</font>
+
+</pre></body></html>

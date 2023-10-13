@@ -1,0 +1,725 @@
+<html><!-- Created using the cpp_pretty_printer from the dlib C++ library.  See http://dlib.net for updates. --><head><title>dlib C++ Library - type_safe_union_kernel.h</title></head><body bgcolor='white'><pre>
+<font color='#009900'>// Copyright (C) 2009  Davis E. King (davis@dlib.net)
+</font><font color='#009900'>// License: Boost Software License   See LICENSE.txt for the full license.
+</font><font color='#0000FF'>#ifndef</font> DLIB_TYPE_SAFE_UNIOn_h_ 
+<font color='#0000FF'>#define</font> DLIB_TYPE_SAFE_UNIOn_h_
+
+<font color='#0000FF'>#include</font> "<a style='text-decoration:none' href='type_safe_union_kernel_abstract.h.html'>type_safe_union_kernel_abstract.h</a>"
+<font color='#0000FF'>#include</font> <font color='#5555FF'>&lt;</font>new<font color='#5555FF'>&gt;</font>
+<font color='#0000FF'>#include</font> <font color='#5555FF'>&lt;</font>iostream<font color='#5555FF'>&gt;</font>
+<font color='#0000FF'>#include</font> <font color='#5555FF'>&lt;</font>type_traits<font color='#5555FF'>&gt;</font>
+<font color='#0000FF'>#include</font> <font color='#5555FF'>&lt;</font>functional<font color='#5555FF'>&gt;</font>
+<font color='#0000FF'>#include</font> "<a style='text-decoration:none' href='../serialize.h.html'>../serialize.h</a>"
+<font color='#0000FF'>#include</font> "<a style='text-decoration:none' href='../invoke.h.html'>../invoke.h</a>"
+
+<font color='#0000FF'>namespace</font> dlib
+<b>{</b>
+    <font color='#009900'>// ---------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>class</font> <b><a name='bad_type_safe_union_cast'></a>bad_type_safe_union_cast</b> : <font color='#0000FF'>public</font> std::bad_cast 
+    <b>{</b>
+    <font color='#0000FF'>public</font>:
+          <font color='#0000FF'>virtual</font> <font color='#0000FF'>const</font> <font color='#0000FF'><u>char</u></font> <font color='#5555FF'>*</font> <b><a name='what'></a>what</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#0000FF'>const</font> <font color='#0000FF'>throw</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>
+          <b>{</b>
+              <font color='#0000FF'>return</font> "<font color='#CC0000'>bad_type_safe_union_cast</font>";
+          <b>}</b>
+    <b>}</b>;
+
+    <font color='#009900'>// ---------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>struct</font> <b><a name='in_place_tag'></a>in_place_tag</b> <b>{</b> <font color='#0000FF'>using</font> type <font color='#5555FF'>=</font> T;<b>}</b>;
+
+    <font color='#009900'>// ---------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font>... Types<font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='type_safe_union'></a>type_safe_union</b>;
+
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> Tsu<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>struct</font> <b><a name='type_safe_union_size'></a>type_safe_union_size</b>;
+
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font>... Types<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>struct</font> <b><a name='type_safe_union_size'></a>type_safe_union_size</b><font color='#5555FF'>&lt;</font>type_safe_union<font color='#5555FF'>&lt;</font>Types...<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font> : std::integral_constant<font color='#5555FF'>&lt;</font><font color='#0000FF'><u>size_t</u></font>, <font color='#0000FF'>sizeof</font>...<font face='Lucida Console'>(</font>Types<font face='Lucida Console'>)</font><font color='#5555FF'>&gt;</font> <b>{</b><b>}</b>;
+
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> Tsu<font color='#5555FF'>&gt;</font> <font color='#0000FF'>struct</font> <b><a name='type_safe_union_size'></a>type_safe_union_size</b><font color='#5555FF'>&lt;</font><font color='#0000FF'>const</font> Tsu<font color='#5555FF'>&gt;</font>           : type_safe_union_size<font color='#5555FF'>&lt;</font>Tsu<font color='#5555FF'>&gt;</font> <b>{</b><b>}</b>;
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> Tsu<font color='#5555FF'>&gt;</font> <font color='#0000FF'>struct</font> <b><a name='type_safe_union_size'></a>type_safe_union_size</b><font color='#5555FF'>&lt;</font><font color='#0000FF'>volatile</font> Tsu<font color='#5555FF'>&gt;</font>        : type_safe_union_size<font color='#5555FF'>&lt;</font>Tsu<font color='#5555FF'>&gt;</font> <b>{</b><b>}</b>;
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> Tsu<font color='#5555FF'>&gt;</font> <font color='#0000FF'>struct</font> <b><a name='type_safe_union_size'></a>type_safe_union_size</b><font color='#5555FF'>&lt;</font><font color='#0000FF'>const</font> <font color='#0000FF'>volatile</font> Tsu<font color='#5555FF'>&gt;</font>  : type_safe_union_size<font color='#5555FF'>&lt;</font>Tsu<font color='#5555FF'>&gt;</font> <b>{</b><b>}</b>;
+
+    <font color='#009900'>// ---------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>namespace</font> detail
+    <b>{</b>
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'><u>size_t</u></font> I, <font color='#0000FF'>typename</font>... Ts<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>struct</font> <b><a name='nth_type'></a>nth_type</b>;
+
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'><u>size_t</u></font> I, <font color='#0000FF'>typename</font> T0, <font color='#0000FF'>typename</font>... Ts<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>struct</font> <b><a name='nth_type'></a>nth_type</b><font color='#5555FF'>&lt;</font>I, T0, Ts...<font color='#5555FF'>&gt;</font> : nth_type<font color='#5555FF'>&lt;</font>I<font color='#5555FF'>-</font><font color='#979000'>1</font>, Ts...<font color='#5555FF'>&gt;</font> <b>{</b><b>}</b>;
+
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T0, <font color='#0000FF'>typename</font>... Ts<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>struct</font> <b><a name='nth_type'></a>nth_type</b><font color='#5555FF'>&lt;</font><font color='#979000'>0</font>, T0, Ts...<font color='#5555FF'>&gt;</font> <b>{</b> <font color='#0000FF'>using</font> type <font color='#5555FF'>=</font> T0; <b>}</b>;
+    <b>}</b>
+
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>size_t</u></font> I, <font color='#0000FF'>typename</font> TSU<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>struct</font> <b><a name='type_safe_union_alternative'></a>type_safe_union_alternative</b>;
+
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>size_t</u></font> I, <font color='#0000FF'>typename</font>... Types<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>struct</font> <b><a name='type_safe_union_alternative'></a>type_safe_union_alternative</b><font color='#5555FF'>&lt;</font>I, type_safe_union<font color='#5555FF'>&lt;</font>Types...<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font> : detail::nth_type<font color='#5555FF'>&lt;</font>I, Types...<font color='#5555FF'>&gt;</font><b>{</b><b>}</b>;
+
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'><u>size_t</u></font> I, <font color='#0000FF'>typename</font> TSU<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>using</font> type_safe_union_alternative_t <font color='#5555FF'>=</font> <font color='#0000FF'>typename</font> type_safe_union_alternative<font color='#5555FF'>&lt;</font>I, TSU<font color='#5555FF'>&gt;</font>::type;
+
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>size_t</u></font> I, <font color='#0000FF'>typename</font> TSU<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>struct</font> <b><a name='type_safe_union_alternative'></a>type_safe_union_alternative</b><font color='#5555FF'>&lt;</font>I, <font color='#0000FF'>const</font> TSU<font color='#5555FF'>&gt;</font>
+    <b>{</b> <font color='#0000FF'>using</font> type <font color='#5555FF'>=</font> <font color='#0000FF'>typename</font> std::add_const<font color='#5555FF'>&lt;</font>type_safe_union_alternative_t<font color='#5555FF'>&lt;</font>I, TSU<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font>::type; <b>}</b>;
+
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>size_t</u></font> I, <font color='#0000FF'>typename</font> TSU<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>struct</font> <b><a name='type_safe_union_alternative'></a>type_safe_union_alternative</b><font color='#5555FF'>&lt;</font>I, <font color='#0000FF'>volatile</font> TSU<font color='#5555FF'>&gt;</font>
+    <b>{</b> <font color='#0000FF'>using</font> type <font color='#5555FF'>=</font> <font color='#0000FF'>typename</font> std::add_volatile<font color='#5555FF'>&lt;</font>type_safe_union_alternative_t<font color='#5555FF'>&lt;</font>I, TSU<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font>::type; <b>}</b>;
+
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>size_t</u></font> I, <font color='#0000FF'>typename</font> TSU<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>struct</font> <b><a name='type_safe_union_alternative'></a>type_safe_union_alternative</b><font color='#5555FF'>&lt;</font>I, <font color='#0000FF'>const</font> <font color='#0000FF'>volatile</font> TSU<font color='#5555FF'>&gt;</font>
+    <b>{</b> <font color='#0000FF'>using</font> type <font color='#5555FF'>=</font> <font color='#0000FF'>typename</font> std::add_cv<font color='#5555FF'>&lt;</font>type_safe_union_alternative_t<font color='#5555FF'>&lt;</font>I, TSU<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font>::type; <b>}</b>;
+
+    <font color='#009900'>// ---------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>namespace</font> detail
+    <b>{</b>
+        <font color='#009900'>// ---------------------------------------------------------------------
+</font>
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T, <font color='#0000FF'>typename</font> First, <font color='#0000FF'>typename</font>... Rest<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>struct</font> <b><a name='is_any'></a>is_any</b> : std::integral_constant<font color='#5555FF'>&lt;</font><font color='#0000FF'><u>bool</u></font>, is_any<font color='#5555FF'>&lt;</font>T,First<font color='#5555FF'>&gt;</font>::value <font color='#5555FF'>|</font><font color='#5555FF'>|</font> is_any<font color='#5555FF'>&lt;</font>T,Rest...<font color='#5555FF'>&gt;</font>::value<font color='#5555FF'>&gt;</font> <b>{</b><b>}</b>;
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T, <font color='#0000FF'>typename</font> First<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>struct</font> <b><a name='is_any'></a>is_any</b><font color='#5555FF'>&lt;</font>T,First<font color='#5555FF'>&gt;</font> : std::is_same<font color='#5555FF'>&lt;</font>T,First<font color='#5555FF'>&gt;</font> <b>{</b><b>}</b>;
+
+        <font color='#009900'>// ---------------------------------------------------------------------
+</font>
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>int</u></font> nTs, <font color='#0000FF'>typename</font> T, <font color='#0000FF'>typename</font>... Ts<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>struct</font> <b><a name='type_safe_union_type_id_impl'></a>type_safe_union_type_id_impl</b>
+                : std::integral_constant<font color='#5555FF'>&lt;</font><font color='#0000FF'><u>int</u></font>, <font color='#5555FF'>-</font><font color='#979000'>1</font> <font color='#5555FF'>-</font> nTs<font color='#5555FF'>&gt;</font> <b>{</b><b>}</b>;
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>int</u></font> nTs, <font color='#0000FF'>typename</font> T, <font color='#0000FF'>typename</font> T0, <font color='#0000FF'>typename</font>... Ts<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>struct</font> <b><a name='type_safe_union_type_id_impl'></a>type_safe_union_type_id_impl</b><font color='#5555FF'>&lt;</font>nTs, T, T0, Ts...<font color='#5555FF'>&gt;</font>
+                : std::integral_constant<font color='#5555FF'>&lt;</font><font color='#0000FF'><u>int</u></font>, std::is_same<font color='#5555FF'>&lt;</font>T,T0<font color='#5555FF'>&gt;</font>::value ? <font color='#979000'>1</font> : type_safe_union_type_id_impl<font color='#5555FF'>&lt;</font>nTs, T,Ts...<font color='#5555FF'>&gt;</font>::value <font color='#5555FF'>+</font> <font color='#979000'>1</font><font color='#5555FF'>&gt;</font> <b>{</b><b>}</b>;
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T, <font color='#0000FF'>typename</font>... Ts<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>struct</font> <b><a name='type_safe_union_type_id'></a>type_safe_union_type_id</b> : type_safe_union_type_id_impl<font color='#5555FF'>&lt;</font><font color='#0000FF'>sizeof</font>...<font face='Lucida Console'>(</font>Ts<font face='Lucida Console'>)</font>,T,Ts...<font color='#5555FF'>&gt;</font><b>{</b><b>}</b>;
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T, <font color='#0000FF'>typename</font>... Ts<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>struct</font> <b><a name='type_safe_union_type_id'></a>type_safe_union_type_id</b><font color='#5555FF'>&lt;</font>in_place_tag<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font>, Ts...<font color='#5555FF'>&gt;</font> : type_safe_union_type_id<font color='#5555FF'>&lt;</font>T,Ts...<font color='#5555FF'>&gt;</font><b>{</b><b>}</b>;
+
+        <font color='#009900'>// ---------------------------------------------------------------------
+</font>    <b>}</b>
+
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font>... Types<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>class</font> <b><a name='type_safe_union'></a>type_safe_union</b>
+    <b>{</b>
+        <font color='#009900'>/*!
+            CONVENTION
+                - is_empty() ==  (type_identity == 0)
+                - contains&lt;T&gt;() == (type_identity == get_type_id&lt;T&gt;())
+                - mem == the aligned block of memory on the stack which is
+                  where objects in the union are stored
+        !*/</font>
+    <font color='#0000FF'>public</font>:
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>static</font> constexpr <font color='#0000FF'><u>int</u></font> <b><a name='get_type_id'></a>get_type_id</b> <font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#0000FF'>return</font> detail::type_safe_union_type_id<font color='#5555FF'>&lt;</font>T,Types...<font color='#5555FF'>&gt;</font>::value;
+        <b>}</b>
+
+    <font color='#0000FF'>private</font>:
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>struct</font> <b><a name='is_valid'></a>is_valid</b> : detail::is_any<font color='#5555FF'>&lt;</font>T,Types...<font color='#5555FF'>&gt;</font> <b>{</b><b>}</b>;
+
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>using</font> is_valid_check <font color='#5555FF'>=</font> <font color='#0000FF'>typename</font> std::enable_if<font color='#5555FF'>&lt;</font>is_valid<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font>::value, <font color='#0000FF'><u>bool</u></font><font color='#5555FF'>&gt;</font>::type;
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>size_t</u></font> I<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>using</font> get_type_t <font color='#5555FF'>=</font> type_safe_union_alternative_t<font color='#5555FF'>&lt;</font>I, type_safe_union<font color='#5555FF'>&gt;</font>;
+
+        <font color='#0000FF'>typename</font> std::aligned_union<font color='#5555FF'>&lt;</font><font color='#979000'>0</font>, Types...<font color='#5555FF'>&gt;</font>::type mem;
+        <font color='#0000FF'><u>int</u></font> type_identity <font color='#5555FF'>=</font> <font color='#979000'>0</font>;
+
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font>
+            <font color='#0000FF'>typename</font> F,
+            <font color='#0000FF'>typename</font> TSU,
+            std::<font color='#0000FF'><u>size_t</u></font> I
+        <font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>static</font> <font color='#0000FF'><u>void</u></font> <b><a name='apply_to_contents_as_type'></a>apply_to_contents_as_type</b><font face='Lucida Console'>(</font>
+            F<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> f,
+            TSU<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> me
+        <font face='Lucida Console'>)</font>
+        <b>{</b>
+            std::forward<font color='#5555FF'>&lt;</font>F<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>f<font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>me.<font color='#0000FF'>template</font> unchecked_get<font color='#5555FF'>&lt;</font>get_type_t<font color='#5555FF'>&lt;</font>I<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+        <b>}</b>
+
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font>
+            <font color='#0000FF'>typename</font> F,
+            <font color='#0000FF'>typename</font> TSU,
+            std::<font color='#0000FF'><u>size_t</u></font>... I
+        <font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>static</font> <font color='#0000FF'><u>void</u></font> <b><a name='apply_to_contents_impl'></a>apply_to_contents_impl</b><font face='Lucida Console'>(</font>
+            F<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> f,
+            TSU<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> me,
+            dlib::index_sequence<font color='#5555FF'>&lt;</font>I...<font color='#5555FF'>&gt;</font>
+        <font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#0000FF'>using</font> func_t <font color='#5555FF'>=</font> <font color='#0000FF'><u>void</u></font><font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>F<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font>, TSU<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>;
+
+            <font color='#0000FF'>const</font> func_t vtable[] <font color='#5555FF'>=</font> <b>{</b>
+                <font color='#009900'>/*! Empty (type_identity == 0) case !*/</font>
+                []<font face='Lucida Console'>(</font>F<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font>, TSU<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font> <b>{</b>
+                <b>}</b>,
+                <font color='#009900'>/*! Non-empty cases !*/</font>
+                <font color='#5555FF'>&amp;</font>apply_to_contents_as_type<font color='#5555FF'>&lt;</font>F<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font>,TSU<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font>,I<font color='#5555FF'>&gt;</font>...
+            <b>}</b>;
+
+            <font color='#0000FF'>return</font> vtable[me.<font color='#BB00BB'>get_current_type_id</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>]<font face='Lucida Console'>(</font>std::forward<font color='#5555FF'>&lt;</font>F<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>f<font face='Lucida Console'>)</font>, std::forward<font color='#5555FF'>&lt;</font>TSU<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>me<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+        <b>}</b>
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>const</font> T<font color='#5555FF'>&amp;</font> <b><a name='unchecked_get'></a>unchecked_get</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+        <b>{</b>
+            <font color='#0000FF'>return</font> <font color='#5555FF'>*</font><font color='#0000FF'>reinterpret_cast</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>const</font> T<font color='#5555FF'>*</font><font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><font color='#5555FF'>&amp;</font>mem<font face='Lucida Console'>)</font>;
+        <b>}</b>
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T<font color='#5555FF'>&gt;</font>
+        T<font color='#5555FF'>&amp;</font> <b><a name='unchecked_get'></a>unchecked_get</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#0000FF'>return</font> <font color='#5555FF'>*</font><font color='#0000FF'>reinterpret_cast</font><font color='#5555FF'>&lt;</font>T<font color='#5555FF'>*</font><font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><font color='#5555FF'>&amp;</font>mem<font face='Lucida Console'>)</font>;
+        <b>}</b>
+
+        <font color='#0000FF'>struct</font> <b><a name='destruct_helper'></a>destruct_helper</b>
+        <b>{</b>
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font face='Lucida Console'>(</font>T<font color='#5555FF'>&amp;</font> item<font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+            <b>{</b>
+                item.~<font color='#BB00BB'>T</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+            <b>}</b>
+        <b>}</b>;
+
+        <font color='#0000FF'><u>void</u></font> <b><a name='destruct'></a>destruct</b> <font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#BB00BB'>apply_to_contents</font><font face='Lucida Console'>(</font>destruct_helper<b>{</b><b>}</b><font face='Lucida Console'>)</font>;
+            type_identity <font color='#5555FF'>=</font> <font color='#979000'>0</font>;
+        <b>}</b>
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T, <font color='#0000FF'>typename</font>... Args<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'><u>void</u></font> <b><a name='construct'></a>construct</b> <font face='Lucida Console'>(</font>
+            Args<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font>... args
+        <font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#BB00BB'>destruct</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+            <font color='#0000FF'>new</font><font face='Lucida Console'>(</font><font color='#5555FF'>&amp;</font>mem<font face='Lucida Console'>)</font> <font color='#BB00BB'>T</font><font face='Lucida Console'>(</font>std::forward<font color='#5555FF'>&lt;</font>Args<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>args<font face='Lucida Console'>)</font>...<font face='Lucida Console'>)</font>;
+            type_identity <font color='#5555FF'>=</font> get_type_id<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+        <b>}</b>
+
+        <font color='#0000FF'>struct</font> <b><a name='assign_to'></a>assign_to</b>
+        <b>{</b>
+            <font color='#009900'>/*!
+                This class assigns an object to `me` using std::forward.
+            !*/</font>
+            <b><a name='assign_to'></a>assign_to</b><font face='Lucida Console'>(</font>type_safe_union<font color='#5555FF'>&amp;</font> me<font face='Lucida Console'>)</font> : _me<font face='Lucida Console'>(</font>me<font face='Lucida Console'>)</font> <b>{</b><b>}</b>
+
+            <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>T<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> x<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#0000FF'>using</font> U <font color='#5555FF'>=</font> <font color='#0000FF'>typename</font> std::decay<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font>::type;
+
+                <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>_me.type_identity <font color='#5555FF'>!</font><font color='#5555FF'>=</font> get_type_id<font color='#5555FF'>&lt;</font>U<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+                <b>{</b>
+                    _me.construct<font color='#5555FF'>&lt;</font>U<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>std::forward<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>x<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+                <b>}</b>
+                <font color='#0000FF'>else</font>
+                <b>{</b>
+                    _me.<font color='#0000FF'>template</font> unchecked_get<font color='#5555FF'>&lt;</font>U<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>=</font> std::forward<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>x<font face='Lucida Console'>)</font>;
+                <b>}</b>
+            <b>}</b>
+
+            type_safe_union<font color='#5555FF'>&amp;</font> _me;
+        <b>}</b>;
+
+        <font color='#0000FF'>struct</font> <b><a name='move_to'></a>move_to</b>
+        <b>{</b>
+            <font color='#009900'>/*!
+                This class move assigns an object to `me`.
+            !*/</font>
+            <b><a name='move_to'></a>move_to</b><font face='Lucida Console'>(</font>type_safe_union<font color='#5555FF'>&amp;</font> me<font face='Lucida Console'>)</font> : _me<font face='Lucida Console'>(</font>me<font face='Lucida Console'>)</font> <b>{</b><b>}</b>
+
+            <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>T<font color='#5555FF'>&amp;</font> x<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>_me.type_identity <font color='#5555FF'>!</font><font color='#5555FF'>=</font> get_type_id<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+                <b>{</b>
+                    _me.construct<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>std::<font color='#BB00BB'>move</font><font face='Lucida Console'>(</font>x<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+                <b>}</b>
+                <font color='#0000FF'>else</font>
+                <b>{</b>
+                    _me.<font color='#0000FF'>template</font> unchecked_get<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>=</font> std::<font color='#BB00BB'>move</font><font face='Lucida Console'>(</font>x<font face='Lucida Console'>)</font>;
+                <b>}</b>
+            <b>}</b>
+
+            type_safe_union<font color='#5555FF'>&amp;</font> _me;
+        <b>}</b>;
+
+        <font color='#0000FF'>struct</font> <b><a name='swap_to'></a>swap_to</b>
+        <b>{</b>
+            <font color='#009900'>/*!
+                This class swaps an object with `me`.
+            !*/</font>
+            <b><a name='swap_to'></a>swap_to</b><font face='Lucida Console'>(</font>type_safe_union<font color='#5555FF'>&amp;</font> me<font face='Lucida Console'>)</font> : _me<font face='Lucida Console'>(</font>me<font face='Lucida Console'>)</font> <b>{</b><b>}</b>
+            <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>T<font color='#5555FF'>&amp;</font> x<font face='Lucida Console'>)</font>
+            <font color='#009900'>/*!
+                requires
+                    - _me.contains&lt;T&gt;() == true
+            !*/</font>
+            <b>{</b>
+                <font color='#0000FF'>using</font> std::swap;
+                <font color='#BB00BB'>swap</font><font face='Lucida Console'>(</font>_me.unchecked_get<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, x<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            type_safe_union<font color='#5555FF'>&amp;</font> _me;
+        <b>}</b>;
+
+    <font color='#0000FF'>public</font>:
+
+        <b><a name='type_safe_union'></a>type_safe_union</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>=</font> <font color='#0000FF'>default</font>;
+
+        <b><a name='type_safe_union'></a>type_safe_union</b> <font face='Lucida Console'>(</font>
+            <font color='#0000FF'>const</font> type_safe_union<font color='#5555FF'>&amp;</font> item
+        <font face='Lucida Console'>)</font> : type_safe_union<font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>
+        <b>{</b>
+            item.<font color='#BB00BB'>apply_to_contents</font><font face='Lucida Console'>(</font>assign_to<b>{</b><font color='#5555FF'>*</font><font color='#0000FF'>this</font><b>}</b><font face='Lucida Console'>)</font>;
+        <b>}</b>
+
+        type_safe_union<font color='#5555FF'>&amp;</font> <b><a name='operator'></a>operator</b><font color='#5555FF'>=</font><font face='Lucida Console'>(</font>
+            <font color='#0000FF'>const</font> type_safe_union<font color='#5555FF'>&amp;</font> item
+        <font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>item.<font color='#BB00BB'>is_empty</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+                <font color='#BB00BB'>destruct</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+            <font color='#0000FF'>else</font>
+                item.<font color='#BB00BB'>apply_to_contents</font><font face='Lucida Console'>(</font>assign_to<b>{</b><font color='#5555FF'>*</font><font color='#0000FF'>this</font><b>}</b><font face='Lucida Console'>)</font>;
+            <font color='#0000FF'>return</font> <font color='#5555FF'>*</font><font color='#0000FF'>this</font>;
+        <b>}</b>
+
+        <b><a name='type_safe_union'></a>type_safe_union</b> <font face='Lucida Console'>(</font>
+            type_safe_union<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> item
+        <font face='Lucida Console'>)</font> : type_safe_union<font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>
+        <b>{</b>
+            item.<font color='#BB00BB'>apply_to_contents</font><font face='Lucida Console'>(</font>move_to<b>{</b><font color='#5555FF'>*</font><font color='#0000FF'>this</font><b>}</b><font face='Lucida Console'>)</font>;
+            item.<font color='#BB00BB'>destruct</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+        <b>}</b>
+
+        type_safe_union<font color='#5555FF'>&amp;</font> <b><a name='operator'></a>operator</b><font color='#5555FF'>=</font> <font face='Lucida Console'>(</font>
+            type_safe_union<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> item
+        <font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>item.<font color='#BB00BB'>is_empty</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>destruct</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+            <b>}</b>
+            <font color='#0000FF'>else</font>
+            <b>{</b>
+                item.<font color='#BB00BB'>apply_to_contents</font><font face='Lucida Console'>(</font>move_to<b>{</b><font color='#5555FF'>*</font><font color='#0000FF'>this</font><b>}</b><font face='Lucida Console'>)</font>;
+                item.<font color='#BB00BB'>destruct</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+            <b>}</b>
+            <font color='#0000FF'>return</font> <font color='#5555FF'>*</font><font color='#0000FF'>this</font>;
+        <b>}</b>
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font>
+            <font color='#0000FF'>typename</font> T,
+            is_valid_check<font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> std::decay<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font>::type<font color='#5555FF'>&gt;</font> <font color='#5555FF'>=</font> <font color='#979000'>true</font>
+        <font color='#5555FF'>&gt;</font>
+        <b><a name='type_safe_union'></a>type_safe_union</b> <font face='Lucida Console'>(</font>
+            T<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> item
+        <font face='Lucida Console'>)</font> : type_safe_union<font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>
+        <b>{</b>
+            assign_to<b>{</b><font color='#5555FF'>*</font><font color='#0000FF'>this</font><b>}</b><font face='Lucida Console'>(</font>std::forward<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>item<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+        <b>}</b>
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font>
+            <font color='#0000FF'>typename</font> T,
+            is_valid_check<font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> std::decay<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font>::type<font color='#5555FF'>&gt;</font> <font color='#5555FF'>=</font> <font color='#979000'>true</font>
+        <font color='#5555FF'>&gt;</font>
+        type_safe_union<font color='#5555FF'>&amp;</font> <b><a name='operator'></a>operator</b><font color='#5555FF'>=</font> <font face='Lucida Console'>(</font>
+            T<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> item
+        <font face='Lucida Console'>)</font>
+        <b>{</b>
+            assign_to<b>{</b><font color='#5555FF'>*</font><font color='#0000FF'>this</font><b>}</b><font face='Lucida Console'>(</font>std::forward<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>item<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+            <font color='#0000FF'>return</font> <font color='#5555FF'>*</font><font color='#0000FF'>this</font>;
+        <b>}</b>
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font>
+            <font color='#0000FF'>typename</font> T,
+            <font color='#0000FF'>typename</font>... Args,
+            is_valid_check<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font> <font color='#5555FF'>=</font> <font color='#979000'>true</font>
+        <font color='#5555FF'>&gt;</font>
+        <b><a name='type_safe_union'></a>type_safe_union</b> <font face='Lucida Console'>(</font>
+            in_place_tag<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font>,
+            Args<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font>... args
+        <font face='Lucida Console'>)</font>
+        <b>{</b>
+            construct<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>std::forward<font color='#5555FF'>&lt;</font>Args<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>args<font face='Lucida Console'>)</font>...<font face='Lucida Console'>)</font>;
+        <b>}</b>
+
+        ~<b><a name='type_safe_union'></a>type_safe_union</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#BB00BB'>destruct</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+        <b>}</b>
+
+        <font color='#0000FF'><u>void</u></font> <b><a name='clear'></a>clear</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#BB00BB'>destruct</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+        <b>}</b>
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font>
+            <font color='#0000FF'>typename</font> T,
+            <font color='#0000FF'>typename</font>... Args,
+            is_valid_check<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font> <font color='#5555FF'>=</font> <font color='#979000'>true</font>
+        <font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'><u>void</u></font> <b><a name='emplace'></a>emplace</b><font face='Lucida Console'>(</font>
+            Args<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font>... args
+        <font face='Lucida Console'>)</font>
+        <b>{</b>
+            construct<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>std::forward<font color='#5555FF'>&lt;</font>Args<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>args<font face='Lucida Console'>)</font>...<font face='Lucida Console'>)</font>;
+        <b>}</b>
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> F<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'><u>void</u></font> <b><a name='apply_to_contents'></a>apply_to_contents</b><font face='Lucida Console'>(</font>
+            F<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> f
+        <font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#BB00BB'>apply_to_contents_impl</font><font face='Lucida Console'>(</font>std::forward<font color='#5555FF'>&lt;</font>F<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>f<font face='Lucida Console'>)</font>, <font color='#5555FF'>*</font><font color='#0000FF'>this</font>, dlib::make_index_sequence<font color='#5555FF'>&lt;</font><font color='#0000FF'>sizeof</font>...<font face='Lucida Console'>(</font>Types<font face='Lucida Console'>)</font><font color='#5555FF'>&gt;</font><b>{</b><b>}</b><font face='Lucida Console'>)</font>;
+        <b>}</b>
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> F<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'><u>void</u></font> <b><a name='apply_to_contents'></a>apply_to_contents</b><font face='Lucida Console'>(</font>
+            F<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> f
+        <font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+        <b>{</b>
+            <font color='#BB00BB'>apply_to_contents_impl</font><font face='Lucida Console'>(</font>std::forward<font color='#5555FF'>&lt;</font>F<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>f<font face='Lucida Console'>)</font>, <font color='#5555FF'>*</font><font color='#0000FF'>this</font>, dlib::make_index_sequence<font color='#5555FF'>&lt;</font><font color='#0000FF'>sizeof</font>...<font face='Lucida Console'>(</font>Types<font face='Lucida Console'>)</font><font color='#5555FF'>&gt;</font><b>{</b><b>}</b><font face='Lucida Console'>)</font>;
+        <b>}</b>
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'><u>bool</u></font> <b><a name='contains'></a>contains</b> <font face='Lucida Console'>(</font>
+        <font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+        <b>{</b>
+            <font color='#0000FF'>return</font> type_identity <font color='#5555FF'>=</font><font color='#5555FF'>=</font> get_type_id<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+        <b>}</b>
+
+        <font color='#0000FF'><u>bool</u></font> <b><a name='is_empty'></a>is_empty</b> <font face='Lucida Console'>(</font>
+        <font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+        <b>{</b>
+            <font color='#0000FF'>return</font> type_identity <font color='#5555FF'>=</font><font color='#5555FF'>=</font> <font color='#979000'>0</font>;
+        <b>}</b>
+
+        <font color='#0000FF'><u>int</u></font> <b><a name='get_current_type_id'></a>get_current_type_id</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+        <b>{</b>
+            <font color='#0000FF'>return</font> type_identity;
+        <b>}</b>
+
+        <font color='#0000FF'><u>void</u></font> <b><a name='swap'></a>swap</b> <font face='Lucida Console'>(</font>
+            type_safe_union<font color='#5555FF'>&amp;</font> item
+        <font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>type_identity <font color='#5555FF'>=</font><font color='#5555FF'>=</font> item.type_identity<font face='Lucida Console'>)</font>
+            <b>{</b>
+                item.<font color='#BB00BB'>apply_to_contents</font><font face='Lucida Console'>(</font>swap_to<b>{</b><font color='#5555FF'>*</font><font color='#0000FF'>this</font><b>}</b><font face='Lucida Console'>)</font>;
+            <b>}</b>
+            <font color='#0000FF'>else</font> <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font><font color='#BB00BB'>is_empty</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                item.<font color='#BB00BB'>apply_to_contents</font><font face='Lucida Console'>(</font>move_to<b>{</b><font color='#5555FF'>*</font><font color='#0000FF'>this</font><b>}</b><font face='Lucida Console'>)</font>;
+                item.<font color='#BB00BB'>destruct</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+            <b>}</b>
+            <font color='#0000FF'>else</font> <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>item.<font color='#BB00BB'>is_empty</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>apply_to_contents</font><font face='Lucida Console'>(</font>move_to<b>{</b>item<b>}</b><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>destruct</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+            <b>}</b>
+            <font color='#0000FF'>else</font>
+            <b>{</b>
+                type_safe_union tmp;
+                <font color='#BB00BB'>swap</font><font face='Lucida Console'>(</font>tmp<font face='Lucida Console'>)</font>;      <font color='#009900'>// this -&gt; tmp
+</font>                <font color='#BB00BB'>swap</font><font face='Lucida Console'>(</font>item<font face='Lucida Console'>)</font>;     <font color='#009900'>// item -&gt; this
+</font>                tmp.<font color='#BB00BB'>swap</font><font face='Lucida Console'>(</font>item<font face='Lucida Console'>)</font>; <font color='#009900'>// tmp (this) -&gt; item
+</font>            <b>}</b>
+        <b>}</b>
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font>
+            <font color='#0000FF'>typename</font> T,
+            is_valid_check<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font> <font color='#5555FF'>=</font> <font color='#979000'>true</font>
+        <font color='#5555FF'>&gt;</font>
+        T<font color='#5555FF'>&amp;</font> <b><a name='get'></a>get</b><font face='Lucida Console'>(</font>
+        <font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>type_identity <font color='#5555FF'>!</font><font color='#5555FF'>=</font> get_type_id<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+                construct<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+            <font color='#0000FF'>return</font> unchecked_get<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+        <b>}</b>
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font>
+            <font color='#0000FF'>typename</font> T
+        <font color='#5555FF'>&gt;</font>
+        T<font color='#5555FF'>&amp;</font> <b><a name='get'></a>get</b><font face='Lucida Console'>(</font>
+            in_place_tag<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font>
+        <font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#0000FF'>return</font> get<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+        <b>}</b>
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font>
+            <font color='#0000FF'>typename</font> T,
+            is_valid_check<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font> <font color='#5555FF'>=</font> <font color='#979000'>true</font>
+        <font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>const</font> T<font color='#5555FF'>&amp;</font> <b><a name='cast_to'></a>cast_to</b> <font face='Lucida Console'>(</font>
+        <font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+        <b>{</b>
+            <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>contains<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+                <font color='#0000FF'>return</font> unchecked_get<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+            <font color='#0000FF'>else</font>
+                <font color='#0000FF'>throw</font> <font color='#BB00BB'>bad_type_safe_union_cast</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+        <b>}</b>
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font>
+            <font color='#0000FF'>typename</font> T,
+            is_valid_check<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font> <font color='#5555FF'>=</font> <font color='#979000'>true</font>
+        <font color='#5555FF'>&gt;</font>
+        T<font color='#5555FF'>&amp;</font> <b><a name='cast_to'></a>cast_to</b> <font face='Lucida Console'>(</font>
+        <font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>contains<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+                <font color='#0000FF'>return</font> unchecked_get<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+            <font color='#0000FF'>else</font>
+                <font color='#0000FF'>throw</font> <font color='#BB00BB'>bad_type_safe_union_cast</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+        <b>}</b>
+    <b>}</b>;
+
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> ...Types<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>inline</font> <font color='#0000FF'><u>void</u></font> <b><a name='swap'></a>swap</b> <font face='Lucida Console'>(</font>
+        type_safe_union<font color='#5555FF'>&lt;</font>Types...<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> a,
+        type_safe_union<font color='#5555FF'>&lt;</font>Types...<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> b
+    <font face='Lucida Console'>)</font> <b>{</b> a.<font color='#BB00BB'>swap</font><font face='Lucida Console'>(</font>b<font face='Lucida Console'>)</font>; <b>}</b>
+
+    <font color='#0000FF'>namespace</font> detail
+    <b>{</b>
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font>
+            <font color='#0000FF'>typename</font> F,
+            <font color='#0000FF'>typename</font> TSU,
+            std::<font color='#0000FF'><u>size_t</u></font>... I
+        <font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'><u>void</u></font> <b><a name='for_each_type_impl'></a>for_each_type_impl</b><font face='Lucida Console'>(</font>
+            F<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> f,
+            TSU<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> tsu,
+            dlib::index_sequence<font color='#5555FF'>&lt;</font>I...<font color='#5555FF'>&gt;</font>
+        <font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#0000FF'>using</font> Tsu <font color='#5555FF'>=</font> <font color='#0000FF'>typename</font> std::decay<font color='#5555FF'>&lt;</font>TSU<font color='#5555FF'>&gt;</font>::type;
+            <font face='Lucida Console'>(</font><font color='#0000FF'><u>void</u></font><font face='Lucida Console'>)</font>std::initializer_list<font color='#5555FF'>&lt;</font><font color='#0000FF'><u>int</u></font><font color='#5555FF'>&gt;</font><b>{</b>
+                <font face='Lucida Console'>(</font>std::forward<font color='#5555FF'>&lt;</font>F<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>f<font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>
+                        in_place_tag<font color='#5555FF'>&lt;</font>type_safe_union_alternative_t<font color='#5555FF'>&lt;</font>I, Tsu<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><b>{</b><b>}</b>,
+                        std::forward<font color='#5555FF'>&lt;</font>TSU<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>tsu<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>,
+                 <font color='#979000'>0</font>
+                <font face='Lucida Console'>)</font>...
+            <b>}</b>;
+        <b>}</b>
+
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font>
+            <font color='#0000FF'>typename</font> R,
+            <font color='#0000FF'>typename</font> F,
+            <font color='#0000FF'>typename</font> TSU,
+            std::<font color='#0000FF'><u>size_t</u></font> I
+        <font color='#5555FF'>&gt;</font>
+        R <b><a name='visit_impl_as_type'></a>visit_impl_as_type</b><font face='Lucida Console'>(</font>
+            F<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> f,
+            TSU<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> tsu
+        <font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#0000FF'>using</font> Tsu <font color='#5555FF'>=</font> <font color='#0000FF'>typename</font> std::decay<font color='#5555FF'>&lt;</font>TSU<font color='#5555FF'>&gt;</font>::type;
+            <font color='#0000FF'>using</font> T   <font color='#5555FF'>=</font> type_safe_union_alternative_t<font color='#5555FF'>&lt;</font>I, Tsu<font color='#5555FF'>&gt;</font>;
+            <font color='#0000FF'>return</font> dlib::<font color='#BB00BB'>invoke</font><font face='Lucida Console'>(</font>std::forward<font color='#5555FF'>&lt;</font>F<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>f<font face='Lucida Console'>)</font>, tsu.<font color='#0000FF'>template</font> cast_to<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+        <b>}</b>
+
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font>
+            <font color='#0000FF'>typename</font> R,
+            <font color='#0000FF'>typename</font> F,
+            <font color='#0000FF'>typename</font> TSU,
+            std::<font color='#0000FF'><u>size_t</u></font>... I
+        <font color='#5555FF'>&gt;</font>
+        R <b><a name='visit_impl'></a>visit_impl</b><font face='Lucida Console'>(</font>
+            F<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> f,
+            TSU<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> tsu,
+            dlib::index_sequence<font color='#5555FF'>&lt;</font>I...<font color='#5555FF'>&gt;</font>
+        <font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#0000FF'>using</font> func_t <font color='#5555FF'>=</font> <font color='#BB00BB'>R</font><font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>F<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font>, TSU<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>;
+
+            <font color='#0000FF'>const</font> func_t vtable[] <font color='#5555FF'>=</font> <b>{</b>
+                <font color='#009900'>/*! Empty (type_identity == 0) case !*/</font>
+                []<font face='Lucida Console'>(</font>F<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font>, TSU<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font> <b>{</b>
+                    <font color='#0000FF'>return</font> <font color='#BB00BB'>R</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <b>}</b>,
+                <font color='#009900'>/*! Non-empty cases !*/</font>
+                <font color='#5555FF'>&amp;</font>visit_impl_as_type<font color='#5555FF'>&lt;</font>R,F<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font>,TSU<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font>,I<font color='#5555FF'>&gt;</font>...
+            <b>}</b>;
+
+            <font color='#0000FF'>return</font> vtable[tsu.<font color='#BB00BB'>get_current_type_id</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>]<font face='Lucida Console'>(</font>std::forward<font color='#5555FF'>&lt;</font>F<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>f<font face='Lucida Console'>)</font>, std::forward<font color='#5555FF'>&lt;</font>TSU<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>tsu<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+        <b>}</b>
+    <b>}</b>
+
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font>
+        <font color='#0000FF'>typename</font> TSU,
+        <font color='#0000FF'>typename</font> F
+    <font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'><u>void</u></font> <b><a name='for_each_type'></a>for_each_type</b><font face='Lucida Console'>(</font>
+        F<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> f,
+        TSU<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> tsu
+    <font face='Lucida Console'>)</font>
+    <b>{</b>
+        <font color='#0000FF'>using</font> Tsu <font color='#5555FF'>=</font> <font color='#0000FF'>typename</font> std::decay<font color='#5555FF'>&lt;</font>TSU<font color='#5555FF'>&gt;</font>::type;
+        <font color='#0000FF'>static</font> constexpr std::<font color='#0000FF'><u>size_t</u></font> Size <font color='#5555FF'>=</font> type_safe_union_size<font color='#5555FF'>&lt;</font>Tsu<font color='#5555FF'>&gt;</font>::value;
+        detail::<font color='#BB00BB'>for_each_type_impl</font><font face='Lucida Console'>(</font>std::forward<font color='#5555FF'>&lt;</font>F<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>f<font face='Lucida Console'>)</font>, std::forward<font color='#5555FF'>&lt;</font>TSU<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>tsu<font face='Lucida Console'>)</font>, dlib::make_index_sequence<font color='#5555FF'>&lt;</font>Size<font color='#5555FF'>&gt;</font><b>{</b><b>}</b><font face='Lucida Console'>)</font>;
+    <b>}</b>
+
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font>
+        <font color='#0000FF'>typename</font> F,
+        <font color='#0000FF'>typename</font> TSU,
+        <font color='#0000FF'>typename</font> Tsu <font color='#5555FF'>=</font> <font color='#0000FF'>typename</font> std::decay<font color='#5555FF'>&lt;</font>TSU<font color='#5555FF'>&gt;</font>::type,
+        <font color='#0000FF'>typename</font> T0  <font color='#5555FF'>=</font> type_safe_union_alternative_t<font color='#5555FF'>&lt;</font><font color='#979000'>0</font>, Tsu<font color='#5555FF'>&gt;</font>
+    <font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>auto</font> <b><a name='visit'></a>visit</b><font face='Lucida Console'>(</font>
+        F<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> f,
+        TSU<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> tsu
+    <font face='Lucida Console'>)</font> <font color='#5555FF'>-</font><font color='#5555FF'>&gt;</font> dlib::invoke_result_t<font color='#5555FF'>&lt;</font>F, <b><a name='decltype'></a>decltype</b><font face='Lucida Console'>(</font>tsu.<font color='#0000FF'>template</font> cast_to<font color='#5555FF'>&lt;</font>T0<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font><font color='#5555FF'>&gt;</font>
+    <b>{</b>
+        <font color='#0000FF'>using</font> ReturnType <font color='#5555FF'>=</font> dlib::invoke_result_t<font color='#5555FF'>&lt;</font>F, <font color='#BB00BB'>decltype</font><font face='Lucida Console'>(</font>tsu.<font color='#0000FF'>template</font> cast_to<font color='#5555FF'>&lt;</font>T0<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font><font color='#5555FF'>&gt;</font>;
+        <font color='#0000FF'>static</font> constexpr std::<font color='#0000FF'><u>size_t</u></font> Size <font color='#5555FF'>=</font> type_safe_union_size<font color='#5555FF'>&lt;</font>Tsu<font color='#5555FF'>&gt;</font>::value;
+        <font color='#0000FF'>return</font> detail::visit_impl<font color='#5555FF'>&lt;</font>ReturnType<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>std::forward<font color='#5555FF'>&lt;</font>F<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>f<font face='Lucida Console'>)</font>, std::forward<font color='#5555FF'>&lt;</font>TSU<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>tsu<font face='Lucida Console'>)</font>, dlib::make_index_sequence<font color='#5555FF'>&lt;</font>Size<font color='#5555FF'>&gt;</font><b>{</b><b>}</b><font face='Lucida Console'>)</font>;
+    <b>}</b>
+
+    <font color='#0000FF'>namespace</font> detail
+    <b>{</b>
+        <font color='#0000FF'>struct</font> <b><a name='serialize_helper'></a>serialize_helper</b>
+        <b>{</b>
+            <b><a name='serialize_helper'></a>serialize_helper</b><font face='Lucida Console'>(</font>std::ostream<font color='#5555FF'>&amp;</font> out_<font face='Lucida Console'>)</font> : out<font face='Lucida Console'>(</font>out_<font face='Lucida Console'>)</font> <b>{</b><b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font face='Lucida Console'>(</font><font color='#0000FF'>const</font> T<font color='#5555FF'>&amp;</font> item<font face='Lucida Console'>)</font> <font color='#0000FF'>const</font> 
+            <b>{</b> 
+                <font color='#BB00BB'>serialize</font><font face='Lucida Console'>(</font>item, out<font face='Lucida Console'>)</font>; 
+            <b>}</b> 
+
+            std::ostream<font color='#5555FF'>&amp;</font> out;
+        <b>}</b>;  
+
+        <font color='#0000FF'>struct</font> <b><a name='deserialize_helper'></a>deserialize_helper</b>
+        <b>{</b>
+            <b><a name='deserialize_helper'></a>deserialize_helper</b><font face='Lucida Console'>(</font>
+                std::istream<font color='#5555FF'>&amp;</font> in_,
+                <font color='#0000FF'><u>int</u></font> index_
+            <font face='Lucida Console'>)</font> : index<font face='Lucida Console'>(</font>index_<font face='Lucida Console'>)</font>,
+                in<font face='Lucida Console'>(</font>in_<font face='Lucida Console'>)</font>
+            <b>{</b><b>}</b>
+
+            <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T, <font color='#0000FF'>typename</font> TSU<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>in_place_tag<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font>, TSU<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> x<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>index <font color='#5555FF'>=</font><font color='#5555FF'>=</font> x.<font color='#0000FF'>template</font> get_type_id<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+                    <font color='#BB00BB'>deserialize</font><font face='Lucida Console'>(</font>x.<font color='#0000FF'>template</font> get<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, in<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>const</font> <font color='#0000FF'><u>int</u></font> index <font color='#5555FF'>=</font> <font color='#5555FF'>-</font><font color='#979000'>1</font>;
+            std::istream<font color='#5555FF'>&amp;</font> in;
+        <b>}</b>;
+    <b>}</b> <font color='#009900'>// namespace detail
+</font>
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font>... Types<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>inline</font> <font color='#0000FF'><u>void</u></font> <b><a name='serialize'></a>serialize</b> <font face='Lucida Console'>(</font>
+        <font color='#0000FF'>const</font> type_safe_union<font color='#5555FF'>&lt;</font>Types...<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> item,
+        std::ostream<font color='#5555FF'>&amp;</font> out
+    <font face='Lucida Console'>)</font>
+    <b>{</b>
+        <font color='#0000FF'>try</font>
+        <b>{</b>
+            <font color='#BB00BB'>serialize</font><font face='Lucida Console'>(</font>item.<font color='#BB00BB'>get_current_type_id</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, out<font face='Lucida Console'>)</font>;
+            item.<font color='#BB00BB'>apply_to_contents</font><font face='Lucida Console'>(</font>detail::<font color='#BB00BB'>serialize_helper</font><font face='Lucida Console'>(</font>out<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+        <b>}</b>
+        <font color='#0000FF'>catch</font> <font face='Lucida Console'>(</font>serialization_error<font color='#5555FF'>&amp;</font> e<font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#0000FF'>throw</font> <font color='#BB00BB'>serialization_error</font><font face='Lucida Console'>(</font>e.info <font color='#5555FF'>+</font> "<font color='#CC0000'>\n   while serializing an object of type type_safe_union</font>"<font face='Lucida Console'>)</font>;
+        <b>}</b>
+    <b>}</b>
+
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font>... Types<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>inline</font> <font color='#0000FF'><u>void</u></font> <b><a name='deserialize'></a>deserialize</b> <font face='Lucida Console'>(</font>
+        type_safe_union<font color='#5555FF'>&lt;</font>Types...<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> item,
+        std::istream<font color='#5555FF'>&amp;</font> in
+    <font face='Lucida Console'>)</font>
+    <b>{</b>
+        <font color='#0000FF'>try</font>
+        <b>{</b>
+            <font color='#0000FF'><u>int</u></font> index <font color='#5555FF'>=</font> <font color='#5555FF'>-</font><font color='#979000'>1</font>;
+            <font color='#BB00BB'>deserialize</font><font face='Lucida Console'>(</font>index, in<font face='Lucida Console'>)</font>;
+
+            <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>index <font color='#5555FF'>=</font><font color='#5555FF'>=</font> <font color='#979000'>0</font><font face='Lucida Console'>)</font>
+                item.<font color='#BB00BB'>clear</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+            <font color='#0000FF'>else</font> <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>index <font color='#5555FF'>&gt;</font> <font color='#979000'>0</font> <font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> index <font color='#5555FF'>&lt;</font><font color='#5555FF'>=</font> <font face='Lucida Console'>(</font><font color='#0000FF'><u>int</u></font><font face='Lucida Console'>)</font><font color='#0000FF'>sizeof</font>...<font face='Lucida Console'>(</font>Types<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+                <font color='#BB00BB'>for_each_type</font><font face='Lucida Console'>(</font>detail::<font color='#BB00BB'>deserialize_helper</font><font face='Lucida Console'>(</font>in, index<font face='Lucida Console'>)</font>, item<font face='Lucida Console'>)</font>;
+            <font color='#0000FF'>else</font>
+                <font color='#0000FF'>throw</font> <font color='#BB00BB'>serialization_error</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>bad index value. Should be in range [0,sizeof...(Types))</font>"<font face='Lucida Console'>)</font>;
+        <b>}</b>
+        <font color='#0000FF'>catch</font><font face='Lucida Console'>(</font>serialization_error<font color='#5555FF'>&amp;</font> e<font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#0000FF'>throw</font> <font color='#BB00BB'>serialization_error</font><font face='Lucida Console'>(</font>e.info <font color='#5555FF'>+</font> "<font color='#CC0000'>\n   while deserializing an object of type type_safe_union</font>"<font face='Lucida Console'>)</font>;
+        <b>}</b>
+    <b>}</b>
+
+<font color='#0000FF'>#if</font> __cplusplus <font color='#5555FF'>&gt;</font><font color='#5555FF'>=</font> <font color='#979000'>201703</font>L
+
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> ...Base<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>struct</font> <b><a name='overloaded_helper'></a>overloaded_helper</b> : Base...
+    <b>{</b>
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font>... T<font color='#5555FF'>&gt;</font>
+        <b><a name='overloaded_helper'></a>overloaded_helper</b><font face='Lucida Console'>(</font>T<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> ... t<font face='Lucida Console'>)</font> : Base<b>{</b>std::forward<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>t<font face='Lucida Console'>)</font><b>}</b>... <b>{</b><b>}</b>
+
+        <font color='#0000FF'>using</font> Base::<b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>...;
+    <b>}</b>;
+
+<font color='#0000FF'>#else</font>
+
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> Base, <font color='#0000FF'>typename</font> ... BaseRest<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>struct</font> <b><a name='overloaded_helper'></a>overloaded_helper</b>: Base, overloaded_helper<font color='#5555FF'>&lt;</font>BaseRest...<font color='#5555FF'>&gt;</font>
+    <b>{</b>
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T, <font color='#0000FF'>typename</font> ... TRest<font color='#5555FF'>&gt;</font>
+        <b><a name='overloaded_helper'></a>overloaded_helper</b><font face='Lucida Console'>(</font>T<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> t, TRest<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> ...trest<font face='Lucida Console'>)</font> :
+            Base<b>{</b>std::forward<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>t<font face='Lucida Console'>)</font><b>}</b>,
+            overloaded_helper<font color='#5555FF'>&lt;</font>BaseRest...<font color='#5555FF'>&gt;</font><b>{</b>std::forward<font color='#5555FF'>&lt;</font>TRest<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>trest<font face='Lucida Console'>)</font>...<b>}</b>
+        <b>{</b><b>}</b>
+
+        <font color='#0000FF'>using</font> Base::<b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+        <font color='#0000FF'>using</font> overloaded_helper<font color='#5555FF'>&lt;</font>BaseRest...<font color='#5555FF'>&gt;</font>::<b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+    <b>}</b>;
+
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> Base<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>struct</font> <b><a name='overloaded_helper'></a>overloaded_helper</b><font color='#5555FF'>&lt;</font>Base<font color='#5555FF'>&gt;</font> : Base
+    <b>{</b>
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T<font color='#5555FF'>&gt;</font>
+        overloaded_helper<font color='#5555FF'>&lt;</font>Base<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>T<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> t<font face='Lucida Console'>)</font> : Base<b>{</b>std::forward<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>t<font face='Lucida Console'>)</font><b>}</b>
+        <b>{</b><b>}</b>
+
+        <font color='#0000FF'>using</font> Base::<b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+    <b>}</b>;
+
+<font color='#0000FF'>#endif</font> <font color='#009900'>//__cplusplus &gt;= 201703L
+</font>
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font>... T<font color='#5555FF'>&gt;</font>
+    overloaded_helper<font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> std::decay<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font>::type...<font color='#5555FF'>&gt;</font> <b><a name='overloaded'></a>overloaded</b><font face='Lucida Console'>(</font>T<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font>... t<font face='Lucida Console'>)</font>
+    <b>{</b>
+        <font color='#0000FF'>return</font> overloaded_helper<font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> std::decay<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font>::type...<font color='#5555FF'>&gt;</font><b>{</b>std::forward<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>t<font face='Lucida Console'>)</font>...<b>}</b>;
+    <b>}</b>
+<b>}</b>
+
+<font color='#0000FF'>#endif</font> <font color='#009900'>// DLIB_TYPE_SAFE_UNIOn_h_
+</font>
+</pre></body></html>

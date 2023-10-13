@@ -1,0 +1,998 @@
+<html><!-- Created using the cpp_pretty_printer from the dlib C++ library.  See http://dlib.net for updates. --><head><title>dlib C++ Library - visitors.h</title></head><body bgcolor='white'><pre>
+<font color='#009900'>// Copyright (C) 2022  Davis E. King (davis@dlib.net)
+</font><font color='#009900'>// License: Boost Software License   See LICENSE.txt for the full license.
+</font><font color='#0000FF'>#ifndef</font> DLIB_DNn_VISITORS_H_
+<font color='#0000FF'>#define</font> DLIB_DNn_VISITORS_H_
+
+<font color='#0000FF'>#include</font> "<a style='text-decoration:none' href='input.h.html'>input.h</a>"
+<font color='#0000FF'>#include</font> "<a style='text-decoration:none' href='layers.h.html'>layers.h</a>"
+<font color='#0000FF'>#include</font> "<a style='text-decoration:none' href='loss.h.html'>loss.h</a>"
+
+<font color='#0000FF'>namespace</font> dlib
+<b>{</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>namespace</font> impl
+    <b>{</b>
+
+        <font color='#0000FF'>class</font> <b><a name='visitor_net_map_input_to_output'></a>visitor_net_map_input_to_output</b>
+        <b>{</b>
+        <font color='#0000FF'>public</font>:
+
+            <b><a name='visitor_net_map_input_to_output'></a>visitor_net_map_input_to_output</b><font face='Lucida Console'>(</font>dpoint<font color='#5555FF'>&amp;</font> p_<font face='Lucida Console'>)</font> : p<font face='Lucida Console'>(</font>p_<font face='Lucida Console'>)</font> <b>{</b><b>}</b>
+
+            dpoint<font color='#5555FF'>&amp;</font> p;
+
+            <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> input_layer_type<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> input_layer_type<font color='#5555FF'>&amp;</font> <font face='Lucida Console'>)</font>
+            <b>{</b>
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T, <font color='#0000FF'>typename</font> U<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> add_loss_layer<font color='#5555FF'>&lt;</font>T,U<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> net<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font color='#0000FF'>this</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>net.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>T,U,E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> net<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font color='#0000FF'>this</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>net.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+                p <font color='#5555FF'>=</font> net.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>map_input_to_output</font><font face='Lucida Console'>(</font>p<font face='Lucida Console'>)</font>;
+            <b>}</b>
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>bool</u></font> B, <font color='#0000FF'>typename</font> T, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> dimpl::subnet_wrapper<font color='#5555FF'>&lt;</font>add_layer<font color='#5555FF'>&lt;</font>T,U,E<font color='#5555FF'>&gt;</font>,B<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> net<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font color='#0000FF'>this</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>net.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+                p <font color='#5555FF'>=</font> net.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>map_input_to_output</font><font face='Lucida Console'>(</font>p<font face='Lucida Console'>)</font>;
+            <b>}</b>
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>size_t</u></font> N, <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='R'></a>R</b>, <font color='#0000FF'>typename</font> U<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> repeat<font color='#5555FF'>&lt;</font>N, R, U<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> net<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font color='#0000FF'>this</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>net.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i <font color='#5555FF'>=</font> <font color='#979000'>0</font>; i <font color='#5555FF'>&lt;</font> N; <font color='#5555FF'>+</font><font color='#5555FF'>+</font>i<font face='Lucida Console'>)</font>
+                <b>{</b>
+                    <font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font color='#0000FF'>this</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>net.<font color='#BB00BB'>get_repeated_layer</font><font face='Lucida Console'>(</font>N<font color='#5555FF'>-</font><font color='#979000'>1</font><font color='#5555FF'>-</font>i<font face='Lucida Console'>)</font>.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+                <b>}</b>
+            <b>}</b>
+
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>long</u></font> ID, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> add_tag_layer<font color='#5555FF'>&lt;</font>ID,U,E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> net<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#009900'>// tag layers are an identity transform, so do nothing
+</font>                <font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font color='#0000FF'>this</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>net.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+            <b>}</b>
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>bool</u></font> is_first, <font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>long</u></font> ID, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> dimpl::subnet_wrapper<font color='#5555FF'>&lt;</font>add_tag_layer<font color='#5555FF'>&lt;</font>ID,U,E<font color='#5555FF'>&gt;</font>,is_first<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> net<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#009900'>// tag layers are an identity transform, so do nothing
+</font>                <font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font color='#0000FF'>this</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>net.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='TAG_TYPE'></a>TAG_TYPE</b>, <font color='#0000FF'>typename</font> U<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> add_skip_layer<font color='#5555FF'>&lt;</font>TAG_TYPE,U<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> net<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font color='#0000FF'>this</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>layer<font color='#5555FF'>&lt;</font>TAG_TYPE<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>net<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+            <b>}</b>
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>bool</u></font> is_first, <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='TAG_TYPE'></a>TAG_TYPE</b>, <font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> dimpl::subnet_wrapper<font color='#5555FF'>&lt;</font>add_skip_layer<font color='#5555FF'>&lt;</font>TAG_TYPE,SUBNET<font color='#5555FF'>&gt;</font>,is_first<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> net<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#009900'>// skip layers are an identity transform, so do nothing
+</font>                <font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font color='#0000FF'>this</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>layer<font color='#5555FF'>&lt;</font>TAG_TYPE<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>net<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+        <b>}</b>;
+
+        <font color='#0000FF'>class</font> <b><a name='visitor_net_map_output_to_input'></a>visitor_net_map_output_to_input</b>
+        <b>{</b>
+        <font color='#0000FF'>public</font>:
+            <b><a name='visitor_net_map_output_to_input'></a>visitor_net_map_output_to_input</b><font face='Lucida Console'>(</font>dpoint<font color='#5555FF'>&amp;</font> p_<font face='Lucida Console'>)</font> : p<font face='Lucida Console'>(</font>p_<font face='Lucida Console'>)</font> <b>{</b><b>}</b>
+
+            dpoint<font color='#5555FF'>&amp;</font> p;
+
+            <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> input_layer_type<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> input_layer_type<font color='#5555FF'>&amp;</font> <font face='Lucida Console'>)</font>
+            <b>{</b>
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T, <font color='#0000FF'>typename</font> U<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> add_loss_layer<font color='#5555FF'>&lt;</font>T,U<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> net<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font color='#0000FF'>this</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>net.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>T,U,E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> net<font face='Lucida Console'>)</font>
+            <b>{</b>
+                p <font color='#5555FF'>=</font> net.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>map_output_to_input</font><font face='Lucida Console'>(</font>p<font face='Lucida Console'>)</font>;
+                <font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font color='#0000FF'>this</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>net.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+            <b>}</b>
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>bool</u></font> B, <font color='#0000FF'>typename</font> T, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> dimpl::subnet_wrapper<font color='#5555FF'>&lt;</font>add_layer<font color='#5555FF'>&lt;</font>T,U,E<font color='#5555FF'>&gt;</font>,B<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> net<font face='Lucida Console'>)</font>
+            <b>{</b>
+                p <font color='#5555FF'>=</font> net.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>map_output_to_input</font><font face='Lucida Console'>(</font>p<font face='Lucida Console'>)</font>;
+                <font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font color='#0000FF'>this</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>net.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+            <b>}</b>
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>size_t</u></font> N, <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='R'></a>R</b>, <font color='#0000FF'>typename</font> U<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> repeat<font color='#5555FF'>&lt;</font>N, R, U<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> net<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i <font color='#5555FF'>=</font> <font color='#979000'>0</font>; i <font color='#5555FF'>&lt;</font> N; <font color='#5555FF'>+</font><font color='#5555FF'>+</font>i<font face='Lucida Console'>)</font>
+                <b>{</b>
+                    <font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font color='#0000FF'>this</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>net.<font color='#BB00BB'>get_repeated_layer</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+                <b>}</b>
+                <font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font color='#0000FF'>this</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>net.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>long</u></font> ID, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> add_tag_layer<font color='#5555FF'>&lt;</font>ID,U,E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> net<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#009900'>// tag layers are an identity transform, so do nothing
+</font>                <font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font color='#0000FF'>this</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>net.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+            <b>}</b>
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>bool</u></font> is_first, <font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>long</u></font> ID, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> dimpl::subnet_wrapper<font color='#5555FF'>&lt;</font>add_tag_layer<font color='#5555FF'>&lt;</font>ID,U,E<font color='#5555FF'>&gt;</font>,is_first<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> net<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#009900'>// tag layers are an identity transform, so do nothing
+</font>                <font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font color='#0000FF'>this</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>net.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='TAG_TYPE'></a>TAG_TYPE</b>, <font color='#0000FF'>typename</font> U<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> add_skip_layer<font color='#5555FF'>&lt;</font>TAG_TYPE,U<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> net<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font color='#0000FF'>this</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>layer<font color='#5555FF'>&lt;</font>TAG_TYPE<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>net<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+            <b>}</b>
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>bool</u></font> is_first, <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='TAG_TYPE'></a>TAG_TYPE</b>, <font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> dimpl::subnet_wrapper<font color='#5555FF'>&lt;</font>add_skip_layer<font color='#5555FF'>&lt;</font>TAG_TYPE,SUBNET<font color='#5555FF'>&gt;</font>,is_first<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> net<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#009900'>// skip layers are an identity transform, so do nothing
+</font>                <font face='Lucida Console'>(</font><font color='#5555FF'>*</font><font color='#0000FF'>this</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>layer<font color='#5555FF'>&lt;</font>TAG_TYPE<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>net<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+        <b>}</b>;
+    <b>}</b>
+
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> net_type<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>inline</font> dpoint <b><a name='input_tensor_to_output_tensor'></a>input_tensor_to_output_tensor</b><font face='Lucida Console'>(</font>
+        <font color='#0000FF'>const</font> net_type<font color='#5555FF'>&amp;</font> net,
+        dpoint p
+    <font face='Lucida Console'>)</font>
+    <b>{</b>
+        impl::visitor_net_map_input_to_output <font color='#BB00BB'>temp</font><font face='Lucida Console'>(</font>p<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>temp</font><font face='Lucida Console'>(</font>net<font face='Lucida Console'>)</font>;
+        <font color='#0000FF'>return</font> p;
+    <b>}</b>
+
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> net_type<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>inline</font> dpoint <b><a name='output_tensor_to_input_tensor'></a>output_tensor_to_input_tensor</b><font face='Lucida Console'>(</font>
+        <font color='#0000FF'>const</font> net_type<font color='#5555FF'>&amp;</font> net,
+        dpoint p
+    <font face='Lucida Console'>)</font>
+    <b>{</b>
+        impl::visitor_net_map_output_to_input <font color='#BB00BB'>temp</font><font face='Lucida Console'>(</font>p<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>temp</font><font face='Lucida Console'>(</font>net<font face='Lucida Console'>)</font>;
+        <font color='#0000FF'>return</font> p;
+    <b>}</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> net_type<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'><u>size_t</u></font> <b><a name='count_parameters'></a>count_parameters</b><font face='Lucida Console'>(</font>
+        <font color='#0000FF'>const</font> net_type<font color='#5555FF'>&amp;</font> net
+    <font face='Lucida Console'>)</font>
+    <b>{</b>
+        <font color='#0000FF'><u>size_t</u></font> num_parameters <font color='#5555FF'>=</font> <font color='#979000'>0</font>;
+        <font color='#BB00BB'>visit_layer_parameters</font><font face='Lucida Console'>(</font>net, [<font color='#5555FF'>&amp;</font>]<font face='Lucida Console'>(</font><font color='#0000FF'>const</font> tensor<font color='#5555FF'>&amp;</font> t<font face='Lucida Console'>)</font> <b>{</b> num_parameters <font color='#5555FF'>+</font><font color='#5555FF'>=</font> t.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>; <b>}</b><font face='Lucida Console'>)</font>;
+        <font color='#0000FF'>return</font> num_parameters;
+    <b>}</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>namespace</font> impl
+    <b>{</b>
+        <font color='#0000FF'>class</font> <b><a name='visitor_learning_rate_multiplier'></a>visitor_learning_rate_multiplier</b>
+        <b>{</b>
+        <font color='#0000FF'>public</font>:
+            <b><a name='visitor_learning_rate_multiplier'></a>visitor_learning_rate_multiplier</b><font face='Lucida Console'>(</font><font color='#0000FF'><u>double</u></font> new_learning_rate_multiplier_<font face='Lucida Console'>)</font> :
+                new_learning_rate_multiplier<font face='Lucida Console'>(</font>new_learning_rate_multiplier_<font face='Lucida Console'>)</font> <b>{</b><b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> layer<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>layer<font color='#5555FF'>&amp;</font> l<font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+            <b>{</b>
+                <font color='#BB00BB'>set_learning_rate_multiplier</font><font face='Lucida Console'>(</font>l, new_learning_rate_multiplier<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+        <font color='#0000FF'>private</font>:
+
+            <font color='#0000FF'><u>double</u></font> new_learning_rate_multiplier;
+        <b>}</b>;
+    <b>}</b>
+
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> net_type<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'><u>void</u></font> <b><a name='set_all_learning_rate_multipliers'></a>set_all_learning_rate_multipliers</b><font face='Lucida Console'>(</font>
+        net_type<font color='#5555FF'>&amp;</font> net,
+        <font color='#0000FF'><u>double</u></font> learning_rate_multiplier
+    <font face='Lucida Console'>)</font>
+    <b>{</b>
+        <font color='#BB00BB'>DLIB_CASSERT</font><font face='Lucida Console'>(</font>learning_rate_multiplier <font color='#5555FF'>&gt;</font><font color='#5555FF'>=</font> <font color='#979000'>0</font><font face='Lucida Console'>)</font>;
+        impl::visitor_learning_rate_multiplier <font color='#BB00BB'>temp</font><font face='Lucida Console'>(</font>learning_rate_multiplier<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>visit_computational_layers</font><font face='Lucida Console'>(</font>net, temp<font face='Lucida Console'>)</font>;
+    <b>}</b>
+
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>size_t</u></font> begin, <font color='#0000FF'><u>size_t</u></font> end, <font color='#0000FF'>typename</font> net_type<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'><u>void</u></font> <b><a name='set_learning_rate_multipliers_range'></a>set_learning_rate_multipliers_range</b><font face='Lucida Console'>(</font>
+        net_type<font color='#5555FF'>&amp;</font> net,
+        <font color='#0000FF'><u>double</u></font> learning_rate_multiplier
+    <font face='Lucida Console'>)</font>
+    <b>{</b>
+        <font color='#BB00BB'>static_assert</font><font face='Lucida Console'>(</font>begin <font color='#5555FF'>&lt;</font><font color='#5555FF'>=</font> end, "<font color='#CC0000'>Invalid range</font>"<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>static_assert</font><font face='Lucida Console'>(</font>end <font color='#5555FF'>&lt;</font><font color='#5555FF'>=</font> net_type::num_layers, "<font color='#CC0000'>Invalid range</font>"<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>DLIB_CASSERT</font><font face='Lucida Console'>(</font>learning_rate_multiplier <font color='#5555FF'>&gt;</font><font color='#5555FF'>=</font> <font color='#979000'>0</font><font face='Lucida Console'>)</font>;
+        impl::visitor_learning_rate_multiplier <font color='#BB00BB'>temp</font><font face='Lucida Console'>(</font>learning_rate_multiplier<font face='Lucida Console'>)</font>;
+        visit_computational_layers_range<font color='#5555FF'>&lt;</font>begin, end<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>net, temp<font face='Lucida Console'>)</font>;
+    <b>}</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>namespace</font> impl
+    <b>{</b>
+        <font color='#0000FF'>class</font> <b><a name='visitor_bn_running_stats_window_size'></a>visitor_bn_running_stats_window_size</b>
+        <b>{</b>
+        <font color='#0000FF'>public</font>:
+
+            <b><a name='visitor_bn_running_stats_window_size'></a>visitor_bn_running_stats_window_size</b><font face='Lucida Console'>(</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>long</u></font> new_window_size_<font face='Lucida Console'>)</font> : new_window_size<font face='Lucida Console'>(</font>new_window_size_<font face='Lucida Console'>)</font> <b>{</b><b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='set_window_size'></a>set_window_size</b><font face='Lucida Console'>(</font>T<font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+            <b>{</b>
+                <font color='#009900'>// ignore other layer detail types
+</font>            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font> layer_mode mode <font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='set_window_size'></a>set_window_size</b><font face='Lucida Console'>(</font>bn_<font color='#5555FF'>&lt;</font>mode<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> l<font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+            <b>{</b>
+                l.<font color='#BB00BB'>set_running_stats_window_size</font><font face='Lucida Console'>(</font>new_window_size<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> input_layer_type<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> , input_layer_type<font color='#5555FF'>&amp;</font> <font face='Lucida Console'>)</font>  <font color='#0000FF'>const</font>
+            <b>{</b>
+                <font color='#009900'>// ignore other layers
+</font>            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> , add_layer<font color='#5555FF'>&lt;</font>T,U,E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> l<font face='Lucida Console'>)</font>  <font color='#0000FF'>const</font>
+            <b>{</b>
+                <font color='#BB00BB'>set_window_size</font><font face='Lucida Console'>(</font>l.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+        <font color='#0000FF'>private</font>:
+
+            <font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>long</u></font> new_window_size;
+        <b>}</b>;
+    <b>}</b>
+
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> net_type<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'><u>void</u></font> <b><a name='set_all_bn_running_stats_window_sizes'></a>set_all_bn_running_stats_window_sizes</b> <font face='Lucida Console'>(</font>
+        net_type<font color='#5555FF'>&amp;</font> net,
+        <font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>long</u></font> new_window_size
+    <font face='Lucida Console'>)</font>
+    <b>{</b>
+        <font color='#BB00BB'>visit_layers</font><font face='Lucida Console'>(</font>net, impl::<font color='#BB00BB'>visitor_bn_running_stats_window_size</font><font face='Lucida Console'>(</font>new_window_size<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+    <b>}</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>namespace</font> impl
+    <b>{</b>
+        <font color='#0000FF'>class</font> <b><a name='visitor_disable_input_bias'></a>visitor_disable_input_bias</b>
+        <b>{</b>
+        <font color='#0000FF'>public</font>:
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='disable_input_bias'></a>disable_input_bias</b><font face='Lucida Console'>(</font>T<font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+            <b>{</b>
+                <font color='#009900'>// ignore other layer types
+</font>            <b>}</b>
+
+            <font color='#009900'>// handle the standard case
+</font>            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='disable_input_bias'></a>disable_input_bias</b><font face='Lucida Console'>(</font>add_layer<font color='#5555FF'>&lt;</font>layer_norm_, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> l<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>disable_bias</font><font face='Lucida Console'>(</font>l.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>set_bias_learning_rate_multiplier</font><font face='Lucida Console'>(</font>l.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, <font color='#979000'>0</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>set_bias_weight_decay_multiplier</font><font face='Lucida Console'>(</font>l.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, <font color='#979000'>0</font><font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font>layer_mode mode, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='disable_input_bias'></a>disable_input_bias</b><font face='Lucida Console'>(</font>add_layer<font color='#5555FF'>&lt;</font>bn_<font color='#5555FF'>&lt;</font>mode<font color='#5555FF'>&gt;</font>, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> l<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>disable_bias</font><font face='Lucida Console'>(</font>l.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>set_bias_learning_rate_multiplier</font><font face='Lucida Console'>(</font>l.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, <font color='#979000'>0</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>set_bias_weight_decay_multiplier</font><font face='Lucida Console'>(</font>l.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, <font color='#979000'>0</font><font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#009900'>// handle input repeat layer case
+</font>            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font>layer_mode mode, <font color='#0000FF'><u>size_t</u></font> N, <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='R'></a>R</b>, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='disable_input_bias'></a>disable_input_bias</b><font face='Lucida Console'>(</font>add_layer<font color='#5555FF'>&lt;</font>bn_<font color='#5555FF'>&lt;</font>mode<font color='#5555FF'>&gt;</font>, repeat<font color='#5555FF'>&lt;</font>N, R, U<font color='#5555FF'>&gt;</font>, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> l<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>disable_bias</font><font face='Lucida Console'>(</font>l.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>get_repeated_layer</font><font face='Lucida Console'>(</font><font color='#979000'>0</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>set_bias_learning_rate_multiplier</font><font face='Lucida Console'>(</font>l.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>get_repeated_layer</font><font face='Lucida Console'>(</font><font color='#979000'>0</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, <font color='#979000'>0</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>set_bias_weight_decay_multiplier</font><font face='Lucida Console'>(</font>l.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>get_repeated_layer</font><font face='Lucida Console'>(</font><font color='#979000'>0</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, <font color='#979000'>0</font><font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>size_t</u></font> N, <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='R'></a>R</b>, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='disable_input_bias'></a>disable_input_bias</b><font face='Lucida Console'>(</font>add_layer<font color='#5555FF'>&lt;</font>layer_norm_, repeat<font color='#5555FF'>&lt;</font>N, R, U<font color='#5555FF'>&gt;</font>, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> l<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>disable_bias</font><font face='Lucida Console'>(</font>l.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>get_repeated_layer</font><font face='Lucida Console'>(</font><font color='#979000'>0</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>set_bias_learning_rate_multiplier</font><font face='Lucida Console'>(</font>l.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>get_repeated_layer</font><font face='Lucida Console'>(</font><font color='#979000'>0</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, <font color='#979000'>0</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>set_bias_weight_decay_multiplier</font><font face='Lucida Console'>(</font>l.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>get_repeated_layer</font><font face='Lucida Console'>(</font><font color='#979000'>0</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, <font color='#979000'>0</font><font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#009900'>// handle input repeat layer with tag case
+</font>            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font>layer_mode mode, <font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>long</u></font> ID, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='disable_input_bias'></a>disable_input_bias</b><font face='Lucida Console'>(</font>add_layer<font color='#5555FF'>&lt;</font>bn_<font color='#5555FF'>&lt;</font>mode<font color='#5555FF'>&gt;</font>, add_tag_layer<font color='#5555FF'>&lt;</font>ID, impl::repeat_input_layer<font color='#5555FF'>&gt;</font>, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> <font face='Lucida Console'>)</font>
+            <b>{</b>
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>long</u></font> ID, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='disable_input_bias'></a>disable_input_bias</b><font face='Lucida Console'>(</font>add_layer<font color='#5555FF'>&lt;</font>layer_norm_, add_tag_layer<font color='#5555FF'>&lt;</font>ID, impl::repeat_input_layer<font color='#5555FF'>&gt;</font>, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> <font face='Lucida Console'>)</font>
+            <b>{</b>
+            <b>}</b>
+
+            <font color='#009900'>// handle tag layer case
+</font>            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font>layer_mode mode, <font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>long</u></font> ID, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='disable_input_bias'></a>disable_input_bias</b><font face='Lucida Console'>(</font>add_layer<font color='#5555FF'>&lt;</font>bn_<font color='#5555FF'>&lt;</font>mode<font color='#5555FF'>&gt;</font>, add_tag_layer<font color='#5555FF'>&lt;</font>ID, U<font color='#5555FF'>&gt;</font>, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> <font face='Lucida Console'>)</font>
+            <b>{</b>
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>long</u></font> ID, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='disable_input_bias'></a>disable_input_bias</b><font face='Lucida Console'>(</font>add_layer<font color='#5555FF'>&lt;</font>layer_norm_, add_tag_layer<font color='#5555FF'>&lt;</font>ID, U<font color='#5555FF'>&gt;</font>, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> <font face='Lucida Console'>)</font>
+            <b>{</b>
+            <b>}</b>
+
+            <font color='#009900'>// handle skip layer case
+</font>            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font>layer_mode mode, <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='TAG'></a>TAG</b>, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='disable_input_bias'></a>disable_input_bias</b><font face='Lucida Console'>(</font>add_layer<font color='#5555FF'>&lt;</font>bn_<font color='#5555FF'>&lt;</font>mode<font color='#5555FF'>&gt;</font>, add_skip_layer<font color='#5555FF'>&lt;</font>TAG, U<font color='#5555FF'>&gt;</font>, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> <font face='Lucida Console'>)</font>
+            <b>{</b>
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='TAG'></a>TAG</b>, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='disable_input_bias'></a>disable_input_bias</b><font face='Lucida Console'>(</font>add_layer<font color='#5555FF'>&lt;</font>layer_norm_, add_skip_layer<font color='#5555FF'>&lt;</font>TAG, U<font color='#5555FF'>&gt;</font>, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> <font face='Lucida Console'>)</font>
+            <b>{</b>
+            <b>}</b>
+
+            <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> input_layer_type<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> , input_layer_type<font color='#5555FF'>&amp;</font> <font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+            <b>{</b>
+                <font color='#009900'>// ignore other layers
+</font>            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> , add_layer<font color='#5555FF'>&lt;</font>T,U,E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> l<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>disable_input_bias</font><font face='Lucida Console'>(</font>l<font face='Lucida Console'>)</font>;
+            <b>}</b>
+        <b>}</b>;
+    <b>}</b>
+
+
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> net_type<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'><u>void</u></font> <b><a name='disable_duplicative_biases'></a>disable_duplicative_biases</b> <font face='Lucida Console'>(</font>
+        net_type<font color='#5555FF'>&amp;</font> net
+    <font face='Lucida Console'>)</font>
+    <b>{</b>
+        <font color='#BB00BB'>visit_layers</font><font face='Lucida Console'>(</font>net, impl::<font color='#BB00BB'>visitor_disable_input_bias</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+    <b>}</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>namespace</font> impl
+    <b>{</b>
+        <font color='#0000FF'>class</font> <b><a name='visitor_fuse_layers'></a>visitor_fuse_layers</b>
+        <b>{</b>
+            <font color='#0000FF'>public</font>:
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='fuse_convolution'></a>fuse_convolution</b><font face='Lucida Console'>(</font>T<font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+            <b>{</b>
+                <font color='#009900'>// disable other layer types
+</font>            <b>}</b>
+
+            <font color='#009900'>// handle the standard case (convolutional layer followed by affine;
+</font>            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>long</u></font> nf, <font color='#0000FF'><u>long</u></font> nr, <font color='#0000FF'><u>long</u></font> nc, <font color='#0000FF'><u>int</u></font> sy, <font color='#0000FF'><u>int</u></font> sx, <font color='#0000FF'><u>int</u></font> py, <font color='#0000FF'><u>int</u></font> px, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='fuse_convolution'></a>fuse_convolution</b><font face='Lucida Console'>(</font>add_layer<font color='#5555FF'>&lt;</font>affine_, add_layer<font color='#5555FF'>&lt;</font>con_<font color='#5555FF'>&lt;</font>nf, nr, nc, sy, sx, py, px<font color='#5555FF'>&gt;</font>, U<font color='#5555FF'>&gt;</font>, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> l<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>l.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>is_disabled</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+                    <font color='#0000FF'>return</font>;
+
+                <font color='#009900'>// get the convolution below the affine layer
+</font>                <font color='#0000FF'>auto</font><font color='#5555FF'>&amp;</font> conv <font color='#5555FF'>=</font> l.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+
+                <font color='#009900'>// get the parameters from the affine layer as alias_tensor_instance
+</font>                alias_tensor_instance gamma <font color='#5555FF'>=</font> l.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>get_gamma</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                alias_tensor_instance beta <font color='#5555FF'>=</font> l.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>get_beta</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+
+                <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>conv.<font color='#BB00BB'>bias_is_disabled</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+                <b>{</b>
+                    conv.<font color='#BB00BB'>enable_bias</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <b>}</b>
+
+                tensor<font color='#5555FF'>&amp;</font> params <font color='#5555FF'>=</font> conv.<font color='#BB00BB'>get_layer_params</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+
+                <font color='#009900'>// update the biases
+</font>                <font color='#0000FF'>auto</font> biases <font color='#5555FF'>=</font> <font color='#BB00BB'>alias_tensor</font><font face='Lucida Console'>(</font><font color='#979000'>1</font>, conv.<font color='#BB00BB'>num_filters</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>biases</font><font face='Lucida Console'>(</font>params, params.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>-</font> conv.<font color='#BB00BB'>num_filters</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font> <font color='#5555FF'>+</font><font color='#5555FF'>=</font> <font color='#BB00BB'>mat</font><font face='Lucida Console'>(</font>beta<font face='Lucida Console'>)</font>;
+
+                <font color='#009900'>// guess the number of input channels
+</font>                <font color='#0000FF'>const</font> <font color='#0000FF'><u>long</u></font> k_in <font color='#5555FF'>=</font> <font face='Lucida Console'>(</font>params.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>-</font> conv.<font color='#BB00BB'>num_filters</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font> <font color='#5555FF'>/</font> conv.<font color='#BB00BB'>num_filters</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>/</font> conv.<font color='#BB00BB'>nr</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>/</font> conv.<font color='#BB00BB'>nc</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+
+                <font color='#009900'>// rescale the filters
+</font>                <font color='#BB00BB'>DLIB_CASSERT</font><font face='Lucida Console'>(</font>conv.<font color='#BB00BB'>num_filters</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>=</font><font color='#5555FF'>=</font> gamma.<font color='#BB00BB'>k</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+                alias_tensor <font color='#BB00BB'>filter</font><font face='Lucida Console'>(</font><font color='#979000'>1</font>, k_in, conv.<font color='#BB00BB'>nr</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, conv.<font color='#BB00BB'>nc</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>const</font> <font color='#0000FF'><u>float</u></font><font color='#5555FF'>*</font> g <font color='#5555FF'>=</font> gamma.<font color='#BB00BB'>host</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'><u>long</u></font> n <font color='#5555FF'>=</font> <font color='#979000'>0</font>; n <font color='#5555FF'>&lt;</font> conv.<font color='#BB00BB'>num_filters</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>; <font color='#5555FF'>+</font><font color='#5555FF'>+</font>n<font face='Lucida Console'>)</font>
+                <b>{</b>
+                    <font color='#BB00BB'>filter</font><font face='Lucida Console'>(</font>params, n <font color='#5555FF'>*</font> filter.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font> <font color='#5555FF'>*</font><font color='#5555FF'>=</font> g[n];
+                <b>}</b>
+
+                <font color='#009900'>// disable the affine layer
+</font>                l.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>disable</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> input_layer_type<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> , input_layer_type<font color='#5555FF'>&amp;</font> <font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+            <b>{</b>
+                <font color='#009900'>// ignore other layers
+</font>            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> , add_layer<font color='#5555FF'>&lt;</font>T, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> l<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>fuse_convolution</font><font face='Lucida Console'>(</font>l<font face='Lucida Console'>)</font>;
+            <b>}</b>
+        <b>}</b>;
+    <b>}</b>
+
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> net_type<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'><u>void</u></font> <b><a name='fuse_layers'></a>fuse_layers</b> <font face='Lucida Console'>(</font>
+        net_type<font color='#5555FF'>&amp;</font> net
+    <font face='Lucida Console'>)</font>
+    <b>{</b>
+        <font color='#BB00BB'>DLIB_CASSERT</font><font face='Lucida Console'>(</font><font color='#BB00BB'>count_parameters</font><font face='Lucida Console'>(</font>net<font face='Lucida Console'>)</font> <font color='#5555FF'>&gt;</font> <font color='#979000'>0</font>, "<font color='#CC0000'>The network has to be allocated before fusing the layers.</font>"<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>visit_layers</font><font face='Lucida Console'>(</font>net, impl::<font color='#BB00BB'>visitor_fuse_layers</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+    <b>}</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>namespace</font> impl
+    <b>{</b>
+        <font color='#0000FF'>class</font> <b><a name='visitor_net_to_xml'></a>visitor_net_to_xml</b>
+        <b>{</b>
+        <font color='#0000FF'>public</font>:
+
+            <b><a name='visitor_net_to_xml'></a>visitor_net_to_xml</b><font face='Lucida Console'>(</font>std::ostream<font color='#5555FF'>&amp;</font> out_<font face='Lucida Console'>)</font> : out<font face='Lucida Console'>(</font>out_<font face='Lucida Console'>)</font> <b>{</b><b>}</b>
+
+            <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> input_layer_type<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> idx, <font color='#0000FF'>const</font> input_layer_type<font color='#5555FF'>&amp;</font> l<font face='Lucida Console'>)</font>
+            <b>{</b>
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>&lt;layer idx='</font>"<font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font>idx<font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font>"<font color='#CC0000'>' type='input'&gt;\n</font>";
+                <font color='#BB00BB'>to_xml</font><font face='Lucida Console'>(</font>l,out<font face='Lucida Console'>)</font>;
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>&lt;/layer&gt;\n</font>";
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T, <font color='#0000FF'>typename</font> U<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> idx, <font color='#0000FF'>const</font> add_loss_layer<font color='#5555FF'>&lt;</font>T,U<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> l<font face='Lucida Console'>)</font>
+            <b>{</b>
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>&lt;layer idx='</font>"<font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font>idx<font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font>"<font color='#CC0000'>' type='loss'&gt;\n</font>";
+                <font color='#BB00BB'>to_xml</font><font face='Lucida Console'>(</font>l.<font color='#BB00BB'>loss_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>,out<font face='Lucida Console'>)</font>;
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>&lt;/layer&gt;\n</font>";
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> idx, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>T,U,E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> l<font face='Lucida Console'>)</font>
+            <b>{</b>
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>&lt;layer idx='</font>"<font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font>idx<font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font>"<font color='#CC0000'>' type='comp'&gt;\n</font>";
+                <font color='#BB00BB'>to_xml</font><font face='Lucida Console'>(</font>l.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>,out<font face='Lucida Console'>)</font>;
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>&lt;/layer&gt;\n</font>";
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>long</u></font> ID, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> idx, <font color='#0000FF'>const</font> add_tag_layer<font color='#5555FF'>&lt;</font>ID,U,E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> <font color='#009900'>/*l*/</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>&lt;layer idx='</font>"<font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font>idx<font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font>"<font color='#CC0000'>' type='tag' id='</font>"<font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font>ID<font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font>"<font color='#CC0000'>'/&gt;\n</font>";
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='T'></a>T</b>, <font color='#0000FF'>typename</font> U<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> idx, <font color='#0000FF'>const</font> add_skip_layer<font color='#5555FF'>&lt;</font>T,U<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> <font color='#009900'>/*l*/</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>&lt;layer idx='</font>"<font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font>idx<font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font>"<font color='#CC0000'>' type='skip' id='</font>"<font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font><font face='Lucida Console'>(</font>tag_id<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font>::id<font face='Lucida Console'>)</font><font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font>"<font color='#CC0000'>'/&gt;\n</font>";
+            <b>}</b>
+
+        <font color='#0000FF'>private</font>:
+
+            std::ostream<font color='#5555FF'>&amp;</font> out;
+        <b>}</b>;
+    <b>}</b>
+
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> net_type<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'><u>void</u></font> <b><a name='net_to_xml'></a>net_to_xml</b> <font face='Lucida Console'>(</font>
+        <font color='#0000FF'>const</font> net_type<font color='#5555FF'>&amp;</font> net,
+        std::ostream<font color='#5555FF'>&amp;</font> out
+    <font face='Lucida Console'>)</font>
+    <b>{</b>
+        <font color='#0000FF'>auto</font> old_precision <font color='#5555FF'>=</font> out.<font color='#BB00BB'>precision</font><font face='Lucida Console'>(</font><font color='#979000'>9</font><font face='Lucida Console'>)</font>;
+        out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>&lt;net&gt;\n</font>";
+        <font color='#BB00BB'>visit_layers</font><font face='Lucida Console'>(</font>net, impl::<font color='#BB00BB'>visitor_net_to_xml</font><font face='Lucida Console'>(</font>out<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+        out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>&lt;/net&gt;\n</font>";
+        <font color='#009900'>// restore the original stream precision.
+</font>        out.<font color='#BB00BB'>precision</font><font face='Lucida Console'>(</font>old_precision<font face='Lucida Console'>)</font>;
+    <b>}</b>
+
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> net_type<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'><u>void</u></font> <b><a name='net_to_xml'></a>net_to_xml</b> <font face='Lucida Console'>(</font>
+        <font color='#0000FF'>const</font> net_type<font color='#5555FF'>&amp;</font> net,
+        <font color='#0000FF'>const</font> std::string<font color='#5555FF'>&amp;</font> filename
+    <font face='Lucida Console'>)</font>
+    <b>{</b>
+        std::ofstream <font color='#BB00BB'>fout</font><font face='Lucida Console'>(</font>filename<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>net_to_xml</font><font face='Lucida Console'>(</font>net, fout<font face='Lucida Console'>)</font>;
+    <b>}</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>namespace</font> impl
+    <b>{</b>
+        <font color='#0000FF'>class</font> <b><a name='visitor_net_to_dot'></a>visitor_net_to_dot</b>
+        <b>{</b>
+        <font color='#0000FF'>public</font>:
+
+            <b><a name='visitor_net_to_dot'></a>visitor_net_to_dot</b><font face='Lucida Console'>(</font>std::ostream<font color='#5555FF'>&amp;</font> out<font face='Lucida Console'>)</font> : out<font face='Lucida Console'>(</font>out<font face='Lucida Console'>)</font> <b>{</b><b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> input_layer_type<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, input_layer_type<font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>input</font>"<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                from <font color='#5555FF'>=</font> i;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T, <font color='#0000FF'>typename</font> U<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_loss_layer<font color='#5555FF'>&lt;</font>T, U<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>loss</font>"<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font>... <b><a name='TAGS'></a>TAGS</b>, <font color='#0000FF'>typename</font> U<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_loss_layer<font color='#5555FF'>&lt;</font>loss_yolo_<font color='#5555FF'>&lt;</font>TAGS...<font color='#5555FF'>&gt;</font>, U<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>loss_yolo</font>"<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                std::ostringstream sout;
+                concat_helper_impl<font color='#5555FF'>&lt;</font>TAGS...<font color='#5555FF'>&gt;</font>::<font color='#BB00BB'>list_tags</font><font face='Lucida Console'>(</font>sout<font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>const</font> <font color='#0000FF'>auto</font> tags <font color='#5555FF'>=</font> dlib::<font color='#BB00BB'>split</font><font face='Lucida Console'>(</font>sout.<font color='#BB00BB'>str</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, "<font color='#CC0000'>,</font>"<font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'>const</font> <font color='#0000FF'>auto</font><font color='#5555FF'>&amp;</font> tag : tags<font face='Lucida Console'>)</font>
+                    out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> tag_to_layer.<font color='#BB00BB'>at</font><font face='Lucida Console'>(</font>std::<font color='#BB00BB'>stoul</font><font face='Lucida Console'>(</font>tag<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> -&gt; </font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> i <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> '<font color='#FF0000'>\n</font>';
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>long</u></font> ID, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_tag_layer<font color='#5555FF'>&lt;</font>ID, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#009900'>// check for consecutive tag layers
+</font>                tagged_layers.<font color='#BB00BB'>push_back</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+                std::<font color='#BB00BB'>sort</font><font face='Lucida Console'>(</font>tagged_layers.<font color='#BB00BB'>begin</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, tagged_layers.<font color='#BB00BB'>end</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+                std::vector<font color='#5555FF'>&lt;</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>long</u></font><font color='#5555FF'>&gt;</font> diffs;
+                std::<font color='#BB00BB'>adjacent_difference</font><font face='Lucida Console'>(</font>tagged_layers.<font color='#BB00BB'>begin</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, tagged_layers.<font color='#BB00BB'>end</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, std::<font color='#BB00BB'>back_inserter</font><font face='Lucida Console'>(</font>diffs<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+                from <font color='#5555FF'>=</font> i <font color='#5555FF'>+</font> <font color='#979000'>1</font>;
+                <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>diffs.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&gt;</font> <font color='#979000'>1</font> <font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> diffs[<font color='#979000'>1</font>] <font color='#5555FF'>=</font><font color='#5555FF'>=</font> <font color='#979000'>1</font><font face='Lucida Console'>)</font>
+                <b>{</b>
+                    <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> id <font color='#5555FF'>=</font> <font color='#979000'>1</font>; id <font color='#5555FF'>&lt;</font> diffs.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>; <font color='#5555FF'>+</font><font color='#5555FF'>+</font>id<font face='Lucida Console'>)</font>
+                    <b>{</b>
+                        <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>diffs[id] <font color='#5555FF'>=</font><font color='#5555FF'>=</font> <font color='#979000'>1</font><font face='Lucida Console'>)</font>
+                            <font color='#5555FF'>+</font><font color='#5555FF'>+</font>from;
+                        <font color='#0000FF'>else</font>
+                            <font color='#0000FF'>break</font>;
+                    <b>}</b>
+                <b>}</b>
+                tag_to_layer[ID] <font color='#5555FF'>=</font> from;
+
+                <font color='#009900'>// In case we wanted to draw the tagged layers, instead:
+</font>                <font color='#009900'>// tag_to_layer[ID] = i;
+</font>                <font color='#009900'>// start_node(i, "tag", "Mrecord");
+</font>                <font color='#009900'>// out &lt;&lt; " | {id|{" &lt;&lt; ID &lt;&lt; "}}";
+</font>                <font color='#009900'>// end_node();
+</font>                <font color='#009900'>// update(i);
+</font>            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='TAG'></a>TAG</b>, <font color='#0000FF'>typename</font> U<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font>, <font color='#0000FF'>const</font> add_skip_layer<font color='#5555FF'>&lt;</font>TAG, U<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#0000FF'>const</font> <font color='#0000FF'>auto</font> t <font color='#5555FF'>=</font> tag_id<font color='#5555FF'>&lt;</font>TAG<font color='#5555FF'>&gt;</font>::id;
+                from <font color='#5555FF'>=</font> tag_to_layer.<font color='#BB00BB'>at</font><font face='Lucida Console'>(</font>t<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>long</u></font> nf, <font color='#0000FF'><u>long</u></font> nr, <font color='#0000FF'><u>long</u></font> nc, <font color='#0000FF'><u>int</u></font> sy, <font color='#0000FF'><u>int</u></font> sx, <font color='#0000FF'><u>int</u></font> py, <font color='#0000FF'><u>int</u></font> px, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>con_<font color='#5555FF'>&lt;</font>nf, nr, nc, sy, sx, py, px<font color='#5555FF'>&gt;</font>, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> l<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>con</font>"<font face='Lucida Console'>)</font>;
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> | {filters|{</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> l.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>num_filters</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>}}</font>";
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> | {size|{</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> nr <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>,</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> nc <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>}}</font>";
+                <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>sy <font color='#5555FF'>!</font><font color='#5555FF'>=</font> <font color='#979000'>1</font> <font color='#5555FF'>|</font><font color='#5555FF'>|</font> sx <font color='#5555FF'>!</font><font color='#5555FF'>=</font> <font color='#979000'>1</font><font face='Lucida Console'>)</font>
+                    out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> | {stride|{</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> sy<font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>,</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> sx <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>}}</font>";
+                <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>py <font color='#5555FF'>!</font><font color='#5555FF'>=</font> <font color='#979000'>0</font> <font color='#5555FF'>|</font><font color='#5555FF'>|</font> px <font color='#5555FF'>!</font><font color='#5555FF'>=</font> <font color='#979000'>0</font><font face='Lucida Console'>)</font>
+                    out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> | {pad|{</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> py<font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>,</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> px <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>}}</font>";
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>long</u></font> nf, <font color='#0000FF'><u>long</u></font> nr, <font color='#0000FF'><u>long</u></font> nc, <font color='#0000FF'><u>int</u></font> sy, <font color='#0000FF'><u>int</u></font> sx, <font color='#0000FF'><u>int</u></font> py, <font color='#0000FF'><u>int</u></font> px, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>cont_<font color='#5555FF'>&lt;</font>nf, nr, nc, sy, sx, py, px<font color='#5555FF'>&gt;</font>, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> l<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>cont</font>"<font face='Lucida Console'>)</font>;
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> | {filters|{</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> l.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>num_filters</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>}}</font>";
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> | {size|{</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> nr <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>,</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> nc <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>}}</font>";
+                <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>sy <font color='#5555FF'>!</font><font color='#5555FF'>=</font> <font color='#979000'>1</font> <font color='#5555FF'>|</font><font color='#5555FF'>|</font> sx <font color='#5555FF'>!</font><font color='#5555FF'>=</font> <font color='#979000'>1</font><font face='Lucida Console'>)</font>
+                    out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> | {stride|{</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> sy<font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>,</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> sx <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>}}</font>";
+                <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>py <font color='#5555FF'>!</font><font color='#5555FF'>=</font> <font color='#979000'>0</font> <font color='#5555FF'>|</font><font color='#5555FF'>|</font> px <font color='#5555FF'>!</font><font color='#5555FF'>=</font> <font color='#979000'>0</font><font face='Lucida Console'>)</font>
+                    out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> | {pad|{</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> py<font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>,</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> px <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>}}</font>";
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>int</u></font> sy, <font color='#0000FF'><u>int</u></font> sx, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>upsample_<font color='#5555FF'>&lt;</font>sy, sx<font color='#5555FF'>&gt;</font>, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>upsample</font>"<font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>sy <font color='#5555FF'>!</font><font color='#5555FF'>=</font> <font color='#979000'>1</font> <font color='#5555FF'>|</font><font color='#5555FF'>|</font> sx <font color='#5555FF'>!</font><font color='#5555FF'>=</font> <font color='#979000'>1</font><font face='Lucida Console'>)</font>
+                    out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> | {scale|{</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> sy<font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>,</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> sx <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>}}</font>";
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>int</u></font> NR, <font color='#0000FF'><u>int</u></font> NC, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>resize_to_<font color='#5555FF'>&lt;</font>NR, NC<font color='#5555FF'>&gt;</font>, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>resize_to</font>"<font face='Lucida Console'>)</font>;
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> | {size|{</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> NR <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>,</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> NC <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>}}</font>";
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>long</u></font> nr, <font color='#0000FF'><u>long</u></font> nc, <font color='#0000FF'><u>int</u></font> sy, <font color='#0000FF'><u>int</u></font> sx, <font color='#0000FF'><u>int</u></font> py, <font color='#0000FF'><u>int</u></font> px, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>max_pool_<font color='#5555FF'>&lt;</font>nr, nc, sy, sx, py, px<font color='#5555FF'>&gt;</font>, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>max_pool</font>"<font face='Lucida Console'>)</font>;
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> | {size|{</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> nr <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>,</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> nc <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>}}</font>";
+                <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>sy <font color='#5555FF'>!</font><font color='#5555FF'>=</font> <font color='#979000'>1</font> <font color='#5555FF'>|</font><font color='#5555FF'>|</font> sx <font color='#5555FF'>!</font><font color='#5555FF'>=</font> <font color='#979000'>1</font><font face='Lucida Console'>)</font>
+                    out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> | {stride|{</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> sy<font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>,</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> sx <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>}}</font>";
+                <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>py <font color='#5555FF'>!</font><font color='#5555FF'>=</font> <font color='#979000'>0</font> <font color='#5555FF'>|</font><font color='#5555FF'>|</font> px <font color='#5555FF'>!</font><font color='#5555FF'>=</font> <font color='#979000'>0</font><font face='Lucida Console'>)</font>
+                    out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> | {pad|{</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> py<font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>,</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> px <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>}}</font>";
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>long</u></font> nr, <font color='#0000FF'><u>long</u></font> nc, <font color='#0000FF'><u>int</u></font> sy, <font color='#0000FF'><u>int</u></font> sx, <font color='#0000FF'><u>int</u></font> py, <font color='#0000FF'><u>int</u></font> px, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>avg_pool_<font color='#5555FF'>&lt;</font>nr, nc, sy, sx, py, px<font color='#5555FF'>&gt;</font>, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>avg_pool</font>"<font face='Lucida Console'>)</font>;
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> | {size|{</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> nr <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>,</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> nc <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>}}</font>";
+                <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>sy <font color='#5555FF'>!</font><font color='#5555FF'>=</font> <font color='#979000'>1</font> <font color='#5555FF'>|</font><font color='#5555FF'>|</font> sx <font color='#5555FF'>!</font><font color='#5555FF'>=</font> <font color='#979000'>1</font><font face='Lucida Console'>)</font>
+                    out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> | {stride|{</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> sy<font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>,</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> sx <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>}}</font>";
+                <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>py <font color='#5555FF'>!</font><font color='#5555FF'>=</font> <font color='#979000'>0</font> <font color='#5555FF'>|</font><font color='#5555FF'>|</font> px <font color='#5555FF'>!</font><font color='#5555FF'>=</font> <font color='#979000'>0</font><font face='Lucida Console'>)</font>
+                    out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> | {pad|{</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> py<font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>,</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> px <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>}}</font>";
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>layer_norm_, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>layer_norm</font>"<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font>layer_mode MODE, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>bn_<font color='#5555FF'>&lt;</font>MODE<font color='#5555FF'>&gt;</font>, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>batch_norm</font>"<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>long</u></font> no, fc_bias_mode bm, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>fc_<font color='#5555FF'>&lt;</font>no, bm<font color='#5555FF'>&gt;</font>, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> l<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>fc</font>"<font face='Lucida Console'>)</font>;
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> | { outputs |{</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> l.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>get_num_outputs</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>}}</font>";
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>dropout_, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>dropout</font>"<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>multiply_, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>multiply</font>"<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>affine_, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>affine</font>"<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='TAG'></a>TAG</b>, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>add_prev_<font color='#5555FF'>&lt;</font>TAG<font color='#5555FF'>&gt;</font>, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>add</font>"<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>const</font> <font color='#0000FF'>auto</font> t <font color='#5555FF'>=</font> tag_id<font color='#5555FF'>&lt;</font>TAG<font color='#5555FF'>&gt;</font>::id;
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> tag_to_layer.<font color='#BB00BB'>at</font><font face='Lucida Console'>(</font>t<font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> -&gt; </font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> i <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> '<font color='#FF0000'>\n</font>';
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='TAG'></a>TAG</b>, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>mult_prev_<font color='#5555FF'>&lt;</font>TAG<font color='#5555FF'>&gt;</font>, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>mult</font>"<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>const</font> <font color='#0000FF'>auto</font> t <font color='#5555FF'>=</font> tag_id<font color='#5555FF'>&lt;</font>TAG<font color='#5555FF'>&gt;</font>::id;
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> tag_to_layer.<font color='#BB00BB'>at</font><font face='Lucida Console'>(</font>t<font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> -&gt; </font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> i <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> '<font color='#FF0000'>\n</font>';
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='TAG'></a>TAG</b>, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>resize_prev_to_tagged_<font color='#5555FF'>&lt;</font>TAG<font color='#5555FF'>&gt;</font>, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>resize_as</font>"<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>const</font> <font color='#0000FF'>auto</font> t <font color='#5555FF'>=</font> tag_id<font color='#5555FF'>&lt;</font>TAG<font color='#5555FF'>&gt;</font>::id;
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> i <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> -&gt; </font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> tag_to_layer.<font color='#BB00BB'>at</font><font face='Lucida Console'>(</font>t<font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>[style=dashed]\n</font>";
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+                from <font color='#5555FF'>=</font> i;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='TAG'></a>TAG</b>, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>scale_<font color='#5555FF'>&lt;</font>TAG<font color='#5555FF'>&gt;</font>, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>scale</font>"<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>const</font> <font color='#0000FF'>auto</font> t <font color='#5555FF'>=</font> tag_id<font color='#5555FF'>&lt;</font>TAG<font color='#5555FF'>&gt;</font>::id;
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> tag_to_layer.<font color='#BB00BB'>at</font><font face='Lucida Console'>(</font>t<font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> -&gt; </font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> i <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> '<font color='#FF0000'>\n</font>';
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='TAG'></a>TAG</b>, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>scale_prev_<font color='#5555FF'>&lt;</font>TAG<font color='#5555FF'>&gt;</font>, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>scale</font>"<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>const</font> <font color='#0000FF'>auto</font> t <font color='#5555FF'>=</font> tag_id<font color='#5555FF'>&lt;</font>TAG<font color='#5555FF'>&gt;</font>::id;
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> tag_to_layer.<font color='#BB00BB'>at</font><font face='Lucida Console'>(</font>t<font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> -&gt; </font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> i <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> '<font color='#FF0000'>\n</font>';
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>relu_, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>relu</font>"<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>prelu_, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>prelu</font>"<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>leaky_relu_, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> l<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>leaky_relu</font>"<font face='Lucida Console'>)</font>;
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> | { alpha |{</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> l.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>get_alpha</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>}}</font>";
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>sig_, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>sigmoid</font>"<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>mish_, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>mish</font>"<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>htan_, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>htan</font>"<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>clipped_relu_, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>clipped_relu</font>"<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>elu_, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>elu</font>"<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>gelu_, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>gelu</font>"<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>smelu_, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> l<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>smelu</font>"<font face='Lucida Console'>)</font>;
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> | { beta |{</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> l.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>get_beta</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>}}</font>";
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>silu_, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>silu</font>"<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>softmax_, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>softmax</font>"<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>softmax_all_, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>softmax_all</font>"<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font>... <b><a name='TAGS'></a>TAGS</b>, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>concat_<font color='#5555FF'>&lt;</font>TAGS...<font color='#5555FF'>&gt;</font>, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>concat</font>"<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                std::ostringstream sout;
+                concat_helper_impl<font color='#5555FF'>&lt;</font>TAGS...<font color='#5555FF'>&gt;</font>::<font color='#BB00BB'>list_tags</font><font face='Lucida Console'>(</font>sout<font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>const</font> <font color='#0000FF'>auto</font> tags <font color='#5555FF'>=</font> dlib::<font color='#BB00BB'>split</font><font face='Lucida Console'>(</font>sout.<font color='#BB00BB'>str</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, "<font color='#CC0000'>,</font>"<font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'>const</font> <font color='#0000FF'>auto</font><font color='#5555FF'>&amp;</font> tag : tags<font face='Lucida Console'>)</font>
+                    out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> tag_to_layer.<font color='#BB00BB'>at</font><font face='Lucida Console'>(</font>std::<font color='#BB00BB'>stoul</font><font face='Lucida Console'>(</font>tag<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> -&gt; </font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> i <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> '<font color='#FF0000'>\n</font>';
+                from <font color='#5555FF'>=</font> i;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>l2normalize_, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>l2normalize</font>"<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>long</u></font> offset, <font color='#0000FF'><u>long</u></font> k, <font color='#0000FF'><u>int</u></font> nr, <font color='#0000FF'><u>int</u></font> nc, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>extract_<font color='#5555FF'>&lt;</font>offset, k, nr, nc<font color='#5555FF'>&gt;</font>, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>extract</font>"<font face='Lucida Console'>)</font>;
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> | {offset|{</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> offset <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>}}</font>";
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> | {k|{</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> k <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>}}</font>";
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> | {nr|{</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> nr <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>}}</font>";
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> | {nc|{</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> nc <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>}}</font>";
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>long</u></font> <font color='#0000FF'><u>long</u></font> sy, <font color='#0000FF'><u>long</u></font> <font color='#0000FF'><u>long</u></font> sx, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>reorg_<font color='#5555FF'>&lt;</font>sy, sx<font color='#5555FF'>&gt;</font>, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>reorg</font>"<font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>sy <font color='#5555FF'>!</font><font color='#5555FF'>=</font> <font color='#979000'>1</font> <font color='#5555FF'>|</font><font color='#5555FF'>|</font> sx <font color='#5555FF'>!</font><font color='#5555FF'>=</font> <font color='#979000'>1</font><font face='Lucida Console'>)</font>
+                    out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> | {stride|{</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> sy<font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>,</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> sx <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>}}</font>";
+                <font color='#BB00BB'>end_node</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T, <font color='#0000FF'>typename</font> U, <font color='#0000FF'>typename</font> E<font color='#5555FF'>&gt;</font>
+            <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> add_layer<font color='#5555FF'>&lt;</font>T, U, E<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#BB00BB'>start_node</font><font face='Lucida Console'>(</font>i, "<font color='#CC0000'>unhandled layer</font>"<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>update</font><font face='Lucida Console'>(</font>i<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+        <font color='#0000FF'>private</font>:
+            <font color='#0000FF'><u>size_t</u></font> from;
+            std::ostream<font color='#5555FF'>&amp;</font> out;
+            std::unordered_map<font color='#5555FF'>&lt;</font><font color='#0000FF'><u>size_t</u></font>, <font color='#0000FF'><u>size_t</u></font><font color='#5555FF'>&gt;</font> tag_to_layer;
+            std::vector<font color='#5555FF'>&lt;</font><font color='#0000FF'><u>size_t</u></font><font color='#5555FF'>&gt;</font> tagged_layers;
+            <font color='#0000FF'><u>void</u></font> <b><a name='update'></a>update</b><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> <font color='#0000FF'><u>size_t</u></font> i<font face='Lucida Console'>)</font>
+            <b>{</b>
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> from <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> -&gt; </font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> i <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> '<font color='#FF0000'>\n</font>';
+                from <font color='#5555FF'>=</font> i;
+            <b>}</b>
+            <font color='#0000FF'><u>void</u></font> <b><a name='start_node'></a>start_node</b><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> <font color='#0000FF'><u>size_t</u></font> i, <font color='#0000FF'>const</font> std::string<font color='#5555FF'>&amp;</font> name, <font color='#0000FF'>const</font> std::string<font color='#5555FF'>&amp;</font> shape <font color='#5555FF'>=</font> "<font color='#CC0000'>record</font>"<font face='Lucida Console'>)</font>
+            <b>{</b>
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> i <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> [shape=</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> shape <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>, label=\"{layer|{</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> i <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>}} | </font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> name;
+            <b>}</b>
+            <font color='#0000FF'><u>void</u></font> <b><a name='end_node'></a>end_node</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>\"]\n</font>";
+            <b>}</b>
+
+        <b>}</b>;
+    <b>}</b>
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> net_type<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'><u>void</u></font> <b><a name='net_to_dot'></a>net_to_dot</b> <font face='Lucida Console'>(</font>
+        <font color='#0000FF'>const</font> net_type<font color='#5555FF'>&amp;</font> net,
+        std::ostream<font color='#5555FF'>&amp;</font> out
+    <font face='Lucida Console'>)</font>
+    <b>{</b>
+        out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>digraph G {\n</font>";
+        out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>rankdir = BT\n</font>";
+        <font color='#BB00BB'>visit_layers_backwards</font><font face='Lucida Console'>(</font>net, impl::<font color='#BB00BB'>visitor_net_to_dot</font><font face='Lucida Console'>(</font>out<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+        out <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>}</font>";
+    <b>}</b>
+
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> net_type<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'><u>void</u></font> <b><a name='net_to_dot'></a>net_to_dot</b> <font face='Lucida Console'>(</font>
+        <font color='#0000FF'>const</font> net_type<font color='#5555FF'>&amp;</font> net,
+        <font color='#0000FF'>const</font> std::string<font color='#5555FF'>&amp;</font> filename
+    <font face='Lucida Console'>)</font>
+    <b>{</b>
+        std::ofstream <font color='#BB00BB'>fout</font><font face='Lucida Console'>(</font>filename<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>net_to_dot</font><font face='Lucida Console'>(</font>net, fout<font face='Lucida Console'>)</font>;
+    <b>}</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+<b>}</b>
+
+<font color='#0000FF'>#endif</font> <font color='#009900'>// DLIB_DNn_VISITORS_H_
+</font>
+
+</pre></body></html>

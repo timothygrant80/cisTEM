@@ -1,0 +1,109 @@
+<html><!-- Created using the cpp_pretty_printer from the dlib C++ library.  See http://dlib.net for updates. --><head><title>dlib C++ Library - cifar.cpp</title></head><body bgcolor='white'><pre>
+<font color='#009900'>// Copyright (C) 2020  Davis E. King (davis@dlib.net)
+</font><font color='#009900'>// License: Boost Software License   See LICENSE.txt for the full license.
+</font><font color='#0000FF'>#ifndef</font> DLIB_CIFAR_CPp_
+<font color='#0000FF'>#define</font> DLIB_CIFAR_CPp_
+
+<font color='#0000FF'>#include</font> "<a style='text-decoration:none' href='cifar.h.html'>cifar.h</a>"
+<font color='#0000FF'>#include</font> <font color='#5555FF'>&lt;</font>fstream<font color='#5555FF'>&gt;</font>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+<font color='#0000FF'>namespace</font> dlib
+<b>{</b>
+    <font color='#0000FF'>namespace</font> impl
+    <b>{</b>
+        <font color='#0000FF'><u>void</u></font> <b><a name='load_cifar_10_batch'></a>load_cifar_10_batch</b> <font face='Lucida Console'>(</font>
+            <font color='#0000FF'>const</font> std::string<font color='#5555FF'>&amp;</font> folder_name,
+            <font color='#0000FF'>const</font> std::string<font color='#5555FF'>&amp;</font> batch_name,
+            <font color='#0000FF'>const</font> <font color='#0000FF'><u>size_t</u></font> first_idx,
+            <font color='#0000FF'>const</font> <font color='#0000FF'><u>size_t</u></font> images_per_batch,
+            std::vector<font color='#5555FF'>&lt;</font>matrix<font color='#5555FF'>&lt;</font>rgb_pixel<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> images,
+            std::vector<font color='#5555FF'>&lt;</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>long</u></font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> labels
+        <font face='Lucida Console'>)</font>
+        <b>{</b>
+            std::ifstream <font color='#BB00BB'>fin</font><font face='Lucida Console'>(</font>folder_name <font color='#5555FF'>+</font> "<font color='#CC0000'>/</font>" <font color='#5555FF'>+</font> batch_name, std::ios::binary<font face='Lucida Console'>)</font>;
+            <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font><font color='#5555FF'>!</font>fin<font face='Lucida Console'>)</font> <font color='#0000FF'>throw</font> <font color='#BB00BB'>error</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>Unable to open file </font>" <font color='#5555FF'>+</font> batch_name<font face='Lucida Console'>)</font>;
+            <font color='#0000FF'>const</font> <font color='#0000FF'><u>long</u></font> nr <font color='#5555FF'>=</font> <font color='#979000'>32</font>;
+            <font color='#0000FF'>const</font> <font color='#0000FF'><u>long</u></font> nc <font color='#5555FF'>=</font> <font color='#979000'>32</font>;
+            <font color='#0000FF'>const</font> <font color='#0000FF'><u>long</u></font> plane_size <font color='#5555FF'>=</font> nr <font color='#5555FF'>*</font> nc;
+            <font color='#0000FF'>const</font> <font color='#0000FF'><u>long</u></font> image_size <font color='#5555FF'>=</font> <font color='#979000'>3</font> <font color='#5555FF'>*</font> plane_size;
+
+            <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i <font color='#5555FF'>=</font> <font color='#979000'>0</font>; i <font color='#5555FF'>&lt;</font> images_per_batch; <font color='#5555FF'>+</font><font color='#5555FF'>+</font>i<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#0000FF'><u>char</u></font> l;
+                fin.<font color='#BB00BB'>read</font><font face='Lucida Console'>(</font><font color='#5555FF'>&amp;</font>l, <font color='#979000'>1</font><font face='Lucida Console'>)</font>;
+                labels[first_idx <font color='#5555FF'>+</font> i] <font color='#5555FF'>=</font> l;
+                images[first_idx <font color='#5555FF'>+</font> i].<font color='#BB00BB'>set_size</font><font face='Lucida Console'>(</font>nr, nc<font face='Lucida Console'>)</font>;
+
+                std::array<font color='#5555FF'>&lt;</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>char</u></font>, image_size<font color='#5555FF'>&gt;</font> buffer;
+                fin.<font color='#BB00BB'>read</font><font face='Lucida Console'>(</font><font face='Lucida Console'>(</font><font color='#0000FF'><u>char</u></font><font color='#5555FF'>*</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>buffer.<font color='#BB00BB'>data</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>, buffer.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'><u>long</u></font> k <font color='#5555FF'>=</font> <font color='#979000'>0</font>; k <font color='#5555FF'>&lt;</font> plane_size; <font color='#5555FF'>+</font><font color='#5555FF'>+</font>k<font face='Lucida Console'>)</font>
+                <b>{</b>
+                    <font color='#0000FF'><u>char</u></font> r <font color='#5555FF'>=</font> buffer[<font color='#979000'>0</font> <font color='#5555FF'>*</font> plane_size <font color='#5555FF'>+</font> k];
+                    <font color='#0000FF'><u>char</u></font> g <font color='#5555FF'>=</font> buffer[<font color='#979000'>1</font> <font color='#5555FF'>*</font> plane_size <font color='#5555FF'>+</font> k];
+                    <font color='#0000FF'><u>char</u></font> b <font color='#5555FF'>=</font> buffer[<font color='#979000'>2</font> <font color='#5555FF'>*</font> plane_size <font color='#5555FF'>+</font> k];
+                    <font color='#0000FF'>const</font> <font color='#0000FF'><u>long</u></font> row <font color='#5555FF'>=</font> k <font color='#5555FF'>/</font> nr;
+                    <font color='#0000FF'>const</font> <font color='#0000FF'><u>long</u></font> col <font color='#5555FF'>=</font> k <font color='#5555FF'>%</font> nr;
+                    images[first_idx <font color='#5555FF'>+</font> i]<font face='Lucida Console'>(</font>row, col<font face='Lucida Console'>)</font> <font color='#5555FF'>=</font> <font color='#BB00BB'>rgb_pixel</font><font face='Lucida Console'>(</font>r, g, b<font face='Lucida Console'>)</font>;
+                <b>}</b>
+            <b>}</b>
+
+            <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font><font color='#5555FF'>!</font>fin<font face='Lucida Console'>)</font> <font color='#0000FF'>throw</font> <font color='#BB00BB'>error</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>Unable to read file </font>" <font color='#5555FF'>+</font> batch_name<font face='Lucida Console'>)</font>;
+
+            <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>fin.<font color='#BB00BB'>get</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>!</font><font color='#5555FF'>=</font> EOF<font face='Lucida Console'>)</font> <font color='#0000FF'>throw</font> <font color='#BB00BB'>error</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>Unexpected bytes at end of </font>" <font color='#5555FF'>+</font> batch_name<font face='Lucida Console'>)</font>;
+        <b>}</b>
+    <b>}</b>
+
+    <font color='#0000FF'><u>void</u></font> <b><a name='load_cifar_10_dataset'></a>load_cifar_10_dataset</b> <font face='Lucida Console'>(</font>
+        <font color='#0000FF'>const</font> std::string<font color='#5555FF'>&amp;</font> folder_name,
+        std::vector<font color='#5555FF'>&lt;</font>matrix<font color='#5555FF'>&lt;</font>rgb_pixel<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> training_images,
+        std::vector<font color='#5555FF'>&lt;</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>long</u></font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> training_labels,
+        std::vector<font color='#5555FF'>&lt;</font>matrix<font color='#5555FF'>&lt;</font>rgb_pixel<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> testing_images,
+        std::vector<font color='#5555FF'>&lt;</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>long</u></font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> testing_labels
+    <font face='Lucida Console'>)</font>
+    <b>{</b>
+        <font color='#0000FF'>using</font> <font color='#0000FF'>namespace</font> std;
+
+        <font color='#0000FF'>const</font> <font color='#0000FF'><u>size_t</u></font> images_per_batch <font color='#5555FF'>=</font> <font color='#979000'>10000</font>;
+        <font color='#0000FF'>const</font> <font color='#0000FF'><u>size_t</u></font> num_training_batches <font color='#5555FF'>=</font> <font color='#979000'>5</font>;
+        <font color='#0000FF'>const</font> <font color='#0000FF'><u>size_t</u></font> num_testing_batches <font color='#5555FF'>=</font> <font color='#979000'>1</font>;
+
+        training_images.<font color='#BB00BB'>resize</font><font face='Lucida Console'>(</font>images_per_batch <font color='#5555FF'>*</font> num_training_batches<font face='Lucida Console'>)</font>;
+        training_labels.<font color='#BB00BB'>resize</font><font face='Lucida Console'>(</font>images_per_batch <font color='#5555FF'>*</font> num_training_batches<font face='Lucida Console'>)</font>;
+        testing_images.<font color='#BB00BB'>resize</font><font face='Lucida Console'>(</font>images_per_batch <font color='#5555FF'>*</font> num_testing_batches<font face='Lucida Console'>)</font>;
+        testing_labels.<font color='#BB00BB'>resize</font><font face='Lucida Console'>(</font>images_per_batch <font color='#5555FF'>*</font> num_testing_batches<font face='Lucida Console'>)</font>;
+
+        std::vector<font color='#5555FF'>&lt;</font>string<font color='#5555FF'>&gt;</font> training_batches_names<b>{</b>
+            "<font color='#CC0000'>data_batch_1.bin</font>",
+            "<font color='#CC0000'>data_batch_2.bin</font>",
+            "<font color='#CC0000'>data_batch_3.bin</font>",
+            "<font color='#CC0000'>data_batch_4.bin</font>",
+            "<font color='#CC0000'>data_batch_5.bin</font>",
+        <b>}</b>;
+
+        <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i <font color='#5555FF'>=</font> <font color='#979000'>0</font>; i <font color='#5555FF'>&lt;</font> num_training_batches; <font color='#5555FF'>+</font><font color='#5555FF'>+</font>i<font face='Lucida Console'>)</font>
+        <b>{</b>
+            impl::<font color='#BB00BB'>load_cifar_10_batch</font><font face='Lucida Console'>(</font>
+                folder_name,
+                training_batches_names[i],
+                i <font color='#5555FF'>*</font> images_per_batch,
+                images_per_batch,
+                training_images,
+                training_labels<font face='Lucida Console'>)</font>;
+        <b>}</b>
+
+        impl::<font color='#BB00BB'>load_cifar_10_batch</font><font face='Lucida Console'>(</font>
+            folder_name,
+            "<font color='#CC0000'>test_batch.bin</font>",
+            <font color='#979000'>0</font>,
+            images_per_batch,
+            testing_images,
+            testing_labels<font face='Lucida Console'>)</font>;
+    <b>}</b>
+<b>}</b>
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+<font color='#0000FF'>#endif</font> <font color='#009900'>// DLIB_CIFAR_CPp_
+</font>
+</pre></body></html>

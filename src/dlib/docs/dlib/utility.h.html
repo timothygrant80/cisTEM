@@ -1,0 +1,44 @@
+<html><!-- Created using the cpp_pretty_printer from the dlib C++ library.  See http://dlib.net for updates. --><head><title>dlib C++ Library - utility.h</title></head><body bgcolor='white'><pre>
+<font color='#009900'>// Copyright (C) 2016  Davis E. King (davis@dlib.net)
+</font><font color='#009900'>// License: Boost Software License   See LICENSE.txt for the full license.
+</font><font color='#0000FF'>#ifndef</font> DLIB_UTILITY_Hh_
+<font color='#0000FF'>#define</font> DLIB_UTILITY_Hh_
+
+<font color='#0000FF'>#include</font> <font color='#5555FF'>&lt;</font>cstddef<font color='#5555FF'>&gt;</font>
+
+<font color='#009900'>/*
+    This header contains back-ports of C++14/17 functions and type traits
+    found in &lt;utility&gt; header of the standard library.
+ */</font>
+
+<font color='#0000FF'>namespace</font> dlib
+<b>{</b>
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font>std::<font color='#0000FF'><u>size_t</u></font>... Ints<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>struct</font> <b><a name='index_sequence'></a>index_sequence</b>
+    <b>{</b>
+        <font color='#0000FF'>using</font> type <font color='#5555FF'>=</font> index_sequence;
+        <font color='#0000FF'>using</font> value_type <font color='#5555FF'>=</font> std::<font color='#0000FF'><u>size_t</u></font>;
+        <font color='#0000FF'>static</font> constexpr std::<font color='#0000FF'><u>size_t</u></font> <b><a name='size'></a>size</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> noexcept <b>{</b><font color='#0000FF'>return</font> <font color='#0000FF'>sizeof</font>...<font face='Lucida Console'>(</font>Ints<font face='Lucida Console'>)</font>;<b>}</b>
+    <b>}</b>;
+
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>class</font> <b><a name='Sequence1'></a>Sequence1</b>, <font color='#0000FF'>class</font> <b><a name='Sequence2'></a>Sequence2</b><font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>struct</font> <b><a name='merge_and_renumber'></a>merge_and_renumber</b>;
+
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font>std::<font color='#0000FF'><u>size_t</u></font>... I1, std::<font color='#0000FF'><u>size_t</u></font>... I2<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>struct</font> <b><a name='merge_and_renumber'></a>merge_and_renumber</b><font color='#5555FF'>&lt;</font>index_sequence<font color='#5555FF'>&lt;</font>I1...<font color='#5555FF'>&gt;</font>, index_sequence<font color='#5555FF'>&lt;</font>I2...<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font>
+            : index_sequence <font color='#5555FF'>&lt;</font> I1..., <font face='Lucida Console'>(</font><font color='#0000FF'>sizeof</font>...<font face='Lucida Console'>(</font>I1<font face='Lucida Console'>)</font> <font color='#5555FF'>+</font> I2<font face='Lucida Console'>)</font>... <font color='#5555FF'>&gt;</font> <b>{</b><b>}</b>;
+
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font>std::<font color='#0000FF'><u>size_t</u></font> N<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>struct</font> <b><a name='make_index_sequence'></a>make_index_sequence</b>
+        : merge_and_renumber <font color='#5555FF'>&lt;</font> <font color='#0000FF'>typename</font> make_index_sequence <font color='#5555FF'>&lt;</font> N <font color='#5555FF'>/</font> <font color='#979000'>2</font> <font color='#5555FF'>&gt;</font>::type,
+          <font color='#0000FF'>typename</font> make_index_sequence <font color='#5555FF'>&lt;</font> N <font color='#5555FF'>-</font> N <font color='#5555FF'>/</font> <font color='#979000'>2</font> <font color='#5555FF'>&gt;</font>::type <font color='#5555FF'>&gt;</font> <b>{</b><b>}</b>;
+
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>struct</font> <b><a name='make_index_sequence'></a>make_index_sequence</b><font color='#5555FF'>&lt;</font><font color='#979000'>0</font><font color='#5555FF'>&gt;</font> : index_sequence<font color='#5555FF'>&lt;</font><font color='#5555FF'>&gt;</font> <b>{</b><b>}</b>;
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>struct</font> <b><a name='make_index_sequence'></a>make_index_sequence</b><font color='#5555FF'>&lt;</font><font color='#979000'>1</font><font color='#5555FF'>&gt;</font> : index_sequence<font color='#5555FF'>&lt;</font><font color='#979000'>0</font><font color='#5555FF'>&gt;</font> <b>{</b><b>}</b>;
+
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font>... Ts<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>using</font> index_sequence_for <font color='#5555FF'>=</font> make_index_sequence<font color='#5555FF'>&lt;</font><font color='#0000FF'>sizeof</font>...<font face='Lucida Console'>(</font>Ts<font face='Lucida Console'>)</font><font color='#5555FF'>&gt;</font>;
+<b>}</b>
+
+<font color='#0000FF'>#endif</font> <font color='#009900'>//DLIB_UTILITY_Hh_</font>
+</pre></body></html>

@@ -1,0 +1,97 @@
+<html><!-- Created using the cpp_pretty_printer from the dlib C++ library.  See http://dlib.net for updates. --><head><title>dlib C++ Library - utilities.h</title></head><body bgcolor='white'><pre>
+<font color='#009900'>// Copyright (C) 2016  Davis E. King (davis@dlib.net)
+</font><font color='#009900'>// License: Boost Software License   See LICENSE.txt for the full license.
+</font><font color='#0000FF'>#ifndef</font> DLIB_DNn_UTILITIES_H_
+<font color='#0000FF'>#define</font> DLIB_DNn_UTILITIES_H_
+
+<font color='#0000FF'>#include</font> "<a style='text-decoration:none' href='../cuda/tensor.h.html'>../cuda/tensor.h</a>"
+<font color='#0000FF'>#include</font> "<a style='text-decoration:none' href='utilities_abstract.h.html'>utilities_abstract.h</a>"
+<font color='#0000FF'>#include</font> "<a style='text-decoration:none' href='../geometry.h.html'>../geometry.h</a>"
+<font color='#0000FF'>#include</font> <font color='#5555FF'>&lt;</font>fstream<font color='#5555FF'>&gt;</font>
+
+<font color='#0000FF'>namespace</font> dlib
+<b>{</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>inline</font> <font color='#0000FF'><u>void</u></font> <b><a name='randomize_parameters'></a>randomize_parameters</b> <font face='Lucida Console'>(</font>
+        tensor<font color='#5555FF'>&amp;</font> params,
+        <font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>long</u></font> num_inputs_and_outputs,
+        dlib::rand<font color='#5555FF'>&amp;</font> rnd
+    <font face='Lucida Console'>)</font>
+    <b>{</b>
+        <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'>auto</font><font color='#5555FF'>&amp;</font> val : params<font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#009900'>// Draw a random number to initialize the layer according to formula (16)
+</font>            <font color='#009900'>// from Understanding the difficulty of training deep feedforward neural
+</font>            <font color='#009900'>// networks by Xavier Glorot and Yoshua Bengio.
+</font>            val <font color='#5555FF'>=</font> <font color='#979000'>2</font><font color='#5555FF'>*</font>rnd.<font color='#BB00BB'>get_random_float</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font color='#5555FF'>-</font><font color='#979000'>1</font>;
+            val <font color='#5555FF'>*</font><font color='#5555FF'>=</font> std::<font color='#BB00BB'>sqrt</font><font face='Lucida Console'>(</font><font color='#979000'>6.0</font><font color='#5555FF'>/</font><font face='Lucida Console'>(</font>num_inputs_and_outputs<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+        <b>}</b>
+    <b>}</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> label_type<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>struct</font> <b><a name='weighted_label'></a>weighted_label</b>
+    <b>{</b>
+        <b><a name='weighted_label'></a>weighted_label</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>
+        <b>{</b><b>}</b>
+
+        <b><a name='weighted_label'></a>weighted_label</b><font face='Lucida Console'>(</font>label_type label, <font color='#0000FF'><u>float</u></font> weight <font color='#5555FF'>=</font> <font color='#979000'>1.f</font><font face='Lucida Console'>)</font>
+            : label<font face='Lucida Console'>(</font>label<font face='Lucida Console'>)</font>, weight<font face='Lucida Console'>(</font>weight<font face='Lucida Console'>)</font>
+        <b>{</b><b>}</b>
+
+        label_type label<b>{</b><b>}</b>;
+        <font color='#0000FF'><u>float</u></font> weight <font color='#5555FF'>=</font> <font color='#979000'>1.f</font>;
+    <b>}</b>;
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>inline</font> <font color='#0000FF'><u>double</u></font> <b><a name='log1pexp'></a>log1pexp</b><font face='Lucida Console'>(</font><font color='#0000FF'><u>double</u></font> x<font face='Lucida Console'>)</font>
+    <b>{</b>
+        <font color='#0000FF'>using</font> std::exp;
+        <font color='#0000FF'>using</font> <font color='#0000FF'>namespace</font> std; <font color='#009900'>// Do this instead of using std::log1p because some compilers
+</font>                             <font color='#009900'>// error out otherwise (E.g. gcc 4.9 in cygwin)
+</font>        <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>x <font color='#5555FF'>&lt;</font><font color='#5555FF'>=</font> <font color='#5555FF'>-</font><font color='#979000'>37</font><font face='Lucida Console'>)</font>
+            <font color='#0000FF'>return</font> <font color='#BB00BB'>exp</font><font face='Lucida Console'>(</font>x<font face='Lucida Console'>)</font>;
+        <font color='#0000FF'>else</font> <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font><font color='#5555FF'>-</font><font color='#979000'>37</font> <font color='#5555FF'>&lt;</font> x <font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> x <font color='#5555FF'>&lt;</font><font color='#5555FF'>=</font> <font color='#979000'>18</font><font face='Lucida Console'>)</font>
+            <font color='#0000FF'>return</font> <font color='#BB00BB'>log1p</font><font face='Lucida Console'>(</font><font color='#BB00BB'>exp</font><font face='Lucida Console'>(</font>x<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+        <font color='#0000FF'>else</font> <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font><font color='#979000'>18</font> <font color='#5555FF'>&lt;</font> x <font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> x <font color='#5555FF'>&lt;</font><font color='#5555FF'>=</font> <font color='#979000'>33.3</font><font face='Lucida Console'>)</font>
+            <font color='#0000FF'>return</font> x <font color='#5555FF'>+</font> <font color='#BB00BB'>exp</font><font face='Lucida Console'>(</font><font color='#5555FF'>-</font>x<font face='Lucida Console'>)</font>;
+        <font color='#0000FF'>else</font>
+            <font color='#0000FF'>return</font> x;
+    <b>}</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T<font color='#5555FF'>&gt;</font>
+    T <b><a name='safe_log'></a>safe_log</b><font face='Lucida Console'>(</font>T input, T epsilon <font color='#5555FF'>=</font> <font color='#979000'>1e</font><font color='#5555FF'>-</font><font color='#979000'>10</font><font face='Lucida Console'>)</font>
+    <b>{</b>
+        <font color='#009900'>// Prevent trying to calculate the logarithm of a very small number (let alone zero)
+</font>        <font color='#0000FF'>return</font> std::<font color='#BB00BB'>log</font><font face='Lucida Console'>(</font>std::<font color='#BB00BB'>max</font><font face='Lucida Console'>(</font>input, epsilon<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+    <b>}</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>static</font> <font color='#0000FF'><u>size_t</u></font> <b><a name='tensor_index'></a>tensor_index</b><font face='Lucida Console'>(</font>
+        <font color='#0000FF'>const</font> tensor<font color='#5555FF'>&amp;</font> t,
+        <font color='#0000FF'>const</font> <font color='#0000FF'><u>long</u></font> sample,
+        <font color='#0000FF'>const</font> <font color='#0000FF'><u>long</u></font> k,
+        <font color='#0000FF'>const</font> <font color='#0000FF'><u>long</u></font> r,
+        <font color='#0000FF'>const</font> <font color='#0000FF'><u>long</u></font> c
+    <font face='Lucida Console'>)</font>
+    <b>{</b>
+        <font color='#0000FF'>return</font> <font face='Lucida Console'>(</font><font face='Lucida Console'>(</font>sample <font color='#5555FF'>*</font> t.<font color='#BB00BB'>k</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>+</font> k<font face='Lucida Console'>)</font> <font color='#5555FF'>*</font> t.<font color='#BB00BB'>nr</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>+</font> r<font face='Lucida Console'>)</font> <font color='#5555FF'>*</font> t.<font color='#BB00BB'>nc</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>+</font> c;
+    <b>}</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+<b>}</b>
+
+<font color='#0000FF'>#endif</font> <font color='#009900'>// DLIB_DNn_UTILITIES_H_ 
+</font>
+
+
+
+</pre></body></html>

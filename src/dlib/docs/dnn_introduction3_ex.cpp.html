@@ -1,0 +1,160 @@
+<html><!-- Created using the cpp_pretty_printer from the dlib C++ library.  See http://dlib.net for updates. --><head><title>dlib C++ Library - dnn_introduction3_ex.cpp</title></head><body bgcolor='white'><pre>
+<font color='#009900'>// The contents of this file are in the public domain. See LICENSE_FOR_EXAMPLE_PROGRAMS.txt
+</font><font color='#009900'>/*
+    This is an example illustrating the use of the deep learning tools from the
+    dlib C++ Library.  I'm assuming you have already read the <a href="dnn_introduction_ex.cpp.html">dnn_introduction_ex.cpp</a> and
+    the <a href="dnn_introduction2_ex.cpp.html">dnn_introduction2_ex.cpp</a> examples.  So in this example program I'm going to go
+    over a transfer learning example, which includes:
+        - Defining a layer visitor to modify the some network parameters for fine-tuning
+        - Using pretrained layers of a network for another task
+*/</font>
+
+<font color='#0000FF'>#include</font> <font color='#5555FF'>&lt;</font>dlib<font color='#5555FF'>/</font>dnn.h<font color='#5555FF'>&gt;</font>
+<font color='#0000FF'>#include</font> <font color='#5555FF'>&lt;</font>iostream<font color='#5555FF'>&gt;</font>
+
+<font color='#009900'>// This header file includes a generic definition of the most common ResNet architectures
+</font><font color='#0000FF'>#include</font> "<a style='text-decoration:none' href='resnet.h.html'>resnet.h</a>"
+
+<font color='#0000FF'>using</font> <font color='#0000FF'>namespace</font> std;
+<font color='#0000FF'>using</font> <font color='#0000FF'>namespace</font> dlib;
+
+<font color='#009900'>// In this simple example we will show how to load a pretrained network and use it for a
+</font><font color='#009900'>// different task.  In particular, we will load a ResNet50 trained on ImageNet, adjust
+</font><font color='#009900'>// some of its parameters and use it as a pretrained backbone for some metric learning
+</font><font color='#009900'>// task.
+</font>
+<font color='#009900'>// Let's start by defining a network that will use the ResNet50 backbone from resnet.h
+</font><font color='#0000FF'>namespace</font> model
+<b>{</b>
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='BN'></a>BN</b><font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>using</font> net_type <font color='#5555FF'>=</font> loss_metric<font color='#5555FF'>&lt;</font>
+        fc_no_bias<font color='#5555FF'>&lt;</font><font color='#979000'>128</font>,
+        avg_pool_everything<font color='#5555FF'>&lt;</font>
+        <font color='#0000FF'>typename</font> resnet::def<font color='#5555FF'>&lt;</font>BN<font color='#5555FF'>&gt;</font>::<font color='#0000FF'>template</font> backbone_50<font color='#5555FF'>&lt;</font>
+        input_rgb_image
+        <font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font>;
+
+    <font color='#0000FF'>using</font> train <font color='#5555FF'>=</font> net_type<font color='#5555FF'>&lt;</font>bn_con<font color='#5555FF'>&gt;</font>;
+    <font color='#0000FF'>using</font> infer <font color='#5555FF'>=</font> net_type<font color='#5555FF'>&lt;</font>affine<font color='#5555FF'>&gt;</font>;
+<b>}</b>
+
+<font color='#009900'>// Next, we define a layer visitor that will modify the weight decay of a network.  The
+</font><font color='#009900'>// main interest of this class is to show how one can define custom visitors that modify
+</font><font color='#009900'>// some network parameters.
+</font><font color='#0000FF'>class</font> <b><a name='visitor_weight_decay_multiplier'></a>visitor_weight_decay_multiplier</b>
+<b>{</b>
+<font color='#0000FF'>public</font>:
+
+    <b><a name='visitor_weight_decay_multiplier'></a>visitor_weight_decay_multiplier</b><font face='Lucida Console'>(</font><font color='#0000FF'><u>double</u></font> new_weight_decay_multiplier_<font face='Lucida Console'>)</font> :
+        new_weight_decay_multiplier<font face='Lucida Console'>(</font>new_weight_decay_multiplier_<font face='Lucida Console'>)</font> <b>{</b><b>}</b>
+
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> layer<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'><u>void</u></font> <b><a name='operator'></a>operator</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>(</font>layer<font color='#5555FF'>&amp;</font> l<font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+    <b>{</b>
+        <font color='#BB00BB'>set_weight_decay_multiplier</font><font face='Lucida Console'>(</font>l, new_weight_decay_multiplier<font face='Lucida Console'>)</font>;
+    <b>}</b>
+
+<font color='#0000FF'>private</font>:
+
+    <font color='#0000FF'><u>double</u></font> new_weight_decay_multiplier;
+<b>}</b>;
+
+
+<font color='#0000FF'><u>int</u></font> <b><a name='main'></a>main</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#0000FF'>try</font>
+<b>{</b>
+    <font color='#009900'>// Let's instantiate our network in train mode.
+</font>    model::train net;
+
+    <font color='#009900'>// We create a new scope so that resources from the loaded network are freed
+</font>    <font color='#009900'>// automatically when leaving the scope.
+</font>    <b>{</b>
+        <font color='#009900'>// Now, let's define the classic ResNet50 network and load the pretrained model on
+</font>        <font color='#009900'>// ImageNet.
+</font>        resnet::train_50 resnet50;
+        std::vector<font color='#5555FF'>&lt;</font>string<font color='#5555FF'>&gt;</font> labels;
+        <font color='#BB00BB'>deserialize</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>resnet50_1000_imagenet_classifier.dnn</font>"<font face='Lucida Console'>)</font> <font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font> resnet50 <font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font> labels;
+
+        <font color='#009900'>// For transfer learning, we are only interested in the ResNet50's backbone, which
+</font>        <font color='#009900'>// lays below the loss and the fc layers, so we can extract it as:
+</font>        <font color='#0000FF'>auto</font> backbone <font color='#5555FF'>=</font> std::<font color='#BB00BB'>move</font><font face='Lucida Console'>(</font>resnet50.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+
+        <font color='#009900'>// We can now assign ResNet50's backbone to our network skipping the different
+</font>        <font color='#009900'>// layers, in our case, the loss layer and the fc layer:
+</font>        net.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>=</font> backbone;
+
+        <font color='#009900'>// An alternative way to use the pretrained network on a different
+</font>        <font color='#009900'>// network is to extract the relevant part of the network (we remove
+</font>        <font color='#009900'>// loss and fc layers), stack the new layers on top of it and assign
+</font>        <font color='#009900'>// the network.
+</font>        <font color='#0000FF'>using</font> net_type <font color='#5555FF'>=</font> loss_metric<font color='#5555FF'>&lt;</font>fc_no_bias<font color='#5555FF'>&lt;</font><font color='#979000'>128</font>, <font color='#BB00BB'>decltype</font><font face='Lucida Console'>(</font>backbone<font face='Lucida Console'>)</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font>;
+        net_type net2;
+        net2.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>=</font> backbone;
+    <b>}</b>
+
+    <font color='#009900'>// We can use the visit_layers function to modify the weight decay of the entire
+</font>    <font color='#009900'>// network:
+</font>    <font color='#BB00BB'>visit_computational_layers</font><font face='Lucida Console'>(</font>net, <font color='#BB00BB'>visitor_weight_decay_multiplier</font><font face='Lucida Console'>(</font><font color='#979000'>0.001</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+
+    <font color='#009900'>// We can also use predefined visitors to affect the learning rate of the whole
+</font>    <font color='#009900'>// network.
+</font>    <font color='#BB00BB'>set_all_learning_rate_multipliers</font><font face='Lucida Console'>(</font>net, <font color='#979000'>0.5</font><font face='Lucida Console'>)</font>;
+
+    <font color='#009900'>// Modifying the learning rates of a network is a common practice for fine tuning, for
+</font>    <font color='#009900'>// this reason it is already provided. However, it is implemented internally using a
+</font>    <font color='#009900'>// visitor that is very similar to the one defined in this example.
+</font>
+    <font color='#009900'>// Usually, we want to freeze the network, except for the top layers:
+</font>    <font color='#BB00BB'>visit_computational_layers</font><font face='Lucida Console'>(</font>net.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, <font color='#BB00BB'>visitor_weight_decay_multiplier</font><font face='Lucida Console'>(</font><font color='#979000'>0</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+    <font color='#BB00BB'>set_all_learning_rate_multipliers</font><font face='Lucida Console'>(</font>net.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>subnet</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, <font color='#979000'>0</font><font face='Lucida Console'>)</font>;
+
+    <font color='#009900'>// Alternatively, we can use the visit_layers_range to modify only a specific set of
+</font>    <font color='#009900'>// layers:
+</font>    visit_computational_layers_range<font color='#5555FF'>&lt;</font><font color='#979000'>0</font>, <font color='#979000'>2</font><font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>net, <font color='#BB00BB'>visitor_weight_decay_multiplier</font><font face='Lucida Console'>(</font><font color='#979000'>1</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+
+    <font color='#009900'>// Sometimes we might want to set the learning rate differently throughout the network.
+</font>    <font color='#009900'>// Here we show how to use adjust the learning rate at the different ResNet50's
+</font>    <font color='#009900'>// convolutional blocks:
+</font>    set_learning_rate_multipliers_range<font color='#5555FF'>&lt;</font>  <font color='#979000'>0</font>,   <font color='#979000'>2</font><font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>net, <font color='#979000'>1</font><font face='Lucida Console'>)</font>;
+    set_learning_rate_multipliers_range<font color='#5555FF'>&lt;</font>  <font color='#979000'>2</font>,  <font color='#979000'>38</font><font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>net, <font color='#979000'>0.1</font><font face='Lucida Console'>)</font>;
+    set_learning_rate_multipliers_range<font color='#5555FF'>&lt;</font> <font color='#979000'>38</font>, <font color='#979000'>107</font><font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>net, <font color='#979000'>0.01</font><font face='Lucida Console'>)</font>;
+    set_learning_rate_multipliers_range<font color='#5555FF'>&lt;</font><font color='#979000'>107</font>, <font color='#979000'>154</font><font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>net, <font color='#979000'>0.001</font><font face='Lucida Console'>)</font>;
+    set_learning_rate_multipliers_range<font color='#5555FF'>&lt;</font><font color='#979000'>154</font>, <font color='#979000'>193</font><font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>net, <font color='#979000'>0.0001</font><font face='Lucida Console'>)</font>;
+
+    <font color='#009900'>// Finally, we can check the results by printing the network.  But before, if we
+</font>    <font color='#009900'>// forward an image through the network, we will see tensors shape at every layer.
+</font>    matrix<font color='#5555FF'>&lt;</font>rgb_pixel<font color='#5555FF'>&gt;</font> <font color='#BB00BB'>image</font><font face='Lucida Console'>(</font><font color='#979000'>224</font>, <font color='#979000'>224</font><font face='Lucida Console'>)</font>;
+    <font color='#BB00BB'>assign_all_pixels</font><font face='Lucida Console'>(</font>image, <font color='#BB00BB'>rgb_pixel</font><font face='Lucida Console'>(</font><font color='#979000'>0</font>, <font color='#979000'>0</font>, <font color='#979000'>0</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+    std::vector<font color='#5555FF'>&lt;</font>matrix<font color='#5555FF'>&lt;</font>rgb_pixel<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font> <font color='#BB00BB'>minibatch</font><font face='Lucida Console'>(</font><font color='#979000'>1</font>, image<font face='Lucida Console'>)</font>;
+    resizable_tensor input;
+    net.<font color='#BB00BB'>to_tensor</font><font face='Lucida Console'>(</font>minibatch.<font color='#BB00BB'>begin</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, minibatch.<font color='#BB00BB'>end</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, input<font face='Lucida Console'>)</font>;
+    net.<font color='#BB00BB'>forward</font><font face='Lucida Console'>(</font>input<font face='Lucida Console'>)</font>;
+    cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> net <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> endl;
+    cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>input size=(</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font>
+       "<font color='#CC0000'>num:</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> input.<font color='#BB00BB'>num_samples</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>, </font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font>
+       "<font color='#CC0000'>k:</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> input.<font color='#BB00BB'>k</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>, </font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font>
+       "<font color='#CC0000'>nr:</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> input.<font color='#BB00BB'>nr</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>, </font>"
+       "<font color='#CC0000'>nc:</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> input.<font color='#BB00BB'>nc</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>)</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> endl;
+
+    <font color='#009900'>// We can also print the number of parameters of the network:
+</font>    cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>number of network parameters: </font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> <font color='#BB00BB'>count_parameters</font><font face='Lucida Console'>(</font>net<font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> endl;
+
+    <font color='#009900'>// From this point on, we can fine-tune the new network using this pretrained backbone
+</font>    <font color='#009900'>// on another task, such as the one showed in <a href="dnn_metric_learning_on_images_ex.cpp.html">dnn_metric_learning_on_images_ex.cpp</a>.
+</font>
+    <font color='#0000FF'>return</font> EXIT_SUCCESS;
+<b>}</b>
+<font color='#0000FF'>catch</font> <font face='Lucida Console'>(</font><font color='#0000FF'>const</font> serialization_error<font color='#5555FF'>&amp;</font> e<font face='Lucida Console'>)</font>
+<b>{</b>
+    cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> e.<font color='#BB00BB'>what</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> endl;
+    cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>You need to download a copy of the file resnet50_1000_imagenet_classifier.dnn</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> endl;
+    cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>available at http://dlib.net/files/resnet50_1000_imagenet_classifier.dnn.bz2</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> endl;
+    cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> endl;
+    <font color='#0000FF'>return</font> EXIT_FAILURE;
+<b>}</b>
+<font color='#0000FF'>catch</font> <font face='Lucida Console'>(</font><font color='#0000FF'>const</font> exception<font color='#5555FF'>&amp;</font> e<font face='Lucida Console'>)</font>
+<b>{</b>
+    cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> e.<font color='#BB00BB'>what</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> endl;
+    <font color='#0000FF'>return</font> EXIT_FAILURE;
+<b>}</b>
+
+</pre></body></html>

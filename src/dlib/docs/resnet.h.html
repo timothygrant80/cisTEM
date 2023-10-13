@@ -1,0 +1,109 @@
+<html><!-- Created using the cpp_pretty_printer from the dlib C++ library.  See http://dlib.net for updates. --><head><title>dlib C++ Library - resnet.h</title></head><body bgcolor='white'><pre>
+<font color='#0000FF'>#ifndef</font> ResNet_H
+<font color='#0000FF'>#define</font> ResNet_H
+
+<font color='#0000FF'>#include</font> <font color='#5555FF'>&lt;</font>dlib<font color='#5555FF'>/</font>dnn.h<font color='#5555FF'>&gt;</font>
+
+<font color='#0000FF'>namespace</font> resnet
+<b>{</b>
+    <font color='#0000FF'>using</font> <font color='#0000FF'>namespace</font> dlib;
+    <font color='#009900'>// BN is bn_con or affine layer
+</font>    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='BN'></a>BN</b><font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>struct</font> <b><a name='def'></a>def</b>
+    <b>{</b>
+        <font color='#009900'>// the resnet basic block, where BN is bn_con or affine
+</font>        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'><u>long</u></font> num_filters, <font color='#0000FF'><u>int</u></font> stride, <font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>using</font> basicblock <font color='#5555FF'>=</font> BN<font color='#5555FF'>&lt;</font>con<font color='#5555FF'>&lt;</font>num_filters, <font color='#979000'>3</font>, <font color='#979000'>3</font>, <font color='#979000'>1</font>, <font color='#979000'>1</font>,
+                relu<font color='#5555FF'>&lt;</font>BN<font color='#5555FF'>&lt;</font>con<font color='#5555FF'>&lt;</font>num_filters, <font color='#979000'>3</font>, <font color='#979000'>3</font>, stride, stride, SUBNET<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font>;
+
+        <font color='#009900'>// the resnet bottleneck block
+</font>        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'><u>long</u></font> num_filters, <font color='#0000FF'><u>int</u></font> stride, <font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>using</font> bottleneck <font color='#5555FF'>=</font> BN<font color='#5555FF'>&lt;</font>con<font color='#5555FF'>&lt;</font><font color='#979000'>4</font> <font color='#5555FF'>*</font> num_filters, <font color='#979000'>1</font>, <font color='#979000'>1</font>, <font color='#979000'>1</font>, <font color='#979000'>1</font>,
+                relu<font color='#5555FF'>&lt;</font>BN<font color='#5555FF'>&lt;</font>con<font color='#5555FF'>&lt;</font>num_filters, <font color='#979000'>3</font>, <font color='#979000'>3</font>, stride, stride,
+                relu<font color='#5555FF'>&lt;</font>BN<font color='#5555FF'>&lt;</font>con<font color='#5555FF'>&lt;</font>num_filters, <font color='#979000'>1</font>, <font color='#979000'>1</font>, <font color='#979000'>1</font>, <font color='#979000'>1</font>, SUBNET<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font>;
+
+        <font color='#009900'>// the resnet residual, where BLOCK is either basicblock or bottleneck
+</font>        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'><u>long</u></font>, <font color='#0000FF'><u>int</u></font>, <font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='BLOCK'></a>BLOCK</b>, <font color='#0000FF'><u>long</u></font> num_filters, <font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>using</font> residual <font color='#5555FF'>=</font> add_prev1<font color='#5555FF'>&lt;</font>BLOCK<font color='#5555FF'>&lt;</font>num_filters, <font color='#979000'>1</font>, tag1<font color='#5555FF'>&lt;</font>SUBNET<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font>;
+
+        <font color='#009900'>// a resnet residual that does subsampling on both paths
+</font>        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'><u>long</u></font>, <font color='#0000FF'><u>int</u></font>, <font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='BLOCK'></a>BLOCK</b>, <font color='#0000FF'><u>long</u></font> num_filters, <font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>using</font> residual_down <font color='#5555FF'>=</font> add_prev2<font color='#5555FF'>&lt;</font>avg_pool<font color='#5555FF'>&lt;</font><font color='#979000'>2</font>, <font color='#979000'>2</font>, <font color='#979000'>2</font>, <font color='#979000'>2</font>,
+                              skip1<font color='#5555FF'>&lt;</font>tag2<font color='#5555FF'>&lt;</font>BLOCK<font color='#5555FF'>&lt;</font>num_filters, <font color='#979000'>2</font>,
+                              tag1<font color='#5555FF'>&lt;</font>SUBNET<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font>;
+
+        <font color='#009900'>// residual block with optional downsampling
+</font>        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font>
+            <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'><u>long</u></font>, <font color='#0000FF'><u>int</u></font>, <font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font>, <font color='#0000FF'><u>long</u></font>, <font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='RESIDUAL'></a>RESIDUAL</b>,
+            <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'><u>long</u></font>, <font color='#0000FF'><u>int</u></font>, <font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='BLOCK'></a>BLOCK</b>,
+            <font color='#0000FF'><u>long</u></font> num_filters,
+            <font color='#0000FF'>typename</font> SUBNET
+        <font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>using</font> residual_block <font color='#5555FF'>=</font> relu<font color='#5555FF'>&lt;</font>RESIDUAL<font color='#5555FF'>&lt;</font>BLOCK, num_filters, SUBNET<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font>;
+
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'><u>long</u></font> num_filters, <font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>using</font> resbasicblock_down <font color='#5555FF'>=</font> residual_block<font color='#5555FF'>&lt;</font>residual_down, basicblock, num_filters, SUBNET<font color='#5555FF'>&gt;</font>;
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'><u>long</u></font> num_filters, <font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>using</font> resbottleneck_down <font color='#5555FF'>=</font> residual_block<font color='#5555FF'>&lt;</font>residual_down, bottleneck, num_filters, SUBNET<font color='#5555FF'>&gt;</font>;
+
+        <font color='#009900'>// some definitions to allow the use of the repeat layer
+</font>        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> resbasicblock_512 <font color='#5555FF'>=</font> residual_block<font color='#5555FF'>&lt;</font>residual, basicblock, <font color='#979000'>512</font>, SUBNET<font color='#5555FF'>&gt;</font>;
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> resbasicblock_256 <font color='#5555FF'>=</font> residual_block<font color='#5555FF'>&lt;</font>residual, basicblock, <font color='#979000'>256</font>, SUBNET<font color='#5555FF'>&gt;</font>;
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> resbasicblock_128 <font color='#5555FF'>=</font> residual_block<font color='#5555FF'>&lt;</font>residual, basicblock, <font color='#979000'>128</font>, SUBNET<font color='#5555FF'>&gt;</font>;
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> resbasicblock_64  <font color='#5555FF'>=</font> residual_block<font color='#5555FF'>&lt;</font>residual, basicblock,  <font color='#979000'>64</font>, SUBNET<font color='#5555FF'>&gt;</font>;
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> resbottleneck_512 <font color='#5555FF'>=</font> residual_block<font color='#5555FF'>&lt;</font>residual, bottleneck, <font color='#979000'>512</font>, SUBNET<font color='#5555FF'>&gt;</font>;
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> resbottleneck_256 <font color='#5555FF'>=</font> residual_block<font color='#5555FF'>&lt;</font>residual, bottleneck, <font color='#979000'>256</font>, SUBNET<font color='#5555FF'>&gt;</font>;
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> resbottleneck_128 <font color='#5555FF'>=</font> residual_block<font color='#5555FF'>&lt;</font>residual, bottleneck, <font color='#979000'>128</font>, SUBNET<font color='#5555FF'>&gt;</font>;
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> resbottleneck_64  <font color='#5555FF'>=</font> residual_block<font color='#5555FF'>&lt;</font>residual, bottleneck,  <font color='#979000'>64</font>, SUBNET<font color='#5555FF'>&gt;</font>;
+
+        <font color='#009900'>// common processing for standard resnet inputs
+</font>        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> INPUT<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>using</font> input_processing <font color='#5555FF'>=</font> max_pool<font color='#5555FF'>&lt;</font><font color='#979000'>3</font>, <font color='#979000'>3</font>, <font color='#979000'>2</font>, <font color='#979000'>2</font>, relu<font color='#5555FF'>&lt;</font>BN<font color='#5555FF'>&lt;</font>con<font color='#5555FF'>&lt;</font><font color='#979000'>64</font>, <font color='#979000'>7</font>, <font color='#979000'>7</font>, <font color='#979000'>2</font>, <font color='#979000'>2</font>, INPUT<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font>;
+
+        <font color='#009900'>// the resnet backbone with basicblocks
+</font>        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'><u>long</u></font> nb_512, <font color='#0000FF'><u>long</u></font> nb_256, <font color='#0000FF'><u>long</u></font> nb_128, <font color='#0000FF'><u>long</u></font> nb_64, <font color='#0000FF'>typename</font> INPUT<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>using</font> backbone_basicblock <font color='#5555FF'>=</font>
+            repeat<font color='#5555FF'>&lt;</font>nb_512, resbasicblock_512, resbasicblock_down<font color='#5555FF'>&lt;</font><font color='#979000'>512</font>,
+            repeat<font color='#5555FF'>&lt;</font>nb_256, resbasicblock_256, resbasicblock_down<font color='#5555FF'>&lt;</font><font color='#979000'>256</font>,
+            repeat<font color='#5555FF'>&lt;</font>nb_128, resbasicblock_128, resbasicblock_down<font color='#5555FF'>&lt;</font><font color='#979000'>128</font>,
+            repeat<font color='#5555FF'>&lt;</font>nb_64,  resbasicblock_64, input_processing<font color='#5555FF'>&lt;</font>INPUT<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font>;
+
+        <font color='#009900'>// the resnet backbone with bottlenecks
+</font>        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'><u>long</u></font> nb_512, <font color='#0000FF'><u>long</u></font> nb_256, <font color='#0000FF'><u>long</u></font> nb_128, <font color='#0000FF'><u>long</u></font> nb_64, <font color='#0000FF'>typename</font> INPUT<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>using</font> backbone_bottleneck <font color='#5555FF'>=</font>
+            repeat<font color='#5555FF'>&lt;</font>nb_512, resbottleneck_512, resbottleneck_down<font color='#5555FF'>&lt;</font><font color='#979000'>512</font>,
+            repeat<font color='#5555FF'>&lt;</font>nb_256, resbottleneck_256, resbottleneck_down<font color='#5555FF'>&lt;</font><font color='#979000'>256</font>,
+            repeat<font color='#5555FF'>&lt;</font>nb_128, resbottleneck_128, resbottleneck_down<font color='#5555FF'>&lt;</font><font color='#979000'>128</font>,
+            repeat<font color='#5555FF'>&lt;</font>nb_64,  resbottleneck_64, input_processing<font color='#5555FF'>&lt;</font>INPUT<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font>;
+
+        <font color='#009900'>// the backbones for the classic architectures
+</font>        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> INPUT<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> backbone_18  <font color='#5555FF'>=</font> backbone_basicblock<font color='#5555FF'>&lt;</font><font color='#979000'>1</font>, <font color='#979000'>1</font>, <font color='#979000'>1</font>, <font color='#979000'>2</font>, INPUT<font color='#5555FF'>&gt;</font>;
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> INPUT<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> backbone_34  <font color='#5555FF'>=</font> backbone_basicblock<font color='#5555FF'>&lt;</font><font color='#979000'>2</font>, <font color='#979000'>5</font>, <font color='#979000'>3</font>, <font color='#979000'>3</font>, INPUT<font color='#5555FF'>&gt;</font>;
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> INPUT<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> backbone_50  <font color='#5555FF'>=</font> backbone_bottleneck<font color='#5555FF'>&lt;</font><font color='#979000'>2</font>, <font color='#979000'>5</font>, <font color='#979000'>3</font>, <font color='#979000'>3</font>, INPUT<font color='#5555FF'>&gt;</font>;
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> INPUT<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> backbone_101 <font color='#5555FF'>=</font> backbone_bottleneck<font color='#5555FF'>&lt;</font><font color='#979000'>2</font>, <font color='#979000'>22</font>, <font color='#979000'>3</font>, <font color='#979000'>3</font>, INPUT<font color='#5555FF'>&gt;</font>;
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> INPUT<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> backbone_152 <font color='#5555FF'>=</font> backbone_bottleneck<font color='#5555FF'>&lt;</font><font color='#979000'>2</font>, <font color='#979000'>35</font>, <font color='#979000'>7</font>, <font color='#979000'>3</font>, INPUT<font color='#5555FF'>&gt;</font>;
+
+        <font color='#009900'>// the typical classifier models
+</font>        <font color='#0000FF'>using</font> n18  <font color='#5555FF'>=</font> loss_multiclass_log<font color='#5555FF'>&lt;</font>fc<font color='#5555FF'>&lt;</font><font color='#979000'>1000</font>, avg_pool_everything<font color='#5555FF'>&lt;</font>backbone_18<font color='#5555FF'>&lt;</font>input_rgb_image<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font>;
+        <font color='#0000FF'>using</font> n34  <font color='#5555FF'>=</font> loss_multiclass_log<font color='#5555FF'>&lt;</font>fc<font color='#5555FF'>&lt;</font><font color='#979000'>1000</font>, avg_pool_everything<font color='#5555FF'>&lt;</font>backbone_34<font color='#5555FF'>&lt;</font>input_rgb_image<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font>;
+        <font color='#0000FF'>using</font> n50  <font color='#5555FF'>=</font> loss_multiclass_log<font color='#5555FF'>&lt;</font>fc<font color='#5555FF'>&lt;</font><font color='#979000'>1000</font>, avg_pool_everything<font color='#5555FF'>&lt;</font>backbone_50<font color='#5555FF'>&lt;</font>input_rgb_image<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font>;
+        <font color='#0000FF'>using</font> n101 <font color='#5555FF'>=</font> loss_multiclass_log<font color='#5555FF'>&lt;</font>fc<font color='#5555FF'>&lt;</font><font color='#979000'>1000</font>, avg_pool_everything<font color='#5555FF'>&lt;</font>backbone_101<font color='#5555FF'>&lt;</font>input_rgb_image<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font>;
+        <font color='#0000FF'>using</font> n152 <font color='#5555FF'>=</font> loss_multiclass_log<font color='#5555FF'>&lt;</font>fc<font color='#5555FF'>&lt;</font><font color='#979000'>1000</font>, avg_pool_everything<font color='#5555FF'>&lt;</font>backbone_152<font color='#5555FF'>&lt;</font>input_rgb_image<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font>;
+    <b>}</b>;
+
+    <font color='#0000FF'>using</font> train_18 <font color='#5555FF'>=</font> def<font color='#5555FF'>&lt;</font>bn_con<font color='#5555FF'>&gt;</font>::n18;
+    <font color='#0000FF'>using</font> train_34 <font color='#5555FF'>=</font> def<font color='#5555FF'>&lt;</font>bn_con<font color='#5555FF'>&gt;</font>::n34;
+    <font color='#0000FF'>using</font> train_50 <font color='#5555FF'>=</font> def<font color='#5555FF'>&lt;</font>bn_con<font color='#5555FF'>&gt;</font>::n50;
+    <font color='#0000FF'>using</font> train_101 <font color='#5555FF'>=</font> def<font color='#5555FF'>&lt;</font>bn_con<font color='#5555FF'>&gt;</font>::n101;
+    <font color='#0000FF'>using</font> train_152 <font color='#5555FF'>=</font> def<font color='#5555FF'>&lt;</font>bn_con<font color='#5555FF'>&gt;</font>::n152;
+
+    <font color='#0000FF'>using</font> infer_18 <font color='#5555FF'>=</font> def<font color='#5555FF'>&lt;</font>affine<font color='#5555FF'>&gt;</font>::n18;
+    <font color='#0000FF'>using</font> infer_34 <font color='#5555FF'>=</font> def<font color='#5555FF'>&lt;</font>affine<font color='#5555FF'>&gt;</font>::n34;
+    <font color='#0000FF'>using</font> infer_50 <font color='#5555FF'>=</font> def<font color='#5555FF'>&lt;</font>affine<font color='#5555FF'>&gt;</font>::n50;
+    <font color='#0000FF'>using</font> infer_101 <font color='#5555FF'>=</font> def<font color='#5555FF'>&lt;</font>affine<font color='#5555FF'>&gt;</font>::n101;
+    <font color='#0000FF'>using</font> infer_152 <font color='#5555FF'>=</font> def<font color='#5555FF'>&lt;</font>affine<font color='#5555FF'>&gt;</font>::n152;
+<b>}</b>
+
+<font color='#0000FF'>#endif</font> <font color='#009900'>// ResNet_H
+</font>
+</pre></body></html>

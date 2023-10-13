@@ -35,28 +35,22 @@
 // ODD Sized IMAGES
 // NON SQUARE IMAGES
 
-void print2DArray(Image& image) {
-    int width           = 10;
-    int padding_counter = 1;
-    wxPrintf("\n");
-    for ( int x = -1; x < image.logical_x_dimension + image.padding_jump_value; x++ ) {
-        wxPrintf("[%-4d]   ", x);
-        for ( int y = 0; y < image.logical_y_dimension; y++ ) {
-            if ( x == -1 ) {
-                wxPrintf("[%*.3d]", width, y);
+void printArray(Image& image, bool round_to_int = false) {
+    float val;
+
+    for ( int k = 0; k < image.logical_z_dimension; k++ ) {
+        wxPrintf("z = %i\n", k);
+        for ( int i = 0; i < image.logical_x_dimension; i++ ) {
+            for ( int j = 0; j < image.logical_y_dimension; j++ ) {
+                val = image.ReturnRealPixelFromPhysicalCoord(i, j, k);
+                if ( round_to_int )
+                    wxPrintf("%i ", myroundint(val));
+                else
+                    wxPrintf("%f ", val);
             }
-            else if ( x < image.logical_x_dimension ) {
-                wxPrintf("%*.3f", width, image.real_values[image.ReturnReal1DAddressFromPhysicalCoord(x, y, 0)]);
-            }
-            else {
-                wxPrintf("%*.3f", width, image.real_values[padding_counter + image.ReturnReal1DAddressFromPhysicalCoord(x - padding_counter, y, 0)]);
-            }
+            wxPrintf("\n");
         }
-        if ( x >= image.logical_x_dimension )
-            padding_counter++;
-        wxPrintf("\n");
     }
-    wxPrintf("\n");
 }
 
 class
@@ -735,6 +729,47 @@ void MyTestApp::TestSumOfSquaresFourierAndFFTNormalization( ) {
     if ( ! RelativeErrorIsLessThanEpsilon(sum_of_squares, 1.f) )
         FailTest;
 
+    // To check the 2d and 3d cases, we can also use some toy images.
+    std::array<int, 2>  test_sizes = {6, 7};
+    std::array<bool, 2> test_3d    = {false, true};
+    int                 size_3d;
+    constexpr float     img_values = 1.0f;
+    for ( auto& size : test_sizes ) {
+        for ( auto& do3d : test_3d ) {
+            if ( do3d )
+                size_3d = size;
+            else
+                size_3d = 1;
+            test_image.Allocate(size, size, size_3d);
+            // Make sure the meta data is correctly reset:
+            test_image.object_is_centred_in_box = true;
+            test_image.SetToConstant(0.0f);
+            int ox, oy, oz;
+            ox = test_image.physical_address_of_box_center_x;
+            oy = test_image.physical_address_of_box_center_y;
+            oz = test_image.physical_address_of_box_center_z;
+
+            // Set a unit impulse at the centered in the box origin and a cross in the xy plane
+            float sum = 0.f;
+
+            test_image.real_values[test_image.ReturnReal1DAddressFromPhysicalCoord(ox, oy, oz)] = img_values;
+            sum += img_values;
+            for ( int i = -2; i < 3; i += 4 ) {
+                for ( int j = -2; j < 3; j += 4 ) {
+                    test_image.real_values[test_image.ReturnReal1DAddressFromPhysicalCoord(ox + i, oy + j, oz)] = img_values;
+                    sum += img_values;
+                }
+            }
+            // Don't do any scaling as it doesn't matter anyway since we'll use ReturnSumOfSquares to set the power to 1
+            test_image.ForwardFFT(false);
+            // We need to scale by 1/root(N) otherwise the we will get Sqrt(N) as the sum of squares
+            test_image.DivideByConstant(sqrtf(test_image.ReturnSumOfSquares( ) * test_image.number_of_real_space_pixels));
+            test_image.BackwardFFT( );
+            // ReturnSumOfSquares in real space actually returns SumOfSquares/N.
+            if ( ! FloatsAreAlmostTheSame(test_image.ReturnSumOfSquares( ) * test_image.number_of_real_space_pixels, 1.f) )
+                FailTest;
+        }
+    }
     EndTest( );
 }
 
@@ -1341,6 +1376,83 @@ void MyTestApp::TestAlignmentFunctions( ) {
                 FailTest;
         }
     }
+    EndTest( );
+
+    // A bare minimal test to make sure the origin of rotation is as expected.
+    BeginTest("Image::ExtractSlice");
+    Image test_vol;
+
+    // Test for even/odd and 2 and 3D images
+    AnglesAndShifts     test_extract_angles(90.f, 0.f, 0.f, 0.f, 0.f);
+    std::complex<float> origin_value;
+    for ( auto& size : test_sizes ) {
+        size += 2;
+        test_image.Allocate(size, size, 1);
+        int size_3d = 8 * size;
+        if ( IsOdd(size) )
+            size_3d++;
+        test_vol.Allocate(size_3d, size_3d, size_3d);
+        // Make sure the meta data is correctly reset:
+        test_vol.object_is_centred_in_box   = true;
+        test_image.object_is_centred_in_box = true;
+        test_image.SetToConstant(0.0f);
+        test_vol.SetToConstant(0.0f);
+        int ox, oy, oz;
+        ox = test_vol.physical_address_of_box_center_x;
+        oy = test_vol.physical_address_of_box_center_y;
+        oz = test_vol.physical_address_of_box_center_z;
+        // Set a unit impulse at the centered in the box origin and a cross in the xy plane
+
+        float sum = 0.f;
+
+        test_vol.real_values[test_vol.ReturnReal1DAddressFromPhysicalCoord(ox, oy, oz)] = 1.0f;
+        sum += 1.f;
+        for ( int i = -2; i < 3; i += 4 ) {
+            for ( int j = -2; j < 3; j += 4 ) {
+                test_vol.real_values[test_vol.ReturnReal1DAddressFromPhysicalCoord(ox + i, oy + j, oz)] = 1.0f;
+                sum += 1.f;
+            }
+        }
+
+        test_vol.ForwardFFT(false);
+
+        test_vol.SwapRealSpaceQuadrants( );
+        test_vol.ExtractSlice(test_image, test_extract_angles, 0., false);
+        test_image.SwapRealSpaceQuadrants( );
+        test_image.BackwardFFT( );
+
+        // Leaving for notes:
+        // An un-normalized padded 3d FT, projection, removal of zero pixel, padded back 2d fft,
+        // crop, normalized forward 2d, un-normalized back 2d FFT results in a total change in power as below.
+        // float p_   = test_vol.ReturnSumOfSquares( ) * test_vol.number_of_real_space_pixels;
+        // float sum_ = test_vol.ReturnSumOfRealValues( );
+        // float n2_  = float(size_3d * size_3d);
+        // float n3_  = float(size_3d * size_3d * size_3d);
+        // // I needed an extra sqrt(n2_) here ?
+        // float p_out_calc_ = powf(n2_, 1.5f) * (n3_ * p_ - sum_ * sum_);
+
+        EmpiricalDistribution test_dist;
+        test_image.UpdateDistributionOfRealValues(&test_dist);
+        float scale = test_dist.GetMaximum( );
+        test_image.MultiplyByConstant(1.f / scale);
+        // there is a sinc and some power loss during the cropping so it won't be perfectly 1
+        for ( int i = 0; i < test_image.real_memory_allocated; i++ )
+            test_image.real_values[i] = roundf(test_image.real_values[i]);
+        ox = test_image.physical_address_of_box_center_x;
+        oy = test_image.physical_address_of_box_center_y;
+        oz = test_image.physical_address_of_box_center_z;
+        if ( ! FloatsAreAlmostTheSame(test_image.ReturnRealPixelFromPhysicalCoord(ox, oy, 0), 1.0f) ) {
+            FailTest;
+        }
+        for ( int i = -2; i < 3; i += 4 ) {
+            for ( int j = -2; j < 3; j += 4 ) {
+                if ( ! FloatsAreAlmostTheSame(test_image.ReturnRealPixelFromPhysicalCoord(ox + i, oy + j, 0), 1.0f) ) {
+                    FailTest;
+                }
+            }
+        }
+    }
+
     EndTest( );
 
     // CalculateCrossCorrelationImageWith

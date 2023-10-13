@@ -2770,7 +2770,7 @@ void GpuImage::CopyHostToDeviceTextureComplex3d(Image& host_image) {
 
 // TODO: replace with template version
 void GpuImage::CopyHostToDevice16f(Image& host_image, bool should_block_until_finished) {
-    MyDebugAssertTrue(host_image.is_memory_allocated(real_values_16f), "Host image not allocated");
+    MyDebugAssertTrue(host_image.IsMemoryAllocated(real_values_16f), "Host image not allocated");
     if ( is_meta_data_initialized ) {
         MyDebugAssertTrue(HasSameDimensionsAs(host_image), "Images have different dimensions");
         UpdateFlagsFromHostImage(host_image);

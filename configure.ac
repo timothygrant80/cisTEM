@@ -381,6 +381,9 @@ fi
 AC_CHECK_HEADER(fftw3.h, , AC_MSG_ERROR("Can't find fftw3.h"))
 AC_CHECK_LIB([mkl_intel_lp64],[fftwf_malloc],[HAVE_MKL="yes"],[HAVE_MKL="no"],[-lmkl_core -lmkl_sequential -lpthread])
 
+# Check the library lX11
+AC_CHECK_LIB([X11], [XPending], [], [AC_MSG_ERROR([libX11 is required but not found])])
+
 if test "x$use_mkl" = "x0"; then
 	HAVE_MKL="no"
 fi

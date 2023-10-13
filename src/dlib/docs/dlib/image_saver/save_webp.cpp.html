@@ -1,0 +1,97 @@
+<html><!-- Created using the cpp_pretty_printer from the dlib C++ library.  See http://dlib.net for updates. --><head><title>dlib C++ Library - save_webp.cpp</title></head><body bgcolor='white'><pre>
+<font color='#009900'>// Copyright (C) 2022  Davis E. King (davis@dlib.net), Adrià Arrufat
+</font><font color='#009900'>// License: Boost Software License   See LICENSE.txt for the full license.
+</font><font color='#0000FF'>#ifndef</font> DLIB_WEBP_SAVER_CPp_
+<font color='#0000FF'>#define</font> DLIB_WEBP_SAVER_CPp_
+
+<font color='#009900'>// only do anything with this file if DLIB_WEBP_SUPPORT is defined
+</font><font color='#0000FF'>#ifdef</font> DLIB_WEBP_SUPPORT
+
+<font color='#0000FF'>#include</font> "<a style='text-decoration:none' href='save_webp.h.html'>save_webp.h</a>"
+<font color='#0000FF'>#include</font> "<a style='text-decoration:none' href='image_saver.h.html'>image_saver.h</a>"
+<font color='#0000FF'>#include</font> <font color='#5555FF'>&lt;</font>sstream<font color='#5555FF'>&gt;</font>
+
+<font color='#0000FF'>#include</font> <font color='#5555FF'>&lt;</font>webp<font color='#5555FF'>/</font>encode.h<font color='#5555FF'>&gt;</font>
+
+<font color='#0000FF'>namespace</font> dlib <b>{</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>namespace</font> impl
+    <b>{</b>
+        <font color='#0000FF'><u>void</u></font> <b><a name='impl_save_webp'></a>impl_save_webp</b> <font face='Lucida Console'>(</font>
+            <font color='#0000FF'>const</font> std::string<font color='#5555FF'>&amp;</font> filename,
+            <font color='#0000FF'>const</font> uint8_t<font color='#5555FF'>*</font> data,
+            <font color='#0000FF'>const</font> <font color='#0000FF'><u>int</u></font> width,
+            <font color='#0000FF'>const</font> <font color='#0000FF'><u>int</u></font> height,
+            <font color='#0000FF'>const</font> <font color='#0000FF'><u>int</u></font> stride,
+            <font color='#0000FF'>const</font> <font color='#0000FF'><u>float</u></font> quality,
+            <font color='#0000FF'>const</font> webp_type type
+        <font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>width <font color='#5555FF'>&gt;</font> WEBP_MAX_DIMENSION <font color='#5555FF'>|</font><font color='#5555FF'>|</font> height <font color='#5555FF'>&gt;</font> WEBP_MAX_DIMENSION<font face='Lucida Console'>)</font>
+                <font color='#0000FF'>throw</font> <font color='#BB00BB'>image_save_error</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>Error while encoding </font>" <font color='#5555FF'>+</font> filename <font color='#5555FF'>+</font> "<font color='#CC0000'>. Bad picture dimensions: </font>"
+                <font color='#5555FF'>+</font> std::<font color='#BB00BB'>to_string</font><font face='Lucida Console'>(</font>width<font face='Lucida Console'>)</font> <font color='#5555FF'>+</font> "<font color='#CC0000'>x</font>" <font color='#5555FF'>+</font> std::<font color='#BB00BB'>to_string</font><font face='Lucida Console'>(</font>height<font face='Lucida Console'>)</font>
+                <font color='#5555FF'>+</font> "<font color='#CC0000'>. Maximum WebP width and height allowed is </font>"
+                <font color='#5555FF'>+</font> std::<font color='#BB00BB'>to_string</font><font face='Lucida Console'>(</font>WEBP_MAX_DIMENSION<font face='Lucida Console'>)</font> <font color='#5555FF'>+</font> "<font color='#CC0000'> pixels</font>"<font face='Lucida Console'>)</font>;
+
+            std::ofstream <font color='#BB00BB'>fout</font><font face='Lucida Console'>(</font>filename, std::ios::binary<font face='Lucida Console'>)</font>;
+            <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font><font color='#5555FF'>!</font>fout.<font color='#BB00BB'>good</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+                <font color='#0000FF'>throw</font> <font color='#BB00BB'>image_save_error</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>Unable to open </font>" <font color='#5555FF'>+</font> filename <font color='#5555FF'>+</font> "<font color='#CC0000'> for writing.</font>"<font face='Lucida Console'>)</font>;
+
+            uint8_t<font color='#5555FF'>*</font> output;
+            <font color='#0000FF'><u>size_t</u></font> output_size <font color='#5555FF'>=</font> <font color='#979000'>0</font>;
+            <font color='#0000FF'>switch</font> <font face='Lucida Console'>(</font>type<font face='Lucida Console'>)</font>
+            <b>{</b>
+            <font color='#0000FF'>case</font> webp_type::rgb:
+                <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>quality <font color='#5555FF'>&gt;</font> <font color='#979000'>100</font><font face='Lucida Console'>)</font>
+                    output_size <font color='#5555FF'>=</font> <font color='#BB00BB'>WebPEncodeLosslessRGB</font><font face='Lucida Console'>(</font>data, width, height, stride, <font color='#5555FF'>&amp;</font>output<font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>else</font>
+                    output_size <font color='#5555FF'>=</font> <font color='#BB00BB'>WebPEncodeRGB</font><font face='Lucida Console'>(</font>data, width, height, stride, quality, <font color='#5555FF'>&amp;</font>output<font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>break</font>;
+            <font color='#0000FF'>case</font> webp_type::rgba:
+                <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>quality <font color='#5555FF'>&gt;</font> <font color='#979000'>100</font><font face='Lucida Console'>)</font>
+                    output_size <font color='#5555FF'>=</font> <font color='#BB00BB'>WebPEncodeLosslessRGBA</font><font face='Lucida Console'>(</font>data, width, height, stride, <font color='#5555FF'>&amp;</font>output<font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>else</font>
+                    output_size <font color='#5555FF'>=</font> <font color='#BB00BB'>WebPEncodeRGBA</font><font face='Lucida Console'>(</font>data, width, height, stride, quality, <font color='#5555FF'>&amp;</font>output<font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>break</font>;
+            <font color='#0000FF'>case</font> webp_type::bgr:
+                <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>quality <font color='#5555FF'>&gt;</font> <font color='#979000'>100</font><font face='Lucida Console'>)</font>
+                    output_size <font color='#5555FF'>=</font> <font color='#BB00BB'>WebPEncodeLosslessBGR</font><font face='Lucida Console'>(</font>data, width, height, stride, <font color='#5555FF'>&amp;</font>output<font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>else</font>
+                    output_size <font color='#5555FF'>=</font> <font color='#BB00BB'>WebPEncodeBGR</font><font face='Lucida Console'>(</font>data, width, height, stride, quality, <font color='#5555FF'>&amp;</font>output<font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>break</font>;
+            <font color='#0000FF'>case</font> webp_type::bgra:
+                <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>quality <font color='#5555FF'>&gt;</font> <font color='#979000'>100</font><font face='Lucida Console'>)</font>
+                    output_size <font color='#5555FF'>=</font> <font color='#BB00BB'>WebPEncodeLosslessBGRA</font><font face='Lucida Console'>(</font>data, width, height, stride, <font color='#5555FF'>&amp;</font>output<font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>else</font>
+                    output_size <font color='#5555FF'>=</font> <font color='#BB00BB'>WebPEncodeBGRA</font><font face='Lucida Console'>(</font>data, width, height, stride, quality, <font color='#5555FF'>&amp;</font>output<font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>break</font>;
+            <font color='#0000FF'>default</font>:
+                <font color='#0000FF'>throw</font> <font color='#BB00BB'>image_save_error</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>Invalid WebP color type</font>"<font face='Lucida Console'>)</font>;
+            <b>}</b>
+
+            <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>output_size <font color='#5555FF'>&gt;</font> <font color='#979000'>0</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                fout.<font color='#BB00BB'>write</font><font face='Lucida Console'>(</font><font color='#0000FF'>reinterpret_cast</font><font color='#5555FF'>&lt;</font><font color='#0000FF'><u>char</u></font><font color='#5555FF'>*</font><font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>output<font face='Lucida Console'>)</font>, output_size<font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font><font color='#5555FF'>!</font>fout.<font color='#BB00BB'>good</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+                    <font color='#0000FF'>throw</font> <font color='#BB00BB'>image_save_error</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>Error while writing WebP image to </font>" <font color='#5555FF'>+</font> filename <font color='#5555FF'>+</font> "<font color='#CC0000'>.</font>"<font face='Lucida Console'>)</font>;
+            <b>}</b>
+            <font color='#0000FF'>else</font>
+            <b>{</b>
+                <font color='#0000FF'>throw</font> <font color='#BB00BB'>image_save_error</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>Error while encoding WebP image to </font>" <font color='#5555FF'>+</font> filename <font color='#5555FF'>+</font> "<font color='#CC0000'>.</font>"<font face='Lucida Console'>)</font>;
+            <b>}</b>
+            <font color='#BB00BB'>WebPFree</font><font face='Lucida Console'>(</font>output<font face='Lucida Console'>)</font>;
+        <b>}</b>
+    <b>}</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+<b>}</b>
+
+<font color='#0000FF'>#endif</font> <font color='#009900'>// DLIB_WEBP_SUPPORT
+</font>
+<font color='#0000FF'>#endif</font> <font color='#009900'>// DLIB_WEBP_SAVER_CPp_
+</font>
+
+</pre></body></html>

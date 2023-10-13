@@ -1,0 +1,138 @@
+<html><!-- Created using the cpp_pretty_printer from the dlib C++ library.  See http://dlib.net for updates. --><head><title>dlib C++ Library - webp_loader.cpp</title></head><body bgcolor='white'><pre>
+<font color='#009900'>// Copyright (C) 2022  Davis E. King (davis@dlib.net), Martin Sandsmark, Adrià Arrufat
+</font><font color='#009900'>// License: Boost Software License   See LICENSE.txt for the full license.
+</font><font color='#0000FF'>#ifndef</font> DLIB_WEBP_LOADER_CPp_
+<font color='#0000FF'>#define</font> DLIB_WEBP_LOADER_CPp_
+
+<font color='#009900'>// only do anything with this file if DLIB_WEBP_SUPPORT is defined
+</font><font color='#0000FF'>#ifdef</font> DLIB_WEBP_SUPPORT
+
+<font color='#0000FF'>#include</font> "<a style='text-decoration:none' href='../array2d.h.html'>../array2d.h</a>"
+<font color='#0000FF'>#include</font> "<a style='text-decoration:none' href='../pixel.h.html'>../pixel.h</a>"
+<font color='#0000FF'>#include</font> "<a style='text-decoration:none' href='../dir_nav.h.html'>../dir_nav.h</a>"
+<font color='#0000FF'>#include</font> "<a style='text-decoration:none' href='webp_loader.h.html'>webp_loader.h</a>"
+
+<font color='#0000FF'>#include</font> <font color='#5555FF'>&lt;</font>webp<font color='#5555FF'>/</font>decode.h<font color='#5555FF'>&gt;</font>
+<font color='#0000FF'>#include</font> <font color='#5555FF'>&lt;</font>fstream<font color='#5555FF'>&gt;</font>
+
+<font color='#0000FF'>namespace</font> dlib
+<b>{</b>
+
+    <font color='#0000FF'>static</font> std::vector<font color='#5555FF'>&lt;</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>char</u></font><font color='#5555FF'>&gt;</font> <b><a name='load_contents'></a>load_contents</b><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> std::string<font color='#5555FF'>&amp;</font> filename<font face='Lucida Console'>)</font>
+    <b>{</b>
+        std::ifstream <font color='#BB00BB'>stream</font><font face='Lucida Console'>(</font>filename, std::ios::binary<font face='Lucida Console'>)</font>;
+        stream.<font color='#BB00BB'>exceptions</font><font face='Lucida Console'>(</font>std::ifstream::failbit <font color='#5555FF'>|</font> std::ifstream::badbit <font color='#5555FF'>|</font> std::ifstream::eofbit<font face='Lucida Console'>)</font>;
+        stream.<font color='#BB00BB'>seekg</font><font face='Lucida Console'>(</font><font color='#979000'>0</font>, std::ios_base::end<font face='Lucida Console'>)</font>;
+        std::vector<font color='#5555FF'>&lt;</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>char</u></font><font color='#5555FF'>&gt;</font> <font color='#BB00BB'>buffer</font><font face='Lucida Console'>(</font>stream.<font color='#BB00BB'>tellg</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+        stream.<font color='#BB00BB'>seekg</font><font face='Lucida Console'>(</font><font color='#979000'>0</font><font face='Lucida Console'>)</font>;
+        stream.<font color='#BB00BB'>read</font><font face='Lucida Console'>(</font><font color='#0000FF'>reinterpret_cast</font><font color='#5555FF'>&lt;</font><font color='#0000FF'><u>char</u></font><font color='#5555FF'>*</font><font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>buffer.<font color='#BB00BB'>data</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>, buffer.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+        <font color='#0000FF'>return</font> buffer;
+    <b>}</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    webp_loader::
+    <b><a name='webp_loader'></a>webp_loader</b><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> <font color='#0000FF'><u>char</u></font><font color='#5555FF'>*</font> filename<font face='Lucida Console'>)</font> : height_<font face='Lucida Console'>(</font><font color='#979000'>0</font><font face='Lucida Console'>)</font>, width_<font face='Lucida Console'>(</font><font color='#979000'>0</font><font face='Lucida Console'>)</font>
+    <b>{</b>
+        data_ <font color='#5555FF'>=</font> <font color='#BB00BB'>load_contents</font><font face='Lucida Console'>(</font>filename<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>get_info</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+    <b>}</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    webp_loader::
+    <b><a name='webp_loader'></a>webp_loader</b><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> std::string<font color='#5555FF'>&amp;</font> filename<font face='Lucida Console'>)</font> : height_<font face='Lucida Console'>(</font><font color='#979000'>0</font><font face='Lucida Console'>)</font>, width_<font face='Lucida Console'>(</font><font color='#979000'>0</font><font face='Lucida Console'>)</font>
+    <b>{</b>
+        data_ <font color='#5555FF'>=</font> <font color='#BB00BB'>load_contents</font><font face='Lucida Console'>(</font>filename<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>get_info</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+    <b>}</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    webp_loader::
+    <b><a name='webp_loader'></a>webp_loader</b><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> dlib::file<font color='#5555FF'>&amp;</font> f<font face='Lucida Console'>)</font> : height_<font face='Lucida Console'>(</font><font color='#979000'>0</font><font face='Lucida Console'>)</font>, width_<font face='Lucida Console'>(</font><font color='#979000'>0</font><font face='Lucida Console'>)</font>
+    <b>{</b>
+        data_ <font color='#5555FF'>=</font> <font color='#BB00BB'>load_contents</font><font face='Lucida Console'>(</font>f.<font color='#BB00BB'>full_name</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>get_info</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+    <b>}</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    webp_loader::
+    <b><a name='webp_loader'></a>webp_loader</b><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> <font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>char</u></font><font color='#5555FF'>*</font> imgbuffer, <font color='#0000FF'><u>size_t</u></font> imgbuffersize<font face='Lucida Console'>)</font> : height_<font face='Lucida Console'>(</font><font color='#979000'>0</font><font face='Lucida Console'>)</font>, width_<font face='Lucida Console'>(</font><font color='#979000'>0</font><font face='Lucida Console'>)</font>
+    <b>{</b>
+        data_.<font color='#BB00BB'>resize</font><font face='Lucida Console'>(</font>imgbuffersize<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>memcpy</font><font face='Lucida Console'>(</font>data_.<font color='#BB00BB'>data</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, imgbuffer, imgbuffersize<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>get_info</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+    <b>}</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'><u>void</u></font> webp_loader::<b><a name='get_info'></a>get_info</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>
+    <b>{</b>
+        <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font><font color='#5555FF'>!</font><font color='#BB00BB'>WebPGetInfo</font><font face='Lucida Console'>(</font>data_.<font color='#BB00BB'>data</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, data_.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, <font color='#5555FF'>&amp;</font>width_, <font color='#5555FF'>&amp;</font>height_<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#0000FF'>throw</font> <font color='#BB00BB'>image_load_error</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>webp_loader: Invalid header</font>"<font face='Lucida Console'>)</font>;
+        <b>}</b>
+    <b>}</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'><u>void</u></font> webp_loader::<b><a name='read_argb'></a>read_argb</b><font face='Lucida Console'>(</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>char</u></font> <font color='#5555FF'>*</font>out, <font color='#0000FF'>const</font> <font color='#0000FF'><u>size_t</u></font> out_size, <font color='#0000FF'>const</font> <font color='#0000FF'><u>int</u></font> out_stride<font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+    <b>{</b>
+        <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font><font color='#5555FF'>!</font><font color='#BB00BB'>WebPDecodeARGBInto</font><font face='Lucida Console'>(</font>data_.<font color='#BB00BB'>data</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, data_.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, out, out_size, out_stride<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#0000FF'>throw</font> <font color='#BB00BB'>image_load_error</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>webp_loader: decoding failed</font>"<font face='Lucida Console'>)</font>;
+        <b>}</b>
+    <b>}</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'><u>void</u></font> webp_loader::<b><a name='read_rgba'></a>read_rgba</b><font face='Lucida Console'>(</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>char</u></font> <font color='#5555FF'>*</font>out, <font color='#0000FF'>const</font> <font color='#0000FF'><u>size_t</u></font> out_size, <font color='#0000FF'>const</font> <font color='#0000FF'><u>int</u></font> out_stride<font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+    <b>{</b>
+        <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font><font color='#5555FF'>!</font><font color='#BB00BB'>WebPDecodeRGBAInto</font><font face='Lucida Console'>(</font>data_.<font color='#BB00BB'>data</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, data_.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, out, out_size, out_stride<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#0000FF'>throw</font> <font color='#BB00BB'>image_load_error</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>webp_loader: decoding failed</font>"<font face='Lucida Console'>)</font>;
+        <b>}</b>
+    <b>}</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'><u>void</u></font> webp_loader::<b><a name='read_bgra'></a>read_bgra</b><font face='Lucida Console'>(</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>char</u></font> <font color='#5555FF'>*</font>out, <font color='#0000FF'>const</font> <font color='#0000FF'><u>size_t</u></font> out_size, <font color='#0000FF'>const</font> <font color='#0000FF'><u>int</u></font> out_stride<font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+    <b>{</b>
+        <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font><font color='#5555FF'>!</font><font color='#BB00BB'>WebPDecodeBGRAInto</font><font face='Lucida Console'>(</font>data_.<font color='#BB00BB'>data</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, data_.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, out, out_size, out_stride<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#0000FF'>throw</font> <font color='#BB00BB'>image_load_error</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>webp_loader: decoding failed</font>"<font face='Lucida Console'>)</font>;
+        <b>}</b>
+    <b>}</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'><u>void</u></font> webp_loader::<b><a name='read_rgb'></a>read_rgb</b><font face='Lucida Console'>(</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>char</u></font> <font color='#5555FF'>*</font>out, <font color='#0000FF'>const</font> <font color='#0000FF'><u>size_t</u></font> out_size, <font color='#0000FF'>const</font> <font color='#0000FF'><u>int</u></font> out_stride<font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+    <b>{</b>
+        <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font><font color='#5555FF'>!</font><font color='#BB00BB'>WebPDecodeRGBInto</font><font face='Lucida Console'>(</font>data_.<font color='#BB00BB'>data</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, data_.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, out, out_size, out_stride<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#0000FF'>throw</font> <font color='#BB00BB'>image_load_error</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>webp_loader: decoding failed</font>"<font face='Lucida Console'>)</font>;
+        <b>}</b>
+    <b>}</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'><u>void</u></font> webp_loader::<b><a name='read_bgr'></a>read_bgr</b><font face='Lucida Console'>(</font><font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>char</u></font> <font color='#5555FF'>*</font>out, <font color='#0000FF'>const</font> <font color='#0000FF'><u>size_t</u></font> out_size, <font color='#0000FF'>const</font> <font color='#0000FF'><u>int</u></font> out_stride<font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+    <b>{</b>
+        <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font><font color='#5555FF'>!</font><font color='#BB00BB'>WebPDecodeBGRInto</font><font face='Lucida Console'>(</font>data_.<font color='#BB00BB'>data</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, data_.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, out, out_size, out_stride<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#0000FF'>throw</font> <font color='#BB00BB'>image_load_error</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>webp_loader: decoding failed</font>"<font face='Lucida Console'>)</font>;
+        <b>}</b>
+    <b>}</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+<b>}</b>
+
+<font color='#0000FF'>#endif</font> <font color='#009900'>// DLIB_WEBP_SUPPORT
+</font>
+<font color='#0000FF'>#endif</font> <font color='#009900'>// DLIB_WEBP_LOADER_CPp_
+</font>
+
+</pre></body></html>

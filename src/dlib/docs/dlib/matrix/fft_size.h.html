@@ -1,0 +1,223 @@
+<html><!-- Created using the cpp_pretty_printer from the dlib C++ library.  See http://dlib.net for updates. --><head><title>dlib C++ Library - fft_size.h</title></head><body bgcolor='white'><pre>
+<font color='#0000FF'>#ifndef</font> DLIB_FFT_SIZE_H
+<font color='#0000FF'>#define</font> DLIB_FFT_SIZE_H
+
+<font color='#0000FF'>#include</font> <font color='#5555FF'>&lt;</font>array<font color='#5555FF'>&gt;</font>
+<font color='#0000FF'>#include</font> <font color='#5555FF'>&lt;</font>algorithm<font color='#5555FF'>&gt;</font>
+<font color='#0000FF'>#include</font> <font color='#5555FF'>&lt;</font>numeric<font color='#5555FF'>&gt;</font>
+<font color='#0000FF'>#include</font> "<a style='text-decoration:none' href='../assert.h.html'>../assert.h</a>"
+<font color='#0000FF'>#include</font> "<a style='text-decoration:none' href='../hash.h.html'>../hash.h</a>"
+
+<font color='#0000FF'>namespace</font> dlib
+<b>{</b>
+    <font color='#0000FF'>class</font> <b><a name='fft_size'></a>fft_size</b>
+    <b>{</b>   
+        <font color='#009900'>/*!
+            WHAT THIS OBJECT REPRESENTS
+                This object is a container used to store the dimensions of an FFT 
+                operation. It is implemented as a stack-based container with an 
+                upper bound of 5 dimensions (batch,channels,height,width,depth).
+                All dimensions must be strictly positive.
+         
+                The object is either default constructed, constructed with an 
+                initialiser list or with a pair of iterators
+
+                If default-constructed, the object is empty and in an invalid state.
+                That is, FFT functions will throw if attempted to be used with such 
+                an object.
+
+                If constructed with an initialiser list L, the object is properly
+                initialised provided:
+                    - L.size() &gt; 0 and L.size() &lt;= 5
+                    - L contains strictly positive values
+         
+                If constructed with a pair of iterators, the behaviour of the 
+                constructor is exactly the same as if constructed with an 
+                initializer list spanned by those iterators.
+
+                Once the object is constructed, it is immutable.
+        !*/</font>
+    <font color='#0000FF'>public</font>:
+        <font color='#0000FF'>using</font> container_type    <font color='#5555FF'>=</font> std::array<font color='#5555FF'>&lt;</font><font color='#0000FF'><u>long</u></font>,<font color='#979000'>5</font><font color='#5555FF'>&gt;</font>;
+        <font color='#0000FF'>using</font> const_reference   <font color='#5555FF'>=</font> container_type::const_reference;
+        <font color='#0000FF'>using</font> iterator          <font color='#5555FF'>=</font> container_type::iterator;
+        <font color='#0000FF'>using</font> const_iterator    <font color='#5555FF'>=</font> container_type::const_iterator;
+        
+        <b><a name='fft_size'></a>fft_size</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>=</font> <font color='#0000FF'>default</font>;
+        <font color='#009900'>/*!
+            ensures
+                - *this is properly initialised
+                - num_dims() == 0
+        !*/</font>
+        
+        <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> ConstIterator<font color='#5555FF'>&gt;</font>
+        <b><a name='fft_size'></a>fft_size</b><font face='Lucida Console'>(</font>ConstIterator dims_begin, ConstIterator dims_end<font face='Lucida Console'>)</font>
+        <font color='#009900'>/*!
+            requires
+                - ConstIterator is const iterator type that points to a long object
+                - std::distance(dims_begin, dims_end) &gt; 0
+                - std::distance(dims_begin, dims_end) &lt;= 5
+                - range contains strictly positive values
+            ensures
+                - *this is properly initialised
+                - num_dims() == std::distance(dims_begin, dims_end)
+                - num_elements() == product of all values in range
+        !*/</font>
+        <b>{</b>
+            <font color='#0000FF'>const</font> <font color='#0000FF'><u>size_t</u></font> ndims <font color='#5555FF'>=</font> std::<font color='#BB00BB'>distance</font><font face='Lucida Console'>(</font>dims_begin, dims_end<font face='Lucida Console'>)</font>;
+            <font color='#BB00BB'>DLIB_ASSERT</font><font face='Lucida Console'>(</font>ndims <font color='#5555FF'>&gt;</font> <font color='#979000'>0</font>, "<font color='#CC0000'>fft_size objects must be non-empty</font>"<font face='Lucida Console'>)</font>;
+            <font color='#BB00BB'>DLIB_ASSERT</font><font face='Lucida Console'>(</font>ndims <font color='#5555FF'>&lt;</font><font color='#5555FF'>=</font> _dims.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, "<font color='#CC0000'>fft_size objects must have size less than 6</font>"<font face='Lucida Console'>)</font>;
+            <font color='#BB00BB'>DLIB_ASSERT</font><font face='Lucida Console'>(</font>std::<font color='#BB00BB'>find_if</font><font face='Lucida Console'>(</font>dims_begin, dims_end, []<font face='Lucida Console'>(</font><font color='#0000FF'><u>long</u></font> dim<font face='Lucida Console'>)</font> <b>{</b><font color='#0000FF'>return</font> dim <font color='#5555FF'>&lt;</font><font color='#5555FF'>=</font> <font color='#979000'>0</font>;<b>}</b><font face='Lucida Console'>)</font> <font color='#5555FF'>=</font><font color='#5555FF'>=</font> dims_end, "<font color='#CC0000'>fft_size objects must contain strictly positive values</font>"<font face='Lucida Console'>)</font>;
+            
+            std::<font color='#BB00BB'>copy</font><font face='Lucida Console'>(</font>dims_begin, dims_end, _dims.<font color='#BB00BB'>begin</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+            _size <font color='#5555FF'>=</font> ndims;
+            _num_elements <font color='#5555FF'>=</font> std::<font color='#BB00BB'>accumulate</font><font face='Lucida Console'>(</font>dims_begin, dims_end, <font color='#979000'>1</font>, std::multiplies<font color='#5555FF'>&lt;</font><font color='#0000FF'><u>long</u></font><font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+        <b>}</b>
+        
+        <b><a name='fft_size'></a>fft_size</b><font face='Lucida Console'>(</font>std::initializer_list<font color='#5555FF'>&lt;</font><font color='#0000FF'><u>long</u></font><font color='#5555FF'>&gt;</font> dims<font face='Lucida Console'>)</font>
+        : fft_size<font face='Lucida Console'>(</font>dims.begin<font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, dims.end<font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+        <font color='#009900'>/*!
+            requires
+                - dims.size() &gt; 0 and dims.size() &lt;= 5
+                - dims contains strictly positive values
+            ensures
+                - *this is properly initialised
+                - num_dims() == dims.size()
+                - num_elements() == product of all values in dims
+        !*/</font>
+        <b>{</b>
+        <b>}</b>
+        
+        <font color='#0000FF'><u>size_t</u></font> <b><a name='num_dims'></a>num_dims</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+        <font color='#009900'>/*!
+            ensures
+                - returns the number of dimensions
+        !*/</font>
+        <b>{</b>
+            <font color='#0000FF'>return</font> _size;
+        <b>}</b>
+        
+        <font color='#0000FF'><u>long</u></font> <b><a name='num_elements'></a>num_elements</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+        <font color='#009900'>/*!
+            ensures
+                - if num_dims() &gt; 0, returns the product of all dimensions, i.e. the total number
+                  of elements
+                - if num_dims() == 0, returns 0
+        !*/</font>
+        <b>{</b>
+            <font color='#0000FF'>return</font> _num_elements;
+        <b>}</b>
+
+        const_reference <b><a name='operator'></a>operator</b>[]<font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> index<font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+        <font color='#009900'>/*!
+            requires
+                - index &lt; num_dims()
+            ensures
+                - returns a const reference to the dimension at position index
+        !*/</font>
+        <b>{</b>
+            <font color='#BB00BB'>DLIB_ASSERT</font><font face='Lucida Console'>(</font>index <font color='#5555FF'>&lt;</font> _size, "<font color='#CC0000'>index </font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> index <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> out of range [0,</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> _size <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>)</font>"<font face='Lucida Console'>)</font>;
+            <font color='#0000FF'>return</font> _dims[index];
+        <b>}</b>
+        
+        const_reference <b><a name='back'></a>back</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+        <font color='#009900'>/*!
+            requires
+                - num_dims() &gt; 0
+            ensures
+                - returns a const reference to (*this)[num_dims()-1]
+        !*/</font>
+        <b>{</b>
+            <font color='#BB00BB'>DLIB_ASSERT</font><font face='Lucida Console'>(</font>_size <font color='#5555FF'>&gt;</font> <font color='#979000'>0</font>, "<font color='#CC0000'>object is empty</font>"<font face='Lucida Console'>)</font>;
+            <font color='#0000FF'>return</font> _dims[_size<font color='#5555FF'>-</font><font color='#979000'>1</font>];
+        <b>}</b>
+                
+        const_iterator <b><a name='begin'></a>begin</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+        <font color='#009900'>/*!
+            ensures
+                - returns a const iterator that points to the first dimension 
+                  in this container or end() if the array is empty.
+        !*/</font>
+        <b>{</b>
+            <font color='#0000FF'>return</font> _dims.<font color='#BB00BB'>begin</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+        <b>}</b>
+        
+        const_iterator <b><a name='end'></a>end</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+        <font color='#009900'>/*!
+            ensures
+                - returns a const iterator that points to one past the end of 
+                  the container.
+        !*/</font>
+        <b>{</b>
+            <font color='#0000FF'>return</font> _dims.<font color='#BB00BB'>begin</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>+</font> _size;
+        <b>}</b>
+        
+        <font color='#0000FF'><u>bool</u></font> <b><a name='operator'></a>operator</b><font color='#5555FF'>=</font><font color='#5555FF'>=</font><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> fft_size<font color='#5555FF'>&amp;</font> other<font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>
+        <font color='#009900'>/*!
+            ensures
+                - returns true if two fft_size objects have same size and same dimensions, i.e. if they have identical states
+        !*/</font>
+        <b>{</b>
+            <font color='#0000FF'>return</font> <font color='#0000FF'>this</font><font color='#5555FF'>-</font><font color='#5555FF'>&gt;</font>_size <font color='#5555FF'>=</font><font color='#5555FF'>=</font> other._size <font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> std::<font color='#BB00BB'>equal</font><font face='Lucida Console'>(</font><font color='#BB00BB'>begin</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, <font color='#BB00BB'>end</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, other.<font color='#BB00BB'>begin</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+        <b>}</b>
+        
+    <font color='#0000FF'>private</font>:        
+        <font color='#0000FF'><u>size_t</u></font> _size <font color='#5555FF'>=</font> <font color='#979000'>0</font>;
+        <font color='#0000FF'><u>size_t</u></font> _num_elements <font color='#5555FF'>=</font> <font color='#979000'>0</font>;
+        container_type _dims<b>{</b><b>}</b>;
+    <b>}</b>;
+    
+    <font color='#0000FF'>inline</font> dlib::uint32 <b><a name='hash'></a>hash</b><font face='Lucida Console'>(</font>
+        <font color='#0000FF'>const</font> fft_size<font color='#5555FF'>&amp;</font> item,
+        dlib::uint32 seed <font color='#5555FF'>=</font> <font color='#979000'>0</font><font face='Lucida Console'>)</font>
+    <b>{</b>
+        seed <font color='#5555FF'>=</font> dlib::<font color='#BB00BB'>hash</font><font face='Lucida Console'>(</font><font face='Lucida Console'>(</font>dlib::uint64<font face='Lucida Console'>)</font>item.<font color='#BB00BB'>num_dims</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, seed<font face='Lucida Console'>)</font>;
+        seed <font color='#5555FF'>=</font> std::<font color='#BB00BB'>accumulate</font><font face='Lucida Console'>(</font>item.<font color='#BB00BB'>begin</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, item.<font color='#BB00BB'>end</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, seed, []<font face='Lucida Console'>(</font>dlib::uint32 seed, <font color='#0000FF'><u>long</u></font> next<font face='Lucida Console'>)</font> <b>{</b>
+            <font color='#0000FF'>return</font> dlib::<font color='#BB00BB'>hash</font><font face='Lucida Console'>(</font><font face='Lucida Console'>(</font>dlib::uint64<font face='Lucida Console'>)</font>next, seed<font face='Lucida Console'>)</font>;
+        <b>}</b><font face='Lucida Console'>)</font>;
+        <font color='#0000FF'>return</font> seed;
+    <b>}</b>
+    <font color='#009900'>/*!
+        ensures
+            - returns a 32bit hash of the data stored in item.
+    !*/</font>
+
+    <font color='#0000FF'>inline</font> fft_size <b><a name='pop_back'></a>pop_back</b><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> fft_size<font color='#5555FF'>&amp;</font> size<font face='Lucida Console'>)</font>
+    <b>{</b>
+        <font color='#BB00BB'>DLIB_ASSERT</font><font face='Lucida Console'>(</font>size.<font color='#BB00BB'>num_dims</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&gt;</font> <font color='#979000'>0</font><font face='Lucida Console'>)</font>;
+        <font color='#0000FF'>return</font> <font color='#BB00BB'>fft_size</font><font face='Lucida Console'>(</font>size.<font color='#BB00BB'>begin</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, size.<font color='#BB00BB'>end</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>-</font> <font color='#979000'>1</font><font face='Lucida Console'>)</font>;
+    <b>}</b>
+    <font color='#009900'>/*!
+        requires
+            - num_dims.size() &gt; 0
+        ensures
+            - returns a copy of size with the last dimension removed.
+    !*/</font>
+    
+    <font color='#0000FF'>inline</font> fft_size <b><a name='squeeze_ones'></a>squeeze_ones</b><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> fft_size size<font face='Lucida Console'>)</font>
+    <b>{</b>
+        <font color='#BB00BB'>DLIB_ASSERT</font><font face='Lucida Console'>(</font>size.<font color='#BB00BB'>num_dims</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&gt;</font> <font color='#979000'>0</font><font face='Lucida Console'>)</font>;
+        fft_size newsize;
+        <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>size.<font color='#BB00BB'>num_elements</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>=</font><font color='#5555FF'>=</font> <font color='#979000'>1</font><font face='Lucida Console'>)</font>
+        <b>{</b>
+            newsize <font color='#5555FF'>=</font> <b>{</b><font color='#979000'>1</font><b>}</b>;
+        <b>}</b>
+        <font color='#0000FF'>else</font>
+        <b>{</b>
+            fft_size::container_type tmp;
+            <font color='#0000FF'>auto</font> end <font color='#5555FF'>=</font> std::<font color='#BB00BB'>copy_if</font><font face='Lucida Console'>(</font>size.<font color='#BB00BB'>begin</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, size.<font color='#BB00BB'>end</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, tmp.<font color='#BB00BB'>begin</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, []<font face='Lucida Console'>(</font><font color='#0000FF'><u>long</u></font> dim<font face='Lucida Console'>)</font><b>{</b><font color='#0000FF'>return</font> dim <font color='#5555FF'>!</font><font color='#5555FF'>=</font> <font color='#979000'>1</font>;<b>}</b><font face='Lucida Console'>)</font>;
+            newsize <font color='#5555FF'>=</font> <font color='#BB00BB'>fft_size</font><font face='Lucida Console'>(</font>tmp.<font color='#BB00BB'>begin</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, end<font face='Lucida Console'>)</font>;
+        <b>}</b>
+        <font color='#0000FF'>return</font> newsize;
+    <b>}</b>
+    <font color='#009900'>/*!
+        requires
+            - num_dims.size() &gt; 0
+        ensures
+            - removes dimensions with values equal to 1, yielding a new fft_size object with the same num_elements() but fewer dimensions
+    !*/</font>
+<b>}</b>
+
+<font color='#0000FF'>#endif</font> <font color='#009900'>//DLIB_FFT_SIZE_H
+</font>
+</pre></body></html>

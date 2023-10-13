@@ -1,0 +1,517 @@
+<html><!-- Created using the cpp_pretty_printer from the dlib C++ library.  See http://dlib.net for updates. --><head><title>dlib C++ Library - type_safe_union_kernel_abstract.h</title></head><body bgcolor='white'><pre>
+<font color='#009900'>// Copyright (C) 2009  Davis E. King (davis@dlib.net)
+</font><font color='#009900'>// License: Boost Software License   See LICENSE.txt for the full license.
+</font><font color='#0000FF'>#undef</font> DLIB_TYPE_SAFE_UNION_KERNEl_ABSTRACT_
+<font color='#0000FF'>#ifdef</font> DLIB_TYPE_SAFE_UNION_KERNEl_ABSTRACT_
+
+<font color='#0000FF'>namespace</font> dlib
+<b>{</b>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>class</font> <b><a name='bad_type_safe_union_cast'></a>bad_type_safe_union_cast</b> : <font color='#0000FF'>public</font> std::bad_cast 
+    <b>{</b>
+        <font color='#009900'>/*!
+            This is the exception object thrown by type_safe_union::cast_to() if the
+            type_safe_union does not contain the type of object being requested.
+        !*/</font>
+    <b>}</b>;
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>struct</font> <b><a name='in_place_tag'></a>in_place_tag</b> <b>{</b> <font color='#0000FF'>using</font> type <font color='#5555FF'>=</font> T; <b>}</b>;
+    <font color='#009900'>/*!
+        This is an empty class type used as a special disambiguation tag to be
+        passed as the first argument to the constructor of type_safe_union that performs
+        in-place construction of an object.
+
+        Here is an example of its usage:
+
+            struct A
+            {
+                int i = 0;
+                int j = 0;
+
+                A(int i_, int j_) : i(i_), j(j_) {}
+            };
+
+            using tsu = type_safe_union&lt;A,std::string&gt;;
+            tsu a(in_place_tag&lt;A&gt;{}, 0, 1); // a now contains an object of type A
+        
+        It is also used with type_safe_union::for_each() to disambiguate types.
+    !*/</font>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> TSU<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>struct</font> <b><a name='type_safe_union_size'></a>type_safe_union_size</b>
+    <b>{</b>
+        <font color='#0000FF'>static</font> constexpr <font color='#0000FF'><u>size_t</u></font> value <font color='#5555FF'>=</font> The number of types in the TSU.
+    <b>}</b>;
+    <font color='#009900'>/*!
+        requires
+            - TSU must be of type type_safe_union&lt;Types...&gt; with possible cv qualification
+        ensures
+            - value contains the number of types in TSU, i.e. sizeof...(Types...)
+    !*/</font>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>size_t</u></font> I, <font color='#0000FF'>typename</font> TSU<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>struct</font> <b><a name='type_safe_union_alternative'></a>type_safe_union_alternative</b>;
+    <font color='#009900'>/*!
+        requires
+            - TSU is a type_safe_union
+        ensures
+            - type_safe_union_alternative&lt;I, TSU&gt;::type is the Ith type in the TSU.
+            - TSU::get_type_id&lt;typename type_safe_union_alternative&lt;I, TSU&gt;::type&gt;() == I
+    !*/</font>
+
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'><u>size_t</u></font> I, <font color='#0000FF'>typename</font> TSU<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>using</font> type_safe_union_alternative_t <font color='#5555FF'>=</font> type_safe_union_alternative<font color='#5555FF'>&lt;</font>I,TSU<font color='#5555FF'>&gt;</font>::type;
+    <font color='#009900'>/*!
+        ensures
+            - provides template alias for type_safe_union_alternative
+    !*/</font>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font>... Types<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>class</font> <b><a name='type_safe_union'></a>type_safe_union</b>
+    <b>{</b>
+        <font color='#009900'>/*!
+            REQUIREMENTS ON ALL TEMPLATE ARGUMENTS
+                All template arguments must be default constructable and have
+                a global swap.
+
+            INITIAL VALUE
+                - is_empty() == true
+                - contains&lt;U&gt;() == false, for all possible values of U
+
+            WHAT THIS OBJECT REPRESENTS 
+                This object is a type safe analogue of the classic C union object. 
+                The type_safe_union, unlike a union, can contain non-POD types such 
+                as std::string.  
+
+                For example:
+                    union my_union
+                    {
+                        int a;
+                        std::string b;   // Error, std::string isn't a POD
+                    };
+
+                    type_safe_union&lt;int,std::string&gt; my_type_safe_union;  // No error
+        !*/</font>
+
+    <font color='#0000FF'>public</font>:
+
+        <b><a name='type_safe_union'></a>type_safe_union</b><font face='Lucida Console'>(</font>
+        <font face='Lucida Console'>)</font> <font color='#5555FF'>=</font> <font color='#0000FF'>default</font>;
+        <font color='#009900'>/*!
+            ensures
+                - #is_empty() == true
+        !*/</font>
+
+        <b><a name='type_safe_union'></a>type_safe_union</b> <font face='Lucida Console'>(</font>
+            <font color='#0000FF'>const</font> type_safe_union<font color='#5555FF'>&amp;</font> item
+        <font face='Lucida Console'>)</font>
+        <font color='#009900'>/*!
+            ensures
+                - copy constructs *this from item
+        !*/</font>
+
+        type_safe_union<font color='#5555FF'>&amp;</font> <b><a name='operator'></a>operator</b><font color='#5555FF'>=</font><font face='Lucida Console'>(</font>
+            <font color='#0000FF'>const</font> type_safe_union<font color='#5555FF'>&amp;</font> item
+        <font face='Lucida Console'>)</font>;
+        <font color='#009900'>/*!
+            ensures
+                - copy assigns *this from item
+        !*/</font>
+
+        <b><a name='type_safe_union'></a>type_safe_union</b> <font face='Lucida Console'>(</font>
+            type_safe_union<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> item
+        <font face='Lucida Console'>)</font>;
+        <font color='#009900'>/*!
+            ensures
+                - move constructs *this from item.
+        !*/</font>
+
+        type_safe_union<font color='#5555FF'>&amp;</font> <b><a name='operator'></a>operator</b><font color='#5555FF'>=</font> <font face='Lucida Console'>(</font>
+            type_safe_union<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> item
+        <font face='Lucida Console'>)</font>;
+        <font color='#009900'>/*!
+            ensures
+                - move assigns *this from item.
+        !*/</font>
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font>
+            <font color='#0000FF'>typename</font> T
+        <font color='#5555FF'>&gt;</font>
+        <b><a name='type_safe_union'></a>type_safe_union</b> <font face='Lucida Console'>(</font>
+            T<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> item
+        <font face='Lucida Console'>)</font>;
+        <font color='#009900'>/*!
+            requires
+                - std::decay_t&lt;T&gt; must be one of the types given to this object's template arguments
+            ensures
+                - constructs *this from item using perfect forwarding (converting constructor)
+                - #get&lt;T&gt;() == std::forward&lt;T&gt;(item)
+                  (i.e. this object will either contain a copy of item or will have moved item into *this
+                   depending on the reference type)
+        !*/</font>
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font>
+            <font color='#0000FF'>typename</font> T
+        <font color='#5555FF'>&gt;</font>
+        type_safe_union<font color='#5555FF'>&amp;</font> <b><a name='operator'></a>operator</b><font color='#5555FF'>=</font> <font face='Lucida Console'>(</font>
+            T<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> item
+        <font face='Lucida Console'>)</font>;
+        <font color='#009900'>/*!
+            requires
+                - std::decay_t&lt;T&gt; must be one of the types given to this object's template arguments
+            ensures
+                - assigns *this from item using perfect forwarding (converting assignment)
+                - #get&lt;T&gt; == std::forward&lt;T&gt;(item)
+                  (i.e. this object will either contain a copy of item or will have moved item into *this
+                   depending on the reference type)
+        !*/</font>
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font>
+            <font color='#0000FF'>typename</font> T,
+            <font color='#0000FF'>typename</font>... Args
+        <font color='#5555FF'>&gt;</font>
+        <b><a name='type_safe_union'></a>type_safe_union</b> <font face='Lucida Console'>(</font>
+            in_place_tag<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font>,
+            Args<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font>... args
+        <font face='Lucida Console'>)</font>;
+        <font color='#009900'>/*!
+            requires
+                - T must be one of the types given to this object's template arguments
+            ensures
+                - constructs *this with type T using constructor-arguments args...
+                  (i.e. efficiently performs *this = T(args...))
+        !*/</font>
+
+        ~<b><a name='type_safe_union'></a>type_safe_union</b><font face='Lucida Console'>(</font>
+        <font face='Lucida Console'>)</font>;
+        <font color='#009900'>/*!
+            ensures
+                - all resources associated with this object have been freed
+        !*/</font>
+
+        <font color='#0000FF'><u>void</u></font> <b><a name='clear'></a>clear</b><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+        <font color='#009900'>/*!
+            ensures
+                - all resources associated with this object have been freed
+                - #is_empty() == true
+        !*/</font>
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font>
+            <font color='#0000FF'>typename</font> T,
+            <font color='#0000FF'>typename</font>... Args
+        <font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'><u>void</u></font> <b><a name='emplace'></a>emplace</b><font face='Lucida Console'>(</font>
+            Args<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font>... args
+        <font face='Lucida Console'>)</font>;
+        <font color='#009900'>/*!
+            requires
+                - T must be one of the types given to this object's template arguments
+            ensures
+                - re-assigns *this with type T using constructor-arguments args...
+                  (i.e. efficiently performs *this = T(args...))
+        !*/</font>
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>static</font> constexpr <font color='#0000FF'><u>int</u></font> <b><a name='get_type_id'></a>get_type_id</b> <font face='Lucida Console'>(</font>
+        <font face='Lucida Console'>)</font>;
+        <font color='#009900'>/*!
+           ensures
+                - if (T is the same type as one of the template arguments) then
+                    - returns a number indicating which template argument it is. In particular,
+                      if it's the first template argument it returns 1, if the second then 2, and so on.
+                - else if (T is in_place_tag&lt;U&gt;) then 
+                    - equivalent to returning get_type_id&lt;U&gt;())
+                - else
+                    - returns -1
+        !*/</font>
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'><u>bool</u></font> <b><a name='contains'></a>contains</b> <font face='Lucida Console'>(</font>
+        <font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>;
+        <font color='#009900'>/*!
+            ensures
+                - if (this type_safe_union currently contains an object of type T) then
+                    - returns true
+                - else
+                    - returns false
+        !*/</font>
+
+        <font color='#0000FF'><u>bool</u></font> <b><a name='is_empty'></a>is_empty</b> <font face='Lucida Console'>(</font>
+        <font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>;
+        <font color='#009900'>/*!
+            ensures
+                - if (this type_safe_union currently contains any object at all) then
+                    - returns true
+                - else
+                    - returns false
+        !*/</font>
+
+        <font color='#0000FF'><u>int</u></font> <b><a name='get_current_type_id'></a>get_current_type_id</b><font face='Lucida Console'>(</font>
+        <font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>;
+        <font color='#009900'>/*!
+            ensures
+                - if (is_empty()) then
+                    - returns 0
+                - else
+                    - Returns the type id of the currently held type.  This is the same as
+                      get_type_id&lt;WhateverTypeIsCurrentlyHeld&gt;().  Therefore, if the current type is
+                      the first template argument it returns 1, if it's the second then 2, and so on.
+        !*/</font>
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> F<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'><u>void</u></font> <b><a name='apply_to_contents'></a>apply_to_contents</b><font face='Lucida Console'>(</font>
+            F<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> f
+        <font face='Lucida Console'>)</font>;
+        <font color='#009900'>/*!
+            requires
+                - f is a callable object capable of operating on all the types contained
+                  in this type_safe_union.  I.e.  std::forward&lt;F&gt;(f)(this-&gt;get&lt;U&gt;()) must be a valid
+                  expression for all the possible U types.
+            ensures
+                - if (is_empty() == false) then
+                    - Let U denote the type of object currently contained in this type_safe_union
+                    - calls std::forward&lt;F&gt;(f)(this-&gt;get&lt;U&gt;())
+                    - The object passed to f() (i.e. by this-&gt;get&lt;U&gt;()) will be non-const.
+        !*/</font>
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> F<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'><u>void</u></font> <b><a name='apply_to_contents'></a>apply_to_contents</b><font face='Lucida Console'>(</font>
+            F<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> f
+        <font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>;
+        <font color='#009900'>/*!
+            requires
+                - f is a callable object capable of operating on all the types contained
+                  in this type_safe_union.  I.e.  std::forward&lt;F&gt;(f)(this-&gt;get&lt;U&gt;()) must be a valid
+                  expression for all the possible U types.
+            ensures
+                - if (is_empty() == false) then
+                    - Let U denote the type of object currently contained in this type_safe_union
+                    - calls std::forward&lt;F&gt;(f)(this-&gt;get&lt;U&gt;())
+                    - The object passed to f() (i.e. by this-&gt;get&lt;U&gt;()) will be const.
+        !*/</font>
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T<font color='#5555FF'>&gt;</font> 
+        T<font color='#5555FF'>&amp;</font> <b><a name='get'></a>get</b><font face='Lucida Console'>(</font>
+        <font face='Lucida Console'>)</font>;
+        <font color='#009900'>/*!
+            requires
+                - T must be one of the types given to this object's template arguments
+            ensures
+                - #is_empty() == false
+                - #contains&lt;T&gt;() == true
+                - if (contains&lt;T&gt;() == true)
+                    - returns a non-const reference to the object contained in this type_safe_union.
+                - else
+                    - Constructs an object of type T inside *this
+                    - Any previous object stored in this type_safe_union is destructed and its
+                      state is lost.
+                    - returns a non-const reference to the newly created T object.
+        !*/</font>
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T<font color='#5555FF'>&gt;</font>
+        T<font color='#5555FF'>&amp;</font> <b><a name='get'></a>get</b><font face='Lucida Console'>(</font>
+            <font color='#0000FF'>const</font> in_place_tag<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> tag
+        <font face='Lucida Console'>)</font>;
+        <font color='#009900'>/*!
+            ensures
+                - equivalent to calling get&lt;T&gt;()
+        !*/</font>
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>const</font> T<font color='#5555FF'>&amp;</font> <b><a name='cast_to'></a>cast_to</b> <font face='Lucida Console'>(</font>
+        <font face='Lucida Console'>)</font> <font color='#0000FF'>const</font>;
+        <font color='#009900'>/*!
+            requires
+                - T must be one of the types given to this object's template arguments
+            ensures
+                - if (contains&lt;T&gt;() == true) then
+                    - returns a const reference to the object contained in this type_safe_union.
+                - else
+                    - throws bad_type_safe_union_cast
+        !*/</font>
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T<font color='#5555FF'>&gt;</font>
+        T<font color='#5555FF'>&amp;</font> <b><a name='cast_to'></a>cast_to</b> <font face='Lucida Console'>(</font>
+        <font face='Lucida Console'>)</font>;
+        <font color='#009900'>/*!
+            requires
+                - T must be one of the types given to this object's template arguments
+            ensures
+                - if (contains&lt;T&gt;() == true) then
+                    - returns a non-const reference to the object contained in this type_safe_union.
+                - else
+                    - throws bad_type_safe_union_cast
+        !*/</font>
+
+        <font color='#0000FF'><u>void</u></font> <b><a name='swap'></a>swap</b> <font face='Lucida Console'>(</font>
+            type_safe_union<font color='#5555FF'>&amp;</font> item
+        <font face='Lucida Console'>)</font>;
+        <font color='#009900'>/*!
+            ensures
+                - swaps *this and item
+        !*/</font>
+
+    <b>}</b>;
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font>... Types<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>inline</font> <font color='#0000FF'><u>void</u></font> <b><a name='swap'></a>swap</b> <font face='Lucida Console'>(</font>
+        type_safe_union<font color='#5555FF'>&lt;</font>Types...<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> a, 
+        type_safe_union<font color='#5555FF'>&lt;</font>Types...<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> b 
+    <font face='Lucida Console'>)</font> <b>{</b> a.<font color='#BB00BB'>swap</font><font face='Lucida Console'>(</font>b<font face='Lucida Console'>)</font>; <b>}</b>   
+    <font color='#009900'>/*!
+        provides a global swap function
+    !*/</font>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font>
+        <font color='#0000FF'>typename</font> TSU,
+        <font color='#0000FF'>typename</font> F
+    <font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'><u>void</u></font> <b><a name='for_each_type'></a>for_each_type</b><font face='Lucida Console'>(</font>
+        F<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> f,
+        TSU<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> tsu
+    <font face='Lucida Console'>)</font>;
+    <font color='#009900'>/*!
+        requires
+            - tsu is an object of type type_safe_union&lt;Types...&gt; for some types Types...
+            - f is a callable object such that the following expression is valid for
+              all types U in Types...:
+                std::forward&lt;F&gt;(f)(in_place_tag&lt;U&gt;{}, std::forward&lt;TSU&gt;(tsu))
+        ensures
+            - This function iterates over all types U in Types... and calls:
+                std::forward&lt;F&gt;(f)(in_place_tag&lt;U&gt;{}, std::forward&lt;TSU&gt;(tsu))
+    !*/</font>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font>
+        <font color='#0000FF'>typename</font> F,
+        <font color='#0000FF'>typename</font> TSU
+    <font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>auto</font> <b><a name='visit'></a>visit</b><font face='Lucida Console'>(</font>
+        F<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> f,
+        TSU<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> tsu
+    <font face='Lucida Console'>)</font>;
+    <font color='#009900'>/*!
+        requires
+            - tsu is an object of type type_safe_union&lt;Types...&gt; for some types Types...
+            - f is a callable object capable of operating on all the types contained
+              in tsu.  I.e.  std::forward&lt;F&gt;(f)(this-&gt;get&lt;U&gt;()) must be a valid
+              expression for all the possible U types.
+        ensures
+            - if (tsu.is_empty() == false) then
+                - Let U denote the type of object currently contained in tsu.
+                - returns std::forward&lt;F&gt;(f)(this-&gt;get&lt;U&gt;())
+                - The object passed to f() (i.e. by this-&gt;get&lt;U&gt;()) will have the same reference
+                  type as TSU.
+    !*/</font>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font>... Types<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'><u>void</u></font> <b><a name='serialize'></a>serialize</b> <font face='Lucida Console'>(</font>
+        <font color='#0000FF'>const</font> type_safe_union<font color='#5555FF'>&lt;</font>Types...<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> item, 
+        std::ostream<font color='#5555FF'>&amp;</font> out 
+    <font face='Lucida Console'>)</font>;   
+    <font color='#009900'>/*!
+        provides serialization support 
+
+        Note that type_safe_union objects are serialized as follows:
+         - if (item.is_empty()) then
+            - perform: serialize(0, out)
+         - else
+            - perform: serialize(item.get_type_id&lt;type_of_object_in_item&gt;(), out);
+                       serialize(item.get&lt;type_of_object_in_item&gt;(), out);
+    !*/</font>
+
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font>... Types<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'><u>void</u></font> <b><a name='deserialize'></a>deserialize</b> <font face='Lucida Console'>(</font>
+        type_safe_union<font color='#5555FF'>&lt;</font>Types...<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> item, 
+        std::istream<font color='#5555FF'>&amp;</font> in
+    <font face='Lucida Console'>)</font>;   
+    <font color='#009900'>/*!
+        provides deserialization support 
+    !*/</font>
+
+<font color='#009900'>// ----------------------------------------------------------------------------------------
+</font>
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font>... T<font color='#5555FF'>&gt;</font>
+    overloaded_helper<font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> std::decay<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font>::type...<font color='#5555FF'>&gt;</font> <b><a name='overloaded'></a>overloaded</b><font face='Lucida Console'>(</font>T<font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font>... t<font face='Lucida Console'>)</font>
+    <b>{</b>
+        <font color='#0000FF'>return</font> overloaded_helper<font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> std::decay<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font>::type...<font color='#5555FF'>&gt;</font><b>{</b>std::forward<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>t<font face='Lucida Console'>)</font>...<b>}</b>;
+    <b>}</b>
+    <font color='#009900'>/*!
+        This is a helper function for passing many callable objects (usually lambdas)
+        to either apply_to_contents(), visit() or for_each(), that combine to make a complete
+        visitor. A picture paints a thousand words:
+
+        using tsu = type_safe_union&lt;int,float,std::string&gt;;
+
+        tsu a = std::string("hello there");
+
+        std::string result;
+
+        a.apply_to_contents(overloaded(
+            [&amp;result](int) {
+                result = std::string("int");
+            },
+            [&amp;result](float) {
+                result = std::string("float");
+            },
+            [&amp;result](const std::string&amp; item) {
+                result = item;
+            }
+        ));
+
+        assert(result == "hello there");
+        result = "";
+
+        result = visit(overloaded(
+            [](int) {
+                return std::string("int");
+            },
+            [](float) {
+                return std::string("float");
+            },
+            [](const std::string&amp; item) {
+                return item;
+            }
+        ), a);
+
+        assert(result == "hello there");
+
+        std::vector&lt;int&gt; type_ids;
+
+        for_each_type(a, overloaded(
+            [&amp;type_ids](in_place_tag&lt;int&gt;, tsu&amp; me) {
+                type_ids.push_back(me.get_type_id&lt;int&gt;());
+            },
+            [&amp;type_ids](in_place_tag&lt;float&gt;, tsu&amp; me) {
+                type_ids.push_back(me.get_type_id&lt;float&gt;());
+            },
+            [&amp;type_ids](in_place_tag&lt;std::string&gt;, tsu&amp; me) {
+                type_ids.push_back(me.get_type_id&lt;std::string&gt;());
+            }
+        ));
+
+        assert(type_ids == vector&lt;int&gt;({0,1,2}));
+    !*/</font>
+<b>}</b>
+
+<font color='#0000FF'>#endif</font> <font color='#009900'>// DLIB_TYPE_SAFE_UNION_KERNEl_ABSTRACT_
+</font>
+</pre></body></html>

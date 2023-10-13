@@ -1,0 +1,246 @@
+<html><!-- Created using the cpp_pretty_printer from the dlib C++ library.  See http://dlib.net for updates. --><head><title>dlib C++ Library - mkl_fft.h</title></head><body bgcolor='white'><pre>
+<font color='#0000FF'>#ifndef</font> DLIB_MKL_FFT_H
+<font color='#0000FF'>#define</font> DLIB_MKL_FFT_H
+
+<font color='#0000FF'>#include</font> <font color='#5555FF'>&lt;</font>type_traits<font color='#5555FF'>&gt;</font>
+<font color='#0000FF'>#include</font> <font color='#5555FF'>&lt;</font>mkl_dfti.h<font color='#5555FF'>&gt;</font>
+<font color='#0000FF'>#include</font> "<a style='text-decoration:none' href='fft_size.h.html'>fft_size.h</a>"
+
+<font color='#0000FF'>#define</font> DLIB_DFTI_CHECK_STATUS<font face='Lucida Console'>(</font>s<font face='Lucida Console'>)</font> \
+    <font color='#0000FF'>if</font><font face='Lucida Console'>(</font><font face='Lucida Console'>(</font>s<font face='Lucida Console'>)</font> <font color='#5555FF'>!</font><font color='#5555FF'>=</font> <font color='#979000'>0</font> <font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font> <font color='#5555FF'>!</font><font color='#BB00BB'>DftiErrorClass</font><font face='Lucida Console'>(</font><font face='Lucida Console'>(</font>s<font face='Lucida Console'>)</font>, DFTI_NO_ERROR<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font> \
+    <b>{</b> \
+        <font color='#0000FF'>throw</font> dlib::<font color='#BB00BB'>error</font><font face='Lucida Console'>(</font><font color='#BB00BB'>DftiErrorMessage</font><font face='Lucida Console'>(</font><font face='Lucida Console'>(</font>s<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>; \
+    <b>}</b>
+
+<font color='#0000FF'>namespace</font> dlib
+<b>{</b>
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'><u>void</u></font> <b><a name='mkl_fft'></a>mkl_fft</b><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> fft_size<font color='#5555FF'>&amp;</font> dims, <font color='#0000FF'>const</font> std::complex<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font color='#5555FF'>*</font> in, std::complex<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font color='#5555FF'>*</font> out, <font color='#0000FF'><u>bool</u></font> is_inverse<font face='Lucida Console'>)</font>
+    <font color='#009900'>/*!
+        requires
+            - T must be either float or double
+            - dims represents the dimensions of both `in` and `out`
+            - dims.num_dims() &gt; 0
+            - dims.num_dims() &lt; 3
+        ensures
+            - performs an FFT on `in` and stores the result in `out`.
+            - if `is_inverse` is true, a backward FFT is performed, 
+              otherwise a forward FFT is performed.
+    !*/</font>
+    <b>{</b>
+        <font color='#BB00BB'>static_assert</font><font face='Lucida Console'>(</font>std::is_floating_point<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font>::value, "<font color='#CC0000'>template parameter needs to be a floatint point type</font>"<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>DLIB_ASSERT</font><font face='Lucida Console'>(</font>dims.<font color='#BB00BB'>num_dims</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&gt;</font> <font color='#979000'>0</font>, "<font color='#CC0000'>dims can't be empty</font>"<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>DLIB_ASSERT</font><font face='Lucida Console'>(</font>dims.<font color='#BB00BB'>num_dims</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font> <font color='#979000'>3</font>, "<font color='#CC0000'>we currently only support up to 2D FFT. Please submit an issue on github if 3D or above is required.</font>"<font face='Lucida Console'>)</font>;
+
+        constexpr DFTI_CONFIG_VALUE dfti_type <font color='#5555FF'>=</font> std::is_same<font color='#5555FF'>&lt;</font>T,<font color='#0000FF'><u>float</u></font><font color='#5555FF'>&gt;</font>::value ? DFTI_SINGLE : DFTI_DOUBLE;
+
+        DFTI_DESCRIPTOR_HANDLE h;
+        MKL_LONG status;
+
+        <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>dims.<font color='#BB00BB'>num_dims</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>=</font><font color='#5555FF'>=</font> <font color='#979000'>1</font><font face='Lucida Console'>)</font>
+        <b>{</b>
+            status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiCreateDescriptor</font><font face='Lucida Console'>(</font><font color='#5555FF'>&amp;</font>h, dfti_type, DFTI_COMPLEX, <font color='#979000'>1</font>, dims[<font color='#979000'>0</font>]<font face='Lucida Console'>)</font>;
+            <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+        <b>}</b>
+        <font color='#0000FF'>else</font>
+        <b>{</b>
+            MKL_LONG size[] <font color='#5555FF'>=</font> <b>{</b>dims[<font color='#979000'>0</font>], dims[<font color='#979000'>1</font>]<b>}</b>;
+            status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiCreateDescriptor</font><font face='Lucida Console'>(</font><font color='#5555FF'>&amp;</font>h, dfti_type, DFTI_COMPLEX, <font color='#979000'>2</font>, size<font face='Lucida Console'>)</font>;
+            <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+
+            MKL_LONG strides[<font color='#979000'>3</font>];
+            strides[<font color='#979000'>0</font>] <font color='#5555FF'>=</font> <font color='#979000'>0</font>;
+            strides[<font color='#979000'>1</font>] <font color='#5555FF'>=</font> size[<font color='#979000'>1</font>];
+            strides[<font color='#979000'>2</font>] <font color='#5555FF'>=</font> <font color='#979000'>1</font>;
+
+            status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiSetValue</font><font face='Lucida Console'>(</font>h, DFTI_INPUT_STRIDES, strides<font face='Lucida Console'>)</font>;
+            <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+            status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiSetValue</font><font face='Lucida Console'>(</font>h, DFTI_OUTPUT_STRIDES, strides<font face='Lucida Console'>)</font>;
+            <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+        <b>}</b>
+
+        <font color='#0000FF'>const</font> DFTI_CONFIG_VALUE inplacefft <font color='#5555FF'>=</font> in <font color='#5555FF'>=</font><font color='#5555FF'>=</font> out ? DFTI_INPLACE : DFTI_NOT_INPLACE;
+        status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiSetValue</font><font face='Lucida Console'>(</font>h, DFTI_PLACEMENT, inplacefft<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+
+        <font color='#009900'>// Unless we use sequential mode, the fft results are not correct.
+</font>        status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiSetValue</font><font face='Lucida Console'>(</font>h, DFTI_THREAD_LIMIT, <font color='#979000'>1</font><font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+
+        status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiCommitDescriptor</font><font face='Lucida Console'>(</font>h<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+
+        <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>is_inverse<font face='Lucida Console'>)</font>
+            status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiComputeBackward</font><font face='Lucida Console'>(</font>h, <font face='Lucida Console'>(</font><font color='#0000FF'><u>void</u></font><font color='#5555FF'>*</font><font face='Lucida Console'>)</font>in, <font face='Lucida Console'>(</font><font color='#0000FF'><u>void</u></font><font color='#5555FF'>*</font><font face='Lucida Console'>)</font>out<font face='Lucida Console'>)</font>;
+        <font color='#0000FF'>else</font>
+            status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiComputeForward</font><font face='Lucida Console'>(</font>h, <font face='Lucida Console'>(</font><font color='#0000FF'><u>void</u></font><font color='#5555FF'>*</font><font face='Lucida Console'>)</font>in, <font face='Lucida Console'>(</font><font color='#0000FF'><u>void</u></font><font color='#5555FF'>*</font><font face='Lucida Console'>)</font>out<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+
+        status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiFreeDescriptor</font><font face='Lucida Console'>(</font><font color='#5555FF'>&amp;</font>h<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+    <b>}</b>
+
+    <font color='#009900'>/*
+     *  in  has dims[0] * dims[1] * ... * dims[-2] * dims[-1] points
+     *  out has dims[0] * dims[1] * ... * dims[-2] * (dims[-1]/2+1) points
+     */</font>
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'><u>void</u></font> <b><a name='mkl_fftr'></a>mkl_fftr</b><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> fft_size<font color='#5555FF'>&amp;</font> dims, <font color='#0000FF'>const</font> T<font color='#5555FF'>*</font> in, std::complex<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font color='#5555FF'>*</font> out<font face='Lucida Console'>)</font>
+    <font color='#009900'>/*!
+        requires
+            - T must be either float or double
+            - dims represent the dimensions of `in`
+            - `out` has dimensions {dims[0], dims[1], ..., dims[-2], dims[-1]/2+1}
+            - dims.num_dims() &gt; 0
+            - dims.num_dims() &lt;= 3
+            - dims.back() must be even
+        ensures
+            - performs a real FFT on `in` and stores the result in `out`.
+    !*/</font>
+    <b>{</b>
+        <font color='#BB00BB'>static_assert</font><font face='Lucida Console'>(</font>std::is_floating_point<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font>::value, "<font color='#CC0000'>template parameter needs to be a floatint point type</font>"<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>DLIB_ASSERT</font><font face='Lucida Console'>(</font>dims.<font color='#BB00BB'>num_dims</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&gt;</font> <font color='#979000'>0</font>, "<font color='#CC0000'>dims can't be empty</font>"<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>DLIB_ASSERT</font><font face='Lucida Console'>(</font>dims.<font color='#BB00BB'>num_dims</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font> <font color='#979000'>3</font>, "<font color='#CC0000'>we currently only support up to 2D FFT. Please submit an issue on github if 3D or above is required.</font>"<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>DLIB_ASSERT</font><font face='Lucida Console'>(</font>dims.<font color='#BB00BB'>back</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>%</font> <font color='#979000'>2</font> <font color='#5555FF'>=</font><font color='#5555FF'>=</font> <font color='#979000'>0</font>, "<font color='#CC0000'>last dimension needs to be even</font>"<font face='Lucida Console'>)</font>;
+        
+        constexpr DFTI_CONFIG_VALUE dfti_type <font color='#5555FF'>=</font> std::is_same<font color='#5555FF'>&lt;</font>T,<font color='#0000FF'><u>float</u></font><font color='#5555FF'>&gt;</font>::value ? DFTI_SINGLE : DFTI_DOUBLE;
+
+        DFTI_DESCRIPTOR_HANDLE h;
+        MKL_LONG status;
+
+        <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>dims.<font color='#BB00BB'>num_dims</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>=</font><font color='#5555FF'>=</font> <font color='#979000'>1</font><font face='Lucida Console'>)</font>
+        <b>{</b>
+            status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiCreateDescriptor</font><font face='Lucida Console'>(</font><font color='#5555FF'>&amp;</font>h, dfti_type, DFTI_REAL, <font color='#979000'>1</font>, dims[<font color='#979000'>0</font>]<font face='Lucida Console'>)</font>;
+            <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+        <b>}</b>
+        <font color='#0000FF'>else</font>
+        <b>{</b>
+            <font color='#0000FF'>const</font> <font color='#0000FF'><u>long</u></font> lastdim  <font color='#5555FF'>=</font> dims[<font color='#979000'>1</font>]<font color='#5555FF'>/</font><font color='#979000'>2</font><font color='#5555FF'>+</font><font color='#979000'>1</font>;
+            MKL_LONG size[] <font color='#5555FF'>=</font> <b>{</b>dims[<font color='#979000'>0</font>], dims[<font color='#979000'>1</font>]<b>}</b>;
+            status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiCreateDescriptor</font><font face='Lucida Console'>(</font><font color='#5555FF'>&amp;</font>h, dfti_type, DFTI_REAL, <font color='#979000'>2</font>, size<font face='Lucida Console'>)</font>;
+            <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+
+            <b>{</b>
+                MKL_LONG strides[<font color='#979000'>3</font>];
+                strides[<font color='#979000'>0</font>] <font color='#5555FF'>=</font> <font color='#979000'>0</font>;
+                strides[<font color='#979000'>1</font>] <font color='#5555FF'>=</font> size[<font color='#979000'>1</font>];
+                strides[<font color='#979000'>2</font>] <font color='#5555FF'>=</font> <font color='#979000'>1</font>;
+
+                status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiSetValue</font><font face='Lucida Console'>(</font>h, DFTI_INPUT_STRIDES, strides<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+            <b>}</b>
+            <b>{</b>
+                MKL_LONG strides[<font color='#979000'>3</font>];
+                strides[<font color='#979000'>0</font>] <font color='#5555FF'>=</font> <font color='#979000'>0</font>;
+                strides[<font color='#979000'>1</font>] <font color='#5555FF'>=</font> lastdim;
+                strides[<font color='#979000'>2</font>] <font color='#5555FF'>=</font> <font color='#979000'>1</font>;
+                status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiSetValue</font><font face='Lucida Console'>(</font>h, DFTI_OUTPUT_STRIDES, strides<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+            <b>}</b>   
+        <b>}</b>
+
+        <font color='#0000FF'>const</font> DFTI_CONFIG_VALUE inplacefft <font color='#5555FF'>=</font> <font face='Lucida Console'>(</font><font color='#0000FF'><u>void</u></font><font color='#5555FF'>*</font><font face='Lucida Console'>)</font>in <font color='#5555FF'>=</font><font color='#5555FF'>=</font> <font face='Lucida Console'>(</font><font color='#0000FF'><u>void</u></font><font color='#5555FF'>*</font><font face='Lucida Console'>)</font>out ? DFTI_INPLACE : DFTI_NOT_INPLACE;
+        status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiSetValue</font><font face='Lucida Console'>(</font>h, DFTI_PLACEMENT, inplacefft<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+        
+        status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiSetValue</font><font face='Lucida Console'>(</font>h, DFTI_CONJUGATE_EVEN_STORAGE, DFTI_COMPLEX_COMPLEX<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+
+        <font color='#009900'>// Unless we use sequential mode, the fft results are not correct.
+</font>        status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiSetValue</font><font face='Lucida Console'>(</font>h, DFTI_THREAD_LIMIT, <font color='#979000'>1</font><font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+
+        status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiCommitDescriptor</font><font face='Lucida Console'>(</font>h<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+
+        status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiComputeForward</font><font face='Lucida Console'>(</font>h, <font face='Lucida Console'>(</font><font color='#0000FF'><u>void</u></font><font color='#5555FF'>*</font><font face='Lucida Console'>)</font>in, <font face='Lucida Console'>(</font><font color='#0000FF'><u>void</u></font><font color='#5555FF'>*</font><font face='Lucida Console'>)</font>out<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+
+        status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiFreeDescriptor</font><font face='Lucida Console'>(</font><font color='#5555FF'>&amp;</font>h<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+    <b>}</b>
+
+    <font color='#009900'>/*
+     *  in  has dims[0] * dims[1] * ... * dims[-2] * (dims[-1]/2+1) points
+     *  out has dims[0] * dims[1] * ... * dims[-2] * dims[-1] points
+     */</font>
+    <font color='#0000FF'>template</font><font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> T<font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'><u>void</u></font> <b><a name='mkl_ifftr'></a>mkl_ifftr</b><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> fft_size<font color='#5555FF'>&amp;</font> dims, <font color='#0000FF'>const</font> std::complex<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font><font color='#5555FF'>*</font> in, T<font color='#5555FF'>*</font> out<font face='Lucida Console'>)</font>
+    <font color='#009900'>/*!
+        requires
+            - T must be either float or double
+            - dims represent the dimensions of `out`
+            - `in` has dimensions {dims[0], dims[1], ..., dims[-2], dims[-1]/2+1}
+            - dims.num_dims() &gt; 0
+            - dims.num_dims() &lt;= 3
+            - dims.back() must be even
+        ensures
+            - performs an inverse real FFT on `in` and stores the result in `out`.
+    !*/</font>
+    <b>{</b>
+        <font color='#BB00BB'>static_assert</font><font face='Lucida Console'>(</font>std::is_floating_point<font color='#5555FF'>&lt;</font>T<font color='#5555FF'>&gt;</font>::value, "<font color='#CC0000'>template parameter needs to be a floatint point type</font>"<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>DLIB_ASSERT</font><font face='Lucida Console'>(</font>dims.<font color='#BB00BB'>num_dims</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&gt;</font> <font color='#979000'>0</font>, "<font color='#CC0000'>dims can't be empty</font>"<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>DLIB_ASSERT</font><font face='Lucida Console'>(</font>dims.<font color='#BB00BB'>num_dims</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font> <font color='#979000'>3</font>, "<font color='#CC0000'>we currently only support up to 2D FFT. Please submit an issue on github if 3D or above is required.</font>"<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>DLIB_ASSERT</font><font face='Lucida Console'>(</font>dims.<font color='#BB00BB'>back</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>%</font> <font color='#979000'>2</font> <font color='#5555FF'>=</font><font color='#5555FF'>=</font> <font color='#979000'>0</font>, "<font color='#CC0000'>last dimension needs to be even</font>"<font face='Lucida Console'>)</font>;
+
+        constexpr DFTI_CONFIG_VALUE dfti_type <font color='#5555FF'>=</font> std::is_same<font color='#5555FF'>&lt;</font>T,<font color='#0000FF'><u>float</u></font><font color='#5555FF'>&gt;</font>::value ? DFTI_SINGLE : DFTI_DOUBLE;
+
+        DFTI_DESCRIPTOR_HANDLE h;
+        MKL_LONG status;
+
+        <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>dims.<font color='#BB00BB'>num_dims</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>=</font><font color='#5555FF'>=</font> <font color='#979000'>1</font><font face='Lucida Console'>)</font>
+        <b>{</b>
+            status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiCreateDescriptor</font><font face='Lucida Console'>(</font><font color='#5555FF'>&amp;</font>h, dfti_type, DFTI_REAL, <font color='#979000'>1</font>, dims[<font color='#979000'>0</font>]<font face='Lucida Console'>)</font>;
+            <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+        <b>}</b>
+        <font color='#0000FF'>else</font>
+        <b>{</b>
+            <font color='#0000FF'>const</font> <font color='#0000FF'><u>long</u></font> lastdim  <font color='#5555FF'>=</font> dims[<font color='#979000'>1</font>]<font color='#5555FF'>/</font><font color='#979000'>2</font><font color='#5555FF'>+</font><font color='#979000'>1</font>;
+            MKL_LONG size[] <font color='#5555FF'>=</font> <b>{</b>dims[<font color='#979000'>0</font>], dims[<font color='#979000'>1</font>]<b>}</b>;
+            status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiCreateDescriptor</font><font face='Lucida Console'>(</font><font color='#5555FF'>&amp;</font>h, dfti_type, DFTI_REAL, <font color='#979000'>2</font>, size<font face='Lucida Console'>)</font>;
+            <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+
+            <b>{</b>
+                MKL_LONG strides[<font color='#979000'>3</font>];
+                strides[<font color='#979000'>0</font>] <font color='#5555FF'>=</font> <font color='#979000'>0</font>;
+                strides[<font color='#979000'>1</font>] <font color='#5555FF'>=</font> lastdim;
+                strides[<font color='#979000'>2</font>] <font color='#5555FF'>=</font> <font color='#979000'>1</font>;
+
+                status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiSetValue</font><font face='Lucida Console'>(</font>h, DFTI_INPUT_STRIDES, strides<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+            <b>}</b>
+            <b>{</b>
+                MKL_LONG strides[<font color='#979000'>3</font>];
+                strides[<font color='#979000'>0</font>] <font color='#5555FF'>=</font> <font color='#979000'>0</font>;
+                strides[<font color='#979000'>1</font>] <font color='#5555FF'>=</font> dims[<font color='#979000'>1</font>];
+                strides[<font color='#979000'>2</font>] <font color='#5555FF'>=</font> <font color='#979000'>1</font>;
+                status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiSetValue</font><font face='Lucida Console'>(</font>h, DFTI_OUTPUT_STRIDES, strides<font face='Lucida Console'>)</font>;
+                <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+            <b>}</b>   
+        <b>}</b>
+
+        <font color='#0000FF'>const</font> DFTI_CONFIG_VALUE inplacefft <font color='#5555FF'>=</font> <font face='Lucida Console'>(</font><font color='#0000FF'><u>void</u></font><font color='#5555FF'>*</font><font face='Lucida Console'>)</font>in <font color='#5555FF'>=</font><font color='#5555FF'>=</font> <font face='Lucida Console'>(</font><font color='#0000FF'><u>void</u></font><font color='#5555FF'>*</font><font face='Lucida Console'>)</font>out ? DFTI_INPLACE : DFTI_NOT_INPLACE;
+        status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiSetValue</font><font face='Lucida Console'>(</font>h, DFTI_PLACEMENT, inplacefft<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+
+        status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiSetValue</font><font face='Lucida Console'>(</font>h, DFTI_CONJUGATE_EVEN_STORAGE, DFTI_COMPLEX_COMPLEX<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+        
+        <font color='#009900'>// Unless we use sequential mode, the fft results are not correct.
+</font>        status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiSetValue</font><font face='Lucida Console'>(</font>h, DFTI_THREAD_LIMIT, <font color='#979000'>1</font><font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+
+        status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiCommitDescriptor</font><font face='Lucida Console'>(</font>h<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+
+        status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiComputeBackward</font><font face='Lucida Console'>(</font>h, <font face='Lucida Console'>(</font><font color='#0000FF'><u>void</u></font><font color='#5555FF'>*</font><font face='Lucida Console'>)</font>in, <font face='Lucida Console'>(</font><font color='#0000FF'><u>void</u></font><font color='#5555FF'>*</font><font face='Lucida Console'>)</font>out<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+
+        status <font color='#5555FF'>=</font> <font color='#BB00BB'>DftiFreeDescriptor</font><font face='Lucida Console'>(</font><font color='#5555FF'>&amp;</font>h<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>DLIB_DFTI_CHECK_STATUS</font><font face='Lucida Console'>(</font>status<font face='Lucida Console'>)</font>;
+    <b>}</b>
+<b>}</b>
+
+<font color='#0000FF'>#endif</font> <font color='#009900'>// DLIB_MKL_FFT_H
+</font>
+</pre></body></html>

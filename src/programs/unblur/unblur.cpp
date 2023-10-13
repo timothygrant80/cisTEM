@@ -1,8 +1,10 @@
+#include <dlib/dlib/queue.h>
 #include "../../core/core_headers.h"
-
 #include <string>
 #include <fstream>
-#include "../../core/dlib/optimization.h"
+// #include "../../core/dlib/optimization.h"
+
+#include "dlib/dlib/optimization.h"
 #include <vector>
 
 // The timing that unblur originally tracks is always on, by direct reference to cistem_timer::StopWatch

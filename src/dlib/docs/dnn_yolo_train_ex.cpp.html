@@ -1,0 +1,538 @@
+<html><!-- Created using the cpp_pretty_printer from the dlib C++ library.  See http://dlib.net for updates. --><head><title>dlib C++ Library - dnn_yolo_train_ex.cpp</title></head><body bgcolor='white'><pre>
+<font color='#009900'>// The contents of this file are in the public domain. See LICENSE_FOR_EXAMPLE_PROGRAMS.txt
+</font><font color='#009900'>/*
+    This is an example illustrating the use of the deep learning tools from the dlib C++
+    Library.  I'm assuming you have already read the <a href="dnn_introduction_ex.cpp.html">dnn_introduction_ex.cpp</a>, the
+    <a href="dnn_introduction2_ex.cpp.html">dnn_introduction2_ex.cpp</a> and the <a href="dnn_introduction3_ex.cpp.html">dnn_introduction3_ex.cpp</a> examples.  In this example
+    program we are going to show how one can train a YOLO detector.  In particular, we will train
+    the YOLOv3 model like the one introduced in this paper:
+    "YOLOv3: An Incremental Improvement" by Joseph Redmon and  Ali Farhadi.
+
+    This example program will work with any imglab dataset, such as:
+        - faces: http://dlib.net/files/data/dlib_face_detection_dataset-2016-09-30.tar.gz
+        - vehicles: http://dlib.net/files/data/dlib_rear_end_vehicles_v1.tar
+    Just uncompress the dataset and give the directory containing the training.xml and testing.xml
+    files as an argument to this program.
+*/</font>
+
+<font color='#0000FF'>#include</font> <font color='#5555FF'>&lt;</font>dlib<font color='#5555FF'>/</font>cmd_line_parser.h<font color='#5555FF'>&gt;</font>
+<font color='#0000FF'>#include</font> <font color='#5555FF'>&lt;</font>dlib<font color='#5555FF'>/</font>data_io.h<font color='#5555FF'>&gt;</font>
+<font color='#0000FF'>#include</font> <font color='#5555FF'>&lt;</font>dlib<font color='#5555FF'>/</font>dnn.h<font color='#5555FF'>&gt;</font>
+<font color='#0000FF'>#include</font> <font color='#5555FF'>&lt;</font>dlib<font color='#5555FF'>/</font>gui_widgets.h<font color='#5555FF'>&gt;</font>
+<font color='#0000FF'>#include</font> <font color='#5555FF'>&lt;</font>dlib<font color='#5555FF'>/</font>image_io.h<font color='#5555FF'>&gt;</font>
+<font color='#0000FF'>#include</font> <font color='#5555FF'>&lt;</font>tools<font color='#5555FF'>/</font>imglab<font color='#5555FF'>/</font>src<font color='#5555FF'>/</font>metadata_editor.h<font color='#5555FF'>&gt;</font>
+
+<font color='#0000FF'>using</font> <font color='#0000FF'>namespace</font> std;
+<font color='#0000FF'>using</font> <font color='#0000FF'>namespace</font> dlib;
+
+<font color='#009900'>// In the darknet namespace we define:
+</font><font color='#009900'>// - the network architecture: DarkNet53 backbone and detection head for YOLO.
+</font><font color='#009900'>// - a helper function to setup the detector: change the number of classes, etc.
+</font><font color='#0000FF'>namespace</font> darknet
+<b>{</b>
+    <font color='#009900'>// backbone tags
+</font>    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> btag8 <font color='#5555FF'>=</font> add_tag_layer<font color='#5555FF'>&lt;</font><font color='#979000'>8008</font>, SUBNET<font color='#5555FF'>&gt;</font>;
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> btag16 <font color='#5555FF'>=</font> add_tag_layer<font color='#5555FF'>&lt;</font><font color='#979000'>8016</font>, SUBNET<font color='#5555FF'>&gt;</font>;
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> bskip8 <font color='#5555FF'>=</font> add_skip_layer<font color='#5555FF'>&lt;</font>btag8, SUBNET<font color='#5555FF'>&gt;</font>;
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> bskip16 <font color='#5555FF'>=</font> add_skip_layer<font color='#5555FF'>&lt;</font>btag16, SUBNET<font color='#5555FF'>&gt;</font>;
+    <font color='#009900'>// neck tags
+</font>    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> ntag8 <font color='#5555FF'>=</font> add_tag_layer<font color='#5555FF'>&lt;</font><font color='#979000'>6008</font>, SUBNET<font color='#5555FF'>&gt;</font>;
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> ntag16 <font color='#5555FF'>=</font> add_tag_layer<font color='#5555FF'>&lt;</font><font color='#979000'>6016</font>, SUBNET<font color='#5555FF'>&gt;</font>;
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> ntag32 <font color='#5555FF'>=</font> add_tag_layer<font color='#5555FF'>&lt;</font><font color='#979000'>6032</font>, SUBNET<font color='#5555FF'>&gt;</font>;
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> nskip8 <font color='#5555FF'>=</font> add_skip_layer<font color='#5555FF'>&lt;</font>ntag8, SUBNET<font color='#5555FF'>&gt;</font>;
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> nskip16 <font color='#5555FF'>=</font> add_skip_layer<font color='#5555FF'>&lt;</font>ntag16, SUBNET<font color='#5555FF'>&gt;</font>;
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> nskip32 <font color='#5555FF'>=</font> add_skip_layer<font color='#5555FF'>&lt;</font>ntag32, SUBNET<font color='#5555FF'>&gt;</font>;
+    <font color='#009900'>// head tags
+</font>    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> htag8 <font color='#5555FF'>=</font> add_tag_layer<font color='#5555FF'>&lt;</font><font color='#979000'>7008</font>, SUBNET<font color='#5555FF'>&gt;</font>;
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> htag16 <font color='#5555FF'>=</font> add_tag_layer<font color='#5555FF'>&lt;</font><font color='#979000'>7016</font>, SUBNET<font color='#5555FF'>&gt;</font>;
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> htag32 <font color='#5555FF'>=</font> add_tag_layer<font color='#5555FF'>&lt;</font><font color='#979000'>7032</font>, SUBNET<font color='#5555FF'>&gt;</font>;
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> hskip8 <font color='#5555FF'>=</font> add_skip_layer<font color='#5555FF'>&lt;</font>htag8, SUBNET<font color='#5555FF'>&gt;</font>;
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> hskip16 <font color='#5555FF'>=</font> add_skip_layer<font color='#5555FF'>&lt;</font>htag16, SUBNET<font color='#5555FF'>&gt;</font>;
+    <font color='#009900'>// yolo tags
+</font>    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> ytag8 <font color='#5555FF'>=</font> add_tag_layer<font color='#5555FF'>&lt;</font><font color='#979000'>4008</font>, SUBNET<font color='#5555FF'>&gt;</font>;
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> ytag16 <font color='#5555FF'>=</font> add_tag_layer<font color='#5555FF'>&lt;</font><font color='#979000'>4016</font>, SUBNET<font color='#5555FF'>&gt;</font>;
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> ytag32 <font color='#5555FF'>=</font> add_tag_layer<font color='#5555FF'>&lt;</font><font color='#979000'>4032</font>, SUBNET<font color='#5555FF'>&gt;</font>;
+
+    <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='ACT'></a>ACT</b>, <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='BN'></a>BN</b><font color='#5555FF'>&gt;</font>
+    <font color='#0000FF'>struct</font> <b><a name='def'></a>def</b>
+    <b>{</b>
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>long</u></font> nf, <font color='#0000FF'><u>long</u></font> ks, <font color='#0000FF'><u>int</u></font> s, <font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>using</font> conblock <font color='#5555FF'>=</font> ACT<font color='#5555FF'>&lt;</font>BN<font color='#5555FF'>&lt;</font>add_layer<font color='#5555FF'>&lt;</font>con_<font color='#5555FF'>&lt;</font>nf, ks, ks, s, s, ks <font color='#5555FF'>/</font> <font color='#979000'>2</font>, ks <font color='#5555FF'>/</font> <font color='#979000'>2</font><font color='#5555FF'>&gt;</font>, SUBNET<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font>;
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>long</u></font> nf, <font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>using</font> residual <font color='#5555FF'>=</font> add_prev1<font color='#5555FF'>&lt;</font>conblock<font color='#5555FF'>&lt;</font>nf, <font color='#979000'>3</font>, <font color='#979000'>1</font>, conblock<font color='#5555FF'>&lt;</font>nf <font color='#5555FF'>/</font> <font color='#979000'>2</font>, <font color='#979000'>1</font>, <font color='#979000'>1</font>, tag1<font color='#5555FF'>&lt;</font>SUBNET<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font>;
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>long</u></font> nf, <font color='#0000FF'><u>long</u></font> factor, <font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>using</font> conblock5 <font color='#5555FF'>=</font> conblock<font color='#5555FF'>&lt;</font>nf, <font color='#979000'>1</font>, <font color='#979000'>1</font>,
+                          conblock<font color='#5555FF'>&lt;</font>nf <font color='#5555FF'>*</font> factor, <font color='#979000'>3</font>, <font color='#979000'>1</font>,
+                          conblock<font color='#5555FF'>&lt;</font>nf, <font color='#979000'>1</font>, <font color='#979000'>1</font>,
+                          conblock<font color='#5555FF'>&lt;</font>nf <font color='#5555FF'>*</font> factor, <font color='#979000'>3</font>, <font color='#979000'>1</font>,
+                          conblock<font color='#5555FF'>&lt;</font>nf, <font color='#979000'>1</font>, <font color='#979000'>1</font>, SUBNET<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font>;
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> res_64 <font color='#5555FF'>=</font> residual<font color='#5555FF'>&lt;</font><font color='#979000'>64</font>, SUBNET<font color='#5555FF'>&gt;</font>;
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> res_128 <font color='#5555FF'>=</font> residual<font color='#5555FF'>&lt;</font><font color='#979000'>128</font>, SUBNET<font color='#5555FF'>&gt;</font>;
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> res_256 <font color='#5555FF'>=</font> residual<font color='#5555FF'>&lt;</font><font color='#979000'>256</font>, SUBNET<font color='#5555FF'>&gt;</font>;
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> res_512 <font color='#5555FF'>=</font> residual<font color='#5555FF'>&lt;</font><font color='#979000'>512</font>, SUBNET<font color='#5555FF'>&gt;</font>;
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font> <font color='#0000FF'>using</font> res_1024 <font color='#5555FF'>=</font> residual<font color='#5555FF'>&lt;</font><font color='#979000'>1024</font>, SUBNET<font color='#5555FF'>&gt;</font>;
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font> INPUT<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>using</font> backbone53 <font color='#5555FF'>=</font> repeat<font color='#5555FF'>&lt;</font><font color='#979000'>4</font>, res_1024, conblock<font color='#5555FF'>&lt;</font><font color='#979000'>1024</font>, <font color='#979000'>3</font>, <font color='#979000'>2</font>,
+                    btag16<font color='#5555FF'>&lt;</font>repeat<font color='#5555FF'>&lt;</font><font color='#979000'>8</font>, res_512,  conblock<font color='#5555FF'>&lt;</font><font color='#979000'>512</font>, <font color='#979000'>3</font>, <font color='#979000'>2</font>,
+                     btag8<font color='#5555FF'>&lt;</font>repeat<font color='#5555FF'>&lt;</font><font color='#979000'>8</font>, res_256,  conblock<font color='#5555FF'>&lt;</font><font color='#979000'>256</font>, <font color='#979000'>3</font>, <font color='#979000'>2</font>,
+                           repeat<font color='#5555FF'>&lt;</font><font color='#979000'>2</font>, res_128,  conblock<font color='#5555FF'>&lt;</font><font color='#979000'>128</font>, <font color='#979000'>3</font>, <font color='#979000'>2</font>,
+                                     res_64<font color='#5555FF'>&lt;</font>   conblock<font color='#5555FF'>&lt;</font><font color='#979000'>64</font>, <font color='#979000'>3</font>, <font color='#979000'>2</font>,
+                                               conblock<font color='#5555FF'>&lt;</font><font color='#979000'>32</font>, <font color='#979000'>3</font>, <font color='#979000'>1</font>,
+                                               INPUT<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font>;
+
+        <font color='#009900'>// This is the layer that will be passed to the loss layer to get the detections from the network.
+</font>        <font color='#009900'>// The main thing to pay attention to when defining the YOLO output layer is that it should be
+</font>        <font color='#009900'>// a tag layer, followed by a sigmoid layer and a 1x1 convolution.  The tag layer should be unique
+</font>        <font color='#009900'>// in the whole network definition, as the loss layer will use it to get the outputs.  The number of
+</font>        <font color='#009900'>// filters in the convolutional layer should be (1 + 4 + num_classes) * num_anchors at that output.
+</font>        <font color='#009900'>// The 1 corresponds to the objectness in the loss layer and the 4 to the bounding box coordinates.
+</font>        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>long</u></font> num_classes, <font color='#0000FF'><u>long</u></font> nf, <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='YTAG'></a>YTAG</b>, <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'>typename</font><font color='#5555FF'>&gt;</font> <font color='#0000FF'>class</font> <b><a name='NTAG'></a>NTAG</b>, <font color='#0000FF'>typename</font> SUBNET<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>using</font> yolo <font color='#5555FF'>=</font> YTAG<font color='#5555FF'>&lt;</font>sig<font color='#5555FF'>&lt;</font>con<font color='#5555FF'>&lt;</font><font color='#979000'>3</font> <font color='#5555FF'>*</font> <font face='Lucida Console'>(</font>num_classes <font color='#5555FF'>+</font> <font color='#979000'>5</font><font face='Lucida Console'>)</font>, <font color='#979000'>1</font>, <font color='#979000'>1</font>, <font color='#979000'>1</font>, <font color='#979000'>1</font>,
+                     conblock<font color='#5555FF'>&lt;</font>nf, <font color='#979000'>3</font>, <font color='#979000'>1</font>,
+                NTAG<font color='#5555FF'>&lt;</font>conblock5<font color='#5555FF'>&lt;</font>nf <font color='#5555FF'>/</font> <font color='#979000'>2</font>, <font color='#979000'>2</font>,
+                     SUBNET<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font>;
+
+        <font color='#0000FF'>template</font> <font color='#5555FF'>&lt;</font><font color='#0000FF'><u>long</u></font> num_classes<font color='#5555FF'>&gt;</font>
+        <font color='#0000FF'>using</font> yolov3 <font color='#5555FF'>=</font> yolo<font color='#5555FF'>&lt;</font>num_classes, <font color='#979000'>256</font>, ytag8, ntag8,
+                       concat2<font color='#5555FF'>&lt;</font>htag8, btag8,
+                 htag8<font color='#5555FF'>&lt;</font>upsample<font color='#5555FF'>&lt;</font><font color='#979000'>2</font>, conblock<font color='#5555FF'>&lt;</font><font color='#979000'>128</font>, <font color='#979000'>1</font>, <font color='#979000'>1</font>,
+                       nskip16<font color='#5555FF'>&lt;</font>
+                       yolo<font color='#5555FF'>&lt;</font>num_classes, <font color='#979000'>512</font>, ytag16, ntag16,
+                       concat2<font color='#5555FF'>&lt;</font>htag16, btag16,
+                htag16<font color='#5555FF'>&lt;</font>upsample<font color='#5555FF'>&lt;</font><font color='#979000'>2</font>, conblock<font color='#5555FF'>&lt;</font><font color='#979000'>256</font>, <font color='#979000'>1</font>, <font color='#979000'>1</font>,
+                       nskip32<font color='#5555FF'>&lt;</font>
+                       yolo<font color='#5555FF'>&lt;</font>num_classes, <font color='#979000'>1024</font>, ytag32, ntag32,
+                       backbone53<font color='#5555FF'>&lt;</font>input_rgb_image<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font>;
+
+    <b>}</b>;
+
+    <font color='#0000FF'>using</font> yolov3_train_type <font color='#5555FF'>=</font> loss_yolo<font color='#5555FF'>&lt;</font>ytag8, ytag16, ytag32, def<font color='#5555FF'>&lt;</font>leaky_relu, bn_con<font color='#5555FF'>&gt;</font>::yolov3<font color='#5555FF'>&lt;</font><font color='#979000'>80</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font>;
+    <font color='#0000FF'>using</font> yolov3_infer_type <font color='#5555FF'>=</font> loss_yolo<font color='#5555FF'>&lt;</font>ytag8, ytag16, ytag32, def<font color='#5555FF'>&lt;</font>leaky_relu, affine<font color='#5555FF'>&gt;</font>::yolov3<font color='#5555FF'>&lt;</font><font color='#979000'>80</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font>;
+
+    <font color='#0000FF'><u>void</u></font> <b><a name='setup_detector'></a>setup_detector</b><font face='Lucida Console'>(</font>yolov3_train_type<font color='#5555FF'>&amp;</font> net, <font color='#0000FF'>const</font> yolo_options<font color='#5555FF'>&amp;</font> options<font face='Lucida Console'>)</font>
+    <b>{</b>
+        <font color='#009900'>// remove bias from bn inputs
+</font>        <font color='#BB00BB'>disable_duplicative_biases</font><font face='Lucida Console'>(</font>net<font face='Lucida Console'>)</font>;
+        <font color='#009900'>// setup leaky relus
+</font>        <font color='#BB00BB'>visit_computational_layers</font><font face='Lucida Console'>(</font>net, []<font face='Lucida Console'>(</font>leaky_relu_<font color='#5555FF'>&amp;</font> l<font face='Lucida Console'>)</font> <b>{</b> l <font color='#5555FF'>=</font> <font color='#BB00BB'>leaky_relu_</font><font face='Lucida Console'>(</font><font color='#979000'>0.1</font><font face='Lucida Console'>)</font>; <b>}</b><font face='Lucida Console'>)</font>;
+        <font color='#009900'>// enlarge the batch normalization stats window
+</font>        <font color='#BB00BB'>set_all_bn_running_stats_window_sizes</font><font face='Lucida Console'>(</font>net, <font color='#979000'>1000</font><font face='Lucida Console'>)</font>;
+        <font color='#009900'>// set the number of filters for detection layers (they are located after the tag and sig layers)
+</font>        <font color='#0000FF'>const</font> <font color='#0000FF'><u>long</u></font> nfo1 <font color='#5555FF'>=</font> options.anchors.<font color='#BB00BB'>at</font><font face='Lucida Console'>(</font>tag_id<font color='#5555FF'>&lt;</font>ytag8<font color='#5555FF'>&gt;</font>::id<font face='Lucida Console'>)</font>.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>*</font> <font face='Lucida Console'>(</font>options.labels.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>+</font> <font color='#979000'>5</font><font face='Lucida Console'>)</font>;
+        <font color='#0000FF'>const</font> <font color='#0000FF'><u>long</u></font> nfo2 <font color='#5555FF'>=</font> options.anchors.<font color='#BB00BB'>at</font><font face='Lucida Console'>(</font>tag_id<font color='#5555FF'>&lt;</font>ytag16<font color='#5555FF'>&gt;</font>::id<font face='Lucida Console'>)</font>.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>*</font> <font face='Lucida Console'>(</font>options.labels.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>+</font> <font color='#979000'>5</font><font face='Lucida Console'>)</font>;
+        <font color='#0000FF'>const</font> <font color='#0000FF'><u>long</u></font> nfo3 <font color='#5555FF'>=</font> options.anchors.<font color='#BB00BB'>at</font><font face='Lucida Console'>(</font>tag_id<font color='#5555FF'>&lt;</font>ytag32<font color='#5555FF'>&gt;</font>::id<font face='Lucida Console'>)</font>.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>*</font> <font face='Lucida Console'>(</font>options.labels.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>+</font> <font color='#979000'>5</font><font face='Lucida Console'>)</font>;
+        layer<font color='#5555FF'>&lt;</font>ytag8, <font color='#979000'>2</font><font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>net<font face='Lucida Console'>)</font>.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>set_num_filters</font><font face='Lucida Console'>(</font>nfo1<font face='Lucida Console'>)</font>;
+        layer<font color='#5555FF'>&lt;</font>ytag16, <font color='#979000'>2</font><font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>net<font face='Lucida Console'>)</font>.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>set_num_filters</font><font face='Lucida Console'>(</font>nfo2<font face='Lucida Console'>)</font>;
+        layer<font color='#5555FF'>&lt;</font>ytag32, <font color='#979000'>2</font><font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>net<font face='Lucida Console'>)</font>.<font color='#BB00BB'>layer_details</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>.<font color='#BB00BB'>set_num_filters</font><font face='Lucida Console'>(</font>nfo3<font face='Lucida Console'>)</font>;
+    <b>}</b>
+<b>}</b>
+
+<font color='#009900'>// In this example, YOLO expects square images, and we choose to transform them by letterboxing them.
+</font>rectangle_transform <b><a name='preprocess_image'></a>preprocess_image</b><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> matrix<font color='#5555FF'>&lt;</font>rgb_pixel<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> image, matrix<font color='#5555FF'>&lt;</font>rgb_pixel<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> output, <font color='#0000FF'>const</font> <font color='#0000FF'><u>long</u></font> image_size<font face='Lucida Console'>)</font>
+<b>{</b>
+    <font color='#0000FF'>return</font> <font color='#BB00BB'>rectangle_transform</font><font face='Lucida Console'>(</font><font color='#BB00BB'>inv</font><font face='Lucida Console'>(</font><font color='#BB00BB'>letterbox_image</font><font face='Lucida Console'>(</font>image, output, image_size<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+<b>}</b>
+
+<font color='#009900'>// YOLO outputs the bounding boxes in the coordinate system of the input (letterboxed) image, so we need to convert them
+</font><font color='#009900'>// back to the original image.
+</font><font color='#0000FF'><u>void</u></font> <b><a name='postprocess_detections'></a>postprocess_detections</b><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> rectangle_transform<font color='#5555FF'>&amp;</font> tform, std::vector<font color='#5555FF'>&lt;</font>yolo_rect<font color='#5555FF'>&gt;</font><font color='#5555FF'>&amp;</font> detections<font face='Lucida Console'>)</font>
+<b>{</b>
+    <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'>auto</font><font color='#5555FF'>&amp;</font> d : detections<font face='Lucida Console'>)</font>
+        d.rect <font color='#5555FF'>=</font> <font color='#BB00BB'>tform</font><font face='Lucida Console'>(</font>d.rect<font face='Lucida Console'>)</font>;
+<b>}</b>
+
+<font color='#0000FF'><u>int</u></font> <b><a name='main'></a>main</b><font face='Lucida Console'>(</font><font color='#0000FF'>const</font> <font color='#0000FF'><u>int</u></font> argc, <font color='#0000FF'>const</font> <font color='#0000FF'><u>char</u></font><font color='#5555FF'>*</font><font color='#5555FF'>*</font> argv<font face='Lucida Console'>)</font>
+<font color='#0000FF'>try</font>
+<b>{</b>
+    command_line_parser parser;
+    parser.<font color='#BB00BB'>add_option</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>size</font>", "<font color='#CC0000'>image size for training (default: 416)</font>", <font color='#979000'>1</font><font face='Lucida Console'>)</font>;
+    parser.<font color='#BB00BB'>add_option</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>learning-rate</font>", "<font color='#CC0000'>initial learning rate (default: 0.001)</font>", <font color='#979000'>1</font><font face='Lucida Console'>)</font>;
+    parser.<font color='#BB00BB'>add_option</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>batch-size</font>", "<font color='#CC0000'>mini batch size (default: 8)</font>", <font color='#979000'>1</font><font face='Lucida Console'>)</font>;
+    parser.<font color='#BB00BB'>add_option</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>burnin</font>", "<font color='#CC0000'>learning rate burnin steps (default: 1000)</font>", <font color='#979000'>1</font><font face='Lucida Console'>)</font>;
+    parser.<font color='#BB00BB'>add_option</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>patience</font>", "<font color='#CC0000'>number of steps without progress (default: 10000)</font>", <font color='#979000'>1</font><font face='Lucida Console'>)</font>;
+    parser.<font color='#BB00BB'>add_option</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>workers</font>", "<font color='#CC0000'>number of worker threads to load data (default: 4)</font>", <font color='#979000'>1</font><font face='Lucida Console'>)</font>;
+    parser.<font color='#BB00BB'>add_option</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>gpus</font>", "<font color='#CC0000'>number of GPUs to run the training on (default: 1)</font>", <font color='#979000'>1</font><font face='Lucida Console'>)</font>;
+    parser.<font color='#BB00BB'>add_option</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>test</font>", "<font color='#CC0000'>test the detector with a threshold (default: 0.01)</font>", <font color='#979000'>1</font><font face='Lucida Console'>)</font>;
+    parser.<font color='#BB00BB'>add_option</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>visualize</font>", "<font color='#CC0000'>visualize data augmentation instead of training</font>"<font face='Lucida Console'>)</font>;
+    parser.<font color='#BB00BB'>add_option</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>map</font>", "<font color='#CC0000'>compute the mean average precision</font>"<font face='Lucida Console'>)</font>;
+    parser.<font color='#BB00BB'>add_option</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>anchors</font>", "<font color='#CC0000'>Do nothing but compute &lt;arg1&gt; anchor boxes using K-Means and print their shapes.</font>", <font color='#979000'>1</font><font face='Lucida Console'>)</font>;
+    parser.<font color='#BB00BB'>set_group_name</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>Help Options</font>"<font face='Lucida Console'>)</font>;
+    parser.<font color='#BB00BB'>add_option</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>h</font>", "<font color='#CC0000'>alias of --help</font>"<font face='Lucida Console'>)</font>;
+    parser.<font color='#BB00BB'>add_option</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>help</font>", "<font color='#CC0000'>display this message and exit</font>"<font face='Lucida Console'>)</font>;
+    parser.<font color='#BB00BB'>parse</font><font face='Lucida Console'>(</font>argc, argv<font face='Lucida Console'>)</font>;
+    <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>parser.<font color='#BB00BB'>number_of_arguments</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>=</font><font color='#5555FF'>=</font> <font color='#979000'>0</font> <font color='#5555FF'>|</font><font color='#5555FF'>|</font> parser.<font color='#BB00BB'>option</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>h</font>"<font face='Lucida Console'>)</font> <font color='#5555FF'>|</font><font color='#5555FF'>|</font> parser.<font color='#BB00BB'>option</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>help</font>"<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+    <b>{</b>
+        parser.<font color='#BB00BB'>print_options</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+        cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>Give the path to a folder containing the training.xml file.</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> endl;
+        <font color='#0000FF'>return</font> <font color='#979000'>0</font>;
+    <b>}</b>
+    <font color='#0000FF'>const</font> <font color='#0000FF'><u>double</u></font> learning_rate <font color='#5555FF'>=</font> <font color='#BB00BB'>get_option</font><font face='Lucida Console'>(</font>parser, "<font color='#CC0000'>learning-rate</font>", <font color='#979000'>0.001</font><font face='Lucida Console'>)</font>;
+    <font color='#0000FF'>const</font> <font color='#0000FF'><u>size_t</u></font> patience <font color='#5555FF'>=</font> <font color='#BB00BB'>get_option</font><font face='Lucida Console'>(</font>parser, "<font color='#CC0000'>patience</font>", <font color='#979000'>10000</font><font face='Lucida Console'>)</font>;
+    <font color='#0000FF'>const</font> <font color='#0000FF'><u>size_t</u></font> batch_size <font color='#5555FF'>=</font> <font color='#BB00BB'>get_option</font><font face='Lucida Console'>(</font>parser, "<font color='#CC0000'>batch-size</font>", <font color='#979000'>8</font><font face='Lucida Console'>)</font>;
+    <font color='#0000FF'>const</font> <font color='#0000FF'><u>size_t</u></font> burnin <font color='#5555FF'>=</font> <font color='#BB00BB'>get_option</font><font face='Lucida Console'>(</font>parser, "<font color='#CC0000'>burnin</font>", <font color='#979000'>1000</font><font face='Lucida Console'>)</font>;
+    <font color='#0000FF'>const</font> <font color='#0000FF'><u>size_t</u></font> image_size <font color='#5555FF'>=</font> <font color='#BB00BB'>get_option</font><font face='Lucida Console'>(</font>parser, "<font color='#CC0000'>size</font>", <font color='#979000'>416</font><font face='Lucida Console'>)</font>;
+    <font color='#0000FF'>const</font> <font color='#0000FF'><u>size_t</u></font> num_workers <font color='#5555FF'>=</font> <font color='#BB00BB'>get_option</font><font face='Lucida Console'>(</font>parser, "<font color='#CC0000'>workers</font>", <font color='#979000'>4</font><font face='Lucida Console'>)</font>;
+    <font color='#0000FF'>const</font> <font color='#0000FF'><u>size_t</u></font> num_gpus <font color='#5555FF'>=</font> <font color='#BB00BB'>get_option</font><font face='Lucida Console'>(</font>parser, "<font color='#CC0000'>gpus</font>", <font color='#979000'>1</font><font face='Lucida Console'>)</font>;
+
+    <font color='#0000FF'>const</font> string data_directory <font color='#5555FF'>=</font> parser[<font color='#979000'>0</font>];
+    <font color='#0000FF'>const</font> string sync_file_name <font color='#5555FF'>=</font> "<font color='#CC0000'>yolov3_sync</font>";
+
+    image_dataset_metadata::dataset dataset;
+    image_dataset_metadata::<font color='#BB00BB'>load_image_dataset_metadata</font><font face='Lucida Console'>(</font>dataset, data_directory <font color='#5555FF'>+</font> "<font color='#CC0000'>/training.xml</font>"<font face='Lucida Console'>)</font>;
+    cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'># images: </font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> dataset.images.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> endl;
+    std::map<font color='#5555FF'>&lt;</font>string, <font color='#0000FF'><u>size_t</u></font><font color='#5555FF'>&gt;</font> labels;
+    <font color='#0000FF'><u>size_t</u></font> num_objects <font color='#5555FF'>=</font> <font color='#979000'>0</font>;
+    <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'>const</font> <font color='#0000FF'>auto</font><font color='#5555FF'>&amp;</font> im : dataset.images<font face='Lucida Console'>)</font>
+    <b>{</b>
+        <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'>const</font> <font color='#0000FF'>auto</font><font color='#5555FF'>&amp;</font> b : im.boxes<font face='Lucida Console'>)</font>
+        <b>{</b>
+            labels[b.label]<font color='#5555FF'>+</font><font color='#5555FF'>+</font>;
+            <font color='#5555FF'>+</font><font color='#5555FF'>+</font>num_objects;
+        <b>}</b>
+    <b>}</b>
+    cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'># labels: </font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> labels.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> endl;
+
+    yolo_options options;
+    color_mapper string_to_color;
+    <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'>const</font> <font color='#0000FF'>auto</font><font color='#5555FF'>&amp;</font> label : labels<font face='Lucida Console'>)</font>
+    <b>{</b>
+        cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font>  "<font color='#CC0000'> - </font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> label.first <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>: </font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> label.second;
+        cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> (</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> <font face='Lucida Console'>(</font><font color='#979000'>100.0</font><font color='#5555FF'>*</font>label.second<font face='Lucida Console'>)</font><font color='#5555FF'>/</font>num_objects <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>%)\n</font>";
+        options.labels.<font color='#BB00BB'>push_back</font><font face='Lucida Console'>(</font>label.first<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>string_to_color</font><font face='Lucida Console'>(</font>label.first<font face='Lucida Console'>)</font>;
+    <b>}</b>
+
+    <font color='#009900'>// If the default anchor boxes don't fit your data well you should recompute them.
+</font>    <font color='#009900'>// Here's a simple way to do it using K-Means clustering.  Note that the approach
+</font>    <font color='#009900'>// shown below is suboptimal, since it doesn't group the bounding boxes by size.
+</font>    <font color='#009900'>// Grouping the bounding boxes by size and computing the K-Means on each group
+</font>    <font color='#009900'>// would make more sense, since each stride of the network is meant to output
+</font>    <font color='#009900'>// boxes at a particular size, but that is very specific to the network architecture
+</font>    <font color='#009900'>// and the dataset itself.
+</font>    <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>parser.<font color='#BB00BB'>option</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>anchors</font>"<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+    <b>{</b>
+        <font color='#0000FF'>const</font> <font color='#0000FF'>auto</font> num_clusers <font color='#5555FF'>=</font> std::<font color='#BB00BB'>stoul</font><font face='Lucida Console'>(</font>parser.<font color='#BB00BB'>option</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>anchors</font>"<font face='Lucida Console'>)</font>.<font color='#BB00BB'>argument</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+        std::vector<font color='#5555FF'>&lt;</font>dpoint<font color='#5555FF'>&gt;</font> samples;
+        <font color='#009900'>// First we need to rescale the bounding boxes to match the image size at training time.
+</font>        <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'>const</font> <font color='#0000FF'>auto</font><font color='#5555FF'>&amp;</font> image_info : dataset.images<font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#0000FF'>const</font> <font color='#0000FF'>auto</font> scale <font color='#5555FF'>=</font> image_size <font color='#5555FF'>/</font> std::max<font color='#5555FF'>&lt;</font><font color='#0000FF'><u>double</u></font><font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font>image_info.width, image_info.height<font face='Lucida Console'>)</font>;
+            <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'>const</font> <font color='#0000FF'>auto</font><font color='#5555FF'>&amp;</font> box : image_info.boxes<font face='Lucida Console'>)</font>
+            <b>{</b>
+                dpoint <font color='#BB00BB'>sample</font><font face='Lucida Console'>(</font>box.rect.<font color='#BB00BB'>width</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, box.rect.<font color='#BB00BB'>height</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+                samples.<font color='#BB00BB'>push_back</font><font face='Lucida Console'>(</font>sample<font color='#5555FF'>*</font>scale<font face='Lucida Console'>)</font>;
+            <b>}</b>
+        <b>}</b>
+        <font color='#009900'>// Now we can compute K-Means clustering
+</font>        <font color='#BB00BB'>randomize_samples</font><font face='Lucida Console'>(</font>samples<font face='Lucida Console'>)</font>;
+        cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>Computing anchors for </font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> samples.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> samples</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> endl;
+        std::vector<font color='#5555FF'>&lt;</font>dpoint<font color='#5555FF'>&gt;</font> anchors;
+        <font color='#BB00BB'>pick_initial_centers</font><font face='Lucida Console'>(</font>num_clusers, anchors, samples<font face='Lucida Console'>)</font>;
+        <font color='#BB00BB'>find_clusters_using_kmeans</font><font face='Lucida Console'>(</font>samples, anchors<font face='Lucida Console'>)</font>;
+        std::<font color='#BB00BB'>sort</font><font face='Lucida Console'>(</font>anchors.<font color='#BB00BB'>begin</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, anchors.<font color='#BB00BB'>end</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, []<font face='Lucida Console'>(</font><font color='#0000FF'>const</font> dpoint<font color='#5555FF'>&amp;</font> a, <font color='#0000FF'>const</font> dpoint<font color='#5555FF'>&amp;</font> b<font face='Lucida Console'>)</font><b>{</b> <font color='#0000FF'>return</font> <font color='#BB00BB'>prod</font><font face='Lucida Console'>(</font>a<font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font> <font color='#BB00BB'>prod</font><font face='Lucida Console'>(</font>b<font face='Lucida Console'>)</font>; <b>}</b><font face='Lucida Console'>)</font>;
+        <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'>const</font> dpoint<font color='#5555FF'>&amp;</font> c : anchors<font face='Lucida Console'>)</font>
+            cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> <font color='#BB00BB'>round</font><font face='Lucida Console'>(</font><font color='#BB00BB'>c</font><font face='Lucida Console'>(</font><font color='#979000'>0</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> '<font color='#FF0000'>x</font>' <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> <font color='#BB00BB'>round</font><font face='Lucida Console'>(</font><font color='#BB00BB'>c</font><font face='Lucida Console'>(</font><font color='#979000'>1</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> endl;
+        <font color='#009900'>// And check the average IoU of the newly computed anchor boxes and the training samples.
+</font>        <font color='#0000FF'><u>double</u></font> average_iou <font color='#5555FF'>=</font> <font color='#979000'>0</font>;
+        <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'>const</font> dpoint<font color='#5555FF'>&amp;</font> s : samples<font face='Lucida Console'>)</font>
+        <b>{</b>
+            drectangle sample <font color='#5555FF'>=</font> <font color='#BB00BB'>centered_drect</font><font face='Lucida Console'>(</font><font color='#BB00BB'>dpoint</font><font face='Lucida Console'>(</font><font color='#979000'>0</font>, <font color='#979000'>0</font><font face='Lucida Console'>)</font>, s.<font color='#BB00BB'>x</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, s.<font color='#BB00BB'>y</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+            <font color='#0000FF'><u>double</u></font> best_iou <font color='#5555FF'>=</font> <font color='#979000'>0</font>;
+            <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'>const</font> dpoint<font color='#5555FF'>&amp;</font> a : anchors<font face='Lucida Console'>)</font>
+            <b>{</b>
+                drectangle anchor <font color='#5555FF'>=</font> <font color='#BB00BB'>centered_drect</font><font face='Lucida Console'>(</font><font color='#BB00BB'>dpoint</font><font face='Lucida Console'>(</font><font color='#979000'>0</font>, <font color='#979000'>0</font><font face='Lucida Console'>)</font>, a.<font color='#BB00BB'>x</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, a.<font color='#BB00BB'>y</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+                best_iou <font color='#5555FF'>=</font> std::<font color='#BB00BB'>max</font><font face='Lucida Console'>(</font>best_iou, <font color='#BB00BB'>box_intersection_over_union</font><font face='Lucida Console'>(</font>sample, anchor<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+            <b>}</b>
+            average_iou <font color='#5555FF'>+</font><font color='#5555FF'>=</font> best_iou;
+        <b>}</b>
+        cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>Average IoU: </font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> average_iou <font color='#5555FF'>/</font> samples.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> endl;
+        <font color='#0000FF'>return</font> EXIT_SUCCESS;
+    <b>}</b>
+
+    <font color='#009900'>// When computing the objectness loss in YOLO, predictions that do not have an IoU
+</font>    <font color='#009900'>// with any ground truth box of at least options.iou_ignore_threshold, will be
+</font>    <font color='#009900'>// treated as not capable of detecting an object, an therefore incur loss.
+</font>    <font color='#009900'>// Similarly, predictions above this threshold are considered correct predictions
+</font>    <font color='#009900'>// by the loss.  Typical settings for this threshold are in the range 0.5 to 0.7.
+</font>    options.iou_ignore_threshold <font color='#5555FF'>=</font> <font color='#979000'>0.7</font>;
+    <font color='#009900'>// By setting this to a value &lt; 1, we are telling the model to update all the predictions
+</font>    <font color='#009900'>// as long as the anchor box has an IoU &gt; 0.2 with a ground truth.
+</font>    options.iou_anchor_threshold <font color='#5555FF'>=</font> <font color='#979000'>0.2</font>;
+    <font color='#009900'>// These are the anchors computed on COCO dataset, presented in the YOLOv3 paper.
+</font>    options.add_anchors<font color='#5555FF'>&lt;</font>darknet::ytag8<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><b>{</b><b>{</b><font color='#979000'>10</font>, <font color='#979000'>13</font><b>}</b>, <b>{</b><font color='#979000'>16</font>, <font color='#979000'>30</font><b>}</b>, <b>{</b><font color='#979000'>33</font>, <font color='#979000'>23</font><b>}</b><b>}</b><font face='Lucida Console'>)</font>;
+    options.add_anchors<font color='#5555FF'>&lt;</font>darknet::ytag16<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><b>{</b><b>{</b><font color='#979000'>30</font>, <font color='#979000'>61</font><b>}</b>, <b>{</b><font color='#979000'>62</font>, <font color='#979000'>45</font><b>}</b>, <b>{</b><font color='#979000'>59</font>, <font color='#979000'>119</font><b>}</b><b>}</b><font face='Lucida Console'>)</font>;
+    options.add_anchors<font color='#5555FF'>&lt;</font>darknet::ytag32<font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><b>{</b><b>{</b><font color='#979000'>116</font>, <font color='#979000'>90</font><b>}</b>, <b>{</b><font color='#979000'>156</font>, <font color='#979000'>198</font><b>}</b>, <b>{</b><font color='#979000'>373</font>, <font color='#979000'>326</font><b>}</b><b>}</b><font face='Lucida Console'>)</font>;
+    darknet::yolov3_train_type <font color='#BB00BB'>net</font><font face='Lucida Console'>(</font>options<font face='Lucida Console'>)</font>;
+    darknet::<font color='#BB00BB'>setup_detector</font><font face='Lucida Console'>(</font>net, options<font face='Lucida Console'>)</font>;
+
+    <font color='#009900'>// The training process can be unstable at the beginning.  For this reason, we exponentially
+</font>    <font color='#009900'>// increase the learning rate during the first burnin steps.
+</font>    <font color='#0000FF'>const</font> matrix<font color='#5555FF'>&lt;</font><font color='#0000FF'><u>double</u></font><font color='#5555FF'>&gt;</font> learning_rate_schedule <font color='#5555FF'>=</font> learning_rate <font color='#5555FF'>*</font> <font color='#BB00BB'>pow</font><font face='Lucida Console'>(</font><font color='#BB00BB'>linspace</font><font face='Lucida Console'>(</font><font color='#979000'>1e</font><font color='#5555FF'>-</font><font color='#979000'>12</font>, <font color='#979000'>1</font>, burnin<font face='Lucida Console'>)</font>, <font color='#979000'>4</font><font face='Lucida Console'>)</font>;
+
+    <font color='#009900'>// In case we have several GPUs, we can tell the dnn_trainer to make use of them.
+</font>    std::vector<font color='#5555FF'>&lt;</font><font color='#0000FF'><u>int</u></font><font color='#5555FF'>&gt;</font> <font color='#BB00BB'>gpus</font><font face='Lucida Console'>(</font>num_gpus<font face='Lucida Console'>)</font>;
+    <font color='#BB00BB'>iota</font><font face='Lucida Console'>(</font>gpus.<font color='#BB00BB'>begin</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, gpus.<font color='#BB00BB'>end</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, <font color='#979000'>0</font><font face='Lucida Console'>)</font>;
+    <font color='#009900'>// We initialize the trainer here, as it will be used in several contexts, depending on the
+</font>    <font color='#009900'>// arguments passed the the program.
+</font>    dnn_trainer<font color='#5555FF'>&lt;</font>darknet::yolov3_train_type<font color='#5555FF'>&gt;</font> <font color='#BB00BB'>trainer</font><font face='Lucida Console'>(</font>net, <font color='#BB00BB'>sgd</font><font face='Lucida Console'>(</font><font color='#979000'>0.0005</font>, <font color='#979000'>0.9</font><font face='Lucida Console'>)</font>, gpus<font face='Lucida Console'>)</font>;
+    trainer.<font color='#BB00BB'>be_verbose</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+    trainer.<font color='#BB00BB'>set_mini_batch_size</font><font face='Lucida Console'>(</font>batch_size<font face='Lucida Console'>)</font>;
+    trainer.<font color='#BB00BB'>set_learning_rate_schedule</font><font face='Lucida Console'>(</font>learning_rate_schedule<font face='Lucida Console'>)</font>;
+    trainer.<font color='#BB00BB'>set_synchronization_file</font><font face='Lucida Console'>(</font>sync_file_name, chrono::<font color='#BB00BB'>minutes</font><font face='Lucida Console'>(</font><font color='#979000'>15</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+    cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> trainer;
+
+    <font color='#009900'>// If the training has started and a synchronization file has already been saved to disk,
+</font>    <font color='#009900'>// we can re-run this program with the --test option and a confidence threshold to see
+</font>    <font color='#009900'>// how the training is going.
+</font>    <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>parser.<font color='#BB00BB'>option</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>test</font>"<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+    <b>{</b>
+        <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font><font color='#5555FF'>!</font><font color='#BB00BB'>file_exists</font><font face='Lucida Console'>(</font>sync_file_name<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+        <b>{</b>
+            cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>Could not find file </font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> sync_file_name <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> endl;
+            <font color='#0000FF'>return</font> EXIT_FAILURE;
+        <b>}</b>
+        <font color='#0000FF'>const</font> <font color='#0000FF'><u>double</u></font> threshold <font color='#5555FF'>=</font> <font color='#BB00BB'>get_option</font><font face='Lucida Console'>(</font>parser, "<font color='#CC0000'>test</font>", <font color='#979000'>0.01</font><font face='Lucida Console'>)</font>;
+        image_window win;
+        matrix<font color='#5555FF'>&lt;</font>rgb_pixel<font color='#5555FF'>&gt;</font> image, resized;
+        <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'>const</font> <font color='#0000FF'>auto</font><font color='#5555FF'>&amp;</font> im : dataset.images<font face='Lucida Console'>)</font>
+        <b>{</b>
+            win.<font color='#BB00BB'>clear_overlay</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+            <font color='#BB00BB'>load_image</font><font face='Lucida Console'>(</font>image, data_directory <font color='#5555FF'>+</font> "<font color='#CC0000'>/</font>" <font color='#5555FF'>+</font> im.filename<font face='Lucida Console'>)</font>;
+            win.<font color='#BB00BB'>set_title</font><font face='Lucida Console'>(</font>im.filename<font face='Lucida Console'>)</font>;
+            win.<font color='#BB00BB'>set_image</font><font face='Lucida Console'>(</font>image<font face='Lucida Console'>)</font>;
+            <font color='#0000FF'>const</font> <font color='#0000FF'>auto</font> tform <font color='#5555FF'>=</font> <font color='#BB00BB'>preprocess_image</font><font face='Lucida Console'>(</font>image, resized, image_size<font face='Lucida Console'>)</font>;
+            <font color='#0000FF'>auto</font> detections <font color='#5555FF'>=</font> net.<font color='#BB00BB'>process</font><font face='Lucida Console'>(</font>resized, threshold<font face='Lucida Console'>)</font>;
+            <font color='#BB00BB'>postprocess_detections</font><font face='Lucida Console'>(</font>tform, detections<font face='Lucida Console'>)</font>;
+            cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'># detections: </font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> detections.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> endl;
+            <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'>const</font> <font color='#0000FF'>auto</font><font color='#5555FF'>&amp;</font> det : detections<font face='Lucida Console'>)</font>
+            <b>{</b>
+                win.<font color='#BB00BB'>add_overlay</font><font face='Lucida Console'>(</font>det.rect, <font color='#BB00BB'>string_to_color</font><font face='Lucida Console'>(</font>det.label<font face='Lucida Console'>)</font>, det.label<font face='Lucida Console'>)</font>;
+                cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> det.label <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>: </font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> det.rect <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> </font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> det.detection_confidence <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> endl;
+            <b>}</b>
+            cin.<font color='#BB00BB'>get</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+        <b>}</b>
+        <font color='#0000FF'>return</font> EXIT_SUCCESS;
+    <b>}</b>
+
+    <font color='#009900'>// If the training has started and a synchronization file has already been saved to disk,
+</font>    <font color='#009900'>// we can re-run this program with the --map option to compute the mean average precision
+</font>    <font color='#009900'>// on the test set.
+</font>    <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>parser.<font color='#BB00BB'>option</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>map</font>"<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+    <b>{</b>
+        image_dataset_metadata::dataset dataset;
+        image_dataset_metadata::<font color='#BB00BB'>load_image_dataset_metadata</font><font face='Lucida Console'>(</font>dataset, data_directory <font color='#5555FF'>+</font> "<font color='#CC0000'>/testing.xml</font>"<font face='Lucida Console'>)</font>;
+        <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font><font color='#5555FF'>!</font><font color='#BB00BB'>file_exists</font><font face='Lucida Console'>(</font>sync_file_name<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+        <b>{</b>
+            cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>Could not find file </font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> sync_file_name <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> endl;
+            <font color='#0000FF'>return</font> EXIT_FAILURE;
+        <b>}</b>
+        matrix<font color='#5555FF'>&lt;</font>rgb_pixel<font color='#5555FF'>&gt;</font> image, resized;
+        std::map<font color='#5555FF'>&lt;</font>std::string, std::vector<font color='#5555FF'>&lt;</font>std::pair<font color='#5555FF'>&lt;</font><font color='#0000FF'><u>double</u></font>, <font color='#0000FF'><u>bool</u></font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font> hits;
+        std::map<font color='#5555FF'>&lt;</font>std::string, <font color='#0000FF'><u>unsigned</u></font> <font color='#0000FF'><u>long</u></font><font color='#5555FF'>&gt;</font> missing;
+        <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'>const</font> <font color='#0000FF'>auto</font><font color='#5555FF'>&amp;</font> label : options.labels<font face='Lucida Console'>)</font>
+        <b>{</b>
+            hits[label] <font color='#5555FF'>=</font> std::vector<font color='#5555FF'>&lt;</font>std::pair<font color='#5555FF'>&lt;</font><font color='#0000FF'><u>double</u></font>, <font color='#0000FF'><u>bool</u></font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+            missing[label] <font color='#5555FF'>=</font> <font color='#979000'>0</font>;
+        <b>}</b>
+        cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>computing mean average precision for </font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> dataset.images.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> images...</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> endl;
+        <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i <font color='#5555FF'>=</font> <font color='#979000'>0</font>; i <font color='#5555FF'>&lt;</font> dataset.images.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>; <font color='#5555FF'>+</font><font color='#5555FF'>+</font>i<font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#0000FF'>const</font> <font color='#0000FF'>auto</font><font color='#5555FF'>&amp;</font> im <font color='#5555FF'>=</font> dataset.images[i];
+            <font color='#BB00BB'>load_image</font><font face='Lucida Console'>(</font>image, data_directory <font color='#5555FF'>+</font> "<font color='#CC0000'>/</font>" <font color='#5555FF'>+</font> im.filename<font face='Lucida Console'>)</font>;
+            <font color='#0000FF'>const</font> <font color='#0000FF'>auto</font> tform <font color='#5555FF'>=</font> <font color='#BB00BB'>preprocess_image</font><font face='Lucida Console'>(</font>image, resized, image_size<font face='Lucida Console'>)</font>;
+            <font color='#0000FF'>auto</font> dets <font color='#5555FF'>=</font> net.<font color='#BB00BB'>process</font><font face='Lucida Console'>(</font>resized, <font color='#979000'>0.005</font><font face='Lucida Console'>)</font>;
+            <font color='#BB00BB'>postprocess_detections</font><font face='Lucida Console'>(</font>tform, dets<font face='Lucida Console'>)</font>;
+            std::vector<font color='#5555FF'>&lt;</font><font color='#0000FF'><u>bool</u></font><font color='#5555FF'>&gt;</font> <font color='#BB00BB'>used</font><font face='Lucida Console'>(</font>dets.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, <font color='#979000'>false</font><font face='Lucida Console'>)</font>;
+            <font color='#009900'>// true positives: truths matched by detections
+</font>            <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> t <font color='#5555FF'>=</font> <font color='#979000'>0</font>; t <font color='#5555FF'>&lt;</font> im.boxes.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>; <font color='#5555FF'>+</font><font color='#5555FF'>+</font>t<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#0000FF'><u>bool</u></font> found_match <font color='#5555FF'>=</font> <font color='#979000'>false</font>;
+                <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> d <font color='#5555FF'>=</font> <font color='#979000'>0</font>; d <font color='#5555FF'>&lt;</font> dets.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>; <font color='#5555FF'>+</font><font color='#5555FF'>+</font>d<font face='Lucida Console'>)</font>
+                <b>{</b>
+                    <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>used[d]<font face='Lucida Console'>)</font>
+                        <font color='#0000FF'>continue</font>;
+                    <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>im.boxes[t].label <font color='#5555FF'>=</font><font color='#5555FF'>=</font> dets[d].label <font color='#5555FF'>&amp;</font><font color='#5555FF'>&amp;</font>
+                        <font color='#BB00BB'>box_intersection_over_union</font><font face='Lucida Console'>(</font><font color='#BB00BB'>drectangle</font><font face='Lucida Console'>(</font>im.boxes[t].rect<font face='Lucida Console'>)</font>, dets[d].rect<font face='Lucida Console'>)</font> <font color='#5555FF'>&gt;</font> <font color='#979000'>0.5</font><font face='Lucida Console'>)</font>
+                    <b>{</b>
+                        used[d] <font color='#5555FF'>=</font> <font color='#979000'>true</font>;
+                        found_match <font color='#5555FF'>=</font> <font color='#979000'>true</font>;
+                        hits.<font color='#BB00BB'>at</font><font face='Lucida Console'>(</font>dets[d].label<font face='Lucida Console'>)</font>.<font color='#BB00BB'>emplace_back</font><font face='Lucida Console'>(</font>dets[d].detection_confidence, <font color='#979000'>true</font><font face='Lucida Console'>)</font>;
+                        <font color='#0000FF'>break</font>;
+                    <b>}</b>
+                <b>}</b>
+                <font color='#009900'>// false negatives: truths not matched
+</font>                <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font><font color='#5555FF'>!</font>found_match<font face='Lucida Console'>)</font>
+                    missing.<font color='#BB00BB'>at</font><font face='Lucida Console'>(</font>im.boxes[t].label<font face='Lucida Console'>)</font><font color='#5555FF'>+</font><font color='#5555FF'>+</font>;
+            <b>}</b>
+            <font color='#009900'>// false positives: detections not matched
+</font>            <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> d <font color='#5555FF'>=</font> <font color='#979000'>0</font>; d <font color='#5555FF'>&lt;</font> dets.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>; <font color='#5555FF'>+</font><font color='#5555FF'>+</font>d<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font><font color='#5555FF'>!</font>used[d]<font face='Lucida Console'>)</font>
+                    hits.<font color='#BB00BB'>at</font><font face='Lucida Console'>(</font>dets[d].label<font face='Lucida Console'>)</font>.<font color='#BB00BB'>emplace_back</font><font face='Lucida Console'>(</font>dets[d].detection_confidence, <font color='#979000'>false</font><font face='Lucida Console'>)</font>;
+            <b>}</b>
+            cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>progress: </font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> i <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> '<font color='#FF0000'>/</font>' <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> dataset.images.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>\t\t\t\r</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> flush;
+        <b>}</b>
+        <font color='#0000FF'><u>double</u></font> map <font color='#5555FF'>=</font> <font color='#979000'>0</font>;
+        <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'>auto</font><font color='#5555FF'>&amp;</font> item : hits<font face='Lucida Console'>)</font>
+        <b>{</b>
+            std::<font color='#BB00BB'>sort</font><font face='Lucida Console'>(</font>item.second.<font color='#BB00BB'>rbegin</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, item.second.<font color='#BB00BB'>rend</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+            <font color='#0000FF'>const</font> <font color='#0000FF'><u>double</u></font> ap <font color='#5555FF'>=</font> <font color='#BB00BB'>average_precision</font><font face='Lucida Console'>(</font>item.second, missing[item.first]<font face='Lucida Console'>)</font>;
+            cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> <font color='#BB00BB'>rpad</font><font face='Lucida Console'>(</font>item.first <font color='#5555FF'>+</font> "<font color='#CC0000'>: </font>", <font color='#979000'>16</font>, "<font color='#CC0000'> </font>"<font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> ap <font color='#5555FF'>*</font> <font color='#979000'>100</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> '<font color='#FF0000'>%</font>' <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> endl;
+            map <font color='#5555FF'>+</font><font color='#5555FF'>=</font> ap;
+        <b>}</b>
+        cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> <font color='#BB00BB'>rpad</font><font face='Lucida Console'>(</font><font color='#BB00BB'>string</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>mAP: </font>"<font face='Lucida Console'>)</font>, <font color='#979000'>16</font>, "<font color='#CC0000'> </font>"<font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> map <font color='#5555FF'>/</font> hits.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>*</font> <font color='#979000'>100</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> '<font color='#FF0000'>%</font>' <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> endl;
+        <font color='#0000FF'>return</font> EXIT_SUCCESS;
+    <b>}</b>
+
+
+    <font color='#009900'>// Create some data loaders which will load the data, and perform some data augmentation.
+</font>    dlib::pipe<font color='#5555FF'>&lt;</font>std::pair<font color='#5555FF'>&lt;</font>matrix<font color='#5555FF'>&lt;</font>rgb_pixel<font color='#5555FF'>&gt;</font>, std::vector<font color='#5555FF'>&lt;</font>yolo_rect<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font> <font color='#BB00BB'>train_data</font><font face='Lucida Console'>(</font><font color='#979000'>1000</font><font face='Lucida Console'>)</font>;
+    <font color='#0000FF'>const</font> <font color='#0000FF'>auto</font> loader <font color='#5555FF'>=</font> [<font color='#5555FF'>&amp;</font>dataset, <font color='#5555FF'>&amp;</font>data_directory, <font color='#5555FF'>&amp;</font>train_data, <font color='#5555FF'>&amp;</font>image_size]<font face='Lucida Console'>(</font>time_t seed<font face='Lucida Console'>)</font>
+    <b>{</b>
+        dlib::rand <font color='#BB00BB'>rnd</font><font face='Lucida Console'>(</font><font color='#BB00BB'>time</font><font face='Lucida Console'>(</font>nullptr<font face='Lucida Console'>)</font> <font color='#5555FF'>+</font> seed<font face='Lucida Console'>)</font>;
+        matrix<font color='#5555FF'>&lt;</font>rgb_pixel<font color='#5555FF'>&gt;</font> image, rotated;
+        std::pair<font color='#5555FF'>&lt;</font>matrix<font color='#5555FF'>&lt;</font>rgb_pixel<font color='#5555FF'>&gt;</font>, std::vector<font color='#5555FF'>&lt;</font>yolo_rect<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font> temp;
+        random_cropper cropper;
+        cropper.<font color='#BB00BB'>set_seed</font><font face='Lucida Console'>(</font><font color='#BB00BB'>time</font><font face='Lucida Console'>(</font>nullptr<font face='Lucida Console'>)</font> <font color='#5555FF'>+</font> seed<font face='Lucida Console'>)</font>;
+        cropper.<font color='#BB00BB'>set_chip_dims</font><font face='Lucida Console'>(</font>image_size, image_size<font face='Lucida Console'>)</font>;
+        cropper.<font color='#BB00BB'>set_max_object_size</font><font face='Lucida Console'>(</font><font color='#979000'>0.9</font><font face='Lucida Console'>)</font>;
+        cropper.<font color='#BB00BB'>set_min_object_size</font><font face='Lucida Console'>(</font><font color='#979000'>10</font>, <font color='#979000'>10</font><font face='Lucida Console'>)</font>;
+        cropper.<font color='#BB00BB'>set_max_rotation_degrees</font><font face='Lucida Console'>(</font><font color='#979000'>10</font><font face='Lucida Console'>)</font>;
+        cropper.<font color='#BB00BB'>set_translate_amount</font><font face='Lucida Console'>(</font><font color='#979000'>0.5</font><font face='Lucida Console'>)</font>;
+        cropper.<font color='#BB00BB'>set_randomly_flip</font><font face='Lucida Console'>(</font><font color='#979000'>true</font><font face='Lucida Console'>)</font>;
+        cropper.<font color='#BB00BB'>set_background_crops_fraction</font><font face='Lucida Console'>(</font><font color='#979000'>0</font><font face='Lucida Console'>)</font>;
+        cropper.<font color='#BB00BB'>set_min_object_coverage</font><font face='Lucida Console'>(</font><font color='#979000'>0.8</font><font face='Lucida Console'>)</font>;
+        <font color='#0000FF'>while</font> <font face='Lucida Console'>(</font>train_data.<font color='#BB00BB'>is_enabled</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+        <b>{</b>
+            <font color='#0000FF'>const</font> <font color='#0000FF'>auto</font> idx <font color='#5555FF'>=</font> rnd.<font color='#BB00BB'>get_random_32bit_number</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>%</font> dataset.images.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+            <font color='#BB00BB'>load_image</font><font face='Lucida Console'>(</font>image, data_directory <font color='#5555FF'>+</font> "<font color='#CC0000'>/</font>" <font color='#5555FF'>+</font> dataset.images[idx].filename<font face='Lucida Console'>)</font>;
+            <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'>const</font> <font color='#0000FF'>auto</font><font color='#5555FF'>&amp;</font> box : dataset.images[idx].boxes<font face='Lucida Console'>)</font>
+                temp.second.<font color='#BB00BB'>emplace_back</font><font face='Lucida Console'>(</font>box.rect, <font color='#979000'>1</font>, box.label<font face='Lucida Console'>)</font>;
+
+            <font color='#009900'>// We alternate between augmenting the full image and random cropping
+</font>            <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>rnd.<font color='#BB00BB'>get_random_double</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&gt;</font> <font color='#979000'>0.5</font><font face='Lucida Console'>)</font>
+            <b>{</b>
+                rectangle_transform tform <font color='#5555FF'>=</font> <font color='#BB00BB'>rotate_image</font><font face='Lucida Console'>(</font>
+                    image,
+                    rotated,
+                    rnd.<font color='#BB00BB'>get_double_in_range</font><font face='Lucida Console'>(</font><font color='#5555FF'>-</font><font color='#979000'>5</font> <font color='#5555FF'>*</font> pi <font color='#5555FF'>/</font> <font color='#979000'>180</font>, <font color='#979000'>5</font> <font color='#5555FF'>*</font> pi <font color='#5555FF'>/</font> <font color='#979000'>180</font><font face='Lucida Console'>)</font>,
+                    <font color='#BB00BB'>interpolate_bilinear</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'>auto</font><font color='#5555FF'>&amp;</font> box : temp.second<font face='Lucida Console'>)</font>
+                    box.rect <font color='#5555FF'>=</font> <font color='#BB00BB'>tform</font><font face='Lucida Console'>(</font>box.rect<font face='Lucida Console'>)</font>;
+
+                tform <font color='#5555FF'>=</font> <font color='#BB00BB'>letterbox_image</font><font face='Lucida Console'>(</font>rotated, temp.first, image_size<font face='Lucida Console'>)</font>;
+                <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'>auto</font><font color='#5555FF'>&amp;</font> box : temp.second<font face='Lucida Console'>)</font>
+                    box.rect <font color='#5555FF'>=</font> <font color='#BB00BB'>tform</font><font face='Lucida Console'>(</font>box.rect<font face='Lucida Console'>)</font>;
+
+                <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>rnd.<font color='#BB00BB'>get_random_double</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&gt;</font> <font color='#979000'>0.5</font><font face='Lucida Console'>)</font>
+                <b>{</b>
+                    tform <font color='#5555FF'>=</font> <font color='#BB00BB'>flip_image_left_right</font><font face='Lucida Console'>(</font>temp.first<font face='Lucida Console'>)</font>;
+                    <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'>auto</font><font color='#5555FF'>&amp;</font> box : temp.second<font face='Lucida Console'>)</font>
+                        box.rect <font color='#5555FF'>=</font> <font color='#BB00BB'>tform</font><font face='Lucida Console'>(</font>box.rect<font face='Lucida Console'>)</font>;
+                <b>}</b>
+            <b>}</b>
+            <font color='#0000FF'>else</font>
+            <b>{</b>
+                std::vector<font color='#5555FF'>&lt;</font>yolo_rect<font color='#5555FF'>&gt;</font> boxes <font color='#5555FF'>=</font> temp.second;
+                <font color='#BB00BB'>cropper</font><font face='Lucida Console'>(</font>image, boxes, temp.first, temp.second<font face='Lucida Console'>)</font>;
+            <b>}</b>
+            <font color='#BB00BB'>disturb_colors</font><font face='Lucida Console'>(</font>temp.first, rnd<font face='Lucida Console'>)</font>;
+            train_data.<font color='#BB00BB'>enqueue</font><font face='Lucida Console'>(</font>temp<font face='Lucida Console'>)</font>;
+        <b>}</b>
+    <b>}</b>;
+
+    std::vector<font color='#5555FF'>&lt;</font>thread<font color='#5555FF'>&gt;</font> data_loaders;
+    <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'><u>size_t</u></font> i <font color='#5555FF'>=</font> <font color='#979000'>0</font>; i <font color='#5555FF'>&lt;</font> num_workers; <font color='#5555FF'>+</font><font color='#5555FF'>+</font>i<font face='Lucida Console'>)</font>
+        data_loaders.<font color='#BB00BB'>emplace_back</font><font face='Lucida Console'>(</font>[loader, i]<font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <b>{</b> <font color='#BB00BB'>loader</font><font face='Lucida Console'>(</font>i <font color='#5555FF'>+</font> <font color='#979000'>1</font><font face='Lucida Console'>)</font>; <b>}</b><font face='Lucida Console'>)</font>;
+
+    <font color='#009900'>// It is always a good idea to visualize the training samples.  By passing the --visualize
+</font>    <font color='#009900'>// flag, we can see the training samples that will be fed to the dnn_trainer.
+</font>    <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>parser.<font color='#BB00BB'>option</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>visualize</font>"<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+    <b>{</b>
+        image_window win;
+        <font color='#0000FF'>while</font> <font face='Lucida Console'>(</font><font color='#979000'>true</font><font face='Lucida Console'>)</font>
+        <b>{</b>
+            std::pair<font color='#5555FF'>&lt;</font>matrix<font color='#5555FF'>&lt;</font>rgb_pixel<font color='#5555FF'>&gt;</font>, std::vector<font color='#5555FF'>&lt;</font>yolo_rect<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font> temp;
+            train_data.<font color='#BB00BB'>dequeue</font><font face='Lucida Console'>(</font>temp<font face='Lucida Console'>)</font>;
+            win.<font color='#BB00BB'>clear_overlay</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+            win.<font color='#BB00BB'>set_image</font><font face='Lucida Console'>(</font>temp.first<font face='Lucida Console'>)</font>;
+            <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'>const</font> <font color='#0000FF'>auto</font><font color='#5555FF'>&amp;</font> r : temp.second<font face='Lucida Console'>)</font>
+            <b>{</b>
+                <font color='#0000FF'>auto</font> color <font color='#5555FF'>=</font> <font color='#BB00BB'>string_to_color</font><font face='Lucida Console'>(</font>r.label<font face='Lucida Console'>)</font>;
+                <font color='#009900'>// make semi-transparent and cross-out the ignored boxes
+</font>                <font color='#0000FF'>if</font> <font face='Lucida Console'>(</font>r.ignore<font face='Lucida Console'>)</font>
+                <b>{</b>
+                    color.alpha <font color='#5555FF'>=</font> <font color='#979000'>128</font>;
+                    win.<font color='#BB00BB'>add_overlay</font><font face='Lucida Console'>(</font>r.rect.<font color='#BB00BB'>tl_corner</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, r.rect.<font color='#BB00BB'>br_corner</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, color<font face='Lucida Console'>)</font>;
+                    win.<font color='#BB00BB'>add_overlay</font><font face='Lucida Console'>(</font>r.rect.<font color='#BB00BB'>tr_corner</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, r.rect.<font color='#BB00BB'>bl_corner</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>, color<font face='Lucida Console'>)</font>;
+                <b>}</b>
+                win.<font color='#BB00BB'>add_overlay</font><font face='Lucida Console'>(</font>r.rect, color, r.label<font face='Lucida Console'>)</font>;
+            <b>}</b>
+            cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>Press enter to visualize the next training sample.</font>";
+            cin.<font color='#BB00BB'>get</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+        <b>}</b>
+    <b>}</b>
+
+    std::vector<font color='#5555FF'>&lt;</font>matrix<font color='#5555FF'>&lt;</font>rgb_pixel<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font> images;
+    std::vector<font color='#5555FF'>&lt;</font>std::vector<font color='#5555FF'>&lt;</font>yolo_rect<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font> bboxes;
+
+    <font color='#009900'>// The main training loop, that we will reuse for the warmup and the rest of the training.
+</font>    <font color='#0000FF'>const</font> <font color='#0000FF'>auto</font> train <font color='#5555FF'>=</font> [<font color='#5555FF'>&amp;</font>images, <font color='#5555FF'>&amp;</font>bboxes, <font color='#5555FF'>&amp;</font>train_data, <font color='#5555FF'>&amp;</font>trainer]<font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>
+    <b>{</b>
+        images.<font color='#BB00BB'>clear</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+        bboxes.<font color='#BB00BB'>clear</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+        pair<font color='#5555FF'>&lt;</font>matrix<font color='#5555FF'>&lt;</font>rgb_pixel<font color='#5555FF'>&gt;</font>, std::vector<font color='#5555FF'>&lt;</font>yolo_rect<font color='#5555FF'>&gt;</font><font color='#5555FF'>&gt;</font> temp;
+        <font color='#0000FF'>while</font> <font face='Lucida Console'>(</font>images.<font color='#BB00BB'>size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font> trainer.<font color='#BB00BB'>get_mini_batch_size</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+        <b>{</b>
+            train_data.<font color='#BB00BB'>dequeue</font><font face='Lucida Console'>(</font>temp<font face='Lucida Console'>)</font>;
+            images.<font color='#BB00BB'>push_back</font><font face='Lucida Console'>(</font><font color='#BB00BB'>move</font><font face='Lucida Console'>(</font>temp.first<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+            bboxes.<font color='#BB00BB'>push_back</font><font face='Lucida Console'>(</font><font color='#BB00BB'>move</font><font face='Lucida Console'>(</font>temp.second<font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>;
+        <b>}</b>
+        trainer.<font color='#BB00BB'>train_one_step</font><font face='Lucida Console'>(</font>images, bboxes<font face='Lucida Console'>)</font>;
+    <b>}</b>;
+
+    cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>training started with </font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> burnin <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'> burn-in steps</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> endl;
+    <font color='#0000FF'>while</font> <font face='Lucida Console'>(</font>trainer.<font color='#BB00BB'>get_train_one_step_calls</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font> burnin<font face='Lucida Console'>)</font>
+        <font color='#BB00BB'>train</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+
+    cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>burn-in finished</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> endl;
+    trainer.<font color='#BB00BB'>get_net</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+    trainer.<font color='#BB00BB'>set_learning_rate</font><font face='Lucida Console'>(</font>learning_rate<font face='Lucida Console'>)</font>;
+    trainer.<font color='#BB00BB'>set_min_learning_rate</font><font face='Lucida Console'>(</font>learning_rate <font color='#5555FF'>*</font> <font color='#979000'>1e</font><font color='#5555FF'>-</font><font color='#979000'>3</font><font face='Lucida Console'>)</font>;
+    trainer.<font color='#BB00BB'>set_learning_rate_shrink_factor</font><font face='Lucida Console'>(</font><font color='#979000'>0.1</font><font face='Lucida Console'>)</font>;
+    trainer.<font color='#BB00BB'>set_iterations_without_progress_threshold</font><font face='Lucida Console'>(</font>patience<font face='Lucida Console'>)</font>;
+    cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> trainer <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> endl;
+
+    <font color='#0000FF'>while</font> <font face='Lucida Console'>(</font>trainer.<font color='#BB00BB'>get_learning_rate</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&gt;</font><font color='#5555FF'>=</font> trainer.<font color='#BB00BB'>get_min_learning_rate</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font><font face='Lucida Console'>)</font>
+        <font color='#BB00BB'>train</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+
+    cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> "<font color='#CC0000'>training done</font>" <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> endl;
+
+    trainer.<font color='#BB00BB'>get_net</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+    train_data.<font color='#BB00BB'>disable</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+    <font color='#0000FF'>for</font> <font face='Lucida Console'>(</font><font color='#0000FF'>auto</font><font color='#5555FF'>&amp;</font> worker : data_loaders<font face='Lucida Console'>)</font>
+        worker.<font color='#BB00BB'>join</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font>;
+
+    <font color='#009900'>// Before saving the network, we can assign it to the "infer" version, so that it won't
+</font>    <font color='#009900'>// perform batch normalization with batch sizes larger than one, as usual.  Moreover,
+</font>    <font color='#009900'>// we can also fuse the batch normalization (affine) layers into the convolutional
+</font>    <font color='#009900'>// layers, so that the network can run a bit faster.  Notice that, after fusing the
+</font>    <font color='#009900'>// layers, the network can no longer be used for training, so you should save the
+</font>    <font color='#009900'>// yolov3_train_type network if you plan to further train or finetune the network.
+</font>    darknet::yolov3_infer_type <font color='#BB00BB'>inet</font><font face='Lucida Console'>(</font>net<font face='Lucida Console'>)</font>;
+    <font color='#BB00BB'>fuse_layers</font><font face='Lucida Console'>(</font>inet<font face='Lucida Console'>)</font>;
+
+    <font color='#BB00BB'>serialize</font><font face='Lucida Console'>(</font>"<font color='#CC0000'>yolov3.dnn</font>"<font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> inet;
+    <font color='#0000FF'>return</font> EXIT_SUCCESS;
+<b>}</b>
+<font color='#0000FF'>catch</font> <font face='Lucida Console'>(</font><font color='#0000FF'>const</font> std::exception<font color='#5555FF'>&amp;</font> e<font face='Lucida Console'>)</font>
+<b>{</b>
+    cout <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> e.<font color='#BB00BB'>what</font><font face='Lucida Console'>(</font><font face='Lucida Console'>)</font> <font color='#5555FF'>&lt;</font><font color='#5555FF'>&lt;</font> endl;
+    <font color='#0000FF'>return</font> EXIT_FAILURE;
+<b>}</b>
+
+</pre></body></html>

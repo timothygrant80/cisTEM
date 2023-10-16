@@ -66,7 +66,7 @@ template void Image::RegisterPageLockedMemory<half_float::half>(half_float::half
 
 template <typename StorageBaseType>
 void Image::UnRegisterPageLockedMemory(StorageBaseType* ptr) {
-    MyDebugAssertTrue(is_memory_allocated(ptr), "Image is not in memory");
+    MyDebugAssertTrue(IsMemoryAllocated(ptr), "Image is not in memory");
 
     if ( IsMemoryPageLocked(ptr) ) {
         wxMutexLocker lock(s_mutexProtectingFFTW); // the mutex will be unlocked when this object is destroyed (when it goes out of scope)

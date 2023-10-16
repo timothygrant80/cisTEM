@@ -174,6 +174,16 @@ float Image::ReturnSumOfRealValues( ) {
     return float(sum);
 }
 
+/**
+ * @brief Warning: This function returns the Sum of Squares in Fourier space, SS/N in real space
+ * 
+ * @param wanted_mask_radius 
+ * @param wanted_center_x 
+ * @param wanted_center_y 
+ * @param wanted_center_z 
+ * @param invert_mask 
+ * @return float 
+ */
 float Image::ReturnSumOfSquares(float wanted_mask_radius, float wanted_center_x, float wanted_center_y, float wanted_center_z, bool invert_mask) {
     //	result is too big
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
@@ -273,7 +283,7 @@ float Image::ReturnSumOfSquares(float wanted_mask_radius, float wanted_center_x,
                     if ( (i == 0 || (i == logical_upper_bound_complex_x && x_is_even)) && (jj == 0 || (jj == logical_lower_bound_complex_y && x_is_even)) && (kk == 0 || (kk == logical_lower_bound_complex_z && x_is_even)) )
                         sum += pow(abs(complex_values[address]), 2) * 0.5;
                     else if ( (i == 0 || (i == logical_upper_bound_complex_x && x_is_even)) && logical_z_dimension != 1 )
-                        sum += pow(abs(complex_values[address]), 2) * 0.25;
+                        sum += pow(abs(complex_values[address]), 2) * 0.5f;
                     else if ( (i != 0 && (i != logical_upper_bound_complex_x || ! x_is_even)) || (jj >= 0 && kk >= 0) )
                         sum += pow(abs(complex_values[address]), 2);
                     address++;
@@ -2335,6 +2345,16 @@ void Image::RotateFourier2D(Image& rotated_image, AnglesAndShifts& rotation_angl
     rotated_image.object_is_centred_in_box = false;
 }
 
+/**
+ * @brief Extract a 2d central section at arbitrary angles and shifts from (this) 3d volume.
+ * Requires the 3d volume to be cubic and origin at the corner, i.e. QuadrantSwapped.
+ * Output is the FFT of the extracted 2d image, QuadrantSwapped with zero mean.
+ * 
+ * @param image_to_extract 
+ * @param angles_and_shifts_of_image 
+ * @param resolution_limit 
+ * @param apply_resolution_limit 
+ */
 void Image::ExtractSlice(Image& image_to_extract, AnglesAndShifts& angles_and_shifts_of_image, float resolution_limit, bool apply_resolution_limit) {
     //	MyDebugAssertTrue(image_to_extract.logical_x_dimension == logical_x_dimension && image_to_extract.logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
     MyDebugAssertTrue(image_to_extract.logical_z_dimension == 1, "Error: attempting to extract 3D image from 3D reconstruction");
@@ -4428,10 +4448,17 @@ void Image::Deallocate( ) {
 #endif
 }
 
-//!>  \brief  Allocate memory for the Image object.
-//
-//  If the object is already allocated with correct dimensions, nothing happens. Otherwise, object is deallocated first.
-
+/**
+ * @brief Allocate memory for the Image object.
+ * If the object is already allocated with correct dimensions, nothing happens. Otherwise, object is deallocated first.
+ * Warning: if the object is deallocated/reallocated the value of object_is_centred_in_box is NOT reset. And must be done manually.
+ * TODO: It is worth considering reseting all metadata bools to default in the Image::Deallocate() method.
+ * @param wanted_x_size 
+ * @param wanted_y_size 
+ * @param wanted_z_size 
+ * @param should_be_in_real_space 
+ * @param do_fft_planning 
+ */
 void Image::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size, bool should_be_in_real_space, bool do_fft_planning) {
 
     MyDebugAssertTrue(wanted_x_size > 0 && wanted_y_size > 0 && wanted_z_size > 0, "Bad dimensions: %i %i %i\n", wanted_x_size, wanted_y_size, wanted_z_size);
@@ -4684,7 +4711,7 @@ void Image::UpdateLoopingAndAddressing( ) {
 
 void Image::UpdatePhysicalAddressOfBoxCenter( ) {
     /*
-    if (IsEven(logical_x_dimension)) physical_address_of_box_center_x = logical_x_dimension / 2;
+    if (IsEven(logical_x_dimension))  = logical_x_dimension / 2;
     else physical_address_of_box_center_x = (logical_x_dimension - 1) / 2;
 
     if (IsEven(logical_y_dimension)) physical_address_of_box_center_y = logical_y_dimension / 2;
@@ -9015,6 +9042,10 @@ void Image::SwapFourierSpaceQuadrants(bool also_swap_real_space_quadrants) {
     is_fft_centered_in_box = true;
 }
 
+/**
+ * @brief Places the origin of the image (N/2) at 0,0,0 in real space. And vice-versa. Applied twice in a row should be a noop.
+ * 
+ */
 void Image::SwapRealSpaceQuadrants( ) {
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 
@@ -9024,50 +9055,44 @@ void Image::SwapRealSpaceQuadrants( ) {
     float y_shift_to_apply;
     float z_shift_to_apply;
 
-    if ( is_in_real_space == true ) {
+    if ( is_in_real_space ) {
         must_fft = true;
         ForwardFFT( );
     }
 
-    if ( object_is_centred_in_box == true ) {
+    if ( object_is_centred_in_box ) {
+
+        if ( IsEven(logical_x_dimension) )
+            x_shift_to_apply = float(physical_address_of_box_center_x);
+        else
+            x_shift_to_apply = float(physical_address_of_box_center_x) + 1.0f;
+
+        if ( IsEven(logical_y_dimension) )
+            y_shift_to_apply = float(physical_address_of_box_center_y);
+        else
+            y_shift_to_apply = float(physical_address_of_box_center_y) + 1.0f;
+
+        if ( IsEven(logical_z_dimension) )
+            z_shift_to_apply = float(physical_address_of_box_center_z);
+        else
+            z_shift_to_apply = float(physical_address_of_box_center_z) + 1.0f;
+    }
+    else {
         x_shift_to_apply = float(physical_address_of_box_center_x);
         y_shift_to_apply = float(physical_address_of_box_center_y);
         z_shift_to_apply = float(physical_address_of_box_center_z);
     }
-    else {
-        if ( IsEven(logical_x_dimension) == true ) {
-            x_shift_to_apply = float(physical_address_of_box_center_x);
-        }
-        else {
-            x_shift_to_apply = float(physical_address_of_box_center_x) - 1.0;
-        }
 
-        if ( IsEven(logical_y_dimension) == true ) {
-            y_shift_to_apply = float(physical_address_of_box_center_y);
-        }
-        else {
-            y_shift_to_apply = float(physical_address_of_box_center_y) - 1.0;
-        }
-
-        if ( IsEven(logical_z_dimension) == true ) {
-            z_shift_to_apply = float(physical_address_of_box_center_z);
-        }
-        else {
-            z_shift_to_apply = float(physical_address_of_box_center_z) - 1.0;
-        }
-    }
-
-    if ( logical_z_dimension == 1 ) {
+    if ( logical_z_dimension == 1 )
         z_shift_to_apply = 0.0;
-    }
 
     PhaseShift(x_shift_to_apply, y_shift_to_apply, z_shift_to_apply);
 
-    if ( must_fft == true )
+    if ( must_fft )
         BackwardFFT( );
 
     // keep track of center;
-    if ( object_is_centred_in_box == true )
+    if ( object_is_centred_in_box )
         object_is_centred_in_box = false;
     else
         object_is_centred_in_box = true;

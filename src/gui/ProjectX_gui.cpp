@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Oct 26 2018)
+// C++ code generated with wxFormBuilder (version 3.10.0-4761b0c)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO *NOT* EDIT THIS FILE!
@@ -11030,6 +11030,7 @@ RefineTemplateDevPanelParent::~RefineTemplateDevPanelParent()
 NewProjectWizard::NewProjectWizard( wxWindow* parent, wxWindowID id, const wxString& title, const wxBitmap& bitmap, const wxPoint& pos, long style )
 {
 	this->Create( parent, id, title, bitmap, pos, style );
+
 	this->SetSizeHints( wxSize( 500,350 ), wxDefaultSize );
 
 	wxWizardPageSimple* m_wizPage1 = new wxWizardPageSimple( this );
@@ -11112,6 +11113,7 @@ NewProjectWizard::~NewProjectWizard()
 CombineRefinementPackagesWizardParent::CombineRefinementPackagesWizardParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxBitmap& bitmap, const wxPoint& pos, long style )
 {
 	this->Create( parent, id, title, bitmap, pos, style );
+
 	this->SetSizeHints( wxSize( -1,-1 ), wxSize( -1,-1 ) );
 
 
@@ -11137,6 +11139,7 @@ CombineRefinementPackagesWizardParent::~CombineRefinementPackagesWizardParent()
 ExportRefinementPackageWizardParent::ExportRefinementPackageWizardParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxBitmap& bitmap, const wxPoint& pos, long style )
 {
 	this->Create( parent, id, title, bitmap, pos, style );
+
 	this->SetSizeHints( wxSize( 700,400 ), wxDefaultSize );
 
 	wxWizardPageSimple* ChooseParamsPage = new wxWizardPageSimple( this );
@@ -11294,6 +11297,7 @@ ExportRefinementPackageWizardParent::~ExportRefinementPackageWizardParent()
 ImportRefinementPackageWizardParent::ImportRefinementPackageWizardParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxBitmap& bitmap, const wxPoint& pos, long style )
 {
 	this->Create( parent, id, title, bitmap, pos, style );
+
 	this->SetSizeHints( wxSize( 700,400 ), wxDefaultSize );
 
 	wxWizardPageSimple* ImportTypePage = new wxWizardPageSimple( this );
@@ -11694,6 +11698,7 @@ RenameDialog::~RenameDialog()
 NewRefinementPackageWizard::NewRefinementPackageWizard( wxWindow* parent, wxWindowID id, const wxString& title, const wxBitmap& bitmap, const wxPoint& pos, long style )
 {
 	this->Create( parent, id, title, bitmap, pos, style );
+
 	this->SetSizeHints( wxSize( -1,-1 ), wxDefaultSize );
 
 

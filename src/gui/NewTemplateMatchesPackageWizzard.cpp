@@ -158,13 +158,18 @@ TemplateMatchesWizardPage::~TemplateMatchesWizardPage( ) {
 
 void TemplateMatchesWizardPage::SelectionChanged(wxCommandEvent& event) {
     int tm_sel = my_panel->TMJobComboBox->GetSelection( );
+    int im_sel = my_panel->ImageGroupComboBox->GetSelection( );
     if ( tm_sel == -1 )
         return;
-    int  tm_job = my_panel->TMJobComboBox->AssetComboBox->associated_ids[tm_sel];
+    int  tm_job   = my_panel->TMJobComboBox->AssetComboBox->associated_ids[tm_sel];
+    int  im_group = my_panel->ImageGroupComboBox->AssetComboBox->associated_ids[im_sel];
     bool more_data;
     wizard_pointer->tm_ids.Clear( );
     wizard_pointer->image_ids.Clear( );
-    more_data = main_frame->current_project.database.BeginBatchSelect(wxString::Format("SELECT TEMPLATE_MATCH_ID, IMAGE_ASSET_ID FROM TEMPLATE_MATCH_LIST WHERE TEMPLATE_MATCH_JOB_ID=%i", tm_job));
+    if ( im_group > 0 )
+        more_data = main_frame->current_project.database.BeginBatchSelect(wxString::Format("SELECT TEMPLATE_MATCH_ID, TEMPLATE_MATCH_LIST.IMAGE_ASSET_ID FROM TEMPLATE_MATCH_LIST INNER JOIN IMAGE_GROUP_%i ON TEMPLATE_MATCH_LIST.IMAGE_ASSET_ID = IMAGE_GROUP_%i.IMAGE_ASSET_ID WHERE TEMPLATE_MATCH_JOB_ID=%i", im_group, im_group, tm_job));
+    else
+        more_data = main_frame->current_project.database.BeginBatchSelect(wxString::Format("SELECT TEMPLATE_MATCH_ID, TEMPLATE_MATCH_LIST.IMAGE_ASSET_ID FROM TEMPLATE_MATCH_LIST WHERE TEMPLATE_MATCH_JOB_ID=%i", tm_job));
     while ( more_data == true ) {
         int tm_id, image_id;
         more_data = main_frame->current_project.database.GetFromBatchSelect("ii", &tm_id, &image_id);

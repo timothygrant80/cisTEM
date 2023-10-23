@@ -175,7 +175,7 @@ void TemplateMatchesPackageAssetPanel::FillRefinementPackages( ) {
         RefinementPackageListCtrl->SetItemCount(0);
         ContainedParticlesListCtrl->SetItemCount(0);
 
-        StarFileNameText->SetLabel("");
+        StarFileNameText->SetValue("");
 
         ContainedParticlesStaticText->SetLabel("Contained Particles : ");
     }
@@ -284,6 +284,8 @@ void TemplateMatchesPackageAssetPanel::OnPackageFocusChange(wxListEvent& event) 
 
         if ( selected_refinement_package >= 0 ) {
             ContainedParticlesStaticText->SetLabel(wxString::Format("Contained Matches (%li) : ", all_template_matches_packages.Item(selected_refinement_package).contained_match_count));
+            wxPrintf("Selected refinement package = %li %s\n", selected_refinement_package, all_template_matches_packages.Item(selected_refinement_package).starfile_filename);
+            StarFileNameText->SetValue(all_template_matches_packages.Item(selected_refinement_package).starfile_filename);
         }
         else
             ContainedParticlesStaticText->SetLabel("Contained Matches : ");

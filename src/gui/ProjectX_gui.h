@@ -3387,7 +3387,7 @@ class TemplateMatchesPackageAssetPanelParent : public wxPanel
 		ContainedParticleListControl* ContainedParticlesListCtrl;
 		wxStaticLine* m_staticline53;
 		wxStaticText* m_staticText319;
-		wxStaticText* StarFileNameText;
+		wxTextCtrl* StarFileNameText;
 
 		// Virtual event handlers, override them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }

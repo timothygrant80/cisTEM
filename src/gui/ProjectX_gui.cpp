@@ -12974,31 +12974,15 @@ TemplateMatchesPackageAssetPanelParent::TemplateMatchesPackageAssetPanelParent( 
 	wxBoxSizer* bSizer192;
 	bSizer192 = new wxBoxSizer( wxHORIZONTAL );
 
-	wxGridSizer* gSizer12;
-	gSizer12 = new wxGridSizer( 0, 6, 0, 0 );
-
 	m_staticText319 = new wxStaticText( this, wxID_ANY, wxT("Starfile Filename :"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText319->Wrap( -1 );
-	gSizer12->Add( m_staticText319, 0, wxALIGN_RIGHT|wxALL, 5 );
+	bSizer192->Add( m_staticText319, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
 
-	StarFileNameText = new wxStaticText( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0 );
-	StarFileNameText->Wrap( -1 );
-	gSizer12->Add( StarFileNameText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+	StarFileNameText = new wxTextCtrl( this, wxID_ANY, wxT("None"), wxDefaultPosition, wxDefaultSize, wxTE_READONLY );
+	StarFileNameText->SetForegroundColour( wxSystemSettings::GetColour( wxSYS_COLOUR_WINDOWTEXT ) );
+	StarFileNameText->SetBackgroundColour( wxSystemSettings::GetColour( wxSYS_COLOUR_WINDOWFRAME ) );
 
-
-	gSizer12->Add( 0, 0, 1, wxEXPAND, 5 );
-
-
-	gSizer12->Add( 0, 0, 1, wxEXPAND, 5 );
-
-
-	gSizer12->Add( 0, 0, 1, wxEXPAND, 5 );
-
-
-	gSizer12->Add( 0, 0, 1, wxEXPAND, 5 );
-
-
-	bSizer192->Add( gSizer12, 1, wxEXPAND, 5 );
+	bSizer192->Add( StarFileNameText, 1, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxEXPAND, 5 );
 
 
 	bSizer187->Add( bSizer192, 0, wxEXPAND, 5 );

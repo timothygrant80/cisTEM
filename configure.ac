@@ -228,10 +228,15 @@ AC_ARG_ENABLE(debugmode, AS_HELP_STRING([--enable-debugmode],[Compile in debug m
 
 FastFFT_INCLUDES=""
 use_FastFFT="no"
-if test "$want_cuda" = "yes" ; then
-
+AC_ARG_ENABLE(FastFFT, AS_HELP_STRING([--enable-FastFFT],[FastFFT library for gpu builds [default=no]]),[
+  if test "$enableval" = yes; then
     # Call the m4 macro to check and setup for FastFFT if present and requested
     submodule_FastFFT
+  fi
+  ]) 
+  
+if test "$want_cuda" = "yes" ; then
+
 
     # ~Runtime about 85% with K3 images, but mips are different - total detection is ~the same. 
     # Determined this is likely just numerical error. Enabling by default.

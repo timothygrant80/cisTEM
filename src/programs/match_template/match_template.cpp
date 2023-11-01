@@ -10,8 +10,8 @@
 
 #include "../../constants/constants.h"
 
-#ifdef ENABLE_FastFFT
-#include <FastFFT.h>
+#if defined(ENABLE_FastFFT) && defined(ENABLEGPU)
+#include "../../ext/FastFFT/include/FastFFT.h"
 #endif
 
 class AggregatedTemplateResult {
@@ -557,9 +557,10 @@ bool MatchTemplateApp::DoCalculation( ) {
     whitening_filter.Reciprocal( );
     whitening_filter.MultiplyByConstant(1.0f / whitening_filter.ReturnMaximumValue( ));
 
-    //whitening_filter.WriteToFile("/tmp/filter.txt");
     input_image.ApplyCurveFilter(&whitening_filter);
     input_image.ZeroCentralPixel( );
+    // Note: we are dividing by the sqrt of the sum of squares, so the variance in the images 1/N, not 1. This is where the need to multiply the mips by sqrt(N) comes from.
+    // Dividing by sqrt(input_image.ReturnSumOfSquares() / N) would result in a properly normalized CCC value.
     input_image.DivideByConstant(sqrtf(input_image.ReturnSumOfSquares( )));
     //input_image.QuickAndDirtyWriteSlice("/tmp/white.mrc", 1);
     //exit(-1);
@@ -734,36 +735,13 @@ bool MatchTemplateApp::DoCalculation( ) {
 #pragma omp critical
                     {
 
-                        Image mip_buffer;
-                        mip_buffer.CopyFrom(&max_intensity_projection);
-                        Image psi_buffer;
-                        psi_buffer.CopyFrom(&max_intensity_projection);
-                        Image phi_buffer;
-                        phi_buffer.CopyFrom(&max_intensity_projection);
-                        Image theta_buffer;
-                        theta_buffer.CopyFrom(&max_intensity_projection);
+                        Image mip_buffer   = GPU[tIDX].d_max_intensity_projection.CopyDeviceToNewHost(true, false);
+                        Image psi_buffer   = GPU[tIDX].d_best_psi.CopyDeviceToNewHost(true, false);
+                        Image phi_buffer   = GPU[tIDX].d_best_phi.CopyDeviceToNewHost(true, false);
+                        Image theta_buffer = GPU[tIDX].d_best_theta.CopyDeviceToNewHost(true, false);
 
-                        GPU[tIDX].d_max_intensity_projection.CopyDeviceToHostAndSynchronize(mip_buffer, false);
-                        GPU[tIDX].d_best_psi.CopyDeviceToHostAndSynchronize(psi_buffer, false);
-                        GPU[tIDX].d_best_phi.CopyDeviceToHostAndSynchronize(phi_buffer, false);
-                        GPU[tIDX].d_best_theta.CopyDeviceToHostAndSynchronize(theta_buffer, false);
-
-                        //                    mip_buffer.QuickAndDirtyWriteSlice("/tmp/tmpMipBuffer.mrc",1,1);
-                        // TODO should prob aggregate these across all workers
-                        // TODO add a copySum method that allocates a pinned buffer, copies there then sumes into the wanted image.
-                        Image sum;
-                        Image sumSq;
-
-                        sum.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
-                        sumSq.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
-
-                        sum.SetToConstant(0.0f);
-                        sumSq.SetToConstant(0.0f);
-
-                        GPU[tIDX].d_sum3.CopyDeviceToHostAndSynchronize(sum, false);
-                        GPU[tIDX].d_sumSq3.CopyDeviceToHostAndSynchronize(sumSq, false);
-
-                        GPU[tIDX].d_max_intensity_projection.Wait( );
+                        Image sum   = GPU[tIDX].d_sum3.CopyDeviceToNewHost(true, false);
+                        Image sumSq = GPU[tIDX].d_sumSq3.CopyDeviceToNewHost(true, false);
 
                         // TODO swap max_padding for explicit padding in x/y and limit calcs to that region.
                         pixel_counter = 0;
@@ -822,60 +800,24 @@ bool MatchTemplateApp::DoCalculation( ) {
                         template_reconstruction.ExtractSlice(current_projection, angles, 1.0f, false);
                         current_projection.SwapRealSpaceQuadrants( );
                     }
-                    //                    current_projection.QuickAndDirtyWriteSlice("proj.mrc", 1);
-                    //if (first_search_position == 0) current_projection.QuickAndDirtyWriteSlice("/tmp/small_proj_nofilter.mrc", 1);
 
                     current_projection.MultiplyPixelWise(projection_filter);
 
-                    //if (first_search_position == 0) projection_filter.QuickAndDirtyWriteSlice("/tmp/projection_filter.mrc", 1);
-                    //if (first_search_position == 0) current_projection.QuickAndDirtyWriteSlice("/tmp/small_proj_afterfilter.mrc", 1);
-
-                    //current_projection.ZeroCentralPixel();
-                    //current_projection.DivideByConstant(sqrt(current_projection.ReturnSumOfSquares()));
                     current_projection.BackwardFFT( );
                     //current_projection.ReplaceOutliersWithMean(6.0f);
 
-                    // find the pixel with the largest absolute density, and shift it to the centre
-
-                    /*    pixel_counter = 0;
-                    int best_x;
-                    int best_y;
-                    float max_value = -FLT_MAX;
-
-                    for ( int y = 0; y < current_projection.logical_y_dimension; y ++ )
-                    {
-                        for ( int x = 0; x < current_projection.logical_x_dimension; x ++ )
-                        {
-                            if (fabsf(current_projection.real_values[pixel_counter]) > max_value)
-                            {
-                                max_value = fabsf(current_projection.real_values[pixel_counter]);
-                                best_x = x - current_projection.physical_address_of_box_center_x;
-                                best_y = y - current_projection.physical_address_of_box_center_y;;
-                            }
-                            pixel_counter++;
-                        }
-                        pixel_counter += current_projection.padding_jump_value;
-                    }
-
-                    current_projection.RealSpaceIntegerShift(best_x, best_y, 0);
-    */
-                    ///
-
                     current_projection.AddConstant(-current_projection.ReturnAverageOfRealValuesOnEdges( ));
 
-                    //                    variance = current_projection.number_of_real_space_pixels / padded_reference.number_of_real_space_pixels;
-                    //                    current_projection.DivideByConstant(sqrtf(variance));
-                    //                    variance = current_projection.ReturnSumOfSquares();
+                    // We want a variance of 1 in the padded FFT. Scale the small SumOfSquares (which is already divided by n) and then re-divide by N.
                     variance = current_projection.ReturnSumOfSquares( ) * current_projection.number_of_real_space_pixels / padded_reference.number_of_real_space_pixels - powf(current_projection.ReturnAverageOfRealValues( ) * current_projection.number_of_real_space_pixels / padded_reference.number_of_real_space_pixels, 2);
                     current_projection.DivideByConstant(sqrtf(variance));
                     current_projection.ClipIntoLargerRealSpace2D(&padded_reference);
 
+                    // Note: The real space variance is set to 1.0 (for the padded size image) and that results in a variance of N in the FFT do to the scaling of the FFT,
+                    // but the FFT values are divided by 1/N so the variance becomes N / (N^2) = is 1/N
                     padded_reference.ForwardFFT( );
                     // Zeroing the central pixel is probably not doing anything useful...
                     padded_reference.ZeroCentralPixel( );
-                    //                    padded_reference.DivideByConstant(sqrtf(variance));
-
-                    //if (first_search_position == 0)  padded_reference.QuickAndDirtyWriteSlice("/tmp/proj.mrc", 1);
 
 #ifdef MKL
                     // Use the MKL
@@ -886,18 +828,9 @@ bool MatchTemplateApp::DoCalculation( ) {
                     }
 #endif
 
+                    // Note: the cross correlation will have variance 1/N (the product of variance of the two FFTs assuming the means are both zero and the distributions independent.)
+                    // Taking the inverse FFT scales this variance by N resulting in a MIP with variance 1
                     padded_reference.BackwardFFT( );
-                    //                    padded_reference.QuickAndDirtyWriteSlice("cc.mrc", 1);
-                    //                    exit(0);
-
-                    //                    for (pixel_counter = 0; pixel_counter <  padded_reference.real_memory_allocated; pixel_counter++)
-                    //                    {
-                    //                        temp_float = padded_reference.real_values[pixel_counter] / variance;
-                    //                        padded_reference.real_values[pixel_counter] = temp_float * padded_reference.real_values[pixel_counter] - powf(temp_float, 2) * variance;
-                    ////                        if (pixel_counter == 1000) wxPrintf("l, value = %g %g\n", temp_float, padded_reference.real_values[pixel_counter]);
-                    ////                        padded_reference.real_values[pixel_counter] *= powf(float(padded_reference.number_of_real_space_pixels), 2);
-                    ////                        padded_reference.real_values[pixel_counter] = temp_float;
-                    //                    }
 
                     // update mip, and histogram..
                     pixel_counter = 0;

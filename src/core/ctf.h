@@ -120,7 +120,6 @@ class CTF {
     float               DefocusGivenAzimuth(float azimuth);
     float               BeamTiltGivenAzimuth(float azimuth);
     float               ParticleShiftGivenAzimuth(float azimuth);
-    float               WavelengthGivenAccelerationVoltage(float acceleration_voltage);
 
     // This is the sinc(xi) term derived in the supplemental of McMullan et al. (2015)
     inline float IntegratedDefocusModulation(float squared_spatial_frequency) {

@@ -105,7 +105,7 @@ void CTF::Init(float wanted_acceleration_voltage_in_kV, // keV
                float wanted_particle_shift_y_in_angstroms, // A
                float wanted_sample_thickness_in_nm) // nm
 {
-    wavelength                    = WavelengthGivenAccelerationVoltage(wanted_acceleration_voltage_in_kV) / pixel_size_in_angstroms;
+    wavelength                    = ReturnWavelenthInAngstroms(wanted_acceleration_voltage_in_kV) / pixel_size_in_angstroms;
     squared_wavelength            = powf(wavelength, 2);
     cubed_wavelength              = powf(wavelength, 3);
     spherical_aberration          = wanted_spherical_aberration_in_mm * 10000000.0 / pixel_size_in_angstroms;
@@ -507,12 +507,6 @@ float CTF::BeamTiltGivenAzimuth(float azimuth) {
 // Return the effective beam tilt at the azimuth of interest
 float CTF::ParticleShiftGivenAzimuth(float azimuth) {
     return particle_shift * cosf(azimuth - particle_shift_azimuth);
-}
-
-// Given acceleration voltage in keV, return the electron wavelength in Angstroms
-float CTF::WavelengthGivenAccelerationVoltage(float acceleration_voltage) {
-    //	return 12.26f / sqrtf(1000.0f * acceleration_voltage + 0.9784f * powf(1000.0f * acceleration_voltage,2)/powf(10.0f,6));
-    return 12.2639f / sqrtf(1000.0f * acceleration_voltage + 0.97845e-6 * powf(1000.0f * acceleration_voltage, 2));
 }
 
 // Compare two CTF objects and return true if they are within a specified defocus tolerance

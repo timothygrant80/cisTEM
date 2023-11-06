@@ -1,329 +1,1559 @@
-// The contents of this file are in the public domain. See LICENSE_FOR_EXAMPLE_PROGRAMS.txt
-/*
 
-    This is an example illustrating the use the general purpose non-linear
-    optimization routines from the dlib C++ Library.
 
-    The library provides implementations of many popular algorithms such as L-BFGS
-    and BOBYQA.  These algorithms allow you to find the minimum or maximum of a
-    function of many input variables.  This example walks though a few of the ways
-    you might put these routines to use.
-
-*/
-
-// #include <dlib/optimization.h>
-// #include <dlib/global_optimization.h>
-// #include <iostream>
+// bicubic spline -----------------------------------------
 #include <dlib/dlib/queue.h>
 #include "../../core/core_headers.h"
 #include <iostream>
-// #include "../../core/dlib/queue.h"
-
-// #include <string>
-// #include <fstream>
-// #include "../../core/dlib/optimization.h"
-// #include "../../core/dlib/global_optimization.h"
 #include "dlib/dlib/optimization.h"
 #include "dlib/dlib/global_optimization.h"
-// #include "../../core/dlib-part/optimization.h"
-// #include "../../core/dlib-part/global_optimization.h"
-// #include <iostream>
-// #include <vector>
+#include <vector>
+#include <numeric>
+#include <dlib/dlib/matrix.h>
 
 using namespace std;
 using namespace dlib;
 
-// ----------------------------------------------------------------------------------------
-
-// In dlib, most of the general purpose solvers optimize functions that take a
-// column vector as input and return a double.  So here we make a typedef for a
-// variable length column vector of doubles.  This is the type we will use to
-// represent the input to our objective functions which we will be minimizing.
 typedef matrix<double, 0, 1> column_vector;
 
-// ----------------------------------------------------------------------------------------
-// Below we create a few functions.  When you get down into main() you will see that
-// we can use the optimization algorithms to find the minimums of these functions.
-// ----------------------------------------------------------------------------------------
-
-double rosen(const column_vector& m)
-/*
-    This function computes what is known as Rosenbrock's function.  It is 
-    a function of two input variables and has a global minimum at (1,1).
-    So when we use this function to test out the optimization algorithms
-    we will see that the minimum found is indeed at the point (1,1). 
-*/
-{
-    const double x = m(0);
-    const double y = m(1);
-
-    // compute Rosenbrock's function and return the result
-    return 100.0 * pow(y - x * x, 2) + pow(1 - x, 2);
-}
-
-// This is a helper function used while optimizing the rosen() function.
-const column_vector rosen_derivative(const column_vector& m)
-/*!
-    ensures
-        - returns the gradient vector for the rosen function
-!*/
-{
-    const double x = m(0);
-    const double y = m(1);
-
-    // make us a column vector of length 2
-    column_vector res(2);
-
-    // now compute the gradient vector
-    res(0) = -400 * x * (y - x * x) - 2 * (1 - x); // derivative of rosen() with respect to x
-    res(1) = 200 * (y - x * x); // derivative of rosen() with respect to y
-    return res;
-}
-
-// This function computes the Hessian matrix for the rosen() fuction.  This is
-// the matrix of second derivatives.
-matrix<double> rosen_hessian(const column_vector& m) {
-    const double x = m(0);
-    const double y = m(1);
-
-    matrix<double> res(2, 2);
-
-    // now compute the second derivatives
-    res(0, 0) = 1200 * x * x - 400 * y + 2; // second derivative with respect to x
-    res(1, 0) = res(0, 1) = -400 * x; // derivative with respect to x and y
-    res(1, 1)             = 200; // second derivative with respect to y
-    return res;
-}
-
-// ----------------------------------------------------------------------------------------
-
-class rosen_model {
+class bicubicspline {
     /*!
-        This object is a "function model" which can be used with the
-        find_min_trust_region() routine.  
+        This object is a "function model" 
     !*/
 
   public:
-    typedef ::column_vector column_vector;
-    typedef matrix<double>  general_matrix;
+    int            m = 4; // row no.
+    int            n = 4; // column no.
+    matrix<double> z_on_knot;
+    float          spline_patch_dim_y = 1;
+    float          spline_patch_dim_x = 1;
 
-    double operator( )(
-            const column_vector& x) const { return rosen(x); }
+    int            total; // remains to be check
+    long           totaldim;
+    matrix<double> phi;
+    matrix<double> Qz2d;
+    matrix<double> MappingMat;
+    // matrix<double> UsedIndex;
+    std::vector<double> UsedIndex;
+    matrix<double>      x;
+    matrix<double>      y;
+    matrix<double>      z;
+    long                Mapping_Mat_Row_no;
+    long                Mapping_Mat_Col_no;
 
-    void get_derivative_and_hessian(
-            const column_vector& x,
-            column_vector&       der,
-            general_matrix&      hess) const {
-        der  = rosen_derivative(x);
-        hess = rosen_hessian(x);
+    // matrix<double> GridZ;
+
+    //   public:
+    //     typedef ::column_vector column_vector;
+    //     typedef matrix<double>  general_matrix;
+
+    // matrix<double> CalcPhi( ) {
+    void InitializeSpline(int row_no, int column_no, float spline_patch_dimy, float spline_patch_dimx) {
+        this->m                  = row_no;
+        this->n                  = column_no;
+        this->spline_patch_dim_x = spline_patch_dimx;
+        this->spline_patch_dim_y = spline_patch_dimy;
+        total                    = (this->m + 2) * (this->n + 2);
+        totaldim                 = (this->m + 2) * (this->n + 2);
+        // long dim = (this->m + 2) * (this->n + 2);
+        this->phi.set_size(totaldim, totaldim);
+
+        for ( int j = 0; j < this->m; j++ ) {
+            for ( int i = 0; i < this->n; i++ ) {
+                this->phi(i + (j) * this->n, i + (j) * (this->n + 2))         = 1;
+                this->phi(i + (j) * this->n, i + (j) * (this->n + 2) + 1)     = 4;
+                this->phi(i + (j) * this->n, i + (j) * (this->n + 2) + 2)     = 1;
+                this->phi(i + (j) * this->n, i + (j + 1) * (this->n + 2))     = 4;
+                this->phi(i + (j) * this->n, i + (j + 1) * (this->n + 2) + 1) = 16;
+                this->phi(i + (j) * this->n, i + (j + 1) * (this->n + 2) + 2) = 4;
+                this->phi(i + (j) * this->n, i + (j + 2) * (this->n + 2))     = 1;
+                this->phi(i + (j) * this->n, i + (j + 2) * (this->n + 2) + 1) = 4;
+                this->phi(i + (j) * this->n, i + (j + 2) * (this->n + 2) + 2) = 1;
+            }
+        }
+
+        //  y- border
+        for ( int i = 0; i < this->m; i++ ) {
+            this->phi(this->n * this->m + i, (i + 1) * (this->n + 2))     = 1;
+            this->phi(this->n * this->m + i, (i + 1) * (this->n + 2) + 1) = -2;
+            this->phi(this->n * this->m + i, (i + 1) * (this->n + 2) + 2) = 1;
+        }
+
+        //  y+ border
+        for ( int i = 0; i < this->m; i++ ) {
+            this->phi(this->n * this->m + this->m + i, (i + 1) * (this->n + 2) + (this->n + 2 - 3)) = 1;
+            this->phi(this->n * this->m + this->m + i, (i + 1) * (this->n + 2) + (this->n + 2 - 2)) = -2;
+            this->phi(this->n * this->m + this->m + i, (i + 1) * (this->n + 2) + (this->n + 2 - 1)) = 1;
+        }
+
+        //  x+ border
+        for ( int i = 0; i < this->n; i++ ) {
+            this->phi(this->n * this->m + 2 * this->m + i, 1 + i)                     = 1;
+            this->phi(this->n * this->m + 2 * this->m + i, 1 + i + this->n + 2)       = -2;
+            this->phi(this->n * this->m + 2 * this->m + i, 1 + i + 2 * (this->n + 2)) = 1;
+        }
+
+        //  x- border
+        for ( int i = 0; i < this->n; i++ ) {
+            this->phi(this->n * this->m + 2 * this->m + this->n + i, totaldim - 1 - (1 + i))                     = 1;
+            this->phi(this->n * this->m + 2 * this->m + this->n + i, totaldim - 1 - (1 + i + (this->n + 2)))     = -2;
+            this->phi(this->n * this->m + 2 * this->m + this->n + i, totaldim - 1 - (1 + i + 2 * (this->n + 2))) = 1;
+        }
+        //  x- y- corner
+        this->phi(this->n * this->m + 2 * this->m + 2 * this->n, 0)                     = 1;
+        this->phi(this->n * this->m + 2 * this->m + 2 * this->n, this->n + 2 + 1)       = -2;
+        this->phi(this->n * this->m + 2 * this->m + 2 * this->n, 2 * (this->n + 2) + 2) = 1;
+        //  x- y+ corner
+        this->phi(this->n * this->m + 2 * this->m + 2 * this->n + 1, (this->n + 2) - 1)                           = 1;
+        this->phi(this->n * this->m + 2 * this->m + 2 * this->n + 1, (this->n + 2) + ((this->n + 2) - 1) - 1)     = -2;
+        this->phi(this->n * this->m + 2 * this->m + 2 * this->n + 1, 2 * (this->n + 2) + ((this->n + 2) - 2) - 1) = 1;
+        //  x+ y- corner
+        this->phi(this->n * this->m + 2 * this->m + 2 * this->n + 2, (this->m + 2) * (this->n + 2) - (this->n + 2))         = 1;
+        this->phi(this->n * this->m + 2 * this->m + 2 * this->n + 2, (this->m + 2) * (this->n + 2) - 2 * (this->n + 2) + 1) = -2;
+        this->phi(this->n * this->m + 2 * this->m + 2 * this->n + 2, (this->m + 2) * (this->n + 2) - 3 * (this->n + 2) + 2) = 1;
+        //  x+ y+ corner
+        this->phi(this->n * this->m + 2 * this->m + 2 * this->n + 3, (this->m + 2) * (this->n + 2) - 2 * (this->n + 2) - 3) = 1;
+        this->phi(this->n * this->m + 2 * this->m + 2 * this->n + 3, (this->m + 2) * (this->n + 2) - (this->n + 2) - 2)     = -2;
+        this->phi(this->n * this->m + 2 * this->m + 2 * this->n + 3, (this->m + 2) * (this->n + 2) - 1)                     = 1;
+        // return phi;
+    }
+
+    void UpdateSpline(matrix<double> z_on_knot) {
+        this->z_on_knot = z_on_knot;
+        this->Qz2d      = CalcQz(z_on_knot);
+    }
+
+    void UpdateSplineInterpMapping(matrix<double> x, matrix<double> y, matrix<double> z) {
+        this->x                  = x;
+        this->y                  = y;
+        this->z                  = z;
+        this->Mapping_Mat_Row_no = y.size( );
+        this->Mapping_Mat_Col_no = x.size( );
+        this->MappingMat         = MappingMatrix(x, y);
+    }
+
+    void InitializeSplineModel(int row_no, int column_no, float spline_patch_dimy, float spline_patch_dimx, matrix<double> x, matrix<double> y, matrix<double> z, matrix<double> z_on_knot) {
+        this->m                  = row_no;
+        this->n                  = column_no;
+        this->spline_patch_dim_x = spline_patch_dimx;
+        this->spline_patch_dim_y = spline_patch_dimy;
+        this->x                  = x;
+        this->y                  = y;
+        this->z                  = z;
+        this->z_on_knot          = z_on_knot;
+        total                    = (this->m + 2) * (this->n + 2);
+        totaldim                 = (this->m + 2) * (this->n + 2);
+        this->Mapping_Mat_Row_no = y.size( );
+        this->Mapping_Mat_Col_no = x.size( );
+        // long dim = (this->m + 2) * (this->n + 2);
+        this->phi.set_size(totaldim, totaldim);
+
+        for ( int j = 0; j < this->m; j++ ) {
+            for ( int i = 0; i < this->n; i++ ) {
+                this->phi(i + (j) * this->n, i + (j) * (this->n + 2))         = 1;
+                this->phi(i + (j) * this->n, i + (j) * (this->n + 2) + 1)     = 4;
+                this->phi(i + (j) * this->n, i + (j) * (this->n + 2) + 2)     = 1;
+                this->phi(i + (j) * this->n, i + (j + 1) * (this->n + 2))     = 4;
+                this->phi(i + (j) * this->n, i + (j + 1) * (this->n + 2) + 1) = 16;
+                this->phi(i + (j) * this->n, i + (j + 1) * (this->n + 2) + 2) = 4;
+                this->phi(i + (j) * this->n, i + (j + 2) * (this->n + 2))     = 1;
+                this->phi(i + (j) * this->n, i + (j + 2) * (this->n + 2) + 1) = 4;
+                this->phi(i + (j) * this->n, i + (j + 2) * (this->n + 2) + 2) = 1;
+            }
+        }
+
+        //  y- border
+        for ( int i = 0; i < this->m; i++ ) {
+            this->phi(this->n * this->m + i, (i + 1) * (this->n + 2))     = 1;
+            this->phi(this->n * this->m + i, (i + 1) * (this->n + 2) + 1) = -2;
+            this->phi(this->n * this->m + i, (i + 1) * (this->n + 2) + 2) = 1;
+        }
+
+        //  y+ border
+        for ( int i = 0; i < this->m; i++ ) {
+            this->phi(this->n * this->m + this->m + i, (i + 1) * (this->n + 2) + (this->n + 2 - 3)) = 1;
+            this->phi(this->n * this->m + this->m + i, (i + 1) * (this->n + 2) + (this->n + 2 - 2)) = -2;
+            this->phi(this->n * this->m + this->m + i, (i + 1) * (this->n + 2) + (this->n + 2 - 1)) = 1;
+        }
+
+        //  x+ border
+        for ( int i = 0; i < this->n; i++ ) {
+            this->phi(this->n * this->m + 2 * this->m + i, 1 + i)                     = 1;
+            this->phi(this->n * this->m + 2 * this->m + i, 1 + i + this->n + 2)       = -2;
+            this->phi(this->n * this->m + 2 * this->m + i, 1 + i + 2 * (this->n + 2)) = 1;
+        }
+
+        //  x- border
+        for ( int i = 0; i < this->n; i++ ) {
+            this->phi(this->n * this->m + 2 * this->m + this->n + i, totaldim - 1 - (1 + i))                     = 1;
+            this->phi(this->n * this->m + 2 * this->m + this->n + i, totaldim - 1 - (1 + i + (this->n + 2)))     = -2;
+            this->phi(this->n * this->m + 2 * this->m + this->n + i, totaldim - 1 - (1 + i + 2 * (this->n + 2))) = 1;
+        }
+        //  x- y- corner
+        this->phi(this->n * this->m + 2 * this->m + 2 * this->n, 0)                     = 1;
+        this->phi(this->n * this->m + 2 * this->m + 2 * this->n, this->n + 2 + 1)       = -2;
+        this->phi(this->n * this->m + 2 * this->m + 2 * this->n, 2 * (this->n + 2) + 2) = 1;
+        //  x- y+ corner
+        this->phi(this->n * this->m + 2 * this->m + 2 * this->n + 1, (this->n + 2) - 1)                           = 1;
+        this->phi(this->n * this->m + 2 * this->m + 2 * this->n + 1, (this->n + 2) + ((this->n + 2) - 1) - 1)     = -2;
+        this->phi(this->n * this->m + 2 * this->m + 2 * this->n + 1, 2 * (this->n + 2) + ((this->n + 2) - 2) - 1) = 1;
+        //  x+ y- corner
+        this->phi(this->n * this->m + 2 * this->m + 2 * this->n + 2, (this->m + 2) * (this->n + 2) - (this->n + 2))         = 1;
+        this->phi(this->n * this->m + 2 * this->m + 2 * this->n + 2, (this->m + 2) * (this->n + 2) - 2 * (this->n + 2) + 1) = -2;
+        this->phi(this->n * this->m + 2 * this->m + 2 * this->n + 2, (this->m + 2) * (this->n + 2) - 3 * (this->n + 2) + 2) = 1;
+        //  x+ y+ corner
+        this->phi(this->n * this->m + 2 * this->m + 2 * this->n + 3, (this->m + 2) * (this->n + 2) - 2 * (this->n + 2) - 3) = 1;
+        this->phi(this->n * this->m + 2 * this->m + 2 * this->n + 3, (this->m + 2) * (this->n + 2) - (this->n + 2) - 2)     = -2;
+        this->phi(this->n * this->m + 2 * this->m + 2 * this->n + 3, (this->m + 2) * (this->n + 2) - 1)                     = 1;
+        // return phi;
+        this->Qz2d       = CalcQz(z_on_knot);
+        this->MappingMat = MappingMatrix(x, y);
+    }
+
+    matrix<double> CalcQz(matrix<double> z_on_knot) {
+        // void CalcQz(matrix<double> z) {
+        matrix<double> Qz1d;
+        matrix<double> Qz2d;
+        matrix<double> invphi;
+        Qz1d.set_size(this->totaldim, 1);
+        Qz2d.set_size((this->m + 2), (this->n + 2));
+        // float Pz[total];
+
+        matrix<double> Pz;
+        // matrix<double> Qz1d, Qz2d;
+        // Pz.set_size(1, total * total);
+        Pz.set_size(this->totaldim * this->totaldim, 1);
+
+        for ( int i = 0; i < this->m * this->n; i++ ) {
+            Pz(i) = z_on_knot(i);
+        }
+        for ( int i = this->m * this->n; i < this->total; i++ ) {
+            Pz(i) = 0;
+        }
+
+        invphi.set_size(this->totaldim, this->totaldim);
+        invphi = inv(phi);
+
+        Qz1d = invphi * Pz * 36;
+
+        for ( int i = 0; i < this->m + 2; i++ ) {
+            for ( int j = 0; j < this->n + 2; j++ ) {
+                Qz2d(i, j) = Qz1d(i * (this->n + 2) + j);
+            }
+        }
+
+        return Qz2d;
+    }
+
+    double ApplySpline(double u, double v, int pu, int pv, matrix<double> Qz2d) {
+        double V1, V2, V3, V4;
+        double U1, U2, U3, U4;
+        double param_z;
+
+        V1      = powf((1 - v), 3);
+        V2      = 3 * powf(v, 3) - 6 * powf(v, 2) + 4;
+        V3      = -3 * powf(v, 3) + 3 * powf(v, 2) + 3 * v + 1;
+        V4      = powf(v, 3);
+        U1      = powf((1 - u), 3);
+        U2      = 3 * powf(u, 3) - 6 * powf(u, 2) + 4;
+        U3      = -3 * powf(u, 3) + 3 * powf(u, 2) + 3 * u + 1;
+        U4      = powf(u, 3);
+        param_z = ((V1 * (Qz2d(pu, pv) * U1 + Qz2d(pu + 1, pv) * U2 + Qz2d(pu + 2, pv) * U3 + Qz2d(pu + 3, pv) * U4)) + (V2 * (Qz2d(pu, pv + 1) * U1 + Qz2d(pu + 1, pv + 1) * U2 + Qz2d(pu + 2, pv + 1) * U3 + Qz2d(pu + 3, pv + 1) * U4)) + (V3 * (Qz2d(pu, pv + 2) * U1 + Qz2d(pu + 1, pv + 2) * U2 + Qz2d(pu + 2, pv + 2) * U3 + Qz2d(pu + 3, pv + 2) * U4)) + (V4 * (Qz2d(pu, pv + 3) * U1 + Qz2d(pu + 1, pv + 3) * U2 + Qz2d(pu + 2, pv + 3) * U3 + Qz2d(pu + 3, pv + 3) * U4))) / 36;
+
+        return param_z;
+    }
+
+    matrix<double> ZOnGrid(matrix<double> Qz2d) {
+        matrix<double> GridZ;
+        GridZ.set_size(this->m, this->n);
+        for ( int i = 0; i < this->m; i++ ) {
+            for ( int j = 0; j < this->n; j++ ) {
+                GridZ(i, j) = ApplySpline(0.0, 0.0, i, j, Qz2d);
+            }
+        }
+        for ( int i = 0; i < this->m - 1; i++ ) {
+            GridZ(i, this->n - 1) = ApplySpline(0.0, 1.0, i, this->n - 2, Qz2d);
+        }
+
+        for ( int j = 0; j < this->n - 1; j++ ) {
+            GridZ(this->m - 1, j) = ApplySpline(1.0, 0.0, this->m - 2, j, Qz2d);
+        }
+        GridZ(this->m - 1, this->n - 1) = ApplySpline(1.0, 1.0, this->m - 2, this->n - 2, Qz2d);
+
+        return GridZ;
+    }
+
+    matrix<double> SplineSurface(matrix<double> x, matrix<double> y, matrix<double> Qz2d) {
+        int            lenx = x.size( );
+        int            leny = y.size( );
+        matrix<double> z_surface;
+        // cout << lenx << '\t' << leny << endl;
+        z_surface.set_size(leny, lenx);
+        // cout << z_surface.size( ) << endl;
+        matrix<double> PUY;
+        matrix<double> PVX;
+        double         u;
+        double         v;
+        PUY = y / this->spline_patch_dim_y;
+        PVX = x / this->spline_patch_dim_x;
+        // cout << "PUY" << PUY << endl;
+        // cout << "PVX" << PVX << endl;
+        if ( PUY(leny - 1) > this->m or PVX(lenx - 1) > this->n ) {
+            cout << " the data set exists the boundary of the spline model" << endl;
+        }
+        // cout << PVX << endl;
+        int y_index_start = 0;
+        int y_index_end;
+        int x_index_start = 0;
+        int x_index_end;
+
+        for ( int pv = 0; pv < this->n - 1; pv++ ) {
+            // cout << "mark1" << endl;
+            if ( x_index_start > lenx - 1 )
+                break;
+            while ( PVX(x_index_start) < pv )
+                x_index_start++;
+            x_index_end = x_index_start;
+
+            if ( PVX(x_index_start) >= (pv + 1) )
+                continue;
+
+            while ( PVX(x_index_end) < (pv + 1) && x_index_end <= lenx - 1 ) {
+                x_index_end++;
+            }
+            if ( x_index_end > x_index_start )
+                x_index_end -= 1;
+            // x_index_end -= 1;
+            // cout << "mark2" << endl;
+            // cout << "xindex " << x_index_start << " " << x_index_end << endl;
+            y_index_start = 0;
+            for ( int pu = 0; pu < this->m - 1; pu++ ) {
+                if ( y_index_start > leny - 1 )
+                    break;
+                while ( PUY(y_index_start) < pu )
+                    y_index_start++;
+                if ( PUY(y_index_start) >= (pu + 1) )
+                    continue;
+                y_index_end = y_index_start;
+                while ( PUY(y_index_end) < (pu + 1) && y_index_end <= leny - 1 ) {
+                    y_index_end++;
+                }
+                if ( y_index_end > y_index_start )
+                    y_index_end -= 1;
+                // cout << "mark3" << endl;
+                // cout << "yindex " << y_index_start << " " << y_index_end << endl;
+                for ( int i = y_index_start; i <= y_index_end; i++ ) {
+                    for ( int j = x_index_start; j <= x_index_end; j++ ) {
+                        u = PUY(i) - pu;
+                        v = PVX(j) - pv;
+                        // cout << "mark31" << endl;
+                        // cout << i << " " << j << " " << PUY(i) << " " << PVX(j) << " " << u << " " << v << endl;
+                        z_surface(i, j) = ApplySpline(u, v, pu, pv, Qz2d);
+                        // cout << "mark32" << endl;
+                    }
+                }
+                // y_index_start = 0;
+                // y_index_end   = y_index_start;
+                y_index_start = y_index_end + 1;
+            }
+            x_index_start = x_index_end + 1;
+            // x_index_end   = x_index_start;
+        }
+        // PVX(lenx-1) should be smaller than n-1
+        // if ( (x_index_start <= (lenx - 1)) && (PVX(x_index_start) - (n - 1)) == 0 )
+        // cout << "mark4" << endl;
+        if ( (x_index_start <= (lenx - 1)) && ((PVX(x_index_start) - (this->n - 1)) == 0) ) {
+            int pv        = this->n - 2;
+            y_index_start = 0;
+            // cout << "mark5" << endl;
+            for ( int pu = 0; pu < this->m - 1; pu++ ) {
+                while ( PUY(y_index_start) < pu )
+                    y_index_start++;
+                if ( PUY(y_index_start) >= (pu + 1) )
+                    continue;
+                y_index_end = y_index_start;
+                while ( PUY(y_index_end) < (pu + 1) && y_index_end <= leny - 1 ) {
+                    y_index_end++;
+                }
+                if ( y_index_end > y_index_start )
+                    y_index_end -= 1;
+                for ( int i = y_index_start; i <= y_index_end; i++ ) {
+                    // u = PUY(i) - pu;
+                    // v = 0;
+                    u = PUY(i) - pu;
+                    v = PVX(x_index_start) - pv;
+                    // cout << i << " " << x_index_start << " " << u << " " << v << endl;
+
+                    z_surface(i, x_index_start) = ApplySpline(u, v, pu, pv, Qz2d);
+                }
+                y_index_start = y_index_end + 1;
+                // y_index_start = 0;
+            }
+
+            if ( (y_index_start <= (leny - 1)) && ((PUY(y_index_start) - (this->m - 1)) == 0) ) {
+                int pu = this->m - 2;
+                // u      = 0;
+                // v      = 0;
+                u = PUY(y_index_start) - pu;
+                v = PVX(x_index_start) - pv;
+                // cout << y_index_start << " " << x_index_start << " " << PUY(y_index_start) << " " << PVX(x_index_start) << " " << u << " " << v << endl;
+                z_surface(y_index_start, x_index_start) = ApplySpline(u, v, pu, pv, Qz2d);
+            }
+        }
+        // cout << "mark6" << endl;
+        if ( (y_index_start <= (leny - 1)) && ((PUY(y_index_start) - (this->m - 1)) == 0) ) {
+            int pu        = this->m - 2;
+            x_index_start = 0;
+            for ( int pv = 0; pv < this->n - 1; pv++ ) {
+                while ( PVX(x_index_start) < pv )
+                    x_index_start++;
+                if ( PVX(x_index_start) >= (pv + 1) )
+                    continue;
+                x_index_end = x_index_start;
+
+                while ( PVX(x_index_end) < (pv + 1) && x_index_end <= lenx - 1 ) {
+                    x_index_end++;
+                }
+                if ( x_index_end > x_index_start )
+                    x_index_end -= 1;
+                for ( int j = x_index_start; j <= x_index_end; j++ ) {
+                    u = PUY(y_index_start) - pu;
+                    v = PVX(x_index_start) - pv;
+                    // cout << y_index_start << " " << j << " " << PUY(y_index_start) << " " << PVX(j) << " " << u << " " << v << endl;
+                    z_surface(y_index_start, j) = ApplySpline(u, v, pu, pv, Qz2d);
+                }
+                x_index_start = x_index_end + 1;
+            }
+        }
+        // cout << "mark7" << endl;
+        // for ( int i = 0; i < leny; i++ ) {
+        //     for ( int j = 0; j < lenx; j++ ) {
+        //         // cout << i << " " << j << " " << z_surface(i, j) << "  ";
+        //         cout << z_surface(i, j) << "  ";
+        //     }
+        //     cout << endl;
+        // }
+        return z_surface;
+    }
+
+    matrix<double> MappingMatrix(matrix<double> x, matrix<double> y) {
+        int            lenx = x.size( );
+        int            leny = y.size( );
+        matrix<double> z_surface;
+        matrix<double> MappingMat;
+        // cout << lenx << '\t' << leny << endl;
+        z_surface.set_size(leny, lenx);
+        MappingMat.set_size(leny * lenx, 6);
+        int count = 0;
+        // cout << z_surface.size( ) << endl;
+        matrix<double> PUY;
+        matrix<double> PVX;
+        double         u;
+        double         v;
+        PUY = y / this->spline_patch_dim_y;
+        PVX = x / this->spline_patch_dim_x;
+        cout << "PUY" << PUY << endl;
+        cout << "PVX" << PVX << endl;
+        if ( PUY(leny - 1) > this->m or PVX(lenx - 1) > this->n ) {
+            cout << " the data set exists the boundary of the spline model" << endl;
+        }
+        // cout << PVX << endl;
+        int y_index_start = 0;
+        int y_index_end;
+        int x_index_start = 0;
+        int x_index_end;
+
+        for ( int pv = 0; pv < this->n - 1; pv++ ) {
+            // cout << "mark1" << endl;
+            if ( x_index_start > lenx - 1 )
+                break;
+            while ( PVX(x_index_start) < pv )
+                x_index_start++;
+            x_index_end = x_index_start;
+
+            if ( PVX(x_index_start) >= (pv + 1) )
+                continue;
+
+            while ( PVX(x_index_end) < (pv + 1) && x_index_end <= lenx - 1 ) {
+                x_index_end++;
+            }
+            if ( x_index_end > x_index_start )
+                x_index_end -= 1;
+            // x_index_end -= 1;
+            // cout << "mark2" << endl;
+            // cout << "xindex " << x_index_start << " " << x_index_end << endl;
+            // set_subm(MappingMat, range(0, 1), range(0, 1)) = 7;
+            y_index_start = 0;
+            for ( int pu = 0; pu < this->m - 1; pu++ ) {
+                if ( y_index_start > leny - 1 )
+                    break;
+                while ( PUY(y_index_start) < pu )
+                    y_index_start++;
+                if ( PUY(y_index_start) >= (pu + 1) )
+                    continue;
+                y_index_end = y_index_start;
+                while ( PUY(y_index_end) < (pu + 1) && y_index_end <= leny - 1 ) {
+                    y_index_end++;
+                }
+                if ( y_index_end > y_index_start )
+                    y_index_end -= 1;
+                // cout << "mark3" << endl;
+                // cout << "yindex " << y_index_start << " " << y_index_end << endl;
+                for ( int i = y_index_start; i <= y_index_end; i++ ) {
+                    for ( int j = x_index_start; j <= x_index_end; j++ ) {
+                        u = PUY(i) - pu;
+                        v = PVX(j) - pv;
+                        // cout << "mark31" << endl;
+                        // cout << i << " " << j << " " << PUY(i) << " " << PVX(j) << " " << u << " " << v << endl;
+                        MappingMat(count, 0) = i;
+                        MappingMat(count, 1) = j;
+                        MappingMat(count, 2) = pu;
+                        MappingMat(count, 3) = pv;
+                        MappingMat(count, 4) = u;
+                        MappingMat(count, 5) = v;
+                        count++;
+                        // z_surface(i, j) = ApplySpline(u, v, pu, pv, Qz2d);
+                        // cout << "mark32" << endl;
+                    }
+                }
+                // y_index_start = 0;
+                // y_index_end   = y_index_start;
+                y_index_start = y_index_end + 1;
+            }
+            x_index_start = x_index_end + 1;
+            // x_index_end   = x_index_start;
+        }
+        // PVX(lenx-1) should be smaller than n-1
+        // if ( (x_index_start <= (lenx - 1)) && (PVX(x_index_start) - (n - 1)) == 0 )
+        // cout << "mark4" << endl;
+        if ( (x_index_start <= (lenx - 1)) && ((PVX(x_index_start) - (this->n - 1)) == 0) ) {
+            int pv        = this->n - 2;
+            y_index_start = 0;
+            // cout << "mark5" << endl;
+            for ( int pu = 0; pu < this->m - 1; pu++ ) {
+                while ( PUY(y_index_start) < pu )
+                    y_index_start++;
+                if ( PUY(y_index_start) >= (pu + 1) )
+                    continue;
+                y_index_end = y_index_start;
+                while ( PUY(y_index_end) < (pu + 1) && y_index_end <= leny - 1 ) {
+                    y_index_end++;
+                }
+                if ( y_index_end > y_index_start )
+                    y_index_end -= 1;
+                for ( int i = y_index_start; i <= y_index_end; i++ ) {
+                    // u = PUY(i) - pu;
+                    // v = 0;
+                    u = PUY(i) - pu;
+                    v = PVX(x_index_start) - pv;
+                    // cout << i << " " << x_index_start << " " << u << " " << v << endl;
+                    MappingMat(count, 0) = i;
+                    MappingMat(count, 1) = x_index_start;
+                    MappingMat(count, 2) = pu;
+                    MappingMat(count, 3) = pv;
+                    MappingMat(count, 4) = u;
+                    MappingMat(count, 5) = v;
+                    count++;
+                    // z_surface(i, x_index_start) = ApplySpline(u, v, pu, pv, Qz2d);
+                }
+                y_index_start = y_index_end + 1;
+                // y_index_start = 0;
+            }
+
+            if ( (y_index_start <= (leny - 1)) && ((PUY(y_index_start) - (this->m - 1)) == 0) ) {
+                int pu               = this->m - 2;
+                u                    = PUY(y_index_start) - pu;
+                v                    = PVX(x_index_start) - pv;
+                MappingMat(count, 0) = y_index_start;
+                MappingMat(count, 1) = x_index_start;
+                MappingMat(count, 2) = pu;
+                MappingMat(count, 3) = pv;
+                MappingMat(count, 4) = u;
+                MappingMat(count, 5) = v;
+                count++;
+                // z_surface(y_index_start, x_index_start) = ApplySpline(u, v, pu, pv, Qz2d);
+            }
+        }
+
+        cout << "mark6" << endl;
+        if ( (y_index_start <= (leny - 1)) && ((PUY(y_index_start) - (this->m - 1)) == 0) ) {
+            int pu        = this->m - 2;
+            x_index_start = 0;
+            for ( int pv = 0; pv < this->n - 1; pv++ ) {
+                while ( PVX(x_index_start) < pv )
+                    x_index_start++;
+                if ( PVX(x_index_start) >= (pv + 1) )
+                    continue;
+                x_index_end = x_index_start;
+
+                while ( PVX(x_index_end) < (pv + 1) && x_index_end <= lenx - 1 ) {
+                    x_index_end++;
+                }
+                if ( x_index_end > x_index_start )
+                    x_index_end -= 1;
+                for ( int j = x_index_start; j <= x_index_end; j++ ) {
+                    u                    = PUY(y_index_start) - pu;
+                    v                    = PVX(x_index_start) - pv;
+                    MappingMat(count, 0) = y_index_start;
+                    MappingMat(count, 1) = j;
+                    MappingMat(count, 2) = pu;
+                    MappingMat(count, 3) = pv;
+                    MappingMat(count, 4) = u;
+                    MappingMat(count, 5) = v;
+                    count++;
+                    // z_surface(y_index_start, j) = ApplySpline(u, v, pu, pv, Qz2d);
+                }
+                x_index_start = x_index_end + 1;
+            }
+        }
+
+        return MappingMat;
+    }
+
+    // matrix<double> ImplementParam(bicubicspline& splinemodel, matrix<double> Qz2d) {
+    //     // for (int i=0;i<)
+    // }
+
+    matrix<double> ApplyMappingMat(matrix<double> Qz1d) {
+        Qz2d = reshape(Qz1d, (this->m + 2), (this->n + 2));
+        matrix<double> smoothsurf;
+        smoothsurf.set_size(this->Mapping_Mat_Row_no, this->Mapping_Mat_Col_no);
+        int   total_no = this->Mapping_Mat_Col_no * this->Mapping_Mat_Row_no;
+        int   row_no   = this->Mapping_Mat_Row_no;
+        int   col_no   = this->Mapping_Mat_Col_no;
+        int   pu;
+        int   pv;
+        float u;
+        float v;
+        int   col;
+        int   row;
+
+        for ( int i = 0; i < total_no; i++ ) {
+            col                  = this->MappingMat(i, 0);
+            row                  = this->MappingMat(i, 1);
+            pu                   = this->MappingMat(i, 2);
+            pv                   = this->MappingMat(i, 3);
+            u                    = this->MappingMat(i, 4);
+            v                    = this->MappingMat(i, 5);
+            smoothsurf(col, row) = ApplySpline(u, v, pu, pv, Qz2d);
+        }
+
+        return smoothsurf;
+    }
+
+    // double MissingGridFixObject(matrix<double> z_on_knot_refined) {
+    //     matrix<double> Qz1d;
+    //     matrix<double> Qz2d_refined;
+    //     matrix<double> smoothsurf;
+    //     matrix<double> updated_z_on_knot;
+    //     double         error = 0;
+
+    //     Qz2d_refined           = CalcQz(z_on_knot_refined);
+    //     updated_z_on_knot      = reshape(ZOnGrid(Qz2d_refined), totaldim, 1);
+    //     int UsedIndex_total_no = this->UsedIndex.size( );
+
+    //     for ( int i = 0; i < UsedIndex_total_no; i++ ) {
+    //         int ind = this->UsedIndex[i];
+    //         error   = error + powf(updated_z_on_knot(ind) - this->z_on_knot(ind), 2);
+    //     }
+
+    //     return error;
+    // }
+
+    double MissingGridFixObject(matrix<double> Qz1d) {
+
+        // matrix<double> Qz1d;
+        matrix<double> Qz2d_refined;
+        matrix<double> smoothsurf;
+        matrix<double> updated_z_on_knot;
+        double         error = 0;
+        Qz2d_refined         = reshape(Qz1d, (this->m + 2), (this->n + 2));
+        // Qz2d_refined           = CalcQz(z_on_knot_refined);
+        updated_z_on_knot      = reshape(ZOnGrid(Qz2d_refined), totaldim, 1);
+        int UsedIndex_total_no = this->UsedIndex.size( );
+
+        for ( int i = 0; i < UsedIndex_total_no; i++ ) {
+            int ind = this->UsedIndex[i];
+            error   = error + powf(updated_z_on_knot(ind) - this->z_on_knot(ind), 2);
+        }
+
+        return error;
+    }
+
+    double OptimizationObejct(matrix<double> Qz1d) {
+        matrix<double> Qz2d = reshape(Qz1d, (this->m + 2), (this->n + 2));
+        matrix<double> smoothsurf;
+        smoothsurf.set_size(this->Mapping_Mat_Row_no, this->Mapping_Mat_Col_no);
+        int    total_no = this->Mapping_Mat_Col_no * this->Mapping_Mat_Row_no;
+        int    row_no   = this->Mapping_Mat_Row_no;
+        int    col_no   = this->Mapping_Mat_Col_no;
+        int    pu;
+        int    pv;
+        float  u;
+        float  v;
+        int    col;
+        int    row;
+        double error;
+        // cout << "total number" << total_no << endl;
+
+        for ( int i = 0; i < total_no; i++ ) {
+            col                  = this->MappingMat(i, 0);
+            row                  = this->MappingMat(i, 1);
+            pu                   = this->MappingMat(i, 2);
+            pv                   = this->MappingMat(i, 3);
+            u                    = this->MappingMat(i, 4);
+            v                    = this->MappingMat(i, 5);
+            smoothsurf(col, row) = ApplySpline(u, v, pu, pv, Qz2d);
+        }
+
+        error = 0.0;
+        for ( int i = 0; i < row_no; i++ ) {
+            for ( int j = 0; j < col_no; j++ ) {
+                error = error + std::abs(smoothsurf(i, j) - this->z(i * col_no + j));
+                // cout << i * col_no + j << " " << error << " " << smoothsurf(i, j) << " " << z(i * col_no + j) << endl;
+            }
+        }
+
+        return error;
+    }
+
+    double OptimizationJoinObejct(matrix<double> join1d) {
+        matrix<double> Join2d = reshape(join1d, (this->m), (this->n));
+        matrix<double> smoothsurf;
+        // this->z_on_knot = Join2d;
+        matrix<double> Qz2d;
+        Qz2d = this->CalcQz(Join2d);
+        smoothsurf.set_size(this->Mapping_Mat_Row_no, this->Mapping_Mat_Col_no);
+        int    total_no = this->Mapping_Mat_Col_no * this->Mapping_Mat_Row_no;
+        int    row_no   = this->Mapping_Mat_Row_no;
+        int    col_no   = this->Mapping_Mat_Col_no;
+        int    pu;
+        int    pv;
+        float  u;
+        float  v;
+        int    col;
+        int    row;
+        double error;
+        // cout << "total number" << total_no << endl;
+
+        for ( int i = 0; i < total_no; i++ ) {
+            col                  = this->MappingMat(i, 0);
+            row                  = this->MappingMat(i, 1);
+            pu                   = this->MappingMat(i, 2);
+            pv                   = this->MappingMat(i, 3);
+            u                    = this->MappingMat(i, 4);
+            v                    = this->MappingMat(i, 5);
+            smoothsurf(col, row) = ApplySpline(u, v, pu, pv, Qz2d);
+        }
+
+        error = 0.0;
+        for ( int i = 0; i < row_no; i++ ) {
+            for ( int j = 0; j < col_no; j++ ) {
+                error = error + std::abs(smoothsurf(i, j) - this->z(i * col_no + j));
+                // cout << i * col_no + j << " " << error << " " << smoothsurf(i, j) << " " << z(i * col_no + j) << endl;
+            }
+        }
+
+        return error;
+    }
+
+    // void Search( ) {
+    //     matrix<double> Qz1dtest = zeros_matrix<double>(long(m + 2) * long(n + 2), 1);
+    //     // Qz1dtest=reshape()
+    //     // Qz1dtest = zeros_matrix(7, 10);
+
+    //     // cout << spline.OptimizationObejct(qz1d) << endl;
+    //     // matrix         starting_point = {4, 8};
+    //     // column<double> starting_point = {-94, 5.2};
+    //     find_min_using_approximate_derivatives(lbfgs_search_strategy(10),
+    //                                            objective_delta_stop_strategy(1e-7),
+    //                                            OptimizationObejct, Qz1dtest, -1);
+    //     cout << "solution: \n"
+    //          << Qz1dtest << endl;
+    // }
+};
+
+// double minfunc(bicubicspline splinemodle, matrix<double> qz1d) {
+//     double result;
+//     result = splinemodle.OptimizationObejct(qz1d);
+//     return result;
+// }
+struct Point {
+    double x, y;
+
+    double distance(const Point& other) const {
+        return std::sqrt((x - other.x) * (x - other.x) + (y - other.y) * (y - other.y));
     }
 };
 
-// ----------------------------------------------------------------------------------------
+Point findNearestNeighbor(const Point& point, const std::vector<Point>& points) {
+    Point  nearest;
+    double minDistance = std::numeric_limits<double>::max( );
 
-int main( ) try {
-    // int main( ) {
-    // Set the starting point to (4,8).  This is the point the optimization algorithm
-    // will start out from and it will move it closer and closer to the function's
-    // minimum point.   So generally you want to try and compute a good guess that is
-    // somewhat near the actual optimum value.
-    column_vector starting_point = {4, 8};
-
-    // The first example below finds the minimum of the rosen() function and uses the
-    // analytical derivative computed by rosen_derivative().  Since it is very easy to
-    // make a mistake while coding a function like rosen_derivative() it is a good idea
-    // to compare your derivative function against a numerical approximation and see if
-    // the results are similar.  If they are very different then you probably made a
-    // mistake.  So the first thing we do is compare the results at a test point:
-    cout << "Difference between analytic derivative and numerical approximation of derivative: "
-         << length(derivative(rosen)(starting_point) - rosen_derivative(starting_point)) << endl;
-
-    cout << "Find the minimum of the rosen function()" << endl;
-    // Now we use the find_min() function to find the minimum point.  The first argument
-    // to this routine is the search strategy we want to use.  The second argument is the
-    // stopping strategy.  Below I'm using the objective_delta_stop_strategy which just
-    // says that the search should stop when the change in the function being optimized
-    // is small enough.
-
-    // The other arguments to find_min() are the function to be minimized, its derivative,
-    // then the starting point, and the last is an acceptable minimum value of the rosen()
-    // function.  That is, if the algorithm finds any inputs to rosen() that gives an output
-    // value <= -1 then it will stop immediately.  Usually you supply a number smaller than
-    // the actual global minimum.  So since the smallest output of the rosen function is 0
-    // we just put -1 here which effectively causes this last argument to be disregarded.
-
-    find_min(bfgs_search_strategy( ), // Use BFGS search algorithm
-             objective_delta_stop_strategy(1e-7), // Stop when the change in rosen() is less than 1e-7
-             rosen, rosen_derivative, starting_point, -1);
-    // Once the function ends the starting_point vector will contain the optimum point
-    // of (1,1).
-    cout << "rosen solution:\n"
-         << starting_point << endl;
-
-    // Now let's try doing it again with a different starting point and the version
-    // of find_min() that doesn't require you to supply a derivative function.
-    // This version will compute a numerical approximation of the derivative since
-    // we didn't supply one to it.
-    starting_point = {-94, 5.2};
-    find_min_using_approximate_derivatives(bfgs_search_strategy( ),
-                                           objective_delta_stop_strategy(1e-7),
-                                           rosen, starting_point, -1);
-    // Again the correct minimum point is found and stored in starting_point
-    cout << "rosen solution:\n"
-         << starting_point << endl;
-
-    // Here we repeat the same thing as above but this time using the L-BFGS
-    // algorithm.  L-BFGS is very similar to the BFGS algorithm, however, BFGS
-    // uses O(N^2) memory where N is the size of the starting_point vector.
-    // The L-BFGS algorithm however uses only O(N) memory.  So if you have a
-    // function of a huge number of variables the L-BFGS algorithm is probably
-    // a better choice.
-    starting_point = {0.8, 1.3};
-    find_min(lbfgs_search_strategy(10), // The 10 here is basically a measure of how much memory L-BFGS will use.
-             objective_delta_stop_strategy(1e-7).be_verbose( ), // Adding be_verbose() causes a message to be
-             // printed for each iteration of optimization.
-             rosen, rosen_derivative, starting_point, -1);
-
-    cout << endl
-         << "rosen solution: \n"
-         << starting_point << endl;
-
-    starting_point = {-94, 5.2};
-    find_min_using_approximate_derivatives(lbfgs_search_strategy(10),
-                                           objective_delta_stop_strategy(1e-7),
-                                           rosen, starting_point, -1);
-    cout << "rosen solution: \n"
-         << starting_point << endl;
-
-    // dlib also supports solving functions subject to bounds constraints on
-    // the variables.  So for example, if you wanted to find the minimizer
-    // of the rosen function where both input variables were in the range
-    // 0.1 to 0.8 you would do it like this:
-    starting_point = {0.1, 0.1}; // Start with a valid point inside the constraint box.
-    find_min_box_constrained(lbfgs_search_strategy(10),
-                             objective_delta_stop_strategy(1e-9),
-                             rosen, rosen_derivative, starting_point, 0.1, 0.8);
-    // Here we put the same [0.1 0.8] range constraint on each variable, however, you
-    // can put different bounds on each variable by passing in column vectors of
-    // constraints for the last two arguments rather than scalars.
-
-    cout << endl
-         << "constrained rosen solution: \n"
-         << starting_point << endl;
-
-    // You can also use an approximate derivative like so:
-    starting_point = {0.1, 0.1};
-    find_min_box_constrained(bfgs_search_strategy( ),
-                             objective_delta_stop_strategy(1e-9),
-                             rosen, derivative(rosen), starting_point, 0.1, 0.8);
-    cout << endl
-         << "constrained rosen solution: \n"
-         << starting_point << endl;
-
-    // In many cases, it is useful if we also provide second derivative information
-    // to the optimizers.  Two examples of how we can do that are shown below.
-    starting_point = {0.8, 1.3};
-    find_min(newton_search_strategy(rosen_hessian),
-             objective_delta_stop_strategy(1e-7),
-             rosen,
-             rosen_derivative,
-             starting_point,
-             -1);
-    cout << "rosen solution: \n"
-         << starting_point << endl;
-
-    // We can also use find_min_trust_region(), which is also a method which uses
-    // second derivatives.  For some kinds of non-convex function it may be more
-    // reliable than using a newton_search_strategy with find_min().
-    starting_point = {0.8, 1.3};
-    find_min_trust_region(objective_delta_stop_strategy(1e-7),
-                          rosen_model( ),
-                          starting_point,
-                          10 // initial trust region radius
-    );
-    cout << "rosen solution: \n"
-         << starting_point << endl;
-
-    // Next, let's try the BOBYQA algorithm.  This is a technique specially
-    // designed to minimize a function in the absence of derivative information.
-    // Generally speaking, it is the method of choice if derivatives are not available
-    // and the function you are optimizing is smooth and has only one local optima.  As
-    // an example, consider the be_like_target function defined below:
-    column_vector target         = {3, 5, 1, 7};
-    auto          be_like_target = [&](const column_vector& x) {
-        return mean(squared(x - target));
-    };
-    starting_point = {-4, 5, 99, 3};
-    find_min_bobyqa(be_like_target,
-                    starting_point,
-                    9, // number of interpolation points
-                    uniform_matrix<double>(4, 1, -1e100), // lower bound constraint
-                    uniform_matrix<double>(4, 1, 1e100), // upper bound constraint
-                    10, // initial trust region radius
-                    1e-6, // stopping trust region radius
-                    100 // max number of objective function evaluations
-    );
-    cout << "be_like_target solution:\n"
-         << starting_point << endl;
-
-    // Finally, let's try the find_min_global() routine.  Like find_min_bobyqa(),
-    // this technique is specially designed to minimize a function in the absence
-    // of derivative information.  However, it is also designed to handle
-    // functions with many local optima.  Where BOBYQA would get stuck at the
-    // nearest local optima, find_min_global() won't.  find_min_global() uses a
-    // global optimization method based on a combination of non-parametric global
-    // function modeling and BOBYQA style quadratic trust region modeling to
-    // efficiently find a global minimizer.  It usually does a good job with a
-    // relatively small number of calls to the function being optimized.
-    //
-    // You also don't have to give it a starting point or set any parameters,
-    // other than defining bounds constraints.  This makes it the method of
-    // choice for derivative free optimization in the presence of multiple local
-    // optima.  Its API also allows you to define functions that take a
-    // column_vector as shown above or to explicitly use named doubles as
-    // arguments, which we do here.
-    // ---------------------------------------------
-    auto complex_holder_table = [](double x0, double x1) {
-        // This function is a version of the well known Holder table test
-        // function, which is a function containing a bunch of local optima.
-        // Here we make it even more difficult by adding more local optima
-        // and also a bunch of discontinuities.
-
-        // add discontinuities
-        double sign = 1;
-        for ( double j = -4; j < 9; j += 0.5 ) {
-            if ( j < x0 && x0 < j + 0.5 )
-                x0 += sign * 0.25;
-            sign *= -1;
+    for ( const auto& p : points ) {
+        double dist = point.distance(p);
+        if ( dist < minDistance ) {
+            minDistance = dist;
+            nearest     = p;
         }
-        // Holder table function tilted towards 10,10 and with additional
-        // high frequency terms to add more local optima.
-        return -(std::abs(sin(x0) * cos(x1) * exp(std::abs(1 - std::sqrt(x0 * x0 + x1 * x1) / pi))) - (x0 + x1) / 10 - sin(x0 * 10) * cos(x1 * 10));
-    };
+    }
 
-    // To optimize this difficult function all we need to do is call
-    // find_min_global()
-    auto result = find_min_global(complex_holder_table,
-                                  {-10, -10}, // lower bounds
-                                  {10, 10}, // upper bounds
-                                  std::chrono::milliseconds(500) // run this long
-    );
-
-    cout.precision(9);
-    // These cout statements will show that find_min_global() found the
-    // globally optimal solution to 9 digits of precision:
-    cout << "complex holder table function solution y (should be -21.9210397): " << result.y << endl;
-    cout << "complex holder table function solution x:\n"
-         << result.x << endl;
-
+    return nearest;
 }
 
-// * /
+bicubicspline spline;
+bicubicspline shiftsplinex, shiftspliney;
 
-catch ( std::exception& e ) {
-
-    cout << e.what( ) << endl;
+double minfunc(matrix<double> qz1d) {
+    double result;
+    result = spline.OptimizationObejct(qz1d);
+    return result;
 }
+
+double minfuncObject(matrix<double> join_1d) {
+    double result;
+    result = shiftsplinex.OptimizationJoinObejct(join_1d);
+    return result;
+}
+
+double minfuncQzObject(matrix<double> qz1d) {
+    double result;
+    result = shiftsplinex.OptimizationObejct(qz1d);
+    return result;
+}
+
+double MissingGridFix(matrix<double> qz1d) {
+    double result;
+    // result = shiftspline.MissingGridFixObject(z_on_knot_refined);
+    result = shiftsplinex.MissingGridFixObject(qz1d);
+    return result;
+}
+
+int main( ) {
+    int            m     = 5;
+    int            n     = 8;
+    int            total = (m + 2) * (n + 2);
+    matrix<double> Z_On_Grid;
+    matrix<double> Qz;
+    matrix<double> z_on_knot;
+    matrix<double> MappingMat;
+    float          spline_patch_dim_x = 2;
+    float          spline_patch_dim_y = 4;
+    // float spline_p3atch_dim_x = 1;
+    // float spline_patch_dim_y = 1;
+
+    // float**       Qz = NULL;
+    // bicubicspline spline;
+    z_on_knot.set_size(m * n, 1);
+    z_on_knot = -0.25091976, 0.90142861, 0.46398788, 0.19731697, -0.68796272,
+    -0.68801096, -0.88383278, 0.73235229, 0.20223002, 0.41614516,
+    -0.95883101, 0.9398197, 0.66488528, -0.57532178, -0.63635007,
+    -0.63319098, -0.39151551, 0.04951286, -0.13610996, -0.41754172,
+    0.22370579, -0.72101228, -0.4157107, -0.26727631, -0.08786003,
+    0.57035192, -0.60065244, 0.02846888, 0.18482914, -0.90709917,
+    0.2150897, -0.65895175, -0.86989681, 0.89777107, 0.93126407,
+    0.6167947, -0.39077246, -0.80465577, 0.36846605, -0.11969501;
+
+    for ( int i = 0; i < m * n; i++ ) {
+        cout << z_on_knot(i) << "  ";
+    }
+    cout << endl;
+    // phi      = spline.CalcPhi( );
+    // spline.CalcPhi( );
+    spline.InitializeSpline(m, n, spline_patch_dim_y, spline_patch_dim_x);
+    cout << spline.m << " " << spline.n << endl;
+    // spline.phi = spline.CalcPhi( );
+    cout << "here1" << endl;
+    Qz = spline.CalcQz(z_on_knot); // so far the code is verified by python to be correct
+    cout << "here2" << endl;
+
+    Z_On_Grid = spline.ZOnGrid(Qz);
+    cout << "here3" << endl;
+    matrix<double> x;
+    matrix<double> y;
+    matrix<double> z;
+    matrix<double> surface;
+    int            patchxnum  = 32;
+    int            patchynum  = 15;
+    int            totalpatch = patchxnum * patchynum;
+    x.set_size(1, patchxnum);
+    y.set_size(1, patchynum);
+    z.set_size(1, totalpatch);
+    // double xstep = double(2 * n - 1) / double(patchxnum - 1);
+    // double ystep = double(4 * m - 1) / double(patchynum - 1);
+    double xstep = double(2 * (n - 1)) / double(patchxnum - 1);
+    double ystep = double(4 * (m - 1)) / double(patchynum - 1);
+
+    x(0) = 0;
+    y(0) = 0;
+    for ( int i = 1; i < patchxnum; i++ ) {
+        x(i) = x(i - 1) + xstep;
+    }
+    for ( int i = 1; i < patchynum; i++ ) {
+        y(i) = y(i - 1) + ystep;
+    }
+
+    cout << "x " << x << endl;
+    cout << "y " << y << endl;
+    std::ifstream zptxt;
+    zptxt.open("/data/lingli/Lingli_20221028/grid2_process/MotCor202301/S_record1525_12_08_1013_ForCPlus/zp.txt");
+
+    cout << "initialized" << endl;
+
+    if ( zptxt.is_open( ) ) {
+        cout << "files are open" << endl;
+        for ( int i = 0; i < totalpatch; i++ ) {
+            zptxt >> z(i);
+        }
+        cout << endl;
+    }
+
+    cout << "herez" << endl;
+    cout << z << endl;
+    zptxt.close( );
+    cout << "files are closed" << endl;
+    spline.InitializeSplineModel(m, n, spline_patch_dim_y, spline_patch_dim_x, x, y, z, z_on_knot);
+
+    matrix<double> qz1d;
+    matrix<double> opti_mat;
+    qz1d     = reshape(Qz, total, 1);
+    opti_mat = spline.ApplyMappingMat(qz1d);
+    // for ( int i = 0; i < patchynum; i++ ) {
+    //     for ( int j = 0; j < patchxnum; j++ ) {
+    //         cout << opti_mat(i, j) << "  ";
+    //     }
+    //     cout << endl;
+    // }
+    // cout << spline.z << endl;
+
+    // column_vector Qz1dtest;
+    // Qz1dtest = zeros_matrix<double>(long(m + 2) * long(n + 2), 1);
+    // double error;
+    // error = minfunc(Qz1dtest);
+    // cout << "error " << error << endl;
+    // find_min_using_approximate_derivatives(lbfgs_search_strategy(10000), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
+    //                                        objective_delta_stop_strategy(1e-7).be_verbose( ),
+    //                                        minfunc, Qz1dtest, -1);
+
+    // matrix<double> fitted_result;
+    // fitted_result = reshape(Qz1dtest, m + 2, n + 2);
+
+    // cout << "solution: \n"
+    //      << fitted_result << endl;
+    // cout << "Qz2d original \n"
+    //      << Qz << endl;
+    //=============================================== basic test for the lbfgs ==================================
+    //=============================================== test the fix grid  ==================================
+    matrix<double> shift_mat_x, shift_mat_y;
+
+    int patch_num_x     = 12;
+    int patch_num_y     = 8;
+    int total_patch_num = patch_num_x * patch_num_y;
+
+    shift_mat_x.set_size(total_patch_num, 1);
+    shift_mat_y.set_size(total_patch_num, 1);
+    shift_mat_x = 7.6150800e+00, 9.7743600e+00, 7.5544400e+00, 7.4693030e+00,
+    4.9003300e+00, 6.0669400e+00, 1.2479550e+01, 2.1771890e+01,
+    9.2391300e-01, -6.3588160e+00, -5.5370000e+00, -4.4893300e+00,
+    -5.1402950e+01, 2.6031710e+01, -2.1205200e+01, -4.4496080e+00,
+    2.6714975e+01, -3.4797400e+00, 2.2858510e+00, 2.3485750e+00,
+    -6.8856700e-02, -3.3976800e+00, -1.1384420e+01, -7.7283900e+00,
+    -6.3457000e-01, 6.5073800e+00, 1.9762960e+01, 1.2934560e+01,
+    3.6607100e-01, 3.5070250e+00, 2.1788100e+00, 1.0548600e+00,
+    6.9876400e+00, -6.3134000e+00, -8.1051300e+00, -1.1828720e+01,
+    8.3406400e+00, 8.6968500e+00, 5.6076900e+00, 6.0117100e-01,
+    1.7226800e+00, 1.7508270e+00, 7.1818200e-01, 1.1823869e+01,
+    2.2536574e+01, -7.2780000e+00, -3.1327120e+01, -1.2873720e+01,
+    9.8347200e+00, 1.4806540e+01, 4.6955000e+00, 1.1177460e+00,
+    2.6143510e+00, 1.1934540e+00, -1.0776330e+00, -9.0495200e-01,
+    -4.1067570e+00, -6.4913700e+00, -6.8183500e+00, -1.0974440e+01,
+    8.1436500e+00, 6.8106900e+00, 2.3342920e+01, 1.5253720e+00,
+    2.2594640e+00, -3.1269600e-01, -2.2225230e+00, -1.5036470e+00,
+    -3.2084230e+00, -5.0051000e+00, -2.3018210e+01, -3.6536120e+01,
+    1.8694050e+00, 5.4216700e+00, 4.2725600e+00, 2.5381600e+00,
+    1.6410678e+00, 1.2825433e+00, -1.4910980e-01, 4.6271900e-01,
+    5.1332000e-03, -3.6178260e+00, -2.5597200e+00, -4.3899000e+00,
+    -1.2765060e+00, 4.0570800e+00, 3.7635300e+00, 1.1319220e+00,
+    3.4470970e+00, 3.8015600e+00, 4.7082500e+00, 4.6554500e+00,
+    2.5270610e+00, -8.6322800e-01, 2.1318310e+00, 7.6637400e-01;
+    shift_mat_y = -1.14144700e+01, -2.26945300e+01, -1.91624300e+02, -1.05277500e+01,
+    -7.82531000e+00, -5.14991000e+00, -2.45675000e+01, -6.36344900e+00,
+    -1.19623100e+01, -1.00021200e+02, -2.24008500e+01, -1.64602400e+01,
+    -1.64868700e+02, -1.29855900e+02, -1.49809300e+02, -2.84561000e+01,
+    -1.07428400e+01, -7.76606000e+00, -1.01149000e+01, -1.53724800e+01,
+    -9.15628000e+00, -1.45033000e+01, -2.12581200e+01, -1.38257800e+01,
+    -2.90679000e+01, -2.29407000e+01, -8.19505000e+01, -2.88783500e+01,
+    -8.00151000e+00, -8.94282000e+00, -6.42825000e+00, -7.76041000e+00,
+    -4.90524000e+00, -4.60821000e+00, -5.89306000e+00, -1.19626400e+01,
+    -6.26686000e+00, -1.47015600e+01, -1.29866100e+01, -9.12107000e+00,
+    -6.06435000e+00, -5.03817000e+00, -3.23305000e+00, -4.52679000e+00,
+    -8.70212000e+00, 1.38044000e-01, -4.54326500e+00, -4.57392600e+00,
+    8.03073000e+00, 4.95014500e+00, 3.64636800e+00, 1.08626100e+00,
+    -1.08004800e+00, -7.23455500e-01, -1.67868900e+00, -2.35822000e+00,
+    -1.49133200e-01, 6.00561100e-01, 1.58416500e+00, -2.40451300e+00,
+    1.05496300e+01, 6.57432000e+00, 2.08810700e+01, 4.69526000e+00,
+    2.73370000e+00, 3.93901000e+00, 1.26033240e+00, 3.02252000e+00,
+    3.51668000e+00, 4.12562000e+00, -6.85680000e-01, -2.15289857e+00,
+    1.48088000e+01, 1.10633100e+01, 7.70438000e+00, 5.63907000e+00,
+    4.07736000e+00, 3.31463800e+00, 2.37731200e+00, 5.71514000e+00,
+    5.27137000e+00, 6.44086000e+00, 2.87076000e+00, 1.72262300e+00,
+    1.29135900e+01, 1.14345100e+01, 8.09923000e+00, 6.89876000e+00,
+    7.21504000e+00, 5.21205000e+00, 4.56850000e+00, 4.94054000e+00,
+    6.61320000e+00, 5.36471000e+00, 4.16169000e+00, 3.46664200e+00;
+
+    matrix<double> x_patch_1d, y_patch_1d;
+    x_patch_1d.set_size(1, patch_num_x);
+    y_patch_1d.set_size(1, patch_num_y);
+    x_patch_1d = 240., 720., 1200., 1680., 2160., 2640., 3120., 3600., 4080., 4560., 5040., 5520;
+    y_patch_1d = 256., 767., 1279., 1790., 2302., 2813., 3325., 3836;
+    int    rows, cols;
+    double patch_x_dim = 480, patch_y_dim = 511.5;
+    // double sizex = 480, sizey = 511.5;
+
+    // rows = patch_num_y;
+    // cols = patch_num_x;
+
+    int knotx_no, knoty_no;
+    knotx_no = 8;
+    knoty_no = 5;
+    int image_x_dim, image_y_dim;
+    image_x_dim = 5760;
+    image_y_dim = 4092;
+
+    rows         = knoty_no;
+    cols         = knotx_no;
+    double sizex = image_x_dim / (knotx_no - 1);
+    double sizey = image_y_dim / (knoty_no - 1);
+
+    shiftsplinex.InitializeSpline(rows, cols, sizey, sizex);
+    shiftspliney.InitializeSpline(rows, cols, sizey, sizex);
+    // matrix<double> missed_index;
+    // missed_index.set_size(3, 1);
+    // missed_index = 4, 40, 80;
+    // matrix<double> used_index;
+    std::vector<double> used_index(total_patch_num);
+    std::vector<int>    missed_index; // it should be in increasing order
+    matrix<float>       truefalse;
+    // truefalse.set_size(patch_num_y, patch_num_x);
+    truefalse    = ones_matrix<float>(patch_num_y, patch_num_x);
+    missed_index = {2, 7, 10, 12, 13, 14, 16, 27, 32, 43, 44, 46, 49, 62, 70, 71, 83, 2, 3, 6, 9, 10, 12, 13, 14, 15, 16, 24, 26, 27, 62};
+    // shiftsplinex.UpdateSpline(shift_mat_x);
+    // shiftspliney.UpdateSpline(shift_mat_y);
+    // std::iota(used_index.begin( ), used_index.end( ), 0);
+    // for ( int num : used_index ) {
+    //     std::cout << num << ' ';
+    // }
+
+    // int no_of_missed;
+    // no_of_missed = missed_index.size( );
+    // cout << " missed :" << no_of_missed << endl;
+
+    // for ( int i = 0; i < no_of_missed; i++ ) {
+    //     cout << missed_index[i] << endl;
+    //     used_index.erase(used_index.begin( ) + missed_index[no_of_missed - 1 - i]);
+    // }
+
+    // for ( int num : used_index ) {
+    //     std::cout << num << ' ';
+    // }
+    // cout << " current index number " << used_index.size( ) << endl;
+    // shiftsplinex.UsedIndex = used_index;
+    // use nearest neighbor to solved the problem.
+    for ( int i = 0; i < missed_index.size( ); i++ ) {
+        int c = missed_index[i] % patch_num_x;
+        int r = (missed_index[i] - c) / patch_num_x;
+        cout << "column and row are " << c << " " << r << endl;
+        truefalse(r, c) = 0;
+    }
+    cout << "truefalse map" << endl
+         << truefalse << endl;
+    std::vector<Point> points;
+    std::vector<Point> badpoints;
+    matrix<double>     shift_mat_x_fix, shift_mat_y_fix;
+
+    shift_mat_x_fix.set_size(total_patch_num, 1);
+    shift_mat_y_fix.set_size(total_patch_num, 1);
+
+    // shift_mat_x_fix = copy(shift_mat_x);
+    // for ( int i = 0; i < total_patch_num; i++ ) {
+    //     shift_mat_x_fix(i) = shift_mat_x(i);
+    shift_mat_x_fix = shift_mat_x;
+    shift_mat_y_fix = shift_mat_y;
+    for ( int i = 0; i < patch_num_y; i++ ) {
+        for ( int j = 0; j < patch_num_x; j++ ) {
+            if ( truefalse(i, j) == 0 ) {
+                badpoints.push_back({x_patch_1d(j), y_patch_1d(i)});
+            }
+            else {
+                Point temppoint;
+                temppoint = {x_patch_1d(j), y_patch_1d(i)};
+                points.push_back({x_patch_1d(j), y_patch_1d(i)});
+            }
+        }
+    }
+    int pointslength    = points.size( );
+    int badpointslength = badpoints.size( );
+    cout << pointslength << endl;
+    for ( int i = 0; i < pointslength; i++ ) {
+        cout << points[i].x << " " << points[i].y << endl;
+    }
+    for ( int i = 0; i < badpointslength; i++ ) {
+        Point nearest                            = findNearestNeighbor(badpoints[i], points);
+        int   jj                                 = nearest.x / patch_x_dim;
+        int   ii                                 = nearest.y / patch_y_dim;
+        int   jjb                                = badpoints[i].x / patch_x_dim;
+        int   iib                                = badpoints[i].y / patch_y_dim;
+        shift_mat_x_fix(iib * patch_num_x + jjb) = shift_mat_x(ii * patch_num_x + jj);
+        shift_mat_y_fix(iib * patch_num_x + jjb) = shift_mat_y(ii * patch_num_x + jj);
+        // shiftsplinex.z_on_knot(iib * patch_num_x + jjb) = shift_mat_x(ii * patch_num_x + jj);
+        // shiftspliney.z_on_knot(iib * patch_num_x + jjb) = shift_mat_y(ii * patch_num_x + jj);
+        // cout << "bad " << iib << " " << jjb << " good " << ii << " " << jj << endl;
+    }
+    cout << "before fix" << endl;
+    cout << reshape(shift_mat_x, patch_num_y, patch_num_x) << endl;
+    cout << "fixed" << endl;
+    // cout << reshape(shiftsplinex.z_on_knot, patch_num_x, patch_num_y) << endl;
+    cout << reshape(shift_mat_x_fix, patch_num_y, patch_num_x) << endl;
+    shiftsplinex.UpdateSplineInterpMapping(x_patch_1d, y_patch_1d, shift_mat_x_fix);
+    // shiftsplinex.UpdateSplineInterpMapping(x_patch_1d, y_patch_1d, shift_mat_x);
+    // shiftsplinex.MappingMatrix()
+
+    cout << "spline z" << endl;
+    cout << reshape(shiftsplinex.z, patch_num_y, patch_num_x) << endl;
+    cout << "mapping matrix" << endl;
+    cout << shiftsplinex.MappingMat << endl;
+
+    column_vector Join1dTest, Qz1dtest;
+    Join1dTest = zeros_matrix<double>(long(rows) * long(cols), 1);
+    double error;
+    error = shiftsplinex.OptimizationJoinObejct(Join1dTest);
+    // error = minfuncObject(Qz1dtest);
+    cout << "error " << error << endl;
+    find_min_using_approximate_derivatives(lbfgs_search_strategy(100000), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
+                                           objective_delta_stop_strategy(1e-8).be_verbose( ),
+                                           minfuncObject, Join1dTest, -1);
+    matrix<double> fitted_result;
+    fitted_result = reshape(Join1dTest, rows, cols);
+    cout << "solution: \n"
+         << fitted_result << endl;
+    matrix<double> fitted_z, fitted_qz2d;
+    fitted_qz2d = shiftsplinex.CalcQz(fitted_result);
+    fitted_z    = shiftsplinex.SplineSurface(x_patch_1d, y_patch_1d, fitted_qz2d);
+
+    cout << "fitted \n"
+         << fitted_z << endl;
+    cout << "fixed \n"
+         << reshape(shift_mat_x_fix, patch_num_y, patch_num_x) << endl;
+    cout << "original \n"
+         << reshape(shift_mat_x, patch_num_y, patch_num_x) << endl;
+    matrix<double> error_by_point;
+    error_by_point.set_size(patch_num_y, patch_num_x);
+    for ( int i = 0; i < patch_num_y; i++ ) {
+        for ( int j = 0; j < patch_num_x; j++ ) {
+            error_by_point(i, j) = shift_mat_x_fix(i * patch_num_x + j) - fitted_z(i, j);
+        }
+    }
+    cout << "error by point \n"
+         << error_by_point << endl;
+
+    // fit Qz
+    // Qz1dtest = zeros_matrix<double>(long(rows + 2) * long(cols + 2), 1);
+    // error    = shiftsplinex.OptimizationObejct(Join1dTest);
+    // // error = minfuncObject(Qz1dtest);
+    // cout << "error " << error << endl;
+    // find_min_using_approximate_derivatives(lbfgs_search_strategy(1000), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
+    //                                        objective_delta_stop_strategy(1e-8).be_verbose( ),
+    //                                        minfuncQzObject, Qz1dtest, -1);
+    // // matrix<double> fitted_qz2d;
+    // matrix<double> fitted_z_fromqz;
+    // fitted_qz2d     = reshape(Qz1dtest, long(rows + 2), long(cols + 2));
+    // fitted_z_fromqz = shiftsplinex.SplineSurface(x_patch_1d, y_patch_1d, fitted_qz2d);
+    // cout << "fitted Qz \n"
+    //      << fitted_qz2d << endl;
+    // cout << "fitted z fromqz \n"
+    //      << fitted_z_fromqz << endl;
+    // cout << "fitted \n"
+    //      << fitted_z << endl;
+
+    // for ( int i = 0; i < patch_num_y; i++ ) {
+    //     for ( int j = 0; j < patch_num_x; j++ ) {
+    //         error_by_point(i, j) = fitted_z_fromqz(i, j) - fitted_z(i, j);
+    //     }
+    // }
+    // cout << "error by point \n"
+    //      << error_by_point << endl;
+    // fit qz end================
+
+    // shiftsplinex.InitializeSplineModel(rows, cols, sizey, sizex,x_patch_1d,y_patch_1d,shift_mat_x_fix,);
+    //this method is not. non uniform bicubic spline should be used -------
+    // column_vector fixed_z_on_grid, qz1dtest1;
+    // shiftspline.z_on_knot = shift_mat_x;
+    // // fixed_z_on_grid       = shift_mat_x;
+    // // fixed_z_on_grid = zeros_matrix<double>(long(patch_num_y) * long(patch_num_x), 1);
+    // qz1dtest1 = zeros_matrix<double>(long(patch_num_y + 2) * long(patch_num_x + 2), 1);
+    // // for ( int i = 0; i < total_patch_num; i++ ) {
+    // //     fixed_z_on_grid(i) = shift_mat_x(i);
+    // // }
+
+    // double error;
+
+    // error = MissingGridFix(qz1dtest1);
+    // cout << "error " << error << endl;
+    // cout << "original1: \n"
+    //      << reshape(shift_mat_x, patch_num_y, patch_num_x) << endl;
+    // find_min_using_approximate_derivatives(lbfgs_search_strategy(10000), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
+    //                                        objective_delta_stop_strategy(1e-7).be_verbose( ),
+    //                                        MissingGridFix, qz1dtest1, -1);
+
+    // // cout << "solution: \n"
+    // //      << reshape(fixed_z_on_grid, patch_num_y, patch_num_x) << endl;
+    // double newerror;
+
+    // newerror = shiftspline.MissingGridFixObject(qz1dtest1);
+    // // cout << "original: \n"
+    // //      << reshape(shift_mat_x, patch_num_y, patch_num_x) << endl;
+    // cout << "original: \n"
+    //      << reshape(shiftspline.CalcQz(shift_mat_x), patch_num_y + 2, patch_num_x + 2) << endl;
+    // cout << "current error" << newerror << endl;
+    // cout << "solution: \n"
+    //      << reshape(qz1dtest1, patch_num_y + 2, patch_num_x + 2) << endl;
+    // // cout << "Qz2d original \n"
+    // //      << Qz << endl;
+    //this method is not. non uniform bicubic spline should be used end -------
+
+    return 0;
+}
+
+// bi cubic spline end -----------------------------------------
+
+// // test dlib start ------------------------------------------------------------------------------------------------------------------------------
+// // The contents of this file are in the public domain. See LICENSE_FOR_EXAMPLE_PROGRAMS.txt
+// /*
+
+//     This is an example illustrating the use the general purpose non-linear
+//     optimization routines from the dlib C++ Library.
+
+//     The library provides implementations of many popular algorithms such as L-BFGS
+//     and BOBYQA.  These algorithms allow you to find the minimum or maximum of a
+//     function of many input variables.  This example walks though a few of the ways
+//     you might put these routines to use.
+
+// */
+
+// // #include <dlib/optimization.h>
+// // #include <dlib/global_optimization.h>
+// // #include <iostream>
+// #include <dlib/dlib/queue.h>
+// #include "../../core/core_headers.h"
+// #include <iostream>
+// // #include "../../core/dlib/queue.h"
+
+// // #include <string>
+// // #include <fstream>
+// // #include "../../core/dlib/optimization.h"
+// // #include "../../core/dlib/global_optimization.h"
+// #include "dlib/dlib/optimization.h"
+// #include "dlib/dlib/global_optimization.h"
+// // #include "../../core/dlib-part/optimization.h"
+// // #include "../../core/dlib-part/global_optimization.h"
+// // #include <iostream>
+// // #include <vector>
+
+// using namespace std;
+// using namespace dlib;
+
+// // ----------------------------------------------------------------------------------------
+
+// // In dlib, most of the general purpose solvers optimize functions that take a
+// // column vector as input and return a double.  So here we make a typedef for a
+// // variable length column vector of doubles.  This is the type we will use to
+// // represent the input to our objective functions which we will be minimizing.
+// typedef matrix<double, 0, 1> column_vector;
+
+// // ----------------------------------------------------------------------------------------
+// // Below we create a few functions.  When you get down into main() you will see that
+// // we can use the optimization algorithms to find the minimums of these functions.
+// // ----------------------------------------------------------------------------------------
+
+// double rosen(const column_vector& m)
+// /*
+//     This function computes what is known as Rosenbrock's function.  It is
+//     a function of two input variables and has a global minimum at (1,1).
+//     So when we use this function to test out the optimization algorithms
+//     we will see that the minimum found is indeed at the point (1,1).
+// */
+// {
+//     const double x = m(0);
+//     const double y = m(1);
+
+//     // compute Rosenbrock's function and return the result
+//     return 100.0 * pow(y - x * x, 2) + pow(1 - x, 2);
+// }
+
+// // This is a helper function used while optimizing the rosen() function.
+// const column_vector rosen_derivative(const column_vector& m)
+// /*!
+//     ensures
+//         - returns the gradient vector for the rosen function
+// !*/
+// {
+//     const double x = m(0);
+//     const double y = m(1);
+
+//     // make us a column vector of length 2
+//     column_vector res(2);
+
+//     // now compute the gradient vector
+//     res(0) = -400 * x * (y - x * x) - 2 * (1 - x); // derivative of rosen() with respect to x
+//     res(1) = 200 * (y - x * x); // derivative of rosen() with respect to y
+//     return res;
+// }
+
+// // This function computes the Hessian matrix for the rosen() fuction.  This is
+// // the matrix of second derivatives.
+// matrix<double> rosen_hessian(const column_vector& m) {
+//     const double x = m(0);
+//     const double y = m(1);
+
+//     matrix<double> res(2, 2);
+
+//     // now compute the second derivatives
+//     res(0, 0) = 1200 * x * x - 400 * y + 2; // second derivative with respect to x
+//     res(1, 0) = res(0, 1) = -400 * x; // derivative with respect to x and y
+//     res(1, 1)             = 200; // second derivative with respect to y
+//     return res;
+// }
+
+// // ----------------------------------------------------------------------------------------
+
+// class rosen_model {
+//     /*!
+//         This object is a "function model" which can be used with the
+//         find_min_trust_region() routine.
+//     !*/
+
+//   public:
+//     typedef ::column_vector column_vector;
+//     typedef matrix<double>  general_matrix;
+
+//     double operator( )(
+//             const column_vector& x) const { return rosen(x); }
+
+//     void get_derivative_and_hessian(
+//             const column_vector& x,
+//             column_vector&       der,
+//             general_matrix&      hess) const {
+//         der  = rosen_derivative(x);
+//         hess = rosen_hessian(x);
+//     }
+// };
+
+// // ----------------------------------------------------------------------------------------
+
+// int main( ) try {
+//     // int main( ) {
+//     // Set the starting point to (4,8).  This is the point the optimization algorithm
+//     // will start out from and it will move it closer and closer to the function's
+//     // minimum point.   So generally you want to try and compute a good guess that is
+//     // somewhat near the actual optimum value.
+//     column_vector starting_point = {4, 8};
+
+//     // The first example below finds the minimum of the rosen() function and uses the
+//     // analytical derivative computed by rosen_derivative().  Since it is very easy to
+//     // make a mistake while coding a function like rosen_derivative() it is a good idea
+//     // to compare your derivative function against a numerical approximation and see if
+//     // the results are similar.  If they are very different then you probably made a
+//     // mistake.  So the first thing we do is compare the results at a test point:
+//     cout << "Difference between analytic derivative and numerical approximation of derivative: "
+//          << length(derivative(rosen)(starting_point) - rosen_derivative(starting_point)) << endl;
+
+//     cout << "Find the minimum of the rosen function()" << endl;
+//     // Now we use the find_min() function to find the minimum point.  The first argument
+//     // to this routine is the search strategy we want to use.  The second argument is the
+//     // stopping strategy.  Below I'm using the objective_delta_stop_strategy which just
+//     // says that the search should stop when the change in the function being optimized
+//     // is small enough.
+
+//     // The other arguments to find_min() are the function to be minimized, its derivative,
+//     // then the starting point, and the last is an acceptable minimum value of the rosen()
+//     // function.  That is, if the algorithm finds any inputs to rosen() that gives an output
+//     // value <= -1 then it will stop immediately.  Usually you supply a number smaller than
+//     // the actual global minimum.  So since the smallest output of the rosen function is 0
+//     // we just put -1 here which effectively causes this last argument to be disregarded.
+
+//     find_min(bfgs_search_strategy( ), // Use BFGS search algorithm
+//              objective_delta_stop_strategy(1e-7), // Stop when the change in rosen() is less than 1e-7
+//              rosen, rosen_derivative, starting_point, -1);
+//     // Once the function ends the starting_point vector will contain the optimum point
+//     // of (1,1).
+//     cout << "rosen solution:\n"
+//          << starting_point << endl;
+
+//     // Now let's try doing it again with a different starting point and the version
+//     // of find_min() that doesn't require you to supply a derivative function.
+//     // This version will compute a numerical approximation of the derivative since
+//     // we didn't supply one to it.
+//     starting_point = {-94, 5.2};
+//     find_min_using_approximate_derivatives(bfgs_search_strategy( ),
+//                                            objective_delta_stop_strategy(1e-7),
+//                                            rosen, starting_point, -1);
+//     // Again the correct minimum point is found and stored in starting_point
+//     cout << "rosen solution:\n"
+//          << starting_point << endl;
+
+//     // Here we repeat the same thing as above but this time using the L-BFGS
+//     // algorithm.  L-BFGS is very similar to the BFGS algorithm, however, BFGS
+//     // uses O(N^2) memory where N is the size of the starting_point vector.
+//     // The L-BFGS algorithm however uses only O(N) memory.  So if you have a
+//     // function of a huge number of variables the L-BFGS algorithm is probably
+//     // a better choice.
+//     starting_point = {0.8, 1.3};
+//     find_min(lbfgs_search_strategy(10), // The 10 here is basically a measure of how much memory L-BFGS will use.
+//              objective_delta_stop_strategy(1e-7).be_verbose( ), // Adding be_verbose() causes a message to be
+//              // printed for each iteration of optimization.
+//              rosen, rosen_derivative, starting_point, -1);
+
+//     cout << endl
+//          << "rosen solution: \n"
+//          << starting_point << endl;
+
+//     starting_point = {-94, 5.2};
+//     find_min_using_approximate_derivatives(lbfgs_search_strategy(10),
+//                                            objective_delta_stop_strategy(1e-7),
+//                                            rosen, starting_point, -1);
+//     cout << "rosen solution: \n"
+//          << starting_point << endl;
+
+//     // dlib also supports solving functions subject to bounds constraints on
+//     // the variables.  So for example, if you wanted to find the minimizer
+//     // of the rosen function where both input variables were in the range
+//     // 0.1 to 0.8 you would do it like this:
+//     starting_point = {0.1, 0.1}; // Start with a valid point inside the constraint box.
+//     find_min_box_constrained(lbfgs_search_strategy(10),
+//                              objective_delta_stop_strategy(1e-9),
+//                              rosen, rosen_derivative, starting_point, 0.1, 0.8);
+//     // Here we put the same [0.1 0.8] range constraint on each variable, however, you
+//     // can put different bounds on each variable by passing in column vectors of
+//     // constraints for the last two arguments rather than scalars.
+
+//     cout << endl
+//          << "constrained rosen solution: \n"
+//          << starting_point << endl;
+
+//     // You can also use an approximate derivative like so:
+//     starting_point = {0.1, 0.1};
+//     find_min_box_constrained(bfgs_search_strategy( ),
+//                              objective_delta_stop_strategy(1e-9),
+//                              rosen, derivative(rosen), starting_point, 0.1, 0.8);
+//     cout << endl
+//          << "constrained rosen solution: \n"
+//          << starting_point << endl;
+
+//     // In many cases, it is useful if we also provide second derivative information
+//     // to the optimizers.  Two examples of how we can do that are shown below.
+//     starting_point = {0.8, 1.3};
+//     find_min(newton_search_strategy(rosen_hessian),
+//              objective_delta_stop_strategy(1e-7),
+//              rosen,
+//              rosen_derivative,
+//              starting_point,
+//              -1);
+//     cout << "rosen solution: \n"
+//          << starting_point << endl;
+
+//     // We can also use find_min_trust_region(), which is also a method which uses
+//     // second derivatives.  For some kinds of non-convex function it may be more
+//     // reliable than using a newton_search_strategy with find_min().
+//     starting_point = {0.8, 1.3};
+//     find_min_trust_region(objective_delta_stop_strategy(1e-7),
+//                           rosen_model( ),
+//                           starting_point,
+//                           10 // initial trust region radius
+//     );
+//     cout << "rosen solution: \n"
+//          << starting_point << endl;
+
+//     // Next, let's try the BOBYQA algorithm.  This is a technique specially
+//     // designed to minimize a function in the absence of derivative information.
+//     // Generally speaking, it is the method of choice if derivatives are not available
+//     // and the function you are optimizing is smooth and has only one local optima.  As
+//     // an example, consider the be_like_target function defined below:
+//     column_vector target         = {3, 5, 1, 7};
+//     auto          be_like_target = [&](const column_vector& x) {
+//         return mean(squared(x - target));
+//     };
+//     starting_point = {-4, 5, 99, 3};
+//     find_min_bobyqa(be_like_target,
+//                     starting_point,
+//                     9, // number of interpolation points
+//                     uniform_matrix<double>(4, 1, -1e100), // lower bound constraint
+//                     uniform_matrix<double>(4, 1, 1e100), // upper bound constraint
+//                     10, // initial trust region radius
+//                     1e-6, // stopping trust region radius
+//                     100 // max number of objective function evaluations
+//     );
+//     cout << "be_like_target solution:\n"
+//          << starting_point << endl;
+
+//     // Finally, let's try the find_min_global() routine.  Like find_min_bobyqa(),
+//     // this technique is specially designed to minimize a function in the absence
+//     // of derivative information.  However, it is also designed to handle
+//     // functions with many local optima.  Where BOBYQA would get stuck at the
+//     // nearest local optima, find_min_global() won't.  find_min_global() uses a
+//     // global optimization method based on a combination of non-parametric global
+//     // function modeling and BOBYQA style quadratic trust region modeling to
+//     // efficiently find a global minimizer.  It usually does a good job with a
+//     // relatively small number of calls to the function being optimized.
+//     //
+//     // You also don't have to give it a starting point or set any parameters,
+//     // other than defining bounds constraints.  This makes it the method of
+//     // choice for derivative free optimization in the presence of multiple local
+//     // optima.  Its API also allows you to define functions that take a
+//     // column_vector as shown above or to explicitly use named doubles as
+//     // arguments, which we do here.
+//     // ---------------------------------------------
+//     auto complex_holder_table = [](double x0, double x1) {
+//         // This function is a version of the well known Holder table test
+//         // function, which is a function containing a bunch of local optima.
+//         // Here we make it even more difficult by adding more local optima
+//         // and also a bunch of discontinuities.
+
+//         // add discontinuities
+//         double sign = 1;
+//         for ( double j = -4; j < 9; j += 0.5 ) {
+//             if ( j < x0 && x0 < j + 0.5 )
+//                 x0 += sign * 0.25;
+//             sign *= -1;
+//         }
+//         // Holder table function tilted towards 10,10 and with additional
+//         // high frequency terms to add more local optima.
+//         return -(std::abs(sin(x0) * cos(x1) * exp(std::abs(1 - std::sqrt(x0 * x0 + x1 * x1) / pi))) - (x0 + x1) / 10 - sin(x0 * 10) * cos(x1 * 10));
+//     };
+
+//     // To optimize this difficult function all we need to do is call
+//     // find_min_global()
+//     auto result = find_min_global(complex_holder_table,
+//                                   {-10, -10}, // lower bounds
+//                                   {10, 10}, // upper bounds
+//                                   std::chrono::milliseconds(500) // run this long
+//     );
+
+//     cout.precision(9);
+//     // These cout statements will show that find_min_global() found the
+//     // globally optimal solution to 9 digits of precision:
+//     cout << "complex holder table function solution y (should be -21.9210397): " << result.y << endl;
+//     cout << "complex holder table function solution x:\n"
+//          << result.x << endl;
+
+// }
+
+// // * /
+
+// catch ( std::exception& e ) {
+
+//     cout << e.what( ) << endl;
+// }
+
+// // test dlib end ------------------------------------------------------------------------------------------------------------------------------
 
 // #include "../../core/core_headers.h"
 // #include <iostream>

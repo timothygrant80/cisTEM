@@ -1719,7 +1719,7 @@ void Database::AddRefinementPackageAsset(RefinementPackage* asset_to_add) {
 
 void Database::AddTemplateMatchesPackageAsset(TemplateMatchesPackage* asset_to_add) {
     BeginCommitLocker active_locker(this);
-    InsertOrReplace("TEMPLATE_MATCHES_PACKAGE_ASSETS", "Ptt", "TEMPLATE_MATCHES_PACKAGE_ASSET_ID", "NAME", "STARFILE_FILENAME", asset_to_add->asset_id, asset_to_add->name.ToUTF8( ).data( ), asset_to_add->starfile_filename.c_str( ));
+    InsertOrReplace("TEMPLATE_MATCHES_PACKAGE_ASSETS", "Ptt", "TEMPLATE_MATCHES_PACKAGE_ASSET_ID", "NAME", "STARFILE_FILENAME", asset_to_add->asset_id, asset_to_add->name.ToUTF8( ).data( ), asset_to_add->starfile_filename.ToUTF8( ).data( ));
 }
 
 void Database::AddStartupJob(long startup_job_id, long refinement_package_asset_id, wxString name, int number_of_starts, int number_of_cycles, float initial_res_limit, float final_res_limit, bool auto_mask, bool auto_percent_used, float initial_percent_used, float final_percent_used, float mask_radius, bool apply_blurring, float smoothing_factor, wxArrayLong result_volume_ids) {

@@ -387,72 +387,36 @@ void DisplayPanel::OnInvert(wxCommandEvent& WXUNUSED(event)) {
 
 void DisplayPanel::OnOpen(wxCommandEvent& WXUNUSED(event)) {
 
-    int  filename_length;
-    char InputFilename[500];
-
-    wxString caption = wxT("Choose Image File");
-    //wxString wildcard = wxT("IMG files (*.img)|*.img");
-    wxString wildcard        = wxT("IMG and MRC files (*.img;*.mrc)|*.img;*.mrc|All Files (*.*)|*.*");
-    wxString remember_path   = wxGetCwd( );
-    wxString defaultDir      = remember_path;
+    wxString caption         = wxT("Choose Image File");
+    wxString wildcard        = wxT("MRC files (*.mrc, *.mrcs)|*.mrc;*.mrcs|All Files (*.*)|*.*");
+    wxString defaultDir      = wxGetCwd( );
     wxString defaultFilename = wxEmptyString;
 
     wxFileDialog dialog(NULL, caption, defaultDir, defaultFilename, wildcard, wxFD_FILE_MUST_EXIST);
     if ( dialog.ShowModal( ) == wxID_OK ) {
-        wxString path            = dialog.GetPath( );
-        remember_path            = dialog.GetDirectory( );
+        wxString   path          = dialog.GetPath( );
         wxString   this_filename = dialog.GetFilename( );
         wxFileName filename      = this_filename;
 
-        // ok, we got a filename - was it an imagic file?.
-
         wxString extension = this_filename.Mid(this_filename.Len( ) - 4);
 
-        if ( extension.IsSameAs(wxT(".img")) ) {
-            // we're opening an imagic file..
+        int x_size, y_size, number_of_frames;
 
-            this_filename.Truncate(this_filename.Len( ) - 4);
-            filename_length = path.Len( );
+        // Does the file have MRC structure?
+        bool is_valid = GetMRCDetails(path, x_size, y_size, number_of_frames);
 
-            //	InputFilename = new char[filename_length];
-
-            for ( int mycounter = 0; mycounter < filename_length - 4; mycounter++ ) {
-                InputFilename[mycounter] = char(path.GetWritableChar(mycounter));
-            }
-
-            InputFilename[filename_length - 4] = 0;
-            //	path.Truncate(path.Len() - 4);
-
-            OpenFile(InputFilename, this_filename);
+        if ( is_valid ) {
+            // TODO: this leads to errors for any file extensions not included in MRCFile::OpenFile
+            /* In Tigris, there was the option to specify the filetype to open it with the appropriate
+            function; in cisTEM, we have a switch case that is determined by using an if statement
+            with a sequence of operator=|| that checks the extension; it will only open the file if the
+            extension is included in this list, which is not robust against the various extensions that
+            could exist*/
+            OpenFile(path, this_filename);
+            ReturnCurrentPanel( )->short_image_filename = this_filename;
         }
-        else {
-            // Perhaps we are opening some kind of mrc file..
-
-            filename_length = path.Len( );
-            //InputFilename = new char[filename_length];
-
-            for ( int mycounter = 0; mycounter < filename_length; mycounter++ ) {
-
-                InputFilename[mycounter] = char(path.GetWritableChar(mycounter));
-            }
-
-            InputFilename[filename_length] = 0;
-
-            // does it seem to be an MRC file? If so, try and open it
-            bool is_valid;
-            int  x_size, y_size, number_of_frames;
-            //wxStripExtension(&this_filename);
-            if ( filename.GetExt( ).IsSameAs("mrc", false) || filename.GetExt( ).IsSameAs("mrcs", false) ) {
-                is_valid = GetMRCDetails(path, x_size, y_size, number_of_frames); // This is being recognized as valid mrc now; good
-                if ( is_valid ) {
-                    OpenFile(InputFilename, this_filename);
-                }
-                else
-                    wxMessageBox(wxT("This file is not a compatible type. Accepted types are mrc and mrcs."), wxT("Error"), wxOK | wxICON_INFORMATION);
-            }
-        }
-        ReturnCurrentPanel( )->short_image_filename = this_filename;
-        //delete [] InputFilename;
+        else
+            wxMessageBox(wxT("This file is not a compatible type; must be mrc file format."), wxT("Error"), wxOK | wxICON_INFORMATION);
     }
 }
 
@@ -1331,6 +1295,11 @@ void DisplayNotebook::OnSelectionChange(wxAuiNotebookEvent& event) {
 }
 
 void DisplayNotebook::OnDragEnd(wxAuiNotebookEvent& event) {
+    /* Set selection to "old selection" to ensure that the tab drag follows
+     * the currently selected panel, rather than sticking with the index
+     * in the list of pages
+     */
+    this->SetSelection(event.GetOldSelection( ));
     parent_display_panel->UpdateToolbar( );
     event.Skip( );
 }

@@ -2,6 +2,7 @@
 #define __DisplayPanel__
 
 #include <wx/popupwin.h>
+#include <wx/aui/auibook.h>
 
 #define CAN_CHANGE_FILE 1 // 2^0, bit 0
 #define CAN_CLOSE_TABS 2 // 2^1, bit 1
@@ -26,7 +27,6 @@
 #define AUTO_GREYS 3
 
 // These are only used for the cisTEM_display program
-// Used as a toggle for picking images and coords
 #define COORDS_PICK 0
 #define IMAGES_PICK 1
 

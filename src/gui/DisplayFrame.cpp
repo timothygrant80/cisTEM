@@ -242,7 +242,7 @@ void DisplayFrame::OnSaveTxtClick(wxCommandEvent& event) {
             file_to_update.Clear( );
 
             if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode == IMAGES_PICK ) {
-                for ( long i = 0; i < cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnNumberofImages( ); i++ ) {
+                for ( long i = 0; i <= cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnNumberofImages( ); i++ ) {
                     if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->image_is_selected[i] )
                         file_to_update.AddLine(wxString::Format("%li", i));
                 }
@@ -296,7 +296,7 @@ void DisplayFrame::OnSaveTxtAsClick(wxCommandEvent& event) {
             path                            = save_dialog->GetPath( );
             remember_path                   = save_dialog->GetDirectory( );
             wxTextFile* new_selections_file = new wxTextFile(path);
-            for ( long i = 0; i < cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnNumberofImages( ); i++ ) {
+            for ( long i = 0; i <= cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnNumberofImages( ); i++ ) {
                 if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->image_is_selected[i] )
                     new_selections_file->AddLine(wxString::Format("%li", i));
             }
@@ -581,7 +581,7 @@ bool DisplayFrame::LoadCoords(wxString current_line, long& x, long& y, long& ima
     current_line.SubString(prev_whitespace_position + 1, index_of_whitespace - 1).ToLong(&image_number);
 
     // First, check that all coordinates and image numbers are valid for the open image
-    if ( x < cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnImageXSize( ) && y < cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnImageYSize( ) && image_number < cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnNumberofImages( ) ) {
+    if ( x < cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnImageXSize( ) && y < cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnImageYSize( ) && image_number <= cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnNumberofImages( ) ) {
         cisTEMDisplayPanel->ReturnCurrentPanel( )->coord_tracker->ToggleCoord(image_number, x, y);
         return true;
     }
@@ -603,14 +603,14 @@ bool DisplayFrame::LoadSelections(wxString current_line) {
     }
 
     // Get the value that's selected
-    long image_number = -1;
+    long image_number;
     current_line.ToLong(&image_number);
 
-    // If the value exceeds the possible dimensions don't try to access the index for setting selected
-    if ( image_number < cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnNumberofImages( ) ) {
+    if ( image_number <= cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnNumberofImages( ) ) {
         cisTEMDisplayPanel->ReturnCurrentPanel( )->SetImageSelected(image_number, false);
         return true;
     }
+    // If the value exceeds the possible dimensions don't try to access the index for setting selected
     else {
         wxMessageDialog invalid_file_dialog(this, wxString::Format("The file being opened contains selected images that exceed the number of images in the current file. Cannot open the selections.(Images in open file: %i. Image index sought: %li)", cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnNumberofImages( ), image_number), "Invalid Selection(s) for Current Image(s)", wxOK | wxOK_DEFAULT | wxICON_EXCLAMATION);
         cisTEMDisplayPanel->ClearSelection(false);

@@ -33,8 +33,20 @@ void ImageFile::SetFileTypeFromExtension( ) {
         file_type_string = "EER";
     }
     else {
-        file_type        = UNSUPPORTED_FILE_TYPE;
-        file_type_string = "Unsupported file type";
+        // FIXME: Change for display prog:
+        // We will perform quick check on MRC format so any properly formatted MRC type with any extension
+        // can be opened. Maybe a bit ugly, so alternatives should potentially be considered.
+        // GetMRCDetails is also wanted as a member of the MRCFile class, and this method relies on the function
+        // being a non-member
+        int x_size, y_size, number_of_frames;
+        if ( GetMRCDetails(filename.GetFullPath( ), x_size, y_size, number_of_frames) ) {
+            file_type        = MRC_FILE;
+            file_type_string = "MRC";
+        }
+        else {
+            file_type        = UNSUPPORTED_FILE_TYPE;
+            file_type_string = "Unsupported file type";
+        }
     }
 }
 

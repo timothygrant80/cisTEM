@@ -106,6 +106,7 @@
 #include "../gui/MyFSCPanel.h"
 #include "../gui/MyRefinementResultsPanel.h"
 #include "../gui/AngularDistributionPlotPanel.h"
+#include "../programs/cisTEM_display/display_gui.h"
 #include "../gui/DisplayPanel.h"
 #include "../gui/DisplayFrame.h"
 #include "../gui/ClassificationPlotPanel.h"

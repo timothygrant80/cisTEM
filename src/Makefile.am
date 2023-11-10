@@ -217,7 +217,8 @@ noinst_HEADERS = core/stopwatch.h \
                  programs/console_test/sine_128x128x1.cpp \
                  gui/icons/match_template_icon.cpp \
                  programs/refine3d/ProjectionComparisonObjects.h \
-                 core/scattering_potential.h
+                 core/scattering_potential.h \
+                 programs/cisTEM_display/display_gui.h
 
                  
 
@@ -307,13 +308,13 @@ bin_PROGRAMS =  cisTEM_job_control \
                 invert_hand \
                 quick_test \
                 append_stacks \
+                cisTEM_display \
                 cisTEM \
                 gui_test \
                 convert_star_to_binary \
                 convert_binary_to_star \
                 convert_eer_to_mrc \
                 azimuthal_average \
-                cisTEM_display \
                 normalize_stack \
                 print_stack_statistics \
                 combine_stacks_by_star \
@@ -448,6 +449,7 @@ libguicore_a_CXXFLAGS = $(WX_CPPFLAGS)
 libguicore_a_CPPFLAGS = $(WX_CPPFLAGS)
 
 cisTEM_SOURCES = programs/projectx/projectx.cpp \
+                programs/cisTEM_display/display_gui.cpp \
                 gui/gui_globals.cpp \
                 gui/MyFSCPanel.cpp \
                 gui/MyRefinementResultsPanel.cpp \
@@ -517,7 +519,6 @@ cisTEM_SOURCES = programs/projectx/projectx.cpp \
                 gui/AngularDistributionPlotPanel.cpp \
                 core/particle_finder.cpp \
                 gui/DisplayPanel.cpp \
-                gui/DisplayFrame.cpp \
                 gui/ClassumSelectionCopyFromDialog.cpp \
                 gui/MyOverviewPanel.cpp \
                 gui/AbInitio3DPanel.cpp \
@@ -552,7 +553,7 @@ cisTEM_CXXFLAGS = $(WX_CPPFLAGS)
 cisTEM_CPPFLAGS = $(WX_CPPFLAGS)
 cisTEM_LDADD    = libguicore.a libcore.a $(WX_LIBS)
 
-cisTEM_display_SOURCES = programs/cisTEM_display/cisTEM_display.cpp gui/gui_globals.cpp gui/MyFSCPanel.cpp gui/MyRefinementResultsPanel.cpp gui/PlotFSCPanel.cpp gui/gui_functions.cpp gui/my_controls.cpp gui/MyRenameDialog.cpp gui/BitmapPanel.cpp gui/PickingBitmapPanel.cpp gui/job_panel.cpp gui/ProjectX_gui.cpp gui/ResultsDataViewListCtrl.cpp gui/MyMovieFilterDialog.cpp gui/MainFrame.cpp gui/MyAssetPanelParent.cpp gui/MyMovieAssetPanel.cpp gui/MyImageAssetPanel.cpp gui/MyParticlePositionAssetPanel.cpp gui/MyVolumeChooserDialog.cpp gui/MovieImportDialog.cpp gui/MyImageImportDialog.cpp gui/MyVolumeImportDialog.cpp gui/ErrorDialog.cpp gui/AlignMoviesPanel.cpp gui/MyRunProfilesPanel.cpp gui/mathplot.cpp gui/MyMovieAlignResultsPanel.cpp gui/MyFindCTFResultsPanel.cpp gui/PickingResultsPanel.cpp gui/MyAddRunCommandDialog.cpp gui/MyNewProjectWizard.cpp gui/MyNewRefinementPackageWizard.cpp gui/UnblurResultsPanel.cpp gui/ShowCTFResultsPanel.cpp gui/PickingResultsDisplayPanel.cpp gui/CTF1DPanel.cpp gui/FindCTFPanel.cpp gui/FindParticlesPanel.cpp gui/MyVolumeAssetPanel.cpp gui/MyResultsPanel.cpp gui/MyAssetsPanel.cpp gui/ActionsPanelSpa.cpp gui/ActionsPanelTm.cpp gui/MySettingsPanel.cpp gui/MyParticlePositionExportDialog.cpp gui/MyFrealignExportDialog.cpp gui/MyRelionExportDialog.cpp gui/MyRefinementPackageAssetPanel.cpp gui/MyRefine3DPanel.cpp gui/MyRefine2DPanel.cpp gui/ClassificationPlotPanel.cpp gui/AbInitioPlotPanel.cpp gui/Refine2DResultsPanel.cpp gui/AngularDistributionPlotPanel.cpp core/particle_finder.cpp gui/DisplayPanel.cpp gui/DisplayFrame.cpp gui/ClassumSelectionCopyFromDialog.cpp gui/MyOverviewPanel.cpp gui/AbInitio3DPanel.cpp gui/AssetPickerComboPanel.cpp gui/AutoRefine3dPanel.cpp gui/DisplayRefinementResultsPanel.cpp gui/ImportRefinementPackageWizard.cpp gui/PopupTextDialog.cpp gui/ExportRefinementPackageWizard.cpp gui/Generate3DPanel.cpp gui/LargeAngularPlotDialog.cpp gui/RefinementParametersDialog.cpp gui/Sharpen3DPanel.cpp gui/PlotCurvePanel.cpp gui/DistributionPlotDialog.cpp gui/RefineCTFPanel.cpp gui/ShowTemplateMatchResultsPanel.cpp gui/MatchTemplatePanel.cpp gui/MatchTemplateResultsPanel.cpp gui/RefineTemplatePanel.cpp gui/CombineRefinementPackagesWizard.cpp
+cisTEM_display_SOURCES = programs/cisTEM_display/cisTEM_display.cpp programs/cisTEM_display/display_gui.cpp gui/DisplayPanel.cpp gui/DisplayFrame.cpp
 cisTEM_display_CXXFLAGS = $(WX_CPPFLAGS)
 cisTEM_display_CPPFLAGS = $(WX_CPPFLAGS)
 cisTEM_display_LDADD = libguicore.a libcore.a $(WX_LIBS)

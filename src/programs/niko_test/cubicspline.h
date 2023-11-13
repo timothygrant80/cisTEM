@@ -17,6 +17,7 @@ class cubicspline {
     int            total; // remains to be check
     long           totaldim;
     matrix<double> phi;
+    matrix<double> invphi;
     matrix<double> Qy;
     matrix<double> MappingMat;
     // matrix<double> UsedIndex;
@@ -38,4 +39,6 @@ class cubicspline {
     matrix<double> SplineCurve(matrix<double> x, matrix<double> Qy);
     matrix<double> MappingMatrix(matrix<double> x);
     matrix<double> ApplyMappingMat(matrix<double> Qy);
+    matrix<double> ApplyMappingMatWithMat(matrix<double> MappingMat, matrix<double> Qy);
+    double         ApplySplineFunc(double xp);
 };

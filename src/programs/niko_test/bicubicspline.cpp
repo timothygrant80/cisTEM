@@ -97,7 +97,8 @@ void bicubicspline::CalcPhi( ) {
     // total                    = (this->m + 2) * (this->n + 2);
     // totaldim                 = (this->m + 2) * (this->n + 2);
     // long dim = (this->m + 2) * (this->n + 2);
-    this->phi.set_size(this->totaldim, this->totaldim);
+    // this->phi.set_size(this->totaldim, this->totaldim);
+    this->phi = zeros_matrix<double>(this->totaldim, this->totaldim);
 
     for ( int j = 0; j < this->m; j++ ) {
         for ( int i = 0; i < this->n; i++ ) {
@@ -157,6 +158,8 @@ void bicubicspline::CalcPhi( ) {
     this->phi(this->n * this->m + 2 * this->m + 2 * this->n + 3, (this->m + 2) * (this->n + 2) - (this->n + 2) - 2)     = -2;
     this->phi(this->n * this->m + 2 * this->m + 2 * this->n + 3, (this->m + 2) * (this->n + 2) - 1)                     = 1;
     // return phi;
+    this->invphi.set_size(this->totaldim, this->totaldim);
+    this->invphi = inv(this->phi);
 }
 
 matrix<double> bicubicspline::CalcQz(matrix<double> z_on_knot) {
@@ -399,10 +402,12 @@ matrix<double> bicubicspline::MappingMatrix(matrix<double> x, matrix<double> y) 
     matrix<double> PVX;
     double         u;
     double         v;
-    PUY = y / this->spline_patch_dim_y;
-    PVX = x / this->spline_patch_dim_x;
-    cout << "PUY" << PUY << endl;
-    cout << "PVX" << PVX << endl;
+    PUY                      = y / this->spline_patch_dim_y;
+    PVX                      = x / this->spline_patch_dim_x;
+    this->Mapping_Mat_Row_no = leny;
+    this->Mapping_Mat_Col_no = lenx;
+    // cout << "PUY" << PUY << endl;
+    // cout << "PVX" << PVX << endl;
     if ( PUY(leny - 1) > this->m or PVX(lenx - 1) > this->n ) {
         cout << " the data set exists the boundary of the spline model" << endl;
     }
@@ -563,8 +568,10 @@ matrix<double> bicubicspline::MappingMatrix(matrix<double> x, matrix<double> y) 
 //     // for (int i=0;i<)
 // }
 
-matrix<double> bicubicspline::ApplyMappingMat(matrix<double> Qz1d) {
-    Qz2d = reshape(Qz1d, (this->m + 2), (this->n + 2));
+// matrix<double> bicubicspline::ApplyMappingMat(matrix<double> Qz1d) {
+// Qz2d = reshape(Qz1d, (this->m + 2), (this->n + 2));
+matrix<double> bicubicspline::ApplyMappingMat(matrix<double> Qz2d) {
+    // Qz2d = reshape(Qz1d, (this->m + 2), (this->n + 2));
     matrix<double> smoothsurf;
     smoothsurf.set_size(this->Mapping_Mat_Row_no, this->Mapping_Mat_Col_no);
     int   total_no = this->Mapping_Mat_Col_no * this->Mapping_Mat_Row_no;
@@ -588,6 +595,48 @@ matrix<double> bicubicspline::ApplyMappingMat(matrix<double> Qz1d) {
     }
 
     return smoothsurf;
+}
+
+double bicubicspline::ApplySplineFunc(double xp, double yp) {
+    double zp;
+    double PUY;
+    double PVX;
+    double u;
+    double v;
+    PUY = yp / this->spline_patch_dim_y;
+    PVX = xp / this->spline_patch_dim_x;
+    int pv;
+    int pu;
+
+    pv = int(PVX);
+    pu = int(PUY);
+
+    // cout << " here "
+    //      << "PUY PVX pu pv " << PUY << " " << PVX << " " << pu << " " << pv << endl;
+
+    if ( PUY > this->m - 1 ) {
+        cout << "the y position of the point exceed the spline surface " << endl;
+    }
+    if ( PVX > this->n - 1 ) {
+        cout << "the x position of the point exceed the spline surface " << endl;
+    }
+
+    // if ( ((PVX - (this->n - 1)) == 0) ) {
+    if ( (int(PVX) == (this->n - 1)) && (PVX <= this->n - 1) ) {
+        int pv = this->n - 2;
+    }
+
+    if ( (int(PUY) == (this->m - 1)) && (PUY <= this->m - 1) ) {
+        int pu = this->m - 2;
+    }
+
+    u = PUY - pu;
+    v = PVX - pv;
+    // cout << "u v pu pv " << u << " " << v << " " << pu << " " << pv << endl;
+    zp = ApplySpline(u, v, pu, pv, this->Qz2d);
+    // cout << "zp " << zp << endl;
+
+    return zp;
 }
 
 // double MissingGridFixObject(matrix<double> z_on_knot_refined) {

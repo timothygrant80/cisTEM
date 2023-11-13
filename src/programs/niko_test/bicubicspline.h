@@ -19,6 +19,7 @@ class bicubicspline {
     int            total; // remains to be check
     long           totaldim;
     matrix<double> phi;
+    matrix<double> invphi;
     matrix<double> Qz2d;
     matrix<double> MappingMat;
     // matrix<double> UsedIndex;
@@ -42,8 +43,9 @@ class bicubicspline {
     matrix<double> ZOnGrid(matrix<double> Qz2d);
     matrix<double> SplineSurface(matrix<double> x, matrix<double> y, matrix<double> Qz2d);
     matrix<double> MappingMatrix(matrix<double> x, matrix<double> y);
-    matrix<double> ApplyMappingMat(matrix<double> Qz1d);
+    // matrix<double> ApplyMappingMat(matrix<double> Qz1d);
+    matrix<double> ApplyMappingMat(matrix<double> Qz2d);
     double         OptimizationObejct(matrix<double> Qz1d);
     double         OptimizationKnotObejct(matrix<double> join1d);
+    double         ApplySplineFunc(double xp, double yp);
 };
-

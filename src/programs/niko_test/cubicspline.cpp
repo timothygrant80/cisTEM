@@ -43,7 +43,8 @@ void cubicspline::InitializeSplineModel(int knot_no, float spline_patch_dim, flo
 }
 
 void cubicspline::CalcPhi( ) {
-    this->phi.set_size(this->totaldim, this->totaldim);
+    // this->phi.set_size(this->totaldim, this->totaldim);
+    this->phi = zeros_matrix<double>(this->totaldim, this->totaldim);
     for ( int i = 0; i < this->n; i++ ) {
         this->phi(i + 1, i)     = 1;
         this->phi(i + 1, i + 1) = 4;
@@ -57,6 +58,8 @@ void cubicspline::CalcPhi( ) {
     this->phi(this->n + 1, this->n - 1) = 1;
     this->phi(this->n + 1, this->n)     = -2;
     this->phi(this->n + 1, this->n + 1) = 1;
+    this->invphi.set_size(this->totaldim, this->totaldim);
+    this->invphi = inv(this->phi);
 }
 
 matrix<double> cubicspline::CalcQy(matrix<double> y_on_knot) {
@@ -155,6 +158,7 @@ matrix<double> cubicspline::MappingMatrix(matrix<double> x) {
     // matrix<double> y_curve;
     matrix<double> MappingMat;
     MappingMat.set_size(lenx, 3);
+    this->Mapping_Mat_no = lenx;
     // y_curve.set_size(lenx, 1);
     int            count = 0;
     matrix<double> PVX;
@@ -225,8 +229,47 @@ matrix<double> cubicspline::ApplyMappingMat(matrix<double> Qy) {
 
         smoothcurve(knot) = ApplySpline(v, pv, Qy);
     }
-
     return smoothcurve;
+}
+
+matrix<double> cubicspline::ApplyMappingMatWithMat(matrix<double> MappingMat, matrix<double> Qy) {
+    // Qz2d = reshape(Qy, (this->m + 2), (this->n + 2));
+    matrix<double> smoothcurve;
+    smoothcurve.set_size(MappingMat.size( ), 1);
+    int total_no = MappingMat.size( );
+    int pv;
+
+    float v;
+    int   knot;
+
+    for ( int i = 0; i < total_no; i++ ) {
+        knot = MappingMat(i, 0);
+        pv   = MappingMat(i, 1);
+        v    = MappingMat(i, 2);
+
+        smoothcurve(knot) = ApplySpline(v, pv, Qy);
+    }
+    return smoothcurve;
+}
+
+double cubicspline::ApplySplineFunc(double xp) {
+    double yp;
+    double PVX;
+    double v;
+    PVX = xp / this->spline_patch_dim;
+    int pv;
+
+    pv = int(PVX);
+    // if ( PVX == this->n - 1 ) {
+    if ( PVX <= this->n - 1 && int(PVX) == this->n - 1 ) {
+        pv = this->n - 2;
+    }
+    if ( PVX > this->n - 1 ) {
+        cout << "the point exceed the spline curve range." << endl;
+    }
+    v  = PVX - pv;
+    yp = ApplySpline(v, pv, this->Qy);
+    return yp;
 }
 
 // double OptimizationObejct(matrix<double> Qz1d) {}

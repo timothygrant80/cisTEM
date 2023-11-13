@@ -11,9 +11,12 @@
 #include <dlib/dlib/matrix.h>
 #include "./bicubicspline.h"
 #include "./cubicspline.h"
+#include <thread>
+#include <chrono>
 
 using namespace std;
 using namespace dlib;
+// using namespace cistem;
 
 typedef matrix<double, 0, 1> column_vector;
 
@@ -47,6 +50,323 @@ Point findNearestNeighbor(const Point& point, const std::vector<Point>& points) 
 bicubicspline spline;
 bicubicspline shiftsplinex, shiftspliney;
 
+// patchshifts shape : image_no,patch_x_num,patch_y_mum
+class MovieFrameSpline {
+
+    // int patch_x_num;
+    // int patch_y_num;
+
+  public:
+    int knot_no_x;
+    int knot_no_y;
+    int knot_no_z; // this is the knot no along the frame sequece dimension
+    int total_knot;
+
+    double spline_patch_dimx;
+    double spline_patch_dimy;
+    double spline_patch_dimz;
+
+    matrix<double>  x;
+    matrix<double>  y;
+    matrix<double>  z;
+    matrix<double>* discrete_values;
+    matrix<double>* smooth_interp; // smooth_interp[i] is the smooth surface of i th frame
+
+    int image_x_dim;
+    int image_y_dim;
+    int frame_no;
+
+    cubicspline**    Spline1d;
+    bicubicspline*   Spline2d;
+    matrix<double>   phiz;
+    matrix<double>   phixy;
+    matrix<double>   invphiz;
+    matrix<double>   invphixy;
+    matrix<double>   MappingMat_z;
+    matrix<double>   MappingMat_xy;
+    long             Mapping_Mat_Row_no;
+    long             Mapping_Mat_Col_no;
+    matrix<double>** value_on_knot; // shape: knot_no_y, knot_no_x, knot_no_z
+
+    void Initialize(int knot_no_along_z, int row_no, int column_no, int frame_no, int image_x_dim, int image_y_dim, float spline_knotz_distance, float spline_knotx_distance, float spline_knoty_distance) {
+        this->frame_no    = frame_no;
+        this->image_x_dim = image_x_dim;
+        this->image_y_dim = image_y_dim;
+
+        this->spline_patch_dimx = spline_knotx_distance;
+        this->spline_patch_dimy = spline_knoty_distance;
+        this->spline_patch_dimz = spline_knotz_distance;
+
+        this->knot_no_y  = row_no;
+        this->knot_no_x  = column_no;
+        this->knot_no_z  = knot_no_along_z;
+        this->total_knot = knot_no_along_z * row_no * column_no;
+        // double tmp_total_z = this->spline_patch_dimz * (this->knot_no_z - 1);
+
+        // this->z.set_size(frame_no, 1);
+        // this->z = this->z* ;
+        // this->z = range(0, frame_no - 1);
+
+        // cout << "z is " << z << endl;
+        // this->x
+
+        this->value_on_knot = new matrix<double>*[row_no];
+        for ( int i = 0; i < row_no; i++ ) {
+            this->value_on_knot[i] = new matrix<double>[column_no];
+        }
+
+        this->Spline1d = new cubicspline*[row_no];
+        for ( int i = 0; i < row_no; i++ ) {
+            this->Spline1d[i] = new cubicspline[column_no];
+        }
+
+        for ( int i = 0; i < row_no; i++ ) {
+            for ( int j = 0; j < column_no; j++ ) {
+                this->Spline1d[i][j].InitializeSpline(knot_no_along_z, spline_patch_dimz);
+            }
+        }
+
+        this->phiz    = Spline1d[0][0].phi;
+        this->invphiz = Spline1d[0][0].invphi;
+        // this->MappingMat_z = Spline1d[0][0].MappingMatrix(this->z);
+
+        this->Spline2d = new bicubicspline[this->frame_no];
+        for ( int i = 0; i < frame_no; i++ ) {
+            Spline2d[i].InitializeSpline(row_no, column_no, spline_patch_dimy, spline_patch_dimx);
+        }
+        this->phixy    = Spline2d[0].phi;
+        this->invphixy = Spline2d[0].invphi;
+        // this->MappingMat_xy = Spline2d[0].MappingMatrix(this->x, this->y);
+
+        // this->spline_patch_dim_x = spline_patch_dimx;
+        // this->spline_patch_dim_y = spline_patch_dimy;
+        // this->total              = (this->m + 2) * (this->n + 2);
+        // this->totaldim           = (this->m + 2) * (this->n + 2);
+        // CalcPhi( );
+    }
+
+    void Update3DSpline(matrix<double>** value_on_knot) {
+        this->value_on_knot = value_on_knot;
+    }
+
+    void Update3DSplineInterpMapping(matrix<double> x_vector, matrix<double> y_vector, matrix<double> z_vector) {
+        this->x                  = x_vector;
+        this->y                  = y_vector;
+        this->z                  = z_vector;
+        this->Mapping_Mat_Row_no = y_vector.size( );
+        this->Mapping_Mat_Col_no = x_vector.size( );
+
+        matrix<double> Value_On_Image;
+        Value_On_Image.set_size(this->knot_no_y, this->knot_no_x);
+
+        for ( int i = 0; i < this->knot_no_y; i++ ) {
+            for ( int j = 0; j < this->knot_no_x; j++ ) {
+                Spline1d[i][j].UpdateSpline(this->value_on_knot[i][j]);
+                Spline1d[i][j].FineGridCurve = Spline1d[i][j].SplineCurve(this->z, Spline1d[i][j].Qy);
+                Spline1d[i][j].MappingMat    = Spline1d[i][j].MappingMatrix(this->z);
+            }
+        }
+        for ( int frame_ind = 0; frame_ind < this->frame_no; frame_ind++ ) {
+            for ( int i = 0; i < this->knot_no_y; i++ ) {
+                for ( int j = 0; j < this->knot_no_x; j++ ) {
+                    Value_On_Image(i, j) = Spline1d[i][j].FineGridCurve(frame_ind);
+                }
+            }
+            Spline2d[frame_ind].UpdateSpline(Value_On_Image);
+            Spline2d[frame_ind].MappingMat = Spline2d[frame_ind].MappingMatrix(x_vector, y_vector);
+        }
+
+        this->MappingMat_xy = Spline2d[0].MappingMatrix(this->x, this->y);
+        this->MappingMat_z  = Spline1d[0][0].MappingMatrix(this->z);
+    }
+
+    matrix<double>* SmoothInterp( ) {
+        matrix<double>* smooth_interp;
+        smooth_interp = new matrix<double>[this->frame_no];
+        for ( int frame_ind = 0; frame_ind < this->frame_no; frame_ind++ ) {
+            smooth_interp[frame_ind] = Spline2d[frame_ind].ApplyMappingMat(Spline2d[frame_ind].Qz2d);
+        }
+        this->smooth_interp = smooth_interp;
+        return smooth_interp;
+    }
+
+    void UpdateDiscreteValues(matrix<double>* Discret_Values_For_Smooth) {
+        // matrix<double>* discrete_values;
+        this->discrete_values = new matrix<double>[this->frame_no];
+
+        for ( int frame_ind = 0; frame_ind < this->frame_no; frame_ind++ ) {
+            // this->discrete_values[frame_ind].set_size(this->Mapping_Mat_Col_no,this->Mapping_Mat_Row_no);
+            this->discrete_values[frame_ind] = Discret_Values_For_Smooth[frame_ind];
+        }
+    }
+
+    double Apply3DSplineFunc(double x, double y, int image_index) {
+        double value;
+        value = this->Spline2d[image_index].ApplySplineFunc(x, y);
+        return value;
+    }
+
+    // double OptimizationKnotObejct(matrix<double> value_on_knot_1d) {
+
+    //     matrix<double> value_on_knot_2d = reshape(value_on_knot_1d, this->knot_no_x * this->knot_no_y, this->knot_no_z);
+    //     matrix<double> tmp;
+
+    //     // assign parameters
+    //     for ( int i = 0; i < this->knot_no_y; i++ ) {
+    //         for ( int j = 0; j < this->knot_no_x; j++ ) {
+    //             tmp = rowm(value_on_knot_2d, (i * this->knot_no_x + j));
+    //             // cout << "size" << tmp.size( ) << endl;
+    //             // cout << "current " << i << " " << j << " " << i * this->knot_no_x + j << " " << tmp << endl;
+    //             // this->value_on_knot[i][j] = tmp;
+    //             // // cout << "tmp " << tmp << endl;
+    //             // this->Spline1d[i][j].UpdateSpline(this->value_on_knot[i][j]);
+    //             this->Spline1d[i][j].UpdateSpline(tmp);
+    //             this->Spline1d[i][j].FineGridCurve = this->Spline1d[i][j].ApplyMappingMat(Spline1d[i][j].Qy);
+    //         }
+    //     }
+
+    //     matrix<double> Value_On_Image;
+    //     Value_On_Image.set_size(this->knot_no_y, this->knot_no_x);
+
+    //     for ( int frame_ind = 0; frame_ind < this->frame_no; frame_ind++ ) {
+    //         for ( int i = 0; i < this->knot_no_y; i++ ) {
+    //             for ( int j = 0; j < this->knot_no_x; j++ ) {
+    //                 Value_On_Image(i, j) = Spline1d[i][j].FineGridCurve(frame_ind);
+    //             }
+    //         }
+    //         this->Spline2d[frame_ind].UpdateSpline(Value_On_Image);
+    //         // this->Spline2d[frame_ind].MappingMat = this->Spline2d[frame_ind].MappingMatrix(this->x, this->y);
+    //     }
+    //     matrix<double>* smooth_interp; // it sames the interpolated values
+    //     smooth_interp = this->SmoothInterp( );
+
+    //     double error;
+
+    //     error = 0.0;
+
+    //     for ( int k = 0; k < this->frame_no; k++ ) {
+    //         for ( int i = 0; i < this->Mapping_Mat_Row_no; i++ ) {
+    //             for ( int j = 0; j < this->Mapping_Mat_Col_no; j++ ) {
+    //                 // error = error + powf(std::abs(smooth_interp[k](i, j) - this->discrete_values[k](i, j)), 2);
+    //                 // error = error + std::abs(smooth_interp[k](i, j) - this->discrete_values[k](i, j));
+    //                 error = error + powf(std::abs(smooth_interp[k](i, j) - this->discrete_values[k](i, j)), 2);
+    //                 // cout << " interp and discret val " << smooth_interp[k](i, j) << " " << this->discrete_values[k](i, j) << endl;
+    //                 // cout << i * col_no + j << " " << error << " " << smoothsurf(i, j) << " " << z(i * col_no + j) << endl;
+    //             }
+    //         }
+    //     }
+
+    //     return error;
+    // }
+
+    double OptimizationKnotObejctFast(matrix<double> value_on_knot_1d) {
+        // cout << "size" << value_on_knot_1d.size( ) << endl;
+        // matrix<double>  value_on_knot_2d = reshape(value_on_knot_1d, this->knot_no_x * this->knot_no_y, this->knot_no_z);
+        matrix<double>  tmp;
+        matrix<double>* grid_curves;
+        matrix<double>  tmp_qy;
+        matrix<double>  tmp_qz;
+
+        // matrix<double> value_on_knot_2d;
+        // value_on_knot_2d.set_size(this->knot_no_x * this->knot_no_y, this->knot_no_z);
+        // for(int i = 0; i<this->knot_no_x*this->knot_no_y;i++){
+        //     value_on_knot_2d(i,)
+        // }
+        grid_curves = new matrix<double>[this->knot_no_x * this->knot_no_y];
+        // tmp_qz.set_size(this->knot_no_y, this->knot_no_x);
+
+        // assign parameters
+        int knot_no_2d = this->knot_no_x * this->knot_no_y;
+        // for ( int k = 0; k < this->knot_no_z; k++ ) {
+
+        for ( int i = 0; i < this->knot_no_y; i++ ) {
+            for ( int j = 0; j < this->knot_no_x; j++ ) {
+                // tmp = rowm(value_on_knot_2d, (i * this->knot_no_x + j));
+                int currentid = i * this->knot_no_x + j;
+                // cout << "range " << range(currentid * this->knot_no_z, (currentid + 1) * this->knot_no_z - 1);
+                tmp = rowm(value_on_knot_1d, range(currentid * this->knot_no_z, (currentid + 1) * this->knot_no_z - 1)); //, (currentid + 1) * this->knot_no_z - 1);
+                // cout << "tmp " << tmp << endl;
+                // this->value_on_knot[i][j] = tmp;
+                // cout << "tmp " << tmp << endl;
+                // this->Spline1d[i][j].UpdateSpline(this->value_on_knot[i][j]);
+                this->Spline1d[i][j].UpdateSpline(tmp);
+                // tmp_qy = this->Spline1d[i][j].CalcQy(tmp);
+                // cout << "tmp_qy" << tmp_qy << endl;
+                // cout << Spline1d[i][j].Qy << endl;
+                // cout << Spline1d[i][j].phi << endl;
+                // grid_curves[i * this->knot_no_x + j] = this->Spline1d[i][j].ApplyMappingMat(tmp_qy);
+                // cout << "Qy shape" << Spline1d[i][j].Qy.size( ) << endl;
+                grid_curves[i * this->knot_no_x + j] = this->Spline1d[i][j].ApplyMappingMat(Spline1d[i][j].Qy);
+            }
+        }
+        // }
+
+        matrix<double> Value_On_Image;
+        Value_On_Image.set_size(this->knot_no_y, this->knot_no_x);
+        matrix<double>* smooth_interp; // it sames the interpolated values
+        // smooth_interp = new matrix<double>[this->frame_no];
+        // smooth_interp = this->SmoothInterp( );
+
+        for ( int frame_ind = 0; frame_ind < this->frame_no; frame_ind++ ) {
+            for ( int i = 0; i < this->knot_no_y; i++ ) {
+                for ( int j = 0; j < this->knot_no_x; j++ ) {
+                    Value_On_Image(i, j) = grid_curves[i * this->knot_no_x + j](frame_ind);
+                }
+            }
+            this->Spline2d[frame_ind].UpdateSpline(Value_On_Image);
+            // tmp_qz                   = Spline2d[frame_ind].CalcQz(Value_On_Image);
+            // smooth_interp[frame_ind] = Spline2d[frame_ind].ApplyMappingMat(tmp_qz);
+            // this->Spline2d[frame_ind].MappingMat = this->Spline2d[frame_ind].MappingMatrix(this->x, this->y);
+        }
+        // matrix<double>* smooth_interp; // it sames the interpolated values
+        smooth_interp = this->SmoothInterp( );
+
+        // for ( int frame_ind = 0; frame_ind < this->frame_no; frame_ind++ ) {
+        //     smooth_interp[frame_ind] = Spline2d[frame_ind].ApplyMappingMat(Spline2d[frame_ind].Qz2d);
+        // }
+        // this->smooth_interp = smooth_interp;
+
+        double error, current_error;
+
+        error = 0.0;
+
+        for ( int k = 0; k < this->frame_no; k++ ) {
+            current_error = 0;
+            for ( int i = 0; i < this->Mapping_Mat_Row_no; i++ ) {
+                for ( int j = 0; j < this->Mapping_Mat_Col_no; j++ ) {
+                    // current_error = current_error + powf(std::abs(smooth_interp[k](i, j) - this->discrete_values[k](i, j)), 2);
+                    // error         = error + std::abs(smooth_interp[k](i, j) - this->discrete_values[k](i, j)) / this->frame_no;
+                    error = error + powf(std::abs(smooth_interp[k](i, j) - this->discrete_values[k](i, j)), 2) / this->frame_no;
+                    // cout << " image " << k << endl;
+                    // cout << " interp and discret val, error " << smooth_interp[k](i, j) << " " << this->discrete_values[k](i, j) << " " << powf(std::abs(smooth_interp[k](i, j) - this->discrete_values[k](i, j)), 2) << endl;
+                    // cout << "total error and current error "
+                    //      << " " << error << " " << current_error << endl;
+                }
+            }
+        }
+        // delete grid_curves;
+
+        return error;
+    }
+};
+
+// matrix<double> CalcPatchShifts( ) {
+
+//     matrix<double> PatchShifts;
+//     PatchShifts
+// };
+
+// cubicspline  Spline1d[3];
+cubicspline**    Spline1d;
+bicubicspline*   Spline2d;
+MovieFrameSpline Spline3d, Spline3dy;
+
+// double MissingGridFix(matrix<double> qz1d) {
+//     double result;
+//     // result = shiftspline.MissingGridFixObject(z_on_knot_refined);
+//     result = shiftsplinex.MissingGridFixObject(qz1d);
+//     return result;
+// }
 double minfunc(matrix<double> qz1d) {
     double result;
     result = spline.OptimizationObejct(qz1d);
@@ -65,14 +385,47 @@ double minfuncQzObject(matrix<double> qz1d) {
     return result;
 }
 
-cubicspline Spline1d[3];
+double minfunc3dSplineObject(matrix<double> join_1d) {
+    double result;
+    result = Spline3d.OptimizationKnotObejctFast(join_1d);
+    return result;
+}
 
-// double MissingGridFix(matrix<double> qz1d) {
-//     double result;
-//     // result = shiftspline.MissingGridFixObject(z_on_knot_refined);
-//     result = shiftsplinex.MissingGridFixObject(qz1d);
-//     return result;
-// }
+// int no = 0;
+
+double minfunc3dSplineObjectxy(matrix<double> join_1d) {
+    double         result, result1, result2;
+    int            len, halflen;
+    matrix<double> tmp;
+    len       = join_1d.size( );
+    halflen   = len / 2;
+    int count = 0;
+    // cout << range(0, halflen) << endl;
+    // cout << range(halflen, len - 1) << endl;
+    tmp = colm(join_1d, range(0, halflen - 1));
+    tmp.set_size(halflen, 1);
+    for ( int i = 0; i < halflen; i++ ) {
+        tmp(i) = join_1d(count);
+        count++;
+    }
+    // cout << "tmpesize " << tmp.size( ) << endl;
+    // cout << tmp << endl;
+    // cout << "init x," << tmp(0) << " ," << tmp(tmp.size( ) - 1) << ", " << tmp.size( ) << endl;
+    result1 = Spline3d.OptimizationKnotObejctFast(tmp);
+    // tmp     = colm(join_1d, range(halflen, len - 1));
+    for ( int i = 0; i < halflen; i++ ) {
+        tmp(i) = join_1d(count);
+        count++;
+    }
+    // cout << tmp.size( ) << endl;
+    // cout << "init y," << tmp(0) << " ," << tmp(tmp.size( ) - 1) << ", " << tmp.size( ) << endl;
+    result2 = Spline3dy.OptimizationKnotObejctFast(tmp);
+    // no      = no + 1;
+    result = result1 + result2;
+    // cout << "result 1 and result 2 " << result1 << " " << result2 << endl;
+    // cout << "result 1 and result 2 " << no << ", " << result1 << " " << result2 << endl;
+    return result;
+}
 
 /* buid 3d spline*/
 
@@ -85,6 +438,7 @@ int main( ) {
     int            n                = 8;
     matrix<double> x;
     matrix<double> mat_curve;
+
     x.set_size(71, 1);
     x = 0., 0.1, 0.2, 0.3, 0.4, 0.5, 0.6, 0.7, 0.8, 0.9, 1., 1.1, 1.2,
     1.3, 1.4, 1.5, 1.6, 1.7, 1.8, 1.9, 2., 2.1, 2.2, 2.3, 2.4, 2.5,
@@ -92,16 +446,386 @@ int main( ) {
     3.9, 4., 4.1, 4.2, 4.3, 4.4, 4.5, 4.6, 4.7, 4.8, 4.9, 5., 5.1,
     5.2, 5.3, 5.4, 5.5, 5.6, 5.7, 5.8, 5.9, 6., 6.1, 6.2, 6.3, 6.4,
     6.5, 6.6, 6.7, 6.8, 6.9, 7.;
-    for ( int i = 0; i < 3; i++ ) {
-        Spline1d[i].InitializeSpline(n, spline_patch_dim);
-        Spline1d[i].UpdateSplineInterpMapping(x);
-        Qy        = Spline1d[i].CalcQy(y_on_knot);
-        mat_curve = Spline1d[i].ApplyMappingMat(Qy);
+    int    image_no       = 75;
+    double total_dose     = 30;
+    double sample_dose    = 4;
+    double dose_per_frame = total_dose / double(image_no);
+    int    image_y_dim    = 4092;
+    int    image_x_dim    = 5760;
+    // double knot_on_z      = 2;
+    // double knot_z_dis     = ceil(total_dose / (knot_on_z - 1));
+    double knot_z_dis = sample_dose;
+    double knot_on_z  = ceil(total_dose / sample_dose) + 1;
 
-        smooth_curve = Spline1d[i].SplineCurve(x, Qy);
-        mat_curve    = Spline1d[i].ApplyMappingMat(Qy);
+    double knot_on_x  = 8;
+    double knot_x_dis = ceil(image_x_dim / (knot_on_x - 1));
+    double knot_on_y  = 5;
+    double knot_y_dis = ceil(image_y_dim / (knot_on_y - 1));
+
+    int patch_no_x = 12;
+    int patch_no_y = 8;
+    int patch_no   = patch_no_x * patch_no_y;
+
+    matrix<double> z;
+    z.set_size(image_no, 1);
+    for ( int i = 0; i < image_no; i++ ) {
+        z(i) = i * dose_per_frame;
+    }
+    // cout << "dose per frame" << dose_per_frame << endl;
+    // cout << z << endl;
+
+    std::ifstream File; //, yFile;
+    // wxString      shift_file;
+    std::string        shift_file, shift_filex, shift_filey;
+    char               buffer[200];
+    std::ostringstream oss;
+    // wxString      shift_filey;
+    // wxString shift_file_pref = "shift";
+    std::string     shift_file_pref  = "_shift";
+    std::string     shift_file_prefx = "_shiftx";
+    std::string     shift_file_prefy = "_shifty";
+    matrix<double>* patch_peaksx;
+    matrix<double>* patch_peaksy;
+    patch_peaksx = new matrix<double>[image_no];
+    patch_peaksy = new matrix<double>[image_no];
+    for ( int i = 0; i < image_no; i++ ) {
+        patch_peaksx[i].set_size(patch_no_y, patch_no_x);
+        patch_peaksy[i].set_size(patch_no_y, patch_no_x);
     }
 
+    // wxString input_path = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/S_record1525_12_08_0724_dosefilter/";
+    std::string input_path = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/S_record1525_12_08_0724_dosefilter/";
+
+    // load array from file
+    // for ( int patch_index = 0; patch_index < patch_no; patch_index++ ) {
+    for ( int patch_index_y = 0; patch_index_y < patch_no_y; patch_index_y++ ) {
+        for ( int patch_index_x = 0; patch_index_x < patch_no_x; patch_index_x++ ) {
+
+            int patch_index = patch_index_y * patch_no_x + patch_index_x;
+            // wxPrintf("processing patch %i\n", patch_index);
+            cout << "princessing patch " << patch_index << endl;
+            int shift_file_index = patch_index;
+            oss << "%s%04i%s%s" << input_path.c_str( ), shift_file_index, shift_file_pref.c_str( ), ".txt";
+            std::snprintf(buffer, sizeof(buffer), "%s%04i%s%s", input_path.c_str( ), shift_file_index, shift_file_pref.c_str( ), ".txt");
+            // shift_file = oss.str( );
+            shift_file = buffer;
+            cout << "file " << shift_file << endl;
+            File.open(shift_file.c_str( ));
+            // yFile.open(shift_filey.c_str( ));
+
+            // if ( xFile.is_open( ) && yFile.is_open( ) ) {
+            if ( File.is_open( ) ) {
+                // wxPrintf("files are open\n");
+                // float myarray[10][5760];
+                for ( int image_ind = 0; image_ind < image_no; image_ind++ ) {
+                    // read by order, which y is in descending
+                    File >> patch_peaksx[image_ind](patch_index_y, patch_index_x);
+                    File >> patch_peaksy[image_ind](patch_index_y, patch_index_x);
+                }
+            }
+            // wxPrintf("image 0 patch %d shift x ,y %f, %f \n", patch_index, patch_peaksx(0, patch_index), patch_peaksy(0, patch_index));
+            cout << patch_index << " " << patch_peaksx[0](patch_index_y, patch_index_x) << " " << patch_peaksy[0](patch_index_y, patch_index_x) << endl;
+            // wxPrintf("adjusted first pix position x ,y %f, %f \n", shifted_mapx[0], shifted_mapy[0]);
+            // wxPrintf("shifting files are loaded \n");
+            File.close( );
+            // yFile.close( );
+        }
+    }
+
+    matrix<double> patch_locations;
+    matrix<double> patch_locations_x;
+    matrix<double> patch_locations_y;
+    patch_locations.set_size(patch_no, 2);
+    patch_locations_x.set_size(patch_no_x, 1);
+    patch_locations_y.set_size(patch_no_y, 1);
+    // int   image_dim_x = image_stack[0].logical_x_dimension;
+    // int   image_dim_y = image_stack[0].logical_y_dimension;
+    int step_size_x = myroundint(float(image_x_dim) / float(patch_no_x) / 2);
+    int step_size_y = myroundint(float(image_y_dim) / float(patch_no_y) / 2);
+
+    for ( int patch_x_ind = 0; patch_x_ind < patch_no_x; patch_x_ind++ ) {
+        patch_locations_x(patch_x_ind) = patch_x_ind * step_size_x * 2 + step_size_x;
+        // wxPrintf("patch locations: %f, %f\n", patch_locations[patch_num_x * patch_y_ind + patch_x_ind][0], patch_locations[patch_num_x * patch_y_ind + patch_x_ind][1]);
+    }
+
+    for ( int patch_y_ind = 0; patch_y_ind < patch_no_y; patch_y_ind++ ) {
+        patch_locations_y(patch_y_ind) = image_y_dim - patch_y_ind * step_size_y * 2 - step_size_y;
+    }
+    std::cout << "patch_locations" << endl;
+    std::cout << patch_locations_x << endl;
+    std::cout << patch_locations_y << endl;
+
+    //flip the patch regarding y so that the y is in ascending order
+    // cout << patch_peaksx[0] << endl;
+    for ( int i = 0; i < image_no; i++ ) {
+        patch_peaksy[i] = flipud(patch_peaksy[i]);
+        patch_peaksx[i] = flipud(patch_peaksx[i]);
+    }
+    for ( int i = 1; i < image_no; i++ ) {
+        patch_peaksy[i] = patch_peaksy[i] - patch_peaksy[0];
+        patch_peaksx[i] = patch_peaksx[i] - patch_peaksx[0];
+    }
+    patch_locations_y = flipud(patch_locations_y);
+
+    Spline3d.Initialize(knot_on_z, knot_on_y, knot_on_x, image_no, image_x_dim, image_y_dim, knot_z_dis, knot_x_dis, knot_y_dis);
+    Spline3dy.Initialize(knot_on_z, knot_on_y, knot_on_x, image_no, image_x_dim, image_y_dim, knot_z_dis, knot_x_dis, knot_y_dis);
+    // Spline3d.Update3DSpline(value_on_knot);
+    Spline3d.Update3DSplineInterpMapping(patch_locations_x, patch_locations_y, z);
+    Spline3dy.Update3DSplineInterpMapping(patch_locations_x, patch_locations_y, z);
+    cout << Spline3d.x << endl;
+    cout << Spline3d.y << endl;
+    cout << Spline3d.z << endl;
+
+    Spline3d.UpdateDiscreteValues(patch_peaksx);
+    Spline3dy.UpdateDiscreteValues(patch_peaksy);
+    // cout << "print updated discrete_values" << endl;
+    // for ( int i = 0; i < image_no; i++ ) {
+    //     cout << "current frame" << i << endl;
+    //     cout << Spline3d.discrete_values[i] << endl;
+    // }
+    // cout << "end printing" << endl;
+    column_vector Join1d, Join1dy;
+    Join1d = ones_matrix<double>(knot_on_x * knot_on_y * knot_on_z * 2, 1);
+    // Join1dy = ones_matrix<double>(knot_on_x * knot_on_y * knot_on_z, 1);
+    // for ( int i = 0; i < knot_on_x * knot_on_y * knot_on_z * 2; i++ ) {
+    //     Join1d(i) = i;
+    // }
+    cout << "shape of input " << Join1d.size( ) << endl;
+    double error;
+    // error = minfunc3dSplineObject(Join1d);
+    error = minfunc3dSplineObjectxy(Join1d);
+    cout << "error " << error << endl;
+    for ( int i = 0; i < image_no; i++ ) {
+        cout << i << endl;
+        cout << Spline3d.smooth_interp[i] << endl;
+        cout << Spline3d.discrete_values[i] << endl;
+        cout << patch_peaksx[i] << endl;
+    }
+    // /*  this section fix the outliers using nearest neighbor ---------------------------------------------------
+    std::vector<double> used_index(patch_no);
+    std::vector<int>    missed_index; // it should be in increasing order
+    matrix<float>       truefalse;
+    // truefalse.set_size(patch_num_y, patch_num_x);
+    truefalse    = ones_matrix<float>(patch_no_y, patch_no_x);
+    missed_index = {2, 7, 10, 12, 13, 14, 16, 27, 32, 43, 44, 46, 49, 62, 70, 71, 83, 2, 3, 6, 9, 10, 12, 13, 14, 15, 16, 24, 26, 27, 62};
+
+    for ( int i = 0; i < missed_index.size( ); i++ ) {
+        int c = missed_index[i] % patch_no_x;
+        int r = (missed_index[i] - c) / patch_no_x;
+        cout << "column and row are " << c << " " << r << endl;
+        truefalse(r, c) = 0;
+    }
+    cout << "truefalse map" << endl
+         << truefalse << endl;
+    std::vector<Point> points;
+    std::vector<Point> badpoints;
+    for ( int i = 0; i < patch_no_y; i++ ) {
+        for ( int j = 0; j < patch_no_x; j++ ) {
+            if ( truefalse(i, j) == 0 ) {
+                badpoints.push_back({patch_locations_x(j), patch_locations_y(i)});
+            }
+            else {
+                Point temppoint;
+                temppoint = {patch_locations_x(j), patch_locations_y(i)};
+                points.push_back({patch_locations_x(j), patch_locations_y(i)});
+            }
+        }
+    }
+    int pointslength    = points.size( );
+    int badpointslength = badpoints.size( );
+    cout << pointslength << endl;
+    // for ( int i = 0; i < pointslength; i++ ) {
+    //     cout << points[i].x << " " << points[i].y << endl;
+    // }
+    cout << "bad points" << endl;
+    for ( int i = 0; i < badpointslength; i++ ) {
+        cout << badpoints[i].x << endl;
+    }
+
+    matrix<double>* patch_peaksx_tmp;
+    matrix<double>* patch_peaksy_tmp;
+    patch_peaksx_tmp = new matrix<double>[image_no];
+    patch_peaksy_tmp = new matrix<double>[image_no];
+    for ( int i = 0; i < image_no; i++ ) {
+        patch_peaksx_tmp[i].set_size(patch_no_y, patch_no_x);
+        patch_peaksy_tmp[i].set_size(patch_no_y, patch_no_x);
+        patch_peaksx_tmp[i] = patch_peaksx[i];
+        patch_peaksy_tmp[i] = patch_peaksy[i];
+    }
+
+    for ( int i = 0; i < badpointslength; i++ ) {
+        Point nearest = findNearestNeighbor(badpoints[i], points);
+        int   jj      = nearest.x / step_size_x / 2;
+        int   ii      = nearest.y / step_size_y / 2;
+        int   jjb     = badpoints[i].x / step_size_x / 2;
+        int   iib     = badpoints[i].y / step_size_y / 2;
+        for ( int image_ind = 0; image_ind < image_no; image_ind++ ) {
+            patch_peaksx[image_ind](iib, jjb) = patch_peaksx_tmp[image_ind](ii, jj);
+            patch_peaksy[image_ind](iib, jjb) = patch_peaksy_tmp[image_ind](ii, jj);
+        }
+    }
+    cout << "before fix" << endl;
+    cout << patch_peaksx_tmp[74] << endl;
+    cout << "fixed" << endl;
+    // cout << reshape(shiftsplinex.z_on_knot, patch_num_x, patch_num_y) << endl;
+    cout << patch_peaksx[74] << endl;
+
+    Spline3d.UpdateDiscreteValues(patch_peaksx);
+    Spline3dy.UpdateDiscreteValues(patch_peaksy);
+
+    // #-- --
+    // * / end the outlier fix ---------------------------------------------------
+
+    // /*
+    auto start = std::chrono::high_resolution_clock::now( );
+    // find_min_using_approximate_derivatives(lbfgs_search_strategy(10000), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
+    //                                        objective_delta_stop_strategy(1e-7).be_verbose( ),
+    //                                        minfunc3dSplineObject, Join1d, -1);
+    find_min_using_approximate_derivatives(lbfgs_search_strategy(1000000), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
+                                           objective_delta_stop_strategy(1e-1).be_verbose( ),
+                                           minfunc3dSplineObjectxy, Join1d, -1);
+    auto stop     = std::chrono::high_resolution_clock::now( );
+    auto duration = std::chrono::duration_cast<std::chrono::minutes>(stop - start);
+    std::cout << "Lap time" << duration.count( ) << " minutes\n";
+    // cout << "Join1d" << Join1d << endl;
+
+    error = minfunc3dSplineObject(Join1d);
+    // cout << "Image" << i << endl;
+
+    cout << "error " << error << endl;
+    cout << "parameters" << Join1d << endl;
+    // for ( int i = 0; i < image_no; i++ ) {
+    //     cout << "Image" << i << endl;
+    //     cout << Spline3d.smooth_interp[i] << endl;
+    //     cout << patch_peaksx[i] << endl;
+    //     cout << Spline3d.smooth_interp[i] - patch_peaksx[i] << endl;
+    // }
+    std::string   output_path = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/S_record1525_12_08_1109_ForCPlus_square_xy/";
+    std::ofstream xoFile, yoFile;
+
+    for ( int image_ind = 0; image_ind < image_no; image_ind++ ) {
+
+        int shift_file_index = image_ind;
+        oss << "%s%04i%s%s" << output_path.c_str( ), shift_file_index, shift_file_prefx.c_str( ), ".txt";
+        std::snprintf(buffer, sizeof(buffer), "%s%04i%s%s", output_path.c_str( ), shift_file_index, shift_file_prefx.c_str( ), ".txt");
+        // shift_file = oss.str( );
+        shift_filex = buffer;
+        cout << "file " << shift_filex << endl;
+        oss << "%s%04i%s%s" << output_path.c_str( ), shift_file_index, shift_file_prefy.c_str( ), ".txt";
+        std::snprintf(buffer, sizeof(buffer), "%s%04i%s%s", output_path.c_str( ), shift_file_index, shift_file_prefy.c_str( ), ".txt");
+        // shift_file = oss.str( );
+        shift_filey = buffer;
+        cout << "file " << shift_filey << endl;
+        // File.open(shift_file.c_str( ));
+
+        // wxString      shifted_mapx_file = outputpath + "shifted_x.txt";
+        // wxString      shifted_mapy_file = outputpath + "shifted_y.txt";
+        // std::ofstream xoFile, yoFile;
+
+        // wxPrintf("1\n");
+        // for ( int i = 0; i < 10; i++ ) {
+        //     for ( int j = 0; j < 10; j++ ) {
+        //         shifted_map_x[i][j] = j;
+        //         shifted_map_y[i][j] = i;
+        //     }
+        // }
+
+        xoFile.open(shift_filex.c_str( ));
+        yoFile.open(shift_filey.c_str( ));
+        // yoFile.open(shifted_mapy_file.c_str( ));
+        if ( xoFile.is_open( ) && yoFile.is_open( ) ) {
+            // wxPrintf("files are open\n");
+            cout << "files are open" << endl;
+            // float myarray[10][5760];
+            for ( int i = 0; i < patch_no_y; i++ ) {
+                for ( int j = 0; j < patch_no_x; j++ ) {
+                    xoFile << Spline3d.smooth_interp[image_ind](i, j) << '\t';
+                    yoFile << Spline3dy.smooth_interp[image_ind](i, j) << '\t';
+                    // yoFile << shifted_map_y[i][j] << '\t';
+                }
+                xoFile << '\n';
+                yoFile << '\n';
+            }
+        }
+        xoFile.close( );
+        yoFile.close( );
+    }
+
+    std::ofstream joinfile;
+
+    oss << "%s%s%s" << output_path.c_str( ), shift_file_pref.c_str( ), ".txt";
+    std::snprintf(buffer, sizeof(buffer), "%s%s%s", output_path.c_str( ), shift_file_pref.c_str( ), ".txt");
+    // shift_file = oss.str( );
+    shift_file = buffer;
+    cout << "file " << shift_file << endl;
+    joinfile.open(shift_file.c_str( ));
+
+    for ( int i = 0; i < Join1d.size( ); i++ ) {
+        joinfile << Join1d(i) << '\n';
+    }
+    joinfile.close( );
+
+    std::ifstream joinfile_python;
+    std::string   python_file;
+    // std::ofstream xoFile, yoFile;
+    //     oss << "%s%s%s" << output_path.c_str( ), shift_file_pref.c_str( ), ".txt";
+    // std::snprintf(buffer, sizeof(buffer), "%s%s%s", output_path.c_str( ), shift_file_pref.c_str( ), ".txt");
+    // // shift_file = oss.str( );
+    // shift_file = buffer;
+    // cout << "file " << shift_file << endl;
+    python_file = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/S_record1525_12_08_1013_ForCPlus/reshaped_init_join.txt";
+    joinfile_python.open(python_file.c_str( ));
+    column_vector Join1d_python;
+    Join1d_python = ones_matrix<double>(knot_on_x * knot_on_y * knot_on_z * 2, 1);
+    column_vector Join1d_python_tmp;
+    Join1d_python_tmp = ones_matrix<double>(knot_on_x * knot_on_y * knot_on_z * 2, 1);
+
+    if ( joinfile_python.is_open( ) ) {
+        for ( int i = 0; i < Join1d_python_tmp.size( ); i++ ) {
+            joinfile_python >> Join1d_python_tmp(i, 0);
+            // File >> patch_peaksx[image_ind](patch_index_y, patch_index_x);
+        }
+    }
+
+    joinfile_python.close( );
+    Join1d_python = Join1d_python_tmp;
+    // int halflen = Join1d_python_tmp.size( ) / 2;
+    // for ( int i = 0; i < halflen; i++ ) {
+    //     Join1d_python(i)     = Join1d_python_tmp(i);
+    //     Join1d_python(i + 1) = Join1d_python_tmp(i + halflen);
+    // }
+
+    // for ( int i = 0; i < image_no; i++ ) {
+    int i = 74;
+    cout << "Image" << i << endl;
+    cout << "smoothed" << endl;
+    cout << Spline3d.smooth_interp[i] << endl;
+    cout << "raw" << endl;
+    cout << patch_peaksx[i] << endl;
+    cout << "error" << endl;
+    cout << Spline3d.smooth_interp[i] - patch_peaksx[i] << endl;
+
+    cout << "python error" << endl;
+    error = minfunc3dSplineObject(Join1d_python);
+    cout << " error " << error << endl;
+    cout << "python smooth" << endl;
+    cout << Spline3d.smooth_interp[i] << endl;
+    cout << " python parame" << Join1d_python << endl;
+    // }
+
+    // for ( int patch_y_ind = 0; patch_y_ind < patch_no_y; patch_y_ind++ ) {
+    //     for ( int patch_x_ind = 0; patch_x_ind < patch_no_x; patch_x_ind++ ) {
+    //         patch_locations(patch_no_x * patch_y_ind + patch_x_ind, 0) = patch_x_ind * step_size_x * 2 + step_size_x;
+    //         patch_locations(patch_no_x * patch_y_ind + patch_x_ind, 1) = image_y_dim - patch_y_ind * step_size_y * 2 - step_size_y;
+    //         // wxPrintf("patch locations: %f, %f\n", patch_locations[patch_num_x * patch_y_ind + patch_x_ind][0], patch_locations[patch_num_x * patch_y_ind + patch_x_ind][1]);
+    //     }
+    // }
+
+    // for (int i = 0; i < rows; ++i) {
+    //     delete[] Spline1d[i]; // Delete the memory allocated for the columns
+    // }
+    // delete[] Spline1d; // Delete the array of pointers
+    // */
     return 0;
 }
 
@@ -131,6 +855,7 @@ int main( ) {
     // smooth_curve.set_size(x.size( ), 1);
     matrix<double> mat_curve;
     Spline1d.UpdateSplineInterpMapping(x);
+    Spline1d.UpdateSpline(y_on_knot);
     mat_curve = Spline1d.ApplyMappingMat(Qy);
 
     smooth_curve = Spline1d.SplineCurve(x, Qy);
@@ -145,11 +870,13 @@ int main( ) {
         // cout << "Smooth Y \n"
         cout << smooth_curve(i) << " ";
         // cout << "Smooth With MappingMat \n"
-        cout << mat_curve(i) << endl;
+        cout << mat_curve(i) << " ";
+        cout << Spline1d.ApplySplineFunc(x(i)) << endl;
     }
 
     return 0;
 }
+
 */
 
 /* test bicubic spline
@@ -191,7 +918,7 @@ int main( ) {
     Qz = spline.CalcQz(z_on_knot); // so far the code is verified by python to be correct
     cout << "here2" << endl;
 
-    Z_On_Grid = spline.YOnGrid(Qz);
+    Z_On_Grid = spline.ZOnGrid(Qz);
     cout << "here3" << endl;
     matrix<double> x;
     matrix<double> y;
@@ -351,6 +1078,7 @@ int main( ) {
 
     shiftsplinex.InitializeSpline(rows, cols, sizey, sizex);
     shiftspliney.InitializeSpline(rows, cols, sizey, sizex);
+
     // matrix<double> missed_index;
     // missed_index.set_size(3, 1);
     // missed_index = 4, 40, 80;
@@ -479,6 +1207,17 @@ int main( ) {
     }
     cout << "error by point \n"
          << error_by_point << endl;
+    cout << " test the ApplySplineFunc" << endl;
+    shiftsplinex.UpdateSpline(fitted_result);
+    cout << " patch x" << shiftsplinex.spline_patch_dim_x << endl;
+    cout << " patch y" << shiftsplinex.spline_patch_dim_y << endl;
+    for ( int i = 0; i < patch_num_y; i++ ) {
+        for ( int j = 0; j < patch_num_x; j++ ) {
+            // cout << " xp yp " << x_patch_1d(j) << " " << y_patch_1d(i) << endl;
+            cout << fitted_z(i, j) << " ";
+            cout << shiftsplinex.ApplySplineFunc(x_patch_1d(j), y_patch_1d(i)) << endl;
+        }
+    }
 
     // fit Qz
     // Qz1dtest = zeros_matrix<double>(long(rows + 2) * long(cols + 2), 1);
@@ -547,6 +1286,7 @@ int main( ) {
 
     return 0;
 }
+
 */
 // bi cubic spline end -----------------------------------------
 

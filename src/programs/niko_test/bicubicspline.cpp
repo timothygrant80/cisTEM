@@ -1,4 +1,5 @@
 #include <dlib/dlib/queue.h>
+#include "../../core/core_headers.h"
 #include <iostream>
 #include <vector>
 #include <numeric>
@@ -7,6 +8,7 @@
 
 using namespace std;
 using namespace dlib;
+using namespace cistem;
 
 // class bicubicspline {
 
@@ -47,7 +49,9 @@ void bicubicspline::InitializeSpline(int row_no, int column_no, float spline_pat
     this->spline_patch_dim_y = spline_patch_dimy;
     this->total              = (this->m + 2) * (this->n + 2);
     this->totaldim           = (this->m + 2) * (this->n + 2);
+    wxPrintf("phi1?\n");
     CalcPhi( );
+    wxPrintf("phi?\n");
 }
 
 void bicubicspline::UpdateSpline(matrix<double> z_on_knot) {
@@ -98,8 +102,9 @@ void bicubicspline::CalcPhi( ) {
     // totaldim                 = (this->m + 2) * (this->n + 2);
     // long dim = (this->m + 2) * (this->n + 2);
     // this->phi.set_size(this->totaldim, this->totaldim);
+    wxPrintf("mark0-------------------------------------------\n");
     this->phi = zeros_matrix<double>(this->totaldim, this->totaldim);
-
+    wxPrintf("mark1\n");
     for ( int j = 0; j < this->m; j++ ) {
         for ( int i = 0; i < this->n; i++ ) {
             this->phi(i + (j) * this->n, i + (j) * (this->n + 2))         = 1;
@@ -113,7 +118,7 @@ void bicubicspline::CalcPhi( ) {
             this->phi(i + (j) * this->n, i + (j + 2) * (this->n + 2) + 2) = 1;
         }
     }
-
+    wxPrintf("mark2\n");
     //  y- border
     for ( int i = 0; i < this->m; i++ ) {
         this->phi(this->n * this->m + i, (i + 1) * (this->n + 2))     = 1;
@@ -166,7 +171,7 @@ matrix<double> bicubicspline::CalcQz(matrix<double> z_on_knot) {
     // void CalcQz(matrix<double> z) {
     matrix<double> Qz1d;
     matrix<double> Qz2d;
-    matrix<double> invphi;
+    // matrix<double> invphi;
     Qz1d.set_size(this->totaldim, 1);
     Qz2d.set_size((this->m + 2), (this->n + 2));
     // float Pz[total];
@@ -183,10 +188,10 @@ matrix<double> bicubicspline::CalcQz(matrix<double> z_on_knot) {
         Pz(i) = 0;
     }
 
-    invphi.set_size(this->totaldim, this->totaldim);
-    invphi = inv(phi);
+    // invphi.set_size(this->totaldim, this->totaldim);
+    // invphi = inv(phi);
 
-    Qz1d = invphi * Pz * 36;
+    Qz1d = this->invphi * Pz * 36;
 
     for ( int i = 0; i < this->m + 2; i++ ) {
         for ( int j = 0; j < this->n + 2; j++ ) {
@@ -195,6 +200,46 @@ matrix<double> bicubicspline::CalcQz(matrix<double> z_on_knot) {
     }
 
     return Qz2d;
+}
+
+// matrix<double> bicubicspline::CalcQzWithInvPhi(matrix<double> z_on_knot, matrix<double> InvPhi) {
+matrix<double> bicubicspline::CalcQzWithInvPhi(matrix<double> InvPhi) {
+    // void CalcQz(matrix<double> z) {
+    matrix<double> Qz1d;
+    matrix<double> Qz2dOutput;
+    // matrix<double> invphi;
+    Qz1d.set_size(this->totaldim, 1);
+    Qz2dOutput.set_size((this->m + 2), (this->n + 2));
+    // float Pz[total];
+    // wxPrintf("in calc?1\n");
+    matrix<double> Pz;
+    // matrix<double> Qz1d, Qz2d;
+    // Pz.set_size(1, total * total);
+    Pz.set_size(this->totaldim * this->totaldim, 1);
+    // wxPrintf("in calc2?");
+    for ( int i = 0; i < this->m * this->n; i++ ) {
+        Pz(i) = this->z_on_knot(i);
+    }
+    for ( int i = this->m * this->n; i < this->total; i++ ) {
+        Pz(i) = 0;
+    }
+    // wxPrintf("in calc?");
+    // invphi.set_size(this->totaldim, this->totaldim);
+    // invphi = inv(phi);
+
+    Qz1d = InvPhi * Pz * 36;
+
+    for ( int i = 0; i < this->m + 2; i++ ) {
+        for ( int j = 0; j < this->n + 2; j++ ) {
+            Qz2dOutput(i, j) = Qz1d(i * (this->n + 2) + j);
+        }
+    }
+    // wxPrintf("in function knot %f %f \n", Pz(0), Pz(this->n * this->m - 1));
+    // wxPrintf("in function knot %f %f \n", z_on_knot(0), z_on_knot(this->n * this->m - 1));
+    // wxPrintf("in function invphi %f \n", InvPhi(0, 0));
+    // wxPrintf(" in fucntion qz %f %f\n", Qz2dOutput(0, 0), Qz2dOutput(10, 10));
+    // this->Qz2d = Qz2d;
+    return Qz2dOutput;
 }
 
 double bicubicspline::ApplySpline(double u, double v, int pu, int pv, matrix<double> Qz2d) {

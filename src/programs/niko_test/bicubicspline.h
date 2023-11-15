@@ -39,6 +39,9 @@ class bicubicspline {
     void           InitializeSplineModel(int row_no, int column_no, float spline_patch_dimy, float spline_patch_dimx, matrix<double> x, matrix<double> y, matrix<double> z, matrix<double> z_on_knot);
     void           CalcPhi( );
     matrix<double> CalcQz(matrix<double> z_on_knot);
+    matrix<double> CalcQzWithInvPhi(matrix<double> InvPhi);
+    // matrix<double> CalcQzWithInvPhi(matrix<double> z_on_knot, matrix<double> InvPhi);
+
     double         ApplySpline(double u, double v, int pu, int pv, matrix<double> Qz2d);
     matrix<double> ZOnGrid(matrix<double> Qz2d);
     matrix<double> SplineSurface(matrix<double> x, matrix<double> y, matrix<double> Qz2d);

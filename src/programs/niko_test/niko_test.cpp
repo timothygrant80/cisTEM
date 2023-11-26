@@ -11,6 +11,7 @@
 #include <dlib/dlib/matrix.h>
 #include "./bicubicspline.h"
 #include "./cubicspline.h"
+#include "./movieframespline.h"
 #include <thread>
 #include <chrono>
 
@@ -66,372 +67,120 @@ bicubicspline spline;
 bicubicspline shiftsplinex, shiftspliney;
 
 // patchshifts shape : image_no,patch_x_num,patch_y_mum
-class MovieFrameSpline {
-
-    // int patch_x_num;
-    // int patch_y_num;
-
-  public:
-    int knot_no_x;
-    int knot_no_y;
-    int knot_no_z; // this is the knot no along the frame sequece dimension
-    int total_knot;
-
-    double spline_patch_dimx;
-    double spline_patch_dimy;
-    double spline_patch_dimz;
-
-    matrix<double>  x;
-    matrix<double>  y;
-    matrix<double>  z;
-    matrix<double>* discrete_values;
-    matrix<double>* smooth_interp; // smooth_interp[i] is the smooth surface of i th frame
-
-    int image_x_dim;
-    int image_y_dim;
-    int frame_no;
-
-    cubicspline**    Spline1d;
-    bicubicspline*   Spline2d;
-    matrix<double>   phiz;
-    matrix<double>   phixy;
-    matrix<double>   invphiz;
-    matrix<double>   invphixy;
-    matrix<double>   MappingMat_z;
-    matrix<double>   MappingMat_xy;
-    long             Mapping_Mat_Row_no;
-    long             Mapping_Mat_Col_no;
-    matrix<double>** value_on_knot; // shape: knot_no_y, knot_no_x, knot_no_z
-
-    void Initialize(int knot_no_along_z, int row_no, int column_no, int frame_no, int image_x_dim, int image_y_dim, float spline_knotz_distance, float spline_knotx_distance, float spline_knoty_distance) {
-        this->frame_no    = frame_no;
-        this->image_x_dim = image_x_dim;
-        this->image_y_dim = image_y_dim;
-
-        this->spline_patch_dimx = spline_knotx_distance;
-        this->spline_patch_dimy = spline_knoty_distance;
-        this->spline_patch_dimz = spline_knotz_distance;
-
-        this->knot_no_y  = row_no;
-        this->knot_no_x  = column_no;
-        this->knot_no_z  = knot_no_along_z;
-        this->total_knot = knot_no_along_z * row_no * column_no;
-        // double tmp_total_z = this->spline_patch_dimz * (this->knot_no_z - 1);
-
-        // this->z.set_size(frame_no, 1);
-        // this->z = this->z* ;
-        // this->z = range(0, frame_no - 1);
-
-        // cout << "z is " << z << endl;
-        // this->x
-
-        this->value_on_knot = new matrix<double>*[row_no];
-        for ( int i = 0; i < row_no; i++ ) {
-            this->value_on_knot[i] = new matrix<double>[column_no];
-        }
-
-        this->Spline1d = new cubicspline*[row_no];
-        for ( int i = 0; i < row_no; i++ ) {
-            this->Spline1d[i] = new cubicspline[column_no];
-        }
-
-        for ( int i = 0; i < row_no; i++ ) {
-            for ( int j = 0; j < column_no; j++ ) {
-                this->Spline1d[i][j].InitializeSpline(knot_no_along_z, spline_patch_dimz);
-            }
-        }
-
-        this->phiz    = this->Spline1d[0][0].phi;
-        this->invphiz = this->Spline1d[0][0].invphi;
-        // this->MappingMat_z = Spline1d[0][0].MappingMatrix(this->z);
-
-        this->Spline2d = new bicubicspline[this->frame_no];
-        for ( int i = 0; i < frame_no; i++ ) {
-            this->Spline2d[i].InitializeSpline(row_no, column_no, spline_patch_dimy, spline_patch_dimx);
-        }
-        this->phixy    = this->Spline2d[0].phi;
-        this->invphixy = this->Spline2d[0].invphi;
-        // this->MappingMat_xy = this->Spline2d[0].MappingMatrix(this->x, this->y);
-
-        // this->spline_patch_dim_x = spline_patch_dimx;
-        // this->spline_patch_dim_y = spline_patch_dimy;
-        // this->total              = (this->m + 2) * (this->n + 2);
-        // this->totaldim           = (this->m + 2) * (this->n + 2);
-        // CalcPhi( );
-    }
-
-    void Update3DSplineOnKnotValue(matrix<double>** value_on_knot) {
-        this->value_on_knot = value_on_knot;
-    }
-
-    void Update3DSplineInterpMapping(matrix<double> x_vector, matrix<double> y_vector, matrix<double> z_vector) {
-        this->x                  = x_vector;
-        this->y                  = y_vector;
-        this->z                  = z_vector;
-        this->Mapping_Mat_Row_no = y_vector.size( );
-        this->Mapping_Mat_Col_no = x_vector.size( );
-
-        matrix<double> Value_On_Image;
-        Value_On_Image.set_size(this->knot_no_y, this->knot_no_x);
-
-        for ( int i = 0; i < this->knot_no_y; i++ ) {
-            for ( int j = 0; j < this->knot_no_x; j++ ) {
-                this->Spline1d[i][j].UpdateSpline(this->value_on_knot[i][j]);
-                this->Spline1d[i][j].FineGridCurve = this->Spline1d[i][j].SplineCurve(this->z, this->Spline1d[i][j].Qy);
-                this->Spline1d[i][j].MappingMat    = this->Spline1d[i][j].MappingMatrix(this->z);
-            }
-        }
-        for ( int frame_ind = 0; frame_ind < this->frame_no; frame_ind++ ) {
-            for ( int i = 0; i < this->knot_no_y; i++ ) {
-                for ( int j = 0; j < this->knot_no_x; j++ ) {
-                    Value_On_Image(i, j) = this->Spline1d[i][j].FineGridCurve(frame_ind);
-                }
-            }
-            this->Spline2d[frame_ind].UpdateSpline(Value_On_Image);
-            this->Spline2d[frame_ind].MappingMat = this->Spline2d[frame_ind].MappingMatrix(x_vector, y_vector);
-        }
-
-        this->MappingMat_xy = this->Spline2d[0].MappingMatrix(this->x, this->y);
-        this->MappingMat_z  = this->Spline1d[0][0].MappingMatrix(this->z);
-    }
-
-    void Update3DSpline1dInput(matrix<double> value_on_knot_1d) {
-        matrix<double> tmp;
-        matrix<double> Value_On_Image;
-        // matrix<double>* grid_curves
-        Value_On_Image.set_size(this->knot_no_y, this->knot_no_x);
-        for ( int i = 0; i < this->knot_no_y; i++ ) {
-            for ( int j = 0; j < this->knot_no_x; j++ ) {
-                // tmp = rowm(value_on_knot_2d, (i * this->knot_no_x + j));
-                int currentid = i * this->knot_no_x + j;
-                // cout << "range " << range(currentid * this->knot_no_z, (currentid + 1) * this->knot_no_z - 1);
-                tmp = rowm(value_on_knot_1d, range(currentid * this->knot_no_z, (currentid + 1) * this->knot_no_z - 1)); //, (currentid + 1) * this->knot_no_z - 1);
-                // this->Spline1d[i][j].UpdateSpline(tmp);
-                this->value_on_knot[i][j] = tmp;
-                double len                = this->value_on_knot[i][j].size( );
-
-                // grid_curves[i * this->knot_no_x + j] = this->Spline1d[i][j].ApplyMappingMat(Spline1d[i][j].Qy);
-            }
-        }
-        cout << "value ond knot " << this->value_on_knot << endl;
-        for ( int i = 0; i < this->knot_no_y; i++ ) {
-            for ( int j = 0; j < this->knot_no_x; j++ ) {
-                this->Spline1d[i][j].UpdateSpline(this->value_on_knot[i][j]);
-                this->Spline1d[i][j].FineGridCurve = this->Spline1d[i][j].SplineCurve(this->z, this->Spline1d[i][j].Qy);
-                double len                         = this->Spline1d[i][j].FineGridCurve.size( );
-                // Spline1d[i][j].MappingMat    = Spline1d[i][j].MappingMatrix(this->z);
-            }
-        }
-        for ( int frame_ind = 0; frame_ind < this->frame_no; frame_ind++ ) {
-            for ( int i = 0; i < this->knot_no_y; i++ ) {
-                for ( int j = 0; j < this->knot_no_x; j++ ) {
-                    Value_On_Image(i, j) = this->Spline1d[i][j].FineGridCurve(frame_ind);
-                }
-            }
-            this->Spline2d[frame_ind].UpdateSpline(Value_On_Image);
-            // Spline2d[frame_ind].MappingMat = Spline2d[frame_ind].MappingMatrix(x_vector, y_vector);
-        }
-    }
-
-    void Update3DSpline(matrix<double>** value_on_knot) {
-
-        matrix<double> Value_On_Image;
-        Value_On_Image.set_size(this->knot_no_y, this->knot_no_x);
-        this->value_on_knot = value_on_knot;
-
-        for ( int i = 0; i < this->knot_no_y; i++ ) {
-            for ( int j = 0; j < this->knot_no_x; j++ ) {
-                this->Spline1d[i][j].UpdateSpline(this->value_on_knot[i][j]);
-                this->Spline1d[i][j].FineGridCurve = this->Spline1d[i][j].SplineCurve(this->z, this->Spline1d[i][j].Qy);
-                // Spline1d[i][j].MappingMat    = Spline1d[i][j].MappingMatrix(this->z);
-            }
-        }
-        for ( int frame_ind = 0; frame_ind < this->frame_no; frame_ind++ ) {
-            for ( int i = 0; i < this->knot_no_y; i++ ) {
-                for ( int j = 0; j < this->knot_no_x; j++ ) {
-                    Value_On_Image(i, j) = this->Spline1d[i][j].FineGridCurve(frame_ind);
-                }
-            }
-            this->Spline2d[frame_ind].UpdateSpline(Value_On_Image);
-            // this->Spline2d[frame_ind].MappingMat = this->Spline2d[frame_ind].MappingMatrix(x_vector, y_vector);
-        }
-    }
-
-    matrix<double>* SmoothInterp( ) {
-        matrix<double>* smooth_interp;
-        smooth_interp = new matrix<double>[this->frame_no];
-        for ( int frame_ind = 0; frame_ind < this->frame_no; frame_ind++ ) {
-            smooth_interp[frame_ind] = this->Spline2d[frame_ind].ApplyMappingMat(this->Spline2d[frame_ind].Qz2d);
-        }
-        this->smooth_interp = smooth_interp;
-        return smooth_interp;
-    }
-
-    void UpdateDiscreteValues(matrix<double>* Discret_Values_For_Smooth) {
-        // matrix<double>* discrete_values;
-        this->discrete_values = new matrix<double>[this->frame_no];
-
-        for ( int frame_ind = 0; frame_ind < this->frame_no; frame_ind++ ) {
-            // this->discrete_values[frame_ind].set_size(this->Mapping_Mat_Col_no,this->Mapping_Mat_Row_no);
-            this->discrete_values[frame_ind] = Discret_Values_For_Smooth[frame_ind];
-        }
-    }
-
-    double Apply3DSplineFunc(double x, double y, int image_index) {
-        double value;
-        value = this->Spline2d[image_index].ApplySplineFunc(x, y);
-        return value;
-    }
-
-    // double OptimizationKnotObejct(matrix<double> value_on_knot_1d) {
-
-    //     matrix<double> value_on_knot_2d = reshape(value_on_knot_1d, this->knot_no_x * this->knot_no_y, this->knot_no_z);
-    //     matrix<double> tmp;
-
-    //     // assign parameters
-    //     for ( int i = 0; i < this->knot_no_y; i++ ) {
-    //         for ( int j = 0; j < this->knot_no_x; j++ ) {
-    //             tmp = rowm(value_on_knot_2d, (i * this->knot_no_x + j));
-    //             // cout << "size" << tmp.size( ) << endl;
-    //             // cout << "current " << i << " " << j << " " << i * this->knot_no_x + j << " " << tmp << endl;
-    //             // this->value_on_knot[i][j] = tmp;
-    //             // // cout << "tmp " << tmp << endl;
-    //             // this->Spline1d[i][j].UpdateSpline(this->value_on_knot[i][j]);
-    //             this->Spline1d[i][j].UpdateSpline(tmp);
-    //             this->Spline1d[i][j].FineGridCurve = this->Spline1d[i][j].ApplyMappingMat(Spline1d[i][j].Qy);
-    //         }
-    //     }
-
-    //     matrix<double> Value_On_Image;
-    //     Value_On_Image.set_size(this->knot_no_y, this->knot_no_x);
-
-    //     for ( int frame_ind = 0; frame_ind < this->frame_no; frame_ind++ ) {
-    //         for ( int i = 0; i < this->knot_no_y; i++ ) {
-    //             for ( int j = 0; j < this->knot_no_x; j++ ) {
-    //                 Value_On_Image(i, j) = Spline1d[i][j].FineGridCurve(frame_ind);
-    //             }
-    //         }
-    //         this->Spline2d[frame_ind].UpdateSpline(Value_On_Image);
-    //         // this->Spline2d[frame_ind].MappingMat = this->Spline2d[frame_ind].MappingMatrix(this->x, this->y);
-    //     }
-    //     matrix<double>* smooth_interp; // it sames the interpolated values
-    //     smooth_interp = this->SmoothInterp( );
-
-    //     double error;
-
-    //     error = 0.0;
-
-    //     for ( int k = 0; k < this->frame_no; k++ ) {
-    //         for ( int i = 0; i < this->Mapping_Mat_Row_no; i++ ) {
-    //             for ( int j = 0; j < this->Mapping_Mat_Col_no; j++ ) {
-    //                 // error = error + powf(std::abs(smooth_interp[k](i, j) - this->discrete_values[k](i, j)), 2);
-    //                 // error = error + std::abs(smooth_interp[k](i, j) - this->discrete_values[k](i, j));
-    //                 error = error + powf(std::abs(smooth_interp[k](i, j) - this->discrete_values[k](i, j)), 2);
-    //                 // cout << " interp and discret val " << smooth_interp[k](i, j) << " " << this->discrete_values[k](i, j) << endl;
-    //                 // cout << i * col_no + j << " " << error << " " << smoothsurf(i, j) << " " << z(i * col_no + j) << endl;
-    //             }
-    //         }
-    //     }
-
-    //     return error;
-    // }
-
-    double OptimizationKnotObejctFast(matrix<double> value_on_knot_1d) {
-        // cout << "size" << value_on_knot_1d.size( ) << endl;
-        // matrix<double>  value_on_knot_2d = reshape(value_on_knot_1d, this->knot_no_x * this->knot_no_y, this->knot_no_z);
-        matrix<double>  tmp;
-        matrix<double>* grid_curves;
-        matrix<double>  tmp_qy;
-        matrix<double>  tmp_qz;
-
-        // matrix<double> value_on_knot_2d;
-        // value_on_knot_2d.set_size(this->knot_no_x * this->knot_no_y, this->knot_no_z);
-        // for(int i = 0; i<this->knot_no_x*this->knot_no_y;i++){
-        //     value_on_knot_2d(i,)
-        // }
-        grid_curves = new matrix<double>[this->knot_no_x * this->knot_no_y];
-        // tmp_qz.set_size(this->knot_no_y, this->knot_no_x);
-
-        // assign parameters
-        int knot_no_2d = this->knot_no_x * this->knot_no_y;
-        // for ( int k = 0; k < this->knot_no_z; k++ ) {
-
-        for ( int i = 0; i < this->knot_no_y; i++ ) {
-            for ( int j = 0; j < this->knot_no_x; j++ ) {
-                // tmp = rowm(value_on_knot_2d, (i * this->knot_no_x + j));
-                int currentid = i * this->knot_no_x + j;
-                // cout << "range " << range(currentid * this->knot_no_z, (currentid + 1) * this->knot_no_z - 1);
-                tmp = rowm(value_on_knot_1d, range(currentid * this->knot_no_z, (currentid + 1) * this->knot_no_z - 1)); //, (currentid + 1) * this->knot_no_z - 1);
-                // cout << "tmp " << tmp << endl;
-                // this->value_on_knot[i][j] = tmp;
-                // cout << "tmp " << tmp << endl;
-                // this->Spline1d[i][j].UpdateSpline(this->value_on_knot[i][j]);
-                this->Spline1d[i][j].UpdateSpline(tmp);
-                // tmp_qy = this->Spline1d[i][j].CalcQy(tmp);
-                // cout << "tmp_qy" << tmp_qy << endl;
-                // cout << Spline1d[i][j].Qy << endl;
-                // cout << Spline1d[i][j].phi << endl;
-                // grid_curves[i * this->knot_no_x + j] = this->Spline1d[i][j].ApplyMappingMat(tmp_qy);
-                // cout << "Qy shape" << Spline1d[i][j].Qy.size( ) << endl;
-                grid_curves[i * this->knot_no_x + j] = this->Spline1d[i][j].ApplyMappingMat(this->Spline1d[i][j].Qy);
-            }
-        }
-        // }
-
-        matrix<double> Value_On_Image;
-        Value_On_Image.set_size(this->knot_no_y, this->knot_no_x);
-        matrix<double>* smooth_interp; // it sames the interpolated values
-        // smooth_interp = new matrix<double>[this->frame_no];
-        // smooth_interp = this->SmoothInterp( );
-
-        for ( int frame_ind = 0; frame_ind < this->frame_no; frame_ind++ ) {
-            for ( int i = 0; i < this->knot_no_y; i++ ) {
-                for ( int j = 0; j < this->knot_no_x; j++ ) {
-                    Value_On_Image(i, j) = grid_curves[i * this->knot_no_x + j](frame_ind);
-                }
-            }
-            this->Spline2d[frame_ind].UpdateSpline(Value_On_Image);
-            // tmp_qz                   = Spline2d[frame_ind].CalcQz(Value_On_Image);
-            // smooth_interp[frame_ind] = Spline2d[frame_ind].ApplyMappingMat(tmp_qz);
-            // this->Spline2d[frame_ind].MappingMat = this->Spline2d[frame_ind].MappingMatrix(this->x, this->y);
-        }
-        // matrix<double>* smooth_interp; // it sames the interpolated values
-        smooth_interp = this->SmoothInterp( );
-
-        // for ( int frame_ind = 0; frame_ind < this->frame_no; frame_ind++ ) {
-        //     smooth_interp[frame_ind] = Spline2d[frame_ind].ApplyMappingMat(Spline2d[frame_ind].Qz2d);
-        // }
-        // this->smooth_interp = smooth_interp;
-
-        double error, current_error;
-
-        error = 0.0;
-
-        for ( int k = 0; k < this->frame_no; k++ ) {
-            current_error = 0;
-            for ( int i = 0; i < this->Mapping_Mat_Row_no; i++ ) {
-                for ( int j = 0; j < this->Mapping_Mat_Col_no; j++ ) {
-                    // current_error = current_error + powf(std::abs(smooth_interp[k](i, j) - this->discrete_values[k](i, j)), 2);
-                    // error         = error + std::abs(smooth_interp[k](i, j) - this->discrete_values[k](i, j)) / this->frame_no;
-                    error = error + powf(std::abs(smooth_interp[k](i, j) - this->discrete_values[k](i, j)), 2) / this->frame_no;
-                    // cout << " image " << k << endl;
-                    // cout << " interp and discret val, error " << smooth_interp[k](i, j) << " " << this->discrete_values[k](i, j) << " " << powf(std::abs(smooth_interp[k](i, j) - this->discrete_values[k](i, j)), 2) << endl;
-                    // cout << "total error and current error "
-                    //      << " " << error << " " << current_error << endl;
-                }
-            }
-        }
-        // delete grid_curves;
-
-        return error;
-    }
-};
 
 // cubicspline  Spline1d[3];
-cubicspline**    Spline1d;
-bicubicspline*   Spline2d;
-MovieFrameSpline Spline3d, Spline3dy;
-bicubicspline**  ccmap;
+cubicspline**      Spline1d;
+bicubicspline*     Spline2d;
+MovieFrameSpline   Spline3d, Spline3dy;
+bicubicspline**    ccmap;
+bicubicsplinestack ccmap_stack;
+
+void           Generate_CoeffSpline(Image** patch_stack, float unitless_bfactor, int patch_no, int image_no, bool write_out_the_ccmap, std::string output_path, std::string file_pref);
+void           write_shifts(int patch_no_x, int patch_no_y, int image_no, std::string output_path, std::string shift_file_prefx, std::string shift_file_prefy);
+void           write_joins(std::string output_path, std::string join_file_pref, column_vector Join1d);
+void           FixOutliers(matrix<double>* patch_peaksx, matrix<double>* patch_peaksy, matrix<double> patch_locations_x, matrix<double> patch_locations_y, int patch_no_x, int patch_no_y, int step_size_x, int step_size_y, int image_no);
+void           generate_shift_spline(int number_of_images, int image_dim_x, int image_dim_y, float** shifted_mapx, float** shifted_mapy, bool superres, int bin);
+matrix<double> read_joins(std::string join_file_pref, std::string output_path, int joinsize);
+Image          ImageStretchInFourier(Image input_image, int Stretch_Dim_X, int Stretch_Dim_Y, float padding_value);
+
+void generate_shift_spline(int number_of_images, int image_dim_x, int image_dim_y, float** shifted_mapx, float** shifted_mapy, bool superres, int bin) {
+    int    totalpixels;
+    float* original_map_x;
+    float* original_map_y;
+
+    totalpixels = image_dim_x * image_dim_y * bin * bin;
+
+    original_map_x = new float[totalpixels];
+    original_map_y = new float[totalpixels];
+
+    // initialize the pixel coordinates
+    for ( int i = 0; i < image_dim_y * bin; i++ ) {
+        for ( int j = 0; j < image_dim_x * bin; j++ ) {
+            original_map_x[i * image_dim_x * bin + j] = float(j) / float(bin);
+            original_map_y[i * image_dim_x * bin + j] = float(i) / float(bin);
+        }
+    }
+
+    // input_vector input;
+    for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
+        wxPrintf("generating shifts for frame %i \n ", image_counter + 1);
+        for ( int pix = 0; pix < totalpixels; pix++ ) {
+            shifted_mapx[image_counter][pix] += Spline3d.Apply3DSplineFunc(original_map_x[pix], original_map_y[pix], image_counter);
+            shifted_mapy[image_counter][pix] += Spline3dy.Apply3DSplineFunc(original_map_x[pix], original_map_y[pix], image_counter);
+            // shifted_map_x[pix] = Spline3d.Apply3DSplineFunc(original_map_x[pix], original_map_y[pix], time) + original_map_x[pix];
+            // shifted_map_y[pix] = Spline3dy.Apply3DSplineFunc(original_map_x[pix], original_map_y[pix], time) + original_map_y[pix];
+        }
+    }
+
+    delete[] original_map_x;
+    delete[] original_map_y;
+}
+
+void split_and_update(matrix<double> Join1d, int joinsize) {
+    int            count = 0;
+    matrix<double> knot_on_spline_for_x, knot_on_spline_for_y;
+    int            halflen = joinsize / 2;
+    // int            halflen = knot_on_x * knot_on_y * knot_on_z;
+    knot_on_spline_for_x.set_size(halflen, 1);
+    for ( int i = 0; i < halflen; i++ ) {
+        knot_on_spline_for_x(i) = Join1d(count);
+        count++;
+    }
+
+    // Spline3d.Update3DSpline1dInput(knot_on_spline_for_x);
+    Spline3d.Update3DSpline1dInput(knot_on_spline_for_x);
+
+    knot_on_spline_for_y.set_size(halflen, 1);
+    for ( int i = 0; i < halflen; i++ ) {
+        knot_on_spline_for_y(i) = Join1d(count);
+        count++;
+    }
+    // Spline3dy.Update3DSpline1dInput(knot_on_spline_for_y);
+    Spline3dy.Update3DSpline1dInput(knot_on_spline_for_y);
+}
+
+void apply_shift(Image* input_stack, Image* distorted_stack, float** shifted_mapx, float** shifted_mapy, int number_of_images) {
+    int image_dim_x = input_stack[0].logical_x_dimension;
+    int image_dim_y = input_stack[0].logical_y_dimension;
+    int totalpixels = image_dim_x * image_dim_y;
+
+    float* original_map_x = new float[totalpixels];
+    float* original_map_y = new float[totalpixels];
+    float* shifted_map_x  = new float[totalpixels];
+    float* shifted_map_y  = new float[totalpixels];
+
+    // initialize the pixel coordinates
+    for ( int i = 0; i < image_dim_y; i++ ) {
+        for ( int j = 0; j < image_dim_x; j++ ) {
+            original_map_x[i * image_dim_x + j] = j;
+            original_map_y[i * image_dim_x + j] = i;
+        }
+    }
+
+    Image tmp_img;
+    tmp_img.Allocate(input_stack[0].logical_x_dimension, input_stack[0].logical_y_dimension, 1, true);
+
+    // input_vector input;
+    float time;
+    // wxString     outputpath = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/TestPatch_24_16_0626/";
+    for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
+        for ( int pix = 0; pix < totalpixels; pix++ ) {
+            shifted_map_x[pix] = original_map_x[pix] + shifted_mapx[image_counter][pix];
+            shifted_map_y[pix] = original_map_y[pix] + shifted_mapy[image_counter][pix];
+        }
+        wxPrintf("correcting frame %i \n ", image_counter + 1);
+        distorted_stack[image_counter].Allocate(input_stack[0].logical_x_dimension, input_stack[0].logical_y_dimension, 1, true);
+        tmp_img.CopyFrom(&input_stack[image_counter]);
+        distorted_stack[image_counter].SetToConstant(input_stack[image_counter].ReturnAverageOfRealValuesOnEdges( ));
+        tmp_img.Distortion(&distorted_stack[image_counter], shifted_map_x, shifted_map_y);
+    }
+
+    delete[] original_map_x;
+    delete[] original_map_y;
+    delete[] shifted_map_x;
+    delete[] shifted_map_y;
+    // return distorted_stack;
+}
 
 // double MissingGridFix(matrix<double> qz1d) {
 //     double result;
@@ -482,6 +231,7 @@ double minfunc3dSplineObjectxy(matrix<double> join_1d) {
     // cout << tmp << endl;
     // cout << "init x," << tmp(0) << " ," << tmp(tmp.size( ) - 1) << ", " << tmp.size( ) << endl;
     result1 = Spline3d.OptimizationKnotObejctFast(tmp);
+    // result  = result1;
     // tmp     = colm(join_1d, range(halflen, len - 1));
     for ( int i = 0; i < halflen; i++ ) {
         tmp(i) = join_1d(count);
@@ -508,10 +258,12 @@ double minfunc3dSplineCCLossObject(matrix<double> join_1d) {
     int count = 0;
 
     // pass some params:
-    int image_no        = Spline3d.frame_no;
-    int patch_x_num     = Spline3d.Mapping_Mat_Col_no;
-    int patch_y_num     = Spline3d.Mapping_Mat_Row_no;
-    int ccmap_patch_dim = ccmap[0][0].m;
+    int image_no    = Spline3d.frame_no;
+    int patch_x_num = Spline3d.Mapping_Mat_Col_no;
+    int patch_y_num = Spline3d.Mapping_Mat_Row_no;
+    // int ccmap_patch_dim = ccmap[0][0].m;
+    int ccmap_patch_dim      = ccmap_stack.m;
+    int half_ccmap_patch_dim = ccmap_patch_dim / 2;
 
     // tmp = colm(join_1d, range(0, halflen - 1));
     knot_on_spline_for_x.set_size(halflen, 1);
@@ -519,121 +271,40 @@ double minfunc3dSplineCCLossObject(matrix<double> join_1d) {
         knot_on_spline_for_x(i) = join_1d(count);
         count++;
     }
-    // wxPrintf("----------------------1");
-    Spline3d.Update3DSpline1dInput(knot_on_spline_for_x);
-    // wxPrintf("----------------------2");
-    shiftsx = Spline3d.SmoothInterp( );
-    // Spline3d.Update3DSplineInterpMapping(tmp);
-    // wxPrintf("----------------------3");
+
+    // Spline3d.Update3DSpline1dInput(knot_on_spline_for_x);
+    shiftsx = Spline3d.KnotToInterp(knot_on_spline_for_x);
+
     knot_on_spline_for_y.set_size(halflen, 1);
     for ( int i = 0; i < halflen; i++ ) {
         knot_on_spline_for_y(i) = join_1d(count);
         count++;
     }
-    // wxPrintf("----------------------4");
-    Spline3dy.Update3DSpline1dInput(knot_on_spline_for_y);
-    // wxPrintf("----------------------5");
-    shiftsy = Spline3dy.SmoothInterp( );
-    // wxPrintf("----------------------6");
-    // Spline3dy.Update3DSplineInterpMapping(tmp, );
+    // Spline3dy.Update3DSpline1dInput(knot_on_spline_for_y);
+    shiftsy = Spline3dy.KnotToInterp(knot_on_spline_for_y);
 
-    // shiftsy = Spline3dy.SmoothInterp( );
-
-    // shiftsx = shiftsx + ccmap_patch_dim / 2;
-    // shiftsy = shiftsy + ccmap_patch_dim / 2;
-
-    // for each patch, sum the cc values
     loss = 0;
     for ( int img_ind = 0; img_ind < image_no; img_ind++ ) {
         for ( int i = 0; i < patch_y_num; i++ ) {
             for ( int j = 0; j < patch_x_num; j++ ) {
                 // wxPrintf("current shifts %f, %f, \n", shiftsx[img_ind](i, j) + ccmap_patch_dim / 2, shiftsy[img_ind](i, j) + ccmap_patch_dim / 2);
                 // wxPrintf("current qz? %f, %f\n", ccmap[img_ind][i * patch_x_num + j].Qz2d(0, 0), ccmap[img_ind][i * patch_x_num + j].Qz2d(0, 1));
-                loss -= ccmap[img_ind][i * patch_x_num + j].ApplySplineFunc(shiftsx[img_ind](i, j) + ccmap_patch_dim / 2, shiftsy[img_ind](i, j) + ccmap_patch_dim / 2);
-                // wxPrintf(" current loss: %f\n", ccmap[img_ind][i * patch_x_num + j].ApplySplineFunc(shiftsx[img_ind](i, j) + ccmap_patch_dim / 2, shiftsy[img_ind](i, j) + ccmap_patch_dim / 2));
+                // loss -= ccmap[img_ind][i * patch_x_num + j].ApplySplineFunc(shiftsx[img_ind](i, j) + ccmap_patch_dim / 2, shiftsy[img_ind](i, j) + ccmap_patch_dim / 2);
+                // loss -= ccmap[img_ind][i * patch_x_num + j].ApplySplineFunc(shiftsx[img_ind](i, j) + ccmap_patch_dim / 2, shiftsy[img_ind](i, j) + ccmap_patch_dim / 2);
+                int patch_ind = i * patch_x_num + j;
+                // wxPrintf("is it here?");
+                // wxPrintf("shifts %f %f\n", shiftsx[img_ind](i, j) + half_ccmap_patch_dim, shiftsy[img_ind](i, j) + half_ccmap_patch_dim);
+                loss -= ccmap_stack.spline_stack[patch_ind * image_no + img_ind].ApplySplineFunc(shiftsx[img_ind](i, j) + half_ccmap_patch_dim, shiftsy[img_ind](i, j) + half_ccmap_patch_dim);
+                // wxPrintf("is it here?");
+                // wxPrintf(" img id %d current loss: %f\n", img_ind, ccmap_stack.spline_stack[patch_ind * image_no + img_ind].ApplySplineFunc(shiftsx[img_ind](i, j) + half_ccmap_patch_dim, shiftsy[img_ind](i, j) + half_ccmap_patch_dim));
                 // wxPrintf(" neighbor loss: %f, %f\n", ccmap[img_ind][i * patch_x_num + j].ApplySplineFunc(shiftsx[img_ind](i, j) + ccmap_patch_dim / 2 + 1, shiftsy[img_ind](i, j) + ccmap_patch_dim / 2 + 1));
             }
         }
     }
-    wxPrintf("result %f", loss);
+    loss = loss;
+    // wxPrintf("result %f", loss);
     return loss;
 }
-
-void FixOutliers(matrix<double>* patch_peaksx,matrix<double>* patch_peaksy, matrix<double> patch_locations_x, matrix<double> patch_locations_y, int patch_no_x, int patch_no_y,int step_size_x, int step_size_y,int image_no){
-    int patch_no = patch_no_x*patch_no_y;
-    // /*  this section fix the outliers using nearest neighbor ---------------------------------------------------
-    
-    std::vector<double> used_index(patch_no);
-    std::vector<int>    missed_index; // it should be in increasing order
-    matrix<float>       truefalse;
-    // truefalse.set_size(patch_num_y, patch_num_x);
-    truefalse    = ones_matrix<float>(patch_no_y, patch_no_x);
-    missed_index = {2, 7, 10, 12, 13, 14, 16, 27, 32, 43, 44, 46, 49, 62, 70, 71, 83, 2, 3, 6, 9, 10, 12, 13, 14, 15, 16, 24, 26, 27, 62};
-
-    for ( int i = 0; i < missed_index.size( ); i++ ) {
-        int c = missed_index[i] % patch_no_x;
-        int r = (missed_index[i] - c) / patch_no_x;
-        cout << "column and row are " << c << " " << r << endl;
-        truefalse(r, c) = 0;
-    }
-    cout << "truefalse map" << endl
-         << truefalse << endl;
-    std::vector<Point> points;
-    std::vector<Point> badpoints;
-    for ( int i = 0; i < patch_no_y; i++ ) {
-        for ( int j = 0; j < patch_no_x; j++ ) {
-            if ( truefalse(i, j) == 0 ) {
-                badpoints.push_back({patch_locations_x(j), patch_locations_y(i)});
-            }
-            else {
-                Point temppoint;
-                temppoint = {patch_locations_x(j), patch_locations_y(i)};
-                points.push_back({patch_locations_x(j), patch_locations_y(i)});
-            }
-        }
-    }
-    int pointslength    = points.size( );
-    int badpointslength = badpoints.size( );
-    cout << pointslength << endl;
-    // for ( int i = 0; i < pointslength; i++ ) {
-    //     cout << points[i].x << " " << points[i].y << endl;
-    // }
-    cout << "bad points" << endl;
-    for ( int i = 0; i < badpointslength; i++ ) {
-        cout << badpoints[i].x << endl;
-    }
-
-    matrix<double>* patch_peaksx_tmp;
-    matrix<double>* patch_peaksy_tmp;
-    patch_peaksx_tmp = new matrix<double>[image_no];
-    patch_peaksy_tmp = new matrix<double>[image_no];
-    for ( int i = 0; i < image_no; i++ ) {
-        patch_peaksx_tmp[i].set_size(patch_no_y, patch_no_x);
-        patch_peaksy_tmp[i].set_size(patch_no_y, patch_no_x);
-        patch_peaksx_tmp[i] = patch_peaksx[i];
-        patch_peaksy_tmp[i] = patch_peaksy[i];
-    }
-
-    for ( int i = 0; i < badpointslength; i++ ) {
-        Point nearest = findNearestNeighbor(badpoints[i], points);
-        int   jj      = nearest.x / step_size_x / 2;
-        int   ii      = nearest.y / step_size_y / 2;
-        int   jjb     = badpoints[i].x / step_size_x / 2;
-        int   iib     = badpoints[i].y / step_size_y / 2;
-        for ( int image_ind = 0; image_ind < image_no; image_ind++ ) {
-            patch_peaksx[image_ind](iib, jjb) = patch_peaksx_tmp[image_ind](ii, jj);
-            patch_peaksy[image_ind](iib, jjb) = patch_peaksy_tmp[image_ind](ii, jj);
-        }
-    }
-    cout << "before fix" << endl;
-    cout << patch_peaksx_tmp[74] << endl;
-    cout << "fixed" << endl;
-    // cout << reshape(shiftsplinex.z_on_knot, patch_num_x, patch_num_y) << endl;
-    cout << patch_peaksx[74] << endl;
-
-    // Spline3d.UpdateDiscreteValues(patch_peaksx);
-    // Spline3dy.UpdateDiscreteValues(patch_peaksy);
-};
 
 // /* buid 3d spline*/
 
@@ -644,31 +315,40 @@ bool NikoTestApp::DoCalculation( ) {
     double total_dose     = 30;
     double sample_dose    = 4; //10; //4;
     double dose_per_frame = total_dose / double(image_no);
-    int    image_y_dim    = 4092;
-    int    image_x_dim    = 5760;
+    // double pre_exposure_amount = 0;
+    float pre_exposure_amount = 0.0;
+    int   image_y_dim         = 4092;
+    int   image_x_dim         = 5760;
     // double knot_on_z      = 2;
     // double knot_z_dis     = ceil(total_dose / (knot_on_z - 1));
-    double knot_z_dis = sample_dose;
-    double knot_on_z  = ceil(total_dose / sample_dose) + 1;
+    double        knot_z_dis = sample_dose;
+    double        knot_on_z  = ceil(total_dose / sample_dose) + 1;
+    double        knot_on_x  = 8; //8;
+    double        knot_x_dis = ceil(image_x_dim / (knot_on_x - 1));
+    double        knot_on_y  = 5; //5;
+    double        knot_y_dis = ceil(image_y_dim / (knot_on_y - 1));
+    column_vector Join1d, Join1dy;
+    cout << "knot x y dis" << endl;
+    cout << knot_x_dis << endl;
+    cout << knot_y_dis << endl;
 
-    double knot_on_x  = 8;
-    double knot_x_dis = ceil(image_x_dim / (knot_on_x - 1));
-    double knot_on_y  = 5;
-    double knot_y_dis = ceil(image_y_dim / (knot_on_y - 1));
-
-    int patch_no_x = 12;
-    int patch_no_y = 8;
-    int patch_no   = patch_no_x * patch_no_y;
-
+    int                     patch_no_x = 12;
+    int                     patch_no_y = 8;
+    int                     patch_no   = patch_no_x * patch_no_y;
+    std::ofstream           xoFile, yoFile;
+    std::ofstream           file;
     cistem_timer::StopWatch spline_time;
-
+    // auto                    start, stop, duration;
+    std::ofstream  joinfile;
+    std::string    lossfile;
     matrix<double> z;
     z.set_size(image_no, 1);
     for ( int i = 0; i < image_no; i++ ) {
-        z(i) = i * dose_per_frame;
+        z(i) = (i + 1) * dose_per_frame;
+        cout << i << " " << z(i) << endl;
     }
-    // cout << "dose per frame" << dose_per_frame << endl;
-    // cout << z << endl;
+    cout << "dose per frame" << dose_per_frame << endl;
+    // cout << i << " " << z << endl;
 
     std::ifstream File; //, yFile;
     // wxString      shift_file;
@@ -690,23 +370,27 @@ bool NikoTestApp::DoCalculation( ) {
     }
 
     // wxString input_path = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/S_record1525_12_08_0724_dosefilter/";
-    std::string input_path  = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/S_record1525_12_08_0724_dosefilter/";
-    std::string output_path = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/S_record1525_12_08_1109_ForCPlus_square_xy/";
+    std::string input_path = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/S_record1525_12_08_0724_dosefilter/";
+    // std::string output_path = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/S_record1525_12_08_1121_ForCPlus_square_xy_sumimgbfactor_single_no/";
+    std::string output_path = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/S_record1525_12_08_1120_ForCPlus_square_xy_allframebfactor/";
+
+    // std::string output_path = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/S_record1525_12_08_1109_ForCPlus_square_xy_sumimgbfactor_single_no_1118/";
+    // std::string output_path = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/S_record1525_12_08_1109_ForCPlus_square_xy_bothbfactor_1118/";
 
     // load peak array from file ---------------------------------------------------
     for ( int patch_index_y = 0; patch_index_y < patch_no_y; patch_index_y++ ) {
         for ( int patch_index_x = 0; patch_index_x < patch_no_x; patch_index_x++ ) {
             int patch_index = patch_index_y * patch_no_x + patch_index_x;
             // wxPrintf("processing patch %i\n", patch_index);
-            cout << "princessing patch " << patch_index << endl;
+            cout << "patch shifts reading " << patch_index << endl;
             int shift_file_index = patch_index;
             oss << "%s%04i%s%s" << input_path.c_str( ), shift_file_index, shift_file_pref.c_str( ), ".txt";
             std::snprintf(buffer, sizeof(buffer), "%s%04i%s%s", input_path.c_str( ), shift_file_index, shift_file_pref.c_str( ), ".txt");
             shift_file = buffer;
-            cout << "file " << shift_file << endl;
+            // cout << "file " << shift_file << endl;
             File.open(shift_file.c_str( ));
             if ( File.is_open( ) ) {
-                // wxPrintf("files are open\n");
+                wxPrintf("files are open\n");
                 for ( int image_ind = 0; image_ind < image_no; image_ind++ ) {
                     // read by order, which y is in descending
                     File >> patch_peaksx[image_ind](patch_index_y, patch_index_x);
@@ -719,7 +403,6 @@ bool NikoTestApp::DoCalculation( ) {
         }
     }
     // load peak array from file end ---------------------------------------------------
-
     // initialize the 3d splines  ---------------------------------------------------
     matrix<double> patch_locations;
     matrix<double> patch_locations_x;
@@ -731,12 +414,12 @@ bool NikoTestApp::DoCalculation( ) {
     // int   image_dim_y = image_stack[0].logical_y_dimension;
     int step_size_x = myroundint(float(image_x_dim) / float(patch_no_x) / 2);
     int step_size_y = myroundint(float(image_y_dim) / float(patch_no_y) / 2);
+    cout << step_size_x << endl;
+    cout << step_size_y << endl;
 
     for ( int patch_x_ind = 0; patch_x_ind < patch_no_x; patch_x_ind++ ) {
         patch_locations_x(patch_x_ind) = patch_x_ind * step_size_x * 2 + step_size_x;
-        // wxPrintf("patch locations: %f, %f\n", patch_locations[patch_num_x * patch_y_ind + patch_x_ind][0], patch_locations[patch_num_x * patch_y_ind + patch_x_ind][1]);
     }
-
     for ( int patch_y_ind = 0; patch_y_ind < patch_no_y; patch_y_ind++ ) {
         patch_locations_y(patch_y_ind) = image_y_dim - patch_y_ind * step_size_y * 2 - step_size_y;
     }
@@ -768,7 +451,17 @@ bool NikoTestApp::DoCalculation( ) {
     Spline3dy.UpdateDiscreteValues(patch_peaksy);
     // initialize the 3d splines end ---------------------------------------------------
 
-    column_vector Join1d, Join1dy;
+    // cout << patch_peaksx[image_no-1] << endl;
+    FixOutliers(patch_peaksx, patch_peaksy, patch_locations_x, patch_locations_y, patch_no_x, patch_no_y, step_size_x, step_size_y, image_no);
+    cout << "fixed" << endl;
+    // cout << patch_peaksx[image_no-1] << endl;
+
+    Spline3d.UpdateDiscreteValues(patch_peaksx);
+    Spline3dy.UpdateDiscreteValues(patch_peaksy);
+    wxPrintf("updated check %f\n", Spline3d.discrete_values[0](0, 0));
+
+    // fitting the shifts--------------------------------------------------
+    /*
     Join1d = ones_matrix<double>(knot_on_x * knot_on_y * knot_on_z * 2, 1);
     // Join1dy = ones_matrix<double>(knot_on_x * knot_on_y * knot_on_z, 1);
     // for ( int i = 0; i < knot_on_x * knot_on_y * knot_on_z * 2; i++ ) {
@@ -778,6 +471,9 @@ bool NikoTestApp::DoCalculation( ) {
     double error;
     // error = minfunc3dSplineObject(Join1d);
     error = minfunc3dSplineObjectxy(Join1d);
+    cout << "initial error " << error << endl;
+    // wxPrintf(" initial error: %f \n", error);
+    //-----------------------------------------------------------------------------------------------------------
     cout << "error " << error << endl;
     for ( int i = 0; i < image_no; i++ ) {
         cout << i << endl;
@@ -785,181 +481,70 @@ bool NikoTestApp::DoCalculation( ) {
         cout << Spline3d.discrete_values[i] << endl;
         cout << patch_peaksx[i] << endl;
     }
-    FixOutliers(patch_peaksx, patch_peaksy,patch_locations_x,patch_locations_y,patch_no_x,patch_no_y,step_size_x,step_size_y,image_no);
-    // cout << "before fix" << endl;
-    // cout << patch_peaksx_tmp[74] << endl;
-    cout << "fixed" << endl;
-    // cout << reshape(shiftsplinex.z_on_knot, patch_num_x, patch_num_y) << endl;
-    cout << patch_peaksx[74] << endl;
+    oss << "%s%s%s" << output_path.c_str( ), shift_file_pref.c_str( ), "loss_round0.txt";
+    std::snprintf(buffer, sizeof(buffer), "%s%s%s", output_path.c_str( ), shift_file_pref.c_str( ), "loss_R0.txt");
+    // shift_file = oss.str( );
+    lossfile = buffer;
+    cout << "file " << lossfile << endl;
 
-    Spline3d.UpdateDiscreteValues(patch_peaksx);
-    Spline3dy.UpdateDiscreteValues(patch_peaksy);
+    file.open(lossfile.c_str( ));
+    std::streambuf* coutBuf0 = std::cout.rdbuf( );
+    std::cout.rdbuf(file.rdbuf( ));
 
-    /*  this section fix the outliers using nearest neighbor ---------------------------------------------------
-    std::vector<double> used_index(patch_no);
-    std::vector<int>    missed_index; // it should be in increasing order
-    matrix<float>       truefalse;
-    // truefalse.set_size(patch_num_y, patch_num_x);
-    truefalse    = ones_matrix<float>(patch_no_y, patch_no_x);
-    missed_index = {2, 7, 10, 12, 13, 14, 16, 27, 32, 43, 44, 46, 49, 62, 70, 71, 83, 2, 3, 6, 9, 10, 12, 13, 14, 15, 16, 24, 26, 27, 62};
-
-    for ( int i = 0; i < missed_index.size( ); i++ ) {
-        int c = missed_index[i] % patch_no_x;
-        int r = (missed_index[i] - c) / patch_no_x;
-        cout << "column and row are " << c << " " << r << endl;
-        truefalse(r, c) = 0;
-    }
-    cout << "truefalse map" << endl
-         << truefalse << endl;
-    std::vector<Point> points;
-    std::vector<Point> badpoints;
-    for ( int i = 0; i < patch_no_y; i++ ) {
-        for ( int j = 0; j < patch_no_x; j++ ) {
-            if ( truefalse(i, j) == 0 ) {
-                badpoints.push_back({patch_locations_x(j), patch_locations_y(i)});
-            }
-            else {
-                Point temppoint;
-                temppoint = {patch_locations_x(j), patch_locations_y(i)};
-                points.push_back({patch_locations_x(j), patch_locations_y(i)});
-            }
-        }
-    }
-    int pointslength    = points.size( );
-    int badpointslength = badpoints.size( );
-    cout << pointslength << endl;
-    // for ( int i = 0; i < pointslength; i++ ) {
-    //     cout << points[i].x << " " << points[i].y << endl;
-    // }
-    cout << "bad points" << endl;
-    for ( int i = 0; i < badpointslength; i++ ) {
-        cout << badpoints[i].x << endl;
-    }
-
-    matrix<double>* patch_peaksx_tmp;
-    matrix<double>* patch_peaksy_tmp;
-    patch_peaksx_tmp = new matrix<double>[image_no];
-    patch_peaksy_tmp = new matrix<double>[image_no];
-    for ( int i = 0; i < image_no; i++ ) {
-        patch_peaksx_tmp[i].set_size(patch_no_y, patch_no_x);
-        patch_peaksy_tmp[i].set_size(patch_no_y, patch_no_x);
-        patch_peaksx_tmp[i] = patch_peaksx[i];
-        patch_peaksy_tmp[i] = patch_peaksy[i];
-    }
-
-    for ( int i = 0; i < badpointslength; i++ ) {
-        Point nearest = findNearestNeighbor(badpoints[i], points);
-        int   jj      = nearest.x / step_size_x / 2;
-        int   ii      = nearest.y / step_size_y / 2;
-        int   jjb     = badpoints[i].x / step_size_x / 2;
-        int   iib     = badpoints[i].y / step_size_y / 2;
-        for ( int image_ind = 0; image_ind < image_no; image_ind++ ) {
-            patch_peaksx[image_ind](iib, jjb) = patch_peaksx_tmp[image_ind](ii, jj);
-            patch_peaksy[image_ind](iib, jjb) = patch_peaksy_tmp[image_ind](ii, jj);
-        }
-    }
-    cout << "before fix" << endl;
-    cout << patch_peaksx_tmp[74] << endl;
-    cout << "fixed" << endl;
-    // cout << reshape(shiftsplinex.z_on_knot, patch_num_x, patch_num_y) << endl;
-    cout << patch_peaksx[74] << endl;
-
-    Spline3d.UpdateDiscreteValues(patch_peaksx);
-    Spline3dy.UpdateDiscreteValues(patch_peaksy);
-
-    // #-- --
-    // end the outlier fix ---------------------------------------------------
-    */
-
-    // fitting the shifts--------------------------------------------------
-    /*
     auto start = std::chrono::high_resolution_clock::now( );
     // find_min_using_approximate_derivatives(lbfgs_search_strategy(10000), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
     //                                        objective_delta_stop_strategy(1e-7).be_verbose( ),
     //                                        minfunc3dSplineObject, Join1d, -1);
     find_min_using_approximate_derivatives(lbfgs_search_strategy(1000000), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
-                                           objective_delta_stop_strategy(1e-1).be_verbose( ),
+                                           objective_delta_stop_strategy(1e-7).be_verbose( ),
                                            minfunc3dSplineObjectxy, Join1d, -1);
     auto stop     = std::chrono::high_resolution_clock::now( );
     auto duration = std::chrono::duration_cast<std::chrono::minutes>(stop - start);
-    std::cout << "Lap time" << duration.count( ) << " minutes\n";
+    std::cout << "Lap time " << duration.count( ) << " minutes\n";
+    std::cout.rdbuf(coutBuf0);
+    file.close( );
     // cout << "Join1d" << Join1d << endl;
 
-    error = minfunc3dSplineObject(Join1d);
+    error = minfunc3dSplineObjectxy(Join1d);
     // cout << "Image" << i << endl;
-
+    wxPrintf(" round 1 final error: %f \n", error);
     cout << "error " << error << endl;
     cout << "parameters" << Join1d << endl;
-    // for ( int i = 0; i < image_no; i++ ) {
-    //     cout << "Image" << i << endl;
-    //     cout << Spline3d.smooth_interp[i] << endl;
-    //     cout << patch_peaksx[i] << endl;
-    //     cout << Spline3d.smooth_interp[i] - patch_peaksx[i] << endl;
-    // }
-    std::ofstream xoFile, yoFile;
 
-    for ( int image_ind = 0; image_ind < image_no; image_ind++ ) {
-
-        int shift_file_index = image_ind;
-        oss << "%s%04i%s%s" << output_path.c_str( ), shift_file_index, shift_file_prefx.c_str( ), ".txt";
-        std::snprintf(buffer, sizeof(buffer), "%s%04i%s%s", output_path.c_str( ), shift_file_index, shift_file_prefx.c_str( ), ".txt");
-        // shift_file = oss.str( );
-        shift_filex = buffer;
-        cout << "file " << shift_filex << endl;
-        oss << "%s%04i%s%s" << output_path.c_str( ), shift_file_index, shift_file_prefy.c_str( ), ".txt";
-        std::snprintf(buffer, sizeof(buffer), "%s%04i%s%s", output_path.c_str( ), shift_file_index, shift_file_prefy.c_str( ), ".txt");
-        // shift_file = oss.str( );
-        shift_filey = buffer;
-        cout << "file " << shift_filey << endl;
-        // File.open(shift_file.c_str( ));
-
-        // wxString      shifted_mapx_file = outputpath + "shifted_x.txt";
-        // wxString      shifted_mapy_file = outputpath + "shifted_y.txt";
-        // std::ofstream xoFile, yoFile;
-
-        // wxPrintf("1\n");
-        // for ( int i = 0; i < 10; i++ ) {
-        //     for ( int j = 0; j < 10; j++ ) {
-        //         shifted_map_x[i][j] = j;
-        //         shifted_map_y[i][j] = i;
-        //     }
-        // }
-
-        xoFile.open(shift_filex.c_str( ));
-        yoFile.open(shift_filey.c_str( ));
-        // yoFile.open(shifted_mapy_file.c_str( ));
-        if ( xoFile.is_open( ) && yoFile.is_open( ) ) {
-            // wxPrintf("files are open\n");
-            cout << "files are open" << endl;
-            // float myarray[10][5760];
-            for ( int i = 0; i < patch_no_y; i++ ) {
-                for ( int j = 0; j < patch_no_x; j++ ) {
-                    xoFile << Spline3d.smooth_interp[image_ind](i, j) << '\t';
-                    yoFile << Spline3dy.smooth_interp[image_ind](i, j) << '\t';
-                    // yoFile << shifted_map_y[i][j] << '\t';
-                }
-                xoFile << '\n';
-                yoFile << '\n';
-            }
-        }
-        xoFile.close( );
-        yoFile.close( );
-    }
-
-    std::ofstream joinfile;
-
-    oss << "%s%s%s" << output_path.c_str( ), shift_file_pref.c_str( ), ".txt";
-    std::snprintf(buffer, sizeof(buffer), "%s%s%s", output_path.c_str( ), shift_file_pref.c_str( ), ".txt");
+    shift_file_prefx = "_shiftx_R0";
+    shift_file_prefy = "_shifty_R0";
+    write_shifts(patch_no_x, patch_no_y, image_no, output_path, shift_file_prefx, shift_file_prefy);
+    write_joins(output_path, "Joins_R0", Join1d);
+    // */
+    // fitting the shifts end --------------------------------------------------
+    // ---------reading the join file -----------------------
+    /*
+    wxPrintf("reading the initilized peaks\n");
+    std::ifstream ijoinfile;
+    // column_vector Join1d;
+    // Join1d = ones_matrix<double>(knot_on_x * knot_on_y * knot_on_z * 2, 1);
+    std::string join_file_pref = "Joins_R0";
+    oss << "%s%s%s" << output_path.c_str( ), join_file_pref.c_str( ), ".txt";
+    std::snprintf(buffer, sizeof(buffer), "%s%s%s", output_path.c_str( ), join_file_pref.c_str( ), ".txt");
     // shift_file = oss.str( );
     shift_file = buffer;
     cout << "file " << shift_file << endl;
-    joinfile.open(shift_file.c_str( ));
-
-    for ( int i = 0; i < Join1d.size( ); i++ ) {
-        joinfile << Join1d(i) << '\n';
+    wxPrintf("file %s\n", shift_file);
+    ijoinfile.open(shift_file.c_str( ));
+    int joinsize = knot_on_x * knot_on_y * knot_on_z * 2;
+    Join1d.set_size(joinsize, 1);
+    // int tmpsize  = Join1d.size( );
+    // wxPrintf("join1d size %d\n", tmpsize);
+    for ( int i = 0; i < joinsize; i++ ) {
+        ijoinfile >> Join1d(i);
     }
-    joinfile.close( );
+    wxPrintf("3dsplien updates1\n");
+    ijoinfile.close( );
+    wxPrintf("3dsplien updates\n");
+    // */
+    // ---------reading the join file end-----------------------
 
+    /* read from python-------------------------------------------------
     std::ifstream joinfile_python;
     std::string   python_file;
     // std::ofstream xoFile, yoFile;
@@ -1007,28 +592,15 @@ bool NikoTestApp::DoCalculation( ) {
     cout << Spline3d.smooth_interp[i] << endl;
     cout << " python parame" << Join1d_python << endl;
     // }
-
-    // for ( int patch_y_ind = 0; patch_y_ind < patch_no_y; patch_y_ind++ ) {
-    //     for ( int patch_x_ind = 0; patch_x_ind < patch_no_x; patch_x_ind++ ) {
-    //         patch_locations(patch_no_x * patch_y_ind + patch_x_ind, 0) = patch_x_ind * step_size_x * 2 + step_size_x;
-    //         patch_locations(patch_no_x * patch_y_ind + patch_x_ind, 1) = image_y_dim - patch_y_ind * step_size_y * 2 - step_size_y;
-    //         // wxPrintf("patch locations: %f, %f\n", patch_locations[patch_num_x * patch_y_ind + patch_x_ind][0], patch_locations[patch_num_x * patch_y_ind + patch_x_ind][1]);
-    //     }
-    // }
-
-    // for (int i = 0; i < rows; ++i) {
-    //     delete[] Spline1d[i]; // Delete the memory allocated for the columns
-    // }
-    // delete[] Spline1d; // Delete the array of pointers
-    */
-    // fitting the shifts end --------------------------------------------------
-
+    // */
+    // python read end --------------------------------------------------
+    wxPrintf("loading the images and initialize the CC maps\n");
     // /* utilize the cross correlation maps for loss function
     float unitless_bfactor;
     float bfactor_in_angstoms = 1500;
     int   output_x_size       = image_x_dim;
     int   output_y_size       = image_y_dim;
-    float original_pixel_size = 0.415;
+    float original_pixel_size = 0.415 * 2;
 
     float x_bin_factor       = float(image_x_dim) / float(output_x_size);
     float y_bin_factor       = float(image_y_dim) / float(output_y_size);
@@ -1039,8 +611,8 @@ bool NikoTestApp::DoCalculation( ) {
     unitless_bfactor = bfactor_in_angstoms / pow(output_pixel_size, 2);
 
     // load the image stacks: ----------------------------------------
-    // /*
-    auto start = std::chrono::high_resolution_clock::now( );
+    /*
+    // auto start = std::chrono::high_resolution_clock::now( );
 
     std::string mrc_file;
     ImageFile   input_file;
@@ -1057,55 +629,29 @@ bool NikoTestApp::DoCalculation( ) {
     // MRCFile CC_file;
     // std::string cc_pref  = "CCMap";
     // Image** cc_stack = new Image*[patch_no];
-    Image sum_of_images;
-    Image sum_of_images_minus_current;
 
-    ccmap = new bicubicspline*[image_no];
-    matrix<double> temp;
-
-    // temp = zeros_matrix<double>(patch_dim * patch_dim / 4, patch_dim * patch_dim / 4);
-    wxPrintf("here?1\n");
-    spline_time.start("initialize ccmap spline\n");
-    for ( int i = 0; i < image_no; i++ ) {
-        ccmap[i] = new bicubicspline[patch_no];
-    }
-    matrix<double> phi, invphi;
-    ccmap[0][0].InitializeSpline(quater_patch_dim, quater_patch_dim, 1, 1);
-    phi    = ccmap[0][0].phi;
-    invphi = ccmap[0][0].invphi;
-    wxPrintf("inv phi %f %f \n", invphi(0, 0), phi(0, 0));
-
-    for ( int i = 0; i < image_no; i++ ) {
-        wxPrintf("current image %d\n", i);
-        for ( int j = 0; j < patch_no; j++ ) {
-            wxPrintf("here?2----------------------------\n");
-            // ccmap[i][j].phi                = phi;
-            // ccmap[i][j].invphi             = invphi;
-            ccmap[i][j].m                  = quater_patch_dim;
-            ccmap[i][j].n                  = quater_patch_dim;
-            ccmap[i][j].total              = (quater_patch_dim + 2) * (quater_patch_dim + 2);
-            ccmap[i][j].totaldim           = (quater_patch_dim + 2) * (quater_patch_dim + 2);
-            ccmap[i][j].spline_patch_dim_x = 1;
-            ccmap[i][j].spline_patch_dim_y = 1;
-            wxPrintf("here?3\n");
-        }
-    }
-    spline_time.lap("initialize ccmap spline\n");
     // auto stop     = std::chrono::high_resolution_clock::now( );
     // auto duration = std::chrono::duration_cast<std::chrono::minutes>(stop - start);
     // cout << "duration" << duration << endl;
     // wxPrintf(" the time for initial the parameters of the ccmap splines %s", duration);
     // long number_of_input_images = input_file.ReturnNumberOfSlices( );
-    sum_of_images.Allocate(512, 512, false);
-    sum_of_images.SetToConstant(0.0);
-    spline_time.start("ccmap spline qz calc\n");
-    for ( int i = 0; i < patch_no; i++ ) {
-        Image          tmpimg;
-        matrix<double> tmpcc;
-        tmpcc.set_size(quater_patch_dim * quater_patch_dim, 1);
-        tmpimg.Allocate(quater_patch_dim, quater_patch_dim, false);
 
-        int index = i;
+    matrix<int> index_mat;
+    index_mat.set_size(patch_no_y, patch_no_x);
+    for ( int i = 0; i < patch_no_y; i++ ) {
+        for ( int j = 0; j < patch_no_x; j++ ) {
+            index_mat(i, j) = i * patch_no_x + j;
+        }
+    }
+    index_mat = flipud(index_mat);
+    reshape(index_mat, patch_no_x * patch_no_y, 1);
+    for ( int i = 0; i < patch_no; i++ ) {
+        wxPrintf("%d \t", index_mat(i));
+    }
+    wxPrintf("\n");
+#pragma omp parallel for num_threads(8) private(buffer, mrc_file, patch_file, tmp)
+    for ( int i = 0; i < patch_no; i++ ) {
+        int index = index_mat(i);
         oss << "%s%04i%s" << input_path.c_str( ), index, ".mrc";
         std::snprintf(buffer, sizeof(buffer), "%s%04i%s", input_path.c_str( ), index, ".mrc");
         // shift_file = oss.str( );
@@ -1113,117 +659,563 @@ bool NikoTestApp::DoCalculation( ) {
         cout << "file " << mrc_file << endl;
         patch_file.OpenFile(mrc_file, false);
 
-        // CC_file.OpenFile(wxString::Format("CCMap_%i.mrc", index).ToStdString( ), true);
-        // cout << patch_file[i].ReturnNumberOfSlices( ) << endl;
-        wxPrintf("number of slices %d \n", patch_file.ReturnNumberOfSlices( ));
+        wxPrintf("patch stack no %d number of slices %d \n", i, patch_file.ReturnNumberOfSlices( ));
 
         for ( int image_counter = 1; image_counter <= image_no; image_counter++ ) {
             // Read from disk
             tmp.ReadSlice(&patch_file, image_counter);
-            cout << "here" << endl;
             patch_stack[i][image_counter - 1].ReadSlice(&patch_file, image_counter);
-            patch_stack[i][image_counter - 1].ForwardFFT();
-            patch_stack[i][image_counter - 1].ApplyBFactor(unitless_bfactor);
-            cout << "here1" << endl;
-            //  MRCFile input_file(inputstack.ToStdString( ), false);
-        }
-        for ( int image_counter = 0; image_counter < image_no; image_counter++ ) {
-            sum_of_images.AddImage(&patch_stack[i][image_counter]);
-        }
-        for ( int image_counter = 0; image_counter < image_no; image_counter++ ) {
-            sum_of_images_minus_current.CopyFrom(&sum_of_images);
-            sum_of_images_minus_current.SubtractImage(&patch_stack[i][image_counter]);
-            // sum_of_images_minus_current.ApplyBFactor(unitless_bfactor);
-            wxPrintf(" ----2");
-            // patch_stack[i][image_counter].ForwardFFT( );
-            // sum_of_images_minus_current.ForwardFFT( );
-            sum_of_images_minus_current.CalculateCrossCorrelationImageWith(&patch_stack[i][image_counter]);
-            // wxPrintf("here?\n");
-            sum_of_images_minus_current.QuickAndDirtyWriteSlice(wxString::Format("CCMapBfactor_%02i.mrc", index).ToStdString( ), image_counter + 1);
-            // wxPrintf("center: %f, %f, %f \n", sum_of_images_minus_current.real_values[128, 128], sum_of_images_minus_current.real_values[0, 0], sum_of_images_minus_current.real_values[511, 511]);
-
-            sum_of_images_minus_current.ClipInto(&tmpimg, 0);
-            wxPrintf("cliped\n");
-            wxPrintf("current size %d\n", sum_of_images_minus_current.logical_x_dimension);
-            wxPrintf("tmp size %d\n", tmpimg.logical_x_dimension);
-            // current_power_spectrum.Consume(&current_input_image_square);
-
-            wxPrintf("here1 img %d\n", image_counter);
-            int patch_index = index;
-            wxPrintf("here1 patch %d\n", patch_index);
-            ccmap[image_counter][patch_index].z_on_knot.set_size(quater_patch_dim * quater_patch_dim, 1);
-            for ( int ii = 0; ii < quater_patch_dim; ii++ ) {
-                for ( int jj = 0; jj < quater_patch_dim; jj++ ) {
-                    // tmpcc(ii * quater_patch_dim + jj) = tmpimg.real_values[ii, jj];
-                    // wxPrintf("ii jj, %d, %d, %f, %f \n", ii, jj, tmpimg.real_values[ii, jj]); //, tmpcc(ii * quater_patch_dim + jj));
-                    ccmap[image_counter][patch_index].z_on_knot(ii * quater_patch_dim + jj) = tmpimg.real_values[ii, jj];
-                }
-                // wxPrintf("here?????");
-            }
-            wxPrintf("here??\n");
-            // // tmpcc = sum_of_images_minus_current.real_values;
-            // ccmap[image_counter][patch_index].z_on_knot = tmpcc;
-            // wxPrintf("here1??");
-            wxPrintf("z on knot %f %f \n ", ccmap[image_counter][patch_index].z_on_knot(0), ccmap[image_counter][patch_index].z_on_knot(quater_patch_dim * quater_patch_dim - 1));
-            // ccmap[image_counter][patch_index].Qz2d = ccmap[image_counter][patch_index].CalcQzWithInvPhi(ccmap[image_counter][patch_index].z_on_knot, invphi);
-            ccmap[image_counter][patch_index].Qz2d = ccmap[image_counter][patch_index].CalcQzWithInvPhi(invphi);
-
-            // ccmap[image_counter][patch_index].Qz2d = ccmap[image_counter][patch_index].CalcQz(ccmap[image_counter][patch_index].z_on_knot);
-            wxPrintf("qz %f %f\n", ccmap[image_counter][patch_index].Qz2d(0, 0), ccmap[image_counter][patch_index].Qz2d(10, 10));
         }
         patch_file.CloseFile( );
-        tmpimg.Deallocate( );
-        wxPrintf("end?\n");
-        // CC_file.CloseFile( );
-        // cout << patch_stack[i]->logical_x_dimension << endl;
     }
+    //load image stacks  ending -------------------------------------------
+
+    // shift the frames
+    // wxPrintf("shifting the patches\n");
+    // for ( int i = 0; i < patch_no_y; i++ ) {
+    //     for ( int j = 0; j < patch_no_x; j++ ) {
+    //         int patch_ind = i * patch_no_x + j;
+    //         for ( int img_ind = 0; img_ind < image_no; img_ind++ ) {
+    //             wxPrintf("shift %f %f\n", Spline3d.smooth_interp[img_ind](i, j), Spline3dy.smooth_interp[img_ind](i, j));
+    //             patch_stack[patch_ind][img_ind].PhaseShift(Spline3d.smooth_interp[img_ind](i, j), Spline3dy.smooth_interp[img_ind](i, j));
+    //         }
+    //     }
+    // }
+
+    //=================generate spline ===============
+    Image          sum_of_images;
+    Image          sum_of_images_minus_current;
+    Image          single_img_with_bfactor;
+    matrix<double> temp;
+    spline_time.start("initialize ccmap spline\n");
+    ccmap_stack.InitializeSplineStack(quater_patch_dim, quater_patch_dim, patch_no * image_no, 1, 1);
+    spline_time.lap("initialize ccmap spline\n");
+    // sum_of_images.Allocate(patch_dim, patch_dim, false);
+    // sum_of_images.SetToConstant(0.0);
+    spline_time.start("ccmap spline qz calc\n");
+    Generate_CoeffSpline(patch_stack, unitless_bfactor, patch_no, image_no, true, output_path, "CCMapBfactor_R1");
     // spline_time.lap("ccmap qz end\n");
     spline_time.lap("ccmap spline qz calc\n");
+    // to check interpolation
+    // for ( int ii = 0; ii < quater_patch_dim; ii++ ) {
+    //     float shx, shy;
+    //     int   spline_ind;
+    //     wxPrintf("input your spline index and shiftx and y\n");
+    //     cin >> spline_ind;
+    //     cin >> shx;
+    //     cin >> shy;
+    //     cout << ccmap_stack.spline_stack[spline_ind].ApplySplineFunc(shx, shy) << endl;
+    //     wxPrintf("result: %f\n", ccmap_stack.spline_stack[0].ApplySplineFunc(shx, shy));
+    // }
     // */
     //load image stacks and create correlation maps ending -------------------------------------------
 
+    // fit the ccmap loss-- round 1
+    /*
     // int     output_stack_box_size = 512;
     // Image** unbinned_patch_stack;
     // Image** patch_stack = new Image*[patch_num];
     // for ( int i = 0; i < patch_num; i++ ) {
     //     patch_stack[i] = new Image[number_of_input_images];
 
-    std::ifstream ijoinfile;
-
-    oss << "%s%s%s" << output_path.c_str( ), shift_file_pref.c_str( ), ".txt";
-    std::snprintf(buffer, sizeof(buffer), "%s%s%s", output_path.c_str( ), shift_file_pref.c_str( ), ".txt");
-    // shift_file = oss.str( );
-    shift_file = buffer;
-    cout << "file " << shift_file << endl;
-    wxPrintf("file %s\n", shift_file);
-    ijoinfile.open(shift_file.c_str( ));
-    int joinsize = knot_on_x * knot_on_y * knot_on_z * 2;
-    int tmpsize  = Join1d.size( );
-    wxPrintf("join1d size %d\n", tmpsize);
-    for ( int i = 0; i < joinsize; i++ ) {
-        ijoinfile >> Join1d(i);
-    }
-    wxPrintf("3dsplien updates1\n");
-    ijoinfile.close( );
-    wxPrintf("3dsplien updates\n");
+    // Round 1 =========================================================================================
     double ccmap_error;
-
-    wxPrintf("here????\n");
+    ///--------here use zero matrix to debug.------------------------------------------
+    // Join1d = zeros_matrix<double>(knot_on_x * knot_on_y * knot_on_z * 2, 1);
+    //-------------------------------to debug----------------------
+    // Join1d = ones_matrix<double>(knot_on_x * knot_on_y * knot_on_z * 2, 1);
+    // Join1d = Join1d * 10;
+    wxPrintf("fitting the spline based on ccmap loss function\n");
     ccmap_error = minfunc3dSplineCCLossObject(Join1d);
+    // int point;
+    // wxPrintf("input an integer to continue\n");
+    // cin >> point;
+
     wxPrintf("initial loss: %f \n", ccmap_error);
     spline_time.start("fitting ccmap loss spline\n");
+    shift_file_pref = "_shift";
+    oss << "%s%s%s" << output_path.c_str( ), shift_file_pref.c_str( ), "loss_R1.txt";
+    std::snprintf(buffer, sizeof(buffer), "%s%s%s", output_path.c_str( ), shift_file_pref.c_str( ), "loss_R1.txt");
+    // shift_file = oss.str( );
+    lossfile = buffer;
+    cout << "file " << lossfile << endl;
+    file.open(lossfile.c_str( ));
+    std::streambuf* coutBuf2 = std::cout.rdbuf( );
+    std::cout.rdbuf(file.rdbuf( ));
+    auto startR1 = std::chrono::high_resolution_clock::now( );
+    // when all frames are bfactord successful case
+    // find_min_using_approximate_derivatives(lbfgs_search_strategy(1000000), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
+    //                                        objective_delta_stop_strategy(1e-7).be_verbose( ),
+    //                                        minfunc3dSplineCCLossObject, Join1d, -100, 1e-4);
     find_min_using_approximate_derivatives(lbfgs_search_strategy(1000000), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
-                                           objective_delta_stop_strategy(1e-8).be_verbose( ),
-                                           minfunc3dSplineCCLossObject, Join1d, -1);
+                                           objective_delta_stop_strategy(1e-5).be_verbose( ),
+                                           minfunc3dSplineCCLossObject, Join1d, -100, 1e-1);
+    // find_min_using_approximate_derivatives(lbfgs_search_strategy(1000000), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
+    //                                        objective_delta_stop_strategy(1e-7).be_verbose( ),
+    //                                        minfunc3dSplineCCLossObject, Join1d, -1);
+    auto stopR1     = std::chrono::high_resolution_clock::now( );
+    auto durationR1 = std::chrono::duration_cast<std::chrono::minutes>(stopR1 - startR1);
+    std::cout << "Lap time " << durationR1.count( ) << " minutes\n";
+
+    std::cout.rdbuf(coutBuf2);
+    file.close( );
     spline_time.lap("fitting ccmap loss spline\n");
     ccmap_error = minfunc3dSplineCCLossObject(Join1d);
     wxPrintf("final loss: %f \n", ccmap_error);
     wxPrintf("yes end?\n");
 
-    std::ofstream xoFile, yoFile;
+    // saving the fitted shifts and joints-------------------------------
+    // /*
+    shift_file_prefx = "_shiftx_R1";
+    shift_file_prefy = "_shifty_R1";
+    write_shifts(patch_no_x, patch_no_y, image_no, output_path, shift_file_prefx, shift_file_prefy);
+    write_joins(output_path, "Joins_R1", Join1d);
+    // */
 
+    // Round 2 =========================================================================================
+    /*
+    //shift patches to recalculate the
+    wxPrintf("shifting the patches\n");
+    for ( int i = 0; i < patch_no_y; i++ ) {
+        for ( int j = 0; j < patch_no_x; j++ ) {
+            int patch_ind = i * patch_no_x + j;
+            for ( int img_ind = 0; img_ind < image_no; img_ind++ ) {
+                wxPrintf("shift %f %f\n", Spline3d.smooth_interp[img_ind](i, j), Spline3dy.smooth_interp[img_ind](i, j));
+                patch_stack[patch_ind][img_ind].PhaseShift(Spline3d.smooth_interp[img_ind](i, j), Spline3dy.smooth_interp[img_ind](i, j));
+            }
+        }
+    }
+    // sum_of_images.SetToConstant(0.0);
+    Generate_CoeffSpline(patch_stack, unitless_bfactor, patch_no, image_no, true, output_path, "CCMapBfactor_R2");
+
+    column_vector new_join1d;
+    new_join1d  = zeros_matrix<double>(knot_on_x * knot_on_y * knot_on_z * 2, 1);
+    ccmap_error = minfunc3dSplineCCLossObject(new_join1d);
+    wxPrintf("update initial loss for the 2nd round: %f \n", ccmap_error);
+
+    spline_time.start("fitting ccmap loss spline 2nd round\n");
+
+    oss << "%s%s%s" << output_path.c_str( ), shift_file_pref.c_str( ), "loss_R2.txt";
+    std::snprintf(buffer, sizeof(buffer), "%s%s%s", output_path.c_str( ), shift_file_pref.c_str( ), "loss_R2.txt");
+    // shift_file = oss.str( );
+    lossfile = buffer;
+    cout << "file " << lossfile << endl;
+    file.open(lossfile.c_str( ));
+    std::streambuf* coutBuf = std::cout.rdbuf( );
+    std::cout.rdbuf(file.rdbuf( ));
+    auto startR2 = std::chrono::high_resolution_clock::now( );
+    // when each frame is bfactored
+    find_min_using_approximate_derivatives(lbfgs_search_strategy(1000000), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
+                                           objective_delta_stop_strategy(1e-5).be_verbose( ),
+                                           minfunc3dSplineCCLossObject, new_join1d, -100, 1e-2);
+    // find_min_using_approximate_derivatives(lbfgs_search_strategy(1000000), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
+    //                                        objective_delta_stop_strategy(1e-7).be_verbose( ),
+    //                                        minfunc3dSplineCCLossObject, new_join1d, -1);
+    auto stopR2     = std::chrono::high_resolution_clock::now( );
+    auto durationR2 = std::chrono::duration_cast<std::chrono::minutes>(stopR2 - startR2);
+    std::cout << "Lap time " << durationR2.count( ) << " minutes\n";
+    std::cout.rdbuf(coutBuf);
+    file.close( );
+    spline_time.lap("fitting ccmap loss spline 2nd round\n");
+    ccmap_error = minfunc3dSplineCCLossObject(new_join1d);
+    wxPrintf("final loss: %f \n", ccmap_error);
+    wxPrintf("yes end?\n");
+    // */
+    // saving the fitted shifts and joints-------------------------------
+    /*
+    shift_file_prefx = "_shiftx_R2";
+    shift_file_prefy = "_shifty_R2";
+    write_shifts(patch_no_x, patch_no_y, image_no, output_path, shift_file_prefx, shift_file_prefy);
+    write_joins(output_path, "Joins_R2", new_join1d);
+    // */
+    Image* image_stack       = new Image[image_no];
+    Image* image_stack_super = new Image[image_no];
+    int    bin               = 2;
+    // MRCFile  input_stack(input_imgstack.ToStdString( ), false);
+
+    MRCFile input_stack(wxString::Format("%sUnblur_Frames_Round_0000.mrc", input_path).ToStdString( ), false);
+    // wxString fullstack=""
+    MRCFile input_stack_super("/data/lingli/Lingli_20221028/grid2_process/MotCor202301/s_records_15-25_00000_-20.0_Oct29_19.01.10.mrc", false);
+    Image   interp_img, interp_img_tmp;
+    Image   sample_img;
+    int     totalpixels = image_x_dim * image_y_dim;
+    // MRCFile output_stack;
+    // output_stack.OpenFile(wxString::Format("%soutputstack.mrc", output_path).ToStdString( ), true);
+
+    for ( int image_index = 0; image_index < image_no; image_index++ ) {
+        image_stack[image_index].ReadSlice(&input_stack, image_index + 1);
+        // float padding_val              = image_stack[image_index].ReturnAverageOfRealValues( );
+        // image_stack_super[image_index] = ImageStretch(image_stack[image_index], image_x_dim * bin, image_y_dim * bin, padding_val);
+    }
+
+    wxPrintf("image_stack size %d, %d\n", image_stack[0].logical_x_dimension, image_stack[0].logical_y_dimension);
+    wxString        shift_supres = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/S_record1525_12_08_0724_dosefilter/outshift_19_b2_gain.txt";
+    NumericTextFile input_shift_supres(shift_supres, OPEN_TO_READ, 2);
+    float           temp_array[2];
+    ImageFile       gain_file;
+    Image           gain_image;
+    //   gain_file();
+
+    gain_file.OpenFile("/data/lingli/Lingli_20221028/grid2_process/MotCor202301/SuperCDSRef_s_lamella_00000_-20.0_Oct29_12.16.03.dm4", false);
+    gain_image.ReadSlice(&gain_file, 1);
+    // input_shift_supres(shift_supres, OPEN_TO_READ, 2);
+    for ( int img_ind = 0; img_ind < image_no; img_ind++ ) {
+        image_stack_super[img_ind].ReadSlice(&input_stack_super, img_ind + 1);
+        image_stack_super[img_ind].MultiplyPixelWise(gain_image);
+        image_stack_super[img_ind].ReplaceOutliersWithMean(12);
+        input_shift_supres.ReadLine(temp_array);
+        wxPrintf("shifs %f, %f\n", temp_array[0], temp_array[1]);
+        image_stack_super[img_ind].PhaseShift(temp_array[0], temp_array[1], 0);
+    }
+
+    // some quick checks..
+    ElectronDose* my_electron_dose;
+
+    float* dose_filter;
+    float* dose_filter_sum_of_squares;
+
+    my_electron_dose = new ElectronDose(300, 0.45);
+
+    dose_filter = new float[image_stack_super[0].real_memory_allocated / 2];
+    ZeroFloatArray(dose_filter, image_stack_super[0].real_memory_allocated / 2);
+    float* thread_dose_filter_sum_of_squares = new float[image_stack_super[0].real_memory_allocated / 2];
+    ZeroFloatArray(thread_dose_filter_sum_of_squares, image_stack_super[0].real_memory_allocated / 2);
+
+    for ( int img_ind = 0; img_ind < image_no; img_ind++ ) {
+        my_electron_dose->CalculateDoseFilterAs1DArray(&image_stack_super[img_ind], dose_filter, (img_ind * dose_per_frame) + pre_exposure_amount, ((img_ind + 1) * dose_per_frame) + pre_exposure_amount);
+        // filter the image, and also calculate the sum of squares..
+        for ( int pixel_counter = 0; pixel_counter < image_stack_super[img_ind].real_memory_allocated / 2; pixel_counter++ ) {
+            image_stack_super[img_ind].complex_values[pixel_counter] *= dose_filter[pixel_counter];
+            thread_dose_filter_sum_of_squares[pixel_counter] += powf(dose_filter[pixel_counter], 2);
+        }
+    }
+    delete[] dose_filter;
+
+    float** shifted_mapx;
+    float** shifted_mapy;
+    float** shifted_mapx_superres;
+    float** shifted_mapy_superres;
+    int     totalpixel_superres;
+    totalpixel_superres = totalpixels * 4;
+
+    shifted_mapx          = new float*[image_no];
+    shifted_mapy          = new float*[image_no];
+    shifted_mapx_superres = new float*[image_no];
+    shifted_mapy_superres = new float*[image_no];
+
+    for ( int i = 0; i < image_no; i++ ) {
+        shifted_mapx[i]          = new float[totalpixels];
+        shifted_mapy[i]          = new float[totalpixels];
+        shifted_mapx_superres[i] = new float[totalpixel_superres];
+        shifted_mapy_superres[i] = new float[totalpixel_superres];
+        for ( int pix = 0; pix < totalpixels; pix++ ) {
+            shifted_mapx[i][pix] = 0.0;
+            shifted_mapy[i][pix] = 0.0;
+        }
+        for ( int pix = 0; pix < totalpixel_superres; pix++ ) {
+            shifted_mapx_superres[i][pix] = 0.0;
+            shifted_mapy_superres[i][pix] = 0.0;
+        }
+    }
+
+    // column_vector Join1d;
+    // Join1d = ones_matrix<double>(knot_on_x * knot_on_y * knot_on_z * 2, 1);
+    std::string    join_file_pref = "Joins_R1";
+    matrix<double> Join_round1;
+    int            joinsize = knot_on_x * knot_on_y * knot_on_z * 2;
+    Join_round1             = read_joins(join_file_pref, output_path, joinsize);
+
+    split_and_update(Join_round1, joinsize);
+    // generate_shift_spline(image_no, image_x_dim, image_y_dim, shifted_mapx, shifted_mapy, false, 1);
+    generate_shift_spline(image_no, image_x_dim, image_y_dim, shifted_mapx_superres, shifted_mapy_superres, true, bin);
+
+    // read round 2 join file----------------
+    /*
+    join_file_pref = "Joins_R2";
+    matrix<double> Join_round2;
+    Join_round2 = read_joins(join_file_pref, output_path, joinsize);
+    split_and_update(Join_round2, joinsize);
+    generate_shift_spline(image_no, image_x_dim, image_y_dim, shifted_mapx, shifted_mapy);
+    // */
+
+    Image* distorted_stack;
+
+    distorted_stack = new Image[image_no];
+
+    // expand image_stack by two
+    // for ( int img_ind = 0; img_ind < image_no; img_ind++ ) {
+    //     image_stack[img_ind].ForwardFFT( );
+    // }
+    // apply_shift(image_stack, distorted_stack, shifted_mapx, shifted_mapy, image_no);
+    // apply_shift(image_stack_super, distorted_stack, shifted_mapx_superres, shifted_mapy_superres, image_no);
+
+    Image sum_image;
+    sum_image.Allocate(image_stack[0].logical_x_dimension, image_stack[0].logical_y_dimension, true);
+    sum_image.SetToConstant(0.0);
+    delete[] image_stack;
+
+    float* original_map_x = new float[totalpixel_superres];
+    float* original_map_y = new float[totalpixel_superres];
+    float* shifted_map_x  = new float[totalpixel_superres];
+    float* shifted_map_y  = new float[totalpixel_superres];
+
+    // initialize the pixel coordinates
+    for ( int i = 0; i < image_y_dim * bin; i++ ) {
+        for ( int j = 0; j < image_x_dim * bin; j++ ) {
+            original_map_x[i * image_x_dim * bin + j] = j;
+            original_map_y[i * image_x_dim * bin + j] = i;
+        }
+    }
+
+    Image tmp_img;
+
+    // input_vector input;
+    float   time;
+    MRCFile output_stack;
+    output_stack.OpenFile(wxString::Format("%sUnblur_Frames_spline_sup_dosefilter.mrc", output_path).ToStdString( ), true);
+    // wxString     outputpath = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/TestPatch_24_16_0626/";
+    for ( int image_counter = 0; image_counter < image_no; image_counter++ ) {
+        for ( int pix = 0; pix < totalpixel_superres; pix++ ) {
+            shifted_map_x[pix] = original_map_x[pix] + shifted_mapx_superres[image_counter][pix];
+            shifted_map_y[pix] = original_map_y[pix] + shifted_mapy_superres[image_counter][pix];
+        }
+        wxPrintf("correcting frame %i \n ", image_counter + 1);
+        // distorted_stack[image_counter].Allocate(input_stack[0].logical_x_dimension, input_stack[0].logical_y_dimension, 1, true);
+        tmp_img.Allocate(image_x_dim * bin, image_y_dim * bin, 1, true);
+        // tmp_img.CopyFrom(&image_stack_super[image_counter]);
+        tmp_img.SetToConstant(image_stack_super[image_counter].ReturnAverageOfRealValuesOnEdges( ));
+        image_stack_super[image_counter].Distortion(&tmp_img, shifted_map_x, shifted_map_y);
+        // tmp_img.RealSpaceBinning(bin, bin, 1);
+        tmp_img.ForwardFFT( );
+        tmp_img.Resize(image_x_dim, image_y_dim, 1);
+        tmp_img.BackwardFFT( );
+
+        sum_image.AddImage(&tmp_img);
+        tmp_img.WriteSlice(&output_stack, image_counter + 1);
+        // tmp_img.QuickAndDirtyWriteSlice(wxString::Format("%sUnblur_Frames_spline_sup.mrc", output_path).ToStdString( ), image_counter + 1);
+        delete[] shifted_mapx_superres[image_counter];
+        delete[] shifted_mapy_superres[image_counter];
+        tmp_img.Deallocate( );
+    }
+    output_stack.CloseFile( );
+    /*
+    for ( int image_counter = 0; image_counter < image_no; image_counter++ ) {
+        sum_image.AddImage(&distorted_stack[image_counter]);
+        distorted_stack[image_counter].QuickAndDirtyWriteSlice(wxString::Format("%sUnblur_Frames_spline.mrc", output_path).ToStdString( ), image_counter + 1);
+        // }
+    }
+    */
+    // sum_image.BackwardFFT( );
+    sum_image.WriteSlicesAndFillHeader(wxString::Format("%ssum_image_sup_dosefilter.mrc", output_path).ToStdString( ), 1);
+
+    // // apply_fitting_spline(image_stack, number_of_input_images, x, y);
+    // for ( int i = 0; i < patch_no; ++i ) {
+    //     delete[] patch_stack[i]; // each i-th pointer must be deleted first
+    // }
+    // delete[] patch_stack; //
+
+    delete[] distorted_stack;
+    delete[] original_map_x;
+    delete[] original_map_y;
+    // delete[] image_stack;
+    delete[] image_stack_super;
+    // */
+
+    spline_time.print_times( );
+    return true;
+    // return 0;
+}
+
+//==================================================== functions ====================================================================
+void FixOutliers(matrix<double>* patch_peaksx, matrix<double>* patch_peaksy, matrix<double> patch_locations_x, matrix<double> patch_locations_y, int patch_no_x, int patch_no_y, int step_size_x, int step_size_y, int image_no) {
+    int patch_no = patch_no_x * patch_no_y;
+    // /*  this section fix the outliers using nearest neighbor ---------------------------------------------------
+    wxPrintf("outlier fix1\n");
+    std::vector<double> used_index(patch_no);
+    std::vector<int>    missed_index; // it should be in increasing order
+    matrix<float>       truefalse;
+    // truefalse.set_size(patch_num_y, patch_num_x);
+    truefalse    = ones_matrix<float>(patch_no_y, patch_no_x);
+    missed_index = {2, 7, 10, 12, 13, 14, 16, 27, 32, 43, 44, 46, 49, 62, 70, 71, 83, 2, 3, 6, 9, 10, 12, 13, 14, 15, 16, 24, 26, 27, 62};
+
+    for ( int i = 0; i < missed_index.size( ); i++ ) {
+        int c = missed_index[i] % patch_no_x;
+        int r = (missed_index[i] - c) / patch_no_x;
+        // cout << "column and row are " << c << " " << r << endl;
+        truefalse(r, c) = 0;
+    }
+    cout << "truefalse map" << endl
+         << truefalse << endl;
+    std::vector<Point> points;
+    std::vector<Point> badpoints;
+    for ( int i = 0; i < patch_no_y; i++ ) {
+        for ( int j = 0; j < patch_no_x; j++ ) {
+            if ( truefalse(i, j) == 0 ) {
+                badpoints.push_back({patch_locations_x(j), patch_locations_y(i)});
+            }
+            else {
+                Point temppoint;
+                temppoint = {patch_locations_x(j), patch_locations_y(i)};
+                points.push_back({patch_locations_x(j), patch_locations_y(i)});
+            }
+        }
+    }
+    int pointslength    = points.size( );
+    int badpointslength = badpoints.size( );
+    cout << pointslength << endl;
+    // for ( int i = 0; i < pointslength; i++ ) {
+    //     cout << points[i].x << " " << points[i].y << endl;
+    // }
+    cout << "bad points" << endl;
+    for ( int i = 0; i < badpointslength; i++ ) {
+        cout << badpoints[i].x << endl;
+    }
+
+    matrix<double>* patch_peaksx_tmp;
+    matrix<double>* patch_peaksy_tmp;
+    patch_peaksx_tmp = new matrix<double>[image_no];
+    patch_peaksy_tmp = new matrix<double>[image_no];
+    for ( int i = 0; i < image_no; i++ ) {
+        patch_peaksx_tmp[i].set_size(patch_no_y, patch_no_x);
+        patch_peaksy_tmp[i].set_size(patch_no_y, patch_no_x);
+        patch_peaksx_tmp[i] = patch_peaksx[i];
+        patch_peaksy_tmp[i] = patch_peaksy[i];
+    }
+
+    for ( int i = 0; i < badpointslength; i++ ) {
+        Point nearest = findNearestNeighbor(badpoints[i], points);
+        int   jj      = nearest.x / step_size_x / 2;
+        int   ii      = nearest.y / step_size_y / 2;
+        int   jjb     = badpoints[i].x / step_size_x / 2;
+        int   iib     = badpoints[i].y / step_size_y / 2;
+        for ( int image_ind = 0; image_ind < image_no; image_ind++ ) {
+            patch_peaksx[image_ind](iib, jjb) = patch_peaksx_tmp[image_ind](ii, jj);
+            patch_peaksy[image_ind](iib, jjb) = patch_peaksy_tmp[image_ind](ii, jj);
+        }
+    }
+    // cout << "before fix" << endl;
+    // cout << patch_peaksx_tmp[image_no - 1] << endl;
+    // cout << "fixed" << endl;
+    // // cout << reshape(shiftsplinex.z_on_knot, patch_num_x, patch_num_y) << endl;
+    // cout << patch_peaksx[image_no - 1] << endl;
+
+    // Spline3d.UpdateDiscreteValues(patch_peaksx);
+    // Spline3dy.UpdateDiscreteValues(patch_peaksy);
+};
+
+void Generate_CoeffSpline(Image** patch_stack, float unitless_bfactor, int patch_no, int image_no, bool write_out_the_ccmap, std::string output_path, std::string file_pref) {
+    int            quater_patch_dim = ccmap_stack.m;
+    int            patch_dim        = patch_stack[0][0].logical_x_dimension; //based on patches are square
+    matrix<double> tmp_z_on_knot;
+    Image          sum_of_images, sum_of_images_minus_current, tmpimg, img_bfactor;
+
+    // tmpimg.Allocate(quater_patch_dim, quater_patch_dim, false);
+    // sum_of_images.Allocate(patch_dim, patch_dim, false);
+
+    wxPrintf("------------------------------------generating coeffcient map spline------------------------------------\n");
+    int max_thread = 8;
+#pragma omp parallel for num_threads(max_thread) private(sum_of_images, sum_of_images_minus_current, img_bfactor, tmpimg)
+    for ( int patch_index = 0; patch_index < patch_no; patch_index++ ) {
+        tmpimg.Allocate(quater_patch_dim, quater_patch_dim, false);
+        sum_of_images.Allocate(patch_dim, patch_dim, false);
+        sum_of_images.SetToConstant(0.0);
+        wxPrintf("patch %d\n", patch_index);
+        // apply b factor to the patch stack and generate image sum
+        for ( int image_counter = 0; image_counter < image_no; image_counter++ ) {
+            img_bfactor.CopyFrom(&patch_stack[patch_index][image_counter]);
+            // img_bfactor.ForwardFFT( );
+            // img_bfactor.ApplyBFactor(unitless_bfactor);
+            sum_of_images.AddImage(&img_bfactor);
+        }
+        // generate correlation map
+        for ( int image_counter = 0; image_counter < image_no; image_counter++ ) {
+            sum_of_images_minus_current.CopyFrom(&sum_of_images);
+            // # each frame apply b factor
+            // img_bfactor.CopyFrom(&patch_stack[patch_index][image_counter]);
+            // img_bfactor.ForwardFFT( );
+            // img_bfactor.ApplyBFactor(unitless_bfactor);
+            // sum_of_images_minus_current.SubtractImage(&img_bfactor);
+
+            // // both apply b factor
+            // img_bfactor.CopyFrom(&patch_stack[patch_index][image_counter]);
+            // img_bfactor.ForwardFFT( );
+            // sum_of_images_minus_current.SubtractImage(&img_bfactor);
+            // img_bfactor.ApplyBFactor(unitless_bfactor);
+
+            // sum apply b factor, single image no bfactor
+            img_bfactor.CopyFrom(&patch_stack[patch_index][image_counter]);
+            sum_of_images_minus_current.SubtractImage(&img_bfactor);
+            sum_of_images_minus_current.ApplyBFactor(unitless_bfactor);
+            img_bfactor.ForwardFFT( );
+            // img_bfactor.ApplyBFactor(unitless_bfactor);
+
+            // sum_of_images_minus_current.ForwardFFT( );
+            // img_bfactor.ForwardFFT( );
+            // sum_of_images_minus_current.ApplyBFactor(unitless_bfactor);
+            sum_of_images_minus_current.CalculateCrossCorrelationImageWith(&img_bfactor); //both in fourier space
+
+            if ( write_out_the_ccmap ) {
+                sum_of_images_minus_current.QuickAndDirtyWriteSlice(wxString::Format("%s%s_%02i.mrc", output_path, file_pref, patch_index).ToStdString( ), image_counter + 1);
+            }
+            sum_of_images_minus_current.ClipInto(&tmpimg, 0);
+            tmpimg.QuickAndDirtyWriteSlice(wxString::Format("%s%s_%02icroped.mrc", output_path, file_pref, patch_index).ToStdString( ), image_counter + 1);
+            // wxPrintf("img %d\n", image_counter);
+            // tmpimg.BackwardFFT( );
+            // wxPrintf("check the real values\n");
+            int pixel_counter = 0;
+            int spline_ind    = patch_index * image_no + image_counter;
+            ccmap_stack.spline_stack[spline_ind].z_on_knot.set_size(quater_patch_dim * quater_patch_dim, 1);
+
+            for ( int ii = 0; ii < quater_patch_dim; ii++ ) {
+                for ( int jj = 0; jj < quater_patch_dim; jj++ ) {
+                    ccmap_stack.spline_stack[spline_ind].z_on_knot(ii * quater_patch_dim + jj) = tmpimg.real_values[pixel_counter];
+                    // wxPrintf("%f \t", tmpimg.real_values[pixel_counter]);
+                    pixel_counter++;
+                }
+                pixel_counter += tmpimg.padding_jump_value;
+                // wxPrintf(" \n");
+            }
+            // wxPrintf("here?\n");
+            ccmap_stack.UpdateSingleSpline(spline_ind);
+            // wxPrintf(" out function qz %f %f %f\n", ccmap_stack.spline_stack[patch_index * image_no + image_counter].Qz2d(0, 0), ccmap_stack.spline_stack[patch_index * image_no + image_counter].Qz2d(10, 10), ccmap_stack.spline_stack[patch_index * image_no + image_counter].Qz2d(30, 30));
+
+            for ( int i = 0; i < quater_patch_dim + 2; i++ ) {
+                for ( int j = 0; j < quater_patch_dim + 2; j++ ) {
+                    // wxPrintf("%f\t", ccmap_stack.spline_stack[spline_ind].Qz2d(i, j));
+                }
+                // wxPrintf("\n");
+            }
+            // pirnt to check
+            // for ( int ii = 0; ii < quater_patch_dim; ii++ ) {
+            //     for ( int jj = 0; jj < quater_patch_dim; jj++ ) {
+            //         wxPrintf("on knot, img, interp, %f, %f, %f\n", ccmap_stack.spline_stack[spline_ind].z_on_knot(ii * quater_patch_dim + jj), tmpimg.real_values[ii, jj], ccmap_stack.spline_stack[spline_ind].ApplySplineFunc(jj, ii));
+            //     }
+            // }
+            // wxPrintf("input to continue\n");
+            // int i;
+            // cin >> i;
+        }
+        // wxPrintf("here?1\n");
+        tmpimg.Deallocate( );
+        sum_of_images.Deallocate( );
+    }
+    // for ( int ii = 0; ii < quater_patch_dim; ii++ ) {
+    //     float shx, shy;
+    //     wxPrintf("input your shiftx and y\n");
+    //     cin >> shx;
+    //     cin >> shy;
+    //     cout << ccmap_stack.spline_stack[0].ApplySplineFunc(shx, shy) << endl;
+    //     wxPrintf("result: %f\n", ccmap_stack.spline_stack[0].ApplySplineFunc(shx, shy));
+    // }
+    wxPrintf("here2?\n");
+};
+
+void write_shifts(int patch_no_x, int patch_no_y, int image_no, std::string output_path, std::string shift_file_prefx, std::string shift_file_prefy) {
+    std::ofstream      xoFile, yoFile;
+    char               buffer[200];
+    std::string        shift_file, shift_filex, shift_filey;
+    std::ostringstream oss;
     for ( int image_ind = 0; image_ind < image_no; image_ind++ ) {
-
         int shift_file_index = image_ind;
         oss << "%s%04i%s%s" << output_path.c_str( ), shift_file_index, shift_file_prefx.c_str( ), "ccmap.txt";
         std::snprintf(buffer, sizeof(buffer), "%s%04i%s%s", output_path.c_str( ), shift_file_index, shift_file_prefx.c_str( ), "ccmap.txt");
@@ -1235,20 +1227,6 @@ bool NikoTestApp::DoCalculation( ) {
         // shift_file = oss.str( );
         shift_filey = buffer;
         cout << "file " << shift_filey << endl;
-        // File.open(shift_file.c_str( ));
-
-        // wxString      shifted_mapx_file = outputpath + "shifted_x.txt";
-        // wxString      shifted_mapy_file = outputpath + "shifted_y.txt";
-        // std::ofstream xoFile, yoFile;
-
-        // wxPrintf("1\n");
-        // for ( int i = 0; i < 10; i++ ) {
-        //     for ( int j = 0; j < 10; j++ ) {
-        //         shifted_map_x[i][j] = j;
-        //         shifted_map_y[i][j] = i;
-        //     }
-        // }
-
         xoFile.open(shift_filex.c_str( ));
         yoFile.open(shift_filey.c_str( ));
         // yoFile.open(shifted_mapy_file.c_str( ));
@@ -1269,31 +1247,68 @@ bool NikoTestApp::DoCalculation( ) {
         xoFile.close( );
         yoFile.close( );
     }
+};
 
-    std::ofstream joinfile;
-
-    oss << "%s%s%s" << output_path.c_str( ), shift_file_pref.c_str( ), "ccmap.txt";
-    std::snprintf(buffer, sizeof(buffer), "%s%s%s", output_path.c_str( ), shift_file_pref.c_str( ), "ccmap.txt");
-    // shift_file = oss.str( );
-    shift_file = buffer;
-    cout << "file " << shift_file << endl;
-    joinfile.open(shift_file.c_str( ));
+void write_joins(std::string output_path, std::string join_file_pref, column_vector Join1d) {
+    std::ofstream      xoFile, yoFile;
+    char               buffer[200];
+    std::string        join_file_name;
+    std::ofstream      joinfile;
+    std::ostringstream oss;
+    oss << "%s%s%s" << output_path.c_str( ), join_file_pref.c_str( ), ".txt";
+    std::snprintf(buffer, sizeof(buffer), "%s%s%s", output_path.c_str( ), join_file_pref.c_str( ), ".txt");
+    join_file_name = buffer;
+    // cout << "file " << join_file_name << endl;
+    joinfile.open(join_file_name.c_str( ));
 
     for ( int i = 0; i < Join1d.size( ); i++ ) {
         joinfile << Join1d(i) << '\n';
     }
     joinfile.close( );
+};
 
-    // for ( int i = 0; i < patch_no; ++i ) {
-    //     delete[] patch_stack[i]; // each i-th pointer must be deleted first
-    // }
+matrix<double> read_joins(std::string join_file_pref, std::string output_path, int joinsize) {
+    wxPrintf("reading the joins from\n");
+    std::ifstream      ijoinfile;
+    char               buffer[200];
+    std::ostringstream oss;
+    std::string        join_file;
+    matrix<double>     Join1d;
+    // column_vector Join1d;
+    // Join1d = ones_matrix<double>(knot_on_x * knot_on_y * knot_on_z * 2, 1);
+    // std::string join_file_pref = "Joins_R1";
+    oss << "%s%s%s" << output_path.c_str( ), join_file_pref.c_str( ), ".txt";
+    std::snprintf(buffer, sizeof(buffer), "%s%s%s", output_path.c_str( ), join_file_pref.c_str( ), ".txt");
+    // join_file = oss.str( );
+    join_file = buffer;
+    cout << "file " << join_file << endl;
+    wxPrintf("file %s\n", join_file);
+    ijoinfile.open(join_file.c_str( ));
+    Join1d.set_size(joinsize, 1);
+    // int tmpsize  = Join1d.size( );
+    // wxPrintf("join1d size %d\n", tmpsize);
+    for ( int i = 0; i < joinsize; i++ ) {
+        ijoinfile >> Join1d(i);
+    }
+    ijoinfile.close( );
+    wxPrintf("finish reading -----\n");
+    return Join1d;
+};
 
-    // delete[] patch_stack; //
-    // */
-    // return 0;
-    spline_time.print_times( );
-    return true;
-}
+Image ImageStretchInFourier(Image input_image, int Stretch_Dim_X, int Stretch_Dim_Y, float padding_value) {
+    Image stretched_image;
+    int   scale;
+
+    scale = input_image.logical_x_dimension * input_image.logical_y_dimension;
+
+    stretched_image.Allocate(Stretch_Dim_X, Stretch_Dim_Y, true);
+    stretched_image.SetToConstant(0.0); // To avoid valgrind uninitialised errors, but maybe this is a waste?
+    input_image.ForwardFFT(false);
+    input_image.ClipInto(&stretched_image, padding_value, false);
+    stretched_image.BackwardFFT( );
+    stretched_image.DivideByConstant(scale);
+    return stretched_image;
+};
 
 /* test 1d spline
 int main( ) {

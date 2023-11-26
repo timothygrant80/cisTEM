@@ -49,9 +49,9 @@ void bicubicspline::InitializeSpline(int row_no, int column_no, float spline_pat
     this->spline_patch_dim_y = spline_patch_dimy;
     this->total              = (this->m + 2) * (this->n + 2);
     this->totaldim           = (this->m + 2) * (this->n + 2);
-    wxPrintf("phi1?\n");
+    // wxPrintf("phi1?\n");
     CalcPhi( );
-    wxPrintf("phi?\n");
+    // wxPrintf("phi?\n");
 }
 
 void bicubicspline::UpdateSpline(matrix<double> z_on_knot) {
@@ -102,9 +102,9 @@ void bicubicspline::CalcPhi( ) {
     // totaldim                 = (this->m + 2) * (this->n + 2);
     // long dim = (this->m + 2) * (this->n + 2);
     // this->phi.set_size(this->totaldim, this->totaldim);
-    wxPrintf("mark0-------------------------------------------\n");
+    // wxPrintf("mark0-------------------------------------------\n");
     this->phi = zeros_matrix<double>(this->totaldim, this->totaldim);
-    wxPrintf("mark1\n");
+    // wxPrintf("mark1\n");
     for ( int j = 0; j < this->m; j++ ) {
         for ( int i = 0; i < this->n; i++ ) {
             this->phi(i + (j) * this->n, i + (j) * (this->n + 2))         = 1;
@@ -118,7 +118,7 @@ void bicubicspline::CalcPhi( ) {
             this->phi(i + (j) * this->n, i + (j + 2) * (this->n + 2) + 2) = 1;
         }
     }
-    wxPrintf("mark2\n");
+
     //  y- border
     for ( int i = 0; i < this->m; i++ ) {
         this->phi(this->n * this->m + i, (i + 1) * (this->n + 2))     = 1;
@@ -217,6 +217,7 @@ matrix<double> bicubicspline::CalcQzWithInvPhi(matrix<double> InvPhi) {
     // Pz.set_size(1, total * total);
     Pz.set_size(this->totaldim * this->totaldim, 1);
     // wxPrintf("in calc2?");
+    // wxPrintf("z_on_knot len %d\n", this->z_on_knot.size( ));
     for ( int i = 0; i < this->m * this->n; i++ ) {
         Pz(i) = this->z_on_knot(i);
     }
@@ -226,20 +227,81 @@ matrix<double> bicubicspline::CalcQzWithInvPhi(matrix<double> InvPhi) {
     // wxPrintf("in calc?");
     // invphi.set_size(this->totaldim, this->totaldim);
     // invphi = inv(phi);
+    // wxPrintf("print Pz\n");
+    // for ( int i = 0; i < this->m; i++ ) {
+    //     for ( int j = 0; j < this->n; j++ ) {
+    //         wxPrintf("%f\t", Pz(i * this->n + j));
+    //     }
+    //     wxPrintf("\n");
+    // }
 
     Qz1d = InvPhi * Pz * 36;
 
     for ( int i = 0; i < this->m + 2; i++ ) {
         for ( int j = 0; j < this->n + 2; j++ ) {
             Qz2dOutput(i, j) = Qz1d(i * (this->n + 2) + j);
+            // wxPrintf("%f %f\t", Qz2dOutput(i, j), Qz1d(i * (this->n + 2) + j));
         }
+        // wxPrintf("\n");
     }
+    // wxPrintf("phi");
+    // for ( int i = 0; i < this->totaldim; i++ ) {
+    //     for ( int j = 0; j < this->totaldim; j++ ) {
+    //         wxPrintf(" %f ", this->phi(i, j));
+    //     }
+    //     wxPrintf("\n");
+    // }
+    // wxPrintf("invphi");
+    // for ( int i = 0; i < this->totaldim; i++ ) {
+    //     for ( int j = 0; j < this->totaldim; j++ ) {
+    //         wxPrintf(" %f ", InvPhi(i, j));
+    //     }
+    //     wxPrintf("\n");
+    // }
     // wxPrintf("in function knot %f %f \n", Pz(0), Pz(this->n * this->m - 1));
     // wxPrintf("in function knot %f %f \n", z_on_knot(0), z_on_knot(this->n * this->m - 1));
-    // wxPrintf("in function invphi %f \n", InvPhi(0, 0));
-    // wxPrintf(" in fucntion qz %f %f\n", Qz2dOutput(0, 0), Qz2dOutput(10, 10));
+    // wxPrintf("in function invphi %f %f %f\n", InvPhi(0, 0), InvPhi(10, 10), InvPhi(30, 30));
+    // wxPrintf(" in function qz %f %f %f\n", Qz2dOutput(0, 0), Qz2dOutput(10, 10), Qz2dOutput(30, 30));
+
     // this->Qz2d = Qz2d;
     return Qz2dOutput;
+}
+
+void bicubicspline::UpdateQz( ) {
+    // void CalcQz(matrix<double> z) {
+    matrix<double> Qz1d;
+    // matrix<double> Qz2dOutput;
+    // matrix<double> invphi;
+    Qz1d.set_size(this->totaldim, 1);
+    // Qz2dOutput.set_size((this->m + 2), (this->n + 2));
+    // float Pz[total];
+    // wxPrintf("in calc?1\n");
+    matrix<double> Pz;
+    // matrix<double> Qz1d, Qz2d;
+    // Pz.set_size(1, total * total);
+    Pz.set_size(this->totaldim * this->totaldim, 1);
+    // wxPrintf("in calc2?");
+    // wxPrintf("z_on_knot len %d\n", this->z_on_knot.size( ));
+    for ( int i = 0; i < this->m * this->n; i++ ) {
+        Pz(i) = this->z_on_knot(i);
+    }
+    for ( int i = this->m * this->n; i < this->total; i++ ) {
+        Pz(i) = 0;
+    }
+
+    Qz1d = this->invphi * Pz * 36;
+
+    for ( int i = 0; i < this->m + 2; i++ ) {
+        for ( int j = 0; j < this->n + 2; j++ ) {
+            this->Qz2d(i, j) = Qz1d(i * (this->n + 2) + j);
+            // wxPrintf("%f %f\t", this->Qz2d(i, j), Qz1d(i * (this->n + 2) + j));
+        }
+        // wxPrintf("\n");
+    }
+    // wxPrintf("before assign \n");
+    // this->Qz2d = Qz2dOutput;
+    // wxPrintf("in calc?1 done\n");
+    // return Qz2dOutput;
 }
 
 double bicubicspline::ApplySpline(double u, double v, int pu, int pv, matrix<double> Qz2d) {
@@ -659,25 +721,32 @@ double bicubicspline::ApplySplineFunc(double xp, double yp) {
     // cout << " here "
     //      << "PUY PVX pu pv " << PUY << " " << PVX << " " << pu << " " << pv << endl;
 
-    if ( PUY > this->m - 1 ) {
-        cout << "the y position of the point exceed the spline surface " << endl;
-    }
-    if ( PVX > this->n - 1 ) {
-        cout << "the x position of the point exceed the spline surface " << endl;
-    }
-
     // if ( ((PVX - (this->n - 1)) == 0) ) {
     if ( (int(PVX) == (this->n - 1)) && (PVX <= this->n - 1) ) {
-        int pv = this->n - 2;
+        pv = this->n - 2;
     }
 
     if ( (int(PUY) == (this->m - 1)) && (PUY <= this->m - 1) ) {
-        int pu = this->m - 2;
+        pu = this->m - 2;
     }
 
     u = PUY - pu;
     v = PVX - pv;
+
+    if ( PUY > this->m - 1 ) {
+        cout << "the y position of the point exceed the spline surface " << endl;
+        // use the boundary value as the value outside the spline area. This need to be revised. Or the program should be forced to terminate.
+        pu = this->m - 2;
+        u  = 1;
+    }
+    if ( PVX > this->n - 1 ) {
+        cout << "the x position of the point exceed the spline surface " << endl;
+        pv = this->n - 2;
+        v  = 1;
+    }
+
     // cout << "u v pu pv " << u << " " << v << " " << pu << " " << pv << endl;
+    // wxPrintf("PUY,PVX,u,v,pu,pv, %f %f %f %f %d %d \n", PUY, PVX, u, v, pu, pv);
     zp = ApplySpline(u, v, pu, pv, this->Qz2d);
     // cout << "zp " << zp << endl;
 

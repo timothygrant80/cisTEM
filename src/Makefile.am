@@ -1587,7 +1587,7 @@ local_resolution_finalize_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 local_resolution_finalize_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 local_resolution_finalize_LDADD = libcore.a $(WX_LIBS_BASE)
 
-niko_test_SOURCES = programs/niko_test/niko_test.cpp dlib/dlib/all/source.cpp programs/niko_test/bicubicspline.cpp programs/niko_test/cubicspline.cpp 
+niko_test_SOURCES = programs/niko_test/niko_test.cpp dlib/dlib/all/source.cpp programs/niko_test/bicubicspline.cpp programs/niko_test/cubicspline.cpp programs/niko_test/movieframespline.cpp
 niko_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 niko_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 niko_test_LDADD = libcore.a libdlib.a $(WX_LIBS_BASE)

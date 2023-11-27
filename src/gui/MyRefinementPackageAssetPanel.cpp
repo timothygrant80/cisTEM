@@ -25,7 +25,7 @@ void MyRefinementPackageAssetPanel::OnDisplayStackButton(wxCommandEvent& event) 
     if ( selected_refinement_package >= 0 ) {
         wxString execution_command = wxStandardPaths::Get( ).GetExecutablePath( );
         execution_command          = execution_command.BeforeLast('/');
-        execution_command += "/display ";
+        execution_command += "/cisTEM_display ";
 
         execution_command += all_refinement_packages[selected_refinement_package].stack_filename;
         execution_command += "&";

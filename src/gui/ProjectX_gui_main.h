@@ -30,7 +30,7 @@
 #include <wx/button.h>
 #include <wx/wizard.h>
 #include <wx/dynarray.h>
-WX_DEFINE_ARRAY_PTR( wxWizardPageSimple*, WizardPages );
+// WX_DEFINE_ARRAY_PTR( wxWizardPageSimple*, WizardPages );
 #include <wx/statbmp.h>
 #include <wx/hyperlink.h>
 #include <wx/dialog.h>
@@ -40,248 +40,233 @@ WX_DEFINE_ARRAY_PTR( wxWizardPageSimple*, WizardPages );
 ///////////////////////////////////////////////////////////////////////////////
 /// Class MainFrame
 ///////////////////////////////////////////////////////////////////////////////
-class MainFrame : public wxFrame
-{
-	private:
+class MainFrame : public wxFrame {
+  private:
 
-	protected:
-		wxPanel* LeftPanel;
-		wxMenuBar* m_menubar1;
-		wxMenu* FileMenu;
-		wxMenu* WorkflowMenu;
-		wxMenuItem* WorkflowSingleParticle;
-		wxMenuItem* WorkflowTemplateMatching;
-		wxMenu* HelpMenu;
+  protected:
+    wxPanel*    LeftPanel;
+    wxMenuBar*  m_menubar1;
+    wxMenu*     FileMenu;
+    wxMenu*     WorkflowMenu;
+    wxMenuItem* WorkflowSingleParticle;
+    wxMenuItem* WorkflowTemplateMatching;
+    wxMenu*     HelpMenu;
 
-		// Virtual event handlers, override them in your derived class
-		virtual void OnMenuBookChange( wxListbookEvent& event ) { event.Skip(); }
-		virtual void OnFileMenuUpdate( wxUpdateUIEvent& event ) { event.Skip(); }
-		virtual void OnFileNewProject( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnFileOpenProject( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnFileCloseProject( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnFileExit( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnSingleParticleWorkflow( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnTemplateMatchingWorkflow( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnHelpLaunch( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnAboutLaunch( wxCommandEvent& event ) { event.Skip(); }
+    // Virtual event handlers, override them in your derived class
+    virtual void OnMenuBookChange(wxListbookEvent& event) { event.Skip( ); }
 
+    virtual void OnFileMenuUpdate(wxUpdateUIEvent& event) { event.Skip( ); }
 
-	public:
-		wxListbook* MenuBook;
+    virtual void OnFileNewProject(wxCommandEvent& event) { event.Skip( ); }
 
-		MainFrame( wxWindow* parent, wxWindowID id = wxID_OPEN, const wxString& title = wxT("cisTEM"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1366,768 ), long style = wxDEFAULT_FRAME_STYLE|wxTAB_TRAVERSAL|wxWANTS_CHARS );
+    virtual void OnFileOpenProject(wxCommandEvent& event) { event.Skip( ); }
 
-		~MainFrame();
+    virtual void OnFileCloseProject(wxCommandEvent& event) { event.Skip( ); }
 
+    virtual void OnFileExit(wxCommandEvent& event) { event.Skip( ); }
+
+    virtual void OnSingleParticleWorkflow(wxCommandEvent& event) { event.Skip( ); }
+
+    virtual void OnTemplateMatchingWorkflow(wxCommandEvent& event) { event.Skip( ); }
+
+    virtual void OnHelpLaunch(wxCommandEvent& event) { event.Skip( ); }
+
+    virtual void OnAboutLaunch(wxCommandEvent& event) { event.Skip( ); }
+
+  public:
+    wxListbook* MenuBook;
+
+    MainFrame(wxWindow* parent, wxWindowID id = wxID_OPEN, const wxString& title = wxT("cisTEM"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(1366, 768), long style = wxDEFAULT_FRAME_STYLE | wxTAB_TRAVERSAL | wxWANTS_CHARS);
+
+    ~MainFrame( );
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class ActionsPanelParent
 ///////////////////////////////////////////////////////////////////////////////
-class ActionsPanelParent : public wxPanel
-{
-	private:
+class ActionsPanelParent : public wxPanel {
+  private:
 
-	protected:
-		wxStaticLine* m_staticline3;
+  protected:
+    wxStaticLine* m_staticline3;
 
-		// Virtual event handlers, override them in your derived class
-		virtual void OnActionsBookPageChanged( wxListbookEvent& event ) { event.Skip(); }
+    // Virtual event handlers, override them in your derived class
+    virtual void OnActionsBookPageChanged(wxListbookEvent& event) { event.Skip( ); }
 
+  public:
+    wxListbook* ActionsBook;
 
-	public:
-		wxListbook* ActionsBook;
+    ActionsPanelParent(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(500, 300), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString);
 
-		ActionsPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
-
-		~ActionsPanelParent();
-
+    ~ActionsPanelParent( );
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class SettingsPanel
 ///////////////////////////////////////////////////////////////////////////////
-class SettingsPanel : public wxPanel
-{
-	private:
+class SettingsPanel : public wxPanel {
+  private:
 
-	protected:
-		wxStaticLine* m_staticline3;
+  protected:
+    wxStaticLine* m_staticline3;
 
-		// Virtual event handlers, override them in your derived class
-		virtual void OnSettingsBookPageChanged( wxListbookEvent& event ) { event.Skip(); }
+    // Virtual event handlers, override them in your derived class
+    virtual void OnSettingsBookPageChanged(wxListbookEvent& event) { event.Skip( ); }
 
+  public:
+    wxListbook* SettingsBook;
 
-	public:
-		wxListbook* SettingsBook;
+    SettingsPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(500, 300), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString);
 
-		SettingsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
-
-		~SettingsPanel();
-
+    ~SettingsPanel( );
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class ResultsPanel
 ///////////////////////////////////////////////////////////////////////////////
-class ResultsPanel : public wxPanel
-{
-	private:
+class ResultsPanel : public wxPanel {
+  private:
 
-	protected:
-		wxStaticLine* m_staticline3;
+  protected:
+    wxStaticLine* m_staticline3;
 
-		// Virtual event handlers, override them in your derived class
-		virtual void OnResultsBookPageChanged( wxListbookEvent& event ) { event.Skip(); }
+    // Virtual event handlers, override them in your derived class
+    virtual void OnResultsBookPageChanged(wxListbookEvent& event) { event.Skip( ); }
 
+  public:
+    wxListbook* ResultsBook;
 
-	public:
-		wxListbook* ResultsBook;
+    ResultsPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(500, 300), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString);
 
-		ResultsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
-
-		~ResultsPanel();
-
+    ~ResultsPanel( );
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class AssetsPanel
 ///////////////////////////////////////////////////////////////////////////////
-class AssetsPanel : public wxPanel
-{
-	private:
+class AssetsPanel : public wxPanel {
+  private:
 
-	protected:
-		wxStaticLine* m_staticline68;
+  protected:
+    wxStaticLine* m_staticline68;
 
-		// Virtual event handlers, override them in your derived class
-		virtual void OnAssetsBookPageChanged( wxListbookEvent& event ) { event.Skip(); }
+    // Virtual event handlers, override them in your derived class
+    virtual void OnAssetsBookPageChanged(wxListbookEvent& event) { event.Skip( ); }
 
+  public:
+    wxListbook* AssetsBook;
 
-	public:
-		wxListbook* AssetsBook;
+    AssetsPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(500, 300), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString);
 
-		AssetsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
-
-		~AssetsPanel();
-
+    ~AssetsPanel( );
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class ExperimentalPanel
 ///////////////////////////////////////////////////////////////////////////////
-class ExperimentalPanel : public wxPanel
-{
-	private:
+class ExperimentalPanel : public wxPanel {
+  private:
 
-	protected:
-		wxStaticLine* m_staticline68;
+  protected:
+    wxStaticLine* m_staticline68;
 
-		// Virtual event handlers, override them in your derived class
-		virtual void OnExperimentalBookPageChanged( wxListbookEvent& event ) { event.Skip(); }
+    // Virtual event handlers, override them in your derived class
+    virtual void OnExperimentalBookPageChanged(wxListbookEvent& event) { event.Skip( ); }
 
+  public:
+    wxListbook* ExperimentalBook;
 
-	public:
-		wxListbook* ExperimentalBook;
+    ExperimentalPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(500, 300), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString);
 
-		ExperimentalPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
-
-		~ExperimentalPanel();
-
+    ~ExperimentalPanel( );
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class OverviewPanel
 ///////////////////////////////////////////////////////////////////////////////
-class OverviewPanel : public wxPanel
-{
-	private:
+class OverviewPanel : public wxPanel {
+  private:
 
-	protected:
-		wxStaticLine* m_staticline2;
-		wxPanel* WelcomePanel;
+  protected:
+    wxStaticLine* m_staticline2;
+    wxPanel*      WelcomePanel;
 
-		// Virtual event handlers, override them in your derived class
-		virtual void OnInfoURL( wxTextUrlEvent& event ) { event.Skip(); }
+    // Virtual event handlers, override them in your derived class
+    virtual void OnInfoURL(wxTextUrlEvent& event) { event.Skip( ); }
 
+  public:
+    wxRichTextCtrl* InfoText;
 
-	public:
-		wxRichTextCtrl* InfoText;
+    OverviewPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize(500, 300), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString);
 
-		OverviewPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
-
-		~OverviewPanel();
-
+    ~OverviewPanel( );
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class NewProjectWizard
 ///////////////////////////////////////////////////////////////////////////////
-class NewProjectWizard : public wxWizard
-{
-	private:
+class NewProjectWizard : public wxWizard {
+  private:
 
-	protected:
-		wxStaticText* m_staticText41;
-		wxTextCtrl* ProjectNameTextCtrl;
-		wxStaticText* m_staticText42;
-		wxTextCtrl* ParentDirTextCtrl;
-		wxButton* m_button24;
-		wxStaticText* m_staticText45;
-		wxTextCtrl* ProjectPathTextCtrl;
-		wxStaticText* ErrorText;
+  protected:
+    wxStaticText* m_staticText41;
+    wxTextCtrl*   ProjectNameTextCtrl;
+    wxStaticText* m_staticText42;
+    wxTextCtrl*   ParentDirTextCtrl;
+    wxButton*     m_button24;
+    wxStaticText* m_staticText45;
+    wxTextCtrl*   ProjectPathTextCtrl;
+    wxStaticText* ErrorText;
 
-		// Virtual event handlers, override them in your derived class
-		virtual void OnFinished( wxWizardEvent& event ) { event.Skip(); }
-		virtual void OnProjectTextChange( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnParentDirChange( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnBrowseButtonClick( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnProjectPathChange( wxCommandEvent& event ) { event.Skip(); }
+    // Virtual event handlers, override them in your derived class
+    virtual void OnFinished(wxWizardEvent& event) { event.Skip( ); }
 
+    virtual void OnProjectTextChange(wxCommandEvent& event) { event.Skip( ); }
 
-	public:
+    virtual void OnParentDirChange(wxCommandEvent& event) { event.Skip( ); }
 
-		NewProjectWizard( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Create New Project"), const wxBitmap& bitmap = wxNullBitmap, const wxPoint& pos = wxDefaultPosition, long style = wxDEFAULT_DIALOG_STYLE );
-		WizardPages m_pages;
+    virtual void OnBrowseButtonClick(wxCommandEvent& event) { event.Skip( ); }
 
-		~NewProjectWizard();
+    virtual void OnProjectPathChange(wxCommandEvent& event) { event.Skip( ); }
 
+  public:
+    NewProjectWizard(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Create New Project"), const wxBitmap& bitmap = wxNullBitmap, const wxPoint& pos = wxDefaultPosition, long style = wxDEFAULT_DIALOG_STYLE);
+    WizardPages m_pages;
+
+    ~NewProjectWizard( );
 };
 
 ///////////////////////////////////////////////////////////////////////////////
 /// Class AboutDialog
 ///////////////////////////////////////////////////////////////////////////////
-class AboutDialog : public wxDialog
-{
-	private:
+class AboutDialog : public wxDialog {
+  private:
 
-	protected:
-		wxStaticLine* m_staticline131;
-		wxStaticLine* m_staticline130;
-		wxStaticText* m_staticText611;
-		wxStaticText* m_staticText605;
-		wxStaticText* m_staticText606;
-		wxStaticText* m_staticText607;
-		wxStaticText* m_staticText608;
-		wxStaticText* m_staticText609;
-		wxStaticText* m_staticText610;
-		wxStaticText* m_staticText613;
-		wxStaticText* m_staticText614;
-		wxStaticText* m_staticText615;
-		wxHyperlinkCtrl* m_hyperlink1;
-		wxStaticText* m_staticText617;
-		wxHyperlinkCtrl* m_hyperlink2;
-		wxStaticLine* m_staticline129;
-		wxButton* m_button141;
+  protected:
+    wxStaticLine*    m_staticline131;
+    wxStaticLine*    m_staticline130;
+    wxStaticText*    m_staticText611;
+    wxStaticText*    m_staticText605;
+    wxStaticText*    m_staticText606;
+    wxStaticText*    m_staticText607;
+    wxStaticText*    m_staticText608;
+    wxStaticText*    m_staticText609;
+    wxStaticText*    m_staticText610;
+    wxStaticText*    m_staticText613;
+    wxStaticText*    m_staticText614;
+    wxStaticText*    m_staticText615;
+    wxHyperlinkCtrl* m_hyperlink1;
+    wxStaticText*    m_staticText617;
+    wxHyperlinkCtrl* m_hyperlink2;
+    wxStaticLine*    m_staticline129;
+    wxButton*        m_button141;
 
-	public:
-		wxStaticBitmap* LogoBitmap;
-		wxStaticText* VersionStaticText;
-		wxStaticText* BuildDateText;
+  public:
+    wxStaticBitmap* LogoBitmap;
+    wxStaticText*   VersionStaticText;
+    wxStaticText*   BuildDateText;
 
-		AboutDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("About cisTEM"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxDEFAULT_DIALOG_STYLE );
+    AboutDialog(wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("About cisTEM"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxDEFAULT_DIALOG_STYLE);
 
-		~AboutDialog();
-
+    ~AboutDialog( );
 };
-

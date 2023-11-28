@@ -9,6 +9,7 @@
 
 #include <wx/artprov.h>
 #include <wx/xrc/xmlres.h>
+class AngularDistributionPlotPanel;
 class AngularDistributionPlotPanelHistogram;
 class DisplayPanel;
 class DisplayRefinementResultsPanel;
@@ -39,6 +40,7 @@ class VolumeAssetPickerComboPanel;
 #include <wx/button.h>
 #include <wx/splitter.h>
 #include <wx/tglbtn.h>
+#include <wx/aui/auibook.h>
 #include <wx/checkbox.h>
 #include <wx/radiobut.h>
 #include <wx/spinctrl.h>
@@ -191,6 +193,70 @@ class RefinementResultsPanel : public wxPanel
 			m_splitter16->SetSashPosition( 350 );
 			m_splitter16->Disconnect( wxEVT_IDLE, wxIdleEventHandler( RefinementResultsPanel::m_splitter16OnIdle ), NULL, this );
 		}
+
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class DisplayRefinementResultsPanelParent
+///////////////////////////////////////////////////////////////////////////////
+class DisplayRefinementResultsPanelParent : public wxPanel
+{
+	private:
+
+	protected:
+		wxStaticText* OrthText;
+		wxStaticLine* m_staticline109;
+
+	public:
+		wxSplitterWindow* LeftRightSplitter;
+		wxPanel* LeftPanel;
+		wxSplitterWindow* TopBottomSplitter;
+		wxPanel* TopPanel;
+		wxStaticText* AngularPlotText;
+		wxStaticLine* AngularPlotLine;
+		AngularDistributionPlotPanel* AngularPlotPanel;
+		wxPanel* BottomPanel;
+		MyFSCPanel* FSCResultsPanel;
+		wxPanel* RightPanel;
+		DisplayPanel* ShowOrthDisplayPanel;
+		wxPanel* RoundPlotPanel;
+
+		DisplayRefinementResultsPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 952,539 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+
+		~DisplayRefinementResultsPanelParent();
+
+		void LeftRightSplitterOnIdle( wxIdleEvent& )
+		{
+			LeftRightSplitter->SetSashPosition( 600 );
+			LeftRightSplitter->Disconnect( wxEVT_IDLE, wxIdleEventHandler( DisplayRefinementResultsPanelParent::LeftRightSplitterOnIdle ), NULL, this );
+		}
+
+		void TopBottomSplitterOnIdle( wxIdleEvent& )
+		{
+			TopBottomSplitter->SetSashPosition( 0 );
+			TopBottomSplitter->Disconnect( wxEVT_IDLE, wxIdleEventHandler( DisplayRefinementResultsPanelParent::TopBottomSplitterOnIdle ), NULL, this );
+		}
+
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class ClassificationPlotPanelParent
+///////////////////////////////////////////////////////////////////////////////
+class ClassificationPlotPanelParent : public wxPanel
+{
+	private:
+
+	protected:
+		wxPanel* SigmaPanel;
+		wxPanel* LikelihoodPanel;
+		wxPanel* MobilityPanel;
+
+	public:
+		wxAuiNotebook* my_notebook;
+
+		ClassificationPlotPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+
+		~ClassificationPlotPanelParent();
 
 };
 

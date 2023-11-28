@@ -625,6 +625,128 @@ RefinementResultsPanel::~RefinementResultsPanel()
 
 }
 
+DisplayRefinementResultsPanelParent::DisplayRefinementResultsPanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
+{
+	wxBoxSizer* bSizer92;
+	bSizer92 = new wxBoxSizer( wxVERTICAL );
+
+	LeftRightSplitter = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_PERMIT_UNSPLIT );
+	LeftRightSplitter->SetSashGravity( 0.5 );
+	LeftRightSplitter->Connect( wxEVT_IDLE, wxIdleEventHandler( DisplayRefinementResultsPanelParent::LeftRightSplitterOnIdle ), NULL, this );
+
+	LeftPanel = new wxPanel( LeftRightSplitter, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer301;
+	bSizer301 = new wxBoxSizer( wxVERTICAL );
+
+	TopBottomSplitter = new wxSplitterWindow( LeftPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D|wxSP_PERMIT_UNSPLIT );
+	TopBottomSplitter->SetSashGravity( 0.5 );
+	TopBottomSplitter->Connect( wxEVT_IDLE, wxIdleEventHandler( DisplayRefinementResultsPanelParent::TopBottomSplitterOnIdle ), NULL, this );
+
+	TopPanel = new wxPanel( TopBottomSplitter, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer302;
+	bSizer302 = new wxBoxSizer( wxVERTICAL );
+
+	AngularPlotText = new wxStaticText( TopPanel, wxID_ANY, wxT("Angular Plot"), wxDefaultPosition, wxDefaultSize, 0 );
+	AngularPlotText->Wrap( -1 );
+	AngularPlotText->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+
+	bSizer302->Add( AngularPlotText, 0, wxALL, 5 );
+
+	AngularPlotLine = new wxStaticLine( TopPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer302->Add( AngularPlotLine, 0, wxEXPAND | wxALL, 5 );
+
+	AngularPlotPanel = new AngularDistributionPlotPanel( TopPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	bSizer302->Add( AngularPlotPanel, 1, wxEXPAND | wxALL, 5 );
+
+
+	TopPanel->SetSizer( bSizer302 );
+	TopPanel->Layout();
+	bSizer302->Fit( TopPanel );
+	BottomPanel = new wxPanel( TopBottomSplitter, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer303;
+	bSizer303 = new wxBoxSizer( wxVERTICAL );
+
+	FSCResultsPanel = new MyFSCPanel( BottomPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	bSizer303->Add( FSCResultsPanel, 1, wxEXPAND | wxALL, 5 );
+
+
+	BottomPanel->SetSizer( bSizer303 );
+	BottomPanel->Layout();
+	bSizer303->Fit( BottomPanel );
+	TopBottomSplitter->SplitHorizontally( TopPanel, BottomPanel, 0 );
+	bSizer301->Add( TopBottomSplitter, 1, wxEXPAND, 5 );
+
+
+	LeftPanel->SetSizer( bSizer301 );
+	LeftPanel->Layout();
+	bSizer301->Fit( LeftPanel );
+	RightPanel = new wxPanel( LeftRightSplitter, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer304;
+	bSizer304 = new wxBoxSizer( wxVERTICAL );
+
+	OrthText = new wxStaticText( RightPanel, wxID_ANY, wxT("Orthogonal Slices / Projections"), wxDefaultPosition, wxDefaultSize, 0 );
+	OrthText->Wrap( -1 );
+	OrthText->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxT("Sans") ) );
+
+	bSizer304->Add( OrthText, 0, wxALL, 5 );
+
+	m_staticline109 = new wxStaticLine( RightPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer304->Add( m_staticline109, 0, wxEXPAND | wxALL, 5 );
+
+	ShowOrthDisplayPanel = new DisplayPanel( RightPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	bSizer304->Add( ShowOrthDisplayPanel, 66, wxEXPAND | wxALL, 5 );
+
+	RoundPlotPanel = new wxPanel( RightPanel, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	RoundPlotPanel->Hide();
+
+	bSizer304->Add( RoundPlotPanel, 33, wxEXPAND | wxALL, 5 );
+
+	wxBoxSizer* bSizer306;
+	bSizer306 = new wxBoxSizer( wxHORIZONTAL );
+
+
+	bSizer304->Add( bSizer306, 0, wxEXPAND, 5 );
+
+
+	RightPanel->SetSizer( bSizer304 );
+	RightPanel->Layout();
+	bSizer304->Fit( RightPanel );
+	LeftRightSplitter->SplitVertically( LeftPanel, RightPanel, 600 );
+	bSizer92->Add( LeftRightSplitter, 1, wxEXPAND, 5 );
+
+
+	this->SetSizer( bSizer92 );
+	this->Layout();
+}
+
+DisplayRefinementResultsPanelParent::~DisplayRefinementResultsPanelParent()
+{
+}
+
+ClassificationPlotPanelParent::ClassificationPlotPanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
+{
+	wxBoxSizer* bSizer278;
+	bSizer278 = new wxBoxSizer( wxVERTICAL );
+
+	my_notebook = new wxAuiNotebook( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, 0 );
+	SigmaPanel = new wxPanel( my_notebook, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	my_notebook->AddPage( SigmaPanel, wxT("Sigma"), false, wxNullBitmap );
+	LikelihoodPanel = new wxPanel( my_notebook, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	my_notebook->AddPage( LikelihoodPanel, wxT("Likelihood"), false, wxNullBitmap );
+	MobilityPanel = new wxPanel( my_notebook, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	my_notebook->AddPage( MobilityPanel, wxT("Image Mobility"), true, wxNullBitmap );
+
+	bSizer278->Add( my_notebook, 1, wxEXPAND | wxALL, 5 );
+
+
+	this->SetSizer( bSizer278 );
+	this->Layout();
+}
+
+ClassificationPlotPanelParent::~ClassificationPlotPanelParent()
+{
+}
+
 Refine3DPanel::Refine3DPanel( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : JobPanel( parent, id, pos, size, style, name )
 {
 	wxBoxSizer* bSizer43;

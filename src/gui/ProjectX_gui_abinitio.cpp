@@ -10,7 +10,7 @@
 #include "DisplayPanel.h"
 #include "my_controls.h"
 
-#include "ProjectX_gui_abinitio.h.h"
+#include "ProjectX_gui_abinitio.h"
 
 ///////////////////////////////////////////////////////////////////////////
 

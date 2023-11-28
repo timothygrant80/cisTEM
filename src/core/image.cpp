@@ -6973,7 +6973,7 @@ void Image::ComputeAmplitudeSpectrumFull2D(Image* amplitude_spectrum, bool calcu
     amplitude_spectrum->object_is_centred_in_box = true;
 }
 
-void Image::ComputeFilteredAmplitudeSpectrumFull2D(Image* average_spectrum_masked, Image* current_power_spectrum, float& average, float& sigma, float minimum_resolution, float maximum_resolution, float pixel_size_for_fitting) {
+void Image::ComputeFilteredAmplitudeSpectrumFull2D(Image* average_spectrum_masked, Image* current_power_spectrum, float& average, float& sigma, float minimum_resolution, float maximum_resolution, float pixel_size_for_fitting, bool apply_cosine_mask) {
 
     // This is pulled from the ctffind.cpp App - this filtering is used also in wave_function_propagtor::ReturnImageContrast. Any changes here should affect both programs identically.
     // The only change I (Ben) made is to change amplitud_spectrum-> to this->
@@ -7014,7 +7014,9 @@ void Image::ComputeFilteredAmplitudeSpectrumFull2D(Image* average_spectrum_maske
     //			average_spectrum_masked->SetMaximumValue(average_spectrum_masked->ReturnMaximumValue(3,3));
 
     average_spectrum_masked->CopyFrom(this);
-    average_spectrum_masked->CosineMask(float(average_spectrum_masked->logical_x_dimension) * pixel_size_for_fitting / std::max(maximum_resolution, 8.0f), float(average_spectrum_masked->logical_x_dimension) * pixel_size_for_fitting / std::max(maximum_resolution, 4.0f), true);
+    if (apply_cosine_mask) {
+        average_spectrum_masked->CosineMask(float(average_spectrum_masked->logical_x_dimension) * pixel_size_for_fitting / std::max(maximum_resolution, 8.0f), float(average_spectrum_masked->logical_x_dimension) * pixel_size_for_fitting / std::max(maximum_resolution, 4.0f), true);
+    }
     //			average_spectrum_masked->QuickAndDirtyWriteSlice("dbg_spec_before_thresh.mrc",1);
     //			average_spectrum_masked->CorrectSinc();
     //			average_spectrum_masked->CorrectSinc(float(average_spectrum_masked->logical_x_dimension)*pixel_size_for_fitting/std::max(maximum_resolution, 8.0f), 0.5, true, 0.0);

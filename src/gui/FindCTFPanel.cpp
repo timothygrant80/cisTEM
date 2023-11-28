@@ -698,7 +698,7 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
 
         const int number_of_threads = 1;
 
-        current_job_package.AddJob("sbisffffifffffbfbfffbffbbsbsbfffbfffbiii", input_filename.c_str( ), // 0
+        current_job_package.AddJob("sbisffffifffffbfbfffbffbbsbsbfffbfffbiiib", input_filename.c_str( ), // 0
                                    input_is_a_movie, // 1
                                    number_of_frames_to_average, //2
                                    output_diagnostic_filename.c_str( ), // 3
@@ -737,7 +737,8 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
                                    determine_tilt,
                                    number_of_threads,
                                    current_eer_frames_per_image,
-                                   current_eer_super_res_factor);
+                                   current_eer_super_res_factor,
+                                   true);
 
         my_progress_dialog->Update(counter + 1);
     }

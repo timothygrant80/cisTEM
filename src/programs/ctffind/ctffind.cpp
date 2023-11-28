@@ -107,6 +107,7 @@ void CtffindApp::DoInteractiveUserInput( ) {
     int         desired_number_of_threads        = 1;
     int         eer_frames_per_image             = 0;
     int         eer_super_res_factor             = 1;
+    bool        filter_lowres_signal             = true;
 
     // Things we need for old school input
     double     temp_double               = -1.0;
@@ -484,6 +485,7 @@ void CtffindApp::DoInteractiveUserInput( ) {
                 known_astigmatism_angle = 0.0;
                 known_phase_shift       = 0.0;
             }
+            filter_lowres_signal = my_input->GetYesNoFromUser("Filter out low-resolution signal?", "Answer yes if you want to filter out low-resolution signal", "Yes");
             desired_number_of_threads = my_input->GetIntFromUser("Desired number of parallel threads", "The command-line option -j will override this", "1", 1);
         }
         else // expert options not supplied by user
@@ -503,7 +505,7 @@ void CtffindApp::DoInteractiveUserInput( ) {
     }
 
     //	my_current_job.Reset(39);
-    my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbsbfffbfffbiii", input_filename.c_str( ), //1
+    my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbsbfffbfffbiiib", input_filename.c_str( ), //1
                                       input_is_a_movie,
                                       number_of_frames_to_average,
                                       output_diagnostic_filename.c_str( ),
@@ -542,7 +544,8 @@ void CtffindApp::DoInteractiveUserInput( ) {
                                       determine_tilt,
                                       desired_number_of_threads,
                                       eer_frames_per_image,
-                                      eer_super_res_factor);
+                                      eer_super_res_factor,
+                                      filter_lowres_signal);
 }
 
 // Optional command-line stuff
@@ -604,6 +607,7 @@ bool CtffindApp::DoCalculation( ) {
     int               desired_number_of_threads          = my_current_job.arguments[37].ReturnIntegerArgument( );
     int               eer_frames_per_image               = my_current_job.arguments[38].ReturnIntegerArgument( );
     int               eer_super_res_factor               = my_current_job.arguments[39].ReturnIntegerArgument( );
+    bool              filter_lowres_signal               = my_current_job.arguments[40].ReturnBoolArgument( );
 
     // if we are applying a mag distortion, it can change the pixel size, so do that here to make sure it is used forever onwards..
 

@@ -4,3 +4,8 @@
 #include "ProjectX_gui_controls.h"
 #include "ProjectX_gui_main.h"
 #include "ProjectX_gui_matchtemplate.h"
+#include "ProjectX_gui_ctffind.h"
+#include "ProjectX_gui_settings.h"
+#include "ProjectX_gui_refine2d.h"
+#include "ProjectX_gui_refine3d.h"
+#include "ProjectX_gui_picking.h"

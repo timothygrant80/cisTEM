@@ -6,6 +6,8 @@
 ///////////////////////////////////////////////////////////////////////////
 
 #include "../core/gui_core_headers.h"
+
+#include "../core/gui_core_headers.h"
 #include "AssetPickerComboPanel.h"
 #include "PickingResultsDisplayPanel.h"
 #include "ResultsDataViewListCtrl.h"

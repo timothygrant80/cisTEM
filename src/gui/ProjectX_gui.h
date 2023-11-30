@@ -11,3 +11,4 @@
 #include "ProjectX_gui_unblur.h"
 #include "ProjectX_gui_refinement_package.h"
 #include "ProjectX_gui_main.h"
+#include "ProjectX_gui_wizards.h"

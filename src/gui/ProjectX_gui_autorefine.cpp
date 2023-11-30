@@ -5,6 +5,8 @@
 // PLEASE DO *NOT* EDIT THIS FILE!
 ///////////////////////////////////////////////////////////////////////////
 
+#include "../core/gui_core_headers.h"
+
 #include "AssetPickerComboPanel.h"
 #include "DisplayRefinementResultsPanel.h"
 #include "my_controls.h"

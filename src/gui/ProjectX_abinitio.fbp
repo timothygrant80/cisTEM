@@ -20,7 +20,7 @@
         <property name="name">ProjectX_abinitio</property>
         <property name="namespace"></property>
         <property name="path">.</property>
-        <property name="precompiled_header"></property>
+        <property name="precompiled_header">#include &quot;../core/gui_core_headers.h&quot;</property>
         <property name="relative_path">1</property>
         <property name="skip_lua_events">1</property>
         <property name="skip_php_events">1</property>

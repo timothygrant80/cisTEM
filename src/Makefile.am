@@ -987,6 +987,7 @@ if EXPERIMENTAL_AM
 endif
     unit_test_runner_SOURCES  = test/unit_test_runner.cpp 
     unit_test_runner_SOURCES  += test/core/test_matrix.cpp 
+    unit_test_runner_SOURCES  += test/core/test_non_wx_functions.cpp
 if WANT_CISTEM_GPU_AM
     unit_test_runner_SOURCES += test/gpu/test_gpu.cpp
                             

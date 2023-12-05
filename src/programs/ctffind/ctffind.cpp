@@ -11,10 +11,12 @@ using namespace cistem_timer;
 using namespace cistem_timer_noop;
 #endif
 
-const std::string ctffind_version = "4.1.14";
+const std::string ctffind_version = "4.1.15";
 
 /*
  * Changelog
+  * - 4.1.15
+ * -- Make tweaked background subtraction optional
  * - 4.1.14
  * -- bug fixes (memory, equiphase averaging)
  * -- bug fixes from David Mastronarde (fixed/known phase shift)

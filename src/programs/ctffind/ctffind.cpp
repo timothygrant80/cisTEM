@@ -485,7 +485,7 @@ void CtffindApp::DoInteractiveUserInput( ) {
                 known_astigmatism_angle = 0.0;
                 known_phase_shift       = 0.0;
             }
-            filter_lowres_signal = my_input->GetYesNoFromUser("Filter out low-resolution signal?", "Answer yes if you want to filter out low-resolution signal", "Yes");
+            filter_lowres_signal      = my_input->GetYesNoFromUser("Weight down low resolution signal?", "Answer yes if you want to filter out low-resolution signal", "Yes");
             desired_number_of_threads = my_input->GetIntFromUser("Desired number of parallel threads", "The command-line option -j will override this", "1", 1);
         }
         else // expert options not supplied by user
@@ -1011,7 +1011,7 @@ bool CtffindApp::DoCalculation( ) {
         // Filter the amplitude spectrum, remove background
         if ( ! filtered_amplitude_spectrum_input ) {
             profile_timing.start("Filter spectrum");
-            average_spectrum->ComputeFilteredAmplitudeSpectrumFull2D(average_spectrum_masked, current_power_spectrum, average, sigma, minimum_resolution, maximum_resolution, pixel_size_for_fitting);
+            average_spectrum->ComputeFilteredAmplitudeSpectrumFull2D(average_spectrum_masked, current_power_spectrum, average, sigma, minimum_resolution, maximum_resolution, pixel_size_for_fitting, filter_lowres_signal);
             profile_timing.lap("Filter spectrum");
         }
 

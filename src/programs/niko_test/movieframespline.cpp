@@ -4,8 +4,8 @@
 #include <vector>
 #include <numeric>
 #include <dlib/dlib/matrix.h>
-#include "./cubicspline.h"
-#include "./bicubicspline.h"
+// #include "./cubicspline.h"
+// #include "./bicubicspline.h"
 #include "movieframespline.h"
 
 void MovieFrameSpline::Initialize(int knot_no_along_z, int row_no, int column_no, int frame_no, int image_x_dim, int image_y_dim, float spline_knotz_distance, float spline_knotx_distance, float spline_knoty_distance) {
@@ -49,8 +49,23 @@ void MovieFrameSpline::Initialize(int knot_no_along_z, int row_no, int column_no
     this->invphixy = this->Spline2d[0].invphi;
 }
 
+void MovieFrameSpline::Deallocate( ) {
+    delete[] this->Spline2d;
+
+    for ( int i = 0; i < this->knot_no_y; i++ ) {
+        delete[] this->Spline1d[i];
+        delete[] this->value_on_knot[i];
+    }
+    delete[] this->Spline1d;
+    delete[] this->value_on_knot;
+}
+
 void MovieFrameSpline::Update3DSplineOnKnotValue(matrix<double>** value_on_knot) {
     this->value_on_knot = value_on_knot;
+}
+
+void MovieFrameSpline::CopyFrom(MovieFrameSpline other_MovieFrameSpline) {
+    *this = other_MovieFrameSpline;
 }
 
 void MovieFrameSpline::Update3DSplineInterpMapping(matrix<double> x_vector, matrix<double> y_vector, matrix<double> z_vector) {

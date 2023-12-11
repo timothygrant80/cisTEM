@@ -11927,6 +11927,9 @@ void Image::Distortion(Image* interp_img, float* shifted_mapx, float* shifted_ma
             }
         }
     }
+    interp_img_tmp.Deallocate( );
+    delete[] interpolated_mapx;
+    delete[] interpolated_mapy;
 }
 
 //BEGIN_FOR_STAND_ALONE_CTFFIND

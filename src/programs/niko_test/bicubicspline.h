@@ -120,11 +120,16 @@ class bicubicsplinestack {
     // void UpdateSingleSpline(matrix<double> z_on_knot, int spline_index) {
     void UpdateSingleSpline(int spline_index) {
         // this->spline_stack[spline_index].z_on_knot = z_on_knot;
-        this->spline_stack[spline_index].Qz2d      = this->spline_stack[spline_index].CalcQzWithInvPhi(this->invphi);
+        this->spline_stack[spline_index].Qz2d = this->spline_stack[spline_index].CalcQzWithInvPhi(this->invphi);
         // this->spline_stack[spline_index].Qz2d = this->spline_stack[spline_index].CalcQz(z_on_knot);
         // wxPrintf("check function");
         // this->spline_stack[spline_index].Qz2d.set_size(this->m + 2, this->n + 2);
         // this->spline_stack[spline_index].UpdateQz( );
+    }
+
+    void FreeSplineStack( ) {
+        delete[] spline_stack;
+        spline_stack = nullptr;
     }
 };
 

@@ -457,7 +457,20 @@ cisTEM_SOURCES = programs/projectx/projectx.cpp \
                 gui/BitmapPanel.cpp \
                 gui/PickingBitmapPanel.cpp \
                 gui/job_panel.cpp \
-                gui/ProjectX_gui.cpp \
+                gui/ProjectX_gui_abinitio.cpp \
+                gui/ProjectX_gui_assets.cpp \
+                gui/ProjectX_gui_autorefine.cpp \
+                gui/ProjectX_gui_controls.cpp \
+                gui/ProjectX_gui_ctffind.cpp \
+                gui/ProjectX_gui_main.cpp \
+                gui/ProjectX_gui_matchtemplate.cpp \
+                gui/ProjectX_gui_picking.cpp \
+                gui/ProjectX_gui_refine2d.cpp \
+                gui/ProjectX_gui_refine3d.cpp \
+                gui/ProjectX_gui_refinement_package.cpp \
+                gui/ProjectX_gui_settings.cpp \
+                gui/ProjectX_gui_unblur.cpp \
+                gui/ProjectX_gui_wizards.cpp \
                 gui/ResultsDataViewListCtrl.cpp \
                 gui/MyMovieFilterDialog.cpp \
                 gui/MainFrame.cpp \

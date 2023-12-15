@@ -15,7 +15,9 @@ const std::string ctffind_version = "4.1.15";
 
 /*
  * Changelog
-  * - 4.1.15
+ * - 4.1.16
+ * -- Fixes crashes, found by David Mastronarde
+ * - 4.1.15
  * -- Make tweaked background subtraction optional
  * - 4.1.14
  * -- bug fixes (memory, equiphase averaging)
@@ -1578,29 +1580,35 @@ bool CtffindApp::DoCalculation( ) {
             MyDebugAssertTrue(first_bin_to_check >= 0 && first_bin_to_check < number_of_bins_in_1d_spectra, "Bad first bin to check\n");
             //wxPrintf("Will only check from bin %i of %i onwards\n", first_bin_to_check, number_of_bins_in_1d_spectra);
             last_bin_with_good_fit = -1;
-            for ( counter = first_bin_to_check; counter < number_of_bins_in_1d_spectra; counter++ ) {
-                //wxPrintf("On bin %i, fit_frc = %f, rot averate astig = %f\n", counter, fit_frc[counter], rotational_average_astig[counter]);
-                at_last_bin_with_good_fit = ((number_of_bins_above_low_threshold > 3) && (fit_frc[counter] < low_threshold)) ||
-                                            ((number_of_bins_above_high_threshold > 3) && (fit_frc[counter] < frc_significance_threshold));
-                if ( at_last_bin_with_good_fit ) {
-                    last_bin_with_good_fit = counter;
-                    break;
-                }
-                // Count number of bins above given thresholds
-                if ( fit_frc[counter] > low_threshold )
-                    number_of_bins_above_low_threshold++;
-                if ( fit_frc[counter] > frc_significance_threshold )
-                    number_of_bins_above_significance_threshold++;
-                if ( fit_frc[counter] > high_threshold )
-                    number_of_bins_above_high_threshold++;
-            }
-            //wxPrintf("%i bins out of %i checked were above significance threshold\n",number_of_bins_above_significance_threshold,number_of_bins_in_1d_spectra-first_bin_to_check);
-            if ( number_of_bins_above_significance_threshold == number_of_bins_in_1d_spectra - first_bin_to_check )
-                last_bin_with_good_fit = number_of_bins_in_1d_spectra - 1;
-            if ( number_of_bins_above_significance_threshold == 0 )
+            // DNM: skip explicitly if there are no bins
+            if ( first_bin_to_check >= number_of_bins_in_1d_spectra ) {
                 last_bin_with_good_fit = 1;
-            last_bin_with_good_fit = std::min(last_bin_with_good_fit, number_of_bins_in_1d_spectra);
-            profile_timing.lap("Compute resolution cutoff");
+            }
+            else {
+                for ( counter = first_bin_to_check; counter < number_of_bins_in_1d_spectra; counter++ ) {
+                    //wxPrintf("On bin %i, fit_frc = %f, rot averate astig = %f\n", counter, fit_frc[counter], rotational_average_astig[counter]);
+                    at_last_bin_with_good_fit = ((number_of_bins_above_low_threshold > 3) && (fit_frc[counter] < low_threshold)) ||
+                                                ((number_of_bins_above_high_threshold > 3) && (fit_frc[counter] < frc_significance_threshold));
+                    if ( at_last_bin_with_good_fit ) {
+                        last_bin_with_good_fit = counter;
+                        break;
+                    }
+                    // Count number of bins above given thresholds
+                    if ( fit_frc[counter] > low_threshold )
+                        number_of_bins_above_low_threshold++;
+                    if ( fit_frc[counter] > frc_significance_threshold )
+                        number_of_bins_above_significance_threshold++;
+                    if ( fit_frc[counter] > high_threshold )
+                        number_of_bins_above_high_threshold++;
+                }
+                //wxPrintf("%i bins out of %i checked were above significance threshold\n",number_of_bins_above_significance_threshold,number_of_bins_in_1d_spectra-first_bin_to_check);
+                if ( number_of_bins_above_significance_threshold == number_of_bins_in_1d_spectra - first_bin_to_check )
+                    last_bin_with_good_fit = number_of_bins_in_1d_spectra - 1;
+                if ( number_of_bins_above_significance_threshold == 0 )
+                    last_bin_with_good_fit = 1;
+                last_bin_with_good_fit = std::min(last_bin_with_good_fit, number_of_bins_in_1d_spectra);
+                profile_timing.lap("Compute resolution cutoff");
+            }
         }
         else {
             last_bin_with_good_fit = 1;
@@ -1622,7 +1630,8 @@ bool CtffindApp::DoCalculation( ) {
         if ( dump_debug_files )
             average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_rescaling.mrc", 1);
         profile_timing.start("Write diagnostic image");
-        if ( compute_extra_stats ) {
+        // DNM 3/31/23: do not call if no bins with good fit
+        if ( compute_extra_stats && last_bin_with_good_fit > 1 ) {
             average_spectrum->RescaleSpectrumAndRotationalAverage(number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, rotational_average_astig_fit, number_of_extrema_profile, ctf_values_profile, last_bin_without_aliasing, last_bin_with_good_fit);
         }
         //average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_thresholding.mrc",1);

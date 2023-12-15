@@ -337,8 +337,8 @@ void SpectrumImage::RescaleSpectrumAndRotationalAverage(Image* number_of_extrema
     int        bin_counter;
     bool       at_a_maximum, at_a_minimum, maximum_at_previous_bin, minimum_at_previous_bin;
     int        location_of_previous_maximum, location_of_previous_minimum;
-    int        current_maximum_number = 0;
-    int        normalisation_bin_number;
+    int        current_maximum_number   = 0;
+    int        normalisation_bin_number = 0;
     int        i;
     int        j;
     bool       actually_do_rescaling;
@@ -668,4 +668,3 @@ void SpectrumImage::ComputeEquiPhaseAverageOfPowerSpectrum(CTF* ctf, Curve* epa_
     delete count_pre_max;
     delete count_post_max;
 }
-

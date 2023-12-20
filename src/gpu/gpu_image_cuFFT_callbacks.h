@@ -45,6 +45,7 @@ __device__ void CB_mipCCGAndStore(void* dataOut, size_t offset, cufftReal elemen
 }
 
 __device__ cufftCallbackStoreR d_mipCCGAndStorePtr = CB_mipCCGAndStore;
+cufftCallbackStoreR            h_mipCCGStore_BackwardFFTAfterComplexConjMul;
 
 template <typename T>
 struct CB_complexConjMulLoad_params {

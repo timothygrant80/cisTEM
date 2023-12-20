@@ -28,7 +28,6 @@ class Histogram {
     size_t size_of_temp_hist;
     float* cummulative_histogram;
 
-    int histogram_n_bins; //
     //	float histogram_min;
     //	float histogram_max;
     //	float histogram_step;
@@ -40,7 +39,7 @@ class Histogram {
 
     void SetInitialValues( );
     void Init(int histogram_n_bins, float histogram_min, float histogram_step);
-    void BufferInit(NppiSize npp_ROI);
+    void BufferInit(GpuImage& input_image);
     void AddToHistogram(GpuImage& input_image);
     void Accumulate(GpuImage& input_image);
 

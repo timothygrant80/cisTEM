@@ -9,6 +9,7 @@
 #define GPU_CORE_HEADERS_H_
 
 #include "../core/core_headers.h"
+
 #include <cuda_fp16.h>
 #include <cuda_bf16.h>
 
@@ -31,8 +32,9 @@ const int MAX_GPU_COUNT = 32;
 #define precheck 
 #else
 // The static path to the error code definitions is brittle, but better than the internet. At least you can click in VSCODE to get there.
+// cudaErrorNOteReady is not really an error (600 or hexadecimal 0x258) but it is returned by cudaStreamSynchronize
 #define nppErr(npp_stat)  {if (npp_stat != NPP_SUCCESS) { std::cerr << "NPP_CHECK_NPP - npp_stat = " << npp_stat ; wxPrintf(" at %s:(%d)\nFind error codes at /usr/local/cuda-11.7/targets/x86_64-linux/include/nppdefs.h:(170)\n\n",__FILE__,__LINE__); DEBUG_ABORT} ;};
-#define cudaErr(error) { auto status = static_cast<cudaError_t>(error); if (status != cudaSuccess) { std::cerr << cudaGetErrorString(status) << " :-> "; MyPrintWithDetails(""); DEBUG_ABORT} }
+#define cudaErr(error) { auto status = static_cast<cudaError_t>(error); if (status != cudaSuccess || status == cudaErrorNotReady) { std::cerr << cudaGetErrorString(status) << " :-> "; MyPrintWithDetails(""); DEBUG_ABORT} }
 #define cufftErr(error) { auto status = static_cast<cufftResult>(error); if (status != CUFFT_SUCCESS) { std::cerr << cistem::gpu::cufft_error_types[status] << " :-> "; MyPrintWithDetails(""); DEBUG_ABORT} }
 #define cuTensorErr(error) { auto status = static_cast<cutensorStatus_t>(error); if (status != CUTENSOR_STATUS_SUCCESS) { std::cerr << cutensorGetErrorString(status) << " :-> "; MyPrintWithDetails(""); DEBUG_ABORT} }
 #define postcheck { cudaErr(cudaPeekAtLastError()); cudaError_t error = cudaStreamSynchronize(cudaStreamPerThread); cudaErr(error); }

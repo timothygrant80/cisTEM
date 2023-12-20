@@ -185,7 +185,7 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
                                       best_defocus_output_file.ToUTF8( ).data( ),
                                       best_pixel_size_output_file.ToUTF8( ).data( ),
                                       scaled_mip_output_file.ToUTF8( ).data( ),
-                                      correlation_std_output_file.ToUTF8( ).data( ),
+                                      correlation_avg_output_file.ToUTF8( ).data( ),
                                       my_symmetry.ToUTF8( ).data( ),
                                       in_plane_angular_step,
                                       output_histogram_file.ToUTF8( ).data( ),
@@ -193,7 +193,7 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
                                       last_search_position,
                                       image_number_for_gui,
                                       number_of_jobs_per_image_in_gui,
-                                      correlation_avg_output_file.ToUTF8( ).data( ),
+                                      correlation_std_output_file.ToUTF8( ).data( ),
                                       directory_for_results.ToUTF8( ).data( ),
                                       result_filename.ToUTF8( ).data( ),
                                       min_peak_radius,
@@ -672,11 +672,11 @@ bool MatchTemplateApp::DoCalculation( ) {
         template_reconstruction.ZeroCentralPixel( );
         template_reconstruction.SwapRealSpaceQuadrants( );
 
-        //        wxPrintf("First search last search position %d/ %d\n",first_search_position, last_search_position);
-
         if ( use_gpu ) {
 #ifdef ENABLEGPU
 
+// TODO: for images that are being copied into the GPU, change to references in the call to Init
+// TODO: for cpu images not copied after the call to Init, unpin the memory to limit locked pages.
 #pragma omp parallel num_threads(max_threads)
             {
                 int tIDX = ReturnThreadNumberOfCurrentThread( );
@@ -767,7 +767,8 @@ bool MatchTemplateApp::DoCalculation( ) {
                             pixel_counter += max_intensity_projection.padding_jump_value;
                         }
 
-                        GPU[tIDX].histogram.CopyToHostAndAdd(histogram_data);
+                        // GPU[tIDX].histogram.CopyToHostAndAdd(histogram_data);
+                        GPU[tIDX].my_dist.at(0).CopyToHostAndAdd(histogram_data);
 
                         //                    current_correlation_position += GPU[tIDX].total_number_of_cccs_calculated;
                         actual_number_of_ccs_calculated += GPU[tIDX].total_number_of_cccs_calculated;

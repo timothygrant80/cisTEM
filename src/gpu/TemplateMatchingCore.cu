@@ -3,109 +3,15 @@
 
 #include "TemplateMatchingCore.h"
 
-// #define DO_HISTOGRAM
+// Implementation is in the header as it is only used here for now.
+#include "projection_queue.cuh"
 
 using namespace cistem_timer;
 
 constexpr bool use_gpu_prj               = false;
-constexpr int  n_prjs                    = 2;
 constexpr int  n_mips_to_process_at_once = 10;
 
 static_assert(n_mips_to_process_at_once == 1 || n_mips_to_process_at_once == 10, "n_mips_to_process_at_once must be 1 or 10");
-
-class ProjectionQueue {
-
-  private:
-    int             n_prjs_in_queue_;
-    cudaEvent_t     gpu_projection_is_ready_Event[n_prjs];
-    std::queue<int> available_prj_queue;
-    std::queue<int> submitted_prj_queue;
-
-    cudaError_t event_status;
-
-  public:
-    cudaStream_t gpu_projection_stream[n_prjs];
-    cudaEvent_t  cpu_projection_is_writeable_Event[n_prjs];
-
-    StopWatch timer;
-
-    ProjectionQueue(int wanted_size) : n_prjs_in_queue_(wanted_size) {
-        MyDebugAssertFalse(n_prjs_in_queue_ == 0, "ProjectionQueue must be initialized with a size greater than 0");
-        // We don't need to do anything if the queue has only one member
-        ResetQueues( );
-
-        int least_priority, highest_priority;
-        cudaErr(cudaDeviceGetStreamPriorityRange(&least_priority, &highest_priority));
-        for ( int i = 0; i < n_prjs_in_queue_; i++ ) {
-            cudaErr(cudaStreamCreateWithPriority(&gpu_projection_stream[i], cudaStreamNonBlocking, highest_priority - 1));
-            cudaErr(cudaEventCreateWithFlags(&gpu_projection_is_ready_Event[i], cudaEventBlockingSync));
-            cudaErr(cudaEventCreateWithFlags(&cpu_projection_is_writeable_Event[i], cudaEventBlockingSync));
-        }
-    }
-
-    ~ProjectionQueue( ) {
-        for ( int i = 0; i < n_prjs_in_queue_; i++ ) {
-            cudaErr(cudaStreamDestroy(gpu_projection_stream[i]));
-            cudaErr(cudaEventDestroy(gpu_projection_is_ready_Event[i]));
-            cudaErr(cudaEventDestroy(cpu_projection_is_writeable_Event[i]));
-        }
-    }
-
-    void ResetQueues( ) {
-        while ( ! submitted_prj_queue.empty( ) ) {
-            submitted_prj_queue.pop( );
-        }
-        for ( int i = 0; i < n_prjs_in_queue_; i++ )
-            available_prj_queue.push(i);
-    }
-
-    int
-    GetAvailableProjectionIDX( ) {
-
-        // Remove the oldest projections if they are ready and place them back in the available queue.
-        while ( ! submitted_prj_queue.empty( ) ) {
-            event_status = cudaEventQuery(cpu_projection_is_writeable_Event[submitted_prj_queue.front( )]);
-            if ( event_status == cudaErrorNotReady ) {
-                // Okay, we've hit one that isn't ready, so we can stop looking, let's break out
-                break;
-            }
-            else {
-                available_prj_queue.push(submitted_prj_queue.front( ));
-                submitted_prj_queue.pop( );
-            }
-        }
-
-        // We only need to spin if there are no more available projections
-        if ( available_prj_queue.empty( ) ) {
-            timer.start("busy wait");
-            cudaErr(cudaEventSynchronize(cpu_projection_is_writeable_Event[submitted_prj_queue.front( )]));
-            timer.lap("busy wait");
-            available_prj_queue.push(submitted_prj_queue.front( ));
-            submitted_prj_queue.pop( );
-        }
-
-        submitted_prj_queue.push(available_prj_queue.front( ));
-        available_prj_queue.pop( );
-
-        return submitted_prj_queue.back( );
-    }
-
-    inline void
-    RecordProjectionReadyBlockingHost(int idx, cudaStream_t stream) {
-        cudaErr(cudaEventRecord(cpu_projection_is_writeable_Event[idx], stream));
-    }
-
-    inline void
-    RecordGpuProjectionReadyStreamPerThreadWait(int idx) {
-        cudaErr(cudaEventRecord(gpu_projection_is_ready_Event[idx], gpu_projection_stream[idx]));
-        cudaErr(cudaStreamWaitEvent(cudaStreamPerThread, gpu_projection_is_ready_Event[idx], cudaEventWaitDefault));
-    }
-
-    void
-    PrintTimes( ) {
-        timer.print_times( );
-    }
-};
 
 void TemplateMatchingCore::Init(MyApp*           parent_pointer,
                                 Image&           wanted_template_reconstruction,
@@ -176,26 +82,26 @@ void TemplateMatchingCore::Init(MyApp*           parent_pointer,
     d_input_image.Init(input_image);
     d_input_image.CopyHostToDevice(input_image);
 
-    d_padded_reference.Allocate(d_input_image.dims.x, d_input_image.dims.y, 1, true);
-    d_max_intensity_projection.Allocate(d_input_image.dims.x, d_input_image.dims.y, number_of_global_search_images_to_save, true);
-    d_best_psi.Allocate(d_input_image.dims.x, d_input_image.dims.y, number_of_global_search_images_to_save, true);
-    d_best_theta.Allocate(d_input_image.dims.x, d_input_image.dims.y, number_of_global_search_images_to_save, true);
-    d_best_phi.Allocate(d_input_image.dims.x, d_input_image.dims.y, number_of_global_search_images_to_save, true);
-
-    d_sum1.Allocate(d_input_image.dims.x, d_input_image.dims.y, 1, true);
-    d_sumSq1.Allocate(d_input_image.dims.x, d_input_image.dims.y, 1, true);
-    d_sum2.Allocate(d_input_image.dims.x, d_input_image.dims.y, 1, true);
-    d_sumSq2.Allocate(d_input_image.dims.x, d_input_image.dims.y, 1, true);
-    d_sum3.Allocate(d_input_image.dims.x, d_input_image.dims.y, 1, true);
-    d_sumSq3.Allocate(d_input_image.dims.x, d_input_image.dims.y, 1, true);
-
-#ifdef DO_HISTOGRAM
-    wxPrintf("Setting up the histogram\n\n");
-    histogram.Init(histogram_number_of_bins, histogram_min_scaled, histogram_step_scaled);
-    if ( max_padding > 2 ) {
-        histogram.max_padding = max_padding;
+    d_statistical_buffers.push_back(&d_padded_reference);
+    d_statistical_buffers.push_back(&d_sum1);
+    d_statistical_buffers.push_back(&d_sumSq1);
+    d_statistical_buffers.push_back(&d_sum2);
+    d_statistical_buffers.push_back(&d_sumSq2);
+    d_statistical_buffers.push_back(&d_sum3);
+    d_statistical_buffers.push_back(&d_sumSq3);
+    int n_2d_buffers = 0;
+    for ( auto& buffer : d_statistical_buffers ) {
+        buffer->Allocate(d_input_image.dims.x, d_input_image.dims.y, 1, true);
+        n_2d_buffers++;
     }
-#endif
+
+    d_statistical_buffers.push_back(&d_max_intensity_projection);
+    d_statistical_buffers.push_back(&d_best_psi);
+    d_statistical_buffers.push_back(&d_best_theta);
+    d_statistical_buffers.push_back(&d_best_phi);
+    for ( int i = n_2d_buffers; i < d_statistical_buffers.size( ); i++ ) {
+        d_statistical_buffers[i]->Allocate(d_input_image.dims.x, d_input_image.dims.y, number_of_global_search_images_to_save, true);
+    }
 
     this->histogram_max_padding = max_padding;
     this->histogram_min_scaled  = histogram_min_scaled;
@@ -216,22 +122,11 @@ void TemplateMatchingCore::Init(MyApp*           parent_pointer,
 
 void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel, float c_defocus, int threadIDX, long& current_correlation_position) {
 
-#ifndef DO_HISTOGRAM
     my_dist.emplace_back(d_input_image, histogram_min_scaled, histogram_step_scaled, histogram_max_padding, n_mips_to_process_at_once, cudaStreamPerThread);
-#endif
     // Make sure we are starting with zeros
-    d_max_intensity_projection.Zeros( );
-    d_best_psi.Zeros( );
-    d_best_phi.Zeros( );
-    d_best_theta.Zeros( );
-    d_padded_reference.Zeros( );
-
-    d_sum1.Zeros( );
-    d_sumSq1.Zeros( );
-    d_sum2.Zeros( );
-    d_sumSq2.Zeros( );
-    d_sum3.Zeros( );
-    d_sumSq3.Zeros( );
+    for ( auto& buffer : d_statistical_buffers ) {
+        buffer->Zeros( );
+    }
 
     this->c_defocus                 = c_defocus;
     this->c_pixel                   = c_pixel;
@@ -275,10 +170,8 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
     // cudaStreamSynchronize: Blocks host until ALL work in the stream is completed
     // cudaStreamWaitEvent: Makes all future work in stream wait on an event. Since we are always using cudaStreamPerThread, this is not needed.
 
-    cudaEvent_t projection_is_free_Event, gpu_work_is_done_Event, mip_is_done_Event;
+    cudaEvent_t mip_is_done_Event;
 
-    // cudaErr(cudaEventCreateWithFlags(&projection_is_free_Event, cudaEventDisableTiming));
-    // cudaErr(cudaEventCreateWithFlags(&gpu_work_is_done_Event, cudaEventDisableTiming));
     cudaErr(cudaEventCreateWithFlags(&mip_is_done_Event, cudaEventBlockingSync));
 
     int   ccc_counter = 0;
@@ -382,14 +275,6 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
 
             // d_padded_reference.MultiplyByConstant(rsqrtf(d_padded_reference.ReturnSumOfSquares( ) / (float)d_padded_reference.number_of_real_space_pixels));
 
-#ifdef DO_HISTOGRAM
-            if ( ! histogram.is_allocated_histogram ) {
-                d_padded_reference.NppInit( );
-                histogram.BufferInit(d_padded_reference);
-            }
-            histogram.AddToHistogram(d_padded_reference);
-#endif
-
             // cudaErr(cudaStreamSynchronize(cudaStreamPerThread));
 
             if constexpr ( n_mips_to_process_at_once > 1 ) {
@@ -404,21 +289,16 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
                     cudaErr(cudaMemcpyAsync(d_phi_array, phi_array, sizeof(__half) * n_mips_to_process_at_once, cudaMemcpyHostToDevice, cudaStreamPerThread));
 
                     total_mip_processed += current_mip_to_process;
-#ifndef DO_HISTOGRAM
                     my_dist.at(0).AccumulateDistribution(ccf_array, current_mip_to_process);
-#endif
 
                     MipPixelWiseStack(ccf_array, d_psi_array, d_theta_array, d_phi_array, current_mip_to_process);
-
-                    // This shouldn't be needed AFAIK as all work that might affect ccf array or mip_psi is done in cudaStreamPerThread
 
                     current_mip_to_process = 0;
                 }
             }
             else {
-#ifndef DO_HISTOGRAM
+
                 my_dist.at(0).AccumulateDistribution(d_padded_reference.real_values_fp16, 1);
-#endif
 
                 MipPixelWise(__float2half_rn(current_psi), __float2half_rn(global_euler_search.list_of_search_parameters[current_search_position][1]),
                              __float2half_rn(global_euler_search.list_of_search_parameters[current_search_position][0]));
@@ -451,7 +331,6 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
 
             current_projection[current_projection_idx].is_in_real_space = false;
             d_padded_reference.is_in_real_space                         = true;
-            // cudaEventRecord(gpu_work_is_done_Event, cudaStreamPerThread);
 
             //			first_loop_complete = true;
 
@@ -479,16 +358,12 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
 
     projection_queue.PrintTimes( );
 
-    // cudaStreamWaitEvent(cudaStreamPerThread, gpu_work_is_done_Event, 0);
-
     if constexpr ( n_mips_to_process_at_once > 1 ) {
         if ( current_mip_to_process > 0 ) {
             cudaErr(cudaMemcpyAsync(d_psi_array, psi_array, sizeof(__half) * n_mips_to_process_at_once, cudaMemcpyHostToDevice, cudaStreamPerThread));
             cudaErr(cudaMemcpyAsync(d_theta_array, theta_array, sizeof(__half) * n_mips_to_process_at_once, cudaMemcpyHostToDevice, cudaStreamPerThread));
             cudaErr(cudaMemcpyAsync(d_phi_array, phi_array, sizeof(__half) * n_mips_to_process_at_once, cudaMemcpyHostToDevice, cudaStreamPerThread));
-#ifndef DO_HISTOGRAM
             my_dist.at(0).AccumulateDistribution(ccf_array, current_mip_to_process);
-#endif
             MipPixelWiseStack(ccf_array, d_psi_array, d_theta_array, d_phi_array, current_mip_to_process);
             total_mip_processed += current_mip_to_process;
         }
@@ -508,12 +383,7 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
 
     MipToImage( );
 
-#ifdef DO_HISTOGRAM
-    MyAssertTrue(histogram.is_allocated_histogram, "Trying to accumulate a histogram that has not been initialized!");
-    histogram.Accumulate(d_padded_reference);
-#else
     my_dist.at(0).FinalAccumulate( );
-#endif
 
     cudaErr(cudaFreeAsync(mip_psi, cudaStreamPerThread));
     cudaErr(cudaFreeAsync(sum_sumsq, cudaStreamPerThread));

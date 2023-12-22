@@ -43,8 +43,8 @@ class TemplateMatchingCore {
     GpuImage d_best_defocus;
     GpuImage d_best_pixel_size;
 
-    GpuImage d_sum1, d_sum2, d_sum3, d_sum4, d_sum5;
-    GpuImage d_sumSq1, d_sumSq2, d_sumSq3, d_sumSq4, d_sumSq5;
+    GpuImage d_sum1, d_sum2, d_sum3;
+    GpuImage d_sumSq1, d_sumSq2, d_sumSq3;
     bool     is_allocated_sum_buffer = false;
     int      is_non_zero_sum_buffer;
 
@@ -52,8 +52,9 @@ class TemplateMatchingCore {
     //  GpuImage d_sumSq1, d_sumSq2, d_sumSq3, d_sumSq4, d_sumSq5;
 
     // This will need to be copied in
-    GpuImage              d_input_image;
-    std::vector<GpuImage> d_current_projection;
+    GpuImage               d_input_image;
+    std::vector<GpuImage>  d_current_projection;
+    std::vector<GpuImage*> d_statistical_buffers;
 
     GpuImage d_padded_reference;
 

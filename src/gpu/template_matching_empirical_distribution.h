@@ -33,6 +33,8 @@ class TM_EmpiricalDistribution {
     ccfType* theta;
     ccfType* phi;
 
+    __half* statistics_buffer_;
+
     dim3 threadsPerBlock_;
     dim3 gridDims_;
 

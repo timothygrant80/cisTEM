@@ -62,7 +62,7 @@ def get_config(args, data_dir: str, ref_number: int, img_number: int):
     for arg_val in args.args_to_check:
         config[arg_val] = getattr(args, arg_val)
 
-    config['output_file_prefix'] = os.path.join(args.output_file_prefix, config.get('data')[img_number]['img_name'])
+    config['output_file_prefix'] = os.path.abspath(os.path.join(args.output_file_prefix, config.get('data')[img_number]['img_name']))
     os.makedirs(config['output_file_prefix'], exist_ok=True)
 
     return config

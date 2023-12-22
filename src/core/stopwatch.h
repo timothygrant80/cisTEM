@@ -5,6 +5,9 @@
  *      Author: himesb
  */
 
+#ifndef __SRC_CORE_STOP_WATCH_H__
+#define __SRC_CORE_STOP_WATCH_H__
+
 namespace cistem_timer_noop {
 
 class StopWatch {
@@ -99,3 +102,5 @@ class StopWatch {
     void record_measured( );
 };
 } // namespace cistem_timer
+
+#endif /* __SRC_CORE_STOP_WATCH_H__ */

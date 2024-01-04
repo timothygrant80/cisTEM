@@ -1,9 +1,11 @@
+import annoying_hack
+
 from os import makedirs
 from os import symlink
 from os import remove
 from os.path import join
-import util.make_tmp_runfile as mktmp
-import util.run_job as runner
+import cistem_test_utils.make_tmp_runfile as mktmp
+import cistem_test_utils.run_job as runner
 
 
 def run_job(config):

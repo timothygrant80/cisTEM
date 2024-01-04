@@ -1,12 +1,13 @@
 #!/usr/bin/env python3
 
+import annoying_hack
 
 from os.path import join as join
 from os import makedirs
-import util.args as tmArgs
-import util.make_tmp_runfile as mktmp
-import util.run_job as runner
-import util.re_run_results_on_mip as re_runner
+import cistem_test_utils.args as tmArgs
+import cistem_test_utils.make_tmp_runfile as mktmp
+import cistem_test_utils.run_job as runner
+import cistem_test_utils.re_run_results_on_mip as re_runner
 
 import sys
 # By default the "_gpu" suffix will be added unless the --old-cistem flag is used

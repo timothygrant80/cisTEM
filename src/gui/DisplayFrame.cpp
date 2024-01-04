@@ -8,6 +8,9 @@ DisplayFrame::DisplayFrame(wxWindow* parent, wxWindowID id, const wxString& titl
 
     this->cisTEMDisplayPanel->Initialise(CAN_CHANGE_FILE | CAN_CLOSE_TABS | CAN_MOVE_TABS | CAN_FFT);
 
+    // Set this bool to true so that DisplayPanel knows that this frame's panel is from the cisTEM_display program
+    this->cisTEMDisplayPanel->is_from_display_program = true;
+
     int screen_x_size = wxSystemSettings::GetMetric(wxSYS_SCREEN_X);
     int screen_y_size = wxSystemSettings::GetMetric(wxSYS_SCREEN_Y);
     int x_offset;
@@ -50,7 +53,6 @@ void DisplayFrame::OnCharHook(wxKeyEvent& event) {
 
 void DisplayFrame::OnFileOpenClick(wxCommandEvent& event) {
     cisTEMDisplayPanel->OnOpen(event);
-    cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode = IMAGES_PICK;
 }
 
 void DisplayFrame::OnCloseTabClick(wxCommandEvent& event) {

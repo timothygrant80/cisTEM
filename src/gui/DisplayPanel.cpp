@@ -919,10 +919,14 @@ void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title,
     Update( );
 
     // if there is only one image, then set single image mode to true by default
-
-    if ( my_panel->included_image_numbers.GetCount( ) == 1 ) {
-        //my_panel->single_image = true;
-        //my_panel->picking_mode = COORDS_PICK;
+    if ( is_from_display_program ) {
+        if ( my_panel->included_image_numbers.GetCount( ) == 1 ) {
+            my_panel->single_image = true;
+            my_panel->picking_mode = COORDS_PICK;
+        }
+        else {
+            my_panel->picking_mode = IMAGES_PICK;
+        }
     }
 
     my_panel->ReDrawPanel( );
@@ -1463,7 +1467,7 @@ void DisplayNotebookPanel::UpdateImageStatusInfo(int x_pos, int y_pos) {
     long   max_y = images_in_y * current_y_size;
     double current_resolution;
 
-    if ( single_image == true ) {
+    if ( single_image ) {
         int current_x_pos = single_image_x + (x_pos / actual_scale_factor); // - 1;
         int current_y_pos = single_image_y + (y_pos / actual_scale_factor); // - 1;
 
@@ -1707,7 +1711,7 @@ void DisplayNotebookPanel::OnRightDown(wxMouseEvent& event) {
         int current_y_pos;
         int current_image;
 
-        if ( single_image == true ) {
+        if ( single_image ) {
             current_x_pos = single_image_x + (x_pos / actual_scale_factor); //- 1;
             current_y_pos = single_image_y + (y_pos / actual_scale_factor); // - 1;
             current_image = current_location;
@@ -1858,7 +1862,7 @@ void DisplayNotebookPanel::OnLeftDown(wxMouseEvent& event) {
     int current_y_pos;
     int current_image;
 
-    if ( single_image == true ) {
+    if ( single_image ) {
         current_x_pos = single_image_x + (x_pos / actual_scale_factor); //- 1;
         current_y_pos = single_image_y + (y_pos / actual_scale_factor); // - 1;
         current_image = current_location;
@@ -1900,7 +1904,7 @@ void DisplayNotebookPanel::OnLeftDown(wxMouseEvent& event) {
 
     // work out what image (if any) us under the mouse and select / deselect it
 
-    if ( single_image == true ) {
+    if ( single_image ) {
         // perform the relevant action..
 
         if ( current_x_pos < ReturnImageXSize( ) && current_x_pos >= 0 && current_y_pos < ReturnImageYSize( ) && current_y_pos >= 0 ) {
@@ -2215,11 +2219,13 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
         scaled_x_size = long(myround(ReturnImageXSize( ) * desired_scale_factor));
         scaled_y_size = long(myround(ReturnImageYSize( ) * desired_scale_factor));
 
-        if ( single_image == true ) {
+        // For stacks of 2d images and slices of 3d, we intentionally limit the max scaling to whatever is capable of fitting within the size of the window.
+        // Done because the DisplayPanel is used in several areas of cisTEM without the ability to remove Single Image Mode; this could result in scaled
+        // images in the main cisTEM GUI that could not be adjusted, whereas this viewing mode can be disabled in the cisTEM_display program.
+        if ( single_image ) {
             actual_scale_factor = desired_scale_factor;
         }
-        else // single image mode is false...
-        {
+        else {
             images_in_x = window_x_size / scaled_x_size;
             images_in_y = window_y_size / scaled_y_size;
 
@@ -2247,7 +2253,7 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
         current_x_size = scaled_x_size;
         current_y_size = scaled_y_size;
 
-        if ( single_image == true ) {
+        if ( single_image ) {
             images_in_current_view = 1;
             images_in_x            = 1;
             images_in_y            = 1;
@@ -2551,7 +2557,7 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
                     // case of "single image mode" things are different as in this case we cut out a sub-bitmap
                     // and only blit that..
 
-                    if ( single_image == true ) {
+                    if ( single_image ) {
                         cut_x_size = window_x_size;
                         cut_y_size = window_y_size;
 
@@ -2743,7 +2749,7 @@ void DisplayNotebookPanel::OnPaint(wxPaintEvent& evt) {
                             if ( image_is_selected[counter] == true ) {
                                 // draw a rectangle around the image..
 
-                                if ( single_image == true ) {
+                                if ( single_image ) {
                                     dc.DrawRoundedRectangle(0, 0, window_x_size, window_y_size, -.5);
                                 }
                                 else
@@ -2756,7 +2762,7 @@ void DisplayNotebookPanel::OnPaint(wxPaintEvent& evt) {
                             for ( coord_counter = 0; coord_counter < coord_tracker->number_of_coords; coord_counter++ ) {
                                 if ( coord_tracker->coords[coord_counter].image_number == counter ) {
                                     // draw the point on..
-                                    if ( single_image == true ) {
+                                    if ( single_image ) {
                                         // we need to check if the co-ordinate is inside the current view, and if so, draw it.
 
                                         if ( coord_tracker->coords[coord_counter].x_pos > single_image_x && coord_tracker->coords[coord_counter].x_pos < single_image_x + window_x_size / actual_scale_factor && coord_tracker->coords[coord_counter].y_pos > single_image_y && coord_tracker->coords[coord_counter].y_pos < single_image_y + window_y_size / actual_scale_factor ) {
@@ -2802,7 +2808,7 @@ void DisplayNotebookPanel::OnPaint(wxPaintEvent& evt) {
                                     dc.SetPen(wxColor(38, 124, 181));
                                     // draw a rectangle around the image..
 
-                                    if ( single_image == true ) {
+                                    if ( single_image ) {
                                         dc.DrawRectangle(0, 0, window_x_size, window_y_size);
                                     }
                                     else

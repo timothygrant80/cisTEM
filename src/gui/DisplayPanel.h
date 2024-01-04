@@ -77,6 +77,7 @@ class
     DisplayNotebook*      my_notebook;
     wxStaticText*         StatusText;
     bool                  popup_exists;
+    bool                  is_from_display_program = false;
     DisplayPopup*         popup;
     DisplayNotebookPanel* no_notebook_panel;
 

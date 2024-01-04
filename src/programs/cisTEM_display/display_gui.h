@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version Oct 26 2018)
+// C++ code generated with wxFormBuilder (version 3.10.0-4761b0c)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO *NOT* EDIT THIS FILE!
@@ -44,13 +44,14 @@ class DisplayPanelParent : public wxPanel
 		wxBoxSizer* MainSizer;
 		wxToolBar* Toolbar;
 
-		// Virtual event handlers, overide them in your derived class
+		// Virtual event handlers, override them in your derived class
 		virtual void OnMiddleUp( wxMouseEvent& event ) { event.Skip(); }
 
 
 	public:
 
 		DisplayPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+
 		~DisplayPanelParent();
 
 };
@@ -90,7 +91,7 @@ class DisplayFrameParent : public wxFrame
 		wxMenu* DisplayHelpMenu;
 		wxMenuItem* HelpAbout;
 
-		// Virtual event handlers, overide them in your derived class
+		// Virtual event handlers, override them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnFileOpenClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnCloseTabClick( wxCommandEvent& event ) { event.Skip(); }
@@ -146,7 +147,7 @@ class DisplayManualDialogParent : public wxDialog
 		wxButton* m_button94;
 		wxButton* m_button95;
 
-		// Virtual event handlers, overide them in your derived class
+		// Virtual event handlers, override them in your derived class
 		virtual void OnClose( wxCloseEvent& event ) { event.Skip(); }
 		virtual void OnLeftDown( wxMouseEvent& event ) { event.Skip(); }
 		virtual void OnMotion( wxMouseEvent& event ) { event.Skip(); }
@@ -163,6 +164,7 @@ class DisplayManualDialogParent : public wxDialog
 	public:
 
 		DisplayManualDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Manual Grey Settings"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxDEFAULT_DIALOG_STYLE );
+
 		~DisplayManualDialogParent();
 
 };

@@ -128,6 +128,7 @@ noinst_HEADERS = core/stopwatch.h \
                  gui/ClassumSelectionCopyFromDialog.h \
                  gui/MyOverviewPanel.h \
                  gui/DisplayPanel.h \
+                 gui/DisplayFrame.h \
                  gui/ProjectX_gui.h \
                  gui/gui_globals.h \
                  gui/ImportRefinementPackageWizard.h \
@@ -216,7 +217,8 @@ noinst_HEADERS = core/stopwatch.h \
                  programs/console_test/sine_128x128x1.cpp \
                  gui/icons/match_template_icon.cpp \
                  programs/refine3d/ProjectionComparisonObjects.h \
-                 core/scattering_potential.h
+                 core/scattering_potential.h \
+                 programs/cisTEM_display/display_gui.h
 
                  
 
@@ -244,7 +246,6 @@ endif
 	
 
 noinst_LIBRARIES = libcore.a libguicore.a
-
 bin_PROGRAMS =  cisTEM_job_control \
                 unblur \
                 console_test \
@@ -307,6 +308,7 @@ bin_PROGRAMS =  cisTEM_job_control \
                 invert_hand \
                 quick_test \
                 append_stacks \
+                cisTEM_display \
                 cisTEM \
                 gui_test \
                 convert_star_to_binary \
@@ -447,6 +449,7 @@ libguicore_a_CXXFLAGS = $(WX_CPPFLAGS)
 libguicore_a_CPPFLAGS = $(WX_CPPFLAGS)
 
 cisTEM_SOURCES = programs/projectx/projectx.cpp \
+                programs/cisTEM_display/display_gui.cpp \
                 gui/gui_globals.cpp \
                 gui/MyFSCPanel.cpp \
                 gui/MyRefinementResultsPanel.cpp \
@@ -537,7 +540,6 @@ cisTEM_SOURCES = programs/projectx/projectx.cpp \
                 gui/MatchTemplateResultsPanel.cpp \
                 gui/RefineTemplatePanel.cpp \
                 gui/CombineRefinementPackagesWizard.cpp
-                
 
 if EXPERIMENTAL_AM
 cisTEM_SOURCES +=  gui/RefineTemplateDevPanel.cpp gui/MyExperimentalPanel.cpp gui/AtomicCoordinatesAssetPanel.cpp gui/AtomicCoordinatesChooserDialog.cpp gui/AtomicCoordinatesImportDialog.cpp
@@ -551,8 +553,12 @@ cisTEM_CXXFLAGS = $(WX_CPPFLAGS)
 cisTEM_CPPFLAGS = $(WX_CPPFLAGS)
 cisTEM_LDADD    = libguicore.a libcore.a $(WX_LIBS)
 
-gui_test_SOURCES = programs/gui_test/gui_test.cpp gui/PlotCurvePanel.cpp gui/mathplot.cpp
+cisTEM_display_SOURCES = programs/cisTEM_display/cisTEM_display.cpp programs/cisTEM_display/display_gui.cpp gui/DisplayPanel.cpp gui/DisplayFrame.cpp
+cisTEM_display_CXXFLAGS = $(WX_CPPFLAGS)
+cisTEM_display_CPPFLAGS = $(WX_CPPFLAGS)
+cisTEM_display_LDADD = libguicore.a libcore.a $(WX_LIBS)
 
+gui_test_SOURCES = programs/gui_test/gui_test.cpp gui/PlotCurvePanel.cpp gui/mathplot.cpp
 gui_test_CXXFLAGS = $(WX_CPPFLAGS)
 gui_test_CPPFLAGS = $(WX_CPPFLAGS)
 gui_test_LDADD = libguicore.a libcore.a $(WX_LIBS)

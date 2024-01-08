@@ -2,6 +2,7 @@
 #define __DisplayPanel__
 
 #include <wx/popupwin.h>
+#include <wx/aui/auibook.h>
 
 #define CAN_CHANGE_FILE 1 // 2^0, bit 0
 #define CAN_CLOSE_TABS 2 // 2^1, bit 1
@@ -25,9 +26,38 @@
 #define MANUAL_GREYS 2
 #define AUTO_GREYS 3
 
+// These are only used for the cisTEM_display program
+#define COORDS_PICK 0
+#define IMAGES_PICK 1
+
 class DisplayPopup;
 class DisplayNotebook;
 class DisplayNotebookPanel;
+class CoordTracker;
+
+struct Coord {
+    long image_number;
+    long x_pos;
+    long y_pos;
+};
+
+class CoordTracker {
+
+  public:
+    DisplayNotebookPanel* parent_notebook;
+    long                  number_of_coords;
+    long                  number_allocated;
+    Coord*                coords;
+
+    CoordTracker(wxWindow* parent);
+    ~CoordTracker( );
+
+    void Clear( );
+    void ToggleCoord(long wanted_image, long wanted_x, long wanted_y);
+    void AddCoord(long wanted_image, long wanted_x, long wanted_y);
+    void RemoveCoord(long coord_to_remove);
+    void RectangleRemoveCoord(long wanted_image, long start_x, long start_y, long end_x, long end_y);
+};
 
 class
         DisplayPanel : public DisplayPanelParent {
@@ -47,6 +77,7 @@ class
     DisplayNotebook*      my_notebook;
     wxStaticText*         StatusText;
     bool                  popup_exists;
+    bool                  is_from_display_program = false;
     DisplayPopup*         popup;
     DisplayNotebookPanel* no_notebook_panel;
 
@@ -57,6 +88,10 @@ class
     void OpenFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong* wanted_included_image_numbers = NULL, bool keep_scale_and_location_if_possible = false, bool force_local_survey = false);
     void ChangeFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong* wanted_included_image_numbers = NULL);
     void ChangeFileForTabNumber(int wanted_tab_number, wxString wanted_filename, wxString wanted_tab_title, wxArrayLong* wanted_included_image_numbers = NULL);
+
+    void SetTabNameSaved( );
+    void SetTabNameUnsaved( );
+    void RefreshTabName( );
 
     void OpenImage(Image* image_to_view, wxString wanted_tab_title, bool take_ownership = false, wxArrayLong* wanted_included_image_numbers = NULL);
     void ChangeImage(Image* image_to_View, wxString wanted_tab_title, bool take_ownership = false, wxArrayLong* wanted_included_image_numbers = NULL);
@@ -86,10 +121,12 @@ class
     void OnHistogram(wxCommandEvent& event);
     void OnFFT(wxCommandEvent& event);
     void OnInvert(wxCommandEvent& event);
+    void OnOpen(wxCommandEvent& event);
     void OnPrevious(wxCommandEvent& event);
     void ChangeLocation(wxCommandEvent& event);
     void ChangeScaling(wxCommandEvent& event);
     void OnHighQuality(wxCommandEvent& event);
+    void OnMiddleUp(wxCommandEvent& event);
 
     DisplayNotebookPanel* ReturnCurrentPanel( );
 
@@ -112,6 +149,7 @@ class
     void GotFocus(wxFocusEvent& event);
     void OnEraseBackground(wxEraseEvent& event);
     void OnPaint(wxPaintEvent& evt);
+    void CloseTab(wxCommandEvent& event);
 
     /*
 	void OnRightClick(wxMouseEvent& event);
@@ -186,6 +224,7 @@ class
     void OnLeftDown(wxMouseEvent& event);
     void OnRightDown(wxMouseEvent& event);
     void OnRightUp(wxMouseEvent& event);
+    void OnMiddleUp(wxMouseEvent& event);
     void OnMotion(wxMouseEvent& event);
     void OnLeaveWindow(wxMouseEvent& event);
 
@@ -236,21 +275,8 @@ class
     bool SetGlobalGreys( );
 
     wxString short_image_filename;
-    wxString short_plt_filename;
-    wxString short_waypoints_filename;
-
-    //		char Filename[420];
-    //		char PLTFilename[420];
-    //		char WaypointsFilename[420];
-
-    //	TigrisImage first_header;
-    //	TigrisImage image_memory_buffer[5000];
-
-    //	long image_format;
-
-    long original_number_of_images;
-    long original_x_size;
-    long original_y_size;
+    wxString short_txt_filename;
+    wxString current_file_path;
 
     long current_location;
     long blue_selection_square_location;
@@ -307,15 +333,14 @@ class
 
     int  single_image_x;
     int  single_image_y;
+    long old_mouse_x;
+    long old_mouse_y;
     bool show_label;
     bool show_crosshair;
     bool single_image;
 
-    bool plt_is_saved;
-    bool have_plt_filename;
-
-    bool waypoints_is_saved;
-    bool have_waypoints_filename;
+    bool txt_is_saved;
+    bool have_txt_filename;
 
     bool something_is_being_grabbed;
     long selected_filament_number;
@@ -331,14 +356,14 @@ class
 
     long selected_point_size;
 
-    //CoordTracker coord_tracker;
+    CoordTracker* coord_tracker;
 
     /*
 
 		void OnLeftDown(wxMouseEvent& event);
 	    void OnLeftUp(wxMouseEvent& event);
 
-		void OnMiddleUp(wxMouseEvent& event);
+		
 
 		void OnMouseWheel(wxMouseEvent& event);
 		void LostMouseCapture(wxMouseCaptureLostEvent& event);

@@ -6,7 +6,8 @@
 #include <dlib/dlib/matrix.h>
 // #include <numeric>
 // #include <iostream>
-#include "movieframespline.h"
+// #include "movieframespline.h"
+#include "movieframespline_quad.h"
 
 using namespace std;
 using namespace cistem;
@@ -114,7 +115,6 @@ std::vector<double> findOutliersUpperBound(const std::vector<double>& data) {
 
 std::vector<int> findOutlierUpperBoundIndices(const std::vector<double>& data) {
     std::vector<double> sortedData = data;
-    std::sort(sortedData.begin( ), sortedData.end( ));
 
     double Q1  = calculatePercentile(sortedData, 25);
     double Q3  = calculatePercentile(sortedData, 75);
@@ -355,6 +355,31 @@ void Generate_CoeffSpline(bicubicsplinestack ccmap_stack, Image** patch_stack, f
     //     wxPrintf("result: %f\n", ccmap_stack.spline_stack[0].ApplySplineFunc(shx, shy));
     // }
     wxPrintf("generating spline coefficient map finished.\n");
+}
+
+void Generate_RefStack(Image** patch_stack, Image** ref_stack, int patch_no, int image_no) {
+    int   patch_dim = patch_stack[0][0].logical_x_dimension; //based on patches are square
+    Image sum_of_images, sum_of_images_minus_current;
+    int   max_thread = 8;
+
+#pragma omp parallel for num_threads(max_thread) private(sum_of_images)
+    for ( int patch_index = 0; patch_index < patch_no; patch_index++ ) {
+
+        sum_of_images.Allocate(patch_dim, patch_dim, false);
+        sum_of_images.SetToConstant(0.0);
+        wxPrintf("patch %d\n", patch_index);
+
+        for ( int image_counter = 0; image_counter < image_no; image_counter++ ) {
+            sum_of_images.AddImage(&patch_stack[patch_index][image_counter]);
+        }
+
+        for ( int image_counter = 0; image_counter < image_no; image_counter++ ) {
+            ref_stack[patch_index][image_counter].CopyFrom(&sum_of_images);
+            ref_stack[patch_index][image_counter].SubtractImage(&patch_stack[patch_index][image_counter]);
+            ref_stack[patch_index][image_counter].DivideByConstant(float(image_no - 1));
+        }
+        sum_of_images.Deallocate( );
+    }
 }
 
 void write_joins(std::string output_path, std::string join_file_pref, column_vector Join1d) {

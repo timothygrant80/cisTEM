@@ -906,17 +906,17 @@ bool UnBlurApp::DoCalculation( ) {
                         // patch_stack[patch_counter][image_counter].ZeroCentralPixel( );
                     }
                 }
-                // unblur_refine_alignment(patch_stack[patch_counter], number_of_input_images, 1, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], profile_timing_refinement_method);
-                // // for ( int i = 0; i < number_of_input_images; i++ ) {
-                // //     wxPrintf("patch %i, shifts, %f, %f\n", patch_counter, patch_shift_x[patch_counter][i], patch_shift_y[patch_counter][i]);
-                // // }
+                unblur_refine_alignment(patch_stack[patch_counter], number_of_input_images, 1, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], profile_timing_refinement_method, false);
+                // for ( int i = 0; i < number_of_input_images; i++ ) {
+                //     wxPrintf("patch %i, shifts, %f, %f\n", patch_counter, patch_shift_x[patch_counter][i], patch_shift_y[patch_counter][i]);
+                // }
 
-                // unblur_refine_alignment(patch_stack[patch_counter], number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], profile_timing_refinement_method);
-                // // for ( int i = 0; i < number_of_input_images; i++ ) {
-                // //     wxPrintf("patch %i, shifts, %f, %f\n", patch_counter, patch_shift_x[patch_counter][i], patch_shift_y[patch_counter][i]);
-                // // }
-                // unblur_refine_alignment(patch_stack[patch_counter], number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], profile_timing_refinement_method);
-                unblur_refine_alignment(patch_stack[patch_counter], number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average * 3, myroundint(5.0f / exposure_per_frame), max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], profile_timing_refinement_method, true);
+                unblur_refine_alignment(patch_stack[patch_counter], number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], profile_timing_refinement_method, false);
+                // for ( int i = 0; i < number_of_input_images; i++ ) {
+                //     wxPrintf("patch %i, shifts, %f, %f\n", patch_counter, patch_shift_x[patch_counter][i], patch_shift_y[patch_counter][i]);
+                // }
+                unblur_refine_alignment(patch_stack[patch_counter], number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], profile_timing_refinement_method, false);
+                // unblur_refine_alignment(patch_stack[patch_counter], number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average * 3, myroundint(5.0f / exposure_per_frame), max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], profile_timing_refinement_method, true);
 
                 //write out the patch shift info
                 wxString patch_shift;
@@ -1108,7 +1108,8 @@ bool UnBlurApp::DoCalculation( ) {
                 }
                 for ( int patch_y_ind = 0; patch_y_ind < patch_num_y; patch_y_ind++ ) {
                     // patch_locations_y(patch_y_ind) = image_dim_y - patch_y_ind * step_size_y * 2 - step_size_y;
-                    patch_locations_y(patch_y_ind) = patch_y_ind * step_size_y * 2 + step_size_y;
+                    // patch_locations_y(patch_y_ind) = patch_y_ind * step_size_y * 2 + step_size_y;
+                    patch_locations_y(patch_num_y - patch_y_ind - 1) = image_dim_y - patch_y_ind * step_size_y * 2 - step_size_y;
                 }
 
                 matrix<double>* patch_peaksx;
@@ -1152,15 +1153,15 @@ bool UnBlurApp::DoCalculation( ) {
 
                 // initialize the 3d splines  ---------------------------------------------------
                 double total_dose  = exposure_per_frame * number_of_input_images;
-                double sample_dose = 6; //10; //4;
+                double sample_dose = 4; //8; //4; //10; //4;
 
                 // double knot_on_z      = 2;
                 // double knot_z_dis     = ceil(total_dose / (knot_on_z - 1));
                 double         knot_z_dis = sample_dose;
                 double         knot_on_z  = ceil(total_dose / sample_dose) + 1;
-                double         knot_on_x  = 11; //8;
+                double         knot_on_x  = 8; //8;
                 double         knot_x_dis = ceil(image_dim_x / (knot_on_x - 1));
-                double         knot_on_y  = 8; //5;
+                double         knot_on_y  = 5; //5;
                 double         knot_y_dis = ceil(image_dim_y / (knot_on_y - 1));
                 column_vector  Join1d, Join1d_ccmap;
                 matrix<double> z;
@@ -1181,7 +1182,8 @@ bool UnBlurApp::DoCalculation( ) {
                 // start the fitting ============================================
                 // /*
                 // initialize the parameters
-                Join1d = ones_matrix<double>(knot_on_x * knot_on_y * knot_on_z * 2, 1);
+                // Join1d = ones_matrix<double>(knot_on_x * knot_on_y * knot_on_z * 2, 1);
+                Join1d = ones_matrix<double>(knot_on_x * knot_on_y * (knot_on_z + 1) * 2, 1);
 
                 char          buffer[200];
                 std::string   shift_file_pref = "_shift";
@@ -1197,23 +1199,25 @@ bool UnBlurApp::DoCalculation( ) {
                 std::cout.rdbuf(file.rdbuf( ));
 
                 // #1 initialize based on the alignment -----
-                int maxsize = knot_on_x * knot_on_y * knot_on_z * 2;
+                int maxsize = knot_on_x * knot_on_y * (knot_on_z + 1) * 2;
                 wxPrintf("max memory size is set to: %d\n", maxsize * 2);
                 auto start1 = std::chrono::high_resolution_clock::now( );
-                find_min_using_approximate_derivatives(lbfgs_search_strategy(maxsize * 2), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
-                                                       objective_delta_stop_strategy(1e-2).be_verbose( ),
+                find_min_using_approximate_derivatives(lbfgs_search_strategy(maxsize * 4), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
+                                                       objective_delta_stop_strategy(1e-4).be_verbose( ),
                                                        minfunc3dSplineObjectxy, Join1d, -1);
                 auto stop1     = std::chrono::high_resolution_clock::now( );
                 auto duration1 = std::chrono::duration_cast<std::chrono::minutes>(stop1 - start1);
                 std::cout << "Lap time " << duration1.count( ) << " minutes\n";
                 write_joins(outputpath.ToStdString( ), "Joins_R0", Join1d);
                 write_shifts(patch_num_x, patch_num_y, number_of_input_images, outputpath.ToStdString( ), "_shiftx_R0", "_shifty_R0");
+                // */
 
                 // #2  use the crosscorrelation map for loss function -----
-                // Join1d               = read_joins("Joins_R0", outputpath.ToStdString( ), knot_on_x * knot_on_y * knot_on_z * 2);
+                // Join1d = read_joins("Joins_R0", outputpath.ToStdString( ), knot_on_x * knot_on_y * knot_on_z * 2);
+                // split_and_update(Join1d, Join1d.size( ));
                 int quater_patch_dim = 64 / 2;
                 patch_trimming(image_stack, patch_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath, max_threads, false);
-                wxPrintf("done patch triminng\n");
+
                 if ( patch_stack[0][0].is_in_real_space ) {
                     for ( int patch_counter = 0; patch_counter < patch_num; patch_counter++ ) {
                         for ( int image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
@@ -1233,9 +1237,59 @@ bool UnBlurApp::DoCalculation( ) {
                 }
 
                 ccmap_stack.InitializeSplineStack(quater_patch_dim, quater_patch_dim, patch_num * number_of_input_images, 1, 1);
-                Generate_CoeffSpline(ccmap_stack, patch_stack, unitless_bfactor, patch_num, number_of_input_images, true, outputpath.ToStdString( ), "CCMapBfactor_R1");
-                // column_vector Join1d_ccmap;
-                Join1d_ccmap       = zeros_matrix<double>(knot_on_x * knot_on_y * knot_on_z * 2, 1);
+                Generate_CoeffSpline(ccmap_stack, patch_stack, unitless_bfactor / 4.0, patch_num, number_of_input_images, true, outputpath.ToStdString( ), "CCMapBfactor_R1");
+
+                // for ( int sample = sample_dose; sample < sample_dose + 1; sample++ ) {
+                //     wxPrintf("sample dose %d\n", sample);
+                //     wxPrintf("pixel size %f\n", pixel_size);
+                //     double total_dose = exposure_per_frame * number_of_input_images;
+                //     // double sample_dose = 6; //10; //4;
+                //     double sample_dose = double(sample);
+
+                //     // double knot_on_z      = 2;
+                //     // double knot_z_dis     = ceil(total_dose / (knot_on_z - 1));
+                //     double knot_z_dis = sample_dose;
+                //     double knot_on_z  = ceil(total_dose / sample_dose) + 1;
+                //     // double         knot_on_x  = 6; //8;
+                //     double knot_x_dis = ceil(image_dim_x / (knot_on_x - 1));
+                //     // double         knot_on_y  = 4; //5;
+                //     double         knot_y_dis = ceil(image_dim_y / (knot_on_y - 1));
+                //     column_vector  Join1d, Join1d_ccmap;
+                //     matrix<double> z;
+                //     z.set_size(number_of_input_images, 1);
+                //     for ( int i = 0; i < number_of_input_images; i++ ) {
+                //         z(i) = (i + 1) * exposure_per_frame;
+                //     }
+                //     Spline3dx.Initialize(knot_on_z, knot_on_y, knot_on_x, number_of_input_images, image_dim_x, image_dim_y, knot_z_dis, knot_x_dis, knot_y_dis);
+                //     Spline3dy.Initialize(knot_on_z, knot_on_y, knot_on_x, number_of_input_images, image_dim_x, image_dim_y, knot_z_dis, knot_x_dis, knot_y_dis);
+                //     Spline3dx.Update3DSplineInterpMapping(patch_locations_x, patch_locations_y, z);
+                //     Spline3dy.Update3DSplineInterpMapping(patch_locations_x, patch_locations_y, z);
+                //     Join1d_ccmap       = zeros_matrix<double>(knot_on_x * knot_on_y * knot_on_z * 2, 1);
+                //     double ccmap_error = minfunc3dSplineCCLossObject(Join1d_ccmap);
+                //     wxPrintf("initial loss: %f \n", ccmap_error);
+                //     auto start2 = std::chrono::high_resolution_clock::now( );
+                //     find_min_using_approximate_derivatives(lbfgs_search_strategy(maxsize * 2), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
+                //                                            objective_delta_stop_strategy(1e-5).be_verbose( ),
+                //                                            minfunc3dSplineCCLossObject, Join1d_ccmap, -100, 1e-2);
+                //     auto stop2     = std::chrono::high_resolution_clock::now( );
+                //     auto duration2 = std::chrono::duration_cast<std::chrono::minutes>(stop2 - start2);
+                //     std::cout << "Lap time " << duration2.count( ) << " minutes\n";
+                //     double likelihood;
+                //     double AIC;
+                //     double k;
+                //     double sigma_square;
+                //     // sigma_square = total_dose / double(number_of_input_images) * pixel_size * pixel_size;
+                //     sigma_square = 0.009;
+
+                //     wxPrintf("pixel size %f\n", pixel_size);
+                //     k          = knot_on_x * knot_on_y * knot_on_z * 2;
+                //     likelihood = -minfunc3dSplineCCLossObject(Join1d_ccmap) * (-1) / sigma_square;
+                //     AIC        = k - likelihood;
+                //     wxPrintf("current sigmasquare k, like, AIC are %f, %f, %f, %f \n ", sigma_square, k, likelihood, AIC);
+                // }
+                // std::cout.rdbuf(coutBuf0);
+                // file.close( );
+                Join1d_ccmap       = zeros_matrix<double>(knot_on_x * knot_on_y * (knot_on_z + 1) * 2, 1);
                 double ccmap_error = minfunc3dSplineCCLossObject(Join1d_ccmap);
                 wxPrintf("initial loss: %f \n", ccmap_error);
                 auto start2 = std::chrono::high_resolution_clock::now( );
@@ -1398,57 +1452,57 @@ bool UnBlurApp::DoCalculation( ) {
             delete[] y_shifts;
         }
         // write the final corrected image and frames
-        if ( round_index == total_rounds - 1 ) {
-            if ( image_stack[0].is_in_real_space ) {
-                for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
-                    image_stack[image_counter].ForwardFFT(true);
-                }
+        // if ( round_index == total_rounds - 1 ) {
+        if ( image_stack[0].is_in_real_space ) {
+            for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+                image_stack[image_counter].ForwardFFT(true);
             }
+        }
 
-            sum_image.Allocate(image_stack[0].logical_x_dimension, image_stack[0].logical_y_dimension, false);
-            sum_image.SetToConstant(0.0);
-            if ( should_dose_filter == true ) {
-                if ( write_out_amplitude_spectrum == true ) {
-                    profile_timing.start("amplitude spectrum");
-                    sum_image_no_dose_filter.Allocate(image_stack[0].logical_x_dimension, image_stack[0].logical_y_dimension, false);
-                    sum_image_no_dose_filter.SetToConstant(0.0);
+        sum_image.Allocate(image_stack[0].logical_x_dimension, image_stack[0].logical_y_dimension, false);
+        sum_image.SetToConstant(0.0);
+        if ( should_dose_filter == true ) {
+            if ( write_out_amplitude_spectrum == true ) {
+                profile_timing.start("amplitude spectrum");
+                sum_image_no_dose_filter.Allocate(image_stack[0].logical_x_dimension, image_stack[0].logical_y_dimension, false);
+                sum_image_no_dose_filter.SetToConstant(0.0);
 
-                    for ( image_counter = first_frame - 1; image_counter < last_frame; image_counter++ ) {
-                        sum_image_no_dose_filter.AddImage(&image_stack[image_counter]);
-                    }
-                    profile_timing.lap("amplitude spectrum");
-                }
-                profile_timing.start("setup dose filter");
-                dose_filter_sum_of_squares = new float[image_stack[0].real_memory_allocated / 2];
-                ZeroFloatArray(dose_filter_sum_of_squares, image_stack[0].real_memory_allocated / 2);
-                profile_timing.lap("setup dose filter");
-                dosefilter(image_stack, first_frame, last_frame, dose_filter_sum_of_squares, my_electron_dose, profile_timing, exposure_per_frame, pre_exposure_amount, max_threads);
-
-                profile_timing.start("final sum");
                 for ( image_counter = first_frame - 1; image_counter < last_frame; image_counter++ ) {
-                    sum_image.AddImage(&image_stack[image_counter]);
-
-                    if ( saved_aligned_frames == true ) {
-                        // wxString::Format(outpath + "%04i.mrc", patch_counter).ToStdString( )
-                        // outputpath.ToStdString( ) + "distortion_corrected_frames.mrc";
-                        image_stack[image_counter].QuickAndDirtyWriteSlice(wxString::Format(outputpath + "Unblur_Frames_Round_%04i.mrc", round_index).ToStdString( ), image_counter + 1);
-                    }
+                    sum_image_no_dose_filter.AddImage(&image_stack[image_counter]);
                 }
-                profile_timing.lap("final sum");
+                profile_timing.lap("amplitude spectrum");
             }
-            else // just add them
-            {
-                profile_timing.start("final sum");
-                for ( image_counter = first_frame - 1; image_counter < last_frame; image_counter++ ) {
-                    sum_image.AddImage(&image_stack[image_counter]);
+            profile_timing.start("setup dose filter");
+            dose_filter_sum_of_squares = new float[image_stack[0].real_memory_allocated / 2];
+            ZeroFloatArray(dose_filter_sum_of_squares, image_stack[0].real_memory_allocated / 2);
+            profile_timing.lap("setup dose filter");
+            dosefilter(image_stack, first_frame, last_frame, dose_filter_sum_of_squares, my_electron_dose, profile_timing, exposure_per_frame, pre_exposure_amount, max_threads);
 
-                    if ( saved_aligned_frames == true ) {
-                        // image_stack[image_counter].QuickAndDirtyWriteSlice(aligned_frames_filename, image_counter + 1);
-                        image_stack[image_counter].QuickAndDirtyWriteSlice(wxString::Format(outputpath + "Unblur_Frames_Round_%04i.mrc", round_index).ToStdString( ), image_counter + 1);
-                    }
+            profile_timing.start("final sum");
+            for ( image_counter = first_frame - 1; image_counter < last_frame; image_counter++ ) {
+                sum_image.AddImage(&image_stack[image_counter]);
+
+                if ( saved_aligned_frames == true ) {
+                    // wxString::Format(outpath + "%04i.mrc", patch_counter).ToStdString( )
+                    // outputpath.ToStdString( ) + "distortion_corrected_frames.mrc";
+                    image_stack[image_counter].QuickAndDirtyWriteSlice(wxString::Format(outputpath + "Unblur_Frames_Round_%04i.mrc", round_index).ToStdString( ), image_counter + 1);
                 }
-                profile_timing.lap("final sum");
             }
+            profile_timing.lap("final sum");
+            // }
+            // else // just add them
+            // {
+            profile_timing.start("final sum");
+            for ( image_counter = first_frame - 1; image_counter < last_frame; image_counter++ ) {
+                sum_image.AddImage(&image_stack[image_counter]);
+
+                if ( saved_aligned_frames == true ) {
+                    // image_stack[image_counter].QuickAndDirtyWriteSlice(aligned_frames_filename, image_counter + 1);
+                    image_stack[image_counter].QuickAndDirtyWriteSlice(wxString::Format(outputpath + "Unblur_Frames_Round_%04i.mrc", round_index).ToStdString( ), image_counter + 1);
+                }
+            }
+            profile_timing.lap("final sum");
+            // }
 
             // if we are restoring the power - do it here..
 
@@ -2019,7 +2073,9 @@ void patch_trimming(Image* input_stack, Image** patch_stack, int number_of_image
             for ( int patch_x_ind = 0; patch_x_ind < patch_num_x; patch_x_ind++ ) {
                 temp_array[patch_num_x * patch_y_ind + patch_x_ind][0] = patch_x_ind * step_size_x * 2 + step_size_x - image_dim_x / 2;
                 // temp_array[patch_num_x * patch_y_ind + patch_x_ind][1] = image_dim_y - patch_y_ind * step_size_y * 2 - step_size_y - image_dim_y / 2;
-                temp_array[patch_num_x * patch_y_ind + patch_x_ind][1] = patch_y_ind * step_size_y * 2 + step_size_y - image_dim_y / 2;
+                // temp_array[patch_num_x * patch_y_ind + patch_x_ind][1] = patch_y_ind * step_size_y * 2 + step_size_y - image_dim_y / 2;
+                // temp_array[patch_num_x * patch_y_ind + patch_x_ind][1] = image_dim_y - patch_y_ind * step_size_y * 2 - step_size_y - image_dim_y / 2;
+                temp_array[patch_num_x * (patch_num_y - patch_y_ind - 1) + patch_x_ind][1] = image_dim_y - patch_y_ind * step_size_y * 2 - step_size_y - image_dim_y / 2;
 
                 patch[patch_counter].OpenFile(wxString::Format(outpath + "%04i.mrc", patch_counter).ToStdString( ), true);
                 patch_counter += 1;
@@ -2861,18 +2917,18 @@ void write_shifts(int patch_no_x, int patch_no_y, int image_no, std::string outp
         std::snprintf(buffer, sizeof(buffer), "%s%04i%s%s", output_path.c_str( ), shift_file_index, shift_file_prefx.c_str( ), "ccmap.txt");
         // shift_file = oss.str( );
         shift_filex = buffer;
-        cout << "file " << shift_filex << endl;
+        // cout << "file " << shift_filex << endl;
         oss << "%s%04i%s%s" << output_path.c_str( ), shift_file_index, shift_file_prefy.c_str( ), "ccmap.txt";
         std::snprintf(buffer, sizeof(buffer), "%s%04i%s%s", output_path.c_str( ), shift_file_index, shift_file_prefy.c_str( ), "ccmap.txt");
         // shift_file = oss.str( );
         shift_filey = buffer;
-        cout << "file " << shift_filey << endl;
+        // cout << "file " << shift_filey << endl;
         xoFile.open(shift_filex.c_str( ));
         yoFile.open(shift_filey.c_str( ));
         // yoFile.open(shifted_mapy_file.c_str( ));
         if ( xoFile.is_open( ) && yoFile.is_open( ) ) {
             // wxPrintf("files are open\n");
-            cout << "files are open" << endl;
+            // cout << "files are open" << endl;
             // float myarray[10][5760];
             for ( int i = 0; i < patch_no_y; i++ ) {
                 for ( int j = 0; j < patch_no_x; j++ ) {

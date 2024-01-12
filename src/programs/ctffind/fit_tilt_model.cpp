@@ -17,10 +17,12 @@ void FitTiltModel::DoInteractiveUserInput( ) {
     std::string input_file  = "";
     std::string rawtlt_file = "";
     std::string output_path = "";
-    input_file              = my_input->GetFilenameFromUser("txt file containing ctffind tilt angle and axis direction", "second column is tilt angle and thrid column is axis direction", "TiltAngle_AxisDirction", false);
-    rawtlt_file             = my_input->GetFilenameFromUser("tlt file containing the raw tilt values", "one column storing tilt angle", "rawtlt.tlt", false);
-    output_path             = my_input->GetFilenameFromUser("path to the output files", "/outpath/", "/data/output/", false);
-    my_current_job.ManualSetArguments("ttt", input_file.c_str( ), rawtlt_file.c_str( ), output_path.c_str( ));
+    float       tem_axis_angle;
+    input_file     = my_input->GetFilenameFromUser("txt file containing ctffind tilt angle and axis direction", "second column is tilt angle and thrid column is axis direction", "TiltAngle_AxisDirction", false);
+    rawtlt_file    = my_input->GetFilenameFromUser("tlt file containing the raw tilt values", "one column storing tilt angle", "rawtlt.tlt", false);
+    tem_axis_angle = my_input->GetFloatFromUser("axis direction ", "the axis direction of the microscope", "178.4", 0.0);
+    output_path    = my_input->GetFilenameFromUser("path to the output files", "/outpath/", "/data/output/", false);
+    my_current_job.ManualSetArguments("ttft", input_file.c_str( ), rawtlt_file.c_str( ), tem_axis_angle, output_path.c_str( ));
 };
 
 using namespace std;
@@ -31,16 +33,20 @@ double                           CalcRMSE(const std::vector<double>& data, std::
 void                             MatrixToAngleZXZ(const std::vector<std::vector<double>>& R, double* theta, double* phi);
 std::vector<double>              multiplyMatWithVec(const std::vector<std::vector<double>>& matrix, const std::vector<double>& vec);
 std::vector<std::vector<double>> multiplyMatrices(const std::vector<std::vector<double>>& matrix1, const std::vector<std::vector<double>>& matrix2);
+void                             adjust_ctffind_range_for_plot(std::vector<double> theta_series);
+// void                             range_adjust_for_plot(std::vector<double>& theta_serie, std::vector<double>& phi_series, double tem_phi);
 
-std::vector<std::vector<double>>* ctf_rot_mat;
-std::vector<std::vector<double>>* tem_rot_mat;
-std::vector<int>                  UpdatedIndices, outlier_indexes;
-float*                            raw_tilt;
-double*                           ctffind_phi;
-double*                           ctffind_theta;
-int                               image_no;
+int                 image_no;
+std::vector<int>    UpdatedIndices, outlier_indexes;
+std::vector<double> ctffind_phi, ctffind_theta;
+float*              raw_tilt;
 
 double optim_function(void* pt2Object, double values[]) {
+    std::vector<std::vector<double>>* ctf_rot_mat;
+    std::vector<std::vector<double>>* tem_rot_mat;
+    ctf_rot_mat = new std::vector<std::vector<double>>[image_no];
+    tem_rot_mat = new std::vector<std::vector<double>>[image_no];
+
     double                           phi_zero   = values[1];
     double                           theta_zero = values[2];
     double                           phi_tem    = values[3];
@@ -61,7 +67,8 @@ double optim_function(void* pt2Object, double values[]) {
     res.clear( );
     for ( int image_ind = 0; image_ind < image_no; image_ind++ ) {
         ctf_vec = multiplyMatWithVec(ctf_rot_mat[image_ind], z_vec);
-        tmp_mat = multiplyMatrices(tem_rot_mat[image_ind], zero_rot);
+        // tmp_mat = multiplyMatrices(tem_rot_mat[image_ind], zero_rot);
+        tmp_mat = multiplyMatrices(zero_rot, tem_rot_mat[image_ind]);
         fit_vec = multiplyMatWithVec(tmp_mat, z_vec);
 
         float sum_num = 0;
@@ -97,23 +104,37 @@ double optim_function(void* pt2Object, double values[]) {
         }
     } while ( flag == 1 );
 
+    int count = 0;
+    for ( int i = 0; i < image_no; ++i ) {
+        if ( UpdatedIndices[count] == i ) {
+            count++;
+            continue;
+        }
+        else {
+            outlier_indexes.push_back(i);
+        }
+    }
+    delete[] ctf_rot_mat;
+    delete[] tem_rot_mat;
     return rmse;
 }
 
 bool FitTiltModel::DoCalculation( ) {
     const std::string input_filename = my_current_job.arguments[0].ReturnStringArgument( );
     const std::string rawtltfile     = my_current_job.arguments[1].ReturnStringArgument( );
-    const std::string outpath        = my_current_job.arguments[2].ReturnStringArgument( );
+    float             input_tem_axis = my_current_job.arguments[2].ReturnFloatArgument( );
+    const std::string outpath        = my_current_job.arguments[3].ReturnStringArgument( );
 
-    int*    index;
-    double* exp_theta;
-    double* exp_phi;
+    int*   index;
+    double fitted_phi_zero, fitted_theta_zero, fitted_phi_tem;
+    double rmse;
 
+    // std::vector<double>               abs_error_theta, abs_error_phi;
     std::vector<std::vector<double>>* exp_rot;
-    std::vector<std::vector<double>>  zero_rot;
-
-    NumericTextFile inputfile(input_filename, OPEN_TO_READ, 3);
-    NumericTextFile rawtlt(rawtltfile, OPEN_TO_READ, 1);
+    std::vector<std::vector<double>>  zero_rot, tmp_mat;
+    std::vector<double>               exp_theta, exp_phi;
+    NumericTextFile                   inputfile(input_filename, OPEN_TO_READ, 3);
+    NumericTextFile                   rawtlt(rawtltfile, OPEN_TO_READ, 1);
 
     // Read Inputs
     wxPrintf("read txt file by numeric txtfile\n");
@@ -121,22 +142,17 @@ bool FitTiltModel::DoCalculation( ) {
     wxPrintf("number of tilts: %d\n", image_no);
     float temp_array[3];
 
-    index         = new int[image_no];
-    ctffind_phi   = new double[image_no];
-    ctffind_theta = new double[image_no];
-    raw_tilt      = new float[image_no];
+    index    = new int[image_no];
+    raw_tilt = new float[image_no];
     for ( int image_ind = 0; image_ind < image_no; image_ind++ ) {
         inputfile.ReadLine(temp_array);
-        index[image_ind]         = temp_array[0];
-        ctffind_phi[image_ind]   = temp_array[1];
-        ctffind_theta[image_ind] = temp_array[2];
+        index[image_ind] = temp_array[0];
+        ctffind_phi.push_back(360 - temp_array[1]);
+        ctffind_theta.push_back(-temp_array[2]);
         rawtlt.ReadLine(&raw_tilt[image_ind]);
     }
     rawtlt.Close( );
     inputfile.Close( );
-
-    ctf_rot_mat = new std::vector<std::vector<double>>[image_no];
-    tem_rot_mat = new std::vector<std::vector<double>>[image_no];
 
     DownhillSimplex simplex_minimzer(3);
 
@@ -147,15 +163,13 @@ bool FitTiltModel::DoCalculation( ) {
     ranges[0] = 0.0f;
     ranges[1] = 180.0f;
     ranges[2] = 180.0f;
-    ranges[3] = 180.0f;
+    ranges[3] = 0.00f;
 
     start_values[0] = 0.0f;
-    start_values[1] = 90;
     start_values[2] = 10;
-    start_values[3] = 90.0f;
-    // check the object function value with the initila guess
-    // float test      = optim_function(this, start_values);
-    // wxPrintf("initial %f\n", test);
+    start_values[3] = 178.4f;
+    start_values[3] = input_tem_axis;
+    start_values[1] = start_values[3];
 
     simplex_minimzer.SetIinitalValues(start_values, ranges);
 
@@ -178,51 +192,67 @@ bool FitTiltModel::DoCalculation( ) {
     simplex_minimzer.MinimizeFunction(this, optim_function);
     simplex_minimzer.GetMinimizedValues(min_values);
 
-    wxPrintf("fitted result: phi_zero, theta_zero, phi_tem\n");
+    wxPrintf("\nfitted result: phi_zero, theta_zero, phi_tem\n");
     wxPrintf(" %f, %f, %f\n", min_values[1], min_values[2], min_values[3]);
-    // check the object function value after refinement
-    // test = optim_function(this, min_values);
-    // wxPrintf("final %f\n", test);
 
-    double fitted_phi_zero   = min_values[1];
-    double fitted_theta_zero = min_values[2];
-    double fitted_phi_tem    = min_values[3];
+    fitted_phi_zero   = min_values[1];
+    fitted_theta_zero = min_values[2];
+    fitted_phi_tem    = min_values[3];
+
+    if ( abs(fitted_phi_zero - input_tem_axis) > 145 ) {
+        if ( fitted_phi_zero > input_tem_axis ) {
+            fitted_phi_zero -= 180;
+            fitted_theta_zero *= -1;
+        }
+        else {
+            fitted_phi_zero += 180;
+            fitted_theta_zero *= -1;
+        }
+    }
+
+    wxPrintf("\nadjusted fitted result: phi_zero, theta_zero, phi_tem\n");
+    wxPrintf(" %f, %f, %f\n", fitted_phi_zero, fitted_theta_zero, fitted_phi_tem);
+
+    rmse = optim_function(this, min_values);
+    wxPrintf("rmse is %f\n", rmse);
 
     zero_rot = CTFRotationMatrix(fitted_phi_zero, fitted_theta_zero);
 
     exp_rot = new std::vector<std::vector<double>>[image_no];
 
-    exp_theta = new double[image_no];
-    exp_phi   = new double[image_no];
+    exp_theta.resize(image_no);
+    exp_phi.resize(image_no);
+
     for ( int image_ind = 0; image_ind < image_no; image_ind++ ) {
-        ctf_rot_mat[image_ind] = CTFRotationMatrix(fitted_phi_tem, raw_tilt[image_ind]);
-        exp_rot[image_ind]     = multiplyMatrices(ctf_rot_mat[image_ind], zero_rot);
+        tmp_mat            = CTFRotationMatrix(fitted_phi_tem, raw_tilt[image_ind]);
+        exp_rot[image_ind] = multiplyMatrices(zero_rot, tmp_mat);
         MatrixToAngleZXZ(exp_rot[image_ind], &exp_theta[image_ind], &exp_phi[image_ind]);
     }
 
     // save results to files :
-    wxPrintf(" fitted tilt and axis direction\n");
+    wxPrintf("\nfitted tilt and axis direction\n");
     for ( int image_ind = 0; image_ind < image_no; image_ind++ ) {
         wxPrintf("%d %f %f\n", image_ind, exp_theta[image_ind], exp_phi[image_ind]);
     }
+
+    wxPrintf("\noutlier indexes: ");
+    NumericTextFile OutlierIndexFile(outpath + "outlier_index.txt", OPEN_TO_WRITE, 1);
     if ( outlier_indexes.size( ) == 0 ) {
-        wxPrintf("--- all data pairs were used for fitting, no outliers --- \n");
+        wxPrintf("\n--- all data pairs were used for fitting, no outliers --- \n");
     }
     else {
-        NumericTextFile OutlierIndexFile(outpath + "outlier_index.txt", OPEN_TO_WRITE, 1);
-        wxPrintf("--- outliers' indexes are: ");
         for ( float value : outlier_indexes ) {
-            wxPrintf("%d\t", value);
+            wxPrintf("%f\t", value);
             OutlierIndexFile.WriteLine(&value);
         }
         wxPrintf("\n");
-        OutlierIndexFile.Close( );
     }
+    OutlierIndexFile.Close( );
 
     NumericTextFile outputfile(outpath + "fitted_parameter.txt", OPEN_TO_WRITE, 3);
-    temp_array[0] = min_values[1];
-    temp_array[1] = min_values[2];
-    temp_array[2] = min_values[3];
+    temp_array[0] = fitted_phi_zero;
+    temp_array[1] = fitted_theta_zero;
+    temp_array[2] = fitted_phi_tem;
     outputfile.WriteLine(temp_array);
     outputfile.Close( );
 
@@ -235,15 +265,49 @@ bool FitTiltModel::DoCalculation( ) {
     }
     outputangle.Close( );
 
+    adjust_ctffind_range_for_plot(exp_theta);
+    // range_adjust_for_plot(exp_theta, exp_phi, input_tem_axis);
+    // range_adjust_for_plot(ctffind_theta, ctffind_phi, input_tem_axis);
+    NumericTextFile  absolutionerror(outpath + "abserror_tilt_and_axis_angle.txt", OPEN_TO_WRITE, 3);
+    float            sum_theta_error = 0;
+    float            sum_phi_error   = 0;
+    int              count           = 0;
+    int              outlier_count   = 0;
+    std::vector<int> excluded_index;
+    for ( int i = 0; i < image_no; i++ ) {
+        // wxPrintf("%d %f %f %d %f %f\n", i, exp_theta[i], exp_phi[i], i, ctffind_theta[i], ctffind_phi[i]);
+        temp_array[0] = index[i];
+        temp_array[1] = abs(exp_theta[i] - ctffind_theta[i]);
+        temp_array[2] = abs(exp_phi[i] - ctffind_phi[i]);
+        absolutionerror.WriteLine(temp_array);
+        if ( outlier_indexes[outlier_count] == i && outlier_count < outlier_indexes.size( ) ) {
+            excluded_index.push_back(outlier_indexes[outlier_count]);
+            outlier_count++;
+            continue;
+        }
+        if ( abs(exp_theta[i]) > 5 && ctffind_theta[i] > 5 ) {
+            sum_theta_error += temp_array[1];
+            sum_phi_error += temp_array[2];
+            count++;
+        }
+        else {
+            excluded_index.push_back(i);
+        }
+    }
+    absolutionerror.Close( );
+
+    wxPrintf("\nthe excluded index for calculating the mean abs error are:\n");
+    for ( int value : excluded_index ) {
+        wxPrintf(" %d\t", value);
+    }
+    wxPrintf("\n");
+    float mean_theta_error = sum_theta_error / count;
+    float mean_phi_error   = sum_phi_error / count;
+    wxPrintf("\nthe mean abs error for theta and phi are: %f %f \n", mean_theta_error, mean_phi_error);
+
     delete[] index;
-    delete[] ctffind_phi;
-    delete[] ctffind_theta;
     delete[] raw_tilt;
-    delete[] ctf_rot_mat;
-    delete[] tem_rot_mat;
     delete[] exp_rot;
-    delete[] exp_theta;
-    delete[] exp_phi;
 
     return true;
 }
@@ -334,3 +398,54 @@ std::vector<std::vector<double>> multiplyMatrices(const std::vector<std::vector<
     }
     return result;
 };
+
+void adjust_ctffind_range_for_plot(std::vector<double> theta_series) { //, std::vector<double>& phi_series, double tem_phi) {
+    int count_pred    = std::count_if(theta_series.begin( ), theta_series.end( ), [](int x) { return x < 0; });
+    int count_ctffind = std::count_if(ctffind_theta.begin( ), ctffind_theta.end( ), [](int x) { return x < 0; });
+    if ( (count_pred - image_no / 2) * (count_ctffind - image_no / 2) < 0 ) {
+        for ( int i = 0; i < image_no; i++ ) {
+            ctffind_theta[i] *= -1;
+            ctffind_phi[i] -= 180;
+        }
+    }
+};
+
+// void range_adjust_for_plot(std::vector<double>& theta_series, std::vector<double>& phi_series, double tem_phi) {
+//     double imod_rot = tem_phi - 90;
+//     int    count    = std::count_if(theta_series.begin( ), theta_series.end( ), [](int x) { return x < 0; });
+
+//     if ( count > image_no / 2 ) {
+//         for ( auto& element : theta_series ) {
+//             element *= -1;
+//         }
+//         for ( auto& element : phi_series ) {
+//             element += 180;
+//         }
+//     }
+//     // if ( imod_rot > 45 ) {
+//     //     for ( auto& element : phi_series ) {
+//     //         element -= 90;
+//     //     }
+//     // }
+
+//     for ( int i = 0; i < image_no; i++ ) {
+//         while ( phi_series[i] > 360 ) {
+//             phi_series[i] -= 360;
+//         }
+
+//         while ( phi_series[i] < 0 ) {
+//             phi_series[i] += 360;
+//         }
+
+//         if ( phi_series[i] < (imod_rot) / 2.0 ) {
+//             phi_series[i] += 180;
+//             theta_series[i] *= -1;
+//         }
+//     }
+
+//     // if ( imod_rot > 45 ) {
+//     //     for ( auto& element : phi_series ) {
+//     //         element += 90;
+//     //     }
+//     // }
+// };

@@ -32,9 +32,9 @@ std::vector<std::vector<double>> CTFRotationMatrix(double phi, double theta);
 double                           CalcRMSE(const std::vector<double>& data, std::vector<int> indexes);
 void                             MatrixToAngleZXZ(const std::vector<std::vector<double>>& R, double* theta, double* phi);
 std::vector<double>              multiplyMatWithVec(const std::vector<std::vector<double>>& matrix, const std::vector<double>& vec);
+std::vector<double>              multiplyVecWithMat(const std::vector<double>& vec, const std::vector<std::vector<double>>& matrix);
 std::vector<std::vector<double>> multiplyMatrices(const std::vector<std::vector<double>>& matrix1, const std::vector<std::vector<double>>& matrix2);
-void                             adjust_ctffind_range_for_plot(std::vector<double> theta_series);
-// void                             range_adjust_for_plot(std::vector<double>& theta_serie, std::vector<double>& phi_series, double tem_phi);
+void                             range_adjust_for_plot(std::vector<double>& theta_serie, std::vector<double>& phi_series, double tem_phi);
 
 int                 image_no;
 std::vector<int>    UpdatedIndices, outlier_indexes;
@@ -66,10 +66,9 @@ double optim_function(void* pt2Object, double values[]) {
 
     res.clear( );
     for ( int image_ind = 0; image_ind < image_no; image_ind++ ) {
-        ctf_vec = multiplyMatWithVec(ctf_rot_mat[image_ind], z_vec);
-        // tmp_mat = multiplyMatrices(tem_rot_mat[image_ind], zero_rot);
+        ctf_vec = multiplyVecWithMat(z_vec, ctf_rot_mat[image_ind]);
         tmp_mat = multiplyMatrices(zero_rot, tem_rot_mat[image_ind]);
-        fit_vec = multiplyMatWithVec(tmp_mat, z_vec);
+        fit_vec = multiplyVecWithMat(z_vec, tmp_mat);
 
         float sum_num = 0;
         for ( int k = 0; k < 3; k++ ) {
@@ -149,6 +148,7 @@ bool FitTiltModel::DoCalculation( ) {
         index[image_ind] = temp_array[0];
         ctffind_phi.push_back(360 - temp_array[1]);
         ctffind_theta.push_back(-temp_array[2]);
+        // wxPrintf("theta phi read %f %f \n", ctffind_theta[image_ind], ctffind_phi[image_ind]);
         rawtlt.ReadLine(&raw_tilt[image_ind]);
     }
     rawtlt.Close( );
@@ -256,6 +256,9 @@ bool FitTiltModel::DoCalculation( ) {
     outputfile.WriteLine(temp_array);
     outputfile.Close( );
 
+    range_adjust_for_plot(exp_theta, exp_phi, input_tem_axis);
+    range_adjust_for_plot(ctffind_theta, ctffind_phi, input_tem_axis);
+
     NumericTextFile outputangle(outpath + "fitted_tilt_and_axis_angle.txt", OPEN_TO_WRITE, 3);
     for ( int i = 0; i < image_no; i++ ) {
         temp_array[0] = index[i];
@@ -265,17 +268,27 @@ bool FitTiltModel::DoCalculation( ) {
     }
     outputangle.Close( );
 
-    adjust_ctffind_range_for_plot(exp_theta);
-    // range_adjust_for_plot(exp_theta, exp_phi, input_tem_axis);
-    // range_adjust_for_plot(ctffind_theta, ctffind_phi, input_tem_axis);
-    NumericTextFile  absolutionerror(outpath + "abserror_tilt_and_axis_angle.txt", OPEN_TO_WRITE, 3);
+    NumericTextFile outputanglectffind(outpath + "ctffind_tilt_and_axis_angle_counterclock.txt", OPEN_TO_WRITE, 3);
+    for ( int i = 0; i < image_no; i++ ) {
+        temp_array[0] = index[i];
+        temp_array[1] = ctffind_theta[i];
+        temp_array[2] = ctffind_phi[i];
+        outputanglectffind.WriteLine(temp_array);
+    }
+    outputanglectffind.Close( );
+
+    //calculate absolute error:
+    NumericTextFile absolutionerror(outpath + "abs_error_tilt_and_axis_angle.txt", OPEN_TO_WRITE, 3);
+
     float            sum_theta_error = 0;
     float            sum_phi_error   = 0;
-    int              count           = 0;
-    int              outlier_count   = 0;
+    float            mean_theta_error;
+    float            mean_phi_error;
+    int              count         = 0;
+    int              outlier_count = 0;
     std::vector<int> excluded_index;
     for ( int i = 0; i < image_no; i++ ) {
-        // wxPrintf("%d %f %f %d %f %f\n", i, exp_theta[i], exp_phi[i], i, ctffind_theta[i], ctffind_phi[i]);
+        wxPrintf("%d %f %f %d %f %f\n", i, exp_theta[i], exp_phi[i], i, ctffind_theta[i], ctffind_phi[i]);
         temp_array[0] = index[i];
         temp_array[1] = abs(exp_theta[i] - ctffind_theta[i]);
         temp_array[2] = abs(exp_phi[i] - ctffind_phi[i]);
@@ -296,13 +309,20 @@ bool FitTiltModel::DoCalculation( ) {
     }
     absolutionerror.Close( );
 
+    NumericTextFile excludedpointindex(outpath + "abs_error_excluded_index.txt", OPEN_TO_WRITE, 1);
+    for ( float value : excluded_index ) {
+        wxPrintf("%f\t", value);
+        excludedpointindex.WriteLine(&value);
+    }
+    excludedpointindex.Close( );
+
     wxPrintf("\nthe excluded index for calculating the mean abs error are:\n");
     for ( int value : excluded_index ) {
         wxPrintf(" %d\t", value);
     }
     wxPrintf("\n");
-    float mean_theta_error = sum_theta_error / count;
-    float mean_phi_error   = sum_phi_error / count;
+    mean_theta_error = sum_theta_error / count;
+    mean_phi_error   = sum_phi_error / count;
     wxPrintf("\nthe mean abs error for theta and phi are: %f %f \n", mean_theta_error, mean_phi_error);
 
     delete[] index;
@@ -320,7 +340,7 @@ void MatrixToAngleZXZ(const std::vector<std::vector<double>>& R, double* theta, 
 
     z_vec = {0, 0, 1};
 
-    vec_norm = multiplyMatWithVec(R, z_vec);
+    vec_norm = multiplyVecWithMat(z_vec, R);
     *theta   = (double)acos(vec_norm[2]) * rtoa;
 
     if ( vec_norm[1] == 0 ) {
@@ -330,7 +350,10 @@ void MatrixToAngleZXZ(const std::vector<std::vector<double>>& R, double* theta, 
         *phi = (double)atan(vec_norm[0] / vec_norm[1]) * rtoa;
     }
     if ( *phi < 0 ) {
-        *phi = *phi + 180;
+        *phi += 180;
+    }
+    if ( vec_norm[0] < 0 ) {
+        *phi += 180;
     }
 }
 
@@ -384,6 +407,19 @@ std::vector<double> multiplyMatWithVec(const std::vector<std::vector<double>>& m
     return result;
 };
 
+std::vector<double> multiplyVecWithMat(const std::vector<double>& vec, const std::vector<std::vector<double>>& matrix) {
+    if ( matrix.empty( ) || matrix.size( ) != vec.size( ) ) {
+        throw std::invalid_argument("Matrix and vector dimensions do not match for multiplication.");
+    }
+    std::vector<double> result(matrix.size( ), 0);
+    for ( size_t i = 0; i < matrix[0].size( ); ++i ) {
+        for ( size_t j = 0; j < vec.size( ); ++j ) {
+            result[i] += matrix[j][i] * vec[j];
+        }
+    }
+    return result;
+};
+
 std::vector<std::vector<double>> multiplyMatrices(const std::vector<std::vector<double>>& matrix1, const std::vector<std::vector<double>>& matrix2) {
     if ( matrix1.empty( ) || matrix2.empty( ) || matrix1[0].size( ) != matrix2.size( ) ) {
         throw std::invalid_argument("Matrix dimensions do not match for multiplication.");
@@ -399,53 +435,41 @@ std::vector<std::vector<double>> multiplyMatrices(const std::vector<std::vector<
     return result;
 };
 
-void adjust_ctffind_range_for_plot(std::vector<double> theta_series) { //, std::vector<double>& phi_series, double tem_phi) {
-    int count_pred    = std::count_if(theta_series.begin( ), theta_series.end( ), [](int x) { return x < 0; });
-    int count_ctffind = std::count_if(ctffind_theta.begin( ), ctffind_theta.end( ), [](int x) { return x < 0; });
-    if ( (count_pred - image_no / 2) * (count_ctffind - image_no / 2) < 0 ) {
-        for ( int i = 0; i < image_no; i++ ) {
-            ctffind_theta[i] *= -1;
-            ctffind_phi[i] -= 180;
+void range_adjust_for_plot(std::vector<double>& theta_series, std::vector<double>& phi_series, double tem_phi) {
+    double imod_rot = tem_phi - 90;
+    int    count    = std::count_if(theta_series.begin( ), theta_series.end( ), [](int x) { return x < 0; });
+
+    if ( count > image_no / 2 ) {
+        for ( auto& element : theta_series ) {
+            element *= -1;
+        }
+        for ( auto& element : phi_series ) {
+            element += 180;
+        }
+    }
+    if ( imod_rot > 45 ) {
+        for ( auto& element : phi_series ) {
+            element += 90;
+        }
+    }
+
+    for ( int i = 0; i < image_no; i++ ) {
+        while ( phi_series[i] > 360 ) {
+            phi_series[i] -= 360;
+        }
+        // while ( phi_series[i] < 0 ) {
+        //     phi_series[i] += 360;
+        // }
+
+        // if ( phi_series[i] < (imod_rot) / 2.0 ) {
+        //     phi_series[i] += 180;
+        //     theta_series[i] *= -1;
+        // }
+    }
+
+    if ( imod_rot > 45 ) {
+        for ( auto& element : phi_series ) {
+            element -= 90;
         }
     }
 };
-
-// void range_adjust_for_plot(std::vector<double>& theta_series, std::vector<double>& phi_series, double tem_phi) {
-//     double imod_rot = tem_phi - 90;
-//     int    count    = std::count_if(theta_series.begin( ), theta_series.end( ), [](int x) { return x < 0; });
-
-//     if ( count > image_no / 2 ) {
-//         for ( auto& element : theta_series ) {
-//             element *= -1;
-//         }
-//         for ( auto& element : phi_series ) {
-//             element += 180;
-//         }
-//     }
-//     // if ( imod_rot > 45 ) {
-//     //     for ( auto& element : phi_series ) {
-//     //         element -= 90;
-//     //     }
-//     // }
-
-//     for ( int i = 0; i < image_no; i++ ) {
-//         while ( phi_series[i] > 360 ) {
-//             phi_series[i] -= 360;
-//         }
-
-//         while ( phi_series[i] < 0 ) {
-//             phi_series[i] += 360;
-//         }
-
-//         if ( phi_series[i] < (imod_rot) / 2.0 ) {
-//             phi_series[i] += 180;
-//             theta_series[i] *= -1;
-//         }
-//     }
-
-//     // if ( imod_rot > 45 ) {
-//     //     for ( auto& element : phi_series ) {
-//     //         element += 90;
-//     //     }
-//     // }
-// };

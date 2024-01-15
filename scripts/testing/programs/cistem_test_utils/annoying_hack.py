@@ -9,7 +9,7 @@ cistem_programs_path = os.path.abspath(os.path.join(__file__, '..'))
 from  sys import path as sys_path
 
 while n_try < max_tries:
-    if os.path.basename(cistem_programs_path) == 'cistem_programs':
+    if os.path.basename(cistem_programs_path) == 'programs':
         break
     else:
         n_try += 1

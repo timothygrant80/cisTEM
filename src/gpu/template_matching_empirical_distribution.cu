@@ -96,7 +96,7 @@ TM_EmpiricalDistribution<ccfType, mipType, per_image>::TM_EmpiricalDistribution(
 
     // Array of temporary storage to accumulate the shared mem to
     cudaErr(cudaMallocAsync(&histogram_, gridDims_.x * gridDims_.y * TM::histogram_number_of_points * sizeof(histogram_storage_t), calc_stream_));
-    cudaErr(cudaMemsetAsync(histogram_, 0, gridDims_.x * gridDims_.y * TM::histogram_number_of_points * sizeof(histogram_storage_t), calc_stream_));
+    ZeroHistogram( );
 };
 
 template <typename ccfType, typename mipType, bool per_image>
@@ -105,6 +105,11 @@ TM_EmpiricalDistribution<ccfType, mipType, per_image>::~TM_EmpiricalDistribution
 
     cudaErr(cudaFreeAsync(histogram_, calc_stream_));
 };
+
+template <typename ccfType, typename mipType, bool per_image>
+void TM_EmpiricalDistribution<ccfType, mipType, per_image>::ZeroHistogram( ) {
+    cudaErr(cudaMemsetAsync(histogram_, 0, gridDims_.x * gridDims_.y * TM::histogram_number_of_points * sizeof(histogram_storage_t), calc_stream_));
+}
 
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 // Kernels and inline helper functions called from EmpiricalDistribution::AccumulateDistribution
@@ -362,7 +367,7 @@ void TM_EmpiricalDistribution<ccfType, mipType, per_image>::CopyToHostAndAdd(lon
 
     // Make a temporary copy of the cummulative histogram on the host and then add on the host. TODO errorchecking
     histogram_storage_t* tmp_array;
-    cudaErr(cudaMallocHost(&tmp_array, TM::histogram_number_of_points * sizeof(histogram_storage_t)));
+    cudaErr(cudaHostAlloc(&tmp_array, TM::histogram_number_of_points * sizeof(histogram_storage_t), cudaHostAllocDefault));
     cudaErr(cudaMemcpy(tmp_array, histogram_, TM::histogram_number_of_points * sizeof(histogram_storage_t), cudaMemcpyDeviceToHost));
 
     for ( int iBin = 0; iBin < TM::histogram_number_of_points; iBin++ ) {

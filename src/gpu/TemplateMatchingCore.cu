@@ -122,7 +122,12 @@ void TemplateMatchingCore::Init(MyApp*           parent_pointer,
 
 void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel, float c_defocus, int threadIDX, long& current_correlation_position) {
 
-    my_dist.emplace_back(d_input_image, histogram_min_scaled, histogram_step_scaled, histogram_max_padding, n_mips_to_process_at_once, cudaStreamPerThread);
+    // This should probably just be a unique pointer and not a vector
+    if ( my_dist.empty( ) )
+        my_dist.emplace_back(d_input_image, histogram_min_scaled, histogram_step_scaled, histogram_max_padding, n_mips_to_process_at_once, cudaStreamPerThread);
+    else
+        my_dist.at(0).ZeroHistogram( );
+
     // Make sure we are starting with zeros
     for ( auto& buffer : d_statistical_buffers ) {
         buffer->Zeros( );

@@ -64,6 +64,7 @@ class TM_EmpiricalDistribution {
 
     ~TM_EmpiricalDistribution( );
 
+    void ZeroHistogram( );
     void AccumulateDistribution(ccfType* input_data, int n_images_this_batch);
     void FinalAccumulate( );
     void CopyToHostAndAdd(long* array_to_add_to);

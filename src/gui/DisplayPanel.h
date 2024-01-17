@@ -127,6 +127,7 @@ class
     void ChangeScaling(wxCommandEvent& event);
     void OnHighQuality(wxCommandEvent& event);
     void OnMiddleUp(wxCommandEvent& event);
+    void OnRefresh(wxCommandEvent& event);
 
     DisplayNotebookPanel* ReturnCurrentPanel( );
 

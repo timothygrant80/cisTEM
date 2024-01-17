@@ -25,6 +25,7 @@ DisplayPanel::DisplayPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, 
     Bind(wxEVT_MENU, &DisplayPanel::OnHighQuality, this, Toolbar_High_Quality);
     Bind(wxEVT_MENU, &DisplayPanel::OnInvert, this, Toolbar_Invert);
     Bind(wxEVT_MENU, &DisplayPanel::OnOpen, this, Toolbar_Open);
+    Bind(wxEVT_MENU, &DisplayPanel::OnRefresh, this, Toolbar_Refresh);
 
     Bind(wxEVT_TEXT_ENTER, &DisplayPanel::ChangeLocation, this, Toolbar_Location_Text);
     Bind(wxEVT_TEXT_ENTER, &DisplayPanel::ChangeScaling, this, Toolbar_Scale_Combo_Control);
@@ -593,6 +594,12 @@ void DisplayPanel::OnGlobal(wxCommandEvent& WXUNUSED(event)) {
         current_panel->panel_image_has_correct_greys = false;
         current_panel->ReDrawPanel( );
     }
+}
+
+void DisplayPanel::OnRefresh(wxCommandEvent& WXUNUSED(event)) {
+    DisplayNotebookPanel* current_panel = ReturnCurrentPanel( );
+    current_panel->should_refresh       = true;
+    current_panel->ReDrawPanel( );
 }
 
 void DisplayPanel::ChangeFocusToPanel(void) {

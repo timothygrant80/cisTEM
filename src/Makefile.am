@@ -344,6 +344,7 @@ noinst_LIBRARIES += libgpucore.a
 libgpucore_a_SOURCES  =      gpu/core_extensions/stop_watch_gpu.cu \
                              gpu/core_extensions/image.cu \
                              gpu/Histogram.cu \
+                             gpu/template_matching_empirical_distribution.cu \
                              gpu/TemplateMatchingCore.cu \
                              gpu/DeviceManager.cu \
                              gpu/TensorManager.cu \

@@ -23,9 +23,14 @@ constexpr int number_of_output_images     = 8; //mip, psi, theta, phi, pixel, de
 constexpr int number_of_meta_data_values  = 7; // img_x, img_y, number cccs, histogram values, pixel_size
 constexpr int MAX_ALLOWED_NUMBER_OF_PEAKS = 1000; // An error will be thrown and job aborted if this number of peaks is exceeded in the make template results block
 
+/**
+ * @brief Fixed number of bins in histogram used for template matching. Must be < 1024 (max number of cuda threads in a block) and must be a multiple of 32 (cistem::gpu::warp size).
+ * 
+ */
 constexpr int   histogram_number_of_points = 512;
 constexpr float histogram_min              = -12.5f;
 constexpr float histogram_max              = 22.5f;
+constexpr float histogram_step             = (histogram_max - histogram_min) / float(histogram_number_of_points);
 
 enum Enum : int {
     image_size_x,
@@ -152,6 +157,22 @@ constexpr std::array<std::string_view, 17> cufft_error_types = {
         "CUFFT_NOT_IMPLEMENTED",
         "CUFFT_LICENSE_ERROR",
         "CUFFT_NOT_SUPPORTED"};
+
+// To avoid extra calls to malloc managed, which are slow, set an enum for the different types were we may need tmp vals
+// Note: if you add one of these here, you need to make sure the memory allocation is also increased
+
+namespace tmp_val {
+
+constexpr size_t n_tmp_vals         = 1;
+constexpr size_t n_tmp_vals_complex = 3;
+
+enum Enum : int { ReturnSumSquareModulusComplexValues,
+                  ReturnSumOfRealValues,
+                  L2Norm,
+
+};
+} // namespace tmp_val
+
 } // namespace gpu
 
 } // namespace cistem

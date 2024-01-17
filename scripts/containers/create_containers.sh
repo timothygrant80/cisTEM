@@ -133,7 +133,7 @@ while [[ $# -gt 0 ]]; do
         shift # past argument
         ;;
     -*|--*)
-      echo "Unknown option $1"
+      echo "Unknown option $1, try running with -h for help."
       exit 1
       ;;
   esac
@@ -181,6 +181,7 @@ if [[ "x${build_layer}" == "xbase" ]] ; then
     echo "    container version: ${base_container_version}"
     echo "    container repository: ${container_repository}"
     echo "    path to base dockerfile: ${path_to_base_dockerfile}"
+    sleep 3
     prefix="base_image_v"
     container_version=${base_container_version}
     path_to_dockerfile=${path_to_base_dockerfile}
@@ -195,10 +196,12 @@ else
     echo "    npm: ${build_npm}"
     echo "    ref-images: ${build_ref_images}"
     echo "    container version: ${top_container_version}"
+    echo "    container base version: ${base_container_version}"
     echo "    container repository: ${container_repository}"
     echo "    path to top dockerfile: ${path_to_top_dockerfile}"
     # Modify the top_dockerfile to use the correct base image
     #   NOTE: there is no need to modify the base Docker file
+    sleep 3
     path_to_dockerfile=$(mktemp -d)
     # Make sure we clean up the temp directoryman
     trap 'rm -rf -- "$path_to_dockerfile"' EXIT
@@ -206,13 +209,14 @@ else
 
     awk -v VER="base_image_v$base_container_version" -v REPO="FROM $container_repository" '{if($0 ~ "FROM fake_repo") print REPO":"VER; else print $0}' ${path_to_top_dockerfile}/Dockerfile > ${path_to_dockerfile}/Dockerfile
     cp ${path_to_top_dockerfile}/install*.sh ${path_to_dockerfile}/
+
     
     # Modify the devcontainer.json to use the correct full image, this should be soft linked from the project root to the .vscode_shared/UserName/devcontainer_VERSION.json
-    tmp_file=$(mktemp)
-    awk -v VER="v$top_container_version" -v REPO="    \"image\": \"$container_repository" '{if($0 ~ REPO) print REPO":"VER"\",";  else print $0}' ../../.devcontainer.json > $tmp_file
-    # awk -v VER="$container_version" '{if(/bhimesbhimes\/ibkr_tools/) print "   \"image\": \"bhimesbhimes/ibkr_tools:v"VER"\","; else print $0}' ${path_to_dockerfile}/../.devcontainer.json > tmp.json
-    cp --no-dereference $tmp_file ../../.devcontainer.json
-    rm $tmp_file
+    # tmp_file=$(mktemp)
+    # awk -v VER="v$top_container_version" -v REPO="    \"image\": \"$container_repository" '{if($0 ~ REPO) print REPO":"VER"\",";  else print $0}' ../../.devcontainer.json > $tmp_file
+    # # awk -v VER="$container_version" '{if(/bhimesbhimes\/ibkr_tools/) print "   \"image\": \"bhimesbhimes/ibkr_tools:v"VER"\","; else print $0}' ${path_to_dockerfile}/../.devcontainer.json > tmp.json
+    # cp --no-dereference $tmp_file ../../.devcontainer.json
+    # rm $tmp_file
 fi
 
 

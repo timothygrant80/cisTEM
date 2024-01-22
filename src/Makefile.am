@@ -217,8 +217,10 @@ noinst_HEADERS = core/stopwatch.h \
                  programs/console_test/sine_128x128x1.cpp \
                  gui/icons/match_template_icon.cpp \
                  programs/refine3d/ProjectionComparisonObjects.h \
+                 core/pdb.h \
                  core/scattering_potential.h \
                  programs/cisTEM_display/display_gui.h
+                 
 
                  
 
@@ -229,7 +231,6 @@ noinst_HEADERS += 	gui/icons/experimental_icon.cpp \
                     gui/AtomicCoordinatesChooserDialog.h \
                     gui/AtomicCoordinatesImportDialog.h \
                     core/water.h \
-                    core/pdb.h \
                     programs/simulate/wave_function_propagator.h 
 
 endif      
@@ -432,13 +433,14 @@ libcore_a_SOURCES  = core/stopwatch.cpp \
                        core/ccl3d.cpp \
                        core/template_matching.cpp \
                        core/eer_file.cpp \
+                       core/pdb.cpp \
                        core/scattering_potential.cpp \
                        core/padded_coordinates.cpp
 
 
 
 if EXPERIMENTAL_AM
-libcore_a_SOURCES += core/water.cpp core/pdb.cpp
+libcore_a_SOURCES += core/water.cpp
 endif
 
 libcore_a_CXXFLAGS = $(WX_CPPFLAGS_BASE)

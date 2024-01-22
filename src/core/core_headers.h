@@ -182,6 +182,7 @@ class StackDump : public wxStackWalker // so we can give backtraces..
 #include "json/jsonreader.h"
 #include "json/jsonval.h"
 #include "ccl3d.h"
+#include "pdb.h"
 
 #ifdef EXPERIMENTAL
 #include "../../include/ieee-754-half/half.hpp"
@@ -191,7 +192,6 @@ class StackDump : public wxStackWalker // so we can give backtraces..
 #include "../../include/gemmi/gz.hpp"
 #include "../../include/gemmi/resinfo.hpp"
 #include "../../include/gemmi/calculate.hpp"
-#include "pdb.h"
 #include "water.h"
 #endif
 

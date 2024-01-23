@@ -55,9 +55,9 @@ CTFTilt::CTFTilt(ImageFile& wanted_input_file, float wanted_high_res_limit_ctf_f
     ctf_image.Allocate(box_size, box_size, 1);
 
     micrograph_subregion_dimension = 2000.0f / ctf_fit_pixel_size;
-    wxPrintf("micrograph_subregion_dimension: %d\n", micrograph_subregion_dimension);
+    MyDebugPrint("micrograph_subregion_dimension: %d\n", micrograph_subregion_dimension);
     micrograph_subregion_dimension = ReturnClosestFactorizedLower(micrograph_subregion_dimension, 5);
-    wxPrintf("micrograph_subregion_dimension factorized: %d\n", micrograph_subregion_dimension);
+    MyDebugPrint("micrograph_subregion_dimension factorized: %d\n", micrograph_subregion_dimension);
     if ( micrograph_subregion_dimension < micrograph_binned_dimension_for_ctf )
         power_spectrum_binned_image.Allocate(micrograph_subregion_dimension, micrograph_subregion_dimension, 1);
     else
@@ -68,7 +68,7 @@ CTFTilt::CTFTilt(ImageFile& wanted_input_file, float wanted_high_res_limit_ctf_f
     tilt_fit_pixel_size = original_pixel_size * tilt_binning_factor;
     n_sections_x        = int(image_x_dim_forsubsection / tilt_binning_factor / tile_size);
     n_sections_y        = int(image_y_dim_forsubsection / tilt_binning_factor / tile_size);
-    wxPrintf("number of sections along x and y dimensions: %d, %d\n", n_sections_x, n_sections_y);
+    MyDebugPrint("number of sections along x and y dimensions: %d, %d\n", n_sections_x, n_sections_y);
 
     int ix, iy;
     int sub_section_dimension;
@@ -80,17 +80,17 @@ CTFTilt::CTFTilt(ImageFile& wanted_input_file, float wanted_high_res_limit_ctf_f
     if ( IsOdd(sub_section_dimension_y) )
         sub_section_dimension_y--;
     sub_section_dimension = std::min(sub_section_dimension_x, sub_section_dimension_y);
-    wxPrintf("subsection dim, subsection_dim_x, subsection_dim_y: %d, %d, %d\n", sub_section_dimension, sub_section_dimension_x, sub_section_dimension_y);
+    MyDebugPrint("subsection dim, subsection_dim_x, subsection_dim_y: %d, %d, %d\n", sub_section_dimension, sub_section_dimension_x, sub_section_dimension_y);
     tile_size = std::min(sub_section_dimension, tile_size);
-    wxPrintf("tile size: %d\n", tile_size);
+    MyDebugPrint("tile size: %d\n", tile_size);
     sub_section.Allocate(tile_size, tile_size, 1, true);
     power_spectrum_sub_section.Allocate(tile_size, tile_size, 1);
 
     resampled_power_spectra = new Image[((n_sections_x - 1) * n_steps + 1) * ((n_sections_y - 1) * n_steps + 1)];
     int tile_num            = ((n_sections_x - 1) * n_steps + 1) * ((n_sections_y - 1) * n_steps + 1);
-    wxPrintf("total tiles: %d\n", tile_num);
+    MyDebugPrint("total tiles: %d\n", tile_num);
     int secxsecy = n_sections_x * n_sections_y;
-    wxPrintf("section_x*section_y %d\n", secxsecy);
+    MyDebugPrint("section_x*section_y %d\n", secxsecy);
 
     // for ( iy = -(n_sections_y - 1) * n_steps / 2; iy <= (n_sections_y - 1) * n_steps / 2; iy++ ) {
     //     for ( ix = -(n_sections_x - 1) * n_steps / 2; ix <= (n_sections_x - 1) * n_steps / 2; ix++ ) {
@@ -120,7 +120,6 @@ CTFTilt::~CTFTilt( ) {
     }
     delete[] input_image_buffer;
     delete[] resampled_power_spectra;
-    wxPrintf("Deallocated memory for CTFTilt\n");
 }
 
 void CTFTilt::CalculatePowerSpectra(bool subtract_average) {
@@ -292,7 +291,7 @@ float CTFTilt::FindDefocusAstigmatism( ) {
     simplex_minimzer.initial_values[4][1] = start_values[1] * simplex_minimzer.value_scalers[1];
     simplex_minimzer.initial_values[4][2] = start_values[2] * simplex_minimzer.value_scalers[2];
     simplex_minimzer.initial_values[4][3] = start_values[3] * simplex_minimzer.value_scalers[3] + ranges[3] * simplex_minimzer.value_scalers[3];
-    wxPrintf("scalers %f, %f, %f\n", simplex_minimzer.value_scalers[1], simplex_minimzer.value_scalers[2], simplex_minimzer.value_scalers[3]);
+    MyDebugPrint("scalers %f, %f, %f\n", simplex_minimzer.value_scalers[1], simplex_minimzer.value_scalers[2], simplex_minimzer.value_scalers[3]);
     simplex_minimzer.MinimizeFunction(this, SampleTiltScoreFunctionForSimplex);
     simplex_minimzer.GetMinimizedValues(min_values);
 
@@ -340,7 +339,7 @@ float CTFTilt::SearchTiltAxisAndAngle( ) {
                 variance_max    = variance;
                 best_tilt_axis  = tilt_axis;
                 best_tilt_angle = tilt_angle;
-                wxPrintf("tilt axis, angle, var = %g %g %g\n", best_tilt_axis, best_tilt_angle, variance_max);
+                MyDebugPrint("tilt axis, angle, var = %g %g %g\n", best_tilt_axis, best_tilt_angle, variance_max);
             }
         }
     }
@@ -429,7 +428,7 @@ float CTFTilt::RefineTiltAxisAndAngle( ) {
     start_values[3] = average_defocus;
 
     simplex_minimzer.SetIinitalValues(start_values, ranges);
-    wxPrintf("scalers1 %f, %f, %f\n", simplex_minimzer.value_scalers[1], simplex_minimzer.value_scalers[2], simplex_minimzer.value_scalers[3]);
+    MyDebugPrint("scalers1 %f, %f, %f\n", simplex_minimzer.value_scalers[1], simplex_minimzer.value_scalers[2], simplex_minimzer.value_scalers[3]);
 
     simplex_minimzer.initial_values[1][1] = start_values[1] * simplex_minimzer.value_scalers[1] + ranges[1] * simplex_minimzer.value_scalers[1] * sqrtf(8.0f / 9.0f);
     simplex_minimzer.initial_values[1][2] = start_values[2] * simplex_minimzer.value_scalers[2];
@@ -816,7 +815,7 @@ double CTFTilt::ScoreValuesFixedDefocus(double input_values[]) {
 double SampleTiltScoreFunctionForSimplex(void* pt2Object, double values[]) {
     CTFTilt* scorer_to_use = reinterpret_cast<CTFTilt*>(pt2Object);
     float    score         = scorer_to_use->ScoreValues(values);
-    wxPrintf("%f, %f, %f, %f = %f\n", values[1], values[2], values[3], values[4], score);
+    MyDebugPrint("%f, %f, %f, %f = %f\n", values[1], values[2], values[3], values[4], score);
     return scorer_to_use->ScoreValues(values);
 }
 
@@ -824,6 +823,6 @@ double SampleTiltScoreFunctionForSimplexTiltAxis(void* pt2Object, double values[
     CTFTilt* scorer_to_use = reinterpret_cast<CTFTilt*>(pt2Object);
     // wxPrintf("average_defocus: %f\n",average_defocus);
     float score = scorer_to_use->ScoreValues(values);
-    wxPrintf("%f, %f, %f = %f\n", values[1], values[2], values[3], score);
+    MyDebugPrint("%f, %f, %f = %f\n", values[1], values[2], values[3], score);
     return scorer_to_use->ScoreValuesFixedDefocus(values);
 }

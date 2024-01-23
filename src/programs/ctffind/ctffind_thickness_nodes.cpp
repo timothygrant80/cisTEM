@@ -147,7 +147,7 @@ void do_2D_refinement(CTFNodeFitInput* input, wxJSONValue& debug_json_output) {
     input->comparison_object_2D->SetupQuickCorrelation( );
     input->comparison_object_2D->fit_nodes_downweight_nodes = input->downweight_nodes;
     input->comparison_object_2D->fit_nodes_rounded_square   = input->use_rounded_square;
-    MyDebugPrint("fit_nodes_rounded_square = %i", input->comparison_object_2D->fit_nodes_rounded_square);
+    //MyDebugPrint("fit_nodes_rounded_square = %i", input->comparison_object_2D->fit_nodes_rounded_square);
     ConjugateGradient* conjugate_gradient_minimizer = new ConjugateGradient( );
     conjugate_gradient_minimizer->Init(&CtffindNodesObjectiveFunction, input->comparison_object_2D, number_of_search_dimensions, cg_starting_point, cg_accuracy);
 
@@ -322,8 +322,6 @@ int calculate_new_frc(CTFNodeFitInput* input, double* rotational_average_astig_r
     int          counter;
     float        sq_spatial_frequency;
 
-    MyDebugPrint("Startign FRC calc");
-
     int first_fit_bin = 0;
     for ( int bin_counter = input->number_of_bins_in_1d_spectra - 1; bin_counter >= 0; bin_counter-- ) {
         if ( input->spatial_frequency[bin_counter] >= input->current_ctf->GetLowestFrequencyForFitting( ) )
@@ -401,7 +399,6 @@ int calculate_new_frc(CTFNodeFitInput* input, double* rotational_average_astig_r
     if ( number_of_bins_above_significance_threshold == 0 )
         last_bin_with_good_fit = 1;
     last_bin_with_good_fit = std::min(last_bin_with_good_fit, input->number_of_bins_in_1d_spectra);
-    MyDebugPrint(" Done!\n");
     return last_bin_with_good_fit;
 }
 
@@ -476,7 +473,6 @@ CTFNodeFitOuput fit_thickness_nodes(CTFNodeFitInput* input) {
         }
     }
     int last_bin_with_good_fit = calculate_new_frc(input, rotational_average_astig_renormalized, number_of_extrema_profile, debug_json_output);
-    MyDebugPrint("Offesting spectrum\n");
     for ( counter = 1; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
         input->rotational_average_astig[counter] -= rotational_average_astig_curve.polynomial_fit[counter];
         input->rotational_average_astig[counter] += 0.5;
@@ -484,7 +480,6 @@ CTFNodeFitOuput fit_thickness_nodes(CTFNodeFitInput* input) {
 
     if ( input->debug ) {
         // Write out the json debug file
-        MyDebugPrint("Print out debug");
         wxJSONWriter writer;
         wxString     json_string;
         writer.Write(debug_json_output, json_string);
@@ -494,10 +489,7 @@ CTFNodeFitOuput fit_thickness_nodes(CTFNodeFitInput* input) {
         debug_file.Close( );
     }
     CTFNodeFitOuput output = {last_bin_with_good_fit};
-    MyDebugPrint("Cleaning up\n");
     delete[] rotational_average_astig_renormalized;
-    MyDebugPrint("Cleaning up2\n");
     delete[] number_of_extrema_profile;
-    MyDebugPrint("Cleaning up3\n");
     return output;
 }

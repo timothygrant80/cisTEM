@@ -11,10 +11,13 @@ using namespace cistem_timer;
 using namespace cistem_timer_noop;
 #endif
 
-const std::string ctffind_version = "4.1.14";
+const std::string ctffind_version = "5.0.0";
 
 /*
  * Changelog
+ * - 5.0.0
+ * -- Support for estimating tilt of sample
+ * -- Support for estimating thickness of sample 
  * - 4.1.14
  * -- bug fixes (memory, equiphase averaging)
  * -- bug fixes from David Mastronarde (fixed/known phase shift)
@@ -164,18 +167,26 @@ void CtffindApp::DoInteractiveUserInput( ) {
     bool        movie_is_gain_corrected            = false;
     bool        movie_is_dark_corrected;
     wxString    dark_filename;
-    wxString    gain_filename                    = "/dev/null";
-    bool        correct_movie_mag_distortion     = false;
-    float       movie_mag_distortion_angle       = 0.0;
-    float       movie_mag_distortion_major_scale = 1.0;
-    float       movie_mag_distortion_minor_scale = 1.0;
-    bool        defocus_is_known                 = false;
-    float       known_defocus_1                  = 0.0;
-    float       known_defocus_2                  = 0.0;
-    float       known_phase_shift                = 0.0;
-    int         desired_number_of_threads        = 1;
-    int         eer_frames_per_image             = 0;
-    int         eer_super_res_factor             = 1;
+    wxString    gain_filename                      = "/dev/null";
+    bool        correct_movie_mag_distortion       = false;
+    float       movie_mag_distortion_angle         = 0.0;
+    float       movie_mag_distortion_major_scale   = 1.0;
+    float       movie_mag_distortion_minor_scale   = 1.0;
+    bool        defocus_is_known                   = false;
+    float       known_defocus_1                    = 0.0;
+    float       known_defocus_2                    = 0.0;
+    float       known_phase_shift                  = 0.0;
+    int         desired_number_of_threads          = 1;
+    int         eer_frames_per_image               = 0;
+    int         eer_super_res_factor               = 1;
+    bool        fit_nodes                          = false;
+    bool        fit_nodes_1D_brute_force           = true;
+    bool        fit_nodes_2D_refine                = true;
+    float       fit_nodes_low_resolution_limit     = 30.0;
+    float       fit_nodes_high_resolution_limit    = 3.0;
+    float       target_pixel_size_after_resampling = 1.4;
+    bool        fit_nodes_use_rounded_square       = false;
+    bool        fit_nodes_downweight_nodes         = false;
 
     // Things we need for old school input
     double     temp_double               = -1.0;
@@ -480,10 +491,21 @@ void CtffindApp::DoInteractiveUserInput( ) {
         // Currently, tilt determination only works when there is no additional phase shift
         if ( ! find_additional_phase_shift )
             determine_tilt = my_input->GetYesNoFromUser("Determine sample tilt?", "Answer yes if you tilted the sample and need to determine tilt axis and angle", "No");
-
+        fit_nodes = my_input->GetYesNoFromUser("Determine samnple thickness?", "Answer yes if you want to fit nodes to the CTF", "No");
+        if ( fit_nodes ) {
+            fit_nodes_1D_brute_force        = my_input->GetYesNoFromUser("Use brute force 1D search?", "Answer yes if you want to use a brute force 1D search for the nodes", "Yes");
+            fit_nodes_2D_refine             = my_input->GetYesNoFromUser("Use 2D refinement?", "Answer yes if you want to use a 2D refinement for the nodes", "Yes");
+            fit_nodes_low_resolution_limit  = my_input->GetFloatFromUser("Low resolution limit for nodes", "In Angstroms, the low resolution limit for the nodes", "30.0", 0.0);
+            fit_nodes_high_resolution_limit = my_input->GetFloatFromUser("High resolution limit for nodes", "In Angstroms, the high resolution limit for the nodes", "3.0", 0.0);
+            fit_nodes_use_rounded_square    = my_input->GetYesNoFromUser("Use rounded square for nodes?", "Answer yes if you want to use a rounded square for the nodes", "No");
+            fit_nodes_downweight_nodes      = my_input->GetYesNoFromUser("Downweight nodes?", "Answer yes if you want to downweight nodes", "No");
+        }
         give_expert_options = my_input->GetYesNoFromUser("Do you want to set expert options?", "There are options which normally not changed, but can be accessed by answering yes here", "No");
         if ( give_expert_options ) {
             resample_if_pixel_too_small = my_input->GetYesNoFromUser("Resample micrograph if pixel size too small?", "When the pixel is too small, Thon rings appear very thin and near the origin of the spectrum, which can lead to suboptimal fitting. This options resamples micrographs to a more reasonable pixel size if needed", "Yes");
+            if ( resample_if_pixel_too_small ) {
+                target_pixel_size_after_resampling = my_input->GetFloatFromUser("Target pixel size after resampling", "In Angstroms. The pixel size to resample to if the input pixel size is too small", "1.4", 0.0);
+            }
             if ( input_is_a_movie ) {
                 movie_is_dark_corrected = my_input->GetYesNoFromUser("Movie is dark-subtracted?", "If the movie is not dark-subtracted you will need to provide a dark reference image", "Yes");
                 if ( movie_is_dark_corrected ) {
@@ -612,14 +634,14 @@ void CtffindApp::DoInteractiveUserInput( ) {
                                       desired_number_of_threads,
                                       eer_frames_per_image,
                                       eer_super_res_factor,
-                                      false,
-                                      false,
-                                      false,
-                                      10.0,
-                                      3.0,
-                                      1.4,
-                                      false,
-                                      false);
+                                      fit_nodes,
+                                      fit_nodes_1D_brute_force,
+                                      fit_nodes_2D_refine,
+                                      fit_nodes_low_resolution_limit,
+                                      fit_nodes_high_resolution_limit,
+                                      target_pixel_size_after_resampling,
+                                      fit_nodes_use_rounded_square,
+                                      fit_nodes_downweight_nodes);
 }
 
 // Optional command-line stuff
@@ -689,8 +711,7 @@ bool CtffindApp::DoCalculation( ) {
     float             fit_nodes_high_resolution_limit    = my_current_job.arguments[44].ReturnFloatArgument( );
     float             target_pixel_size_after_resampling = my_current_job.arguments[45].ReturnFloatArgument( );
     bool              fit_nodes_use_rounded_square       = my_current_job.arguments[46].ReturnBoolArgument( );
-    MyDebugPrint("fit_nodes_use_rounded_square = %i", fit_nodes_use_rounded_square);
-    bool fit_nodes_downweight_nodes = my_current_job.arguments[47].ReturnBoolArgument( );
+    bool              fit_nodes_downweight_nodes         = my_current_job.arguments[47].ReturnBoolArgument( );
     // if we are applying a mag distortion, it can change the pixel size, so do that here to make sure it is used forever onwards..
 
     if ( input_is_a_movie && correct_movie_mag_distortion ) {
@@ -729,12 +750,7 @@ bool CtffindApp::DoCalculation( ) {
 
     // Debugging
     const bool dump_debug_files = command_line_parser.FoundSwitch("debug");
-    if ( dump_debug_files ) {
-        MyDebugPrint("Print debug info\n");
-    }
-    else {
-        MyDebugPrint("No info here\n");
-    }
+
     std::string debug_file_prefix = output_diagnostic_filename.substr(0, output_diagnostic_filename.find_last_of('.')) + "_debug_";
 
     /*
@@ -797,7 +813,7 @@ bool CtffindApp::DoCalculation( ) {
     double*            fit_frc_sigma                             = NULL;
     MRCFile            output_diagnostic_file(output_diagnostic_filename, true);
     int                last_bin_with_good_fit;
-    double*            values_to_write_out = new double[7];
+    double*            values_to_write_out = new double[10];
     float              best_score_after_initial_phase;
     int                last_bin_without_aliasing;
     ImageFile          gain_file;
@@ -855,14 +871,14 @@ bool CtffindApp::DoCalculation( ) {
     output_text_fn = FilenameReplaceExtension(output_diagnostic_filename, "txt");
 
     if ( is_running_locally ) {
-        output_text = new NumericTextFile(output_text_fn, OPEN_TO_WRITE, 7);
+        output_text = new NumericTextFile(output_text_fn, OPEN_TO_WRITE, 10);
 
         // Print header to the output text file
         output_text->WriteCommentLine("# Output from CTFFind version %s, run on %s\n", ctffind_version.c_str( ), wxDateTime::Now( ).FormatISOCombined(' ').ToStdString( ).c_str( ));
         output_text->WriteCommentLine("# Input file: %s ; Number of micrographs: %i\n", input_filename.c_str( ), number_of_micrographs);
         output_text->WriteCommentLine("# Pixel size: %0.3f Angstroms ; acceleration voltage: %0.1f keV ; spherical aberration: %0.2f mm ; amplitude contrast: %0.2f\n", pixel_size_of_input_image, acceleration_voltage, spherical_aberration, amplitude_contrast);
         output_text->WriteCommentLine("# Box size: %i pixels ; min. res.: %0.1f Angstroms ; max. res.: %0.1f Angstroms ; min. def.: %0.1f um; max. def. %0.1f um\n", box_size, minimum_resolution, maximum_resolution, minimum_defocus, maximum_defocus);
-        output_text->WriteCommentLine("# Columns: #1 - micrograph number; #2 - defocus 1 [Angstroms]; #3 - defocus 2; #4 - azimuth of astigmatism; #5 - additional phase shift [radians]; #6 - cross correlation; #7 - spacing (in Angstroms) up to which CTF rings were fit successfully\n");
+        output_text->WriteCommentLine("# Columns: #1 - micrograph number; #2 - defocus 1 [Angstroms]; #3 - defocus 2; #4 - azimuth of astigmatism; #5 - additional phase shift [radians]; #6 - cross correlation; #7 - spacing (in Angstroms) up to which CTF rings were fit successfully; #8 - Estimated tilt axis angle; #9 - Estimated tilt angle ; #10 Estimated sample thickness (in Angstroms)\n");
     }
 
     // Prepare a text file with 1D rotational average spectra
@@ -1718,7 +1734,6 @@ bool CtffindApp::DoCalculation( ) {
         // Start of Node fitting
         CTFNodeFitOuput node_output;
         if ( fit_nodes ) {
-            MyDebugPrint("Estimating thickness: ");
             profile_timing.start("Thickness estimation");
             CTFNodeFitInput node_fit_input = {
                     current_ctf,
@@ -1744,13 +1759,10 @@ bool CtffindApp::DoCalculation( ) {
                     fit_nodes_use_rounded_square,
                     fit_nodes_downweight_nodes};
 
-            node_output = fit_thickness_nodes(&node_fit_input);
-            MyDebugPrint("Got out of the function\n");
+            node_output            = fit_thickness_nodes(&node_fit_input);
             last_bin_with_good_fit = node_output.last_bin_with_good_fit;
             profile_timing.lap("Thickness estimation");
-            MyDebugPrint("Done!\n");
         }
-        wxPrintf("Or here\n");
 
         // Prepare output diagnostic image
         //average_spectrum->AddConstant(- average_spectrum->ReturnAverageOfRealValuesOnEdges()); // this used to be done in OverlayCTF / CTFOperation in the Fortran code
@@ -1790,6 +1802,8 @@ bool CtffindApp::DoCalculation( ) {
             }
             if ( determine_tilt )
                 wxPrintf("Tilt_axis, tilt angle           : %0.2f , %0.2f degrees\n", tilt_axis, tilt_angle);
+            if ( fit_nodes )
+                wxPrintf("Estimated sample thickness      : %0.2f Angstroms\n", current_ctf->GetSampleThickness( ) * pixel_size_for_fitting);
             wxPrintf("Score                           : %0.5f\n", final_score);
             wxPrintf("Pixel size for fitting          : %0.3f Angstroms\n", pixel_size_for_fitting);
             if ( compute_extra_stats ) {
@@ -1825,6 +1839,20 @@ bool CtffindApp::DoCalculation( ) {
             else {
                 values_to_write_out[6] = 0.0;
             }
+            if ( determine_tilt ) {
+                values_to_write_out[7] = tilt_axis;
+                values_to_write_out[8] = tilt_angle;
+            }
+            else {
+                values_to_write_out[7] = 0.0;
+                values_to_write_out[8] = 0.0;
+            }
+            if ( fit_nodes ) {
+                values_to_write_out[9] = current_ctf->GetSampleThickness( ) * pixel_size_for_fitting;
+            }
+            else {
+                values_to_write_out[9] = 0.0;
+            }
             output_text->WriteLine(values_to_write_out);
 
             if ( (! old_school_input) && number_of_micrographs > 1 && is_running_locally )
@@ -1853,10 +1881,8 @@ bool CtffindApp::DoCalculation( ) {
             output_text_avrot->WriteLine(fit_frc_sigma);
             delete[] spatial_frequency_in_reciprocal_angstroms;
         }
-        wxPrintf("Cleaning up comparison object... do not\n");
         //delete comparison_object_2D;
     } // End of loop over micrographs
-    wxPrintf("I'm back...\n");
     if ( is_running_locally && (! old_school_input) && number_of_micrographs > 1 ) {
         delete my_progress_bar;
         wxPrintf("\n");
@@ -1876,7 +1902,6 @@ bool CtffindApp::DoCalculation( ) {
     }
 
     // Send results back
-    wxPrintf("Sending results back...\n");
     float results_array[11];
     results_array[0] = current_ctf->GetDefocus1( ) * pixel_size_for_fitting; // Defocus 1 (Angstroms)
     results_array[1] = current_ctf->GetDefocus2( ) * pixel_size_for_fitting; // Defocus 2 (Angstroms)
@@ -1903,7 +1928,6 @@ bool CtffindApp::DoCalculation( ) {
     results_array[10] = current_ctf->GetSampleThickness( ) * pixel_size_for_fitting; // Sample thickness (Angstroms)
     my_result.SetResult(11, results_array);
     // Cleanup
-    wxPrintf("Cleaning up memory...\n");
     delete current_ctf;
     delete average_spectrum;
     delete average_spectrum_masked;

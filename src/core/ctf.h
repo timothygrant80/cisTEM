@@ -132,7 +132,9 @@ class CTF {
     // to 0. Factor and exponent control the rounding at the nodes. Both should
     // be odd numbers.
     inline float rounded_square(float x, float factor = 5.0f, float exponent = 1.0f) {
-        if (x < PIf/2.f) { return 1.0f;}
+        if ( x < PIf / 2.f ) {
+            return 1.0f;
+        }
         float sin_x = sin(x);
         if ( fabs(sin_x) > sin(PIf / (2.f * factor)) ) {
             return copysignf(1.0, sin_x);

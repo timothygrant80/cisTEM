@@ -19,7 +19,7 @@
         <property name="internationalize">0</property>
         <property name="name">cisTEMDisplay</property>
         <property name="namespace"></property>
-        <property name="path">../programs/cisTEM_display</property>
+        <property name="path">../../programs/cisTEM_display</property>
         <property name="precompiled_header"></property>
         <property name="relative_path">1</property>
         <property name="skip_lua_events">1</property>

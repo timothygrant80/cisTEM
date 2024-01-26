@@ -19,7 +19,7 @@
         <property name="internationalize">0</property>
         <property name="name">ProjectX_refinement_package</property>
         <property name="namespace"></property>
-        <property name="path">.</property>
+        <property name="path">..</property>
         <property name="precompiled_header">#include &quot;../core/gui_core_headers.h&quot;</property>
         <property name="relative_path">1</property>
         <property name="skip_lua_events">1</property>

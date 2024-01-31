@@ -210,7 +210,7 @@ bool Merge3DApp::DoCalculation( ) {
 	// MASKING
 
 	const bool test_locres_filtering = true;
-	const int  number_of_threads 	= 64;
+	const int  number_of_threads 	= 88;
 	if ( test_locres_filtering ) {
     	{
         	Image local_resolution_volume; // define local_resolution_volume image class
@@ -239,7 +239,7 @@ bool Merge3DApp::DoCalculation( ) {
         	temp_filename = output_reconstruction_filtered; // I think this is just setting the filename of the filtered reconstruction (volume_#_#.mrc)
 
 
-        	output_3d.density_map->QuickAndDirtyWriteSlices(wxString::Format("/tmp/locres_original_%s", temp_filename.GetFullName()).ToStdString(), 1, output_3d.density_map->logical_z_dimension, true, original_pixel_size);
+        	//output_3d.density_map->QuickAndDirtyWriteSlices(wxString::Format("/tmp/locres_original_%s", temp_filename.GetFullName()).ToStdString(), 1, output_3d.density_map->logical_z_dimension, true, original_pixel_size);
         	// Debug out put that needs be changed before this gets pushed to git
 
         	Image size_image;
@@ -328,7 +328,7 @@ bool Merge3DApp::DoCalculation( ) {
                 	local_resolution_volume_local.Allocate(output_3d.density_map->logical_x_dimension, output_3d.density_map->logical_y_dimension, output_3d.density_map->logical_z_dimension);
                 	local_resolution_volume_local.SetToConstant(0.0f); // allocate and set constant the local volume
                 	LocalResolutionEstimator* estimator = new LocalResolutionEstimator( );
-                	estimator->SetAllUserParameters(&input_volume_one_local, &input_volume_two_local, &input_original_volume, &size_image, first_slice, last_slice, 1, original_pixel_size, box_size, threshold_snr, threshold_confidence, use_fixed_threshold, fixed_fsc_threshold, my_reconstruction_1.symmetry_matrices.symmetry_symbol, true, 2);
+                	estimator->SetAllUserParameters(&input_volume_one_local, &input_volume_two_local, &input_original_volume, &size_image, first_slice, last_slice, 1, original_pixel_size, box_size, threshold_snr, threshold_confidence, use_fixed_threshold, fixed_fsc_threshold, my_reconstruction_1.symmetry_matrices.symmetry_symbol, true, 4, molecular_mass_kDa, outer_mask_radius);
                 	//set all inputs for the local res estimator code
                 	estimator->EstimateLocalResolution(&local_resolution_volume_local); // run estimate local resolution on the local volume
                 	delete estimator;
@@ -358,7 +358,7 @@ bool Merge3DApp::DoCalculation( ) {
         	local_resolution_volume_all.QuickAndDirtyWriteSlices(wxString::Format("/tmp/locres_all").ToStdString(), 1, size_image.logical_z_dimension, true, original_pixel_size);
         	local_resolution_volume_all.DivideByConstant(number_averaged); // divides by the number averaged
         	local_resolution_volume.CopyFrom(&local_resolution_volume_all); // makes the local volume the combined volume
-       		local_resolution_volume.QuickAndDirtyWriteSlices(wxString::Format("/tmp/locres_box_weighting_%s", temp_filename.GetFullName()).ToStdString(), 1, size_image.logical_z_dimension, true, original_pixel_size);
+       		//local_resolution_volume.QuickAndDirtyWriteSlices(wxString::Format("/tmp/locres_box_weighting_%s", temp_filename.GetFullName()).ToStdString(), 1, size_image.logical_z_dimension, true, original_pixel_size);
 
         	// get scaler for resolution
 

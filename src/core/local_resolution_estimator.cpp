@@ -28,6 +28,8 @@ LocalResolutionEstimator::LocalResolutionEstimator( ) {
     whiten_half_maps                         = true;
     shell_number_lut                         = NULL;
     padding_factor                           = 1;
+    molecular_mass_kDa						 = 1000;
+    outer_mask_radius						 = 0;
 }
 
 LocalResolutionEstimator::~LocalResolutionEstimator( ) {
@@ -42,7 +44,7 @@ LocalResolutionEstimator::~LocalResolutionEstimator( ) {
     box_combined_half_maps_no_padding.Deallocate( );
 }
 
-void LocalResolutionEstimator::SetAllUserParameters(Image* wanted_input_volume_one, Image* wanted_input_volume_two, Image* wanted_input_orignal_volume, Image* wanted_mask_volume, int wanted_first_slice, int wanted_last_slice, int wanted_sampling_step, float input_pixel_size_in_Angstroms, int wanted_box_size, float wanted_threshold_snr, float wanted_threshold_confidence_n_sigma, bool wanted_use_fixed_fsc_threshold, float wanted_fixed_fsc_threshold, wxString wanted_symmetry_symbol, bool wanted_whiten_half_maps, int wanted_padding_factor) {
+void LocalResolutionEstimator::SetAllUserParameters(Image* wanted_input_volume_one, Image* wanted_input_volume_two, Image* wanted_input_orignal_volume, Image* wanted_mask_volume, int wanted_first_slice, int wanted_last_slice, int wanted_sampling_step, float input_pixel_size_in_Angstroms, int wanted_box_size, float wanted_threshold_snr, float wanted_threshold_confidence_n_sigma, bool wanted_use_fixed_fsc_threshold, float wanted_fixed_fsc_threshold, wxString wanted_symmetry_symbol, bool wanted_whiten_half_maps, int wanted_padding_factor, float input_molecular_mass_kDa, float input_outer_mask_radius) {
     MyDebugAssertTrue(IsEven(box_size), "Box size should be even");
     SetInputVolumes(wanted_input_volume_one, wanted_input_volume_two, wanted_input_orignal_volume, wanted_mask_volume);
     first_slice   = wanted_first_slice;
@@ -59,6 +61,8 @@ void LocalResolutionEstimator::SetAllUserParameters(Image* wanted_input_volume_o
     symmetry_redundancy  = sym_matrix.number_of_matrices;
     whiten_half_maps     = wanted_whiten_half_maps;
     padding_factor       = wanted_padding_factor;
+    molecular_mass_kDa   = input_molecular_mass_kDa;
+    outer_mask_radius	 = input_outer_mask_radius;
     number_of_fsc_shells = box_size * padding_factor / 2;
 
     // Update based on user-supplied parameter values
@@ -250,6 +254,7 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
     center_of_first_box = box_size / 2;
     center_of_last_box  = input_volume_one->logical_x_dimension - (box_size / 2) - 1;
     float       computed_fsc[number_of_fsc_shells];
+    float		scaled_computed_fsc[number_of_fsc_shells];
     const float resolution_value_between_estimation_points = 0.0;
 
     // Work arrays needed for computing the FSCs fast
@@ -262,15 +267,18 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
 
     // Debug
 #ifdef DEBUG
-    const int dbg_i = 96;
-    const int dbg_j = 96;
-    const int dbg_k = 96;
+    const int dbg_i = 95;
+    const int dbg_j = 71;
+    const int dbg_k = 82;
 #endif
 
     // Initialisation
     for ( int shell_counter = 0; shell_counter < number_of_fsc_shells; shell_counter++ ) {
         computed_fsc[shell_counter] = 0.0;
     }
+    for ( int shell_counter = 0; shell_counter < number_of_fsc_shells; shell_counter++ ) {
+        scaled_computed_fsc[shell_counter] = 0.0;
+        }
 
     // Whiten the input volumes
     if ( whiten_half_maps ) {
@@ -337,6 +345,10 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
     combined_half_maps.AddImage(input_volume_two);
 
     Curve FSC_filter;
+    Curve FSC_filter_SNR;
+    float inner_mask_radius = 0.0f;
+    float cosine_edge = 10.0f;
+    float mask_volume_in_voxels = input_original_volume->CosineRingMask(inner_mask_radius, outer_mask_radius / pixel_size_in_Angstroms, cosine_edge / pixel_size_in_Angstroms);
 
     for ( k = 0; k < input_volume_one->logical_z_dimension; k++ ) {
         if ( k >= first_slice - 1 && k <= last_slice - 1 && k % sampling_step == 0 ) {
@@ -406,18 +418,69 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
                                 //box_one.ComputeFSC(&box_two, number_of_fsc_shells, shell_number_lut, computed_fsc, work_sum_of_squares, work_sum_of_other_squares, work_sum_of_cross_products);
 
                                 // FSC CURVE FILTERING HACK
+
                                 FSC_filter.AddPoint(0,1);
+                                float resolution_limit_in_spacial_freq = 1 / (pixel_size_in_Angstroms * 2.0);
+                                float inverse_resolution;
+                                float shifted_inverse_resolution;
+                                float resolution_after_threshold;
+                                float shift_factor = 0.0;
+                                float scale_factor = 1.0;
+                                //float volume_fraction = kDa_to_Angstrom3(molecular_mass_kDa) / powf(pixel_size_in_Angstroms, 3) / total_number_of_boxes;
+                                //float volume_fraction = kDa_to_Angstrom3(molecular_mass_kDa) / powf(pixel_size_in_Angstroms, 3) / mask_volume_in_voxels;
+                                float volume_fraction = 1.0f;
+
+                                wxPrintf("Total Boxes = %li \n", total_number_of_boxes);
+                                wxPrintf("Mask volume = %.2f voxels\n", mask_volume_in_voxels);
+                                wxPrintf("Volume fraction = %.2f \n", volume_fraction);
 
                                 for ( int shell_counter = 1; shell_counter < number_of_fsc_shells; shell_counter++ ) {
                                 	inverse_resolution = float (shell_counter) / (pixel_size_in_Angstroms * 2.0 * float(number_of_fsc_shells - 1));
-                                	if (computed_fsc[shell_counter] < 0) {
-                                		computed_fsc[shell_counter] = 0;
+                                	current_resolution = pixel_size_in_Angstroms * 2.0 * float(number_of_fsc_shells - 1) / float(shell_counter);
+
+                                	// Shifting the curve by a constant
+                                	shifted_inverse_resolution = inverse_resolution + shift_factor;
+                                	if (shifted_inverse_resolution > resolution_limit_in_spacial_freq) {
+                                		shifted_inverse_resolution = resolution_limit_in_spacial_freq;
                                 	}
-                                	FSC_filter.AddPoint(inverse_resolution , computed_fsc[shell_counter]);
+                                	//FSC is scaled same way as particle FSC scaling
+                                	scaled_computed_fsc[shell_counter] = computed_fsc[shell_counter] / volume_fraction / (1.0f + (1.0f / volume_fraction - 1.0f) * fabsf(computed_fsc[shell_counter]));
+
+                                	//Find resolution value after it goes past threshold
+                                	bool past_threshold = false;
+                                	for ( int shell_counter = 1; shell_counter < number_of_fsc_shells; shell_counter++ ) {
+                                		current_resolution = pixel_size_in_Angstroms * 2.0 * float(number_of_fsc_shells - 1) / float(shell_counter);
+                                		resolution_after_threshold = current_resolution;
+                                		if (computed_fsc[shell_counter] < 0.143) {
+                                			past_threshold = true;
+                                			break;
+                                		}
+                                		if (past_threshold) {
+                                			break;
+                                		}
+                                	}
+
+                                	if ( resolution_after_threshold > 100.0f ) {
+                                	 if (computed_fsc[shell_counter] > 0.0) {
+                                	 FSC_filter.AddPoint(shifted_inverse_resolution , computed_fsc[shell_counter]);
+                                	 }
+                                	 else {
+                                	 FSC_filter.AddPoint(shifted_inverse_resolution , 0.0f);
+                                	 }
+                                  }
+                                	else {
+                                	 if ( scaled_computed_fsc[shell_counter] > 0.0 ) {
+                                	 FSC_filter.AddPoint(shifted_inverse_resolution , scaled_computed_fsc[shell_counter]);
+                                	 }
+                                	 else {
+                                	 FSC_filter.AddPoint(shifted_inverse_resolution , 0.0f);
+                                	 }
+                                   }
+
                                 }
+                                wxPrintf("resolution of box at 0.5 FSC = %.2f \n", resolution_after_threshold);
 
                                 float resolution_limit = inverse_resolution;
-
 
                              // Filter using FSC on original volume boxes
 /*
@@ -454,11 +517,14 @@ void LocalResolutionEstimator::ComputeLocalFSCAndCompareToThreshold(float fsc_th
                                 if ( on_dbg_point ) {
                                 	std::ofstream fsc_curves;
                                 	fsc_curves.open ("/tmp/fsc_curves.txt", std::ios_base::app);
-                                	fsc_curves << "0 0.0 1.0 \n";
+                                	fsc_curves << "0 0.0 1.0 1.0 \n";
                                     for ( int shell_counter = 1; shell_counter < number_of_fsc_shells; shell_counter++ ) {
-                                    	inverse_resolution = float (shell_counter) / (pixel_size_in_Angstroms * 2.0 * float(number_of_fsc_shells - 1));
-                                    	wxPrintf("%i %.2f %.4f\n", shell_counter, inverse_resolution, computed_fsc[shell_counter]);
-                                        fsc_curves << shell_counter << " " << inverse_resolution << " " << computed_fsc[shell_counter] << "\n";
+                                    	shifted_inverse_resolution = float (shell_counter) / (pixel_size_in_Angstroms * 2.0 * float(number_of_fsc_shells - 1)) + shift_factor;
+                                    	if (shifted_inverse_resolution > resolution_limit_in_spacial_freq) {
+                                    	    shifted_inverse_resolution = resolution_limit_in_spacial_freq;
+                                    	   	}
+                                    	wxPrintf("%i %.2f %.4f %.4f\n", shell_counter, shifted_inverse_resolution, computed_fsc[shell_counter], scaled_computed_fsc[shell_counter]);
+                                        fsc_curves << shell_counter << " " << shifted_inverse_resolution << " " << computed_fsc[shell_counter] << " " << scaled_computed_fsc[shell_counter] << "\n";
                                     }
                                     wxPrintf("\n\n");
 

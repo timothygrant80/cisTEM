@@ -54,6 +54,7 @@ void LocalResolution::DoInteractiveUserInput( ) {
     float resolution_for_phase_randomization;
     bool  whiten_half_maps;
     int   padding_factor;
+    float molecular_mass_kDa;
     randomize_phases                   = false;
     resolution_for_phase_randomization = -1.0;
     whiten_half_maps                   = true;
@@ -68,7 +69,7 @@ void LocalResolution::DoInteractiveUserInput( ) {
     delete my_input;
 
     my_current_job.Reset(18);
-    my_current_job.ManualSetArguments("tttttftiiiibfffbfbi", input_volume_one.ToUTF8( ).data( ), input_volume_two.ToUTF8( ).data( ), input_original_volume.ToUTF8( ).data( ), input_volume_mask.ToUTF8( ).data( ), output_volume.ToUTF8( ).data( ), pixel_size, my_symmetry.ToUTF8( ).data( ), first_slice, last_slice, sampling_step, box_size, use_fixed_threshold, fixed_threshold, threshold_snr, confidence_level, randomize_phases, resolution_for_phase_randomization, whiten_half_maps, padding_factor);
+    my_current_job.ManualSetArguments("tttttftiiiibfffbfbiff", input_volume_one.ToUTF8( ).data( ), input_volume_two.ToUTF8( ).data( ), input_original_volume.ToUTF8( ).data( ), input_volume_mask.ToUTF8( ).data( ), output_volume.ToUTF8( ).data( ), pixel_size, my_symmetry.ToUTF8( ).data( ), first_slice, last_slice, sampling_step, box_size, use_fixed_threshold, fixed_threshold, threshold_snr, confidence_level, randomize_phases, resolution_for_phase_randomization, whiten_half_maps, padding_factor);
 }
 
 bool LocalResolution::DoCalculation( ) {
@@ -91,6 +92,8 @@ bool LocalResolution::DoCalculation( ) {
     float    resolution_for_phase_randomization = my_current_job.arguments[16].ReturnFloatArgument( );
     bool     whiten_half_maps                   = my_current_job.arguments[17].ReturnBoolArgument( );
     int      padding_factor                     = my_current_job.arguments[18].ReturnIntegerArgument( );
+    float    molecular_mass_kDa					= my_current_job.arguments[19].ReturnFloatArgument( );
+    float	 outer_mask_radius					= my_current_job.arguments[20].ReturnFloatArgument( );my_current_job.arguments[19].ReturnIntegerArgument( );
 
     // Read volumes from disk
     ImageFile input_file_one(input_volume_one_fn.ToStdString( ), false);
@@ -128,7 +131,7 @@ bool LocalResolution::DoCalculation( ) {
 
     //
     LocalResolutionEstimator* estimator = new LocalResolutionEstimator( );
-    estimator->SetAllUserParameters(&input_volume_one, &input_volume_two, &input_original_volume, &input_volume_mask, first_slice, last_slice, sampling_step, pixel_size, box_size, threshold_snr, confidence_level, use_fixed_threshold, fixed_threshold, my_symmetry, whiten_half_maps, padding_factor);
+    estimator->SetAllUserParameters(&input_volume_one, &input_volume_two, &input_original_volume, &input_volume_mask, first_slice, last_slice, sampling_step, pixel_size, box_size, threshold_snr, confidence_level, use_fixed_threshold, fixed_threshold, my_symmetry, whiten_half_maps, padding_factor, molecular_mass_kDa, outer_mask_radius);
     estimator->EstimateLocalResolution(&local_resolution_volume);
 
     // Write output volume to disk

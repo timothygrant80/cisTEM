@@ -20,7 +20,9 @@ class LocalResolutionEstimator {
                               float    wanted_fixed_fsc_threshold,
                               wxString wanted_symmetry_symbol,
                               bool     wanted_whiten_half_maps,
-                              int      wanted_padding_factor);
+                              int      wanted_padding_factor,
+							  float    input_molecular_mass_kDa,
+							  float    input_outer_mask_radius);
 
     void EstimateLocalResolution(Image* local_resolution_volume);
 
@@ -47,6 +49,8 @@ class LocalResolutionEstimator {
 
     bool whiten_half_maps;
     int  padding_factor;
+    float molecular_mass_kDa;
+    float outer_mask_radius;
 
     // Internal
     Image box_one_no_padding;

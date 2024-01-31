@@ -1784,7 +1784,7 @@ void DisplayNotebookPanel::OnRightDown(wxMouseEvent& event) {
 }
 
 void DisplayNotebookPanel::SetImageSelected(long wanted_image, bool refresh) {
-    MyDebugAssertTrue((parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || parent_display_panel->ReturnCurrentPanel( )->picking_mode == IMAGES_PICK, "Trying to select images, but selection style flag not set");
+    MyDebugAssertTrue((parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || picking_mode == IMAGES_PICK, "Trying to select images, but selection style flag not set");
     MyDebugAssertTrue(wanted_image > 0 && wanted_image <= ReturnNumberofImages( ), "Trying to select an image that doesn't exist (%li)", wanted_image);
 
     if ( image_is_selected[wanted_image] == false )
@@ -1798,7 +1798,7 @@ void DisplayNotebookPanel::SetImageSelected(long wanted_image, bool refresh) {
 }
 
 void DisplayNotebookPanel::SetImageNotSelected(long wanted_image, bool refresh) {
-    MyDebugAssertTrue((parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || parent_display_panel->ReturnCurrentPanel( )->picking_mode == IMAGES_PICK, "Trying to select images, but selection style flag not set");
+    MyDebugAssertTrue((parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || picking_mode == IMAGES_PICK, "Trying to select images, but selection style flag not set");
     MyDebugAssertTrue(wanted_image > 0 && wanted_image <= ReturnNumberofImages( ), "Trying to select an image that doesn't exist (%li)", wanted_image);
 
     if ( image_is_selected[wanted_image] == true )
@@ -1812,7 +1812,7 @@ void DisplayNotebookPanel::SetImageNotSelected(long wanted_image, bool refresh) 
 }
 
 void DisplayNotebookPanel::ToggleImageSelected(long wanted_image, bool refresh) {
-    MyDebugAssertTrue((parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || parent_display_panel->ReturnCurrentPanel( )->picking_mode == IMAGES_PICK, "Trying to select images, but selection style flag not set");
+    MyDebugAssertTrue((parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || picking_mode == IMAGES_PICK, "Trying to select images, but selection style flag not set");
     MyDebugAssertTrue(wanted_image > 0 && wanted_image <= ReturnNumberofImages( ), "Trying to select an image that doesn't exist (%li)", wanted_image);
 
     if ( image_is_selected[wanted_image] == true ) {
@@ -1831,7 +1831,7 @@ void DisplayNotebookPanel::ToggleImageSelected(long wanted_image, bool refresh) 
 }
 
 void DisplayNotebookPanel::ClearSelection(bool refresh) {
-    MyDebugAssertTrue((parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || (parent_display_panel->ReturnCurrentPanel( )->picking_mode == IMAGES_PICK), "Trying to clear selection, but selection style flag not set");
+    MyDebugAssertTrue((parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || picking_mode == IMAGES_PICK, "Trying to clear selection, but selection style flag not set");
 
     for ( long mycounter = 0; mycounter < ReturnNumberofImages( ) + 1; mycounter++ ) {
         image_is_selected[mycounter] = false;
@@ -1940,13 +1940,13 @@ void DisplayNotebookPanel::OnLeftDown(wxMouseEvent& event) {
     else if ( x_pos < max_x && y_pos < max_y ) {
         // perform the relevant action..
         if ( current_image <= ReturnNumberofImages( ) ) {
-            if ( picking_mode == IMAGES_PICK ) {
+            if ( (parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || picking_mode == IMAGES_PICK ) {
                 ToggleImageSelected(current_image, false);
                 parent_display_panel->SetTabNameUnsaved( );
             }
 
             // We must be in coords mode
-            else {
+            else if ( parent_display_panel->is_from_display_program && picking_mode == COORDS_PICK ) {
                 coord_tracker->ToggleCoord(current_image, current_x_pos, current_y_pos);
                 parent_display_panel->SetTabNameUnsaved( );
             }
@@ -2752,19 +2752,14 @@ void DisplayNotebookPanel::OnPaint(wxPaintEvent& evt) {
             for ( int y = 0; y < images_in_y; y++ ) {
                 for ( int x = 0; x < images_in_x; x++ ) {
                     if ( ReturnNumberofImages( ) >= counter ) {
-                        if ( (parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || parent_display_panel->ReturnCurrentPanel( )->picking_mode == IMAGES_PICK ) {
+                        if ( (parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || (parent_display_panel->is_from_display_program && picking_mode == IMAGES_PICK) ) {
                             if ( image_is_selected[counter] == true ) {
                                 // draw a rectangle around the image..
-
-                                if ( single_image ) {
-                                    dc.DrawRoundedRectangle(0, 0, window_x_size, window_y_size, -.5);
-                                }
-                                else
-                                    dc.DrawRoundedRectangle(x * current_x_size, y * current_y_size, current_x_size, current_y_size, -.5);
+                                dc.DrawRoundedRectangle(x * current_x_size, y * current_y_size, current_x_size, current_y_size, -.5);
                             }
                         }
                         // Otherwise, we're picking coords
-                        else {
+                        else if ( parent_display_panel->is_from_display_program && parent_display_panel->ReturnCurrentPanel( )->picking_mode == COORDS_PICK ) {
                             // find all the coordinates for this image..
                             for ( coord_counter = 0; coord_counter < coord_tracker->number_of_coords; coord_counter++ ) {
                                 if ( coord_tracker->coords[coord_counter].image_number == counter ) {
@@ -3793,34 +3788,43 @@ void DisplayManualDialog::OnHighChange(wxCommandEvent& WXUNUSED(event)) {
 }
 
 void DisplayPanel::SetTabNameUnsaved( ) {
-    ReturnCurrentPanel( )->txt_is_saved = false;
-    RefreshTabName( );
+    // Add this because we only want to update tab names if there are tabs
+    if ( ! ((style_flags & NO_NOTEBOOK) == NO_NOTEBOOK) ) {
+        ReturnCurrentPanel( )->txt_is_saved = false;
+        RefreshTabName( );
+    }
 }
 
 void DisplayPanel::SetTabNameSaved( ) {
-    ReturnCurrentPanel( )->txt_is_saved = true;
-    RefreshTabName( );
+    // Add this because we only want to update tab names if there are tabs
+    if ( ! ((style_flags & NO_NOTEBOOK) == NO_NOTEBOOK) ) {
+        ReturnCurrentPanel( )->txt_is_saved = true;
+        RefreshTabName( );
+    }
 }
 
 void DisplayPanel::RefreshTabName( ) {
-    int selected_tab = my_notebook->GetSelection( );
+    // Add this because we only want to update tab names if there are tabs
+    if ( ! ((style_flags & NO_NOTEBOOK) == NO_NOTEBOOK) ) {
+        int selected_tab = my_notebook->GetSelection( );
 
-    wxString tab_text;
+        wxString tab_text;
 
-    if ( ! ReturnCurrentPanel( )->have_txt_filename && ! ReturnCurrentPanel( )->txt_is_saved ) {
-        tab_text = wxT("*") + ReturnCurrentPanel( )->short_image_filename;
+        if ( ! ReturnCurrentPanel( )->have_txt_filename && ! ReturnCurrentPanel( )->txt_is_saved ) {
+            tab_text = wxT("*") + ReturnCurrentPanel( )->short_image_filename;
+        }
+        else
+            tab_text = ReturnCurrentPanel( )->short_image_filename;
+
+        if ( ReturnCurrentPanel( )->have_txt_filename ) {
+            tab_text += wxT(" : ");
+            if ( ! ReturnCurrentPanel( )->txt_is_saved )
+                tab_text += wxT("*");
+            tab_text += ReturnCurrentPanel( )->short_txt_filename;
+        }
+
+        my_notebook->SetPageText(selected_tab, tab_text);
     }
-    else
-        tab_text = ReturnCurrentPanel( )->short_image_filename;
-
-    if ( ReturnCurrentPanel( )->have_txt_filename ) {
-        tab_text += wxT(" : ");
-        if ( ! ReturnCurrentPanel( )->txt_is_saved )
-            tab_text += wxT("*");
-        tab_text += ReturnCurrentPanel( )->short_txt_filename;
-    }
-
-    my_notebook->SetPageText(selected_tab, tab_text);
 }
 
 CoordTracker::CoordTracker(wxWindow* parent) {

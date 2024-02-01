@@ -46,7 +46,7 @@ ENV LD_PRELOAD=/opt/intel/libfakeIntel.so
 RUN wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | gpg --dearmor | sudo tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null
 RUN echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | sudo tee /etc/apt/sources.list.d/oneAPI.list
 RUN apt-get update && apt-get install -y intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic-2021.4.0 intel-oneapi-mkl-2021.4.0 intel-oneapi-mkl-devel-2021.4.0 \
-    && cd /opt/intel/oneapi/ && rm -rf debugger/ conda_channel/ mkl/latest/lib/intel64/*_sycl* \
+    && cd /opt/intel/oneapi/ && rm -rf debugger/ conda_channel/ mkl/latest/lib/intel64/*_sycl* compiler/2021.4.0/linux/lib/oclfpga \
     && rm -rf /var/lib/apt/lists/* 
 
 
@@ -63,6 +63,7 @@ RUN wget -q https://github.com/wxWidgets/wxWidgets/releases/download/v3.0.5/wxWi
 
 # Here for the record if you want to build and link static binaries to avoid the cointainerized distribution
 # CXXFLAGS=-fPIC CFLAGS=-fPIC were specified for the static configure line, but I'm not sure that makes any sense?
+# NOTE: these are not installed until the top layer of the container is build.
 RUN . /opt/intel/oneapi/setvars.sh && \
     cd /opt/WX/intel-static/wxWidgets-3.0.5 && \
     CXX=icpc CC=icc ./configure --disable-precomp-headers --prefix=/opt/WX/intel-static --with-libnotify=no --disable-shared \
@@ -87,18 +88,15 @@ RUN echo "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-14 main" | tee -a 
     cd /usr/bin && ln -s clang-format-14 clang-format \
     && rm -rf /var/lib/apt/lists/*
 
-# Install pytorch
-RUN cd /tmp && wget https://download.pytorch.org/libtorch/cu113/libtorch-cxx11-abi-shared-with-deps-1.11.0%2Bcu113.zip && \
-    unzip libtorch-cxx11-abi-shared-with-deps-1.11.0+cu113.zip && \
-    rm libtorch-cxx11-abi-shared-with-deps-1.11.0+cu113.zip && \
-    mv libtorch /opt
+# Install pytorch - now optional in the top layer container
 
-# Include the lib path in LD_RUN_PATH so on linking, the correct path is known 
-ENV LD_RUN_PATH=/opt/libtorch/lib:${LD_RUN_PATH}
+
 
 # Install cuda (when the web is live)
-ARG CUDA_VER=11.7.0
-ARG DRIVER_VER=515.43.04
+# NOTE: the MINIMUM driver verions is >=525.60.13
+ARG CUDA_VER=12.3.2
+ARG DRIVER_VER=545.23.08
+
 # Install cuda (when the web is live)
 RUN cd /tmp && wget https://developer.download.nvidia.com/compute/cuda/${CUDA_VER}/local_installers/cuda_${CUDA_VER}_${DRIVER_VER}_linux.run && \
     sh cuda_${CUDA_VER}_${DRIVER_VER}_linux.run --silent --toolkit && \

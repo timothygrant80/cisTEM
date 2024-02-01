@@ -3,13 +3,13 @@ FROM ubuntu:20.04
 # /groups/himesb/.config/Code\ -\ Insiders/User/globalStorage/ms-vscode-remote.remote-containers/cli-bin/code-insiders build --image-name bhimesbhimes/cistem_build_env:latest ./.devcontainer_build
 
 # For compiling wxWidgets
-ARG n_threads=12
+ARG n_threads=16
 ARG DEBIAN_FRONTEND=noninteractive
 ARG TZ=America/New_York
 ARG GCC_VER=11
 
-RUN apt-get update && apt-get -y install tzdata
-
+RUN apt-get update && apt-get -y install tzdata && \
+    ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
 
 RUN apt-get install -y locales && rm -rf /var/lib/apt/lists/* \
     && localedef -i en_US -c -f UTF-8 -A /usr/share/locale/locale.alias en_US.UTF-8

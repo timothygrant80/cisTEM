@@ -59,12 +59,8 @@ RUN cd /tmp && wget https://github.com/wxFormBuilder/wxFormBuilder/releases/down
 RUN echo "build npm" && if [[ "x${build_npm}" == "xtrue" ]] ; then /tmp/install_node_16.sh ; fi
 
 # TODO: this flag doesn't exist in the build script. Relocating from the base image to the top image
-RUN if [[ "x${build_pytorch}" == "xtrue" ]]; then \
-    cd /tmp && wget https://download.pytorch.org/libtorch/cu113/libtorch-cxx11-abi-shared-with-deps-1.11.0%2Bcu113.zip && \
-    unzip libtorch-cxx11-abi-shared-with-deps-1.11.0+cu113.zip && \
-    rm libtorch-cxx11-abi-shared-with-deps-1.11.0+cu113.zip && \
-    mv libtorch /opt \
-    fi
+RUN if [[ "x${build_pytorch}" == "xtrue" ]]; then cd /tmp && wget https://download.pytorch.org/libtorch/cu113/libtorch-cxx11-abi-shared-with-deps-1.11.0%2Bcu113.zip && unzip libtorch-cxx11-abi-shared-with-deps-1.11.0+cu113.zip && rm libtorch-cxx11-abi-shared-with-deps-1.11.0+cu113.zip && mv libtorch /opt ; fi
+
 
 # Include the lib path in LD_RUN_PATH so on linking, the correct path is known 
 # TODO: could this be avoided as the installation? Will there be any problems if used without the actual install

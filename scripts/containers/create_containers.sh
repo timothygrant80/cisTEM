@@ -85,7 +85,8 @@ build_type="static"
 build_compiler="icpc"
 build_wx_version="stable"
 build_npm="false"
-build_ref_images="false"
+build_ref_images="true"
+build_pytorch="false"
 
 
 while [[ $# -gt 0 ]]; do
@@ -130,6 +131,10 @@ while [[ $# -gt 0 ]]; do
         ;;
     --ref-images)
         build_ref_images="true"
+        shift # past argument
+        ;;
+    --pytorch)
+        build_pytorch="true"
         shift # past argument
         ;;
     -*|--*)
@@ -195,6 +200,7 @@ else
     echo "    build type: ${build_type}"
     echo "    npm: ${build_npm}"
     echo "    ref-images: ${build_ref_images}"
+    echo "    pytorch: ${build_pytorch}"
     echo "    container version: ${top_container_version}"
     echo "    container base version: ${base_container_version}"
     echo "    container repository: ${container_repository}"
@@ -230,4 +236,5 @@ docker build ${skip_cache} --tag ${container_repository}:${prefix}${container_ve
     --build-arg build_wx_version=${build_wx_version} \
     --build-arg build_npm=${build_npm} \
     --build-arg build_ref_images=${build_ref_images} \
+    --build-arg build_pytorch=${build_pytorch} \
     ${path_to_dockerfile}

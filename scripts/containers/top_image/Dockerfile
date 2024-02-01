@@ -58,6 +58,14 @@ RUN cd /tmp && wget https://github.com/wxFormBuilder/wxFormBuilder/releases/down
 # # Install Node 16
 RUN echo "build npm" && if [[ "x${build_npm}" == "xtrue" ]] ; then /tmp/install_node_16.sh ; fi
 
+# TODO: this flag doesn't exist in the build script. Relocating from the base image to the top image
+RUN if [[ "x${build_pytorch}" == "xtrue" ]]; then cd /tmp && wget https://download.pytorch.org/libtorch/cu113/libtorch-cxx11-abi-shared-with-deps-1.11.0%2Bcu113.zip && unzip libtorch-cxx11-abi-shared-with-deps-1.11.0+cu113.zip && rm libtorch-cxx11-abi-shared-with-deps-1.11.0+cu113.zip && mv libtorch /opt ; fi
+
+
+# Include the lib path in LD_RUN_PATH so on linking, the correct path is known 
+# TODO: could this be avoided as the installation? Will there be any problems if used without the actual install
+ENV LD_RUN_PATH=/opt/libtorch/lib:${LD_RUN_PATH}
+
 # TODO: if adding dynamic linking for the cuda libs, we can save a bunch of space in the image by removing these large static libs
 # Use the basename bit to ensure no rm -rf foibles with root dir in empyt string case
 # RUN ls /usr/local/cuda/lib64/lib*_static.a | grep -v cufft_static.a | while read a; do rm -rf /usr/local/cuda/lib64/$(basename $a); done && \

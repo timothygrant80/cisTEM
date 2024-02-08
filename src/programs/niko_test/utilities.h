@@ -4,10 +4,11 @@
 #include <cmath>
 #include <algorithm>
 #include <dlib/dlib/matrix.h>
+#include <dlib/dlib/statistics.h>
 // #include <numeric>
 // #include <iostream>
-// #include "movieframespline.h"
-#include "movieframespline_quad.h"
+#include "movieframespline.h"
+// #include "movieframespline_quad.h"
 
 using namespace std;
 using namespace cistem;
@@ -136,9 +137,33 @@ std::vector<int> findOutlierUpperBoundIndices(const std::vector<double>& data) {
     return outlierIndices;
 }
 
+std::vector<column_vector> PCAReduction(const std::vector<column_vector>& data, double target_dim) {
+    vector_normalizer_pca<column_vector> pca, pcaa;
+    pca.train(data, 0.99);
+    // wxPrintf("size data.nr eps %li %li %f\n", data[0].size( ), data[0].nr( ), target_dim / data[0].nr( ));
+    // wxPrintf("size data r and c %li %li\n", data[0].nr( ), data[0].nc( ));
+
+    // std::vector<column_vector> new_data;
+    std::vector<column_vector> output_data;
+    wxPrintf("datasize %li \n", data.size( ));
+    // new_data.reserve(data.size( ));
+    output_data.reserve(data.size( ));
+    for ( size_t i = 0; i < data.size( ); ++i ) {
+        // new_data.emplace_back(pca(data[i]));
+        output_data.emplace_back(rowm(pca(data[i]), range(0, target_dim - 1)));
+    }
+
+    // wxPrintf("std size %li\n", pca.std_devs( ).size( ));
+    // wxPrintf("std %f\n", pca.std_devs( )(0));
+    // wxPrintf("mean %f\n", pca.means( )(0));
+    // wxPrintf("pca_matrix size %li\n", pca.pca_matrix( ).size( ));
+
+    return output_data;
+}
+
 //==================================================== functions ====================================================================
 
-std::vector<int> FixOutliers(matrix<double>* patch_peaksx, matrix<double>* patch_peaksy, matrix<double> patch_locations_x, matrix<double> patch_locations_y, int patch_no_x, int patch_no_y, int step_size_x, int step_size_y, int image_no) {
+std::vector<int> FixOutliers(matrix<double>* patch_peaksx, matrix<double>* patch_peaksy, matrix<double> patch_locations_x, matrix<double> patch_locations_y, int patch_no_x, int patch_no_y, int step_size_x, int step_size_y, int image_no, bool write_out_the_outliers, std::string output_path, std::string file_pref) {
     int patch_no = patch_no_x * patch_no_y;
     // /*  this section fix the outliers using nearest neighbor ---------------------------------------------------
     wxPrintf("outlier fix1\n");
@@ -184,6 +209,17 @@ std::vector<int> FixOutliers(matrix<double>* patch_peaksx, matrix<double>* patch
         wxPrintf("%d\t", missed_index[i]);
     }
     wxPrintf("\n");
+
+    if ( write_out_the_outliers ) {
+        float           outlier;
+        NumericTextFile outputfile(output_path + "outliers.txt", OPEN_TO_WRITE, 1);
+        for ( int i = 0; i < missed_index.size( ); i++ ) {
+            // wxPrintf("%d\t", missed_index[i]);
+            outlier = missed_index[i];
+            outputfile.WriteLine(&outlier);
+        }
+        outputfile.Close( );
+    }
 
     for ( int i = 0; i < missed_index.size( ); i++ ) {
         int c = missed_index[i] % patch_no_x;
@@ -251,13 +287,97 @@ std::vector<int> FixOutliers(matrix<double>* patch_peaksx, matrix<double>* patch
     return missed_index;
 }
 
+// void CalculateDiffSquare(Image** ref_stack, Image** patch_stack, float unitless_bfactor, int patch_no, int image_no, bool write_out_the_map, std::string output_path, std::string file_pref) {
+float CalculateDiffSquare(Image** patch_stack, int patch_no, int image_no, bool write_out_the_map, std::string output_path, std::string file_pref) {
+
+    int    patch_dim   = patch_stack[0][0].logical_x_dimension;
+    int    central_pix = (patch_stack[0][0].padding_jump_value + patch_dim) * patch_dim / 2 + patch_dim / 2;
+    Image  sum_of_images, sum_of_images_minus_current, diff_image, diff_image_copy;
+    Peak   peak;
+    int    max_thread = 8;
+    float *peak_sum, *pixmult;
+    peak_sum                  = new float[patch_no];
+    pixmult                   = new float[patch_no];
+    float           total_Sum = 0.0;
+    NumericTextFile outputpeaks(wxString::Format("%s%s_peaks.txt", output_path, file_pref).ToStdString( ), OPEN_TO_WRITE, 3);
+    float           temp_array[3];
+    wxPrintf("calculating diff square\n");
+#pragma omp parallel for num_threads(max_thread) private(sum_of_images, sum_of_images_minus_current, diff_image, diff_image_copy, temp_array)
+    for ( int patch_index = 0; patch_index < patch_no; patch_index++ ) {
+        sum_of_images.Allocate(patch_dim, patch_dim, false);
+        sum_of_images.SetToConstant(0.0);
+        wxPrintf("patch %d\n", patch_index);
+        peak_sum[patch_index] = 0;
+        pixmult[patch_index]  = 0;
+
+        for ( int image_counter = 0; image_counter < image_no; image_counter++ ) {
+            sum_of_images.AddImage(&patch_stack[patch_index][image_counter]);
+            if ( write_out_the_map ) {
+                patch_stack[patch_index][image_counter].QuickAndDirtyWriteSlice(wxString::Format("%s%s_%02ishifted.mrc", output_path, file_pref, patch_index).ToStdString( ), image_counter + 1);
+            }
+        }
+        for ( int image_counter = 0; image_counter < image_no; image_counter++ ) {
+            sum_of_images_minus_current.Allocate(sum_of_images.logical_x_dimension, sum_of_images.logical_y_dimension, false);
+            sum_of_images_minus_current.CopyFrom(&sum_of_images);
+            sum_of_images_minus_current.SubtractImage(&patch_stack[patch_index][image_counter]);
+            sum_of_images_minus_current.DivideByConstant(image_no - 1);
+            if ( write_out_the_map ) {
+                sum_of_images_minus_current.QuickAndDirtyWriteSlice(wxString::Format("%s%s_%02i.mrc", output_path, file_pref, patch_index).ToStdString( ), image_counter + 1);
+            }
+
+            diff_image.Allocate(sum_of_images.logical_x_dimension, sum_of_images.logical_y_dimension, false);
+            diff_image_copy.Allocate(sum_of_images.logical_x_dimension, sum_of_images.logical_y_dimension, false);
+            diff_image.CopyFrom(&sum_of_images_minus_current);
+            diff_image.SubtractImage(&patch_stack[patch_index][image_counter]);
+            diff_image_copy.CopyFrom(&diff_image);
+            diff_image.CalculateCrossCorrelationImageWith(&diff_image_copy); //both in fourier space
+            peak_sum[patch_index] += diff_image.real_values[central_pix];
+            // wxPrintf("here?");
+            // diff_image.BackwardFFT( );
+
+            // diff_image.ForwardFFT( );
+            // diff_image_copy.ForwardFFT( );
+            // diff_image.CalculateCrossCorrelationImageWith(&diff_image_copy); //both in fourier space
+
+            if ( write_out_the_map ) {
+                diff_image.QuickAndDirtyWriteSlice(wxString::Format("%s%s_%02iCCmap.mrc", output_path, file_pref, patch_index).ToStdString( ), image_counter + 1);
+            }
+            // peak = sum_of_images_minus_current.FindPeakAtOriginFast2D();
+            // peak = diff_image.FindPeakWithIntegerCoordinates( );
+            // wxPrintf("peak value and pixel %f %f\n", peak.value, diff_image.real_values[central_pix]);
+            // peak_sum[patch_index] += peak.value; // * patch_dim * patch_dim;
+            // peak_sum[patch_index] += diff_image.real_values[central_pix];
+            diff_image_copy.BackwardFFT( );
+            pixmult[patch_index] += diff_image_copy.ReturnPixelWiseProduct(diff_image_copy);
+            diff_image.Deallocate( );
+            diff_image_copy.Deallocate( );
+            sum_of_images_minus_current.Deallocate( );
+            // wxPrintf("peak: x y value %g, %g, %g\n", peak.x, peak.y, peak.value);
+            // wxPrintf("correlatoin and scaled peak.value %f %g\n", cc_value, peak.value * patch_dim * patch_dim);
+        }
+        temp_array[0] = patch_index;
+        temp_array[1] = peak_sum[patch_index];
+        temp_array[2] = pixmult[patch_index];
+        outputpeaks.WriteLine(temp_array);
+        // total_Sum += peak_sum[patch_index];
+        total_Sum += pixmult[patch_index];
+        // wxPrintf("here?1\n");
+        // tmpimg.Deallocate( );
+        sum_of_images.Deallocate( );
+    }
+    outputpeaks.Close( );
+    total_Sum = total_Sum * patch_dim * patch_dim;
+    wxPrintf("calculating diff square done\n");
+    delete[] peak_sum;
+    return total_Sum;
+};
+
 void Generate_CoeffSpline(bicubicsplinestack ccmap_stack, Image** patch_stack, float unitless_bfactor, int patch_no, int image_no, bool write_out_the_ccmap, std::string output_path, std::string file_pref) {
     // void Generate_CoeffSpline(Image** patch_stack, float unitless_bfactor, int patch_no, int image_no, bool write_out_the_ccmap, std::string output_path, std::string file_pref) {
 
-    int            quater_patch_dim = ccmap_stack.m;
-    int            patch_dim        = patch_stack[0][0].logical_x_dimension; //based on patches are square
-    matrix<double> tmp_z_on_knot;
-    Image          sum_of_images, sum_of_images_minus_current, tmpimg, img_bfactor;
+    int   quater_patch_dim = ccmap_stack.m;
+    int   patch_dim        = patch_stack[0][0].logical_x_dimension; //based on patches are square
+    Image sum_of_images, sum_of_images_minus_current, tmpimg, img_bfactor;
 
     // tmpimg.Allocate(quater_patch_dim, quater_patch_dim, false);
     // sum_of_images.Allocate(patch_dim, patch_dim, false);
@@ -311,7 +431,9 @@ void Generate_CoeffSpline(bicubicsplinestack ccmap_stack, Image** patch_stack, f
                 sum_of_images_minus_current.QuickAndDirtyWriteSlice(wxString::Format("%s%s_%02i.mrc", output_path, file_pref, patch_index).ToStdString( ), image_counter + 1);
             }
             sum_of_images_minus_current.ClipInto(&tmpimg, 0);
-            tmpimg.QuickAndDirtyWriteSlice(wxString::Format("%s%s_%02icroped.mrc", output_path, file_pref, patch_index).ToStdString( ), image_counter + 1);
+            if ( write_out_the_ccmap ) {
+                tmpimg.QuickAndDirtyWriteSlice(wxString::Format("%s%s_%02icroped.mrc", output_path, file_pref, patch_index).ToStdString( ), image_counter + 1);
+            }
             // wxPrintf("img %d\n", image_counter);
             // tmpimg.BackwardFFT( );
             // wxPrintf("check the real values\n");
@@ -426,4 +548,74 @@ matrix<double> read_joins(std::string join_file_pref, std::string output_path, i
     ijoinfile.close( );
     wxPrintf("finish reading -----\n");
     return Join1d;
+}
+
+void patch_trimming_basedon_locations(Image* input_stack, Image** patch_stack, int number_of_images, int patch_num_x, int patch_num_y, int output_stack_box_size, std::string outpath, std::string file_pref, int max_threads, bool mean_padding, bool write_trimmed_files, float** patch_locations) {
+
+    int number_of_patchgroups = patch_num_x * patch_num_y;
+
+    MRCFile* patch = new MRCFile[number_of_patchgroups];
+
+    int image_dim_x;
+    int image_dim_y;
+
+    image_dim_x = input_stack[0].logical_x_dimension;
+    image_dim_y = input_stack[0].logical_y_dimension;
+
+    if ( ! input_stack[0].is_in_real_space ) {
+        wxPrintf("do backward fft\n");
+        for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
+            input_stack[image_counter].BackwardFFT( );
+        }
+    }
+
+    //write a if statement to judge if the number of coordinates in the coord file equals to image_no
+
+    int step_size_x   = myroundint(float(image_dim_x) / float(patch_num_x) / 2); // check whether myroundint is correct
+    int step_size_y   = myroundint(float(image_dim_y) / float(patch_num_y) / 2);
+    int patch_counter = 0;
+
+    for ( int patch_y_ind = 0; patch_y_ind < patch_num_y; patch_y_ind++ ) {
+        for ( int patch_x_ind = 0; patch_x_ind < patch_num_x; patch_x_ind++ ) {
+            // patch[patch_counter].OpenFile(wxString::Format("%s%04i.mrc", outpath, patch_counter).ToStdString( ), true);
+            if ( write_trimmed_files ) {
+                patch[patch_counter].OpenFile(wxString::Format("%s%s_%04i.mrc", outpath, file_pref, patch_counter).ToStdString( ), true);
+            }
+            patch_counter += 1;
+        }
+    }
+
+    wxPrintf("number of patch groups: %i\n\n", number_of_patchgroups);
+    // for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
+#pragma omp parallel for default(shared) num_threads(max_threads)
+    for ( int patch_counter = 0; patch_counter < number_of_patchgroups; patch_counter++ ) {
+        wxPrintf("current patch: %i\n", patch_counter);
+        for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
+            float image_mean;
+            if ( mean_padding ) {
+                // wxPrintf(" yest mean padding");
+                image_mean = input_stack[image_counter].ReturnAverageOfRealValues( );
+            }
+            else {
+                image_mean = 0.0;
+            }
+
+            int my_x = patch_locations[patch_counter][0];
+            int my_y = patch_locations[patch_counter][1];
+
+            patch_stack[patch_counter][image_counter].Allocate(output_stack_box_size, output_stack_box_size, 1, true);
+
+            input_stack[image_counter].ClipInto(&patch_stack[patch_counter][image_counter], image_mean, false, 1.0, int(my_x), int(my_y), 0);
+            if ( write_trimmed_files ) {
+                patch_stack[patch_counter][image_counter].WriteSlice(&patch[patch_counter], image_counter + 1);
+            }
+        }
+        patch[patch_counter].CloseFile( );
+    }
+
+    // delete input_coos_file;
+    delete[] patch;
+    // delete[] input_stack_real_space;
+    wxPrintf("Done Patch Trimming\n");
+    // return patch_stack;
 }

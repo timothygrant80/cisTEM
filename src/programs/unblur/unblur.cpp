@@ -186,6 +186,32 @@ double minfunc3dSplineObjectxy(matrix<double> join_1d) {
     return result;
 }
 
+double minfunc3dSplineObjectxyControlPoints(matrix<double> control_1d) {
+    double         result, result1, result2;
+    int            len, halflen;
+    matrix<double> tmp;
+    len       = control_1d.size( );
+    halflen   = len / 2;
+    int count = 0;
+    // cout << range(0, halflen) << endl;
+    // cout << range(halflen, len - 1) << endl;
+    tmp = colm(control_1d, range(0, halflen - 1));
+    tmp.set_size(halflen, 1);
+    for ( int i = 0; i < halflen; i++ ) {
+        tmp(i) = control_1d(count);
+        count++;
+    }
+    // wxPrintf("before update\n");
+    result1 = Spline3dx.OptimizationKnotObejctFromControlPoints(tmp);
+    for ( int i = 0; i < halflen; i++ ) {
+        tmp(i) = control_1d(count);
+        count++;
+    }
+    result2 = Spline3dy.OptimizationKnotObejctFromControlPoints(tmp);
+    result  = result1 + result2;
+    return result;
+}
+
 double minfunc3dSplineCCLossObject(matrix<double> join_1d) {
     double          loss;
     matrix<double>* shiftsx;
@@ -233,19 +259,70 @@ double minfunc3dSplineCCLossObject(matrix<double> join_1d) {
     return loss;
 }
 
+double minfunc3dSplineCCLossObjectControlPoints(matrix<double> control_1d) {
+    double          loss;
+    matrix<double>* shiftsx;
+    matrix<double>* shiftsy;
+    int             len, halflen;
+    matrix<double>  control_on_spline_for_x, control_on_spline_for_y;
+    len       = control_1d.size( );
+    halflen   = len / 2;
+    int count = 0;
+
+    // pass some params:
+    int image_no    = Spline3dx.frame_no;
+    int patch_x_num = Spline3dx.Mapping_Mat_Col_no;
+    int patch_y_num = Spline3dx.Mapping_Mat_Row_no;
+
+    int ccmap_patch_dim      = ccmap_stack.m;
+    int half_ccmap_patch_dim = ccmap_patch_dim / 2;
+
+    // tmp = colm(join_1d, range(0, halflen - 1));
+    control_on_spline_for_x.set_size(halflen, 1);
+    for ( int i = 0; i < halflen; i++ ) {
+        control_on_spline_for_x(i) = control_1d(count);
+        count++;
+    }
+
+    // shiftsx = Spline3dx.KnotToInterp(knot_on_spline_for_x);
+    shiftsx = Spline3dx.ControlToInterp(control_on_spline_for_x);
+
+    control_on_spline_for_y.set_size(halflen, 1);
+    for ( int i = 0; i < halflen; i++ ) {
+        control_on_spline_for_y(i) = control_1d(count);
+        count++;
+    }
+    shiftsy = Spline3dy.ControlToInterp(control_on_spline_for_y);
+
+    loss = 0;
+    for ( int img_ind = 0; img_ind < image_no; img_ind++ ) {
+        for ( int i = 0; i < patch_y_num; i++ ) {
+            for ( int j = 0; j < patch_x_num; j++ ) {
+                int patch_ind = i * patch_x_num + j;
+                loss -= ccmap_stack.spline_stack[patch_ind * image_no + img_ind].ApplySplineFunc(shiftsx[img_ind](i, j) + half_ccmap_patch_dim, shiftsy[img_ind](i, j) + half_ccmap_patch_dim);
+            }
+        }
+    }
+    loss = loss;
+    return loss;
+}
+
 void    unblur_refine_alignment(Image* input_stack, int number_of_images, int max_iterations, float unitless_bfactor, bool mask_central_cross, int width_of_vertical_line, int width_of_horizontal_line, float inner_radius_for_peak_search, float outer_radius_for_peak_search, float max_shift_convergence_threshold, float pixel_size, int number_of_frames_for_running_average, int savitzy_golay_window_size, int max_threads, float* x_shifts, float* y_shifts, StopWatch& profile_timing_refinement_method, bool reverse_shift);
 Image** patch_trimming_independent(Image* input_stack, int number_of_images, int patch_num_x, int patch_num_y, int output_stack_box_size, wxString outpath, bool use_coord_file = false, wxString coordinates_filename = " ");
-void    patch_trimming(Image* input_stack, Image** patch_stack, int number_of_images, int patch_num_x, int patch_num_y, int output_stack_box_size, wxString outpath, int max_threads, bool use_coord_file, wxString coordinates_filename = " ");
+void    patch_trimming(Image* input_stack, Image** patch_stack, int number_of_images, int patch_num_x, int patch_num_y, int output_stack_box_size, std::string outpath, std::string file_pref, int max_threads, bool mean_padding, bool write_trimmed_files, bool use_coord_file, wxString coordinates_filename = " ");
 void    split_and_update(matrix<double> Join1d, int joinsize);
 void    apply_fitting_quadratic(Image* input_stack, int number_of_images, param_vector_quadratic params_x, param_vector_quadratic params_y);
 void    apply_fitting_linear(Image* input_stack, int number_of_images, param_vector_linear params_x, param_vector_linear params_y);
-void    apply_fitting_quadratic_sup(Image* input_stack, Image* super_res_stack, float output_binning_factor, int number_of_images, param_vector_quadratic params_x, param_vector_quadratic params_y);
+void    apply_fitting_quadratic_sup(Image* super_res_stack, float output_binning_factor, int number_of_images, param_vector_quadratic params_x, param_vector_quadratic params_y, int max_threads);
 void    apply_fitting_linear_sup(Image* input_stack, Image* super_res_stack, float output_binning_factor, int number_of_images, param_vector_linear params_x, param_vector_linear params_y);
 // void    apply_fitting_spline_sup(Image* input_stack, Image* super_res_stack, float output_binning_factor, int number_of_images, column_vector Join1d, int max_threads);
 // void apply_fitting_spline_sup(Image* input_stack, Image* super_res_stack, float output_binning_factor, int number_of_images, column_vector Join1d_R0, column_vector Join1d_R1, int max_threads);
 void apply_fitting_spline_sup(int output_x_size, int output_y_size, Image* super_res_stack, float output_binning_factor, int number_of_images, column_vector Join1d_R0, column_vector Join1d_R1, int max_threads);
+void apply_fitting_spline_sup_control(int output_x_size, int output_y_size, Image* super_res_stack, float output_binning_factor, int number_of_images, column_vector Control1d_R0, column_vector Control1d_R1, int max_threads);
 void dosefilter(Image* image_stack, int first_frame, int last_frame, float* dose_filter_sum_of_squares, ElectronDose* my_electron_dose, StopWatch profile_timing, float exposure_per_frame, float pre_exposure_amount, int max_threads);
 void write_shifts(int patch_no_x, int patch_no_y, int image_no, std::string output_path, std::string shift_file_prefx, std::string shift_file_prefy);
+void write_quad_shifts(int image_no, int patch_no_x, int patch_no_y, param_vector_quadratic params_x, param_vector_quadratic params_y, float** patch_locations, std::string output_path, std::string shift_file_prefx, std::string shift_file_prefy);
+void write_linear_shifts(int image_no, int patch_no_x, int patch_no_y, param_vector_linear params_x, param_vector_linear params_y, float** patch_locations, std::string output_path, std::string shift_file_prefx, std::string shift_file_prefy);
 
 IMPLEMENT_APP(UnBlurApp)
 
@@ -292,6 +369,7 @@ void UnBlurApp::DoInteractiveUserInput( ) {
     int      max_threads;
     int      eer_frames_per_image = 0;
     int      eer_super_res_factor = 1;
+    wxString MotCorpath           = "";
 
     bool save_aligned_frames;
 
@@ -420,6 +498,7 @@ void UnBlurApp::DoInteractiveUserInput( ) {
 #else
     max_threads = 1;
 #endif
+    MotCorpath = my_input->GetStringFromUser("MotCorLogPath", "MotCorLotPath", "/data/outpatch/");
 
     delete my_input;
 
@@ -429,7 +508,7 @@ void UnBlurApp::DoInteractiveUserInput( ) {
     bool        write_out_small_sum_image    = false;
     std::string small_sum_image_filename     = "/dev/null";
 
-    my_current_job.ManualSetArguments("ttfffbbfifbiifffbsbsfbfffbtbtiiiibttiisbiii", input_filename.c_str( ),
+    my_current_job.ManualSetArguments("ttfffbbfifbiifffbsbsfbfffbtbtiiiibttiisbiiis", input_filename.c_str( ),
                                       output_filename.c_str( ),
                                       original_pixel_size,
                                       minimum_shift_in_angstroms,
@@ -471,7 +550,8 @@ void UnBlurApp::DoInteractiveUserInput( ) {
                                       patchcorrection,
                                       patch_num_x,
                                       patch_num_y,
-                                      distortion_model);
+                                      distortion_model,
+                                      MotCorpath.ToUTF8( ).data( ));
 }
 
 // overide the do calculation method which will be what is actually run..
@@ -536,6 +616,7 @@ bool UnBlurApp::DoCalculation( ) {
     int         patch_num_x                          = my_current_job.arguments[40].ReturnIntegerArgument( );
     int         patch_num_y                          = my_current_job.arguments[41].ReturnIntegerArgument( );
     int         distortion_model                     = my_current_job.arguments[42].ReturnIntegerArgument( );
+    wxString    MotCorpath                           = my_current_job.arguments[43].ReturnStringArgument( );
 
     if ( is_running_locally == false )
         max_threads = number_of_threads_requested_on_command_line; // OVERRIDE FOR THE GUI, AS IT HAS TO BE SET ON THE COMMAND LINE...
@@ -602,6 +683,11 @@ bool UnBlurApp::DoCalculation( ) {
     Image* running_average_stack; // we will allocate this later if necessary;
     if ( patch_track ) {
         raw_image_stack = new Image[number_of_input_images];
+    }
+    Image* counting_image_stack;
+    Image* unbinned_counting_stack;
+    if ( patch_track ) {
+        counting_image_stack = new Image[number_of_input_images];
     }
 
     Image gain_image;
@@ -690,7 +776,13 @@ bool UnBlurApp::DoCalculation( ) {
     first_frame_to_preprocess = 1;
     last_frame_to_preprocess  = max_threads;
     total_processed           = 0;
-
+    // MRCFile rawcountingfile;
+    // rawcountingfile.OpenFile(wxString::Format(outputpath + "rawCountingStack.mrc").ToStdString( ), true);
+    // MRCFile rawcountingfilebeforeresize;
+    // rawcountingfilebeforeresize.OpenFile(wxString::Format(outputpath + "rawCountingStackbeforeresize.mrc").ToStdString( ), true);
+    // MRCFile rawcountingfileafterresize;
+    // rawcountingfileafterresize.OpenFile(wxString::Format(outputpath + "rawCountingStackafterresize.mrc").ToStdString( ), true);
+    // float* stack_mean = new float[number_of_input_images];
     for ( preprocess_block_counter = 0; preprocess_block_counter < number_of_preprocess_blocks; preprocess_block_counter++ ) {
         profile_timing.start("read in frames");
         for ( image_counter = first_frame_to_preprocess; image_counter <= last_frame_to_preprocess; image_counter++ ) {
@@ -722,13 +814,18 @@ bool UnBlurApp::DoCalculation( ) {
                     wxSleep(10);
                     exit(-1);
                 }
+                // counting_image_stack[image_counter - 1].CopyFrom(&image_stack[image_counter - 1]);
                 //if (image_counter == 0) SendInfo(wxString::Format("Info: multiplying %s by gain %s\n",input_filename,gain_filename.ToStdString()));
                 image_stack[image_counter - 1].MultiplyPixelWise(gain_image);
                 profile_timing.lap("gain correct");
+                // counting_image_stack[image_counter - 1].BackwardFFT( );
+                // counting_image_stack[image_counter - 1].WriteSlice(&rawcountingfile, image_counter);
             }
 
             profile_timing.start("replace outliers");
             image_stack[image_counter - 1].ReplaceOutliersWithMean(12);
+            // counting_image_stack[image_counter - 1].ReplaceOutliersWithMean(12);
+
             profile_timing.lap("replace outliers");
 
             if ( correct_mag_distortion == true ) {
@@ -738,9 +835,16 @@ bool UnBlurApp::DoCalculation( ) {
             }
 
             // FT
+            // stack_mean[image_counter - 1] = image_stack[image_counter - 1].ReturnAverageOfRealValues( );
+            // stack_mean[image_counter - 1] = 0;
+            // wxPrintf("mean value image %f\n", stack_mean[image_counter - 1]);
             profile_timing.start("forward FFT");
             image_stack[image_counter - 1].ForwardFFT(true);
+            // image_stack[image_counter - 1].ForwardFFT( );
             image_stack[image_counter - 1].ZeroCentralPixel( );
+            // // counting_image_stack[image_counter - 1].ForwardFFT(true);
+            // counting_image_stack[image_counter - 1].ForwardFFT( );
+            // // counting_image_stack[image_counter - 1].ZeroCentralPixel( );
             profile_timing.lap("forward FFT");
 
             // Resize the FT (binning)
@@ -748,7 +852,15 @@ bool UnBlurApp::DoCalculation( ) {
                 profile_timing.start("resize");
                 raw_image_stack[image_counter - 1].Allocate(image_stack[image_counter - 1].logical_x_dimension, image_stack[image_counter - 1].logical_y_dimension, 1, false);
                 raw_image_stack[image_counter - 1].CopyFrom(&image_stack[image_counter - 1]);
+                // image_stack[image_counter - 1].Resize(myroundint(image_stack[image_counter - 1].logical_x_dimension / output_binning_factor), myroundint(image_stack[image_counter - 1].logical_y_dimension / output_binning_factor), 1, stack_mean[image_counter - 1]);
                 image_stack[image_counter - 1].Resize(myroundint(image_stack[image_counter - 1].logical_x_dimension / output_binning_factor), myroundint(image_stack[image_counter - 1].logical_y_dimension / output_binning_factor), 1);
+
+                // // counting_image_stack[image_counter - 1].BackwardFFT( );
+                // // counting_image_stack[image_counter - 1].WriteSlice(&rawcountingfilebeforeresize, image_counter);
+                // // counting_image_stack[image_counter - 1].ForwardFFT( );
+                // counting_image_stack[image_counter - 1].Resize(myroundint(image_stack[image_counter - 1].logical_x_dimension / output_binning_factor), myroundint(image_stack[image_counter - 1].logical_y_dimension / output_binning_factor), 1);
+                // // counting_image_stack[image_counter - 1].BackwardFFT( );
+                // // counting_image_stack[image_counter - 1].WriteSlice(&rawcountingfileafterresize, image_counter);
                 profile_timing.lap("resize");
             }
 
@@ -766,7 +878,9 @@ bool UnBlurApp::DoCalculation( ) {
             last_frame_to_preprocess = number_of_input_images;
     }
     input_file.CloseFile( );
-
+    // rawcountingfile.CloseFile( );
+    // rawcountingfilebeforeresize.CloseFile( );
+    // rawcountingfileafterresize.CloseFile( );
     unblur_timing.lap("read frames");
     // if we are binning - choose a binning factor..
 
@@ -782,6 +896,7 @@ bool UnBlurApp::DoCalculation( ) {
         unbinned_image_stack = image_stack;
         image_stack          = new Image[number_of_input_images];
         pixel_size           = output_pixel_size * pre_binning_factor;
+        // unbinned_counting_stack = counting_image_stack;
     }
     else {
         pixel_size = output_pixel_size;
@@ -806,6 +921,8 @@ bool UnBlurApp::DoCalculation( ) {
         for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
             image_stack[image_counter].Allocate(unbinned_image_stack[image_counter].logical_x_dimension / pre_binning_factor, unbinned_image_stack[image_counter].logical_y_dimension / pre_binning_factor, 1, false);
             unbinned_image_stack[image_counter].ClipInto(&image_stack[image_counter]);
+            // counting_image_stack[image_counter].Allocate(unbinned_counting_stack[image_counter].logical_x_dimension / pre_binning_factor, unbinned_counting_stack[image_counter].logical_y_dimension / pre_binning_factor, 1, false);
+            // unbinned_counting_stack[image_counter].ClipInto(&counting_image_stack[image_counter]);
             //image_stack[image_counter].QuickAndDirtyWriteSlice("binned.mrc", image_counter + 1);
         }
         profile_timing.lap("make prebinned stack");
@@ -814,6 +931,32 @@ bool UnBlurApp::DoCalculation( ) {
         if ( termination_threshold_in_pixels < 1 && pre_binning_factor > 1 )
             termination_threshold_in_pixels = 1;
     }
+    // MRCFile countingfile;
+    // countingfile.OpenFile(wxString::Format(outputpath + "CountingStack.mrc").ToStdString( ), true);
+
+    // for ( int k = 0; k < number_of_input_images; k++ ) {
+    //     counting_image_stack[k].BackwardFFT( );
+    //     // counting_image_stack[k].QuickAndDirtyWriteSlice((outputpath.ToStdString( ) + "CountingStack.mrc"), k + 1);
+    //     counting_image_stack[k].WriteSlice(&countingfile, k + 1);
+
+    //     // image_stack[image_counter].QuickAndDirtyWriteSlice(wxString::Format(outputpath + "Unblur_Frames_Round_%04i.mrc", round_index).ToStdString( ), image_counter + 1);
+    // }
+    // countingfile.CloseFile( );
+    // wxPrintf("done writing counting image\n");
+
+    // MRCFile supfile;
+    // supfile.OpenFile(wxString::Format(outputpath + "SupStack.mrc").ToStdString( ), true);
+
+    // for ( int k = 0; k < number_of_input_images; k++ ) {
+    //     raw_image_stack[k].BackwardFFT( );
+    //     // counting_image_stack[k].QuickAndDirtyWriteSlice((outputpath.ToStdString( ) + "CountingStack.mrc"), k + 1);
+    //     raw_image_stack[k].WriteSlice(&supfile, k + 1);
+
+    //     // image_stack[image_counter].QuickAndDirtyWriteSlice(wxString::Format(outputpath + "Unblur_Frames_Round_%04i.mrc", round_index).ToStdString( ), image_counter + 1);
+    // }
+    // supfile.CloseFile( );
+    // wxPrintf("done writing supreso image\n");
+
     //added for patch tracking correction
     // bool patch_track = true;
     int total_rounds;
@@ -843,120 +986,176 @@ bool UnBlurApp::DoCalculation( ) {
                 }
             }
 
-            // The image_stack is binned.
-            // if the does filter is active, the current image_stack is already does filtered
-            wxPrintf("size of the image stack in patch tracking: %i,%i\n", image_stack[0].logical_x_dimension, image_stack[0].logical_y_dimension);
-            // the unbinned_image_stack is also the same as image_stack, which is binned.
-            // wxPrintf("size of the image stack in patch tracking: %i,%i\n", unbinned_image_stack[0].logical_x_dimension, unbinned_image_stack[0].logical_y_dimension);
+            // // The image_stack is binned.
+            // // if the does filter is active, the current image_stack is already does filtered
+            // wxPrintf("size of the image stack in patch tracking: %i,%i\n", image_stack[0].logical_x_dimension, image_stack[0].logical_y_dimension);
+            // // the unbinned_image_stack is also the same as image_stack, which is binned.
+            // // wxPrintf("size of the image stack in patch tracking: %i,%i\n", unbinned_image_stack[0].logical_x_dimension, unbinned_image_stack[0].logical_y_dimension);
 
-            // patch_stack = patch_trimming_independent(image_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath, false);
-            unblur_timing.start("Trimming Patches");
-            // use the stack that's not dose filtered -================!!! need to be refined
-            //             if(should_dose_filter == true){
+            // // patch_stack = patch_trimming_independent(image_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath, false);
+            // unblur_timing.start("Trimming Patches");
+            // // use the stack that's not dose filtered -================!!! need to be refined
+            // //             if(should_dose_filter == true){
 
-            //                    raw_image_stack[image_counter - 1].CopyFrom(&image_stack[image_counter - 1]);
-            //                 image_stack[image_counter - 1].Resize(myroundint(image_stack[image_counter - 1].logical_x_dimension / output_binning_factor), myroundint(image_stack[image_counter - 1].logical_y_dimension / output_binning_factor), 1);
+            // //                    raw_image_stack[image_counter - 1].CopyFrom(&image_stack[image_counter - 1]);
+            // //                 image_stack[image_counter - 1].Resize(myroundint(image_stack[image_counter - 1].logical_x_dimension / output_binning_factor), myroundint(image_stack[image_counter - 1].logical_y_dimension / output_binning_factor), 1);
 
-            //                 delete[] image_stack;
-            //                 image_stack = unbinned_image_stack;
-            //                 pixel_size  = output_pixel_size;
+            // //                 delete[] image_stack;
+            // //                 image_stack = unbinned_image_stack;
+            // //                 pixel_size  = output_pixel_size;
 
-            //                 // Adjust the shifts, then phase shift the original images
-            //                 profile_timing.start("apply shifts 1");
-            // #pragma omp parallel for default(shared) num_threads(max_threads) private(image_counter)
-            //                 for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
-            //                     x_shifts[image_counter] *= pre_binning_factor;
-            //                     y_shifts[image_counter] *= pre_binning_factor;
+            // //                 // Adjust the shifts, then phase shift the original images
+            // //                 profile_timing.start("apply shifts 1");
+            // // #pragma omp parallel for default(shared) num_threads(max_threads) private(image_counter)
+            // //                 for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+            // //                     x_shifts[image_counter] *= pre_binning_factor;
+            // //                     y_shifts[image_counter] *= pre_binning_factor;
 
-            //                     image_stack[image_counter].PhaseShift(x_shifts[image_counter], y_shifts[image_counter], 0.0);
-            //                 }
-            //             }
-            patch_trimming(image_stack, patch_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath, max_threads, false);
-            if ( image_stack[0].is_in_real_space ) {
-                wxPrintf("after trimming image stack is in real space\n");
-            }
-            unblur_timing.lap("Trimming Patches");
-            // if ( pre_binning_factor > 1 ) {
+            // //                     image_stack[image_counter].PhaseShift(x_shifts[image_counter], y_shifts[image_counter], 0.0);
+            // //                 }
+            // //             }
 
-            //     unbinned_patch_stack = patch_stack;
-            //     patch_stack          = new Image*[patch_num];
-            //     for ( int i = 0; i < patch_num; i++ ) {
-            //         patch_stack[i] = new Image[number_of_input_images];
-            //     }
-            //     //check the allocated dimension, if it is correct
-            //     for ( int patch_counter = 0; patch_counter < patch_num; patch_counter++ ) {
-            //         for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
-            //             patch_stack[patch_counter][image_counter].Allocate(unbinned_patch_stack[patch_counter][image_counter].logical_x_dimension / pre_binning_factor, unbinned_patch_stack[patch_counter][image_counter].logical_y_dimension / pre_binning_factor, 1, false);
-            //             unbinned_patch_stack[patch_counter][image_counter].ClipInto(&patch_stack[patch_counter][image_counter]);
+            // patch_trimming(image_stack, patch_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath.ToStdString( ), "patch", max_threads, true, true, false);
+            // if ( image_stack[0].is_in_real_space ) {
+            //     wxPrintf("after trimming image stack is in real space\n");
+            // }
+            // unblur_timing.lap("Trimming Patches");
+            // // if ( pre_binning_factor > 1 ) {
+
+            // //     unbinned_patch_stack = patch_stack;
+            // //     patch_stack          = new Image*[patch_num];
+            // //     for ( int i = 0; i < patch_num; i++ ) {
+            // //         patch_stack[i] = new Image[number_of_input_images];
+            // //     }
+            // //     //check the allocated dimension, if it is correct
+            // //     for ( int patch_counter = 0; patch_counter < patch_num; patch_counter++ ) {
+            // //         for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+            // //             patch_stack[patch_counter][image_counter].Allocate(unbinned_patch_stack[patch_counter][image_counter].logical_x_dimension / pre_binning_factor, unbinned_patch_stack[patch_counter][image_counter].logical_y_dimension / pre_binning_factor, 1, false);
+            // //             unbinned_patch_stack[patch_counter][image_counter].ClipInto(&patch_stack[patch_counter][image_counter]);
+            // //         }
+            // //     }
+            // // }
+            // // start
+            // // wxString outputpath = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/TestPatch/";
+            // // wxString      patch_shift = outputpath + "patch_shift.txt";
+            // std::ofstream xoFile;
+
+            // // xoFile.open(patch_shift.c_str( ));
+            // // /*
+            // unblur_timing.start("Patch Alignment");
+            // for ( int patch_counter = 0; patch_counter < patch_num; patch_counter++ ) {
+            //     wxPrintf("aligning patch %d\n", patch_counter);
+            //     if ( patch_stack[patch_counter][0].is_in_real_space ) {
+            //         for ( int image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+            //             patch_stack[patch_counter][image_counter].ForwardFFT(true);
+            //             // patch_stack[patch_counter][image_counter].ZeroCentralPixel( );
             //         }
             //     }
+            //     unblur_refine_alignment(patch_stack[patch_counter], number_of_input_images, 1, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], profile_timing_refinement_method, false);
+            //     // for ( int i = 0; i < number_of_input_images; i++ ) {
+            //     //     wxPrintf("patch %i, shifts, %f, %f\n", patch_counter, patch_shift_x[patch_counter][i], patch_shift_y[patch_counter][i]);
+            //     // }
+
+            //     unblur_refine_alignment(patch_stack[patch_counter], number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], profile_timing_refinement_method, false);
+            //     // for ( int i = 0; i < number_of_input_images; i++ ) {
+            //     //     wxPrintf("patch %i, shifts, %f, %f\n", patch_counter, patch_shift_x[patch_counter][i], patch_shift_y[patch_counter][i]);
+            //     // }
+            //     unblur_refine_alignment(patch_stack[patch_counter], number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], profile_timing_refinement_method, false);
+            //     // unblur_refine_alignment(patch_stack[patch_counter], number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average * 3, myroundint(5.0f / exposure_per_frame), max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], profile_timing_refinement_method, true);
+
+            //     //write out the patch shift info
+            //     wxString patch_shift;
+            //     patch_shift = wxString::Format(outputpath + "%04i_" + "shift.txt", patch_counter);
+            //     xoFile.open(patch_shift.c_str( ));
+            //     if ( xoFile.is_open( ) ) {
+            //         // wxPrintf("files are open\n");
+            //         // float myarray[10][5760];
+            //         for ( int image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+            //             xoFile << patch_shift_x[patch_counter][image_counter] << '\t';
+            //             xoFile << patch_shift_y[patch_counter][image_counter] << '\t';
+            //             xoFile << '\n';
+            //         }
+            //     }
+            //     xoFile.close( );
             // }
-            // start
-            // wxString outputpath = "/data/lingli/Lingli_20221028/grid2_process/MotCor202301/TestPatch/";
-            // wxString      patch_shift = outputpath + "patch_shift.txt";
-            std::ofstream xoFile;
-
-            // xoFile.open(patch_shift.c_str( ));
-            unblur_timing.start("Patch Alignment");
-            for ( int patch_counter = 0; patch_counter < patch_num; patch_counter++ ) {
-                wxPrintf("aligning patch %d\n", patch_counter);
-                if ( patch_stack[patch_counter][0].is_in_real_space ) {
-                    for ( int image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
-                        patch_stack[patch_counter][image_counter].ForwardFFT(true);
-                        // patch_stack[patch_counter][image_counter].ZeroCentralPixel( );
-                    }
-                }
-                unblur_refine_alignment(patch_stack[patch_counter], number_of_input_images, 1, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], profile_timing_refinement_method, false);
-                // for ( int i = 0; i < number_of_input_images; i++ ) {
-                //     wxPrintf("patch %i, shifts, %f, %f\n", patch_counter, patch_shift_x[patch_counter][i], patch_shift_y[patch_counter][i]);
-                // }
-
-                unblur_refine_alignment(patch_stack[patch_counter], number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], profile_timing_refinement_method, false);
-                // for ( int i = 0; i < number_of_input_images; i++ ) {
-                //     wxPrintf("patch %i, shifts, %f, %f\n", patch_counter, patch_shift_x[patch_counter][i], patch_shift_y[patch_counter][i]);
-                // }
-                unblur_refine_alignment(patch_stack[patch_counter], number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], profile_timing_refinement_method, false);
-                // unblur_refine_alignment(patch_stack[patch_counter], number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average * 3, myroundint(5.0f / exposure_per_frame), max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], profile_timing_refinement_method, true);
-
-                //write out the patch shift info
-                wxString patch_shift;
-                patch_shift = wxString::Format(outputpath + "%04i_" + "shift.txt", patch_counter);
-                xoFile.open(patch_shift.c_str( ));
-                if ( xoFile.is_open( ) ) {
-                    // wxPrintf("files are open\n");
-                    // float myarray[10][5760];
-                    for ( int image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
-                        xoFile << patch_shift_x[patch_counter][image_counter] << '\t';
-                        xoFile << patch_shift_y[patch_counter][image_counter] << '\t';
-                        xoFile << '\n';
-                    }
-                }
-                xoFile.close( );
-            }
-            unblur_timing.lap("Patch Alignment");
-            // for ( int i = 0; i < patch_num; ++i ) {
-            //     delete[] patch_stack[i]; // each i-th pointer must be deleted first
-            // }
-            // delete[] patch_stack; // now delete pointer array
+            // unblur_timing.lap("Patch Alignment");
+            // // */
+            // // for ( int i = 0; i < patch_num; ++i ) {
+            // //     delete[] patch_stack[i]; // each i-th pointer must be deleted first
+            // // }
+            // // delete[] patch_stack; // now delete pointer array
             unblur_timing.start("Distortion Fix");
             wxPrintf("modeling the distortion \n");
+
+            // NumericTextFile motcor_patchframe("/data/lingli/Lingli_20221028/grid2_process/MotionCor2/s_records_15-15_FmRef0/0-Patch-Frame.log", OPEN_TO_READ, 5);
+            NumericTextFile motcor_patchframe(MotCorpath + "0-Patch-Frame.log", OPEN_TO_READ, 5);
+
+            // shifts_file.WriteCommentLine("X/Y Shifts for file %s\n", input_filename.c_str( ));
+            float temp_float2[5];
+            for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+                for ( int patch = 0; patch < patch_num; patch++ ) {
+                    motcor_patchframe.ReadLine(temp_float2);
+                    patch_shift_x[patch][image_counter] = temp_float2[3] / 2;
+                    patch_shift_y[patch][image_counter] = temp_float2[4] / 2;
+                    // temp_float[0] = x_shifts[image_counter] * output_pixel_size;
+                    // temp_float[1] = y_shifts[image_counter] * output_pixel_size;
+                    // shifts_file.WriteLine(temp_float);
+                }
+            }
+            motcor_patchframe.Close( );
+            matrix<double> patch_locations_x;
+            matrix<double> patch_locations_y;
+            int            image_dim_x = image_stack[0].logical_x_dimension;
+            int            image_dim_y = image_stack[0].logical_y_dimension;
+            int            step_size_x = myroundint(float(image_dim_x) / float(patch_num_x) / 2);
+            int            step_size_y = myroundint(float(image_dim_y) / float(patch_num_y) / 2);
+            patch_locations_x.set_size(patch_num_x, 1);
+            patch_locations_y.set_size(patch_num_y, 1);
+            // for ( int patch_x_ind = 0; patch_x_ind < patch_num_x; patch_x_ind++ ) {
+            patch_locations_x = 483.66, 1443.00, 2402.33, 3361.67, 4321.00, 5280.33, 6239.67, 7199.00, 8158.33, 9117.67, 10077.00, 11036.34;
+            patch_locations_y = 511.50, 1534.50, 2557.50, 3580.50, 4603.50, 5626.50, 6649.50, 7672.50;
+            for ( int patch_x_ind = 0; patch_x_ind < patch_num_x; patch_x_ind++ ) {
+                patch_locations_x(patch_x_ind) = patch_locations_x(patch_x_ind) / 2.0;
+                wxPrintf("x loc %f\n", patch_locations_x(patch_x_ind));
+            }
+            for ( int patch_y_ind = 0; patch_y_ind < patch_num_y; patch_y_ind++ ) {
+                patch_locations_y(patch_y_ind) = patch_locations_y(patch_y_ind) / 2.0;
+                wxPrintf("y loc %f\n", patch_locations_y(patch_y_ind));
+            }
+            float** patch_locations;
+            Allocate2DFloatArray(patch_locations, patch_num, 2);
+            for ( int patch_y_ind = 0; patch_y_ind < patch_num_y; patch_y_ind++ ) {
+                for ( int patch_x_ind = 0; patch_x_ind < patch_num_x; patch_x_ind++ ) {
+                    // patch_locations[patch_num_x * patch_y_ind + patch_x_ind][0] = patch_x_ind * step_size_x * 2 + step_size_x;
+                    // // patch_locations[patch_num_x * patch_y_ind + patch_x_ind][1] = image_dim_y - patch_y_ind * step_size_y * 2 - step_size_y;
+                    // patch_locations[patch_num_x * patch_y_ind + patch_x_ind][1] = patch_y_ind * step_size_y * 2 + step_size_y;
+                    patch_locations[patch_num_x * patch_y_ind + patch_x_ind][0] = patch_locations_x(patch_x_ind);
+                    // patch_locations[patch_num_x * patch_y_ind + patch_x_ind][1] = image_dim_y - patch_y_ind * step_size_y * 2 - step_size_y;
+                    patch_locations[patch_num_x * patch_y_ind + patch_x_ind][1] = patch_locations_y(patch_y_ind);
+
+                    // wxPrintf("patch locations: %f, %f\n", patch_locations[patch_num_x * patch_y_ind + patch_x_ind][0], patch_locations[patch_num_x * patch_y_ind + patch_x_ind][1]);
+                }
+            }
             //patch shift fitting-------------------------------------------
             if ( distortion_model == 2 || distortion_model == 1 ) {
 
-                float patch_locations[patch_num][2];
-                int   image_dim_x = image_stack[0].logical_x_dimension;
-                int   image_dim_y = image_stack[0].logical_y_dimension;
-                int   step_size_x = myroundint(float(image_dim_x) / float(patch_num_x) / 2);
-                int   step_size_y = myroundint(float(image_dim_y) / float(patch_num_y) / 2);
-                for ( int patch_y_ind = 0; patch_y_ind < patch_num_y; patch_y_ind++ ) {
-                    for ( int patch_x_ind = 0; patch_x_ind < patch_num_x; patch_x_ind++ ) {
-                        patch_locations[patch_num_x * patch_y_ind + patch_x_ind][0] = patch_x_ind * step_size_x * 2 + step_size_x;
-                        // patch_locations[patch_num_x * patch_y_ind + patch_x_ind][1] = image_dim_y - patch_y_ind * step_size_y * 2 - step_size_y;
-                        patch_locations[patch_num_x * patch_y_ind + patch_x_ind][1] = patch_y_ind * step_size_y * 2 + step_size_y;
+                // float patch_locations[patch_num][2];
+                int image_dim_x = image_stack[0].logical_x_dimension;
+                int image_dim_y = image_stack[0].logical_y_dimension;
+                int step_size_x = myroundint(float(image_dim_x) / float(patch_num_x) / 2);
+                int step_size_y = myroundint(float(image_dim_y) / float(patch_num_y) / 2);
+                // for ( int patch_y_ind = 0; patch_y_ind < patch_num_y; patch_y_ind++ ) {
+                //     for ( int patch_x_ind = 0; patch_x_ind < patch_num_x; patch_x_ind++ ) {
+                //         // patch_locations[patch_num_x * patch_y_ind + patch_x_ind][0] = patch_x_ind * step_size_x * 2 + step_size_x;
+                //         // // patch_locations[patch_num_x * patch_y_ind + patch_x_ind][1] = image_dim_y - patch_y_ind * step_size_y * 2 - step_size_y;
+                //         // patch_locations[patch_num_x * patch_y_ind + patch_x_ind][1] = patch_y_ind * step_size_y * 2 + step_size_y;
+                //         patch_locations[patch_num_x * patch_y_ind + patch_x_ind][0] = patch_locations_x(patch_x_ind);
+                //         // patch_locations[patch_num_x * patch_y_ind + patch_x_ind][1] = image_dim_y - patch_y_ind * step_size_y * 2 - step_size_y;
+                //         patch_locations[patch_num_x * patch_y_ind + patch_x_ind][1] = patch_locations_y(patch_y_ind);
 
-                        // wxPrintf("patch locations: %f, %f\n", patch_locations[patch_num_x * patch_y_ind + patch_x_ind][0], patch_locations[patch_num_x * patch_y_ind + patch_x_ind][1]);
-                    }
-                }
+                //         // wxPrintf("patch locations: %f, %f\n", patch_locations[patch_num_x * patch_y_ind + patch_x_ind][0], patch_locations[patch_num_x * patch_y_ind + patch_x_ind][1]);
+                //     }
+                // }
                 // FixOutliers(patch_peaksx, patch_peaksy, patch_locations_x, patch_locations_y, patch_num_x, patch_num_y, step_size_x, step_size_y, number_of_input_images);
 
                 input_vector                                 input;
@@ -985,6 +1184,7 @@ bool UnBlurApp::DoCalculation( ) {
                     patch_peaksx[i].set_size(patch_num_y, patch_num_x);
                     patch_peaksy[i].set_size(patch_num_y, patch_num_x);
                 }
+                /*
                 matrix<double> patch_locations_x;
                 matrix<double> patch_locations_y;
                 patch_locations_x.set_size(patch_num_x, 1);
@@ -996,6 +1196,7 @@ bool UnBlurApp::DoCalculation( ) {
                     // patch_locations_y(patch_y_ind) = image_dim_y - patch_y_ind * step_size_y * 2 - step_size_y;
                     patch_locations_y(patch_y_ind) = patch_y_ind * step_size_y * 2 + step_size_y;
                 }
+                 */
                 for ( int patch_index_y = 0; patch_index_y < patch_num_y; patch_index_y++ ) {
                     for ( int patch_index_x = 0; patch_index_x < patch_num_x; patch_index_x++ ) {
                         int patch_index = patch_index_y * patch_num_x + patch_index_x;
@@ -1005,17 +1206,21 @@ bool UnBlurApp::DoCalculation( ) {
                         }
                     }
                 }
+
                 std::vector<int> outlier_index;
-                outlier_index = FixOutliers(patch_peaksx, patch_peaksy, patch_locations_x, patch_locations_y, patch_num_x, patch_num_y, step_size_x, step_size_y, number_of_input_images);
+                outlier_index = FixOutliers(patch_peaksx, patch_peaksy, patch_locations_x, patch_locations_y, patch_num_x, patch_num_y, step_size_x, step_size_y, number_of_input_images, true, outputpath.ToStdString( ), "outlier");
                 delete[] patch_peaksx;
                 delete[] patch_peaksy;
                 for ( int image_index = 0; image_index < number_of_input_images; image_index++ ) {
                     int outlier_ind = 0;
                     for ( int patch_index = 0; patch_index < patch_num; patch_index++ ) {
-                        if ( patch_index == outlier_index[outlier_ind] ) {
-                            outlier_ind++;
-                            continue;
+                        if ( outlier_index.empty( ) == false ) {
+                            if ( patch_index == outlier_index[outlier_ind] ) {
+                                outlier_ind++;
+                                continue;
+                            }
                         }
+
                         float time;
                         time     = image_index;
                         input(0) = patch_locations[patch_index][0];
@@ -1052,11 +1257,18 @@ bool UnBlurApp::DoCalculation( ) {
 
                     // //apply fitting-------------------------------------------
                     for ( int image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
-                        image_stack[image_counter].BackwardFFT( );
+                        // image_stack[image_counter].BackwardFFT( );
                         raw_image_stack[image_counter].BackwardFFT( );
                     }
                     // apply_fitting_quadratic(image_stack, number_of_input_images, x, y);
-                    apply_fitting_quadratic_sup(image_stack, raw_image_stack, output_binning_factor, number_of_input_images, x_quad, y_quad);
+                    delete[] image_stack;
+                    image_stack = nullptr;
+
+                    apply_fitting_quadratic_sup(raw_image_stack, output_binning_factor, number_of_input_images, x_quad, y_quad, max_threads);
+                    image_stack = raw_image_stack;
+                    write_quad_shifts(number_of_input_images, patch_num_x, patch_num_y, x_quad, y_quad, patch_locations, outputpath.ToStdString( ), "_shiftx_R0", "_shifty_R0");
+                    // write_shifts(patch_num_x, patch_num_y, number_of_input_images, outputpath.ToStdString( ), "_shiftx_R0", "_shifty_R0");
+                    Deallocate2DFloatArray(patch_locations, patch_num);
                 }
                 else if ( distortion_model == 1 ) {
                     param_vector_linear x_linear, y_linear;
@@ -1079,11 +1291,14 @@ bool UnBlurApp::DoCalculation( ) {
 
                     // //apply fitting-------------------------------------------
                     for ( int image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
-                        image_stack[image_counter].BackwardFFT( );
+                        // image_stack[image_counter].BackwardFFT( );
                         raw_image_stack[image_counter].BackwardFFT( );
                     }
                     // apply_fitting_linear(image_stack, number_of_input_images, x, y);
                     apply_fitting_linear_sup(image_stack, raw_image_stack, output_binning_factor, number_of_input_images, x_linear, y_linear);
+                    write_linear_shifts(number_of_input_images, patch_num_x, patch_num_y, x_linear, y_linear, patch_locations, outputpath.ToStdString( ), "_shiftx_R0", "_shifty_R0");
+
+                    Deallocate2DFloatArray(patch_locations, patch_num);
                 }
                 for ( int i = 0; i < patch_num; ++i ) {
                     delete[] patch_stack[i]; // each i-th pointer must be deleted first
@@ -1094,7 +1309,13 @@ bool UnBlurApp::DoCalculation( ) {
                 Deallocate2DFloatArray(patch_shift_y, patch_num);
             }
             else if ( distortion_model == 3 ) {
+                // for ( int image_ind = 0; image_ind < number_of_input_images; image_ind++ ) {
+                //     counting_image_stack[image_ind].Allocate(raw_image_stack[image_ind].logical_x_dimension, raw_image_stack[image_ind].logical_y_dimension, 1, false);
+                //     counting_image_stack[image_ind].CopyFrom(&raw_image_stack[image_ind]);
+                //     counting_image_stack[image_ind].Resize(image_stack[image_ind].logical_x_dimension, image_stack[image_ind].logical_y_dimension, 1, 0);
+                // }
                 // prepare for spline  ---------------------------------------------------
+                /*
                 matrix<double> patch_locations_x;
                 matrix<double> patch_locations_y;
                 int            image_dim_x = image_stack[0].logical_x_dimension;
@@ -1111,7 +1332,30 @@ bool UnBlurApp::DoCalculation( ) {
                     // patch_locations_y(patch_y_ind) = patch_y_ind * step_size_y * 2 + step_size_y;
                     patch_locations_y(patch_num_y - patch_y_ind - 1) = image_dim_y - patch_y_ind * step_size_y * 2 - step_size_y;
                 }
+                */
+                // float patch_locations[patch_num][2];
+                // float** patch_locations;
+                // patch_locations = new float*[patch_num];
+                // for ( int i = 0; i < patch_num; i++ ) {
+                //     patch_locations[i];
+                // }
+                // Allocate2DFloatArray(patch_locations, patch_num, 2);
+                // int image_dim_x = image_stack[0].logical_x_dimension;
+                // int image_dim_y = image_stack[0].logical_y_dimension;
+                // int step_size_x = myroundint(float(image_dim_x) / float(patch_num_x) / 2);
+                // int step_size_y = myroundint(float(image_dim_y) / float(patch_num_y) / 2);
+                // for ( int patch_y_ind = 0; patch_y_ind < patch_num_y; patch_y_ind++ ) {
+                //     for ( int patch_x_ind = 0; patch_x_ind < patch_num_x; patch_x_ind++ ) {
+                //         // patch_locations[patch_num_x * patch_y_ind + patch_x_ind][0] = patch_x_ind * step_size_x * 2 + step_size_x;
+                //         // // patch_locations[patch_num_x * patch_y_ind + patch_x_ind][1] = image_dim_y - patch_y_ind * step_size_y * 2 - step_size_y;
+                //         // patch_locations[patch_num_x * patch_y_ind + patch_x_ind][1] = patch_y_ind * step_size_y * 2 + step_size_y;
+                //         patch_locations[patch_num_x * patch_y_ind + patch_x_ind][0] = patch_locations_x(patch_x_ind);
+                //         // patch_locations[patch_num_x * patch_y_ind + patch_x_ind][1] = image_dim_y - patch_y_ind * step_size_y * 2 - step_size_y;
+                //         patch_locations[patch_num_x * patch_y_ind + patch_x_ind][1] = patch_locations_y(patch_y_ind);
 
+                //         // wxPrintf("patch locations: %f, %f\n", patch_locations[patch_num_x * patch_y_ind + patch_x_ind][0], patch_locations[patch_num_x * patch_y_ind + patch_x_ind][1]);
+                //     }
+                // }
                 matrix<double>* patch_peaksx;
                 matrix<double>* patch_peaksy;
                 patch_peaksx = new matrix<double>[number_of_input_images];
@@ -1132,12 +1376,12 @@ bool UnBlurApp::DoCalculation( ) {
                 Deallocate2DFloatArray(patch_shift_x, patch_num);
                 Deallocate2DFloatArray(patch_shift_y, patch_num);
                 // set the first image as reference image
-                // for ( int i = 1; i < number_of_input_images; i++ ) {
-                //     patch_peaksy[i] = patch_peaksy[i] - patch_peaksy[0];
-                //     patch_peaksx[i] = patch_peaksx[i] - patch_peaksx[0];
-                // }
-                // patch_peaksy[0] = patch_peaksy[0] - patch_peaksy[0];
-                // patch_peaksx[0] = patch_peaksx[0] - patch_peaksx[0];
+                for ( int i = 1; i < number_of_input_images; i++ ) {
+                    patch_peaksy[i] = patch_peaksy[i] - patch_peaksy[0];
+                    patch_peaksx[i] = patch_peaksx[i] - patch_peaksx[0];
+                }
+                patch_peaksy[0] = patch_peaksy[0] - patch_peaksy[0];
+                patch_peaksx[0] = patch_peaksx[0] - patch_peaksx[0];
 
                 //flip the patch regarding y so that the y is in ascending order
                 // for ( int i = 0; i < number_of_input_images; i++ ) {
@@ -1145,10 +1389,14 @@ bool UnBlurApp::DoCalculation( ) {
                 //     patch_peaksx[i] = flipud(patch_peaksx[i]);
                 // }
                 // patch_locations_y = flipud(patch_locations_y);
-
+                for ( int i = 0; i < patch_num; ++i ) {
+                    delete[] patch_stack[i]; // each i-th pointer must be deleted first
+                }
+                delete[] patch_stack; // now delete pointer array
+                patch_stack = NULL;
                 //spline modeling:
                 std::vector<int> outlier_index;
-                outlier_index = FixOutliers(patch_peaksx, patch_peaksy, patch_locations_x, patch_locations_y, patch_num_x, patch_num_y, step_size_x, step_size_y, number_of_input_images);
+                outlier_index = FixOutliers(patch_peaksx, patch_peaksy, patch_locations_x, patch_locations_y, patch_num_x, patch_num_y, step_size_x, step_size_y, number_of_input_images, true, outputpath.ToStdString( ), "outlier");
                 // prepare for spline end ---------------------------------------------------
 
                 // initialize the 3d splines  ---------------------------------------------------
@@ -1164,6 +1412,7 @@ bool UnBlurApp::DoCalculation( ) {
                 double         knot_on_y  = 5; //5;
                 double         knot_y_dis = ceil(image_dim_y / (knot_on_y - 1));
                 column_vector  Join1d, Join1d_ccmap;
+                column_vector  Control1d, Control1d_ccmap;
                 matrix<double> z;
                 z.set_size(number_of_input_images, 1);
                 for ( int i = 0; i < number_of_input_images; i++ ) {
@@ -1171,8 +1420,12 @@ bool UnBlurApp::DoCalculation( ) {
                 }
                 Spline3dx.Initialize(knot_on_z, knot_on_y, knot_on_x, number_of_input_images, image_dim_x, image_dim_y, knot_z_dis, knot_x_dis, knot_y_dis);
                 Spline3dy.Initialize(knot_on_z, knot_on_y, knot_on_x, number_of_input_images, image_dim_x, image_dim_y, knot_z_dis, knot_x_dis, knot_y_dis);
-                Spline3dx.Update3DSplineInterpMapping(patch_locations_x, patch_locations_y, z);
-                Spline3dy.Update3DSplineInterpMapping(patch_locations_x, patch_locations_y, z);
+                // Spline3dx.Update3DSplineInterpMapping(patch_locations_x, patch_locations_y, z);
+                // Spline3dy.Update3DSplineInterpMapping(patch_locations_x, patch_locations_y, z);
+
+                Spline3dx.Update3DSplineInterpMappingControl(patch_locations_x, patch_locations_y, z);
+                Spline3dy.Update3DSplineInterpMappingControl(patch_locations_x, patch_locations_y, z);
+                // Update3DSplineInterpMappingControl
                 Spline3dx.UpdateDiscreteValues(patch_peaksx);
                 Spline3dy.UpdateDiscreteValues(patch_peaksy);
                 delete[] patch_peaksx;
@@ -1182,8 +1435,8 @@ bool UnBlurApp::DoCalculation( ) {
                 // start the fitting ============================================
                 // /*
                 // initialize the parameters
-                // Join1d = ones_matrix<double>(knot_on_x * knot_on_y * knot_on_z * 2, 1);
-                Join1d = ones_matrix<double>(knot_on_x * knot_on_y * (knot_on_z + 1) * 2, 1);
+                Join1d    = ones_matrix<double>(knot_on_x * knot_on_y * knot_on_z * 2, 1);
+                Control1d = ones_matrix<double>(knot_on_x * knot_on_y * knot_on_z * 2, 1);
 
                 char          buffer[200];
                 std::string   shift_file_pref = "_shift";
@@ -1197,137 +1450,404 @@ bool UnBlurApp::DoCalculation( ) {
                 file.open(lossfile.c_str( ));
                 std::streambuf* coutBuf0 = std::cout.rdbuf( );
                 std::cout.rdbuf(file.rdbuf( ));
-
+                int maxsize;
                 // #1 initialize based on the alignment -----
-                int maxsize = knot_on_x * knot_on_y * (knot_on_z + 1) * 2;
+                // /*
+                maxsize = knot_on_x * knot_on_y * (knot_on_z)*2;
                 wxPrintf("max memory size is set to: %d\n", maxsize * 2);
-                auto start1 = std::chrono::high_resolution_clock::now( );
+                auto   start1        = std::chrono::high_resolution_clock::now( );
+                double initial_error = minfunc3dSplineObjectxyControlPoints(Control1d);
+                double stop_cri      = initial_error / 100000;
+                std::cout << " initial error, " << initial_error << endl;
+                std::cout << " stop criteria, " << stop_cri << endl;
                 find_min_using_approximate_derivatives(lbfgs_search_strategy(maxsize * 4), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
-                                                       objective_delta_stop_strategy(1e-4).be_verbose( ),
-                                                       minfunc3dSplineObjectxy, Join1d, -1);
+                                                       objective_delta_stop_strategy(stop_cri).be_verbose( ),
+                                                       minfunc3dSplineObjectxyControlPoints, Control1d, -1);
+                // find_min_using_approximate_derivatives(lbfgs_search_strategy(maxsize * 4), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
+                //                                        objective_delta_stop_strategy(1e-4).be_verbose( ),
+                //                                        minfunc3dSplineObjectxy, Join1d, -1);
+                // before apply the stop criteria
+                // find_min_using_approximate_derivatives(lbfgs_search_strategy(maxsize * 4), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
+                //                                        objective_delta_stop_strategy(1e-4).be_verbose( ),
+                //                                        minfunc3dSplineObjectxyControlPoints, Control1d, -1);
                 auto stop1     = std::chrono::high_resolution_clock::now( );
                 auto duration1 = std::chrono::duration_cast<std::chrono::minutes>(stop1 - start1);
                 std::cout << "Lap time " << duration1.count( ) << " minutes\n";
-                write_joins(outputpath.ToStdString( ), "Joins_R0", Join1d);
+                // write_joins(outputpath.ToStdString( ), "Joins_R0", Join1d);
+                write_joins(outputpath.ToStdString( ), "Control_R0", Control1d);
                 write_shifts(patch_num_x, patch_num_y, number_of_input_images, outputpath.ToStdString( ), "_shiftx_R0", "_shifty_R0");
                 // */
-
+                // /*
                 // #2  use the crosscorrelation map for loss function -----
                 // Join1d = read_joins("Joins_R0", outputpath.ToStdString( ), knot_on_x * knot_on_y * knot_on_z * 2);
                 // split_and_update(Join1d, Join1d.size( ));
-                int quater_patch_dim = 64 / 2;
-                patch_trimming(image_stack, patch_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath, max_threads, false);
+                /*
+                // Image** counting_patch   = new Image*[patch_num];
+                // for ( int i = 0; i < patch_num; i++ ) {
+                //     counting_patch[i] = new Image[number_of_input_images];
+                // }
+                // Image** sup_patch = new Image*[patch_num];
+                // for ( int i = 0; i < patch_num; i++ ) {
+                //     sup_patch[i] = new Image[number_of_input_images];
+                // }
+                // patch_trimming(raw_image_stack, sup_patch, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath.ToStdString( ), "patch_sup", max_threads, false);
+                // patch_trimming(image_stack, patch_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size / 2, outputpath.ToStdString( ), "patch_pix", max_threads, false);
+                patch_trimming(counting_image_stack, patch_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath.ToStdString( ), "patch_pix", max_threads, false, false, false);
 
+                // patch_trimming(counting_image_stack, counting_patch, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size / 2, outputpath.ToStdString( ), "patch_counting", max_threads, false);
                 if ( patch_stack[0][0].is_in_real_space ) {
                     for ( int patch_counter = 0; patch_counter < patch_num; patch_counter++ ) {
                         for ( int image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
                             patch_stack[patch_counter][image_counter].ForwardFFT(true);
+                            // sup_patch[patch_counter][image_counter].ForwardFFT(false);
+                            // sup_patch[patch_counter][image_counter].ForwardFFT(true);
+                            // counting_patch[patch_counter][image_counter].ForwardFFT(true);
                             // patch_stack[patch_counter][image_counter].ZeroCentralPixel( );
                         }
                     }
                 }
+                // for ( int image_ind = 0; image_ind < number_of_input_images; image_ind++ ) {
+                //     for ( int i = 0; i < patch_num_y; i++ ) {
+                //         for ( int j = 0; j < patch_num_x; j++ ) {
+                //             int patch_ind = i * patch_num_x + j;
+                //             patch_stack[patch_ind][image_ind].PhaseShift(Spline3dx.smooth_interp[image_ind](i, j), Spline3dy.smooth_interp[image_ind](i, j), 0.0);
+                //             counting_patch[patch_ind][image_ind].PhaseShift(Spline3dx.smooth_interp[image_ind](i, j), Spline3dy.smooth_interp[image_ind](i, j), 0.0);
+
+                //             // yoFile << shifted_map_y[i][j] << '\t';
+                //         }
+                //     }
+                // }
+                //-----AIC calculation --- start
+
+                // Image** ref_stack = new Image*[patch_num];
+                // for ( int i = 0; i < patch_num; i++ ) {
+                //     ref_stack[i] = new Image[number_of_input_images];
+                // }
+                float           diff_square, diff_counting_square;
+                NumericTextFile AICRecord(outputpath.ToStdString( ) + "AIC_records.txt", OPEN_TO_WRITE, 8);
+
+                column_vector best_control_1d;
+
+                double best_knot_on_x;
+                double best_knot_on_y;
+                double best_sample_dose;
+                double best_sigma_square;
+                double best_k;
+                double best_diff_square;
+                double best_likelihood;
+                double best_AIC;
+                double best_counting_square;
+                double best_likelihood_counting;
+                double best_AIC_counting;
+
+                bool firsttry = true;
+                // for ( int sample = sample_dose; sample < sample_dose + 1; sample++ ) {
+                // for ( int sample = 4; sample < 8; sample++ ) {
+                //     for ( int knot_x = 4; knot_x < patch_num_x; knot_x++ ) {
+                //         for ( int knot_y = 4; knot_y < patch_num_y; knot_y++ ) {
+                for ( int sample = 4; sample < 5; sample++ ) {
+                    for ( int knot_x = 8; knot_x < 9; knot_x++ ) {
+                        for ( int knot_y = 5; knot_y < 6; knot_y++ ) {
+                            // for ( int knot_x = 4; knot_x < 5; knot_x++ ) {
+                            //     for ( int knot_y = 4; knot_y < 5; knot_y++ ) {
+
+                            knot_on_x = knot_x;
+                            knot_on_y = knot_y;
+                            wxPrintf("sample dose %d\n", sample);
+                            wxPrintf("pixel size %f\n", pixel_size);
+                            // double total_dose  = exposure_per_frame * number_of_input_images;
+                            double search_sample_dose = double(sample);
+
+                            // double knot_on_z      = 2;
+                            // double knot_z_dis     = ceil(total_dose / (knot_on_z - 1));
+                            double knot_z_dis = search_sample_dose;
+                            double knot_on_z  = ceil(total_dose / search_sample_dose) + 1;
+                            // double         knot_on_x  = 6; //8;
+                            double knot_x_dis = ceil(image_dim_x / (knot_on_x - 1));
+                            double knot_y_dis = ceil(image_dim_y / (knot_on_y - 1));
+                            // double         knot_on_y  = 4; //5;
+                            column_vector Control_1d_search;
+                            // matrix<double> z;
+                            // z.set_size(number_of_input_images, 1);
+                            // for ( int i = 0; i < number_of_input_images; i++ ) {
+                            //     z(i) = (i + 1) * exposure_per_frame;
+                            // }
+                            Spline3dx.Initialize(knot_on_z, knot_on_y, knot_on_x, number_of_input_images, image_dim_x, image_dim_y, knot_z_dis, knot_x_dis, knot_y_dis);
+                            Spline3dy.Initialize(knot_on_z, knot_on_y, knot_on_x, number_of_input_images, image_dim_x, image_dim_y, knot_z_dis, knot_x_dis, knot_y_dis);
+                            // Spline3dx.Update3DSplineInterpMapping(patch_locations_x, patch_locations_y, z);
+                            // Spline3dy.Update3DSplineInterpMapping(patch_locations_x, patch_locations_y, z);
+                            Spline3dx.Update3DSplineInterpMappingControl(patch_locations_x, patch_locations_y, z);
+                            Spline3dy.Update3DSplineInterpMappingControl(patch_locations_x, patch_locations_y, z);
+
+                            maxsize             = knot_on_x * knot_on_y * knot_on_z * 2;
+                            Control_1d_search   = ones_matrix<double>(knot_on_x * knot_on_y * knot_on_z * 2, 1);
+                            double search_error = minfunc3dSplineObjectxyControlPoints(Control_1d_search);
+                            wxPrintf("initial loss: %f \n", search_error);
+                            double search_converge_Cri = search_error / 100000;
+                            std::cout << " knot_x_num, knot_y_num, sample_dose, " << knot_on_x << " " << knot_on_y << " " << sample_dose << endl;
+                            std::cout << " initial error, " << search_error << endl;
+                            std::cout << " stop criteria, " << search_converge_Cri << endl;
+                            auto start2 = std::chrono::high_resolution_clock::now( );
+                            //
+                            find_min_using_approximate_derivatives(lbfgs_search_strategy(maxsize * 4), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
+                                                                   objective_delta_stop_strategy(search_converge_Cri).be_verbose( ),
+                                                                   minfunc3dSplineObjectxyControlPoints, Control_1d_search, -100, 1e-2);
+                            //
+                            auto stop2     = std::chrono::high_resolution_clock::now( );
+                            auto duration2 = std::chrono::duration_cast<std::chrono::minutes>(stop2 - start2);
+                            std::cout << "Lap time " << duration2.count( ) << " minutes\n";
+                            double likelihood;
+                            double AIC;
+                            double k;
+                            double sigma_square;
+                            // sigma_square = total_dose / double(number_of_input_images) * pixel_size * pixel_size;
+                            // sigma_square = 0.009;
+                            sigma_square = exposure_per_frame * pixel_size * pixel_size;
+
+                            wxPrintf("pixel size %f\n", pixel_size);
+                            k = knot_on_x * knot_on_y * knot_on_z * 2;
+                            // likelihood = -minfunc3dSplineCCLossObject(Join1d_ccmap) * (-1) / sigma_square;
+
+                            for ( int image_ind = 0; image_ind < number_of_input_images; image_ind++ ) {
+                                for ( int i = 0; i < patch_num_y; i++ ) {
+                                    for ( int j = 0; j < patch_num_x; j++ ) {
+                                        int patch_ind = i * patch_num_x + j;
+                                        patch_stack[patch_ind][image_ind].PhaseShift(Spline3dx.smooth_interp[image_ind](i, j), Spline3dy.smooth_interp[image_ind](i, j), 0.0);
+                                        // sup_patch[patch_ind][image_ind].PhaseShift(Spline3dx.smooth_interp[image_ind](i, j) * output_binning_factor, Spline3dy.smooth_interp[image_ind](i, j) * output_binning_factor, 0.0);
+                                        // counting_patch[patch_ind][image_ind].PhaseShift(Spline3dx.smooth_interp[image_ind](i, j), Spline3dy.smooth_interp[image_ind](i, j), 0.0);
+                                        // yoFile << shifted_map_y[i][j] << '\t';
+                                    }
+                                }
+                            }
+
+                            // diff_square = CalculateDiffSquare(patch_stack, unitless_bfactor, patch_num, number_of_input_images, true, outputpath.ToStdString( ), "Ref_Stack");
+                            diff_square = CalculateDiffSquare(patch_stack, patch_num, number_of_input_images, false, outputpath.ToStdString( ), "Ref_Stack");
+
+                            // diff_counting_square = CalculateDiffSquare(sup_patch, unitless_bfactor, patch_num, number_of_input_images, true, outputpath.ToStdString( ), "Ref_Stack_counting");
+                            // diff_counting_square = CalculateDiffSquare(counting_patch, unitless_bfactor, patch_num, number_of_input_images, true, outputpath.ToStdString( ), "Ref_Stack_counting");
+
+                            likelihood = -diff_square / 2 / sigma_square;
+                            wxPrintf("diff square and couting diff square %f %f\n", diff_square); //, diff_counting_square);
+                            // double likelihood_counting = -diff_counting_square / 2 / sigma_square;
+                            // likelihood  = 0;
+
+                            AIC = k - likelihood;
+                            // double AIC_counting = k - likelihood_counting;
+                            wxPrintf("current sigmasquare k, diffsquare, like, AIC are %g, %g, %g, %g \n ", sigma_square, k, diff_square, likelihood, AIC);
+                            // wxPrintf("couting mode k,diffsquare, like, AIC are %g, %g, %g, %g \n ", sigma_square, k, diff_counting_square, likelihood_counting, AIC_counting);
+                            double temp_array[8];
+
+                            temp_array[0] = knot_on_x;
+                            temp_array[1] = knot_on_y;
+                            temp_array[2] = search_sample_dose;
+                            temp_array[3] = sigma_square;
+                            temp_array[4] = k;
+                            temp_array[5] = diff_square;
+                            temp_array[6] = likelihood;
+                            temp_array[7] = AIC;
+                            // temp_array[8]  = diff_counting_square;
+                            // temp_array[9]  = likelihood_counting;
+                            // temp_array[10] = AIC_counting;
+                            AICRecord.WriteLine(temp_array);
+                            for ( int image_ind = 0; image_ind < number_of_input_images; image_ind++ ) {
+                                for ( int i = 0; i < patch_num_y; i++ ) {
+                                    for ( int j = 0; j < patch_num_x; j++ ) {
+                                        int patch_ind = i * patch_num_x + j;
+                                        patch_stack[patch_ind][image_ind].PhaseShift(-Spline3dx.smooth_interp[image_ind](i, j), -Spline3dy.smooth_interp[image_ind](i, j), 0.0);
+                                        // counting_patch[patch_ind][image_ind].PhaseShift(-Spline3dx.smooth_interp[image_ind](i, j), -Spline3dy.smooth_interp[image_ind](i, j), 0.0);
+                                        // sup_patch[patch_ind][image_ind].PhaseShift(-Spline3dx.smooth_interp[image_ind](i, j) * output_binning_factor, -Spline3dy.smooth_interp[image_ind](i, j) * output_binning_factor, 0.0);
+
+                                        // yoFile << shifted_map_y[i][j] << '\t';
+                                    }
+                                }
+                            }
+                            if ( firsttry ) {
+                                best_knot_on_x    = knot_on_x;
+                                best_knot_on_y    = knot_on_y;
+                                best_sample_dose  = search_sample_dose;
+                                best_sigma_square = sigma_square;
+                                best_control_1d   = Control_1d_search;
+                                best_k            = k;
+                                best_diff_square  = diff_square;
+                                best_likelihood   = likelihood;
+                                best_AIC          = AIC;
+                                // best_counting_square     = diff_counting_square;
+                                // best_likelihood_counting = likelihood_counting;
+                                // best_AIC_counting        = AIC_counting;
+                                write_joins(outputpath.ToStdString( ), "Control_R0", Control1d);
+                                write_shifts(patch_num_x, patch_num_y, number_of_input_images, outputpath.ToStdString( ), "_shiftx_R0", "_shifty_R0");
+                                firsttry = false;
+                            }
+                            if ( AIC < best_AIC ) {
+                                best_knot_on_x    = knot_on_x;
+                                best_knot_on_y    = knot_on_y;
+                                best_sample_dose  = search_sample_dose;
+                                best_sigma_square = sigma_square;
+                                best_control_1d   = Control_1d_search;
+                                best_k            = k;
+                                best_diff_square  = diff_square;
+                                best_likelihood   = likelihood;
+                                best_AIC          = AIC;
+                                // best_counting_square     = diff_counting_square;
+                                // best_likelihood_counting = likelihood_counting;
+                                // best_AIC_counting        = AIC_counting;
+                                write_joins(outputpath.ToStdString( ), "Control_R0", Control1d);
+                                write_shifts(patch_num_x, patch_num_y, number_of_input_images, outputpath.ToStdString( ), "_shiftx_R0", "_shifty_R0");
+                            }
+                        }
+                    }
+                }
+                double temp_array[11];
+                temp_array[0] = best_knot_on_x;
+                temp_array[1] = best_knot_on_y;
+                temp_array[2] = best_sample_dose;
+                temp_array[3] = best_sigma_square;
+                temp_array[4] = best_k;
+                temp_array[5] = diff_square;
+                temp_array[6] = best_likelihood;
+                temp_array[7] = best_AIC;
+                // temp_array[8]  = best_counting_square;
+                // temp_array[9]  = best_likelihood_counting;
+                // temp_array[10] = best_AIC_counting;
+                AICRecord.WriteLine(temp_array);
+
+                AICRecord.Close( );
+                // std::cout.rdbuf(coutBuf0);
+                // file.close( );
+                // for ( int i = 0; i < patch_num; ++i ) {
+                //     delete[] counting_patch[i]; // each i-th pointer must be deleted first
+                // }
+                // delete[] counting_patch; // now delete pointer array
+                delete[] counting_image_stack;
+
+                //-----AIC calculation --- end
+
+                // implement the best values-------------------------------------------------------
+                knot_on_x = best_knot_on_x;
+                knot_on_y = best_knot_on_y;
+                wxPrintf("implement knot_on_x y %f %f\n", knot_on_x, knot_on_y);
+                wxPrintf("sample dose %f\n", best_sample_dose);
+                wxPrintf("pixel size %f\n", pixel_size);
+                // double total_dose  = exposure_per_frame * number_of_input_images;
+                sample_dose = double(best_sample_dose);
+                Control1d   = best_control_1d;
+
+                // double knot_on_z      = 2;
+                // double knot_z_dis     = ceil(total_dose / (knot_on_z - 1));
+                knot_z_dis = sample_dose;
+                knot_on_z  = ceil(total_dose / sample_dose) + 1;
+                // double         knot_on_x  = 6; //8;
+                knot_x_dis = ceil(image_dim_x / (knot_on_x - 1));
+                knot_y_dis = ceil(image_dim_y / (knot_on_y - 1));
+
+                Spline3dx.Initialize(knot_on_z, knot_on_y, knot_on_x, number_of_input_images, image_dim_x, image_dim_y, knot_z_dis, knot_x_dis, knot_y_dis);
+                Spline3dy.Initialize(knot_on_z, knot_on_y, knot_on_x, number_of_input_images, image_dim_x, image_dim_y, knot_z_dis, knot_x_dis, knot_y_dis);
+                // Spline3dx.Update3DSplineInterpMapping(patch_locations_x, patch_locations_y, z);
+                // Spline3dy.Update3DSplineInterpMapping(patch_locations_x, patch_locations_y, z);
+                Spline3dx.Update3DSplineInterpMappingControl(patch_locations_x, patch_locations_y, z);
+                Spline3dy.Update3DSplineInterpMappingControl(patch_locations_x, patch_locations_y, z);
+                // update the control point and smooth interpolation
+                double refined_error = minfunc3dSplineObjectxyControlPoints(best_control_1d);
+                //-----AIC calculation --- end
+                //  */
+                // done implement-------------------------------------------------------
+                int quater_patch_dim = 64 / 2;
+
+                patch_stack = new Image*[patch_num];
+                for ( int i = 0; i < patch_num; i++ ) {
+                    patch_stack[i] = new Image[number_of_input_images];
+                }
+
+                patch_trimming_basedon_locations(image_stack, patch_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath.ToStdString( ), "patch_pix", max_threads, true, true, patch_locations);
+                // patch_trimming(image_stack, patch_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size / 2, outputpath.ToStdString( ), "patch_pix", max_threads, true, false, false);
+                Deallocate2DFloatArray(patch_locations, patch_num);
+                if ( patch_stack[0][0].is_in_real_space ) {
+                    for ( int patch_counter = 0; patch_counter < patch_num; patch_counter++ ) {
+                        for ( int image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+                            patch_stack[patch_counter][image_counter].ForwardFFT(true);
+                        }
+                    }
+                }
+
                 for ( int image_ind = 0; image_ind < number_of_input_images; image_ind++ ) {
                     for ( int i = 0; i < patch_num_y; i++ ) {
                         for ( int j = 0; j < patch_num_x; j++ ) {
                             int patch_ind = i * patch_num_x + j;
                             patch_stack[patch_ind][image_ind].PhaseShift(Spline3dx.smooth_interp[image_ind](i, j), Spline3dy.smooth_interp[image_ind](i, j), 0.0);
+
                             // yoFile << shifted_map_y[i][j] << '\t';
                         }
                     }
                 }
-
                 ccmap_stack.InitializeSplineStack(quater_patch_dim, quater_patch_dim, patch_num * number_of_input_images, 1, 1);
-                Generate_CoeffSpline(ccmap_stack, patch_stack, unitless_bfactor / 4.0, patch_num, number_of_input_images, true, outputpath.ToStdString( ), "CCMapBfactor_R1");
+                Generate_CoeffSpline(ccmap_stack, patch_stack, unitless_bfactor, patch_num, number_of_input_images, false, outputpath.ToStdString( ), "CCMapBfactor_R1");
+                for ( int i = 0; i < patch_num; ++i ) {
+                    delete[] patch_stack[i]; // each i-th pointer must be deleted first
+                }
+                delete[] patch_stack; // now delete pointer array
+                patch_stack  = NULL;
+                Join1d_ccmap = zeros_matrix<double>(knot_on_x * knot_on_y * (knot_on_z)*2, 1);
+                // Control1d_ccmap = zeros_matrix<double>((knot_on_x + 2) * (knot_on_y + 2) * (knot_on_z + 1) * 2, 1);
+                Control1d_ccmap = zeros_matrix<double>(knot_on_x * knot_on_y * (knot_on_z)*2, 1);
 
-                // for ( int sample = sample_dose; sample < sample_dose + 1; sample++ ) {
-                //     wxPrintf("sample dose %d\n", sample);
-                //     wxPrintf("pixel size %f\n", pixel_size);
-                //     double total_dose = exposure_per_frame * number_of_input_images;
-                //     // double sample_dose = 6; //10; //4;
-                //     double sample_dose = double(sample);
-
-                //     // double knot_on_z      = 2;
-                //     // double knot_z_dis     = ceil(total_dose / (knot_on_z - 1));
-                //     double knot_z_dis = sample_dose;
-                //     double knot_on_z  = ceil(total_dose / sample_dose) + 1;
-                //     // double         knot_on_x  = 6; //8;
-                //     double knot_x_dis = ceil(image_dim_x / (knot_on_x - 1));
-                //     // double         knot_on_y  = 4; //5;
-                //     double         knot_y_dis = ceil(image_dim_y / (knot_on_y - 1));
-                //     column_vector  Join1d, Join1d_ccmap;
-                //     matrix<double> z;
-                //     z.set_size(number_of_input_images, 1);
-                //     for ( int i = 0; i < number_of_input_images; i++ ) {
-                //         z(i) = (i + 1) * exposure_per_frame;
-                //     }
-                //     Spline3dx.Initialize(knot_on_z, knot_on_y, knot_on_x, number_of_input_images, image_dim_x, image_dim_y, knot_z_dis, knot_x_dis, knot_y_dis);
-                //     Spline3dy.Initialize(knot_on_z, knot_on_y, knot_on_x, number_of_input_images, image_dim_x, image_dim_y, knot_z_dis, knot_x_dis, knot_y_dis);
-                //     Spline3dx.Update3DSplineInterpMapping(patch_locations_x, patch_locations_y, z);
-                //     Spline3dy.Update3DSplineInterpMapping(patch_locations_x, patch_locations_y, z);
-                //     Join1d_ccmap       = zeros_matrix<double>(knot_on_x * knot_on_y * knot_on_z * 2, 1);
-                //     double ccmap_error = minfunc3dSplineCCLossObject(Join1d_ccmap);
-                //     wxPrintf("initial loss: %f \n", ccmap_error);
-                //     auto start2 = std::chrono::high_resolution_clock::now( );
-                //     find_min_using_approximate_derivatives(lbfgs_search_strategy(maxsize * 2), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
-                //                                            objective_delta_stop_strategy(1e-5).be_verbose( ),
-                //                                            minfunc3dSplineCCLossObject, Join1d_ccmap, -100, 1e-2);
-                //     auto stop2     = std::chrono::high_resolution_clock::now( );
-                //     auto duration2 = std::chrono::duration_cast<std::chrono::minutes>(stop2 - start2);
-                //     std::cout << "Lap time " << duration2.count( ) << " minutes\n";
-                //     double likelihood;
-                //     double AIC;
-                //     double k;
-                //     double sigma_square;
-                //     // sigma_square = total_dose / double(number_of_input_images) * pixel_size * pixel_size;
-                //     sigma_square = 0.009;
-
-                //     wxPrintf("pixel size %f\n", pixel_size);
-                //     k          = knot_on_x * knot_on_y * knot_on_z * 2;
-                //     likelihood = -minfunc3dSplineCCLossObject(Join1d_ccmap) * (-1) / sigma_square;
-                //     AIC        = k - likelihood;
-                //     wxPrintf("current sigmasquare k, like, AIC are %f, %f, %f, %f \n ", sigma_square, k, likelihood, AIC);
-                // }
-                // std::cout.rdbuf(coutBuf0);
-                // file.close( );
-                Join1d_ccmap       = zeros_matrix<double>(knot_on_x * knot_on_y * (knot_on_z + 1) * 2, 1);
-                double ccmap_error = minfunc3dSplineCCLossObject(Join1d_ccmap);
+                // double ccmap_error = minfunc3dSplineCCLossObject(Join1d_ccmap);
+                double ccmap_error = minfunc3dSplineCCLossObjectControlPoints(Control1d_ccmap);
                 wxPrintf("initial loss: %f \n", ccmap_error);
+                double stop_cri_map = abs(ccmap_error / 100000);
+                std::cout << " initial error, " << ccmap_error << endl;
+                std::cout << " stop criteria, " << stop_cri_map << endl;
                 auto start2 = std::chrono::high_resolution_clock::now( );
-                find_min_using_approximate_derivatives(lbfgs_search_strategy(maxsize * 2), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
-                                                       objective_delta_stop_strategy(1e-6).be_verbose( ),
-                                                       minfunc3dSplineCCLossObject, Join1d_ccmap, -100, 1e-1);
+                find_min_using_approximate_derivatives(lbfgs_search_strategy(maxsize * 4), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
+                                                       objective_delta_stop_strategy(stop_cri_map).be_verbose( ),
+                                                       minfunc3dSplineCCLossObjectControlPoints, Control1d_ccmap, -100, 1e-1);
+                // find_min_using_approximate_derivatives(lbfgs_search_strategy(maxsize * 2), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
+                //                                        gradient_norm_stop_strategy(stop_cri_map, 10).be_verbose( ),
+                //                                        minfunc3dSplineCCLossObjectControlPoints, Control1d_ccmap, -100, 1e-1);
+                // find_min_using_approximate_derivatives(lbfgs_search_strategy(maxsize * 2), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
+                //                                        objective_delta_stop_strategy(1e-6).be_verbose( ),
+                //                                        minfunc3dSplineCCLossObject, Join1d_ccmap, -100, 1e-1);
+                // following is before using the gradient stop strategy
+                // find_min_using_approximate_derivatives(lbfgs_search_strategy(maxsize * 2), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
+                //                                        objective_delta_stop_strategy(1e-6).be_verbose( ),
+                //                                        minfunc3dSplineCCLossObjectControlPoints, Control1d_ccmap, -100, 1e-1);
                 auto stop2     = std::chrono::high_resolution_clock::now( );
                 auto duration2 = std::chrono::duration_cast<std::chrono::minutes>(stop2 - start2);
                 std::cout << "Lap time " << duration2.count( ) << " minutes\n";
                 std::cout.rdbuf(coutBuf0);
                 file.close( );
-                write_joins(outputpath.ToStdString( ), "Joins_R1", Join1d_ccmap);
+                // write_joins(outputpath.ToStdString( ), "Joins_R1", Join1d_ccmap);
+                write_joins(outputpath.ToStdString( ), "Control_R1", Control1d_ccmap);
                 write_shifts(patch_num_x, patch_num_y, number_of_input_images, outputpath.ToStdString( ), "_shiftx_R1", "_shifty_R1");
                 ccmap_stack.FreeSplineStack( );
                 // */
                 // end the fitting ============================================
 
+                // Control1d       = read_joins("Control_R0", outputpath.ToStdString( ), knot_on_x * knot_on_y * knot_on_z * 2);
+                // Control1d_ccmap = read_joins("Control_R1", outputpath.ToStdString( ), knot_on_x * knot_on_y * knot_on_z * 2);
                 // Join1d       = read_joins("Joins_R0", outputpath.ToStdString( ), knot_on_x * knot_on_y * knot_on_z * 2);
-                // Join1d_ccmap = read_joins("Joins_R1", outputpath.ToStdString( ), knot_on_x * knot_on_y * knot_on_z * 2);
-
-                for ( int i = 0; i < patch_num; ++i ) {
-                    delete[] patch_stack[i]; // each i-th pointer must be deleted first
-                }
-                delete[] patch_stack; // now delete pointer array
-                patch_stack = NULL;
-                for ( int image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
-                    // image_stack[image_counter].BackwardFFT( );
-                    raw_image_stack[image_counter].BackwardFFT( );
+                // Join1d_ccmap = read_joins("Joins_R1", outputpath.ToStdStri
+                // for ( int i = 0; i < patch_num; ++i ) {
+                //     delete[] patch_stack[i]; // each i-th pointer must be deleted first
+                // }
+                // delete[] patch_stack; // now delete pointer array
+                // patch_stack = NULL;
+                if ( ! raw_image_stack[0].is_in_real_space ) {
+                    for ( int image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+                        // image_stack[image_counter].BackwardFFT( );
+                        raw_image_stack[image_counter].BackwardFFT( );
+                    }
                 }
                 wxPrintf("correcting distortion\n");
                 delete[] image_stack;
                 image_stack = nullptr;
                 // apply_fitting_spline_sup(image_stack, raw_image_stack, output_binning_factor, number_of_input_images, Join1d, Join1d_ccmap, max_threads);
-                apply_fitting_spline_sup(output_x_size, output_y_size, raw_image_stack, output_binning_factor, number_of_input_images, Join1d, Join1d_ccmap, max_threads);
+                // apply_fitting_spline_sup(output_x_size, output_y_size, raw_image_stack, output_binning_factor, number_of_input_images, Join1d, Join1d_ccmap, max_threads);
+                apply_fitting_spline_sup_control(output_x_size, output_y_size, raw_image_stack, output_binning_factor, number_of_input_images, Control1d, Control1d_ccmap, max_threads);
                 image_stack = raw_image_stack;
-                Spline3dx.Deallocate( );
-                Spline3dy.Deallocate( );
+                // Spline3dx.Deallocate( );
+                // Spline3dy.Deallocate( );
             }
+
             unblur_timing.lap("Distortion Fix");
             // wxPrintf("writing the fixed frames \n");
             // Image sum_image_fixed;
@@ -1357,99 +1877,127 @@ bool UnBlurApp::DoCalculation( ) {
             //patches end
         }
         if ( round_index == 0 ) {
-            // do the initial refinement (only 1 round - with the min shift)
-            unblur_timing.start("whole frame initial refine");
-            profile_timing.start("initial refine");
-            //SendInfo(wxString::Format("Doing first alignment on %s\n",input_filename));
-            unblur_refine_alignment(image_stack, number_of_input_images, 1, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, min_shift_in_pixels, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts, profile_timing_refinement_method, false);
-            unblur_timing.lap("whole frame initial refine");
-            profile_timing.lap("initial refine");
+            //             // do the initial refinement (only 1 round - with the min shift)
+            //             unblur_timing.start("whole frame initial refine");
+            //             profile_timing.start("initial refine");
+            //             //SendInfo(wxString::Format("Doing first alignment on %s\n",input_filename));
+            //             unblur_refine_alignment(image_stack, number_of_input_images, 1, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, min_shift_in_pixels, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts, profile_timing_refinement_method, false);
+            //             unblur_timing.lap("whole frame initial refine");
+            //             profile_timing.lap("initial refine");
 
-            // now do the actual refinement..
-            unblur_timing.start("whole frame main refine");
-            profile_timing.start("main refine");
-            //SendInfo(wxString::Format("Doing main alignment on %s\n",input_filename));
-            unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts, profile_timing_refinement_method, false);
-            unblur_timing.lap("whole frame main refine");
-            profile_timing.lap("main refine");
+            //             // now do the actual refinement..
+            //             unblur_timing.start("whole frame main refine");
+            //             profile_timing.start("main refine");
+            //             //SendInfo(wxString::Format("Doing main alignment on %s\n",input_filename));
+            //             unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts, profile_timing_refinement_method, false);
+            //             unblur_timing.lap("whole frame main refine");
+            //             profile_timing.lap("main refine");
 
-            // if we have been using pre-binning, we need to do a refinment on the unbinned data..
-            unblur_timing.start("whole frame final refine");
+            //             // if we have been using pre-binning, we need to do a refinment on the unbinned data..
+            //             unblur_timing.start("whole frame final refine");
+            //             if ( pre_binning_factor > 1 ) {
+            //                 // we don't need the binned images anymore..
+
+            //                 delete[] image_stack;
+            //                 image_stack = unbinned_image_stack;
+            //                 pixel_size  = output_pixel_size;
+
+            //                 // Adjust the shifts, then phase shift the original images
+            //                 profile_timing.start("apply shifts 1");
+            // #pragma omp parallel for default(shared) num_threads(max_threads) private(image_counter)
+            //                 for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+            //                     x_shifts[image_counter] *= pre_binning_factor;
+            //                     y_shifts[image_counter] *= pre_binning_factor;
+
+            //                     image_stack[image_counter].PhaseShift(x_shifts[image_counter], y_shifts[image_counter], 0.0);
+            //                     //         #pragma omp parallel for default(shared) num_threads(max_threads) private(image_counter)
+            //                     // for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+            //                     raw_image_stack[image_counter].PhaseShift(x_bin_factor * x_shifts[image_counter], y_bin_factor * y_shifts[image_counter], 0.0);
+            //                     // }
+            //                 }
+            //                 profile_timing.lap("apply shifts 1");
+
+            //                 // convert parameters to pixels with new pixel size..
+
+            //                 min_shift_in_pixels             = minumum_shift_in_angstroms / output_pixel_size;
+            //                 max_shift_in_pixels             = maximum_shift_in_angstroms / output_pixel_size;
+            //                 termination_threshold_in_pixels = termination_threshold_in_angstoms / output_pixel_size;
+
+            //                 // recalculate the bfactor
+
+            //                 unitless_bfactor = bfactor_in_angstoms / pow(output_pixel_size, 2);
+
+            //                 // do the refinement..
+            //                 //SendInfo(wxString::Format("Doing final unbinned alignment on %s\n",input_filename));
+            //                 profile_timing.start("final refine");
+            //                 unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, output_pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts, profile_timing_refinement_method, false);
+            //                 profile_timing.lap("final refine");
+            //                 // if allocated delete the binned stack, and swap the unbinned to image_stack - so that no matter what is happening we can just use image_stack
+            //             }
+            //             unblur_timing.lap("whole frame final refine");
+
+            //             // we should be finished with alignment, now we just need to make the final sum..
+
+            //             // fill the result..
+
+            //             profile_timing.start("fill result");
+            //             float* result_array = new float[number_of_input_images * 2];
+
+            //             if ( is_running_locally == true ) {
+            //                 NumericTextFile shifts_file(output_shift_text_file, OPEN_TO_WRITE, 2);
+            //                 shifts_file.WriteCommentLine("X/Y Shifts for file %s\n", input_filename.c_str( ));
+
+            //                 for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+            //                     temp_float[0] = x_shifts[image_counter] * output_pixel_size;
+            //                     temp_float[1] = y_shifts[image_counter] * output_pixel_size;
+            //                     shifts_file.WriteLine(temp_float);
+            // #ifdef PRINT_VERBOSE
+            //                     wxPrintf("image #%li = %f, %f\n", image_counter, result_array[image_counter], result_array[image_counter + number_of_input_images]);
+            // #endif
+            //                 }
+            //             }
+            //             else {
+            //                 for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+            //                     result_array[image_counter]                          = x_shifts[image_counter] * output_pixel_size;
+            //                     result_array[image_counter + number_of_input_images] = y_shifts[image_counter] * output_pixel_size;
+            //                 }
+            //             }
+            //             wxPrintf("mark 1\n");
+            //             my_result.SetResult(number_of_input_images * 2, result_array);
+            //             wxPrintf("mark 2\n");
+            //             profile_timing.lap("fill result");
+            //             wxPrintf("mark 3\n");
+            //             delete[] result_array;
+            //             delete[] x_shifts;
+            //             delete[] y_shifts;
+
+            NumericTextFile motcor_Shiftifle(MotCorpath + "0-Patch-Full.log", OPEN_TO_READ, 5);
+            // shifts_file.WriteCommentLine("X/Y Shifts for file %s\n", input_filename.c_str( ));
+            float temp_float1[3];
+            for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+                motcor_Shiftifle.ReadLine(temp_float1);
+                x_shifts[image_counter] = temp_float1[1];
+                y_shifts[image_counter] = temp_float1[2];
+                // temp_float[0] = x_shifts[image_counter] * output_pixel_size;
+                // temp_float[1] = y_shifts[image_counter] * output_pixel_size;
+                // shifts_file.WriteLine(temp_float);
+            }
+            motcor_Shiftifle.Close( );
             if ( pre_binning_factor > 1 ) {
-                // we don't need the binned images anymore..
-
                 delete[] image_stack;
                 image_stack = unbinned_image_stack;
-                pixel_size  = output_pixel_size;
-
-                // Adjust the shifts, then phase shift the original images
-                profile_timing.start("apply shifts 1");
-#pragma omp parallel for default(shared) num_threads(max_threads) private(image_counter)
-                for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
-                    x_shifts[image_counter] *= pre_binning_factor;
-                    y_shifts[image_counter] *= pre_binning_factor;
-
-                    image_stack[image_counter].PhaseShift(x_shifts[image_counter], y_shifts[image_counter], 0.0);
-                    //         #pragma omp parallel for default(shared) num_threads(max_threads) private(image_counter)
-                    // for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
-                    raw_image_stack[image_counter].PhaseShift(x_bin_factor * x_shifts[image_counter], y_bin_factor * y_shifts[image_counter], 0.0);
-                    // }
-                }
-                profile_timing.lap("apply shifts 1");
-
-                // convert parameters to pixels with new pixel size..
-
-                min_shift_in_pixels             = minumum_shift_in_angstroms / output_pixel_size;
-                max_shift_in_pixels             = maximum_shift_in_angstroms / output_pixel_size;
-                termination_threshold_in_pixels = termination_threshold_in_angstoms / output_pixel_size;
-
-                // recalculate the bfactor
-
-                unitless_bfactor = bfactor_in_angstoms / pow(output_pixel_size, 2);
-
-                // do the refinement..
-                //SendInfo(wxString::Format("Doing final unbinned alignment on %s\n",input_filename));
-                profile_timing.start("final refine");
-                unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, output_pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts, profile_timing_refinement_method, false);
-                profile_timing.lap("final refine");
-                // if allocated delete the binned stack, and swap the unbinned to image_stack - so that no matter what is happening we can just use image_stack
             }
-            unblur_timing.lap("whole frame final refine");
 
-            // we should be finished with alignment, now we just need to make the final sum..
+            for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+                // x_shifts[image_counter] *= pre_binning_factor;
+                // y_shifts[image_counter] *= pre_binning_factor;
 
-            // fill the result..
-
-            profile_timing.start("fill result");
-            float* result_array = new float[number_of_input_images * 2];
-
-            if ( is_running_locally == true ) {
-                NumericTextFile shifts_file(output_shift_text_file, OPEN_TO_WRITE, 2);
-                shifts_file.WriteCommentLine("X/Y Shifts for file %s\n", input_filename.c_str( ));
-
-                for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
-                    temp_float[0] = x_shifts[image_counter] * output_pixel_size;
-                    temp_float[1] = y_shifts[image_counter] * output_pixel_size;
-                    shifts_file.WriteLine(temp_float);
-#ifdef PRINT_VERBOSE
-                    wxPrintf("image #%li = %f, %f\n", image_counter, result_array[image_counter], result_array[image_counter + number_of_input_images]);
-#endif
-                }
+                image_stack[image_counter].PhaseShift(x_shifts[image_counter] / 2, y_shifts[image_counter] / 2, 0.0);
+                //         #pragma omp parallel for default(shared) num_threads(max_threads) private(image_counter)
+                // for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+                raw_image_stack[image_counter].PhaseShift(x_shifts[image_counter], y_shifts[image_counter], 0.0);
+                // }
             }
-            else {
-                for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
-                    result_array[image_counter]                          = x_shifts[image_counter] * output_pixel_size;
-                    result_array[image_counter + number_of_input_images] = y_shifts[image_counter] * output_pixel_size;
-                }
-            }
-            wxPrintf("mark 1\n");
-            my_result.SetResult(number_of_input_images * 2, result_array);
-            wxPrintf("mark 2\n");
-            profile_timing.lap("fill result");
-            wxPrintf("mark 3\n");
-            delete[] result_array;
-            delete[] x_shifts;
-            delete[] y_shifts;
         }
         // write the final corrected image and frames
         // if ( round_index == total_rounds - 1 ) {
@@ -2006,7 +2554,7 @@ void unblur_refine_alignment(Image* input_stack, int number_of_images, int max_i
 //     wxPrintf("Done Patch Trimming\n");
 //     // return patch_stack;
 // }
-void patch_trimming(Image* input_stack, Image** patch_stack, int number_of_images, int patch_num_x, int patch_num_y, int output_stack_box_size, wxString outpath, int max_threads, bool use_coord_file, wxString coordinates_filename) {
+void patch_trimming(Image* input_stack, Image** patch_stack, int number_of_images, int patch_num_x, int patch_num_y, int output_stack_box_size, std::string outpath, std::string file_pref, int max_threads, bool mean_padding, bool write_trimmed_files, bool use_coord_file, wxString coordinates_filename) {
 
     // Image current_image;
     // Image    box;
@@ -2062,7 +2610,10 @@ void patch_trimming(Image* input_stack, Image** patch_stack, int number_of_image
         input_coos_file = new NumericTextFile(coordinates_filename, OPEN_TO_READ, 3);
         for ( int patch_counter = 0; patch_counter < number_of_patchgroups; patch_counter++ ) {
             input_coos_file->ReadLine(temp_array[patch_counter]);
-            patch[patch_counter].OpenFile(wxString::Format(outpath + "%04i.mrc", patch_counter).ToStdString( ), true);
+            // patch[patch_counter].OpenFile(wxString::Format(outpath + "%04i.mrc", patch_counter).ToStdString( ), true);
+            if ( write_trimmed_files ) {
+                patch[patch_counter].OpenFile(wxString::Format("%s%s_%04i.mrc", outpath, file_pref, patch_counter).ToStdString( ), true);
+            }
         }
     }
     else {
@@ -2077,7 +2628,10 @@ void patch_trimming(Image* input_stack, Image** patch_stack, int number_of_image
                 // temp_array[patch_num_x * patch_y_ind + patch_x_ind][1] = image_dim_y - patch_y_ind * step_size_y * 2 - step_size_y - image_dim_y / 2;
                 temp_array[patch_num_x * (patch_num_y - patch_y_ind - 1) + patch_x_ind][1] = image_dim_y - patch_y_ind * step_size_y * 2 - step_size_y - image_dim_y / 2;
 
-                patch[patch_counter].OpenFile(wxString::Format(outpath + "%04i.mrc", patch_counter).ToStdString( ), true);
+                // patch[patch_counter].OpenFile(wxString::Format("%s%04i.mrc", outpath, patch_counter).ToStdString( ), true);
+                if ( write_trimmed_files ) {
+                    patch[patch_counter].OpenFile(wxString::Format("%s%s_%04i.mrc", outpath, file_pref, patch_counter).ToStdString( ), true);
+                }
                 patch_counter += 1;
             }
         }
@@ -2094,15 +2648,24 @@ void patch_trimming(Image* input_stack, Image** patch_stack, int number_of_image
         wxPrintf("current patch: %i\n", patch_counter);
         // for ( int patch_counter = 0; patch_counter < number_of_patchgroups; patch_counter++ ) {
         for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
+            float image_mean;
+            if ( mean_padding ) {
+                // wxPrintf(" yest mean padding");
+                image_mean = input_stack[image_counter].ReturnAverageOfRealValues( );
+            }
+            else {
+                image_mean = 0.0;
+            }
 
-            float image_mean = input_stack[image_counter].ReturnAverageOfRealValues( );
-            int   my_x       = temp_array[patch_counter][0];
-            int   my_y       = temp_array[patch_counter][1];
+            int my_x = temp_array[patch_counter][0];
+            int my_y = temp_array[patch_counter][1];
 
             patch_stack[patch_counter][image_counter].Allocate(output_stack_box_size, output_stack_box_size, 1, true);
 
             input_stack[image_counter].ClipInto(&patch_stack[patch_counter][image_counter], image_mean, false, 1.0, int(my_x), int(my_y), 0);
-            patch_stack[patch_counter][image_counter].WriteSlice(&patch[patch_counter], image_counter + 1);
+            if ( write_trimmed_files ) {
+                patch_stack[patch_counter][image_counter].WriteSlice(&patch[patch_counter], image_counter + 1);
+            }
         }
         patch[patch_counter].CloseFile( );
     }
@@ -2243,7 +2806,7 @@ void split_and_update(matrix<double> Join1d, int joinsize) {
     Spline3dy.Update3DSpline1dInput(knot_on_spline_for_y);
 };
 
-void apply_fitting_quadratic_sup(Image* input_stack, Image* super_res_stack, float output_binning_factor, int number_of_images, param_vector_quadratic params_x, param_vector_quadratic params_y) {
+void apply_fitting_quadratic_sup(Image* super_res_stack, float output_binning_factor, int number_of_images, param_vector_quadratic params_x, param_vector_quadratic params_y, int max_threads) {
     // image_stack[image_counter - 1].Resize(myroundint(image_stack[image_counter - 1].logical_x_dimension / output_binning_factor), myroundint(image_stack[image_counter - 1].logical_y_dimension / output_binning_factor), 1);
     int   super_dim_x     = super_res_stack[0].logical_x_dimension;
     int   super_dim_y     = super_res_stack[0].logical_y_dimension;
@@ -2258,8 +2821,8 @@ void apply_fitting_quadratic_sup(Image* input_stack, Image* super_res_stack, flo
 
     float* original_map_x = new float[totalpixels];
     float* original_map_y = new float[totalpixels];
-    float* shifted_map_x  = new float[totalpixels];
-    float* shifted_map_y  = new float[totalpixels];
+    float* shifted_map_x; // = new float[totalpixels];
+    float* shifted_map_y; // = new float[totalpixels];
 
     // initialize the pixel coordinates
     for ( int i = 0; i < super_dim_y; i++ ) {
@@ -2270,11 +2833,16 @@ void apply_fitting_quadratic_sup(Image* input_stack, Image* super_res_stack, flo
     }
 
     Image tmp_sup_res;
-    tmp_sup_res.Allocate(super_res_stack[0].logical_x_dimension, super_res_stack[0].logical_y_dimension, 1, true);
+#pragma omp parallel for num_threads(max_threads) private(tmp_sup_res, shifted_map_x, shifted_map_y, input)
     for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
+        tmp_sup_res.Allocate(super_res_stack[0].logical_x_dimension, super_res_stack[0].logical_y_dimension, 1, true);
+        shifted_map_x = new float[totalpixels];
+        shifted_map_y = new float[totalpixels];
         wxPrintf("correcting frame %i \n ", image_counter + 1);
-        time     = image_counter;
-        input(2) = time;
+        // time     = image_counter;
+        // input(2) = time;
+        input(2) = image_counter;
+
         for ( int pix = 0; pix < totalpixels; pix++ ) {
             input(0)           = original_map_x[pix];
             input(1)           = original_map_y[pix];
@@ -2282,24 +2850,35 @@ void apply_fitting_quadratic_sup(Image* input_stack, Image* super_res_stack, flo
             shifted_map_y[pix] = model_quadratic(input, params_y) * y_binning_float + original_map_y[pix] * y_binning_float;
         }
 
-        tmp_sup_res.CopyFrom(&super_res_stack[image_counter]);
-        tmp_sup_res.SetToConstant(super_res_stack[image_counter].ReturnAverageOfRealValuesOnEdges( ));
-        // super_res_stack[image_counter].BackwardFFT();
-        super_res_stack[image_counter].Distortion(&tmp_sup_res, shifted_map_x, shifted_map_y);
-        tmp_sup_res.ForwardFFT(true);
-        tmp_sup_res.ZeroCentralPixel( );
-        tmp_sup_res.Resize(image_dim_x, image_dim_y, 1, super_res_stack[image_counter].ReturnAverageOfRealValues( ));
-        input_stack[image_counter].CopyFrom(&tmp_sup_res);
-    }
+        // tmp_sup_res.CopyFrom(&super_res_stack[image_counter]);
+        // tmp_sup_res.SetToConstant(super_res_stack[image_counter].ReturnAverageOfRealValuesOnEdges( ));
+        // // super_res_stack[image_counter].BackwardFFT();
+        // super_res_stack[image_counter].Distortion(&tmp_sup_res, shifted_map_x, shifted_map_y);
+        // tmp_sup_res.ForwardFFT(true);
+        // tmp_sup_res.ZeroCentralPixel( );
+        // tmp_sup_res.Resize(image_dim_x, image_dim_y, 1, super_res_stack[image_counter].ReturnAverageOfRealValues( ));
+        // input_stack[image_counter].CopyFrom(&tmp_sup_res);
 
+        tmp_sup_res.CopyFrom(&super_res_stack[image_counter]);
+        super_res_stack[image_counter].SetToConstant(tmp_sup_res.ReturnAverageOfRealValuesOnEdges( ));
+        tmp_sup_res.Distortion(&super_res_stack[image_counter], shifted_map_x, shifted_map_y);
+        delete[] shifted_map_x;
+        delete[] shifted_map_y;
+        shifted_map_x = nullptr;
+        shifted_map_y = nullptr;
+    }
     delete[] original_map_x;
     delete[] original_map_y;
-    delete[] shifted_map_x;
-    delete[] shifted_map_y;
     original_map_x = nullptr;
     original_map_y = nullptr;
-    shifted_map_x  = nullptr;
-    shifted_map_y  = nullptr;
+
+#pragma omp parallel for num_threads(max_threads)
+    for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
+        super_res_stack[image_counter].ForwardFFT(true);
+        super_res_stack[image_counter].ZeroCentralPixel( );
+        super_res_stack[image_counter].Resize(image_dim_x, image_dim_y, 1);
+        super_res_stack[image_counter].BackwardFFT( );
+    }
 }
 
 void apply_fitting_quadratic(Image* input_stack, int number_of_images, param_vector_quadratic params_x, param_vector_quadratic params_y) {
@@ -2403,9 +2982,9 @@ void apply_fitting_spline_sup(int output_x_size, int output_y_size, Image* super
     }
 
     // Spline3dx.Update3DSpline1dInput(knot_on_spline_for_x);
-    wxPrintf("before update3d spline x\n");
+    // wxPrintf("before update3d spline x\n");
     spline3dx_R0.Update3DSpline1dInput(knot_on_spline_for_x);
-    wxPrintf("done update3d spline x\n");
+    // wxPrintf("done update3d spline x\n");
     knot_on_spline_for_y.set_size(halflen, 1);
     for ( int i = 0; i < halflen; i++ ) {
         knot_on_spline_for_y(i) = Join1d_R0(count);
@@ -2421,7 +3000,7 @@ void apply_fitting_spline_sup(int output_x_size, int output_y_size, Image* super
     }
     Spline3dx.Update3DSpline1dInput(knot_on_spline_for_x);
     for ( int i = 0; i < halflen; i++ ) {
-        knot_on_spline_for_y(i) = Join1d_R0(count);
+        knot_on_spline_for_y(i) = Join1d_R1(count);
         count++;
     }
     Spline3dy.Update3DSpline1dInput(knot_on_spline_for_y);
@@ -2484,7 +3063,7 @@ void apply_fitting_spline_sup(int output_x_size, int output_y_size, Image* super
         shifted_map_y = nullptr;
         tmp_sup_res.Deallocate( );
     }
-    wxPrintf("distrotion finished\n");
+    wxPrintf("distortion finished\n");
 
     delete[] original_map_x;
     delete[] original_map_y;
@@ -2497,8 +3076,133 @@ void apply_fitting_spline_sup(int output_x_size, int output_y_size, Image* super
         super_res_stack[image_counter].Resize(image_dim_x, image_dim_y, 1);
         super_res_stack[image_counter].BackwardFFT( );
     }
+    // spline3dx_R0.Destroy( );
+    // spline3dy_R0.Destroy( );
+    wxPrintf("here?");
     spline3dx_R0.Deallocate( );
     spline3dy_R0.Deallocate( );
+    // Spline3dx.Deallocate( );
+    // Spline3dy.Deallocate( );
+};
+
+void apply_fitting_spline_sup_control(int output_x_size, int output_y_size, Image* super_res_stack, float output_binning_factor, int number_of_images, column_vector Control1d_R0, column_vector Control1d_R1, int max_threads) {
+    int   super_dim_x     = super_res_stack[0].logical_x_dimension;
+    int   super_dim_y     = super_res_stack[0].logical_y_dimension;
+    int   image_dim_x     = output_x_size;
+    int   image_dim_y     = output_y_size;
+    float x_binning_float = super_res_stack[0].logical_x_dimension / image_dim_x;
+    float y_binning_float = super_res_stack[0].logical_y_dimension / image_dim_y;
+    int   totalpixels     = super_dim_x * super_dim_y;
+
+    float* original_map_x = new float[totalpixels];
+    float* original_map_y = new float[totalpixels];
+
+    int              controlsize = Control1d_R0.size( );
+    MovieFrameSpline spline3dx_R0, spline3dy_R0;
+    wxPrintf("Control Points size: %d\n", controlsize);
+    // split_and_update(Join1d_R0, joinsize);
+    // spline3dx_R0.CopyFrom(Spline3dx);
+    // spline3dy_R0.CopyFrom(Spline3dy); //check copyfrom
+
+    spline3dx_R0.Initialize(Spline3dx.knot_no_z, Spline3dx.knot_no_y, Spline3dx.knot_no_x, Spline3dx.frame_no, image_dim_x, image_dim_y, Spline3dx.spline_patch_dimz, Spline3dx.spline_patch_dimx, Spline3dx.spline_patch_dimy);
+    spline3dy_R0.Initialize(Spline3dy.knot_no_z, Spline3dy.knot_no_y, Spline3dy.knot_no_x, Spline3dy.frame_no, image_dim_x, image_dim_y, Spline3dy.spline_patch_dimz, Spline3dy.spline_patch_dimx, Spline3dy.spline_patch_dimy);
+    spline3dx_R0.Update3DSplineInterpMappingControl(Spline3dx.x, Spline3dx.y, Spline3dx.z);
+    spline3dy_R0.Update3DSplineInterpMappingControl(Spline3dy.x, Spline3dy.y, Spline3dy.z);
+    wxPrintf("initialized spline 3d for 0 round\n");
+    int            count = 0;
+    matrix<double> control_on_spline_for_x, control_on_spline_for_y;
+    int            halflen = controlsize / 2;
+    // int            halflen = knot_on_x * knot_on_y * knot_on_z;
+    control_on_spline_for_x.set_size(halflen, 1);
+    for ( int i = 0; i < halflen; i++ ) {
+        control_on_spline_for_x(i) = Control1d_R0(count);
+        count++;
+    }
+
+    // Spline3dx.Update3DSpline1dInput(knot_on_spline_for_x);
+    wxPrintf("before update3d spline x\n");
+    spline3dx_R0.Update3DSpline1dInputControlPoints(control_on_spline_for_x);
+    wxPrintf("done update3d spline x\n");
+    control_on_spline_for_y.set_size(halflen, 1);
+    for ( int i = 0; i < halflen; i++ ) {
+        control_on_spline_for_y(i) = Control1d_R0(count);
+        count++;
+    }
+    // Spline3dy.Update3DSpline1dInput(knot_on_spline_for_y);
+    spline3dy_R0.Update3DSpline1dInputControlPoints(control_on_spline_for_y);
+
+    count = 0;
+    for ( int i = 0; i < halflen; i++ ) {
+        control_on_spline_for_x(i) = Control1d_R1(count);
+        count++;
+    }
+    Spline3dx.Update3DSpline1dInputControlPoints(control_on_spline_for_x);
+    for ( int i = 0; i < halflen; i++ ) {
+        control_on_spline_for_y(i) = Control1d_R1(count);
+        count++;
+    }
+    Spline3dy.Update3DSpline1dInputControlPoints(control_on_spline_for_y);
+
+    // split_and_update(Join1d_R1, joinsize);
+    // initialize the pixel coordinates
+    for ( int i = 0; i < super_dim_y; i++ ) {
+        for ( int j = 0; j < super_dim_x; j++ ) {
+            original_map_x[i * super_dim_x + j] = float(j) / x_binning_float;
+            original_map_y[i * super_dim_x + j] = float(i) / y_binning_float;
+        }
+    }
+
+    Image  tmp_sup_res;
+    float* shifted_map_x;
+    float* shifted_map_y;
+
+#pragma omp parallel for num_threads(max_threads) private(tmp_sup_res, shifted_map_x, shifted_map_y)
+    for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
+        shifted_map_x = new float[totalpixels];
+        shifted_map_y = new float[totalpixels];
+        wxPrintf("generating interpolation map %i \n ", image_counter + 1);
+        for ( int i = 0; i < super_dim_y; i++ ) {
+            for ( int j = 0; j < super_dim_x; j++ ) {
+                int pix            = i * super_dim_x + j;
+                shifted_map_x[pix] = j + Spline3dx.Apply3DSplineFunc(original_map_x[pix], original_map_y[pix], image_counter) * x_binning_float;
+                shifted_map_y[pix] = i + Spline3dy.Apply3DSplineFunc(original_map_x[pix], original_map_y[pix], image_counter) * y_binning_float;
+                shifted_map_x[pix] = shifted_map_x[pix] + spline3dx_R0.Apply3DSplineFunc(original_map_x[pix], original_map_y[pix], image_counter) * x_binning_float;
+                shifted_map_y[pix] = shifted_map_y[pix] + spline3dy_R0.Apply3DSplineFunc(original_map_x[pix], original_map_y[pix], image_counter) * y_binning_float;
+            }
+        }
+
+        wxPrintf("correcting frame %i \n ", image_counter + 1);
+        tmp_sup_res.CopyFrom(&super_res_stack[image_counter]);
+        super_res_stack[image_counter].SetToConstant(tmp_sup_res.ReturnAverageOfRealValuesOnEdges( ));
+        wxPrintf("before distortion %i \n ", image_counter + 1);
+        tmp_sup_res.Distortion(&super_res_stack[image_counter], shifted_map_x, shifted_map_y);
+        delete[] shifted_map_x;
+        delete[] shifted_map_y;
+        shifted_map_x = nullptr;
+        shifted_map_y = nullptr;
+        tmp_sup_res.Deallocate( );
+    }
+    wxPrintf("distortion finished--\n");
+
+    delete[] original_map_x;
+    delete[] original_map_y;
+    wxPrintf("here1?");
+    original_map_x = nullptr;
+    original_map_y = nullptr;
+#pragma omp parallel for num_threads(max_threads)
+    for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
+        super_res_stack[image_counter].ForwardFFT(true);
+        super_res_stack[image_counter].ZeroCentralPixel( );
+        super_res_stack[image_counter].Resize(image_dim_x, image_dim_y, 1);
+        super_res_stack[image_counter].BackwardFFT( );
+    }
+    wxPrintf("here?");
+    // spline3dx_R0.Destroy( );
+    // spline3dy_R0.Destroy( );
+    // spline3dx_R0.Deallocate( );
+    // spline3dy_R0.Deallocate( );
+    // Spline3dx.Deallocate( );
+    // Spline3dy.Deallocate( );
 };
 
 // 12042023
@@ -2943,4 +3647,100 @@ void write_shifts(int patch_no_x, int patch_no_y, int image_no, std::string outp
         xoFile.close( );
         yoFile.close( );
     }
-}
+};
+
+// write_quad_shifts(number_of_input_images, x_quad, y_quad, patch_locations, outputpath.ToStdString( ), "_shiftx_R0", "_shifty_R0");
+
+void write_quad_shifts(int image_no, int patch_no_x, int patch_no_y, param_vector_quadratic params_x, param_vector_quadratic params_y, float** patch_locations, std::string output_path, std::string shift_file_prefx, std::string shift_file_prefy) {
+    std::ofstream      xoFile, yoFile;
+    char               buffer[200];
+    std::string        shift_file, shift_filex, shift_filey;
+    std::ostringstream oss;
+    input_vector       input;
+
+    for ( int image_ind = 0; image_ind < image_no; image_ind++ ) {
+        int shift_file_index = image_ind;
+        oss << "%s%04i%s%s" << output_path.c_str( ), shift_file_index, shift_file_prefx.c_str( ), "ccmap.txt";
+        std::snprintf(buffer, sizeof(buffer), "%s%04i%s%s", output_path.c_str( ), shift_file_index, shift_file_prefx.c_str( ), "ccmap.txt");
+        // shift_file = oss.str( );
+        shift_filex = buffer;
+        // cout << "file " << shift_filex << endl;
+        oss << "%s%04i%s%s" << output_path.c_str( ), shift_file_index, shift_file_prefy.c_str( ), "ccmap.txt";
+        std::snprintf(buffer, sizeof(buffer), "%s%04i%s%s", output_path.c_str( ), shift_file_index, shift_file_prefy.c_str( ), "ccmap.txt");
+        // shift_file = oss.str( );
+        shift_filey = buffer;
+        // cout << "file " << shift_filey << endl;
+        xoFile.open(shift_filex.c_str( ));
+        yoFile.open(shift_filey.c_str( ));
+        // yoFile.open(shifted_mapy_file.c_str( ));
+
+        if ( xoFile.is_open( ) && yoFile.is_open( ) ) {
+            // wxPrintf("files are open\n");
+            // cout << "files are open" << endl;
+            // float myarray[10][5760];
+            for ( int image_counter = 0; image_counter < image_no; image_counter++ ) {
+                input(2) = image_counter;
+            }
+            for ( int i = 0; i < patch_no_y; i++ ) {
+                for ( int j = 0; j < patch_no_x; j++ ) {
+                    int patch_counter = patch_no_x * i + j;
+                    input(0)          = patch_locations[patch_counter][0];
+                    input(1)          = patch_locations[patch_counter][1];
+                    xoFile << model_quadratic(input, params_x);
+                    yoFile << model_quadratic(input, params_y);
+                }
+                xoFile << '\n';
+                yoFile << '\n';
+            }
+        }
+        xoFile.close( );
+        yoFile.close( );
+    }
+};
+
+void write_linear_shifts(int image_no, int patch_no_x, int patch_no_y, param_vector_linear params_x, param_vector_linear params_y, float** patch_locations, std::string output_path, std::string shift_file_prefx, std::string shift_file_prefy) {
+    std::ofstream      xoFile, yoFile;
+    char               buffer[200];
+    std::string        shift_file, shift_filex, shift_filey;
+    std::ostringstream oss;
+    input_vector       input;
+
+    for ( int image_ind = 0; image_ind < image_no; image_ind++ ) {
+        int shift_file_index = image_ind;
+        oss << "%s%04i%s%s" << output_path.c_str( ), shift_file_index, shift_file_prefx.c_str( ), "ccmap.txt";
+        std::snprintf(buffer, sizeof(buffer), "%s%04i%s%s", output_path.c_str( ), shift_file_index, shift_file_prefx.c_str( ), "ccmap.txt");
+        // shift_file = oss.str( );
+        shift_filex = buffer;
+        // cout << "file " << shift_filex << endl;
+        oss << "%s%04i%s%s" << output_path.c_str( ), shift_file_index, shift_file_prefy.c_str( ), "ccmap.txt";
+        std::snprintf(buffer, sizeof(buffer), "%s%04i%s%s", output_path.c_str( ), shift_file_index, shift_file_prefy.c_str( ), "ccmap.txt");
+        // shift_file = oss.str( );
+        shift_filey = buffer;
+        // cout << "file " << shift_filey << endl;
+        xoFile.open(shift_filex.c_str( ));
+        yoFile.open(shift_filey.c_str( ));
+        // yoFile.open(shifted_mapy_file.c_str( ));
+
+        if ( xoFile.is_open( ) && yoFile.is_open( ) ) {
+            // wxPrintf("files are open\n");
+            // cout << "files are open" << endl;
+            // float myarray[10][5760];
+            for ( int image_counter = 0; image_counter < image_no; image_counter++ ) {
+                input(2) = image_counter;
+            }
+            for ( int i = 0; i < patch_no_y; i++ ) {
+                for ( int j = 0; j < patch_no_x; j++ ) {
+                    int patch_counter = patch_no_x * i + j;
+                    input(0)          = patch_locations[patch_counter][0];
+                    input(1)          = patch_locations[patch_counter][1];
+                    xoFile << model_linear(input, params_x);
+                    yoFile << model_linear(input, params_y);
+                }
+                xoFile << '\n';
+                yoFile << '\n';
+            }
+        }
+        xoFile.close( );
+        yoFile.close( );
+    }
+};

@@ -25,6 +25,7 @@ DisplayPanel::DisplayPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, 
     Bind(wxEVT_MENU, &DisplayPanel::OnHighQuality, this, Toolbar_High_Quality);
     Bind(wxEVT_MENU, &DisplayPanel::OnInvert, this, Toolbar_Invert);
     Bind(wxEVT_MENU, &DisplayPanel::OnOpen, this, Toolbar_Open);
+    Bind(wxEVT_MENU, &DisplayPanel::OnRefresh, this, Toolbar_Refresh);
 
     Bind(wxEVT_TEXT_ENTER, &DisplayPanel::ChangeLocation, this, Toolbar_Location_Text);
     Bind(wxEVT_TEXT_ENTER, &DisplayPanel::ChangeScaling, this, Toolbar_Scale_Combo_Control);
@@ -195,7 +196,7 @@ void DisplayPanel::ChangeLocation(wxCommandEvent& WXUNUSED(event)) {
     wxString current_string = toolbar_location_text->GetValue( );
     bool     has_worked     = current_string.ToLong(&set_location);
 
-    if ( has_worked == true ) {
+    if ( has_worked ) {
         // is this number valid?
 
         if ( set_location > 0 && set_location <= current_panel->included_image_numbers.GetCount( ) ) {
@@ -231,7 +232,7 @@ void DisplayPanel::ChangeLocation(wxCommandEvent& WXUNUSED(event)) {
 
     // if for some reason it hasn't worked - set it back to it's previous value..
 
-    if ( has_worked == false ) {
+    if ( ! has_worked ) {
         toolbar_location_text->SetValue(wxString::Format(wxT("%li"), current_panel->current_location));
         Refresh( );
         Update( );
@@ -302,13 +303,13 @@ void DisplayPanel::ChangeScaling(wxCommandEvent& WXUNUSED(event)) {
 
     DisplayNotebookPanel* current_panel = ReturnCurrentPanel( );
 
-    if ( combo_value.Right(1).IsSameAs(wxT("%")) == true ) {
+    if ( combo_value.Right(1).IsSameAs(wxT("%")) ) {
         combo_value.RemoveLast( );
     }
 
     convert_success = combo_value.ToLong(&new_value);
 
-    if ( convert_success == true && new_value > 0 && double(new_value) / 100. != current_panel->desired_scale_factor ) {
+    if ( convert_success && new_value > 0 && double(new_value) / 100. != current_panel->desired_scale_factor ) {
         current_panel->desired_scale_factor          = double(new_value) / 100.;
         current_panel->panel_image_has_correct_scale = false;
         current_panel->ReDrawPanel( );
@@ -349,7 +350,7 @@ void DisplayPanel::ChangeScaling(wxCommandEvent& WXUNUSED(event)) {
 void DisplayPanel::OnFFT(wxCommandEvent& WXUNUSED(event)) {
     DisplayNotebookPanel* current_panel = ReturnCurrentPanel( );
 
-    if ( current_panel->use_fft == true )
+    if ( current_panel->use_fft )
         current_panel->use_fft = false;
     else {
         current_panel->use_fft = true;
@@ -362,7 +363,7 @@ void DisplayPanel::OnFFT(wxCommandEvent& WXUNUSED(event)) {
 void DisplayPanel::OnHighQuality(wxCommandEvent& WXUNUSED(event)) {
     DisplayNotebookPanel* current_panel = ReturnCurrentPanel( );
 
-    if ( current_panel->use_fourier_scaling == true )
+    if ( current_panel->use_fourier_scaling )
         current_panel->use_fourier_scaling = false;
     else {
         current_panel->use_fourier_scaling = true;
@@ -375,7 +376,7 @@ void DisplayPanel::OnHighQuality(wxCommandEvent& WXUNUSED(event)) {
 void DisplayPanel::OnInvert(wxCommandEvent& WXUNUSED(event)) {
     DisplayNotebookPanel* current_panel = ReturnCurrentPanel( );
 
-    if ( current_panel->invert_contrast == true )
+    if ( current_panel->invert_contrast )
         current_panel->invert_contrast = false;
     else {
         current_panel->invert_contrast = true;
@@ -406,7 +407,6 @@ void DisplayPanel::OnOpen(wxCommandEvent& WXUNUSED(event)) {
         bool is_valid = GetMRCDetails(path, x_size, y_size, number_of_frames);
 
         if ( is_valid ) {
-            // TODO: this leads to errors for any file extensions not included in MRCFile::OpenFile
             /* In Tigris, there was the option to specify the filetype to open it with the appropriate
             function; in cisTEM, we have a switch case that is determined by using an if statement
             with a sequence of operator=|| that checks the extension; it will only open the file if the
@@ -446,14 +446,14 @@ void DisplayPanel::OnPrevious(wxCommandEvent& WXUNUSED(event)) {
 
     DisplayNotebookPanel* current_panel = ReturnCurrentPanel( );
 
-    if ( popup_exists == true ) {
+    if ( popup_exists ) {
         ReleaseMouse( );
         current_panel->SetCursor(wxCursor(wxCURSOR_CROSS));
         popup->Destroy( );
         popup_exists = false;
     }
     /*
-	if (drawing_selection_square == true)
+	if (drawing_selection_square )
 	{
 		drawing_selection_square = false;
 	}
@@ -503,14 +503,14 @@ void DisplayPanel::OnNext(wxCommandEvent& WXUNUSED(event)) {
 
     DisplayNotebookPanel* current_panel = ReturnCurrentPanel( );
 
-    if ( popup_exists == true ) {
+    if ( popup_exists ) {
         ReleaseMouse( );
         current_panel->SetCursor(wxCursor(wxCURSOR_CROSS));
         popup->Destroy( );
         popup_exists = false;
     }
     /*
-	if (drawing_selection_square == true)
+	if (drawing_selection_square )
 	{
 		drawing_selection_square = false;
 	}*/
@@ -578,7 +578,7 @@ void DisplayPanel::OnGlobal(wxCommandEvent& WXUNUSED(event)) {
     if ( current_panel->global_low_grey == 0 && current_panel->global_high_grey == 0 ) {
         bool success = current_panel->SetGlobalGreys( );
 
-        if ( success == true ) {
+        if ( success ) {
             current_panel->low_grey_value                = current_panel->global_low_grey;
             current_panel->high_grey_value               = current_panel->global_high_grey;
             current_panel->grey_values_decided_by        = GLOBAL_GREYS;
@@ -593,6 +593,12 @@ void DisplayPanel::OnGlobal(wxCommandEvent& WXUNUSED(event)) {
         current_panel->panel_image_has_correct_greys = false;
         current_panel->ReDrawPanel( );
     }
+}
+
+void DisplayPanel::OnRefresh(wxCommandEvent& WXUNUSED(event)) {
+    DisplayNotebookPanel* current_panel = ReturnCurrentPanel( );
+    current_panel->should_refresh       = true;
+    current_panel->ReDrawPanel( );
 }
 
 void DisplayPanel::ChangeFocusToPanel(void) {
@@ -618,7 +624,7 @@ void DisplayPanel::UpdateToolbar(void) {
     else if ( my_notebook->GetPageCount( ) == 0 )
         blank_toolbar = true;
 
-    if ( blank_toolbar == true ) {
+    if ( blank_toolbar ) {
         toolbar_location_text->SetValue(wxT(""));
         toolbar_location_text->Disable( );
         toolbar_scale_combo->SetValue(wxT(""));
@@ -655,7 +661,7 @@ void DisplayPanel::UpdateToolbar(void) {
         if ( current_panel != NULL ) {
 
             /*
-		    if (current_panel->have_txt_filename == true)
+		    if (current_panel->have_txt_filename )
 		    {
 		    	toolbar->EnableTool(Toolbar_Save, true);
 		    }
@@ -701,7 +707,7 @@ void DisplayPanel::UpdateToolbar(void) {
             if ( (style_flags & CAN_FFT) == CAN_FFT ) {
                 Toolbar->EnableTool(Toolbar_FFT, true);
 
-                if ( current_panel->use_fft == true ) {
+                if ( current_panel->use_fft ) {
                     Toolbar->ToggleTool(Toolbar_FFT, true);
                 }
                 else {
@@ -711,7 +717,7 @@ void DisplayPanel::UpdateToolbar(void) {
 
             Toolbar->EnableTool(Toolbar_High_Quality, true);
 
-            if ( current_panel->use_fourier_scaling == true ) {
+            if ( current_panel->use_fourier_scaling ) {
                 Toolbar->ToggleTool(Toolbar_High_Quality, true);
             }
             else {
@@ -720,7 +726,7 @@ void DisplayPanel::UpdateToolbar(void) {
 
             Toolbar->EnableTool(Toolbar_Invert, true);
 
-            if ( current_panel->invert_contrast == true ) {
+            if ( current_panel->invert_contrast ) {
                 Toolbar->ToggleTool(Toolbar_Invert, true);
             }
             else {
@@ -795,7 +801,7 @@ void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title,
     double current_scale_factor;
     long   current_image_location;
 
-    if ( keep_scale_and_location_if_possible == true ) {
+    if ( keep_scale_and_location_if_possible ) {
         DisplayNotebookPanel* current_panel = ReturnCurrentPanel( );
 
         if ( current_panel != NULL ) {
@@ -812,12 +818,12 @@ void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title,
         current_image_location = 1;
     }
 
-    if ( DoesFileExist(wanted_filename) == false ) {
+    if ( ! DoesFileExist(wanted_filename) ) {
         wxMessageBox(wxString::Format("Error, File does not exist (%s)", wanted_filename), wxT("Error"), wxOK | wxICON_INFORMATION, this);
         return;
     }
 
-    if ( popup_exists == true ) {
+    if ( popup_exists ) {
         DisplayNotebookPanel* current_panel = ReturnCurrentPanel( );
 
         if ( current_panel != NULL ) {
@@ -836,7 +842,7 @@ void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title,
         no_notebook_panel = new DisplayNotebookPanel(this, panel_counter);
         my_panel          = no_notebook_panel;
 
-        if ( force_local_survey == true )
+        if ( force_local_survey )
             no_notebook_panel->grey_values_decided_by = LOCAL_GREYS;
         MainSizer->Insert(1, no_notebook_panel, 1, wxEXPAND | wxALL, 5);
         Layout( );
@@ -844,13 +850,13 @@ void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title,
     else {
         panel_counter++;
         my_panel = new DisplayNotebookPanel(my_notebook, panel_counter);
-        if ( force_local_survey == true )
+        if ( force_local_survey )
             my_panel->grey_values_decided_by = LOCAL_GREYS;
     }
 
     my_panel->my_file.OpenFile(wanted_filename.ToStdString( ), false);
 
-    if ( my_panel->my_file.IsOpen( ) == false ) {
+    if ( ! my_panel->my_file.IsOpen( ) ) {
         wxMessageBox(wxString::Format("Error, Cannot open file (%s)", wanted_filename), wxT("Error"), wxOK | wxICON_INFORMATION, this);
         return;
     }
@@ -949,7 +955,7 @@ void DisplayPanel::ChangeFileForTabNumber(int wanted_tab_number, wxString wanted
 
         MyDebugAssertTrue(wanted_tab_number < my_notebook->GetPageCount( ) && wanted_tab_number >= 0, "Asking for a tab that does not exist");
 
-        if ( wanted_tab_number == my_notebook->GetSelection( ) && popup_exists == true ) {
+        if ( wanted_tab_number == my_notebook->GetSelection( ) && popup_exists ) {
             DisplayNotebookPanel* current_panel = ReturnCurrentPanel( );
 
             if ( current_panel != NULL ) {
@@ -966,24 +972,24 @@ void DisplayPanel::ChangeFileForTabNumber(int wanted_tab_number, wxString wanted
     if ( current_panel == NULL )
         return;
 
-    if ( DoesFileExist(wanted_filename) == false ) {
+    if ( ! DoesFileExist(wanted_filename) ) {
         wxMessageBox(wxString::Format("Error, File does not exist (%s)", wanted_filename), wxT("Error"), wxOK | wxICON_INFORMATION, this);
         return;
     }
 
-    if ( current_panel->input_is_a_file == true ) {
-        if ( current_panel->my_file.IsOpen( ) == true )
+    if ( current_panel->input_is_a_file ) {
+        if ( current_panel->my_file.IsOpen( ) )
             current_panel->my_file.CloseFile( );
     }
     else {
-        if ( current_panel->image_to_display != NULL && current_panel->do_i_have_image_ownership == true ) {
+        if ( current_panel->image_to_display != NULL && current_panel->do_i_have_image_ownership ) {
             delete current_panel->image_to_display;
         }
     }
 
     current_panel->my_file.OpenFile(wanted_filename.ToStdString( ), false);
 
-    if ( current_panel->my_file.IsOpen( ) == false ) {
+    if ( ! current_panel->my_file.IsOpen( ) ) {
         wxMessageBox(wxString::Format("Error, Cannot open file (%s)", wanted_filename), wxT("Error"), wxOK | wxICON_INFORMATION, this);
         return;
     }
@@ -1070,7 +1076,7 @@ void DisplayPanel::OpenImage(Image* image_to_view, wxString wanted_tab_title, bo
         return;
     }
 
-    if ( popup_exists == true ) {
+    if ( popup_exists ) {
         DisplayNotebookPanel* current_panel = ReturnCurrentPanel( );
 
         if ( current_panel != NULL ) {
@@ -1159,7 +1165,7 @@ void DisplayPanel::OpenImage(Image* image_to_view, wxString wanted_tab_title, bo
 }
 
 void DisplayPanel::ChangeImage(Image* image_to_view, wxString wanted_tab_title, bool take_ownership, wxArrayLong* wanted_included_image_numbers) {
-    if ( popup_exists == true ) {
+    if ( popup_exists ) {
         DisplayNotebookPanel* current_panel = ReturnCurrentPanel( );
 
         if ( current_panel != NULL ) {
@@ -1205,19 +1211,19 @@ void DisplayPanel::ChangeImage(Image* image_to_view, wxString wanted_tab_title, 
         }
     }
 
-    if ( current_panel->input_is_a_file == true ) {
+    if ( current_panel->input_is_a_file ) {
         current_panel->input_is_a_file           = false;
         current_panel->do_i_have_image_ownership = take_ownership;
         current_panel->image_to_display          = image_to_view;
 
-        if ( current_panel->my_file.IsOpen( ) == true )
+        if ( current_panel->my_file.IsOpen( ) )
             current_panel->my_file.CloseFile( );
     }
     else {
         bool   delete_old_image = false;
         Image* old_image;
 
-        if ( current_panel->image_to_display != NULL && current_panel->do_i_have_image_ownership == true ) {
+        if ( current_panel->image_to_display != NULL && current_panel->do_i_have_image_ownership ) {
             delete_old_image = true;
             old_image        = current_panel->image_to_display;
         }
@@ -1226,7 +1232,7 @@ void DisplayPanel::ChangeImage(Image* image_to_view, wxString wanted_tab_title, 
         current_panel->do_i_have_image_ownership = take_ownership;
         current_panel->image_to_display          = image_to_view;
 
-        if ( delete_old_image == true ) {
+        if ( delete_old_image ) {
             delete old_image;
         }
     }
@@ -1488,21 +1494,21 @@ void DisplayNotebookPanel::UpdateImageStatusInfo(int x_pos, int y_pos) {
             wxString StatusText;
             StatusText = wxT("Image: ") + wxString::Format(wxT("%i"), current_image) + wxT("  - X=") + wxString::Format(wxT("%i"), current_x_pos) + wxT(", Y=") + wxString::Format(wxT("%i"), current_y_pos);
 
-            if ( resolution_instead_of_radius == true )
+            if ( resolution_instead_of_radius )
                 StatusText += wxT(", Res=") + wxString::Format(wxT("%.2f"), current_resolution) + wxT("Å");
             else
                 StatusText += wxT(", Rad=") + wxString::Format(wxT("%i"), current_radius);
 
             StatusText += wxT(", Value=") + wxString::Format(wxT("%f"), raw_pixel_value);
 
-            //if (selected_distance != 0 && show_selection_distances == true) StatusText += wxT(", Dist=") + wxString::Format(wxT("%f"), selected_distance);
+            //if (selected_distance != 0 && show_selection_distances ) StatusText += wxT(", Dist=") + wxString::Format(wxT("%f"), selected_distance);
             //if (picking_mode == INTEGRATE_PICK && integrate_box_x_pos != -1 && integrate_box_y_pos != -1) StatusText += wxT(", Integrated Value =") + wxString::Format(wxT("%f"), integrated_value);
             parent_display_panel->StatusText->SetLabel(StatusText);
         }
         else {
             wxString StatusText = wxT("");
 
-            //if (selected_distance != 0 && show_selection_distances == true) StatusText += wxT("Dist=") + wxString::Format(wxT("%f"), selected_distance);
+            //if (selected_distance != 0 && show_selection_distances ) StatusText += wxT("Dist=") + wxString::Format(wxT("%f"), selected_distance);
             //	if (picking_mode == INTEGRATE_PICK && integrate_box_x_pos != -1 && integrate_box_y_pos != -1) StatusText += wxT("Integrated Value =") + wxString::Format(wxT("%f"), integrated_value);
             parent_display_panel->StatusText->SetLabel(StatusText);
         }
@@ -1532,21 +1538,21 @@ void DisplayNotebookPanel::UpdateImageStatusInfo(int x_pos, int y_pos) {
                 wxString StatusText;
                 StatusText = wxT("Image: ") + wxString::Format(wxT("%i"), current_image) + wxT("  - X=") + wxString::Format(wxT("%i"), current_x_pos) + wxT(", Y=") + wxString::Format(wxT("%i"), current_y_pos);
 
-                if ( resolution_instead_of_radius == true )
+                if ( resolution_instead_of_radius )
                     StatusText += wxT(", Res=") + wxString::Format(wxT("%.2f"), current_resolution) + wxT("Å");
                 else
                     StatusText += wxT(", Rad=") + wxString::Format(wxT("%i"), current_radius);
 
                 StatusText += wxT(", Value=") + wxString::Format(wxT("%f"), raw_pixel_value);
 
-                //	if (selected_distance != 0 && show_selection_distances == true) StatusText += wxT(", Dist=") + wxString::Format(wxT("%f"), selected_distance);
+                //	if (selected_distance != 0 && show_selection_distances ) StatusText += wxT(", Dist=") + wxString::Format(wxT("%f"), selected_distance);
                 //	if (picking_mode == INTEGRATE_PICK && integrate_box_x_pos != -1 && integrate_box_y_pos != -1) StatusText += wxT(", Integrated Value =") + wxString::Format(wxT("%f"), integrated_value);
                 parent_display_panel->StatusText->SetLabel(StatusText);
             }
             else {
                 wxString StatusText = wxT("");
 
-                //	if (selected_distance != 0 && show_selection_distances == true) StatusText += wxT("Dist=") + wxString::Format(wxT("%f"), selected_distance);
+                //	if (selected_distance != 0 && show_selection_distances ) StatusText += wxT("Dist=") + wxString::Format(wxT("%f"), selected_distance);
                 //	if (picking_mode == INTEGRATE_PICK && integrate_box_x_pos != -1 && integrate_box_y_pos != -1) StatusText += wxT("Integrated Value =") + wxString::Format(wxT("%f"), integrated_value);
                 parent_display_panel->StatusText->SetLabel(StatusText);
             }
@@ -1554,7 +1560,7 @@ void DisplayNotebookPanel::UpdateImageStatusInfo(int x_pos, int y_pos) {
         else {
             wxString StatusText = wxT("");
 
-            // 		if (selected_distance != 0 && show_selection_distances == true) StatusText += wxT("Dist=") + wxString::Format(wxT("%f"), selected_distance);
+            // 		if (selected_distance != 0 && show_selection_distances ) StatusText += wxT("Dist=") + wxString::Format(wxT("%f"), selected_distance);
             // 		if (picking_mode == INTEGRATE_PICK && integrate_box_x_pos != -1 && integrate_box_y_pos != -1) StatusText += wxT(" Integrated Value =") + wxString::Format(wxT("%f"), integrated_value);
             parent_display_panel->StatusText->SetLabel(StatusText);
         }
@@ -1612,7 +1618,7 @@ void DisplayNotebookPanel::OnKeyUp(wxKeyEvent& event) {
 
 	wxCommandEvent null_event;
 
-	if (current_keycode == WXK_SPACE && suspend_overlays == true)
+	if (current_keycode == WXK_SPACE && suspend_overlays )
 	{
 		suspend_overlays = false;
 
@@ -1620,7 +1626,7 @@ void DisplayNotebookPanel::OnKeyUp(wxKeyEvent& event) {
 		current_panel->Update();
 	}
 
-	if (current_keycode == WXK_CONTROL && drawing_selection_square == true)
+	if (current_keycode == WXK_CONTROL && drawing_selection_square )
 	{
 		drawing_selection_square = false;
 		current_panel->Refresh();
@@ -1637,7 +1643,7 @@ bool DisplayNotebookPanel::SetGlobalGreys(void) {
 
     Image buffer_image;
 
-    if ( CheckFileStillValid( ) == true ) {
+    if ( CheckFileStillValid( ) ) {
         float global_min;
         float global_max;
         float current_min;
@@ -1661,12 +1667,12 @@ bool DisplayNotebookPanel::SetGlobalGreys(void) {
 
             should_continue = my_progress.Update(counter);
 
-            if ( should_continue == false ) {
+            if ( ! should_continue ) {
                 continue;
             }
         }
 
-        if ( should_continue == true ) {
+        if ( should_continue ) {
             global_low_grey  = global_min;
             global_high_grey = global_max;
             return true;
@@ -1685,7 +1691,7 @@ DisplayNotebookPanel::~DisplayNotebookPanel( ) {
         delete[] image_memory_buffer;
     if ( scaled_image_memory_buffer != NULL )
         delete[] scaled_image_memory_buffer;
-    if ( input_is_a_file == false && do_i_have_image_ownership == true && image_to_display != NULL )
+    if ( ! input_is_a_file && do_i_have_image_ownership && image_to_display != NULL )
         delete image_to_display;
 }
 
@@ -1736,7 +1742,7 @@ void DisplayNotebookPanel::OnRightDown(wxMouseEvent& event) {
         event.ResumePropagation(2); // go up to the parent parent panel..
         event.Skip( );
     }
-    else if ( parent_display_panel->popup_exists == false ) {
+    else if ( ! parent_display_panel->popup_exists ) {
         int client_x = int(x_pos);
         int client_y = int(y_pos);
 
@@ -1777,38 +1783,38 @@ void DisplayNotebookPanel::OnRightDown(wxMouseEvent& event) {
 }
 
 void DisplayNotebookPanel::SetImageSelected(long wanted_image, bool refresh) {
-    MyDebugAssertTrue((parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || parent_display_panel->ReturnCurrentPanel( )->picking_mode == IMAGES_PICK, "Trying to select images, but selection style flag not set");
+    MyDebugAssertTrue((parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || picking_mode == IMAGES_PICK, "Trying to select images, but selection style flag not set");
     MyDebugAssertTrue(wanted_image > 0 && wanted_image <= ReturnNumberofImages( ), "Trying to select an image that doesn't exist (%li)", wanted_image);
 
-    if ( image_is_selected[wanted_image] == false )
+    if ( ! image_is_selected[wanted_image] )
         number_of_selections++;
     image_is_selected[wanted_image] = true;
 
-    if ( refresh == true ) {
+    if ( refresh ) {
         Refresh( );
         Update( );
     }
 }
 
 void DisplayNotebookPanel::SetImageNotSelected(long wanted_image, bool refresh) {
-    MyDebugAssertTrue((parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || parent_display_panel->ReturnCurrentPanel( )->picking_mode == IMAGES_PICK, "Trying to select images, but selection style flag not set");
+    MyDebugAssertTrue((parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || picking_mode == IMAGES_PICK, "Trying to select images, but selection style flag not set");
     MyDebugAssertTrue(wanted_image > 0 && wanted_image <= ReturnNumberofImages( ), "Trying to select an image that doesn't exist (%li)", wanted_image);
 
-    if ( image_is_selected[wanted_image] == true )
+    if ( image_is_selected[wanted_image] )
         number_of_selections--;
     image_is_selected[wanted_image] = false;
 
-    if ( refresh == true ) {
+    if ( refresh ) {
         Refresh( );
         Update( );
     }
 }
 
 void DisplayNotebookPanel::ToggleImageSelected(long wanted_image, bool refresh) {
-    MyDebugAssertTrue((parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || parent_display_panel->ReturnCurrentPanel( )->picking_mode == IMAGES_PICK, "Trying to select images, but selection style flag not set");
+    MyDebugAssertTrue((parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || picking_mode == IMAGES_PICK, "Trying to select images, but selection style flag not set");
     MyDebugAssertTrue(wanted_image > 0 && wanted_image <= ReturnNumberofImages( ), "Trying to select an image that doesn't exist (%li)", wanted_image);
 
-    if ( image_is_selected[wanted_image] == true ) {
+    if ( image_is_selected[wanted_image] ) {
         image_is_selected[wanted_image] = false;
         number_of_selections--;
     }
@@ -1817,14 +1823,14 @@ void DisplayNotebookPanel::ToggleImageSelected(long wanted_image, bool refresh) 
         number_of_selections++;
     }
 
-    if ( refresh == true ) {
+    if ( refresh ) {
         Refresh( );
         Update( );
     }
 }
 
 void DisplayNotebookPanel::ClearSelection(bool refresh) {
-    MyDebugAssertTrue((parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || (parent_display_panel->ReturnCurrentPanel( )->picking_mode == IMAGES_PICK), "Trying to clear selection, but selection style flag not set");
+    MyDebugAssertTrue((parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || picking_mode == IMAGES_PICK, "Trying to clear selection, but selection style flag not set");
 
     for ( long mycounter = 0; mycounter < ReturnNumberofImages( ) + 1; mycounter++ ) {
         image_is_selected[mycounter] = false;
@@ -1832,14 +1838,14 @@ void DisplayNotebookPanel::ClearSelection(bool refresh) {
 
     number_of_selections = 0;
 
-    if ( refresh == true ) {
+    if ( refresh ) {
         Refresh( );
         Update( );
     }
 }
 
 void DisplayNotebookPanel::OnLeftDown(wxMouseEvent& event) {
-    if ( parent_display_panel->popup_exists == true ) {
+    if ( parent_display_panel->popup_exists ) {
         ReleaseMouse( );
         SetCursor(wxCursor(wxCURSOR_CROSS));
         parent_display_panel->popup->Destroy( );
@@ -1889,7 +1895,7 @@ void DisplayNotebookPanel::OnLeftDown(wxMouseEvent& event) {
 
     // check if the CTRL key is down, if so we want to make a selection box...
 
-    /*if ( event.ControlDown( ) == true && picking_mode == COORDS_PICK ) // we want to draw a selection box..
+    /*if ( event.ControlDown( )  && picking_mode == COORDS_PICK ) // we want to draw a selection box..
     {
         drawing_selection_square = true;
 
@@ -1910,7 +1916,7 @@ void DisplayNotebookPanel::OnLeftDown(wxMouseEvent& event) {
         if ( current_x_pos < ReturnImageXSize( ) && current_x_pos >= 0 && current_y_pos < ReturnImageYSize( ) && current_y_pos >= 0 ) {
             if ( current_image <= ReturnNumberofImages( ) ) {
                 if ( picking_mode == IMAGES_PICK ) {
-                    if ( image_is_selected[current_image] == true ) {
+                    if ( image_is_selected[current_image] ) {
                         image_is_selected[current_image] = false;
                         number_of_selections--;
                     }
@@ -1933,13 +1939,13 @@ void DisplayNotebookPanel::OnLeftDown(wxMouseEvent& event) {
     else if ( x_pos < max_x && y_pos < max_y ) {
         // perform the relevant action..
         if ( current_image <= ReturnNumberofImages( ) ) {
-            if ( picking_mode == IMAGES_PICK ) {
+            if ( (parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || (parent_display_panel->is_from_display_program && picking_mode == IMAGES_PICK) ) {
                 ToggleImageSelected(current_image, false);
                 parent_display_panel->SetTabNameUnsaved( );
             }
 
             // We must be in coords mode
-            else {
+            else if ( parent_display_panel->is_from_display_program && picking_mode == COORDS_PICK ) {
                 coord_tracker->ToggleCoord(current_image, current_x_pos, current_y_pos);
                 parent_display_panel->SetTabNameUnsaved( );
             }
@@ -1956,7 +1962,7 @@ void DisplayNotebookPanel::OnLeftDown(wxMouseEvent& event) {
 }
 
 void DisplayNotebookPanel::OnRightUp(wxMouseEvent& event) {
-    if ( parent_display_panel->popup_exists == true ) {
+    if ( parent_display_panel->popup_exists ) {
 
         DisplayNotebookPanel* current_panel = parent_display_panel->ReturnCurrentPanel( );
         current_panel->ReleaseMouse( );
@@ -1987,7 +1993,7 @@ void DisplayNotebookPanel::OnMotion(wxMouseEvent& event) {
 
     // if left button is down, and we are drawing a selections square, update to coords..
     /*
-	 if (event.m_leftDown == true && drawing_selection_square == true)
+	 if (event.m_leftDown  && drawing_selection_square )
 	 {
 		 // in coordinate selection mode - do not let the square leave the initial image, as otherwise, it becomes too complicated..
 
@@ -2008,7 +2014,7 @@ void DisplayNotebookPanel::OnMotion(wxMouseEvent& event) {
 		 int min_image_x_pos;
 		 int min_image_y_pos;
 
-		 if (single_image == true)
+		 if (single_image )
 		 {
 			 current_x_pos = single_image_x + (x_pos / actual_scale_factor) - 1;
 			 current_y_pos = single_image_y + (y_pos / actual_scale_factor) - 1;
@@ -2050,7 +2056,7 @@ void DisplayNotebookPanel::OnMotion(wxMouseEvent& event) {
 		 Update();
 	 }
 	 else // if the right button is down and the popup exists move it..*/
-    if ( event.m_rightDown == true && parent_display_panel->popup_exists == true ) {
+    if ( event.m_rightDown && parent_display_panel->popup_exists ) {
         // At the time of writing, when the popupwindow goes off the size of screen
         // it's draw direction is reveresed.. For this reason i've included this
         // rather dodgy get around, of just adding the box size when the box goes
@@ -2113,7 +2119,7 @@ void DisplayNotebookPanel::OnMotion(wxMouseEvent& event) {
 
 bool DisplayNotebookPanel::CheckFileStillValid( ) {
 
-    if ( input_is_a_file == true ) {
+    if ( input_is_a_file ) {
         ImageFile buffer_file;
         buffer_file.OpenFile(filename.ToStdString( ), false);
 
@@ -2263,7 +2269,7 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
 
         if ( current_location != location_on_last_draw || images_in_x != images_in_x_on_last_draw || images_in_y != images_in_y_on_last_draw ) {
             //dc.Clear();
-            if ( CheckFileStillValid( ) == true ) {
+            if ( CheckFileStillValid( ) ) {
 
                 if ( number_allocated_for_buffer < images_in_current_view ) {
                     if ( image_memory_buffer != NULL )
@@ -2281,7 +2287,7 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
                     if ( current_location + image_counter <= included_image_numbers.GetCount( ) ) {
                         SetImageInMemoryBuffer(image_counter, current_location + image_counter - 1);
 
-                        if ( use_fft == true ) {
+                        if ( use_fft ) {
                             Image buffer_image;
                             buffer_image.CopyFrom(&image_memory_buffer[image_counter]);
                             buffer_image.ForwardFFT(false);
@@ -2300,10 +2306,10 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
             images_in_y_on_last_draw = images_in_y;
         }
 
-        if ( should_refresh == true ) {
+        if ( should_refresh ) {
             // check none of the file attributes have changed..
 
-            if ( CheckFileStillValid( ) == true ) {
+            if ( CheckFileStillValid( ) ) {
                 // we should be safe to reload..
 
                 //dc.Clear();
@@ -2320,7 +2326,7 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
 
                         SetImageInMemoryBuffer(image_counter, current_location + image_counter - 1);
 
-                        if ( use_fft == true ) {
+                        if ( use_fft ) {
                             Image buffer_image;
                             buffer_image.CopyFrom(&image_memory_buffer[image_counter]);
                             buffer_image.ForwardFFT(false);
@@ -2350,18 +2356,18 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
 
                 if ( this->current_location + image_counter <= included_image_numbers.GetCount( ) ) {
 
-                    if ( panel_image_has_correct_greys == false || panel_image_has_correct_scale == false || single_image == false ) {
+                    if ( ! panel_image_has_correct_greys || ! panel_image_has_correct_scale || ! single_image ) {
                         // drawing speed is critical so we'll do it by directly writing the data,
                         // this gives us a pointer to the image data..
 
-                        if ( use_fourier_scaling == true && (scaled_x_size != ReturnImageXSize( ) || scaled_y_size != ReturnImageYSize( )) ) {
+                        if ( use_fourier_scaling && (scaled_x_size != ReturnImageXSize( ) || scaled_y_size != ReturnImageYSize( )) ) {
                             scaled_image_memory_buffer[image_counter].CopyFrom(&image_memory_buffer[image_counter]);
                             scaled_image_memory_buffer[image_counter].ForwardFFT( );
                             scaled_image_memory_buffer[image_counter].Resize(scaled_x_size, scaled_y_size, 1);
                             scaled_image_memory_buffer[image_counter].BackwardFFT( );
                         }
 
-                        if ( use_fourier_scaling == true && (scaled_x_size != ReturnImageXSize( ) || scaled_y_size != ReturnImageYSize( )) ) {
+                        if ( use_fourier_scaling && (scaled_x_size != ReturnImageXSize( ) || scaled_y_size != ReturnImageYSize( )) ) {
                             panel_image->Resize(wxSize(scaled_x_size, scaled_y_size), wxPoint(0, 0));
                         }
                         else {
@@ -2373,7 +2379,7 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
                         // are we locally scaling?
 
                         if ( this->grey_values_decided_by == LOCAL_GREYS ) {
-                            if ( use_fourier_scaling == true && (scaled_x_size != ReturnImageXSize( ) || scaled_y_size != ReturnImageYSize( )) ) {
+                            if ( use_fourier_scaling && (scaled_x_size != ReturnImageXSize( ) || scaled_y_size != ReturnImageYSize( )) ) {
                                 scaled_image_memory_buffer[image_counter].GetMinMax(current_low_grey_value, current_high_grey_value);
                             }
                             else
@@ -2389,7 +2395,7 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
 
                             address = 0;
 
-                            if ( use_fourier_scaling == true && (scaled_x_size != ReturnImageXSize( ) || scaled_y_size != ReturnImageYSize( )) ) {
+                            if ( use_fourier_scaling && (scaled_x_size != ReturnImageXSize( ) || scaled_y_size != ReturnImageYSize( )) ) {
                                 for ( j = 0; j < scaled_image_memory_buffer[image_counter].logical_y_dimension; j++ ) {
                                     for ( i = 0; i < scaled_image_memory_buffer[image_counter].logical_x_dimension; i++ ) {
                                         if ( scaled_image_memory_buffer[image_counter].real_values[address] != 0. ) {
@@ -2428,7 +2434,7 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
                                 image_variance        = (image_total_squared / number_of_pixels) - pow(image_average_density, 2);
                                 image_stdev           = sqrt(image_variance);
 
-                                if ( actual_scale_factor < 1 && use_fourier_scaling == false ) {
+                                if ( actual_scale_factor < 1 && ! use_fourier_scaling ) {
                                     image_stdev *= pow(actual_scale_factor, 2);
                                 }
 
@@ -2436,7 +2442,7 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
                                 current_high_grey_value = image_average_density + (image_stdev * 2.5);
 
                                 /*
-						   if (actual_scale_factor < 1 && use_fourier_scaling == false)
+						   if (actual_scale_factor < 1 && ! use_fourier_scaling )
 						   {
 							   current_low_grey_value = image_average_density - ((image_stdev * 2.5) * pow(actual_scale_factor,2));
 							   current_high_grey_value = image_average_density + ((image_stdev * 2.5) * pow(actual_scale_factor,2));
@@ -2459,7 +2465,7 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
 
                         // scale to grey values and draw..
 
-                        if ( invert_contrast == true && use_fft == false ) {
+                        if ( invert_contrast && ! use_fft ) {
                             float buffer            = current_low_grey_value;
                             current_low_grey_value  = current_high_grey_value;
                             current_high_grey_value = buffer;
@@ -2473,7 +2479,7 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
                         green_counter = 1;
                         blue_counter  = 2;
 
-                        if ( use_fourier_scaling == true && (scaled_x_size != ReturnImageXSize( ) || scaled_y_size != ReturnImageYSize( )) ) {
+                        if ( use_fourier_scaling && (scaled_x_size != ReturnImageXSize( ) || scaled_y_size != ReturnImageYSize( )) ) {
                             for ( j = 0; j < scaled_image_memory_buffer[image_counter].logical_y_dimension; j++ ) {
                                 address = (scaled_image_memory_buffer[image_counter].logical_y_dimension - 1 - j) * (scaled_image_memory_buffer[image_counter].logical_x_dimension + scaled_image_memory_buffer[image_counter].padding_jump_value);
 
@@ -2601,7 +2607,7 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
                     memDC.SetFont(*wxNORMAL_FONT);
 #endif
 
-                    if ( this->show_label == true ) {
+                    if ( this->show_label ) {
                         LabelText = wxString::Format(wxT("%i"), int(this->current_location + image_counter));
                     }
                     else
@@ -2614,7 +2620,7 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
                     // draw on crosshair if desired..
 
                     /*
-				if (show_crosshair == true)
+				if (show_crosshair )
 				{
 					memDC.CrossHair(DrawBitmap->GetWidth() / 2, DrawBitmap->GetHeight() / 2);
 				}*/
@@ -2691,7 +2697,7 @@ void DisplayNotebookPanel::OnPaint(wxPaintEvent& evt) {
     if ( window_x_size != panel_bitmap.GetWidth( ) || window_y_size != panel_bitmap.GetHeight( ) ) {
         ReDrawPanel( );
     }
-    else if ( panel_image_has_correct_greys == false || panel_image_has_correct_scale == false ) {
+    else if ( ! panel_image_has_correct_greys || ! panel_image_has_correct_scale ) {
         ReDrawPanel( );
     }
     //else
@@ -2718,7 +2724,7 @@ void DisplayNotebookPanel::OnPaint(wxPaintEvent& evt) {
         // if we are drawing a selection box - draw it..
 
         /*
-		if (drawing_selection_square == true)
+		if (drawing_selection_square )
 		{
 			wxPen selection_pen(*wxRED, 1, wxSHORT_DASH);
 			dc.SetPen(selection_pen);
@@ -2731,7 +2737,7 @@ void DisplayNotebookPanel::OnPaint(wxPaintEvent& evt) {
         // put a funky little red box around them.. or if coords mode is
         // selected.. draw coords. -UNLESS SUSPENDED
 
-        if ( suspend_overlays == false ) {
+        if ( ! suspend_overlays ) {
 
             dc.SetPen(*wxRED);
             if ( picking_mode == IMAGES_PICK )
@@ -2744,23 +2750,22 @@ void DisplayNotebookPanel::OnPaint(wxPaintEvent& evt) {
 
             for ( int y = 0; y < images_in_y; y++ ) {
                 for ( int x = 0; x < images_in_x; x++ ) {
-                    if ( ReturnNumberofImages( ) >= counter ) {
-                        if ( (parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || parent_display_panel->ReturnCurrentPanel( )->picking_mode == IMAGES_PICK ) {
-                            if ( image_is_selected[counter] == true ) {
-                                // draw a rectangle around the image..
+                    if ( counter <= ReturnNumberofImages( ) ) {
+                        if ( (parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || (parent_display_panel->is_from_display_program && picking_mode == IMAGES_PICK) ) {
+                            if ( image_is_selected[counter] ) {
 
-                                if ( single_image ) {
-                                    dc.DrawRoundedRectangle(0, 0, window_x_size, window_y_size, -.5);
-                                }
-                                else
-                                    dc.DrawRoundedRectangle(x * current_x_size, y * current_y_size, current_x_size, current_y_size, -.5);
+                                // draw a rectangle around the image..
+                                dc.DrawRoundedRectangle(x * current_x_size, y * current_y_size, current_x_size, current_y_size, -.5);
                             }
                         }
-                        // Otherwise, we're picking coords
-                        else {
+
+                        // Otherwise, we're picking coords (and therefore in display program)
+                        else if ( parent_display_panel->is_from_display_program && parent_display_panel->ReturnCurrentPanel( )->picking_mode == COORDS_PICK ) {
+
                             // find all the coordinates for this image..
                             for ( coord_counter = 0; coord_counter < coord_tracker->number_of_coords; coord_counter++ ) {
                                 if ( coord_tracker->coords[coord_counter].image_number == counter ) {
+
                                     // draw the point on..
                                     if ( single_image ) {
                                         // we need to check if the co-ordinate is inside the current view, and if so, draw it.
@@ -2771,14 +2776,14 @@ void DisplayNotebookPanel::OnPaint(wxPaintEvent& evt) {
 
                                         // if this coord is the last coord, and show selection distances is true, show the distance.
 
-                                        if ( coord_counter == coord_tracker->number_of_coords - 1 && coord_tracker->number_of_coords > 1 && show_selection_distances == true && coord_tracker->coords[coord_counter].image_number == coord_tracker->coords[coord_counter - 1].image_number ) {
+                                        if ( coord_counter == coord_tracker->number_of_coords - 1 && coord_tracker->number_of_coords > 1 && show_selection_distances && coord_tracker->coords[coord_counter].image_number == coord_tracker->coords[coord_counter - 1].image_number ) {
                                             dc.DrawLine((coord_tracker->coords[coord_counter].x_pos - single_image_x) * actual_scale_factor, (coord_tracker->coords[coord_counter].y_pos - single_image_y) * actual_scale_factor, (coord_tracker->coords[coord_counter - 1].x_pos - single_image_x) * actual_scale_factor, (coord_tracker->coords[coord_counter - 1].y_pos - single_image_y) * actual_scale_factor);
                                         }
                                     }
                                     else {
                                         dc.DrawCircle(x * current_x_size + (coord_tracker->coords[coord_counter].x_pos * actual_scale_factor), y * current_y_size + (coord_tracker->coords[coord_counter].y_pos * actual_scale_factor), point_size);
 
-                                        if ( coord_counter == coord_tracker->number_of_coords - 1 && coord_tracker->number_of_coords > 1 && show_selection_distances == true && coord_tracker->coords[coord_counter].image_number == coord_tracker->coords[coord_counter - 1].image_number ) {
+                                        if ( coord_counter == coord_tracker->number_of_coords - 1 && coord_tracker->number_of_coords > 1 && show_selection_distances && coord_tracker->coords[coord_counter].image_number == coord_tracker->coords[coord_counter - 1].image_number ) {
                                             dc.DrawLine(x * current_x_size + (coord_tracker->coords[coord_counter].x_pos * actual_scale_factor), y * current_y_size + (coord_tracker->coords[coord_counter].y_pos * actual_scale_factor), x * current_x_size + (coord_tracker->coords[coord_counter - 1].x_pos * actual_scale_factor), y * current_y_size + (coord_tracker->coords[coord_counter - 1].y_pos * actual_scale_factor));
                                         }
                                     }
@@ -2788,36 +2793,36 @@ void DisplayNotebookPanel::OnPaint(wxPaintEvent& evt) {
                         counter++;
                     }
                 }
+            }
 
-                if ( template_matching_marker_x_pos != -1.0 && template_matching_marker_y_pos != -1.0 ) {
-                    dc.SetPen(*wxRED);
-                    dc.SetBrush(wxBrush(*wxRED, wxTRANSPARENT));
-                    int radius = myroundint(template_matching_marker_radius * actual_scale_factor);
-                    if ( radius < 5 )
-                        radius = 5;
-                    dc.DrawCircle(myroundint(template_matching_marker_x_pos * actual_scale_factor), current_y_size - myroundint(template_matching_marker_y_pos * actual_scale_factor) - 1, radius);
-                }
+            if ( template_matching_marker_x_pos != -1.0 && template_matching_marker_y_pos != -1.0 ) {
+                dc.SetPen(*wxRED);
+                dc.SetBrush(wxBrush(*wxRED, wxTRANSPARENT));
+                int radius = myroundint(template_matching_marker_radius * actual_scale_factor);
+                if ( radius < 5 )
+                    radius = 5;
+                dc.DrawCircle(myroundint(template_matching_marker_x_pos * actual_scale_factor), current_y_size - myroundint(template_matching_marker_y_pos * actual_scale_factor) - 1, radius);
+            }
 
-                if ( current_location <= blue_selection_square_location && blue_selection_square_location <= (current_location + images_in_current_view) ) {
-                    counter = current_location;
+            if ( current_location <= blue_selection_square_location && blue_selection_square_location <= (current_location + images_in_current_view) ) {
+                counter = current_location;
 
-                    for ( int y = 0; y < images_in_y; y++ ) {
-                        for ( int x = 0; x < images_in_x; x++ ) {
-                            if ( ReturnNumberofImages( ) >= counter ) {
-                                if ( counter == blue_selection_square_location ) {
-                                    dc.SetPen(wxColor(38, 124, 181));
-                                    // draw a rectangle around the image..
+                for ( int y = 0; y < images_in_y; y++ ) {
+                    for ( int x = 0; x < images_in_x; x++ ) {
+                        if ( ReturnNumberofImages( ) >= counter ) {
+                            if ( counter == blue_selection_square_location ) {
+                                dc.SetPen(wxColor(38, 124, 181));
+                                // draw a rectangle around the image..
 
-                                    if ( single_image ) {
-                                        dc.DrawRectangle(0, 0, window_x_size, window_y_size);
-                                    }
-                                    else
-                                        dc.DrawRectangle(x * current_x_size, y * current_y_size, current_x_size, current_y_size);
+                                if ( single_image ) {
+                                    dc.DrawRectangle(0, 0, window_x_size, window_y_size);
                                 }
+                                else
+                                    dc.DrawRectangle(x * current_x_size, y * current_y_size, current_x_size, current_y_size);
                             }
-
-                            counter++;
                         }
+
+                        counter++;
                     }
                 }
             }
@@ -2842,7 +2847,7 @@ DisplayPopup::DisplayPopup(wxWindow* parent, int flags)
 
     DisplayNotebookPanel* current_panel = parent_display_panel->ReturnCurrentPanel( );
 
-    if ( current_panel->use_unscaled_image_for_popup == true ) {
+    if ( current_panel->use_unscaled_image_for_popup ) {
 
         float high_grey;
         float low_grey;
@@ -2894,7 +2899,7 @@ DisplayPopup::DisplayPopup(wxWindow* parent, int flags)
             high_grey = current_panel->high_grey_value;
         }
 
-        if ( current_panel->invert_contrast == true && current_panel->use_fft == false ) {
+        if ( current_panel->invert_contrast && ! current_panel->use_fft ) {
             current_low_grey_value  = high_grey;
             current_high_grey_value = low_grey;
         }
@@ -2917,7 +2922,7 @@ void DisplayPopup::OnPaint(wxPaintEvent& evt) {
     int sub_bitmap_x_offset = 0;
     int sub_bitmap_y_offset = 0;
 
-    if ( current_panel->use_unscaled_image_for_popup == true ) {
+    if ( current_panel->use_unscaled_image_for_popup ) {
         // get the original image position..
 
         int original_x_pos = myroundint(double(x_pos + 128) / current_panel->actual_scale_factor);
@@ -3176,7 +3181,7 @@ void DisplayManualDialog::PaintHistogram(void) {
     float* current_histogram = new float[width_of_dialog];
 
     for ( int counter = 0; counter < width_of_dialog; counter++ ) {
-        if ( histogram_checkbox->IsChecked( ) == true )
+        if ( histogram_checkbox->IsChecked( ) )
             current_histogram[counter] = global_histogram[counter];
         else
             current_histogram[counter] = histogram[counter];
@@ -3236,7 +3241,7 @@ bool DisplayManualDialog::GetGlobalHistogram(void) {
     else
         should_continue = true;
 
-    if ( should_continue == true ) {
+    if ( should_continue ) {
         // Set-up grey level increment between bins
         global_grey_level_increment = (current_panel->global_high_grey - current_panel->global_low_grey) / double(width_of_dialog);
 
@@ -3274,14 +3279,14 @@ bool DisplayManualDialog::GetGlobalHistogram(void) {
 
             should_continue = my_progress.Update(image_counter);
 
-            if ( should_continue == false ) {
+            if ( ! should_continue ) {
                 continue;
             }
         }
 
         // if it is true set
 
-        if ( should_continue == true ) {
+        if ( should_continue ) {
             have_global_histogram = true;
         }
     }
@@ -3318,7 +3323,7 @@ void DisplayManualDialog::OnPaint(wxPaintEvent& evt) {
     double this_grey_level_increment;
     double this_min_grey_level;
 
-    if ( histogram_checkbox->IsChecked( ) == true ) {
+    if ( histogram_checkbox->IsChecked( ) ) {
         this_grey_level_increment = global_grey_level_increment;
         this_min_grey_level       = current_panel->global_low_grey;
     }
@@ -3375,7 +3380,7 @@ void DisplayManualDialog::OnLeftDown(wxMouseEvent& event) {
         double this_grey_level_increment;
         double this_min_grey_level;
 
-        if ( histogram_checkbox->IsChecked( ) == true ) {
+        if ( histogram_checkbox->IsChecked( ) ) {
             this_grey_level_increment = global_grey_level_increment;
             this_min_grey_level       = current_panel->global_low_grey;
         }
@@ -3395,7 +3400,7 @@ void DisplayManualDialog::OnLeftDown(wxMouseEvent& event) {
 
         minimum_text_ctrl->SetValue(wxString::Format(wxT("%f"), new_grey));
 
-        if ( new_grey != current_panel->manual_low_grey && live_checkbox->IsChecked( ) == true ) {
+        if ( new_grey != current_panel->manual_low_grey && live_checkbox->IsChecked( ) ) {
             current_panel->low_grey_value                = new_grey;
             current_panel->panel_image_has_correct_greys = false;
             current_panel->grey_values_decided_by        = MANUAL_GREYS;
@@ -3422,7 +3427,7 @@ void DisplayManualDialog::OnRightDown(wxMouseEvent& event) {
         double this_grey_level_increment;
         double this_min_grey_level;
 
-        if ( histogram_checkbox->IsChecked( ) == true ) {
+        if ( histogram_checkbox->IsChecked( ) ) {
             this_grey_level_increment = global_grey_level_increment;
             this_min_grey_level       = current_panel->global_low_grey;
         }
@@ -3442,7 +3447,7 @@ void DisplayManualDialog::OnRightDown(wxMouseEvent& event) {
 
         maximum_text_ctrl->SetValue(wxString::Format(wxT("%f"), new_grey));
 
-        if ( new_grey != current_panel->manual_high_grey && live_checkbox->IsChecked( ) == true ) {
+        if ( new_grey != current_panel->manual_high_grey && live_checkbox->IsChecked( ) ) {
             current_panel->high_grey_value               = new_grey;
             current_panel->grey_values_decided_by        = MANUAL_GREYS;
             current_panel->panel_image_has_correct_greys = false;
@@ -3469,7 +3474,7 @@ void DisplayManualDialog::OnMotion(wxMouseEvent& event) {
         double this_grey_level_increment;
         double this_min_grey_level;
 
-        if ( histogram_checkbox->IsChecked( ) == true ) {
+        if ( histogram_checkbox->IsChecked( ) ) {
             this_grey_level_increment = global_grey_level_increment;
             this_min_grey_level       = current_panel->global_low_grey;
         }
@@ -3481,7 +3486,7 @@ void DisplayManualDialog::OnMotion(wxMouseEvent& event) {
 
         // yes it is.. so check if a button is down..
 
-        if ( event.m_leftDown == true && event.m_rightDown == false ) {
+        if ( event.m_leftDown && ! event.m_rightDown ) {
 
             double new_grey = this_min_grey_level + (x_pos * this_grey_level_increment);
 
@@ -3490,14 +3495,14 @@ void DisplayManualDialog::OnMotion(wxMouseEvent& event) {
 
             minimum_text_ctrl->SetValue(wxString::Format(wxT("%f"), new_grey));
 
-            if ( new_grey != current_panel->manual_low_grey && live_checkbox->IsChecked( ) == true ) {
+            if ( new_grey != current_panel->manual_low_grey && live_checkbox->IsChecked( ) ) {
                 current_panel->low_grey_value                = new_grey;
                 current_panel->panel_image_has_correct_greys = false;
                 current_panel->grey_values_decided_by        = MANUAL_GREYS;
                 current_panel->ReDrawPanel( );
             }
         }
-        else if ( event.m_rightDown == true && event.m_leftDown == false ) {
+        else if ( event.m_rightDown && ! event.m_leftDown ) {
             double new_grey = this_min_grey_level + (x_pos * this_grey_level_increment);
 
             // set the appropriate textctrl - this will also send a
@@ -3505,7 +3510,7 @@ void DisplayManualDialog::OnMotion(wxMouseEvent& event) {
 
             maximum_text_ctrl->SetValue(wxString::Format(wxT("%f"), new_grey));
 
-            if ( new_grey != current_panel->manual_high_grey && live_checkbox->IsChecked( ) == true ) {
+            if ( new_grey != current_panel->manual_high_grey && live_checkbox->IsChecked( ) ) {
                 current_panel->high_grey_value               = new_grey;
                 current_panel->panel_image_has_correct_greys = false;
                 current_panel->grey_values_decided_by        = MANUAL_GREYS;
@@ -3559,7 +3564,7 @@ void DisplayManualDialog::OnHistogramCheck(wxCommandEvent& WXUNUSED(event)) {
 
     bool should_continue = true;
 
-    if ( histogram_checkbox->IsChecked( ) == true ) {
+    if ( histogram_checkbox->IsChecked( ) ) {
         // first disable the image select box..
 
         toolbar_location_text->Disable( );
@@ -3568,10 +3573,10 @@ void DisplayManualDialog::OnHistogramCheck(wxCommandEvent& WXUNUSED(event)) {
         // if it has already been calculated, then do nothing.
         // Otherwise we need to calculate it..
 
-        if ( have_global_histogram == false ) {
+        if ( ! have_global_histogram ) {
             should_continue = GetGlobalHistogram( );
 
-            if ( should_continue == false ) {
+            if ( ! should_continue ) {
                 // if should_continue is false, then the user cancelled so uncheck the box
                 // and also re-enable the image select box..
 
@@ -3651,7 +3656,7 @@ void DisplayManualDialog::OnImageChange(wxCommandEvent& WXUNUSED(event)) {
     wxString current_string = toolbar_location_text->GetValue( );
     bool     has_worked     = current_string.ToLong(&set_location);
 
-    if ( has_worked == true ) {
+    if ( has_worked ) {
         // is this number valid?
 
         if ( set_location > 0 && set_location <= current_panel->included_image_numbers.GetCount( ) ) {
@@ -3678,7 +3683,7 @@ void DisplayManualDialog::OnImageChange(wxCommandEvent& WXUNUSED(event)) {
 
     // if for some reason it hasn't worked - set it back to it's previous value..
 
-    if ( has_worked == false ) {
+    if ( ! has_worked ) {
         toolbar_location_text->SetValue(wxString::Format(wxT("%li"), current_location));
         Refresh( );
         Update( );
@@ -3699,7 +3704,7 @@ void DisplayManualDialog::OnNext(wxCommandEvent& event) {
     bool     has_worked     = current_string.ToLong(&set_location);
     set_location++;
 
-    if ( has_worked == true ) {
+    if ( has_worked ) {
         // is this number valid?
 
         if ( set_location > 0 && set_location <= current_panel->included_image_numbers.GetCount( ) ) {
@@ -3726,7 +3731,7 @@ void DisplayManualDialog::OnNext(wxCommandEvent& event) {
 
     // if for some reason it hasn't worked - set it back to it's previous value..
 
-    if ( has_worked == false ) {
+    if ( ! has_worked ) {
         toolbar_location_text->SetValue(wxString::Format(wxT("%li"), current_location));
         Refresh( );
         Update( );
@@ -3746,7 +3751,7 @@ void DisplayManualDialog::OnPrevious(wxCommandEvent& event) {
     bool     has_worked     = current_string.ToLong(&set_location);
     set_location--;
 
-    if ( has_worked == true ) {
+    if ( has_worked ) {
         // is this number valid?
 
         if ( set_location > 0 && set_location <= current_panel->included_image_numbers.GetCount( ) ) {
@@ -3773,7 +3778,7 @@ void DisplayManualDialog::OnPrevious(wxCommandEvent& event) {
 
     // if for some reason it hasn't worked - set it back to it's previous value..
 
-    if ( has_worked == false ) {
+    if ( ! has_worked ) {
         toolbar_location_text->SetValue(wxString::Format(wxT("%li"), current_location));
         Refresh( );
         Update( );
@@ -3786,34 +3791,43 @@ void DisplayManualDialog::OnHighChange(wxCommandEvent& WXUNUSED(event)) {
 }
 
 void DisplayPanel::SetTabNameUnsaved( ) {
-    ReturnCurrentPanel( )->txt_is_saved = false;
-    RefreshTabName( );
+    // Add this because we only want to update tab names if there are tabs
+    if ( ! ((style_flags & NO_NOTEBOOK) == NO_NOTEBOOK) ) {
+        ReturnCurrentPanel( )->txt_is_saved = false;
+        RefreshTabName( );
+    }
 }
 
 void DisplayPanel::SetTabNameSaved( ) {
-    ReturnCurrentPanel( )->txt_is_saved = true;
-    RefreshTabName( );
+    // Add this because we only want to update tab names if there are tabs
+    if ( ! ((style_flags & NO_NOTEBOOK) == NO_NOTEBOOK) ) {
+        ReturnCurrentPanel( )->txt_is_saved = true;
+        RefreshTabName( );
+    }
 }
 
 void DisplayPanel::RefreshTabName( ) {
-    int selected_tab = my_notebook->GetSelection( );
+    // Add this because we only want to update tab names if there are tabs
+    if ( ! ((style_flags & NO_NOTEBOOK) == NO_NOTEBOOK) ) {
+        int selected_tab = my_notebook->GetSelection( );
 
-    wxString tab_text;
+        wxString tab_text;
 
-    if ( ! ReturnCurrentPanel( )->have_txt_filename && ! ReturnCurrentPanel( )->txt_is_saved ) {
-        tab_text = wxT("*") + ReturnCurrentPanel( )->short_image_filename;
+        if ( ! ReturnCurrentPanel( )->have_txt_filename && ! ReturnCurrentPanel( )->txt_is_saved ) {
+            tab_text = wxT("*") + ReturnCurrentPanel( )->short_image_filename;
+        }
+        else
+            tab_text = ReturnCurrentPanel( )->short_image_filename;
+
+        if ( ReturnCurrentPanel( )->have_txt_filename ) {
+            tab_text += wxT(" : ");
+            if ( ! ReturnCurrentPanel( )->txt_is_saved )
+                tab_text += wxT("*");
+            tab_text += ReturnCurrentPanel( )->short_txt_filename;
+        }
+
+        my_notebook->SetPageText(selected_tab, tab_text);
     }
-    else
-        tab_text = ReturnCurrentPanel( )->short_image_filename;
-
-    if ( ReturnCurrentPanel( )->have_txt_filename ) {
-        tab_text += wxT(" : ");
-        if ( ! ReturnCurrentPanel( )->txt_is_saved )
-            tab_text += wxT("*");
-        tab_text += ReturnCurrentPanel( )->short_txt_filename;
-    }
-
-    my_notebook->SetPageText(selected_tab, tab_text);
 }
 
 CoordTracker::CoordTracker(wxWindow* parent) {
@@ -3862,7 +3876,7 @@ void CoordTracker::ToggleCoord(long wanted_image, long wanted_x, long wanted_y) 
 
     // if it wasn't found, then add it.
 
-    if ( was_found == false ) {
+    if ( ! was_found ) {
         AddCoord(wanted_image, wanted_x, wanted_y);
     }
     // we need to know the distance between the last two coords (if possible), so that if
@@ -4002,6 +4016,6 @@ void CoordTracker::RectangleRemoveCoord(long wanted_image, long start_x, long st
         }
     }
 
-    if ( removed_any_coords == true )
+    if ( removed_any_coords )
         parent_notebook->parent_display_panel->SetTabNameUnsaved( );
 }

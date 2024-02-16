@@ -23,18 +23,14 @@ ImageCTFComparison::ImageCTFComparison(int wanted_number_of_images, CTF wanted_c
 }
 
 ImageCTFComparison::~ImageCTFComparison( ) {
-    wxPrintf("Deleting ImageCTFComparison\n");
     for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
         img[image_counter].Deallocate( );
     }
     delete[] img;
-    wxPrintf("Deleting ImageCTFComparison2\n");
     delete[] azimuths;
     delete[] spatial_frequency_squared;
-    wxPrintf("Deleting ImageCTFComparison3\n");
     delete[] addresses;
     number_to_correlate = 0;
-    wxPrintf("Deleting ImageCTFComparison4\n");
 }
 
 void ImageCTFComparison::SetImage(int wanted_image_number, Image* new_image) {

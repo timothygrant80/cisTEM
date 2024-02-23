@@ -397,7 +397,7 @@ PickingResultsPanel::PickingResultsPanel( wxWindow* parent, wxWindowID id, const
 	wxBoxSizer* bSizer69;
 	bSizer69 = new wxBoxSizer( wxHORIZONTAL );
 
-	m_staticText469 = new wxStaticText( RightPanel, wxID_ANY, wxT("Left-Click on particles to select/deselect.\nCtrl-Left-Click to rubberband area and deselect.\nShift-Left-Click to paint area and deselect."), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText469 = new wxStaticText( RightPanel, wxID_ANY, wxT("Left-Click on particles to select/deselect.\nCtrl-Left-Click to rubberband area and deselect.\nShift-Left-Click to paint area and deselect.\nRight-Click for zoomed sub-view."), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText469->Wrap( -1 );
 	bSizer69->Add( m_staticText469, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 

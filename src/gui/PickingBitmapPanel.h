@@ -1,6 +1,7 @@
 #ifndef __PICKING_BITMAP_PANEL_H__
 #define __PICKING_BITMAP_PANEL_H__
 
+#include <wx/popupwin.h>
 #include <wx/panel.h>
 #include <vector>
 #include <functional>
@@ -24,10 +25,13 @@ struct particle_coordinate
 
 WX_DECLARE_OBJARRAY(ArrayOfParticlePositionAssets, ArrayOfCoordinatesHistory);
 
+class PickingBitmapPanelPopup;
+
 class PickingBitmapPanel : public wxPanel {
   public:
-    wxBitmap PanelBitmap; // buffer for the panel size
-    wxString panel_text;
+    wxBitmap                 PanelBitmap; // buffer for the panel size
+    wxString                 panel_text;
+    PickingBitmapPanelPopup* popup;
 
     ArrayOfParticlePositionAssets particle_coordinates_in_angstroms;
 
@@ -63,6 +67,8 @@ class PickingBitmapPanel : public wxPanel {
     // Mouse event handles
     void     OnLeftDown(wxMouseEvent& event);
     void     OnLeftUp(wxMouseEvent& event);
+    void     OnRightDown(wxMouseEvent& event);
+    void     OnRightUp(wxMouseEvent& event);
     void     OnMotion(wxMouseEvent& event);
     wxCursor CreatePaintCursor( );
 
@@ -76,6 +82,7 @@ class PickingBitmapPanel : public wxPanel {
     bool  should_wiener_filter;
     bool  draw_scale_bar;
     bool  allow_editing_of_coordinates;
+    bool  popup_exists;
 
     float low_res_filter_value;
     float high_res_filter_value;
@@ -118,6 +125,22 @@ class PickingBitmapPanel : public wxPanel {
     int bitmap_y_offset;
     int bitmap_width;
     int bitmap_height;
+};
+
+class PickingBitmapPanelPopup : public wxPopupWindow {
+    PickingBitmapPanel* parent_picking_bitmap_panel;
+
+  public:
+    PickingBitmapPanelPopup(wxWindow* parent, int flags = wxBORDER_NONE);
+
+    void OnPaint(wxPaintEvent& event);
+    void OnEraseBackground(wxEraseEvent& event);
+
+    int x_pos;
+    int y_pos;
+
+    float current_low_grey_value;
+    float current_high_grey_value;
 };
 
 #endif

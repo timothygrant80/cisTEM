@@ -26,11 +26,15 @@ PickingBitmapPanel::PickingBitmapPanel(wxWindow* parent, wxWindowID id, const wx
     size_is_dirty        = true;
     font_size_multiplier = 1.0;
 
+    popup_exists = false;
+
     Bind(wxEVT_PAINT, &PickingBitmapPanel::OnPaint, this);
     Bind(wxEVT_ERASE_BACKGROUND, &PickingBitmapPanel::OnEraseBackground, this);
     Bind(wxEVT_SIZE, &PickingBitmapPanel::OnSize, this);
     Bind(wxEVT_LEFT_DOWN, &PickingBitmapPanel::OnLeftDown, this);
     Bind(wxEVT_LEFT_UP, &PickingBitmapPanel::OnLeftUp, this);
+    Bind(wxEVT_RIGHT_DOWN, &PickingBitmapPanel::OnRightDown, this);
+    Bind(wxEVT_RIGHT_UP, &PickingBitmapPanel::OnRightUp, this);
     Bind(wxEVT_MOTION, &PickingBitmapPanel::OnMotion, this);
 
     image_in_bitmap_filename       = "";
@@ -422,6 +426,7 @@ void PickingBitmapPanel::OnPaint(wxPaintEvent& evt) {
                 dc.DrawText(scalebar_label, bitmap_x_offset + scalebar_x_start + scalebar_length / 2 - scalebar_label_width / 2, bitmap_y_offset + scalebar_y_pos - scalebar_label_height - scalebar_thickness / 8);
             }
 
+            // FIXME: why isn't the selection rectangle appearing?
             // Draw selection retangle
             if ( draw_selection_rectangle ) {
                 dc.SetPen(wxPen(wxColor(255, 0, 0), pen_thickness * 2, wxPENSTYLE_LONG_DASH));
@@ -526,6 +531,122 @@ void PickingBitmapPanel::OnLeftUp(wxMouseEvent& event) {
     event.Skip( );
 }
 
+// This function doesn't actually do any of the hard stuff; we will always want scaled image here, and we don't
+// have to worry specifically about auto or manual or global grays
+// What may be important is the Wiener filter, other checkboxes to the right of the bitmap
+PickingBitmapPanelPopup::PickingBitmapPanelPopup(wxWindow* parent, int flags) : wxPopupWindow(parent, flags) {
+    Bind(wxEVT_PAINT, &PickingBitmapPanelPopup::OnPaint, this);
+    Bind(wxEVT_ERASE_BACKGROUND, &PickingBitmapPanelPopup::OnEraseBackground, this);
+    SetBackgroundColour(*wxBLACK);
+
+    parent_picking_bitmap_panel = reinterpret_cast<PickingBitmapPanel*>(parent);
+
+    /* In DisplayPanel.cpp, we have to select the specific notebook panel
+    and focus on the appropriate image; here, we only have one image on the panel
+    at any given time, so we can just focus on only that image for all zooming
+    and creating the mini client
+    */
+}
+
+void PickingBitmapPanelPopup::OnPaint(wxPaintEvent& event) {
+    wxPaintDC dc(this);
+
+    // We are going to grab the section of the panel bitmap which corresponds to
+    // a 128x128 square under the panel.  It is made slightly more complicated by the
+    // fact that if we request part of a bitmap which does not exist the entire square
+    // will be blank, so we have to do some bounds checking..
+
+    int sub_bitmap_x_pos    = x_pos + 64;
+    int sub_bitmap_y_pos    = y_pos + 64;
+    int sub_bitmap_x_size   = 128;
+    int sub_bitmap_y_size   = 128;
+    int sub_bitmap_x_offset = 0;
+    int sub_bitmap_y_offset = 0;
+
+    if ( sub_bitmap_x_pos < 0 ) {
+        sub_bitmap_x_offset = abs(sub_bitmap_x_pos);
+        sub_bitmap_x_size -= sub_bitmap_x_offset;
+    }
+    else if ( sub_bitmap_x_pos >= parent_picking_bitmap_panel->PanelBitmap.GetWidth( ) - 128 && sub_bitmap_x_pos < parent_picking_bitmap_panel->PanelBitmap.GetWidth( ) )
+        sub_bitmap_x_size = parent_picking_bitmap_panel->PanelBitmap.GetWidth( ) - sub_bitmap_x_pos;
+
+    if ( sub_bitmap_y_pos < 0 && sub_bitmap_y_pos > -128 ) {
+        sub_bitmap_y_offset = abs(sub_bitmap_y_pos);
+        sub_bitmap_y_size -= sub_bitmap_y_offset;
+    }
+    else if ( sub_bitmap_y_pos >= parent_picking_bitmap_panel->PanelBitmap.GetHeight( ) - 128 && sub_bitmap_y_pos < parent_picking_bitmap_panel->PanelBitmap.GetHeight( ) )
+        sub_bitmap_y_size = parent_picking_bitmap_panel->PanelBitmap.GetHeight( ) - sub_bitmap_y_pos;
+
+    // the following line is a whole host of checks designed to not grab a dodgy bit of bitmap
+
+    if ( sub_bitmap_x_pos + sub_bitmap_x_offset >= 0 && sub_bitmap_y_pos + sub_bitmap_y_offset >= 0 && sub_bitmap_y_pos + sub_bitmap_y_offset < parent_picking_bitmap_panel->PanelBitmap.GetHeight( ) && sub_bitmap_x_pos + sub_bitmap_x_offset < parent_picking_bitmap_panel->PanelBitmap.GetWidth( ) && sub_bitmap_x_size > 0 && sub_bitmap_y_size > 0 ) {
+        wxBitmap section    = parent_picking_bitmap_panel->PanelBitmap.GetSubBitmap(wxRect(sub_bitmap_x_pos + sub_bitmap_x_offset, sub_bitmap_y_pos + sub_bitmap_y_offset, sub_bitmap_x_size, sub_bitmap_y_size));
+        wxImage  paintimage = section.ConvertToImage( );
+        paintimage.Rescale(section.GetWidth( ) * 2, section.GetHeight( ) * 2);
+        wxBitmap topaint(paintimage);
+
+        dc.DrawBitmap(topaint, sub_bitmap_x_offset * 2, sub_bitmap_y_offset * 2);
+        dc.SetPen(wxPen(*wxRED, 2, wxLONG_DASH));
+        dc.CrossHair(128, 128);
+    }
+
+    event.Skip( );
+}
+
+void PickingBitmapPanelPopup::OnEraseBackground(wxEraseEvent& event) {
+}
+
+void PickingBitmapPanel::OnRightDown(wxMouseEvent& event) {
+    long x_pos;
+    long y_pos;
+    event.GetPosition(&x_pos, &y_pos);
+
+    if ( ! popup_exists ) {
+        int client_x = int(x_pos);
+        int client_y = int(y_pos);
+
+        ClientToScreen(&client_x, &client_y);
+
+        // At the time of writing, when the popupwindow goes off the size of screen
+        // it's draw direction is reveresed.. For this reason i've included this
+        // rather dodgy get around, of just adding the box size when the box goes
+        // off the edge.. hopefully it will hold up.
+
+        int screen_x_size = wxSystemSettings::GetMetric(wxSYS_SCREEN_X);
+        int screen_y_size = wxSystemSettings::GetMetric(wxSYS_SCREEN_Y);
+
+        if ( client_x + 256 > screen_x_size )
+            client_x += 256;
+        if ( client_y + 256 > screen_y_size )
+            client_y += 256;
+
+        SetCursor(wxCursor(wxCURSOR_BLANK));
+
+        CaptureMouse( );
+        popup = new PickingBitmapPanelPopup(this);
+        popup->SetClientSize(256, 256);
+        popup->Position(wxPoint(client_x - 128, client_y - 128), wxSize(0, 0));
+        popup->x_pos = x_pos - 128 - bitmap_x_offset;
+        popup->y_pos = y_pos - 128 - bitmap_y_offset;
+        popup->SetCursor(wxCursor(wxCURSOR_BLANK));
+        popup->Show( );
+        popup->Refresh( );
+        popup->Update( );
+        popup_exists = true;
+    }
+    event.Skip( );
+}
+
+void PickingBitmapPanel::OnRightUp(wxMouseEvent& event) {
+    if ( popup_exists ) {
+        ReleaseMouse( );
+        SetCursor(wxCursor(wxCURSOR_CROSS));
+        popup->Destroy( );
+        popup_exists = false;
+    }
+    event.Skip( );
+}
+
 float PickingBitmapPanel::PixelToAngstromX(const int& x_in_pixels) {
     return float(x_in_pixels - bitmap_x_offset) * image_in_bitmap_pixel_size;
 }
@@ -551,9 +672,38 @@ void PickingBitmapPanel::OnMotion(wxMouseEvent& event) {
                 RemoveParticleCoordinatesWithinRectangleOrNearClickedPoint( );
             }
         }
+        Refresh( );
+        Update( );
     }
-    Refresh( );
-    Update( );
+    else if ( event.m_rightDown && popup_exists ) {
+        int client_x = x_pos;
+        int client_y = y_pos;
+        ClientToScreen(&client_x, &client_y);
+
+        // This is the same popup window workaround that was used for the DisplayPanel
+        // In addition, however, we subtract by the bitmap_x_offset/bitmap_y_offset
+        // because of the white border surrounding the image in the bitmap. Failure
+        // to do this causes the popup to display the scaled bitmap at a different position
+        // than the mouse.
+
+        int screen_x_size = wxSystemSettings::GetMetric(wxSYS_SCREEN_X);
+        int screen_y_size = wxSystemSettings::GetMetric(wxSYS_SCREEN_Y);
+
+        if ( client_x + 256 > screen_x_size )
+            client_x += 256;
+        if ( client_y + 256 > screen_y_size )
+            client_y += 256;
+
+        popup->Position(wxPoint(client_x - 128, client_y - 128), wxSize(0, 0));
+        // Specifically
+        popup->x_pos = x_pos - 128 - bitmap_x_offset;
+        popup->y_pos = y_pos - 128 - bitmap_y_offset;
+        popup->Show( );
+        popup->Refresh( );
+        popup->Update( );
+        Update( );
+    }
+
     event.Skip( );
 }
 

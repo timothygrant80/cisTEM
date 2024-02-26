@@ -87,6 +87,8 @@ PickingBitmapPanel::~PickingBitmapPanel( ) {
     Unbind(wxEVT_SIZE, &PickingBitmapPanel::OnSize, this);
     Unbind(wxEVT_LEFT_DOWN, &PickingBitmapPanel::OnLeftDown, this);
     Unbind(wxEVT_LEFT_UP, &PickingBitmapPanel::OnLeftUp, this);
+    Unbind(wxEVT_RIGHT_DOWN, &PickingBitmapPanel::OnRightDown, this);
+    Unbind(wxEVT_RIGHT_UP, &PickingBitmapPanel::OnRightUp, this);
     Unbind(wxEVT_MOTION, &PickingBitmapPanel::OnMotion, this);
 }
 
@@ -426,7 +428,6 @@ void PickingBitmapPanel::OnPaint(wxPaintEvent& evt) {
                 dc.DrawText(scalebar_label, bitmap_x_offset + scalebar_x_start + scalebar_length / 2 - scalebar_label_width / 2, bitmap_y_offset + scalebar_y_pos - scalebar_label_height - scalebar_thickness / 8);
             }
 
-            // FIXME: why isn't the selection rectangle appearing?
             // Draw selection retangle
             if ( draw_selection_rectangle ) {
                 dc.SetPen(wxPen(wxColor(255, 0, 0), pen_thickness * 2, wxPENSTYLE_LONG_DASH));
@@ -661,6 +662,8 @@ void PickingBitmapPanel::OnMotion(wxMouseEvent& event) {
     if ( draw_selection_rectangle ) {
         selection_rectangle_current_x = x_pos;
         selection_rectangle_current_y = y_pos;
+        Refresh( );
+        Update( );
     }
     else if ( event.LeftIsDown( ) == true && event.ShiftDown( ) ) // is the left button and shift down
     {

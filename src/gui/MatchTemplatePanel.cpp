@@ -148,7 +148,7 @@ void MatchTemplatePanel::ResetDefaults( ) {
 
     if ( main_frame->current_project.is_open ) {
         ResumeRunCheckBox->SetValue(false);
-        if ( main_frame->current_project.database.ReturnNumberOfTemplateMatchingJobs( ) == 0 )
+        if ( match_template_results_panel->template_match_job_ids )
             ResumeRunCheckBox->Enable(false);
         else
             ResumeRunCheckBox->Enable(true);
@@ -376,7 +376,7 @@ void MatchTemplatePanel::OnUpdateUI(wxUpdateUIEvent& event) {
         ResumeRunCheckBox->Enable(false);
     }
     else {
-        if ( main_frame->current_project.database.ReturnNumberOfTemplateMatchingJobs( ) == 0 ) {
+        if ( match_template_results_panel->template_match_job_ids ) {
             ResumeRunCheckBox->Enable(false);
         }
         else {

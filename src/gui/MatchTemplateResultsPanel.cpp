@@ -19,7 +19,7 @@ MatchTemplateResultsPanel::MatchTemplateResultsPanel(wxWindow* parent)
 
     per_row_asset_id       = NULL;
     per_row_array_position = NULL;
-    template_match_job_ids = NULL;
+    template_match_job_ids = nullptr;
     number_of_assets       = 0;
 
     selected_row     = -1;

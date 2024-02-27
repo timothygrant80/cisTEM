@@ -48,6 +48,19 @@ std::vector<double> diff(const std::vector<double>& data) {
     return differences;
 }
 
+std::vector<int> FindCommonElements(const std::vector<int>& vec1, const std::vector<int>& vec2) {
+    std::vector<int>        commonElements;
+    std::unordered_set<int> set1(vec1.begin( ), vec1.end( ));
+
+    for ( const auto& num : vec2 ) {
+        if ( set1.count(num) > 0 ) {
+            commonElements.push_back(num);
+        }
+    }
+
+    return commonElements;
+}
+
 // #include <iostream>
 // #include <vector>
 
@@ -166,7 +179,7 @@ std::vector<column_vector> PCAReduction(const std::vector<column_vector>& data, 
 std::vector<int> FixOutliers(matrix<double>* patch_peaksx, matrix<double>* patch_peaksy, matrix<double> patch_locations_x, matrix<double> patch_locations_y, int patch_no_x, int patch_no_y, int step_size_x, int step_size_y, int image_no, bool write_out_the_outliers, std::string output_path, std::string file_pref) {
     int patch_no = patch_no_x * patch_no_y;
     // /*  this section fix the outliers using nearest neighbor ---------------------------------------------------
-    wxPrintf("outlier fix1\n");
+    wxPrintf("fixing outlier fix\n");
     std::vector<double> used_index(patch_no);
     std::vector<int>    missed_index; // it should be in increasing order
     matrix<float>       truefalse;
@@ -444,7 +457,6 @@ void Generate_CoeffSpline(bicubicsplinestack ccmap_stack, Image** patch_stack, f
             for ( int ii = 0; ii < quater_patch_dim; ii++ ) {
                 for ( int jj = 0; jj < quater_patch_dim; jj++ ) {
                     ccmap_stack.spline_stack[spline_ind].z_on_knot(ii * quater_patch_dim + jj) = tmpimg.real_values[pixel_counter];
-                    // wxPrintf("%f \t", tmpimg.real_values[pixel_counter]);
                     pixel_counter++;
                 }
                 pixel_counter += tmpimg.padding_jump_value;
@@ -571,8 +583,8 @@ void patch_trimming_basedon_locations(Image* input_stack, Image** patch_stack, i
 
     //write a if statement to judge if the number of coordinates in the coord file equals to image_no
 
-    int step_size_x   = myroundint(float(image_dim_x) / float(patch_num_x) / 2); // check whether myroundint is correct
-    int step_size_y   = myroundint(float(image_dim_y) / float(patch_num_y) / 2);
+    // int step_size_x   = myroundint(float(image_dim_x) / float(patch_num_x) / 2); // check whether myroundint is correct
+    // int step_size_y   = myroundint(float(image_dim_y) / float(patch_num_y) / 2);
     int patch_counter = 0;
 
     for ( int patch_y_ind = 0; patch_y_ind < patch_num_y; patch_y_ind++ ) {
@@ -600,8 +612,9 @@ void patch_trimming_basedon_locations(Image* input_stack, Image** patch_stack, i
                 image_mean = 0.0;
             }
 
-            int my_x = patch_locations[patch_counter][0];
-            int my_y = patch_locations[patch_counter][1];
+            float my_x = patch_locations[patch_counter][0] - image_dim_x / 2.0;
+            float my_y = patch_locations[patch_counter][1] - image_dim_y / 2.0;
+            // wxPrintf("index trim center x y %d %f %f", patch_counter, my_x, my_y);
 
             patch_stack[patch_counter][image_counter].Allocate(output_stack_box_size, output_stack_box_size, 1, true);
 
@@ -618,4 +631,4 @@ void patch_trimming_basedon_locations(Image* input_stack, Image** patch_stack, i
     // delete[] input_stack_real_space;
     wxPrintf("Done Patch Trimming\n");
     // return patch_stack;
-}
+};

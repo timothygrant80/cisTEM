@@ -19,6 +19,9 @@ MatchTemplateResultsPanel::MatchTemplateResultsPanel(wxWindow* parent)
 
     per_row_asset_id       = NULL;
     per_row_array_position = NULL;
+    // This (along with several other dynamic allocations seem to be leaked.)
+    // There is no destructor for this class, but the parents destructor is (i assume) inherited.
+    // I think changing this to a smart pointer would be easier than messing with inheritance.
     template_match_job_ids = nullptr;
     number_of_assets       = 0;
 
@@ -150,7 +153,7 @@ void MatchTemplateResultsPanel::FillBasedOnSelectCommand(wxString wanted_command
     }
     // cache the various  alignment_job_ids
 
-    if ( template_match_job_ids != NULL ) {
+    if ( template_match_job_ids ) {
         delete[] template_match_job_ids;
     }
     template_match_job_ids = new long[number_of_template_match_ids];
@@ -358,6 +361,7 @@ void MatchTemplateResultsPanel::FillResultsPanelAndDetails(int row, int column) 
 }
 
 void MatchTemplateResultsPanel::OnValueChanged(wxDataViewEvent& event) {
+    MyDebugAssertTrue(template_match_job_ids, "Template match job ids not set");
 
     if ( doing_panel_fill == false ) {
         wxDataViewItem current_item = event.GetItem( );

@@ -19,10 +19,6 @@ MatchTemplateResultsPanel::MatchTemplateResultsPanel(wxWindow* parent)
 
     per_row_asset_id       = NULL;
     per_row_array_position = NULL;
-    // This (along with several other dynamic allocations seem to be leaked.)
-    // There is no destructor for this class, but the parents destructor is (i assume) inherited.
-    // I think changing this to a smart pointer would be easier than messing with inheritance.
-    template_match_job_ids = nullptr;
     number_of_assets       = 0;
 
     selected_row     = -1;
@@ -153,10 +149,15 @@ void MatchTemplateResultsPanel::FillBasedOnSelectCommand(wxString wanted_command
     }
     // cache the various  alignment_job_ids
 
-    if ( template_match_job_ids ) {
-        delete[] template_match_job_ids;
+    if ( template_match_job_ids.empty( ) ) {
+        // If the vector is empty here, it is our first time through, so reserve memory to avoid unnecessary reallocations.
+        template_match_job_ids.reserve(number_of_template_match_ids);
     }
-    template_match_job_ids = new long[number_of_template_match_ids];
+    else {
+        // Otherwise, clear the vector, leaving allocated memory in place and leave the increase in capacity to be handled
+        // by calls to emplace back.
+        template_match_job_ids.clear( );
+    }
 
     main_frame->current_project.database.GetUniqueTemplateMatchIDs(template_match_job_ids, number_of_template_match_ids);
 
@@ -361,7 +362,7 @@ void MatchTemplateResultsPanel::FillResultsPanelAndDetails(int row, int column) 
 }
 
 void MatchTemplateResultsPanel::OnValueChanged(wxDataViewEvent& event) {
-    MyDebugAssertTrue(template_match_job_ids, "Template match job ids not set");
+    MyDebugAssertFalse(template_match_job_ids.empty( ), "Template match job ids not set");
 
     if ( doing_panel_fill == false ) {
         wxDataViewItem current_item = event.GetItem( );

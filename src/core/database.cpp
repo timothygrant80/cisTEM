@@ -401,7 +401,7 @@ void Database::GetUniqueCTFEstimationIDs(int* ctf_estimation_job_ids, int number
     EndBatchSelect( );
 }
 
-void Database::GetUniqueTemplateMatchIDs(long* template_match_job_ids, int number_of_template_match_jobs) {
+void Database::GetUniqueTemplateMatchIDs(std::vector<long>& template_match_job_ids, int number_of_template_match_jobs) {
     MyDebugAssertTrue(is_open == true, "database not open!");
 
     bool more_data;
@@ -409,6 +409,8 @@ void Database::GetUniqueTemplateMatchIDs(long* template_match_job_ids, int numbe
     more_data = BeginBatchSelect("SELECT DISTINCT TEMPLATE_MATCH_JOB_ID FROM TEMPLATE_MATCH_LIST") == true;
 
     for ( int counter = 0; counter < number_of_template_match_jobs; counter++ ) {
+        // FIXME: This is a weird mix. Shouldn't it be either a debug assert, or a runtime assert?
+        // Here we always check and print the message, but only abort in debug mode.
         if ( more_data == false ) {
             MyPrintWithDetails("Unexpected end of select command");
             DEBUG_ABORT;

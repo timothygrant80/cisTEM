@@ -415,8 +415,9 @@ void Database::GetUniqueTemplateMatchIDs(std::vector<long>& template_match_job_i
             MyPrintWithDetails("Unexpected end of select command");
             DEBUG_ABORT;
         }
-
-        more_data = GetFromBatchSelect("l", &template_match_job_ids[counter]);
+        // Add in a dummy value so the containers size is correct.
+        template_match_job_ids.emplace_back(0);
+        more_data = GetFromBatchSelect_NoChar(&template_match_job_ids[counter]);
     }
 
     EndBatchSelect( );
@@ -1193,6 +1194,66 @@ bool Database::GetFromBatchSelect(const char* column_format, ...) {
 void Database::EndBatchSelect( ) {
     Finalize(batch_statement);
     in_batch_select = false;
+}
+
+template <typename T>
+void Database::ProcessBatchSelectElement(T* ptr, int& argument_counter) {
+
+    if constexpr ( std::is_same_v<T, wxString> ) {
+        ptr[0] = sqlite3_column_text(batch_statement, argument_counter);
+    }
+    else if constexpr ( std::is_same_v<T, wxFileName> ) {
+        ptr[0] = sqlite3_column_text(batch_statement, argument_counter);
+    }
+    else if constexpr ( std::is_same_v<T, double> ) {
+        ptr[0] = sqlite3_column_double(batch_statement, argument_counter);
+    }
+    else if constexpr ( std::is_same_v<T, int> ) {
+        ptr[0] = sqlite3_column_int(batch_statement, argument_counter);
+    }
+    else if constexpr ( std::is_same_v<T, float> ) {
+        double temp_double = sqlite3_column_double(batch_statement, argument_counter);
+        ptr[0]             = float(temp_double);
+    }
+    else if constexpr ( std::is_same_v<T, long> ) {
+        ptr[0] = sqlite3_column_int64(batch_statement, argument_counter);
+    }
+    else {
+        MyPrintWithDetails("Error: Unknown format character!\n");
+    }
+    argument_counter++;
+}
+
+/**
+ * @brief This function takes a variable number of arguments, that are all pointers to data that
+ * will be fetched from the database. Rather than passing a char* literal to decode the types,
+ * we use a fold expresssion to call the ProcessBatchSelectElement function for each argument.
+ * The type of each pointer is checked there and the appropriate sqlite3 function is called, incrementing
+ * the argument counter.
+ * 
+ * @tparam Args 
+ * @param args 
+ * @return true 
+ * @return false 
+ */
+template <class... Args>
+bool Database::GetFromBatchSelect_NoChar(Args... args) {
+
+    MyDebugAssertTrue(is_open == true, "database not open!");
+    MyDebugAssertTrue(in_batch_insert == false, "in batch select but batch insert is true");
+    MyDebugAssertTrue(in_batch_select == true, "in batch select but batch select is false");
+    MyDebugAssertTrue(last_return_code == SQLITE_ROW, "get from batch select, but return code is not SQLITE_ROW");
+
+    int argument_counter = 0;
+
+    (ProcessBatchSelectElement(args, argument_counter), ...);
+
+    last_return_code = Step(batch_statement);
+
+    if ( last_return_code == SQLITE_DONE )
+        return false;
+    else
+        return true;
 }
 
 void Database::BeginAllMovieAssetsSelect( ) {

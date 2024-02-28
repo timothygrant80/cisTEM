@@ -149,15 +149,14 @@ void MatchTemplateResultsPanel::FillBasedOnSelectCommand(wxString wanted_command
     }
     // cache the various  alignment_job_ids
 
-    if ( template_match_job_ids.empty( ) ) {
-        // If the vector is empty here, it is our first time through, so reserve memory to avoid unnecessary reallocations.
-        template_match_job_ids.reserve(number_of_template_match_ids);
+    // Minimize reallocations by reserving space for the vector.
+    // Since we can't use push/emplace_back and rely on the normal exponential resizing, implement it here.
+    if ( template_match_job_ids.capacity( ) < number_of_template_match_ids ) {
+        template_match_job_ids.reserve(number_of_template_match_ids * 2);
     }
-    else {
-        // Otherwise, clear the vector, leaving allocated memory in place and leave the increase in capacity to be handled
-        // by calls to emplace back.
-        template_match_job_ids.clear( );
-    }
+
+    // This will set the vector to empty
+    template_match_job_ids.clear( );
 
     main_frame->current_project.database.GetUniqueTemplateMatchIDs(template_match_job_ids, number_of_template_match_ids);
 

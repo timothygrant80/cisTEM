@@ -93,6 +93,11 @@ class Database {
     bool GetFromBatchSelect(const char* column_format, ...);
     void EndBatchSelect( );
 
+    template <typename T>
+    void ProcessBatchSelectElement(T* ptr, int& argument_counter);
+    template <class... Args>
+    bool GetFromBatchSelect_NoChar(Args... args);
+
     int  ExecuteSQL(const char* command);
     int  Prepare(wxString select_command, sqlite3_stmt** current_statement);
     int  Step(sqlite3_stmt* current_statement);

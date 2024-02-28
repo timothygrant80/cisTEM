@@ -1196,6 +1196,9 @@ void Database::EndBatchSelect( ) {
     in_batch_select = false;
 }
 
+template <bool flag = false>
+inline void static_ProcessBatchSelectElement_no_match( ) { static_assert(flag, "no matching type!"); }
+
 template <typename T>
 void Database::ProcessBatchSelectElement(T* ptr, int& argument_counter) {
 
@@ -1219,7 +1222,7 @@ void Database::ProcessBatchSelectElement(T* ptr, int& argument_counter) {
         ptr[0] = sqlite3_column_int64(batch_statement, argument_counter);
     }
     else {
-        MyPrintWithDetails("Error: Unknown format character!\n");
+        static_ProcessBatchSelectElement_no_match( );
     }
     argument_counter++;
 }

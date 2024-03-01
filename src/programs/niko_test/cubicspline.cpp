@@ -9,6 +9,15 @@ using namespace std;
 using namespace dlib;
 
 void cubicspline::InitializeSpline(int knot_no, float spline_patch_dim) {
+    // wxPrintf("initial3 cubicspline\n");
+    this->n                = knot_no;
+    this->spline_patch_dim = spline_patch_dim;
+    this->total            = (this->n + 2);
+    this->totaldim         = (this->n + 2);
+    this->Qy.set_size(this->totaldim, 1);
+}
+
+void cubicspline::InitializeSplineForwardModel(int knot_no, float spline_patch_dim) {
     this->n                = knot_no;
     this->spline_patch_dim = spline_patch_dim;
     this->total            = (this->n + 2);
@@ -21,10 +30,29 @@ void cubicspline::UpdateSpline(matrix<double> y_on_knot) {
     this->Qy        = CalcQy(y_on_knot);
 }
 
+void cubicspline::UpdateSpline1dControlPoints(matrix<double> Qy1d_updated) {
+    // this->z_on_knot = z_on_knot;
+    // matrix<double> Qy;
+    // this->Qy.set_size(this->totaldim, 1);
+    // set boundary condition
+    this->Qy(0)                  = Qy1d_updated(0) * 2 - Qy1d_updated(1);
+    this->Qy(this->totaldim - 1) = Qy1d_updated(this->n - 1) * 2 - Qy1d_updated(this->n - 2);
+    for ( int i = 1; i < this->totaldim - 1; i++ ) {
+        this->Qy(i) = Qy1d_updated(i - 1);
+    }
+}
+
 void cubicspline::UpdateSplineInterpMapping(matrix<double> x) {
     this->x              = x;
     this->Mapping_Mat_no = x.size( );
     this->MappingMat     = MappingMatrix(x);
+}
+
+void cubicspline::UpdateDiscreteValues(matrix<double> Discret_Values_For_Smooth) {
+    // matrix<double>* discrete_values;
+    // delete[] this->discrete_values;
+    // this->discrete_values = new matrix<double>[this->frame_no];
+    this->discrete_values = Discret_Values_For_Smooth;
 }
 
 void cubicspline::InitializeSplineModel(int knot_no, float spline_patch_dim, float spline_patch_dimx, matrix<double> x, matrix<double> y, matrix<double> y_on_knot) {
@@ -272,6 +300,29 @@ double cubicspline::ApplySplineFunc(double xp) {
     return yp;
 }
 
-// double OptimizationObejct(matrix<double> Qz1d) {}
+double cubicspline::OptimizationObejct(matrix<double> Qy1d) {
+
+    // matrix<double> Qz2d = reshape(Qz1d, (this->m + 2), (this->n + 2));
+    matrix<double> smoothcurve;
+    // smoothsurf.set_size(this->Mapping_Mat_Row_no, this->Mapping_Mat_Col_no);
+    // int total_no = this->Mapping_Mat_Col_no * this->Mapping_Mat_Row_no;
+    // int row_no   = this->Mapping_Mat_Row_no;
+    int col_no = this->Mapping_Mat_no;
+
+    double error;
+    // cout << "total number" << total_no << endl;
+    UpdateSpline1dControlPoints(Qy1d);
+    smoothcurve = ApplyMappingMat(this->Qy);
+
+    error = 0.0;
+    // for ( int i = 0; i < row_no; i++ ) {
+    for ( int j = 0; j < col_no; j++ ) {
+        // error = error + std::abs(smoothsurf(i, j) - this->z(i * col_no + j));
+        error = error + std::abs(smoothcurve(j) - this->discrete_values(j));
+        // cout << i * col_no + j << " " << error << " " << smoothsurf(i, j) << " " << z(i * col_no + j) << endl;
+    }
+    // }
+    return error;
+}
 
 // double OptimizationKnotObejct(matrix<double> join1d) {}

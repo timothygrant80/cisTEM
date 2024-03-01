@@ -24,12 +24,18 @@ class cubicspline {
     std::vector<double> UsedIndex;
     matrix<double>      x;
     matrix<double>      y;
+    matrix<double>      discrete_values;
     // matrix<double> z;
     matrix<double> FineGridCurve;
     long           Mapping_Mat_no;
 
-    void           InitializeSpline(int knot_no, float spline_patch_dim);
-    void           UpdateSpline(matrix<double> y_on_knot);
+    void InitializeSpline(int knot_no, float spline_patch_dim);
+    void InitializeSplineForwardModel(int knot_no, float spline_patch_dim);
+
+    void UpdateSpline(matrix<double> y_on_knot);
+    void UpdateSpline1dControlPoints(matrix<double> Qy1d_updated);
+    void UpdateDiscreteValues(matrix<double> Discret_Values_For_Smooth);
+
     void           UpdateSplineInterpMapping(matrix<double> x);
     void           InitializeSplineModel(int knot_no, float spline_patch_dim, float spline_patch_dimx, matrix<double> x, matrix<double> y, matrix<double> y_on_knot);
     void           CalcPhi( );
@@ -41,4 +47,5 @@ class cubicspline {
     matrix<double> ApplyMappingMat(matrix<double> Qy);
     matrix<double> ApplyMappingMatWithMat(matrix<double> MappingMat, matrix<double> Qy);
     double         ApplySplineFunc(double xp);
+    double         OptimizationObejct(matrix<double> Qz1d);
 };

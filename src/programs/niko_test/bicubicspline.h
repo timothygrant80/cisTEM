@@ -26,15 +26,25 @@ class bicubicspline {
     std::vector<double> UsedIndex;
     matrix<double>      x;
     matrix<double>      y;
-    matrix<double>      z;
-    matrix<double>      FineGridSurface;
-    long                Mapping_Mat_Row_no;
-    long                Mapping_Mat_Col_no;
+    // matrix<double>      z;
+    matrix<double> discrete_values;
+    matrix<double> smooth_interp;
+    long           Mapping_Mat_Row_no;
+    long           Mapping_Mat_Col_no;
 
-    void           InitializeSpline(int row_no, int column_no, float spline_patch_dimy, float spline_patch_dimx);
-    void           UpdateSpline(matrix<double> z_on_knot);
-    void           UpdateSplineInterpMapping(matrix<double> x, matrix<double> y, matrix<double> z);
-    void           InitializeSplineModel(int row_no, int column_no, float spline_patch_dimy, float spline_patch_dimx, matrix<double> x, matrix<double> y, matrix<double> z, matrix<double> z_on_knot);
+    void InitializeSpline(int row_no, int column_no, float spline_patch_dimy, float spline_patch_dimx);
+    void InitializeSplineForwardModel(int row_no, int column_no, float spline_patch_dimy, float spline_patch_dimx);
+    void UpdateSpline(matrix<double> z_on_knot);
+    // void UpdateSpline1dControlPoints(matrix<double> Qz1d_updated);
+    void UpdateSpline2dControlPoints(matrix<double> Qz2d_updated);
+    void UpdateSpline1dControlPoints(matrix<double> Qz1d_updated);
+
+    void UpdateSplineInterpMapping(matrix<double> x, matrix<double> y);
+    void UpdateDiscreteValues(matrix<double> Discret_Values_For_Smooth);
+    // void InitializeSplineModel(int row_no, int column_no, float spline_patch_dimy, float spline_patch_dimx, matrix<double> x, matrix<double> y, matrix<double> z, matrix<double> z_on_knot);
+    void InitializeSplineModelKnotToControl(int row_no, int column_no, float spline_patch_dimy, float spline_patch_dimx, matrix<double> x, matrix<double> y, matrix<double> z_on_knot);
+    void InitializeSplineModelControl(int row_no, int column_no, float spline_patch_dimy, float spline_patch_dimx, matrix<double> x, matrix<double> y, matrix<double> Qz2d_input);
+
     void           CalcPhi( );
     matrix<double> CalcQz(matrix<double> z_on_knot);
     void           UpdateQz( );
@@ -94,7 +104,8 @@ class bicubicsplinestack {
 
         this->spline_stack = new bicubicspline[this->spline_no];
 
-        this->spline_stack[0].InitializeSpline(this->m, this->n, this->spline_patch_dim_y, this->spline_patch_dim_x);
+        // this->spline_stack[0].InitializeSpline(this->m, this->n, this->spline_patch_dim_y, this->spline_patch_dim_x);
+        this->spline_stack[0].InitializeSplineForwardModel(this->m, this->n, this->spline_patch_dim_y, this->spline_patch_dim_x);
         this->phi    = this->spline_stack[0].phi;
         this->invphi = this->spline_stack[0].invphi;
 
@@ -155,7 +166,7 @@ class bicubicsplinestack {
 //     matrix<double>      x;
 //     matrix<double>      y;
 //     matrix<double>      z;
-//     // matrix<double>      FineGridSurface;
+//     // matrix<double>      smooth_interp;
 //     long                Mapping_Mat_Row_no;
 //     long                Mapping_Mat_Col_no;
 //     // bicubicspline( );

@@ -59,10 +59,57 @@ class quadspline {
         this->total    = (this->n + 1);
         this->totaldim = (this->n + 1);
         // this->Mapping_Mat_no   = x.size( );
-        // CalcPhi( );
-        // this->Qy            = CalcQy(y_on_knot);
+        CalcPhi( );
+        this->Qy = CalcQy(y_on_knot);
         // this->MappingMat    = MappingMatrix(x);
         this->FineGridCurve = SplineCurve(x, this->Qy);
+    }
+
+    void CalcPhi( ) {
+        // this->phi.set_size(this->totaldim, this->totaldim);
+        this->phi = zeros_matrix<double>(this->totaldim, this->totaldim);
+        for ( int i = 1; i < this->total; i++ ) {
+            this->phi(i, i)     = 1;
+            this->phi(i, i + 1) = 1;
+        }
+
+        // // # natural boundary condition
+        this->phi(0, 0) = 1;
+        // this->phi(0, 0)                     = 1;
+        // this->phi(0, 1)                     = -2;
+        // this->phi(0, 2)                     = 1;
+        // this->phi(this->n + 1, this->n - 1) = 1;
+        // this->phi(this->n + 1, this->n)     = -2;
+        // this->phi(this->n + 1, this->n + 1) = 1;
+        this->invphi.set_size(this->totaldim, this->totaldim);
+        this->invphi = inv(this->phi);
+    }
+
+    matrix<double> CalcQy(matrix<double> y_on_knot) {
+        // void CalcQy(matrix<double> z) {
+        matrix<double> Qy1d;
+        // matrix<double> Qz2d;
+        matrix<double> invphi;
+        Qy1d.set_size(this->totaldim, 1);
+        // Qz2d.set_size((this->m + 2), (this->n + 2));
+        // float Py[total];
+
+        matrix<double> Py;
+        // matrix<double> Qz1d, Qz2d;
+        // Py.set_size(1, total * total);
+        Py.set_size(this->totaldim, 1);
+        Py(0) = 0;
+        for ( int i = 1; i <= this->n; i++ ) {
+            Py(i) = y_on_knot(i - 1);
+        }
+        // Py(this->n + 1) = 0;
+
+        // invphi.set_size(this->totaldim, this->totaldim);
+        // invphi = inv(phi);
+
+        Qy1d = this->invphi * Py * 2;
+
+        return Qy1d;
     }
 
     double ApplySpline(double v, int pv, matrix<double> Qy) {

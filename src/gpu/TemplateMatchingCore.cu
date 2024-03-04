@@ -156,9 +156,10 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
     unsigned int* d_trimmed_counter;
     cudaErr(cudaMallocAsync((void**)&d_median, sizeof(__half) * d_input_image.real_memory_allocated, cudaStreamPerThread));
     cudaErr(cudaMallocAsync((void**)&d_median_abs_dev, sizeof(__half) * d_input_image.real_memory_allocated, cudaStreamPerThread));
-    cudaErr(cudaMallocAsync((void**)&d_trimmed_counter, sizeof(unsigned int), cudaStreamPerThread));
-    cudaErr(cudaMemsetAsync(d_trimmed_counter, 0, sizeof(unsigned int), cudaStreamPerThread));
-    frame_count = 0;
+    cudaErr(cudaMallocAsync((void**)&d_trimmed_counter, sizeof(unsigned int) * d_input_image.real_memory_allocated, cudaStreamPerThread));
+    cudaErr(cudaMemsetAsync(d_trimmed_counter, 0, sizeof(unsigned int) * d_input_image.real_memory_allocated, cudaStreamPerThread));
+    // This is used to calculate a running estimate of the median and is not used outside of the inner loop
+    unsigned int frame_count = 0;
 #endif
 
     if constexpr ( n_mips_to_process_at_once > 1 ) {
@@ -422,7 +423,7 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
 
 #ifdef MEDIAN_FILTER_TEST
     trimmed_counter.reserve(d_input_image.real_memory_allocated);
-    cudaErr(cudaMemcpyAsync(trimmed_counter.data( ), d_trimmed_counter, sizeof(unsigned int) * d_input_image.real_memory_allocated, cudaMemcpyDeviceToHost, cudaStreamPerThread));
+    cudaErr(cudaMemcpyAsync((unsigned int*)trimmed_counter.data( ), d_trimmed_counter, sizeof(unsigned int) * d_input_image.real_memory_allocated, cudaMemcpyDeviceToHost, cudaStreamPerThread));
     cudaErr(cudaFreeAsync(d_median, cudaStreamPerThread));
     cudaErr(cudaFreeAsync(d_median_abs_dev, cudaStreamPerThread));
     cudaErr(cudaFreeAsync(d_trimmed_counter, cudaStreamPerThread));
@@ -553,7 +554,7 @@ __global__ void MipPixelWiseStackWithMedianFiltKernel(const __half* __restrict__
                                                       const __half* __restrict__ phi,
                                                       __half* __restrict__ d_median,
                                                       __half* __restrict__ d_median_abs_dev,
-                                                      unsigned int* __restrict__ d_trimmer_counter,
+                                                      unsigned int* __restrict__ d_trimmed_counter,
                                                       const float frame_count,
                                                       float* __restrict__ sum,
                                                       float* __restrict__ sum_sq,
@@ -624,7 +625,7 @@ __global__ void MipPixelWiseStackWithMedianFiltKernel(const __half* __restrict__
 
         sum[i] += tmp_sum;
         sum_sq[i] += tmp_sum_sq;
-        d_trimmer_counter[i] += n_added;
+        d_trimmed_counter[i] += n_added;
 
         if ( max_val > -10.f && __float2half_rn(max_val) > __low2half(mip_psi[i]) ) {
             mip_psi[i]   = __halves2half2(__float2half_rn(max_val), psi[max_idx]);
@@ -633,7 +634,7 @@ __global__ void MipPixelWiseStackWithMedianFiltKernel(const __half* __restrict__
     }
 }
 
-void TemplateMatchingCore::MipPixelWiseStackWithMedianFilt(__half* ccf, __half* psi, __half* theta, __half* phi, __half* d_median, __half* d_median_abs_dev, unsigned int* d_trimmer_counter, unsigned int& frame_count, int n_mips_this_round) {
+void TemplateMatchingCore::MipPixelWiseStackWithMedianFilt(__half* ccf, __half* psi, __half* theta, __half* phi, __half* d_median, __half* d_median_abs_dev, unsigned int* d_trimmed_counter, unsigned int& frame_count, int n_mips_this_round) {
 
     precheck;
     // N
@@ -646,7 +647,7 @@ void TemplateMatchingCore::MipPixelWiseStackWithMedianFilt(__half* ccf, __half* 
                                                                                                                                        phi,
                                                                                                                                        d_median,
                                                                                                                                        d_median_abs_dev,
-                                                                                                                                       d_trimmer_counter,
+                                                                                                                                       d_trimmed_counter,
                                                                                                                                        frame_count_to_pass,
                                                                                                                                        (float*)d_sum1.real_values,
                                                                                                                                        (float*)d_sumSq1.real_values,

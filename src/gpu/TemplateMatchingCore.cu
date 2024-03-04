@@ -609,9 +609,9 @@ __global__ void MipPixelWiseStackWithMedianFiltKernel(const __half* __restrict__
         for ( iSlice = 1; iSlice < n_mips_this_round; iSlice++ ) {
             float frame_count_incremented = float(iSlice) + frame_count;
             ccf_val                       = __half2float(ccf[iSlice * numel + i]);
-            median                        = (1.0f - 1.0f / frame_count_incremented) * (d_median[i]) + (1.0f / frame_count_incremented) * ccf_val;
+            median                        = (1.0f - 1.0f / frame_count_incremented) * median + (1.0f / frame_count_incremented) * ccf_val;
             abs_dev                       = fabsf(ccf_val - median);
-            median_abs_dev                = (1.0f - 1.0f / frame_count_incremented) * (d_median_abs_dev[i]) + (1.0f / frame_count_incremented) * abs_dev;
+            median_abs_dev                = (1.0f - 1.0f / frame_count_incremented) * median_abs_dev + (1.0f / frame_count_incremented) * abs_dev;
             if ( abs_dev <= thresholdMultiplier * median_abs_dev ) {
                 tmp_sum += ccf_val;
                 tmp_sum_sq += (ccf_val * ccf_val);

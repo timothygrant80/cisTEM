@@ -151,11 +151,11 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
     __half* ccf_array;
 
 #ifdef MEDIAN_FILTER_TEST
-    __half*       d_median;
-    __half*       d_median_abs_dev;
+    float*        d_median;
+    float*        d_median_abs_dev;
     unsigned int* d_trimmed_counter;
-    cudaErr(cudaMallocAsync((void**)&d_median, sizeof(__half) * d_input_image.real_memory_allocated, cudaStreamPerThread));
-    cudaErr(cudaMallocAsync((void**)&d_median_abs_dev, sizeof(__half) * d_input_image.real_memory_allocated, cudaStreamPerThread));
+    cudaErr(cudaMallocAsync((void**)&d_median, sizeof(float) * d_input_image.real_memory_allocated, cudaStreamPerThread));
+    cudaErr(cudaMallocAsync((void**)&d_median_abs_dev, sizeof(float) * d_input_image.real_memory_allocated, cudaStreamPerThread));
     cudaErr(cudaMallocAsync((void**)&d_trimmed_counter, sizeof(unsigned int) * d_input_image.real_memory_allocated, cudaStreamPerThread));
     cudaErr(cudaMemsetAsync(d_trimmed_counter, 0, sizeof(unsigned int) * d_input_image.real_memory_allocated, cudaStreamPerThread));
     // This is used to calculate a running estimate of the median and is not used outside of the inner loop
@@ -552,8 +552,8 @@ __global__ void MipPixelWiseStackWithMedianFiltKernel(const __half* __restrict__
                                                       const __half* __restrict__ psi,
                                                       const __half* __restrict__ theta,
                                                       const __half* __restrict__ phi,
-                                                      __half* __restrict__ d_median,
-                                                      __half* __restrict__ d_median_abs_dev,
+                                                      float* __restrict__ d_median,
+                                                      float* __restrict__ d_median_abs_dev,
                                                       unsigned int* __restrict__ d_trimmed_counter,
                                                       const float frame_count,
                                                       float* __restrict__ sum,
@@ -586,14 +586,14 @@ __global__ void MipPixelWiseStackWithMedianFiltKernel(const __half* __restrict__
         if ( frame_count < 1.f )
             median = ccf_val;
         else
-            median = (1.0f - 1.0f / frame_count) * __half2float(d_median[iSlice * numel + i]) + (1.0f / frame_count) * ccf_val;
+            median = (1.0f - 1.0f / frame_count) * (d_median[i]) + (1.0f / frame_count) * ccf_val;
 
         float abs_dev = fabsf(ccf_val - median);
 
         if ( frame_count < 1.f )
             median_abs_dev = abs_dev;
         else
-            median_abs_dev = (1.0f - 1.0f / frame_count) * __half2float(d_median_abs_dev[iSlice * numel + i]) + (1.0f / frame_count) * abs_dev;
+            median_abs_dev = (1.0f - 1.0f / frame_count) * (d_median_abs_dev[i]) + (1.0f / frame_count) * abs_dev;
         constexpr float thresholdMultiplier = 3.0f;
         if ( abs_dev <= thresholdMultiplier * median_abs_dev ) {
             tmp_sum += ccf_val;
@@ -609,9 +609,9 @@ __global__ void MipPixelWiseStackWithMedianFiltKernel(const __half* __restrict__
         for ( iSlice = 1; iSlice < n_mips_this_round; iSlice++ ) {
             float frame_count_incremented = float(iSlice) + frame_count;
             ccf_val                       = __half2float(ccf[iSlice * numel + i]);
-            median                        = (1.0f - 1.0f / frame_count_incremented) * __half2float(d_median[iSlice * numel + i]) + (1.0f / frame_count_incremented) * ccf_val;
+            median                        = (1.0f - 1.0f / frame_count_incremented) * (d_median[i]) + (1.0f / frame_count_incremented) * ccf_val;
             abs_dev                       = fabsf(ccf_val - median);
-            median_abs_dev                = (1.0f - 1.0f / frame_count_incremented) * __half2float(d_median_abs_dev[iSlice * numel + i]) + (1.0f / frame_count_incremented) * abs_dev;
+            median_abs_dev                = (1.0f - 1.0f / frame_count_incremented) * (d_median_abs_dev[i]) + (1.0f / frame_count_incremented) * abs_dev;
             if ( abs_dev <= thresholdMultiplier * median_abs_dev ) {
                 tmp_sum += ccf_val;
                 tmp_sum_sq += (ccf_val * ccf_val);
@@ -625,6 +625,8 @@ __global__ void MipPixelWiseStackWithMedianFiltKernel(const __half* __restrict__
 
         sum[i] += tmp_sum;
         sum_sq[i] += tmp_sum_sq;
+        d_median[i]         = (median);
+        d_median_abs_dev[i] = (median_abs_dev);
         d_trimmed_counter[i] += n_added;
 
         if ( max_val > -10.f && __float2half_rn(max_val) > __low2half(mip_psi[i]) ) {
@@ -634,7 +636,7 @@ __global__ void MipPixelWiseStackWithMedianFiltKernel(const __half* __restrict__
     }
 }
 
-void TemplateMatchingCore::MipPixelWiseStackWithMedianFilt(__half* ccf, __half* psi, __half* theta, __half* phi, __half* d_median, __half* d_median_abs_dev, unsigned int* d_trimmed_counter, unsigned int& frame_count, int n_mips_this_round) {
+void TemplateMatchingCore::MipPixelWiseStackWithMedianFilt(__half* ccf, __half* psi, __half* theta, __half* phi, float* d_median, float* d_median_abs_dev, unsigned int* d_trimmed_counter, unsigned int& frame_count, int n_mips_this_round) {
 
     precheck;
     // N

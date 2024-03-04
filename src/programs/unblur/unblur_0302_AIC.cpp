@@ -6,9 +6,13 @@
 
 #include "dlib/dlib/optimization.h"
 #include <vector>
+// #include "./splinefuncs.h"
 #include <dlib/dlib/matrix.h>
 #include "../niko_test/utilities.h"
 
+// #include "../niko_test/bicubicspline.h"
+// #include "../niko_test/cubicspline.h"
+// #include "../niko_test/movieframespline.h"
 
 // The timing that unblur originally tracks is always on, by direct reference to cistem_timer::StopWatch
 // The profiling for development is under conrtol of --enable-profiling.
@@ -1290,6 +1294,7 @@ bool UnBlurApp::DoCalculation( ) {
 
             // patch_stack = patch_trimming_independent(image_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath, false);
             unblur_timing.start("Trimming Patches");
+            // use the stack that's not dose filtered -================!!! need to be refined
 
             matrix<double> patch_locations_x;
             matrix<double> patch_locations_y;
@@ -1337,13 +1342,13 @@ bool UnBlurApp::DoCalculation( ) {
                     patch_locations[patch_num_x * patch_y_ind + patch_x_ind][1] = patch_locations_y(patch_y_ind);
                 }
             }
-            // use stack with no dose filter, image_stack is already dose filtered in round 0
-
+            // use stack with no dose filter
             for ( int image_ind = 0; image_ind < number_of_input_images; image_ind++ ) {
                 counting_image_stack[image_ind].Allocate(raw_image_stack[image_ind].logical_x_dimension, raw_image_stack[image_ind].logical_y_dimension, 1, false);
                 counting_image_stack[image_ind].CopyFrom(&raw_image_stack[image_ind]);
                 counting_image_stack[image_ind].Resize(image_stack[image_ind].logical_x_dimension, image_stack[image_ind].logical_y_dimension, 1, 0);
             }
+            // here you may replace image_stack with counting stack.... to be revised
             patch_trimming_basedon_locations(counting_image_stack, patch_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath.ToStdString( ), "patch", max_threads, true, true, patch_locations);
             // patch_trimming_basedon_locations(image_stack, patch_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath.ToStdString( ), "patch", max_threads, true, true, patch_locations);
 
@@ -1365,9 +1370,29 @@ bool UnBlurApp::DoCalculation( ) {
                         // patch_stack[patch_counter][image_counter].ZeroCentralPixel( );
                     }
                 }
+                // unblur_refine_alignment(patch_stack[patch_counter], number_of_input_images, 1, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], profile_timing_refinement_method, false);
+                // unblur_refine_alignment_new(patch_stack[patch_counter], number_of_input_images, max_iterations * 2, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, 3, max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], profile_timing_refinement_method, false);
+                // unblur_basic_alignment(patch_stack[patch_counter], number_of_input_images, max_iterations * 2, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, 3, max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], profile_timing_refinement_method, false);
+                // unblur_basic_alignment(patch_stack[patch_counter], number_of_input_images, max_iterations * 2, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, 3, 3, max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], profile_timing_refinement_method, false);
+                // unblur_float_alignment(patch_stack[patch_counter], number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, 5, 3, max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], profile_timing_refinement_method, true);
 
                 patch_object.Initialize(patch_stack[patch_counter], number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, 5, 3, max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], false);
                 patch_object.alignment_refine(false);
+                // unblur_float_alignment(patch_stack[patch_counter], number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, 5, 3, max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], profile_timing_refinement_method, true);
+
+                // unblur_float_alignment(patch_stack[patch_counter], number_of_input_images, max_iterations * 2, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, 5, 3, max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], profile_timing_refinement_method, false);
+
+                // for ( int i = 0; i < number_of_input_images; i++ ) {
+                //     wxPrintf("patch %i, shifts, %f, %f\n", patch_counter, patch_shift_x[patch_counter][i], patch_shift_y[patch_counter][i]);
+                // }
+
+                // unblur_refine_alignment(patch_stack[patch_counter], number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], profile_timing_refinement_method, false);
+
+                // // for ( int i = 0; i < number_of_input_images; i++ ) {
+                // //     wxPrintf("patch %i, shifts, %f, %f\n", patch_counter, patch_shift_x[patch_counter][i], patch_shift_y[patch_counter][i]);
+                // // }
+                // unblur_refine_alignment(patch_stack[patch_counter], number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], profile_timing_refinement_method, false);
+                // // unblur_refine_alignment(patch_stack[patch_counter], number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average * 3, myroundint(5.0f / exposure_per_frame), max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], profile_timing_refinement_method, true);
 
                 //write out the patch shift info
                 wxString patch_shift;
@@ -1606,15 +1631,21 @@ bool UnBlurApp::DoCalculation( ) {
                 double sample_dose_start;
                 bool   fine_search = true;
 
-                patch_stack = new Image*[patch_num];
-                for ( int i = 0; i < patch_num; i++ ) {
-                    patch_stack[i] = new Image[number_of_input_images];
-                }
-
                 if ( fine_search ) {
-
+                    for ( int image_ind = 0; image_ind < number_of_input_images; image_ind++ ) {
+                        counting_image_stack[image_ind].Allocate(raw_image_stack[image_ind].logical_x_dimension, raw_image_stack[image_ind].logical_y_dimension, 1, false);
+                        counting_image_stack[image_ind].CopyFrom(&raw_image_stack[image_ind]);
+                        counting_image_stack[image_ind].Resize(image_stack[image_ind].logical_x_dimension, image_stack[image_ind].logical_y_dimension, 1, 0);
+                    }
+                    patch_stack = new Image*[patch_num];
+                    for ( int i = 0; i < patch_num; i++ ) {
+                        patch_stack[i] = new Image[number_of_input_images];
+                    }
                     // patch_trimming_basedon_locations(counting_image_stack, patch_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath.ToStdString( ), "patch", max_threads, true, true, patch_locations);
                     patch_trimming_basedon_locations(counting_image_stack, patch_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath.ToStdString( ), "patch", max_threads, false, false, patch_locations);
+                    // patch_trimming(counting_image_stack, patch_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath.ToStdString( ), "patch_pix", max_threads, false, false, false);
+
+                    // patch_trimming(counting_image_stack, counting_patch, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size / 2, outputpath.ToStdString( ), "patch_counting", max_threads, false);
 
                     if ( patch_stack[0][0].is_in_real_space ) {
 #pragma omp parallel for default(shared) num_threads(max_threads)
@@ -1729,19 +1760,10 @@ bool UnBlurApp::DoCalculation( ) {
                                 AICRecord.WriteLine(temp_array);
 
                                 double refined_error = minfunc3dSplineObjectxyControlPoints(Control_1d_search);
-                                // Spline_Shift_Reverse(patch_stack, patch_num_x, patch_num_y, number_of_input_images, max_threads);
+                                Spline_Shift_Reverse(patch_stack, patch_num_x, patch_num_y, number_of_input_images, max_threads);
 
                                 double refined_error_ccmap = minfunc3dSplineCCLossObjectControlPoints(Control1d_ccmap);
-                                // Spline_Shift_Reverse(patch_stack, patch_num_x, patch_num_y, number_of_input_images, max_threads);
-                                //try retrimming
-                                // patch_trimming_basedon_locations(counting_image_stack, patch_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath.ToStdString( ), "patch", max_threads, true, true, patch_locations);
-                                patch_trimming_basedon_locations(counting_image_stack, patch_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath.ToStdString( ), "patch", max_threads, false, false, patch_locations);
-#pragma omp parallel for default(shared) num_threads(max_threads)
-                                for ( int patch_ind = 0; patch_ind < patch_num; patch_ind++ ) {
-                                    for ( int image_ind = 0; image_ind < number_of_input_images; image_ind++ ) {
-                                        patch_stack[patch_ind][image_ind].ForwardFFT(true);
-                                    }
-                                }
+                                Spline_Shift_Reverse(patch_stack, patch_num_x, patch_num_y, number_of_input_images, max_threads);
 
                                 if ( firsttry ) {
                                     best_knot_on_x        = knot_on_x;
@@ -1805,12 +1827,12 @@ bool UnBlurApp::DoCalculation( ) {
                     AICRecord.Close( );
                     // std::cout.rdbuf(coutBuf0);
                     // file.close( );
-                    // for ( int i = 0; i < patch_num; ++i ) {
-                    //     delete[] patch_stack[i]; // each i-th pointer must be deleted first
-                    // }
-                    // delete[] patch_stack; // now delete pointer array
-                    // patch_stack = nullptr;
-
+                    for ( int i = 0; i < patch_num; ++i ) {
+                        delete[] patch_stack[i]; // each i-th pointer must be deleted first
+                    }
+                    delete[] patch_stack; // now delete pointer array
+                    patch_stack = nullptr;
+                    delete[] counting_image_stack;
                     // implement the best values-------------------------------------------------------
                     knot_on_x = best_knot_on_x;
                     knot_on_y = best_knot_on_y;
@@ -1840,6 +1862,11 @@ bool UnBlurApp::DoCalculation( ) {
                     double refined_error_ccmap = minfunc3dSplineCCLossObjectControlPoints(best_control_1d_ccmap);
                 }
                 else {
+                    // int quater_patch_dim = 64 / 2;
+                    patch_stack = new Image*[patch_num];
+                    for ( int i = 0; i < patch_num; i++ ) {
+                        patch_stack[i] = new Image[number_of_input_images];
+                    }
 
                     patch_trimming_basedon_locations(counting_image_stack, patch_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath.ToStdString( ), "patch_pix", max_threads, false, false, patch_locations);
                     Deallocate2DFloatArray(patch_locations, patch_num);
@@ -1870,11 +1897,10 @@ bool UnBlurApp::DoCalculation( ) {
                     Spline_Shift_Implement(patch_stack, patch_num_x, patch_num_y, number_of_input_images, max_threads);
                     Generate_CoeffSpline(ccmap_stack, patch_stack, coeffspline_unitless_bfactor, patch_num, number_of_input_images, false, outputpath.ToStdString( ), "CCMapBfactor_R1");
                     Spline_LossRefine(Control1d_ccmap, knot_on_x, knot_on_y, knot_on_z, knot_x_dis, knot_y_dis, sample_dose, outputpath.ToStdString( ));
-                    // Spline_Shift_Implement(patch_stack, patch_num_x, patch_num_y, number_of_input_images, max_threads);
+                    Spline_Shift_Implement(patch_stack, patch_num_x, patch_num_y, number_of_input_images, max_threads);
 
                     write_joins(outputpath.ToStdString( ), "Control_R0", Control1d);
                     write_joins(outputpath.ToStdString( ), "Control_R1", Control1d_ccmap);
-
                     // */
 
                     // ------------------------------------
@@ -1883,14 +1909,8 @@ bool UnBlurApp::DoCalculation( ) {
                     std::cout << refined_error << endl;
                     std::cout << refined_error_ccmap << endl;
                 }
-                for ( int i = 0; i < patch_num; ++i ) {
-                    delete[] patch_stack[i]; // each i-th pointer must be deleted first
-                }
-                delete[] patch_stack; // now delete pointer array
-                patch_stack = NULL;
-                delete[] counting_image_stack;
+
                 if ( ! raw_image_stack[0].is_in_real_space ) {
-#pragma omp parallel for default(shared) num_threads(max_threads)
                     for ( int image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
                         // image_stack[image_counter].BackwardFFT( );
                         raw_image_stack[image_counter].BackwardFFT( );
@@ -1900,7 +1920,8 @@ bool UnBlurApp::DoCalculation( ) {
                 // Control1d_ccmap = read_joins("Control_R1", outputpath.ToStdString( ), knot_on_x * knot_on_y * knot_on_z * 2);
 
                 wxPrintf("correcting distortion\n");
-
+                // std::cout << Control1d << endl;
+                // std::cout << Control1d_ccmap << endl;
                 delete[] image_stack;
                 image_stack = nullptr;
                 // apply_fitting_spline_sup(image_stack, raw_image_stack, output_binning_factor, number_of_input_images, Join1d, Join1d_ccmap, max_threads);
@@ -1949,6 +1970,12 @@ bool UnBlurApp::DoCalculation( ) {
             unblur_refine_alignment_object initial_alignment_object;
             initial_alignment_object.Initialize(image_stack, number_of_input_images, 1, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, min_shift_in_pixels, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts, false);
             initial_alignment_object.alignment_refine(true);
+            // unblur_refine_alignment(image_stack, number_of_input_images, 1, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, min_shift_in_pixels, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts, profile_timing_refinement_method, false);
+
+            //SendInfo(wxString::Format("Doing first alignment on %s\n",input_filename));
+            // unblur_refine_alignment(image_stack, number_of_input_images, 10, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, min_shift_in_pixels, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, 1, max_threads, x_shifts, y_shifts, profile_timing_refinement_method, false);
+            // unblur_refine_alignment_new(image_stack, number_of_input_images, 10, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, 1, max_threads, x_shifts, y_shifts, profile_timing_refinement_method, false);
+            // unblur_basic_alignment(image_stack, number_of_input_images, 1, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, min_shift_in_pixels, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, 1, max_threads, x_shifts, y_shifts, profile_timing_refinement_method, false);
 
             // write the first round
             wxString FullFrame_R1;
@@ -1976,6 +2003,10 @@ bool UnBlurApp::DoCalculation( ) {
             unblur_refine_alignment_object main_alignment_object;
             main_alignment_object.Initialize(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts, false);
             main_alignment_object.alignment_refine(false);
+            // unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts, profile_timing_refinement_method, false);
+            // unblur_refine_alignment_new(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, 1, pixel_size, number_of_frames_for_running_average, 1, max_threads, x_shifts, y_shifts, profile_timing_refinement_method, false);
+            // unblur_basic_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, 1, pixel_size, number_of_frames_for_running_average, 1, max_threads, x_shifts, y_shifts, profile_timing_refinement_method, false);
+            // unblur_float_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, 1, pixel_size, 3, 1, max_threads, x_shifts, y_shifts, profile_timing_refinement_method, false);
 
             unblur_timing.lap("whole frame main refine");
             profile_timing.lap("main refine");
@@ -2029,7 +2060,13 @@ bool UnBlurApp::DoCalculation( ) {
                 // do the refinement..
                 //SendInfo(wxString::Format("Doing final unbinned alignment on %s\n",input_filename));
                 profile_timing.start("final refine");
+                // unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, output_pixel_size, number_of_frames_for_running_average, myroundint(2.5f / exposure_per_frame), max_threads, x_shifts, y_shifts, profile_timing_refinement_method, false);
+                // unblur_refine_alignment_new(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, 1, output_pixel_size, number_of_frames_for_running_average, 3, max_threads, x_shifts, y_shifts, profile_timing_refinement_method, false);
+                // unblur_basic_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, 1, output_pixel_size, number_of_frames_for_running_average, 3, max_threads, x_shifts, y_shifts, profile_timing_refinement_method, false);
+                // unblur_float_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, 1, output_pixel_size, number_of_frames_for_running_average, 5, max_threads, x_shifts, y_shifts, profile_timing_refinement_method, false);
+                // unblur_refine_alignment_new(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, 1, output_pixel_size, number_of_frames_for_running_average, 5, max_threads, x_shifts, y_shifts, profile_timing_refinement_method, false);
                 unblur_refine_alignment_object refine_alignment_object;
+                // Image* input_stack, int number_of_images, int max_iterations, float unitless_bfactor, bool mask_central_cross, int width_of_vertical_line, int width_of_horizontal_line, float inner_radius_for_peak_search, float outer_radius_for_peak_search, float max_shift_convergence_threshold, float pixel_size, int number_of_frames_for_running_average, int savitzy_golay_window_size, int max_threads,  bool reverse_shift) ;
                 refine_alignment_object.Initialize(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, 1, output_pixel_size, number_of_frames_for_running_average, 5, max_threads, x_shifts, y_shifts, false);
                 refine_alignment_object.alignment_refine(false);
 

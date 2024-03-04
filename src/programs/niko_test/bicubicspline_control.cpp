@@ -10,6 +10,38 @@ using namespace std;
 using namespace dlib;
 using namespace cistem;
 
+// class bicubicspline {
+
+/*!
+        This object is a "function model" 
+    !*/
+
+//   public:
+//     int            m = 4; // row no.
+//     int            n = 4; // column no.
+//     matrix<double> z_on_knot;
+//     float          spline_patch_dim_y = 1;
+//     float          spline_patch_dim_x = 1;
+
+//     int            total; // remains to be check
+//     long           totaldim;
+//     matrix<double> phi;
+//     matrix<double> Qz2d;
+//     matrix<double> MappingMat;
+//     // matrix<double> UsedIndex;
+//     std::vector<double> UsedIndex;
+//     matrix<double>      x;
+//     matrix<double>      y;
+//     matrix<double>      z;
+//     matrix<double>      FineGridSurface;
+//     long                Mapping_Mat_Row_no;
+//     long                Mapping_Mat_Col_no;
+
+// matrix<double> GridZ;
+//   public:
+//     typedef ::column_vector column_vector;
+//     typedef matrix<double>  general_matrix;
+
 void bicubicspline::InitializeSpline(int row_no, int column_no, float spline_patch_dimy, float spline_patch_dimx) {
     this->m                  = row_no;
     this->n                  = column_no;
@@ -17,7 +49,6 @@ void bicubicspline::InitializeSpline(int row_no, int column_no, float spline_pat
     this->spline_patch_dim_y = spline_patch_dimy;
     this->total              = (this->m + 2) * (this->n + 2);
     this->totaldim           = (this->m + 2) * (this->n + 2);
-    this->Qz2d.set_size(this->m + 2, this->n + 2);
     // CalcPhi( );
 }
 
@@ -40,72 +71,39 @@ void bicubicspline::UpdateSpline(matrix<double> z_on_knot) {
 
 void bicubicspline::UpdateSpline1dControlPoints(matrix<double> Qz1d_updated) {
     // this->z_on_knot = z_on_knot;
-    matrix<double> tmpQz2d;
-    tmpQz2d.set_size((this->m), (this->n));
+    matrix<double> Qz2d;
+    Qz2d.set_size((this->m + 2), (this->n + 2));
 
-    for ( int i = 0; i < this->m; i++ ) {
-        for ( int j = 0; j < this->n; j++ ) {
-            tmpQz2d(i, j) = Qz1d_updated(i * (this->n) + j);
+    for ( int i = 0; i < this->m + 2; i++ ) {
+        for ( int j = 0; j < this->n + 2; j++ ) {
+            Qz2d(i, j) = Qz1d_updated(i * (this->n + 2) + j);
         }
     }
 
-    // this->Qz2d = Qz2d;
-    UpdateSpline2dControlPoints(tmpQz2d);
+    this->Qz2d = Qz2d;
 }
 
 void bicubicspline::UpdateSpline2dControlPoints(matrix<double> Qz2d_updated) {
-    // boundary condition
-    // wxPrintf("enter \n");
-    for ( int i = 1; i < this->m + 1; i++ ) {
-        this->Qz2d(i, 0)           = Qz2d_updated(i - 1, 0) * 2 - Qz2d_updated(i - 1, 1);
-        this->Qz2d(i, this->n + 1) = Qz2d_updated(i - 1, this->n - 1) * 2 - Qz2d_updated(i - 1, this->n - 2);
-    }
-    // wxPrintf("finish1 \n");
-    for ( int j = 1; j < this->n + 1; j++ ) {
-        this->Qz2d(0, j)           = Qz2d_updated(0, j - 1) * 2 - Qz2d_updated(1, j - 1);
-        this->Qz2d(this->m + 1, j) = Qz2d_updated(this->m - 1, j - 1) * 2 - Qz2d_updated(this->m - 2, j - 1);
-    }
-    // wxPrintf("finish2 \n");
-    //corner
-    this->Qz2d(0, 0)                     = Qz2d_updated(0, 0) * 2 - Qz2d_updated(1, 1);
-    this->Qz2d(this->m + 1, this->n + 1) = Qz2d_updated(this->m - 1, this->n - 1) * 2 - Qz2d_updated(this->m - 2, this->n - 2);
-    this->Qz2d(0, this->n + 1)           = Qz2d_updated(0, this->n - 1) * 2 - Qz2d_updated(1, this->n - 2);
-    this->Qz2d(this->m + 1, 0)           = Qz2d_updated(this->m - 1, 0) * 2 - Qz2d_updated(this->m - 2, 1);
-    // wxPrintf("finish3 \n");
-    for ( int i = 1; i < this->m + 1; i++ ) {
-        for ( int j = 1; j < this->n + 1; j++ ) {
-            this->Qz2d(i, j) = Qz2d_updated(i - 1, j - 1);
-        }
-    }
-
-    // this->Qz2d = Qz2d_updated;
+    this->Qz2d = Qz2d_updated;
 }
 
-void bicubicspline::UpdateSplineInterpMapping(matrix<double> x, matrix<double> y) {
-    this->x = x;
-    this->y = y;
-    // this->z                  = z;
+void bicubicspline::UpdateSplineInterpMapping(matrix<double> x, matrix<double> y, matrix<double> z) {
+    this->x                  = x;
+    this->y                  = y;
+    this->z                  = z;
     this->Mapping_Mat_Row_no = y.size( );
     this->Mapping_Mat_Col_no = x.size( );
     this->MappingMat         = MappingMatrix(x, y);
 }
 
-void bicubicspline::UpdateDiscreteValues(matrix<double> Discret_Values_For_Smooth) {
-    // matrix<double>* discrete_values;
-    // delete[] this->discrete_values;
-    // this->discrete_values = new matrix<double>[this->frame_no];
-    this->discrete_values = Discret_Values_For_Smooth;
-}
-
-// wx
-void bicubicspline::InitializeSplineModelKnotToControl(int row_no, int column_no, float spline_patch_dimy, float spline_patch_dimx, matrix<double> x, matrix<double> y, matrix<double> z_on_knot) {
+void bicubicspline::InitializeSplineModelKnotToControl(int row_no, int column_no, float spline_patch_dimy, float spline_patch_dimx, matrix<double> x, matrix<double> y, matrix<double> z, matrix<double> z_on_knot) {
     this->m                  = row_no;
     this->n                  = column_no;
     this->spline_patch_dim_x = spline_patch_dimx;
     this->spline_patch_dim_y = spline_patch_dimy;
     this->x                  = x;
     this->y                  = y;
-    // this->z                  = z;
+    this->z                  = z;
     this->z_on_knot          = z_on_knot;
     this->total              = (this->m + 2) * (this->n + 2);
     this->totaldim           = (this->m + 2) * (this->n + 2);
@@ -114,22 +112,22 @@ void bicubicspline::InitializeSplineModelKnotToControl(int row_no, int column_no
     // long dim = (this->m + 2) * (this->n + 2);
     // this->phi.set_size(totaldim, totaldim);
     CalcPhi( );
-    this->Qz2d          = CalcQz(z_on_knot);
-    this->MappingMat    = MappingMatrix(x, y);
-    this->smooth_interp = SplineSurface(x, y, this->Qz2d);
+    this->Qz2d            = CalcQz(z_on_knot);
+    this->MappingMat      = MappingMatrix(x, y);
+    this->FineGridSurface = SplineSurface(x, y, this->Qz2d);
     // the following method should also work.
     // matrix<double> Qz1d   = reshape(Qz2d, this->total, 1)
-    // this->smooth_interp = ApplyMappingMat(Qz1d);
+    // this->FineGridSurface = ApplyMappingMat(Qz1d);
 }
 
-void bicubicspline::InitializeSplineModelControl(int row_no, int column_no, float spline_patch_dimy, float spline_patch_dimx, matrix<double> x, matrix<double> y, matrix<double> Qz2d_input) {
+void bicubicspline::InitializeSplineModelControl(int row_no, int column_no, float spline_patch_dimy, float spline_patch_dimx, matrix<double> x, matrix<double> y, matrix<double> z, matrix<double> Qz2d_input) {
     this->m                  = row_no;
     this->n                  = column_no;
     this->spline_patch_dim_x = spline_patch_dimx;
     this->spline_patch_dim_y = spline_patch_dimy;
     this->x                  = x;
     this->y                  = y;
-    // this->z                  = z;
+    this->z                  = z;
     // this->z_on_knot          = z_on_knot;
     this->total              = (this->m + 2) * (this->n + 2);
     this->totaldim           = (this->m + 2) * (this->n + 2);
@@ -139,12 +137,12 @@ void bicubicspline::InitializeSplineModelControl(int row_no, int column_no, floa
     // this->phi.set_size(totaldim, totaldim);
     // CalcPhi( );
     // this->Qz2d            = CalcQz(z_on_knot);
-    this->Qz2d          = Qz2d_input;
-    this->MappingMat    = MappingMatrix(x, y);
-    this->smooth_interp = SplineSurface(x, y, this->Qz2d);
+    this->Qz2d            = Qz2d_input;
+    this->MappingMat      = MappingMatrix(x, y);
+    this->FineGridSurface = SplineSurface(x, y, this->Qz2d);
     // the following method should also work.
     // matrix<double> Qz1d   = reshape(Qz2d, this->total, 1)
-    // this->smooth_interp = ApplyMappingMat(Qz1d);
+    // this->FineGridSurface = ApplyMappingMat(Qz1d);
 }
 
 void bicubicspline::CalcPhi( ) {
@@ -568,7 +566,6 @@ matrix<double> bicubicspline::MappingMatrix(matrix<double> x, matrix<double> y) 
     PVX                      = x / this->spline_patch_dim_x;
     this->Mapping_Mat_Row_no = leny;
     this->Mapping_Mat_Col_no = lenx;
-
     // cout << "PUY" << PUY << endl;
     // cout << "PVX" << PVX << endl;
     if ( PUY(leny - 1) > this->m or PVX(lenx - 1) > this->n ) {
@@ -735,12 +732,8 @@ matrix<double> bicubicspline::MappingMatrix(matrix<double> x, matrix<double> y) 
 // Qz2d = reshape(Qz1d, (this->m + 2), (this->n + 2));
 matrix<double> bicubicspline::ApplyMappingMat(matrix<double> Qz2d) {
     // Qz2d = reshape(Qz1d, (this->m + 2), (this->n + 2));
-    // wxPrintf("in smooth apply?\n");
-    // wxPrintf(" mappin mat row and col %f %f\n", this->Mapping_Mat_Row_no, this->Mapping_Mat_Col_no);
-    // wxPrintf(" mappin mat row and col %d %d\n", int(this->Mapping_Mat_Row_no), int(this->Mapping_Mat_Col_no));
     matrix<double> smoothsurf;
     smoothsurf.set_size(this->Mapping_Mat_Row_no, this->Mapping_Mat_Col_no);
-    // wxPrintf("in smooth apply 1?\n");
     int   total_no = this->Mapping_Mat_Col_no * this->Mapping_Mat_Row_no;
     int   row_no   = this->Mapping_Mat_Row_no;
     int   col_no   = this->Mapping_Mat_Col_no;
@@ -750,17 +743,17 @@ matrix<double> bicubicspline::ApplyMappingMat(matrix<double> Qz2d) {
     float v;
     int   col;
     int   row;
-    // wxPrintf("smooth apply?\n");
+
     for ( int i = 0; i < total_no; i++ ) {
-        row                  = this->MappingMat(i, 0);
-        col                  = this->MappingMat(i, 1);
+        col                  = this->MappingMat(i, 0);
+        row                  = this->MappingMat(i, 1);
         pu                   = this->MappingMat(i, 2);
         pv                   = this->MappingMat(i, 3);
         u                    = this->MappingMat(i, 4);
         v                    = this->MappingMat(i, 5);
-        smoothsurf(row, col) = ApplySpline(u, v, pu, pv, Qz2d);
+        smoothsurf(col, row) = ApplySpline(u, v, pu, pv, Qz2d);
     }
-    this->smooth_interp = smoothsurf;
+
     return smoothsurf;
 }
 
@@ -794,26 +787,13 @@ double bicubicspline::ApplySplineFunc(double xp, double yp) {
     v = PVX - pv;
 
     if ( PUY > this->m - 1 ) {
-        // cout << "spline dis x y" << this->spline_patch_dim_x << " " << this->spline_patch_dim_y << endl;
-        // cout << " xp " << xp << endl;
-        // cout << " yp " << yp << endl;
-        // cout << "PUY " << PUY << " m-1 " << this->m - 1 << endl;
-        // cout << "u " << u << endl;
         cout << "the y position of the point exceed the spline surface " << endl;
-        cout << "replaced with the boundary value\n " << endl;
         // use the boundary value as the value outside the spline area. This need to be revised. Or the program should be forced to terminate.
         pu = this->m - 2;
         u  = 1;
     }
     if ( PVX > this->n - 1 ) {
-        // cout << "spline dis x y" << this->spline_patch_dim_x << " " << this->spline_patch_dim_y << endl;
-        // cout << " xp " << xp << endl;
-        // cout << " yp " << yp << endl;
-        // cout << "PVX " << PVX << " n-1 " << this->n - 1 << endl;
-        // cout << "v " << v << endl;
         cout << "the x position of the point exceed the spline surface " << endl;
-        cout << "replaced with the boundary value\n " << endl;
-
         pv = this->n - 2;
         v  = 1;
     }
@@ -866,69 +846,81 @@ double bicubicspline::ApplySplineFunc(double xp, double yp) {
 // }
 
 double bicubicspline::OptimizationObejct(matrix<double> Qz1d) {
-
-    // matrix<double> Qz2d = reshape(Qz1d, (this->m + 2), (this->n + 2));
+    matrix<double> Qz2d = reshape(Qz1d, (this->m + 2), (this->n + 2));
     matrix<double> smoothsurf;
-    // smoothsurf.set_size(this->Mapping_Mat_Row_no, this->Mapping_Mat_Col_no);
-    int total_no = this->Mapping_Mat_Col_no * this->Mapping_Mat_Row_no;
-    int row_no   = this->Mapping_Mat_Row_no;
-    int col_no   = this->Mapping_Mat_Col_no;
-    // wxPrintf("enter optimize obejct\n");
+    smoothsurf.set_size(this->Mapping_Mat_Row_no, this->Mapping_Mat_Col_no);
+    int    total_no = this->Mapping_Mat_Col_no * this->Mapping_Mat_Row_no;
+    int    row_no   = this->Mapping_Mat_Row_no;
+    int    col_no   = this->Mapping_Mat_Col_no;
+    int    pu;
+    int    pv;
+    float  u;
+    float  v;
+    int    col;
+    int    row;
     double error;
     // cout << "total number" << total_no << endl;
-    UpdateSpline1dControlPoints(Qz1d);
-    smoothsurf = ApplyMappingMat(this->Qz2d);
+
+    for ( int i = 0; i < total_no; i++ ) {
+        col                  = this->MappingMat(i, 0);
+        row                  = this->MappingMat(i, 1);
+        pu                   = this->MappingMat(i, 2);
+        pv                   = this->MappingMat(i, 3);
+        u                    = this->MappingMat(i, 4);
+        v                    = this->MappingMat(i, 5);
+        smoothsurf(col, row) = ApplySpline(u, v, pu, pv, Qz2d);
+    }
 
     error = 0.0;
     for ( int i = 0; i < row_no; i++ ) {
         for ( int j = 0; j < col_no; j++ ) {
-            // error = error + std::abs(smoothsurf(i, j) - this->z(i * col_no + j));
-            error = error + std::abs(smoothsurf(i, j) - this->discrete_values(i, j));
+            error = error + std::abs(smoothsurf(i, j) - this->z(i * col_no + j));
             // cout << i * col_no + j << " " << error << " " << smoothsurf(i, j) << " " << z(i * col_no + j) << endl;
         }
     }
+
     return error;
 }
 
-// double bicubicspline::OptimizationKnotObejct(matrix<double> join1d) {
-//     matrix<double> Join2d = reshape(join1d, (this->m), (this->n));
-//     matrix<double> smoothsurf;
-//     // this->z_on_knot = Join2d;
-//     matrix<double> Qz2d;
-//     Qz2d = this->CalcQz(Join2d);
-//     smoothsurf.set_size(this->Mapping_Mat_Row_no, this->Mapping_Mat_Col_no);
-//     int    total_no = this->Mapping_Mat_Col_no * this->Mapping_Mat_Row_no;
-//     int    row_no   = this->Mapping_Mat_Row_no;
-//     int    col_no   = this->Mapping_Mat_Col_no;
-//     int    pu;
-//     int    pv;
-//     float  u;
-//     float  v;
-//     int    col;
-//     int    row;
-//     double error;
-//     // cout << "total number" << total_no << endl;
+double bicubicspline::OptimizationKnotObejct(matrix<double> join1d) {
+    matrix<double> Join2d = reshape(join1d, (this->m), (this->n));
+    matrix<double> smoothsurf;
+    // this->z_on_knot = Join2d;
+    matrix<double> Qz2d;
+    Qz2d = this->CalcQz(Join2d);
+    smoothsurf.set_size(this->Mapping_Mat_Row_no, this->Mapping_Mat_Col_no);
+    int    total_no = this->Mapping_Mat_Col_no * this->Mapping_Mat_Row_no;
+    int    row_no   = this->Mapping_Mat_Row_no;
+    int    col_no   = this->Mapping_Mat_Col_no;
+    int    pu;
+    int    pv;
+    float  u;
+    float  v;
+    int    col;
+    int    row;
+    double error;
+    // cout << "total number" << total_no << endl;
 
-//     for ( int i = 0; i < total_no; i++ ) {
-//         col                  = this->MappingMat(i, 0);
-//         row                  = this->MappingMat(i, 1);
-//         pu                   = this->MappingMat(i, 2);
-//         pv                   = this->MappingMat(i, 3);
-//         u                    = this->MappingMat(i, 4);
-//         v                    = this->MappingMat(i, 5);
-//         smoothsurf(col, row) = ApplySpline(u, v, pu, pv, Qz2d);
-//     }
+    for ( int i = 0; i < total_no; i++ ) {
+        col                  = this->MappingMat(i, 0);
+        row                  = this->MappingMat(i, 1);
+        pu                   = this->MappingMat(i, 2);
+        pv                   = this->MappingMat(i, 3);
+        u                    = this->MappingMat(i, 4);
+        v                    = this->MappingMat(i, 5);
+        smoothsurf(col, row) = ApplySpline(u, v, pu, pv, Qz2d);
+    }
 
-//     error = 0.0;
-//     for ( int i = 0; i < row_no; i++ ) {
-//         for ( int j = 0; j < col_no; j++ ) {
-//             error = error + std::abs(smoothsurf(i, j) - this->z(i * col_no + j));
-//             // cout << i * col_no + j << " " << error << " " << smoothsurf(i, j) << " " << z(i * col_no + j) << endl;
-//         }
-//     }
+    error = 0.0;
+    for ( int i = 0; i < row_no; i++ ) {
+        for ( int j = 0; j < col_no; j++ ) {
+            error = error + std::abs(smoothsurf(i, j) - this->z(i * col_no + j));
+            // cout << i * col_no + j << " " << error << " " << smoothsurf(i, j) << " " << z(i * col_no + j) << endl;
+        }
+    }
 
-//     return error;
-// }
+    return error;
+}
 
 // void Search( ) {
 //     matrix<double> Qz1dtest = zeros_matrix<double>(long(m + 2) * long(n + 2), 1);

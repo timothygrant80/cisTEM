@@ -117,8 +117,7 @@ class TemplateMatchingCore {
     void AccumulateSums(__half2* sum_sumsq, GpuImage& sum, GpuImage& sq_sum);
 
 #ifdef MEDIAN_FILTER_TEST
-    void                      MipPixelWiseStackWithMedianFilt(__half* ccf, __half* psi, __half* theta, __half* phi, __half* d_median, __half* d_median_abs_dev, unsigned int* d_trimmer_counter, unsigned int& frame_count, int n_mips_this_round);
-    unsigned int              frame_count{ };
+    void                      MipPixelWiseStackWithMedianFilt(__half* ccf, __half* psi, __half* theta, __half* phi, float* d_median, float* d_median_abs_dev, unsigned int* d_trimmer_counter, unsigned int& frame_count, int n_mips_this_round);
     std::vector<unsigned int> trimmed_counter;
 #endif
 

@@ -150,6 +150,17 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
     __half* d_phi_array;
     __half* ccf_array;
 
+#ifdef MEDIAN_FILTER_TEST
+    __half*       d_median;
+    __half*       d_median_abs_dev;
+    unsigned int* d_trimmed_counter;
+    cudaErr(cudaMallocAsync((void**)&d_median, sizeof(__half) * d_input_image.real_memory_allocated, cudaStreamPerThread));
+    cudaErr(cudaMallocAsync((void**)&d_median_abs_dev, sizeof(__half) * d_input_image.real_memory_allocated, cudaStreamPerThread));
+    cudaErr(cudaMallocAsync((void**)&d_trimmed_counter, sizeof(unsigned int), cudaStreamPerThread));
+    cudaErr(cudaMemsetAsync(d_trimmed_counter, 0, sizeof(unsigned int), cudaStreamPerThread));
+    frame_count = 0;
+#endif
+
     if constexpr ( n_mips_to_process_at_once > 1 ) {
         psi_array   = new __half[n_mips_to_process_at_once];
         theta_array = new __half[n_mips_to_process_at_once];
@@ -296,7 +307,11 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
                     total_mip_processed += current_mip_to_process;
                     my_dist.at(0).AccumulateDistribution(ccf_array, current_mip_to_process);
 
+#ifdef MEDIAN_FILTER_TEST
+                    MipPixelWiseStackWithMedianFilt(ccf_array, d_psi_array, d_theta_array, d_phi_array, d_median, d_median_abs_dev, d_trimmed_counter, frame_count, current_mip_to_process);
+#else
                     MipPixelWiseStack(ccf_array, d_psi_array, d_theta_array, d_phi_array, current_mip_to_process);
+#endif
 
                     current_mip_to_process = 0;
                 }
@@ -369,7 +384,11 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
             cudaErr(cudaMemcpyAsync(d_theta_array, theta_array, sizeof(__half) * n_mips_to_process_at_once, cudaMemcpyHostToDevice, cudaStreamPerThread));
             cudaErr(cudaMemcpyAsync(d_phi_array, phi_array, sizeof(__half) * n_mips_to_process_at_once, cudaMemcpyHostToDevice, cudaStreamPerThread));
             my_dist.at(0).AccumulateDistribution(ccf_array, current_mip_to_process);
+#ifdef MEDIAN_FILTER_TEST
+            MipPixelWiseStackWithMedianFilt(ccf_array, d_psi_array, d_theta_array, d_phi_array, d_median, d_median_abs_dev, d_trimmed_counter, frame_count, current_mip_to_process);
+#else
             MipPixelWiseStack(ccf_array, d_psi_array, d_theta_array, d_phi_array, current_mip_to_process);
+#endif
             total_mip_processed += current_mip_to_process;
         }
     }
@@ -400,6 +419,14 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
         cudaErr(cudaFreeAsync(d_phi_array, cudaStreamPerThread));
         cudaErr(cudaFreeAsync(ccf_array, cudaStreamPerThread));
     }
+
+#ifdef MEDIAN_FILTER_TEST
+    trimmed_counter.reserve(d_input_image.real_memory_allocated);
+    cudaErr(cudaMemcpyAsync(trimmed_counter.data( ), d_trimmed_counter, sizeof(unsigned int) * d_input_image.real_memory_allocated, cudaMemcpyDeviceToHost, cudaStreamPerThread));
+    cudaErr(cudaFreeAsync(d_median, cudaStreamPerThread));
+    cudaErr(cudaFreeAsync(d_median_abs_dev, cudaStreamPerThread));
+    cudaErr(cudaFreeAsync(d_trimmed_counter, cudaStreamPerThread));
+#endif
 
     if ( n_global_search_images_to_save > 1 ) {
         cudaErr(cudaFreeAsync(secondary_peaks, cudaStreamPerThread));
@@ -518,6 +545,120 @@ void TemplateMatchingCore::MipPixelWiseStack(__half* ccf, __half* psi, __half* t
     postcheck;
 }
 
+#ifdef MEDIAN_FILTER_TEST
+
+__global__ void MipPixelWiseStackWithMedianFiltKernel(const __half* __restrict__ ccf,
+                                                      const __half* __restrict__ psi,
+                                                      const __half* __restrict__ theta,
+                                                      const __half* __restrict__ phi,
+                                                      __half* __restrict__ d_median,
+                                                      __half* __restrict__ d_median_abs_dev,
+                                                      unsigned int* __restrict__ d_trimmer_counter,
+                                                      const float frame_count,
+                                                      float* __restrict__ sum,
+                                                      float* __restrict__ sum_sq,
+                                                      __half2* __restrict__ mip_psi,
+                                                      __half2* __restrict__ theta_phi,
+                                                      int numel,
+                                                      int n_mips_this_round) {
+
+    int   max_idx;
+    float tmp_sum;
+    float tmp_sum_sq;
+    float max_val;
+    float ccf_val;
+    int   n_added;
+
+    // for ( int img_index = blockIdx.x * blockDim.x + threadIdx.x; img_index < NX; img_index += blockDim.x * gridDim.x ) {
+    // 2,147,483,647 max_int(32 bit)
+    // k3 padded is 5832 4096, so max_int could handle is 89.89 slices
+
+    for ( int i = physical_X_1d_grid( ); i < numel; i += GridStride_1dGrid( ) ) {
+        n_added    = 0;
+        tmp_sum    = 0.f;
+        tmp_sum_sq = 0.f;
+        max_val    = -10.f;
+        float median;
+        float median_abs_dev;
+        int   iSlice = 0;
+        ccf_val      = __half2float(ccf[iSlice * numel + i]);
+        if ( frame_count < 1.f )
+            median = ccf_val;
+        else
+            median = (1.0f - 1.0f / frame_count) * __half2float(d_median[iSlice * numel + i]) + (1.0f / frame_count) * ccf_val;
+
+        float abs_dev = fabsf(ccf_val - median);
+
+        if ( frame_count < 1.f )
+            median_abs_dev = abs_dev;
+        else
+            median_abs_dev = (1.0f - 1.0f / frame_count) * __half2float(d_median_abs_dev[iSlice * numel + i]) + (1.0f / frame_count) * abs_dev;
+        constexpr float thresholdMultiplier = 3.0f;
+        if ( abs_dev <= thresholdMultiplier * median_abs_dev ) {
+            tmp_sum += ccf_val;
+            tmp_sum_sq += (ccf_val * ccf_val);
+            n_added++;
+        }
+        if ( ccf_val > max_val ) {
+            max_val = ccf_val;
+            max_idx = iSlice;
+        }
+
+        // Now do the other slices
+        for ( iSlice = 1; iSlice < n_mips_this_round; iSlice++ ) {
+            float frame_count_incremented = float(iSlice) + frame_count;
+            ccf_val                       = __half2float(ccf[iSlice * numel + i]);
+            median                        = (1.0f - 1.0f / frame_count_incremented) * __half2float(d_median[iSlice * numel + i]) + (1.0f / frame_count_incremented) * ccf_val;
+            abs_dev                       = fabsf(ccf_val - median);
+            median_abs_dev                = (1.0f - 1.0f / frame_count_incremented) * __half2float(d_median_abs_dev[iSlice * numel + i]) + (1.0f / frame_count_incremented) * abs_dev;
+            if ( abs_dev <= thresholdMultiplier * median_abs_dev ) {
+                tmp_sum += ccf_val;
+                tmp_sum_sq += (ccf_val * ccf_val);
+                n_added++;
+            }
+            if ( ccf_val > max_val ) {
+                max_val = ccf_val;
+                max_idx = iSlice;
+            }
+        }
+
+        sum[i] += tmp_sum;
+        sum_sq[i] += tmp_sum_sq;
+        d_trimmer_counter[i] += n_added;
+
+        if ( max_val > -10.f && __float2half_rn(max_val) > __low2half(mip_psi[i]) ) {
+            mip_psi[i]   = __halves2half2(__float2half_rn(max_val), psi[max_idx]);
+            theta_phi[i] = __halves2half2(theta[max_idx], phi[max_idx]);
+        }
+    }
+}
+
+void TemplateMatchingCore::MipPixelWiseStackWithMedianFilt(__half* ccf, __half* psi, __half* theta, __half* phi, __half* d_median, __half* d_median_abs_dev, unsigned int* d_trimmer_counter, unsigned int& frame_count, int n_mips_this_round) {
+
+    precheck;
+    // N
+    d_padded_reference.ReturnLaunchParametersLimitSMs(5.f, 1024);
+    const float frame_count_to_pass = float(frame_count);
+
+    MipPixelWiseStackWithMedianFiltKernel<<<d_padded_reference.gridDims, d_padded_reference.threadsPerBlock, 0, cudaStreamPerThread>>>(ccf,
+                                                                                                                                       psi,
+                                                                                                                                       theta,
+                                                                                                                                       phi,
+                                                                                                                                       d_median,
+                                                                                                                                       d_median_abs_dev,
+                                                                                                                                       d_trimmer_counter,
+                                                                                                                                       frame_count_to_pass,
+                                                                                                                                       (float*)d_sum1.real_values,
+                                                                                                                                       (float*)d_sumSq1.real_values,
+                                                                                                                                       mip_psi,
+                                                                                                                                       theta_phi,
+                                                                                                                                       (int)d_padded_reference.real_memory_allocated,
+                                                                                                                                       n_mips_this_round);
+
+    postcheck;
+    frame_count += n_mips_this_round;
+}
+#endif
 __global__ void
 UpdateSecondaryPeaksKernel(__half*   secondary_peaks,
                            __half2*  mip_psi,

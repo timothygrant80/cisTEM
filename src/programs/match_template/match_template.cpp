@@ -1,5 +1,8 @@
 #include <cistem_config.h>
 
+// FOR testing, define here, TemplateMatchingCore.cu and MatchTemplatePanel.cpp
+#define MEDIAN_FILTER_TEST
+
 #ifdef ENABLEGPU
 #include "../../gpu/gpu_core_headers.h"
 #include "../../gpu/DeviceManager.h"
@@ -80,6 +83,7 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
     wxString correlation_std_output_file;
     wxString correlation_avg_output_file;
     wxString scaled_mip_output_file;
+    wxString healpix_file;
 
     float pixel_size              = 1.0f;
     float voltage_kV              = 300.0f;
@@ -147,12 +151,15 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
 #else
     // Ensure we always have the same number of interactive inputs to make scripting more consistent.
     // (N\ot that it is likely to run match_template on the CPU)
-    use_gpu_input = my_input->GetYesNoFromUser("Use GPU", "Not compiled for gpu, input ignored.", "No");
-    max_threads   = my_input->GetIntFromUser("Max. threads to use for calculation", "Not compiled for gpu, input ignored.", "1", 1);
-    use_gpu_input = false;
-    max_threads   = 1;
+    use_gpu_input                   = my_input->GetYesNoFromUser("Use GPU", "Not compiled for gpu, input ignored.", "No");
+    max_threads                     = my_input->GetIntFromUser("Max. threads to use for calculation", "Not compiled for gpu, input ignored.", "1", 1);
+    use_gpu_input                   = false;
+    max_threads                     = 1;
 #endif
 
+#ifdef MEDIAN_FILTER_TEST
+    healpix_file = my_input->GetFilenameFromUser("Healpix region segment file", "File containing the Phi and Theta values for search", "orientations.txt", false);
+#endif
     int   first_search_position           = -1;
     int   last_search_position            = -1;
     int   image_number_for_gui            = 0;
@@ -164,7 +171,12 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
 
     delete my_input;
 
-    my_current_job.ManualSetArguments("ttffffffffffifffffbfftttttttttftiiiitttfbi", input_search_images.ToUTF8( ).data( ),
+#ifdef MEDIAN_FILTER_TEST
+    const char* jop_code_arg_string = "ttffffffffffifffffbfftttttttttftiiiitttfbit";
+#else
+    const char* jop_code_arg_string = "ttffffffffffifffffbfftttttttttftiiiitttfbi";
+#endif
+    my_current_job.ManualSetArguments(jop_code_arg_string, input_search_images.ToUTF8( ).data( ),
                                       input_reconstruction.ToUTF8( ).data( ),
                                       pixel_size,
                                       voltage_kV,
@@ -205,7 +217,13 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
                                       result_filename.ToUTF8( ).data( ),
                                       min_peak_radius,
                                       use_gpu_input,
-                                      max_threads);
+                                      max_threads
+#ifdef MEDIAN_FILTER_TEST
+                                      ,
+                                      healpix_file.ToUTF8( ).data( ));
+#else
+    );
+#endif
 }
 
 // override the do calculation method which will be what is actually run..
@@ -263,7 +281,9 @@ bool MatchTemplateApp::DoCalculation( ) {
     float    min_peak_radius                 = my_current_job.arguments[39].ReturnFloatArgument( );
     bool     use_gpu                         = my_current_job.arguments[40].ReturnBoolArgument( );
     int      max_threads                     = my_current_job.arguments[41].ReturnIntegerArgument( );
-
+#ifdef MEDIAN_FILTER_TEST
+    wxString healpix_file = my_current_job.arguments[42].ReturnStringArgument( );
+#endif
     if ( is_running_locally == false )
         max_threads = number_of_threads_requested_on_command_line; // OVERRIDE FOR THE GUI, AS IT HAS TO BE SET ON THE COMMAND LINE...
 
@@ -331,6 +351,12 @@ bool MatchTemplateApp::DoCalculation( ) {
     EulerSearch     global_euler_search;
     AnglesAndShifts angles;
 
+#ifdef MEDIAN_FILTER_TEST
+    //RD: for counting the lines in the file and assigning the Float array global_euler_search.list_of_search_parameters
+    int number_of_search_positions = 0;
+    //RD : To open the text file containing the orientations from Healpix
+    NumericTextFile healpix_binning(healpix_file, OPEN_TO_READ, 0);
+#endif
     ImageFile input_search_image_file;
     ImageFile input_reconstruction_file;
 
@@ -466,7 +492,13 @@ bool MatchTemplateApp::DoCalculation( ) {
     correlation_pixel_sum_of_squares_image.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
     double* correlation_pixel_sum            = new double[input_image.real_memory_allocated];
     double* correlation_pixel_sum_of_squares = new double[input_image.real_memory_allocated];
-
+#ifdef MEDIAN_FILTER_TEST
+    //RD: Images objects for the online statistics
+    double* medianValues       = new double[input_image.real_memory_allocated];
+    double* absolute_deviation = new double[input_image.real_memory_allocated];
+    double* MADValues          = new double[input_image.real_memory_allocated];
+    double* trimmed_counter    = new double[input_image.real_memory_allocated];
+#endif
     padded_reference.SetToConstant(0.0f);
     max_intensity_projection.SetToConstant(-FLT_MAX);
     best_psi.SetToConstant(0.0f);
@@ -476,7 +508,14 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     ZeroDoubleArray(correlation_pixel_sum, input_image.real_memory_allocated);
     ZeroDoubleArray(correlation_pixel_sum_of_squares, input_image.real_memory_allocated);
-
+#ifdef MEDIAN_FILTER_TEST
+    //RD: Assign the images
+    ZeroDoubleArray(medianValues, input_image.real_memory_allocated);
+    // BAH: absolute_deviation seems to only be used/assigined once each loop, so a single value would suffice rather than an array
+    ZeroDoubleArray(absolute_deviation, input_image.real_memory_allocated);
+    ZeroDoubleArray(MADValues, input_image.real_memory_allocated);
+    ZeroDoubleArray(trimmed_counter, input_image.real_memory_allocated);
+#endif
     sqrt_input_pixels = sqrt((double)(input_image.logical_x_dimension * input_image.logical_y_dimension));
 
     // setup curve
@@ -533,6 +572,21 @@ bool MatchTemplateApp::DoCalculation( ) {
     // search grid
 
     global_euler_search.InitGrid(my_symmetry, angular_step, 0.0f, 0.0f, psi_max, psi_step, psi_start, pixel_size / high_resolution_limit_search, parameter_map, best_parameters_to_keep);
+#ifdef MEDIAN_FILTER_TEST
+    float orientations[healpix_binning.number_of_lines];
+    number_of_search_positions                     = healpix_binning.number_of_lines;
+    global_euler_search.number_of_search_positions = number_of_search_positions;
+    Allocate2DFloatArray(global_euler_search.list_of_search_parameters, number_of_search_positions, 2);
+
+    // for loop here
+    for ( int counter = 0; counter < healpix_binning.number_of_lines; counter++ ) {
+        healpix_binning.ReadLine(orientations);
+        global_euler_search.list_of_search_parameters[counter][0] = orientations[0];
+        global_euler_search.list_of_search_parameters[counter][1] = orientations[1];
+    }
+
+    healpix_binning.Close( );
+#else
     if ( my_symmetry.StartsWith("C") ) // TODO 2x check me - w/o this O symm at least is broken
     {
         if ( global_euler_search.test_mirror == true ) // otherwise the theta max is set to 90.0 and test_mirror is set to true.  However, I don't want to have to test the mirrors.
@@ -542,7 +596,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     }
 
     global_euler_search.CalculateGridSearchPositions(false);
-
+#endif
     // for now, I am assuming the MTF has been applied already.
     // work out the filter to just whiten the image..
 
@@ -645,7 +699,10 @@ bool MatchTemplateApp::DoCalculation( ) {
     int minPos = first_search_position;
     int maxPos = last_search_position;
     int incPos = (nJobs) / (max_threads);
-
+#ifdef MEDIAN_FILTER_TEST
+    //RD: counter to keep in check the values that are added into the sum_of_squares and sum_image
+    int frameCount = 0;
+#endif
 //    wxPrintf("First last and inc %d, %d, %d\n", minPos, maxPos, incPos);
 #ifdef ENABLEGPU
     TemplateMatchingCore* GPU;
@@ -750,6 +807,12 @@ bool MatchTemplateApp::DoCalculation( ) {
                         Image sum   = GPU[tIDX].d_sum3.CopyDeviceToNewHost(true, false);
                         Image sumSq = GPU[tIDX].d_sumSq3.CopyDeviceToNewHost(true, false);
 
+#ifdef MEDIAN_FILTER_TEST
+                        for ( int i = 0; i < GPU[tIDX].d_max_intensity_projection.real_memory_allocated; i++ ) {
+                            trimmed_counter[i] += (double)GPU[tIDX].trimmed_counter[i];
+                        }
+#endif
+
                         // TODO swap max_padding for explicit padding in x/y and limit calcs to that region.
                         pixel_counter = 0;
                         for ( current_y = 0; current_y < max_intensity_projection.logical_y_dimension; current_y++ ) {
@@ -787,7 +850,12 @@ bool MatchTemplateApp::DoCalculation( ) {
 
 #endif
             }
-
+#ifdef MEDIAN_FILTER_TEST
+            //RD: The multiple used for the outlier removal condition : current abs deviation <= thresholdMultiplier*median abs deviation
+            // BAH: FIXME: why is a double being used to assign to an int.
+            // BAH: FIXME: this value is also being used in TemplateMatchingCore, so you must change it there as well
+            int thresholdMultiplier = 3.0;
+#endif
             for ( current_search_position = first_search_position; current_search_position <= last_search_position; current_search_position++ ) {
                 //loop over each rotation angle
 
@@ -832,7 +900,7 @@ bool MatchTemplateApp::DoCalculation( ) {
                     vmcMulByConj(padded_reference.real_memory_allocated / 2, reinterpret_cast<MKL_Complex8*>(input_image.complex_values), reinterpret_cast<MKL_Complex8*>(padded_reference.complex_values), reinterpret_cast<MKL_Complex8*>(padded_reference.complex_values), VML_EP | VML_FTZDAZ_ON | VML_ERRMODE_IGNORE);
 #else
                     for ( pixel_counter = 0; pixel_counter < padded_reference.real_memory_allocated / 2; pixel_counter++ ) {
-                          padded_reference.complex_values[pixel_counter] = conj(padded_reference.complex_values[pixel_counter]) * input_image.complex_values[pixel_counter];
+                        padded_reference.complex_values[pixel_counter] = conj(padded_reference.complex_values[pixel_counter]) * input_image.complex_values[pixel_counter];
                     }
 #endif
 
@@ -873,7 +941,36 @@ bool MatchTemplateApp::DoCalculation( ) {
                         pixel_counter += padded_reference.padding_jump_value;
                     }
 
-                    //                    correlation_pixel_sum.AddImage(&padded_reference);
+#ifdef MEDIAN_FILTER_TEST
+                    //RD: Removed the block where pixel_sum and pixel_sum_of_squares are updated. Added my block between that.
+                    for ( pixel_counter = 0; pixel_counter < padded_reference.real_memory_allocated; pixel_counter++ ) {
+                        // Update median incrementally
+                        //double pixel_value =
+                        if ( frameCount == 0 ) { // can use if (frameCount == 0)
+                            medianValues[pixel_counter] = padded_reference.real_values[pixel_counter];
+                        }
+                        else {
+                            medianValues[pixel_counter] = (1 - 1.0 / frameCount) * medianValues[pixel_counter] + (1.0 / frameCount) * padded_reference.real_values[pixel_counter];
+                        }
+                        // Calculate absolute deviation from median
+                        absolute_deviation[pixel_counter] = abs(padded_reference.real_values[pixel_counter] - medianValues[pixel_counter]);
+                        // Update median incrementally
+                        if ( frameCount == 0 ) { // can use if (frameCount == 0)
+                            MADValues[pixel_counter] = absolute_deviation[pixel_counter];
+                        }
+                        else {
+                            MADValues[pixel_counter] = (1 - 1.0 / frameCount) * MADValues[pixel_counter] + (1.0 / frameCount) * absolute_deviation[pixel_counter];
+                        }
+                        // Check for outliers
+                        if ( absolute_deviation[pixel_counter] <= thresholdMultiplier * MADValues[pixel_counter] ) {
+                            correlation_pixel_sum[pixel_counter] += padded_reference.real_values[pixel_counter];
+                            //padded_reference.SquareRealValues( );
+                            correlation_pixel_sum_of_squares[pixel_counter] += padded_reference.real_values[pixel_counter] * padded_reference.real_values[pixel_counter];
+                            trimmed_counter[pixel_counter] += 1;
+                        }
+                    }
+                    frameCount++;
+#else
                     for ( pixel_counter = 0; pixel_counter < padded_reference.real_memory_allocated; pixel_counter++ ) {
                         correlation_pixel_sum[pixel_counter] += padded_reference.real_values[pixel_counter];
                     }
@@ -882,6 +979,16 @@ bool MatchTemplateApp::DoCalculation( ) {
                     for ( pixel_counter = 0; pixel_counter < padded_reference.real_memory_allocated; pixel_counter++ ) {
                         correlation_pixel_sum_of_squares[pixel_counter] += padded_reference.real_values[pixel_counter];
                     }
+#endif
+                    /*//                    correlation_pixel_sum.AddImage(&padded_reference);
+                    for ( pixel_counter = 0; pixel_counter < padded_reference.real_memory_allocated; pixel_counter++ ) {
+                        correlation_pixel_sum[pixel_counter] += padded_reference.real_values[pixel_counter];
+                    }
+                    padded_reference.SquareRealValues( );
+                    //                    correlation_pixel_sum_of_squares.AddImage(&padded_reference);
+                    for ( pixel_counter = 0; pixel_counter < padded_reference.real_memory_allocated; pixel_counter++ ) {
+                        correlation_pixel_sum_of_squares[pixel_counter] += padded_reference.real_values[pixel_counter];
+                    }*/
 
                     //max_intensity_projection.QuickAndDirtyWriteSlice("/tmp/mip.mrc", 1);
 
@@ -905,7 +1012,10 @@ bool MatchTemplateApp::DoCalculation( ) {
     }
 
     wxPrintf("\n\n\tTimings: Overall: %s\n", (wxDateTime::Now( ) - overall_start).Format( ));
-
+#ifdef MEDIAN_FILTER_TEST
+    //RD : error factor to be included with the standard deviation to make up for the error associated with trimming
+    float err_fac = 1 + (6.1605 / 100);
+#endif
     for ( pixel_counter = 0; pixel_counter < input_image.real_memory_allocated; pixel_counter++ ) {
         correlation_pixel_sum_image.real_values[pixel_counter]            = (float)correlation_pixel_sum[pixel_counter];
         correlation_pixel_sum_of_squares_image.real_values[pixel_counter] = (float)correlation_pixel_sum_of_squares[pixel_counter];
@@ -950,8 +1060,31 @@ bool MatchTemplateApp::DoCalculation( ) {
     if ( is_running_locally == true ) {
         delete my_progress;
 
-        // scale images..
+// scale images..
+#ifdef MEDIAN_FILTER_TEST
+        for ( pixel_counter = 0; pixel_counter < input_image.real_memory_allocated; pixel_counter++ ) {
 
+            //            correlation_pixel_sum.real_values[pixel_counter] /= float(total_correlation_positions);
+            //            correlation_pixel_sum_of_squares.real_values[pixel_counter] = correlation_pixel_sum_of_squares.real_values[pixel_counter] / float(total_correlation_positions) - powf(correlation_pixel_sum.real_values[pixel_counter], 2);
+            //            if (correlation_pixel_sum_of_squares.real_values[pixel_counter] > 0.0f)
+            //            {
+            //                correlation_pixel_sum_of_squares.real_values[pixel_counter] = sqrtf(correlation_pixel_sum_of_squares.real_values[pixel_counter]) * sqrtf(correlation_pixel_sum.logical_x_dimension * correlation_pixel_sum.logical_y_dimension);
+            //            }
+            //            else correlation_pixel_sum_of_squares.real_values[pixel_counter] = 0.0f;
+            //RD : divide by the right number of correlation positions based on the "if" condition; different values are included for different pixels
+            //correlation_pixel_sum[pixel_counter] /= float(total_correlation_positions);
+            correlation_pixel_sum[pixel_counter] /= float(trimmed_counter[pixel_counter]);
+            //correlation_pixel_sum_of_squares[pixel_counter] = correlation_pixel_sum_of_squares[pixel_counter] / float(total_correlation_positions) - powf(correlation_pixel_sum[pixel_counter], 2);
+            correlation_pixel_sum_of_squares[pixel_counter] = correlation_pixel_sum_of_squares[pixel_counter] / float(trimmed_counter[pixel_counter]) - powf(correlation_pixel_sum[pixel_counter], 2);
+            if ( correlation_pixel_sum_of_squares[pixel_counter] > 0.0f ) {
+                //RD : do the error correction here
+                correlation_pixel_sum_of_squares[pixel_counter] = sqrtf(correlation_pixel_sum_of_squares[pixel_counter]) * (float)sqrt_input_pixels * err_fac;
+            }
+            else
+                correlation_pixel_sum_of_squares[pixel_counter] = 0.0f;
+            correlation_pixel_sum[pixel_counter] *= (float)sqrt_input_pixels;
+        }
+#else
         for ( pixel_counter = 0; pixel_counter < input_image.real_memory_allocated; pixel_counter++ ) {
 
             //            correlation_pixel_sum.real_values[pixel_counter] /= float(total_correlation_positions);
@@ -970,6 +1103,7 @@ bool MatchTemplateApp::DoCalculation( ) {
                 correlation_pixel_sum_of_squares[pixel_counter] = 0.0f;
             correlation_pixel_sum[pixel_counter] *= (float)sqrt_input_pixels;
         }
+#endif
 
         max_intensity_projection.MultiplyByConstant((float)sqrt_input_pixels);
         //        correlation_pixel_sum.MultiplyByConstant(sqrtf(max_intensity_projection.logical_x_dimension * max_intensity_projection.logical_y_dimension));
@@ -1086,6 +1220,7 @@ bool MatchTemplateApp::DoCalculation( ) {
         delete[] survival_histogram;
         delete[] expected_survival_histogram;
     }
+
     else {
         // send back the final images to master (who should merge them, and send to the gui)
 

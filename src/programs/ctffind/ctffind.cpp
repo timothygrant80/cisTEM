@@ -11,7 +11,7 @@ using namespace cistem_timer;
 using namespace cistem_timer_noop;
 #endif
 
-const std::string ctffind_version = "4.1.15";
+const std::string ctffind_version = "4.1.16";
 
 /*
  * Changelog

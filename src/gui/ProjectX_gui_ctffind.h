@@ -392,6 +392,8 @@ class FindCTFPanel : public JobPanel
 		NumericTextCtrl* MaxPhaseShiftNumericCtrl;
 		wxStaticText* PhaseShiftStepStaticText;
 		NumericTextCtrl* PhaseShiftStepNumericCtrl;
+		wxStaticText* m_staticText2001;
+		wxCheckBox* FilterLowresSignalCheckBox;
 		wxPanel* OutputTextPanel;
 		wxTextCtrl* output_textctrl;
 		wxPanel* InfoPanel;

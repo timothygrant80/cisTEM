@@ -791,6 +791,10 @@ void ComputeFRCBetween1DSpectrumAndFit(int number_of_bins, double average[], dou
 
     const int minimum_window_half_width = number_of_bins / 40;
 
+    // DNM 3/29/23: Initialize in case there are no extrema and extend to the rest only if an extremum is found
+    for ( i = 1; i < number_of_bins; i++ )
+        half_window_width[i] = minimum_window_half_width;
+
     // First, work out the size of the window over which we'll compute the FRC value
     bin_of_previous_extremum = 0;
     for ( bin_counter = 1; bin_counter < number_of_bins; bin_counter++ ) {
@@ -804,8 +808,10 @@ void ComputeFRCBetween1DSpectrumAndFit(int number_of_bins, double average[], dou
         }
     }
     half_window_width[0] = half_window_width[1];
-    for ( bin_counter = bin_of_previous_extremum; bin_counter < number_of_bins; bin_counter++ ) {
-        half_window_width[bin_counter] = half_window_width[bin_of_previous_extremum - 1];
+    if ( bin_of_previous_extremum > 0 ) {
+        for ( bin_counter = bin_of_previous_extremum; bin_counter < number_of_bins; bin_counter++ ) {
+            half_window_width[bin_counter] = half_window_width[bin_of_previous_extremum - 1];
+        }
     }
 
     // Now compute the FRC for each bin

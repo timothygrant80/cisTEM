@@ -11,10 +11,14 @@ using namespace cistem_timer;
 using namespace cistem_timer_noop;
 #endif
 
-const std::string ctffind_version = "4.1.14";
+const std::string ctffind_version = "4.1.16";
 
 /*
  * Changelog
+ * - 4.1.16
+ * -- Fixes crashes, found by David Mastronarde
+ * - 4.1.15
+ * -- Make tweaked background subtraction optional
  * - 4.1.14
  * -- bug fixes (memory, equiphase averaging)
  * -- bug fixes from David Mastronarde (fixed/known phase shift)
@@ -107,6 +111,7 @@ void CtffindApp::DoInteractiveUserInput( ) {
     int         desired_number_of_threads        = 1;
     int         eer_frames_per_image             = 0;
     int         eer_super_res_factor             = 1;
+    bool        filter_lowres_signal             = true;
 
     // Things we need for old school input
     double     temp_double               = -1.0;
@@ -484,6 +489,7 @@ void CtffindApp::DoInteractiveUserInput( ) {
                 known_astigmatism_angle = 0.0;
                 known_phase_shift       = 0.0;
             }
+            filter_lowres_signal      = my_input->GetYesNoFromUser("Weight down low resolution signal?", "Answer yes if you want to filter out low-resolution signal", "Yes");
             desired_number_of_threads = my_input->GetIntFromUser("Desired number of parallel threads", "The command-line option -j will override this", "1", 1);
         }
         else // expert options not supplied by user
@@ -503,7 +509,7 @@ void CtffindApp::DoInteractiveUserInput( ) {
     }
 
     //	my_current_job.Reset(39);
-    my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbsbfffbfffbiii", input_filename.c_str( ), //1
+    my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbsbfffbfffbiiib", input_filename.c_str( ), //1
                                       input_is_a_movie,
                                       number_of_frames_to_average,
                                       output_diagnostic_filename.c_str( ),
@@ -542,7 +548,8 @@ void CtffindApp::DoInteractiveUserInput( ) {
                                       determine_tilt,
                                       desired_number_of_threads,
                                       eer_frames_per_image,
-                                      eer_super_res_factor);
+                                      eer_super_res_factor,
+                                      filter_lowres_signal);
 }
 
 // Optional command-line stuff
@@ -604,6 +611,7 @@ bool CtffindApp::DoCalculation( ) {
     int               desired_number_of_threads          = my_current_job.arguments[37].ReturnIntegerArgument( );
     int               eer_frames_per_image               = my_current_job.arguments[38].ReturnIntegerArgument( );
     int               eer_super_res_factor               = my_current_job.arguments[39].ReturnIntegerArgument( );
+    bool              filter_lowres_signal               = my_current_job.arguments[40].ReturnBoolArgument( );
 
     // if we are applying a mag distortion, it can change the pixel size, so do that here to make sure it is used forever onwards..
 
@@ -1007,7 +1015,7 @@ bool CtffindApp::DoCalculation( ) {
         // Filter the amplitude spectrum, remove background
         if ( ! filtered_amplitude_spectrum_input ) {
             profile_timing.start("Filter spectrum");
-            average_spectrum->ComputeFilteredAmplitudeSpectrumFull2D(average_spectrum_masked, current_power_spectrum, average, sigma, minimum_resolution, maximum_resolution, pixel_size_for_fitting);
+            average_spectrum->ComputeFilteredAmplitudeSpectrumFull2D(average_spectrum_masked, current_power_spectrum, average, sigma, minimum_resolution, maximum_resolution, pixel_size_for_fitting, filter_lowres_signal);
             profile_timing.lap("Filter spectrum");
         }
 
@@ -1572,29 +1580,35 @@ bool CtffindApp::DoCalculation( ) {
             MyDebugAssertTrue(first_bin_to_check >= 0 && first_bin_to_check < number_of_bins_in_1d_spectra, "Bad first bin to check\n");
             //wxPrintf("Will only check from bin %i of %i onwards\n", first_bin_to_check, number_of_bins_in_1d_spectra);
             last_bin_with_good_fit = -1;
-            for ( counter = first_bin_to_check; counter < number_of_bins_in_1d_spectra; counter++ ) {
-                //wxPrintf("On bin %i, fit_frc = %f, rot averate astig = %f\n", counter, fit_frc[counter], rotational_average_astig[counter]);
-                at_last_bin_with_good_fit = ((number_of_bins_above_low_threshold > 3) && (fit_frc[counter] < low_threshold)) ||
-                                            ((number_of_bins_above_high_threshold > 3) && (fit_frc[counter] < frc_significance_threshold));
-                if ( at_last_bin_with_good_fit ) {
-                    last_bin_with_good_fit = counter;
-                    break;
-                }
-                // Count number of bins above given thresholds
-                if ( fit_frc[counter] > low_threshold )
-                    number_of_bins_above_low_threshold++;
-                if ( fit_frc[counter] > frc_significance_threshold )
-                    number_of_bins_above_significance_threshold++;
-                if ( fit_frc[counter] > high_threshold )
-                    number_of_bins_above_high_threshold++;
-            }
-            //wxPrintf("%i bins out of %i checked were above significance threshold\n",number_of_bins_above_significance_threshold,number_of_bins_in_1d_spectra-first_bin_to_check);
-            if ( number_of_bins_above_significance_threshold == number_of_bins_in_1d_spectra - first_bin_to_check )
-                last_bin_with_good_fit = number_of_bins_in_1d_spectra - 1;
-            if ( number_of_bins_above_significance_threshold == 0 )
+            // DNM: skip explicitly if there are no bins
+            if ( first_bin_to_check >= number_of_bins_in_1d_spectra ) {
                 last_bin_with_good_fit = 1;
-            last_bin_with_good_fit = std::min(last_bin_with_good_fit, number_of_bins_in_1d_spectra);
-            profile_timing.lap("Compute resolution cutoff");
+            }
+            else {
+                for ( counter = first_bin_to_check; counter < number_of_bins_in_1d_spectra; counter++ ) {
+                    //wxPrintf("On bin %i, fit_frc = %f, rot averate astig = %f\n", counter, fit_frc[counter], rotational_average_astig[counter]);
+                    at_last_bin_with_good_fit = ((number_of_bins_above_low_threshold > 3) && (fit_frc[counter] < low_threshold)) ||
+                                                ((number_of_bins_above_high_threshold > 3) && (fit_frc[counter] < frc_significance_threshold));
+                    if ( at_last_bin_with_good_fit ) {
+                        last_bin_with_good_fit = counter;
+                        break;
+                    }
+                    // Count number of bins above given thresholds
+                    if ( fit_frc[counter] > low_threshold )
+                        number_of_bins_above_low_threshold++;
+                    if ( fit_frc[counter] > frc_significance_threshold )
+                        number_of_bins_above_significance_threshold++;
+                    if ( fit_frc[counter] > high_threshold )
+                        number_of_bins_above_high_threshold++;
+                }
+                //wxPrintf("%i bins out of %i checked were above significance threshold\n",number_of_bins_above_significance_threshold,number_of_bins_in_1d_spectra-first_bin_to_check);
+                if ( number_of_bins_above_significance_threshold == number_of_bins_in_1d_spectra - first_bin_to_check )
+                    last_bin_with_good_fit = number_of_bins_in_1d_spectra - 1;
+                if ( number_of_bins_above_significance_threshold == 0 )
+                    last_bin_with_good_fit = 1;
+                last_bin_with_good_fit = std::min(last_bin_with_good_fit, number_of_bins_in_1d_spectra);
+                profile_timing.lap("Compute resolution cutoff");
+            }
         }
         else {
             last_bin_with_good_fit = 1;
@@ -1616,7 +1630,8 @@ bool CtffindApp::DoCalculation( ) {
         if ( dump_debug_files )
             average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_rescaling.mrc", 1);
         profile_timing.start("Write diagnostic image");
-        if ( compute_extra_stats ) {
+        // DNM 3/31/23: do not call if no bins with good fit
+        if ( compute_extra_stats && last_bin_with_good_fit > 1 ) {
             average_spectrum->RescaleSpectrumAndRotationalAverage(number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, rotational_average_astig_fit, number_of_extrema_profile, ctf_values_profile, last_bin_without_aliasing, last_bin_with_good_fit);
         }
         //average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_thresholding.mrc",1);

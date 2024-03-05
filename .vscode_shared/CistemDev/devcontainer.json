@@ -1,11 +1,12 @@
 {
     "name": "cisTEMdev-wxSTABLE-static12",
-    "image": "cistemdashorg/cistem_build_env:v2.0.12",
+    "image": "cistemdashorg/cistem_build_env:v2.1.1",
     "remoteUser": "cisTEMdev",
+    "hostRequirements": {
+        "gpu": "optional"
+    },
     "runArgs": [
         "--rm",
-        "--gpus",
-        "all",
         "-it",
         "--net",
         "host",

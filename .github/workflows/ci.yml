@@ -54,7 +54,6 @@ jobs:
         ../../configure ${{matrix.config_options}}
         VERSION=$(cat config.log | grep CISTEM_VERSION_TEXT | cut -d' ' -f3 | tr -d '"')
         echo "::set-output name=version::$VERSION" 
-    - uses: ammaraskar/gcc-problem-matcher@master
     - name: make 
       run: |
         ${{ matrix.source_cmd }}

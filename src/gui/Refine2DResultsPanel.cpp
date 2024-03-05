@@ -60,41 +60,45 @@ void Refine2DResultsPanel::OnClassumLeftClick(wxMouseEvent& event) {
 
         ClassificationSelection* current_selection = &refinement_package_asset_panel->all_classification_selections.Item(SelectionManagerListCtrl->ReturnCurrentSelectionOriginalArrayPosition( ));
 
-        // ok toggle the effective selection..
+        // Need to make sure the event's ID is within the bounds of the images, i.e. the classes in this MRC
+        // Failure to do this results in crash when non-existent index access is attempted.
+        if ( event.GetId( ) <= current_selection->number_of_classes ) {
 
-        if ( ClassumDisplayPanel->ReturnCurrentPanel( )->image_is_selected[event.GetId( )] == false ) {
-            // need to add it..
-            current_selection->selections.Add(event.GetId( ));
-            current_selection->number_of_selections++;
+            // ok toggle the effective selection..
+            if ( ClassumDisplayPanel->ReturnCurrentPanel( )->image_is_selected[event.GetId( )] == false ) {
+                // need to add it..
+                current_selection->selections.Add(event.GetId( ));
+                current_selection->number_of_selections++;
 
-            // and from listctrl..
+                // and from listctrl..
 
-            SelectionManagerListCtrl->all_valid_selections.Item(SelectionManagerListCtrl->ReturnCurrentSelection( )).selections.Add(event.GetId( ));
-            SelectionManagerListCtrl->all_valid_selections.Item(SelectionManagerListCtrl->ReturnCurrentSelection( )).number_of_selections++;
+                SelectionManagerListCtrl->all_valid_selections.Item(SelectionManagerListCtrl->ReturnCurrentSelection( )).selections.Add(event.GetId( ));
+                SelectionManagerListCtrl->all_valid_selections.Item(SelectionManagerListCtrl->ReturnCurrentSelection( )).number_of_selections++;
 
-            // now the database..
+                // now the database..
 
-            main_frame->current_project.database.InsertOrReplace(wxString::Format("CLASSIFICATION_SELECTION_%li", current_selection->selection_id), "i", "CLASS_AVERAGE_NUMBER", event.GetId( ));
-            main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE CLASSIFICATION_SELECTION_LIST SET NUMBER_OF_SELECTIONS=%i WHERE SELECTION_ID=%li", current_selection->number_of_selections, current_selection->selection_id));
+                main_frame->current_project.database.InsertOrReplace(wxString::Format("CLASSIFICATION_SELECTION_%li", current_selection->selection_id), "i", "CLASS_AVERAGE_NUMBER", event.GetId( ));
+                main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE CLASSIFICATION_SELECTION_LIST SET NUMBER_OF_SELECTIONS=%i WHERE SELECTION_ID=%li", current_selection->number_of_selections, current_selection->selection_id));
+            }
+            else {
+                // need to remove it..
+                current_selection->selections.Remove(event.GetId( ));
+                current_selection->number_of_selections--;
+
+                // and from listctrl..
+
+                SelectionManagerListCtrl->all_valid_selections.Item(SelectionManagerListCtrl->ReturnCurrentSelection( )).selections.Remove(event.GetId( ));
+                SelectionManagerListCtrl->all_valid_selections.Item(SelectionManagerListCtrl->ReturnCurrentSelection( )).number_of_selections--;
+
+                // now the databse..
+
+                main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM CLASSIFICATION_SELECTION_%li WHERE CLASS_AVERAGE_NUMBER=%i", current_selection->selection_id, event.GetId( )));
+                main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE CLASSIFICATION_SELECTION_LIST SET NUMBER_OF_SELECTIONS=%i WHERE SELECTION_ID=%li", current_selection->number_of_selections, current_selection->selection_id));
+            }
+
+            ClassumDisplayPanel->ToggleImageSelected(event.GetId( ));
+            SelectionManagerListCtrl->RefreshItem(SelectionManagerListCtrl->ReturnCurrentSelection( ));
         }
-        else {
-            // need to add it..
-            current_selection->selections.Remove(event.GetId( ));
-            current_selection->number_of_selections--;
-
-            // and from listctrl..
-
-            SelectionManagerListCtrl->all_valid_selections.Item(SelectionManagerListCtrl->ReturnCurrentSelection( )).selections.Remove(event.GetId( ));
-            SelectionManagerListCtrl->all_valid_selections.Item(SelectionManagerListCtrl->ReturnCurrentSelection( )).number_of_selections--;
-
-            // now the databse..
-
-            main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM CLASSIFICATION_SELECTION_%li WHERE CLASS_AVERAGE_NUMBER=%i", current_selection->selection_id, event.GetId( )));
-            main_frame->current_project.database.ExecuteSQL(wxString::Format("UPDATE CLASSIFICATION_SELECTION_LIST SET NUMBER_OF_SELECTIONS=%i WHERE SELECTION_ID=%li", current_selection->number_of_selections, current_selection->selection_id));
-        }
-
-        ClassumDisplayPanel->ToggleImageSelected(event.GetId( ));
-        SelectionManagerListCtrl->RefreshItem(SelectionManagerListCtrl->ReturnCurrentSelection( ));
     }
 }
 
@@ -350,7 +354,9 @@ void Refine2DResultsPanel::OnSelected(wxListEvent& event) {
     ClassificationSelection* current_selection = &refinement_package_asset_panel->all_classification_selections.Item(SelectionManagerListCtrl->ReturnCurrentSelectionOriginalArrayPosition( ));
 
     for ( int counter = 0; counter < current_selection->selections.GetCount( ); counter++ ) {
-        ClassumDisplayPanel->SetImageSelected(current_selection->selections.Item(counter));
+        if ( current_selection->selections.Item(counter) <= current_selection->number_of_classes ) {
+            ClassumDisplayPanel->SetImageSelected(current_selection->selections.Item(counter));
+        }
     }
 }
 

@@ -3,44 +3,103 @@
 #include <iostream>
 #include <string>
 #include "../constants/constants.h"
+#include "../../include/ieee-754-half/half.hpp"
 
+// TODO [Deprecated]: If the forwarded type specific ZeroArray functions do not produce any known errors a year from now, remove the deprecated functions.
+// Now being 2023-Nov-6
+
+/**
+ * @brief Zero out an array of any type, with bool(0) being false.
+ * 
+ * @tparam T_ (Type deduction should always work)
+ * @param array_to_zero 
+ * @param size_of_array 
+ */
+template <typename T_>
+inline void ZeroArray(T_* array_to_zero, int size_of_array) {
+    // Note: the SIMD directives only seem to impact float & bool when tested, but it was a 4x speedup.
+    if constexpr ( std::is_same_v<T_, bool> ) {
+#pragma omp simd
+        for ( int counter = 0; counter < size_of_array; counter++ )
+            array_to_zero[counter] = false;
+    }
+    else {
+        constexpr T_ zero_value = T_(0);
+#pragma omp simd
+        for ( int counter = 0; counter < size_of_array; counter++ )
+            array_to_zero[counter] = zero_value;
+    }
+}
+
+/**
+ * @brief [Deprecated] please use ZeroArray for new work.
+ * 
+ * @param array_to_zero bool specific
+ * @param size_of_array 
+ */
 inline void ZeroBoolArray(bool* array_to_zero, int size_of_array) {
-    for ( int counter = 0; counter < size_of_array; counter++ ) {
-        array_to_zero[counter] = false;
-    }
+    ZeroArray(array_to_zero, size_of_array);
 }
 
+/**
+ * @brief [Deprecated] please use ZeroArray for new work.
+ * 
+ * @param array_to_zero int specific
+ * @param size_of_array 
+ */
 inline void ZeroIntArray(int* array_to_zero, int size_of_array) {
-    for ( int counter = 0; counter < size_of_array; counter++ ) {
-        array_to_zero[counter] = 0;
-    }
+    ZeroArray(array_to_zero, size_of_array);
 }
 
+/**
+ * @brief [Deprecated] please use ZeroArray for new work.
+ * 
+ * @param array_to_zero long specific
+ * @param size_of_array 
+ */
 inline void ZeroLongArray(long* array_to_zero, int size_of_array) {
-    for ( int counter = 0; counter < size_of_array; counter++ ) {
-        array_to_zero[counter] = 0;
-    }
+    ZeroArray(array_to_zero, size_of_array);
 }
 
+/**
+ * @brief [Deprecated] please use ZeroArray for new work.
+ * 
+ * @param array_to_zero float specific
+ * @param size_of_array 
+ */
 inline void ZeroFloatArray(float* array_to_zero, int size_of_array) {
-    for ( int counter = 0; counter < size_of_array; counter++ ) {
-        array_to_zero[counter] = 0.0;
-    }
+    ZeroArray(array_to_zero, size_of_array);
 }
 
+/**
+ * @brief [Deprecated] please use ZeroArray for new work.
+ * 
+ * @param array_to_zero double specific
+ * @param size_of_array 
+ */
 inline void ZeroDoubleArray(double* array_to_zero, int size_of_array) {
-    for ( int counter = 0; counter < size_of_array; counter++ ) {
-        array_to_zero[counter] = 0.0;
-    }
+    ZeroArray(array_to_zero, size_of_array);
 }
 
-inline bool IsEven(int number_to_check) {
-    if ( number_to_check % 2 == 0 )
-        return true;
-    else
+inline bool IsOdd(const int number) {
+    if ( (number & 1) == 0 )
         return false;
+    else
+        return true;
 }
 
+inline bool IsEven(const int number_to_check) {
+    return ! IsOdd(number_to_check);
+}
+
+/**
+ * @brief Returns an even value, always larger than the input value.
+ * WARNING: This is intended for resizing/padding where number to make even is > 0.
+ * Negative ints will be made closer to zero, which may not be what you want.
+ * 
+ * @param number_to_make_even 
+ * @return int 
+ */
 inline int MakeEven(int number_to_make_even) {
     if ( IsEven(number_to_make_even) )
         return number_to_make_even;
@@ -137,33 +196,52 @@ inline int RoundAndMakeEven(float a) {
     return MakeEven(myroundint(a));
 }
 
-inline bool IsOdd(int number) {
-    if ( (number & 1) == 0 )
-        return false;
-    else
-        return true;
-}
-
+/**
+ * @brief Some functions will fail if their output is directed at /dev/null, so this function is here to prevent that.
+ * Examples may be found in numeric_text_file and mrc_file.cpp
+ * 
+ * @param wanted_filename 
+ * @return true 
+ * @return false 
+ */
 inline bool StartsWithDevNull(const std::string& wanted_filename) {
-    if ( wanted_filename.size( ) > 8 ) {
-        // It is long enough to point to /dev/null/...
-        constexpr const char* dev_null{"/dev/null"};
-        for ( int iChar = 0; iChar < 9; iChar++ ) {
-            if ( wanted_filename[iChar] != dev_null[iChar] ) {
+    switch ( wanted_filename.length( ) ) {
+        case 9:
+            return (wanted_filename == "/dev/null");
+        case 10:
+            return (wanted_filename == "/dev/null/");
+        default:
+            if ( wanted_filename.length( ) > 10 ) {
+                return (wanted_filename.substr(0, 10) == "/dev/null/");
+            }
+            else {
                 return false;
             }
-        }
     }
-    else {
-        return false;
-    }
-    return true;
 }
 
+/**
+ * @brief Given a real-space shift, calculate the phase factor needed to apply the shift in Fourier space.
+ * Note: The same method could be used to shift the complex values in a Fourier transform by applying them to 
+ * a complex-valued "real space" image.
+ * 
+ * @param real_space_shift 
+ * @param distance_from_origin 
+ * @param dimension_size 
+ * @return float 
+ */
 inline float ReturnPhaseFromShift(float real_space_shift, float distance_from_origin, float dimension_size) {
-    return real_space_shift * distance_from_origin * 2.0 * pi_v<float> / dimension_size;
+    return real_space_shift * distance_from_origin * 2.0f * pi_v<float> / dimension_size;
 }
 
+/**
+ * @brief Returns the complex exponential from converting the cartesian phase shifts into a single 3d.
+ * 
+ * @param phase_x 
+ * @param phase_y 
+ * @param phase_z 
+ * @return std::complex<float> 
+ */
 inline std::complex<float> Return3DPhaseFromIndividualDimensions(float phase_x, float phase_y, float phase_z) {
     float temp_phase = -phase_x - phase_y - phase_z;
 
@@ -183,8 +261,8 @@ inline bool FloatsAreAlmostTheSame(float a, float b) {
     return (fabs(a - b) < 0.0001);
 }
 
-inline bool HalfFloatsAreAlmostTheSame(float a, float b) {
-    return (fabs(a - b) < 0.001);
+inline bool HalfFloatsAreAlmostTheSame(const half_float::half a, const half_float::half b) {
+    return (fabs(float(a) - float(b)) < 0.001);
 }
 
 template <typename T>
@@ -220,6 +298,6 @@ inline float ConvertXYToPhiInDegrees(float x, float y) {
         return rad_2_deg(atan2f(y, x));
 }
 
-inline float ReturnWavelenthInAngstroms(float kV) {
-    return 12.262643247 / sqrtf(kV * 1000 + 0.97845e-6 * powf(kV * 1000, 2));
+inline float ReturnWavelenthInAngstroms(float acceleration_voltage_kV) {
+    return 12.2639f / sqrtf(1000.0f * acceleration_voltage_kV + 0.97845e-6 * powf(1000.0f * acceleration_voltage_kV, 2));
 }

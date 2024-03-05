@@ -15,7 +15,7 @@ add_library(cisTEM_gui STATIC
 	ProjectX_gui.cpp 
 	ResultsDataViewListCtrl.cpp 
 	MyMovieFilterDialog.cpp 
-	MainFrame.cpp 
+	MainFrame.cpp
 	MyAssetPanelParent.cpp 
 	MyMovieAssetPanel.cpp 
 	MyImageAssetPanel.cpp 
@@ -56,7 +56,8 @@ add_library(cisTEM_gui STATIC
 	AbInitioPlotPanel.cpp 
 	Refine2DResultsPanel.cpp 
 	AngularDistributionPlotPanel.cpp 
-	DisplayPanel.cpp 
+	DisplayPanel.cpp
+	DisplayFrame.cpp
 	ClassumSelectionCopyFromDialog.cpp 
 	AbInitio3DPanel.cpp 
 	AssetPickerComboPanel.cpp 

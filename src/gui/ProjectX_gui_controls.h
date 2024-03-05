@@ -35,11 +35,10 @@ class RefinementParametersListCtrl;
 #include <wx/statline.h>
 #include <wx/scrolwin.h>
 #include <wx/dialog.h>
-#include <wx/toolbar.h>
-#include <wx/textctrl.h>
-#include <wx/checkbox.h>
 #include <wx/statbmp.h>
+#include <wx/textctrl.h>
 #include <wx/listctrl.h>
+#include <wx/toolbar.h>
 #include <wx/choice.h>
 
 ///////////////////////////////////////////////////////////////////////////
@@ -136,70 +135,6 @@ class FSCPanel : public wxPanel
 		FSCPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 
 		~FSCPanel();
-
-};
-
-///////////////////////////////////////////////////////////////////////////////
-/// Class DisplayPanelParent
-///////////////////////////////////////////////////////////////////////////////
-class DisplayPanelParent : public wxPanel
-{
-	private:
-
-	protected:
-		wxBoxSizer* MainSizer;
-		wxToolBar* Toolbar;
-
-	public:
-
-		DisplayPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 500,300 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
-
-		~DisplayPanelParent();
-
-};
-
-///////////////////////////////////////////////////////////////////////////////
-/// Class DisplayManualDialogParent
-///////////////////////////////////////////////////////////////////////////////
-class DisplayManualDialogParent : public wxDialog
-{
-	private:
-
-	protected:
-		wxBoxSizer* MainSizer;
-		wxStaticLine* m_staticline58;
-		wxStaticText* m_staticText315;
-		wxTextCtrl* minimum_text_ctrl;
-		wxStaticText* m_staticText316;
-		wxTextCtrl* maximum_text_ctrl;
-		wxStaticText* m_staticText317;
-		wxToolBar* Toolbar;
-		wxStaticLine* m_staticline61;
-		wxCheckBox* histogram_checkbox;
-		wxCheckBox* live_checkbox;
-		wxStaticLine* m_staticline63;
-		wxButton* m_button94;
-		wxButton* m_button95;
-
-		// Virtual event handlers, override them in your derived class
-		virtual void OnClose( wxCloseEvent& event ) { event.Skip(); }
-		virtual void OnLeftDown( wxMouseEvent& event ) { event.Skip(); }
-		virtual void OnMotion( wxMouseEvent& event ) { event.Skip(); }
-		virtual void OnPaint( wxPaintEvent& event ) { event.Skip(); }
-		virtual void OnRightDown( wxMouseEvent& event ) { event.Skip(); }
-		virtual void OnLowChange( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnHighChange( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnHistogramCheck( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnRealtimeCheck( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnButtonOK( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnButtonCancel( wxCommandEvent& event ) { event.Skip(); }
-
-
-	public:
-
-		DisplayManualDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Manual Grey Settings"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxDEFAULT_DIALOG_STYLE );
-
-		~DisplayManualDialogParent();
 
 };
 

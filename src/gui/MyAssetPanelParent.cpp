@@ -64,7 +64,7 @@ void MyAssetPanelParent::DisplaySelectedItems( ) {
     if ( DisplayButton->IsEnabled( ) == true ) {
         wxString execution_command = wxStandardPaths::Get( ).GetExecutablePath( );
         execution_command          = execution_command.BeforeLast('/');
-        execution_command += "/display";
+        execution_command += "/cisTEM_display";
 
         // get all selected..
 

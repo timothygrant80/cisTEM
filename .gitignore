@@ -31,3 +31,4 @@ configure~
 *.mrc
 *.tif
 *.dff
+__pycache__/

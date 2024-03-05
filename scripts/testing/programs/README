@@ -1,0 +1,163 @@
+These tests cover basic controls for the template matching implementation over a range of problem sets.
+
+The primary goal is to ensure we have a standard set of test data covering a range of normal and pathological images. The utils and meta data layout are designed
+to minimized error when dealing with writing new tests for existing test data.
+
+I expect the setup may be useful as a more general tool for testing cisTEM binary programs more broadly.
+
+A note on benchmarking:
+
+    - I have added some baseline results in the test descriptions below, but this is for very coarse trouble shooting. The conditions at runtime (how many gpu's are being used),
+    the host hardware as a whole and even which GPU is being used can have a large impact on the runtime. For example, on one of my computers with 3 rtx3090's the third is 
+    measurable slower because it only gets 4 pcie lanes. The first two are slower when run together than another computer with 4 rtx3090's because their pcie lanes are split (bifurcated) and only get 8 lanes eache.
+    If running gpu 1 only the first computer it gets the full 16 lanes available to it. But this doesn't correspond to the physical order (should be gpu 0). All this is to say,
+    for any meaningful benchmarcks, you will need to run both tests on your hardware. I do think it will be useful to have some collection of results which may point out outlier behavior.
+    For example, on the 4 gpu machine, which should be better in every way, TM runs slower for some particular size of reference when using the host for projection. I don't know if this is related
+    to transfer speeds or more likely some cache size difference on the CPU's in both machines. Anyway, ramble over : )
+
+    - I think the servers used by a couple labs are using boards with PCIE gen 3, so please note that the above references may apply even if you don't have bifuraction. Ie. my 4 lance reference is to 4 gen 4 lanes which is roughly 8 gen 3 lanes.
+
+###################################
+
+# Inputs, Outputs, and Test Data #
+
+###################################
+
+    Inputs:
+
+        Run time input:
+
+            - run any test with -h to see the available options.
+
+            - The only required option is a path to the directory holding the binary to test.
+                - for now match_template_gpu
+                    - (or match_template if --old_cistem is passed in)
+                    - make_template_result is called after calls to match_template
+                - expect to add other cisTEM binaries in the future.
+
+        Experimental input:
+
+            - Every directory has the same layout and may be accessed by any test.py
+
+                - General label (e.g. Yeast, SPA, Lamella_from_je etc.)
+
+                    - Images
+
+                        - aligned 2d images
+                            - TODO: a movie directory will make sense when expanding beyond match_template
+                            - NOTE: it would be nice to mirror the cistem_project/Assets directory where relevant
+
+                    - MetaData
+
+                        - toml files named after General label (e.g. Yeast.toml, SPA.toml, Lamella_from_je.toml etc.)
+                            - The format should be straightforward to adapt to new data sets.
+                            - NOTE: there is only one toml even if there are multiple images or templates.
+                            
+
+                    - Templates
+                    
+                        - 3d volumes and optionally in some cases atomic coordinate files.
+
+    Outputs:
+
+        - defaults to /tmp, user specified at runtime
+
+        - all results for a given input data (Images currently) are placed in a directory named after the input data.
+            - e.g. /tmp/s_THP1_C_g1_niceview_00089_20.0_Mar17_19.27.36_90_0/
+        
+        - The TM results are all saved as generic names (e.g. mip.mrc, scaled_mip.mrc etc.)
+
+            - By default, make_template_result is called. In several tests (described in the next section) make_template_result is re-run on the unscaled mip.
+
+        - Output useful for benchmarking is recorded as well.
+
+            - cpu_info.txt resp. gpu_info.txt
+                - records pertinent information about the hardware used for the test.
+
+            - dmon_info.txt
+                - records state of all gpus on the hardward during the test
+
+            - run_info.txt
+                - captures stdout and stderr from the test run
+
+#################################
+
+# Test Descriptions #
+
+#################################
+
+        Each test should have the following details:
+
+            - Expected run time
+            - Goal of the Test
+            - Failure conditions
+            - Intended future utility
+
+test_k3_rotation.py
+
+    - Expected run time: ~ 120 s total.
+    - The goal is to assert that the in place 90 rotation for k3 images is working properly. 
+        - Failure condition: If the times are more than a few percent (probably 10-15%) off from the expected times, then the rotation is not working properly.
+
+test_apofferitin.py
+
+    - Expected run time to be 
+        - 4 pcie gen 4 lanes : 180 s/image (no_gpu_prj) and  40 s/image (gpu_prj). [ ~4.5x speedup ]
+        - 8 pcie gen 4 lanes : 150 s/image (no_gpu_prj) and  40 s/image (gpu_prj). [ ~3.8x speedup ]
+            - NOTE: a similar pattern may be expected for increasing reference sizes, but that relationship will be more complicated as it will increasingly affect the CPU's occupancy as well.
+    - Goal is to check that the GPU projection is working and particularly that it "rescues" small problem sizes to saturate GPU hardware.
+
+test_boobytrap_lamella.py & test_fringe_image.py
+
+    - Expected run time:
+        fringe: 2600 s (v2024), 2780 s (2022 lucas-et-al [1.09])
+        boobytrap: 
+            - Results with 2 prjs in projection queue, and 10 mips in batch
+            - serial, rtx 3080: 580 s
+            - parallel, rtx 3090, AMD Ryzen 9 5950X 16-Core
+                                                                   (new, cpu_prj)  (new, gpu_prj)  (2022 lucas-et-al [1.39x avg] )
+                -gpu 0 (16  GT/s 16->4 lanes pcie gen 4)       :         597      |      611      |          845     
+                -gpu 1 (16  GT/s 16->8 lanes pcie gen 4)       :         581      |      597      |          803  
+                -gpu 2 (2.5 GT/s 16->8 lanes pcie gen 4)       :         581      |      597      |          801
+
+            - parallel, rtx 3090, AMD Threadripper PRO 3955WX 16-Cores 
+                                                                   (new, cpu_prj)  (new, gpu_prj)  (2022 lucas-et-al [1.39x avg] )
+                -gpu 0 (16  GT/s 16    lanes pcie gen 4)       :         579      |      N/M      |          N/M     
+                -gpu 1 (2.5 GT/s 16    lanes pcie gen 4)       :         585      |      N/M      |          N/M  
+                -gpu 2 (2.5 GT/s 16    lanes pcie gen 4)       :         586      |      N/M      |          N/M
+                -gpu 3 (16  GT/s 16    lanes pcie gen 4)       :         583      |      N/M      |          N/m
+            
+    - These are both positive controls for the current per-pixel rescaling over the TM search space.
+        - the fringe image has strong fringes that return many false positives in the non-scaled mip.
+        - the boobytrap lamella has several strong features and density gradients false positives in the non-scaled mip.
+
+    - These are intended to be available to test new methods for handling the statistical/probablistic nature of the TM search space.
+
+    - Expected runtime: 3860 s, 4960 s (2022 lucas-et-al [1.28])
+    - The goal is to not have more false positives than expected, which is currently only possible with the pixel-wise rescaling.
+        - It is not immediately clear if these false positives are due to the same mechanism as the false positives from other less specific image features as in the boobytrap lamella fringe image.
+        - NOTE 1 : The distiction between postive and negative controls is a bit arbitrary here. A yeast lamella with 80s ribosomes is searched with an e. coli 50s LSU.
+
+test_yeast_ribo_def_0_by_0.py
+
+    - Expected runtime, rtx 3080 serial: 4012 (new), 4960 (2022 lucas-et-al [1.24]) 
+    - The goal is primarily for a "quick" timing with "normal" search parameters on a k3 image. 
+        - NOTE 1 : we need a representative Falcon4 image, or better yet, use mrcimage to crop a k3 image to the same size as the Falcon4 image.
+        - NOTE 2 : this image could also be used for local normalization tests (vacuole v cytoplasem v nucleous etc.)
+
+test_yeast_ribo_def_900_by_300.py
+
+    - Expected runtime: 
+    - The goal is primarily for peak height and ROC accuracy checks with "normal" search parameters on a k3 image with a nominal defocus range.
+        - NOTE 1 : This could also be used for timing tests if we decide to rearrange the defocus loop to be inside the in-plane loop.
+
+test_kras_false_negative.py
+
+    - Expected runtime: 
+    - This test is intended for future work to improve the sensitivity of TM for small particles. 
+        - NOTE 1 : This image also has some fringes in the corner
+
+test_crown.py
+
+    - Expected runtime: 
+    - This test doesn't yet exist, however, the data are included to use for testing the angular dependence of normalization using a fairly non-globular protein.

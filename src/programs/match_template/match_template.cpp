@@ -144,6 +144,13 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
 #ifdef ENABLEGPU
     use_gpu_input = my_input->GetYesNoFromUser("Use GPU", "Offload expensive calcs to GPU", "No");
     max_threads   = my_input->GetIntFromUser("Max. threads to use for calculation", "when threading, what is the max threads to run", "1", 1);
+#else
+    // Ensure we always have the same number of interactive inputs to make scripting more consistent.
+    // (N\ot that it is likely to run match_template on the CPU)
+    use_gpu_input = my_input->GetYesNoFromUser("Use GPU", "Not compiled for gpu, input ignored.", "No");
+    max_threads   = my_input->GetIntFromUser("Max. threads to use for calculation", "Not compiled for gpu, input ignored.", "1", 1);
+    use_gpu_input = false;
+    max_threads   = 1;
 #endif
 
     int   first_search_position           = -1;
@@ -185,7 +192,7 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
                                       best_defocus_output_file.ToUTF8( ).data( ),
                                       best_pixel_size_output_file.ToUTF8( ).data( ),
                                       scaled_mip_output_file.ToUTF8( ).data( ),
-                                      correlation_std_output_file.ToUTF8( ).data( ),
+                                      correlation_avg_output_file.ToUTF8( ).data( ),
                                       my_symmetry.ToUTF8( ).data( ),
                                       in_plane_angular_step,
                                       output_histogram_file.ToUTF8( ).data( ),
@@ -193,7 +200,7 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
                                       last_search_position,
                                       image_number_for_gui,
                                       number_of_jobs_per_image_in_gui,
-                                      correlation_avg_output_file.ToUTF8( ).data( ),
+                                      correlation_std_output_file.ToUTF8( ).data( ),
                                       directory_for_results.ToUTF8( ).data( ),
                                       result_filename.ToUTF8( ).data( ),
                                       min_peak_radius,
@@ -672,11 +679,11 @@ bool MatchTemplateApp::DoCalculation( ) {
         template_reconstruction.ZeroCentralPixel( );
         template_reconstruction.SwapRealSpaceQuadrants( );
 
-        //        wxPrintf("First search last search position %d/ %d\n",first_search_position, last_search_position);
-
         if ( use_gpu ) {
 #ifdef ENABLEGPU
 
+// TODO: for images that are being copied into the GPU, change to references in the call to Init
+// TODO: for cpu images not copied after the call to Init, unpin the memory to limit locked pages.
 #pragma omp parallel num_threads(max_threads)
             {
                 int tIDX = ReturnThreadNumberOfCurrentThread( );
@@ -767,7 +774,8 @@ bool MatchTemplateApp::DoCalculation( ) {
                             pixel_counter += max_intensity_projection.padding_jump_value;
                         }
 
-                        GPU[tIDX].histogram.CopyToHostAndAdd(histogram_data);
+                        // GPU[tIDX].histogram.CopyToHostAndAdd(histogram_data);
+                        GPU[tIDX].my_dist.at(0).CopyToHostAndAdd(histogram_data);
 
                         //                    current_correlation_position += GPU[tIDX].total_number_of_cccs_calculated;
                         actual_number_of_ccs_calculated += GPU[tIDX].total_number_of_cccs_calculated;
@@ -824,7 +832,7 @@ bool MatchTemplateApp::DoCalculation( ) {
                     vmcMulByConj(padded_reference.real_memory_allocated / 2, reinterpret_cast<MKL_Complex8*>(input_image.complex_values), reinterpret_cast<MKL_Complex8*>(padded_reference.complex_values), reinterpret_cast<MKL_Complex8*>(padded_reference.complex_values), VML_EP | VML_FTZDAZ_ON | VML_ERRMODE_IGNORE);
 #else
                     for ( pixel_counter = 0; pixel_counter < padded_reference.real_memory_allocated / 2; pixel_counter++ ) {
-                        padded_reference.complex_values[pixel_counter] = conj(padded_reference.complex_values[pixel_counter]) * input_image.complex_values[pixel_counter];
+                          padded_reference.complex_values[pixel_counter] = conj(padded_reference.complex_values[pixel_counter]) * input_image.complex_values[pixel_counter];
                     }
 #endif
 
@@ -1529,7 +1537,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
 #ifdef MKL
         vdErfcInv(1, &erf_input, &temp_threshold);
 #else
-        temp_threshold = cisTEM_erfcinv(erf_input);
+        temp_threshold       = cisTEM_erfcinv(erf_input);
 #endif
         expected_threshold = sqrtf(2.0f) * (float)temp_threshold * CCG_NOISE_STDDEV;
 

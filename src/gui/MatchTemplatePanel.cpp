@@ -1,5 +1,5 @@
 //#include "../core/core_headers.h"
-#include "../core/cistem_constants.h"
+#include "../constants/constants.h"
 #include "../core/gui_core_headers.h"
 
 // extern MyMovieAssetPanel *movie_asset_panel;
@@ -20,7 +20,7 @@ MatchTemplatePanel::MatchTemplatePanel(wxWindow* parent)
     run_profiles_are_dirty = false;
     set_up_to_resume_job   = false;
 
-#ifndef ENABLEGPU
+#ifndef SHOW_CISTEM_GPU_OPTIONS
     UseGpuCheckBox->Show(false);
 #endif
 
@@ -148,16 +148,16 @@ void MatchTemplatePanel::ResetDefaults( ) {
 
     if ( main_frame->current_project.is_open ) {
         ResumeRunCheckBox->SetValue(false);
-        if ( main_frame->current_project.database.ReturnNumberOfTemplateMatchingJobs( ) == 0 )
-            ResumeRunCheckBox->Enable(false);
-        else
+        if ( match_template_results_panel->template_match_job_ids.empty( ) )
             ResumeRunCheckBox->Enable(true);
+        else
+            ResumeRunCheckBox->Enable(false);
     }
     else {
         ResumeRunCheckBox->Enable(false);
     }
 
-#ifdef ENABLEGPU
+#ifdef SHOW_CISTEM_GPU_OPTIONS
     UseGpuCheckBox->SetValue(true);
 #else
     UseGpuCheckBox->SetValue(false); // Already disabled, but also set to un-ticked for visual consistency.
@@ -376,18 +376,18 @@ void MatchTemplatePanel::OnUpdateUI(wxUpdateUIEvent& event) {
         ResumeRunCheckBox->Enable(false);
     }
     else {
-        if ( main_frame->current_project.database.ReturnNumberOfTemplateMatchingJobs( ) == 0 ) {
-            ResumeRunCheckBox->Enable(false);
+        if ( match_template_results_panel->template_match_job_ids.empty( ) ) {
+            ResumeRunCheckBox->Enable(true);
         }
         else {
-            ResumeRunCheckBox->Enable(true);
+            ResumeRunCheckBox->Enable(false);
         }
 
         if ( running_job == false ) {
             RunProfileComboBox->Enable(true);
             GroupComboBox->Enable(true);
             ReferenceSelectPanel->Enable(true);
-#ifdef ENABLEGPU
+#ifdef SHOW_CISTEM_GPU_OPTIONS
             UseGpuCheckBox->Enable(true);
 #endif
 
@@ -432,7 +432,7 @@ void MatchTemplatePanel::OnUpdateUI(wxUpdateUIEvent& event) {
             GroupComboBox->Enable(false);
             ReferenceSelectPanel->Enable(false);
             RunProfileComboBox->Enable(false);
-            UseGpuCheckBox->Enable(false); // Doesn't matter if ENABLEGPU
+            UseGpuCheckBox->Enable(false); // Doesn't matter if SHOW_CISTEM_GPU_OPTIONS
             //StartAlignmentButton->SetLabel("Stop Job");
             //StartAlignmentButton->Enable(true);
         }
@@ -464,6 +464,10 @@ void MatchTemplatePanel::SetInputsForPossibleReRun(bool set_up_to_resume_job, Te
 
     this->set_up_to_resume_job = set_up_to_resume_job;
     bool enable_value;
+
+    // FIXME: If the project is moved, the reference volume will have anew path and we aren't allowing updates to the reference.
+    // Probably the right solution is to be able to update the path to the reference when updating the project. Or alternatively
+    // to have a dialog pop up when a reference is NOT found and ask if the user wants to update the reference.
     if ( set_up_to_resume_job ) {
         // We want to disable user inputs so the job run matches the intial state.
         enable_value = false;
@@ -703,7 +707,11 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
         number_of_rotations++;
     }
 
-    current_job_package.Reset(active_refinement_run_profile, "match_template", number_of_jobs);
+    // CPU match_template can probably be DEPRECATED
+    if ( use_gpu )
+        current_job_package.Reset(active_refinement_run_profile, "match_template_gpu", number_of_jobs);
+    else
+        current_job_package.Reset(active_refinement_run_profile, "match_template", number_of_jobs);
 
     expected_number_of_results = 0;
     number_of_received_results = 0;

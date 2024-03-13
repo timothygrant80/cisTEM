@@ -134,6 +134,7 @@ void MyFindCTFPanel::ResetDefaults( ) {
     RestrainAstigmatismCheckBox->SetValue(false);
     ToleratedAstigmatismNumericCtrl->ChangeValueFloat(500.0f);
     AdditionalPhaseShiftCheckBox->SetValue(false);
+    FilterLowresSignalCheckBox->SetValue(true);
     MinPhaseShiftNumericCtrl->ChangeValueFloat(0.0f);
     MaxPhaseShiftNumericCtrl->ChangeValueFloat(180.0f);
     PhaseShiftStepNumericCtrl->ChangeValueFloat(10.0f);
@@ -315,6 +316,11 @@ void MyFindCTFPanel::SetInfo( ) {
     InfoText->WriteText(wxT("Step size of initial phase shift search (°) : "));
     InfoText->EndBold( );
     InfoText->WriteText(wxT("If finding an additional phase shift, this value sets the step size for the search."));
+    InfoText->Newline( );
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Weight down low resolution signal? : "));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT("Reduce the intensity of the powerspectrum at low resolution. This is normally desired for single-particle micrographs, but might cause issues for other types of data."));
     InfoText->Newline( );
     InfoText->Newline( );
     InfoText->EndAlignment( );
@@ -558,6 +564,7 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
     bool        resample_if_pixel_too_small;
     float       resample_pixel_size;
     bool        large_astigmatism_expected;
+    bool        filter_lowres_signal = true;
 
     wxString current_dark_filename;
     bool     movie_is_dark_corrected;
@@ -627,6 +634,11 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
         maximum_additional_phase_shift     = 0.0f;
         additional_phase_shift_search_step = 0.0f;
     }
+
+    if ( FilterLowresSignalCheckBox->IsChecked( ) == true )
+        filter_lowres_signal = true;
+    else
+        filter_lowres_signal = false;
 
     if ( FitNodesCheckBox->IsChecked( ) == true ) {
         fit_nodes                = true;
@@ -753,7 +765,7 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
 
         const int number_of_threads = 1;
 
-        current_job_package.AddJob("sbisffffifffffbfbfffbffbbsbsbfffbfffbiiibbbfffbb", input_filename.c_str( ), // 0
+        current_job_package.AddJob("sbisffffifffffbfbfffbffbbsbsbfffbfffbiiibbbbfffbb", input_filename.c_str( ), // 0
                                    input_is_a_movie, // 1
                                    number_of_frames_to_average, //2
                                    output_diagnostic_filename.c_str( ), // 3
@@ -793,6 +805,7 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
                                    number_of_threads,
                                    current_eer_frames_per_image,
                                    current_eer_super_res_factor,
+                                   filter_lowres_signal,
                                    fit_nodes,
                                    fit_nodes_1d,
                                    fit_nodes_2d,

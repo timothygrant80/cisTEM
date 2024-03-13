@@ -13,6 +13,7 @@ void Image::SetupInitialValues( ) {
 
     is_in_real_space         = true;
     object_is_centred_in_box = true;
+    is_fft_centered_in_box   = false;
 
     physical_upper_bound_complex_x = 0;
     physical_upper_bound_complex_y = 0;
@@ -50,8 +51,10 @@ void Image::SetupInitialValues( ) {
     real_values                      = NULL;
     complex_values                   = NULL;
 
-    is_in_memory          = false;
-    real_memory_allocated = 0;
+    is_in_memory              = false;
+    is_in_memory_16f          = false;
+    real_memory_allocated     = 0;
+    real_memory_allocated_16f = 0;
 
     plan_fwd = NULL;
     plan_bwd = NULL;
@@ -64,6 +67,11 @@ void Image::SetupInitialValues( ) {
 
 Image::Image( ) {
     SetupInitialValues( );
+}
+
+Image::Image(int wanted_x_size, int wanted_y_size, int wanted_z_size, bool is_in_real_space, bool do_fft_planning) {
+    SetupInitialValues( );
+    Allocate(wanted_x_size, wanted_y_size, wanted_z_size, is_in_real_space, do_fft_planning);
 }
 
 Image::Image(const Image& other_image) // copy constructor
@@ -166,6 +174,16 @@ float Image::ReturnSumOfRealValues( ) {
     return float(sum);
 }
 
+/**
+ * @brief Warning: This function returns the Sum of Squares in Fourier space, SS/N in real space
+ * 
+ * @param wanted_mask_radius 
+ * @param wanted_center_x 
+ * @param wanted_center_y 
+ * @param wanted_center_z 
+ * @param invert_mask 
+ * @return float 
+ */
 float Image::ReturnSumOfSquares(float wanted_mask_radius, float wanted_center_x, float wanted_center_y, float wanted_center_z, bool invert_mask) {
     //	result is too big
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
@@ -265,7 +283,7 @@ float Image::ReturnSumOfSquares(float wanted_mask_radius, float wanted_center_x,
                     if ( (i == 0 || (i == logical_upper_bound_complex_x && x_is_even)) && (jj == 0 || (jj == logical_lower_bound_complex_y && x_is_even)) && (kk == 0 || (kk == logical_lower_bound_complex_z && x_is_even)) )
                         sum += pow(abs(complex_values[address]), 2) * 0.5;
                     else if ( (i == 0 || (i == logical_upper_bound_complex_x && x_is_even)) && logical_z_dimension != 1 )
-                        sum += pow(abs(complex_values[address]), 2) * 0.25;
+                        sum += pow(abs(complex_values[address]), 2) * 0.5f;
                     else if ( (i != 0 && (i != logical_upper_bound_complex_x || ! x_is_even)) || (jj >= 0 && kk >= 0) )
                         sum += pow(abs(complex_values[address]), 2);
                     address++;
@@ -554,6 +572,69 @@ float Image::GetWeightedCorrelationWithImage(Image& projection_image, int* bins,
     return sum3;
 }
 
+float Image::GetWeightedCorrelationWithImage(Image& projection_image, float low_limit2, float high_limit2, float signed_CC_limit2) {
+    MyDebugAssertTrue(is_in_memory, "Image memory not allocated");
+    MyDebugAssertTrue(projection_image.is_in_memory, "projection_image memory not allocated");
+    MyDebugAssertTrue(! is_in_real_space, "Image not in Fourier space");
+    MyDebugAssertTrue(! projection_image.is_in_real_space, "projection_image not in Fourier space");
+    //	MyDebugAssertTrue(! projection_image.object_is_centred_in_box, "projection_image quadrants have not been swapped");
+    MyDebugAssertTrue(HasSameDimensionsAs(&projection_image), "Images do not have the same dimensions");
+    MyDebugAssertFalse(HasNan( ), "Image has one or more NaN pixels");
+    MyDebugAssertFalse(projection_image.HasNan( ), "Projection has one or more NaN pixels");
+
+    double sum1 = 0;
+    double sum2 = 0;
+    double sum3 = 0;
+
+    float* c_img = (float*)complex_values;
+    float* p_img = (float*)projection_image.complex_values;
+
+    int   i, j, k, pixel_counter;
+    float x, y, z, frequency_squared;
+    pixel_counter = 0;
+    int doing_it  = 0;
+    int doing_it2 = 0;
+    int doing_it3 = 0;
+    for ( k = 0; k <= physical_upper_bound_complex_z; k++ ) {
+        z = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z, 2);
+        for ( j = 0; j <= physical_upper_bound_complex_y; j++ ) {
+            y = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y, 2);
+            for ( i = 0; i <= physical_upper_bound_complex_x; i++ ) {
+                x                 = powf(i * fourier_voxel_size_x, 2);
+                frequency_squared = x + y + z;
+                doing_it3++;
+                if ( frequency_squared >= low_limit2 && frequency_squared <= high_limit2 && ! (i == 0 && j == 0 && k == 0) ) {
+                    doing_it++;
+                    if ( (c_img[pixel_counter] == 0.f && c_img[pixel_counter + 1] == 0.0f) ||
+                         (p_img[pixel_counter] == 0.f && p_img[pixel_counter + 1] == 0.0f) ) {
+                        // Do nothing
+                    }
+                    else {
+                        doing_it2++;
+                        sum1 += (powf(c_img[pixel_counter], 2) + powf(c_img[pixel_counter + 1], 2));
+                        sum2 += (powf(p_img[pixel_counter], 2) + powf(p_img[pixel_counter + 1], 2));
+                        if ( frequency_squared > signed_CC_limit2 ) {
+                            sum3 += fabsf(c_img[pixel_counter] * p_img[pixel_counter] +
+                                          c_img[pixel_counter + 1] * p_img[pixel_counter + 1]);
+                        }
+                        else {
+                            sum3 += (c_img[pixel_counter] * p_img[pixel_counter] +
+                                     c_img[pixel_counter + 1] * p_img[pixel_counter + 1]);
+                        }
+                    }
+                }
+                pixel_counter += 2;
+            }
+        }
+    }
+
+    sum1 *= sum2;
+    if ( sum1 != 0.0 )
+        sum3 /= sqrtf(sum1);
+
+    return sum3;
+}
+
 void Image::PhaseFlipPixelWise(Image& phase_image) {
     MyDebugAssertTrue(is_in_memory, "Image memory not allocated");
     MyDebugAssertTrue(phase_image.is_in_memory, "Other image memory not allocated");
@@ -617,6 +698,17 @@ void Image::MultiplyPixelWiseReal(Image& other_image, bool absolute) {
         for ( pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter += 2 ) {
             real_b[pixel_counter] *= real_r[pixel_counter];
         };
+    }
+}
+
+void Image::Conj( ) {
+    MyDebugAssertTrue(is_in_memory, "Image memory not allocated");
+    MyDebugAssertFalse(is_in_real_space, "Image is not in Fourier space");
+
+    float* imag_part = &real_values[1];
+
+    for ( long pixel_counter = 0; pixel_counter < real_memory_allocated - 1; pixel_counter += 2 ) {
+        imag_part[pixel_counter] = -imag_part[pixel_counter];
     }
 }
 
@@ -875,7 +967,7 @@ void Image::AddNoise(NoiseType wanted_noise_type, float noise_param_1, float noi
     MyDebugAssertTrue(wanted_noise_type == EXPONENTIAL ? noise_param_1 > 0 : true, "Mean of an Exponential distribution must be positive");
     MyDebugAssertTrue(wanted_noise_type == GAMMA ? (noise_param_1 > 0 && noise_param_2 > 0) : true, "alpha and beta of a Gamma distribution must be positive");
 
-    RandomNumberGenerator my_rng(PIf);
+    RandomNumberGenerator my_rng(pi_v<float>);
 
     switch ( wanted_noise_type ) {
         case GAUSSIAN:
@@ -951,14 +1043,11 @@ void Image::ZeroFloatOutside(float wanted_mask_radius, bool invert_mask) {
     AddConstant(-average);
 }
 
-// Pixels with values greater than maximum_n_sigmas above the mean or less than maximum_n_sigmas below the mean will be replaced with the mean
-void Image::ReplaceOutliersWithMean(float maximum_n_sigmas) {
-    MyDebugAssertTrue(is_in_real_space, "Image must be in real space");
+void Image::ReplaceOutliersWithMean(float mean, float stdDev, float maximum_n_sigmas) {
+    MyDebugAssertTrue(is_in_real_space == true, "Image must be in real space");
 
-    float sigma = sqrtf(ReturnVarianceOfRealValues( ));
-    float mean  = ReturnAverageOfRealValues( );
-    float max   = mean + maximum_n_sigmas * sigma;
-    float min   = mean - maximum_n_sigmas * sigma;
+    float max = mean + maximum_n_sigmas * stdDev;
+    float min = mean - maximum_n_sigmas * stdDev;
 
     for ( long address = 0; address < real_memory_allocated; address++ ) {
         if ( real_values[address] > max ) {
@@ -968,6 +1057,16 @@ void Image::ReplaceOutliersWithMean(float maximum_n_sigmas) {
             real_values[address] = mean;
         }
     }
+}
+
+// Pixels with values greater than maximum_n_sigmas above the mean or less than maximum_n_sigmas below the mean will be replaced with the mean
+void Image::ReplaceOutliersWithMean(float maximum_n_sigmas) {
+    MyDebugAssertTrue(is_in_real_space, "Image must be in real space");
+
+    float sigma = sqrtf(ReturnVarianceOfRealValues( ));
+    float mean  = ReturnAverageOfRealValues( );
+
+    ReplaceOutliersWithMean(mean, sigma, maximum_n_sigmas);
 }
 
 float Image::ReturnVarianceOfRealValues(float wanted_mask_radius, float wanted_center_x, float wanted_center_y, float wanted_center_z, bool invert_mask) {
@@ -1868,8 +1967,10 @@ void Image::RotateQuadrants(Image& rotated_image, int quad_i) {
 }
 
 void Image::GenerateReferenceProjections(Image* projections, EulerSearch& parameters, float resolution) {
-    int             i;
-    float           variance;
+    int   i;
+    float variance;
+    // FIXME: Applying a fixed bfactor does not make any real sense. I'm sure it was born out of some observations in image processing,
+    // but that is not tolerable for my case. It should at least be taken as an option.
     float           effective_bfactor = 100;
     AnglesAndShifts angles;
 
@@ -2274,6 +2375,16 @@ void Image::RotateFourier2D(Image& rotated_image, AnglesAndShifts& rotation_angl
     rotated_image.object_is_centred_in_box = false;
 }
 
+/**
+ * @brief Extract a 2d central section at arbitrary angles and shifts from (this) 3d volume.
+ * Requires the 3d volume to be cubic and origin at the corner, i.e. QuadrantSwapped.
+ * Output is the FFT of the extracted 2d image, QuadrantSwapped with zero mean.
+ * 
+ * @param image_to_extract 
+ * @param angles_and_shifts_of_image 
+ * @param resolution_limit 
+ * @param apply_resolution_limit 
+ */
 void Image::ExtractSlice(Image& image_to_extract, AnglesAndShifts& angles_and_shifts_of_image, float resolution_limit, bool apply_resolution_limit) {
     //	MyDebugAssertTrue(image_to_extract.logical_x_dimension == logical_x_dimension && image_to_extract.logical_y_dimension == logical_y_dimension, "Error: Images different sizes");
     MyDebugAssertTrue(image_to_extract.logical_z_dimension == 1, "Error: attempting to extract 3D image from 3D reconstruction");
@@ -2877,17 +2988,22 @@ void Image::AddByLinearInterpolationFourier2D(float& wanted_logical_x_coordinate
     }
 }
 
-void Image::CalculateCTFImage(CTF& ctf_of_image, bool calculate_complex_ctf, bool apply_coherence_envelope) {
+void Image::CalculateCTFImage(CTF& ctf_of_image, bool calculate_complex_ctf, bool apply_coherence_envelope, bool use_half_precision) {
     MyDebugAssertTrue(is_in_memory, "Memory not allocated for CTF image");
     if ( apply_coherence_envelope ) {
         MyDebugAssertFalse(calculate_complex_ctf, "calculating a complex CTF and a coherence envelope is not supported.");
+    }
+    if ( use_half_precision ) {
+        // If already allocated and the same number of pixels as real_values, this will just return
+        Allocate16fBuffer( );
     }
     //	MyDebugAssertTrue(is_in_real_space == false, "CTF image not in Fourier space");
 
     int i;
     int j;
 
-    long pixel_counter = 0;
+    long pixel_counter      = 0;
+    long pixel_counter_fp16 = 0;
 
     float x_coordinate_2d;
     float y_coordinate_2d;
@@ -2922,6 +3038,16 @@ void Image::CalculateCTFImage(CTF& ctf_of_image, bool calculate_complex_ctf, boo
                 else
                     complex_values[pixel_counter] = ctf_of_image.Evaluate(frequency_squared, azimuth) + I * 0.0f;
             }
+
+            if ( use_half_precision ) {
+                // On the cpu half library, we don't have vector types, to manually interleave the real and imag parts
+                // real_values_16f[pixel_counter_fp16]     = half_float::half_cast<half>(real(ctf_value));
+                // real_values_16f[pixel_counter_fp16 + 1] = half_float::half_cast<half>(imag(ctf_value));
+                real_values_16f[pixel_counter_fp16]     = half_float::half(real(complex_values[pixel_counter]));
+                real_values_16f[pixel_counter_fp16 + 1] = half_float::half(imag(complex_values[pixel_counter]));
+                pixel_counter_fp16 += 2;
+            }
+
             pixel_counter++;
         }
     }
@@ -3220,7 +3346,7 @@ float Image::CosineRingMask(float wanted_inner_radius, float wanted_outer_radius
                     if ( do_inner_masking ) {
                         if ( frequency_squared <= inner_mask_radius_squared && frequency_squared >= inner_mask_radius_minus_edge_squared ) {
                             frequency = sqrtf(frequency_squared);
-                            edge      = (1.0 + cosf(PI * (outer_mask_radius - frequency) / wanted_mask_edge)) / 2.0;
+                            edge      = (1.0 + cosf(PI * (inner_mask_radius - frequency) / wanted_mask_edge)) / 2.0;
                             complex_values[pixel_counter] *= edge;
                         }
                         if ( frequency_squared <= inner_mask_radius_minus_edge_squared )
@@ -4312,6 +4438,7 @@ Image& Image::operator=(const Image* other_image) {
 
         is_in_real_space         = other_image->is_in_real_space;
         object_is_centred_in_box = other_image->object_is_centred_in_box;
+        is_fft_centered_in_box   = other_image->is_fft_centered_in_box;
 
         for ( long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++ ) {
             real_values[pixel_counter] = other_image->real_values[pixel_counter];
@@ -4330,6 +4457,11 @@ void Image::Deallocate( ) {
     if ( is_in_memory == true && image_memory_should_not_be_deallocated == false ) {
         fftwf_free(real_values);
         is_in_memory = false;
+
+        if ( is_in_memory_16f ) {
+            delete[] real_values_16f;
+            is_in_memory_16f = false;
+        }
     }
 
     if ( planned == true ) {
@@ -4339,12 +4471,24 @@ void Image::Deallocate( ) {
         fftwf_destroy_plan(plan_bwd);
         planned = false;
     }
+
+#ifdef ENABLEGPU
+    UnRegisterPageLockedMemory(real_values);
+    UnRegisterPageLockedMemory(real_values_16f);
+#endif
 }
 
-//!>  \brief  Allocate memory for the Image object.
-//
-//  If the object is already allocated with correct dimensions, nothing happens. Otherwise, object is deallocated first.
-
+/**
+ * @brief Allocate memory for the Image object.
+ * If the object is already allocated with correct dimensions, nothing happens. Otherwise, object is deallocated first.
+ * Warning: if the object is deallocated/reallocated the value of object_is_centred_in_box is NOT reset. And must be done manually.
+ * TODO: It is worth considering reseting all metadata bools to default in the Image::Deallocate() method.
+ * @param wanted_x_size 
+ * @param wanted_y_size 
+ * @param wanted_z_size 
+ * @param should_be_in_real_space 
+ * @param do_fft_planning 
+ */
 void Image::Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size, bool should_be_in_real_space, bool do_fft_planning) {
 
     MyDebugAssertTrue(wanted_x_size > 0 && wanted_y_size > 0 && wanted_z_size > 0, "Bad dimensions: %i %i %i\n", wanted_x_size, wanted_y_size, wanted_z_size);
@@ -4439,6 +4583,25 @@ void Image::Allocate(int wanted_x_size, int wanted_y_size, bool should_be_in_rea
 
 void Image::Allocate(Image* image_to_copy_size_and_space_from) {
     Allocate(image_to_copy_size_and_space_from->logical_x_dimension, image_to_copy_size_and_space_from->logical_y_dimension, image_to_copy_size_and_space_from->logical_z_dimension, image_to_copy_size_and_space_from->is_in_real_space);
+}
+
+void Image::Allocate16fBuffer( ) {
+    MyDebugAssertTrue(is_in_memory, "Image is not in memory");
+
+    if ( is_in_memory_16f == true ) {
+        if ( real_memory_allocated == real_memory_allocated_16f && real_memory_allocated_16f > 0 ) {
+            // nothing to do
+            return;
+        }
+        else {
+            delete[] real_values_16f;
+            is_in_memory_16f = false;
+        }
+    }
+
+    real_memory_allocated_16f = real_memory_allocated;
+    real_values_16f           = new half_float::half[real_memory_allocated_16f];
+    is_in_memory_16f          = true;
 }
 
 void Image::AllocateAsPointingToSliceIn3D(Image* wanted3d, long wanted_slice) {
@@ -4578,7 +4741,7 @@ void Image::UpdateLoopingAndAddressing( ) {
 
 void Image::UpdatePhysicalAddressOfBoxCenter( ) {
     /*
-    if (IsEven(logical_x_dimension)) physical_address_of_box_center_x = logical_x_dimension / 2;
+    if (IsEven(logical_x_dimension))  = logical_x_dimension / 2;
     else physical_address_of_box_center_x = (logical_x_dimension - 1) / 2;
 
     if (IsEven(logical_y_dimension)) physical_address_of_box_center_y = logical_y_dimension / 2;
@@ -4654,6 +4817,7 @@ void Image::ForwardFFT(bool should_scale) {
 void Image::BackwardFFT( ) {
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
     MyDebugAssertFalse(is_in_real_space, "Image already in real space");
+    MyDebugAssertFalse(is_fft_centered_in_box, "A centered and shifted FFT cannot be back transformed as it would require a complex real-space image.");
 
     fftwf_execute_dft_c2r(plan_bwd, reinterpret_cast<fftwf_complex*>(complex_values), real_values);
 
@@ -6872,7 +7036,7 @@ void Image::ComputeAmplitudeSpectrumFull2D(Image* amplitude_spectrum, bool calcu
     amplitude_spectrum->object_is_centred_in_box = true;
 }
 
-void Image::ComputeFilteredAmplitudeSpectrumFull2D(Image* average_spectrum_masked, Image* current_power_spectrum, float& average, float& sigma, float minimum_resolution, float maximum_resolution, float pixel_size_for_fitting) {
+void Image::ComputeFilteredAmplitudeSpectrumFull2D(Image* average_spectrum_masked, Image* current_power_spectrum, float& average, float& sigma, float minimum_resolution, float maximum_resolution, float pixel_size_for_fitting, bool apply_cosine_mask) {
 
     // This is pulled from the ctffind.cpp App - this filtering is used also in wave_function_propagtor::ReturnImageContrast. Any changes here should affect both programs identically.
     // The only change I (Ben) made is to change amplitud_spectrum-> to this->
@@ -6913,7 +7077,9 @@ void Image::ComputeFilteredAmplitudeSpectrumFull2D(Image* average_spectrum_maske
     //			average_spectrum_masked->SetMaximumValue(average_spectrum_masked->ReturnMaximumValue(3,3));
 
     average_spectrum_masked->CopyFrom(this);
-    average_spectrum_masked->CosineMask(float(average_spectrum_masked->logical_x_dimension) * pixel_size_for_fitting / std::max(maximum_resolution, 8.0f), float(average_spectrum_masked->logical_x_dimension) * pixel_size_for_fitting / std::max(maximum_resolution, 4.0f), true);
+    if (apply_cosine_mask) {
+        average_spectrum_masked->CosineMask(float(average_spectrum_masked->logical_x_dimension) * pixel_size_for_fitting / std::max(maximum_resolution, 8.0f), float(average_spectrum_masked->logical_x_dimension) * pixel_size_for_fitting / std::max(maximum_resolution, 4.0f), true);
+    }
     //			average_spectrum_masked->QuickAndDirtyWriteSlice("dbg_spec_before_thresh.mrc",1);
     //			average_spectrum_masked->CorrectSinc();
     //			average_spectrum_masked->CorrectSinc(float(average_spectrum_masked->logical_x_dimension)*pixel_size_for_fitting/std::max(maximum_resolution, 8.0f), 0.5, true, 0.0);
@@ -8308,6 +8474,20 @@ void Image::MakeAbsolute( ) {
     }
 }
 
+void Image::Abs( ) {
+
+    if ( is_in_real_space ) {
+        for ( int counter = 0; counter < real_memory_allocated; counter++ ) {
+            real_values[counter] = fabsf(real_values[counter]);
+        }
+    }
+    else {
+        for ( int counter = 0; counter < real_memory_allocated / 2; counter++ ) {
+            complex_values[counter] = abs(complex_values[counter]);
+        }
+    }
+}
+
 void Image::PhaseShift(float wanted_x_shift, float wanted_y_shift, float wanted_z_shift) {
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 
@@ -8907,6 +9087,67 @@ bool Image::HasSameDimensionsAs(Image* other_image) {
 
 //END_FOR_STAND_ALONE_CTFFIND
 
+void Image::SwapFourierSpaceQuadrants(bool also_swap_real_space_quadrants) {
+    MyDebugAssertTrue(is_in_memory, "Image memory not allocated");
+    MyDebugAssertTrue(is_in_real_space, "Image is not in real space");
+
+    if ( also_swap_real_space_quadrants ) {
+        // For convenience, just do the real space swap here. This is of course inefficient, and could be implemented at the end of this method, but
+        // the price of an extra round of FFTs seems to be low, given the assumed low frequency use of this method, relative to projection.
+        ForwardFFT( );
+        SwapRealSpaceQuadrants( );
+        BackwardFFT( );
+    }
+
+    // To also add the single shift means we'll have a complex input image, handle as two reals.
+    Image       tmp_real;
+    Image       tmp_imag;
+    float       tmp_real_value;
+    float       tmp_imag_value;
+    float       yz_shift;
+    const float lead_term = 2.f * pi_v<float> / float(logical_x_dimension);
+    int         address   = 0;
+
+    tmp_real.Allocate(logical_x_dimension, logical_y_dimension, logical_z_dimension, true);
+    tmp_imag.Allocate(logical_x_dimension, logical_y_dimension, logical_z_dimension, true);
+
+    for ( int k = 0; k < logical_z_dimension; k++ ) {
+        for ( int j = 0; j < logical_y_dimension; j++ ) {
+            // separating the exponents in the 3d phase shift with magnitue of NY/2 and NZ/2 the phases become become -1^(y+z)
+            yz_shift = powf(-1.f, float(k + j));
+            for ( int i = 0; i < logical_x_dimension; i++ ) {
+                // To add the x = -1 term to avoid padding for 3d interpolation in GPU texture memory, where spatial locality is important, we need to shift the image by 1 pixel.
+                // Additionally, to get the positive half_float::half and not the negative, we need an extra NX/2, so we have exp(i*2*pi*x / NX (NX + 1)) which reduces to exp(i*2*pi*x/NX)
+                sincosf(lead_term * float(i), &tmp_imag_value, &tmp_real_value);
+                tmp_real.real_values[address] = real_values[address] * yz_shift * tmp_real_value;
+                tmp_imag.real_values[address] = real_values[address] * yz_shift * tmp_imag_value;
+
+                address++;
+            }
+            address += padding_jump_value;
+        }
+    }
+
+    // Now to get a complex FFT, we use FFT(a + bi) = FFT(a) + iFFT(b)
+    // Ar +iAc + i(Br + iBc) = (Ar - Bc) + i(Ac + Br)
+    tmp_real.ForwardFFT( );
+    tmp_imag.ForwardFFT( );
+
+    for ( int complex_address = 0; complex_address < real_memory_allocated / 2; complex_address++ ) {
+        complex_values[complex_address] = MakeComplex(
+                real(tmp_real.complex_values[complex_address]) - imag(tmp_imag.complex_values[complex_address]),
+                imag(tmp_real.complex_values[complex_address]) + real(tmp_imag.complex_values[complex_address]));
+    }
+
+    // Since the FFT was out of place, update the meta data
+    is_in_real_space       = false;
+    is_fft_centered_in_box = true;
+}
+
+/**
+ * @brief Places the origin of the image (N/2) at 0,0,0 in real space. And vice-versa. Applied twice in a row should be a noop.
+ * 
+ */
 void Image::SwapRealSpaceQuadrants( ) {
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
 
@@ -8916,50 +9157,44 @@ void Image::SwapRealSpaceQuadrants( ) {
     float y_shift_to_apply;
     float z_shift_to_apply;
 
-    if ( is_in_real_space == true ) {
+    if ( is_in_real_space ) {
         must_fft = true;
         ForwardFFT( );
     }
 
-    if ( object_is_centred_in_box == true ) {
+    if ( object_is_centred_in_box ) {
+
+        if ( IsEven(logical_x_dimension) )
+            x_shift_to_apply = float(physical_address_of_box_center_x);
+        else
+            x_shift_to_apply = float(physical_address_of_box_center_x) + 1.0f;
+
+        if ( IsEven(logical_y_dimension) )
+            y_shift_to_apply = float(physical_address_of_box_center_y);
+        else
+            y_shift_to_apply = float(physical_address_of_box_center_y) + 1.0f;
+
+        if ( IsEven(logical_z_dimension) )
+            z_shift_to_apply = float(physical_address_of_box_center_z);
+        else
+            z_shift_to_apply = float(physical_address_of_box_center_z) + 1.0f;
+    }
+    else {
         x_shift_to_apply = float(physical_address_of_box_center_x);
         y_shift_to_apply = float(physical_address_of_box_center_y);
         z_shift_to_apply = float(physical_address_of_box_center_z);
     }
-    else {
-        if ( IsEven(logical_x_dimension) == true ) {
-            x_shift_to_apply = float(physical_address_of_box_center_x);
-        }
-        else {
-            x_shift_to_apply = float(physical_address_of_box_center_x) - 1.0;
-        }
 
-        if ( IsEven(logical_y_dimension) == true ) {
-            y_shift_to_apply = float(physical_address_of_box_center_y);
-        }
-        else {
-            y_shift_to_apply = float(physical_address_of_box_center_y) - 1.0;
-        }
-
-        if ( IsEven(logical_z_dimension) == true ) {
-            z_shift_to_apply = float(physical_address_of_box_center_z);
-        }
-        else {
-            z_shift_to_apply = float(physical_address_of_box_center_z) - 1.0;
-        }
-    }
-
-    if ( logical_z_dimension == 1 ) {
+    if ( logical_z_dimension == 1 )
         z_shift_to_apply = 0.0;
-    }
 
     PhaseShift(x_shift_to_apply, y_shift_to_apply, z_shift_to_apply);
 
-    if ( must_fft == true )
+    if ( must_fft )
         BackwardFFT( );
 
     // keep track of center;
-    if ( object_is_centred_in_box == true )
+    if ( object_is_centred_in_box )
         object_is_centred_in_box = false;
     else
         object_is_centred_in_box = true;
@@ -9001,6 +9236,122 @@ void Image::CalculateCrossCorrelationImageWith(Image* other_image) {
 
     if ( must_fft == true )
         other_image->BackwardFFT( );
+}
+
+void Image::CalculatePhaseCrossCorrelationImageWith(Image& other_image, Peak& found_peak, float peak_shift_multiplier, bool normalize) {
+    MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+    MyDebugAssertTrue(is_in_real_space == other_image.is_in_real_space, "Images are in different spaces");
+    MyDebugAssertTrue(HasSameDimensionsAs(&other_image) == true, "Images are different sizes");
+
+    long pixel_counter;
+    bool must_fft = false;
+
+    // do we have to fft..
+
+    if ( is_in_real_space == true ) {
+        must_fft = true;
+        ForwardFFT( );
+        other_image.ForwardFFT( );
+    }
+
+    // multiply by the complex conjugate
+
+#ifdef MKL
+    // Use the MKL
+    vmcMulByConj(real_memory_allocated / 2, reinterpret_cast<MKL_Complex8*>(complex_values), reinterpret_cast<MKL_Complex8*>(other_image.complex_values), reinterpret_cast<MKL_Complex8*>(complex_values), VML_EP | VML_FTZDAZ_ON | VML_ERRMODE_IGNORE);
+#else
+    for ( pixel_counter = 0; pixel_counter < real_memory_allocated / 2; pixel_counter++ ) {
+        complex_values[pixel_counter] *= std::conj(other_image.complex_values[pixel_counter]);
+    }
+#endif
+
+    if ( object_is_centred_in_box == true ) {
+        object_is_centred_in_box = false;
+        SwapRealSpaceQuadrants( );
+    }
+
+    // Now that we have the cross correlation map, we can use the fact that given an image and a
+    // copy shifted by (dx) = XS(k) = X(k) * exp(-2pi i kx dx)
+    // We have XCF(k) = X(k) * XS(K)
+    // Dividing by the magnidue XS(K) / |XS(K)| leaves just the phase shift term, which can be amplified by the peak shift multiplier
+    // eg.g exp(a)^b = exp(a*b)
+    const float epsilon  = 0.01f;
+    Image       tmp_abs  = *this;
+    Image       tmp_copy = *this;
+
+    tmp_abs.Abs( );
+    tmp_abs.AddConstant(epsilon);
+
+    for ( int i = 0; i < real_memory_allocated / 2; i++ ) {
+        tmp_copy.complex_values[i] /= tmp_abs.real_values[2 * i];
+        complex_values[i] *= pow(tmp_copy.complex_values[i], peak_shift_multiplier);
+    }
+
+    BackwardFFT( );
+
+    for ( int i = 0; i < real_memory_allocated; i++ ) {
+        if ( ! isfinite(real_values[i]) ) {
+            real_values[i] = 0.0f;
+        }
+    }
+
+    found_peak = FindPeakWithParabolaFit(0, 3 * (peak_shift_multiplier + 1));
+
+    if ( must_fft == true )
+        other_image.BackwardFFT( );
+}
+
+void Image::FindPeakAtOriginFast2DMask(int wanted_max_pix_x, int wanted_max_pix_y) {
+    MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+    MyDebugAssertTrue(is_in_real_space == true, "Image not in real space");
+    MyDebugAssertTrue(! object_is_centred_in_box, "Peak centered in image");
+
+    int j;
+    int i;
+    int jj;
+    int pixel_counter;
+    int y_dim     = logical_y_dimension + padding_jump_value;
+    int max_pix_x = wanted_max_pix_x;
+    int max_pix_y = wanted_max_pix_y;
+
+    if ( max_pix_x > physical_address_of_box_center_x )
+        max_pix_x = physical_address_of_box_center_x;
+    if ( max_pix_y > physical_address_of_box_center_y )
+        max_pix_y = physical_address_of_box_center_y;
+
+    for ( j = 0; j <= max_pix_y; j++ ) {
+        jj = j * y_dim;
+        for ( i = 0; i <= max_pix_x; i++ ) {
+            pixel_counter              = jj + i;
+            real_values[pixel_counter] = 1.f;
+        }
+    }
+
+    for ( j = logical_y_dimension - max_pix_y - 1; j <= logical_y_dimension - 1; j++ ) {
+        jj = j * y_dim;
+        for ( i = 0; i <= max_pix_x; i++ ) {
+            pixel_counter              = jj + i;
+            real_values[pixel_counter] = 1.f;
+        }
+    }
+
+    for ( j = 0; j <= max_pix_y; j++ ) {
+        jj = j * y_dim;
+        for ( i = logical_x_dimension - max_pix_x - 1; i <= logical_x_dimension - 1; i++ ) {
+            pixel_counter              = jj + i;
+            real_values[pixel_counter] = 1.f;
+        }
+    }
+
+    for ( j = logical_y_dimension - max_pix_y - 1; j <= logical_y_dimension - 1; j++ ) {
+        jj = j * y_dim;
+        for ( i = logical_x_dimension - max_pix_x - 1; i <= logical_x_dimension - 1; i++ ) {
+            pixel_counter              = jj + i;
+            real_values[pixel_counter] = 1.f;
+        }
+    }
+
+    return;
 }
 
 Peak Image::FindPeakAtOriginFast2D(int wanted_max_pix_x, int wanted_max_pix_y) {
@@ -9719,7 +10070,7 @@ float Image::FindBeamTilt(CTF& input_ctf, float pixel_size, Image& phase_error_o
     return best_score;
 }
 
-Peak Image::FindPeakWithParabolaFit(float wanted_min_radius, float wanted_max_radius) {
+Peak Image::FindPeakWithParabolaFit(float wanted_min_radius, float wanted_max_radius, int wanted_min_distance_from_edges) {
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
     MyDebugAssertTrue(is_in_real_space == true, "Image not in real space");
     MyDebugAssertTrue(logical_z_dimension == 1, "Only 2D images supported for now");
@@ -9749,7 +10100,7 @@ Peak Image::FindPeakWithParabolaFit(float wanted_min_radius, float wanted_max_ra
     float x_max;
     float y_max;
 
-    integer_peak = FindPeakWithIntegerCoordinates(wanted_min_radius, wanted_max_radius);
+    integer_peak = FindPeakWithIntegerCoordinates(wanted_min_radius, wanted_max_radius, wanted_min_distance_from_edges);
 
     //wxPrintf("Integer Peak = %f, %f\n", integer_peak.x, integer_peak.y);
 
@@ -11421,8 +11772,8 @@ float Image::ReturnBeamTiltSignificanceScore(Image calculated_beam_tilt) {
     buffer.Binarise(0.00002f);
     calculated_beam_tilt.Binarise(0.0f);
 
-    float mask_radius_local = sqrtf((buffer.ReturnAverageOfRealValues( ) * buffer.logical_x_dimension * buffer.logical_y_dimension) / PIf);
+    float mask_radius_local = sqrtf((buffer.ReturnAverageOfRealValues( ) * buffer.logical_x_dimension * buffer.logical_y_dimension) / pi_v<float>);
     buffer.SubtractImage(&calculated_beam_tilt);
     float binarized_score = buffer.ReturnSumOfSquares(mask_radius_local);
-    return 0.5f * PIf * powf((0.5f - binarized_score) * mask_radius_local, 2);
+    return 0.5f * pi_v<float> * powf((0.5f - binarized_score) * mask_radius_local, 2);
 }

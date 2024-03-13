@@ -18,6 +18,7 @@ void Project3DApp::DoInteractiveUserInput( ) {
     wxString input_star_filename;
     wxString input_reconstruction;
     wxString ouput_projection_stack;
+    wxString output_star_file;
     int      first_particle = 1;
     int      last_particle  = 0;
     float    pixel_size     = 1;
@@ -54,9 +55,10 @@ void Project3DApp::DoInteractiveUserInput( ) {
         apply_shifts        = my_input->GetYesNoFromUser("Apply shifts", "Should the particle translations be applied to the output projections?", "No");
     }
     else {
-        angular_step = my_input->GetFloatFromUser("Angular step for projection", "Angular step size for grid projection", "0.0", 0.1);
-        apply_CTF    = false;
-        apply_shifts = false;
+        angular_step     = my_input->GetFloatFromUser("Angular step for projection", "Angular step size for grid projection", "0.0", 0.1);
+        output_star_file = my_input->GetFilenameFromUser("Output Star File", "The star file containing angles for the projections", "output_angles.star", false);
+        apply_CTF        = false;
+        apply_shifts     = false;
     }
 
     ouput_projection_stack = my_input->GetFilenameFromUser("Output projection stack", "The output image stack, containing the 2D projections", "my_projection_stack.mrc", false);
@@ -85,13 +87,24 @@ void Project3DApp::DoInteractiveUserInput( ) {
     delete my_input;
 
     //	my_current_job.Reset(14);
-    my_current_job.ManualSetArguments("tttiifffftbbbbbfi", input_star_filename.ToUTF8( ).data( ),
+    my_current_job.ManualSetArguments("tttiifffftbbbbbfit", input_star_filename.ToUTF8( ).data( ),
                                       input_reconstruction.ToUTF8( ).data( ),
                                       ouput_projection_stack.ToUTF8( ).data( ),
-                                      first_particle, last_particle,
-                                      pixel_size, mask_radius, wanted_SNR, padding,
+                                      first_particle,
+                                      last_particle,
+                                      pixel_size,
+                                      mask_radius,
+                                      wanted_SNR,
+                                      padding,
                                       my_symmetry.ToUTF8( ).data( ),
-                                      apply_CTF, apply_shifts, apply_mask, add_noise, project_based_on_star, angular_step, max_threads);
+                                      apply_CTF,
+                                      apply_shifts,
+                                      apply_mask,
+                                      add_noise,
+                                      project_based_on_star,
+                                      angular_step,
+                                      max_threads,
+                                      output_star_file.ToUTF8( ).data( ));
 }
 
 // override the do calculation method which will be what is actually run..
@@ -121,11 +134,13 @@ bool Project3DApp::DoCalculation( ) {
     bool     project_based_on_star = my_current_job.arguments[14].ReturnBoolArgument( );
     float    angular_step          = my_current_job.arguments[15].ReturnFloatArgument( );
     int      max_threads           = my_current_job.arguments[16].ReturnIntegerArgument( );
+    wxString output_star_file      = my_current_job.arguments[17].ReturnStringArgument( );
 
     Image               projection_image;
     Image               final_image;
     ReconstructedVolume input_3d;
     Image               projection_3d;
+    cisTEMParameters    output_params;
 
     int image_counter = 0;
     int number_of_projections_to_calculate;
@@ -222,16 +237,46 @@ bool Project3DApp::DoCalculation( ) {
         wxPrintf("\nAverage sigma noise = %f, average score = %f\nNumber of projections to calculate = %li\n\n", average_sigma, average_score, lines_to_process.GetCount( ));
     }
 
-    if ( project_based_on_star == true )
+    if ( project_based_on_star ) {
         number_of_projections_to_calculate = lines_to_process.GetCount( );
-    else
+    }
+    else {
         number_of_projections_to_calculate = global_euler_search.number_of_search_positions;
+
+        // setup paramters
+
+        output_params.parameters_to_write.SetActiveParameters(POSITION_IN_STACK |
+                                                              IMAGE_IS_ACTIVE |
+                                                              PSI |
+                                                              THETA |
+                                                              PHI |
+                                                              X_SHIFT |
+                                                              Y_SHIFT |
+                                                              DEFOCUS_1 |
+                                                              DEFOCUS_2 |
+                                                              DEFOCUS_ANGLE |
+                                                              PHASE_SHIFT |
+                                                              OCCUPANCY |
+                                                              LOGP |
+                                                              SIGMA |
+                                                              SCORE |
+                                                              PIXEL_SIZE |
+                                                              MICROSCOPE_VOLTAGE |
+                                                              MICROSCOPE_CS |
+                                                              AMPLITUDE_CONTRAST |
+                                                              BEAM_TILT_X |
+                                                              BEAM_TILT_Y |
+                                                              IMAGE_SHIFT_X |
+                                                              IMAGE_SHIFT_Y |
+                                                              ASSIGNED_SUBSET);
+        output_params.PreallocateMemoryAndBlank(number_of_projections_to_calculate);
+    }
 
     ProgressBar* my_progress = new ProgressBar(number_of_projections_to_calculate);
     projection_3d.CopyFrom(input_3d.density_map);
 
 #pragma omp parallel num_threads(max_threads) default(none) shared(global_random_number_generator, input_star_file, first_particle, last_particle, apply_CTF, apply_shifts, \
-                                                                   pixel_size, output_file, add_noise, wanted_SNR, apply_mask, mask_radius, my_progress, lines_to_process, image_counter, projection_3d, input_file, global_euler_search, number_of_projections_to_calculate, project_based_on_star) private(current_image, input_parameters, my_parameters, my_ctf, projection_image, final_image, variance)
+                                                                   pixel_size, output_file, add_noise, wanted_SNR, apply_mask, mask_radius, my_progress, lines_to_process, image_counter, projection_3d, input_file, global_euler_search, number_of_projections_to_calculate, project_based_on_star, output_params) private(current_image, input_parameters, my_parameters, my_ctf, projection_image, final_image, variance)
     {
 
         projection_image.Allocate(input_file.ReturnXSize( ), input_file.ReturnYSize( ), false);
@@ -274,16 +319,50 @@ bool Project3DApp::DoCalculation( ) {
                 final_image.CosineMask(mask_radius / input_parameters.pixel_size, 6.0);
 
 #pragma omp ordered
+
+            //write slice and parameters
+
             final_image.WriteSlice(&output_file, current_image + 1);
 
 #pragma omp atomic
             image_counter++;
+
+            // fill in the parameters..
+
+            output_params.all_parameters[current_image].position_in_stack                  = current_image + 1;
+            output_params.all_parameters[current_image].image_is_active                    = 1;
+            output_params.all_parameters[current_image].psi                                = my_parameters.ReturnPsiAngle( );
+            output_params.all_parameters[current_image].theta                              = my_parameters.ReturnThetaAngle( );
+            output_params.all_parameters[current_image].phi                                = my_parameters.ReturnPhiAngle( );
+            output_params.all_parameters[current_image].x_shift                            = 0.0f;
+            output_params.all_parameters[current_image].y_shift                            = 0.0f;
+            output_params.all_parameters[current_image].defocus_1                          = 0.0f;
+            output_params.all_parameters[current_image].defocus_2                          = 0.0f;
+            output_params.all_parameters[current_image].defocus_angle                      = 0.0f;
+            output_params.all_parameters[current_image].phase_shift                        = 0.0f;
+            output_params.all_parameters[current_image].occupancy                          = 100.0f;
+            output_params.all_parameters[current_image].logp                               = -100;
+            output_params.all_parameters[current_image].sigma                              = 10.0f;
+            output_params.all_parameters[current_image].score                              = 10.0f;
+            output_params.all_parameters[current_image].score_change                       = 0.0f;
+            output_params.all_parameters[current_image].pixel_size                         = pixel_size;
+            output_params.all_parameters[current_image].microscope_voltage_kv              = 300.0f;
+            output_params.all_parameters[current_image].microscope_spherical_aberration_mm = 2.7f;
+            output_params.all_parameters[current_image].amplitude_contrast                 = 0.07;
+            output_params.all_parameters[current_image].beam_tilt_x                        = 0.0f;
+            output_params.all_parameters[current_image].beam_tilt_y                        = 0.0f;
+            output_params.all_parameters[current_image].image_shift_x                      = 0.0f;
+            output_params.all_parameters[current_image].image_shift_y                      = 0.0f;
 
             if ( is_running_locally == true && ReturnThreadNumberOfCurrentThread( ) == 0 )
                 my_progress->Update(image_counter);
         }
     }
     // end omp
+
+    // write star file
+
+    output_params.WriteTocisTEMStarFile(output_star_file);
     delete my_progress;
 
     wxPrintf("\n\nProject3D: Normal termination\n\n");

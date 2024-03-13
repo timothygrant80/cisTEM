@@ -105,7 +105,7 @@ void CTF::Init(float wanted_acceleration_voltage_in_kV, // keV
                float wanted_particle_shift_y_in_angstroms, // A
                float wanted_sample_thickness_in_nm) // nm
 {
-    wavelength                    = WavelengthGivenAccelerationVoltage(wanted_acceleration_voltage_in_kV) / pixel_size_in_angstroms;
+    wavelength                    = ReturnWavelenthInAngstroms(wanted_acceleration_voltage_in_kV) / pixel_size_in_angstroms;
     squared_wavelength            = powf(wavelength, 2);
     cubed_wavelength              = powf(wavelength, 3);
     spherical_aberration          = wanted_spherical_aberration_in_mm * 10000000.0 / pixel_size_in_angstroms;
@@ -517,12 +517,6 @@ float CTF::ParticleShiftGivenAzimuth(float azimuth) {
     return particle_shift * cosf(azimuth - particle_shift_azimuth);
 }
 
-// Given acceleration voltage in keV, return the electron wavelength in Angstroms
-float CTF::WavelengthGivenAccelerationVoltage(float acceleration_voltage) {
-    //	return 12.26f / sqrtf(1000.0f * acceleration_voltage + 0.9784f * powf(1000.0f * acceleration_voltage,2)/powf(10.0f,6));
-    return 12.2639f / sqrtf(1000.0f * acceleration_voltage + 0.97845e-6 * powf(1000.0f * acceleration_voltage, 2));
-}
-
 // Compare two CTF objects and return true if they are within a specified defocus tolerance
 bool CTF::IsAlmostEqualTo(CTF* wanted_ctf, float delta_defocus) {
     float delta;
@@ -619,4 +613,329 @@ void CTF::ChangePixelSize(float old_pixel_size, float new_pixel_size) {
     //
     squared_wavelength = powf(wavelength, 2);
     cubed_wavelength   = powf(wavelength, 3);
+}
+
+float CTF::ReturnAzimuthToUseFor1DPlots( ) {
+    const float min_angular_distances_from_axes_radians = 10.0 / 180.0 * PIf;
+    float       azimuth_of_mid_defocus;
+    float       angular_distance_from_axes;
+
+    // We choose the azimuth to be mid way between the two defoci of the astigmatic CTF
+    azimuth_of_mid_defocus = this->GetAstigmatismAzimuth( ) + PIf * 0.25f;
+    // We don't want the azimuth too close to the axes, which may have been blanked by the central-cross-artefact-suppression-system (tm)
+    angular_distance_from_axes = fmod(azimuth_of_mid_defocus, PIf * 0.5f);
+    if ( fabs(angular_distance_from_axes) < min_angular_distances_from_axes_radians ) {
+        if ( angular_distance_from_axes > 0.0f ) {
+            azimuth_of_mid_defocus = min_angular_distances_from_axes_radians;
+        }
+        else {
+            azimuth_of_mid_defocus = -min_angular_distances_from_axes_radians;
+        }
+    }
+    if ( fabs(angular_distance_from_axes) > 0.5f * PIf - min_angular_distances_from_axes_radians ) {
+        if ( angular_distance_from_axes > 0.0 ) {
+            azimuth_of_mid_defocus = PIf * 0.5f - min_angular_distances_from_axes_radians;
+        }
+        else {
+            azimuth_of_mid_defocus = -PIf * 0.5f + min_angular_distances_from_axes_radians;
+        }
+    }
+
+    return azimuth_of_mid_defocus;
+}
+
+// Compute an image where each pixel stores the number of preceding CTF extrema. This is described as image "E" in Rohou & Grigorieff 2015 (see Fig 3)
+void CTF::ComputeImagesWithNumberOfExtremaAndCTFValues(Image* number_of_extrema, Image* ctf_values) {
+    MyDebugAssertTrue(number_of_extrema->is_in_memory, "Memory not allocated");
+    MyDebugAssertTrue(ctf_values->is_in_memory, "Memory not allocated");
+    MyDebugAssertTrue(ctf_values->HasSameDimensionsAs(number_of_extrema), "Images do not have same dimensions");
+
+    int   i, j;
+    float i_logi, i_logi_sq;
+    float j_logi, j_logi_sq;
+    float current_spatial_frequency_squared;
+    float current_azimuth;
+    long  address;
+
+    address = 0;
+    for ( j = 0; j < number_of_extrema->logical_y_dimension; j++ ) {
+        j_logi    = float(j - number_of_extrema->physical_address_of_box_center_y) * number_of_extrema->fourier_voxel_size_y;
+        j_logi_sq = pow(j_logi, 2);
+        for ( i = 0; i < number_of_extrema->logical_x_dimension; i++ ) {
+            i_logi    = float(i - number_of_extrema->physical_address_of_box_center_x) * number_of_extrema->fourier_voxel_size_x;
+            i_logi_sq = pow(i_logi, 2);
+            // Where are we?
+            current_spatial_frequency_squared = j_logi_sq + i_logi_sq;
+            if ( current_spatial_frequency_squared > 0.0 ) {
+                current_azimuth = atan2(j_logi, i_logi);
+            }
+            else {
+                current_azimuth = 0.0;
+            }
+            //
+            ctf_values->real_values[address]        = this->Evaluate(current_spatial_frequency_squared, current_azimuth);
+            number_of_extrema->real_values[address] = this->ReturnNumberOfExtremaBeforeSquaredSpatialFrequency(current_spatial_frequency_squared, current_azimuth);
+            //
+            address++;
+        }
+        address += number_of_extrema->padding_jump_value;
+    }
+
+    number_of_extrema->is_in_real_space = true;
+    ctf_values->is_in_real_space        = true;
+}
+
+/*
+ * Go from an experimental radial average with decaying Thon rings to a function between 0.0 and 1.0 for every oscillation.
+ * This is done by treating each interval between a zero and an extremum of the CTF separately, and for each of them,
+ * sorting and ranking the values in the radial average.
+ * Each value is then replaced by its rank, modified to make it looks like a |CTF| signal.
+ * This makes sense as a preparation for evaluating the quality of fit of a CTF when we want to ignore the amplitude of the Thon
+ * rings and just focus on whether the fit agrees in terms of the positions of the zeros and extrema.
+ * Without this, a very good fit doesn't always have a great FRC for regions where the experimental radial average is decaying rapidly.
+ */
+void Renormalize1DSpectrumForFRC(int number_of_bins, double average[], double fit[], float number_of_extrema_profile[]) {
+    int                 bin_counter;
+    int                 bin_of_previous_extremum;
+    int                 bin_of_current_extremum;
+    int                 i;
+    int                 bin_of_zero;
+    std::vector<float>  temp_vector;
+    std::vector<size_t> temp_ranks;
+    float               number_of_extrema_delta;
+    //
+    bin_of_previous_extremum = 0;
+    bin_of_current_extremum  = 0;
+    for ( bin_counter = 1; bin_counter < number_of_bins; bin_counter++ ) {
+        number_of_extrema_delta = number_of_extrema_profile[bin_counter] - number_of_extrema_profile[bin_counter - 1];
+        if ( number_of_extrema_delta >= 0.9 && number_of_extrema_delta <= 1.9 ) // if the CTF is oscillating too quickly, let's not do anything
+        {
+            // We just passed an extremum, at bin_counter-1
+            // (number_of_extrema_profile keeps track of the count of extrema before the spatial frequency corresponding to this bin)
+            bin_of_current_extremum = bin_counter - 1;
+            if ( bin_of_previous_extremum > 0 ) {
+                if ( (bin_of_current_extremum - bin_of_previous_extremum >= 4 && false) || (number_of_extrema_profile[bin_counter] < 7) ) {
+                    // Loop from the previous extremum to the one we just found
+                    // (there is a zero in between, let's find it)
+                    // TODO: redefine the zero as the lowest point between the two extrema?
+                    bin_of_zero = (bin_of_current_extremum - bin_of_previous_extremum) / 2 + bin_of_previous_extremum;
+                    for ( i = bin_of_previous_extremum; i < bin_of_current_extremum; i++ ) {
+                        if ( fit[i] < fit[i - 1] && fit[i] < fit[i + 1] )
+                            bin_of_zero = i;
+                    }
+                    //wxPrintf("bin zero = %i\n",bin_of_zero);
+
+                    // Now we can rank before the zero (the downslope)
+                    //wxPrintf("downslope (including zero)...\n");
+                    temp_vector.clear( );
+                    for ( i = bin_of_previous_extremum; i <= bin_of_zero; i++ ) {
+                        //wxPrintf("about to push back %f\n",float(average[i]));
+                        temp_vector.push_back(float(average[i]));
+                    }
+                    temp_ranks = rankSort(temp_vector);
+                    for ( i = bin_of_previous_extremum; i <= bin_of_zero; i++ ) {
+                        //wxPrintf("replaced %f",average[i]);
+                        average[i] = double(float(temp_ranks.at(i - bin_of_previous_extremum)) / float(temp_vector.size( ) - 1));
+                        average[i] = sin(average[i] * PI * 0.5);
+                        //wxPrintf(" with %f\n",average[i]);
+                    }
+
+                    // Now we can rank after the zero (upslope)
+                    //wxPrintf("upslope...\n");
+                    temp_vector.clear( );
+                    for ( i = bin_of_zero + 1; i < bin_of_current_extremum; i++ ) {
+                        //wxPrintf("about to push back %f\n",float(average[i]));
+                        temp_vector.push_back(float(average[i]));
+                    }
+                    temp_ranks = rankSort(temp_vector);
+                    for ( i = bin_of_zero + 1; i < bin_of_current_extremum; i++ ) {
+                        //wxPrintf("[rank]bin %i: replaced %f",i,average[i]);
+                        average[i] = double(float(temp_ranks.at(i - bin_of_zero - 1) + 1) / float(temp_vector.size( ) + 1));
+                        average[i] = sin(average[i] * PI * 0.5);
+                        //wxPrintf(" with %f\n",average[i]);
+                    }
+                    //MyDebugAssertTrue(abs(average[bin_of_zero]) < 0.01,"Zero bin (%i) isn't set to zero: %f\n", bin_of_zero, average[bin_of_zero]);
+                }
+                else {
+                    // A simpler way, without ranking, is just normalize
+                    // between 0.0 and 1.0 (this usually works quite well when Thon rings are on a flat background anyway)
+                    float min_value = 1.0;
+                    float max_value = 0.0;
+                    for ( i = bin_of_previous_extremum; i < bin_of_current_extremum; i++ ) {
+                        if ( average[i] > max_value )
+                            max_value = average[i];
+                        if ( average[i] < min_value )
+                            min_value = average[i];
+                    }
+                    for ( i = bin_of_previous_extremum; i < bin_of_current_extremum; i++ ) {
+                        //wxPrintf("bin %i: replaced %f",i,average[i]);
+                        average[i] -= min_value;
+                        if ( max_value - min_value > 0.0001 )
+                            average[i] /= (max_value - min_value);
+                        //wxPrintf(" with %f\n",average[i]);
+                    }
+                }
+            }
+            bin_of_previous_extremum = bin_of_current_extremum;
+        }
+        MyDebugAssertFalse(std::isnan(average[bin_counter]), "Average is NaN for bin %i\n", bin_counter);
+    }
+}
+
+//
+void ComputeFRCBetween1DSpectrumAndFit(int number_of_bins, double average[], double fit[], float number_of_extrema_profile[], double frc[], double frc_sigma[], int first_fit_bin) {
+
+    MyDebugAssertTrue(first_fit_bin >= 0, "Bad first fit bin on entry: %i", first_fit_bin);
+
+    int    bin_counter;
+    int    half_window_width[number_of_bins];
+    int    bin_of_previous_extremum;
+    int    i;
+    int    first_bin, last_bin;
+    double spectrum_mean, fit_mean;
+    double spectrum_sigma, fit_sigma;
+    double cross_product;
+    float  number_of_bins_in_window;
+
+    const int minimum_window_half_width = number_of_bins / 40;
+
+    // DNM 3/29/23: Initialize in case there are no extrema and extend to the rest only if an extremum is found
+    for ( i = 1; i < number_of_bins; i++ )
+        half_window_width[i] = minimum_window_half_width;
+
+    // First, work out the size of the window over which we'll compute the FRC value
+    bin_of_previous_extremum = 0;
+    for ( bin_counter = 1; bin_counter < number_of_bins; bin_counter++ ) {
+        if ( number_of_extrema_profile[bin_counter] != number_of_extrema_profile[bin_counter - 1] ) {
+            for ( i = bin_of_previous_extremum; i < bin_counter; i++ ) {
+                half_window_width[i] = std::max(minimum_window_half_width, int((1.0 + 0.1 * float(number_of_extrema_profile[bin_counter])) * float(bin_counter - bin_of_previous_extremum + 1)));
+                half_window_width[i] = std::min(half_window_width[i], number_of_bins / 2 - 1);
+                MyDebugAssertTrue(half_window_width[i] < number_of_bins / 2, "Bad half window width: %i. Number of bins: %i\n", half_window_width[i], number_of_bins);
+            }
+            bin_of_previous_extremum = bin_counter;
+        }
+    }
+    half_window_width[0] = half_window_width[1];
+    if ( bin_of_previous_extremum > 0 ) {
+        for ( bin_counter = bin_of_previous_extremum; bin_counter < number_of_bins; bin_counter++ ) {
+            half_window_width[bin_counter] = half_window_width[bin_of_previous_extremum - 1];
+        }
+    }
+
+    // Now compute the FRC for each bin
+    for ( bin_counter = 0; bin_counter < number_of_bins; bin_counter++ ) {
+        if ( bin_counter < first_fit_bin ) {
+            frc[bin_counter]       = 1.0;
+            frc_sigma[bin_counter] = 0.0;
+        }
+        else {
+            spectrum_mean  = 0.0;
+            fit_mean       = 0.0;
+            spectrum_sigma = 0.0;
+            fit_sigma      = 0.0;
+            cross_product  = 0.0;
+            // Work out the boundaries
+            first_bin = bin_counter - half_window_width[bin_counter];
+            last_bin  = bin_counter + half_window_width[bin_counter];
+            if ( first_bin < first_fit_bin ) {
+                first_bin = first_fit_bin;
+                last_bin  = first_bin + 2 * half_window_width[bin_counter] + 1;
+            }
+            if ( last_bin >= number_of_bins ) {
+                last_bin  = number_of_bins - 1;
+                first_bin = last_bin - 2 * half_window_width[bin_counter] - 1;
+            }
+            MyDebugAssertTrue(first_bin >= 0 && first_bin < number_of_bins, "Bad first_bin: %i", first_bin);
+            MyDebugAssertTrue(last_bin >= 0 && last_bin < number_of_bins, "Bad last_bin: %i", last_bin);
+            // First pass
+            for ( i = first_bin; i <= last_bin; i++ ) {
+                spectrum_mean += average[i];
+                fit_mean += fit[i];
+            }
+            number_of_bins_in_window = float(2 * half_window_width[bin_counter] + 1);
+            //wxPrintf("bin %03i, number of extrema: %f, number of bins in window: %f , spectrum_sum = %f\n", bin_counter, number_of_extrema_profile[bin_counter], number_of_bins_in_window,spectrum_mean);
+            spectrum_mean /= number_of_bins_in_window;
+            fit_mean /= number_of_bins_in_window;
+            // Second pass
+            for ( i = first_bin; i <= last_bin; i++ ) {
+                cross_product += (average[i] - spectrum_mean) * (fit[i] - fit_mean);
+                spectrum_sigma += pow(average[i] - spectrum_mean, 2);
+                fit_sigma += pow(fit[i] - fit_mean, 2);
+            }
+            MyDebugAssertTrue(spectrum_sigma > 0.0 && spectrum_sigma < 10000.0, "Bad spectrum_sigma: %f\n", spectrum_sigma);
+            MyDebugAssertTrue(fit_sigma > 0.0 && fit_sigma < 10000.0, "Bad fit sigma: %f\n", fit_sigma);
+            if ( spectrum_sigma > 0.0 && fit_sigma > 0.0 ) {
+                frc[bin_counter] = cross_product / (sqrtf(spectrum_sigma / number_of_bins_in_window) * sqrtf(fit_sigma / number_of_bins_in_window)) / number_of_bins_in_window;
+            }
+            else {
+                frc[bin_counter] = 0.0;
+            }
+            frc_sigma[bin_counter] = 2.0 / sqrtf(number_of_bins_in_window);
+        }
+        //wxPrintf("First fit bin: %i\n", first_fit_bin);
+        MyDebugAssertTrue(frc[bin_counter] > -1.01 && frc[bin_counter] < 1.01, "Bad FRC value: %f", frc[bin_counter]);
+    }
+}
+
+int ReturnSpectrumBinNumber(int number_of_bins, float number_of_extrema_profile[], Image* number_of_extrema, long address, Image* ctf_values, float ctf_values_profile[]) {
+    int   current_bin;
+    float diff_number_of_extrema;
+    float diff_number_of_extrema_previous;
+    float diff_number_of_extrema_next;
+    float ctf_diff_from_current_bin;
+    float ctf_diff_from_current_bin_old;
+    int   chosen_bin;
+    //
+    //MyDebugPrint("address: %li - number of extrema: %f - ctf_value: %f\n", address, number_of_extrema->real_values[address], ctf_values->real_values[address]);
+    MyDebugAssertTrue(address < number_of_extrema->real_memory_allocated, "Oops, bad address: %li\n", address);
+    // Let's find the bin which has the same number of preceding extrema and the most similar ctf value
+    ctf_diff_from_current_bin = std::numeric_limits<float>::max( );
+    chosen_bin                = -1;
+    for ( current_bin = 0; current_bin < number_of_bins; current_bin++ ) {
+        diff_number_of_extrema = fabs(number_of_extrema->real_values[address] - number_of_extrema_profile[current_bin]);
+        if ( current_bin > 0 ) {
+            diff_number_of_extrema_previous = fabs(number_of_extrema->real_values[address] - number_of_extrema_profile[current_bin - 1]);
+        }
+        else {
+            diff_number_of_extrema_previous = std::numeric_limits<float>::max( );
+        }
+        if ( current_bin < number_of_bins - 1 ) {
+            diff_number_of_extrema_next = fabs(number_of_extrema->real_values[address] - number_of_extrema_profile[current_bin + 1]);
+        }
+        else {
+            diff_number_of_extrema_next = std::numeric_limits<float>::max( );
+        }
+        //
+        if ( number_of_extrema->real_values[address] > number_of_extrema_profile[number_of_bins - 1] ) {
+            chosen_bin = number_of_bins - 1;
+        }
+        else {
+            if ( diff_number_of_extrema <= 0.01 || (diff_number_of_extrema < diff_number_of_extrema_previous &&
+                                                    diff_number_of_extrema <= diff_number_of_extrema_next &&
+                                                    number_of_extrema_profile[std::max(current_bin - 1, 0)] != number_of_extrema_profile[std::min(current_bin + 1, number_of_bins - 1)]) ) {
+                // We're nearly there
+                // Let's look for the position for the nearest CTF value
+                ctf_diff_from_current_bin_old = ctf_diff_from_current_bin;
+                ctf_diff_from_current_bin     = fabs(ctf_values->real_values[address] - ctf_values_profile[current_bin]);
+                if ( ctf_diff_from_current_bin < ctf_diff_from_current_bin_old ) {
+                    //MyDebugPrint("new chosen bin: %i\n",current_bin);
+                    chosen_bin = current_bin;
+                }
+            }
+        }
+    }
+    if ( chosen_bin == -1 ) {
+        //TODO: return false
+#ifdef DEBUG
+        MyPrintfRed("Could not find bin\n");
+        DEBUG_ABORT;
+#endif
+    }
+    else {
+        //MyDebugAssertTrue(chosen_bin > 0 && chosen_bin < number_of_bins,"Oops, bad chosen bin number: %i (number of bins = %i)\n",chosen_bin,number_of_bins);
+        //MyDebugPrint("final chosen bin = %i\n", chosen_bin);
+        return chosen_bin;
+    }
+
+    return -1;
 }

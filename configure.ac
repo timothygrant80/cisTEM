@@ -20,6 +20,7 @@ AC_PROG_LIBTOOL
 AC_LANG(C++)
 
 # Set this for the gpu makefile hack
+# TODO: I don't think this is still needed, but I'm not sure.
 TOPSRCDIR=$srcdir
 CISTEM_CONFIG_DIR=`pwd`
 if test "x$TOPSRCDIR" = "x." ; then
@@ -33,6 +34,24 @@ CPPFLAGS="$INPUT_CPPFLAGS"
 
 # set up initial flags
 AC_MSG_NOTICE([Setting up initial flags])
+AC_MSG_NOTICE([CXXFLAGS = $CXXFLAGS])
+AC_MSG_NOTICE([CPPFLAGS = $CPPFLAGS])
+
+#
+# We need to know about static linking prior to setting CUDA flags 
+#
+# NOTE: the variable name "static_link" is tested in ax_cuda.m4 and must be consistent w/ the name here.
+static_link="false"
+AC_ARG_ENABLE(staticmode, AS_HELP_STRING([--enable-staticmode],[Link statically [default=no]]),[
+  if test "$enableval" = yes; then
+  static_link="true"
+  WXCONFIGFLAGS="--static=yes"
+  fi
+])
+
+  
+AC_MSG_NOTICE(static_link = $static_link)
+AM_CONDITIONAL([STATIC_LINKING_AM],[test x$static_link = xtrue])
 
 #
 # Check CUDA at the top, b/c it needs at least c++14 so we are now using c++17, let cpu only builds stay on c++11 until other devs are okay with modernizing.
@@ -51,11 +70,11 @@ CPP_STANDARD=17
 # fi
 
 # check to see if compiler warnings are desired.
-
-AC_ARG_ENABLE([disable-warnings], AS_HELP_STRING([--disable compiler warnings], [Default=false]), 
+# no value or --enable-warnings result in warnings on, --disable-warnings results in warnings off
+AC_ARG_ENABLE([warnings], AS_HELP_STRING([--disable-warnings], [Default=false]), 
 [
 	# If flag do this
-	if test "x$enableval" = "no" ; then
+	if test "x$enableval" = "xno" ; then
 		WARNINGS_ON=""		
 	else
 		if test "x$CXX" = "xicpc"; then		
@@ -74,12 +93,21 @@ AC_ARG_ENABLE([disable-warnings], AS_HELP_STRING([--disable compiler warnings], 
 		fi	
 ])
 
+# Noop: Code not yet ported from downstream
+AC_ARG_ENABLE(multiple-global-refinements, AS_HELP_STRING([--disable-multiple-global-refinements],[Only do one global search in AutoRefine3d [default=no]]),[
+	if test "x$enableval" = "xno" ; then
+		AC_DEFINE([DISABLE_MUTLI_GLOBAL_REFINEMENTS], [ ], [Disable multiple rounds of global refinement in AutoRefine3d])
+  fi
+]) # No action needed if flag is not present as multiple global refinements is the default.
 
 # AC_DEFINE_UNQUOTED([_FILE_OFFSET_BITS], [64], [Define the file offset bits])
 # AC_DEFINE([_LARGEFILE_SOURCE], [], [Define the large file source])
 if test "x$CXX" = "xicpc"; then		
 	CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -no-prec-sqrt $WARNINGS_ON -std=c++${CPP_STANDARD} -wd1125"
 	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -no-prec-sqrt $WARNINGS_ON"
+  # This may only be needed for dynamic linking
+  
+  LIBS="$LIBS -lz"
 else 
   if test "x$CXX" = "xclang++"; then
     # Clang needs the -no-c++11-narrowing suppression to compile
@@ -91,7 +119,7 @@ else
 
 	  #sqlite needs dl on gcc
 	
-	  LIBS="$LIBS -ldl"
+    LIBS="$LIBS -ldl -lz"
   fi
 fi
 
@@ -116,9 +144,12 @@ case "${host_os}" in
         build_mac=yes
         ;;
     *)
-        AC_MSG_ERROR(["OS $host_os is not supported"])
+        # Syntax highlighting wasn't seeing the end quote in VSCODE w/  inline msg
+        msg="OS $host_os is not supported"
+        AC_MSG_ERROR([$msg])
         ;;
 esac
+
 # Pass the conditionals to automake
 AM_CONDITIONAL([LINUX_AM], [test "$build_linux" = "yes"])
 AM_CONDITIONAL([WINDOWS_AM], [test "$build_windows" = "yes"])
@@ -139,27 +170,16 @@ fi
 # MKL
 
 use_mkl=1
-AC_ARG_ENABLE(mkl, AS_HELP_STRING([--disable-mkl],[Do not use the Intel MKL]),
-[
+AC_ARG_ENABLE(mkl, AS_HELP_STRING([--disable-mkl],[Do not use the Intel MKL]), [
  if test "$enableval" = no; then
-        use_mkl=0
+    # LINK_MKL_NOT_FFTW3
+    AC_MSG_NOTICE([     ])
+    AC_MSG_ERROR([You must use the Intel mkl in cisTEM. See FFT_LICENSE_NOTE in the root directory for details.])
+    use_mkl=0
  fi
- ])
+])
 
 
-# Static linking
-
-static_link="false"
-AC_ARG_ENABLE(staticmode, AS_HELP_STRING([--enable-staticmode],[Link statically [default=no]]),[
-  if test "$enableval" = yes; then
-	static_link="true"
-	WXCONFIGFLAGS="--static=yes"
-  fi
-  ])
-
-	
-AC_MSG_NOTICE(static_link = $static_link)
-AM_CONDITIONAL([STATIC_LINKING_AM],[test x$static_link = xtrue])
 
 
 # wx-config 
@@ -205,42 +225,55 @@ AC_ARG_ENABLE(debugmode, AS_HELP_STRING([--enable-debugmode],[Compile in debug m
 # BEGIN CUDA CHECKS AND SETS
 ###############################
 
-  	
+
+FastFFT_INCLUDES=""
+use_FastFFT="no"
+AC_ARG_ENABLE(FastFFT, AS_HELP_STRING([--enable-FastFFT],[FastFFT library for gpu builds [default=no]]),[
+  if test "$enableval" = yes; then
+    # Call the m4 macro to check and setup for FastFFT if present and requested
+    submodule_FastFFT
+  fi
+  ]) 
+  
 if test "$want_cuda" = "yes" ; then
 
-	# ~Runtime about 85% with K3 images, but mips are different - total detection is ~the same. 
-  # Determined this is likely just numerical error. Enabling by default.
-  #  --disable-feature is equivalent to --enable-feature=no. 
-  use_rotated_tm=1
-	AC_ARG_ENABLE(rotated-tm, AS_HELP_STRING([--disable-rotated-tm],[Place power of 2 sized axis on X by rotating 90 deg in template matching for speed [default=no]]),[
-	  if test "$enableval" = no; then
-      use_rotated_tm=0
-	  fi
-	  ])
 
-  if test "x$use_rotated_tm" = "x1"; then
-    AC_DEFINE([ROTATEFORSPEED], [], [Rotate image for faster FFT in template matching])
-    AC_MSG_NOTICE([Enabling rotated-tm]);
-  fi
+    # ~Runtime about 85% with K3 images, but mips are different - total detection is ~the same. 
+    # Determined this is likely just numerical error. Enabling by default.
+    #    --disable-feature is equivalent to --enable-feature=no. 
+    use_rotated_tm=1
+    AC_ARG_ENABLE(rotated-tm, AS_HELP_STRING([--disable-rotated-tm],[Place power of 2 sized axis on X by rotating 90 deg in template matching for speed [default=no]]),[
+        if test "$enableval" = no; then
+            use_rotated_tm=0
+        fi
+    ])
 
-  AC_MSG_NOTICE([Adding the CUDA includes Setting up NVCC initial flags])
-  CUDA_CPPFLAGS="$CUDA_CFLAGS $NVCCFLAGS"
-  CUDA_CXXFLAGS="$CUDA_CFLAGS $NVCCFLAGS"
-  
-  CXXFLAGS="$CXXFLAGS $use_gpu_cache_hints $CUDA_CFLAGS"
-  CPPFLAGS="$CPPFLAGS $use_gpu_cache_hints $CUDA_CFLAGS"
-  AC_MSG_NOTICE([Using CUDA_CXXFLAGS=$CUDA_CXXFLAGS])
-  AC_MSG_NOTICE([Using CUDA_LIBS=$CUDA_LIBS])
+    if test "x$use_rotated_tm" = "x1"; then
+        AC_DEFINE([ROTATEFORSPEED], [], [Rotate image for faster FFT in template matching])
+        AC_MSG_NOTICE([Enabling rotated-tm]);
+    fi
 
-  AC_DEFINE([ENABLEGPU], [], [Enable gpu codepath])
+    AC_MSG_NOTICE([Adding the CUDA includes Setting up NVCC initial flags])
+    CUDA_CPPFLAGS="$CUDA_CFLAGS $NVCCFLAGS $FastFFT_FLAGS"
+    CUDA_CXXFLAGS="$CUDA_CFLAGS $NVCCFLAGS $FastFFT_FLAGS"
+    
+    CXXFLAGS="$CXXFLAGS $use_gpu_cache_hints $CUDA_CFLAGS"
+    CPPFLAGS="$CPPFLAGS $use_gpu_cache_hints $CUDA_CFLAGS"
+    AC_MSG_NOTICE([Using CUDA_CXXFLAGS=$CUDA_CXXFLAGS])
+    AC_MSG_NOTICE([Using CUDA_LIBS=$CUDA_LIBS])
 
+    # This does include any gpu functionality directly, but is used primarily in the GUI to do things like
+    # showing radio buttons to  use/not use gpu functionality that is enabled in the called program.
+    AC_DEFINE([SHOW_CISTEM_GPU_OPTIONS], [], [Enable gpu codepath])
 fi
 
 ##############################
 # END CUDA CHECKS AND SETS
-##############################  
+##############################
 
-AM_CONDITIONAL([ENABLEGPU_AM], [test "$want_cuda" = "yes"])
+# Define WANT_CISTEM_GPU_AM to be used in the Makefile on a per-program basis to then define ENABLEGPU or not.
+AM_CONDITIONAL([WANT_CISTEM_GPU_AM], [test "$want_cuda" = "yes"])
+AM_CONDITIONAL([ENABLE_FASTFFT_AM], [test "x$use_FastFFT" = "xyes"])
 
 # fftw
 
@@ -255,28 +288,41 @@ AS_HELP_STRING([--with-fftw-dir=DIR],[Declare the root directory of fftw3, if it
     fi
 ])
 
-# Compile programs/samples/sample_functional_test.cpp 
-want_samples="no"
-AC_ARG_ENABLE(samples, AS_HELP_STRING([--enable-samples],[Compile with samples [default=no]]),[
-  if test "$enableval" = yes; then
-    want_samples="yes"
-  	AC_MSG_NOTICE([Compiling sample functional tests])	
-  fi
-  ]) 
-AM_CONDITIONAL([ENABLESAMPLES_AM], [test "$want_samples" = "yes"])
 
 # Use fine grained profiling
 
 want_profiling="no"  
 AC_ARG_ENABLE(profiling, AS_HELP_STRING([--enable-profiling],[Include fine-grained profiling [default=no]]),[
   if test "$enableval" = yes; then
-    AC_DEFINE([PROFILING], [], [Define the profiling flag])
+    AC_DEFINE([CISTEM_PROFILING], [], [Define the profiling flag])
   	want_profiling="true"
   	AC_MSG_NOTICE([Compiling with fine-grained profiling])	
   fi
   ]) 
 
 AM_CONDITIONAL([ENABLEPROFILING_AM], [test x$want_profiling = xtrue])
+
+AC_ARG_ENABLE(fp16-particlestacks, AS_HELP_STRING([--enable-fp16-particlestacks],[Save particle stacks in reduced precision. Use with caution  [default=no]]),[
+  if test "$enableval" = yes; then
+    AC_DEFINE([USE_FP16_PARTICLE_STACKS], [], [Save particle stacks in reduced precision])
+  	AC_MSG_NOTICE([Compiling with reduced precision particle stacks])	
+  fi
+  ]) 
+
+
+  
+
+want_webview="no"
+AC_ARG_ENABLE(wx-webview, AS_HELP_STRING([--enable-wx-webview],[Compile with experimental webview panel]),[
+  if test "$enableval" = yes; then
+    AC_DEFINE([ENABLE_WEBVIEW], [], [Define the webview flag])
+  	want_webview="true"
+  	AC_MSG_NOTICE([Compiling with webview enabled])	
+  fi
+ ]) 
+AM_CONDITIONAL([ENABLE_WEBVIEW_AM], [test x$want_webview = xtrue])
+
+
 
 AC_ARG_ENABLE(gpu-debug, AS_HELP_STRING([--enable-gpu-debug],[Compile heavy synchronous checking [default=no]]),[
   if test "$enableval" = yes; then
@@ -350,10 +396,10 @@ WXTEST
 
 # Verify minimus requires
 vers=`echo $wxversion | $AWK 'BEGIN { FS = "."; } { printf "% d", ($1  1000 + $2)  1000 + $3;}'`
-if test -n "$vers" && test "$vers" -ge 3000004; then
+if test -n "$vers" && test "$vers" -ge 310001004; then
 
     # TODO: Get all define symbols from WX into cistem_config.h
-    # wx_cxx_defines="`$($WXCONFIG $WXCONFIGFLAGS --cxxflags) | awk  'BEGIN{output_string=""}{ for (i = 1; i <= NF; i++) if($i ~ /^-D/) output_string=output_string" "$i}END{print output_string}'`"   
+    # wx_cxx_defines="`$($WXCONFIG $WXCONFIGFLAGS --cxxflags) | $AWK 'BEGIN{output_string=""}{ for (i = 1; i <= NF; i++) if($i ~ /^-D/) output_string=output_string" "$i}END{print output_string}'`"   
 
         WX_CPPFLAGS="`$WXCONFIG $WXCONFIGFLAGS --cppflags`"
         WX_CXXFLAGS="`$WXCONFIG $WXCONFIGFLAGS --cxxflags | sed -e 's/-fno-exceptions//'`"
@@ -370,6 +416,21 @@ if test -n "$vers" && test "$vers" -ge 3000004; then
         fi
                 
         wx_is_available=1
+
+    # Record whether we are on the stable (3.0.4/5) or development (3.1.5) branch
+    if test -n "$vers" && test "$vers" -gt 310001005; then
+        AC_DEFINE([WXWIDGETS_3_DEV], [], [Define to 1 if wxWidgets version is 3.1.5 or greater])
+    else
+        AC_DEFINE([WXWIDGETS_3_0_5], [], [Define to 1 if wxWidgets version is 3.0.4 or greater])
+    fi
+
+    # Record which gtk version we are using
+    GTK_CONFIG=`$WXCONFIG --selected-config | $AWK 'BEGIN{FS="-"}{if($1=="gtk2") print 2; else print 3}'`
+    # if test -n "$GTK_CONFIG" -ne 2 -a -n "$GTK_CONFIG" -ne 3; then
+    #     AC_MSG_ERROR("Can't determine GTK version")
+    # fi
+    AC_DEFINE_UNQUOTED([GTK_VERSION], $GTK_CONFIG, [Define to 2 if gtk2, 3 if gtk3])
+
 else
         AC_MSG_ERROR("Only wxWidgets version 3.0.4+ is currently supported.")
         wx_is_available=0
@@ -391,14 +452,14 @@ if test "x$HAVE_MKL" = "xyes"; then
 	AC_DEFINE([MKL], [], [Use the MKL])
 
 	if test "x$CXX" = "xicpc"; then
-		CPPFLAGS="$CPPFLAGS -mkl=sequential"
-		LIBS="$LIBS -mkl=sequential"
+    CPPFLAGS="$CPPFLAGS -qmkl=sequential"
+    LIBS="$LIBS -qmkl=sequential"
 	else
 		LDFLAGS="$LDFLAGS -L\$(MKLROOT)/lib/intel64"
 		if test "x$static_link" = "xtrue"; then
 			AC_MSG_ERROR("Static builds with Intel MKL are not supported when using the GNU compiler. Please try with the Intel compiler instead.")
 	    else
-#	    	LIBS="$LIBS -lmkl_rt"
+#        LIBS="$LIBS -lmkl_rt"
 	    	LIBS="$LIBS -lmkl_sequential -lmkl_core -lmkl_intel_lp64"
 	    fi
 	fi
@@ -461,7 +522,8 @@ if test "xis_git_new_enough" == "xno" ; then
   	AC_MSG_NOTICE([your version of git is too old, you can updated on Centos 7 with sudo yum -y install https://packages.endpoint.com/rhel/7/os/x86_64/endpoint-repo-1.7-1.x86_64.rpm
   	])
 else
-	
+
+set_git_versioning_defaults="no"
 AC_CHECK_FILE("$TOPSRCDIR/.git/HEAD",
   [
     if test "x$GIT_CHECK" == "xyes"; then 
@@ -479,13 +541,36 @@ AC_CHECK_FILE("$TOPSRCDIR/.git/HEAD",
       AC_DEFINE_UNQUOTED([CISTEM_TIME_READABLE],["`git show --no-patch --no-notes --pretty='%ci' --date=format:%y%m%d%H%M%S`"], [time of build readable]) 
       
     else
-      AC_MSG_NOTICE([We DO NOT have git on path])
-      AC_DEFINE(CISTEM_VERSION_TEXT, "2.0.0-alpha", [A hard coded version moved in from defines.h]) 
+      set_git_versioning_defaults="yes"
+
     fi
   ], 
   [
-      AC_DEFINE(CISTEM_VERSION_TEXT, "2.0.0-alpha", [A hard coded version moved in from defines.h]) 
+    set_git_versioning_defaults="yes"
   ])
+fi
+
+# Confirm we found the proper git versioning information. This is primarly intended for developers who are actively using multiple versions
+# or who are distributing test debug builds to users, such that they may easily confirm what version they are using from the 
+# overview panel. 
+if test "x$set_git_versioning_defaults" = "xyes" ; then
+  # Check to see if the user has specified the versioning information.
+  if test "x$CISTEM_VERSION_TEXT" = "x" ; then
+    AC_MSG_NOTICE([CISTEM_VERSION_TEXT not specified, using default])
+    AC_DEFINE(CISTEM_VERSION_TEXT, "undefined", [undefined_version]) 
+  fi
+  if test "x$CISTEM_TIME_YYMMDDHHMMSS" = "x" ; then
+    AC_MSG_NOTICE([CISTEM_TIME_YYMMDDHHMMSS not specified, using default])
+    AC_DEFINE(CISTEM_TIME_YYMMDDHHMMSS, "undefined", [undefined_time])
+  fi
+  if test "x$CISTEM_TIME_READABLE" = "x" ; then
+    AC_MSG_NOTICE([CISTEM_TIME_READABLE not specified, using default])
+    AC_DEFINE(CISTEM_TIME_READABLE, "undefined", [undefined_time_readable])
+  fi
+  if test "x$CISTEM_CURRENT_BRANCH" = "x" ; then
+    AC_MSG_NOTICE([CISTEM_CURRENT_BRANCH not specified, using default])
+    AC_DEFINE(CISTEM_CURRENT_BRANCH, "undefined", [undefined_branch])
+  fi
 fi
 
 

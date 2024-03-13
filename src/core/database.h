@@ -1,4 +1,4 @@
-#include "cistem_constants.h"
+#include "../constants/constants.h"
 
 class Database {
 
@@ -93,6 +93,11 @@ class Database {
     bool GetFromBatchSelect(const char* column_format, ...);
     void EndBatchSelect( );
 
+    template <typename T>
+    void ProcessBatchSelectElement(T* ptr, int& argument_counter);
+    template <class... Args>
+    bool GetFromBatchSelect_NoChar(Args... args);
+
     int  ExecuteSQL(const char* command);
     int  Prepare(wxString select_command, sqlite3_stmt** current_statement);
     int  Step(sqlite3_stmt* current_statement);
@@ -147,7 +152,7 @@ class Database {
 
     void GetUniqueAlignmentIDs(int* alignment_job_ids, int number_of_alignmnet_jobs);
     void GetUniqueCTFEstimationIDs(int* ctf_estimation_job_ids, int number_of_ctf_estimation_jobs);
-    void GetUniqueTemplateMatchIDs(long* template_match_job_ids, int number_of_template_match_jobs);
+    void GetUniqueTemplateMatchIDs(std::vector<long>& template_match_job_ids, int number_of_template_match_jobs);
     void GetUniquePickingJobIDs(int* picking_job_ids, int number_of_picking_jobs);
     void GetUniqueIDsOfImagesWithCTFEstimations(int* image_ids, int& number_of_image_ids);
 

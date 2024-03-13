@@ -7,6 +7,7 @@ noinst_HEADERS = 	src/core/asset_group.h \
                  src/core/defines.h \
                  src/core/functions.h \
                  src/core/image.h \
+                 src/core/spectrum_image.h \
                  src/core/mrc_file.h \
                  src/core/mrc_header.h \
                  src/core/dm_file.h \

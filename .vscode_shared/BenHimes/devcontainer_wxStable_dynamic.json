@@ -1,0 +1,40 @@
+{
+    "name": "cisTEMdev-wxSTABLE-dynamic",
+    "image": "bhimesbhimes/cistem_build_env:v2.0.3-dynamic",
+    "remoteUser": "cisTEMdev",
+    "runArgs": [
+        "--rm",
+        "--gpus",
+        "all",
+        "-it",
+        "--net",
+        "host",
+        "-e",
+        "DISPLAY=${env:DISPLAY}",
+        "-v",
+        "${env:XAUTHORITY}:/home/cisTEMdev/.Xauthority",
+        "-v",
+        "/tmp/.X11-unix:/tmp/.X11-unix"
+    ],
+    "customizations": {
+        "vscode": {
+            "extensions": [
+                "maelvalais.autoconf",
+                "ms-python.autopep8",
+                "ms-vscode.cpptools",
+                "ms-vscode.cpptools-extension-pack",
+                "cschlosser.doxdocgen",
+                "eamodio.gitlens",
+                "ms-toolsai.jupyter",
+                "DavidAnson.vscode-markdownlint",
+                "ms-python.vscode-pylance",
+                "ms-python.python",
+                "frinkr.vscode-tabify",
+                "jomeinaster.bracket-peek",
+                "onnovalkering.vscode-singularity",
+                "GitHub.copilot",
+                "GitHub.copilot-chat"
+            ]
+        }
+    }
+}

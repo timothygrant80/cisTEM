@@ -1,4 +1,9 @@
+#ifndef _src_core_defines_h_
+#define _src_core_defines_h_
+
 // clang-format off
+
+#include "../constants/constants.h"
 
 #define INTEGER_DATABASE_VERSION 2
 #define START_PORT 3000
@@ -93,3 +98,5 @@ WX_DECLARE_OBJARRAY(float, wxArrayFloat);
 WX_DECLARE_OBJARRAY(bool, wxArrayBool);
 
 // clang-format on
+
+#endif /* defines.h */

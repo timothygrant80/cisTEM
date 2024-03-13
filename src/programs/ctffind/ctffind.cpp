@@ -5,7 +5,7 @@
 
 // The timing that ctffind originally tracks is always on, by direct reference to cistem_timer::StopWatch
 // The profiling for development is under conrtol of --enable-profiling.
-#ifdef PROFILING
+#ifdef CISTEM_PROFILING
 using namespace cistem_timer;
 #else
 using namespace cistem_timer_noop;
@@ -18,6 +18,10 @@ const std::string ctffind_version = "5.0.0";
  * - 5.0.0
  * -- Support for estimating tilt of sample
  * -- Support for estimating thickness of sample 
+ * - 4.1.16
+ * -- Fixes crashes, found by David Mastronarde
+ * - 4.1.15
+ * -- Make tweaked background subtraction optional
  * - 4.1.14
  * -- bug fixes (memory, equiphase averaging)
  * -- bug fixes from David Mastronarde (fixed/known phase shift)
@@ -179,6 +183,7 @@ void CtffindApp::DoInteractiveUserInput( ) {
     int         desired_number_of_threads          = 1;
     int         eer_frames_per_image               = 0;
     int         eer_super_res_factor               = 1;
+    bool        filter_lowres_signal             = true;
     bool        fit_nodes                          = false;
     bool        fit_nodes_1D_brute_force           = true;
     bool        fit_nodes_2D_refine                = true;
@@ -187,6 +192,7 @@ void CtffindApp::DoInteractiveUserInput( ) {
     float       target_pixel_size_after_resampling = 1.4;
     bool        fit_nodes_use_rounded_square       = false;
     bool        fit_nodes_downweight_nodes         = false;
+
 
     // Things we need for old school input
     double     temp_double               = -1.0;
@@ -575,6 +581,7 @@ void CtffindApp::DoInteractiveUserInput( ) {
                 known_astigmatism_angle = 0.0;
                 known_phase_shift       = 0.0;
             }
+            filter_lowres_signal      = my_input->GetYesNoFromUser("Weight down low resolution signal?", "Answer yes if you want to filter out low-resolution signal", "Yes");
             desired_number_of_threads = my_input->GetIntFromUser("Desired number of parallel threads", "The command-line option -j will override this", "1", 1);
         }
         else // expert options not supplied by user
@@ -594,7 +601,8 @@ void CtffindApp::DoInteractiveUserInput( ) {
     }
 
     //	my_current_job.Reset(39);
-    my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbsbfffbfffbiiibbbfffbb", input_filename.c_str( ), //1
+
+    my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbsbfffbfffbiiibbbbfffbb", input_filename.c_str( ), //1
                                       input_is_a_movie,
                                       number_of_frames_to_average,
                                       output_diagnostic_filename.c_str( ),
@@ -634,6 +642,7 @@ void CtffindApp::DoInteractiveUserInput( ) {
                                       desired_number_of_threads,
                                       eer_frames_per_image,
                                       eer_super_res_factor,
+                                      filter_lowres_signal,
                                       fit_nodes,
                                       fit_nodes_1D_brute_force,
                                       fit_nodes_2D_refine,
@@ -704,14 +713,16 @@ bool CtffindApp::DoCalculation( ) {
     int               desired_number_of_threads          = my_current_job.arguments[37].ReturnIntegerArgument( );
     int               eer_frames_per_image               = my_current_job.arguments[38].ReturnIntegerArgument( );
     int               eer_super_res_factor               = my_current_job.arguments[39].ReturnIntegerArgument( );
-    bool              fit_nodes                          = my_current_job.arguments[40].ReturnBoolArgument( );
-    bool              fit_nodes_1D_brute_force           = my_current_job.arguments[41].ReturnBoolArgument( );
-    bool              fit_nodes_2D_refine                = my_current_job.arguments[42].ReturnBoolArgument( );
-    float             fit_nodes_low_resolution_limit     = my_current_job.arguments[43].ReturnFloatArgument( );
-    float             fit_nodes_high_resolution_limit    = my_current_job.arguments[44].ReturnFloatArgument( );
-    float             target_pixel_size_after_resampling = my_current_job.arguments[45].ReturnFloatArgument( );
-    bool              fit_nodes_use_rounded_square       = my_current_job.arguments[46].ReturnBoolArgument( );
-    bool              fit_nodes_downweight_nodes         = my_current_job.arguments[47].ReturnBoolArgument( );
+    bool              filter_lowres_signal               = my_current_job.arguments[40].ReturnBoolArgument( );
+    bool              fit_nodes                          = my_current_job.arguments[41].ReturnBoolArgument( );
+    bool              fit_nodes_1D_brute_force           = my_current_job.arguments[42].ReturnBoolArgument( );
+    bool              fit_nodes_2D_refine                = my_current_job.arguments[43].ReturnBoolArgument( );
+    float             fit_nodes_low_resolution_limit     = my_current_job.arguments[44].ReturnFloatArgument( );
+    float             fit_nodes_high_resolution_limit    = my_current_job.arguments[45].ReturnFloatArgument( );
+    float             target_pixel_size_after_resampling = my_current_job.arguments[46].ReturnFloatArgument( );
+    bool              fit_nodes_use_rounded_square       = my_current_job.arguments[47].ReturnBoolArgument( );
+    bool              fit_nodes_downweight_nodes         = my_current_job.arguments[48].ReturnBoolArgument( );
+
     // if we are applying a mag distortion, it can change the pixel size, so do that here to make sure it is used forever onwards..
 
     if ( input_is_a_movie && correct_movie_mag_distortion ) {
@@ -1060,7 +1071,7 @@ bool CtffindApp::DoCalculation( ) {
                     current_power_spectrum->real_values[current_power_spectrum->ReturnReal1DAddressFromPhysicalCoord(current_power_spectrum->physical_address_of_box_center_x, current_power_spectrum->physical_address_of_box_center_y, current_power_spectrum->physical_address_of_box_center_z)] = 0.0;
 
                     // Resample the amplitude spectrum
-                    pixel_size_for_fitting = PixelSizeForFitting(resample_if_pixel_too_small, pixel_size_of_input_image, target_pixel_size_after_resampling, box_size, current_power_spectrum, resampled_power_spectrum);
+                    pixel_size_for_fitting = current_power_spectrum->DilatePowerspectrumToNewPixelSize(resample_if_pixel_too_small, pixel_size_of_input_image, target_pixel_size_after_resampling, box_size, resampled_power_spectrum);
 
                     average_spectrum->AddImage(resampled_power_spectrum);
                     profile_timing.lap("Compute amplitude spectrum");
@@ -1122,7 +1133,7 @@ bool CtffindApp::DoCalculation( ) {
         // Filter the amplitude spectrum, remove background
         if ( ! filtered_amplitude_spectrum_input ) {
             profile_timing.start("Filter spectrum");
-            average_spectrum->ComputeFilteredAmplitudeSpectrumFull2D(average_spectrum_masked, current_power_spectrum, average, sigma, minimum_resolution, maximum_resolution, pixel_size_for_fitting);
+            average_spectrum->ComputeFilteredAmplitudeSpectrumFull2D(average_spectrum_masked, current_power_spectrum, average, sigma, minimum_resolution, maximum_resolution, pixel_size_for_fitting, filter_lowres_signal);
             profile_timing.lap("Filter spectrum");
         }
 
@@ -1187,7 +1198,7 @@ bool CtffindApp::DoCalculation( ) {
                 temp_image->CopyFrom(average_spectrum);
                 temp_image->ApplyMirrorAlongY( );
                 //temp_image.QuickAndDirtyWriteSlice("dbg_spec_y.mrc",1);
-                estimated_astigmatism_angle = 0.5 * FindRotationalAlignmentBetweenTwoStacksOfImages(average_spectrum, temp_image, 1, 90.0, 5.0, pixel_size_for_fitting / minimum_resolution, pixel_size_for_fitting / std::max(maximum_resolution, maximum_resolution_for_initial_search));
+                estimated_astigmatism_angle = 0.5 * average_spectrum->FindRotationalAlignmentBetweenTwoStacksOfImages(temp_image, 1, 90.0, 5.0, pixel_size_for_fitting / minimum_resolution, pixel_size_for_fitting / std::max(maximum_resolution, maximum_resolution_for_initial_search));
                 profile_timing.lap("Estimate initial astigmatism");
             }
 
@@ -1616,13 +1627,13 @@ bool CtffindApp::DoCalculation( ) {
             ctf_values_profile                    = new float[number_of_bins_in_1d_spectra];
             fit_frc                               = new double[number_of_bins_in_1d_spectra];
             fit_frc_sigma                         = new double[number_of_bins_in_1d_spectra];
-            ComputeImagesWithNumberOfExtremaAndCTFValues(current_ctf, number_of_extrema_image, ctf_values_image);
+            current_ctf->ComputeImagesWithNumberOfExtremaAndCTFValues(number_of_extrema_image, ctf_values_image);
             //ctf_values_image.QuickAndDirtyWriteSlice("dbg_ctf_values.mrc",1);
             if ( dump_debug_files ) {
                 average_spectrum->QuickAndDirtyWriteSlice(debug_file_prefix + "dbg_spectrum_before_1dave.mrc", 1);
                 number_of_extrema_image->QuickAndDirtyWriteSlice(debug_file_prefix + "dbg_num_extrema.mrc", 1);
             }
-            ComputeRotationalAverageOfPowerSpectrum(average_spectrum, current_ctf, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, rotational_average_astig_fit, rotational_average_astig_renormalized, number_of_extrema_profile, ctf_values_profile);
+            average_spectrum->ComputeRotationalAverageOfPowerSpectrum(current_ctf, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, rotational_average_astig_fit, rotational_average_astig_renormalized, number_of_extrema_profile, ctf_values_profile);
 #ifdef use_epa_rather_than_zero_counting
             if ( fit_nodes ) {
                 ComputeEquiPhaseAverageOfPowerSpectrum(average_spectrum_masked, current_ctf, &equiphase_average_pre_max, &equiphase_average_post_max);
@@ -1633,7 +1644,7 @@ bool CtffindApp::DoCalculation( ) {
             // Replace the old curve with EPA values
             {
                 float current_sq_sf;
-                float azimuth_for_1d_plots         = ReturnAzimuthToUseFor1DPlots(current_ctf);
+                float azimuth_for_1d_plots         = current_ctf->ReturnAzimuthToUseFor1DPlots( );
                 float defocus_for_1d_plots         = current_ctf->DefocusGivenAzimuth(azimuth_for_1d_plots);
                 float sq_sf_of_phase_shift_maximum = current_ctf->ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(defocus_for_1d_plots);
                 for ( counter = 1; counter < number_of_bins_in_1d_spectra; counter++ ) {
@@ -1694,29 +1705,35 @@ bool CtffindApp::DoCalculation( ) {
             MyDebugAssertTrue(first_bin_to_check >= 0 && first_bin_to_check < number_of_bins_in_1d_spectra, "Bad first bin to check\n");
             //wxPrintf("Will only check from bin %i of %i onwards\n", first_bin_to_check, number_of_bins_in_1d_spectra);
             last_bin_with_good_fit = -1;
-            for ( counter = first_bin_to_check; counter < number_of_bins_in_1d_spectra; counter++ ) {
-                //wxPrintf("On bin %i, fit_frc = %f, rot averate astig = %f\n", counter, fit_frc[counter], rotational_average_astig[counter]);
-                at_last_bin_with_good_fit = ((number_of_bins_above_low_threshold > 3) && (fit_frc[counter] < low_threshold)) ||
-                                            ((number_of_bins_above_high_threshold > 3) && (fit_frc[counter] < frc_significance_threshold));
-                if ( at_last_bin_with_good_fit ) {
-                    last_bin_with_good_fit = counter;
-                    break;
-                }
-                // Count number of bins above given thresholds
-                if ( fit_frc[counter] > low_threshold )
-                    number_of_bins_above_low_threshold++;
-                if ( fit_frc[counter] > frc_significance_threshold )
-                    number_of_bins_above_significance_threshold++;
-                if ( fit_frc[counter] > high_threshold )
-                    number_of_bins_above_high_threshold++;
-            }
-            //wxPrintf("%i bins out of %i checked were above significance threshold\n",number_of_bins_above_significance_threshold,number_of_bins_in_1d_spectra-first_bin_to_check);
-            if ( number_of_bins_above_significance_threshold == number_of_bins_in_1d_spectra - first_bin_to_check )
-                last_bin_with_good_fit = number_of_bins_in_1d_spectra - 1;
-            if ( number_of_bins_above_significance_threshold == 0 )
+            // DNM: skip explicitly if there are no bins
+            if ( first_bin_to_check >= number_of_bins_in_1d_spectra ) {
                 last_bin_with_good_fit = 1;
-            last_bin_with_good_fit = std::min(last_bin_with_good_fit, number_of_bins_in_1d_spectra);
-            profile_timing.lap("Compute resolution cutoff");
+            }
+            else {
+                for ( counter = first_bin_to_check; counter < number_of_bins_in_1d_spectra; counter++ ) {
+                    //wxPrintf("On bin %i, fit_frc = %f, rot averate astig = %f\n", counter, fit_frc[counter], rotational_average_astig[counter]);
+                    at_last_bin_with_good_fit = ((number_of_bins_above_low_threshold > 3) && (fit_frc[counter] < low_threshold)) ||
+                                                ((number_of_bins_above_high_threshold > 3) && (fit_frc[counter] < frc_significance_threshold));
+                    if ( at_last_bin_with_good_fit ) {
+                        last_bin_with_good_fit = counter;
+                        break;
+                    }
+                    // Count number of bins above given thresholds
+                    if ( fit_frc[counter] > low_threshold )
+                        number_of_bins_above_low_threshold++;
+                    if ( fit_frc[counter] > frc_significance_threshold )
+                        number_of_bins_above_significance_threshold++;
+                    if ( fit_frc[counter] > high_threshold )
+                        number_of_bins_above_high_threshold++;
+                }
+                //wxPrintf("%i bins out of %i checked were above significance threshold\n",number_of_bins_above_significance_threshold,number_of_bins_in_1d_spectra-first_bin_to_check);
+                if ( number_of_bins_above_significance_threshold == number_of_bins_in_1d_spectra - first_bin_to_check )
+                    last_bin_with_good_fit = number_of_bins_in_1d_spectra - 1;
+                if ( number_of_bins_above_significance_threshold == 0 )
+                    last_bin_with_good_fit = 1;
+                last_bin_with_good_fit = std::min(last_bin_with_good_fit, number_of_bins_in_1d_spectra);
+                profile_timing.lap("Compute resolution cutoff");
+            }
         }
         else {
             last_bin_with_good_fit = 1;
@@ -1770,7 +1787,8 @@ bool CtffindApp::DoCalculation( ) {
         if ( dump_debug_files )
             average_spectrum->QuickAndDirtyWriteSlice(debug_file_prefix + "dbg_spec_before_rescaling.mrc", 1);
         profile_timing.start("Write diagnostic image");
-        if ( compute_extra_stats && ! fit_nodes ) {
+        // DNM 3/31/23: do not call if no bins with good fit
+        if ( compute_extra_stats && ! fit_nodes && last_bin_with_good_fit > 1) {
             RescaleSpectrumAndRotationalAverage(average_spectrum, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, rotational_average_astig_fit, number_of_extrema_profile, ctf_values_profile, last_bin_without_aliasing, last_bin_with_good_fit);
         }
 

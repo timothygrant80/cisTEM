@@ -1,35 +1,12 @@
+#include "defines.h"
+#include "non_wx_functions.h"
 
 void swapbytes(unsigned char* v, size_t n);
 void swapbytes(size_t size, unsigned char* v, size_t n);
 
 bool GetMRCDetails(const char* filename, int& x_size, int& y_size, int& number_of_images);
 
-inline void ZeroBoolArray(bool* array_to_zero, int size_of_array) {
-    for ( int counter = 0; counter < size_of_array; counter++ ) {
-        array_to_zero[counter] = false;
-    }
-}
-
-int sizeCanBe4BitK2SuperRes(int nx, int ny); // provided by David Mastronarde
-
-inline void ZeroIntArray(int* array_to_zero, int size_of_array) {
-    for ( int counter = 0; counter < size_of_array; counter++ ) {
-        array_to_zero[counter] = 0;
-    }
-}
-
-inline void ZeroLongArray(long* array_to_zero, int size_of_array) {
-    for ( int counter = 0; counter < size_of_array; counter++ ) {
-        array_to_zero[counter] = 0;
-    }
-}
-
-inline void ZeroFloatArray(float* array_to_zero, int size_of_array) {
-    for ( int counter = 0; counter < size_of_array; counter++ ) {
-        array_to_zero[counter] = 0.0;
-    }
-}
-
+int  sizeCanBe4BitK2SuperRes(int nx, int ny); // provided by David Mastronarde
 void FirstLastParticleForJob(long& first_particle, long& last_particle, long number_of_particles, int current_job_number, int number_of_jobs);
 
 int ReturnSafeBinnedBoxSize(int original_box_size, float bin_factor);
@@ -383,19 +360,6 @@ inline void ReadFromSocket	(	wxSocketBase *socket, void * 	buffer, wxUint32 nbyt
 }
 */
 
-inline void ZeroDoubleArray(double* array_to_zero, int size_of_array) {
-    for ( int counter = 0; counter < size_of_array; counter++ ) {
-        array_to_zero[counter] = 0.0;
-    }
-}
-
-inline bool IsEven(int number_to_check) {
-    if ( number_to_check % 2 == 0 )
-        return true;
-    else
-        return false;
-}
-
 inline bool DoesFileExist(wxString filename) {
     std::ifstream file_to_check(filename.c_str( ));
 
@@ -417,158 +381,14 @@ inline bool DoesFileExistWithWait(wxString filename, int max_wait_time_in_second
     return DoesFileExist(filename);
 }
 
-// Function to check if x is power of 2
-inline bool is_power_of_two(int n) {
-    if ( n == 0 )
-        return false;
-    return (ceil(log2((float)n)) == floor(log2((float)n)));
-}
-
-inline float rad_2_deg(float radians) {
-    return radians / (PIf / 180.);
-}
-
-inline float deg_2_rad(float degrees) {
-    return degrees * PIf / 180.;
-}
-
-inline float clamp_angular_range_0_to_2pi(float angle, bool units_are_degrees = false) {
-    // Clamps the angle to be in the range ( 0,+360 ] { exclusive, inclusive }
-    if ( units_are_degrees ) {
-        angle = fmodf(angle, 360.0f);
-    }
-    else {
-        angle = fmodf(angle, 2.0f * PIf);
-    }
-    return angle;
-}
-
-inline float clamp_angular_range_negative_pi_to_pi(float angle, bool units_are_degrees = false) {
-    // Clamps the angle to be in the range ( -180,+180 ] { exclusive, inclusive }
-    if ( units_are_degrees ) {
-        angle = fmodf(angle, 360.0f);
-        if ( angle > 180.0f )
-            angle -= 360.0f;
-        if ( angle <= -180.0f )
-            angle += 360.0f;
-        ;
-    }
-    else {
-        angle = fmodf(angle, 2.0f * PIf);
-        if ( angle > PIf )
-            angle -= 2.0f * PIf;
-        if ( angle <= -PIf )
-            angle += 2.0f * PIf;
-    }
-    return angle;
-}
-
-inline float sinc(float radians) {
-    if ( radians == 0.0 )
-        return 1.0;
-    if ( radians >= 0.01 )
-        return sinf(radians) / radians;
-    float temp_float = radians * radians;
-    return 1.0 - temp_float / 6.0 + temp_float * temp_float / 120.0;
-}
-
-inline double myround(double a) {
-    if ( a > 0 )
-        return double(long(a + 0.5));
-    else
-        return double(long(a - 0.5));
-}
-
-inline float myround(float a) {
-    if ( a > 0 )
-        return float(int(a + 0.5));
-    else
-        return float(int(a - 0.5));
-}
-
-inline int myroundint(double a) {
-    if ( a > 0 )
-        return int(a + 0.5);
-    else
-        return int(a - 0.5);
-}
-
-inline int myroundint(float a) {
-    if ( a > 0 )
-        return int(a + 0.5);
-    else
-        return int(a - 0.5);
-}
-
-inline bool IsOdd(int number) {
-    if ( (number & 1) == 0 )
-        return false;
-    else
-        return true;
-}
-
 wxArrayString ReturnIPAddress( );
 wxString      ReturnIPAddressFromSocket(wxSocketBase* socket);
 
-inline float ReturnPhaseFromShift(float real_space_shift, float distance_from_origin, float dimension_size) {
-    return real_space_shift * distance_from_origin * 2.0 * PI / dimension_size;
-}
-
-inline std::complex<float> Return3DPhaseFromIndividualDimensions(float phase_x, float phase_y, float phase_z) {
-    float temp_phase = -phase_x - phase_y - phase_z;
-
-    return cosf(temp_phase) + sinf(temp_phase) * I;
-}
-
-inline bool DoublesAreAlmostTheSame(double a, double b) {
-    return (fabs(a - b) < 0.000001);
-}
-
-inline bool FloatsAreAlmostTheSame(float a, float b) {
-    return (fabs(a - b) < 0.0001);
-}
-
-template <typename T>
-bool RelativeErrorIsLessThanEpsilon(T reference, T test_value, T epsilon = 0.0001, bool print_if_failed = true) {
-
-    bool ret_val;
-    // I'm not sure if this is the best way to guard against very small division
-    if ( abs(reference) < epsilon || abs(test_value) < epsilon )
-        ret_val = (std::abs((reference - test_value)) < epsilon);
-    else
-        ret_val = (std::abs((reference - test_value) / reference) < epsilon);
-
-    if ( print_if_failed && ! ret_val ) {
-        std::cerr << "RelativeErrorIsLessThanEpsilon failed: " << reference << " " << test_value << " " << epsilon << " " << std::abs((reference - test_value) / reference) << std::endl;
-    }
-    return ret_val;
-};
-
-template <typename T>
-bool AbsoluteErrorIsLessThanEpsilon(T reference, T test_value, T epsilon = 0.0001, bool print_if_failed = true) {
-
-    bool ret_val;
-
-    ret_val = (std::abs(reference - test_value) < epsilon);
-
-    if ( print_if_failed && ! ret_val ) {
-        std::cerr << "AbsoluteErrorIsLessThanEpsilon failed: " << reference << " " << test_value << " " << epsilon << " " << std::abs(reference - test_value) << std::endl;
-    }
-    return ret_val;
-};
-
-inline bool InputIsATerminal( ) {
-    return isatty(fileno(stdin));
-};
-
-inline bool OutputIsAtTerminal( ) {
-    return isatty(fileno(stdout));
-}
-
 float CalculateAngularStep(float required_resolution, float radius_in_angstroms);
 
-int ReturnClosestFactorizedUpper(int wanted_int, int largest_factor, bool enforce_even = false, int enforce_factor = 0);
-int ReturnClosestFactorizedLower(int wanted_int, int largest_factor, bool enforce_even = false, int enforce_factor = 0);
+int  ReturnClosestFactorizedUpper(int wanted_int, int largest_factor, bool enforce_even = false, int enforce_factor = 0);
+int  ReturnClosestFactorizedLower(int wanted_int, int largest_factor, bool enforce_even = false, int enforce_factor = 0);
+void ReturnBestFourierBinnedSize(float& output_binning_factor, int& dx, int& dy, const int input_x_size, const int input_y_size);
 
 bool FilenameExtensionMatches(std::string filename, std::string extension);
 
@@ -592,10 +412,6 @@ inline wxString BoolToYesNo(bool b) {
 
 long ReturnFileSizeInBytes(wxString filename);
 
-inline float kDa_to_Angstrom3(float kilo_daltons) {
-    return kilo_daltons * 1000.0 / 0.81;
-}
-
 inline bool IsAValidSymmetry(wxString* string_to_check) {
     long     junk;
     wxString buffer_string = *string_to_check;
@@ -614,18 +430,6 @@ float ReturnSumOfLogP(float logp1, float logp2, float log_range);
 
 int ReturnNumberofAsymmetricUnits(wxString symmetry);
 
-inline float ConvertProjectionXYToThetaInDegrees(float x, float y) // assumes that max x,y is 1
-{
-    return rad_2_deg(asin(sqrtf(powf(x, 2) + powf(y, 2))));
-}
-
-inline float ConvertXYToPhiInDegrees(float x, float y) {
-    if ( x == 0 && y == 0 )
-        return 0;
-    else
-        return rad_2_deg(atan2f(y, x));
-}
-
 std::vector<size_t> rankSort(const float* v_temp, const size_t size);
 std::vector<size_t> rankSort(const std::vector<float>& v_temp);
 
@@ -643,3 +447,11 @@ double cisTEM_erfcinv(double x);
 bool StripEnclosingSingleQuotesFromString(wxString& string_to_strip); // returns true if it was done, false if first and last characters are not '
 
 void ActivateMKLDebugForNonIntelCPU( ); // will activate MKL debug environment variable if running on an AMD that supports high level features.  This works on my version on intel MKL - it is disabled in the released MKL (although setting it should not break anything)
+
+inline bool InputIsATerminal( ) {
+    return isatty(fileno(stdin));
+};
+
+inline bool OutputIsAtTerminal( ) {
+    return isatty(fileno(stdout));
+};

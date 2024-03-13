@@ -48,6 +48,7 @@ void swapbytes(size_t size, unsigned char* v, size_t n) {
         swapbytes(v, n);
 }
 
+// FIXME: This should not be seperate from the MRCFile class - adding mode 12 here for now as it breaks import in the GUI w/o
 bool GetMRCDetails(const char* filename, int& x_size, int& y_size, int& number_of_images) {
     FILE* input;
     input = fopen(filename, "rb");
@@ -95,6 +96,8 @@ bool GetMRCDetails(const char* filename, int& x_size, int& y_size, int& number_o
             bytes_per_pixel = 2.0f;
         else if ( mode == 2 )
             bytes_per_pixel = 4.0f;
+        else if ( mode == 12 )
+            bytes_per_pixel = 2.0f;
         else if ( mode == 3 )
             bytes_per_pixel = 4.0f;
         else if ( mode == 4 )
@@ -502,6 +505,8 @@ int ReturnClosestFactorizedUpper(int wanted_int, int largest_factor, bool enforc
     if ( enforce_factor != 0 ) {
         enforce_even = true;
         increment    = enforce_factor;
+        // Start at the lowest possible factor
+        wanted_int = wanted_int + (enforce_factor - (wanted_int % enforce_factor));
     }
     else {
         increment = 2;
@@ -509,7 +514,7 @@ int ReturnClosestFactorizedUpper(int wanted_int, int largest_factor, bool enforc
 
     if ( enforce_even ) {
         temp_int = wanted_int;
-        if ( ! IsEven(temp_int) )
+        if ( IsOdd(temp_int) )
             temp_int++;
         for ( number = temp_int; number < 10000 * wanted_int; number += increment ) {
             remainder = number;
@@ -591,8 +596,148 @@ int ReturnClosestFactorizedLower(int wanted_int, int largest_factor, bool enforc
     return number;
 }
 
+void ReturnBestFourierBinnedSize(float& output_binning_factor, int& dx, int& dy, const int input_x_size, const int input_y_size) {
+    // We want to find the smallest change from the output_binning_factor that will result in
+    // a factorizable output size in both dimensions, which may not be trivial for rectangular images.
+    wxPrintf("\nWanted output binning factor    : %f\n", output_binning_factor);
+    constexpr std::array<int, 6>    factors = {2, 3, 5, 7, 11, 13};
+    std::vector<int>                factorized_sizes_x;
+    std::vector<int>                factorized_sizes_y;
+    std::vector<std::vector<float>> factorized_binning_factors_exact;
+    std::vector<std::vector<float>> factorized_binning_factors_with_real_space_padding;
+
+    constexpr bool enforce_even           = true;
+    constexpr int  enforce_factor_of_four = 0;
+
+    int   output_x   = RoundAndMakeEven(float(input_x_size) / output_binning_factor);
+    int   output_y   = RoundAndMakeEven(float(input_y_size) / output_binning_factor);
+    float output_x_f = float(output_x);
+    float output_y_f = float(output_y);
+    // First, get a list of possible sizes for both X and y
+    for ( auto& factor : factors ) {
+        factorized_sizes_x.push_back(ReturnClosestFactorizedLower(output_x, factor, enforce_even, enforce_factor_of_four));
+        factorized_sizes_y.push_back(ReturnClosestFactorizedLower(output_y, factor, enforce_even, enforce_factor_of_four));
+        factorized_sizes_x.push_back(ReturnClosestFactorizedUpper(output_x, factor, enforce_even, enforce_factor_of_four));
+        factorized_sizes_y.push_back(ReturnClosestFactorizedUpper(output_y, factor, enforce_even, enforce_factor_of_four));
+    }
+
+    // Now, we want to find any pairs of factorized sizes that produce a common binning factor
+    float              temp_binning_factor = 0.f;
+    std::vector<float> results             = {0.f, 0.f, 0.f};
+    int                tmp_x, tmp_y;
+    for ( auto& x : factorized_sizes_x ) {
+        temp_binning_factor = output_x_f / float(x);
+        tmp_x               = RoundAndMakeEven(output_x_f / temp_binning_factor);
+        for ( auto& y : factorized_sizes_y ) {
+            tmp_y = RoundAndMakeEven(output_y_f / temp_binning_factor);
+
+            if ( tmp_x == x && tmp_y == y ) {
+                results = {temp_binning_factor, float(x), float(y)};
+                factorized_binning_factors_exact.push_back(results);
+            }
+            else {
+                results = {temp_binning_factor, float(x - tmp_x), float(y - tmp_y)};
+                factorized_binning_factors_with_real_space_padding.push_back(results);
+            }
+        }
+    }
+
+    // Finally we want to find the binning factor that produces the smallest change from the original.
+    // It is unlikely that we find an exact match, so we will also look for the closest scaling with additional real
+    // space padding
+
+    float best_binning_factor   = 0.f;
+    int   smallest_total_change = std::numeric_limits<int>::max( ); // Not sure total change vs avg makes more sense?
+    int   current_change;
+    float best_result = -1.f;
+    for ( auto& results : factorized_binning_factors_exact ) {
+        current_change = abs(RoundAndMakeEven(output_x_f / results[0]) - output_x) +
+                         abs(RoundAndMakeEven(output_y_f / results[0]) - output_y);
+        if ( current_change < smallest_total_change ) {
+            best_result           = results[0];
+            smallest_total_change = current_change;
+        }
+    }
+
+    // If we did not find an exact match, let's pick the closest one with the smallest realspace padding that is a REDUCTION
+    // this way we don't have to worry about any normalization or edge effects or anything.
+    // TODO: there should be a bond on acceptable realspace padding, but I'm not sure what that is yet.
+    int n_factors = 0;
+    if ( best_result < 0.f ) {
+        float best_binning_factor;
+        float current_factor = std::numeric_limits<float>::max( );
+        bool  first_factor   = true;
+        int   smallest_negative_change;
+        int   current_change_area;
+        int   current_output_x;
+        int   current_output_y;
+        for ( auto& results : factorized_binning_factors_with_real_space_padding ) {
+            if ( ! FloatsAreAlmostTheSame(results[0], current_factor) ) {
+                smallest_negative_change = std::numeric_limits<int>::max( );
+                current_factor           = results[0];
+                current_output_x         = RoundAndMakeEven(output_x_f / current_factor);
+                current_output_y         = RoundAndMakeEven(output_y_f / current_factor);
+                if ( ! first_factor ) {
+                    n_factors++;
+                }
+                first_factor = false;
+            }
+            // For each binning factor, select the one with one result == 0, the other the smallest negative number, we'll then pick
+            // reduced imaging area the smallest
+            if ( FloatsAreAlmostTheSame(results[1], 0.f) || FloatsAreAlmostTheSame(results[2], 0.f) ) {
+
+                if ( results[1] < 0.f ) {
+                    current_change = abs(results[1] * current_output_y);
+                }
+                else {
+                    if ( results[2] < 0.f ) {
+                        current_change = abs(results[2] * current_output_x);
+                    }
+                    else {
+                        continue;
+                    }
+                }
+
+                if ( current_change < smallest_negative_change ) {
+                    factorized_binning_factors_with_real_space_padding[n_factors] = results;
+                    smallest_negative_change                                      = current_change;
+                }
+            }
+        }
+
+        float best_final_score = std::numeric_limits<float>::max( );
+
+        for ( int i = 0; i <= n_factors; ++i ) {
+
+            // To select combine the additional scaling factor + the fractional realspace change to create a score and take the smallest difference from 1
+            float final_score = fabsf(factorized_binning_factors_with_real_space_padding[i][0] +
+                                      factorized_binning_factors_with_real_space_padding[i][1] / output_x_f +
+                                      factorized_binning_factors_with_real_space_padding[i][2] / output_y_f - 1.0f);
+            if ( final_score < best_final_score ) {
+                best_binning_factor = factorized_binning_factors_with_real_space_padding[i][0];
+                best_final_score    = final_score;
+                dx                  = factorized_binning_factors_with_real_space_padding[i][1];
+                dy                  = factorized_binning_factors_with_real_space_padding[i][2];
+            }
+        }
+
+        wxPrintf("Best additional binning factor : %f, producing size x and y of %d and %d respectively\n", best_binning_factor,
+                 RoundAndMakeEven(output_x_f / best_binning_factor), RoundAndMakeEven(output_y_f / best_binning_factor));
+
+        // The full binning is now
+        output_binning_factor *= best_binning_factor;
+        output_x = RoundAndMakeEven(float(input_x_size) / output_binning_factor);
+        output_y = RoundAndMakeEven(float(input_y_size) / output_binning_factor);
+
+        wxPrintf("Total binning factor w/ trimming: %f, producing size x and y of %d and %d respectively\n", output_binning_factor, output_x + dx, output_y + dy);
+    }
+}
+
 float CalculateAngularStep(float required_resolution, float radius_in_angstroms) {
-    return 360.0 * required_resolution / PI / radius_in_angstroms;
+    // I think the factor of 2 comes from assuming that the wanted resolution is
+    // at nyquist in most searches, so 2 * wanted resoution = pixel size.
+    // It is not clear to me that this is optimal in any sense though. FIXME
+    return rad_2_deg(2.f * required_resolution / radius_in_angstroms);
 }
 
 void Allocate2DFloatArray(float**& array, int dim1, int dim2) {
@@ -1112,10 +1257,14 @@ static int numCoresAndLogicalProcs(int* physical, int* logical) {
     return (processorCoreCount <= 0 || logicalProcessorCount < 0) ? 1 : 0;
 }
 
-/*
- * Warn the user if the number of threads they are asking for seems
+/**
+ * @brief Warn the user if the number of threads they are asking for seems
  * excessive.
  * If OpenMP is not available, reset the number of threads to 1.
+ *
+ * @param[in] nthreads The number of threads to use.
+ *
+ * @return The number of threads to use.sslak
  */
 int CheckNumberOfThreads(int number_of_threads) {
 #ifdef _OPENMP

@@ -63,6 +63,8 @@ WaveFunctionPropagator::~WaveFunctionPropagator( ) {
     delete[] ctf;
     delete[] fresnel_propagtor;
     delete[] ctf_for_fitting;
+
+    delete[] wave_function_in;
 }
 
 void WaveFunctionPropagator::SetCTF(float wanted_acceleration_voltage,
@@ -182,6 +184,8 @@ void WaveFunctionPropagator::SetFitParams(float pixel_size, float kv, float Cs, 
     for_ctffind.defocus_step      = defocus_step;
 
     fit_params_are_set = true;
+
+    return;
 }
 
 void WaveFunctionPropagator::SetFresnelPropagator(float wanted_acceleration_voltage, float propagation_distance) {
@@ -211,6 +215,8 @@ void WaveFunctionPropagator::SetFresnelPropagator(float wanted_acceleration_volt
         fresnel_propagtor[0].SetDefocus(propagation_distance, propagation_distance, 0.0f);
         fresnel_propagtor[1].SetDefocus(propagation_distance, propagation_distance, 0.0f);
     }
+
+    return;
 }
 
 //void WaveFunctionPropagator::SetInputProjections(Image* scattering_potential, Image* inelastic_potential, int nSlabs)
@@ -273,6 +279,8 @@ void WaveFunctionPropagator::SetInputWaveFunction(int size_x, int size_y) {
             t_N[iPar].SetToConstant(0.0f);
         }
     }
+
+    return;
 }
 
 float WaveFunctionPropagator::DoPropagation(Image* sum_image, Image* scattering_potential, Image* inelastic_potential,
@@ -337,9 +345,7 @@ float WaveFunctionPropagator::DoPropagation(Image* sum_image, Image* scattering_
         // in case this somehow has to do with the mass distribution.
         float total_shift_x = 0.0f; //-2.0f*pixel_size*cosf(beam_tilt_azimuth);//0.0f;
         float total_shift_y = 0.0f; //-2.0f*pixel_size*sinf(beam_tilt_azimuth);//0.0f;
-
         for ( int iSlab = 0; iSlab < nSlabs; iSlab++ ) {
-
             SetFresnelPropagator(0.0f, propagator_distance[iSlab]);
 
             phase_grating[0].SetToConstant(0.0f);
@@ -642,7 +648,7 @@ float WaveFunctionPropagator::DoPropagation(Image* sum_image, Image* scattering_
         //	// Limit based on objective aperture. Ideally this would be done prior to "imaging" where we take the square modulus. Unfortunately, the division of the complex image into its real and imaginary parts
         //	// only makes sense for linear operators (fft) and multiplication by scalars to both parts. Multiplying by the aperture function violates this linearity.
         if ( iContrast > 0 && estimate_amplitude_contrast ) {
-            wxPrintf("Limiting the resolution based on an objective aperture of diameter %3.3f micron to %3.3f Angstrom\n", GetObjectiveAperture( ), pixel_size / objective_aperture_resolution);
+            wxPrintf("\nLimiting the resolution based on an objective aperture of diameter %3.3f micron to %3.3f Angstrom\n", GetObjectiveAperture( ), pixel_size / objective_aperture_resolution);
 
             ReturnImageContrast(sum_image[tilt_IDX], &total_contrast, false, tilt_angle); // - phase_contrast;
             //		sum_image[tilt_IDX].QuickAndDirtyWriteSlice("total.mrc",1,false,1);
@@ -653,7 +659,7 @@ float WaveFunctionPropagator::DoPropagation(Image* sum_image, Image* scattering_
             ReturnImageContrast(sum_image[tilt_IDX], &phase_contrast, true, tilt_angle);
             //		sum_image[tilt_IDX].QuickAndDirtyWriteSlice("phase.mrc",1,false,1);
 
-            wxPrintf("Phase contrast estimate at %3.3e\n", phase_contrast);
+            wxPrintf("\nPhase contrast estimate at %3.3e\n", phase_contrast);
         }
 
         is_set_input_projections = false;
@@ -690,7 +696,7 @@ void WaveFunctionPropagator::ReturnImageContrast(Image& wave_function_sq_modulus
     Image                 amplitude_spectrum;
     Image                 amplitude_spectrum_masked;
     Image                 buffer;
-    RandomNumberGenerator my_rand(PIf);
+    RandomNumberGenerator my_rand(pi_v<float>);
 
     bool non_unique_id = true;
     int  fileID;
@@ -873,7 +879,7 @@ void WaveFunctionPropagator::ReturnImageContrast(Image& wave_function_sq_modulus
                 if ( is_phase_contrast_image || iFit >= 0.0f ) {
 
                     if ( fabs(iFit - 1.0) < 1e-3 )
-                        iFit = PIf / 2.0f;
+                        iFit = pi_v<float> / 2.0f;
                     else
                         precomputed_amplitude_contrast_term = atanf(iFit / sqrtf(1.0 - powf(iFit, 2)));
                     ctf_for_fitting->SetAdditionalPhaseShift(precomputed_amplitude_contrast_term);
@@ -938,4 +944,6 @@ void WaveFunctionPropagator::ReturnImageContrast(Image& wave_function_sq_modulus
     else {
         *contrast = best_fit_value;
     }
+
+    return;
 }

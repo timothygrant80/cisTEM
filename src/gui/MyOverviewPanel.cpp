@@ -143,8 +143,8 @@ void MyOverviewPanel::SetWelcomeInfo( ) {
 
 // If compiled with debug and any other special configure flags are set, display them here
 #ifdef DEBUG
-    InfoText->WriteText(wxString::Format("Compiled in DEBUG mode with additional configure flags: "));
-#ifdef ENABLEGPU
+    InfoText->WriteText(wxString::Format("Compiled in CISTEM_DEBUG mode with additional configure flags: "));
+#ifdef SHOW_CISTEM_GPU_OPTIONS
     InfoText->WriteText(wxString::Format("ENABLEGPU "));
 #endif
 #ifdef MKL
@@ -162,7 +162,7 @@ void MyOverviewPanel::SetWelcomeInfo( ) {
 #ifdef ROTATEFORSPEED
     InfoText->WriteText(wxString::Format("ROTATEFORSPEED "));
 #endif
-#ifdef PROFILING
+#ifdef CISTEM_PROFILING
     InfoText->WriteText(wxString::Format("Compiled in PROFILING mode"));
 #endif
     InfoText->Newline( );

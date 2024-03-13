@@ -41,6 +41,8 @@ class cisTEMStarFileReader {
     int assigned_subset_column;
     int pre_exposure_column;
     int total_exposure_column;
+    int original_x_position_column;
+    int original_y_position_column;
 
     long binary_buffer_position;
 
@@ -234,4 +236,8 @@ class cisTEMStarFileReader {
     inline int ReturnPreExposure(int line_number) { return cached_parameters->Item(line_number).pre_exposure; }
 
     inline int ReturnTotalExpsosure(int line_number) { return cached_parameters->Item(line_number).total_exposure; }
+
+    inline int ReturnOriginalXPosition(int line_number) { return cached_parameters->Item(line_number).original_x_position; }
+
+    inline int ReturnOriginalYPosition(int line_number) { return cached_parameters->Item(line_number).original_y_position; }
 };

@@ -234,16 +234,24 @@ void MRCHeader::ReadHeader(std::fstream* MRCFile) {
         case 1:
             bytes_per_pixel        = 2;
             pixel_data_are_signed  = true;
-            pixel_data_are_of_type = Float;
+            pixel_data_are_of_type = Float; // FIXME: Why are we using defintions from multiple enums (this from dm.h others from mrc_header.h)
             pixel_data_are_complex = false;
             break;
 
         case 2:
             bytes_per_pixel        = 4;
             pixel_data_are_signed  = true;
-            pixel_data_are_of_type = MRCByte;
+            pixel_data_are_of_type = MRCByte; // FIXME: Why is this not MRCFloat?
             pixel_data_are_complex = false;
             break;
+
+        case 12: {
+            bytes_per_pixel        = 2;
+            pixel_data_are_signed  = true;
+            pixel_data_are_of_type = MRCFloat16;
+            pixel_data_are_complex = false;
+            break;
+        }
 
         case 3:
             bytes_per_pixel        = 2;

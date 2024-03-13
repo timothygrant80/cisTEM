@@ -91,7 +91,7 @@ bool SumAllMRC::DoCalculation( ) {
     delete current_input_file;
 
     output_sum_image.Allocate(file_x_size, file_y_size, 1);
-    output_sum_image.SetToConstant(0.0);
+    output_sum_image.SetToConstant(0.0f);
 
     if ( make_dark_and_gain == true ) {
         output_dark_image.Allocate(file_x_size, file_y_size, 1);

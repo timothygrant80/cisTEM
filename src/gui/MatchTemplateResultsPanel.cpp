@@ -1,5 +1,5 @@
 //#include "../core/core_headers.h"
-#include "../core/cistem_constants.h"
+#include "../constants/constants.h"
 #include "../core/gui_core_headers.h"
 
 extern MyMainFrame*        main_frame;
@@ -19,7 +19,6 @@ MatchTemplateResultsPanel::MatchTemplateResultsPanel(wxWindow* parent)
 
     per_row_asset_id       = NULL;
     per_row_array_position = NULL;
-    template_match_job_ids = NULL;
     number_of_assets       = 0;
 
     selected_row     = -1;
@@ -150,10 +149,14 @@ void MatchTemplateResultsPanel::FillBasedOnSelectCommand(wxString wanted_command
     }
     // cache the various  alignment_job_ids
 
-    if ( template_match_job_ids != NULL ) {
-        delete[] template_match_job_ids;
+    // Minimize reallocations by reserving space for the vector.
+    // Since we can't use push/emplace_back and rely on the normal exponential resizing, implement it here.
+    if ( template_match_job_ids.capacity( ) < number_of_template_match_ids ) {
+        template_match_job_ids.reserve(number_of_template_match_ids * 2);
     }
-    template_match_job_ids = new long[number_of_template_match_ids];
+
+    // This will set the vector to empty
+    template_match_job_ids.clear( );
 
     main_frame->current_project.database.GetUniqueTemplateMatchIDs(template_match_job_ids, number_of_template_match_ids);
 
@@ -358,6 +361,7 @@ void MatchTemplateResultsPanel::FillResultsPanelAndDetails(int row, int column) 
 }
 
 void MatchTemplateResultsPanel::OnValueChanged(wxDataViewEvent& event) {
+    MyDebugAssertFalse(template_match_job_ids.empty( ), "Template match job ids not set");
 
     if ( doing_panel_fill == false ) {
         wxDataViewItem current_item = event.GetItem( );

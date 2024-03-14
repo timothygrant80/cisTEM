@@ -1961,6 +1961,7 @@ void MyTestApp::TestCTFNodes( ) {
         // This is to override a failure, which occurs randomly when using gcc
         // There is probably some undefined behaviour in the code somewhere
         SkipTest;
+    }
 
     CTF ctf2;
     // CTF with a sample thickness parameter of 100.0
@@ -1979,6 +1980,7 @@ void MyTestApp::TestCTFNodes( ) {
         // This is to override a failure, which occurs randomly when using gcc
         // There is probably some undefined behaviour in the code somewhere
         SkipTest;
+    }
 
     // Test manually integrating ctf and compare with thickness formula
     ctf_curve1.SetYToConstant(0.0);

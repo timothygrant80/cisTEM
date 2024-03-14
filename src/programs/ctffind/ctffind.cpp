@@ -183,7 +183,7 @@ void CtffindApp::DoInteractiveUserInput( ) {
     int         desired_number_of_threads          = 1;
     int         eer_frames_per_image               = 0;
     int         eer_super_res_factor               = 1;
-    bool        filter_lowres_signal             = true;
+    bool        filter_lowres_signal               = true;
     bool        fit_nodes                          = false;
     bool        fit_nodes_1D_brute_force           = true;
     bool        fit_nodes_2D_refine                = true;
@@ -192,7 +192,6 @@ void CtffindApp::DoInteractiveUserInput( ) {
     float       target_pixel_size_after_resampling = 1.4;
     bool        fit_nodes_use_rounded_square       = false;
     bool        fit_nodes_downweight_nodes         = false;
-
 
     // Things we need for old school input
     double     temp_double               = -1.0;
@@ -773,15 +772,15 @@ bool CtffindApp::DoCalculation( ) {
     int              number_of_movie_frames;
     int              number_of_micrographs;
     ImageFile        input_file;
-    Image*           average_spectrum        = new Image( );
-    Image*           average_spectrum_masked = new Image( ); // This will contain a high-pass filtered version to recuce the effect of the high contrast at low frequencies
+    SpectrumImage*   average_spectrum        = new SpectrumImage( );
+    SpectrumImage*   average_spectrum_masked = new SpectrumImage( ); // This will contain a high-pass filtered version to recuce the effect of the high contrast at low frequencies
     wxString         output_text_fn;
     ProgressBar*     my_progress_bar;
     NumericTextFile* output_text;
     NumericTextFile* output_text_avrot;
     int              current_micrograph_number;
     int              number_of_tiles_used;
-    Image*           current_power_spectrum = new Image( );
+    SpectrumImage*   current_power_spectrum = new SpectrumImage( );
     int              current_first_frame_within_average;
     int              current_frame_within_average;
     int              current_input_location;
@@ -1636,10 +1635,10 @@ bool CtffindApp::DoCalculation( ) {
             average_spectrum->ComputeRotationalAverageOfPowerSpectrum(current_ctf, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, rotational_average_astig_fit, rotational_average_astig_renormalized, number_of_extrema_profile, ctf_values_profile);
 #ifdef use_epa_rather_than_zero_counting
             if ( fit_nodes ) {
-                ComputeEquiPhaseAverageOfPowerSpectrum(average_spectrum_masked, current_ctf, &equiphase_average_pre_max, &equiphase_average_post_max);
+                average_spectrum_masked->ComputeEquiPhaseAverageOfPowerSpectrum(current_ctf, &equiphase_average_pre_max, &equiphase_average_post_max);
             }
             else {
-                ComputeEquiPhaseAverageOfPowerSpectrum(average_spectrum, current_ctf, &equiphase_average_pre_max, &equiphase_average_post_max);
+                average_spectrum_masked->ComputeEquiPhaseAverageOfPowerSpectrum(current_ctf, &equiphase_average_pre_max, &equiphase_average_post_max);
             }
             // Replace the old curve with EPA values
             {
@@ -1788,8 +1787,8 @@ bool CtffindApp::DoCalculation( ) {
             average_spectrum->QuickAndDirtyWriteSlice(debug_file_prefix + "dbg_spec_before_rescaling.mrc", 1);
         profile_timing.start("Write diagnostic image");
         // DNM 3/31/23: do not call if no bins with good fit
-        if ( compute_extra_stats && ! fit_nodes && last_bin_with_good_fit > 1) {
-            RescaleSpectrumAndRotationalAverage(average_spectrum, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, rotational_average_astig_fit, number_of_extrema_profile, ctf_values_profile, last_bin_without_aliasing, last_bin_with_good_fit);
+        if ( compute_extra_stats && ! fit_nodes && last_bin_with_good_fit > 1 ) {
+            average_spectrum->RescaleSpectrumAndRotationalAverage(number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, rotational_average_astig_fit, number_of_extrema_profile, ctf_values_profile, last_bin_without_aliasing, last_bin_with_good_fit);
         }
 
         normalization_radius_max = std::max(normalization_radius_max, float(average_spectrum->logical_x_dimension * spatial_frequency[last_bin_with_good_fit]));
@@ -1802,7 +1801,7 @@ bool CtffindApp::DoCalculation( ) {
         average_spectrum->MultiplyByConstant(1.0 / ((average + 2.0 * sigma) - (average - sigma)));
         if ( dump_debug_files )
             average_spectrum->QuickAndDirtyWriteSlice(debug_file_prefix + "dbg_spec_before_overlay.mrc", 1);
-        OverlayCTF(average_spectrum, current_ctf, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, number_of_extrema_profile, ctf_values_profile, &equiphase_average_pre_max, &equiphase_average_post_max, fit_nodes);
+        average_spectrum->OverlayCTF(current_ctf, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, number_of_extrema_profile, ctf_values_profile, &equiphase_average_pre_max, &equiphase_average_post_max, fit_nodes);
 
         average_spectrum->WriteSlice(&output_diagnostic_file, current_output_location);
         output_diagnostic_file.SetDensityStatistics(average_spectrum->ReturnMinimumValue( ), average_spectrum->ReturnMaximumValue( ), average_spectrum->ReturnAverageOfRealValues( ), 0.1);

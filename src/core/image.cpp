@@ -925,7 +925,7 @@ bool Image::IsAlmostEqual(Image& other_image, bool print_if_failed, float epsilo
 
     if ( is_in_real_space ) {
         for ( pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++ ) {
-            if ( ! RelativeErrorIsLessThanEpsilon(real_values[pixel_counter], other_image.real_values[pixel_counter], epsilon, print_if_failed) ) {
+            if ( ! RelativeErrorIsLessThanEpsilon(real_values[pixel_counter], other_image.real_values[pixel_counter], print_if_failed, epsilon) ) {
                 return false;
             }
         }
@@ -933,10 +933,10 @@ bool Image::IsAlmostEqual(Image& other_image, bool print_if_failed, float epsilo
     else {
         // Iterate through forier space
         for ( pixel_counter = 0; pixel_counter < real_memory_allocated / 2; pixel_counter++ ) {
-            if ( ! RelativeErrorIsLessThanEpsilon(real(complex_values[pixel_counter]), real(other_image.complex_values[pixel_counter]), epsilon, print_if_failed) ) {
+            if ( ! RelativeErrorIsLessThanEpsilon(real(complex_values[pixel_counter]), real(other_image.complex_values[pixel_counter]), print_if_failed, epsilon) ) {
                 return false;
             }
-            if ( ! RelativeErrorIsLessThanEpsilon(imag(complex_values[pixel_counter]), imag(other_image.complex_values[pixel_counter]), epsilon, print_if_failed) ) {
+            if ( ! RelativeErrorIsLessThanEpsilon(imag(complex_values[pixel_counter]), imag(other_image.complex_values[pixel_counter]), print_if_failed, epsilon) ) {
                 return false;
             }
         }
@@ -7077,7 +7077,7 @@ void Image::ComputeFilteredAmplitudeSpectrumFull2D(Image* average_spectrum_maske
     //			average_spectrum_masked->SetMaximumValue(average_spectrum_masked->ReturnMaximumValue(3,3));
 
     average_spectrum_masked->CopyFrom(this);
-    if (apply_cosine_mask) {
+    if ( apply_cosine_mask ) {
         average_spectrum_masked->CosineMask(float(average_spectrum_masked->logical_x_dimension) * pixel_size_for_fitting / std::max(maximum_resolution, 8.0f), float(average_spectrum_masked->logical_x_dimension) * pixel_size_for_fitting / std::max(maximum_resolution, 4.0f), true);
     }
     //			average_spectrum_masked->QuickAndDirtyWriteSlice("dbg_spec_before_thresh.mrc",1);

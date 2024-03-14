@@ -51,7 +51,8 @@ class CTFTilt {
 
   public:
     CTFTilt(ImageFile& wanted_input_file, float wanted_high_res_limit_ctf_fit, float wanted_high_res_limit_tilt_fit, float wanted_minimum_defocus, float wanted_maximum_defocus,
-            float wanted_pixel_size, float wanted_acceleration_voltage_in_kV, float wanted_spherical_aberration_in_mm, float wanted_amplitude_contrast, float wanted_additional_phase_shift_in_radians);
+            float wanted_pixel_size, float wanted_acceleration_voltage_in_kV, float wanted_spherical_aberration_in_mm, float wanted_amplitude_contrast, float wanted_additional_phase_shift_in_radians,
+            bool wanted_debug = false, std::string wanted_debug_json_output_filename = "");
     ~CTFTilt( );
     void   CalculatePowerSpectra(bool subtract_average = false);
     void   UpdateInputImage(Image* wanted_input_image);
@@ -115,5 +116,36 @@ class CurveCTFComparison {
 
 float CtffindObjectiveFunction(void* scoring_parameters, float array_of_values[]);
 float CtffindCurveObjectiveFunction(void* scoring_parameters, float array_of_values[]);
+
+struct CTFNodeFitInput {
+    CTF*                current_ctf;
+    int                 last_bin_with_good_fit;
+    int                 number_of_bins_in_1d_spectra;
+    float               pixel_size_for_fitting;
+    double*             spatial_frequency;
+    double*             rotational_average_astig;
+    double*             rotational_average_astig_fit;
+    Curve&              equiphase_average_pre_max;
+    Curve&              equiphase_average_post_max;
+    CurveCTFComparison* comparison_object_1D;
+    ImageCTFComparison* comparison_object_2D;
+    bool                bruteforce_1D;
+    bool                refine_2D;
+    float               low_resolution_limit;
+    float               high_resolution_limit;
+    double*             fit_frc;
+    double*             fit_frc_sigma;
+    Image*              average_spectrum;
+    bool                debug;
+    std::string         debug_filename;
+    bool                use_rounded_square;
+    bool                downweight_nodes;
+};
+
+struct CTFNodeFitOuput {
+    int last_bin_with_good_fit;
+};
+
+CTFNodeFitOuput fit_thickness_nodes(CTFNodeFitInput* input);
 
 #endif /* PROGRAMS_CTFFIND_CTFFIND_H_ */

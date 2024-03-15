@@ -618,6 +618,11 @@ ctffind_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_LDADD = libcore.a $(WX_LIBS_BASE)
 
+fit_tilt_model_SOURCES = programs/ctffind/fit_tilt_model.cpp
+fit_tilt_model_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+fit_tilt_model_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+fit_tilt_model_LDADD = libcore.a $(WX_LIBS_BASE)
+
 reconstruct3d_SOURCES  = programs/reconstruct3d/reconstruct3d.cpp
 reconstruct3d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 reconstruct3d_CPPFLAGS = $(WX_CPPFLAGS_BASE)

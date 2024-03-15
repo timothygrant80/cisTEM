@@ -390,6 +390,9 @@ class FindCTFPanel : public JobPanel
 		wxStaticText* TiltStaticText;
 		wxRadioButton* SearchTiltYesRadio;
 		wxRadioButton* SearchTiltNoRadio;
+		wxStaticText* ResampleStaticText;
+		wxCheckBox* ResamplePixelSizeCheckBox;
+		NumericTextCtrl* ResamplePixelSizeNumericCtrl;
 		wxStaticText* m_staticText201;
 		wxStaticText* m_staticText189;
 		NumericTextCtrl* MinResNumericCtrl;

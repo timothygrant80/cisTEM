@@ -613,7 +613,7 @@ applyctf_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 applyctf_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 applyctf_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-ctffind_SOURCES = programs/ctffind/ctffind.cpp
+ctffind_SOURCES = programs/ctffind/ctffind.cpp programs/ctffind/ctftilt.cpp programs/ctffind/ctffind_thickness_nodes.cpp
 ctffind_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_LDADD = libcore.a $(WX_LIBS_BASE)

@@ -562,7 +562,66 @@ cisTEM_display_CXXFLAGS = $(WX_CPPFLAGS)
 cisTEM_display_CPPFLAGS = $(WX_CPPFLAGS)
 cisTEM_display_LDADD = libguicore.a libcore.a $(WX_LIBS)
 
-gui_test_SOURCES = programs/gui_test/gui_test.cpp programs/gui_test/test_ctf_nodes.cpp gui/gui_globals.cpp gui/MyFSCPanel.cpp gui/MyRefinementResultsPanel.cpp gui/PlotFSCPanel.cpp gui/gui_functions.cpp gui/my_controls.cpp gui/MyRenameDialog.cpp gui/BitmapPanel.cpp gui/PickingBitmapPanel.cpp gui/job_panel.cpp gui/ProjectX_gui.cpp gui/ResultsDataViewListCtrl.cpp gui/MyMovieFilterDialog.cpp gui/MainFrame.cpp gui/MyAssetPanelParent.cpp gui/MyMovieAssetPanel.cpp gui/MyImageAssetPanel.cpp gui/MyParticlePositionAssetPanel.cpp gui/MyVolumeChooserDialog.cpp gui/MovieImportDialog.cpp gui/MyImageImportDialog.cpp gui/MyVolumeImportDialog.cpp gui/ErrorDialog.cpp gui/AlignMoviesPanel.cpp gui/MyRunProfilesPanel.cpp gui/mathplot.cpp gui/MyMovieAlignResultsPanel.cpp gui/MyFindCTFResultsPanel.cpp gui/PickingResultsPanel.cpp gui/MyAddRunCommandDialog.cpp gui/MyNewProjectWizard.cpp gui/MyNewRefinementPackageWizard.cpp gui/UnblurResultsPanel.cpp gui/ShowCTFResultsPanel.cpp gui/PickingResultsDisplayPanel.cpp gui/CTF1DPanel.cpp gui/FindCTFPanel.cpp gui/FindParticlesPanel.cpp gui/MyVolumeAssetPanel.cpp gui/MyResultsPanel.cpp gui/MyAssetsPanel.cpp gui/ActionsPanelSpa.cpp gui/ActionsPanelTm.cpp gui/MySettingsPanel.cpp gui/MyParticlePositionExportDialog.cpp gui/MyFrealignExportDialog.cpp gui/MyRelionExportDialog.cpp gui/MyRefinementPackageAssetPanel.cpp gui/MyRefine3DPanel.cpp gui/MyRefine2DPanel.cpp gui/ClassificationPlotPanel.cpp gui/AbInitioPlotPanel.cpp gui/Refine2DResultsPanel.cpp gui/AngularDistributionPlotPanel.cpp core/particle_finder.cpp gui/DisplayPanel.cpp gui/ClassumSelectionCopyFromDialog.cpp gui/MyOverviewPanel.cpp gui/AbInitio3DPanel.cpp gui/AssetPickerComboPanel.cpp gui/AutoRefine3dPanel.cpp gui/DisplayRefinementResultsPanel.cpp gui/ImportRefinementPackageWizard.cpp gui/PopupTextDialog.cpp gui/ExportRefinementPackageWizard.cpp gui/Generate3DPanel.cpp gui/LargeAngularPlotDialog.cpp gui/RefinementParametersDialog.cpp gui/Sharpen3DPanel.cpp gui/PlotCurvePanel.cpp gui/DistributionPlotDialog.cpp gui/RefineCTFPanel.cpp gui/ShowTemplateMatchResultsPanel.cpp gui/MatchTemplatePanel.cpp gui/MatchTemplateResultsPanel.cpp gui/RefineTemplatePanel.cpp
+gui_test_SOURCES =  programs/gui_test/gui_test.cpp \
+                    gui/ProjectX_gui_abinitio.cpp \
+                    gui/ProjectX_gui_assets.cpp \
+                    gui/ProjectX_gui_autorefine.cpp \
+                    gui/ProjectX_gui_controls.cpp \
+                    gui/ProjectX_gui_ctffind.cpp \
+                    gui/ProjectX_gui_main.cpp \
+                    gui/ProjectX_gui_matchtemplate.cpp \
+                    gui/ProjectX_gui_picking.cpp \
+                    gui/ProjectX_gui_refine2d.cpp \
+                    gui/ProjectX_gui_refine3d.cpp \
+                    gui/ProjectX_gui_refinement_package.cpp \
+                    gui/ProjectX_gui_settings.cpp \
+                    gui/ProjectX_gui_unblur.cpp \
+                    gui/ProjectX_gui_wizards.cpp \
+                    programs/gui_test/test_ctf_nodes.cpp \
+                    gui/gui_globals.cpp gui/MyFSCPanel.cpp \
+                    gui/MyRefinementResultsPanel.cpp \
+                    gui/PlotFSCPanel.cpp \
+                    gui/gui_functions.cpp \
+                    gui/my_controls.cpp \
+                    gui/MyRenameDialog.cpp \
+                    gui/BitmapPanel.cpp \
+                    gui/PickingBitmapPanel.cpp \
+                    gui/job_panel.cpp \
+                    gui/ResultsDataViewListCtrl.cpp \
+                    gui/MyMovieFilterDialog.cpp \
+                    gui/MainFrame.cpp \
+                    gui/MyAssetPanelParent.cpp \
+                    gui/MyMovieAssetPanel.cpp \
+                    gui/MyImageAssetPanel.cpp \
+                    gui/MyParticlePositionAssetPanel.cpp \
+                    gui/MyVolumeChooserDialog.cpp \
+                    gui/MovieImportDialog.cpp \
+                    gui/MyImageImportDialog.cpp \
+                    gui/MyVolumeImportDialog.cpp \
+                    gui/ErrorDialog.cpp \
+                    gui/AlignMoviesPanel.cpp \
+                    gui/MyRunProfilesPanel.cpp \
+                    gui/mathplot.cpp \
+                    gui/MyMovieAlignResultsPanel.cpp \
+                    gui/MyFindCTFResultsPanel.cpp \
+                    gui/PickingResultsPanel.cpp \
+                    gui/MyAddRunCommandDialog.cpp \
+                    gui/MyNewProjectWizard.cpp \
+                    gui/MyNewRefinementPackageWizard.cpp \
+                    gui/UnblurResultsPanel.cpp gui/ShowCTFResultsPanel.cpp \
+                    gui/PickingResultsDisplayPanel.cpp gui/CTF1DPanel.cpp gui/FindCTFPanel.cpp gui/FindParticlesPanel.cpp \
+                    gui/MyVolumeAssetPanel.cpp gui/MyResultsPanel.cpp gui/MyAssetsPanel.cpp gui/ActionsPanelSpa.cpp \
+                    gui/ActionsPanelTm.cpp gui/MySettingsPanel.cpp gui/MyParticlePositionExportDialog.cpp \
+                    gui/MyFrealignExportDialog.cpp gui/MyRelionExportDialog.cpp gui/MyRefinementPackageAssetPanel.cpp \
+                    gui/MyRefine3DPanel.cpp gui/MyRefine2DPanel.cpp gui/ClassificationPlotPanel.cpp gui/AbInitioPlotPanel.cpp \
+                    gui/Refine2DResultsPanel.cpp gui/AngularDistributionPlotPanel.cpp core/particle_finder.cpp \
+                    gui/DisplayPanel.cpp gui/ClassumSelectionCopyFromDialog.cpp gui/MyOverviewPanel.cpp \
+                    gui/AbInitio3DPanel.cpp gui/AssetPickerComboPanel.cpp gui/AutoRefine3dPanel.cpp \
+                    gui/DisplayRefinementResultsPanel.cpp gui/ImportRefinementPackageWizard.cpp \
+                    gui/PopupTextDialog.cpp gui/ExportRefinementPackageWizard.cpp gui/Generate3DPanel.cpp gui/LargeAngularPlotDialog.cpp \
+                    gui/RefinementParametersDialog.cpp gui/Sharpen3DPanel.cpp gui/PlotCurvePanel.cpp gui/DistributionPlotDialog.cpp \
+                    gui/RefineCTFPanel.cpp gui/ShowTemplateMatchResultsPanel.cpp gui/MatchTemplatePanel.cpp gui/MatchTemplateResultsPanel.cpp \
+                    gui/RefineTemplatePanel.cpp gui/CombineRefinementPackagesWizard.cpp programs/cisTEM_display/display_gui.cpp 
 gui_test_CXXFLAGS = $(WX_CPPFLAGS)
 gui_test_CPPFLAGS = $(WX_CPPFLAGS)
 gui_test_LDADD = libguicore.a libcore.a $(WX_LIBS)
@@ -613,7 +672,7 @@ applyctf_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 applyctf_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 applyctf_LDADD    = libcore.a $(WX_LIBS_BASE)
 
-ctffind_SOURCES = programs/ctffind/ctffind.cpp programs/ctffind/ctftilt.cpp programs/ctffind/ctffind_thickness_nodes.cpp
+ctffind_SOURCES = programs/ctffind/ctffind.cpp programs/ctffind/ctftilt.cpp programs/ctffind/ctffind_thickness_nodes.cpp programs/ctffind/ctffind_image_ctf_comparison.cpp programs/ctffind/ctffind_objective_functions.cpp
 ctffind_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_LDADD = libcore.a $(WX_LIBS_BASE)

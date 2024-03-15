@@ -3,6 +3,12 @@
 
 #define use_epa_rather_than_zero_counting
 
+double SampleTiltScoreFunctionForSimplex(void* pt2Object, double values[]);
+double SampleTiltScoreFunctionForSimplexTiltAxis(void* pt2Object, double values[]);
+//TODO: gives this function a good name that describes what it actually does (it actually rescales the power spectrum!)
+float PixelSizeForFitting(bool resample_if_pixel_too_small, float pixel_size_of_input_image, float target_pixel_size_after_resampling,
+                          int box_size, Image* current_power_spectrum, Image* resampled_power_spectrum, bool do_resampling = true, float stretch_factor = 1.0f);
+
 class CTFTilt {
     int   refine_mode;
     int   micrograph_subregion_dimension;
@@ -11,7 +17,10 @@ class CTFTilt {
     int   sub_section_dimension_x;
     int   sub_section_dimension_y;
     int   box_size;
+    int   tile_size;
     int   n_sections;
+    int   n_sections_x;
+    int   n_sections_y;
     int   n_steps;
     int   box_convolution;
     int   input_image_x_dimension;
@@ -49,6 +58,10 @@ class CTFTilt {
     bool defocus_astigmatism_determined;
     bool power_spectra_calculated;
 
+    bool        debug;
+    wxJSONValue debug_json_output;
+    std::string debug_json_output_filename;
+
   public:
     CTFTilt(ImageFile& wanted_input_file, float wanted_high_res_limit_ctf_fit, float wanted_high_res_limit_tilt_fit, float wanted_minimum_defocus, float wanted_maximum_defocus,
             float wanted_pixel_size, float wanted_acceleration_voltage_in_kV, float wanted_spherical_aberration_in_mm, float wanted_amplitude_contrast, float wanted_additional_phase_shift_in_radians,
@@ -63,6 +76,7 @@ class CTFTilt {
     float  CalculateTiltCorrectedSpectra(bool resample_if_pixel_too_small, float pixel_size_of_input_image, float target_pixel_size_after_resampling,
                                          int box_size, Image* resampled_spectrum);
     double ScoreValues(double[]);
+    double ScoreValuesFixedDefocus(double[]);
 
     float defocus_1;
     float defocus_2;
@@ -77,8 +91,10 @@ class ImageCTFComparison {
   public:
     ImageCTFComparison(int wanted_number_of_images, CTF wanted_ctf, float wanted_pixel_size, bool should_find_phase_shift, bool wanted_astigmatism_is_known, float wanted_known_astigmatism, float wanted_known_astigmatism_angle, bool should_fit_defocus_sweep);
     ~ImageCTFComparison( );
-    void  SetImage(int wanted_image_number, Image* new_image);
-    void  SetCTF(CTF new_ctf);
+    void SetImage(int wanted_image_number, Image* new_image);
+    void SetCTF(CTF new_ctf);
+    void SetFitWithThicknessNodes(bool wanted_fit_with_thickness_nodes);
+
     CTF   ReturnCTF( );
     bool  AstigmatismIsKnown( );
     float ReturnKnownAstigmatism( );
@@ -94,6 +110,9 @@ class ImageCTFComparison {
     float* azimuths;
     float* spatial_frequency_squared;
     int*   addresses;
+    bool   fit_with_thickness_nodes;
+    bool   fit_nodes_downweight_nodes = false;
+    bool   fit_nodes_rounded_square   = false;
 
   private:
     CTF   ctf;
@@ -112,6 +131,8 @@ class CurveCTFComparison {
     float  reciprocal_pixel_size; // In reciprocal pixels
     CTF    ctf;
     bool   find_phase_shift;
+    bool   find_thickness_nodes     = false;
+    bool   fit_nodes_rounded_square = false;
 };
 
 float CtffindObjectiveFunction(void* scoring_parameters, float array_of_values[]);
@@ -135,7 +156,7 @@ struct CTFNodeFitInput {
     float               high_resolution_limit;
     double*             fit_frc;
     double*             fit_frc_sigma;
-    Image*              average_spectrum;
+    SpectrumImage*      average_spectrum;
     bool                debug;
     std::string         debug_filename;
     bool                use_rounded_square;

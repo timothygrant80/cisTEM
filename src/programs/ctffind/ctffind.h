@@ -51,8 +51,8 @@ class CTFTilt {
     Image  ctf_transform;
     Image  ctf_image;
     Image  sub_section;
-    Image* resampled_power_spectra;
-    Image* input_image_buffer;
+    Image* resampled_power_spectra = nullptr;
+    Image* input_image_buffer = nullptr;
 
     bool rough_defocus_determined;
     bool defocus_astigmatism_determined;

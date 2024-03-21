@@ -89,8 +89,15 @@ CTFTilt::CTFTilt(ImageFile& wanted_input_file, float wanted_high_res_limit_ctf_f
 }
 
 CTFTilt::~CTFTilt( ) {
-    delete[] input_image_buffer;
-    delete[] resampled_power_spectra;
+    if (input_image_buffer != nullptr) {
+        delete[] input_image_buffer;
+        input_image_buffer = nullptr; // set to nullptr after deletion to avoid dangling pointer
+    }
+
+    if (resampled_power_spectra != nullptr) {
+        delete[] resampled_power_spectra;
+        resampled_power_spectra = nullptr; // set to nullptr after deletion to avoid dangling pointer
+    }
 }
 
 void CTFTilt::CalculatePowerSpectra(bool subtract_average) {

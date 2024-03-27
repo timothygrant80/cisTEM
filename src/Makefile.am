@@ -1382,7 +1382,7 @@ console_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 console_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 console_test_LDADD = libcore.a $(WX_LIBS_BASE)
 
-unblur_SOURCES = programs/unblur/unblur.cpp dlib/dlib/all/source.cpp programs/niko_test/bicubicspline.cpp programs/niko_test/cubicspline.cpp programs/niko_test/movieframespline.cpp
+unblur_SOURCES = programs/unblur/unblur.cpp dlib/dlib/all/source.cpp programs/unblur/bicubicspline.cpp programs/unblur/cubicspline.cpp programs/unblur/movieframespline.cpp
 unblur_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 unblur_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 unblur_LDADD = libcore.a libdlib.a -lX11 $(LIBS) $(WX_LIBS_BASE)
@@ -1587,7 +1587,7 @@ local_resolution_finalize_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 local_resolution_finalize_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 local_resolution_finalize_LDADD = libcore.a $(WX_LIBS_BASE)
 
-niko_test_SOURCES = programs/niko_test/niko_test.cpp dlib/dlib/all/source.cpp programs/niko_test/bicubicspline.cpp programs/niko_test/cubicspline.cpp programs/niko_test/movieframespline.cpp
+niko_test_SOURCES = programs/niko_test/niko_test.cpp dlib/dlib/all/source.cpp
 niko_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 niko_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 niko_test_LDADD = libcore.a libdlib.a $(WX_LIBS_BASE)

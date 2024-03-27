@@ -7,7 +7,7 @@
 #include "dlib/dlib/optimization.h"
 #include <vector>
 #include <dlib/dlib/matrix.h>
-#include "../niko_test/utilities.h"
+#include "utilities.h"
 
 // The timing that unblur originally tracks is always on, by direct reference to cistem_timer::StopWatch
 // The profiling for development is under conrtol of --enable-profiling.

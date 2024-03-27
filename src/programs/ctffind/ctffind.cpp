@@ -1640,7 +1640,7 @@ bool CtffindApp::DoCalculation( ) {
                 average_spectrum_masked->ComputeEquiPhaseAverageOfPowerSpectrum(current_ctf, &equiphase_average_pre_max, &equiphase_average_post_max);
             }
             else {
-                average_spectrum_masked->ComputeEquiPhaseAverageOfPowerSpectrum(current_ctf, &equiphase_average_pre_max, &equiphase_average_post_max);
+                average_spectrum->ComputeEquiPhaseAverageOfPowerSpectrum(current_ctf, &equiphase_average_pre_max, &equiphase_average_post_max);
             }
             // Replace the old curve with EPA values
             {

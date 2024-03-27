@@ -1,3 +1,4 @@
+add_subdirectory(display)
 add_subdirectory(unblur)
 add_subdirectory(ctffind)
 add_subdirectory(refine2d)

@@ -1,4 +1,5 @@
 #include "gpu_core_headers.h"
+#include "DeviceManager.h"
 
 DeviceManager::DeviceManager( ){
 
@@ -18,7 +19,7 @@ DeviceManager::~DeviceManager( ) {
 void DeviceManager::Init(int wanted_number_of_gpus) {
     wxPrintf("requesting %d gpus\n", wanted_number_of_gpus);
 
-    int gpu_check = -1;
+    int gpu_check = 0;
     cudaErr(cudaGetDeviceCount(&gpu_check));
     wxPrintf("CUDA-capable device count: %d\n", gpu_check);
     if ( wanted_number_of_gpus > MAX_GPU_COUNT ) {
@@ -28,8 +29,8 @@ void DeviceManager::Init(int wanted_number_of_gpus) {
     }
 
     size_t free_mem;
-    size_t total_mem = 0;
-    size_t max_mem;
+    size_t total_mem            = 0;
+    size_t max_mem              = 0;
     size_t min_memory_available = 4294967296; // 4 Gb
     size_t min_memory_total     = 8589934592; // 8Gb
     int    selected_GPU         = -1;
@@ -63,6 +64,7 @@ void DeviceManager::Init(int wanted_number_of_gpus) {
         //	  wxPrintf("\n");
 
         cudaErr(cudaDeviceGetAttribute(&cuda_compute_mode, cudaDevAttrComputeMode, iGPU));
+
         cudaErr(cudaSetDevice(iGPU));
 
         //	  cudaErr(cudaMemGetInfo(&free_mem,&total_mem));
@@ -145,6 +147,8 @@ void DeviceManager::ListDevices( ) {
 
         cudaDeviceProp prop;
         cudaErr(cudaGetDeviceProperties(&prop, iGPU));
+        int can_use_host_ptr = -1;
+        cudaErr(cudaDeviceGetAttribute(&can_use_host_ptr, cudaDevAttrCanUseHostPointerForRegisteredMem, iGPU));
         wxPrintf("Device number: %d\n", iGPU);
         wxPrintf("  Device name: %s\n", prop.name);
         wxPrintf("  Memory clock cate (KHz): %d\n", prop.memoryClockRate);
@@ -152,9 +156,12 @@ void DeviceManager::ListDevices( ) {
         wxPrintf("  Memory bandwidth (GB/s): %f\n", 2.0 * prop.memoryClockRate * (prop.memoryBusWidth / 8) / 1.0e6);
         wxPrintf("  Number of multiprocessors: %d\n", prop.multiProcessorCount);
         wxPrintf("  Threads per multiprocessor: %d\n", prop.maxThreadsPerMultiProcessor);
+        wxPrintf("  Maximum 3dArray size: %i, %i, %i\n", prop.maxSurface3D[0], prop.maxSurface3D[1], prop.maxSurface3D[2]); // for texture cache
         // wxPrintf("  Memory per multiprocessor (GB): %f\n", float(prop.sharedMemPerMultiprocessor) / 1024 / 1024 / 1024);
         wxPrintf("  Memory on device (GB): %f\n", float(prop.totalGlobalMem) / 1024 / 1024 / 1024);
         wxPrintf("  Free memory (GB): %f\n", float(free_mem) / 1024 / 1024 / 1024);
+        wxPrintf("  cudaDevAttrCanUseHostPointerForRegisteredMem = %i\n", can_use_host_ptr);
+
         // if (cuda_compute_mode == cudaComputeModeProhibited) wxPrintf("  Device incompatible with CUDA\n");
         if ( prop.totalGlobalMem <= min_memory_available )
             wxPrintf("  *** Not enough memory on device, %f GB needed ***\n", float(min_memory_available) / 1024 / 1024 / 1024);

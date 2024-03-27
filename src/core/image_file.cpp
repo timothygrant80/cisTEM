@@ -33,8 +33,20 @@ void ImageFile::SetFileTypeFromExtension( ) {
         file_type_string = "EER";
     }
     else {
-        file_type        = UNSUPPORTED_FILE_TYPE;
-        file_type_string = "Unsupported file type";
+        // FIXME: Change for display prog:
+        // We will perform quick check on MRC format so any properly formatted MRC type with any extension
+        // can be opened. Maybe a bit ugly, so alternatives should potentially be considered.
+        // GetMRCDetails is also wanted as a member of the MRCFile class, and this method relies on the function
+        // being a non-member
+        int x_size, y_size, number_of_frames;
+        if ( GetMRCDetails(filename.GetFullPath( ), x_size, y_size, number_of_frames) ) {
+            file_type        = MRC_FILE;
+            file_type_string = "MRC";
+        }
+        else {
+            file_type        = UNSUPPORTED_FILE_TYPE;
+            file_type_string = "Unsupported file type";
+        }
     }
 }
 
@@ -42,6 +54,13 @@ bool ImageFile::OpenFile(std::string wanted_filename, bool overwrite, bool wait_
     bool file_seems_ok = false;
     filename           = wanted_filename;
     SetFileTypeFromExtension( );
+    // FIXME:
+    // The default eer_frames_per_image is being grabbed from the GUI even for tif files.
+    // This causes an encoding error and crash. It really should be fixed there, however,
+    // By overriding it here, all a user has to do is rename their files with eer extension to get around this hack.
+    if ( file_type != EER_FILE ) {
+        eer_frames_per_image = 0;
+    }
     switch ( file_type ) {
         case TIFF_FILE: file_seems_ok = tiff_file.OpenFile(wanted_filename, overwrite, wait_for_file_to_exist, check_only_the_first_image, eer_super_res_factor, eer_frames_per_image); break;
         case MRC_FILE: file_seems_ok = mrc_file.OpenFile(wanted_filename, overwrite, wait_for_file_to_exist, check_only_the_first_image, eer_super_res_factor, eer_frames_per_image); break;

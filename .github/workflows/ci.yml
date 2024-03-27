@@ -17,18 +17,21 @@ jobs:
           - compiler: icpc
             cxx: icpc
             cc: icc
-            staticmode: "--enable-staticmode --enable-openmp"
+            config_options: "--enable-staticmode --enable-openmp --enable-experimental --enable-samples --with-wx-config=/opt/WX/intel-static/bin/wx-config"
+            source_cmd: ". /opt/intel/oneapi/setvars.sh"
           - compiler: gcc
             cxx: g++
             cc: gcc
-            staticmode: "--enable-staticmode --enable-openmp"
+            config_options: "--enable-staticmode --enable-openmp --enable-experimental --enable-samples  --with-wx-config=wx-config"
+            source_cmd: ""
           - compiler: clang
             cxx: clang++
             cc: clang
-            staticmode: ""
+            config_options: "--enable-experimental --enable-samples  --with-wx-config=wx-config"
+            source_cmd: ""
           
     runs-on: ubuntu-latest
-    container: jojoelfe/cistem_ci_${{ matrix.compiler }}
+    container: cistemdashorg/cistem_build_env:ci_${{ matrix.compiler }}
     outputs:
       version: ${{ steps.configure.outputs.version }}
     steps:
@@ -37,15 +40,7 @@ jobs:
         fetch-depth: 0
     - name: regenerate_project
       run: ./regenerate_project.b
-#    - name: set path
-#      run: | 
-#        echo "/opt/intel/oneapi/compiler/2021.4.0/linux/bin/intel64" >> $GITHUB_PATH
-#        echo "CPATH=/opt/intel/oneapi/vpl/2021.6.0/include:/opt/intel/oneapi/tbb/2021.4.0/env/../include:/opt/intel/oneapi/mpi/2021.4.0//include:/opt/intel/oneapi/mkl/2021.4.0/include:/opt/intel/oneapi/ippcp/2021.4.0/include:/opt/intel/oneapi/ipp/2021.4.0/include:/opt/intel/oneapi/dpl/2021.5.0/linux/include:/opt/intel/oneapi/dnnl/2021.4.0/cpu_dpcpp_gpu_dpcpp/lib:/opt/intel/oneapi/dev-utilities/2021.4.0/include:/opt/intel/oneapi/dal/2021.4.0/include:/opt/intel/oneapi/compiler/2021.4.0/linux/include:/opt/intel/oneapi/ccl/2021.4.0/include/cpu_gpu_dpcpp" >> $GITHUB_ENV
-#        echo "LD_LIBRARY_PATH=/opt/intel/oneapi/vpl/2021.6.0/lib:/opt/intel/oneapi/tbb/2021.4.0/env/../lib/intel64/gcc4.8:/opt/intel/oneapi/mpi/2021.4.0//libfabric/lib:/opt/intel/oneapi/mpi/2021.4.0//lib/release:/opt/intel/oneapi/mpi/2021.4.0//lib:/opt/intel/oneapi/mkl/2021.4.0/lib/intel64:/opt/intel/oneapi/itac/2021.4.0/slib:/opt/intel/oneapi/ippcp/2021.4.0/lib/intel64:/opt/intel/oneapi/ipp/2021.4.0/lib/intel64:/opt/intel/oneapi/dnnl/2021.4.0/cpu_dpcpp_gpu_dpcpp/lib:/opt/intel/oneapi/debugger/10.2.4/gdb/intel64/lib:/opt/intel/oneapi/debugger/10.2.4/libipt/intel64/lib:/opt/intel/oneapi/debugger/10.2.4/dep/lib:/opt/intel/oneapi/dal/2021.4.0/lib/intel64:/opt/intel/oneapi/compiler/2021.4.0/linux/lib:/opt/intel/oneapi/compiler/2021.4.0/linux/lib/x64:/opt/intel/oneapi/compiler/2021.4.0/linux/lib/emu:/opt/intel/oneapi/compiler/2021.4.0/linux/lib/oclfpga/host/linux64/lib:/opt/intel/oneapi/compiler/2021.4.0/linux/lib/oclfpga/linux64/lib:/opt/intel/oneapi/compiler/2021.4.0/linux/compiler/lib/intel64_lin:/opt/intel/oneapi/ccl/2021.4.0/lib/cpu_gpu_dpcpp" >> $GITHUB_ENV
-#        echo "MKLROOT=/opt/intel/oneapi/mkl/2021.4.0" >> $GITHUB_ENV
-#        echo "PKG_CONFIG_PATH=/opt/intel/oneapi/vtune/2021.7.1/include/pkgconfig/lib64:/opt/intel/oneapi/vpl/2021.6.0/lib/pkgconfig:/opt/intel/oneapi/tbb/2021.4.0/env/../lib/pkgconfig:/opt/intel/oneapi/mpi/2021.4.0/lib/pkgconfig:/opt/intel/oneapi/mkl/2021.4.0/lib/pkgconfig:/opt/intel/oneapi/ippcp/2021.4.0/lib/pkgconfig:/opt/intel/oneapi/inspector/2021.4.0/include/pkgconfig/lib64:/opt/intel/oneapi/dpl/2021.5.0/lib/pkgconfig:/opt/intel/oneapi/dal/2021.4.0/lib/pkgconfig:/opt/intel/oneapi/compiler/2021.4.0/lib/pkgconfig:/opt/intel/oneapi/ccl/2021.4.0/lib/pkgconfig:/opt/intel/oneapi/advisor/2021.4.0/include/pkgconfig/lib64:" >> $GITHUB_ENV
-#        echo "LIBRARY_PATH=/opt/intel/oneapi/vpl/2021.6.0/lib:/opt/intel/oneapi/tbb/2021.4.0/env/../lib/intel64/gcc4.8:/opt/intel/oneapi/mpi/2021.4.0//libfabric/lib:/opt/intel/oneapi/mpi/2021.4.0//lib/release:/opt/intel/oneapi/mpi/2021.4.0//lib:/opt/intel/oneapi/mkl/2021.4.0/lib/intel64:/opt/intel/oneapi/ippcp/2021.4.0/lib/intel64:/opt/intel/oneapi/ipp/2021.4.0/lib/intel64:/opt/intel/oneapi/dnnl/2021.4.0/cpu_dpcpp_gpu_dpcpp/lib:/opt/intel/oneapi/dal/2021.4.0/lib/intel64:/opt/intel/oneapi/compiler/2021.4.0/linux/compiler/lib/intel64_lin:/opt/intel/oneapi/compiler/2021.4.0/linux/lib:/opt/intel/oneapi/clck/2021.4.0/lib/intel64:/opt/intel/oneapi/ccl/2021.4.0/lib/cpu_gpu_dpcpp" >> $GITHUB_ENV
-#        echo "NLSPATH=/opt/intel/oneapi/mkl/2021.4.0/lib/intel64/locale/%l_%t/%N" >> $GITHUB_ENV
+
     - name: configure
       env:
         CC: ${{ matrix.cc }}
@@ -55,12 +50,13 @@ jobs:
         cd build/${{ matrix.compiler }} 
         echo $CC
         echo $CXX
-        ../../configure  --enable-experimental ${{matrix.staticmode}} --with-wx-config=wx-config  --enable-samples
+        ${{ matrix.source_cmd }}
+        ../../configure ${{matrix.config_options}}
         VERSION=$(cat config.log | grep CISTEM_VERSION_TEXT | cut -d' ' -f3 | tr -d '"')
         echo "::set-output name=version::$VERSION" 
-    - uses: ammaraskar/gcc-problem-matcher@master
     - name: make 
       run: |
+        ${{ matrix.source_cmd }}
         cd build/${{ matrix.compiler }}
         make -j2
         cp ../../scripts/testing/test_and_benchmark.sh src/
@@ -126,4 +122,27 @@ jobs:
       run: |
         chmod +x samples_functional_testing
         ./samples_functional_testing
+
+  unit_tests:
+    strategy:
+      fail-fast: true
+      matrix:
+        compiler: [icpc,gcc,clang]
+    name: Unit Tests
+    needs: build
+    runs-on: ubuntu-latest
+    steps:
+    - name: Download artifact
+      uses: actions/download-artifact@v2
+      with:
+        name: cistem_binaries_${{ matrix.compiler }}
+    - name: Install fftw3
+      if: ${{ matrix.compiler=='gcc' || matrix.compiler=='clang' }}
+      run: sudo apt-get install -y libfftw3-dev 
+    - name: run unit tests
+      continue-on-error: false
+      run: |
+        chmod +x unit_test_runner
+        ./unit_test_runner
+
 

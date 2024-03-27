@@ -25,11 +25,11 @@ class MatchTemplateResultsPanel : public MatchTemplateResultsPanelParent {
     void OnByFilterSelect(wxCommandEvent& event);
     void OnCharHook(wxKeyEvent& event);
 
-    long* template_match_job_ids;
-    int   number_of_template_match_ids;
-    int*  per_row_asset_id;
-    int*  per_row_array_position;
-    int   number_of_assets;
+    std::vector<long> template_match_job_ids;
+    int               number_of_template_match_ids;
+    int*              per_row_asset_id;
+    int*              per_row_array_position;
+    int               number_of_assets;
 
     int selected_row;
     int selected_column;

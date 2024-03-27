@@ -1,12 +1,12 @@
-
+#ifndef _SRC_GPU_DEVICEMANAGER_H_
+#define _SRC_GPU_DEVICEMANAGER_H_
 
 class DeviceManager {
 
   public:
-    int   nGPUs;
-    int   gpuIDX;
-    bool  is_manager_initialized = false;
-    bool* is_gpu_free;
+    int  nGPUs;
+    int  gpuIDX;
+    bool is_manager_initialized = false;
 
     DeviceManager( );
     DeviceManager(int wanted_number_of_gpus);
@@ -19,3 +19,5 @@ class DeviceManager {
 
   private:
 };
+
+#endif // _SRC_GPU_DEVICEMANAGER_H_

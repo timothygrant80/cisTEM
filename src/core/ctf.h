@@ -1,3 +1,5 @@
+class Image;
+
 class CTF {
 
   private:
@@ -118,7 +120,6 @@ class CTF {
     float               DefocusGivenAzimuth(float azimuth);
     float               BeamTiltGivenAzimuth(float azimuth);
     float               ParticleShiftGivenAzimuth(float azimuth);
-    float               WavelengthGivenAccelerationVoltage(float acceleration_voltage);
 
     // This is the sinc(xi) term derived in the supplemental of McMullan et al. (2015)
     inline float IntegratedDefocusModulation(float squared_spatial_frequency) {
@@ -167,4 +168,10 @@ class CTF {
     float ReturnSquaredSpatialFrequencyOfPhaseShiftExtremumGivenDefocus(float defocus);
     float ReturnPhaseAberrationMaximum( );
     float ReturnPhaseAberrationMaximumGivenDefocus(float defocus);
+    float ReturnAzimuthToUseFor1DPlots( );
+    void  ComputeImagesWithNumberOfExtremaAndCTFValues(Image* number_of_extrema, Image* ctf_values);
 };
+
+void Renormalize1DSpectrumForFRC(int number_of_bins, double average[], double fit[], float number_of_extrema_profile[]);
+void ComputeFRCBetween1DSpectrumAndFit(int number_of_bins, double average[], double fit[], float number_of_extrema_profile[], double frc[], double frc_sigma[], int first_fit_bin);
+int  ReturnSpectrumBinNumber(int number_of_bins, float number_of_extrema_profile[], Image* number_of_extrema, long address, Image* ctf_values, float ctf_values_profile[]);

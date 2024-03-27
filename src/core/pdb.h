@@ -5,6 +5,9 @@
 
 #define MAX_NUMBER_OF_NOISE_PARTICLES 6
 
+#include "../constants/constants.h"
+
+// FIXME: move to constants/chemical_constants.h
 enum AtomType : int { hydrogen       = 0,
                       carbon         = 1,
                       nitrogen       = 2,
@@ -35,6 +38,12 @@ class Atom {
   private:
 
   public:
+    Atom( );
+    Atom(const wxString& name, const bool& is_real_particle, const AtomType& atom_type, const float& x, const float& y, const float& z, const float& occ, const float& bfactor, const float& charge);
+    Atom(const Atom& atom);
+    Atom& operator=(const Atom& atom);
+    Atom& operator=(const Atom* atom);
+    ~Atom( );
     // If any fields are added or modified here, be sure to update the CopyAtom method in the PDB class.
     wxString name;
     AtomType atom_type;
@@ -46,8 +55,6 @@ class Atom {
     float    bfactor;
     float    charge;
 };
-
-WX_DECLARE_OBJARRAY(Atom, ArrayOfAtoms);
 
 class ParticleTrajectory {
 
@@ -88,7 +95,7 @@ class PDB {
     wxTextOutputStream* output_text_stream;
 
   public:
-    ArrayOfAtoms                my_atoms;
+    std::vector<Atom>           atoms;
     ArrayOfParticleTrajectories my_trajectory;
     // This should be used to replace my_trajectory. For now just using for the noise atoms.
     AnglesAndShifts                  my_angles_and_shifts[MAX_NUMBER_OF_NOISE_PARTICLES];
@@ -106,6 +113,11 @@ class PDB {
     //ArrayOfParticleInstances my_particle;
     // Constructors
     PDB( );
+    PDB(const PDB& copy_pdb);
+    PDB& operator=(const PDB& other_pdb);
+    PDB& operator=(const PDB* other_pdb);
+    void SetDefaultValues( );
+
     PDB(long number_of_non_water_atoms, float cubic_size, float wanted_pixel_size, int minimum_paddeding_x_and_y, double minimum_thickness_z,
         int   max_number_of_noise_particles,
         float wanted_noise_particle_radius_as_mutliple_of_particle_radius,
@@ -116,7 +128,12 @@ class PDB {
         bool  is_alpha_fold_prediction,
         bool  use_star_file);
 
-    PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, long wanted_records_per_line, int minimum_paddeding_x_and_y, double minimum_thickness_z,
+    PDB(wxString          Filename,
+        long              wanted_access_type,
+        float             wanted_pixel_size,
+        long              wanted_records_per_line,
+        int               minimum_paddeding_x_and_y,
+        double            minimum_thickness_z,
         int               max_number_of_noise_particles,
         float             wanted_noise_particle_radius_as_mutliple_of_particle_radius,
         float             wanted_noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
@@ -124,9 +141,17 @@ class PDB {
         float             emulate_tilt_angle,
         bool              shift_by_center_of_mass,
         bool              is_alpha_fold_prediction,
-        cisTEMParameters& wanted_star_file, bool use_star_file);
+        cisTEMParameters& wanted_star_file,
+        bool              use_star_file);
 
-    PDB(wxString Filename, long wanted_access_type, float wanted_pixel_size, long wanted_records_per_line, int minimum_paddeding_x_and_y, double minimum_thickness_z, double* center_of_mass, bool is_alpha_fold_prediction);
+    PDB(wxString Filename,
+        long     wanted_access_type,
+        float    wanted_pixel_size,
+        long     wanted_records_per_line,
+        int      minimum_paddeding_x_and_y,
+        double   minimum_thickness_z,
+        bool     is_alpha_fold_prediction,
+        double*  center_of_mass = nullptr);
 
     ~PDB( );
 
@@ -142,7 +167,7 @@ class PDB {
     bool   is_alpha_fold_prediction;
 
     int   number_of_particles_initialized;
-    long  number_of_each_atom[NUMBER_OF_ATOM_TYPES];
+    long  number_of_each_atom[cistem::number_of_atom_types];
     float atomic_volume;
     float average_bFactor;
     float pixel_size;
@@ -163,20 +188,20 @@ class PDB {
 
     // H(0),C(1),N(2),O(3),F(4),Na(5),Mg(6),P(7),S(8),Cl(9),K(10),Ca(11),Mn(12),Fe(13),Zn(14),H20(15),0-(16)
 
-    // This should probably be a copy constructor in the Atom class FIXME
-    Atom CopyAtom(Atom& atom_to_copy) {
-        Atom atom_out;
-        atom_out.atom_type        = atom_to_copy.atom_type;
-        atom_out.is_real_particle = atom_to_copy.is_real_particle;
-        atom_out.name             = atom_to_copy.name;
-        atom_out.x_coordinate     = atom_to_copy.x_coordinate; // Angstrom
-        atom_out.y_coordinate     = atom_to_copy.y_coordinate; // Angstrom
-        atom_out.z_coordinate     = atom_to_copy.z_coordinate; // Angstrom
-        atom_out.occupancy        = atom_to_copy.occupancy;
-        atom_out.bfactor          = atom_to_copy.bfactor;
-        atom_out.charge           = atom_to_copy.charge;
-        return atom_out;
-    };
+    // // This should probably be a copy constructor in the Atom class FIXME
+    // Atom& CopyAtom(const Atom& atom_to_copy) {
+    //     Atom atom_out;
+    //     atom_out.atom_type        = atom_to_copy.atom_type;
+    //     atom_out.is_real_particle = atom_to_copy.is_real_particle;
+    //     atom_out.name             = atom_to_copy.name;
+    //     atom_out.x_coordinate     = atom_to_copy.x_coordinate; // Angstrom
+    //     atom_out.y_coordinate     = atom_to_copy.y_coordinate; // Angstrom
+    //     atom_out.z_coordinate     = atom_to_copy.z_coordinate; // Angstrom
+    //     atom_out.occupancy        = atom_to_copy.occupancy;
+    //     atom_out.bfactor          = atom_to_copy.bfactor;
+    //     atom_out.charge           = atom_to_copy.charge;
+    //     return atom_out;
+    // };
 
     // Methods
 
@@ -196,6 +221,8 @@ class PDB {
     void TransformBaseCoordinates(float wanted_origin_x, float wanted_origin_y, float wanted_origin_z, float euler1, float euler2, float euler3, int particle_idx, int frame_number);
     void TransformLocalAndCombine(PDB* pdb_ensemble, int number_of_pdbs, int frame_number, RotationMatrix particle_rot, float shift_z, bool is_single_particle = false);
     void TransformGlobalAndSortOnZ(long number_of_non_water_atoms, float shift_x, float shift_y, float shift_z, RotationMatrix rotate_waters);
+
+    void TransformLocalAndCombine(PDB& clean_copy, int number_of_pdbs, int frame_number, RotationMatrix particle_rot, float shift_z, bool is_single_particle = false);
 
     inline bool IsNonAminoAcid(wxString atom_name) {
         // TODO make sure this is a valid way to check

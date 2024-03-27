@@ -3,12 +3,14 @@
 	for information on actual data management / addressing see the image_data_array class..
 
 */
+#include "../../include/ieee-754-half/half.hpp"
 
 class ReconstructedVolume;
 class EulerSearch;
 class ResolutionStatistics;
 class RotationMatrix;
 class MyApp;
+class GpuImage;
 
 using namespace cistem;
 
@@ -21,6 +23,7 @@ class Image {
 
     bool is_in_real_space; // !< Whether the image is in real or Fourier space
     bool object_is_centred_in_box; //!<  Whether the object or region of interest is near the center of the box (as opposed to near the corners and wrapped around). This refers to real space and is meaningless in Fourier space.
+    bool is_fft_centered_in_box; //!< Whether the image is centered in the box (as opposed to near the corners and wrapped around). This refers to Fourier space and is meaningless in real space.
 
     int physical_upper_bound_complex_x; // !< In each dimension, the upper bound of the complex image's physical addresses
     int physical_upper_bound_complex_y; // !< In each dimension, the upper bound of the complex image's physical addresses
@@ -55,8 +58,9 @@ class Image {
     int logical_lower_bound_real_z; // !<  In each dimension, the lower bound of the real image's logical addresses
 
     long real_memory_allocated; // !<  Number of floats allocated in real space;
+    int  real_memory_allocated_16f;
 
-    int padding_jump_value; // !<  The FFTW padding value, if odd this is 2, if even it is 1.  It is used in loops etc over real space.
+    int padding_jump_value; // !<  The FFTW padding value, if odd this is 1, if even it is 2.  It is used in loops etc over real space.
 
     int insert_into_which_reconstruction; // !<  Determines which reconstruction the image will be inserted into (for FSC calculation).
 
@@ -68,6 +72,47 @@ class Image {
     float*               real_values; // !<  Real array to hold values for REAL images.
     std::complex<float>* complex_values; // !<  Complex array to hold values for COMP images.
     bool                 is_in_memory; // !<  Whether image values are in-memory, in other words whether the image has memory space allocated to its data array. Default = .FALSE.
+    bool                 is_page_locked_real_values = false; // !<  Whether the page-locked memory has been registered with CUDA. Has no impact without DENABLE_GPU. See gpu/core_extensions/image.cu
+
+    half_float::half* real_values_16f;
+    bool              is_in_memory_16f;
+    bool              is_page_locked_real_values_16f = false;
+
+    // By expanding data types, some of the legacy bools used to track state, like is_in_memory, become cumbersome. Use templating to ensure that the correct state is tracked.
+
+    // This could of course be done by replacing the naked pointers by smart pointers.
+    // Maybe it would be nice to hide these somewhere else?
+    template <typename StorageBaseType>
+    bool IsMemoryAllocated(StorageBaseType* ptr) {
+        if constexpr ( std::is_same_v<StorageBaseType, float> )
+            return is_in_memory;
+        else if constexpr ( std::is_same_v<StorageBaseType, half_float::half> )
+            return is_in_memory_16f;
+        else
+            MyDebugAssertTrue(false, "Unknown StorageBaseType");
+        return false;
+    }
+
+    template <typename StorageBaseType>
+    bool IsMemoryPageLocked(StorageBaseType* ptr) {
+        if constexpr ( std::is_same_v<StorageBaseType, float> )
+            return is_page_locked_real_values;
+        else if constexpr ( std::is_same_v<StorageBaseType, half_float::half> )
+            return is_page_locked_real_values_16f;
+        else
+            MyDebugAssertTrue(false, "Unknown StorageBaseType");
+        return false;
+    }
+
+    template <typename StorageBaseType>
+    void SetIsMemoryPageLocked(StorageBaseType* ptr, bool value) {
+        if constexpr ( std::is_same_v<StorageBaseType, float> )
+            is_page_locked_real_values = value;
+        else if constexpr ( std::is_same_v<StorageBaseType, half_float::half> )
+            is_page_locked_real_values_16f = value;
+        else
+            MyDebugAssertTrue(false, "Unknown StorageBaseType");
+    }
 
     // FFTW-specfic
 
@@ -81,6 +126,7 @@ class Image {
     // Methods
 
     Image( );
+    Image(int wanted_x_size, int wanted_y_size, int wanted_z_size = 1, bool is_in_real_space = true, bool do_fft_planning = true);
     Image(const Image& other_image); // copy constructor
     ~Image( );
 
@@ -92,6 +138,15 @@ class Image {
     void Allocate(int wanted_x_size, int wanted_y_size, int wanted_z_size = 1, bool is_in_real_space = true, bool do_fft_planning = true);
     void Allocate(int wanted_x_size, int wanted_y_size, bool is_in_real_space = true);
     void Allocate(Image* image_to_copy_size_and_space_from);
+    void Allocate16fBuffer( );
+
+    // To enable asynchronous memory transfers, we need to allocate page-locked memory, only has an effect with DENABLE_GPU. See gpu/core_extensions/image.cu
+    template <typename StorageBaseType = float>
+    void AllocatePageLockedMemory(int wanted_x_size, int wanted_y_size, int wanted_z_size = 1, bool is_in_real_space = true, bool do_fft_planning = true);
+    template <typename StorageBaseType>
+    void RegisterPageLockedMemory(StorageBaseType* ptr);
+    template <typename StorageBaseType>
+    void UnRegisterPageLockedMemory(StorageBaseType* ptr);
 
     void AllocateAsPointingToSliceIn3D(Image* wanted3d, long wanted_slice);
 
@@ -113,9 +168,11 @@ class Image {
     float ReturnBeamTiltSignificanceScore(Image calculated_beam_tilt);
     float ReturnPixelWiseProduct(Image& other_image);
     float GetWeightedCorrelationWithImage(Image& projection_image, int* bins, float signed_CC_limit);
+    float GetWeightedCorrelationWithImage(Image& projection_image, float low_limit2, float high_limit2, float signed_CC_limit2);
     void  PhaseFlipPixelWise(Image& other_image);
     void  MultiplyPixelWiseReal(Image& other_image, bool absolute = false);
     void  MultiplyPixelWise(Image& other_image);
+    void  Conj( );
     void  ConjugateMultiplyPixelWise(Image& other_image);
     void  ComputeFSCVectorized(Image* other_image, Image* work_this_image_squared, Image* work_other_image_squared, Image* work_cross_product_image, int number_of_shells, int* shell_number, float* computed_fsc, double* work_sum_of_squares, double* work_sum_of_other_squares, double* work_sum_of_cross_products);
     void  ComputeFSC(Image* other_image, int number_of_shells, int* shell_number, float* computed_fsc, double* work_sum_of_squares, double* work_sum_of_other_squares, double* work_sum_of_cross_products);
@@ -134,24 +191,52 @@ class Image {
 
     void AddNoiseFromGammaDistribution(float wanted_alpha_value, float wanted_beta_value) { AddNoise(GAMMA, wanted_alpha_value, wanted_beta_value); }
 
-    long                  ZeroFloat(float wanted_mask_radius = 0.0, bool outsize = false);
-    long                  ZeroFloatAndNormalize(float wanted_sigma_value = 1.0, float wanted_mask_radius = 0.0, bool outside = false);
-    long                  Normalize(float wanted_sigma_value = 1.0, float wanted_mask_radius = 0.0, bool outside = false);
-    void                  NormalizeSumOfSquares( );
-    void                  ZeroFloatOutside(float wanted_mask_radius, bool invert_mask = false);
-    void                  ReplaceOutliersWithMean(float maximum_n_sigmas);
-    float                 ReturnVarianceOfRealValues(float wanted_mask_radius = 0.0, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0, bool invert_mask = false);
+    void FillWithNoiseFromUniformDistribution(float wanted_minimum_value, float wanted_maximum_value) {
+        SetToConstant(0.f);
+        AddNoise(UNIFORM, wanted_minimum_value, wanted_maximum_value);
+    }
+
+    void FillWithNoiseFromNormalDistribution(float wanted_mean_value, float wanted_sigma_value) {
+        SetToConstant(0.f);
+        AddNoise(GAUSSIAN, wanted_mean_value, wanted_sigma_value);
+    }
+
+    void FillWithNoiseFromPoissonDistribution(float wanted_mean_value) {
+        SetToConstant(0.f);
+        AddNoise(POISSON, wanted_mean_value, 0.1f);
+    }
+
+    void FillWithNoiseFromExponentialDistribution(float wanted_lambda_value) {
+        SetToConstant(0.f);
+        AddNoise(EXPONENTIAL, wanted_lambda_value, 0.1f);
+    }
+
+    void FillWithNoiseFromGammaDistribution(float wanted_alpha_value, float wanted_beta_value) {
+        SetToConstant(0.f);
+        AddNoise(GAMMA, wanted_alpha_value, wanted_beta_value);
+    }
+
     EmpiricalDistribution ReturnDistributionOfRealValues(float wanted_mask_radius = 0.0, bool outside = false, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0);
-    void                  UpdateDistributionOfRealValues(EmpiricalDistribution* distribution_to_update, float wanted_mask_radius = 0.0, bool outside = false, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0);
-    void                  ApplySqrtNFilter( );
-    void                  Whiten(float resolution_limit = 1.0, Curve* whitening_filter = NULL);
-    void                  OptimalFilterBySNRImage(Image& SNR_image, int include_reference_weighting = 1);
-    void                  MultiplyByWeightsCurve(Curve& weights, float scale_factor = 1.0);
-    void                  MultiplyByWeightsCurveReal(Curve& weights, float scale_factor);
-    void                  WeightBySSNR(Image& ctf_image, float molecular_mass_kDa, float pixel_size, Curve& SSNR, Image& projection_image, bool weight_particle_image, bool weight_projection_image);
-    void                  OptimalFilterSSNR(Curve& SSNR);
-    void                  OptimalFilterFSC(Curve& FSC);
-    void                  OptimalFilterWarp(CTF ctf, float pixel_size_in_angstroms, float ssnr_falloff_fudge_factor = 1.0, float ssnr_scale_fudge_factor = 1.0, float ssnr_falloff_frequency = 100.0, float high_pass_frequency = 200.0);
+
+    long ZeroFloat(float wanted_mask_radius = 0.0, bool outsize = false);
+    long ZeroFloatAndNormalize(float wanted_sigma_value = 1.0, float wanted_mask_radius = 0.0, bool outside = false);
+    long Normalize(float wanted_sigma_value = 1.0, float wanted_mask_radius = 0.0, bool outside = false);
+    void NormalizeSumOfSquares( );
+    void ZeroFloatOutside(float wanted_mask_radius, bool invert_mask = false);
+
+    void  ReplaceOutliersWithMean(float mean, float stdDev, float maximum_n_sigmas);
+    void  ReplaceOutliersWithMean(float maximum_n_sigmas);
+    float ReturnVarianceOfRealValues(float wanted_mask_radius = 0.0, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0, bool invert_mask = false);
+    void  UpdateDistributionOfRealValues(EmpiricalDistribution* distribution_to_update, float wanted_mask_radius = 0.0, bool outside = false, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0);
+    void  ApplySqrtNFilter( );
+    void  Whiten(float resolution_limit = 1.0, Curve* whitening_filter = NULL);
+    void  OptimalFilterBySNRImage(Image& SNR_image, int include_reference_weighting = 1);
+    void  MultiplyByWeightsCurve(Curve& weights, float scale_factor = 1.0);
+    void  MultiplyByWeightsCurveReal(Curve& weights, float scale_factor);
+    void  WeightBySSNR(Image& ctf_image, float molecular_mass_kDa, float pixel_size, Curve& SSNR, Image& projection_image, bool weight_particle_image, bool weight_projection_image);
+    void  OptimalFilterSSNR(Curve& SSNR);
+    void  OptimalFilterFSC(Curve& FSC);
+    void  OptimalFilterWarp(CTF ctf, float pixel_size_in_angstroms, float ssnr_falloff_fudge_factor = 1.0, float ssnr_scale_fudge_factor = 1.0, float ssnr_falloff_frequency = 100.0, float high_pass_frequency = 200.0);
     //float Correct3D(float wanted_mask_radius = 0.0);
     float               CorrectSinc(float wanted_mask_radius = 0.0, float padding_factor = 1.0, bool force_background_value = false, float wanted_mask_value = 0.0);
     void                MirrorXFourier2D(Image& mirrored_image);
@@ -198,7 +283,7 @@ class Image {
     float               SquareMaskWithCosineEdge(float wanted_mask_dim, float wanted_mask_edge, bool use_mean_value, int wanted_center_x, int wanted_center_y, int wanted_center_z);
 
     void TriangleMask(float wanted_triangle_half_base_length);
-    void CalculateCTFImage(CTF& ctf_of_image, bool calculate_complex_ctf = false, bool apply_coherence_envelope = false);
+    void CalculateCTFImage(CTF& ctf_of_image, bool calculate_complex_ctf = false, bool apply_coherence_envelope = false, bool use_half_precision = false);
     void CalculateBeamTiltImage(CTF& ctf_of_image, bool output_phase_shifts = false);
     bool ContainsBlankEdges(float mask_radius = 0.0);
 
@@ -422,7 +507,10 @@ class Image {
 
     void PhaseShift(float wanted_x_shift, float wanted_y_shift, float wanted_z_shift = 0.0);
 
+    // This has no check on real or complex status and I'm not going to take the time to see everywhere it is used
+    // as I'm sure it is likely intentional. Adding Abs() to actually return the absolute value of the underlying array.
     void MakeAbsolute( );
+    void Abs( );
 
     void  AddImage(Image* other_image);
     void  SubtractImage(Image* other_image);
@@ -440,9 +528,11 @@ class Image {
     void  MaskCentralCross(int vertical_half_width = 1, int horizontal_half_width = 1);
     void  ZeroCentralPixel( );
     void  CalculateCrossCorrelationImageWith(Image* other_image);
+    void  CalculatePhaseCrossCorrelationImageWith(Image& other_image, Peak& found_peak, float peak_shift_multiplier, bool normalize);
+    void  SwapFourierSpaceQuadrants(bool also_swap_real_space_quadrants = true);
     void  SwapRealSpaceQuadrants( );
     void  ComputeAmplitudeSpectrumFull2D(Image* other_image, bool calculate_phases = false, float phase_multiplier = 1.0f);
-    void  ComputeFilteredAmplitudeSpectrumFull2D(Image* average_spectrum_masked, Image* current_power_spectrum, float& average, float& sigma, float minimum_resolution, float maximum_resolution, float pixel_size_for_fitting);
+    void  ComputeFilteredAmplitudeSpectrumFull2D(Image* average_spectrum_masked, Image* current_power_spectrum, float& average, float& sigma, float minimum_resolution, float maximum_resolution, float pixel_size_for_fitting, bool apply_cosine_mask = true);
     void  ComputeAmplitudeSpectrum(Image* other_image, bool signed_values = false);
     void  ComputeHistogramOfRealValuesCurve(Curve* histogram_curve);
     void  Compute1DAmplitudeSpectrumCurve(Curve* curve_with_average_power, Curve* curve_with_number_of_values);
@@ -489,6 +579,7 @@ class Image {
     // Interpolation
     void GetRealValueByLinearInterpolationNoBoundsCheckImage(float& x, float& y, float& interpolated_value);
 
+    void FindPeakAtOriginFast2DMask(int max_pix_x, int max_pix_y);
     Peak FindPeakAtOriginFast2D(int max_pix_x, int max_pix_y);
     Peak FindPeakWithIntegerCoordinates(float wanted_min_radius = 0.0, float wanted_max_radius = FLT_MAX, int wanted_min_distance_from_edges = 0);
     void XCorrPeakFindWidth(int nxdim, int ny, float* xpeak, float* ypeak,

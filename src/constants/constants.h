@@ -17,6 +17,32 @@ namespace cistem {
 constexpr const int fraction_of_box_size_to_exclude_for_border = 4;
 constexpr const int maximum_number_of_detections               = 1000;
 
+namespace match_template {
+// Values for data that are passed around in the results.
+constexpr int number_of_output_images     = 8; //mip, psi, theta, phi, pixel, defocus, sums, sqsums (scaled mip is not sent out)
+constexpr int number_of_meta_data_values  = 7; // img_x, img_y, number cccs, histogram values, pixel_size
+constexpr int MAX_ALLOWED_NUMBER_OF_PEAKS = 1000; // An error will be thrown and job aborted if this number of peaks is exceeded in the make template results block
+
+/**
+ * @brief Fixed number of bins in histogram used for template matching. Must be < 1024 (max number of cuda threads in a block) and must be a multiple of 32 (cistem::gpu::warp size).
+ * 
+ */
+constexpr int   histogram_number_of_points = 512;
+constexpr float histogram_min              = -12.5f;
+constexpr float histogram_max              = 22.5f;
+constexpr float histogram_step             = (histogram_max - histogram_min) / float(histogram_number_of_points);
+
+enum Enum : int {
+    image_size_x,
+    image_size_y,
+    image_real_memory_allocated,
+    number_of_cccs,
+    number_of_histogram_bins,
+    ccc_scalar,
+    pixel_size,
+};
+} // namespace match_template
+
 namespace physical_constants {
 
 // From Shang and Sigworth, average of polar and non-polar from table 1 (with correction to polar radius 3, 1.7-->3.0);
@@ -131,6 +157,22 @@ constexpr std::array<std::string_view, 17> cufft_error_types = {
         "CUFFT_NOT_IMPLEMENTED",
         "CUFFT_LICENSE_ERROR",
         "CUFFT_NOT_SUPPORTED"};
+
+// To avoid extra calls to malloc managed, which are slow, set an enum for the different types were we may need tmp vals
+// Note: if you add one of these here, you need to make sure the memory allocation is also increased
+
+namespace tmp_val {
+
+constexpr size_t n_tmp_vals         = 1;
+constexpr size_t n_tmp_vals_complex = 3;
+
+enum Enum : int { ReturnSumSquareModulusComplexValues,
+                  ReturnSumOfRealValues,
+                  L2Norm,
+
+};
+} // namespace tmp_val
+
 } // namespace gpu
 
 } // namespace cistem

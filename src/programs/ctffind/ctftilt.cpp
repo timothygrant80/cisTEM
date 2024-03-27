@@ -1,9 +1,9 @@
 #include "../../core/core_headers.h"
 #include "./ctffind.h"
 
-CTFTilt::CTFTilt(ImageFile& wanted_input_file, float wanted_high_res_limit_ctf_fit, float wanted_high_res_limit_tilt_fit, float wanted_minimum_defocus, float wanted_maximum_defocus,
-                 float wanted_pixel_size, float wanted_acceleration_voltage_in_kV, float wanted_spherical_aberration_in_mm, float wanted_amplitude_contrast, float wanted_additional_phase_shift_in_radians,
-                 bool wanted_debug, std::string wanted_debug_json_output_filename) {
+void CTFTilt::Init(ImageFile& wanted_input_file, float wanted_high_res_limit_ctf_fit, float wanted_high_res_limit_tilt_fit, float wanted_minimum_defocus, float wanted_maximum_defocus,
+                   float wanted_pixel_size, float wanted_acceleration_voltage_in_kV, float wanted_spherical_aberration_in_mm, float wanted_amplitude_contrast, float wanted_additional_phase_shift_in_radians,
+                   bool wanted_debug, std::string wanted_debug_json_output_filename) {
     box_size  = 128;
     tile_size = 128;
 

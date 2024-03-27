@@ -942,7 +942,7 @@ bool CtffindApp::DoCalculation( ) {
         else {
             CTFTilt tilt_scorer;
             if ( determine_tilt ) {
-                tilt_scorer = CTFTilt(input_file, 5.0f, 10.0f, minimum_defocus, maximum_defocus, pixel_size_of_input_image, acceleration_voltage, spherical_aberration, amplitude_contrast, 0.0f, dump_debug_files, debug_file_prefix + "_tilt.json");
+                tilt_scorer.Init(input_file, 5.0f, 10.0f, minimum_defocus, maximum_defocus, pixel_size_of_input_image, acceleration_voltage, spherical_aberration, amplitude_contrast, 0.0f, dump_debug_files, debug_file_prefix + "_tilt.json");
             }
             for ( current_first_frame_within_average = 1; current_first_frame_within_average <= number_of_movie_frames; current_first_frame_within_average += number_of_frames_to_average ) {
                 for ( current_frame_within_average = 1; current_frame_within_average <= number_of_frames_to_average; current_frame_within_average++ ) {

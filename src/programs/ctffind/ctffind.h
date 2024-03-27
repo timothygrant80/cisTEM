@@ -52,7 +52,7 @@ class CTFTilt {
     Image  ctf_image;
     Image  sub_section;
     Image* resampled_power_spectra = nullptr;
-    Image* input_image_buffer = nullptr;
+    Image* input_image_buffer      = nullptr;
 
     bool rough_defocus_determined;
     bool defocus_astigmatism_determined;
@@ -65,10 +65,10 @@ class CTFTilt {
   public:
     // Provide empty default constructor for when tilt is not going to be estimated
     CTFTilt( ){ };
-    CTFTilt(ImageFile& wanted_input_file, float wanted_high_res_limit_ctf_fit, float wanted_high_res_limit_tilt_fit, float wanted_minimum_defocus, float wanted_maximum_defocus,
-            float wanted_pixel_size, float wanted_acceleration_voltage_in_kV, float wanted_spherical_aberration_in_mm, float wanted_amplitude_contrast, float wanted_additional_phase_shift_in_radians,
-            bool wanted_debug = false, std::string wanted_debug_json_output_filename = "");
     ~CTFTilt( );
+    void   Init(ImageFile& wanted_input_file, float wanted_high_res_limit_ctf_fit, float wanted_high_res_limit_tilt_fit, float wanted_minimum_defocus, float wanted_maximum_defocus,
+                float wanted_pixel_size, float wanted_acceleration_voltage_in_kV, float wanted_spherical_aberration_in_mm, float wanted_amplitude_contrast, float wanted_additional_phase_shift_in_radians,
+                bool wanted_debug = false, std::string wanted_debug_json_output_filename = "");
     void   CalculatePowerSpectra(bool subtract_average = false);
     void   UpdateInputImage(Image* wanted_input_image);
     float  FindRoughDefocus( );

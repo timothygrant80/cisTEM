@@ -789,31 +789,31 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
                                    known_astigmatism, // 21
                                    known_astigmatism_angle, // 22
                                    resample_if_pixel_too_small, // 23
-                                   movie_is_gain_corrected,
-                                   current_gain_filename.ToStdString( ).c_str( ),
-                                   movie_is_dark_corrected,
-                                   current_dark_filename.ToStdString( ).c_str( ),
-                                   correct_movie_mag_distortion,
-                                   movie_mag_distortion_angle,
-                                   movie_mag_distortion_major_scale,
-                                   movie_mag_distortion_minor_scale,
-                                   defocus_is_known,
-                                   known_defocus_1,
-                                   known_defocus_2,
-                                   known_phase_shift,
-                                   determine_tilt,
-                                   number_of_threads,
-                                   current_eer_frames_per_image,
-                                   current_eer_super_res_factor,
-                                   filter_lowres_signal,
-                                   fit_nodes,
-                                   fit_nodes_1d,
-                                   fit_nodes_2d,
-                                   fit_nodes_min_res,
-                                   fit_nodes_max_res,
-                                   resample_pixel_size,
-                                   fit_nodes_rounded_square,
-                                   fit_nodes_weights);
+                                   movie_is_gain_corrected, // 24
+                                   current_gain_filename.ToStdString( ).c_str( ), // 25
+                                   movie_is_dark_corrected, // 26
+                                   current_dark_filename.ToStdString( ).c_str( ), // 27
+                                   correct_movie_mag_distortion, // 28
+                                   movie_mag_distortion_angle, // 29
+                                   movie_mag_distortion_major_scale, // 30
+                                   movie_mag_distortion_minor_scale, // 31
+                                   defocus_is_known, // 32
+                                   known_defocus_1, // 33
+                                   known_defocus_2, // 34
+                                   known_phase_shift, // 35
+                                   determine_tilt, // 36
+                                   number_of_threads, // 37
+                                   current_eer_frames_per_image, // 38
+                                   current_eer_super_res_factor, // 39
+                                   filter_lowres_signal, // 40
+                                   fit_nodes, // 41
+                                   fit_nodes_1d, // 42
+                                   fit_nodes_2d, // 43
+                                   fit_nodes_min_res, // 44
+                                   fit_nodes_max_res, // 45
+                                   resample_pixel_size, // 46
+                                   fit_nodes_rounded_square, // 47
+                                   fit_nodes_weights); // 48
 
         my_progress_dialog->Update(counter + 1);
     }
@@ -1192,15 +1192,15 @@ void MyFindCTFPanel::WriteResultToDataBase( ) {
                                                               buffered_results[counter].result_data[10], // sample thickness
                                                               "",
                                                               current_job_package.jobs[counter].arguments[36].ReturnBoolArgument( ), // Determine tilt,
-                                                              current_job_package.jobs[counter].arguments[40].ReturnBoolArgument( ), // Fit nodes,
-                                                              current_job_package.jobs[counter].arguments[41].ReturnBoolArgument( ), // Fit nodes 1D search
-                                                              current_job_package.jobs[counter].arguments[42].ReturnBoolArgument( ), // Fit nodes 2D search
-                                                              current_job_package.jobs[counter].arguments[43].ReturnFloatArgument( ), // Fit nodes low resolution limit
-                                                              current_job_package.jobs[counter].arguments[44].ReturnFloatArgument( ), // Fit nodes high resolution limit
-                                                              current_job_package.jobs[counter].arguments[46].ReturnBoolArgument( ), // Fit nodes use rounded square model
-                                                              current_job_package.jobs[counter].arguments[47].ReturnBoolArgument( ), // Fit nodes downweight signla in nodes
+                                                              current_job_package.jobs[counter].arguments[41].ReturnBoolArgument( ), // Fit nodes,
+                                                              current_job_package.jobs[counter].arguments[42].ReturnBoolArgument( ), // Fit nodes 1D search
+                                                              current_job_package.jobs[counter].arguments[43].ReturnBoolArgument( ), // Fit nodes 2D search
+                                                              current_job_package.jobs[counter].arguments[44].ReturnFloatArgument( ), // Fit nodes low resolution limit
+                                                              current_job_package.jobs[counter].arguments[45].ReturnFloatArgument( ), // Fit nodes high resolution limit
+                                                              current_job_package.jobs[counter].arguments[47].ReturnBoolArgument( ), // Fit nodes use rounded square model
+                                                              current_job_package.jobs[counter].arguments[48].ReturnBoolArgument( ), // Fit nodes downweight signla in nodes
                                                               current_job_package.jobs[counter].arguments[23].ReturnBoolArgument( ), // Resample if pixel size is too small
-                                                              current_job_package.jobs[counter].arguments[45].ReturnFloatArgument( ) // Target pixel size
+                                                              current_job_package.jobs[counter].arguments[46].ReturnFloatArgument( ) // Target pixel size
         );
         ctf_estimation_id++;
         my_progress_dialog->Update(counter + 1);

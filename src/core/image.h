@@ -585,7 +585,8 @@ class Image {
     void XCorrPeakFindWidth(int nxdim, int ny, float* xpeak, float* ypeak,
                             float* peak, float* width, float* widthMin, int maxPeaks,
                             float minStrength);
-    Peak FindPeakWithParabolaFit(float wanted_min_radius = 0.0, float wanted_max_radius = FLT_MAX);
+    // Peak FindPeakWithParabolaFit(float wanted_min_radius = 0.0, float wanted_max_radius = FLT_MAX);
+    Peak FindPeakWithParabolaFit(float wanted_min_radius = 0.0, float wanted_max_radius = FLT_MAX, int wanted_min_distance_from_edges = 0);
 
     void SubSampleWithNoisyResampling(Image* first_sampled_image, Image* second_sampled_image);
     void SubSampleMask(Image* first_sampled_image, Image* second_sampled_image);

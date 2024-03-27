@@ -1175,7 +1175,7 @@ endif
 
 	
 
-noinst_LIBRARIES = libcore.a libguicore.a
+noinst_LIBRARIES = libcore.a libguicore.a libdlib.a
 bin_PROGRAMS =  cisTEM_job_control \
                 unblur \
                 console_test \
@@ -1882,6 +1882,11 @@ niko_test_SOURCES = programs/niko_test/niko_test.cpp dlib/dlib/all/source.cpp
 niko_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 niko_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 niko_test_LDADD = libcore.a libdlib.a $(WX_LIBS_BASE)
+
+quick_test_SOURCES  = programs/quick_test/quick_test.cpp
+quick_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+quick_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+quick_test_LDADD    = libcore.a $(WX_LIBS_BASE)
 
 patch_movie_SOURCES = programs/patch_movie/patch_movie.cpp
 patch_movie_CXXFLAGS = $(WX_CPPFLAGS_BASE)

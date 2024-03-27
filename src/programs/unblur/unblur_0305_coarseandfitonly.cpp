@@ -1340,8 +1340,7 @@ bool UnBlurApp::DoCalculation( ) {
                 wxPrintf("aligning patch %d\n", patch_counter);
 
                 patch_object.Initialize(patch_stack[patch_counter], number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, 5, 3, max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], false);
-                // patch_object.alignment_refine(false);
-                patch_object.alignment_refine(true);
+                patch_object.alignment_refine(false);
 
                 //write out the patch shift info
                 wxString patch_shift;
@@ -1669,9 +1668,9 @@ bool UnBlurApp::DoCalculation( ) {
 
                                 Spline_Fitting(Control_1d_search, deriv_eps, f_min, max_iter, stop_cri_scale, knot_on_x, knot_on_y, knot_on_z, knot_x_dis, knot_y_dis, search_sample_dose, outputpath);
                                 Spline_Shift_Implement(patch_stack, patch_num_x, patch_num_y, number_of_input_images, max_threads);
-                                Generate_CoeffSpline(ccmap_stack, patch_stack, coeffspline_unitless_bfactor, patch_num, number_of_input_images, false, outputpath.ToStdString( ), "CCMapBfactor_R1");
-                                Spline_LossRefine(Control1d_ccmap, deriv_eps_loss, f_min, 10, stop_cri_scale_loss, knot_on_x, knot_on_y, knot_on_z, knot_x_dis, knot_y_dis, search_sample_dose, outputpath.ToStdString( ));
-                                Spline_Shift_Implement(patch_stack, patch_num_x, patch_num_y, number_of_input_images, max_threads);
+                                // Generate_CoeffSpline(ccmap_stack, patch_stack, coeffspline_unitless_bfactor, patch_num, number_of_input_images, false, outputpath.ToStdString( ), "CCMapBfactor_R1");
+                                // Spline_LossRefine(Control1d_ccmap, deriv_eps_loss, f_min, 10, stop_cri_scale_loss, knot_on_x, knot_on_y, knot_on_z, knot_x_dis, knot_y_dis, search_sample_dose, outputpath.ToStdString( ));
+                                // Spline_Shift_Implement(patch_stack, patch_num_x, patch_num_y, number_of_input_images, max_threads);
 
                                 double likelihood;
                                 double AIC;
@@ -1802,8 +1801,6 @@ bool UnBlurApp::DoCalculation( ) {
 
                     Spline_Fitting(best_control_1d, deriv_eps, f_min, max_iter, stop_cri_scale, knot_on_x, knot_on_y, knot_on_z, knot_x_dis, knot_y_dis, best_sample_dose, outputpath);
                     Spline_Shift_Implement(patch_stack, patch_num_x, patch_num_y, number_of_input_images, max_threads);
-                    write_shifts(patch_num_x, patch_num_y, number_of_input_images, outputpath.ToStdString( ), "_shiftx_R0", "_shifty_R0");
-
                     double refined_error_ccmap = minfunc3dSplineCCLossObjectControlPoints(best_control_1d_ccmap);
                     Generate_CoeffSpline(ccmap_stack, patch_stack, coeffspline_unitless_bfactor, patch_num, number_of_input_images, false, outputpath.ToStdString( ), "CCMapBfactor_R1");
 
@@ -1837,15 +1834,11 @@ bool UnBlurApp::DoCalculation( ) {
                     double        deriv_eps_loss = 1e-1;
                     Spline_Fitting(Control1d, deriv_eps, f_min, max_iter, stop_cri_scale, knot_on_x, knot_on_y, knot_on_z, knot_x_dis, knot_y_dis, sample_dose, outputpath);
                     Spline_Shift_Implement(patch_stack, patch_num_x, patch_num_y, number_of_input_images, max_threads);
-                    write_shifts(patch_num_x, patch_num_y, number_of_input_images, outputpath.ToStdString( ), "_shiftx_R0", "_shifty_R0");
-
                     Generate_CoeffSpline(ccmap_stack, patch_stack, coeffspline_unitless_bfactor, patch_num, number_of_input_images, false, outputpath.ToStdString( ), "CCMapBfactor_R1");
                     Spline_LossRefine(Control1d_ccmap, deriv_eps_loss, f_min, max_iter, stop_cri_scale, knot_on_x, knot_on_y, knot_on_z, knot_x_dis, knot_y_dis, sample_dose, outputpath.ToStdString( ));
-                    write_shifts(patch_num_x, patch_num_y, number_of_input_images, outputpath.ToStdString( ), "_shiftx_R1", "_shifty_R1");
 
                     write_joins(outputpath.ToStdString( ), "Control_R0", Control1d);
                     write_joins(outputpath.ToStdString( ), "Control_R1", Control1d_ccmap);
-
                     // */
 
                     // ------------------------------------

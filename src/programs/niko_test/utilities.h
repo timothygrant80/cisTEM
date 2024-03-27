@@ -301,13 +301,13 @@ std::vector<int> FixOutliers(matrix<double>* patch_peaksx, matrix<double>* patch
 }
 
 // void CalculateDiffSquare(Image** ref_stack, Image** patch_stack, float unitless_bfactor, int patch_no, int image_no, bool write_out_the_map, std::string output_path, std::string file_pref) {
-float CalculateDiffSquare(Image** patch_stack, int patch_no, int image_no, bool write_out_the_map, std::string output_path, std::string file_pref) {
+float CalculateDiffSquare(Image** patch_stack, int patch_no, int image_no, bool write_out_the_map, int max_thread, std::string output_path, std::string file_pref) {
 
-    int    patch_dim   = patch_stack[0][0].logical_x_dimension;
-    int    central_pix = (patch_stack[0][0].padding_jump_value + patch_dim) * patch_dim / 2 + patch_dim / 2;
-    Image  sum_of_images, sum_of_images_minus_current, diff_image, diff_image_copy;
-    Peak   peak;
-    int    max_thread = 8;
+    int   patch_dim   = patch_stack[0][0].logical_x_dimension;
+    int   central_pix = (patch_stack[0][0].padding_jump_value + patch_dim) * patch_dim / 2 + patch_dim / 2;
+    Image sum_of_images, sum_of_images_minus_current, diff_image, diff_image_copy;
+    Peak  peak;
+    // int    max_thread = 8;
     float *peak_sum, *pixmult;
     peak_sum                  = new float[patch_no];
     pixmult                   = new float[patch_no];
@@ -568,14 +568,14 @@ void patch_trimming_basedon_locations(Image* input_stack, Image** patch_stack, i
 
     MRCFile* patch = new MRCFile[number_of_patchgroups];
 
-    int image_dim_x;
-    int image_dim_y;
+    int  image_dim_x;
+    int  image_dim_y;
+    bool input_stack_is_in_real_space = input_stack[0].is_in_real_space;
 
     image_dim_x = input_stack[0].logical_x_dimension;
     image_dim_y = input_stack[0].logical_y_dimension;
 
-    if ( ! input_stack[0].is_in_real_space ) {
-        wxPrintf("do backward fft\n");
+    if ( ! input_stack_is_in_real_space ) {
         for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
             input_stack[image_counter].BackwardFFT( );
         }
@@ -628,6 +628,22 @@ void patch_trimming_basedon_locations(Image* input_stack, Image** patch_stack, i
 
     // delete input_coos_file;
     delete[] patch;
+
+    if ( ! input_stack_is_in_real_space ) {
+        // wxPrintf("input stack is not in real space\n");
+#pragma omp parallel for default(shared) num_threads(max_threads)
+        for ( int patch_ind = 0; patch_ind < number_of_patchgroups; patch_ind++ ) {
+            for ( int image_ind = 0; image_ind < number_of_images; image_ind++ ) {
+                patch_stack[patch_ind][image_ind].ForwardFFT(true);
+                patch_stack[patch_ind][image_ind].ZeroCentralPixel( );
+            }
+        }
+        for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
+            input_stack[image_counter].ForwardFFT(true);
+            input_stack[image_counter].ZeroCentralPixel( );
+        }
+    }
+
     // delete[] input_stack_real_space;
     wxPrintf("Done Patch Trimming\n");
     // return patch_stack;

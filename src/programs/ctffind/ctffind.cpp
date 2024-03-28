@@ -11,10 +11,14 @@ using namespace cistem_timer;
 using namespace cistem_timer_noop;
 #endif
 
-const std::string ctffind_version = "5.0.0";
+const std::string ctffind_version = "5.0.2";
 
 /*
  * Changelog
+ * - 5.0.2
+ * -- Fixed bug in 1D spectra calculation after estimation of thickness
+* - 5.0.1
+ * -- Allow for larger minimal resolution
  * - 5.0.0
  * -- Support for estimating tilt of sample
  * -- Support for estimating thickness of sample 
@@ -139,7 +143,7 @@ IMPLEMENT_APP(CtffindApp)
 
 void CtffindApp::DoInteractiveUserInput( ) {
 
-    float lowest_allowed_minimum_resolution = 50.0;
+    float lowest_allowed_minimum_resolution = 50000.0;
 
     std::string input_filename                     = "/dev/null";
     bool        input_is_a_movie                   = false;

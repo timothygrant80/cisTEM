@@ -36,14 +36,15 @@ float CtffindNodesObjectiveFunction(void* scoring_parameters, float array_of_val
     else {
         my_ctf.SetDefocus(array_of_values[0], array_of_values[1], array_of_values[2]);
     }
-    if ( array_of_values[3] < 500.0f ) {
-        array_of_values[3] = 500.0f;
+    float est_thickness = array_of_values[3];
+    if ( array_of_values[3] * comparison_object->pixel_size < 400.0f ) {
+        est_thickness = 400.0f / comparison_object->pixel_size;
     }
-    if ( array_of_values[3] > 50000.0f ) {
-        array_of_values[3] = 50000.0f;
+    if ( array_of_values[3] * comparison_object->pixel_size > 50000.0f ) {
+        est_thickness = 50000.0f / comparison_object->pixel_size;
     }
 
-    my_ctf.SetSampleThickness(array_of_values[3]);
+    my_ctf.SetSampleThickness(est_thickness);
 
     // Evaluate the function
     float score;
@@ -69,7 +70,7 @@ float CtffindNodesObjectiveFunction(void* scoring_parameters, float array_of_val
         }
     }
 
-    MyDebugPrint("(CtffindObjectiveFunction) D1 = %6.2f pxl D2 = %6.2f pxl, PhaseShift = %6.3f rad, Ast = %5.2f rad, Low freq = %f 1/pxl, High freq = %f 1/pxl, Thickness = %f pxl,  Score = %g\n", my_ctf.GetDefocus1( ), my_ctf.GetDefocus2( ), my_ctf.GetAdditionalPhaseShift( ), my_ctf.GetAstigmatismAzimuth( ), my_ctf.GetLowestFrequencyForFitting( ), my_ctf.GetHighestFrequencyForFitting( ), my_ctf.GetSampleThickness( ), score);
+    // MyDebugPrint("(CtffindObjectiveFunction) D1 = %6.2f pxl D2 = %6.2f pxl, PhaseShift = %6.3f rad, Ast = %5.2f rad, Low freq = %f 1/pxl, High freq = %f 1/pxl, Thickness = %f pxl,  Score = %g\n", my_ctf.GetDefocus1( ), my_ctf.GetDefocus2( ), my_ctf.GetAdditionalPhaseShift( ), my_ctf.GetAstigmatismAzimuth( ), my_ctf.GetLowestFrequencyForFitting( ), my_ctf.GetHighestFrequencyForFitting( ), my_ctf.GetSampleThickness( ), score);
     MyDebugAssertFalse(std::isnan(score), "Score is NaN!");
     return score;
 }
@@ -88,11 +89,13 @@ void do_1D_bruteforce(CTFNodeFitInput* input, wxJSONValue& debug_json_output) {
     input->comparison_object_1D->find_thickness_nodes     = true;
     input->comparison_object_1D->ctf                      = my_ctf;
     input->comparison_object_1D->fit_nodes_rounded_square = input->use_rounded_square;
-
+    float defocus_start                                   = my_ctf.DefocusGivenAzimuth(azimuth_for_1d_plots);
+    float def1_offset                                     = my_ctf.GetDefocus1( ) - defocus_start;
+    float def2_offset                                     = my_ctf.GetDefocus2( ) - defocus_start;
     // We can now look for the defocus value
     float bf_halfrange[2] = {1750 / input->pixel_size_for_fitting, 1000 / input->pixel_size_for_fitting};
 
-    float bf_midpoint[2] = {500 / input->pixel_size_for_fitting + bf_halfrange[0], my_ctf.DefocusGivenAzimuth(azimuth_for_1d_plots)};
+    float bf_midpoint[2] = {500 / input->pixel_size_for_fitting + bf_halfrange[0], defocus_start};
 
     float bf_stepsize[2] = {10 / input->pixel_size_for_fitting, 10 / input->pixel_size_for_fitting};
 
@@ -120,7 +123,8 @@ void do_1D_bruteforce(CTFNodeFitInput* input, wxJSONValue& debug_json_output) {
     //delete[] all_scores;
 
     input->current_ctf->SetSampleThickness(brute_force_search->GetBestValue(0));
-    input->current_ctf->SetDefocus(brute_force_search->GetBestValue(1), brute_force_search->GetBestValue(1), input->current_ctf->GetAstigmatismAzimuth( ));
+    input->current_ctf->SetDefocus(brute_force_search->GetBestValue(1) + def1_offset, brute_force_search->GetBestValue(1) + def2_offset, input->current_ctf->GetAstigmatismAzimuth( ));
+    input->current_ctf->EnforceConvention( );
     for ( counter = 0; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
         current_sq_sf                                = powf(input->spatial_frequency[counter], 2);
         input->rotational_average_astig_fit[counter] = input->current_ctf->EvaluatePowerspectrumWithThickness(current_sq_sf, azimuth_for_1d_plots, input->use_rounded_square);
@@ -136,7 +140,6 @@ void do_1D_bruteforce(CTFNodeFitInput* input, wxJSONValue& debug_json_output) {
 void do_2D_refinement(CTFNodeFitInput* input, wxJSONValue& debug_json_output) {
     int   counter;
     float current_sq_sf;
-    float azimuth_for_1d_plots = input->current_ctf->ReturnAzimuthToUseFor1DPlots( );
 
     int   number_of_search_dimensions = 4;
     float cg_accuracy[4]              = {100.0, 100.0, 0.05, 10.0}; //TODO: try defocus_search_step  / pix_size_for_fitting / 10.0
@@ -147,8 +150,7 @@ void do_2D_refinement(CTFNodeFitInput* input, wxJSONValue& debug_json_output) {
     input->comparison_object_2D->SetupQuickCorrelation( );
     input->comparison_object_2D->fit_nodes_downweight_nodes = input->downweight_nodes;
     input->comparison_object_2D->fit_nodes_rounded_square   = input->use_rounded_square;
-    //MyDebugPrint("fit_nodes_rounded_square = %i", input->comparison_object_2D->fit_nodes_rounded_square);
-    ConjugateGradient* conjugate_gradient_minimizer = new ConjugateGradient( );
+    ConjugateGradient* conjugate_gradient_minimizer         = new ConjugateGradient( );
     conjugate_gradient_minimizer->Init(&CtffindNodesObjectiveFunction, input->comparison_object_2D, number_of_search_dimensions, cg_starting_point, cg_accuracy);
 
     conjugate_gradient_minimizer->Run( );
@@ -160,8 +162,10 @@ void do_2D_refinement(CTFNodeFitInput* input, wxJSONValue& debug_json_output) {
 
     input->current_ctf->SetDefocus(cg_starting_point[0], cg_starting_point[1], cg_starting_point[2]);
     input->current_ctf->SetSampleThickness(cg_starting_point[3]);
-    // Replace rotational_average_astig_fit with thickness model
+    input->current_ctf->EnforceConvention( );
 
+    // Replace rotational_average_astig_fit with thickness model
+    float azimuth_for_1d_plots = input->current_ctf->ReturnAzimuthToUseFor1DPlots( );
     for ( counter = 0; counter < input->number_of_bins_in_1d_spectra; counter++ ) {
         current_sq_sf                                = powf(input->spatial_frequency[counter], 2);
         input->rotational_average_astig_fit[counter] = input->current_ctf->EvaluatePowerspectrumWithThickness(current_sq_sf, azimuth_for_1d_plots, input->use_rounded_square);
@@ -276,6 +280,10 @@ void ComputeFRCBetween1DSpectrumAndFitNodes(int number_of_bins, double average[]
             if ( last_bin >= number_of_bins ) {
                 last_bin  = number_of_bins - 1;
                 first_bin = last_bin - 2 * half_window_width[bin_counter] - 1;
+                // In some cases nescessary, because the half-window width is too large
+                if ( first_bin < first_fit_bin ) {
+                    first_bin = first_fit_bin;
+                }
             }
             MyDebugAssertTrue(first_bin >= 0 && first_bin < number_of_bins, "Bad first_bin: %i", first_bin);
             MyDebugAssertTrue(last_bin >= 0 && last_bin < number_of_bins, "Bad last_bin: %i", last_bin);
@@ -407,6 +415,7 @@ CTFNodeFitOuput fit_thickness_nodes(CTFNodeFitInput* input) {
     wxJSONValue debug_json_output;
 
     float first_thickness_estimate = input->current_ctf->ThicknessWhereIntegrateDefocusModulationIsZero(powf(input->spatial_frequency[input->last_bin_with_good_fit], 2.0));
+    wxPrintf("Estimating sample thickness. Initial estimate is %.0f A based on goodness of fit\n", first_thickness_estimate * input->pixel_size_for_fitting);
     if ( input->debug ) {
         debug_json_output["thickness_estimates"]            = wxJSONValue(wxJSONTYPE_OBJECT);
         debug_json_output["thickness_estimates"]["initial"] = first_thickness_estimate * input->pixel_size_for_fitting;
@@ -451,9 +460,11 @@ CTFNodeFitOuput fit_thickness_nodes(CTFNodeFitInput* input) {
     input->current_ctf->SetHighestFrequencyForFitting(1.0 / input->high_resolution_limit * input->pixel_size_for_fitting);
     if ( input->bruteforce_1D ) {
         do_1D_bruteforce(input, debug_json_output);
+        wxPrintf("Performed brute force search for thickness on 1D spectrum. The thickness estimate is %.0f A\n", input->current_ctf->GetSampleThickness( ) * input->pixel_size_for_fitting);
     }
     if ( input->refine_2D ) {
         do_2D_refinement(input, debug_json_output);
+        wxPrintf("Performed 2D refinement for thickness on 2D spectrum. The thickness estimate is %.0f A\n", input->current_ctf->GetSampleThickness( ) * input->pixel_size_for_fitting);
     }
     double* rotational_average_astig_renormalized = new double[input->number_of_bins_in_1d_spectra];
     float*  number_of_extrema_profile             = new float[input->number_of_bins_in_1d_spectra];
@@ -480,6 +491,7 @@ CTFNodeFitOuput fit_thickness_nodes(CTFNodeFitInput* input) {
 
     if ( input->debug ) {
         // Write out the json debug file
+        MyDebugPrint("Printing thickness debug files to %s\n", input->debug_filename + "thickness.json");
         wxJSONWriter writer;
         wxString     json_string;
         writer.Write(debug_json_output, json_string);

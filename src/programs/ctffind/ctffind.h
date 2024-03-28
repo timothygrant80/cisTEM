@@ -107,6 +107,7 @@ class ImageCTFComparison {
     int    number_of_images;
     Image* img; // Usually an amplitude spectrum, or an array of amplitude spectra
     int    number_to_correlate;
+    float  pixel_size;
     double norm_image;
     double image_mean;
     float* azimuths;
@@ -118,7 +119,6 @@ class ImageCTFComparison {
 
   private:
     CTF   ctf;
-    float pixel_size;
     bool  find_phase_shift;
     bool  astigmatism_is_known;
     float known_astigmatism;

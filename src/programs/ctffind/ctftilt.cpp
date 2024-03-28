@@ -310,8 +310,8 @@ float CTFTilt::SearchTiltAxisAndAngle( ) {
 
     float  variance;
     float  variance_max = -FLT_MAX;
-    float  axis_step    = 10.0f;
-    float  angle_step   = 5.0f;
+    float  axis_step    = 20.0f;
+    float  angle_step   = 10.0f;
     float  tilt_angle;
     float  tilt_axis;
     float  average_defocus = (defocus_1 + defocus_2) / 2.0f;
@@ -537,6 +537,7 @@ float CTFTilt::CalculateTiltCorrectedSpectra(bool resample_if_pixel_too_small, f
                 //				wxPrintf("x, y, x_coordinate_2d, y_coordinate_2d, stretch_factor = %i %i %g %g %g\n", ix, iy, x_coordinate_2d, y_coordinate_2d, stretch_factor);
 
                 input_image_buffer[image_counter].ClipInto(&section, 0.0f, false, 0.0f, myroundint(float(ix) * sub_section_x / float(n_stp)), myroundint(float(iy) * sub_section_y / float(n_stp)), 0);
+                wxPrintf("section size: %d %d\n", section.logical_x_dimension, section.logical_y_dimension);
                 padding_value = section.ReturnAverageOfRealValues( );
                 section.CosineRectangularMask(0.9f * section.physical_address_of_box_center_x, 0.9f * section.physical_address_of_box_center_y,
                                               0.0f, 0.1f * section.logical_x_dimension, false, true, padding_value);
@@ -546,10 +547,12 @@ float CTFTilt::CalculateTiltCorrectedSpectra(bool resample_if_pixel_too_small, f
                 section.ForwardFFT( );
                 section.complex_values[0] = 0.0f + I * 0.0f;
                 section.ComputeAmplitudeSpectrumFull2D(&power_spectrum);
+                wxPrintf("power_spectrum size: %d %d\n", power_spectrum.logical_x_dimension, power_spectrum.logical_y_dimension);
+                wxPrintf("resampled_spectrum size: %d %d\n", resampled_spectrum->logical_x_dimension, resampled_spectrum->logical_y_dimension);
                 //				power_spectrum.QuickAndDirtyWriteSlice("spectrum.mrc", section_counter + 1);
                 //				section_counter++;
                 //				for (i = 0; i < power_spectrum_sub_section.real_memory_allocated; i++) power_spectrum_sub_section.real_values[i] = powf(power_spectrum_sub_section.real_values[i], 2);
-
+                wxPrintf("%d %f %f %f", resample_if_pixel_too_small, pixel_size_of_input_image, target_pixel_size_after_resampling, box_size);
                 PixelSizeForFitting(resample_if_pixel_too_small, pixel_size_of_input_image, target_pixel_size_after_resampling, box_size, &power_spectrum, &resampled_power_spectrum, true, stretch_factor);
 
                 //				power_spectrum.ForwardFFT();

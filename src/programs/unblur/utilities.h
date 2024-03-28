@@ -385,7 +385,7 @@ float CalculateDiffSquare(Image** patch_stack, int patch_no, int image_no, bool 
     return total_Sum;
 };
 
-void Generate_CoeffSpline(bicubicsplinestack ccmap_stack, Image** patch_stack, float unitless_bfactor, int patch_no, int image_no, bool write_out_the_ccmap, std::string output_path, std::string file_pref) {
+void Generate_CoeffSpline(bicubicsplinestack ccmap_stack, Image** patch_stack, float unitless_bfactor, int patch_no, int image_no, int max_thread, bool write_out_the_ccmap, std::string output_path, std::string file_pref) {
     // void Generate_CoeffSpline(Image** patch_stack, float unitless_bfactor, int patch_no, int image_no, bool write_out_the_ccmap, std::string output_path, std::string file_pref) {
 
     int   quater_patch_dim = ccmap_stack.m;
@@ -396,7 +396,7 @@ void Generate_CoeffSpline(bicubicsplinestack ccmap_stack, Image** patch_stack, f
     // sum_of_images.Allocate(patch_dim, patch_dim, false);
 
     wxPrintf("------------------------------------generating coeffcient map spline------------------------------------\n");
-    int max_thread = 8;
+    // int max_thread = 8;
 #pragma omp parallel for num_threads(max_thread) private(sum_of_images, sum_of_images_minus_current, img_bfactor, tmpimg)
     for ( int patch_index = 0; patch_index < patch_no; patch_index++ ) {
         tmpimg.Allocate(quater_patch_dim, quater_patch_dim, false);

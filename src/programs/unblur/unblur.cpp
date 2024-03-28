@@ -1527,11 +1527,15 @@ bool UnBlurApp::DoCalculation( ) {
                 double total_dose  = exposure_per_frame * number_of_input_images;
                 double sample_dose = 4; //exposure_per_frame * number_of_input_images / 3; //8; //4; //10; //4;
 
-                double knot_z_dis       = sample_dose;
-                double knot_on_z        = ceil(total_dose / sample_dose) + 1;
-                double knot_on_x        = 8; //patch_num_x; //8;
-                double knot_x_dis       = ceil(image_dim_x / (knot_on_x - 1));
-                double knot_on_y        = 5; //patch_num_y; //5;
+                double knot_z_dis = sample_dose;
+                double knot_on_z  = ceil(total_dose / sample_dose) + 1;
+                // double knot_on_x  = 8; //patch_num_x; //8;
+                double knot_on_x = round(patch_num_x / 3 * 2); //patch_num_x; //8;
+                wxPrintf("knot_on_x %f\n", knot_on_x);
+                double knot_x_dis = ceil(image_dim_x / (knot_on_x - 1));
+                // double knot_on_y  = 5; //patch_num_y; //5;
+                double knot_on_y = round(patch_num_y / 3 * 2); //patch_num_y; //5;
+                wxPrintf("knot_on_y %f\n", knot_on_y);
                 double knot_y_dis       = ceil(image_dim_y / (knot_on_y - 1));
                 int    quater_patch_dim = 64 / 2;
                 wxPrintf("knot_x_dis %f\n", knot_x_dis);
@@ -1669,7 +1673,7 @@ bool UnBlurApp::DoCalculation( ) {
 
                                 Spline_Fitting(Control_1d_search, deriv_eps, f_min, max_iter, stop_cri_scale, knot_on_x, knot_on_y, knot_on_z, knot_x_dis, knot_y_dis, search_sample_dose, outputpath);
                                 Spline_Shift_Implement(patch_stack, patch_num_x, patch_num_y, number_of_input_images, max_threads);
-                                Generate_CoeffSpline(ccmap_stack, patch_stack, coeffspline_unitless_bfactor, patch_num, number_of_input_images, false, outputpath.ToStdString( ), "CCMapBfactor_R1");
+                                Generate_CoeffSpline(ccmap_stack, patch_stack, coeffspline_unitless_bfactor, patch_num, number_of_input_images, max_threads, false, outputpath.ToStdString( ), "CCMapBfactor_R1");
                                 Spline_LossRefine(Control1d_ccmap, deriv_eps_loss, f_min, 10, stop_cri_scale_loss, knot_on_x, knot_on_y, knot_on_z, knot_x_dis, knot_y_dis, search_sample_dose, outputpath.ToStdString( ));
                                 Spline_Shift_Implement(patch_stack, patch_num_x, patch_num_y, number_of_input_images, max_threads);
 
@@ -1805,7 +1809,7 @@ bool UnBlurApp::DoCalculation( ) {
                     write_shifts(patch_num_x, patch_num_y, number_of_input_images, outputpath.ToStdString( ), "_shiftx_R0", "_shifty_R0");
 
                     double refined_error_ccmap = minfunc3dSplineCCLossObjectControlPoints(best_control_1d_ccmap);
-                    Generate_CoeffSpline(ccmap_stack, patch_stack, coeffspline_unitless_bfactor, patch_num, number_of_input_images, false, outputpath.ToStdString( ), "CCMapBfactor_R1");
+                    Generate_CoeffSpline(ccmap_stack, patch_stack, coeffspline_unitless_bfactor, patch_num, number_of_input_images, max_threads, false, outputpath.ToStdString( ), "CCMapBfactor_R1");
 
                     // do some finner search
                     Spline_LossRefine(best_control_1d_ccmap, deriv_eps_loss, f_min, max_iter, stop_cri_scale_loss, knot_on_x, knot_on_y, knot_on_z, knot_x_dis, knot_y_dis, sample_dose, outputpath.ToStdString( ));
@@ -1839,7 +1843,7 @@ bool UnBlurApp::DoCalculation( ) {
                     Spline_Shift_Implement(patch_stack, patch_num_x, patch_num_y, number_of_input_images, max_threads);
                     write_shifts(patch_num_x, patch_num_y, number_of_input_images, outputpath.ToStdString( ), "_shiftx_R0", "_shifty_R0");
 
-                    Generate_CoeffSpline(ccmap_stack, patch_stack, coeffspline_unitless_bfactor, patch_num, number_of_input_images, false, outputpath.ToStdString( ), "CCMapBfactor_R1");
+                    Generate_CoeffSpline(ccmap_stack, patch_stack, coeffspline_unitless_bfactor, patch_num, number_of_input_images, max_threads, false, outputpath.ToStdString( ), "CCMapBfactor_R1");
                     Spline_LossRefine(Control1d_ccmap, deriv_eps_loss, f_min, max_iter, stop_cri_scale, knot_on_x, knot_on_y, knot_on_z, knot_x_dis, knot_y_dis, sample_dose, outputpath.ToStdString( ));
                     write_shifts(patch_num_x, patch_num_y, number_of_input_images, outputpath.ToStdString( ), "_shiftx_R1", "_shifty_R1");
 
@@ -2373,7 +2377,7 @@ void Spline_Refine(Image** patch_stack, column_vector& Control_1d_search, column
     // int quater_patch_dim = 64 / 2;
     // ccmap_stack.InitializeSplineStack(quater_patch_dim, quater_patch_dim, patch_num * number_of_input_images, 1, 1);
     // Generate_CoeffSpline(ccmap_stack, patch_stack, unitless_bfactor, patch_num, number_of_input_images, false, outputpath.ToStdString( ), "CCMapBfactor_R1");
-    Generate_CoeffSpline(ccmap_stack, patch_stack, coeffspline_unitless_bfactor, patch_num, number_of_input_images, false, outputpath.ToStdString( ), "CCMapBfactor_R1");
+    Generate_CoeffSpline(ccmap_stack, patch_stack, coeffspline_unitless_bfactor, patch_num, number_of_input_images, max_threads, false, outputpath.ToStdString( ), "CCMapBfactor_R1");
 
     // for ( int i = 0; i < patch_num; ++i ) {
     //     delete[] patch_stack[i]; // each i-th pointer must be deleted first

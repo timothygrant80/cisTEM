@@ -52,6 +52,7 @@ class CTFTilt {
     Image  ctf_image;
     Image  sub_section;
     Image* resampled_power_spectra = nullptr;
+    bool*  invalid_powerspectrum = nullptr;
     Image* input_image_buffer      = nullptr;
 
     bool rough_defocus_determined;

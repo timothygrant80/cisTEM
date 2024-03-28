@@ -87,7 +87,9 @@ void CTFTilt::Init(ImageFile& wanted_input_file, float wanted_high_res_limit_ctf
     power_spectrum_sub_section.Allocate(tile_size, tile_size, 1);
 
     resampled_power_spectra = new Image[((n_sections_x - 1) * n_steps + 1) * ((n_sections_y - 1) * n_steps + 1)];
-    int tile_num            = ((n_sections_x - 1) * n_steps + 1) * ((n_sections_y - 1) * n_steps + 1);
+    invalid_powerspectrum   = new bool[((n_sections_x - 1) * n_steps + 1) * ((n_sections_y - 1) * n_steps + 1)];
+
+    int tile_num = ((n_sections_x - 1) * n_steps + 1) * ((n_sections_y - 1) * n_steps + 1);
     MyDebugPrint("total tiles: %d\n", tile_num);
     int secxsecy = n_sections_x * n_sections_y;
     MyDebugPrint("section_x*section_y %d\n", secxsecy);
@@ -97,6 +99,7 @@ void CTFTilt::Init(ImageFile& wanted_input_file, float wanted_high_res_limit_ctf
     for ( int i = 0; i < tile_num; i++ ) {
         resampled_power_spectra[section_counter].Allocate(box_size, box_size, 1, true);
         resampled_power_spectra[section_counter].SetToConstant(0.0f);
+        invalid_powerspectrum[section_counter] = false;
         section_counter++;
     }
     //     }
@@ -120,6 +123,7 @@ CTFTilt::~CTFTilt( ) {
     }
     delete[] input_image_buffer;
     delete[] resampled_power_spectra;
+    delete[] invalid_powerspectrum;
 }
 
 void CTFTilt::CalculatePowerSpectra(bool subtract_average) {
@@ -183,6 +187,11 @@ void CTFTilt::CalculatePowerSpectra(bool subtract_average) {
                 debug_json_output["search_tiles"][debug_json_output["search_tiles"].Size( ) - 1]["y"]      = float(iy) / 2.0 * sub_section_dimension_y / float(n_steps);
                 debug_json_output["search_tiles"][debug_json_output["search_tiles"].Size( ) - 1]["width"]  = sub_section_dimension_x;
                 debug_json_output["search_tiles"][debug_json_output["search_tiles"].Size( ) - 1]["height"] = sub_section_dimension_y;
+            }
+            if ( sub_section.ReturnAverageOfRealValues( ) < 0.0f ) {
+                invalid_powerspectrum[section_counter] = true;
+                section_counter++;
+                continue;
             }
             sub_section.CosineRectangularMask(0.9f * sub_section.physical_address_of_box_center_x, 0.9f * sub_section.physical_address_of_box_center_y, 0.0f, 0.1f * sub_section.logical_x_dimension);
             if ( debug ) {
@@ -664,6 +673,10 @@ double CTFTilt::ScoreValues(double input_values[]) {
 
             for ( iy = -(n_sections_y - 1) * n_steps; iy <= (n_sections_y - 1) * n_steps; iy += 2 ) {
                 for ( ix = -(n_sections_x - 1) * n_steps; ix <= (n_sections_x - 1) * n_steps; ix += 2 ) {
+                    if ( invalid_powerspectrum[section_counter] ) {
+                        section_counter++;
+                        continue;
+                    }
                     x_coordinate_2d = float(ix) / 2.0 * sub_section_dimension_x / float(n_steps) * tilt_fit_pixel_size;
                     y_coordinate_2d = float(iy) / 2.0 * sub_section_dimension_y / float(n_steps) * tilt_fit_pixel_size;
                     rotation_angle.euler_matrix.RotateCoords2D(x_coordinate_2d, y_coordinate_2d, x_rotated, y_rotated);
@@ -759,6 +772,10 @@ double CTFTilt::ScoreValuesFixedDefocus(double input_values[]) {
 
     for ( iy = -(n_sections_y - 1) * n_steps / 2; iy <= (n_sections_y - 1) * n_steps / 2; iy++ ) {
         for ( ix = -(n_sections_x - 1) * n_steps / 2; ix <= (n_sections_x - 1) * n_steps / 2; ix++ ) {
+            if ( invalid_powerspectrum[section_counter] ) {
+                section_counter++;
+                continue;
+            }
             x_coordinate_2d = float(ix) * sub_section_dimension_x / float(n_steps) * tilt_fit_pixel_size;
             y_coordinate_2d = float(iy) * sub_section_dimension_y / float(n_steps) * tilt_fit_pixel_size;
             rotation_angle.euler_matrix.RotateCoords2D(x_coordinate_2d, y_coordinate_2d, x_rotated, y_rotated);

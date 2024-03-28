@@ -128,7 +128,7 @@ bool ApplyCTFApp::DoCalculation( ) {
     float       wiener_filter_scale_fudge_factor   = my_current_job.arguments[16].ReturnFloatArgument( );
     float       wiener_filter_high_pass_radius     = my_current_job.arguments[17].ReturnFloatArgument( );
     bool        maintain_image_contrast            = my_current_job.arguments[18].ReturnBoolArgument( );
-    float       temp_float[5];
+    float       temp_float[15];
 
     ProgressBar* my_progress_bar;
 
@@ -147,8 +147,8 @@ bool ApplyCTFApp::DoCalculation( ) {
             DEBUG_ABORT;
         }
 
-        if ( input_text->records_per_line != 3 && input_text->records_per_line != 4 ) {
-            SendError("Error: Expect 3 or 4 records per line in defocus text file");
+        if ( input_text->records_per_line < 3 ) {
+            SendError("Error: Expect at least 3 records per line!");
             DEBUG_ABORT;
         }
     }
@@ -172,7 +172,7 @@ bool ApplyCTFApp::DoCalculation( ) {
                 current_ctf.Init(acceleration_voltage, spherical_aberration, amplitude_contrast, temp_float[0], temp_float[1], temp_float[2], 0.0, 0.5, 0.0, pixel_size, 0.0);
             }
             else {
-                current_ctf.Init(acceleration_voltage, spherical_aberration, amplitude_contrast, temp_float[0], temp_float[1], temp_float[2], 0.0, 0.5, 0.0, pixel_size, temp_float[3]);
+                current_ctf.Init(acceleration_voltage, spherical_aberration, amplitude_contrast, temp_float[1], temp_float[2], temp_float[3], 0.0, 0.5, 0.0, pixel_size, temp_float[4]);
             }
         }
 

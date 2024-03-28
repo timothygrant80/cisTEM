@@ -135,9 +135,19 @@ void BruteForceSearch::IncrementCurrentValues(float* current_values, bool& searc
     }
 }
 
+void BruteForceSearch::Run( ) {
+    float* all_valuesp = nullptr;
+    float* all_scoresp = nullptr;
+    int    num_values;
+    int    num_scores;
+    Run(&all_valuesp, &all_scoresp, &num_values, &num_scores);
+    delete[] all_valuesp;
+    delete[] all_scoresp;
+}
+
 // Run the brute force minimiser's exhaustive search
 // DNM: parallelized by storing the step values
-void BruteForceSearch::Run( ) {
+void BruteForceSearch::Run(float** all_valuesp, float** all_scoresp, int* num_values, int* num_scores) {
     MyDebugAssertTrue(is_in_memory, "BruteForceSearch object not allocated");
 
     // Private variables
@@ -147,8 +157,14 @@ void BruteForceSearch::Run( ) {
     float* current_values_for_local_minimization = new float[number_of_dimensions];
     // DNM: New arrays for holding the values at each step, the scores from each step,
     // and the best values from the CG search at each step
-    float*       all_values            = new float[number_of_dimensions * num_iterations];
-    float*       all_scores            = new float[num_iterations];
+    //allocate memory for all_value and all_scores
+
+    float* all_values                  = new float[number_of_dimensions * num_iterations];
+    *num_values                        = number_of_dimensions * num_iterations;
+    *all_valuesp                       = all_values;
+    float* all_scores                  = new float[num_iterations];
+    *num_scores                        = num_iterations;
+    *all_scoresp                       = all_scores;
     float*       all_local_best_values = new float[number_of_dimensions * num_iterations];
     int          i;
     int          num_iterations_completed;
@@ -289,7 +305,5 @@ void BruteForceSearch::Run( ) {
 
     delete[] accuracy_for_local_minimization;
     delete[] current_values_for_local_minimization;
-    delete[] all_values;
-    delete[] all_scores;
     delete[] all_local_best_values;
 }

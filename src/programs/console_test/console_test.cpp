@@ -2009,6 +2009,36 @@ void MyTestApp::TestCTFNodes( ) {
         SkipTest;
     }
 
+    // Test on a 2D power spectrum with astigmatism that formula and manual integration give similar results
+    counter = 0;
+    Image powerspectrum, temp_image;
+    powerspectrum.Allocate(500, 500, 1);
+    powerspectrum.SetToConstant(0.0);
+    temp_image.Allocate(500, 500, 1);
+    for ( float z_level = -495.0; z_level < 500.0; z_level = z_level + 10.0f ) {
+        ctf1.Init(300, 2.7, 0.07, 5000 + z_level, 9000 + z_level, 0, 1.0, 0.0, 0.0);
+        counter++;
+        temp_image.SetToConstant(1.0);
+        temp_image.ApplyPowerspectrumWithThickness(ctf1);
+        powerspectrum.AddImage(&temp_image);
+    }
+    powerspectrum.DivideByConstant(float(counter));
+    ctf1.Init(300, 2.7, 0.07, 5000, 9000, 0, 1.0, 0.0, 100.0);
+    temp_image.SetToConstant(1.0);
+    temp_image.ApplyPowerspectrumWithThickness(ctf1);
+
+    if ( powerspectrum.IsAlmostEqual(temp_image, true, 0.005f) == false ) {
+        FailTest;
+    }
+
+    // Make sure the same test fails if using a different thickness
+    ctf1.Init(300, 2.7, 0.07, 5000, 9000, 0, 1.0, 0.0, 200.0);
+    temp_image.SetToConstant(1.0);
+    temp_image.ApplyPowerspectrumWithThickness(ctf1);
+
+    if ( powerspectrum.IsAlmostEqual(temp_image, false, 0.005f) == true ) {
+        FailTest;
+    }
     EndTest( );
 }
 

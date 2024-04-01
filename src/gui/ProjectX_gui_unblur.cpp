@@ -545,8 +545,6 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 
 	ExpertPanel = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxSize( -1,-1 ), wxVSCROLL );
 	ExpertPanel->SetScrollRate( 5, 5 );
-	ExpertPanel->Hide();
-
 	InputSizer = new wxBoxSizer( wxVERTICAL );
 
 	wxFlexGridSizer* fgSizer1;
@@ -620,7 +618,7 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	m_staticText47->Wrap( -1 );
 	fgSizer1->Add( m_staticText47, 0, wxALL, 5 );
 
-	max_iterations_spinctrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 50, 10 );
+	max_iterations_spinctrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 50, 20 );
 	fgSizer1->Add( max_iterations_spinctrl, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText48 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Filter"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -660,11 +658,60 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	vertical_mask_spinctrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 0, 10, 1 );
 	fgSizer1->Add( vertical_mask_spinctrl, 0, wxALL|wxEXPAND, 5 );
 
-	m_staticText481 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Final Sum"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText481 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Distortion Correction"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText481->Wrap( -1 );
 	m_staticText481->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxEmptyString ) );
 
 	fgSizer1->Add( m_staticText481, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	Distortion_Correction_checkbox = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Do Local Distortion Correction?"), wxDefaultPosition, wxDefaultSize, 0 );
+	Distortion_Correction_checkbox->SetValue(true);
+	fgSizer1->Add( Distortion_Correction_checkbox, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	DistortionModelChoice_static_text = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tDistortion Model Type :"), wxDefaultPosition, wxDefaultSize, 0 );
+	DistortionModelChoice_static_text->Wrap( -1 );
+	fgSizer1->Add( DistortionModelChoice_static_text, 0, wxALL, 5 );
+
+	DistortionModelChoice_spinctrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 3, 3 );
+	fgSizer1->Add( DistortionModelChoice_spinctrl, 0, wxALL, 5 );
+
+	OverwriteDefaultPatchNumber_checkbox = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Overwrite The Patch Number From Unblur?"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer1->Add( OverwriteDefaultPatchNumber_checkbox, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	PatchNumX_static_text = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tPatch Number Along X Dimension: "), wxDefaultPosition, wxDefaultSize, 0 );
+	PatchNumX_static_text->Wrap( -1 );
+	fgSizer1->Add( PatchNumX_static_text, 0, wxALL, 5 );
+
+	PatchNumX_spinCtrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 2, 50, 4 );
+	fgSizer1->Add( PatchNumX_spinCtrl, 0, wxALL, 5 );
+
+	PatchNumY_static_text = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tPatch Number Along Y Dimension: "), wxDefaultPosition, wxDefaultSize, 0 );
+	PatchNumY_static_text->Wrap( -1 );
+	fgSizer1->Add( PatchNumY_static_text, 0, wxALL, 5 );
+
+	PatchNumY_spinCtrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 2, 50, 4 );
+	fgSizer1->Add( PatchNumY_spinCtrl, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+
+
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	m_staticText4811 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Final Sum"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText4811->Wrap( -1 );
+	m_staticText4811->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxEmptyString ) );
+
+	fgSizer1->Add( m_staticText4811, 0, wxALL, 5 );
 
 
 	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );

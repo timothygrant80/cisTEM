@@ -90,6 +90,8 @@ void MyAlignMoviesPanel::ResetDefaults( ) {
     first_frame_spin_ctrl->SetValue(1);
     last_frame_spin_ctrl->SetValue(1);
     SaveScaledSumCheckbox->SetValue(true);
+    Distortion_Correction_checkbox->SetValue(true);
+    DistortionModelChoice_spinctrl->SetValue(3);
 
     // #ifdef SHOW_CISTEM_GPU_OPTIONS
     //     use_gpu_checkboxUnblur->SetValue(true);
@@ -441,7 +443,35 @@ void MyAlignMoviesPanel::OnUpdateUI(wxUpdateUIEvent& event) {
                 first_frame_spin_ctrl->Enable(false);
                 last_frame_spin_ctrl->Enable(false);
             }
+
+            if ( Distortion_Correction_checkbox->GetValue( ) == true ) {
+                DistortionModelChoice_static_text->Enable(true);
+                DistortionModelChoice_spinctrl->Enable(true);
+                OverwriteDefaultPatchNumber_checkbox->Enable(true);
+                if ( OverwriteDefaultPatchNumber_checkbox->GetValue( ) == true ) {
+                    PatchNumX_static_text->Enable(true);
+                    PatchNumY_static_text->Enable(true);
+                    PatchNumX_spinCtrl->Enable(true);
+                    PatchNumY_spinCtrl->Enable(true);
+                }
+                else {
+                    PatchNumX_static_text->Enable(false);
+                    PatchNumY_static_text->Enable(false);
+                    PatchNumX_spinCtrl->Enable(false);
+                    PatchNumY_spinCtrl->Enable(false);
+                }
+            }
+            else {
+                DistortionModelChoice_static_text->Enable(false);
+                DistortionModelChoice_spinctrl->Enable(false);
+                OverwriteDefaultPatchNumber_checkbox->Enable(false);
+                PatchNumX_static_text->Enable(false);
+                PatchNumY_static_text->Enable(false);
+                PatchNumX_spinCtrl->Enable(false);
+                PatchNumY_spinCtrl->Enable(false);
+            }
         }
+
         else {
             ExpertToggleButton->Enable(false);
             GroupComboBox->Enable(false);
@@ -500,6 +530,13 @@ void MyAlignMoviesPanel::StartAlignmentClick(wxCommandEvent& event) {
     bool should_mask_central_cross;
     int  horizontal_mask;
     int  vertical_mask;
+
+    bool     patchcorrection;
+    bool     overwritedefaultpatchnumber;
+    int      patch_num_x;
+    int      patch_num_y;
+    int      distortion_model = 3;
+    wxString outputpath       = "";
 
     float current_pixel_size;
 
@@ -698,11 +735,24 @@ void MyAlignMoviesPanel::StartAlignmentClick(wxCommandEvent& event) {
         number_of_frames_for_running_average = 1;
         max_threads                          = 1;
 
+        patchcorrection = Distortion_Correction_checkbox->IsChecked( );
+        if ( patchcorrection ) {
+            distortion_model            = DistortionModelChoice_spinctrl->GetValue( );
+            overwritedefaultpatchnumber = OverwriteDefaultPatchNumber_checkbox->IsChecked( );
+            if ( overwritedefaultpatchnumber ) {
+                patch_num_x = PatchNumX_spinCtrl->GetValue( );
+                patch_num_y = PatchNumY_spinCtrl->GetValue( );
+            }
+        }
+        outputpath = main_frame->current_project.image_asset_directory.GetFullPath( );
+        outputpath += wxString::Format("/%s_%i_%i/", buffer_filename.GetName( ), current_asset_id, number_of_previous_alignments);
+        wxFileName::Mkdir(outputpath);
+
         bool        saved_aligned_frames    = false;
         std::string aligned_frames_filename = "/dev/null";
         std::string output_shift_text_file  = "/dev/null";
 
-        current_job_package.AddJob("ssfffbbfifbiifffbsbsfbfffbtbtiiiibttii", current_filename.c_str( ), //0
+        current_job_package.AddJob("ssfffbbfifbiifffbsbsfbfffbtbtiiiibttiisbbiii", current_filename.c_str( ), //0
                                    output_filename.ToUTF8( ).data( ),
                                    current_pixel_size,
                                    float(minimum_shift),
@@ -739,7 +789,13 @@ void MyAlignMoviesPanel::StartAlignmentClick(wxCommandEvent& event) {
                                    aligned_frames_filename.c_str( ),
                                    output_shift_text_file.c_str( ),
                                    current_eer_frames_per_image,
-                                   current_eer_super_res_factor);
+                                   current_eer_super_res_factor,
+                                   outputpath.ToUTF8( ).data( ),
+                                   patchcorrection,
+                                   overwritedefaultpatchnumber,
+                                   patch_num_x,
+                                   patch_num_y,
+                                   distortion_model);
 
         my_progress_dialog->Update(counter + 1);
     }

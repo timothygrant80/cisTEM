@@ -224,6 +224,15 @@ class AlignMoviesPanel : public JobPanel
 		wxStaticText* vertical_mask_static_text;
 		wxSpinCtrl* vertical_mask_spinctrl;
 		wxStaticText* m_staticText481;
+		wxCheckBox* Distortion_Correction_checkbox;
+		wxStaticText* DistortionModelChoice_static_text;
+		wxSpinCtrl* DistortionModelChoice_spinctrl;
+		wxCheckBox* OverwriteDefaultPatchNumber_checkbox;
+		wxStaticText* PatchNumX_static_text;
+		wxSpinCtrl* PatchNumX_spinCtrl;
+		wxStaticText* PatchNumY_static_text;
+		wxSpinCtrl* PatchNumY_spinCtrl;
+		wxStaticText* m_staticText4811;
 		wxCheckBox* include_all_frames_checkbox;
 		wxStaticText* first_frame_static_text;
 		wxSpinCtrl* first_frame_spin_ctrl;

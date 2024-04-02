@@ -29,7 +29,7 @@ class CTF {
     float precomputed_amplitude_contrast_term;
     float squared_wavelength;
     float cubed_wavelength;
-    float low_resolution_contrast;
+    float low_resolution_contrast = 0.0;
 
     float squared_illumination_aperture;
     float squared_energy_half_width;

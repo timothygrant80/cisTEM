@@ -1958,9 +1958,10 @@ void MyTestApp::TestCTFNodes( ) {
     ctf_curve1.MultiplyBy(ctf_curve1);
     ctf_curve2.ApplyPowerspectrumWithThickness(ctf1);
     if ( ctf_curve1.YIsAlmostEqual(ctf_curve2) == false ) {
+
         // This is to override a failure, which occurs randomly when using gcc
         // There is probably some undefined behaviour in the code somewhere
-        SkipTest;
+        FailTest;
     }
 
     CTF ctf2;
@@ -1979,7 +1980,7 @@ void MyTestApp::TestCTFNodes( ) {
     if ( ctf_curve1.YIsAlmostEqual(ctf_curve2) == true ) {
         // This is to override a failure, which occurs randomly when using gcc
         // There is probably some undefined behaviour in the code somewhere
-        SkipTest;
+        FailTest;
     }
 
     // Test manually integrating ctf and compare with thickness formula
@@ -2006,7 +2007,7 @@ void MyTestApp::TestCTFNodes( ) {
     if ( min < -0.001f || max > 0.001f ) {
         // This is to override a failure, which occurs randomly when using gcc
         // There is probably some undefined behaviour in the code somewhere
-        SkipTest;
+        FailTest;
     }
 
     // Test on a 2D power spectrum with astigmatism that formula and manual integration give similar results

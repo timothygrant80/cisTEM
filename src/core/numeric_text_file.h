@@ -1,23 +1,36 @@
-#define OPEN_TO_READ 0
-#define OPEN_TO_WRITE 1
-#define OPEN_TO_APPEND 2
+#ifndef __SRC_CORE_NUMERIC_TEXT_FILE_H__
+#define __SRC_CORE_NUMERIC_TEXT_FILE_H__
+
+#include "../constants/constants.h"
 
 class NumericTextFile {
 
-  private:
-    void                Init( );
+    long access_type;
+
     wxString            text_filename;
-    long                access_type;
-    wxFileInputStream*  input_file_stream;
-    wxTextInputStream*  input_text_stream;
-    wxFileOutputStream* output_file_stream;
-    wxTextOutputStream* output_text_stream;
+    wxFileInputStream*  input_file_stream{ };
+    wxTextInputStream*  input_text_stream{ };
+    wxFileOutputStream* output_file_stream{ };
+    wxTextOutputStream* output_text_stream{ };
+    bool                default_constructed{ };
+    // In special cases (e.g. if the filename is /dev/null), we don't do anything
+    bool file_is_not_dev_null{ };
+    void Init( );
+
+    inline bool LineIsACommentOrZeroLength(const wxString& current_line) const {
+        return (current_line.StartsWith("#") || current_line.StartsWith("C") || current_line.Length( ) == 0);
+    }
 
   public:
-    // Constructors
     NumericTextFile( );
     NumericTextFile(wxString Filename, long wanted_access_type, long wanted_records_per_line = 1);
     ~NumericTextFile( );
+
+    // We don't want to allow copying or moving of this class
+    NumericTextFile(const NumericTextFile&)            = delete;
+    NumericTextFile& operator=(const NumericTextFile&) = delete;
+    NumericTextFile(NumericTextFile&&)                 = delete;
+    NumericTextFile& operator=(NumericTextFile&&)      = delete;
 
     // data
 
@@ -26,17 +39,19 @@ class NumericTextFile {
 
     // Methods
 
-    void     Open(wxString Filename, long wanted_access_type, long wanted_records_per_line = 1);
-    void     Close( );
-    void     Rewind( );
-    void     Flush( );
-    wxString ReturnFilename( );
+    void Open(wxString Filename, long wanted_access_type, long wanted_records_per_line = 1);
+    void Close( );
+    void Rewind( );
+    void Flush( );
+
+    wxString ReturnFilename( ) { return text_filename; }
 
     void ReadLine(float* data_array);
-    void WriteLine(float* data_array);
-    void WriteLine(double* data_array);
-    void WriteCommentLine(const char* format, ...);
 
-    // In special cases (e.g. if the filename is /dev/null), we don't do anything
-    bool do_nothing;
+    template <typename T>
+    void WriteLine(T* data_array);
+
+    void WriteCommentLine(const char* format, ...);
 };
+
+#endif // __SRC_CORE_NUMERIC_TEXT_FILE_H__

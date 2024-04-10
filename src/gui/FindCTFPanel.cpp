@@ -692,11 +692,12 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
 
         if ( input_is_a_movie == true ) {
             parent_asset_id = image_asset_panel->ReturnAssetPointer(active_group.members[counter])->parent_id;
-            input_filename  = movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->filename.GetFullPath( ).ToStdString( );
-            pixel_size      = movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->pixel_size;
+            MovieAsset* current_movie = movie_asset_panel->ReturnAssetPointer(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_asset_id));
+            input_filename  = current_movie->filename.GetFullPath( ).ToStdString( );
+            pixel_size      = current_movie->pixel_size;
 
-            current_movie_size = (float(movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->x_size) / movie_asset_panel->ReturnAssetBinningFactor(active_group.members[counter])) * (float(movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->y_size) / movie_asset_panel->ReturnAssetBinningFactor(active_group.members[counter]));
-            current_movie_size *= movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->number_of_frames;
+            current_movie_size = (float(current_movie->x_size) / current_movie->output_binning_factor) * (float(current_movie->y_size) / current_movie->output_binning_factor);
+            current_movie_size *= current_movie->number_of_frames;
             max_movie_size = std::max(max_movie_size, current_movie_size);
         }
         else {

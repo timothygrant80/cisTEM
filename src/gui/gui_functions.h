@@ -1,7 +1,8 @@
 
 
 void ConvertImageToBitmap(Image* input_image, wxBitmap* output_bitmap, bool auto_contrast = false);
-void ConvertImageToBitmap(Image* input_image, wxBitmap* output_bitmap, double scale_factor, bool auto_contrast = false);
+void ConvertImageToBitmap(Image* input_image, wxBitmap* output_bitmap, int client_x_size, int client_y_size, int img_x, int img_y, float scaling_factor, bool auto_contrast = false);
+//void ConvertImageToBitmap(Image* input_image, wxBitmap* output_bitmap, double scale_factor, int cut_x_size, int cut_y_size, int image_x, int image_y, bool auto_contrast = false);
 void GetMultilineTextExtent(wxDC* wanted_dc, const wxString& string, int& width, int& height);
 void FillGroupComboBoxWorker(wxComboBox* GroupComboBox, bool include_all_images_group = true);
 void FillParticlePositionsGroupComboBox(wxComboBox* GroupComboBox, bool include_all_particle_positions_group = true);

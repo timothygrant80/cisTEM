@@ -7,7 +7,6 @@ PickingResultsDisplayPanel::PickingResultsDisplayPanel(wxWindow* parent, wxWindo
     //Bind(wxEVT_COMBOBOX, &ShowPickingResultsPanel::OnFitTypeRadioButton, this);
 
     //CTF2DResultsPanel->font_size_multiplier = 1.5;
-
     PickingResultsImagePanel->UnsetToolTip( );
 
     LowResFilterTextCtrl->SetMinMaxValue(0.1, FLT_MAX);
@@ -155,7 +154,6 @@ void PickingResultsDisplayPanel::OnRedoButtonClick(wxCommandEvent& event) {
 }
 
 void PickingResultsDisplayPanel::OnScalingChange(wxCommandEvent& event) {
-    wxPrintf("PickingResultsDisplayPanel::ChangeImageScaling gets called\n");
     wxString scaling_value = ScalingComboBox->GetValue( );
     if ( scaling_value.Right(1).IsSameAs(wxT("%")) )
         scaling_value.RemoveLast( );

@@ -127,7 +127,6 @@ class PickingBitmapPanel : public wxPanel {
     float clicked_point_x_in_angstroms;
     float clicked_point_y_in_angstroms;
 
-    //
     int bitmap_x_offset;
     int bitmap_y_offset;
     int bitmap_width;

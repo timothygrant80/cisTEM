@@ -82,14 +82,14 @@ PickingResultsDisplayPanelParent::PickingResultsDisplayPanelParent( wxWindow* pa
 
 	ScalingComboBox = new wxComboBox( this, wxID_ANY, wxT("100%"), wxDefaultPosition, wxDefaultSize, 0, NULL, 0 );
 	ScalingComboBox->Append( wxT("300%") );
+	ScalingComboBox->Append( wxT("250%") );
 	ScalingComboBox->Append( wxT("200%") );
+	ScalingComboBox->Append( wxT("166%") );
 	ScalingComboBox->Append( wxT("150%") );
+	ScalingComboBox->Append( wxT("133%") );
+	ScalingComboBox->Append( wxT("125%") );
 	ScalingComboBox->Append( wxT("100%") );
 	ScalingComboBox->Append( wxT("66%") );
-	ScalingComboBox->Append( wxT("50%") );
-	ScalingComboBox->Append( wxT("33%") );
-	ScalingComboBox->Append( wxT("25%") );
-	ScalingComboBox->Append( wxT("10%") );
 	bSizer35->Add( ScalingComboBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
 	ImageScalingText = new wxStaticText( this, wxID_ANY, wxT("Image Scaling"), wxDefaultPosition, wxDefaultSize, 0 );

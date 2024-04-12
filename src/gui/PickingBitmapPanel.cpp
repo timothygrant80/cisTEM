@@ -37,7 +37,9 @@ PickingBitmapPanel::PickingBitmapPanel(wxWindow* parent, wxWindowID id, const wx
 
     image_in_bitmap_filename       = "";
     image_in_bitmap_pixel_size     = 0.0;
-    image_in_bitmap_scaling_factor = 0.0;
+    image_in_bitmap_scaling_factor = 1.0;
+    image_in_bitmap_x              = 0;
+    image_in_bitmap_y              = 0;
 
     image_in_memory_filename   = "";
     image_in_memory_pixel_size = 0.0;
@@ -76,6 +78,8 @@ PickingBitmapPanel::PickingBitmapPanel(wxWindow* parent, wxWindowID id, const wx
     clicked_point_y_in_angstroms              = 0.0;
     current_step_in_history                   = 0;
     scale_factor                              = 1.0;
+    old_mouse_x                               = -9999;
+    old_mouse_y                               = -9999;
 
     low_res_filter_value  = -1.0;
     high_res_filter_value = -1.0;
@@ -246,27 +250,24 @@ void PickingBitmapPanel::SetCTFOfImageInBitmap(CTF ctf_to_copy) {
 // EXPLANATION: This function pre-determines the size of the image to be 95% of the size of the allowed dimension (whichever is smaller)
 // Since the dimension can vary, it opts for whichever scaling factor is smaller
 void PickingBitmapPanel::UpdateScalingAndDimensions( ) {
-    wxPrintf("Entered PickingBitmapPanel::UpdateScalingAndDimensions\n");
+    image_in_bitmap_x = 0;
+    image_in_bitmap_y = 0;
     if ( ! image_in_memory_filename.IsEmpty( ) ) {
         int panel_dim_x, panel_dim_y;
         GetClientSize(&panel_dim_x, &panel_dim_y);
 
-        // TODO: is this where to add the scaling? Mutliply panel_dims * .95 by the scale factor
-        float target_scaling_x = float(panel_dim_x) * 0.95 * scale_factor / float(image_in_memory.logical_x_dimension);
-        float target_scaling_y = float(panel_dim_y) * 0.95 * scale_factor / float(image_in_memory.logical_y_dimension);
-        float scaling_factor   = std::min(target_scaling_x, target_scaling_y);
-        wxPrintf("scaling_factor = %f\n", scaling_factor);
+        float target_scaling_x    = float(panel_dim_x) * 0.95 * scale_factor / float(image_in_memory.logical_x_dimension);
+        float target_scaling_y    = float(panel_dim_y) * 0.95 * scale_factor / float(image_in_memory.logical_y_dimension);
+        float actual_scale_factor = std::min(target_scaling_x, target_scaling_y);
 
-        int new_x_dimension = std::max(int(float(image_in_memory.logical_x_dimension) * scaling_factor), 1);
-        int new_y_dimension = std::max(int(float(image_in_memory.logical_y_dimension) * scaling_factor), 1);
-        wxPrintf("new_x_dimension = %i, new_y_dimension = %i\n", new_x_dimension, new_y_dimension);
-
+        int new_x_dimension = std::max(int(float(image_in_memory.logical_x_dimension) * actual_scale_factor), 1);
+        int new_y_dimension = std::max(int(float(image_in_memory.logical_y_dimension) * actual_scale_factor), 1);
         // TODO: choose dimensions that are more favorable to FFT
 
         if ( ! image_in_bitmap.is_in_memory || new_x_dimension != image_in_bitmap.logical_x_dimension || new_y_dimension != image_in_bitmap.logical_y_dimension ) {
             image_in_bitmap.Allocate(new_x_dimension, new_y_dimension, true);
-            image_in_bitmap_scaling_factor = scaling_factor;
-            image_in_bitmap_pixel_size     = image_in_memory_pixel_size / scaling_factor;
+            image_in_bitmap_scaling_factor = actual_scale_factor;
+            image_in_bitmap_pixel_size     = image_in_memory_pixel_size / actual_scale_factor;
             image_in_bitmap_ctf.CopyFrom(image_in_memory_ctf);
             image_in_bitmap_ctf.ChangePixelSize(image_in_memory_pixel_size, image_in_bitmap_pixel_size);
         }
@@ -276,7 +277,6 @@ void PickingBitmapPanel::UpdateScalingAndDimensions( ) {
 // FIXME: This is probably where I need to add the scaling changes code
 // Might be better to start over at this point, and get a better understanding.
 void PickingBitmapPanel::UpdateImageInBitmap(bool force_reload) {
-    wxPrintf("Entering PickingBitmapPanel::UpdateImageInBitmap\n");
     if ( ! image_in_memory_filename.IsEmpty( ) ) {
         if ( force_reload || ! image_in_bitmap_filename.IsSameAs(image_in_memory_filename) || PanelBitmap.GetWidth( ) != image_in_bitmap.logical_x_dimension || PanelBitmap.GetHeight( ) != image_in_bitmap.logical_y_dimension ) {
             if ( image_in_memory.is_in_real_space )
@@ -285,7 +285,6 @@ void PickingBitmapPanel::UpdateImageInBitmap(bool force_reload) {
             image_in_memory.ClipInto(&image_in_bitmap);
 
             //const float filter_edge_width = 0.2;//image_in_bitmap_pixel_size / (2.0 * radius_of_circles_around_particles_in_angstroms);
-
             float high_pass_radius;
             float low_pass_radius;
 
@@ -317,9 +316,17 @@ void PickingBitmapPanel::UpdateImageInBitmap(bool force_reload) {
             image_in_bitmap.BackwardFFT( );
             image_in_bitmap_filename = image_in_memory_filename;
 
-                        //wxImage frame_image = new wxImage(image_in_bitmap);
-
-            ConvertImageToBitmap(&image_in_bitmap, &PanelBitmap, true);
+            // TEMP: starting point of the panel load from upper left corner -- just for getting the bitmap loaded and limited to the size of the panel
+            // it's being placed onto
+            int image_x = 0;
+            int image_y = 0;
+            // cut size should be the size of the panel
+            int client_x, client_y;
+            GetClientSize(&client_x, &client_y);
+            // DEBUG:
+            // wxPrintf("logical x = %i, logical y = %i\n", image_in_bitmap.logical_x_dimension, image_in_bitmap.logical_y_dimension);
+            // wxPrintf("client_x == %i, client_y == %i\n", client_x, client_y);
+            ConvertImageToBitmap(&image_in_bitmap, &PanelBitmap, client_x, client_y, image_in_bitmap_x, image_in_bitmap_y, image_in_bitmap_scaling_factor, true);
         }
     }
 }
@@ -382,25 +389,22 @@ void PickingBitmapPanel::OnPaint(wxPaintEvent& evt) {
         combined_width  = bitmap_width + text_x_size;
         combined_height = bitmap_height;
 
-        // FIXME: We're changing this; the image does not always have to fit in the window
-        //if ( combined_width > window_x_size || combined_height > window_y_size ) {
-        //    MyDebugAssertTrue(false, "Oops, should not get here, because the image should always fit in\n");
-        //}
         //else {
         bitmap_x_offset = (window_x_size - ((bitmap_width) + text_x_size)) / 2;
         bitmap_y_offset = (window_y_size - (bitmap_height)) / 2;
 
-        // Test offset can't be less than 0:
+        // offset < 0 is bad; results in badly shifted image
         if ( bitmap_x_offset < 0 )
             bitmap_x_offset = 0;
         if ( bitmap_y_offset < 0 )
             bitmap_y_offset = 0;
 
         // DEBUG:
-        wxPrintf("bitmap_x_offset = %i; bitmap_y_offset = %i\n", bitmap_x_offset, bitmap_y_offset);
+        // wxPrintf("bitmap_x_offset = %i; bitmap_y_offset = %i\n", bitmap_x_offset, bitmap_y_offset);
+        // wxPrintf("bitmap_width = %i, bitmap_height = %i\n", bitmap_width, bitmap_height);
 
         // Draw the image bitmap
-        dc.DrawBitmap(PanelBitmap, bitmap_x_offset, bitmap_y_offset, false); // Here, bitmap_x_offset and bitmap_y_offset are the starting coords for the iamge when drawn into the bitmap...
+        dc.DrawBitmap(PanelBitmap, bitmap_x_offset, bitmap_y_offset, false); // Here, bitmap_x_offset and bitmap_y_offset are the starting coords for the image when drawn into the bitmap
 
         // Choose a pen thickness for drawing circles around particles
         int pen_thickness = std::min(bitmap_width, bitmap_height) / 512;
@@ -409,19 +413,34 @@ void PickingBitmapPanel::OnPaint(wxPaintEvent& evt) {
         if ( pen_thickness > 5 )
             pen_thickness = 5;
 
-        // Draw circles around particles
         if ( draw_circles_around_particles ) {
             float x, y;
             dc.SetPen(wxPen(wxColor(255, 0, 0), pen_thickness));
             dc.SetBrush(wxNullBrush);
             for ( int counter = 0; counter < particle_coordinates_in_angstroms.GetCount( ); counter++ ) {
-                x = particle_coordinates_in_angstroms.Item(counter).x_position;
-                y = particle_coordinates_in_angstroms.Item(counter).y_position;
-                dc.DrawCircle(bitmap_x_offset + x / image_in_bitmap_pixel_size, bitmap_y_offset + bitmap_height - y / image_in_bitmap_pixel_size, radius_of_circles_around_particles_in_angstroms / image_in_bitmap_pixel_size);
+                x = particle_coordinates_in_angstroms.Item(counter).x_position / image_in_bitmap_pixel_size;
+                y = particle_coordinates_in_angstroms.Item(counter).y_position / image_in_bitmap_pixel_size;
+
+                // 100% or less zoom level where image fits in the bitmap because it is slightly downscaled
+                if ( bitmap_width >= image_in_bitmap.logical_x_dimension && bitmap_height >= image_in_bitmap.logical_y_dimension ) {
+                    dc.DrawCircle(bitmap_x_offset + x, bitmap_y_offset + bitmap_height - y, radius_of_circles_around_particles_in_angstroms / image_in_bitmap_pixel_size);
+                }
+
+                // Cases where bitmap width or height is less than the image (i.e., the image doesn't fit due to zoom)
+                // The circle must correspond to the position on the bitmap overall, despite any cutoff; to achieve this,
+                // subtract the y position from y dim of the image. This plots circle properly regardless of cutoff
+                else {
+                    // Add separate variable for readability
+                    const int final_y = bitmap_y_offset - image_in_bitmap_y * image_in_bitmap_scaling_factor + image_in_bitmap.logical_y_dimension - y;
+                    const int final_x = bitmap_x_offset - image_in_bitmap_x * image_in_bitmap_scaling_factor + x;
+                    // Draw only if it fits in the window's view
+                    if ( final_x >= 0 && final_x <= bitmap_width + image_in_bitmap_x && final_y >= 0 && final_y <= bitmap_height + image_in_bitmap_y ) {
+                        dc.DrawCircle(final_x, final_y, radius_of_circles_around_particles_in_angstroms / image_in_bitmap_pixel_size);
+                    }
+                }
             }
         }
 
-        // Draw scale bar
         if ( draw_scale_bar ) {
             wxPen scalebar_pen;
             scalebar_pen = wxPen(*wxWHITE);
@@ -451,14 +470,11 @@ void PickingBitmapPanel::OnPaint(wxPaintEvent& evt) {
             dc.DrawText(scalebar_label, bitmap_x_offset + scalebar_x_start + scalebar_length / 2 - scalebar_label_width / 2, bitmap_y_offset + scalebar_y_pos - scalebar_label_height - scalebar_thickness / 8);
         }
 
-        // Draw selection retangle
         if ( draw_selection_rectangle ) {
             dc.SetPen(wxPen(wxColor(255, 0, 0), pen_thickness * 2, wxPENSTYLE_LONG_DASH));
             dc.SetBrush(wxNullBrush);
             dc.DrawRectangle(std::min(selection_rectangle_start_x, selection_rectangle_current_x), std::min(selection_rectangle_start_y, selection_rectangle_current_y), abs(selection_rectangle_current_x - selection_rectangle_start_x), abs(selection_rectangle_current_y - selection_rectangle_start_y));
         }
-
-        // Draw text
 
         text_y_offset = ((bitmap_height)-text_y_size) / 2;
         if ( text_y_offset > 0 )
@@ -689,9 +705,10 @@ void PickingBitmapPanel::OnMotion(wxMouseEvent& event) {
     if ( draw_selection_rectangle ) {
         selection_rectangle_current_x = x_pos;
         selection_rectangle_current_y = y_pos;
+        Update( );
+        Refresh( );
     }
-    else if ( event.LeftIsDown( ) == true && event.ShiftDown( ) ) // is the left button and shift down
-    {
+    else if ( event.LeftIsDown( ) && event.ShiftDown( ) ) { // is the left button and shift down
         event.GetPosition(&clicked_point_x, &clicked_point_y);
         if ( clicked_point_x > bitmap_x_offset && clicked_point_x < bitmap_x_offset + bitmap_width && clicked_point_y > bitmap_y_offset && clicked_point_y < bitmap_y_offset + bitmap_height ) {
             clicked_point_x_in_angstroms = PixelToAngstromX(clicked_point_x);
@@ -702,8 +719,6 @@ void PickingBitmapPanel::OnMotion(wxMouseEvent& event) {
         }
     }
 
-    // FIXME: we need to add accounting for the image bitmap being bigger than what fits into the panel
-    // And in this situation, we need to not display anything
     else if ( event.RightIsDown( ) && popup_exists ) {
         int client_x = x_pos;
         int client_y = y_pos;
@@ -723,16 +738,12 @@ void PickingBitmapPanel::OnMotion(wxMouseEvent& event) {
         int window_size_y;
         GetClientSize(&window_size_x, &window_size_y); // the actual size of the panel
 
-        wxPrintf("window_size_x = %i, window_size_y = %i\n", window_size_x, window_size_y);
-
         // TODO: add bounding for top and bottom...
         if ( client_x + 256 > screen_x_size )
             client_x += 256;
         if ( client_y + 256 > screen_y_size )
             client_y += 256;
 
-        // DEBUG:
-        wxPrintf("client_x = %i; client_y = %i\n", client_x, client_y);
         popup->Position(wxPoint(client_x - 128, client_y - 128), wxSize(0, 0));
         popup->x_pos = x_pos - 128 - bitmap_x_offset;
         popup->y_pos = y_pos - 128 - bitmap_y_offset;
@@ -742,32 +753,58 @@ void PickingBitmapPanel::OnMotion(wxMouseEvent& event) {
         Update( );
     }
     else if ( event.MiddleIsDown( ) ) {
-        if ( old_mouse_x == -9999 || old_mouse_y == -9999 ) {
-            old_mouse_x = x_pos;
-            old_mouse_y = y_pos;
-        }
-        // FIXME: account for offset of image in the bitmap
-        else {
-            // Account for scaling
-            image_in_bitmap_x = (old_mouse_x - x_pos) / scale_factor;
-            image_in_bitmap_y = (old_mouse_y - y_pos) / scale_factor;
+        // Don't drag if the image isn't zoomed
+        // FIXME: this is not robust enough; it could be a very small image where being zoomed at 2x is only
+        if ( scale_factor > 1.0f ) {
+            int client_x, client_y;
+            GetClientSize(&client_x, &client_y); // Get panel dimensions
 
-            // Set bounds to prevent stupid dragging
-            // Left bound
-            if ( image_in_bitmap_x < 0 )
-                image_in_bitmap_x = 0;
+            if ( old_mouse_x == -9999 || old_mouse_y == -9999 ) {
+                old_mouse_x = x_pos;
+                old_mouse_y = y_pos;
+            }
+            // FIXME: account for offset of image in the bitmap
+            // Now, for the scaling, we'll use logical dimensions as these are the max values we should be able to reach
+            else {
+                // Don't allow reassignment of the value unless the image dimensions are bigger than the client
+                if ( image_in_bitmap.logical_x_dimension > client_x )
+                    image_in_bitmap_x += (old_mouse_x - x_pos) / image_in_bitmap_scaling_factor;
+                else
+                    image_in_bitmap_x = 0;
+                if ( image_in_bitmap.logical_y_dimension > client_y )
+                    image_in_bitmap_y += (old_mouse_y - y_pos) / image_in_bitmap_scaling_factor;
+                else
+                    image_in_bitmap_y = 0;
 
-            // Right bound
-            else if ( image_in_bitmap_x > image_in_bitmap.logical_x_dimension - 1 )
-                image_in_bitmap_x > image_in_bitmap.logical_x_dimension - 1;
+                // Left bound
+                if ( image_in_bitmap_x < 0 )
+                    image_in_bitmap_x = 0;
 
-            // Bottom bound
-            if ( image_in_bitmap_y < 0 )
-                image_in_bitmap_y = 0;
+                // Right bound
+                else if ( image_in_bitmap_x > (image_in_bitmap.logical_x_dimension - client_x - 1) / image_in_bitmap_scaling_factor )
+                    image_in_bitmap_x = (image_in_bitmap.logical_x_dimension - client_x - 1) / image_in_bitmap_scaling_factor;
 
-            // Top bound
-            else if ( image_in_bitmap_y > image_in_bitmap.logical_y_dimension - 1 )
-                image_in_bitmap_y = image_in_bitmap.logical_y_dimension - 1;
+                // Bottom bound
+                if ( image_in_bitmap_y < 0 )
+                    image_in_bitmap_y = 0;
+
+                // Top bound
+                else if ( image_in_bitmap_y > (image_in_bitmap.logical_y_dimension - client_y - 1) / image_in_bitmap_scaling_factor )
+                    image_in_bitmap_y = (image_in_bitmap.logical_y_dimension - client_y - 1) / image_in_bitmap_scaling_factor;
+
+                old_mouse_x = x_pos;
+                old_mouse_y = y_pos;
+
+                // DEBUG:
+                wxPrintf("image_in_bitmap_x = %li, image_in_bitmap_y = %li\n", image_in_bitmap_x, image_in_bitmap_y);
+                wxPrintf("logical x = %i, logical y = %i\n\n", image_in_bitmap.logical_x_dimension, image_in_bitmap.logical_y_dimension);
+                wxPrintf("scale factor = %f\n", image_in_bitmap_scaling_factor);
+                wxPrintf("client_x = %i; client_y = %i\n", client_x, client_y);
+                wxPrintf("limits: x dim = %i; y dim = %i\n\n", image_in_bitmap.logical_x_dimension - client_x - 1, image_in_bitmap.logical_y_dimension - client_y - 1);
+
+                ConvertImageToBitmap(&image_in_bitmap, &PanelBitmap, client_x, client_y, image_in_bitmap_x, image_in_bitmap_y, image_in_bitmap_scaling_factor, true);
+                Refresh( );
+            }
         }
     }
 

@@ -1474,15 +1474,18 @@ void DisplayNotebookPanel::UpdateImageStatusInfo(int x_pos, int y_pos) {
     double current_resolution;
 
     if ( single_image ) {
+        // Set the x,y positions
         int current_x_pos = single_image_x + (x_pos / actual_scale_factor); // - 1;
         int current_y_pos = single_image_y + (y_pos / actual_scale_factor); // - 1;
 
+        // Use wxWidgets 0,0 in upper left corner
         current_y_pos = ReturnImageYSize( ) - 1 - current_y_pos;
 
         int current_image = current_location;
 
         int current_radius = sqrtf(pow(current_x_pos - (ReturnImageXSize( ) / 2), 2) + pow(current_y_pos - (ReturnImageYSize( ) / 2), 2));
 
+        // This if-else does the same thing...should it be ReturnImageYSize in the else?
         if ( ReturnImageXSize( ) > ReturnImageYSize( ) )
             current_resolution = (pixel_size * ReturnImageXSize( )) / current_radius;
         else
@@ -2374,6 +2377,11 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
                             panel_image->Resize(wxSize(ReturnImageXSize( ), ReturnImageYSize( )), wxPoint(0, 0));
                         }
 
+                        // REMOVE COMMENT:
+                        // THIS is pointer to the wxImage's data; this is where we're loading in the information
+                        // So, I can just emulate the process in the ConvertImageToBitmap function
+                        // What this means is that you build the full bitmap, and then crop it down to the region that fits
+                        // within the boundaries of the panel -- makes sense given current behavior of picking results panel
                         unsigned char* image_data = panel_image->GetData( );
 
                         // are we locally scaling?
@@ -2572,9 +2580,10 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
                         // DEBUG:
                         wxPrintf("Before if statements: cut_x_size == %li, cut_y_size == %li\n", cut_x_size, cut_y_size);
                         int quick_sum = int(single_image_x * actual_scale_factor + window_x_size);
-                        wxPrintf("Comparison values: single_image_x == %i * actual_scale_factor == %d + window_x_size == %i = %i", single_image_x, actual_scale_factor, window_x_size, quick_sum);
+                        wxPrintf("Comparison values: single_image_x == %i * actual_scale_factor == %f + window_x_size == %i = %i\n", single_image_x, actual_scale_factor, window_x_size, quick_sum);
+                        wxPrintf("MRC size: x: %i, y: %i\n", panel_image->GetWidth( ), panel_image->GetHeight( ));
                         quick_sum = int(single_image_y * actual_scale_factor + window_y_size);
-                        wxPrintf("Comparison values: single_image_y == %i * actual_scale_factor == %d + window_y_size == %i = %i", single_image_y, actual_scale_factor, window_y_size, quick_sum);
+                        wxPrintf("Comparison values: single_image_y == %i * actual_scale_factor == %f + window_y_size == %i = %i\n", single_image_y, actual_scale_factor, window_y_size, quick_sum);
                         if ( single_image_x * actual_scale_factor + window_x_size > panel_image->GetWidth( ) )
                             cut_x_size = panel_image->GetWidth( ) - single_image_x * actual_scale_factor;
                         if ( single_image_y * actual_scale_factor + window_y_size > panel_image->GetHeight( ) )

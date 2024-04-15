@@ -116,8 +116,8 @@ class PickingBitmapPanel : public wxPanel {
     int   selection_rectangle_current_y;
     long  old_mouse_x;
     long  old_mouse_y;
-    long  image_in_bitmap_x;
-    long  image_in_bitmap_y;
+    long  image_starting_x_coord;
+    long  image_starting_y_coord;
     float selection_rectangle_start_x_in_angstroms;
     float selection_rectangle_start_y_in_angstroms;
     float selection_rectangle_finish_x_in_angstroms;

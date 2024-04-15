@@ -75,7 +75,6 @@ void ConvertImageToBitmap(Image* input_image, wxBitmap* output_bitmap, bool auto
     }
 }
 
-// TODO: plan to revert this function back to just taking the initial submap, and not loading the full thing
 /**
  * @brief Overload; converts a given image into a bitmap for usage in a display panel. Created to enable
  * ability to zoom in on picking panels while retaining proper coordinate placement.
@@ -84,12 +83,12 @@ void ConvertImageToBitmap(Image* input_image, wxBitmap* output_bitmap, bool auto
  * @param output_bitmap Bitmap being filled.
  * @param client_x_size X-dim of panel the bitmap will be placed in.
  * @param client_y_size Y-dim of panel the bitmap will be placed in.
- * @param img_x Starting x-coord for getting bitmap data.
- * @param img_y Starting y-coord for getting bitmap data.
+ * @param img_x_start Starting x-coord for getting bitmap data.
+ * @param img_y_start Starting y-coord for getting bitmap data.
  * @param scaling_factor I.e. zoom level; the value logical dimensions were actually multiplied by.
  * @param auto_contrast Sets whether the contrast will be maximal.
  */
-void ConvertImageToBitmap(Image* input_image, wxBitmap* output_bitmap, int client_x_size, int client_y_size, int img_x, int img_y, float scaling_factor, bool auto_contrast) {
+void ConvertImageToBitmap(Image* input_image, wxBitmap* output_bitmap, int client_x_size, int client_y_size, int img_x_start, int img_y_start, float scaling_factor, bool auto_contrast) {
     MyDebugAssertTrue(input_image->logical_z_dimension == 1, "Only 2D images can be used");
     MyDebugAssertTrue(output_bitmap->GetDepth( ) == 24, "bitmap should be 24 bit");
 
@@ -103,12 +102,6 @@ void ConvertImageToBitmap(Image* input_image, wxBitmap* output_bitmap, int clien
 
     long mirror_line_address;
 
-    // set x and y dimensions based on the client size and the image dimensions
-    // int bitmap_x = input_image->logical_x_dimension < client_x_size ? input_image->logical_x_dimension : client_x_size;
-    // int bitmap_y = input_image->logical_y_dimension < client_y_size ? input_image->logical_y_dimension : client_y_size;
-    // output_bitmap->Create(bitmap_x, bitmap_y, 24);
-
-    // This should always be the logical dimension, and then we will manipulate
     if ( input_image->logical_x_dimension != output_bitmap->GetWidth( ) || input_image->logical_y_dimension != output_bitmap->GetHeight( ) ) {
         output_bitmap->Create(input_image->logical_x_dimension, input_image->logical_y_dimension, 24);
     }
@@ -129,7 +122,6 @@ void ConvertImageToBitmap(Image* input_image, wxBitmap* output_bitmap, int clien
     inverse_range = 1. / range;
     inverse_range *= 256.;
 
-    //unsigned char* pixel_data = tmp_img->GetData( );
     wxNativePixelData pixel_data(*output_bitmap);
     if ( ! pixel_data ) {
         MyPrintWithDetails("Can't access bitmap data");
@@ -141,10 +133,7 @@ void ConvertImageToBitmap(Image* input_image, wxBitmap* output_bitmap, int clien
 
     // we have to mirror the lines as wxwidgets using 0,0 at top left
     // Get all of the image data, and then take a subsection of it for actually creating the bitmap,
-    // which should be limited by the panel's size
-    // Overall, though, the limit should be the size of the image, not the dimensions of the panel
-    // This may be the reason the DP uses the sub image instead of limiting the size of the panel
-    // FIXME: set this to be the same loop as before, and use a sub bitmap
+    // which should be limited by the panel's or the image's size, whichever is smaller
     for ( j = 0; j < input_image->logical_y_dimension; j++ ) {
         mirror_line_address = (input_image->logical_y_dimension - 1 - j) * (input_image->logical_x_dimension + input_image->padding_jump_value);
         p.MoveTo(pixel_data, 0, j);
@@ -167,29 +156,15 @@ void ConvertImageToBitmap(Image* input_image, wxBitmap* output_bitmap, int clien
         }
     }
 
-    // Get sub bitmap in case of zooming
-    // FIXME: invalid size
+    // Now get sub-image dimensions and create it.
+    int cut_x_size = (client_x_size < input_image->logical_x_dimension) ? client_x_size : input_image->logical_x_dimension;
+    int cut_y_size = (client_y_size < input_image->logical_y_dimension) ? client_y_size : input_image->logical_y_dimension;
+    if ( img_x_start * scaling_factor + client_x_size > input_image->logical_x_dimension )
+        cut_x_size = input_image->logical_x_dimension - img_x_start * scaling_factor;
+    if ( img_y_start * scaling_factor + client_y_size > input_image->logical_y_dimension )
+        cut_y_size = input_image->logical_y_dimension - img_y_start * scaling_factor;
 
-    int cut_x_size = client_x_size;
-    int cut_y_size = client_y_size;
-    if ( img_x * scaling_factor + client_x_size > input_image->logical_x_dimension )
-        cut_x_size = input_image->logical_x_dimension - img_x * scaling_factor;
-    if ( img_y * scaling_factor + client_y_size > input_image->logical_y_dimension )
-        cut_y_size = input_image->logical_y_dimension - img_y * scaling_factor;
-
-    *output_bitmap = output_bitmap->GetSubBitmap(wxRect(img_x * scaling_factor, img_y * scaling_factor, cut_x_size, cut_y_size));
-
-    /*
-    if ( input_image->logical_x_dimension > client_x_size ) {
-        if ( input_image->logical_y_dimension > client_y_size ) // both logical x and logical y are greater than the panel size
-            *output_bitmap = output_bitmap->GetSubBitmap(wxRect(img_x * scaling_factor, img_y * scaling_factor, client_x_size, client_y_size));
-        else // Only logical x is greater
-            *output_bitmap = output_bitmap->GetSubBitmap(wxRect(img_x * scaling_factor, img_y * scaling_factor, client_x_size, input_image->logical_y_dimension));
-    }
-    // Only y dimension exceeds the client size
-    else if ( input_image->logical_y_dimension > client_y_size ) {
-        *output_bitmap = output_bitmap->GetSubBitmap(wxRect(img_x, img_y, input_image->logical_x_dimension, client_y_size));
-    }*/
+    *output_bitmap = output_bitmap->GetSubBitmap(wxRect(img_x_start * scaling_factor, img_y_start * scaling_factor, cut_x_size, cut_y_size));
 }
 
 void GetMultilineTextExtent(wxDC* wanted_dc, const wxString& string, int& width, int& height) {

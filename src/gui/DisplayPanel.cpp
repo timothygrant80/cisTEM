@@ -2377,11 +2377,6 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
                             panel_image->Resize(wxSize(ReturnImageXSize( ), ReturnImageYSize( )), wxPoint(0, 0));
                         }
 
-                        // REMOVE COMMENT:
-                        // THIS is pointer to the wxImage's data; this is where we're loading in the information
-                        // So, I can just emulate the process in the ConvertImageToBitmap function
-                        // What this means is that you build the full bitmap, and then crop it down to the region that fits
-                        // within the boundaries of the panel -- makes sense given current behavior of picking results panel
                         unsigned char* image_data = panel_image->GetData( );
 
                         // are we locally scaling?
@@ -2577,19 +2572,12 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
 
                         // cut out the appropriate section taking the scaling factor into account.
                         // prevent cutting outside the size of the image..
-                        // DEBUG:
-                        wxPrintf("Before if statements: cut_x_size == %li, cut_y_size == %li\n", cut_x_size, cut_y_size);
                         int quick_sum = int(single_image_x * actual_scale_factor + window_x_size);
-                        wxPrintf("Comparison values: single_image_x == %i * actual_scale_factor == %f + window_x_size == %i = %i\n", single_image_x, actual_scale_factor, window_x_size, quick_sum);
-                        wxPrintf("MRC size: x: %i, y: %i\n", panel_image->GetWidth( ), panel_image->GetHeight( ));
-                        quick_sum = int(single_image_y * actual_scale_factor + window_y_size);
-                        wxPrintf("Comparison values: single_image_y == %i * actual_scale_factor == %f + window_y_size == %i = %i\n", single_image_y, actual_scale_factor, window_y_size, quick_sum);
+                        quick_sum     = int(single_image_y * actual_scale_factor + window_y_size);
                         if ( single_image_x * actual_scale_factor + window_x_size > panel_image->GetWidth( ) )
                             cut_x_size = panel_image->GetWidth( ) - single_image_x * actual_scale_factor;
                         if ( single_image_y * actual_scale_factor + window_y_size > panel_image->GetHeight( ) )
                             cut_y_size = panel_image->GetHeight( ) - single_image_y * actual_scale_factor;
-                        // DEBUG:
-                        wxPrintf("After if statements: cut_x_size == %li, cut_y_size == %li\n", cut_x_size, cut_y_size);
                         FrameImage = panel_image->GetSubImage(wxRect(single_image_x * actual_scale_factor, single_image_y * actual_scale_factor, cut_x_size, cut_y_size));
                     }
                     else {

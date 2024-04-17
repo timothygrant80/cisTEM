@@ -4,6 +4,10 @@
 #include <array>
 #include <string_view>
 
+constexpr long OPEN_TO_READ   = 0;
+constexpr long OPEN_TO_WRITE  = 1;
+constexpr long OPEN_TO_APPEND = 2;
+
 // Numerical constants for frequently used values like pi, sqrt(2), etc.
 #include "cistem_numbers.h"
 

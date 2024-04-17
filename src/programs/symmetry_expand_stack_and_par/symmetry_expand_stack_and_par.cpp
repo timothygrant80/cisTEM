@@ -8,307 +8,8 @@ class
 
   private:
 };
-/*
-class
-BruteForceMatrixToEuler
-{
-	RotationMatrix *all_matrices;
-	long total_number_of_matrices;
-	float *all_phi_values;
-	float *all_theta_values;
-	float *all_psi_values;
-	float angular_sampling;
 
-public :
-
-	BruteForceMatrixToEuler();
-	~BruteForceMatrixToEuler();
-	void Init(float wanted_angluar_sampling=0.5f);
-	void FindClosestEulerAngles(RotationMatrix *input_matrix, float &output_phi, float &output_theta, float &output_psi);
-};
-*/
 IMPLEMENT_APP(SymmetryExpandStackAndPar)
-
-/*
-BruteForceMatrixToEuler::BruteForceMatrixToEuler()
-{
-	angular_sampling = 0.0f;
-	total_number_of_matrices = 0;
-	all_matrices = NULL;
-	all_phi_values = NULL;
-	all_theta_values = NULL;
-	all_psi_values = NULL;
-}
-
-BruteForceMatrixToEuler::~BruteForceMatrixToEuler()
-{
-	if (all_matrices != NULL) delete [] all_matrices;
-	if (all_phi_values != NULL) delete [] all_phi_values;
-	if (all_theta_values != NULL) delete [] all_theta_values;
-	if (all_psi_values != NULL) delete [] all_psi_values;
-}
-
-void BruteForceMatrixToEuler::Init(float wanted_angular_sampling)
-{
-	if (all_matrices != NULL) delete [] all_matrices;
-	if (all_phi_values != NULL) delete [] all_phi_values;
-	if (all_theta_values != NULL) delete [] all_theta_values;
-	if (all_psi_values != NULL) delete [] all_psi_values;
-
-	float current_phi;
-	float current_theta;
-	float current_psi;
-
-	total_number_of_matrices = 0;
-	long current_matrix = 0;
-	EulerSearch	global_euler_search;
-
-	bool parameter_map[5]; // needed for euler search init
-	for (int i = 0; i < 5; i++) {parameter_map[i] = true;}
-
-	int			best_parameters_to_keep = 20;
-
-
-	global_euler_search.InitGrid("C1", wanted_angular_sampling, 0.0f, 0.0, 360.0f, wanted_angular_sampling, 0.0f, 0.5f, parameter_map, best_parameters_to_keep);
-
-	if (global_euler_search.test_mirror == true) // otherwise the theta max is set to 90.0 and test_mirror is set to true.  However, I don't want to have to test the mirrors.
-	{
-		global_euler_search.theta_max = 180.0f;
-		global_euler_search.CalculateGridSearchPositions();
-	}
-
-
-	angular_sampling = wanted_angular_sampling;
-
-	for (long current_search_position = 0; current_search_position < global_euler_search.number_of_search_positions; current_search_position++)
-	{
-		for (current_psi = 0.0f; current_psi < 360.0f; current_psi += angular_sampling)
-		{
-			total_number_of_matrices++;
-		}
-	}
-
-	wxPrintf("There are %li matrices\n", total_number_of_matrices);
-/*
-	for (current_phi = -180.0f; current_phi < 180.0f; current_phi += angular_sampling)
-	{
-		for (current_theta = 0.0f; current_theta < 90.0f; current_theta += angular_sampling)
-		{
-			for (current_psi = -180.0f; current_psi < 180.0f; current_psi += angular_sampling)
-			{
-				total_number_of_matrices++;
-			}
-		}
-
-	}
-
-	// allocate memory
-
-	all_matrices = new RotationMatrix[total_number_of_matrices];
-	all_phi_values = new float[total_number_of_matrices];
-	all_theta_values = new float[total_number_of_matrices];
-	all_psi_values = new float[total_number_of_matrices];
-
-	ProgressBar *my_progress = new ProgressBar(total_number_of_matrices);
-
-	/*for (current_phi = -180.0f; current_phi < 180.0f; current_phi += angular_sampling)
-	{
-		for (current_theta = 0.0f; current_theta < 90.0f; current_theta += angular_sampling)
-		{
-			for (current_psi = -180.0f; current_psi < 180.0f; current_psi += angular_sampling)
-			{
-				all_phi_values[current_matrix] = current_phi;
-				all_theta_values[current_matrix] = current_theta;
-				all_psi_values[current_matrix] = current_psi;
-				all_matrices[current_matrix].SetToEulerRotation(current_phi, current_theta, current_psi);
-
-				current_matrix++;
-				my_progress->Update(current_matrix);
-			}
-		}
-	}
-
-	for (long current_search_position = 0; current_search_position < global_euler_search.number_of_search_positions; current_search_position++)
-	{
-		for (current_psi = 0.0f; current_psi < 360.0f; current_psi += angular_sampling)
-		{
-			all_phi_values[current_matrix] = global_euler_search.list_of_search_parameters[current_search_position][0];
-			all_theta_values[current_matrix] = global_euler_search.list_of_search_parameters[current_search_position][1];
-			all_psi_values[current_matrix] = current_psi;
-			all_matrices[current_matrix].SetToEulerRotation(global_euler_search.list_of_search_parameters[current_search_position][0], global_euler_search.list_of_search_parameters[current_search_position][1], current_psi);
-
-			current_matrix++;
-			my_progress->Update(current_matrix);
-		}
-	}
-
-	delete my_progress;
-
-
-}
-
-void BruteForceMatrixToEuler::FindClosestEulerAngles(RotationMatrix *input_matrix, float &output_phi, float &output_theta, float &output_psi)
-{
-	float best_difference = FLT_MAX;
-	float best_phi;
-	float best_theta;
-	float best_psi;
-	float current_difference;
-
-	float current_phi;
-	float current_theta;
-	float current_psi;
-
-	RotationMatrix refine_matrix;
-
-	for (long current_matrix = 0; current_matrix < total_number_of_matrices; current_matrix++)
-	{
-		current_difference = 0.0f;
-
-		current_difference += fabsf(all_matrices[current_matrix].m[0][0] - input_matrix->m[0][0]);
-		current_difference += fabsf(all_matrices[current_matrix].m[1][0] - input_matrix->m[1][0]);
-		current_difference += fabsf(all_matrices[current_matrix].m[2][0] - input_matrix->m[2][0]);
-		current_difference += fabsf(all_matrices[current_matrix].m[0][1] - input_matrix->m[0][1]);
-		current_difference += fabsf(all_matrices[current_matrix].m[1][1] - input_matrix->m[1][1]);
-		current_difference += fabsf(all_matrices[current_matrix].m[2][1] - input_matrix->m[2][1]);
-		current_difference += fabsf(all_matrices[current_matrix].m[0][2] - input_matrix->m[0][2]);
-		current_difference += fabsf(all_matrices[current_matrix].m[1][2] - input_matrix->m[1][2]);
-		current_difference += fabsf(all_matrices[current_matrix].m[2][2] - input_matrix->m[2][2]);
-
-		if (current_difference < best_difference)
-		{
-			best_difference = current_difference;
-			best_phi = all_phi_values[current_matrix];
-			best_theta = all_theta_values[current_matrix];
-			best_psi = all_psi_values[current_matrix];
-		}
-	}
-
-
-	float old_best_phi = best_phi;
-	float old_best_theta = best_theta;
-	float old_best_psi = best_psi;
-
-	for (current_phi = best_phi - angular_sampling; current_phi < old_best_phi + angular_sampling; current_phi += 0.5)
-	{
-		for (current_theta = best_theta - angular_sampling; current_theta < old_best_theta + angular_sampling; current_theta += 0.5)
-		{
-			for (current_psi = best_psi - angular_sampling; current_psi < old_best_psi + angular_sampling; current_psi += 0.5)
-			{
-
-				refine_matrix.SetToEulerRotation(current_phi, current_theta, current_psi);
-				current_difference = 0.0f;
-
-				current_difference += fabsf(refine_matrix.m[0][0] - input_matrix->m[0][0]);
-				current_difference += fabsf(refine_matrix.m[1][0] - input_matrix->m[1][0]);
-				current_difference += fabsf(refine_matrix.m[2][0] - input_matrix->m[2][0]);
-				current_difference += fabsf(refine_matrix.m[0][1] - input_matrix->m[0][1]);
-				current_difference += fabsf(refine_matrix.m[1][1] - input_matrix->m[1][1]);
-				current_difference += fabsf(refine_matrix.m[2][1] - input_matrix->m[2][1]);
-				current_difference += fabsf(refine_matrix.m[0][2] - input_matrix->m[0][2]);
-				current_difference += fabsf(refine_matrix.m[1][2] - input_matrix->m[1][2]);
-				current_difference += fabsf(refine_matrix.m[2][2] - input_matrix->m[2][2]);
-
-				if (current_difference < best_difference)
-				{
-					best_difference = current_difference;
-					best_phi = current_phi;
-					best_theta = current_theta;
-					best_psi = current_psi;
-				}
-
-			}
-		}
-
-	}
-
-
-	old_best_phi = best_phi;
-	old_best_theta = best_theta;
-	old_best_psi = best_psi;
-
-	for (current_phi = best_phi - 1; current_phi < old_best_phi + 1; current_phi += 0.1)
-	{
-		for (current_theta = best_theta - 1; current_theta < old_best_theta + 1; current_theta += 0.1)
-		{
-			for (current_psi = best_psi - 1; current_psi < old_best_psi + 1; current_psi += 0.1)
-			{
-
-				refine_matrix.SetToEulerRotation(current_phi, current_theta, current_psi);
-				current_difference = 0.0f;
-
-				current_difference += fabsf(refine_matrix.m[0][0] - input_matrix->m[0][0]);
-				current_difference += fabsf(refine_matrix.m[1][0] - input_matrix->m[1][0]);
-				current_difference += fabsf(refine_matrix.m[2][0] - input_matrix->m[2][0]);
-				current_difference += fabsf(refine_matrix.m[0][1] - input_matrix->m[0][1]);
-				current_difference += fabsf(refine_matrix.m[1][1] - input_matrix->m[1][1]);
-				current_difference += fabsf(refine_matrix.m[2][1] - input_matrix->m[2][1]);
-				current_difference += fabsf(refine_matrix.m[0][2] - input_matrix->m[0][2]);
-				current_difference += fabsf(refine_matrix.m[1][2] - input_matrix->m[1][2]);
-				current_difference += fabsf(refine_matrix.m[2][2] - input_matrix->m[2][2]);
-
-				if (current_difference < best_difference)
-				{
-					best_difference = current_difference;
-					best_phi = current_phi;
-					best_theta = current_theta;
-					best_psi = current_psi;
-				}
-
-			}
-		}
-
-	}
-
-
-	output_phi = best_phi;
-	output_theta = best_theta;
-	output_psi = best_psi;
-
-	old_best_phi = best_phi;
-	old_best_theta = best_theta;
-	old_best_psi = best_psi;
-
-	for (current_phi = best_phi - 0.1; current_phi < old_best_phi + 0.1; current_phi += 0.02)
-	{
-		for (current_theta = best_theta - 0.1; current_theta < old_best_theta + 0.1; current_theta += 0.02)
-		{
-			for (current_psi = best_psi - 0.1; current_psi < old_best_psi + 0.1; current_psi += 0.02)
-			{
-
-				refine_matrix.SetToEulerRotation(current_phi, current_theta, current_psi);
-				current_difference = 0.0f;
-
-				current_difference += fabsf(refine_matrix.m[0][0] - input_matrix->m[0][0]);
-				current_difference += fabsf(refine_matrix.m[1][0] - input_matrix->m[1][0]);
-				current_difference += fabsf(refine_matrix.m[2][0] - input_matrix->m[2][0]);
-				current_difference += fabsf(refine_matrix.m[0][1] - input_matrix->m[0][1]);
-				current_difference += fabsf(refine_matrix.m[1][1] - input_matrix->m[1][1]);
-				current_difference += fabsf(refine_matrix.m[2][1] - input_matrix->m[2][1]);
-				current_difference += fabsf(refine_matrix.m[0][2] - input_matrix->m[0][2]);
-				current_difference += fabsf(refine_matrix.m[1][2] - input_matrix->m[1][2]);
-				current_difference += fabsf(refine_matrix.m[2][2] - input_matrix->m[2][2]);
-
-				if (current_difference < best_difference)
-				{
-					best_difference = current_difference;
-					best_phi = current_phi;
-					best_theta = current_theta;
-					best_psi = current_psi;
-				}
-
-			}
-		}
-
-	}
-
-
-	output_phi = best_phi;
-	output_theta = best_theta;
-	output_psi = best_psi;
-
-}
-*/
 
 // override the DoInteractiveUserInput
 
@@ -593,49 +294,27 @@ bool SymmetryExpandStackAndPar::DoCalculation( ) {
         input_3d_masked.InitWithDimensions(input_3d_file->ReturnXSize( ), input_3d_file->ReturnYSize( ), input_3d_file->ReturnZSize( ), pixel_size, "C1");
 
         input_3d.density_map->ReadSlices(input_3d_file, 1, input_3d.density_map->logical_z_dimension);
-        //
-        //		input_3d.density_map->AddConstant(0.1f);
 
         input_3d.mask_radius = FLT_MAX;
-        //		input_3d.density_map->QuickAndDirtyWriteSlices("/tmp/original_3d.mrc", 1, input_3d.density_map->logical_z_dimension);
         input_3d.density_map->CorrectSinc(900000000, 1.0, true, 0.0);
-        //	input_3d.density_map->CorrectSinc(900000000,1.0,false);
-        //	input_3d.density_map->QuickAndDirtyWriteSlices("/tmp/scaled_3d.mrc", 1, input_3d.density_map->logical_z_dimension);
 
         wxPrintf("Adding %f\n", -input_3d.density_map->ReturnAverageOfRealValuesAtRadius(input_3d.density_map->physical_address_of_box_center_x * 0.9));
         //offset
-        //input_3d.density_map->AddConstant(-input_3d.density_map->ReturnAverageOfRealValues(input_3d.density_map->physical_address_of_box_center_x - (10.0f / pixel_size), true));
         input_3d.density_map->AddConstant(-input_3d.density_map->ReturnAverageOfRealValuesAtRadius(input_3d.density_map->physical_address_of_box_center_x * 0.9));
         input_3d.density_map->CorrectSinc(9000000000, 1.0, true, 0.0);
-        //input_3d.density_map->AddConstant(0.5f);
-        //scaling
-        //input_3d.density_map->MultiplyByConstant(sqrtf(input_3d.density_map->ReturnVarianceOfRealValues(input_3d.density_map->physical_address_of_box_center_x , 0.0, 0.0, 0.0, true)));
-        // apply curve filter
-
-        //input_3d.density_map->DivideByConstant(sqrtf(float(input_3d_file->ReturnXSize() * input_3d_file->ReturnYSize() * input_3d_file->ReturnZSize())));
-        //input_3d.density_map->ApplyCurveFilter(&noise_power_spectrum);
 
         input_mask.ReadSlices(input_mask_file, 1, input_mask_file->ReturnNumberOfSlices( ));
 
         input_3d_masked.density_map->CopyFrom(input_3d.density_map);
-        //input_3d_masked.density_map->SwapRealSpaceQuadrants();
-        //input_3d_masked.density_map->BackwardFFT();
-        //input_3d_masked.density_map->DivideByConstant(sqrtf(float(input_3d_file->ReturnXSize() * input_3d_file->ReturnYSize() * input_3d_file->ReturnZSize())));
-        //input_3d_masked.density_map->ApplyMask(input_mask, 10.0f, 0.0f, 0.0f, 0.0f, input_3d_masked.density_map->ReturnAverageOfRealValues(), true);
         input_3d_masked.density_map->MultiplyPixelWise(input_mask);
 
-        ///nput_3d_masked.PrepareForProjections(0.0, 2.0 * pixel_size);
         input_3d_masked.density_map->ForwardFFT( );
         input_3d_masked.density_map->SwapRealSpaceQuadrants( );
 
         input_3d.density_map->ForwardFFT( );
         input_3d.density_map->SwapRealSpaceQuadrants( );
-        //input_3d_masked.density_map->DivideByConstant(sqrtf(float(input_3d_file->ReturnXSize() * input_3d_file->ReturnYSize() * input_3d_file->ReturnZSize())));
-
-        //input_3d_masked.density_map->MultiplyByConstant(sqrtf(float(input_3d_file->ReturnXSize() * input_3d_file->ReturnYSize() * input_3d_file->ReturnZSize())));
 
         input_3d_masked.mask_radius = FLT_MAX;
-        //input_3d_masked.density_map->QuickAndDirtyWriteSlices("/tmp/masked_3d.mrc", 1, input_3d_masked.density_map->logical_z_dimension);
 
         original_x_coord = centre_x_coord - input_3d.density_map->physical_address_of_box_center_x;
         original_y_coord = centre_y_coord - input_3d.density_map->physical_address_of_box_center_y;
@@ -651,9 +330,7 @@ bool SymmetryExpandStackAndPar::DoCalculation( ) {
 
     number_of_images_processed = 0;
 
-    for ( current_image = 1; current_image <= my_input_par_file.number_of_lines; current_image++ )
-    //for (current_image = 1; current_image <= 1; current_image++)
-    {
+    for ( current_image = 1; current_image <= my_input_par_file.number_of_lines; current_image++ ) {
         my_input_par_file.ReadLine(temp_float);
         if ( temp_float[0] < first_particle || temp_float[0] > last_particle )
             continue;
@@ -675,11 +352,6 @@ bool SymmetryExpandStackAndPar::DoCalculation( ) {
             particle_image.AddMultiplyConstant(-average, 1.0 / sqrtf(variance));
         }
 
-        //	particle_image_transform.CopyFrom(&particle_image);
-        //particle_image_transform.CircleMask(mask_radius / pixel_size);
-        //	particle_image_transform.ForwardFFT();
-        //	particle_image_transform.DivideByConstant(sqrtf(float(projection_image.logical_x_dimension * projection_image.logical_y_dimension)));
-
         current_phi   = temp_float[1];
         current_theta = temp_float[2];
         current_psi   = temp_float[3];
@@ -689,7 +361,6 @@ bool SymmetryExpandStackAndPar::DoCalculation( ) {
         for ( symmetry_counter = 1; symmetry_counter <= ReturnNumberofAsymmetricUnits(symmetry); symmetry_counter++ ) {
             current_symmetry_related_matrix = original_matrix * my_symmetry_matrices.rot_mat[symmetry_counter - 1];
             current_symmetry_related_matrix.ConvertToValidEulerAngles(temp_float[1], temp_float[2], temp_float[3]);
-            //current_symmetry_related_matrix_transposed = current_symmetry_related_matrix.ReturnTransposed();
 
             if ( do_subtraction == true ) {
                 buffer_image.CopyFrom(&particle_image);
@@ -703,10 +374,7 @@ bool SymmetryExpandStackAndPar::DoCalculation( ) {
                 projection_image.PhaseShift(temp_float[4] / pixel_size, temp_float[5] / pixel_size);
                 projection_image.SwapRealSpaceQuadrants( );
 
-                //projection_image.ApplyCurveFilter(&noise_power_spectrum);
                 projection_image.BackwardFFT( );
-                //projection_image.DivideByConstant(sqrtf(float(projection_image.logical_x_dimension * projection_image.logical_y_dimension)));
-                //projection_image.AddConstant(-projection_image.ReturnAverageOfRealValuesAtRadius(projection_image.physical_address_of_box_center_x * 0.9));
 
                 if ( use_least_squares_scaling == true ) {
                     // work out a frequency dependent scaling based on the unmasked projection
@@ -717,113 +385,7 @@ bool SymmetryExpandStackAndPar::DoCalculation( ) {
                     unmasked_projection_image.ApplyCTF(my_ctf);
                     unmasked_projection_image.PhaseShift(temp_float[4] / pixel_size, temp_float[5] / pixel_size);
                     unmasked_projection_image.SwapRealSpaceQuadrants( );
-                    //unmasked_projection_image.ApplyCurveFilter(&noise_power_spectrum);
                     unmasked_projection_image.BackwardFFT( );
-                    //unmasked_projection_image.CircleMask(mask_radius / pixel_size);
-                    //unmasked_projection_image.DivideByConstant(sqrtf(float(projection_image.logical_x_dimension * projection_image.logical_y_dimension)));
-
-                    //if (current_image == 1 && symmetry_counter == 1 && first_particle == 1) unmasked_projection_image.QuickAndDirtyWriteSlice("/tmp/unmasked_proj.mrc", 1);
-
-                    //projection_image.ForwardFFT();
-                    //projection_image.DivideByConstant(sqrtf(float(projection_image.logical_x_dimension * projection_image.logical_y_dimension)));
-
-                    /*	int j, i, yi;
-					float x,y;
-					float frequency_squared;
-					float bin;
-					int ibin;
-					float difference;
-
-					int number_of_bins = particle_image.ReturnSmallestLogicalDimension() / 2 + 1;
-					int number_of_bins2 = 2 * (number_of_bins - 1);
-					std::complex<double> temp_c;
-
-					double *dot_products = new double[number_of_bins2];
-					double *used_pixels = new double[number_of_bins2];
-					double *self_dot_products = new double[number_of_bins2];
-					double *scale_factors = new double[number_of_bins2];
-
-					ZeroDoubleArray(dot_products, number_of_bins2);
-					ZeroDoubleArray(used_pixels, number_of_bins2);
-					ZeroDoubleArray(self_dot_products, number_of_bins2);
-					ZeroDoubleArray(scale_factors, number_of_bins2);
-
-					pixel_counter = 0;
-
-					for (j = 0; j <= particle_image_transform.physical_upper_bound_complex_y; j++)
-					{
-						yi = particle_image.ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j);
-						y = powf(yi * particle_image_transform.fourier_voxel_size_y, 2);
-
-						for (i = 0; i <= particle_image_transform.physical_upper_bound_complex_x; i++)
-						{
-							x = powf(i * particle_image_transform.fourier_voxel_size_x, 2);
-							frequency_squared = x + y;
-							bin = sqrtf(frequency_squared) * number_of_bins2;
-							ibin = int(bin);
-							difference = bin - float(ibin);
-
-							//wxPrintf("ibin = %i\n", ibin);
-							temp_c = real(particle_image_transform.complex_values[pixel_counter] * conj(unmasked_projection_image.complex_values[pixel_counter])) + I * 0.0f;
-							dot_product = real(temp_c);
-							//wxPrintf("dot_product = %f\n", dot_product);
-							dot_products[ibin] += dot_product * (1-difference);
-							dot_products[ibin + 1] += dot_product * difference;
-
-							self_dot_product = real(unmasked_projection_image.complex_values[pixel_counter] * conj(unmasked_projection_image.complex_values[pixel_counter]));
-							//wxPrintf("self_dot_product = %f\n", self_dot_product);
-							self_dot_products[ibin] += self_dot_product * (1-difference);
-							self_dot_products[ibin + 1] += self_dot_product * difference;
-
-
-							used_pixels[ibin] += 1-difference;
-							used_pixels[ibin + 1] += difference;
-
-							pixel_counter++;
-						}
-
-					}
-
-					for (int bin_counter = 0; bin_counter < number_of_bins2; bin_counter++)
-					{
-						if (used_pixels[bin_counter] != 0.0f && self_dot_products[bin_counter] != 0.0f)
-						{
-							scale_factors[bin_counter] = dot_products[bin_counter] / self_dot_products[bin_counter];
-						}
-						else
-						{
-							scale_factors[bin_counter] = 1.0f;
-						}
-
-						//wxPrintf ("scale factor %i = %f\n", bin_counter, scale_factors[bin_counter]);
-						//wxPrintf ("used pixels %i = %f\n", bin_counter, used_pixels[bin_counter]);
-						wxPrintf ("self_dot_product %i = %f\n", bin_counter, self_dot_products[bin_counter]);
-					}
-
-					// apply the scaling..
-
-					pixel_counter = 0;
-					for (j = 0; j <= particle_image.physical_upper_bound_complex_y; j++)
-					{
-						yi = particle_image.ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j);
-						y = powf(yi * particle_image.fourier_voxel_size_y, 2);
-
-						for (i = 0; i <= particle_image.physical_upper_bound_complex_x; i++)
-						{
-							x = powf(i * particle_image.fourier_voxel_size_x, 2);
-							frequency_squared = x + y;
-							bin = sqrtf(frequency_squared) * number_of_bins2;
-							ibin = int(bin);
-							difference = bin - float(ibin);
-
-							projection_image.complex_values[pixel_counter] *= scale_factors[ibin];
-							pixel_counter++;
-						}
-					}
-
-					projection_image.BackwardFFT();
-					projection_image.DivideByConstant(sqrtf(float(projection_image.logical_x_dimension * projection_image.logical_y_dimension)));
-*/
 
                     used_pixels      = 0;
                     dot_product      = 0.0;
@@ -882,32 +444,17 @@ bool SymmetryExpandStackAndPar::DoCalculation( ) {
 
                     average_difference += (difference / float(num_pixels));
                     number_of_differences_calculated++;
-                    //scale_factor = 0.058925565;
-                    //scale_factor = 0.5;
                     projection_image.MultiplyByConstant(scale_factor);
                 }
 
-                //if (current_image == 1 && symmetry_counter == 1 && first_particle == 1)
-                //{
-                //	projection_image.QuickAndDirtyWriteSlice("/tmp/proj.mrc", 1);
-                //	particle_image.QuickAndDirtyWriteSlice("/tmp/particle.mrc", position_in_output_stack);
-                //}
-
                 buffer_image.SubtractImage(&projection_image);
-                //projection_image.QuickAndDirtyWriteSlice("/tmp/projs.mrc", position_in_output_stack);
-                //particle_image.QuickAndDirtyWriteSlice("/tmp/particle.mrc", position_in_output_stack);
             }
 
             if ( do_centring_and_cropping == true ) {
 
                 // work out rotated coords..
-                //buffer_image.PhaseShift(-temp_float[4] / pixel_size, -temp_float[5] / pixel_size);
                 matrix_for_centring.SetToEulerRotation(-temp_float[1], -temp_float[2], -temp_float[3]);
-                //current_symmetry_related_matrix = matrix_for_centring * my_symmetry_matrices.rot_mat[symmetry_counter - 1];
                 matrix_for_centring.RotateCoords(original_x_coord, original_y_coord, original_z_coord, rotated_x_coord, rotated_y_coord, rotated_z_coord);
-
-                //	wxPrintf("original coords (%i) = %.2f, %.2f, %.2f\n", symmetry_counter + 1, original_x_coord, original_y_coord, original_z_coord);
-                //	wxPrintf("rotated  coords (%i) = %.2f, %.2f, %.2f\n", symmetry_counter + 1, rotated_x_coord, rotated_y_coord, rotated_z_coord);
 
                 // phase_shift the subtracted image so that the bit we want is in the centre..
 
@@ -938,8 +485,6 @@ bool SymmetryExpandStackAndPar::DoCalculation( ) {
             if ( do_centring_and_cropping ) {
                 temp_float[4] = 0.0f;
                 temp_float[5] = 0.0f;
-                //temp_float[4] = old_x_shift;
-                //temp_float[5] = old_y_shift;
             }
             else {
                 temp_float[4] = old_x_shift;

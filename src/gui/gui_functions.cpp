@@ -102,6 +102,10 @@ void ConvertImageToBitmap(Image* input_image, wxBitmap* output_bitmap, int clien
 
     long mirror_line_address;
 
+    // TODO: change allocated size of the bitmap, then try to implement an algo in which the
+    // data loaded is limited maximally to the size of the client.
+    // This should save the time that needs to be saved on dragging
+
     if ( input_image->logical_x_dimension != output_bitmap->GetWidth( ) || input_image->logical_y_dimension != output_bitmap->GetHeight( ) ) {
         output_bitmap->Create(input_image->logical_x_dimension, input_image->logical_y_dimension, 24);
     }

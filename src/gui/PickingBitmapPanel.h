@@ -85,7 +85,7 @@ class PickingBitmapPanel : public wxPanel {
     bool   allow_editing_of_coordinates;
     bool   popup_exists;
     bool   image_has_correct_scaling;
-    double scale_factor;
+    double user_specified_scale_factor;
 
     float low_res_filter_value;
     float high_res_filter_value;

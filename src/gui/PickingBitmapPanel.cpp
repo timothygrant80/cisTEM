@@ -77,7 +77,7 @@ PickingBitmapPanel::PickingBitmapPanel(wxWindow* parent, wxWindowID id, const wx
     clicked_point_x_in_angstroms              = 0.0;
     clicked_point_y_in_angstroms              = 0.0;
     current_step_in_history                   = 0;
-    scale_factor                              = 1.0;
+    user_specified_scale_factor               = 1.0;
     old_mouse_x                               = -9999;
     old_mouse_y                               = -9999;
 
@@ -254,8 +254,8 @@ void PickingBitmapPanel::UpdateScalingAndDimensions( ) {
         int panel_dim_x, panel_dim_y;
         GetClientSize(&panel_dim_x, &panel_dim_y);
 
-        float target_scaling_x    = float(panel_dim_x) * 0.95 * scale_factor / float(image_in_memory.logical_x_dimension);
-        float target_scaling_y    = float(panel_dim_y) * 0.95 * scale_factor / float(image_in_memory.logical_y_dimension);
+        float target_scaling_x    = float(panel_dim_x) * 0.95 * user_specified_scale_factor / float(image_in_memory.logical_x_dimension);
+        float target_scaling_y    = float(panel_dim_y) * 0.95 * user_specified_scale_factor / float(image_in_memory.logical_y_dimension);
         float actual_scale_factor = std::min(target_scaling_x, target_scaling_y);
 
         int new_x_dimension = std::max(int(float(image_in_memory.logical_x_dimension) * actual_scale_factor), 1);
@@ -358,8 +358,6 @@ void PickingBitmapPanel::OnPaint(wxPaintEvent& evt) {
 
         int text_y_offset;
 
-        //float scale_factor;
-
         int x_oversize;
         int y_oversize;
 
@@ -367,7 +365,7 @@ void PickingBitmapPanel::OnPaint(wxPaintEvent& evt) {
         bitmap_width  = PanelBitmap.GetWidth( );
         bitmap_height = PanelBitmap.GetHeight( );
 
-        if ( panel_text.IsEmpty( ) == true ) {
+        if ( panel_text.IsEmpty( ) ) {
             text_x_size = 0;
             text_y_size = 0;
         }
@@ -410,12 +408,13 @@ void PickingBitmapPanel::OnPaint(wxPaintEvent& evt) {
                     dc.DrawCircle(bitmap_x_offset + x, bitmap_y_offset + bitmap_height - y, radius_of_circles_around_particles_in_angstroms / image_in_bitmap_pixel_size);
                 }
 
-                // Cases where bitmap width or height is less than the image (i.e., the image doesn't fit due to zoom level)
+                // Cases where bitmap width or height is less than the image (i.e., the image doesn't fit due to zoom level).
                 // The circle must correspond to the position on the bitmap overall, despite any cutoff; to achieve this,
-                // subtract the y position from y dim of the image. This plots circle properly regardless of cutoff
+                // add offset, subtract bitmap starting position (0,0 is upper left corner for wxWidgets) from the coordinate,
+                // and in the case of y coords, add the image dimension to flip the plot, as for angstrom coords 0,0 is bottom left.
                 else {
-                    const int final_y = bitmap_y_offset - image_starting_y_coord * image_in_bitmap_scaling_factor + image_in_bitmap.logical_y_dimension - y;
-                    const int final_x = bitmap_x_offset - image_starting_x_coord * image_in_bitmap_scaling_factor + x;
+                    const int final_y = -y + bitmap_y_offset - image_starting_y_coord * image_in_bitmap_scaling_factor + image_in_bitmap.logical_y_dimension;
+                    const int final_x = x + bitmap_x_offset - image_starting_x_coord * image_in_bitmap_scaling_factor;
                     // Draw if it fits in the client's view
                     if ( final_x >= 0 && final_x <= bitmap_width + image_starting_x_coord && final_y >= 0 && final_y <= bitmap_height + image_starting_y_coord ) {
                         dc.DrawCircle(final_x, final_y, radius_of_circles_around_particles_in_angstroms / image_in_bitmap_pixel_size);
@@ -485,7 +484,7 @@ void PickingBitmapPanel::SetupPanelBitmap( ) {
 }
 
 void PickingBitmapPanel::OnLeftDown(wxMouseEvent& event) {
-    if ( should_show == true ) {
+    if ( should_show ) {
         int x_pos, y_pos;
         event.GetPosition(&x_pos, &y_pos);
         if ( event.ControlDown( ) ) {
@@ -514,8 +513,8 @@ void PickingBitmapPanel::OnLeftDown(wxMouseEvent& event) {
 void PickingBitmapPanel::OnLeftUp(wxMouseEvent& event) {
     extern MyPickingResultsPanel* picking_results_panel;
 
-    if ( should_show == true ) {
-        if ( doing_shift_delete == true ) {
+    if ( should_show ) {
+        if ( doing_shift_delete ) {
             doing_shift_delete = false;
         }
         else if ( draw_selection_rectangle ) {
@@ -675,11 +674,21 @@ void PickingBitmapPanel::OnMiddleUp(wxMouseEvent& event) {
 }
 
 float PickingBitmapPanel::PixelToAngstromX(const int& x_in_pixels) {
-    return float(x_in_pixels - bitmap_x_offset) * image_in_bitmap_pixel_size;
+    // If the bitmap is bigger than the panel, account for image dimensions being greater
+    // than bitmap width, and the bitmap's starting coordinate on the image
+    if ( user_specified_scale_factor <= 1.0f )
+        return float(x_in_pixels - bitmap_x_offset) * image_in_bitmap_pixel_size;
+    else
+        return float(x_in_pixels - bitmap_x_offset + image_starting_x_coord * image_in_bitmap_scaling_factor) * image_in_bitmap_pixel_size;
 }
 
 float PickingBitmapPanel::PixelToAngstromY(const int& y_in_pixels) {
-    return float(bitmap_y_offset + bitmap_height - y_in_pixels) * image_in_bitmap_pixel_size;
+    // If the bitmap is bigger than the panel, account for image dimensions being greater
+    // than bitmap height, and the bitmap's starting coordinate on the image
+    if ( user_specified_scale_factor <= 1.0f )
+        return float(bitmap_y_offset + bitmap_height - y_in_pixels) * image_in_bitmap_pixel_size;
+    else
+        return float((bitmap_y_offset + image_in_bitmap.logical_y_dimension - (image_starting_y_coord * image_in_bitmap_scaling_factor) - y_in_pixels)) * image_in_bitmap_pixel_size;
 }
 
 void PickingBitmapPanel::OnMotion(wxMouseEvent& event) {
@@ -691,7 +700,7 @@ void PickingBitmapPanel::OnMotion(wxMouseEvent& event) {
         Update( );
         Refresh( );
     }
-    else if ( event.LeftIsDown( ) && event.ShiftDown( ) ) { // is the left button and shift down
+    else if ( event.LeftIsDown( ) && event.ShiftDown( ) ) {
         event.GetPosition(&clicked_point_x, &clicked_point_y);
         if ( clicked_point_x > bitmap_x_offset && clicked_point_x < bitmap_x_offset + bitmap_width && clicked_point_y > bitmap_y_offset && clicked_point_y < bitmap_y_offset + bitmap_height ) {
             clicked_point_x_in_angstroms = PixelToAngstromX(clicked_point_x);
@@ -737,8 +746,7 @@ void PickingBitmapPanel::OnMotion(wxMouseEvent& event) {
     }
     else if ( event.MiddleIsDown( ) ) {
         // Don't drag if the image isn't zoomed
-        // FIXME: this is not robust enough; it could be a very small image where being zoomed at 2x still has white borders
-        if ( scale_factor > 1.0f ) {
+        if ( user_specified_scale_factor > 1.0f ) {
             int client_x, client_y;
             GetClientSize(&client_x, &client_y); // Get panel dimensions
 

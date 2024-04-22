@@ -160,12 +160,9 @@ void PickingResultsDisplayPanel::OnScalingChange(wxCommandEvent& event) {
     bool convert_success;
     long new_value;
     convert_success = scaling_value.ToLong(&new_value);
-    if ( convert_success && new_value > 0 && double(new_value) / 100. != PickingResultsImagePanel->scale_factor ) {
-        PickingResultsImagePanel->scale_factor  = double(new_value) / 100;
-        PickingResultsImagePanel->size_is_dirty = true;
-        // TODO: Add a way to redraw the bitmap here, so that the image is scaled in accordance with the newly set scale factor
-        // Want to follow DRY principles, but unsure of best way to get redraw; it may just be as simple as a Refresh()/Update()
-        // and then adding the appropriate resizing code in the drawing of the bitmap
+    if ( convert_success && new_value > 0 && double(new_value) / 100. != PickingResultsImagePanel->user_specified_scale_factor ) {
+        PickingResultsImagePanel->user_specified_scale_factor = double(new_value) / 100;
+        PickingResultsImagePanel->size_is_dirty               = true;
         PickingResultsImagePanel->UpdateScalingAndDimensions( );
         PickingResultsImagePanel->UpdateImageInBitmap( );
         PickingResultsImagePanel->Refresh( );
@@ -174,7 +171,7 @@ void PickingResultsDisplayPanel::OnScalingChange(wxCommandEvent& event) {
     // Something was not right; so reset to old scale factor
     else {
         wxString temp_string;
-        temp_string = wxString::Format(wxT("%i"), int(myround(PickingResultsImagePanel->scale_factor * 100)));
+        temp_string = wxString::Format(wxT("%i"), int(myround(PickingResultsImagePanel->user_specified_scale_factor * 100)));
         temp_string += wxT("%");
         ScalingComboBox->SetValue(temp_string);
     }

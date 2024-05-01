@@ -314,7 +314,7 @@ void PickingBitmapPanel::UpdateImageInBitmap(bool force_reload) {
 
             int client_x, client_y;
             GetClientSize(&client_x, &client_y);
-            ConvertImageToBitmap(&image_in_bitmap, &PanelBitmap, client_x, client_y, image_starting_x_coord, image_starting_y_coord, image_in_bitmap_scaling_factor, true);
+            ConvertImageToBitmap(&image_in_bitmap, &PanelBitmap, true, client_x, client_y, image_starting_x_coord, image_starting_y_coord, image_in_bitmap_scaling_factor);
         }
     }
 }
@@ -413,7 +413,7 @@ void PickingBitmapPanel::OnPaint(wxPaintEvent& evt) {
                 // add offset, subtract bitmap starting position (0,0 is upper left corner for wxWidgets) from the coordinate,
                 // and in the case of y coords, add the image dimension to flip the plot, as for angstrom coords 0,0 is bottom left.
                 else {
-                    const int final_y = -y + bitmap_y_offset - image_starting_y_coord * image_in_bitmap_scaling_factor + image_in_bitmap.logical_y_dimension;
+                    const int final_y = bitmap_y_offset - image_starting_y_coord * image_in_bitmap_scaling_factor + image_in_bitmap.logical_y_dimension - y;
                     const int final_x = x + bitmap_x_offset - image_starting_x_coord * image_in_bitmap_scaling_factor;
                     // Draw if it fits in the client's view
                     if ( final_x >= 0 && final_x <= bitmap_width + image_starting_x_coord && final_y >= 0 && final_y <= bitmap_height + image_starting_y_coord ) {
@@ -563,11 +563,10 @@ PickingBitmapPanelPopup::PickingBitmapPanelPopup(wxWindow* parent, int flags) : 
 
     parent_picking_bitmap_panel = reinterpret_cast<PickingBitmapPanel*>(parent);
 
-    /* In DisplayPanel.cpp, we have to select the specific notebook panel
-    and focus on the appropriate image; here, we only have one image on the panel
-    at any given time, so we can just focus on only that image for all zooming
-    and creating the mini client
-    */
+    //  In DisplayPanel.cpp, we have to select the specific notebook panel
+    // and focus on the appropriate image; here, we only have one image on the panel
+    // at any given time, so we can just focus on only that image for all zooming
+    // and creating the mini client
 }
 
 void PickingBitmapPanelPopup::OnPaint(wxPaintEvent& event) {
@@ -683,8 +682,6 @@ float PickingBitmapPanel::PixelToAngstromX(const int& x_in_pixels) {
 }
 
 float PickingBitmapPanel::PixelToAngstromY(const int& y_in_pixels) {
-    // If the bitmap is bigger than the panel, account for image dimensions being greater
-    // than bitmap height, and the bitmap's starting coordinate on the image
     if ( user_specified_scale_factor <= 1.0f )
         return float(bitmap_y_offset + bitmap_height - y_in_pixels) * image_in_bitmap_pixel_size;
     else
@@ -728,9 +725,8 @@ void PickingBitmapPanel::OnMotion(wxMouseEvent& event) {
         // Try to bound by the size of the panel for what displays...
         int window_size_x;
         int window_size_y;
-        GetClientSize(&window_size_x, &window_size_y); // the actual size of the panel
+        GetClientSize(&window_size_x, &window_size_y);
 
-        // TODO: add bounding for top and bottom...
         if ( client_x + 256 > screen_x_size )
             client_x += 256;
         if ( client_y + 256 > screen_y_size )
@@ -745,10 +741,10 @@ void PickingBitmapPanel::OnMotion(wxMouseEvent& event) {
         Update( );
     }
     else if ( event.MiddleIsDown( ) ) {
-        // Don't drag if the image isn't zoomed
+        // Don't allow drag if the image isn't zoomed
         if ( user_specified_scale_factor > 1.0f ) {
             int client_x, client_y;
-            GetClientSize(&client_x, &client_y); // Get panel dimensions
+            GetClientSize(&client_x, &client_y);
 
             if ( old_mouse_x == -9999 || old_mouse_y == -9999 ) {
                 old_mouse_x = x_pos;
@@ -766,18 +762,17 @@ void PickingBitmapPanel::OnMotion(wxMouseEvent& event) {
                 else if ( image_starting_x_coord > (image_in_bitmap.logical_x_dimension - client_x - 1) / image_in_bitmap_scaling_factor )
                     image_starting_x_coord = (image_in_bitmap.logical_x_dimension - client_x - 1) / image_in_bitmap_scaling_factor;
 
-                // Bottom bound -- also has to account for scaled adjustment being less than 0
+                // Top bound -- also has to account for scaled adjustment being less than 0
                 if ( image_starting_y_coord < 0 || image_in_bitmap.logical_y_dimension - client_y - 1 < 0 )
                     image_starting_y_coord = 0;
 
-                // Top bound
+                // Bottom bound
                 else if ( image_starting_y_coord > (image_in_bitmap.logical_y_dimension - client_y - 1) / image_in_bitmap_scaling_factor )
                     image_starting_y_coord = (image_in_bitmap.logical_y_dimension - client_y - 1) / image_in_bitmap_scaling_factor;
-
                 old_mouse_x = x_pos;
                 old_mouse_y = y_pos;
 
-                ConvertImageToBitmap(&image_in_bitmap, &PanelBitmap, client_x, client_y, image_starting_x_coord, image_starting_y_coord, image_in_bitmap_scaling_factor, true);
+                ConvertImageToBitmap(&image_in_bitmap, &PanelBitmap, true, client_x, client_y, image_starting_x_coord, image_starting_y_coord, image_in_bitmap_scaling_factor);
                 Refresh( );
             }
         }

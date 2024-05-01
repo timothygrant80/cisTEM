@@ -3,92 +3,20 @@
 
 extern MyMainFrame* main_frame;
 
-void ConvertImageToBitmap(Image* input_image, wxBitmap* output_bitmap, bool auto_contrast) {
-    MyDebugAssertTrue(input_image->logical_z_dimension == 1, "Only 2D images can be used");
-    MyDebugAssertTrue(output_bitmap->GetDepth( ) == 24, "bitmap should be 24 bit");
-
-    float image_min_value;
-    float image_max_value;
-    float range;
-    float inverse_range;
-
-    int current_grey_value;
-    int i, j;
-
-    long mirror_line_address;
-
-    int bitmap_x;
-    int bitmap_y;
-
-    if ( input_image->logical_x_dimension != output_bitmap->GetWidth( ) || input_image->logical_y_dimension != output_bitmap->GetHeight( ) ) {
-        output_bitmap->Create(input_image->logical_x_dimension, input_image->logical_y_dimension, 24);
-    }
-
-    if ( auto_contrast == false ) {
-
-        input_image->GetMinMax(image_min_value, image_max_value);
-    }
-    else {
-        float average_value = input_image->ReturnAverageOfRealValues( );
-        float variance      = input_image->ReturnVarianceOfRealValues( );
-        float stdev         = sqrt(variance);
-
-        image_min_value = average_value - (stdev * 2.5);
-        image_max_value = average_value + (stdev * 2.5);
-    }
-
-    range         = image_max_value - image_min_value;
-    inverse_range = 1. / range;
-    inverse_range *= 256.;
-
-    wxNativePixelData pixel_data(*output_bitmap);
-
-    if ( ! pixel_data ) {
-        MyPrintWithDetails("Can't access bitmap data");
-        DEBUG_ABORT;
-    }
-
-    wxNativePixelData::Iterator p(pixel_data);
-    p.Reset(pixel_data);
-
-    // we have to mirror the lines as wxwidgets using 0,0 at top left
-    for ( j = 0; j < input_image->logical_y_dimension; j++ ) {
-        mirror_line_address = (input_image->logical_y_dimension - 1 - j) * (input_image->logical_x_dimension + input_image->padding_jump_value);
-        p.MoveTo(pixel_data, 0, j);
-
-        for ( i = 0; i < input_image->logical_x_dimension; i++ ) {
-            //mirror_line_address = input_image->ReturnReal1DAddressFromPhysicalCoord(i,j,0);
-            current_grey_value = myroundint((input_image->real_values[mirror_line_address] - image_min_value) * inverse_range);
-
-            if ( current_grey_value < 0 )
-                current_grey_value = 0;
-            else if ( current_grey_value > 255 )
-                current_grey_value = 255;
-
-            p.Red( )   = current_grey_value;
-            p.Green( ) = current_grey_value;
-            p.Blue( )  = current_grey_value;
-
-            p++;
-            mirror_line_address++;
-        }
-    }
-}
-
 /**
- * @brief Overload; converts a given image into a bitmap for usage in a display panel. Created to enable
- * ability to zoom in on picking panels while retaining proper coordinate placement.
+ * @brief Converts a given image into a bitmap for usage in a panel that will display
+ *  the bitmap.
  * 
  * @param input_image Image to be converted.
  * @param output_bitmap Bitmap being filled.
+ * @param auto_contrast Sets whether the contrast will be maximal.
  * @param client_x_size X-dim of panel the bitmap will be placed in.
  * @param client_y_size Y-dim of panel the bitmap will be placed in.
  * @param img_x_start Starting x-coord for getting bitmap data.
  * @param img_y_start Starting y-coord for getting bitmap data.
- * @param scaling_factor I.e. zoom level; the value logical dimensions were actually multiplied by.
- * @param auto_contrast Sets whether the contrast will be maximal.
+ * @param scaling_factor I.e. zoom level; the value by which the logical dimensions of input_image were scaled.
  */
-void ConvertImageToBitmap(Image* input_image, wxBitmap* output_bitmap, int client_x_size, int client_y_size, int img_x_start, int img_y_start, float scaling_factor, bool auto_contrast) {
+void ConvertImageToBitmap(Image* input_image, wxBitmap* output_bitmap, bool auto_contrast, int client_x_size, int client_y_size, int img_x_start, int img_y_start, float scaling_factor) {
     MyDebugAssertTrue(input_image->logical_z_dimension == 1, "Only 2D images can be used");
     MyDebugAssertTrue(output_bitmap->GetDepth( ) == 24, "bitmap should be 24 bit");
 
@@ -102,13 +30,14 @@ void ConvertImageToBitmap(Image* input_image, wxBitmap* output_bitmap, int clien
 
     long mirror_line_address;
 
-    // TODO: change allocated size of the bitmap, then try to implement an algo in which the
-    // data loaded is limited maximally to the size of the client.
-    // This should save the time that needs to be saved on dragging
-
-    if ( input_image->logical_x_dimension != output_bitmap->GetWidth( ) || input_image->logical_y_dimension != output_bitmap->GetHeight( ) ) {
-        output_bitmap->Create(input_image->logical_x_dimension, input_image->logical_y_dimension, 24);
-    }
+    //  Assign bitmap size to the smaller dimension between the client panel and the scaled image dimensions
+    //  The purpose of this is to avoid reading the entire image from memory each time PickingBitmapPanel::OnMotion
+    //  is called, resulting in a smoother drag with what would otherwise be a very large number of pixels to load.
+    int final_width, final_height;
+    final_width  = std::min(input_image->logical_x_dimension, client_x_size);
+    final_height = std::min(input_image->logical_y_dimension, client_y_size);
+    if ( final_width != output_bitmap->GetWidth( ) || final_height != output_bitmap->GetHeight( ) )
+        output_bitmap->Create(final_width, final_height, 24);
 
     if ( auto_contrast == false ) {
         input_image->GetMinMax(image_min_value, image_max_value);
@@ -135,17 +64,16 @@ void ConvertImageToBitmap(Image* input_image, wxBitmap* output_bitmap, int clien
     wxNativePixelData::Iterator p(pixel_data);
     p.Reset(pixel_data);
 
-    // we have to mirror the lines as wxwidgets using 0,0 at top left
-    // Get all of the image data, and then take a subsection of it for actually creating the bitmap,
-    // which should be limited by the panel's or the image's size, whichever is smaller
-    for ( j = 0; j < input_image->logical_y_dimension; j++ ) {
-        mirror_line_address = (input_image->logical_y_dimension - 1 - j) * (input_image->logical_x_dimension + input_image->padding_jump_value);
+    // Still start at 0, but instead of allowing the address to be determined this way, set the value ahead of time.
+    // This maintains proper place in the bitmap, while shifting us to be in the correct position for the image
+    for ( j = 0; j < final_height; j++ ) {
+        int image_y = static_cast<int>(img_y_start * scaling_factor) + j;
         p.MoveTo(pixel_data, 0, j);
+        for ( i = 0; i < final_width; i++ ) {
+            int image_x         = static_cast<int>(img_x_start * scaling_factor) + i;
+            mirror_line_address = input_image->ReturnReal1DAddressFromPhysicalCoord(image_x, input_image->logical_y_dimension - 1 - image_y, 0);
 
-        for ( i = 0; i < input_image->logical_x_dimension; i++ ) {
-            //mirror_line_address = input_image->ReturnReal1DAddressFromPhysicalCoord(i,j,0);
             current_grey_value = myroundint((input_image->real_values[mirror_line_address] - image_min_value) * inverse_range);
-
             if ( current_grey_value < 0 )
                 current_grey_value = 0;
             else if ( current_grey_value > 255 )
@@ -156,19 +84,8 @@ void ConvertImageToBitmap(Image* input_image, wxBitmap* output_bitmap, int clien
             p.Blue( )  = current_grey_value;
 
             p++;
-            mirror_line_address++;
         }
     }
-
-    // Now get sub-image dimensions and create it.
-    int cut_x_size = (client_x_size < input_image->logical_x_dimension) ? client_x_size : input_image->logical_x_dimension;
-    int cut_y_size = (client_y_size < input_image->logical_y_dimension) ? client_y_size : input_image->logical_y_dimension;
-    if ( img_x_start * scaling_factor + client_x_size > input_image->logical_x_dimension )
-        cut_x_size = input_image->logical_x_dimension - img_x_start * scaling_factor;
-    if ( img_y_start * scaling_factor + client_y_size > input_image->logical_y_dimension )
-        cut_y_size = input_image->logical_y_dimension - img_y_start * scaling_factor;
-
-    *output_bitmap = output_bitmap->GetSubBitmap(wxRect(img_x_start * scaling_factor, img_y_start * scaling_factor, cut_x_size, cut_y_size));
 }
 
 void GetMultilineTextExtent(wxDC* wanted_dc, const wxString& string, int& width, int& height) {

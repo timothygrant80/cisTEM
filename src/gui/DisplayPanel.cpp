@@ -2572,8 +2572,6 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
 
                         // cut out the appropriate section taking the scaling factor into account.
                         // prevent cutting outside the size of the image..
-                        int quick_sum = int(single_image_x * actual_scale_factor + window_x_size);
-                        quick_sum     = int(single_image_y * actual_scale_factor + window_y_size);
                         if ( single_image_x * actual_scale_factor + window_x_size > panel_image->GetWidth( ) )
                             cut_x_size = panel_image->GetWidth( ) - single_image_x * actual_scale_factor;
                         if ( single_image_y * actual_scale_factor + window_y_size > panel_image->GetHeight( ) )

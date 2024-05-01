@@ -837,14 +837,14 @@ double CTFTilt::ScoreValuesFixedDefocus(double input_values[]) {
 double SampleTiltScoreFunctionForSimplex(void* pt2Object, double values[]) {
     CTFTilt* scorer_to_use = reinterpret_cast<CTFTilt*>(pt2Object);
     float    score         = scorer_to_use->ScoreValues(values);
-    MyDebugPrint("%f, %f, %f, %f = %f\n", values[1], values[2], values[3], values[4], score);
-    return scorer_to_use->ScoreValues(values);
+    MyDebugPrint("%f, %f, %f, %f = %f\n", values[0], values[1], values[2], values[3], score);
+    return score;
 }
 
 double SampleTiltScoreFunctionForSimplexTiltAxis(void* pt2Object, double values[]) {
     CTFTilt* scorer_to_use = reinterpret_cast<CTFTilt*>(pt2Object);
     // wxPrintf("average_defocus: %f\n",average_defocus);
-    float score = scorer_to_use->ScoreValues(values);
-    MyDebugPrint("%f, %f, %f = %f\n", values[1], values[2], values[3], score);
-    return scorer_to_use->ScoreValuesFixedDefocus(values);
+    float score = scorer_to_use->ScoreValuesFixedDefocus(values);
+    MyDebugPrint("%f, %f, %f = %f\n", values[0], values[1], values[2], score);
+    return score;
 }

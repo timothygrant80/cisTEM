@@ -11,10 +11,12 @@ using namespace cistem_timer;
 using namespace cistem_timer_noop;
 #endif
 
-const std::string ctffind_version = "5.0.2";
+const std::string ctffind_version = "5.0.2_de";
 
 /*
  * Changelog
+ * - de
+ * -- Better support for decolace
  * - 5.0.2
  * -- Fixed bug in 1D spectra calculation after estimation of thickness
 * - 5.0.1
@@ -1088,19 +1090,19 @@ bool CtffindApp::DoCalculation( ) {
                 profile_timing.start("Tilt estimation");
                 // Find rough defocus
                 tilt_scorer.FindRoughDefocus( );
-                //	wxPrintf("\nFindRoughDefocus values: defocus_1, defocus_2, astig_angle, tilt_axis, tilt_angle = %g %g %g %g %g\n\n", tilt_scorer.defocus_1, tilt_scorer.defocus_2, tilt_scorer.astigmatic_angle, tilt_scorer.best_tilt_axis, tilt_scorer.best_tilt_angle);
+                //  wxPrintf("\nFindRoughDefocus values: defocus_1, defocus_2, astig_angle, tilt_axis, tilt_angle = %g %g %g %g %g\n\n", tilt_scorer.defocus_1, tilt_scorer.defocus_2, tilt_scorer.astigmatic_angle, tilt_scorer.best_tilt_axis, tilt_scorer.best_tilt_angle);
 
                 // Find astigmatism
                 tilt_scorer.FindDefocusAstigmatism( );
-                //	wxPrintf("\nFindDefocusAstigmatism values: defocus_1, defocus_2, astig_angle, tilt_axis, tilt_angle = %g %g %g %g %g\n\n", tilt_scorer.defocus_1, tilt_scorer.defocus_2, tilt_scorer.astigmatic_angle, tilt_scorer.best_tilt_axis, tilt_scorer.best_tilt_angle);
+                //wxPrintf("\nFindDefocusAstigmatism values: defocus_1, defocus_2, astig_angle, tilt_axis, tilt_angle = %g %g %g %g %g\n\n", tilt_scorer.defocus_1, tilt_scorer.defocus_2, tilt_scorer.astigmatic_angle, tilt_scorer.best_tilt_axis, tilt_scorer.best_tilt_angle);
 
                 // Search tilt axis and angle
                 tilt_scorer.SearchTiltAxisAndAngle( );
-                //	wxPrintf("\nSearchTiltAxisAndAngle values: defocus_1, defocus_2, astig_angle, tilt_axis, tilt_angle = %g %g %g %g %g\n\n", tilt_scorer.defocus_1, tilt_scorer.defocus_2, tilt_scorer.astigmatic_angle, tilt_scorer.best_tilt_axis, tilt_scorer.best_tilt_angle);
+                //wxPrintf("\nSearchTiltAxisAndAngle values: defocus_1, defocus_2, astig_angle, tilt_axis, tilt_angle = %g %g %g %g %g\n\n", tilt_scorer.defocus_1, tilt_scorer.defocus_2, tilt_scorer.astigmatic_angle, tilt_scorer.best_tilt_axis, tilt_scorer.best_tilt_angle);
 
                 // Refine tilt axis and angle
                 tilt_scorer.RefineTiltAxisAndAngle( );
-                //	wxPrintf("\nRefineTiltAxisAndAngle values: defocus_1, defocus_2, astig_angle, tilt_axis, tilt_angle = %g %g %g %g %g\n\n", tilt_scorer.defocus_1, tilt_scorer.defocus_2, tilt_scorer.astigmatic_angle, tilt_scorer.best_tilt_axis, tilt_scorer.best_tilt_angle);
+                //wxPrintf("\nRefineTiltAxisAndAngle values: defocus_1, defocus_2, astig_angle, tilt_axis, tilt_angle = %g %g %g %g %g\n\n", tilt_scorer.defocus_1, tilt_scorer.defocus_2, tilt_scorer.astigmatic_angle, tilt_scorer.best_tilt_axis, tilt_scorer.best_tilt_angle);
 
                 tilt_axis  = tilt_scorer.best_tilt_axis;
                 tilt_angle = tilt_scorer.best_tilt_angle;

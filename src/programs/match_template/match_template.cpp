@@ -737,9 +737,8 @@ bool MatchTemplateApp::DoCalculation( ) {
                     int tIDX = ReturnThreadNumberOfCurrentThread( );
                     gpuDev.SetGpu(tIDX);
 
-                    GPU[tIDX].RunInnerLoop(projection_filter, size_i, defocus_i, tIDX, current_correlation_position);
-
 #pragma omp critical
+                    GPU[tIDX].RunInnerLoop(projection_filter, size_i, defocus_i, tIDX, current_correlation_position);
                     {
 
                         Image mip_buffer   = GPU[tIDX].d_max_intensity_projection.CopyDeviceToNewHost(true, false);

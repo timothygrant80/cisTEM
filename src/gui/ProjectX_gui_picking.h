@@ -28,6 +28,7 @@ class ResultsDataViewListCtrl;
 #include <wx/textctrl.h>
 #include <wx/stattext.h>
 #include <wx/sizer.h>
+#include <wx/combobox.h>
 #include <wx/statline.h>
 #include <wx/button.h>
 #include <wx/bitmap.h>
@@ -36,7 +37,6 @@ class ResultsDataViewListCtrl;
 #include <wx/radiobut.h>
 #include <wx/tglbtn.h>
 #include <wx/dataview.h>
-#include <wx/combobox.h>
 #include <wx/splitter.h>
 #include <wx/spinctrl.h>
 #include <wx/choice.h>
@@ -77,12 +77,15 @@ class PickingResultsDisplayPanelParent : public wxPanel
 		virtual void OnLowPassKillFocus( wxFocusEvent& event ) { event.Skip(); }
 		virtual void OnLowPassEnter( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnWienerFilterCheckBox( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnScalingChange( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnUndoButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnRedoButtonClick( wxCommandEvent& event ) { event.Skip(); }
 
 
 	public:
 		PickingBitmapPanel* PickingResultsImagePanel;
+		wxComboBox* ScalingComboBox;
+		wxStaticText* ImageScalingText;
 		wxButton* UndoButton;
 		wxButton* RedoButton;
 

@@ -23,6 +23,7 @@ class
     void OnScaleBarCheckBox(wxCommandEvent& event);
     void OnUndoButtonClick(wxCommandEvent& event);
     void OnRedoButtonClick(wxCommandEvent& event);
+    void OnScalingChange(wxCommandEvent& event);
 
     void OnLowPassEnter(wxCommandEvent& event);
     void OnLowPassKillFocus(wxFocusEvent& event);

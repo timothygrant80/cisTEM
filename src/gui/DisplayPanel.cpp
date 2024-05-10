@@ -1474,15 +1474,18 @@ void DisplayNotebookPanel::UpdateImageStatusInfo(int x_pos, int y_pos) {
     double current_resolution;
 
     if ( single_image ) {
+        // Set the x,y positions
         int current_x_pos = single_image_x + (x_pos / actual_scale_factor); // - 1;
         int current_y_pos = single_image_y + (y_pos / actual_scale_factor); // - 1;
 
+        // Use wxWidgets 0,0 in upper left corner
         current_y_pos = ReturnImageYSize( ) - 1 - current_y_pos;
 
         int current_image = current_location;
 
         int current_radius = sqrtf(pow(current_x_pos - (ReturnImageXSize( ) / 2), 2) + pow(current_y_pos - (ReturnImageYSize( ) / 2), 2));
 
+        // This if-else does the same thing...should it be ReturnImageYSize in the else?
         if ( ReturnImageXSize( ) > ReturnImageYSize( ) )
             current_resolution = (pixel_size * ReturnImageXSize( )) / current_radius;
         else
@@ -2569,12 +2572,10 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
 
                         // cut out the appropriate section taking the scaling factor into account.
                         // prevent cutting outside the size of the image..
-
                         if ( single_image_x * actual_scale_factor + window_x_size > panel_image->GetWidth( ) )
                             cut_x_size = panel_image->GetWidth( ) - single_image_x * actual_scale_factor;
                         if ( single_image_y * actual_scale_factor + window_y_size > panel_image->GetHeight( ) )
                             cut_y_size = panel_image->GetHeight( ) - single_image_y * actual_scale_factor;
-
                         FrameImage = panel_image->GetSubImage(wxRect(single_image_x * actual_scale_factor, single_image_y * actual_scale_factor, cut_x_size, cut_y_size));
                     }
                     else {

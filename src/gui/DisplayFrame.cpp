@@ -170,7 +170,7 @@ void DisplayFrame::OnOpenTxtClick(wxCommandEvent& event) {
             size_t line_counter = 0;
             while ( valid_file && line_counter < file_to_open->GetLineCount( ) ) {
                 current_line = file_to_open->GetLine(line_counter);
-                valid_file   = LoadSelections(current_line);
+                valid_file   = LoadImageSelections(current_line);
                 line_counter++;
             }
         }
@@ -567,8 +567,8 @@ void DisplayFrame::OnUpdateUI(wxUpdateUIEvent& event) {
 
 bool DisplayFrame::LoadCoords(wxString current_line, long& x, long& y, long& image_number) {
     // Parse the string for x, y, and the image number
-    size_t index_of_whitespace      = current_line.find(' ');
-    size_t prev_whitespace_position = 0;
+    int index_of_whitespace      = current_line.find(' ');
+    int prev_whitespace_position = 0;
     if ( index_of_whitespace == wxNOT_FOUND ) {
         wxMessageDialog wrong_file_format(this, "Cannot open Image Selection text file in Coordinate Selection mode.", "Incorrect File Format", wxOK | wxOK_DEFAULT | wxICON_EXCLAMATION);
         wrong_file_format.ShowModal( );
@@ -595,9 +595,9 @@ bool DisplayFrame::LoadCoords(wxString current_line, long& x, long& y, long& ima
     }
 }
 
-bool DisplayFrame::LoadSelections(wxString current_line) {
+bool DisplayFrame::LoadImageSelections(wxString current_line) {
     // Quick check of file format
-    size_t index_of_whitespace = current_line.find(' ');
+    int index_of_whitespace = current_line.find(' ');
     if ( index_of_whitespace != wxNOT_FOUND ) {
         wxMessageDialog wrong_file_format(this, "Cannot open Coordinate Selection text file in Image Selection mode.", "Incorrect File Format", wxOK | wxOK_DEFAULT | wxICON_EXCLAMATION);
         wrong_file_format.ShowModal( );
@@ -616,6 +616,7 @@ bool DisplayFrame::LoadSelections(wxString current_line) {
     else {
         wxMessageDialog invalid_file_dialog(this, wxString::Format("The file being opened contains selected images that exceed the number of images in the current file. Cannot open the selections.(Images in open file: %i. Image index sought: %li)", cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnNumberofImages( ), image_number), "Invalid Selection(s) for Current Image(s)", wxOK | wxOK_DEFAULT | wxICON_EXCLAMATION);
         cisTEMDisplayPanel->ClearSelection(false);
+        return false;
     }
 }
 

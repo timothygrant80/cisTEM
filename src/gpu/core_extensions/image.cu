@@ -47,10 +47,10 @@ template void Image::AllocatePageLockedMemory<half_float::half>(int wanted_x_siz
 
 template <typename StorageBaseType>
 void Image::RegisterPageLockedMemory(StorageBaseType* ptr) {
+    wxMutexLocker lock(s_mutexProtectingFFTW); // the mutex will be unlocked when this object is destroyed (when it goes out of scope)
+    MyDebugAssertTrue(lock.IsOk( ), "Mute locking failed");
 
     if ( ! IsMemoryPageLocked(ptr) ) {
-        wxMutexLocker lock(s_mutexProtectingFFTW); // the mutex will be unlocked when this object is destroyed (when it goes out of scope)
-        MyDebugAssertTrue(lock.IsOk( ), "Mute locking failed");
         if constexpr ( std::is_same_v<StorageBaseType, half_float::half> ) {
             cudaErr(cudaHostRegister(real_values_16f, sizeof(StorageBaseType) * real_memory_allocated, cudaHostRegisterDefault));
         }

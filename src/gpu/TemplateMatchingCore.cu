@@ -120,7 +120,14 @@ void TemplateMatchingCore::Init(MyApp*           parent_pointer,
     // Transfer the input image_memory_should_not_be_deallocated
 };
 
-void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel, float c_defocus, int threadIDX, long& current_correlation_position) {
+void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel, float c_defocus, int threadIDX, long& current_correlation_position
+#ifdef MEDIAN_FILTER_TEST
+                                        ,
+                                        int                 x_coords_to_track,
+                                        int                 y_coords_to_track,
+                                        std::vector<float>& ccf_abs_dev_med_abs_dev
+#endif
+) {
 
     // This should probably just be a unique pointer and not a vector
     if ( my_dist.empty( ) )
@@ -151,6 +158,12 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
     __half* ccf_array;
 
 #ifdef MEDIAN_FILTER_TEST
+    // Initialize the device arrays for tracking the coordinate across the search.
+    int    index_to_track;
+    float* d_ccf_abs_dev_med_abs_dev;
+    cudaErr(cudaMallocAsync((void**)&d_ccf_abs_dev_med_abs_dev, sizeof(float) * ccf_abs_dev_med_abs_dev.size( ), cudaStreamPerThread));
+    cudaErr(cudaMemsetAsync(d_ccf_abs_dev_med_abs_dev, 0, sizeof(float) * ccf_abs_dev_med_abs_dev.size( ), cudaStreamPerThread));
+
     float*        d_median;
     float*        d_median_abs_dev;
     unsigned int* d_trimmed_counter;
@@ -309,7 +322,9 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
                     my_dist.at(0).AccumulateDistribution(ccf_array, current_mip_to_process);
 
 #ifdef MEDIAN_FILTER_TEST
-                    MipPixelWiseStackWithMedianFilt(ccf_array, d_psi_array, d_theta_array, d_phi_array, d_median, d_median_abs_dev, d_trimmed_counter, frame_count, current_mip_to_process);
+                    index_to_track = int(input_image.ReturnReal1DAddressFromPhysicalCoord(x_coords_to_track, y_coords_to_track, 0));
+                    MipPixelWiseStackWithMedianFilt(ccf_array, d_psi_array, d_theta_array, d_phi_array, d_median, d_median_abs_dev, d_ccf_abs_dev_med_abs_dev,
+                                                    index_to_track, d_trimmed_counter, frame_count, current_mip_to_process);
 #else
                     MipPixelWiseStack(ccf_array, d_psi_array, d_theta_array, d_phi_array, current_mip_to_process);
 #endif
@@ -386,7 +401,8 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
             cudaErr(cudaMemcpyAsync(d_phi_array, phi_array, sizeof(__half) * n_mips_to_process_at_once, cudaMemcpyHostToDevice, cudaStreamPerThread));
             my_dist.at(0).AccumulateDistribution(ccf_array, current_mip_to_process);
 #ifdef MEDIAN_FILTER_TEST
-            MipPixelWiseStackWithMedianFilt(ccf_array, d_psi_array, d_theta_array, d_phi_array, d_median, d_median_abs_dev, d_trimmed_counter, frame_count, current_mip_to_process);
+            MipPixelWiseStackWithMedianFilt(ccf_array, d_psi_array, d_theta_array, d_phi_array, d_median, d_median_abs_dev, d_ccf_abs_dev_med_abs_dev,
+                                            index_to_track, d_trimmed_counter, frame_count, current_mip_to_process);
 #else
             MipPixelWiseStack(ccf_array, d_psi_array, d_theta_array, d_phi_array, current_mip_to_process);
 #endif
@@ -427,6 +443,9 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
     cudaErr(cudaFreeAsync(d_median, cudaStreamPerThread));
     cudaErr(cudaFreeAsync(d_median_abs_dev, cudaStreamPerThread));
     cudaErr(cudaFreeAsync(d_trimmed_counter, cudaStreamPerThread));
+
+    cudaErr(cudaMemcpyAsync(ccf_abs_dev_med_abs_dev.data( ), d_ccf_abs_dev_med_abs_dev, sizeof(float) * ccf_abs_dev_med_abs_dev.size( ), cudaMemcpyDeviceToHost, cudaStreamPerThread));
+    cudaErr(cudaFreeAsync(d_ccf_abs_dev_med_abs_dev, cudaStreamPerThread));
 #endif
 
     if ( n_global_search_images_to_save > 1 ) {
@@ -554,6 +573,8 @@ __global__ void MipPixelWiseStackWithMedianFiltKernel(const __half* __restrict__
                                                       const __half* __restrict__ phi,
                                                       float* __restrict__ d_median,
                                                       float* __restrict__ d_median_abs_dev,
+                                                      float* __restrict__ d_ccf_abs_dev_med_abs_dev,
+                                                      const int index_to_track,
                                                       unsigned int* __restrict__ d_trimmed_counter,
                                                       const float frame_count,
                                                       float* __restrict__ sum,
@@ -621,6 +642,13 @@ __global__ void MipPixelWiseStackWithMedianFiltKernel(const __half* __restrict__
                 max_val = ccf_val;
                 max_idx = iSlice;
             }
+            int search_position_incremented = 3 * (iSlice + nearbyintf(frame_count));
+
+            if ( i == index_to_track ) {
+                d_ccf_abs_dev_med_abs_dev[search_position_incremented]     = ccf_val;
+                d_ccf_abs_dev_med_abs_dev[search_position_incremented + 1] = abs_dev;
+                d_ccf_abs_dev_med_abs_dev[search_position_incremented + 2] = median_abs_dev;
+            }
         }
 
         sum[i] += tmp_sum;
@@ -636,7 +664,8 @@ __global__ void MipPixelWiseStackWithMedianFiltKernel(const __half* __restrict__
     }
 }
 
-void TemplateMatchingCore::MipPixelWiseStackWithMedianFilt(__half* ccf, __half* psi, __half* theta, __half* phi, float* d_median, float* d_median_abs_dev, unsigned int* d_trimmed_counter, unsigned int& frame_count, int n_mips_this_round) {
+void TemplateMatchingCore::MipPixelWiseStackWithMedianFilt(__half* ccf, __half* psi, __half* theta, __half* phi, float* d_median, float* d_median_abs_dev, float* d_ccf_abs_dev_med_abs_dev,
+                                                           const int index_to_track, unsigned int* d_trimmed_counter, unsigned int& frame_count, int n_mips_this_round) {
 
     precheck;
     // N
@@ -649,6 +678,8 @@ void TemplateMatchingCore::MipPixelWiseStackWithMedianFilt(__half* ccf, __half* 
                                                                                                                                        phi,
                                                                                                                                        d_median,
                                                                                                                                        d_median_abs_dev,
+                                                                                                                                       d_ccf_abs_dev_med_abs_dev,
+                                                                                                                                       index_to_track,
                                                                                                                                        d_trimmed_counter,
                                                                                                                                        frame_count_to_pass,
                                                                                                                                        (float*)d_sum1.real_values,

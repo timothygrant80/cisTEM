@@ -117,7 +117,10 @@ class TemplateMatchingCore {
     void AccumulateSums(__half2* sum_sumsq, GpuImage& sum, GpuImage& sq_sum);
 
 #ifdef MEDIAN_FILTER_TEST
-    void                      MipPixelWiseStackWithMedianFilt(__half* ccf, __half* psi, __half* theta, __half* phi, float* d_median, float* d_median_abs_dev, unsigned int* d_trimmer_counter, unsigned int& frame_count, int n_mips_this_round);
+    void                      MipPixelWiseStackWithMedianFilt(__half* ccf, __half* psi, __half* theta, __half* phi, float* d_median, float* d_median_abs_dev,
+                                                              float*        d_ccf_abs_dev_med_abs_dev,
+                                                              const int     index_to_track,
+                                                              unsigned int* d_trimmer_counter, unsigned int& frame_count, int n_mips_this_round);
     std::vector<unsigned int> trimmed_counter;
 #endif
 
@@ -152,7 +155,14 @@ class TemplateMatchingCore {
               bool             is_running_locally,
               int              number_of_global_search_images_to_save = 1);
 
-    void RunInnerLoop(Image& projection_filter, float pixel_i, float defocus_i, int threadIDX, long& current_correlation_position);
+    void RunInnerLoop(Image& projection_filter, float pixel_i, float defocus_i, int threadIDX, long& current_correlation_position
+#ifdef MEDIAN_FILTER_TEST
+                      ,
+                      int                 x_coord_to_track,
+                      int                 y_coord_to_track,
+                      std::vector<float>& ccf_abs_dev_med_abs_dev
+#endif
+    );
 };
 
 #endif

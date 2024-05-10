@@ -84,6 +84,7 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
     wxString correlation_avg_output_file;
     wxString scaled_mip_output_file;
     wxString healpix_file;
+    wxString coords_to_track_file;
 
     float pixel_size              = 1.0f;
     float voltage_kV              = 300.0f;
@@ -158,8 +159,8 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
 #endif
 
 #ifdef MEDIAN_FILTER_TEST
-    healpix_file    = my_input->GetFilenameFromUser("Healpix region segment file", "File containing the Phi and Theta values for search", "orientations.txt", false);
-    coords_to_track = my_input->GetFilenameFromUser("Text file with x,y coordinates to track across full search", "File containing the x,y coordinates to track", "none", false);
+    healpix_file         = my_input->GetFilenameFromUser("Healpix region segment file", "File containing the Phi and Theta values for search", "orientations.txt", false);
+    coords_to_track_file = my_input->GetFilenameFromUser("Text file with x,y coordinates to track across full search", "File containing the x,y coordinates to track", "none", false);
 #endif
     int   first_search_position           = -1;
     int   last_search_position            = -1;
@@ -222,7 +223,7 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
 #ifdef MEDIAN_FILTER_TEST
                                       ,
                                       healpix_file.ToUTF8( ).data( ),
-                                      coords_to_track.ToUTF8( ).data( ));
+                                      coords_to_track_file.ToUTF8( ).data( ));
 #else
     );
 #endif
@@ -290,10 +291,10 @@ bool MatchTemplateApp::DoCalculation( ) {
     // List of x,y logical coordinates to save all ccf, abs_dev, med_abs_dev.
     // There is no check on memory limits. You will need N_pixels * 2 bytes * 6 extra gpu memory for this.
     bool     track_pixels_across_search = false;
-    wxString coords_to_track            = my_current_job.arguments[43].ReturnStringArgument( );
+    wxString coords_to_track_file       = my_current_job.arguments[43].ReturnStringArgument( );
 
     // Default value for the parser, otherwise, must be a filename that exists
-    if ( coords_to_track != "none" ) {
+    if ( coords_to_track_file != "none" ) {
         track_pixels_across_search = true;
     }
 #endif
@@ -613,21 +614,26 @@ bool MatchTemplateApp::DoCalculation( ) {
     healpix_binning.Close( );
 
     // We'll track the ccf, absolute deviation, and median absolute deviation for one pixel requested in the numeric text file.
-
     std::vector<float> ccf_abs_dev_med_abs_dev(number_of_search_positions * 3);
+
     // Use the array to read in each line of the coordinate file.
-    std::array<int, 2> coords_to_track;
+    int   x_coord_to_track;
+    int   y_coord_to_track;
+    float temp_coords[2];
+
     if ( track_pixels_across_search ) {
-        pixel_file.Open(track_pixels_across_search, OPEN_TO_READ, 2);
+        pixel_file.Open(coords_to_track_file, OPEN_TO_READ, 2);
         MyDebugAssertTrue(pixel_file.number_of_lines == 1, "The file should only have one line in it.");
         // There should only be one line in the file, representing one x,y coordinate.
-        pixel_file.ReadLine(coords_to_track.data( ));
+        pixel_file.ReadLine(temp_coords);
     }
 
+    x_coord_to_track = myroundint(temp_coords[0]);
+    y_coord_to_track = myroundint(temp_coords[1]);
+
+    wxPrintf("Tracking pixel at x = %i, y = %i\n", x_coord_to_track, y_coord_to_track);
     // Pass a reference of this into the GPU inner loop. If size is > 0, enable tracking there.
     // Gather reference back.  Will only work for one thread as written.
-    std::vector<std::array<float, 5>> ccf_abs_dev_med_abs_dev;
-    wxPrintf("Read in %i coordinates to track\n", coords_to_track_y.size( ));
 #else
     if ( my_symmetry.StartsWith("C") ) // TODO 2x check me - w/o this O symm at least is broken
     {
@@ -835,7 +841,17 @@ bool MatchTemplateApp::DoCalculation( ) {
                     int tIDX = ReturnThreadNumberOfCurrentThread( );
                     gpuDev.SetGpu(tIDX);
 
-                    GPU[tIDX].RunInnerLoop(projection_filter, size_i, defocus_i, tIDX, current_correlation_position);
+                    GPU[tIDX].RunInnerLoop(projection_filter, size_i, defocus_i, tIDX, current_correlation_position
+#ifdef MEDIAN_FILTER_TEST
+                                           // The device values for ccf_abs_dev_med_abs_dev will be copied into this host vector prior to the return from RunInnerLoop.
+                                           // They should be ordered as following (assuming frame_count = search_position in angular space)
+                                           // d_ccf_abs_dev_med_abs_dev[frame_count * 3]     = ccf_val;
+                                           // d_ccf_abs_dev_med_abs_dev[frame_count * 3 + 1] = abs_dev;
+                                           // d_ccf_abs_dev_med_abs_dev[frame_count * 3 + 2] = median_abs_dev;
+                                           ,
+                                           x_coord_to_track, y_coord_to_track, ccf_abs_dev_med_abs_dev
+#endif
+                    );
 
 #pragma omp critical
                     {

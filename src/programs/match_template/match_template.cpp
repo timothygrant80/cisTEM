@@ -158,7 +158,8 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
 #endif
 
 #ifdef MEDIAN_FILTER_TEST
-    healpix_file = my_input->GetFilenameFromUser("Healpix region segment file", "File containing the Phi and Theta values for search", "orientations.txt", false);
+    healpix_file    = my_input->GetFilenameFromUser("Healpix region segment file", "File containing the Phi and Theta values for search", "orientations.txt", false);
+    coords_to_track = my_input->GetFilenameFromUser("Text file with x,y coordinates to track across full search", "File containing the x,y coordinates to track", "none", false);
 #endif
     int   first_search_position           = -1;
     int   last_search_position            = -1;
@@ -172,7 +173,7 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
     delete my_input;
 
 #ifdef MEDIAN_FILTER_TEST
-    const char* jop_code_arg_string = "ttffffffffffifffffbfftttttttttftiiiitttfbit";
+    const char* jop_code_arg_string = "ttffffffffffifffffbfftttttttttftiiiitttfbitt";
 #else
     const char* jop_code_arg_string = "ttffffffffffifffffbfftttttttttftiiiitttfbi";
 #endif
@@ -220,7 +221,8 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
                                       max_threads
 #ifdef MEDIAN_FILTER_TEST
                                       ,
-                                      healpix_file.ToUTF8( ).data( ));
+                                      healpix_file.ToUTF8( ).data( ),
+                                      coords_to_track.ToUTF8( ).data( ));
 #else
     );
 #endif
@@ -282,7 +284,18 @@ bool MatchTemplateApp::DoCalculation( ) {
     bool     use_gpu                         = my_current_job.arguments[40].ReturnBoolArgument( );
     int      max_threads                     = my_current_job.arguments[41].ReturnIntegerArgument( );
 #ifdef MEDIAN_FILTER_TEST
+    // The median filter test is only setup to work single threaded.
+    MyAssertFalse(max_threads > 1, "The median filter test is only setup to work single threaded.");
     wxString healpix_file = my_current_job.arguments[42].ReturnStringArgument( );
+    // List of x,y logical coordinates to save all ccf, abs_dev, med_abs_dev.
+    // There is no check on memory limits. You will need N_pixels * 2 bytes * 6 extra gpu memory for this.
+    bool     track_pixels_across_search = false;
+    wxString coords_to_track            = my_current_job.arguments[43].ReturnStringArgument( );
+
+    // Default value for the parser, otherwise, must be a filename that exists
+    if ( coords_to_track != "none" ) {
+        track_pixels_across_search = true;
+    }
 #endif
     if ( is_running_locally == false )
         max_threads = number_of_threads_requested_on_command_line; // OVERRIDE FOR THE GUI, AS IT HAS TO BE SET ON THE COMMAND LINE...
@@ -356,6 +369,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     int number_of_search_positions = 0;
     //RD : To open the text file containing the orientations from Healpix
     NumericTextFile healpix_binning(healpix_file, OPEN_TO_READ, 0);
+    NumericTextFile pixel_file;
 #endif
     ImageFile input_search_image_file;
     ImageFile input_reconstruction_file;
@@ -576,19 +590,44 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     global_euler_search.InitGrid(my_symmetry, angular_step, 0.0f, 0.0f, psi_max, psi_step, psi_start, pixel_size / high_resolution_limit_search, parameter_map, best_parameters_to_keep);
 #ifdef MEDIAN_FILTER_TEST
-    float orientations[healpix_binning.number_of_lines];
+
+    // Changing the following 2024-4-5 Bah
+    // float orientations[healpix_binning.number_of_lines];
+
+    // This is no good for two reasons:
+    // 1) you are allocating an array on the stack which does work for some compilers, but not all. It is generally considered that the
+    // size of a stack allocated array should be known at compile time.
+    // 2) even if you knew the size, you are allocating an array that is the size of the file, but what you want is an array
+    // that has the same number of records per line. These sort of details make or break c++ code.
+    std::vector<float> orientations(healpix_binning.records_per_line);
+
     number_of_search_positions                     = healpix_binning.number_of_lines;
     global_euler_search.number_of_search_positions = number_of_search_positions;
     Allocate2DFloatArray(global_euler_search.list_of_search_parameters, number_of_search_positions, 2);
 
-    // for loop here
     for ( int counter = 0; counter < healpix_binning.number_of_lines; counter++ ) {
-        healpix_binning.ReadLine(orientations);
-        global_euler_search.list_of_search_parameters[counter][0] = orientations[0];
-        global_euler_search.list_of_search_parameters[counter][1] = orientations[1];
+        healpix_binning.ReadLine(orientations.data( ));
+        global_euler_search.list_of_search_parameters[counter][0] = orientations.at(0);
+        global_euler_search.list_of_search_parameters[counter][1] = orientations.at(1);
+    }
+    healpix_binning.Close( );
+
+    // We'll track the ccf, absolute deviation, and median absolute deviation for one pixel requested in the numeric text file.
+
+    std::vector<float> ccf_abs_dev_med_abs_dev(number_of_search_positions * 3);
+    // Use the array to read in each line of the coordinate file.
+    std::array<int, 2> coords_to_track;
+    if ( track_pixels_across_search ) {
+        pixel_file.Open(track_pixels_across_search, OPEN_TO_READ, 2);
+        MyDebugAssertTrue(pixel_file.number_of_lines == 1, "The file should only have one line in it.");
+        // There should only be one line in the file, representing one x,y coordinate.
+        pixel_file.ReadLine(coords_to_track.data( ));
     }
 
-    healpix_binning.Close( );
+    // Pass a reference of this into the GPU inner loop. If size is > 0, enable tracking there.
+    // Gather reference back.  Will only work for one thread as written.
+    std::vector<std::array<float, 5>> ccf_abs_dev_med_abs_dev;
+    wxPrintf("Read in %i coordinates to track\n", coords_to_track_y.size( ));
 #else
     if ( my_symmetry.StartsWith("C") ) // TODO 2x check me - w/o this O symm at least is broken
     {
@@ -732,7 +771,6 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     //    wxPrintf("Starting job\n");
     for ( size_i = -myroundint(float(pixel_size_search_range) / float(pixel_size_step)); size_i <= myroundint(float(pixel_size_search_range) / float(pixel_size_step)); size_i++ ) {
-
         //        template_reconstruction.CopyFrom(&input_reconstruction);
         input_reconstruction.ChangePixelSize(&template_reconstruction, (pixel_size + float(size_i) * pixel_size_step) / pixel_size, 0.001f, true);
         //    template_reconstruction.ForwardFFT();
@@ -1378,7 +1416,7 @@ bool MatchTemplateApp::DoCalculation( ) {
         delete[] GPU;
     }
 
-    //  gpuDev.ResetGpu();
+//  gpuDev.ResetGpu();
 #endif
 
     if ( is_running_locally == true ) {

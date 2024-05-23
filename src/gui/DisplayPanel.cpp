@@ -904,6 +904,7 @@ void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title,
     else {
         my_notebook->Freeze( );
         my_notebook->AddPage(my_panel, wanted_tab_title, false);
+        my_notebook->SetPageToolTip(panel_counter - 1, my_panel->filename);
         my_notebook->Thaw( );
         my_notebook->SetSelection(my_notebook->GetPageCount( ) - 1);
     }

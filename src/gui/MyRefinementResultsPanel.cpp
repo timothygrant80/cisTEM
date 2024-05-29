@@ -15,7 +15,9 @@ MyRefinementResultsPanel::MyRefinementResultsPanel(wxWindow* parent)
     currently_displayed_refinement = NULL;
     buffered_full_refinement       = NULL;
 
-    OrthPanel->Initialise(START_WITH_FOURIER_SCALING | DO_NOT_SHOW_STATUS_BAR);
+    OrthPanel->EnableStartWithFourierScaling( );
+    OrthPanel->EnableDoNotShowStatusBar( );
+    OrthPanel->Initialise( );
     OrthPanel->my_notebook->Bind(wxEVT_AUINOTEBOOK_PAGE_CHANGED, &MyRefinementResultsPanel::OnDisplayTabChange, this);
 
     RefinementPackageComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MyRefinementResultsPanel::OnRefinementPackageComboBox, this);

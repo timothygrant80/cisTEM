@@ -21,7 +21,10 @@ MyRefine2DPanel::MyRefine2DPanel(wxWindow* parent)
 
     my_classification_manager.SetParent(this);
 
-    ResultDisplayPanel->Initialise(CAN_FFT | START_WITH_FOURIER_SCALING | KEEP_TABS_LINKED_IF_POSSIBLE);
+    ResultDisplayPanel->EnableCanFFT( );
+    ResultDisplayPanel->EnableStartWithFourierScaling( );
+    ResultDisplayPanel->EnableKeepTabsLinked( );
+    ResultDisplayPanel->Initialise( );
 
     RefinementPackageComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MyRefine2DPanel::OnRefinementPackageComboBox, this);
     InputParametersComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MyRefine2DPanel::OnInputParametersComboBox, this);

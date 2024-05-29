@@ -4,31 +4,10 @@
 #include <wx/popupwin.h>
 #include <wx/aui/auibook.h>
 
-#define CAN_CHANGE_FILE 1 // 2^0, bit 0
-#define CAN_CLOSE_TABS 2 // 2^1, bit 1
-#define CAN_FFT 4 // 2^2, bit 2
-#define START_WITH_INVERTED_CONTRAST 8
-#define START_WITH_AUTO_CONTRAST 16
-#define NO_NOTEBOOK 32
-#define FIRST_LOCATION_ONLY 64
-#define START_WITH_FOURIER_SCALING 128
-#define DO_NOT_SHOW_STATUS_BAR 256
-#define CAN_SELECT_IMAGES 1024
-#define NO_POPUP 2048
-#define START_WITH_NO_LABEL 4096
-#define SKIP_LEFTCLICK_TO_PARENT 8192
-#define CAN_MOVE_TABS 16384
-#define DRAW_IMAGE_SEPARATOR 32768
-#define KEEP_TABS_LINKED_IF_POSSIBLE 65536
-
 #define LOCAL_GREYS 0
 #define GLOBAL_GREYS 1
 #define MANUAL_GREYS 2
 #define AUTO_GREYS 3
-
-// These are only used for the cisTEM_display program
-#define COORDS_PICK 0
-#define IMAGES_PICK 1
 
 class DisplayPopup;
 class DisplayNotebook;
@@ -65,8 +44,6 @@ class
     friend class DisplayNotebookPanel;
 
   protected:
-    int style_flags;
-
     wxTextCtrl*   toolbar_location_text;
     wxStaticText* toolbar_number_of_locations_text;
     wxComboBox*   toolbar_scale_combo;
@@ -83,7 +60,7 @@ class
 
     DisplayPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
 
-    void Initialise(int style_flags = 0);
+    void Initialise( );
 
     void OpenFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong* wanted_included_image_numbers = NULL, bool keep_scale_and_location_if_possible = false, bool force_local_survey = false);
     void ChangeFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong* wanted_included_image_numbers = NULL);
@@ -98,7 +75,6 @@ class
 
     void UpdateToolbar( );
     void ChangeFocusToPanel(void);
-    void ReDrawCurrentPanel( );
 
     void SetSelectionSquareLocation(long wanted_location);
 
@@ -126,13 +102,67 @@ class
     void ChangeLocation(wxCommandEvent& event);
     void ChangeScaling(wxCommandEvent& event);
     void OnHighQuality(wxCommandEvent& event);
-    void OnMiddleUp(wxCommandEvent& event);
     void OnRefresh(wxCommandEvent& event);
 
     DisplayNotebookPanel* ReturnCurrentPanel( );
 
     void Clear( );
     void CloseAllTabs( );
+
+    // Setters for feature bool values
+    void EnableCanChangeFile( );
+    void EnableCanCloseTabs( );
+    void EnableCanFFT( );
+    void EnableStartWithInvertedContrast( );
+    void EnableStartWithAutoContrast( );
+    void EnableNoNotebook( );
+    void EnableFirstLocationOnly( );
+    void EnableStartWithFourierScaling( );
+    void EnableDoNotShowStatusBar( );
+    void EnableCanSelectImages( );
+    void EnableNoPopup( );
+    void EnableStartWithNoLabel( );
+    void EnableSkipLeftclickToParent( );
+    void EnableCanMoveTabs( );
+    void EnableDrawImageSeparator( );
+    void EnableKeepTabsLinked( );
+
+    // For encapsulation; not technically in use at the moment, but included in the event
+    // they ever become needed
+    bool GetCanChangeFile( );
+    bool GetCanCloseTabs( );
+    bool GetCanFFT( );
+    bool GetStartWithInvertedContrast( );
+    bool GetStartWithAutoContrast( );
+    bool GetNoNotebook( );
+    bool GetFirstLocationOnly( );
+    bool GetStartWithFourierScaling( );
+    bool GetDoNotShowStatusBar( );
+    bool GetCanSelectImages( );
+    bool GetNoPopup( );
+    bool GetStartWithNoLabel( );
+    bool GetSkipLeftclickToParent( );
+    bool GetCanMoveTabs( );
+    bool GetDrawImageSeparator( );
+    bool GetKeepTabsLinked( );
+
+  private:
+    bool can_change_file              = false;
+    bool can_close_tabs               = false;
+    bool can_fft                      = false;
+    bool start_with_inverted_contrast = false;
+    bool start_with_auto_contrast     = false;
+    bool no_notebook                  = false;
+    bool first_location_only          = false;
+    bool start_with_fourier_scaling   = false;
+    bool do_not_show_status_bar       = false;
+    bool can_select_images            = false;
+    bool no_popup                     = false;
+    bool start_with_no_label          = false;
+    bool skip_leftclick_to_parent     = false;
+    bool can_move_tabs                = false;
+    bool draw_image_separator         = false;
+    bool keep_tabs_linked_if_possible = false;
 };
 
 class
@@ -347,8 +377,8 @@ class
     long selected_filament_number;
     bool only_show_selected_filament;
 
-    int label_mode;
-    int picking_mode;
+    int  label_mode;
+    bool image_picking_mode_enabled;
 
     wxBitmap panel_bitmap;
 

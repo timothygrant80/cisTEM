@@ -32,7 +32,7 @@ DisplayPanel::DisplayPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, 
     Bind(wxEVT_COMBOBOX, &DisplayPanel::ChangeScaling, this, Toolbar_Scale_Combo_Control);
 }
 
-void DisplayPanel::Initialise(int wanted_style_flags) {
+void DisplayPanel::Initialise( ) {
 
 #include "icons/display_open_icon.cpp"
 #include "icons/display_previous_icon.cpp"
@@ -47,8 +47,6 @@ void DisplayPanel::Initialise(int wanted_style_flags) {
 #include "icons/display_invert_icon.cpp"
 #include "icons/display_high_quality_icon.cpp"
 
-    style_flags = wanted_style_flags;
-
     if ( my_notebook != NULL ) {
         delete my_notebook;
         my_notebook = NULL;
@@ -59,14 +57,12 @@ void DisplayPanel::Initialise(int wanted_style_flags) {
         no_notebook_panel = NULL;
     }
 
-    if ( (style_flags & NO_NOTEBOOK) == NO_NOTEBOOK ) {
-    }
-    else {
+    if ( ! no_notebook ) {
         long flags = wxAUI_NB_SCROLL_BUTTONS | wxAUI_NB_TOP | wxAUI_NB_WINDOWLIST_BUTTON;
 
-        if ( (style_flags & CAN_CLOSE_TABS) == CAN_CLOSE_TABS )
+        if ( can_close_tabs )
             flags |= wxAUI_NB_CLOSE_ON_ACTIVE_TAB;
-        if ( (style_flags & CAN_MOVE_TABS) == CAN_MOVE_TABS )
+        if ( can_close_tabs )
             flags |= wxAUI_NB_TAB_MOVE;
 
         my_notebook = new DisplayNotebook(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, flags);
@@ -87,7 +83,7 @@ void DisplayPanel::Initialise(int wanted_style_flags) {
 
     // setup the toolbar..
 
-    if ( (style_flags & CAN_CHANGE_FILE) == CAN_CHANGE_FILE ) {
+    if ( can_change_file ) {
         Toolbar->AddTool(Toolbar_Open, wxT("Open Image file"), wxBITMAP_PNG_FROM_DATA(display_open_icon), wxNullBitmap, wxITEM_NORMAL, wxT("Open Image File"), wxT("Open an new image file in a new tab"));
         Toolbar->AddSeparator( );
         Toolbar->EnableTool(Toolbar_Open, true);
@@ -102,9 +98,7 @@ void DisplayPanel::Initialise(int wanted_style_flags) {
         delete toolbar_number_of_locations_text;
     toolbar_number_of_locations_text = new wxStaticText(Toolbar, wxID_ANY, wxT(""), wxDefaultPosition, wxSize(-1, -1));
 
-    if ( (style_flags & FIRST_LOCATION_ONLY) == FIRST_LOCATION_ONLY ) {
-    }
-    else {
+    if ( ! first_location_only ) {
         Toolbar->AddTool(Toolbar_Previous, wxT("Previous"), wxBITMAP_PNG_FROM_DATA(display_previous_icon), wxNullBitmap, wxITEM_NORMAL, wxT("Previous"), wxT("Move to the previous set of images"));
         Toolbar->EnableTool(Toolbar_Previous, false);
 
@@ -158,7 +152,7 @@ void DisplayPanel::Initialise(int wanted_style_flags) {
 
     Toolbar->AddSeparator( );
 
-    if ( (style_flags & CAN_FFT) == CAN_FFT ) {
+    if ( can_fft ) {
         Toolbar->AddTool(Toolbar_FFT, wxT("FFT"), wxBITMAP_PNG_FROM_DATA(display_fft_icon), wxNullBitmap, wxITEM_CHECK, wxT("FFT Images"), wxT("Fourier Transform Images"));
         Toolbar->EnableTool(Toolbar_FFT, false);
     }
@@ -166,7 +160,7 @@ void DisplayPanel::Initialise(int wanted_style_flags) {
     Toolbar->AddTool(Toolbar_High_Quality, wxT("High Quality Scaling"), wxBITMAP_PNG_FROM_DATA(display_high_quality_icon), wxNullBitmap, wxITEM_CHECK, wxT("Use High Quality Scaling"), wxT("Use High Quality Scaling"));
     Toolbar->EnableTool(Toolbar_High_Quality, false);
 
-    if ( (style_flags & CAN_CHANGE_FILE) == CAN_CHANGE_FILE ) {
+    if ( can_change_file ) {
         Toolbar->AddTool(Toolbar_Refresh, wxT("Refresh"), wxBITMAP_PNG_FROM_DATA(display_refresh_icon), wxNullBitmap, wxITEM_NORMAL, wxT("Refresh"), wxT("Refresh the current view"));
         Toolbar->EnableTool(Toolbar_Refresh, false);
     }
@@ -175,7 +169,7 @@ void DisplayPanel::Initialise(int wanted_style_flags) {
 
     Toolbar->Realize( );
 
-    if ( (style_flags & DO_NOT_SHOW_STATUS_BAR) == DO_NOT_SHOW_STATUS_BAR ) {
+    if ( do_not_show_status_bar ) {
         StatusText->Show(false);
     }
     else
@@ -205,7 +199,7 @@ void DisplayPanel::ChangeLocation(wxCommandEvent& WXUNUSED(event)) {
             current_panel->panel_image_has_correct_greys = false;
             current_panel->ReDrawPanel( );
 
-            if ( (style_flags & KEEP_TABS_LINKED_IF_POSSIBLE) == KEEP_TABS_LINKED_IF_POSSIBLE ) {
+            if ( keep_tabs_linked_if_possible ) {
                 // set all tabs to this scaling
                 long global_location = current_panel->current_location;
 
@@ -280,7 +274,7 @@ void DisplayPanel::ClearActiveTemplateMatchMarker( ) {
 }
 
 void DisplayPanel::CloseAllTabs( ) {
-    if ( (style_flags & NO_NOTEBOOK) == NO_NOTEBOOK ) {
+    if ( no_notebook ) {
         // shall i delete the panel
         if ( no_notebook_panel != NULL ) {
             MainSizer->Detach(no_notebook_panel);
@@ -314,7 +308,7 @@ void DisplayPanel::ChangeScaling(wxCommandEvent& WXUNUSED(event)) {
         current_panel->panel_image_has_correct_scale = false;
         current_panel->ReDrawPanel( );
 
-        if ( (style_flags & KEEP_TABS_LINKED_IF_POSSIBLE) == KEEP_TABS_LINKED_IF_POSSIBLE ) {
+        if ( keep_tabs_linked_if_possible ) {
             // set all tabs to this scaling
             double global_scale_factor = current_panel->desired_scale_factor;
 
@@ -465,7 +459,7 @@ void DisplayPanel::OnPrevious(wxCommandEvent& WXUNUSED(event)) {
     current_panel->panel_image_has_correct_greys = false;
     current_panel->ReDrawPanel( );
 
-    if ( (style_flags & KEEP_TABS_LINKED_IF_POSSIBLE) == KEEP_TABS_LINKED_IF_POSSIBLE ) {
+    if ( keep_tabs_linked_if_possible ) {
         // set all tabs to this scaling
         long global_location = current_panel->current_location;
 
@@ -489,7 +483,7 @@ void DisplayPanel::OnPrevious(wxCommandEvent& WXUNUSED(event)) {
 
 DisplayNotebookPanel* DisplayPanel::ReturnCurrentPanel( ) {
     DisplayNotebookPanel* current_panel;
-    if ( (style_flags & NO_NOTEBOOK) == NO_NOTEBOOK )
+    if ( no_notebook )
         current_panel = no_notebook_panel;
     else
         current_panel = (DisplayNotebookPanel*)my_notebook->GetCurrentPage( );
@@ -522,7 +516,7 @@ void DisplayPanel::OnNext(wxCommandEvent& WXUNUSED(event)) {
     current_panel->panel_image_has_correct_greys = false;
     current_panel->ReDrawPanel( );
 
-    if ( (style_flags & KEEP_TABS_LINKED_IF_POSSIBLE) == KEEP_TABS_LINKED_IF_POSSIBLE ) {
+    if ( keep_tabs_linked_if_possible ) {
         // set all tabs to this scaling
         long global_location = current_panel->current_location;
 
@@ -602,7 +596,7 @@ void DisplayPanel::OnRefresh(wxCommandEvent& WXUNUSED(event)) {
 }
 
 void DisplayPanel::ChangeFocusToPanel(void) {
-    if ( (style_flags & NO_NOTEBOOK) == NO_NOTEBOOK ) {
+    if ( no_notebook ) {
         if ( no_notebook_panel != NULL )
             no_notebook_panel->SetFocus( );
     }
@@ -617,7 +611,7 @@ void DisplayPanel::ChangeFocusToPanel(void) {
 void DisplayPanel::UpdateToolbar(void) {
     bool blank_toolbar = false;
 
-    if ( (style_flags & NO_NOTEBOOK) == NO_NOTEBOOK ) {
+    if ( no_notebook ) {
         if ( no_notebook_panel == NULL )
             blank_toolbar = true;
     }
@@ -630,13 +624,13 @@ void DisplayPanel::UpdateToolbar(void) {
         toolbar_scale_combo->SetValue(wxT(""));
         toolbar_scale_combo->Disable( );
 
-        if ( (style_flags & CAN_CHANGE_FILE) == CAN_CHANGE_FILE )
+        if ( can_change_file )
             Toolbar->EnableTool(Toolbar_Open, true);
         //Toolbar->EnableTool(Toolbar_Save, false);
         Toolbar->EnableTool(Toolbar_Previous, false);
         Toolbar->EnableTool(Toolbar_Next, false);
         Toolbar->EnableTool(Toolbar_Histogram, false);
-        if ( (style_flags & CAN_CHANGE_FILE) == CAN_CHANGE_FILE )
+        if ( can_change_file )
             Toolbar->EnableTool(Toolbar_Refresh, false);
         toolbar_number_of_locations_text->SetLabel(wxT(""));
         Toolbar->EnableTool(Toolbar_Local, false);
@@ -647,11 +641,11 @@ void DisplayPanel::UpdateToolbar(void) {
 
         Toolbar->EnableTool(Toolbar_High_Quality, false);
 
-        if ( (style_flags & CAN_FFT) == CAN_FFT )
+        if ( can_fft )
             Toolbar->EnableTool(Toolbar_FFT, false);
     }
     else {
-        if ( (style_flags & CAN_CHANGE_FILE) == CAN_CHANGE_FILE )
+        if ( can_change_file )
             Toolbar->EnableTool(Toolbar_Open, true);
 
         // there must be a tab then, so get the selected displayPanel..
@@ -700,11 +694,11 @@ void DisplayPanel::UpdateToolbar(void) {
             Toolbar->EnableTool(Toolbar_Global, true);
             Toolbar->EnableTool(Toolbar_Manual, true);
 
-            if ( (style_flags & CAN_CHANGE_FILE) == CAN_CHANGE_FILE )
+            if ( can_change_file )
                 Toolbar->EnableTool(Toolbar_Refresh, true);
             Toolbar->EnableTool(Toolbar_Histogram, true);
 
-            if ( (style_flags & CAN_FFT) == CAN_FFT ) {
+            if ( can_fft ) {
                 Toolbar->EnableTool(Toolbar_FFT, true);
 
                 if ( current_panel->use_fft ) {
@@ -836,7 +830,7 @@ void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title,
 
     DisplayNotebookPanel* my_panel;
 
-    if ( (style_flags & NO_NOTEBOOK) == NO_NOTEBOOK ) {
+    if ( no_notebook ) {
         if ( no_notebook_panel != NULL )
             no_notebook_panel->Destroy( );
         no_notebook_panel = new DisplayNotebookPanel(this, panel_counter);
@@ -899,18 +893,17 @@ void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title,
         my_panel->current_location = current_image_location;
     }
 
-    if ( (style_flags & NO_NOTEBOOK) == NO_NOTEBOOK ) {
-    }
-    else {
+    if ( ! no_notebook ) {
         my_notebook->Freeze( );
         my_notebook->AddPage(my_panel, wanted_tab_title, false);
+        my_notebook->SetPageToolTip(panel_counter - 1, my_panel->filename);
         my_notebook->Thaw( );
         my_notebook->SetSelection(my_notebook->GetPageCount( ) - 1);
     }
 
     // This was moved here because calling ClearSelection before the panel was added
     // resulted in a crash from a debug assert -- the current page was still null
-    if ( (style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || ReturnCurrentPanel( )->picking_mode == IMAGES_PICK ) {
+    if ( can_select_images || ReturnCurrentPanel( )->image_picking_mode_enabled ) {
         my_panel->image_is_selected = new bool[my_panel->my_file.ReturnNumberOfSlices( ) + 1];
         ClearSelection(false);
     }
@@ -927,11 +920,11 @@ void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title,
     // if there is only one image, then set single image mode to true by default
     if ( is_from_display_program ) {
         if ( my_panel->included_image_numbers.GetCount( ) == 1 ) {
-            my_panel->single_image = true;
-            my_panel->picking_mode = COORDS_PICK;
+            my_panel->single_image               = true;
+            my_panel->image_picking_mode_enabled = false;
         }
         else {
-            my_panel->picking_mode = IMAGES_PICK;
+            my_panel->image_picking_mode_enabled = true;
         }
     }
 
@@ -941,7 +934,7 @@ void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title,
 }
 
 void DisplayPanel::ChangeFileForTabNumber(int wanted_tab_number, wxString wanted_filename, wxString wanted_tab_title, wxArrayLong* wanted_included_image_numbers) {
-    if ( (style_flags & NO_NOTEBOOK) == NO_NOTEBOOK ) {
+    if ( no_notebook ) {
         if ( no_notebook_panel == NULL ) {
             OpenFile(wanted_filename, wanted_tab_title, wanted_included_image_numbers);
             return;
@@ -949,7 +942,7 @@ void DisplayPanel::ChangeFileForTabNumber(int wanted_tab_number, wxString wanted
     }
 
     DisplayNotebookPanel* current_panel;
-    if ( (style_flags & NO_NOTEBOOK) == NO_NOTEBOOK )
+    if ( no_notebook )
         current_panel = no_notebook_panel;
     else {
 
@@ -1019,7 +1012,7 @@ void DisplayPanel::ChangeFileForTabNumber(int wanted_tab_number, wxString wanted
         current_panel->image_is_selected = NULL;
     }
 
-    if ( (style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || ReturnCurrentPanel( )->picking_mode == IMAGES_PICK ) {
+    if ( can_select_images || ReturnCurrentPanel( )->image_picking_mode_enabled ) {
         current_panel->image_is_selected = new bool[current_panel->my_file.ReturnNumberOfSlices( ) + 1];
 
         for ( int mycounter = 0; mycounter < current_panel->my_file.ReturnNumberOfSlices( ) + 1; mycounter++ ) {
@@ -1041,9 +1034,7 @@ void DisplayPanel::ChangeFileForTabNumber(int wanted_tab_number, wxString wanted
     current_panel->panel_image = new wxImage(int(current_panel->my_file.ReturnXSize( )), int(current_panel->my_file.ReturnYSize( )));
     current_panel->tab_title   = wanted_tab_title;
 
-    if ( (style_flags & NO_NOTEBOOK) == NO_NOTEBOOK ) {
-    }
-    else {
+    if ( ! no_notebook ) {
 
         my_notebook->SetPageText(wanted_tab_number, wanted_tab_title);
 
@@ -1063,7 +1054,7 @@ void DisplayPanel::ChangeFileForTabNumber(int wanted_tab_number, wxString wanted
 }
 
 void DisplayPanel::ChangeFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong* wanted_included_image_numbers) {
-    if ( (style_flags & NO_NOTEBOOK) == NO_NOTEBOOK ) {
+    if ( no_notebook ) {
         ChangeFileForTabNumber(-1, wanted_filename, wanted_tab_title, wanted_included_image_numbers);
     }
     else
@@ -1089,7 +1080,7 @@ void DisplayPanel::OpenImage(Image* image_to_view, wxString wanted_tab_title, bo
 
     DisplayNotebookPanel* my_panel;
 
-    if ( (style_flags & NO_NOTEBOOK) == NO_NOTEBOOK ) {
+    if ( no_notebook ) {
         if ( no_notebook_panel != NULL )
             no_notebook_panel->Destroy( );
         no_notebook_panel = new DisplayNotebookPanel(this, panel_counter);
@@ -1122,7 +1113,7 @@ void DisplayPanel::OpenImage(Image* image_to_view, wxString wanted_tab_title, bo
     my_panel->input_is_a_file           = false;
     my_panel->do_i_have_image_ownership = take_ownership;
 
-    if ( (style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES ) {
+    if ( can_select_images ) {
         my_panel->image_is_selected = new bool[image_to_view->logical_z_dimension + 1];
         ClearSelection(false);
     }
@@ -1134,9 +1125,7 @@ void DisplayPanel::OpenImage(Image* image_to_view, wxString wanted_tab_title, bo
     my_panel->panel_image = new wxImage(image_to_view->logical_x_dimension, image_to_view->logical_y_dimension);
     my_panel->tab_title   = wanted_tab_title;
 
-    if ( (style_flags & NO_NOTEBOOK) == NO_NOTEBOOK ) {
-    }
-    else {
+    if ( ! no_notebook ) {
         my_notebook->Freeze( );
         my_notebook->AddPage(my_panel, wanted_tab_title, false);
         my_notebook->Thaw( );
@@ -1156,7 +1145,7 @@ void DisplayPanel::OpenImage(Image* image_to_view, wxString wanted_tab_title, bo
 
     if ( my_panel->included_image_numbers.GetCount( ) == 1 ) {
         //my_panel->single_image = true;
-        //my_panel->picking_mode = COORDS_PICK;
+        //my_panel->image_picking_mode_enabled = COORDS_PICK;
     }
 
     my_panel->ReDrawPanel( );
@@ -1176,7 +1165,7 @@ void DisplayPanel::ChangeImage(Image* image_to_view, wxString wanted_tab_title, 
         }
     }
 
-    if ( (style_flags & NO_NOTEBOOK) == NO_NOTEBOOK ) {
+    if ( no_notebook ) {
         if ( no_notebook_panel == NULL ) {
             OpenImage(image_to_view, wanted_tab_title, take_ownership, wanted_included_image_numbers);
             return;
@@ -1247,7 +1236,7 @@ void DisplayPanel::ChangeImage(Image* image_to_view, wxString wanted_tab_title, 
     }
 
     // Image or stack just opened; set all images as not selected
-    if ( (style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || ReturnCurrentPanel( )->picking_mode == IMAGES_PICK ) {
+    if ( can_select_images || ReturnCurrentPanel( )->image_picking_mode_enabled ) {
         current_panel->image_is_selected = new bool[image_to_view->logical_z_dimension + 1];
         for ( int mycounter = 0; mycounter < image_to_view->logical_z_dimension + 1; mycounter++ ) {
             current_panel->image_is_selected[mycounter] = false;
@@ -1268,9 +1257,7 @@ void DisplayPanel::ChangeImage(Image* image_to_view, wxString wanted_tab_title, 
     current_panel->panel_image = new wxImage(image_to_view->logical_x_dimension, image_to_view->logical_y_dimension);
     current_panel->tab_title   = wanted_tab_title;
 
-    if ( (style_flags & NO_NOTEBOOK) == NO_NOTEBOOK ) {
-    }
-    else {
+    if ( ! no_notebook ) {
         my_notebook->SetPageText(my_notebook->GetSelection( ), wanted_tab_title);
     }
 
@@ -1287,6 +1274,83 @@ void DisplayPanel::ChangeImage(Image* image_to_view, wxString wanted_tab_title, 
     //notebook->SetFocus();
     ChangeFocusToPanel( );
 }
+
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+// SETTERS for panel features: these should be called only once prior to initialise wherever the panel
+// is used to convert them from false to true However, this implementation would technically allow
+// flipping them back, which may not be desired...
+///////////////////////////////////////////////////////////////////////////////////////////////////////
+
+void DisplayPanel::EnableCanChangeFile( ) { can_change_file = true; }
+
+void DisplayPanel::EnableCanCloseTabs( ) { can_close_tabs = true; }
+
+void DisplayPanel::EnableCanFFT( ) { can_fft = true; }
+
+void DisplayPanel::EnableStartWithInvertedContrast( ) { start_with_inverted_contrast = true; }
+
+void DisplayPanel::EnableStartWithAutoContrast( ) { start_with_auto_contrast = true; }
+
+void DisplayPanel::EnableNoNotebook( ) { no_notebook = true; }
+
+void DisplayPanel::EnableFirstLocationOnly( ) { first_location_only = true; }
+
+void DisplayPanel::EnableStartWithFourierScaling( ) { start_with_fourier_scaling = true; }
+
+void DisplayPanel::EnableDoNotShowStatusBar( ) { do_not_show_status_bar = true; }
+
+void DisplayPanel::EnableCanSelectImages( ) { can_select_images = true; }
+
+void DisplayPanel::EnableNoPopup( ) { no_popup = true; }
+
+void DisplayPanel::EnableStartWithNoLabel( ) { start_with_no_label = true; }
+
+void DisplayPanel::EnableSkipLeftclickToParent( ) { skip_leftclick_to_parent = true; }
+
+void DisplayPanel::EnableCanMoveTabs( ) { can_move_tabs = true; }
+
+void DisplayPanel::EnableDrawImageSeparator( ) { draw_image_separator = true; }
+
+void DisplayPanel::EnableKeepTabsLinked( ) { keep_tabs_linked_if_possible = true; }
+
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+// GETTERS; as of now, many of these may not be necessary as the features are set and only used within
+// the class itself. But, there are a few instances the values are needed outside of the class; because
+// of this, it is better to make these now so they can be used if new features are added that require
+// access but don't need direct access.
+////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+bool DisplayPanel::GetCanChangeFile( ) { return can_change_file; }
+
+bool DisplayPanel::GetCanCloseTabs( ) { return can_close_tabs; }
+
+bool DisplayPanel::GetCanFFT( ) { return can_fft; }
+
+bool DisplayPanel::GetStartWithInvertedContrast( ) { return start_with_inverted_contrast; }
+
+bool DisplayPanel::GetStartWithAutoContrast( ) { return start_with_auto_contrast; }
+
+bool DisplayPanel::GetNoNotebook( ) { return no_notebook; }
+
+bool DisplayPanel::GetFirstLocationOnly( ) { return first_location_only; }
+
+bool DisplayPanel::GetStartWithFourierScaling( ) { return start_with_fourier_scaling; }
+
+bool DisplayPanel::GetDoNotShowStatusBar( ) { return do_not_show_status_bar; }
+
+bool DisplayPanel::GetCanSelectImages( ) { return can_select_images; }
+
+bool DisplayPanel::GetNoPopup( ) { return no_popup; }
+
+bool DisplayPanel::GetStartWithNoLabel( ) { return start_with_no_label; }
+
+bool DisplayPanel::GetSkipLeftclickToParent( ) { return skip_leftclick_to_parent; }
+
+bool DisplayPanel::GetCanMoveTabs( ) { return can_move_tabs; }
+
+bool DisplayPanel::GetDrawImageSeparator( ) { return draw_image_separator; }
+
+bool DisplayPanel::GetKeepTabsLinked( ) { return keep_tabs_linked_if_possible; }
 
 DisplayNotebook::DisplayNotebook(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
     : wxAuiNotebook(parent, id, pos, size, style) {
@@ -1377,19 +1441,19 @@ DisplayNotebookPanel::DisplayNotebookPanel(wxWindow* parent, wxWindowID id, cons
 
     use_unscaled_image_for_popup = false;
 
-    if ( (parent_display_panel->style_flags & FIRST_LOCATION_ONLY) == FIRST_LOCATION_ONLY || (parent_display_panel->style_flags & START_WITH_NO_LABEL) == START_WITH_NO_LABEL ) {
+    if ( parent_display_panel->GetFirstLocationOnly( ) || parent_display_panel->GetStartWithNoLabel( ) ) {
         show_label = false;
     }
     else
         show_label = true;
 
-    if ( (parent_display_panel->style_flags & START_WITH_INVERTED_CONTRAST) == START_WITH_INVERTED_CONTRAST ) {
+    if ( parent_display_panel->start_with_inverted_contrast ) {
         invert_contrast = true;
     }
     else
         invert_contrast = false;
 
-    if ( (parent_display_panel->style_flags & START_WITH_FOURIER_SCALING) == START_WITH_FOURIER_SCALING ) {
+    if ( parent_display_panel->start_with_fourier_scaling ) {
         use_fourier_scaling = true;
     }
     else
@@ -1424,7 +1488,7 @@ DisplayNotebookPanel::DisplayNotebookPanel(wxWindow* parent, wxWindowID id, cons
     manual_low_grey      = 0.;
     manual_high_grey     = 0.;
 
-    if ( (parent_display_panel->style_flags & START_WITH_AUTO_CONTRAST) == START_WITH_AUTO_CONTRAST )
+    if ( parent_display_panel->start_with_auto_contrast )
         grey_values_decided_by = AUTO_GREYS;
     else
         grey_values_decided_by = LOCAL_GREYS;
@@ -1440,10 +1504,12 @@ DisplayNotebookPanel::DisplayNotebookPanel(wxWindow* parent, wxWindowID id, cons
     integrate_box_y_pos = -1;
     integrated_value    = -1;
 
-    picking_mode             = IMAGES_PICK; // Do this by default, change when creating the frame.
-    have_txt_filename        = false;
-    txt_is_saved             = false;
-    selected_filament_number = 1;
+    // This is specific to the display program, and differentiates whether the user's left click will
+    // Select images or coordinates
+    image_picking_mode_enabled = true;
+    have_txt_filename          = false;
+    txt_is_saved               = false;
+    selected_filament_number   = 1;
 
     int window_x_size;
     int window_y_size;
@@ -1505,14 +1571,14 @@ void DisplayNotebookPanel::UpdateImageStatusInfo(int x_pos, int y_pos) {
             StatusText += wxT(", Value=") + wxString::Format(wxT("%f"), raw_pixel_value);
 
             //if (selected_distance != 0 && show_selection_distances ) StatusText += wxT(", Dist=") + wxString::Format(wxT("%f"), selected_distance);
-            //if (picking_mode == INTEGRATE_PICK && integrate_box_x_pos != -1 && integrate_box_y_pos != -1) StatusText += wxT(", Integrated Value =") + wxString::Format(wxT("%f"), integrated_value);
+            //if (image_picking_mode_enabled == INTEGRATE_PICK && integrate_box_x_pos != -1 && integrate_box_y_pos != -1) StatusText += wxT(", Integrated Value =") + wxString::Format(wxT("%f"), integrated_value);
             parent_display_panel->StatusText->SetLabel(StatusText);
         }
         else {
             wxString StatusText = wxT("");
 
             //if (selected_distance != 0 && show_selection_distances ) StatusText += wxT("Dist=") + wxString::Format(wxT("%f"), selected_distance);
-            //	if (picking_mode == INTEGRATE_PICK && integrate_box_x_pos != -1 && integrate_box_y_pos != -1) StatusText += wxT("Integrated Value =") + wxString::Format(wxT("%f"), integrated_value);
+            //	if (image_picking_mode_enabled == INTEGRATE_PICK && integrate_box_x_pos != -1 && integrate_box_y_pos != -1) StatusText += wxT("Integrated Value =") + wxString::Format(wxT("%f"), integrated_value);
             parent_display_panel->StatusText->SetLabel(StatusText);
         }
     }
@@ -1549,14 +1615,14 @@ void DisplayNotebookPanel::UpdateImageStatusInfo(int x_pos, int y_pos) {
                 StatusText += wxT(", Value=") + wxString::Format(wxT("%f"), raw_pixel_value);
 
                 //	if (selected_distance != 0 && show_selection_distances ) StatusText += wxT(", Dist=") + wxString::Format(wxT("%f"), selected_distance);
-                //	if (picking_mode == INTEGRATE_PICK && integrate_box_x_pos != -1 && integrate_box_y_pos != -1) StatusText += wxT(", Integrated Value =") + wxString::Format(wxT("%f"), integrated_value);
+                //	if (image_picking_mode_enabled == INTEGRATE_PICK && integrate_box_x_pos != -1 && integrate_box_y_pos != -1) StatusText += wxT(", Integrated Value =") + wxString::Format(wxT("%f"), integrated_value);
                 parent_display_panel->StatusText->SetLabel(StatusText);
             }
             else {
                 wxString StatusText = wxT("");
 
                 //	if (selected_distance != 0 && show_selection_distances ) StatusText += wxT("Dist=") + wxString::Format(wxT("%f"), selected_distance);
-                //	if (picking_mode == INTEGRATE_PICK && integrate_box_x_pos != -1 && integrate_box_y_pos != -1) StatusText += wxT("Integrated Value =") + wxString::Format(wxT("%f"), integrated_value);
+                //	if (image_picking_mode_enabled == INTEGRATE_PICK && integrate_box_x_pos != -1 && integrate_box_y_pos != -1) StatusText += wxT("Integrated Value =") + wxString::Format(wxT("%f"), integrated_value);
                 parent_display_panel->StatusText->SetLabel(StatusText);
             }
         }
@@ -1564,7 +1630,7 @@ void DisplayNotebookPanel::UpdateImageStatusInfo(int x_pos, int y_pos) {
             wxString StatusText = wxT("");
 
             // 		if (selected_distance != 0 && show_selection_distances ) StatusText += wxT("Dist=") + wxString::Format(wxT("%f"), selected_distance);
-            // 		if (picking_mode == INTEGRATE_PICK && integrate_box_x_pos != -1 && integrate_box_y_pos != -1) StatusText += wxT(" Integrated Value =") + wxString::Format(wxT("%f"), integrated_value);
+            // 		if (image_picking_mode_enabled == INTEGRATE_PICK && integrate_box_x_pos != -1 && integrate_box_y_pos != -1) StatusText += wxT(" Integrated Value =") + wxString::Format(wxT("%f"), integrated_value);
             parent_display_panel->StatusText->SetLabel(StatusText);
         }
     }
@@ -1576,7 +1642,7 @@ void DisplayNotebookPanel::OnKeyDown(wxKeyEvent& event) {
     wxCommandEvent null_event;
 
     if ( current_keycode == WXK_LEFT ) {
-        if ( (parent_display_panel->style_flags & NO_NOTEBOOK) == NO_NOTEBOOK ) {
+        if ( parent_display_panel->no_notebook ) {
         }
         else {
             int current_page = parent_display_panel->my_notebook->GetSelection( );
@@ -1587,7 +1653,7 @@ void DisplayNotebookPanel::OnKeyDown(wxKeyEvent& event) {
         }
     }
     else if ( current_keycode == WXK_RIGHT ) {
-        if ( (parent_display_panel->style_flags & NO_NOTEBOOK) == NO_NOTEBOOK ) {
+        if ( parent_display_panel->no_notebook ) {
         }
         else {
             int current_page = parent_display_panel->my_notebook->GetSelection( );
@@ -1711,7 +1777,7 @@ void DisplayNotebookPanel::OnRightDown(wxMouseEvent& event) {
 
     event.GetPosition(&x_pos, &y_pos);
 
-    if ( (parent_display_panel->style_flags & NO_POPUP) == NO_POPUP ) {
+    if ( parent_display_panel->no_popup ) {
         // work out which is the selected image, and put it into the event..
 
         int image_x_coord;
@@ -1786,7 +1852,7 @@ void DisplayNotebookPanel::OnRightDown(wxMouseEvent& event) {
 }
 
 void DisplayNotebookPanel::SetImageSelected(long wanted_image, bool refresh) {
-    MyDebugAssertTrue((parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || picking_mode == IMAGES_PICK, "Trying to select images, but selection style flag not set");
+    MyDebugAssertTrue(parent_display_panel->can_select_images || image_picking_mode_enabled, "Trying to select images, but selection style flag not set");
     MyDebugAssertTrue(wanted_image > 0 && wanted_image <= ReturnNumberofImages( ), "Trying to select an image that doesn't exist (%li)", wanted_image);
 
     if ( ! image_is_selected[wanted_image] )
@@ -1800,7 +1866,7 @@ void DisplayNotebookPanel::SetImageSelected(long wanted_image, bool refresh) {
 }
 
 void DisplayNotebookPanel::SetImageNotSelected(long wanted_image, bool refresh) {
-    MyDebugAssertTrue((parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || picking_mode == IMAGES_PICK, "Trying to select images, but selection style flag not set");
+    MyDebugAssertTrue(parent_display_panel->can_select_images || image_picking_mode_enabled, "Trying to select images, but selection style flag not set");
     MyDebugAssertTrue(wanted_image > 0 && wanted_image <= ReturnNumberofImages( ), "Trying to select an image that doesn't exist (%li)", wanted_image);
 
     if ( image_is_selected[wanted_image] )
@@ -1814,7 +1880,7 @@ void DisplayNotebookPanel::SetImageNotSelected(long wanted_image, bool refresh) 
 }
 
 void DisplayNotebookPanel::ToggleImageSelected(long wanted_image, bool refresh) {
-    MyDebugAssertTrue((parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || picking_mode == IMAGES_PICK, "Trying to select images, but selection style flag not set");
+    MyDebugAssertTrue(parent_display_panel->can_select_images || image_picking_mode_enabled, "Trying to select images, but selection style flag not set");
     MyDebugAssertTrue(wanted_image > 0 && wanted_image <= ReturnNumberofImages( ), "Trying to select an image that doesn't exist (%li)", wanted_image);
 
     if ( image_is_selected[wanted_image] ) {
@@ -1833,7 +1899,7 @@ void DisplayNotebookPanel::ToggleImageSelected(long wanted_image, bool refresh) 
 }
 
 void DisplayNotebookPanel::ClearSelection(bool refresh) {
-    MyDebugAssertTrue((parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || picking_mode == IMAGES_PICK, "Trying to clear selection, but selection style flag not set");
+    MyDebugAssertTrue(parent_display_panel->can_select_images || image_picking_mode_enabled, "Trying to clear selection, but selection style flag not set");
 
     for ( long mycounter = 0; mycounter < ReturnNumberofImages( ) + 1; mycounter++ ) {
         image_is_selected[mycounter] = false;
@@ -1884,7 +1950,7 @@ void DisplayNotebookPanel::OnLeftDown(wxMouseEvent& event) {
         current_y_pos = (y_pos - (current_y_size * image_y_coord)) / actual_scale_factor;
     }
 
-    if ( (parent_display_panel->style_flags & SKIP_LEFTCLICK_TO_PARENT) == SKIP_LEFTCLICK_TO_PARENT ) {
+    if ( parent_display_panel->skip_leftclick_to_parent ) {
         if ( x_pos < max_x && y_pos < max_y ) {
             event.SetId(current_image);
         }
@@ -1898,7 +1964,7 @@ void DisplayNotebookPanel::OnLeftDown(wxMouseEvent& event) {
 
     // check if the CTRL key is down, if so we want to make a selection box...
 
-    /*if ( event.ControlDown( )  && picking_mode == COORDS_PICK ) // we want to draw a selection box..
+    /*if ( event.ControlDown( )  && image_picking_mode_enabled == COORDS_PICK ) // we want to draw a selection box..
     {
         drawing_selection_square = true;
 
@@ -1918,7 +1984,7 @@ void DisplayNotebookPanel::OnLeftDown(wxMouseEvent& event) {
 
         if ( current_x_pos < ReturnImageXSize( ) && current_x_pos >= 0 && current_y_pos < ReturnImageYSize( ) && current_y_pos >= 0 ) {
             if ( current_image <= ReturnNumberofImages( ) ) {
-                if ( picking_mode == IMAGES_PICK ) {
+                if ( image_picking_mode_enabled ) {
                     if ( image_is_selected[current_image] ) {
                         image_is_selected[current_image] = false;
                         number_of_selections--;
@@ -1930,7 +1996,7 @@ void DisplayNotebookPanel::OnLeftDown(wxMouseEvent& event) {
 
                     parent_display_panel->SetTabNameUnsaved( );
                 }
-                else if ( picking_mode == COORDS_PICK ) {
+                else if ( ! image_picking_mode_enabled ) {
                     coord_tracker->ToggleCoord(current_image, current_x_pos, current_y_pos);
                     parent_display_panel->SetTabNameUnsaved( );
                 }
@@ -1942,13 +2008,13 @@ void DisplayNotebookPanel::OnLeftDown(wxMouseEvent& event) {
     else if ( x_pos < max_x && y_pos < max_y ) {
         // perform the relevant action..
         if ( current_image <= ReturnNumberofImages( ) ) {
-            if ( (parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || (parent_display_panel->is_from_display_program && picking_mode == IMAGES_PICK) ) {
+            if ( parent_display_panel->can_select_images || (parent_display_panel->is_from_display_program && image_picking_mode_enabled) ) {
                 ToggleImageSelected(current_image, false);
                 parent_display_panel->SetTabNameUnsaved( );
             }
 
             // We must be in coords mode
-            else if ( parent_display_panel->is_from_display_program && picking_mode == COORDS_PICK ) {
+            else if ( parent_display_panel->is_from_display_program && ! image_picking_mode_enabled ) {
                 coord_tracker->ToggleCoord(current_image, current_x_pos, current_y_pos);
                 parent_display_panel->SetTabNameUnsaved( );
             }
@@ -2132,7 +2198,7 @@ bool DisplayNotebookPanel::CheckFileStillValid( ) {
         else {
             wxMessageBox(wxT("The current file is no longer accessible, or has changed number/size/type!!"), wxT("Error!!"), wxOK | wxICON_INFORMATION, this);
 
-            if ( (parent_display_panel->style_flags & NO_NOTEBOOK) == NO_NOTEBOOK ) {
+            if ( parent_display_panel->no_notebook ) {
                 // delete panel?
             }
             else {
@@ -2487,7 +2553,7 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
                                 address = (scaled_image_memory_buffer[image_counter].logical_y_dimension - 1 - j) * (scaled_image_memory_buffer[image_counter].logical_x_dimension + scaled_image_memory_buffer[image_counter].padding_jump_value);
 
                                 for ( i = 0; i < scaled_image_memory_buffer[image_counter].logical_x_dimension; i++ ) {
-                                    if ( (parent_display_panel->style_flags & DRAW_IMAGE_SEPARATOR) == DRAW_IMAGE_SEPARATOR && (j == 0 || j == scaled_image_memory_buffer[image_counter].logical_y_dimension - 1 || i == 0 || i == scaled_image_memory_buffer[image_counter].logical_x_dimension - 1) ) {
+                                    if ( parent_display_panel->draw_image_separator && (j == 0 || j == scaled_image_memory_buffer[image_counter].logical_y_dimension - 1 || i == 0 || i == scaled_image_memory_buffer[image_counter].logical_x_dimension - 1) ) {
                                         image_data[red_counter]   = 0;
                                         image_data[green_counter] = 0;
                                         image_data[blue_counter]  = 0;
@@ -2522,7 +2588,7 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
                                 address = (image_memory_buffer[image_counter].logical_y_dimension - 1 - j) * (image_memory_buffer[image_counter].logical_x_dimension + image_memory_buffer[image_counter].padding_jump_value);
 
                                 for ( i = 0; i < image_memory_buffer[image_counter].logical_x_dimension; i++ ) {
-                                    if ( (parent_display_panel->style_flags & DRAW_IMAGE_SEPARATOR) == DRAW_IMAGE_SEPARATOR && (float(j) <= 1.0f / desired_scale_factor || float(j) >= image_memory_buffer[image_counter].logical_y_dimension - 1.0f / desired_scale_factor || float(i) <= 1.0f / desired_scale_factor || float(i) >= image_memory_buffer[image_counter].logical_x_dimension - 1.0f / desired_scale_factor) ) {
+                                    if ( parent_display_panel->draw_image_separator && (float(j) <= 1.0f / desired_scale_factor || float(j) >= image_memory_buffer[image_counter].logical_y_dimension - 1.0f / desired_scale_factor || float(i) <= 1.0f / desired_scale_factor || float(i) >= image_memory_buffer[image_counter].logical_x_dimension - 1.0f / desired_scale_factor) ) {
                                         image_data[red_counter]   = 0;
                                         image_data[green_counter] = 0;
                                         image_data[blue_counter]  = 0;
@@ -2741,9 +2807,9 @@ void DisplayNotebookPanel::OnPaint(wxPaintEvent& evt) {
         if ( ! suspend_overlays ) {
 
             dc.SetPen(*wxRED);
-            if ( picking_mode == IMAGES_PICK )
+            if ( image_picking_mode_enabled )
                 dc.SetBrush(wxBrush(*wxRED, wxTRANSPARENT));
-            else if ( picking_mode == COORDS_PICK ) {
+            else {
                 dc.SetBrush(wxBrush(*wxRED, wxSOLID));
             }
 
@@ -2752,7 +2818,7 @@ void DisplayNotebookPanel::OnPaint(wxPaintEvent& evt) {
             for ( int y = 0; y < images_in_y; y++ ) {
                 for ( int x = 0; x < images_in_x; x++ ) {
                     if ( counter <= ReturnNumberofImages( ) ) {
-                        if ( (parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || (parent_display_panel->is_from_display_program && picking_mode == IMAGES_PICK) ) {
+                        if ( parent_display_panel->can_select_images || (parent_display_panel->is_from_display_program && image_picking_mode_enabled) ) {
                             if ( image_is_selected[counter] ) {
 
                                 // draw a rectangle around the image..
@@ -2761,7 +2827,7 @@ void DisplayNotebookPanel::OnPaint(wxPaintEvent& evt) {
                         }
 
                         // Otherwise, we're picking coords (and therefore in display program)
-                        else if ( parent_display_panel->is_from_display_program && parent_display_panel->ReturnCurrentPanel( )->picking_mode == COORDS_PICK ) {
+                        else if ( parent_display_panel->is_from_display_program && ! parent_display_panel->ReturnCurrentPanel( )->image_picking_mode_enabled ) {
 
                             // find all the coordinates for this image..
                             for ( coord_counter = 0; coord_counter < coord_tracker->number_of_coords; coord_counter++ ) {
@@ -3793,7 +3859,7 @@ void DisplayManualDialog::OnHighChange(wxCommandEvent& WXUNUSED(event)) {
 
 void DisplayPanel::SetTabNameUnsaved( ) {
     // Add this because we only want to update tab names if there are tabs
-    if ( ! ((style_flags & NO_NOTEBOOK) == NO_NOTEBOOK) ) {
+    if ( ! no_notebook ) {
         ReturnCurrentPanel( )->txt_is_saved = false;
         RefreshTabName( );
     }
@@ -3801,7 +3867,7 @@ void DisplayPanel::SetTabNameUnsaved( ) {
 
 void DisplayPanel::SetTabNameSaved( ) {
     // Add this because we only want to update tab names if there are tabs
-    if ( ! ((style_flags & NO_NOTEBOOK) == NO_NOTEBOOK) ) {
+    if ( ! no_notebook ) {
         ReturnCurrentPanel( )->txt_is_saved = true;
         RefreshTabName( );
     }
@@ -3809,7 +3875,7 @@ void DisplayPanel::SetTabNameSaved( ) {
 
 void DisplayPanel::RefreshTabName( ) {
     // Add this because we only want to update tab names if there are tabs
-    if ( ! ((style_flags & NO_NOTEBOOK) == NO_NOTEBOOK) ) {
+    if ( ! no_notebook ) {
         int selected_tab = my_notebook->GetSelection( );
 
         wxString tab_text;

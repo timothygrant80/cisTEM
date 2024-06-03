@@ -5,7 +5,11 @@ extern MyRefinementPackageAssetPanel* refinement_package_asset_panel;
 
 Sharpen3DPanel::Sharpen3DPanel(wxWindow* parent)
     : Sharpen3DPanelParent(parent) {
-    ResultDisplayPanel->Initialise(START_WITH_FOURIER_SCALING | DO_NOT_SHOW_STATUS_BAR | START_WITH_NO_LABEL | FIRST_LOCATION_ONLY);
+    ResultDisplayPanel->EnableStartWithFourierScaling( );
+    ResultDisplayPanel->EnableDoNotShowStatusBar( );
+    ResultDisplayPanel->EnableStartWithNoLabel( );
+    ResultDisplayPanel->EnableFirstLocationOnly( );
+    ResultDisplayPanel->Initialise( );
     GuinierPlot->Initialise(wxT("Spatial Freq. (1/Å)"), "Log Amplitude", true, 20, 45, 30, 20, true, false);
     SetInfo( );
 

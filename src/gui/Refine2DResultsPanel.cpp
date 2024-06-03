@@ -6,9 +6,24 @@ Refine2DResultsPanel::Refine2DResultsPanel(wxWindow* parent, wxWindowID id, cons
     : Refine2DResultsPanelParent(parent, id, pos, size, style) {
 #include "icons/add_file_icon.cpp"
 #include "icons/delete_file_icon.cpp"
+    ClassumDisplayPanel->EnableCanFFT( );
+    ClassumDisplayPanel->EnableNoNotebook( );
+    ClassumDisplayPanel->EnableCanSelectImages( );
+    ClassumDisplayPanel->EnableNoPopup( );
+    ClassumDisplayPanel->EnableStartWithFourierScaling( );
+    ClassumDisplayPanel->EnableSkipLeftclickToParent( );
+    ClassumDisplayPanel->EnableDoNotShowStatusBar( );
+    ClassumDisplayPanel->Initialise( );
 
-    ClassumDisplayPanel->Initialise(CAN_FFT | NO_NOTEBOOK | CAN_SELECT_IMAGES | NO_POPUP | START_WITH_FOURIER_SCALING | SKIP_LEFTCLICK_TO_PARENT | DO_NOT_SHOW_STATUS_BAR);
-    ParticleDisplayPanel->Initialise(CAN_FFT | START_WITH_INVERTED_CONTRAST | START_WITH_AUTO_CONTRAST | NO_NOTEBOOK | START_WITH_NO_LABEL | START_WITH_FOURIER_SCALING | DO_NOT_SHOW_STATUS_BAR | DRAW_IMAGE_SEPARATOR);
+    ParticleDisplayPanel->EnableCanFFT( );
+    ParticleDisplayPanel->EnableStartWithInvertedContrast( );
+    ParticleDisplayPanel->EnableStartWithAutoContrast( );
+    ParticleDisplayPanel->EnableNoNotebook( );
+    ParticleDisplayPanel->EnableStartWithNoLabel( );
+    ParticleDisplayPanel->EnableStartWithFourierScaling( );
+    ParticleDisplayPanel->EnableDoNotShowStatusBar( );
+    ParticleDisplayPanel->EnableDrawImageSeparator( );
+    ParticleDisplayPanel->Initialise( );
     selected_class                      = 1;
     refinement_package_combo_is_dirty   = false;
     input_params_combo_is_dirty         = false;

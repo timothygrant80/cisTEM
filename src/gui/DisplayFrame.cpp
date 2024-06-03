@@ -6,7 +6,11 @@ DisplayFrame::DisplayFrame(wxWindow* parent, wxWindowID id, const wxString& titl
     is_fullscreen = false;
     remember_path = wxGetCwd( );
 
-    this->cisTEMDisplayPanel->Initialise(CAN_CHANGE_FILE | CAN_CLOSE_TABS | CAN_MOVE_TABS | CAN_FFT);
+    cisTEMDisplayPanel->EnableCanChangeFile( );
+    cisTEMDisplayPanel->EnableCanCloseTabs( );
+    cisTEMDisplayPanel->EnableCanMoveTabs( );
+    cisTEMDisplayPanel->EnableCanFFT( );
+    cisTEMDisplayPanel->Initialise( );
 
     // Set this bool to true so that DisplayPanel knows that this frame's panel is from the cisTEM_display program
     this->cisTEMDisplayPanel->is_from_display_program = true;
@@ -80,13 +84,13 @@ void DisplayFrame::OnLocationNumberClick(wxCommandEvent& event) {
 void DisplayFrame::OnImageSelectionModeClick(wxCommandEvent& event) {
     // if we are already in selections mode, we don't want to do anything, so
     // make a check.
-    if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode != IMAGES_PICK ) {
+    if ( ! cisTEMDisplayPanel->ReturnCurrentPanel( )->image_picking_mode_enabled ) {
         if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->coord_tracker->number_of_coords > 0 ) {
             wxMessageDialog question_dialog(this, "By switching the selection mode, you will lose your current coordinates selections if they are unsaved.\nDo you want to continue?", "Swtich Selection Modes?", wxYES_NO | wxNO_DEFAULT | wxICON_EXCLAMATION);
 
             if ( question_dialog.ShowModal( ) == wxID_YES ) {
                 cisTEMDisplayPanel->ReturnCurrentPanel( )->coord_tracker->Clear( );
-                cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode = IMAGES_PICK;
+                cisTEMDisplayPanel->ReturnCurrentPanel( )->image_picking_mode_enabled = true;
                 SelectInvertSelection->Enable(true);
             }
 
@@ -95,7 +99,7 @@ void DisplayFrame::OnImageSelectionModeClick(wxCommandEvent& event) {
                 return;
         }
         else
-            cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode = IMAGES_PICK;
+            cisTEMDisplayPanel->ReturnCurrentPanel( )->image_picking_mode_enabled = true;
 
         ClearTextFileFromPanel( );
         Refresh( );
@@ -104,12 +108,12 @@ void DisplayFrame::OnImageSelectionModeClick(wxCommandEvent& event) {
 }
 
 void DisplayFrame::OnCoordsSelectionModeClick(wxCommandEvent& event) {
-    if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode != COORDS_PICK ) {
+    if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->image_picking_mode_enabled ) {
         if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->number_of_selections > 0 ) {
             wxMessageDialog question_dialog(this, "By switching the selection mode, you will lose your current image selections.\nDo you want to continue?", "Switch Selection Modes?", wxYES_NO | wxNO_DEFAULT | wxICON_EXCLAMATION);
             if ( question_dialog.ShowModal( ) == wxID_YES ) {
                 cisTEMDisplayPanel->ClearSelection(false);
-                cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode = COORDS_PICK;
+                cisTEMDisplayPanel->ReturnCurrentPanel( )->image_picking_mode_enabled = false;
 
                 SelectInvertSelection->Enable(false);
             }
@@ -120,7 +124,7 @@ void DisplayFrame::OnCoordsSelectionModeClick(wxCommandEvent& event) {
 
         // No selections
         else
-            cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode = COORDS_PICK;
+            cisTEMDisplayPanel->ReturnCurrentPanel( )->image_picking_mode_enabled = false;
 
         ClearTextFileFromPanel( );
         Refresh( );
@@ -138,7 +142,7 @@ void DisplayFrame::OnOpenTxtClick(wxCommandEvent& event) {
     wxString path;
 
     // We want to open image selections if we're in IMAGES_PICK mode
-    if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode == IMAGES_PICK ) {
+    if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->image_picking_mode_enabled ) {
         if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->number_of_selections > 0 ) {
             wxMessageDialog open_without_saving_selections_dialog(this, "To open image selections, all current selections must be cleared. Do you want to continue without saving?", "Proceed without Saving Current Selections?", wxYES_NO | wxNO_DEFAULT | wxICON_EXCLAMATION);
             if ( open_without_saving_selections_dialog.ShowModal( ) == wxID_YES ) {
@@ -243,7 +247,7 @@ void DisplayFrame::OnSaveTxtClick(wxCommandEvent& event) {
             file_to_update.Open( );
             file_to_update.Clear( );
 
-            if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode == IMAGES_PICK ) {
+            if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->image_picking_mode_enabled ) {
                 for ( long i = 0; i <= cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnNumberofImages( ); i++ ) {
                     if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->image_is_selected[i] )
                         file_to_update.AddLine(wxString::Format("%li", i));
@@ -273,7 +277,7 @@ void DisplayFrame::OnSaveTxtAsClick(wxCommandEvent& event) {
     wxFileName temp_filename;
     int        temp_int;
 
-    if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode == IMAGES_PICK ) {
+    if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->image_picking_mode_enabled ) {
         caption          = wxT("Save image selections as text file");
         wildcard         = wxT("TXT files (*.txt)|*.txt");
         default_dir      = remember_path;
@@ -357,12 +361,12 @@ void DisplayFrame::OnInvertSelectionClick(wxCommandEvent& event) {
 }
 
 void DisplayFrame::OnClearSelectionClick(wxCommandEvent& event) {
-    if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode == IMAGES_PICK ) {
+    if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->image_picking_mode_enabled ) {
         for ( int image_counter = 0; image_counter < cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnNumberofImages( ); image_counter++ ) {
             cisTEMDisplayPanel->ClearSelection(false);
         }
     }
-    else if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode == COORDS_PICK ) {
+    else if ( ! cisTEMDisplayPanel->ReturnCurrentPanel( )->image_picking_mode_enabled ) {
         cisTEMDisplayPanel->ReturnCurrentPanel( )->coord_tracker->Clear( );
     }
     ClearTextFileFromPanel( );
@@ -398,8 +402,8 @@ void DisplayFrame::OnSingleImageModeClick(wxCommandEvent& event) {
         cisTEMDisplayPanel->ReturnCurrentPanel( )->single_image = false;
     }
     else {
-        cisTEMDisplayPanel->ReturnCurrentPanel( )->single_image = true;
-        cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode = COORDS_PICK;
+        cisTEMDisplayPanel->ReturnCurrentPanel( )->single_image               = true;
+        cisTEMDisplayPanel->ReturnCurrentPanel( )->image_picking_mode_enabled = false;
     }
 
     cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_image_has_correct_greys = false;
@@ -505,7 +509,7 @@ void DisplayFrame::OnUpdateUI(wxUpdateUIEvent& event) {
         }
 
         // Keep picking mode radio buttons visually current
-        if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->picking_mode == IMAGES_PICK ) {
+        if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->image_picking_mode_enabled ) {
             SelectImageSelectionMode->Check(true);
             SelectInvertSelection->Enable(true);
         }

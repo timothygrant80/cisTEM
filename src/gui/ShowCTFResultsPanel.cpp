@@ -9,7 +9,13 @@ ShowCTFResultsPanel::ShowCTFResultsPanel(wxWindow* parent, wxWindowID id, const 
     CTF2DResultsPanel->font_size_multiplier = 1.5;
     CTF2DResultsPanel->use_auto_contrast    = false;
 
-    ImageDisplayPanel->Initialise(CAN_FFT | NO_NOTEBOOK | FIRST_LOCATION_ONLY | START_WITH_AUTO_CONTRAST | START_WITH_FOURIER_SCALING | DO_NOT_SHOW_STATUS_BAR);
+    ImageDisplayPanel->EnableCanFFT( );
+    ImageDisplayPanel->EnableNoNotebook( );
+    ImageDisplayPanel->EnableFirstLocationOnly( );
+    ImageDisplayPanel->EnableStartWithAutoContrast( );
+    ImageDisplayPanel->EnableStartWithFourierScaling( );
+    ImageDisplayPanel->EnableDoNotShowStatusBar( );
+    ImageDisplayPanel->Initialise( );
 }
 
 ShowCTFResultsPanel::~ShowCTFResultsPanel( ) {

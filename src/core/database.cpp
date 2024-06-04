@@ -2367,12 +2367,124 @@ bool Database::UpdateSchema(ColumnChanges columns) {
     CreateAllTables( );
     char     format;
     wxString column_format;
+    int      col_counter;
+    bool     output_pixel_size_added = false;
+
     for ( ColumnChange& column : columns ) {
         format        = std::get<COLUMN_CHANGE_TYPE>(column);
         column_format = map_type_char_to_sqlite_string(format);
         ExecuteSQL(wxString::Format("ALTER TABLE %s ADD COLUMN %s %s;", std::get<COLUMN_CHANGE_TABLE>(column), std::get<COLUMN_CHANGE_NAME>(column), column_format));
+
+        // checks for specific problem :-
+        // output pixel size was not added onto the end, and it needs to have a value set.
+
+        if ( std::get<COLUMN_CHANGE_NAME>(column) == "OUTPUT_PIXEL_SIZE" )
+            output_pixel_size_added = true;
     }
+
     UpdateVersion( );
+
+    // do the more complicated post work..
+
+    if ( output_pixel_size_added == true ) {
+        ExecuteSQL("drop table if exists cistem_schema_update_temp_table");
+        ExecuteSQL("alter table REFINEMENT_PACKAGE_ASSETS rename to cistem_schema_update_temp_table");
+        CreateAllTables( ); // should now be correct order but blank..
+
+        std::vector<wxString> all_columns;
+
+        for ( TableData& table : static_tables ) {
+
+            if ( std::get<TABLE_NAME>(table) == "REFINEMENT_PACKAGE_ASSETS" ) {
+                for ( col_counter = 0; col_counter < std::get<TABLE_COLUMNS>(table).size( ); col_counter++ ) {
+                    all_columns.push_back(std::get<TABLE_COLUMNS>(table)[col_counter]);
+                }
+            }
+        }
+
+        wxString sql_command;
+        sql_command = "insert into REFINEMENT_PACKAGE_ASSETS select ";
+
+        for ( col_counter = 0; col_counter < all_columns.size( ); col_counter++ ) {
+            sql_command += all_columns[col_counter];
+
+            if ( col_counter < all_columns.size( ) - 1 )
+                sql_command += ", ";
+            else
+                sql_command += " from cistem_schema_update_temp_table;";
+        }
+
+        ExecuteSQL(sql_command);
+        ExecuteSQL("drop table if exists cistem_schema_update_temp_table");
+
+        // now we need to go and set this value to the output pixel size..
+        wxArrayInt refinement_package_asset_ids = ReturnIntArrayFromSelectCommand("SELECT REFINEMENT_PACKAGE_ASSET_ID FROM REFINEMENT_PACKAGE_ASSETS");
+        double     current_pixel_size;
+
+        for ( int refinement_package_counter = 0; refinement_package_counter < refinement_package_asset_ids.GetCount( ); refinement_package_counter++ ) {
+            current_pixel_size = ReturnSingleDoubleFromSelectCommand(wxString::Format("select pixel_size from refinement_package_contained_particles_%i", refinement_package_asset_ids[refinement_package_counter]));
+            ExecuteSQL(wxString::Format("update refinement_package_assets set output_pixel_size = %f where refinement_package_asset_id = %i", current_pixel_size, refinement_package_asset_ids[refinement_package_counter]));
+        }
+
+        // Next, make sure pixel size, aberration, voltage, and amplitude contrast are being updated where needed
+        {
+            wxString   sql_command                         = "";
+            double     classification_held_pixel_size      = 0.0;
+            double     refinement_held_pixel_size          = 0.0;
+            double     contained_particles_pixel_size      = 0.0;
+            double     aberration                          = 0.0;
+            double     voltage                             = 0.0;
+            double     amplitude_contrast                  = 0.0;
+            int        corresponding_refinement_package_id = 0;
+            int        refinement_number_of_classes        = 0;
+            wxArrayInt classification_ids                  = ReturnIntArrayFromSelectCommand(wxString::Format("select CLASSIFICATION_ID from CLASSIFICATION_LIST"));
+            wxArrayInt refinement_ids                      = ReturnIntArrayFromSelectCommand(wxString::Format("select REFINEMENT_ID from REFINEMENT_LIST"));
+
+            // Use the refinement_package_asset_id from each table to update the needed variables
+            // First do classification results
+            for ( int classification_result_counter = 0; classification_result_counter < classification_ids.size( ); classification_result_counter++ ) {
+                corresponding_refinement_package_id = ReturnSingleIntFromSelectCommand(wxString::Format("select REFINEMENT_PACKAGE_ASSET_ID from CLASSIFICATION_LIST where CLASSIFICATION_ID = %i", classification_ids[classification_result_counter]));
+                classification_held_pixel_size      = ReturnSingleDoubleFromSelectCommand(wxString::Format("select PIXEL_SIZE from CLASSIFICATION_RESULT_%i", classification_ids[classification_result_counter]));
+                contained_particles_pixel_size      = ReturnSingleDoubleFromSelectCommand(wxString::Format("select PIXEL_SIZE from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
+
+                // If pixel size doesn't match, probably none do; update all 4.
+                if ( contained_particles_pixel_size != classification_held_pixel_size ) {
+                    aberration         = ReturnSingleDoubleFromSelectCommand(wxString::Format("select SPHERICAL_ABERRATION from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
+                    voltage            = ReturnSingleDoubleFromSelectCommand(wxString::Format("select MICROSCOPE_VOLTAGE from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
+                    amplitude_contrast = ReturnSingleDoubleFromSelectCommand(wxString::Format("select AMPLITUDE_CONTRAST from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
+
+                    ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set PIXEL_SIZE = %f", classification_ids[classification_result_counter], contained_particles_pixel_size));
+                    ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set CS = %f", classification_ids[classification_result_counter], aberration));
+                    ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set AMPLITUDE_CONTRAST = %f", classification_ids[classification_result_counter], amplitude_contrast));
+                    ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set VOLTAGE = %f", classification_ids[classification_result_counter], voltage));
+                }
+            }
+
+            // Now do refinement results; first loop over the refinement_ids, then loop over the number of classes.
+            for ( int refinement_result_counter = 0; refinement_result_counter < refinement_ids.size( ); refinement_result_counter++ ) {
+                refinement_number_of_classes = ReturnSingleIntFromSelectCommand(wxString::Format("select NUMBER_OF_CLASSES from REFINEMENT_LIST where REFINEMENT_ID = %i", refinement_ids[refinement_result_counter])) + 1;
+
+                for ( int refinement_result_class_counter = 1; refinement_result_class_counter < refinement_number_of_classes; refinement_result_class_counter++ ) {
+                    corresponding_refinement_package_id = ReturnSingleIntFromSelectCommand(wxString::Format("select REFINEMENT_PACKAGE_ASSET_ID from REFINEMENT_LIST where REFINEMENT_ID = %i", refinement_ids[refinement_result_counter]));
+                    refinement_held_pixel_size          = ReturnSingleDoubleFromSelectCommand(wxString::Format("select PIXEL_SIZE from REFINEMENT_RESULT_%i_%i", refinement_ids[refinement_result_counter], refinement_result_class_counter));
+                    contained_particles_pixel_size      = ReturnSingleDoubleFromSelectCommand(wxString::Format("select PIXEL_SIZE from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
+
+                    // If pixel size doesn't match, probably none do; update all 4.
+                    if ( contained_particles_pixel_size != classification_held_pixel_size ) {
+                        aberration         = ReturnSingleDoubleFromSelectCommand(wxString::Format("select SPHERICAL_ABERRATION from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
+                        voltage            = ReturnSingleDoubleFromSelectCommand(wxString::Format("select MICROSCOPE_VOLTAGE from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
+                        amplitude_contrast = ReturnSingleDoubleFromSelectCommand(wxString::Format("select AMPLITUDE_CONTRAST from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
+
+                        ExecuteSQL(wxString::Format("update REFINEMENT_RESULT_%i_%i set PIXEL_SIZE = %f", refinement_ids[refinement_result_counter], refinement_result_class_counter, contained_particles_pixel_size));
+                        ExecuteSQL(wxString::Format("update REFINEMENT_RESULT_%i_%i set MICROSCOPE_CS = %f", refinement_ids[refinement_result_counter], refinement_result_class_counter, aberration));
+                        ExecuteSQL(wxString::Format("update REFINEMENT_RESULT_%i_%i set AMPLITUDE_CONTRAST = %f", refinement_ids[refinement_result_counter], refinement_result_class_counter, amplitude_contrast));
+                        ExecuteSQL(wxString::Format("update REFINEMENT_RESULT_%i_%i set MICROSCOPE_VOLTAGE = %f", refinement_ids[refinement_result_counter], refinement_result_class_counter, voltage));
+                    }
+                }
+            }
+        }
+    }
+
     return true;
 }
 

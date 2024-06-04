@@ -2428,13 +2428,16 @@ bool Database::UpdateSchema(ColumnChanges columns) {
 
         // Next, make sure pixel size, aberration, voltage, and amplitude contrast are being updated where needed
         {
-            wxString   sql_command                         = "";
             double     classification_held_pixel_size      = 0.0;
             double     refinement_held_pixel_size          = 0.0;
             double     contained_particles_pixel_size      = 0.0;
             double     aberration                          = 0.0;
             double     voltage                             = 0.0;
             double     amplitude_contrast                  = 0.0;
+            double     defocus_1                           = 0.0;
+            double     defocus_2                           = 0.0;
+            double     defocus_angle                       = 0.0;
+            double     phase_shift                         = 0.0;
             int        corresponding_refinement_package_id = 0;
             int        refinement_number_of_classes        = 0;
             wxArrayInt classification_ids                  = ReturnIntArrayFromSelectCommand(wxString::Format("select CLASSIFICATION_ID from CLASSIFICATION_LIST"));
@@ -2447,17 +2450,31 @@ bool Database::UpdateSchema(ColumnChanges columns) {
                 classification_held_pixel_size      = ReturnSingleDoubleFromSelectCommand(wxString::Format("select PIXEL_SIZE from CLASSIFICATION_RESULT_%i", classification_ids[classification_result_counter]));
                 contained_particles_pixel_size      = ReturnSingleDoubleFromSelectCommand(wxString::Format("select PIXEL_SIZE from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
 
-                // If pixel size doesn't match, probably none do; update all 4.
+                // If pixel size doesn't match, probably none do; update all NULL columns.
                 if ( contained_particles_pixel_size != classification_held_pixel_size ) {
                     aberration         = ReturnSingleDoubleFromSelectCommand(wxString::Format("select SPHERICAL_ABERRATION from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
                     voltage            = ReturnSingleDoubleFromSelectCommand(wxString::Format("select MICROSCOPE_VOLTAGE from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
                     amplitude_contrast = ReturnSingleDoubleFromSelectCommand(wxString::Format("select AMPLITUDE_CONTRAST from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
+                    defocus_1          = ReturnSingleDoubleFromSelectCommand(wxString::Format("select DEFOCUS_1 from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
+                    defocus_2          = ReturnSingleDoubleFromSelectCommand(wxString::Format("select DEFOCUS_2 from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
+                    defocus_angle      = ReturnSingleDoubleFromSelectCommand(wxString::Format("select DEFOCUS_ANGLE from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
+                    phase_shift        = ReturnSingleDoubleFromSelectCommand(wxString::Format("select PHASE_SHIFT from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
 
                     ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set PIXEL_SIZE = %f", classification_ids[classification_result_counter], contained_particles_pixel_size));
                     ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set CS = %f", classification_ids[classification_result_counter], aberration));
                     ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set AMPLITUDE_CONTRAST = %f", classification_ids[classification_result_counter], amplitude_contrast));
                     ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set VOLTAGE = %f", classification_ids[classification_result_counter], voltage));
+                    ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set DEFOCUS_1 = %f", classification_ids[classification_result_counter], defocus_1));
+                    ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set DEFOCUS_2 = %f", classification_ids[classification_result_counter], defocus_2));
+                    ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set DEFOCUS_ANGLE = %f", classification_ids[classification_result_counter], defocus_angle));
+                    ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set PHASE_SHIFT = %f", classification_ids[classification_result_counter], phase_shift));
                 }
+
+                // Then fill in the columns that would remain 0.0 as the values didn't exist in the beta version
+                ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set BEAM_TILT_X = 0.0 where BEAM_TILT_X is null", classification_ids[classification_result_counter]));
+                ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set BEAM_TILT_Y = 0.0 where BEAM_TILT_Y is null", classification_ids[classification_result_counter]));
+                ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set IMAGE_SHIFT_X = 0.0 where IMAGE_SHIFT_X is null", classification_ids[classification_result_counter]));
+                ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set IMAGE_SHIFT_Y = 0.0 where IMAGE_SHIFT_Y is null", classification_ids[classification_result_counter]));
             }
 
             // Now do refinement results; first loop over the refinement_ids, then loop over the number of classes.
@@ -2479,9 +2496,22 @@ bool Database::UpdateSchema(ColumnChanges columns) {
                         ExecuteSQL(wxString::Format("update REFINEMENT_RESULT_%i_%i set MICROSCOPE_CS = %f", refinement_ids[refinement_result_counter], refinement_result_class_counter, aberration));
                         ExecuteSQL(wxString::Format("update REFINEMENT_RESULT_%i_%i set AMPLITUDE_CONTRAST = %f", refinement_ids[refinement_result_counter], refinement_result_class_counter, amplitude_contrast));
                         ExecuteSQL(wxString::Format("update REFINEMENT_RESULT_%i_%i set MICROSCOPE_VOLTAGE = %f", refinement_ids[refinement_result_counter], refinement_result_class_counter, voltage));
+
+                        // Then fill in the columns that would remain 0.0 as the values didn't exist in the beta version
+                        ExecuteSQL(wxString::Format("update REFINEMENT_RESULT_%i_%i set BEAM_TILT_X = 0.0 where BEAM_TILT_X is null", refinement_ids[refinement_result_counter], refinement_result_class_counter));
+                        ExecuteSQL(wxString::Format("update REFINEMENT_RESULT_%i_%i set BEAM_TILT_Y = 0.0 where BEAM_TILT_Y is null", refinement_ids[refinement_result_counter], refinement_result_class_counter));
+                        ExecuteSQL(wxString::Format("update REFINEMENT_RESULT_%i_%i set IMAGE_SHIFT_X = 0.0 where IMAGE_SHIFT_X is null", refinement_ids[refinement_result_counter], refinement_result_class_counter));
+                        ExecuteSQL(wxString::Format("update REFINEMENT_RESULT_%i_%i set IMAGE_SHIFT_Y = 0.0 where IMAGE_SHIFT_Y is null", refinement_ids[refinement_result_counter], refinement_result_class_counter));
                     }
                 }
             }
+        }
+
+        // Now update the last 3 columns of the estimated ctf parameters table
+        {
+            ExecuteSQL(wxString::Format("update ESTIMATED_CTF_PARAMETERS set ICINESS = 0.0 where ICINESS is null"));
+            ExecuteSQL(wxString::Format("update ESTIMATED_CTF_PARAMETERS set TILT_ANGLE = 0.0 where TILT_ANGLE is null"));
+            ExecuteSQL(wxString::Format("update ESTIMATED_CTF_PARAMETERS set TILT_AXIS = 0.0 where TILT_AXIS is null"));
         }
     }
 

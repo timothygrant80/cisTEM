@@ -25,6 +25,7 @@ class BruteForceSearch {
     // Methods
     void  Init(float (*function_to_minimize)(void* parameters, float[]), void* parameters, int num_dim, float starting_value[], float half_range[], float step_size[], bool minimise_at_every_step, bool print_progress_bar, int wanted_desired_num_threads = 12);
     void  Run( );
+    void  Run(float** all_values, float** all_scores, int* num_values, int* num_scores);
     void  IncrementCurrentValues(float* current_values, bool& search_is_now_completed);
     float GetBestValue(int index);
 

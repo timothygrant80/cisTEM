@@ -108,6 +108,7 @@ no                               # Slow, exhaustive, search
 no                               # Restrain astigmatism
 no                               # Find phase shift     
 no                               # Find sample tilt
+no                               # Find sample thickness
 no                               # Set expert options
 EOF
 

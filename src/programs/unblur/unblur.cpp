@@ -1195,13 +1195,14 @@ bool UnBlurApp::DoCalculation( ) {
 
             profile_timing.lap("forward FFT");
 
+            if ( patch_track ) {
+                raw_image_stack[image_counter - 1].Allocate(image_stack[image_counter - 1].logical_x_dimension, image_stack[image_counter - 1].logical_y_dimension, 1, false);
+                raw_image_stack[image_counter - 1].CopyFrom(&image_stack[image_counter - 1]);
+            }
+
             // Resize the FT (binning)
             if ( output_binning_factor > 1.0001 ) {
                 profile_timing.start("resize");
-                if ( patch_track ) {
-                    raw_image_stack[image_counter - 1].Allocate(image_stack[image_counter - 1].logical_x_dimension, image_stack[image_counter - 1].logical_y_dimension, 1, false);
-                    raw_image_stack[image_counter - 1].CopyFrom(&image_stack[image_counter - 1]);
-                }
                 image_stack[image_counter - 1].Resize(myroundint(image_stack[image_counter - 1].logical_x_dimension / output_binning_factor), myroundint(image_stack[image_counter - 1].logical_y_dimension / output_binning_factor), 1);
                 profile_timing.lap("resize");
             }

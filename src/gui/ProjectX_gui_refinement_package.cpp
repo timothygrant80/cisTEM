@@ -382,6 +382,9 @@ RefinementPackageAssetPanel::RefinementPackageAssetPanel( wxWindow* parent, wxWi
 	CombineButton = new wxButton( m_panel50, wxID_ANY, wxT("Combine"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer193->Add( CombineButton, 0, wxALL, 5 );
 
+	BinButton = new wxButton( m_panel50, wxID_ANY, wxT("Bin"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer193->Add( BinButton, 0, wxALL, 5 );
+
 
 	bSizer145->Add( bSizer193, 0, wxEXPAND, 5 );
 
@@ -536,6 +539,7 @@ RefinementPackageAssetPanel::RefinementPackageAssetPanel( wxWindow* parent, wxWi
 	ImportButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnImportClick ), NULL, this );
 	ExportButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnExportClick ), NULL, this );
 	CombineButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnCombineClick ), NULL, this );
+	BinButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnBinClick ), NULL, this );
 	RefinementPackageListCtrl->Connect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( RefinementPackageAssetPanel::MouseCheckPackagesVeto ), NULL, this );
 	RefinementPackageListCtrl->Connect( wxEVT_LEFT_DOWN, wxMouseEventHandler( RefinementPackageAssetPanel::MouseCheckPackagesVeto ), NULL, this );
 	RefinementPackageListCtrl->Connect( wxEVT_LEFT_UP, wxMouseEventHandler( RefinementPackageAssetPanel::MouseVeto ), NULL, this );
@@ -574,6 +578,7 @@ RefinementPackageAssetPanel::~RefinementPackageAssetPanel()
 	ImportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnImportClick ), NULL, this );
 	ExportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnExportClick ), NULL, this );
 	CombineButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnCombineClick ), NULL, this );
+	BinButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnBinClick ), NULL, this );
 	RefinementPackageListCtrl->Disconnect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( RefinementPackageAssetPanel::MouseCheckPackagesVeto ), NULL, this );
 	RefinementPackageListCtrl->Disconnect( wxEVT_LEFT_DOWN, wxMouseEventHandler( RefinementPackageAssetPanel::MouseCheckPackagesVeto ), NULL, this );
 	RefinementPackageListCtrl->Disconnect( wxEVT_LEFT_UP, wxMouseEventHandler( RefinementPackageAssetPanel::MouseVeto ), NULL, this );
@@ -658,5 +663,84 @@ ClassumSelectionCopyFromDialogParent::~ClassumSelectionCopyFromDialogParent()
 	// Disconnect Events
 	OkButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ClassumSelectionCopyFromDialogParent::OnOKButtonClick ), NULL, this );
 	CancelButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ClassumSelectionCopyFromDialogParent::OnCancelButtonClick ), NULL, this );
+
+}
+
+BinningDialogParent::BinningDialogParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
+{
+	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
+
+	wxBoxSizer* bSizer31;
+	bSizer31 = new wxBoxSizer( wxVERTICAL );
+
+	wxBoxSizer* bSizer34;
+	bSizer34 = new wxBoxSizer( wxVERTICAL );
+
+	BinningInfoText = new wxStaticText( this, wxID_ANY, wxT("This action will resample the selected package's particle stack to be as close to the desired pixel size as possible while keeping the box size even, then create a new refinement package with the actual pixel size and box size."), wxDefaultPosition, wxDefaultSize, wxST_NO_AUTORESIZE );
+	BinningInfoText->Wrap( 550 );
+	bSizer34->Add( BinningInfoText, 0, wxALIGN_LEFT|wxALL, 5 );
+
+	m_staticline6 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer34->Add( m_staticline6, 0, wxEXPAND | wxALL, 5 );
+
+
+	bSizer31->Add( bSizer34, 0, wxALL|wxEXPAND, 5 );
+
+	wxBoxSizer* bSizer33;
+	bSizer33 = new wxBoxSizer( wxHORIZONTAL );
+
+	m_staticText29 = new wxStaticText( this, wxID_ANY, wxT("Desired Pixel Size (Å):"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText29->Wrap( -1 );
+	bSizer33->Add( m_staticText29, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	DesiredPixelSizeTextCtrl = new NumericTextCtrl( this, wxID_ANY, wxT("1.00"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer33->Add( DesiredPixelSizeTextCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+
+	bSizer31->Add( bSizer33, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	wxBoxSizer* bSizer38;
+	bSizer38 = new wxBoxSizer( wxHORIZONTAL );
+
+	ActualPixelSizeText = new wxStaticText( this, wxID_ANY, wxT("Actual Pixel Size: "), wxDefaultPosition, wxDefaultSize, 0 );
+	ActualPixelSizeText->Wrap( -1 );
+	bSizer38->Add( ActualPixelSizeText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	ActualBoxSizeText = new wxStaticText( this, wxID_ANY, wxT("Actual Box Size: "), wxDefaultPosition, wxDefaultSize, 0 );
+	ActualBoxSizeText->Wrap( -1 );
+	bSizer38->Add( ActualBoxSizeText, 0, wxALL, 5 );
+
+
+	bSizer31->Add( bSizer38, 0, wxALIGN_CENTER_HORIZONTAL, 5 );
+
+	wxBoxSizer* bSizer32;
+	bSizer32 = new wxBoxSizer( wxHORIZONTAL );
+
+	CancelButton = new wxButton( this, wxID_CANCEL, wxT("Cancel"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer32->Add( CancelButton, 0, wxALL, 5 );
+
+	OKButton = new wxButton( this, wxID_OK, wxT("OK"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer32->Add( OKButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALL, 5 );
+
+
+	bSizer31->Add( bSizer32, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_TOP|wxALL, 5 );
+
+
+	this->SetSizer( bSizer31 );
+	this->Layout();
+	bSizer31->Fit( this );
+
+	this->Centre( wxBOTH );
+
+	// Connect Events
+	CancelButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( BinningDialogParent::OnCancel ), NULL, this );
+	OKButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( BinningDialogParent::OnOK ), NULL, this );
+}
+
+BinningDialogParent::~BinningDialogParent()
+{
+	// Disconnect Events
+	CancelButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( BinningDialogParent::OnCancel ), NULL, this );
+	OKButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( BinningDialogParent::OnOK ), NULL, this );
 
 }

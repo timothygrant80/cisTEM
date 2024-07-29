@@ -335,6 +335,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     ImageFile input_reconstruction_file;
 
     Curve whitening_filter;
+    Curve highpass_filter;
     Curve number_of_terms;
 
     input_search_image_file.OpenFile(input_search_images_filename.ToStdString( ), false);
@@ -548,6 +549,28 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     whitening_filter.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((input_image.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
     number_of_terms.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((input_image.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
+    highpass_filter.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((input_image.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
+    highpass_filter.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((input_image.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
+    highpass_filter.SetYToConstant(1.0f);
+
+    float cutoff_freq  = 0.01;
+    float half_coswith = 0.005;
+    for ( int i = 0; i < highpass_filter.number_of_points; i++ ) {
+        if ( highpass_filter.data_x[i] <= cutoff_freq + half_coswith ) {
+            if ( highpass_filter.data_x[i] < cutoff_freq - half_coswith ) {
+                highpass_filter.data_y[i] = 0.0f;
+            }
+            // else( highpass_filter.data_x[i] > cutoff_freq - half_coswith )
+            else {
+                highpass_filter.data_y[i] = 1.0f - cosf((highpass_filter.data_x[i] - half_coswith) / (2 * half_coswith) * PI / 2);
+            }
+        }
+        else {
+            break;
+        }
+    }
+
+    highpass_filter.WriteToFile("highpassfilter.txt");
 
     wxDateTime my_time_out;
     wxDateTime my_time_in;
@@ -558,17 +581,41 @@ bool MatchTemplateApp::DoCalculation( ) {
     input_image.ForwardFFT( );
     input_image.SwapRealSpaceQuadrants( );
 
+    input_image.QuickAndDirtyWriteSlice("beforewhitenedinput.mrc", 1);
+    whitening_filter.WriteToFile("whitening_filter.txt");
     input_image.ZeroCentralPixel( );
     input_image.Compute1DPowerSpectrumCurve(&whitening_filter, &number_of_terms);
     whitening_filter.SquareRoot( );
     whitening_filter.Reciprocal( );
     whitening_filter.MultiplyByConstant(1.0f / whitening_filter.ReturnMaximumValue( ));
 
+    input_image.QuickAndDirtyWriteSlice("beforecurvefilter.mrc", 1);
+    whitening_filter.WriteToFile("applied_whitening_filter.txt");
+
     input_image.ApplyCurveFilter(&whitening_filter);
+    int in_real = 0;
+    if ( input_image.is_in_real_space ) {
+        wxPrintf("whitened image is in real\n");
+        input_image.QuickAndDirtyWriteSlice("whitenedinput.mrc", 1);
+    }
+    else {
+        in_real = 1;
+        wxPrintf("whitened image is in fourier\n");
+        input_image.BackwardFFT( );
+        input_image.QuickAndDirtyWriteSlice("whitenedinput.mrc", 1);
+    }
+    if ( in_real ) {
+        input_image.ForwardFFT( );
+    }
+
     input_image.ZeroCentralPixel( );
     // Note: we are dividing by the sqrt of the sum of squares, so the variance in the images 1/N, not 1. This is where the need to multiply the mips by sqrt(N) comes from.
     // Dividing by sqrt(input_image.ReturnSumOfSquares() / N) would result in a properly normalized CCC value.
     input_image.DivideByConstant(sqrtf(input_image.ReturnSumOfSquares( )));
+    input_image.QuickAndDirtyWriteSlice("whitenednormedinput.mrc", 1);
+
+    input_image.ApplyCurveFilter(&highpass_filter);
+    input_image.QuickAndDirtyWriteSlice("highpasswhitenednormedinput.mrc", 1);
     //input_image.QuickAndDirtyWriteSlice("/tmp/white.mrc", 1);
     //exit(-1);
 

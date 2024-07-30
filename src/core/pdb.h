@@ -1,6 +1,6 @@
-#define OPEN_TO_READ 0
-#define OPEN_TO_WRITE 1
-#define OPEN_TO_APPEND 2
+#ifndef _SRC_CORE_PDB_H_
+#define _SRC_CORE_PDB_H_
+
 #define MAX_NUMBER_OF_TIMESTEPS 2000
 
 #define MAX_NUMBER_OF_NOISE_PARTICLES 6
@@ -251,3 +251,5 @@ class PDB {
         return isAcidicOxygen;
     }
 };
+
+#endif // _SRC_CORE_PDB_H_

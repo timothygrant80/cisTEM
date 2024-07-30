@@ -1201,129 +1201,120 @@ void MyTestApp::TestNumericTextFiles( ) {
     // AddImage
     BeginTest("NumericTextFile::Init");
 
+    for ( int with_default_constructor = 0; with_default_constructor < 2; with_default_constructor++ ) {
+        if ( with_default_constructor > 0 ) {
+            NumericTextFile test_file;
+            test_file.Open(numeric_text_filename, OPEN_TO_READ);
+            if ( test_file.number_of_lines != 4 )
+                FailTest;
+            if ( test_file.records_per_line != 5 )
+                FailTest;
+        }
+        else {
+            NumericTextFile test_file(numeric_text_filename, OPEN_TO_READ);
+            if ( test_file.number_of_lines != 4 )
+                FailTest;
+            if ( test_file.records_per_line != 5 )
+                FailTest;
+        }
+    }
+    EndTest( );
+
     NumericTextFile test_file(numeric_text_filename, OPEN_TO_READ);
 
-    if ( test_file.number_of_lines != 4 )
-        FailTest;
-    if ( test_file.records_per_line != 5 )
-        FailTest;
-
-    EndTest( );
-
     BeginTest("NumericTextFile::ReadLine");
-    float temp_float[5];
+    std::array<float, 5>                temp_float;
+    std::array<double, 5>               temp_double;
+    std::array<std::array<float, 5>, 4> line_values;
+    line_values[0] = {1.0f, 2.0f, 3.0f, 4.0f, 5.0f};
+    line_values[1] = {6.0f, 7.1f, 8.3f, 9.4f, 10.5f};
+    line_values[2] = {11.2f, 12.7f, 13.2f, 14.1f, 15.8f};
+    line_values[3] = {16.1245f, 17.81003f, 18.5467f, 19.7621f, 20.11111f};
 
-    test_file.ReadLine(temp_float);
-
-    if ( int(temp_float[0]) != 1 )
-        FailTest;
-    if ( int(temp_float[1]) != 2 )
-        FailTest;
-    if ( int(temp_float[2]) != 3 )
-        FailTest;
-    if ( int(temp_float[3]) != 4 )
-        FailTest;
-    if ( int(temp_float[4]) != 5 )
-        FailTest;
-
-    test_file.ReadLine(temp_float);
-
-    if ( FloatsAreAlmostTheSame(temp_float[0], 6.0) == false )
-        FailTest;
-    if ( FloatsAreAlmostTheSame(temp_float[1], 7.1) == false )
-        FailTest;
-    if ( FloatsAreAlmostTheSame(temp_float[2], 8.3) == false )
-        FailTest;
-    if ( FloatsAreAlmostTheSame(temp_float[3], 9.4) == false )
-        FailTest;
-    if ( FloatsAreAlmostTheSame(temp_float[4], 10.5) == false )
-        FailTest;
-
-    test_file.ReadLine(temp_float);
-
-    if ( FloatsAreAlmostTheSame(temp_float[0], 11.2) == false )
-        FailTest;
-    if ( FloatsAreAlmostTheSame(temp_float[1], 12.7) == false )
-        FailTest;
-    if ( FloatsAreAlmostTheSame(temp_float[2], 13.2) == false )
-        FailTest;
-    if ( FloatsAreAlmostTheSame(temp_float[3], 14.1) == false )
-        FailTest;
-    if ( FloatsAreAlmostTheSame(temp_float[4], 15.8) == false )
-        FailTest;
-
-    test_file.ReadLine(temp_float);
-
-    if ( FloatsAreAlmostTheSame(temp_float[0], 16.1245) == false )
-        FailTest;
-    if ( FloatsAreAlmostTheSame(temp_float[1], 17.81003) == false )
-        FailTest;
-    if ( FloatsAreAlmostTheSame(temp_float[2], 18.5467) == false )
-        FailTest;
-    if ( FloatsAreAlmostTheSame(temp_float[3], 19.7621) == false )
-        FailTest;
-    if ( FloatsAreAlmostTheSame(temp_float[4], 20.11111) == false )
-        FailTest;
+    for ( int line = 0; line < line_values.size( ); line++ ) {
+        test_file.ReadLine(temp_float.data( ));
+        for ( int i = 0; i < line_values[line].size( ); i++ ) {
+            if ( FloatsAreAlmostTheSame(temp_float[i], line_values[line][i]) == false )
+                FailTest;
+        }
+    }
 
     EndTest( );
 
-    BeginTest("NumericTextFile::WriteLine");
+    BeginTest("NumericTextFile::WriteLine float");
 
     wxString        output_filename = temp_directory + "/number_out.num";
     NumericTextFile output_test_file(output_filename, OPEN_TO_WRITE, 5);
 
-    temp_float[0] = 0.1;
-    temp_float[1] = 0.2;
-    temp_float[2] = 0.3;
-    temp_float[3] = 0.4;
-    temp_float[4] = 0.5;
-
+    for ( int i = 0; i < line_values[0].size( ); i++ ) {
+        temp_float[i] = line_values[0][i];
+    }
+    output_test_file.WriteLine(temp_float.data( ));
     output_test_file.WriteCommentLine("This is a comment line %i", 5);
-    output_test_file.WriteLine(temp_float);
-    output_test_file.WriteCommentLine("Another comment = %s", "booooo!");
-    temp_float[0] = 0.67;
-    temp_float[1] = 0.78;
-    temp_float[2] = 0.89;
-    temp_float[3] = 0.91;
-    temp_float[4] = 1.02;
 
-    output_test_file.WriteLine(temp_float);
+    for ( int i = 0; i < line_values[1].size( ); i++ ) {
+        temp_float[i] = line_values[1][i];
+    }
+
+    output_test_file.WriteLine(temp_float.data( ));
+    output_test_file.WriteCommentLine("Another comment = %s", "booooo!");
+
     output_test_file.Flush( );
 
-    test_file.Close( );
-    test_file.Open(output_filename, OPEN_TO_READ);
-
-    if ( test_file.number_of_lines != 2 )
+    output_test_file.Close( );
+    output_test_file.Open(output_filename, OPEN_TO_READ);
+    // We only expect non-comment lines to be counted.
+    if ( output_test_file.number_of_lines != 2 )
         FailTest;
-    if ( test_file.records_per_line != 5 )
-        FailTest;
-
-    test_file.ReadLine(temp_float);
-
-    if ( FloatsAreAlmostTheSame(temp_float[0], 0.1) == false )
-        FailTest;
-    if ( FloatsAreAlmostTheSame(temp_float[1], 0.2) == false )
-        FailTest;
-    if ( FloatsAreAlmostTheSame(temp_float[2], 0.3) == false )
-        FailTest;
-    if ( FloatsAreAlmostTheSame(temp_float[3], 0.4) == false )
-        FailTest;
-    if ( FloatsAreAlmostTheSame(temp_float[4], 0.5) == false )
+    if ( output_test_file.records_per_line != 5 )
         FailTest;
 
-    test_file.ReadLine(temp_float);
+    for ( int line = 0; line < 2; line++ ) {
+        output_test_file.ReadLine(temp_float.data( ));
+        for ( int i = 0; i < line_values[line].size( ); i++ ) {
+            if ( FloatsAreAlmostTheSame(temp_float[i], line_values[line][i]) == false )
+                FailTest;
+        }
+    }
+    output_test_file.Close( );
+    EndTest( );
 
-    if ( FloatsAreAlmostTheSame(temp_float[0], 0.67) == false )
+    BeginTest("NumericTextFile::WriteLine double");
+
+    output_filename = temp_directory + "/number_out.num";
+    output_test_file.Open(output_filename, OPEN_TO_WRITE, 5);
+
+    for ( int i = 0; i < line_values[0].size( ); i++ ) {
+        temp_double[i] = line_values[0][i];
+    }
+    output_test_file.WriteLine(temp_double.data( ));
+    output_test_file.WriteCommentLine("This is a comment line %i", 5);
+
+    for ( int i = 0; i < line_values[1].size( ); i++ ) {
+        temp_double[i] = line_values[1][i];
+    }
+
+    output_test_file.WriteLine(temp_double.data( ));
+    output_test_file.WriteCommentLine("Another comment = %s", "booooo!");
+
+    output_test_file.Flush( );
+
+    output_test_file.Close( );
+    output_test_file.Open(output_filename, OPEN_TO_READ);
+
+    if ( output_test_file.number_of_lines != 2 )
         FailTest;
-    if ( FloatsAreAlmostTheSame(temp_float[1], 0.78) == false )
-        FailTest;
-    if ( FloatsAreAlmostTheSame(temp_float[2], 0.89) == false )
-        FailTest;
-    if ( FloatsAreAlmostTheSame(temp_float[3], 0.91) == false )
-        FailTest;
-    if ( FloatsAreAlmostTheSame(temp_float[4], 1.02) == false )
+    if ( output_test_file.records_per_line != 5 )
         FailTest;
 
+    for ( int line = 0; line < 2; line++ ) {
+        output_test_file.ReadLine(temp_float.data( ));
+        for ( int i = 0; i < line_values[line].size( ); i++ ) {
+            if ( FloatsAreAlmostTheSame(temp_float[i], line_values[line][i]) == false )
+                FailTest;
+        }
+    }
+    output_test_file.Close( );
     EndTest( );
 }
 
@@ -1617,7 +1608,6 @@ void MyTestApp::TestScalingAndSizingFunctions( ) {
     test_image.ReadSlice(&input_file, 1);
     test_image.ClipInto(&clipped_image, 0);
 
-    //wxPrintf("value = %f\n", clipped_image.ReturnRealPixelValue(119,119));
     if ( FloatsAreAlmostTheSame(clipped_image.ReturnRealPixelFromPhysicalCoord(40, 40, 0), -0.340068) == false )
         FailTest;
     if ( FloatsAreAlmostTheSame(clipped_image.ReturnRealPixelFromPhysicalCoord(80, 80, 0), 1.819805) == false )
@@ -1667,7 +1657,6 @@ void MyTestApp::TestScalingAndSizingFunctions( ) {
         FailTest;
 
     test_pixel = clipped_image.ReturnComplexPixelFromLogicalCoord(5, 5, 0, -100.0f + I * 0.0f);
-    //wxPrintf("real = %f, image = %f\n", creal(test_pixel),cimag(test_pixel));
     if ( FloatsAreAlmostTheSame(real(test_pixel), 0.075896) == false || FloatsAreAlmostTheSame(imag(test_pixel), 0.045677) == false )
         FailTest;
 
@@ -1694,7 +1683,6 @@ void MyTestApp::TestScalingAndSizingFunctions( ) {
         FailTest;
 
     test_pixel = clipped_image.ReturnComplexPixelFromLogicalCoord(5, 5, 0, -100.0f + I * 0.0f);
-    //wxPrintf("real = %f, image = %f\n", creal(test_pixel),cimag(test_pixel));
     if ( FloatsAreAlmostTheSame(real(test_pixel), 0.075896) == false || FloatsAreAlmostTheSame(imag(test_pixel), 0.045677) == false )
         FailTest;
 
@@ -1757,13 +1745,10 @@ void MyTestApp::TestScalingAndSizingFunctions( ) {
         FailTest;
 
     test_pixel = test_image.ReturnComplexPixelFromLogicalCoord(5, 5, 0, -100.0f + I * 0.0f);
-    //wxPrintf("real = %f, image = %f\n", creal(test_pixel),cimag(test_pixel));
     if ( FloatsAreAlmostTheSame(real(test_pixel), 0.075896) == false || FloatsAreAlmostTheSame(imag(test_pixel), 0.045677) == false )
         FailTest;
 
     EndTest( );
-
-    //wxPrintf ("real = %f, imag = %f", creal(test_pixel), cimag(test_pixel), 0.0);
 }
 
 void MyTestApp::TestMRCFunctions( ) {

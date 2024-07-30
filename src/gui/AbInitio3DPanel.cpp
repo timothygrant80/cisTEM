@@ -11,7 +11,9 @@ AbInitio3DPanel::AbInitio3DPanel(wxWindow* parent)
 
     SetInfo( );
 
-    ShowOrthDisplayPanel->Initialise(START_WITH_FOURIER_SCALING | DO_NOT_SHOW_STATUS_BAR);
+    ShowOrthDisplayPanel->EnableStartWithFourierScaling( );
+    ShowOrthDisplayPanel->EnableDoNotShowStatusBar( );
+    ShowOrthDisplayPanel->Initialise( );
 
     wxSize input_size = InputSizer->GetMinSize( );
     input_size.x += wxSystemSettings::GetMetric(wxSYS_VSCROLL_X);

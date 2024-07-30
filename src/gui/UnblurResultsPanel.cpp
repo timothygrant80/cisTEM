@@ -3,7 +3,13 @@
 
 UnblurResultsPanel::UnblurResultsPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name)
     : UnblurResultsPanelParent(parent, id, pos, size, style) {
-    ImageDisplayPanel->Initialise(CAN_FFT | NO_NOTEBOOK | FIRST_LOCATION_ONLY | START_WITH_AUTO_CONTRAST | START_WITH_FOURIER_SCALING | DO_NOT_SHOW_STATUS_BAR);
+    ImageDisplayPanel->EnableCanFFT( );
+    ImageDisplayPanel->EnableNoNotebook( );
+    ImageDisplayPanel->EnableFirstLocationOnly( );
+    ImageDisplayPanel->EnableStartWithAutoContrast( );
+    ImageDisplayPanel->EnableStartWithFourierScaling( );
+    ImageDisplayPanel->EnableDoNotShowStatusBar( );
+    ImageDisplayPanel->Initialise( );
 
     current_x_shift_vector_layer = new mpFXYVector(("X-Shift"));
     current_y_shift_vector_layer = new mpFXYVector(("Y-Shift"));

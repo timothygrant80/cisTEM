@@ -51,7 +51,7 @@ class DisplayFrame : public DisplayFrameParent {
     bool     is_fullscreen;
     wxString remember_path;
     bool     LoadCoords(wxString current_line, long& x, long& y, long& image_number);
-    bool     LoadSelections(wxString current_line);
+    bool     LoadImageSelections(wxString current_line);
     void     ClearTextFileFromPanel( );
 };
 

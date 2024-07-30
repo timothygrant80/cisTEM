@@ -77,6 +77,27 @@ PickingResultsDisplayPanelParent::PickingResultsDisplayPanelParent( wxWindow* pa
 
 	bSizer94->Add( WienerFilterCheckBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 
+	wxBoxSizer* bSizer35;
+	bSizer35 = new wxBoxSizer( wxHORIZONTAL );
+
+	ScalingComboBox = new wxComboBox( this, wxID_ANY, wxT("100%"), wxDefaultPosition, wxDefaultSize, 0, NULL, 0 );
+	ScalingComboBox->Append( wxT("300%") );
+	ScalingComboBox->Append( wxT("266%") );
+	ScalingComboBox->Append( wxT("233%") );
+	ScalingComboBox->Append( wxT("200%") );
+	ScalingComboBox->Append( wxT("166%") );
+	ScalingComboBox->Append( wxT("133%") );
+	ScalingComboBox->Append( wxT("100%") );
+	ScalingComboBox->Append( wxT("66%") );
+	bSizer35->Add( ScalingComboBox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	ImageScalingText = new wxStaticText( this, wxID_ANY, wxT("Image Scaling"), wxDefaultPosition, wxDefaultSize, 0 );
+	ImageScalingText->Wrap( -1 );
+	bSizer35->Add( ImageScalingText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+
+	bSizer94->Add( bSizer35, 0, wxEXPAND, 5 );
+
 	m_staticline831 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	bSizer94->Add( m_staticline831, 0, wxEXPAND | wxALL, 5 );
 
@@ -138,6 +159,8 @@ PickingResultsDisplayPanelParent::PickingResultsDisplayPanelParent( wxWindow* pa
 	LowResFilterTextCtrl->Connect( wxEVT_KILL_FOCUS, wxFocusEventHandler( PickingResultsDisplayPanelParent::OnLowPassKillFocus ), NULL, this );
 	LowResFilterTextCtrl->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnLowPassEnter ), NULL, this );
 	WienerFilterCheckBox->Connect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnWienerFilterCheckBox ), NULL, this );
+	ScalingComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnScalingChange ), NULL, this );
+	ScalingComboBox->Connect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnScalingChange ), NULL, this );
 	UndoButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnUndoButtonClick ), NULL, this );
 	RedoButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnRedoButtonClick ), NULL, this );
 }
@@ -152,6 +175,8 @@ PickingResultsDisplayPanelParent::~PickingResultsDisplayPanelParent()
 	LowResFilterTextCtrl->Disconnect( wxEVT_KILL_FOCUS, wxFocusEventHandler( PickingResultsDisplayPanelParent::OnLowPassKillFocus ), NULL, this );
 	LowResFilterTextCtrl->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnLowPassEnter ), NULL, this );
 	WienerFilterCheckBox->Disconnect( wxEVT_COMMAND_CHECKBOX_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnWienerFilterCheckBox ), NULL, this );
+	ScalingComboBox->Disconnect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnScalingChange ), NULL, this );
+	ScalingComboBox->Disconnect( wxEVT_COMMAND_TEXT_ENTER, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnScalingChange ), NULL, this );
 	UndoButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnUndoButtonClick ), NULL, this );
 	RedoButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( PickingResultsDisplayPanelParent::OnRedoButtonClick ), NULL, this );
 
@@ -397,7 +422,7 @@ PickingResultsPanel::PickingResultsPanel( wxWindow* parent, wxWindowID id, const
 	wxBoxSizer* bSizer69;
 	bSizer69 = new wxBoxSizer( wxHORIZONTAL );
 
-	m_staticText469 = new wxStaticText( RightPanel, wxID_ANY, wxT("Left-Click on particles to select/deselect.\nCtrl-Left-Click to rubberband area and deselect.\nShift-Left-Click to paint area and deselect."), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText469 = new wxStaticText( RightPanel, wxID_ANY, wxT("Left-Click on particles to select/deselect.\nCtrl-Left-Click to rubberband area and deselect.\nShift-Left-Click to paint area and deselect.\nRight-Click for zoomed sub-view.\nMiddle-Mouse-Hold when zoomed to drag across image."), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText469->Wrap( -1 );
 	bSizer69->Add( m_staticText469, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
 

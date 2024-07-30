@@ -7,7 +7,12 @@ extern MyVolumeAssetPanel* volume_asset_panel;
 ShowTemplateMatchResultsPanel::ShowTemplateMatchResultsPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
     : ShowTemplateMatchResultsPanelParent(parent, id, pos, size, style) {
     HistogramPlotPanel->Initialise(wxT("Correlation Value"), "", false, false, 20, 50, 60, 20, true, false, true);
-    ImageDisplayPanel->Initialise(FIRST_LOCATION_ONLY | START_WITH_AUTO_CONTRAST | START_WITH_FOURIER_SCALING | DO_NOT_SHOW_STATUS_BAR | SKIP_LEFTCLICK_TO_PARENT);
+    ImageDisplayPanel->EnableFirstLocationOnly( );
+    ImageDisplayPanel->EnableStartWithAutoContrast( );
+    ImageDisplayPanel->EnableStartWithFourierScaling( );
+    ImageDisplayPanel->EnableDoNotShowStatusBar( );
+    ImageDisplayPanel->EnableSkipLeftclickToParent( );
+    ImageDisplayPanel->Initialise( );
 
     PeakListCtrl->Bind(wxEVT_LIST_ITEM_SELECTED, &ShowTemplateMatchResultsPanel::OnPeakListSelectionChange, this);
     PeakListCtrl->Bind(wxEVT_LIST_ITEM_DESELECTED, &ShowTemplateMatchResultsPanel::OnPeakListSelectionChange, this);

@@ -379,6 +379,10 @@ void CTF::SetHighestFrequencyForFitting(float wanted_highest_frequency_in_recipr
     highest_frequency_for_fitting = wanted_highest_frequency_in_reciprocal_pixels;
 }
 
+void CTF::SetLowestFrequencyForFitting(float wanted_lowest_frequency_in_reciprocal_pixels) {
+    lowest_frequency_for_fitting = wanted_lowest_frequency_in_reciprocal_pixels;
+}
+
 void CTF::SetLowResolutionContrast(float wanted_low_resolution_contrast) {
     MyDebugAssertTrue(wanted_low_resolution_contrast >= 0.0f && wanted_low_resolution_contrast <= 1.0f, "Bad low_resolution_contrast: %f", wanted_low_resolution_contrast);
     low_resolution_contrast = asin(wanted_low_resolution_contrast);
@@ -424,8 +428,12 @@ float CTF::Evaluate(float squared_spatial_frequency, float azimuth) {
 // Formulas according to "TEM bright field imaging of thick specimens: nodes in
 // Thon ring patterns" by Tichelaar, et.al. who got it from McMullan et al. (2015)
 
-float CTF::EvaluatePowerspectrumWithThickness(float squared_spatial_frequency, float azimuth) {
+float CTF::EvaluatePowerspectrumWithThickness(float squared_spatial_frequency, float azimuth, bool use_rounded_square) {
     float phase_aberration = PhaseShiftGivenSquaredSpatialFrequencyAndAzimuth(squared_spatial_frequency, azimuth);
+    if ( use_rounded_square ) {
+        return 0.5f * (1 - IntegratedDefocusModulationRoundedSquare(squared_spatial_frequency) * cosf(2 * phase_aberration));
+    }
+
     return 0.5f * (1 - IntegratedDefocusModulation(squared_spatial_frequency) * cosf(2 * phase_aberration));
 }
 

@@ -96,6 +96,8 @@ class ShowCTFResultsPanelParent : public wxPanel
 		wxStaticText* TiltAngleStaticText;
 		wxStaticText* m_staticText868;
 		wxStaticText* TiltAxisStaticText;
+		wxStaticText* m_staticText8681;
+		wxStaticText* ThicknessStaticText;
 		wxStaticLine* m_staticline83;
 		wxStaticText* m_staticText394;
 		wxStaticText* ImageFileText;
@@ -159,6 +161,12 @@ class FindCTFResultsPanel : public wxPanel
 		wxStaticText* CsStaticText;
 		wxStaticText* m_staticText78;
 		wxStaticText* PixelSizeStaticText;
+		wxStaticText* m_staticText781;
+		wxStaticText* ResampleStaticText;
+		wxStaticText* m_staticText7811;
+		wxStaticText* PixelSizeTargetStaticText;
+		wxStaticText* m_staticText78111;
+		wxStaticText* EstimateTiltStaticText;
 		wxStaticText* m_staticText96;
 		wxStaticText* AmplitudeContrastStaticText;
 		wxStaticText* m_staticText85;
@@ -189,7 +197,20 @@ class FindCTFResultsPanel : public wxPanel
 		wxStaticText* MaxPhaseshiftStaticText;
 		wxStaticText* PhaseShiftStepLabel;
 		wxStaticText* PhaseShiftStepStaticText;
-		wxStaticText* IcinessStaticText;
+		wxStaticText* PhaseShiftStepLabel1;
+		wxStaticText* EstimateThicknessStaticText;
+		wxStaticText* ThicknessLabel1;
+		wxStaticText* Thickness1DStaticText;
+		wxStaticText* ThicknessLabel2;
+		wxStaticText* Thickness2DStaticText;
+		wxStaticText* ThicknessLabel3;
+		wxStaticText* ThicknessMinResText;
+		wxStaticText* ThicknessLabel4;
+		wxStaticText* ThicknessMaxResStaticText;
+		wxStaticText* ThicknessLabel5;
+		wxStaticText* ThicknessNoDecayStaticText;
+		wxStaticText* ThicknessLabel6;
+		wxStaticText* ThicknessDownweightNodesStaticText;
 		wxStaticLine* m_staticline30;
 		ShowCTFResultsPanel* ResultPanel;
 		wxButton* DeleteFromGroupButton;
@@ -369,6 +390,9 @@ class FindCTFPanel : public JobPanel
 		wxStaticText* TiltStaticText;
 		wxRadioButton* SearchTiltYesRadio;
 		wxRadioButton* SearchTiltNoRadio;
+		wxStaticText* ResampleStaticText;
+		wxCheckBox* ResamplePixelSizeCheckBox;
+		NumericTextCtrl* ResamplePixelSizeNumericCtrl;
 		wxStaticText* m_staticText201;
 		wxStaticText* m_staticText189;
 		NumericTextCtrl* MinResNumericCtrl;
@@ -393,6 +417,16 @@ class FindCTFPanel : public JobPanel
 		wxStaticText* PhaseShiftStepStaticText;
 		NumericTextCtrl* PhaseShiftStepNumericCtrl;
 		wxStaticText* m_staticText2001;
+		wxCheckBox* FitNodesCheckBox;
+		wxCheckBox* FitNodes1DCheckBox;
+		wxCheckBox* FitNodes2DCheckBox;
+		wxStaticText* FitNodesMinResStaticText;
+		NumericTextCtrl* FitNodesMinResNumericCtrl;
+		wxStaticText* FitNodesMaxResStaticText;
+		NumericTextCtrl* FitNodesMaxResNumericCtrl;
+		wxCheckBox* FitNodesRoundedSquareCheckBox;
+		wxCheckBox* FitNodesWeightsCheckBox;
+		wxStaticText* m_staticText20011;
 		wxCheckBox* FilterLowresSignalCheckBox;
 		wxPanel* OutputTextPanel;
 		wxTextCtrl* output_textctrl;
@@ -419,6 +453,7 @@ class FindCTFPanel : public JobPanel
 		virtual void OnLargeAstigmatismExpectedCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnRestrainAstigmatismCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnFindAdditionalPhaseCheckBox( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnFitNodesCheckBox( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnInfoURL( wxTextUrlEvent& event ) { event.Skip(); }
 		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }

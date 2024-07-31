@@ -592,30 +592,35 @@ bool MatchTemplateApp::DoCalculation( ) {
     input_image.QuickAndDirtyWriteSlice("beforecurvefilter.mrc", 1);
     whitening_filter.WriteToFile("applied_whitening_filter.txt");
 
+    for ( int i = 0; i < whitening_filter.number_of_points; i++ ) {
+        whitening_filter.data_y[i] = whitening_filter.data_y[i] * highpass_filter.data_y[i];
+    }
+
     input_image.ApplyCurveFilter(&whitening_filter);
-    int in_real = 0;
-    if ( input_image.is_in_real_space ) {
-        wxPrintf("whitened image is in real\n");
-        input_image.QuickAndDirtyWriteSlice("whitenedinput.mrc", 1);
-    }
-    else {
-        in_real = 1;
-        wxPrintf("whitened image is in fourier\n");
-        input_image.BackwardFFT( );
-        input_image.QuickAndDirtyWriteSlice("whitenedinput.mrc", 1);
-    }
-    if ( in_real ) {
-        input_image.ForwardFFT( );
-    }
+    // write and check whitening filtered image
+    // int in_real = 0;
+    // if ( input_image.is_in_real_space ) {
+    //     wxPrintf("whitened image is in real\n");
+    //     input_image.QuickAndDirtyWriteSlice("whitenedinput.mrc", 1);
+    // }
+    // else {
+    //     in_real = 1;
+    //     wxPrintf("whitened image is in fourier\n");
+    //     input_image.BackwardFFT( );
+    //     input_image.QuickAndDirtyWriteSlice("whitenedinput.mrc", 1);
+    // }
+    // if ( in_real ) {
+    //     input_image.ForwardFFT( );
+    // }
 
     input_image.ZeroCentralPixel( );
     // Note: we are dividing by the sqrt of the sum of squares, so the variance in the images 1/N, not 1. This is where the need to multiply the mips by sqrt(N) comes from.
     // Dividing by sqrt(input_image.ReturnSumOfSquares() / N) would result in a properly normalized CCC value.
     input_image.DivideByConstant(sqrtf(input_image.ReturnSumOfSquares( )));
-    input_image.QuickAndDirtyWriteSlice("whitenednormedinput.mrc", 1);
+    input_image.QuickAndDirtyWriteSlice("whitenedhptogethernormedinput.mrc", 1);
 
-    input_image.ApplyCurveFilter(&highpass_filter);
-    input_image.QuickAndDirtyWriteSlice("highpasswhitenednormedinput.mrc", 1);
+    // input_image.ApplyCurveFilter(&highpass_filter);
+    // input_image.QuickAndDirtyWriteSlice("highpasswhitenednormedinput.mrc", 1);
     //input_image.QuickAndDirtyWriteSlice("/tmp/white.mrc", 1);
     //exit(-1);
 

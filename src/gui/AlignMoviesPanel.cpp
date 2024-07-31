@@ -748,11 +748,13 @@ void MyAlignMoviesPanel::StartAlignmentClick(wxCommandEvent& event) {
         outputpath += wxString::Format("/%s_%i_%i/", buffer_filename.GetName( ), current_asset_id, number_of_previous_alignments);
         wxFileName::Mkdir(outputpath);
 
-        bool        saved_aligned_frames    = false;
-        std::string aligned_frames_filename = "/dev/null";
-        std::string output_shift_text_file  = "/dev/null";
+        bool saved_aligned_frames = true;
+        // std::string aligned_frames_filename = "/dev/null";
+        // std::string output_shift_text_file  = "/dev/null";
 
-        current_job_package.AddJob("ssfffbbfifbiifffbsbsfbfffbtbtiiiibttiisbbiii", current_filename.c_str( ), //0
+        current_job_package.AddJob("ssfffbbfifbiifffbsbsfbfffbtbtiiiibiisbbiii", current_filename.c_str( ), //0
+                                   // current_job_package.AddJob("ssfffbbfifbiifffbsbsfbfffbtbtiiiibttiisbbiii", current_filename.c_str( ), //0
+
                                    output_filename.ToUTF8( ).data( ),
                                    current_pixel_size,
                                    float(minimum_shift),
@@ -786,8 +788,8 @@ void MyAlignMoviesPanel::StartAlignmentClick(wxCommandEvent& event) {
                                    number_of_frames_for_running_average,
                                    max_threads,
                                    saved_aligned_frames,
-                                   aligned_frames_filename.c_str( ),
-                                   output_shift_text_file.c_str( ),
+                                   //    aligned_frames_filename.c_str( ),
+                                   //    output_shift_text_file.c_str( ),
                                    current_eer_frames_per_image,
                                    current_eer_super_res_factor,
                                    outputpath.ToUTF8( ).data( ),

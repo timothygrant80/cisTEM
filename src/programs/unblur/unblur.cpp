@@ -672,27 +672,27 @@ IMPLEMENT_APP(UnBlurApp)
 void UnBlurApp::DoInteractiveUserInput( ) {
     std::string input_filename;
     std::string output_filename;
-    std::string aligned_frames_filename;
-    std::string output_shift_text_file;
-    float       original_pixel_size                = 1;
-    float       minimum_shift_in_angstroms         = 2;
-    float       maximum_shift_in_angstroms         = 80;
-    bool        should_dose_filter                 = true;
-    bool        should_restore_power               = true;
-    float       termination_threshold_in_angstroms = 1;
-    int         max_iterations                     = 20;
-    float       bfactor_in_angstroms               = 1500;
-    bool        should_mask_central_cross          = true;
-    int         horizontal_mask_size               = 1;
-    int         vertical_mask_size                 = 1;
-    float       exposure_per_frame                 = 0.0;
-    float       acceleration_voltage               = 300.0;
-    float       pre_exposure_amount                = 0.0;
-    bool        movie_is_gain_corrected            = true;
-    wxString    gain_filename                      = "";
-    bool        movie_is_dark_corrected            = true;
-    wxString    dark_filename                      = "";
-    float       output_binning_factor              = 1;
+    // std::string aligned_frames_filename;
+    // std::string output_shift_text_file;
+    float    original_pixel_size                = 1;
+    float    minimum_shift_in_angstroms         = 2;
+    float    maximum_shift_in_angstroms         = 80;
+    bool     should_dose_filter                 = true;
+    bool     should_restore_power               = true;
+    float    termination_threshold_in_angstroms = 1;
+    int      max_iterations                     = 20;
+    float    bfactor_in_angstroms               = 1500;
+    bool     should_mask_central_cross          = true;
+    int      horizontal_mask_size               = 1;
+    int      vertical_mask_size                 = 1;
+    float    exposure_per_frame                 = 0.0;
+    float    acceleration_voltage               = 300.0;
+    float    pre_exposure_amount                = 0.0;
+    bool     movie_is_gain_corrected            = true;
+    wxString gain_filename                      = "";
+    bool     movie_is_dark_corrected            = true;
+    wxString dark_filename                      = "";
+    float    output_binning_factor              = 1;
 
     bool     set_expert_options;
     bool     correct_mag_distortion;
@@ -717,9 +717,9 @@ void UnBlurApp::DoInteractiveUserInput( ) {
 
     UserInput* my_input = new UserInput("Unblur", 3.0);
 
-    input_filename         = my_input->GetFilenameFromUser("Input stack filename", "The input file, containing your raw movie frames", "my_movie.mrc", true);
-    output_filename        = my_input->GetFilenameFromUser("Output aligned sum", "The output file, containing a weighted sum of the aligned input frames", "my_aligned_sum.mrc", false);
-    output_shift_text_file = my_input->GetFilenameFromUser("Output shift text file", "The output text file, containing shifts in angstroms", "my_shifts.txt", false);
+    input_filename  = my_input->GetFilenameFromUser("Input stack filename", "The input file, containing your raw movie frames", "my_movie.mrc", true);
+    output_filename = my_input->GetFilenameFromUser("Output aligned sum", "The output file, containing a weighted sum of the aligned input frames", "my_aligned_sum.mrc", false);
+    // output_shift_text_file = my_input->GetFilenameFromUser("Output shift text file", "The output text file, containing shifts in angstroms", "my_shifts.txt", false);
 
     original_pixel_size   = my_input->GetFloatFromUser("Pixel size of images (A)", "Pixel size of input images in Angstroms", "1.0", 0.0);
     output_binning_factor = my_input->GetFloatFromUser("Output binning factor", "Output images will be binned (downsampled) by this factor relative to the input images", "1", 1);
@@ -769,12 +769,12 @@ void UnBlurApp::DoInteractiveUserInput( ) {
         number_of_frames_for_running_average = my_input->GetIntFromUser("Number of frames for running average", "use a running average of frames, useful for low SNR frames, must be odd", "1", 1);
 
         save_aligned_frames = my_input->GetYesNoFromUser("Save Aligned Frames?", "If yes, save the aligned frames", "no");
-        if ( save_aligned_frames == true ) {
-            aligned_frames_filename = my_input->GetFilenameFromUser("Output aligned frames filename", "The output file, containing your aligned movie frames", "my_aligned_frames.mrc", false);
-        }
-        else {
-            aligned_frames_filename = "";
-        }
+        // if ( save_aligned_frames == true ) {
+        //     aligned_frames_filename = my_input->GetFilenameFromUser("Output aligned frames filename", "The output file, containing your aligned movie frames", "my_aligned_frames.mrc", false);
+        // }
+        // else {
+        //     aligned_frames_filename = "";
+        // }
 
         if ( FilenameExtensionMatches(input_filename, "eer") ) {
             eer_frames_per_image = my_input->GetIntFromUser("Number of EER frames per image", "If the input movie is in EER format, we will average EER frames together so that each frame image for alignment has a reasonable exposure", "25", 1);
@@ -802,9 +802,9 @@ void UnBlurApp::DoInteractiveUserInput( ) {
         last_frame                           = 0;
         number_of_frames_for_running_average = 1;
         save_aligned_frames                  = false;
-        aligned_frames_filename              = "";
-        eer_frames_per_image                 = 0;
-        eer_super_res_factor                 = 1;
+        // aligned_frames_filename              = "";
+        eer_frames_per_image = 0;
+        eer_super_res_factor = 1;
     }
 
     correct_mag_distortion = my_input->GetYesNoFromUser("Correct Magnification Distortion?", "If yes, a magnification distortion can be corrected", "no");
@@ -868,7 +868,8 @@ void UnBlurApp::DoInteractiveUserInput( ) {
     bool        write_out_small_sum_image    = false;
     std::string small_sum_image_filename     = "/dev/null";
 
-    my_current_job.ManualSetArguments("ttfffbbfifbiifffbsbsfbfffbtbtiiiibttiisbbiii", input_filename.c_str( ),
+    // my_current_job.ManualSetArguments("ttfffbbfifbiifffbsbsfbfffbtbtiiiibttiisbbiii", input_filename.c_str( ),
+    my_current_job.ManualSetArguments("ttfffbbfifbiifffbsbsfbfffbtbtiiiibiisbbiii", input_filename.c_str( ),
                                       output_filename.c_str( ),
                                       original_pixel_size,
                                       minimum_shift_in_angstroms,
@@ -902,8 +903,8 @@ void UnBlurApp::DoInteractiveUserInput( ) {
                                       number_of_frames_for_running_average,
                                       max_threads,
                                       save_aligned_frames,
-                                      aligned_frames_filename.c_str( ),
-                                      output_shift_text_file.c_str( ),
+                                      //   aligned_frames_filename.c_str( ),
+                                      //   output_shift_text_file.c_str( ),
                                       eer_frames_per_image,
                                       eer_super_res_factor,
                                       outputpath.ToUTF8( ).data( ),
@@ -968,16 +969,16 @@ bool UnBlurApp::DoCalculation( ) {
     int         number_of_frames_for_running_average = my_current_job.arguments[31].ReturnIntegerArgument( );
     int         max_threads                          = my_current_job.arguments[32].ReturnIntegerArgument( );
     bool        saved_aligned_frames                 = my_current_job.arguments[33].ReturnBoolArgument( );
-    std::string aligned_frames_filename              = my_current_job.arguments[34].ReturnStringArgument( );
-    std::string output_shift_text_file               = my_current_job.arguments[35].ReturnStringArgument( );
-    int         eer_frames_per_image                 = my_current_job.arguments[36].ReturnIntegerArgument( );
-    int         eer_super_res_factor                 = my_current_job.arguments[37].ReturnIntegerArgument( );
-    wxString    outputpath                           = my_current_job.arguments[38].ReturnStringArgument( );
-    bool        patch_track                          = my_current_job.arguments[39].ReturnBoolArgument( );
-    bool        overwritepatchnumber                 = my_current_job.arguments[40].ReturnBoolArgument( );
-    int         patch_num_x                          = my_current_job.arguments[41].ReturnIntegerArgument( );
-    int         patch_num_y                          = my_current_job.arguments[42].ReturnIntegerArgument( );
-    int         distortion_model                     = my_current_job.arguments[43].ReturnIntegerArgument( );
+    // std::string aligned_frames_filename              = my_current_job.arguments[34].ReturnStringArgument( );
+    // std::string output_shift_text_file               = my_current_job.arguments[35].ReturnStringArgument( );
+    int      eer_frames_per_image = my_current_job.arguments[34].ReturnIntegerArgument( );
+    int      eer_super_res_factor = my_current_job.arguments[35].ReturnIntegerArgument( );
+    wxString outputpath           = my_current_job.arguments[36].ReturnStringArgument( );
+    bool     patch_track          = my_current_job.arguments[37].ReturnBoolArgument( );
+    bool     overwritepatchnumber = my_current_job.arguments[38].ReturnBoolArgument( );
+    int      patch_num_x          = my_current_job.arguments[39].ReturnIntegerArgument( );
+    int      patch_num_y          = my_current_job.arguments[40].ReturnIntegerArgument( );
+    int      distortion_model     = my_current_job.arguments[41].ReturnIntegerArgument( );
     // wxString    MotCorpath                           = my_current_job.arguments[43].ReturnStringArgument( );
 
     if ( is_running_locally == false )
@@ -2132,25 +2133,46 @@ bool UnBlurApp::DoCalculation( ) {
             profile_timing.start("fill result");
             float* result_array = new float[number_of_input_images * 2];
 
-            if ( is_running_locally == true ) {
-                NumericTextFile shifts_file(output_shift_text_file, OPEN_TO_WRITE, 2);
-                shifts_file.WriteCommentLine("X/Y Shifts for file %s\n", input_filename.c_str( ));
+            //             if ( is_running_locally == true ) {
+            //                 NumericTextFile shifts_file(output_shift_text_file, OPEN_TO_WRITE, 2);
+            //                 shifts_file.WriteCommentLine("X/Y Shifts for file %s\n", input_filename.c_str( ));
 
-                for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
-                    temp_float[0] = x_shifts[image_counter] * output_pixel_size;
-                    temp_float[1] = y_shifts[image_counter] * output_pixel_size;
-                    shifts_file.WriteLine(temp_float);
-#ifdef PRINT_VERBOSE
-                    wxPrintf("image #%li = %f, %f\n", image_counter, result_array[image_counter], result_array[image_counter + number_of_input_images]);
-#endif
-                }
-            }
-            else {
+            //                 for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+            //                     temp_float[0] = x_shifts[image_counter] * output_pixel_size;
+            //                     temp_float[1] = y_shifts[image_counter] * output_pixel_size;
+            //                     shifts_file.WriteLine(temp_float);
+            // #ifdef PRINT_VERBOSE
+            //                     wxPrintf("image #%li = %f, %f\n", image_counter, result_array[image_counter], result_array[image_counter + number_of_input_images]);
+            // #endif
+            //                 }
+            //             }
+            //             else {
+            //                 for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+            //                     result_array[image_counter]                          = x_shifts[image_counter] * output_pixel_size;
+            //                     result_array[image_counter + number_of_input_images] = y_shifts[image_counter] * output_pixel_size;
+            //                 }
+            //             }
+
+            if ( is_running_locally == false ) {
                 for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
                     result_array[image_counter]                          = x_shifts[image_counter] * output_pixel_size;
                     result_array[image_counter + number_of_input_images] = y_shifts[image_counter] * output_pixel_size;
                 }
             }
+
+            NumericTextFile shifts_file(wxString::Format(outputpath + "fullframe_shift.txt"), OPEN_TO_WRITE, 2);
+            // wxString::Format(outputpath + "FullFrame_R1_shift.txt");
+            shifts_file.WriteCommentLine("X/Y Shifts for file %s\n", input_filename.c_str( ));
+
+            for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+                temp_float[0] = x_shifts[image_counter] * output_pixel_size;
+                temp_float[1] = y_shifts[image_counter] * output_pixel_size;
+                shifts_file.WriteLine(temp_float);
+#ifdef PRINT_VERBOSE
+                wxPrintf("image #%li = %f, %f\n", image_counter, result_array[image_counter], result_array[image_counter + number_of_input_images]);
+#endif
+            }
+
             wxPrintf("mark 1\n");
             my_result.SetResult(number_of_input_images * 2, result_array);
             wxPrintf("mark 2\n");

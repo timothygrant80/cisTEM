@@ -38,7 +38,9 @@ MyImageAssetPanel*            image_asset_panel;
 MyParticlePositionAssetPanel* particle_position_asset_panel;
 MyVolumeAssetPanel*           volume_asset_panel;
 #ifdef EXPERIMENTAL
-AtomicCoordinatesAssetPanel* atomic_coordinates_asset_panel;
+AtomicCoordinatesAssetPanel*      atomic_coordinates_asset_panel;
+TemplateMatchesPackageAssetPanel* template_matches_package_asset_panel;
+
 #endif
 MyRefinementPackageAssetPanel* refinement_package_asset_panel;
 

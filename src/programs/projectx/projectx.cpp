@@ -44,7 +44,8 @@ MyImageAssetPanel*            image_asset_panel;
 MyParticlePositionAssetPanel* particle_position_asset_panel;
 MyVolumeAssetPanel*           volume_asset_panel;
 #ifdef EXPERIMENTAL
-AtomicCoordinatesAssetPanel* atomic_coordinates_asset_panel;
+AtomicCoordinatesAssetPanel*      atomic_coordinates_asset_panel;
+TemplateMatchesPackageAssetPanel* template_matches_package_asset_panel;
 #endif
 MyRefinementPackageAssetPanel* refinement_package_asset_panel;
 
@@ -140,7 +141,9 @@ bool MyGuiApp::OnInit( ) {
     particle_position_asset_panel = new MyParticlePositionAssetPanel(assets_panel->AssetsBook);
     volume_asset_panel            = new MyVolumeAssetPanel(assets_panel->AssetsBook);
 #ifdef EXPERIMENTAL
-    atomic_coordinates_asset_panel = new AtomicCoordinatesAssetPanel(assets_panel->AssetsBook);
+    atomic_coordinates_asset_panel       = new AtomicCoordinatesAssetPanel(assets_panel->AssetsBook);
+    template_matches_package_asset_panel = new TemplateMatchesPackageAssetPanel(assets_panel->AssetsBook);
+
 #endif
     refinement_package_asset_panel = new MyRefinementPackageAssetPanel(assets_panel->AssetsBook);
     align_movies_panel             = new MyAlignMoviesPanel(actions_panel_spa->ActionsBook);
@@ -295,6 +298,8 @@ bool MyGuiApp::OnInit( ) {
     assets_panel->AssetsBook->AddPage(refinement_package_asset_panel, "Refine Pkgs.", false, 4);
 #ifdef EXPERIMENTAL
     assets_panel->AssetsBook->AddPage(atomic_coordinates_asset_panel, "Atomic Coordinates", false, 5);
+    assets_panel->AssetsBook->AddPage(template_matches_package_asset_panel, "MT Pkgs.", false, 4);
+
 #endif
 
     actions_panel_spa->ActionsBook->AddPage(align_movies_panel, "Align Movies", true, 0);

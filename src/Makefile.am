@@ -29,6 +29,7 @@ noinst_HEADERS = core/stopwatch.h \
                  core/run_profile.h \
                  core/run_profile_manager.h \
                  core/refinement_package.h \
+                 core/template_matches_package.h \
                  core/refinement.h \
                  core/database.h \
                  core/project.h \
@@ -95,6 +96,7 @@ noinst_HEADERS = core/stopwatch.h \
                  gui/MyAddRunCommandDialog.h \
                  gui/MyNewProjectWizard.h \
                  gui/MyNewRefinementPackageWizard.h \
+                 gui/NewTemplateMatchesPackageWizard.h \
                  gui/MyResultsPanel.h \
                  gui/MyAssetsPanel.h \
                  gui/ActionsPanelSpa.h \
@@ -105,6 +107,7 @@ noinst_HEADERS = core/stopwatch.h \
                  gui/MyFrealignExportDialog.h \
                  gui/MyRelionExportDialog.h \
                  gui/MyRefinementPackageAssetPanel.h \
+                 gui/TemplateMatchesPackageAssetPanel.h \
                  gui/MyRenameDialog.h \
                  gui/MyVolumeChooserDialog.h \
                  gui/MyRefine3DPanel.h \
@@ -418,6 +421,7 @@ libcore_a_SOURCES  = core/stopwatch.cpp \
                        core/frealign_parameter_file.cpp \
                        core/basic_star_file_reader.cpp \
                        core/refinement_package.cpp \
+                       core/template_matches_package.cpp \
                        core/refinement.cpp \
                        core/classification.cpp \
                        core/particle_finder.cpp \
@@ -499,6 +503,7 @@ cisTEM_SOURCES = programs/projectx/projectx.cpp \
                 gui/MyAddRunCommandDialog.cpp \
                 gui/MyNewProjectWizard.cpp \
                 gui/MyNewRefinementPackageWizard.cpp \
+                gui/NewTemplateMatchesPackageWizzard.cpp \
                 gui/UnblurResultsPanel.cpp \
                 gui/ShowCTFResultsPanel.cpp \
                 gui/PickingResultsDisplayPanel.cpp \
@@ -515,6 +520,7 @@ cisTEM_SOURCES = programs/projectx/projectx.cpp \
                 gui/MyFrealignExportDialog.cpp \
                 gui/MyRelionExportDialog.cpp \
                 gui/MyRefinementPackageAssetPanel.cpp \
+                gui/TemplateMatchesPackageAssetPanel.cpp \
                 gui/MyRefine3DPanel.cpp \
                 gui/MyRefine2DPanel.cpp \
                 gui/ClassificationPlotPanel.cpp \
@@ -607,12 +613,14 @@ gui_test_SOURCES =  programs/gui_test/gui_test.cpp \
                     gui/PickingResultsPanel.cpp \
                     gui/MyAddRunCommandDialog.cpp \
                     gui/MyNewProjectWizard.cpp \
-                    gui/MyNewRefinementPackageWizard.cpp \
+                    gui/MyNewRefinementPackageWizard.cpp \                   
+                    gui/NewTemplateMatchesPackageWizzard.cpp \
                     gui/UnblurResultsPanel.cpp gui/ShowCTFResultsPanel.cpp \
                     gui/PickingResultsDisplayPanel.cpp gui/CTF1DPanel.cpp gui/FindCTFPanel.cpp gui/FindParticlesPanel.cpp \
                     gui/MyVolumeAssetPanel.cpp gui/MyResultsPanel.cpp gui/MyAssetsPanel.cpp gui/ActionsPanelSpa.cpp \
                     gui/ActionsPanelTm.cpp gui/MySettingsPanel.cpp gui/MyParticlePositionExportDialog.cpp \
                     gui/MyFrealignExportDialog.cpp gui/MyRelionExportDialog.cpp gui/MyRefinementPackageAssetPanel.cpp \
+                    gui/TemplateMatchesPackageAssetPanel.cpp \
                     gui/MyRefine3DPanel.cpp gui/MyRefine2DPanel.cpp gui/ClassificationPlotPanel.cpp gui/AbInitioPlotPanel.cpp \
                     gui/Refine2DResultsPanel.cpp gui/AngularDistributionPlotPanel.cpp core/particle_finder.cpp \
                     gui/DisplayPanel.cpp gui/ClassumSelectionCopyFromDialog.cpp gui/MyOverviewPanel.cpp \

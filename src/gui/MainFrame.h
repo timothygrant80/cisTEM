@@ -73,7 +73,7 @@ class MyMainFrame : public MainFrame, public SocketCommunicator {
     void DirtyRefinements( );
     void DirtyClassificationSelections( );
     void DirtyClassifications( );
-
+    void DirtyTemplateMatchesPackages( );
     void ResetAllPanels( );
 
     void ClearScratchDirectory( );

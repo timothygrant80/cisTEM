@@ -696,6 +696,184 @@ ImageImportDialog::~ImageImportDialog()
 
 }
 
+TemplateMatchesPackageAssetPanelParent::TemplateMatchesPackageAssetPanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
+{
+	wxBoxSizer* bSizer187;
+	bSizer187 = new wxBoxSizer( wxVERTICAL );
+
+	m_staticline52 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer187->Add( m_staticline52, 0, wxEXPAND | wxALL, 5 );
+
+	m_splitter11 = new wxSplitterWindow( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxSP_3D );
+	m_splitter11->Connect( wxEVT_IDLE, wxIdleEventHandler( TemplateMatchesPackageAssetPanelParent::m_splitter11OnIdle ), NULL, this );
+
+	m_panel50 = new wxPanel( m_splitter11, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer188;
+	bSizer188 = new wxBoxSizer( wxVERTICAL );
+
+	m_staticText313 = new wxStaticText( m_panel50, wxID_ANY, wxT("Template Matches Packages:"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText313->Wrap( -1 );
+	bSizer188->Add( m_staticText313, 0, wxALL, 5 );
+
+	wxBoxSizer* bSizer145;
+	bSizer145 = new wxBoxSizer( wxHORIZONTAL );
+
+	wxBoxSizer* bSizer193;
+	bSizer193 = new wxBoxSizer( wxVERTICAL );
+
+	CreateButton = new wxButton( m_panel50, wxID_ANY, wxT("Create"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer193->Add( CreateButton, 0, wxALL, 5 );
+
+	RenameButton = new wxButton( m_panel50, wxID_ANY, wxT("Rename"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer193->Add( RenameButton, 0, wxALL, 5 );
+
+	DeleteButton = new wxButton( m_panel50, wxID_ANY, wxT("Delete"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer193->Add( DeleteButton, 0, wxALL, 5 );
+
+	m_staticline122 = new wxStaticLine( m_panel50, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer193->Add( m_staticline122, 0, wxEXPAND | wxALL, 5 );
+
+	ImportButton = new wxButton( m_panel50, wxID_ANY, wxT("Import"), wxDefaultPosition, wxDefaultSize, 0 );
+	ImportButton->Hide();
+
+	bSizer193->Add( ImportButton, 0, wxALL, 5 );
+
+	ExportButton = new wxButton( m_panel50, wxID_ANY, wxT("Export"), wxDefaultPosition, wxDefaultSize, 0 );
+	ExportButton->Hide();
+
+	bSizer193->Add( ExportButton, 0, wxALL, 5 );
+
+	CombineButton = new wxButton( m_panel50, wxID_ANY, wxT("Combine"), wxDefaultPosition, wxDefaultSize, 0 );
+	CombineButton->Hide();
+
+	bSizer193->Add( CombineButton, 0, wxALL, 5 );
+
+
+	bSizer145->Add( bSizer193, 0, wxEXPAND, 5 );
+
+	RefinementPackageListCtrl = new TemplateMatchesPackageListControl( m_panel50, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_EDIT_LABELS|wxLC_NO_HEADER|wxLC_REPORT|wxLC_SINGLE_SEL|wxLC_VIRTUAL );
+	bSizer145->Add( RefinementPackageListCtrl, 1, wxALL|wxEXPAND, 5 );
+
+
+	bSizer188->Add( bSizer145, 1, wxEXPAND, 5 );
+
+
+	m_panel50->SetSizer( bSizer188 );
+	m_panel50->Layout();
+	bSizer188->Fit( m_panel50 );
+	m_panel51 = new wxPanel( m_splitter11, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+	wxBoxSizer* bSizer191;
+	bSizer191 = new wxBoxSizer( wxVERTICAL );
+
+	ContainedParticlesStaticText = new wxStaticText( m_panel51, wxID_ANY, wxT("Contained Particles :"), wxDefaultPosition, wxDefaultSize, 0 );
+	ContainedParticlesStaticText->Wrap( -1 );
+	bSizer191->Add( ContainedParticlesStaticText, 0, wxALL, 5 );
+
+	ContainedParticlesListCtrl = new ContainedParticleListControl( m_panel51, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_REPORT|wxLC_SINGLE_SEL|wxLC_VIRTUAL );
+	bSizer191->Add( ContainedParticlesListCtrl, 1, wxALL|wxEXPAND, 5 );
+
+
+	m_panel51->SetSizer( bSizer191 );
+	m_panel51->Layout();
+	bSizer191->Fit( m_panel51 );
+	m_splitter11->SplitVertically( m_panel50, m_panel51, 600 );
+	bSizer187->Add( m_splitter11, 1, wxEXPAND, 5 );
+
+	m_staticline53 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer187->Add( m_staticline53, 0, wxEXPAND | wxALL, 5 );
+
+	wxBoxSizer* bSizer192;
+	bSizer192 = new wxBoxSizer( wxHORIZONTAL );
+
+	m_staticText319 = new wxStaticText( this, wxID_ANY, wxT("Starfile Filename :"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText319->Wrap( -1 );
+	bSizer192->Add( m_staticText319, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALIGN_RIGHT|wxALL, 5 );
+
+	StarFileNameText = new wxTextCtrl( this, wxID_ANY, wxT("None"), wxDefaultPosition, wxDefaultSize, wxTE_READONLY );
+	StarFileNameText->SetForegroundColour( wxSystemSettings::GetColour( wxSYS_COLOUR_WINDOWTEXT ) );
+	StarFileNameText->SetBackgroundColour( wxSystemSettings::GetColour( wxSYS_COLOUR_WINDOWFRAME ) );
+
+	bSizer192->Add( StarFileNameText, 1, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxEXPAND, 5 );
+
+
+	bSizer187->Add( bSizer192, 0, wxEXPAND, 5 );
+
+
+	this->SetSizer( bSizer187 );
+	this->Layout();
+	bSizer187->Fit( this );
+
+	// Connect Events
+	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( TemplateMatchesPackageAssetPanelParent::OnUpdateUI ) );
+	CreateButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( TemplateMatchesPackageAssetPanelParent::OnCreateClick ), NULL, this );
+	RenameButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( TemplateMatchesPackageAssetPanelParent::OnRenameClick ), NULL, this );
+	DeleteButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( TemplateMatchesPackageAssetPanelParent::OnDeleteClick ), NULL, this );
+	ImportButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( TemplateMatchesPackageAssetPanelParent::OnImportClick ), NULL, this );
+	ExportButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( TemplateMatchesPackageAssetPanelParent::OnExportClick ), NULL, this );
+	CombineButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( TemplateMatchesPackageAssetPanelParent::OnCombineClick ), NULL, this );
+	RefinementPackageListCtrl->Connect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseCheckPackagesVeto ), NULL, this );
+	RefinementPackageListCtrl->Connect( wxEVT_LEFT_DOWN, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseCheckPackagesVeto ), NULL, this );
+	RefinementPackageListCtrl->Connect( wxEVT_LEFT_UP, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	RefinementPackageListCtrl->Connect( wxEVT_COMMAND_LIST_BEGIN_LABEL_EDIT, wxListEventHandler( TemplateMatchesPackageAssetPanelParent::OnBeginEdit ), NULL, this );
+	RefinementPackageListCtrl->Connect( wxEVT_COMMAND_LIST_END_LABEL_EDIT, wxListEventHandler( TemplateMatchesPackageAssetPanelParent::OnEndEdit ), NULL, this );
+	RefinementPackageListCtrl->Connect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( TemplateMatchesPackageAssetPanelParent::OnPackageActivated ), NULL, this );
+	RefinementPackageListCtrl->Connect( wxEVT_COMMAND_LIST_ITEM_FOCUSED, wxListEventHandler( TemplateMatchesPackageAssetPanelParent::OnPackageFocusChange ), NULL, this );
+	RefinementPackageListCtrl->Connect( wxEVT_MIDDLE_DCLICK, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	RefinementPackageListCtrl->Connect( wxEVT_MIDDLE_DOWN, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	RefinementPackageListCtrl->Connect( wxEVT_MIDDLE_UP, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	RefinementPackageListCtrl->Connect( wxEVT_MOTION, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	RefinementPackageListCtrl->Connect( wxEVT_RIGHT_DCLICK, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	RefinementPackageListCtrl->Connect( wxEVT_RIGHT_DOWN, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	RefinementPackageListCtrl->Connect( wxEVT_RIGHT_UP, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	ContainedParticlesListCtrl->Connect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseCheckParticlesVeto ), NULL, this );
+	ContainedParticlesListCtrl->Connect( wxEVT_LEFT_DOWN, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseCheckParticlesVeto ), NULL, this );
+	ContainedParticlesListCtrl->Connect( wxEVT_LEFT_UP, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	ContainedParticlesListCtrl->Connect( wxEVT_MIDDLE_DCLICK, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	ContainedParticlesListCtrl->Connect( wxEVT_MIDDLE_DOWN, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	ContainedParticlesListCtrl->Connect( wxEVT_MIDDLE_UP, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	ContainedParticlesListCtrl->Connect( wxEVT_MOTION, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	ContainedParticlesListCtrl->Connect( wxEVT_RIGHT_DCLICK, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	ContainedParticlesListCtrl->Connect( wxEVT_RIGHT_DOWN, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	ContainedParticlesListCtrl->Connect( wxEVT_RIGHT_UP, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+}
+
+TemplateMatchesPackageAssetPanelParent::~TemplateMatchesPackageAssetPanelParent()
+{
+	// Disconnect Events
+	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( TemplateMatchesPackageAssetPanelParent::OnUpdateUI ) );
+	CreateButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( TemplateMatchesPackageAssetPanelParent::OnCreateClick ), NULL, this );
+	RenameButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( TemplateMatchesPackageAssetPanelParent::OnRenameClick ), NULL, this );
+	DeleteButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( TemplateMatchesPackageAssetPanelParent::OnDeleteClick ), NULL, this );
+	ImportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( TemplateMatchesPackageAssetPanelParent::OnImportClick ), NULL, this );
+	ExportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( TemplateMatchesPackageAssetPanelParent::OnExportClick ), NULL, this );
+	CombineButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( TemplateMatchesPackageAssetPanelParent::OnCombineClick ), NULL, this );
+	RefinementPackageListCtrl->Disconnect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseCheckPackagesVeto ), NULL, this );
+	RefinementPackageListCtrl->Disconnect( wxEVT_LEFT_DOWN, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseCheckPackagesVeto ), NULL, this );
+	RefinementPackageListCtrl->Disconnect( wxEVT_LEFT_UP, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	RefinementPackageListCtrl->Disconnect( wxEVT_COMMAND_LIST_BEGIN_LABEL_EDIT, wxListEventHandler( TemplateMatchesPackageAssetPanelParent::OnBeginEdit ), NULL, this );
+	RefinementPackageListCtrl->Disconnect( wxEVT_COMMAND_LIST_END_LABEL_EDIT, wxListEventHandler( TemplateMatchesPackageAssetPanelParent::OnEndEdit ), NULL, this );
+	RefinementPackageListCtrl->Disconnect( wxEVT_COMMAND_LIST_ITEM_ACTIVATED, wxListEventHandler( TemplateMatchesPackageAssetPanelParent::OnPackageActivated ), NULL, this );
+	RefinementPackageListCtrl->Disconnect( wxEVT_COMMAND_LIST_ITEM_FOCUSED, wxListEventHandler( TemplateMatchesPackageAssetPanelParent::OnPackageFocusChange ), NULL, this );
+	RefinementPackageListCtrl->Disconnect( wxEVT_MIDDLE_DCLICK, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	RefinementPackageListCtrl->Disconnect( wxEVT_MIDDLE_DOWN, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	RefinementPackageListCtrl->Disconnect( wxEVT_MIDDLE_UP, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	RefinementPackageListCtrl->Disconnect( wxEVT_MOTION, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	RefinementPackageListCtrl->Disconnect( wxEVT_RIGHT_DCLICK, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	RefinementPackageListCtrl->Disconnect( wxEVT_RIGHT_DOWN, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	RefinementPackageListCtrl->Disconnect( wxEVT_RIGHT_UP, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	ContainedParticlesListCtrl->Disconnect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseCheckParticlesVeto ), NULL, this );
+	ContainedParticlesListCtrl->Disconnect( wxEVT_LEFT_DOWN, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseCheckParticlesVeto ), NULL, this );
+	ContainedParticlesListCtrl->Disconnect( wxEVT_LEFT_UP, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	ContainedParticlesListCtrl->Disconnect( wxEVT_MIDDLE_DCLICK, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	ContainedParticlesListCtrl->Disconnect( wxEVT_MIDDLE_DOWN, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	ContainedParticlesListCtrl->Disconnect( wxEVT_MIDDLE_UP, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	ContainedParticlesListCtrl->Disconnect( wxEVT_MOTION, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	ContainedParticlesListCtrl->Disconnect( wxEVT_RIGHT_DCLICK, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	ContainedParticlesListCtrl->Disconnect( wxEVT_RIGHT_DOWN, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+	ContainedParticlesListCtrl->Disconnect( wxEVT_RIGHT_UP, wxMouseEventHandler( TemplateMatchesPackageAssetPanelParent::MouseVeto ), NULL, this );
+
+}
+
 AssetPanelParent::AssetPanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
 {
 	this->SetMinSize( wxSize( 680,400 ) );

@@ -14,6 +14,7 @@ class ImageGroupPickerComboPanel;
 class NumericTextCtrl;
 class RefinementPickerComboPanel;
 class TMJobPickerComboPanel;
+class TMPackagePickerComboPanel;
 
 #include <wx/string.h>
 #include <wx/bitmap.h>
@@ -534,6 +535,26 @@ class NumberofClassesWizardPanel : public wxPanel
 		NumberofClassesWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 
 		~NumberofClassesWizardPanel();
+
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class InputTemplateMatchesPackageWizardPanel
+///////////////////////////////////////////////////////////////////////////////
+class InputTemplateMatchesPackageWizardPanel : public wxPanel
+{
+	private:
+
+	protected:
+		wxStaticText* m_staticText214;
+
+	public:
+		TMPackagePickerComboPanel* TemplateMatchesPackageComboBox;
+		AutoWrapStaticText* InfoText;
+
+		InputTemplateMatchesPackageWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+
+		~InputTemplateMatchesPackageWizardPanel();
 
 };
 

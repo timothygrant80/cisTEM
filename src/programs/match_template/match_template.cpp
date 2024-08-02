@@ -376,6 +376,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     //RD : To open the text file containing the orientations from Healpix
     NumericTextFile healpix_binning(healpix_file, OPEN_TO_READ, 0);
     NumericTextFile pixel_file;
+    NumericTextFile cc_file(write_out_cc_file, OPEN_TO_WRITE, 4);
 #endif
     ImageFile input_search_image_file;
     ImageFile input_reconstruction_file;
@@ -874,6 +875,7 @@ bool MatchTemplateApp::DoCalculation( ) {
                             trimmed_counter[i] += (double)GPU[tIDX].trimmed_counter[i];
                         }
                         
+                        
 #endif
 
                         // TODO swap max_padding for explicit padding in x/y and limit calcs to that region.
@@ -909,20 +911,20 @@ bool MatchTemplateApp::DoCalculation( ) {
                     } // end of omp critical block
                 } // end of parallel block
                 // Check the size of the vector ccf_abs_dev_med_abs_dev
-                wxPrintf("\n The size of the ccf_abs_dev_med_abs_dev is %d", d_ccf_abs_dev_med_abs_dev.size())
-                return true;
-                for (int frame_count = 0; frame_count < d_ccf_abs_dev_med_abs_dev.size() / 3; frame_count++) {
-                    float ccf_val = d_ccf_abs_dev_med_abs_dev[frame_count * 3];
-                    float abs_dev = d_ccf_abs_dev_med_abs_dev[frame_count * 3 + 1];
-                    float median_abs_dev = d_ccf_abs_dev_med_abs_dev[frame_count * 3 + 2];
+                wxPrintf("\n The size of the ccf_abs_dev_med_abs_dev is %d", GPU[tIDX].d_ccf_abs_dev_med_abs_dev.size());
+                //return true;
+                //for (int frame_count = 0; frame_count < d_ccf_abs_dev_med_abs_dev.size() / 3; frame_count++) {
+                //    float ccf_val = d_ccf_abs_dev_med_abs_dev[frame_count * 3];
+                //    float abs_dev = d_ccf_abs_dev_med_abs_dev[frame_count * 3 + 1];
+                //    float median_abs_dev = d_ccf_abs_dev_med_abs_dev[frame_count * 3 + 2];
     // Use the values as needed
-}
-                    cc_file.WriteCommentLine("Output cross correlation values at %d,%d", x_coord_to_track, y_coord_to_track);
+//}
+//                    cc_file.WriteCommentLine("Output cross correlation values at %d,%d", x_coord_to_track, y_coord_to_track);
         
-        for (int line_counter = 0; line_counter < d_ccf_abs_dev_med_abs_dev.size() / 3;line_counter++){
-            temp_cc_array[0] = d_ccf_abs_dev_med_abs_dev[line_counter * 3];
-            temp_cc_array[1] = d_ccf_abs_dev_med_abs_dev[line_counter * 3 + 1];
-            temp_cc_array[2] = d_ccf_abs_dev_med_abs_dev[line_counter * 3 + 2];
+        for (int line_counter = 0; line_counter < GPU[tIDX].d_ccf_abs_dev_med_abs_dev.size() / 3;line_counter++){
+            temp_cc_array[0] = GPU[tIDX].d_ccf_abs_dev_med_abs_dev.[line_counter * 3];
+            temp_cc_array[1] = GPU[tIDX].d_ccf_abs_dev_med_abs_dev.[line_counter * 3 + 1];
+            temp_cc_array[2] = GPU[tIDX].d_ccf_abs_dev_med_abs_dev.[line_counter * 3 + 2];
             cc_file.WriteLine(temp_cc_array);
         }
                 continue;
@@ -1267,7 +1269,7 @@ bool MatchTemplateApp::DoCalculation( ) {
         temp_float = histogram_min + (histogram_step / 2.0f); // start position
         NumericTextFile histogram_file(output_histogram_file, OPEN_TO_WRITE, 4);
 
-        NumericTextFile cc_file(write_out_cc_file, OPEN_TO_WRITE, 4);
+        
 
         double* expected_survival_histogram = new double[histogram_number_of_points];
         double* survival_histogram          = new double[histogram_number_of_points];

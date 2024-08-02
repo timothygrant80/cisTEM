@@ -402,6 +402,42 @@ void DisplayPanel::OnTrajectory(wxCommandEvent& WXUNUSED(event)) {
 
     GetClientSize(&window_x_size, &window_y_size);
 
+    // how big are the images going to be, and how many will fit..
+
+    long scaled_x_size = long(myround(current_panel->ReturnImageXSize( ) * current_panel->desired_scale_factor));
+    long scaled_y_size = long(myround(current_panel->ReturnImageYSize( ) * current_panel->desired_scale_factor));
+
+    // For stacks of 2d images and slices of 3d, we intentionally limit the max scaling to whatever is capable of fitting within the size of the window.
+    // Done because the DisplayPanel is used in several areas of cisTEM without the ability to remove Single Image Mode; this could result in scaled
+    // images in the main cisTEM GUI that could not be adjusted, whereas this viewing mode can be disabled in the cisTEM_display program.
+    if ( current_panel->single_image ) {
+        current_panel->actual_scale_factor = current_panel->desired_scale_factor;
+    }
+    else {
+        current_panel->images_in_x = window_x_size / scaled_x_size;
+        current_panel->images_in_y = window_y_size / scaled_y_size;
+
+        if ( current_panel->images_in_x < 1 || current_panel->images_in_y < 1 ) {
+            // none fit, so we should scale it so that 1 image fits...
+            // determine if the X or Y is the limiting factor..
+
+            if ( double(window_x_size) / double(scaled_x_size) >= double(window_y_size) / double(scaled_y_size) ) {
+                // this means that the limiting dimension is the y.. so scale appropriately..
+                current_panel->actual_scale_factor = double(window_y_size) / double(current_panel->ReturnImageYSize( ));
+            }
+            else
+                current_panel->actual_scale_factor = double(window_x_size) / double(current_panel->ReturnImageXSize( ));
+
+            scaled_x_size = long(myround(current_panel->ReturnImageXSize( ) * current_panel->actual_scale_factor));
+            scaled_y_size = long(myround(current_panel->ReturnImageYSize( ) * current_panel->actual_scale_factor));
+
+            current_panel->images_in_x = 1;
+            current_panel->images_in_y = 1;
+        }
+        else
+            current_panel->actual_scale_factor = current_panel->desired_scale_factor;
+    }
+
     // is our stored bitmap the correct size? if not redraw
     if ( current_panel->use_trajectory ) {
         if ( window_x_size != current_panel->panel_bitmap.GetWidth( ) || window_y_size != current_panel->panel_bitmap.GetHeight( ) ) {
@@ -440,7 +476,16 @@ void DisplayPanel::OnTrajectory(wxCommandEvent& WXUNUSED(event)) {
                 // for ( int y = 0; y < current_panel->images_in_y; y++ ) {
                 //     for ( int x = 0; x < current_panel->images_in_x; x++ ) {
                 if ( counter <= current_panel->ReturnNumberofImages( ) ) {
-                    dc.DrawLine(100, 100, 200, 200);
+                    // dc.DrawLine(100, 100, 200, 200);
+                    wxPrintf("trajectoryx 0 %f", current_panel->trajectory_x[0]);
+                    // wxPrintf("Trajectory size %d", current_panel->trajectory_x.size( ));
+                    float scale = 300 * current_panel->actual_scale_factor;
+                    wxPrintf("scale %f", scale);
+                    wxPrintf("actual scale factor %f", current_panel->actual_scale_factor);
+                    dc.DrawLine(0, 0, scale * current_panel->trajectory_x[0], scale * current_panel->trajectory_y[0]);
+                    for ( int i = 1; i < current_panel->trajectory_x.size( ); i++ ) {
+                        dc.DrawLine(scale * current_panel->trajectory_x[i - 1], scale * current_panel->trajectory_y[i - 1], scale * current_panel->trajectory_x[i], scale * current_panel->trajectory_y[i]);
+                    }
 
                     // if ( (parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || (parent_display_panel->is_from_display_program && picking_mode == IMAGES_PICK) ) {
                     //     if ( image_is_selected[counter] ) {
@@ -2657,10 +2702,10 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
                             buffer_image.ComputeAmplitudeSpectrumFull2D(&image_memory_buffer[image_counter]);
                             image_memory_buffer[image_counter].ZeroCentralPixel( );
                         }
-                        if ( use_trajectory ) {
-                            wxPrintf("enter the use trajectory\n");
-                            paintdc.DrawCircle(10, 10, 5);
-                        }
+                        // if ( use_trajectory ) {
+                        //     wxPrintf("enter the use trajectory\n");
+                        //     paintdc.DrawCircle(10, 10, 5);
+                        // }
                     }
                 }
             }

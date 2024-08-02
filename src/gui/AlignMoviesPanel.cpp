@@ -1034,43 +1034,9 @@ void MyAlignMoviesPanel::WriteResultToDataBase( ) {
 
     // loop over all the jobs, and add them..
 
-    main_frame->current_project.database.BeginBatchInsert("MOVIE_ALIGNMENT_LIST", 22, "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "OUTPUT_FILE", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK", "SHOULD_INCLUDE_ALL_FRAMES_IN_SUM", "FIRST_FRAME_TO_SUM", "LAST_FRAME_TO_SUM");
-
     wxDateTime now = wxDateTime::Now( );
 
     OneSecondProgressDialog* my_progress_dialog = new OneSecondProgressDialog("Write Results", "Writing results to the database...", my_job_tracker.total_number_of_jobs * 3, this, wxPD_APP_MODAL);
-
-    for ( counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++ ) {
-        main_frame->current_project.database.AddToBatchInsert("iliitrrrrrriiriiiiiiii", alignment_id,
-                                                              (long int)now.GetAsDOS( ),
-                                                              alignment_job_id,
-                                                              movie_asset_panel->ReturnAssetID(active_group.members[counter]),
-                                                              current_job_package.jobs[counter].arguments[1].ReturnStringArgument( ).c_str( ), // output_filename
-                                                              current_job_package.jobs[counter].arguments[13].ReturnFloatArgument( ), // voltage
-                                                              current_job_package.jobs[counter].arguments[2].ReturnFloatArgument( ), // pixel size
-                                                              current_job_package.jobs[counter].arguments[14].ReturnFloatArgument( ), // exposure per frame
-                                                              current_job_package.jobs[counter].arguments[15].ReturnFloatArgument( ), // current_pre_exposure
-                                                              current_job_package.jobs[counter].arguments[3].ReturnFloatArgument( ), // min shift
-                                                              current_job_package.jobs[counter].arguments[4].ReturnFloatArgument( ), // max shift
-                                                              current_job_package.jobs[counter].arguments[5].ReturnBoolArgument( ), // should dose filter
-                                                              current_job_package.jobs[counter].arguments[6].ReturnBoolArgument( ), // should restore power
-                                                              current_job_package.jobs[counter].arguments[7].ReturnFloatArgument( ), // termination threshold
-                                                              current_job_package.jobs[counter].arguments[8].ReturnIntegerArgument( ), // max_iterations
-                                                              int(current_job_package.jobs[counter].arguments[9].ReturnFloatArgument( )), // bfactor
-                                                              current_job_package.jobs[counter].arguments[10].ReturnBoolArgument( ), // should mask central cross
-                                                              current_job_package.jobs[counter].arguments[11].ReturnIntegerArgument( ), // horizonatal mask
-                                                              current_job_package.jobs[counter].arguments[12].ReturnIntegerArgument( ), // vertical mask
-                                                              include_all_frames_checkbox->GetValue( ), // include all frames
-                                                              current_job_package.jobs[counter].arguments[29].ReturnIntegerArgument( ), // first_frame
-                                                              current_job_package.jobs[counter].arguments[30].ReturnIntegerArgument( ) // last_frame
-        );
-
-        alignment_id++;
-
-        my_progress_dialog->Update(counter + 1);
-    }
-
-    main_frame->current_project.database.EndBatchInsert( );
 
     // now need to add the results of the job..
 
@@ -1189,6 +1155,44 @@ void MyAlignMoviesPanel::WriteResultToDataBase( ) {
 
     main_frame->current_project.database.EndImageAssetInsert( );
 
+    // Now update the final_pixel_size in the movie_alignment_table
+    alignment_id = starting_alignment_id + 1;
+    main_frame->current_project.database.BeginBatchInsert("MOVIE_ALIGNMENT_LIST", 23, "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "OUTPUT_FILE", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK", "SHOULD_INCLUDE_ALL_FRAMES_IN_SUM", "FIRST_FRAME_TO_SUM", "LAST_FRAME_TO_SUM", "FINAL_PIXEL_SIZE");
+
+    for ( counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++ ) {
+        parent_id      = movie_asset_panel->ReturnAssetID(active_group.members[counter]);
+        array_location = image_asset_panel->ReturnArrayPositionFromParentID(parent_id);
+        main_frame->current_project.database.AddToBatchInsert("iliitrrrrrriiriiiiiiiir", alignment_id,
+                                                              (long int)now.GetAsDOS( ),
+                                                              alignment_job_id,
+                                                              parent_id,
+                                                              current_job_package.jobs[counter].arguments[1].ReturnStringArgument( ).c_str( ), // output_filename
+                                                              current_job_package.jobs[counter].arguments[13].ReturnFloatArgument( ), // voltage
+                                                              current_job_package.jobs[counter].arguments[2].ReturnFloatArgument( ), // pixel size
+                                                              current_job_package.jobs[counter].arguments[14].ReturnFloatArgument( ), // exposure per frame
+                                                              current_job_package.jobs[counter].arguments[15].ReturnFloatArgument( ), // current_pre_exposure
+                                                              current_job_package.jobs[counter].arguments[3].ReturnFloatArgument( ), // min shift
+                                                              current_job_package.jobs[counter].arguments[4].ReturnFloatArgument( ), // max shift
+                                                              current_job_package.jobs[counter].arguments[5].ReturnBoolArgument( ), // should dose filter
+                                                              current_job_package.jobs[counter].arguments[6].ReturnBoolArgument( ), // should restore power
+                                                              current_job_package.jobs[counter].arguments[7].ReturnFloatArgument( ), // termination threshold
+                                                              current_job_package.jobs[counter].arguments[8].ReturnIntegerArgument( ), // max_iterations
+                                                              int(current_job_package.jobs[counter].arguments[9].ReturnFloatArgument( )), // bfactor
+                                                              current_job_package.jobs[counter].arguments[10].ReturnBoolArgument( ), // should mask central cross
+                                                              current_job_package.jobs[counter].arguments[11].ReturnIntegerArgument( ), // horizonatal mask
+                                                              current_job_package.jobs[counter].arguments[12].ReturnIntegerArgument( ), // vertical mask
+                                                              include_all_frames_checkbox->GetValue( ), // include all frames
+                                                              current_job_package.jobs[counter].arguments[29].ReturnIntegerArgument( ), // first_frame
+                                                              current_job_package.jobs[counter].arguments[30].ReturnIntegerArgument( ), // last_frame
+                                                              reinterpret_cast<ImageAsset*>(image_asset_panel->all_assets_list->assets)[array_location].pixel_size // final pixel size
+        );
+
+        alignment_id++;
+
+        my_progress_dialog->Update(counter + 1);
+    }
+
+    main_frame->current_project.database.EndBatchInsert( );
     // global commit..
 
     main_frame->current_project.database.Commit( );

@@ -230,6 +230,9 @@ class AlignMoviesPanel : public JobPanel
 		wxStaticText* last_frame_static_text;
 		wxSpinCtrl* last_frame_spin_ctrl;
 		wxCheckBox* SaveScaledSumCheckbox;
+		wxCheckBox* BinningFactorCheckBox;
+		wxStaticText* m_staticText461;
+		wxTextCtrl* binning_factor_text;
 		wxPanel* OutputTextPanel;
 		wxTextCtrl* output_textctrl;
 		UnblurResultsPanel* GraphPanel;

@@ -734,8 +734,6 @@ TemplateMatchesPackageAssetPanelParent::TemplateMatchesPackageAssetPanelParent( 
 	bSizer193->Add( m_staticline122, 0, wxEXPAND | wxALL, 5 );
 
 	ImportButton = new wxButton( m_panel50, wxID_ANY, wxT("Import"), wxDefaultPosition, wxDefaultSize, 0 );
-	ImportButton->Hide();
-
 	bSizer193->Add( ImportButton, 0, wxALL, 5 );
 
 	ExportButton = new wxButton( m_panel50, wxID_ANY, wxT("Export"), wxDefaultPosition, wxDefaultSize, 0 );

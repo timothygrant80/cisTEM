@@ -39,13 +39,6 @@ void TemplateMatchesPackageAssetPanel::OnCombineClick(wxCommandEvent& event) {
     my_wizard->Destroy( );
 }
 
-void TemplateMatchesPackageAssetPanel::OnImportClick(wxCommandEvent& event) {
-    ImportRefinementPackageWizard* my_wizard = new ImportRefinementPackageWizard(this);
-    my_wizard->GetPageAreaSizer( )->Add(my_wizard->m_pages.Item(0));
-    my_wizard->RunWizard(my_wizard->m_pages.Item(0));
-    my_wizard->Destroy( );
-}
-
 void TemplateMatchesPackageAssetPanel::OnExportClick(wxCommandEvent& event) {
     ExportRefinementPackageWizard* my_wizard = new ExportRefinementPackageWizard(this);
     my_wizard->GetPageAreaSizer( )->Add(my_wizard->m_pages.Item(0));
@@ -57,7 +50,7 @@ void TemplateMatchesPackageAssetPanel::OnDeleteClick(wxCommandEvent& event) {
     if ( selected_refinement_package >= 0 ) {
         // check if there is a running job which uses refinement packages, if there is refuse to delete the refinement package.
 
-        wxMessageDialog* check_dialog = new wxMessageDialog(this, "This will remove the refinement package from your entire project, including all classifications / refinements that have been run on it.\n\nAlso note that this is just a database deletion, the particle stacks are not deleted.\n\nAre you sure you want to continue?", "Are you sure?", wxYES_NO);
+        wxMessageDialog* check_dialog = new wxMessageDialog(this, "This will remove the temaplte matches package from your entire project, including all classifications / refinements that have been run on it.\n\nAlso note that this is just a database deletion, the particle stacks are not deleted.\n\nAre you sure you want to continue?", "Are you sure?", wxYES_NO);
 
         if ( check_dialog->ShowModal( ) == wxID_YES ) {
             long counter;
@@ -65,7 +58,7 @@ void TemplateMatchesPackageAssetPanel::OnDeleteClick(wxCommandEvent& event) {
 
             main_frame->current_project.database.Begin( );
 
-            main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM REFINEMENT_PACKAGE_ASSETS WHERE REFINEMENT_PACKAGE_ASSET_ID=%li", all_template_matches_packages.Item(selected_refinement_package).asset_id));
+            main_frame->current_project.database.ExecuteSQL(wxString::Format("DELETE FROM TEMPLATE_MATCHES_PACKAGE_ASSETS WHERE TEMPLATE_MATCHES_PACKAGE_ASSET_ID=%li", all_template_matches_packages.Item(selected_refinement_package).asset_id));
             //main_frame->current_project.database.DeleteTable(wxString::Format("REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%li", all_template_matches_packages.Item(selected_refinement_package).asset_id));
             //main_frame->current_project.database.DeleteTable(wxString::Format("REFINEMENT_PACKAGE_CURRENT_REFERENCES_%li", all_template_matches_packages.Item(selected_refinement_package).asset_id));
             //main_frame->current_project.database.DeleteTable(wxString::Format("REFINEMENT_PACKAGE_REFINEMENTS_LIST_%li", all_template_matches_packages.Item(selected_refinement_package).asset_id));
@@ -82,6 +75,9 @@ void TemplateMatchesPackageAssetPanel::OnDeleteClick(wxCommandEvent& event) {
             main_frame->DirtyTemplateMatchesPackages( );
         }
     }
+}
+
+void TemplateMatchesPackageAssetPanel::OnImportClick(wxCommandEvent& event) {
 }
 
 void TemplateMatchesPackageAssetPanel::AddAsset(TemplateMatchesPackage* refinement_package) {

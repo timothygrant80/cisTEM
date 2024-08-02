@@ -286,6 +286,11 @@ void MyNewRefinementPackageWizard::PageChanged(wxWizardEvent& event) {
 
                 output_pixel_size_page->my_panel->OutputPixelSizeTextCtrl->ChangeValueFloat(first_particle_image->pixel_size);
             }
+            else if ( template_page->my_panel->GroupComboBox->GetSelection( ) == 2 ) // new, we should do largest_dimension * 2, scaled up to factorizable.
+            {
+
+                output_pixel_size_page->my_panel->OutputPixelSizeTextCtrl->ChangeValueFloat(1.0);
+            }
             else // from class selection
             { // take the stack size of the refinement package of the first selected class selection
 

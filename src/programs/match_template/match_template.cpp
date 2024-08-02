@@ -80,6 +80,7 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
     wxString best_pixel_size_output_file;
 
     wxString output_histogram_file;
+    wxString write_out_cc_file;
     wxString correlation_std_output_file;
     wxString correlation_avg_output_file;
     wxString scaled_mip_output_file;
@@ -161,6 +162,7 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
 #ifdef MEDIAN_FILTER_TEST
     healpix_file         = my_input->GetFilenameFromUser("Healpix region segment file", "File containing the Phi and Theta values for search", "orientations.txt", false);
     coords_to_track_file = my_input->GetFilenameFromUser("Text file with x,y coordinates to track across full search", "File containing the x,y coordinates to track", "none", false);
+    write_out_cc_file    = my_input->GetFilenameFromUser("Output filename for the CC's of tracked coordinates : ","Output correlation values at the tracked coordinates", "none", false);
 #endif
     int   first_search_position           = -1;
     int   last_search_position            = -1;
@@ -174,7 +176,7 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
     delete my_input;
 
 #ifdef MEDIAN_FILTER_TEST
-    const char* jop_code_arg_string = "ttffffffffffifffffbfftttttttttftiiiitttfbitt";
+    const char* jop_code_arg_string = "ttffffffffffifffffbfftttttttttftiiiitttfbittt";
 #else
     const char* jop_code_arg_string = "ttffffffffffifffffbfftttttttttftiiiitttfbi";
 #endif
@@ -223,7 +225,8 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
 #ifdef MEDIAN_FILTER_TEST
                                       ,
                                       healpix_file.ToUTF8( ).data( ),
-                                      coords_to_track_file.ToUTF8( ).data( ));
+                                      coords_to_track_file.ToUTF8( ).data( ),
+                                      write_out_cc_file.ToUTF8( ).data( ));
 #else
     );
 #endif
@@ -292,10 +295,11 @@ bool MatchTemplateApp::DoCalculation( ) {
     // There is no check on memory limits. You will need N_pixels * 2 bytes * 6 extra gpu memory for this.
     bool     track_pixels_across_search = false;
     wxString coords_to_track_file       = my_current_job.arguments[43].ReturnStringArgument( );
-
+    wxString write_out_cc_file = my_current_job.arguments[44].ReturnStringArgument( );
     // Default value for the parser, otherwise, must be a filename that exists
     if ( coords_to_track_file != "none" ) {
         track_pixels_across_search = true;
+        //wxString write_out_cc_file = my_current_job.arguments[44].ReturnStringArgument( ); // Why didnt this work? Not declared in scope compile error
     }
 #endif
     if ( is_running_locally == false )
@@ -335,6 +339,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     float  variance;
     double temp_double;
     double temp_double_array[5];
+    double temp_cc_array[3];
     float  factor_score;
 
     int  number_of_rotations;
@@ -868,6 +873,7 @@ bool MatchTemplateApp::DoCalculation( ) {
                         for ( int i = 0; i < GPU[tIDX].d_max_intensity_projection.real_memory_allocated; i++ ) {
                             trimmed_counter[i] += (double)GPU[tIDX].trimmed_counter[i];
                         }
+                        
 #endif
 
                         // TODO swap max_padding for explicit padding in x/y and limit calcs to that region.
@@ -902,7 +908,23 @@ bool MatchTemplateApp::DoCalculation( ) {
 
                     } // end of omp critical block
                 } // end of parallel block
-
+                // Check the size of the vector ccf_abs_dev_med_abs_dev
+                wxPrintf("\n The size of the ccf_abs_dev_med_abs_dev is %d", d_ccf_abs_dev_med_abs_dev.size())
+                return true;
+                for (int frame_count = 0; frame_count < d_ccf_abs_dev_med_abs_dev.size() / 3; frame_count++) {
+                    float ccf_val = d_ccf_abs_dev_med_abs_dev[frame_count * 3];
+                    float abs_dev = d_ccf_abs_dev_med_abs_dev[frame_count * 3 + 1];
+                    float median_abs_dev = d_ccf_abs_dev_med_abs_dev[frame_count * 3 + 2];
+    // Use the values as needed
+}
+                    cc_file.WriteCommentLine("Output cross correlation values at %d,%d", x_coord_to_track, y_coord_to_track);
+        
+        for (int line_counter = 0; line_counter < d_ccf_abs_dev_med_abs_dev.size() / 3;line_counter++){
+            temp_cc_array[0] = d_ccf_abs_dev_med_abs_dev[line_counter * 3];
+            temp_cc_array[1] = d_ccf_abs_dev_med_abs_dev[line_counter * 3 + 1];
+            temp_cc_array[2] = d_ccf_abs_dev_med_abs_dev[line_counter * 3 + 2];
+            cc_file.WriteLine(temp_cc_array);
+        }
                 continue;
 
 #endif
@@ -1245,6 +1267,8 @@ bool MatchTemplateApp::DoCalculation( ) {
         temp_float = histogram_min + (histogram_step / 2.0f); // start position
         NumericTextFile histogram_file(output_histogram_file, OPEN_TO_WRITE, 4);
 
+        NumericTextFile cc_file(write_out_cc_file, OPEN_TO_WRITE, 4);
+
         double* expected_survival_histogram = new double[histogram_number_of_points];
         double* survival_histogram          = new double[histogram_number_of_points];
         ZeroDoubleArray(survival_histogram, histogram_number_of_points);
@@ -1262,6 +1286,7 @@ bool MatchTemplateApp::DoCalculation( ) {
         histogram_file.WriteCommentLine("Expected threshold = %.2f\n", expected_threshold);
         histogram_file.WriteCommentLine("SNR, histogram, survival histogram, random survival histogram");
 
+
         for ( int line_counter = 0; line_counter < histogram_number_of_points; line_counter++ ) {
             temp_double_array[0] = temp_float + histogram_step * float(line_counter);
             temp_double_array[1] = histogram_data[line_counter];
@@ -1271,6 +1296,8 @@ bool MatchTemplateApp::DoCalculation( ) {
         }
 
         histogram_file.Close( );
+
+
 
         // memory cleanup
 

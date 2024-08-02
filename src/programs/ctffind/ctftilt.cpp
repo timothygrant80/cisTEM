@@ -310,8 +310,8 @@ float CTFTilt::SearchTiltAxisAndAngle( ) {
 
     float  variance;
     float  variance_max = -FLT_MAX;
-    float  axis_step    = 10.0f;
-    float  angle_step   = 5.0f;
+    float  axis_step    = 20.0f;
+    float  angle_step   = 10.0f;
     float  tilt_angle;
     float  tilt_axis;
     float  average_defocus = (defocus_1 + defocus_2) / 2.0f;
@@ -493,8 +493,10 @@ float CTFTilt::CalculateTiltCorrectedSpectra(bool resample_if_pixel_too_small, f
     Image           counts_per_pixel;
 
     pixel_size_for_fitting = PixelSizeForFitting(resample_if_pixel_too_small, pixel_size_of_input_image, target_pixel_size_after_resampling, box_size, &power_spectrum, &resampled_power_spectrum, false);
-
-    n_sec = std::max(input_image_buffer[0].logical_x_dimension / resampled_spectrum->logical_x_dimension, input_image_buffer[0].logical_y_dimension / resampled_spectrum->logical_y_dimension);
+    sub_section_dimension  = resampled_spectrum->logical_x_dimension * (pixel_size_for_fitting / pixel_size_of_input_image);
+    if ( IsOdd(sub_section_dimension) )
+        sub_section_dimension--;
+    n_sec = std::max(input_image_buffer[0].logical_x_dimension / sub_section_dimension, input_image_buffer[0].logical_y_dimension / sub_section_dimension);
     if ( IsEven(n_sec) )
         n_sec++;
     //	wxPrintf("n_sec, n_stp = %i %i\n", n_sec, n_stp);
@@ -815,14 +817,14 @@ double CTFTilt::ScoreValuesFixedDefocus(double input_values[]) {
 double SampleTiltScoreFunctionForSimplex(void* pt2Object, double values[]) {
     CTFTilt* scorer_to_use = reinterpret_cast<CTFTilt*>(pt2Object);
     float    score         = scorer_to_use->ScoreValues(values);
-    MyDebugPrint("%f, %f, %f, %f = %f\n", values[1], values[2], values[3], values[4], score);
-    return scorer_to_use->ScoreValues(values);
+    MyDebugPrint("%f, %f, %f, %f = %f\n", values[0], values[1], values[2], values[3], score);
+    return score;
 }
 
 double SampleTiltScoreFunctionForSimplexTiltAxis(void* pt2Object, double values[]) {
     CTFTilt* scorer_to_use = reinterpret_cast<CTFTilt*>(pt2Object);
     // wxPrintf("average_defocus: %f\n",average_defocus);
-    float score = scorer_to_use->ScoreValues(values);
-    MyDebugPrint("%f, %f, %f = %f\n", values[1], values[2], values[3], score);
-    return scorer_to_use->ScoreValuesFixedDefocus(values);
+    float score = scorer_to_use->ScoreValuesFixedDefocus(values);
+    MyDebugPrint("%f, %f, %f = %f\n", values[0], values[1], values[2], score);
+    return score;
 }

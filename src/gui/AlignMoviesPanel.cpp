@@ -1018,10 +1018,13 @@ void MyAlignMoviesPanel::ProcessResult(JobResult* result_to_process) // this wil
                 GraphPanel->ImageDisplayPanel->OpenFile(current_job_package.jobs[result_to_process->job_number].arguments[28].ReturnStringArgument( ), current_filename.GetName( ));
                 DisplayNotebookPanel* current_panel         = reinterpret_cast<DisplayNotebookPanel*>(GraphPanel->ImageDisplayPanel->my_notebook->GetPage(0));
                 current_panel->use_unscaled_image_for_popup = true;
+                wxPrintf("case1 1 trajectory name %s \n", current_job_package.jobs[result_to_process->job_number].arguments[36].ReturnStringArgument( ));
+                GraphPanel->ImageDisplayPanel->LoadTrajectory(0, current_job_package.jobs[result_to_process->job_number].arguments[36].ReturnStringArgument( ) + "/fullframe_shift.txt");
             }
             else {
                 wxPrintf("case1 2 \n");
                 GraphPanel->ImageDisplayPanel->ChangeFileForTabNumber(0, current_job_package.jobs[result_to_process->job_number].arguments[28].ReturnStringArgument( ), "");
+                GraphPanel->ImageDisplayPanel->LoadTrajectory(0, current_job_package.jobs[result_to_process->job_number].arguments[36].ReturnStringArgument( ) + "/fullframe_shift.txt");
             }
             // if ( DoesFileExist(current_job_package.jobs[result_to_process->job_number].arguments[36].ReturnStringArgument( ) + "fullframe_shift.txt") == true ) {
 
@@ -1033,11 +1036,13 @@ void MyAlignMoviesPanel::ProcessResult(JobResult* result_to_process) // this wil
                 GraphPanel->ImageDisplayPanel->ChangeFile(sum_filename.GetFullPath( ), sum_filename.GetShortPath( ));
                 DisplayNotebookPanel* current_panel         = reinterpret_cast<DisplayNotebookPanel*>(GraphPanel->ImageDisplayPanel->my_notebook->GetPage(0));
                 current_panel->use_unscaled_image_for_popup = true;
+                GraphPanel->ImageDisplayPanel->LoadTrajectory(0, current_job_package.jobs[result_to_process->job_number].arguments[36].ReturnStringArgument( ) + "/fullframe_shift.txt");
             }
             else {
                 wxPrintf("case2 2 \n");
                 // GraphPanel->ImageDisplayPanel->ChangeFile(sum_filename.GetFullPath( ), sum_filename.GetShortPath( ));
                 GraphPanel->ImageDisplayPanel->ChangeFileForTabNumber(0, sum_filename.GetFullPath( ), sum_filename.GetShortPath( ));
+                GraphPanel->ImageDisplayPanel->LoadTrajectory(0, current_job_package.jobs[result_to_process->job_number].arguments[36].ReturnStringArgument( ) + "/fullframe_shift.txt");
             }
         }
 
@@ -1116,14 +1121,14 @@ void MyAlignMoviesPanel::WriteResultToDataBase( ) {
 
     // loop over all the jobs, and add them..
 
-    main_frame->current_project.database.BeginBatchInsert("MOVIE_ALIGNMENT_LIST", 22, "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "OUTPUT_FILE", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK", "SHOULD_INCLUDE_ALL_FRAMES_IN_SUM", "FIRST_FRAME_TO_SUM", "LAST_FRAME_TO_SUM");
+    main_frame->current_project.database.BeginBatchInsert("MOVIE_ALIGNMENT_LIST", 23, "ALIGNMENT_ID", "DATETIME_OF_RUN", "ALIGNMENT_JOB_ID", "MOVIE_ASSET_ID", "OUTPUT_FILE", "VOLTAGE", "PIXEL_SIZE", "EXPOSURE_PER_FRAME", "PRE_EXPOSURE_AMOUNT", "MIN_SHIFT", "MAX_SHIFT", "SHOULD_DOSE_FILTER", "SHOULD_RESTORE_POWER", "TERMINATION_THRESHOLD", "MAX_ITERATIONS", "BFACTOR", "SHOULD_MASK_CENTRAL_CROSS", "HORIZONTAL_MASK", "VERTICAL_MASK", "SHOULD_INCLUDE_ALL_FRAMES_IN_SUM", "FIRST_FRAME_TO_SUM", "LAST_FRAME_TO_SUM", "OUTPUT_PATH");
 
     wxDateTime now = wxDateTime::Now( );
 
     OneSecondProgressDialog* my_progress_dialog = new OneSecondProgressDialog("Write Results", "Writing results to the database...", my_job_tracker.total_number_of_jobs * 3, this, wxPD_APP_MODAL);
 
     for ( counter = 0; counter < my_job_tracker.total_number_of_jobs; counter++ ) {
-        main_frame->current_project.database.AddToBatchInsert("iliitrrrrrriiriiiiiiii", alignment_id,
+        main_frame->current_project.database.AddToBatchInsert("iliitrrrrrriiriiiiiiiit", alignment_id,
                                                               (long int)now.GetAsDOS( ),
                                                               alignment_job_id,
                                                               movie_asset_panel->ReturnAssetID(active_group.members[counter]),
@@ -1144,7 +1149,8 @@ void MyAlignMoviesPanel::WriteResultToDataBase( ) {
                                                               current_job_package.jobs[counter].arguments[12].ReturnIntegerArgument( ), // vertical mask
                                                               include_all_frames_checkbox->GetValue( ), // include all frames
                                                               current_job_package.jobs[counter].arguments[29].ReturnIntegerArgument( ), // first_frame
-                                                              current_job_package.jobs[counter].arguments[30].ReturnIntegerArgument( ) // last_frame
+                                                              current_job_package.jobs[counter].arguments[30].ReturnIntegerArgument( ), // last_frame
+                                                              current_job_package.jobs[counter].arguments[36].ReturnStringArgument( ).c_str( ) // output path
         );
 
         alignment_id++;

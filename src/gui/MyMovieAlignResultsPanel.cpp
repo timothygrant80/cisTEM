@@ -193,23 +193,25 @@ void MyMovieAlignResultsPanel::DrawCurveAndFillDetails(int row, int column) {
     int      alignment_id;
     long     datetime_of_run;
     wxString output_file;
-    double   voltage;
-    double   pixel_size;
-    double   exposure_per_frame;
-    double   pre_exposure_amount;
-    double   min_shift;
-    double   max_shift;
-    int      should_dose_filter;
-    int      should_restore_power;
-    double   termination_threshold;
-    int      max_iterations;
-    int      bfactor;
-    int      should_mask_central_cross;
-    int      horizontal_mask;
-    int      vertical_mask;
-    int      include_all_frames;
-    int      first_frame;
-    int      last_frame;
+    wxString output_path;
+
+    double voltage;
+    double pixel_size;
+    double exposure_per_frame;
+    double pre_exposure_amount;
+    double min_shift;
+    double max_shift;
+    int    should_dose_filter;
+    int    should_restore_power;
+    double termination_threshold;
+    int    max_iterations;
+    int    bfactor;
+    int    should_mask_central_cross;
+    int    horizontal_mask;
+    int    vertical_mask;
+    int    include_all_frames;
+    int    first_frame;
+    int    last_frame;
 
     // get the alignment_id and all the other details..;
 
@@ -220,7 +222,7 @@ void MyMovieAlignResultsPanel::DrawCurveAndFillDetails(int row, int column) {
                 DEBUG_ABORT;
     }
 
-    main_frame->current_project.database.GetFromBatchSelect("iliitrrrrrriiriiiiiiii", &alignment_id, &datetime_of_run, &current_alignment_job_id, &current_movie_id, &output_file, &voltage, &pixel_size, &exposure_per_frame, &pre_exposure_amount, &min_shift, &max_shift, &should_dose_filter, &should_restore_power, &termination_threshold, &max_iterations, &bfactor, &should_mask_central_cross, &horizontal_mask, &vertical_mask, &include_all_frames, &first_frame, &last_frame);
+    main_frame->current_project.database.GetFromBatchSelect("iliitrrrrrriiriiiiiiiit", &alignment_id, &datetime_of_run, &current_alignment_job_id, &current_movie_id, &output_file, &voltage, &pixel_size, &exposure_per_frame, &pre_exposure_amount, &min_shift, &max_shift, &should_dose_filter, &should_restore_power, &termination_threshold, &max_iterations, &bfactor, &should_mask_central_cross, &horizontal_mask, &vertical_mask, &include_all_frames, &first_frame, &last_frame, &output_path);
     main_frame->current_project.database.EndBatchSelect( );
 
     RightPanel->Freeze( );
@@ -324,25 +326,33 @@ void MyMovieAlignResultsPanel::DrawCurveAndFillDetails(int row, int column) {
     ResultPanel->Draw( );
 
     wxString small_image_filename = main_frame->current_project.image_asset_directory.GetFullPath( );
-    ;
-    small_image_filename += wxString::Format("/Scaled/%s", wxFileName(output_file).GetFullName( ));
+    wxString trajectory_file;
+    //    = main_frame->current_project.image_asset_directory.GetFullPath( );
 
+    small_image_filename += wxString::Format("/Scaled/%s", wxFileName(output_file).GetFullName( ));
+    wxPrintf("output_path = %s\n", output_path);
+    trajectory_file = wxString::Format("%s%s", output_path, "/fullframe_shift.txt");
+    wxPrintf("Trajectory file = %s\n", trajectory_file);
     if ( DoesFileExist(small_image_filename) == true ) {
         // ResultPanel->ImageDisplayPanel->ChangeFile(small_image_filename, "");
         if ( ResultPanel->ImageDisplayPanel->my_notebook->GetPageCount( ) == 0 ) {
             ResultPanel->ImageDisplayPanel->OpenFile(small_image_filename, "Image");
+            ResultPanel->ImageDisplayPanel->LoadTrajectory(0, trajectory_file);
         }
         else {
             ResultPanel->ImageDisplayPanel->ChangeFileForTabNumber(0, small_image_filename, "Image");
+            ResultPanel->ImageDisplayPanel->LoadTrajectory(0, trajectory_file);
         }
     }
     else if ( DoesFileExist(output_file) == true ) {
         // ResultPanel->ImageDisplayPanel->ChangeFile(output_file, "");
         if ( ResultPanel->ImageDisplayPanel->my_notebook->GetPageCount( ) == 0 ) {
             ResultPanel->ImageDisplayPanel->OpenFile(output_file, "Image");
+            ResultPanel->ImageDisplayPanel->LoadTrajectory(0, trajectory_file);
         }
         else {
             ResultPanel->ImageDisplayPanel->ChangeFileForTabNumber(0, output_file, "Image");
+            ResultPanel->ImageDisplayPanel->LoadTrajectory(0, trajectory_file);
         }
         // ResultPanel->ImageDisplayPanel->ChangeFileForTabNumber(0, output_file, "");
     }

@@ -1045,8 +1045,8 @@ void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title,
     }
     else {
         for ( long counter = 0; counter < wanted_included_image_numbers->GetCount( ); counter++ ) {
-            MyDebugAssertTrue(wanted_included_image_numbers->Item(counter) > 0 && wanted_included_image_numbers->Item(counter) <= my_panel->my_file.ReturnNumberOfSlices( ), "trying to add image numbers that don't exist")
-                    my_panel->included_image_numbers.Add(wanted_included_image_numbers->Item(counter));
+            MyDebugAssertTrue(wanted_included_image_numbers->Item(counter) > 0 && wanted_included_image_numbers->Item(counter) <= my_panel->my_file.ReturnNumberOfSlices( ), "trying to add image numbers that don't exist");
+            my_panel->included_image_numbers.Add(wanted_included_image_numbers->Item(counter));
         }
     }
 
@@ -1113,6 +1113,185 @@ void DisplayPanel::OpenFile(wxString wanted_filename, wxString wanted_tab_title,
     my_panel->ReDrawPanel( );
     //notebook->SetFocus();
     ChangeFocusToPanel( );
+}
+
+void DisplayPanel::LoadTrajectory(int wanted_tab_number, wxString wanted_my_trajectory_file, wxArrayLong** wanted_included_patch_trajectory) {
+
+    double current_scale_factor;
+    long   current_image_location;
+
+    // if ( keep_scale_and_location_if_possible ) {
+    //     DisplayNotebookPanel* current_panel = ReturnCurrentPanel( );
+
+    //     if ( current_panel != NULL ) {
+    //         current_scale_factor   = current_panel->desired_scale_factor;
+    //         current_image_location = current_panel->current_location;
+    //     }
+    //     else {
+    //         current_scale_factor   = 1.0;
+    //         current_image_location = 1;
+    //     }
+    // }
+    // else {
+    //     current_scale_factor   = 1.0;
+    //     current_image_location = 1;
+    // }
+
+    if ( ! DoesFileExist(wanted_my_trajectory_file) ) {
+        wxMessageBox(wxString::Format("Error, File does not exist (%s)", wanted_my_trajectory_file), wxT("Error"), wxOK | wxICON_INFORMATION, this);
+        return;
+    }
+
+    // if ( popup_exists ) {
+    //     DisplayNotebookPanel* current_panel = ReturnCurrentPanel( );
+
+    //     if ( current_panel != NULL ) {
+    //         current_panel->ReleaseMouse( );
+    //         current_panel->SetCursor(wxCursor(wxCURSOR_CROSS));
+    //         popup->Destroy( );
+    //         popup_exists = false;
+    //     }
+    // }
+
+    // DisplayNotebookPanel* my_panel;
+
+    // if ( (style_flags & NO_NOTEBOOK) == NO_NOTEBOOK ) {
+    //     if ( no_notebook_panel != NULL )
+    //         no_notebook_panel->Destroy( );
+    //     no_notebook_panel = new DisplayNotebookPanel(this, panel_counter);
+    //     my_panel          = no_notebook_panel;
+
+    //     if ( force_local_survey )
+    //         no_notebook_panel->grey_values_decided_by = LOCAL_GREYS;
+    //     MainSizer->Insert(1, no_notebook_panel, 1, wxEXPAND | wxALL, 5);
+    //     Layout( );
+    // }
+    // else {
+    //     panel_counter++;
+    //     my_panel = new DisplayNotebookPanel(my_notebook, panel_counter);
+    //     if ( force_local_survey )
+    //         my_panel->grey_values_decided_by = LOCAL_GREYS;
+    // }
+    // from here it is changed
+    // my_panel->my_file.OpenFile(wanted_filename.ToStdString( ), false);
+    DisplayNotebookPanel* current_panel;
+    if ( (style_flags & NO_NOTEBOOK) == NO_NOTEBOOK )
+        current_panel = no_notebook_panel;
+    else {
+
+        MyDebugAssertTrue(wanted_tab_number < my_notebook->GetPageCount( ) && wanted_tab_number >= 0, "Asking for a tab that does not exist");
+
+        if ( wanted_tab_number == my_notebook->GetSelection( ) && popup_exists ) {
+            DisplayNotebookPanel* current_panel = ReturnCurrentPanel( );
+
+            if ( current_panel != NULL ) {
+                current_panel->ReleaseMouse( );
+                current_panel->SetCursor(wxCursor(wxCURSOR_CROSS));
+                popup->Destroy( );
+                popup_exists = false;
+            }
+        }
+
+        current_panel = (DisplayNotebookPanel*)my_notebook->GetPage(wanted_tab_number);
+        // }
+
+        // current_panel->my_trajectory.Open(wanted_my_trajectory_file.ToStdString( ), OPEN_TO_READ, 2);
+        current_panel->my_trajectory = new NumericTextFile(wanted_my_trajectory_file.ToStdString( ), OPEN_TO_READ, 2);
+
+        int   lines = current_panel->my_trajectory->number_of_lines;
+        float temp_array[2];
+
+        for ( long image_counter = 0; image_counter < lines; image_counter++ ) {
+            // my_image.crop( );
+            current_panel->my_trajectory->ReadLine(temp_array);
+            current_panel->trajectory_x.push_back(temp_array[0]);
+            current_panel->trajectory_y.push_back(temp_array[1]);
+            wxPrintf("loaded trajectory %f %f\n", temp_array[0], temp_array[1]);
+        }
+    }
+
+    // if ( ! my_panel->my_file.IsOpen( ) ) {
+    //     wxMessageBox(wxString::Format("Error, Cannot open file (%s)", wanted_filename), wxT("Error"), wxOK | wxICON_INFORMATION, this);
+    //     return;
+    // }
+
+    // // which images are we including..
+
+    // if ( wanted_included_image_numbers == NULL ) {
+    //     for ( long counter = 1; counter <= my_panel->my_file.ReturnNumberOfSlices( ); counter++ ) {
+    //         my_panel->included_image_numbers.Add(counter);
+    //     }
+    // }
+    // else {
+    //     for ( long counter = 0; counter < wanted_included_image_numbers->GetCount( ); counter++ ) {
+    //         MyDebugAssertTrue(wanted_included_image_numbers->Item(counter) > 0 && wanted_included_image_numbers->Item(counter) <= my_panel->my_file.ReturnNumberOfSlices( ), "trying to add image numbers that don't exist");
+    //         my_panel->included_image_numbers.Add(wanted_included_image_numbers->Item(counter));
+    //     }
+    // }
+
+    // // setup the panel attributes...
+
+    // my_panel->filename        = wanted_filename;
+    // my_panel->input_is_a_file = true;
+
+    // /*my_panel->image_is_selected = new bool[my_panel->first_header.number_following + 2];
+
+    // for (int mycounter = 0; mycounter < my_panel->first_header.number_following + 2; mycounter++)
+    // {
+    // 	my_panel->image_is_selected[mycounter] = false;
+    // }*/
+
+    // // add the panel
+
+    // if ( my_panel->panel_image != NULL )
+    //     delete my_panel->panel_image;
+    // my_panel->panel_image = new wxImage(int(my_panel->my_file.ReturnXSize( )), int(my_panel->my_file.ReturnYSize( )));
+    // my_panel->tab_title   = wanted_tab_title;
+
+    // my_panel->desired_scale_factor = current_scale_factor;
+    // if ( my_panel->included_image_numbers.GetCount( ) > current_image_location ) {
+    //     my_panel->current_location = current_image_location;
+    // }
+
+    // if ( (style_flags & NO_NOTEBOOK) == NO_NOTEBOOK ) {
+    // }
+    // else {
+    //     my_notebook->Freeze( );
+    //     my_notebook->AddPage(my_panel, wanted_tab_title, false);
+    //     my_notebook->Thaw( );
+    //     my_notebook->SetSelection(my_notebook->GetPageCount( ) - 1);
+    // }
+
+    // // This was moved here because calling ClearSelection before the panel was added
+    // // resulted in a crash from a debug assert -- the current page was still null
+    // if ( (style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || ReturnCurrentPanel( )->picking_mode == IMAGES_PICK ) {
+    //     my_panel->image_is_selected = new bool[my_panel->my_file.ReturnNumberOfSlices( ) + 1];
+    //     ClearSelection(false);
+    // }
+
+    // // we have switched focus so update toolbar..
+
+    // UpdateToolbar( );
+
+    // // we can directly call the drawing now..
+
+    // Refresh( );
+    // Update( );
+
+    // // if there is only one image, then set single image mode to true by default
+    // if ( is_from_display_program ) {
+    //     if ( my_panel->included_image_numbers.GetCount( ) == 1 ) {
+    //         my_panel->single_image = true;
+    //         my_panel->picking_mode = COORDS_PICK;
+    //     }
+    //     else {
+    //         my_panel->picking_mode = IMAGES_PICK;
+    //     }
+    // }
+
+    // my_panel->ReDrawPanel( );
+    // //notebook->SetFocus();
+    // ChangeFocusToPanel( );
 }
 
 void DisplayPanel::ChangeFileForTabNumber(int wanted_tab_number, wxString wanted_filename, wxString wanted_tab_title, wxArrayLong* wanted_included_image_numbers) {
@@ -2521,10 +2700,10 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
                             buffer_image.ComputeAmplitudeSpectrumFull2D(&image_memory_buffer[image_counter]);
                             image_memory_buffer[image_counter].ZeroCentralPixel( );
                         }
-                        if ( use_trajectory ) {
-                            wxPrintf("enter the use trajectory\n");
-                            paintdc.DrawCircle(10, 10, 5);
-                        }
+                        // if ( use_trajectory ) {
+                        //     wxPrintf("enter the use trajectory\n");
+                        //     paintdc.DrawCircle(10, 10, 5);
+                        // }
                     }
                 }
 

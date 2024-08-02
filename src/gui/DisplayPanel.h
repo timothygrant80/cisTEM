@@ -89,6 +89,8 @@ class
     void ChangeFile(wxString wanted_filename, wxString wanted_tab_title, wxArrayLong* wanted_included_image_numbers = NULL);
     void ChangeFileForTabNumber(int wanted_tab_number, wxString wanted_filename, wxString wanted_tab_title, wxArrayLong* wanted_included_image_numbers = NULL);
 
+    void LoadTrajectory(int wanted_tab_number, wxString wated_my_trajectory_file, wxArrayLong** wanted_included_patch_trajectory = NULL); //, bool keep_scale_and_location_if_possible = false);
+
     void SetTabNameSaved( );
     void SetTabNameUnsaved( );
     void RefreshTabName( );
@@ -193,9 +195,11 @@ class
 
     DisplayPanel* parent_display_panel;
 
-    ImageFile my_file;
-    wxString  filename;
-    bool      input_is_a_file;
+    ImageFile        my_file;
+    wxString         filename;
+    bool             input_is_a_file;
+    wxString         my_trajectory_file;
+    NumericTextFile* my_trajectory;
 
     Image* image_to_display;
     bool   do_i_have_image_ownership;
@@ -206,7 +210,9 @@ class
 
     wxString tab_title;
 
-    wxArrayLong included_image_numbers;
+    wxArrayLong     included_image_numbers;
+    wxVector<float> trajectory_x;
+    wxVector<float> trajectory_y;
 
     void ReDrawPanel( );
 

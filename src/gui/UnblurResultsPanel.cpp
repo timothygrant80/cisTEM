@@ -3,7 +3,11 @@
 
 UnblurResultsPanel::UnblurResultsPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name)
     : UnblurResultsPanelParent(parent, id, pos, size, style) {
-    ImageDisplayPanel->Initialise(CAN_FFT | NO_NOTEBOOK | FIRST_LOCATION_ONLY | START_WITH_AUTO_CONTRAST | START_WITH_FOURIER_SCALING | DO_NOT_SHOW_STATUS_BAR);
+    // ImageDisplayPanel->Initialise(CAN_FFT | NO_NOTEBOOK | FIRST_LOCATION_ONLY | START_WITH_AUTO_CONTRAST | START_WITH_FOURIER_SCALING | DO_NOT_SHOW_STATUS_BAR);
+    ImageDisplayPanel->Initialise(CAN_FFT | FIRST_LOCATION_ONLY | START_WITH_AUTO_CONTRAST | START_WITH_FOURIER_SCALING | DO_NOT_SHOW_STATUS_BAR); // | SKIP_LEFTCLICK_TO_PARENT);
+    // ImageDisplayPanel->Initialise(FIRST_LOCATION_ONLY | START_WITH_AUTO_CONTRAST | START_WITH_FOURIER_SCALING | DO_NOT_SHOW_STATUS_BAR | SKIP_LEFTCLICK_TO_PARENT);
+    // ImageDisplayPanel->my_notebook->SetSelection(0);
+    // ImageDisplayPanel->Bind(wxEVT_LEFT_DOWN, &UnblurResultsPanel::OnImageLeftClick, this);
 
     current_x_shift_vector_layer = new mpFXYVector(("X-Shift"));
     current_y_shift_vector_layer = new mpFXYVector(("Y-Shift"));
@@ -70,6 +74,8 @@ UnblurResultsPanel::UnblurResultsPanel(wxWindow* parent, wxWindowID id, const wx
 
 UnblurResultsPanel::~UnblurResultsPanel( ) {
     delete current_plot_window;
+    // ImageDisplayPanel->Unbind(wxEVT_LEFT_DOWN, &UnblurResultsPanel::OnImageLeftClick, this);
+
     //delete legend;
     //delete title;
     //delete current_x_shift_vector_layer;
@@ -77,6 +83,41 @@ UnblurResultsPanel::~UnblurResultsPanel( ) {
     //delete current_xaxis;
     //delete current_yaxis;
 }
+
+// void UnblurResultsPanel::OnImageLeftClick(wxMouseEvent& event) {
+//     // //     long x_pos;
+//     // // long y_pos;
+//     // // int  counter;
+
+//     // // event.GetPosition(&x_pos, &y_pos);
+
+//     // // int peak_x_pos;
+//     // // int peak_y_pos;
+
+//     // DisplayNotebookPanel* current_panel = ImageDisplayPanel->ReturnCurrentPanel( );
+//     // // here need to convert the trajectory to the current scale factor
+
+//     // peak_x_pos = myroundint(x_pos / current_panel->actual_scale_factor);
+//     // peak_y_pos = myroundint((current_panel->current_y_size - y_pos + 1) / current_panel->actual_scale_factor);
+
+//     // int closest_peak     = -1;
+//     // int closest_distance = INT_MAX;
+//     // int current_distance;
+
+//     // for ( counter = 0; counter < current_result.found_peaks.GetCount( ); counter++ ) {
+//     //     current_distance = abs(current_result.found_peaks[counter].x_pos - peak_x_pos) + abs(current_result.found_peaks[counter].y_pos - peak_y_pos);
+
+//     //     if ( current_distance < closest_distance ) {
+//     //         closest_distance = current_distance;
+//     //         closest_peak     = counter;
+//     //     }
+//     // }
+
+//     // if ( closest_peak != -1 && closest_distance < 500 ) {
+//     //     PeakListCtrl->SetItemState(closest_peak, wxLIST_STATE_SELECTED, wxLIST_STATE_SELECTED);
+//     //     PeakListCtrl->EnsureVisible(closest_peak);
+//     // }
+// }
 
 void UnblurResultsPanel::Clear( ) {
     ClearGraph( );

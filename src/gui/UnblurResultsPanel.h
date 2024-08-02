@@ -15,6 +15,7 @@ class
     void ClearGraph( );
     void AddPoint(double dose, double x_movement, double y_movement);
     void Draw( );
+    // void OnImageLeftClick(wxMouseEvent& event);
 
     std::vector<double> current_accumulated_dose_data;
     std::vector<double> current_x_movement_data;

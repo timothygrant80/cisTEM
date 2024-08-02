@@ -24,6 +24,7 @@ class
   public:
     bool DoCalculation( );
     void DoInteractiveUserInput( );
+    // void MasterHandleProgramDefinedResult(float* result_array, long array_size, int result_number, int number_of_expected_results);
 
   private:
 };

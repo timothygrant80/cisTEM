@@ -1012,10 +1012,34 @@ void MyAlignMoviesPanel::ProcessResult(JobResult* result_to_process) // this wil
         GraphPanel->Draw( );
 
         if ( DoesFileExist(current_job_package.jobs[result_to_process->job_number].arguments[28].ReturnStringArgument( )) == true ) {
-            GraphPanel->ImageDisplayPanel->ChangeFile(current_job_package.jobs[result_to_process->job_number].arguments[28].ReturnStringArgument( ), "");
+            // GraphPanel->ImageDisplayPanel->ChangeFile(current_job_package.jobs[result_to_process->job_number].arguments[28].ReturnStringArgument( ), "");
+            if ( GraphPanel->ImageDisplayPanel->my_notebook->GetPageCount( ) == 0 ) {
+                wxPrintf("case1 1 \n");
+                GraphPanel->ImageDisplayPanel->OpenFile(current_job_package.jobs[result_to_process->job_number].arguments[28].ReturnStringArgument( ), current_filename.GetName( ));
+                DisplayNotebookPanel* current_panel         = reinterpret_cast<DisplayNotebookPanel*>(GraphPanel->ImageDisplayPanel->my_notebook->GetPage(0));
+                current_panel->use_unscaled_image_for_popup = true;
+            }
+            else {
+                wxPrintf("case1 2 \n");
+                GraphPanel->ImageDisplayPanel->ChangeFileForTabNumber(0, current_job_package.jobs[result_to_process->job_number].arguments[28].ReturnStringArgument( ), "");
+            }
+            // if ( DoesFileExist(current_job_package.jobs[result_to_process->job_number].arguments[36].ReturnStringArgument( ) + "fullframe_shift.txt") == true ) {
+
+            // }
         }
-        else if ( DoesFileExist(sum_filename.GetFullPath( )) == true )
-            GraphPanel->ImageDisplayPanel->ChangeFile(sum_filename.GetFullPath( ), sum_filename.GetShortPath( ));
+        else if ( DoesFileExist(sum_filename.GetFullPath( )) == true ) {
+            if ( GraphPanel->ImageDisplayPanel->my_notebook->GetPageCount( ) == 0 ) {
+                wxPrintf("case2 1 \n");
+                GraphPanel->ImageDisplayPanel->ChangeFile(sum_filename.GetFullPath( ), sum_filename.GetShortPath( ));
+                DisplayNotebookPanel* current_panel         = reinterpret_cast<DisplayNotebookPanel*>(GraphPanel->ImageDisplayPanel->my_notebook->GetPage(0));
+                current_panel->use_unscaled_image_for_popup = true;
+            }
+            else {
+                wxPrintf("case2 2 \n");
+                // GraphPanel->ImageDisplayPanel->ChangeFile(sum_filename.GetFullPath( ), sum_filename.GetShortPath( ));
+                GraphPanel->ImageDisplayPanel->ChangeFileForTabNumber(0, sum_filename.GetFullPath( ), sum_filename.GetShortPath( ));
+            }
+        }
 
         if ( graph_is_hidden == true ) {
             GraphPanel->Show(true);

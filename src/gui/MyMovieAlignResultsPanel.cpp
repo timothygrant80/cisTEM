@@ -328,10 +328,23 @@ void MyMovieAlignResultsPanel::DrawCurveAndFillDetails(int row, int column) {
     small_image_filename += wxString::Format("/Scaled/%s", wxFileName(output_file).GetFullName( ));
 
     if ( DoesFileExist(small_image_filename) == true ) {
-        ResultPanel->ImageDisplayPanel->ChangeFile(small_image_filename, "");
+        // ResultPanel->ImageDisplayPanel->ChangeFile(small_image_filename, "");
+        if ( ResultPanel->ImageDisplayPanel->my_notebook->GetPageCount( ) == 0 ) {
+            ResultPanel->ImageDisplayPanel->OpenFile(small_image_filename, "Image");
+        }
+        else {
+            ResultPanel->ImageDisplayPanel->ChangeFileForTabNumber(0, small_image_filename, "Image");
+        }
     }
     else if ( DoesFileExist(output_file) == true ) {
-        ResultPanel->ImageDisplayPanel->ChangeFile(output_file, "");
+        // ResultPanel->ImageDisplayPanel->ChangeFile(output_file, "");
+        if ( ResultPanel->ImageDisplayPanel->my_notebook->GetPageCount( ) == 0 ) {
+            ResultPanel->ImageDisplayPanel->OpenFile(output_file, "Image");
+        }
+        else {
+            ResultPanel->ImageDisplayPanel->ChangeFileForTabNumber(0, output_file, "Image");
+        }
+        // ResultPanel->ImageDisplayPanel->ChangeFileForTabNumber(0, output_file, "");
     }
 
     RightPanel->Layout( );

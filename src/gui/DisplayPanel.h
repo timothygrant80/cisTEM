@@ -120,6 +120,7 @@ class
     void OnNext(wxCommandEvent& event);
     void OnHistogram(wxCommandEvent& event);
     void OnFFT(wxCommandEvent& event);
+    void OnTrajectory(wxCommandEvent& event);
     void OnInvert(wxCommandEvent& event);
     void OnOpen(wxCommandEvent& event);
     void OnPrevious(wxCommandEvent& event);
@@ -320,6 +321,7 @@ class
     bool resolution_instead_of_radius;
     bool should_refresh;
     bool use_fft;
+    bool use_trajectory;
     bool invert_contrast;
     bool suspend_overlays;
 
@@ -461,6 +463,7 @@ enum {
     Toolbar_Refresh,
     Toolbar_Histogram,
     Toolbar_FFT,
+    Toolbar_Traj,
     Toolbar_High_Quality,
     Toolbar_Invert,
     //	Location_Text_Control,

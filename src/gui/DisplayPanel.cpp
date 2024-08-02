@@ -26,6 +26,7 @@ DisplayPanel::DisplayPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, 
     Bind(wxEVT_MENU, &DisplayPanel::OnInvert, this, Toolbar_Invert);
     Bind(wxEVT_MENU, &DisplayPanel::OnOpen, this, Toolbar_Open);
     Bind(wxEVT_MENU, &DisplayPanel::OnRefresh, this, Toolbar_Refresh);
+    Bind(wxEVT_MENU, &DisplayPanel::OnTrajectory, this, Toolbar_Traj);
 
     Bind(wxEVT_TEXT_ENTER, &DisplayPanel::ChangeLocation, this, Toolbar_Location_Text);
     Bind(wxEVT_TEXT_ENTER, &DisplayPanel::ChangeScaling, this, Toolbar_Scale_Combo_Control);
@@ -155,6 +156,13 @@ void DisplayPanel::Initialise(int wanted_style_flags) {
 
     Toolbar->AddTool(Toolbar_Invert, wxT("Invert Contrast"), wxBITMAP_PNG_FROM_DATA(display_invert_icon), wxNullBitmap, wxITEM_CHECK, wxT("Invert Image Contrast"), wxT("Invert Image Contrast"));
     Toolbar->EnableTool(Toolbar_Invert, false);
+
+    Toolbar->AddSeparator( );
+
+    //this is for icon display
+    Toolbar->AddTool(Toolbar_Traj, wxT("Plot Trajectory"), wxBITMAP_PNG_FROM_DATA(display_invert_icon), wxNullBitmap, wxITEM_CHECK, wxT("Plot Trajectory"), wxT("Plot Trajectory"));
+    // need a new icon for this
+    Toolbar->EnableTool(Toolbar_Traj, false);
 
     Toolbar->AddSeparator( );
 
@@ -358,6 +366,171 @@ void DisplayPanel::OnFFT(wxCommandEvent& WXUNUSED(event)) {
 
     current_panel->should_refresh = true;
     current_panel->ReDrawPanel( );
+}
+
+void DisplayPanel::OnTrajectory(wxCommandEvent& WXUNUSED(event)) {
+    DisplayNotebookPanel* current_panel = ReturnCurrentPanel( );
+
+    if ( current_panel->use_trajectory )
+        current_panel->use_trajectory = false;
+    else {
+        current_panel->use_trajectory = true;
+    }
+
+    // current_panel->should_refresh = true;
+    // current_panel->ReDrawPanel( );
+
+    //****
+    // void DisplayNotebookPanel::OnPaint(wxPaintEvent& evt) {
+    // wxPaintDC dc(this);
+    wxPaintDC dc(current_panel);
+
+    int window_x_size;
+    int window_y_size;
+    //int point_size = 3 * actual_scale_factor;
+
+    //if (point_size < 3) point_size = 3;
+
+    // int point_size = selected_point_size;
+
+    long counter;
+    long coord_counter;
+    long waypoint_counter;
+
+    wxCoord actual_x, actual_y;
+    float   tangent_x, tangent_y;
+
+    GetClientSize(&window_x_size, &window_y_size);
+
+    // is our stored bitmap the correct size? if not redraw
+    if ( current_panel->use_trajectory ) {
+        if ( window_x_size != current_panel->panel_bitmap.GetWidth( ) || window_y_size != current_panel->panel_bitmap.GetHeight( ) ) {
+            current_panel->ReDrawPanel( );
+        }
+        else if ( ! current_panel->panel_image_has_correct_greys || ! current_panel->panel_image_has_correct_scale ) {
+            current_panel->ReDrawPanel( );
+        }
+        //else
+        {
+            //just redraw the areas that have changed..
+
+            int              vX, vY, vW, vH; // Dimensions of client area in pixels
+            wxRegionIterator upd(GetUpdateRegion( )); // get the update rect list
+
+            while ( upd ) {
+                vX = upd.GetX( );
+                vY = upd.GetY( );
+                vW = upd.GetW( );
+                vH = upd.GetH( );
+
+                // Repaint this rectangle
+
+                if ( vX + vW <= current_panel->panel_bitmap.GetWidth( ) && vY + vH <= current_panel->panel_bitmap.GetHeight( ) )
+                    dc.DrawBitmap(current_panel->panel_bitmap.GetSubBitmap(wxRect(vX, vY, vW, vH)), vX, vY);
+
+                upd++;
+            }
+
+            if ( ! current_panel->suspend_overlays ) {
+
+                dc.SetPen(*wxRED);
+
+                counter = current_panel->current_location;
+
+                // for ( int y = 0; y < current_panel->images_in_y; y++ ) {
+                //     for ( int x = 0; x < current_panel->images_in_x; x++ ) {
+                if ( counter <= current_panel->ReturnNumberofImages( ) ) {
+                    dc.DrawLine(100, 100, 200, 200);
+
+                    // if ( (parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || (parent_display_panel->is_from_display_program && picking_mode == IMAGES_PICK) ) {
+                    //     if ( image_is_selected[counter] ) {
+
+                    //         // draw a rectangle around the image..
+                    //         dc.DrawRoundedRectangle(10, 10, 10, -.5);
+
+                    //         // dc.DrawRoundedRectangle(x * current_x_size, y * current_y_size, current_x_size, current_y_size, -.5);
+                    //     }
+                    // }
+
+                    // Otherwise, we're picking coords (and therefore in display program)
+                    // else if ( parent_display_panel->is_from_display_program && parent_display_panel->ReturnCurrentPanel( )->picking_mode == COORDS_PICK ) {
+
+                    // find all the coordinates for this image..
+                    // dc.DrawCircle(100, 100, 10);
+
+                    // for ( coord_counter = 0; coord_counter < coord_tracker->number_of_coords; coord_counter++ ) {
+                    //     if ( coord_tracker->coords[coord_counter].image_number == counter ) {
+
+                    //         // draw the point on..
+                    //         if ( single_image ) {
+                    //             // we need to check if the co-ordinate is inside the current view, and if so, draw it.
+
+                    //             if ( coord_tracker->coords[coord_counter].x_pos > single_image_x && coord_tracker->coords[coord_counter].x_pos < single_image_x + window_x_size / actual_scale_factor && coord_tracker->coords[coord_counter].y_pos > single_image_y && coord_tracker->coords[coord_counter].y_pos < single_image_y + window_y_size / actual_scale_factor ) {
+                    //                 dc.DrawCircle((coord_tracker->coords[coord_counter].x_pos - single_image_x) * actual_scale_factor, (coord_tracker->coords[coord_counter].y_pos - single_image_y) * actual_scale_factor, point_size);
+                    //             }
+
+                    //             // if this coord is the last coord, and show selection distances is true, show the distance.
+
+                    //             if ( coord_counter == coord_tracker->number_of_coords - 1 && coord_tracker->number_of_coords > 1 && show_selection_distances && coord_tracker->coords[coord_counter].image_number == coord_tracker->coords[coord_counter - 1].image_number ) {
+                    //                 dc.DrawLine((coord_tracker->coords[coord_counter].x_pos - single_image_x) * actual_scale_factor, (coord_tracker->coords[coord_counter].y_pos - single_image_y) * actual_scale_factor, (coord_tracker->coords[coord_counter - 1].x_pos - single_image_x) * actual_scale_factor, (coord_tracker->coords[coord_counter - 1].y_pos - single_image_y) * actual_scale_factor);
+                    //             }
+                    //         }
+                    //         else {
+                    //             dc.DrawCircle(x * current_x_size + (coord_tracker->coords[coord_counter].x_pos * actual_scale_factor), y * current_y_size + (coord_tracker->coords[coord_counter].y_pos * actual_scale_factor), point_size);
+
+                    //             if ( coord_counter == coord_tracker->number_of_coords - 1 && coord_tracker->number_of_coords > 1 && show_selection_distances && coord_tracker->coords[coord_counter].image_number == coord_tracker->coords[coord_counter - 1].image_number ) {
+                    //                 dc.DrawLine(x * current_x_size + (coord_tracker->coords[coord_counter].x_pos * actual_scale_factor), y * current_y_size + (coord_tracker->coords[coord_counter].y_pos * actual_scale_factor), x * current_x_size + (coord_tracker->coords[coord_counter - 1].x_pos * actual_scale_factor), y * current_y_size + (coord_tracker->coords[coord_counter - 1].y_pos * actual_scale_factor));
+                    //             }
+                    //         }
+                    //     }
+                    // }
+                    // }
+                    //         counter++;
+                    //     }
+                    // }
+                }
+
+                // if ( template_matching_marker_x_pos != -1.0 && template_matching_marker_y_pos != -1.0 ) {
+                //     dc.SetPen(*wxRED);
+                //     dc.SetBrush(wxBrush(*wxRED, wxTRANSPARENT));
+                //     int radius = myroundint(template_matching_marker_radius * actual_scale_factor);
+                //     if ( radius < 5 )
+                //         radius = 5;
+                //     dc.DrawCircle(myroundint(template_matching_marker_x_pos * actual_scale_factor), current_y_size - myroundint(template_matching_marker_y_pos * actual_scale_factor) - 1, radius);
+                // }
+
+                // if ( current_location <= blue_selection_square_location && blue_selection_square_location <= (current_location + images_in_current_view) ) {
+                //     counter = current_location;
+
+                //     for ( int y = 0; y < images_in_y; y++ ) {
+                //         for ( int x = 0; x < images_in_x; x++ ) {
+                //             if ( ReturnNumberofImages( ) >= counter ) {
+                //                 if ( counter == blue_selection_square_location ) {
+                //                     dc.SetPen(wxColor(38, 124, 181));
+                //                     // draw a rectangle around the image..
+
+                //                     if ( single_image ) {
+                //                         dc.DrawRectangle(0, 0, window_x_size, window_y_size);
+                //                     }
+                //                     else
+                //                         dc.DrawRectangle(x * current_x_size, y * current_y_size, current_x_size, current_y_size);
+                //                 }
+                //             }
+
+                //             counter++;
+                //         }
+                //     }
+                // }
+            }
+        }
+    }
+    else {
+        current_panel->ReDrawPanel( ); // this will remove the trajectory when the button is toggled off
+    }
+    // current_panel->should_refresh = true;
+    // current_panel->ReDrawPanel( );
+    // evt.Skip( );
+    //*************************
 }
 
 void DisplayPanel::OnHighQuality(wxCommandEvent& WXUNUSED(event)) {
@@ -644,6 +817,7 @@ void DisplayPanel::UpdateToolbar(void) {
         Toolbar->EnableTool(Toolbar_Global, false);
         Toolbar->EnableTool(Toolbar_Manual, false);
         Toolbar->EnableTool(Toolbar_Invert, false);
+        Toolbar->EnableTool(Toolbar_Traj, false);
 
         Toolbar->EnableTool(Toolbar_High_Quality, false);
 
@@ -699,6 +873,7 @@ void DisplayPanel::UpdateToolbar(void) {
             Toolbar->EnableTool(Toolbar_Auto, true);
             Toolbar->EnableTool(Toolbar_Global, true);
             Toolbar->EnableTool(Toolbar_Manual, true);
+            Toolbar->EnableTool(Toolbar_Traj, true);
 
             if ( (style_flags & CAN_CHANGE_FILE) == CAN_CHANGE_FILE )
                 Toolbar->EnableTool(Toolbar_Refresh, true);
@@ -2193,6 +2368,7 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
 
     wxMemoryDC memDC;
     wxMemoryDC dc;
+    wxPaintDC  paintdc(this);
 
     // we need to know how many images we are going to read in.. first get the current size of the window..
 
@@ -2217,6 +2393,13 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
         dc.SetBackground(*wxBLACK_BRUSH);
         dc.Clear( );
         dc.SelectObject(wxNullBitmap);
+
+        paintdc.SetPen(*wxRED);
+        paintdc.SetBrush(wxBrush(*wxRED, wxTRANSPARENT));
+        // int radius = myroundint(template_matching_marker_radius * actual_scale_factor);
+        // if ( radius < 5 )
+        //     radius = 5;
+        // dc.DrawCircle(myroundint(template_matching_marker_x_pos * actual_scale_factor), current_y_size - myroundint(template_matching_marker_y_pos * actual_scale_factor) - 1, radius);
 
         //Update();
 
@@ -2295,6 +2478,10 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
                             buffer_image.ComputeAmplitudeSpectrumFull2D(&image_memory_buffer[image_counter]);
                             image_memory_buffer[image_counter].ZeroCentralPixel( );
                         }
+                        if ( use_trajectory ) {
+                            wxPrintf("enter the use trajectory\n");
+                            paintdc.DrawCircle(10, 10, 5);
+                        }
                     }
                 }
             }
@@ -2333,6 +2520,10 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
                             buffer_image.DivideByConstant(sqrt(buffer_image.number_of_real_space_pixels));
                             buffer_image.ComputeAmplitudeSpectrumFull2D(&image_memory_buffer[image_counter]);
                             image_memory_buffer[image_counter].ZeroCentralPixel( );
+                        }
+                        if ( use_trajectory ) {
+                            wxPrintf("enter the use trajectory\n");
+                            paintdc.DrawCircle(10, 10, 5);
                         }
                     }
                 }

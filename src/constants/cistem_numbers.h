@@ -9,6 +9,7 @@ inline constexpr std::complex<float> I(0.0, 1.0);
 #include <numbers>
 using namespace std::numbers;
 #else
+
 // For now we do not have c++20 in compiling gpu code so we need to define this for constants. Modified from /usr/include/c++/11/numbers
 /// pi
 
@@ -52,6 +53,29 @@ inline constexpr _Tp sqrt3_v = static_cast<_Tp>(1.732050807568877293527446341505
 template <typename _Tp>
 inline constexpr _Tp inv_sqrt3_v = _Tp(1) / sqrt3_v<_Tp>;
 
-#endif
+#endif // __cplusplus > 201703L
 
-#endif
+#ifndef ENABLEGPU
+
+typedef struct _int3 {
+    int x;
+    int y;
+    int z;
+} int3;
+
+typedef struct _int4 {
+    int x;
+    int y;
+    int z;
+    int w;
+} int4;
+
+typedef struct _float3 {
+    float x;
+    float y;
+    float z;
+} float3;
+
+#endif // ENABLEGPU
+
+#endif // include guard

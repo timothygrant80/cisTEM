@@ -359,7 +359,8 @@ float ProjectionComparisonObjects::DoGpuProjection( ) {
     MyDebugAssertTrue(current_particle_image->is_in_memory_gpu, "gpu_particle_image is not allocated");
 #endif
 
-    current_projection->ExtractSliceShiftAndCtf(current_density_map, &gpu_ctf_image, particle->alignment_parameters, reference_volume->pixel_size, particle->pixel_size / particle->filter_radius_high, true,
+    constexpr float real_space_binning_factor = 1.0f;
+    current_projection->ExtractSliceShiftAndCtf(current_density_map, &gpu_ctf_image, particle->alignment_parameters, reference_volume->pixel_size, real_space_binning_factor, particle->pixel_size / particle->filter_radius_high, true,
                                                 swap_quadrants, apply_shifts, apply_ctf, absolute_ctf);
 
 #ifdef CALCULATE_SCORE_ON_CPU_DISABLE_GPU_PARTICLE

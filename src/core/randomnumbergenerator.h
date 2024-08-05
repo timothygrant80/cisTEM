@@ -1,4 +1,5 @@
 /*  \brief  RandomNumberGenerator class */
+constexpr bool debug_with_constant_seed = false;
 
 class RandomNumberGenerator {
 
@@ -6,13 +7,21 @@ class RandomNumberGenerator {
     int            random_seed; // Seed for all instances of this class even though it is not declared static!
     bool           use_internal; // Use internal implementation of rand and srand to enable multiple PRNGs within a single program
     unsigned int   next_seed; // State variable for internal PRNG
-    const uint64_t seed = std::chrono::high_resolution_clock::now( ).time_since_epoch( ).count( );
+    const uint64_t random_seed_std_routines = std::chrono::high_resolution_clock::now( ).time_since_epoch( ).count( );
+    const uint64_t const_seed_std_routines  = 1147;
 
     // Constructor
     RandomNumberGenerator(bool internal = false);
     RandomNumberGenerator(int random_seed, bool internal = false);
 
-    RandomNumberGenerator(float thread_id) : rng(rd( )) { rng.seed(seed); }
+    RandomNumberGenerator(float thread_id) : rng(rd( )) {
+        if constexpr ( debug_with_constant_seed ) {
+            rng.seed(const_seed_std_routines);
+        }
+        else {
+            rng.seed(random_seed_std_routines);
+        }
+    }
 
     // Seed generator
     void SetSeed(int random_seed);

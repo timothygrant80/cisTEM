@@ -1,3 +1,5 @@
+class Image;
+class ImageFile;
 
 class TemplateMatchFoundPeakInfo {
   public:

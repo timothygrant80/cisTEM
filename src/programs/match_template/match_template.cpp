@@ -11,14 +11,14 @@
 #include "../../constants/constants.h"
 
 #if defined(ENABLE_FastFFT) && defined(ENABLEGPU)
-#include "../../ext/FastFFT/include/FastFFT.h"
+#include "../../../include/FastFFT/include/FastFFT.h"
 #endif
 
 class AggregatedTemplateResult {
   public:
     int   image_number;
     int   number_of_received_results;
-    float total_number_of_ccs;
+    float total_number_of_angles_searched;
 
     float* collated_data_array;
     float* collated_mip_data;
@@ -288,7 +288,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     float histogram_step;
 
     float expected_threshold;
-    float actual_number_of_ccs_calculated;
+    float actual_number_of_angles_searched;
 
     double histogram_min_scaled; // scaled for the x*y scaling which is only applied at the end.
     double histogram_step_scaled; // scaled for the x*y scaling which is only applied at the end.
@@ -626,7 +626,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     //    wxPrintf("Searching %i - %i of %i total positions\n", first_search_position, last_search_position, global_euler_search.number_of_search_positions);
     //    wxPrintf("psi_start = %f, psi_max = %f, psi_step = %f\n", psi_start, psi_max, psi_step);
 
-    actual_number_of_ccs_calculated = 0.0;
+    actual_number_of_angles_searched = 0.0;
 
     wxDateTime overall_start;
     wxDateTime overall_finish;
@@ -778,7 +778,7 @@ bool MatchTemplateApp::DoCalculation( ) {
                         GPU[tIDX].my_dist.at(0).CopyToHostAndAdd(histogram_data);
 
                         //                    current_correlation_position += GPU[tIDX].total_number_of_cccs_calculated;
-                        actual_number_of_ccs_calculated += GPU[tIDX].total_number_of_cccs_calculated;
+                        actual_number_of_angles_searched += GPU[tIDX].total_number_of_cccs_calculated;
 
                     } // end of omp critical block
                 } // end of parallel block
@@ -893,7 +893,7 @@ bool MatchTemplateApp::DoCalculation( ) {
                         my_progress->Update(current_correlation_position);
 
                     if ( is_running_locally == false ) {
-                        actual_number_of_ccs_calculated++;
+                        actual_number_of_angles_searched++;
                         temp_float             = current_correlation_position;
                         JobResult* temp_result = new JobResult;
                         temp_result->SetResult(1, &temp_float);
@@ -1175,9 +1175,9 @@ bool MatchTemplateApp::DoCalculation( ) {
             result[cm_t::image_size_y]                = max_intensity_projection.logical_y_dimension;
             result[cm_t::image_real_memory_allocated] = max_intensity_projection.real_memory_allocated;
             result[cm_t::number_of_histogram_bins]    = histogram_number_of_points;
-            result[cm_t::number_of_cccs]              = actual_number_of_ccs_calculated;
+            result[cm_t::number_of_angles_searched]   = actual_number_of_angles_searched;
             result[cm_t::ccc_scalar]                  = (float)sqrt_input_pixels;
-            result[cm_t::pixel_size]                  = pixel_size;
+            result[cm_t::input_pixel_size]            = pixel_size;
         }
 
         result_array_counter = cistem::match_template::number_of_meta_data_values;
@@ -1401,9 +1401,9 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
 
         temp_image.Allocate(int(aggregated_results[array_location].collated_data_array[0]), int(aggregated_results[array_location].collated_data_array[1]), true);
         for ( pixel_counter = 0; pixel_counter < int(result_array[2]); pixel_counter++ ) {
-            aggregated_results[array_location].collated_pixel_sums[pixel_counter] /= aggregated_results[array_location].total_number_of_ccs;
+            aggregated_results[array_location].collated_pixel_sums[pixel_counter] /= aggregated_results[array_location].total_number_of_angles_searched;
             aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] = sqrtf(aggregated_results[array_location].collated_pixel_square_sums[pixel_counter] /
-                                                                                                         aggregated_results[array_location].total_number_of_ccs -
+                                                                                                         aggregated_results[array_location].total_number_of_angles_searched -
                                                                                                  powf(aggregated_results[array_location].collated_pixel_sums[pixel_counter], 2));
 #ifndef CISTEM_TEST_FILTERED_MIP
             // ifdef, we want to modify the avg and stdDev image first
@@ -1525,14 +1525,14 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
         }
 
         for ( int line_counter = 0; line_counter <= histogram_number_of_points; line_counter++ ) {
-            expected_survival_histogram[line_counter] = (erfc((temp_float + histogram_step * float(line_counter)) / sqrtf(2.0f)) / 2.0f) * (aggregated_results[array_location].collated_data_array[0] * aggregated_results[array_location].collated_data_array[1] * aggregated_results[array_location].total_number_of_ccs);
+            expected_survival_histogram[line_counter] = (erfc((temp_float + histogram_step * float(line_counter)) / sqrtf(2.0f)) / 2.0f) * (aggregated_results[array_location].collated_data_array[0] * aggregated_results[array_location].collated_data_array[1] * aggregated_results[array_location].total_number_of_angles_searched);
         }
 
         // calculate the expected threshold (from peter's paper)
         const float CCG_NOISE_STDDEV = 1.0;
         double      temp_threshold   = 0.0;
-        double      erf_input        = 2.0 / (1.0 * ((double)aggregated_results[array_location].collated_data_array[0] * (double)aggregated_results[array_location].collated_data_array[1] * (double)aggregated_results[array_location].total_number_of_ccs));
-        //        wxPrintf("ox oy total %3.3e %3.3e %3.3e\n", (double)result_array[5] , (double)result_array[6] , (double)aggregated_results[array_location].total_number_of_ccs, erf_input);
+        double      erf_input        = 2.0 / (1.0 * ((double)aggregated_results[array_location].collated_data_array[0] * (double)aggregated_results[array_location].collated_data_array[1] * (double)aggregated_results[array_location].total_number_of_angles_searched));
+        //        wxPrintf("ox oy total %3.3e %3.3e %3.3e\n", (double)result_array[5] , (double)result_array[6] , (double)aggregated_results[array_location].total_number_of_angles_searched, erf_input);
 
 #ifdef MKL
         vdErfcInv(1, &erf_input, &temp_threshold);
@@ -1541,7 +1541,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
 #endif
         expected_threshold = sqrtf(2.0f) * (float)temp_threshold * CCG_NOISE_STDDEV;
 
-        //        expected_threshold = sqrtf(2.0f)*cisTEM_erfcinv((2.0f*(1))/(((original_input_image_x * original_input_image_y * aggregated_results[array_location].total_number_of_ccs))));
+        //        expected_threshold = sqrtf(2.0f)*cisTEM_erfcinv((2.0f*(1))/(((original_input_image_x * original_input_image_y * aggregated_results[array_location].total_number_of_angles_searched))));
 
         histogram_file.WriteCommentLine("Expected threshold = %.2f\n", expected_threshold);
         histogram_file.WriteCommentLine("histogram, expected histogram, survival histogram, expected survival histogram");
@@ -1715,9 +1715,9 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
 }
 
 AggregatedTemplateResult::AggregatedTemplateResult( ) {
-    image_number               = -1;
-    number_of_received_results = 0;
-    total_number_of_ccs        = 0.0f;
+    image_number                    = -1;
+    number_of_received_results      = 0;
+    total_number_of_angles_searched = 0.0f;
 
     collated_data_array        = NULL;
     collated_mip_data          = NULL;
@@ -1746,8 +1746,8 @@ void AggregatedTemplateResult::AddResult(float* result_array, long array_size, i
     if ( collated_data_array == NULL ) {
         collated_data_array = new float[array_size];
         ZeroFloatArray(collated_data_array, array_size);
-        number_of_received_results = 0;
-        total_number_of_ccs        = 0.0f;
+        number_of_received_results      = 0;
+        total_number_of_angles_searched = 0.0f;
 
         // nasty..
 
@@ -1767,7 +1767,7 @@ void AggregatedTemplateResult::AddResult(float* result_array, long array_size, i
         }
     }
 
-    total_number_of_ccs += result_array[cm_t::number_of_cccs];
+    total_number_of_angles_searched += result_array[cm_t::number_of_angles_searched];
 
     float* result_mip_data          = &result_array[offset + int(result_array[2]) * 0];
     float* result_psi_data          = &result_array[offset + int(result_array[2]) * 1];

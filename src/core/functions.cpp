@@ -506,7 +506,7 @@ int ReturnClosestFactorizedUpper(int wanted_int, int largest_factor, bool enforc
         enforce_even = true;
         increment    = enforce_factor;
         // Start at the lowest possible factor
-        wanted_int = wanted_int + (enforce_factor - (wanted_int % enforce_factor));
+        wanted_int = wanted_int - (wanted_int % enforce_factor);
     }
     else {
         increment = 2;

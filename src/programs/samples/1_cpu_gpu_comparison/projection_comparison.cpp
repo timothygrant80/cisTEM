@@ -104,8 +104,6 @@ bool DoCPUvsGPUProjectionTest(const wxString& cistem_ref_dir, const wxString& te
         score  = ref_prj.ReturnCorrelationCoefficientUnnormalized(cpu_prj, mask_radius);
         passed = passed && (score > 0.999f);
 
-        // wxPrintf("Projection match %d: %f\n", iPrj, score);
-
         // Now for a negative control, mess up the angles.
 
         // Make a projection the angles and shifts are *NOT* set to.
@@ -238,14 +236,14 @@ bool DoCPUvsGPUProjectionTest(const wxString& cistem_ref_dir, const wxString& te
     GpuImage ctf_img;
     ctf_img.CopyFrom(&gpu_prj);
     ctf_img.SetToConstant(1.f);
-
+    constexpr float real_space_binning_factor = 1.0f;
     for ( int iCondition = 0; iCondition < condition_name.size( ); iCondition++ ) {
         SamplesBeginTest(condition_name[iCondition].c_str( ), passed);
         for ( int iLoop = 0; iLoop < n_loops; iLoop++ ) {
             // Compared to the previous, we now pass a bool to pug Extract slice and add and extra method call for the GPU to get whitening of the PS.
             my_angles_and_shifts.Init(my_rand.GetUniformRandomSTD(-180.f, 180), my_rand.GetUniformRandomSTD(0.f, 180), my_rand.GetUniformRandomSTD(0.f, 360), 0.f, 0.f);
             new_cpu_volume.ExtractSlice(cpu_prj, my_angles_and_shifts, res_limit, limit_res[iCondition]);
-            gpu_prj.ExtractSliceShiftAndCtf(&gpu_volume, &ctf_img, my_angles_and_shifts, pixel_size, res_limit, limit_res[iCondition],
+            gpu_prj.ExtractSliceShiftAndCtf(&gpu_volume, &ctf_img, my_angles_and_shifts, pixel_size, real_space_binning_factor, res_limit, limit_res[iCondition],
                                             swap_quadrants[iCondition], apply_shifts[iCondition], apply_ctf[iCondition], absolute_ctf[iCondition]);
             if ( whiten[iCondition] ) {
                 gpu_prj.Whiten( );

@@ -107,11 +107,21 @@ inline int MakeEven(int number_to_make_even) {
         return number_to_make_even + 1;
 }
 
-// Function to check if x is power of 2
-inline bool is_power_of_two(int n) {
-    if ( n == 0 )
+inline int get_next_power_of_two(const int input_value) {
+    int tmp_val = 1;
+    while ( tmp_val < input_value )
+        tmp_val = tmp_val << 1;
+
+    return tmp_val;
+}
+
+inline bool is_power_of_two(const int input_value) {
+    int tmp_val = get_next_power_of_two(input_value);
+
+    if ( tmp_val > input_value )
         return false;
-    return (ceil(log2((float)n)) == floor(log2((float)n)));
+    else
+        return true;
 }
 
 inline float rad_2_deg(float radians) {

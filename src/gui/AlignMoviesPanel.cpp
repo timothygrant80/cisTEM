@@ -689,6 +689,11 @@ void MyAlignMoviesPanel::StartAlignmentClick(wxCommandEvent& event) {
         current_eer_super_res_factor = movie_asset_panel->ReturnAssetEerSuperResFactor(active_group.members[counter]);
 
         output_binning_factor = movie_asset_panel->ReturnAssetBinningFactor(active_group.members[counter]);
+        if ( BinningFactorCheckBox->IsChecked( ) == true ) {
+            double wanted_output_binning_factor;
+            ok_number_conversion  = binning_factor_text->GetLineText(0).ToDouble(&wanted_output_binning_factor);
+            output_binning_factor = (float)wanted_output_binning_factor;
+        }
 
         correct_mag_distortion          = movie_asset_panel->ReturnCorrectMagDistortion(active_group.members[counter]);
         mag_distortion_angle            = movie_asset_panel->ReturnMagDistortionAngle(active_group.members[counter]);

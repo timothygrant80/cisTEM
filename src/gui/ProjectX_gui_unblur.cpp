@@ -545,8 +545,6 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 
 	ExpertPanel = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxSize( -1,-1 ), wxVSCROLL );
 	ExpertPanel->SetScrollRate( 5, 5 );
-	ExpertPanel->Hide();
-
 	InputSizer = new wxBoxSizer( wxVERTICAL );
 
 	wxFlexGridSizer* fgSizer1;
@@ -705,13 +703,9 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 
 	m_staticText461 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tBinning Factor:"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText461->Wrap( -1 );
-	m_staticText461->Enable( false );
-
 	fgSizer1->Add( m_staticText461, 0, wxALL, 5 );
 
 	binning_factor_text = new wxTextCtrl( ExpertPanel, wxID_ANY, wxT("2.0"), wxDefaultPosition, wxDefaultSize, 0 );
-	binning_factor_text->Enable( false );
-
 	fgSizer1->Add( binning_factor_text, 0, wxALL, 5 );
 
 

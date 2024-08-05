@@ -508,7 +508,7 @@ float CTFTilt::CalculateTiltCorrectedSpectra(bool resample_if_pixel_too_small, f
     if ( IsOdd(sub_section_y) )
         sub_section_y--;
     //	sub_section_dimension = std::min(sub_section_x, sub_section_y);
-    sub_section_dimension = resampled_spectrum->logical_x_dimension;
+    // sub_section_dimension = resampled_spectrum->logical_x_dimension;
     //	offset_x = float(n_sec) / 2.0f * sub_section_x;
     //	offset_y = float(n_sec) / 2.0f * sub_section_y;
 

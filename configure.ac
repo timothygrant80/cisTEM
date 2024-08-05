@@ -225,18 +225,20 @@ AC_ARG_ENABLE(debugmode, AS_HELP_STRING([--enable-debugmode],[Compile in debug m
 # BEGIN CUDA CHECKS AND SETS
 ###############################
 
-
-FastFFT_INCLUDES=""
-use_FastFFT="no"
-AC_ARG_ENABLE(FastFFT, AS_HELP_STRING([--enable-FastFFT],[FastFFT library for gpu builds [default=no]]),[
+# This also has an effect in submodule_FastFFT on the FastFFT_FLAGS
+want_gpu_debug="no"
+AC_ARG_ENABLE(gpu-debug, AS_HELP_STRING([--enable-gpu-debug],[Compile heavy synchronous checking [default=no]]),[
   if test "$enableval" = yes; then
-    # Call the m4 macro to check and setup for FastFFT if present and requested
-    submodule_FastFFT
+    AC_DEFINE([ENABLE_GPU_DEBUG],[], [use the gpu or not])
+  	AC_MSG_NOTICE([Compiling with synchronizing debug checks for GPU code])	
+    want_gpu_debug="yes"
   fi
   ]) 
   
-if test "$want_cuda" = "yes" ; then
+# Call the m4 macro to check and setup for FastFFT if present and requested
+submodule_FastFFT
 
+if test "x$want_cuda" = "xyes" ; then
 
     # ~Runtime about 85% with K3 images, but mips are different - total detection is ~the same. 
     # Determined this is likely just numerical error. Enabling by default.
@@ -254,8 +256,8 @@ if test "$want_cuda" = "yes" ; then
     fi
 
     AC_MSG_NOTICE([Adding the CUDA includes Setting up NVCC initial flags])
-    CUDA_CPPFLAGS="$CUDA_CFLAGS $NVCCFLAGS $FastFFT_FLAGS"
-    CUDA_CXXFLAGS="$CUDA_CFLAGS $NVCCFLAGS $FastFFT_FLAGS"
+    CUDA_CPPFLAGS="$CUDA_CFLAGS $NVCCFLAGS $FastFFT_CUDA_FLAGS $FastFFT_DEFINES"
+    CUDA_CXXFLAGS="$CUDA_CFLAGS $NVCCFLAGS $FastFFT_CUDA_FLAGS $FastFFT_DEFINES"
     
     CXXFLAGS="$CXXFLAGS $use_gpu_cache_hints $CUDA_CFLAGS"
     CPPFLAGS="$CPPFLAGS $use_gpu_cache_hints $CUDA_CFLAGS"
@@ -273,7 +275,6 @@ fi
 
 # Define WANT_CISTEM_GPU_AM to be used in the Makefile on a per-program basis to then define ENABLEGPU or not.
 AM_CONDITIONAL([WANT_CISTEM_GPU_AM], [test "$want_cuda" = "yes"])
-AM_CONDITIONAL([ENABLE_FASTFFT_AM], [test "x$use_FastFFT" = "xyes"])
 
 # fftw
 
@@ -323,14 +324,6 @@ AC_ARG_ENABLE(wx-webview, AS_HELP_STRING([--enable-wx-webview],[Compile with exp
 AM_CONDITIONAL([ENABLE_WEBVIEW_AM], [test x$want_webview = xtrue])
 
 
-
-AC_ARG_ENABLE(gpu-debug, AS_HELP_STRING([--enable-gpu-debug],[Compile heavy synchronous checking [default=no]]),[
-  if test "$enableval" = yes; then
-    AC_DEFINE([ENABLE_GPU_DEBUG],[], [use the gpu or not])
-  	AC_MSG_NOTICE([Compiling with synchronizing debug checks for GPU code])	
-  fi
-  ]) 
-  
 # experimental
 compile_experimental="false"
 AC_ARG_ENABLE(experimental, AS_HELP_STRING([--enable-experimental],[Compile with experimental [default=no]]),[

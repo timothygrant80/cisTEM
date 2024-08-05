@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Software License Agreement &mdash; cuFFTDx 1.1.0 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/cufftdx_override.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Release Notes" href="release_notes.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" > 
+            <a href="index.html" class="icon icon-home"> cuFFTDx
+          </a>
+              <div class="version">
+                1.1.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+  <style>
+    /* Sidebar header (and topbar for mobile) */
+    .wy-side-nav-search, .wy-nav-top {
+      background: #76b900;
+    }
+
+    .wy-side-nav-search a:link, .wy-nav-top a:link {
+      color: #fff;
+    }
+    .wy-side-nav-search a:visited, .wy-nav-top a:visited {
+      color: #fff;
+    }
+    .wy-side-nav-search a:hover, .wy-nav-top a:hover {
+      color: #fff;
+    }
+
+    .wy-menu-vertical a:link, .wy-menu-vertical a:visited {
+      color: #d9d9d9
+    }
+
+    .wy-menu-vertical a:active {
+      background-color: #76b900
+    }
+
+    .wy-side-nav-search>div.version {
+      color: rgba(0, 0, 0, 0.3)
+    }
+
+    /* override table width restrictions */
+    .wy-table-responsive table td, .wy-table-responsive table th {
+        white-space: normal;
+    }
+
+    .wy-table-responsive {
+        margin-bottom: 24px;
+        max-width: 100%;
+        overflow: visible;
+    }
+  </style>
+  
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Documentation home</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">User guide:</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="requirements_func.html">Requirements and Functionality</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="requirements_func.html#requirements">Requirements</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="requirements_func.html#supported-compilers">Supported Compilers</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="requirements_func.html#supported-functionality">Supported Functionality</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Quick Installation Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#cufftdx-in-your-project">cuFFTDx In Your Project</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#cufftdx-in-your-cmake-project">cuFFTDx In Your CMake Project</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="installation.html#defined-variables">Defined Variables</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="introduction1.html">First FFT Using cuFFTDx</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="introduction1.html#defining-basic-fft">Defining Basic FFT</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction1.html#executing-fft">Executing FFT</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction1.html#launching-fft-kernel">Launching FFT Kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction1.html#compilation">Compilation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="introduction2.html">Your Next Custom FFT Kernels</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="introduction2.html#using-optimal-parameters">Using Optimal parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction2.html#extra-shared-memory">Extra Shared Memory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction2.html#what-happens-under-the-hood">What happens under the hood</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="introduction2.html#why">Why?</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="performance.html">Achieving High Performance</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="performance.html#general-advice">General Advice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="performance.html#memory-management">Memory Management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="performance.html#kernel-fusion">Kernel Fusion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="performance.html#advanced">Advanced</a></li>
+<li class="toctree-l2"><a class="reference internal" href="performance.html#further-reading">Further Reading</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="performance.html#references">References</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/index.html">cuFFTDx API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/operators.html">Operators</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/operators.html#description-operators">Description Operators</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/operators.html#size-operator">Size Operator</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/operators.html#direction-operator">Direction Operator</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/operators.html#type-operator">Type Operator</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/operators.html#precision-operator">Precision Operator</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/operators.html#sm-operator">SM Operator</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api/operators.html#execution-operators">Execution Operators</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/operators.html#thread-operator">Thread Operator</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/operators.html#block-operator">Block Operator</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/operators.html#block-configuration-operators">Block Configuration Operators</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api/traits.html">Traits</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/traits.html#description-traits">Description Traits</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/traits.html#size-trait">Size Trait</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/traits.html#type-trait">Type Trait</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/traits.html#direction-trait">Direction Trait</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/traits.html#precision-trait">Precision Trait</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/traits.html#is-fft-trait">Is FFT? Trait</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/traits.html#is-fft-execution-trait">Is FFT Execution? Trait</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/traits.html#is-fft-complete-trait">Is FFT-complete? Trait</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/traits.html#is-fft-complete-execution-trait">Is FFT-complete Execution? Trait</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api/traits.html#execution-traits">Execution Traits</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/traits.html#thread-traits">Thread Traits</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/traits.html#block-traits">Block Traits</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api/traits.html#other-traits">Other Traits</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/traits.html#cufftdx-is-supported">cufftdx::is_supported</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api/methods.html">Execution Methods</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/methods.html#thread-execute-method">Thread Execute Method</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/methods.html#block-execute-method">Block Execute Method</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/methods.html#value-format">Value Format</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/methods.html#input-output-data-format">Input/Output Data Format</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/methods.html#shared-memory-usage">Shared Memory Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api/methods.html#make-workspace-function">Make Workspace Function</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#introduction-examples">Introduction Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#simple-fft-examples">Simple FFT Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="examples.html#simple-fft-thread-examples">simple_fft_thread* Examples</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples.html#simple-fft-block-examples">simple_fft_block* Examples</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples.html#extra-simple-fft-block-examples">Extra simple_fft_block(*) Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#nvrtc-examples">NVRTC Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#fft-performance">FFT Performance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#convolution-examples">Convolution Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#input-output-helper-functions">Input/Output Helper Functions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="release_notes.html">Release Notes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="release_notes.html#id1">1.1.0</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="release_notes.html#new-features">New Features</a></li>
+<li class="toctree-l3"><a class="reference internal" href="release_notes.html#known-issues">Known Issues</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="release_notes.html#id2">1.0.0</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="release_notes.html#id3">New Features</a></li>
+<li class="toctree-l3"><a class="reference internal" href="release_notes.html#resolved-issues">Resolved Issues</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="release_notes.html#id4">0.3.1</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="release_notes.html#id5">Known Issues</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Software License Agreement</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">cuFFTDx</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a></li>
+      <li class="breadcrumb-item active">Software License Agreement</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="software-license-agreement">
+<h1>Software License Agreement<a class="headerlink" href="#software-license-agreement" title="Permalink to this heading">¶</a></h1>
+<p>LICENSE AGREEMENT FOR NVIDIA MATH LIBRARIES SOFTWARE DEVELOPMENT KITS</p>
+<p>This license agreement(“Agreement”) is a legal agreement between you and NVIDIA Corporation (“NVIDIA”) and governs your use of the NVIDIA math libraries software development kit as available at NVIDIA’s discretion (each, a “SDK”).</p>
+<p>Each SDK has its own set of software and materials, but here is a description of the types of items that may be included in a SDK: source code, header files, APIs, data sets and assets (examples include images, textures, models, scenes, videos, native API input/output files), binary software, sample code, libraries, utility programs, programming code and documentation.</p>
+<p>This Agreement can be accepted only by an adult of legal age of majority in the country in which the SDK is used.</p>
+<p>If you are entering into this Agreement on behalf of a company or other legal entity, you represent that you have the legal authority to bind the entity to this Agreement, in which case “you” will mean the entity you represent.</p>
+<p>If you don’t have the required age or authority to accept this Agreement, or if you don’t accept all the terms and conditions of this Agreement, do not download, install or use the SDK.</p>
+<p>You agree to use the SDK only for purposes that are permitted by (a) this Agreement, and (b) any applicable law, regulation or generally accepted practices or guidelines in the relevant jurisdictions.</p>
+<ol class="arabic simple">
+<li><p>License.</p></li>
+</ol>
+<p>1.1 Grant</p>
+<p>Subject to the terms of this Agreement, NVIDIA hereby grants you a non-exclusive, non-transferable license, without the right to sublicense (except as expressly provided in this Agreement) to:</p>
+<ol class="lowerroman simple">
+<li><p>Install and use the SDK, and</p></li>
+<li><p>Distribute the binary files, files identified as samples, and headers as incorporated into a software application that meets the distribution requirements indicated in this Agreement.</p></li>
+</ol>
+<p>1.2 Distribution Requirements</p>
+<p>These are the distribution requirements for you to exercise the distribution grant:</p>
+<ol class="lowerroman simple">
+<li><p>Your application must have material additional functionality, beyond the included portions of the SDK.</p></li>
+<li><p>The distributable portions of the SDK shall only be accessed by your application.</p></li>
+<li><p>The following notice shall be included in modifications and derivative works of sample source code distributed: “This software contains source code provided by NVIDIA Corporation.”</p></li>
+<li><p>Unless a developer tool is identified in this Agreement as distributable, it is delivered for your internal use only.</p></li>
+<li><p>The terms under which you distribute your application must be consistent with the terms of this Agreement, including (without limitation) terms relating to the license grant and license restrictions and protection of NVIDIA’s intellectual property rights. Additionally, you agree that you will protect the privacy, security and legal rights of your application users.</p></li>
+<li><p>You agree to notify NVIDIA in writing of any known or suspected distribution or use of the SDK not in compliance with the requirements of this Agreement, and to enforce the terms of your agreements with respect to distributed SDK.</p></li>
+</ol>
+<p>1.3 Authorized Users</p>
+<p>You may allow employees and contractors of your entity or of your subsidiary(ies) to access and use the SDK from your secure network to perform work on your behalf.</p>
+<p>If you are an academic institution you may allow users enrolled or employed by the academic institution to access and use the SDK from your secure network.</p>
+<p>You are responsible for the compliance with the terms of this Agreement by your authorized users. If you become aware that your authorized users didn’t follow the terms of this Agreement, you agree to take reasonable steps to resolve the non-compliance and prevent new occurrences.</p>
+<p>1.4 Pre-Release SDK
+The SDK versions identified as alpha, beta, preview or otherwise as pre-release, may not be fully functional, may contain errors or design flaws, and may have reduced or different security, privacy, accessibility, availability, and reliability standards relative to commercial versions of NVIDIA software and materials. Use of a pre-release SDK may result in unexpected results, loss of data, project delays or other unpredictable damage or loss.
+You may use a pre-release SDK at your own risk, understanding that pre-release SDKs are not intended for use in production or business-critical systems.
+NVIDIA may choose not to make available a commercial version of any pre-release SDK. NVIDIA may also choose to abandon development and terminate the availability of a pre-release SDK at any time without liability.
+1.5      Updates</p>
+<p>NVIDIA may, at its option, make available patches, workarounds or other updates to this SDK. Unless the updates are provided with their separate governing terms, they are deemed part of the SDK licensed to you as provided in this Agreement.</p>
+<p>You agree that the form and content of the SDK that NVIDIA provides may change without prior notice to you. While NVIDIA generally maintains compatibility between versions, NVIDIA may in some cases make changes that introduce incompatibilities in future versions of the SDK.</p>
+<p>1.6      Components Under Other Licenses.</p>
+<p>The SDK may include NVIDIA or third-party components with separate legal notices or terms as may be described in proprietary notices accompanying the SDK, such as components governed by open source software licenses. If and to the extent there is a conflict between the terms in this license and the license terms associated with a component, the license terms associated with the components control only to the extent necessary to resolve the conflict.</p>
+<p>1.7 Reservation of Rights</p>
+<p>NVIDIA reserves all rights, title and interest in and to the SDK not expressly granted to you under this Agreement.</p>
+<ol class="arabic simple" start="2">
+<li><p>Limitations.</p></li>
+</ol>
+<p>The following license limitations apply to your use of the SDK:</p>
+<p>2.1 The SDK is licensed for you to develop applications only for use in systems with NVIDIA GPUs.</p>
+<p>2.2 You may not reverse engineer, decompile or disassemble, or remove copyright or other proprietary notices from any portion of the SDK or copies of the SDK.</p>
+<p>2.3 Except as expressly provided in this Agreement, you may not copy, sell, rent, sublicense, transfer, distribute, modify, or create derivative works of any portion of the SDK.</p>
+<p>2.4 Unless you have an agreement with NVIDIA for this purpose, you may not indicate that an application created with the SDK is sponsored or endorsed by NVIDIA.</p>
+<p>2.5 You may not bypass, disable, or circumvent any encryption, security, digital rights management or authentication mechanism in the SDK.</p>
+<p>2.6 You may not use the SDK in any manner that would cause it to become subject to an open source software license. As examples, licenses that require as a condition of use, modification, and/or distribution that the SDK be (i) disclosed or distributed in source code form; (ii) licensed for the purpose of making derivative works; or (iii) redistributable at no charge.</p>
+<p>2.7  You acknowledge that the SDK as delivered is not tested or certified by NVIDIA for use in connection with the design, construction, maintenance, and/or operation of any system where the use or failure of such system could result in a situation that threatens the safety of human life or results in catastrophic damages (each, a “Critical Application”). Examples of Critical Applications include use in avionics, navigation, autonomous vehicle applications, ai solutions for automotive products, military, medical, life support or other life critical applications. NVIDIA shall not be liable to you or any third party, in whole or in part, for any claims or damages arising from such uses. You are solely responsible for ensuring that any product or service developed with the SDK as a whole includes sufficient features to comply with all applicable legal and regulatory standards and requirements.</p>
+<p>2.8 You agree to defend, indemnify and hold harmless NVIDIA and its affiliates, and their respective employees, contractors, agents, officers and directors, from and against any and all claims, damages, obligations, losses, liabilities, costs or debt, fines, restitutions and expenses (including but not limited to attorney’s fees and costs incident to establishing the right of indemnification) arising out of or related to products or services that use the SDK in or for Critical Applications, and for use of the SDK outside of the scope of this Agreement, or not in compliance with its terms.</p>
+<ol class="arabic simple" start="3">
+<li><p>Ownership.</p></li>
+</ol>
+<p>3.1 NVIDIA or its licensors hold all rights, title and interest in and to the SDK and its modifications, including their respective intellectual property rights. This SDK may include software and materials from NVIDIA’s licensors, and these licensors are intended third party beneficiaries that may enforce this Agreement with respect to their intellectual property rights.</p>
+<p>3.2 You may, but don’t have to, provide to NVIDIA suggestions, feature requests or other feedback regarding the SDK, including possible enhancements or modifications to the SDK. For any feedback that you voluntarily provide, you hereby grant NVIDIA and its affiliates a perpetual, non-exclusive, worldwide, irrevocable license to use, reproduce, modify, license, sublicense (through multiple tiers of sublicensees), and distribute (through multiple tiers of distributors) it without the payment of any royalties or fees to you. NVIDIA will use feedback at its choice.</p>
+<ol class="arabic simple" start="4">
+<li><p>No Warranties.</p></li>
+</ol>
+<p>THE SDK IS PROVIDED BY NVIDIA “AS IS” AND “WITH ALL FAULTS.” TO THE MAXIMUM EXTENT PERMITTED BY LAW, NVIDIA AND ITS AFFILIATES EXPRESSLY DISCLAIM ALL WARRANTIES OF ANY KIND OR NATURE, WHETHER EXPRESS, IMPLIED OR STATUTORY, INCLUDING, BUT NOT LIMITED TO, ANY WARRANTIES OF MERCHANTABILITY, FITNESS FOR A PARTICULAR PURPOSE, TITLE, NON-INFRINGEMENT, OR THE ABSENCE OF ANY DEFECTS THEREIN, WHETHER LATENT OR PATENT. NO WARRANTY IS MADE ON THE BASIS OF TRADE USAGE, COURSE OF DEALING OR COURSE OF TRADE.</p>
+<ol class="arabic simple" start="5">
+<li><p>Limitations of Liability.</p></li>
+</ol>
+<p>TO THE MAXIMUM EXTENT PERMITTED BY LAW, NVIDIA AND ITS AFFILIATES SHALL NOT BE LIABLE FOR ANY SPECIAL, INCIDENTAL, PUNITIVE OR CONSEQUENTIAL DAMAGES, OR ANY LOST PROFITS, LOSS OF USE, LOSS OF DATA OR LOSS OF GOODWILL, OR THE COSTS OF PROCURING SUBSTITUTE PRODUCTS, ARISING OUT OF OR IN CONNECTION WITH THIS AGREEMENT OR THE USE OR PERFORMANCE OF THE SDK, WHETHER SUCH LIABILITY ARISES FROM ANY CLAIM BASED UPON BREACH OF CONTRACT, BREACH OF WARRANTY, TORT (INCLUDING NEGLIGENCE), PRODUCT LIABILITY OR ANY OTHER CAUSE OF ACTION OR THEORY OF LIABILITY. IN NO EVENT WILL NVIDIA’S AND ITS AFFILIATES TOTAL CUMULATIVE LIABILITY UNDER OR ARISING OUT OF THIS AGREEMENT EXCEED US$10.00. THE NATURE OF THE LIABILITY OR THE NUMBER OF CLAIMS OR SUITS SHALL NOT ENLARGE OR EXTEND THIS LIMIT.</p>
+<p>These exclusions and limitations of liability shall apply regardless if NVIDIA or its affiliates have been advised of the possibility of such damages, and regardless of whether a remedy fails its essential purpose. These exclusions and limitations of liability form an essential basis of the bargain between the parties, and, absent any of these exclusions or limitations of liability, the provisions of this Agreement, including, without limitation, the economic terms, would be substantially different.</p>
+<ol class="arabic simple" start="6">
+<li><p>Termination.</p></li>
+</ol>
+<p>6.1 This Agreement will continue to apply until terminated by either you or NVIDIA as described below.</p>
+<p>6.2 If you want to terminate this Agreement, you may do so by stopping to use the SDK.</p>
+<p>6.3 NVIDIA may, at any time, terminate this Agreement if: (i) you fail to comply with any term of this Agreement and the non-compliance is not fixed within thirty (30) days following notice from NVIDIA (or immediately if you violate NVIDIA’s intellectual property rights); (ii) you commence or participate in any legal proceeding against NVIDIA with respect to the SDK; or (iii) NVIDIA decides to no longer provide the SDK in a country or, in NVIDIA’s sole discretion, the continued use of it is no longer commercially viable.</p>
+<p>6.4 Upon any termination of this Agreement, you agree to promptly discontinue use of the SDK and destroy all copies in your possession or control. Your prior distributions in accordance with this Agreement are not affected by the termination of this Agreement. Upon written request, you will certify in writing that you have complied with your commitments under this section. Upon any termination of this Agreement all provisions survive except for the licenses granted to you.</p>
+<ol class="arabic simple" start="7">
+<li><p>General.</p></li>
+</ol>
+<p>If you wish to assign this Agreement or your rights and obligations, including by merger, consolidation, dissolution or operation of law, contact NVIDIA to ask for permission. Any attempted assignment not approved by NVIDIA in writing shall be void and of no effect. NVIDIA may assign, delegate or transfer this Agreement and its rights and obligations, and if to a non-affiliate you will be notified.</p>
+<p>You agree to cooperate with NVIDIA and provide reasonably requested information to verify your compliance with this Agreement.</p>
+<p>This Agreement will be governed in all respects by the laws of the United States and of the State of Delaware as those laws are applied to contracts entered into and performed entirely within Delaware by Delaware residents, without regard to the conflicts of laws principles. The United Nations Convention on Contracts for the International Sale of Goods is specifically disclaimed. You agree to all terms of this Agreement in the English language.</p>
+<p>The state or federal courts residing in Santa Clara County, California shall have exclusive jurisdiction over any dispute or claim arising out of this Agreement. Notwithstanding this, you agree that NVIDIA shall still be allowed to apply for injunctive remedies or an equivalent type of urgent legal relief in any jurisdiction.</p>
+<p>If any court of competent jurisdiction determines that any provision of this Agreement is illegal, invalid or unenforceable, such provision will be construed as limited to the extent necessary to be consistent with and fully enforceable under the law and the remaining provisions will remain in full force and effect. Unless otherwise specified, remedies are cumulative.</p>
+<p>Each party acknowledges and agrees that the other is an independent contractor in the performance of this Agreement.</p>
+<p>The SDK has been developed entirely at private expense and is “commercial items” consisting of “commercial computer software” and “commercial computer software documentation” provided with RESTRICTED RIGHTS. Use, duplication or disclosure by the U.S. Government or a U.S. Government subcontractor is subject to the restrictions in this Agreement pursuant to DFARS 227.7202-3(a) or as set forth in subparagraphs (b)(1) and (2) of the Commercial Computer Software - Restricted Rights clause at FAR 52.227-19, as applicable. Contractor/manufacturer is NVIDIA, 2788 San Tomas Expressway, Santa Clara, CA 95051.</p>
+<p>The SDK is subject to United States export laws and regulations. You agree that you will not ship, transfer or export the SDK into any country, or use the SDK in any manner, prohibited by the United States Bureau of Industry and Security or economic sanctions regulations administered by the U.S. Department of Treasury’s Office of Foreign Assets Control (OFAC), or any applicable export laws, restrictions or regulations. These laws include restrictions on destinations, end users and end use. By accepting this Agreement, you confirm that you are not a resident or citizen of any country currently embargoed by the U.S. and that you are not otherwise prohibited from receiving the SDK.</p>
+<p>Any notice delivered by NVIDIA to you under this Agreement will be delivered via mail, email or fax. You agree that any notices that NVIDIA sends you electronically will satisfy any legal communication requirements. Please direct your legal notices or other correspondence to NVIDIA Corporation, 2788 San Tomas Expressway, Santa Clara, California 95051, United States of America, Attention: Legal Department.</p>
+<p>This Agreement constitutes the entire agreement of the parties with respect to the subject matter of this Agreement and supersedes all prior negotiations or documentation exchanged between the parties relating to this subject matter. Any additional and/or conflicting terms on documents issued by you are null, void, and invalid. Any amendment or waiver under this Agreement shall be in writing and signed by representatives of both parties.</p>
+<p>If the distribution terms in this Agreement are not suitable for your organization, or for any questions regarding this Agreement, please contact NVIDIA at <a class="reference external" href="mailto:nvidia-compute-license-questions&#37;&#52;&#48;nvidia&#46;com">nvidia-compute-license-questions<span>&#64;</span>nvidia<span>&#46;</span>com</a>.</p>
+<p>(v. February 10, 2022)</p>
+</div>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="release_notes.html" class="btn btn-neutral float-left" title="Release Notes" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, NVIDIA Corporation.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>  
+
+  <style>
+  a:link, a:visited {
+    color: #76b900;
+  }
+
+  a:hover {
+    color: #8c0;
+  }
+
+  .rst-content dl:not(.docutils) dt {
+    background: rgba(118, 185, 0, 0.1);
+    color: rgba(59,93,0,1);
+    border-top: solid 3px rgba(59,93,0,1);
+  }
+  </style>
+  
+
+</body>
+</html>

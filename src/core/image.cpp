@@ -4813,6 +4813,12 @@ void Image::MultiplyAddConstant(float constant_to_multiply_by, float constant_to
     }
 }
 
+/**
+ * @brief Returns pixel wise (x - c1) * c2
+ * 
+ * @param constant_to_add 
+ * @param constant_to_multiply_by 
+ */
 void Image::AddMultiplyConstant(float constant_to_add, float constant_to_multiply_by) {
     for ( long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++ ) {
         real_values[pixel_counter] = (real_values[pixel_counter] + constant_to_add) * constant_to_multiply_by;
@@ -5230,6 +5236,18 @@ void Image::RemoveFFTWPadding( ) {
 
             current_read_position += padding_jump_value;
         }
+    }
+}
+
+void Image::ZeroFFTWPadding( ) {
+    MyDebugAssertTrue(is_in_memory, "Image not allocated!");
+    MyDebugAssertTrue(padding_jump_value == 1 || padding_jump_value == 2, "Padding jump value is not 1 or 2");
+
+    for ( int end_of_x_line = logical_x_dimension; end_of_x_line < real_memory_allocated; end_of_x_line += (logical_x_dimension + padding_jump_value) ) {
+        // padding_jump_value is always 1 or 2
+        real_values[end_of_x_line] = 0.0f;
+        if ( padding_jump_value > 1 )
+            real_values[end_of_x_line + 1] = 0.0f;
     }
 }
 
@@ -7014,7 +7032,7 @@ void Image::ComputeFilteredAmplitudeSpectrumFull2D(Image* average_spectrum_maske
     //			average_spectrum_masked->SetMaximumValue(average_spectrum_masked->ReturnMaximumValue(3,3));
 
     average_spectrum_masked->CopyFrom(this);
-    if (apply_cosine_mask) {
+    if ( apply_cosine_mask ) {
         average_spectrum_masked->CosineMask(float(average_spectrum_masked->logical_x_dimension) * pixel_size_for_fitting / std::max(maximum_resolution, 8.0f), float(average_spectrum_masked->logical_x_dimension) * pixel_size_for_fitting / std::max(maximum_resolution, 4.0f), true);
     }
     //			average_spectrum_masked->QuickAndDirtyWriteSlice("dbg_spec_before_thresh.mrc",1);
@@ -7788,7 +7806,7 @@ void Image::InsertOtherImageAtSpecifiedPosition(Image* other_image, int wanted_x
 }
 
 // If you don't want to clip from the center, you can give wanted_coordinate_of_box_center_{x,y,z}. This will define the pixel in the image at which other_image will be centered. (0,0,0) means center of image.
-void Image::ClipInto(Image* other_image, float wanted_padding_value, bool fill_with_noise, float wanted_noise_sigma, int wanted_coordinate_of_box_center_x, int wanted_coordinate_of_box_center_y, int wanted_coordinate_of_box_center_z) {
+void Image::ClipInto(Image* other_image, float wanted_padding_value, bool fill_with_noise, float wanted_noise_sigma, int wanted_coordinate_of_box_center_x, int wanted_coordinate_of_box_center_y, int wanted_coordinate_of_box_center_z, bool skip_padding) {
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
     MyDebugAssertTrue(other_image->is_in_memory, "Other image Memory not allocated");
     MyDebugAssertFalse(is_in_real_space == true && fill_with_noise == true, "Fill with noise, only for fourier space");
@@ -7836,7 +7854,8 @@ void Image::ClipInto(Image* other_image, float wanted_padding_value, bool fill_w
                     i       = physical_address_of_box_center_x + wanted_coordinate_of_box_center_x + ii_logi;
 
                     if ( k < 0 || k >= logical_z_dimension || j < 0 || j >= logical_y_dimension || i < 0 || i >= logical_x_dimension ) {
-                        other_image->real_values[pixel_counter] = wanted_padding_value;
+                        if ( ! skip_padding )
+                            other_image->real_values[pixel_counter] = wanted_padding_value;
                     }
                     else {
                         other_image->real_values[pixel_counter] = ReturnRealPixelFromPhysicalCoord(i, j, k);
@@ -7955,6 +7974,8 @@ void Image::ChangePixelSize(Image* other_image, float wanted_factor, float wante
         return;
     }
 
+    // Note: only the z dimension is being initialized like this.
+    // currently, all x/y values are set before being accessed, but this is a bit sloppy.
     int   old_x_dimension, old_y_dimension, old_z_dimension = 1;
     int   new_x_dimension, new_y_dimension, new_z_dimension = 1;
     int   pad_x_dimension, pad_y_dimension, pad_z_dimension = 1;

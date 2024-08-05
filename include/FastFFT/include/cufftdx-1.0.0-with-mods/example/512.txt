@@ -1,0 +1,16 @@
+FFT size: 512
+FFTs run: 262892
+
+cuFFTDx
+Avg Time [ms_n]: 2.66752
+Time (all) [ms_n]: 26.6752
+Performance [GFLOPS]: 2270.66
+FFTs elements per thread: 8
+FFTs per block: 2
+CUDA blocks: 131446
+Blocks per multiprocessor: 7
+
+cuFFT
+Avg Time [ms_n]: 7.87425
+Time (all) [ms_n]: 78.7425
+Performance [GFLOPS]: 769.22

@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" >
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Requirements and Functionality &mdash; cuFFTDx 1.1.0 documentation</title>
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/cufftdx_override.css" type="text/css" />
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js"></script>
+        <script src="_static/doctools.js"></script>
+        <script src="_static/sphinx_highlight.js"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Quick Installation Guide" href="installation.html" />
+    <link rel="prev" title="NVIDIA cuFFTDx" href="index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" > 
+            <a href="index.html" class="icon icon-home"> cuFFTDx
+          </a>
+              <div class="version">
+                1.1.0
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+
+  <style>
+    /* Sidebar header (and topbar for mobile) */
+    .wy-side-nav-search, .wy-nav-top {
+      background: #76b900;
+    }
+
+    .wy-side-nav-search a:link, .wy-nav-top a:link {
+      color: #fff;
+    }
+    .wy-side-nav-search a:visited, .wy-nav-top a:visited {
+      color: #fff;
+    }
+    .wy-side-nav-search a:hover, .wy-nav-top a:hover {
+      color: #fff;
+    }
+
+    .wy-menu-vertical a:link, .wy-menu-vertical a:visited {
+      color: #d9d9d9
+    }
+
+    .wy-menu-vertical a:active {
+      background-color: #76b900
+    }
+
+    .wy-side-nav-search>div.version {
+      color: rgba(0, 0, 0, 0.3)
+    }
+
+    /* override table width restrictions */
+    .wy-table-responsive table td, .wy-table-responsive table th {
+        white-space: normal;
+    }
+
+    .wy-table-responsive {
+        margin-bottom: 24px;
+        max-width: 100%;
+        overflow: visible;
+    }
+  </style>
+  
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul>
+<li class="toctree-l1"><a class="reference internal" href="index.html">Documentation home</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">User guide:</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Requirements and Functionality</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#requirements">Requirements</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#supported-compilers">Supported Compilers</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#supported-functionality">Supported Functionality</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Quick Installation Guide</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#cufftdx-in-your-project">cuFFTDx In Your Project</a></li>
+<li class="toctree-l2"><a class="reference internal" href="installation.html#cufftdx-in-your-cmake-project">cuFFTDx In Your CMake Project</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="installation.html#defined-variables">Defined Variables</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="introduction1.html">First FFT Using cuFFTDx</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="introduction1.html#defining-basic-fft">Defining Basic FFT</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction1.html#executing-fft">Executing FFT</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction1.html#launching-fft-kernel">Launching FFT Kernel</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction1.html#compilation">Compilation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="introduction2.html">Your Next Custom FFT Kernels</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="introduction2.html#using-optimal-parameters">Using Optimal parameters</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction2.html#extra-shared-memory">Extra Shared Memory</a></li>
+<li class="toctree-l2"><a class="reference internal" href="introduction2.html#what-happens-under-the-hood">What happens under the hood</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="introduction2.html#why">Why?</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="performance.html">Achieving High Performance</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="performance.html#general-advice">General Advice</a></li>
+<li class="toctree-l2"><a class="reference internal" href="performance.html#memory-management">Memory Management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="performance.html#kernel-fusion">Kernel Fusion</a></li>
+<li class="toctree-l2"><a class="reference internal" href="performance.html#advanced">Advanced</a></li>
+<li class="toctree-l2"><a class="reference internal" href="performance.html#further-reading">Further Reading</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="performance.html#references">References</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="api/index.html">cuFFTDx API Reference</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="api/operators.html">Operators</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/operators.html#description-operators">Description Operators</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/operators.html#size-operator">Size Operator</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/operators.html#direction-operator">Direction Operator</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/operators.html#type-operator">Type Operator</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/operators.html#precision-operator">Precision Operator</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/operators.html#sm-operator">SM Operator</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api/operators.html#execution-operators">Execution Operators</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/operators.html#thread-operator">Thread Operator</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/operators.html#block-operator">Block Operator</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/operators.html#block-configuration-operators">Block Configuration Operators</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api/traits.html">Traits</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/traits.html#description-traits">Description Traits</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/traits.html#size-trait">Size Trait</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/traits.html#type-trait">Type Trait</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/traits.html#direction-trait">Direction Trait</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/traits.html#precision-trait">Precision Trait</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/traits.html#is-fft-trait">Is FFT? Trait</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/traits.html#is-fft-execution-trait">Is FFT Execution? Trait</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/traits.html#is-fft-complete-trait">Is FFT-complete? Trait</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/traits.html#is-fft-complete-execution-trait">Is FFT-complete Execution? Trait</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api/traits.html#execution-traits">Execution Traits</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/traits.html#thread-traits">Thread Traits</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/traits.html#block-traits">Block Traits</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api/traits.html#other-traits">Other Traits</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/traits.html#cufftdx-is-supported">cufftdx::is_supported</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="api/methods.html">Execution Methods</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="api/methods.html#thread-execute-method">Thread Execute Method</a></li>
+<li class="toctree-l3"><a class="reference internal" href="api/methods.html#block-execute-method">Block Execute Method</a><ul>
+<li class="toctree-l4"><a class="reference internal" href="api/methods.html#value-format">Value Format</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/methods.html#input-output-data-format">Input/Output Data Format</a></li>
+<li class="toctree-l4"><a class="reference internal" href="api/methods.html#shared-memory-usage">Shared Memory Usage</a></li>
+</ul>
+</li>
+<li class="toctree-l3"><a class="reference internal" href="api/methods.html#make-workspace-function">Make Workspace Function</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="examples.html">Examples</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#introduction-examples">Introduction Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#simple-fft-examples">Simple FFT Examples</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="examples.html#simple-fft-thread-examples">simple_fft_thread* Examples</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples.html#simple-fft-block-examples">simple_fft_block* Examples</a></li>
+<li class="toctree-l3"><a class="reference internal" href="examples.html#extra-simple-fft-block-examples">Extra simple_fft_block(*) Examples</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#nvrtc-examples">NVRTC Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#fft-performance">FFT Performance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#convolution-examples">Convolution Examples</a></li>
+<li class="toctree-l2"><a class="reference internal" href="examples.html#input-output-helper-functions">Input/Output Helper Functions</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="release_notes.html">Release Notes</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="release_notes.html#id1">1.1.0</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="release_notes.html#new-features">New Features</a></li>
+<li class="toctree-l3"><a class="reference internal" href="release_notes.html#known-issues">Known Issues</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="release_notes.html#id2">1.0.0</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="release_notes.html#id3">New Features</a></li>
+<li class="toctree-l3"><a class="reference internal" href="release_notes.html#resolved-issues">Resolved Issues</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="release_notes.html#id4">0.3.1</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="release_notes.html#id5">Known Issues</a></li>
+</ul>
+</li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="license.html">Software License Agreement</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">cuFFTDx</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home"></a></li>
+      <li class="breadcrumb-item active">Requirements and Functionality</li>
+      <li class="wy-breadcrumbs-aside">
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <div class="section" id="requirements-and-functionality">
+<span id="requirements-and-functionality-label"></span><h1>Requirements and Functionality<a class="headerlink" href="#requirements-and-functionality" title="Permalink to this heading">¶</a></h1>
+<hr class="docutils" />
+<div class="section" id="requirements">
+<span id="requirements-label"></span><h2>Requirements<a class="headerlink" href="#requirements" title="Permalink to this heading">¶</a></h2>
+<p>The cuFFTDx library is a CUDA C++ header only library. Therefore, the list of required software to use the library is relatively small. User needs:</p>
+<ul class="simple">
+<li><p>CUDA Toolkit 11.0 or newer</p></li>
+<li><p>Supported CUDA compiler</p></li>
+<li><p>Supported host compiler (C++17 required)</p></li>
+<li><p>(Optionally) CMake (version 3.18 or greater)</p></li>
+</ul>
+<div class="section" id="supported-compilers">
+<h3>Supported Compilers<a class="headerlink" href="#supported-compilers" title="Permalink to this heading">¶</a></h3>
+<p><strong>CUDA Compilers:</strong></p>
+<ul class="simple">
+<li><p>NVCC 11.0.194+ (CUDA Toolkit 11.0 or newer)</p></li>
+<li><p>(Experimental support) NVRTC 11.0.194+ (CUDA Toolkit  11.0 or newer)</p></li>
+</ul>
+<p><strong>Host / C++ Compilers:</strong></p>
+<ul class="simple">
+<li><p>GCC 7+</p></li>
+<li><p>Clang 9+ (only on Linux/WSL2)</p></li>
+<li><p>(Preliminary support) MSVC 1920+ (Windows/Visual Studio 2019 16.0 or newer)</p></li>
+</ul>
+<div class="admonition warning">
+<p class="admonition-title">Warning</p>
+<p>Compiling using MSVC as CUDA host compiler requires enabling <code class="code highlight cpp docutils literal highlight-cpp"><span class="n">__cplusplus</span><span class="w"></span></code>
+(<a class="reference external" href="https://learn.microsoft.com/en-us/cpp/build/reference/zc-cplusplus">/Zc:__cplusplus</a>).
+In order to do so, pass <code class="code highlight cpp docutils literal highlight-cpp"><span class="o">-</span><span class="n">Xcompiler</span><span class="w"> </span><span class="s">&quot;/Zc:__cplusplus&quot;</span><span class="w"></span></code> as an option to NVCC. Failing to do so may result in errors
+reporting that a variable of class <code class="code highlight cpp docutils literal highlight-cpp"><span class="n">dim3</span><span class="w"></span></code> can’t be declared <code class="code highlight cpp docutils literal highlight-cpp"><span class="k">constexpr</span><span class="w"></span></code>.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>cuFFTDx emits errors for unsupported versions of compilers, which can be silenced by defining <code class="code highlight cpp docutils literal highlight-cpp"><span class="n">CUFFTDX_IGNORE_DEPRECATED_COMPILER</span><span class="w"></span></code>
+during compilation. cuFFTDx is not guaranteed to work with versions of compilers that are not supported in cuFTTDx.</p>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>cuFFTDx emits errors for unsupported versions of C++ standard, which can be silenced by defining <code class="code highlight cpp docutils literal highlight-cpp"><span class="n">CUFFTDX_IGNORE_DEPRECATED_DIALECT</span><span class="w"></span></code>
+during compilation. cuFFTDx is not guaranteed to work with versions of C++ standard that are not supported in cuFTTDx.</p>
+</div>
+</div>
+</div>
+<div class="section" id="supported-functionality">
+<span id="functionality-label"></span><h2>Supported Functionality<a class="headerlink" href="#supported-functionality" title="Permalink to this heading">¶</a></h2>
+<dl class="simple">
+<dt>Supported functions include:</dt><dd><ul class="simple">
+<li><p>Create block descriptors that run collective FFT operations (with one or more threads collaborating to compute one or more FFTs) in a single CUDA block. See <a class="reference internal" href="api/operators.html#block-operator-label"><span class="std std-ref">Block Operator</span></a>.</p></li>
+<li><p>Create thread descriptors that run a single FFT operation per thread. This function might require more expertise with cuFFTDx in order to obtain correct results with higher performance. See <a class="reference internal" href="api/operators.html#thread-operator-label"><span class="std std-ref">Thread Operator</span></a>.</p></li>
+<li><p>Bi-directional information flow, from the user to the descriptor via <a class="reference internal" href="api/operators.html#operators-label"><span class="std std-ref">Operators</span></a> and from the descriptor to the user via <a class="reference internal" href="api/traits.html#traits-label"><span class="std std-ref">Traits</span></a>.</p></li>
+<li><p>Target specific GPU architectures using the <a class="reference internal" href="api/operators.html#sm-operator-label"><span class="std std-ref">SM Operator</span></a>. This enables users to configure the descriptor with suggested parameters to target performance.</p></li>
+</ul>
+</dd>
+</dl>
+<p>cuFFTDx supports selected FFT sizes in the range <code class="code highlight cpp docutils literal highlight-cpp"><span class="p">[</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">max_size</span><span class="p">]</span><span class="w"></span></code>, where <code class="code highlight cpp docutils literal highlight-cpp"><span class="n">max_size</span><span class="w"></span></code> depends on precision and CUDA architecture as
+presented in table below, and all FFT sizes in the range <code class="code highlight cpp docutils literal highlight-cpp"><span class="p">[</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">max_size_fp64</span><span class="o">/</span><span class="mi">2</span><span class="p">]</span><span class="w"></span></code>, where <code class="code highlight cpp docutils literal highlight-cpp"><span class="n">max_size_fp64</span><span class="w"></span></code> is max FFT size for double
+precision for a given CUDA architecture. However, not every combination of size, precision, elements per thread, and FFTs per block
+is correct and available. The following table summarizes the available configurations:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 13%" />
+<col style="width: 33%" />
+<col style="width: 16%" />
+<col style="width: 14%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head" rowspan="2"><p>Type</p></th>
+<th class="head" rowspan="2"><p>Precision</p></th>
+<th class="head" rowspan="2"><p>Thread FFT Sizes</p></th>
+<th class="head" colspan="2"><p>Block FFT Sizes</p></th>
+</tr>
+<tr class="row-even"><th class="head"><p>Architecture</p></th>
+<th class="head"><p>Size Range</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-odd"><td rowspan="9"><ul class="simple">
+<li><p>Complex-to-complex</p></li>
+<li><p>Real-to-complex</p></li>
+<li><p>Complex-to-real</p></li>
+</ul>
+</td>
+<td rowspan="3"><p>half</p></td>
+<td rowspan="3"><p>All sizes in range: [2; 32]</p></td>
+<td><p>75</p></td>
+<td><p>[2; 4096]</p></td>
+</tr>
+<tr class="row-even"><td><p>70;72;86;89</p></td>
+<td><p>[2; 16384]</p></td>
+</tr>
+<tr class="row-odd"><td><p>80;87;90</p></td>
+<td><p>[2; 32768]</p></td>
+</tr>
+<tr class="row-even"><td rowspan="3"><p>float</p></td>
+<td rowspan="3"><p>All sizes in range: [2; 32]</p></td>
+<td><p>75</p></td>
+<td><p>[2; 4096]</p></td>
+</tr>
+<tr class="row-odd"><td><p>70;72;86;89</p></td>
+<td><p>[2; 16384]</p></td>
+</tr>
+<tr class="row-even"><td><p>80;87;90</p></td>
+<td><p>[2; 32768]</p></td>
+</tr>
+<tr class="row-odd"><td rowspan="3"><p>double</p></td>
+<td rowspan="3"><p>All sizes in range: [2; 16]</p></td>
+<td><p>75</p></td>
+<td><p>[2; 2048]</p></td>
+</tr>
+<tr class="row-even"><td><p>70;72;86;89</p></td>
+<td><p>[2; 8192]</p></td>
+</tr>
+<tr class="row-odd"><td><p>80;87;90</p></td>
+<td><p>[2; 16384]</p></td>
+</tr>
+</tbody>
+</table>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>cuFFTDx 0.3.0 added preliminary support for all sizes in range of <code class="code highlight cpp docutils literal highlight-cpp"><span class="p">[</span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">max_size_fp64</span><span class="o">/</span><span class="mi">2</span><span class="p">]</span><span class="w"></span></code>. Most sizes will require you to create additional workspace with global memory allocation. See <a class="reference internal" href="api/methods.html#make-workspace-method-label"><span class="std std-ref">Make Workspace Function</span></a>
+for more details about workspace. You can check if a given FFT requires with <a class="reference internal" href="api/traits.html#requiresworkspace-block-trait-label"><span class="std std-ref">FFT::requires_workspace</span></a> trait.</p>
+</div>
+<div class="admonition hint">
+<p class="admonition-title">Hint</p>
+<p>Since cuFFTDx 1.1.0, whether an FFT description is supported on a given CUDA architecture or not can be checked using <a class="reference internal" href="api/traits.html#is-supported-trait-label"><span class="std std-ref">cufftdx::is_supported</span></a>.</p>
+</div>
+<blockquote>
+<div><p>Workspace is not required for FFTs of following sizes:</p>
+<ul class="simple">
+<li><p>Powers of 2 up to 32768</p></li>
+<li><p>Powers of 3 up to 19683</p></li>
+<li><p>Powers of 5 up to 15625</p></li>
+<li><p>Powers of 6 up to 1296</p></li>
+<li><p>Powers of 7 up to 2401</p></li>
+<li><p>Powers of 10 up to 10000</p></li>
+<li><p>Powers of 11 up to 1331</p></li>
+<li><p>Powers of 12 up to 1728</p></li>
+</ul>
+<dl class="simple">
+<dt>In the future versions of cuFFTDx:</dt><dd><ul class="simple">
+<li><p>Workspace requirement may be removed for other configurations.</p></li>
+<li><p>FFT configurations that do not require workspace will continue to do so.</p></li>
+</ul>
+</dd>
+</dl>
+</div></blockquote>
+<dl class="simple">
+<dt>Functionality not yet supported include:</dt><dd><ul class="simple">
+<li><p>Input/output stored in global memory. Input data must be in registers or shared memory.</p></li>
+<li><p>The <a class="reference internal" href="api/operators.html#blockdim-operator-label"><span class="std std-ref">BlockDim Operator</span></a>, which enables fine-grain customization of the CUDA block dimensions.</p></li>
+</ul>
+</dd>
+</dl>
+</div>
+</div>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="index.html" class="btn btn-neutral float-left" title="NVIDIA cuFFTDx" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="installation.html" class="btn btn-neutral float-right" title="Quick Installation Guide" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2022, NVIDIA Corporation.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script>  
+
+  <style>
+  a:link, a:visited {
+    color: #76b900;
+  }
+
+  a:hover {
+    color: #8c0;
+  }
+
+  .rst-content dl:not(.docutils) dt {
+    background: rgba(118, 185, 0, 0.1);
+    color: rgba(59,93,0,1);
+    border-top: solid 3px rgba(59,93,0,1);
+  }
+  </style>
+  
+
+</body>
+</html>

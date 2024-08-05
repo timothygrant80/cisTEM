@@ -16,7 +16,7 @@
         {
             "label": "Configure cisTEM build",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/intel-gpu-static && cd ${build_dir}/intel-gpu-static && CC=icc CXX=icpc ../../configure --with-wx-config=/opt/WX/intel-static/bin/wx-config --enable-staticmode --with-cuda=${cuda_dir} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+            "command": "mkdir -p ${build_dir}/intel-gpu-static && cd ${build_dir}/intel-gpu-static && CC=icc CXX=icpc ../../configure ${input:additional_compiler_flags} --with-wx-config=/opt/WX/intel-static/bin/wx-config --enable-staticmode --with-cuda=${cuda_dir} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
         },
         {
             "label": "BUILD cisTEM",
@@ -26,7 +26,7 @@
         {
             "label": "Configure cisTEM DEBUG build",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/intel-gpu-debug-static && cd ${build_dir}/intel-gpu-debug-static && CC=icc CXX=icpc ../../configure --enable-debugmode --enable-gpu-debug --with-wx-config=/opt/WX/intel-static/bin/wx-config --enable-staticmode --with-cuda=${cuda_dir} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+            "command": "mkdir -p ${build_dir}/intel-gpu-debug-static && cd ${build_dir}/intel-gpu-debug-static && CC=icc CXX=icpc ../../configure ${input:additional_compiler_flags} --enable-debugmode --enable-gpu-debug --with-wx-config=/opt/WX/intel-static/bin/wx-config --enable-staticmode --with-cuda=${cuda_dir} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
         },
         {
             "label": "BUILD cisTEM DEBUG",
@@ -36,7 +36,7 @@
         {
             "label": "Configure cisTEM DEBUG build, CPU only",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/intel-debug-static && cd ${build_dir}/intel-debug-static && CC=icc CXX=icpc ../../configure --enable-debugmode --with-wx-config=/opt/WX/intel-static/bin/wx-config --enable-staticmode ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+            "command": "mkdir -p ${build_dir}/intel-debug-static && cd ${build_dir}/intel-debug-static && CC=icc CXX=icpc ../../configure ${input:additional_compiler_flags} --enable-debugmode --with-wx-config=/opt/WX/intel-static/bin/wx-config --enable-staticmode ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
         },
         {
             "label": "BUILD cisTEM DEBUG, CPU only",
@@ -50,6 +50,12 @@
             "id": "compile_cores",
             "description": "Number of threads for compiling.",
             "default": "8"
+        },
+        {
+            "type": "promptString",
+            "id": "additional_compiler_flags",
+            "description": "additional_compiler_flags",
+            "default": ""
         }
     ]
 }

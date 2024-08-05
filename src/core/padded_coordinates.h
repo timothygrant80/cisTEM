@@ -10,22 +10,6 @@ enum PaddingStatus : int { none    = 0,
 constexpr int TAPERWIDTH = 29; // TODO this should be set to 12 with zeros padded out by size neighborhood and calculated by taper = 0.5+0.5.*cos((((1:pixelFallOff)).*pi)./(length((1:pixelFallOff+1))));
 constexpr int N_TAPERS   = 3; // for trimming final image
 
-#ifndef ENABLEGPU
-
-typedef struct _int3 {
-    int x;
-    int y;
-    int z;
-} int3;
-
-typedef struct _float3 {
-    float x;
-    float y;
-    float z;
-} float3;
-
-#endif
-
 class Coords {
 
   public:

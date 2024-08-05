@@ -406,6 +406,7 @@ void DisplayPanel::OnTrajectory(wxCommandEvent& WXUNUSED(event)) {
 
     long scaled_x_size = long(myround(current_panel->ReturnImageXSize( ) * current_panel->desired_scale_factor));
     long scaled_y_size = long(myround(current_panel->ReturnImageYSize( ) * current_panel->desired_scale_factor));
+    wxPrintf("currentImageSize %d %d", current_panel->ReturnImageXSize( ), current_panel->ReturnImageYSize( ));
 
     // For stacks of 2d images and slices of 3d, we intentionally limit the max scaling to whatever is capable of fitting within the size of the window.
     // Done because the DisplayPanel is used in several areas of cisTEM without the ability to remove Single Image Mode; this could result in scaled
@@ -470,6 +471,7 @@ void DisplayPanel::OnTrajectory(wxCommandEvent& WXUNUSED(event)) {
             if ( ! current_panel->suspend_overlays ) {
 
                 dc.SetPen(*wxRED);
+                // dc.SetBrush(wxBrush(wxColor(50, 50, 200, 60)));
 
                 counter = current_panel->current_location;
 
@@ -479,13 +481,31 @@ void DisplayPanel::OnTrajectory(wxCommandEvent& WXUNUSED(event)) {
                     // dc.DrawLine(100, 100, 200, 200);
                     wxPrintf("trajectoryx 0 %f", current_panel->trajectory_x[0]);
                     // wxPrintf("Trajectory size %d", current_panel->trajectory_x.size( ));
-                    float scale = 300 * current_panel->actual_scale_factor;
+                    float scale = 1 * current_panel->actual_scale_factor;
                     wxPrintf("scale %f", scale);
                     wxPrintf("actual scale factor %f", current_panel->actual_scale_factor);
-                    dc.DrawLine(0, 0, scale * current_panel->trajectory_x[0], scale * current_panel->trajectory_y[0]);
-                    for ( int i = 1; i < current_panel->trajectory_x.size( ); i++ ) {
-                        dc.DrawLine(scale * current_panel->trajectory_x[i - 1], scale * current_panel->trajectory_y[i - 1], scale * current_panel->trajectory_x[i], scale * current_panel->trajectory_y[i]);
+                    // dc.DrawLine(0, 0, scale * current_panel->trajectory_x[0], scale * current_panel->trajectory_y[0]);
+                    int patch_no      = current_panel->trajectory_x[0];
+                    int frame_no      = current_panel->trajectory_y[0];
+                    int index_counter = 1;
+                    for ( int i = 0; i < patch_no; i++ ) {
+                        float x0 = scale * current_panel->trajectory_x[index_counter];
+                        float y0 = scale * current_panel->trajectory_y[index_counter];
+                        // wxPrintf("x0 y0 %f %f", current_panel->trajectory_x[index_counter], current_panel->trajectory_y[index_counter]);
+                        dc.DrawCircle(x0, y0, 2);
+                        index_counter++;
+                        for ( int j = 0; j < frame_no; j++ ) {
+                            float x1 = -scale * current_panel->trajectory_x[index_counter] + x0;
+                            float y1 = -scale * current_panel->trajectory_y[index_counter] + y0;
+                            dc.DrawLine(x0, y0, x1, y1);
+                            index_counter++;
+                            x0 = x1;
+                            y0 = y1;
+                        }
                     }
+                    // for ( int i = 1; i < current_panel->trajectory_x.size( ); i++ ) {
+                    //     dc.DrawLine(scale * current_panel->trajectory_x[i - 1], scale * current_panel->trajectory_y[i - 1], scale * current_panel->trajectory_x[i], scale * current_panel->trajectory_y[i]);
+                    // }
 
                     // if ( (parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || (parent_display_panel->is_from_display_program && picking_mode == IMAGES_PICK) ) {
                     //     if ( image_is_selected[counter] ) {

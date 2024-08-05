@@ -661,8 +661,11 @@ void apply_fitting_spline_sup(int output_x_size, int output_y_size, Image* super
 void apply_fitting_spline_sup_control(int output_x_size, int output_y_size, Image* super_res_stack, float output_binning_factor, int number_of_images, column_vector Control1d_R0, column_vector Control1d_R1, int max_threads);
 void dosefilter(Image* image_stack, int first_frame, int last_frame, float* dose_filter_sum_of_squares, ElectronDose* my_electron_dose, StopWatch profile_timing, float exposure_per_frame, float pre_exposure_amount, int max_threads);
 void write_shifts(int patch_no_x, int patch_no_y, int image_no, std::string output_path, std::string shift_file_prefx, std::string shift_file_prefy);
+void write_shifts_forGUI(int image_dim_x, int image_dim_y, int patch_no_x, int patch_no_y, float** patch_locations, int image_no, std::string output_path, float output_binning_factor, column_vector Control1d, column_vector Control1d_ccmap);
 void write_quad_shifts(int image_no, int patch_no_x, int patch_no_y, param_vector_quadratic params_x, param_vector_quadratic params_y, float** patch_locations, std::string output_path, std::string shift_file_prefx, std::string shift_file_prefy);
+void write_shifts_forGUI_quad(int image_no, int patch_no_x, int patch_no_y, param_vector_quadratic params_x, param_vector_quadratic params_y, float** patch_locations, std::string output_path);
 void write_linear_shifts(int image_no, int patch_no_x, int patch_no_y, param_vector_linear params_x, param_vector_linear params_y, float** patch_locations, std::string output_path, std::string shift_file_prefx, std::string shift_file_prefy);
+void write_shifts_forGUI_linear(int image_no, int patch_no_x, int patch_no_y, param_vector_linear params_x, param_vector_linear params_y, float** patch_locations, std::string output_path);
 void Spline_Refine(Image** patch_stack, column_vector& Control_1d_search, column_vector& Control1d_ccmap, double knot_on_x, double knot_on_y, double knot_on_z, int number_of_input_images, int image_dim_x, int image_dim_y, double search_sample_dose, double total_dose, double pixel_size, double exposure_per_frame, double coeffspline_unitless_bfactor, int patch_num_x, int patch_num_y, int max_threads, int output_x_size, int output_y_size, wxString outputpath, int output_binning_factor, int pre_binning_factor, int patch_num, matrix<double> patch_locations_x, matrix<double> patch_locations_y, matrix<double> z);
 void Spline_Fitting(column_vector& Control_1d_search, double deriv_eps, double f_min, unsigned long max_iter, double stop_cri_scale, double knot_on_x, double knot_on_y, double knot_on_z, double knot_x_dis, double knot_y_dis, double search_sample_dose, wxString outputpath);
 void Spline_Shift_Implement(Image** patch_stack, int patch_num_x, int patch_num_y, int number_of_input_images, int max_threads);
@@ -1559,6 +1562,8 @@ bool UnBlurApp::DoCalculation( ) {
                     image_stack = raw_image_stack;
                     unblur_timing.lap("Distortion Correction");
                     write_quad_shifts(number_of_input_images, patch_num_x, patch_num_y, x_quad, y_quad, patch_locations, outputpath.ToStdString( ), "_shiftx_R0", "_shifty_R0");
+                    write_shifts_forGUI_quad(number_of_input_images, patch_num_x, patch_num_y, x_quad, y_quad, patch_locations, outputpath.ToStdString( ));
+
                     // write_shifts(patch_num_x, patch_num_y, number_of_input_images, outputpath.ToStdString( ), "_shiftx_R0", "_shifty_R0");
                     Deallocate2DFloatArray(patch_locations, patch_num);
                 }
@@ -1594,6 +1599,9 @@ bool UnBlurApp::DoCalculation( ) {
                     unblur_timing.lap("Distortion Correction");
                     write_linear_shifts(number_of_input_images, patch_num_x, patch_num_y, x_linear, y_linear, patch_locations, outputpath.ToStdString( ), "_shiftx_R0", "_shifty_R0");
 
+                    if ( is_running_locally == false ) {
+                        write_shifts_forGUI_linear(number_of_input_images, patch_num_x, patch_num_y, x_linear, y_linear, patch_locations, outputpath.ToStdString( ));
+                    }
                     Deallocate2DFloatArray(patch_locations, patch_num);
                 }
             }
@@ -1940,10 +1948,15 @@ bool UnBlurApp::DoCalculation( ) {
                     write_joins(outputpath.ToStdString( ), "Control_R0", best_control_1d);
                     write_joins(outputpath.ToStdString( ), "Control_R1", best_control_1d_ccmap);
                     write_shifts(patch_num_x, patch_num_y, number_of_input_images, outputpath.ToStdString( ), "_shiftx_R1", "_shifty_R1");
+
+                    // if ( is_running_locally == false ) {
+                    wxPrintf("write shifts for GUI\n");
+                    write_shifts_forGUI(output_x_size, output_y_size, patch_num_x, patch_num_y, patch_locations, number_of_input_images, outputpath.ToStdString( ), output_binning_factor, Control1d, Control1d_ccmap);
+                    // output_x_size, output_y_size, raw_image_stack, output_binning_factor, number_of_input_images, Control1d, Control1d_ccmap
+                    // }
                 }
                 else {
                     patch_trimming_basedon_locations(counting_image_stack, patch_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath.ToStdString( ), "patch_pix", max_threads, false, false, patch_locations);
-                    Deallocate2DFloatArray(patch_locations, patch_num);
 
                     // /*
                     ccmap_stack.InitializeSplineStack(quater_patch_dim, quater_patch_dim, patch_num * number_of_input_images, 1, 1);
@@ -1969,18 +1982,26 @@ bool UnBlurApp::DoCalculation( ) {
                     write_shifts(patch_num_x, patch_num_y, number_of_input_images, outputpath.ToStdString( ), "_shiftx_R0", "_shifty_R0");
                     unblur_timing.lap("Initial Model Fitting");
 
+                    wxPrintf("Loss Refine\n");
+
                     unblur_timing.start("Loss Refine Preparation");
                     Generate_CoeffSpline(ccmap_stack, patch_stack, coeffspline_unitless_bfactor, patch_num, number_of_input_images, max_threads, false, outputpath.ToStdString( ), "CCMapBfactor_R1");
                     unblur_timing.lap("Loss Refine Preparation");
+                    wxPrintf("Refine\n");
 
                     unblur_timing.start("Model Refinement");
                     Spline_LossRefine(Control1d_ccmap, deriv_eps_loss, f_min, max_iter_lossrefine, stop_cri_scale, knot_on_x, knot_on_y, knot_on_z, knot_x_dis, knot_y_dis, sample_dose, outputpath.ToStdString( ));
                     write_shifts(patch_num_x, patch_num_y, number_of_input_images, outputpath.ToStdString( ), "_shiftx_R1", "_shifty_R1");
                     unblur_timing.lap("Model Refinement");
+                    wxPrintf("write joins for GUI\n");
 
                     write_joins(outputpath.ToStdString( ), "Control_R0", Control1d);
                     write_joins(outputpath.ToStdString( ), "Control_R1", Control1d_ccmap);
-
+                    // if ( is_running_locally == false ) {
+                    wxPrintf("write shifts for GUI\n");
+                    write_shifts_forGUI(output_x_size, output_y_size, patch_num_x, patch_num_y, patch_locations, number_of_input_images, outputpath.ToStdString( ), output_binning_factor, Control1d, Control1d_ccmap);
+                    // output_x_size, output_y_size, raw_image_stack, output_binning_factor, number_of_input_images, Control1d, Control1d_ccmap
+                    // }
                     // */
 
                     // ------------------------------------
@@ -2014,8 +2035,14 @@ bool UnBlurApp::DoCalculation( ) {
                 apply_fitting_spline_sup_control(output_x_size, output_y_size, raw_image_stack, output_binning_factor, number_of_input_images, Control1d, Control1d_ccmap, max_threads);
                 image_stack = raw_image_stack;
                 unblur_timing.lap("Distortion Correction");
+                // if ( is_running_locally == false ) {
+                //     wxPrintf("write shifts for GUI\n");
+                //     write_shifts_forGUI(output_x_size, output_y_size, patch_num_x, patch_num_y, patch_locations, number_of_input_images, outputpath.ToStdString( ), output_binning_factor, Control1d, Control1d_ccmap);
+                //     // output_x_size, output_y_size, raw_image_stack, output_binning_factor, number_of_input_images, Control1d, Control1d_ccmap
+                // }
                 // Spline3dx.Deallocate( );
                 // Spline3dy.Deallocate( );
+                Deallocate2DFloatArray(patch_locations, patch_num);
                 std::cout.rdbuf(coutBuf0);
                 file.close( );
             }
@@ -3076,6 +3103,109 @@ void write_shifts(int patch_no_x, int patch_no_y, int image_no, std::string outp
     }
 };
 
+void write_shifts_forGUI(int image_dim_x, int image_dim_y, int patch_no_x, int patch_no_y, float** patch_locations, int image_no, std::string output_path, float output_binning_factor, column_vector Control1d_R0, column_vector Control1d_R1) {
+    int              controlsize = Control1d_R0.size( );
+    MovieFrameSpline spline3dx_0, spline3dy_0;
+    matrix<double>*  interp;
+
+    spline3dx_0.Initialize(Spline3dx.knot_no_z, Spline3dx.knot_no_y, Spline3dx.knot_no_x, Spline3dx.frame_no, image_dim_x, image_dim_y, Spline3dx.spline_patch_dimz, Spline3dx.spline_patch_dimx, Spline3dx.spline_patch_dimy);
+    spline3dy_0.Initialize(Spline3dy.knot_no_z, Spline3dy.knot_no_y, Spline3dy.knot_no_x, Spline3dy.frame_no, image_dim_x, image_dim_y, Spline3dy.spline_patch_dimz, Spline3dy.spline_patch_dimx, Spline3dy.spline_patch_dimy);
+    spline3dx_0.Update3DSplineInterpMappingControl(Spline3dx.x, Spline3dx.y, Spline3dx.z);
+    spline3dy_0.Update3DSplineInterpMappingControl(Spline3dy.x, Spline3dy.y, Spline3dy.z);
+    int            count = 0;
+    matrix<double> control_on_spline_for_x, control_on_spline_for_y;
+    int            halflen = controlsize / 2;
+    // int            halflen = knot_on_x * knot_on_y * knot_on_z;
+    // wxPrintf("initialize spline 3d for 0 round %i %i %i\n", spline3dx_0.knot_no_x, spline3dx_0.knot_no_y, spline3dx_0.knot_no_z);
+    control_on_spline_for_x.set_size(halflen, 1);
+    for ( int i = 0; i < halflen; i++ ) {
+        control_on_spline_for_x(i) = Control1d_R0(count);
+        // wxPrintf("control_on_spline_for_x %f\n", control_on_spline_for_x(i));
+        count++;
+    }
+    // wxPrintf("Update3DSpline1dInputControlPoints x\n");
+    // spline3dx_0.Update3DSpline1dInputControlPoints(control_on_spline_for_x);
+
+    control_on_spline_for_y.set_size(halflen, 1);
+    for ( int i = 0; i < halflen; i++ ) {
+        control_on_spline_for_y(i) = Control1d_R0(count);
+        count++;
+    }
+    // wxPrintf("Update3DSpline1dInputControlPoints y\n");
+    // spline3dy_0.Update3DSpline1dInputControlPoints(control_on_spline_for_y);
+
+    // wxPrintf("smooth 3dx R0 x\n");
+    // wxPrintf("spline3d %f %f\n", Spline3dy.smooth_interp[0](0, 0), Spline3dy.smooth_interp[0](0, 1));
+    // // shiftsx = spline3dx_R0.ControlToInterp(control_on_spline_for_x);
+    // wxPrintf("frame no %i\n", spline3dx_0.frame_no);
+    interp = spline3dx_0.ControlToInterp(control_on_spline_for_x);
+
+    // wxPrintf("smooth 3dy R0 y\n");
+    interp = spline3dy_0.ControlToInterp(control_on_spline_for_y);
+
+    // refine spline
+    count = 0;
+    for ( int i = 0; i < halflen; i++ ) {
+        control_on_spline_for_x(i) = Control1d_R1(count);
+        count++;
+    }
+    // wxPrintf("Update3DSpline1dInputControlPoints Spline3dx x\n");
+
+    // Spline3dx.Update3DSpline1dInputControlPoints(control_on_spline_for_x);
+    for ( int i = 0; i < halflen; i++ ) {
+        control_on_spline_for_y(i) = Control1d_R1(count);
+        count++;
+    }
+    // wxPrintf("Update3DSpline1dInputControlPoints Spline3dy x\n");
+
+    // Spline3dy.Update3DSpline1dInputControlPoints(control_on_spline_for_y);
+
+    // wxPrintf("smooth 3dx R1 x\n");
+
+    interp = Spline3dx.ControlToInterp(control_on_spline_for_x);
+    // wxPrintf("smooth 3dy R1 x\n");
+
+    interp = Spline3dy.ControlToInterp(control_on_spline_for_y);
+
+    // Write the result
+    std::ostringstream oss;
+    std::ofstream      oFile;
+    char               subbuffer[200];
+
+    // wxPrintf("before writing\n");
+    std::string patch_shift_file;
+    oss << "%s%s" << output_path.c_str( ), "patch_shift.txt";
+    std::snprintf(subbuffer, sizeof(subbuffer), "%s%s", output_path.c_str( ), "patch_shift.txt");
+    patch_shift_file = subbuffer;
+    // wxPrintf("before opening file\n");
+    // wxPrintf(" some test output %f %f\n", spline3dx_0.smooth_interp[0](0, 0), spline3dy_0.smooth_interp[0](0, 1));
+    // wxPrintf(" some test output %f %f\n", Spline3dy.smooth_interp[0](0, 0), Spline3dy.smooth_interp[0](0, 1));
+    oFile.open(patch_shift_file.c_str( ));
+    float shiftx, shifty;
+    int   patch_no = patch_no_x * patch_no_y;
+    if ( oFile.is_open( ) ) {
+        oFile << "# Patch number & Frame number\n";
+        oFile << patch_no << '\t' << image_no << '\n';
+        for ( int i = 0; i < patch_no_y; i++ ) {
+            for ( int j = 0; j < patch_no_x; j++ ) {
+                int patch_counter = patch_no_x * i + j;
+                // wxPrintf("patch no %i\n", patch_counter);
+                oFile << "# Patch " << patch_counter << '\n';
+                // wxPrintf("patch locations %f %f\n", patch_locations[patch_counter][0], patch_locations[patch_counter][1]);
+                oFile << patch_locations[patch_counter][0] << '\t';
+                oFile << patch_locations[patch_counter][1] << '\n';
+                for ( int image_ind = 0; image_ind < image_no; image_ind++ ) {
+                    shiftx = spline3dx_0.smooth_interp[image_ind](i, j) + Spline3dx.smooth_interp[image_ind](i, j);
+                    shifty = spline3dy_0.smooth_interp[image_ind](i, j) + Spline3dy.smooth_interp[image_ind](i, j);
+                    oFile << shiftx << '\t';
+                    oFile << shifty << '\n';
+                }
+            }
+        }
+    }
+    oFile.close( );
+};
+
 void write_quad_shifts(int image_no, int patch_no_x, int patch_no_y, param_vector_quadratic params_x, param_vector_quadratic params_y, float** patch_locations, std::string output_path, std::string shift_file_prefx, std::string shift_file_prefy) {
     std::ofstream      xoFile, yoFile;
     char               buffer[200];
@@ -3123,6 +3253,42 @@ void write_quad_shifts(int image_no, int patch_no_x, int patch_no_y, param_vecto
     }
 };
 
+void write_shifts_forGUI_quad(int image_no, int patch_no_x, int patch_no_y, param_vector_quadratic params_x, param_vector_quadratic params_y, float** patch_locations, std::string output_path) {
+    std::ofstream oFile;
+    char          buffer[200];
+    std::string   patch_shift_file;
+    input_vector  input;
+
+    std::ostringstream oss;
+    oss << "%s%s" << output_path.c_str( ), "patch_shift.txt";
+    std::snprintf(buffer, sizeof(buffer), "%s%s", output_path.c_str( ), "patch_shift.txt");
+    patch_shift_file = buffer;
+
+    oFile.open(patch_shift_file.c_str( ));
+    int patch_no = patch_no_x * patch_no_y;
+
+    if ( oFile.is_open( ) ) {
+        oFile << "# Patch number & Frame number\n";
+        oFile << patch_no << '\t' << image_no << '\n';
+        for ( int i = 0; i < patch_no_y; i++ ) {
+            for ( int j = 0; j < patch_no_x; j++ ) {
+                int patch_counter = patch_no_x * i + j;
+                oFile << "# Patch " << patch_counter << '\n';
+                oFile << patch_locations[patch_counter][0] << '\t';
+                oFile << patch_locations[patch_counter][1] << '\n';
+                for ( int image_counter = 0; image_counter < image_no; image_counter++ ) {
+                    input(2) = image_counter;
+                    input(0) = patch_locations[patch_counter][0];
+                    input(1) = patch_locations[patch_counter][1];
+                    oFile << model_quadratic(input, params_x) << '\t';
+                    oFile << model_quadratic(input, params_y) << '\n';
+                }
+            }
+        }
+    }
+    oFile.close( );
+};
+
 void write_linear_shifts(int image_no, int patch_no_x, int patch_no_y, param_vector_linear params_x, param_vector_linear params_y, float** patch_locations, std::string output_path, std::string shift_file_prefx, std::string shift_file_prefy) {
     std::ofstream      xoFile, yoFile;
     char               buffer[200];
@@ -3168,4 +3334,39 @@ void write_linear_shifts(int image_no, int patch_no_x, int patch_no_y, param_vec
         xoFile.close( );
         yoFile.close( );
     }
+};
+
+void write_shifts_forGUI_linear(int image_no, int patch_no_x, int patch_no_y, param_vector_linear params_x, param_vector_linear params_y, float** patch_locations, std::string output_path) {
+    std::ofstream oFile;
+    char          buffer[200];
+    std::string   patch_shift_file;
+    input_vector  input;
+
+    std::ostringstream oss;
+    oss << "%s%s" << output_path.c_str( ), "patch_shift.txt";
+    std::snprintf(buffer, sizeof(buffer), "%s%s", output_path.c_str( ), "patch_shift.txt");
+    patch_shift_file = buffer;
+
+    oFile.open(patch_shift_file.c_str( ));
+    int patch_no = patch_no_x * patch_no_y;
+    if ( oFile.is_open( ) ) {
+        oFile << "# Patch number & Frame number\n";
+        oFile << patch_no << '\t' << image_no << '\n';
+        for ( int i = 0; i < patch_no_y; i++ ) {
+            for ( int j = 0; j < patch_no_x; j++ ) {
+                int patch_counter = patch_no_x * i + j;
+                oFile << "# Patch " << patch_counter << '\n';
+                oFile << patch_locations[patch_counter][0] << '\t';
+                oFile << patch_locations[patch_counter][1] << '\n';
+                for ( int image_counter = 0; image_counter < image_no; image_counter++ ) {
+                    input(2) = image_counter;
+                    input(0) = patch_locations[patch_counter][0];
+                    input(1) = patch_locations[patch_counter][1];
+                    oFile << model_linear(input, params_x) << '\t';
+                    oFile << model_linear(input, params_y) << '\n';
+                }
+            }
+        }
+    }
+    oFile.close( );
 };

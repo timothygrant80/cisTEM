@@ -51,7 +51,7 @@ void MovieFrameSpline::Initialize(int knot_no_along_z, int row_no, int column_no
     // this->phixy    = this->Spline2d[0].phi;
     // this->invphixy = this->Spline2d[0].invphi;
     wxPrintf("done initial\n");
-    // this->smooth_interp   = new matrix<double>[this->frame_no];
+    this->smooth_interp = new matrix<double>[this->frame_no];
     // this->discrete_values = new matrix<double>[this->frame_no];
 }
 
@@ -394,10 +394,27 @@ void MovieFrameSpline::Update3DSpline(matrix<double>** value_on_knot) {
 
 matrix<double>* MovieFrameSpline::SmoothInterp( ) {
     // matrix<double>* interp;
-    delete[] this->smooth_interp;
+    if ( this->smooth_interp != NULL ) {
+        // wxPrintf("bf delete\n");
+        delete[] this->smooth_interp;
+        // wxPrintf("af delete\n");
+    }
+    // wxPrintf("bf delete\n");
+    // delete[] this->smooth_interp;
+    // wxPrintf("af delete\n");
+
     this->smooth_interp = new matrix<double>[this->frame_no];
     for ( int frame_ind = 0; frame_ind < this->frame_no; frame_ind++ ) {
+        // if ( frame_ind == 0 ) {
+        //     // wxPrintf("before apply mapping mat\n");
+        //     wxPrintf("before apply mapping mat %f\n", this->Spline2d[frame_ind].Qz2d(0, 0));
+        // }
+        // wxPrintf("bf delete\n");
         this->smooth_interp[frame_ind] = this->Spline2d[frame_ind].ApplyMappingMat(this->Spline2d[frame_ind].Qz2d);
+        // if ( frame_ind == 0 ) {
+        //     // wxPrintf("before apply mapping mat\n");
+        //     wxPrintf("after apply mapping mat %f\n", this->Spline2d[frame_ind].Qz2d(0, 1));
+        // }
     }
     // interp = this->smooth_interp;
     // // this->smooth_interp = interp;

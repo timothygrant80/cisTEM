@@ -1019,12 +1019,12 @@ void MyAlignMoviesPanel::ProcessResult(JobResult* result_to_process) // this wil
                 DisplayNotebookPanel* current_panel         = reinterpret_cast<DisplayNotebookPanel*>(GraphPanel->ImageDisplayPanel->my_notebook->GetPage(0));
                 current_panel->use_unscaled_image_for_popup = true;
                 wxPrintf("case1 1 trajectory name %s \n", current_job_package.jobs[result_to_process->job_number].arguments[36].ReturnStringArgument( ));
-                GraphPanel->ImageDisplayPanel->LoadTrajectory(0, current_job_package.jobs[result_to_process->job_number].arguments[36].ReturnStringArgument( ) + "/fullframe_shift.txt");
+                GraphPanel->ImageDisplayPanel->LoadTrajectory(0, current_job_package.jobs[result_to_process->job_number].arguments[36].ReturnStringArgument( ) + "/patch_shift.txt");
             }
             else {
                 wxPrintf("case1 2 \n");
                 GraphPanel->ImageDisplayPanel->ChangeFileForTabNumber(0, current_job_package.jobs[result_to_process->job_number].arguments[28].ReturnStringArgument( ), "");
-                GraphPanel->ImageDisplayPanel->LoadTrajectory(0, current_job_package.jobs[result_to_process->job_number].arguments[36].ReturnStringArgument( ) + "/fullframe_shift.txt");
+                GraphPanel->ImageDisplayPanel->LoadTrajectory(0, current_job_package.jobs[result_to_process->job_number].arguments[36].ReturnStringArgument( ) + "/patch_shift.txt");
             }
             // if ( DoesFileExist(current_job_package.jobs[result_to_process->job_number].arguments[36].ReturnStringArgument( ) + "fullframe_shift.txt") == true ) {
 
@@ -1036,13 +1036,13 @@ void MyAlignMoviesPanel::ProcessResult(JobResult* result_to_process) // this wil
                 GraphPanel->ImageDisplayPanel->ChangeFile(sum_filename.GetFullPath( ), sum_filename.GetShortPath( ));
                 DisplayNotebookPanel* current_panel         = reinterpret_cast<DisplayNotebookPanel*>(GraphPanel->ImageDisplayPanel->my_notebook->GetPage(0));
                 current_panel->use_unscaled_image_for_popup = true;
-                GraphPanel->ImageDisplayPanel->LoadTrajectory(0, current_job_package.jobs[result_to_process->job_number].arguments[36].ReturnStringArgument( ) + "/fullframe_shift.txt");
+                GraphPanel->ImageDisplayPanel->LoadTrajectory(0, current_job_package.jobs[result_to_process->job_number].arguments[36].ReturnStringArgument( ) + "/patch_shift.txt");
             }
             else {
                 wxPrintf("case2 2 \n");
                 // GraphPanel->ImageDisplayPanel->ChangeFile(sum_filename.GetFullPath( ), sum_filename.GetShortPath( ));
                 GraphPanel->ImageDisplayPanel->ChangeFileForTabNumber(0, sum_filename.GetFullPath( ), sum_filename.GetShortPath( ));
-                GraphPanel->ImageDisplayPanel->LoadTrajectory(0, current_job_package.jobs[result_to_process->job_number].arguments[36].ReturnStringArgument( ) + "/fullframe_shift.txt");
+                GraphPanel->ImageDisplayPanel->LoadTrajectory(0, current_job_package.jobs[result_to_process->job_number].arguments[36].ReturnStringArgument( ) + "/patch_shift.txt");
             }
         }
 

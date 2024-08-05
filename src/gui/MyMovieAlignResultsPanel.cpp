@@ -331,7 +331,7 @@ void MyMovieAlignResultsPanel::DrawCurveAndFillDetails(int row, int column) {
 
     small_image_filename += wxString::Format("/Scaled/%s", wxFileName(output_file).GetFullName( ));
     wxPrintf("output_path = %s\n", output_path);
-    trajectory_file = wxString::Format("%s%s", output_path, "/fullframe_shift.txt");
+    trajectory_file = wxString::Format("%s%s", output_path, "/patch_shift.txt");
     wxPrintf("Trajectory file = %s\n", trajectory_file);
     if ( DoesFileExist(small_image_filename) == true ) {
         // ResultPanel->ImageDisplayPanel->ChangeFile(small_image_filename, "");

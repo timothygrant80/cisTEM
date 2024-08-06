@@ -661,11 +661,11 @@ void apply_fitting_spline_sup(int output_x_size, int output_y_size, Image* super
 void apply_fitting_spline_sup_control(int output_x_size, int output_y_size, Image* super_res_stack, float output_binning_factor, int number_of_images, column_vector Control1d_R0, column_vector Control1d_R1, int max_threads);
 void dosefilter(Image* image_stack, int first_frame, int last_frame, float* dose_filter_sum_of_squares, ElectronDose* my_electron_dose, StopWatch profile_timing, float exposure_per_frame, float pre_exposure_amount, int max_threads);
 void write_shifts(int patch_no_x, int patch_no_y, int image_no, std::string output_path, std::string shift_file_prefx, std::string shift_file_prefy);
-void write_shifts_forGUI(int image_dim_x, int image_dim_y, int patch_no_x, int patch_no_y, float** patch_locations, int image_no, std::string output_path, float output_binning_factor, column_vector Control1d, column_vector Control1d_ccmap);
+void write_shifts_forGUI(int image_dim_x, int image_dim_y, int patch_no_x, int patch_no_y, float** patch_locations, int image_no, std::string output_path, float output_binning_factor, column_vector Control1d, column_vector Control1d_ccmap, bool write_out_small_sum_image);
 void write_quad_shifts(int image_no, int patch_no_x, int patch_no_y, param_vector_quadratic params_x, param_vector_quadratic params_y, float** patch_locations, std::string output_path, std::string shift_file_prefx, std::string shift_file_prefy);
-void write_shifts_forGUI_quad(int image_no, int patch_no_x, int patch_no_y, param_vector_quadratic params_x, param_vector_quadratic params_y, float** patch_locations, std::string output_path);
+void write_shifts_forGUI_quad(int image_dim_x, int image_dim_y, int image_no, int patch_no_x, int patch_no_y, param_vector_quadratic params_x, param_vector_quadratic params_y, float** patch_locations, std::string output_path, bool write_out_small_sum_image);
 void write_linear_shifts(int image_no, int patch_no_x, int patch_no_y, param_vector_linear params_x, param_vector_linear params_y, float** patch_locations, std::string output_path, std::string shift_file_prefx, std::string shift_file_prefy);
-void write_shifts_forGUI_linear(int image_no, int patch_no_x, int patch_no_y, param_vector_linear params_x, param_vector_linear params_y, float** patch_locations, std::string output_path);
+void write_shifts_forGUI_linear(int image_dim_x, int image_dim_y, int image_no, int patch_no_x, int patch_no_y, param_vector_linear params_x, param_vector_linear params_y, float** patch_locations, std::string output_path, bool write_out_small_sum_image);
 void Spline_Refine(Image** patch_stack, column_vector& Control_1d_search, column_vector& Control1d_ccmap, double knot_on_x, double knot_on_y, double knot_on_z, int number_of_input_images, int image_dim_x, int image_dim_y, double search_sample_dose, double total_dose, double pixel_size, double exposure_per_frame, double coeffspline_unitless_bfactor, int patch_num_x, int patch_num_y, int max_threads, int output_x_size, int output_y_size, wxString outputpath, int output_binning_factor, int pre_binning_factor, int patch_num, matrix<double> patch_locations_x, matrix<double> patch_locations_y, matrix<double> z);
 void Spline_Fitting(column_vector& Control_1d_search, double deriv_eps, double f_min, unsigned long max_iter, double stop_cri_scale, double knot_on_x, double knot_on_y, double knot_on_z, double knot_x_dis, double knot_y_dis, double search_sample_dose, wxString outputpath);
 void Spline_Shift_Implement(Image** patch_stack, int patch_num_x, int patch_num_y, int number_of_input_images, int max_threads);
@@ -1562,7 +1562,7 @@ bool UnBlurApp::DoCalculation( ) {
                     image_stack = raw_image_stack;
                     unblur_timing.lap("Distortion Correction");
                     write_quad_shifts(number_of_input_images, patch_num_x, patch_num_y, x_quad, y_quad, patch_locations, outputpath.ToStdString( ), "_shiftx_R0", "_shifty_R0");
-                    write_shifts_forGUI_quad(number_of_input_images, patch_num_x, patch_num_y, x_quad, y_quad, patch_locations, outputpath.ToStdString( ));
+                    write_shifts_forGUI_quad(image_dim_x, image_dim_y, number_of_input_images, patch_num_x, patch_num_y, x_quad, y_quad, patch_locations, outputpath.ToStdString( ), write_out_small_sum_image);
 
                     // write_shifts(patch_num_x, patch_num_y, number_of_input_images, outputpath.ToStdString( ), "_shiftx_R0", "_shifty_R0");
                     Deallocate2DFloatArray(patch_locations, patch_num);
@@ -1600,7 +1600,7 @@ bool UnBlurApp::DoCalculation( ) {
                     write_linear_shifts(number_of_input_images, patch_num_x, patch_num_y, x_linear, y_linear, patch_locations, outputpath.ToStdString( ), "_shiftx_R0", "_shifty_R0");
 
                     if ( is_running_locally == false ) {
-                        write_shifts_forGUI_linear(number_of_input_images, patch_num_x, patch_num_y, x_linear, y_linear, patch_locations, outputpath.ToStdString( ));
+                        write_shifts_forGUI_linear(image_dim_x, image_dim_y, number_of_input_images, patch_num_x, patch_num_y, x_linear, y_linear, patch_locations, outputpath.ToStdString( ), write_out_small_sum_image);
                     }
                     Deallocate2DFloatArray(patch_locations, patch_num);
                 }
@@ -1949,11 +1949,11 @@ bool UnBlurApp::DoCalculation( ) {
                     write_joins(outputpath.ToStdString( ), "Control_R1", best_control_1d_ccmap);
                     write_shifts(patch_num_x, patch_num_y, number_of_input_images, outputpath.ToStdString( ), "_shiftx_R1", "_shifty_R1");
 
-                    // if ( is_running_locally == false ) {
-                    wxPrintf("write shifts for GUI\n");
-                    write_shifts_forGUI(output_x_size, output_y_size, patch_num_x, patch_num_y, patch_locations, number_of_input_images, outputpath.ToStdString( ), output_binning_factor, Control1d, Control1d_ccmap);
-                    // output_x_size, output_y_size, raw_image_stack, output_binning_factor, number_of_input_images, Control1d, Control1d_ccmap
-                    // }
+                    if ( is_running_locally == false ) {
+                        // wxPrintf("write shifts for GUI\n");
+                        write_shifts_forGUI(output_x_size, output_y_size, patch_num_x, patch_num_y, patch_locations, number_of_input_images, outputpath.ToStdString( ), output_binning_factor, Control1d, Control1d_ccmap, write_out_small_sum_image);
+                        // output_x_size, output_y_size, raw_image_stack, output_binning_factor, number_of_input_images, Control1d, Control1d_ccmap
+                    }
                 }
                 else {
                     patch_trimming_basedon_locations(counting_image_stack, patch_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath.ToStdString( ), "patch_pix", max_threads, false, false, patch_locations);
@@ -1997,11 +1997,10 @@ bool UnBlurApp::DoCalculation( ) {
 
                     write_joins(outputpath.ToStdString( ), "Control_R0", Control1d);
                     write_joins(outputpath.ToStdString( ), "Control_R1", Control1d_ccmap);
-                    // if ( is_running_locally == false ) {
-                    wxPrintf("write shifts for GUI\n");
-                    write_shifts_forGUI(output_x_size, output_y_size, patch_num_x, patch_num_y, patch_locations, number_of_input_images, outputpath.ToStdString( ), output_binning_factor, Control1d, Control1d_ccmap);
-                    // output_x_size, output_y_size, raw_image_stack, output_binning_factor, number_of_input_images, Control1d, Control1d_ccmap
-                    // }
+                    if ( is_running_locally == false ) {
+                        // wxPrintf("write shifts for GUI\n");
+                        write_shifts_forGUI(output_x_size, output_y_size, patch_num_x, patch_num_y, patch_locations, number_of_input_images, outputpath.ToStdString( ), output_binning_factor, Control1d, Control1d_ccmap, write_out_small_sum_image);
+                    }
                     // */
 
                     // ------------------------------------
@@ -3103,7 +3102,7 @@ void write_shifts(int patch_no_x, int patch_no_y, int image_no, std::string outp
     }
 };
 
-void write_shifts_forGUI(int image_dim_x, int image_dim_y, int patch_no_x, int patch_no_y, float** patch_locations, int image_no, std::string output_path, float output_binning_factor, column_vector Control1d_R0, column_vector Control1d_R1) {
+void write_shifts_forGUI(int image_dim_x, int image_dim_y, int patch_no_x, int patch_no_y, float** patch_locations, int image_no, std::string output_path, float output_binning_factor, column_vector Control1d_R0, column_vector Control1d_R1, bool write_out_small_sum_image) {
     int              controlsize = Control1d_R0.size( );
     MovieFrameSpline spline3dx_0, spline3dy_0;
     matrix<double>*  interp;
@@ -3171,7 +3170,16 @@ void write_shifts_forGUI(int image_dim_x, int image_dim_y, int patch_no_x, int p
     std::ostringstream oss;
     std::ofstream      oFile;
     char               subbuffer[200];
-
+    float              scale_factor;
+    scale_factor = 1.0;
+    if ( write_out_small_sum_image ) {
+        // work out a good size..
+        int largest_dimension = std::max(image_dim_x, image_dim_y);
+        scale_factor          = float(SCALED_IMAGE_SIZE) / float(largest_dimension);
+        if ( scale_factor > 1.0 ) {
+            scale_factor = 1.0;
+        }
+    }
     // wxPrintf("before writing\n");
     std::string patch_shift_file;
     oss << "%s%s" << output_path.c_str( ), "patch_shift.txt";
@@ -3183,6 +3191,7 @@ void write_shifts_forGUI(int image_dim_x, int image_dim_y, int patch_no_x, int p
     oFile.open(patch_shift_file.c_str( ));
     float shiftx, shifty;
     int   patch_no = patch_no_x * patch_no_y;
+    float initial_offsetx, initial_offsety;
     if ( oFile.is_open( ) ) {
         oFile << "# Patch number & Frame number\n";
         oFile << patch_no << '\t' << image_no << '\n';
@@ -3192,11 +3201,13 @@ void write_shifts_forGUI(int image_dim_x, int image_dim_y, int patch_no_x, int p
                 // wxPrintf("patch no %i\n", patch_counter);
                 oFile << "# Patch " << patch_counter << '\n';
                 // wxPrintf("patch locations %f %f\n", patch_locations[patch_counter][0], patch_locations[patch_counter][1]);
-                oFile << patch_locations[patch_counter][0] << '\t';
-                oFile << patch_locations[patch_counter][1] << '\n';
+                oFile << patch_locations[patch_counter][0] * scale_factor << '\t';
+                oFile << patch_locations[patch_counter][1] * scale_factor << '\n';
+                initial_offsetx = spline3dx_0.smooth_interp[0](i, j) * scale_factor + Spline3dx.smooth_interp[0](i, j) * scale_factor;
+                initial_offsety = spline3dy_0.smooth_interp[0](i, j) * scale_factor + Spline3dy.smooth_interp[0](i, j) * scale_factor;
                 for ( int image_ind = 0; image_ind < image_no; image_ind++ ) {
-                    shiftx = spline3dx_0.smooth_interp[image_ind](i, j) + Spline3dx.smooth_interp[image_ind](i, j);
-                    shifty = spline3dy_0.smooth_interp[image_ind](i, j) + Spline3dy.smooth_interp[image_ind](i, j);
+                    shiftx = spline3dx_0.smooth_interp[image_ind](i, j) * scale_factor + Spline3dx.smooth_interp[image_ind](i, j) * scale_factor - initial_offsetx;
+                    shifty = spline3dy_0.smooth_interp[image_ind](i, j) * scale_factor + Spline3dy.smooth_interp[image_ind](i, j) * scale_factor - initial_offsety;
                     oFile << shiftx << '\t';
                     oFile << shifty << '\n';
                 }
@@ -3253,7 +3264,7 @@ void write_quad_shifts(int image_no, int patch_no_x, int patch_no_y, param_vecto
     }
 };
 
-void write_shifts_forGUI_quad(int image_no, int patch_no_x, int patch_no_y, param_vector_quadratic params_x, param_vector_quadratic params_y, float** patch_locations, std::string output_path) {
+void write_shifts_forGUI_quad(int image_dim_x, int image_dim_y, int image_no, int patch_no_x, int patch_no_y, param_vector_quadratic params_x, param_vector_quadratic params_y, float** patch_locations, std::string output_path, bool write_out_small_sum_image) {
     std::ofstream oFile;
     char          buffer[200];
     std::string   patch_shift_file;
@@ -3263,6 +3274,17 @@ void write_shifts_forGUI_quad(int image_no, int patch_no_x, int patch_no_y, para
     oss << "%s%s" << output_path.c_str( ), "patch_shift.txt";
     std::snprintf(buffer, sizeof(buffer), "%s%s", output_path.c_str( ), "patch_shift.txt");
     patch_shift_file = buffer;
+
+    float scale_factor;
+    scale_factor = 1.0;
+    if ( write_out_small_sum_image ) {
+        // work out a good size..
+        int largest_dimension = std::max(image_dim_x, image_dim_y);
+        scale_factor          = float(SCALED_IMAGE_SIZE) / float(largest_dimension);
+        if ( scale_factor > 1.0 ) {
+            scale_factor = 1.0;
+        }
+    }
 
     oFile.open(patch_shift_file.c_str( ));
     int patch_no = patch_no_x * patch_no_y;
@@ -3274,14 +3296,14 @@ void write_shifts_forGUI_quad(int image_no, int patch_no_x, int patch_no_y, para
             for ( int j = 0; j < patch_no_x; j++ ) {
                 int patch_counter = patch_no_x * i + j;
                 oFile << "# Patch " << patch_counter << '\n';
-                oFile << patch_locations[patch_counter][0] << '\t';
-                oFile << patch_locations[patch_counter][1] << '\n';
+                oFile << scale_factor * patch_locations[patch_counter][0] << '\t';
+                oFile << scale_factor * patch_locations[patch_counter][1] << '\n';
                 for ( int image_counter = 0; image_counter < image_no; image_counter++ ) {
                     input(2) = image_counter;
                     input(0) = patch_locations[patch_counter][0];
                     input(1) = patch_locations[patch_counter][1];
-                    oFile << model_quadratic(input, params_x) << '\t';
-                    oFile << model_quadratic(input, params_y) << '\n';
+                    oFile << scale_factor * model_quadratic(input, params_x) << '\t';
+                    oFile << scale_factor * model_quadratic(input, params_y) << '\n';
                 }
             }
         }
@@ -3336,7 +3358,7 @@ void write_linear_shifts(int image_no, int patch_no_x, int patch_no_y, param_vec
     }
 };
 
-void write_shifts_forGUI_linear(int image_no, int patch_no_x, int patch_no_y, param_vector_linear params_x, param_vector_linear params_y, float** patch_locations, std::string output_path) {
+void write_shifts_forGUI_linear(int image_dim_x, int image_dim_y, int image_no, int patch_no_x, int patch_no_y, param_vector_linear params_x, param_vector_linear params_y, float** patch_locations, std::string output_path, bool write_out_small_sum_image) {
     std::ofstream oFile;
     char          buffer[200];
     std::string   patch_shift_file;
@@ -3347,6 +3369,17 @@ void write_shifts_forGUI_linear(int image_no, int patch_no_x, int patch_no_y, pa
     std::snprintf(buffer, sizeof(buffer), "%s%s", output_path.c_str( ), "patch_shift.txt");
     patch_shift_file = buffer;
 
+    float scale_factor;
+    scale_factor = 1.0;
+    if ( write_out_small_sum_image ) {
+        // work out a good size..
+        int largest_dimension = std::max(image_dim_x, image_dim_y);
+        scale_factor          = float(SCALED_IMAGE_SIZE) / float(largest_dimension);
+        if ( scale_factor > 1.0 ) {
+            scale_factor = 1.0;
+        }
+    }
+
     oFile.open(patch_shift_file.c_str( ));
     int patch_no = patch_no_x * patch_no_y;
     if ( oFile.is_open( ) ) {
@@ -3356,14 +3389,14 @@ void write_shifts_forGUI_linear(int image_no, int patch_no_x, int patch_no_y, pa
             for ( int j = 0; j < patch_no_x; j++ ) {
                 int patch_counter = patch_no_x * i + j;
                 oFile << "# Patch " << patch_counter << '\n';
-                oFile << patch_locations[patch_counter][0] << '\t';
-                oFile << patch_locations[patch_counter][1] << '\n';
+                oFile << scale_factor * patch_locations[patch_counter][0] << '\t';
+                oFile << scale_factor * patch_locations[patch_counter][1] << '\n';
                 for ( int image_counter = 0; image_counter < image_no; image_counter++ ) {
                     input(2) = image_counter;
                     input(0) = patch_locations[patch_counter][0];
                     input(1) = patch_locations[patch_counter][1];
-                    oFile << model_linear(input, params_x) << '\t';
-                    oFile << model_linear(input, params_y) << '\n';
+                    oFile << scale_factor * model_linear(input, params_x) << '\t';
+                    oFile << scale_factor * model_linear(input, params_y) << '\n';
                 }
             }
         }

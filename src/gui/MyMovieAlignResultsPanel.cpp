@@ -194,6 +194,7 @@ void MyMovieAlignResultsPanel::DrawCurveAndFillDetails(int row, int column) {
     long     datetime_of_run;
     wxString output_file;
     wxString output_path;
+    int      patch_track;
 
     double voltage;
     double pixel_size;
@@ -222,7 +223,7 @@ void MyMovieAlignResultsPanel::DrawCurveAndFillDetails(int row, int column) {
                 DEBUG_ABORT;
     }
 
-    main_frame->current_project.database.GetFromBatchSelect("iliitrrrrrriiriiiiiiiit", &alignment_id, &datetime_of_run, &current_alignment_job_id, &current_movie_id, &output_file, &voltage, &pixel_size, &exposure_per_frame, &pre_exposure_amount, &min_shift, &max_shift, &should_dose_filter, &should_restore_power, &termination_threshold, &max_iterations, &bfactor, &should_mask_central_cross, &horizontal_mask, &vertical_mask, &include_all_frames, &first_frame, &last_frame, &output_path);
+    main_frame->current_project.database.GetFromBatchSelect("iliitrrrrrriiriiiiiiiiti", &alignment_id, &datetime_of_run, &current_alignment_job_id, &current_movie_id, &output_file, &voltage, &pixel_size, &exposure_per_frame, &pre_exposure_amount, &min_shift, &max_shift, &should_dose_filter, &should_restore_power, &termination_threshold, &max_iterations, &bfactor, &should_mask_central_cross, &horizontal_mask, &vertical_mask, &include_all_frames, &first_frame, &last_frame, &output_path, &patch_track);
     main_frame->current_project.database.EndBatchSelect( );
 
     RightPanel->Freeze( );
@@ -333,26 +334,35 @@ void MyMovieAlignResultsPanel::DrawCurveAndFillDetails(int row, int column) {
     wxPrintf("output_path = %s\n", output_path);
     trajectory_file = wxString::Format("%s%s", output_path, "/patch_shift.txt");
     wxPrintf("Trajectory file = %s\n", trajectory_file);
+    wxPrintf("patch_track is %i\n", patch_track);
     if ( DoesFileExist(small_image_filename) == true ) {
         // ResultPanel->ImageDisplayPanel->ChangeFile(small_image_filename, "");
         if ( ResultPanel->ImageDisplayPanel->my_notebook->GetPageCount( ) == 0 ) {
             ResultPanel->ImageDisplayPanel->OpenFile(small_image_filename, "Image");
-            ResultPanel->ImageDisplayPanel->LoadTrajectory(0, trajectory_file);
+            if ( patch_track == 1 ) {
+                ResultPanel->ImageDisplayPanel->LoadTrajectory(0, trajectory_file);
+            }
         }
         else {
             ResultPanel->ImageDisplayPanel->ChangeFileForTabNumber(0, small_image_filename, "Image");
-            ResultPanel->ImageDisplayPanel->LoadTrajectory(0, trajectory_file);
+            if ( patch_track == 1 ) {
+                ResultPanel->ImageDisplayPanel->LoadTrajectory(0, trajectory_file);
+            }
         }
     }
     else if ( DoesFileExist(output_file) == true ) {
         // ResultPanel->ImageDisplayPanel->ChangeFile(output_file, "");
         if ( ResultPanel->ImageDisplayPanel->my_notebook->GetPageCount( ) == 0 ) {
             ResultPanel->ImageDisplayPanel->OpenFile(output_file, "Image");
-            ResultPanel->ImageDisplayPanel->LoadTrajectory(0, trajectory_file);
+            if ( patch_track == 1 ) {
+                ResultPanel->ImageDisplayPanel->LoadTrajectory(0, trajectory_file);
+            }
         }
         else {
             ResultPanel->ImageDisplayPanel->ChangeFileForTabNumber(0, output_file, "Image");
-            ResultPanel->ImageDisplayPanel->LoadTrajectory(0, trajectory_file);
+            if ( patch_track == 1 ) {
+                ResultPanel->ImageDisplayPanel->LoadTrajectory(0, trajectory_file);
+            }
         }
         // ResultPanel->ImageDisplayPanel->ChangeFileForTabNumber(0, output_file, "");
     }

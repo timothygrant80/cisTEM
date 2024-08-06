@@ -211,6 +211,7 @@ class
     wxString tab_title;
 
     wxArrayLong     included_image_numbers;
+    bool            patch_track = false;
     wxVector<float> trajectory_x;
     wxVector<float> trajectory_y;
 

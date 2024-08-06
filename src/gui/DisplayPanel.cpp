@@ -162,7 +162,7 @@ void DisplayPanel::Initialise(int wanted_style_flags) {
     //this is for icon display
     Toolbar->AddTool(Toolbar_Traj, wxT("Plot Trajectory"), wxBITMAP_PNG_FROM_DATA(display_invert_icon), wxNullBitmap, wxITEM_CHECK, wxT("Plot Trajectory"), wxT("Plot Trajectory"));
     // need a new icon for this
-    Toolbar->EnableTool(Toolbar_Traj, false);
+    Toolbar->EnableTool(Toolbar_Traj, true);
 
     Toolbar->AddSeparator( );
 
@@ -370,11 +370,9 @@ void DisplayPanel::OnFFT(wxCommandEvent& WXUNUSED(event)) {
 
 void DisplayPanel::OnTrajectory(wxCommandEvent& WXUNUSED(event)) {
     DisplayNotebookPanel* current_panel = ReturnCurrentPanel( );
-
-    if ( current_panel->use_trajectory )
-        current_panel->use_trajectory = false;
-    else {
-        current_panel->use_trajectory = true;
+    if ( current_panel->patch_track == false ) {
+        wxPrintf("current result is not a patch tracking result\n");
+        return;
     }
 
     // current_panel->should_refresh = true;
@@ -406,7 +404,8 @@ void DisplayPanel::OnTrajectory(wxCommandEvent& WXUNUSED(event)) {
 
     long scaled_x_size = long(myround(current_panel->ReturnImageXSize( ) * current_panel->desired_scale_factor));
     long scaled_y_size = long(myround(current_panel->ReturnImageYSize( ) * current_panel->desired_scale_factor));
-    wxPrintf("currentImageSize %d %d", current_panel->ReturnImageXSize( ), current_panel->ReturnImageYSize( ));
+    // wxPrintf("currentImageSize %d %d", current_panel->ReturnImageXSize( ), current_panel->ReturnImageYSize( ));
+    // wxPrintf("current pixel size %f", current_panel->my_file.ReturnPixelSize( ));
 
     // For stacks of 2d images and slices of 3d, we intentionally limit the max scaling to whatever is capable of fitting within the size of the window.
     // Done because the DisplayPanel is used in several areas of cisTEM without the ability to remove Single Image Mode; this could result in scaled
@@ -469,30 +468,33 @@ void DisplayPanel::OnTrajectory(wxCommandEvent& WXUNUSED(event)) {
             }
 
             if ( ! current_panel->suspend_overlays ) {
-
-                dc.SetPen(*wxRED);
+                float circle_radius = 3.0f;
+                float line_width    = 2.0f;
+                dc.SetPen(wxPen(*wxRED, line_width)); //, wxSOLID));
+                // dc.SetBrush(wxBrush(*wxRED, wxSOLID));
                 // dc.SetBrush(wxBrush(wxColor(50, 50, 200, 60)));
 
                 counter = current_panel->current_location;
 
-                // for ( int y = 0; y < current_panel->images_in_y; y++ ) {
-                //     for ( int x = 0; x < current_panel->images_in_x; x++ ) {
                 if ( counter <= current_panel->ReturnNumberofImages( ) ) {
-                    // dc.DrawLine(100, 100, 200, 200);
-                    wxPrintf("trajectoryx 0 %f", current_panel->trajectory_x[0]);
+                    // wxPrintf("trajectoryx 0 %f", current_panel->trajectory_x[0]);
                     // wxPrintf("Trajectory size %d", current_panel->trajectory_x.size( ));
                     float scale = 1 * current_panel->actual_scale_factor;
-                    wxPrintf("scale %f", scale);
-                    wxPrintf("actual scale factor %f", current_panel->actual_scale_factor);
+                    // wxPrintf("scale %f", scale);
+                    // wxPrintf("actual scale factor %f", current_panel->actual_scale_factor);
                     // dc.DrawLine(0, 0, scale * current_panel->trajectory_x[0], scale * current_panel->trajectory_y[0]);
                     int patch_no      = current_panel->trajectory_x[0];
                     int frame_no      = current_panel->trajectory_y[0];
                     int index_counter = 1;
                     for ( int i = 0; i < patch_no; i++ ) {
-                        float x0 = scale * current_panel->trajectory_x[index_counter];
-                        float y0 = scale * current_panel->trajectory_y[index_counter];
+                        float x0 = current_panel->actual_scale_factor * current_panel->trajectory_x[index_counter];
+                        float y0 = current_panel->actual_scale_factor * current_panel->trajectory_y[index_counter];
                         // wxPrintf("x0 y0 %f %f", current_panel->trajectory_x[index_counter], current_panel->trajectory_y[index_counter]);
-                        dc.DrawCircle(x0, y0, 2);
+                        // dc.SetPen(wxPen(*wxBLACK, line_width)); //, wxSOLID));
+                        dc.DrawCircle(x0, y0, circle_radius);
+                        // dc.SetPen(wxPen(*wxRED, line_width)); //, wxSOLID));
+                        // dc.FloodFill(x0, y0, *wxRED);
+                        // dc.DrawPoint(x0, y0);
                         index_counter++;
                         for ( int j = 0; j < frame_no; j++ ) {
                             float x1 = -scale * current_panel->trajectory_x[index_counter] + x0;
@@ -503,94 +505,18 @@ void DisplayPanel::OnTrajectory(wxCommandEvent& WXUNUSED(event)) {
                             y0 = y1;
                         }
                     }
-                    // for ( int i = 1; i < current_panel->trajectory_x.size( ); i++ ) {
-                    //     dc.DrawLine(scale * current_panel->trajectory_x[i - 1], scale * current_panel->trajectory_y[i - 1], scale * current_panel->trajectory_x[i], scale * current_panel->trajectory_y[i]);
-                    // }
-
-                    // if ( (parent_display_panel->style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || (parent_display_panel->is_from_display_program && picking_mode == IMAGES_PICK) ) {
-                    //     if ( image_is_selected[counter] ) {
-
-                    //         // draw a rectangle around the image..
-                    //         dc.DrawRoundedRectangle(10, 10, 10, -.5);
-
-                    //         // dc.DrawRoundedRectangle(x * current_x_size, y * current_y_size, current_x_size, current_y_size, -.5);
-                    //     }
-                    // }
-
-                    // Otherwise, we're picking coords (and therefore in display program)
-                    // else if ( parent_display_panel->is_from_display_program && parent_display_panel->ReturnCurrentPanel( )->picking_mode == COORDS_PICK ) {
-
-                    // find all the coordinates for this image..
-                    // dc.DrawCircle(100, 100, 10);
-
-                    // for ( coord_counter = 0; coord_counter < coord_tracker->number_of_coords; coord_counter++ ) {
-                    //     if ( coord_tracker->coords[coord_counter].image_number == counter ) {
-
-                    //         // draw the point on..
-                    //         if ( single_image ) {
-                    //             // we need to check if the co-ordinate is inside the current view, and if so, draw it.
-
-                    //             if ( coord_tracker->coords[coord_counter].x_pos > single_image_x && coord_tracker->coords[coord_counter].x_pos < single_image_x + window_x_size / actual_scale_factor && coord_tracker->coords[coord_counter].y_pos > single_image_y && coord_tracker->coords[coord_counter].y_pos < single_image_y + window_y_size / actual_scale_factor ) {
-                    //                 dc.DrawCircle((coord_tracker->coords[coord_counter].x_pos - single_image_x) * actual_scale_factor, (coord_tracker->coords[coord_counter].y_pos - single_image_y) * actual_scale_factor, point_size);
-                    //             }
-
-                    //             // if this coord is the last coord, and show selection distances is true, show the distance.
-
-                    //             if ( coord_counter == coord_tracker->number_of_coords - 1 && coord_tracker->number_of_coords > 1 && show_selection_distances && coord_tracker->coords[coord_counter].image_number == coord_tracker->coords[coord_counter - 1].image_number ) {
-                    //                 dc.DrawLine((coord_tracker->coords[coord_counter].x_pos - single_image_x) * actual_scale_factor, (coord_tracker->coords[coord_counter].y_pos - single_image_y) * actual_scale_factor, (coord_tracker->coords[coord_counter - 1].x_pos - single_image_x) * actual_scale_factor, (coord_tracker->coords[coord_counter - 1].y_pos - single_image_y) * actual_scale_factor);
-                    //             }
-                    //         }
-                    //         else {
-                    //             dc.DrawCircle(x * current_x_size + (coord_tracker->coords[coord_counter].x_pos * actual_scale_factor), y * current_y_size + (coord_tracker->coords[coord_counter].y_pos * actual_scale_factor), point_size);
-
-                    //             if ( coord_counter == coord_tracker->number_of_coords - 1 && coord_tracker->number_of_coords > 1 && show_selection_distances && coord_tracker->coords[coord_counter].image_number == coord_tracker->coords[coord_counter - 1].image_number ) {
-                    //                 dc.DrawLine(x * current_x_size + (coord_tracker->coords[coord_counter].x_pos * actual_scale_factor), y * current_y_size + (coord_tracker->coords[coord_counter].y_pos * actual_scale_factor), x * current_x_size + (coord_tracker->coords[coord_counter - 1].x_pos * actual_scale_factor), y * current_y_size + (coord_tracker->coords[coord_counter - 1].y_pos * actual_scale_factor));
-                    //             }
-                    //         }
-                    //     }
-                    // }
-                    // }
-                    //         counter++;
-                    //     }
-                    // }
                 }
-
-                // if ( template_matching_marker_x_pos != -1.0 && template_matching_marker_y_pos != -1.0 ) {
-                //     dc.SetPen(*wxRED);
-                //     dc.SetBrush(wxBrush(*wxRED, wxTRANSPARENT));
-                //     int radius = myroundint(template_matching_marker_radius * actual_scale_factor);
-                //     if ( radius < 5 )
-                //         radius = 5;
-                //     dc.DrawCircle(myroundint(template_matching_marker_x_pos * actual_scale_factor), current_y_size - myroundint(template_matching_marker_y_pos * actual_scale_factor) - 1, radius);
-                // }
-
-                // if ( current_location <= blue_selection_square_location && blue_selection_square_location <= (current_location + images_in_current_view) ) {
-                //     counter = current_location;
-
-                //     for ( int y = 0; y < images_in_y; y++ ) {
-                //         for ( int x = 0; x < images_in_x; x++ ) {
-                //             if ( ReturnNumberofImages( ) >= counter ) {
-                //                 if ( counter == blue_selection_square_location ) {
-                //                     dc.SetPen(wxColor(38, 124, 181));
-                //                     // draw a rectangle around the image..
-
-                //                     if ( single_image ) {
-                //                         dc.DrawRectangle(0, 0, window_x_size, window_y_size);
-                //                     }
-                //                     else
-                //                         dc.DrawRectangle(x * current_x_size, y * current_y_size, current_x_size, current_y_size);
-                //                 }
-                //             }
-
-                //             counter++;
-                //         }
-                //     }
-                // }
             }
         }
     }
     else {
+
         current_panel->ReDrawPanel( ); // this will remove the trajectory when the button is toggled off
+    }
+    if ( current_panel->use_trajectory )
+        current_panel->use_trajectory = false;
+    else {
+        current_panel->use_trajectory = true;
     }
     // current_panel->should_refresh = true;
     // current_panel->ReDrawPanel( );
@@ -882,7 +808,7 @@ void DisplayPanel::UpdateToolbar(void) {
         Toolbar->EnableTool(Toolbar_Global, false);
         Toolbar->EnableTool(Toolbar_Manual, false);
         Toolbar->EnableTool(Toolbar_Invert, false);
-        Toolbar->EnableTool(Toolbar_Traj, false);
+        Toolbar->EnableTool(Toolbar_Traj, true);
 
         Toolbar->EnableTool(Toolbar_High_Quality, false);
 
@@ -1239,9 +1165,15 @@ void DisplayPanel::LoadTrajectory(int wanted_tab_number, wxString wanted_my_traj
     // }
     // from here it is changed
     // my_panel->my_file.OpenFile(wanted_filename.ToStdString( ), false);
+    wxPrintf("enter patch track\n");
     DisplayNotebookPanel* current_panel;
-    if ( (style_flags & NO_NOTEBOOK) == NO_NOTEBOOK )
-        current_panel = no_notebook_panel;
+    wxPrintf("assign patch track\n");
+
+    wxPrintf("done assign patch track\n");
+    if ( (style_flags & NO_NOTEBOOK) == NO_NOTEBOOK ) {
+        current_panel              = no_notebook_panel;
+        current_panel->patch_track = true;
+    }
     else {
 
         MyDebugAssertTrue(wanted_tab_number < my_notebook->GetPageCount( ) && wanted_tab_number >= 0, "Asking for a tab that does not exist");
@@ -1257,7 +1189,8 @@ void DisplayPanel::LoadTrajectory(int wanted_tab_number, wxString wanted_my_traj
             }
         }
 
-        current_panel = (DisplayNotebookPanel*)my_notebook->GetPage(wanted_tab_number);
+        current_panel              = (DisplayNotebookPanel*)my_notebook->GetPage(wanted_tab_number);
+        current_panel->patch_track = true;
         // }
 
         // current_panel->my_trajectory.Open(wanted_my_trajectory_file.ToStdString( ), OPEN_TO_READ, 2);
@@ -1271,7 +1204,7 @@ void DisplayPanel::LoadTrajectory(int wanted_tab_number, wxString wanted_my_traj
             current_panel->my_trajectory->ReadLine(temp_array);
             current_panel->trajectory_x.push_back(temp_array[0]);
             current_panel->trajectory_y.push_back(temp_array[1]);
-            wxPrintf("loaded trajectory %f %f\n", temp_array[0], temp_array[1]);
+            // wxPrintf("loaded trajectory %f %f\n", temp_array[0], temp_array[1]);
         }
     }
 
@@ -1817,6 +1750,7 @@ DisplayNotebookPanel::DisplayNotebookPanel(wxWindow* parent, wxWindowID id, cons
     selected_point_size = 3;
     should_refresh      = false;
     use_fft             = false;
+    use_trajectory      = true;
 
     pixel_size = 1;
 

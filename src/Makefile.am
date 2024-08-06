@@ -232,9 +232,8 @@ noinst_HEADERS += 	gui/icons/experimental_icon.cpp \
                     gui/AtomicCoordinatesChooserDialog.h \
                     gui/AtomicCoordinatesImportDialog.h \
                     core/water.h \
-                    programs/simulate/wave_function_propagator.h  
-                    #\
-                    # programs/match_template/template_matching_data_sizer.h 
+                    programs/simulate/wave_function_propagator.h  \
+                    programs/match_template/template_matching_data_sizer.h 
 
 endif      
 
@@ -1235,7 +1234,7 @@ endif
 samples_functional_testing_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
 match_template_SOURCES  = programs/match_template/match_template.cpp
-# match_template_SOURCES += programs/match_template/template_matching_data_sizer.cpp
+match_template_SOURCES += programs/match_template/template_matching_data_sizer.cpp
 match_template_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 match_template_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 match_template_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
@@ -1243,7 +1242,7 @@ match_template_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
 if WANT_CISTEM_GPU_AM  
     match_template_gpu_SOURCES  = programs/match_template/match_template.cpp
-# match_template_gpu_SOURCES += programs/match_template/template_matching_data_sizer.cpp
+    match_template_gpu_SOURCES += programs/match_template/template_matching_data_sizer.cpp
     match_template_gpu_CXXFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
     match_template_gpu_CPPFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
     match_template_gpu_LDADD    = libgpucore.a libcore.a $(WX_LIBS_BASE) $(MKL_LIBS) $(CUDA_LIBS)

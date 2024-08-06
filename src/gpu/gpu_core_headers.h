@@ -13,6 +13,9 @@
 #include <cuda_fp16.h>
 #include <cuda_bf16.h>
 
+// From the cuda samples TODO: add license bit for this
+#include "cuda_common/helper_math.h"
+
 // #include <cutensor.h>
 
 const int MAX_GPU_COUNT = 32;

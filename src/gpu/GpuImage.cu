@@ -5254,8 +5254,6 @@ void GpuImage::ExtractSliceShiftAndCtf(GpuImage* volume_to_extract_from, GpuImag
         shifts.x += float(physical_address_of_box_center.x);
         shifts.y += float(physical_address_of_box_center.y);
     }
-    shifts.x = shifts.x * pi_v<float> * 2.0f / float(dims.x) / pixel_size;
-    shifts.y = shifts.y * pi_v<float> * 2.0f / float(dims.y) / pixel_size;
 
     //
     shifts.x = shifts.x * -1.f * pi_v<float> * 2.0f / float(dims.x);

@@ -3,6 +3,9 @@
 
 #include "TemplateMatchingCore.h"
 
+#ifdef ENABLE_FastFFT
+#include "../ext/FastFFT/include/FastFFT.cuh"
+#endif
 // Implementation is in the header as it is only used here for now.
 #include "projection_queue.cuh"
 

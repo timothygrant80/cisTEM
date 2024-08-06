@@ -1212,7 +1212,7 @@ filter_images_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
 filter_images_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
 if WANT_CISTEM_GPU_AM
-        # samples_functional_testing_SOURCES += programs/samples/0_simple/resample.cpp
+        samples_functional_testing_SOURCES += programs/samples/0_simple/resample.cpp
         samples_functional_testing_SOURCES += programs/samples/1_cpu_gpu_comparison/resize_comparison.cpp 
         samples_functional_testing_SOURCES += programs/samples/1_cpu_gpu_comparison/projection_comparison.cpp 
         samples_functional_testing_SOURCES += programs/samples/1_cpu_gpu_comparison/masking.cpp 

@@ -873,9 +873,16 @@ bool MatchTemplateApp::DoCalculation( ) {
 #ifdef MEDIAN_FILTER_TEST
                         for ( int i = 0; i < GPU[tIDX].d_max_intensity_projection.real_memory_allocated; i++ ) {
                             trimmed_counter[i] += (double)GPU[tIDX].trimmed_counter[i];
-                        }             
-#endif
+                        }
                         wxPrintf("\n The size of the array is %d", ccf_abs_dev_med_abs_dev.size());
+                        for (int i=0; i < ccf_abs_dev_med_abs_dev.size() / 3; i++) {
+                            temp_cc_array[0] = (double)ccf_abs_dev_med_abs_dev[i * 3] * sqrt_input_pixels;
+                            temp_cc_array[1] = (double)ccf_abs_dev_med_abs_dev[i * 3 + 1] * sqrt_input_pixels;
+                            temp_cc_array[2] = (double)ccf_abs_dev_med_abs_dev[i * 3 + 2] * sqrt_input_pixels;
+                            cc_file.WriteLine(temp_cc_array);
+                        }         
+#endif
+                        
         
                         // TODO swap max_padding for explicit padding in x/y and limit calcs to that region.
                         pixel_counter = 0;
@@ -909,13 +916,6 @@ bool MatchTemplateApp::DoCalculation( ) {
 
                     } // end of omp critical block
                 } // end of parallel block
-                for (int i=0; i < ccf_abs_dev_med_abs_dev.size() / 3; i++) {
-                            temp_cc_array[0] = (double)ccf_abs_dev_med_abs_dev[i * 3] * sqrt_input_pixels;
-                            temp_cc_array[1] = (double)ccf_abs_dev_med_abs_dev[i * 3 + 1] * sqrt_input_pixels;
-                            temp_cc_array[2] = (double)ccf_abs_dev_med_abs_dev[i * 3 + 2] * sqrt_input_pixels;
-                            cc_file.WriteLine(temp_cc_array);
-                }
-                
                 
                 continue;
 

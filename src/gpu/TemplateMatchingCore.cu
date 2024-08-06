@@ -11,7 +11,7 @@
 
 using namespace cistem_timer;
 
-constexpr bool use_gpu_prj               = true;
+constexpr bool use_gpu_prj               = false;
 constexpr int  n_mips_to_process_at_once = 10;
 
 static_assert(n_mips_to_process_at_once == 1 || n_mips_to_process_at_once == 10, "n_mips_to_process_at_once must be 1 or 10");
@@ -41,11 +41,14 @@ void TemplateMatchingCore::Init(MyApp*           parent_pointer,
                                 ProgressBar*     my_progress,
                                 long             total_correlation_positions,
                                 bool             is_running_locally,
+                                bool             use_fast_fft,
                                 int              number_of_global_search_images_to_save)
 
 {
 
     MyDebugAssertFalse(object_initialized_, "Init must only be called once!");
+    MyDebugAssertFalse(wanted_input_image.is_in_real_space, "Input image must be in Fourier space");
+    MyDebugAssertTrue(wanted_input_image.is_in_memory, "Input image must be in memory");
     object_initialized_ = true;
 
     this->first_search_position          = first_search_position;
@@ -57,6 +60,8 @@ void TemplateMatchingCore::Init(MyApp*           parent_pointer,
     this->psi_start = psi_start;
     this->psi_step  = psi_step;
     this->psi_max   = psi_max;
+
+    this->use_fast_fft = use_fast_fft;
 
     // It seems that I need a copy for these - 1) confirm, 2) if already copying, maybe put straight into pinned mem with cudaHostMalloc
     template_reconstruction.CopyFrom(&wanted_template_reconstruction);
@@ -125,9 +130,43 @@ void TemplateMatchingCore::Init(MyApp*           parent_pointer,
 
 void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel, float c_defocus, int threadIDX, long& current_correlation_position) {
 
+    this->c_defocus                 = c_defocus;
+    this->c_pixel                   = c_pixel;
+    total_number_of_cccs_calculated = 0;
+
+    bool this_is_the_first_run_on_inner_loop = my_dist.empty( );
+
+#ifdef ENABLE_FastFFT
+    // FIXME: Move this to a new method in matche_template.cpp and reference it from a shared pointer.
+    if ( use_fast_fft && this_is_the_first_run_on_inner_loop ) {
+        // FastFFT pads from the upper left corner, so we need to shift the image so the origins coinicide
+        d_input_image.PhaseShift(-(d_input_image.physical_address_of_box_center.x - d_current_projection[0].physical_address_of_box_center.x),
+                                 -(d_input_image.physical_address_of_box_center.y - d_current_projection[0].physical_address_of_box_center.y),
+                                 0);
+
+        d_input_image.BackwardFFT( );
+
+        FastFFT::FourierTransformer<float, float, float2, 2> FT;
+
+        // TODO: overload that takes and short4's int4's instead of the individual values
+        FT.SetForwardFFTPlan(input_image.logical_x_dimension, input_image.logical_y_dimension, d_input_image.logical_z_dimension, d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
+        FT.SetInverseFFTPlan(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
+
+        FT.FwdFFT(d_input_image.real_values);
+
+        // We've done a round trip iFFT/FFT since the input image was normalized to STD 1.0, so re-normalize by 1/n
+        d_input_image.is_in_real_space = false;
+        // d_input_image.MultiplyByConstant(sqrtf(1.f / d_input_image.number_of_real_space_pixels));
+        d_input_image.MultiplyByConstant(1.f / d_input_image.number_of_real_space_pixels / sqrtf(float(d_current_projection[0].number_of_real_space_pixels)));
+    }
+#endif
+
     // This should probably just be a unique pointer and not a vector
-    if ( my_dist.empty( ) )
+    if ( this_is_the_first_run_on_inner_loop ) {
+        d_input_image.CopyFP32toFP16buffer(false);
+        d_padded_reference.CopyFP32toFP16buffer(false);
         my_dist.emplace_back(d_input_image, histogram_min_scaled, histogram_step_scaled, histogram_max_padding, n_mips_to_process_at_once, cudaStreamPerThread);
+    }
     else
         my_dist.at(0).ZeroHistogram( );
 
@@ -136,15 +175,7 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
         buffer->Zeros( );
     }
 
-    this->c_defocus                 = c_defocus;
-    this->c_pixel                   = c_pixel;
-    total_number_of_cccs_calculated = 0;
-
-    // Either do not delete the single precision, or add in a copy here so that each loop over defocus vals
-    // have a copy to work with. Otherwise this will not exist on the second loop
-    d_input_image.CopyFP32toFP16buffer(false);
-    d_padded_reference.CopyFP32toFP16buffer(false);
-
+    // TODO: move this to empirical_distribution_object
     __half* psi_array;
     __half* theta_array;
     __half* phi_array;
@@ -181,7 +212,23 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
     cudaEvent_t mip_is_done_Event;
 
     cudaErr(cudaEventCreateWithFlags(&mip_is_done_Event, cudaEventBlockingSync));
+#ifdef ENABLE_FastFFT
+    FastFFT::FourierTransformer<float, __half, __half2, 2>                           FT;
+    FastFFT::KernelFunction::my_functor<float, 0, FastFFT::KernelFunction::NOOP>     noop;
+    FastFFT::KernelFunction::my_functor<float, 4, FastFFT::KernelFunction::CONJ_MUL> conj_mul;
 
+    // float scale_factor = powf((float)d_current_projection[0].number_of_real_space_pixels, -2.0);
+    // float scale_factor = 1.f;
+    float scale_factor = sqrtf(1.0f / float(d_input_image.number_of_real_space_pixels));
+
+    FastFFT::KernelFunction::my_functor<float, 4, FastFFT::KernelFunction::CONJ_MUL_THEN_SCALE> conj_mul_then_scale(scale_factor);
+
+    if ( use_fast_fft ) {
+        // TODO: overload that takes and short4's int4's instead of the individual values
+        FT.SetForwardFFTPlan(current_projection[0].logical_x_dimension, current_projection[0].logical_y_dimension, current_projection[0].logical_z_dimension, d_padded_reference.dims.x, d_padded_reference.dims.y, d_padded_reference.dims.z, true);
+        FT.SetInverseFFTPlan(d_padded_reference.dims.x, d_padded_reference.dims.y, d_padded_reference.dims.z, d_padded_reference.dims.x, d_padded_reference.dims.y, d_padded_reference.dims.z, true);
+    }
+#endif
     int   ccc_counter = 0;
     int   current_search_position;
     float average_on_edge;
@@ -216,21 +263,46 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
 
         for ( float current_psi = psi_start; current_psi <= psi_max; current_psi += psi_step ) {
 
-            angles.Init(global_euler_search.list_of_search_parameters[current_search_position][0], global_euler_search.list_of_search_parameters[current_search_position][1], current_psi, 0.0, 0.0);
-            //			current_projection.SetToConstant(0.0f); // This also sets the FFT padding to zero
+            constexpr float shifts_in_x_y                               = 0.0f;
+            constexpr bool  apply_shifts                                = false;
+            constexpr bool  swap_real_space_quadrants_during_projection = true;
+            angles.Init(global_euler_search.list_of_search_parameters[current_search_position][0], global_euler_search.list_of_search_parameters[current_search_position][1], current_psi, shifts_in_x_y, shifts_in_x_y);
 
             current_projection_idx = projection_queue.GetAvailableProjectionIDX( );
             if ( use_gpu_prj ) {
 
                 d_current_projection[current_projection_idx].is_in_real_space = false;
-                d_current_projection[current_projection_idx].ExtractSliceShiftAndCtf(&template_gpu, &d_projection_filter, angles, 1.0, 1.0, false, true, true, true, false, true, projection_queue.gpu_projection_stream[current_projection_idx]);
+                constexpr float pixel_size                                    = 1.0f;
+                constexpr float resolution_limit                              = 1.0f;
+                float           real_space_binning_factor                     = 1.0f;
+
+                if ( use_lerp_for_resizing ) {
+                    real_space_binning_factor = binning_factor;
+                }
+
+                // template_gpu_shared.get( )
+                d_current_projection[current_projection_idx].ExtractSliceShiftAndCtf(&template_gpu,
+                                                                                     &d_projection_filter,
+                                                                                     angles,
+                                                                                     pixel_size,
+                                                                                     real_space_binning_factor,
+                                                                                     resolution_limit,
+                                                                                     false,
+                                                                                     swap_real_space_quadrants_during_projection,
+                                                                                     apply_shifts,
+                                                                                     true,
+                                                                                     false,
+                                                                                     true,
+                                                                                     projection_queue.gpu_projection_stream[current_projection_idx]);
+
                 average_of_reals = 0.f;
                 average_on_edge  = 0.f;
                 projection_queue.RecordGpuProjectionReadyStreamPerThreadWait(current_projection_idx);
+                // Default GpuImage methods are in cudaStreamPerThread
+
                 d_current_projection[current_projection_idx].BackwardFFT( );
             }
             else {
-
                 // Make sure the previous copy from host -> device has completed before we start to make another projection.
                 // Event is created as non-blocking so this is a busy-wait.
 
@@ -246,7 +318,6 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
                 // For an intiial test, make projection_queue.cpu_prj_stream[current_projection_idx]
                 // a public member.. if it works, make it private and return a reference instead
 
-                // d_current_projection[current_projection_idx].CopyHostToDevice(current_projection[current_projection_idx], false, false);
                 d_current_projection[current_projection_idx].CopyHostToDevice(current_projection[current_projection_idx], false, false, projection_queue.gpu_projection_stream[current_projection_idx]);
 
                 // We need to make sure the current cpu projection is not used by the host until the gpu has finished with it, which may be independent of the main work
@@ -255,35 +326,60 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
                 // We need the main work in cudaStreamPerThread to wait on the transfer in this stream, which if the CPU thread is ahead, should be a non-blocking event
                 projection_queue.RecordGpuProjectionReadyStreamPerThreadWait(current_projection_idx);
 
+                // Note: I had deleted this in the dev branch for FastFFT. Review when possible
                 // The average in the full padded image will be different;
                 average_of_reals *= ((float)d_current_projection[current_projection_idx].number_of_real_space_pixels / (float)d_padded_reference.number_of_real_space_pixels);
             }
 
-            // d_current_projection[current_projection_idx].MultiplyByConstant(rsqrtf(d_current_projection[current_projection_idx].ReturnSumOfSquares( ) / (float)d_padded_reference.number_of_real_space_pixels - (average_of_reals * average_of_reals)));
             // For the host to execute the preceding line, it was to wait on the return value from ReturnSumOfSquares. This could be a bit of a performance regression as otherwise it can queue up all the reamining
             // GPU work and get back to calculating the next projection. The commented out method is an attempt around that, but currently the mips come out a little different a bit faster.
-            d_current_projection[current_projection_idx].NormalizeRealSpaceStdDeviation(float(d_padded_reference.number_of_real_space_pixels), average_of_reals, average_on_edge);
-            d_current_projection[current_projection_idx].ClipInto(&d_padded_reference, 0, false, 0, 0, 0, 0);
-            // d_current_projection[current_projection_idx].MultiplyByConstant(rsqrtf(d_current_projection[current_projection_idx].ReturnSumOfSquares( ) / (float)d_padded_reference.number_of_real_space_pixels - (average_of_reals * average_of_reals)));
 
-            if ( use_gpu_prj ) {
-                // Note the stream change will not affect the padded projection
-                projection_queue.RecordProjectionReadyBlockingHost(current_projection_idx, cudaStreamPerThread);
-            }
+            if ( use_fast_fft ) {
+#ifdef ENABLE_FastFFT
+                // float scale_factor = rsqrtf(d_current_projection[current_projection_idx].ReturnSumOfSquares( ) / (float)d_padded_reference.number_of_real_space_pixels - (average_of_reals * average_of_reals));
+                // scale_factor /= powf((float)d_current_projection[current_projection_idx].number_of_real_space_pixels, 1.0);
 
-            d_padded_reference.ForwardFFT(false);
+                float scale_factor = powf(float(d_padded_reference.number_of_real_space_pixels), 1.0);
+                scale_factor *= powf((float)d_current_projection[current_projection_idx].number_of_real_space_pixels, 1.5);
+                scale_factor = 1.0f;
+                // d_current_projection[current_projection_idx].MultiplyByConstant(scale_factor);
+                d_current_projection[current_projection_idx].NormalizeRealSpaceStdDeviationAndCastToFp16(scale_factor, average_of_reals, average_on_edge);
 
-            //      d_padded_reference.ForwardFFTAndClipInto(d_current_projection,false);
-            if constexpr ( n_mips_to_process_at_once > 1 ) {
-                d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image.complex_values_fp16, true, &ccf_array[current_mip_to_process * d_input_image.real_memory_allocated]);
+                if constexpr ( n_mips_to_process_at_once > 1 ) {
+                    FT.FwdImageInvFFT(d_current_projection[current_projection_idx].real_values_fp16, (__half2*)d_input_image.complex_values_fp16, &ccf_array[current_mip_to_process * d_input_image.real_memory_allocated], noop, conj_mul_then_scale, noop);
+                }
+                else {
+                    FT.FwdImageInvFFT(d_current_projection[current_projection_idx].real_values_fp16, (__half2*)d_input_image.complex_values_fp16, d_padded_reference.real_values_fp16, noop, conj_mul_then_scale, noop);
+                }
+                if ( use_gpu_prj ) {
+                    // Note the stream change will not affect the padded projection
+                    projection_queue.RecordProjectionReadyBlockingHost(current_projection_idx, cudaStreamPerThread);
+                }
+#endif
             }
             else {
-                d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image.complex_values_fp16, true);
+                // The average in the full padded image will be different;
+                average_of_reals *= ((float)d_current_projection[current_projection_idx].number_of_real_space_pixels / (float)d_padded_reference.number_of_real_space_pixels);
+                d_current_projection[current_projection_idx].NormalizeRealSpaceStdDeviation(float(d_padded_reference.number_of_real_space_pixels), average_of_reals, average_on_edge);
+                d_current_projection[current_projection_idx].ClipInto(&d_padded_reference, 0, false, 0, 0, 0, 0);
+                // d_current_projection[current_projection_idx].MultiplyByConstant(rsqrtf(d_current_projection[current_projection_idx].ReturnSumOfSquares( ) / (float)d_padded_reference.number_of_real_space_pixels - (average_of_reals * average_of_reals)));
+
+                if ( use_gpu_prj ) {
+                    // Note the stream change will not affect the padded projection
+                    projection_queue.RecordProjectionReadyBlockingHost(current_projection_idx, cudaStreamPerThread);
+                }
+
+                d_padded_reference.ForwardFFT(false);
+                //      d_padded_reference.ForwardFFTAndClipInto(d_current_projection,false);
+                if constexpr ( n_mips_to_process_at_once > 1 ) {
+                    d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image.complex_values_fp16, true, &ccf_array[current_mip_to_process * d_input_image.real_memory_allocated]);
+                }
+                else {
+                    d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image.complex_values_fp16, true);
+                }
             }
 
             // d_padded_reference.MultiplyByConstant(rsqrtf(d_padded_reference.ReturnSumOfSquares( ) / (float)d_padded_reference.number_of_real_space_pixels));
-
-            // cudaErr(cudaStreamSynchronize(cudaStreamPerThread));
 
             if constexpr ( n_mips_to_process_at_once > 1 ) {
                 psi_array[current_mip_to_process]   = __float2half_rn(current_psi);
@@ -297,6 +393,7 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
                     cudaErr(cudaMemcpyAsync(d_phi_array, phi_array, sizeof(__half) * n_mips_to_process_at_once, cudaMemcpyHostToDevice, cudaStreamPerThread));
 
                     total_mip_processed += current_mip_to_process;
+
                     my_dist.at(0).AccumulateDistribution(ccf_array, current_mip_to_process);
 
                     MipPixelWiseStack(ccf_array, d_psi_array, d_theta_array, d_phi_array, current_mip_to_process);
@@ -431,7 +528,7 @@ __global__ void MipPixelWiseKernel(__half* __restrict__ ccf,
     for ( int i = physical_X_1d_grid( ); i < numel; i += GridStride_1dGrid( ) ) {
 
         const __half  half_val = ccf[i];
-        const __half2 input    = __half2half2(half_val * __half(10000.0));
+        const __half2 input    = __half2half2(half_val * __half(1.0));
         const __half2 mulVal   = __halves2half2((__half)1.0, half_val);
 
         sum_sumsq[i] = __hfma2(input, mulVal, sum_sumsq[i]);
@@ -663,9 +760,10 @@ __global__ void AccumulateSumsKernel(__half2* __restrict__ sum_sumsq, cufftReal*
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     if ( x < numel ) {
 
-        sum[x]    = __fmaf_rn(0.0001f, __low2float(sum_sumsq[x]), sum[x]);
-        sq_sum[x] = __fmaf_rn(0.0001f, __high2float(sum_sumsq[x]), sq_sum[x]);
-
+        // sum[x]    = __fmaf_rn(0.0001f, __low2float(sum_sumsq[x]), sum[x]);
+        // sq_sum[x] = __fmaf_rn(0.0001f, __high2float(sum_sumsq[x]), sq_sum[x]);
+        sum[x]       = __low2float(sum_sumsq[x]);
+        sq_sum[x]    = __high2float(sum_sumsq[x]);
         sum_sumsq[x] = __halves2half2((__half)0., (__half)0.);
     }
 }

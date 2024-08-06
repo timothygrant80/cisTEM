@@ -16,6 +16,7 @@
 
 #include "ProjectX_gui_matchtemplate.h"
 
+// clang-format off
 ///////////////////////////////////////////////////////////////////////////
 
 ShowTemplateMatchResultsPanelParent::ShowTemplateMatchResultsPanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
@@ -795,6 +796,56 @@ MatchTemplatePanelParent::MatchTemplatePanelParent( wxWindow* parent, wxWindowID
 	MinPeakRadiusNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("2.5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( MinPeakRadiusNumericCtrl, 0, wxALL|wxEXPAND, 5 );
 
+m_staticText8571 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Gpu Configuration"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText8571->Wrap( -1 );
+	m_staticText8571->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxT("Sans") ) );
+
+	fgSizer1->Add( m_staticText8571, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	m_staticText6991 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Use GPU?"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText6991->Wrap( -1 );
+	fgSizer1->Add( m_staticText6991, 0, wxALL, 5 );
+
+	wxBoxSizer* bSizer26513;
+	bSizer26513 = new wxBoxSizer( wxHORIZONTAL );
+
+	UseGPURadioYes = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer26513->Add( UseGPURadioYes, 0, wxALL, 5 );
+
+	UseGPURadioNo = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer26513->Add( UseGPURadioNo, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( bSizer26513, 1, wxEXPAND, 5 );
+
+	m_staticText69911 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Use FastFFT library?"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText69911->Wrap( -1 );
+	fgSizer1->Add( m_staticText69911, 0, wxALL, 5 );
+
+	wxBoxSizer* bSizer26512;
+	bSizer26512 = new wxBoxSizer( wxHORIZONTAL );
+
+	UseFastFFTRadioYes = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	bSizer26512->Add( UseFastFFTRadioYes, 0, wxALL, 5 );
+
+	UseFastFFTRadioNo = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer26512->Add( UseFastFFTRadioNo, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( bSizer26512, 1, wxEXPAND, 5 );
+
+
+	wxBoxSizer* bSizer26511;
+	bSizer26511 = new wxBoxSizer( wxHORIZONTAL );
+
+
+
+
+	fgSizer1->Add( bSizer26511, 1, wxEXPAND, 5 );
+
 
 	InputSizer->Add( fgSizer1, 1, wxEXPAND, 5 );
 
@@ -903,10 +954,6 @@ MatchTemplatePanelParent::MatchTemplatePanelParent( wxWindow* parent, wxWindowID
 
 	RunProfileComboBox = new MemoryComboBox( StartPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, 0, NULL, wxCB_READONLY );
 	bSizer58->Add( RunProfileComboBox, 50, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
-
-	UseGpuCheckBox = new wxCheckBox( StartPanel, wxID_ANY, wxT("Use GPU"), wxDefaultPosition, wxDefaultSize, 0 );
-	UseGpuCheckBox->SetValue(true);
-	bSizer58->Add( UseGpuCheckBox, 0, wxALL|wxEXPAND, 5 );
 
 	wxBoxSizer* bSizer60;
 	bSizer60 = new wxBoxSizer( wxVERTICAL );
@@ -1779,3 +1826,5 @@ RefineTemplateDevPanelParent::~RefineTemplateDevPanelParent()
 	StartEstimationButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateDevPanelParent::StartEstimationClick ), NULL, this );
 
 }
+
+// clang-format on

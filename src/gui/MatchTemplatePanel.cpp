@@ -22,6 +22,11 @@ MatchTemplatePanel::MatchTemplatePanel(wxWindow* parent)
 
 #ifndef SHOW_CISTEM_GPU_OPTIONS
     UseGpuCheckBox->Show(false);
+    UseGPURadioYes->Enable(false);
+    UseGPURadioNo->Enable(false);
+    UseFastFFTRadioYes->Enable(false);
+    UseFastFFTRadioNo->Enable(false);
+
 #endif
 
     SetInfo( );
@@ -158,9 +163,12 @@ void MatchTemplatePanel::ResetDefaults( ) {
     }
 
 #ifdef SHOW_CISTEM_GPU_OPTIONS
-    UseGpuCheckBox->SetValue(true);
+    UseGPURadioYes->SetValue(true);
+    UseFastFFTRadioYes->SetValue(true);
 #else
     UseGpuCheckBox->SetValue(false); // Already disabled, but also set to un-ticked for visual consistency.
+    UseGPURadioNo->SetValue(true);
+    UseFastFFTRadioNo->SetValue(true);
 #endif
 
     DefocusSearchRangeNumericCtrl->ChangeValueFloat(1200.0f);
@@ -387,9 +395,6 @@ void MatchTemplatePanel::OnUpdateUI(wxUpdateUIEvent& event) {
             RunProfileComboBox->Enable(true);
             GroupComboBox->Enable(true);
             ReferenceSelectPanel->Enable(true);
-#ifdef SHOW_CISTEM_GPU_OPTIONS
-            UseGpuCheckBox->Enable(true);
-#endif
 
             if ( RunProfileComboBox->GetCount( ) > 0 ) {
                 if ( image_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection( )) > 0 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(RunProfileComboBox->GetSelection( )) > 0 && all_images_have_defocus_values == true ) {
@@ -432,9 +437,6 @@ void MatchTemplatePanel::OnUpdateUI(wxUpdateUIEvent& event) {
             GroupComboBox->Enable(false);
             ReferenceSelectPanel->Enable(false);
             RunProfileComboBox->Enable(false);
-            UseGpuCheckBox->Enable(false); // Doesn't matter if SHOW_CISTEM_GPU_OPTIONS
-            //StartAlignmentButton->SetLabel("Stop Job");
-            //StartAlignmentButton->Enable(true);
         }
 
         if ( group_combo_is_dirty == true ) {
@@ -579,6 +581,7 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
     int number_of_pixel_size_positions;
 
     bool use_gpu;
+    bool use_fast_fft;
     int  max_threads = 1; // Only used for the GPU code. For GUI this comes from the run profile -> command line override as in other programs.
 
     int image_number_for_gui;
@@ -640,12 +643,8 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
 
     float min_peak_radius = MinPeakRadiusNumericCtrl->ReturnValue( );
 
-    if ( UseGpuCheckBox->GetValue( ) == true ) {
-        use_gpu = true;
-    }
-    else {
-        use_gpu = false;
-    }
+    use_gpu      = UseGPURadioYes->GetValue( ) ? true : false;
+    use_fast_fft = UseFastFFTRadioYes->GetValue( ) ? true : false;
 
     wxString wanted_symmetry    = SymmetryComboBox->GetValue( );
     wanted_symmetry             = SymmetryComboBox->GetValue( ).Upper( );
@@ -673,6 +672,7 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
         }
     }
 
+    // Normally this is called in EulerSearch::InitGrid, but we need to re-call it here to get the search positions WITHOUT the default randomization to phi (azimuthal angle.)
     current_image_euler_search->CalculateGridSearchPositions(false);
 
     if ( use_gpu ) {
@@ -876,8 +876,12 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
             //			wxString directory_for_results = main_frame->ReturnScratchDirectory();
 
             //wxPrintf("%i = %i - %i\n", job_counter, first_search_position, last_search_position);
-
-            current_job_package.AddJob("ttffffffffffifffffbfftttttttttftiiiitttfbi", input_search_image.ToUTF8( ).data( ),
+            // These are accessed directly via index in MatchTemplateApp::MasterHandleProgramDefinedResult
+            // any changes here MUST be propagated there, e.g. jobs[0].arguments[37].ReturnStringArgument( );
+            // NOTE: also, please keep in sync with the manual command line arguments.
+            // TODO: this is a bit of a mess.
+            current_job_package.AddJob("ttffffffffffifffffbfftttttttttftiiiitttfbbi",
+                                       input_search_image.ToUTF8( ).data( ),
                                        input_reconstruction.ToUTF8( ).data( ),
                                        pixel_size,
                                        voltage_kV,
@@ -905,7 +909,7 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
                                        best_defocus_output_file.ToUTF8( ).data( ),
                                        best_pixel_size_output_file.ToUTF8( ).data( ),
                                        scaled_mip_output_file.ToUTF8( ).data( ),
-                                       correlation_avg_output_file.ToUTF8( ).data( ),
+                                       correlation_std_output_file.ToUTF8( ).data( ),
                                        wanted_symmetry.ToUTF8( ).data( ),
                                        wanted_in_plane_angular_step,
                                        output_histogram_file.ToUTF8( ).data( ),
@@ -913,11 +917,12 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
                                        last_search_position,
                                        image_number_for_gui,
                                        number_of_jobs_per_image_in_gui,
-                                       correlation_std_output_file.ToUTF8( ).data( ),
+                                       correlation_avg_output_file.ToUTF8( ).data( ),
                                        directory_for_results.ToUTF8( ).data( ),
                                        output_result_file.ToUTF8( ).data( ),
                                        min_peak_radius,
                                        use_gpu,
+                                       use_fast_fft,
                                        max_threads);
         }
 

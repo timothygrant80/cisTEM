@@ -11,10 +11,15 @@
 #include "../../constants/constants.h"
 
 #if defined(ENABLE_FastFFT) && defined(ENABLEGPU)
-#include "../../../include/FastFFT/include/FastFFT.h"
+#include "../../include/FastFFT/include/FastFFT.h"
 #endif
 
+#include "template_matching_data_sizer.h"
+
+// #define USE_LERP_NOT_FOURIER_RESIZING
+
 class AggregatedTemplateResult {
+
   public:
     int   image_number;
     int   number_of_received_results;
@@ -105,6 +110,7 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
     float    in_plane_angular_step     = 0;
     bool     use_gpu_input             = false;
     int      max_threads               = 1; // Only used for the GPU code
+    bool     use_fast_fft              = false;
 
     UserInput* my_input = new UserInput("MatchTemplate", 1.00);
 
@@ -142,15 +148,11 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
     particle_radius_angstroms = my_input->GetFloatFromUser("Mask radius for global search (A) (0.0 = max)", "Radius of a circular mask to be applied to the input images during global search", "0.0", 0.0);
     my_symmetry               = my_input->GetSymmetryFromUser("Template symmetry", "The symmetry of the template reconstruction", "C1");
 #ifdef ENABLEGPU
-    use_gpu_input = my_input->GetYesNoFromUser("Use GPU", "Offload expensive calcs to GPU", "No");
-    max_threads   = my_input->GetIntFromUser("Max. threads to use for calculation", "when threading, what is the max threads to run", "1", 1);
-#else
-    // Ensure we always have the same number of interactive inputs to make scripting more consistent.
-    // (N\ot that it is likely to run match_template on the CPU)
-    use_gpu_input = my_input->GetYesNoFromUser("Use GPU", "Not compiled for gpu, input ignored.", "No");
-    max_threads   = my_input->GetIntFromUser("Max. threads to use for calculation", "Not compiled for gpu, input ignored.", "1", 1);
-    use_gpu_input = false;
-    max_threads   = 1;
+    use_gpu_input = my_input->GetYesNoFromUser("Use GPU", "Offload expensive calcs to GPU", "Yes");
+#ifdef ENABLE_FastFFT
+    use_fast_fft = my_input->GetYesNoFromUser("Use Fast FFT", "Use the Fast FFT library", "Yes");
+#endif
+    max_threads = my_input->GetIntFromUser("Max. threads to use for calculation", "when threading, what is the max threads to run", "1", 1);
 #endif
 
     int   first_search_position           = -1;
@@ -164,7 +166,7 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
 
     delete my_input;
 
-    my_current_job.ManualSetArguments("ttffffffffffifffffbfftttttttttftiiiitttfbi", input_search_images.ToUTF8( ).data( ),
+    my_current_job.ManualSetArguments("ttffffffffffifffffbfftttttttttftiiiitttfbbi", input_search_images.ToUTF8( ).data( ),
                                       input_reconstruction.ToUTF8( ).data( ),
                                       pixel_size,
                                       voltage_kV,
@@ -205,6 +207,7 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
                                       result_filename.ToUTF8( ).data( ),
                                       min_peak_radius,
                                       use_gpu_input,
+                                      use_fast_fft,
                                       max_threads);
 }
 
@@ -262,7 +265,9 @@ bool MatchTemplateApp::DoCalculation( ) {
     wxString result_output_filename          = my_current_job.arguments[38].ReturnStringArgument( );
     float    min_peak_radius                 = my_current_job.arguments[39].ReturnFloatArgument( );
     bool     use_gpu                         = my_current_job.arguments[40].ReturnBoolArgument( );
-    int      max_threads                     = my_current_job.arguments[41].ReturnIntegerArgument( );
+    bool     use_fast_fft                    = my_current_job.arguments[41].ReturnBoolArgument( );
+
+    int max_threads = my_current_job.arguments[43].ReturnIntegerArgument( );
 
     if ( is_running_locally == false )
         max_threads = number_of_threads_requested_on_command_line; // OVERRIDE FOR THE GUI, AS IT HAS TO BE SET ON THE COMMAND LINE...
@@ -704,8 +709,13 @@ bool MatchTemplateApp::DoCalculation( ) {
                                    angles, global_euler_search,
                                    histogram_min_scaled, histogram_step_scaled, histogram_number_of_points,
                                    max_padding, t_first_search_position, t_last_search_position,
-                                   my_progress, total_correlation_positions_per_thread, is_running_locally);
+                                   my_progress, total_correlation_positions_per_thread, is_running_locally, use_fast_fft);
 
+#ifdef USE_LERP_NOT_FOURIER_RESIZING
+                    std::cerr << "\n\nUsing LERP\n\n";
+                    GPU[tIDX].use_lerp_for_resizing = true;
+                    GPU[tIDX].binning_factor        = wanted_binning_factor;
+#endif
                     wxPrintf("%d\n", tIDX);
                     wxPrintf("%d\n", t_first_search_position);
                     wxPrintf("%d\n", t_last_search_position);
@@ -832,7 +842,7 @@ bool MatchTemplateApp::DoCalculation( ) {
                     vmcMulByConj(padded_reference.real_memory_allocated / 2, reinterpret_cast<MKL_Complex8*>(input_image.complex_values), reinterpret_cast<MKL_Complex8*>(padded_reference.complex_values), reinterpret_cast<MKL_Complex8*>(padded_reference.complex_values), VML_EP | VML_FTZDAZ_ON | VML_ERRMODE_IGNORE);
 #else
                     for ( pixel_counter = 0; pixel_counter < padded_reference.real_memory_allocated / 2; pixel_counter++ ) {
-                          padded_reference.complex_values[pixel_counter] = conj(padded_reference.complex_values[pixel_counter]) * input_image.complex_values[pixel_counter];
+                        padded_reference.complex_values[pixel_counter] = conj(padded_reference.complex_values[pixel_counter]) * input_image.complex_values[pixel_counter];
                     }
 #endif
 
@@ -947,7 +957,7 @@ bool MatchTemplateApp::DoCalculation( ) {
         }
     }
 
-    if ( is_running_locally == true ) {
+    if ( is_running_locally ) {
         delete my_progress;
 
         // scale images..
@@ -1537,7 +1547,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
 #ifdef MKL
         vdErfcInv(1, &erf_input, &temp_threshold);
 #else
-        temp_threshold       = cisTEM_erfcinv(erf_input);
+        temp_threshold = cisTEM_erfcinv(erf_input);
 #endif
         expected_threshold = sqrtf(2.0f) * (float)temp_threshold * CCG_NOISE_STDDEV;
 

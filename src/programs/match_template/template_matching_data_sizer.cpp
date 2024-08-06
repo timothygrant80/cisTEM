@@ -10,7 +10,7 @@
 
 #include "../../constants/constants.h"
 
-#if defined(ENABLE_FastFFT) && defined(ENABLEGPU)
+#if defined(cisTEM_USING_FastFFT) && defined(ENABLEGPU)
 #include "../../ext/FastFFT/include/FastFFT.h"
 #endif
 
@@ -72,12 +72,23 @@ void TemplateMatchingDataSizer::SetImageAndTemplateSizing(const float wanted_hig
  * 
  * @param input_image 
  */
-void TemplateMatchingDataSizer::PreProcessInputImage(Image& input_image, Curve& whitening_filter, bool swap_real_space_quadrants, bool normalize_to_variance_one) {
+void TemplateMatchingDataSizer::PreProcessInputImage(Image& input_image, bool swap_real_space_quadrants, bool normalize_to_variance_one) {
 
+    // We whiten the image prior to any padding etc in particular to remove any low-frequency gradients that would add to boundary dislocations.
+    // We may also whiten following any further resampling and resizing or other ops that are done to the image. We need to keep track of the total filtering applied.
     Curve number_of_terms;
-    whitening_filter.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((input_image.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
+    Curve local_whitening_filter;
+    local_whitening_filter.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((input_image.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
     number_of_terms.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((input_image.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
 
+    if ( ! whitening_filter_ptr ) {
+        // We'll accumulate the local whitening filter at the end of the method
+        whitening_filter_ptr = std::make_unique<Curve>(local_whitening_filter);
+        whitening_filter_ptr->CopyFrom(&local_whitening_filter);
+        whitening_filter_ptr->SetYToConstant(1.0f);
+    }
+    // We could also check and FFT if necessary similar to Resize() but we are assuming the input image is in real space.
+    MyDebugAssertTrue(input_image.is_in_real_space, "Input image must be in real space");
     // This won't work for movie frames (13.0 is used in unblur) TODO use poisson stats
     input_image.ReplaceOutliersWithMean(5.0f);
 
@@ -91,12 +102,15 @@ void TemplateMatchingDataSizer::PreProcessInputImage(Image& input_image, Curve& 
         input_image.SwapRealSpaceQuadrants( );
 
     input_image.ZeroCentralPixel( );
-    input_image.Compute1DPowerSpectrumCurve(&whitening_filter, &number_of_terms);
-    whitening_filter.SquareRoot( );
-    whitening_filter.Reciprocal( );
-    whitening_filter.MultiplyByConstant(1.0f / whitening_filter.ReturnMaximumValue( ));
+    input_image.Compute1DPowerSpectrumCurve(&local_whitening_filter, &number_of_terms);
+    local_whitening_filter.SquareRoot( );
+    local_whitening_filter.Reciprocal( );
+    local_whitening_filter.MultiplyByConstant(1.0f / local_whitening_filter.ReturnMaximumValue( ));
 
-    input_image.ApplyCurveFilter(&whitening_filter);
+    input_image.ApplyCurveFilter(&local_whitening_filter);
+    // Record this filtering for later use
+    whitening_filter_ptr->MultiplyBy(local_whitening_filter);
+
     input_image.ZeroCentralPixel( );
     if ( normalize_to_variance_one ) {
         // Presumably for Pre-processing (where we need the realspace variance = 1 so noise in padding reginos matchs)

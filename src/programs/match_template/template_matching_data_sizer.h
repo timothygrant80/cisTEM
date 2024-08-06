@@ -78,6 +78,8 @@ class TemplateMatchingDataSizer {
     TemplateMatchingDataSizer(MyApp* parent_match_template_app_ptr, Image& input_image, Image& wanted_template, float wanted_pixel_size, float wanted_template_padding);
     ~TemplateMatchingDataSizer( );
 
+    std::unique_ptr<Curve> whitening_filter_ptr;
+
     // Don't allow copy or move. FIXME: if we don't add any dynamically allocated data, we can remove this.
     // TemplateMatchingDataSizer(const TemplateMatchingDataSizer&)            = delete;
     // TemplateMatchingDataSizer& operator=(const TemplateMatchingDataSizer&) = delete;
@@ -85,9 +87,9 @@ class TemplateMatchingDataSizer {
     // TemplateMatchingDataSizer& operator=(TemplateMatchingDataSizer&&)      = delete;
 
     void SetImageAndTemplateSizing(const float wanted_high_resolution_limit, const bool use_fast_fft);
-    void PreProcessInputImage(Image& input_image, Curve& whitening_filter, bool swap_real_space_quadrants = false, bool normalize_to_variance_one = true);
+    void PreProcessInputImage(Image& input_image, bool swap_real_space_quadrants = false, bool normalize_to_variance_one = true);
 
-    void PreProcessResizedInputImage(Image& input_image, Curve& whitening_filter) { PreProcessInputImage(input_image, whitening_filter, true, false); }
+    void PreProcessResizedInputImage(Image& input_image) { PreProcessInputImage(input_image, true, false); }
 
     void ResizeTemplate_preSearch(Image& template_image, const bool use_lerp_not_fourier_resampling = false);
     void ResizeTemplate_postSearch(Image& template_image);

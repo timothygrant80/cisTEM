@@ -880,6 +880,7 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
             // any changes here MUST be propagated there, e.g. jobs[0].arguments[37].ReturnStringArgument( );
             // NOTE: also, please keep in sync with the manual command line arguments.
             // TODO: this is a bit of a mess.
+            
             current_job_package.AddJob("ttffffffffffifffffbfftttttttttftiiiitttfbbi",
                                        input_search_image.ToUTF8( ).data( ),
                                        input_reconstruction.ToUTF8( ).data( ),

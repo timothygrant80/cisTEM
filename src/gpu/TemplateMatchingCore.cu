@@ -3,7 +3,7 @@
 
 #include "TemplateMatchingCore.h"
 
-#ifdef ENABLE_FastFFT
+#ifdef cisTEM_USING_FastFFT
 #include "../ext/FastFFT/include/FastFFT.cuh"
 #endif
 // Implementation is in the header as it is only used here for now.
@@ -136,7 +136,7 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
 
     bool this_is_the_first_run_on_inner_loop = my_dist.empty( );
 
-#ifdef ENABLE_FastFFT
+#ifdef cisTEM_USING_FastFFT
     // FIXME: Move this to a new method in matche_template.cpp and reference it from a shared pointer.
     if ( use_fast_fft && this_is_the_first_run_on_inner_loop ) {
         // FastFFT pads from the upper left corner, so we need to shift the image so the origins coinicide
@@ -212,7 +212,7 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
     cudaEvent_t mip_is_done_Event;
 
     cudaErr(cudaEventCreateWithFlags(&mip_is_done_Event, cudaEventBlockingSync));
-#ifdef ENABLE_FastFFT
+#ifdef cisTEM_USING_FastFFT
     FastFFT::FourierTransformer<float, __half, __half2, 2>                           FT;
     FastFFT::KernelFunction::my_functor<float, 0, FastFFT::KernelFunction::NOOP>     noop;
     FastFFT::KernelFunction::my_functor<float, 4, FastFFT::KernelFunction::CONJ_MUL> conj_mul;
@@ -328,14 +328,14 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
 
                 // Note: I had deleted this in the dev branch for FastFFT. Review when possible
                 // The average in the full padded image will be different;
-                average_of_reals *= ((float)d_current_projection[current_projection_idx].number_of_real_space_pixels / (float)d_padded_reference.number_of_real_space_pixels);
+                // average_of_reals *= ((float)d_current_projection[current_projection_idx].number_of_real_space_pixels / (float)d_padded_reference.number_of_real_space_pixels);
             }
 
             // For the host to execute the preceding line, it was to wait on the return value from ReturnSumOfSquares. This could be a bit of a performance regression as otherwise it can queue up all the reamining
             // GPU work and get back to calculating the next projection. The commented out method is an attempt around that, but currently the mips come out a little different a bit faster.
 
             if ( use_fast_fft ) {
-#ifdef ENABLE_FastFFT
+#ifdef cisTEM_USING_FastFFT
                 // float scale_factor = rsqrtf(d_current_projection[current_projection_idx].ReturnSumOfSquares( ) / (float)d_padded_reference.number_of_real_space_pixels - (average_of_reals * average_of_reals));
                 // scale_factor /= powf((float)d_current_projection[current_projection_idx].number_of_real_space_pixels, 1.0);
 
@@ -355,6 +355,7 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
                     // Note the stream change will not affect the padded projection
                     projection_queue.RecordProjectionReadyBlockingHost(current_projection_idx, cudaStreamPerThread);
                 }
+
 #endif
             }
             else {
@@ -378,7 +379,6 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
                     d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image.complex_values_fp16, true);
                 }
             }
-
             // d_padded_reference.MultiplyByConstant(rsqrtf(d_padded_reference.ReturnSumOfSquares( ) / (float)d_padded_reference.number_of_real_space_pixels));
 
             if constexpr ( n_mips_to_process_at_once > 1 ) {

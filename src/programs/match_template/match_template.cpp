@@ -873,11 +873,10 @@ bool MatchTemplateApp::DoCalculation( ) {
 #ifdef MEDIAN_FILTER_TEST
                         for ( int i = 0; i < GPU[tIDX].d_max_intensity_projection.real_memory_allocated; i++ ) {
                             trimmed_counter[i] += (double)GPU[tIDX].trimmed_counter[i];
-                        }
-                        
-                        
+                        }             
 #endif
-
+                        wxPrintf("\n The size of the array is %d", ccf_abs_dev_med_abs_dev.size());
+        
                         // TODO swap max_padding for explicit padding in x/y and limit calcs to that region.
                         pixel_counter = 0;
                         for ( current_y = 0; current_y < max_intensity_projection.logical_y_dimension; current_y++ ) {
@@ -910,23 +909,14 @@ bool MatchTemplateApp::DoCalculation( ) {
 
                     } // end of omp critical block
                 } // end of parallel block
-                // Check the size of the vector ccf_abs_dev_med_abs_dev
-                wxPrintf("\n The size of the ccf_abs_dev_med_abs_dev is %d", GPU[tIDX].d_ccf_abs_dev_med_abs_dev.size());
-                //return true;
-                //for (int frame_count = 0; frame_count < d_ccf_abs_dev_med_abs_dev.size() / 3; frame_count++) {
-                //    float ccf_val = d_ccf_abs_dev_med_abs_dev[frame_count * 3];
-                //    float abs_dev = d_ccf_abs_dev_med_abs_dev[frame_count * 3 + 1];
-                //    float median_abs_dev = d_ccf_abs_dev_med_abs_dev[frame_count * 3 + 2];
-    // Use the values as needed
-//}
-//                    cc_file.WriteCommentLine("Output cross correlation values at %d,%d", x_coord_to_track, y_coord_to_track);
-        
-        for (int line_counter = 0; line_counter < GPU[tIDX].d_ccf_abs_dev_med_abs_dev.size() / 3;line_counter++){
-            temp_cc_array[0] = GPU[tIDX].d_ccf_abs_dev_med_abs_dev.[line_counter * 3];
-            temp_cc_array[1] = GPU[tIDX].d_ccf_abs_dev_med_abs_dev.[line_counter * 3 + 1];
-            temp_cc_array[2] = GPU[tIDX].d_ccf_abs_dev_med_abs_dev.[line_counter * 3 + 2];
-            cc_file.WriteLine(temp_cc_array);
-        }
+                for (int i=0; i < ccf_abs_dev_med_abs_dev.size() / 3; i++) {
+                            temp_cc_array[0] = (double)ccf_abs_dev_med_abs_dev[i * 3] * sqrt_input_pixels;
+                            temp_cc_array[1] = (double)ccf_abs_dev_med_abs_dev[i * 3 + 1] * sqrt_input_pixels;
+                            temp_cc_array[2] = (double)ccf_abs_dev_med_abs_dev[i * 3 + 2] * sqrt_input_pixels;
+                            cc_file.WriteLine(temp_cc_array);
+                }
+                
+                
                 continue;
 
 #endif
@@ -1091,7 +1081,7 @@ bool MatchTemplateApp::DoCalculation( ) {
             }
         }
     }
-
+    cc_file.Close( );
     wxPrintf("\n\n\tTimings: Overall: %s\n", (wxDateTime::Now( ) - overall_start).Format( ));
 #ifdef MEDIAN_FILTER_TEST
     //RD : error factor to be included with the standard deviation to make up for the error associated with trimming

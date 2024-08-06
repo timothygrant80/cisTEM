@@ -11,7 +11,7 @@
 
 using namespace cistem_timer;
 
-constexpr bool use_gpu_prj               = false;
+constexpr bool use_gpu_prj               = true;
 constexpr int  n_mips_to_process_at_once = 10;
 
 static_assert(n_mips_to_process_at_once == 1 || n_mips_to_process_at_once == 10, "n_mips_to_process_at_once must be 1 or 10");

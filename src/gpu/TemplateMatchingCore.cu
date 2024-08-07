@@ -11,38 +11,38 @@
 
 using namespace cistem_timer;
 
-constexpr bool use_gpu_prj               = false;
+constexpr bool use_gpu_prj               = true;
 constexpr int  n_mips_to_process_at_once = 10;
 
-static_assert(n_mips_to_process_at_once == 1 || n_mips_to_process_at_once == 10, "n_mips_to_process_at_once must be 1 or 10");
+static_assert(n_mips_to_process_at_once == 10, "n_mips_to_process_at_once must be 10");
 
-void TemplateMatchingCore::Init(MyApp*           parent_pointer,
-                                Image&           wanted_template_reconstruction,
-                                Image&           wanted_input_image,
-                                Image&           current_projection,
-                                float            pixel_size_search_range,
-                                float            pixel_size_step,
-                                float            pixel_size,
-                                float            defocus_search_range,
-                                float            defocus_step,
-                                float            defocus1,
-                                float            defocus2,
-                                float            psi_max,
-                                float            psi_start,
-                                float            psi_step,
-                                AnglesAndShifts& angles,
-                                EulerSearch&     global_euler_search,
-                                float            histogram_min_scaled,
-                                float            histogram_step_scaled,
-                                int              histogram_number_of_bins,
-                                int              max_padding,
-                                int              first_search_position,
-                                int              last_search_position,
-                                ProgressBar*     my_progress,
-                                long             total_correlation_positions,
-                                bool             is_running_locally,
-                                bool             use_fast_fft,
-                                int              number_of_global_search_images_to_save)
+void TemplateMatchingCore::Init(MyApp*                    parent_pointer,
+                                std::shared_ptr<GpuImage> wanted_template_reconstruction,
+                                Image&                    wanted_input_image,
+                                Image&                    current_projection,
+                                float                     pixel_size_search_range,
+                                float                     pixel_size_step,
+                                float                     pixel_size,
+                                float                     defocus_search_range,
+                                float                     defocus_step,
+                                float                     defocus1,
+                                float                     defocus2,
+                                float                     psi_max,
+                                float                     psi_start,
+                                float                     psi_step,
+                                AnglesAndShifts&          angles,
+                                EulerSearch&              global_euler_search,
+                                float                     histogram_min_scaled,
+                                float                     histogram_step_scaled,
+                                int                       histogram_number_of_bins,
+                                int                       max_padding,
+                                int                       first_search_position,
+                                int                       last_search_position,
+                                ProgressBar*              my_progress,
+                                long                      total_correlation_positions,
+                                bool                      is_running_locally,
+                                bool                      use_fast_fft,
+                                int                       number_of_global_search_images_to_save)
 
 {
 
@@ -64,7 +64,6 @@ void TemplateMatchingCore::Init(MyApp*           parent_pointer,
     this->use_fast_fft = use_fast_fft;
 
     // It seems that I need a copy for these - 1) confirm, 2) if already copying, maybe put straight into pinned mem with cudaHostMalloc
-    template_reconstruction.CopyFrom(&wanted_template_reconstruction);
     input_image.CopyFrom(&wanted_input_image);
 
     this->current_projection.reserve(n_prjs);
@@ -73,18 +72,7 @@ void TemplateMatchingCore::Init(MyApp*           parent_pointer,
         d_current_projection.emplace_back(this->current_projection[i]);
     }
     if ( use_gpu_prj ) {
-        // FIXME: for intial testing, we want to compare GPU and CPU projections, so make a copy
-        Image tmp_vol = template_reconstruction;
-        if ( ! this->is_gpu_3d_swapped ) {
-            tmp_vol.SwapRealSpaceQuadrants( );
-            tmp_vol.BackwardFFT( );
-            tmp_vol.SwapFourierSpaceQuadrants(true);
-            this->is_gpu_3d_swapped = true;
-        }
-        // TODO: confirm you need the real-values allocated
-
-        this->template_gpu.InitializeBasedOnCpuImage(tmp_vol, false, true);
-        this->template_gpu.CopyHostToDeviceTextureComplex3d(tmp_vol);
+        template_gpu_shared = wanted_template_reconstruction;
     }
 
     d_input_image.Init(input_image);
@@ -281,7 +269,7 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
                 }
 
                 // template_gpu_shared.get( )
-                d_current_projection[current_projection_idx].ExtractSliceShiftAndCtf(&template_gpu,
+                d_current_projection[current_projection_idx].ExtractSliceShiftAndCtf(template_gpu_shared.get( ),
                                                                                      &d_projection_filter,
                                                                                      angles,
                                                                                      pixel_size,

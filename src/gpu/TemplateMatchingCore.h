@@ -29,9 +29,9 @@ class TemplateMatchingCore {
     int number_of_jobs_per_image_in_gui;
 
     // CPU images to be passed in -
-    Image    template_reconstruction;
-    GpuImage template_gpu;
-    Image    input_image; // These will be modified on the host from withing Template Matching Core so Allocate locally
+    Image                     template_reconstruction;
+    std::shared_ptr<GpuImage> template_gpu_shared;
+    Image                     input_image; // These will be modified on the host from withing Template Matching Core so Allocate locally
 
     bool  use_lerp_for_resizing{ };
     float binning_factor = 1.f;
@@ -121,33 +121,33 @@ class TemplateMatchingCore {
 
     void SetMinimumThreshold(float wanted_threshold) { minimum_threshold = wanted_threshold; }
 
-    void Init(MyApp*           parent_pointer,
-              Image&           template_reconstruction,
-              Image&           input_image,
-              Image&           current_projection,
-              float            pixel_size_search_range,
-              float            pixel_size_step,
-              float            pixel_size,
-              float            defocus_search_range,
-              float            defocus_step,
-              float            defocus1,
-              float            defocus2,
-              float            psi_max,
-              float            psi_start,
-              float            psi_step,
-              AnglesAndShifts& angles,
-              EulerSearch&     global_euler_search,
-              float            histogram_min_scaled,
-              float            histogram_step_scaled,
-              int              histogram_number_of_bins,
-              int              max_padding,
-              int              first_search_position,
-              int              last_search_position,
-              ProgressBar*     my_progress,
-              long             total_correlation_positions,
-              bool             is_running_locally,
-              bool             use_fast_fft,
-              int              number_of_global_search_images_to_save = 1);
+    void Init(MyApp*                    parent_pointer,
+              std::shared_ptr<GpuImage> template_reconstruction,
+              Image&                    input_image,
+              Image&                    current_projection,
+              float                     pixel_size_search_range,
+              float                     pixel_size_step,
+              float                     pixel_size,
+              float                     defocus_search_range,
+              float                     defocus_step,
+              float                     defocus1,
+              float                     defocus2,
+              float                     psi_max,
+              float                     psi_start,
+              float                     psi_step,
+              AnglesAndShifts&          angles,
+              EulerSearch&              global_euler_search,
+              float                     histogram_min_scaled,
+              float                     histogram_step_scaled,
+              int                       histogram_number_of_bins,
+              int                       max_padding,
+              int                       first_search_position,
+              int                       last_search_position,
+              ProgressBar*              my_progress,
+              long                      total_correlation_positions,
+              bool                      is_running_locally,
+              bool                      use_fast_fft,
+              int                       number_of_global_search_images_to_save = 1);
 
     void RunInnerLoop(Image& projection_filter, float pixel_i, float defocus_i, int threadIDX, long& current_correlation_position);
 };

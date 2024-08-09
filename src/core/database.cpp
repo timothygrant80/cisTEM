@@ -2362,13 +2362,23 @@ void Database::GetRefinementAngularDistributionHistogramData(long wanted_refinem
     EndBatchSelect( );
 }
 
-bool Database::UpdateSchema(ColumnChanges columns) {
+bool Database::UpdateSchema(ColumnChanges columns, UpdateProgressTracker* progress_bar, unsigned long total_num_rows, int normalized_increments) {
     using namespace database_schema;
     CreateAllTables( );
-    char     format;
-    wxString column_format;
-    int      col_counter;
-    bool     output_pixel_size_added = false;
+    char          format;
+    wxString      column_format;
+    int           col_counter;
+    unsigned long rows_processed          = 0;
+    int           current_progress        = 0;
+    int           previous_progress       = 0;
+    bool          should_update_text      = false; // Modified in UpdateProgressTracker::OnUpdateProgress
+    bool          output_pixel_size_added = false;
+
+    // Assitive lambda function used in helping to update the progress bar
+    auto calculate_current_percentage = [&rows_processed, &total_num_rows, &normalized_increments]( ) -> int {
+        double percent_completion = (double(rows_processed) / double(total_num_rows)) * normalized_increments;
+        return static_cast<int>(percent_completion);
+    };
 
     for ( ColumnChange& column : columns ) {
         format        = std::get<COLUMN_CHANGE_TYPE>(column);
@@ -2380,13 +2390,26 @@ bool Database::UpdateSchema(ColumnChanges columns) {
 
         if ( std::get<COLUMN_CHANGE_NAME>(column) == "OUTPUT_PIXEL_SIZE" )
             output_pixel_size_added = true;
+
+        if ( progress_bar ) {
+            rows_processed++; // Not actually updating rows, but altering tables; but, need one variable for tracking
+            current_progress = calculate_current_percentage( );
+
+            if ( current_progress > previous_progress ) {
+                progress_bar->OnUpdateProgress(current_progress, "Making column changes...", should_update_text);
+                previous_progress = current_progress;
+            }
+        }
     }
+    should_update_text = true;
 
     UpdateVersion( );
 
     // do the more complicated post work..
 
-    if ( output_pixel_size_added == true ) {
+    if ( output_pixel_size_added ) {
+        // Grab IDs first, or else we can't properly update progress bar
+        wxArrayInt ref_pkg_ids = ReturnIntArrayFromSelectCommand("select REFINEMENT_PACKAGE_ASSET_ID from REFINEMENT_PACKAGE_ASSETS");
         ExecuteSQL("drop table if exists cistem_schema_update_temp_table");
         ExecuteSQL("alter table REFINEMENT_PACKAGE_ASSETS rename to cistem_schema_update_temp_table");
         CreateAllTables( ); // should now be correct order but blank..
@@ -2418,14 +2441,26 @@ bool Database::UpdateSchema(ColumnChanges columns) {
         ExecuteSQL("drop table if exists cistem_schema_update_temp_table");
 
         // now we need to go and set this value to the output pixel size..
-        wxArrayInt refinement_package_asset_ids = ReturnIntArrayFromSelectCommand("SELECT REFINEMENT_PACKAGE_ASSET_ID FROM REFINEMENT_PACKAGE_ASSETS");
-        double     current_pixel_size;
+        double current_pixel_size;
+        int    num_particles = 0;
 
-        for ( int refinement_package_counter = 0; refinement_package_counter < refinement_package_asset_ids.GetCount( ); refinement_package_counter++ ) {
-            current_pixel_size = ReturnSingleDoubleFromSelectCommand(wxString::Format("select pixel_size from refinement_package_contained_particles_%i", refinement_package_asset_ids[refinement_package_counter]));
-            ExecuteSQL(wxString::Format("update refinement_package_assets set output_pixel_size = %f where refinement_package_asset_id = %i", current_pixel_size, refinement_package_asset_ids[refinement_package_counter]));
+        for ( int refinement_package_counter = 0; refinement_package_counter < ref_pkg_ids.GetCount( ); refinement_package_counter++ ) {
+            current_pixel_size = ReturnSingleDoubleFromSelectCommand(wxString::Format("select pixel_size from refinement_package_contained_particles_%i", ref_pkg_ids[refinement_package_counter]));
+            ExecuteSQL(wxString::Format("update refinement_package_assets set output_pixel_size = %f where refinement_package_asset_id = %i", current_pixel_size, ref_pkg_ids[refinement_package_counter]));
+
+            // Update loading bar
+            if ( progress_bar ) {
+                num_particles = ReturnSingleIntFromSelectCommand(wxString::Format("select COUNT(*) from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", ref_pkg_ids[refinement_package_counter]));
+                rows_processed += num_particles;
+                current_progress = calculate_current_percentage( );
+
+                if ( current_progress > previous_progress ) {
+                    progress_bar->OnUpdateProgress(current_progress, "Updating refinement package(s) pixel size...", should_update_text);
+                    previous_progress = current_progress;
+                }
+            }
         }
-
+        should_update_text = true;
         // Next, make sure pixel size, aberration, voltage, and amplitude contrast are being updated where needed
         {
             double     classification_held_pixel_size      = 0.0;
@@ -2445,12 +2480,12 @@ bool Database::UpdateSchema(ColumnChanges columns) {
 
             // Use the refinement_package_asset_id from each table to update the needed variables
             // First do classification results
-            for ( int classification_result_counter = 0; classification_result_counter < classification_ids.size( ); classification_result_counter++ ) {
+            for ( int classification_result_counter = 0; classification_result_counter < classification_ids.GetCount( ); classification_result_counter++ ) {
                 corresponding_refinement_package_id = ReturnSingleIntFromSelectCommand(wxString::Format("select REFINEMENT_PACKAGE_ASSET_ID from CLASSIFICATION_LIST where CLASSIFICATION_ID = %i", classification_ids[classification_result_counter]));
                 classification_held_pixel_size      = ReturnSingleDoubleFromSelectCommand(wxString::Format("select PIXEL_SIZE from CLASSIFICATION_RESULT_%i", classification_ids[classification_result_counter]));
                 contained_particles_pixel_size      = ReturnSingleDoubleFromSelectCommand(wxString::Format("select PIXEL_SIZE from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
 
-                // If pixel size doesn't match, probably none do; update all NULL columns.
+                // If pixel size doesn't match, probably none do -- fix classification tables; fill all NULL columns.
                 if ( contained_particles_pixel_size != classification_held_pixel_size ) {
                     aberration         = ReturnSingleDoubleFromSelectCommand(wxString::Format("select SPHERICAL_ABERRATION from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
                     voltage            = ReturnSingleDoubleFromSelectCommand(wxString::Format("select MICROSCOPE_VOLTAGE from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
@@ -2468,25 +2503,36 @@ bool Database::UpdateSchema(ColumnChanges columns) {
                     ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set DEFOCUS_2 = %f", classification_ids[classification_result_counter], defocus_2));
                     ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set DEFOCUS_ANGLE = %f", classification_ids[classification_result_counter], defocus_angle));
                     ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set PHASE_SHIFT = %f", classification_ids[classification_result_counter], phase_shift));
+
+                    // Then fill in the columns that would remain 0.0 as the values didn't exist in the beta version
+                    ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set BEAM_TILT_X = 0.0 where BEAM_TILT_X is null", classification_ids[classification_result_counter]));
+                    ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set BEAM_TILT_Y = 0.0 where BEAM_TILT_Y is null", classification_ids[classification_result_counter]));
+                    ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set IMAGE_SHIFT_X = 0.0 where IMAGE_SHIFT_X is null", classification_ids[classification_result_counter]));
+                    ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set IMAGE_SHIFT_Y = 0.0 where IMAGE_SHIFT_Y is null", classification_ids[classification_result_counter]));
                 }
 
-                // Then fill in the columns that would remain 0.0 as the values didn't exist in the beta version
-                ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set BEAM_TILT_X = 0.0 where BEAM_TILT_X is null", classification_ids[classification_result_counter]));
-                ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set BEAM_TILT_Y = 0.0 where BEAM_TILT_Y is null", classification_ids[classification_result_counter]));
-                ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set IMAGE_SHIFT_X = 0.0 where IMAGE_SHIFT_X is null", classification_ids[classification_result_counter]));
-                ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set IMAGE_SHIFT_Y = 0.0 where IMAGE_SHIFT_Y is null", classification_ids[classification_result_counter]));
+                // Update the loading bar
+                if ( progress_bar ) {
+                    num_particles = ReturnSingleIntFromSelectCommand(wxString::Format("select COUNT(*) from CLASSIFICATION_RESULT_%i", classification_ids[classification_result_counter]));
+                    rows_processed += num_particles;
+                    current_progress = calculate_current_percentage( );
+                    if ( current_progress > previous_progress ) {
+                        progress_bar->OnUpdateProgress(current_progress, "Updating classification result(s)...", should_update_text);
+                        previous_progress = current_progress;
+                    }
+                }
             }
+            should_update_text = true;
 
             // Now do refinement results; first loop over the refinement_ids, then loop over the number of classes.
-            for ( int refinement_result_counter = 0; refinement_result_counter < refinement_ids.size( ); refinement_result_counter++ ) {
+            for ( int refinement_result_counter = 0; refinement_result_counter < refinement_ids.GetCount( ); refinement_result_counter++ ) {
                 refinement_number_of_classes = ReturnSingleIntFromSelectCommand(wxString::Format("select NUMBER_OF_CLASSES from REFINEMENT_LIST where REFINEMENT_ID = %i", refinement_ids[refinement_result_counter])) + 1;
-
                 for ( int refinement_result_class_counter = 1; refinement_result_class_counter < refinement_number_of_classes; refinement_result_class_counter++ ) {
                     corresponding_refinement_package_id = ReturnSingleIntFromSelectCommand(wxString::Format("select REFINEMENT_PACKAGE_ASSET_ID from REFINEMENT_LIST where REFINEMENT_ID = %i", refinement_ids[refinement_result_counter]));
                     refinement_held_pixel_size          = ReturnSingleDoubleFromSelectCommand(wxString::Format("select PIXEL_SIZE from REFINEMENT_RESULT_%i_%i", refinement_ids[refinement_result_counter], refinement_result_class_counter));
                     contained_particles_pixel_size      = ReturnSingleDoubleFromSelectCommand(wxString::Format("select PIXEL_SIZE from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
 
-                    // If pixel size doesn't match, probably none do; update all 4.
+                    // If pixel size doesn't match, probably none do; repeat above process for refinement result tables
                     if ( contained_particles_pixel_size != classification_held_pixel_size ) {
                         aberration         = ReturnSingleDoubleFromSelectCommand(wxString::Format("select SPHERICAL_ABERRATION from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
                         voltage            = ReturnSingleDoubleFromSelectCommand(wxString::Format("select MICROSCOPE_VOLTAGE from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
@@ -2503,6 +2549,18 @@ bool Database::UpdateSchema(ColumnChanges columns) {
                         ExecuteSQL(wxString::Format("update REFINEMENT_RESULT_%i_%i set IMAGE_SHIFT_X = 0.0 where IMAGE_SHIFT_X is null", refinement_ids[refinement_result_counter], refinement_result_class_counter));
                         ExecuteSQL(wxString::Format("update REFINEMENT_RESULT_%i_%i set IMAGE_SHIFT_Y = 0.0 where IMAGE_SHIFT_Y is null", refinement_ids[refinement_result_counter], refinement_result_class_counter));
                     }
+
+                    // Update the loading bar
+                    if ( progress_bar ) {
+                        num_particles = ReturnSingleIntFromSelectCommand(wxString::Format("select COUNT(*) from REFINEMENT_RESULT_%i_%i", refinement_ids[refinement_result_counter], refinement_result_class_counter));
+                        rows_processed += num_particles;
+                        current_progress = calculate_current_percentage( );
+
+                        if ( current_progress > previous_progress ) {
+                            progress_bar->OnUpdateProgress(current_progress, "Updating refinement result(s)...", should_update_text);
+                            previous_progress = current_progress;
+                        }
+                    }
                 }
             }
         }
@@ -2514,7 +2572,6 @@ bool Database::UpdateSchema(ColumnChanges columns) {
             ExecuteSQL(wxString::Format("update ESTIMATED_CTF_PARAMETERS set TILT_AXIS = 0.0 where TILT_AXIS is null"));
         }
     }
-
     return true;
 }
 

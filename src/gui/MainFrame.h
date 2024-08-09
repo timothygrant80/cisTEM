@@ -1,8 +1,9 @@
 #ifndef _gui_MainFrame_h_
 #define _gui_MainFrame_h_
+#include "UpdateProgressTracker.h"
 
 /** Implementing MainFrame */
-class MyMainFrame : public MainFrame, public SocketCommunicator {
+class MyMainFrame : public MainFrame, public SocketCommunicator, public UpdateProgressTracker {
     bool                   is_fullscreen;
     cistem::workflow::Enum current_workflow;
     cistem::workflow::Enum previous_workflow;
@@ -27,6 +28,10 @@ class MyMainFrame : public MainFrame, public SocketCommunicator {
     short int my_port;
 
     virtual wxString ReturnName( ) { return "MainFrame"; }
+
+    // For schema update only; could be more generalized/re-used when needed
+    void OnUpdateProgress(int progress, wxString new_msg, bool& should_update_text) override;
+    void OnCompletion( ) override;
 
     void RecalculateAssetBrowser(void);
     void OnCollapseAll(wxCommandEvent& event);
@@ -119,6 +124,10 @@ class MyMainFrame : public MainFrame, public SocketCommunicator {
     }
 
     //LaunchJob(JobPanel *parent_panel, )
+
+  private:
+    // Only used in schema update at this point
+    OneSecondProgressDialog* update_progress_dialog;
 };
 
 #endif // _gui_MainFrame_h_

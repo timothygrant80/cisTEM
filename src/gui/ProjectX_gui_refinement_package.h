@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version 3.10.0-4761b0c)
+// C++ code generated with wxFormBuilder (version 3.10.1-0-g8feb16b3)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO *NOT* EDIT THIS FILE!
@@ -10,7 +10,6 @@
 #include <wx/artprov.h>
 #include <wx/xrc/xmlres.h>
 class ContainedParticleListControl;
-class NumericTextCtrl;
 class ReferenceVolumesListControl;
 class RefinementPackageListControl;
 
@@ -219,36 +218,6 @@ class ClassumSelectionCopyFromDialogParent : public wxDialog
 		ClassumSelectionCopyFromDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE );
 
 		~ClassumSelectionCopyFromDialogParent();
-
-};
-
-///////////////////////////////////////////////////////////////////////////////
-/// Class BinningDialogParent
-///////////////////////////////////////////////////////////////////////////////
-class BinningDialogParent : public wxDialog
-{
-	private:
-
-	protected:
-		wxStaticText* BinningInfoText;
-		wxStaticLine* m_staticline6;
-		wxStaticText* m_staticText29;
-		NumericTextCtrl* DesiredPixelSizeTextCtrl;
-		wxStaticText* ActualPixelSizeText;
-		wxStaticText* ActualBoxSizeText;
-		wxButton* CancelButton;
-		wxButton* OKButton;
-
-		// Virtual event handlers, override them in your derived class
-		virtual void OnCancel( wxCommandEvent& event ) { event.Skip(); }
-		virtual void OnOK( wxCommandEvent& event ) { event.Skip(); }
-
-
-	public:
-
-		BinningDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Bin Particle Stack"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE );
-
-		~BinningDialogParent();
 
 };
 

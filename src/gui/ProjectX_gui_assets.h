@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version 3.10.0-4761b0c)
+// C++ code generated with wxFormBuilder (version 3.10.1-0-g8feb16b3)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO *NOT* EDIT THIS FILE!
@@ -28,9 +28,9 @@ class VolumeAssetPickerComboPanel;
 #include <wx/stattext.h>
 #include <wx/textctrl.h>
 #include <wx/dialog.h>
+#include <wx/spinctrl.h>
 #include <wx/combobox.h>
 #include <wx/choice.h>
-#include <wx/spinctrl.h>
 #include <wx/checkbox.h>
 #include <wx/filepicker.h>
 #include <wx/panel.h>
@@ -60,6 +60,7 @@ class VolumeImportDialog : public wxDialog
 		wxButton* ImportButton;
 
 		// Virtual event handlers, override them in your derived class
+		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void AddFilesClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void AddDirectoryClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void ClearClick( wxCommandEvent& event ) { event.Skip(); }
@@ -74,6 +75,38 @@ class VolumeImportDialog : public wxDialog
 		VolumeImportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Import Images"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 484,539 ), long style = wxCLOSE_BOX );
 
 		~VolumeImportDialog();
+
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class ResampleDialogParent
+///////////////////////////////////////////////////////////////////////////////
+class ResampleDialogParent : public wxDialog
+{
+	private:
+
+	protected:
+		wxStaticText* ResampleInfoText;
+		wxStaticLine* m_staticline6;
+		wxStaticText* m_staticText29;
+		wxSpinCtrl* BoxSizeSpinCtrl;
+		wxStaticText* NewPixelSizeText;
+		wxStaticLine* m_staticline19;
+		wxButton* CancelButton;
+		wxButton* OKButton;
+
+		// Virtual event handlers, override them in your derived class
+		virtual void OnBoxSizeSpinCtrl( wxSpinEvent& event ) { event.Skip(); }
+		virtual void OnBoxSizeTextEnter( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnCancel( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnOK( wxCommandEvent& event ) { event.Skip(); }
+
+
+	public:
+
+		ResampleDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Resample Asset"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE );
+
+		~ResampleDialogParent();
 
 };
 
@@ -243,12 +276,14 @@ class AssetPanelParent : public wxPanel
 		wxButton* NewFromParentButton;
 		wxPanel* m_panel3;
 		wxStaticText* AssetTypeText;
+		wxBoxSizer* bSizer28;
 		wxButton* ImportAsset;
 		wxButton* RemoveSelectedAssetButton;
 		wxButton* RemoveAllAssetsButton;
 		wxButton* RenameAssetButton;
 		wxButton* AddSelectedAssetButton;
 		wxButton* DisplayButton;
+		wxButton* ResampleButton;
 		wxStaticLine* m_staticline6;
 		wxStaticText* Label0Title;
 		wxStaticText* Label0Text;
@@ -295,6 +330,7 @@ class AssetPanelParent : public wxPanel
 		virtual void RenameAssetClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void AddSelectedAssetClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnDisplayButtonClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnResampleClick( wxCommandEvent& event ) { event.Skip(); }
 
 
 	public:

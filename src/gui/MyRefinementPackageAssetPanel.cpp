@@ -61,7 +61,7 @@ void MyRefinementPackageAssetPanel::OnExportClick(wxCommandEvent& event) {
 }
 
 void MyRefinementPackageAssetPanel::OnBinClick(wxCommandEvent& event) {
-    BinningDialog my_dialog(this);
+    ResampleDialog my_dialog(this, false);
     my_dialog.ShowModal( );
 }
 

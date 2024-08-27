@@ -706,7 +706,7 @@ cisTEM_SOURCES = programs/projectx/projectx.cpp \
                 gui/MatchTemplateResultsPanel.cpp \
                 gui/RefineTemplatePanel.cpp \
                 gui/CombineRefinementPackagesWizard.cpp \
-                gui/BinningDialog.cpp
+                gui/ResampleDialog.cpp
 
 if EXPERIMENTAL_AM
 cisTEM_SOURCES +=  gui/RefineTemplateDevPanel.cpp gui/MyExperimentalPanel.cpp gui/AtomicCoordinatesAssetPanel.cpp gui/AtomicCoordinatesChooserDialog.cpp gui/AtomicCoordinatesImportDialog.cpp

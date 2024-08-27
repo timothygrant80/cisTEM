@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version 3.10.0-4761b0c)
+// C++ code generated with wxFormBuilder (version 3.10.1-0-g8feb16b3)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO *NOT* EDIT THIS FILE!
@@ -58,6 +58,12 @@ VolumeImportDialog::VolumeImportDialog( wxWindow* parent, wxWindowID id, const w
 	m_staticline8 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
 	bSizer26->Add( m_staticline8, 0, wxEXPAND | wxALL, 5 );
 
+	wxBoxSizer* bSizer55;
+	bSizer55 = new wxBoxSizer( wxVERTICAL );
+
+
+	bSizer26->Add( bSizer55, 1, wxEXPAND, 5 );
+
 	wxBoxSizer* bSizer33;
 	bSizer33 = new wxBoxSizer( wxHORIZONTAL );
 
@@ -85,6 +91,7 @@ VolumeImportDialog::VolumeImportDialog( wxWindow* parent, wxWindowID id, const w
 	this->Centre( wxBOTH );
 
 	// Connect Events
+	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( VolumeImportDialog::OnUpdateUI ) );
 	m_button10->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::AddFilesClick ), NULL, this );
 	m_button11->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::AddDirectoryClick ), NULL, this );
 	ClearButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::ClearClick ), NULL, this );
@@ -97,6 +104,7 @@ VolumeImportDialog::VolumeImportDialog( wxWindow* parent, wxWindowID id, const w
 VolumeImportDialog::~VolumeImportDialog()
 {
 	// Disconnect Events
+	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( VolumeImportDialog::OnUpdateUI ) );
 	m_button10->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::AddFilesClick ), NULL, this );
 	m_button11->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::AddDirectoryClick ), NULL, this );
 	ClearButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::ClearClick ), NULL, this );
@@ -104,6 +112,88 @@ VolumeImportDialog::~VolumeImportDialog()
 	PixelSizeText->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( VolumeImportDialog::TextChanged ), NULL, this );
 	m_button13->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::CancelClick ), NULL, this );
 	ImportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( VolumeImportDialog::ImportClick ), NULL, this );
+
+}
+
+ResampleDialogParent::ResampleDialogParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
+{
+	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
+
+	wxBoxSizer* bSizer31;
+	bSizer31 = new wxBoxSizer( wxVERTICAL );
+
+	wxBoxSizer* bSizer34;
+	bSizer34 = new wxBoxSizer( wxVERTICAL );
+
+	ResampleInfoText = new wxStaticText( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxST_NO_AUTORESIZE );
+	ResampleInfoText->Wrap( -1 );
+	bSizer34->Add( ResampleInfoText, 1, wxALIGN_CENTER_HORIZONTAL|wxALL, 5 );
+
+
+	bSizer31->Add( bSizer34, 1, wxALIGN_CENTER_HORIZONTAL|wxALL|wxEXPAND, 5 );
+
+	m_staticline6 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer31->Add( m_staticline6, 0, wxEXPAND | wxALL, 5 );
+
+	wxBoxSizer* bSizer33;
+	bSizer33 = new wxBoxSizer( wxHORIZONTAL );
+
+	m_staticText29 = new wxStaticText( this, wxID_ANY, wxT("Desired Box Size:"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText29->Wrap( -1 );
+	bSizer33->Add( m_staticText29, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	BoxSizeSpinCtrl = new wxSpinCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 32, 1600, 192 );
+	bSizer33->Add( BoxSizeSpinCtrl, 0, wxALL, 5 );
+
+
+	bSizer31->Add( bSizer33, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	wxBoxSizer* bSizer38;
+	bSizer38 = new wxBoxSizer( wxHORIZONTAL );
+
+	NewPixelSizeText = new wxStaticText( this, wxID_ANY, wxT("New Pixel Size: "), wxDefaultPosition, wxDefaultSize, 0 );
+	NewPixelSizeText->Wrap( -1 );
+	bSizer38->Add( NewPixelSizeText, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+
+	bSizer31->Add( bSizer38, 0, wxALIGN_CENTER_HORIZONTAL, 5 );
+
+	m_staticline19 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer31->Add( m_staticline19, 0, wxEXPAND | wxALL, 5 );
+
+	wxBoxSizer* bSizer32;
+	bSizer32 = new wxBoxSizer( wxHORIZONTAL );
+
+	CancelButton = new wxButton( this, wxID_CANCEL, wxT("Cancel"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer32->Add( CancelButton, 0, wxALL, 5 );
+
+	OKButton = new wxButton( this, wxID_OK, wxT("OK"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer32->Add( OKButton, 0, wxALIGN_CENTER_HORIZONTAL|wxALL, 5 );
+
+
+	bSizer31->Add( bSizer32, 0, wxALIGN_CENTER_HORIZONTAL|wxALIGN_TOP|wxALL, 5 );
+
+
+	this->SetSizer( bSizer31 );
+	this->Layout();
+	bSizer31->Fit( this );
+
+	this->Centre( wxBOTH );
+
+	// Connect Events
+	BoxSizeSpinCtrl->Connect( wxEVT_COMMAND_SPINCTRL_UPDATED, wxSpinEventHandler( ResampleDialogParent::OnBoxSizeSpinCtrl ), NULL, this );
+	BoxSizeSpinCtrl->Connect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( ResampleDialogParent::OnBoxSizeTextEnter ), NULL, this );
+	CancelButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ResampleDialogParent::OnCancel ), NULL, this );
+	OKButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ResampleDialogParent::OnOK ), NULL, this );
+}
+
+ResampleDialogParent::~ResampleDialogParent()
+{
+	// Disconnect Events
+	BoxSizeSpinCtrl->Disconnect( wxEVT_COMMAND_SPINCTRL_UPDATED, wxSpinEventHandler( ResampleDialogParent::OnBoxSizeSpinCtrl ), NULL, this );
+	BoxSizeSpinCtrl->Disconnect( wxEVT_COMMAND_TEXT_UPDATED, wxCommandEventHandler( ResampleDialogParent::OnBoxSizeTextEnter ), NULL, this );
+	CancelButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ResampleDialogParent::OnCancel ), NULL, this );
+	OKButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( ResampleDialogParent::OnOK ), NULL, this );
 
 }
 
@@ -773,7 +863,6 @@ AssetPanelParent::AssetPanelParent( wxWindow* parent, wxWindowID id, const wxPoi
 	ContentsListBox = new ContentsList( m_panel3, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLC_ALIGN_LEFT|wxLC_NO_SORT_HEADER|wxLC_REPORT|wxLC_VIRTUAL|wxLC_VRULES );
 	bSizer25->Add( ContentsListBox, 100, wxALL|wxEXPAND, 5 );
 
-	wxBoxSizer* bSizer28;
 	bSizer28 = new wxBoxSizer( wxHORIZONTAL );
 
 	ImportAsset = new wxButton( m_panel3, wxID_ANY, wxT("Import"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -802,6 +891,11 @@ AssetPanelParent::AssetPanelParent( wxWindow* parent, wxWindowID id, const wxPoi
 	DisplayButton = new wxButton( m_panel3, wxID_ANY, wxT("Display"), wxDefaultPosition, wxDefaultSize, 0 );
 	bSizer28->Add( DisplayButton, 0, wxALL, 5 );
 
+	ResampleButton = new wxButton( m_panel3, wxID_ANY, wxT("Resample"), wxDefaultPosition, wxDefaultSize, 0 );
+	ResampleButton->Enable( false );
+
+	bSizer28->Add( ResampleButton, 0, wxALL|wxEXPAND, 5 );
+
 
 	bSizer25->Add( bSizer28, 0, wxEXPAND, 5 );
 
@@ -829,7 +923,7 @@ AssetPanelParent::AssetPanelParent( wxWindow* parent, wxWindowID id, const wxPoi
 
 	Label0Title = new wxStaticText( this, wxID_ANY, wxT("Label 0 :"), wxDefaultPosition, wxDefaultSize, 0 );
 	Label0Title->Wrap( -1 );
-	Label0Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	Label0Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString ) );
 
 	gSizer1->Add( Label0Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 
@@ -851,7 +945,7 @@ AssetPanelParent::AssetPanelParent( wxWindow* parent, wxWindowID id, const wxPoi
 
 	Label1Title = new wxStaticText( this, wxID_ANY, wxT("Label 1 :"), wxDefaultPosition, wxDefaultSize, 0 );
 	Label1Title->Wrap( -1 );
-	Label1Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	Label1Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString ) );
 
 	gSizer1->Add( Label1Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 
@@ -861,7 +955,7 @@ AssetPanelParent::AssetPanelParent( wxWindow* parent, wxWindowID id, const wxPoi
 
 	Label2Title = new wxStaticText( this, wxID_ANY, wxT("Label 2 :"), wxDefaultPosition, wxDefaultSize, 0 );
 	Label2Title->Wrap( -1 );
-	Label2Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	Label2Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString ) );
 
 	gSizer1->Add( Label2Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 
@@ -871,7 +965,7 @@ AssetPanelParent::AssetPanelParent( wxWindow* parent, wxWindowID id, const wxPoi
 
 	Label3Title = new wxStaticText( this, wxID_ANY, wxT("Label 3 :"), wxDefaultPosition, wxDefaultSize, 0 );
 	Label3Title->Wrap( -1 );
-	Label3Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	Label3Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString ) );
 
 	gSizer1->Add( Label3Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 
@@ -881,7 +975,7 @@ AssetPanelParent::AssetPanelParent( wxWindow* parent, wxWindowID id, const wxPoi
 
 	Label4Title = new wxStaticText( this, wxID_ANY, wxT("Label 4 :"), wxDefaultPosition, wxDefaultSize, 0 );
 	Label4Title->Wrap( -1 );
-	Label4Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	Label4Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString ) );
 
 	gSizer1->Add( Label4Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 
@@ -891,7 +985,7 @@ AssetPanelParent::AssetPanelParent( wxWindow* parent, wxWindowID id, const wxPoi
 
 	Label5Title = new wxStaticText( this, wxID_ANY, wxT("Label 5 :"), wxDefaultPosition, wxDefaultSize, 0 );
 	Label5Title->Wrap( -1 );
-	Label5Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	Label5Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString ) );
 
 	gSizer1->Add( Label5Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 
@@ -901,7 +995,7 @@ AssetPanelParent::AssetPanelParent( wxWindow* parent, wxWindowID id, const wxPoi
 
 	Label6Title = new wxStaticText( this, wxID_ANY, wxT("Label 6 :"), wxDefaultPosition, wxDefaultSize, 0 );
 	Label6Title->Wrap( -1 );
-	Label6Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	Label6Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString ) );
 
 	gSizer1->Add( Label6Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 
@@ -911,7 +1005,7 @@ AssetPanelParent::AssetPanelParent( wxWindow* parent, wxWindowID id, const wxPoi
 
 	Label7Title = new wxStaticText( this, wxID_ANY, wxT("Label 7 :"), wxDefaultPosition, wxDefaultSize, 0 );
 	Label7Title->Wrap( -1 );
-	Label7Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	Label7Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString ) );
 
 	gSizer1->Add( Label7Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 
@@ -921,7 +1015,7 @@ AssetPanelParent::AssetPanelParent( wxWindow* parent, wxWindowID id, const wxPoi
 
 	Label8Title = new wxStaticText( this, wxID_ANY, wxT("Label 8 :"), wxDefaultPosition, wxDefaultSize, 0 );
 	Label8Title->Wrap( -1 );
-	Label8Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	Label8Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString ) );
 
 	gSizer1->Add( Label8Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 
@@ -931,7 +1025,7 @@ AssetPanelParent::AssetPanelParent( wxWindow* parent, wxWindowID id, const wxPoi
 
 	Label9Title = new wxStaticText( this, wxID_ANY, wxT("Label 9 :"), wxDefaultPosition, wxDefaultSize, 0 );
 	Label9Title->Wrap( -1 );
-	Label9Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, false, wxEmptyString ) );
+	Label9Title->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_NORMAL, false, wxEmptyString ) );
 
 	gSizer1->Add( Label9Title, 0, wxALIGN_RIGHT|wxALL, 5 );
 
@@ -989,6 +1083,7 @@ AssetPanelParent::AssetPanelParent( wxWindow* parent, wxWindowID id, const wxPoi
 	RenameAssetButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::RenameAssetClick ), NULL, this );
 	AddSelectedAssetButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::AddSelectedAssetClick ), NULL, this );
 	DisplayButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::OnDisplayButtonClick ), NULL, this );
+	ResampleButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::OnResampleClick ), NULL, this );
 }
 
 AssetPanelParent::~AssetPanelParent()
@@ -1033,6 +1128,7 @@ AssetPanelParent::~AssetPanelParent()
 	RenameAssetButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::RenameAssetClick ), NULL, this );
 	AddSelectedAssetButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::AddSelectedAssetClick ), NULL, this );
 	DisplayButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::OnDisplayButtonClick ), NULL, this );
+	ResampleButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( AssetPanelParent::OnResampleClick ), NULL, this );
 
 }
 

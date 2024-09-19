@@ -1599,9 +1599,9 @@ bool UnBlurApp::DoCalculation( ) {
                     unblur_timing.lap("Distortion Correction");
                     write_linear_shifts(number_of_input_images, patch_num_x, patch_num_y, x_linear, y_linear, patch_locations, outputpath.ToStdString( ), "_shiftx_R0", "_shifty_R0");
 
-                    if ( is_running_locally == false ) {
-                        write_shifts_forGUI_linear(image_dim_x, image_dim_y, number_of_input_images, patch_num_x, patch_num_y, x_linear, y_linear, patch_locations, outputpath.ToStdString( ), write_out_small_sum_image);
-                    }
+                    // if ( is_running_locally == false ) {
+                    write_shifts_forGUI_linear(image_dim_x, image_dim_y, number_of_input_images, patch_num_x, patch_num_y, x_linear, y_linear, patch_locations, outputpath.ToStdString( ), write_out_small_sum_image);
+                    // }
                     Deallocate2DFloatArray(patch_locations, patch_num);
                 }
             }
@@ -1949,11 +1949,11 @@ bool UnBlurApp::DoCalculation( ) {
                     write_joins(outputpath.ToStdString( ), "Control_R1", best_control_1d_ccmap);
                     write_shifts(patch_num_x, patch_num_y, number_of_input_images, outputpath.ToStdString( ), "_shiftx_R1", "_shifty_R1");
 
-                    if ( is_running_locally == false ) {
-                        // wxPrintf("write shifts for GUI\n");
-                        write_shifts_forGUI(output_x_size, output_y_size, patch_num_x, patch_num_y, patch_locations, number_of_input_images, outputpath.ToStdString( ), output_binning_factor, Control1d, Control1d_ccmap, write_out_small_sum_image);
-                        // output_x_size, output_y_size, raw_image_stack, output_binning_factor, number_of_input_images, Control1d, Control1d_ccmap
-                    }
+                    // if ( is_running_locally == false ) {
+                    // wxPrintf("write shifts for GUI\n");
+                    write_shifts_forGUI(output_x_size, output_y_size, patch_num_x, patch_num_y, patch_locations, number_of_input_images, outputpath.ToStdString( ), output_binning_factor, Control1d, Control1d_ccmap, write_out_small_sum_image);
+                    // output_x_size, output_y_size, raw_image_stack, output_binning_factor, number_of_input_images, Control1d, Control1d_ccmap
+                    // }
                 }
                 else {
                     patch_trimming_basedon_locations(counting_image_stack, patch_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath.ToStdString( ), "patch_pix", max_threads, false, false, patch_locations);
@@ -1997,10 +1997,10 @@ bool UnBlurApp::DoCalculation( ) {
 
                     write_joins(outputpath.ToStdString( ), "Control_R0", Control1d);
                     write_joins(outputpath.ToStdString( ), "Control_R1", Control1d_ccmap);
-                    if ( is_running_locally == false ) {
-                        // wxPrintf("write shifts for GUI\n");
-                        write_shifts_forGUI(output_x_size, output_y_size, patch_num_x, patch_num_y, patch_locations, number_of_input_images, outputpath.ToStdString( ), output_binning_factor, Control1d, Control1d_ccmap, write_out_small_sum_image);
-                    }
+                    // if ( is_running_locally == false ) {
+                    wxPrintf("write shifts for GUI\n");
+                    write_shifts_forGUI(output_x_size, output_y_size, patch_num_x, patch_num_y, patch_locations, number_of_input_images, outputpath.ToStdString( ), output_binning_factor, Control1d, Control1d_ccmap, write_out_small_sum_image);
+                    // }
                     // */
 
                     // ------------------------------------
@@ -3181,6 +3181,7 @@ void write_shifts_forGUI(int image_dim_x, int image_dim_y, int patch_no_x, int p
         }
     }
     // wxPrintf("before writing\n");
+    wxPrintf("starts writing the patch_shift.txt\n");
     std::string patch_shift_file;
     oss << "%s%s" << output_path.c_str( ), "patch_shift.txt";
     std::snprintf(subbuffer, sizeof(subbuffer), "%s%s", output_path.c_str( ), "patch_shift.txt");

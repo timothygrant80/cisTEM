@@ -1080,8 +1080,9 @@ bool UnBlurApp::DoCalculation( ) {
 
     // work out the output pixel size..
 
-    float x_bin_factor       = float(input_file.ReturnXSize( )) / float(output_x_size);
-    float y_bin_factor       = float(input_file.ReturnYSize( )) / float(output_y_size);
+    float x_bin_factor = float(input_file.ReturnXSize( )) / float(output_x_size);
+    float y_bin_factor = float(input_file.ReturnYSize( )) / float(output_y_size);
+
     float average_bin_factor = (x_bin_factor + y_bin_factor) / 2.0;
 
     float output_pixel_size = original_pixel_size * float(average_bin_factor);
@@ -2002,7 +2003,6 @@ bool UnBlurApp::DoCalculation( ) {
                     write_shifts_forGUI(output_x_size, output_y_size, patch_num_x, patch_num_y, patch_locations, number_of_input_images, outputpath.ToStdString( ), output_binning_factor, Control1d, Control1d_ccmap, write_out_small_sum_image);
                     // }
                     // */
-
                     // ------------------------------------
                     double refined_error       = minfunc3dSplineObjectxyControlPoints(Control1d);
                     double refined_error_ccmap = minfunc3dSplineCCLossObjectControlPoints(Control1d_ccmap);
@@ -2836,8 +2836,8 @@ void apply_fitting_spline_sup_control(int output_x_size, int output_y_size, Imag
     int   super_dim_y     = super_res_stack[0].logical_y_dimension;
     int   image_dim_x     = output_x_size;
     int   image_dim_y     = output_y_size;
-    float x_binning_float = super_res_stack[0].logical_x_dimension / image_dim_x;
-    float y_binning_float = super_res_stack[0].logical_y_dimension / image_dim_y;
+    float x_binning_float = float(super_res_stack[0].logical_x_dimension) / float(image_dim_x);
+    float y_binning_float = float(super_res_stack[0].logical_y_dimension) / float(image_dim_y);
     int   totalpixels     = super_dim_x * super_dim_y;
 
     float* original_map_x = new float[totalpixels];

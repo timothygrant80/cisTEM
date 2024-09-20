@@ -799,8 +799,8 @@ double bicubicspline::ApplySplineFunc(double xp, double yp) {
         // cout << " yp " << yp << endl;
         // cout << "PUY " << PUY << " m-1 " << this->m - 1 << endl;
         // cout << "u " << u << endl;
-        cout << "the y position of the point exceed the spline surface " << endl;
-        cout << "replaced with the boundary value\n " << endl;
+        // cout << "the y position of the point exceed the spline surface " << endl;
+        // cout << "replaced with the boundary value\n " << endl;
         // use the boundary value as the value outside the spline area. This need to be revised. Or the program should be forced to terminate.
         pu = this->m - 2;
         u  = 1;
@@ -811,8 +811,8 @@ double bicubicspline::ApplySplineFunc(double xp, double yp) {
         // cout << " yp " << yp << endl;
         // cout << "PVX " << PVX << " n-1 " << this->n - 1 << endl;
         // cout << "v " << v << endl;
-        cout << "the x position of the point exceed the spline surface " << endl;
-        cout << "replaced with the boundary value\n " << endl;
+        // cout << "the x position of the point exceed the spline surface " << endl;
+        // cout << "replaced with the boundary value\n " << endl;
 
         pv = this->n - 2;
         v  = 1;

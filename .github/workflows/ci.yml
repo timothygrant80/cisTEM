@@ -67,7 +67,7 @@ jobs:
         rm -r src/gui
         rm -r src/programs
     - name: Create binary artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with: 
         name: cistem_binaries_${{ matrix.compiler }}
         path: build/${{ matrix.compiler }}/src
@@ -82,7 +82,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Download artifact
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v4
       with:
         name: cistem_binaries_${{ matrix.compiler }}
     - name: Install fftw3
@@ -96,7 +96,7 @@ jobs:
     - name: run benchmark
       run: ./test_and_benchmark.sh ./
     - name: Create image artifact
-      uses: actions/upload-artifact@v2
+      uses: actions/upload-artifact@v4
       with: 
         name: test_images
         path: /tmp/*.mrc
@@ -111,7 +111,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Download artifact
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v4
       with:
         name: cistem_binaries_${{ matrix.compiler }}
     - name: Install fftw3
@@ -133,7 +133,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - name: Download artifact
-      uses: actions/download-artifact@v2
+      uses: actions/download-artifact@v4
       with:
         name: cistem_binaries_${{ matrix.compiler }}
     - name: Install fftw3

@@ -53,7 +53,7 @@ jobs:
         ${{ matrix.source_cmd }}
         ../../configure ${{matrix.config_options}}
         VERSION=$(cat config.log | grep CISTEM_VERSION_TEXT | cut -d' ' -f3 | tr -d '"')
-        echo "::set-output name=version::$VERSION" 
+        echo "version::$VERSION" >> $GITHUB_OUTPUT
     - name: make 
       run: |
         ${{ matrix.source_cmd }}
@@ -98,7 +98,7 @@ jobs:
     - name: Create image artifact
       uses: actions/upload-artifact@v4
       with: 
-        name: test_images
+        name: test_images_${{ matrix.compiler }}
         path: /tmp/*.mrc
 
   samples_functional_testing:

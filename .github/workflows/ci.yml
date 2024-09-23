@@ -25,8 +25,8 @@ jobs:
             config_options: "--enable-staticmode --enable-openmp --enable-experimental --enable-samples  --with-wx-config=wx-config"
             source_cmd: ""
           - compiler: clang
-            cxx: clang++
-            cc: clang
+            cxx: clang++-14
+            cc: clang-14
             config_options: "--enable-experimental --enable-samples  --with-wx-config=wx-config"
             source_cmd: ""
           
@@ -35,7 +35,7 @@ jobs:
     outputs:
       version: ${{ steps.configure.outputs.version }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
       with:
         fetch-depth: 0
     - name: regenerate_project

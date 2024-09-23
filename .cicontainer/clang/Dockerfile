@@ -4,7 +4,6 @@ FROM silkeh/clang:14
 ARG n_threads=16
 ARG DEBIAN_FRONTEND=noninteractive
 ARG TZ=America/New_York
-ARG GCC_VER=11
 
 RUN apt-get update && apt-get -y install tzdata 
 

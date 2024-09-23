@@ -31,7 +31,7 @@ jobs:
             source_cmd: ""
           
     runs-on: ubuntu-latest
-    container: cistemdashorg/cistem_build_env:ci_${{ matrix.compiler }}
+    container: cistemdashorg/cistem_build_env:v2.1.2_${{ matrix.compiler }}_ci
     outputs:
       version: ${{ steps.configure.outputs.version }}
     steps:

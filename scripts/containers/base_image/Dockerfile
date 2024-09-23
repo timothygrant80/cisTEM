@@ -6,7 +6,7 @@ FROM ubuntu:20.04
 ARG n_threads=16
 ARG DEBIAN_FRONTEND=noninteractive
 ARG TZ=America/New_York
-ARG GCC_VER=11
+ARG CLANG_VER=14
 
 RUN apt-get update && apt-get -y install tzdata && \
     ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
@@ -49,6 +49,13 @@ RUN apt-get update && apt-get install -y intel-oneapi-compiler-dpcpp-cpp-and-cpp
     && cd /opt/intel/oneapi/ && rm -rf debugger/ conda_channel/ mkl/latest/lib/intel64/*_sycl* compiler/2021.4.0/linux/lib/oclfpga \
     && rm -rf /var/lib/apt/lists/* 
 
+# Install the clang compiler
+RUN echo "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-14 main" | tee -a /etc/apt/sources.list && \
+    echo "deb-src http://apt.llvm.org/focal/ llvm-toolchain-focal-14 main" | tee -a /etc/apt/sources.list && \
+    wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add - && \
+    apt-get update && apt-get install -y clang-${CLANG_VER} clang-tidy-${CLANG_VER} clang-format-${CLANG_VER} \
+    && cd /usr/bin && ln -s clang-format-14 clang-format \
+    && rm -rf /var/lib/apt/lists/*
 
 # Grab the source for wxWidgets 3.0.5, the stable version and build it against gtk-2 for both dyamic and staic linking
 # Installation is deferred until the final layer so only the correct version is installed to prevent difficult to track down conflicts.
@@ -57,8 +64,11 @@ RUN apt-get update && apt-get install -y intel-oneapi-compiler-dpcpp-cpp-and-cpp
 RUN wget -q https://github.com/wxWidgets/wxWidgets/releases/download/v3.0.5/wxWidgets-3.0.5.tar.bz2 -O /tmp/wxwidgets.tar.bz2 && \
     echo 'Building wxWidgets but deferring install' && \
     mkdir -p /opt/WX/intel-static && mkdir -p /opt/WX/intel-dynamic && \
+    mkdir -p /opt/WX/gcc-dynamic && mkdir -p /opt/WX/clang-dynamic && \
     tar -xf /tmp/wxwidgets.tar.bz2 -C /opt/WX/intel-static && \
     tar -xf /tmp/wxwidgets.tar.bz2 -C /opt/WX/intel-dynamic && \
+    tar -xf /tmp/wxwidgets.tar.bz2 -C /opt/WX/gcc-dynamic && \
+    tar -xf /tmp/wxwidgets.tar.bz2 -C /opt/WX/clang-dynamic && \
     rm -rf /tmp/wxwidgets.tar.bz2 
 
 # Here for the record if you want to build and link static binaries to avoid the cointainerized distribution
@@ -74,22 +84,27 @@ RUN . /opt/intel/oneapi/setvars.sh && \
 # Now build with out static
 RUN . /opt/intel/oneapi/setvars.sh && \
     cd /opt/WX/intel-dynamic/wxWidgets-3.0.5 && \
-    CXX=icpc CC=icc CXXFLAGS=-fPIC CFLAGS=-fPIC  ./configure --disable-precomp-headers --prefix=/opt/WX/intel-dynamic --with-libnotify=no  \
+    CXX=icpc CC=icc CXXFLAGS=-fPIC CFLAGS=-fPIC  ./configure --disable-precomp-headers --prefix=/opt/WX/intel-dynamic --with-libnotify=no \
     --without-gtkprint --with-libjpeg=builtin --with-libpng=builtin --with-libtiff=builtin --with-zlib=builtin --with-expat=builtin \
     --disable-compat28 --without-liblzma --without-libjbig --with-gtk=2 --disable-sys-libs  && \
     make -j$n_threads 
 
-# Install clang format
-# 14 - these goa t the end of /etc/apt/sources.list
-RUN echo "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-14 main" | tee -a /etc/apt/sources.list && \
-    echo "deb-src http://apt.llvm.org/focal/ llvm-toolchain-focal-14 main" | tee -a /etc/apt/sources.list && \
-    wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add - && \
-    apt-get update && apt-get install -y clang-format-14 -y && \
-    cd /usr/bin && ln -s clang-format-14 clang-format \
-    && rm -rf /var/lib/apt/lists/*
+
+# Note that in the current CI we are building GCC static and clang dynamic, yet both wx builds are dynamic. I'm not sure this is correct.
+RUN cd /opt/WX/gcc-dynamic/wxWidgets-3.0.5 && \
+    CC=gcc CXX=g++  CXXFLAGS=-fPIC CFLAGS=-fPIC ./configure --disable-precomp-headers --prefix=/opt/WX/gcc-dynamic --with-libnotify=no \
+    --disable-shared --without-gtkprint --with-libjpeg=builtin --with-libpng=builtin --with-libtiff=builtin --with-zlib=builtin --with-expat=builtin \
+    --disable-compat28 --without-liblzma --without-libjbig --with-gtk=2 --disable-sys-libs && \
+    make -j$n_threads 
+
+# Note: unlinke clang-format, we did not link clang-14 to clang and instead just call directly
+RUN cd /opt/WX/clang-dynamic/wxWidgets-3.0.5 && \
+    CC=clang-${CLANG_VER} CXX=clang++-${CLANG_VER}  CXXFLAGS=-fPIC CFLAGS=-fPIC ./configure --disable-precomp-headers --prefix=/opt/WX/clang-dynamic --with-libnotify=no \
+    --disable-shared --without-gtkprint --with-libjpeg=builtin --with-libpng=builtin --with-libtiff=builtin --with-zlib=builtin --with-expat=builtin \
+    --disable-compat28 --without-liblzma --without-libjbig --with-gtk=2 --disable-sys-libs && \
+    make -j$n_threads 
 
 # Install pytorch - now optional in the top layer container
-
 
 
 # Install cuda (when the web is live)

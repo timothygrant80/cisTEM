@@ -1,9 +1,8 @@
-FROM ubuntu:18.04
+FROM ubuntu:20.04
 
 ARG n_threads=16
 ARG DEBIAN_FRONTEND=noninteractive
 ARG TZ=America/New_York
-ARG GCC_VER=11
 
 RUN apt-get update && apt-get -y install tzdata 
 
@@ -15,11 +14,11 @@ ENV LANG en_US.utf8
 
 RUN apt-get --allow-releaseinfo-change update && \
     apt-get install -y gtk2.0-dev \
-        libfftw3-dev libtiff-dev software-properties-common libffi-dev \
-        libbz2-dev libsqlite3-dev zlib1g-dev libjpeg-dev \
-        libreadline-dev liblzma-dev libssl-dev libncursesw5-dev wget \
-        build-essential \
-        && rm -rf /var/lib/apt/lists/*
+    libfftw3-dev libtiff-dev software-properties-common libffi-dev \
+    libbz2-dev libsqlite3-dev zlib1g-dev libjpeg-dev \
+    libreadline-dev liblzma-dev libssl-dev libncursesw5-dev wget \
+    build-essential \
+    && rm -rf /var/lib/apt/lists/*
 
 #Need newer git for Github actions
 RUN add-apt-repository ppa:git-core/ppa -y && apt-get --allow-releaseinfo-change update && apt-get install -y git \

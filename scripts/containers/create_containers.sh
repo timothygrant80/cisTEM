@@ -28,7 +28,7 @@ usr_path="../../.vscode"
 # Check for -h or --help
 if [[ $1 == "-h" || $1 == "--help" ]] ; then
     echo ""
-    echo "Usage: build_base.sh <base|top> [--no-cache] [--wx-version=<stable|dev>] [--compiler=<icpc|g++>] [--build-type=<static|dynamic>] [--npm ] [--ref-images ]"
+    echo "Usage: build_base.sh <base|top> [--no-cache] [--no-cuda] [--wx-version=<stable|dev>] [--compiler=<icpc|g++>] [--build-type=<static|dynamic>] [--npm ] [--ref-images ]"
     echo "      --no-cache: build without cache, must be second arg"
     echo ""
     echo "  positional args are optional and only affect the top layer build"
@@ -37,7 +37,7 @@ if [[ $1 == "-h" || $1 == "--help" ]] ; then
     echo "      --build-type: static or dynamic, default is static [BUT only dynamic is supported for --wx-version dev]"
     echo "      --npm: build npm, default is false if not specified"
     echo "      --ref-images: build reference images, default is false if not specified"
-    echo ""
+        echo ""
     echo "For example, to build the base image without cache, and the top image with wxWidgets 3.1.5, g++, dynamic, npm, and ref-images:"
     echo "      build_base.sh base --no-cache --wx-version=dev --compiler=g++ --npm --ref-images"
     exit 0
@@ -87,6 +87,7 @@ build_wx_version="stable"
 build_npm="false"
 build_ref_images="true"
 build_pytorch="false"
+build_ci_layer=""
 
 
 while [[ $# -gt 0 ]]; do
@@ -94,8 +95,8 @@ while [[ $# -gt 0 ]]; do
     --wx-version)
         build_wx_version="$2"
       # Check that the version is valid: stable or dev
-        if [[ $build_wx_version != "stable" && $build_wx_version != "dev" ]] ; then
-            echo "Invalid wx version: ($build_wx_version) - must be stable or dev"
+        if [[ $build_wx_version != "stable" && $build_wx_version != "dev" && $build_wx_version != "gcc_ci" && $build_wx_version != "clang_ci" && $build_wx_version != "icpc_ci" ]] ; then
+            echo "Invalid wx version: ($build_wx_version) - must be stable or dev (intel) or gcc_ci, clang_ci, or icpc_ci (for CI containers.)"
             exit 1
         fi
         shift # past argument
@@ -130,8 +131,13 @@ while [[ $# -gt 0 ]]; do
         shift # past argument
         ;;
     --ref-images)
-        build_ref_images="true"
+        build_ref_images="$2"
+        if [[ $build_ref_images != "true" && $build_ref_images != "false" ]] ; then
+            echo "Invalid ref-images: ($build_ref_images) - must be true or false"
+            exit 1
+        fi
         shift # past argument
+        shift # past value
         ;;
     --pytorch)
         build_pytorch="true"
@@ -148,6 +154,10 @@ done
 if [[ $build_wx_version == "dev" && $build_type == "static" ]] ; then
     echo "Dynamic builds are required for wxWidgets dev"
     exit 1
+fi
+
+if [[ $build_wx_version == "gcc_ci" || $build_wx_version == "clang_ci" || $build_wx_version == "icpc_ci" ]] ; then
+    build_ci_layer="_${build_wx_version}"
 fi
 
 # These are effectively fixed constants.
@@ -201,7 +211,7 @@ else
     echo "    npm: ${build_npm}"
     echo "    ref-images: ${build_ref_images}"
     echo "    pytorch: ${build_pytorch}"
-    echo "    container version: ${top_container_version}"
+    echo "    container version: ${top_container_version}${build_ci_layer} "
     echo "    container base version: ${base_container_version}"
     echo "    container repository: ${container_repository}"
     echo "    path to top dockerfile: ${path_to_top_dockerfile}"
@@ -227,10 +237,10 @@ fi
 
 
 # Print out the version and repository information
-echo "Building ${container_repository}:${prefix}${container_version} ${path_to_dockerfile}Dockerfile"
+echo "Building ${container_repository}:${prefix}${container_version}${build_ci_layer} ${path_to_dockerfile}Dockerfile"
 
 
-docker build ${skip_cache} --tag ${container_repository}:${prefix}${container_version} \
+docker build ${skip_cache} --tag ${container_repository}:${prefix}${container_version}${build_ci_layer} \
     --build-arg build_type=${build_type} \
     --build-arg build_compiler=${build_compiler} \
     --build-arg build_wx_version=${build_wx_version} \

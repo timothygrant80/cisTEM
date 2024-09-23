@@ -16,7 +16,6 @@ FROM fake_repo
 ARG n_threads=12
 ARG DEBIAN_FRONTEND=noninteractive
 ARG TZ=America/New_York
-ARG GCC_VER=11
 # note "-" in the variable seems to break the conditional statements.
 ARG build_type="static"
 ARG build_compiler="icpc"
@@ -26,7 +25,7 @@ ARG build_ref_images="false"
 
 SHELL ["/bin/bash", "-c"]
 # some rebuild comment
-ENV CISTEM_REF_IMAGES /cisTEMdev/cistem_reference_images
+ENV CISTEM_REF_IMAGES=/cisTEMdev/cistem_reference_images
 ENV LD_RUN_PATH=/opt/WX/intel-dynamic/lib:${LD_RUN_PATH}
 
 # Install wxWidgets
@@ -34,13 +33,15 @@ COPY install_wx_3.0.5_static.sh /tmp/install_wx_3.0.5_static.sh
 COPY install_wx_3.0.5_dynamic.sh /tmp/install_wx_3.0.5_dynamic.sh
 COPY install_wx_3.1.5.sh /tmp/install_wx_3.1.5.sh
 COPY install_node_16.sh /tmp/install_node_16.sh
+COPY install_ci_clang_wx_3.0.5.sh /tmp/install_ci_clang_wx_3.0.5.sh
+COPY install_ci_gcc_wx_3.0.5.sh /tmp/install_gcc_clang_wx_3.0.5.sh
+COPY install_wx_version.sh /tmp/install_wx_version.sh
 
-# NOTE: if working on setting up dynamic linking, we will need to add a step to install wxWidgets. The script is already at top_image/install_wx_3.0.5_dynamic.sh
-RUN echo "install wxWidgets 3.05" && /tmp/install_wx_3.0.5_static.sh && /tmp/install_wx_3.0.5_dynamic.sh
-RUN 
+
 
 # If we do not do this, we want to link the static or dynamic libs from /opt/WX to /usr/bin so we don't need to set it on configure lines and also so that wxformbuilder can find them
-RUN echo "checking for wxWidgets 3.1.5" && if [[ "x${build_wx_version}" == "xdev" ]]; then /tmp/install_wx_3.1.5.sh  ; else echo "linking the (${build_type}) wx-config system wide"  && ln -sf /opt/WX/intel-${build_type}/bin/wx-config /usr/bin/wx-config ; fi
+RUN /tmp/install_wx_version.sh $build_wx_version
+# RUN echo "checking for wxWidgets 3.1.5" && if [[ "x${build_wx_version}" == "xgcc" || "x${build_wx_version}" == "xclang"]] ; then if [[ "x${build_compiler}" == "xgcc" ]]; then /tmp/install_gcc_clang_wx_3.0.5.sh; else /tmp/install_ci_clang_wx_3.0.5.sh; fi; else if [[ "x${build_wx_version}" == "xdev" ]]; then /tmp/install_wx_3.1.5.sh; else echo "linking the (${build_type}) wx-config system wide"  && ln -sf /opt/WX/intel-${build_type}/bin/wx-config /usr/bin/wx-config; fi; fi
 
 # Get reference images for testing and debugging
 RUN if [[ "x${build_ref_images}" == "xtrue" ]]; then mkdir -p /cisTEMdev && pip3 install gdown toml && cd /cisTEMdev && gdown --fuzzy https://drive.google.com/file/d/1WOkMaq9rPBLMbZYhFl50XdeNXVakRFCV/view?usp=sharing && tar -xjf cistem_reference_images.tar.bz2 && rm cistem_reference_images.tar.bz2 ;fi

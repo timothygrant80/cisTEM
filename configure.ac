@@ -282,9 +282,13 @@ AS_HELP_STRING([--with-fftw-dir=DIR],[Declare the root directory of fftw3, if it
                           current location is not system accessible ]),
 [
     if test "$withval" != "yes" -a "$withval" != ""; then
-        CPPFLAGS="$CPPFLAGS -I$withval/include -L$withval/lib"
-        CXXFLAGS="$CXXFLAGS -I$withval/include -L$withval/lib"
-        LDFLAGS="$LDFLAGS -L$withval/lib"
+      # LINK_MKL_NOT_FFTW3
+      AC_MSG_NOTICE([     ])
+      AC_MSG_ERROR([You must use the Intel mkl in cisTEM. See FFT_LICENSE_NOTE in the root directory for details.])
+ 
+      CPPFLAGS="$CPPFLAGS -I$withval/include -L$withval/lib"
+      CXXFLAGS="$CXXFLAGS -I$withval/include -L$withval/lib"
+      LDFLAGS="$LDFLAGS -L$withval/lib"
     fi
 ])
 

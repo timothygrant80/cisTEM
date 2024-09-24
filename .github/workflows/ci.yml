@@ -17,7 +17,7 @@ jobs:
           - compiler: icpc
             cxx: icpc
             cc: icc
-            config_options: "--enable-staticmode --enable-openmp --enable-experimental --with-wx-config=/opt/WX/intel/bin/wx-config"
+            config_options: "--enable-staticmode --enable-openmp --enable-experimental --with-wx-config=/opt/WX/icpc/bin/wx-config"
             source_cmd: ". /opt/intel/oneapi/setvars.sh"
           - compiler: gcc
             cxx: g++

@@ -33,3 +33,4 @@ RUN wget -q https://github.com/wxWidgets/wxWidgets/releases/download/v3.0.5/wxWi
     CXXFLAGS=-fPIC CFLAGS=-fPIC ./configure --disable-precomp-headers --prefix=/usr/local --with-libnotify=no --disable-shared --without-gtkprint --with-libjpeg=builtin --with-libpng=builtin --with-libtiff=builtin --with-zlib=builtin --with-expat=builtin --disable-compat28 --without-liblzma --without-libjbig --with-gtk=2 --disable-sys-libs && \
     make -j$n_threads && \
     make install
+

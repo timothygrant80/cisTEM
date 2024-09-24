@@ -83,9 +83,9 @@ RUN . /opt/intel/oneapi/setvars.sh && \
 # 14 - these goa t the end of /etc/apt/sources.list
 RUN echo "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-14 main" | tee -a /etc/apt/sources.list && \
     echo "deb-src http://apt.llvm.org/focal/ llvm-toolchain-focal-14 main" | tee -a /etc/apt/sources.list && \
-    wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add - && \
-    apt-get update && apt-get install -y clang-format-14 -y && \
-    cd /usr/bin && ln -s clang-format-14 clang-format \
+    wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key | apt-key add - && \
+    apt-get update && apt-get install -y clang-format-14 clang-tidy-14 && \
+    cd /usr/bin && ln -s clang-format-14 clang-format && ln -s clang-14 clang \
     && rm -rf /var/lib/apt/lists/*
 
 # Install pytorch - now optional in the top layer container

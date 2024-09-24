@@ -17,21 +17,21 @@ jobs:
           - compiler: icpc
             cxx: icpc
             cc: icc
-            config_options: "--enable-staticmode --enable-openmp --enable-experimental  --with-wx-config=/opt/WX/intel-static/bin/wx-config"
+            config_options: "--enable-staticmode --enable-openmp --enable-experimental --with-wx-config=/opt/WX/intel/bin/wx-config"
             source_cmd: ". /opt/intel/oneapi/setvars.sh"
           - compiler: gcc
             cxx: g++
             cc: gcc
-            config_options: "--enable-staticmode --enable-openmp --enable-experimental   --with-wx-config=wx-config"
+            config_options: "--enable-staticmode --enable-openmp --enable-experimental --with-wx-config=/opt/WX/gcc/bin/wx-config"
             source_cmd: ""
           - compiler: clang
             cxx: clang++
             cc: clang
-            config_options: "--enable-experimental   --with-wx-config=wx-config"
+            config_options: "--enable-experimental  --with-wx-config=/opt/WX/clang/bin/wx-config"
             source_cmd: ""
           
     runs-on: ubuntu-latest
-    container: cistemdashorg/cistem_build_env:ci_${{ matrix.compiler }}
+    container: cistemdashorg/cistem_build_env:ci_base_cpu_only
     outputs:
       version: ${{ steps.configure.outputs.version }}
 

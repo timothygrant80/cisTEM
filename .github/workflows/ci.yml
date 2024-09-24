@@ -46,7 +46,9 @@ jobs:
 
     - name: regenerate_project
       run: ./regenerate_project.b
-
+    - name: Install fftw3
+      if: ${{ matrix.compiler=='gcc' || matrix.compiler=='clang' }}
+      run: sudo apt-get install -y libfftw3-dev
     - name: configure
       env:
         CC: ${{ matrix.cc }}

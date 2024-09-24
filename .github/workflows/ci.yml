@@ -36,11 +36,14 @@ jobs:
       version: ${{ steps.configure.outputs.version }}
 
     steps:
+    - name: okay the project dir
+      run: git config --global --add safe.directory /__w/cisTEM/cisTEM
+
     - uses: actions/checkout@v4
+    # the macro for CISTEM_VERSION_TEXT needs access to the history.
       with:
         fetch-depth: 0
-    - name: okay the regenerate_project
-      run: git config --global --add safe.directory /__w/cisTEM/cisTEM
+
     - name: regenerate_project
       run: ./regenerate_project.b
 

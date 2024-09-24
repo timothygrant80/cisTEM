@@ -1,0 +1,19 @@
+name: cisTEM GPU release
+
+on:
+  push:
+    branches: master
+  pull_request:
+    branches: master
+
+jobs:
+  run_build:
+    uses: ./.github/workflows/run_builds.yml
+    with:
+      build_type: "GPU_release"
+      configure_options: "--with-cuda "
+      global_configure_options: "--enable-openmp --enable-experimental --disable-multiple-global-refinements --enable-smooth-mip --disable-multiple-global-refinements "
+      runs_on_os: ubuntu-latest
+      CC: icc
+      CXX: icpc
+      cppstandard: 17

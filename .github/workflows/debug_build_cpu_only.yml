@@ -1,0 +1,19 @@
+name: cisTEM cpu debug
+
+on:
+  push:
+    branches: master
+  pull_request:
+    branches: master
+
+jobs:
+  run_build:  
+    uses: ./.github/workflows/run_builds.yml
+    with:
+      build_type: "cpu_debug"
+      configure_options: "--enable-debugmode "
+      global_configure_options: "--enable-openmp --enable-experimental --disable-multiple-global-refinements --enable-smooth-mip --disable-multiple-global-refinements "
+      runs_on_os: ubuntu-latest
+      CC: icc
+      CXX: icpc
+      cppstandard: 17

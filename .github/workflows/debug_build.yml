@@ -1,0 +1,19 @@
+name: cisTEM GPU debug
+
+on:
+  push:
+    branches: master
+  pull_request:
+    branches: master
+
+jobs:
+  run_build:  
+    uses: ./.github/workflows/run_builds.yml
+    with:
+      build_type: "GPU_debug"
+      configure_options: "--enable-gpu-debug --enable-debugmode --with-cuda "
+      global_configure_options: "--enable-openmp --enable-experimental --disable-multiple-global-refinements --enable-smooth-mip --disable-multiple-global-refinements "
+      runs_on_os: ubuntu-latest
+      CC: icc
+      CXX: icpc
+      cppstandard: 17

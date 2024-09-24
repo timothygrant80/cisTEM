@@ -17,3 +17,5 @@ jobs:
       CC: icc
       CXX: icpc
       cppstandard: 17
+      run_tests: false
+      n_threads: 4

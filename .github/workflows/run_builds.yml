@@ -31,6 +31,14 @@ on:
         description: 'The c++ standard to use = 17 or 20'
         required: true 
         type: string
+      run_tests:
+        description: 'Run tests, currently we can not run GPU code, so we skip tests for GPU builds'
+        required: true
+        type: boolean
+      n_threads:
+        description: 'Number of threads to use for make. Current Free tier has 4 threads'
+        required: true
+        type: number
 
 jobs:
   build:
@@ -39,7 +47,7 @@ jobs:
       fail-fast: true
     runs-on: ${{ inputs.runs_on_os }}
     container: 
-      image: cistemdashorg/cistem_build_env:v2.1.2_ci
+      image: cistemdashorg/cistem_build_env:v2.1.2
       options: --user root --rm
       # options: --user root --rm --gpus all
     outputs:
@@ -68,13 +76,13 @@ jobs:
         git config --global --add safe.directory /__w/cisTEM/cisTEM
         ../../configure   ${{ inputs.configure_options }}  ${{ inputs.global_configure_options }}
         VERSION=$(cat config.log | grep CISTEM_VERSION_TEXT | cut -d' ' -f3 | tr -d '"')
-        echo "::set-output name=version::$VERSION" 
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
     - uses: ammaraskar/gcc-problem-matcher@master
     - name: make 
       run: |
         . /opt/intel/oneapi/setvars.sh
         workdir=$(pwd)
-        cd build/${{ inputs.build_type }} && make -j 2
+        cd build/${{ inputs.build_type }} && make -j ${{ inputs.n_threads }}
         cd $workdir
         cp scripts/testing/test_and_benchmark.sh build/${{ inputs.build_type }}/src/
     - name: clean up
@@ -90,6 +98,7 @@ jobs:
     #     path: build/${{ inputs.build_type }}/src
 
     - name: Console test
+      if: ${{ inputs.run_tests }}
       run: |
         . /opt/intel/oneapi/setvars.sh
         cd build/${{ inputs.build_type }}/src
@@ -99,6 +108,7 @@ jobs:
         
     # chmod is redundant, but to keep this independent of Console test we keep it.
     - name: Samples functional testing
+      if: ${{ inputs.run_tests }}
       run: |
         . /opt/intel/oneapi/setvars.sh
         cd build/${{ inputs.build_type }}/src 
@@ -107,6 +117,7 @@ jobs:
 
     # chmod is redundant, but to keep this independent of Console test we keep it.
     - name: Unit tests
+      if: ${{ inputs.run_tests }}
       run: |
         . /opt/intel/oneapi/setvars.sh
         cd build/${{ inputs.build_type }}/src 

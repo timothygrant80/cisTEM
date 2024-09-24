@@ -34,10 +34,13 @@ jobs:
     container: cistemdashorg/cistem_build_env:ci_${{ matrix.compiler }}
     outputs:
       version: ${{ steps.configure.outputs.version }}
+
     steps:
     - uses: actions/checkout@v2
       with:
         fetch-depth: 0
+    - name: okay the regenerate_project
+      run: git config --global --add safe.directory /__w/cisTEM/cisTEM
     - name: regenerate_project
       run: ./regenerate_project.b
 

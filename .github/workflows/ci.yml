@@ -17,17 +17,17 @@ jobs:
           - compiler: icpc
             cxx: icpc
             cc: icc
-            config_options: "--enable-staticmode --enable-openmp --enable-experimental --enable-samples --with-wx-config=/opt/WX/intel-static/bin/wx-config"
+            config_options: "--enable-staticmode --enable-openmp --enable-experimental  --with-wx-config=/opt/WX/intel-static/bin/wx-config"
             source_cmd: ". /opt/intel/oneapi/setvars.sh"
           - compiler: gcc
             cxx: g++
             cc: gcc
-            config_options: "--enable-staticmode --enable-openmp --enable-experimental --enable-samples  --with-wx-config=wx-config"
+            config_options: "--enable-staticmode --enable-openmp --enable-experimental   --with-wx-config=wx-config"
             source_cmd: ""
           - compiler: clang
             cxx: clang++
             cc: clang
-            config_options: "--enable-experimental --enable-samples  --with-wx-config=wx-config"
+            config_options: "--enable-experimental   --with-wx-config=wx-config"
             source_cmd: ""
           
     runs-on: ubuntu-latest

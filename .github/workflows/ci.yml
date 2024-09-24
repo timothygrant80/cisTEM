@@ -59,7 +59,7 @@ jobs:
         ${{ matrix.source_cmd }}
         ../../configure ${{matrix.config_options}}
         VERSION=$(cat config.log | grep CISTEM_VERSION_TEXT | cut -d' ' -f3 | tr -d '"')
-        echo "version::$VERSION" >> $GITHUB_OUTPUT
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
     - name: make 
       run: |
         ${{ matrix.source_cmd }}

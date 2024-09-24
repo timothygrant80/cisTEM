@@ -26,7 +26,7 @@ ARG build_ref_images="false"
 
 SHELL ["/bin/bash", "-c"]
 # some rebuild comment
-ENV CISTEM_REF_IMAGES /cisTEMdev/cistem_reference_images
+ENV CISTEM_REF_IMAGES=/cisTEMdev/cistem_reference_images
 ENV LD_RUN_PATH=/opt/WX/intel-dynamic/lib:${LD_RUN_PATH}
 
 # Install wxWidgets

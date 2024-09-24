@@ -28,7 +28,7 @@ usr_path="../../.vscode"
 # Check for -h or --help
 if [[ $1 == "-h" || $1 == "--help" ]] ; then
     echo ""
-    echo "Usage: build_base.sh <base|top> [--no-cache] [--wx-version=<stable|dev>] [--compiler=<icpc|g++>] [--build-type=<static|dynamic>] [--npm ] [--ref-images ]"
+    echo "Usage: build_base.sh <base|top> [--no-cache] [--wx-version=<stable|dev>] [--compiler=<icpc|g++>] [--build-type=<static|dynamic>] [--npm ] [--ref-images ] [--tag-suffix=<string>]"
     echo "      --no-cache: build without cache, must be second arg"
     echo ""
     echo "  positional args are optional and only affect the top layer build"
@@ -37,6 +37,7 @@ if [[ $1 == "-h" || $1 == "--help" ]] ; then
     echo "      --build-type: static or dynamic, default is static [BUT only dynamic is supported for --wx-version dev]"
     echo "      --npm: build npm, default is false if not specified"
     echo "      --ref-images: build reference images, default is false if not specified"
+    echo "      --tag-suffix: to append to the image tag"
     echo ""
     echo "For example, to build the base image without cache, and the top image with wxWidgets 3.1.5, g++, dynamic, npm, and ref-images:"
     echo "      build_base.sh base --no-cache --wx-version=dev --compiler=g++ --npm --ref-images"
@@ -85,8 +86,9 @@ build_type="static"
 build_compiler="icpc"
 build_wx_version="stable"
 build_npm="false"
-build_ref_images="true"
+build_ref_images="false"
 build_pytorch="false"
+tag_suffix=""
 
 
 while [[ $# -gt 0 ]]; do
@@ -136,6 +138,11 @@ while [[ $# -gt 0 ]]; do
     --pytorch)
         build_pytorch="true"
         shift # past argument
+        ;;
+    --tag-suffix)
+        tag_suffix="$2"
+        shift # past argument
+        shift # past value
         ;;
     -*|--*)
       echo "Unknown option $1, try running with -h for help."
@@ -227,10 +234,10 @@ fi
 
 
 # Print out the version and repository information
-echo "Building ${container_repository}:${prefix}${container_version} ${path_to_dockerfile}Dockerfile"
+echo "Building ${container_repository}:${prefix}${container_version}${tag_suffix} ${path_to_dockerfile}Dockerfile"
 
 
-docker build ${skip_cache} --tag ${container_repository}:${prefix}${container_version} \
+docker build ${skip_cache} --tag ${container_repository}:${prefix}${container_version}${tag_suffix} \
     --build-arg build_type=${build_type} \
     --build-arg build_compiler=${build_compiler} \
     --build-arg build_wx_version=${build_wx_version} \

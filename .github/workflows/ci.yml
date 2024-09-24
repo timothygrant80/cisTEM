@@ -37,7 +37,7 @@ jobs:
 
     steps:
     - name: okay the project dir
-      run: git config --global --add safe.directory /__w/cisTEM/cisTEM
+      run: /usr/bin/git config --global --add safe.directory /__w/cisTEM/cisTEM
 
     - uses: actions/checkout@v4
     # the macro for CISTEM_VERSION_TEXT needs access to the history.

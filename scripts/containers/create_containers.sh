@@ -86,7 +86,7 @@ build_type="static"
 build_compiler="icpc"
 build_wx_version="stable"
 build_npm="false"
-build_ref_images="false"
+build_ref_images="true"
 build_pytorch="false"
 tag_suffix=""
 

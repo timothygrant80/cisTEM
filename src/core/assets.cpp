@@ -1,12 +1,8 @@
 #include "core_headers.h"
 
-//#include "gui_core_headers.h"
-// TODO: can these be more local to their usage?
 #include "../../include/gemmi/model.hpp"
-#include "../../include/gemmi/elem.hpp"
 #include "../../include/gemmi/mmread.hpp"
 #include "../../include/gemmi/gz.hpp"
-#include "../../include/gemmi/resinfo.hpp"
 #include "../../include/gemmi/calculate.hpp"
 
 AssetList::AssetList( ) {

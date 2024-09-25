@@ -184,17 +184,6 @@ class StackDump : public wxStackWalker // so we can give backtraces..
 #include "ccl3d.h"
 #include "pdb.h"
 
-#ifdef EXPERIMENTAL
-#include "../../include/ieee-754-half/half.hpp"
-#include "../../include/gemmi/model.hpp"
-#include "../../include/gemmi/elem.hpp"
-#include "../../include/gemmi/mmread.hpp"
-#include "../../include/gemmi/gz.hpp"
-#include "../../include/gemmi/resinfo.hpp"
-#include "../../include/gemmi/calculate.hpp"
-#include "water.h"
-#endif
-
 #ifdef ENABLEGPU
 #include <cuda_runtime.h>
 #include <cuda.h>

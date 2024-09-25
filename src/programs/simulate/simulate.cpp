@@ -1,5 +1,6 @@
 #include "../../core/core_headers.h"
 
+#include "../../core/water.h"
 #include "../../constants/constants.h"
 
 #include "calc_hydration_radius.h"

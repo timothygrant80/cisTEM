@@ -2,13 +2,9 @@
 #include <wx/arrimpl.cpp> // this is a magic incantation which must be done!
 WX_DEFINE_OBJARRAY(ArrayOfParticleTrajectories);
 
-// TODO: can these be more local to their usage?
 #include "../../include/gemmi/model.hpp"
-#include "../../include/gemmi/elem.hpp"
 #include "../../include/gemmi/mmread.hpp"
 #include "../../include/gemmi/gz.hpp"
-#include "../../include/gemmi/resinfo.hpp"
-#include "../../include/gemmi/calculate.hpp"
 
 Atom::Atom( ) {
     name             = "";
@@ -304,10 +300,10 @@ PDB::PDB(wxString Filename,
     this->is_alpha_fold_prediction = is_alpha_fold_prediction;
 
     if ( COM ) {
-    for ( int iCOM = 0; iCOM < 3; iCOM++ ) {
+        for ( int iCOM = 0; iCOM < 3; iCOM++ ) {
             center_of_mass[iCOM] = COM[iCOM];
-        wxPrintf("Using provided center of mass %d %3.3f\n", iCOM, this->center_of_mass[iCOM]);
-    }
+            wxPrintf("Using provided center of mass %d %3.3f\n", iCOM, this->center_of_mass[iCOM]);
+        }
     }
     else {
 

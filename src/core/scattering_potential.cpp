@@ -7,6 +7,7 @@
  */
 #include "core_headers.h"
 #include "scattering_potential.h"
+#include "water.h"
 
 ScatteringPotential::ScatteringPotential( ) {
     SetDefaultValues( );

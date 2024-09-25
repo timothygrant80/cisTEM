@@ -244,87 +244,247 @@ if WANT_CISTEM_GPU_AM
 noinst_HEADERS += programs/samples/1_cpu_gpu_comparison/cpu_gpu_comparison.h
 endif
 
-	
+
 
 noinst_LIBRARIES = libcore.a libguicore.a
+
+# Min needed for GUI
 bin_PROGRAMS =  cisTEM_job_control \
+                cisTEM \
                 unblur \
-                console_test \
-                unit_test_runner \
-                samples_functional_testing \
-                applyctf \
                 reconstruct3d \
                 merge3d \
-                project3d \
                 refine3d \
-                calc_occ \
                 ctffind \
-                remove_outlier_pixels \
-                resize \
-                resample \
-                reset_mrc_header \
-                estimate_dataset_ssnr \
                 find_particles \
-                montage \
-                extract_particles \
-                sum_all_mrc_files \
-                sum_all_tif_files \
-                apply_gain_ref \
-                scale_with_mask \
                 refine2d \
                 merge2d \
-                mag_distortion_correct \
-                apply_mask \
-                convert_tif_to_mrc \
-                remove_inf_and_nan \
-                make_orth_views \
-                sharpen_map \
-                calculate_fsc \
-                make_size_map \
                 prepare_stack \
                 prepare_stack_classaverage \
                 align_symmetry \
-                subtract_from_stack \
-                binarize \
-                move_volume_xyz \
-                symmetry_expand_stack_and_par \
                 fft \
                 local_resolution \
                 local_resolution_finalize \
                 local_resolution_filter \
-                subtract_two_stacks \
-                add_two_stacks \
-                multiply_two_stacks \
-                divide_two_stacks \
-                invert_stack \
-                convert_par_to_star \
-                align_coordinates \
-                find_dqe \
-                combine_via_max \
                 refine_ctf \
                 estimate_beamtilt \
-                remove_relion_stripes \
                 warp_to_cistem \
-                create_mask \
-                invert_hand \
-                quick_test \
-                append_stacks \
-                cisTEM_display \
-                cisTEM \
-                gui_test \
-                convert_star_to_binary \
-                convert_binary_to_star \
-                convert_eer_to_mrc \
-                azimuthal_average \
-                normalize_stack \
-                print_stack_statistics \
-                combine_stacks_by_star \
                 match_template \
                 refine_template \
                 make_template_result \
                 prepare_stack_matchtemplate \
-                sum_all_eer_files \
-                measure_template_bias
+                cisTEM_display 
+
+
+
+# Programs for testing and automated testing
+bin_PROGRAMS += quick_test console_test unit_test_runner samples_functional_testing gui_test
+
+########################################################
+# Optional programs listed at the
+#######################################################
+if ENABLE_APPLYCTF_AM
+bin_PROGRAMS += applyctf
+endif
+
+if ENABLE_PROJECT3D_AM
+bin_PROGRAMS += project3d
+endif
+
+if ENABLE_CALCOCC_AM
+bin_PROGRAMS += calc_occ
+endif
+
+if ENABLE_REMOVEOUTLIERPIXELS_AM
+bin_PROGRAMS += remove_outlier_pixels
+endif
+
+if ENABLE_RESIZE_AM
+bin_PROGRAMS += resize
+endif
+
+if ENABLE_RESAMPLE_AM
+bin_PROGRAMS += resample
+endif
+
+if ENABLE_RESETMRCHEADER_AM
+bin_PROGRAMS += reset_mrc_header
+endif
+
+if ENABLE_ESTIMATEDATASETSSNR_AM
+bin_PROGRAMS += estimate_dataset_ssnr
+endif                 
+                
+if ENABLE_MONTAGE_AM
+bin_PROGRAMS += montage
+endif
+
+if ENABLE_EXTRACTPARTICLES_AM
+bin_PROGRAMS += extract_particles
+endif
+
+if ENABLE_SUMALLMRCFILES_AM
+bin_PROGRAMS += sum_all_mrc_files
+endif
+
+if ENABLE_SUMALLTIFFILES_AM
+bin_PROGRAMS += sum_all_tif_files
+endif
+
+if ENABLE_SUMALLEERFILES_AM
+bin_PROGRAMS += sum_all_eer_files
+endif
+
+if ENABLE_APPLYGAINREF_AM
+bin_PROGRAMS += apply_gain_ref
+endif
+
+if ENABLE_SCALEWITHMASK_AM
+bin_PROGRAMS += scale_with_mask
+endif
+
+if ENABLE_MAGDISTORTIONCORRECT_AM
+bin_PROGRAMS += mag_distortion_correct
+endif
+
+if ENABLE_APPLYMASK_AM
+bin_PROGRAMS += apply_mask
+endif
+
+if ENABLE_CONVERTTIFTOMRC_AM
+bin_PROGRAMS += convert_tif_to_mrc
+endif
+
+if ENABLE_REMOVEINFANDNAN_AM
+bin_PROGRAMS += remove_inf_and_nan
+endif
+
+if ENABLE_MAKEORTHVIEWS_AM
+bin_PROGRAMS += make_orth_views
+endif
+
+if ENABLE_SHARPENMAP_AM
+bin_PROGRAMS += sharpen_map
+endif
+
+if ENABLE_CALCULATEFSC_AM
+bin_PROGRAMS += calculate_fsc
+endif
+
+if ENABLE_MAKESIZEMAP_AM
+bin_PROGRAMS += make_size_map
+endif
+
+if ENABLE_CONVERTPARTOSTAR_AM
+bin_PROGRAMS += convert_par_to_star
+endif
+
+if ENABLE_SUBTRACTFROMSTACK_AM
+bin_PROGRAMS += subtract_from_stack
+endif
+
+if ENABLE_BINARIZE_AM
+bin_PROGRAMS += binarize
+endif
+
+if ENABLE_MOVEVOLUMEXYZ_AM
+bin_PROGRAMS += move_volume_xyz
+endif
+
+if ENABLE_SYMMETRYEXPANDSTACKANDPAR_AM
+bin_PROGRAMS += symmetry_expand_stack_and_par
+endif
+
+if ENABLE_SUBTRACTTWOSTACKS_AM
+bin_PROGRAMS += subtract_two_stacks
+endif
+
+if ENABLE_ADDTWOSTACKS_AM
+bin_PROGRAMS += add_two_stacks
+endif
+
+if ENABLE_MULTIPLYTWOSTACKS_AM
+bin_PROGRAMS += multiply_two_stacks
+endif
+
+if ENABLE_DIVIDETWOSTACKS_AM
+bin_PROGRAMS += divide_two_stacks
+endif
+
+if ENABLE_INVERTSTACK_AM
+bin_PROGRAMS += invert_stack
+endif
+
+if ENABLE_ALIGNCOORDINATES_AM
+bin_PROGRAMS += align_coordinates
+endif
+
+if ENABLE_FINDDQE_AM
+bin_PROGRAMS += find_dqe
+endif
+
+if ENABLE_COMBINEVIAMAX_AM
+bin_PROGRAMS += combine_via_max
+endif
+
+if ENABLE_REMOVERELIONSTRIPES_AM
+bin_PROGRAMS += remove_relion_stripes
+endif
+
+if ENABLE_CREATEMASK_AM
+bin_PROGRAMS += create_mask
+endif
+
+if ENABLE_INVERTHAND_AM
+bin_PROGRAMS += invert_hand
+endif
+
+if ENABLE_APPENDSTACKS_AM
+bin_PROGRAMS += append_stacks
+endif
+
+if ENABLE_CONVERTSTARTOBINARY_AM
+bin_PROGRAMS += convert_star_to_binary
+endif
+
+if ENABLE_CONVERTBINARYTOSTAR_AM
+bin_PROGRAMS += convert_binary_to_star
+endif
+
+if ENABLE_CONVERTEERTOMRC_AM
+bin_PROGRAMS += convert_eer_to_mrc
+endif
+
+if ENABLE_AZIMUTHALAVERAGE_AM
+bin_PROGRAMS += azimuthal_average
+endif
+
+if ENABLE_NORMALIZESTACK_AM
+bin_PROGRAMS += normalize_stack
+endif
+
+if ENABLE_PRINTSTACKSTATISTICS_AM  
+bin_PROGRAMS += print_stack_statistics
+endif
+
+if ENABLE_COMBINESTACKSBYSTAR_AM
+bin_PROGRAMS += combine_stacks_by_star
+endif
+
+if ENABLE_MEASURETEMPLATEBIAS_AM
+bin_PROGRAMS += measure_template_bias
+endif
+
+########################################################
+# End optional programs
+########################################################
+
+
+if EXPERIMENTAL_AM   
+bin_PROGRAMS += refine_template_dev simulate sum_all_power_spectra
+endif
+
+                
 if WANT_CISTEM_GPU_AM
     bin_PROGRAMS +=  match_template_gpu 
     #unblur_gpu global_search_gpu global_search_refinement_gpu

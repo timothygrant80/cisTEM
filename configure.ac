@@ -59,6 +59,16 @@ AM_CONDITIONAL([STATIC_LINKING_AM],[test x$static_link = xtrue])
 want_cuda="no"
 AX_CUDA 
 CPP_STANDARD=17
+
+# 
+# Check for extra requested programs beyond main functionality and testing
+# Default is to build all programs.
+#   --disable-build-all will override default behavior and build only those programs needed for the GUI to run and for testing
+#   --enable-build-program will add the additional program(s)
+#     these flags have no meaning unles --disable-build-all is set
+#
+AX_ADDITIONAL_PROGRAMS
+
 # if test "$want_cuda" = "yes" ; then
 #   CPP_STANDARD=17
 # else

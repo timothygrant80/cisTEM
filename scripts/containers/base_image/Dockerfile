@@ -35,14 +35,14 @@ RUN apt-get --allow-releaseinfo-change update && apt-get install -y \
 RUN echo "deb http://apt.llvm.org/focal/ llvm-toolchain-focal-14 main" | tee -a /etc/apt/sources.list && \
     echo "deb-src http://apt.llvm.org/focal/ llvm-toolchain-focal-14 main" | tee -a /etc/apt/sources.list && \
     wget -O - https://apt.llvm.org/llvm-snapshot.gpg.key|sudo apt-key add - && \
-    apt-get update && apt-get install -y clang-format-14 -y && \
-    cd /usr/bin && ln -s clang-format-14 clang-format \
+    apt-get update && apt-get install -y clang-format-14 clang-14 clang-tidy-14 && \
+    cd /usr/bin && ln -s clang-format-14 clang-format && ln -s clang-14 clang && ln -s clang-tidy-14 clang-tidy && ln -s clang++-14 clang++ \
     && rm -rf /var/lib/apt/lists/*
 
 
 
 # Get the MKL and intel compiler: note, this is 19G by default, will try to determine minimal set needed huge waste but works well enough for now, final size is ~5gb
-
+# The second to last line is to ensure clang++ is used and not the one bundled with the intel compiler.
 RUN wget -O- https://apt.repos.intel.com/intel-gpg-keys/GPG-PUB-KEY-INTEL-SW-PRODUCTS.PUB | gpg --dearmor | tee /usr/share/keyrings/oneapi-archive-keyring.gpg > /dev/null && \
     echo "deb [signed-by=/usr/share/keyrings/oneapi-archive-keyring.gpg] https://apt.repos.intel.com/oneapi all main" | tee /etc/apt/sources.list.d/oneAPI.list && \
     apt-get update && apt-get install -y intel-oneapi-compiler-dpcpp-cpp-and-cpp-classic-2021.4.0 intel-oneapi-mkl-2021.4.0 intel-oneapi-mkl-devel-2021.4.0 && \
@@ -61,31 +61,48 @@ ENV LD_PRELOAD=/opt/intel/libfakeIntel.so
 # NOTE: for now, only building with the intel-compiler. If people still are pushing gnu compiler, we can add those here.
 RUN wget -q https://github.com/wxWidgets/wxWidgets/releases/download/v3.0.5/wxWidgets-3.0.5.tar.bz2 -O /tmp/wxwidgets.tar.bz2 && \
     echo 'Building wxWidgets but deferring install' && \
-    mkdir -p /opt/WX/intel-static && mkdir -p /opt/WX/intel-dynamic && \
-    tar -xjf /tmp/wxwidgets.tar.bz2 -C /opt/WX/intel-static && \
-    tar -xjf /tmp/wxwidgets.tar.bz2 -C /opt/WX/intel-dynamic && \
+    mkdir -p /opt/WX/icc-static /opt/WX/gcc-static /opt/WX/clang-static && \
+    tar -xjf /tmp/wxwidgets.tar.bz2 -C /opt/WX/icc-static && \
+    tar -xjf /tmp/wxwidgets.tar.bz2 -C /opt/WX/gcc-static && \
+    tar -xjf /tmp/wxwidgets.tar.bz2 -C /opt/WX/clang-static && \
     rm -rf /tmp/wxwidgets.tar.bz2 
 
 # Here for the record if you want to build and link static binaries to avoid the cointainerized distribution
 # CXXFLAGS=-fPIC CFLAGS=-fPIC were specified for the static configure line, but I'm not sure that makes any sense?
 RUN . /opt/intel/oneapi/setvars.sh && \
     cd /opt/WX && wget https://github.com/wxFormBuilder/wxFormBuilder/releases/download/v3.10.0/wxformbuilder_3.10.0_ubuntu-20.04_amd64.deb && \
-    cd /opt/WX/intel-static/wxWidgets-3.0.5 && \
-    CXX=icpc CC=icc ./configure --disable-precomp-headers --prefix=/opt/WX/intel-static --with-libnotify=no --disable-shared \
+    cd /opt/WX/icc-static/wxWidgets-3.0.5 && \
+    CXXFLAGS=-fPIC CFLAGS=-fPIC CXX=icpc CC=icc ./configure --disable-precomp-headers --prefix=/opt/WX/icc-static --with-libnotify=no --disable-shared \
     --without-gtkprint --with-libjpeg=builtin --with-libpng=builtin --with-libtiff=builtin --with-zlib=builtin --with-expat=builtin \
     --disable-compat28 --without-liblzma --without-libjbig --with-gtk=2 --disable-sys-libs  && \
-    make -j$n_threads && make install && make clean && make distclean && rm -rf /opt/WX/intel-static/wxWidgets-3.0.5 && \
-    cd /opt/WX/intel-dynamic/wxWidgets-3.0.5 && \
-    CXX=icpc CC=icc CXXFLAGS=-fPIC CFLAGS=-fPIC  ./configure --disable-precomp-headers --prefix=/opt/WX/intel-dynamic --with-libnotify=no  \
+    make -j$n_threads && make install && make clean && make distclean && rm -rf /opt/WX/icc-static/wxWidgets-3.0.5 && \
+    cd /opt/WX/gcc-static/wxWidgets-3.0.5 && \
+    CXXFLAGS=-fPIC CFLAGS=-fPIC CXX=g++ CC=gcc ./configure --disable-precomp-headers --prefix=/opt/WX/gcc-static --with-libnotify=no --disable-shared \
     --without-gtkprint --with-libjpeg=builtin --with-libpng=builtin --with-libtiff=builtin --with-zlib=builtin --with-expat=builtin \
     --disable-compat28 --without-liblzma --without-libjbig --with-gtk=2 --disable-sys-libs  && \
-    make -j$n_threads && make install && make clean && make distclean && rm -rf /opt/WX/intel-dynamic/wxWidgets-3.0.5
-
-# First noticed outside container with g++9, several errors in longlong.h seem to be fixed by this extra include  /usr/include/wx-3.1-unofficial
-tf=`tempfile` && cp /opt/WX/gcc-static/include/wx-3.0/wx/longlong.h /opt/WX/gcc-static/include/wx-3.0/wx/longlong.h.orig && \
+    make -j$n_threads && make install && make clean && make distclean && rm -rf /opt/WX/gcc-static/wxWidgets-3.0.5 && \
+    cd /opt/WX/clang-static/wxWidgets-3.0.5 && \
+    CXXFLAGS=-fPIC CFLAGS=-fPIC CXX=clang++ CC=clang ./configure --disable-precomp-headers --prefix=/opt/WX/clang-static --with-libnotify=no --disable-shared \
+    --without-gtkprint --with-libjpeg=builtin --with-libpng=builtin --with-libtiff=builtin --with-zlib=builtin --with-expat=builtin \
+    --disable-compat28 --without-liblzma --without-libjbig --with-gtk=2 --disable-sys-libs  && \
+    make -j$n_threads && make install && make clean && make distclean && rm -rf /opt/WX/clang-static/wxWidgets-3.0.5 && \
+    tf=`tempfile` && cp /opt/WX/icc-static/include/wx-3.0/wx/longlong.h /opt/WX/icc-static/include/wx-3.0/wx/longlong.h.orig && \
+    awk '{if(/#include "wx\/defs.h"/){ print $0 ;print "#include <wx/txtstrm.h>"} else print $0}' /opt/WX/icc-static/include/wx-3.0/wx/longlong.h.orig > $tf && \
+    mv $tf /opt/WX/icc-static/include/wx-3.0/wx/longlong.h && \
+    chmod a+r /opt/WX/icc-static/include/wx-3.0/wx/longlong.h && \
+    tf=`tempfile` && cp /opt/WX/gcc-static/include/wx-3.0/wx/longlong.h /opt/WX/gcc-static/include/wx-3.0/wx/longlong.h.orig && \
     awk '{if(/#include "wx\/defs.h"/){ print $0 ;print "#include <wx/txtstrm.h>"} else print $0}' /opt/WX/gcc-static/include/wx-3.0/wx/longlong.h.orig > $tf && \
     mv $tf /opt/WX/gcc-static/include/wx-3.0/wx/longlong.h && \
-    chmod a+r /opt/WX/gcc-static/include/wx-3.0/wx/longlong.h
+    chmod a+r /opt/WX/gcc-static/include/wx-3.0/wx/longlong.h && \
+    tf=`tempfile` && cp /opt/WX/clang-static/include/wx-3.0/wx/longlong.h /opt/WX/clang-static/include/wx-3.0/wx/longlong.h.orig && \
+    awk '{if(/#include "wx\/defs.h"/){ print $0 ;print "#include <wx/txtstrm.h>"} else print $0}' /opt/WX/clang-static/include/wx-3.0/wx/longlong.h.orig > $tf && \
+    mv $tf /opt/WX/clang-static/include/wx-3.0/wx/longlong.h && \
+    chmod a+r /opt/WX/clang-static/include/wx-3.0/wx/longlong.h
+
+
+
+# First noticed outside container with g++9, several errors in longlong.h seem to be fixed by this extra include  /usr/include/wx-3.1-unofficial
+
 
 # Install pytorch - now optional in the top layer container
 
@@ -107,7 +124,7 @@ RUN echo 'alias lt="ls -lrth"' >> /home/cisTEMdev/.bashrc && \
     echo 'alias dU="du -ch --max-depth=1 | sort -h"' >> /home/cisTEMdev/.bashrc && \
     echo 'source /opt/intel/oneapi/setvars.sh' >> /home/cisTEMdev/.bashrc && \
     echo 'bind "set bell-style none"' >> /home/cisTEMdev/.bashrc && \
-    echo 'export PATH=/usr/local/cuda/bin:$PATH' >> /home/cisTEMdev/.bashrc 
+    echo 'export PATH=/usr/bin:/usr/local/cuda/bin:$PATH' >> /home/cisTEMdev/.bashrc 
 
 
 

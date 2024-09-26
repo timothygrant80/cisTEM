@@ -27,14 +27,13 @@ ARG build_ref_images="false"
 SHELL ["/bin/bash", "-c"]
 # some rebuild comment
 ENV CISTEM_REF_IMAGES=/cisTEMdev/cistem_reference_images
-ENV LD_RUN_PATH=/opt/WX/intel-dynamic/lib:${LD_RUN_PATH}
 
 # Install wxWidgets
 COPY install_wx_3.1.5.sh install_node_16.sh /tmp/
 
 
 # If we do not do this, we want to link the static or dynamic libs from /opt/WX to /usr/bin so we don't need to set it on configure lines and also so that wxformbuilder can find them
-RUN echo "checking for wxWidgets 3.1.5" && if [[ "x${build_wx_version}" == "xdev" ]]; then /tmp/install_wx_3.1.5.sh  ; else echo "linking the (${build_type}) wx-config system wide"  && ln -sf /opt/WX/intel-${build_type}/bin/wx-config /usr/bin/wx-config ; fi
+RUN echo "checking for wxWidgets 3.1.5" && if [[ "x${build_wx_version}" == "xdev" ]]; then /tmp/install_wx_3.1.5.sh  ; else echo "linking the (${build_type}) wx-config system wide"  && ln -sf /opt/WX/icc-${build_type}/bin/wx-config /usr/bin/wx-config ; fi
 
 # Get reference images for testing and debugging
 

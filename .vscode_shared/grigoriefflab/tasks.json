@@ -6,7 +6,7 @@
         "env": {
             "cuda_dir": "/usr/local/cuda",
             "wx_dir_dynamic": "/opt/WX/intel-dynamic/bin/wx-config",
-            "wx_dir_static": "/opt/WX/intel-static/bin/wx-config",
+            "wx_dir_static": "/opt/WX/icc-static/bin/wx-config",
             "build_dir": "${workspaceFolder}/build",
             "compile_cores": "12",
             "GIT_BRANCH": "git rev-parse --abbrev-ref HEAD"

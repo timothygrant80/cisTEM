@@ -12,7 +12,7 @@ jobs:
     with:
       build_type: "GPU_release"
       configure_options: "--with-cuda "
-      global_configure_options: " --disable-build-all --enable-openmp --enable-experimental --disable-multiple-global-refinements --enable-smooth-mip "
+      global_configure_options: " --disable-build-all --enable-openmp --enable-experimental --disable-multiple-global-refinements --enable-smooth-mip --with-wx-config=/opt/WX/icc-static/bin/wx-config "
       runs_on_os: ubuntu-latest
       CC: icc
       CXX: icpc

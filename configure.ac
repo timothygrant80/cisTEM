@@ -121,11 +121,11 @@ if test "x$CXX" = "xicpc"; then
 else 
   if test "x$CXX" = "xclang++"; then
     # Clang needs the -no-c++11-narrowing suppression to compile
-	  CXXFLAGS="$CXXFLAGS -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -std=c++${CPP_STANDARD} -Wno-c++11-narrowing" 		
-	  CPPFLAGS="$CPPFLAGS -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations"
+	  CXXFLAGS="$CXXFLAGS -m64 -funroll-loops -O3 -pipe $WARNINGS_ON  -std=c++${CPP_STANDARD} -Wno-c++11-narrowing" 		
+	  CPPFLAGS="$CPPFLAGS -m64 -funroll-loops -O3 -pipe $WARNINGS_ON "
   else 
-	  CXXFLAGS="$CXXFLAGS -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -std=c++${CPP_STANDARD}" 		
-	  CPPFLAGS="$CPPFLAGS -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations"
+	  CXXFLAGS="$CXXFLAGS -m64 -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -std=c++${CPP_STANDARD}" 		
+	  CPPFLAGS="$CPPFLAGS -m64 -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations"
 
 	  #sqlite needs dl on gcc
 	
@@ -481,9 +481,6 @@ AC_CHECK_FILE("$MKLROOT/include/mkl.h",
   AC_DEFINE([MKL], [], [Use the MKL])
 # Compiler options are the same for all threading options (as long as it is gcc)
 AC_DEFINE([MKL_ILP64], [], [Use the MKL ILP64 interface])
-if test "x$CXX" = "xg++"; then
-    CXXFLAGS="$CXXFLAGS -m64 "
-fi
 
 
 # FIXME would not match next block
@@ -500,6 +497,7 @@ LDFLAGS="$LDFLAGS -L"${MKLROOT}/lib/intel64" "
 
 
 MKL_LIBS=""
+LIBTOOL_FLAGS=""
 if test "x$use_mkl_threads" = "xyes" -o "x$use_gnu_threads" = "xyes"; then
 
     # I added the proper options here along when updating with sequential, which is what cisTEM has always used.
@@ -533,10 +531,9 @@ else
     
     if test "x$static_link" = "xtrue" ; then
       AC_MSG_NOTICE([   Using static linking for the MKL. ])
-        #MKL_LIBS="$MKL_LIBS -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_intel_thread.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -liomp5 -lpthread "               
-        # MKL_LIBS="$MKL_LIBS -Wl,--start-group ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${MKLROOT}/lib/intel64/libmkl_sequential.a ${MKLROOT}/lib/intel64/libmkl_core.a -Wl,--end-group -lpthread -lm -ldl"
-        # TH
+
         # |-Wl*-group|/opt/*mkl* 
+        LIBTOOL_FLAGS="--preserve-dup-deps "
         circular_deps="${MKLROOT}/lib/intel64/libmkl_core.a ${MKLROOT}/lib/intel64/libmkl_sequential.a "
         MKL_LIBS=" $MKL_LIBS ${MKLROOT}/lib/intel64/libmkl_intel_ilp64.a ${circular_deps}  ${circular_deps}  ${circular_deps} -lpthread -lm -ldl"
 
@@ -697,6 +694,7 @@ AC_SUBST(CUDA_CXXFLAGS)
 AC_SUBST(CUDA_CPPFLAGS)
 AC_SUBST(CUDA_LIBS)
 AC_SUBST(MKL_LIBS)
+AC_SUBST(LIBTOOL_FLAGS)
 
   AC_MSG_NOTICE([Using CUDA_CXXFLAGS=$CUDA_CXXFLAGS])
   AC_MSG_NOTICE([WX_LIBS_BASE=$WX_LIBS_BASE])

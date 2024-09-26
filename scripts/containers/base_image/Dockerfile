@@ -23,7 +23,7 @@ ENV LANG en_US.utf8
 
 # Install useful ubuntu packages libwxgtk3.0-gtk3-dev libwxbase3.0-dev
 RUN apt-get --allow-releaseinfo-change update && apt-get install -y \
-    libgtk2.0-dev libgtk-3-dev \
+    libgtk2.0-dev libgtk-3-dev libwxbase3.0-dev \
     libtool autoconf autotools-dev nano gedit meld cmake \
     libfftw3-dev libtiff-dev software-properties-common libffi-dev \
     libbz2-dev libsqlite3-dev zlib1g-dev libjpeg-dev libtiff-dev \
@@ -62,8 +62,8 @@ ENV LD_PRELOAD=/opt/intel/libfakeIntel.so
 RUN wget -q https://github.com/wxWidgets/wxWidgets/releases/download/v3.0.5/wxWidgets-3.0.5.tar.bz2 -O /tmp/wxwidgets.tar.bz2 && \
     echo 'Building wxWidgets but deferring install' && \
     mkdir -p /opt/WX/intel-static && mkdir -p /opt/WX/intel-dynamic && \
-    tar -xf /tmp/wxwidgets.tar.bz2 -C /opt/WX/intel-static && \
-    tar -xf /tmp/wxwidgets.tar.bz2 -C /opt/WX/intel-dynamic && \
+    tar -xjf /tmp/wxwidgets.tar.bz2 -C /opt/WX/intel-static && \
+    tar -xjf /tmp/wxwidgets.tar.bz2 -C /opt/WX/intel-dynamic && \
     rm -rf /tmp/wxwidgets.tar.bz2 
 
 # Here for the record if you want to build and link static binaries to avoid the cointainerized distribution
@@ -81,6 +81,11 @@ RUN . /opt/intel/oneapi/setvars.sh && \
     --disable-compat28 --without-liblzma --without-libjbig --with-gtk=2 --disable-sys-libs  && \
     make -j$n_threads && make install && make clean && make distclean && rm -rf /opt/WX/intel-dynamic/wxWidgets-3.0.5
 
+# First noticed outside container with g++9, several errors in longlong.h seem to be fixed by this extra include  /usr/include/wx-3.1-unofficial
+tf=`tempfile` && cp /opt/WX/gcc-static/include/wx-3.0/wx/longlong.h /opt/WX/gcc-static/include/wx-3.0/wx/longlong.h.orig && \
+    awk '{if(/#include "wx\/defs.h"/){ print $0 ;print "#include <wx/txtstrm.h>"} else print $0}' /opt/WX/gcc-static/include/wx-3.0/wx/longlong.h.orig > $tf && \
+    mv $tf /opt/WX/gcc-static/include/wx-3.0/wx/longlong.h && \
+    chmod a+r /opt/WX/gcc-static/include/wx-3.0/wx/longlong.h
 
 # Install pytorch - now optional in the top layer container
 

@@ -42,6 +42,17 @@
             "label": "BUILD cisTEM DEBUG, CPU only",
             "type": "shell",
             "command": "cd ${build_dir}/intel-debug-static && make -j${input:compile_cores}"
+        },
+        {
+            //--disable-staticmode --with-wx-config=/opt/WX/gcc-static/bin/wx-config
+            "label": "CONFIG GNU ,gpu",
+            "type": "shell",
+            "command": "mkdir -p ${build_dir}/GNU-gpu && cd ${build_dir}/GNU-gpu && CC=gcc CXX=g++ ../../configure  --with-cuda=${cuda_dir}  --enable-staticmode  --with-wx-config=/opt/WX/gcc-static/bin/wx-config ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+        },
+        {
+            "label": "BUILD GNU,gpu",
+            "type": "shell",
+            "command": "cd ${build_dir}/GNU-gpu && make -j${input:compile_cores}"
         }
     ],
     "inputs": [

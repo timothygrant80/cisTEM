@@ -47,7 +47,7 @@ typedef struct CurvePoint {
 #include <unordered_map>
 #include <random>
 #include <functional>
-#ifdef __INTEL_COMPILER
+#ifdef MKL
 // These are in $MKLROOT/include
 #include <fftw/fftw3.h>
 #include <fftw/fftw3_mkl.h>

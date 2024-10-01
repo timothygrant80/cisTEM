@@ -22,10 +22,6 @@ __global__ void histogram_smem_atomics(const __half* __restrict__ in, int4 dims,
     int x = physical_X( );
     int y = physical_Y( );
 
-    //     threadsPerBlock_img = dim3(cistem::match_template::histogram_number_of_points, 1, 1);
-    // gridDims_img        = dim3((input_image.dims.x + threadsPerBlock_img.x - 1) / threadsPerBlock_img.x,
-    //                            (input_image.dims.y + (y_grid_divisor + threadsPerBlock_img.y) - 1) / (y_grid_divisor - 1 + threadsPerBlock_img.y), 1);
-
     // initialize temporary accumulation array in shared memory, this is equal to the number of bins in the histogram,
     // which may  be more or less than the number of threads in a block
     __shared__ int smem[cistem::match_template::histogram_number_of_points];

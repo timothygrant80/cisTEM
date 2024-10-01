@@ -25,8 +25,10 @@ else
     fft_debug_level=0
 fi
 
+AS_IF([test "x$want_cuda" = "xyes"], [
+
 AC_ARG_ENABLE(FastFFT, AS_HELP_STRING([--disable-FastFFT],[Do not use the FastFFT library, even if submodule is present]), [
-    if test "$enableval" = no; then
+    if test "x$enableval" = "xno"; then
         use_FastFFT="no"
         AC_MSG_NOTICE([Not using the FastFFT Library b/c --disable-FastFFT is configured.])      
     else
@@ -57,6 +59,10 @@ AC_ARG_ENABLE(FastFFT, AS_HELP_STRING([--disable-FastFFT],[Do not use the FastFF
     else
         AC_MSG_NOTICE([Not using the FastFFT Library b/c $TOPSRCDIR/include/FastFFT/include/FastFFT.h was not found.])
     fi   
+])
+], [
+    use_FastFFT="no"
+    AC_MSG_NOTICE([Not using the FastFFT Library b/c --with-cuda is not configured.])      
 ])
 
 AM_CONDITIONAL([ENABLE_FASTFFT_AM], [test "x$use_FastFFT" = "xyes"])

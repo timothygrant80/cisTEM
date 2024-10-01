@@ -22,16 +22,31 @@ class TM_EmpiricalDistribution {
     ccfType   histogram_min_;
     ccfType   histogram_step_;
     int       histogram_n_bins_;
-    int       n_border_pixels_to_ignore_for_histogram_;
+    int2      pre_padding_;
+    int2      roi_;
     const int n_images_to_accumulate_concurrently_;
+
+    const int image_plane_mem_allocated_;
 
     float*   sum_array;
     float*   sum_sq_array;
     mipType* mip_psi;
-    mipType* mip_theta;
+    mipType* theta_phi;
     ccfType* psi;
     ccfType* theta;
     ccfType* phi;
+
+    int active_idx_{ };
+
+    std::array<ccfType*, 2> psi_array_;
+    std::array<ccfType*, 2> theta_array_;
+    std::array<ccfType*, 2> phi_array_;
+
+    std::array<ccfType*, 2> d_psi_array_;
+    std::array<ccfType*, 2> d_theta_array_;
+    std::array<ccfType*, 2> d_phi_array_;
+
+    std::array<ccfType*, 2> ccf_array_;
 
     __half* statistics_buffer_;
 
@@ -41,7 +56,9 @@ class TM_EmpiricalDistribution {
     int4 image_dims_;
 
     histogram_storage_t* histogram_;
-    cudaStream_t         calc_stream_; // Managed by some external resource
+
+    cudaStream_t calc_stream_[1];
+    cudaEvent_t  mip_stack_is_ready_event_[1];
 
   public:
     /**
@@ -58,21 +75,72 @@ class TM_EmpiricalDistribution {
     TM_EmpiricalDistribution(GpuImage&           reference_image,
                              histogram_storage_t histogram_min,
                              histogram_storage_t histogram_step,
-                             int                 n_border_pixels_to_ignore_for_histogram,
+                             int2                pre_padding,
+                             int2                roi,
                              const int           n_images_to_accumulate_before_final_accumulation,
                              cudaStream_t        calc_stream = cudaStreamPerThread);
 
     ~TM_EmpiricalDistribution( );
 
+    inline int GetActiveIdx( ) { return active_idx_; }
+
+    inline void SetActive_idx( ) {
+        if ( active_idx_ == 1 )
+            active_idx_ = 0;
+        else
+            active_idx_ = 1;
+    }
+
+    inline ccfType* GetCCFArray(const int current_slice_to_process) {
+        return &ccf_array_.at(active_idx_)[image_plane_mem_allocated_ * current_slice_to_process];
+    }
+
+    void AllocateAndZeroStatisticalArrays( );
     void ZeroHistogram( );
-    void AccumulateDistribution(ccfType* input_data, int n_images_this_batch);
+    void AccumulateDistribution(int n_images_this_batch);
     void FinalAccumulate( );
     void CopyToHostAndAdd(long* array_to_add_to);
 
-    void SetCalcStream(cudaStream_t calc_stream) {
-        MyDebugAssertFalse(cudaStreamQuery(calc_stream_) == cudaErrorInvalidResourceHandle, "The cuda stream is invalid");
-        calc_stream_ = calc_stream;
+    inline void
+    RecordMipStackIsReadyBlockingHost( ) {
+        cudaErr(cudaEventRecord(mip_stack_is_ready_event_[0], calc_stream_[0]));
+        // This would make a stream wait
+        // cudaErr(cudaStreamWaitEvent(cudaStreamPerThread, mip_stack_is_ready_event_[0], cudaEventWaitDefault));
+
+        // This would make the host wait
+        // cudaErr(cudaEventSynchronize(mip_stack_is_ready_event_[0]));
     }
+
+    inline void
+    MakeHostWaitOnMipStackIsReadyEvent( ) {
+        cudaErr(cudaEventSynchronize(mip_stack_is_ready_event_[0]));
+    }
+
+    inline void UpdateHostAngleArrays(const int current_mip_to_process, const float current_psi, const float current_theta, const float current_phi) {
+        MyDebugAssertTrue(current_mip_to_process >= 0 && current_mip_to_process <= n_images_to_accumulate_concurrently_, "current_mip_to_process is out of bounds");
+        if constexpr ( std::is_same_v<ccfType, __half> ) {
+            psi_array_.at(active_idx_)[current_mip_to_process]   = __float2half_rn(current_psi);
+            theta_array_.at(active_idx_)[current_mip_to_process] = __float2half_rn(current_theta);
+            phi_array_.at(active_idx_)[current_mip_to_process]   = __float2half_rn(current_phi);
+        }
+        else {
+            psi_array_.at(active_idx_)[current_mip_to_process]   = __float2bfloat16_rn(current_psi);
+            theta_array_.at(active_idx_)[current_mip_to_process] = __float2bfloat16_rn(current_theta);
+            phi_array_.at(active_idx_)[current_mip_to_process]   = __float2bfloat16_rn(current_phi);
+        }
+    }
+
+    inline void UpdateDeviceAngleArrays( ) {
+        cudaErr(cudaMemcpyAsync(d_psi_array_.at(active_idx_), psi_array_.at(active_idx_), n_images_to_accumulate_concurrently_ * sizeof(ccfType), cudaMemcpyHostToDevice, calc_stream_[0]));
+        cudaErr(cudaMemcpyAsync(d_theta_array_.at(active_idx_), theta_array_.at(active_idx_), n_images_to_accumulate_concurrently_ * sizeof(ccfType), cudaMemcpyHostToDevice, calc_stream_[0]));
+        cudaErr(cudaMemcpyAsync(d_phi_array_.at(active_idx_), phi_array_.at(active_idx_), n_images_to_accumulate_concurrently_ * sizeof(ccfType), cudaMemcpyHostToDevice, calc_stream_[0]));
+    }
+
+    void CopySumAndSumSqAndZero(GpuImage& sum, GpuImage& sq_sum);
+    void MipToImage(GpuImage& d_max_intensity_projection,
+                    GpuImage& d_best_psi,
+                    GpuImage& d_best_theta,
+                    GpuImage& d_best_phi);
 };
 
 #endif

@@ -383,7 +383,7 @@ ArrayOfParticlePositionAssets ParticleFinder::ReturnArrayOfParticlePositionAsset
     temp_asset.picking_id = 0;
 
     // Loop over picked coordinates
-    for ( int particle_counter = 0; particle_counter < results_x_y.number_of_points; particle_counter++ ) {
+    for ( int particle_counter = 0; particle_counter < results_x_y.NumberOfPoints( ); particle_counter++ ) {
         // Finish setting up the asset. We use an ID that hasn't been used for any other position asset previously.
         temp_asset.asset_id++;
         temp_asset.x_position         = results_x_y.data_x[particle_counter];
@@ -721,7 +721,7 @@ void ParticleFinder::DoTemplateMatching( ) {
                 template_medium.Compute1DPowerSpectrumCurve(&current_power_spectrum, &current_number_of_fourier_elements);
                 b_numerator   = 0.0;
                 b_denominator = 0.0;
-                for ( int curve_counter = 0; curve_counter < current_power_spectrum.number_of_points; curve_counter++ ) {
+                for ( int curve_counter = 0; curve_counter < current_power_spectrum.NumberOfPoints( ); curve_counter++ ) {
                     b_numerator += pow(current_power_spectrum.data_x[curve_counter], 2) * current_power_spectrum.data_y[curve_counter];
                     b_denominator += current_power_spectrum.data_y[curve_counter];
                 }
@@ -876,7 +876,7 @@ void ParticleFinder::WhitenMicrographBackground( ) {
     // Next, we need to whiten the noise in the micrograph and ensure that at each pixel
     // it has a variance of 1.0
     background_whitening_filter = background_power_spectrum;
-    for ( int counter = 0; counter < background_power_spectrum.number_of_points; counter++ ) {
+    for ( int counter = 0; counter < background_power_spectrum.NumberOfPoints( ); counter++ ) {
         if ( background_power_spectrum.data_y[counter] > 0.0 ) {
             background_whitening_filter.data_y[counter] = 1.0 / sqrtf(background_power_spectrum.data_y[counter]);
         }

@@ -407,16 +407,16 @@ void SpectrumImage::RescaleSpectrumAndRotationalAverage(Image* number_of_extrema
         }
 
         // Fit the minima and maximum curves using Savitzky-Golay smoothing
-        if ( maxima_curve->number_of_points > sg_width )
+        if ( maxima_curve->NumberOfPoints( ) > sg_width )
             maxima_curve->FitSavitzkyGolayToData(sg_width, sg_order);
-        if ( minima_curve->number_of_points > sg_width )
+        if ( minima_curve->NumberOfPoints( ) > sg_width )
             minima_curve->FitSavitzkyGolayToData(sg_width, sg_order);
 
         // Replace the background and peak envelopes with the smooth min/max curves
         for ( bin_counter = 0; bin_counter < number_of_bins; bin_counter++ ) {
-            if ( minima_curve->number_of_points > sg_width )
+            if ( minima_curve->NumberOfPoints( ) > sg_width )
                 background[bin_counter] = minima_curve->ReturnSavitzkyGolayInterpolationFromX(spatial_frequency[bin_counter]);
-            if ( maxima_curve->number_of_points > sg_width )
+            if ( maxima_curve->NumberOfPoints( ) > sg_width )
                 peak[bin_counter] = maxima_curve->ReturnSavitzkyGolayInterpolationFromX(spatial_frequency[bin_counter]);
         }
 

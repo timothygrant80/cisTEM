@@ -169,11 +169,11 @@ bool FindParticlesApp::DoCalculation( ) {
 
     float* result_array;
 
-    if ( particle_finder.results_x_y.number_of_points > 0 )
-        result_array = new float[5 * particle_finder.results_x_y.number_of_points];
+    if ( particle_finder.results_x_y.NumberOfPoints( ) > 0 )
+        result_array = new float[5 * particle_finder.results_x_y.NumberOfPoints( )];
 
     long address = 0;
-    for ( long counter = 0; counter < particle_finder.results_x_y.number_of_points; counter++ ) {
+    for ( long counter = 0; counter < particle_finder.results_x_y.NumberOfPoints( ); counter++ ) {
         result_array[address] = particle_finder.results_x_y.data_x[counter]; // x
         address++;
         result_array[address] = particle_finder.results_x_y.data_y[counter]; // y
@@ -186,10 +186,10 @@ bool FindParticlesApp::DoCalculation( ) {
         address++;
     }
 
-    my_result.SetResult(5 * particle_finder.results_x_y.number_of_points, result_array);
+    my_result.SetResult(5 * particle_finder.results_x_y.NumberOfPoints( ), result_array);
 
     // Cleanup
-    if ( particle_finder.results_x_y.number_of_points > 0 )
+    if ( particle_finder.results_x_y.NumberOfPoints( ) > 0 )
         delete[] result_array;
 
     return true;

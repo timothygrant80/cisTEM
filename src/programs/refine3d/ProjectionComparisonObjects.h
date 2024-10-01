@@ -79,7 +79,7 @@ class ProjectionComparisonObjects {
     bool is_allocated_gpu_search_ctf_image;
     bool is_allocated_gpu_search_particle_image;
 
-#ifdef CISTEM_DEBUG
+#ifdef DEBUG
     int nprj;
     // Get some extra info to make sure all the allocation/deallocation is working. I.e. even if we succeed (no segfaults and correct results)
     // we still want to be sure we aren't alloc/dealloc or copying data around unecessarily.

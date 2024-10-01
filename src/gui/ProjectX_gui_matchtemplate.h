@@ -7,8 +7,6 @@
 
 #pragma once
 
-// clang-format off
-
 #include <wx/artprov.h>
 #include <wx/xrc/xmlres.h>
 class DisplayPanel;
@@ -251,7 +249,7 @@ class MatchTemplatePanelParent : public JobPanel
 		wxStaticText* m_staticText857;
 		wxStaticText* m_staticText849;
 		NumericTextCtrl* MinPeakRadiusNumericCtrl;
-wxStaticText* m_staticText8571;
+		wxStaticText* m_staticText8571;
 		wxStaticText* m_staticText6991;
 		wxRadioButton* UseGPURadioYes;
 		wxRadioButton* UseGPURadioNo;
@@ -273,7 +271,7 @@ wxStaticText* m_staticText8571;
 		wxPanel* StartPanel;
 		wxStaticText* RunProfileText;
 		MemoryComboBox* RunProfileComboBox;
-				wxButton* StartEstimationButton;
+		wxButton* StartEstimationButton;
 		wxCheckBox* ResumeRunCheckBox;
 
 		// Virtual event handlers, override them in your derived class
@@ -479,4 +477,3 @@ class RefineTemplateDevPanelParent : public JobPanel
 
 };
 
-// clang-format on

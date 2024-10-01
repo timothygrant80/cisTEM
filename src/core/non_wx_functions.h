@@ -264,15 +264,15 @@ inline std::complex<float> MakeComplex(const float& real, const float& imag) {
 }
 
 inline bool DoublesAreAlmostTheSame(double a, double b) {
-    return (fabs(a - b) < 0.000001);
+    return (fabs(a - b) < cistem::double_epsilon);
 }
 
 inline bool FloatsAreAlmostTheSame(float a, float b) {
-    return (fabs(a - b) < 0.0001);
+    return (fabs(a - b) < cistem::float_epsilon);
 }
 
 inline bool HalfFloatsAreAlmostTheSame(const half_float::half a, const half_float::half b) {
-    return (fabs(float(a) - float(b)) < 0.001);
+    return (fabs(float(a) - float(b)) < cistem::half_float_epsilon);
 }
 
 template <typename T>

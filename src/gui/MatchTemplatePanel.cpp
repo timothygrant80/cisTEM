@@ -21,7 +21,6 @@ MatchTemplatePanel::MatchTemplatePanel(wxWindow* parent)
     set_up_to_resume_job   = false;
 
 #ifndef SHOW_CISTEM_GPU_OPTIONS
-    UseGpuCheckBox->Show(false);
     UseGPURadioYes->Enable(false);
     UseGPURadioNo->Enable(false);
     UseFastFFTRadioYes->Enable(false);
@@ -166,7 +165,6 @@ void MatchTemplatePanel::ResetDefaults( ) {
     UseGPURadioYes->SetValue(true);
     UseFastFFTRadioYes->SetValue(true);
 #else
-    UseGpuCheckBox->SetValue(false); // Already disabled, but also set to un-ticked for visual consistency.
     UseGPURadioNo->SetValue(true);
     UseFastFFTRadioNo->SetValue(true);
 #endif
@@ -880,7 +878,7 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
             // any changes here MUST be propagated there, e.g. jobs[0].arguments[37].ReturnStringArgument( );
             // NOTE: also, please keep in sync with the manual command line arguments.
             // TODO: this is a bit of a mess.
-            
+
             current_job_package.AddJob("ttffffffffffifffffbfftttttttttftiiiitttfbbi",
                                        input_search_image.ToUTF8( ).data( ),
                                        input_reconstruction.ToUTF8( ).data( ),

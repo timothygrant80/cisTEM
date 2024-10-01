@@ -1011,7 +1011,7 @@ void unblur_refine_alignment(Image* input_stack, int number_of_images, int max_i
 
         if ( inner_radius_for_peak_search != 0 ) // in this case, weird things can happen (+1/-1 flips), we want to really smooth it. use a polynomial.  This should only affect the first round..
         {
-            if ( x_shifts_curve.number_of_points > 2 ) {
+            if ( x_shifts_curve.NumberOfPoints( ) > 2 ) {
                 x_shifts_curve.FitPolynomialToData(4);
                 y_shifts_curve.FitPolynomialToData(4);
 
@@ -1028,7 +1028,7 @@ void unblur_refine_alignment(Image* input_stack, int number_of_images, int max_i
             }
         }
         else {
-            if ( savitzy_golay_window_size < x_shifts_curve.number_of_points ) // when the input movie is dodgy (very few frames), the fitting won't work
+            if ( savitzy_golay_window_size < x_shifts_curve.NumberOfPoints( ) ) // when the input movie is dodgy (very few frames), the fitting won't work
             {
                 x_shifts_curve.FitSavitzkyGolayToData(savitzy_golay_window_size, 1);
                 y_shifts_curve.FitSavitzkyGolayToData(savitzy_golay_window_size, 1);

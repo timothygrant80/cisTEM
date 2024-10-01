@@ -57,6 +57,11 @@ inline constexpr _Tp inv_sqrt3_v = _Tp(1) / sqrt3_v<_Tp>;
 
 #ifndef ENABLEGPU
 
+typedef struct _int2 {
+    int x;
+    int y;
+} int2;
+
 typedef struct _int3 {
     int x;
     int y;

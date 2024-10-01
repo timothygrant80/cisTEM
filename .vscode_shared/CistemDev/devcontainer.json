@@ -1,6 +1,6 @@
 {
     "name": "cisTEMdev-wxSTABLE-static12",
-    "image": "cistemdashorg/cistem_build_env:v2.1.1",
+    "image": "cistemdashorg/cistem_build_env:v2.1.3",
     "remoteUser": "cisTEMdev",
     "hostRequirements": {
         "gpu": "optional"
@@ -38,4 +38,13 @@
             ]
         }
     }
+    // ,
+    // "mounts": [
+    //     "source=${localEnv:CISTEM_DEV_SCRATCH_DIR},target=/mnt,type=bind,consistency=cached"
+    // ]
+    ,
+    // "mounts": [
+    //     "source=/scratch/salina,target=/scratch/salina,type=bind,consistency=cached",
+    //     "source=/sa_shared,target=/sa_shared,type=bind,consistency=cached"
+    // ]
 }

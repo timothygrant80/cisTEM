@@ -4,7 +4,7 @@
 #include "TemplateMatchingCore.h"
 
 #ifdef cisTEM_USING_FastFFT
-#include "../ext/FastFFT/include/FastFFT.cuh"
+#include "../../include/FastFFT/include/FastFFT.cuh"
 #endif
 // Implementation is in the header as it is only used here for now.
 #include "projection_queue.cuh"

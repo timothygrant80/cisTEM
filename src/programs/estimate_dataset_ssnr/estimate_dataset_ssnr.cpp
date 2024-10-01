@@ -128,8 +128,8 @@ bool EstimateDataSetSSNR::DoCalculation( ) {
     fourier_voxel_size = 0.5 / float(my_statistics.number_of_bins - 1);
     //fourier_voxel_size = first_sampled_image.fourier_voxel_size_x;
 
-    sum_of_ctf_squares        = new double[average_frc.number_of_points];
-    spatial_frequency_squared = new float[average_frc.number_of_points];
+    sum_of_ctf_squares        = new double[average_frc.NumberOfPoints( )];
+    spatial_frequency_squared = new float[average_frc.NumberOfPoints( )];
 
     defocus_text.ReadLine(temp_float);
     current_ctf.SetDefocus(temp_float[0] / pixel_size, temp_float[1] / pixel_size, deg_2_rad(temp_float[2]));
@@ -137,7 +137,7 @@ bool EstimateDataSetSSNR::DoCalculation( ) {
         current_ctf.SetAdditionalPhaseShift(temp_float[3]);
     //wxPrintf("Defocus = %f, %f, %f\n", temp_float[0], temp_float[1], temp_float[2], temp_float[3]);
 
-    for ( counter = 0; counter < average_frc.number_of_points; counter++ ) {
+    for ( counter = 0; counter < average_frc.NumberOfPoints( ); counter++ ) {
         spatial_frequency_squared[counter] = powf(float(counter) * fourier_voxel_size, 2);
         sum_of_ctf_squares[counter]        = 0;
     }
@@ -145,7 +145,7 @@ bool EstimateDataSetSSNR::DoCalculation( ) {
     current_azimuth = 0;
 
     for ( rotation_counter = 0; rotation_counter < number_of_ctf_rotations; rotation_counter++ ) {
-        for ( counter = 0; counter < average_frc.number_of_points; counter++ ) {
+        for ( counter = 0; counter < average_frc.NumberOfPoints( ); counter++ ) {
             sum_of_ctf_squares[counter] += powf(current_ctf.Evaluate(spatial_frequency_squared[counter], current_azimuth), 2);
         }
 
@@ -178,7 +178,7 @@ bool EstimateDataSetSSNR::DoCalculation( ) {
         current_azimuth = 0;
 
         for ( rotation_counter = 0; rotation_counter < number_of_ctf_rotations; rotation_counter++ ) {
-            for ( counter = 0; counter < average_frc.number_of_points; counter++ ) {
+            for ( counter = 0; counter < average_frc.NumberOfPoints( ); counter++ ) {
                 sum_of_ctf_squares[counter] += powf(current_ctf.Evaluate(spatial_frequency_squared[counter], current_azimuth), 2);
             }
 
@@ -190,7 +190,7 @@ bool EstimateDataSetSSNR::DoCalculation( ) {
         my_progress->Update(image_counter + 1);
     }
 
-    for ( counter = 0; counter < average_frc.number_of_points; counter++ ) {
+    for ( counter = 0; counter < average_frc.NumberOfPoints( ); counter++ ) {
         average_frc.data_y[counter] /= float(my_input_file.ReturnNumberOfSlices( ));
         sum_of_ctf_squares[counter] /= double(number_of_ctfs);
 

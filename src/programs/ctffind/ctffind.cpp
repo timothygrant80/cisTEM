@@ -1722,7 +1722,7 @@ bool CtffindApp::DoCalculation( ) {
                 spatial_frequency_in_reciprocal_angstroms[counter] = spatial_frequency[counter] / pixel_size_for_fitting;
             }
             output_text_avrot->WriteLine(spatial_frequency_in_reciprocal_angstroms);
-            output_text_avrot->WriteLine(rotational_average->data_y);
+            output_text_avrot->WriteLine(rotational_average->data_y.data( ));
             output_text_avrot->WriteLine(rotational_average_astig);
             output_text_avrot->WriteLine(rotational_average_astig_fit);
             output_text_avrot->WriteLine(fit_frc);

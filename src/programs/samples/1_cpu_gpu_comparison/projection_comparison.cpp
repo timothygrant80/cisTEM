@@ -195,7 +195,7 @@ bool DoCPUvsGPUProjectionTest(const wxString& cistem_ref_dir, const wxString& te
     new_cpu_volume.SwapRealSpaceQuadrants( );
 
     for ( int iLoop = 0; iLoop < n_loops; iLoop++ ) {
-        my_angles_and_shifts.Init(my_rand.GetUniformRandomSTD(-180.f, 180), my_rand.GetUniformRandomSTD(0.f, 180), my_rand.GetUniformRandomSTD(0.f, 360), 0.f, 0.f);
+        my_angles_and_shifts.Init(my_rand.GetUniformRandomSTD(-180.f, 180.f), my_rand.GetUniformRandomSTD(0.f, 180.f), my_rand.GetUniformRandomSTD(0.f, 360.f), 0.f, 0.f);
         new_cpu_volume.ExtractSlice(cpu_prj, my_angles_and_shifts, 0.f, false);
         gpu_prj.ExtractSlice(&gpu_volume, my_angles_and_shifts, pixel_size, 0.f, false);
 
@@ -241,7 +241,7 @@ bool DoCPUvsGPUProjectionTest(const wxString& cistem_ref_dir, const wxString& te
         SamplesBeginTest(condition_name[iCondition].c_str( ), passed);
         for ( int iLoop = 0; iLoop < n_loops; iLoop++ ) {
             // Compared to the previous, we now pass a bool to pug Extract slice and add and extra method call for the GPU to get whitening of the PS.
-            my_angles_and_shifts.Init(my_rand.GetUniformRandomSTD(-180.f, 180), my_rand.GetUniformRandomSTD(0.f, 180), my_rand.GetUniformRandomSTD(0.f, 360), 0.f, 0.f);
+            my_angles_and_shifts.Init(my_rand.GetUniformRandomSTD(-180.f, 180.f), my_rand.GetUniformRandomSTD(0.f, 180.f), my_rand.GetUniformRandomSTD(0.f, 360.f), 0.f, 0.f);
             new_cpu_volume.ExtractSlice(cpu_prj, my_angles_and_shifts, res_limit, limit_res[iCondition]);
             gpu_prj.ExtractSliceShiftAndCtf(&gpu_volume, &ctf_img, my_angles_and_shifts, pixel_size, real_space_binning_factor, res_limit, limit_res[iCondition],
                                             swap_quadrants[iCondition], apply_shifts[iCondition], apply_ctf[iCondition], absolute_ctf[iCondition]);

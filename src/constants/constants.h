@@ -17,6 +17,11 @@ constexpr long OPEN_TO_APPEND = 2;
 // Place system wide constants and enums here. Gradually, we would like to replace the many defines.
 namespace cistem {
 
+// Small value for floating point comparisons
+constexpr double double_epsilon     = 0.000001;
+constexpr float  float_epsilon      = 0.0001f;
+constexpr float  half_float_epsilon = 0.001f;
+
 // The default border to exclude when choosing peaks, e.g. in match_template, refine_template, prepare_stack_matchtemplate, make_template_result.
 constexpr const int fraction_of_box_size_to_exclude_for_border = 4;
 constexpr const int maximum_number_of_detections               = 1000;

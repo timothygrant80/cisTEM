@@ -86,7 +86,7 @@ void PlotFSCPanel::AddPartFSC(ResolutionStatistics* statistics_to_add, float wan
         current_FSC_vector_layer->SetPen(vectorpen);
         current_FSC_vector_layer->SetDrawOutsideMargins(false);
 
-        for ( int point_counter = 1; point_counter < statistics_to_add->part_FSC.number_of_points - 1; point_counter++ ) {
+        for ( int point_counter = 1; point_counter < statistics_to_add->part_FSC.NumberOfPoints( ) - 1; point_counter++ ) {
             if ( statistics_to_add->part_FSC.data_x[point_counter] >= wanted_nyquist && statistics_to_add->part_FSC.data_x[point_counter] < 1000 ) {
                 current_spatial_frequency_data.push_back(1.0 / statistics_to_add->part_FSC.data_x[point_counter]);
                 current_FSC_data.push_back(statistics_to_add->part_FSC.data_y[point_counter]);

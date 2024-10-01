@@ -708,6 +708,7 @@ AC_OUTPUT
 
 # Test placeholder for smudge/clean filters
 
+
 # SA INSERT 1b
 # "" 
 # SA INSERT 1e

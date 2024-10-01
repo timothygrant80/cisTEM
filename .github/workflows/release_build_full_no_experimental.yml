@@ -2,7 +2,9 @@ name: cisTEM GPU release no experimental full build
 
 on:
   push:
-    branches: master
+    branches: 
+      - master
+      - '*_with_ci'
   pull_request:
     branches: master
 

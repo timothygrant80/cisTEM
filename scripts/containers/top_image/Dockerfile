@@ -37,8 +37,7 @@ RUN echo "checking for wxWidgets 3.1.5" && if [[ "x${build_wx_version}" == "xdev
 
 # Get reference images for testing and debugging
 
-RUN if [[ "x${build_ref_images}" == "xtrue" ]]; then mkdir -p /cisTEMdev && pip3 install gdown toml && cd /cisTEMdev && gdown --fuzzy https://drive.google.com/file/d/1f6b_mkVEfz3K6y1y7biWiHEDrdwVGb-v/view?usp=sharing && tar -xjf cistem_reference_images.tar.bz2 && rm cistem_reference_images.tar.bz2 ;fi
-#RUN if [[ "x${build_ref_images}" == "true" ]]; then mkdir -p /cisTEMdev && pip3 install gdown && cd /cisTEMdev && gdown https://drive.google.com/drive/folders/1PO9tBU7lKqKUuSb8qdEPvlEk7xeektXv?usp --folder ; fi
+RUN if [[ "x${build_ref_images}" == "xtrue" ]]; then mkdir -p /cisTEMdev && pip3 install gdown toml && cd /cisTEMdev && gdown --fuzzy https://drive.google.com/file/d/1WOkMaq9rPBLMbZYhFl50XdeNXVakRFCV/view?usp=sharing && tar -xjvf cistem_reference_images_fp32.tar.bz2 && rm cistem_reference_images_fp32.tar.bz2 ;fi
 
 
 # Will this work with wx 3.0.5?

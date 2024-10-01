@@ -27,7 +27,8 @@ MatchTemplatePanel::MatchTemplatePanel(wxWindow* parent)
     UseFastFFTRadioNo->Enable(false);
 
 #endif
-
+    // We need to allow a higher precision, otherwise, the option to resample will almost always be taken
+    HighResolutionLimitNumericCtrl->SetPrecision(4);
     SetInfo( );
     FillGroupComboBox( );
     FillRunProfileComboBox( );
@@ -237,7 +238,7 @@ void MatchTemplatePanel::SetInfo( ) {
     InfoText->EndAlignment( );
 
     InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
-    InfoText->WriteText(wxT("Blah Blah Blah - See (Rickgauer, 2017)."));
+    InfoText->WriteText(wxT("TODO: update this with the 2020 paper (finding things in cells) combined with things for bigger regions (Johannes' paper) or baited recon (newer paper)."));
     InfoText->Newline( );
     InfoText->Newline( );
     InfoText->EndAlignment( );
@@ -261,12 +262,12 @@ void MatchTemplatePanel::SetInfo( ) {
     InfoText->BeginBold( );
     InfoText->WriteText(wxT("Reference Volume : "));
     InfoText->EndBold( );
-    InfoText->WriteText(wxT("The volume that will used for the template search."));
+    InfoText->WriteText(wxT("The volume that will used for the template search TODO: add a description of how to generate a reference, and padding/sizing considerations."));
     InfoText->Newline( );
     InfoText->BeginBold( );
     InfoText->WriteText(wxT("Run Profile : "));
     InfoText->EndBold( );
-    InfoText->WriteText(wxT("The selected run profile will be used to run the job. The run profile describes how the job should be run (e.g. how many processors should be used, and on which different computers).  Run profiles are set in the Run Profile panel, located under settings."));
+    InfoText->WriteText(wxT("TODO: reference threading vs process balance. The selected run profile will be used to run the job. The run profile describes how the job should be run (e.g. how many processors should be used, and on which different computers).  Run profiles are set in the Run Profile panel, located under settings."));
     InfoText->Newline( );
     InfoText->Newline( );
     InfoText->EndAlignment( );
@@ -281,6 +282,7 @@ void MatchTemplatePanel::SetInfo( ) {
     InfoText->Newline( );
     InfoText->EndAlignment( );
 
+    // TODO: add section on scaling based on pixel size. Note that the input is a target that may slightly differ. Note limits on sizing and power of two (ref to fast FFT bit)
     InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
     InfoText->BeginBold( );
     InfoText->WriteText(wxT("Out of Plane Angular Step : "));

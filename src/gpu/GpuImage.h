@@ -343,6 +343,29 @@ class GpuImage {
                                input_dims.z);
     };
 
+    // Use this for kernels that will explicitly skip over the FFTW padding
+    template <int ntds_x = 32, int ntds_y = 32>
+    __inline__ void ReturnLaunchParametersNoFFTWPadding(int4 input_dims) {
+        static_assert(ntds_x % cistem::gpu::warp_size == 0);
+        static_assert(ntds_x * ntds_y <= cistem::gpu::max_threads_per_block);
+
+        threadsPerBlock = dim3(ntds_x, ntds_y, 1);
+        gridDims        = dim3((input_dims.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                               (input_dims.y + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                               input_dims.z);
+    };
+
+    template <int ntds_x = 32, int ntds_y = 32>
+    __inline__ void ReturnLaunchParametersNoFFTWPadding(int input_x_dim, int input_y_dim, int input_z_dim, dim3& wanted_gridDims, dim3& wanted_threadsPerBlock) {
+        static_assert(ntds_x % cistem::gpu::warp_size == 0);
+        static_assert(ntds_x * ntds_y <= cistem::gpu::max_threads_per_block);
+
+        wanted_threadsPerBlock = dim3(ntds_x, ntds_y, 1);
+        wanted_gridDims        = dim3((input_x_dim + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                                      (input_y_dim + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                                      input_z_dim);
+    };
+
     __inline__ void ReturnLaunchParameters1d_X(const int4 input_dims, const bool real_space) {
         int div = 1;
         if ( ! real_space )
@@ -350,7 +373,10 @@ class GpuImage {
 
         using namespace cistem::gpu;
         // Note: that second set of parens changes the division!
-        threadsPerBlock = dim3(std::max(min_threads_per_block, std::min(max_threads_per_block, warp_size * ((input_dims.w / div + warp_size - 1) / warp_size))), 1, 1);
+        threadsPerBlock = dim3(std::max(min_threads_per_block,
+                                        std::min(max_threads_per_block,
+                                                 warp_size * ((input_dims.w / div + warp_size - 1) / warp_size))),
+                               1, 1);
         gridDims        = dim3((input_dims.w / div + threadsPerBlock.x - 1) / threadsPerBlock.x,
                                (input_dims.y + threadsPerBlock.y - 1) / threadsPerBlock.y,
                                input_dims.z);
@@ -363,7 +389,10 @@ class GpuImage {
 
         using namespace cistem::gpu;
         // Note: that second set of parens changes the division!
-        threadsPerBlock = dim3(std::max(min_threads_per_block, std::min(max_threads_per_block / stride_y, warp_size * ((input_dims.w / div + warp_size - 1) / warp_size))), stride_y, 1);
+        threadsPerBlock = dim3(std::max(min_threads_per_block,
+                                        std::min(max_threads_per_block / stride_y,
+                                                 warp_size * ((input_dims.w / div + warp_size - 1) / warp_size))),
+                               stride_y, 1);
         gridDims        = dim3((input_dims.w / div + threadsPerBlock.x - 1) / threadsPerBlock.x,
                                (input_dims.y + threadsPerBlock.y - 1) / threadsPerBlock.y,
                                input_dims.z);

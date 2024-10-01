@@ -235,7 +235,7 @@ AC_ARG_ENABLE(gpu-debug, AS_HELP_STRING([--enable-gpu-debug],[Compile heavy sync
   fi
   ]) 
   
-# Call the m4 macro to check and setup for FastFFT if present and requested
+# Call the m4 macro to check and setup for FastFFT if present and requested. Must be run after AX_CUDA
 submodule_FastFFT
 
 if test "x$want_cuda" = "xyes" ; then

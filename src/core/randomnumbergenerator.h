@@ -33,15 +33,29 @@ class RandomNumberGenerator {
     int   Internal_rand( );
 
     // Distributions are lightweight, create on the fly
-    inline int GetPoissonRandomSTD(float mean_value) { return std::poisson_distribution<int>{mean_value}(rng); }
+    // TODO: it might be nice to add some contraints on the template parameters.
+    template <typename T_in, typename T_out = int>
+    inline T_out GetPoissonRandomSTD(T_in mean_value) { return std::poisson_distribution<T_out>{mean_value}(rng); }
 
-    inline float GetUniformRandomSTD(float min_value, float max_value) { return std::uniform_real_distribution<float>{min_value, max_value}(rng); }
+    template <typename T>
+    inline T GetUniformRandomSTD(T min_value, T max_value) {
+        if constexpr ( std::is_integral<T>::value ) {
+            return std::uniform_int_distribution<T>{min_value, max_value}(rng);
+        }
+        else {
+            return std::uniform_real_distribution<T>{min_value, max_value}(rng);
+        }
+        return 0;
+    }
 
-    inline float GetNormalRandomSTD(float mean_value, float std_deviation) { return std::normal_distribution<float>{mean_value, std_deviation}(rng); }
+    template <typename T>
+    inline T GetNormalRandomSTD(T mean_value, T std_deviation) { return std::normal_distribution<T>{mean_value, std_deviation}(rng); }
 
-    inline float GetExponentialRandomSTD(float lambda) { return std::exponential_distribution<float>{lambda}(rng); }
+    template <typename T>
+    inline T GetExponentialRandomSTD(T lambda) { return std::exponential_distribution<T>{lambda}(rng); }
 
-    inline float GetGammaRandomSTD(float alpha, float beta) { return std::gamma_distribution<float>{alpha, beta}(rng); }
+    template <typename T>
+    inline T GetGammaRandomSTD(T alpha, T beta) { return std::gamma_distribution<T>{alpha, beta}(rng); }
 
   private:
     std::random_device   rd;

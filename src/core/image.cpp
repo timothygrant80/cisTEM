@@ -1261,7 +1261,7 @@ void Image::Whiten(float resolution_limit, Curve* whitening_filter) {
 
 void Image::MultiplyByWeightsCurve(Curve& weights, float scale_factor) {
     MyDebugAssertTrue(is_in_real_space == false, "Image to filter not in Fourier space");
-    MyDebugAssertTrue(weights.number_of_points > 0, "weights curve not calculated");
+    MyDebugAssertTrue(weights.NumberOfPoints( ) > 0, "weights curve not calculated");
 
     int i;
     int j;
@@ -1294,7 +1294,7 @@ void Image::MultiplyByWeightsCurve(Curve& weights, float scale_factor) {
                 // compute radius, in units of physical Fourier pixels
                 bin = int(sqrtf(frequency_squared) * number_of_bins2);
 
-                if ( (frequency_squared <= 0.25) && (bin < weights.number_of_points) ) {
+                if ( (frequency_squared <= 0.25) && (bin < weights.NumberOfPoints( )) ) {
                     //					if (power == 1.0)
                     //					{
                     real_a[pixel_counter] = real_a[pixel_counter] * fabsf(weights.data_y[bin]) * scale_factor;
@@ -1478,7 +1478,7 @@ void Image::OptimalFilterWarp(CTF ctf, float pixel_size_in_angstroms, float ssnr
 
 void Image::OptimalFilterSSNR(Curve& SSNR) {
     MyDebugAssertTrue(is_in_real_space == false, "Image to filter not in Fourier space");
-    MyDebugAssertTrue(SSNR.number_of_points > 0, "SSNR curve not calculated");
+    MyDebugAssertTrue(SSNR.NumberOfPoints( ) > 0, "SSNR curve not calculated");
 
     int i;
     int j;
@@ -1495,7 +1495,7 @@ void Image::OptimalFilterSSNR(Curve& SSNR) {
 
     long pixel_counter = 0;
 
-    //	number_of_bins2 = 2 * (SSNR.number_of_points - 1);
+    //	number_of_bins2 = 2 * (SSNR.NumberOfPoints( ) - 1);
     number_of_bins2 = ReturnLargestLogicalDimension( );
 
     for ( k = 0; k <= physical_upper_bound_complex_z; k++ ) {
@@ -1510,7 +1510,7 @@ void Image::OptimalFilterSSNR(Curve& SSNR) {
                 // compute radius, in units of physical Fourier pixels
                 bin = int(sqrtf(frequency_squared) * number_of_bins2);
 
-                if ( (frequency_squared <= 0.25) && (bin < SSNR.number_of_points) ) {
+                if ( (frequency_squared <= 0.25) && (bin < SSNR.NumberOfPoints( )) ) {
                     snr = fabsf(SSNR.data_y[bin]);
                     // Should this be the same as in OptimalFilterBySNRImage?
                     //					complex_values[pixel_counter] *= sqrtf(1.0 + snr);
@@ -1527,7 +1527,7 @@ void Image::OptimalFilterSSNR(Curve& SSNR) {
 
 void Image::OptimalFilterFSC(Curve& FSC) {
     MyDebugAssertTrue(is_in_real_space == false, "Image to filter not in Fourier space");
-    MyDebugAssertTrue(FSC.number_of_points > 0, "FSC curve not calculated");
+    MyDebugAssertTrue(FSC.NumberOfPoints( ) > 0, "FSC curve not calculated");
 
     int i;
     int j;
@@ -1543,7 +1543,7 @@ void Image::OptimalFilterFSC(Curve& FSC) {
 
     long pixel_counter = 0;
 
-    //	number_of_bins2 = 2 * (FSC.number_of_points - 1);
+    //	number_of_bins2 = 2 * (FSC.NumberOfPoints( ) - 1);
     number_of_bins2 = ReturnLargestLogicalDimension( );
 
     for ( k = 0; k <= physical_upper_bound_complex_z; k++ ) {
@@ -1558,7 +1558,7 @@ void Image::OptimalFilterFSC(Curve& FSC) {
                 // compute radius, in units of physical Fourier pixels
                 bin = int(sqrtf(frequency_squared) * number_of_bins2);
 
-                if ( (frequency_squared <= 0.25) && (bin < FSC.number_of_points) ) {
+                if ( (frequency_squared <= 0.25) && (bin < FSC.NumberOfPoints( )) ) {
                     //					if (FSC.data_y[bin] != 0.0) complex_values[pixel_counter] /= (1.0 + 0.5 * (1.0 - fabsf(FSC.data_y[bin])) / fabsf(FSC.data_y[bin]));
                     if ( FSC.data_y[bin] != 0.0 )
                         complex_values[pixel_counter] *= 2.0 * fabsf(FSC.data_y[bin]) / (1.0 + fabsf(FSC.data_y[bin]));
@@ -6449,7 +6449,7 @@ void Image::AverageRadially( ) {
 void Image::Compute1DRotationalAverage(Curve& average, Curve& number_of_values, bool fractional_radius_in_real_space, bool average_real_parts) {
 
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
-    MyDebugAssertTrue(average.number_of_points == number_of_values.number_of_points, "Curves do not have the same number of points");
+    MyDebugAssertTrue(average.NumberOfPoints( ) == number_of_values.NumberOfPoints( ), "Curves do not have the same number of points");
     MyDebugAssertTrue((is_in_real_space && ! average_real_parts) || ! is_in_real_space, "average_real_part not possible for real space image");
 
     int   i;
@@ -6540,7 +6540,7 @@ void Image::Compute1DRotationalAverage(Curve& average, Curve& number_of_values, 
     }
 
     // Do the actual averaging
-    for ( int counter = 0; counter < average.number_of_points; counter++ ) {
+    for ( int counter = 0; counter < average.NumberOfPoints( ); counter++ ) {
         if ( number_of_values.data_y[counter] != 0.0 )
             average.data_y[counter] /= number_of_values.data_y[counter];
     }
@@ -6557,13 +6557,13 @@ void Image::Compute1DPowerSpectrumCurve(Curve* curve_with_average_power, Curve* 
 
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
     MyDebugAssertFalse(is_in_real_space, "Image not in Fourier space");
-    MyDebugAssertTrue(curve_with_average_power->number_of_points > 0, "Curve not setup");
+    MyDebugAssertTrue(curve_with_average_power->NumberOfPoints( ) > 0, "Curve not setup");
     MyDebugAssertTrue(curve_with_average_power->data_x[0] == 0.0, "Curve does not start at x = 0\n");
     // Using the FloatsAreAlmostEqual criterion |a-b| < 0.0001, otherwise, errors like Curve does not go to at least x = 0.5 (it goes to 0.5)
-    MyDebugAssertTrue(curve_with_average_power->data_x[curve_with_average_power->number_of_points - 1] >= 0.49999, "Curve does not go to at least x = 0.5 (it goes to %f)\n", curve_with_average_power->data_x[curve_with_average_power->number_of_points - 1]);
-    MyDebugAssertTrue(curve_with_average_power->number_of_points == curve_with_number_of_values->number_of_points, "Curves need to have the same number of points");
+    MyDebugAssertTrue(curve_with_average_power->data_x[curve_with_average_power->NumberOfPoints( ) - 1] >= 0.49999, "Curve does not go to at least x = 0.5 (it goes to %f)\n", curve_with_average_power->data_x[curve_with_average_power->NumberOfPoints( ) - 1]);
+    MyDebugAssertTrue(curve_with_average_power->NumberOfPoints( ) == curve_with_number_of_values->NumberOfPoints( ), "Curves need to have the same number of points");
     MyDebugAssertTrue(curve_with_average_power->data_x[0] == curve_with_number_of_values->data_x[0], "Curves need to have the same starting point");
-    MyDebugAssertTrue(curve_with_average_power->data_x[curve_with_average_power->number_of_points - 1] == curve_with_number_of_values->data_x[curve_with_number_of_values->number_of_points - 1], "Curves need to have the same ending point");
+    MyDebugAssertTrue(curve_with_average_power->data_x[curve_with_average_power->NumberOfPoints( ) - 1] == curve_with_number_of_values->data_x[curve_with_number_of_values->NumberOfPoints( ) - 1], "Curves need to have the same ending point");
 
     int   i, j, k;
     float sq_dist_x, sq_dist_y, sq_dist_z;
@@ -6608,7 +6608,7 @@ void Image::Compute1DPowerSpectrumCurve(Curve* curve_with_average_power, Curve* 
     }
 
     // Do the actual averaging
-    for ( counter = 0; counter < curve_with_average_power->number_of_points; counter++ ) {
+    for ( counter = 0; counter < curve_with_average_power->NumberOfPoints( ); counter++ ) {
         if ( curve_with_number_of_values->data_y[counter] > 0.0 ) {
             curve_with_average_power->data_y[counter] /= curve_with_number_of_values->data_y[counter];
         }
@@ -8657,7 +8657,7 @@ void Image::SharpenMap(float pixel_size, float resolution_limit, bool invert_han
     power_spectrum.SquareRoot( );
 
     if ( original_log_plot != NULL ) {
-        for ( int counter = 0; counter < original_log_plot->number_of_points; counter++ ) {
+        for ( int counter = 0; counter < original_log_plot->NumberOfPoints( ); counter++ ) {
             if ( original_log_plot->data_x[counter] == 0.0 ) {
                 original_log_plot->data_x[counter] = (pixel_size * original_log_plot->data_x[counter + 1]);
                 original_log_plot->data_y[counter] = logf(power_spectrum.data_y[counter + 1]);
@@ -8696,7 +8696,7 @@ void Image::SharpenMap(float pixel_size, float resolution_limit, bool invert_han
         buffer_image.Compute1DPowerSpectrumCurve(&power_spectrum, &number_of_terms);
         power_spectrum.SquareRoot( );
 
-        for ( int counter = 0; counter < sharpened_log_plot->number_of_points; counter++ ) {
+        for ( int counter = 0; counter < sharpened_log_plot->NumberOfPoints( ); counter++ ) {
             if ( sharpened_log_plot->data_x[counter] == 0.0 ) {
                 sharpened_log_plot->data_x[counter] = (pixel_size * sharpened_log_plot->data_x[counter + 1]);
                 sharpened_log_plot->data_y[counter] = logf(power_spectrum.data_y[counter + 1]);
@@ -8775,7 +8775,7 @@ float Image::CalculateBFactor(float pixel_size, float low_resolution, float high
     // Now get the number of new points
     int number_in_resolution_range      = 0;
     int first_index_in_resolution_range = 0;
-    for ( int i = 0; i < power_spectrum.number_of_points; i++ ) {
+    for ( int i = 0; i < power_spectrum.NumberOfPoints( ); i++ ) {
         if ( power_spectrum.data_x[i] >= low_resolution_in_pixels && power_spectrum.data_x[i] <= high_resolution_in_pixels ) {
             if ( first_index_in_resolution_range == 0 )
                 first_index_in_resolution_range = i;
@@ -8786,7 +8786,7 @@ float Image::CalculateBFactor(float pixel_size, float low_resolution, float high
     // Setup a new curve that only contains the requested resolution range and copy from the original full spectrum.
     Curve trimmed_power_spectrum;
     trimmed_power_spectrum.SetupXAxis(low_resolution_in_pixels, high_resolution_in_pixels, number_in_resolution_range);
-    for ( int i = 0; i < trimmed_power_spectrum.number_of_points; i++ ) {
+    for ( int i = 0; i < trimmed_power_spectrum.NumberOfPoints( ); i++ ) {
         trimmed_power_spectrum.data_x[i] = powf(power_spectrum.data_x[i + first_index_in_resolution_range], 2.0f);
         trimmed_power_spectrum.data_y[i] = isfinite(power_spectrum.data_y[i + first_index_in_resolution_range]) ? power_spectrum.data_y[i + first_index_in_resolution_range] : 0.0f;
     }
@@ -8881,9 +8881,9 @@ void Image::ApplyBFactorAndWhiten(Curve& power_spectrum, float bfactor_low, floa
 
                 if ( frequency_squared <= bfactor_res_limit2 )
                     filter_value = exp(-bfactor_low * frequency_squared * 0.25);
-                else if ( (frequency_squared > bfactor_res_limit2) && (frequency_squared <= 0.25) && (bin < power_spectrum.number_of_points) )
+                else if ( (frequency_squared > bfactor_res_limit2) && (frequency_squared <= 0.25) && (bin < power_spectrum.NumberOfPoints( )) )
                     filter_value = filter_value_blimit * exp(-(bfactor_low * bfactor_res_limit2 + bfactor_high * (frequency_squared - bfactor_res_limit2)) * 0.25) / power_spectrum.data_y[bin];
-                //				else if ((frequency_squared > bfactor_res_limit2) && (frequency_squared <= 0.25) && (bin < power_spectrum.number_of_points)) filter_value = filter_value_blimit / power_spectrum.data_y[bin];
+                //				else if ((frequency_squared > bfactor_res_limit2) && (frequency_squared <= 0.25) && (bin < power_spectrum.NumberOfPoints( ))) filter_value = filter_value_blimit / power_spectrum.data_y[bin];
                 else
                     filter_value = 0.0;
 

@@ -2046,7 +2046,7 @@ void Database::AddRefinement(Refinement* refinement_to_add) {
 
         BeginBatchInsert(wxString::Format("REFINEMENT_RESOLUTION_STATISTICS_%li_%i", refinement_to_add->refinement_id, class_counter), 6, "SHELL", "RESOLUTION", "FSC", "PART_FSC", "PART_SSNR", "REC_SSNR");
 
-        for ( counter = 0; counter <= refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.FSC.number_of_points; counter++ ) {
+        for ( counter = 0; counter <= refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.FSC.NumberOfPoints( ); counter++ ) {
             AddToBatchInsert("lrrrrr", counter, refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.FSC.data_x[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.FSC.data_y[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.part_FSC.data_y[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.part_SSNR.data_y[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.rec_SSNR.data_y[counter]);
         }
 
@@ -2069,7 +2069,7 @@ void Database::UpdateRefinementResolutionStatistics(Refinement* refinement_to_ad
 
         BeginBatchInsert(wxString::Format("REFINEMENT_RESOLUTION_STATISTICS_%li_%i", refinement_to_add->refinement_id, class_counter), 6, "SHELL", "RESOLUTION", "FSC", "PART_FSC", "PART_SSNR", "REC_SSNR");
 
-        for ( counter = 0; counter <= refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.FSC.number_of_points; counter++ ) {
+        for ( counter = 0; counter <= refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.FSC.NumberOfPoints( ); counter++ ) {
             AddToBatchInsert("lrrrrr", counter, refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.FSC.data_x[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.FSC.data_y[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.part_FSC.data_y[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.part_SSNR.data_y[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.rec_SSNR.data_y[counter]);
         }
 

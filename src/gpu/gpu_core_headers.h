@@ -87,6 +87,25 @@ void* print_pointer_atrributes(T ptr, const char* ptr_name = nullptr) {
     return attr.hostPointer;
 }
 
+struct FlushKernelPrintF {
+    FILE* tmpout;
+
+    FlushKernelPrintF(std::string& message) {
+        std::cerr << "Flushing kernel printfs " << message << std::endl;
+        std::cerr << "There can only be one instance of this created as it modifies the global stdout pointer\n";
+        cudaErr(cudaDeviceSynchronize( ));
+        tmpout = stdout;
+        stdout = stderr;
+    }
+
+    ~FlushKernelPrintF( ) {
+        cudaErr(cudaDeviceSynchronize( ));
+        fflush(stdout);
+        stdout = tmpout;
+        std::cerr << "Stdout pointer reset" << std::endl;
+    }
+};
+
 // Limits for specific kernels
 constexpr int ntds_x_WhitenPS = 32;
 constexpr int ntds_y_WhitenPS = 32;

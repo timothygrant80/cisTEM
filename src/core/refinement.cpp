@@ -503,7 +503,7 @@ wxArrayFloat Refinement::UpdatePSSNR( ) {
             sum_ave_occ += average_occupancies[class_counter];
         }
 
-        for ( point_counter = 0; point_counter < this->class_refinement_results[0].class_resolution_statistics.part_SSNR.number_of_points; point_counter++ ) {
+        for ( point_counter = 0; point_counter < this->class_refinement_results[0].class_resolution_statistics.part_SSNR.NumberOfPoints( ); point_counter++ ) {
             sum_part_ssnr = 0;
             for ( class_counter = 0; class_counter < this->number_of_classes; class_counter++ ) {
                 sum_part_ssnr += this->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.data_y[point_counter] * average_occupancies[class_counter];

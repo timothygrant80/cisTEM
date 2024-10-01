@@ -38,4 +38,13 @@
             ]
         }
     }
+    // ,
+    // "mounts": [
+    //     "source=${localEnv:CISTEM_DEV_SCRATCH_DIR},target=/mnt,type=bind,consistency=cached"
+    // ]
+    ,
+    // "mounts": [
+    //     "source=/scratch/salina,target=/scratch/salina,type=bind,consistency=cached",
+    //     "source=/sa_shared,target=/sa_shared,type=bind,consistency=cached"
+    // ]
 }

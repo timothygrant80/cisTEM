@@ -1629,7 +1629,7 @@ void AbInitioManager::SetupRefinementJob( ) {
             temp.Init(input_refinement->resolution_statistics_box_size, input_refinement->resolution_statistics_box_size);
             temp.GenerateDefaultStatistics(active_refinement_package->estimated_particle_weight_in_kda);
 
-            for ( counter = 0; counter < input_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.number_of_points; counter++ ) {
+            for ( counter = 0; counter < input_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.NumberOfPoints( ); counter++ ) {
                 if ( input_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.data_y[counter] > temp.part_SSNR.data_y[counter] ) {
                     input_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.data_y[counter] = temp.part_SSNR.data_y[counter];
                 }

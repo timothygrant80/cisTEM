@@ -196,8 +196,9 @@ class StackDump : public wxStackWalker // so we can give backtraces..
 #include <npps_arithmetic_and_logical_operations.h>
 #include <typeinfo>
 #include <limits>
-
 #endif
+
+#include "padded_coordinates.h"
 
 #ifdef MKL
 #define MKL_Complex8 std::complex<float>

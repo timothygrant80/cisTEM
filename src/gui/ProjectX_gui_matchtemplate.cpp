@@ -16,7 +16,6 @@
 
 #include "ProjectX_gui_matchtemplate.h"
 
-// clang-format off
 ///////////////////////////////////////////////////////////////////////////
 
 ShowTemplateMatchResultsPanelParent::ShowTemplateMatchResultsPanelParent( wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxString& name ) : wxPanel( parent, id, pos, size, style, name )
@@ -796,7 +795,7 @@ MatchTemplatePanelParent::MatchTemplatePanelParent( wxWindow* parent, wxWindowID
 	MinPeakRadiusNumericCtrl = new NumericTextCtrl( ExpertPanel, wxID_ANY, wxT("2.5"), wxDefaultPosition, wxDefaultSize, wxTE_PROCESS_ENTER );
 	fgSizer1->Add( MinPeakRadiusNumericCtrl, 0, wxALL|wxEXPAND, 5 );
 
-m_staticText8571 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Gpu Configuration"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText8571 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Gpu Configuration"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText8571->Wrap( -1 );
 	m_staticText8571->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxT("Sans") ) );
 
@@ -836,15 +835,6 @@ m_staticText8571 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Gpu Configurati
 
 
 	fgSizer1->Add( bSizer26512, 1, wxEXPAND, 5 );
-
-
-	wxBoxSizer* bSizer26511;
-	bSizer26511 = new wxBoxSizer( wxHORIZONTAL );
-
-
-
-
-	fgSizer1->Add( bSizer26511, 1, wxEXPAND, 5 );
 
 
 	InputSizer->Add( fgSizer1, 1, wxEXPAND, 5 );
@@ -1826,5 +1816,3 @@ RefineTemplateDevPanelParent::~RefineTemplateDevPanelParent()
 	StartEstimationButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefineTemplateDevPanelParent::StartEstimationClick ), NULL, this );
 
 }
-
-// clang-format on

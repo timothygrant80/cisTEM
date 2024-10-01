@@ -945,7 +945,7 @@ void PDB::TransformLocalAndCombine(PDB* pdb_ensemble, int number_of_pdbs, int fr
 
                     RandomNumberGenerator my_rand(pi_v<float>);
                     // Set the number of noise particles for this given particle in the stack
-                    pdb_ensemble[current_pdb].number_of_noise_particles = myroundint(my_rand.GetUniformRandomSTD(std::max(0, this->max_number_of_noise_particles - 2), this->max_number_of_noise_particles));
+                    pdb_ensemble[current_pdb].number_of_noise_particles = my_rand.GetUniformRandomSTD(std::max(0, this->max_number_of_noise_particles - 2), this->max_number_of_noise_particles);
                     wxPrintf("\n\n\tSetting pdb %d to %d noise particles of max %d\n\n", current_pdb, pdb_ensemble[current_pdb].number_of_noise_particles, max_number_of_noise_particles);
 
                     // Angular sector size such that noise particles do not overlap. This could be a method.

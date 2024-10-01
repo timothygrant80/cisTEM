@@ -88,13 +88,13 @@ bool DoCosineMaskingTest(const wxString& hiv_image_80x80x1_filename, wxString& t
         wanted_mask_radius = 0.f; // GetUniformRandomSTD(0.0f, cpu_image.logical_x_dimension / 2.0f);
         wanted_mask_edge   = 20.f; //GetUniformRandomSTD(0.0f, 20.0f);
         wanted_mask_value  = 0.f; //GetUniformRandomSTD(0.0f, 1.0f);
-        if ( my_rand.GetUniformRandomSTD(0.0f, 1.0f > 0.5f) ) {
+        if ( my_rand.GetUniformRandomSTD(0.0f, 1.0f) > 0.5f ) {
             invert = true;
         }
         else {
             invert = false;
         }
-        if ( my_rand.GetUniformRandomSTD(0.0f, 1.0f > 0.5f) ) {
+        if ( my_rand.GetUniformRandomSTD(0.0f, 1.0f) > 0.5f ) {
             force_mask_value = true;
         }
         else {

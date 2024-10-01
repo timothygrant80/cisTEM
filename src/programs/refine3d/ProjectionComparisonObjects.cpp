@@ -34,7 +34,7 @@ ProjectionComparisonObjects::ProjectionComparisonObjects( ) {
     is_allocated_weighted_correlation_buffers = false;
     old_buffer_size                           = 0;
 
-#ifdef CISTEM_DEBUG
+#ifdef DEBUG
     nprj = 0;
     // Get some extra info to make sure all the allocation/deallocation is working. I.e. even if we succeed (no segfaults and correct results)
     // we still want to be sure we aren't alloc/dealloc or copying data around unecessarily.
@@ -65,7 +65,7 @@ ProjectionComparisonObjects::ProjectionComparisonObjects( ) {
 ProjectionComparisonObjects::~ProjectionComparisonObjects( ) {
     Deallocate( );
 
-#ifdef CISTEM_DEBUG
+#ifdef DEBUG
     if ( ReturnThreadNumberOfCurrentThread( ) == 0 ) {
         wxPrintf("\n----------------------------------------------------\n");
         wxPrintf("Image type : Calls : Allocs : HtoD copies\n");
@@ -274,7 +274,7 @@ void ProjectionComparisonObjects::PrepareGpuImages(Particle& host_particle, Imag
             // for the projection, we don't care about the host data, just the size and pointer association.
             bool was_gpu_projection_memory_changed = tmp_gpu_projection->Init(host_projection_image, pin_host_memory, allocate_gpu_memory_if_needed);
 
-#ifdef CISTEM_DEBUG
+#ifdef DEBUG
             int& particle_alloc                    = is_for_global_search ? n_search_particle_image_allocations : n_particle_image_allocations;
             int& projection_alloc                  = is_for_global_search ? n_search_projection_image_allocations : n_projection_image_allocations;
             int& calls_to                          = is_for_global_search ? n_calls_to_prep_search_images : n_calls_to_prep_images;
@@ -305,7 +305,7 @@ void ProjectionComparisonObjects::PrepareGpuImages(Particle& host_particle, Imag
             }
             host_particle.RecordGpuCTFImageAssociation( );
 
-#ifdef CISTEM_DEBUG
+#ifdef DEBUG
             int& ctf_alloc      = is_for_global_search ? n_search_ctf_image_allocations : n_ctf_image_allocations;
             int& calls_to       = is_for_global_search ? n_calls_to_prep_search_ctf_images : n_calls_to_prep_ctf_images;
             int& ctf_copy_calls = is_for_global_search ? n_search_ctf_image_HtoD_copies : n_ctf_image_HtoD_copies;

@@ -1289,10 +1289,10 @@ if EXPERIMENTAL_AM
     refine_template_dev_LDADD = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
     refine_template_dev_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 endif
-
-unit_test_runner_SOURCES  = test/unit_test_runner.cpp 
-unit_test_runner_SOURCES  += test/core/test_matrix.cpp 
-unit_test_runner_SOURCES  += test/core/test_non_wx_functions.cpp
+    unit_test_runner_SOURCES  = test/unit_test_runner.cpp 
+    unit_test_runner_SOURCES  += test/core/test_matrix.cpp 
+    unit_test_runner_SOURCES  += test/core/test_non_wx_functions.cpp
+    unit_test_runner_SOURCES  += test/core/test_curve.cpp
 if WANT_CISTEM_GPU_AM
     unit_test_runner_SOURCES += test/gpu/test_gpu.cpp
                             

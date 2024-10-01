@@ -1,5 +1,7 @@
-#ifndef _SRC_PROGRAMS_SIMULATE_COORDS_H_
-#define _SRC_PROGRAMS_SIMULATE_COORDS_H_
+#ifndef _SRC_CORE_PADDED_COORDINATES_H_
+#define _SRC_CORE_PADDED_COORDINATES_H_
+
+#include "../constants/cistem_numbers.h"
 
 // Use to keep track of what the specimen looks like.
 enum PaddingStatus : int { none    = 0,
@@ -9,6 +11,13 @@ enum PaddingStatus : int { none    = 0,
 // FIXME this should just be given to Cosine Rectangular method in the image class
 constexpr int TAPERWIDTH = 29; // TODO this should be set to 12 with zeros padded out by size neighborhood and calculated by taper = 0.5+0.5.*cos((((1:pixelFallOff)).*pi)./(length((1:pixelFallOff+1))));
 constexpr int N_TAPERS   = 3; // for trimming final image
+
+typedef struct padding2d_ {
+    int pre_x;
+    int pre_y;
+    int post_x;
+    int post_y;
+} padding2d;
 
 class Coords {
 
@@ -70,4 +79,4 @@ class Coords {
     int3 solvent_padding;
 };
 
-#endif
+#endif // _SRC_CORE_PADDED_COORDINATES_H_

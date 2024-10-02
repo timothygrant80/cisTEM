@@ -24,6 +24,8 @@ class AggregatedTemplateResult {
     int   image_number;
     int   number_of_received_results;
     float total_number_of_angles_searched;
+    long  total_number_of_histogram_samples;
+    long  total_number_of_stats_samples;
 
     float* collated_data_array;
     float* collated_mip_data;
@@ -61,12 +63,12 @@ class
 
   private:
     template <typename StatsType>
-    void CalcGlobalCCCScalingFactor(double&     global_ccc_mean,
-                                    double&     global_ccc_std_dev,
-                                    StatsType*  sum,
-                                    StatsType*  sum_of_sqs,
-                                    const float n_angles_in_search,
-                                    const int   N);
+    void CalcGlobalCCCScalingFactor(double&    global_ccc_mean,
+                                    double&    global_ccc_std_dev,
+                                    StatsType* sum,
+                                    StatsType* sum_of_sqs,
+                                    const long n_stats_samples,
+                                    const int  N);
 
     void ResampleHistogramData(long*        histogram_ptr,
                                const double global_ccc_mean,
@@ -78,7 +80,9 @@ class
                                                              StatsType*  correlation_pixel_sum,
                                                              StatsType*  correlation_pixel_sum_of_squares,
                                                              long*       histogram,
-                                                             const float n_angles_in_search);
+                                                             const float n_angles_in_search,
+                                                             const long  n_histogram_samples,
+                                                             const long  n_stats_samples);
 };
 
 IMPLEMENT_APP(MatchTemplateApp)
@@ -310,7 +314,9 @@ bool MatchTemplateApp::DoCalculation( ) {
     float psi_start;
 
     float expected_threshold;
-    float actual_number_of_angles_searched;
+    float actual_number_of_angles_searched{0.f};
+    long  total_number_of_histogram_samples{0};
+    long  total_number_of_stats_samples{0};
 
     long* histogram_data;
 
@@ -548,8 +554,6 @@ bool MatchTemplateApp::DoCalculation( ) {
     //    wxPrintf("Searching %i - %i of %i total positions\n", first_search_position, last_search_position, global_euler_search.number_of_search_positions);
     //    wxPrintf("psi_start = %f, psi_max = %f, psi_step = %f\n", psi_start, psi_max, psi_step);
 
-    actual_number_of_angles_searched = 0.0;
-
     wxDateTime overall_start;
     wxDateTime overall_finish;
     overall_start = wxDateTime::Now( );
@@ -711,10 +715,12 @@ bool MatchTemplateApp::DoCalculation( ) {
                         }
 
                         // GPU[tIDX].histogram.CopyToHostAndAdd(histogram_data);
-                        GPU[tIDX].my_dist.at(0).CopyToHostAndAdd(histogram_data);
+                        GPU[tIDX].my_dist->CopyToHostAndAdd(histogram_data);
 
                         //                    current_correlation_position += GPU[tIDX].total_number_of_cccs_calculated;
                         actual_number_of_angles_searched += GPU[tIDX].total_number_of_cccs_calculated;
+                        total_number_of_histogram_samples += GPU[tIDX].total_number_of_histogram_samples;
+                        total_number_of_stats_samples += GPU[tIDX].total_number_of_stats_samples;
 
                     } // end of omp critical block
                 } // end of parallel block
@@ -815,6 +821,9 @@ bool MatchTemplateApp::DoCalculation( ) {
 
                     if ( is_running_locally == false ) {
                         actual_number_of_angles_searched++;
+                        // Currently there is no subsampling in the CPU implementation
+                        total_number_of_histogram_samples++;
+                        total_number_of_stats_samples++;
                         temp_float             = current_correlation_position;
                         JobResult* temp_result = new JobResult;
                         temp_result->SetResult(1, &temp_float);
@@ -852,7 +861,14 @@ bool MatchTemplateApp::DoCalculation( ) {
 
         // Adjust the MIP by the measured mean and stddev of the full search CCC which is an estimate for the moments of the noise distribution of CCCs.
         Image scaled_mip = max_intensity_projection;
-        RescaleMipAndStatisticalArraysByGlobalMeanAndStdDev(&max_intensity_projection, &scaled_mip, correlation_pixel_sum_image.real_values, correlation_pixel_sum_of_squares_image.real_values, histogram_data, total_correlation_positions);
+        RescaleMipAndStatisticalArraysByGlobalMeanAndStdDev(&max_intensity_projection,
+                                                            &scaled_mip,
+                                                            correlation_pixel_sum_image.real_values,
+                                                            correlation_pixel_sum_of_squares_image.real_values,
+                                                            histogram_data,
+                                                            total_correlation_positions,
+                                                            total_number_of_histogram_samples,
+                                                            total_number_of_stats_samples);
         // calculate the expected threshold (from peter's paper)
         const float CCG_NOISE_STDDEV = 1.0;
         double      temp_threshold;
@@ -938,6 +954,8 @@ bool MatchTemplateApp::DoCalculation( ) {
             result[cm_t::image_real_memory_allocated]   = max_intensity_projection.real_memory_allocated;
             result[cm_t::number_of_histogram_bins]      = histogram_number_of_points;
             result[cm_t::number_of_angles_searched]     = actual_number_of_angles_searched;
+            result[cm_t::number_of_histogram_samples]   = total_number_of_histogram_samples;
+            result[cm_t::number_of_stats_samples]       = total_number_of_stats_samples;
             result[cm_t::ccc_scalar]                    = 1.0f; // (float)sqrt_input_pixels is redundant, but we need all the results to calculate the scaling from the global CCC moments
             result[cm_t::input_pixel_size]              = data_sizer.GetPixelSize( );
             result[cm_t::number_of_valid_search_pixels] = data_sizer.GetNumberOfValidSearchPixels( );
@@ -1107,7 +1125,9 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
                                                             aggregated_results[array_location].collated_pixel_sums,
                                                             aggregated_results[array_location].collated_pixel_square_sums,
                                                             aggregated_results[array_location].collated_histogram_data,
-                                                            aggregated_results[array_location].total_number_of_angles_searched);
+                                                            aggregated_results[array_location].total_number_of_angles_searched,
+                                                            aggregated_results[array_location].total_number_of_histogram_samples,
+                                                            aggregated_results[array_location].total_number_of_stats_samples);
 
         // Update the collated mip data which is used downstream for the scaled mip and other calcs
         // Fill the temp_image with data form the collatged mip before passing it on to be rescaled.
@@ -1408,9 +1428,11 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
 }
 
 AggregatedTemplateResult::AggregatedTemplateResult( ) {
-    image_number                    = -1;
-    number_of_received_results      = 0;
-    total_number_of_angles_searched = 0.0f;
+    image_number                      = -1;
+    number_of_received_results        = 0;
+    total_number_of_angles_searched   = 0.0f;
+    total_number_of_histogram_samples = 0;
+    total_number_of_stats_samples     = 0;
 
     collated_data_array        = NULL;
     collated_mip_data          = NULL;
@@ -1466,6 +1488,8 @@ void AggregatedTemplateResult::AddResult(float* result_array, long array_size, i
     }
 
     total_number_of_angles_searched += result_array[cistem::match_template::number_of_angles_searched];
+    total_number_of_histogram_samples += result_array[cistem::match_template::number_of_histogram_samples];
+    total_number_of_stats_samples += result_array[cistem::match_template::number_of_stats_samples];
 
     float* result_mip_data          = &result_array[offset + image_real_memory_allocated * 0];
     float* result_psi_data          = &result_array[offset + image_real_memory_allocated * 1];
@@ -1527,12 +1551,15 @@ void AggregatedTemplateResult::AddResult(float* result_array, long array_size, i
  * @param padding_jump_value 
  */
 template <typename StatsType>
-void MatchTemplateApp::CalcGlobalCCCScalingFactor(double&     global_ccc_mean,
-                                                  double&     global_ccc_std_dev,
-                                                  StatsType*  sum,
-                                                  StatsType*  sum_of_sqs,
-                                                  const float n_angles_in_search,
-                                                  const int   N) {
+void MatchTemplateApp::CalcGlobalCCCScalingFactor(double&    global_ccc_mean,
+                                                  double&    global_ccc_std_dev,
+                                                  StatsType* sum,
+                                                  StatsType* sum_of_sqs,
+                                                  const long n_stats_samples,
+                                                  const int  N) {
+
+    MyDebugAssertTrue(N > 0, "N must be greater than 0");
+    MyDebugAssertTrue(n_stats_samples > 0, "n_stats_samples must be greater than 0");
 
     double global_sum            = 0.0;
     double global_sum_of_squares = 0.0;
@@ -1548,7 +1575,7 @@ void MatchTemplateApp::CalcGlobalCCCScalingFactor(double&     global_ccc_mean,
         }
     }
 
-    const double total_number_of_ccs = double(n_angles_in_search * float(counted_values));
+    const double total_number_of_ccs = double(n_stats_samples) * double(counted_values);
     std::cerr << "Counted Values: " << counted_values << " out of " << N << " fractions: " << float(counted_values) / float(N) << std::endl;
 
     global_ccc_mean    = global_sum / total_number_of_ccs;
@@ -1592,20 +1619,24 @@ void MatchTemplateApp::RescaleMipAndStatisticalArraysByGlobalMeanAndStdDev(Image
                                                                            StatsType*  correlation_pixel_sum,
                                                                            StatsType*  correlation_pixel_sum_of_squares,
                                                                            long*       histogram,
-                                                                           const float n_angles_in_search) {
+                                                                           const float n_angles_in_search,
+                                                                           const long  n_histogram_samples,
+                                                                           const long  n_stats_samples) {
 
     double global_ccc_mean    = 0.0;
     double global_ccc_std_dev = 0.0;
-    CalcGlobalCCCScalingFactor(global_ccc_mean, global_ccc_std_dev, correlation_pixel_sum, correlation_pixel_sum_of_squares, n_angles_in_search, mip_image->real_memory_allocated);
+    CalcGlobalCCCScalingFactor(global_ccc_mean, global_ccc_std_dev, correlation_pixel_sum, correlation_pixel_sum_of_squares, n_stats_samples, mip_image->real_memory_allocated);
 
     std::cerr << "Over n_cccs " << n_angles_in_search << " the Global mean and std_dev are " << global_ccc_mean << " and " << global_ccc_std_dev << std::endl;
+    std::cerr << "The histogram has " << n_histogram_samples << " samples." << std::endl;
+    std::cerr << "The stats arrays have " << n_stats_samples << " samples." << std::endl;
     // Use the global statistics to resample the histogram from a smoothed curve fit to the measured data.
     ResampleHistogramData(histogram, global_ccc_mean, global_ccc_std_dev);
 
     // Assuming we want to measure SNR = (CCC - mean) / std_dev, but really we measure std_dev * SNR + mean.
     // Scaling the pixel-wise sum over the search space (A) requires (A - N * mean) / stddev
     // Scaling the pixel-wse sum_of_sqs over the search space (B) requires (B - 2 * mean * A + N * mean^2) / stddev^2
-    double N_x_mean    = n_angles_in_search * global_ccc_mean;
+    double N_x_mean    = n_stats_samples * global_ccc_mean;
     double N_x_mean_sq = N_x_mean * global_ccc_mean;
     for ( long pixel_counter = 0; pixel_counter < mip_image->real_memory_allocated; pixel_counter++ ) {
         // We need the estimated value of the sum (A) so we have to calculate sum_sq first
@@ -1615,9 +1646,9 @@ void MatchTemplateApp::RescaleMipAndStatisticalArraysByGlobalMeanAndStdDev(Image
             correlation_pixel_sum[pixel_counter]            = (correlation_pixel_sum[pixel_counter] - N_x_mean) / global_ccc_std_dev;
 
             // TODO: this could be done in one step, but for now I'm brining it in so that local/gui rescaling happens in the same place and leaving it written as it was there.
-            correlation_pixel_sum[pixel_counter] /= n_angles_in_search;
+            correlation_pixel_sum[pixel_counter] /= n_stats_samples;
             correlation_pixel_sum_of_squares[pixel_counter] = sqrtf(correlation_pixel_sum_of_squares[pixel_counter] /
-                                                                            n_angles_in_search -
+                                                                            n_stats_samples -
                                                                     powf(correlation_pixel_sum[pixel_counter], 2));
 
             scaled_mip->real_values[pixel_counter] = (mip_image->real_values[pixel_counter] - correlation_pixel_sum[pixel_counter]) / correlation_pixel_sum_of_squares[pixel_counter];

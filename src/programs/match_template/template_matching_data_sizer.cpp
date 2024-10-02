@@ -640,8 +640,6 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& input_image,
     float x_radius = float(max_intensity_projection.physical_address_of_box_center_x - x_lower_bound);
     float y_radius = float(max_intensity_projection.physical_address_of_box_center_y - y_lower_bound);
 
-    max_intensity_projection.QuickAndDirtyWriteSlice("mip_pre.mrc", 1);
-
     long pixel_counter = 0;
     for ( int y = 0; y < max_intensity_projection.logical_y_dimension; y++ ) {
         for ( int x = 0; x < max_intensity_projection.logical_x_dimension; x++ ) {
@@ -695,8 +693,6 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& input_image,
         }
         pixel_counter += max_intensity_projection.padding_jump_value;
     }
-
-    max_intensity_projection.QuickAndDirtyWriteSlice("mip_post.mrc", 1);
 
     // Work through the transformations backward to get to the original image size
     if ( is_rotated_by_90 ) {
@@ -840,19 +836,13 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& input_image,
 
     valid_area_mask.SetToConstant(1.0f);
     valid_area_mask.CosineRectangularMask(x_radius, y_radius, 0, mask_radius, false, true, 0.f);
-    valid_area_mask.QuickAndDirtyWriteSlice("valid_area_mask.mrc", 1);
 
     valid_area_mask.Binarise(0.9f);
     valid_area_mask.ZeroFFTWPadding( );
 
     if ( resampling_is_needed ) {
-        tmp_psi.QuickAndDirtyWriteSlice("best_psi_pre.mrc", 1);
-        tmp_phi.QuickAndDirtyWriteSlice("best_phi_pre.mrc", 1);
-
-        best_theta.QuickAndDirtyWriteSlice("best_theta_pre.mrc", 1);
 
         FillInNearestNeighbors(best_psi, tmp_psi, valid_area_mask, NN_no_value);
-        tmp_psi.QuickAndDirtyWriteSlice("best_psi_post.mrc", 1);
         FillInNearestNeighbors(best_phi, tmp_phi, valid_area_mask, NN_no_value);
         FillInNearestNeighbors(best_theta, tmp_theta, valid_area_mask, NN_no_value);
         FillInNearestNeighbors(best_defocus, tmp_defocus, valid_area_mask, NN_no_value);

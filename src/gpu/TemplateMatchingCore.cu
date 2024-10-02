@@ -11,14 +11,7 @@
 
 using namespace cistem_timer;
 
-constexpr int  tn                        = 50;
-constexpr bool use_gpu_prj               = true;
-constexpr int  n_mips_to_process_at_once = tn;
-
-// FIXME: the only other tested value is 1, which was useful for intial development, but somewhere along the way, this branch broke.
-// I don't think this is particularly useful as a troubleshooting tool, so I think it will be worth just removing the branch for n_mips_to_process_at_once == 1
-// TOOD: this should work for other values than 10.
-static_assert(n_mips_to_process_at_once == tn, "n_mips_to_process_at_once must be 10");
+constexpr bool use_gpu_prj = true;
 
 void TemplateMatchingCore::Init(MyApp*                    parent_pointer,
                                 std::shared_ptr<GpuImage> wanted_template_reconstruction,
@@ -124,12 +117,14 @@ void TemplateMatchingCore::Init(MyApp*                    parent_pointer,
 
 void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel, float c_defocus, int threadIDX, long& current_correlation_position) {
 
-    this->c_defocus                 = c_defocus;
-    this->c_pixel                   = c_pixel;
-    total_number_of_cccs_calculated = 0;
-    bool at_least_100               = false;
+    this->c_defocus                   = c_defocus;
+    this->c_pixel                     = c_pixel;
+    total_number_of_cccs_calculated   = 0;
+    total_number_of_histogram_samples = 0;
+    total_number_of_stats_samples     = 0;
+    bool at_least_100                 = false;
 
-    bool this_is_the_first_run_on_inner_loop = my_dist.empty( );
+    bool this_is_the_first_run_on_inner_loop = my_dist ? false : true;
 
 #ifdef cisTEM_USING_FastFFT
     // FIXME: Move this to a new method in matche_template.cpp and reference it from a shared pointer.
@@ -156,14 +151,16 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
     }
 #endif
 
-    // This should probably just be a unique pointer and not a vector
+    const float wanted_histogram_sampling = 1.0f; // 100% until tested
+    const float wanted_stats_sampling     = 1.0f; // 100% until tested
     if ( this_is_the_first_run_on_inner_loop ) {
         d_input_image.CopyFP32toFP16buffer(false);
         d_padded_reference.CopyFP32toFP16buffer(false);
-        my_dist.emplace_back(d_input_image, histogram_min_scaled, histogram_step_scaled, pre_padding, roi, n_mips_to_process_at_once);
+        my_dist = std::make_unique<TM_EmpiricalDistribution<__half, __half2>>(d_input_image, histogram_min_scaled, histogram_step_scaled, pre_padding, roi, wanted_histogram_sampling, wanted_stats_sampling);
     }
-    else
-        my_dist.at(0).ZeroHistogram( );
+    else {
+        my_dist->ZeroHistogram( );
+    }
 
     // Make sure we are starting with zeros
     for ( auto& buffer : d_statistical_buffers_ptrs ) {
@@ -312,7 +309,7 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
                 // d_current_projection[current_projection_idx].MultiplyByConstant(scale_factor);
                 d_current_projection[current_projection_idx].NormalizeRealSpaceStdDeviationAndCastToFp16(scale_factor, average_of_reals, average_on_edge);
 
-                FT.FwdImageInvFFT(d_current_projection[current_projection_idx].real_values_fp16, (__half2*)d_input_image.complex_values_fp16, my_dist.at(0).GetCCFArray(current_mip_to_process), noop, conj_mul_then_scale, noop);
+                FT.FwdImageInvFFT(d_current_projection[current_projection_idx].real_values_fp16, (__half2*)d_input_image.complex_values_fp16, my_dist->GetCCFArray(current_mip_to_process), noop, conj_mul_then_scale, noop);
 
                 if ( use_gpu_prj ) {
                     // Note the stream change will not affect the padded projection
@@ -335,24 +332,24 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
 
                 d_padded_reference.ForwardFFT(false);
                 //      d_padded_reference.ForwardFFTAndClipInto(d_current_projection,false);
-                d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image.complex_values_fp16, true, my_dist.at(0).GetCCFArray(current_mip_to_process));
+                d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image.complex_values_fp16, true, my_dist->GetCCFArray(current_mip_to_process));
             }
             // d_padded_reference.MultiplyByConstant(rsqrtf(d_padded_reference.ReturnSumOfSquares( ) / (float)d_padded_reference.number_of_real_space_pixels));
 
-            my_dist.at(0).UpdateHostAngleArrays(current_mip_to_process, current_psi, global_euler_search.list_of_search_parameters[current_search_position][1], global_euler_search.list_of_search_parameters[current_search_position][0]);
+            my_dist->UpdateHostAngleArrays(current_mip_to_process, current_psi, global_euler_search.list_of_search_parameters[current_search_position][1], global_euler_search.list_of_search_parameters[current_search_position][0]);
 
             current_mip_to_process++;
-            if ( current_mip_to_process == n_mips_to_process_at_once ) {
+            if ( current_mip_to_process == my_dist->n_imgs_to_process_at_once( ) ) {
                 // Make sure the last stack has been processed before we start the next one
-                my_dist.at(0).MakeHostWaitOnMipStackIsReadyEvent( );
+                my_dist->MakeHostWaitOnMipStackIsReadyEvent( );
                 // On the first loop this will not do anything, so we can change the active_idx, and move forward to calculate the alternate stack of ccfs while the mip works on this one
 
                 total_mip_processed += current_mip_to_process;
                 // current_mip_to_process only matters after the main loop, the TM empirical dist will also update the active_idx_ before returning from Accumulate distribution
-                my_dist.at(0).AccumulateDistribution(current_mip_to_process);
+                my_dist->AccumulateDistribution(current_mip_to_process, total_number_of_histogram_samples, total_number_of_stats_samples);
 
                 // We've queued up all the work for the current stack, so record the event that will be used to block the host until the stack is ready
-                my_dist.at(0).RecordMipStackIsReadyBlockingHost( );
+                my_dist->RecordMipStackIsReadyBlockingHost( );
 
                 current_mip_to_process = 0;
             }
@@ -361,8 +358,8 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
             total_number_of_cccs_calculated++;
 
             if ( ccc_counter % 100 == 0 ) {
-                my_dist.at(0).MakeHostWaitOnMipStackIsReadyEvent( );
-                my_dist.at(0).CopySumAndSumSqAndZero(d_sum1, d_sumSq1);
+                my_dist->MakeHostWaitOnMipStackIsReadyEvent( );
+                my_dist->CopySumAndSumSqAndZero(d_sum1, d_sumSq1);
                 at_least_100 = true;
             }
 
@@ -408,38 +405,38 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
 
     // If we have a total number of cccs that is not a multiple of n_mips_to_process_at_once, we need to process the remaining mips
     // Make sure the last stack has been processed before we start the next one
-    my_dist.at(0).MakeHostWaitOnMipStackIsReadyEvent( );
+    my_dist->MakeHostWaitOnMipStackIsReadyEvent( );
     if ( current_mip_to_process > 0 ) {
 
         // On the first loop this will not do anything, so we can change the active_idx, and move forward to calculate the alternate stack of ccfs while the mip works on this one
 
         total_mip_processed += current_mip_to_process;
         // current_mip_to_process only matters after the main loop, the TM empirical dist will also update the active_idx_ before returning from Accumulate distribution
-        my_dist.at(0).AccumulateDistribution(current_mip_to_process);
+        my_dist->AccumulateDistribution(current_mip_to_process, total_number_of_histogram_samples, total_number_of_stats_samples);
 
         // We've queued up all the work for the current stack, so record the event that will be used to block the host until the stack is ready
-        my_dist.at(0).RecordMipStackIsReadyBlockingHost( );
-        my_dist.at(0).MakeHostWaitOnMipStackIsReadyEvent( );
+        my_dist->RecordMipStackIsReadyBlockingHost( );
+        my_dist->MakeHostWaitOnMipStackIsReadyEvent( );
 
         // This is run in cudaStreamPerThread
-        my_dist.at(0).CopySumAndSumSqAndZero(d_sum1, d_sumSq1);
+        my_dist->CopySumAndSumSqAndZero(d_sum1, d_sumSq1);
     }
     else {
         // if somehow we search less than 100 positions, we never will have run the above code
         if ( ~at_least_100 ) {
-            my_dist.at(0).CopySumAndSumSqAndZero(d_sum1, d_sumSq1);
+            my_dist->CopySumAndSumSqAndZero(d_sum1, d_sumSq1);
         }
     }
 
     d_sum2.AddImage(d_sum1);
     d_sumSq2.AddImage(d_sumSq1);
 
-    my_dist.at(0).MipToImage(d_max_intensity_projection,
-                             d_best_psi,
-                             d_best_theta,
-                             d_best_phi);
+    my_dist->MipToImage(d_max_intensity_projection,
+                        d_best_psi,
+                        d_best_theta,
+                        d_best_phi);
 
-    my_dist.at(0).FinalAccumulate( );
+    my_dist->FinalAccumulate( );
 
     if ( n_global_search_images_to_save > 1 ) {
         cudaErr(cudaFreeAsync(secondary_peaks, cudaStreamPerThread));

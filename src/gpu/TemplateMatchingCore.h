@@ -79,6 +79,8 @@ class TemplateMatchingCore {
     int  first_search_position;
     int  last_search_position;
     long total_number_of_cccs_calculated;
+    long total_number_of_histogram_samples;
+    long total_number_of_stats_samples;
     long total_correlation_positions;
 
     int n_global_search_images_to_save;
@@ -88,7 +90,7 @@ class TemplateMatchingCore {
     bool      use_fast_fft;
     Histogram histogram;
 
-    std::vector<TM_EmpiricalDistribution<__half, __half2>> my_dist;
+    std::unique_ptr<TM_EmpiricalDistribution<__half, __half2>> my_dist;
 
     float histogram_min_scaled;
     float histogram_step_scaled;

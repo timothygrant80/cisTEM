@@ -2155,7 +2155,7 @@ void RefinementManager::ProcessAllJobsFinished( ) {
                 current_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.ClearData( );
                 current_refinement->class_refinement_results[class_counter].class_resolution_statistics.rec_SSNR.ClearData( );
 
-                for ( point_counter = 0; point_counter < output_refinement->class_refinement_results[class_counter].class_resolution_statistics.FSC.number_of_points; point_counter++ ) {
+                for ( point_counter = 0; point_counter < output_refinement->class_refinement_results[class_counter].class_resolution_statistics.FSC.NumberOfPoints( ); point_counter++ ) {
                     current_refinement->class_refinement_results[class_counter].class_resolution_statistics.FSC.AddPoint(output_refinement->class_refinement_results[class_counter].class_resolution_statistics.FSC.data_x[point_counter], output_refinement->class_refinement_results[class_counter].class_resolution_statistics.FSC.data_y[point_counter]);
                     current_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_FSC.AddPoint(output_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_FSC.data_x[point_counter], output_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_FSC.data_y[point_counter]);
                     current_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.AddPoint(output_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.data_x[point_counter], output_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.data_y[point_counter]);

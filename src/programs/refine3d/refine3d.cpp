@@ -819,7 +819,7 @@ bool Refine3DApp::DoCalculation( ) {
 
     if ( padding != 1.0 ) {
         input_3d.density_map->Resize(input_3d.density_map->logical_x_dimension * padding, input_3d.density_map->logical_y_dimension * padding, input_3d.density_map->logical_z_dimension * padding, input_3d.density_map->ReturnAverageOfRealValuesOnEdges( ));
-        //		refine_statistics.part_SSNR.ResampleCurve(&refine_statistics.part_SSNR, refine_statistics.part_SSNR.number_of_points * padding);
+        //		refine_statistics.part_SSNR.ResampleCurve(&refine_statistics.part_SSNR, refine_statistics.part_SSNR.NumberOfPoints( ) * padding);
     }
 
     //	input_3d.PrepareForProjections(high_resolution_limit);

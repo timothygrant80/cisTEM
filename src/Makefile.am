@@ -231,7 +231,8 @@ noinst_HEADERS += 	gui/icons/experimental_icon.cpp \
                     gui/AtomicCoordinatesChooserDialog.h \
                     gui/AtomicCoordinatesImportDialog.h \
                     core/water.h \
-                    programs/simulate/wave_function_propagator.h 
+                    programs/simulate/wave_function_propagator.h  \
+                    programs/match_template/template_matching_data_sizer.h 
 
 endif      
 
@@ -353,7 +354,7 @@ libgpucore_a_SOURCES  =      gpu/core_extensions/stop_watch_gpu.cu \
                              programs/refine3d/batched_search.cu \
                              test/gpu/test_gpu_kernels.cu
 if ENABLE_FASTFFT_AM
-    libgpucore_a_SOURCES += ext/FastFFT/src/FastFFT.cu
+    libgpucore_a_SOURCES += ../include/FastFFT/src/fastfft/FastFFT.cu
 endif
 
 libgpucore_OBJECTS=$(libgpucore_a_SOURCES:.cu=.o)                                                   
@@ -942,7 +943,11 @@ samples_functional_testing_SOURCES += programs/samples/common/helper_functions.c
 samples_functional_testing_SOURCES += programs/samples/0_simple/disk_io_image.cpp  
 samples_functional_testing_SOURCES += programs/samples/6_simulation/simple_3d.cpp
 if WANT_CISTEM_GPU_AM
-        samples_functional_testing_SOURCES += programs/samples/1_cpu_gpu_comparison/resize_comparison.cpp programs/samples/1_cpu_gpu_comparison/projection_comparison.cpp programs/samples/1_cpu_gpu_comparison/masking.cpp programs/samples/1_cpu_gpu_comparison/statistical_ops.cpp 
+        samples_functional_testing_SOURCES += programs/samples/0_simple/resample.cpp
+        samples_functional_testing_SOURCES += programs/samples/1_cpu_gpu_comparison/resize_comparison.cpp 
+        samples_functional_testing_SOURCES += programs/samples/1_cpu_gpu_comparison/projection_comparison.cpp 
+        samples_functional_testing_SOURCES += programs/samples/1_cpu_gpu_comparison/masking.cpp 
+        samples_functional_testing_SOURCES += programs/samples/1_cpu_gpu_comparison/statistical_ops.cpp 
         # samples_functional_testing_SOURCES += programs/samples/3_tensor_ops/gpu_image_tensor_ops.cpp
         samples_functional_testing_SOURCES += programs/samples/4_ffts/simple_cufft.cpp
         samples_functional_testing_SOURCES += programs/samples/5_batched_ops/batched_correlation.cpp
@@ -961,12 +966,14 @@ endif
 
 
 match_template_SOURCES  = programs/match_template/match_template.cpp
+match_template_SOURCES += programs/match_template/template_matching_data_sizer.cpp
 match_template_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 match_template_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 match_template_LDADD    = libcore.a $(WX_LIBS_BASE)
 
 if WANT_CISTEM_GPU_AM  
     match_template_gpu_SOURCES  = programs/match_template/match_template.cpp
+    match_template_gpu_SOURCES += programs/match_template/template_matching_data_sizer.cpp
     match_template_gpu_CXXFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
     match_template_gpu_CPPFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
     match_template_gpu_LDADD    = libgpucore.a libcore.a $(WX_LIBS_BASE) $(CUDA_LIBS)
@@ -1010,6 +1017,7 @@ endif
     unit_test_runner_SOURCES  = test/unit_test_runner.cpp 
     unit_test_runner_SOURCES  += test/core/test_matrix.cpp 
     unit_test_runner_SOURCES  += test/core/test_non_wx_functions.cpp
+    unit_test_runner_SOURCES  += test/core/test_curve.cpp
 if WANT_CISTEM_GPU_AM
     unit_test_runner_SOURCES += test/gpu/test_gpu.cpp
                             

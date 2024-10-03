@@ -12,7 +12,6 @@ ResolutionStatistics::ResolutionStatistics(float wanted_pixel_size, int box_size
 
 ResolutionStatistics::ResolutionStatistics(const ResolutionStatistics& other_statistics) // copy constructor
 {
-    MyDebugPrint("Warning: copying a resolution statistics object");
     *this = other_statistics;
     //DEBUG_ABORT;
 }
@@ -47,13 +46,13 @@ void ResolutionStatistics::ResampleFrom(ResolutionStatistics& other_statistics, 
     if ( wanted_number_of_bins == 0 )
         extended = number_of_bins_extended;
 
-    if ( other_statistics.FSC.number_of_points > 0 )
+    if ( other_statistics.FSC.NumberOfPoints( ) > 0 )
         FSC.ResampleCurve(&other_statistics.FSC, extended);
-    if ( other_statistics.part_FSC.number_of_points > 0 )
+    if ( other_statistics.part_FSC.NumberOfPoints( ) > 0 )
         part_FSC.ResampleCurve(&other_statistics.part_FSC, extended);
-    if ( other_statistics.part_SSNR.number_of_points > 0 )
+    if ( other_statistics.part_SSNR.NumberOfPoints( ) > 0 )
         part_SSNR.ResampleCurve(&other_statistics.part_SSNR, extended);
-    if ( other_statistics.rec_SSNR.number_of_points > 0 )
+    if ( other_statistics.rec_SSNR.NumberOfPoints( ) > 0 )
         rec_SSNR.ResampleCurve(&other_statistics.rec_SSNR, extended);
 }
 
@@ -80,13 +79,13 @@ void ResolutionStatistics::CopyFrom(ResolutionStatistics& other_statistics, int 
         else {
             resolution = 0.0;
         }
-        if ( other_statistics.FSC.number_of_points > 0 )
+        if ( other_statistics.FSC.NumberOfPoints( ) > 0 )
             FSC.AddPoint(resolution, other_statistics.FSC.data_y[i]);
-        if ( other_statistics.part_FSC.number_of_points > 0 )
+        if ( other_statistics.part_FSC.NumberOfPoints( ) > 0 )
             part_FSC.AddPoint(resolution, other_statistics.part_FSC.data_y[i]);
-        if ( other_statistics.part_SSNR.number_of_points > 0 )
+        if ( other_statistics.part_SSNR.NumberOfPoints( ) > 0 )
             part_SSNR.AddPoint(resolution, other_statistics.part_SSNR.data_y[i]);
-        if ( other_statistics.rec_SSNR.number_of_points > 0 )
+        if ( other_statistics.rec_SSNR.NumberOfPoints( ) > 0 )
             rec_SSNR.AddPoint(resolution, other_statistics.rec_SSNR.data_y[i]);
     }
 
@@ -97,13 +96,13 @@ void ResolutionStatistics::CopyFrom(ResolutionStatistics& other_statistics, int 
         else {
             resolution = 0.0;
         }
-        if ( other_statistics.FSC.number_of_points > 0 )
+        if ( other_statistics.FSC.NumberOfPoints( ) > 0 )
             FSC.AddPoint(resolution, 0.0);
-        if ( other_statistics.part_FSC.number_of_points > 0 )
+        if ( other_statistics.part_FSC.NumberOfPoints( ) > 0 )
             part_FSC.AddPoint(resolution, 0.0);
-        if ( other_statistics.part_SSNR.number_of_points > 0 )
+        if ( other_statistics.part_SSNR.NumberOfPoints( ) > 0 )
             part_SSNR.AddPoint(resolution, 0.0);
-        if ( other_statistics.rec_SSNR.number_of_points > 0 )
+        if ( other_statistics.rec_SSNR.NumberOfPoints( ) > 0 )
             rec_SSNR.AddPoint(resolution, 0.0);
     }
 }
@@ -128,7 +127,7 @@ void ResolutionStatistics::CopyParticleSSNR(ResolutionStatistics& other_statisti
         else {
             resolution = 0.0;
         }
-        if ( other_statistics.part_SSNR.number_of_points > 0 )
+        if ( other_statistics.part_SSNR.NumberOfPoints( ) > 0 )
             part_SSNR.AddPoint(resolution, other_statistics.part_SSNR.data_y[i]);
     }
 
@@ -139,7 +138,7 @@ void ResolutionStatistics::CopyParticleSSNR(ResolutionStatistics& other_statisti
         else {
             resolution = 0.0;
         }
-        if ( other_statistics.part_SSNR.number_of_points > 0 )
+        if ( other_statistics.part_SSNR.NumberOfPoints( ) > 0 )
             part_SSNR.AddPoint(resolution, 0.0);
     }
 }
@@ -151,7 +150,7 @@ void ResolutionStatistics::ResampleParticleSSNR(ResolutionStatistics& other_stat
     if ( wanted_number_of_bins == 0 )
         extended = number_of_bins_extended;
 
-    if ( other_statistics.part_SSNR.number_of_points > 0 ) {
+    if ( other_statistics.part_SSNR.NumberOfPoints( ) > 0 ) {
         part_SSNR.ResampleCurve(&other_statistics.part_SSNR, extended);
         part_SSNR.MultiplyByConstant(float(extended) / float(other_statistics.number_of_bins_extended));
     }
@@ -161,7 +160,7 @@ float ResolutionStatistics::ReturnEstimatedResolution(bool use_part_fsc) {
     float estimated_resolution = 0.0f;
 
     if ( use_part_fsc == true ) {
-        for ( int counter = 1; counter < part_FSC.number_of_points; counter++ ) {
+        for ( int counter = 1; counter < part_FSC.NumberOfPoints( ); counter++ ) {
             if ( part_FSC.data_y[counter] < 0.143 ) {
                 estimated_resolution = (part_FSC.data_x[counter - 1] + part_FSC.data_x[counter]) / 2.0;
                 break;
@@ -169,7 +168,7 @@ float ResolutionStatistics::ReturnEstimatedResolution(bool use_part_fsc) {
         }
     }
     else {
-        for ( int counter = 1; counter < FSC.number_of_points; counter++ ) {
+        for ( int counter = 1; counter < FSC.NumberOfPoints( ); counter++ ) {
             if ( FSC.data_y[counter] < 0.143 ) {
                 estimated_resolution = (FSC.data_x[counter - 1] + FSC.data_x[counter]) / 2.0;
                 break;
@@ -187,7 +186,7 @@ float ResolutionStatistics::Return0p8Resolution(bool use_part_fsc) {
     float estimated_resolution = 0.0f;
 
     if ( use_part_fsc == true ) {
-        for ( int counter = 1; counter < part_FSC.number_of_points; counter++ ) {
+        for ( int counter = 1; counter < part_FSC.NumberOfPoints( ); counter++ ) {
             if ( part_FSC.data_y[counter] < 0.8 ) {
                 estimated_resolution = (part_FSC.data_x[counter - 1] + part_FSC.data_x[counter]) / 2.0;
                 break;
@@ -195,7 +194,7 @@ float ResolutionStatistics::Return0p8Resolution(bool use_part_fsc) {
         }
     }
     else {
-        for ( int counter = 1; counter < FSC.number_of_points; counter++ ) {
+        for ( int counter = 1; counter < FSC.NumberOfPoints( ); counter++ ) {
             if ( FSC.data_y[counter] < 0.8 ) {
                 estimated_resolution = (FSC.data_x[counter - 1] + FSC.data_x[counter]) / 2.0;
                 break;
@@ -213,7 +212,7 @@ float ResolutionStatistics::Return0p5Resolution(bool use_part_fsc) {
     float estimated_resolution = 0.0f;
 
     if ( use_part_fsc == true ) {
-        for ( int counter = 1; counter < part_FSC.number_of_points; counter++ ) {
+        for ( int counter = 1; counter < part_FSC.NumberOfPoints( ); counter++ ) {
             if ( part_FSC.data_y[counter] < 0.5 ) {
                 estimated_resolution = (part_FSC.data_x[counter - 1] + part_FSC.data_x[counter]) / 2.0;
                 break;
@@ -221,7 +220,7 @@ float ResolutionStatistics::Return0p5Resolution(bool use_part_fsc) {
         }
     }
     else {
-        for ( int counter = 1; counter < FSC.number_of_points; counter++ ) {
+        for ( int counter = 1; counter < FSC.NumberOfPoints( ); counter++ ) {
             if ( FSC.data_y[counter] < 0.5 ) {
                 estimated_resolution = (FSC.data_x[counter - 1] + FSC.data_x[counter]) / 2.0;
                 break;
@@ -238,7 +237,7 @@ float ResolutionStatistics::Return0p5Resolution(bool use_part_fsc) {
 float ResolutionStatistics::ReturnResolutionNShellsAfter(float wanted_resolution, int number_of_shells) {
     int resolution_shell = -1;
 
-    for ( int counter = 1; counter < FSC.number_of_points; counter++ ) {
+    for ( int counter = 1; counter < FSC.NumberOfPoints( ); counter++ ) {
         if ( FSC.data_x[counter] < wanted_resolution ) {
             resolution_shell = counter;
             break;
@@ -249,7 +248,7 @@ float ResolutionStatistics::ReturnResolutionNShellsAfter(float wanted_resolution
         return 0;
     else {
         resolution_shell += number_of_shells;
-        if ( resolution_shell >= FSC.number_of_points )
+        if ( resolution_shell >= FSC.NumberOfPoints( ) )
             return pixel_size * 2.0;
         else
             return FSC.data_x[resolution_shell];
@@ -259,7 +258,7 @@ float ResolutionStatistics::ReturnResolutionNShellsAfter(float wanted_resolution
 int ResolutionStatistics::ReturnResolutionShellNumber(float wanted_resolution) {
     int resolution_shell = -1;
 
-    for ( int counter = 1; counter < FSC.number_of_points; counter++ ) {
+    for ( int counter = 1; counter < FSC.NumberOfPoints( ); counter++ ) {
         if ( FSC.data_x[counter] < wanted_resolution ) {
             resolution_shell = counter;
             break;
@@ -272,7 +271,7 @@ int ResolutionStatistics::ReturnResolutionShellNumber(float wanted_resolution) {
 float ResolutionStatistics::ReturnResolutionNShellsBefore(float wanted_resolution, int number_of_shells) {
     int resolution_shell = -1;
 
-    for ( int counter = FSC.number_of_points - 1; counter >= 1; counter-- ) {
+    for ( int counter = FSC.NumberOfPoints( ) - 1; counter >= 1; counter-- ) {
         if ( FSC.data_x[counter] > wanted_resolution ) {
             resolution_shell = counter;
             break;
@@ -303,7 +302,7 @@ void ResolutionStatistics::Init(float wanted_pixel_size, int box_size) {
 void ResolutionStatistics::NormalizeVolumeWithParticleSSNR(Image& reconstructed_volume) {
     //	MyDebugAssertTrue(reconstructed_volume.is_in_real_space == false, "reconstructed_volume not in Fourier space");
     MyDebugAssertTrue(number_of_bins_extended == int((reconstructed_volume.logical_x_dimension / 2 + 1) * sqrtf(3.0)) + 1, "reconstructed_volume not compatible with resolution statistics");
-    MyDebugAssertTrue(part_SSNR.number_of_points > 0, "part_SSNR curve not calculated");
+    MyDebugAssertTrue(part_SSNR.NumberOfPoints( ) > 0, "part_SSNR curve not calculated");
 
     float ssq_in;
     float ssq_out;
@@ -497,7 +496,7 @@ void ResolutionStatistics::CalculateFSC(Image& reconstructed_volume_1, Image& re
 }
 
 void ResolutionStatistics::CalculateParticleFSCandSSNR(float mask_volume_in_voxels, float molecular_mass_kDa) {
-    MyDebugAssertTrue(FSC.number_of_points > 0, "FSC curve must be calculated first");
+    MyDebugAssertTrue(FSC.NumberOfPoints( ) > 0, "FSC curve must be calculated first");
 
     int i;
 
@@ -520,7 +519,7 @@ void ResolutionStatistics::CalculateParticleFSCandSSNR(float mask_volume_in_voxe
 }
 
 void ResolutionStatistics::CalculateParticleSSNR(Image& image_reconstruction, float* ctf_reconstruction, float mask_volume_fraction) {
-    MyDebugAssertTrue(FSC.number_of_points > 0, "FSC curve must be calculated first");
+    MyDebugAssertTrue(FSC.NumberOfPoints( ) > 0, "FSC curve must be calculated first");
     MyDebugAssertTrue(mask_volume_fraction > 0.0, "mask_volume_fraction invalid");
 
     part_SSNR.ClearData( );
@@ -606,7 +605,7 @@ void ResolutionStatistics::CalculateParticleSSNR(Image& image_reconstruction, fl
 
     delete[] sum_double;
     delete[] sum_int;
-    //	wxPrintf("number_of_bins = %i, number_of_bins_extended = %i, ssnr = %i\n", number_of_bins, number_of_bins_extended, part_SSNR.number_of_points);
+    //	wxPrintf("number_of_bins = %i, number_of_bins_extended = %i, ssnr = %i\n", number_of_bins, number_of_bins_extended, part_SSNR.NumberOfPoints( ));
 }
 
 void ResolutionStatistics::RestrainParticleSSNR(float low_resolution_limit) {
@@ -619,13 +618,13 @@ void ResolutionStatistics::RestrainParticleSSNR(float low_resolution_limit) {
     Curve temp_curve;
     temp_curve = part_SSNR;
     // part_SSNR x-axis is in A, need 1/A for fit
-    for ( i = 0; i < temp_curve.number_of_points; i++ ) {
+    for ( i = 0; i < temp_curve.NumberOfPoints( ); i++ ) {
         if ( temp_curve.data_x[i] != 0.0f )
             temp_curve.data_x[i] = 1.0f / temp_curve.data_x[i];
     }
     //	temp_curve.FitGaussianToData(reciprocal_resolution_limit, FLT_MAX, true);
     temp_curve.FitGaussianToData(reciprocal_resolution_limit);
-    for ( i = 0; i < part_SSNR.number_of_points; i++ ) {
+    for ( i = 0; i < part_SSNR.NumberOfPoints( ); i++ ) {
         if ( temp_curve.data_x[i] >= reciprocal_resolution_limit ) {
             // Set adjustment factor for the first time
             if ( adjustment_factor < -FLT_MAX * 0.5f && temp_curve.gaussian_fit[i] > 0.0f )
@@ -654,7 +653,7 @@ void ResolutionStatistics::ZeroToResolution(float resolution_limit) {
 }
 
 void ResolutionStatistics::PrintStatistics( ) {
-    MyDebugAssertTrue(FSC.number_of_points > 0, "Resolution statistics have not been fully calculated");
+    MyDebugAssertTrue(FSC.NumberOfPoints( ) > 0, "Resolution statistics have not been fully calculated");
 
     wxPrintf("\nC                                             Sqrt       Sqrt  \n");
     wxPrintf("C NO.   RESOL  RING_RAD       FSC  Part_FSC Part_SSNR  Rec_SSNR\n");
@@ -667,11 +666,11 @@ void ResolutionStatistics::PrintStatistics( ) {
 
 void ResolutionStatistics::WriteStatisticsToFloatArray(float* float_array, int wanted_class) // this is a hack for pre-embo course rush, but i predict it will last for a long time after...
 {
-    float_array[0]       = FSC.number_of_points;
+    float_array[0]       = FSC.NumberOfPoints( );
     float_array[1]       = wanted_class;
     int position_counter = 2;
 
-    for ( int i = 0; i < FSC.number_of_points; i++ ) {
+    for ( int i = 0; i < FSC.NumberOfPoints( ); i++ ) {
         float_array[position_counter] = FSC.data_x[i];
         position_counter++;
         float_array[position_counter] = FSC.data_y[i];
@@ -686,7 +685,7 @@ void ResolutionStatistics::WriteStatisticsToFloatArray(float* float_array, int w
 }
 
 void ResolutionStatistics::WriteStatisticsToFile(NumericTextFile& output_statistics_file, float pssnr_division_factor) {
-    MyDebugAssertTrue(FSC.number_of_points > 0, "Resolution statistics have not been fully calculated");
+    MyDebugAssertTrue(FSC.NumberOfPoints( ) > 0, "Resolution statistics have not been fully calculated");
 
     float temp_float[7];
 

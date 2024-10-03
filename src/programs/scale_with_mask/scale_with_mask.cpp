@@ -108,7 +108,7 @@ bool ScaleWithMask::DoCalculation( ) {
     ref_amp.SquareRoot( );
     original_amp.SquareRoot( );
 
-    for ( long counter = 0; counter < ref_amp.number_of_points; counter++ ) {
+    for ( long counter = 0; counter < ref_amp.NumberOfPoints( ); counter++ ) {
         if ( original_amp.data_y[counter] != 0.0 && ref_amp.data_y[counter] != 0.0 ) {
             original_amp.data_y[counter] = ref_amp.data_y[counter] / original_amp.data_y[counter];
         }

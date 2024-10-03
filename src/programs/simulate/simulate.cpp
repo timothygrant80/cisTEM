@@ -5,7 +5,6 @@
 #include "calc_hydration_radius.h"
 #include "../../core/scattering_potential.h"
 #include "wave_function_propagator.h"
-#include "../../core/padded_coordinates.h"
 
 const int MAX_3D_SIZE = 1536; // ~14.5 Gb in single precision
 
@@ -1020,7 +1019,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
             else {
                 // FIXME this isn't really a good sampling
                 tilt_psi.push_back(my_rand.GetUniformRandomSTD(0.f, 360.f));
-                tilt_theta.push_back(my_rand.GetUniformRandomSTD(0, r_theta_max));
+                tilt_theta.push_back(my_rand.GetUniformRandomSTD(0.f, r_theta_max));
                 // tilt_phi[iTilt]   = -1 * tilt_psi[iTilt] + my_rand.GetUniformRandomSTD(0.f, r_phi_max); //*(2*PI);
                 tilt_phi.push_back(my_rand.GetUniformRandomSTD(0.f, r_phi_max)); //*(2*PI);
 

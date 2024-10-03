@@ -82,11 +82,21 @@ class ProjectionQueue {
         return submitted_prj_queue.back( );
     }
 
+    /**
+     * @brief this event is recorded when the host projection is free after being copied to the device. It is used in GetAvailableProjectionIDX to manage the queue of host side projections available.
+     * 
+     * @param idx 
+     */
     inline void
     RecordProjectionReadyBlockingHost(int idx, cudaStream_t stream) {
         cudaErr(cudaEventRecord(cpu_projection_is_writeable_Event[idx], stream));
     }
 
+    /**
+     * @brief make the main stream (cudaStreamPerThread) wait for the projection to be ready, whether it is projected on the GPU or copied form host -> device, both events are queued in the gpu_projection_stream
+     * 
+     * @param idx 
+     */
     inline void
     RecordGpuProjectionReadyStreamPerThreadWait(int idx) {
         cudaErr(cudaEventRecord(gpu_projection_is_ready_Event[idx], gpu_projection_stream[idx]));

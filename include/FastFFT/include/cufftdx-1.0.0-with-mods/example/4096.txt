@@ -1,0 +1,36 @@
+FFT type: c2c
+FFT size: 4096
+FFTs elements per thread: 8
+FFTs per block: 1
+CUDA blocks: 164
+Blocks per multiprocessor: 2
+FFTs run: 164
+Shared memory: 32768
+Avg Time [ms_n]: 0.0047063
+Time (all) [ms_n]: 18.8252
+Performance [GFLOPS]: 8563.97
+ 
+FFT type: c2c
+FFT size: 4096
+FFTs elements per thread: 8
+FFTs per block: 1
+CUDA blocks: 164
+Blocks per multiprocessor: 2
+FFTs run: 164
+Shared memory: 32768
+Avg Time [ms_n]: 0.00370534
+Time (all) [ms_n]: 14.8214
+Performance [GFLOPS]: 10877.4
+ 
+FFT type: c2c
+FFT size: 4096
+FFTs elements per thread: 8
+FFTs per block: 1
+CUDA blocks: 164
+Blocks per multiprocessor: 2
+FFTs run: 164
+Shared memory: 32768
+Avg Time [ms_n]: 0.00407578
+Time (all) [ms_n]: 16.3031
+Performance [GFLOPS]: 9888.83
+ 

@@ -2,102 +2,50 @@
 #include <wx/arrimpl.cpp> // this is a magic incantation which must be done!
 WX_DEFINE_OBJARRAY(ArrayofCurves);
 
-void LS_POLY(float* x_data, float* y_data, int number_of_points, int order_of_polynomial, float* output_smoothed_curve, float* output_coefficients);
+void LS_POLY(float* x_data, float* y_data, int n_points, int order_of_polynomial, float* output_smoothed_curve, float* output_coefficients);
 
 Curve::Curve( ) {
-    have_polynomial     = false;
-    have_savitzky_golay = false;
-
-    number_of_points           = 0;
-    allocated_space_for_points = 100;
-
-    data_x = new float[100];
-    data_y = new float[100];
-
-    polynomial_fit              = NULL; // allocate on fit..
-    savitzky_golay_fit          = NULL;
-    savitzky_golay_coefficients = NULL;
-
-    polynomial_order        = 0;
-    polynomial_coefficients = NULL;
-
+    polynomial_order                = 0;
     savitzky_golay_polynomial_order = 0;
     savitzky_golay_window_size      = 0;
-
-    index_of_last_point_used = 0;
+    index_of_last_point_used        = 0;
 }
 
-Curve::Curve(const Curve& other_curve) // copy constructor
-{
-    MyDebugPrint("Warning: copying a curve object");
+// copy constructor
+Curve::Curve(const Curve& other_curve) {
 
-    have_polynomial     = false;
-    have_savitzky_golay = false;
-
-    number_of_points           = 0;
-    allocated_space_for_points = 100;
-
-    data_x = new float[100];
-    data_y = new float[100];
-
-    polynomial_fit              = NULL; // allocate on fit..
-    savitzky_golay_fit          = NULL;
-    savitzky_golay_coefficients = NULL;
-
-    polynomial_order        = 0;
-    polynomial_coefficients = NULL;
-
+    DeleteSavitzkyGolayCoefficients( );
     savitzky_golay_polynomial_order = 0;
     savitzky_golay_window_size      = 0;
+
+    polynomial_coefficients.clear( );
+    polynomial_order = 0;
 
     index_of_last_point_used = 0;
 
     *this = other_curve;
-    //DEBUG_ABORT;
 }
 
 Curve::~Curve( ) {
-    delete[] data_x;
-    delete[] data_y;
-
-    if ( have_polynomial == true ) {
-        delete[] polynomial_fit;
-        delete[] polynomial_coefficients;
-
-        polynomial_fit  = NULL;
-        have_polynomial = false;
-    }
-
-    if ( have_savitzky_golay == true ) {
-        delete[] savitzky_golay_fit;
-        savitzky_golay_fit = NULL;
-        DeleteSavitzkyGolayCoefficients( );
-        have_savitzky_golay = false;
-    }
 }
 
 void Curve::DeleteSavitzkyGolayCoefficients( ) {
-    MyDebugAssertTrue(savitzky_golay_coefficients != NULL, "Oops trying to deallocate coefficients when they are not allocated\n");
-    for ( int pixel_counter = 0; pixel_counter < number_of_points; pixel_counter++ ) {
-        if ( savitzky_golay_coefficients[pixel_counter] != NULL ) {
-            delete[] savitzky_golay_coefficients[pixel_counter];
-        }
+    for ( auto& coefficient : savitzky_golay_coefficients ) {
+        coefficient.clear( );
     }
-    delete[] savitzky_golay_coefficients;
-    savitzky_golay_coefficients = NULL;
+    savitzky_golay_coefficients.clear( );
 }
 
 void Curve::AllocateSavitzkyGolayCoefficients( ) {
-    MyDebugAssertTrue(savitzky_golay_coefficients == NULL, "Oops, trying to allocate coffecients when they are already allocated\n");
     MyDebugAssertTrue(savitzky_golay_polynomial_order > 0, "Oops, looks like the SG polynomial order was not set properly\n");
-    savitzky_golay_coefficients = new float*[number_of_points];
-    int counter;
-    for ( int pixel_counter = 0; pixel_counter < number_of_points; pixel_counter++ ) {
-        savitzky_golay_coefficients[pixel_counter] = new float[savitzky_golay_polynomial_order + 1];
-        // Initialise
-        for ( counter = 0; counter < savitzky_golay_polynomial_order + 1; counter++ ) {
-            savitzky_golay_coefficients[pixel_counter][counter] = 0.0;
-        }
+    savitzky_golay_coefficients.clear( );
+    savitzky_golay_coefficients.reserve(NumberOfPoints( ));
+
+    std::vector<float> temp;
+    temp.assign(savitzky_golay_polynomial_order + 1, 0.0f);
+
+    for ( int i = 0; i < NumberOfPoints( ); i++ ) {
+        savitzky_golay_coefficients.push_back(temp);
     }
 }
 
@@ -106,35 +54,36 @@ Curve& Curve::operator=(const Curve* other_curve) {
     if ( this != other_curve ) {
         int counter;
 
-        if ( number_of_points != other_curve->number_of_points ) {
-            delete[] data_x;
-            delete[] data_y;
+        if ( NumberOfPoints( ) != other_curve->NumberOfPoints( ) ) {
+            data_x.clear( );
+            data_y.clear( );
 
-            allocated_space_for_points = other_curve->allocated_space_for_points;
+            data_x.reserve(other_curve->NumberOfPoints( ));
+            data_y.reserve(other_curve->NumberOfPoints( ));
 
-            data_x = new float[allocated_space_for_points];
-            data_y = new float[allocated_space_for_points];
+            for ( auto& x : other_curve->data_x ) {
+                data_x.push_back(x);
+            }
+            for ( auto& y : other_curve->data_y ) {
+                data_y.push_back(y);
+            }
 
             polynomial_order                = other_curve->polynomial_order;
             savitzky_golay_polynomial_order = other_curve->savitzky_golay_polynomial_order;
 
-            if ( have_polynomial == true ) {
-                delete[] polynomial_fit;
-                delete[] polynomial_coefficients;
+            polynomial_fit.clear( );
+            polynomial_coefficients.clear( );
+
+            savitzky_golay_fit.clear( );
+            DeleteSavitzkyGolayCoefficients( );
+
+            if ( ! other_curve->polynomial_fit.empty( ) ) {
+                polynomial_fit.reserve(other_curve->NumberOfPoints( ));
+                polynomial_coefficients.reserve(polynomial_order);
             }
 
-            if ( have_savitzky_golay == true ) {
-                delete[] savitzky_golay_fit;
-                DeleteSavitzkyGolayCoefficients( );
-            }
-
-            if ( other_curve->have_polynomial == true ) {
-                polynomial_fit          = new float[number_of_points];
-                polynomial_coefficients = new float[polynomial_order];
-            }
-
-            if ( other_curve->have_savitzky_golay == true ) {
-                savitzky_golay_fit = new float[number_of_points];
+            if ( ! other_curve->savitzky_golay_fit.empty( ) ) {
+                savitzky_golay_fit.reserve(other_curve->NumberOfPoints( ));
                 AllocateSavitzkyGolayCoefficients( );
             }
         }
@@ -142,58 +91,51 @@ Curve& Curve::operator=(const Curve* other_curve) {
             polynomial_order                = other_curve->polynomial_order;
             savitzky_golay_polynomial_order = other_curve->savitzky_golay_polynomial_order;
 
-            if ( have_polynomial != other_curve->have_polynomial ) {
-                if ( have_polynomial == true ) {
-                    delete[] polynomial_coefficients;
-                    delete[] polynomial_fit;
+            if ( polynomial_fit.empty( ) != other_curve->polynomial_fit.empty( ) ) {
+                if ( ! polynomial_fit.empty( ) ) {
+                    polynomial_coefficients.clear( );
+                    polynomial_fit.clear( );
                 }
                 else {
-                    polynomial_fit          = new float[number_of_points];
-                    polynomial_coefficients = new float[polynomial_order];
+                    polynomial_fit.reserve(NumberOfPoints( ));
+                    polynomial_coefficients.reserve(polynomial_order);
                 }
             }
 
-            if ( have_savitzky_golay != other_curve->have_savitzky_golay ) {
-                if ( have_savitzky_golay == true ) {
-                    delete[] savitzky_golay_fit;
+            if ( savitzky_golay_fit.empty( ) != other_curve->savitzky_golay_fit.empty( ) ) {
+                if ( ! savitzky_golay_fit.empty( ) ) {
+                    savitzky_golay_fit.clear( );
                     DeleteSavitzkyGolayCoefficients( );
                 }
                 else {
-                    savitzky_golay_fit = new float[number_of_points];
+                    savitzky_golay_fit.reserve(NumberOfPoints( ));
                     AllocateSavitzkyGolayCoefficients( );
                 }
             }
         }
 
-        number_of_points                = other_curve->number_of_points;
-        have_polynomial                 = other_curve->have_polynomial;
-        have_savitzky_golay             = other_curve->have_savitzky_golay;
         savitzky_golay_polynomial_order = other_curve->savitzky_golay_polynomial_order;
         savitzky_golay_window_size      = other_curve->savitzky_golay_window_size;
 
         index_of_last_point_used = other_curve->index_of_last_point_used;
 
-        for ( counter = 0; counter < number_of_points; counter++ ) {
-            data_x[counter] = other_curve->data_x[counter];
-            data_y[counter] = other_curve->data_y[counter];
-        }
-
-        if ( have_polynomial == true ) {
-            for ( counter = 0; counter < number_of_points; counter++ ) {
-                polynomial_fit[counter] = other_curve->polynomial_fit[counter];
+        if ( ! other_curve->polynomial_fit.empty( ) ) {
+            for ( auto& fit : other_curve->polynomial_fit ) {
+                polynomial_fit.push_back(fit);
             }
-
-            for ( counter = 0; counter < polynomial_order; counter++ ) {
-                polynomial_coefficients[counter] = other_curve->polynomial_coefficients[counter];
+            for ( auto& coefficient : other_curve->polynomial_coefficients ) {
+                polynomial_coefficients.push_back(coefficient);
             }
         }
 
-        if ( have_savitzky_golay == true ) {
-            for ( counter = 0; counter < number_of_points; counter++ ) {
-                savitzky_golay_fit[counter] = other_curve->savitzky_golay_fit[counter];
-                for ( int degree = 0; degree <= savitzky_golay_polynomial_order; degree++ ) {
-                    savitzky_golay_coefficients[counter][degree] = other_curve->savitzky_golay_coefficients[counter][degree];
-                }
+        if ( ! other_curve->savitzky_golay_fit.empty( ) ) {
+            savitzky_golay_fit.clear( );
+            for ( auto& fit : other_curve->savitzky_golay_fit ) {
+                savitzky_golay_fit.push_back(fit);
+            }
+            savitzky_golay_coefficients.clear( );
+            for ( auto& coefficient : other_curve->savitzky_golay_coefficients ) {
+                savitzky_golay_coefficients.push_back(coefficient);
             }
         }
     }
@@ -210,80 +152,111 @@ void Curve::SetupXAxis(const float lower_bound, const float upper_bound, const i
     MyDebugAssertFalse(isnan(lower_bound), "Lower bound is NaN");
     MyDebugAssertFalse(isnan(upper_bound), "Lower bound is NaN");
     MyDebugAssertTrue(wanted_number_of_points > 1, "Bad number of points");
+
     ClearData( );
-    AllocateMemory(wanted_number_of_points);
 
     for ( int counter = 0; counter < wanted_number_of_points; counter++ ) {
         AddPoint(counter * (upper_bound - lower_bound) / float(wanted_number_of_points - 1) + lower_bound, 0.0);
     }
 }
 
+/**
+ * @brief Sets all data_y to 0 (calls SetYToConstant(0.f))
+ * 
+ * @param wanted_constant 
+ */
 void Curve::ZeroYData( ) {
-    for ( int counter = 0; counter < number_of_points; counter++ ) {
-        data_y[counter] = 0;
-    }
+    SetYToConstant(0.0f);
 }
 
+/**
+ * @brief Sets all data_y to a constant float value
+ * 
+ * @param wanted_constant 
+ */
 void Curve::SetYToConstant(float wanted_constant) {
-    MyDebugAssertTrue(number_of_points > 0, "No points to set");
-    for ( int counter = 0; counter < number_of_points; counter++ ) {
-        data_y[counter] = wanted_constant;
-    }
+    DebugCheckEmpty( );
+    data_y.assign(NumberOfPoints( ), wanted_constant);
 }
 
+/**
+ * @brief Adds the data_y of another curve to the data_y of this curve. The number of points in both curves must be the same.
+ * 
+ * @param other_curve 
+ */
 void Curve::AddWith(Curve* other_curve) {
-    MyDebugAssertTrue(number_of_points > 0, "No points to interpolate");
-    MyDebugAssertTrue(number_of_points == other_curve->number_of_points, "Different number of points");
+    DebugCheckEmpty( );
+    MyDebugAssertTrue(NumberOfPoints( ) == other_curve->data_y.size( ), "Different number of points");
 
-    for ( int counter = 0; counter < number_of_points; counter++ ) {
-        data_y[counter] += other_curve->data_y[counter];
-    }
+    std::transform(data_y.begin( ), data_y.end( ), other_curve->data_y.begin( ), data_y.begin( ), std::plus<float>( ));
 }
 
+/**
+ * @brief Divides the data_y of this curve by the data_y of another curve. The number of points in both curves must be the same. Division by zero returns zero.
+ * 
+ * @param other_curve 
+ */
 void Curve::DivideBy(Curve* other_curve) {
-    MyDebugAssertTrue(number_of_points > 0, "No points to interpolate");
-    MyDebugAssertTrue(number_of_points == other_curve->number_of_points, "Different number of points");
+    DebugCheckEmpty( );
+    MyDebugAssertTrue(NumberOfPoints( ) == other_curve->data_y.size( ), "Different number of points");
 
-    for ( int counter = 0; counter < number_of_points; counter++ ) {
-        if ( other_curve->data_y[counter] != 0.0 )
-            data_y[counter] /= other_curve->data_y[counter];
-    }
+    std::transform(data_y.begin( ), data_y.end( ), other_curve->data_y.begin( ), data_y.begin( ), [](const float my_val, const float other_val) {
+        if ( other_val == 0.0f )
+            return 0.0f;
+        else
+            return my_val / other_val;
+    });
 }
 
+/**
+ * @brief Returns the arithmetic average of the data_y of the curve
+ * 
+ * @return float 
+ */
 float Curve::ReturnAverageValue( ) {
-    MyDebugAssertTrue(number_of_points > 0, "No points to average");
+    DebugCheckEmpty( );
 
-    float sum = 0.0f;
+    float sum = std::accumulate(data_y.begin( ), data_y.end( ), 0.0f);
 
-    for ( int counter = 0; counter < number_of_points; counter++ ) {
-        sum += data_y[counter];
-    }
-
-    return sum / float(number_of_points);
+    return sum / float(NumberOfPoints( ));
 }
 
+/**
+ * @brief All values after index are set to 0.f
+ * 
+ * @param index 
+ */
 void Curve::ZeroAfterIndex(int index) {
-    MyDebugAssertTrue(number_of_points > 0, "No points in curve");
+    DebugCheckEmpty( );
 
-    if ( index + 1 <= number_of_points ) {
-        for ( int counter = index + 1; counter < number_of_points; counter++ ) {
-            data_y[counter] = 0.0;
-        }
+    for ( int counter = index + 1; counter < NumberOfPoints( ); counter++ ) {
+        data_y[counter] = 0.0;
     }
 }
 
+/**
+ * @brief All values before index are set to the value at index
+ * 
+ * @param index 
+ */
 void Curve::FlattenBeforeIndex(int index) {
-    MyDebugAssertTrue(number_of_points > 0, "No points in curve");
+    DebugCheckEmpty( );
 
-    if ( index > number_of_points )
-        index = number_of_points;
+    if ( index > NumberOfPoints( ) )
+        index = NumberOfPoints( ) - 1;
     for ( int counter = 0; counter < index; counter++ ) {
         data_y[counter] = data_y[index];
     }
 }
 
+/**
+ * @brief Up or down sample a curve using linear interpolation. The ends are clamped to the value of the input.
+ * 
+ * @param wanted_x 
+ * @return int 
+ */
 void Curve::ResampleCurve(Curve* input_curve, int wanted_number_of_points) {
-    MyDebugAssertTrue(input_curve->number_of_points > 0, "Input curve is empty");
+    DebugCheckEmpty( );
     MyDebugAssertTrue(wanted_number_of_points > 1, "wanted_number_of_points is smaller than 2");
 
     Curve temp_curve;
@@ -291,74 +264,94 @@ void Curve::ResampleCurve(Curve* input_curve, int wanted_number_of_points) {
     float i_x, x;
 
     for ( int i = 0; i < wanted_number_of_points; i++ ) {
-        i_x = float(i * (input_curve->number_of_points - 1)) / float(wanted_number_of_points - 1);
-        x   = input_curve->data_x[0] + i_x / (input_curve->number_of_points - 1) * (input_curve->data_x[input_curve->number_of_points - 1] - input_curve->data_x[0]);
-        //		i_x = float(i * input_curve->number_of_points) / float(wanted_number_of_points) * (1.0 - 1.0 / float(wanted_number_of_points - 1));
+        // if wanted_number_of_points > NumberOfPoints( ) then i_x will be the scaled coordinate clamped at 0 and NumberOfPoints( )
+        i_x = float(i * (input_curve->NumberOfPoints( ) - 1)) / float(wanted_number_of_points - 1);
+        x   = input_curve->data_x.front( ) + i_x / (input_curve->NumberOfPoints( ) - 1) * (input_curve->data_x[input_curve->NumberOfPoints( ) - 1] - input_curve->data_x.front( ));
         temp_curve.AddPoint(x, input_curve->ReturnLinearInterpolationFromI(i_x));
     }
-
     CopyFrom(&temp_curve);
 }
 
+/**
+ * @brief Returns the index of the nearest point to the wanted_x
+ * 
+ * @param wanted_x 
+ * @return int 
+ */
 float Curve::ReturnLinearInterpolationFromI(float wanted_i) {
-    MyDebugAssertTrue(number_of_points > 0, "No points to interpolate");
-    MyDebugAssertTrue(wanted_i <= number_of_points - 1, "Index too high");
+    DebugCheckEmpty( );
+    MyDebugAssertTrue(wanted_i <= NumberOfPoints( ) - 1, "Index too high");
     MyDebugAssertTrue(wanted_i >= 0, "Index too low");
 
     int i = int(wanted_i);
 
     float distance_below = wanted_i - i;
     float distance_above = 1.0 - distance_below;
-    float distance;
 
     if ( distance_below == 0.0 )
-        return data_y[i];
+        return data_y.at(i);
     if ( distance_above == 0.0 )
-        return data_y[i + 1];
+        return data_y.at(i + 1);
 
-    return (1.0 - distance_above) * data_y[i + 1] + (1.0 - distance_below) * data_y[i];
+    return (1.0 - distance_above) * data_y.at(i + 1) + (1.0 - distance_below) * data_y.at(i);
 }
 
+/**
+ * @brief Returns the index of the nearest point to the wanted_x
+ * 
+ * @param wanted_x 
+ * @return int 
+ */
 float Curve::ReturnLinearInterpolationFromX(float wanted_x) {
-    MyDebugAssertTrue(number_of_points > 0, "No points to interpolate");
-    MyDebugAssertTrue(wanted_x >= data_x[0] - (data_x[number_of_points - 1] - data_x[0]) * 0.01 && wanted_x <= data_x[number_of_points - 1] + (data_x[number_of_points - 1] - data_x[0]) * 0.01, "Wanted X (%f) falls outside of range (%f to %f)\n", wanted_x, data_x[0], data_x[number_of_points - 1]);
+    DebugCheckEmpty( );
+    DebugCheckValidX(wanted_x);
 
-    float value_to_return = 0.0;
+    float value_to_return = 0.0f;
 
     const int index_of_previous_bin = ReturnIndexOfNearestPreviousBin(wanted_x);
 
-    if ( index_of_previous_bin == number_of_points - 1 ) {
-        value_to_return = data_y[number_of_points - 1];
+    if ( index_of_previous_bin == NumberOfPoints( ) - 1 ) {
+        value_to_return = data_y[NumberOfPoints( ) - 1];
     }
     else {
-        float distance = (wanted_x - data_x[index_of_previous_bin]) / (data_x[index_of_previous_bin + 1] - data_x[index_of_previous_bin]);
-        value_to_return += data_y[index_of_previous_bin] * (1.0 - distance);
-        value_to_return += data_y[index_of_previous_bin + 1] * distance;
+        float distance = (wanted_x - data_x.at(index_of_previous_bin)) / (data_x.at(index_of_previous_bin + 1) - data_x.at(index_of_previous_bin));
+        value_to_return += data_y.at(index_of_previous_bin) * (1.0f - distance);
+        value_to_return += data_y.at(index_of_previous_bin + 1) * distance;
     }
     return value_to_return;
 }
 
+/**
+ * @brief 
+ * 
+ * @param maximum_value 
+ * @param mode 
+ */
 void Curve::ComputeMaximumValueAndMode(float& maximum_value, float& mode) {
-    MyDebugAssertTrue(number_of_points > 0, "No points in curve");
-    maximum_value = -FLT_MAX;
+    DebugCheckEmpty( );
+    maximum_value = -std::numeric_limits<float>::max( );
 
-    for ( int counter = 0; counter < number_of_points; counter++ ) {
+    for ( int counter = 0; counter < NumberOfPoints( ); counter++ ) {
         if ( data_y[counter] > maximum_value ) {
-            maximum_value = data_y[counter];
-            mode          = data_x[counter];
+            maximum_value = data_y.at(counter);
+            mode          = data_x.at(counter);
         }
     }
 }
 
-// This is meant to be used to measure, e.g., the full-width at half-maximum of a histogram
-// stored as a curve
+/**
+ * @brief Returns the maximum value and also the mode, but the mode is ONLY for a curve that is storing a histogram, or any other container where the y_data represent COUNTS>
+ *  This is meant to be used to measure, e.g., the full-width at half-maximum of a histogram stored as a curve
+ * @return float 
+ */
+
 float Curve::ReturnFullWidthAtGivenValue(const float& wanted_value) {
-    MyDebugAssertTrue(number_of_points > 0, "No points in curve");
+    DebugCheckEmpty( );
 
     int first_bin_above_value = -1;
     int last_bin_above_value  = -1;
 
-    for ( int counter = 0; counter < number_of_points; counter++ ) {
+    for ( int counter = 0; counter < NumberOfPoints( ); counter++ ) {
         if ( first_bin_above_value == -1 && data_y[counter] > wanted_value )
             first_bin_above_value = counter;
         if ( last_bin_above_value == -1 && first_bin_above_value != -1 && data_y[counter] < wanted_value )
@@ -368,8 +361,13 @@ float Curve::ReturnFullWidthAtGivenValue(const float& wanted_value) {
     MyDebugAssertTrue(first_bin_above_value != -1, "Could not find first bin above value");
     MyDebugAssertTrue(last_bin_above_value != -1, "Could not find last bin above value");
 
-    return data_x[last_bin_above_value + 1] - data_x[first_bin_above_value];
+    return data_x.at(last_bin_above_value + 1) - data_x.at(first_bin_above_value);
 }
+
+/**
+ * @brief Returns the maximum value of the data_y of a curve object. It does not matter if the data represents a histogram or not.
+ * @return float 
+ */
 
 float Curve::ReturnMaximumValue( ) {
     float maximum_value, mode;
@@ -377,16 +375,24 @@ float Curve::ReturnMaximumValue( ) {
     return maximum_value;
 }
 
+/**
+ * @brief Returns the mode ONLY for a curve that is storing a histogram, or any other container where the y_data represent COUNTS>
+ * 
+ * @return float 
+ */
 float Curve::ReturnMode( ) {
     float maximum_value, mode;
     ComputeMaximumValueAndMode(maximum_value, mode);
     return mode;
 }
 
-// Scale the Y values so that the peak is at 1.0 (assumes all Y values >=0)
+/**
+ * @brief Scale the Y values so that the peak is at 1.0 (assumes all Y values >=0)
+ * 
+ */
 void Curve::NormalizeMaximumValue( ) {
 #ifdef DEBUG
-    for ( int counter = 0; counter < number_of_points; counter++ ) {
+    for ( int counter = 0; counter < NumberOfPoints( ); counter++ ) {
         if ( data_y[counter] < 0.0 )
             MyDebugAssertTrue(false, "This routine assumes all Y values are positive, but value %i is %f\n", counter, data_y[counter]);
     }
@@ -394,65 +400,58 @@ void Curve::NormalizeMaximumValue( ) {
 
     const float maximum_value = ReturnMaximumValue( );
 
-    if ( maximum_value > 0.0 ) {
-        float factor = 1.0 / maximum_value;
-        for ( int counter = 0; counter < number_of_points; counter++ ) {
-            data_y[counter] *= factor;
-        }
+    if ( maximum_value > 0.0f ) {
+        float factor = 1.0f / maximum_value;
+        std::transform(data_y.begin( ), data_y.end( ), data_y.begin( ), [factor](const float& value) { return value * factor; });
     }
 }
 
-// Replace Y values with their log, base 10
+/**
+ * @brief Replace Y values with their log, base 10
+ * 
+ */
 void Curve::Logarithm( ) {
-#ifdef DEBUG
-    for ( int counter = 0; counter < number_of_points; counter++ ) {
-        if ( data_y[counter] < 0.0 )
-            MyDebugAssertTrue(false, "This routine assumes all Y values are positive, but value %i is %f\n", counter, data_y[counter]);
-    }
-#endif
+    DebugCheckForNegativeValues( );
 
-    for ( int counter = 0; counter < number_of_points; counter++ ) {
-        data_y[counter] = log10(data_y[counter]);
+    for ( int counter = 0; counter < NumberOfPoints( ); counter++ ) {
+        data_y[counter] = std::log10(data_y[counter]);
     }
 }
 
-// Replace Y values with their natural logarthm base e
+/**
+ * @brief Replace Y values with their natural logarthm base e
+ * 
+ */
 void Curve::Ln( ) {
-#ifdef CISTEM_DEBUG
-    for ( int counter = 0; counter < number_of_points; counter++ ) {
-        if ( data_y[counter] < 0.0 )
-            MyDebugAssertTrue(false, "This routine assumes all Y values are positive, but value %i is %f\n", counter, data_y[counter]);
-    }
-#endif
+    DebugCheckForNegativeValues( );
 
-    for ( int counter = 0; counter < number_of_points; counter++ ) {
+    for ( int counter = 0; counter < NumberOfPoints( ); counter++ ) {
         data_y[counter] = std::log(data_y[counter]);
     }
 }
 
+/**
+ * @brief Element-wise square root of the Y values
+ * 
+ */
 void Curve::SquareRoot( ) {
-#ifdef DEBUG
-    for ( int counter = 0; counter < number_of_points; counter++ ) {
-        if ( data_y[counter] < 0.0 )
-            MyDebugAssertTrue(false, "This routine assumes all Y values are positive, but value %i is %f\n", counter, data_y[counter]);
-    }
-#endif
+    DebugCheckForNegativeValues( );
 
-    for ( int counter = 0; counter < number_of_points; counter++ ) {
+    for ( int counter = 0; counter < NumberOfPoints( ); counter++ ) {
         data_y[counter] = sqrtf(data_y[counter]);
     }
 }
 
 CurvePoint Curve::ReturnValueAtXUsingLinearInterpolation(float wanted_x, float value_to_add, bool assume_linear_x) {
-    MyDebugAssertTrue(number_of_points > 0, "No points in curve");
-    MyDebugAssertTrue(wanted_x >= data_x[0] - (data_x[number_of_points - 1] - data_x[0]) * 0.01 && wanted_x <= data_x[number_of_points - 1] + (data_x[number_of_points - 1] - data_x[0]) * 0.01, "Wanted X (%f) falls outside of range (%f to %f)\n", wanted_x, data_x[0], data_x[number_of_points - 1]);
+    MyDebugAssertFalse(NumberOfPoints( ) < 2, "No points in curve");
+    DebugCheckValidX(wanted_x);
 
     int        index_of_previous_bin;
     CurvePoint return_value;
     if ( assume_linear_x ) {
         if ( data_x[0] == data_x[1] ) {
             // Special case where x is constant (it's not really a curve in that case, but we still have to deal with this)
-            index_of_previous_bin = number_of_points - 2;
+            index_of_previous_bin = NumberOfPoints( ) - 2;
         }
         else {
             index_of_previous_bin = int((wanted_x - data_x[0]) / (data_x[1] - data_x[0]));
@@ -462,16 +461,16 @@ CurvePoint Curve::ReturnValueAtXUsingLinearInterpolation(float wanted_x, float v
         index_of_previous_bin = ReturnIndexOfNearestPreviousBin(wanted_x);
     }
 
-    MyDebugAssertTrue(index_of_previous_bin >= 0 && index_of_previous_bin < number_of_points, "Oops. Bad index_of_previous_bin: %i\n", index_of_previous_bin);
+    MyDebugAssertTrue(index_of_previous_bin >= 0 && index_of_previous_bin < NumberOfPoints( ), "Oops. Bad index_of_previous_bin: %i\n", index_of_previous_bin);
 
-    if ( index_of_previous_bin == number_of_points - 1 ) {
+    if ( index_of_previous_bin == NumberOfPoints( ) - 1 ) {
         return_value.index_m = index_of_previous_bin;
         return_value.index_n = index_of_previous_bin;
         return_value.value_m = value_to_add;
         return_value.value_n = 0.0;
     }
     else {
-        float distance       = (wanted_x - data_x[index_of_previous_bin]) / (data_x[index_of_previous_bin + 1] - data_x[index_of_previous_bin]);
+        float distance       = (wanted_x - data_x.at(index_of_previous_bin)) / (data_x.at(index_of_previous_bin + 1) - data_x.at(index_of_previous_bin));
         return_value.index_m = index_of_previous_bin;
         return_value.index_n = index_of_previous_bin + 1;
         return_value.value_m = value_to_add * (1.0 - distance);
@@ -481,10 +480,16 @@ CurvePoint Curve::ReturnValueAtXUsingLinearInterpolation(float wanted_x, float v
     return return_value;
 }
 
-// If the data_x values form a linear axis (i.e. they are regularly spaced), give assume_linear_x true.
+/**
+ * @brief If the data_x values form a linear axis (i.e. they are regularly spaced), give assume_linear_x true.
+ * 
+ * @param wanted_x 
+ * @param value_to_add 
+ * @param assume_linear_x 
+ */
 void Curve::AddValueAtXUsingLinearInterpolation(float wanted_x, float value_to_add, bool assume_linear_x) {
-    MyDebugAssertTrue(number_of_points > 0, "No points in curve");
-    MyDebugAssertTrue(wanted_x >= data_x[0] - (data_x[number_of_points - 1] - data_x[0]) * 0.01 && wanted_x <= data_x[number_of_points - 1] + (data_x[number_of_points - 1] - data_x[0]) * 0.01, "Wanted X (%f) falls outside of range (%f to %f)\n", wanted_x, data_x[0], data_x[number_of_points - 1]);
+    DebugCheckEmpty( );
+    DebugCheckValidX(wanted_x);
 
     CurvePoint return_value;
 
@@ -493,38 +498,67 @@ void Curve::AddValueAtXUsingLinearInterpolation(float wanted_x, float value_to_a
     data_y[return_value.index_n] += return_value.value_n;
 }
 
+/**
+ * @brief Simple nearest neighbor interpolation
+ * 
+ * @param wanted_x 
+ * @param value_to_add 
+ */
 void Curve::AddValueAtXUsingNearestNeighborInterpolation(float wanted_x, float value_to_add) {
-    MyDebugAssertTrue(number_of_points > 0, "No points in curve");
-    MyDebugAssertTrue(wanted_x >= data_x[0] - (data_x[number_of_points - 1] - data_x[0]) * 0.01 && wanted_x <= data_x[number_of_points - 1] + (data_x[number_of_points - 1] - data_x[0]) * 0.01, "Wanted X (%f) falls outside of range (%f to %f)\n", wanted_x, data_x[0], data_x[number_of_points - 1]);
+    DebugCheckEmpty( );
+    DebugCheckValidX(wanted_x);
 
     data_y[ReturnIndexOfNearestPointFromX(wanted_x)] += value_to_add;
 }
 
+/**
+ * @brief Print the x/y data of the Curve object to stdout
+ * 
+ */
 void Curve::PrintToStandardOut( ) {
-    for ( int i = 0; i < number_of_points; i++ ) {
+    for ( int i = 0; i < NumberOfPoints( ); i++ ) {
         wxPrintf("%f %f\n", data_x[i], data_y[i]);
     }
 }
 
+/**
+ * @brief Write the curve out to a numeric text file
+ * 
+ * @param output_file 
+ * @param header_line 
+ */
 void Curve::WriteToFile(wxString output_file, wxString header_line) {
-    MyDebugAssertTrue(number_of_points > 0, "Curve is empty");
+    DebugCheckEmpty( );
 
-    float temp_float[2];
+    std::array<float, 2> temp_float;
 
     NumericTextFile output_curve_file(output_file, OPEN_TO_WRITE, 2);
     output_curve_file.WriteCommentLine(header_line);
-    for ( int i = 0; i < number_of_points; i++ ) {
+    for ( int i = 0; i < NumberOfPoints( ); i++ ) {
         temp_float[0] = data_x[i];
         temp_float[1] = data_y[i];
 
-        output_curve_file.WriteLine(temp_float);
+        output_curve_file.WriteLine(temp_float.data( ));
     }
 }
 
+// FIXME: Why is this called externally?
+/**
+ * @brief Set the header for the curve object being written out to a numeric text file
+ * 
+ * @param output_file 
+ */
 void Curve::WriteToFile(wxString output_file) {
     WriteToFile(output_file, "C            X              Y");
 }
 
+/**
+ * @brief Delete existing data and copy from the arrays provided. 
+ * 
+ * @param x_series 
+ * @param y_series 
+ * @param wanted_number_of_points 
+ */
 void Curve::CopyDataFromArrays(double* x_series, double* y_series, int wanted_number_of_points) {
     ClearData( );
     for ( int counter = 0; counter < wanted_number_of_points; counter++ ) {
@@ -532,6 +566,12 @@ void Curve::CopyDataFromArrays(double* x_series, double* y_series, int wanted_nu
     }
 }
 
+/**
+ * @brief Delete existing data and copy from the array provided. The X values are assumed to be 0, 1, 2, 3, ...
+ * 
+ * @param y_series 
+ * @param wanted_number_of_points 
+ */
 void Curve::CopyYValuesFromArray(double* y_series, int wanted_number_of_points) {
     ClearData( );
     for ( int counter = 0; counter < wanted_number_of_points; counter++ ) {
@@ -539,137 +579,143 @@ void Curve::CopyYValuesFromArray(double* y_series, int wanted_number_of_points) 
     }
 }
 
+/**
+ * @brief Call the assignment op for the curve object
+ * 
+ * @param other_curve 
+ */
 void Curve::CopyFrom(Curve* other_curve) {
     *this = other_curve;
 }
 
+/**
+ * @brief Return the min and max X value by reference
+ * 
+ * @param min_value 
+ * @param max_value 
+ */
 void Curve::GetXMinMax(float& min_value, float& max_value) {
-    min_value = FLT_MAX;
-    max_value = -FLT_MAX;
+    min_value = std::numeric_limits<float>::max( );
+    max_value = -std::numeric_limits<float>::max( );
 
-    for ( int point_counter = 0; point_counter < number_of_points; point_counter++ ) {
-        min_value = std::min(min_value, data_x[point_counter]);
-        max_value = std::max(max_value, data_x[point_counter]);
+    for ( auto& x : data_x ) {
+        min_value = std::min(min_value, x);
+        max_value = std::max(max_value, x);
     }
 }
 
+/**
+ * @brief Return the min and max Y value by reference
+ * 
+ * @param min_value 
+ * @param max_value 
+ */
 void Curve::GetYMinMax(float& min_value, float& max_value) {
-    min_value = FLT_MAX;
-    max_value = -FLT_MAX;
+    min_value = std::numeric_limits<float>::max( );
+    max_value = -std::numeric_limits<float>::max( );
 
-    for ( int point_counter = 0; point_counter < number_of_points; point_counter++ ) {
-        min_value = std::min(min_value, data_y[point_counter]);
-        max_value = std::max(max_value, data_y[point_counter]);
+    for ( auto& y : data_y ) {
+        min_value = std::min(min_value, y);
+        max_value = std::max(max_value, y);
     }
 }
 
-void Curve::CheckMemory( ) {
-    if ( number_of_points >= allocated_space_for_points ) {
-        // reallocate..
-
-        if ( allocated_space_for_points < 10000 )
-            allocated_space_for_points *= 2;
-        else
-            allocated_space_for_points += 10000;
-
-        float* x_buffer = new float[allocated_space_for_points];
-        float* y_buffer = new float[allocated_space_for_points];
-
-        for ( long counter = 0; counter < number_of_points; counter++ ) {
-            x_buffer[counter] = data_x[counter];
-            y_buffer[counter] = data_y[counter];
-        }
-
-        delete[] data_x;
-        delete[] data_y;
-
-        data_x = x_buffer;
-        data_y = y_buffer;
-    }
-}
-
-void Curve::AllocateMemory(int wanted_number_of_points) {
-    delete[] data_x;
-    delete[] data_y;
-    allocated_space_for_points = wanted_number_of_points;
-    data_x                     = new float[allocated_space_for_points];
-    data_y                     = new float[allocated_space_for_points];
-    number_of_points           = 0;
-}
-
+/**
+ * @brief push back a new x/y pair to the stored data vectors.
+ * 
+ * @param x_value 
+ * @param y_value 
+ */
 void Curve::AddPoint(float x_value, float y_value) {
-    // check memory
-
-    CheckMemory( );
-
-    // add the point
-
-    data_x[number_of_points] = x_value;
-    data_y[number_of_points] = y_value;
-
-    number_of_points++;
+    data_x.push_back(x_value);
+    data_y.push_back(y_value);
 }
 
+/**
+ * @brief Reset data, fit and coefficient vectors.
+ * 
+ */
 void Curve::ClearData( ) {
-    number_of_points = 0;
+    data_x.clear( );
+    data_y.clear( );
 
-    if ( have_polynomial == true ) {
-        delete[] polynomial_fit;
-        delete[] polynomial_coefficients;
+    polynomial_fit.clear( );
+    polynomial_coefficients.clear( );
 
-        have_polynomial = false;
-    }
-
-    if ( have_savitzky_golay == true ) {
-        delete[] savitzky_golay_fit;
-
-        have_savitzky_golay = false;
-    }
+    savitzky_golay_fit.clear( );
+    DeleteSavitzkyGolayCoefficients( );
 }
 
+/**
+ * @brief Multiply all Y values by a constant
+ * 
+ * @param constant_to_multiply_by 
+ */
 void Curve::MultiplyByConstant(float constant_to_multiply_by) {
-    MyDebugAssertTrue(number_of_points > 0, "No points in curve");
+    DebugCheckEmpty( );
 
-    for ( int counter = 0; counter < number_of_points; counter++ ) {
+    for ( int counter = 0; counter < NumberOfPoints( ); counter++ ) {
         data_y[counter] *= constant_to_multiply_by;
     }
 }
 
-// It is assumed that the X axis has spatial frequencies in reciprocal pixels (0.5 is Nyquist)
+/**
+ * @brief It is assumed that the X axis has spatial frequencies in reciprocal pixels (0.5 is Nyquist)
+ * 
+ * @param ctf_to_apply 
+ * @param azimuth_in_radians 
+ */
 void Curve::ApplyCTF(CTF ctf_to_apply, float azimuth_in_radians) {
-    MyDebugAssertTrue(number_of_points > 0, "No points in curve");
+    DebugCheckEmpty( );
 
-    for ( int counter = 0; counter < number_of_points; counter++ ) {
+    for ( int counter = 0; counter < NumberOfPoints( ); counter++ ) {
         data_y[counter] *= ctf_to_apply.Evaluate(powf(data_x[counter], 2), azimuth_in_radians);
     }
 }
 
+/**
+ * @brief It is assumed that the X axis has spatial frequencies in reciprocal pixels (0.5 is Nyquist)
+ * 
+ * @param ctf_to_apply 
+ * @param azimuth_in_radians 
+ */
 void Curve::ApplyPowerspectrumWithThickness(CTF ctf_to_apply, float azimuth_in_radians) {
-    MyDebugAssertTrue(number_of_points > 0, "No points in curve");
+    DebugCheckEmpty( );
 
-    for ( int counter = 0; counter < number_of_points; counter++ ) {
+    for ( int counter = 0; counter < NumberOfPoints( ); counter++ ) {
         data_y[counter] *= ctf_to_apply.EvaluatePowerspectrumWithThickness(powf(data_x[counter], 2), azimuth_in_radians);
     }
 }
 
-void Curve::ApplyGaussianLowPassFilter(float sigma) // Assumption is that X is recipricoal pixels
-{
+/**
+ * @brief  Assumption is that X is recipricoal pixels
+ * 
+ * @param sigma 
+ */
+void Curve::ApplyGaussianLowPassFilter(float sigma) {
     float frequency_squared;
     float one_over_two_sigma_squared = 0.5 / powf(sigma, 2);
 
-    for ( int counter = 0; counter < number_of_points; counter++ ) {
+    for ( int counter = 0; counter < NumberOfPoints( ); counter++ ) {
         frequency_squared = powf(data_x[counter], 2);
         data_y[counter] *= expf(-frequency_squared * one_over_two_sigma_squared);
     }
 }
 
+/**
+ * @brief mask (FIXME what is undo)
+ * 
+ * @param wanted_x_of_cosine_start 
+ * @param wanted_cosine_width_in_x 
+ * @param undo 
+ */
 void Curve::ApplyCosineMask(float wanted_x_of_cosine_start, float wanted_cosine_width_in_x, bool undo) {
-    MyDebugAssertTrue(number_of_points > 0, "No points in curve");
+    DebugCheckEmpty( );
 
     float current_x;
     float edge;
 
-    for ( int counter = 0; counter < number_of_points; counter++ ) {
+    for ( int counter = 0; counter < NumberOfPoints( ); counter++ ) {
 
         current_x = data_x[counter];
         if ( current_x >= wanted_x_of_cosine_start && current_x <= wanted_x_of_cosine_start + wanted_cosine_width_in_x ) {
@@ -689,14 +735,19 @@ void Curve::ApplyCosineMask(float wanted_x_of_cosine_start, float wanted_cosine_
     }
 }
 
+/**
+ * @brief Return the interpolation of the Savitzky-Golay polynomial at the wanted_x
+ * 
+ * @param wanted_x 
+ * @return float 
+ */
 float Curve::ReturnSavitzkyGolayInterpolationFromX(float wanted_x) {
-    //MyDebugAssertTrue(wanted_x >= data_x[0] && wanted_x <= data_x[number_of_points],"Wanted x (%f) outside of range (%f to %f)\n",wanted_x,data_x[0],data_x[number_of_points]);
 
     // Find the nearest data point to the wanted_x
     int index_of_nearest_point = ReturnIndexOfNearestPointFromX(wanted_x);
 
     // Savitzky-Golay coefficients are zero for last index
-    if ( index_of_nearest_point == number_of_points - 1 )
+    if ( index_of_nearest_point == NumberOfPoints( ) - 1 )
         index_of_nearest_point--;
 
     // Evaluate the polynomial defined at the nearest point.
@@ -709,14 +760,19 @@ float Curve::ReturnSavitzkyGolayInterpolationFromX(float wanted_x) {
     return float(y);
 }
 
+/**
+ * @brief Return the interpolation of the Savitzky-Golay polynomial at the wanted_x
+ * 
+ * @param wanted_x 
+ * @return int 
+ */
 int Curve::ReturnIndexOfNearestPointFromX(float wanted_x) {
-    //MyDebugAssertTrue(wanted_x >= data_x[0] && wanted_x <= data_x[number_of_points],"Wanted x (%f) outside of range (%f to %f)\n",wanted_x,data_x[0],data_x[number_of_points]);
 
     int   index_of_nearest_point    = 0;
     int   counter                   = 0;
     float distance_to_current_point = wanted_x - data_x[counter];
     float distance_to_nearest_point = distance_to_current_point;
-    for ( counter = 1; counter < number_of_points; counter++ ) {
+    for ( counter = 1; counter < NumberOfPoints( ); counter++ ) {
         distance_to_current_point = wanted_x - data_x[counter];
         if ( fabs(distance_to_current_point) <= fabs(distance_to_nearest_point) ) {
             distance_to_nearest_point = distance_to_current_point;
@@ -729,12 +785,17 @@ int Curve::ReturnIndexOfNearestPointFromX(float wanted_x) {
     return index_of_nearest_point;
 }
 
-//TODO: write a quicker version of this
+/**
+ * @brief TODO: write a faster verions of this
+ * 
+ * @param wanted_x 
+ * @return
+ */
 int Curve::ReturnIndexOfNearestPreviousBin(float wanted_x) {
-    MyDebugAssertTrue(number_of_points > 0, "No points in curve");
-    MyDebugAssertTrue(wanted_x >= data_x[0] - (data_x[number_of_points - 1] - data_x[0]) * 0.01 && wanted_x <= data_x[number_of_points - 1] + (data_x[number_of_points - 1] - data_x[0]) * 0.01, "Wanted X (%f) falls outside of range (%f to %f)\n", wanted_x, data_x[0], data_x[number_of_points - 1]);
+    DebugCheckEmpty( );
+    DebugCheckValidX(wanted_x);
 
-    for ( int counter = index_of_last_point_used; counter < number_of_points - 1; counter++ ) {
+    for ( int counter = index_of_last_point_used; counter < NumberOfPoints( ) - 1; counter++ ) {
         if ( wanted_x >= data_x[counter] && wanted_x < data_x[counter + 1] ) {
             index_of_last_point_used = counter;
             return counter;
@@ -751,9 +812,9 @@ int Curve::ReturnIndexOfNearestPreviousBin(float wanted_x) {
         index_of_last_point_used = 0;
         return 0;
     }
-    else if ( wanted_x >= data_x[number_of_points - 1] ) {
-        index_of_last_point_used = number_of_points - 1;
-        return number_of_points - 1;
+    else if ( wanted_x >= data_x.back( ) ) {
+        index_of_last_point_used = NumberOfPoints( ) - 1;
+        return NumberOfPoints( ) - 1;
     }
 
     // Should never get here
@@ -761,11 +822,17 @@ int Curve::ReturnIndexOfNearestPreviousBin(float wanted_x) {
     return 0;
 }
 
+/**
+ * @brief Get the savitzky-golay polynomial order
+ * 
+ * @param wanted_window_size 
+ * @param wanted_polynomial_order 
+ */
 void Curve::FitSavitzkyGolayToData(int wanted_window_size, int wanted_polynomial_order) {
     // make sure the window size is odd
 
-    MyDebugAssertTrue(IsOdd(wanted_window_size) == true, "Window must be odd!")
-            MyDebugAssertTrue(wanted_window_size < number_of_points, "Window size is larger than the number of points!");
+    MyDebugAssertTrue(IsOdd(wanted_window_size) == true, "Window must be odd!");
+    MyDebugAssertTrue(wanted_window_size < NumberOfPoints( ), "Window size is larger than the number of points!");
     MyDebugAssertTrue(wanted_polynomial_order < wanted_window_size, "polynomial order is larger than the window size!");
 
     int pixel_counter;
@@ -785,94 +852,84 @@ void Curve::FitSavitzkyGolayToData(int wanted_window_size, int wanted_polynomial
     savitzky_golay_window_size      = wanted_window_size;
 
     // Allocate array of coefficient arrays, to be kept in memory for later use (e.g. for interpolation)
-    if ( savitzky_golay_coefficients != NULL ) {
-        DeleteSavitzkyGolayCoefficients( );
-    }
+    DeleteSavitzkyGolayCoefficients( );
     // Allocate memory for smooth y values
-    if ( have_savitzky_golay == true ) {
-        delete[] savitzky_golay_fit;
-    }
+    savitzky_golay_fit.assign(NumberOfPoints( ), 0.0f);
 
     AllocateSavitzkyGolayCoefficients( );
-    savitzky_golay_fit  = new float[number_of_points];
-    have_savitzky_golay = true;
 
     // loop over all the points..
 
-    for ( pixel_counter = 0; pixel_counter < number_of_points - 2 * half_pixel; pixel_counter++ ) {
+    for ( pixel_counter = 0; pixel_counter < NumberOfPoints( ) - 2 * half_pixel; pixel_counter++ ) {
         // for this pixel, extract the window, fit the polynomial, and copy the average into the output array
-
         for ( polynomial_counter = 0; polynomial_counter < wanted_window_size; polynomial_counter++ ) {
-            fit_array_x[polynomial_counter] = data_x[pixel_counter + polynomial_counter];
-            fit_array_y[polynomial_counter] = data_y[pixel_counter + polynomial_counter];
+            fit_array_x[polynomial_counter] = data_x.at(pixel_counter + polynomial_counter);
+            fit_array_y[polynomial_counter] = data_y.at(pixel_counter + polynomial_counter);
         }
 
         // fit a polynomial to this data..
-
-        LS_POLY(fit_array_x, fit_array_y, wanted_window_size, wanted_polynomial_order, output_fit_array, savitzky_golay_coefficients[half_pixel + pixel_counter]);
-
+        LS_POLY(fit_array_x, fit_array_y, wanted_window_size, wanted_polynomial_order, output_fit_array, savitzky_golay_coefficients.at(half_pixel + pixel_counter).data( ));
         // take the middle pixel, and put it into the output array..
 
-        savitzky_golay_fit[half_pixel + pixel_counter] = output_fit_array[half_pixel];
+        savitzky_golay_fit.at(half_pixel + pixel_counter) = output_fit_array[half_pixel];
     }
 
     // now we need to take care of the ends - first the start..
     // DNM: Need to take actual points beyond the end of the fitted points in the middle
     for ( polynomial_counter = 0; polynomial_counter < wanted_window_size; polynomial_counter++ ) {
-        fit_array_x[polynomial_counter] = data_x[polynomial_counter];
+        fit_array_x[polynomial_counter] = data_x.at(polynomial_counter);
 
-        if ( polynomial_counter < half_pixel || polynomial_counter >= number_of_points - half_pixel )
-            fit_array_y[polynomial_counter] = data_y[polynomial_counter];
+        if ( polynomial_counter < half_pixel || polynomial_counter >= NumberOfPoints( ) - half_pixel )
+            fit_array_y[polynomial_counter] = data_y.at(polynomial_counter);
         else
-            fit_array_y[polynomial_counter] = savitzky_golay_fit[polynomial_counter];
+            fit_array_y[polynomial_counter] = savitzky_golay_fit.at(polynomial_counter);
     }
 
     // fit a polynomial to this data..
 
-    LS_POLY(fit_array_x, fit_array_y, wanted_window_size, wanted_polynomial_order, output_fit_array, savitzky_golay_coefficients[half_pixel - 1]);
+    LS_POLY(fit_array_x, fit_array_y, wanted_window_size, wanted_polynomial_order, output_fit_array, savitzky_golay_coefficients.at(half_pixel - 1).data( ));
 
     // copy the required data back..
     for ( pixel_counter = 0; pixel_counter < half_pixel - 1; pixel_counter++ ) {
         for ( polynomial_counter = 0; polynomial_counter <= savitzky_golay_polynomial_order; polynomial_counter++ ) {
-            savitzky_golay_coefficients[pixel_counter][polynomial_counter] = savitzky_golay_coefficients[half_pixel - 1][polynomial_counter];
+            savitzky_golay_coefficients.at(pixel_counter).at(polynomial_counter) = savitzky_golay_coefficients.at(half_pixel - 1).at(polynomial_counter);
         }
     }
     for ( polynomial_counter = 0; polynomial_counter < half_pixel; polynomial_counter++ ) {
         //savitzky_golay_coefficients[polynomial_counter] = savitzky_golay_coefficients[half_pixel - 1];
-        savitzky_golay_fit[polynomial_counter] = output_fit_array[polynomial_counter];
+        savitzky_golay_fit.at(polynomial_counter) = output_fit_array[polynomial_counter];
     }
 
     // now the end..
-
-    end_start     = number_of_points - wanted_window_size;
+    end_start     = NumberOfPoints( ) - wanted_window_size;
     pixel_counter = 0;
-    for ( polynomial_counter = end_start; polynomial_counter < number_of_points; polynomial_counter++ ) {
-        fit_array_x[pixel_counter] = data_x[polynomial_counter];
+    for ( polynomial_counter = end_start; polynomial_counter < NumberOfPoints( ); polynomial_counter++ ) {
+        fit_array_x[pixel_counter] = data_x.at(polynomial_counter);
 
         if ( pixel_counter > half_pixel )
-            fit_array_y[pixel_counter] = data_y[polynomial_counter];
+            fit_array_y[pixel_counter] = data_y.at(polynomial_counter);
         else
-            fit_array_y[pixel_counter] = savitzky_golay_fit[polynomial_counter];
+            fit_array_y[pixel_counter] = savitzky_golay_fit.at(polynomial_counter);
 
         pixel_counter++;
     }
 
     // fit a polynomial to this data..
 
-    LS_POLY(fit_array_x, fit_array_y, wanted_window_size, wanted_polynomial_order, output_fit_array, savitzky_golay_coefficients[number_of_points - half_pixel]);
+    LS_POLY(fit_array_x, fit_array_y, wanted_window_size, wanted_polynomial_order, output_fit_array, savitzky_golay_coefficients.at(NumberOfPoints( ) - half_pixel).data( ));
 
     // copy the required data back..
 
-    for ( pixel_counter = number_of_points - half_pixel + 1; pixel_counter < number_of_points - 1; pixel_counter++ ) {
+    for ( pixel_counter = NumberOfPoints( ) - half_pixel + 1; pixel_counter < NumberOfPoints( ) - 1; pixel_counter++ ) {
         for ( polynomial_counter = 0; polynomial_counter <= savitzky_golay_polynomial_order; polynomial_counter++ ) {
-            savitzky_golay_coefficients[pixel_counter][polynomial_counter] = savitzky_golay_coefficients[number_of_points - half_pixel][polynomial_counter];
+            savitzky_golay_coefficients.at(pixel_counter).at(polynomial_counter) = savitzky_golay_coefficients.at(NumberOfPoints( ) - half_pixel).at(polynomial_counter);
         }
     }
 
     pixel_counter = half_pixel + 1;
-    for ( polynomial_counter = number_of_points - half_pixel; polynomial_counter < number_of_points; polynomial_counter++ ) {
-        //savitzky_golay_coefficients[polynomial_counter] = savitzky_golay_coefficients[number_of_points - half_pixel];
-        savitzky_golay_fit[polynomial_counter] = output_fit_array[pixel_counter];
+    for ( polynomial_counter = NumberOfPoints( ) - half_pixel; polynomial_counter < NumberOfPoints( ); polynomial_counter++ ) {
+        //savitzky_golay_coefficients[polynomial_counter] = savitzky_golay_coefficients[NumberOfPoints( ) - half_pixel];
+        savitzky_golay_fit.at(polynomial_counter) = output_fit_array[pixel_counter];
         pixel_counter++;
     }
 
@@ -881,32 +938,37 @@ void Curve::FitSavitzkyGolayToData(int wanted_window_size, int wanted_polynomial
     delete[] output_fit_array;
 }
 
+/**
+ * @brief fit a basic polynomial to the data
+ * 
+ * @param wanted_polynomial_order 
+ */
 void Curve::FitPolynomialToData(int wanted_polynomial_order) {
-    if ( have_polynomial == true ) {
-        delete[] polynomial_coefficients;
-        delete[] polynomial_fit;
-    }
+    polynomial_fit.clear( );
 
-    polynomial_fit          = new float[number_of_points];
-    polynomial_order        = wanted_polynomial_order;
-    polynomial_coefficients = new float[polynomial_order + 1];
-    have_polynomial         = true;
+    polynomial_fit.assign(NumberOfPoints( ), 0.0f);
+    polynomial_order = wanted_polynomial_order;
+    polynomial_coefficients.assign(polynomial_order + 1, 0.0f);
 
-    LS_POLY(data_x, data_y, number_of_points, polynomial_order, polynomial_fit, polynomial_coefficients); // weird old code to do the fit
+    LS_POLY(data_x.data( ), data_y.data( ), NumberOfPoints( ), polynomial_order, polynomial_fit.data( ), polynomial_coefficients.data( )); // weird old code to do the fit
 }
 
+/**
+ * @brief Fit a 1d gaussian to the data
+ * 
+ * @param lower_bound_x 
+ * @param upper_bound_x 
+ * @param apply_x_weighting 
+ */
 void Curve::FitGaussianToData(float lower_bound_x, float upper_bound_x, bool apply_x_weighting) {
-    //	MyDebugAssertTrue(first_point >= 0 && first_point < number_of_points - 1, "first_point out of range");
-    //	MyDebugAssertTrue(last_point >= 0 && first_point < number_of_points, "last_point out of range");
+    //	MyDebugAssertTrue(first_point >= 0 && first_point < NumberOfPoints( ) - 1, "first_point out of range");
+    //	MyDebugAssertTrue(last_point >= 0 && first_point < NumberOfPoints( ), "last_point out of range");
 
-    if ( have_gaussian == true ) {
-        delete[] gaussian_coefficients;
-        delete[] gaussian_fit;
-    }
+    gaussian_coefficients.clear( );
+    gaussian_fit.clear( );
 
-    gaussian_fit          = new float[number_of_points];
-    gaussian_coefficients = new float[2];
-    have_gaussian         = true;
+    gaussian_fit.assign(NumberOfPoints( ), 0.f);
+    gaussian_coefficients.reserve(2);
 
     float s, sx, sxx, sxy, sy;
     float delta, sigma2;
@@ -919,7 +981,7 @@ void Curve::FitGaussianToData(float lower_bound_x, float upper_bound_x, bool app
     sy     = 0.0f;
     sigma2 = 1.0f;
 
-    for ( i = 0; i < number_of_points; i++ ) {
+    for ( i = 0; i < NumberOfPoints( ); i++ ) {
         if ( data_x[i] >= lower_bound_x && data_x[i] <= upper_bound_x ) {
             if ( apply_x_weighting )
                 sigma2 = powf(data_x[i], 2);
@@ -937,71 +999,101 @@ void Curve::FitGaussianToData(float lower_bound_x, float upper_bound_x, bool app
     gaussian_coefficients[0] = expf((sxx * sy - sx * sxy) / delta);
     gaussian_coefficients[1] = (s * sxy - sx * sy) / delta;
 
-    for ( i = 0; i < number_of_points; i++ ) {
+    for ( i = 0; i < NumberOfPoints( ); i++ ) {
         gaussian_fit[i] = gaussian_coefficients[0] * expf(gaussian_coefficients[1] * powf(data_x[i], 2));
     }
 }
 
+/**
+ * @brief in-place reciprocal of the curve, zero values are not modified.
+ * 
+ */
 void Curve::Reciprocal( ) {
-#ifdef DEBUG
-    for ( int counter = 0; counter < number_of_points; counter++ ) {
-        if ( data_y[counter] < 0.0 )
-            MyDebugAssertTrue(false, "This routine assumes all Y values are positive, but value %i is %f\n", counter, data_y[counter]);
-    }
-#endif
+    DebugCheckForNegativeValues( );
 
-    for ( int counter = 0; counter < number_of_points; counter++ ) {
-        if ( data_y[counter] != 0.0 )
-            data_y[counter] = 1.0 / data_y[counter];
+    for ( auto& y : data_y ) {
+        if ( y != 0.0 )
+            y = 1.0 / y;
     }
 }
 
+/**
+ * @brief in-place absolute value of the curve
+ * 
+ */
 void Curve::Absolute( ) {
-    for ( int counter = 0; counter < number_of_points; counter++ ) {
-        data_y[counter] = fabs(data_y[counter]);
+    for ( auto& y : data_y ) {
+        y = fabs(y);
     }
 }
 
+/**
+ * @brief Check that the values of both curves are nearly the same, as defined in functions::FloatsAreAlmostTheSame
+ * 
+ * @param other_curve 
+ * @return true 
+ * @return false 
+ */
 bool Curve::YIsAlmostEqual(Curve& other_curve) {
-    MyDebugAssertTrue(number_of_points > 0, "No points in curve");
-    MyDebugAssertTrue(number_of_points == other_curve.number_of_points, "Number of points in curves not equal");
-    for ( int counter = 0; counter < number_of_points; counter++ ) {
+    DebugCheckEmpty( );
+    MyDebugAssertTrue(NumberOfPoints( ) == other_curve.NumberOfPoints( ), "Number of points in curves not equal");
+    for ( int counter = 0; counter < NumberOfPoints( ); counter++ ) {
         if ( ! FloatsAreAlmostTheSame(data_y[counter], other_curve.data_y[counter]) )
             return false;
     }
     return true;
 }
 
+/**
+ * @brief Add a constant float to each Y value
+ * 
+ * @param constant_to_add 
+ */
 void Curve::AddConstant(float constant_to_add) {
-    for ( int counter = 0; counter < number_of_points; counter++ ) {
-        data_y[counter] += constant_to_add;
+    for ( auto& y : data_y ) {
+        y += constant_to_add;
     }
 }
 
+/**
+ * @brief Divide one cuve by another element wise, zero values are not modified.
+ * 
+ * @param other_curve 
+ */
 void Curve::DivideBy(Curve& other_curve) {
-    MyDebugAssertTrue(number_of_points > 0, "No points in curve");
-    MyDebugAssertTrue(number_of_points == other_curve.number_of_points, "Number of points in curves not equal");
+    DebugCheckEmpty( );
+    MyDebugAssertTrue(NumberOfPoints( ) == other_curve.NumberOfPoints( ), "Number of points in curves not equal");
 
-    for ( int counter = 0; counter < number_of_points; counter++ ) {
+    for ( int counter = 0; counter < NumberOfPoints( ); counter++ ) {
         if ( other_curve.data_y[counter] != 0.0 )
             data_y[counter] = data_y[counter] / other_curve.data_y[counter];
     }
 }
 
+/**
+ * @brief Multiply one curve by another element wise
+ * 
+ * @param other_curve 
+ */
 void Curve::MultiplyBy(Curve& other_curve) {
-    MyDebugAssertTrue(number_of_points > 0, "No points in curve");
-    MyDebugAssertTrue(number_of_points == other_curve.number_of_points, "Number of points in curves not equal");
+    DebugCheckEmpty( );
+    MyDebugAssertTrue(NumberOfPoints( ) == other_curve.NumberOfPoints( ), "Number of points in curves not equal");
 
-    for ( int counter = 0; counter < number_of_points; counter++ ) {
+    for ( int counter = 0; counter < NumberOfPoints( ); counter++ ) {
         data_y[counter] = data_y[counter] * other_curve.data_y[counter];
     }
 }
 
+/**
+ * @brief Multiply the X values by a constant
+ * 
+ * @param constant_to_multiply_by 
+ */
 void Curve::MultiplyXByConstant(float constant_to_multiply_by) {
-    MyDebugAssertTrue(number_of_points > 0, "No points in curve");
+    DebugCheckEmpty( );
 
-    for ( int counter = 0; counter < number_of_points; counter++ ) {
-        data_x[counter] *= constant_to_multiply_by;
+    for ( auto& x : data_x ) {
+        x *= constant_to_multiply_by;
     }
 }
 
@@ -1044,7 +1136,7 @@ TAB    x,y,v,a,b,c,d,c2,e,f;
 * The order of the fit then obtained is l.                      *
 ****************************************************************/
 
-void LS_POLY(float* x_data, float* y_data, int number_of_points, int order_of_polynomial, float* output_smoothed_curve, float* output_coefficients) {
+void LS_POLY(float* x_data, float* y_data, int n_points, int order_of_polynomial, float* output_smoothed_curve, float* output_coefficients) {
 
     double a[order_of_polynomial + 2];
     double b[order_of_polynomial + 2];
@@ -1052,14 +1144,14 @@ void LS_POLY(float* x_data, float* y_data, int number_of_points, int order_of_po
     double c2[order_of_polynomial + 2];
     double f[order_of_polynomial + 2];
 
-    double v[number_of_points + 1];
-    double d[number_of_points + 1];
-    double e[number_of_points + 1];
-    double x[number_of_points + 1];
-    double y[number_of_points + 1];
+    double v[n_points + 1];
+    double d[n_points + 1];
+    double e[n_points + 1];
+    double x[n_points + 1];
+    double y[n_points + 1];
 
     int l; //
-    int n = number_of_points;
+    int n = n_points;
     int m = order_of_polynomial;
 
     double e1 = 0.0; //
@@ -1087,7 +1179,7 @@ void LS_POLY(float* x_data, float* y_data, int number_of_points, int order_of_po
     n1 = m + 1;
     v1 = 1e7;
 
-    for ( i = 0; i < number_of_points; i++ ) {
+    for ( i = 0; i < n_points; i++ ) {
         x[i + 1] = x_data[i];
         y[i + 1] = y_data[i];
 
@@ -1205,7 +1297,7 @@ e50: // Aborted sequence, recover last values
     goto e30;
 fin:;
 
-    for ( i = 0; i < number_of_points; i++ ) {
+    for ( i = 0; i < n_points; i++ ) {
         output_smoothed_curve[i] = v[i + 1];
         //	output_smoothed_curve[i] = y[i + 1];
         //wxPrintf("After %i = %f\n", i, output_smoothed_curve[i]);

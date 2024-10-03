@@ -13,6 +13,9 @@
 #include <cuda_fp16.h>
 #include <cuda_bf16.h>
 
+// From the cuda samples TODO: add license bit for this
+#include "cuda_common/helper_math.h"
+
 // #include <cutensor.h>
 
 const int MAX_GPU_COUNT = 32;
@@ -83,6 +86,25 @@ void* print_pointer_atrributes(T ptr, const char* ptr_name = nullptr) {
     std::cerr << "with possible host address () " << attr.hostPointer << std::endl;
     return attr.hostPointer;
 }
+
+struct FlushKernelPrintF {
+    FILE* tmpout;
+
+    FlushKernelPrintF(std::string& message) {
+        std::cerr << "Flushing kernel printfs " << message << std::endl;
+        std::cerr << "There can only be one instance of this created as it modifies the global stdout pointer\n";
+        cudaErr(cudaDeviceSynchronize( ));
+        tmpout = stdout;
+        stdout = stderr;
+    }
+
+    ~FlushKernelPrintF( ) {
+        cudaErr(cudaDeviceSynchronize( ));
+        fflush(stdout);
+        stdout = tmpout;
+        std::cerr << "Stdout pointer reset" << std::endl;
+    }
+};
 
 // Limits for specific kernels
 constexpr int ntds_x_WhitenPS = 32;

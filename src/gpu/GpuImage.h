@@ -185,7 +185,11 @@ class GpuImage {
     void ZeroCentralPixel( ); /**CPU_eq**/
     template <typename StorageTypeBase = float>
     void PhaseShift(float wanted_x_shift, float wanted_y_shift, float wanted_z_shift); /**CPU_eq**/
+
     void MultiplyByConstant(float scale_factor); /**CPU_eq**/
+    void MultiplyByConstant16f(const float scale_factor, int n_slices = 1);
+    void MultiplyByConstant16f(__half* input_ptr, const float scale_factor, int n_slices = 1);
+
     void SetToConstant(float val);
     void SetToConstant(Npp32fc val);
     void Conj( ); // FIXME
@@ -199,7 +203,6 @@ class GpuImage {
     template <typename StorageTypeBase = float>
     void MultiplyPixelWiseComplexConjugate(GpuImage& other_image, GpuImage& result_image) { MultiplyPixelWiseComplexConjugate<StorageTypeBase>(other_image, result_image, 0); };
 
-    void SwapFourierSpaceQuadrants( );
     template <typename StorageTypeBase = float>
     void SwapRealSpaceQuadrants( ); /**CPU_eq**/
     void ClipInto(GpuImage* other_image,
@@ -242,6 +245,7 @@ class GpuImage {
     float ReturnSumOfSquares( );
 
     void NormalizeRealSpaceStdDeviation(float additional_scalar, float pre_calculated_avg, float average_on_edge);
+    void NormalizeRealSpaceStdDeviationAndCastToFp16(float additional_scalar, float pre_calculated_avg, float average_on_edge);
 
     float ReturnAverageOfRealValuesOnEdges( );
     void  Deallocate( );
@@ -255,6 +259,7 @@ class GpuImage {
 
     void CopyFP32toFP16buffer(bool deallocate_single_precision = true);
     void CopyFP16buffertoFP32(bool deallocate_half_precision = true);
+    void CopyFP32toFP16bufferAndScale(float scalar);
 
     void AllocateTmpVarsAndEvents( );
     // If we allocate the fp16 buffer, we will not allocate fp32, will leave it alone if the same size, and will remove it if different.
@@ -338,6 +343,29 @@ class GpuImage {
                                input_dims.z);
     };
 
+    // Use this for kernels that will explicitly skip over the FFTW padding
+    template <int ntds_x = 32, int ntds_y = 32>
+    __inline__ void ReturnLaunchParametersNoFFTWPadding(int4 input_dims) {
+        static_assert(ntds_x % cistem::gpu::warp_size == 0);
+        static_assert(ntds_x * ntds_y <= cistem::gpu::max_threads_per_block);
+
+        threadsPerBlock = dim3(ntds_x, ntds_y, 1);
+        gridDims        = dim3((input_dims.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                               (input_dims.y + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                               input_dims.z);
+    };
+
+    template <int ntds_x = 32, int ntds_y = 32>
+    __inline__ void ReturnLaunchParametersNoFFTWPadding(int input_x_dim, int input_y_dim, int input_z_dim, dim3& wanted_gridDims, dim3& wanted_threadsPerBlock) {
+        static_assert(ntds_x % cistem::gpu::warp_size == 0);
+        static_assert(ntds_x * ntds_y <= cistem::gpu::max_threads_per_block);
+
+        wanted_threadsPerBlock = dim3(ntds_x, ntds_y, 1);
+        wanted_gridDims        = dim3((input_x_dim + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                                      (input_y_dim + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                                      input_z_dim);
+    };
+
     __inline__ void ReturnLaunchParameters1d_X(const int4 input_dims, const bool real_space) {
         int div = 1;
         if ( ! real_space )
@@ -345,7 +373,10 @@ class GpuImage {
 
         using namespace cistem::gpu;
         // Note: that second set of parens changes the division!
-        threadsPerBlock = dim3(std::max(min_threads_per_block, std::min(max_threads_per_block, warp_size * ((input_dims.w / div + warp_size - 1) / warp_size))), 1, 1);
+        threadsPerBlock = dim3(std::max(min_threads_per_block,
+                                        std::min(max_threads_per_block,
+                                                 warp_size * ((input_dims.w / div + warp_size - 1) / warp_size))),
+                               1, 1);
         gridDims        = dim3((input_dims.w / div + threadsPerBlock.x - 1) / threadsPerBlock.x,
                                (input_dims.y + threadsPerBlock.y - 1) / threadsPerBlock.y,
                                input_dims.z);
@@ -358,7 +389,10 @@ class GpuImage {
 
         using namespace cistem::gpu;
         // Note: that second set of parens changes the division!
-        threadsPerBlock = dim3(std::max(min_threads_per_block, std::min(max_threads_per_block / stride_y, warp_size * ((input_dims.w / div + warp_size - 1) / warp_size))), stride_y, 1);
+        threadsPerBlock = dim3(std::max(min_threads_per_block,
+                                        std::min(max_threads_per_block / stride_y,
+                                                 warp_size * ((input_dims.w / div + warp_size - 1) / warp_size))),
+                               stride_y, 1);
         gridDims        = dim3((input_dims.w / div + threadsPerBlock.x - 1) / threadsPerBlock.x,
                                (input_dims.y + threadsPerBlock.y - 1) / threadsPerBlock.y,
                                input_dims.z);
@@ -369,7 +403,7 @@ class GpuImage {
         // is to limit the number of SMs available for some kernels so that other threads on the device can run in parallel.
         // limit_SMs_by_threads is default 1, so this must be set prior to this call.
         threadsPerBlock = dim3(M, 1, 1);
-        gridDims        = dim3(myroundint(N * number_of_streaming_multiprocessors));
+        gridDims        = dim3(myroundint(N * number_of_streaming_multiprocessors), 1, 1);
     };
 
     void UpdateFlagsFromHostImage(Image& host_image);
@@ -392,7 +426,7 @@ class GpuImage {
 
     void ExtractSlice(GpuImage* volume_to_extract_from, AnglesAndShifts& angles_and_shifts, float pixel_size, float resolution_limit = 1.f, bool apply_resolution_limit = true, bool whiten_spectrum = false);
 
-    void ExtractSliceShiftAndCtf(GpuImage* volume_to_extract_from, GpuImage* ctf_image, AnglesAndShifts& angles_and_shifts, float pixel_size, float resolution_limit, bool apply_resolution_limit,
+    void ExtractSliceShiftAndCtf(GpuImage* volume_to_extract_from, GpuImage* ctf_image, AnglesAndShifts& angles_and_shifts, float pixel_size, float real_space_binning_factor, float resolution_limit, bool apply_resolution_limit,
                                  bool swap_quadrants, bool apply_shifts, bool apply_ctf, bool absolute_ctf, bool zero_central_pixel = false, cudaStream_t stream = cudaStreamPerThread);
 
     void Abs( );

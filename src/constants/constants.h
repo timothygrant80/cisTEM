@@ -17,33 +17,52 @@ constexpr long OPEN_TO_APPEND = 2;
 // Place system wide constants and enums here. Gradually, we would like to replace the many defines.
 namespace cistem {
 
+// Small value for floating point comparisons
+constexpr double double_epsilon     = 0.000001;
+constexpr float  float_epsilon      = 0.0001f;
+constexpr float  half_float_epsilon = 0.001f;
+
 // The default border to exclude when choosing peaks, e.g. in match_template, refine_template, prepare_stack_matchtemplate, make_template_result.
 constexpr const int fraction_of_box_size_to_exclude_for_border = 4;
 constexpr const int maximum_number_of_detections               = 1000;
 
 namespace match_template {
-// Values for data that are passed around in the results.
-constexpr int number_of_output_images     = 8; //mip, psi, theta, phi, pixel, defocus, sums, sqsums (scaled mip is not sent out)
-constexpr int number_of_meta_data_values  = 7; // img_x, img_y, number cccs, histogram values, pixel_size
-constexpr int MAX_ALLOWED_NUMBER_OF_PEAKS = 1000; // An error will be thrown and job aborted if this number of peaks is exceeded in the make template results block
 
 /**
  * @brief Fixed number of bins in histogram used for template matching. Must be < 1024 (max number of cuda threads in a block) and must be a multiple of 32 (cistem::gpu::warp size).
  * 
  */
-constexpr int   histogram_number_of_points = 512;
-constexpr float histogram_min              = -12.5f;
-constexpr float histogram_max              = 22.5f;
-constexpr float histogram_step             = (histogram_max - histogram_min) / float(histogram_number_of_points);
+constexpr int   histogram_number_of_points   = 512;
+constexpr float histogram_min                = -12.5f;
+constexpr float histogram_max                = 22.5f;
+constexpr float histogram_step               = (histogram_max - histogram_min) / float(histogram_number_of_points);
+constexpr float histogram_first_bin_midpoint = histogram_min + (histogram_step / 2.0f); // start position
 
+// Values for data that are passed around in the results.
+constexpr int   number_of_output_images     = 8; //mip, psi, theta, phi, pixel, defocus, sums, sqsums (scaled mip is not sent out)
+constexpr int   number_of_meta_data_values  = 10; // img_x, img_y, number cccs, histogram values, pixel_size
+constexpr int   MAX_ALLOWED_NUMBER_OF_PEAKS = 1000; // An error will be thrown and job aborted if this number of peaks is exceeded in the make template results block
+constexpr float MAX_BINNING_FACTOR          = histogram_min; // The maximum binning factor allowed for the template matching search image
+constexpr float MIN_VALUE_TO_MIP            = 1.0f; // The minimum value to be considered for the MIP
+
+/**
+ * @brief Used to encode search information in result arrays passed from client to server, 
+ * also stored in a small result image to be used for downstream processing. This enum may ONLY be appended, so we 
+ * can avoid version conflicts in the future.
+ * 
+ */
 enum Enum : int {
     image_size_x,
     image_size_y,
     image_real_memory_allocated,
-    number_of_cccs,
+    number_of_angles_searched,
+    number_of_histogram_samples,
+    number_of_stats_samples,
     number_of_histogram_bins,
     ccc_scalar,
-    pixel_size,
+    input_pixel_size,
+    number_of_valid_search_pixels
+
 };
 } // namespace match_template
 

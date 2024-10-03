@@ -29,9 +29,12 @@ class TemplateMatchingCore {
     int number_of_jobs_per_image_in_gui;
 
     // CPU images to be passed in -
-    Image    template_reconstruction;
-    GpuImage template_gpu;
-    Image    input_image; // These will be modified on the host from withing Template Matching Core so Allocate locally
+    Image                     template_reconstruction;
+    std::shared_ptr<GpuImage> template_gpu_shared;
+    Image                     input_image; // These will be modified on the host from withing Template Matching Core so Allocate locally
+
+    bool  use_lerp_for_resizing{ };
+    float binning_factor = 1.f;
 
     std::vector<Image> current_projection;
 
@@ -43,18 +46,16 @@ class TemplateMatchingCore {
     GpuImage d_best_defocus;
     GpuImage d_best_pixel_size;
 
-    GpuImage d_sum1, d_sum2, d_sum3;
-    GpuImage d_sumSq1, d_sumSq2, d_sumSq3;
+    GpuImage d_sum1, d_sum2;
+    GpuImage d_sumSq1, d_sumSq2;
     bool     is_allocated_sum_buffer = false;
     int      is_non_zero_sum_buffer;
 
-    //  GpuImage d_sum1, d_sum2, d_sum3, d_sum4, d_sum5;
-    //  GpuImage d_sumSq1, d_sumSq2, d_sumSq3, d_sumSq4, d_sumSq5;
-
     // This will need to be copied in
-    GpuImage               d_input_image;
-    std::vector<GpuImage>  d_current_projection;
-    std::vector<GpuImage*> d_statistical_buffers;
+    GpuImage              d_input_image;
+    std::vector<GpuImage> d_current_projection;
+
+    std::vector<GpuImage*> d_statistical_buffers_ptrs;
 
     GpuImage d_padded_reference;
 
@@ -78,19 +79,23 @@ class TemplateMatchingCore {
     int  first_search_position;
     int  last_search_position;
     long total_number_of_cccs_calculated;
+    long total_number_of_histogram_samples;
+    long total_number_of_stats_samples;
     long total_correlation_positions;
 
     int n_global_search_images_to_save;
 
     bool      is_running_locally;
     bool      is_gpu_3d_swapped;
+    bool      use_fast_fft;
     Histogram histogram;
 
-    std::vector<TM_EmpiricalDistribution<__half, __half2>> my_dist;
+    std::unique_ptr<TM_EmpiricalDistribution<__half, __half2>> my_dist;
 
     float histogram_min_scaled;
     float histogram_step_scaled;
-    int   histogram_max_padding;
+    int2  pre_padding;
+    int2  roi;
 
     // Search objects
     AnglesAndShifts angles;
@@ -117,32 +122,34 @@ class TemplateMatchingCore {
 
     void SetMinimumThreshold(float wanted_threshold) { minimum_threshold = wanted_threshold; }
 
-    void Init(MyApp*           parent_pointer,
-              Image&           template_reconstruction,
-              Image&           input_image,
-              Image&           current_projection,
-              float            pixel_size_search_range,
-              float            pixel_size_step,
-              float            pixel_size,
-              float            defocus_search_range,
-              float            defocus_step,
-              float            defocus1,
-              float            defocus2,
-              float            psi_max,
-              float            psi_start,
-              float            psi_step,
-              AnglesAndShifts& angles,
-              EulerSearch&     global_euler_search,
-              float            histogram_min_scaled,
-              float            histogram_step_scaled,
-              int              histogram_number_of_bins,
-              int              max_padding,
-              int              first_search_position,
-              int              last_search_position,
-              ProgressBar*     my_progress,
-              long             total_correlation_positions,
-              bool             is_running_locally,
-              int              number_of_global_search_images_to_save = 1);
+    void Init(MyApp*                    parent_pointer,
+              std::shared_ptr<GpuImage> template_reconstruction,
+              Image&                    input_image,
+              Image&                    current_projection,
+              float                     pixel_size_search_range,
+              float                     pixel_size_step,
+              float                     pixel_size,
+              float                     defocus_search_range,
+              float                     defocus_step,
+              float                     defocus1,
+              float                     defocus2,
+              float                     psi_max,
+              float                     psi_start,
+              float                     psi_step,
+              AnglesAndShifts&          angles,
+              EulerSearch&              global_euler_search,
+              float                     histogram_min_scaled,
+              float                     histogram_step_scaled,
+              int                       histogram_number_of_bins,
+              const int2                pre_padding,
+              const int2                roi,
+              int                       first_search_position,
+              int                       last_search_position,
+              ProgressBar*              my_progress,
+              long                      total_correlation_positions,
+              bool                      is_running_locally,
+              bool                      use_fast_fft,
+              int                       number_of_global_search_images_to_save = 1);
 
     void RunInnerLoop(Image& projection_filter, float pixel_i, float defocus_i, int threadIDX, long& current_correlation_position);
 };

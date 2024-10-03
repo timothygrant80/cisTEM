@@ -125,16 +125,16 @@ fi
 
 # This is the code that will be generated at compile time and should be specified for the most used gpu 
 target_arch=""
-AC_ARG_WITH([target-gpu-arch], AS_HELP_STRING([--with-target-gpu-arch@<:@=60,61,70,75,80,86@:>@], [Primary architecture to compile for (default=86)]),
+AC_ARG_WITH([target-gpu-arch], AS_HELP_STRING([--with-target-gpu-arch@<:@=70,75,80,86,89,90@:>@], [Primary architecture to compile for (default=86)]),
 [
-	if test "$withval" = "86" ; then target_arch=86 
+	if test "$withval" = "90" ; then target_arch=90
+	elif  test "$withval" = "89" ; then target_arch=89
+	elif  test "$withval" = "86" ; then target_arch=86 
 	elif  test "$withval" = "80" ; then target_arch=80
 	elif  test "$withval" = "75" ; then target_arch=75
 	elif  test "$withval" = "70" ; then target_arch=70
-	elif  test "$withval" = "61" ; then target_arch=61
-	elif  test "$withval" = "60" ; then target_arch=60
-	else
-		AC_MSG_ERROR([Requested target-gpu-arch must be in 60,61,70,75,80,86, not $withval])
+		else
+		AC_MSG_ERROR([Requested target-gpu-arch must be in 70,75,80,86,89,90 not $withval])
 	fi
 	
 ], [ target_arch="86"] )
@@ -146,46 +146,56 @@ NVCCFLAGS+=" --gpu-architecture=sm_$target_arch -gencode=arch=compute_$target_ar
 
 # This is the oldest arch that will have JIT-able code g
 oldest_arch=""
-AC_ARG_WITH([oldest-gpu-arch], AS_HELP_STRING([--with-oldest-gpu-arch@<:@=60,61,70,75,80,86:>@], [Oldest architecture make compatible for (default=70)]),
+AC_ARG_WITH([oldest-gpu-arch], AS_HELP_STRING([--with-oldest-gpu-arch@<:@=70,75,80,86,89,90:>@], [Oldest architecture make compatible for (default=80)]),
 [
-	if test "$withval" = "86" ; then oldest_arch=86 
+	if test "$withval" = "90" ; then oldest_arch=90
+	elif  test "$withval" = "89" ; then oldest_arch=89
+	elif  test "$withval" = "86" ; then oldest_arch=86 
 	elif  test "$withval" = "80" ; then oldest_arch=80
 	elif  test "$withval" = "75" ; then oldest_arch=75
 	elif  test "$withval" = "70" ; then oldest_arch=70
-	elif  test "$withval" = "61" ; then oldest_arch=61
-	elif  test "$withval" = "60" ; then oldest_arch=60
-	else
-		AC_MSG_ERROR([Requested target-oldest_arch must be in 60,61,70,75,80,86, not $withval])
+		else
+		AC_MSG_ERROR([Requested target-oldest_arch must be in 70,75,80,86,89 not $withval])
 	fi
 	
-], [ oldest_arch="70"] )
+], [ oldest_arch="80"] )
 AC_MSG_NOTICE([oldest gpu architecture is sm$oldest_arch])
 
 if test "$oldest_arch" -gt "$target_arch" ; then 
 	AC_MSG_ERROR([Requested target-oldest_arch is greater than the target arch.]) 
 else
 	current_arch="60"
-	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -lt "$target_arch" ; then
+	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -ne "$target_arch" ; then
 		NVCCFLAGS+=" -gencode=arch=compute_$current_arch,code=sm_$current_arch"
 	fi
 	
 	current_arch="61"
-	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -lt "$target_arch" ; then
+	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -ne "$target_arch" ; then
 		NVCCFLAGS+=" -gencode=arch=compute_$current_arch,code=sm_$current_arch"
 	fi
 	
 	current_arch="70"
-	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -lt "$target_arch" ; then
+	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -ne "$target_arch" ; then
 		NVCCFLAGS+=" -gencode=arch=compute_$current_arch,code=sm_$current_arch"
 	fi	
 	
 	current_arch="75"
-	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -lt "$target_arch" ; then
+	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -ne "$target_arch" ; then
 		NVCCFLAGS+=" -gencode=arch=compute_$current_arch,code=sm_$current_arch"
 	fi	
 	
 	current_arch="80"
-	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -lt "$target_arch" ; then
+	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -ne "$target_arch" ; then
+		NVCCFLAGS+=" -gencode=arch=compute_$current_arch,code=sm_$current_arch"
+	fi		
+
+	current_arch="86"
+	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -ne "$target_arch" ; then
+		NVCCFLAGS+=" -gencode=arch=compute_$current_arch,code=sm_$current_arch"
+	fi	
+
+	current_arch="89"
+	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -ne "$target_arch" ; then
 		NVCCFLAGS+=" -gencode=arch=compute_$current_arch,code=sm_$current_arch"
 	fi		
 		

@@ -565,7 +565,7 @@ void Sharpen3DPanel::OnSharpenThreadComplete(ReturnSharpeningResultsEvent& my_ev
         VolumeAsset* selected_volume = volume_asset_panel->ReturnAssetPointer(VolumeComboBox->GetSelection( ));
 
         // convert curves to spatial frequency
-        for ( int point_counter = 0; point_counter < original_curve->number_of_points; point_counter++ ) {
+        for ( int point_counter = 0; point_counter < original_curve->NumberOfPoints( ); point_counter++ ) {
             original_curve->data_x[point_counter]  = 1.0f / (selected_volume->pixel_size / original_curve->data_x[point_counter]);
             sharpened_curve->data_x[point_counter] = 1.0f / (selected_volume->pixel_size / sharpened_curve->data_x[point_counter]);
         }
@@ -580,7 +580,7 @@ void Sharpen3DPanel::OnSharpenThreadComplete(ReturnSharpeningResultsEvent& my_ev
 
             sharpened_curve->MultiplyByConstant(scale_factor);
 
-            for ( int point_counter = 0; point_counter < original_curve->number_of_points; point_counter++ ) {
+            for ( int point_counter = 0; point_counter < original_curve->NumberOfPoints( ); point_counter++ ) {
                 if ( original_curve->data_x[point_counter] <= 1.0f / (selected_volume->pixel_size / 0.5f) ) {
                     min_y = std::min(min_y, original_curve->data_y[point_counter]);
                     min_y = std::min(min_y, sharpened_curve->data_y[point_counter]);

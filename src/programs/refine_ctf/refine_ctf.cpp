@@ -523,7 +523,7 @@ bool RefineCTFApp::DoCalculation( ) {
 
     //	if (padding != 1.0)
     //	{
-    //		refine_statistics.part_SSNR.ResampleCurve(&refine_statistics.part_SSNR, refine_statistics.part_SSNR.number_of_points * padding);
+    //		refine_statistics.part_SSNR.ResampleCurve(&refine_statistics.part_SSNR, refine_statistics.part_SSNR.NumberOfPoints( ) * padding);
     //	}
 
     if ( beamtilt_refinement ) {

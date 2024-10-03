@@ -537,7 +537,7 @@ bool Merge3DApp::DoCalculation( ) {
     }
 
     if ( is_running_locally == false ) {
-        int number_of_points = resolution_statistics->FSC.number_of_points;
+        int number_of_points = resolution_statistics->FSC.NumberOfPoints( );
         int array_size       = (number_of_points * 5) + 2;
         wxPrintf("number of points = %i, class is %i, array size = %i\n", number_of_points, class_number_for_gui, array_size);
 

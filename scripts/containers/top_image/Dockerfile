@@ -26,32 +26,25 @@ ARG build_ref_images="false"
 
 SHELL ["/bin/bash", "-c"]
 # some rebuild comment
-ENV CISTEM_REF_IMAGES /cisTEMdev/cistem_reference_images
-ENV LD_RUN_PATH=/opt/WX/intel-dynamic/lib:${LD_RUN_PATH}
+ENV CISTEM_REF_IMAGES=/cisTEMdev/cistem_reference_images
 
 # Install wxWidgets
-COPY install_wx_3.0.5_static.sh /tmp/install_wx_3.0.5_static.sh
-COPY install_wx_3.0.5_dynamic.sh /tmp/install_wx_3.0.5_dynamic.sh
-COPY install_wx_3.1.5.sh /tmp/install_wx_3.1.5.sh
-COPY install_node_16.sh /tmp/install_node_16.sh
+COPY install_wx_3.1.5.sh install_node_16.sh /tmp/
 
-# NOTE: if working on setting up dynamic linking, we will need to add a step to install wxWidgets. The script is already at top_image/install_wx_3.0.5_dynamic.sh
-RUN echo "install wxWidgets 3.05" && /tmp/install_wx_3.0.5_static.sh && /tmp/install_wx_3.0.5_dynamic.sh
-RUN 
 
 # If we do not do this, we want to link the static or dynamic libs from /opt/WX to /usr/bin so we don't need to set it on configure lines and also so that wxformbuilder can find them
-RUN echo "checking for wxWidgets 3.1.5" && if [[ "x${build_wx_version}" == "xdev" ]]; then /tmp/install_wx_3.1.5.sh  ; else echo "linking the (${build_type}) wx-config system wide"  && ln -sf /opt/WX/intel-${build_type}/bin/wx-config /usr/bin/wx-config ; fi
+RUN echo "checking for wxWidgets 3.1.5" && if [[ "x${build_wx_version}" == "xdev" ]]; then /tmp/install_wx_3.1.5.sh  ; else echo "linking the (${build_type}) wx-config system wide"  && ln -sf /opt/WX/icc-${build_type}/bin/wx-config /usr/bin/wx-config ; fi
 
 # Get reference images for testing and debugging
-RUN if [[ "x${build_ref_images}" == "xtrue" ]]; then mkdir -p /cisTEMdev && pip3 install gdown toml && cd /cisTEMdev && gdown --fuzzy https://drive.google.com/file/d/1WOkMaq9rPBLMbZYhFl50XdeNXVakRFCV/view?usp=sharing && tar -xjf cistem_reference_images.tar.bz2 && rm cistem_reference_images.tar.bz2 ;fi
-#RUN if [[ "x${build_ref_images}" == "true" ]]; then mkdir -p /cisTEMdev && pip3 install gdown && cd /cisTEMdev && gdown https://drive.google.com/drive/folders/1PO9tBU7lKqKUuSb8qdEPvlEk7xeektXv?usp --folder ; fi
+
+RUN if [[ "x${build_ref_images}" == "xtrue" ]]; then mkdir -p /cisTEMdev && pip3 install gdown toml && cd /cisTEMdev && gdown --fuzzy https://drive.google.com/file/d/1WOkMaq9rPBLMbZYhFl50XdeNXVakRFCV/view?usp=sharing && tar -xjvf cistem_reference_images_fp32.tar.bz2 && rm cistem_reference_images_fp32.tar.bz2 ;fi
 
 
 # Will this work with wx 3.0.5?
 
 # Install wxFormbuilder
 # Note, this will ignore the stable dynamic wx at /opt/WX/intel-dynamic and install libwxbase3.0-0v5 and libwxgtk3.0-gtk3-0v5 and libwxgtk-media3.0-gtk3-0v5
-RUN cd /tmp && wget https://github.com/wxFormBuilder/wxFormBuilder/releases/download/v3.10.0/wxformbuilder_3.10.0_ubuntu-20.04_amd64.deb && \
+RUN cd /opt/WX && \
     apt-get update && apt install -y ./wxformbuilder_3.10.0_ubuntu-20.04_amd64.deb && rm wxformbuilder_3.10.0_ubuntu-20.04_amd64.deb && \
     rm -rf /var/lib/apt/lists/*
 

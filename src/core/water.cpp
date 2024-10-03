@@ -1,4 +1,5 @@
 #include "core_headers.h"
+#include "water.h"
 
 const double SOLVENT_DENSITY = 0.94; // 0.94 +/- 0.02 Ghormley JA, Hochanadel CJ. 1971
 const double CARBON_DENSITY  = 1.75; // 2.0; // NIST and Holography paper TODO add cite (using the lower density to match the Holography paper)
@@ -188,12 +189,12 @@ void Water::SeedWaters3d( ) {
                                     if ( my_rand.GetUniformRandomSTD(0.0, 1.0) > probablity_of_water_in_voxel_octent )
                                         water_coords.emplace_back(AtomType::water, float(iInner) + qx, float(jInner) + qy, float(k) + qz);
                                 }
+                            }
                         }
                     }
                 }
             }
         }
-    }
     }
 
     // We won't add any more waters, so free up the extra memory

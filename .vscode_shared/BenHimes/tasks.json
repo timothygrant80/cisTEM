@@ -95,9 +95,10 @@
             "command": "cd ${build_dir}/intel-gpu && make -j${compile_cores}"
         },
         {
+            //--disable-staticmode
             "label": "CONFIG GNU ,gpu",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/GNU-gpu && cd ${build_dir}/GNU-gpu && CC=gcc CXX=g++ ../../configure    --with-cuda=${cuda_dir} --disable-staticmode --with-wx-config=/opt/WX/intel-dynamic/bin/wx-config ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+            "command": "mkdir -p ${build_dir}/GNU-gpu && cd ${build_dir}/GNU-gpu && CC=gcc CXX=g++ ../../configure    --with-cuda=${cuda_dir}  --with-wx-config=/opt/WX/gcc-dynamic/bin/wx-config ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
         },
         {
             "label": "BUILD GNU,gpu",

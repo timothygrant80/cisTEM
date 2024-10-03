@@ -104,6 +104,7 @@
     "editor.formatOnSave": true,
     "DockerRun.DisableDockerrc": true,
     "html.format.endWithNewline": true,
+    "editor.fontSize": 12,
     "remote.extensionKind": {
         "github.copilot-chat": "ui"
     }

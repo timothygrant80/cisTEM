@@ -1,6 +1,7 @@
 #ifndef _SRC_GPU_TEMPLATE_MATCHING_EMPIRICAL_DISTRIBUTION_H_
 #define _SRC_GPU_TEMPLATE_MATCHING_EMPIRICAL_DISTRIBUTION_H_
 
+#include <memory>
 /**
  * @brief Construct a new tm empiricaldistribution object
  * 

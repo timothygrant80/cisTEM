@@ -1,6 +1,8 @@
 #ifndef __SRC_PROGRAMS_MATCH_TEMPLATE_TEMPLATE_MATCHING_DATA_SIZER_H_
 #define __SRC_PROGRAMS_MATCH_TEMPLATE_TEMPLATE_MATCHING_DATA_SIZER_H_
 
+#include <memory>
+
 #include "../../constants/constants.h"
 
 // #define USE_NEAREST_NEIGHBOR_INTERPOLATION

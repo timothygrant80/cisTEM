@@ -1,6 +1,8 @@
 #ifndef TemplateMatchingCore_H_
 #define TemplateMatchingCore_H_
 
+#include <memory>
+
 #include "GpuImage.h"
 #include "DeviceManager.h"
 #include "Histogram.h"

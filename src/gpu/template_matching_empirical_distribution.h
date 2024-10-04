@@ -22,7 +22,7 @@ constexpr int do_stats_idx     = 4 * n_imgs_to_process_at_once_;
 
 using histogram_storage_t = float;
 
-template <typename ccfType, typename mipType, bool per_image = false>
+template <typename ccfType, typename mipType>
 class TM_EmpiricalDistribution {
 
   private:

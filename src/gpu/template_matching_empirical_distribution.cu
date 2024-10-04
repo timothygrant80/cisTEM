@@ -33,21 +33,20 @@ inline __device__ __host__ bool test_gt_zero(T value) {
  * 
  */
 
-template <typename ccfType, typename mipType, bool per_image>
-TM_EmpiricalDistribution<ccfType, mipType, per_image>::TM_EmpiricalDistribution(GpuImage&           reference_image,
-                                                                                histogram_storage_t histogram_min,
-                                                                                histogram_storage_t histogram_step,
-                                                                                int2                pre_padding,
-                                                                                int2                roi,
-                                                                                const float         histogram_sampling_rate,
-                                                                                const float         stats_sampling_rate) : pre_padding_{pre_padding},
-                                                                                                                   roi_{roi},
-                                                                                                                   higher_order_moments_{false},
-                                                                                                                   image_plane_mem_allocated_{reference_image.real_memory_allocated},
-                                                                                                                   histogram_sampling_rate_{histogram_sampling_rate},
-                                                                                                                   stats_sampling_rate_{stats_sampling_rate} {
+template <typename ccfType, typename mipType>
+TM_EmpiricalDistribution<ccfType, mipType>::TM_EmpiricalDistribution(GpuImage&           reference_image,
+                                                                     histogram_storage_t histogram_min,
+                                                                     histogram_storage_t histogram_step,
+                                                                     int2                pre_padding,
+                                                                     int2                roi,
+                                                                     const float         histogram_sampling_rate,
+                                                                     const float         stats_sampling_rate) : pre_padding_{pre_padding},
+                                                                                                        roi_{roi},
+                                                                                                        higher_order_moments_{false},
+                                                                                                        image_plane_mem_allocated_{reference_image.real_memory_allocated},
+                                                                                                        histogram_sampling_rate_{histogram_sampling_rate},
+                                                                                                        stats_sampling_rate_{stats_sampling_rate} {
 
-    static_assert(per_image == false, "This class does not support per image accumulation yet");
     MyDebugAssertTrue(histogram_sampling_rate_ >= 0.f && histogram_sampling_rate_ <= 1.f, "The histogram sampling rate must be between 0 and 1");
     MyDebugAssertTrue(stats_sampling_rate_ >= 0.f && stats_sampling_rate_ <= 1.f, "The stats sampling rate must be between 0 and 1");
 
@@ -116,8 +115,8 @@ TM_EmpiricalDistribution<ccfType, mipType, per_image>::TM_EmpiricalDistribution(
     AllocateAndZeroStatisticalArrays( );
 };
 
-template <typename ccfType, typename mipType, bool per_image>
-void TM_EmpiricalDistribution<ccfType, mipType, per_image>::AllocateAndZeroStatisticalArrays( ) {
+template <typename ccfType, typename mipType>
+void TM_EmpiricalDistribution<ccfType, mipType>::AllocateAndZeroStatisticalArrays( ) {
 
     cudaErr(cudaMallocAsync(&sum_array, image_plane_mem_allocated_ * sizeof(float), calc_stream_[0]));
     cudaErr(cudaMallocAsync(&sum_sq_array, image_plane_mem_allocated_ * sizeof(float), calc_stream_[0]));
@@ -155,8 +154,8 @@ void TM_EmpiricalDistribution<ccfType, mipType, per_image>::AllocateAndZeroStati
     // }
 };
 
-template <typename ccfType, typename mipType, bool per_image>
-TM_EmpiricalDistribution<ccfType, mipType, per_image>::~TM_EmpiricalDistribution( ) {
+template <typename ccfType, typename mipType>
+TM_EmpiricalDistribution<ccfType, mipType>::~TM_EmpiricalDistribution( ) {
     MyDebugAssertFalse(cudaStreamQuery(calc_stream_[0]) == cudaErrorInvalidResourceHandle, "The cuda stream is invalid");
 
     cudaErr(cudaFreeAsync(histogram_, calc_stream_[0]));
@@ -181,8 +180,8 @@ TM_EmpiricalDistribution<ccfType, mipType, per_image>::~TM_EmpiricalDistribution
     cudaErr(cudaEventDestroy(mip_stack_is_ready_event_[0]));
 };
 
-template <typename ccfType, typename mipType, bool per_image>
-void TM_EmpiricalDistribution<ccfType, mipType, per_image>::ZeroHistogram( ) {
+template <typename ccfType, typename mipType>
+void TM_EmpiricalDistribution<ccfType, mipType>::ZeroHistogram( ) {
     cudaErr(cudaMemsetAsync(histogram_, 0, gridDims_.x * gridDims_.y * TM::histogram_number_of_points * sizeof(histogram_storage_t), calc_stream_[0]));
 }
 
@@ -397,8 +396,8 @@ FinalAccumulateKernel(histogram_storage_t* input_ptr, const int n_bins, const in
  * @param n_images_this_batch - number of slices to accumulate, must be <= n_imgs_to_process_at_once_
  */
 
-template <typename ccfType, typename mipType, bool per_image>
-void TM_EmpiricalDistribution<ccfType, mipType, per_image>::AccumulateDistribution(int n_images_this_batch, long& histogram_sampling_counter, long& stats_sampling_counter) {
+template <typename ccfType, typename mipType>
+void TM_EmpiricalDistribution<ccfType, mipType>::AccumulateDistribution(int n_images_this_batch, long& histogram_sampling_counter, long& stats_sampling_counter) {
     MyDebugAssertTrue(n_images_this_batch <= n_imgs_to_process_at_once_, "The number of images to accumulate is greater than the number of images to accumulate concurrently");
     MyDebugAssertFalse(cudaStreamQuery(calc_stream_[0]) == cudaErrorInvalidResourceHandle, "The cuda stream is invalid");
 
@@ -441,8 +440,8 @@ void TM_EmpiricalDistribution<ccfType, mipType, per_image>::AccumulateDistributi
     SetActive_idx( );
 };
 
-template <typename ccfType, typename mipType, bool per_image>
-void TM_EmpiricalDistribution<ccfType, mipType, per_image>::FinalAccumulate( ) {
+template <typename ccfType, typename mipType>
+void TM_EmpiricalDistribution<ccfType, mipType>::FinalAccumulate( ) {
     MyDebugAssertFalse(cudaStreamQuery(calc_stream_[0]) == cudaErrorInvalidResourceHandle, "The cuda stream is invalid");
 
     const int n_blocks = gridDims_.x * gridDims_.y;
@@ -457,8 +456,8 @@ void TM_EmpiricalDistribution<ccfType, mipType, per_image>::FinalAccumulate( ) {
     postcheck;
 }
 
-template <typename ccfType, typename mipType, bool per_image>
-void TM_EmpiricalDistribution<ccfType, mipType, per_image>::CopyToHostAndAdd(long* array_to_add_to) {
+template <typename ccfType, typename mipType>
+void TM_EmpiricalDistribution<ccfType, mipType>::CopyToHostAndAdd(long* array_to_add_to) {
 
     // Make a temporary copy of the cummulative histogram on the host and then add on the host. TODO errorchecking
     histogram_storage_t* tmp_array;
@@ -473,11 +472,8 @@ void TM_EmpiricalDistribution<ccfType, mipType, per_image>::CopyToHostAndAdd(lon
     cudaErr(cudaFreeHost(tmp_array));
 }
 
-template class TM_EmpiricalDistribution<__half, __half2, false>;
-template class TM_EmpiricalDistribution<__nv_bfloat16, __nv_bfloat162, false>;
-
 // Note: we allow for float in the constructor checking, however, we don't need this for our implementation, so we won't instantiate it.
-// template class TM_EmpiricalDistribution<float, per_image>;
+// template class TM_EmpiricalDistribution<float>;
 
 // TODO: I'm not sure  __restrict__ can be applied to the sum image b/c the value is both read and written to, but this migh tbe okay.
 __global__ void AccumulateSumsKernel(float* sum, float* sumsq, float* __restrict__ sum_img_array, float* __restrict__ sq_sum_img_array, const int numel) {
@@ -491,8 +487,8 @@ __global__ void AccumulateSumsKernel(float* sum, float* sumsq, float* __restrict
     }
 }
 
-template <typename ccfType, typename mipType, bool per_image>
-void TM_EmpiricalDistribution<ccfType, mipType, per_image>::CopySumAndSumSqAndZero(GpuImage& sum_img, GpuImage& sq_sum_img) {
+template <typename ccfType, typename mipType>
+void TM_EmpiricalDistribution<ccfType, mipType>::CopySumAndSumSqAndZero(GpuImage& sum_img, GpuImage& sq_sum_img) {
     precheck;
     dim3 threadsPerBlock = dim3(1024, 1, 1);
     dim3 gridDims        = dim3((image_plane_mem_allocated_ + threadsPerBlock.x - 1) / threadsPerBlock.x, 1, 1);
@@ -538,11 +534,11 @@ __global__ void MipToImageKernel(const mipType* __restrict__ mip_psi,
     // }
 }
 
-template <typename ccfType, typename mipType, bool per_image>
-void TM_EmpiricalDistribution<ccfType, mipType, per_image>::MipToImage(GpuImage& d_max_intensity_projection,
-                                                                       GpuImage& d_best_psi,
-                                                                       GpuImage& d_best_theta,
-                                                                       GpuImage& d_best_phi) {
+template <typename ccfType, typename mipType>
+void TM_EmpiricalDistribution<ccfType, mipType>::MipToImage(GpuImage& d_max_intensity_projection,
+                                                            GpuImage& d_best_psi,
+                                                            GpuImage& d_best_theta,
+                                                            GpuImage& d_best_phi) {
 
     precheck;
     dim3 threadsPerBlock = dim3(1024, 1, 1);
@@ -559,3 +555,7 @@ void TM_EmpiricalDistribution<ccfType, mipType, per_image>::MipToImage(GpuImage&
                                                                                      d_best_phi.real_values);
     postcheck;
 }
+
+// Apparenty clang cares if this is not at the end of the file, and doesn't generate these instantiations for any methods defined after.
+template class TM_EmpiricalDistribution<__half, __half2>;
+template class TM_EmpiricalDistribution<__nv_bfloat16, __nv_bfloat162>;

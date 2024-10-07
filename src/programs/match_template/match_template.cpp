@@ -107,7 +107,7 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
     wxString output_histogram_file;
     wxString correlation_std_output_file;
     wxString correlation_avg_output_file;
-    wxString scaled_mip_output_file;
+    wxString scaled_mip_output_mrcfile;
 
     float input_pixel_size        = 1.0f;
     float voltage_kV              = 300.0f;
@@ -140,7 +140,7 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
     input_search_images         = my_input->GetFilenameFromUser("Input images to be searched", "The input image stack, containing the images that should be searched", "image_stack.mrc", true);
     input_reconstruction        = my_input->GetFilenameFromUser("Input template reconstruction", "The 3D reconstruction from which projections are calculated", "reconstruction.mrc", true);
     mip_output_file             = my_input->GetFilenameFromUser("Output MIP file", "The file for saving the maximum intensity projection image", "mip.mrc", false);
-    scaled_mip_output_file      = my_input->GetFilenameFromUser("Output Scaled MIP file", "The file for saving the maximum intensity projection image divided by correlation variance", "mip_scaled.mrc", false);
+    scaled_mip_output_mrcfile   = my_input->GetFilenameFromUser("Output Scaled MIP file", "The file for saving the maximum intensity projection image divided by correlation variance", "mip_scaled.mrc", false);
     best_psi_output_file        = my_input->GetFilenameFromUser("Output psi file", "The file for saving the best psi image", "psi.mrc", false);
     best_theta_output_file      = my_input->GetFilenameFromUser("Output theta file", "The file for saving the best psi image", "theta.mrc", false);
     best_phi_output_file        = my_input->GetFilenameFromUser("Output phi file", "The file for saving the best psi image", "phi.mrc", false);
@@ -217,7 +217,7 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
                                       best_phi_output_file.ToUTF8( ).data( ),
                                       best_defocus_output_file.ToUTF8( ).data( ),
                                       best_pixel_size_output_file.ToUTF8( ).data( ),
-                                      scaled_mip_output_file.ToUTF8( ).data( ),
+                                      scaled_mip_output_mrcfile.ToUTF8( ).data( ),
                                       correlation_avg_output_file.ToUTF8( ).data( ),
                                       my_symmetry.ToUTF8( ).data( ),
                                       in_plane_angular_step,
@@ -273,7 +273,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     wxString best_phi_output_file            = my_current_job.arguments[24].ReturnStringArgument( );
     wxString best_defocus_output_file        = my_current_job.arguments[25].ReturnStringArgument( );
     wxString best_pixel_size_output_file     = my_current_job.arguments[26].ReturnStringArgument( );
-    wxString scaled_mip_output_file          = my_current_job.arguments[27].ReturnStringArgument( );
+    wxString scaled_mip_output_mrcfile       = my_current_job.arguments[27].ReturnStringArgument( );
     wxString correlation_avg_output_file     = my_current_job.arguments[28].ReturnStringArgument( );
     wxString my_symmetry                     = my_current_job.arguments[29].ReturnStringArgument( );
     float    in_plane_angular_step           = my_current_job.arguments[30].ReturnFloatArgument( );
@@ -881,16 +881,68 @@ bool MatchTemplateApp::DoCalculation( ) {
         expected_threshold = sqrtf(2.0f) * (float)temp_threshold * CCG_NOISE_STDDEV;
 
         temp_image.CopyFrom(&max_intensity_projection);
-        temp_image.QuickAndDirtyWriteSlice(mip_output_file.ToStdString( ), 1, data_sizer.GetPixelSize( ));
+        MRCFile mip_out(mip_output_file.ToStdString( ), true);
+        mip_out.SetPixelSize(data_sizer.GetPixelSize( ));
+#ifdef USE_FP16_PARTICLE_STACKS
+        mip_out.SetOutputToFP16( );
+#endif
+        temp_image.WriteSlice(&mip_out, 1);
 
-        scaled_mip.QuickAndDirtyWriteSlice(scaled_mip_output_file.ToStdString( ), 1, data_sizer.GetPixelSize( ));
-        correlation_pixel_sum_image.QuickAndDirtyWriteSlice(correlation_avg_output_file.ToStdString( ), 1, data_sizer.GetPixelSize( ));
-        correlation_pixel_sum_of_squares_image.QuickAndDirtyWriteSlice(correlation_std_output_file.ToStdString( ), 1, data_sizer.GetPixelSize( ));
-        best_psi.QuickAndDirtyWriteSlice(best_psi_output_file.ToStdString( ), 1, data_sizer.GetPixelSize( ));
-        best_theta.QuickAndDirtyWriteSlice(best_theta_output_file.ToStdString( ), 1, data_sizer.GetPixelSize( ));
-        best_phi.QuickAndDirtyWriteSlice(best_phi_output_file.ToStdString( ), 1, data_sizer.GetPixelSize( ));
-        best_defocus.QuickAndDirtyWriteSlice(best_defocus_output_file.ToStdString( ), 1, data_sizer.GetPixelSize( ));
-        best_pixel_size.QuickAndDirtyWriteSlice(best_pixel_size_output_file.ToStdString( ), 1, data_sizer.GetPixelSize( ));
+        MRCFile scaled_mip_output_mrcfile(mip_output_file.ToStdString( ), true);
+        scaled_mip_output_mrcfile.SetPixelSize(data_sizer.GetPixelSize( ));
+#ifdef USE_FP16_PARTICLE_STACKS
+        scaled_mip_output_mrcfile.SetOutputToFP16( );
+#endif
+        scaled_mip.WriteSlice(&scaled_mip_output_mrcfile, 1);
+
+        MRCFile correlation_pixel_sum_output_mrcfile(correlation_avg_output_file.ToStdString( ), true);
+        correlation_pixel_sum_output_mrcfile.SetPixelSize(data_sizer.GetPixelSize( ));
+#ifdef USE_FP16_PARTICLE_STACKS
+        correlation_pixel_sum_output_mrcfile.SetOutputToFP16( );
+#endif
+        correlation_pixel_sum_image.WriteSlice(&correlation_pixel_sum_output_mrcfile, 1);
+
+        MRCFile correlation_pixel_sum_of_squares_output_mrcfile(correlation_std_output_file.ToStdString( ), true);
+        correlation_pixel_sum_of_squares_output_mrcfile.SetPixelSize(data_sizer.GetPixelSize( ));
+#ifdef USE_FP16_PARTICLE_STACKS
+        correlation_pixel_sum_of_squares_output_mrcfile.SetOutputToFP16( );
+#endif
+        correlation_pixel_sum_of_squares_image.WriteSlice(&correlation_pixel_sum_of_squares_output_mrcfile, 1);
+
+        MRCFile best_psi_output_mrcfile(best_psi_output_file.ToStdString( ), true);
+        best_psi_output_mrcfile.SetPixelSize(data_sizer.GetPixelSize( ));
+#ifdef USE_FP16_PARTICLE_STACKS
+        best_psi_output_mrcfile.SetOutputToFP16( );
+#endif
+        best_psi.WriteSlice(&best_psi_output_mrcfile, 1);
+
+        MRCFile best_theta_output_mrcfile(best_theta_output_file.ToStdString( ), true);
+        best_theta_output_mrcfile.SetPixelSize(data_sizer.GetPixelSize( ));
+#ifdef USE_FP16_PARTICLE_STACKS
+        best_theta_output_mrcfile.SetOutputToFP16( );
+#endif
+        best_theta.WriteSlice(&best_theta_output_mrcfile, 1);
+
+        MRCFile best_phi_output_mrcfile(best_phi_output_file.ToStdString( ), true);
+        best_phi_output_mrcfile.SetPixelSize(data_sizer.GetPixelSize( ));
+#ifdef USE_FP16_PARTICLE_STACKS
+        best_phi_output_mrcfile.SetOutputToFP16( );
+#endif
+        best_phi.WriteSlice(&best_phi_output_mrcfile, 1);
+
+        MRCFile best_defocus_output_mrcfile(best_defocus_output_file.ToStdString( ), true);
+        best_defocus_output_mrcfile.SetPixelSize(data_sizer.GetPixelSize( ));
+#ifdef USE_FP16_PARTICLE_STACKS
+        best_defocus_output_mrcfile.SetOutputToFP16( );
+#endif
+        best_defocus.WriteSlice(&best_defocus_output_mrcfile, 1);
+
+        MRCFile best_pixel_size_output_mrcfile(best_pixel_size_output_file.ToStdString( ), true);
+        best_pixel_size_output_mrcfile.SetPixelSize(data_sizer.GetPixelSize( ));
+#ifdef USE_FP16_PARTICLE_STACKS
+        best_pixel_size_output_mrcfile.SetOutputToFP16( );
+#endif
+        best_pixel_size.WriteSlice(&best_pixel_size_output_mrcfile, 1);
 
         // write out histogram..
 
@@ -1135,87 +1187,109 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
             aggregated_results[array_location].collated_mip_data[pixel_counter] = temp_image.real_values[pixel_counter];
         }
 
+        MRCFile mip_output_file(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[21].ReturnStringArgument( ), true);
+        mip_output_file.SetPixelSize(input_pixel_size);
+#ifdef USE_FP16_PARTICLE_STACKS
+        mip_output_file.SetOutputToFP16( );
+#endif
+        temp_image.WriteSlice(&mip_output_file, 1);
+
         wxPrintf("Writing result %i\n", aggregated_results[array_location].image_number - 1);
-        temp_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[21].ReturnStringArgument( ), 1, false, input_pixel_size);
-        temp_image.Deallocate( );
 
         // psi
-
-        temp_image.Allocate(int(image_size_x), int(image_size_y), true);
         for ( pixel_counter = 0; pixel_counter < image_real_memory_allocated; pixel_counter++ ) {
             temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_psi_data[pixel_counter];
         }
-
-        //temp_image.QuickAndDirtyWriteSlice(wxString::Format("%s/psi.mrc", directory_for_writing_results).ToStdString(), aggregated_results[array_location].image_number);
-        temp_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[22].ReturnStringArgument( ), 1, false, input_pixel_size);
+        MRCFile psi_output_file(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[22].ReturnStringArgument( ), true);
+        psi_output_file.SetPixelSize(input_pixel_size);
+#ifdef USE_FP16_PARTICLE_STACKS
+        psi_output_file.SetOutputToFP16( );
+#endif
+        temp_image.WriteSlice(&psi_output_file, 1);
         psi_image.CopyFrom(&temp_image);
-        temp_image.Deallocate( );
-
         //theta
 
-        temp_image.Allocate(int(image_size_x), int(image_size_y), true);
         for ( pixel_counter = 0; pixel_counter < image_real_memory_allocated; pixel_counter++ ) {
             temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_theta_data[pixel_counter];
         }
+        MRCFile theta_output_file(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[23].ReturnStringArgument( ), true);
+        theta_output_file.SetPixelSize(input_pixel_size);
+#ifdef USE_FP16_PARTICLE_STACKS
+        theta_output_file.SetOutputToFP16( );
+#endif
 
-        temp_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[23].ReturnStringArgument( ), 1, false, input_pixel_size);
+        temp_image.WriteSlice(&theta_output_file, 1);
         theta_image.CopyFrom(&temp_image);
-        temp_image.Deallocate( );
 
         // phi
 
-        temp_image.Allocate(int(image_size_x), int(image_size_y), true);
         for ( pixel_counter = 0; pixel_counter < image_real_memory_allocated; pixel_counter++ ) {
             temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_phi_data[pixel_counter];
         }
-
-        temp_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[24].ReturnStringArgument( ), 1, false, input_pixel_size);
+        MRCFile phi_output_file(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[24].ReturnStringArgument( ), true);
+        phi_output_file.SetPixelSize(input_pixel_size);
+#ifdef USE_FP16_PARTICLE_STACKS
+        phi_output_file.SetOutputToFP16( );
+#endif
+        temp_image.WriteSlice(&phi_output_file, 1);
         phi_image.CopyFrom(&temp_image);
-        temp_image.Deallocate( );
 
         // defocus
 
-        temp_image.Allocate(int(image_size_x), int(image_size_y), true);
         for ( pixel_counter = 0; pixel_counter < image_real_memory_allocated; pixel_counter++ ) {
             temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_defocus_data[pixel_counter];
         }
-
-        temp_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[25].ReturnStringArgument( ), 1, false, input_pixel_size);
+        MRCFile defocus_output_file(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[25].ReturnStringArgument( ), true);
+        defocus_output_file.SetPixelSize(input_pixel_size);
+#ifdef USE_FP16_PARTICLE_STACKS
+        defocus_output_file.SetOutputToFP16( );
+#endif
+        temp_image.WriteSlice(&defocus_output_file, 1);
         defocus_image.CopyFrom(&temp_image);
-        temp_image.Deallocate( );
 
         // pixel size
 
-        temp_image.Allocate(int(image_size_x), int(image_size_y), true);
         for ( pixel_counter = 0; pixel_counter < image_real_memory_allocated; pixel_counter++ ) {
             temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_pixel_size_data[pixel_counter];
         }
-
-        temp_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[26].ReturnStringArgument( ), 1, false, input_pixel_size);
+        MRCFile pixel_size_output_file(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[26].ReturnStringArgument( ), true);
+        pixel_size_output_file.SetPixelSize(input_pixel_size);
+#ifdef USE_FP16_PARTICLE_STACKS
+        pixel_size_output_file.SetOutputToFP16( );
+#endif
+        temp_image.WriteSlice(&pixel_size_output_file, 1);
         pixel_size_image.CopyFrom(&temp_image);
-        temp_image.Deallocate( );
 
-        scaled_mip.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[27].ReturnStringArgument( ), 1, false, input_pixel_size);
+        MRCFile scaled_mip_output_mrcfile(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[27].ReturnStringArgument( ), true);
+        scaled_mip_output_mrcfile.SetPixelSize(input_pixel_size);
+#ifdef USE_FP16_PARTICLE_STACKS
+        scaled_mip_output_mrcfile.SetOutputToFP16( );
+#endif
+        scaled_mip.WriteSlice(&scaled_mip_output_mrcfile, 1);
 
         // sums
 
-        temp_image.Allocate(int(image_size_x), int(image_size_y), true);
         for ( pixel_counter = 0; pixel_counter < image_real_memory_allocated; pixel_counter++ ) {
             temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_pixel_sums[pixel_counter];
         }
-
-        temp_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[36].ReturnStringArgument( ), 1, false, input_pixel_size);
-        temp_image.Deallocate( );
+        MRCFile sum_output_file(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[36].ReturnStringArgument( ), true);
+        sum_output_file.SetPixelSize(input_pixel_size);
+#ifdef USE_FP16_PARTICLE_STACKS
+        sum_output_file.SetOutputToFP16( );
+#endif
+        temp_image.WriteSlice(&sum_output_file, 1);
 
         // square sums
 
-        temp_image.Allocate(int(image_size_x), int(image_size_y), true);
         for ( pixel_counter = 0; pixel_counter < image_real_memory_allocated; pixel_counter++ ) {
             temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_pixel_square_sums[pixel_counter];
         }
-
-        temp_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[28].ReturnStringArgument( ), 1, false, input_pixel_size);
-        temp_image.Deallocate( );
+        MRCFile square_sum_output_file(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[28].ReturnStringArgument( ), true);
+        square_sum_output_file.SetPixelSize(input_pixel_size);
+#ifdef USE_FP16_PARTICLE_STACKS
+        square_sum_output_file.SetOutputToFP16( );
+#endif
+        temp_image.WriteSlice(&square_sum_output_file, 1);
 
         // histogram
 

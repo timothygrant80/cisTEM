@@ -318,11 +318,24 @@ AC_ARG_ENABLE(profiling, AS_HELP_STRING([--enable-profiling],[Include fine-grain
 AM_CONDITIONAL([ENABLEPROFILING_AM], [test x$want_profiling = xtrue])
 
 AC_ARG_ENABLE(fp16-particlestacks, AS_HELP_STRING([--enable-fp16-particlestacks],[Save particle stacks in reduced precision. Use with caution  [default=no]]),[
-  if test "$enableval" = yes; then
+  if test "x$enableval" = "xyes"; then
     AC_DEFINE([USE_FP16_PARTICLE_STACKS], [], [Save particle stacks in reduced precision])
   	AC_MSG_NOTICE([Compiling with reduced precision particle stacks])	
   fi
   ]) 
+
+AC_ARG_ENABLE(fp16-tm-outputs, AS_HELP_STRING([--disable-fp16-tm-outputs],[Disable saving template matching outputs in reduced precision ]),[
+  if test "x$enableval" = "xno"; then
+  	AC_MSG_NOTICE([Not Compiling with reduced precision template matching outputs])	
+  else
+    AC_DEFINE([USE_FP16_TM_OUTPUTS], [], [Save template matching outputs in reduced precision])
+    AC_MSG_NOTICE([Compiling with reduced precision template matching outputs])	
+  fi
+  ],
+  [
+  AC_DEFINE([USE_FP16_TM_OUTPUTS], [], [Save template matching outputs in reduced precision])
+  AC_MSG_NOTICE([Compiling with reduced precision template matching outputs])
+  ])
 
 
   

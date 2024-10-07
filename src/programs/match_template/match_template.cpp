@@ -16,6 +16,14 @@
 
 #include "template_matching_data_sizer.h"
 
+// The profiling for development is under conrtol of --enable-profiling.
+#ifdef CISTEM_PROFILING
+using namespace cistem_timer;
+#else
+#define PRINT_VERBOSE
+using namespace cistem_timer_noop;
+#endif
+
 // #define USE_LERP_NOT_FOURIER_RESIZING
 
 class AggregatedTemplateResult {
@@ -243,6 +251,7 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     // In particular histogram_min, histogram_max, histogram_step, histogram_number_of_points, histogram_first_bin_midpoint
     using namespace cistem::match_template;
+    StopWatch profile_timing;
 
     wxDateTime start_time = wxDateTime::Now( );
 
@@ -303,6 +312,7 @@ bool MatchTemplateApp::DoCalculation( ) {
         max_threads = 1;
     }
 
+    profile_timing.start("Init");
     ParameterMap parameter_map; // needed for euler search init
     //for (int i = 0; i < 5; i++) {parameter_map[i] = true;}
     parameter_map.SetAllTrue( );
@@ -379,14 +389,16 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     Image temp_image;
 
+    profile_timing.lap("Init");
+
+    profile_timing.start("Read input images");
     input_image.ReadSlice(&input_search_image_file, 1);
 
     float histogram_padding_trim_rescale; // scale the counts to
 
     input_reconstruction.ReadSlices(&input_reconstruction_file, 1, input_reconstruction_file.ReturnNumberOfSlices( ));
     MyAssertTrue(input_reconstruction.IsCubic( ), "Input reconstruction should be cubic");
-
-    TemplateMatchingDataSizer data_sizer(this, input_image, input_reconstruction, input_pixel_size, padding);
+    profile_timing.lap("Read input images");
 
 #ifdef USE_LERP_NOT_FOURIER_RESIZING
     const bool use_lerp_not_fourier_resampling = true;
@@ -394,13 +406,17 @@ bool MatchTemplateApp::DoCalculation( ) {
     const bool use_lerp_not_fourier_resampling = false;
 #endif
 
+    profile_timing.start("PreProcessInputImage");
+    TemplateMatchingDataSizer data_sizer(this, input_image, input_reconstruction, input_pixel_size, padding);
     data_sizer.PreProcessInputImage(input_image, 0);
+    profile_timing.lap("PreProcessInputImage");
 
+    profile_timing.start("Resize_preSearch");
     data_sizer.SetImageAndTemplateSizing(high_resolution_limit_search, use_fast_fft);
     data_sizer.ResizeTemplate_preSearch(input_reconstruction, use_lerp_not_fourier_resampling);
     data_sizer.ResizeImage_preSearch(input_image);
+    profile_timing.lap("Resize_preSearch");
     float wanted_binning_factor = data_sizer.GetSearchPixelSize( ) / data_sizer.GetPixelSize( );
-    std::cerr << "Binning factor is " << wanted_binning_factor << std::endl;
 
     if ( data_sizer.IsRotatedBy90( ) )
         defocus_angle += 90.0f;
@@ -412,6 +428,7 @@ bool MatchTemplateApp::DoCalculation( ) {
         input_reconstruction.Resize(input_reconstruction.logical_x_dimension * padding, input_reconstruction.logical_y_dimension * padding, input_reconstruction.logical_z_dimension * padding, input_reconstruction.ReturnAverageOfRealValuesOnEdges( ));
     }
 
+    profile_timing.start("Allocate and zero arrays");
     padded_reference.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
     max_intensity_projection.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
     best_psi.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
@@ -451,6 +468,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     if ( padding != 1.0f )
         padded_projection.Allocate(input_reconstruction.logical_x_dimension * padding, input_reconstruction.logical_x_dimension * padding, false);
 
+    profile_timing.lap("Allocate and zero arrays");
     // angular step
 
     float mask_radius_search;
@@ -499,7 +517,9 @@ bool MatchTemplateApp::DoCalculation( ) {
     wxDateTime my_time_out;
     wxDateTime my_time_in;
 
+    profile_timing.start("PreProcessResizedInputImage");
     data_sizer.PreProcessResizedInputImage(input_image);
+    profile_timing.lap("PreProcessResizedInputImage");
     // count total searches (lazy)
 
     total_correlation_positions  = 0;
@@ -572,20 +592,23 @@ bool MatchTemplateApp::DoCalculation( ) {
     int maxPos = last_search_position;
     int incPos = (nJobs) / (max_threads);
 
-//    wxPrintf("First last and inc %d, %d, %d\n", minPos, maxPos, incPos);
+    //    wxPrintf("First last and inc %d, %d, %d\n", minPos, maxPos, incPos);
+
 #ifdef ENABLEGPU
+    profile_timing.start("Init GPU");
     TemplateMatchingCore* GPU;
     DeviceManager         gpuDev;
+    profile_timing.lap("Init GPU");
 #endif
 
     if ( use_gpu ) {
         total_correlation_positions_per_thread = total_correlation_positions / max_threads;
 
 #ifdef ENABLEGPU
-        //    checkCudaErrors(cudaGetDeviceCount(&nGPUs));
+        profile_timing.start("Init GPU");
         GPU = new TemplateMatchingCore[max_threads];
         gpuDev.Init(nGPUs);
-
+        profile_timing.lap("Init GPU");
 //    wxPrintf("Host: %s is running\nnThreads: %d\nnGPUs: %d\n:nSearchPos %d \n",hostNameBuffer,nThreads, nGPUs, maxPos);
 
 //    TemplateMatchingCore GPU(number_of_jobs_per_image_in_gui);
@@ -598,31 +621,32 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     //    wxPrintf("Starting job\n");
     for ( size_i = -myroundint(float(pixel_size_search_range) / float(pixel_size_step)); size_i <= myroundint(float(pixel_size_search_range) / float(pixel_size_step)); size_i++ ) {
-        //        template_reconstruction.CopyFrom(&input_reconstruction);
+        profile_timing.start("ChangePixelSize");
+        // Manually set this so that if we do loop over the pixel size, it doesn't create any problems with the gpu branch
+        template_reconstruction.is_fft_centered_in_box = false;
         input_reconstruction.ChangePixelSize(&template_reconstruction, (data_sizer.GetSearchPixelSize( ) + float(size_i) * pixel_size_step) / data_sizer.GetSearchPixelSize( ), 0.001f, true);
         //    template_reconstruction.ForwardFFT();
         template_reconstruction.ZeroCentralPixel( );
         template_reconstruction.SwapRealSpaceQuadrants( );
+        profile_timing.lap("ChangePixelSize");
 
         if ( use_gpu ) {
 #ifdef ENABLEGPU
             // FIXME: move this (and the above CPU steps) into a method to prepare the 3d reference.
-            // Swapping the fourier space quadrants is a one way operation, so we need a copy in case the user has a loop over pixel size
-            // TODO: we could check this and avoid the copy
-            Image tmp_vol = template_reconstruction;
-            if ( ! tmp_vol.is_fft_centered_in_box ) {
-                // FIXME: The extra RealSpace swap could be avoided
-                tmp_vol.SwapRealSpaceQuadrants( );
-                tmp_vol.BackwardFFT( );
-                tmp_vol.SwapFourierSpaceQuadrants(true);
-            }
+            profile_timing.start("Swap Fourier Quadrants");
+            template_reconstruction.BackwardFFT( );
+            template_reconstruction.SwapFourierSpaceQuadrants(false);
+            profile_timing.lap("Swap Fourier Quadrants");
             // We only want to have one copy of the 3d template in texture memory that each thread can then reference.
             // First allocate a shared pointer and construct the GpuImage based on the CPU template
             // TODO: Initially, i had this set to use
             // GpuImage::InitializeBasedOnCpuImage(tmp_vol, false, true); where the memory is instructed not to be pinned.
             // This should be fine now, but .
-            std::shared_ptr<GpuImage> template_reconstruction_gpu = std::make_shared<GpuImage>(tmp_vol);
-            template_reconstruction_gpu->CopyHostToDeviceTextureComplex3d(tmp_vol);
+            profile_timing.start("CopyHostToDeviceTextureComplex3d");
+
+            std::shared_ptr<GpuImage> template_reconstruction_gpu = std::make_shared<GpuImage>(template_reconstruction);
+            template_reconstruction_gpu->CopyHostToDeviceTextureComplex3d(template_reconstruction);
+            profile_timing.lap("CopyHostToDeviceTextureComplex3d");
 #pragma omp parallel num_threads(max_threads)
             {
                 int tIDX = ReturnThreadNumberOfCurrentThread( );
@@ -635,7 +659,7 @@ bool MatchTemplateApp::DoCalculation( ) {
 
                     if ( tIDX == (max_threads - 1) )
                         t_last_search_position = maxPos;
-
+                    profile_timing.start("Init GPU");
                     GPU[tIDX].Init(this, template_reconstruction_gpu, input_image, current_projection,
                                    pixel_size_search_range, pixel_size_step, data_sizer.GetSearchPixelSize( ),
                                    defocus_search_range, defocus_step, defocus1, defocus2,
@@ -644,6 +668,7 @@ bool MatchTemplateApp::DoCalculation( ) {
                                    histogram_min, histogram_step, histogram_number_of_points,
                                    data_sizer.GetPrePadding( ), data_sizer.GetRoi( ), t_first_search_position, t_last_search_position,
                                    my_progress, total_correlation_positions_per_thread, is_running_locally, use_fast_fft);
+                    profile_timing.lap("Init GPU");
 
 #ifdef USE_LERP_NOT_FOURIER_RESIZING
                     std::cerr << "\n\nUsing LERP\n\n";
@@ -665,11 +690,13 @@ bool MatchTemplateApp::DoCalculation( ) {
         }
         for ( defocus_i = -myroundint(float(defocus_search_range) / float(defocus_step)); defocus_i <= myroundint(float(defocus_search_range) / float(defocus_step)); defocus_i++ ) {
 
+            profile_timing.start("Ctf and whitening filter");
             // make the projection filter, which will be CTF * whitening filter
             input_ctf.SetDefocus((defocus1 + float(defocus_i) * defocus_step) / data_sizer.GetSearchPixelSize( ), (defocus2 + float(defocus_i) * defocus_step) / data_sizer.GetSearchPixelSize( ), deg_2_rad(defocus_angle));
             //            input_ctf.SetDefocus((defocus1 + 200) / data_sizer.GetSearchPixelSize(), (defocus2 + 200) / data_sizer.GetSearchPixelSize(), deg_2_rad(defocus_angle));
             projection_filter.CalculateCTFImage(input_ctf);
             projection_filter.ApplyCurveFilter(data_sizer.whitening_filter_ptr.get( ));
+            profile_timing.lap("Ctf and whitening filter");
 
             //            projection_filter.QuickAndDirtyWriteSlices("/tmp/projection_filter.mrc",1,projection_filter.logical_z_dimension,true,1.5);
             if ( use_gpu ) {
@@ -680,12 +707,13 @@ bool MatchTemplateApp::DoCalculation( ) {
                 {
                     int tIDX = ReturnThreadNumberOfCurrentThread( );
                     gpuDev.SetGpu(tIDX);
-
+                    profile_timing.start("RunInnerLoop");
                     GPU[tIDX].RunInnerLoop(projection_filter, size_i, defocus_i, tIDX, current_correlation_position);
+                    profile_timing.lap("RunInnerLoop");
 
 #pragma omp critical
                     {
-
+                        profile_timing.start("Transfer data back to host");
                         Image mip_buffer   = GPU[tIDX].d_max_intensity_projection.CopyDeviceToNewHost(true, false);
                         Image psi_buffer   = GPU[tIDX].d_best_psi.CopyDeviceToNewHost(true, false);
                         Image phi_buffer   = GPU[tIDX].d_best_phi.CopyDeviceToNewHost(true, false);
@@ -721,7 +749,7 @@ bool MatchTemplateApp::DoCalculation( ) {
                         actual_number_of_angles_searched += GPU[tIDX].total_number_of_cccs_calculated;
                         total_number_of_histogram_samples += GPU[tIDX].total_number_of_histogram_samples;
                         total_number_of_stats_samples += GPU[tIDX].total_number_of_stats_samples;
-
+                        profile_timing.lap("Transfer data back to host");
                     } // end of omp critical block
                 } // end of parallel block
 
@@ -729,7 +757,7 @@ bool MatchTemplateApp::DoCalculation( ) {
 
 #endif
             }
-
+            profile_timing.start("RunInnerLoop cpu");
             for ( current_search_position = first_search_position; current_search_position <= last_search_position; current_search_position++ ) {
                 //loop over each rotation angle
 
@@ -831,11 +859,13 @@ bool MatchTemplateApp::DoCalculation( ) {
                     }
                 }
             }
+            profile_timing.lap("RunInnerLoop cpu");
         }
     }
 
     wxPrintf("\n\n\tTimings: Overall: %s\n", (wxDateTime::Now( ) - overall_start).Format( ));
 
+    profile_timing.start("Resize_postSearch");
     // We may have rotated or re-sized the image for performance. To map the results back, it will be
     // easiest to convert the statistical arrays back to images.
     for ( pixel_counter = 0; pixel_counter < input_image.real_memory_allocated; pixel_counter++ ) {
@@ -856,6 +886,8 @@ bool MatchTemplateApp::DoCalculation( ) {
                                       correlation_pixel_sum_image,
                                       correlation_pixel_sum_of_squares_image);
 
+    profile_timing.lap("Resize_postSearch");
+    profile_timing.print_times( );
     if ( is_running_locally ) {
         delete my_progress;
 

@@ -897,7 +897,6 @@ void TemplateMatchingDataSizer::FillInNearestNeighbors(Image& output_image, Imag
         else
             size_neighborhood += 2;
     }
-
     // We could try to dilate out each neighborhood, but this will be slower given the bad memory access. Better to do a little extra.
     int offset_max = size_neighborhood / 2;
 

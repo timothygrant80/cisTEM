@@ -16,15 +16,6 @@
 // #define USE_BLOCK_REDUCE
 #define USE_FP16_FOR_WHITENPS
 
-__global__ void
-MipPixelWiseKernel(cufftReal* mip, const cufftReal* correlation_output, const int4 dims);
-__global__ void
-MipPixelWiseKernel(cufftReal* mip, cufftReal* other_image, cufftReal* psi, cufftReal* phi, cufftReal* theta,
-                   int4 dims, float c_psi, float c_phi, float c_theta);
-__global__ void
-MipPixelWiseKernel(cufftReal* mip, cufftReal* other_image, cufftReal* psi, cufftReal* phi, cufftReal* theta, cufftReal* defocus, cufftReal* pixel, const int4 dims,
-                   float c_psi, float c_phi, float c_theta, float c_defocus, float c_pixel);
-
 // Inline declarations
 __device__ __forceinline__ int
 d_ReturnFourierLogicalCoordGivenPhysicalCoord_X(int physical_index,
@@ -527,7 +518,6 @@ MultiplyPixelWiseComplexConjugateKernel(const StorageType* __restrict__ img_comp
     int address = x + (dims.w / 2) * y;
     int stride  = (dims.w / 2) * dims.y;
 
-    constexpr float epsilon = 1e-6f;
     // We have one referece image, and this is broadcasted to all images in the stack
     if constexpr ( std::is_same<StorageType, __half2>::value ) {
         const Complex ref_val = (Complex)__half22float2(ref_complex_values[address]);
@@ -1271,92 +1261,6 @@ float GpuImage::ReturnSumSquareModulusComplexValues( ) {
     cudaErr(cudaStreamSynchronize(nppStream.hStream));
     postcheck;
     return float(tmpValComplex[tmp_val_idx::ReturnSumSquareModulusComplexValues] * tmpValComplex[tmp_val_idx::ReturnSumSquareModulusComplexValues]);
-}
-
-void GpuImage::MipPixelWise(GpuImage& other_image) {
-
-    MyDebugAssertTrue(HasSameDimensionsAs(&other_image), "Images have different dimension.");
-    precheck;
-    ReturnLaunchParameters(dims, true);
-    MipPixelWiseKernel<<<gridDims, threadsPerBlock, 0, cudaStreamPerThread>>>(real_values, other_image.real_values, this->dims);
-    postcheck;
-}
-
-__global__ void
-MipPixelWiseKernel(cufftReal* mip, const cufftReal* correlation_output, const int4 dims) {
-
-    int3 coords = make_int3(blockIdx.x * blockDim.x + threadIdx.x,
-                            blockIdx.y * blockDim.y + threadIdx.y,
-                            blockIdx.z);
-
-    if ( coords.x < dims.x && coords.y < dims.y && coords.z < dims.z ) {
-        int address  = d_ReturnReal1DAddressFromPhysicalCoord(coords, dims);
-        mip[address] = MAX(mip[address], correlation_output[address]);
-    }
-}
-
-void GpuImage::MipPixelWise(GpuImage& other_image, GpuImage& psi, GpuImage& phi, GpuImage& theta, GpuImage& defocus, GpuImage& pixel,
-                            float c_psi, float c_phi, float c_theta, float c_defocus, float c_pixel) {
-
-    MyDebugAssertTrue(HasSameDimensionsAs(&other_image), "Images have different dimension.");
-    precheck;
-    ReturnLaunchParameters(dims, true);
-    MipPixelWiseKernel<<<gridDims, threadsPerBlock, 0, cudaStreamPerThread>>>(real_values, other_image.real_values,
-                                                                              psi.real_values, phi.real_values, theta.real_values, defocus.real_values, pixel.real_values,
-                                                                              this->dims, c_psi, c_phi, c_theta, c_defocus, c_pixel);
-    postcheck;
-}
-
-__global__ void
-MipPixelWiseKernel(cufftReal* mip, cufftReal* correlation_output, cufftReal* psi, cufftReal* phi, cufftReal* theta, cufftReal* defocus, cufftReal* pixel, const int4 dims,
-                   float c_psi, float c_phi, float c_theta, float c_defocus, float c_pixel) {
-
-    int3 coords = make_int3(blockIdx.x * blockDim.x + threadIdx.x,
-                            blockIdx.y * blockDim.y + threadIdx.y,
-                            blockIdx.z);
-
-    if ( coords.x < dims.x && coords.y < dims.y && coords.z < dims.z ) {
-        int address = d_ReturnReal1DAddressFromPhysicalCoord(coords, dims);
-        if ( correlation_output[address] > mip[address] ) {
-            mip[address]     = correlation_output[address];
-            psi[address]     = c_psi;
-            phi[address]     = c_phi;
-            theta[address]   = c_theta;
-            defocus[address] = c_defocus;
-            pixel[address]   = c_pixel;
-        }
-    }
-}
-
-void GpuImage::MipPixelWise(GpuImage& other_image, GpuImage& psi, GpuImage& phi, GpuImage& theta,
-                            float c_psi, float c_phi, float c_theta) {
-
-    MyDebugAssertTrue(HasSameDimensionsAs(&other_image), "Images have different dimension.");
-    precheck;
-    ReturnLaunchParameters(dims, true);
-    MipPixelWiseKernel<<<gridDims, threadsPerBlock, 0, cudaStreamPerThread>>>(real_values, other_image.real_values,
-                                                                              psi.real_values, phi.real_values, theta.real_values,
-                                                                              this->dims, c_psi, c_phi, c_theta);
-    postcheck;
-}
-
-__global__ void
-MipPixelWiseKernel(cufftReal* mip, cufftReal* correlation_output, cufftReal* psi, cufftReal* phi, cufftReal* theta, const int4 dims,
-                   float c_psi, float c_phi, float c_theta) {
-
-    int3 coords = make_int3(blockIdx.x * blockDim.x + threadIdx.x,
-                            blockIdx.y * blockDim.y + threadIdx.y,
-                            blockIdx.z);
-
-    if ( coords.x < dims.x && coords.y < dims.y && coords.z < dims.z ) {
-        int address = d_ReturnReal1DAddressFromPhysicalCoord(coords, dims);
-        if ( correlation_output[address] > mip[address] ) {
-            mip[address]   = correlation_output[address];
-            psi[address]   = c_psi;
-            phi[address]   = c_phi;
-            theta[address] = c_theta;
-        }
-    }
 }
 
 template <typename StorageType>

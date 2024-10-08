@@ -27,6 +27,7 @@ class TM_EmpiricalDistribution {
 
   private:
     bool        higher_order_moments_;
+    bool        object_initialized_{ };
     int         current_image_index_;
     ccfType     histogram_min_;
     ccfType     histogram_step_;
@@ -82,15 +83,14 @@ class TM_EmpiricalDistribution {
  * @param n_images_to_accumulate_concurrently - the number of images to accumulate concurrently
  * 
  */
-    TM_EmpiricalDistribution(GpuImage&           reference_image,
-                             histogram_storage_t histogram_min,
-                             histogram_storage_t histogram_step,
-                             int2                pre_padding,
-                             int2                roi,
-                             const float         histogram_sampling_rate,
-                             const float         stats_sampling_rate);
+    TM_EmpiricalDistribution(GpuImage&   reference_image,
+                             int2        pre_padding,
+                             int2        roi,
+                             const float histogram_sampling_rate,
+                             const float stats_sampling_rate);
 
     ~TM_EmpiricalDistribution( );
+    void Delete( );
 
     // delete the copy and move  constructors as these are not handled or needed.
     TM_EmpiricalDistribution(const TM_EmpiricalDistribution&)            = delete;

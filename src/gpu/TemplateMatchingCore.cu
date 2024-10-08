@@ -11,35 +11,26 @@
 
 using namespace cistem_timer;
 
-constexpr bool use_gpu_prj = true;
-
 void TemplateMatchingCore::Init(MyApp*                    parent_pointer,
                                 std::shared_ptr<GpuImage> wanted_template_reconstruction,
                                 Image&                    wanted_input_image,
                                 Image&                    current_projection,
-                                float                     pixel_size_search_range,
-                                float                     pixel_size_step,
-                                float                     pixel_size,
-                                float                     defocus_search_range,
-                                float                     defocus_step,
-                                float                     defocus1,
-                                float                     defocus2,
                                 float                     psi_max,
                                 float                     psi_start,
                                 float                     psi_step,
                                 AnglesAndShifts&          angles,
                                 EulerSearch&              global_euler_search,
-                                float                     histogram_min_scaled,
-                                float                     histogram_step_scaled,
-                                int                       histogram_number_of_bins,
                                 const int2                pre_padding,
                                 const int2                roi,
+                                float                     histogram_sampling,
+                                float                     stats_sampling,
                                 int                       first_search_position,
                                 int                       last_search_position,
                                 ProgressBar*              my_progress,
                                 long                      total_correlation_positions,
                                 bool                      is_running_locally,
                                 bool                      use_fast_fft,
+                                bool                      use_gpu_prj,
                                 int                       number_of_global_search_images_to_save)
 
 {
@@ -48,6 +39,10 @@ void TemplateMatchingCore::Init(MyApp*                    parent_pointer,
     MyDebugAssertFalse(wanted_input_image.is_in_real_space, "Input image must be in Fourier space");
     MyDebugAssertTrue(wanted_input_image.is_in_memory, "Input image must be in memory");
     object_initialized_ = true;
+
+    this->use_gpu_prj   = use_gpu_prj;
+    histogram_sampling_ = histogram_sampling;
+    stats_sampling_     = stats_sampling;
 
     this->first_search_position          = first_search_position;
     this->last_search_position           = last_search_position;
@@ -97,10 +92,8 @@ void TemplateMatchingCore::Init(MyApp*                    parent_pointer,
         d_statistical_buffers_ptrs[i]->Allocate(d_input_image.dims.x, d_input_image.dims.y, number_of_global_search_images_to_save, true);
     }
 
-    this->pre_padding           = pre_padding;
-    this->roi                   = roi;
-    this->histogram_min_scaled  = histogram_min_scaled;
-    this->histogram_step_scaled = histogram_step_scaled;
+    this->pre_padding = pre_padding;
+    this->roi         = roi;
 
     this->my_progress                 = my_progress;
     this->total_correlation_positions = total_correlation_positions;
@@ -115,10 +108,8 @@ void TemplateMatchingCore::Init(MyApp*                    parent_pointer,
     // Transfer the input image_memory_should_not_be_deallocated
 };
 
-void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel, float c_defocus, int threadIDX, long& current_correlation_position) {
+void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, int threadIDX, long& current_correlation_position) {
 
-    this->c_defocus                   = c_defocus;
-    this->c_pixel                     = c_pixel;
     total_number_of_cccs_calculated   = 0;
     total_number_of_histogram_samples = 0;
     total_number_of_stats_samples     = 0;
@@ -151,12 +142,10 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
     }
 #endif
 
-    const float wanted_histogram_sampling = 1.0f; // 100% until tested
-    const float wanted_stats_sampling     = 1.0f; // 100% until tested
     if ( this_is_the_first_run_on_inner_loop ) {
         d_input_image.CopyFP32toFP16buffer(false);
         d_padded_reference.CopyFP32toFP16buffer(false);
-        my_dist = std::make_unique<TM_EmpiricalDistribution<__half, __half2>>(d_input_image, histogram_min_scaled, histogram_step_scaled, pre_padding, roi, wanted_histogram_sampling, wanted_stats_sampling);
+        my_dist = std::make_unique<TM_EmpiricalDistribution<__half, __half2>>(d_input_image, pre_padding, roi, histogram_sampling_, stats_sampling_);
     }
     else {
         my_dist->ZeroHistogram( );
@@ -177,15 +166,14 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
 
     cudaErr(cudaEventCreateWithFlags(&mip_is_done_Event, cudaEventBlockingSync));
 #ifdef cisTEM_USING_FastFFT
-    FastFFT::FourierTransformer<float, __half, __half2, 2>                           FT;
-    FastFFT::KernelFunction::my_functor<float, 0, FastFFT::KernelFunction::NOOP>     noop;
-    FastFFT::KernelFunction::my_functor<float, 4, FastFFT::KernelFunction::CONJ_MUL> conj_mul;
+    FastFFT::FourierTransformer<float, __half, __half2, 2> FT;
 
     // float scale_factor = powf((float)d_current_projection[0].number_of_real_space_pixels, -2.0);
     // float scale_factor = 1.f;
     float scale_factor = sqrtf(1.0f / float(d_input_image.number_of_real_space_pixels));
 
     FastFFT::KernelFunction::my_functor<float, 4, FastFFT::KernelFunction::CONJ_MUL_THEN_SCALE> conj_mul_then_scale(scale_factor);
+    FastFFT::KernelFunction::my_functor<float, 0, FastFFT::KernelFunction::NOOP>                noop;
 
     if ( use_fast_fft ) {
         // TODO: overload that takes and short4's int4's instead of the individual values
@@ -269,8 +257,8 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter, float c_pixel,
             else {
                 // Make sure the previous copy from host -> device has completed before we start to make another projection.
                 // Event is created as non-blocking so this is a busy-wait.
-
-                template_reconstruction.ExtractSlice(current_projection[current_projection_idx], angles, 1.0f, false);
+                MyDebugAssertFalse(cpu_template == nullptr, "Template reconstruction is not set with SetCpuTemplate");
+                cpu_template->ExtractSlice(current_projection[current_projection_idx], angles, 1.0f, false);
 
                 current_projection[current_projection_idx].SwapRealSpaceQuadrants( );
                 current_projection[current_projection_idx].MultiplyPixelWise(projection_filter);

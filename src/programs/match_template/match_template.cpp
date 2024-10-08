@@ -70,6 +70,7 @@ class
     float GetMaxJobWaitTimeInSeconds( ) { return 360.0f; }
 
   private:
+    void AddCommandLineOptions( );
     template <typename StatsType>
     void CalcGlobalCCCScalingFactor(double&    global_ccc_mean,
                                     double&    global_ccc_std_dev,
@@ -97,6 +98,13 @@ IMPLEMENT_APP(MatchTemplateApp)
 
 // TODO: why is this here?
 void MatchTemplateApp::ProgramSpecificInit( ) {
+}
+
+// Optional command-line stuff
+void MatchTemplateApp::AddCommandLineOptions( ) {
+    command_line_parser.AddOption("", "histogram-sampling", "Random sampling of the histogram, fraction sampled. 0.05 - 1.0 [1.0 default]", wxCMD_LINE_VAL_DOUBLE);
+    command_line_parser.AddOption("", "stats-sampling", "Random sampling of the statistical arrays, fraction sampled. 0.05 - 1.0 [1.0 default]", wxCMD_LINE_VAL_DOUBLE);
+    command_line_parser.AddLongSwitch("disable-gpu-prj", "Disable projection using the gpu. Default false");
 }
 
 // override the DoInteractiveUserInput
@@ -255,6 +263,23 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     wxDateTime start_time = wxDateTime::Now( );
 
+    double temp_double;
+    float  histogram_sampling = 1.0f;
+    float  stats_sampling     = 1.0f;
+    bool   use_gpu_prj        = true;
+    if ( command_line_parser.Found("histogram-sampling", &temp_double) ) {
+        std::cerr << "histogram-sampling: " << temp_double << std::endl;
+        histogram_sampling = float(temp_double);
+    }
+    if ( command_line_parser.Found("stats-sampling", &temp_double) ) {
+        std::cerr << "stats-sampling: " << temp_double << std::endl;
+        stats_sampling = float(temp_double);
+    }
+    if ( command_line_parser.FoundSwitch("disable-gpu-prj") ) {
+        SendInfo("Disabling GPU projection\n");
+        use_gpu_prj = false;
+    }
+
     wxString input_search_images_filename    = my_current_job.arguments[0].ReturnStringArgument( );
     wxString input_reconstruction_filename   = my_current_job.arguments[1].ReturnStringArgument( );
     float    input_pixel_size                = my_current_job.arguments[2].ReturnFloatArgument( );
@@ -282,7 +307,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     wxString best_phi_output_file            = my_current_job.arguments[24].ReturnStringArgument( );
     wxString best_defocus_output_file        = my_current_job.arguments[25].ReturnStringArgument( );
     wxString best_pixel_size_output_file     = my_current_job.arguments[26].ReturnStringArgument( );
-    wxString scaled_mip_output_mrcfile       = my_current_job.arguments[27].ReturnStringArgument( );
+    wxString scaled_mip_output_file          = my_current_job.arguments[27].ReturnStringArgument( );
     wxString correlation_avg_output_file     = my_current_job.arguments[28].ReturnStringArgument( );
     wxString my_symmetry                     = my_current_job.arguments[29].ReturnStringArgument( );
     float    in_plane_angular_step           = my_current_job.arguments[30].ReturnFloatArgument( );
@@ -312,6 +337,11 @@ bool MatchTemplateApp::DoCalculation( ) {
         max_threads = 1;
     }
 
+    if ( ! use_gpu && (FloatsAreAlmostTheSame(histogram_sampling, 1.0f) == false || FloatsAreAlmostTheSame(stats_sampling, 1.0f) == false) ) {
+        // only GPU can handle this
+        SendError("sub-sampling of the histogram and statistical arrays is only supported on the GPU implementation\n");
+    }
+
     profile_timing.start("Init");
     ParameterMap parameter_map; // needed for euler search init
     //for (int i = 0; i < 5; i++) {parameter_map[i] = true;}
@@ -334,7 +364,6 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     float  temp_float;
     float  variance;
-    double temp_double;
     double temp_double_array[5];
 
     int  number_of_rotations;
@@ -496,7 +525,6 @@ bool MatchTemplateApp::DoCalculation( ) {
     //psi_step = 5;
 
     // search grid
-
     // TODO: when checking the impact of limiting the resolution, it may be worthwile to NOT limit the number of search positions
     global_euler_search.InitGrid(my_symmetry, angular_step, 0.0f, 0.0f, psi_max, psi_step, psi_start, data_sizer.GetSearchPixelSize( ) / high_resolution_limit_search, parameter_map, best_parameters_to_keep);
 
@@ -632,43 +660,63 @@ bool MatchTemplateApp::DoCalculation( ) {
 
         if ( use_gpu ) {
 #ifdef ENABLEGPU
-            // FIXME: move this (and the above CPU steps) into a method to prepare the 3d reference.
-            profile_timing.start("Swap Fourier Quadrants");
-            template_reconstruction.BackwardFFT( );
-            template_reconstruction.SwapFourierSpaceQuadrants(false);
-            profile_timing.lap("Swap Fourier Quadrants");
-            // We only want to have one copy of the 3d template in texture memory that each thread can then reference.
-            // First allocate a shared pointer and construct the GpuImage based on the CPU template
-            // TODO: Initially, i had this set to use
-            // GpuImage::InitializeBasedOnCpuImage(tmp_vol, false, true); where the memory is instructed not to be pinned.
-            // This should be fine now, but .
-            profile_timing.start("CopyHostToDeviceTextureComplex3d");
+            std::shared_ptr<GpuImage> template_reconstruction_gpu;
+            if ( use_gpu_prj ) {
 
-            std::shared_ptr<GpuImage> template_reconstruction_gpu = std::make_shared<GpuImage>(template_reconstruction);
-            template_reconstruction_gpu->CopyHostToDeviceTextureComplex3d(template_reconstruction);
-            profile_timing.lap("CopyHostToDeviceTextureComplex3d");
+                // FIXME: move this (and the above CPU steps) into a method to prepare the 3d reference.
+                profile_timing.start("Swap Fourier Quadrants");
+                template_reconstruction.BackwardFFT( );
+                template_reconstruction.SwapFourierSpaceQuadrants(false);
+                profile_timing.lap("Swap Fourier Quadrants");
+                // We only want to have one copy of the 3d template in texture memory that each thread can then reference.
+                // First allocate a shared pointer and construct the GpuImage based on the CPU template
+                // TODO: Initially, i had this set to use
+                // GpuImage::InitializeBasedOnCpuImage(tmp_vol, false, true); where the memory is instructed not to be pinned.
+                // This should be fine now, but .
+                profile_timing.start("CopyHostToDeviceTextureComplex3d");
+
+                template_reconstruction_gpu = std::make_shared<GpuImage>(template_reconstruction);
+                template_reconstruction_gpu->CopyHostToDeviceTextureComplex3d(template_reconstruction);
+
+                profile_timing.lap("CopyHostToDeviceTextureComplex3d");
+            }
+
 #pragma omp parallel num_threads(max_threads)
             {
                 int tIDX = ReturnThreadNumberOfCurrentThread( );
-                gpuDev.SetGpu(tIDX);
+                gpuDev.SetGpu( );
 
                 if ( first_gpu_loop ) {
 
                     int t_first_search_position = first_search_position + (tIDX * incPos);
                     int t_last_search_position  = first_search_position + (incPos - 1) + (tIDX * incPos);
-
                     if ( tIDX == (max_threads - 1) )
                         t_last_search_position = maxPos;
                     profile_timing.start("Init GPU");
-                    GPU[tIDX].Init(this, template_reconstruction_gpu, input_image, current_projection,
-                                   pixel_size_search_range, pixel_size_step, data_sizer.GetSearchPixelSize( ),
-                                   defocus_search_range, defocus_step, defocus1, defocus2,
-                                   psi_max, psi_start, psi_step,
-                                   angles, global_euler_search,
-                                   histogram_min, histogram_step, histogram_number_of_points,
-                                   data_sizer.GetPrePadding( ), data_sizer.GetRoi( ), t_first_search_position, t_last_search_position,
-                                   my_progress, total_correlation_positions_per_thread, is_running_locally, use_fast_fft);
+                    GPU[tIDX].Init(this,
+                                   template_reconstruction_gpu,
+                                   input_image,
+                                   current_projection,
+                                   psi_max,
+                                   psi_start,
+                                   psi_step,
+                                   angles,
+                                   global_euler_search,
+                                   data_sizer.GetPrePadding( ),
+                                   data_sizer.GetRoi( ),
+                                   histogram_sampling,
+                                   stats_sampling,
+                                   t_first_search_position,
+                                   t_last_search_position,
+                                   my_progress,
+                                   total_correlation_positions_per_thread,
+                                   is_running_locally,
+                                   use_fast_fft,
+                                   use_gpu_prj);
                     profile_timing.lap("Init GPU");
+                    if ( ! use_gpu_prj ) {
+                        GPU[tIDX].SetCpuTemplate(&template_reconstruction);
+                    }
 
 #ifdef USE_LERP_NOT_FOURIER_RESIZING
                     std::cerr << "\n\nUsing LERP\n\n";
@@ -706,9 +754,9 @@ bool MatchTemplateApp::DoCalculation( ) {
 #pragma omp parallel num_threads(max_threads)
                 {
                     int tIDX = ReturnThreadNumberOfCurrentThread( );
-                    gpuDev.SetGpu(tIDX);
+                    gpuDev.SetGpu( );
                     profile_timing.start("RunInnerLoop");
-                    GPU[tIDX].RunInnerLoop(projection_filter, size_i, defocus_i, tIDX, current_correlation_position);
+                    GPU[tIDX].RunInnerLoop(projection_filter, tIDX, current_correlation_position);
                     profile_timing.lap("RunInnerLoop");
 
 #pragma omp critical
@@ -920,7 +968,7 @@ bool MatchTemplateApp::DoCalculation( ) {
 #endif
         temp_image.WriteSlice(&mip_out, 1);
 
-        MRCFile scaled_mip_output_mrcfile(mip_output_file.ToStdString( ), true);
+        MRCFile scaled_mip_output_mrcfile(scaled_mip_output_file.ToStdString( ), true);
         scaled_mip_output_mrcfile.SetPixelSize(data_sizer.GetPixelSize( ));
 #ifdef USE_FP16_PARTICLE_STACKS
         scaled_mip_output_mrcfile.SetOutputToFP16( );

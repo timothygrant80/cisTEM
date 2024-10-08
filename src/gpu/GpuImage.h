@@ -30,8 +30,6 @@ class GpuImage {
     GpuImage& operator=(const GpuImage& t);
     GpuImage& operator=(const GpuImage* t);
 
-    // FIXME: move constructor?
-
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // START MEMBER VARIABLES FROM THE cpu IMAGE CLASS
 
@@ -297,11 +295,6 @@ class GpuImage {
     void WaitBlocking( );
     void RecordAndWait( );
     // Maximum intensity projection
-    void MipPixelWise(GpuImage& other_image);
-    void MipPixelWise(GpuImage& other_image, GpuImage& psi, GpuImage& phi, GpuImage& theta,
-                      float c_psi, float c_phi, float c_theta);
-    void MipPixelWise(GpuImage& other_image, GpuImage& psi, GpuImage& phi, GpuImage& theta, GpuImage& defocus, GpuImage& pixel,
-                      float c_psi, float c_phi, float c_theta, float c_defocus, float c_pixel);
 
     // FIXME: These are added for the unblur refinement but are untested.
     template <typename StorageTypeBase = float>

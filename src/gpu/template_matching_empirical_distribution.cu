@@ -34,13 +34,11 @@ inline __device__ __host__ bool test_gt_zero(T value) {
  */
 
 template <typename ccfType, typename mipType>
-TM_EmpiricalDistribution<ccfType, mipType>::TM_EmpiricalDistribution(GpuImage&           reference_image,
-                                                                     histogram_storage_t histogram_min,
-                                                                     histogram_storage_t histogram_step,
-                                                                     int2                pre_padding,
-                                                                     int2                roi,
-                                                                     const float         histogram_sampling_rate,
-                                                                     const float         stats_sampling_rate) : pre_padding_{pre_padding},
+TM_EmpiricalDistribution<ccfType, mipType>::TM_EmpiricalDistribution(GpuImage&   reference_image,
+                                                                     int2        pre_padding,
+                                                                     int2        roi,
+                                                                     const float histogram_sampling_rate,
+                                                                     const float stats_sampling_rate) : pre_padding_{pre_padding},
                                                                                                         roi_{roi},
                                                                                                         higher_order_moments_{false},
                                                                                                         image_plane_mem_allocated_{reference_image.real_memory_allocated},
@@ -65,16 +63,16 @@ TM_EmpiricalDistribution<ccfType, mipType>::TM_EmpiricalDistribution(GpuImage&  
     // If anything, given that the output of the matched filter is ~ Gaussian, all the numbers closer to zero are less
     // likely to be flushed to zero when denormal, so in that respect, bflaot16 may actually maintain higher precision.
     if constexpr ( std::is_same_v<ccfType, __half> ) {
-        histogram_min_  = __float2half_rn(histogram_min);
-        histogram_step_ = __float2half_rn(histogram_step);
+        histogram_min_  = __float2half_rn(TM::histogram_min);
+        histogram_step_ = __float2half_rn(TM::histogram_step);
     }
     else if constexpr ( std::is_same_v<ccfType, __nv_bfloat16> ) {
-        histogram_min_  = __float2bfloat16_rn(histogram_min);
-        histogram_step_ = __float2bfloat16_rn(histogram_step);
+        histogram_min_  = __float2bfloat16_rn(TM::histogram_min);
+        histogram_step_ = __float2bfloat16_rn(TM::histogram_step);
     }
     else if constexpr ( std::is_same_v<ccfType, histogram_storage_t> ) {
-        histogram_min_  = histogram_min;
-        histogram_step_ = histogram_step;
+        histogram_min_  = TM::histogram_min;
+        histogram_step_ = TM::histogram_step;
     }
     else {
         MyDebugAssertTrue(false, "input_type must be either __half __nv_bfloat16, or histogram_storage_t");
@@ -113,6 +111,7 @@ TM_EmpiricalDistribution<ccfType, mipType>::TM_EmpiricalDistribution(GpuImage&  
     ZeroSamplingCounters( );
 
     AllocateAndZeroStatisticalArrays( );
+    object_initialized_ = true;
 };
 
 template <typename ccfType, typename mipType>
@@ -156,6 +155,12 @@ void TM_EmpiricalDistribution<ccfType, mipType>::AllocateAndZeroStatisticalArray
 
 template <typename ccfType, typename mipType>
 TM_EmpiricalDistribution<ccfType, mipType>::~TM_EmpiricalDistribution( ) {
+    if ( object_initialized_ )
+        Delete( );
+};
+
+template <typename ccfType, typename mipType>
+void TM_EmpiricalDistribution<ccfType, mipType>::Delete( ) {
     MyDebugAssertFalse(cudaStreamQuery(calc_stream_[0]) == cudaErrorInvalidResourceHandle, "The cuda stream is invalid");
 
     cudaErr(cudaFreeAsync(histogram_, calc_stream_[0]));
@@ -178,7 +183,9 @@ TM_EmpiricalDistribution<ccfType, mipType>::~TM_EmpiricalDistribution( ) {
 
     cudaErr(cudaStreamDestroy(calc_stream_[0]));
     cudaErr(cudaEventDestroy(mip_stack_is_ready_event_[0]));
-};
+
+    object_initialized_ = false;
+}
 
 template <typename ccfType, typename mipType>
 void TM_EmpiricalDistribution<ccfType, mipType>::ZeroHistogram( ) {
@@ -261,7 +268,7 @@ inline __device__ void write_mip_and_stats(float*   sum_array,
     if constexpr ( std::is_same_v<ccfType, __half> ) {
         // I though short circuit logic would be equivalent, but maybe the cuda driver is pre-fetching values? The nested conditional is ~3% faster on total run time
         // indicating we are skipping unnecessary reads.
-        if ( max_val > ccfType{cistem::match_template::MIN_VALUE_TO_MIP} ) {
+        if ( max_val > ccfType{TM::MIN_VALUE_TO_MIP} ) {
             if ( max_val > __low2half(mip_psi[address]) ) {
                 mip_psi[address]   = __halves2half2(max_val, psi[max_idx]);
                 theta_phi[address] = __halves2half2(theta[max_idx], phi[max_idx]);
@@ -269,7 +276,7 @@ inline __device__ void write_mip_and_stats(float*   sum_array,
         }
     }
     else if constexpr ( std::is_same_v<ccfType, __nv_bfloat16> ) {
-        if ( max_val > ccfType{cistem::match_template::MIN_VALUE_TO_MIP} ) {
+        if ( max_val > ccfType{TM::MIN_VALUE_TO_MIP} ) {
             if ( max_val > __low2bfloat16(mip_psi[address]) ) {
                 mip_psi[address]   = __halves2bfloat162(max_val, psi[max_idx]);
                 theta_phi[address] = __halves2bfloat162(theta[max_idx], phi[max_idx]);
@@ -277,7 +284,7 @@ inline __device__ void write_mip_and_stats(float*   sum_array,
         }
     }
     else if constexpr ( std::is_same_v<ccfType, histogram_storage_t> ) {
-        if ( max_val > ccfType{cistem::match_template::MIN_VALUE_TO_MIP} ) {
+        if ( max_val > ccfType{TM::MIN_VALUE_TO_MIP} ) {
             if ( max_val > mip_psi[address].x ) {
                 mip_psi[address].x   = max_val;
                 mip_psi[address].y   = psi[max_idx];
@@ -344,7 +351,7 @@ __global__ void __launch_bounds__(TM::histogram_number_of_points)
         for ( int i = pre_padding.x + physical_X( ); i < pre_padding.x + roi.x; i += GridStride_2dGrid_X( ) ) {
             // address = ((z * NY + y) * pitch_in_pixels) + x;
             address         = j * pitch_in_pixels_img + i;
-            ccfType max_val = ccfType{cistem::match_template::histogram_min};
+            ccfType max_val = ccfType{TM::histogram_min};
             int     max_idx = 0;
             float   sum{0.f}, sum_sq{0.f};
             for ( int k = 0; k < n_slices_to_process; k++ ) {

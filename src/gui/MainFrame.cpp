@@ -561,35 +561,36 @@ void MyMainFrame::OpenProject(wxString project_filename) {
                 // 1. Estimate number of rows that will be updated
                 // Total number of particles can be very large; on the order of billions.
                 // Use long to ensure enough space.
-                unsigned long total_rows_updating = 0;
+                unsigned long row_updates = 0;
+                int           normalized_increments; // This will adjust how long it takes for an update based on the total number of particles that will be processed
+
                 // Limit scope of temporarily needed arrays while estimating total number of increments...
                 {
                     wxArrayInt ref_pkg_ids = current_project.database.ReturnIntArrayFromSelectCommand("select REFINEMENT_PACKAGE_ASSET_ID from REFINEMENT_PACKAGE_ASSETS");
                     for ( int cur_pkg_id : ref_pkg_ids ) {
-                        total_rows_updating += current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("select COUNT(*) from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", cur_pkg_id));
+                        row_updates += current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("select COUNT(*) from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", cur_pkg_id));
                     }
                     wxArrayString refinement_result_tables = current_project.database.ReturnStringArrayFromSelectCommand("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'REFINEMENT_RESULT_%_%'");
                     for ( wxString table_name : refinement_result_tables ) {
-                        total_rows_updating += current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) FROM '%s'", table_name));
+                        row_updates += current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) FROM '%s'", table_name));
                     }
                     wxArrayString classification_result_tables = current_project.database.ReturnStringArrayFromSelectCommand("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'CLASSIFICATION_RESULT_%'");
                     for ( wxString table_name : classification_result_tables ) {
-                        total_rows_updating += current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) FROM '%s'", table_name));
+                        row_updates += current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) FROM '%s'", table_name));
                     }
                 } // End total increments estimation
 
-                total_rows_updating += schema_comparison.second.size( );
+                row_updates += schema_comparison.second.size( );
 
-                int normalized_increments; // This will adjust how long it takes for an update based on the total number of particles that will be processed
                 // Adjusting the normalized increments based on total increments helps prevent GUI from freezing up and gives more accurate
                 // estimated time remaining. This may need additional fine tuning.
                 {
-                    long tmp_total_rows_updating = total_rows_updating;
-                    int  place_value             = 1;
+                    long tmp_row_updates = row_updates;
+                    int  place_value     = 1;
 
                     // Get highest place value
-                    while ( tmp_total_rows_updating >= 10 ) {
-                        tmp_total_rows_updating /= 10;
+                    while ( tmp_row_updates >= 10 ) {
+                        tmp_row_updates /= 10;
                         place_value *= 10;
                     }
 
@@ -606,14 +607,11 @@ void MyMainFrame::OpenProject(wxString project_filename) {
                     }
                 } // End progress normalization
 
-                // wxPrintf("Total number of particles to loop over: %lu\n", total_rows_updating);
-                // wxPrintf("Number of normalized increments: %i\n", normalized_increments);
-
-                // 2. Create a dialog for tracking progress
+                // 2. Instantiate progress dialog member variable so it can receive updates
                 update_progress_dialog = new OneSecondProgressDialog("Updating Database...", "Starting database update...", normalized_increments, this, wxPD_APP_MODAL | wxPD_REMAINING_TIME | wxPD_AUTO_HIDE | wxPD_SMOOTH);
 
-                // 3. Update
-                current_project.database.UpdateSchema(schema_comparison.second, this, total_rows_updating, normalized_increments);
+                // 3. Update, passing MainFrame's UpdateProgressTracker variables
+                current_project.database.UpdateSchema(schema_comparison.second, this, row_updates, normalized_increments);
                 OnCompletion( );
             }
             else {

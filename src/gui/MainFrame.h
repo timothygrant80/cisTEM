@@ -29,7 +29,7 @@ class MyMainFrame : public MainFrame, public SocketCommunicator, public UpdatePr
 
     virtual wxString ReturnName( ) { return "MainFrame"; }
 
-    // For schema update only; could be more generalized/re-used when needed
+    // For schema update only; could be more generalized/re-used when needed; overrides from UpdateProgressTracker
     void OnUpdateProgress(int progress, wxString new_msg, bool& should_update_text) override;
     void OnCompletion( ) override;
 

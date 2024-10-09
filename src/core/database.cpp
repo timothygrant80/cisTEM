@@ -2368,15 +2368,15 @@ bool Database::UpdateSchema(ColumnChanges columns, UpdateProgressTracker* progre
     char          format;
     wxString      column_format;
     int           col_counter;
-    unsigned long rows_processed          = 0;
+    unsigned long increments_processed    = 0;
     int           current_progress        = 0;
     int           previous_progress       = 0;
     bool          should_update_text      = false; // Modified in UpdateProgressTracker::OnUpdateProgress
     bool          output_pixel_size_added = false;
 
     // Assitive lambda function used in helping to update the progress bar
-    auto calculate_current_percentage = [&rows_processed, &total_num_rows, &normalized_increments]( ) -> int {
-        double percent_completion = (double(rows_processed) / double(total_num_rows)) * normalized_increments;
+    auto calculate_current_percentage = [&increments_processed, &total_num_rows, &normalized_increments]( ) -> int {
+        double percent_completion = (double(increments_processed) / double(total_num_rows)) * normalized_increments;
         return static_cast<int>(percent_completion);
     };
 
@@ -2392,7 +2392,7 @@ bool Database::UpdateSchema(ColumnChanges columns, UpdateProgressTracker* progre
             output_pixel_size_added = true;
 
         if ( progress_bar ) {
-            rows_processed++; // Not actually updating rows, but altering tables; but, need one variable for tracking
+            increments_processed++; // Not actually updating rows, but altering tables; but, need one variable for tracking
             current_progress = calculate_current_percentage( );
 
             if ( current_progress > previous_progress ) {
@@ -2451,7 +2451,7 @@ bool Database::UpdateSchema(ColumnChanges columns, UpdateProgressTracker* progre
             // Update loading bar
             if ( progress_bar ) {
                 num_particles = ReturnSingleIntFromSelectCommand(wxString::Format("select COUNT(*) from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", ref_pkg_ids[refinement_package_counter]));
-                rows_processed += num_particles;
+                increments_processed += num_particles;
                 current_progress = calculate_current_percentage( );
 
                 if ( current_progress > previous_progress ) {
@@ -2462,6 +2462,7 @@ bool Database::UpdateSchema(ColumnChanges columns, UpdateProgressTracker* progre
         }
         should_update_text = true;
         // Next, make sure pixel size, aberration, voltage, and amplitude contrast are being updated where needed
+        // This ensures updates from beta databases are successful
         {
             double     classification_held_pixel_size      = 0.0;
             double     refinement_held_pixel_size          = 0.0;
@@ -2485,7 +2486,7 @@ bool Database::UpdateSchema(ColumnChanges columns, UpdateProgressTracker* progre
                 classification_held_pixel_size      = ReturnSingleDoubleFromSelectCommand(wxString::Format("select PIXEL_SIZE from CLASSIFICATION_RESULT_%i", classification_ids[classification_result_counter]));
                 contained_particles_pixel_size      = ReturnSingleDoubleFromSelectCommand(wxString::Format("select PIXEL_SIZE from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
 
-                // If pixel size doesn't match, probably none do -- fix classification tables; fill all NULL columns.
+                // If pixel size doesn't match, other parameters probably don't -- fix classification tables; fill all NULL columns.
                 if ( contained_particles_pixel_size != classification_held_pixel_size ) {
                     aberration         = ReturnSingleDoubleFromSelectCommand(wxString::Format("select SPHERICAL_ABERRATION from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
                     voltage            = ReturnSingleDoubleFromSelectCommand(wxString::Format("select MICROSCOPE_VOLTAGE from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
@@ -2514,7 +2515,7 @@ bool Database::UpdateSchema(ColumnChanges columns, UpdateProgressTracker* progre
                 // Update the loading bar
                 if ( progress_bar ) {
                     num_particles = ReturnSingleIntFromSelectCommand(wxString::Format("select COUNT(*) from CLASSIFICATION_RESULT_%i", classification_ids[classification_result_counter]));
-                    rows_processed += num_particles;
+                    increments_processed += num_particles;
                     current_progress = calculate_current_percentage( );
                     if ( current_progress > previous_progress ) {
                         progress_bar->OnUpdateProgress(current_progress, "Updating classification result(s)...", should_update_text);
@@ -2532,7 +2533,7 @@ bool Database::UpdateSchema(ColumnChanges columns, UpdateProgressTracker* progre
                     refinement_held_pixel_size          = ReturnSingleDoubleFromSelectCommand(wxString::Format("select PIXEL_SIZE from REFINEMENT_RESULT_%i_%i", refinement_ids[refinement_result_counter], refinement_result_class_counter));
                     contained_particles_pixel_size      = ReturnSingleDoubleFromSelectCommand(wxString::Format("select PIXEL_SIZE from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
 
-                    // If pixel size doesn't match, probably none do; repeat above process for refinement result tables
+                    // If pixel size doesn't match, other parameters probably don't; repeat above process for refinement result tables
                     if ( contained_particles_pixel_size != classification_held_pixel_size ) {
                         aberration         = ReturnSingleDoubleFromSelectCommand(wxString::Format("select SPHERICAL_ABERRATION from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
                         voltage            = ReturnSingleDoubleFromSelectCommand(wxString::Format("select MICROSCOPE_VOLTAGE from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
@@ -2553,7 +2554,7 @@ bool Database::UpdateSchema(ColumnChanges columns, UpdateProgressTracker* progre
                     // Update the loading bar
                     if ( progress_bar ) {
                         num_particles = ReturnSingleIntFromSelectCommand(wxString::Format("select COUNT(*) from REFINEMENT_RESULT_%i_%i", refinement_ids[refinement_result_counter], refinement_result_class_counter));
-                        rows_processed += num_particles;
+                        increments_processed += num_particles;
                         current_progress = calculate_current_percentage( );
 
                         if ( current_progress > previous_progress ) {

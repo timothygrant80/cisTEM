@@ -2671,7 +2671,11 @@ void GpuImage::CopyHostToDevice(Image& host_image, bool should_block_until_compl
     }
 }
 
-void GpuImage::CopyHostToDeviceTextureComplex3d(Image& host_image) {
+template <bool flag = false>
+inline void static_only_2_or_3_dims_allowed( ) { static_assert(flag, "Only 2 or three dimensions are implemented for GPU textures!"); }
+
+template <int n_dims>
+void GpuImage::CopyHostToDeviceTextureComplex(Image& host_image) {
     MyDebugAssertTrue(host_image.is_in_memory, "Host image not allocated");
     if ( is_meta_data_initialized ) {
         MyDebugAssertTrue(HasSameDimensionsAs(host_image), "Images have different dimensions");
@@ -2680,9 +2684,11 @@ void GpuImage::CopyHostToDeviceTextureComplex3d(Image& host_image) {
     else
         CopyCpuImageMetaData(host_image);
 
-    MyDebugAssertFalse(is_allocated_texture_cache, "CopyHostToDeviceTextureComplex3d should only be called once");
-    MyDebugAssertTrue(dims.x == dims.y && dims.y == dims.z, "CopyHostToDeviceTextureComplex3d only supports cubic 3d host images");
-    MyDebugAssertTrue(is_fft_centered_in_box, "CopyHostToDeviceTextureComplex3d only supports fft_centered_in_box");
+    MyDebugAssertFalse(is_allocated_texture_cache, "CopyHostToDeviceTextureComplex should only be called once");
+    if constexpr ( n_dims == 3 ) {
+        MyDebugAssertTrue(dims.x == dims.y && dims.y == dims.z, "CopyHostToDeviceTextureComplex only supports cubic 3d host images");
+        MyDebugAssertTrue(is_fft_centered_in_box, "CopyHostToDeviceTextureComplex only supports fft_centered_in_box");
+    }
 
     int padded_x_dimension = dims.w / 2;
     // We need a temporary host array so we can both de-interlace the real and imaginary parts as well as including x = -1 padding.
@@ -2696,32 +2702,41 @@ void GpuImage::CopyHostToDeviceTextureComplex3d(Image& host_image) {
 
     // cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc(32, 0, 0, 0, cudaChannelFormatKindFloat);
     cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<float>( );
-    cudaExtent            extent      = make_cudaExtent(padded_x_dimension, dims.y, dims.z);
 
-    // Allocate the texture arrays including the padded negative frequency. It seems like this is not part of the Stream ordered allocation yet.
-    // TODO: Try fp16 to reduce memory footprint
-    cudaErr(cudaMalloc3DArray(&cuArray_real, &channelDesc, extent, cudaArrayDefault));
-    cudaErr(cudaMalloc3DArray(&cuArray_imag, &channelDesc, extent, cudaArrayDefault));
+    if constexpr ( n_dims == 2 ) {
+        cudaErr(cudaMallocArray(&cuArray_real, &channelDesc, padded_x_dimension, dims.y));
+        cudaErr(cudaMallocArray(&cuArray_imag, &channelDesc, padded_x_dimension, dims.y));
+        cudaErr(cudaMemcpy2DToArray(cuArray_real, 0, 0, host_array_real, padded_x_dimension * sizeof(float), padded_x_dimension * sizeof(float), dims.y, cudaMemcpyHostToDevice));
+        cudaErr(cudaMemcpy2DToArray(cuArray_imag, 0, 0, host_array_imag, padded_x_dimension * sizeof(float), padded_x_dimension * sizeof(float), dims.y, cudaMemcpyHostToDevice));
+    }
+    else if constexpr ( n_dims == 3 ) {
+        cudaExtent extent = make_cudaExtent(padded_x_dimension, dims.y, dims.z);
+        cudaErr(cudaMalloc3DArray(&cuArray_real, &channelDesc, extent, cudaArrayDefault));
+        cudaErr(cudaMalloc3DArray(&cuArray_imag, &channelDesc, extent, cudaArrayDefault));
+
+        // Copy over the real array
+        cudaMemcpy3DParms p_real = {0};
+        p_real.extent            = extent;
+        p_real.srcPtr            = make_cudaPitchedPtr(host_array_real, (padded_x_dimension) * sizeof(float), padded_x_dimension, dims.y);
+        p_real.dstArray          = cuArray_real;
+        p_real.kind              = cudaMemcpyHostToDevice;
+
+        cudaErr(cudaMemcpy3DAsync(&p_real, cudaStreamPerThread));
+
+        // Copy over the imag array
+        cudaMemcpy3DParms p_imag = {0};
+        p_imag.extent            = extent;
+        p_imag.srcPtr            = make_cudaPitchedPtr(host_array_imag, (padded_x_dimension) * sizeof(float), padded_x_dimension, dims.y);
+        p_imag.dstArray          = cuArray_imag;
+        p_imag.kind              = cudaMemcpyHostToDevice;
+
+        cudaErr(cudaMemcpy3DAsync(&p_imag, cudaStreamPerThread));
+    }
+    else {
+        static_only_2_or_3_dims_allowed( );
+    }
 
     is_allocated_texture_cache = true;
-
-    // Copy over the real array
-    cudaMemcpy3DParms p_real = {0};
-    p_real.extent            = extent;
-    p_real.srcPtr            = make_cudaPitchedPtr(host_array_real, (padded_x_dimension) * sizeof(float), padded_x_dimension, dims.y);
-    p_real.dstArray          = cuArray_real;
-    p_real.kind              = cudaMemcpyHostToDevice;
-
-    cudaErr(cudaMemcpy3DAsync(&p_real, cudaStreamPerThread));
-
-    // Copy over the real array
-    cudaMemcpy3DParms p_imag = {0};
-    p_imag.extent            = extent;
-    p_imag.srcPtr            = make_cudaPitchedPtr(host_array_imag, (padded_x_dimension) * sizeof(float), padded_x_dimension, dims.y);
-    p_imag.dstArray          = cuArray_imag;
-    p_imag.kind              = cudaMemcpyHostToDevice;
-
-    cudaErr(cudaMemcpy3DAsync(&p_imag, cudaStreamPerThread));
 
     // TODO checkout cudaCreateChannelDescHalf https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#sixteen-bit-floating-point-textures
     struct cudaResourceDesc resDesc_real;
@@ -2760,6 +2775,79 @@ void GpuImage::CopyHostToDeviceTextureComplex3d(Image& host_image) {
     delete[] host_array_real;
     delete[] host_array_imag;
 }
+
+template void GpuImage::CopyHostToDeviceTextureComplex<3>(Image& host_image);
+template void GpuImage::CopyHostToDeviceTextureComplex<2>(Image& host_image);
+
+template <int n_dims>
+void GpuImage::CopyHostToDeviceTextureRealValued(Image& host_image) {
+    MyDebugAssertTrue(host_image.is_in_memory, "Host image not allocated");
+    if ( is_meta_data_initialized ) {
+        MyDebugAssertTrue(HasSameDimensionsAs(host_image), "Images have different dimensions");
+        UpdateFlagsFromHostImage(host_image);
+    }
+    else
+        CopyCpuImageMetaData(host_image);
+
+    MyDebugAssertFalse(is_allocated_texture_cache, "CopyHostToDeviceTextureComplex should only be called once");
+
+    int padded_x_dimension = dims.w / 2;
+
+    // FIXME: for now just grab the real part of the complex array, but this is confusing for future use.
+    float* tmp_array = new float[real_memory_allocated / 2];
+    for ( int complex_address = 0; complex_address < host_image.real_memory_allocated / 2; complex_address++ ) {
+        tmp_array[complex_address] = real(host_image.complex_values[complex_address]);
+    }
+
+    // cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc(32, 0, 0, 0, cudaChannelFormatKindFloat);
+    cudaChannelFormatDesc channelDesc = cudaCreateChannelDesc<float>( );
+
+    if constexpr ( n_dims == 2 ) {
+        cudaErr(cudaMallocArray(&cuArray_real, &channelDesc, padded_x_dimension, dims.y));
+        cudaErr(cudaMemcpy2DToArray(cuArray_real, 0, 0, tmp_array, padded_x_dimension * sizeof(float), padded_x_dimension * sizeof(float), dims.y, cudaMemcpyHostToDevice));
+
+        // cudaErr(cudaMemcpyToArray(cuArray_real, 0, 0, tmp_array, padded_x_dimension * dims.y * sizeof(float), cudaMemcpyHostToDevice));
+    }
+    else if constexpr ( n_dims == 3 ) {
+        cudaExtent extent = make_cudaExtent(padded_x_dimension, dims.y, dims.z);
+        cudaErr(cudaMalloc3DArray(&cuArray_real, &channelDesc, extent, cudaArrayDefault));
+
+        // Copy over the real array
+        cudaMemcpy3DParms p_real = {0};
+        p_real.extent            = extent;
+        p_real.srcPtr            = make_cudaPitchedPtr(tmp_array, (padded_x_dimension) * sizeof(float), padded_x_dimension, dims.y);
+        p_real.dstArray          = cuArray_real;
+        p_real.kind              = cudaMemcpyHostToDevice;
+
+        cudaErr(cudaMemcpy3DAsync(&p_real, cudaStreamPerThread));
+    }
+    else {
+        static_only_2_or_3_dims_allowed( );
+    }
+
+    is_allocated_texture_cache = true;
+
+    // TODO checkout cudaCreateChannelDescHalf https://docs.nvidia.com/cuda/cuda-c-programming-guide/index.html#sixteen-bit-floating-point-textures
+    struct cudaResourceDesc resDesc_real;
+    (memset(&resDesc_real, 0, sizeof(resDesc_real)));
+    resDesc_real.resType         = cudaResourceTypeArray;
+    resDesc_real.res.array.array = cuArray_real;
+
+    struct cudaTextureDesc texDesc_real;
+    (memset(&texDesc_real, 0, sizeof(texDesc_real)));
+
+    texDesc_real.filterMode       = cudaFilterModeLinear;
+    texDesc_real.readMode         = cudaReadModeElementType;
+    texDesc_real.normalizedCoords = false;
+    texDesc_real.addressMode[0]   = cudaAddressModeBorder; //cudaAddressModeClamp;
+    texDesc_real.addressMode[1]   = cudaAddressModeBorder; //cudaAddressModeClamp;
+    texDesc_real.addressMode[2]   = cudaAddressModeBorder; //cudaAddressModeClamp;
+
+    cudaErr(cudaCreateTextureObject(&tex_real, &resDesc_real, &texDesc_real, NULL));
+}
+
+template void GpuImage::CopyHostToDeviceTextureRealValued<2>(Image& host_image);
+template void GpuImage::CopyHostToDeviceTextureRealValued<3>(Image& host_image);
 
 // TODO: replace with template version
 void GpuImage::CopyHostToDevice16f(Image& host_image, bool should_block_until_finished) {
@@ -4893,7 +4981,7 @@ void GpuImage::ExtractSlice(GpuImage* volume_to_extract_from, AnglesAndShifts& a
     MyDebugAssertTrue(volume_to_extract_from->dims.z > 1, "Error: attempting to project 2d to 2d");
     MyDebugAssertTrue(is_in_memory_gpu, "Error: gpu memory not allocated");
     MyDebugAssertTrue(volume_to_extract_from->is_allocated_texture_cache, "3d volume not allocated in the texture cache");
-    // MyDebugAssertTrue(IsCubic( ), "Image volume to project is not cubic"); // This is checked on call to CopyHostToDeviceTextureComplex3d
+    // MyDebugAssertTrue(IsCubic( ), "Image volume to project is not cubic"); // This is checked on call to CopyHostToDeviceTextureComplex
     MyDebugAssertFalse(volume_to_extract_from->object_is_centred_in_box, "Image volume quadrants not swapped");
     MyDebugAssertTrue(volume_to_extract_from->is_fft_centered_in_box, "Image volume Fourier quadrants not swapped as required for texture locality");
 
@@ -4968,24 +5056,26 @@ void GpuImage::ExtractSlice(GpuImage* volume_to_extract_from, AnglesAndShifts& a
     is_in_real_space         = false;
 }
 
-__global__ void
-ExtractSliceShiftAndCtfKernel(const cudaTextureObject_t tex_real,
-                              const cudaTextureObject_t tex_imag,
-                              float2*                   outputData,
-                              const __half2* __restrict__ ctf_image,
-                              float2       shifts,
-                              const int    NX,
-                              const int    NY,
-                              const int    NY_3d,
-                              const float3 col1,
-                              const float3 col2,
-                              const bool   do_binning,
-                              const float  fourier_space_binning_factor,
-                              const float  resolution_limit,
-                              const bool   apply_resolution_limit,
-                              const bool   apply_ctf,
-                              const bool   abs_ctf,
-                              const bool   zero_central_pixel) {
+// FIXME: Now explicitly assuming a real-valued CTF (which is almost always true)
+template <bool apply_ctf, typename CTF_t>
+__global__ // __global__void, replacing return type with EnableIf
+        cistem::EnableIf<std::is_same_v<__half2*, CTF_t> || std::is_same_v<cudaTextureObject_t, CTF_t>>
+        ExtractSliceShiftAndCtfKernel(const cudaTextureObject_t tex_real,
+                                      const cudaTextureObject_t tex_imag,
+                                      float2*                   outputData,
+                                      const CTF_t               ctf_image,
+                                      const CTF_t               ctf_image_imag,
+                                      float2                    shifts,
+                                      const int                 NX,
+                                      const int                 NY,
+                                      const int                 NY_3d,
+                                      const float3              col1,
+                                      const float3              col2,
+                                      const bool                do_binning,
+                                      const float               fourier_space_binning_factor,
+                                      const float               resolution_limit,
+                                      const bool                apply_resolution_limit,
+                                      const bool                zero_central_pixel) {
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     if ( x >= NX ) {
         return;
@@ -5002,6 +5092,8 @@ ExtractSliceShiftAndCtfKernel(const cudaTextureObject_t tex_real,
 
     float u, v, tu, tv, tw, frequency_sq;
 
+    constexpr bool use_ctf_texture = std::is_same_v<CTF_t, cudaTextureObject_t>;
+
     // First, convert the physical coordinate of the 2d projection to the logical Fourier coordinate (in a natural FFT layout).
     u = float(x);
     // The first negative logical fourier component is at NY/2
@@ -5010,6 +5102,17 @@ ExtractSliceShiftAndCtfKernel(const cudaTextureObject_t tex_real,
     }
     else {
         v = float(y);
+    }
+
+    __half2 ctf_value;
+    if constexpr ( use_ctf_texture && apply_ctf ) {
+        // We want to use u and v prior to transformation to interpolate from the CTF image
+        if ( do_binning )
+            ctf_value = __floats2half2_rn(tex2D<float>(ctf_image, u * fourier_space_binning_factor + 1.5f, v * fourier_space_binning_factor + 0.5f + float(NY_3d / 2)),
+                                          tex2D<float>(ctf_image_imag, u * fourier_space_binning_factor + 1.5f, v * fourier_space_binning_factor + 0.5f + float(NY_3d / 2)));
+        else
+            ctf_value = __floats2half2_rn(tex2D<float>(ctf_image, u + 1.5f, v + 0.5f + float(NY_3d / 2)),
+                                          tex2D<float>(ctf_image_imag, u + 1.5f, v + 0.5f + float(NY_3d / 2)));
     }
 
     // Shifts are already 2*pi*dx/NX
@@ -5064,44 +5167,50 @@ ExtractSliceShiftAndCtfKernel(const cudaTextureObject_t tex_real,
         // Get the phase shift exp(phi) = cos(phi) + i*sin(phi)
         __sincosf(shifts.x + shifts.y, &tv, &tu);
 
+        if constexpr ( ! use_ctf_texture && apply_ctf ) {
+            ctf_value = ctf_image[y];
+        }
         // reuse tw for our CTF value (assuming it is = RE + i*0)
-        if ( apply_ctf && abs_ctf ) {
-            __half2 tmp_half2 = ctf_image[y];
-            tmp_half2         = __hmul2(tmp_half2, tmp_half2);
-            tw                = __low2float(tmp_half2);
-            tw += __high2float(tmp_half2);
-            tw            = sqrtf(tw);
-            outputData[y] = ComplexMulAndScale((Complex)make_float2(tu, tv), (Complex)make_float2(u, v), tw);
+
+        if constexpr ( apply_ctf ) {
+            outputData[y] = ComplexMul((Complex)__half22float2(ctf_value),
+                                       ComplexMul((Complex)make_float2(tu, tv), (Complex)make_float2(u, v)));
         }
         else {
-            if ( apply_ctf ) {
-                outputData[y] = ComplexMul((Complex)__half22float2(ctf_image[y]),
-                                           ComplexMul((Complex)make_float2(tu, tv), (Complex)make_float2(u, v)));
-            }
-            else {
-                outputData[y] = ComplexMul((Complex)make_float2(tu, tv), (Complex)make_float2(u, v));
-            }
+            outputData[y] = ComplexMul((Complex)make_float2(tu, tv), (Complex)make_float2(u, v));
         }
-
-        // outputData[y] = make_float2(u / tw, v / tw);
     }
 }
 
-void GpuImage::ExtractSliceShiftAndCtf(GpuImage* volume_to_extract_from, GpuImage* ctf_image, AnglesAndShifts& angles_and_shifts, float pixel_size, float real_space_binning_factor, float resolution_limit, bool apply_resolution_limit,
-                                       bool swap_quadrants, bool apply_shifts, bool apply_ctf, bool absolute_ctf, bool zero_central_pixel, cudaStream_t stream) {
+template <bool apply_ctf, bool use_ctf_texture>
+void GpuImage::ExtractSliceShiftAndCtf(GpuImage*        volume_to_extract_from,
+                                       GpuImage*        ctf_image,
+                                       AnglesAndShifts& angles_and_shifts,
+                                       float            pixel_size,
+                                       float            real_space_binning_factor,
+                                       float            resolution_limit,
+                                       bool             apply_resolution_limit,
+                                       bool             swap_quadrants,
+                                       bool             apply_shifts,
+                                       bool             zero_central_pixel,
+                                       cudaStream_t     stream) {
     MyDebugAssertTrue(dims.z == 1, "Error: attempting to project 3d to 3d");
     MyDebugAssertTrue(volume_to_extract_from->dims.z > 1, "Error: attempting to project 2d to 2d");
     MyDebugAssertTrue(is_in_memory_gpu, "Error: gpu memory not allocated");
     MyDebugAssertTrue(volume_to_extract_from->is_allocated_texture_cache, "3d volume not allocated in the texture cache");
-    // MyDebugAssertTrue(IsCubic( ), "Image volume to project is not cubic"); // This is checked on call to CopyHostToDeviceTextureComplex3d
+    // MyDebugAssertTrue(IsCubic( ), "Image volume to project is not cubic"); // This is checked on call to CopyHostToDeviceTextureComplex
     MyDebugAssertFalse(volume_to_extract_from->object_is_centred_in_box, "Image volume quadrants not swapped");
     MyDebugAssertTrue(volume_to_extract_from->is_fft_centered_in_box, "Image volume Fourier quadrants not swapped as required for texture locality");
     MyDebugAssertTrue(real_space_binning_factor >= 1.0f, "Error: real space binning factor must be >= 1.0");
     if ( apply_ctf ) {
         // FIXME:
-        // MyDebugAssertTrue(ctf_image->is_allocated_ctf_16f_buffer, "Error: ctf fp16 gpu memory not allocated");
-        MyDebugAssertTrue(ctf_image->real_values_fp16 != nullptr, "Error: ctf fp16 gpu memory not allocated");
-        MyDebugAssertTrue(HasSameDimensionsAs(ctf_image), "Error: ctf image must have the same dimensions as the image being projected");
+        if constexpr ( use_ctf_texture ) {
+            MyDebugAssertTrue(ctf_image->is_allocated_texture_cache, "Error: ctf texture cache not allocated");
+        }
+        else {
+            MyDebugAssertTrue(ctf_image->real_values_fp16 != nullptr, "Error: ctf fp16 gpu memory not allocated");
+            MyDebugAssertTrue(HasSameDimensionsAs(ctf_image), "Error: ctf image must have the same dimensions as the image being projected");
+        }
     }
 
     // Get launch params for a complex non-redundant half image
@@ -5134,9 +5243,6 @@ void GpuImage::ExtractSliceShiftAndCtf(GpuImage* volume_to_extract_from, GpuImag
         // if binning = 2 and vol ratio = 1, then the physical coord calculated in the kernel will be half the size of the volume
         fourier_space_binning_factor = vol_ratio / real_space_binning_factor;
         do_binning                   = true;
-        std::cerr << "vol_ratio: " << vol_ratio << std::endl;
-        std::cerr << "real_space_binning_factor: " << real_space_binning_factor << std::endl;
-        std::cerr << "fourier_space_binning_factor: " << fourier_space_binning_factor << std::endl;
 
         // FIXME: I can see the case where we have
         // MyDebugAssertTrue(dims.x <= volume_to_extract_from->dims.x, "Error: projection may be arbitrarily size as long as it is smaller than the 3d");
@@ -5163,26 +5269,48 @@ void GpuImage::ExtractSliceShiftAndCtf(GpuImage* volume_to_extract_from, GpuImag
     shifts.x = shifts.x * -1.f * pi_v<float> * 2.0f / float(dims.x);
     shifts.y = shifts.y * -1.f * pi_v<float> * 2.0f / float(dims.y);
 
-    precheck;
-    ExtractSliceShiftAndCtfKernel<<<gridDims, threadsPerBlock, 0, stream>>>(volume_to_extract_from->tex_real,
-                                                                            volume_to_extract_from->tex_imag,
-                                                                            (float2*)complex_values,
-                                                                            (__half2*)ctf_image->complex_values_fp16, //(__half2*)ctf_image->ctf_complex_buffer_16f,
-                                                                            shifts,
-                                                                            dims.w / 2,
-                                                                            dims.y,
-                                                                            volume_to_extract_from->dims.y,
-                                                                            col1,
-                                                                            col2,
-                                                                            do_binning,
-                                                                            fourier_space_binning_factor,
-                                                                            resolution_limit_pixel,
-                                                                            apply_resolution_limit,
-                                                                            apply_ctf,
-                                                                            absolute_ctf,
-                                                                            zero_central_pixel);
+    if constexpr ( use_ctf_texture ) {
+        precheck;
+        ExtractSliceShiftAndCtfKernel<apply_ctf><<<gridDims, threadsPerBlock, 0, stream>>>(volume_to_extract_from->tex_real,
+                                                                                           volume_to_extract_from->tex_imag,
+                                                                                           (float2*)complex_values,
+                                                                                           ctf_image->tex_real, //(__half2*)ctf_image->ctf_complex_buffer_16f,
+                                                                                           ctf_image->tex_imag,
+                                                                                           shifts,
+                                                                                           dims.w / 2,
+                                                                                           dims.y,
+                                                                                           volume_to_extract_from->dims.y,
+                                                                                           col1,
+                                                                                           col2,
+                                                                                           do_binning,
+                                                                                           fourier_space_binning_factor,
+                                                                                           resolution_limit_pixel,
+                                                                                           apply_resolution_limit,
+                                                                                           zero_central_pixel);
 
-    postcheck;
+        postcheck;
+    }
+    else {
+        precheck;
+        ExtractSliceShiftAndCtfKernel<apply_ctf><<<gridDims, threadsPerBlock, 0, stream>>>(volume_to_extract_from->tex_real,
+                                                                                           volume_to_extract_from->tex_imag,
+                                                                                           (float2*)complex_values,
+                                                                                           (__half2*)ctf_image->complex_values_fp16, //(__half2*)ctf_image->ctf_complex_buffer_16f,
+                                                                                           (__half2*)ctf_image->complex_values_fp16, // just a dummy so we can keep the signature the same
+                                                                                           shifts,
+                                                                                           dims.w / 2,
+                                                                                           dims.y,
+                                                                                           volume_to_extract_from->dims.y,
+                                                                                           col1,
+                                                                                           col2,
+                                                                                           do_binning,
+                                                                                           fourier_space_binning_factor,
+                                                                                           resolution_limit_pixel,
+                                                                                           apply_resolution_limit,
+                                                                                           zero_central_pixel);
+
+        postcheck;
+    }
 
     if ( swap_quadrants )
         object_is_centred_in_box = true;
@@ -5192,3 +5320,9 @@ void GpuImage::ExtractSliceShiftAndCtf(GpuImage* volume_to_extract_from, GpuImag
     is_fft_centered_in_box = false;
     is_in_real_space       = false;
 }
+
+// instantiate the template
+template void GpuImage::ExtractSliceShiftAndCtf<true, true>(GpuImage*, GpuImage*, AnglesAndShifts&, float, float, float, bool, bool, bool, bool, cudaStream_t);
+template void GpuImage::ExtractSliceShiftAndCtf<true, false>(GpuImage*, GpuImage*, AnglesAndShifts&, float, float, float, bool, bool, bool, bool, cudaStream_t);
+template void GpuImage::ExtractSliceShiftAndCtf<false, true>(GpuImage*, GpuImage*, AnglesAndShifts&, float, float, float, bool, bool, bool, bool, cudaStream_t);
+template void GpuImage::ExtractSliceShiftAndCtf<false, false>(GpuImage*, GpuImage*, AnglesAndShifts&, float, float, float, bool, bool, bool, bool, cudaStream_t);

@@ -278,8 +278,10 @@ class GpuImage {
 
     void CopyHostToDeviceAndSynchronize(Image& host_image, bool pin_host_memory = true) { CopyHostToDevice(host_image, true, pin_host_memory); };
 
-    void CopyHostToDeviceTextureComplex3d(Image& host_image);
-    void CopyHostToDeviceTextureComplex2d(Image& host_image);
+    template <int n_dims>
+    void CopyHostToDeviceTextureComplex(Image& host_image);
+    template <int n_dims>
+    void CopyHostToDeviceTextureRealValued(Image& host_image);
 
     void CopyHostToDevice16f(Image& host_image, bool should_block_until_finished = false); // CTF images in the ImageClass are stored as complex, even if they only have a real part. This is a waste of memory bandwidth on the GPU
     void CopyDeviceToHostAndSynchronize(Image& cpu_image, bool unpin_host_memory = true);
@@ -419,8 +421,18 @@ class GpuImage {
 
     void ExtractSlice(GpuImage* volume_to_extract_from, AnglesAndShifts& angles_and_shifts, float pixel_size, float resolution_limit = 1.f, bool apply_resolution_limit = true, bool whiten_spectrum = false);
 
-    void ExtractSliceShiftAndCtf(GpuImage* volume_to_extract_from, GpuImage* ctf_image, AnglesAndShifts& angles_and_shifts, float pixel_size, float real_space_binning_factor, float resolution_limit, bool apply_resolution_limit,
-                                 bool swap_quadrants, bool apply_shifts, bool apply_ctf, bool absolute_ctf, bool zero_central_pixel = false, cudaStream_t stream = cudaStreamPerThread);
+    template <bool apply_ctf, bool use_ctf_texture>
+    void ExtractSliceShiftAndCtf(GpuImage*        volume_to_extract_from,
+                                 GpuImage*        ctf_image,
+                                 AnglesAndShifts& angles_and_shifts,
+                                 float            pixel_size,
+                                 float            real_space_binning_factor,
+                                 float            resolution_limit,
+                                 bool             apply_resolution_limit,
+                                 bool             swap_quadrants,
+                                 bool             apply_shifts,
+                                 bool             zero_central_pixel = false,
+                                 cudaStream_t     stream             = cudaStreamPerThread);
 
     void Abs( );
     void AbsDiff(GpuImage& other_image); // inplace

@@ -12,16 +12,20 @@
 #include "../common/common.h"
 #include "resample.h"
 
+constexpr int logical_input_size = 384;
+
 void ResampleRunner(const wxString& temp_directory) {
 
     SamplesPrintTestStartMessage("Starting downsampling tests:", false);
 
     wxString cistem_ref_dir = CheckForReferenceImages( );
 
-    constexpr bool test_is_to_be_run = false;
+    constexpr bool test_is_to_be_run = true;
     if constexpr ( test_is_to_be_run ) {
         // If we are in the dev container the CISTEM_REF_IMAGES variable should be defined, pointing to images we need.
+        TEST(DoCTFImageVsTexture(cistem_ref_dir, temp_directory));
         TEST(DoFourierCropVsLerpResize(cistem_ref_dir, temp_directory));
+        TEST(DoLerpWithCTF(cistem_ref_dir, temp_directory));
     }
     else
         SamplesTestResultCanFail(false);
@@ -31,103 +35,284 @@ void ResampleRunner(const wxString& temp_directory) {
     return;
 }
 
+struct ResampleRunnerObjects {
+
+    std::string volume_filename;
+
+    Image     cpu_volume;
+    ImageFile cpu_volume_file;
+    Image     ctf_image;
+    Image     swapped_ctf_image;
+
+    GpuImage gpu_volume;
+    GpuImage gpu_prj;
+    GpuImage gpu_prj_tex;
+    GpuImage d_ctf_image;
+
+    CTF             ctf;
+    AnglesAndShifts prj_angles;
+
+    const float pixel_size{1.f};
+    const float resolution_limit{1.f};
+    const bool  apply_resolution_limit{ };
+    const bool  apply_shifts{ };
+    const bool  swap_real_space_quadrants{true};
+    const bool  zero_central_pixel{true};
+
+    float real_space_binning_factor{1.f};
+
+    ResampleRunnerObjects(const wxString& cistem_ref_dir, const wxString& temp_directory) {
+
+        volume_filename = cistem_ref_dir.ToStdString( ) + "/ribo_ref.mrc";
+        // Read in and normalize the 3d to use for projection
+
+        const bool over_write_input = false;
+        cpu_volume_file.OpenFile(volume_filename, over_write_input);
+        cpu_volume.ReadSlices(&cpu_volume_file, 1, cpu_volume_file.ReturnNumberOfSlices( ));
+        cpu_volume.ZeroFloatAndNormalize( );
+
+        // Make sure the volume has the expected size
+        MyAssertTrue(cpu_volume.logical_x_dimension == logical_input_size && cpu_volume.IsCubic( ), "The volume should be 384x384x384");
+
+        // Prepare for GPU projection
+
+        constexpr bool also_swap_real_space_quadrants = true;
+        cpu_volume.SwapFourierSpaceQuadrants(also_swap_real_space_quadrants);
+        // Associate the gpu volume with the cpu volume, getting meta data and pinning the host pointer.
+        gpu_volume.Init(cpu_volume, false, true);
+        gpu_volume.CopyHostToDeviceTextureComplex<3>(cpu_volume);
+
+        // Generate a CTF image
+        ctf.Init(300.f, 2.7f, 0.07f, 12000.f, 12000.f, 40.f, pixel_size, 0.f);
+        ctf_image.Allocate(logical_input_size, logical_input_size, 1, false);
+        ctf_image.CalculateCTFImage(ctf);
+
+        swapped_ctf_image = ctf_image;
+        swapped_ctf_image.SwapFourierSpaceQuadrants(false, true);
+
+        // Now we'll grab a projection and apply the CTF to it in the same kernel.
+        prj_angles.Init(10.f, -20.f, 130.f, 0.f, 0.f);
+        gpu_prj.InitializeBasedOnCpuImage(ctf_image, true, true);
+        gpu_prj_tex.InitializeBasedOnCpuImage(ctf_image, false, true);
+        d_ctf_image.InitializeBasedOnCpuImage(ctf_image, false, true);
+        d_ctf_image.CopyHostToDevice(ctf_image);
+        d_ctf_image.CopyFP32toFP16buffer(false);
+    }
+};
+
+bool DoCTFImageVsTexture(const wxString& cistem_ref_dir, const wxString& temp_directory) {
+    MyAssertFalse(cistem_ref_dir == temp_directory, "The temp directory should not be the same as the CISTEM_REF_IMAGES directory.");
+
+    bool passed     = true;
+    bool all_passed = true;
+
+    SamplesBeginTest("CTF image vs texture", passed);
+
+    ResampleRunnerObjects o_(cistem_ref_dir, temp_directory);
+
+    constexpr bool do_not_use_ctf_texture = false;
+    constexpr bool apply_ctf              = true;
+    o_.gpu_prj.ExtractSliceShiftAndCtf<apply_ctf, do_not_use_ctf_texture>(&o_.gpu_volume,
+                                                                          &o_.d_ctf_image,
+                                                                          o_.prj_angles,
+                                                                          o_.pixel_size,
+                                                                          o_.real_space_binning_factor,
+                                                                          o_.resolution_limit,
+                                                                          o_.apply_resolution_limit,
+                                                                          o_.swap_real_space_quadrants,
+                                                                          o_.apply_shifts,
+                                                                          o_.zero_central_pixel);
+
+    o_.gpu_prj_tex.CopyHostToDeviceTextureComplex<2>(o_.swapped_ctf_image);
+
+    constexpr bool use_ctf_texture = true;
+    o_.gpu_prj_tex.ExtractSliceShiftAndCtf<apply_ctf, use_ctf_texture>(&o_.gpu_volume,
+                                                                       &o_.gpu_prj_tex,
+                                                                       o_.prj_angles,
+                                                                       o_.pixel_size,
+                                                                       o_.real_space_binning_factor,
+                                                                       o_.resolution_limit,
+                                                                       o_.apply_resolution_limit,
+                                                                       o_.swap_real_space_quadrants,
+                                                                       o_.apply_shifts,
+                                                                       o_.zero_central_pixel);
+
+    o_.gpu_prj.BackwardFFT( );
+    o_.gpu_prj_tex.BackwardFFT( );
+
+    o_.gpu_prj.NormalizeRealSpaceStdDeviation(1.f, 0.f, 0.f);
+    o_.gpu_prj_tex.NormalizeRealSpaceStdDeviation(1.f, 0.f, 0.f);
+
+    o_.gpu_prj_tex.SubtractImage(o_.gpu_prj);
+    float SS = o_.gpu_prj_tex.ReturnSumOfSquares( );
+
+    passed = FloatsAreAlmostTheSame(SS, 0.f);
+
+    SamplesTestResult(passed);
+
+    return all_passed;
+}
+
 bool DoFourierCropVsLerpResize(const wxString& cistem_ref_dir, const wxString& temp_directory) {
     MyAssertFalse(cistem_ref_dir == temp_directory, "The temp directory should not be the same as the CISTEM_REF_IMAGES directory.");
 
     bool passed     = true;
     bool all_passed = true;
 
-    const int logical_input_size = 384;
-
-    AnglesAndShifts prj_angles(10.f, -20.f, 130.f, 0.f, 0.f);
-
     SamplesBeginTest("Extract slice and downsample", passed);
 
-    std::string volume_filename          = cistem_ref_dir.ToStdString( ) + "/ribo_ref.mrc";
-    std::string prj_input_filename_base  = cistem_ref_dir.ToStdString( ) + "/ribo_ref_prj_";
-    std::string prj_output_filename_base = temp_directory.ToStdString( ) + "/ribo_ref_prj_";
-
-    bool      over_write_input = false;
-    Image     cpu_volume;
-    ImageFile cpu_volume_file;
-
-    GpuImage gpu_volume;
-    GpuImage gpu_prj_full; // project 384 then crop to 192 (downsample by 2)
-    GpuImage gpu_prj_cropped;
-    GpuImage gpu_prj_lerp; // project and resample in the same step
-    GpuImage gpu_prj_lerp_non_binned_size;
-
-    // Read in and normalize the 3d to use for projection
-    cpu_volume_file.OpenFile(volume_filename, over_write_input);
-    cpu_volume.ReadSlices(&cpu_volume_file, 1, cpu_volume_file.ReturnNumberOfSlices( ));
-    cpu_volume.ZeroFloatAndNormalize( );
-
-    // Make sure the volume has the expected size
-    MyAssertTrue(cpu_volume.logical_x_dimension == logical_input_size && cpu_volume.IsCubic( ), "The volume should be 384x384x384");
-
-    // Prepare for GPU projection
-    constexpr bool also_swap_real_space_quadrants = true;
-    cpu_volume.SwapFourierSpaceQuadrants(also_swap_real_space_quadrants);
-    // Associate the gpu volume with the cpu volume, getting meta data and pinning the host pointer.
-    gpu_volume.Init(cpu_volume, false, true);
-    gpu_volume.CopyHostToDeviceTextureComplex3d(cpu_volume);
-
-    // For the positive control, project at the full size, and fourier crop to the binned size
-    gpu_prj_full.Allocate(logical_input_size, logical_input_size, 1, false, false);
-    gpu_prj_cropped.Allocate(logical_input_size / 2, logical_input_size / 2, 1, false, false);
+    ResampleRunnerObjects o_(cistem_ref_dir, temp_directory);
 
     // For direct comparison to gpu_prj_cropped, incorporate the lerp into the projection obviating the need for a separate crop.
-    gpu_prj_lerp.Allocate(logical_input_size / 2, logical_input_size / 2, 1, false, false);
     // For the case where we would first bin but then zero-pad to some other larger size, for example, to have a nice power of 2 image.
-    gpu_prj_lerp_non_binned_size.Allocate(logical_input_size + 128, logical_input_size + 128, 1, false, false);
     // Make sure there are no non-zero vals
-    gpu_prj_full.SetToConstant(0.0f);
-    gpu_prj_cropped.SetToConstant(0.0f);
-    gpu_prj_lerp.SetToConstant(0.0f);
-    gpu_prj_lerp_non_binned_size.SetToConstant(0.0f);
+    o_.gpu_prj.SetToConstant(0.0f);
 
     // The gpu projection method expects quadrants to be swapped.
-    gpu_prj_full.object_is_centred_in_box                 = false;
-    gpu_prj_cropped.object_is_centred_in_box              = false;
-    gpu_prj_lerp.object_is_centred_in_box                 = false;
-    gpu_prj_lerp_non_binned_size.object_is_centred_in_box = false;
+    o_.gpu_prj.object_is_centred_in_box = false;
 
     // Dummy ctf image
     GpuImage dummy_ctf_image;
 
-    constexpr float resolution_limit          = 1.0f;
-    constexpr bool  apply_resolution_limit    = false;
-    constexpr bool  apply_shifts              = false;
-    constexpr bool  swap_real_space_quadrants = true;
-    constexpr bool  apply_ctf                 = false;
-    constexpr bool  absolute_ctf              = false;
-    constexpr bool  zero_central_pixel        = true;
+    constexpr bool apply_ctf       = false;
+    constexpr bool use_ctf_texture = false;
 
-    // Project the full size image
-    gpu_prj_full.ExtractSliceShiftAndCtf(&gpu_volume, &dummy_ctf_image, prj_angles, 1.0f, 1.0f, resolution_limit, apply_resolution_limit, swap_real_space_quadrants, apply_ctf, absolute_ctf, zero_central_pixel);
+    float real_space_binning_factor = 1.0f;
+    // Project the full size image to be fourier cropped and compared
+    o_.gpu_prj.ExtractSliceShiftAndCtf<apply_ctf, use_ctf_texture>(&o_.gpu_volume,
+                                                                   &dummy_ctf_image,
+                                                                   o_.prj_angles,
+                                                                   1.0f,
+                                                                   o_.real_space_binning_factor,
+                                                                   o_.resolution_limit,
+                                                                   o_.apply_resolution_limit,
+                                                                   o_.swap_real_space_quadrants,
+                                                                   o_.zero_central_pixel);
 
-    // gpu_prj_full.SwapRealSpaceQuadrants( );
-    // Crop the full size image
-    gpu_prj_full.ClipIntoFourierSpace(&gpu_prj_cropped, 0.f, true, false);
+    std::array<int, 5> cropped_sizes{382, 192, 96, 48, 24};
+    for ( auto& cropped_size : cropped_sizes ) {
+        GpuImage binned_img, cropped_img;
+        binned_img.Allocate(cropped_size, cropped_size, 1, false, false);
+        cropped_img.Allocate(cropped_size, cropped_size, 1, false, false);
+        real_space_binning_factor = float(logical_input_size) / float(cropped_size);
+        binned_img.ExtractSliceShiftAndCtf<apply_ctf, use_ctf_texture>(&o_.gpu_volume,
+                                                                       &dummy_ctf_image,
+                                                                       o_.prj_angles,
+                                                                       1.0f,
+                                                                       o_.real_space_binning_factor,
+                                                                       o_.resolution_limit,
+                                                                       o_.apply_resolution_limit,
+                                                                       o_.swap_real_space_quadrants,
+                                                                       o_.apply_shifts,
+                                                                       o_.zero_central_pixel);
+        o_.gpu_prj.ClipIntoFourierSpace(&cropped_img, 0.f);
 
-    gpu_prj_lerp.ExtractSliceShiftAndCtf(&gpu_volume, &dummy_ctf_image, prj_angles, 1.0f, 2.0f, resolution_limit, apply_resolution_limit, swap_real_space_quadrants, apply_shifts, apply_ctf, absolute_ctf, zero_central_pixel);
-    // gpu_prj_lerp.SwapRealSpaceQuadrants( );
+        binned_img.BackwardFFT( );
+        cropped_img.BackwardFFT( );
+        // Calculate the mean square error between the two images
+        cropped_img.SubtractImage(binned_img);
+        float SS = cropped_img.ReturnSumOfSquares( );
+        passed   = passed && (FloatsAreAlmostTheSame(SS, 0.0f));
+    }
 
-    gpu_prj_lerp_non_binned_size.ExtractSliceShiftAndCtf(&gpu_volume, &dummy_ctf_image, prj_angles, 1.0f, 2.0f, resolution_limit, apply_resolution_limit, swap_real_space_quadrants, apply_shifts, apply_ctf, absolute_ctf, zero_central_pixel);
-    // gpu_prj_lerp_non_binned_size.SwapRealSpaceQuadrants( );
+    all_passed = passed ? all_passed : false;
+    SamplesTestResult(passed);
 
-    // Save both for inspection (temporarily)
-    gpu_prj_full.QuickAndDirtyWriteSlice(prj_output_filename_base + "full.mrc", 1);
-    gpu_prj_cropped.QuickAndDirtyWriteSlice(prj_output_filename_base + "cropped.mrc", 1);
-    gpu_prj_lerp.QuickAndDirtyWriteSlice(prj_output_filename_base + "lerp.mrc", 1);
-    gpu_prj_lerp_non_binned_size.QuickAndDirtyWriteSlice(prj_output_filename_base + "lerp_non_binned_size.mrc", 1);
+    return true;
+}
 
-    gpu_prj_lerp.SubtractImage(&gpu_prj_cropped);
-    gpu_prj_lerp.BackwardFFT( );
-    float sum = gpu_prj_lerp.ReturnSumOfSquares( );
-    std::cerr << "Sum is " << sum << std::endl;
+bool DoLerpWithCTF(const wxString& cistem_ref_dir, const wxString& temp_directory) {
+    MyAssertFalse(cistem_ref_dir == temp_directory, "The temp directory should not be the same as the CISTEM_REF_IMAGES directory.");
 
-    wxPrintf("\n\nI am HERE in DoFourierCropVsLerpResize\n\n");
-    exit(0);
+    bool passed     = true;
+    bool all_passed = true;
+
+    SamplesBeginTest("Extract slice and downsample lerp+ctf", passed);
+
+    ResampleRunnerObjects o_(cistem_ref_dir, temp_directory);
+
+    constexpr bool apply_ctf       = true;
+    constexpr bool use_ctf_texture = true;
+    constexpr bool skip_ctf        = false;
+
+    o_.gpu_prj_tex.CopyHostToDeviceTextureComplex<2>(o_.swapped_ctf_image);
+
+    // Project the full size image to be fourier cropped and compared
+    o_.gpu_prj.ExtractSliceShiftAndCtf<apply_ctf, use_ctf_texture>(&o_.gpu_volume,
+                                                                   &o_.gpu_prj_tex,
+                                                                   o_.prj_angles,
+                                                                   1.0f,
+                                                                   o_.real_space_binning_factor,
+                                                                   o_.resolution_limit,
+                                                                   o_.apply_resolution_limit,
+                                                                   o_.swap_real_space_quadrants,
+                                                                   o_.zero_central_pixel);
+
+    std::array<int, 5> cropped_sizes{382, 192, 96, 48, 24};
+
+    for ( auto& cropped_size : cropped_sizes ) {
+        GpuImage binned_img, cropped_img, binned_ctf_applied_after;
+        binned_img.Allocate(cropped_size, cropped_size, 1, false, false);
+        cropped_img.Allocate(cropped_size, cropped_size, 1, false, false);
+        binned_ctf_applied_after.Allocate(cropped_size, cropped_size, 1, false, false);
+
+        o_.real_space_binning_factor = float(logical_input_size) / float(cropped_size);
+        binned_img.ExtractSliceShiftAndCtf<apply_ctf, use_ctf_texture>(&o_.gpu_volume,
+                                                                       &o_.gpu_prj_tex,
+                                                                       o_.prj_angles,
+                                                                       1.0f,
+                                                                       o_.real_space_binning_factor,
+                                                                       o_.resolution_limit,
+                                                                       o_.apply_resolution_limit,
+                                                                       o_.swap_real_space_quadrants,
+                                                                       o_.apply_shifts,
+                                                                       o_.zero_central_pixel);
+
+        binned_ctf_applied_after.ExtractSliceShiftAndCtf<skip_ctf, use_ctf_texture>(&o_.gpu_volume,
+                                                                                    &o_.gpu_prj_tex,
+                                                                                    o_.prj_angles,
+                                                                                    1.0f,
+                                                                                    o_.real_space_binning_factor,
+                                                                                    o_.resolution_limit,
+                                                                                    o_.apply_resolution_limit,
+                                                                                    o_.swap_real_space_quadrants,
+                                                                                    o_.apply_shifts,
+                                                                                    o_.zero_central_pixel);
+
+        // Our positive control, ctf applied to full size projection and fourier cropped
+        o_.gpu_prj.ClipIntoFourierSpace(&cropped_img, 0.f);
+
+        // Make a ctf image to apply to the skipped images
+        Image cropped_ctf(cropped_size, cropped_size, 1, false);
+        cropped_ctf.CalculateCTFImage(o_.ctf);
+        GpuImage d_cropped_ctf(cropped_ctf);
+        d_cropped_ctf.CopyHostToDevice(cropped_ctf);
+        binned_ctf_applied_after.MultiplyPixelWise(d_cropped_ctf);
+
+        binned_img.BackwardFFT( );
+        cropped_img.BackwardFFT( );
+        binned_ctf_applied_after.BackwardFFT( );
+
+        // binned_img.QuickAndDirtyWriteSlices("binned_img_" + std::to_string(cropped_size) + ".mrc", 1, 1);
+        // cropped_img.QuickAndDirtyWriteSlices("cropped_img_" + std::to_string(cropped_size) + ".mrc", 1, 1);
+        // binned_ctf_applied_after.QuickAndDirtyWriteSlices("binned_ctf_applied_after_" + std::to_string(cropped_size) + ".mrc", 1, 1);
+
+        binned_img.NormalizeRealSpaceStdDeviation(1.f, 0.f, 0.f);
+        cropped_img.NormalizeRealSpaceStdDeviation(1.f, 0.f, 0.f);
+        binned_ctf_applied_after.NormalizeRealSpaceStdDeviation(1.f, 0.f, 0.f);
+
+        cropped_img.SubtractImage(binned_img);
+        binned_ctf_applied_after.SubtractImage(binned_img);
+
+        float SS_ctf_intra = cropped_img.ReturnSumOfSquares( );
+        float SS_ctf_post  = binned_ctf_applied_after.ReturnSumOfSquares( );
+
+        // We expect the CTF to be applied after the lerp to be the same as the CTF applied to the full size image and then cropped.
+        passed = passed && FloatsAreAlmostTheSame(SS_ctf_intra, 0.f) && ! FloatsAreAlmostTheSame(SS_ctf_post, 0.f);
+    }
+
+    all_passed = passed ? all_passed : false;
+    SamplesTestResult(all_passed);
+
     return true;
 }

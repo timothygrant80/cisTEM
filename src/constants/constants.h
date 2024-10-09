@@ -17,6 +17,15 @@ constexpr long OPEN_TO_APPEND = 2;
 // Place system wide constants and enums here. Gradually, we would like to replace the many defines.
 namespace cistem {
 
+template <bool, typename T = void>
+struct EnableIfT {};
+
+template <typename T>
+struct EnableIfT<true, T> { using Type = T; };
+
+template <bool cond, typename T = void>
+using EnableIf = typename EnableIfT<cond, T>::Type;
+
 // Small value for floating point comparisons
 constexpr double double_epsilon     = 0.000001;
 constexpr float  float_epsilon      = 0.0001f;

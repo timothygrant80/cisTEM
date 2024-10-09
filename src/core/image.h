@@ -516,7 +516,7 @@ class Image {
     float NormalizedCrossCorrelation(Image* other_image);
     void  CalculateCrossCorrelationImageWith(Image* other_image);
     void  CalculatePhaseCrossCorrelationImageWith(Image& other_image, Peak& found_peak, float peak_shift_multiplier, bool normalize);
-    void  SwapFourierSpaceQuadrants(bool also_swap_real_space_quadrants = true);
+    void  SwapFourierSpaceQuadrants(bool also_swap_real_space_quadrants = true, bool is_a_ctf_image = false);
     void  SwapRealSpaceQuadrants( );
     void  ComputeAmplitudeSpectrumFull2D(Image* other_image, bool calculate_phases = false, float phase_multiplier = 1.0f);
     void  ComputeFilteredAmplitudeSpectrumFull2D(Image* average_spectrum_masked, Image* current_power_spectrum, float& average, float& sigma, float minimum_resolution, float maximum_resolution, float pixel_size_for_fitting, bool apply_cosine_mask = true);

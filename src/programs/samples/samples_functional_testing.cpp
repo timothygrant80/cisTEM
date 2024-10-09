@@ -44,6 +44,7 @@ bool SamplesTestingApp::DoCalculation( ) {
 #ifdef ENABLEGPU
 
     ResampleRunner(temp_directory);
+    exit(0);
     // These are broken, I'm not quite sure where, seems to be allocation issues related to consme that Shiran wrote. Revisit.
     // BatchedCorrelationRunner(hiv_images_80x80x10_filename, temp_directory);
     SimpleCuFFTRunner(hiv_image_80x80x1_filename, temp_directory);

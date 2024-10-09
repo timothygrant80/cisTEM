@@ -30,7 +30,7 @@ TemplateMatchingDataSizer::TemplateMatchingDataSizer(MyApp* wanted_parent_ptr,
 
     MyDebugAssertTrue(pixel_size > 0.0f, "Pixel size must be greater than zero");
     // TODO: remove this constraint
-    MyAssertTrue(template_padding == 1.0f, "Padding must be greater equal to 1.0");
+    MyAssertTrue(template_padding == 1.0f, "Padding must be  equal to 1.0");
     image_size.x = input_image.logical_x_dimension;
     image_size.y = input_image.logical_y_dimension;
     image_size.z = input_image.logical_z_dimension;
@@ -87,10 +87,7 @@ void TemplateMatchingDataSizer::PreProcessInputImage(Image& input_image, int mas
     local_whitening_filter.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((input_image.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
     number_of_terms.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((input_image.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
 
-    if ( whitening_filter_ptr ) {
-        whitening_filter_ptr->ResampleCurve(whitening_filter_ptr.get( ), local_whitening_filter.NumberOfPoints( ));
-    }
-    else {
+    if ( ! whitening_filter_ptr ) {
         // We'll accumulate the local whitening filter at the end of the method
         whitening_filter_ptr = std::make_unique<Curve>(local_whitening_filter);
         whitening_filter_ptr->SetYToConstant(1.0f);
@@ -121,6 +118,10 @@ void TemplateMatchingDataSizer::PreProcessInputImage(Image& input_image, int mas
     if ( mask_central_cross_width > 0 )
         input_image.MaskCentralCross(mask_central_cross_width, mask_central_cross_width);
 
+    if ( whitening_filter_ptr ) {
+        whitening_filter_ptr->ResampleCurve(whitening_filter_ptr.get( ), local_whitening_filter.NumberOfPoints( ));
+        local_whitening_filter.ResampleCurve(&local_whitening_filter, whitening_filter_ptr->NumberOfPoints( ));
+    }
     // Record this filtering for later use
     whitening_filter_ptr->MultiplyBy(local_whitening_filter);
 
@@ -357,14 +358,13 @@ void TemplateMatchingDataSizer::GetFFTSize( ) {
     if ( resampling_is_needed ) {
         // Here we need to scale the padding to account for resampling.
         // I think the easiest way to handle fractional reduction, which could result in an odd number of invalid rows/columns is to round up
-        float binning_factor   = search_pixel_size / pixel_size;
-        pre_binning_padding_x  = myroundint(ceilf(float(pre_binning_padding_x) / binning_factor));
-        pre_binning_padding_y  = myroundint(ceilf(float(pre_binning_padding_y) / binning_factor));
-        post_binning_padding_x = myroundint(ceilf(float(post_binning_padding_x) / binning_factor));
-        post_binning_padding_y = myroundint(ceilf(float(post_binning_padding_y) / binning_factor));
+        pre_binning_padding_x  = myroundint(ceilf(float(pre_binning_padding_x) / GetFullBinningFactor( )));
+        pre_binning_padding_y  = myroundint(ceilf(float(pre_binning_padding_y) / GetFullBinningFactor( )));
+        post_binning_padding_x = myroundint(ceilf(float(post_binning_padding_x) / GetFullBinningFactor( )));
+        post_binning_padding_y = myroundint(ceilf(float(post_binning_padding_y) / GetFullBinningFactor( )));
 
 #ifdef DEBUG_TM_SIZER_PRINT
-        wxPrintf("binning factor = %f\n", binning_factor);
+        wxPrintf("binning factor = %f\n", GetFullBinningFactor( ));
         wxPrintf("pre_binning_padding_x = %i\n", pre_binning_padding_x);
         wxPrintf("pre_binning_padding_y = %i\n", pre_binning_padding_y);
         wxPrintf("post_binning_padding_x = %i\n", post_binning_padding_x);
@@ -494,7 +494,11 @@ void TemplateMatchingDataSizer::ResizeTemplate_preSearch(Image& template_image, 
 
     if ( use_lerp_not_fourier_resampling ) {
         // We only need to set the 3d to be the padded power of two size and have the resampling be handled during the projection step.
-        template_image.Resize(template_search_size.x, template_search_size.y, template_search_size.z, template_image.ReturnAverageOfRealValuesOnEdges( ));
+        // search size always >= cropped size
+        template_image.Resize(std::max(template_size.x, template_search_size.x),
+                              std::max(template_size.y, template_search_size.y),
+                              std::max(template_size.z, template_search_size.z),
+                              template_image.ReturnAverageOfRealValuesOnEdges( ));
     }
     else {
 #ifdef DEBUG_IMG_OUTPUT

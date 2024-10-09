@@ -24,7 +24,7 @@ using namespace cistem_timer;
 using namespace cistem_timer_noop;
 #endif
 
-// #define USE_LERP_NOT_FOURIER_RESIZING
+#define USE_LERP_NOT_FOURIER_RESIZING
 
 class AggregatedTemplateResult {
 
@@ -342,6 +342,16 @@ bool MatchTemplateApp::DoCalculation( ) {
         SendError("sub-sampling of the histogram and statistical arrays is only supported on the GPU implementation\n");
     }
 
+#ifdef USE_LERP_NOT_FOURIER_RESIZING
+    const bool use_lerp_not_fourier_resampling = true;
+#else
+    const bool use_lerp_not_fourier_resampling = false;
+#endif
+
+    if ( use_gpu && ! use_gpu_prj && use_lerp_not_fourier_resampling ) {
+        SendError("LERP resampling is only supported on the GPU implementation\n");
+    }
+
     profile_timing.start("Init");
     ParameterMap parameter_map; // needed for euler search init
     //for (int i = 0; i < 5; i++) {parameter_map[i] = true;}
@@ -381,8 +391,6 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     int i;
 
-    int remove_npix_from_edge = 0;
-
     EulerSearch     global_euler_search;
     AnglesAndShifts angles;
 
@@ -391,10 +399,6 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     input_search_image_file.OpenFile(input_search_images_filename.ToStdString( ), false);
     input_reconstruction_file.OpenFile(input_reconstruction_filename.ToStdString( ), false);
-
-    //
-    remove_npix_from_edge = myroundint(particle_radius_angstroms / input_pixel_size);
-    //    wxPrintf("Removing %d pixels around the edge.\n", remove_npix_from_edge);
 
     Image input_image;
     Image padded_reference;
@@ -429,12 +433,6 @@ bool MatchTemplateApp::DoCalculation( ) {
     MyAssertTrue(input_reconstruction.IsCubic( ), "Input reconstruction should be cubic");
     profile_timing.lap("Read input images");
 
-#ifdef USE_LERP_NOT_FOURIER_RESIZING
-    const bool use_lerp_not_fourier_resampling = true;
-#else
-    const bool use_lerp_not_fourier_resampling = false;
-#endif
-
     profile_timing.start("PreProcessInputImage");
     TemplateMatchingDataSizer data_sizer(this, input_image, input_reconstruction, input_pixel_size, padding);
     data_sizer.PreProcessInputImage(input_image, 0);
@@ -445,7 +443,6 @@ bool MatchTemplateApp::DoCalculation( ) {
     data_sizer.ResizeTemplate_preSearch(input_reconstruction, use_lerp_not_fourier_resampling);
     data_sizer.ResizeImage_preSearch(input_image);
     profile_timing.lap("Resize_preSearch");
-    float wanted_binning_factor = data_sizer.GetSearchPixelSize( ) / data_sizer.GetPixelSize( );
 
     if ( data_sizer.IsRotatedBy90( ) )
         defocus_angle += 90.0f;
@@ -453,8 +450,11 @@ bool MatchTemplateApp::DoCalculation( ) {
     data_sizer.PrintImageSizes( );
 
     if ( padding != 1.0f ) {
-        MyDebugAssertFalse(data_sizer.IsResamplingNeeded( ), "Currently, padding of 1.0 is required when resampling.");
         input_reconstruction.Resize(input_reconstruction.logical_x_dimension * padding, input_reconstruction.logical_y_dimension * padding, input_reconstruction.logical_z_dimension * padding, input_reconstruction.ReturnAverageOfRealValuesOnEdges( ));
+    }
+
+    if ( pixel_size_search_range > 0.0f && data_sizer.IsResamplingNeeded( ) ) {
+        SendError("Pixel size search range is not currently supported with resampling.");
     }
 
     profile_timing.start("Allocate and zero arrays");
@@ -486,14 +486,31 @@ bool MatchTemplateApp::DoCalculation( ) {
         histogram_data[counter] = 0;
     }
 
-    CTF input_ctf;
-    input_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, defocus1, defocus2, defocus_angle, 0.0, 0.0, 0.0, data_sizer.GetSearchPixelSize( ), deg_2_rad(phase_shift));
-
     // assume cube
 
-    current_projection.Allocate(input_reconstruction.logical_x_dimension, input_reconstruction.logical_x_dimension, false);
-    projection_filter.Allocate(input_reconstruction.logical_x_dimension, input_reconstruction.logical_x_dimension, false);
-    template_reconstruction.Allocate(input_reconstruction.logical_x_dimension, input_reconstruction.logical_y_dimension, input_reconstruction.logical_z_dimension, true);
+    // if we are using lerp for projection, we want the ctfs to be full size not search sized.
+    int   wanted_pre_projection_template_size;
+    float wanted_pre_projection_pixel_size;
+    if ( use_lerp_not_fourier_resampling ) {
+
+        wanted_pre_projection_pixel_size = data_sizer.GetPixelSize( );
+    }
+    else {
+        wanted_pre_projection_pixel_size = data_sizer.GetSearchPixelSize( );
+    }
+    wanted_pre_projection_template_size = input_reconstruction.logical_x_dimension;
+
+    wxPrintf("values are %i %i %f %f %f\n", wanted_pre_projection_template_size, data_sizer.GetTemplateSearchSizeX( ), wanted_pre_projection_pixel_size, data_sizer.GetPixelSize( ), data_sizer.GetSearchPixelSize( ));
+
+    CTF input_ctf;
+    input_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, defocus1, defocus2, defocus_angle, 0.0, 0.0, 0.0, wanted_pre_projection_pixel_size, deg_2_rad(phase_shift));
+    projection_filter.Allocate(wanted_pre_projection_template_size, wanted_pre_projection_template_size, false);
+    template_reconstruction.Allocate(wanted_pre_projection_template_size, wanted_pre_projection_template_size, wanted_pre_projection_template_size, true);
+
+    // We want the output projection to always be the search size
+    current_projection.Allocate(data_sizer.GetTemplateSearchSizeX( ), data_sizer.GetTemplateSearchSizeX( ), false);
+
+    // NOTE: note supported with resampling
     if ( padding != 1.0f )
         padded_projection.Allocate(input_reconstruction.logical_x_dimension * padding, input_reconstruction.logical_x_dimension * padding, false);
 
@@ -525,7 +542,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     //psi_step = 5;
 
     // search grid
-    // TODO: when checking the impact of limiting the resolution, it may be worthwile to NOT limit the number of search positions
+    // Note: resolution limit is only used in euler search in particle extraction and whitening. It does not affect template matching.
     global_euler_search.InitGrid(my_symmetry, angular_step, 0.0f, 0.0f, psi_max, psi_step, psi_start, data_sizer.GetSearchPixelSize( ) / high_resolution_limit_search, parameter_map, best_parameters_to_keep);
 
     // TODO 2x check me - w/o this O symm at least is broken
@@ -612,7 +629,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     int  nGPUs          = 1;
     int  nJobs          = last_search_position - first_search_position + 1;
     if ( use_gpu && max_threads > nJobs ) {
-        wxPrintf("\n\tWarning, you request more threads (%d) than there are search positions (%d)\n", max_threads, nJobs);
+        SendInfo(wxString::Format("\n\tWarning, you request more threads (%d) than there are search positions (%d)\n", max_threads, nJobs));
         max_threads = nJobs;
     }
 
@@ -673,12 +690,12 @@ bool MatchTemplateApp::DoCalculation( ) {
                 // TODO: Initially, i had this set to use
                 // GpuImage::InitializeBasedOnCpuImage(tmp_vol, false, true); where the memory is instructed not to be pinned.
                 // This should be fine now, but .
-                profile_timing.start("CopyHostToDeviceTextureComplex3d");
+                profile_timing.start("CopyHostToDeviceTextureComplex");
 
                 template_reconstruction_gpu = std::make_shared<GpuImage>(template_reconstruction);
-                template_reconstruction_gpu->CopyHostToDeviceTextureComplex3d(template_reconstruction);
+                template_reconstruction_gpu->CopyHostToDeviceTextureComplex<3>(template_reconstruction);
 
-                profile_timing.lap("CopyHostToDeviceTextureComplex3d");
+                profile_timing.lap("CopyHostToDeviceTextureComplex");
             }
 
 #pragma omp parallel num_threads(max_threads)
@@ -687,6 +704,12 @@ bool MatchTemplateApp::DoCalculation( ) {
                 gpuDev.SetGpu( );
 
                 if ( first_gpu_loop ) {
+
+#ifdef USE_LERP_NOT_FOURIER_RESIZING
+                    std::cerr << "\n\nUsing LERP\n\n";
+                    GPU[tIDX].use_lerp_for_resizing = true;
+                    GPU[tIDX].binning_factor        = data_sizer.GetFullBinningFactor( );
+#endif
 
                     int t_first_search_position = first_search_position + (tIDX * incPos);
                     int t_last_search_position  = first_search_position + (incPos - 1) + (tIDX * incPos);
@@ -718,11 +741,6 @@ bool MatchTemplateApp::DoCalculation( ) {
                         GPU[tIDX].SetCpuTemplate(&template_reconstruction);
                     }
 
-#ifdef USE_LERP_NOT_FOURIER_RESIZING
-                    std::cerr << "\n\nUsing LERP\n\n";
-                    GPU[tIDX].use_lerp_for_resizing = true;
-                    GPU[tIDX].binning_factor        = wanted_binning_factor;
-#endif
                     wxPrintf("%d\n", tIDX);
                     wxPrintf("%d\n", t_first_search_position);
                     wxPrintf("%d\n", t_last_search_position);
@@ -740,21 +758,30 @@ bool MatchTemplateApp::DoCalculation( ) {
 
             profile_timing.start("Ctf and whitening filter");
             // make the projection filter, which will be CTF * whitening filter
-            input_ctf.SetDefocus((defocus1 + float(defocus_i) * defocus_step) / data_sizer.GetSearchPixelSize( ), (defocus2 + float(defocus_i) * defocus_step) / data_sizer.GetSearchPixelSize( ), deg_2_rad(defocus_angle));
-            //            input_ctf.SetDefocus((defocus1 + 200) / data_sizer.GetSearchPixelSize(), (defocus2 + 200) / data_sizer.GetSearchPixelSize(), deg_2_rad(defocus_angle));
+            input_ctf.SetDefocus((defocus1 + float(defocus_i) * defocus_step) / wanted_pre_projection_pixel_size,
+                                 (defocus2 + float(defocus_i) * defocus_step) / wanted_pre_projection_pixel_size,
+                                 deg_2_rad(defocus_angle));
+            // Reset this bool since we will overwrite all values in the CTF image.
+            projection_filter.is_fft_centered_in_box = false;
             projection_filter.CalculateCTFImage(input_ctf);
-            projection_filter.ApplyCurveFilter(data_sizer.whitening_filter_ptr.get( ));
+            for ( int i = 0; i < 1; i++ )
+                projection_filter.ApplyCurveFilter(data_sizer.whitening_filter_ptr.get( ));
+
             profile_timing.lap("Ctf and whitening filter");
 
-            //            projection_filter.QuickAndDirtyWriteSlices("/tmp/projection_filter.mrc",1,projection_filter.logical_z_dimension,true,1.5);
             if ( use_gpu ) {
 #ifdef ENABLEGPU
-                //            wxPrintf("\n\n\t\tsizeI defI %d %d\n\n\n", size_i, defocus_i);
+                // Rather than multiplying the projection by the ctf_image, we will interpolate from it
+                // This allows intra projection down sampling and also keeps the ctf in fast read only cache.
+                // As with the 3d volume, we have to swap the fourier space quadrants and shift x by 1 to have spatially local interp
+                if ( use_gpu_prj )
+                    projection_filter.SwapFourierSpaceQuadrants(false, true);
 
 #pragma omp parallel num_threads(max_threads)
                 {
                     int tIDX = ReturnThreadNumberOfCurrentThread( );
                     gpuDev.SetGpu( );
+
                     profile_timing.start("RunInnerLoop");
                     GPU[tIDX].RunInnerLoop(projection_filter, tIDX, current_correlation_position);
                     profile_timing.lap("RunInnerLoop");
@@ -1153,7 +1180,7 @@ bool MatchTemplateApp::DoCalculation( ) {
         delete[] GPU;
     }
 
-    //  gpuDev.ResetGpu();
+//  gpuDev.ResetGpu();
 #endif
 
     if ( is_running_locally == true ) {

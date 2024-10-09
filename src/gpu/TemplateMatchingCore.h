@@ -132,7 +132,9 @@ class TemplateMatchingCore {
               bool                      use_gpu_prj,
               int                       number_of_global_search_images_to_save = 1);
 
-    void RunInnerLoop(Image& projection_filter, int threadIDX, long& current_correlation_position);
+    void RunInnerLoop(Image& projection_filter,
+                      int    threadIDX,
+                      long&  current_correlation_position);
 };
 
 #endif

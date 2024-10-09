@@ -143,8 +143,20 @@ class TemplateMatchingDataSizer {
         return image_search_size.y;
     }
 
-    inline int GetTemplateSizeX( ) const {
+    inline int GetImageSearchSizeX( ) const {
+        return image_search_size.x;
+    }
+
+    inline int GetImageSearchSizeY( ) const {
+        return image_search_size.y;
+    }
+
+    inline int GetTemplateSearchSizeX( ) const {
         return template_search_size.x;
+    }
+
+    inline int GetTemplateSizeX( ) const {
+        return template_size.x;
     }
 
     inline long GetNumberOfValidSearchPixels( ) const {

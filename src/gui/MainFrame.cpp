@@ -542,7 +542,7 @@ void MyMainFrame::OpenProject(wxString project_filename) {
                 button  = "Open";
             }
             else {
-                message = "cisTEM can try to update the format. It is wise to make a backup of the database before trying this.\n\nAttempt to update the project?";
+                message = "cisTEM can try to update the format, which for databases with many classifications and refinements from earlier versions of cisTEM can take a long time. It is wise to make a backup of the database before trying this.\n\nAttempt to update the project?";
                 button  = "Update";
                 for ( auto& table : schema_comparison.first ) {
                     changes += wxString::Format("Add Table: \t %s\n", table);
@@ -557,8 +557,62 @@ void MyMainFrame::OpenProject(wxString project_filename) {
                 my_dialog->ShowDetailedText(changes);
             }
             if ( my_dialog->ShowModal( ) == wxID_YES ) {
-                my_dialog->Destroy( );
-                current_project.database.UpdateSchema(schema_comparison.second);
+
+                // 1. Estimate number of rows that will be updated
+                // Total number of particles can be very large; on the order of billions.
+                // Use long to ensure enough space.
+                unsigned long row_updates = 0;
+                int           normalized_increments; // This will adjust how long it takes for an update based on the total number of particles that will be processed
+
+                // Limit scope of temporarily needed arrays while estimating total number of increments...
+                {
+                    wxArrayInt ref_pkg_ids = current_project.database.ReturnIntArrayFromSelectCommand("select REFINEMENT_PACKAGE_ASSET_ID from REFINEMENT_PACKAGE_ASSETS");
+                    for ( int cur_pkg_id : ref_pkg_ids ) {
+                        row_updates += current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("select COUNT(*) from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", cur_pkg_id));
+                    }
+                    wxArrayString refinement_result_tables = current_project.database.ReturnStringArrayFromSelectCommand("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'REFINEMENT_RESULT_%_%'");
+                    for ( wxString table_name : refinement_result_tables ) {
+                        row_updates += current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) FROM '%s'", table_name));
+                    }
+                    wxArrayString classification_result_tables = current_project.database.ReturnStringArrayFromSelectCommand("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'CLASSIFICATION_RESULT_%'");
+                    for ( wxString table_name : classification_result_tables ) {
+                        row_updates += current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) FROM '%s'", table_name));
+                    }
+                } // End total increments estimation
+
+                row_updates += schema_comparison.second.size( );
+
+                // Adjusting the normalized increments based on total increments helps prevent GUI from freezing up and gives more accurate
+                // estimated time remaining. This may need additional fine tuning.
+                {
+                    long tmp_row_updates = row_updates;
+                    int  place_value     = 1;
+
+                    // Get highest place value
+                    while ( tmp_row_updates >= 10 ) {
+                        tmp_row_updates /= 10;
+                        place_value *= 10;
+                    }
+
+                    // Determine how many progress bar increments there should be based on largest place value
+                    if ( place_value <= 100000 ) {
+                        normalized_increments = 100;
+                    }
+                    else if ( place_value > 100000 && place_value < 10000000 ) {
+                        normalized_increments = 1000;
+                    }
+                    // 10 million or greater
+                    else {
+                        normalized_increments = 10000;
+                    }
+                } // End progress normalization
+
+                // 2. Instantiate progress dialog member variable so it can receive updates
+                update_progress_dialog = new OneSecondProgressDialog("Updating Database...", "Starting database update...", normalized_increments, this, wxPD_APP_MODAL | wxPD_REMAINING_TIME | wxPD_AUTO_HIDE | wxPD_SMOOTH);
+
+                // 3. Update, passing MainFrame's UpdateProgressTracker variables
+                current_project.database.UpdateSchema(schema_comparison.second, this, row_updates, normalized_increments);
+                OnCompletion( );
             }
             else {
                 my_dialog->Destroy( );
@@ -946,3 +1000,25 @@ void MyMainFrame::SetTemplateMatchingWorkflow(bool triggered_by_gui_event) {
 void MyMainFrame::OnTemplateMatchingWorkflow(wxCommandEvent& event) {
     SetTemplateMatchingWorkflow(true);
 }
+
+////////////////////////////////////
+/// TRACK DATABASE SCHEMA UPDATE
+////////////////////////////////////
+void MyMainFrame::OnUpdateProgress(int progress, wxString new_msg, bool& should_update_text) {
+    if ( ! should_update_text ) {
+        update_progress_dialog->Update(progress);
+    }
+    else {
+        update_progress_dialog->Update(progress, new_msg);
+        should_update_text = false;
+    }
+}
+
+void MyMainFrame::OnCompletion( ) {
+    if ( update_progress_dialog ) {
+        update_progress_dialog->Destroy( );
+        update_progress_dialog = nullptr;
+    }
+}
+
+////////////////////////////////////

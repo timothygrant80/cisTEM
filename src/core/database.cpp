@@ -565,6 +565,72 @@ bool Database::Open(wxFileName file_to_open, bool disable_locking) {
     return true;
 }
 
+/**
+ * @brief Make backup copy of existing database. Currently only in use when
+ * database schema changes are detected and a schema update is necessary.
+ * 
+ * @param backup_db Filename of backup database.
+ * @return true If all backup is created successfully.
+ * @return false If backup fails.
+ */
+bool Database::CopyDatabase(wxFileName backup_db) {
+    sqlite3*        destination;
+    sqlite3_backup* backup;
+    int             return_code;
+    bool            must_open_source_db; // source database should already be open; we will check to be safe
+
+    // Check if source database is already open (it should be); if not, open it
+    must_open_source_db = ! (this->is_open);
+    if ( must_open_source_db ) {
+        return_code = sqlite3_open_v2(this->database_file.GetFullPath( ).ToUTF8( ).data( ), &this->sqlite_database, SQLITE_OPEN_READWRITE, "unix-dotfile");
+        if ( return_code != SQLITE_OK ) {
+            MyPrintWithDetails("Cannot open source database: %s\n", sqlite3_errmsg(this->sqlite_database));
+            sqlite3_close(this->sqlite_database);
+            return false;
+        }
+    }
+
+    // Open backup database
+    return_code = sqlite3_open_v2(backup_db.GetFullPath( ).ToUTF8( ).data( ), &destination, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, "unix-dotfile");
+    if ( return_code != SQLITE_OK ) {
+        MyPrintWithDetails("Cannot open destination database: %s\n", sqlite3_errmsg(destination));
+        sqlite3_close(destination);
+        return false;
+    }
+
+    // Get backup database ready for backing up
+    backup = sqlite3_backup_init(destination, "main", this->sqlite_database, "main");
+    if ( ! backup ) {
+        MyPrintWithDetails("Backup failed: %s\n", sqlite3_errmsg(destination));
+        if ( must_open_source_db )
+            sqlite3_close(this->sqlite_database);
+        sqlite3_close(destination);
+        return false;
+    }
+
+    // Perform backup
+    wxPrintf("Backing up...\n");
+    while ( return_code == SQLITE_OK ) {
+        return_code = sqlite3_backup_step(backup, 5);
+    }
+
+    sqlite3_backup_finish(backup);
+
+    // Ensure backup finished properly
+    if ( return_code != SQLITE_DONE ) {
+        MyPrintWithDetails("Backup failed %s\n", sqlite3_errmsg(destination));
+        return false;
+    }
+    else {
+        wxPrintf("Backup completed successfully\n");
+    }
+
+    if ( must_open_source_db )
+        sqlite3_close(this->sqlite_database);
+    sqlite3_close(destination);
+    return true;
+}
+
 bool Database::DeleteTable(const char* table_name) {
     wxString sql_command = "DROP TABLE IF EXISTS ";
     sql_command += table_name;

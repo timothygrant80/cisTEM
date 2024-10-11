@@ -128,6 +128,7 @@ class MyMainFrame : public MainFrame, public SocketCommunicator, public UpdatePr
   private:
     // Only used in schema update at this point
     OneSecondProgressDialog* update_progress_dialog;
+    void                     UpdateDatabase(std::pair<Database::TableChanges, Database::ColumnChanges>& schema_comparison);
 };
 
 #endif // _gui_MainFrame_h_

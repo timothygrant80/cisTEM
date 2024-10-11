@@ -1,5 +1,5 @@
-#ifndef _UPDATE_PROGRESS_TRACKER_H
-#define _UPDATE_PROGRESS_TRACKER_H
+#ifndef _SRC_GUI_UPDATE_PROGRESS_TRACKER_H
+#define _SRC_GUI_UPDATE_PROGRESS_TRACKER_H
 
 // This class exists only as an interface for overriding in MainFrame.cpp.
 // Its main purpose is to allow the GUI to track database schema update

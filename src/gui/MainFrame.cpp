@@ -1,5 +1,6 @@
 //#include "../core/core_headers.h"
 #include "../core/gui_core_headers.h"
+#include "DatabaseUpdateDialog.h"
 #include <wx/richmsgdlg.h>
 
 #define SERVER_ID 100
@@ -532,92 +533,71 @@ void MyMainFrame::OpenProject(wxString project_filename) {
             current_project.Close(false, false);
             return;
         }
+        // We need to see if we want to update
         else if ( current_project.integer_database_version != INTEGER_DATABASE_VERSION || current_project.cistem_version_text != CISTEM_VERSION_TEXT ) {
             auto     schema_comparison = current_project.database.CheckSchema( );
-            wxString message;
-            wxString button;
-            wxString changes = "";
+            wxString changes           = "";
             if ( schema_comparison.first.size( ) == 0 && schema_comparison.second.size( ) == 0 ) {
-                message = "However, there seem to be no changes in the file format\n\nAttempt to open the project?";
-                button  = "Open";
+                wxRichMessageDialog* my_dialog = new wxRichMessageDialog(this, wxString::Format("This project was last opened by a different cisTEM version:-\n\nCurrent Version: \t %s\nProject Version: \t %s\n\nHowever, there seem to be no changes to the file format.\n\nAttempt to open the project?,", CISTEM_VERSION_TEXT, current_project.cistem_version_text), "Database from different cisTEM version?", wxICON_ERROR | wxYES_NO | wxNO_DEFAULT);
+                if ( my_dialog->ShowModal( ) == wxID_YES )
+                    my_dialog->Destroy( );
+                else {
+                    my_dialog->Destroy( );
+                    current_project.Close(false, false);
+                    return;
+                }
             }
+            // database schemas weren't the same; we're going to have to do a manual update
             else {
-                message = "cisTEM can try to update the format, which for databases with many classifications and refinements from earlier versions of cisTEM can take a long time. It is wise to make a backup of the database before trying this.\n\nAttempt to update the project?";
-                button  = "Update";
+                // Logic for getting table differences
                 for ( auto& table : schema_comparison.first ) {
                     changes += wxString::Format("Add Table: \t %s\n", table);
                 }
                 for ( auto& column : schema_comparison.second ) {
                     changes += wxString::Format("In Table: \t %s \tadd column: \t %s\n", std::get<0>(column), std::get<1>(column));
                 }
-            }
-            wxRichMessageDialog* my_dialog = new wxRichMessageDialog(this, wxString::Format("This project was last opened by a different cisTEM version :-\n\nCurrent Version: \t %s\nProject Version: \t %s\n\n%s", CISTEM_VERSION_TEXT, current_project.cistem_version_text, message), "Database from different cisTEM version?", wxICON_ERROR | wxYES_NO | wxNO_DEFAULT);
-            my_dialog->SetYesNoLabels(button, "Close");
-            if ( changes != wxString("") ) {
-                my_dialog->ShowDetailedText(changes);
-            }
-            if ( my_dialog->ShowModal( ) == wxID_YES ) {
 
-                // 1. Estimate number of rows that will be updated
-                // Total number of particles can be very large; on the order of billions.
-                // Use long to ensure enough space.
-                unsigned long row_updates = 0;
-                int           normalized_increments; // This will adjust how long it takes for an update based on the total number of particles that will be processed
+                int user_update_type = 0;
 
-                // Limit scope of temporarily needed arrays while estimating total number of increments...
-                {
-                    wxArrayInt ref_pkg_ids = current_project.database.ReturnIntArrayFromSelectCommand("select REFINEMENT_PACKAGE_ASSET_ID from REFINEMENT_PACKAGE_ASSETS");
-                    for ( int cur_pkg_id : ref_pkg_ids ) {
-                        row_updates += current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("select COUNT(*) from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", cur_pkg_id));
+                DatabaseUpdateDialog* update_dialog = new DatabaseUpdateDialog(this, changes);
+                // Show dialog and get user choice
+                user_update_type = update_dialog->ShowModal( );
+
+                // Create enum to avoid 'magic numbers' -- easier to identify at a glance what is happening in each case this way
+                enum UpdateOptions { CANCEL            = 1,
+                                     UPDATE_ONLY       = 2,
+                                     BACKUP_AND_UPDATE = 3 };
+
+                switch ( user_update_type ) {
+                    case CANCEL: {
+                        current_project.Close(false, false);
+                        return;
                     }
-                    wxArrayString refinement_result_tables = current_project.database.ReturnStringArrayFromSelectCommand("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'REFINEMENT_RESULT_%_%'");
-                    for ( wxString table_name : refinement_result_tables ) {
-                        row_updates += current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) FROM '%s'", table_name));
+                    case UPDATE_ONLY: {
+                        UpdateDatabase(schema_comparison);
+                        break;
                     }
-                    wxArrayString classification_result_tables = current_project.database.ReturnStringArrayFromSelectCommand("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'CLASSIFICATION_RESULT_%'");
-                    for ( wxString table_name : classification_result_tables ) {
-                        row_updates += current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) FROM '%s'", table_name));
+                    case BACKUP_AND_UPDATE: {
+                        // Create backup filename which simply appends _backup
+                        std::string tmp_backup_filename = std::string(current_project.database.ReturnFilename( ));
+                        tmp_backup_filename.insert(tmp_backup_filename.size( ) - 3, "_backup");
+                        wxFileName backup_db_filename(tmp_backup_filename);
+
+                        // Backup and update
+                        bool backup_succeeded = current_project.database.CopyDatabase(backup_db_filename);
+                        if ( ! backup_succeeded ) {
+                            wxPrintf("Failed to backup database properly. Abandoning update attempt.\n");
+                            DEBUG_ABORT;
+                        }
+                        UpdateDatabase(schema_comparison);
+                        break;
                     }
-                } // End total increments estimation
-
-                row_updates += schema_comparison.second.size( );
-
-                // Adjusting the normalized increments based on total increments helps prevent GUI from freezing up and gives more accurate
-                // estimated time remaining. This may need additional fine tuning.
-                {
-                    long tmp_row_updates = row_updates;
-                    int  place_value     = 1;
-
-                    // Get highest place value
-                    while ( tmp_row_updates >= 10 ) {
-                        tmp_row_updates /= 10;
-                        place_value *= 10;
+                    default: {
+                        // Shouldn't really get here, so something went wrong, or user closed popup; do same as CANCEL case for safety
+                        current_project.Close(false, false);
+                        return;
                     }
-
-                    // Determine how many progress bar increments there should be based on largest place value
-                    if ( place_value <= 100000 ) {
-                        normalized_increments = 100;
-                    }
-                    else if ( place_value > 100000 && place_value < 10000000 ) {
-                        normalized_increments = 1000;
-                    }
-                    // 10 million or greater
-                    else {
-                        normalized_increments = 10000;
-                    }
-                } // End progress normalization
-
-                // 2. Instantiate progress dialog member variable so it can receive updates
-                update_progress_dialog = new OneSecondProgressDialog("Updating Database...", "Starting database update...", normalized_increments, this, wxPD_APP_MODAL | wxPD_REMAINING_TIME | wxPD_AUTO_HIDE | wxPD_SMOOTH);
-
-                // 3. Update, passing MainFrame's UpdateProgressTracker variables
-                current_project.database.UpdateSchema(schema_comparison.second, this, row_updates, normalized_increments);
-                OnCompletion( );
-            }
-            else {
-                my_dialog->Destroy( );
-                current_project.Close(false, false);
-                return;
+                }
             }
         }
 
@@ -679,7 +659,7 @@ void MyMainFrame::OpenProject(wxString project_filename) {
         my_dialog->Update(7, "Opening project (loading CTF estimation results...)");
         //	current_project.database.AddCTFIcinessColumnIfNecessary();
         ctf_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT IMAGE_ASSET_ID FROM ESTIMATED_CTF_PARAMETERS");
-        //	current_project.database.AddCTFIcinessColumnIfNecessary();
+//	current_project.database.AddCTFIcinessColumnIfNecessary();
 #ifdef EXPERIMENTAL
         my_dialog->Update(8, "Opening project (loading Match Template Results...)");
         match_template_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT IMAGE_ASSET_ID FROM TEMPLATE_MATCH_LIST");
@@ -999,6 +979,64 @@ void MyMainFrame::SetTemplateMatchingWorkflow(bool triggered_by_gui_event) {
 
 void MyMainFrame::OnTemplateMatchingWorkflow(wxCommandEvent& event) {
     SetTemplateMatchingWorkflow(true);
+}
+
+void MyMainFrame::UpdateDatabase(std::pair<Database::TableChanges, Database::ColumnChanges>& schema_comparison) {
+    // 1. Estimate number of rows that will be updated
+    // Total number of particles can be very large; on the order of billions.
+    // Use long to ensure enough space.
+    long row_updates = 0;
+    int  normalized_increments; // This will adjust how long it takes for an update based on the total number of particles that will be processed
+
+    // Limit scope of temporarily needed arrays while estimating total number of increments...
+    {
+        wxArrayInt ref_pkg_ids = current_project.database.ReturnIntArrayFromSelectCommand("select REFINEMENT_PACKAGE_ASSET_ID from REFINEMENT_PACKAGE_ASSETS");
+        for ( int cur_pkg_id : ref_pkg_ids ) {
+            row_updates += current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("select COUNT(*) from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", cur_pkg_id));
+        }
+        wxArrayString refinement_result_tables = current_project.database.ReturnStringArrayFromSelectCommand("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'REFINEMENT_RESULT_%_%'");
+        for ( wxString table_name : refinement_result_tables ) {
+            row_updates += current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) FROM '%s'", table_name));
+        }
+        wxArrayString classification_result_tables = current_project.database.ReturnStringArrayFromSelectCommand("SELECT name FROM sqlite_master WHERE type='table' AND name LIKE 'CLASSIFICATION_RESULT_%'");
+        for ( wxString table_name : classification_result_tables ) {
+            row_updates += current_project.database.ReturnSingleIntFromSelectCommand(wxString::Format("SELECT COUNT(*) FROM '%s'", table_name));
+        }
+    } // End total increments estimation
+
+    row_updates += schema_comparison.second.size( );
+
+    // Adjusting the normalized increments based on total increments helps prevent GUI from freezing up and gives more accurate
+    // estimated time remaining. This may need additional fine tuning.
+    {
+        long tmp_row_updates = row_updates;
+        int  place_value     = 1;
+
+        // Get highest place value
+        while ( tmp_row_updates >= 10 ) {
+            tmp_row_updates /= 10;
+            place_value *= 10;
+        }
+
+        // Determine how many progress bar increments there should be based on largest place value
+        if ( place_value <= 100000 ) {
+            normalized_increments = 100;
+        }
+        else if ( place_value > 100000 && place_value < 10000000 ) {
+            normalized_increments = 1000;
+        }
+        // 10 million or greater
+        else {
+            normalized_increments = 10000;
+        }
+    } // End progress normalization
+
+    // 2. Instantiate progress dialog member variable so it can receive updates
+    update_progress_dialog = new OneSecondProgressDialog("Updating Database...", "Starting database update...", normalized_increments, this, wxPD_APP_MODAL | wxPD_REMAINING_TIME | wxPD_AUTO_HIDE | wxPD_SMOOTH);
+
+    // 3. Update, passing MainFrame's UpdateProgressTracker variables
+    current_project.database.UpdateSchema(schema_comparison.second, this, row_updates, normalized_increments);
+    OnCompletion( );
 }
 
 ////////////////////////////////////

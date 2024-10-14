@@ -584,10 +584,11 @@ void MyMainFrame::OpenProject(wxString project_filename) {
                         wxFileName backup_db_filename(tmp_backup_filename);
 
                         // Backup and update
-                        bool backup_succeeded = current_project.database.CopyDatabase(backup_db_filename);
+                        bool backup_succeeded = current_project.database.CopyDatabaseFile(backup_db_filename);
                         if ( ! backup_succeeded ) {
                             wxPrintf("Failed to backup database properly. Abandoning update attempt.\n");
-                            DEBUG_ABORT;
+                            current_project.Close(false, false);
+                            return;
                         }
                         UpdateDatabase(schema_comparison);
                         break;

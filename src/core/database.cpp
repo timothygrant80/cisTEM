@@ -566,14 +566,14 @@ bool Database::Open(wxFileName file_to_open, bool disable_locking) {
 }
 
 /**
- * @brief Make backup copy of existing database. Currently only in use when
+ * @brief Make backup copy of existing database file. Currently only in use when
  * database schema changes are detected and a schema update is necessary.
  * 
  * @param backup_db Filename of backup database.
- * @return true If all backup is created successfully.
- * @return false If backup fails.
+ * @return true If backup creation succeeds.
+ * @return false If backup creation fails.
  */
-bool Database::CopyDatabase(wxFileName backup_db) {
+bool Database::CopyDatabaseFile(wxFileName backup_db) {
     sqlite3*        destination;
     sqlite3_backup* backup;
     int             return_code;

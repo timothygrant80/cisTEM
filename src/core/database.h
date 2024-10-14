@@ -26,7 +26,7 @@ class Database {
 
     bool CreateNewDatabase(wxFileName database_file);
     bool Open(wxFileName file_to_open, bool disable_locking = false);
-    bool CopyDatabase(wxFileName backup_db);
+    bool CopyDatabaseFile(wxFileName backup_db);
 
     inline void Begin( ) {
         if ( number_of_active_transactions == 0 )

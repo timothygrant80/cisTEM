@@ -1,6 +1,10 @@
 #include "../core/gui_core_headers.h"
 #include <wx/gauge.h>
 
+/* NOTE: this file contains large sections that are commented out; this is mostly logic that could/will 
+be useful in the future, but isn't simple to fully implement now. These regions of code are being left 
+in intentionally. */
+
 extern MyRefinementPackageAssetPanel* refinement_package_asset_panel;
 extern MyVolumeAssetPanel*            volume_asset_panel;
 
@@ -24,7 +28,6 @@ ResampleDialog::ResampleDialog(wxWindow* parent, bool is_volume_resample) : Resa
     OnBoxSizeSpinCtrl(tmp_event);
 }
 
-// TODO: don't allow resample if the box size is the same
 void ResampleDialog::OnBoxSizeSpinCtrl(wxCommandEvent& event) {
     // This is a general check that is useful for both stacks and volumes
     resample_box_size = BoxSizeSpinCtrl->GetValue( );
@@ -64,7 +67,7 @@ void ResampleDialog::OnBoxSizeTextEnter(wxCommandEvent& event) {
     event.Skip( );
 }
 
-// TODO: Load in the class and refinement selection panels, then fill the comboxes properly
+// TODO: Load in the class and refinement selection panels, then fill the comboxes properly -- this would go in the constructor
 // RefinementPackage current_package = refinement_package_asset_panel->all_refinement_packages[refinement_package_asset_panel->selected_refinement_package];
 
 // Refinement selection
@@ -88,70 +91,14 @@ void ResampleDialog::OnBoxSizeTextEnter(wxCommandEvent& event) {
 // initial_reference_panel->VolumeComboBox->FillComboBox(true, true);
 // InitialReferenceSelectionSizer->Add(initial_reference_panel, 1, wxALL | wxALIGN_CENTER_HORIZONTAL, 5);
 
-// Magic that refreshes the dialog to force it to look nice
-
 ResampleDialog::~ResampleDialog( ) {
 }
 
-// void ResampleDialog::OnUpdateUI(wxUpdateUIEvent& event) {
-//     // Perhaps I can check the NumericTextCtrl specifically, and then
-//     // DesiredPixelSizeTextCtrl->CheckValues( ); // Checks that values fall within min and max; saves the need for the subsequent check?
-//     // FIXME: May be the ReturnValue function that's causing the problem; it's not used anywhere else in the code
-//     float desired_pixel_size = DesiredPixelSizeTextCtrl->ReturnValue( );
-//     // TODO: Check if this is needed or if handled by NumericTextCtrl class
-//     if ( desired_pixel_size <= 0.0f )
-//         OKButton->Enable(false);
-//     // Do some algebra to get the closest pixel size given the current box size (must guarantee even box size number)
-//     else {
-//         OKButton->Enable(true);
-//         // Only update if input changed
-//         if ( desired_pixel_size != previously_entered_pixel_size ) {
-//             float start_pixel_size   = refinement_package_asset_panel->all_refinement_packages[refinement_package_asset_panel->selected_refinement_package].output_pixel_size;
-//             float conversion_ratio = desired_pixel_size / start_pixel_size;
-
-//             int start_stack_box_size = refinement_package_asset_panel->all_refinement_packages[refinement_package_asset_panel->selected_refinement_package].stack_box_size;
-//             actual_box_size        = myroundint(float(start_stack_box_size) / conversion_ratio);
-
-//             // Ratio for proper conversion:
-//             // new_pixel_size / start_pixel_size == old_box_size / resample_box_size
-//             // Can't have odd box size; modify it and base the ratio off of this instead, and inform the user what they'll actually get
-//             // FIXME: perhaps make adjustments to this to get the same pixel size with a given box size
-//             if ( actual_box_size % 2 != 0 ) {
-//                 actual_box_size++;
-//                 conversion_ratio  = float(start_stack_box_size) / float(actual_box_size);
-//                 actual_pixel_size = conversion_ratio * start_pixel_size;
-//             }
-//             else {
-//                 actual_pixel_size = desired_pixel_size;
-//             }
-
-//             previously_entered_pixel_size = desired_pixel_size;
-//             ActualPixelSizeText->SetLabel(wxString::Format("Actual Pixel Size: %.3f", actual_pixel_size));
-//             ActualBoxSizeText->SetLabel(wxString::Format("Actual Box Size: %i", actual_box_size));
-//             Layout( );
-//             Fit( );
-//         }
-//     }
-// }
-
 void ResampleDialog::OnOK(wxCommandEvent& event) {
-    // This will involve determining new dimensions based on the current x and y dims
-    // May want to only allow integer values; alternatively, simply round to the even number
-    // Get the refinements and classes accessible via array
     // long class_id               = class_selection_panel->ClassComboBox->GetSelection( ); // TEST: Does this get the ID itself or the index of the selection?
     // long selected_refinement_id = refinement_package_asset_panel->all_refinement_packages[refinement_package_asset_panel->selected_refinement_package].refinement_ids[refinement_selection_panel->RefinementComboBox->GetSelection( )];
     // FIXME: this method for pulling the reference index needs to be tested because of generate from params...
     // int      initial_reference_index = initial_reference_panel->VolumeComboBox->GetSelection( ) - 1;
-
-    // This has been replaced with private member actual_pixel_size
-    // wxString binning_val_text        = BinningFactorTextCtrl->GetValue( );
-
-    // double binning_val;
-    // if ( ! binning_val_text.ToDouble(&binning_val) ) {
-    //     wxMessageDialog error_msg(this, "Invalid binning factor!", "Invalid Binning Factor", wxOK | wxOK_DEFAULT | wxICON_EXCLAMATION);
-    //     error_msg.ShowModal( );
-    //     Destroy( );
-    // }
 
     EndModal(0);
     RefinementPackage* binned_pkg;
@@ -190,7 +137,6 @@ void ResampleDialog::OnOK(wxCommandEvent& event) {
             current_image.UpdateDistributionOfRealValues(&stack_distribution);
             overall_progress++;
             my_dialog->Update(overall_progress);
-            // wxYield( );
         }
         float std = stack_distribution.GetSampleVariance( );
         if ( std > 0.0 ) {
@@ -241,11 +187,6 @@ void ResampleDialog::OnOK(wxCommandEvent& event) {
 
         binned_pkg->refinement_ids.Add(binned_refinement->refinement_id);
 
-        // FIXME: this needs to use a seperate selector for the reference
-        // The refinement parameters and the reference itself are different, and you
-        // are able to select a set of parameters that can be applied to the reference.
-        // So, let's see if there's a reference selector that already exists in assets or my_controls
-
         // Fill in particle info
         RefinementPackageParticleInfo current_particle_info;
         // Only using a single refinement, so only one class is being included; and we need to fill up the class_refinement_results with blank particles that will be filled during the loop
@@ -279,20 +220,16 @@ void ResampleDialog::OnOK(wxCommandEvent& event) {
             binned_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].sigma                              = old_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].sigma;
             overall_progress++;
             my_dialog->Update(overall_progress, "Filling Refinement Package with particles...");
-            // wxYield( );
         }
     }
 
-    // TODO: check if this yield even works
-    // wxYield( );
     else {
-        tmp_asset = new VolumeAsset( );
-        // FIXME: Need to check this string for "resampled" in case it gets resampled multiple times
+        tmp_asset                      = new VolumeAsset( );
         wxString resampled_3d_filename = main_frame->current_project.volume_asset_directory.GetFullPath( ) + wxString::Format("/resampled_%i_%s", resample_box_size, volume_asset_panel->all_assets_list->ReturnVolumeAssetPointer(volume_asset_panel->all_groups_list->ReturnGroupMember(volume_asset_panel->selected_group, volume_asset_panel->selected_content))->ReturnShortNameString( ));
 
-        // my_dialog->Update(overall_progress, "Resampling 3D reference stack...");
         VolumeAsset* original_volume_asset = volume_asset_panel->all_assets_list->ReturnVolumeAssetPointer(volume_asset_panel->all_groups_list->ReturnGroupMember(volume_asset_panel->current_group_number, volume_asset_panel->selected_content));
         tmp_asset->CopyFrom(original_volume_asset);
+
         // Now that we have the particular asset, we'll change the parameters that need changing
         tmp_asset->asset_id   = volume_asset_panel->current_asset_number;
         tmp_asset->pixel_size = resample_pixel_size;
@@ -311,7 +248,7 @@ void ResampleDialog::OnOK(wxCommandEvent& event) {
         tmp_asset->half_map_2_filename = "";
         tmp_asset->Update(resampled_3d_filename);
         tmp_asset->asset_name            = tmp_asset->filename.GetName( );
-        tmp_asset->reconstruction_job_id = -1; // FIXME: may not work; thinking it should asset creation wasn't actually a job, just a copy
+        tmp_asset->reconstruction_job_id = -1;
         // binned_pkg->references_for_next_refinement.Add(tmp_asset->asset_id);
 
         MRCFile               original_volume_file(original_volume_asset->filename.GetFullPath( ).ToStdString( ));
@@ -326,8 +263,6 @@ void ResampleDialog::OnOK(wxCommandEvent& event) {
         my_volume.WriteSlices(&resampled_volume_file, 1, resample_box_size);
         // current_slice.UpdateDistributionOfRealValues(&volume_distribution);
 
-        // ++overall_progress;
-        // my_dialog->Update(overall_progress);
         float std = volume_distribution.GetSampleVariance( );
         if ( std > 0.0 ) {
             std = sqrt(std);
@@ -366,7 +301,6 @@ void ResampleDialog::OnOK(wxCommandEvent& event) {
     }
 
     main_frame->current_project.database.Commit( );
-    // my_dialog->Destroy( );
     Destroy( );
 }
 

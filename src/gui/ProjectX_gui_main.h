@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version 3.10.0-4761b0c)
+// C++ code generated with wxFormBuilder (version 3.10.1-0-g8feb16b)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO *NOT* EDIT THIS FILE!
@@ -30,6 +30,7 @@
 #include <wx/hyperlink.h>
 #include <wx/button.h>
 #include <wx/dialog.h>
+#include <wx/textctrl.h>
 
 ///////////////////////////////////////////////////////////////////////////
 
@@ -244,6 +245,39 @@ class AboutDialog : public wxDialog
 		AboutDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("About cisTEM"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxDEFAULT_DIALOG_STYLE );
 
 		~AboutDialog();
+
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class DatabaseUpdateDialogParent
+///////////////////////////////////////////////////////////////////////////////
+class DatabaseUpdateDialogParent : public wxDialog
+{
+	private:
+
+	protected:
+		enum
+		{
+			wxID_UPDATE_ONLY = 1000,
+			wxID_BACKUP_AND_UPDATE
+		};
+
+		wxStaticText* UpdateText;
+		wxTextCtrl* SchemaChangesTextCtrl;
+		wxStaticLine* m_staticline10;
+		wxButton* CancelButton;
+		wxButton* UpdateButton;
+		wxButton* BackupUpdateButton;
+
+		// Virtual event handlers, override them in your derived class
+		virtual void OnButtonClicked( wxCommandEvent& event ) { event.Skip(); }
+
+
+	public:
+
+		DatabaseUpdateDialogParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Differences in Database Schema Detected!"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxDEFAULT_DIALOG_STYLE );
+
+		~DatabaseUpdateDialogParent();
 
 };
 

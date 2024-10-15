@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version 3.10.0-4761b0c)
+// C++ code generated with wxFormBuilder (version 3.10.1-0-g8feb16b)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO *NOT* EDIT THIS FILE!
@@ -435,4 +435,76 @@ AboutDialog::AboutDialog( wxWindow* parent, wxWindowID id, const wxString& title
 
 AboutDialog::~AboutDialog()
 {
+}
+
+DatabaseUpdateDialogParent::DatabaseUpdateDialogParent( wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style ) : wxDialog( parent, id, title, pos, size, style )
+{
+	this->SetSizeHints( wxDefaultSize, wxDefaultSize );
+
+	wxBoxSizer* bSizer12;
+	bSizer12 = new wxBoxSizer( wxVERTICAL );
+
+	wxBoxSizer* bSizer13;
+	bSizer13 = new wxBoxSizer( wxVERTICAL );
+
+	UpdateText = new wxStaticText( this, wxID_ANY, wxT("cisTEM can try to update the database schema format, which for databases with many classifications and refinements from earlier versions of cisTEM can take a long time. \n\nIt is wise to make a backup before trying this, and to ensure there is enough space remaining on your disk to do so.\n\nAttempt to update the project?"), wxDefaultPosition, wxDefaultSize, 0 );
+	UpdateText->Wrap( 620 );
+	bSizer13->Add( UpdateText, 0, wxALL|wxEXPAND, 5 );
+
+
+	bSizer12->Add( bSizer13, 1, wxALIGN_CENTER_HORIZONTAL, 5 );
+
+	wxBoxSizer* bSizer17;
+	bSizer17 = new wxBoxSizer( wxHORIZONTAL );
+
+	SchemaChangesTextCtrl = new wxTextCtrl( this, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_DONTWRAP|wxTE_LEFT|wxTE_MULTILINE|wxTE_READONLY );
+	bSizer17->Add( SchemaChangesTextCtrl, 1, wxALL|wxEXPAND, 5 );
+
+
+	bSizer12->Add( bSizer17, 1, wxALIGN_TOP|wxEXPAND, 5 );
+
+	m_staticline10 = new wxStaticLine( this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxLI_HORIZONTAL );
+	bSizer12->Add( m_staticline10, 0, wxEXPAND | wxALL, 5 );
+
+	wxBoxSizer* bSizer20;
+	bSizer20 = new wxBoxSizer( wxVERTICAL );
+
+	wxBoxSizer* bSizer14;
+	bSizer14 = new wxBoxSizer( wxHORIZONTAL );
+
+	CancelButton = new wxButton( this, wxID_CANCEL, wxT("Cancel"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer14->Add( CancelButton, 0, wxALL|wxALIGN_BOTTOM, 5 );
+
+	UpdateButton = new wxButton( this, wxID_UPDATE_ONLY, wxT("Update"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer14->Add( UpdateButton, 0, wxALL|wxALIGN_BOTTOM, 5 );
+
+	BackupUpdateButton = new wxButton( this, wxID_BACKUP_AND_UPDATE, wxT("Backup And Update"), wxDefaultPosition, wxDefaultSize, 0 );
+	bSizer14->Add( BackupUpdateButton, 0, wxALIGN_BOTTOM|wxALL, 5 );
+
+
+	bSizer20->Add( bSizer14, 1, wxALIGN_RIGHT, 5 );
+
+
+	bSizer12->Add( bSizer20, 0, wxALIGN_RIGHT, 5 );
+
+
+	this->SetSizer( bSizer12 );
+	this->Layout();
+	bSizer12->Fit( this );
+
+	this->Centre( wxBOTH );
+
+	// Connect Events
+	CancelButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DatabaseUpdateDialogParent::OnButtonClicked ), NULL, this );
+	UpdateButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DatabaseUpdateDialogParent::OnButtonClicked ), NULL, this );
+	BackupUpdateButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DatabaseUpdateDialogParent::OnButtonClicked ), NULL, this );
+}
+
+DatabaseUpdateDialogParent::~DatabaseUpdateDialogParent()
+{
+	// Disconnect Events
+	CancelButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DatabaseUpdateDialogParent::OnButtonClicked ), NULL, this );
+	UpdateButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DatabaseUpdateDialogParent::OnButtonClicked ), NULL, this );
+	BackupUpdateButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( DatabaseUpdateDialogParent::OnButtonClicked ), NULL, this );
+
 }

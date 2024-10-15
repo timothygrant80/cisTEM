@@ -565,6 +565,72 @@ bool Database::Open(wxFileName file_to_open, bool disable_locking) {
     return true;
 }
 
+/**
+ * @brief Make backup copy of existing database file. Currently only in use when
+ * database schema changes are detected and a schema update is necessary.
+ * 
+ * @param backup_db Filename of backup database.
+ * @return true If backup creation succeeds.
+ * @return false If backup creation fails.
+ */
+bool Database::CopyDatabaseFile(wxFileName backup_db) {
+    sqlite3*        destination;
+    sqlite3_backup* backup;
+    int             return_code;
+    bool            must_open_source_db; // source database should already be open; we will check to be safe
+
+    // Check if source database is already open (it should be); if not, open it
+    must_open_source_db = ! (this->is_open);
+    if ( must_open_source_db ) {
+        return_code = sqlite3_open_v2(this->database_file.GetFullPath( ).ToUTF8( ).data( ), &this->sqlite_database, SQLITE_OPEN_READWRITE, "unix-dotfile");
+        if ( return_code != SQLITE_OK ) {
+            MyPrintWithDetails("Cannot open source database: %s\n", sqlite3_errmsg(this->sqlite_database));
+            sqlite3_close(this->sqlite_database);
+            return false;
+        }
+    }
+
+    // Open backup database
+    return_code = sqlite3_open_v2(backup_db.GetFullPath( ).ToUTF8( ).data( ), &destination, SQLITE_OPEN_CREATE | SQLITE_OPEN_READWRITE, "unix-dotfile");
+    if ( return_code != SQLITE_OK ) {
+        MyPrintWithDetails("Cannot open destination database: %s\n", sqlite3_errmsg(destination));
+        sqlite3_close(destination);
+        return false;
+    }
+
+    // Get backup database ready for backing up
+    backup = sqlite3_backup_init(destination, "main", this->sqlite_database, "main");
+    if ( ! backup ) {
+        MyPrintWithDetails("Backup failed: %s\n", sqlite3_errmsg(destination));
+        if ( must_open_source_db )
+            sqlite3_close(this->sqlite_database);
+        sqlite3_close(destination);
+        return false;
+    }
+
+    // Perform backup
+    wxPrintf("Backing up...\n");
+    while ( return_code == SQLITE_OK ) {
+        return_code = sqlite3_backup_step(backup, 5);
+    }
+
+    sqlite3_backup_finish(backup);
+
+    // Ensure backup finished properly
+    if ( return_code != SQLITE_DONE ) {
+        MyPrintWithDetails("Backup failed %s\n", sqlite3_errmsg(destination));
+        return false;
+    }
+    else {
+        wxPrintf("Backup completed successfully\n");
+    }
+
+    if ( must_open_source_db )
+        sqlite3_close(this->sqlite_database);
+    sqlite3_close(destination);
+    return true;
+}
+
 bool Database::DeleteTable(const char* table_name) {
     wxString sql_command = "DROP TABLE IF EXISTS ";
     sql_command += table_name;
@@ -2362,17 +2428,217 @@ void Database::GetRefinementAngularDistributionHistogramData(long wanted_refinem
     EndBatchSelect( );
 }
 
-bool Database::UpdateSchema(ColumnChanges columns) {
+bool Database::UpdateSchema(ColumnChanges columns, UpdateProgressTracker* progress_bar, unsigned long total_num_rows, int normalized_increments) {
     using namespace database_schema;
     CreateAllTables( );
-    char     format;
-    wxString column_format;
+    char          format;
+    wxString      column_format;
+    int           col_counter;
+    unsigned long increments_processed    = 0;
+    int           current_progress        = 0;
+    int           previous_progress       = 0;
+    bool          should_update_text      = false; // Modified in UpdateProgressTracker::OnUpdateProgress
+    bool          output_pixel_size_added = false;
+
+    // Assitive lambda function used in helping to update the progress bar
+    auto calculate_current_percentage = [&increments_processed, &total_num_rows, &normalized_increments]( ) -> int {
+        double percent_completion = (double(increments_processed) / double(total_num_rows)) * normalized_increments;
+        return static_cast<int>(percent_completion);
+    };
+
     for ( ColumnChange& column : columns ) {
         format        = std::get<COLUMN_CHANGE_TYPE>(column);
         column_format = map_type_char_to_sqlite_string(format);
         ExecuteSQL(wxString::Format("ALTER TABLE %s ADD COLUMN %s %s;", std::get<COLUMN_CHANGE_TABLE>(column), std::get<COLUMN_CHANGE_NAME>(column), column_format));
+
+        // checks for specific problem :-
+        // output pixel size was not added onto the end, and it needs to have a value set.
+
+        if ( std::get<COLUMN_CHANGE_NAME>(column) == "OUTPUT_PIXEL_SIZE" )
+            output_pixel_size_added = true;
+
+        if ( progress_bar ) {
+            increments_processed++; // Not actually updating rows, but altering tables; but, need one variable for tracking
+            current_progress = calculate_current_percentage( );
+
+            if ( current_progress > previous_progress ) {
+                progress_bar->OnUpdateProgress(current_progress, "Making column changes...", should_update_text);
+                previous_progress = current_progress;
+            }
+        }
     }
+    should_update_text = true;
+
     UpdateVersion( );
+
+    // do the more complicated post work..
+
+    if ( output_pixel_size_added ) {
+        // Grab IDs first, or else we can't properly update progress bar
+        wxArrayInt ref_pkg_ids = ReturnIntArrayFromSelectCommand("select REFINEMENT_PACKAGE_ASSET_ID from REFINEMENT_PACKAGE_ASSETS");
+        ExecuteSQL("drop table if exists cistem_schema_update_temp_table");
+        ExecuteSQL("alter table REFINEMENT_PACKAGE_ASSETS rename to cistem_schema_update_temp_table");
+        CreateAllTables( ); // should now be correct order but blank..
+
+        std::vector<wxString> all_columns;
+
+        for ( TableData& table : static_tables ) {
+
+            if ( std::get<TABLE_NAME>(table) == "REFINEMENT_PACKAGE_ASSETS" ) {
+                for ( col_counter = 0; col_counter < std::get<TABLE_COLUMNS>(table).size( ); col_counter++ ) {
+                    all_columns.push_back(std::get<TABLE_COLUMNS>(table)[col_counter]);
+                }
+            }
+        }
+
+        wxString sql_command;
+        sql_command = "insert into REFINEMENT_PACKAGE_ASSETS select ";
+
+        for ( col_counter = 0; col_counter < all_columns.size( ); col_counter++ ) {
+            sql_command += all_columns[col_counter];
+
+            if ( col_counter < all_columns.size( ) - 1 )
+                sql_command += ", ";
+            else
+                sql_command += " from cistem_schema_update_temp_table;";
+        }
+
+        ExecuteSQL(sql_command);
+        ExecuteSQL("drop table if exists cistem_schema_update_temp_table");
+
+        // now we need to go and set this value to the output pixel size..
+        double current_pixel_size;
+        int    num_particles = 0;
+
+        for ( int refinement_package_counter = 0; refinement_package_counter < ref_pkg_ids.GetCount( ); refinement_package_counter++ ) {
+            current_pixel_size = ReturnSingleDoubleFromSelectCommand(wxString::Format("select pixel_size from refinement_package_contained_particles_%i", ref_pkg_ids[refinement_package_counter]));
+            ExecuteSQL(wxString::Format("update refinement_package_assets set output_pixel_size = %f where refinement_package_asset_id = %i", current_pixel_size, ref_pkg_ids[refinement_package_counter]));
+
+            // Update loading bar
+            if ( progress_bar ) {
+                num_particles = ReturnSingleIntFromSelectCommand(wxString::Format("select COUNT(*) from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", ref_pkg_ids[refinement_package_counter]));
+                increments_processed += num_particles;
+                current_progress = calculate_current_percentage( );
+
+                if ( current_progress > previous_progress ) {
+                    progress_bar->OnUpdateProgress(current_progress, "Updating refinement package(s) pixel size...", should_update_text);
+                    previous_progress = current_progress;
+                }
+            }
+        }
+        should_update_text = true;
+        // Next, make sure pixel size, aberration, voltage, and amplitude contrast are being updated where needed
+        // This ensures updates from beta databases are successful
+        {
+            double     classification_held_pixel_size      = 0.0;
+            double     refinement_held_pixel_size          = 0.0;
+            double     contained_particles_pixel_size      = 0.0;
+            double     aberration                          = 0.0;
+            double     voltage                             = 0.0;
+            double     amplitude_contrast                  = 0.0;
+            double     defocus_1                           = 0.0;
+            double     defocus_2                           = 0.0;
+            double     defocus_angle                       = 0.0;
+            double     phase_shift                         = 0.0;
+            int        corresponding_refinement_package_id = 0;
+            int        refinement_number_of_classes        = 0;
+            wxArrayInt classification_ids                  = ReturnIntArrayFromSelectCommand(wxString::Format("select CLASSIFICATION_ID from CLASSIFICATION_LIST"));
+            wxArrayInt refinement_ids                      = ReturnIntArrayFromSelectCommand(wxString::Format("select REFINEMENT_ID from REFINEMENT_LIST"));
+
+            // Use the refinement_package_asset_id from each table to update the needed variables
+            // First do classification results
+            for ( int classification_result_counter = 0; classification_result_counter < classification_ids.GetCount( ); classification_result_counter++ ) {
+                corresponding_refinement_package_id = ReturnSingleIntFromSelectCommand(wxString::Format("select REFINEMENT_PACKAGE_ASSET_ID from CLASSIFICATION_LIST where CLASSIFICATION_ID = %i", classification_ids[classification_result_counter]));
+                classification_held_pixel_size      = ReturnSingleDoubleFromSelectCommand(wxString::Format("select PIXEL_SIZE from CLASSIFICATION_RESULT_%i", classification_ids[classification_result_counter]));
+                contained_particles_pixel_size      = ReturnSingleDoubleFromSelectCommand(wxString::Format("select PIXEL_SIZE from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
+
+                // If pixel size doesn't match, other parameters probably don't -- fix classification tables; fill all NULL columns.
+                if ( contained_particles_pixel_size != classification_held_pixel_size ) {
+                    aberration         = ReturnSingleDoubleFromSelectCommand(wxString::Format("select SPHERICAL_ABERRATION from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
+                    voltage            = ReturnSingleDoubleFromSelectCommand(wxString::Format("select MICROSCOPE_VOLTAGE from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
+                    amplitude_contrast = ReturnSingleDoubleFromSelectCommand(wxString::Format("select AMPLITUDE_CONTRAST from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
+                    defocus_1          = ReturnSingleDoubleFromSelectCommand(wxString::Format("select DEFOCUS_1 from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
+                    defocus_2          = ReturnSingleDoubleFromSelectCommand(wxString::Format("select DEFOCUS_2 from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
+                    defocus_angle      = ReturnSingleDoubleFromSelectCommand(wxString::Format("select DEFOCUS_ANGLE from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
+                    phase_shift        = ReturnSingleDoubleFromSelectCommand(wxString::Format("select PHASE_SHIFT from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
+
+                    ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set PIXEL_SIZE = %f", classification_ids[classification_result_counter], contained_particles_pixel_size));
+                    ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set CS = %f", classification_ids[classification_result_counter], aberration));
+                    ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set AMPLITUDE_CONTRAST = %f", classification_ids[classification_result_counter], amplitude_contrast));
+                    ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set VOLTAGE = %f", classification_ids[classification_result_counter], voltage));
+                    ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set DEFOCUS_1 = %f", classification_ids[classification_result_counter], defocus_1));
+                    ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set DEFOCUS_2 = %f", classification_ids[classification_result_counter], defocus_2));
+                    ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set DEFOCUS_ANGLE = %f", classification_ids[classification_result_counter], defocus_angle));
+                    ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set PHASE_SHIFT = %f", classification_ids[classification_result_counter], phase_shift));
+
+                    // Then fill in the columns that would remain 0.0 as the values didn't exist in the beta version
+                    ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set BEAM_TILT_X = 0.0 where BEAM_TILT_X is null", classification_ids[classification_result_counter]));
+                    ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set BEAM_TILT_Y = 0.0 where BEAM_TILT_Y is null", classification_ids[classification_result_counter]));
+                    ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set IMAGE_SHIFT_X = 0.0 where IMAGE_SHIFT_X is null", classification_ids[classification_result_counter]));
+                    ExecuteSQL(wxString::Format("update CLASSIFICATION_RESULT_%i set IMAGE_SHIFT_Y = 0.0 where IMAGE_SHIFT_Y is null", classification_ids[classification_result_counter]));
+                }
+
+                // Update the loading bar
+                if ( progress_bar ) {
+                    num_particles = ReturnSingleIntFromSelectCommand(wxString::Format("select COUNT(*) from CLASSIFICATION_RESULT_%i", classification_ids[classification_result_counter]));
+                    increments_processed += num_particles;
+                    current_progress = calculate_current_percentage( );
+                    if ( current_progress > previous_progress ) {
+                        progress_bar->OnUpdateProgress(current_progress, "Updating classification result(s)...", should_update_text);
+                        previous_progress = current_progress;
+                    }
+                }
+            }
+            should_update_text = true;
+
+            // Now do refinement results; first loop over the refinement_ids, then loop over the number of classes.
+            for ( int refinement_result_counter = 0; refinement_result_counter < refinement_ids.GetCount( ); refinement_result_counter++ ) {
+                refinement_number_of_classes = ReturnSingleIntFromSelectCommand(wxString::Format("select NUMBER_OF_CLASSES from REFINEMENT_LIST where REFINEMENT_ID = %i", refinement_ids[refinement_result_counter])) + 1;
+                for ( int refinement_result_class_counter = 1; refinement_result_class_counter < refinement_number_of_classes; refinement_result_class_counter++ ) {
+                    corresponding_refinement_package_id = ReturnSingleIntFromSelectCommand(wxString::Format("select REFINEMENT_PACKAGE_ASSET_ID from REFINEMENT_LIST where REFINEMENT_ID = %i", refinement_ids[refinement_result_counter]));
+                    refinement_held_pixel_size          = ReturnSingleDoubleFromSelectCommand(wxString::Format("select PIXEL_SIZE from REFINEMENT_RESULT_%i_%i", refinement_ids[refinement_result_counter], refinement_result_class_counter));
+                    contained_particles_pixel_size      = ReturnSingleDoubleFromSelectCommand(wxString::Format("select PIXEL_SIZE from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
+
+                    // If pixel size doesn't match, other parameters probably don't; repeat above process for refinement result tables
+                    if ( contained_particles_pixel_size != classification_held_pixel_size ) {
+                        aberration         = ReturnSingleDoubleFromSelectCommand(wxString::Format("select SPHERICAL_ABERRATION from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
+                        voltage            = ReturnSingleDoubleFromSelectCommand(wxString::Format("select MICROSCOPE_VOLTAGE from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
+                        amplitude_contrast = ReturnSingleDoubleFromSelectCommand(wxString::Format("select AMPLITUDE_CONTRAST from REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%i", corresponding_refinement_package_id));
+
+                        ExecuteSQL(wxString::Format("update REFINEMENT_RESULT_%i_%i set PIXEL_SIZE = %f", refinement_ids[refinement_result_counter], refinement_result_class_counter, contained_particles_pixel_size));
+                        ExecuteSQL(wxString::Format("update REFINEMENT_RESULT_%i_%i set MICROSCOPE_CS = %f", refinement_ids[refinement_result_counter], refinement_result_class_counter, aberration));
+                        ExecuteSQL(wxString::Format("update REFINEMENT_RESULT_%i_%i set AMPLITUDE_CONTRAST = %f", refinement_ids[refinement_result_counter], refinement_result_class_counter, amplitude_contrast));
+                        ExecuteSQL(wxString::Format("update REFINEMENT_RESULT_%i_%i set MICROSCOPE_VOLTAGE = %f", refinement_ids[refinement_result_counter], refinement_result_class_counter, voltage));
+
+                        // Then fill in the columns that would remain 0.0 as the values didn't exist in the beta version
+                        ExecuteSQL(wxString::Format("update REFINEMENT_RESULT_%i_%i set BEAM_TILT_X = 0.0 where BEAM_TILT_X is null", refinement_ids[refinement_result_counter], refinement_result_class_counter));
+                        ExecuteSQL(wxString::Format("update REFINEMENT_RESULT_%i_%i set BEAM_TILT_Y = 0.0 where BEAM_TILT_Y is null", refinement_ids[refinement_result_counter], refinement_result_class_counter));
+                        ExecuteSQL(wxString::Format("update REFINEMENT_RESULT_%i_%i set IMAGE_SHIFT_X = 0.0 where IMAGE_SHIFT_X is null", refinement_ids[refinement_result_counter], refinement_result_class_counter));
+                        ExecuteSQL(wxString::Format("update REFINEMENT_RESULT_%i_%i set IMAGE_SHIFT_Y = 0.0 where IMAGE_SHIFT_Y is null", refinement_ids[refinement_result_counter], refinement_result_class_counter));
+                    }
+
+                    // Update the loading bar
+                    if ( progress_bar ) {
+                        num_particles = ReturnSingleIntFromSelectCommand(wxString::Format("select COUNT(*) from REFINEMENT_RESULT_%i_%i", refinement_ids[refinement_result_counter], refinement_result_class_counter));
+                        increments_processed += num_particles;
+                        current_progress = calculate_current_percentage( );
+
+                        if ( current_progress > previous_progress ) {
+                            progress_bar->OnUpdateProgress(current_progress, "Updating refinement result(s)...", should_update_text);
+                            previous_progress = current_progress;
+                        }
+                    }
+                }
+            }
+        }
+
+        // Now update the last 3 columns of the estimated ctf parameters table
+        {
+            ExecuteSQL(wxString::Format("update ESTIMATED_CTF_PARAMETERS set ICINESS = 0.0 where ICINESS is null"));
+            ExecuteSQL(wxString::Format("update ESTIMATED_CTF_PARAMETERS set TILT_ANGLE = 0.0 where TILT_ANGLE is null"));
+            ExecuteSQL(wxString::Format("update ESTIMATED_CTF_PARAMETERS set TILT_AXIS = 0.0 where TILT_AXIS is null"));
+        }
+    }
     return true;
 }
 

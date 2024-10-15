@@ -1,4 +1,5 @@
 #include "../constants/constants.h"
+#include "../gui/UpdateProgressTracker.h"
 
 class Database {
 
@@ -25,6 +26,7 @@ class Database {
 
     bool CreateNewDatabase(wxFileName database_file);
     bool Open(wxFileName file_to_open, bool disable_locking = false);
+    bool CopyDatabaseFile(wxFileName backup_db);
 
     inline void Begin( ) {
         if ( number_of_active_transactions == 0 )
@@ -371,7 +373,7 @@ class Database {
 
     using ColumnChanges = std::vector<ColumnChange>;
     std::pair<TableChanges, ColumnChanges> CheckSchema( );
-    bool                                   UpdateSchema(ColumnChanges columns);
+    bool                                   UpdateSchema(ColumnChanges columns, UpdateProgressTracker* progress_bar = nullptr, unsigned long total_num_rows = 0, int normalized_increments = 100);
     bool                                   UpdateVersion( );
 };
 

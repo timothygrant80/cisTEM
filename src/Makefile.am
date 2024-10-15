@@ -72,6 +72,7 @@ noinst_HEADERS = core/stopwatch.h \
                  core/eer_file.h \
                  gui/job_panel.h \
                  gui/gui_functions.h \
+                 gui/DatabaseUpdateDialog.h \
                  gui/ResultsDataViewListCtrl.h \
                  gui/BitmapPanel.h \
                  gui/PickingBitmapPanel.h \
@@ -638,6 +639,7 @@ cisTEM_SOURCES = programs/projectx/projectx.cpp \
                 gui/ProjectX_gui_settings.cpp \
                 gui/ProjectX_gui_unblur.cpp \
                 gui/ProjectX_gui_wizards.cpp \
+                gui/DatabaseUpdateDialog.cpp \
                 gui/ResultsDataViewListCtrl.cpp \
                 gui/MyMovieFilterDialog.cpp \
                 gui/MainFrame.cpp \

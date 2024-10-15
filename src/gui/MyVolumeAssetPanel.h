@@ -8,6 +8,7 @@ class MyVolumeAssetPanel : public MyAssetPanelParent {
     ~MyVolumeAssetPanel( );
 
     void ImportAssetClick(wxCommandEvent& event);
+    void OnResampleClick(wxCommandEvent& event);
 
     void RemoveAssetFromDatabase(long wanted_asset);
     void RemoveFromGroupInDatabase(int wanted_group_id, int wanted_asset_id);

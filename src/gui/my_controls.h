@@ -297,37 +297,30 @@ class OneSecondProgressDialog : public wxProgressDialog {
     bool Update(int value, const wxString& newmsg = wxEmptyString, bool* skip = NULL);
 };
 
+class CombinedPackageClassSelectionPanel : public wxPanel {
+  public:
+    wxComboBox*   ClassComboBox;
+    wxStaticText* ClassText;
+    wxBoxSizer*   MainSizer;
+    wxBoxSizer*   bSizer989;
 
-
-class CombinedPackageClassSelectionPanel : public wxPanel
-{
-public:
-
-	wxComboBox* ClassComboBox;
-	wxStaticText* ClassText;
-	wxBoxSizer* MainSizer;
-	wxBoxSizer* bSizer989;
-
-	CombinedPackageClassSelectionPanel (wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
-	~CombinedPackageClassSelectionPanel();
-	void FillComboBox(long wanted_refinement_package);
-
+    CombinedPackageClassSelectionPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
+    ~CombinedPackageClassSelectionPanel( );
+    void FillComboBox(long wanted_refinement_package);
 };
 
-class CombinedPackageRefinementSelectPanel : public wxPanel
-{
-	public:
-	RefinementPickerComboPanel* RefinementComboBox;
-	wxStaticText* RefinementText;
-	wxBoxSizer* MainSizer;
-	wxBoxSizer* bSizer989;
+class CombinedPackageRefinementSelectPanel : public wxPanel {
+  public:
+    RefinementPickerComboPanel* RefinementComboBox;
+    wxStaticText*               RefinementText;
+    wxBoxSizer*                 MainSizer;
+    wxBoxSizer*                 bSizer989;
 
-	CombinedPackageRefinementSelectPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
-	~CombinedPackageRefinementSelectPanel();
+    CombinedPackageRefinementSelectPanel(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize, long style = wxTAB_TRAVERSAL);
+    ~CombinedPackageRefinementSelectPanel( );
 
-	private:
-	bool has_random_parameters;
-
+  private:
+    bool has_random_parameters;
 };
 
 #endif

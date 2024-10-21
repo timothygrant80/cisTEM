@@ -19,7 +19,6 @@ RemoteSystemsTempFiles
 .cproject
 /debug_build/
 /release_build/
-**/build*
 **/.DS_Store
 .vscode
 /.devcontainer.json

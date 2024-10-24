@@ -385,11 +385,19 @@ float CalculateDiffSquare(Image** patch_stack, int patch_no, int image_no, bool 
     return total_Sum;
 };
 
-void Generate_CoeffSpline(bicubicsplinestack ccmap_stack, Image** patch_stack, float unitless_bfactor, int patch_no, int image_no, int max_thread, bool write_out_the_ccmap, std::string output_path, std::string file_pref) {
+void Generate_CoeffSpline(bicubicsplinestack ccmap_stack, Image** patch_stack, float unitless_bfactor, int patch_no, int image_no, int max_thread, bool write_out_the_ccmap, std::string output_path, std::string file_pref, bool* disable_patches) {
     // void Generate_CoeffSpline(Image** patch_stack, float unitless_bfactor, int patch_no, int image_no, bool write_out_the_ccmap, std::string output_path, std::string file_pref) {
 
-    int   quater_patch_dim = ccmap_stack.m;
-    int   patch_dim        = patch_stack[0][0].logical_x_dimension; //based on patches are square
+    int quater_patch_dim = ccmap_stack.m;
+    int valid_index      = 0;
+    for ( int patch_index = 0; patch_index < patch_no; patch_index++ ) {
+        if ( disable_patches[patch_index] ) {
+            continue;
+        }
+        valid_index = patch_index;
+        break;
+    }
+    int   patch_dim = patch_stack[valid_index][0].logical_x_dimension; //based on patches are square
     Image sum_of_images, sum_of_images_minus_current, tmpimg, img_bfactor;
 
     // tmpimg.Allocate(quater_patch_dim, quater_patch_dim, false);
@@ -399,6 +407,10 @@ void Generate_CoeffSpline(bicubicsplinestack ccmap_stack, Image** patch_stack, f
     // int max_thread = 8;
 #pragma omp parallel for num_threads(max_thread) private(sum_of_images, sum_of_images_minus_current, img_bfactor, tmpimg)
     for ( int patch_index = 0; patch_index < patch_no; patch_index++ ) {
+        if ( disable_patches[patch_index] ) {
+            wxPrintf("patch %d disabled\n", patch_index);
+            continue;
+        }
         tmpimg.Allocate(quater_patch_dim, quater_patch_dim, false);
         sum_of_images.Allocate(patch_dim, patch_dim, false);
         sum_of_images.SetToConstant(0.0);
@@ -562,7 +574,7 @@ matrix<double> read_joins(std::string join_file_pref, std::string output_path, i
     return Join1d;
 }
 
-void patch_trimming_basedon_locations(Image* input_stack, Image** patch_stack, int number_of_images, int patch_num_x, int patch_num_y, int output_stack_box_size, std::string outpath, std::string file_pref, int max_threads, bool mean_padding, bool write_trimmed_files, float** patch_locations) {
+int patch_trimming_basedon_locations(Image* input_stack, Image** patch_stack, int number_of_images, int patch_num_x, int patch_num_y, int output_stack_box_size, std::string outpath, std::string file_pref, int max_threads, bool mean_padding, bool write_trimmed_files, float** patch_locations, bool* disable_patch) {
 
     int number_of_patchgroups = patch_num_x * patch_num_y;
 
@@ -598,10 +610,35 @@ void patch_trimming_basedon_locations(Image* input_stack, Image** patch_stack, i
     }
 
     wxPrintf("number of patch groups: %i\n\n", number_of_patchgroups);
+    Image sum_of_images;
+    sum_of_images.Allocate(image_dim_x, image_dim_y, 1);
+    sum_of_images.SetToConstant(0.0);
+    for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
+        sum_of_images.AddImage(&input_stack[image_counter]);
+    }
+    Image mask_image;
+    mask_image.CopyFrom(&sum_of_images);
+    mask_image.ForwardFFT( );
+    mask_image.GaussianLowPassFilter(0.01);
+    mask_image.BackwardFFT( );
+    mask_image.QuickAndDirtyWriteSlice("/tmp/gauss.mrc", 1);
+
+    mask_image.Binarise(0.1 * mask_image.ReturnMaximumValue( ));
+
     // for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
 #pragma omp parallel for default(shared) num_threads(max_threads)
     for ( int patch_counter = 0; patch_counter < number_of_patchgroups; patch_counter++ ) {
         wxPrintf("current patch: %i\n", patch_counter);
+        Image mask_patch;
+        mask_patch.Allocate(output_stack_box_size, output_stack_box_size, 1, true);
+        float my_x = patch_locations[patch_counter][0] - image_dim_x / 2.0;
+        float my_y = patch_locations[patch_counter][1] - image_dim_y / 2.0;
+        mask_image.ClipInto(&mask_patch, 0.0, false, 1.0, int(my_x), int(my_y), 0);
+        if ( mask_patch.ReturnAverageOfRealValues( ) < 0.99 ) {
+            disable_patch[patch_counter] = true;
+            wxPrintf("patch %i is disabled\n", patch_counter);
+            continue;
+        }
         for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
             float image_mean;
             if ( mean_padding ) {
@@ -612,8 +649,6 @@ void patch_trimming_basedon_locations(Image* input_stack, Image** patch_stack, i
                 image_mean = 0.0;
             }
 
-            float my_x = patch_locations[patch_counter][0] - image_dim_x / 2.0;
-            float my_y = patch_locations[patch_counter][1] - image_dim_y / 2.0;
             // wxPrintf("index trim center x y %d %f %f", patch_counter, my_x, my_y);
 
             patch_stack[patch_counter][image_counter].Allocate(output_stack_box_size, output_stack_box_size, 1, true);
@@ -633,6 +668,9 @@ void patch_trimming_basedon_locations(Image* input_stack, Image** patch_stack, i
         // wxPrintf("input stack is not in real space\n");
 #pragma omp parallel for default(shared) num_threads(max_threads)
         for ( int patch_ind = 0; patch_ind < number_of_patchgroups; patch_ind++ ) {
+            if ( disable_patch[patch_ind] ) {
+                continue;
+            }
             for ( int image_ind = 0; image_ind < number_of_images; image_ind++ ) {
                 patch_stack[patch_ind][image_ind].ForwardFFT(true);
                 patch_stack[patch_ind][image_ind].ZeroCentralPixel( );
@@ -647,4 +685,5 @@ void patch_trimming_basedon_locations(Image* input_stack, Image** patch_stack, i
     // delete[] input_stack_real_space;
     wxPrintf("Done Patch Trimming\n");
     // return patch_stack;
+    return number_of_patchgroups;
 };

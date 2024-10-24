@@ -2158,7 +2158,7 @@ bool UnBlurApp::DoCalculation( ) {
             // fill the result..
 
             profile_timing.start("fill result");
-            float* result_array = new float[number_of_input_images * 2];
+            float* result_array = new float[number_of_input_images * 2 + 4];
 
             //             if ( is_running_locally == true ) {
             //                 NumericTextFile shifts_file(output_shift_text_file, OPEN_TO_WRITE, 2);
@@ -2185,6 +2185,10 @@ bool UnBlurApp::DoCalculation( ) {
                     result_array[image_counter]                          = x_shifts[image_counter] * output_pixel_size;
                     result_array[image_counter + number_of_input_images] = y_shifts[image_counter] * output_pixel_size;
                 }
+                result_array[2 * number_of_input_images]     = original_x;
+                result_array[2 * number_of_input_images + 1] = original_y;
+                result_array[2 * number_of_input_images + 2] = static_cast<float>(std::get<0>(crop_location));
+                result_array[2 * number_of_input_images + 3] = static_cast<float>(std::get<1>(crop_location));
             }
 
             NumericTextFile shifts_file(wxString::Format(outputpath + "fullframe_shift.txt"), OPEN_TO_WRITE, 2);

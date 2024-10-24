@@ -2372,21 +2372,6 @@ bool UnBlurApp::DoCalculation( ) {
             }
 
             //  Shall we write out a scaled image?
-
-            if ( write_out_small_sum_image == true ) {
-                profile_timing.start("write out small sum image");
-                // work out a good size..
-                int   largest_dimension = std::max(sum_image.logical_x_dimension, sum_image.logical_y_dimension);
-                float scale_factor      = float(SCALED_IMAGE_SIZE) / float(largest_dimension);
-
-                if ( scale_factor < 1.0 ) {
-                    Image buffer_image;
-                    buffer_image.Allocate(myroundint(sum_image.logical_x_dimension * scale_factor), myroundint(sum_image.logical_y_dimension * scale_factor), 1, false);
-                    sum_image.ClipInto(&buffer_image);
-                    buffer_image.QuickAndDirtyWriteSlice(small_sum_image_filename, 1, true);
-                }
-                profile_timing.lap("write out small sum image");
-            }
             float                original_x                                   = sum_image.logical_x_dimension;
             float                original_y                                   = sum_image.logical_y_dimension;
             std::tuple<int, int> crop_location                                = {0, 0};
@@ -2401,6 +2386,21 @@ bool UnBlurApp::DoCalculation( ) {
                 crop_location             = sum_image.CropAndAddGaussianNoiseToDarkAreas(0.01, threshold_for_gaussian_noise, 20, 0.01, measure_mean_and_variance_for_gaussian_noise, variance_for_gaussian_noise, mean_for_gaussian_noise, true, mask_filename);
                 sum_image.ForwardFFT( );
             }
+            if ( write_out_small_sum_image == true ) {
+                profile_timing.start("write out small sum image");
+                // work out a good size..
+                int   largest_dimension = std::max(sum_image.logical_x_dimension, sum_image.logical_y_dimension);
+                float scale_factor      = float(SCALED_IMAGE_SIZE) / float(largest_dimension);
+
+                if ( scale_factor < 1.0 ) {
+                    Image buffer_image;
+                    buffer_image.Allocate(myroundint(sum_image.logical_x_dimension * scale_factor), myroundint(sum_image.logical_y_dimension * scale_factor), 1, false);
+                    sum_image.ClipInto(&buffer_image);
+                    buffer_image.QuickAndDirtyWriteSlice(small_sum_image_filename, 1, true);
+                }
+                profile_timing.lap("write out small sum image");
+            }
+
             // now we just need to write out the final sum..
 
             // MRCFile output_file(output_filename, true);

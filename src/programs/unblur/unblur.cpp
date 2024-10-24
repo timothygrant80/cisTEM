@@ -2208,7 +2208,7 @@ bool UnBlurApp::DoCalculation( ) {
             }
 
             wxPrintf("mark 1\n");
-            my_result.SetResult(number_of_input_images * 2, result_array);
+            my_result.SetResult(number_of_input_images * 2 + 4, result_array);
             wxPrintf("mark 2\n");
             profile_timing.lap("fill result");
             wxPrintf("mark 3\n");

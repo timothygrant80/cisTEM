@@ -571,10 +571,11 @@ class Image {
     float ReturnCorrelationBetweenTwoVerticalLines(int first_line, int second_line);
     bool  ContainsRepeatedLineEdges( );
 
-    float GetCorrelationWithCTF(CTF ctf);
-    void  SetupQuickCorrelationWithCTF(CTF ctf, int& number_of_values, double& norm_image, double& image_mean, int* addresses, float* spatial_frequency_squared, float* azimuth);
-    float QuickCorrelationWithCTF(CTF ctf, int number_of_values, double norm_image, double image_mean, int* addresses, float* spatial_frequency_squared, float* azimuth);
-    float ReturnIcinessOfSpectrum(float pixel_size_in_Angstroms);
+    float                GetCorrelationWithCTF(CTF ctf);
+    void                 SetupQuickCorrelationWithCTF(CTF ctf, int& number_of_values, double& norm_image, double& image_mean, int* addresses, float* spatial_frequency_squared, float* azimuth);
+    float                QuickCorrelationWithCTF(CTF ctf, int number_of_values, double norm_image, double image_mean, int* addresses, float* spatial_frequency_squared, float* azimuth);
+    float                ReturnIcinessOfSpectrum(float pixel_size_in_Angstroms);
+    std::tuple<int, int> CropAndAddGaussianNoiseToDarkAreas(float sigma_for_filter = 0.01, float threshold_percentile = 0.1, float erosion_pixels = 0.0, float sigma_for_soft_edge = 0.01, bool calc_sigma_mean = true, float sigma_for_noise = 1.0, float mean_for_noise = 0.0, bool save_maks = false, wxString mask_filename = "");
 
     // Interpolation
     void GetRealValueByLinearInterpolationNoBoundsCheckImage(float& x, float& y, float& interpolated_value);

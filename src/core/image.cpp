@@ -6103,6 +6103,105 @@ void Image::BinariseInverse(float threshold_value) {
     }
 }
 
+std::tuple<int, int> Image::CropAndAddGaussianNoiseToDarkAreas(float sigma_for_filter, float threshold_percentile, float erosion_pixels, float sigma_for_soft_edge, bool calc_sigma_mean, float sigma_for_noise, float mean_for_noise, bool save_mask, wxString mask_filename) {
+    MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+    MyDebugAssertTrue(is_in_real_space, "Not in real space");
+    Image mask_image;
+    mask_image.CopyFrom(this);
+    mask_image.ForwardFFT( );
+    mask_image.GaussianLowPassFilter(sigma_for_filter);
+    mask_image.BackwardFFT( );
+    mask_image.QuickAndDirtyWriteSlice("/tmp/gauss.mrc", 1);
+
+    mask_image.Binarise(threshold_percentile * mask_image.ReturnMaximumValue( ));
+    if ( erosion_pixels > 0.0 ) {
+        mask_image.ErodeBinarizedMask(erosion_pixels);
+    }
+    mask_image.QuickAndDirtyWriteSlice("/tmp/bin.mrc", 1);
+    int k, j, i;
+    int min_x, min_y, max_x, max_y;
+    min_x                  = logical_x_dimension;
+    min_y                  = logical_y_dimension;
+    max_x                  = 0;
+    max_y                  = 0;
+    long  address          = 0;
+    float sum              = 0;
+    float sum_squared      = 0;
+    long  number_of_pixels = 0;
+    float mean             = 0;
+    float variance         = 2;
+    for ( k = 0; k < logical_z_dimension; k++ ) {
+        for ( j = 0; j < logical_y_dimension; j++ ) {
+            for ( i = 0; i < logical_x_dimension; i++ ) {
+                if ( mask_image.real_values[address] > 0.5 ) {
+                    if ( i < min_x )
+                        min_x = i;
+                    if ( j < min_y )
+                        min_y = j;
+                    if ( i > max_x )
+                        max_x = i;
+                    if ( j > max_y )
+                        max_y = j;
+
+                    sum += real_values[address];
+                    sum_squared += powf(real_values[address], 2);
+                    number_of_pixels++;
+                }
+                address++;
+            }
+            address += padding_jump_value;
+        }
+    }
+    if ( number_of_pixels > 0 ) {
+        mean     = float(sum / number_of_pixels);
+        variance = fabsf(float(sum_squared / number_of_pixels - powf(sum / number_of_pixels, 2)));
+    }
+    // MyDebugPrint("%f mean %f variance",mean,variance);
+    Image noise_image;
+    noise_image.Allocate(this);
+    noise_image.MultiplyByConstant(0.0f);
+    noise_image.AddGaussianNoise(sqrtf(variance));
+    noise_image.MultiplyAddConstant(1.0, mean);
+
+    // Put soft edge on mask
+
+    mask_image.ForwardFFT( );
+    mask_image.GaussianLowPassFilter(sigma_for_soft_edge);
+    mask_image.BackwardFFT( );
+
+    // Apply mask to image and replace dark part with noise
+
+    MultiplyPixelWise(mask_image);
+
+    mask_image.MultiplyAddConstant(-1.0, 1.0);
+    noise_image.MultiplyPixelWise(mask_image);
+
+    AddImage(&noise_image);
+
+    int wanted_x_dimension = (max_x - min_x) + 1;
+    int wanted_y_dimension = (max_y - min_y) + 1;
+
+    // I think for ClipInto I need the coordinate of the center, where (0,0,0) is defined as the center.
+    int   center_x = (max_x + min_x) / 2 - logical_x_dimension / 2;
+    int   center_y = (max_y + min_y) / 2 - logical_y_dimension / 2;
+    Image temp_image2;
+    temp_image2.Allocate(wanted_x_dimension, wanted_y_dimension, logical_z_dimension, true);
+    ClipInto(&temp_image2, 0.0f, false, 1.0f, center_x, center_y);
+    if ( save_mask ) {
+        Image temp_image3;
+        temp_image3.Allocate(wanted_x_dimension, wanted_y_dimension, logical_z_dimension, true);
+        mask_image.MultiplyAddConstant(-1.0, 1.0);
+        mask_image.ClipInto(&temp_image3, 0.0f, false, 1.0f, center_x, center_y);
+        MRCFile mask_file = MRCFile(mask_filename.ToStdString( ), true);
+        mask_file.my_header.SetMode(0);
+        temp_image3.MultiplyAddConstant(255.0, 0.0);
+        temp_image3.WriteSlices(&mask_file, 1, 1);
+    }
+    Consume(&temp_image2);
+
+    return std::make_tuple(center_x, center_y);
+}
+
 void Image::SetMinimumAndMaximumValues(float new_minimum_value, float new_maximum_value) {
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
     MyDebugAssertTrue(is_in_real_space, "Not in real space");
@@ -7825,7 +7924,7 @@ void Image::ComputeFilteredAmplitudeSpectrumFull2D(Image* average_spectrum_maske
     //			average_spectrum_masked->SetMaximumValue(average_spectrum_masked->ReturnMaximumValue(3,3));
 
     average_spectrum_masked->CopyFrom(this);
-    if (apply_cosine_mask) {
+    if ( apply_cosine_mask ) {
         average_spectrum_masked->CosineMask(float(average_spectrum_masked->logical_x_dimension) * pixel_size_for_fitting / std::max(maximum_resolution, 8.0f), float(average_spectrum_masked->logical_x_dimension) * pixel_size_for_fitting / std::max(maximum_resolution, 4.0f), true);
     }
     //			average_spectrum_masked->QuickAndDirtyWriteSlice("dbg_spec_before_thresh.mrc",1);

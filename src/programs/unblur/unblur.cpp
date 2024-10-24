@@ -995,7 +995,10 @@ bool UnBlurApp::DoCalculation( ) {
     StopWatch               profile_timing;
     StopWatch               profile_timing_refinement_method;
 
-    float temp_float[2];
+    float                temp_float[2];
+    float                original_x    = sum_image.logical_x_dimension;
+    float                original_y    = sum_image.logical_y_dimension;
+    std::tuple<int, int> crop_location = {0, 0};
 
     if ( IsOdd(number_of_frames_for_running_average == false) )
         SendError("Error: number of frames for running average must be odd");
@@ -2234,6 +2237,7 @@ bool UnBlurApp::DoCalculation( ) {
             // */
         }
         // write the final corrected image and frames
+
         if ( round_index == total_rounds - 1 ) {
             if ( image_stack[0].is_in_real_space ) {
 #pragma omp parallel for default(shared) num_threads(max_threads) private(image_counter)
@@ -2376,14 +2380,12 @@ bool UnBlurApp::DoCalculation( ) {
             }
 
             //  Shall we write out a scaled image?
-            float                original_x                                   = sum_image.logical_x_dimension;
-            float                original_y                                   = sum_image.logical_y_dimension;
-            std::tuple<int, int> crop_location                                = {0, 0};
-            bool                 replace_dark_areas_with_gaussian_noise       = true;
-            float                threshold_for_gaussian_noise                 = 0.1;
-            bool                 measure_mean_and_variance_for_gaussian_noise = true;
-            float                variance_for_gaussian_noise                  = 0.0;
-            float                mean_for_gaussian_noise                      = 0.0;
+
+            bool  replace_dark_areas_with_gaussian_noise       = true;
+            float threshold_for_gaussian_noise                 = 0.1;
+            bool  measure_mean_and_variance_for_gaussian_noise = true;
+            float variance_for_gaussian_noise                  = 0.0;
+            float mean_for_gaussian_noise                      = 0.0;
             if ( replace_dark_areas_with_gaussian_noise ) {
                 sum_image.BackwardFFT( );
                 std::string mask_filename = output_filename.substr(0, output_filename.size( ) - 4) + "_mask.mrc";

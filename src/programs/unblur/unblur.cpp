@@ -996,8 +996,8 @@ bool UnBlurApp::DoCalculation( ) {
     StopWatch               profile_timing_refinement_method;
 
     float                temp_float[2];
-    float                original_x    = sum_image.logical_x_dimension;
-    float                original_y    = sum_image.logical_y_dimension;
+    float                original_x;  
+    float                original_y;   
     std::tuple<int, int> crop_location = {0, 0};
 
     if ( IsOdd(number_of_frames_for_running_average == false) )
@@ -2160,61 +2160,7 @@ bool UnBlurApp::DoCalculation( ) {
 
             // fill the result..
 
-            profile_timing.start("fill result");
-            float* result_array = new float[number_of_input_images * 2 + 4];
-
-            //             if ( is_running_locally == true ) {
-            //                 NumericTextFile shifts_file(output_shift_text_file, OPEN_TO_WRITE, 2);
-            //                 shifts_file.WriteCommentLine("X/Y Shifts for file %s\n", input_filename.c_str( ));
-
-            //                 for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
-            //                     temp_float[0] = x_shifts[image_counter] * output_pixel_size;
-            //                     temp_float[1] = y_shifts[image_counter] * output_pixel_size;
-            //                     shifts_file.WriteLine(temp_float);
-            // #ifdef PRINT_VERBOSE
-            //                     wxPrintf("image #%li = %f, %f\n", image_counter, result_array[image_counter], result_array[image_counter + number_of_input_images]);
-            // #endif
-            //                 }
-            //             }
-            //             else {
-            //                 for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
-            //                     result_array[image_counter]                          = x_shifts[image_counter] * output_pixel_size;
-            //                     result_array[image_counter + number_of_input_images] = y_shifts[image_counter] * output_pixel_size;
-            //                 }
-            //             }
-
-            if ( is_running_locally == false ) {
-                for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
-                    result_array[image_counter]                          = x_shifts[image_counter] * output_pixel_size;
-                    result_array[image_counter + number_of_input_images] = y_shifts[image_counter] * output_pixel_size;
-                }
-                result_array[2 * number_of_input_images]     = original_x;
-                result_array[2 * number_of_input_images + 1] = original_y;
-                result_array[2 * number_of_input_images + 2] = static_cast<float>(std::get<0>(crop_location));
-                result_array[2 * number_of_input_images + 3] = static_cast<float>(std::get<1>(crop_location));
-            }
-
-            NumericTextFile shifts_file(wxString::Format(outputpath + "fullframe_shift.txt"), OPEN_TO_WRITE, 2);
-            // wxString::Format(outputpath + "FullFrame_R1_shift.txt");
-            shifts_file.WriteCommentLine("X/Y Shifts for file %s\n", input_filename.c_str( ));
-
-            for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
-                temp_float[0] = x_shifts[image_counter] * output_pixel_size;
-                temp_float[1] = y_shifts[image_counter] * output_pixel_size;
-                shifts_file.WriteLine(temp_float);
-#ifdef PRINT_VERBOSE
-                wxPrintf("image #%li = %f, %f\n", image_counter, result_array[image_counter], result_array[image_counter + number_of_input_images]);
-#endif
-            }
-
-            wxPrintf("mark 1\n");
-            my_result.SetResult(number_of_input_images * 2 + 4, result_array);
-            wxPrintf("mark 2\n");
-            profile_timing.lap("fill result");
-            wxPrintf("mark 3\n");
-            delete[] result_array;
-            delete[] x_shifts;
-            delete[] y_shifts;
+            
             // */
             /*
             NumericTextFile motcor_Shiftifle(MotCorpath + "0-Patch-Full.log", OPEN_TO_READ, 5);
@@ -2388,10 +2334,67 @@ bool UnBlurApp::DoCalculation( ) {
             float mean_for_gaussian_noise                      = 0.0;
             if ( replace_dark_areas_with_gaussian_noise ) {
                 sum_image.BackwardFFT( );
+                original_x = sum_image.logical_x_dimension;
+                original_y = sum_image.logical_y_dimension;
                 std::string mask_filename = output_filename.substr(0, output_filename.size( ) - 4) + "_mask.mrc";
                 crop_location             = sum_image.CropAndAddGaussianNoiseToDarkAreas(0.01, threshold_for_gaussian_noise, 20, 0.01, measure_mean_and_variance_for_gaussian_noise, variance_for_gaussian_noise, mean_for_gaussian_noise, true, mask_filename);
                 sum_image.ForwardFFT( );
             }
+            profile_timing.start("fill result");
+            float* result_array = new float[number_of_input_images * 2 + 4];
+
+            //             if ( is_running_locally == true ) {
+            //                 NumericTextFile shifts_file(output_shift_text_file, OPEN_TO_WRITE, 2);
+            //                 shifts_file.WriteCommentLine("X/Y Shifts for file %s\n", input_filename.c_str( ));
+
+            //                 for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+            //                     temp_float[0] = x_shifts[image_counter] * output_pixel_size;
+            //                     temp_float[1] = y_shifts[image_counter] * output_pixel_size;
+            //                     shifts_file.WriteLine(temp_float);
+            // #ifdef PRINT_VERBOSE
+            //                     wxPrintf("image #%li = %f, %f\n", image_counter, result_array[image_counter], result_array[image_counter + number_of_input_images]);
+            // #endif
+            //                 }
+            //             }
+            //             else {
+            //                 for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+            //                     result_array[image_counter]                          = x_shifts[image_counter] * output_pixel_size;
+            //                     result_array[image_counter + number_of_input_images] = y_shifts[image_counter] * output_pixel_size;
+            //                 }
+            //             }
+
+            if ( is_running_locally == false ) {
+                for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+                    result_array[image_counter]                          = x_shifts[image_counter] * output_pixel_size;
+                    result_array[image_counter + number_of_input_images] = y_shifts[image_counter] * output_pixel_size;
+                }
+                result_array[2 * number_of_input_images]     = original_x;
+                result_array[2 * number_of_input_images + 1] = original_y;
+                result_array[2 * number_of_input_images + 2] = static_cast<float>(std::get<0>(crop_location));
+                result_array[2 * number_of_input_images + 3] = static_cast<float>(std::get<1>(crop_location));
+            }
+
+            NumericTextFile shifts_file(wxString::Format(outputpath + "fullframe_shift.txt"), OPEN_TO_WRITE, 2);
+            // wxString::Format(outputpath + "FullFrame_R1_shift.txt");
+            shifts_file.WriteCommentLine("X/Y Shifts for file %s\n", input_filename.c_str( ));
+
+            for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+                temp_float[0] = x_shifts[image_counter] * output_pixel_size;
+                temp_float[1] = y_shifts[image_counter] * output_pixel_size;
+                shifts_file.WriteLine(temp_float);
+#ifdef PRINT_VERBOSE
+                wxPrintf("image #%li = %f, %f\n", image_counter, result_array[image_counter], result_array[image_counter + number_of_input_images]);
+#endif
+            }
+
+            wxPrintf("mark 1\n");
+            my_result.SetResult(number_of_input_images * 2 + 4, result_array);
+            wxPrintf("mark 2\n");
+            profile_timing.lap("fill result");
+            wxPrintf("mark 3\n");
+            delete[] result_array;
+            delete[] x_shifts;
+            delete[] y_shifts;
             if ( write_out_small_sum_image == true ) {
                 profile_timing.start("write out small sum image");
                 // work out a good size..

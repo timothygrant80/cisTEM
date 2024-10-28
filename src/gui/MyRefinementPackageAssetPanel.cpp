@@ -60,6 +60,11 @@ void MyRefinementPackageAssetPanel::OnExportClick(wxCommandEvent& event) {
     my_wizard->Destroy( );
 }
 
+void MyRefinementPackageAssetPanel::OnResampleClick(wxCommandEvent& event) {
+    ResampleDialog my_dialog(this, false);
+    my_dialog.ShowModal( );
+}
+
 void MyRefinementPackageAssetPanel::RemoveVolumeFromAllRefinementPackages(long wanted_volume_asset_id) {
     int refinement_package_counter;
     int reference_id_counter;
@@ -291,12 +296,14 @@ void MyRefinementPackageAssetPanel::OnUpdateUI(wxUpdateUIEvent& event) {
             DeleteButton->Enable(true);
             ExportButton->Enable(true);
             DisplayStackButton->Enable(true);
+            BinButton->Enable(true);
         }
         else {
             RenameButton->Enable(false);
             DeleteButton->Enable(false);
             ExportButton->Enable(false);
             DisplayStackButton->Enable(false);
+            BinButton->Enable(false);
         }
     }
     else

@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version 3.10.0-4761b0c)
+// C++ code generated with wxFormBuilder (version 3.10.1-0-g8feb16b3)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO *NOT* EDIT THIS FILE!
@@ -133,6 +133,7 @@ class RefinementPackageAssetPanel : public wxPanel
 		wxButton* ImportButton;
 		wxButton* ExportButton;
 		wxButton* CombineButton;
+		wxButton* BinButton;
 		RefinementPackageListControl* RefinementPackageListCtrl;
 		wxPanel* m_panel51;
 		wxStaticText* ContainedParticlesStaticText;
@@ -166,6 +167,7 @@ class RefinementPackageAssetPanel : public wxPanel
 		virtual void OnImportClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnExportClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnCombineClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnBinClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void MouseCheckPackagesVeto( wxMouseEvent& event ) { event.Skip(); }
 		virtual void MouseVeto( wxMouseEvent& event ) { event.Skip(); }
 		virtual void OnBeginEdit( wxListEvent& event ) { event.Skip(); }

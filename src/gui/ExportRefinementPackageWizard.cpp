@@ -221,8 +221,12 @@ void ExportRefinementPackageWizard::OnFinished(wxWizardEvent& event) {
             // when we don't, we won't bother with the corrected micrographs file since we don't have that info anyway.
             // Currently only using the first particle to get information for the optics groups;
             // will cause issues if datasets are merged together with different microscopy parameters
-            bool is_valid_parent_image        = first_particle.parent_image_id >= 0;
-            bool is_valid_parent_movie        = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnArrayPositionFromAssetID(first_particle.parent_image_id))->parent_id >= 0;
+            bool is_valid_parent_image = first_particle.parent_image_id > 0;
+            bool is_valid_parent_movie;
+            if ( is_valid_parent_image )
+                is_valid_parent_movie = image_asset_panel->ReturnAssetPointer(image_asset_panel->ReturnArrayPositionFromAssetID(first_particle.parent_image_id))->parent_id > 0;
+            else
+                is_valid_parent_movie = false;
             bool have_valid_images_and_movies = is_valid_parent_image && is_valid_parent_movie;
 
             if ( have_valid_images_and_movies )

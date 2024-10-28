@@ -19,6 +19,8 @@ MyVolumeAssetPanel::MyVolumeAssetPanel(wxWindow* parent)
     Label8Title->SetLabel("");
     Label9Title->SetLabel("");
 
+    ResampleButton->Enable(true);
+
     UpdateInfo( );
 
     SplitterWindow->Unsplit(LeftPanel);
@@ -309,5 +311,13 @@ bool MyVolumeAssetPanel::IsFileAnAsset(wxFileName file_to_check) {
 void MyVolumeAssetPanel::ImportAssetClick(wxCommandEvent& event) {
     MyVolumeImportDialog* import_dialog = new MyVolumeImportDialog(this);
     import_dialog->ShowModal( );
+    main_frame->DirtyVolumes( );
+}
+
+void MyVolumeAssetPanel::OnResampleClick(wxCommandEvent& event) {
+    ResampleDialog resample_dialog(this, true);
+    resample_dialog.ShowModal( );
+
+    // Dirty since we're adding a volume by resampling
     main_frame->DirtyVolumes( );
 }

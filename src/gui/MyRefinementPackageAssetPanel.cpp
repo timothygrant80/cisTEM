@@ -60,7 +60,7 @@ void MyRefinementPackageAssetPanel::OnExportClick(wxCommandEvent& event) {
     my_wizard->Destroy( );
 }
 
-void MyRefinementPackageAssetPanel::OnBinClick(wxCommandEvent& event) {
+void MyRefinementPackageAssetPanel::OnResampleClick(wxCommandEvent& event) {
     ResampleDialog my_dialog(this, false);
     my_dialog.ShowModal( );
 }

@@ -1,11 +1,13 @@
-#ifndef __BINNING_DIALOG_H__
-#define __BINNING_DIALOG_H__
+#ifndef __SRC_RESAMPLE_DIALOG_H__
+#define __SRC_RESAMPLE_DIALOG_H__
 
 class ResampleDialog : public ResampleDialogParent {
   public:
+#ifdef IMPL_OF_CLASS_AND_REFINEMENT_SELECTION
     CombinedPackageClassSelectionPanel*   class_selection_panel;
     CombinedPackageRefinementSelectPanel* refinement_selection_panel;
     ClassVolumeSelectPanel*               initial_reference_panel;
+#endif
 
     ResampleDialog(wxWindow* parent, bool resampling_volume);
     ~ResampleDialog( );

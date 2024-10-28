@@ -315,8 +315,8 @@ void MyVolumeAssetPanel::ImportAssetClick(wxCommandEvent& event) {
 }
 
 void MyVolumeAssetPanel::OnResampleClick(wxCommandEvent& event) {
-    ResampleDialog* resample_dialog = new ResampleDialog(this, true);
-    resample_dialog->ShowModal( );
+    ResampleDialog resample_dialog(this, true);
+    resample_dialog.ShowModal( );
 
     // Dirty since we're adding a volume by resampling
     main_frame->DirtyVolumes( );

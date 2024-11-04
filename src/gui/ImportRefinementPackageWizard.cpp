@@ -214,7 +214,7 @@ void ImportRefinementPackageWizard::OnFinished(wxWizardEvent& event) {
         //		temp_particle_info.microscope_voltage = MicroscopeVoltageTextCtrl->ReturnValue();
         temp_particle_info.parent_image_id    = -1;
         temp_particle_info.amplitude_contrast = input_star_file.ReturnAmplitudeContrast(0); // FIXME should be for all lines.
-        //		temp_particle_info.pixel_size = PixelSizeTextCtrl->ReturnValue();
+        temp_particle_info.pixel_size         = input_star_file.ReturnPixelSize(0);
         //		temp_particle_info.amplitude_contrast = AmplitudeContrastTextCtrl->ReturnValue();
         temp_particle_info.x_pos = 0;
         temp_particle_info.y_pos = 0;

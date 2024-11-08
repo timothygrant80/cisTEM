@@ -8,7 +8,8 @@
 // #define USE_NEAREST_NEIGHBOR_INTERPOLATION
 // The USE_ZERO_PADDING_NOT_NOISE should be defined as padding with noise in real-space adds power to the noise
 // in every Fourier voxel reducing the SSNR. I'm leaving the option here to test noise padding for pathological images in the future.
-#define USE_ZERO_PADDING_NOT_NOISE
+// #define USE_ZERO_PADDING_NOT_NOISE
+#define USE_REPLICATIVE_PADDING
 
 constexpr bool  MUST_BE_POWER_OF_TWO                   = false; // Required for half-precision xforms
 constexpr int   MUST_BE_FACTOR_OF                      = 0; // May be faster
@@ -54,6 +55,7 @@ class TemplateMatchingDataSizer {
     Image valid_area_mask;
 
     long number_of_valid_search_pixels;
+    long number_of_pixels_for_normalization;
 
     int4 template_size;
     int4 template_pre_scaling_size;
@@ -164,6 +166,15 @@ class TemplateMatchingDataSizer {
         return number_of_valid_search_pixels;
     }
 
+    inline long GetNumberOfPixelsForNormalization( ) const {
+        MyDebugAssertTrue(valid_bounds_are_set, "Valid bounds not set");
+#ifdef USE_ZERO_PADDING_NOT_NOISE
+        return number_of_pixels_for_normalization;
+#else
+        return long(image_search_size.x * image_search_size.y);
+#endif
+    }
+
     inline float GetPixelSize( ) const {
         MyDebugAssertFalse(pixel_size == 0.0f, "Pixel size not set");
         return pixel_size;
@@ -220,10 +231,6 @@ class TemplateMatchingDataSizer {
 
     inline int GetPrePaddingX( ) const {
         return pre_padding.x;
-    }
-
-    inline int GetPrePaddingSearchX( ) const {
-        return pre_padding_search.x;
     }
 
     inline int GetPrePaddingY( ) const {

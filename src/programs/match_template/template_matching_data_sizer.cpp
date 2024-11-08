@@ -134,7 +134,7 @@ void TemplateMatchingDataSizer::PreProcessInputImage(Image& input_image, int mas
     }
     else {
         // When used in cross-correlation, we need the extra division.
-        input_image.DivideByConstant(sqrtf(input_image.ReturnSumOfSquares( ) / float(input_image.number_of_real_space_pixels)));
+        input_image.DivideByConstant(sqrtf(input_image.ReturnSumOfSquares( ) / float(GetNumberOfPixelsForNormalization( ))));
     }
 
 #ifdef DEBUG_IMG_OUTPUT
@@ -176,15 +176,8 @@ void TemplateMatchingDataSizer::CheckSizing( ) {
 
 void TemplateMatchingDataSizer::GetFFTSize( ) {
 
-    // TODO: this should consider how close we are to the next power of two, which for the time being,
-    // we are explicitly padding to.
-    int bin_offset_3d          = 0;
-    int bin_offset_2d          = 0;
-    int closest_3d_binned_size = template_size.x;
-    int best_3d_bin_offset     = 0;
-
-    // We'll record the average of these two
-    float closest_3d_binning_factor = 1.f;
+    // We can downsample the template at arbitrary pixel sizes using LERP, so we only need to consider the image size.
+    int   bin_offset_2d             = 0;
     float closest_2d_binning_factor = 1.f;
 
     // We want the binning to be isotropic, and the easiest way to ensure that is to first pad any non-square input_image to a square size in realspace.
@@ -196,79 +189,65 @@ void TemplateMatchingDataSizer::GetFFTSize( ) {
 
     if ( resampling_is_needed ) {
 
-        // Presumably we'll be using a power of 2 square size anyway for FastFFT (though rectangular images should be supported at some point.)
-        // The other requirement is to ensure the resulting pixel size is the same for the reference and the search images.
-        // Ideally, we would just calculate a scattering potential at the correct size, but even when that capability is added, we still should
-        // allow the user to supply a template that is generated from a map that may not have a good model (e.g. something at 5-6 A resolution may still be usefule for TM in situ,
-        // but may be to low res to build a decent atomic model into.)
+        // In the unusual case that the cropped image is larger than the input, we need to start again, and n_tries will be set to -1
+        int n_tries  = 0;
+        int bin_scan = 1;
+        while ( n_tries < 2 ) {
+            // Presumably we'll be using a power of 2 square size anyway for FastFFT (though rectangular images should be supported at some point.)
+            // The other requirement is to ensure the resulting pixel size is the same for the reference and the search images.
+            // Ideally, we would just calculate a scattering potential at the correct size, but even when that capability is added, we still should
+            // allow the user to supply a template that is generated from a map that may not have a good model (e.g. something at 5-6 A resolution may still be usefule for TM in situ,
+            // but may be to low res to build a decent atomic model into.)
 
-        // The most challenging part is matching the pixel size of the input 3d and the input images. Presumably, the smaller 3d will be the limiting factor b/c of the larger
-        // Fourier voxel step.
+            // The most challenging part is matching the pixel size of the input 3d and the input images. Presumably, the smaller 3d will be the limiting factor b/c of the larger
+            // Fourier voxel step.
 
-        // Start by taking the (possibly) largest deviation from the wanted pixel size, but the (possibly) smallest final image size to determine subsequent penalties for padding.
-        current_binning_factor = GetRealizedBinningFactor(target_binning_factor, template_size.x);
-        current_binned_size    = GetBinnedSize(template_size.x, current_binning_factor);
+            // Start by taking the (possibly) largest deviation from the wanted pixel size, but the (possibly) smallest final image size to determine subsequent penalties for padding.
+            current_binning_factor = GetRealizedBinningFactor(target_binning_factor, max_square_size);
+            current_binned_size    = GetBinnedSize(max_square_size, current_binning_factor);
 
-        closest_3d_binned_size         = current_binned_size;
-        closest_3d_binning_factor      = current_binning_factor;
-        const int best_power_of_2_size = get_next_power_of_two(closest_3d_binned_size);
+            // FIXME: We should enforce the 4k restriction somwhere else.
+            constexpr int   max_2d_power_of_2_size      = 4096;
+            constexpr float acceptable_pixel_size_error = 0.00005f;
 
-        // Now see how close we can get to the wanted pixel size without going over the best power of 2 size
-        // float smallest_error = fabsf(pixel_size * target_binning_factor - pixel_size * current_binning_factor) / pixel_size * 100.f;
-        float smallest_error = fabsf(target_binning_factor - current_binning_factor) * 100.f;
+            int closest_2d_binned_size = current_binned_size;
+            closest_2d_binning_factor  = current_binning_factor;
 
-        // TODO: it may make sense to save a few of the best values as they could produce a smaller total error in mismatch between the
-        // Image and template, which is likely more important than any small error in wanted vs realized pixel size.
+            float smallest_error = fabsf(target_binning_factor - closest_2d_binning_factor);
 
-        while ( current_binned_size <= best_power_of_2_size ) {
-            current_binning_factor = GetRealizedBinningFactor(target_binning_factor, template_size.x + bin_offset_3d);
-            current_binned_size    = GetBinnedSize(template_size.x + bin_offset_3d, current_binning_factor);
-            float current_error    = fabsf(target_binning_factor - current_binning_factor) * 100.f;
-            if ( current_error < smallest_error ) {
-                closest_3d_binned_size    = current_binned_size;
-                closest_3d_binning_factor = current_binning_factor;
-                smallest_error            = current_error;
-                best_3d_bin_offset        = bin_offset_3d;
+            int bin_offset_2d = 0;
+            //  && IsEven(image_size.x - (max_square_size + bin_offset_2d))
+            while ( current_binned_size <= max_2d_power_of_2_size ) {
+                if ( smallest_error * pixel_size < acceptable_pixel_size_error ) {
+                    break;
+                }
+                bin_offset_2d += bin_scan;
+                current_binning_factor = GetRealizedBinningFactor(target_binning_factor, max_square_size + bin_offset_2d);
+                current_binned_size    = GetBinnedSize(max_square_size + bin_offset_2d, current_binning_factor);
+                float current_error    = fabsf(current_binning_factor - target_binning_factor);
+                if ( current_error < smallest_error ) {
+                    closest_2d_binned_size    = current_binned_size;
+                    closest_2d_binning_factor = current_binning_factor;
+                    smallest_error            = current_error;
+                }
             }
-            bin_offset_3d++;
+
+            image_pre_scaling_size.x = max_square_size + bin_offset_2d;
+            image_pre_scaling_size.y = max_square_size + bin_offset_2d;
+            image_pre_scaling_size.z = 1; // FIXME: once we add chunking ...
+
+            image_cropped_size.x = closest_2d_binned_size;
+            image_cropped_size.y = closest_2d_binned_size;
+            image_cropped_size.z = 1; // FIXME: once we add chunking ...
+
+            n_tries++;
+
+            if ( image_cropped_size.x <= image_size.x && image_cropped_size.y <= image_size.y ) {
+                n_tries++;
+            }
+            else
+                bin_scan = -1;
         }
-
-        // FIXME: We should enforce the 4k restriction somwhere else.
-        constexpr int   max_2d_power_of_2_size      = 4096;
-        constexpr float acceptable_pixel_size_error = 0.00005f;
-
-        // How close can we get the image pixel size to match that of the resampled 3d? The target is now shifted from the users input, to the best 3d binning we found
-        current_binning_factor     = GetRealizedBinningFactor(closest_3d_binning_factor, max_square_size);
-        current_binned_size        = GetBinnedSize(max_square_size, current_binning_factor);
-        int closest_2d_binned_size = current_binned_size;
-        closest_2d_binning_factor  = current_binning_factor;
-
-        smallest_error = fabsf(closest_2d_binning_factor - closest_3d_binning_factor);
-
-        int bin_offset_2d = 1;
-        while ( current_binned_size <= max_2d_power_of_2_size ) {
-            if ( smallest_error * pixel_size < acceptable_pixel_size_error ) {
-                break;
-            }
-            current_binning_factor = GetRealizedBinningFactor(closest_3d_binning_factor, max_square_size + bin_offset_2d);
-            current_binned_size    = GetBinnedSize(max_square_size + bin_offset_2d, current_binning_factor);
-            float current_error    = fabsf(current_binning_factor - closest_3d_binning_factor);
-            if ( current_error < smallest_error ) {
-                closest_2d_binned_size    = current_binned_size;
-                closest_2d_binning_factor = current_binning_factor;
-                smallest_error            = current_error;
-            }
-
-            bin_offset_2d++;
-        }
-
-        image_pre_scaling_size.x = max_square_size + bin_offset_2d;
-        image_pre_scaling_size.y = max_square_size + bin_offset_2d;
-        image_pre_scaling_size.z = 1; // FIXME: once we add chunking ...
-
-        image_cropped_size.x = closest_2d_binned_size;
-        image_cropped_size.y = closest_2d_binned_size;
-        image_cropped_size.z = 1; // FIXME: once we add chunking ...
     }
     else {
         // FIXME: get rid of the hardcoded ones
@@ -301,13 +280,15 @@ void TemplateMatchingDataSizer::GetFFTSize( ) {
 
     image_search_size.z = 1; // FIXME: once we add chunking ...
 
-    template_pre_scaling_size.x = best_3d_bin_offset + template_size.x;
-    template_pre_scaling_size.y = best_3d_bin_offset + template_size.y;
-    template_pre_scaling_size.z = best_3d_bin_offset + template_size.z;
+    // Assuming the template is cubic and we handle sampling during projection, there is no need for pre-scaling, only resizing to ensure power of 2 (if FastFFT)
+    // TODO: This should work without power of two if we project into a power of 2 size, esp important for templates > 512
+    template_pre_scaling_size.x = template_size.x;
+    template_pre_scaling_size.y = template_size.y;
+    template_pre_scaling_size.z = template_size.z;
 
-    template_cropped_size.x = closest_3d_binned_size;
-    template_cropped_size.y = closest_3d_binned_size;
-    template_cropped_size.z = closest_3d_binned_size;
+    template_cropped_size.x = template_size.x;
+    template_cropped_size.y = template_size.y;
+    template_cropped_size.z = template_size.z;
 
     // In the general case, there are no restrictions on the template being a power of two, but we should want a decent size
     int prime_factor_3d    = use_fast_fft ? 2 : 5;
@@ -317,7 +298,7 @@ void TemplateMatchingDataSizer::GetFFTSize( ) {
     // We know this is an even dimension so adding 2
     template_search_size.w = (template_search_size.x + 2) / 2;
 
-    search_pixel_size = pixel_size * 0.5f * (closest_2d_binning_factor + closest_3d_binning_factor);
+    search_pixel_size = pixel_size * closest_2d_binning_factor;
 
 #ifdef DEBUG_TM_SIZER_PRINT
     wxPrintf("The input image will be padded by %d,%d, cropped to %d,%d and then padded again to %d,%d\n",
@@ -325,8 +306,6 @@ void TemplateMatchingDataSizer::GetFFTSize( ) {
              image_cropped_size.x, image_cropped_size.y,
              image_search_size.x, image_search_size.y);
     wxPrintf("template_size = %i\n", template_size.x);
-    wxPrintf("closest_3d_binning_factor = %f\n", closest_3d_binning_factor);
-    wxPrintf("closest_3d_binning_factor * pixel_size = %f\n", closest_3d_binning_factor * pixel_size);
     wxPrintf("closest 2d binning factor = %f\n", closest_2d_binning_factor);
     wxPrintf("closest 2d binning factor * pixel_size = %f\n", closest_2d_binning_factor * pixel_size);
     wxPrintf("original image size = %i\n", int(image_size.x));
@@ -399,7 +378,7 @@ void TemplateMatchingDataSizer::SetValidSearchImageIndiciesFromPadding(const int
     //       and thereby we create "false negatives" by enforcing this exclusion border the more important issue is to return only peak heights that are not due to the location
     //       in the image. We cannot determine how the downstream processing may compare peak to peak within an image, and so we must be conservative,
     //       in the goal of not leading these downstream analysis to errant conclusions.
-    int template_padding = template_cropped_size.x / cistem::fraction_of_box_size_to_exclude_for_border;
+    int template_padding = 0; //myroundint(float(template_search_size.x) / GetFullBinningFactor( )) / cistem::fraction_of_box_size_to_exclude_for_border;
 
     search_image_valid_area_lower_bound_x = pre_padding_x + template_padding;
     search_image_valid_area_lower_bound_y = pre_padding_y + template_padding;
@@ -411,6 +390,9 @@ void TemplateMatchingDataSizer::SetValidSearchImageIndiciesFromPadding(const int
 
     roi.x = search_image_valid_area_upper_bound_x - search_image_valid_area_lower_bound_x + 1;
     roi.y = search_image_valid_area_upper_bound_y - search_image_valid_area_lower_bound_y + 1;
+
+    number_of_pixels_for_normalization = long(image_search_size.x - post_padding_x - pre_padding_x) *
+                                         long(image_search_size.y - post_padding_y - pre_padding_y);
 
     number_of_valid_search_pixels = long(roi.x) * long(roi.y);
     MyDebugAssertTrue(number_of_valid_search_pixels > 0, "The number of valid search pixels is less than 1");
@@ -431,9 +413,6 @@ void TemplateMatchingDataSizer::GetInputImageToEvenAndSquareOrPrimeFactoredSizeP
     int padding_x_TOTAL;
     int padding_y_TOTAL;
 
-    pre_padding.x        = image_pre_scaling_size.x - image_size.x;
-    pre_padding.y        = image_pre_scaling_size.y - image_size.y;
-    pre_padding_search.x = image_search_size.x - image_size.x;
     if ( resampling_is_needed ) {
         padding_x_TOTAL = image_pre_scaling_size.x - image_size.x;
         padding_y_TOTAL = image_pre_scaling_size.y - image_size.y;
@@ -542,14 +521,19 @@ void TemplateMatchingDataSizer::ResizeImage_preSearch(Image& input_image) {
         Image tmp_sq;
 
         tmp_sq.Allocate(image_pre_scaling_size.x, image_pre_scaling_size.y, image_pre_scaling_size.z, true);
-#ifdef USE_ZERO_PADDING_NOT_NOISE
+#if defined(USE_ZERO_PADDING_NOT_NOISE) || defined(USE_REPLICATIVE_PADDING)
         bool skip_padding_in_clipinto = false;
 #else
         bool skip_padding_in_clipinto = true;
         tmp_sq.FillWithNoiseFromNormalDistribution(0.f, 1.0f);
 #endif
 
+#ifdef USE_REPLICATIVE_PADDING
+        input_image.ClipIntoWithReplicativePadding(&tmp_sq);
+#else
         input_image.ClipInto(&tmp_sq, 0.0f, false, 1.0f, 0, 0, 0, skip_padding_in_clipinto);
+#endif
+
 #ifdef DEBUG_IMG_OUTPUT
         if ( ReturnThreadNumberOfCurrentThread( ) == 0 )
             tmp_sq.QuickAndDirtyWriteSlice(DEBUG_IMG_OUTPUT "/tmp_sq.mrc", 1);
@@ -565,10 +549,15 @@ void TemplateMatchingDataSizer::ResizeImage_preSearch(Image& input_image) {
 #endif
 
         input_image.Allocate(image_search_size.x, image_search_size.y, image_search_size.z, true);
+
+#ifdef USE_REPLICATIVE_PADDING
+        tmp_sq.ClipIntoWithReplicativePadding(&input_image);
+#else
 #ifndef USE_ZERO_PADDING_NOT_NOISE
         input_image.FillWithNoiseFromNormalDistribution(0.f, 1.0f);
-#endif
+#endif // ndef USE_ZERO_PADDING_NOT_NOISE
         tmp_sq.ClipInto(&input_image, 0.0f, false, 1.0f, 0, 0, 0, skip_padding_in_clipinto);
+#endif // USE_REPLICATIVE_PADDING
 
 #ifdef DEBUG_IMG_OUTPUT
         if ( ReturnThreadNumberOfCurrentThread( ) == 0 )
@@ -626,8 +615,6 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& input_image,
 
     // We want the unsampled regions to have the same mean AND variance as the sampled regions,
 
-    RandomNumberGenerator my_rand(pi_v<float>);
-
     // now loop over and update the mean values int rand_y_idx;
     int  rand_x_idx, rand_y_idx;
     long rand_address;
@@ -644,59 +631,31 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& input_image,
     float x_radius = float(max_intensity_projection.physical_address_of_box_center_x - x_lower_bound);
     float y_radius = float(max_intensity_projection.physical_address_of_box_center_y - y_lower_bound);
 
-    long pixel_counter = 0;
-    for ( int y = 0; y < max_intensity_projection.logical_y_dimension; y++ ) {
-        for ( int x = 0; x < max_intensity_projection.logical_x_dimension; x++ ) {
-            // Mirror the edges up to the upper bound then work our way back. This will not be perfect when the image is padded more than 2x the ROI
-            if ( x < x_lower_bound ) {
-                i_x = 2 * x_lower_bound - x - 1;
-                if ( i_x >= x_upper_bound ) {
-                    i_x = 2 * x_upper_bound - i_x - 1;
-                }
-            }
-            else if ( x >= x_upper_bound ) {
-                i_x = 2 * x_upper_bound - x - 1;
-                if ( i_x < x_lower_bound ) {
-                    i_x = 2 * x_lower_bound - i_x - 1;
-                }
-                MyDebugAssertFalse(i_x >= x_upper_bound, "i_x is out of bounds");
-            }
-            else {
-                i_x = x;
-            }
-            if ( y < y_lower_bound ) {
-                i_y = 2 * y_lower_bound - y - 1;
-                if ( i_y >= y_upper_bound ) {
-                    i_y = 2 * y_upper_bound - i_y - 1;
-                }
-            }
-            else if ( y >= y_upper_bound ) {
-                i_y = 2 * y_upper_bound - y - 1;
-                if ( i_y < y_lower_bound ) {
-                    i_y = 2 * y_lower_bound - i_y - 1;
-                }
-                MyDebugAssertFalse(i_y >= y_upper_bound, "i_y is out of bounds");
-            }
-            else {
-                i_y = y;
-            }
-            if ( x < pre_padding.x || x >= pre_padding.x + roi.x || y < pre_padding.y || y >= pre_padding.y + roi.y ) {
+    Image tmp_trim;
+    tmp_trim.Allocate(roi.x, roi.y, 1, true);
+    max_intensity_projection.ClipInto(&tmp_trim);
+    tmp_trim.ClipIntoWithReplicativePadding(&max_intensity_projection);
 
-                rand_address = max_intensity_projection.ReturnReal1DAddressFromPhysicalCoord(i_x, i_y, 0);
+    best_psi.ClipInto(&tmp_trim);
+    tmp_trim.ClipIntoWithReplicativePadding(&best_psi);
 
-                max_intensity_projection.real_values[pixel_counter]               = max_intensity_projection.real_values[rand_address];
-                best_psi.real_values[pixel_counter]                               = best_psi.real_values[rand_address];
-                best_phi.real_values[pixel_counter]                               = best_phi.real_values[rand_address];
-                best_theta.real_values[pixel_counter]                             = best_theta.real_values[rand_address];
-                best_defocus.real_values[pixel_counter]                           = best_defocus.real_values[rand_address];
-                best_pixel_size.real_values[pixel_counter]                        = best_pixel_size.real_values[rand_address];
-                correlation_pixel_sum_image.real_values[pixel_counter]            = correlation_pixel_sum_image.real_values[rand_address];
-                correlation_pixel_sum_of_squares_image.real_values[pixel_counter] = correlation_pixel_sum_of_squares_image.real_values[rand_address];
-            }
-            pixel_counter++;
-        }
-        pixel_counter += max_intensity_projection.padding_jump_value;
-    }
+    best_phi.ClipInto(&tmp_trim);
+    tmp_trim.ClipIntoWithReplicativePadding(&best_phi);
+
+    best_theta.ClipInto(&tmp_trim);
+    tmp_trim.ClipIntoWithReplicativePadding(&best_theta);
+
+    best_defocus.ClipInto(&tmp_trim);
+    tmp_trim.ClipIntoWithReplicativePadding(&best_defocus);
+
+    best_pixel_size.ClipInto(&tmp_trim);
+    tmp_trim.ClipIntoWithReplicativePadding(&best_pixel_size);
+
+    correlation_pixel_sum_image.ClipInto(&tmp_trim);
+    tmp_trim.ClipIntoWithReplicativePadding(&correlation_pixel_sum_image);
+
+    correlation_pixel_sum_of_squares_image.ClipInto(&tmp_trim);
+    tmp_trim.ClipIntoWithReplicativePadding(&correlation_pixel_sum_of_squares_image);
 
     // Work through the transformations backward to get to the original image size
     if ( is_rotated_by_90 ) {
@@ -764,9 +723,9 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& input_image,
                 int x_offset_from_origin = i - max_intensity_projection.physical_address_of_box_center_x;
 
                 // Scale by the binning
-                // TODO: not sure if round or truncation (floor) makes more sense here
-                int x_non_binned = tmp_phi.physical_address_of_box_center_x + myroundint(float(x_offset_from_origin) * actual_image_binning);
-                int y_non_binned = tmp_phi.physical_address_of_box_center_y + myroundint(float(y_offset_from_origin) * actual_image_binning);
+                // Using std::trunc (round to zero) as some pathological cases produce OOB +/- 1 otherwise
+                int x_non_binned = tmp_phi.physical_address_of_box_center_x + std::truncf(float(x_offset_from_origin) * actual_image_binning);
+                int y_non_binned = tmp_phi.physical_address_of_box_center_y + std::truncf(float(y_offset_from_origin) * actual_image_binning);
 
                 if ( x_non_binned >= 0 && x_non_binned < tmp_phi.logical_x_dimension && y_non_binned >= 0 && y_non_binned < tmp_phi.logical_y_dimension ) {
                     address                = tmp_phi.ReturnReal1DAddressFromPhysicalCoord(x_non_binned, y_non_binned, 0);
@@ -777,8 +736,12 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& input_image,
                     wxPrintf("x_non_binned = %d, y_non_binned = %d\n", x_non_binned, y_non_binned);
                     wxPrintf("%f actual_image_binning = %f\n", search_pixel_size, actual_image_binning);
                     wxPrintf("tmp mip size = %d %d\n", tmp_phi.logical_x_dimension, tmp_phi.logical_y_dimension);
+                    wxPrintf("x offset = %d, y offset = %d\n", x_offset_from_origin, y_offset_from_origin);
+                    wxPrintf("box center = %d %d\n", tmp_phi.physical_address_of_box_center_x, tmp_phi.physical_address_of_box_center_y);
+                    wxPrintf("tmp size = %d %d\n", tmp_phi.logical_x_dimension, tmp_phi.logical_y_dimension);
                     wxPrintf("max_intensity_projection size = %d %d\n", max_intensity_projection.logical_x_dimension, max_intensity_projection.logical_y_dimension);
                     address = -1;
+                    exit(1);
                 }
 
                 // There really shouldn't be any peaks out of bounds

@@ -207,6 +207,20 @@ inline int RoundAndMakeEven(float a) {
 }
 
 /**
+ * @brief This function reproduces the modulo operation in Python, which is different than C++ for negative numbers.
+ * 
+ * @param a 
+ * @param b 
+ * @return int 
+ */
+inline int PythonLikeModulo(int a, int b) {
+    if ( a < 0 || b < 0 )
+        return ((a % b) + b) % b;
+    else
+        return a % b;
+}
+
+/**
  * @brief Some functions will fail if their output is directed at /dev/null, so this function is here to prevent that.
  * Examples may be found in numeric_text_file and mrc_file.cpp
  * 

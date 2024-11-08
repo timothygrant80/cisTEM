@@ -7806,6 +7806,91 @@ void Image::InsertOtherImageAtSpecifiedPosition(Image* other_image, int wanted_x
 }
 
 // If you don't want to clip from the center, you can give wanted_coordinate_of_box_center_{x,y,z}. This will define the pixel in the image at which other_image will be centered. (0,0,0) means center of image.
+void Image::ClipIntoWithReplicativePadding(Image* other_image,
+                                           int    wanted_coordinate_of_box_center_x,
+                                           int    wanted_coordinate_of_box_center_y,
+                                           int    wanted_coordinate_of_box_center_z) {
+    MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+    MyDebugAssertTrue(other_image->is_in_memory, "Other image Memory not allocated");
+    MyDebugAssertTrue(is_in_real_space, "ClipIntoWithReplicativePadding only works for real space images");
+    MyDebugAssertTrue(object_is_centred_in_box, "real space image, not centred in box");
+
+    // take other following attributes
+
+    other_image->is_in_real_space         = is_in_real_space;
+    other_image->object_is_centred_in_box = object_is_centred_in_box;
+
+    long pixel_counter = 0;
+    long other_address = 0;
+
+    // The logic for the mirroring permutations is ugly, so to make it something we can put into a loop
+    // and only write out once, we'll use some arrays for the size dimensions.
+    int       my_index[3];
+    int       my_mirrored_index[3];
+    const int my_dims[3] = {
+            logical_x_dimension,
+            logical_y_dimension,
+            logical_z_dimension};
+    ZeroArray(my_index, 3);
+    ZeroArray(my_mirrored_index, 3);
+
+    for ( int kk = 0; kk < other_image->logical_z_dimension; kk++ ) {
+        my_index[2] = physical_address_of_box_center_z + wanted_coordinate_of_box_center_z + (kk - other_image->physical_address_of_box_center_z);
+
+        for ( int jj = 0; jj < other_image->logical_y_dimension; jj++ ) {
+            my_index[1] = physical_address_of_box_center_y + wanted_coordinate_of_box_center_y + (jj - other_image->physical_address_of_box_center_y);
+            for ( int ii = 0; ii < other_image->logical_x_dimension; ii++ ) {
+                my_index[0] = physical_address_of_box_center_x + wanted_coordinate_of_box_center_x + (ii - other_image->physical_address_of_box_center_x);
+
+                // check to see if we are out of bounds which should only happen if we are clipping a smaller image into a larger one
+                if ( my_index[2] < 0 || my_index[2] >= my_dims[2] ||
+                     my_index[1] < 0 || my_index[1] >= my_dims[1] ||
+                     my_index[0] < 0 || my_index[0] >= my_dims[0] ) {
+
+                    for ( int i_dim = 0; i_dim < 3; i_dim++ ) {
+                        if ( my_index[i_dim] < 0 ) {
+                            // we may cycle back and forth if we overshoot the upper boundary etc.
+                            int wrap_around_permutation = (-my_index[i_dim] - 1) / my_dims[i_dim];
+                            if ( IsEven(wrap_around_permutation) ) {
+                                my_mirrored_index[i_dim] = my_dims[i_dim] - PythonLikeModulo(my_index[i_dim], (my_dims[i_dim] + 1));
+                            }
+                            else {
+                                my_mirrored_index[i_dim] = my_dims[i_dim] - 1 - PythonLikeModulo(-my_index[i_dim], (my_dims[i_dim] + 1));
+                            }
+                        }
+                        else if ( my_index[i_dim] >= my_dims[i_dim] ) {
+                            int wrap_around_permutation = my_index[i_dim] / my_dims[i_dim];
+                            if ( IsEven(wrap_around_permutation) ) {
+                                my_mirrored_index[i_dim] = my_dims[i_dim] - 3 - PythonLikeModulo(-my_index[i_dim], (my_dims[i_dim] - 1));
+                            }
+                            else {
+                                my_mirrored_index[i_dim] = my_dims[i_dim] - 1 - PythonLikeModulo(my_index[i_dim], my_dims[i_dim]);
+                            }
+                        }
+                        else {
+                            my_mirrored_index[i_dim] = my_index[i_dim];
+                        }
+                    }
+
+                    other_image->real_values[pixel_counter] = ReturnRealPixelFromPhysicalCoord(my_mirrored_index[0],
+                                                                                               my_mirrored_index[1],
+                                                                                               my_mirrored_index[2]);
+                }
+                else {
+                    other_image->real_values[pixel_counter] = ReturnRealPixelFromPhysicalCoord(my_index[0],
+                                                                                               my_index[1],
+                                                                                               my_index[2]);
+                }
+
+                pixel_counter++;
+            }
+
+            pixel_counter += other_image->padding_jump_value;
+        }
+    }
+}
+
+// If you don't want to clip from the center, you can give wanted_coordinate_of_box_center_{x,y,z}. This will define the pixel in the image at which other_image will be centered. (0,0,0) means center of image.
 void Image::ClipInto(Image* other_image, float wanted_padding_value, bool fill_with_noise, float wanted_noise_sigma, int wanted_coordinate_of_box_center_x, int wanted_coordinate_of_box_center_y, int wanted_coordinate_of_box_center_z, bool skip_padding) {
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
     MyDebugAssertTrue(other_image->is_in_memory, "Other image Memory not allocated");

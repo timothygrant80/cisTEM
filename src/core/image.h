@@ -473,12 +473,28 @@ class Image {
     void QuickAndDirtyReadSlice(std::string filename, long slice_to_read);
     void QuickAndDirtyReadSlices(std::string filename, int first_slice_to_read, int last_slice_to_read);
 
-    bool  IsConstant(bool compare_to_constant = false, float constant_to_compare = 0.0f);
-    bool  HasNan( );
-    bool  HasNegativeRealValue( );
-    void  SetToConstant(float wanted_value);
-    void  ClipIntoLargerRealSpace2D(Image* other_image, float wanted_padding_value = 0);
-    void  ClipInto(Image* other_image, float wanted_padding_value = 0.0, bool fill_with_noise = false, float wanted_noise_sigma = 1.0, int wanted_coordinate_of_box_center_x = 0, int wanted_coordinate_of_box_center_y = 0, int wanted_coordinate_of_box_center_z = 0, bool skip_padding = false);
+    bool IsConstant(bool compare_to_constant = false, float constant_to_compare = 0.0f);
+    bool HasNan( );
+    bool HasNegativeRealValue( );
+    void SetToConstant(float wanted_value);
+
+    void ClipIntoLargerRealSpace2D(Image* other_image,
+                                   float  wanted_padding_value = 0);
+
+    void ClipInto(Image* other_image,
+                  float  wanted_padding_value              = 0.0,
+                  bool   fill_with_noise                   = false,
+                  float  wanted_noise_sigma                = 1.0,
+                  int    wanted_coordinate_of_box_center_x = 0,
+                  int    wanted_coordinate_of_box_center_y = 0,
+                  int    wanted_coordinate_of_box_center_z = 0,
+                  bool   skip_padding                      = false);
+
+    void ClipIntoWithReplicativePadding(Image* other_image,
+                                        int    wanted_coordinate_of_box_center_x = 0,
+                                        int    wanted_coordinate_of_box_center_y = 0,
+                                        int    wanted_coordinate_of_box_center_z = 0);
+
     void  ChangePixelSize(Image* other_image, float wanted_factor, float wanted_tolerance, bool return_fft = false);
     void  InsertOtherImageAtSpecifiedPosition(Image* other_image, int wanted_x_coord, int wanted_y_coord, int wanted_z_coord, float threshold_value = -FLT_MAX);
     void  Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted_z_dimension, float wanted_padding_value = 0);

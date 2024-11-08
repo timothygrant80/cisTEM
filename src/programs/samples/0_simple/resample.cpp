@@ -83,7 +83,7 @@ struct ResampleRunnerObjects {
         gpu_volume.CopyHostToDeviceTextureComplex<3>(cpu_volume);
 
         // Generate a CTF image
-        ctf.Init(300.f, 2.7f, 0.07f, 12000.f, 12000.f, 40.f, pixel_size, 0.f);
+        GetCTFGivenPixelSizeInAngstroms(ctf, pixel_size);
         ctf_image.Allocate(logical_input_size, logical_input_size, 1, false);
         ctf_image.CalculateCTFImage(ctf);
 
@@ -97,6 +97,10 @@ struct ResampleRunnerObjects {
         d_ctf_image.InitializeBasedOnCpuImage(ctf_image, false, true);
         d_ctf_image.CopyHostToDevice(ctf_image);
         d_ctf_image.CopyFP32toFP16buffer(false);
+    }
+
+    inline void GetCTFGivenPixelSizeInAngstroms(CTF& input_ctf, float pixel_size_in_angstroms) {
+        input_ctf.Init(300.f, 2.7f, 0.07f, 12000.f, 12000.f, 40.f, pixel_size_in_angstroms, 0.f);
     }
 };
 
@@ -283,8 +287,10 @@ bool DoLerpWithCTF(const wxString& cistem_ref_dir, const wxString& temp_director
         o_.gpu_prj.ClipIntoFourierSpace(&cropped_img, 0.f);
 
         // Make a ctf image to apply to the skipped images
+        CTF binned_ctf;
+        o_.GetCTFGivenPixelSizeInAngstroms(binned_ctf, 1.0f * o_.real_space_binning_factor);
         Image cropped_ctf(cropped_size, cropped_size, 1, false);
-        cropped_ctf.CalculateCTFImage(o_.ctf);
+        cropped_ctf.CalculateCTFImage(binned_ctf);
         GpuImage d_cropped_ctf(cropped_ctf);
         d_cropped_ctf.CopyHostToDevice(cropped_ctf);
         binned_ctf_applied_after.MultiplyPixelWise(d_cropped_ctf);
@@ -308,7 +314,7 @@ bool DoLerpWithCTF(const wxString& cistem_ref_dir, const wxString& temp_director
         float SS_ctf_post  = binned_ctf_applied_after.ReturnSumOfSquares( );
 
         // We expect the CTF to be applied after the lerp to be the same as the CTF applied to the full size image and then cropped.
-        passed = passed && FloatsAreAlmostTheSame(SS_ctf_intra, 0.f) && ! FloatsAreAlmostTheSame(SS_ctf_post, 0.f);
+        passed = passed && FloatsAreAlmostTheSame(SS_ctf_intra, 0.f) && FloatsAreAlmostTheSame(SS_ctf_post, 0.f);
     }
 
     all_passed = passed ? all_passed : false;

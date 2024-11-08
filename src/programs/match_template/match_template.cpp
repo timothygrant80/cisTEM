@@ -654,9 +654,9 @@ bool MatchTemplateApp::DoCalculation( ) {
         GPU = new TemplateMatchingCore[max_threads];
         gpuDev.Init(nGPUs);
         profile_timing.lap("Init GPU");
-//    wxPrintf("Host: %s is running\nnThreads: %d\nnGPUs: %d\n:nSearchPos %d \n",hostNameBuffer,nThreads, nGPUs, maxPos);
+        //    wxPrintf("Host: %s is running\nnThreads: %d\nnGPUs: %d\n:nSearchPos %d \n",hostNameBuffer,nThreads, nGPUs, maxPos);
 
-//    TemplateMatchingCore GPU(number_of_jobs_per_image_in_gui);
+        //    TemplateMatchingCore GPU(number_of_jobs_per_image_in_gui);
 #endif
     }
 

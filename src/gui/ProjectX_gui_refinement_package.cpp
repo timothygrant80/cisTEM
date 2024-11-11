@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version 3.10.1-0-g8feb16b3)
+// C++ code generated with wxFormBuilder (version 3.10.0-4761b0c)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO *NOT* EDIT THIS FILE!
@@ -539,7 +539,7 @@ RefinementPackageAssetPanel::RefinementPackageAssetPanel( wxWindow* parent, wxWi
 	ImportButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnImportClick ), NULL, this );
 	ExportButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnExportClick ), NULL, this );
 	CombineButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnCombineClick ), NULL, this );
-	BinButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnBinClick ), NULL, this );
+	BinButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnResampleClick ), NULL, this );
 	RefinementPackageListCtrl->Connect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( RefinementPackageAssetPanel::MouseCheckPackagesVeto ), NULL, this );
 	RefinementPackageListCtrl->Connect( wxEVT_LEFT_DOWN, wxMouseEventHandler( RefinementPackageAssetPanel::MouseCheckPackagesVeto ), NULL, this );
 	RefinementPackageListCtrl->Connect( wxEVT_LEFT_UP, wxMouseEventHandler( RefinementPackageAssetPanel::MouseVeto ), NULL, this );
@@ -578,7 +578,7 @@ RefinementPackageAssetPanel::~RefinementPackageAssetPanel()
 	ImportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnImportClick ), NULL, this );
 	ExportButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnExportClick ), NULL, this );
 	CombineButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnCombineClick ), NULL, this );
-	BinButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnBinClick ), NULL, this );
+	BinButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementPackageAssetPanel::OnResampleClick ), NULL, this );
 	RefinementPackageListCtrl->Disconnect( wxEVT_LEFT_DCLICK, wxMouseEventHandler( RefinementPackageAssetPanel::MouseCheckPackagesVeto ), NULL, this );
 	RefinementPackageListCtrl->Disconnect( wxEVT_LEFT_DOWN, wxMouseEventHandler( RefinementPackageAssetPanel::MouseCheckPackagesVeto ), NULL, this );
 	RefinementPackageListCtrl->Disconnect( wxEVT_LEFT_UP, wxMouseEventHandler( RefinementPackageAssetPanel::MouseVeto ), NULL, this );

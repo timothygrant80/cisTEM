@@ -1,5 +1,5 @@
-#ifndef __ImportRefinementPackageWizard__
-#define __ImportRefinementPackageWizard__
+#ifndef __src_gui_ImportRefinementPackageWizard__
+#define __src_gui_ImportRefinementPackageWizard__
 
 class ImportRefinementPackageWizard : public ImportRefinementPackageWizardParent {
   protected:
@@ -29,6 +29,9 @@ class ImportRefinementPackageWizard : public ImportRefinementPackageWizardParent
         if ( win )
             win->Enable(true);
     }
-};
 
+  private:
+    template <typename StarFileSource_t>
+    void ImportRefinementPackage(StarFileSource_t& input_params_file, const int stack_x_size, const int stack_num_images);
+};
 #endif

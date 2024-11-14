@@ -78,7 +78,7 @@ void TemplateMatchingDataSizer::SetImageAndTemplateSizing(const float wanted_hig
  * 
  * @param input_image 
  */
-void TemplateMatchingDataSizer::PreProcessInputImage(Image& input_image, int mask_central_cross_width, bool swap_real_space_quadrants, bool normalize_to_variance_one) {
+void TemplateMatchingDataSizer::PreProcessInputImage(Image& input_image, bool swap_real_space_quadrants, bool normalize_to_variance_one) {
 
     // We whiten the image prior to any padding etc in particular to remove any low-frequency gradients that would add to boundary dislocations.
     // We may also whiten following any further resampling and resizing or other ops that are done to the image. We need to keep track of the total filtering applied.
@@ -91,11 +91,11 @@ void TemplateMatchingDataSizer::PreProcessInputImage(Image& input_image, int mas
         // We'll accumulate the local whitening filter at the end of the method
         whitening_filter_ptr = std::make_unique<Curve>(local_whitening_filter);
         whitening_filter_ptr->SetYToConstant(1.0f);
+        // This won't work for movie frames (13.0 is used in unblur) TODO use poisson stats
+        input_image.ReplaceOutliersWithMean(5.0f);
     }
     // We could also check and FFT if necessary similar to Resize() but we are assuming the input image is in real space.
     MyDebugAssertTrue(input_image.is_in_real_space, "Input image must be in real space");
-    // This won't work for movie frames (13.0 is used in unblur) TODO use poisson stats
-    input_image.ReplaceOutliersWithMean(5.0f);
 
 #ifdef DEBUG_IMG_OUTPUT
     if ( ReturnThreadNumberOfCurrentThread( ) == 0 )
@@ -115,9 +115,6 @@ void TemplateMatchingDataSizer::PreProcessInputImage(Image& input_image, int mas
 
     input_image.ApplyCurveFilter(&local_whitening_filter);
 
-    if ( mask_central_cross_width > 0 )
-        input_image.MaskCentralCross(mask_central_cross_width, mask_central_cross_width);
-
     if ( whitening_filter_ptr ) {
         whitening_filter_ptr->ResampleCurve(whitening_filter_ptr.get( ), local_whitening_filter.NumberOfPoints( ));
         local_whitening_filter.ResampleCurve(&local_whitening_filter, whitening_filter_ptr->NumberOfPoints( ));
@@ -129,6 +126,7 @@ void TemplateMatchingDataSizer::PreProcessInputImage(Image& input_image, int mas
     if ( normalize_to_variance_one ) {
         // Presumably for Pre-processing (where we need the realspace variance = 1 so noise in padding reginos matchs)
         // TODO: rename so the real space vs FFT is clear
+
         input_image.DivideByConstant(sqrtf(input_image.ReturnSumOfSquares( )));
         input_image.BackwardFFT( );
     }
@@ -513,7 +511,7 @@ void TemplateMatchingDataSizer::ResizeTemplate_postSearch(Image& template_image)
     MyAssertTrue(false, "Not yet implemented");
 };
 
-void TemplateMatchingDataSizer::ResizeImage_preSearch(Image& input_image) {
+void TemplateMatchingDataSizer::ResizeImage_preSearch(Image& input_image, const int central_cross_half_width) {
     MyDebugAssertTrue(sizing_is_set, "Sizing has not been set");
 
     if ( resampling_is_needed ) {
@@ -562,6 +560,19 @@ void TemplateMatchingDataSizer::ResizeImage_preSearch(Image& input_image) {
 #ifdef DEBUG_IMG_OUTPUT
         if ( ReturnThreadNumberOfCurrentThread( ) == 0 )
             input_image.QuickAndDirtyWriteSlice(DEBUG_IMG_OUTPUT "/input_image_resized.mrc", 1);
+#endif
+
+        if ( central_cross_half_width > 0 ) {
+            input_image.ForwardFFT( );
+
+            input_image.MaskCentralCross(central_cross_half_width, central_cross_half_width);
+
+            input_image.BackwardFFT( );
+                }
+
+#ifdef DEBUG_IMG_OUTPUT
+        if ( ReturnThreadNumberOfCurrentThread( ) == 0 )
+            input_image.QuickAndDirtyWriteSlice(DEBUG_IMG_OUTPUT "/input_image_resized_masked.mrc", 1);
         DEBUG_ABORT;
 #endif
     }
@@ -659,7 +670,6 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& input_image,
 
     // Work through the transformations backward to get to the original image size
     if ( is_rotated_by_90 ) {
-
         // swap the bounds
         float tmp_x = x_radius;
         x_radius    = y_radius;
@@ -693,7 +703,6 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& input_image,
     constexpr float no_value    = 0.f;
 
     if ( resampling_is_needed ) {
-
         // original size -> pad to square -> crop to binned -> pad to fourier
         // The new images at the square binned size (remove the padding to power of two)
 
@@ -801,14 +810,12 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& input_image,
     valid_area_mask.SetToConstant(1.0f);
     constexpr float mask_radius = 7.f;
 
-    valid_area_mask.SetToConstant(1.0f);
     valid_area_mask.CosineRectangularMask(x_radius, y_radius, 0, mask_radius, false, true, 0.f);
 
     valid_area_mask.Binarise(0.9f);
     valid_area_mask.ZeroFFTWPadding( );
 
     if ( resampling_is_needed ) {
-
         FillInNearestNeighbors(best_psi, tmp_psi, valid_area_mask, NN_no_value);
         FillInNearestNeighbors(best_phi, tmp_phi, valid_area_mask, NN_no_value);
         FillInNearestNeighbors(best_theta, tmp_theta, valid_area_mask, NN_no_value);

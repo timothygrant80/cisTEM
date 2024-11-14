@@ -10945,7 +10945,7 @@ float Image::Skew2D(Image& skewed_image, float height_offset, float minimum_heig
 }
 
 //BEGIN_FOR_STAND_ALONE_CTFFIND
-float Image::ReturnLinearInterpolated2D(float& wanted_physical_x_coordinate, float& wanted_physical_y_coordinate) {
+float Image::ReturnLinearInterpolated2D(const float wanted_physical_x_coordinate, const float wanted_physical_y_coordinate) {
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
     MyDebugAssertTrue(is_in_real_space, "Is in Fourier space");
 

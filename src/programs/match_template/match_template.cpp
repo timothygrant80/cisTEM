@@ -104,6 +104,7 @@ void MatchTemplateApp::ProgramSpecificInit( ) {
 void MatchTemplateApp::AddCommandLineOptions( ) {
     command_line_parser.AddOption("", "histogram-sampling", "Random sampling of the histogram, fraction sampled. 0.05 - 1.0 [1.0 default]", wxCMD_LINE_VAL_DOUBLE);
     command_line_parser.AddOption("", "stats-sampling", "Random sampling of the statistical arrays, fraction sampled. 0.05 - 1.0 [1.0 default]", wxCMD_LINE_VAL_DOUBLE);
+    command_line_parser.AddOption("", "central-cross-half-width", "Half width of the central cross for line artifacts [0 default ]", wxCMD_LINE_VAL_NUMBER);
     command_line_parser.AddLongSwitch("disable-gpu-prj", "Disable projection using the gpu. Default false");
 }
 
@@ -264,9 +265,12 @@ bool MatchTemplateApp::DoCalculation( ) {
     wxDateTime start_time = wxDateTime::Now( );
 
     double temp_double;
-    float  histogram_sampling = 1.0f;
-    float  stats_sampling     = 1.0f;
-    bool   use_gpu_prj        = true;
+    long   temp_long;
+    float  histogram_sampling       = 1.0f;
+    float  stats_sampling           = 1.0f;
+    bool   use_gpu_prj              = true;
+    int    central_cross_half_width = 0;
+
     if ( command_line_parser.Found("histogram-sampling", &temp_double) ) {
         std::cerr << "histogram-sampling: " << temp_double << std::endl;
         histogram_sampling = float(temp_double);
@@ -278,6 +282,10 @@ bool MatchTemplateApp::DoCalculation( ) {
     if ( command_line_parser.FoundSwitch("disable-gpu-prj") ) {
         SendInfo("Disabling GPU projection\n");
         use_gpu_prj = false;
+    }
+    if ( command_line_parser.Found("central-cross-half-width", &temp_long) ) {
+        SendInfo("Central cross half width set to: " + wxString::Format("%ld", temp_long) + "\n");
+        central_cross_half_width = temp_long;
     }
 
     wxString input_search_images_filename    = my_current_job.arguments[0].ReturnStringArgument( );
@@ -435,13 +443,13 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     profile_timing.start("PreProcessInputImage");
     TemplateMatchingDataSizer data_sizer(this, input_image, input_reconstruction, input_pixel_size, padding);
-    data_sizer.PreProcessInputImage(input_image, 0);
+    data_sizer.PreProcessInputImage(input_image, false, true);
     profile_timing.lap("PreProcessInputImage");
 
     profile_timing.start("Resize_preSearch");
     data_sizer.SetImageAndTemplateSizing(high_resolution_limit_search, use_fast_fft);
     data_sizer.ResizeTemplate_preSearch(input_reconstruction, use_lerp_not_fourier_resampling);
-    data_sizer.ResizeImage_preSearch(input_image);
+    data_sizer.ResizeImage_preSearch(input_image, central_cross_half_width);
     profile_timing.lap("Resize_preSearch");
 
     if ( data_sizer.IsRotatedBy90( ) )

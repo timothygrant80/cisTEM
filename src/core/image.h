@@ -254,7 +254,7 @@ class Image {
     void                RotateInPlaceAboutZBy90Degrees(bool rotate_by_positive_90 = true, bool preserve_origin = false);
     void                Rotate2DSample(Image& rotated_image, AnglesAndShifts& rotation_angle, float mask_radius_in_pixels = 0.0);
     float               Skew2D(Image& skewed_image, float height_offset, float minimum_height, float skew_axis, float skew_angle, bool adjust_signal = false);
-    float               ReturnLinearInterpolated2D(float& wanted_physical_x_coordinate, float& wanted_physical_y_coordinate);
+    float               ReturnLinearInterpolated2D(const float wanted_physical_x_coordinate, const float wanted_physical_y_coordinate);
     float               ReturnNearest2D(float& wanted_physical_x_coordinate, float& wanted_physical_y_coordinate);
     void                ExtractSlice(Image& image_to_extract, AnglesAndShifts& angles_and_shifts_of_image, float resolution_limit = 1.0, bool apply_resolution_limit = true);
     void                ExtractSliceByRotMatrix(Image& image_to_extract, RotationMatrix& wanted_matrix, float resolution_limit = 1.0, bool apply_resolution_limit = true);

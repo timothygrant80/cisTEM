@@ -8,8 +8,8 @@
 // #define USE_NEAREST_NEIGHBOR_INTERPOLATION
 // The USE_ZERO_PADDING_NOT_NOISE should be defined as padding with noise in real-space adds power to the noise
 // in every Fourier voxel reducing the SSNR. I'm leaving the option here to test noise padding for pathological images in the future.
-// #define USE_ZERO_PADDING_NOT_NOISE
-#define USE_REPLICATIVE_PADDING
+//#define USE_ZERO_PADDING_NOT_NOISE
+// #define USE_REPLICATIVE_PADDING
 
 constexpr bool  MUST_BE_POWER_OF_TWO                   = false; // Required for half-precision xforms
 constexpr int   MUST_BE_FACTOR_OF                      = 0; // May be faster
@@ -102,9 +102,9 @@ class TemplateMatchingDataSizer {
     // TemplateMatchingDataSizer& operator=(TemplateMatchingDataSizer&&)      = delete;
 
     void SetImageAndTemplateSizing(const float wanted_high_resolution_limit, const bool use_fast_fft);
-    void PreProcessInputImage(Image& input_image, int mask_central_cross_width, bool swap_real_space_quadrants = false, bool normalize_to_variance_one = true);
+    void PreProcessInputImage(Image& input_image, bool swap_real_space_quadrants, bool normalize_to_variance_one);
 
-    void PreProcessResizedInputImage(Image& input_image) { PreProcessInputImage(input_image, 0, true, false); }
+    void PreProcessResizedInputImage(Image& input_image) { PreProcessInputImage(input_image, true, false); }
 
     void ResizeTemplate_preSearch(Image& template_image, const bool use_lerp_not_fourier_resampling = false);
     void ResizeTemplate_postSearch(Image& template_image);
@@ -112,7 +112,7 @@ class TemplateMatchingDataSizer {
     // All statistical images (mip, psi etc.) are originally allocated based on the pre-processed input_image size,
     // and so only the input image needs attention at the outset. Following the search, all statistical images
     // will also need to be resized.
-    void ResizeImage_preSearch(Image& input_image);
+    void ResizeImage_preSearch(Image& input_image, const int central_cross_half_width);
     void ResizeImage_postSearch(Image& input_image,
                                 Image& max_intensity_projection,
                                 Image& best_psi,

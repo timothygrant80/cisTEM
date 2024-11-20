@@ -5201,7 +5201,7 @@ void GpuImage::ExtractSliceShiftAndCtf(GpuImage*        volume_to_extract_from,
     // MyDebugAssertTrue(IsCubic( ), "Image volume to project is not cubic"); // This is checked on call to CopyHostToDeviceTextureComplex
     MyDebugAssertFalse(volume_to_extract_from->object_is_centred_in_box, "Image volume quadrants not swapped");
     MyDebugAssertTrue(volume_to_extract_from->is_fft_centered_in_box, "Image volume Fourier quadrants not swapped as required for texture locality");
-    MyDebugAssertTrue(real_space_binning_factor >= 1.0f, "Error: real space binning factor must be >= 1.0");
+    // MyDebugAssertTrue(real_space_binning_factor >= 1.0f, "Error: real space binning factor must be >= 1.0");
     if ( apply_ctf ) {
         // FIXME:
         if constexpr ( use_ctf_texture ) {
@@ -5231,22 +5231,22 @@ void GpuImage::ExtractSliceShiftAndCtf(GpuImage*        volume_to_extract_from,
     // Image::Whiten() defaults to a res limit of 1.0, so we need to match that in the event we opt to not apply a res li mit
     bool  do_binning                   = false;
     float fourier_space_binning_factor = 1.0f;
-    if ( real_space_binning_factor > 1.0f ) {
-        // I haven't thought yet how (or even if) these ops would be affected, so for now, disallow
-        // MyDebugAssertFalse(apply_resolution_limit, "Error: resolution limit not supported with binning");
-        MyDebugAssertFalse(apply_shifts, "Error: shifts not supported with binning");
-        // The spatial frequency to interpolate from the 3d to the 3d will be based on the smaller 2d's dimensions.
-        // Spatial freq = 0.5 in the small image would come from spatial freq 0.25 when binned by 2.
-        // Rather than pass in information about the volumes size, adjust the binning factor to convey this.
-        float vol_ratio = float(volume_to_extract_from->dims.y) / float(dims.y);
-        // If binning = 2 and vol ratio = 2, then the physical coord calculated in the kernel will already be correct
-        // if binning = 2 and vol ratio = 1, then the physical coord calculated in the kernel will be half the size of the volume
-        fourier_space_binning_factor = vol_ratio / real_space_binning_factor;
-        do_binning                   = true;
+    // if ( real_space_binning_factor != 1.0f ) {
+    // I haven't thought yet how (or even if) these ops would be affected, so for now, disallow
+    // MyDebugAssertFalse(apply_resolution_limit, "Error: resolution limit not supported with binning");
+    MyDebugAssertFalse(apply_shifts, "Error: shifts not supported with binning");
+    // The spatial frequency to interpolate from the 3d to the 3d will be based on the smaller 2d's dimensions.
+    // Spatial freq = 0.5 in the small image would come from spatial freq 0.25 when binned by 2.
+    // Rather than pass in information about the volumes size, adjust the binning factor to convey this.
+    float vol_ratio = float(volume_to_extract_from->dims.y) / float(dims.y);
+    // If binning = 2 and vol ratio = 2, then the physical coord calculated in the kernel will already be correct
+    // if binning = 2 and vol ratio = 1, then the physical coord calculated in the kernel will be half the size of the volume
+    fourier_space_binning_factor = vol_ratio / real_space_binning_factor;
+    do_binning                   = true;
 
-        // FIXME: I can see the case where we have
-        // MyDebugAssertTrue(dims.x <= volume_to_extract_from->dims.x, "Error: projection may be arbitrarily size as long as it is smaller than the 3d");
-    }
+    // FIXME: I can see the case where we have
+    // MyDebugAssertTrue(dims.x <= volume_to_extract_from->dims.x, "Error: projection may be arbitrarily size as long as it is smaller than the 3d");
+    // }
 
     float2 shifts = make_float2(angles_and_shifts.ReturnShiftX( ), angles_and_shifts.ReturnShiftY( ));
     if ( apply_shifts ) {

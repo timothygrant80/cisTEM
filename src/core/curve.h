@@ -86,6 +86,7 @@ class Curve {
     void  AddWith(Curve* other_curve);
     void  DivideBy(Curve* other_curve);
     void  SetupXAxis(const float lower_bound, const float upper_bound, const int wanted_number_of_points);
+    void  SetupXAxisForFourierSpace(const int logical_x_dimension, const float dimension);
     float ReturnMaximumValue( );
     float ReturnMode( );
     void  ComputeMaximumValueAndMode(float& maximum_value, float& mode);

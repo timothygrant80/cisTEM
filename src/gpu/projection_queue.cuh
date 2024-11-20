@@ -1,7 +1,7 @@
 #ifndef __SRC_GPU_PROJECTION_QUEUE_CUH__
 #define __SRC_GPU_PROJECTION_QUEUE_CUH__
 
-constexpr int n_prjs = 2;
+constexpr int n_prjs = 20;
 
 #include "../core/stopwatch.h"
 
@@ -26,10 +26,10 @@ class ProjectionQueue {
         // We don't need to do anything if the queue has only one member
         ResetQueues( );
 
-        int least_priority, highest_priority;
-        cudaErr(cudaDeviceGetStreamPriorityRange(&least_priority, &highest_priority));
+        int lowest_priority, highest_priority;
+        cudaErr(cudaDeviceGetStreamPriorityRange(&lowest_priority, &highest_priority));
         for ( int i = 0; i < n_prjs_in_queue_; i++ ) {
-            cudaErr(cudaStreamCreateWithPriority(&gpu_projection_stream[i], cudaStreamNonBlocking, highest_priority - 1));
+            cudaErr(cudaStreamCreateWithPriority(&gpu_projection_stream[i], cudaStreamNonBlocking, lowest_priority));
             cudaErr(cudaEventCreateWithFlags(&gpu_projection_is_ready_Event[i], cudaEventBlockingSync));
             cudaErr(cudaEventCreateWithFlags(&cpu_projection_is_writeable_Event[i], cudaEventBlockingSync));
         }
@@ -62,6 +62,7 @@ class ProjectionQueue {
                 break;
             }
             else {
+                // Remove the oldest projections if they are ready and place them back in the available queue.
                 available_prj_queue.push(submitted_prj_queue.front( ));
                 submitted_prj_queue.pop( );
             }

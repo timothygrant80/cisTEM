@@ -7927,13 +7927,22 @@ void Image::ClipInto(Image* other_image, float wanted_padding_value, bool fill_w
         MyDebugAssertTrue(object_is_centred_in_box, "real space image, not centred in box");
 
         for ( kk = 0; kk < other_image->logical_z_dimension; kk++ ) {
+            // kk_logi => the vector from the centered origin in the destination image to the current physical pixel in the destination image
             kk_logi = kk - other_image->physical_address_of_box_center_z;
-            k       = physical_address_of_box_center_z + wanted_coordinate_of_box_center_z + kk_logi;
+            // k => coordinate of the source image that has the same logical coordinate (relative to the center of the image) plus
+            // the offset to the box center. This as offsetting the origin of the source image (a passive transformation)
+            // So a positive shift of the origin results in a negative shift of the image.
+
+            k = physical_address_of_box_center_z + wanted_coordinate_of_box_center_z + kk_logi;
 
             for ( jj = 0; jj < other_image->logical_y_dimension; jj++ ) {
                 jj_logi = jj - other_image->physical_address_of_box_center_y;
                 j       = physical_address_of_box_center_y + wanted_coordinate_of_box_center_y + jj_logi;
 
+                // the k/j conditions will be the same for all x, so do them first for the whole valid linel
+                // the valid line can be solved for by x_l - other_ox + this_oxx + offset >= 0 , so x_l >= other_ox - this_oxx - offset
+                // similarly logical_x_dimension > x_h - other_ox + this_oxx + offset, so x_h < logical_x_dimension + other_ox - this_oxx - offset
+                // Then we can get rid of the conditions in the inner loop. if skipping noise, just the copy, otherwise 3 for loops to fill.
                 for ( ii = 0; ii < other_image->logical_x_dimension; ii++ ) {
                     ii_logi = ii - other_image->physical_address_of_box_center_x;
                     i       = physical_address_of_box_center_x + wanted_coordinate_of_box_center_x + ii_logi;

@@ -106,15 +106,14 @@ class TemplateMatchingDataSizer {
 
     void PreProcessResizedInputImage(Image& input_image) { PreProcessInputImage(input_image, true, false); }
 
-    void ResizeTemplate_preSearch(Image& template_image, const bool use_lerp_not_fourier_resampling = false);
+    void ResizeTemplate_preSearch(Image& template_image, const bool use_lerp_not_fourier_resampling = false, const bool allow_upsampling = false);
     void ResizeTemplate_postSearch(Image& template_image);
 
     // All statistical images (mip, psi etc.) are originally allocated based on the pre-processed input_image size,
     // and so only the input image needs attention at the outset. Following the search, all statistical images
     // will also need to be resized.
     void ResizeImage_preSearch(Image& input_image, const int central_cross_half_width);
-    void ResizeImage_postSearch(Image& input_image,
-                                Image& max_intensity_projection,
+    void ResizeImage_postSearch(Image& max_intensity_projection,
                                 Image& best_psi,
                                 Image& best_phi,
                                 Image& best_theta,

@@ -160,6 +160,13 @@ void Curve::SetupXAxis(const float lower_bound, const float upper_bound, const i
     }
 }
 
+void Curve::SetupXAxisForFourierSpace(const int logical_x_dimension, const float dimension) {
+    MyDebugAssertTrue(logical_x_dimension > 1, "Bad number of points");
+    MyDebugAssertTrue(dimension == 2 || dimension == 3, "Bad dimension");
+
+    SetupXAxis(0.0f, 0.5f * sqrtf(dimension), int((logical_x_dimension / 2.0f + 1.0f) * sqrtf(dimension) + 1.0f));
+}
+
 /**
  * @brief Sets all data_y to 0 (calls SetYToConstant(0.f))
  * 

@@ -25,6 +25,7 @@ using namespace cistem_timer_noop;
 #endif
 
 #define USE_LERP_NOT_FOURIER_RESIZING
+#define TEST_SINC
 
 class AggregatedTemplateResult {
 
@@ -272,11 +273,9 @@ bool MatchTemplateApp::DoCalculation( ) {
     int    central_cross_half_width = 0;
 
     if ( command_line_parser.Found("histogram-sampling", &temp_double) ) {
-        std::cerr << "histogram-sampling: " << temp_double << std::endl;
         histogram_sampling = float(temp_double);
     }
     if ( command_line_parser.Found("stats-sampling", &temp_double) ) {
-        std::cerr << "stats-sampling: " << temp_double << std::endl;
         stats_sampling = float(temp_double);
     }
     if ( command_line_parser.FoundSwitch("disable-gpu-prj") ) {
@@ -448,7 +447,11 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     profile_timing.start("Resize_preSearch");
     data_sizer.SetImageAndTemplateSizing(high_resolution_limit_search, use_fast_fft);
-    data_sizer.ResizeTemplate_preSearch(input_reconstruction, use_lerp_not_fourier_resampling);
+#ifdef TEST_SINC
+    data_sizer.ResizeTemplate_preSearch(input_reconstruction, use_lerp_not_fourier_resampling, true);
+#else
+    data_sizer.ResizeTemplate_preSearch(input_reconstruction, use_lerp_not_fourier_resampling, false);
+#endif
     data_sizer.ResizeImage_preSearch(input_image, central_cross_half_width);
     profile_timing.lap("Resize_preSearch");
 
@@ -506,7 +509,12 @@ bool MatchTemplateApp::DoCalculation( ) {
     else {
         wanted_pre_projection_pixel_size = data_sizer.GetSearchPixelSize( );
     }
-    wanted_pre_projection_template_size = input_reconstruction.logical_x_dimension;
+
+#ifdef TEST_SINC
+    wanted_pre_projection_template_size = data_sizer.GetTemplateSizeX( );
+#else
+    wanted_pre_projection_template_size = data_sizer.GetTemplateSearchSizeX( );
+#endif
 
     wxPrintf("values are %i %i %f %f %f\n", wanted_pre_projection_template_size, data_sizer.GetTemplateSearchSizeX( ), wanted_pre_projection_pixel_size, data_sizer.GetPixelSize( ), data_sizer.GetSearchPixelSize( ));
 
@@ -672,7 +680,6 @@ bool MatchTemplateApp::DoCalculation( ) {
         my_progress = new ProgressBar(total_correlation_positions_per_thread);
     }
 
-    //    wxPrintf("Starting job\n");
     for ( size_i = -myroundint(float(pixel_size_search_range) / float(pixel_size_step)); size_i <= myroundint(float(pixel_size_search_range) / float(pixel_size_step)); size_i++ ) {
         profile_timing.start("ChangePixelSize");
         // Manually set this so that if we do loop over the pixel size, it doesn't create any problems with the gpu branch
@@ -714,7 +721,6 @@ bool MatchTemplateApp::DoCalculation( ) {
                 if ( first_gpu_loop ) {
 
 #ifdef USE_LERP_NOT_FOURIER_RESIZING
-                    std::cerr << "\n\nUsing LERP\n\n";
                     GPU[tIDX].use_lerp_for_resizing = true;
                     GPU[tIDX].binning_factor        = data_sizer.GetFullBinningFactor( );
 #endif
@@ -748,12 +754,10 @@ bool MatchTemplateApp::DoCalculation( ) {
                     if ( ! use_gpu_prj ) {
                         GPU[tIDX].SetCpuTemplate(&template_reconstruction);
                     }
-
-                    wxPrintf("%d\n", tIDX);
-                    wxPrintf("%d\n", t_first_search_position);
-                    wxPrintf("%d\n", t_last_search_position);
-                    wxPrintf("Staring TemplateMatchingCore object %d to work on position range %d-%d\n", tIDX, t_first_search_position, t_last_search_position);
-
+#pragma omp critical
+                    {
+                        wxPrintf("Staring TemplateMatchingCore object %d to work on position range %d-%d\n", tIDX, t_first_search_position, t_last_search_position);
+                    }
                     first_gpu_loop = false;
                 }
                 else {
@@ -762,6 +766,7 @@ bool MatchTemplateApp::DoCalculation( ) {
             } // end of omp block
 #endif
         }
+
         for ( defocus_i = -myroundint(float(defocus_search_range) / float(defocus_step)); defocus_i <= myroundint(float(defocus_search_range) / float(defocus_step)); defocus_i++ ) {
 
             profile_timing.start("Ctf and whitening filter");
@@ -772,8 +777,7 @@ bool MatchTemplateApp::DoCalculation( ) {
             // Reset this bool since we will overwrite all values in the CTF image.
             projection_filter.is_fft_centered_in_box = false;
             projection_filter.CalculateCTFImage(input_ctf);
-            for ( int i = 0; i < 1; i++ )
-                projection_filter.ApplyCurveFilter(data_sizer.whitening_filter_ptr.get( ));
+            projection_filter.ApplyCurveFilter(data_sizer.whitening_filter_ptr.get( ));
 
             profile_timing.lap("Ctf and whitening filter");
 
@@ -959,8 +963,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     correlation_pixel_sum_image.ZeroFFTWPadding( );
     correlation_pixel_sum_of_squares_image.ZeroFFTWPadding( );
 
-    data_sizer.ResizeImage_postSearch(input_image,
-                                      max_intensity_projection,
+    data_sizer.ResizeImage_postSearch(max_intensity_projection,
                                       best_psi,
                                       best_phi,
                                       best_theta,
@@ -1273,7 +1276,6 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
 
         ImageFile input_reconstruction_file;
         input_reconstruction_file.OpenFile(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[1].ReturnStringArgument( ), false);
-        // FIXME: this is not correct BROKEN needs to use valid area (add to constants and reference here based on data_sizer)
         int   image_size_x                  = aggregated_results[array_location].collated_data_array[cistem::match_template::image_size_x];
         int   image_size_y                  = aggregated_results[array_location].collated_data_array[cistem::match_template::image_size_y];
         int   image_real_memory_allocated   = aggregated_results[array_location].collated_data_array[cistem::match_template::image_real_memory_allocated];
@@ -1590,8 +1592,6 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
 
                 result_image.InsertOtherImageAtSpecifiedPosition(&current_projection, current_peak.x - result_image.physical_address_of_box_center_x, current_peak.y - result_image.physical_address_of_box_center_y, 0, 0.0f);
                 all_peak_infos.Add(temp_peak_info);
-
-                //current_projection.QuickAndDirtyWriteSlice("/tmp/projs.mrc", all_peak_infos.GetCount());
             }
             else {
                 SendInfo("WARNING: More than 1000 peaks above threshold were found. Limiting results to 1000 peaks.\n");

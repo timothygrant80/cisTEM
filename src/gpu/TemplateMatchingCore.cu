@@ -33,9 +33,7 @@ void TemplateMatchingCore::Init(MyApp*                    parent_pointer,
                                 bool                      is_running_locally,
                                 bool                      use_fast_fft,
                                 bool                      use_gpu_prj,
-                                int                       number_of_global_search_images_to_save)
-
-{
+                                int                       number_of_global_search_images_to_save) {
 
     MyDebugAssertFalse(object_initialized_, "Init must only be called once!");
     MyDebugAssertFalse(wanted_input_image.is_in_real_space, "Input image must be in Fourier space");
@@ -195,7 +193,6 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter,
 
     int thisDevice;
     cudaGetDevice(&thisDevice);
-    wxPrintf("Thread %d is running on device %d\n", threadIDX, thisDevice);
 
     GpuImage d_projection_filter(projection_filter);
     if ( use_gpu_prj ) {
@@ -259,7 +256,11 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter,
                 // Default GpuImage methods are in cudaStreamPerThread
 
                 d_current_projection[current_projection_idx].BackwardFFT( );
-                ;
+
+                if constexpr ( trouble_shoot_mip ) {
+                    cudaErr(cudaDeviceSynchronize( ));
+                    d_current_projection[current_projection_idx].QuickAndDirtyWriteSlice("gpu_prj.mrc", 1);
+                }
             }
             else {
                 // Make sure the previous copy from host -> device has completed before we start to make another projection.
@@ -288,6 +289,10 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter,
                 // Note: I had deleted this in the dev branch for FastFFT. Review when possible
                 // The average in the full padded image will be different;
                 // average_of_reals *= ((float)d_current_projection[current_projection_idx].number_of_real_space_pixels / (float)d_padded_reference.number_of_real_space_pixels);
+                if constexpr ( trouble_shoot_mip ) {
+                    cudaErr(cudaDeviceSynchronize( ));
+                    d_current_projection[current_projection_idx].QuickAndDirtyWriteSlice("gpu_prj.mrc", 1);
+                }
             }
 
             // For the host to execute the preceding line, it was to wait on the return value from ReturnSumOfSquares. This could be a bit of a performance regression as otherwise it can queue up all the reamining
@@ -303,14 +308,14 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter,
                 scale_factor = 1.0f;
                 // d_current_projection[current_projection_idx].MultiplyByConstant(scale_factor);
                 d_current_projection[current_projection_idx].NormalizeRealSpaceStdDeviationAndCastToFp16(scale_factor, average_of_reals, average_on_edge);
-
-                FT.FwdImageInvFFT(d_current_projection[current_projection_idx].real_values_fp16, (__half2*)d_input_image.complex_values_fp16, my_dist->GetCCFArray(current_mip_to_process), noop, conj_mul_then_scale, noop);
-
+                // Since we have cast the projection to the fp16 buffer, we need to let the host know that this gpu projection is ready to receive another projection
+                // This needs to be placed in the main stream as that is where GPU methods default to.
                 if ( use_gpu_prj ) {
                     // Note the stream change will not affect the padded projection
                     projection_queue.RecordProjectionReadyBlockingHost(current_projection_idx, cudaStreamPerThread);
                 }
 
+                FT.FwdImageInvFFT(d_current_projection[current_projection_idx].real_values_fp16, (__half2*)d_input_image.complex_values_fp16, my_dist->GetCCFArray(current_mip_to_process), noop, conj_mul_then_scale, noop);
 #endif
             }
             else {
@@ -320,6 +325,7 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter,
                 d_current_projection[current_projection_idx].ClipInto(&d_padded_reference, 0, false, 0, 0, 0, 0);
                 // d_current_projection[current_projection_idx].MultiplyByConstant(rsqrtf(d_current_projection[current_projection_idx].ReturnSumOfSquares( ) / (float)d_padded_reference.number_of_real_space_pixels - (average_of_reals * average_of_reals)));
 
+                // Unlike with FastFFT we stay in the fp32 buffer, but after clip into we are now in padded reference so this projection is ready for re-use
                 if ( use_gpu_prj ) {
                     // Note the stream change will not affect the padded projection
                     projection_queue.RecordProjectionReadyBlockingHost(current_projection_idx, cudaStreamPerThread);
@@ -431,7 +437,7 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter,
     }
     else {
         // if somehow we search less than 100 positions, we never will have run the above code
-        if ( ~at_least_100 ) {
+        if ( ! at_least_100 ) {
             my_dist->CopySumAndSumSqAndZero(d_sum1, d_sumSq1);
         }
     }

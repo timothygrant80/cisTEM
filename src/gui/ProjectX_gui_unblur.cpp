@@ -545,8 +545,6 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 
 	ExpertPanel = new wxScrolledWindow( this, wxID_ANY, wxDefaultPosition, wxSize( -1,-1 ), wxVSCROLL );
 	ExpertPanel->SetScrollRate( 5, 5 );
-	ExpertPanel->Hide();
-
 	InputSizer = new wxBoxSizer( wxVERTICAL );
 
 	wxFlexGridSizer* fgSizer1;
@@ -693,6 +691,22 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	SaveScaledSumCheckbox = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Also Save Scaled Sum?"), wxDefaultPosition, wxDefaultSize, 0 );
 	SaveScaledSumCheckbox->SetValue(true);
 	fgSizer1->Add( SaveScaledSumCheckbox, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	BinningFactorCheckBox = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Override Binning Factor?"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer1->Add( BinningFactorCheckBox, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	m_staticText461 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tBinning Factor:"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText461->Wrap( -1 );
+	fgSizer1->Add( m_staticText461, 0, wxALL, 5 );
+
+	binning_factor_text = new wxTextCtrl( ExpertPanel, wxID_ANY, wxT("2.0"), wxDefaultPosition, wxDefaultSize, 0 );
+	fgSizer1->Add( binning_factor_text, 0, wxALL, 5 );
 
 
 	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );

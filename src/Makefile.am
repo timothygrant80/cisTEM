@@ -29,6 +29,7 @@ noinst_HEADERS = core/stopwatch.h \
                  core/run_profile.h \
                  core/run_profile_manager.h \
                  core/refinement_package.h \
+                 core/template_matches_package.h \
                  core/refinement.h \
                  core/database.h \
                  core/project.h \
@@ -96,6 +97,7 @@ noinst_HEADERS = core/stopwatch.h \
                  gui/MyAddRunCommandDialog.h \
                  gui/MyNewProjectWizard.h \
                  gui/MyNewRefinementPackageWizard.h \
+                 gui/NewTemplateMatchesPackageWizard.h \
                  gui/MyResultsPanel.h \
                  gui/MyAssetsPanel.h \
                  gui/ActionsPanelSpa.h \
@@ -106,6 +108,7 @@ noinst_HEADERS = core/stopwatch.h \
                  gui/MyFrealignExportDialog.h \
                  gui/MyRelionExportDialog.h \
                  gui/MyRefinementPackageAssetPanel.h \
+                 gui/TemplateMatchesPackageAssetPanel.h \
                  gui/MyRenameDialog.h \
                  gui/MyVolumeChooserDialog.h \
                  gui/MyRefine3DPanel.h \
@@ -591,6 +594,7 @@ libcore_a_SOURCES  = core/stopwatch.cpp \
                        core/frealign_parameter_file.cpp \
                        core/basic_star_file_reader.cpp \
                        core/refinement_package.cpp \
+                       core/template_matches_package.cpp \
                        core/refinement.cpp \
                        core/classification.cpp \
                        core/particle_finder.cpp \
@@ -674,6 +678,7 @@ cisTEM_SOURCES = programs/projectx/projectx.cpp \
                 gui/MyAddRunCommandDialog.cpp \
                 gui/MyNewProjectWizard.cpp \
                 gui/MyNewRefinementPackageWizard.cpp \
+                gui/NewTemplateMatchesPackageWizard.cpp \
                 gui/UnblurResultsPanel.cpp \
                 gui/ShowCTFResultsPanel.cpp \
                 gui/PickingResultsDisplayPanel.cpp \
@@ -690,6 +695,7 @@ cisTEM_SOURCES = programs/projectx/projectx.cpp \
                 gui/MyFrealignExportDialog.cpp \
                 gui/MyRelionExportDialog.cpp \
                 gui/MyRefinementPackageAssetPanel.cpp \
+                gui/TemplateMatchesPackageAssetPanel.cpp \
                 gui/MyRefine3DPanel.cpp \
                 gui/MyRefine2DPanel.cpp \
                 gui/ClassificationPlotPanel.cpp \
@@ -795,7 +801,7 @@ applyctf_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 applyctf_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
 applyctf_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
-ctffind_SOURCES  = programs/ctffind/ctffind.cpp programs/ctffind/ctffind_image_ctf_comparison.cpp programs/ctffind/ctffind_objective_functions.cpp programs/ctffind/ctffind_tilt.cpp
+ctffind_SOURCES = programs/ctffind/ctffind.cpp programs/ctffind/ctftilt.cpp programs/ctffind/ctffind_thickness_nodes.cpp programs/ctffind/ctffind_image_ctf_comparison.cpp programs/ctffind/ctffind_objective_functions.cpp
 ctffind_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)

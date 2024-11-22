@@ -11,10 +11,17 @@ using namespace cistem_timer;
 using namespace cistem_timer_noop;
 #endif
 
-const std::string ctffind_version = "4.1.16";
+const std::string ctffind_version = "5.0.2";
 
 /*
  * Changelog
+* - 5.0.2
+ * -- Fixed bug in 1D spectra calculation after estimation of thickness
+* - 5.0.1
+ * -- Allow for larger minimal resolution
+ * - 5.0.0
+ * -- Support for estimating tilt of sample
+ * -- Support for estimating thickness of sample 
  * - 4.1.16
  * -- Fixes crashes, found by David Mastronarde
  * - 4.1.15
@@ -59,6 +66,75 @@ class
   private:
 };
 
+float PixelSizeForFitting(bool resample_if_pixel_too_small, float pixel_size_of_input_image, float target_pixel_size_after_resampling,
+                          int box_size, Image* current_power_spectrum, Image* resampled_power_spectrum, bool do_resampling, float stretch_factor) {
+    int   temporary_box_size;
+    int   stretched_dimension;
+    float pixel_size_for_fitting;
+    bool  resampling_is_necessary{ };
+
+    Image temp_image;
+
+    // Resample the amplitude spectrum
+    if ( resample_if_pixel_too_small && pixel_size_of_input_image < target_pixel_size_after_resampling ) {
+        // The input pixel was too small, so let's resample the amplitude spectrum into a large temporary box, before clipping the center out for fitting
+        temporary_box_size = round(float(box_size) / pixel_size_of_input_image * target_pixel_size_after_resampling);
+        if ( IsOdd(temporary_box_size) )
+            temporary_box_size++;
+        resampling_is_necessary = current_power_spectrum->logical_x_dimension != box_size || current_power_spectrum->logical_y_dimension != box_size;
+        if ( do_resampling ) {
+            if ( resampling_is_necessary || stretch_factor != 1.0f ) {
+                stretched_dimension = myroundint(temporary_box_size * stretch_factor);
+                if ( IsOdd(stretched_dimension) )
+                    stretched_dimension++;
+                if ( fabsf(stretched_dimension - temporary_box_size * stretch_factor) > fabsf(stretched_dimension - 2 - temporary_box_size * stretch_factor) )
+                    stretched_dimension -= 2;
+
+                current_power_spectrum->ForwardFFT(false);
+                resampled_power_spectrum->Allocate(stretched_dimension, stretched_dimension, 1, false);
+                current_power_spectrum->ClipInto(resampled_power_spectrum);
+                resampled_power_spectrum->BackwardFFT( );
+                temp_image.Allocate(box_size, box_size, 1, true);
+                temp_image.SetToConstant(0.0); // To avoid valgrind uninitialised errors, but maybe this is a waste?
+                resampled_power_spectrum->ClipInto(&temp_image);
+                resampled_power_spectrum->Consume(&temp_image);
+            }
+            else {
+                resampled_power_spectrum->CopyFrom(current_power_spectrum);
+            }
+        }
+        pixel_size_for_fitting = pixel_size_of_input_image * float(temporary_box_size) / float(box_size);
+    }
+    else {
+        // The regular way (the input pixel size was large enough)
+        resampling_is_necessary = current_power_spectrum->logical_x_dimension != box_size || current_power_spectrum->logical_y_dimension != box_size;
+        if ( do_resampling ) {
+            if ( resampling_is_necessary || stretch_factor != 1.0f ) {
+                stretched_dimension = myroundint(box_size * stretch_factor);
+                if ( IsOdd(stretched_dimension) )
+                    stretched_dimension++;
+                if ( fabsf(stretched_dimension - box_size * stretch_factor) > fabsf(stretched_dimension - 2 - box_size * stretch_factor) )
+                    stretched_dimension -= 2;
+
+                current_power_spectrum->ForwardFFT(false);
+                resampled_power_spectrum->Allocate(stretched_dimension, stretched_dimension, 1, false);
+                current_power_spectrum->ClipInto(resampled_power_spectrum);
+                resampled_power_spectrum->BackwardFFT( );
+                temp_image.Allocate(box_size, box_size, 1, true);
+                temp_image.SetToConstant(0.0); // To avoid valgrind uninitialised errors, but maybe this is a waste?
+                resampled_power_spectrum->ClipInto(&temp_image);
+                resampled_power_spectrum->Consume(&temp_image);
+            }
+            else {
+                resampled_power_spectrum->CopyFrom(current_power_spectrum);
+            }
+        }
+        pixel_size_for_fitting = pixel_size_of_input_image;
+    }
+
+    return pixel_size_for_fitting;
+}
+
 //#pragma GCC pop_options
 
 IMPLEMENT_APP(CtffindApp)
@@ -67,7 +143,7 @@ IMPLEMENT_APP(CtffindApp)
 
 void CtffindApp::DoInteractiveUserInput( ) {
 
-    float lowest_allowed_minimum_resolution = 50.0;
+    float lowest_allowed_minimum_resolution = 50000.0;
 
     std::string input_filename                     = "/dev/null";
     bool        input_is_a_movie                   = false;
@@ -99,19 +175,27 @@ void CtffindApp::DoInteractiveUserInput( ) {
     bool        movie_is_gain_corrected            = false;
     bool        movie_is_dark_corrected;
     wxString    dark_filename;
-    wxString    gain_filename                    = "/dev/null";
-    bool        correct_movie_mag_distortion     = false;
-    float       movie_mag_distortion_angle       = 0.0;
-    float       movie_mag_distortion_major_scale = 1.0;
-    float       movie_mag_distortion_minor_scale = 1.0;
-    bool        defocus_is_known                 = false;
-    float       known_defocus_1                  = 0.0;
-    float       known_defocus_2                  = 0.0;
-    float       known_phase_shift                = 0.0;
-    int         desired_number_of_threads        = 1;
-    int         eer_frames_per_image             = 0;
-    int         eer_super_res_factor             = 1;
-    bool        filter_lowres_signal             = true;
+    wxString    gain_filename                      = "/dev/null";
+    bool        correct_movie_mag_distortion       = false;
+    float       movie_mag_distortion_angle         = 0.0;
+    float       movie_mag_distortion_major_scale   = 1.0;
+    float       movie_mag_distortion_minor_scale   = 1.0;
+    bool        defocus_is_known                   = false;
+    float       known_defocus_1                    = 0.0;
+    float       known_defocus_2                    = 0.0;
+    float       known_phase_shift                  = 0.0;
+    int         desired_number_of_threads          = 1;
+    int         eer_frames_per_image               = 0;
+    int         eer_super_res_factor               = 1;
+    bool        filter_lowres_signal               = true;
+    bool        fit_nodes                          = false;
+    bool        fit_nodes_1D_brute_force           = true;
+    bool        fit_nodes_2D_refine                = true;
+    float       fit_nodes_low_resolution_limit     = 30.0;
+    float       fit_nodes_high_resolution_limit    = 3.0;
+    float       target_pixel_size_after_resampling = 1.4;
+    bool        fit_nodes_use_rounded_square       = false;
+    bool        fit_nodes_downweight_nodes         = false;
 
     // Things we need for old school input
     double     temp_double               = -1.0;
@@ -416,10 +500,21 @@ void CtffindApp::DoInteractiveUserInput( ) {
         // Currently, tilt determination only works when there is no additional phase shift
         if ( ! find_additional_phase_shift )
             determine_tilt = my_input->GetYesNoFromUser("Determine sample tilt?", "Answer yes if you tilted the sample and need to determine tilt axis and angle", "No");
-
+        fit_nodes = my_input->GetYesNoFromUser("Determine samnple thickness?", "Answer yes if you want to fit nodes to the CTF", "No");
+        if ( fit_nodes ) {
+            fit_nodes_1D_brute_force        = my_input->GetYesNoFromUser("Use brute force 1D search?", "Answer yes if you want to use a brute force 1D search for the nodes", "Yes");
+            fit_nodes_2D_refine             = my_input->GetYesNoFromUser("Use 2D refinement?", "Answer yes if you want to use a 2D refinement for the nodes", "Yes");
+            fit_nodes_low_resolution_limit  = my_input->GetFloatFromUser("Low resolution limit for nodes", "In Angstroms, the low resolution limit for the nodes", "30.0", 0.0);
+            fit_nodes_high_resolution_limit = my_input->GetFloatFromUser("High resolution limit for nodes", "In Angstroms, the high resolution limit for the nodes", "3.0", 0.0);
+            fit_nodes_use_rounded_square    = my_input->GetYesNoFromUser("Use rounded square for nodes?", "Answer yes if you want to use a rounded square for the nodes", "No");
+            fit_nodes_downweight_nodes      = my_input->GetYesNoFromUser("Downweight nodes?", "Answer yes if you want to downweight nodes", "No");
+        }
         give_expert_options = my_input->GetYesNoFromUser("Do you want to set expert options?", "There are options which normally not changed, but can be accessed by answering yes here", "No");
         if ( give_expert_options ) {
             resample_if_pixel_too_small = my_input->GetYesNoFromUser("Resample micrograph if pixel size too small?", "When the pixel is too small, Thon rings appear very thin and near the origin of the spectrum, which can lead to suboptimal fitting. This options resamples micrographs to a more reasonable pixel size if needed", "Yes");
+            if ( resample_if_pixel_too_small ) {
+                target_pixel_size_after_resampling = my_input->GetFloatFromUser("Target pixel size after resampling", "In Angstroms. The pixel size to resample to if the input pixel size is too small", "1.4", 0.0);
+            }
             if ( input_is_a_movie ) {
                 movie_is_dark_corrected = my_input->GetYesNoFromUser("Movie is dark-subtracted?", "If the movie is not dark-subtracted you will need to provide a dark reference image", "Yes");
                 if ( movie_is_dark_corrected ) {
@@ -509,7 +604,8 @@ void CtffindApp::DoInteractiveUserInput( ) {
     }
 
     //	my_current_job.Reset(39);
-    my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbsbfffbfffbiiib", input_filename.c_str( ), //1
+
+    my_current_job.ManualSetArguments("tbitffffifffffbfbfffbffbbsbsbfffbfffbiiibbbbfffbb", input_filename.c_str( ), //1
                                       input_is_a_movie,
                                       number_of_frames_to_average,
                                       output_diagnostic_filename.c_str( ),
@@ -549,7 +645,15 @@ void CtffindApp::DoInteractiveUserInput( ) {
                                       desired_number_of_threads,
                                       eer_frames_per_image,
                                       eer_super_res_factor,
-                                      filter_lowres_signal);
+                                      filter_lowres_signal,
+                                      fit_nodes,
+                                      fit_nodes_1D_brute_force,
+                                      fit_nodes_2D_refine,
+                                      fit_nodes_low_resolution_limit,
+                                      fit_nodes_high_resolution_limit,
+                                      target_pixel_size_after_resampling,
+                                      fit_nodes_use_rounded_square,
+                                      fit_nodes_downweight_nodes);
 }
 
 // Optional command-line stuff
@@ -560,6 +664,7 @@ void CtffindApp::AddCommandLineOptions( ) {
     command_line_parser.AddLongSwitch("filtered-amplitude-spectrum-input", "The input image is filtered (background-subtracted) amplitude spectrum");
     command_line_parser.AddLongSwitch("fast", "Skip computation of fit statistics as well as spectrum contrast enhancement");
     command_line_parser.AddOption("j", "", "Desired number of threads. Overrides interactive user input. Is overriden by env var OMP_NUM_THREADS", wxCMD_LINE_VAL_NUMBER);
+    command_line_parser.AddLongSwitch("debug", "Write debug information to disk");
 }
 
 // override the do calculation method which will be what is actually run..
@@ -612,6 +717,14 @@ bool CtffindApp::DoCalculation( ) {
     int               eer_frames_per_image               = my_current_job.arguments[38].ReturnIntegerArgument( );
     int               eer_super_res_factor               = my_current_job.arguments[39].ReturnIntegerArgument( );
     bool              filter_lowres_signal               = my_current_job.arguments[40].ReturnBoolArgument( );
+    bool              fit_nodes                          = my_current_job.arguments[41].ReturnBoolArgument( );
+    bool              fit_nodes_1D_brute_force           = my_current_job.arguments[42].ReturnBoolArgument( );
+    bool              fit_nodes_2D_refine                = my_current_job.arguments[43].ReturnBoolArgument( );
+    float             fit_nodes_low_resolution_limit     = my_current_job.arguments[44].ReturnFloatArgument( );
+    float             fit_nodes_high_resolution_limit    = my_current_job.arguments[45].ReturnFloatArgument( );
+    float             target_pixel_size_after_resampling = my_current_job.arguments[46].ReturnFloatArgument( );
+    bool              fit_nodes_use_rounded_square       = my_current_job.arguments[47].ReturnBoolArgument( );
+    bool              fit_nodes_downweight_nodes         = my_current_job.arguments[48].ReturnBoolArgument( );
 
     // if we are applying a mag distortion, it can change the pixel size, so do that here to make sure it is used forever onwards..
 
@@ -632,10 +745,13 @@ bool CtffindApp::DoCalculation( ) {
     }
 
     // Resampling of input images to ensure that the pixel size isn't too small
-    const float target_nyquist_after_resampling    = 2.8; // Angstroms
-    const float target_pixel_size_after_resampling = 0.5 * target_nyquist_after_resampling;
-    float       pixel_size_for_fitting             = pixel_size_of_input_image;
-    int         temporary_box_size;
+    if ( target_pixel_size_after_resampling <= 0.0 ) {
+        target_pixel_size_after_resampling = 1.4f;
+    }
+    const float target_nyquist_after_resampling = 2 * target_pixel_size_after_resampling; // Angstroms
+    // const float target_pixel_size_after_resampling = 0.5 * target_nyquist_after_resampling;
+    float pixel_size_for_fitting = pixel_size_of_input_image;
+    int   temporary_box_size;
 
     // Maybe the user wants to hold the phase shift value (which they can do by giving the same value for min and max)
     const bool fixed_additional_phase_shift = fabs(maximum_additional_phase_shift - minimum_additional_phase_shift) < 0.01;
@@ -647,7 +763,9 @@ bool CtffindApp::DoCalculation( ) {
     const float maximum_resolution_for_initial_search = 5.0;
 
     // Debugging
-    const bool dump_debug_files = false;
+    const bool dump_debug_files = command_line_parser.FoundSwitch("debug");
+
+    std::string debug_file_prefix = output_diagnostic_filename.substr(0, output_diagnostic_filename.find_last_of('.')) + "_debug_";
 
     /*
 	 *  Scoring function
@@ -655,70 +773,70 @@ bool CtffindApp::DoCalculation( ) {
     float MyFunction(float[]);
 
     // Other variables
-    int                 number_of_movie_frames;
-    int                 number_of_micrographs;
-    ImageFile           input_file;
-    SpectrumImage*      average_spectrum        = new SpectrumImage( );
-    Image*              average_spectrum_masked = new Image( );
-    wxString            output_text_fn;
-    ProgressBar*        my_progress_bar;
-    NumericTextFile*    output_text;
-    NumericTextFile*    output_text_avrot;
-    int                 current_micrograph_number;
-    int                 number_of_tiles_used;
-    SpectrumImage*      current_power_spectrum = new SpectrumImage( );
-    int                 current_first_frame_within_average;
-    int                 current_frame_within_average;
-    int                 current_input_location;
-    Image*              current_input_image        = new Image( );
-    Image*              current_input_image_square = new Image( );
-    int                 micrograph_square_dimension;
-    Image*              temp_image               = new Image( );
-    Image*              sum_image                = new Image( );
-    Image*              resampled_power_spectrum = new Image( );
-    bool                resampling_is_necessary;
-    CTF*                current_ctf = new CTF( );
-    float               average, sigma;
-    int                 convolution_box_size;
-    ImageCTFComparison* comparison_object_2D;
-    CurveCTFComparison  comparison_object_1D;
-    float               estimated_astigmatism_angle;
-    float               bf_halfrange[4];
-    float               bf_midpoint[4];
-    float               bf_stepsize[4];
-    float               cg_starting_point[4];
-    float               cg_accuracy[4];
-    int                 number_of_search_dimensions;
-    BruteForceSearch*   brute_force_search;
-    int                 counter;
-    ConjugateGradient*  conjugate_gradient_minimizer;
-    int                 current_output_location;
-    int                 number_of_bins_in_1d_spectra;
-    Curve*              number_of_averaged_pixels                 = new Curve( );
-    Curve*              rotational_average                        = new Curve( );
-    Image*              number_of_extrema_image                   = new Image( );
-    Image*              ctf_values_image                          = new Image( );
-    double*             rotational_average_astig                  = NULL;
-    double*             rotational_average_astig_renormalized     = NULL;
-    double*             spatial_frequency                         = NULL;
-    double*             spatial_frequency_in_reciprocal_angstroms = NULL;
-    double*             rotational_average_astig_fit              = NULL;
-    float*              number_of_extrema_profile                 = NULL;
-    float*              ctf_values_profile                        = NULL;
-    double*             fit_frc                                   = NULL;
-    double*             fit_frc_sigma                             = NULL;
-    MRCFile             output_diagnostic_file(output_diagnostic_filename, true);
-    int                 last_bin_with_good_fit;
-    double*             values_to_write_out = new double[7];
-    float               best_score_after_initial_phase;
-    int                 last_bin_without_aliasing;
-    ImageFile           gain_file;
-    Image*              gain = new Image( );
-    ImageFile           dark_file;
-    Image*              dark = new Image( );
-    float               final_score;
-    float               tilt_axis;
-    float               tilt_angle;
+    int              number_of_movie_frames;
+    int              number_of_micrographs;
+    ImageFile        input_file;
+    SpectrumImage*   average_spectrum        = new SpectrumImage( );
+    SpectrumImage*   average_spectrum_masked = new SpectrumImage( ); // This will contain a high-pass filtered version to recuce the effect of the high contrast at low frequencies
+    wxString         output_text_fn;
+    ProgressBar*     my_progress_bar;
+    NumericTextFile* output_text;
+    NumericTextFile* output_text_avrot;
+    int              current_micrograph_number;
+    int              number_of_tiles_used;
+    SpectrumImage*   current_power_spectrum = new SpectrumImage( );
+    int              current_first_frame_within_average;
+    int              current_frame_within_average;
+    int              current_input_location;
+    Image*           current_input_image        = new Image( );
+    Image*           current_input_image_square = new Image( );
+    int              micrograph_square_dimension;
+    Image*           temp_image               = new Image( );
+    Image*           sum_image                = new Image( );
+    Image*           resampled_power_spectrum = new Image( );
+    bool             resampling_is_necessary;
+    CTF*             current_ctf = new CTF( );
+    float            average, sigma;
+    int              convolution_box_size;
+    // ImageCTFComparison  comparison_object_2D;
+    CurveCTFComparison comparison_object_1D;
+    float              estimated_astigmatism_angle;
+    float              bf_halfrange[4];
+    float              bf_midpoint[4];
+    float              bf_stepsize[4];
+    float              cg_starting_point[4];
+    float              cg_accuracy[4];
+    int                number_of_search_dimensions;
+    BruteForceSearch*  brute_force_search;
+    int                counter;
+    ConjugateGradient* conjugate_gradient_minimizer;
+    int                current_output_location;
+    int                number_of_bins_in_1d_spectra;
+    Curve*             number_of_averaged_pixels                 = new Curve( );
+    Curve*             rotational_average                        = new Curve( );
+    Image*             number_of_extrema_image                   = new Image( );
+    Image*             ctf_values_image                          = new Image( );
+    double*            rotational_average_astig                  = NULL;
+    double*            rotational_average_astig_renormalized     = NULL;
+    double*            spatial_frequency                         = NULL;
+    double*            spatial_frequency_in_reciprocal_angstroms = NULL;
+    double*            rotational_average_astig_fit              = NULL;
+    float*             number_of_extrema_profile                 = NULL;
+    float*             ctf_values_profile                        = NULL;
+    double*            fit_frc                                   = NULL;
+    double*            fit_frc_sigma                             = NULL;
+    MRCFile            output_diagnostic_file(output_diagnostic_filename, true);
+    int                last_bin_with_good_fit;
+    double*            values_to_write_out = new double[10];
+    float              best_score_after_initial_phase;
+    int                last_bin_without_aliasing;
+    ImageFile          gain_file;
+    Image*             gain = new Image( );
+    ImageFile          dark_file;
+    Image*             dark = new Image( );
+    float              final_score;
+    float              tilt_axis;
+    float              tilt_angle;
 
     // Open the input file
     bool input_file_is_valid = input_file.OpenFile(input_filename, false, false, false, eer_super_res_factor, eer_frames_per_image);
@@ -767,14 +885,14 @@ bool CtffindApp::DoCalculation( ) {
     output_text_fn = FilenameReplaceExtension(output_diagnostic_filename, "txt");
 
     if ( is_running_locally ) {
-        output_text = new NumericTextFile(output_text_fn, OPEN_TO_WRITE, 7);
+        output_text = new NumericTextFile(output_text_fn, OPEN_TO_WRITE, 10);
 
         // Print header to the output text file
         output_text->WriteCommentLine("# Output from CTFFind version %s, run on %s\n", ctffind_version.c_str( ), wxDateTime::Now( ).FormatISOCombined(' ').ToStdString( ).c_str( ));
         output_text->WriteCommentLine("# Input file: %s ; Number of micrographs: %i\n", input_filename.c_str( ), number_of_micrographs);
         output_text->WriteCommentLine("# Pixel size: %0.3f Angstroms ; acceleration voltage: %0.1f keV ; spherical aberration: %0.2f mm ; amplitude contrast: %0.2f\n", pixel_size_of_input_image, acceleration_voltage, spherical_aberration, amplitude_contrast);
         output_text->WriteCommentLine("# Box size: %i pixels ; min. res.: %0.1f Angstroms ; max. res.: %0.1f Angstroms ; min. def.: %0.1f um; max. def. %0.1f um\n", box_size, minimum_resolution, maximum_resolution, minimum_defocus, maximum_defocus);
-        output_text->WriteCommentLine("# Columns: #1 - micrograph number; #2 - defocus 1 [Angstroms]; #3 - defocus 2; #4 - azimuth of astigmatism; #5 - additional phase shift [radians]; #6 - cross correlation; #7 - spacing (in Angstroms) up to which CTF rings were fit successfully\n");
+        output_text->WriteCommentLine("# Columns: #1 - micrograph number; #2 - defocus 1 [Angstroms]; #3 - defocus 2; #4 - azimuth of astigmatism; #5 - additional phase shift [radians]; #6 - cross correlation; #7 - spacing (in Angstroms) up to which CTF rings were fit successfully; #8 - Estimated tilt axis angle; #9 - Estimated tilt angle ; #10 Estimated sample thickness (in Angstroms)\n");
     }
 
     // Prepare a text file with 1D rotational average spectra
@@ -826,8 +944,10 @@ bool CtffindApp::DoCalculation( ) {
             average_spectrum_masked->CopyFrom(average_spectrum);
         }
         else {
-            CTFTilt tilt_scorer(input_file, 5.0f, 10.0f, minimum_defocus, maximum_defocus, pixel_size_of_input_image, acceleration_voltage, spherical_aberration, amplitude_contrast, 0.0f);
-
+            CTFTilt tilt_scorer;
+            if ( determine_tilt ) {
+                tilt_scorer.Init(input_file, 5.0f, 10.0f, minimum_defocus, maximum_defocus, pixel_size_of_input_image, acceleration_voltage, spherical_aberration, amplitude_contrast, 0.0f, dump_debug_files, debug_file_prefix + "_tilt.json");
+            }
             for ( current_first_frame_within_average = 1; current_first_frame_within_average <= number_of_movie_frames; current_first_frame_within_average += number_of_frames_to_average ) {
                 for ( current_frame_within_average = 1; current_frame_within_average <= number_of_frames_to_average; current_frame_within_average++ ) {
                     current_input_location = current_first_frame_within_average + number_of_movie_frames * (current_micrograph_number - 1) + (current_frame_within_average - 1);
@@ -908,7 +1028,7 @@ bool CtffindApp::DoCalculation( ) {
                         profile_timing.lap("Correct mag distortion");
                     }
                     // Make the image square
-                    profile_timing.start("Crop image to shortest dimension");
+                    profile_timing.start("Crop image to largest dimension");
                     micrograph_square_dimension = std::max(current_input_image->logical_x_dimension, current_input_image->logical_y_dimension);
                     if ( IsOdd((micrograph_square_dimension)) )
                         micrograph_square_dimension++;
@@ -918,7 +1038,7 @@ bool CtffindApp::DoCalculation( ) {
                         current_input_image->ClipIntoLargerRealSpace2D(current_input_image_square, current_input_image->ReturnAverageOfRealValues( ));
                         current_input_image->Consume(current_input_image_square);
                     }
-                    profile_timing.lap("Crop image to shortest dimension");
+                    profile_timing.lap("Crop image to largest dimension");
                     //
                     profile_timing.start("Average frames");
                     if ( current_frame_within_average == 1 ) {
@@ -965,6 +1085,7 @@ bool CtffindApp::DoCalculation( ) {
             } // end of loop over movie frames
 
             if ( determine_tilt ) {
+                profile_timing.start("Tilt estimation");
                 // Find rough defocus
                 tilt_scorer.FindRoughDefocus( );
                 //	wxPrintf("\nFindRoughDefocus values: defocus_1, defocus_2, astig_angle, tilt_axis, tilt_angle = %g %g %g %g %g\n\n", tilt_scorer.defocus_1, tilt_scorer.defocus_2, tilt_scorer.astigmatic_angle, tilt_scorer.best_tilt_axis, tilt_scorer.best_tilt_angle);
@@ -990,10 +1111,12 @@ bool CtffindApp::DoCalculation( ) {
                 if ( tilt_axis > 360.0f ) {
                     tilt_axis -= 360.0f;
                 }
-                //				wxPrintf("Final values: defocus_1, defocus_2, astig_angle, tilt_axis, tilt_angle = %g %g %g || %g %g\n\n", tilt_scorer.defocus_1, tilt_scorer.defocus_2, tilt_scorer.astigmatic_angle, tilt_scorer.best_tilt_axis, tilt_scorer.best_tilt_angle);
-
+                MyDebugPrint("Final values: defocus_1, defocus_2, astig_angle, tilt_axis, tilt_angle = %g %g %g || %g %g\n\n", tilt_scorer.defocus_1, tilt_scorer.defocus_2, tilt_scorer.astigmatic_angle, tilt_scorer.best_tilt_axis, tilt_scorer.best_tilt_angle);
+                profile_timing.lap("Tilt estimation");
+                profile_timing.start("Tilt correction");
                 pixel_size_for_fitting = tilt_scorer.CalculateTiltCorrectedSpectra(resample_if_pixel_too_small, pixel_size_of_input_image, target_pixel_size_after_resampling, box_size, average_spectrum);
                 average_spectrum->MultiplyByConstant(float(number_of_tiles_used));
+                profile_timing.lap("Tilt correction");
             }
             else {
                 tilt_angle = 0.0f;
@@ -1029,8 +1152,10 @@ bool CtffindApp::DoCalculation( ) {
         ctffind_timing.lap("Spectrum computation");
         ctffind_timing.start("Parameter search");
 
-        if ( dump_debug_files )
-            average_spectrum->WriteSlicesAndFillHeader("dbg_spectrum_for_fitting.mrc", pixel_size_for_fitting);
+        if ( dump_debug_files ) {
+            average_spectrum->WriteSlicesAndFillHeader(debug_file_prefix + "dbg_spectrum_for_fitting.mrc", pixel_size_for_fitting);
+            average_spectrum_masked->WriteSlicesAndFillHeader(debug_file_prefix + "dbg_spectrum_for_fitting_masked.mrc", pixel_size_for_fitting);
+        }
 
 #ifdef threshold_spectrum
         wxPrintf("DEBUG: thresholding spectrum\n");
@@ -1047,20 +1172,20 @@ bool CtffindApp::DoCalculation( ) {
         current_ctf->SetAdditionalPhaseShift(minimum_additional_phase_shift);
 
         // Set up the comparison object
-        comparison_object_2D = new ImageCTFComparison(1, *current_ctf, pixel_size_for_fitting, find_additional_phase_shift && ! fixed_additional_phase_shift, astigmatism_is_known, known_astigmatism / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * PIf, false);
-        comparison_object_2D->SetImage(0, average_spectrum_masked);
-        comparison_object_2D->SetupQuickCorrelation( );
+        ImageCTFComparison comparison_object_2D = ImageCTFComparison(1, *current_ctf, pixel_size_for_fitting, find_additional_phase_shift && ! fixed_additional_phase_shift, astigmatism_is_known, known_astigmatism / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * PIf, false);
+        comparison_object_2D.SetImage(0, average_spectrum_masked);
+        comparison_object_2D.SetupQuickCorrelation( );
 
         if ( defocus_is_known ) {
             profile_timing.start("Calculate Score for known defocus");
             current_ctf->SetDefocus(known_defocus_1 / pixel_size_for_fitting, known_defocus_2 / pixel_size_for_fitting, known_astigmatism_angle / 180.0 * PIf);
             current_ctf->SetAdditionalPhaseShift(known_phase_shift);
             current_ctf->SetHighestFrequencyForFitting(pixel_size_for_fitting / maximum_resolution);
-            comparison_object_2D->SetCTF(*current_ctf);
-            comparison_object_2D->SetupQuickCorrelation( );
+            comparison_object_2D.SetCTF(*current_ctf);
+            comparison_object_2D.SetupQuickCorrelation( );
             final_score = 0.0;
-            final_score = comparison_object_2D->img[0].QuickCorrelationWithCTF(*current_ctf, comparison_object_2D->number_to_correlate, comparison_object_2D->norm_image, comparison_object_2D->image_mean, comparison_object_2D->addresses,
-                                                                               comparison_object_2D->spatial_frequency_squared, comparison_object_2D->azimuths);
+            final_score = comparison_object_2D.img[0].QuickCorrelationWithCTF(*current_ctf, comparison_object_2D.number_to_correlate, comparison_object_2D.norm_image, comparison_object_2D.image_mean, comparison_object_2D.addresses,
+                                                                              comparison_object_2D.spatial_frequency_squared, comparison_object_2D.azimuths);
             profile_timing.lap("Calculate Score for known defocus");
         }
         else {
@@ -1285,7 +1410,7 @@ bool CtffindApp::DoCalculation( ) {
                 profile_timing.start("Perform 2D search");
                 // Actually run the BF search (we run a local minimizer at every grid point only if this is a refinement search following 1D search (otherwise the full brute-force search would get too long)
                 brute_force_search = new BruteForceSearch( );
-                brute_force_search->Init(&CtffindObjectiveFunction, comparison_object_2D, number_of_search_dimensions, bf_midpoint, bf_halfrange, bf_stepsize, ! slower_search, is_running_locally, desired_number_of_threads);
+                brute_force_search->Init(&CtffindObjectiveFunction, &comparison_object_2D, number_of_search_dimensions, bf_midpoint, bf_halfrange, bf_stepsize, ! slower_search, is_running_locally, desired_number_of_threads);
                 brute_force_search->Run( );
 
                 profile_timing.lap("Perform 2D search");
@@ -1392,9 +1517,9 @@ bool CtffindApp::DoCalculation( ) {
             profile_timing.lap("Setup 2D search optimization");
             // CG minimization
             profile_timing.start("Peform 2D search optimization");
-            comparison_object_2D->SetCTF(*current_ctf);
+            comparison_object_2D.SetCTF(*current_ctf);
             conjugate_gradient_minimizer = new ConjugateGradient( );
-            conjugate_gradient_minimizer->Init(&CtffindObjectiveFunction, comparison_object_2D, number_of_search_dimensions, cg_starting_point, cg_accuracy);
+            conjugate_gradient_minimizer->Init(&CtffindObjectiveFunction, &comparison_object_2D, number_of_search_dimensions, cg_starting_point, cg_accuracy);
             conjugate_gradient_minimizer->Run( );
             profile_timing.lap("Peform 2D search optimization");
             // Remember the results of the refinement
@@ -1445,7 +1570,7 @@ bool CtffindApp::DoCalculation( ) {
         profile_timing.start("Renormalize spectrum");
         // Generate diagnostic image
         if ( dump_debug_files )
-            average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_diag_start.mrc", 1);
+            average_spectrum->QuickAndDirtyWriteSlice(debug_file_prefix + "dbg_spec_diag_start.mrc", 1);
         current_output_location = current_micrograph_number;
         average_spectrum->AddConstant(-1.0 * average_spectrum->ReturnAverageOfRealValuesOnEdges( ));
 
@@ -1481,7 +1606,7 @@ bool CtffindApp::DoCalculation( ) {
         }
 
         if ( dump_debug_files )
-            average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_diag_1.mrc", 1);
+            average_spectrum->QuickAndDirtyWriteSlice(debug_file_prefix + "dbg_spec_diag_1.mrc", 1);
         profile_timing.lap("Renormalize spectrum");
         profile_timing.start("Compute final 1D spectrum");
         // 1D rotational average
@@ -1510,12 +1635,17 @@ bool CtffindApp::DoCalculation( ) {
             current_ctf->ComputeImagesWithNumberOfExtremaAndCTFValues(number_of_extrema_image, ctf_values_image);
             //ctf_values_image.QuickAndDirtyWriteSlice("dbg_ctf_values.mrc",1);
             if ( dump_debug_files ) {
-                average_spectrum->QuickAndDirtyWriteSlice("dbg_spectrum_before_1dave.mrc", 1);
-                number_of_extrema_image->QuickAndDirtyWriteSlice("dbg_num_extrema.mrc", 1);
+                average_spectrum->QuickAndDirtyWriteSlice(debug_file_prefix + "dbg_spectrum_before_1dave.mrc", 1);
+                number_of_extrema_image->QuickAndDirtyWriteSlice(debug_file_prefix + "dbg_num_extrema.mrc", 1);
             }
             average_spectrum->ComputeRotationalAverageOfPowerSpectrum(current_ctf, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, rotational_average_astig_fit, rotational_average_astig_renormalized, number_of_extrema_profile, ctf_values_profile);
 #ifdef use_epa_rather_than_zero_counting
-            average_spectrum->ComputeEquiPhaseAverageOfPowerSpectrum(current_ctf, &equiphase_average_pre_max, &equiphase_average_post_max);
+            if ( fit_nodes ) {
+                average_spectrum_masked->ComputeEquiPhaseAverageOfPowerSpectrum(current_ctf, &equiphase_average_pre_max, &equiphase_average_post_max);
+            }
+            else {
+                average_spectrum->ComputeEquiPhaseAverageOfPowerSpectrum(current_ctf, &equiphase_average_pre_max, &equiphase_average_post_max);
+            }
             // Replace the old curve with EPA values
             {
                 float current_sq_sf;
@@ -1564,7 +1694,7 @@ bool CtffindApp::DoCalculation( ) {
         }
 
         if ( dump_debug_files )
-            average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_diag_2.mrc", 1);
+            average_spectrum->QuickAndDirtyWriteSlice(debug_file_prefix + "dbg_spec_diag_2.mrc", 1);
 
         // Until what frequency were CTF rings detected?
         if ( compute_extra_stats ) {
@@ -1623,18 +1753,49 @@ bool CtffindApp::DoCalculation( ) {
             last_bin_with_good_fit = 1;
         }
 #endif
+        // Start of Node fitting
+        CTFNodeFitOuput node_output;
+        if ( fit_nodes ) {
+            profile_timing.start("Thickness estimation");
+            CTFNodeFitInput node_fit_input = {
+                    current_ctf,
+                    last_bin_with_good_fit,
+                    number_of_bins_in_1d_spectra,
+                    pixel_size_for_fitting,
+                    spatial_frequency,
+                    rotational_average_astig,
+                    rotational_average_astig_fit,
+                    equiphase_average_pre_max,
+                    equiphase_average_post_max,
+                    &comparison_object_1D,
+                    &comparison_object_2D,
+                    fit_nodes_1D_brute_force,
+                    fit_nodes_2D_refine,
+                    fit_nodes_low_resolution_limit,
+                    fit_nodes_high_resolution_limit,
+                    fit_frc,
+                    fit_frc_sigma,
+                    average_spectrum_masked,
+                    dump_debug_files,
+                    debug_file_prefix,
+                    fit_nodes_use_rounded_square,
+                    fit_nodes_downweight_nodes};
+
+            node_output            = fit_thickness_nodes(&node_fit_input);
+            last_bin_with_good_fit = node_output.last_bin_with_good_fit;
+            profile_timing.lap("Thickness estimation");
+        }
 
         // Prepare output diagnostic image
         //average_spectrum->AddConstant(- average_spectrum->ReturnAverageOfRealValuesOnEdges()); // this used to be done in OverlayCTF / CTFOperation in the Fortran code
         //average_spectrum.QuickAndDirtyWriteSlice("dbg_spec_diag_3.mrc",1);
         if ( dump_debug_files )
-            average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_rescaling.mrc", 1);
+            average_spectrum->QuickAndDirtyWriteSlice(debug_file_prefix + "dbg_spec_before_rescaling.mrc", 1);
         profile_timing.start("Write diagnostic image");
         // DNM 3/31/23: do not call if no bins with good fit
-        if ( compute_extra_stats && last_bin_with_good_fit > 1 ) {
+        if ( compute_extra_stats && ! fit_nodes && last_bin_with_good_fit > 1 ) {
             average_spectrum->RescaleSpectrumAndRotationalAverage(number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, rotational_average_astig_fit, number_of_extrema_profile, ctf_values_profile, last_bin_without_aliasing, last_bin_with_good_fit);
         }
-        //average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_thresholding.mrc",1);
 
         normalization_radius_max = std::max(normalization_radius_max, float(average_spectrum->logical_x_dimension * spatial_frequency[last_bin_with_good_fit]));
         average_spectrum->ComputeAverageAndSigmaOfValuesInSpectrum(normalization_radius_min,
@@ -1642,20 +1803,21 @@ bool CtffindApp::DoCalculation( ) {
                                                                    average, sigma);
 
         average_spectrum->SetMinimumAndMaximumValues(average - sigma, average + 2.0 * sigma);
-
-        //average_spectrum->QuickAndDirtyWriteSlice("dbg_spec_before_overlay.mrc",1);
-        average_spectrum->OverlayCTF(current_ctf, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, number_of_extrema_profile, ctf_values_profile, &equiphase_average_pre_max, &equiphase_average_post_max);
+        average_spectrum->AddConstant(-(average - sigma));
+        average_spectrum->MultiplyByConstant(1.0 / ((average + 2.0 * sigma) - (average - sigma)));
+        if ( dump_debug_files )
+            average_spectrum->QuickAndDirtyWriteSlice(debug_file_prefix + "dbg_spec_before_overlay.mrc", 1);
+        average_spectrum->OverlayCTF(current_ctf, number_of_extrema_image, ctf_values_image, number_of_bins_in_1d_spectra, spatial_frequency, rotational_average_astig, number_of_extrema_profile, ctf_values_profile, &equiphase_average_pre_max, &equiphase_average_post_max, fit_nodes);
 
         average_spectrum->WriteSlice(&output_diagnostic_file, current_output_location);
         output_diagnostic_file.SetDensityStatistics(average_spectrum->ReturnMinimumValue( ), average_spectrum->ReturnMaximumValue( ), average_spectrum->ReturnAverageOfRealValues( ), 0.1);
         profile_timing.lap("Write diagnostic image");
         // Keep track of time
         ctffind_timing.lap("Diagnostics");
-
+        ctffind_timing.print_times( );
+        profile_timing.print_times( );
         // Print more detailed results to terminal
         if ( is_running_locally && number_of_micrographs == 1 ) {
-            ctffind_timing.print_times( );
-            profile_timing.print_times( );
 
             wxPrintf("\n\nEstimated defocus values        : %0.2f , %0.2f Angstroms\nEstimated azimuth of astigmatism: %0.2f degrees\n", current_ctf->GetDefocus1( ) * pixel_size_for_fitting, current_ctf->GetDefocus2( ) * pixel_size_for_fitting, current_ctf->GetAstigmatismAzimuth( ) / PIf * 180.0);
             if ( find_additional_phase_shift ) {
@@ -1663,6 +1825,8 @@ bool CtffindApp::DoCalculation( ) {
             }
             if ( determine_tilt )
                 wxPrintf("Tilt_axis, tilt angle           : %0.2f , %0.2f degrees\n", tilt_axis, tilt_angle);
+            if ( fit_nodes )
+                wxPrintf("Estimated sample thickness      : %0.2f Angstroms\n", current_ctf->GetSampleThickness( ) * pixel_size_for_fitting);
             wxPrintf("Score                           : %0.5f\n", final_score);
             wxPrintf("Pixel size for fitting          : %0.3f Angstroms\n", pixel_size_for_fitting);
             if ( compute_extra_stats ) {
@@ -1675,7 +1839,6 @@ bool CtffindApp::DoCalculation( ) {
                 }
             }
         }
-
         // Warn the user if significant aliasing occurred within the fit range
         if ( compute_extra_stats && last_bin_without_aliasing != 0 && spatial_frequency[last_bin_without_aliasing] < current_ctf->GetHighestFrequencyForFitting( ) ) {
             if ( is_running_locally && number_of_micrographs == 1 ) {
@@ -1685,7 +1848,6 @@ bool CtffindApp::DoCalculation( ) {
                 //SendInfo(wxString::Format("Warning: for image %s (location %i of %i), CTF aliasing occurred within the CTF fitting range. Consider computing a larger spectrum (current size = %i)\n",input_filename,current_micrograph_number, number_of_micrographs,box_size));
             }
         }
-
         if ( is_running_locally ) {
             // Write out results to a summary file
             values_to_write_out[0] = current_micrograph_number;
@@ -1700,12 +1862,25 @@ bool CtffindApp::DoCalculation( ) {
             else {
                 values_to_write_out[6] = 0.0;
             }
+            if ( determine_tilt ) {
+                values_to_write_out[7] = tilt_axis;
+                values_to_write_out[8] = tilt_angle;
+            }
+            else {
+                values_to_write_out[7] = 0.0;
+                values_to_write_out[8] = 0.0;
+            }
+            if ( fit_nodes ) {
+                values_to_write_out[9] = current_ctf->GetSampleThickness( ) * pixel_size_for_fitting;
+            }
+            else {
+                values_to_write_out[9] = 0.0;
+            }
             output_text->WriteLine(values_to_write_out);
 
             if ( (! old_school_input) && number_of_micrographs > 1 && is_running_locally )
                 my_progress_bar->Update(current_micrograph_number);
         }
-
         // Write out avrot
         // TODO: add to the output a line with non-normalized avrot, so that users can check for things like ice crystal reflections
         if ( compute_extra_stats ) {
@@ -1729,11 +1904,8 @@ bool CtffindApp::DoCalculation( ) {
             output_text_avrot->WriteLine(fit_frc_sigma);
             delete[] spatial_frequency_in_reciprocal_angstroms;
         }
-
-        delete comparison_object_2D;
-
+        //delete comparison_object_2D;
     } // End of loop over micrographs
-
     if ( is_running_locally && (! old_school_input) && number_of_micrographs > 1 ) {
         delete my_progress_bar;
         wxPrintf("\n");
@@ -1753,7 +1925,7 @@ bool CtffindApp::DoCalculation( ) {
     }
 
     // Send results back
-    float results_array[10];
+    float results_array[11];
     results_array[0] = current_ctf->GetDefocus1( ) * pixel_size_for_fitting; // Defocus 1 (Angstroms)
     results_array[1] = current_ctf->GetDefocus2( ) * pixel_size_for_fitting; // Defocus 2 (Angstroms)
     results_array[2] = current_ctf->GetAstigmatismAzimuth( ) * 180.0 / PIf; // Astigmatism angle (degrees)
@@ -1773,12 +1945,11 @@ bool CtffindApp::DoCalculation( ) {
         results_array[6] = pixel_size_for_fitting / spatial_frequency[last_bin_without_aliasing]; //	The resolution (Angstroms) at which aliasing was just detected
     }
 
-    results_array[7] = average_spectrum->ReturnIcinessOfSpectrum(pixel_size_for_fitting);
-    results_array[8] = tilt_angle;
-    results_array[9] = tilt_axis;
-
-    my_result.SetResult(10, results_array);
-
+    results_array[7]  = average_spectrum->ReturnIcinessOfSpectrum(pixel_size_for_fitting);
+    results_array[8]  = tilt_angle;
+    results_array[9]  = tilt_axis;
+    results_array[10] = current_ctf->GetSampleThickness( ) * pixel_size_for_fitting; // Sample thickness (Angstroms)
+    my_result.SetResult(11, results_array);
     // Cleanup
     delete current_ctf;
     delete average_spectrum;

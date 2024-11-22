@@ -385,7 +385,6 @@ void VolumeAsset::CopyFrom(Asset* other_asset) {
 
 // Return Pointers
 
-#ifdef EXPERIMENTAL
 // AtomicCoordinates asset///
 
 AtomicCoordinatesAsset::AtomicCoordinatesAsset( ) {
@@ -543,8 +542,6 @@ void AtomicCoordinatesAsset::CopyFrom(Asset* other_asset) {
     effective_weight = casted_asset->effective_weight;
 }
 
-#endif
-
 MovieAsset* AssetList::ReturnMovieAssetPointer(long wanted_asset) {
     MyPrintWithDetails("This should never be called!!");
     DEBUG_ABORT;
@@ -565,12 +562,10 @@ VolumeAsset* AssetList::ReturnVolumeAssetPointer(long wanted_asset) {
     DEBUG_ABORT;
 }
 
-#ifdef EXPERIMENTAL
 AtomicCoordinatesAsset* AssetList::ReturnAtomicCoordinatesAssetPointer(long wanted_asset) {
     MyPrintWithDetails("This should never be called!!");
     DEBUG_ABORT;
 }
-#endif
 
 ////////////////////////Movie Asset List//////////////////
 
@@ -1146,7 +1141,6 @@ void VolumeAssetList::RemoveAll( ) {
     }
 }
 
-#ifdef EXPERIMENTAL
 // AtomicCoordinates Asset List
 
 AtomicCoordinatesAssetList::AtomicCoordinatesAssetList( ) {
@@ -1289,5 +1283,3 @@ void AtomicCoordinatesAssetList::RemoveAll( ) {
         assets           = new AtomicCoordinatesAsset[number_allocated];
     }
 }
-
-#endif

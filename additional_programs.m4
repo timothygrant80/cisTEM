@@ -445,6 +445,23 @@ AC_ARG_ENABLE(build-measure-template-bias, AS_HELP_STRING([--enable-build-measur
   ])
 AM_CONDITIONAL([ENABLE_MEASURETEMPLATEBIAS_AM], [test "x$build_measure_template_bias" = "xyes"])
 
+
+use_Eigen="no"
+AS_IF([test "x$build_all" = "xyes"], [build_calculate_template_pvalue="yes"])
+AC_ARG_ENABLE(build-calculate-template-pvalue, AS_HELP_STRING([--enable-build-calculate-template-pvalue],[build calculate_template_pvalue  [default="no"]]),[
+  if test "$enableval" = yes; then
+    # Check for Eigen which is currently needed but is slated to be replaced with MKL
+    # The version that should be installed is 3.4.0
+    AC_CHECK_FILE("$TOPSRCDIR/include/Eigen/Dense",[use_Eigen="yes"],[use_Eigen="no"])
+    if test "x$use_Eigen" = "xyes"; then
+        build_calculate_template_pvalue=yes
+        AC_MSG_NOTICE([Building calculate_template_pvalue])
+    else
+        AC_MSG_ERROR([Eigen is required to build calculate_template_pvalue. Please install Eigen v3.4.0 or configure without --enable-calculate-template-pvalue])
+    fi
+  fi
+  ])
+AM_CONDITIONAL([ENABLE_CALCULATETEMPLATEPVALUE_AM], [test "x$build_calculate_template_pvalue" = "xyes"])
 AS_IF([test "x$build_all" = "xyes"], [build_align_nmr_spectra="yes"])
 AC_ARG_ENABLE(build-align-nmr-spectra, AS_HELP_STRING([--enable-build-align-nmr-spectra],[build align_nmr_spectra  [default="no"]]),[
   if test "$enableval" = yes; then

@@ -37,10 +37,13 @@ RefineTemplatePanel::RefineTemplatePanel(wxWindow* parent)
     result_bitmap.Create(1, 1, 24);
     time_of_last_result_update = time(NULL);
 
+    PixelSizeSearchRangeNumericCtrl->SetPrecision(3);
+    PixelSizeSearchStepNumericCtrl->SetPrecision(3);
+
     DefocusSearchRangeNumericCtrl->SetMinMaxValue(0.0f, FLT_MAX);
     DefocusSearchStepNumericCtrl->SetMinMaxValue(1.0f, FLT_MAX);
     PixelSizeSearchRangeNumericCtrl->SetMinMaxValue(0.0f, FLT_MAX);
-    PixelSizeSearchStepNumericCtrl->SetMinMaxValue(0.01f, FLT_MAX);
+    PixelSizeSearchStepNumericCtrl->SetMinMaxValue(0.001f, FLT_MAX);
     HighResolutionLimitNumericCtrl->SetMinMaxValue(0.0f, FLT_MAX);
 
     SymmetryComboBox->Clear( );

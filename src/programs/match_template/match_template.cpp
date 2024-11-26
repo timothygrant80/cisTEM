@@ -713,6 +713,7 @@ bool MatchTemplateApp::DoCalculation( ) {
                 profile_timing.lap("CopyHostToDeviceTextureComplex");
             }
 
+            data_sizer.whitening_filter_ptr->MakeThreadSafeForNThreads(max_threads);
 #pragma omp parallel num_threads(max_threads)
             {
                 int tIDX = ReturnThreadNumberOfCurrentThread( );

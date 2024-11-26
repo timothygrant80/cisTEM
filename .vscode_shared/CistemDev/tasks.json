@@ -34,6 +34,16 @@
             "command": "cd ${build_dir}/intel-gpu-debug-static && make -j${input:compile_cores}"
         }
         {
+            "label": "Configure cisTEM DEBUG build TMPVALUE",
+            "type": "shell",
+            "command": "mkdir -p ${build_dir}/intel-gpu-debug-static-tmpvalue && cd ${build_dir}/intel-gpu-debug-static-tmpvalue && CC=icc CXX=icpc ../../configure ${input:additional_compiler_flags} --enable-debugmode --enable-gpu-debug --with-wx-config=/opt/WX/icc-static/bin/wx-config --enable-staticmode --with-cuda=${cuda_dir} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} --enable-build-calculate-template-pvalue"
+        },
+        {
+            "label": "BUILD cisTEM DEBUG TMPVALUE",
+            "type": "shell",
+            "command": "cd ${build_dir}/intel-gpu-debug-static-tmpvalue && make -j${input:compile_cores}"
+        }
+        {
             "label": "Configure cisTEM DEBUG build, CPU only",
             "type": "shell",
             "command": "mkdir -p ${build_dir}/intel-debug-static && cd ${build_dir}/intel-debug-static && CC=icc CXX=icpc ../../configure ${input:additional_compiler_flags} --enable-debugmode --with-wx-config=/opt/WX/icc-static/bin/wx-config --enable-staticmode ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "

@@ -31,9 +31,6 @@ Peak TemplateScore(void* scoring_parameters) {
         padded_projection.SwapRealSpaceQuadrants( );
         padded_projection.BackwardFFT( );
         padded_projection.ChangePixelSize(&current_projection, comparison_object->pixel_size_factor, 0.001f, true);
-        //		padded_projection.ChangePixelSize(&padded_projection, comparison_object->pixel_size_factor, 0.001f);
-        //		padded_projection.ClipInto(&current_projection);
-        //		current_projection.ForwardFFT();
     }
     else {
         comparison_object->input_reconstruction->ExtractSlice(current_projection, *comparison_object->angles, 1.0f, false);
@@ -42,13 +39,7 @@ Peak TemplateScore(void* scoring_parameters) {
         current_projection.ChangePixelSize(&current_projection, comparison_object->pixel_size_factor, 0.001f, true);
     }
 
-    //	current_projection.QuickAndDirtyWriteSlice("projections.mrc", comparison_object->slice);
-    //	comparison_object->slice++;
     current_projection.MultiplyPixelWise(*comparison_object->projection_filter);
-    //	current_projection.BackwardFFT();
-    //	current_projection.AddConstant(-current_projection.ReturnAverageOfRealValuesOnEdges());
-    //	current_projection.Resize(comparison_object->windowed_particle->logical_x_dimension, comparison_object->windowed_particle->logical_y_dimension, 1, 0.0f);
-    //	current_projection.ForwardFFT();
     current_projection.ZeroCentralPixel( );
     current_projection.DivideByConstant(sqrtf(current_projection.ReturnSumOfSquares( )));
 #ifdef MKL
@@ -60,15 +51,8 @@ Peak TemplateScore(void* scoring_parameters) {
     }
 #endif
     current_projection.BackwardFFT( );
-    //	wxPrintf("ping");
 
     return current_projection.FindPeakWithIntegerCoordinates( );
-    //	box_peak = current_projection.FindPeakWithIntegerCoordinates();
-    //	wxPrintf("address = %li\n", box_peak.physical_address_within_image);
-    //	box_peak.x = 0.0f;
-    //	box_peak.y = 0.0f;
-    //	box_peak.value = current_projection.real_values[33152];
-    //	return box_peak;
 }
 
 IMPLEMENT_APP(RefineTemplateApp)
@@ -102,24 +86,22 @@ void RefineTemplateApp::DoInteractiveUserInput( ) {
     float defocus1                = 10000.0f;
     float defocus2                = 10000.0f;
     ;
-    float defocus_angle;
-    float phase_shift;
-    float low_resolution_limit    = 300.0f;
-    float high_resolution_limit   = 8.0f;
-    float angular_range           = 2.0f;
-    float angular_step            = 5.0f;
-    int   best_parameters_to_keep = 20;
-    float defocus_search_range    = 1000;
-    float defocus_search_step     = 10;
-    //	float 		defocus_refine_step = 5;
-    float pixel_size_search_range = 0.1f;
-    float pixel_size_step         = 0.001f;
-    //	float		pixel_size_refine_step = 0.001f;
-    float    padding               = 1.0;
-    bool     ctf_refinement        = false;
-    float    mask_radius           = 0.0f;
-    wxString my_symmetry           = "C1";
-    float    in_plane_angular_step = 0;
+    float    defocus_angle;
+    float    phase_shift;
+    float    low_resolution_limit    = 300.0f;
+    float    high_resolution_limit   = 8.0f;
+    float    angular_range           = 2.0f;
+    float    angular_step            = 5.0f;
+    int      best_parameters_to_keep = 20;
+    float    defocus_search_range    = 1000;
+    float    defocus_search_step     = 10;
+    float    pixel_size_search_range = 0.1f;
+    float    pixel_size_step         = 0.001f;
+    float    padding                 = 1.0;
+    bool     ctf_refinement          = false;
+    float    mask_radius             = 0.0f;
+    wxString my_symmetry             = "C1";
+    float    in_plane_angular_step   = 0;
     float    wanted_threshold;
     float    min_peak_radius;
     float    xy_change_threshold        = 10.0f;
@@ -210,10 +192,8 @@ void RefineTemplateApp::DoInteractiveUserInput( ) {
                                       best_parameters_to_keep,
                                       defocus_search_range,
                                       defocus_search_step,
-                                      //															defocus_refine_step,
                                       pixel_size_search_range,
                                       pixel_size_step,
-                                      //															pixel_size_refine_step,
                                       padding,
                                       ctf_refinement,
                                       mask_radius,
@@ -264,18 +244,16 @@ bool RefineTemplateApp::DoCalculation( ) {
     float    defocus2                      = my_current_job.arguments[7].ReturnFloatArgument( );
     float    defocus_angle                 = my_current_job.arguments[8].ReturnFloatArgument( );
     ;
-    float low_resolution_limit         = my_current_job.arguments[9].ReturnFloatArgument( );
-    float high_resolution_limit_search = my_current_job.arguments[10].ReturnFloatArgument( );
-    float angular_range                = my_current_job.arguments[11].ReturnFloatArgument( );
-    float angular_step                 = my_current_job.arguments[12].ReturnFloatArgument( );
-    int   best_parameters_to_keep      = my_current_job.arguments[13].ReturnIntegerArgument( );
-    float defocus_search_range         = my_current_job.arguments[14].ReturnFloatArgument( );
-    float defocus_search_step          = my_current_job.arguments[15].ReturnFloatArgument( );
-    //	float 		defocus_refine_step = my_current_job.arguments[15].ReturnFloatArgument();
-    float defocus_refine_step     = 2.0f * defocus_search_step;
-    float pixel_size_search_range = my_current_job.arguments[16].ReturnFloatArgument( );
-    float pixel_size_search_step  = my_current_job.arguments[17].ReturnFloatArgument( );
-    //	float 		pixel_size_refine_step = my_current_job.arguments[17].ReturnFloatArgument();
+    float    low_resolution_limit            = my_current_job.arguments[9].ReturnFloatArgument( );
+    float    high_resolution_limit_search    = my_current_job.arguments[10].ReturnFloatArgument( );
+    float    angular_range                   = my_current_job.arguments[11].ReturnFloatArgument( );
+    float    angular_step                    = my_current_job.arguments[12].ReturnFloatArgument( );
+    int      best_parameters_to_keep         = my_current_job.arguments[13].ReturnIntegerArgument( );
+    float    defocus_search_range            = my_current_job.arguments[14].ReturnFloatArgument( );
+    float    defocus_search_step             = my_current_job.arguments[15].ReturnFloatArgument( );
+    float    defocus_refine_step             = 2.0f * defocus_search_step;
+    float    pixel_size_search_range         = my_current_job.arguments[16].ReturnFloatArgument( );
+    float    pixel_size_search_step          = my_current_job.arguments[17].ReturnFloatArgument( );
     float    pixel_size_refine_step          = 2.0f * pixel_size_search_step;
     float    padding                         = my_current_job.arguments[18].ReturnFloatArgument( );
     bool     ctf_refinement                  = my_current_job.arguments[19].ReturnBoolArgument( );
@@ -313,31 +291,6 @@ bool RefineTemplateApp::DoCalculation( ) {
 
     if ( is_running_locally == false )
         max_threads = number_of_threads_requested_on_command_line; // OVERRIDE FOR THE GUI, AS IT HAS TO BE SET ON THE COMMAND LINE...
-
-    /*wxPrintf("input image = %s\n", input_search_images_filename);
-	wxPrintf("input reconstruction= %s\n", input_reconstruction_filename);
-	wxPrintf("pixel size = %f\n", pixel_size);
-	wxPrintf("voltage = %f\n", voltage_kV);
-	wxPrintf("Cs = %f\n", spherical_aberration_mm);
-	wxPrintf("amp contrast = %f\n", amplitude_contrast);
-	wxPrintf("defocus1 = %f\n", defocus1);
-	wxPrintf("defocus2 = %f\n", defocus2);
-	wxPrintf("defocus_angle = %f\n", defocus_angle);
-	wxPrintf("low res limit = %f\n", low_resolution_limit);
-	wxPrintf("high res limit = %f\n", high_resolution_limit_search);
-	wxPrintf("angular step = %f\n", angular_step);
-	wxPrintf("best params to keep = %i\n", best_parameters_to_keep);
-	wxPrintf("defocus search range = %f\n", defocus_search_range);
-	wxPrintf("defocus step = %f\n", defocus_step);
-	wxPrintf("padding = %f\n", padding);
-	wxPrintf("ctf_refinement = %i\n", int(ctf_refinement));
-	wxPrintf("mask search radius = %f\n", mask_radius);
-	wxPrintf("phase shift = %f\n", phase_shift);
-	wxPrintf("symmetry = %s\n", my_symmetry);
-	wxPrintf("in plane step = %f\n", in_plane_angular_step);
-	wxPrintf("first location = %i\n", first_search_position);
-	wxPrintf("last location = %i\n", last_search_position);
-	*/
 
     int  i, j;
     bool parameter_map[5]; // needed for euler search init
@@ -430,7 +383,7 @@ bool RefineTemplateApp::DoCalculation( ) {
     float current_theta;
     float current_psi;
     float current_defocus;
-    float current_pixel_size;
+    float current_pixel_size_offet_in_angstrom;
     float best_score;
     float score;
     float starting_score;
@@ -490,22 +443,10 @@ bool RefineTemplateApp::DoCalculation( ) {
         input_reconstruction.Resize(input_reconstruction.logical_x_dimension * padding, input_reconstruction.logical_y_dimension * padding, input_reconstruction.logical_z_dimension * padding, input_reconstruction.ReturnAverageOfRealValuesOnEdges( ));
     }
     input_reconstruction.ForwardFFT( );
-    //input_reconstruction.CosineMask(0.1, 0.01, true);
-    //input_reconstruction.Whiten();
-    //if (first_search_position == 0) input_reconstruction.QuickAndDirtyWriteSlices("/tmp/filter.mrc", 1, input_reconstruction.logical_z_dimension);
     input_reconstruction.ZeroCentralPixel( );
     input_reconstruction.SwapRealSpaceQuadrants( );
 
     CTF input_ctf;
-    //	input_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, defocus1, defocus2, defocus_angle, 0.0, 0.0, 0.0, pixel_size, deg_2_rad(phase_shift));
-
-    // assume cube
-
-    //	windowed_particle.Allocate(input_reconstruction_file.ReturnXSize(), input_reconstruction_file.ReturnXSize(), false);
-    //	current_projection.Allocate(input_reconstruction_file.ReturnXSize(), input_reconstruction_file.ReturnXSize(), false);
-    //	projection_filter.Allocate(input_reconstruction_file.ReturnXSize(), input_reconstruction_file.ReturnXSize(), false);
-    //	template_reconstruction.Allocate(input_reconstruction.logical_x_dimension, input_reconstruction.logical_y_dimension, input_reconstruction.logical_z_dimension, true);
-    //	if (padding != 1.0f) padded_projection.Allocate(input_reconstruction_file.ReturnXSize() * padding, input_reconstruction_file.ReturnXSize() * padding, false);
 
     temp_float = (float(input_reconstruction_file.ReturnXSize( )) / 2.0f - 1.0f) * pixel_size;
     if ( mask_radius > temp_float )
@@ -514,8 +455,8 @@ bool RefineTemplateApp::DoCalculation( ) {
     // for now, I am assuming the MTF has been applied already.
     // work out the filter to just whiten the image..
 
-    whitening_filter.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((input_image.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
-    number_of_terms.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((input_image.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
+    whitening_filter.SetupXAxisForFourierSpace(input_image.logical_x_dimension, 2.f);
+    number_of_terms.SetupXAxisForFourierSpace(input_image.logical_x_dimension, 2.f);
 
     wxDateTime my_time_out;
     wxDateTime my_time_in;
@@ -581,11 +522,11 @@ bool RefineTemplateApp::DoCalculation( ) {
                 }
 
                 if ( sq_dist_x == 0.0f && sq_dist_y == 0.0f ) {
-                    current_phi        = phi_image.real_values[address];
-                    current_theta      = theta_image.real_values[address];
-                    current_psi        = psi_image.real_values[address];
-                    current_defocus    = defocus_image.real_values[address];
-                    current_pixel_size = pixel_size_image.real_values[address];
+                    current_phi                          = phi_image.real_values[address];
+                    current_theta                        = theta_image.real_values[address];
+                    current_psi                          = psi_image.real_values[address];
+                    current_defocus                      = defocus_image.real_values[address];
+                    current_pixel_size_offet_in_angstrom = pixel_size_image.real_values[address];
                 }
 
                 address++;
@@ -595,7 +536,7 @@ bool RefineTemplateApp::DoCalculation( ) {
 
         number_of_peaks_found++;
 
-        wxPrintf("Peak %4i at x, y, psi, theta, phi, defocus, pixel size =  %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f : %10.6f\n", number_of_peaks_found, current_peak.x * pixel_size, current_peak.y * pixel_size, current_psi, current_theta, current_phi, current_defocus, current_pixel_size, current_peak.value);
+        wxPrintf("Peak %4i at x, y, psi, theta, phi, defocus, pixel size =  %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f : %10.6f\n", number_of_peaks_found, current_peak.x * pixel_size, current_peak.y * pixel_size, current_psi, current_theta, current_phi, current_defocus, current_pixel_size_offet_in_angstrom, current_peak.value);
     }
 
     if ( defocus_refine_step <= 0.0 ) {
@@ -608,18 +549,10 @@ bool RefineTemplateApp::DoCalculation( ) {
         pixel_size_refine_step  = 100.0f;
     }
 
-    //	number_of_rotations = (2 * myroundint(float(angular_range)/float(angular_step)) + 1) * (2 * myroundint(float(angular_range)/float(angular_step)) + 1) * (2 * myroundint(float(angular_range)/float(in_plane_angular_step)) + 1);
-    //	total_correlation_positions = number_of_peaks_found * number_of_rotations * (2 * myroundint(float(defocus_search_range)/float(defocus_search_step)) + 1) * (2 * myroundint(float(pixel_size_search_range)/float(pixel_size_search_step)) + 1);
-
-    //	ProgressBar *my_progress;
-
     if ( is_running_locally == true ) {
         wxPrintf("\nRefining %i positions in the MIP.\n", number_of_peaks_found);
-        //		wxPrintf("Searching %i rotations per peak.\n", number_of_rotations);
-        //		wxPrintf("Calculating %li correlation total.\n\n", total_correlation_positions);
 
         wxPrintf("\nPerforming refinement...\n\n");
-        //		my_progress = new ProgressBar(total_correlation_positions);
     }
 
     //	best_mip.CopyFrom(&mip_image);
@@ -647,14 +580,17 @@ bool RefineTemplateApp::DoCalculation( ) {
     if ( max_threads > number_of_peaks_found )
         max_threads = number_of_peaks_found;
 
-#pragma omp parallel num_threads(max_threads) default(none) shared(number_of_peaks_found, found_peaks, input_image, mask_radius, pixel_size, mask_falloff,                                                                                                                                                                                                                     \
-                                                                   mip_image, scaled_mip_image, phi_image, theta_image, psi_image, defocus_image, pixel_size_image, defocus_search_range, defocus_refine_step, pixel_size_search_range,                                                                                                                                        \
-                                                                   pixel_size_refine_step, defocus1, defocus2, defocus_angle, angular_step, in_plane_angular_step, whitening_filter, input_reconstruction, min_peak_radius2, best_mip,                                                                                                                                         \
-                                                                   best_scaled_mip, best_phi, best_theta, best_psi, best_defocus, best_pixel_size, input_reconstruction_file, voltage_kV, spherical_aberration_mm, amplitude_contrast,                                                                                                                                         \
-                                                                   phase_shift, max_threads, defocus_step, xy_change_threshold, exclude_above_xy_threshold, all_peak_changes, all_peak_infos) private(current_peak, padded_reference, windowed_particle, sq_dist_x, sq_dist_y, address, current_address, current_phi, current_theta, current_psi, current_defocus,             \
-                                                                                                                                                                                                      current_pixel_size, best_score, phi_i, theta_i, psi_i, defocus_i, size_i, best_mip_local, best_scaled_mip_local, best_phi_local, best_theta_local, best_psi_local,       \
-                                                                                                                                                                                                      best_defocus_local, best_pixel_size_local, template_object, mult_i_start, mult_i, ll, input_ctf, best_defocus_score, best_phi_score, best_theta_score, best_psi_score,   \
-                                                                                                                                                                                                      kk, jj, ii, angles, score, address_offset, temp_float, projection_filter, template_peak, best_pixel_size_score, i, j, best_address, scaled_mip_image_local, peak_number, \
+    whitening_filter.MakeThreadSafeForNThreads(max_threads);
+    number_of_terms.MakeThreadSafeForNThreads(max_threads);
+
+#pragma omp parallel num_threads(max_threads) default(none) shared(number_of_peaks_found, found_peaks, input_image, mask_radius, pixel_size, mask_falloff,                                                                                                                                                                                                                                 \
+                                                                   mip_image, scaled_mip_image, phi_image, theta_image, psi_image, defocus_image, pixel_size_image, defocus_search_range, defocus_refine_step, pixel_size_search_range,                                                                                                                                                    \
+                                                                   pixel_size_refine_step, defocus1, defocus2, defocus_angle, angular_step, in_plane_angular_step, whitening_filter, input_reconstruction, min_peak_radius2, best_mip,                                                                                                                                                     \
+                                                                   best_scaled_mip, best_phi, best_theta, best_psi, best_defocus, best_pixel_size, input_reconstruction_file, voltage_kV, spherical_aberration_mm, amplitude_contrast,                                                                                                                                                     \
+                                                                   phase_shift, max_threads, defocus_step, xy_change_threshold, exclude_above_xy_threshold, all_peak_changes, all_peak_infos) private(current_peak, padded_reference, windowed_particle, sq_dist_x, sq_dist_y, address, current_address, current_phi, current_theta, current_psi, current_defocus,                         \
+                                                                                                                                                                                                      current_pixel_size_offet_in_angstrom, best_score, phi_i, theta_i, psi_i, defocus_i, size_i, best_mip_local, best_scaled_mip_local, best_phi_local, best_theta_local, best_psi_local, \
+                                                                                                                                                                                                      best_defocus_local, best_pixel_size_local, template_object, mult_i_start, mult_i, ll, input_ctf, best_defocus_score, best_phi_score, best_theta_score, best_psi_score,               \
+                                                                                                                                                                                                      kk, jj, ii, angles, score, address_offset, temp_float, projection_filter, template_peak, best_pixel_size_score, i, j, best_address, scaled_mip_image_local, peak_number,             \
                                                                                                                                                                                                       first_score, starting_score, size_is, defocus_is, score_adjustment, offset_distance, best_peak)
     {
 
@@ -721,54 +657,24 @@ bool RefineTemplateApp::DoCalculation( ) {
                 for ( i = 0; i < scaled_mip_image_local.logical_x_dimension; i++ ) {
                     sq_dist_x = float(pow(i - current_peak.x, 2));
 
-                    // The square centered at the pixel
-                    //				if ( sq_dist_x + sq_dist_y <= min_peak_radius2 )
-                    //				{
-                    //					scaled_mip_image_local.real_values[address] = -FLT_MAX;
-                    //				}
-
                     if ( sq_dist_x == 0.0f && sq_dist_y == 0.0f ) {
-                        current_address    = address;
-                        current_phi        = best_phi_local.real_values[address];
-                        current_theta      = best_theta_local.real_values[address];
-                        current_psi        = best_psi_local.real_values[address];
-                        current_defocus    = best_defocus_local.real_values[address];
-                        current_pixel_size = best_pixel_size_local.real_values[address];
-                        best_score         = -FLT_MAX;
+                        current_address                      = address;
+                        current_phi                          = best_phi_local.real_values[address];
+                        current_theta                        = best_theta_local.real_values[address];
+                        current_psi                          = best_psi_local.real_values[address];
+                        current_defocus                      = best_defocus_local.real_values[address];
+                        current_pixel_size_offet_in_angstrom = best_pixel_size_local.real_values[address];
+                        best_score                           = -FLT_MAX;
                         angles.Init(current_phi, current_theta, current_psi, 0.0, 0.0);
 
                         input_ctf.SetDefocus((defocus1 + current_defocus) / pixel_size, (defocus2 + current_defocus) / pixel_size, deg_2_rad(defocus_angle));
                         projection_filter.CalculateCTFImage(input_ctf);
                         projection_filter.ApplyCurveFilter(&whitening_filter);
 
-                        //					input_image.ForwardFFT();
-                        //					template_object.windowed_particle = &input_image;
-
-                        //					input_reconstruction.RandomisePhases(pixel_size / 20.0f);
-                        template_peak = TemplateScore(&template_object);
-                        //					starting_score = template_peak.value;
-                        //					wxPrintf("0 peak x, y, value = %g %g %g\n", template_peak.x, template_peak.y, template_peak.value);
-                        //					float s = 0.0f, a = 0.0f;
-                        //					for (int k = 0; k < 10; k++)
-                        //					{
-                        //						input_reconstruction.RandomisePhases(pixel_size / 20.0f);
-                        //						template_peak = TemplateScore(&template_object);
-                        //						wxPrintf("%i peak x, y, value = %g %g %g\n", k + 1, template_peak.x, template_peak.y, template_peak.value);
-                        //						s += powf(template_peak.value, 2);
-                        //						a += template_peak.value;
-                        //					}
-                        //					a /= 10;
-                        //					s /= 10;
-                        //					s = sqrtf(s - powf(a, 2));
-                        //					wxPrintf("noise, SNR = %g %g\n", s, fabsf(starting_score - a) / s);
-                        //					exit(0);
-                        //					starting_score = scaled_mip_image.real_values[address];
+                        template_peak    = TemplateScore(&template_object);
                         starting_score   = template_peak.value * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension);
                         score_adjustment = 1.0f;
-                        //					score_adjustment = mip_image.real_values[address] / template_peak.value / sqrtf(template_object.windowed_particle->logical_x_dimension * template_object.windowed_particle->logical_y_dimension);
-                        //					wxPrintf("old, new score = %g %g\n", mip_image.real_values[address], template_peak.value * sqrtf(template_object.windowed_particle->logical_x_dimension * template_object.windowed_particle->logical_y_dimension));
-                        //					exit(0);
-                        starting_score = score_adjustment * scaled_mip_image.real_values[current_address] * starting_score / mip_image.real_values[current_address];
+                        starting_score   = score_adjustment * scaled_mip_image.real_values[current_address] * starting_score / mip_image.real_values[current_address];
 
                         if ( max_threads == 1 )
                             wxPrintf("\nRefining peak %i at x, y =  %6i, %6i\n", peak_number + 1, myroundint(current_peak.x), myroundint(current_peak.y));
@@ -777,63 +683,37 @@ bool RefineTemplateApp::DoCalculation( ) {
                                 wxPrintf("Peak %4i: dx, dy, dpsi, dtheta, dphi, ddefocus, dpixel size = %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f | value = %10.6f\n", peak_number + 1, 0., 0., 0., 0., 0., 0., 0., starting_score);
                             goto NEXTPEAK;
                         }
-                        //					template_reconstruction.CopyFrom(&input_reconstruction);
-                        //					template_reconstruction.ForwardFFT();
-                        //					template_reconstruction.ZeroCentralPixel();
-                        //					template_reconstruction.SwapRealSpaceQuadrants();
-
-                        //					template_object.input_reconstruction = &template_reconstruction;
-                        //					template_object.windowed_particle = &windowed_particle;
-                        //					template_object.projection_filter = &projection_filter;
-                        //					template_object.angles = &angles;
-                        //					template_object.pixel_size_factor = 1.0f;
 
                         if ( defocus_search_range != 0.0f ) {
-                            //						for (defocus_is = 0; defocus_is <= myroundint(float(defocus_search_range)/float(defocus_search_step)); defocus_is = defocus_is - myroundint(float(4 * defocus_is - 1) / 2.0f))
                             for ( defocus_is = -myroundint(float(defocus_search_range) / float(defocus_step)); defocus_is <= myroundint(float(defocus_search_range) / float(defocus_step)); defocus_is++ ) {
                                 input_ctf.SetDefocus((defocus1 + current_defocus + defocus_is * defocus_step) / pixel_size, (defocus2 + current_defocus + defocus_is * defocus_step) / pixel_size, deg_2_rad(defocus_angle));
                                 projection_filter.CalculateCTFImage(input_ctf);
                                 projection_filter.ApplyCurveFilter(&whitening_filter);
 
-                                //							angles.Init(current_phi, current_theta, current_psi, 0.0, 0.0);
-
                                 template_peak = TemplateScore(&template_object);
                                 score         = template_peak.value;
                                 if ( score > best_score ) {
-                                    best_peak       = template_peak;
-                                    best_score      = score;
-                                    address_offset  = (scaled_mip_image.logical_x_dimension + scaled_mip_image.padding_jump_value) * myroundint(template_peak.y) + myroundint(template_peak.x);
-                                    best_address    = current_address + address_offset;
-                                    offset_distance = sqrtf(powf(template_peak.x, 2) + powf(template_peak.y, 2));
-                                    temp_float      = score_adjustment * scaled_mip_image.real_values[current_address] * best_score / mip_image.real_values[current_address] * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension);
-                                    //								wxPrintf("Value for dpsi, dtheta, dphi, ddefocus = %f, %f, %f, %f : %f\n", 0.0, 0.0, 0.0, defocus_is * defocus_search_step, temp_float);
-                                    //								best_psi.real_values[current_address] = current_psi + psi_i * in_plane_angular_step;
-                                    //								best_theta.real_values[current_address] = current_theta + theta_i * angular_step;
-                                    //								best_phi.real_values[current_address] = current_phi + phi_i * angular_step;
+                                    best_peak                                    = template_peak;
+                                    best_score                                   = score;
+                                    address_offset                               = (scaled_mip_image.logical_x_dimension + scaled_mip_image.padding_jump_value) * myroundint(template_peak.y) + myroundint(template_peak.x);
+                                    best_address                                 = current_address + address_offset;
+                                    offset_distance                              = sqrtf(powf(template_peak.x, 2) + powf(template_peak.y, 2));
+                                    temp_float                                   = score_adjustment * scaled_mip_image.real_values[current_address] * best_score / mip_image.real_values[current_address] * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension);
                                     best_defocus_local.real_values[best_address] = current_defocus + defocus_is * defocus_step;
-                                    //								best_pixel_size_local.real_values[best_address] = current_pixel_size;
                                     if ( max_threads == 1 )
                                         wxPrintf("Peak %4i: dx, dy, dpsi, dtheta, dphi, ddefocus, dpixel size = %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f | value = %10.6f\n", peak_number + 1, best_peak.x * pixel_size, best_peak.y * pixel_size,
                                                  best_psi_local.real_values[best_address] - psi_image.real_values[current_address], best_theta_local.real_values[best_address] - theta_image.real_values[current_address],
                                                  best_phi_local.real_values[best_address] - phi_image.real_values[current_address], best_defocus_local.real_values[best_address] - defocus_image.real_values[current_address],
                                                  best_pixel_size_local.real_values[best_address] - pixel_size_image.real_values[current_address], temp_float);
-
-                                    //								if (max_threads == 1 && offset_distance * pixel_size > xy_change_threshold) wxPrintf("Warning: peak moved by %g A\n", offset_distance * pixel_size);
                                 }
-                                //							if (first_score == false && defocus_is == 0) {first_score = true; starting_score = temp_float; score_adjustment = scaled_mip_image.real_values[current_address] / starting_score;}
                             }
-                            //						if (defocus_search_step > 0.0) defocus_is = myroundint(best_defocus.real_values[best_address] - current_defocus) / defocus_search_step;
                             current_defocus = best_defocus_local.real_values[best_address];
                         }
 
-                        //					if (number_of_peaks_found < 3) break;
-                        // Do local search with defocus
-                        //					best_score = -FLT_MAX;
                         phi_i     = 0;
                         theta_i   = 0;
                         psi_i     = 0;
                         defocus_i = 0;
-                        //					score = best_score;
 
                         mult_i_start = defocus_step / defocus_refine_step;
                         for ( mult_i = mult_i_start; mult_i > 0.5f; mult_i /= 2.0f ) {
@@ -868,28 +748,22 @@ bool RefineTemplateApp::DoCalculation( ) {
                                                             template_peak = TemplateScore(&template_object);
                                                             score         = template_peak.value;
                                                             if ( score > best_score ) {
-                                                                best_peak       = template_peak;
-                                                                best_score      = score;
-                                                                address_offset  = (scaled_mip_image.logical_x_dimension + scaled_mip_image.padding_jump_value) * myroundint(template_peak.y) + myroundint(template_peak.x);
-                                                                best_address    = current_address + address_offset;
-                                                                offset_distance = sqrtf(powf(template_peak.x, 2) + powf(template_peak.y, 2));
-                                                                //															wxPrintf("peak value, df1, df2 = %f %f %f\n", template_peak.value, defocus1 + current_defocus + defocus_i * defocus_refine_step, defocus2 + current_defocus + defocus_i * defocus_refine_step);
-                                                                temp_float = score_adjustment * scaled_mip_image.real_values[current_address] * best_score / mip_image.real_values[current_address] * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension);
-                                                                //															if (max_threads == 1) wxPrintf("Value for dpsi, dtheta, dphi, ddefocus = %f, %f, %f, %f : %f\n", psi_i * in_plane_angular_step, theta_i * angular_step, phi_i * angular_step, defocus_i * defocus_refine_step, temp_float);
-                                                                //															wxPrintf("Value for dpsi, dtheta, dphi, ddefocus = %f, %f, %f, %f : %f\n", psi_i * in_plane_angular_step, theta_i * angular_step, phi_i * angular_step, defocus_i * defocus_refine_step + defocus_is * defocus_search_step, temp_float);
+                                                                best_peak                                       = template_peak;
+                                                                best_score                                      = score;
+                                                                address_offset                                  = (scaled_mip_image.logical_x_dimension + scaled_mip_image.padding_jump_value) * myroundint(template_peak.y) + myroundint(template_peak.x);
+                                                                best_address                                    = current_address + address_offset;
+                                                                offset_distance                                 = sqrtf(powf(template_peak.x, 2) + powf(template_peak.y, 2));
+                                                                temp_float                                      = score_adjustment * scaled_mip_image.real_values[current_address] * best_score / mip_image.real_values[current_address] * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension);
                                                                 best_psi_local.real_values[best_address]        = current_psi + psi_i * in_plane_angular_step;
                                                                 best_theta_local.real_values[best_address]      = current_theta + theta_i * angular_step;
                                                                 best_phi_local.real_values[best_address]        = current_phi + phi_i * angular_step;
                                                                 best_defocus_local.real_values[best_address]    = current_defocus + defocus_i * defocus_refine_step;
-                                                                best_pixel_size_local.real_values[best_address] = current_pixel_size;
+                                                                best_pixel_size_local.real_values[best_address] = current_pixel_size_offet_in_angstrom;
                                                                 if ( max_threads == 1 )
                                                                     wxPrintf("Peak %4i: dx, dy, dpsi, dtheta, dphi, ddefocus, dpixel size = %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f | value = %10.6f\n", peak_number + 1, best_peak.x * pixel_size, best_peak.y * pixel_size,
                                                                              best_psi_local.real_values[best_address] - psi_image.real_values[current_address], best_theta_local.real_values[best_address] - theta_image.real_values[current_address],
                                                                              best_phi_local.real_values[best_address] - phi_image.real_values[current_address], best_defocus_local.real_values[best_address] - defocus_image.real_values[current_address],
                                                                              best_pixel_size_local.real_values[best_address] - pixel_size_image.real_values[current_address], temp_float);
-                                                                //															if (max_threads == 1 && offset_distance * pixel_size > xy_change_threshold) wxPrintf("Warning: peak moved by %g A\n", offset_distance * pixel_size);
-                                                                //															if (first_score == false) {first_score = true; starting_score = temp_float;}
-                                                                //															addresses[peak_number] = best_address;
                                                             }
                                                         } while ( best_score > best_psi_score );
                                                         psi_i -= ii;
@@ -907,11 +781,11 @@ bool RefineTemplateApp::DoCalculation( ) {
                         }
 
                         // Do pixel_size scan
-                        current_phi        = best_phi_local.real_values[best_address];
-                        current_theta      = best_theta_local.real_values[best_address];
-                        current_psi        = best_psi_local.real_values[best_address];
-                        current_defocus    = best_defocus_local.real_values[best_address];
-                        current_pixel_size = best_pixel_size_local.real_values[best_address];
+                        current_phi                          = best_phi_local.real_values[best_address];
+                        current_theta                        = best_theta_local.real_values[best_address];
+                        current_psi                          = best_psi_local.real_values[best_address];
+                        current_defocus                      = best_defocus_local.real_values[best_address];
+                        current_pixel_size_offet_in_angstrom = best_pixel_size_local.real_values[best_address];
                         //					best_score = -FLT_MAX;
 
                         phi_i   = 0;
@@ -926,57 +800,32 @@ bool RefineTemplateApp::DoCalculation( ) {
 
                         if ( pixel_size_search_range != 0.0f ) {
                             for ( size_is = -myroundint(float(pixel_size_search_range) / float(pixel_size_refine_step)); size_is <= myroundint(float(pixel_size_search_range) / float(pixel_size_refine_step)); size_is++ ) {
-                                template_object.pixel_size_factor = (pixel_size + current_pixel_size + float(size_is) * pixel_size_refine_step) / pixel_size;
-                                //						wxPrintf("trying pixel size %f\n", pixel_size + float(size_is) * pixel_size_refine_step);
-                                template_peak = TemplateScore(&template_object);
-                                score         = template_peak.value;
+                                template_object.pixel_size_factor = (pixel_size + current_pixel_size_offet_in_angstrom + float(size_is) * pixel_size_refine_step) / pixel_size;
+                                template_peak                     = TemplateScore(&template_object);
+                                score                             = template_peak.value;
                                 if ( score > best_score ) {
-                                    best_peak       = template_peak;
-                                    best_score      = score;
-                                    address_offset  = (scaled_mip_image.logical_x_dimension + scaled_mip_image.padding_jump_value) * myroundint(template_peak.y) + myroundint(template_peak.x);
-                                    best_address    = current_address + address_offset;
-                                    offset_distance = sqrtf(powf(template_peak.x, 2) + powf(template_peak.y, 2));
-                                    temp_float      = score_adjustment * scaled_mip_image.real_values[current_address] * best_score / mip_image.real_values[current_address] * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension);
-                                    //							if (max_threads == 1) wxPrintf("Value for dpsi, dtheta, dphi, dpixel size = %f, %f, %f, %f : %f\n", psi_i * in_plane_angular_step, theta_i * angular_step, phi_i * angular_step, size_is * pixel_size_refine_step, temp_float);
-                                    best_pixel_size_local.real_values[best_address] = current_pixel_size + size_is * pixel_size_refine_step;
+                                    best_peak                                       = template_peak;
+                                    best_score                                      = score;
+                                    address_offset                                  = (scaled_mip_image.logical_x_dimension + scaled_mip_image.padding_jump_value) * myroundint(template_peak.y) + myroundint(template_peak.x);
+                                    best_address                                    = current_address + address_offset;
+                                    offset_distance                                 = sqrtf(powf(template_peak.x, 2) + powf(template_peak.y, 2));
+                                    temp_float                                      = score_adjustment * scaled_mip_image.real_values[current_address] * best_score / mip_image.real_values[current_address] * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension);
+                                    best_pixel_size_local.real_values[best_address] = current_pixel_size_offet_in_angstrom + size_is * pixel_size_refine_step;
                                     if ( max_threads == 1 )
                                         wxPrintf("Peak %4i: dx, dy, dpsi, dtheta, dphi, ddefocus, dpixel size = %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f | value = %10.6f\n", peak_number + 1, best_peak.x * pixel_size, best_peak.y * pixel_size,
                                                  best_psi_local.real_values[best_address] - psi_image.real_values[current_address], best_theta_local.real_values[best_address] - theta_image.real_values[current_address],
                                                  best_phi_local.real_values[best_address] - phi_image.real_values[current_address], best_defocus_local.real_values[best_address] - defocus_image.real_values[current_address],
                                                  best_pixel_size_local.real_values[best_address] - pixel_size_image.real_values[current_address], temp_float);
-                                    //								if (max_threads == 1 && offset_distance * pixel_size > xy_change_threshold) wxPrintf("Warning: peak moved by %g A\n", offset_distance * pixel_size);
                                 }
                             }
-                            // Do local search with pixel size
-                            //						current_phi = best_phi_local.real_values[best_address];
-                            //						current_theta = best_theta_local.real_values[best_address];
-                            //						current_psi = best_psi_local.real_values[best_address];
-                            //						current_defocus = best_defocus_local.real_values[best_address];
-                            current_pixel_size = best_pixel_size_local.real_values[best_address];
+                            current_pixel_size_offet_in_angstrom = best_pixel_size_local.real_values[best_address];
                         }
-                        //					best_score = -FLT_MAX;
 
-                        phi_i   = 0;
-                        theta_i = 0;
-                        psi_i   = 0;
-                        size_i  = 0;
-                        //					score = best_score;
-                        //					mult_i_start = pixel_size_search_range/pixel_size_refine_step;
-                        //					mult_i_start = 0.01f/pixel_size_refine_step;
-                        //					if (mult_i_start < 1.0f) mult_i_start = 1.0f;
+                        phi_i        = 0;
+                        theta_i      = 0;
+                        psi_i        = 0;
+                        size_i       = 0;
                         mult_i_start = 1.0f;
-                        //					pixel_size_refine_step /= 2.0f;
-
-                        //					input_ctf.SetDefocus((defocus1 + current_defocus) / pixel_size, (defocus2 + current_defocus) / pixel_size, deg_2_rad(defocus_angle));
-                        //					projection_filter.CalculateCTFImage(input_ctf);
-                        //					projection_filter.ApplyCurveFilter(&whitening_filter);
-
-                        //					input_reconstruction.ChangePixelSize(&template_reconstruction, (pixel_size + float(size_i) * pixel_size_refine_step) / pixel_size, 0.001f, true);
-                        //					template_reconstruction.CopyFrom(&input_reconstruction);
-                        //					template_reconstruction.ForwardFFT();
-                        //					template_reconstruction.ZeroCentralPixel();
-                        //					template_reconstruction.SwapRealSpaceQuadrants();
-                        //					template_object.input_reconstruction = &template_reconstruction;
 
                         for ( mult_i = mult_i_start; mult_i > 0.5f; mult_i /= 2.0f ) {
                             for ( ll = 0; ll < 2; ll = -2 * ll + 1 ) {
@@ -987,18 +836,7 @@ bool RefineTemplateApp::DoCalculation( ) {
                                     if ( pixel_size_search_range != 0.0f )
                                         size_i += myroundint(mult_i * ll);
 
-                                    template_object.pixel_size_factor = (pixel_size + current_pixel_size + float(size_i) * pixel_size_refine_step) / pixel_size;
-                                    //								wxPrintf("trying pixel size %f\n", pixel_size + float(size_i) * pixel_size_refine_step);
-                                    //								input_reconstruction.ChangePixelSize(&template_reconstruction, (pixel_size + float(size_i) * pixel_size_refine_step) / pixel_size, 0.001f, true);
-                                    ////								template_reconstruction.ForwardFFT();
-                                    //								template_reconstruction.ZeroCentralPixel();
-                                    //								template_reconstruction.SwapRealSpaceQuadrants();
-                                    //								template_object.input_reconstruction = &template_reconstruction;
-
-                                    // make the projection filter, which will be CTF * whitening filter
-                                    //								input_ctf.SetDefocus((defocus1 + current_defocus + size_i * defocus_refine_step) / pixel_size, (defocus2 + current_defocus + size_i * defocus_refine_step) / pixel_size, deg_2_rad(defocus_angle));
-                                    //								projection_filter.CalculateCTFImage(input_ctf);
-                                    //								projection_filter.ApplyCurveFilter(&whitening_filter);
+                                    template_object.pixel_size_factor = (pixel_size + current_pixel_size_offet_in_angstrom + float(size_i) * pixel_size_refine_step) / pixel_size;
 
                                     for ( kk = 0; kk < 2; kk = -2 * kk + 1 ) {
                                         do {
@@ -1018,26 +856,22 @@ bool RefineTemplateApp::DoCalculation( ) {
                                                             template_peak = TemplateScore(&template_object);
                                                             score         = template_peak.value;
                                                             if ( score > best_score ) {
-                                                                best_peak       = template_peak;
-                                                                best_score      = score;
-                                                                address_offset  = (scaled_mip_image.logical_x_dimension + scaled_mip_image.padding_jump_value) * myroundint(template_peak.y) + myroundint(template_peak.x);
-                                                                best_address    = current_address + address_offset;
-                                                                offset_distance = sqrtf(powf(template_peak.x, 2) + powf(template_peak.y, 2));
-                                                                //															wxPrintf("peak value, df1, df2 = %f %f %f\n", template_peak.value, defocus1 + current_defocus + defocus_i * defocus_refine_step, defocus2 + current_defocus + defocus_i * defocus_refine_step);
-                                                                temp_float = score_adjustment * scaled_mip_image.real_values[current_address] * best_score / mip_image.real_values[current_address] * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension);
-                                                                //															if (max_threads == 1) wxPrintf("Value for dpsi, dtheta, dphi, dpixel size = %f, %f, %f, %f : %f\n", psi_i * in_plane_angular_step, theta_i * angular_step, phi_i * angular_step, size_i * pixel_size_refine_step, temp_float);
+                                                                best_peak                                       = template_peak;
+                                                                best_score                                      = score;
+                                                                address_offset                                  = (scaled_mip_image.logical_x_dimension + scaled_mip_image.padding_jump_value) * myroundint(template_peak.y) + myroundint(template_peak.x);
+                                                                best_address                                    = current_address + address_offset;
+                                                                offset_distance                                 = sqrtf(powf(template_peak.x, 2) + powf(template_peak.y, 2));
+                                                                temp_float                                      = score_adjustment * scaled_mip_image.real_values[current_address] * best_score / mip_image.real_values[current_address] * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension);
                                                                 best_psi_local.real_values[best_address]        = current_psi + psi_i * in_plane_angular_step;
                                                                 best_theta_local.real_values[best_address]      = current_theta + theta_i * angular_step;
                                                                 best_phi_local.real_values[best_address]        = current_phi + phi_i * angular_step;
                                                                 best_defocus_local.real_values[best_address]    = current_defocus;
-                                                                best_pixel_size_local.real_values[best_address] = current_pixel_size + size_i * pixel_size_refine_step;
+                                                                best_pixel_size_local.real_values[best_address] = current_pixel_size_offet_in_angstrom + size_i * pixel_size_refine_step;
                                                                 if ( max_threads == 1 )
                                                                     wxPrintf("Peak %4i: dx, dy, dpsi, dtheta, dphi, ddefocus, dpixel size = %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f | value = %10.6f\n", peak_number + 1, best_peak.x * pixel_size, best_peak.y * pixel_size,
                                                                              best_psi_local.real_values[best_address] - psi_image.real_values[current_address], best_theta_local.real_values[best_address] - theta_image.real_values[current_address],
                                                                              best_phi_local.real_values[best_address] - phi_image.real_values[current_address], best_defocus_local.real_values[best_address] - defocus_image.real_values[current_address],
                                                                              best_pixel_size_local.real_values[best_address] - pixel_size_image.real_values[current_address], temp_float);
-                                                                //															if (max_threads == 1 && offset_distance * pixel_size > xy_change_threshold) wxPrintf("Warning: peak moved by %g A\n", offset_distance * pixel_size);
-                                                                //															addresses[peak_number] = best_address;
                                                             }
                                                         } while ( best_score > best_psi_score );
                                                         psi_i -= ii;
@@ -1058,7 +892,6 @@ bool RefineTemplateApp::DoCalculation( ) {
                 }
                 address += scaled_mip_image_local.padding_jump_value;
             }
-            //		wxPrintf("score_adjustment, scaled_mip_image, best_score, mip_image = %g %g %g %g\n", score_adjustment, scaled_mip_image.real_values[current_address], best_score, mip_image.real_values[current_address]);
             best_scaled_mip_local.real_values[best_address] = score_adjustment * scaled_mip_image.real_values[current_address] * best_score / mip_image.real_values[current_address] * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension);
             best_mip_local.real_values[best_address]        = score_adjustment * best_score * sqrtf(projection_filter.logical_x_dimension * projection_filter.logical_y_dimension);
 
@@ -1161,11 +994,7 @@ bool RefineTemplateApp::DoCalculation( ) {
 
             address = 0;
 
-            //////////////////////////////////////////////
-            // CURRENTLY HARD CODED TO ONLY DO 1000 MAX //
-            //////////////////////////////////////////////
-
-            if ( number_of_peaks_found <= 1000 ) {
+            if ( number_of_peaks_found <= cistem::match_template::MAX_ALLOWED_NUMBER_OF_PEAKS ) {
 
                 angles.Init(all_peak_infos[counter].phi, all_peak_infos[counter].theta, all_peak_infos[counter].psi, 0.0, 0.0);
 

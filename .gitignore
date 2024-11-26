@@ -32,3 +32,4 @@ configure~
 *.tif
 *.dff
 __pycache__/
+include/Eigen

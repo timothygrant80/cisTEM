@@ -480,6 +480,10 @@ if ENABLE_MEASURETEMPLATEBIAS_AM
 bin_PROGRAMS += measure_template_bias
 endif
 
+if ENABLE_CALCULATETEMPLATEPVALUE_AM
+bin_PROGRAMS += calculate_template_pvalue
+endif
+
 if ENABLE_ALIGNNMRSPECTRA_AM
 bin_PROGRAMS += align_nmr_spectra
 endif
@@ -1321,3 +1325,9 @@ if WANT_CISTEM_GPU_AM
     gpu_devices_LDADD    =  libgpucore.a libcore.a $(WX_LIBS_BASE) $(MKL_LIBS) $(CUDA_LIBS)
     gpu_devices_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 endif
+
+calculate_template_pvalue_SOURCES  = programs/calculate_template_pvalue/calculate_template_pvalue.cpp
+calculate_template_pvalue_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+calculate_template_pvalue_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+calculate_template_pvalue_LDADD    = libcore.a $(WX_LIBS_BASE)
+calculate_template_pvalue_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)

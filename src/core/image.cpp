@@ -8116,18 +8116,20 @@ void Image::ChangePixelSize(Image* other_image, float wanted_factor, float wante
     MyDebugAssertTrue(other_image->is_in_memory, "Other image Memory not allocated");
     MyDebugAssertTrue(is_in_real_space, "Image must be in real space");
 
-    if ( fabsf(wanted_factor - 1.0f) < wanted_tolerance && return_fft ) {
-        if ( other_image == this )
-            ForwardFFT( );
-        else {
-            this->ClipInto(other_image);
-            other_image->ForwardFFT( );
-        }
-        return;
-    }
     if ( fabsf(wanted_factor - 1.0f) < wanted_tolerance ) {
-        if ( other_image != this )
-            this->ClipInto(other_image);
+        if ( return_fft ) {
+
+            if ( other_image == this )
+                ForwardFFT( );
+            else {
+                this->ClipInto(other_image);
+                other_image->ForwardFFT( );
+            }
+        }
+        else {
+            if ( other_image != this )
+                this->ClipInto(other_image);
+        }
         return;
     }
 

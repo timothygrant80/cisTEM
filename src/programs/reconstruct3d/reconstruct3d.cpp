@@ -542,12 +542,15 @@ bool Reconstruct3DApp::DoCalculation( ) {
         percentage         = float(max_samples) / float(images_to_process) / random_reset_count;
         sum_power.SetToConstant(0.0);
         number_of_blank_edges = 0;
-        noise_power_spectrum.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((sum_power.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
-        number_of_terms.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((sum_power.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
+        noise_power_spectrum.SetupXAxisForFourierSpace(sum_power.logical_x_dimension, 2.f);
+        number_of_terms.SetupXAxisForFourierSpace(sum_power.logical_x_dimension, 2.f);
         if ( is_running_locally == true )
             my_progress = new ProgressBar(images_for_noise_power / max_threads);
         current_image        = 0;
         random_reset_counter = 0;
+
+        noise_power_spectrum.MakeThreadSafeForNThreads(max_threads);
+        number_of_terms.MakeThreadSafeForNThreads(max_threads);
 
 #pragma omp parallel num_threads(max_threads) default(none) shared(input_star_file, first_particle, last_particle, my_progress, percentage, exclude_blank_edges, input_stack,                                                                                                                                            \
                                                                    outer_mask_radius, pixel_size, mask_falloff, number_of_blank_edges, sum_power, current_image, global_random_number_generator, random_reset_count, random_reset_counter,                                                                               \

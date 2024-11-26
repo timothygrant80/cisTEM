@@ -284,15 +284,17 @@ void TemplateMatchingDataSizer::GetFFTSize( ) {
     // In the case where this is note == 1, image_cropped_size = image_pre_scaling_size
     image_search_size.z = 1;
 
+    search_pixel_size = pixel_size * closest_2d_binning_factor;
+
     // Assuming the template is cubic and we handle sampling during projection, there is no need for pre-scaling, only resizing to ensure power of 2 (if FastFFT)
     // TODO: This should work without power of two if we project into a power of 2 size, esp important for templates > 512
     template_pre_scaling_size.x = template_size.x;
     template_pre_scaling_size.y = template_size.y;
     template_pre_scaling_size.z = template_size.z;
 
-    template_cropped_size.x = template_size.x;
-    template_cropped_size.y = template_size.y;
-    template_cropped_size.z = template_size.z;
+    template_cropped_size.x = GetBinnedSize(float(template_size.x), GetFullBinningFactor( ));
+    template_cropped_size.y = GetBinnedSize(float(template_size.y), GetFullBinningFactor( ));
+    template_cropped_size.z = GetBinnedSize(float(template_size.z), GetFullBinningFactor( ));
 
     // In the general case, there are no restrictions on the template being a power of two, but we should want a decent size
     int prime_factor_3d    = use_fast_fft ? 2 : 5;
@@ -301,8 +303,6 @@ void TemplateMatchingDataSizer::GetFFTSize( ) {
     template_search_size.z = template_search_size.x;
     // We know this is an even dimension so adding 2
     template_search_size.w = (template_search_size.x + 2) / 2;
-
-    search_pixel_size = pixel_size * closest_2d_binning_factor;
 
 #ifdef DEBUG_TM_SIZER_PRINT
     wxPrintf("The input image will be padded by %d,%d, cropped to %d,%d and then padded again to %d,%d\n",
@@ -910,7 +910,7 @@ void TemplateMatchingDataSizer::FillInNearestNeighbors(Image& output_image, Imag
     int size_neighborhood = 3;
     // FIXME: MAX_BINNING_FACTOR is not enforced anywhere!!
     while ( float(size_neighborhood) < cistem::match_template::MAX_BINNING_FACTOR ) {
-        if ( 0.1f + GetFullBinningFactor( ) <= float(size_neighborhood) ) {
+        if ( 1.5f * GetFullBinningFactor( ) <= float(size_neighborhood) ) {
             break;
         }
         else
@@ -980,7 +980,7 @@ void TemplateMatchingDataSizer::FillInNearestNeighbors(Image& output_image, Imag
                 }
 
             endOfElse:
-                MyDebugAssertFalse(closest_value == no_value, "No value found");
+                MyDebugAssertFalse(closest_value == no_value, "No value found for neighborhood %d and binning_factor %3.3f", size_neighborhood, GetFullBinningFactor( ));
                 output_image.real_values[output_image.ReturnReal1DAddressFromPhysicalCoord(i, j, 0)] = closest_value;
             }
         }

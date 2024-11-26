@@ -8,7 +8,7 @@ Curve::Curve( ) {
     polynomial_order                = 0;
     savitzky_golay_polynomial_order = 0;
     savitzky_golay_window_size      = 0;
-    index_of_last_point_used        = 0;
+    index_of_last_point_used.push_back(0);
 }
 
 // copy constructor
@@ -21,7 +21,8 @@ Curve::Curve(const Curve& other_curve) {
     polynomial_coefficients.clear( );
     polynomial_order = 0;
 
-    index_of_last_point_used = 0;
+    index_of_last_point_used.clear( );
+    index_of_last_point_used.push_back(0);
 
     *this = other_curve;
 }
@@ -792,6 +793,12 @@ int Curve::ReturnIndexOfNearestPointFromX(float wanted_x) {
     return index_of_nearest_point;
 }
 
+void Curve::MakeThreadSafeForNThreads(int wanted_number_of_threads) {
+    for ( int i = index_of_last_point_used.size( ); i < wanted_number_of_threads; i++ ) {
+        index_of_last_point_used.push_back(0);
+    }
+};
+
 /**
  * @brief TODO: write a faster verions of this
  * 
@@ -802,29 +809,38 @@ int Curve::ReturnIndexOfNearestPreviousBin(float wanted_x) {
     DebugCheckEmpty( );
     DebugCheckValidX(wanted_x);
 
-    for ( int counter = index_of_last_point_used; counter < NumberOfPoints( ) - 1; counter++ ) {
+    // This has never been thread-safe, not sure how it worked previously as
+    MyDebugAssertTrue(index_of_last_point_used.size( ) >= ReturnThreadNumberOfCurrentThread( ), "This function is not thread-safe, the Curve object must be set to handle the number of threads prior to any parallel region.\n");
+
+    for ( int counter = GetIndexOfLastPointUsed( ); counter < NumberOfPoints( ) - 1; counter++ ) {
         if ( wanted_x >= data_x[counter] && wanted_x < data_x[counter + 1] ) {
-            index_of_last_point_used = counter;
+            SetIndexOfLastPointUsed(counter);
             return counter;
         }
     }
-    for ( int counter = index_of_last_point_used - 1; counter >= 0; counter-- ) {
+    for ( int counter = GetIndexOfLastPointUsed( ) - 1; counter >= 0; counter-- ) {
         if ( wanted_x >= data_x[counter] && wanted_x < data_x[counter + 1] ) {
-            index_of_last_point_used = counter;
+            SetIndexOfLastPointUsed(counter);
             return counter;
         }
     }
 
     if ( wanted_x < data_x[0] ) {
-        index_of_last_point_used = 0;
+        SetIndexOfLastPointUsed(0);
         return 0;
     }
     else if ( wanted_x >= data_x.back( ) ) {
-        index_of_last_point_used = NumberOfPoints( ) - 1;
-        return NumberOfPoints( ) - 1;
+        SetIndexOfLastPointUsed(NumberOfPoints( ) - 1);
+        return GetIndexOfLastPointUsed( );
     }
 
     // Should never get here
+    wxPrintf("Error: wanted_x = %f\n", wanted_x);
+    wxPrintf("Size of data_x = %i\n", int(data_x.size( )));
+    wxPrintf("Front and back of data_x = %f %f\n", data_x.front( ), data_x.back( ));
+    wxPrintf("Number of points = %i\n", NumberOfPoints( ));
+    wxPrintf("index_of_last_point_used = %i\n", GetIndexOfLastPointUsed( ));
+
     MyDebugAssertTrue(false, "Oops, programming error\n");
     return 0;
 }

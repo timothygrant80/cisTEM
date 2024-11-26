@@ -2,10 +2,18 @@
 class Curve {
 
   private:
-    int savitzky_golay_window_size      = 0;
-    int savitzky_golay_polynomial_order = 0;
-    int polynomial_order                = 0;
-    int index_of_last_point_used;
+    int              savitzky_golay_window_size      = 0;
+    int              savitzky_golay_polynomial_order = 0;
+    int              polynomial_order                = 0;
+    std::vector<int> index_of_last_point_used;
+
+    inline int GetIndexOfLastPointUsed( ) const {
+        return index_of_last_point_used[ReturnThreadNumberOfCurrentThread( )];
+    };
+
+    inline void SetIndexOfLastPointUsed(int wanted_index) {
+        index_of_last_point_used[ReturnThreadNumberOfCurrentThread( )] = wanted_index;
+    };
 
     void DebugCheckForNegativeValues( ) {
 #ifdef DEBUG
@@ -56,6 +64,8 @@ class Curve {
         MyDebugAssertTrue(data_x.size( ) == data_y.size( ), "X and Y data sizes do not match\n");
         return data_x.size( );
     }
+
+    void MakeThreadSafeForNThreads(int wanted_number_of_threads);
 
     void  ResampleCurve(Curve* input_curve, int wanted_number_of_points);
     float ReturnLinearInterpolationFromI(float wanted_i);

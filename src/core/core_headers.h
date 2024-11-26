@@ -85,7 +85,7 @@ class StackDump : public wxStackWalker // so we can give backtraces..
         : wxStackWalker(argv0) {
     }
 
-    virtual void Walk(size_t skip = 1) {
+    virtual void Walk_(size_t skip = 1) {
         wxPrintf("Stack dump:\n\n");
 
         wxStackWalker::Walk(skip);
@@ -208,4 +208,27 @@ class StackDump : public wxStackWalker // so we can give backtraces..
 
 extern RandomNumberGenerator global_random_number_generator;
 
+#ifdef _OPENMP
+#include <omp.h>
 #endif
+
+/*!
+ * Returns the thread number of the current thread, numbered from 0
+ */
+inline int ReturnThreadNumberOfCurrentThread( ) {
+#ifdef _OPENMP
+    return omp_get_thread_num( );
+#else
+    return 0;
+#endif
+};
+
+inline int ReturnNumberOfThreads( ) {
+#ifdef _OPENMP
+    return omp_get_num_threads( );
+#else
+    return 1;
+#endif
+};
+
+#endif // SRC_PROGRAMS_CORE_CORE_HEADERS_H_

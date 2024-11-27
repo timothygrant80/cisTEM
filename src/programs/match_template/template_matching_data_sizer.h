@@ -67,6 +67,7 @@ class TemplateMatchingDataSizer {
     float template_padding{ };
     float high_resolution_limit{-1.f};
     bool  resampling_is_needed{false};
+    bool  resizing_is_needed{false};
     bool  is_rotated_by_90{false};
     bool  use_fast_fft{false};
     bool  sizing_is_set{false};
@@ -112,7 +113,7 @@ class TemplateMatchingDataSizer {
     // All statistical images (mip, psi etc.) are originally allocated based on the pre-processed input_image size,
     // and so only the input image needs attention at the outset. Following the search, all statistical images
     // will also need to be resized.
-    void ResizeImage_preSearch(Image& input_image, const int central_cross_half_width);
+    void ResizeImage_preSearch(Image& input_image, const bool allow_rotation_for_speed);
     void ResizeImage_postSearch(Image& max_intensity_projection,
                                 Image& best_psi,
                                 Image& best_phi,
@@ -130,6 +131,10 @@ class TemplateMatchingDataSizer {
 
     inline bool IsResamplingNeeded( ) const {
         return resampling_is_needed;
+    }
+
+    inline bool IsResizingNeeded( ) const {
+        return resizing_is_needed;
     }
 
     inline bool IsRotatedBy90( ) const {

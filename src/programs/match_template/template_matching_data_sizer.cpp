@@ -434,6 +434,10 @@ void TemplateMatchingDataSizer::GetInputImageToEvenAndSquareOrPrimeFactoredSizeP
         // When not useing fast FFT there is at most one padding step from input size to a nice fourier size.
         padding_x_TOTAL = image_search_size.x - image_cropped_size.x;
         padding_y_TOTAL = image_search_size.y - image_cropped_size.y;
+        if ( padding_x_TOTAL != 0 || padding_y_TOTAL != 0 ) {
+            // set so we know we are resizing, but not resampling.
+            resizing_is_needed = true;
+        }
     }
 
 #ifdef DEBUG_TM_SIZER_PRINT
@@ -533,20 +537,24 @@ void TemplateMatchingDataSizer::ResizeTemplate_postSearch(Image& template_image)
     MyAssertTrue(false, "Not yet implemented");
 };
 
-void TemplateMatchingDataSizer::ResizeImage_preSearch(Image& input_image, const int central_cross_half_width) {
+void TemplateMatchingDataSizer::ResizeImage_preSearch(Image& input_image, const bool allow_rotation_for_speed) {
     MyDebugAssertTrue(sizing_is_set, "Sizing has not been set");
+    MyDebugAssertTrue((resizing_is_needed != resampling_is_needed) || (! resampling_is_needed && ! resizing_is_needed), "Resizing and resampling are mutually exclusive");
+
+    // If we are resizing but not resampling we only need the final padding.
+    Image tmp_sq;
+#if defined(USE_ZERO_PADDING_NOT_NOISE) || defined(USE_REPLICATIVE_PADDING)
+    bool skip_padding_in_clipinto = false;
+#else
+    bool skip_padding_in_clipinto = true;
+#endif
 
     if ( resampling_is_needed ) {
         wxPrintf("Resampling the input image\n");
-        Image tmp_sq;
 
         tmp_sq.Allocate(image_pre_scaling_size.x, image_pre_scaling_size.y, image_pre_scaling_size.z, true);
-#if defined(USE_ZERO_PADDING_NOT_NOISE) || defined(USE_REPLICATIVE_PADDING)
-        bool skip_padding_in_clipinto = false;
-#else
-        bool skip_padding_in_clipinto = true;
-        tmp_sq.FillWithNoiseFromNormalDistribution(0.f, 1.0f);
-#endif
+        if ( skip_padding_in_clipinto )
+            tmp_sq.FillWithNoiseFromNormalDistribution(0.f, 1.0f);
 
 #ifdef USE_REPLICATIVE_PADDING
         input_image.ClipIntoWithReplicativePadding(&tmp_sq);
@@ -567,6 +575,16 @@ void TemplateMatchingDataSizer::ResizeImage_preSearch(Image& input_image, const 
         if ( ReturnThreadNumberOfCurrentThread( ) == 0 )
             tmp_sq.QuickAndDirtyWriteSlice(DEBUG_IMG_OUTPUT "/tmp_sq_resized.mrc", 1);
 #endif
+    }
+    else if ( resizing_is_needed ) {
+        wxPrintf("Resizing the input image\n");
+        tmp_sq = input_image;
+    }
+    else {
+        wxPrintf("not resampling or resizing.\n");
+    }
+
+    if ( resampling_is_needed || resizing_is_needed ) {
 
         input_image.Allocate(image_search_size.x, image_search_size.y, image_search_size.z, true);
 
@@ -584,27 +602,16 @@ void TemplateMatchingDataSizer::ResizeImage_preSearch(Image& input_image, const 
             input_image.QuickAndDirtyWriteSlice(DEBUG_IMG_OUTPUT "/input_image_resized.mrc", 1);
 #endif
 
-        if ( central_cross_half_width > 0 ) {
-            input_image.ForwardFFT( );
-
-            input_image.MaskCentralCross(central_cross_half_width, central_cross_half_width);
-
-            input_image.BackwardFFT( );
-        }
-
 #ifdef DEBUG_IMG_OUTPUT
         if ( ReturnThreadNumberOfCurrentThread( ) == 0 )
             input_image.QuickAndDirtyWriteSlice(DEBUG_IMG_OUTPUT "/input_image_resized_masked.mrc", 1);
         DEBUG_ABORT;
 #endif
     }
-    else {
-        wxPrintf("not resampling\n");
-    }
 
 // NOTE: rotation must always be the FINAL step in pre-processing / resizing and it is always the first to be inverted at the end.
 #ifdef ROTATEFORSPEED
-    if ( ! is_power_of_two(image_search_size.x) && is_power_of_two(image_search_size.y) ) {
+    if ( allow_rotation_for_speed && (! is_power_of_two(image_search_size.x) && is_power_of_two(image_search_size.y)) ) {
         // The speedup in the FFT for better factorization is also dependent on the dimension. The full transform (in cufft anyway) is faster if the best dimension is on X.
         // TODO figure out how to check the case where there is no factor of two, but one dimension is still faster. Probably getting around to writing an explicit planning tool would be useful.
         if ( ReturnThreadNumberOfCurrentThread( ) == 0 ) {
@@ -642,6 +649,7 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& max_intensity_proj
     MyDebugAssertFalse(use_fast_fft ? is_rotated_by_90 : false, "Rotating the search image when using fastfft does  not make sense given the current square size restriction of FastFFT");
     MyDebugAssertTrue(pre_processed_image.at(0).is_in_memory, "The pre-processed image is not in memory"); // FIXME: Move the method to pre-shift the input image from TemplateMatchingCore to this class, then this macro makes sense, but doesn't need to be an array.
     MyDebugAssertFalse(pre_processed_image.at(1).is_in_memory, "Chunking the search image is not supported, but the pre-processed image has allocated mem in the second chunk");
+    MyDebugAssertTrue((resizing_is_needed != resampling_is_needed) || (! resampling_is_needed && ! resizing_is_needed), "Resizing and resampling are mutually exclusive");
 
     // These are used to make a valid area mask that we then use to set the values in the sum/sumSqs images to zero, which
     // is used in the re-normalization of the global search mean and variance step in match_template to indicate regions we should not count.
@@ -652,7 +660,7 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& max_intensity_proj
     // FIXME: This should only be needed for images that are Fourier up sampled, for the nearest neighbor (angles, defocus, pixel), there is
     // no danger of artifacts so this is redundant.
     // FIXME: Add a gaussian block to see if it is any different, interesting and maybe good for the paper.
-    if ( resampling_is_needed ) {
+    if ( resampling_is_needed || resizing_is_needed ) {
         // Clipping into ROI takes removes any values in the FFT padding region, and all the (binned) padding from input -> precropped.
         // We will than clip back to the cropped size, filling any potential, adding back the non FFT padding but as replicative padding from the valid search area.
         Image tmp_trim;
@@ -715,6 +723,19 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& max_intensity_proj
 
     constexpr float NN_no_value = -std::numeric_limits<float>::max( );
     constexpr float no_value    = 0.f;
+
+    if ( resizing_is_needed ) {
+        // FIXME: I think I am implicitly assuming the resizing is always getting larger, which for now should be true.
+        // Either generalize or add an assert.
+        max_intensity_projection.Resize(image_size.x, image_size.y, image_size.z, no_value);
+        best_phi.Resize(image_size.x, image_size.y, image_size.z, no_value);
+        best_theta.Resize(image_size.x, image_size.y, image_size.z, no_value);
+        best_psi.Resize(image_size.x, image_size.y, image_size.z, no_value);
+        best_defocus.Resize(image_size.x, image_size.y, image_size.z, no_value);
+        best_pixel_size.Resize(image_size.x, image_size.y, image_size.z, no_value);
+        correlation_pixel_sum_of_squares_image.Resize(image_size.x, image_size.y, image_size.z, no_value);
+        correlation_pixel_sum_image.Resize(image_size.x, image_size.y, image_size.z, no_value);
+    }
 
     // We need to use nearest neighbor interpolation to cast all existing values back to the original size.
     Image tmp_mip, tmp_psi, tmp_phi, tmp_theta, tmp_defocus, tmp_pixel_size, tmp_sum, tmp_sum_sq;
@@ -846,6 +867,8 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& max_intensity_proj
         correlation_pixel_sum_of_squares_image.Allocate(image_size.x, image_size.y, image_size.z, true);
         tmp_sum_sq.ClipInto(&correlation_pixel_sum_of_squares_image, 0.0f, false, 1.0f, 0, 0, 0, true);
     } // end resampling_is_needed
+
+    // FIXME: when resizing and not resampling, I'm not sure if this block is required.
 
     // Create a mask that will be filled based on the possibly rotated and resized search image, and then rescaled in the same manner, so that we can use this for adjusting the
     // stats images/ histogram elsewhere post resizing.

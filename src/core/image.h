@@ -215,7 +215,7 @@ class Image {
         AddNoise(GAMMA, wanted_alpha_value, wanted_beta_value);
     }
 
-    EmpiricalDistribution ReturnDistributionOfRealValues(float wanted_mask_radius = 0.0, bool outside = false, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0);
+    EmpiricalDistribution<double> ReturnDistributionOfRealValues(float wanted_mask_radius = 0.0, bool outside = false, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0);
 
     long ZeroFloat(float wanted_mask_radius = 0.0, bool outsize = false);
     long ZeroFloatAndNormalize(float wanted_sigma_value = 1.0, float wanted_mask_radius = 0.0, bool outside = false);
@@ -226,7 +226,7 @@ class Image {
     void  ReplaceOutliersWithMean(float mean, float stdDev, float maximum_n_sigmas);
     void  ReplaceOutliersWithMean(float maximum_n_sigmas);
     float ReturnVarianceOfRealValues(float wanted_mask_radius = 0.0, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0, bool invert_mask = false);
-    void  UpdateDistributionOfRealValues(EmpiricalDistribution* distribution_to_update, float wanted_mask_radius = 0.0, bool outside = false, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0);
+    void  UpdateDistributionOfRealValues(EmpiricalDistribution<double>* distribution_to_update, float wanted_mask_radius = 0.0, bool outside = false, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0);
     void  ApplySqrtNFilter( );
     void  Whiten(float resolution_limit = 1.0, Curve* whitening_filter = NULL);
     void  OptimalFilterBySNRImage(Image& SNR_image, int include_reference_weighting = 1);

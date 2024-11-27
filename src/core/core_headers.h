@@ -85,7 +85,7 @@ class StackDump : public wxStackWalker // so we can give backtraces..
         : wxStackWalker(argv0) {
     }
 
-    virtual void Walk_(size_t skip = 1) {
+    virtual void Walk(size_t skip = 1) {
         wxPrintf("Stack dump:\n\n");
 
         wxStackWalker::Walk(skip);

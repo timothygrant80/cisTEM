@@ -2582,7 +2582,7 @@ void AbInitio3DPanel::OnVolumeResampled(ReturnProcessedImageEvent& my_event) {
         new_image->WriteSlices(&output_file, 1, new_image->logical_z_dimension);
         output_file.SetPixelSize(my_abinitio_manager.active_refinement_package->contained_particles[0].pixel_size);
 
-        EmpiricalDistribution density_distribution;
+        EmpiricalDistribution<double> density_distribution;
         new_image->UpdateDistributionOfRealValues(&density_distribution);
         output_file.SetDensityStatistics(density_distribution.GetMinimum( ), density_distribution.GetMaximum( ), density_distribution.GetSampleMean( ), sqrtf(density_distribution.GetSampleVariance( )));
         output_file.CloseFile( );

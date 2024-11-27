@@ -10,10 +10,8 @@
 class TemplateMatchingCore {
 
   private:
-    bool  object_initialized_;
-    bool  use_gpu_prj;
-    float histogram_sampling_;
-    float stats_sampling_;
+    bool object_initialized_;
+    bool use_gpu_prj;
 
   public:
     TemplateMatchingCore( ) : object_initialized_{false} { };
@@ -69,8 +67,6 @@ class TemplateMatchingCore {
     int  first_search_position;
     int  last_search_position;
     long total_number_of_cccs_calculated;
-    long total_number_of_histogram_samples;
-    long total_number_of_stats_samples;
     long total_correlation_positions;
 
     int n_global_search_images_to_save;
@@ -121,8 +117,6 @@ class TemplateMatchingCore {
               EulerSearch&              global_euler_search,
               const int2                pre_padding,
               const int2                roi,
-              float                     histogram_sampling,
-              float                     stats_sampling,
               int                       first_search_position,
               int                       last_search_position,
               ProgressBar*              my_progress,
@@ -132,9 +126,11 @@ class TemplateMatchingCore {
               bool                      use_gpu_prj,
               int                       number_of_global_search_images_to_save = 1);
 
-    void RunInnerLoop(Image& projection_filter,
-                      int    threadIDX,
-                      long&  current_correlation_position);
+    void RunInnerLoop(Image&      projection_filter,
+                      int         threadIDX,
+                      long&       current_correlation_position,
+                      const float min_counter_val,
+                      const float threshold_val);
 };
 
 #endif

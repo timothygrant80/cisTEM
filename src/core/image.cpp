@@ -1005,7 +1005,7 @@ void Image::AddNoise(NoiseType wanted_noise_type, float noise_param_1, float noi
 long Image::ZeroFloat(float wanted_mask_radius, bool outside) {
     MyDebugAssertTrue(is_in_real_space == true, "Image must be in real space");
 
-    EmpiricalDistribution my_distribution = ReturnDistributionOfRealValues(wanted_mask_radius, outside);
+    EmpiricalDistribution<double> my_distribution = ReturnDistributionOfRealValues(wanted_mask_radius, outside);
     AddConstant(-my_distribution.GetSampleMean( ));
 
     return my_distribution.GetNumberOfSamples( );
@@ -1014,7 +1014,7 @@ long Image::ZeroFloat(float wanted_mask_radius, bool outside) {
 long Image::ZeroFloatAndNormalize(float wanted_sigma_value, float wanted_mask_radius, bool outside) {
     MyDebugAssertTrue(is_in_real_space == true, "Image must be in real space");
 
-    EmpiricalDistribution my_distribution = ReturnDistributionOfRealValues(wanted_mask_radius, outside);
+    EmpiricalDistribution<double> my_distribution = ReturnDistributionOfRealValues(wanted_mask_radius, outside);
     if ( my_distribution.IsConstant( ) ) {
         AddConstant(-my_distribution.GetSampleMean( ));
     }
@@ -1028,7 +1028,7 @@ long Image::ZeroFloatAndNormalize(float wanted_sigma_value, float wanted_mask_ra
 long Image::Normalize(float wanted_sigma_value, float wanted_mask_radius, bool outside) {
     MyDebugAssertTrue(is_in_real_space == true, "Image must be in real space");
 
-    EmpiricalDistribution my_distribution = ReturnDistributionOfRealValues(wanted_mask_radius, outside);
+    EmpiricalDistribution<double> my_distribution = ReturnDistributionOfRealValues(wanted_mask_radius, outside);
     if ( ! my_distribution.IsConstant( ) ) {
         AddMultiplyAddConstant(-my_distribution.GetSampleMean( ), wanted_sigma_value / sqrtf(my_distribution.GetSampleVariance( )), my_distribution.GetSampleMean( ));
     }
@@ -4237,7 +4237,7 @@ void Image::LocalResSignificanceFilter(float pixel_size, float starting_resoluti
     int pixels_above_threshold;
     int pixels_added;
 
-    EmpiricalDistribution distro;
+    EmpiricalDistribution<double> distro;
 
     automask.CopyFrom(this);
     sharp3d.CopyFrom(this);
@@ -5187,7 +5187,7 @@ void Image::WriteSlicesAndFillHeader(std::string wanted_filename, float wanted_p
     output_file.OpenFile(wanted_filename, true);
     WriteSlices(&output_file, 1, logical_z_dimension);
     output_file.SetPixelSize(wanted_pixel_size);
-    EmpiricalDistribution density_distribution;
+    EmpiricalDistribution<double> density_distribution;
     UpdateDistributionOfRealValues(&density_distribution);
     output_file.SetDensityStatistics(density_distribution.GetMinimum( ), density_distribution.GetMaximum( ), density_distribution.GetSampleMean( ), sqrtf(density_distribution.GetSampleVariance( )));
     output_file.CloseFile( );
@@ -5903,7 +5903,7 @@ float Image::ReturnAverageOfRealValues(float wanted_mask_radius, bool invert_mas
     return float(sum / (long(logical_x_dimension) * long(logical_y_dimension) * long(logical_z_dimension)));
 }
 
-void Image::UpdateDistributionOfRealValues(EmpiricalDistribution* my_distribution, float wanted_mask_radius, bool outside, float wanted_center_x, float wanted_center_y, float wanted_center_z) {
+void Image::UpdateDistributionOfRealValues(EmpiricalDistribution<double>* my_distribution, float wanted_mask_radius, bool outside, float wanted_center_x, float wanted_center_y, float wanted_center_z) {
 
     MyDebugAssertTrue(is_in_real_space, "Image must be in real space");
 
@@ -5977,10 +5977,10 @@ void Image::UpdateDistributionOfRealValues(EmpiricalDistribution* my_distributio
     }
 }
 
-EmpiricalDistribution Image::ReturnDistributionOfRealValues(float wanted_mask_radius, bool outside, float wanted_center_x, float wanted_center_y, float wanted_center_z) {
+EmpiricalDistribution<double> Image::ReturnDistributionOfRealValues(float wanted_mask_radius, bool outside, float wanted_center_x, float wanted_center_y, float wanted_center_z) {
     MyDebugAssertTrue(is_in_real_space, "Image must be in real space");
 
-    EmpiricalDistribution my_distribution;
+    EmpiricalDistribution<double> my_distribution;
 
     UpdateDistributionOfRealValues(&my_distribution, wanted_mask_radius, outside, wanted_center_x, wanted_center_y, wanted_center_z);
 
@@ -5994,13 +5994,13 @@ void Image::ComputeAverageAndSigmaOfValuesInSpectrum(float minimum_radius, float
     MyDebugAssertTrue(logical_z_dimension == 1, "Meant for images, not volumes");
 
     // Private variables
-    int                   i, j;
-    float                 x_sq, y_sq, rad_sq;
-    EmpiricalDistribution my_distribution;
-    const float           min_rad_sq          = powf(minimum_radius, 2);
-    const float           max_rad_sq          = powf(maximum_radius, 2);
-    const float           cross_half_width_sq = powf(cross_half_width, 2);
-    long                  address             = -1;
+    int                           i, j;
+    float                         x_sq, y_sq, rad_sq;
+    EmpiricalDistribution<double> my_distribution;
+    const float                   min_rad_sq          = powf(minimum_radius, 2);
+    const float                   max_rad_sq          = powf(maximum_radius, 2);
+    const float                   cross_half_width_sq = powf(cross_half_width, 2);
+    long                          address             = -1;
 
     for ( j = 0; j < logical_y_dimension; j++ ) {
         y_sq = powf(j - physical_address_of_box_center_y, 2);
@@ -6818,7 +6818,7 @@ void Image::ApplyLocalResolutionFilter(Image& local_resolution_map, float pixel_
     const bool small_step_size = true;
 
     // Get some stats about the local resolution volume
-    EmpiricalDistribution distribution_of_local_resolutions;
+    EmpiricalDistribution<double> distribution_of_local_resolutions;
     local_resolution_map.UpdateDistributionOfRealValues(&distribution_of_local_resolutions, float(logical_x_dimension) * 0.45);
     float min_res_Angstroms = distribution_of_local_resolutions.GetMinimum( );
     float max_res_Angstroms = distribution_of_local_resolutions.GetMaximum( );

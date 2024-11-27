@@ -687,7 +687,7 @@ void MyTestApp::TestEmpiricalDistribution( ) {
     Image test_image;
     test_image.QuickAndDirtyReadSlice(hiv_image_80x80x1_filename.ToStdString( ), 1);
 
-    EmpiricalDistribution my_dist = test_image.ReturnDistributionOfRealValues( );
+    EmpiricalDistribution<double> my_dist = test_image.ReturnDistributionOfRealValues( );
 
     if ( ! RelativeErrorIsLessThanEpsilon(my_dist.GetSampleMean( ) + 1.f, 1.0f) )
         FailTest;
@@ -781,7 +781,7 @@ void MyTestApp::TestRandomVariableFunctions( ) {
     // We want a reasonably large image to ensure that we sample the distribution well
     Image test_image;
     test_image.Allocate(1024, 1024, 1, true, false);
-    EmpiricalDistribution my_dist = test_image.ReturnDistributionOfRealValues( );
+    EmpiricalDistribution<double> my_dist = test_image.ReturnDistributionOfRealValues( );
 
     // Test multiple configurations of Gaussian noise, mean/sd 0,1 -2,1 3.1,4
     const std::vector<float> test_normal_vals{0.f, 1.f, -2.f, 1.f, 3.1f, 4.f};
@@ -1422,7 +1422,7 @@ void MyTestApp::TestAlignmentFunctions( ) {
         // // I needed an extra sqrt(n2_) here ?
         // float p_out_calc_ = powf(n2_, 1.5f) * (n3_ * p_ - sum_ * sum_);
 
-        EmpiricalDistribution test_dist;
+        EmpiricalDistribution<double> test_dist;
         test_image.UpdateDistributionOfRealValues(&test_dist);
         float scale = test_dist.GetMaximum( );
         test_image.MultiplyByConstant(1.f / scale);

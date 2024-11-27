@@ -1,4 +1,15 @@
+#include <cistem_config.h>
+
+#ifdef ENABLEGPU
+#include "../../gpu/gpu_core_headers.h"
+#include "../../gpu/DeviceManager.h"
+#include "../../gpu/TemplateMatchingCore.h"
+#else
 #include "../../core/core_headers.h"
+#endif
+
+#include "../../constants/constants.h"
+
 #include "../../core/scattering_potential.h"
 
 class

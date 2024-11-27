@@ -51,8 +51,8 @@ bool Resample::DoCalculation( ) {
     ImageFile my_input_file(input_filename, false);
     MRCFile   my_output_file(output_filename, true);
 
-    Image                 my_image;
-    EmpiricalDistribution my_distribution;
+    Image                         my_image;
+    EmpiricalDistribution<double> my_distribution;
 
     // pixel size could be non-square/cubic but we will ignore this here and assume it is square/cubic
     pixel_size = my_input_file.ReturnPixelSize( ) * float(my_input_file.ReturnXSize( )) / float(new_x_size);

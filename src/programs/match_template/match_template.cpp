@@ -25,7 +25,11 @@ using namespace cistem_timer_noop;
 #endif
 
 #define USE_LERP_NOT_FOURIER_RESIZING
-#define TEST_SINC
+
+// TODO: This seems good, let's fix it in place rather than a define
+
+// FIXME: Probably need to disable resizing, or make sure it is handled
+#define TEST_LOCAL_NORMALIZATION
 
 class AggregatedTemplateResult {
 
@@ -33,8 +37,6 @@ class AggregatedTemplateResult {
     int   image_number;
     int   number_of_received_results;
     float total_number_of_angles_searched;
-    long  total_number_of_histogram_samples;
-    long  total_number_of_stats_samples;
 
     float* collated_data_array;
     float* collated_mip_data;
@@ -73,12 +75,12 @@ class
   private:
     void AddCommandLineOptions( );
     template <typename StatsType>
-    void CalcGlobalCCCScalingFactor(double&    global_ccc_mean,
-                                    double&    global_ccc_std_dev,
-                                    StatsType* sum,
-                                    StatsType* sum_of_sqs,
-                                    const long n_stats_samples,
-                                    const int  N);
+    void CalcGlobalCCCScalingFactor(double&     global_ccc_mean,
+                                    double&     global_ccc_std_dev,
+                                    StatsType*  sum,
+                                    StatsType*  sum_of_sqs,
+                                    const float n_angles_in_search,
+                                    const int   N);
 
     void ResampleHistogramData(long*        histogram_ptr,
                                const double global_ccc_mean,
@@ -90,9 +92,7 @@ class
                                                              StatsType*  correlation_pixel_sum,
                                                              StatsType*  correlation_pixel_sum_of_squares,
                                                              long*       histogram,
-                                                             const float n_angles_in_search,
-                                                             const long  n_histogram_samples,
-                                                             const long  n_stats_samples);
+                                                             const float n_angles_in_search);
 };
 
 IMPLEMENT_APP(MatchTemplateApp)
@@ -103,10 +103,12 @@ void MatchTemplateApp::ProgramSpecificInit( ) {
 
 // Optional command-line stuff
 void MatchTemplateApp::AddCommandLineOptions( ) {
-    command_line_parser.AddOption("", "histogram-sampling", "Random sampling of the histogram, fraction sampled. 0.05 - 1.0 [1.0 default]", wxCMD_LINE_VAL_DOUBLE);
-    command_line_parser.AddOption("", "stats-sampling", "Random sampling of the statistical arrays, fraction sampled. 0.05 - 1.0 [1.0 default]", wxCMD_LINE_VAL_DOUBLE);
-    command_line_parser.AddOption("", "central-cross-half-width", "Half width of the central cross for line artifacts [0 default ]", wxCMD_LINE_VAL_NUMBER);
     command_line_parser.AddLongSwitch("disable-gpu-prj", "Disable projection using the gpu. Default false");
+#ifdef TEST_LOCAL_NORMALIZATION
+    command_line_parser.AddOption("", "healpix-file", "Healpix file for the input images", wxCMD_LINE_VAL_STRING);
+    command_line_parser.AddOption("", "min-stats-counter", "Minimum number of pixels to calculate the threshold (defaults to 10.f)", wxCMD_LINE_VAL_DOUBLE);
+    command_line_parser.AddOption("", "threshold-val", "n_stddev to threshold value for the trimmed local variance (defaults to 3.0f)", wxCMD_LINE_VAL_DOUBLE);
+#endif
 }
 
 // override the DoInteractiveUserInput
@@ -165,7 +167,7 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
     best_defocus_output_file    = my_input->GetFilenameFromUser("Output defocus file", "The file for saving the best defocus image", "defocus.mrc", false);
     best_pixel_size_output_file = my_input->GetFilenameFromUser("Output pixel size file", "The file for saving the best pixel size image", "pixel_size.mrc", false);
     correlation_avg_output_file = my_input->GetFilenameFromUser("Correlation average value", "The file for saving the average value of all correlation images", "corr_average.mrc", false);
-    correlation_std_output_file = my_input->GetFilenameFromUser("Correlation variance output file", "The file for saving the variance of all correlation images", "corr_variance.mrc", false);
+    correlation_std_output_file = my_input->GetFilenameFromUser("Correlation variance output file", "The file for saving the variance of all correlation images", "corr_stddev.mrc", false);
     output_histogram_file       = my_input->GetFilenameFromUser("Output histogram of correlation values", "histogram of all correlation values", "histogram.txt", false);
     input_pixel_size            = my_input->GetFloatFromUser("Pixel size of images (A)", "Pixel size of input images in Angstroms", "1.0", 0.0);
     voltage_kV                  = my_input->GetFloatFromUser("Beam energy (keV)", "The energy of the electron beam used to image the sample in kilo electron volts", "300.0", 0.0);
@@ -267,25 +269,40 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     double temp_double;
     long   temp_long;
-    float  histogram_sampling       = 1.0f;
-    float  stats_sampling           = 1.0f;
-    bool   use_gpu_prj              = true;
-    int    central_cross_half_width = 0;
+    bool   use_gpu_prj = true;
 
-    if ( command_line_parser.Found("histogram-sampling", &temp_double) ) {
-        histogram_sampling = float(temp_double);
-    }
-    if ( command_line_parser.Found("stats-sampling", &temp_double) ) {
-        stats_sampling = float(temp_double);
-    }
     if ( command_line_parser.FoundSwitch("disable-gpu-prj") ) {
         SendInfo("Disabling GPU projection\n");
         use_gpu_prj = false;
     }
-    if ( command_line_parser.Found("central-cross-half-width", &temp_long) ) {
-        SendInfo("Central cross half width set to: " + wxString::Format("%ld", temp_long) + "\n");
-        central_cross_half_width = temp_long;
+
+    // This allows an override for the TEST_LOCAL_NORMALIZATION
+    bool allow_rotation_for_speed{true};
+    // This allows us to not use local normalization while also compiling with this option
+    bool  use_local_normalization{false};
+    float min_counter_val{std::numeric_limits<float>::max( )}; // This way, if we aren't using it, we short-circute the calculation of the SD every pixel in the OR clause
+    float threshold_val{3.0f};
+#ifdef TEST_LOCAL_NORMALIZATION
+    wxString healpix_file;
+    if ( command_line_parser.Found("healpix-file", &healpix_file) ) {
+        SendInfo("Using healpix file: " + healpix_file + "\n");
+        healpix_file             = healpix_file;
+        use_local_normalization  = true;
+        allow_rotation_for_speed = false;
+        min_counter_val          = 10.f; // If we are testing local normalization, set the default value here, and possible update it in the next lines.
     }
+    if ( command_line_parser.Found("min-stats-counter", &temp_double) ) {
+        min_counter_val = float(temp_double);
+    }
+    if ( command_line_parser.Found("threshold-val", &temp_double) ) {
+        threshold_val = float(temp_double);
+    }
+
+    wxPrintf("Using local normalization bool: %d\n", use_local_normalization);
+    wxPrintf("Using min stats counter: %f\n", min_counter_val);
+    wxPrintf("Using threshold value: %f\n", threshold_val);
+    // I guess this breaks the local normalization so provide an override for TM data sizer
+#endif
 
     wxString input_search_images_filename    = my_current_job.arguments[0].ReturnStringArgument( );
     wxString input_reconstruction_filename   = my_current_job.arguments[1].ReturnStringArgument( );
@@ -344,11 +361,6 @@ bool MatchTemplateApp::DoCalculation( ) {
         max_threads = 1;
     }
 
-    if ( ! use_gpu && (FloatsAreAlmostTheSame(histogram_sampling, 1.0f) == false || FloatsAreAlmostTheSame(stats_sampling, 1.0f) == false) ) {
-        // only GPU can handle this
-        SendError("sub-sampling of the histogram and statistical arrays is only supported on the GPU implementation\n");
-    }
-
 #ifdef USE_LERP_NOT_FOURIER_RESIZING
     const bool use_lerp_not_fourier_resampling = true;
 #else
@@ -372,8 +384,6 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     float expected_threshold;
     float actual_number_of_angles_searched{0.f};
-    long  total_number_of_histogram_samples{0};
-    long  total_number_of_stats_samples{0};
 
     long* histogram_data;
 
@@ -397,6 +407,11 @@ bool MatchTemplateApp::DoCalculation( ) {
     int size_i;
 
     int i;
+
+#ifdef TEST_LOCAL_NORMALIZATION
+    int             number_of_search_positions = 0;
+    NumericTextFile healpix_binning;
+#endif
 
     EulerSearch     global_euler_search;
     AnglesAndShifts angles;
@@ -442,17 +457,18 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     profile_timing.start("PreProcessInputImage");
     TemplateMatchingDataSizer data_sizer(this, input_image, input_reconstruction, input_pixel_size, padding);
+    if ( use_local_normalization && data_sizer.IsResamplingNeeded( ) ) {
+        SendError("Local normalization is not yet supported with resampling.");
+    }
+
     data_sizer.PreProcessInputImage(input_image, false, true);
     profile_timing.lap("PreProcessInputImage");
 
     profile_timing.start("Resize_preSearch");
     data_sizer.SetImageAndTemplateSizing(high_resolution_limit_search, use_fast_fft);
-#ifdef TEST_SINC
     data_sizer.ResizeTemplate_preSearch(input_reconstruction, use_lerp_not_fourier_resampling, true);
-#else
-    data_sizer.ResizeTemplate_preSearch(input_reconstruction, use_lerp_not_fourier_resampling, false);
-#endif
-    data_sizer.ResizeImage_preSearch(input_image, central_cross_half_width);
+    // FIXME: we could use available threads to accelerate this. (Reduction of Allocations would also be good)
+    data_sizer.ResizeImage_preSearch(input_image, allow_rotation_for_speed);
     profile_timing.lap("Resize_preSearch");
 
     if ( data_sizer.IsRotatedBy90( ) )
@@ -481,6 +497,27 @@ bool MatchTemplateApp::DoCalculation( ) {
     double* correlation_pixel_sum            = new double[input_image.real_memory_allocated];
     double* correlation_pixel_sum_of_squares = new double[input_image.real_memory_allocated];
 
+// FIXME: some of these arrays can be local variables.
+#ifdef TEST_LOCAL_NORMALIZATION
+    const int   BUFFER_SIZE       = 10;
+    const float OUTLIER_THRESHOLD = 3.0f;
+    // variables for Welford's algorithm
+    double* mean_image; // replaces correlation_pixel_sum
+    double* M2_image;
+    int*    n_image;
+    double* variance_image;
+    double* stddev_image;
+    double* local_stats;
+    if ( use_local_normalization ) {
+        n_image        = new int[input_image.real_memory_allocated];
+        local_stats    = new double[4 * input_image.real_memory_allocated];
+        mean_image     = (double*)&local_stats[0 * input_image.real_memory_allocated];
+        M2_image       = (double*)&local_stats[1 * input_image.real_memory_allocated];
+        variance_image = (double*)&local_stats[2 * input_image.real_memory_allocated];
+        stddev_image   = (double*)&local_stats[3 * input_image.real_memory_allocated];
+    }
+#endif
+
     padded_reference.SetToConstant(0.f);
     max_intensity_projection.SetToConstant(0.f);
     best_psi.SetToConstant(0.f);
@@ -490,6 +527,14 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     ZeroArray(correlation_pixel_sum, input_image.real_memory_allocated);
     ZeroArray(correlation_pixel_sum_of_squares, input_image.real_memory_allocated);
+
+// FIXME: some of these arrays can be local variables.
+#ifdef TEST_LOCAL_NORMALIZATION
+    if ( use_local_normalization ) {
+        ZeroArray(local_stats, 4 * input_image.real_memory_allocated);
+        ZeroArray(n_image, input_image.real_memory_allocated);
+    }
+#endif
 
     histogram_data = new long[histogram_number_of_points];
 
@@ -510,11 +555,7 @@ bool MatchTemplateApp::DoCalculation( ) {
         wanted_pre_projection_pixel_size = data_sizer.GetSearchPixelSize( );
     }
 
-#ifdef TEST_SINC
     wanted_pre_projection_template_size = data_sizer.GetTemplateSizeX( );
-#else
-    wanted_pre_projection_template_size = data_sizer.GetTemplateSearchSizeX( );
-#endif
 
     wxPrintf("values are %i %i %f %f %f\n", wanted_pre_projection_template_size, data_sizer.GetTemplateSearchSizeX( ), wanted_pre_projection_pixel_size, data_sizer.GetPixelSize( ), data_sizer.GetSearchPixelSize( ));
 
@@ -554,23 +595,39 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     psi_start = 0.0f;
     psi_max   = 360.0f;
+    if ( use_local_normalization ) {
+#ifdef TEST_LOCAL_NORMALIZATION
 
-    //psi_step = 5;
-
-    // search grid
-    // Note: resolution limit is only used in euler search in particle extraction and whitening. It does not affect template matching.
-    global_euler_search.InitGrid(my_symmetry, angular_step, 0.0f, 0.0f, psi_max, psi_step, psi_start, data_sizer.GetSearchPixelSize( ) / high_resolution_limit_search, parameter_map, best_parameters_to_keep);
-
-    // TODO 2x check me - w/o this O symm at least is broken
-    if ( my_symmetry.StartsWith("C") ) {
-        // otherwise the theta max is set to 90.0 and test_mirror is set to true.  However, I don't want to have to test the mirrors.
-        if ( global_euler_search.test_mirror ) {
-            global_euler_search.theta_max = 180.0f;
+        healpix_binning.Open(healpix_file, OPEN_TO_READ, 0);
+        std::vector<float> orientations(healpix_binning.records_per_line);
+        number_of_search_positions                     = healpix_binning.number_of_lines;
+        global_euler_search.number_of_search_positions = number_of_search_positions;
+        Allocate2DFloatArray(global_euler_search.list_of_search_parameters, number_of_search_positions, 2);
+        for ( int counter = 0; counter < healpix_binning.number_of_lines; counter++ ) {
+            healpix_binning.ReadLine(orientations.data( ));
+            global_euler_search.list_of_search_parameters[counter][0] = orientations.at(0);
+            global_euler_search.list_of_search_parameters[counter][1] = orientations.at(1);
         }
-    }
+        healpix_binning.Close( );
 
-    // Normally this is called in EulerSearch::InitGrid, but we need to re-call it here to get the search positions WITHOUT the default randomization to phi (azimuthal angle.)
-    global_euler_search.CalculateGridSearchPositions(false);
+#endif
+    }
+    else {
+        // search grid
+        // Note: resolution limit is only used in euler search in particle extraction and whitening. It does not affect template matching.
+        global_euler_search.InitGrid(my_symmetry, angular_step, 0.0f, 0.0f, psi_max, psi_step, psi_start, data_sizer.GetSearchPixelSize( ) / high_resolution_limit_search, parameter_map, best_parameters_to_keep);
+
+        // TODO 2x check me - w/o this O symm at least is broken
+        if ( my_symmetry.StartsWith("C") ) {
+            // otherwise the theta max is set to 90.0 and test_mirror is set to true.  However, I don't want to have to test the mirrors.
+            if ( global_euler_search.test_mirror ) {
+                global_euler_search.theta_max = 180.0f;
+            }
+        }
+
+        // Normally this is called in EulerSearch::InitGrid, but we need to re-call it here to get the search positions WITHOUT the default randomization to phi (azimuthal angle.)
+        global_euler_search.CalculateGridSearchPositions(false);
+    }
 
     // for now, I am assuming the MTF has been applied already.
     // work out the filter to just whiten the image..
@@ -698,6 +755,7 @@ bool MatchTemplateApp::DoCalculation( ) {
                 // FIXME: move this (and the above CPU steps) into a method to prepare the 3d reference.
                 profile_timing.start("Swap Fourier Quadrants");
                 template_reconstruction.BackwardFFT( );
+                // FIXME: this should be a GPU method (or also a ...) and it should optionally be combined with a copy to texture.
                 template_reconstruction.SwapFourierSpaceQuadrants(false);
                 profile_timing.lap("Swap Fourier Quadrants");
                 // We only want to have one copy of the 3d template in texture memory that each thread can then reference.
@@ -742,8 +800,6 @@ bool MatchTemplateApp::DoCalculation( ) {
                                    global_euler_search,
                                    data_sizer.GetPrePadding( ),
                                    data_sizer.GetRoi( ),
-                                   histogram_sampling,
-                                   stats_sampling,
                                    t_first_search_position,
                                    t_last_search_position,
                                    my_progress,
@@ -796,7 +852,11 @@ bool MatchTemplateApp::DoCalculation( ) {
                     gpuDev.SetGpu( );
 
                     profile_timing.start("RunInnerLoop");
-                    GPU[tIDX].RunInnerLoop(projection_filter, tIDX, current_correlation_position);
+                    GPU[tIDX].RunInnerLoop(projection_filter,
+                                           tIDX,
+                                           current_correlation_position,
+                                           min_counter_val,
+                                           threshold_val);
                     profile_timing.lap("RunInnerLoop");
 
 #pragma omp critical
@@ -835,8 +895,6 @@ bool MatchTemplateApp::DoCalculation( ) {
 
                         //                    current_correlation_position += GPU[tIDX].total_number_of_cccs_calculated;
                         actual_number_of_angles_searched += GPU[tIDX].total_number_of_cccs_calculated;
-                        total_number_of_histogram_samples += GPU[tIDX].total_number_of_histogram_samples;
-                        total_number_of_stats_samples += GPU[tIDX].total_number_of_stats_samples;
                         profile_timing.lap("Transfer data back to host");
                     } // end of omp critical block
                 } // end of parallel block
@@ -923,8 +981,47 @@ bool MatchTemplateApp::DoCalculation( ) {
                             if ( current_bin >= 0 && current_bin <= histogram_number_of_points ) {
                                 histogram_data[current_bin] += 1;
                             }
-                            correlation_pixel_sum[address] += mip_value;
-                            correlation_pixel_sum_of_squares[address] += mip_value * mip_value;
+
+                            // Note: this one is outside the ifdefs so we can leave the "normal" stats images in places.
+                            if ( use_local_normalization ) {
+                                // Local normalization
+#ifdef TEST_LOCAL_NORMALIZATION
+                                float value = padded_reference.real_values[address]; //* (float)sqrt_input_pixels;
+                                // Welford's algorithm for trimming
+                                // For the GPU implementation we'll have at least 10 (though currently 20) mip values the first time we go through a stack, so
+                                // rather than just skipping the first 10 and assuming no outliers, we can probably be more clever.
+                                if ( n_image[address] < BUFFER_SIZE ) {
+                                    // Buffering phase
+                                    n_image[address]++;
+                                    float delta = value - mean_image[address];
+                                    mean_image[address] += delta / n_image[address];
+                                    float delta2 = value - mean_image[address];
+                                    M2_image[address] += delta * delta2;
+                                }
+                                else {
+                                    // Outlier trimming
+                                    variance_image[address] = M2_image[address] / (n_image[address] - 1);
+                                    stddev_image[address]   = std::sqrt(variance_image[address]);
+                                    if ( std::abs(value - mean_image[address]) > OUTLIER_THRESHOLD * stddev_image[address] ) {
+                                        // Skip outlier
+
+                                        continue;
+                                    }
+
+                                    // Update running statistics for non-outliers
+                                    n_image[address]++;
+                                    float delta = value - mean_image[address];
+                                    mean_image[address] += delta / n_image[address];
+                                    float delta2 = value - mean_image[address];
+                                    M2_image[address] += delta * delta2;
+                                }
+
+#endif
+                            }
+                            else {
+                                correlation_pixel_sum[address] += mip_value;
+                                correlation_pixel_sum_of_squares[address] += mip_value * mip_value;
+                            }
                         }
                     }
 
@@ -938,8 +1035,6 @@ bool MatchTemplateApp::DoCalculation( ) {
                     if ( is_running_locally == false ) {
                         actual_number_of_angles_searched++;
                         // Currently there is no subsampling in the CPU implementation
-                        total_number_of_histogram_samples++;
-                        total_number_of_stats_samples++;
                         temp_float             = current_correlation_position;
                         JobResult* temp_result = new JobResult;
                         temp_result->SetResult(1, &temp_float);
@@ -956,10 +1051,26 @@ bool MatchTemplateApp::DoCalculation( ) {
     profile_timing.start("Resize_postSearch");
     // We may have rotated or re-sized the image for performance. To map the results back, it will be
     // easiest to convert the statistical arrays back to images.
-    for ( pixel_counter = 0; pixel_counter < input_image.real_memory_allocated; pixel_counter++ ) {
-        correlation_pixel_sum_image.real_values[pixel_counter]            = (float)correlation_pixel_sum[pixel_counter];
-        correlation_pixel_sum_of_squares_image.real_values[pixel_counter] = (float)correlation_pixel_sum_of_squares[pixel_counter];
+    if ( use_local_normalization ) {
+#ifdef TEST_LOCAL_NORMALIZATION
+        if ( ! use_gpu )
+            wxPrintf("\n\n\nLocal normalization: Done on cpu!\n");
+        else {
+            // FIXME: redundant
+            for ( pixel_counter = 0; pixel_counter < input_image.real_memory_allocated; pixel_counter++ ) {
+                correlation_pixel_sum_image.real_values[pixel_counter]            = (float)correlation_pixel_sum[pixel_counter];
+                correlation_pixel_sum_of_squares_image.real_values[pixel_counter] = (float)correlation_pixel_sum_of_squares[pixel_counter];
+            }
+        }
+#endif
     }
+    else {
+        for ( pixel_counter = 0; pixel_counter < input_image.real_memory_allocated; pixel_counter++ ) {
+            correlation_pixel_sum_image.real_values[pixel_counter]            = (float)correlation_pixel_sum[pixel_counter];
+            correlation_pixel_sum_of_squares_image.real_values[pixel_counter] = (float)correlation_pixel_sum_of_squares[pixel_counter];
+        }
+    }
+
     // Remove any unwanted values in the padding area
     correlation_pixel_sum_image.ZeroFFTWPadding( );
     correlation_pixel_sum_of_squares_image.ZeroFFTWPadding( );
@@ -978,6 +1089,17 @@ bool MatchTemplateApp::DoCalculation( ) {
     if ( is_running_locally ) {
         delete my_progress;
 
+// FIXME: This needs to go into the other functions
+#ifdef TEST_LOCAL_NORMALIZATION
+        // The gpu implementation is returning the sum and sum of squares images
+        if ( use_local_normalization && ! use_gpu ) {
+            for ( long pixel_counter = 0; pixel_counter < input_image.real_memory_allocated; pixel_counter++ ) {
+                correlation_pixel_sum[pixel_counter]            = mean_image[pixel_counter];
+                correlation_pixel_sum_of_squares[pixel_counter] = stddev_image[pixel_counter];
+            }
+        }
+#endif
+
         // Adjust the MIP by the measured mean and stddev of the full search CCC which is an estimate for the moments of the noise distribution of CCCs.
         Image scaled_mip = max_intensity_projection;
         RescaleMipAndStatisticalArraysByGlobalMeanAndStdDev(&max_intensity_projection,
@@ -985,9 +1107,7 @@ bool MatchTemplateApp::DoCalculation( ) {
                                                             correlation_pixel_sum_image.real_values,
                                                             correlation_pixel_sum_of_squares_image.real_values,
                                                             histogram_data,
-                                                            total_correlation_positions,
-                                                            total_number_of_histogram_samples,
-                                                            total_number_of_stats_samples);
+                                                            total_correlation_positions);
         // calculate the expected threshold (from peter's paper)
         const float CCG_NOISE_STDDEV = 1.0;
         double      temp_threshold;
@@ -1125,8 +1245,6 @@ bool MatchTemplateApp::DoCalculation( ) {
             result[cm_t::image_real_memory_allocated]   = max_intensity_projection.real_memory_allocated;
             result[cm_t::number_of_histogram_bins]      = histogram_number_of_points;
             result[cm_t::number_of_angles_searched]     = actual_number_of_angles_searched;
-            result[cm_t::number_of_histogram_samples]   = total_number_of_histogram_samples;
-            result[cm_t::number_of_stats_samples]       = total_number_of_stats_samples;
             result[cm_t::ccc_scalar]                    = 1.0f; // (float)sqrt_input_pixels is redundant, but we need all the results to calculate the scaling from the global CCC moments
             result[cm_t::input_pixel_size]              = data_sizer.GetPixelSize( );
             result[cm_t::number_of_valid_search_pixels] = data_sizer.GetNumberOfValidSearchPixels( );
@@ -1295,9 +1413,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
                                                             aggregated_results[array_location].collated_pixel_sums,
                                                             aggregated_results[array_location].collated_pixel_square_sums,
                                                             aggregated_results[array_location].collated_histogram_data,
-                                                            aggregated_results[array_location].total_number_of_angles_searched,
-                                                            aggregated_results[array_location].total_number_of_histogram_samples,
-                                                            aggregated_results[array_location].total_number_of_stats_samples);
+                                                            aggregated_results[array_location].total_number_of_angles_searched);
 
         // Update the collated mip data which is used downstream for the scaled mip and other calcs
         // Fill the temp_image with data form the collatged mip before passing it on to be rescaled.
@@ -1618,11 +1734,9 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
 }
 
 AggregatedTemplateResult::AggregatedTemplateResult( ) {
-    image_number                      = -1;
-    number_of_received_results        = 0;
-    total_number_of_angles_searched   = 0.0f;
-    total_number_of_histogram_samples = 0;
-    total_number_of_stats_samples     = 0;
+    image_number                    = -1;
+    number_of_received_results      = 0;
+    total_number_of_angles_searched = 0.0f;
 
     collated_data_array        = NULL;
     collated_mip_data          = NULL;
@@ -1678,8 +1792,6 @@ void AggregatedTemplateResult::AddResult(float* result_array, long array_size, i
     }
 
     total_number_of_angles_searched += result_array[cistem::match_template::number_of_angles_searched];
-    total_number_of_histogram_samples += result_array[cistem::match_template::number_of_histogram_samples];
-    total_number_of_stats_samples += result_array[cistem::match_template::number_of_stats_samples];
 
     float* result_mip_data          = &result_array[offset + image_real_memory_allocated * 0];
     float* result_psi_data          = &result_array[offset + image_real_memory_allocated * 1];
@@ -1741,15 +1853,14 @@ void AggregatedTemplateResult::AddResult(float* result_array, long array_size, i
  * @param padding_jump_value 
  */
 template <typename StatsType>
-void MatchTemplateApp::CalcGlobalCCCScalingFactor(double&    global_ccc_mean,
-                                                  double&    global_ccc_std_dev,
-                                                  StatsType* sum,
-                                                  StatsType* sum_of_sqs,
-                                                  const long n_stats_samples,
-                                                  const int  N) {
+void MatchTemplateApp::CalcGlobalCCCScalingFactor(double&     global_ccc_mean,
+                                                  double&     global_ccc_std_dev,
+                                                  StatsType*  sum,
+                                                  StatsType*  sum_of_sqs,
+                                                  const float n_angles_in_search,
+                                                  const int   N) {
 
     MyDebugAssertTrue(N > 0, "N must be greater than 0");
-    MyDebugAssertTrue(n_stats_samples > 0, "n_stats_samples must be greater than 0");
 
     double global_sum            = 0.0;
     double global_sum_of_squares = 0.0;
@@ -1765,7 +1876,7 @@ void MatchTemplateApp::CalcGlobalCCCScalingFactor(double&    global_ccc_mean,
         }
     }
 
-    const double total_number_of_ccs = double(n_stats_samples) * double(counted_values);
+    const double total_number_of_ccs = double(n_angles_in_search) * double(counted_values);
     std::cerr << "Counted Values: " << counted_values << " out of " << N << " fractions: " << float(counted_values) / float(N) << std::endl;
 
     global_ccc_mean    = global_sum / total_number_of_ccs;
@@ -1809,24 +1920,20 @@ void MatchTemplateApp::RescaleMipAndStatisticalArraysByGlobalMeanAndStdDev(Image
                                                                            StatsType*  correlation_pixel_sum,
                                                                            StatsType*  correlation_pixel_sum_of_squares,
                                                                            long*       histogram,
-                                                                           const float n_angles_in_search,
-                                                                           const long  n_histogram_samples,
-                                                                           const long  n_stats_samples) {
+                                                                           const float n_angles_in_search) {
 
     double global_ccc_mean    = 0.0;
     double global_ccc_std_dev = 0.0;
-    CalcGlobalCCCScalingFactor(global_ccc_mean, global_ccc_std_dev, correlation_pixel_sum, correlation_pixel_sum_of_squares, n_stats_samples, mip_image->real_memory_allocated);
+    CalcGlobalCCCScalingFactor(global_ccc_mean, global_ccc_std_dev, correlation_pixel_sum, correlation_pixel_sum_of_squares, n_angles_in_search, mip_image->real_memory_allocated);
 
     std::cerr << "Over n_cccs " << n_angles_in_search << " the Global mean and std_dev are " << global_ccc_mean << " and " << global_ccc_std_dev << std::endl;
-    std::cerr << "The histogram has " << n_histogram_samples << " samples." << std::endl;
-    std::cerr << "The stats arrays have " << n_stats_samples << " samples." << std::endl;
     // Use the global statistics to resample the histogram from a smoothed curve fit to the measured data.
     ResampleHistogramData(histogram, global_ccc_mean, global_ccc_std_dev);
 
     // Assuming we want to measure SNR = (CCC - mean) / std_dev, but really we measure std_dev * SNR + mean.
     // Scaling the pixel-wise sum over the search space (A) requires (A - N * mean) / stddev
     // Scaling the pixel-wse sum_of_sqs over the search space (B) requires (B - 2 * mean * A + N * mean^2) / stddev^2
-    double N_x_mean    = n_stats_samples * global_ccc_mean;
+    double N_x_mean    = n_angles_in_search * global_ccc_mean;
     double N_x_mean_sq = N_x_mean * global_ccc_mean;
     for ( long pixel_counter = 0; pixel_counter < mip_image->real_memory_allocated; pixel_counter++ ) {
         // We need the estimated value of the sum (A) so we have to calculate sum_sq first
@@ -1836,9 +1943,9 @@ void MatchTemplateApp::RescaleMipAndStatisticalArraysByGlobalMeanAndStdDev(Image
             correlation_pixel_sum[pixel_counter]            = (correlation_pixel_sum[pixel_counter] - N_x_mean) / global_ccc_std_dev;
 
             // TODO: this could be done in one step, but for now I'm brining it in so that local/gui rescaling happens in the same place and leaving it written as it was there.
-            correlation_pixel_sum[pixel_counter] /= n_stats_samples;
+            correlation_pixel_sum[pixel_counter] /= n_angles_in_search;
             correlation_pixel_sum_of_squares[pixel_counter] = sqrtf(correlation_pixel_sum_of_squares[pixel_counter] /
-                                                                            n_stats_samples -
+                                                                            n_angles_in_search -
                                                                     powf(correlation_pixel_sum[pixel_counter], 2));
 
             scaled_mip->real_values[pixel_counter] = (mip_image->real_values[pixel_counter] - correlation_pixel_sum[pixel_counter]) / correlation_pixel_sum_of_squares[pixel_counter];

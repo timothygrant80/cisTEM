@@ -110,11 +110,13 @@ AC_ARG_ENABLE(multiple-global-refinements, AS_HELP_STRING([--disable-multiple-gl
   fi
 ]) # No action needed if flag is not present as multiple global refinements is the default.
 
-# AC_DEFINE_UNQUOTED([_FILE_OFFSET_BITS], [64], [Define the file offset bits])
-# AC_DEFINE([_LARGEFILE_SOURCE], [], [Define the large file source])
+# NOTE: Ofast, also for gcc, adds more aggressive optimizations, than O3 and also sets -fno-protect-parens which we do not want.
+# Unlike gcc, -fno-protect-parens is not a default for icpc, so we need to add it here.
+# TODO: test  with -ipo (may take longer to compile but iterprocess optimization may worth it)
+# -fprotect-parens
 if test "x$CXX" = "xicpc"; then		
-	CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -no-prec-sqrt $WARNINGS_ON -std=c++${CPP_STANDARD} -wd1125"
-	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -no-prec-sqrt $WARNINGS_ON"
+	CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -no-prec-sqrt -fprotect-parens $WARNINGS_ON -std=c++${CPP_STANDARD} -wd1125"
+	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -no-prec-sqrt -fprotect-parens $WARNINGS_ON"
   # This may only be needed for dynamic linking
   
   LIBS="$LIBS -lz"
@@ -124,8 +126,8 @@ else
 	  CXXFLAGS="$CXXFLAGS -m64 -funroll-loops -O3 -pipe $WARNINGS_ON  -std=c++${CPP_STANDARD} -Wno-c++11-narrowing" 		
 	  CPPFLAGS="$CPPFLAGS -m64 -funroll-loops -O3 -pipe $WARNINGS_ON "
   else 
-	  CXXFLAGS="$CXXFLAGS -m64 -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -std=c++${CPP_STANDARD}" 		
-	  CPPFLAGS="$CPPFLAGS -m64 -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations"
+	  CXXFLAGS="$CXXFLAGS -m64 -funroll-loops -O3 -fprotect-parens -pipe $WARNINGS_ON -fexpensive-optimizations -std=c++${CPP_STANDARD}" 		
+	  CPPFLAGS="$CPPFLAGS -m64 -funroll-loops -O3 -fprotect-parens -pipe $WARNINGS_ON -fexpensive-optimizations"
 
 	  #sqlite needs dl on gcc
 	
@@ -215,8 +217,8 @@ AC_ARG_ENABLE(debugmode, AS_HELP_STRING([--enable-debugmode],[Compile in debug m
   if test "$enableval" = yes; then
     AC_DEFINE([DEBUG], [], [Define the debug flag])
     if test "x$CXX" = "xicpc"; then   
-        CXXFLAGS="-O2 -debug -no-prec-div -no-prec-sqrt $WARNINGS_ON -std=c++${CPP_STANDARD} -wd1125"
-        CPPFLAGS="-O2 -debug -no-prec-div -no-prec-sqrt $WARNINGS_ON"
+        CXXFLAGS="-O2 -debug -no-prec-div -no-prec-sqrt -fprotect-parens $WARNINGS_ON -std=c++${CPP_STANDARD} -wd1125"
+        CPPFLAGS="-O2 -debug -no-prec-div -no-prec-sqrt -fprotect-parens $WARNINGS_ON"
     else
         CPPFLAGS="-O2 -g $WARNINGS_ON $INPUT_CPPFLAGS"
         CXXFLAGS="-O2 -g -std=c++${CPP_STANDARD} $WARNINGS_ON $INPUT_CXXFLAGS"

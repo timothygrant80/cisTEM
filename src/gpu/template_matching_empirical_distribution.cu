@@ -34,19 +34,12 @@ inline __device__ __host__ bool test_gt_zero(T value) {
  */
 
 template <typename ccfType, typename mipType>
-TM_EmpiricalDistribution<ccfType, mipType>::TM_EmpiricalDistribution(GpuImage&   reference_image,
-                                                                     int2        pre_padding,
-                                                                     int2        roi,
-                                                                     const float histogram_sampling_rate,
-                                                                     const float stats_sampling_rate) : pre_padding_{pre_padding},
-                                                                                                        roi_{roi},
-                                                                                                        higher_order_moments_{false},
-                                                                                                        image_plane_mem_allocated_{reference_image.real_memory_allocated},
-                                                                                                        histogram_sampling_rate_{histogram_sampling_rate},
-                                                                                                        stats_sampling_rate_{stats_sampling_rate} {
-
-    MyDebugAssertTrue(histogram_sampling_rate_ >= 0.f && histogram_sampling_rate_ <= 1.f, "The histogram sampling rate must be between 0 and 1");
-    MyDebugAssertTrue(stats_sampling_rate_ >= 0.f && stats_sampling_rate_ <= 1.f, "The stats sampling rate must be between 0 and 1");
+TM_EmpiricalDistribution<ccfType, mipType>::TM_EmpiricalDistribution(GpuImage& reference_image,
+                                                                     int2      pre_padding,
+                                                                     int2      roi) : pre_padding_{pre_padding},
+                                                                                 roi_{roi},
+                                                                                 higher_order_moments_{false},
+                                                                                 image_plane_mem_allocated_{reference_image.real_memory_allocated} {
 
     std::cerr << "n_images" << n_imgs_to_process_at_once_ << std::endl;
     int least_priority, highest_priority;
@@ -108,7 +101,6 @@ TM_EmpiricalDistribution<ccfType, mipType>::TM_EmpiricalDistribution(GpuImage&  
     // For an GpuImage the following would be GridDimension_2d( ) * TM::histogram_number_of_points * sizeof(histogram_storage_t)
     cudaErr(cudaMallocAsync(&histogram_, gridDims_.x * gridDims_.y * TM::histogram_number_of_points * sizeof(histogram_storage_t), calc_stream_[0]));
     ZeroHistogram( );
-    ZeroSamplingCounters( );
 
     AllocateAndZeroStatisticalArrays( );
     object_initialized_ = true;
@@ -119,6 +111,7 @@ void TM_EmpiricalDistribution<ccfType, mipType>::AllocateAndZeroStatisticalArray
 
     cudaErr(cudaMallocAsync(&sum_array, image_plane_mem_allocated_ * sizeof(float), calc_stream_[0]));
     cudaErr(cudaMallocAsync(&sum_sq_array, image_plane_mem_allocated_ * sizeof(float), calc_stream_[0]));
+    cudaErr(cudaMallocAsync(&sum_counter, image_plane_mem_allocated_ * sizeof(float), calc_stream_[0]));
     cudaErr(cudaMallocAsync(&mip_psi, image_plane_mem_allocated_ * sizeof(mipType), calc_stream_[0]));
     cudaErr(cudaMallocAsync(&theta_phi, image_plane_mem_allocated_ * sizeof(mipType), calc_stream_[0]));
     cudaErr(cudaMallocAsync(&psi, image_plane_mem_allocated_ * sizeof(ccfType), calc_stream_[0]));
@@ -129,6 +122,7 @@ void TM_EmpiricalDistribution<ccfType, mipType>::AllocateAndZeroStatisticalArray
 
     cudaErr(cudaMemsetAsync(sum_array, 0, image_plane_mem_allocated_ * sizeof(float), calc_stream_[0]));
     cudaErr(cudaMemsetAsync(sum_sq_array, 0, image_plane_mem_allocated_ * sizeof(float), calc_stream_[0]));
+    cudaErr(cudaMemsetAsync(sum_counter, 0, image_plane_mem_allocated_ * sizeof(float), calc_stream_[0]));
     cudaErr(cudaMemsetAsync(mip_psi, 0, image_plane_mem_allocated_ * sizeof(mipType), calc_stream_[0]));
     cudaErr(cudaMemsetAsync(theta_phi, 0, image_plane_mem_allocated_ * sizeof(mipType), calc_stream_[0]));
     cudaErr(cudaMemsetAsync(psi, 0, image_plane_mem_allocated_ * sizeof(ccfType), calc_stream_[0]));
@@ -139,11 +133,11 @@ void TM_EmpiricalDistribution<ccfType, mipType>::AllocateAndZeroStatisticalArray
 
     for ( int i = 0; i < 2; i++ ) {
 
-        host_angle_and_bool_arrays_.at(i) = new ccfType[n_imgs_to_process_at_once_ * 5];
-        std::memset(host_angle_and_bool_arrays_.at(i), 0, n_imgs_to_process_at_once_ * 5 * sizeof(ccfType));
+        host_angle_arrays_.at(i) = new ccfType[n_imgs_to_process_at_once_ * 3];
+        std::memset(host_angle_arrays_.at(i), 0, n_imgs_to_process_at_once_ * 3 * sizeof(ccfType));
 
-        cudaErr(cudaMallocAsync(&device_host_angle_and_bool_arrays_.at(i), n_imgs_to_process_at_once_ * 5 * sizeof(ccfType), calc_stream_[0]));
-        cudaErr(cudaMemcpyAsync(device_host_angle_and_bool_arrays_.at(i), host_angle_and_bool_arrays_.at(i), n_imgs_to_process_at_once_ * 5 * sizeof(ccfType), cudaMemcpyHostToDevice, calc_stream_[0]));
+        cudaErr(cudaMallocAsync(&device_host_angle_arrays_.at(i), n_imgs_to_process_at_once_ * 3 * sizeof(ccfType), calc_stream_[0]));
+        cudaErr(cudaMemcpyAsync(device_host_angle_arrays_.at(i), host_angle_arrays_.at(i), n_imgs_to_process_at_once_ * 3 * sizeof(ccfType), cudaMemcpyHostToDevice, calc_stream_[0]));
     }
 
     // TODO: higher_order_moments_
@@ -166,6 +160,7 @@ void TM_EmpiricalDistribution<ccfType, mipType>::Delete( ) {
     cudaErr(cudaFreeAsync(histogram_, calc_stream_[0]));
     cudaErr(cudaFreeAsync(sum_array, calc_stream_[0]));
     cudaErr(cudaFreeAsync(sum_sq_array, calc_stream_[0]));
+    cudaErr(cudaFreeAsync(sum_counter, calc_stream_[0]));
     cudaErr(cudaFreeAsync(mip_psi, calc_stream_[0]));
     cudaErr(cudaFreeAsync(theta_phi, calc_stream_[0]));
     cudaErr(cudaFreeAsync(psi, calc_stream_[0]));
@@ -175,10 +170,8 @@ void TM_EmpiricalDistribution<ccfType, mipType>::Delete( ) {
     cudaErr(cudaFreeAsync(ccf_array_.at(1), calc_stream_[0]));
 
     for ( int i = 0; i < 2; i++ ) {
-
-        delete[] host_angle_and_bool_arrays_.at(i);
-
-        cudaErr(cudaFreeAsync(device_host_angle_and_bool_arrays_.at(i), calc_stream_[0]));
+        delete[] host_angle_arrays_.at(i);
+        cudaErr(cudaFreeAsync(device_host_angle_arrays_.at(i), calc_stream_[0]));
     }
 
     cudaErr(cudaStreamDestroy(calc_stream_[0]));
@@ -197,61 +190,79 @@ void TM_EmpiricalDistribution<ccfType, mipType>::ZeroHistogram( ) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
-inline __device__ void convert_input(T* input_ptr, const T bin_min, const T bin_inc, int& pixel_idx, T& val, const int address, const bool evalHistogram) {
+inline __device__ void convert_input(T* input_ptr, const T bin_min, const T bin_inc, int& pixel_idx, T& val, const int address) {
     if constexpr ( std::is_same_v<T, __half> ) {
-        val = input_ptr[address];
-        if ( evalHistogram )
-            pixel_idx = __half2int_rd((val - bin_min) / bin_inc);
+        val       = input_ptr[address];
+        pixel_idx = __half2int_rd((val - bin_min) / bin_inc);
     }
     if constexpr ( std::is_same_v<T, __nv_bfloat16> ) {
-        val = input_ptr[address];
-        if ( evalHistogram )
-            pixel_idx = __bfloat162int_rd((val - bin_min) / bin_inc);
+        val       = input_ptr[address];
+        pixel_idx = __bfloat162int_rd((val - bin_min) / bin_inc);
     }
     if constexpr ( std::is_same_v<T, histogram_storage_t> ) {
-        val = input_ptr[address];
-        if ( evalHistogram )
-            pixel_idx = __float2int_rd((val - bin_min) / bin_inc);
+        val       = input_ptr[address];
+        pixel_idx = __float2int_rd((val - bin_min) / bin_inc);
     }
 }
 
 template <typename ccfType>
-inline __device__ void sum_squares_and_check_max(const ccfType val,
-                                                 float&        sum,
-                                                 float&        sum_sq,
-                                                 ccfType&      max_val,
-                                                 int&          max_idx,
-                                                 const int     idx,
-                                                 const bool    evalStats) {
+inline __device__ void sum_squares_and_check_max(ccfType     val,
+                                                 float&      sum,
+                                                 float&      sum_sq,
+                                                 float&      sum_counter_val,
+                                                 float&      sum_err,
+                                                 float&      sum_sq_err,
+                                                 ccfType&    max_val,
+                                                 int&        max_idx,
+                                                 const int   idx,
+                                                 const float min_counter_val,
+                                                 const float threshold_val) {
 
     if ( val > max_val ) {
         max_val = val;
         max_idx = idx;
     }
 
-    if ( evalStats ) {
-        if constexpr ( std::is_same_v<ccfType, __half> ) {
-            sum += __half2float(val);
-            sum_sq += __half2float(val) * __half2float(val);
-        }
-        else if constexpr ( std::is_same_v<ccfType, __nv_bfloat16> ) {
-            sum += __bfloat162float(val);
-            sum_sq += __bfloat162float(val) * __bfloat162float(val);
-        }
-        else if constexpr ( std::is_same_v<ccfType, histogram_storage_t> ) {
-            sum += val;
-            sum_sq += val * val;
-        }
+    // if ( sum_counter_val == 0.f || fabsf(float_val - sum / sum_counter_val) < sqrtf(((sum_sq / sum_counter_val) - powf(sum / sum_counter_val, 2))) * 3.0f ) {
+    float float_val;
+    if constexpr ( std::is_same_v<ccfType, __half> ) {
+        float_val = __half2float(val);
+    }
+    else if constexpr ( std::is_same_v<ccfType, __nv_bfloat16> ) {
+        float_val = __bfloat162float(val);
+    }
+    else if constexpr ( std::is_same_v<ccfType, histogram_storage_t> ) {
+        float_val = val;
+    }
+    // for Welfords
+    // For Kahan summation
+    float mean_val = sum / sum_counter_val;
+
+    if ( sum_counter_val < min_counter_val || fabsf((float_val - mean_val) * rsqrtf(sum_sq / sum_counter_val - mean_val * mean_val)) < threshold_val ) {
+        sum_counter_val += 1.0f;
+
+        // Kahan summation
+        const float y = float_val - sum_err;
+        const float t = sum + y;
+        sum_err       = (t - sum) - y;
+        sum           = t;
+
+        const float y2 = __fmaf_ieee_rn(float_val, float_val, -sum_sq_err);
+        const float t2 = sum_sq + y2;
+        sum_sq_err     = (t2 - sum_sq) - y2;
+        sum_sq         = t2;
     }
 }
 
 template <typename ccfType, typename mipType>
-inline __device__ void write_mip_and_stats(float*   sum_array,
-                                           float*   sum_sq_array,
-                                           mipType* mip_psi,
-                                           mipType* theta_phi,
-                                           float&   sum,
-                                           float&   sum_sq,
+inline __device__ void write_mip_and_stats(float*      sum_array,
+                                           float*      sum_sq_array,
+                                           float*      sum_counter,
+                                           mipType*    mip_psi,
+                                           mipType*    theta_phi,
+                                           const float sum,
+                                           const float sum_sq,
+                                           const float sum_counter_val,
                                            const ccfType* __restrict__ psi,
                                            const ccfType* __restrict__ theta,
                                            const ccfType* __restrict__ phi,
@@ -260,8 +271,9 @@ inline __device__ void write_mip_and_stats(float*   sum_array,
                                            const int address) {
 
     // There may be rare cases where no stats have been evaluated, but then sum/sum_sq == 0. Rather than introduce extra branching logic, just do the extra io for those rare cases.
-    sum_array[address] += sum;
-    sum_sq_array[address] += sum_sq;
+    sum_array[address]    = sum;
+    sum_sq_array[address] = sum_sq;
+    sum_counter[address]  = sum_counter_val;
 
     // TODO: I'm assuming we can avoid reading the mip value when <= histogram min based on short circuit logic, but
     // there may prefetching going on that might be prevented with a second nested if?
@@ -313,13 +325,14 @@ __global__ void __launch_bounds__(TM::histogram_number_of_points)
                                      const int            n_slices_to_process,
                                      float*               sum_array,
                                      float*               sum_sq_array,
+                                     float*               sum_counter,
                                      mipType*             mip_psi,
                                      mipType*             theta_phi,
                                      const ccfType* __restrict__ psi,
                                      const ccfType* __restrict__ theta,
                                      const ccfType* __restrict__ phi,
-                                     const ccfType* __restrict__ do_histogram,
-                                     const ccfType* __restrict__ do_stats) {
+                                     const float min_counter_val,
+                                     const float threshold_val) {
 
     // initialize temporary accumulation array input_ptr shared memory, this is equal to the number of bins input_ptr the histogram,
     // which may  be more or less than the number of threads in a block
@@ -353,20 +366,22 @@ __global__ void __launch_bounds__(TM::histogram_number_of_points)
             address         = j * pitch_in_pixels_img + i;
             ccfType max_val = ccfType{TM::histogram_min};
             int     max_idx = 0;
-            float   sum{0.f}, sum_sq{0.f};
+            // even though we only use kahan summation over ~ 20 numbers, the increase in accuracy is worth it.
+            float sum    = sum_array[address];
+            float sum_sq = sum_sq_array[address];
+            float sum_err{0.f}, sum_sq_err{0.f};
+            float sum_counter_val = sum_counter[address];
             for ( int k = 0; k < n_slices_to_process; k++ ) {
                 // pixel_idx = __half2int_rd((input_ptr[j * dims.w + i] - bin_min) / bin_inc);
-                bool do_histogram_k = (do_histogram[k] == ccfType{1.0});
-                convert_input(input_ptr, bin_min, bin_inc, pixel_idx, val, address + k * NY_img * pitch_in_pixels_img, do_histogram_k);
-                if ( do_histogram_k ) {
-                    if ( pixel_idx >= 0 && pixel_idx < TM::histogram_number_of_points )
-                        atomicAdd(&smem[pixel_idx], 1);
-                }
-                sum_squares_and_check_max(val, sum, sum_sq, max_val, max_idx, k, do_stats[k] == ccfType{1.0});
+                convert_input(input_ptr, bin_min, bin_inc, pixel_idx, val, address + k * NY_img * pitch_in_pixels_img);
+
+                if ( pixel_idx >= 0 && pixel_idx < TM::histogram_number_of_points )
+                    atomicAdd(&smem[pixel_idx], 1);
+                sum_squares_and_check_max(val, sum, sum_sq, sum_counter_val, sum_err, sum_sq_err, max_val, max_idx, k, min_counter_val, threshold_val);
             } // loop over slices
 
             // Now we need to actually write out to global memory for the mip if we are doing it
-            write_mip_and_stats(sum_array, sum_sq_array, mip_psi, theta_phi, sum, sum_sq, psi, theta, phi, max_val, max_idx, address);
+            write_mip_and_stats(sum_array, sum_sq_array, sum_counter, mip_psi, theta_phi, sum, sum_sq, sum_counter_val, psi, theta, phi, max_val, max_idx, address);
         }
     }
 
@@ -404,17 +419,12 @@ FinalAccumulateKernel(histogram_storage_t* input_ptr, const int n_bins, const in
  */
 
 template <typename ccfType, typename mipType>
-void TM_EmpiricalDistribution<ccfType, mipType>::AccumulateDistribution(int n_images_this_batch, long& histogram_sampling_counter, long& stats_sampling_counter) {
+void TM_EmpiricalDistribution<ccfType, mipType>::AccumulateDistribution(int n_images_this_batch) {
     MyDebugAssertTrue(n_images_this_batch <= n_imgs_to_process_at_once_, "The number of images to accumulate is greater than the number of images to accumulate concurrently");
     MyDebugAssertFalse(cudaStreamQuery(calc_stream_[0]) == cudaErrorInvalidResourceHandle, "The cuda stream is invalid");
 
     // Copy the host angle arrays to the device (async in calc_stream_[0])
     UpdateDeviceAngleArrays( );
-
-    // Instead of calculating int((value - bin_min) / bin_inc), use a fused multiply add
-    // print the image dims, pre padding and roi
-    histogram_sampling_counter += n_histogram_samples_this_batch_.at(active_idx_);
-    stats_sampling_counter += n_stats_samples_this_batch_.at(active_idx_);
 
     precheck;
     AccumulateDistributionKernel<<<gridDims_, threadsPerBlock_, 0, calc_stream_[0]>>>(
@@ -429,18 +439,14 @@ void TM_EmpiricalDistribution<ccfType, mipType>::AccumulateDistribution(int n_im
             n_images_this_batch,
             sum_array,
             sum_sq_array,
+            sum_counter,
             mip_psi,
             theta_phi,
-            (ccfType*)&device_host_angle_and_bool_arrays_.at(active_idx_)[psi_idx],
-            (ccfType*)&device_host_angle_and_bool_arrays_.at(active_idx_)[theta_idx],
-            (ccfType*)&device_host_angle_and_bool_arrays_.at(active_idx_)[phi_idx],
-            (ccfType*)&device_host_angle_and_bool_arrays_.at(active_idx_)[do_histogram_idx],
-            (ccfType*)&device_host_angle_and_bool_arrays_.at(active_idx_)[do_stats_idx]);
-    // d_psi_array_.at(active_idx_),
-    // d_theta_array_.at(active_idx_),
-    // d_phi_array_.at(active_idx_),
-    // d_do_histogram_.at(active_idx_),
-    // d_do_stats_.at(active_idx_));
+            (ccfType*)&device_host_angle_arrays_.at(active_idx_)[psi_idx],
+            (ccfType*)&device_host_angle_arrays_.at(active_idx_)[theta_idx],
+            (ccfType*)&device_host_angle_arrays_.at(active_idx_)[phi_idx],
+            min_counter_val_,
+            threshold_val_);
     postcheck;
 
     // Switch the active index
@@ -472,8 +478,7 @@ void TM_EmpiricalDistribution<ccfType, mipType>::CopyToHostAndAdd(long* array_to
     cudaErr(cudaMemcpy(tmp_array, histogram_, TM::histogram_number_of_points * sizeof(histogram_storage_t), cudaMemcpyDeviceToHost));
 
     for ( int iBin = 0; iBin < TM::histogram_number_of_points; iBin++ ) {
-        // Rescale the measured counts so that the expected histogram calcs don't need to be modified.
-        array_to_add_to[iBin] += long(tmp_array[iBin] / histogram_sampling_rate_);
+        array_to_add_to[iBin] += long(tmp_array[iBin]);
     }
 
     cudaErr(cudaFreeHost(tmp_array));
@@ -483,14 +488,22 @@ void TM_EmpiricalDistribution<ccfType, mipType>::CopyToHostAndAdd(long* array_to
 // template class TM_EmpiricalDistribution<float>;
 
 // TODO: I'm not sure  __restrict__ can be applied to the sum image b/c the value is both read and written to, but this migh tbe okay.
-__global__ void AccumulateSumsKernel(float* sum, float* sumsq, float* __restrict__ sum_img_array, float* __restrict__ sq_sum_img_array, const int numel) {
+__global__ void AccumulateSumsKernel(float* sum,
+                                     float* sumsq,
+                                     float* __restrict__ sum_img_array,
+                                     float* __restrict__ sq_sum_img_array,
+                                     float*    sum_counter,
+                                     const int numel) {
 
     int x = blockIdx.x * blockDim.x + threadIdx.x;
     if ( x < numel ) {
+
         sum_img_array[x] += sum[x];
         sq_sum_img_array[x] += sumsq[x];
-        sum[x]   = 0.0f;
-        sumsq[x] = 0.0f;
+
+        sum[x]         = 0.0f;
+        sumsq[x]       = 0.0f;
+        sum_counter[x] = 0.0f;
     }
 }
 
@@ -500,7 +513,12 @@ void TM_EmpiricalDistribution<ccfType, mipType>::CopySumAndSumSqAndZero(GpuImage
     dim3 threadsPerBlock = dim3(1024, 1, 1);
     dim3 gridDims        = dim3((image_plane_mem_allocated_ + threadsPerBlock.x - 1) / threadsPerBlock.x, 1, 1);
 
-    AccumulateSumsKernel<<<gridDims, threadsPerBlock, 0, cudaStreamPerThread>>>(sum_array, sum_sq_array, sum_img.real_values, sq_sum_img.real_values, sq_sum_img.real_memory_allocated);
+    AccumulateSumsKernel<<<gridDims, threadsPerBlock, 0, cudaStreamPerThread>>>(sum_array,
+                                                                                sum_sq_array,
+                                                                                sum_img.real_values,
+                                                                                sq_sum_img.real_values,
+                                                                                sum_counter,
+                                                                                sq_sum_img.real_memory_allocated);
     postcheck;
 }
 

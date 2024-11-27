@@ -910,7 +910,7 @@ void ParticleFinder::WhitenMicrographBackground( ) {
     wxPrintf("\nChecking whitening worked correctly (debug)...\n");
     my_progress_bar = new ProgressBar(number_of_background_boxes);
     temp_curve.ZeroYData( );
-    EmpiricalDistribution dist;
+    EmpiricalDistribution<double> dist;
     for ( int background_box_counter = 0; background_box_counter < number_of_background_boxes; background_box_counter++ ) {
         if ( background_box_counter >= number_of_background_boxes_to_skip ) {
             box.QuickAndDirtyReadSlice("dbg_background_box.mrc", background_box_counter + 1 - number_of_background_boxes_to_skip);
@@ -1282,7 +1282,7 @@ void ParticleFinder::PrepareTemplateForMatching(Image* template_image, Image& pr
 
     Image temporary_image;
 
-    EmpiricalDistribution my_dist;
+    EmpiricalDistribution<double> my_dist;
 
     temporary_image = template_image;
 
@@ -1391,12 +1391,12 @@ void ComputeScheresPickingFunction(Image *micrograph, Image *micrograph_local_me
 	// We assume the template has been normalized such that its mean is 0.0 and its stdev 1.0 outside the mask
 	// (I'm not sure that this is exactly what Sjors does, nor whether this is the correct thing to do)
 #ifdef DEBUG
-	EmpiricalDistribution template_values_outside_radius = template_image->ReturnDistributionOfRealValues(mask_radius,true);
+	EmpiricalDistribution<double> template_values_outside_radius = template_image->ReturnDistributionOfRealValues(mask_radius,true);
 	MyDebugAssertTrue(fabs(template_values_outside_radius.GetSampleMean()) < 0.001,"Template should be normalized to have mean value of 0.0 outside radius");
 	const float template_sum_outside_of_mask = template_values_outside_radius.GetSampleSum();
 	const float template_sum_of_squares_outside_of_mask = template_values_outside_radius.GetSampleSumOfSquares();
 #endif
-	EmpiricalDistribution template_values_inside_radius  = template_image->ReturnDistributionOfRealValues(mask_radius,false);
+	EmpiricalDistribution<double> template_values_inside_radius  = template_image->ReturnDistributionOfRealValues(mask_radius,false);
 	const float template_sum_inside_of_mask = template_values_inside_radius.GetSampleSum();
 	const float template_sum_of_squares_inside_of_mask = template_values_inside_radius.GetSampleSumOfSquares();
 	wxPrintf("Template sum of squares inside of mask = %e\n", template_sum_of_squares_inside_of_mask);

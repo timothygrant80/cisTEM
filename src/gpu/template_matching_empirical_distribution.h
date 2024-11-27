@@ -12,13 +12,11 @@
  * like the cpu version of EmpiricalDistribution or per pixel across many images.
  */
 
-constexpr int n_imgs_to_process_at_once_ = 20;
+constexpr int n_imgs_to_process_at_once_ = 30;
 
-constexpr int psi_idx          = 0;
-constexpr int theta_idx        = 1 * n_imgs_to_process_at_once_;
-constexpr int phi_idx          = 2 * n_imgs_to_process_at_once_;
-constexpr int do_histogram_idx = 3 * n_imgs_to_process_at_once_;
-constexpr int do_stats_idx     = 4 * n_imgs_to_process_at_once_;
+constexpr int psi_idx   = 0;
+constexpr int theta_idx = 1 * n_imgs_to_process_at_once_;
+constexpr int phi_idx   = 2 * n_imgs_to_process_at_once_;
 
 using histogram_storage_t = float;
 
@@ -26,16 +24,14 @@ template <typename ccfType, typename mipType>
 class TM_EmpiricalDistribution {
 
   private:
-    bool        higher_order_moments_;
-    bool        object_initialized_{ };
-    int         current_image_index_;
-    ccfType     histogram_min_;
-    ccfType     histogram_step_;
-    int         histogram_n_bins_;
-    int2        pre_padding_;
-    int2        roi_;
-    const float histogram_sampling_rate_;
-    const float stats_sampling_rate_;
+    bool    higher_order_moments_;
+    bool    object_initialized_{ };
+    int     current_image_index_;
+    ccfType histogram_min_;
+    ccfType histogram_step_;
+    int     histogram_n_bins_;
+    int2    pre_padding_;
+    int2    roi_;
 
     std::unique_ptr<RandomNumberGenerator> my_rng_;
 
@@ -43,6 +39,7 @@ class TM_EmpiricalDistribution {
 
     float*   sum_array;
     float*   sum_sq_array;
+    float*   sum_counter;
     mipType* mip_psi;
     mipType* theta_phi;
     ccfType* psi;
@@ -51,11 +48,8 @@ class TM_EmpiricalDistribution {
 
     int active_idx_{ };
 
-    std::array<ccfType*, 2> host_angle_and_bool_arrays_;
-    std::array<ccfType*, 2> device_host_angle_and_bool_arrays_;
-
-    std::array<int, 2> n_histogram_samples_this_batch_;
-    std::array<int, 2> n_stats_samples_this_batch_;
+    std::array<ccfType*, 2> host_angle_arrays_;
+    std::array<ccfType*, 2> device_host_angle_arrays_;
 
     std::array<ccfType*, 2> ccf_array_;
 
@@ -71,7 +65,19 @@ class TM_EmpiricalDistribution {
     cudaStream_t calc_stream_[1];
     cudaEvent_t  mip_stack_is_ready_event_[1];
 
+    // For the testing of trimmed local variance
+    float min_counter_val_{10.f};
+    float threshold_val_{3.0f};
+
   public:
+    void SetTrimmingAlgoMinCounterVal(float min_counter_val) {
+        min_counter_val_ = min_counter_val;
+    }
+
+    void SetTrimmingAlgoThresholdVal(float threshold_val) {
+        threshold_val_ = threshold_val;
+    }
+
     /**
  * @brief Construct a new TM_EmpiricalDistribution
  * Note: both histogram_min and histogram step must be > 0 or no histogram will be created
@@ -83,11 +89,9 @@ class TM_EmpiricalDistribution {
  * @param n_images_to_accumulate_concurrently - the number of images to accumulate concurrently
  * 
  */
-    TM_EmpiricalDistribution(GpuImage&   reference_image,
-                             int2        pre_padding,
-                             int2        roi,
-                             const float histogram_sampling_rate,
-                             const float stats_sampling_rate);
+    TM_EmpiricalDistribution(GpuImage& reference_image,
+                             int2      pre_padding,
+                             int2      roi);
 
     ~TM_EmpiricalDistribution( );
     void Delete( );
@@ -116,14 +120,7 @@ class TM_EmpiricalDistribution {
     void AllocateAndZeroStatisticalArrays( );
     void ZeroHistogram( );
 
-    void ZeroSamplingCounters( ) {
-        for ( auto& counter : n_histogram_samples_this_batch_ )
-            counter = 0;
-        for ( auto& counter : n_stats_samples_this_batch_ )
-            counter = 0;
-    };
-
-    void AccumulateDistribution(int n_images_this_batch, long& histogram_sampling_counter, long& stats_sampling_counter);
+    void AccumulateDistribution(int n_images_this_batch);
     void FinalAccumulate( );
     void CopyToHostAndAdd(long* array_to_add_to);
 
@@ -145,29 +142,20 @@ class TM_EmpiricalDistribution {
     inline void UpdateHostAngleArrays(const int current_mip_to_process, const float current_psi, const float current_theta, const float current_phi) {
         MyDebugAssertTrue(current_mip_to_process >= 0 && current_mip_to_process <= n_imgs_to_process_at_once_, "current_mip_to_process is out of bounds");
         if constexpr ( std::is_same_v<ccfType, __half> ) {
-            host_angle_and_bool_arrays_.at(active_idx_)[current_mip_to_process + psi_idx]   = __float2half_rn(current_psi);
-            host_angle_and_bool_arrays_.at(active_idx_)[current_mip_to_process + theta_idx] = __float2half_rn(current_theta);
-            host_angle_and_bool_arrays_.at(active_idx_)[current_mip_to_process + phi_idx]   = __float2half_rn(current_phi);
+            host_angle_arrays_.at(active_idx_)[current_mip_to_process + psi_idx]   = __float2half_rn(current_psi);
+            host_angle_arrays_.at(active_idx_)[current_mip_to_process + theta_idx] = __float2half_rn(current_theta);
+            host_angle_arrays_.at(active_idx_)[current_mip_to_process + phi_idx]   = __float2half_rn(current_phi);
         }
         else {
-            host_angle_and_bool_arrays_.at(active_idx_)[current_mip_to_process + psi_idx]   = __float2bfloat16_rn(current_psi);
-            host_angle_and_bool_arrays_.at(active_idx_)[current_mip_to_process + theta_idx] = __float2bfloat16_rn(current_theta);
-            host_angle_and_bool_arrays_.at(active_idx_)[current_mip_to_process + phi_idx]   = __float2bfloat16_rn(current_phi);
+            host_angle_arrays_.at(active_idx_)[current_mip_to_process + psi_idx]   = __float2bfloat16_rn(current_psi);
+            host_angle_arrays_.at(active_idx_)[current_mip_to_process + theta_idx] = __float2bfloat16_rn(current_theta);
+            host_angle_arrays_.at(active_idx_)[current_mip_to_process + phi_idx]   = __float2bfloat16_rn(current_phi);
         }
     }
 
     // This would probably be better if all the arrays were contiguous in memory so we only have one api call per round FIXME
     inline void UpdateDeviceAngleArrays( ) {
-        ZeroSamplingCounters( );
-        for ( int i_bool = 0; i_bool < n_imgs_to_process_at_once_; i_bool++ ) {
-            host_angle_and_bool_arrays_.at(active_idx_)[i_bool + do_histogram_idx] = (my_rng_->GetUniformRandomSTD(0.0f, 1.0f) <= histogram_sampling_rate_) ? ccfType{1.0} : ccfType{0.0f};
-            if ( host_angle_and_bool_arrays_.at(active_idx_)[i_bool + do_histogram_idx] )
-                n_histogram_samples_this_batch_.at(active_idx_)++;
-            host_angle_and_bool_arrays_.at(active_idx_)[i_bool + do_stats_idx] = (my_rng_->GetUniformRandomSTD(0.0f, 1.0f) <= stats_sampling_rate_) ? ccfType{1.0} : ccfType{0.0f};
-            if ( host_angle_and_bool_arrays_.at(active_idx_)[i_bool + do_stats_idx] )
-                n_stats_samples_this_batch_.at(active_idx_)++;
-        }
-        cudaErr(cudaMemcpyAsync(device_host_angle_and_bool_arrays_.at(active_idx_), host_angle_and_bool_arrays_.at(active_idx_), n_imgs_to_process_at_once_ * sizeof(ccfType) * 5, cudaMemcpyHostToDevice, calc_stream_[0]));
+        cudaErr(cudaMemcpyAsync(device_host_angle_arrays_.at(active_idx_), host_angle_arrays_.at(active_idx_), n_imgs_to_process_at_once_ * sizeof(ccfType) * 3, cudaMemcpyHostToDevice, calc_stream_[0]));
     }
 
     void CopySumAndSumSqAndZero(GpuImage& sum, GpuImage& sq_sum);

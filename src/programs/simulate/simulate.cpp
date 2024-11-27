@@ -1926,7 +1926,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
                 std::string fileNameOUT = "crosshair" + this->output_filename;
                 MRCFile     mrc_out(fileNameOUT, true);
                 coords.PadToWantedSize(&cross_hair, wanted_output_size);
-                EmpiricalDistribution my_dist = cross_hair.ReturnDistributionOfRealValues( );
+                EmpiricalDistribution<double> my_dist = cross_hair.ReturnDistributionOfRealValues( );
                 cross_hair.Binarise(0.9 * my_dist.GetMaximum( ));
                 cross_hair.WriteSlices(&mrc_out, 1, 1);
                 mrc_out.SetPixelSize(this->wanted_pixel_size);
@@ -2184,7 +2184,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
                 std::string fileNameOUT = "phaseGrating_" + this->output_filename;
                 MRCFile     mrc_out(fileNameOUT, true);
                 coords.PadToWantedSize(&sum_phase, wanted_output_size);
-                EmpiricalDistribution phase_shift_distribution = sum_phase.ReturnDistributionOfRealValues( );
+                EmpiricalDistribution<double> phase_shift_distribution = sum_phase.ReturnDistributionOfRealValues( );
                 wxPrintf("\n\tPhase plate shift avg: %3.6f\n\tPhase plate shift std %3.6f\n\tPhase plate shift relative error %3.6f\n",
                          phase_shift_distribution.GetSampleMean( ), phase_shift_distribution.GetSampleVariance( ), 100.f * std::abs(phase_shift_distribution.GetSampleMean( ) - pi_v<float> / 2) / (pi_v<float> / 2));
                 sum_phase.WriteSlices(&mrc_out, 1, 1);

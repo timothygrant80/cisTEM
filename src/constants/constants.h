@@ -65,8 +65,6 @@ enum Enum : int {
     image_size_y,
     image_real_memory_allocated,
     number_of_angles_searched,
-    number_of_histogram_samples,
-    number_of_stats_samples,
     number_of_histogram_bins,
     ccc_scalar,
     input_pixel_size,

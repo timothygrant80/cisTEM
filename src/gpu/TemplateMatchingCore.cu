@@ -24,8 +24,6 @@ void TemplateMatchingCore::Init(MyApp*                    parent_pointer,
                                 EulerSearch&              global_euler_search,
                                 const int2                pre_padding,
                                 const int2                roi,
-                                float                     histogram_sampling,
-                                float                     stats_sampling,
                                 int                       first_search_position,
                                 int                       last_search_position,
                                 ProgressBar*              my_progress,
@@ -40,9 +38,7 @@ void TemplateMatchingCore::Init(MyApp*                    parent_pointer,
     MyDebugAssertTrue(wanted_input_image.is_in_memory, "Input image must be in memory");
     object_initialized_ = true;
 
-    this->use_gpu_prj   = use_gpu_prj;
-    histogram_sampling_ = histogram_sampling;
-    stats_sampling_     = stats_sampling;
+    this->use_gpu_prj = use_gpu_prj;
 
     this->first_search_position          = first_search_position;
     this->last_search_position           = last_search_position;
@@ -108,14 +104,14 @@ void TemplateMatchingCore::Init(MyApp*                    parent_pointer,
     // Transfer the input image_memory_should_not_be_deallocated
 };
 
-void TemplateMatchingCore::RunInnerLoop(Image& projection_filter,
-                                        int    threadIDX,
-                                        long&  current_correlation_position) {
+void TemplateMatchingCore::RunInnerLoop(Image&      projection_filter,
+                                        int         threadIDX,
+                                        long&       current_correlation_position,
+                                        const float min_counter_val,
+                                        const float threshold_val) {
 
-    total_number_of_cccs_calculated   = 0;
-    total_number_of_histogram_samples = 0;
-    total_number_of_stats_samples     = 0;
-    bool at_least_100                 = false;
+    total_number_of_cccs_calculated = 0;
+    bool at_least_100               = false;
 
     bool this_is_the_first_run_on_inner_loop = my_dist ? false : true;
 
@@ -147,11 +143,15 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter,
     if ( this_is_the_first_run_on_inner_loop ) {
         d_input_image.CopyFP32toFP16buffer(false);
         d_padded_reference.CopyFP32toFP16buffer(false);
-        my_dist = std::make_unique<TM_EmpiricalDistribution<__half, __half2>>(d_input_image, pre_padding, roi, histogram_sampling_, stats_sampling_);
+        my_dist = std::make_unique<TM_EmpiricalDistribution<__half, __half2>>(d_input_image, pre_padding, roi);
     }
     else {
         my_dist->ZeroHistogram( );
     }
+
+    // Note: these shouldn't change after the first run
+    my_dist->SetTrimmingAlgoMinCounterVal(min_counter_val);
+    my_dist->SetTrimmingAlgoThresholdVal(threshold_val);
 
     // Make sure we are starting with zeros
     for ( auto& buffer : d_statistical_buffers_ptrs ) {
@@ -221,6 +221,7 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter,
             constexpr float shifts_in_x_y                               = 0.0f;
             constexpr bool  apply_shifts                                = false;
             constexpr bool  swap_real_space_quadrants_during_projection = true;
+            // FIXME, change this to also store psi and to have methods to convert between an index encoded as an int and the actual angles
             angles.Init(global_euler_search.list_of_search_parameters[current_search_position][0], global_euler_search.list_of_search_parameters[current_search_position][1], current_psi, shifts_in_x_y, shifts_in_x_y);
 
             current_projection_idx = projection_queue.GetAvailableProjectionIDX( );
@@ -360,7 +361,7 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter,
 
                 total_mip_processed += current_mip_to_process;
                 // current_mip_to_process only matters after the main loop, the TM empirical dist will also update the active_idx_ before returning from Accumulate distribution
-                my_dist->AccumulateDistribution(current_mip_to_process, total_number_of_histogram_samples, total_number_of_stats_samples);
+                my_dist->AccumulateDistribution(current_mip_to_process);
 
                 // We've queued up all the work for the current stack, so record the event that will be used to block the host until the stack is ready
                 my_dist->RecordMipStackIsReadyBlockingHost( );
@@ -371,20 +372,20 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter,
             ccc_counter++;
             total_number_of_cccs_calculated++;
 
-            if ( ccc_counter % 100 == 0 ) {
-                my_dist->MakeHostWaitOnMipStackIsReadyEvent( );
-                my_dist->CopySumAndSumSqAndZero(d_sum1, d_sumSq1);
-                at_least_100 = true;
-            }
+            // if ( ccc_counter % 100 == 0 ) {
+            //     my_dist->MakeHostWaitOnMipStackIsReadyEvent( );
+            //     my_dist->CopySumAndSumSqAndZero(d_sum1, d_sumSq1);
+            //     at_least_100 = true;
+            // }
 
-            if ( ccc_counter % 10000 == 0 ) {
-                // if we are in this block, we must also have been in the % 100 block, so no need to sync again
-                d_sum2.AddImage(d_sum1);
-                d_sum1.Zeros( );
+            // if ( ccc_counter % 10000 == 0 ) {
+            //     // if we are in this block, we must also have been in the % 100 block, so no need to sync again
+            //     d_sum2.AddImage(d_sum1);
+            //     d_sum1.Zeros( );
 
-                d_sumSq2.AddImage(d_sumSq1);
-                d_sumSq1.Zeros( );
-            }
+            //     d_sumSq2.AddImage(d_sumSq1);
+            //     d_sumSq1.Zeros( );
+            // }
 
             current_projection[current_projection_idx].is_in_real_space = false;
             d_padded_reference.is_in_real_space                         = true;
@@ -426,22 +427,17 @@ void TemplateMatchingCore::RunInnerLoop(Image& projection_filter,
 
         total_mip_processed += current_mip_to_process;
         // current_mip_to_process only matters after the main loop, the TM empirical dist will also update the active_idx_ before returning from Accumulate distribution
-        my_dist->AccumulateDistribution(current_mip_to_process, total_number_of_histogram_samples, total_number_of_stats_samples);
+        my_dist->AccumulateDistribution(current_mip_to_process);
 
         // We've queued up all the work for the current stack, so record the event that will be used to block the host until the stack is ready
         my_dist->RecordMipStackIsReadyBlockingHost( );
         my_dist->MakeHostWaitOnMipStackIsReadyEvent( );
-
-        // This is run in cudaStreamPerThread
-        my_dist->CopySumAndSumSqAndZero(d_sum1, d_sumSq1);
-    }
-    else {
-        // if somehow we search less than 100 positions, we never will have run the above code
-        if ( ! at_least_100 ) {
-            my_dist->CopySumAndSumSqAndZero(d_sum1, d_sumSq1);
-        }
     }
 
+    // This is run in cudaStreamPerThread
+    my_dist->CopySumAndSumSqAndZero(d_sum1, d_sumSq1);
+
+    // FIXME: we can get rid of these sum images since we are using Kahan summation now
     d_sum2.AddImage(d_sum1);
     d_sumSq2.AddImage(d_sumSq1);
 

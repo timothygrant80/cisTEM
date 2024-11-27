@@ -44,9 +44,9 @@ bool FFTApp::DoCalculation( ) {
     ImageFile my_input_file(input_filename, false);
     MRCFile   my_output_file(output_filename, true);
 
-    Image                 my_image;
-    Image                 my_amplitude_spectrum;
-    EmpiricalDistribution my_distribution;
+    Image                         my_image;
+    Image                         my_amplitude_spectrum;
+    EmpiricalDistribution<double> my_distribution;
 
     // pixel size could be non-square/cubic but we will ignore this here and assume it is square/cubic
     pixel_size = my_input_file.ReturnPixelSize( );

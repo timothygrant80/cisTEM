@@ -727,7 +727,7 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D& reconstruction, Image* 
     output_file.OpenFile(output_volume.ToStdString( ), true);
     density_map->WriteSlices(&output_file, 1, density_map->logical_z_dimension);
     output_file.SetPixelSize(original_pixel_size);
-    EmpiricalDistribution density_distribution;
+    EmpiricalDistribution<double> density_distribution;
     density_map->UpdateDistributionOfRealValues(&density_distribution);
     output_file.SetDensityStatistics(density_distribution.GetMinimum( ), density_distribution.GetMaximum( ), density_distribution.GetSampleMean( ), sqrtf(density_distribution.GetSampleVariance( )));
     output_file.CloseFile( );

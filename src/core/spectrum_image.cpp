@@ -11,25 +11,25 @@ float SpectrumImage::FindRotationalAlignmentBetweenTwoStacksOfImages(Image* othe
     MyDebugAssertTrue(this[0].HasSameDimensionsAs(&other_image[0]), "Images and reference images do not have same dimensions.");
 
     // Local variables
-    const float           minimum_radius_sq           = pow(minimum_radius, 2);
-    const float           maximum_radius_sq           = pow(maximum_radius, 2);
-    const float           inverse_logical_x_dimension = 1.0 / float(this[0].logical_x_dimension);
-    const float           inverse_logical_y_dimension = 1.0 / float(this[0].logical_y_dimension);
-    float                 best_cc                     = -std::numeric_limits<float>::max( );
-    float                 best_rotation               = -std::numeric_limits<float>::max( );
-    float                 current_rotation            = -search_half_range;
-    float                 current_rotation_rad;
-    EmpiricalDistribution cc_numerator_dist;
-    EmpiricalDistribution cc_denom_self_dist;
-    EmpiricalDistribution cc_denom_other_dist;
-    int                   current_image;
-    int                   i, i_logi;
-    float                 i_logi_frac, ii_phys;
-    int                   j, j_logi;
-    float                 j_logi_frac, jj_phys;
-    float                 current_interpolated_value;
-    long                  address_in_other_image;
-    float                 current_cc;
+    const float                   minimum_radius_sq           = pow(minimum_radius, 2);
+    const float                   maximum_radius_sq           = pow(maximum_radius, 2);
+    const float                   inverse_logical_x_dimension = 1.0 / float(this[0].logical_x_dimension);
+    const float                   inverse_logical_y_dimension = 1.0 / float(this[0].logical_y_dimension);
+    float                         best_cc                     = -std::numeric_limits<float>::max( );
+    float                         best_rotation               = -std::numeric_limits<float>::max( );
+    float                         current_rotation            = -search_half_range;
+    float                         current_rotation_rad;
+    EmpiricalDistribution<double> cc_numerator_dist;
+    EmpiricalDistribution<double> cc_denom_self_dist;
+    EmpiricalDistribution<double> cc_denom_other_dist;
+    int                           current_image;
+    int                           i, i_logi;
+    float                         i_logi_frac, ii_phys;
+    int                           j, j_logi;
+    float                         j_logi_frac, jj_phys;
+    float                         current_interpolated_value;
+    long                          address_in_other_image;
+    float                         current_cc;
 
     // Loop over possible rotations
     while ( current_rotation < search_half_range + search_step_size ) {
@@ -124,23 +124,23 @@ void SpectrumImage::OverlayCTF(CTF* ctf, Image* number_of_extrema, Image* ctf_va
     MyDebugAssertTrue(this->is_in_memory, "Spectrum memory not allocated");
 
     //
-    EmpiricalDistribution values_in_rings;
-    EmpiricalDistribution values_in_fitting_range;
-    int                   i;
-    int                   j;
-    long                  address;
-    float                 i_logi, i_logi_sq;
-    float                 j_logi, j_logi_sq;
-    float                 current_spatial_frequency_squared;
-    float                 current_azimuth;
-    float                 current_defocus;
-    float                 current_phase_aberration;
-    float                 sq_sf_of_phase_aberration_maximum;
-    const float           lowest_freq  = pow(ctf->GetLowestFrequencyForFitting( ), 2);
-    const float           highest_freq = pow(ctf->GetHighestFrequencyForFitting( ), 2);
-    float                 current_ctf_value;
-    float                 target_sigma;
-    int                   chosen_bin;
+    EmpiricalDistribution<double> values_in_rings;
+    EmpiricalDistribution<double> values_in_fitting_range;
+    int                           i;
+    int                           j;
+    long                          address;
+    float                         i_logi, i_logi_sq;
+    float                         j_logi, j_logi_sq;
+    float                         current_spatial_frequency_squared;
+    float                         current_azimuth;
+    float                         current_defocus;
+    float                         current_phase_aberration;
+    float                         sq_sf_of_phase_aberration_maximum;
+    const float                   lowest_freq  = pow(ctf->GetLowestFrequencyForFitting( ), 2);
+    const float                   highest_freq = pow(ctf->GetHighestFrequencyForFitting( ), 2);
+    float                         current_ctf_value;
+    float                         target_sigma;
+    int                           chosen_bin;
 
     //this->QuickAndDirtyWriteSlice("dbg_spec_overlay_entry.mrc",1);
 

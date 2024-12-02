@@ -275,6 +275,21 @@ bin_PROGRAMS =  cisTEM_job_control \
                 refine_ctf \
                 estimate_beamtilt \
                 warp_to_cistem \
+                create_mask \
+                invert_hand \
+                quick_test \
+                append_stacks \
+                cisTEM_display \
+                cisTEM \
+                gui_test \
+                convert_star_to_binary \
+                convert_binary_to_star \
+                convert_eer_to_mrc \
+                azimuthal_average \
+                blush_refinement \
+                normalize_stack \
+                print_stack_statistics \
+                combine_stacks_by_star \
                 match_template \
                 refine_template \
                 make_template_result \
@@ -753,7 +768,7 @@ cisTEM_SOURCES += gui/WebViewPanel.cpp
 endif
 
 cisTEM_CXXFLAGS = $(WX_CPPFLAGS)
-cisTEM_CPPFLAGS = $(WX_CPPFLAGS)
+cisTEM_CPPFLAGS = $(WX_CPPFLAGS) -I/home/tim/VS_Projects/embedding_python_practice/include/libtorch/include -I/home/tim/VS_Projects/embedding_python_practice/include/libtorch/include/torch/
 cisTEM_LDADD    = libguicore.a libcore.a $(WX_LIBS) $(MKL_LIBS)
 cisTEM_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
@@ -1107,6 +1122,14 @@ azimuthal_average_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 azimuthal_average_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 azimuthal_average_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
 azimuthal_average_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
+
+blush_refinement_SOURCES  = programs/blush_refinement/blush_refinement.cpp
+blush_refinement_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+blush_refinement_CPPFLAGS = $(WX_CPPFLAGS_BASE) -I/mnt/libtorch/include -I/mnt/libtorch/include/torch/csrc/api/include -diag-disable 1011 -diag-disable 2196 -diag-disable 1628
+# blush_refinement_CPPFLAGS = -I/home/tim/VS_Projects/embedding_python_practice/include/libtorch/include -I/home/tim/VS_Projects/embedding_python_practice/include/libtorch/include/torch/csrc/api/include $(WX_CPPFLAGS_BASE) 
+blush_refinement_LDADD    = -L/mnt/libtorch/lib -ltorch -ltorch_cpu -lc10 libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
+# blush_refinement_LDADD = libcore.a -L/home/tim/VS_Projects/embedding_python_practice/include/libtorch/lib -ltorch -ltorch_cpu -lc10 $(WX_LIBS_BASE) 
+blus_refinement_LIBTOOLFLAGS= $(LIBTOOL_FLAGS)
 
 multiply_two_stacks_SOURCES  = programs/multiply_two_stacks/multiply_two_stacks.cpp
 multiply_two_stacks_CXXFLAGS = $(WX_CPPFLAGS_BASE)

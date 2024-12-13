@@ -5,23 +5,30 @@ DeviceManager::DeviceManager( ){
 
 };
 
-DeviceManager::DeviceManager(int wanted_number_of_gpus) {
-
-    Init(wanted_number_of_gpus);
-};
-
 DeviceManager::~DeviceManager( ) {
     if ( is_manager_initialized ) {
         cudaErr(cudaDeviceReset( ));
     }
 };
 
-void DeviceManager::Init(int wanted_number_of_gpus) {
-    wxPrintf("requesting %d gpus\n", wanted_number_of_gpus);
+void DeviceManager::Init(int wanted_number_of_gpus, MyApp* parent_ptr) {
+    MyDebugAssertTrue(wanted_number_of_gpus == 1, "Only one GPU is supported at this time");
+    // wxPrintf("requesting %d gpus\n", wanted_number_of_gpus);
 
     int gpu_check = 0;
     cudaErr(cudaGetDeviceCount(&gpu_check));
+    if ( gpu_check == 0 ) {
+        parent_ptr->SendErrorAndCrash("No CUDA-capable devices found. Terminating...");
+    }
+    else if ( gpu_check > 1 ) {
+        parent_ptr->SendErrorAndCrash("More than one CUDA-capable device found. Please select by setting CUDA_VISIBLE_DEVICES=ID, where ID=0,1...2 etc. Terminating...");
+    }
+    return;
+
+    // No longer using this code.
+
     wxPrintf("CUDA-capable device count: %d\n", gpu_check);
+
     if ( wanted_number_of_gpus > MAX_GPU_COUNT ) {
         wxPrintf("There are more gpus available (%d) than the max allowed (%d)\n",
                  wanted_number_of_gpus, MAX_GPU_COUNT);

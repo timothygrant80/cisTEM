@@ -532,7 +532,8 @@ libgpucore_a_SOURCES  =      gpu/core_extensions/stop_watch_gpu.cu \
                              gpu/TensorManager.cu \
                              gpu/GpuImage.cu \
                              programs/refine3d/batched_search.cu \
-                             test/gpu/test_gpu_kernels.cu
+                             test/gpu/test_gpu_kernels.cu \
+                             programs/quick_test/quick_test_gpu.cu
 if ENABLE_FASTFFT_AM
     libgpucore_a_SOURCES += ../include/FastFFT/src/fastfft/FastFFT.cu
 endif
@@ -1046,11 +1047,24 @@ local_resolution_finalize_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 local_resolution_finalize_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
 local_resolution_finalize_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
-quick_test_SOURCES  = programs/quick_test/quick_test.cpp
+
+quick_test_SOURCES  = programs/quick_test/quick_test.cpp 
+if WANT_CISTEM_GPU_AM 
+quick_test_CXXFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
+quick_test_CPPFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
+else
 quick_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 quick_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-quick_test_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
+endif
+
+quick_test_LDSTRING=
+if WANT_CISTEM_GPU_AM
+# WANT_CISTEM_GPU_AM also implies ENABLE_FASTFFT_AM 
+    quick_test_LDSTRING += libgpucore.a
+endif
+quick_test_LDADD    = $(quick_test_LDSTRING) libcore.a $(WX_LIBS_BASE) $(MKL_LIBS) $(CUDA_LIBS)
 quick_test_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
+
 
 local_resolution_filter_SOURCES  = programs/local_resolution_filter/local_resolution_filter.cpp
 local_resolution_filter_CXXFLAGS = $(WX_CPPFLAGS_BASE)

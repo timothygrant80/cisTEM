@@ -25,10 +25,7 @@ constexpr int   MAX_3D_PADDING                         = 196;
  */
 class TemplateMatchingDataSizer {
 
-    // Keep a copy of the original image following pre-processing but no resizing. We'll use this
-    // to deterimine what the peak would be if the image were not resized.
-    // We are currently supporting at most 2 chunks (to make a k3 without super res into 2 4k images)
-    std::array<Image, 2> pre_processed_image;
+
 
     // This is a non-data owning class, but we want references to the underlying image/template data
     int4 image_size;

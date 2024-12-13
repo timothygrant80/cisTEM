@@ -16,8 +16,8 @@
 
 #include "template_matching_data_sizer.h"
 
-// #define DEBUG_IMG_PREPROCESS_OUTPUT "/scratch/salina/TM_test_scaling/yeast/Assets/TemplateMatching"FRe
-// #define DEBUG_IMG_POSTPROCESS_OUTPUT "/scratch/salina/TM_test_scaling/yeast/Assets/TemplateMatching"
+// #define DEBUG_IMG_PREPROCESS_OUTPUT "/tmp"
+// #define DEBUG_IMG_POSTPROCESS_OUTPUT "/tmp"
 #define DEBUG_TM_SIZER_PRINT
 
 TemplateMatchingDataSizer::TemplateMatchingDataSizer(MyApp* wanted_parent_ptr,
@@ -98,10 +98,15 @@ void TemplateMatchingDataSizer::PreProcessInputImage(Image& input_image, bool sw
     // We could also check and FFT if necessary similar to Resize() but we are assuming the input image is in real space.
     MyDebugAssertTrue(input_image.is_in_real_space, "Input image must be in real space");
 
-#ifdef DEBUG_IMG_OUTPUT
-    if ( ReturnThreadNumberOfCurrentThread( ) == 0 )
-        input_image.QuickAndDirtyWriteSlice(DEBUG_IMG_OUTPUT "/input_image.mrc", 1);
+#ifdef DEBUG_IMG_PREPROCESS_OUTPUT
+    if ( ReturnThreadNumberOfCurrentThread( ) == 0 ) {
+        if ( swap_real_space_quadrants )
+            input_image.QuickAndDirtyWriteSlice(DEBUG_IMG_PREPROCESS_OUTPUT "/input_image_2.mrc", 1);
+        else
+            input_image.QuickAndDirtyWriteSlice(DEBUG_IMG_PREPROCESS_OUTPUT "/input_image_1.mrc", 1);
+    }
 #endif
+
     input_image.ForwardFFT( );
 
     if ( swap_real_space_quadrants )
@@ -136,13 +141,14 @@ void TemplateMatchingDataSizer::PreProcessInputImage(Image& input_image, bool sw
         input_image.DivideByConstant(sqrtf(input_image.ReturnSumOfSquares( ) / float(GetNumberOfPixelsForNormalization( ))));
     }
 
-#ifdef DEBUG_IMG_OUTPUT
-    if ( ReturnThreadNumberOfCurrentThread( ) == 0 )
-        input_image.QuickAndDirtyWriteSlice(DEBUG_IMG_OUTPUT "/input_image_whitened.mrc", 1);
+#ifdef DEBUG_IMG_PREPROCESS_OUTPUT
+    if ( ReturnThreadNumberOfCurrentThread( ) == 0 ) {
+        if ( swap_real_space_quadrants )
+            input_image.QuickAndDirtyWriteSlice(DEBUG_IMG_PREPROCESS_OUTPUT "/input_image_whitened_2.mrc", 1);
+        else
+            input_image.QuickAndDirtyWriteSlice(DEBUG_IMG_PREPROCESS_OUTPUT "/input_image_whitened_1.mrc", 1);
+    }
 #endif
-    // Saving a copy of the pre-processed image for later use to determine peak heights not damped by resampling.
-    // TODO: we can also use this (with z > )
-    pre_processed_image.at(0) = input_image;
 };
 
 void TemplateMatchingDataSizer::CheckSizing( ) {
@@ -504,30 +510,29 @@ void TemplateMatchingDataSizer::ResizeTemplate_preSearch(Image& template_image, 
         }
     }
     else {
-#ifdef DEBUG_IMG_OUTPUT
+#ifdef DEBUG_TM_SIZER_PRINT
         if ( ReturnThreadNumberOfCurrentThread( ) == 0 ) {
             // Print out the size of each step
             wxPrintf("template_size = %i %i %i\n", template_size.x, template_size.y, template_size.z);
             wxPrintf("template_pre_scaling_size = %i %i %i\n", template_pre_scaling_size.x, template_pre_scaling_size.y, template_pre_scaling_size.z);
             wxPrintf("template_cropped_size = %i %i %i\n", template_cropped_size.x, template_cropped_size.y, template_cropped_size.z);
             wxPrintf("template_search_size = %i %i %i\n", template_search_size.x, template_search_size.y, template_search_size.z);
-            template_image.QuickAndDirtyWriteSlices(DEBUG_IMG_OUTPUT "/template_image.mrc", 1, template_size.z / 2);
         }
 #endif
         template_image.Resize(template_pre_scaling_size.x, template_pre_scaling_size.y, template_pre_scaling_size.z, template_image.ReturnAverageOfRealValuesOnEdges( ));
-#ifdef DEBUG_IMG_OUTPUT
-        template_image.QuickAndDirtyWriteSlices(DEBUG_IMG_OUTPUT "/template_image_resized_pre_scale.mrc", 1, template_pre_scaling_size.z / 2);
+#ifdef DEBUG_IMG_PREPROCESS_OUTPUT
+        template_image.QuickAndDirtyWriteSlices(DEBUG_IMG_PREPROCESS_OUTPUT "/template_image_resized_pre_scale.mrc", 1, template_pre_scaling_size.z / 2);
 #endif
         template_image.ForwardFFT( );
         template_image.Resize(template_cropped_size.x, template_cropped_size.y, template_cropped_size.z);
         template_image.BackwardFFT( );
-#ifdef DEBUG_IMG_OUTPUT
-        template_image.QuickAndDirtyWriteSlices(DEBUG_IMG_OUTPUT "/template_image_resized_cropped.mrc", 1, template_cropped_size.z / 2);
+#ifdef DEBUG_IMG_PREPROCESS_OUTPUT
+        template_image.QuickAndDirtyWriteSlices(DEBUG_IMG_PREPROCESS_OUTPUT "/template_image_resized_cropped.mrc", 1, template_cropped_size.z / 2);
 #endif
         template_image.Resize(template_search_size.x, template_search_size.y, template_search_size.z, template_image.ReturnAverageOfRealValuesOnEdges( ));
-#ifdef DEBUG_IMG_OUTPUT
+#ifdef DEBUG_IMG_PREPROCESS_OUTPUT
         if ( ReturnThreadNumberOfCurrentThread( ) == 0 ) {
-            template_image.QuickAndDirtyWriteSlices(DEBUG_IMG_OUTPUT "/template_image_resized.mrc", 1, template_search_size.z / 2);
+            template_image.QuickAndDirtyWriteSlices(DEBUG_IMG_PREPROCESS_OUTPUT "/template_image_resized.mrc", 1, template_search_size.z / 2);
         }
 #endif
     }
@@ -562,18 +567,18 @@ void TemplateMatchingDataSizer::ResizeImage_preSearch(Image& input_image, const 
         input_image.ClipInto(&tmp_sq, 0.0f, false, 1.0f, 0, 0, 0, skip_padding_in_clipinto);
 #endif
 
-#ifdef DEBUG_IMG_OUTPUT
+#ifdef DEBUG_IMG_POSTPROCESS_OUTPUT
         if ( ReturnThreadNumberOfCurrentThread( ) == 0 )
-            tmp_sq.QuickAndDirtyWriteSlice(DEBUG_IMG_OUTPUT "/tmp_sq.mrc", 1);
+            tmp_sq.QuickAndDirtyWriteSlice(DEBUG_IMG_POSTPROCESS_OUTPUT "/tmp_sq.mrc", 1);
 #endif
         tmp_sq.ForwardFFT( );
         tmp_sq.Resize(image_cropped_size.x, image_cropped_size.y, image_cropped_size.z);
         tmp_sq.ZeroCentralPixel( );
         tmp_sq.DivideByConstant(sqrtf(tmp_sq.ReturnSumOfSquares( )));
         tmp_sq.BackwardFFT( );
-#ifdef DEBUG_IMG_OUTPUT
+#ifdef DEBUG_IMG_POSTPROCESS_OUTPUT
         if ( ReturnThreadNumberOfCurrentThread( ) == 0 )
-            tmp_sq.QuickAndDirtyWriteSlice(DEBUG_IMG_OUTPUT "/tmp_sq_resized.mrc", 1);
+            tmp_sq.QuickAndDirtyWriteSlice(DEBUG_IMG_POSTPROCESS_OUTPUT "/tmp_sq_resized.mrc", 1);
 #endif
     }
     else if ( resizing_is_needed ) {
@@ -597,15 +602,9 @@ void TemplateMatchingDataSizer::ResizeImage_preSearch(Image& input_image, const 
         tmp_sq.ClipInto(&input_image, 0.0f, false, 1.0f, 0, 0, 0, skip_padding_in_clipinto);
 #endif // USE_REPLICATIVE_PADDING
 
-#ifdef DEBUG_IMG_OUTPUT
+#ifdef DEBUG_IMG_POSTPROCESS_OUTPUT
         if ( ReturnThreadNumberOfCurrentThread( ) == 0 )
-            input_image.QuickAndDirtyWriteSlice(DEBUG_IMG_OUTPUT "/input_image_resized.mrc", 1);
-#endif
-
-#ifdef DEBUG_IMG_OUTPUT
-        if ( ReturnThreadNumberOfCurrentThread( ) == 0 )
-            input_image.QuickAndDirtyWriteSlice(DEBUG_IMG_OUTPUT "/input_image_resized_masked.mrc", 1);
-        DEBUG_ABORT;
+            input_image.QuickAndDirtyWriteSlice(DEBUG_IMG_POSTPROCESS_OUTPUT "/input_image_resized.mrc", 1);
 #endif
     }
 
@@ -622,9 +621,9 @@ void TemplateMatchingDataSizer::ResizeImage_preSearch(Image& input_image, const 
         // input_reconstruction.RotateInPlaceAboutZBy90Degrees(true, preserve_origin);
         // The amplitude spectrum is also rotated
         is_rotated_by_90 = true;
-#ifdef DEBUG_IMG_OUTPUT
+#ifdef DEBUG_IMG_POSTPROCESS_OUTPUT
         if ( ReturnThreadNumberOfCurrentThread( ) == 0 )
-            input_image.QuickAndDirtyWriteSlice(DEBUG_IMG_OUTPUT "/input_image_rotated.mrc", 1);
+            input_image.QuickAndDirtyWriteSlice(DEBUG_IMG_POSTPROCESS_OUTPUT "/input_image_rotated.mrc", 1);
 #endif
     }
     else {
@@ -647,8 +646,6 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& max_intensity_proj
 
     MyDebugAssertTrue(sizing_is_set, "Sizing has not been set");
     MyDebugAssertFalse(use_fast_fft ? is_rotated_by_90 : false, "Rotating the search image when using fastfft does  not make sense given the current square size restriction of FastFFT");
-    MyDebugAssertTrue(pre_processed_image.at(0).is_in_memory, "The pre-processed image is not in memory"); // FIXME: Move the method to pre-shift the input image from TemplateMatchingCore to this class, then this macro makes sense, but doesn't need to be an array.
-    MyDebugAssertFalse(pre_processed_image.at(1).is_in_memory, "Chunking the search image is not supported, but the pre-processed image has allocated mem in the second chunk");
     MyDebugAssertTrue((resizing_is_needed != resampling_is_needed) || (! resampling_is_needed && ! resizing_is_needed), "Resizing and resampling are mutually exclusive");
 
     // These are used to make a valid area mask that we then use to set the values in the sum/sumSqs images to zero, which
@@ -657,6 +654,9 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& max_intensity_proj
     float x_radius = float(max_intensity_projection.physical_address_of_box_center_x - pre_padding.x);
     float y_radius = float(max_intensity_projection.physical_address_of_box_center_y - pre_padding.y);
 
+#ifdef DEBUG_IMG_POSTPROCESS_OUTPUT
+    max_intensity_projection.QuickAndDirtyWriteSlice(DEBUG_IMG_POSTPROCESS_OUTPUT "/max_intensity_projection_pre_resizing.mrc", 1);
+#endif
     // FIXME: This should only be needed for images that are Fourier up sampled, for the nearest neighbor (angles, defocus, pixel), there is
     // no danger of artifacts so this is redundant.
     // FIXME: Add a gaussian block to see if it is any different, interesting and maybe good for the paper.
@@ -668,6 +668,10 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& max_intensity_proj
 
         max_intensity_projection.ClipInto(&tmp_trim);
         tmp_trim.ClipIntoWithReplicativePadding(&max_intensity_projection);
+
+#ifdef DEBUG_IMG_POSTPROCESS_OUTPUT
+        max_intensity_projection.QuickAndDirtyWriteSlice(DEBUG_IMG_POSTPROCESS_OUTPUT "/max_intensity_projection_pre_resizing_roi_replicative.mrc", 1);
+#endif
 
         best_psi.ClipInto(&tmp_trim);
         tmp_trim.ClipIntoWithReplicativePadding(&best_psi);
@@ -735,6 +739,10 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& max_intensity_proj
         best_pixel_size.Resize(image_size.x, image_size.y, image_size.z, no_value);
         correlation_pixel_sum_of_squares_image.Resize(image_size.x, image_size.y, image_size.z, no_value);
         correlation_pixel_sum_image.Resize(image_size.x, image_size.y, image_size.z, no_value);
+
+#ifdef DEBUG_IMG_POSTPROCESS_OUTPUT
+        max_intensity_projection.QuickAndDirtyWriteSlice(DEBUG_IMG_POSTPROCESS_OUTPUT "/max_intensity_projection_resized.mrc", 1);
+#endif
     }
 
     // We need to use nearest neighbor interpolation to cast all existing values back to the original size.
@@ -844,12 +852,20 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& max_intensity_proj
         correlation_pixel_sum_image.Resize(image_cropped_size.x, image_cropped_size.y, image_cropped_size.z);
         correlation_pixel_sum_of_squares_image.Resize(image_cropped_size.x, image_cropped_size.y, image_cropped_size.z);
 
+#ifdef DEBUG_IMG_POSTPROCESS_OUTPUT
+        max_intensity_projection.QuickAndDirtyWriteSlice(DEBUG_IMG_POSTPROCESS_OUTPUT "/max_intensity_projection_resized_to_cropped_dim.mrc", 1);
+#endif
+
         // Now undo the fourier binning
         max_intensity_projection.ForwardFFT( );
         max_intensity_projection.ClipInto(&tmp_mip, 0.0f, false, 1.0f, 0, 0, 0, true);
         tmp_mip.BackwardFFT( );
         max_intensity_projection.Allocate(image_size.x, image_size.y, image_size.z, true);
         tmp_mip.ClipInto(&max_intensity_projection, 0.0f, false, 1.0f, 0, 0, 0, true);
+
+#ifdef DEBUG_IMG_POSTPROCESS_OUTPUT
+        max_intensity_projection.QuickAndDirtyWriteSlice(DEBUG_IMG_POSTPROCESS_OUTPUT "/max_intensity_projection_resized_to_input_dim.mrc", 1);
+#endif
 
         // Dilate the radius of the valid area mask
         x_radius *= GetFullBinningFactor( );

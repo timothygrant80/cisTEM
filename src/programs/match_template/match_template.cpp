@@ -725,7 +725,7 @@ bool MatchTemplateApp::DoCalculation( ) {
 #ifdef ENABLEGPU
         profile_timing.start("Init GPU");
         GPU = new TemplateMatchingCore[max_threads];
-        gpuDev.Init(nGPUs);
+        gpuDev.Init(nGPUs, this);
         profile_timing.lap("Init GPU");
         //    wxPrintf("Host: %s is running\nnThreads: %d\nnGPUs: %d\n:nSearchPos %d \n",hostNameBuffer,nThreads, nGPUs, maxPos);
 
@@ -775,7 +775,7 @@ bool MatchTemplateApp::DoCalculation( ) {
 #pragma omp parallel num_threads(max_threads)
             {
                 int tIDX = ReturnThreadNumberOfCurrentThread( );
-                gpuDev.SetGpu( );
+                // gpuDev.SetGpu( );
 
                 if ( first_gpu_loop ) {
 
@@ -849,7 +849,7 @@ bool MatchTemplateApp::DoCalculation( ) {
 #pragma omp parallel num_threads(max_threads)
                 {
                     int tIDX = ReturnThreadNumberOfCurrentThread( );
-                    gpuDev.SetGpu( );
+                    // gpuDev.SetGpu( );
 
                     profile_timing.start("RunInnerLoop");
                     GPU[tIDX].RunInnerLoop(projection_filter,

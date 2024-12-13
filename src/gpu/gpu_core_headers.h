@@ -91,7 +91,7 @@ struct FlushKernelPrintF {
     FILE* tmpout;
 
     FlushKernelPrintF(std::string& message) {
-        std::cerr << "Flushing kernel printfs " << message << std::endl;
+        std::cerr << "Flushing kernel printfs " << message << "\n\n";
         std::cerr << "There can only be one instance of this created as it modifies the global stdout pointer\n";
         cudaErr(cudaDeviceSynchronize( ));
         tmpout = stdout;

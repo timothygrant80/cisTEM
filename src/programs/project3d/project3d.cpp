@@ -138,6 +138,7 @@ bool Project3DApp::DoCalculation( ) {
 
     Image               projection_image;
     Image               final_image;
+    Image               Binned_Img;
     ReconstructedVolume input_3d;
     Image               projection_3d;
     cisTEMParameters    output_params;
@@ -276,7 +277,7 @@ bool Project3DApp::DoCalculation( ) {
     projection_3d.CopyFrom(input_3d.density_map);
 
 #pragma omp parallel num_threads(max_threads) default(none) shared(global_random_number_generator, input_star_file, first_particle, last_particle, apply_CTF, apply_shifts, \
-                                                                   pixel_size, output_file, add_noise, wanted_SNR, apply_mask, mask_radius, my_progress, lines_to_process, image_counter, projection_3d, input_file, global_euler_search, number_of_projections_to_calculate, project_based_on_star, output_params) private(current_image, input_parameters, my_parameters, my_ctf, projection_image, final_image, variance)
+                                                                   pixel_size, output_file, add_noise, wanted_SNR, apply_mask, mask_radius, my_progress, lines_to_process, image_counter, projection_3d, input_file, global_euler_search, number_of_projections_to_calculate, project_based_on_star, output_params) private(current_image, input_parameters, my_parameters, my_ctf, projection_image, final_image, Binned_Img, variance)
     {
 
         projection_image.Allocate(input_file.ReturnXSize( ), input_file.ReturnYSize( ), false);
@@ -295,7 +296,7 @@ bool Project3DApp::DoCalculation( ) {
             }
 
             projection_3d.ExtractSlice(projection_image, my_parameters);
-            projection_image.complex_values[0] = projection_3d.complex_values[0];
+            // projection_image.complex_values[0] = projection_3d.complex_values[0];
 
             if ( apply_CTF )
                 projection_image.ApplyCTF(my_ctf, false, true);
@@ -320,40 +321,47 @@ bool Project3DApp::DoCalculation( ) {
 
 #pragma omp ordered
 
+            // //write slice and parameters
+
+            // final_image.WriteSlice(&output_file, current_image + 1);
+
             //write slice and parameters
 
-            final_image.WriteSlice(&output_file, current_image + 1);
+            Binned_Img.Allocate(input_file.ReturnXSize( ) / 2, input_file.ReturnYSize( ) / 2, true);
+
+            final_image.ClipInto(&Binned_Img);
+            Binned_Img.WriteSlice(&output_file, current_image + 1);
 
 #pragma omp atomic
             image_counter++;
 
             // fill in the parameters..
-
-            output_params.all_parameters[current_image].position_in_stack                  = current_image + 1;
-            output_params.all_parameters[current_image].image_is_active                    = 1;
-            output_params.all_parameters[current_image].psi                                = my_parameters.ReturnPsiAngle( );
-            output_params.all_parameters[current_image].theta                              = my_parameters.ReturnThetaAngle( );
-            output_params.all_parameters[current_image].phi                                = my_parameters.ReturnPhiAngle( );
-            output_params.all_parameters[current_image].x_shift                            = 0.0f;
-            output_params.all_parameters[current_image].y_shift                            = 0.0f;
-            output_params.all_parameters[current_image].defocus_1                          = 0.0f;
-            output_params.all_parameters[current_image].defocus_2                          = 0.0f;
-            output_params.all_parameters[current_image].defocus_angle                      = 0.0f;
-            output_params.all_parameters[current_image].phase_shift                        = 0.0f;
-            output_params.all_parameters[current_image].occupancy                          = 100.0f;
-            output_params.all_parameters[current_image].logp                               = -100;
-            output_params.all_parameters[current_image].sigma                              = 10.0f;
-            output_params.all_parameters[current_image].score                              = 10.0f;
-            output_params.all_parameters[current_image].score_change                       = 0.0f;
-            output_params.all_parameters[current_image].pixel_size                         = pixel_size;
-            output_params.all_parameters[current_image].microscope_voltage_kv              = 300.0f;
-            output_params.all_parameters[current_image].microscope_spherical_aberration_mm = 2.7f;
-            output_params.all_parameters[current_image].amplitude_contrast                 = 0.07;
-            output_params.all_parameters[current_image].beam_tilt_x                        = 0.0f;
-            output_params.all_parameters[current_image].beam_tilt_y                        = 0.0f;
-            output_params.all_parameters[current_image].image_shift_x                      = 0.0f;
-            output_params.all_parameters[current_image].image_shift_y                      = 0.0f;
-
+            if ( project_based_on_star == false ) {
+                output_params.all_parameters[current_image].position_in_stack                  = current_image + 1;
+                output_params.all_parameters[current_image].image_is_active                    = 1;
+                output_params.all_parameters[current_image].psi                                = my_parameters.ReturnPsiAngle( );
+                output_params.all_parameters[current_image].theta                              = my_parameters.ReturnThetaAngle( );
+                output_params.all_parameters[current_image].phi                                = my_parameters.ReturnPhiAngle( );
+                output_params.all_parameters[current_image].x_shift                            = 0.0f;
+                output_params.all_parameters[current_image].y_shift                            = 0.0f;
+                output_params.all_parameters[current_image].defocus_1                          = 0.0f;
+                output_params.all_parameters[current_image].defocus_2                          = 0.0f;
+                output_params.all_parameters[current_image].defocus_angle                      = 0.0f;
+                output_params.all_parameters[current_image].phase_shift                        = 0.0f;
+                output_params.all_parameters[current_image].occupancy                          = 100.0f;
+                output_params.all_parameters[current_image].logp                               = -100;
+                output_params.all_parameters[current_image].sigma                              = 10.0f;
+                output_params.all_parameters[current_image].score                              = 10.0f;
+                output_params.all_parameters[current_image].score_change                       = 0.0f;
+                output_params.all_parameters[current_image].pixel_size                         = pixel_size;
+                output_params.all_parameters[current_image].microscope_voltage_kv              = 300.0f;
+                output_params.all_parameters[current_image].microscope_spherical_aberration_mm = 2.7f;
+                output_params.all_parameters[current_image].amplitude_contrast                 = 0.07;
+                output_params.all_parameters[current_image].beam_tilt_x                        = 0.0f;
+                output_params.all_parameters[current_image].beam_tilt_y                        = 0.0f;
+                output_params.all_parameters[current_image].image_shift_x                      = 0.0f;
+                output_params.all_parameters[current_image].image_shift_y                      = 0.0f;
+            }
             if ( is_running_locally == true && ReturnThreadNumberOfCurrentThread( ) == 0 )
                 my_progress->Update(image_counter);
         }
@@ -361,8 +369,10 @@ bool Project3DApp::DoCalculation( ) {
     // end omp
 
     // write star file
+    if ( project_based_on_star == false ) {
 
-    output_params.WriteTocisTEMStarFile(output_star_file);
+        output_params.WriteTocisTEMStarFile(output_star_file);
+    }
     delete my_progress;
 
     wxPrintf("\n\nProject3D: Normal termination\n\n");

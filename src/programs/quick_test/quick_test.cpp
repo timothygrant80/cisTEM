@@ -25,6 +25,7 @@ class
     wxString symmetry_symbol;
     bool     my_test_1 = false;
     bool     my_test_2 = true;
+    int      idx;
 
     std::array<wxString, 2> input_starfile_filename;
 
@@ -37,72 +38,14 @@ IMPLEMENT_APP(QuickTestApp)
 
 void QuickTestApp::DoInteractiveUserInput( ) {
 
-    UserInput* my_input = new UserInput("Unblur", 2.0);
+    UserInput* my_input = new UserInput("QuickTest", 2.0);
 
+    idx                           = my_input->GetIntFromUser("Index", "", "", 0, 1000);
     input_starfile_filename.at(0) = my_input->GetFilenameFromUser("Input starfile filename 1", "", "", false);
     input_starfile_filename.at(1) = my_input->GetFilenameFromUser("Input starfile filename 2", "", "", false);
     symmetry_symbol               = my_input->GetSymmetryFromUser("Particle symmetry", "The assumed symmetry of the particle to be reconstructed", "C1");
 
     delete my_input;
-}
-
-unsigned int GetTransformSize(int kernel_type) {
-    return kernel_type * 1;
-}
-
-// override the do calculation method which will be what is actually run..
-template <int FFT_ALGO_t, unsigned int SizeValue>
-void SelectSizeAndTypeWithFold(int kernel_type) {
-
-    // transform_size.P is set when folding over Q values
-    unsigned int P = GetTransformSize(kernel_type);
-    // Note: the size of the input/output may not match the size of the transform, i.e. transform_size.L <= transform_size.P
-    if ( SizeValue == P ) {
-        std::cerr << "SizeValue == " << SizeValue << std::endl;
-    }
-
-    if constexpr ( ! check_pow2(SizeValue) ) {
-        std::cerr << "SizeValue must be a power of 2" << std::endl;
-    }
-    static_assert(check_pow2_func<SizeValue>( ), "SizeValue must be a power of 2");
-}
-
-template <int FFT_ALGO_t, unsigned int... SizeValues>
-void SelectSizeAndType(int kernel_type) {
-    (SelectSizeAndTypeWithFold<FFT_ALGO_t, SizeValues>(kernel_type), ...);
-}
-
-#define MY_INTS_TO_LOOP 64, 128, 256, 1024, 2048, 4096
-
-// template <int FFT_ALGO_t>
-// void set_val(int kernel_type) {
-
-//     SelectSizeAndType<FFT_ALGO_t, MY_INTS_TO_LOOP>(kernel_type);
-// }
-
-constexpr bool check_pow2(int n) {
-    return n == 1 ? true : n % 2 == 0 ? check_pow2(n / 2)
-                                      : false;
-}
-
-template <bool T, unsigned int n>
-EnableIf<T> checkME( ) {
-    return;
-}
-
-template <unsigned int n>
-void check_pow2_func( ) {
-    checkME<check_pow2(n), n>( );
-}
-
-template <unsigned int... SizeValues>
-void MySimpleCheck( ) {
-    (check_pow2_func<SizeValues>, ...);
-}
-
-template <>
-void MySimpleCheck<0>( ) {
-    MySimpleCheck<MY_INTS_TO_LOOP>( );
 }
 
 bool QuickTestApp::DoCalculation( ) {
@@ -112,20 +55,17 @@ bool QuickTestApp::DoCalculation( ) {
     // gpuDev.ListDevices( );
 
     // QuickTestGPU quick_test_gpu;
-    // quick_test_gpu.callHelloFromGPU( );
+    // quick_test_gpu.callHelloFromGPU(idx);
 #endif
-    constexpr int FFT_ALGO_t = 0;
 
-    std::vector<int> kernel_types = {64, 1, 3, 512, 0, 2};
+    std::shared_ptr<float> a = std::make_shared<float>(3.14f);
+    std::shared_ptr<float> b = a;
 
-    std::initializer_list<int> my_checker = {MY_INTS_TO_LOOP};
+    std::cerr << "a: " << a << std::endl;
+    std::cerr << "b: " << b << std::endl;
 
-    for ( auto& val : my_checker ) {
-        std::cerr << val << std::endl;
-    }
-    // MySimpleCheck<MY_INTS_TO_LOOP>( );
-    // for ( auto kernel_type : kernel_types ) {
-    //     set_val<FFT_ALGO_t>(kernel_type);
-    // }
+    std::cerr << "a.data() " << a.get( ) << std::endl;
+    std::cerr << "b.data() " << b.get( ) << std::endl;
+
     return true;
 }

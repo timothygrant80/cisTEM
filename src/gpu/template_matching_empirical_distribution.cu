@@ -34,12 +34,12 @@ inline __device__ __host__ bool test_gt_zero(T value) {
  */
 
 template <typename ccfType, typename mipType>
-TM_EmpiricalDistribution<ccfType, mipType>::TM_EmpiricalDistribution(GpuImage& reference_image,
+TM_EmpiricalDistribution<ccfType, mipType>::TM_EmpiricalDistribution(GpuImage* reference_image,
                                                                      int2      pre_padding,
                                                                      int2      roi) : pre_padding_{pre_padding},
                                                                                  roi_{roi},
                                                                                  higher_order_moments_{false},
-                                                                                 image_plane_mem_allocated_{reference_image.real_memory_allocated} {
+                                                                                 image_plane_mem_allocated_{reference_image->real_memory_allocated} {
 
     std::cerr << "n_images" << n_imgs_to_process_at_once_ << std::endl;
     int least_priority, highest_priority;
@@ -50,50 +50,24 @@ TM_EmpiricalDistribution<ccfType, mipType>::TM_EmpiricalDistribution(GpuImage& r
     cudaErr(cudaStreamCreateWithPriority(&calc_stream_[0], cudaStreamNonBlocking, least_priority));
     cudaErr(cudaEventCreateWithFlags(&mip_stack_is_ready_event_[0], cudaEventBlockingSync)); // blocking sync makes the host wait if calling cudaEventSynchronize
 
-    // I suspect we'll move to bfloat16 for the input data, as it was not available at the time the
-    // original code was implemented. The extended dynamic range, and ease of conversion to/from histogram_storage_t
-    // are likely a benefit, while the further reduced precision is unlikely to be a problem in the raw data values.
-    // If anything, given that the output of the matched filter is ~ Gaussian, all the numbers closer to zero are less
-    // likely to be flushed to zero when denormal, so in that respect, bflaot16 may actually maintain higher precision.
-    if constexpr ( std::is_same_v<ccfType, __half> ) {
-        histogram_min_  = __float2half_rn(TM::histogram_min);
-        histogram_step_ = __float2half_rn(TM::histogram_step);
-    }
-    else if constexpr ( std::is_same_v<ccfType, __nv_bfloat16> ) {
-        histogram_min_  = __float2bfloat16_rn(TM::histogram_min);
-        histogram_step_ = __float2bfloat16_rn(TM::histogram_step);
-    }
-    else if constexpr ( std::is_same_v<ccfType, histogram_storage_t> ) {
-        histogram_min_  = TM::histogram_min;
-        histogram_step_ = TM::histogram_step;
-    }
-    else {
-        MyDebugAssertTrue(false, "input_type must be either __half __nv_bfloat16, or histogram_storage_t");
-    }
-
-    // FIXME: this should probably be a bool rather than testing for a default zero value. Hacky habits die hard
-    if ( test_gt_zero(histogram_step_) ) {
-        MyDebugAssertTrue(TM::histogram_number_of_points <= 1024, "The histogram kernel assumes <= 1024 threads per block");
-        MyDebugAssertTrue(TM::histogram_number_of_points % cistem::gpu::warp_size == 0, "The histogram kernel assumes a multiple of 32 threads per block");
-        histogram_n_bins_ = TM::histogram_number_of_points;
-    }
-    else {
-        // will be used as check on which kernels to call
-        histogram_n_bins_ = 0;
-    }
-
-    image_dims_.x = reference_image.dims.x;
-    image_dims_.y = reference_image.dims.y;
-    image_dims_.z = reference_image.dims.z;
-    image_dims_.w = reference_image.dims.w;
+    image_dims_.x = reference_image->dims.x;
+    image_dims_.y = reference_image->dims.y;
+    image_dims_.z = reference_image->dims.z;
+    image_dims_.w = reference_image->dims.w;
 
     MyDebugAssertTrue(image_dims_.x > 0 && image_dims_.y > 0 && image_dims_.z > 0 && image_dims_.w > 0, "Image dimensions must be > 0");
 
     // Set-up the launch configuration - assumed to be a real space image.
     // WARNING: this is up to the developer to ensure, as we'll use pointers for the input arrays
     // Note: we prefer the "1d" grid as a NxN patch is more likely to have similar values than a N^2x1 line, and so more atomic collisions in the histogram kernel.
-    // TODO: Given that we may be skipping large areas, we may want to consider either the ROI or using fewer threads and a grid stride loop
-    reference_image.ReturnLaunchParametersNoFFTWPadding<TM::histogram_number_of_points, 1>(roi_.x / 4, roi_.y / 4, 1, gridDims_, threadsPerBlock_);
+    // with grid_sub_division = 1 size of histogram storage == image size
+    constexpr int grid_sub_division = 1;
+    reference_image->ReturnLaunchParametersNoFFTWPadding<TM::histogram_number_of_points, 1>(roi_.x / grid_sub_division, roi_.y / grid_sub_division, 1, gridDims_, threadsPerBlock_);
+
+    // reference_image->ReturnLaunchParametersLimitSMs(0.1, TM::histogram_number_of_points, gridDims_, threadsPerBlock_);
+    // std::cerr << "gridDims: " << gridDims_.x << " " << gridDims_.y << " " << gridDims_.z << std::endl;
+    // std::cerr << "threadsPerBlock: " << threadsPerBlock_.x << " " << threadsPerBlock_.y << " " << threadsPerBlock_.z << std::endl;
+    // exit(1);
 
     // Every block will have a shared memory array of the size of the number of bins and aggregate those into their own
     // temp arrays. Only at the end of the search will these be added together'
@@ -190,31 +164,40 @@ void TM_EmpiricalDistribution<ccfType, mipType>::ZeroHistogram( ) {
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
 template <typename T>
-inline __device__ void convert_input(T* input_ptr, const T bin_min, const T bin_inc, int& pixel_idx, T& val, const int address) {
+inline __device__ float convert_input(const T* __restrict__ input_ptr,
+                                      int& pixel_idx,
+                                      int  address) {
+
+    // int((val - min) / step)
+    // int((val -min) * inverse_step)
+    // using these compile time constants do a fused multiply add
+    float val;
+
     if constexpr ( std::is_same_v<T, __half> ) {
-        val       = input_ptr[address];
-        pixel_idx = __half2int_rd((val - bin_min) / bin_inc);
+        val = __half2float(input_ptr[address]);
     }
     if constexpr ( std::is_same_v<T, __nv_bfloat16> ) {
-        val       = input_ptr[address];
-        pixel_idx = __bfloat162int_rd((val - bin_min) / bin_inc);
+        val = __bfloat162float(input_ptr[address]);
     }
     if constexpr ( std::is_same_v<T, histogram_storage_t> ) {
-        val       = input_ptr[address];
-        pixel_idx = __float2int_rd((val - bin_min) / bin_inc);
+        val = input_ptr[address];
     }
+    constexpr float neg_hist_min_div_hist_step = -TM::histogram_min * TM::histogram_step_inverse;
+
+    pixel_idx = __float2int_rd(__fmaf_rn(val, TM::histogram_step_inverse, neg_hist_min_div_hist_step));
+
+    return val;
 }
 
-template <typename ccfType>
-inline __device__ void sum_squares_and_check_max(ccfType     val,
+inline __device__ void sum_squares_and_check_max(const float val,
                                                  float&      sum,
                                                  float&      sum_sq,
                                                  float&      sum_counter_val,
                                                  float&      sum_err,
                                                  float&      sum_sq_err,
-                                                 ccfType&    max_val,
+                                                 float&      max_val,
                                                  int&        max_idx,
-                                                 const int   idx,
+                                                 int         idx,
                                                  const float min_counter_val,
                                                  const float threshold_val) {
 
@@ -223,31 +206,22 @@ inline __device__ void sum_squares_and_check_max(ccfType     val,
         max_idx = idx;
     }
 
-    // if ( sum_counter_val == 0.f || fabsf(float_val - sum / sum_counter_val) < sqrtf(((sum_sq / sum_counter_val) - powf(sum / sum_counter_val, 2))) * 3.0f ) {
-    float float_val;
-    if constexpr ( std::is_same_v<ccfType, __half> ) {
-        float_val = __half2float(val);
-    }
-    else if constexpr ( std::is_same_v<ccfType, __nv_bfloat16> ) {
-        float_val = __bfloat162float(val);
-    }
-    else if constexpr ( std::is_same_v<ccfType, histogram_storage_t> ) {
-        float_val = val;
-    }
+    // if ( sum_counter_val == 0.f || fabsf(val - sum / sum_counter_val) < sqrtf(((sum_sq / sum_counter_val) - powf(sum / sum_counter_val, 2))) * 3.0f ) {
+
     // for Welfords
     // For Kahan summation
     float mean_val = sum / sum_counter_val;
 
-    if ( sum_counter_val < min_counter_val || fabsf((float_val - mean_val) * rsqrtf(sum_sq / sum_counter_val - mean_val * mean_val)) < threshold_val ) {
+    if ( sum_counter_val < min_counter_val || fabsf((val - mean_val) * rsqrtf(sum_sq / sum_counter_val - mean_val * mean_val)) < threshold_val ) {
         sum_counter_val += 1.0f;
 
         // Kahan summation
-        const float y = float_val - sum_err;
+        const float y = val - sum_err;
         const float t = sum + y;
         sum_err       = (t - sum) - y;
         sum           = t;
 
-        const float y2 = __fmaf_ieee_rn(float_val, float_val, -sum_sq_err);
+        const float y2 = __fmaf_ieee_rn(val, val, -sum_sq_err);
         const float t2 = sum_sq + y2;
         sum_sq_err     = (t2 - sum_sq) - y2;
         sum_sq         = t2;
@@ -266,9 +240,9 @@ inline __device__ void write_mip_and_stats(float*      sum_array,
                                            const ccfType* __restrict__ psi,
                                            const ccfType* __restrict__ theta,
                                            const ccfType* __restrict__ phi,
-                                           ccfType&  max_val,
-                                           int       max_idx,
-                                           const int address) {
+                                           const float max_val,
+                                           const int   max_idx,
+                                           const int   address) {
 
     // There may be rare cases where no stats have been evaluated, but then sum/sum_sq == 0. Rather than introduce extra branching logic, just do the extra io for those rare cases.
     sum_array[address]    = sum;
@@ -280,23 +254,23 @@ inline __device__ void write_mip_and_stats(float*      sum_array,
     if constexpr ( std::is_same_v<ccfType, __half> ) {
         // I though short circuit logic would be equivalent, but maybe the cuda driver is pre-fetching values? The nested conditional is ~3% faster on total run time
         // indicating we are skipping unnecessary reads.
-        if ( max_val > ccfType{TM::MIN_VALUE_TO_MIP} ) {
-            if ( max_val > __low2half(mip_psi[address]) ) {
-                mip_psi[address]   = __halves2half2(max_val, psi[max_idx]);
+        if ( max_val > TM::MIN_VALUE_TO_MIP ) {
+            if ( max_val > __low2float(mip_psi[address]) ) {
+                mip_psi[address]   = __halves2half2(__float2half_rn(max_val), psi[max_idx]);
                 theta_phi[address] = __halves2half2(theta[max_idx], phi[max_idx]);
             }
         }
     }
     else if constexpr ( std::is_same_v<ccfType, __nv_bfloat16> ) {
-        if ( max_val > ccfType{TM::MIN_VALUE_TO_MIP} ) {
-            if ( max_val > __low2bfloat16(mip_psi[address]) ) {
-                mip_psi[address]   = __halves2bfloat162(max_val, psi[max_idx]);
+        if ( max_val > TM::MIN_VALUE_TO_MIP ) {
+            if ( max_val > __low2float(mip_psi[address]) ) {
+                mip_psi[address]   = __halves2bfloat162(__float2bfloat16_rn(max_val), psi[max_idx]);
                 theta_phi[address] = __halves2bfloat162(theta[max_idx], phi[max_idx]);
             }
         }
     }
     else if constexpr ( std::is_same_v<ccfType, histogram_storage_t> ) {
-        if ( max_val > ccfType{TM::MIN_VALUE_TO_MIP} ) {
+        if ( max_val > TM::MIN_VALUE_TO_MIP ) {
             if ( max_val > mip_psi[address].x ) {
                 mip_psi[address].x   = max_val;
                 mip_psi[address].y   = psi[max_idx];
@@ -311,28 +285,26 @@ inline __device__ void write_mip_and_stats(float*      sum_array,
 
 // TODO: __half2 atomicAdd(__half2 *address, __half2 val);
 // TODO: __nv_bfloat162 atomicAdd(__nv_bfloat162 *address, __nv_bfloat162 val);
-// This would allow us to double the number of bins in the histogram, and still use atomicAdd reducing contention
+
 template <typename ccfType, typename mipType>
 __global__ void __launch_bounds__(TM::histogram_number_of_points)
-        AccumulateDistributionKernel(ccfType*             input_ptr,
-                                     histogram_storage_t* output_ptr,
-                                     const int            NY_img,
-                                     const int            pitch_in_pixels_img,
-                                     const ccfType        bin_min,
-                                     const ccfType        bin_inc,
-                                     const int2           pre_padding,
-                                     const int2           roi,
-                                     const int            n_slices_to_process,
-                                     float*               sum_array,
-                                     float*               sum_sq_array,
-                                     float*               sum_counter,
-                                     mipType*             mip_psi,
-                                     mipType*             theta_phi,
+        AccumulateDistributionKernel(const ccfType* __restrict__ input_ptr,
+                                     histogram_storage_t* __restrict__ output_ptr,
+                                     const __grid_constant__ int  plane_stride_pixels_img,
+                                     const __grid_constant__ int  pitch_in_pixels_img,
+                                     const __grid_constant__ int2 pre_padding,
+                                     const __grid_constant__ int2 roi,
+                                     const __grid_constant__ int  n_slices_to_process,
+                                     float*                       sum_array,
+                                     float*                       sum_sq_array,
+                                     float*                       sum_counter,
+                                     mipType* __restrict__ mip_psi,
+                                     mipType* __restrict__ theta_phi,
                                      const ccfType* __restrict__ psi,
                                      const ccfType* __restrict__ theta,
                                      const ccfType* __restrict__ phi,
-                                     const float min_counter_val,
-                                     const float threshold_val) {
+                                     const __grid_constant__ float min_counter_val,
+                                     const __grid_constant__ float threshold_val) {
 
     // initialize temporary accumulation array input_ptr shared memory, this is equal to the number of bins input_ptr the histogram,
     // which may  be more or less than the number of threads in a block
@@ -352,9 +324,6 @@ __global__ void __launch_bounds__(TM::histogram_number_of_points)
 
     __syncthreads( );
 
-    int     address;
-    int     pixel_idx;
-    ccfType val;
     // updates our block's partial histogram input_ptr shared memory
 
     // Currently, threads_per_block x is generally < image_dims.x, but we should be launching enough blocks in X to cover the image, making the grid stride loop overkill.
@@ -363,21 +332,32 @@ __global__ void __launch_bounds__(TM::histogram_number_of_points)
     for ( int j = pre_padding.y + physical_Y( ); j < pre_padding.y + roi.y; j += GridStride_2dGrid_Y( ) ) {
         for ( int i = pre_padding.x + physical_X( ); i < pre_padding.x + roi.x; i += GridStride_2dGrid_X( ) ) {
             // address = ((z * NY + y) * pitch_in_pixels) + x;
-            address         = j * pitch_in_pixels_img + i;
-            ccfType max_val = ccfType{TM::histogram_min};
-            int     max_idx = 0;
+            const int address = j * pitch_in_pixels_img + i;
+            float     max_val{TM::histogram_min};
+            int       max_idx = 0;
             // even though we only use kahan summation over ~ 20 numbers, the increase in accuracy is worth it.
             float sum    = sum_array[address];
             float sum_sq = sum_sq_array[address];
             float sum_err{0.f}, sum_sq_err{0.f};
             float sum_counter_val = sum_counter[address];
             for ( int k = 0; k < n_slices_to_process; k++ ) {
-                // pixel_idx = __half2int_rd((input_ptr[j * dims.w + i] - bin_min) / bin_inc);
-                convert_input(input_ptr, bin_min, bin_inc, pixel_idx, val, address + k * NY_img * pitch_in_pixels_img);
+                // pixel_idx = __half2int_rd((input_ptr[j * dims.w + i] -  TM::histogram_min) /  TM::histogram_step);
+                int         pixel_idx;
+                const float val = convert_input(input_ptr, pixel_idx, address + k * plane_stride_pixels_img);
 
                 if ( pixel_idx >= 0 && pixel_idx < TM::histogram_number_of_points )
                     atomicAdd(&smem[pixel_idx], 1);
-                sum_squares_and_check_max(val, sum, sum_sq, sum_counter_val, sum_err, sum_sq_err, max_val, max_idx, k, min_counter_val, threshold_val);
+                sum_squares_and_check_max(val,
+                                          sum,
+                                          sum_sq,
+                                          sum_counter_val,
+                                          sum_err,
+                                          sum_sq_err,
+                                          max_val,
+                                          max_idx,
+                                          k,
+                                          min_counter_val,
+                                          threshold_val);
             } // loop over slices
 
             // Now we need to actually write out to global memory for the mip if we are doing it
@@ -430,10 +410,8 @@ void TM_EmpiricalDistribution<ccfType, mipType>::AccumulateDistribution(int n_im
     AccumulateDistributionKernel<<<gridDims_, threadsPerBlock_, 0, calc_stream_[0]>>>(
             ccf_array_.at(active_idx_),
             histogram_,
-            image_dims_.y,
+            image_dims_.y * image_dims_.w,
             image_dims_.w,
-            histogram_min_,
-            histogram_step_,
             pre_padding_,
             roi_,
             n_images_this_batch,

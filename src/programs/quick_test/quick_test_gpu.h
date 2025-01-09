@@ -6,6 +6,6 @@
 class QuickTestGPU {
   public:
     QuickTestGPU( ) = default;
-    void callHelloFromGPU( );
+    void callHelloFromGPU(int idx = 0);
 };
 #endif // __SRC_PROGRAMS_QUICK_TEST_QUICK_TEST_GPU_H__

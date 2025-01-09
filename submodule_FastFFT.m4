@@ -53,7 +53,7 @@ AC_ARG_ENABLE(FastFFT, AS_HELP_STRING([--disable-FastFFT],[Do not use the FastFF
 
         # AC_DEFINE_UNQUOTED(FFT_DEBUG_LEVEL, $fft_debug_level, [Define the FFT_DEBUG_LEVEL flag])
         # AC_DEFINE(FFT_DEBUG_STAGE, [3], [Define the FFT_DEBUG_STAGE flag])
-        FastFFT_DEFINES="$FastFFT_DEFINES -DFFT_DEBUG_LEVEL=$fft_debug_level -DFFT_DEBUG_STAGE=8"
+        FastFFT_DEFINES="$FastFFT_DEFINES -DFFT_DEBUG_LEVEL=$fft_debug_level -DFFT_DEBUG_STAGE=8 -I$TOPSRCDIR/../include/FastFFT/include/cufftdx/include -I$TOPSRCDIR/../include/FastFFT/include/cufftdx/include/cufftdx"
         FastFFT_CUDA_FLAGS=" --extended-lambda --Wext-lambda-captures-this --expt-relaxed-constexpr"
 
     else

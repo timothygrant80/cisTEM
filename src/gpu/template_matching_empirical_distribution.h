@@ -24,14 +24,12 @@ template <typename ccfType, typename mipType>
 class TM_EmpiricalDistribution {
 
   private:
-    bool    higher_order_moments_;
-    bool    object_initialized_{ };
-    int     current_image_index_;
-    ccfType histogram_min_;
-    ccfType histogram_step_;
-    int     histogram_n_bins_;
-    int2    pre_padding_;
-    int2    roi_;
+    bool higher_order_moments_;
+    bool object_initialized_{ };
+    int  current_image_index_;
+
+    int2 pre_padding_;
+    int2 roi_;
 
     std::unique_ptr<RandomNumberGenerator> my_rng_;
 
@@ -89,7 +87,7 @@ class TM_EmpiricalDistribution {
  * @param n_images_to_accumulate_concurrently - the number of images to accumulate concurrently
  * 
  */
-    TM_EmpiricalDistribution(GpuImage& reference_image,
+    TM_EmpiricalDistribution(GpuImage* reference_image,
                              int2      pre_padding,
                              int2      roi);
 

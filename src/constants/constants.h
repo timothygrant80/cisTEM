@@ -45,6 +45,7 @@ constexpr int   histogram_number_of_points   = 512;
 constexpr float histogram_min                = -12.5f;
 constexpr float histogram_max                = 22.5f;
 constexpr float histogram_step               = (histogram_max - histogram_min) / float(histogram_number_of_points);
+constexpr float histogram_step_inverse       = float(histogram_number_of_points) / (histogram_max - histogram_min);
 constexpr float histogram_first_bin_midpoint = histogram_min + (histogram_step / 2.0f); // start position
 
 // Values for data that are passed around in the results.

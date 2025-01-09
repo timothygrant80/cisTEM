@@ -28,7 +28,8 @@ class TemplateMatchingCore {
 
     // CPU images to be passed in -
     std::shared_ptr<GpuImage> template_gpu_shared;
-    Image                     input_image; // These will be modified on the host from withing Template Matching Core so Allocate locally
+    std::shared_ptr<GpuImage> d_input_image;
+    bool                      is_set_input_image_ptr{ };
 
     bool  use_lerp_for_resizing{ };
     float binning_factor = 1.f;
@@ -51,7 +52,7 @@ class TemplateMatchingCore {
     int      is_non_zero_sum_buffer;
 
     // This will need to be copied in
-    GpuImage              d_input_image;
+
     std::vector<GpuImage> d_current_projection;
 
     std::vector<GpuImage*> d_statistical_buffers_ptrs;
@@ -108,7 +109,7 @@ class TemplateMatchingCore {
 
     void Init(MyApp*                    parent_pointer,
               std::shared_ptr<GpuImage> template_reconstruction,
-              Image&                    input_image,
+              std::shared_ptr<GpuImage> input_image,
               Image&                    current_projection,
               float                     psi_max,
               float                     psi_start,
@@ -125,6 +126,13 @@ class TemplateMatchingCore {
               bool                      use_fast_fft,
               bool                      use_gpu_prj,
               int                       number_of_global_search_images_to_save = 1);
+
+    bool                is_set_L2_cache_persisting{ };
+    cudaStreamAttrValue stream_attribute; // Stream level attributes data structure
+    size_t              SetL2CachePersisting(const float L2_persistance_fraction);
+    void                ClearL2CachePersisting( );
+    void                SetL2AccessPolicy(size_t window_size);
+    void                ClearL2AccessPolicy( );
 
     void RunInnerLoop(Image&      projection_filter,
                       int         threadIDX,

@@ -15,7 +15,7 @@ using namespace cistem_timer;
 
 void TemplateMatchingCore::Init(MyApp*                    parent_pointer,
                                 std::shared_ptr<GpuImage> wanted_template_reconstruction,
-                                Image&                    wanted_input_image,
+                                std::shared_ptr<GpuImage> wanted_input_image,
                                 Image&                    current_projection,
                                 float                     psi_max,
                                 float                     psi_start,
@@ -34,8 +34,8 @@ void TemplateMatchingCore::Init(MyApp*                    parent_pointer,
                                 int                       number_of_global_search_images_to_save) {
 
     MyDebugAssertFalse(object_initialized_, "Init must only be called once!");
-    MyDebugAssertFalse(wanted_input_image.is_in_real_space, "Input image must be in Fourier space");
-    MyDebugAssertTrue(wanted_input_image.is_in_memory, "Input image must be in memory");
+    MyDebugAssertFalse(wanted_input_image->is_in_real_space, "Input image must be in Fourier space");
+    MyDebugAssertTrue(wanted_input_image->is_allocated_16f_buffer, "Input image must be in memory");
     object_initialized_ = true;
 
     this->use_gpu_prj = use_gpu_prj;
@@ -54,9 +54,6 @@ void TemplateMatchingCore::Init(MyApp*                    parent_pointer,
 
     this->use_fast_fft = use_fast_fft;
 
-    // It seems that I need a copy for these - 1) confirm, 2) if already copying, maybe put straight into pinned mem with cudaHostMalloc
-    input_image.CopyFrom(&wanted_input_image);
-
     this->current_projection.reserve(n_prjs);
     for ( int i = 0; i < n_prjs; i++ ) {
         this->current_projection.emplace_back(current_projection);
@@ -66,8 +63,8 @@ void TemplateMatchingCore::Init(MyApp*                    parent_pointer,
         template_gpu_shared = wanted_template_reconstruction;
     }
 
-    d_input_image.Init(input_image);
-    d_input_image.CopyHostToDevice(input_image);
+    d_input_image          = wanted_input_image;
+    is_set_input_image_ptr = true;
 
     d_statistical_buffers_ptrs.push_back(&d_padded_reference);
     d_statistical_buffers_ptrs.push_back(&d_sum1);
@@ -76,7 +73,7 @@ void TemplateMatchingCore::Init(MyApp*                    parent_pointer,
     d_statistical_buffers_ptrs.push_back(&d_sumSq2);
     int n_2d_buffers = 0;
     for ( auto& buffer : d_statistical_buffers_ptrs ) {
-        buffer->Allocate(d_input_image.dims.x, d_input_image.dims.y, 1, true);
+        buffer->Allocate(d_input_image->dims.x, d_input_image->dims.y, 1, true);
         n_2d_buffers++;
     }
 
@@ -85,7 +82,7 @@ void TemplateMatchingCore::Init(MyApp*                    parent_pointer,
     d_statistical_buffers_ptrs.push_back(&d_best_theta);
     d_statistical_buffers_ptrs.push_back(&d_best_phi);
     for ( int i = n_2d_buffers; i < d_statistical_buffers_ptrs.size( ); i++ ) {
-        d_statistical_buffers_ptrs[i]->Allocate(d_input_image.dims.x, d_input_image.dims.y, number_of_global_search_images_to_save, true);
+        d_statistical_buffers_ptrs[i]->Allocate(d_input_image->dims.x, d_input_image->dims.y, number_of_global_search_images_to_save, true);
     }
 
     this->pre_padding = pre_padding;
@@ -104,6 +101,85 @@ void TemplateMatchingCore::Init(MyApp*                    parent_pointer,
     // Transfer the input image_memory_should_not_be_deallocated
 };
 
+size_t TemplateMatchingCore::SetL2CachePersisting(const float L2_persistance_fraction) {
+    MyDebugAssertTrue(is_set_input_image_ptr, "Input image must be set before calling SetL2CachePersisting");
+    MyDebugAssertTrue(ReturnThreadNumberOfCurrentThread( ) == 0, "SetL2CachePersisting must be called from thread 0");
+
+    if ( is_set_L2_cache_persisting || ! L2_persistance_fraction > 0.f )
+        return 0;
+
+    // If we aren't set, lets first check to see if we are on a device where this is beneficial
+    // FIXME: this probably depends more on the size of the L2 cache than on the device arch. EG 800 may be better than 860 (or smaller images)
+    int gpuIDX, major, minor;
+    cudaErr(cudaGetDevice(&gpuIDX));
+    cudaErr(cudaDeviceGetAttribute(&major, cudaDevAttrComputeCapabilityMajor, gpuIDX));
+    cudaErr(cudaDeviceGetAttribute(&minor, cudaDevAttrComputeCapabilityMinor, gpuIDX));
+
+    int device_arch = major * 100 + minor * 10;
+    if ( device_arch < 800 ) {
+        std::cerr << "Device architecture is " << device_arch << " which is less than 800, so we are NOT setting L2 cache persisting" << std::endl;
+        return 0;
+    }
+
+    // NOTE: we're assuming that we only see one GPU as limited by CUDA_VISIBLE_DEVICES in the run_profile
+    // TODO: attributes may be cheaper to query, but this is probably a relatively small cost.
+    size_t data_size_bytes = d_input_image->number_of_real_space_pixels * sizeof(__half);
+    std::cerr << "Data size in bytes: " << data_size_bytes << std::endl;
+
+    int L2_cache_size, max_persisting_L2_cache_size, accessPolicyMaxWindowSize;
+    cudaErr(cudaGetDevice(&gpuIDX));
+
+    cudaErr(cudaDeviceGetAttribute(&max_persisting_L2_cache_size, cudaDevAttrMaxPersistingL2CacheSize, gpuIDX));
+    cudaErr(cudaDeviceGetAttribute(&L2_cache_size, cudaDevAttrL2CacheSize, gpuIDX));
+    cudaErr(cudaDeviceGetAttribute(&accessPolicyMaxWindowSize, cudaDevAttrMaxAccessPolicyWindowSize, gpuIDX));
+
+    // on 86 and 89 it seeems max_persisting_L2_cache_size < L2_cache_size < accessPolicyMaxWindowSize
+    size_t size = std::min(int(L2_cache_size * 0.75), max_persisting_L2_cache_size);
+    if ( float(data_size_bytes) / float(size) > L2_persistance_fraction ) {
+        std::cerr << "Data size is less than the L2 cache size, so we are NOT setting L2 cache persisting" << std::endl;
+        std::cerr << "Data size: " << data_size_bytes << " L2 cache available for persisting size: " << size << std::endl;
+        return 0;
+    }
+
+    cudaDeviceSetLimit(cudaLimitPersistingL2CacheSize, size); // set-aside 3/4 of L2 cache for persisting accesses or the max allowed
+
+    // In the cuda programming manual, it suggests setting the window size as follows:
+    // size_t window_size = std::min(size_t(accessPolicyMaxWindowSize), data_size_bytes);
+
+    // If theh window is > than the allowed cache size, a hit Prop fraction is set in SetL2AccessPolicy
+    // This is (afaik) random addresses, which is probably more efficient with a single accessor, however, we are sharing the input data
+    // among several threads, so we want to limit the window to the data size or the allowed cache size, and let the hitProp fraction = 1
+    size_t window_size = std::min(data_size_bytes, size);
+
+    is_set_L2_cache_persisting = true;
+
+    return window_size;
+
+    // Each thread will set the access policy window for the input image since they have their own stream
+};
+
+void TemplateMatchingCore::ClearL2CachePersisting( ) {
+    // TODO: we need to make sure we are the last user of this before clearing.
+    // If there is any perf improvement, make this a whole object that we use shared pointers for within template matching core.
+    MyDebugAssertTrue(false, "Not implemented");
+    cudaCtxResetPersistingL2Cache( ); // Remove any persistent lines in L2
+}
+
+void TemplateMatchingCore::SetL2AccessPolicy(const size_t window_size) {
+    stream_attribute.accessPolicyWindow.base_ptr  = reinterpret_cast<void*>(d_input_image->complex_values_fp16); // Global Memory data pointer
+    stream_attribute.accessPolicyWindow.num_bytes = window_size; // Number of bytes for persistence access
+    stream_attribute.accessPolicyWindow.hitRatio  = 0.8; // Hint for cache hit ratio
+    stream_attribute.accessPolicyWindow.hitProp   = cudaAccessPropertyPersisting; // Persistence Property
+    stream_attribute.accessPolicyWindow.missProp  = cudaAccessPropertyStreaming; // Type of access property on cache miss
+
+    cudaStreamSetAttribute(cudaStreamPerThread, cudaStreamAttributeAccessPolicyWindow, &stream_attribute); // Set the attributes to a CUDA Stream
+};
+
+void TemplateMatchingCore::ClearL2AccessPolicy( ) {
+    stream_attribute.accessPolicyWindow.num_bytes = 0; // Setting the window size to 0 disable it
+    cudaStreamSetAttribute(cudaStreamPerThread, cudaStreamAttributeAccessPolicyWindow, &stream_attribute); // Overwrite the access policy attribute to a CUDA Stream
+}
+
 void TemplateMatchingCore::RunInnerLoop(Image&      projection_filter,
                                         int         threadIDX,
                                         long&       current_correlation_position,
@@ -115,35 +191,9 @@ void TemplateMatchingCore::RunInnerLoop(Image&      projection_filter,
 
     bool this_is_the_first_run_on_inner_loop = my_dist ? false : true;
 
-#ifdef cisTEM_USING_FastFFT
-    // FIXME: Move this to a new method in matche_template.cpp and reference it from a shared pointer.
-    if ( use_fast_fft && this_is_the_first_run_on_inner_loop ) {
-        // FastFFT pads from the upper left corner, so we need to shift the image so the origins coinicide
-        d_input_image.PhaseShift(-(d_input_image.physical_address_of_box_center.x - d_current_projection[0].physical_address_of_box_center.x),
-                                 -(d_input_image.physical_address_of_box_center.y - d_current_projection[0].physical_address_of_box_center.y),
-                                 0);
-
-        d_input_image.BackwardFFT( );
-
-        FastFFT::FourierTransformer<float, float, float2, 2> FT;
-
-        // TODO: overload that takes and short4's int4's instead of the individual values
-        FT.SetForwardFFTPlan(input_image.logical_x_dimension, input_image.logical_y_dimension, d_input_image.logical_z_dimension, d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
-        FT.SetInverseFFTPlan(d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, d_input_image.dims.x, d_input_image.dims.y, d_input_image.dims.z, true);
-
-        FT.FwdFFT(d_input_image.real_values);
-
-        // We've done a round trip iFFT/FFT since the input image was normalized to STD 1.0, so re-normalize by 1/n
-        d_input_image.is_in_real_space = false;
-        // d_input_image.MultiplyByConstant(sqrtf(1.f / d_input_image.number_of_real_space_pixels));
-        d_input_image.MultiplyByConstant(1.f / d_input_image.number_of_real_space_pixels / sqrtf(float(d_current_projection[0].number_of_real_space_pixels)));
-    }
-#endif
-
     if ( this_is_the_first_run_on_inner_loop ) {
-        d_input_image.CopyFP32toFP16buffer(false);
         d_padded_reference.CopyFP32toFP16buffer(false);
-        my_dist = std::make_unique<TM_EmpiricalDistribution<__half, __half2>>(d_input_image, pre_padding, roi);
+        my_dist = std::make_unique<TM_EmpiricalDistribution<__half, __half2>>(d_input_image.get( ), pre_padding, roi);
     }
     else {
         my_dist->ZeroHistogram( );
@@ -158,8 +208,6 @@ void TemplateMatchingCore::RunInnerLoop(Image&      projection_filter,
         buffer->Zeros( );
     }
 
-    //	cudaErr(cudaMemset(sum_sumsq,0,sizeof(Peaks)*d_input_image.real_memory_allocated));
-
     // Just for reference:
     // cudaStreamSynchronize: Blocks host until ALL work in the stream is completed
     // cudaStreamWaitEvent: Makes all future work in stream wait on an event. Since we are always using cudaStreamPerThread, this is not needed.
@@ -172,18 +220,20 @@ void TemplateMatchingCore::RunInnerLoop(Image&      projection_filter,
 
     // float scale_factor = powf((float)d_current_projection[0].number_of_real_space_pixels, -2.0);
     // float scale_factor = 1.f;
-    float scale_factor = sqrtf(1.0f / float(d_input_image.number_of_real_space_pixels));
+    float scale_factor = sqrtf(1.0f / float(d_input_image->number_of_real_space_pixels));
 
     FastFFT::KernelFunction::my_functor<float, 4, FastFFT::KernelFunction::CONJ_MUL_THEN_SCALE> conj_mul_then_scale(scale_factor);
     FastFFT::KernelFunction::my_functor<float, 0, FastFFT::KernelFunction::NOOP>                noop;
 
     if ( use_fast_fft ) {
+
         // TODO: overload that takes and short4's int4's instead of the individual values
         FT.SetForwardFFTPlan(current_projection[0].logical_x_dimension, current_projection[0].logical_y_dimension, current_projection[0].logical_z_dimension,
                              d_padded_reference.dims.x, d_padded_reference.dims.y, d_padded_reference.dims.z, true);
         FT.SetInverseFFTPlan(d_padded_reference.dims.x, d_padded_reference.dims.y, d_padded_reference.dims.z,
                              d_padded_reference.dims.x, d_padded_reference.dims.y, d_padded_reference.dims.z, true);
     }
+
 #endif
     int   ccc_counter = 0;
     int   current_search_position;
@@ -304,9 +354,7 @@ void TemplateMatchingCore::RunInnerLoop(Image&      projection_filter,
                 // float scale_factor = rsqrtf(d_current_projection[current_projection_idx].ReturnSumOfSquares( ) / (float)d_padded_reference.number_of_real_space_pixels - (average_of_reals * average_of_reals));
                 // scale_factor /= powf((float)d_current_projection[current_projection_idx].number_of_real_space_pixels, 1.0);
 
-                float scale_factor = powf(float(d_padded_reference.number_of_real_space_pixels), 1.0);
-                scale_factor *= powf((float)d_current_projection[current_projection_idx].number_of_real_space_pixels, 1.5);
-                scale_factor = 1.0f;
+                constexpr float scale_factor = 1.0f;
                 // d_current_projection[current_projection_idx].MultiplyByConstant(scale_factor);
                 d_current_projection[current_projection_idx].NormalizeRealSpaceStdDeviationAndCastToFp16(scale_factor, average_of_reals, average_on_edge);
                 // Since we have cast the projection to the fp16 buffer, we need to let the host know that this gpu projection is ready to receive another projection
@@ -316,7 +364,7 @@ void TemplateMatchingCore::RunInnerLoop(Image&      projection_filter,
                     projection_queue.RecordProjectionReadyBlockingHost(current_projection_idx, cudaStreamPerThread);
                 }
 
-                FT.FwdImageInvFFT(d_current_projection[current_projection_idx].real_values_fp16, (__half2*)d_input_image.complex_values_fp16, my_dist->GetCCFArray(current_mip_to_process), noop, conj_mul_then_scale, noop);
+                FT.FwdImageInvFFT(d_current_projection[current_projection_idx].real_values_fp16, (__half2*)d_input_image->complex_values_fp16, my_dist->GetCCFArray(current_mip_to_process), noop, conj_mul_then_scale, noop);
 #endif
             }
             else {
@@ -334,7 +382,7 @@ void TemplateMatchingCore::RunInnerLoop(Image&      projection_filter,
 
                 d_padded_reference.ForwardFFT(false);
                 //      d_padded_reference.ForwardFFTAndClipInto(d_current_projection,false);
-                d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image.complex_values_fp16, true, my_dist->GetCCFArray(current_mip_to_process));
+                d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image->complex_values_fp16, true, my_dist->GetCCFArray(current_mip_to_process));
             }
 
             if constexpr ( trouble_shoot_mip ) {
@@ -524,6 +572,6 @@ void TemplateMatchingCore::UpdateSecondaryPeaks( ) {
     postcheck;
 
     // We need to reset this each outer angle search or we'll never see new maximums
-    cudaErr(cudaMemsetAsync(mip_psi, 0, sizeof(__half2) * d_input_image.real_memory_allocated, cudaStreamPerThread));
-    cudaErr(cudaMemsetAsync(theta_phi, 0, sizeof(__half2) * d_input_image.real_memory_allocated, cudaStreamPerThread));
+    cudaErr(cudaMemsetAsync(mip_psi, 0, sizeof(__half2) * d_input_image->real_memory_allocated, cudaStreamPerThread));
+    cudaErr(cudaMemsetAsync(theta_phi, 0, sizeof(__half2) * d_input_image->real_memory_allocated, cudaStreamPerThread));
 }

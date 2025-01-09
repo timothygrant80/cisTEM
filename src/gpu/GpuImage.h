@@ -401,6 +401,14 @@ class GpuImage {
         gridDims        = dim3(myroundint(N * number_of_streaming_multiprocessors), 1, 1);
     };
 
+    __inline__ void ReturnLaunchParametersLimitSMs(float N, int M, dim3& wanted_gridDims, dim3& wanted_threadsPerBlock) {
+        // This should only be called for kernels with grid stride loops setup. The idea
+        // is to limit the number of SMs available for some kernels so that other threads on the device can run in parallel.
+        // limit_SMs_by_threads is default 1, so this must be set prior to this call.
+        wanted_threadsPerBlock = dim3(M, 1, 1);
+        wanted_gridDims        = dim3(myroundint(N * number_of_streaming_multiprocessors), 1, 1);
+    };
+
     void UpdateFlagsFromHostImage(Image& host_image);
     void UpdateFlagsFromDeviceImage(Image& host_image);
 

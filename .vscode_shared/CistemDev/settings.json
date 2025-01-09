@@ -101,7 +101,9 @@
         "__debug": "cpp",
         "dense": "cpp",
         "stream_ref": "cpp",
-        "core": "cpp"
+        "core": "cpp",
+        "__verbose_abort": "cpp",
+        "barrier": "cpp"
     },
     "C_Cpp.clang_format_path": "/usr/bin/clang-format-14",
     "editor.formatOnSave": true,

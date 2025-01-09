@@ -25,6 +25,7 @@ using namespace cistem_timer_noop;
 #endif
 
 #define USE_LERP_NOT_FOURIER_RESIZING
+#define IMPLICIT_TEMPLATE_POWER_2
 
 // TODO: This seems good, let's fix it in place rather than a define
 
@@ -108,6 +109,7 @@ void MatchTemplateApp::AddCommandLineOptions( ) {
     command_line_parser.AddOption("", "healpix-file", "Healpix file for the input images", wxCMD_LINE_VAL_STRING);
     command_line_parser.AddOption("", "min-stats-counter", "Minimum number of pixels to calculate the threshold (defaults to 10.f)", wxCMD_LINE_VAL_DOUBLE);
     command_line_parser.AddOption("", "threshold-val", "n_stddev to threshold value for the trimmed local variance (defaults to 3.0f)", wxCMD_LINE_VAL_DOUBLE);
+    command_line_parser.AddOption("", "L2-peristance-fraction", "min L2 cache available for persisting as fraction of input image size in fp16 bytes (defaults to 0 [off])", wxCMD_LINE_VAL_DOUBLE);
 #endif
 }
 
@@ -275,13 +277,17 @@ bool MatchTemplateApp::DoCalculation( ) {
         SendInfo("Disabling GPU projection\n");
         use_gpu_prj = false;
     }
-
+    float L2_persistance_fraction{ };
+    if ( command_line_parser.Found("L2-peristance-fraction", &temp_double) ) {
+        L2_persistance_fraction = float(temp_double);
+    }
     // This allows an override for the TEST_LOCAL_NORMALIZATION
     bool allow_rotation_for_speed{true};
     // This allows us to not use local normalization while also compiling with this option
     bool  use_local_normalization{false};
     float min_counter_val{std::numeric_limits<float>::max( )}; // This way, if we aren't using it, we short-circute the calculation of the SD every pixel in the OR clause
     float threshold_val{3.0f};
+
 #ifdef TEST_LOCAL_NORMALIZATION
     wxString healpix_file;
     if ( command_line_parser.Found("healpix-file", &healpix_file) ) {
@@ -298,9 +304,11 @@ bool MatchTemplateApp::DoCalculation( ) {
         threshold_val = float(temp_double);
     }
 
-    wxPrintf("Using local normalization bool: %d\n", use_local_normalization);
-    wxPrintf("Using min stats counter: %f\n", min_counter_val);
-    wxPrintf("Using threshold value: %f\n", threshold_val);
+    if ( use_local_normalization ) {
+        wxPrintf("Using local normalization bool: %d\n", use_local_normalization);
+        wxPrintf("Using min stats counter: %f\n", min_counter_val);
+        wxPrintf("Using threshold value: %f\n", threshold_val);
+    }
     // I guess this breaks the local normalization so provide an override for TM data sizer
 #endif
 
@@ -467,6 +475,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     profile_timing.start("Resize_preSearch");
     data_sizer.SetImageAndTemplateSizing(high_resolution_limit_search, use_fast_fft);
     data_sizer.ResizeTemplate_preSearch(input_reconstruction, use_lerp_not_fourier_resampling, true);
+
     // FIXME: we could use available threads to accelerate this. (Reduction of Allocations would also be good)
     data_sizer.ResizeImage_preSearch(input_image, allow_rotation_for_speed);
     profile_timing.lap("Resize_preSearch");
@@ -564,8 +573,12 @@ bool MatchTemplateApp::DoCalculation( ) {
     projection_filter.Allocate(wanted_pre_projection_template_size, wanted_pre_projection_template_size, false);
     template_reconstruction.Allocate(wanted_pre_projection_template_size, wanted_pre_projection_template_size, wanted_pre_projection_template_size, true);
 
-    // We want the output projection to always be the search size
+// We want the output projection to always be the search size
+#ifdef IMPLICIT_TEMPLATE_POWER_2
+    current_projection.Allocate(wanted_pre_projection_template_size, wanted_pre_projection_template_size, false);
+#else
     current_projection.Allocate(data_sizer.GetTemplateSearchSizeX( ), data_sizer.GetTemplateSearchSizeX( ), false);
+#endif
 
     // NOTE: note supported with resampling
     if ( padding != 1.0f )
@@ -717,6 +730,52 @@ bool MatchTemplateApp::DoCalculation( ) {
     TemplateMatchingCore* GPU;
     DeviceManager         gpuDev;
     profile_timing.lap("Init GPU");
+
+    // We want to share the input image so that we can get the best L2 caching behavior on the GPU.
+    std::shared_ptr<GpuImage> d_input_image = std::make_shared<GpuImage>( );
+    if ( use_gpu ) {
+        d_input_image->Init(input_image);
+        d_input_image->CopyHostToDevice(input_image);
+    }
+#ifdef cisTEM_USING_FastFFT
+    // With FastFFT, the zero-padding of the template is "post" whereas in the original method it was symmetric.
+    // So we need to shift the logical origin of the input image to template size / 2
+    // FastFFT also expects the data to be transposed in XY in Fourier space, and it is easiest to just to the FFT.
+    if ( use_fast_fft ) {
+        // FastFFT pads from the upper left corner, so we need to shift the image so the origins coinicide
+        d_input_image->PhaseShift(-(d_input_image->physical_address_of_box_center.x - current_projection.physical_address_of_box_center_x),
+                                  -(d_input_image->physical_address_of_box_center.y - current_projection.physical_address_of_box_center_y),
+                                  0);
+
+        d_input_image->BackwardFFT( );
+
+        FastFFT::FourierTransformer<float, float, float2, 2> FT;
+        FT.SetForwardFFTPlan(input_image.logical_x_dimension,
+                             input_image.logical_y_dimension,
+                             d_input_image->logical_z_dimension,
+                             d_input_image->dims.x,
+                             d_input_image->dims.y,
+                             d_input_image->dims.z,
+                             true);
+        FT.SetInverseFFTPlan(d_input_image->dims.x,
+                             d_input_image->dims.y,
+                             d_input_image->dims.z,
+                             d_input_image->dims.x,
+                             d_input_image->dims.y,
+                             d_input_image->dims.z,
+                             true);
+
+        FT.FwdFFT(d_input_image->real_values);
+
+        // We've done a round trip iFFT/FFT since the input image was normalized to STD 1.0, so re-normalize by 1/n
+        d_input_image->is_in_real_space = false;
+        d_input_image->MultiplyByConstant(1.f / d_input_image->number_of_real_space_pixels / sqrtf(float(current_projection.number_of_real_space_pixels)));
+    }
+#endif
+
+    // Finally, we want to move this into the FP16 buffer. TODO: we can probably safely deallocate the single precision buffer here
+    if ( use_gpu )
+        d_input_image->CopyFP32toFP16buffer(false);
 #endif
 
     if ( use_gpu ) {
@@ -749,6 +808,7 @@ bool MatchTemplateApp::DoCalculation( ) {
 
         if ( use_gpu ) {
 #ifdef ENABLEGPU
+
             std::shared_ptr<GpuImage> template_reconstruction_gpu;
             if ( use_gpu_prj ) {
 
@@ -772,7 +832,8 @@ bool MatchTemplateApp::DoCalculation( ) {
             }
 
             data_sizer.whitening_filter_ptr->MakeThreadSafeForNThreads(max_threads);
-#pragma omp parallel num_threads(max_threads)
+            size_t L2_window_size;
+#pragma omp parallel num_threads(max_threads) shared(L2_window_size)
             {
                 int tIDX = ReturnThreadNumberOfCurrentThread( );
                 // gpuDev.SetGpu( );
@@ -791,7 +852,7 @@ bool MatchTemplateApp::DoCalculation( ) {
                     profile_timing.start("Init GPU");
                     GPU[tIDX].Init(this,
                                    template_reconstruction_gpu,
-                                   input_image,
+                                   d_input_image,
                                    current_projection,
                                    psi_max,
                                    psi_start,
@@ -807,6 +868,7 @@ bool MatchTemplateApp::DoCalculation( ) {
                                    is_running_locally,
                                    use_fast_fft,
                                    use_gpu_prj);
+
                     profile_timing.lap("Init GPU");
                     if ( ! use_gpu_prj ) {
                         GPU[tIDX].SetCpuTemplate(&template_reconstruction);
@@ -816,6 +878,15 @@ bool MatchTemplateApp::DoCalculation( ) {
                         wxPrintf("Staring TemplateMatchingCore object %d to work on position range %d-%d\n", tIDX, t_first_search_position, t_last_search_position);
                     }
                     first_gpu_loop = false;
+
+                    if ( tIDX == 0 )
+                        L2_window_size = GPU[tIDX].SetL2CachePersisting(L2_persistance_fraction);
+
+#pragma omp barrier // all threads need to wait on tIDX 0 to set the device props
+
+                    // Now that the L2 cache is set persisiting and all threads have reached this point, set up the individual policies in their respective streams.
+                    if ( L2_window_size > 0 )
+                        GPU[tIDX].SetL2AccessPolicy(L2_window_size);
                 }
                 else {
                     GPU[tIDX].template_gpu_shared = template_reconstruction_gpu;

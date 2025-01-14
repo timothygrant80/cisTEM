@@ -520,6 +520,7 @@ endif
 
 if WANT_CISTEM_GPU_AM
 
+# FIXME: gpu_devices should either be compiled like other programs, or removed as it really is not needed.
 bin_PROGRAMS +=  gpu_devices
 noinst_LIBRARIES += libgpucore.a  
 
@@ -534,7 +535,7 @@ libgpucore_a_SOURCES  =      gpu/core_extensions/stop_watch_gpu.cu \
                              programs/refine3d/batched_search.cu \
                              test/gpu/test_gpu_kernels.cu \
                              programs/quick_test/quick_test_gpu.cu
-if ENABLE_FASTFFT_AM
+if ENABLE_LOCAL_BUILD_OF_FASTFFT_AM
     libgpucore_a_SOURCES += ../include/FastFFT/src/fastfft/FastFFT.cu
 endif
 
@@ -542,14 +543,16 @@ libgpucore_OBJECTS=$(libgpucore_a_SOURCES:.cu=.o)
 
 libgpucore_a_CFLAGS = -DENABLEGPU $(CUDA_CPPFLAGS) $(WX_CPPFLAGS_BASE)
 libgpucore_a_CXXFLAGS = -DENABLEGPU $(CUDA_CXXFLAGS) $(WX_CXXFLAGS_BASE)
-libgpucore_a_LIBADD = gpu/gpudevicecode.o 
+libgpucore_a_LIBADD = $(libFastFFT_OBJECTS) gpu/gpudevicecode.o 
 libgpucore_a_AR = $(NVCC) -DENABLEGPU $(CUDA_CXXFLAGS) -lib -o
 
+# This line only knows about objects build from libgpucore_a_SOURCES. We have to add any others e.g. gpu/gpu_device_code.o mannually above in the LIBADD
 .cu.o:
 	$(NVCC) -DENABLEGPU $(CUDA_CXXFLAGS) $(WX_CPPFLAGS_BASE) -dc -o $@ $<
     
-gpu/gpudevicecode.o: $(libgpucore_OBJECTS)
-	$(NVCC) -DENABLEGPU $(CUDA_CXXFLAGS) --device-link $(libgpucore_OBJECTS) -o gpu/gpudevicecode.o $(CUDA_LIBS)
+# FastFFT_LIBS will be empty if we are building the library, or /opt/FastFFT/lib/FastFFT.o if we are linking from the object included in the build container (latter prefered) $(libgpucore_OBJECTS) $(libFastFFT_OBJECTS)
+gpu/gpudevicecode.o: $(libgpucore_OBJECTS) $(libFastFFT_OBJECTS)
+	$(NVCC) -DENABLEGPU $(CUDA_CXXFLAGS) --device-link $^ -o gpu/gpudevicecode.o $(CUDA_LIBS)
 
 endif
 

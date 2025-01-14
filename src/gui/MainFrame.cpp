@@ -636,7 +636,7 @@ void MyMainFrame::OpenProject(wxString project_filename) {
 
         int counter;
         // Note: the second to last arg must be incremented if additional actions are added below.
-        OneSecondProgressDialog* my_dialog = new OneSecondProgressDialog("Open Project", "Opening Project", 11, this);
+        OneSecondProgressDialog* my_dialog = new OneSecondProgressDialog("Open Project", "Opening Project", 12, this);
 
         movie_asset_panel->ImportAllFromDatabase( );
         my_dialog->Update(1, "Opening project (loading image assets...)");

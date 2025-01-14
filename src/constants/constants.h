@@ -50,7 +50,6 @@ constexpr float histogram_first_bin_midpoint = histogram_min + (histogram_step /
 
 // Values for data that are passed around in the results.
 constexpr int   number_of_output_images     = 8; //mip, psi, theta, phi, pixel, defocus, sums, sqsums (scaled mip is not sent out)
-constexpr int   number_of_meta_data_values  = 10; // img_x, img_y, number cccs, histogram values, pixel_size
 constexpr int   MAX_ALLOWED_NUMBER_OF_PEAKS = 1000; // An error will be thrown and job aborted if this number of peaks is exceeded in the make template results block
 constexpr float MAX_BINNING_FACTOR          = 10.f; // The maximum binning factor allowed for the template matching search image
 constexpr float MIN_VALUE_TO_MIP            = -0.5f; // The minimum value to be considered for the MIP, saves i/o but must be lower than the lowest likely mip value
@@ -69,8 +68,9 @@ enum Enum : int {
     number_of_histogram_bins,
     ccc_scalar,
     input_pixel_size,
-    number_of_valid_search_pixels
-
+    number_of_valid_search_pixels,
+    disable_flat_fielding,
+    COUNT
 };
 } // namespace match_template
 

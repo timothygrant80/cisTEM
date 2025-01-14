@@ -11,7 +11,11 @@
 #include "../../constants/constants.h"
 
 #if defined(cisTEM_USING_FastFFT) && defined(ENABLEGPU)
+#ifdef cisTEM_BUILDING_FastFFT
 #include "../../../include/FastFFT/include/FastFFT.h"
+#else
+#include "/opt/FastFFT/include/FastFFT.h"
+#endif
 #endif
 
 #include "template_matching_data_sizer.h"

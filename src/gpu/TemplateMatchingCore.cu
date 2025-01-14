@@ -4,7 +4,13 @@
 #include "TemplateMatchingCore.h"
 
 #ifdef cisTEM_USING_FastFFT
-#include "../../include/FastFFT/include/FastFFT.cuh"
+#ifdef cisTEM_BUILDING_FastFFT
+#include "../../include/FastFFT/include/FastFFT.h"
+#include "../../include/FastFFT/include/detail/functors.h"
+#else
+#include "/opt/FastFFT/include/FastFFT.h"
+#include "/opt/FastFFT/include/detail/functors.h"
+#endif
 #endif
 // Implementation is in the header as it is only used here for now.
 #include "projection_queue.cuh"
@@ -355,7 +361,12 @@ void TemplateMatchingCore::RunInnerLoop(Image&      projection_filter,
                 // scale_factor /= powf((float)d_current_projection[current_projection_idx].number_of_real_space_pixels, 1.0);
 
                 constexpr float scale_factor = 1.0f;
-                // d_current_projection[current_projection_idx].MultiplyByConstant(scale_factor);
+                // FIXME: there is a bunch of wasted math since we are using (1., 0, 0.)
+                // TODO: if doing NCC, T3 = N_img * sum(template^2), and we already have access to sum(template^2) when doing this normalization.
+                // For the first point, let's just check 1/0/0 and call a different kernel if we know we don't need the other factors (still have to wait on L2Norm called from npp, so we can't do it all on host)
+                // For the full NCC, have an overload that passes three more array pointers, one to FFT(image) one to FFT(image^2) and one to conj(FFT(template mask)) // use this for the full NCC given an image mask of all ones
+                // For the case the template mask is assumed rotationally invariant, pass a single array pointer that is the full normalization term to be multiplied by T3 then sqrted (this needs to be used AFTER the back FFT)
+                //     In both of these cases, we don't need to apply the normalization until we go to the mip
                 d_current_projection[current_projection_idx].NormalizeRealSpaceStdDeviationAndCastToFp16(scale_factor, average_of_reals, average_on_edge);
                 // Since we have cast the projection to the fp16 buffer, we need to let the host know that this gpu projection is ready to receive another projection
                 // This needs to be placed in the main stream as that is where GPU methods default to.

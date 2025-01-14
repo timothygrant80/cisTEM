@@ -124,6 +124,7 @@ if test "$want_cuda" = "yes" ; then
 fi
 
 # This is the code that will be generated at compile time and should be specified for the most used gpu 
+# TODO: export target_arch to link against pre-built FastFFT that has the same target arch
 target_arch=""
 AC_ARG_WITH([target-gpu-arch], AS_HELP_STRING([--with-target-gpu-arch@<:@=70,75,80,86,89,90@:>@], [Primary architecture to compile for (default=86)]),
 [
@@ -164,16 +165,7 @@ AC_MSG_NOTICE([oldest gpu architecture is sm$oldest_arch])
 if test "$oldest_arch" -gt "$target_arch" ; then 
 	AC_MSG_ERROR([Requested target-oldest_arch is greater than the target arch.]) 
 else
-	current_arch="60"
-	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -ne "$target_arch" ; then
-		NVCCFLAGS+=" -gencode=arch=compute_$current_arch,code=sm_$current_arch"
-	fi
-	
-	current_arch="61"
-	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -ne "$target_arch" ; then
-		NVCCFLAGS+=" -gencode=arch=compute_$current_arch,code=sm_$current_arch"
-	fi
-	
+
 	current_arch="70"
 	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -ne "$target_arch" ; then
 		NVCCFLAGS+=" -gencode=arch=compute_$current_arch,code=sm_$current_arch"
@@ -197,7 +189,12 @@ else
 	current_arch="89"
 	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -ne "$target_arch" ; then
 		NVCCFLAGS+=" -gencode=arch=compute_$current_arch,code=sm_$current_arch"
-	fi		
+	fi	
+
+	current_arch="90"
+	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -ne "$target_arch" ; then
+		NVCCFLAGS+=" -gencode=arch=compute_$current_arch,code=sm_$current_arch"
+	fi	
 		
 fi
 

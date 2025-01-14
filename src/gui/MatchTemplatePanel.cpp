@@ -25,8 +25,13 @@ MatchTemplatePanel::MatchTemplatePanel(wxWindow* parent)
     UseGPURadioNo->Enable(false);
     UseFastFFTRadioYes->Enable(false);
     UseFastFFTRadioNo->Enable(false);
-
 #endif
+
+#ifndef cisTEM_USING_FastFFT
+    UseFastFFTRadioYes->Enable(false);
+    UseFastFFTRadioNo->Enable(false);
+#endif
+
     // We need to allow a higher precision, otherwise, the option to resample will almost always be taken
     HighResolutionLimitNumericCtrl->SetPrecision(4);
     SetInfo( );
@@ -164,7 +169,9 @@ void MatchTemplatePanel::ResetDefaults( ) {
 
 #ifdef SHOW_CISTEM_GPU_OPTIONS
     UseGPURadioYes->SetValue(true);
+#ifdef cisTEM_USING_FastFFT
     UseFastFFTRadioYes->SetValue(true);
+#endif
 #else
     UseGPURadioNo->SetValue(true);
     UseFastFFTRadioNo->SetValue(true);

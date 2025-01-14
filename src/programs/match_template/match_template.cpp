@@ -11,7 +11,11 @@
 #include "../../constants/constants.h"
 
 #if defined(cisTEM_USING_FastFFT) && defined(ENABLEGPU)
+#ifdef cisTEM_BUILDING_FastFFT
 #include "../../../include/FastFFT/include/FastFFT.h"
+#else
+#include "/opt/FastFFT/include/FastFFT.h"
+#endif
 #endif
 
 #include "template_matching_data_sizer.h"
@@ -38,6 +42,7 @@ class AggregatedTemplateResult {
     int   image_number;
     int   number_of_received_results;
     float total_number_of_angles_searched;
+    bool  disable_flat_fielding;
 
     float* collated_data_array;
     float* collated_mip_data;
@@ -93,7 +98,8 @@ class
                                                              StatsType*  correlation_pixel_sum,
                                                              StatsType*  correlation_pixel_sum_of_squares,
                                                              long*       histogram,
-                                                             const float n_angles_in_search);
+                                                             const float n_angles_in_search,
+                                                             const bool  disable_flat_fielding);
 };
 
 IMPLEMENT_APP(MatchTemplateApp)
@@ -105,6 +111,8 @@ void MatchTemplateApp::ProgramSpecificInit( ) {
 // Optional command-line stuff
 void MatchTemplateApp::AddCommandLineOptions( ) {
     command_line_parser.AddLongSwitch("disable-gpu-prj", "Disable projection using the gpu. Default false");
+    command_line_parser.AddLongSwitch("disable-flat-fielding", "Disable flat fielding. Default false");
+
 #ifdef TEST_LOCAL_NORMALIZATION
     command_line_parser.AddOption("", "healpix-file", "Healpix file for the input images", wxCMD_LINE_VAL_STRING);
     command_line_parser.AddOption("", "min-stats-counter", "Minimum number of pixels to calculate the threshold (defaults to 10.f)", wxCMD_LINE_VAL_DOUBLE);
@@ -271,7 +279,13 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     double temp_double;
     long   temp_long;
-    bool   use_gpu_prj = true;
+    bool   use_gpu_prj           = true;
+    bool   disable_flat_fielding = false;
+
+    if ( command_line_parser.FoundSwitch("disable-flat-fielding") ) {
+        SendInfo("Disabling flat fielding\n");
+        disable_flat_fielding = true;
+    }
 
     if ( command_line_parser.FoundSwitch("disable-gpu-prj") ) {
         SendInfo("Disabling GPU projection\n");
@@ -1178,7 +1192,8 @@ bool MatchTemplateApp::DoCalculation( ) {
                                                             correlation_pixel_sum_image.real_values,
                                                             correlation_pixel_sum_of_squares_image.real_values,
                                                             histogram_data,
-                                                            total_correlation_positions);
+                                                            total_correlation_positions,
+                                                            disable_flat_fielding);
         // calculate the expected threshold (from peter's paper)
         const float CCG_NOISE_STDDEV = 1.0;
         double      temp_threshold;
@@ -1294,7 +1309,7 @@ bool MatchTemplateApp::DoCalculation( ) {
         // send back the final images to master (who should merge them, and send to the gui)
 
         long   result_array_counter;
-        long   number_of_result_floats = cistem::match_template::number_of_meta_data_values; // first float is x size, 2nd is y size of images, 3rd is number allocated, 4th  float is number of doubles in the histogram
+        long   number_of_result_floats = cistem::match_template::COUNT; // first float is x size, 2nd is y size of images, 3rd is number allocated, 4th  float is number of doubles in the histogram
         long   pixel_counter;
         float* pointer_to_histogram_data;
 
@@ -1319,9 +1334,10 @@ bool MatchTemplateApp::DoCalculation( ) {
             result[cm_t::ccc_scalar]                    = 1.0f; // (float)sqrt_input_pixels is redundant, but we need all the results to calculate the scaling from the global CCC moments
             result[cm_t::input_pixel_size]              = data_sizer.GetPixelSize( );
             result[cm_t::number_of_valid_search_pixels] = data_sizer.GetNumberOfValidSearchPixels( );
+            result[cm_t::disable_flat_fielding]         = disable_flat_fielding;
         }
 
-        result_array_counter = cistem::match_template::number_of_meta_data_values;
+        result_array_counter = cistem::match_template::COUNT;
 
         for ( pixel_counter = 0; pixel_counter < max_intensity_projection.real_memory_allocated; pixel_counter++ ) {
             result[result_array_counter] = max_intensity_projection.real_values[pixel_counter];
@@ -1484,7 +1500,8 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
                                                             aggregated_results[array_location].collated_pixel_sums,
                                                             aggregated_results[array_location].collated_pixel_square_sums,
                                                             aggregated_results[array_location].collated_histogram_data,
-                                                            aggregated_results[array_location].total_number_of_angles_searched);
+                                                            aggregated_results[array_location].total_number_of_angles_searched,
+                                                            aggregated_results[array_location].disable_flat_fielding);
 
         // Update the collated mip data which is used downstream for the scaled mip and other calcs
         // Fill the temp_image with data form the collatged mip before passing it on to be rescaled.
@@ -1808,6 +1825,7 @@ AggregatedTemplateResult::AggregatedTemplateResult( ) {
     image_number                    = -1;
     number_of_received_results      = 0;
     total_number_of_angles_searched = 0.0f;
+    disable_flat_fielding           = false;
 
     collated_data_array        = NULL;
     collated_mip_data          = NULL;
@@ -1828,7 +1846,7 @@ AggregatedTemplateResult::~AggregatedTemplateResult( ) {
 
 void AggregatedTemplateResult::AddResult(float* result_array, long array_size, int result_number, int number_of_expected_results) {
 
-    int offset = cistem::match_template::number_of_meta_data_values;
+    int offset = cistem::match_template::COUNT;
 
     const int histogram_number_of_points = cistem::match_template::histogram_number_of_points;
 
@@ -1843,6 +1861,7 @@ void AggregatedTemplateResult::AddResult(float* result_array, long array_size, i
         ZeroFloatArray(collated_data_array, array_size);
         number_of_received_results      = 0;
         total_number_of_angles_searched = 0.0f;
+        disable_flat_fielding           = result_array[cistem::match_template::disable_flat_fielding]; // FIXME: shouldn't we check that these are consistent across all results?
 
         // nasty..
 
@@ -1991,7 +2010,8 @@ void MatchTemplateApp::RescaleMipAndStatisticalArraysByGlobalMeanAndStdDev(Image
                                                                            StatsType*  correlation_pixel_sum,
                                                                            StatsType*  correlation_pixel_sum_of_squares,
                                                                            long*       histogram,
-                                                                           const float n_angles_in_search) {
+                                                                           const float n_angles_in_search,
+                                                                           const bool  disable_flat_fielding) {
 
     double global_ccc_mean    = 0.0;
     double global_ccc_std_dev = 0.0;
@@ -2019,7 +2039,10 @@ void MatchTemplateApp::RescaleMipAndStatisticalArraysByGlobalMeanAndStdDev(Image
                                                                             n_angles_in_search -
                                                                     powf(correlation_pixel_sum[pixel_counter], 2));
 
-            scaled_mip->real_values[pixel_counter] = (mip_image->real_values[pixel_counter] - correlation_pixel_sum[pixel_counter]) / correlation_pixel_sum_of_squares[pixel_counter];
+            if ( disable_flat_fielding )
+                scaled_mip->real_values[pixel_counter] = mip_image->real_values[pixel_counter];
+            else
+                scaled_mip->real_values[pixel_counter] = (mip_image->real_values[pixel_counter] - correlation_pixel_sum[pixel_counter]) / correlation_pixel_sum_of_squares[pixel_counter];
         }
         else {
             scaled_mip->real_values[pixel_counter] = mip_image->real_values[pixel_counter];

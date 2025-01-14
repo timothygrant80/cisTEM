@@ -16,6 +16,7 @@ FastFFT_CUDA_FLAGS=""
 
 # If a dev has pulled in the FastFFT submodule, it will be enabled by default. It may be explicitly disabled with configure options. Check these first.
 use_FastFFT="yes"
+build_FastFFT="no"
 FastFFT_DEFINES=""
 
 # Also introduce synchronizing debug level in FastFFT if it is in place in cisTEM
@@ -36,8 +37,10 @@ AC_ARG_ENABLE(FastFFT, AS_HELP_STRING([--disable-FastFFT],[Do not use the FastFF
     fi
 ], 
 [
-    # Okay, this has not been disabled (explicitly) so let's see if the submodule is in place.
-    AC_CHECK_FILE("$TOPSRCDIR/include/FastFFT/include/FastFFT.h",[use_FastFFT="yes"],[use_FastFFT="no"])
+    # Okay, this has not been disabled (explicitly) so let's see if the library is included prebuilt in the container, or alternatively if a clone of the repo is in place.
+    AC_CHECK_FILE("/opt/FastFFT/lib/FastFFT.o",[use_FastFFT="yes"],
+        AC_CHECK_FILE("$TOPSRCDIR/include/FastFFT/include/FastFFT.h",[build_FastFFT="yes"],[use_FastFFT="no"])
+    )
     if test "x$use_FastFFT" = "xyes"; then
         # using $CISTEM_CONFIG_DIR/$TOPSRCDIR/ is a bit of a jenky way to get an absolute path. I'm doing this
         # because TOPSRCDIR defined by autotools srcdir is generally ../.. so a file in src/core would be okay to include, but 
@@ -51,10 +54,13 @@ AC_ARG_ENABLE(FastFFT, AS_HELP_STRING([--disable-FastFFT],[Do not use the FastFF
         # Generally, you probably shouldn't need to use these through cisTEM, but they do need to be defined.
         # We can't use AC_DEFINE here because the definitions are placed in cistem_config.h which is NOT included in FastFFT      
 
-        # AC_DEFINE_UNQUOTED(FFT_DEBUG_LEVEL, $fft_debug_level, [Define the FFT_DEBUG_LEVEL flag])
-        # AC_DEFINE(FFT_DEBUG_STAGE, [3], [Define the FFT_DEBUG_STAGE flag])
-        FastFFT_DEFINES="$FastFFT_DEFINES -DFFT_DEBUG_LEVEL=$fft_debug_level -DFFT_DEBUG_STAGE=8 -I$TOPSRCDIR/../include/FastFFT/include/cufftdx/include -I$TOPSRCDIR/../include/FastFFT/include/cufftdx/include/cufftdx"
-        FastFFT_CUDA_FLAGS=" --extended-lambda --Wext-lambda-captures-this --expt-relaxed-constexpr"
+        if test "x$build_FastFFT" = "xno" ; then
+            libFastFFT_OBJECTS="/opt/FastFFT/lib/FastFFT.o "
+        else
+            AC_DEFINE(cisTEM_BUILDING_FastFFT, [], [Building the FasFFT library for GPU FFTs where appropriate.])
+            FastFFT_DEFINES="$FastFFT_DEFINES -DFFT_DEBUG_LEVEL=$fft_debug_level -DFFT_DEBUG_STAGE=8 -I$TOPSRCDIR/../include/FastFFT/include/cufftdx/include -I$TOPSRCDIR/../include/FastFFT/include/cufftdx/include/cufftdx"
+            FastFFT_CUDA_FLAGS=" --extended-lambda --Wext-lambda-captures-this --expt-relaxed-constexpr"
+        fi
 
     else
         AC_MSG_NOTICE([Not using the FastFFT Library b/c $TOPSRCDIR/include/FastFFT/include/FastFFT.h was not found.])
@@ -65,7 +71,7 @@ AC_ARG_ENABLE(FastFFT, AS_HELP_STRING([--disable-FastFFT],[Do not use the FastFF
     AC_MSG_NOTICE([Not using the FastFFT Library b/c --with-cuda is not configured.])      
 ])
 
-AM_CONDITIONAL([ENABLE_FASTFFT_AM], [test "x$use_FastFFT" = "xyes"])
+AM_CONDITIONAL([ENABLE_LOCAL_BUILD_OF_FASTFFT_AM], [test "x$build_FastFFT" = "xyes"])
 
 AC_SUBST(FastFFT_CUDA_FLAGS)
 AC_SUBST(FastFFT_CXX_FLAGS)

@@ -1199,6 +1199,8 @@ void DisplayPanel::LoadTrajectory(int wanted_tab_number, wxString wanted_my_traj
         int   lines = current_panel->my_trajectory->number_of_lines;
         float temp_array[2];
 
+        current_panel->trajectory_x.clear( ); 
+        current_panel->trajectory_y.clear( );
         for ( long image_counter = 0; image_counter < lines; image_counter++ ) {
             // my_image.crop( );
             current_panel->my_trajectory->ReadLine(temp_array);

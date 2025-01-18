@@ -3018,7 +3018,7 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
                             for ( int i = 0; i < patch_no; i++ ) {
                                 float x0_org = actual_scale_factor * trajectory_x[index_counter];
                                 float y0_org = actual_scale_factor * trajectory_y[index_counter];
-                                wxPrintf("x0 y0 %f %f", trajectory_x[index_counter], trajectory_y[index_counter]);
+                                // wxPrintf("x0 y0 %f %f", trajectory_x[index_counter], trajectory_y[index_counter]);
                                 dc.DrawCircle(x0_org, y0_org, circle_radius);
 
                                 index_counter++;

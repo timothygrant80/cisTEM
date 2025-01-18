@@ -375,6 +375,19 @@ void DisplayPanel::OnTrajectory(wxCommandEvent& WXUNUSED(event)) {
         return;
     }
 
+    if ( current_panel->use_trajectory )
+        current_panel->use_trajectory = false;
+    else {
+        current_panel->use_trajectory = true;
+    }
+    // else {
+    //     if ( current_panel->use_trajectory )
+    //         current_panel->use_trajectory = false;
+    //     else {
+    //         current_panel->use_trajectory = true;
+    //     }
+    // }
+
     // current_panel->should_refresh = true;
     // current_panel->ReDrawPanel( );
 
@@ -440,6 +453,7 @@ void DisplayPanel::OnTrajectory(wxCommandEvent& WXUNUSED(event)) {
 
     // is our stored bitmap the correct size? if not redraw
     if ( current_panel->use_trajectory ) {
+        wxPrintf("use trajectory should be redraw\n");
         if ( window_x_size != current_panel->panel_bitmap.GetWidth( ) || window_y_size != current_panel->panel_bitmap.GetHeight( ) ) {
             current_panel->ReDrawPanel( );
         }
@@ -477,7 +491,6 @@ void DisplayPanel::OnTrajectory(wxCommandEvent& WXUNUSED(event)) {
                 counter = current_panel->current_location;
 
                 if ( counter <= current_panel->ReturnNumberofImages( ) ) {
-                    // wxPrintf("trajectoryx 0 %f", current_panel->trajectory_x[0]);
                     // wxPrintf("Trajectory size %d", current_panel->trajectory_x.size( ));
                     float scale = 1 * current_panel->actual_scale_factor;
                     // wxPrintf("scale %f", scale);
@@ -510,14 +523,14 @@ void DisplayPanel::OnTrajectory(wxCommandEvent& WXUNUSED(event)) {
         }
     }
     else {
-
         current_panel->ReDrawPanel( ); // this will remove the trajectory when the button is toggled off
     }
-    if ( current_panel->use_trajectory )
-        current_panel->use_trajectory = false;
-    else {
-        current_panel->use_trajectory = true;
-    }
+
+    // if ( current_panel->use_trajectory )
+    //     current_panel->use_trajectory = false;
+    // else {
+    //     current_panel->use_trajectory = true;
+    // }
     // current_panel->should_refresh = true;
     // current_panel->ReDrawPanel( );
     // evt.Skip( );
@@ -1199,7 +1212,7 @@ void DisplayPanel::LoadTrajectory(int wanted_tab_number, wxString wanted_my_traj
         int   lines = current_panel->my_trajectory->number_of_lines;
         float temp_array[2];
 
-        current_panel->trajectory_x.clear( ); 
+        current_panel->trajectory_x.clear( );
         current_panel->trajectory_y.clear( );
         for ( long image_counter = 0; image_counter < lines; image_counter++ ) {
             // my_image.crop( );
@@ -1209,89 +1222,6 @@ void DisplayPanel::LoadTrajectory(int wanted_tab_number, wxString wanted_my_traj
             // wxPrintf("loaded trajectory %f %f\n", temp_array[0], temp_array[1]);
         }
     }
-
-    // if ( ! my_panel->my_file.IsOpen( ) ) {
-    //     wxMessageBox(wxString::Format("Error, Cannot open file (%s)", wanted_filename), wxT("Error"), wxOK | wxICON_INFORMATION, this);
-    //     return;
-    // }
-
-    // // which images are we including..
-
-    // if ( wanted_included_image_numbers == NULL ) {
-    //     for ( long counter = 1; counter <= my_panel->my_file.ReturnNumberOfSlices( ); counter++ ) {
-    //         my_panel->included_image_numbers.Add(counter);
-    //     }
-    // }
-    // else {
-    //     for ( long counter = 0; counter < wanted_included_image_numbers->GetCount( ); counter++ ) {
-    //         MyDebugAssertTrue(wanted_included_image_numbers->Item(counter) > 0 && wanted_included_image_numbers->Item(counter) <= my_panel->my_file.ReturnNumberOfSlices( ), "trying to add image numbers that don't exist");
-    //         my_panel->included_image_numbers.Add(wanted_included_image_numbers->Item(counter));
-    //     }
-    // }
-
-    // // setup the panel attributes...
-
-    // my_panel->filename        = wanted_filename;
-    // my_panel->input_is_a_file = true;
-
-    // /*my_panel->image_is_selected = new bool[my_panel->first_header.number_following + 2];
-
-    // for (int mycounter = 0; mycounter < my_panel->first_header.number_following + 2; mycounter++)
-    // {
-    // 	my_panel->image_is_selected[mycounter] = false;
-    // }*/
-
-    // // add the panel
-
-    // if ( my_panel->panel_image != NULL )
-    //     delete my_panel->panel_image;
-    // my_panel->panel_image = new wxImage(int(my_panel->my_file.ReturnXSize( )), int(my_panel->my_file.ReturnYSize( )));
-    // my_panel->tab_title   = wanted_tab_title;
-
-    // my_panel->desired_scale_factor = current_scale_factor;
-    // if ( my_panel->included_image_numbers.GetCount( ) > current_image_location ) {
-    //     my_panel->current_location = current_image_location;
-    // }
-
-    // if ( (style_flags & NO_NOTEBOOK) == NO_NOTEBOOK ) {
-    // }
-    // else {
-    //     my_notebook->Freeze( );
-    //     my_notebook->AddPage(my_panel, wanted_tab_title, false);
-    //     my_notebook->Thaw( );
-    //     my_notebook->SetSelection(my_notebook->GetPageCount( ) - 1);
-    // }
-
-    // // This was moved here because calling ClearSelection before the panel was added
-    // // resulted in a crash from a debug assert -- the current page was still null
-    // if ( (style_flags & CAN_SELECT_IMAGES) == CAN_SELECT_IMAGES || ReturnCurrentPanel( )->picking_mode == IMAGES_PICK ) {
-    //     my_panel->image_is_selected = new bool[my_panel->my_file.ReturnNumberOfSlices( ) + 1];
-    //     ClearSelection(false);
-    // }
-
-    // // we have switched focus so update toolbar..
-
-    // UpdateToolbar( );
-
-    // // we can directly call the drawing now..
-
-    // Refresh( );
-    // Update( );
-
-    // // if there is only one image, then set single image mode to true by default
-    // if ( is_from_display_program ) {
-    //     if ( my_panel->included_image_numbers.GetCount( ) == 1 ) {
-    //         my_panel->single_image = true;
-    //         my_panel->picking_mode = COORDS_PICK;
-    //     }
-    //     else {
-    //         my_panel->picking_mode = IMAGES_PICK;
-    //     }
-    // }
-
-    // my_panel->ReDrawPanel( );
-    // //notebook->SetFocus();
-    // ChangeFocusToPanel( );
 }
 
 void DisplayPanel::ChangeFileForTabNumber(int wanted_tab_number, wxString wanted_filename, wxString wanted_tab_title, wxArrayLong* wanted_included_image_numbers) {
@@ -1752,7 +1682,7 @@ DisplayNotebookPanel::DisplayNotebookPanel(wxWindow* parent, wxWindowID id, cons
     selected_point_size = 3;
     should_refresh      = false;
     use_fft             = false;
-    use_trajectory      = true;
+    use_trajectory      = false;
 
     pixel_size = 1;
 
@@ -2548,6 +2478,8 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
 
     wxMemoryDC memDC;
     wxMemoryDC dc;
+    // wxMemoryDC paintdc;
+    wxMemoryDC dctrajectory;
     wxPaintDC  paintdc(this);
 
     // we need to know how many images we are going to read in.. first get the current size of the window..
@@ -2574,8 +2506,11 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
         dc.Clear( );
         dc.SelectObject(wxNullBitmap);
 
-        paintdc.SetPen(*wxRED);
-        paintdc.SetBrush(wxBrush(*wxRED, wxTRANSPARENT));
+        float line_width = 2.0f;
+        // paintdc.SetPen(wxPen(*wxRED, line_width));
+        // paintdc.SetPen(red_dashed_pen);
+        // dc.DrawLine(0, 0, 1000, 1000);
+        // paintdc.SetBrush(wxBrush(*wxRED)); //, wxTRANSPARENT));
         // int radius = myroundint(template_matching_marker_radius * actual_scale_factor);
         // if ( radius < 5 )
         //     radius = 5;
@@ -2658,9 +2593,73 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
                             buffer_image.ComputeAmplitudeSpectrumFull2D(&image_memory_buffer[image_counter]);
                             image_memory_buffer[image_counter].ZeroCentralPixel( );
                         }
+
+                        int              vX, vY, vW, vH; // Dimensions of client area in pixels
+                        wxRegionIterator upd(GetUpdateRegion( )); // get the update rect list
+
+                        while ( upd ) {
+                            vX = upd.GetX( );
+                            vY = upd.GetY( );
+                            vW = upd.GetW( );
+                            vH = upd.GetH( );
+
+                            // Repaint this rectangle
+
+                            if ( vX + vW <= panel_bitmap.GetWidth( ) && vY + vH <= panel_bitmap.GetHeight( ) )
+                                paintdc.DrawBitmap(panel_bitmap.GetSubBitmap(wxRect(vX, vY, vW, vH)), vX, vY);
+
+                            upd++;
+                        }
+
+                        // if ( use_trajectory ) {
+                        //     if ( ! suspend_overlays ) {
+                        //         wxPrintf("enter the use trajectory\n");
+
+                        //         float circle_radius = 3.0f;
+                        //         counter             = current_location;
+                        //         paintdc.DrawCircle(0, 0, circle_radius);
+                        //         // dc.SetPen(wxPen(*wxRED, line_width));
+                        //         wxPrintf("here?\n");
+                        //         // for ( int y = 0; y < current_panel->images_in_y; y++ ) {
+                        //         //     for ( int x = 0; x < current_panel->images_in_x; x++ ) {
+                        //         Image buffer_image;
+                        //         buffer_image.CopyFrom(&image_memory_buffer[image_counter]);
+                        //         // if ( counter <= ReturnNumberofImages( ) ) {
+                        //         // wxPrintf("Trajectory size %d", current_panel->trajectory_x.size( ));
+                        //         wxPrintf("actual_scale_factor %f\n", actual_scale_factor);
+                        //         float scale = 1 * actual_scale_factor;
+                        //         wxPrintf("scale %f\n", scale);
+                        //         // wxPrintf("actual scale factor %f", current_panel->actual_scale_factor);
+                        //         // dc.DrawLine(0, 0, scale * current_panel->trajectory_x[0], scale * current_panel->trajectory_y[0]);
+                        //         int patch_no      = trajectory_x[0];
+                        //         int frame_no      = trajectory_y[0];
+                        //         int index_counter = 1;
+                        //         for ( int i = 0; i < patch_no; i++ ) {
+                        //             float x0 = actual_scale_factor * trajectory_x[index_counter];
+                        //             float y0 = actual_scale_factor * trajectory_y[index_counter];
+                        //             // wxPrintf("x0 y0 %f %f", current_panel->trajectory_x[index_counter], current_panel->trajectory_y[index_counter]);
+                        //             // dc.SetPen(wxPen(*wxBLACK, line_width)); //, wxSOLID));
+                        //             paintdc.DrawCircle(x0, y0, circle_radius);
+                        //             // dc.SetPen(wxPen(*wxRED, line_width)); //, wxSOLID));
+                        //             // dc.FloodFill(x0, y0, *wxRED);
+                        //             // dc.DrawPoint(x0, y0);
+                        //             index_counter++;
+                        //             for ( int j = 0; j < frame_no; j++ ) {
+                        //                 float x1 = -scale * trajectory_x[index_counter] + x0;
+                        //                 float y1 = -scale * trajectory_y[index_counter] + y0;
+                        //                 paintdc.DrawLine(x0, y0, x1, y1);
+                        //                 index_counter++;
+                        //                 x0 = x1;
+                        //                 y0 = y1;
+                        //             }
+                        //         }
+                        //         // }
+                        //     }
+                        // }
                         // if ( use_trajectory ) {
                         //     wxPrintf("enter the use trajectory\n");
                         //     paintdc.DrawCircle(10, 10, 5);
+
                         // }
                     }
                 }
@@ -2701,10 +2700,6 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
                             buffer_image.ComputeAmplitudeSpectrumFull2D(&image_memory_buffer[image_counter]);
                             image_memory_buffer[image_counter].ZeroCentralPixel( );
                         }
-                        // if ( use_trajectory ) {
-                        //     wxPrintf("enter the use trajectory\n");
-                        //     paintdc.DrawCircle(10, 10, 5);
-                        // }
                     }
                 }
 
@@ -3002,6 +2997,41 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
 
                     dc.SelectObject(panel_bitmap);
                     dc.DrawBitmap(*DrawBitmap, big_x * scaled_x_size, big_y * scaled_y_size);
+
+                    // This is the place where the following section of code will plot trajectory on the panel. finally find it, and have no idea why so far.
+                    if ( use_trajectory ) {
+                        if ( ! suspend_overlays ) {
+                            wxPrintf("enter the use trajectory refresh\n");
+
+                            float circle_radius = 3.0f;
+                            counter             = current_location;
+                            dc.SetPen(wxPen(*wxRED, line_width));
+                            wxPrintf("pen set?\n");
+                            wxPrintf("here refrehs?\n");
+                            float scale = 1 * actual_scale_factor;
+                            wxPrintf("scale %f\n", scale);
+                            int patch_no      = trajectory_x[0];
+                            int frame_no      = trajectory_y[0];
+                            int index_counter = 1;
+                            for ( int i = 0; i < patch_no; i++ ) {
+                                float x0 = actual_scale_factor * trajectory_x[index_counter];
+                                float y0 = actual_scale_factor * trajectory_y[index_counter];
+                                // wxPrintf("x0 y0 %f %f", trajectory_x[index_counter], trajectory_y[index_counter]);
+                                dc.DrawCircle(x0, y0, circle_radius);
+
+                                index_counter++;
+                                for ( int j = 0; j < frame_no; j++ ) {
+                                    float x1 = -scale * trajectory_x[index_counter] + x0;
+                                    float y1 = -scale * trajectory_y[index_counter] + y0;
+                                    dc.DrawLine(x0, y0, x1, y1);
+                                    index_counter++;
+                                    x0 = x1;
+                                    y0 = y1;
+                                }
+                            }
+                            // }
+                        }
+                    }
                     dc.SelectObject(wxNullBitmap);
 
                     // invalidate only the freshly drawn section, the paint event will

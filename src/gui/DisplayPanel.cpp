@@ -492,7 +492,7 @@ void DisplayPanel::OnTrajectory(wxCommandEvent& WXUNUSED(event)) {
 
                 if ( counter <= current_panel->ReturnNumberofImages( ) ) {
                     // wxPrintf("Trajectory size %d", current_panel->trajectory_x.size( ));
-                    float scale = 1 * current_panel->actual_scale_factor;
+                    float scale = 30 * current_panel->actual_scale_factor;
                     // wxPrintf("scale %f", scale);
                     // wxPrintf("actual scale factor %f", current_panel->actual_scale_factor);
                     // dc.DrawLine(0, 0, scale * current_panel->trajectory_x[0], scale * current_panel->trajectory_y[0]);
@@ -500,18 +500,20 @@ void DisplayPanel::OnTrajectory(wxCommandEvent& WXUNUSED(event)) {
                     int frame_no      = current_panel->trajectory_y[0];
                     int index_counter = 1;
                     for ( int i = 0; i < patch_no; i++ ) {
-                        float x0 = current_panel->actual_scale_factor * current_panel->trajectory_x[index_counter];
-                        float y0 = current_panel->actual_scale_factor * current_panel->trajectory_y[index_counter];
+                        float x0_org = current_panel->actual_scale_factor * current_panel->trajectory_x[index_counter];
+                        float y0_org = current_panel->actual_scale_factor * current_panel->trajectory_y[index_counter];
                         // wxPrintf("x0 y0 %f %f", current_panel->trajectory_x[index_counter], current_panel->trajectory_y[index_counter]);
                         // dc.SetPen(wxPen(*wxBLACK, line_width)); //, wxSOLID));
-                        dc.DrawCircle(x0, y0, circle_radius);
+                        dc.DrawCircle(x0_org, y0_org, circle_radius);
                         // dc.SetPen(wxPen(*wxRED, line_width)); //, wxSOLID));
                         // dc.FloodFill(x0, y0, *wxRED);
                         // dc.DrawPoint(x0, y0);
                         index_counter++;
+                        float x0 = x0_org;
+                        float y0 = y0_org;
                         for ( int j = 0; j < frame_no; j++ ) {
-                            float x1 = -scale * current_panel->trajectory_x[index_counter] + x0;
-                            float y1 = -scale * current_panel->trajectory_y[index_counter] + y0;
+                            float x1 = -scale * current_panel->trajectory_x[index_counter] + x0_org;
+                            float y1 = -scale * current_panel->trajectory_y[index_counter] + y0_org;
                             dc.DrawLine(x0, y0, x1, y1);
                             index_counter++;
                             x0 = x1;
@@ -3006,23 +3008,25 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
                             float circle_radius = 3.0f;
                             counter             = current_location;
                             dc.SetPen(wxPen(*wxRED, line_width));
-                            wxPrintf("pen set?\n");
-                            wxPrintf("here refrehs?\n");
-                            float scale = 1 * actual_scale_factor;
-                            wxPrintf("scale %f\n", scale);
+                            // wxPrintf("pen set?\n");
+                            // wxPrintf("here refrehs?\n");
+                            float scale = 30 * actual_scale_factor;
+                            // wxPrintf("scale %f\n", scale);
                             int patch_no      = trajectory_x[0];
                             int frame_no      = trajectory_y[0];
                             int index_counter = 1;
                             for ( int i = 0; i < patch_no; i++ ) {
-                                float x0 = actual_scale_factor * trajectory_x[index_counter];
-                                float y0 = actual_scale_factor * trajectory_y[index_counter];
-                                // wxPrintf("x0 y0 %f %f", trajectory_x[index_counter], trajectory_y[index_counter]);
-                                dc.DrawCircle(x0, y0, circle_radius);
+                                float x0_org = actual_scale_factor * trajectory_x[index_counter];
+                                float y0_org = actual_scale_factor * trajectory_y[index_counter];
+                                wxPrintf("x0 y0 %f %f", trajectory_x[index_counter], trajectory_y[index_counter]);
+                                dc.DrawCircle(x0_org, y0_org, circle_radius);
 
                                 index_counter++;
+                                float x0 = x0_org;
+                                float y0 = y0_org;
                                 for ( int j = 0; j < frame_no; j++ ) {
-                                    float x1 = -scale * trajectory_x[index_counter] + x0;
-                                    float y1 = -scale * trajectory_y[index_counter] + y0;
+                                    float x1 = -scale * trajectory_x[index_counter] + x0_org;
+                                    float y1 = -scale * trajectory_y[index_counter] + y0_org;
                                     dc.DrawLine(x0, y0, x1, y1);
                                     index_counter++;
                                     x0 = x1;

@@ -370,7 +370,7 @@ void DisplayPanel::OnFFT(wxCommandEvent& WXUNUSED(event)) {
 
 void DisplayPanel::OnTrajectory(wxCommandEvent& WXUNUSED(event)) {
     DisplayNotebookPanel* current_panel = ReturnCurrentPanel( );
-    if ( current_panel->patch_track == false ) {
+    if ( current_panel->patch_track_on == false ) {
         wxPrintf("current result is not a patch tracking result\n");
         return;
     }
@@ -489,7 +489,7 @@ void DisplayPanel::OnTrajectory(wxCommandEvent& WXUNUSED(event)) {
                 // dc.SetBrush(wxBrush(wxColor(50, 50, 200, 60)));
 
                 counter = current_panel->current_location;
-
+                wxPrintf("plot trajec\n");
                 if ( counter <= current_panel->ReturnNumberofImages( ) ) {
                     // wxPrintf("Trajectory size %d", current_panel->trajectory_x.size( ));
                     float scale = 30 * current_panel->actual_scale_factor;
@@ -527,6 +527,7 @@ void DisplayPanel::OnTrajectory(wxCommandEvent& WXUNUSED(event)) {
     else {
         current_panel->ReDrawPanel( ); // this will remove the trajectory when the button is toggled off
     }
+    current_panel->should_refresh = true;
 
     // if ( current_panel->use_trajectory )
     //     current_panel->use_trajectory = false;
@@ -1186,8 +1187,9 @@ void DisplayPanel::LoadTrajectory(int wanted_tab_number, wxString wanted_my_traj
 
     wxPrintf("done assign patch track\n");
     if ( (style_flags & NO_NOTEBOOK) == NO_NOTEBOOK ) {
-        current_panel              = no_notebook_panel;
-        current_panel->patch_track = true;
+        current_panel = no_notebook_panel;
+        wxPrintf("no notebook panel setting patch track\n");
+        current_panel->patch_track_on = true;
     }
     else {
 
@@ -1204,8 +1206,9 @@ void DisplayPanel::LoadTrajectory(int wanted_tab_number, wxString wanted_my_traj
             }
         }
 
-        current_panel              = (DisplayNotebookPanel*)my_notebook->GetPage(wanted_tab_number);
-        current_panel->patch_track = true;
+        current_panel = (DisplayNotebookPanel*)my_notebook->GetPage(wanted_tab_number);
+        wxPrintf("current panel setting patch track\n");
+        current_panel->patch_track_on = true;
         // }
 
         // current_panel->my_trajectory.Open(wanted_my_trajectory_file.ToStdString( ), OPEN_TO_READ, 2);
@@ -1224,6 +1227,7 @@ void DisplayPanel::LoadTrajectory(int wanted_tab_number, wxString wanted_my_traj
             // wxPrintf("loaded trajectory %f %f\n", temp_array[0], temp_array[1]);
         }
     }
+    current_panel->ReDrawPanel( );
 }
 
 void DisplayPanel::ChangeFileForTabNumber(int wanted_tab_number, wxString wanted_filename, wxString wanted_tab_title, wxArrayLong* wanted_included_image_numbers) {
@@ -3001,7 +3005,8 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
                     dc.DrawBitmap(*DrawBitmap, big_x * scaled_x_size, big_y * scaled_y_size);
 
                     // This is the place where the following section of code will plot trajectory on the panel. finally find it, and have no idea why so far.
-                    if ( use_trajectory ) {
+                    // wxPrintf(" in display panel patch_track_on is %i\n", patch_track_on);
+                    if ( use_trajectory && patch_track_on ) {
                         if ( ! suspend_overlays ) {
                             wxPrintf("enter the use trajectory refresh\n");
 

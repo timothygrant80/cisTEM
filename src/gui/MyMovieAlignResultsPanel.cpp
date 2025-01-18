@@ -335,34 +335,88 @@ void MyMovieAlignResultsPanel::DrawCurveAndFillDetails(int row, int column) {
     trajectory_file = wxString::Format("%s%s", output_path, "/patch_shift.txt");
     wxPrintf("Trajectory file = %s\n", trajectory_file);
     wxPrintf("patch_track is %i\n", patch_track);
+    // if ( patch_track == 1 ) {
+    //     wxPrintf("before loading trajectory patch_track is %i\n", patch_track);
+    //     ResultPanel->ImageDisplayPanel->LoadTrajectory(0, trajectory_file);
+    //     wxPrintf("Loading trajectory\n");
+    //     wxPrintf("loaded Trajectory file = %s\n", trajectory_file);
+    // }
+    // else {
+    //     wxPrintf("truning off patch track trajectory\n");
+    //     ResultPanel->ImageDisplayPanel->ReturnCurrentPanel( )->patch_track_on = false;
+    // }
     if ( DoesFileExist(small_image_filename) == true ) {
         // ResultPanel->ImageDisplayPanel->ChangeFile(small_image_filename, "");
         if ( ResultPanel->ImageDisplayPanel->my_notebook->GetPageCount( ) == 0 ) {
             ResultPanel->ImageDisplayPanel->OpenFile(small_image_filename, "Image");
+            // if ( patch_track == 1 ) {
+            //     ResultPanel->ImageDisplayPanel->LoadTrajectory(0, trajectory_file);
+            // }
+            // wxPrintf("1\n");
             if ( patch_track == 1 ) {
+                wxPrintf("before loading trajectory patch_track is %i\n", patch_track);
                 ResultPanel->ImageDisplayPanel->LoadTrajectory(0, trajectory_file);
+                wxPrintf("Loading trajectory\n");
+                wxPrintf("loaded Trajectory file = %s\n", trajectory_file);
+            }
+            else {
+                wxPrintf("truning off patch track trajectory\n");
+                ResultPanel->ImageDisplayPanel->ReturnCurrentPanel( )->patch_track_on = false;
             }
         }
         else {
-            ResultPanel->ImageDisplayPanel->ChangeFileForTabNumber(0, small_image_filename, "Image");
+            // wxPrintf("2\n");
             if ( patch_track == 1 ) {
+                wxPrintf("before loading trajectory patch_track is %i\n", patch_track);
                 ResultPanel->ImageDisplayPanel->LoadTrajectory(0, trajectory_file);
+                wxPrintf("Loading trajectory\n");
+                wxPrintf("loaded Trajectory file = %s\n", trajectory_file);
             }
+            else {
+                wxPrintf("truning off patch track trajectory\n");
+                ResultPanel->ImageDisplayPanel->ReturnCurrentPanel( )->patch_track_on = false;
+            }
+            ResultPanel->ImageDisplayPanel->ChangeFileForTabNumber(0, small_image_filename, "Image");
+            // if ( patch_track == 1 ) {
+            //     ResultPanel->ImageDisplayPanel->LoadTrajectory(0, trajectory_file);
+            // }
         }
     }
     else if ( DoesFileExist(output_file) == true ) {
         // ResultPanel->ImageDisplayPanel->ChangeFile(output_file, "");
         if ( ResultPanel->ImageDisplayPanel->my_notebook->GetPageCount( ) == 0 ) {
             ResultPanel->ImageDisplayPanel->OpenFile(output_file, "Image");
+            // if ( patch_track == 1 ) {
+            //     ResultPanel->ImageDisplayPanel->LoadTrajectory(0, trajectory_file);
+            // }
+            wxPrintf("3\n");
             if ( patch_track == 1 ) {
+                wxPrintf("before loading trajectory patch_track is %i\n", patch_track);
                 ResultPanel->ImageDisplayPanel->LoadTrajectory(0, trajectory_file);
+                wxPrintf("Loading trajectory\n");
+                wxPrintf("loaded Trajectory file = %s\n", trajectory_file);
+            }
+            else {
+                wxPrintf("truning off patch track trajectory\n");
+                ResultPanel->ImageDisplayPanel->ReturnCurrentPanel( )->patch_track_on = false;
             }
         }
         else {
-            ResultPanel->ImageDisplayPanel->ChangeFileForTabNumber(0, output_file, "Image");
+            // wxPrintf("4\n");
             if ( patch_track == 1 ) {
+                wxPrintf("before loading trajectory patch_track is %i\n", patch_track);
                 ResultPanel->ImageDisplayPanel->LoadTrajectory(0, trajectory_file);
+                wxPrintf("Loading trajectory\n");
+                wxPrintf("loaded Trajectory file = %s\n", trajectory_file);
             }
+            else {
+                wxPrintf("truning off patch track trajectory\n");
+                ResultPanel->ImageDisplayPanel->ReturnCurrentPanel( )->patch_track_on = false;
+            }
+            ResultPanel->ImageDisplayPanel->ChangeFileForTabNumber(0, output_file, "Image");
+            // if ( patch_track == 1 ) {
+            //     ResultPanel->ImageDisplayPanel->LoadTrajectory(0, trajectory_file);
+            // }
         }
         // ResultPanel->ImageDisplayPanel->ChangeFileForTabNumber(0, output_file, "");
     }

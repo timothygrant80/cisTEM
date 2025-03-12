@@ -25,8 +25,6 @@ constexpr int   MAX_3D_PADDING                         = 196;
  */
 class TemplateMatchingDataSizer {
 
-
-
     // This is a non-data owning class, but we want references to the underlying image/template data
     int4 image_size;
     int4 image_pre_scaling_size;
@@ -111,14 +109,16 @@ class TemplateMatchingDataSizer {
     // and so only the input image needs attention at the outset. Following the search, all statistical images
     // will also need to be resized.
     void ResizeImage_preSearch(Image& input_image, const bool allow_rotation_for_speed);
-    void ResizeImage_postSearch(Image& max_intensity_projection,
-                                Image& best_psi,
-                                Image& best_phi,
-                                Image& best_theta,
-                                Image& best_defocus,
-                                Image& best_pixel_size,
-                                Image& correlation_pixel_sum_image,
-                                Image& correlation_pixel_sum_of_squares_image);
+    void ResizeImage_postSearch(Image&     max_intensity_projection,
+                                Image&     best_psi,
+                                Image&     best_phi,
+                                Image&     best_theta,
+                                Image&     best_defocus,
+                                Image&     best_pixel_size,
+                                Image&     correlation_pixel_sum_image,
+                                Image&     correlation_pixel_sum_of_squares_image,
+                                const bool skip_result_rescaling,
+                                const int  n_threads);
 
     inline void PrintImageSizes( ) {
         if ( ReturnThreadNumberOfCurrentThread( ) == 0 ) {

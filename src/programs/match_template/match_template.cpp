@@ -1,4 +1,5 @@
 #include <cistem_config.h>
+#include <filesystem>
 
 #ifdef ENABLEGPU
 #include "../../gpu/gpu_core_headers.h"
@@ -112,6 +113,9 @@ void MatchTemplateApp::ProgramSpecificInit( ) {
 void MatchTemplateApp::AddCommandLineOptions( ) {
     command_line_parser.AddLongSwitch("disable-gpu-prj", "Disable projection using the gpu. Default false");
     command_line_parser.AddLongSwitch("disable-flat-fielding", "Disable flat fielding. Default false");
+    command_line_parser.AddOption("", "n-expected-false-positives", "average number of false positives per image, (defaults to 1)", wxCMD_LINE_VAL_DOUBLE);
+    command_line_parser.AddLongSwitch("ignore-defocus-for-threshold", "assume the defocus planes are not independent locs for threshold calc, (defaults false)");
+    command_line_parser.AddLongSwitch("skip-result-rescaling", "Skip the rescaling of the results their original size, (defaults false)");
 
 #ifdef TEST_LOCAL_NORMALIZATION
     command_line_parser.AddOption("", "healpix-file", "Healpix file for the input images", wxCMD_LINE_VAL_STRING);
@@ -279,9 +283,20 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     double temp_double;
     long   temp_long;
-    bool   use_gpu_prj           = true;
-    bool   disable_flat_fielding = false;
+    bool   use_gpu_prj                  = true;
+    bool   disable_flat_fielding        = false;
+    bool   ignore_defocus_for_threshold = false;
+    bool   skip_result_rescaling{ };
+    double n_expected_false_positives{1.0};
 
+    if ( command_line_parser.FoundSwitch("skip-result-rescaling") ) {
+        SendInfo("Skipping result rescaling\n");
+        skip_result_rescaling = true;
+    }
+    if ( command_line_parser.FoundSwitch("ignore-defocus-for-threshold") ) {
+        SendInfo("Using one defocus plane for threshold calc\n");
+        ignore_defocus_for_threshold = true;
+    }
     if ( command_line_parser.FoundSwitch("disable-flat-fielding") ) {
         SendInfo("Disabling flat fielding\n");
         disable_flat_fielding = true;
@@ -294,6 +309,11 @@ bool MatchTemplateApp::DoCalculation( ) {
     float L2_persistance_fraction{ };
     if ( command_line_parser.Found("L2-peristance-fraction", &temp_double) ) {
         L2_persistance_fraction = float(temp_double);
+    }
+
+    if ( command_line_parser.Found("n-expected-false-positives", &temp_double) ) {
+        SendInfo("Using n expected false positives: " + wxString::Format("%f", temp_double) + "\n");
+        n_expected_false_positives = temp_double;
     }
     // This allows an override for the TEST_LOCAL_NORMALIZATION
     bool allow_rotation_for_speed{true};
@@ -415,23 +435,18 @@ bool MatchTemplateApp::DoCalculation( ) {
     float  variance;
     double temp_double_array[5];
 
-    int  number_of_rotations;
-    long total_correlation_positions;
-    long current_correlation_position;
-    long total_correlation_positions_per_thread;
-    long pixel_counter;
+    int   number_of_rotations;
+    float fraction_of_search_positions_that_are_independent{1.f};
+    long  current_correlation_position;
+    long  number_of_search_positions{ };
+    long  number_of_search_positions_per_thread{ };
+    long  pixel_counter;
 
     int current_search_position;
-    int current_x;
-    int current_y;
-
-    int defocus_i;
-    int size_i;
 
     int i;
 
 #ifdef TEST_LOCAL_NORMALIZATION
-    int             number_of_search_positions = 0;
     NumericTextFile healpix_binning;
 #endif
 
@@ -501,10 +516,6 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     if ( padding != 1.0f ) {
         input_reconstruction.Resize(input_reconstruction.logical_x_dimension * padding, input_reconstruction.logical_y_dimension * padding, input_reconstruction.logical_z_dimension * padding, input_reconstruction.ReturnAverageOfRealValuesOnEdges( ));
-    }
-
-    if ( pixel_size_search_range > 0.0f && data_sizer.IsResamplingNeeded( ) ) {
-        SendError("Pixel size search range is not currently supported with resampling.");
     }
 
     profile_timing.start("Allocate and zero arrays");
@@ -667,7 +678,6 @@ bool MatchTemplateApp::DoCalculation( ) {
     profile_timing.lap("PreProcessResizedInputImage");
     // count total searches (lazy)
 
-    total_correlation_positions  = 0;
     current_correlation_position = 0;
 
     // if running locally, search over all of them
@@ -682,7 +692,7 @@ bool MatchTemplateApp::DoCalculation( ) {
         //loop over each rotation angle
 
         for ( current_psi = psi_start; current_psi <= psi_max; current_psi += psi_step ) {
-            total_correlation_positions++;
+            number_of_search_positions++;
         }
     }
 
@@ -696,8 +706,13 @@ bool MatchTemplateApp::DoCalculation( ) {
         pixel_size_step         = 0.02f;
     }
 
-    total_correlation_positions *= (2 * myroundint(float(defocus_search_range) / float(defocus_step)) + 1);
-    total_correlation_positions_per_thread = total_correlation_positions;
+    float n_defocus_steps = (2.f * myroundint(float(defocus_search_range) / float(defocus_step)) + 1.f);
+    if ( ignore_defocus_for_threshold ) {
+        fraction_of_search_positions_that_are_independent /= n_defocus_steps;
+    }
+
+    number_of_search_positions *= n_defocus_steps;
+    number_of_search_positions_per_thread = number_of_search_positions;
 
     number_of_rotations = 0;
 
@@ -712,22 +727,20 @@ bool MatchTemplateApp::DoCalculation( ) {
     wxPrintf("\n\tFor image id %i\n", image_number_for_gui);
     wxPrintf("Searching %i positions on the Euler sphere (first-last: %i-%i)\n", last_search_position - first_search_position, first_search_position, last_search_position);
     wxPrintf("Searching %i rotations per position.\n", number_of_rotations);
-    wxPrintf("There are %li correlation positions total.\n\n", total_correlation_positions);
+    wxPrintf("There are %li correlation positions total.\n\n", number_of_search_positions);
 
     wxPrintf("Performing Search...\n\n");
-
-    //    wxPrintf("Searching %i - %i of %i total positions\n", first_search_position, last_search_position, global_euler_search.number_of_search_positions);
-    //    wxPrintf("psi_start = %f, psi_max = %f, psi_step = %f\n", psi_start, psi_max, psi_step);
 
     wxDateTime overall_start;
     wxDateTime overall_finish;
     overall_start = wxDateTime::Now( );
 
     // These vars are only needed in the GPU code, but also need to be set out here to compile.
-    bool first_gpu_loop = true;
-    int  nThreads       = 2;
-    int  nGPUs          = 1;
-    int  nJobs          = last_search_position - first_search_position + 1;
+    std::vector<bool> first_gpu_loop(max_threads, true);
+
+    int nThreads = 2;
+    int nGPUs    = 1;
+    int nJobs    = last_search_position - first_search_position + 1;
     if ( use_gpu && max_threads > nJobs ) {
         SendInfo(wxString::Format("\n\tWarning, you request more threads (%d) than there are search positions (%d)\n", max_threads, nJobs));
         max_threads = nJobs;
@@ -763,6 +776,11 @@ bool MatchTemplateApp::DoCalculation( ) {
 
         d_input_image->BackwardFFT( );
 
+        // We will have done an "extra" round trip iFFT/FFT her since the input image was originally normalized to STD 1.0, so re-normalize by 1/n
+        // In TemplateMatchingCore.cu, we normalize the whitened reference in real space, so we also "take off" sqrt(N_template) here, so that on
+        // FwdFFT the variance is still 1 under the footprint of the tempalte. A final accounting for the invFFT is applied (1/sqrt(N_image)) during the invFFT.
+        const float round_trip_scale = 1.f / d_input_image->number_of_real_space_pixels / sqrtf(float(current_projection.number_of_real_space_pixels));
+
         FastFFT::FourierTransformer<float, float, float2, 2> FT;
         FT.SetForwardFFTPlan(input_image.logical_x_dimension,
                              input_image.logical_y_dimension,
@@ -783,7 +801,7 @@ bool MatchTemplateApp::DoCalculation( ) {
 
         // We've done a round trip iFFT/FFT since the input image was normalized to STD 1.0, so re-normalize by 1/n
         d_input_image->is_in_real_space = false;
-        d_input_image->MultiplyByConstant(1.f / d_input_image->number_of_real_space_pixels / sqrtf(float(current_projection.number_of_real_space_pixels)));
+        d_input_image->MultiplyByConstant(round_trip_scale);
     }
 #endif
 
@@ -793,7 +811,7 @@ bool MatchTemplateApp::DoCalculation( ) {
 #endif
 
     if ( use_gpu ) {
-        total_correlation_positions_per_thread = total_correlation_positions / max_threads;
+        number_of_search_positions_per_thread = number_of_search_positions / max_threads;
 
 #ifdef ENABLEGPU
         profile_timing.start("Init GPU");
@@ -807,18 +825,21 @@ bool MatchTemplateApp::DoCalculation( ) {
     }
 
     if ( is_running_locally == true ) {
-        my_progress = new ProgressBar(total_correlation_positions_per_thread);
+        my_progress = new ProgressBar(number_of_search_positions_per_thread);
     }
 
-    for ( size_i = -myroundint(float(pixel_size_search_range) / float(pixel_size_step)); size_i <= myroundint(float(pixel_size_search_range) / float(pixel_size_step)); size_i++ ) {
+    for ( int size_i = -myroundint(float(pixel_size_search_range) / float(pixel_size_step)); size_i <= myroundint(float(pixel_size_search_range) / float(pixel_size_step)); size_i++ ) {
         profile_timing.start("ChangePixelSize");
         // Manually set this so that if we do loop over the pixel size, it doesn't create any problems with the gpu branch
         template_reconstruction.is_fft_centered_in_box = false;
+
         input_reconstruction.ChangePixelSize(&template_reconstruction, (data_sizer.GetSearchPixelSize( ) + float(size_i) * pixel_size_step) / data_sizer.GetSearchPixelSize( ), 0.001f, true);
         //    template_reconstruction.ForwardFFT();
+        profile_timing.lap("ChangePixelSize");
+        profile_timing.start("SwapRealSpaceQuadrants");
         template_reconstruction.ZeroCentralPixel( );
         template_reconstruction.SwapRealSpaceQuadrants( );
-        profile_timing.lap("ChangePixelSize");
+        profile_timing.lap("SwapRealSpaceQuadrants");
 
         if ( use_gpu ) {
 #ifdef ENABLEGPU
@@ -847,12 +868,19 @@ bool MatchTemplateApp::DoCalculation( ) {
 
             data_sizer.whitening_filter_ptr->MakeThreadSafeForNThreads(max_threads);
             size_t L2_window_size;
-#pragma omp parallel num_threads(max_threads) shared(L2_window_size)
+            // note that we need the firstprivate so the shared ptr is intialized the first time it is encountered
+#pragma omp parallel num_threads(max_threads) default(none) shared(L2_window_size, first_gpu_loop, GPU, data_sizer, first_search_position, incPos, maxPos, max_threads,                          \
+                                                                   d_input_image, angles, my_progress, template_reconstruction, use_fast_fft, projection_filter,                                 \
+                                                                   min_counter_val, profile_timing, current_projection, psi_start, psi_step, psi_max,                                            \
+                                                                   global_euler_search, number_of_search_positions, number_of_search_positions_per_thread, use_gpu_prj,                          \
+                                                                   data_sizer, best_psi, best_theta, best_phi, best_defocus, best_pixel_size,                                                    \
+                                                                   correlation_pixel_sum, correlation_pixel_sum_image, correlation_pixel_sum_of_squares, correlation_pixel_sum_of_squares_image, \
+                                                                   actual_number_of_angles_searched, defocus_step) firstprivate(template_reconstruction_gpu, L2_persistance_fraction, current_correlation_position)
             {
                 int tIDX = ReturnThreadNumberOfCurrentThread( );
                 // gpuDev.SetGpu( );
 
-                if ( first_gpu_loop ) {
+                if ( first_gpu_loop.at(tIDX) ) {
 
 #ifdef USE_LERP_NOT_FOURIER_RESIZING
                     GPU[tIDX].use_lerp_for_resizing = true;
@@ -878,7 +906,7 @@ bool MatchTemplateApp::DoCalculation( ) {
                                    t_first_search_position,
                                    t_last_search_position,
                                    my_progress,
-                                   total_correlation_positions_per_thread,
+                                   number_of_search_positions_per_thread,
                                    is_running_locally,
                                    use_fast_fft,
                                    use_gpu_prj);
@@ -891,7 +919,7 @@ bool MatchTemplateApp::DoCalculation( ) {
                     {
                         wxPrintf("Staring TemplateMatchingCore object %d to work on position range %d-%d\n", tIDX, t_first_search_position, t_last_search_position);
                     }
-                    first_gpu_loop = false;
+                    first_gpu_loop.at(tIDX) = false;
 
                     if ( tIDX == 0 )
                         L2_window_size = GPU[tIDX].SetL2CachePersisting(L2_persistance_fraction);
@@ -909,7 +937,7 @@ bool MatchTemplateApp::DoCalculation( ) {
 #endif
         }
 
-        for ( defocus_i = -myroundint(float(defocus_search_range) / float(defocus_step)); defocus_i <= myroundint(float(defocus_search_range) / float(defocus_step)); defocus_i++ ) {
+        for ( int defocus_i = -myroundint(float(defocus_search_range) / float(defocus_step)); defocus_i <= myroundint(float(defocus_search_range) / float(defocus_step)); defocus_i++ ) {
 
             profile_timing.start("Ctf and whitening filter");
             // make the projection filter, which will be CTF * whitening filter
@@ -931,7 +959,11 @@ bool MatchTemplateApp::DoCalculation( ) {
                 if ( use_gpu_prj )
                     projection_filter.SwapFourierSpaceQuadrants(false, true);
 
-#pragma omp parallel num_threads(max_threads)
+#pragma omp parallel num_threads(max_threads) default(none) shared(min_counter_val, threshold_val, data_sizer, best_psi, best_theta, best_phi, best_defocus, best_pixel_size, max_intensity_projection,                            \
+                                                                   correlation_pixel_sum, correlation_pixel_sum_image, correlation_pixel_sum_of_squares, correlation_pixel_sum_of_squares_image, actual_number_of_angles_searched, \
+                                                                   profile_timing, GPU, projection_filter, current_projection, angles, global_euler_search, number_of_search_positions_per_thread, use_gpu_prj,                    \
+                                                                   defocus_i, defocus_step, size_i, pixel_size_step, histogram_data) private(current_correlation_position)
+
                 {
                     int tIDX = ReturnThreadNumberOfCurrentThread( );
                     // gpuDev.SetGpu( );
@@ -956,8 +988,8 @@ bool MatchTemplateApp::DoCalculation( ) {
                         Image sumSq = GPU[tIDX].d_sumSq2.CopyDeviceToNewHost(true, false);
 
                         // Note: even if we have ignored some invalid boundary values, copy over everything here
-                        for ( current_y = data_sizer.GetPrePaddingY( ); current_y < data_sizer.GetPrePaddingY( ) + data_sizer.GetRoiY( ); current_y++ ) {
-                            for ( current_x = data_sizer.GetPrePaddingX( ); current_x < data_sizer.GetPrePaddingX( ) + data_sizer.GetRoiX( ); current_x++ ) {
+                        for ( int current_y = data_sizer.GetPrePaddingY( ); current_y < data_sizer.GetPrePaddingY( ) + data_sizer.GetRoiY( ); current_y++ ) {
+                            for ( int current_x = data_sizer.GetPrePaddingX( ); current_x < data_sizer.GetPrePaddingX( ) + data_sizer.GetRoiX( ); current_x++ ) {
                                 // first mip
                                 long address = max_intensity_projection.ReturnReal1DAddressFromPhysicalCoord(current_x, current_y, 0);
 
@@ -979,157 +1011,161 @@ bool MatchTemplateApp::DoCalculation( ) {
                         GPU[tIDX].my_dist->CopyToHostAndAdd(histogram_data);
 
                         //                    current_correlation_position += GPU[tIDX].total_number_of_cccs_calculated;
-                        actual_number_of_angles_searched += GPU[tIDX].total_number_of_cccs_calculated;
+                        actual_number_of_angles_searched += float(GPU[tIDX].total_number_of_cccs_calculated);
                         profile_timing.lap("Transfer data back to host");
                     } // end of omp critical block
                 } // end of parallel block
 
-                continue;
-
 #endif
             }
-            profile_timing.start("RunInnerLoop cpu");
-            for ( current_search_position = first_search_position; current_search_position <= last_search_position; current_search_position++ ) {
-                //loop over each rotation angle
+            else {
+                profile_timing.start("RunInnerLoop cpu");
+                for ( current_search_position = first_search_position; current_search_position <= last_search_position; current_search_position++ ) {
+                    //loop over each rotation angle
 
-                //current_rotation = 0;
-                for ( current_psi = psi_start; current_psi <= psi_max; current_psi += psi_step ) {
+                    //current_rotation = 0;
+                    for ( current_psi = psi_start; current_psi <= psi_max; current_psi += psi_step ) {
 
-                    angles.Init(global_euler_search.list_of_search_parameters[current_search_position][0], global_euler_search.list_of_search_parameters[current_search_position][1], current_psi, 0.0, 0.0);
-                    //                    angles.Init(130.0, 30.0, 199.5, 0.0, 0.0);
+                        angles.Init(global_euler_search.list_of_search_parameters[current_search_position][0], global_euler_search.list_of_search_parameters[current_search_position][1], current_psi, 0.0, 0.0);
+                        //                    angles.Init(130.0, 30.0, 199.5, 0.0, 0.0);
 
-                    if ( padding != 1.0f ) {
-                        template_reconstruction.ExtractSlice(padded_projection, angles, 1.0f, false);
-                        padded_projection.SwapRealSpaceQuadrants( );
-                        padded_projection.BackwardFFT( );
-                        padded_projection.ClipInto(&current_projection);
-                        current_projection.ForwardFFT( );
-                    }
-                    else {
-                        template_reconstruction.ExtractSlice(current_projection, angles, 1.0f, false);
-                        current_projection.SwapRealSpaceQuadrants( );
-                    }
+                        if ( padding != 1.0f ) {
+                            template_reconstruction.ExtractSlice(padded_projection, angles, 1.0f, false);
+                            padded_projection.SwapRealSpaceQuadrants( );
+                            padded_projection.BackwardFFT( );
+                            padded_projection.ClipInto(&current_projection);
+                            current_projection.ForwardFFT( );
+                        }
+                        else {
+                            template_reconstruction.ExtractSlice(current_projection, angles, 1.0f, false);
+                            current_projection.SwapRealSpaceQuadrants( );
+                        }
 
-                    current_projection.MultiplyPixelWise(projection_filter);
+                        current_projection.MultiplyPixelWise(projection_filter);
 
-                    current_projection.BackwardFFT( );
-                    //current_projection.ReplaceOutliersWithMean(6.0f);
+                        current_projection.BackwardFFT( );
+                        //current_projection.ReplaceOutliersWithMean(6.0f);
 
-                    current_projection.AddConstant(-current_projection.ReturnAverageOfRealValuesOnEdges( ));
+                        current_projection.AddConstant(-current_projection.ReturnAverageOfRealValuesOnEdges( ));
 
-                    // We want a variance of 1 in the padded FFT. Scale the small SumOfSquares (which is already divided by n) and then re-divide by N.
-                    variance = current_projection.ReturnSumOfSquares( ) * current_projection.number_of_real_space_pixels / padded_reference.number_of_real_space_pixels - powf(current_projection.ReturnAverageOfRealValues( ) * current_projection.number_of_real_space_pixels / padded_reference.number_of_real_space_pixels, 2);
-                    current_projection.DivideByConstant(sqrtf(variance));
-                    current_projection.ClipIntoLargerRealSpace2D(&padded_reference);
+                        // We want a variance of 1 in the padded FFT. Scale the small SumOfSquares (which is already divided by n) and then re-divide by N.
+                        variance = current_projection.ReturnSumOfSquares( ) * current_projection.number_of_real_space_pixels / padded_reference.number_of_real_space_pixels - powf(current_projection.ReturnAverageOfRealValues( ) * current_projection.number_of_real_space_pixels / padded_reference.number_of_real_space_pixels, 2);
+                        current_projection.DivideByConstant(sqrtf(variance));
+                        current_projection.ClipIntoLargerRealSpace2D(&padded_reference);
 
-                    // Note: The real space variance is set to 1.0 (for the padded size image) and that results in a variance of N in the FFT do to the scaling of the FFT,
-                    // but the FFT values are divided by 1/N so the variance becomes N / (N^2) = is 1/N
-                    padded_reference.ForwardFFT( );
-                    // Zeroing the central pixel is probably not doing anything useful...
-                    padded_reference.ZeroCentralPixel( );
+                        // Note: The real space variance is set to 1.0 (for the padded size image) and that results in a variance of N in the FFT do to the scaling of the FFT,
+                        // but the FFT values are divided by 1/N so the variance becomes N / (N^2) = is 1/N
+                        padded_reference.ForwardFFT( );
+                        // Zeroing the central pixel is probably not doing anything useful...
+                        padded_reference.ZeroCentralPixel( );
 
 #ifdef MKL
-                    // Use the MKL
-                    vmcMulByConj(padded_reference.real_memory_allocated / 2, reinterpret_cast<MKL_Complex8*>(input_image.complex_values), reinterpret_cast<MKL_Complex8*>(padded_reference.complex_values), reinterpret_cast<MKL_Complex8*>(padded_reference.complex_values), VML_EP | VML_FTZDAZ_ON | VML_ERRMODE_IGNORE);
+                        // Use the MKL
+                        vmcMulByConj(padded_reference.real_memory_allocated / 2, reinterpret_cast<MKL_Complex8*>(input_image.complex_values), reinterpret_cast<MKL_Complex8*>(padded_reference.complex_values), reinterpret_cast<MKL_Complex8*>(padded_reference.complex_values), VML_EP | VML_FTZDAZ_ON | VML_ERRMODE_IGNORE);
 #else
-                    for ( pixel_counter = 0; pixel_counter < padded_reference.real_memory_allocated / 2; pixel_counter++ ) {
-                        padded_reference.complex_values[pixel_counter] = conj(padded_reference.complex_values[pixel_counter]) * input_image.complex_values[pixel_counter];
-                    }
+                        for ( pixel_counter = 0; pixel_counter < padded_reference.real_memory_allocated / 2; pixel_counter++ ) {
+                            padded_reference.complex_values[pixel_counter] = conj(padded_reference.complex_values[pixel_counter]) * input_image.complex_values[pixel_counter];
+                        }
 #endif
 
-                    // Note: the cross correlation will have variance 1/N (the product of variance of the two FFTs assuming the means are both zero and the distributions independent.)
-                    // Taking the inverse FFT scales this variance by N resulting in a MIP with variance 1
-                    padded_reference.BackwardFFT( );
+                        // Note: the cross correlation will have variance 1/N (the product of variance of the two FFTs assuming the means are both zero and the distributions independent.)
+                        // Taking the inverse FFT scales this variance by N resulting in a MIP with variance 1
+                        padded_reference.BackwardFFT( );
 
-                    // update mip, and histogram..
+                        // update mip, and histogram..
 
-                    for ( current_y = data_sizer.GetPrePaddingY( ); current_y < data_sizer.GetPrePaddingY( ) + data_sizer.GetRoiY( ); current_y++ ) {
-                        for ( current_x = data_sizer.GetPrePaddingX( ); current_x < data_sizer.GetPrePaddingX( ) + data_sizer.GetRoiX( ); current_x++ ) {
-                            // first mip
-                            long address = max_intensity_projection.ReturnReal1DAddressFromPhysicalCoord(current_x, current_y, 0);
-                            if ( padded_reference.real_values[address] > max_intensity_projection.real_values[address] ) {
-                                max_intensity_projection.real_values[address] = padded_reference.real_values[address];
-                                best_psi.real_values[address]                 = current_psi;
-                                best_theta.real_values[address]               = global_euler_search.list_of_search_parameters[current_search_position][1];
-                                best_phi.real_values[address]                 = global_euler_search.list_of_search_parameters[current_search_position][0];
-                                best_defocus.real_values[address]             = float(defocus_i) * defocus_step;
-                                best_pixel_size.real_values[address]          = float(size_i) * pixel_size_step;
-                                //                                if (size_i != 0) wxPrintf("size_i = %i\n", size_i);
-                                //                                correlation_pixel_sum[pixel_counter] = variance;
-                            }
-
-                            // histogram
-                            float mip_value = padded_reference.real_values[address];
-                            current_bin     = int((mip_value - histogram_min) / histogram_step);
-                            //current_bin = int(double((padded_reference.real_values[address]) - histogram_min) / histogram_step);
-
-                            if ( current_bin >= 0 && current_bin <= histogram_number_of_points ) {
-                                histogram_data[current_bin] += 1;
-                            }
-
-                            // Note: this one is outside the ifdefs so we can leave the "normal" stats images in places.
-                            if ( use_local_normalization ) {
-                                // Local normalization
-#ifdef TEST_LOCAL_NORMALIZATION
-                                float value = padded_reference.real_values[address]; //* (float)sqrt_input_pixels;
-                                // Welford's algorithm for trimming
-                                // For the GPU implementation we'll have at least 10 (though currently 20) mip values the first time we go through a stack, so
-                                // rather than just skipping the first 10 and assuming no outliers, we can probably be more clever.
-                                if ( n_image[address] < BUFFER_SIZE ) {
-                                    // Buffering phase
-                                    n_image[address]++;
-                                    float delta = value - mean_image[address];
-                                    mean_image[address] += delta / n_image[address];
-                                    float delta2 = value - mean_image[address];
-                                    M2_image[address] += delta * delta2;
+                        for ( int current_y = data_sizer.GetPrePaddingY( ); current_y < data_sizer.GetPrePaddingY( ) + data_sizer.GetRoiY( ); current_y++ ) {
+                            for ( int current_x = data_sizer.GetPrePaddingX( ); current_x < data_sizer.GetPrePaddingX( ) + data_sizer.GetRoiX( ); current_x++ ) {
+                                // first mip
+                                long address = max_intensity_projection.ReturnReal1DAddressFromPhysicalCoord(current_x, current_y, 0);
+                                if ( padded_reference.real_values[address] > max_intensity_projection.real_values[address] ) {
+                                    max_intensity_projection.real_values[address] = padded_reference.real_values[address];
+                                    best_psi.real_values[address]                 = current_psi;
+                                    best_theta.real_values[address]               = global_euler_search.list_of_search_parameters[current_search_position][1];
+                                    best_phi.real_values[address]                 = global_euler_search.list_of_search_parameters[current_search_position][0];
+                                    best_defocus.real_values[address]             = float(defocus_i) * defocus_step;
+                                    best_pixel_size.real_values[address]          = float(size_i) * pixel_size_step;
+                                    //                                if (size_i != 0) wxPrintf("size_i = %i\n", size_i);
+                                    //                                correlation_pixel_sum[pixel_counter] = variance;
                                 }
-                                else {
-                                    // Outlier trimming
-                                    variance_image[address] = M2_image[address] / (n_image[address] - 1);
-                                    stddev_image[address]   = std::sqrt(variance_image[address]);
-                                    if ( std::abs(value - mean_image[address]) > OUTLIER_THRESHOLD * stddev_image[address] ) {
-                                        // Skip outlier
 
-                                        continue;
+                                // histogram
+                                float mip_value = padded_reference.real_values[address];
+                                current_bin     = int((mip_value - histogram_min) / histogram_step);
+                                //current_bin = int(double((padded_reference.real_values[address]) - histogram_min) / histogram_step);
+
+                                if ( current_bin >= 0 && current_bin <= histogram_number_of_points ) {
+                                    histogram_data[current_bin] += 1;
+                                }
+
+                                // Note: this one is outside the ifdefs so we can leave the "normal" stats images in places.
+                                if ( use_local_normalization ) {
+                                    // Local normalization
+#ifdef TEST_LOCAL_NORMALIZATION
+                                    float value = padded_reference.real_values[address]; //* (float)sqrt_input_pixels;
+                                    // Welford's algorithm for trimming
+                                    // For the GPU implementation we'll have at least 10 (though currently 20) mip values the first time we go through a stack, so
+                                    // rather than just skipping the first 10 and assuming no outliers, we can probably be more clever.
+                                    if ( n_image[address] < BUFFER_SIZE ) {
+                                        // Buffering phase
+                                        n_image[address]++;
+                                        float delta = value - mean_image[address];
+                                        mean_image[address] += delta / n_image[address];
+                                        float delta2 = value - mean_image[address];
+                                        M2_image[address] += delta * delta2;
+                                    }
+                                    else {
+                                        // Outlier trimming
+                                        variance_image[address] = M2_image[address] / (n_image[address] - 1);
+                                        stddev_image[address]   = std::sqrt(variance_image[address]);
+                                        if ( std::abs(value - mean_image[address]) > OUTLIER_THRESHOLD * stddev_image[address] ) {
+                                            // Skip outlier
+
+                                            continue;
+                                        }
+
+                                        // Update running statistics for non-outliers
+                                        n_image[address]++;
+                                        float delta = value - mean_image[address];
+                                        mean_image[address] += delta / n_image[address];
+                                        float delta2 = value - mean_image[address];
+                                        M2_image[address] += delta * delta2;
                                     }
 
-                                    // Update running statistics for non-outliers
-                                    n_image[address]++;
-                                    float delta = value - mean_image[address];
-                                    mean_image[address] += delta / n_image[address];
-                                    float delta2 = value - mean_image[address];
-                                    M2_image[address] += delta * delta2;
-                                }
-
 #endif
-                            }
-                            else {
-                                correlation_pixel_sum[address] += mip_value;
-                                correlation_pixel_sum_of_squares[address] += mip_value * mip_value;
+                                }
+                                else {
+                                    correlation_pixel_sum[address] += mip_value;
+                                    correlation_pixel_sum_of_squares[address] += mip_value * mip_value;
+                                }
                             }
                         }
-                    }
 
-                    current_projection.is_in_real_space = false;
-                    padded_reference.is_in_real_space   = true;
+                        current_projection.is_in_real_space = false;
+                        padded_reference.is_in_real_space   = true;
 
-                    current_correlation_position++;
-                    if ( is_running_locally == true )
-                        my_progress->Update(current_correlation_position);
+                        current_correlation_position++;
+                        if ( is_running_locally == true )
+                            my_progress->Update(current_correlation_position);
 
-                    if ( is_running_locally == false ) {
                         actual_number_of_angles_searched++;
-                        // Currently there is no subsampling in the CPU implementation
-                        temp_float             = current_correlation_position;
-                        JobResult* temp_result = new JobResult;
-                        temp_result->SetResult(1, &temp_float);
-                        AddJobToResultQueue(temp_result);
+
+                        if ( is_running_locally == false ) {
+
+                            // Currently there is no subsampling in the CPU implementation
+                            temp_float             = current_correlation_position;
+                            JobResult* temp_result = new JobResult;
+                            temp_result->SetResult(1, &temp_float);
+                            AddJobToResultQueue(temp_result);
+                        }
                     }
                 }
-            }
-            profile_timing.lap("RunInnerLoop cpu");
-        }
-    }
+                profile_timing.lap("RunInnerLoop cpu");
+            } // if/else on use_gpu for inner loop
+        } // defocus loop
+    } // pixel size loop
+
+    // Most of the time we can get away without synchronizing here, however,
 
     wxPrintf("\n\n\tTimings: Overall: %s\n", (wxDateTime::Now( ) - overall_start).Format( ));
 
@@ -1160,6 +1196,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     correlation_pixel_sum_image.ZeroFFTWPadding( );
     correlation_pixel_sum_of_squares_image.ZeroFFTWPadding( );
 
+    // Even if we skip_result_rescaling, we still want to remove any padding.
     data_sizer.ResizeImage_postSearch(max_intensity_projection,
                                       best_psi,
                                       best_phi,
@@ -1167,7 +1204,11 @@ bool MatchTemplateApp::DoCalculation( ) {
                                       best_defocus,
                                       best_pixel_size,
                                       correlation_pixel_sum_image,
-                                      correlation_pixel_sum_of_squares_image);
+                                      correlation_pixel_sum_of_squares_image,
+                                      skip_result_rescaling,
+                                      max_threads);
+
+    float output_pixel_size = skip_result_rescaling ? data_sizer.GetSearchPixelSize( ) : data_sizer.GetPixelSize( );
 
     profile_timing.lap("Resize_postSearch");
     profile_timing.print_times( );
@@ -1192,12 +1233,12 @@ bool MatchTemplateApp::DoCalculation( ) {
                                                             correlation_pixel_sum_image.real_values,
                                                             correlation_pixel_sum_of_squares_image.real_values,
                                                             histogram_data,
-                                                            total_correlation_positions,
+                                                            actual_number_of_angles_searched,
                                                             disable_flat_fielding);
         // calculate the expected threshold (from peter's paper)
-        const float CCG_NOISE_STDDEV = 1.0;
+        const float CCG_NOISE_STDDEV = 1.0f;
         double      temp_threshold;
-        double      erf_input = 2.0 / (1.0 * double(data_sizer.GetNumberOfValidSearchPixels( )) * (double)total_correlation_positions);
+        double      erf_input = (n_expected_false_positives * 2.0) / (1.0 * double(data_sizer.GetNumberOfValidSearchPixels( )) * double(actual_number_of_angles_searched) * double(fraction_of_search_positions_that_are_independent));
 #ifdef MKL
         vdErfcInv(1, &erf_input, &temp_threshold);
 #else
@@ -1207,63 +1248,63 @@ bool MatchTemplateApp::DoCalculation( ) {
 
         temp_image.CopyFrom(&max_intensity_projection);
         MRCFile mip_out(mip_output_file.ToStdString( ), true);
-        mip_out.SetPixelSize(data_sizer.GetPixelSize( ));
+        mip_out.SetPixelSize(output_pixel_size);
 #ifdef USE_FP16_PARTICLE_STACKS
         mip_out.SetOutputToFP16( );
 #endif
         temp_image.WriteSlice(&mip_out, 1);
 
         MRCFile scaled_mip_output_mrcfile(scaled_mip_output_file.ToStdString( ), true);
-        scaled_mip_output_mrcfile.SetPixelSize(data_sizer.GetPixelSize( ));
+        scaled_mip_output_mrcfile.SetPixelSize(output_pixel_size);
 #ifdef USE_FP16_PARTICLE_STACKS
         scaled_mip_output_mrcfile.SetOutputToFP16( );
 #endif
         scaled_mip.WriteSlice(&scaled_mip_output_mrcfile, 1);
 
         MRCFile correlation_pixel_sum_output_mrcfile(correlation_avg_output_file.ToStdString( ), true);
-        correlation_pixel_sum_output_mrcfile.SetPixelSize(data_sizer.GetPixelSize( ));
+        correlation_pixel_sum_output_mrcfile.SetPixelSize(output_pixel_size);
 #ifdef USE_FP16_PARTICLE_STACKS
         correlation_pixel_sum_output_mrcfile.SetOutputToFP16( );
 #endif
         correlation_pixel_sum_image.WriteSlice(&correlation_pixel_sum_output_mrcfile, 1);
 
         MRCFile correlation_pixel_sum_of_squares_output_mrcfile(correlation_std_output_file.ToStdString( ), true);
-        correlation_pixel_sum_of_squares_output_mrcfile.SetPixelSize(data_sizer.GetPixelSize( ));
+        correlation_pixel_sum_of_squares_output_mrcfile.SetPixelSize(output_pixel_size);
 #ifdef USE_FP16_PARTICLE_STACKS
         correlation_pixel_sum_of_squares_output_mrcfile.SetOutputToFP16( );
 #endif
         correlation_pixel_sum_of_squares_image.WriteSlice(&correlation_pixel_sum_of_squares_output_mrcfile, 1);
 
         MRCFile best_psi_output_mrcfile(best_psi_output_file.ToStdString( ), true);
-        best_psi_output_mrcfile.SetPixelSize(data_sizer.GetPixelSize( ));
+        best_psi_output_mrcfile.SetPixelSize(output_pixel_size);
 #ifdef USE_FP16_PARTICLE_STACKS
         best_psi_output_mrcfile.SetOutputToFP16( );
 #endif
         best_psi.WriteSlice(&best_psi_output_mrcfile, 1);
 
         MRCFile best_theta_output_mrcfile(best_theta_output_file.ToStdString( ), true);
-        best_theta_output_mrcfile.SetPixelSize(data_sizer.GetPixelSize( ));
+        best_theta_output_mrcfile.SetPixelSize(output_pixel_size);
 #ifdef USE_FP16_PARTICLE_STACKS
         best_theta_output_mrcfile.SetOutputToFP16( );
 #endif
         best_theta.WriteSlice(&best_theta_output_mrcfile, 1);
 
         MRCFile best_phi_output_mrcfile(best_phi_output_file.ToStdString( ), true);
-        best_phi_output_mrcfile.SetPixelSize(data_sizer.GetPixelSize( ));
+        best_phi_output_mrcfile.SetPixelSize(output_pixel_size);
 #ifdef USE_FP16_PARTICLE_STACKS
         best_phi_output_mrcfile.SetOutputToFP16( );
 #endif
         best_phi.WriteSlice(&best_phi_output_mrcfile, 1);
 
         MRCFile best_defocus_output_mrcfile(best_defocus_output_file.ToStdString( ), true);
-        best_defocus_output_mrcfile.SetPixelSize(data_sizer.GetPixelSize( ));
+        best_defocus_output_mrcfile.SetPixelSize(output_pixel_size);
 #ifdef USE_FP16_PARTICLE_STACKS
         best_defocus_output_mrcfile.SetOutputToFP16( );
 #endif
         best_defocus.WriteSlice(&best_defocus_output_mrcfile, 1);
 
         MRCFile best_pixel_size_output_mrcfile(best_pixel_size_output_file.ToStdString( ), true);
-        best_pixel_size_output_mrcfile.SetPixelSize(data_sizer.GetPixelSize( ));
+        best_pixel_size_output_mrcfile.SetPixelSize(output_pixel_size);
 #ifdef USE_FP16_PARTICLE_STACKS
         best_pixel_size_output_mrcfile.SetOutputToFP16( );
 #endif
@@ -1278,7 +1319,7 @@ bool MatchTemplateApp::DoCalculation( ) {
         ZeroDoubleArray(survival_histogram, histogram_number_of_points);
 
         for ( int line_counter = 0; line_counter <= histogram_number_of_points; line_counter++ ) {
-            expected_survival_histogram[line_counter] = (erfc((histogram_first_bin_midpoint + histogram_step * float(line_counter)) / sqrtf(2.0f)) / 2.0f) * float(total_correlation_positions);
+            expected_survival_histogram[line_counter] = (erfc((histogram_first_bin_midpoint + histogram_step * float(line_counter)) / sqrtf(2.0f)) / 2.0f) * float(actual_number_of_angles_searched) * float(fraction_of_search_positions_that_are_independent) / n_expected_false_positives;
         }
 
         survival_histogram[histogram_number_of_points - 1] = histogram_data[histogram_number_of_points - 1];
@@ -1326,15 +1367,23 @@ bool MatchTemplateApp::DoCalculation( ) {
         {
             using cm_t = cistem::match_template::Enum;
 
-            result[cm_t::image_size_x]                  = max_intensity_projection.logical_x_dimension;
-            result[cm_t::image_size_y]                  = max_intensity_projection.logical_y_dimension;
-            result[cm_t::image_real_memory_allocated]   = max_intensity_projection.real_memory_allocated;
-            result[cm_t::number_of_histogram_bins]      = histogram_number_of_points;
-            result[cm_t::number_of_angles_searched]     = actual_number_of_angles_searched;
-            result[cm_t::ccc_scalar]                    = 1.0f; // (float)sqrt_input_pixels is redundant, but we need all the results to calculate the scaling from the global CCC moments
-            result[cm_t::input_pixel_size]              = data_sizer.GetPixelSize( );
-            result[cm_t::number_of_valid_search_pixels] = data_sizer.GetNumberOfValidSearchPixels( );
-            result[cm_t::disable_flat_fielding]         = disable_flat_fielding;
+            result[cm_t::image_size_x]                                      = float(max_intensity_projection.logical_x_dimension);
+            result[cm_t::image_size_y]                                      = float(max_intensity_projection.logical_y_dimension);
+            result[cm_t::image_real_memory_allocated]                       = float(max_intensity_projection.real_memory_allocated);
+            result[cm_t::number_of_histogram_bins]                          = float(histogram_number_of_points);
+            result[cm_t::number_of_angles_searched]                         = actual_number_of_angles_searched;
+            result[cm_t::fraction_of_search_positions_that_are_independent] = fraction_of_search_positions_that_are_independent;
+            result[cm_t::ccc_scalar]                                        = 1.0f; // (float)sqrt_input_pixels is redundant, but we need all the results to calculate the scaling from the global CCC moments
+            result[cm_t::input_pixel_size]                                  = output_pixel_size;
+            result[cm_t::input_binning_factor]                              = skip_result_rescaling ? data_sizer.GetFullBinningFactor( ) : 1.0f;
+            result[cm_t::number_of_valid_search_pixels]                     = float(data_sizer.GetNumberOfValidSearchPixels( )); // if skip_result_rescaling is true, this will = image_size_x * image_size_y as they are cropped to the ROI
+            result[cm_t::disable_flat_fielding]                             = float(disable_flat_fielding);
+            result[cm_t::number_of_expected_false_positives]                = float(n_expected_false_positives);
+
+            if ( skip_result_rescaling ) {
+                MyDebugAssertTrue(data_sizer.GetNumberOfValidSearchPixels( ) == (max_intensity_projection.logical_x_dimension * max_intensity_projection.logical_y_dimension),
+                                  "If skip_result_rescaling is true, the number of valid search pixels (%ld) must equal the image size (%d, %d)\n", data_sizer.GetNumberOfValidSearchPixels( ), max_intensity_projection.logical_x_dimension, max_intensity_projection.logical_y_dimension);
+            }
         }
 
         result_array_counter = cistem::match_template::COUNT;
@@ -1409,6 +1458,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     return true;
 }
 
+// Result number is image_number_for_gui i.e. the idx numbered from 1 -> number of jobs per image in gui
 void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, long array_size, int result_number, int number_of_expected_results) {
 
     // do we have this image number already?
@@ -1432,9 +1482,10 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
         }
     }
 
-    if ( need_a_new_result == true ) // we aren't collecting data for this result yet.. start
-    {
+    // we aren't collecting data for this result yet.. start
+    if ( need_a_new_result == true ) {
         AggregatedTemplateResult result_to_add;
+        // So I guess this Add, then index into size - 1 is like push_back kinda?
         aggregated_results.Add(result_to_add);
         aggregated_results[aggregated_results.GetCount( ) - 1].image_number = result_number;
         aggregated_results[aggregated_results.GetCount( ) - 1].AddResult(result_array, array_size, result_number, number_of_expected_results);
@@ -1480,15 +1531,24 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
 
         bool use_gpu = current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[40].ReturnBoolArgument( );
 
+        int    image_size_x                                      = int(aggregated_results[array_location].collated_data_array[cistem::match_template::image_size_x]);
+        int    image_size_y                                      = int(aggregated_results[array_location].collated_data_array[cistem::match_template::image_size_y]);
+        int    image_real_memory_allocated                       = int(aggregated_results[array_location].collated_data_array[cistem::match_template::image_real_memory_allocated]);
+        float  input_pixel_size                                  = aggregated_results[array_location].collated_data_array[cistem::match_template::input_pixel_size];
+        float  input_binning_factor                              = aggregated_results[array_location].collated_data_array[cistem::match_template::input_binning_factor];
+        long   number_of_valid_search_pixels                     = long(aggregated_results[array_location].collated_data_array[cistem::match_template::number_of_valid_search_pixels]);
+        double n_expected_false_positives                        = double(aggregated_results[array_location].collated_data_array[cistem::match_template::number_of_expected_false_positives]);
+        float  fraction_of_search_positions_that_are_independent = aggregated_results[array_location].collated_data_array[cistem::match_template::fraction_of_search_positions_that_are_independent];
+
+        double number_of_search_positions = double(aggregated_results[array_location].total_number_of_angles_searched * fraction_of_search_positions_that_are_independent);
+
+        bool using_binned_ref = input_binning_factor > 1.0f ? true : false;
+
         ImageFile input_reconstruction_file;
         input_reconstruction_file.OpenFile(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[1].ReturnStringArgument( ), false);
-        int   image_size_x                  = aggregated_results[array_location].collated_data_array[cistem::match_template::image_size_x];
-        int   image_size_y                  = aggregated_results[array_location].collated_data_array[cistem::match_template::image_size_y];
-        int   image_real_memory_allocated   = aggregated_results[array_location].collated_data_array[cistem::match_template::image_real_memory_allocated];
-        float input_pixel_size              = aggregated_results[array_location].collated_data_array[cistem::match_template::input_pixel_size];
-        long  number_of_valid_search_pixels = aggregated_results[array_location].collated_data_array[cistem::match_template::number_of_valid_search_pixels];
 
         temp_image.Allocate(int(image_size_x), int(image_size_y), true);
+
         // Fill the temp_image with data form the collatged mip before passing it on to be rescaled.
         for ( pixel_counter = 0; pixel_counter < image_real_memory_allocated; pixel_counter++ ) {
             temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_mip_data[pixel_counter];
@@ -1633,13 +1693,13 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
         }
 
         for ( int line_counter = 0; line_counter <= histogram_number_of_points; line_counter++ ) {
-            expected_survival_histogram[line_counter] = (erfc((histogram_first_bin_midpoint + histogram_step * float(line_counter)) / sqrtf(2.0f)) / 2.0f) * (number_of_valid_search_pixels * aggregated_results[array_location].total_number_of_angles_searched);
+            expected_survival_histogram[line_counter] = (erfc((histogram_first_bin_midpoint + histogram_step * float(line_counter)) / sqrtf(2.0f)) / 2.0f) * (number_of_valid_search_pixels * number_of_search_positions / n_expected_false_positives);
         }
 
         // calculate the expected threshold (from peter's paper)
         const float CCG_NOISE_STDDEV = 1.0;
         double      temp_threshold   = 0.0;
-        double      erf_input        = 2.0 / (1.0 * (double(number_of_valid_search_pixels) * double(aggregated_results[array_location].total_number_of_angles_searched)));
+        double      erf_input        = (n_expected_false_positives * 2.0) / (1.0 * (double(number_of_valid_search_pixels) * double(number_of_search_positions)));
         //        wxPrintf("ox oy total %3.3e %3.3e %3.3e\n", (double)result_array[5] , (double)result_array[6] , (double)aggregated_results[array_location].total_number_of_angles_searched, erf_input);
 
 #ifdef MKL
@@ -1685,10 +1745,23 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
         int   min_peak_radius         = current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[39].ReturnFloatArgument( );
         float min_peak_radius_squared = powf(float(min_peak_radius), 2);
 
+        if ( using_binned_ref )
+            min_peak_radius_squared /= (input_binning_factor * input_binning_factor);
+
         result_image.Allocate(scaled_mip.logical_x_dimension, scaled_mip.logical_y_dimension, 1);
         result_image.SetToConstant(0.0f);
 
         input_reconstruction.ReadSlices(&input_reconstruction_file, 1, input_reconstruction_file.ReturnNumberOfSlices( ));
+        if ( using_binned_ref ) {
+            // Not exact but just for visualization
+            int new_size = int(input_reconstruction.logical_x_dimension / input_binning_factor + 0.5f);
+            if ( IsOdd(new_size) )
+                new_size++;
+            input_reconstruction.ForwardFFT( );
+            input_reconstruction.Resize(new_size, new_size, new_size);
+            input_reconstruction.BackwardFFT( );
+        }
+
         float max_density = input_reconstruction.ReturnAverageOfMaxN( );
         input_reconstruction.DivideByConstant(max_density);
 
@@ -1708,6 +1781,12 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
 #else
         int exclusion_radius = input_reconstruction.logical_x_dimension / cistem::fraction_of_box_size_to_exclude_for_border + 1;
 #endif
+
+        // if we used a resampled search and have elected to skip resampling the results images, this border region is already removed.
+        // this should be true for any binning > 1
+        if ( input_binning_factor > 1.0f ) {
+            exclusion_radius = 0;
+        }
 
         long nTrys = 0;
         while ( 1 == 1 ) {
@@ -1731,8 +1810,8 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
             current_peak.y = current_peak.y + scaled_mip.physical_address_of_box_center_y;
 
             // arguments[2] = input_pixel_size
-            temp_peak_info.x_pos = current_peak.x * current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[2].ReturnFloatArgument( ); // RETURNING IN ANGSTROMS
-            temp_peak_info.y_pos = current_peak.y * current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[2].ReturnFloatArgument( ); // RETURNING IN ANGSTROMS
+            temp_peak_info.x_pos = current_peak.x * input_pixel_size; // RETURNING IN ANGSTROMS (also takes care of binning if present)
+            temp_peak_info.y_pos = current_peak.y * input_pixel_size; // RETURNING IN ANGSTROMS
 
             //            wxPrintf("Peak = %f, %f, %f : %f\n", current_peak.x, current_peak.y, current_peak.value);
 

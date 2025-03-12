@@ -17,6 +17,8 @@
 
 constexpr bool trouble_shoot_mip = false;
 
+// #define TEST_IES
+
 using namespace cistem_timer;
 
 void TemplateMatchingCore::Init(MyApp*                    parent_pointer,
@@ -191,7 +193,6 @@ void TemplateMatchingCore::RunInnerLoop(Image&      projection_filter,
                                         long&       current_correlation_position,
                                         const float min_counter_val,
                                         const float threshold_val) {
-
     total_number_of_cccs_calculated = 0;
     bool at_least_100               = false;
 
@@ -266,6 +267,12 @@ void TemplateMatchingCore::RunInnerLoop(Image&      projection_filter,
     cudaErr(cudaStreamSynchronize(cudaStreamPerThread));
     projection_queue.RecordProjectionReadyBlockingHost(current_projection_idx, cudaStreamPerThread);
 
+#ifdef TEST_IES
+    GpuImage tmp_mask[1];
+    tmp_mask->Allocate(d_current_projection[current_projection_idx].dims.x, d_current_projection[current_projection_idx].dims.y, 1, false);
+#else
+    GpuImage* tmp_mask = nullptr;
+#endif
     for ( current_search_position = first_search_position; current_search_position <= last_search_position; current_search_position++ ) {
 
         if ( current_search_position % 10 == 0 ) {
@@ -279,14 +286,17 @@ void TemplateMatchingCore::RunInnerLoop(Image&      projection_filter,
             constexpr bool  swap_real_space_quadrants_during_projection = true;
             // FIXME, change this to also store psi and to have methods to convert between an index encoded as an int and the actual angles
             angles.Init(global_euler_search.list_of_search_parameters[current_search_position][0], global_euler_search.list_of_search_parameters[current_search_position][1], current_psi, shifts_in_x_y, shifts_in_x_y);
-
             current_projection_idx = projection_queue.GetAvailableProjectionIDX( );
             if ( use_gpu_prj ) {
 
                 d_current_projection[current_projection_idx].is_in_real_space = false;
-                constexpr float pixel_size                                    = 1.0f;
-                constexpr float resolution_limit                              = 1.0f;
-                float           real_space_binning_factor                     = 1.0f;
+
+#ifdef TEST_IES
+                tmp_mask->is_in_real_space = false;
+#endif
+                constexpr float pixel_size                = 1.0f;
+                constexpr float resolution_limit          = 1.0f;
+                float           real_space_binning_factor = 1.0f;
 
                 if ( use_lerp_for_resizing ) {
                     real_space_binning_factor = binning_factor;
@@ -295,6 +305,7 @@ void TemplateMatchingCore::RunInnerLoop(Image&      projection_filter,
                 // template_gpu_shared.get( )
                 constexpr bool apply_ctf       = true;
                 constexpr bool use_ctf_texture = true;
+
                 d_current_projection[current_projection_idx].ExtractSliceShiftAndCtf<apply_ctf, use_ctf_texture>(template_gpu_shared.get( ),
                                                                                                                  &d_projection_filter,
                                                                                                                  angles,
@@ -305,18 +316,35 @@ void TemplateMatchingCore::RunInnerLoop(Image&      projection_filter,
                                                                                                                  swap_real_space_quadrants_during_projection,
                                                                                                                  apply_shifts,
                                                                                                                  true,
+                                                                                                                 tmp_mask,
                                                                                                                  projection_queue.gpu_projection_stream[current_projection_idx]);
 
                 average_of_reals = 0.f;
                 average_on_edge  = 0.f;
-                projection_queue.RecordGpuProjectionReadyStreamPerThreadWait(current_projection_idx);
-                // Default GpuImage methods are in cudaStreamPerThread
 
-                d_current_projection[current_projection_idx].BackwardFFT( );
+                /*  Keep this comment for future dev to be aware of GOTCHA stream semantics:
 
+                    Default GpuImage methods are in cudaStreamPerThread, now that we can pass a stream to BackwardFFT, we don't need to set this unless we do other
+                    ops in cudaStreamPerThread using d_current_projection[current_projection_idx]
+                    projection_queue.RecordGpuProjectionReadyStreamPerThreadWait(current_projection_idx);
+                */
+
+                d_current_projection[current_projection_idx].BackwardFFT(projection_queue.gpu_projection_stream[current_projection_idx]);
                 if constexpr ( trouble_shoot_mip ) {
+
                     cudaErr(cudaDeviceSynchronize( ));
                     d_current_projection[current_projection_idx].QuickAndDirtyWriteSlice("gpu_prj.mrc", 1);
+                    float prj_sum = d_current_projection[current_projection_idx].ReturnSumOfRealValues( );
+#ifdef TEST_IES
+
+                    tmp_mask->BackwardFFT(projection_queue.gpu_projection_stream[current_projection_idx]);
+                    tmp_mask->QuickAndDirtyWriteSlice("gpu_mask.mrc", 1);
+                    float mask_sum = tmp_mask->ReturnSumOfRealValues( );
+                    std::cerr << "prj sum: " << prj_sum << std::endl;
+
+                    std::cerr << "Mask sum: " << mask_sum << std::endl;
+                    exit(0);
+#endif
                 }
             }
             else {
@@ -367,16 +395,20 @@ void TemplateMatchingCore::RunInnerLoop(Image&      projection_filter,
                 // For the full NCC, have an overload that passes three more array pointers, one to FFT(image) one to FFT(image^2) and one to conj(FFT(template mask)) // use this for the full NCC given an image mask of all ones
                 // For the case the template mask is assumed rotationally invariant, pass a single array pointer that is the full normalization term to be multiplied by T3 then sqrted (this needs to be used AFTER the back FFT)
                 //     In both of these cases, we don't need to apply the normalization until we go to the mip
-                d_current_projection[current_projection_idx].NormalizeRealSpaceStdDeviationAndCastToFp16(scale_factor, average_of_reals, average_on_edge);
-                // Since we have cast the projection to the fp16 buffer, we need to let the host know that this gpu projection is ready to receive another projection
-                // This needs to be placed in the main stream as that is where GPU methods default to.
-                if ( use_gpu_prj ) {
-                    // Note the stream change will not affect the padded projection
-                    projection_queue.RecordProjectionReadyBlockingHost(current_projection_idx, cudaStreamPerThread);
-                }
+                d_current_projection[current_projection_idx].NormalizeRealSpaceStdDeviationAndCastToFp16(scale_factor,
+                                                                                                         average_of_reals,
+                                                                                                         average_on_edge,
+                                                                                                         projection_queue.gpu_projection_stream[current_projection_idx]);
+
+                // Make sure the FastFFT, using the cudaStreamPerThread stream waits on  projection_queue.gpu_projection_stream[current_projection_idx] before doing work
+                projection_queue.RecordGpuProjectionReadyStreamPerThreadWait(current_projection_idx);
+
+                // Since we have cast the projection to the fp16 buffer, we can let the host know that this gpu projection is ready to receive another projection
+                projection_queue.RecordProjectionReadyBlockingHost(current_projection_idx, projection_queue.gpu_projection_stream[current_projection_idx]);
 
                 FT.FwdImageInvFFT(d_current_projection[current_projection_idx].real_values_fp16, (__half2*)d_input_image->complex_values_fp16, my_dist->GetCCFArray(current_mip_to_process), noop, conj_mul_then_scale, noop);
-#endif
+
+#endif // cisTEM_USING_FastFFT
             }
             else {
                 // The average in the full padded image will be different;

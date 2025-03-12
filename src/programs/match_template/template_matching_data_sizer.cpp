@@ -92,7 +92,11 @@ void TemplateMatchingDataSizer::PreProcessInputImage(Image& input_image, bool sw
     local_whitening_filter.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((input_image.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
     number_of_terms.SetupXAxis(0.0, 0.5 * sqrtf(2.0), int((input_image.logical_x_dimension / 2.0 + 1.0) * sqrtf(2.0) + 1.0));
 
+    // revert
+    // temporarily skip the second whitening step
+    bool is_first_whitening = false;
     if ( ! whitening_filter_ptr ) {
+        is_first_whitening = true;
         // We'll accumulate the local whitening filter at the end of the method
         whitening_filter_ptr = std::make_unique<Curve>(local_whitening_filter);
         whitening_filter_ptr->SetYToConstant(1.0f);
@@ -118,19 +122,25 @@ void TemplateMatchingDataSizer::PreProcessInputImage(Image& input_image, bool sw
 
     input_image.ZeroCentralPixel( );
 
-    input_image.Compute1DPowerSpectrumCurve(&local_whitening_filter, &number_of_terms);
-    local_whitening_filter.SquareRoot( );
-    local_whitening_filter.Reciprocal( );
-    local_whitening_filter.MultiplyByConstant(1.0f / local_whitening_filter.ReturnMaximumValue( ));
 
-    input_image.ApplyCurveFilter(&local_whitening_filter);
+    if ( is_first_whitening ) {
+        input_image.Compute1DPowerSpectrumCurve(&local_whitening_filter, &number_of_terms);
+        local_whitening_filter.SquareRoot( );
+        local_whitening_filter.Reciprocal( );
+        local_whitening_filter.MultiplyByConstant(1.0f / local_whitening_filter.ReturnMaximumValue( ));
 
-    if ( whitening_filter_ptr ) {
-        whitening_filter_ptr->ResampleCurve(whitening_filter_ptr.get( ), local_whitening_filter.NumberOfPoints( ));
-        local_whitening_filter.ResampleCurve(&local_whitening_filter, whitening_filter_ptr->NumberOfPoints( ));
+        input_image.ApplyCurveFilter(&local_whitening_filter);
+
+        whitening_filter_ptr->MultiplyBy(local_whitening_filter);
     }
+    // revert (from skip temp)
+
+    // if ( whitening_filter_ptr ) {
+    //     whitening_filter_ptr->ResampleCurve(whitening_filter_ptr.get( ), local_whitening_filter.NumberOfPoints( ));
+    //     local_whitening_filter.ResampleCurve(&local_whitening_filter, whitening_filter_ptr->NumberOfPoints( ));
+    // }
     // Record this filtering for later use
-    whitening_filter_ptr->MultiplyBy(local_whitening_filter);
+    // whitening_filter_ptr->MultiplyBy(local_whitening_filter);
 
     input_image.ZeroCentralPixel( );
     if ( normalize_to_variance_one ) {
@@ -639,19 +649,23 @@ void TemplateMatchingDataSizer::ResizeImage_preSearch(Image& input_image, const 
 #endif
 };
 
-void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& max_intensity_projection,
-                                                       Image& best_psi,
-                                                       Image& best_phi,
-                                                       Image& best_theta,
-                                                       Image& best_defocus,
-                                                       Image& best_pixel_size,
-                                                       Image& correlation_pixel_sum_image,
-                                                       Image& correlation_pixel_sum_of_squares_image) {
+void TemplateMatchingDataSizer::ResizeImage_postSearch(Image&     max_intensity_projection,
+                                                       Image&     best_psi,
+                                                       Image&     best_phi,
+                                                       Image&     best_theta,
+                                                       Image&     best_defocus,
+                                                       Image&     best_pixel_size,
+                                                       Image&     correlation_pixel_sum_image,
+                                                       Image&     correlation_pixel_sum_of_squares_image,
+                                                       const bool skip_result_rescaling,
+                                                       const int  n_threads) {
 
     MyDebugAssertTrue(sizing_is_set, "Sizing has not been set");
     MyDebugAssertFalse(use_fast_fft ? is_rotated_by_90 : false, "Rotating the search image when using fastfft does  not make sense given the current square size restriction of FastFFT");
     MyDebugAssertTrue((resizing_is_needed != resampling_is_needed) || (! resampling_is_needed && ! resizing_is_needed), "Resizing and resampling are mutually exclusive");
 
+    cistem_timer::StopWatch timer;
+    const int               n_images = 8;
     // These are used to make a valid area mask that we then use to set the values in the sum/sumSqs images to zero, which
     // is used in the re-normalization of the global search mean and variance step in match_template to indicate regions we should not count.
     // TODO: We could probably just rescale these padding/roi back to the original dimensions and use those.
@@ -667,36 +681,53 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& max_intensity_proj
     if ( resampling_is_needed || resizing_is_needed ) {
         // Clipping into ROI takes removes any values in the FFT padding region, and all the (binned) padding from input -> precropped.
         // We will than clip back to the cropped size, filling any potential, adding back the non FFT padding but as replicative padding from the valid search area.
+        timer.start("ClipINtoRepli");
         Image tmp_trim;
-        tmp_trim.Allocate(roi.x, roi.y, 1, true);
 
-        max_intensity_projection.ClipInto(&tmp_trim);
-        tmp_trim.ClipIntoWithReplicativePadding(&max_intensity_projection);
+        if ( skip_result_rescaling ) {
+            // remove any padding regions and there is no need to then calculate the valid area mask or any of the subsequent steps.
+            max_intensity_projection.Resize(roi.x, roi.y, 1, 0.f);
+            best_psi.Resize(roi.x, roi.y, 1, 0.f);
+            best_theta.Resize(roi.x, roi.y, 1, 0.f);
+            best_phi.Resize(roi.x, roi.y, 1, 0.f);
+            best_defocus.Resize(roi.x, roi.y, 1, 0.f);
+            best_pixel_size.Resize(roi.x, roi.y, 1, 0.f);
+            correlation_pixel_sum_image.Resize(roi.x, roi.y, 1, 0.f);
+            correlation_pixel_sum_of_squares_image.Resize(roi.x, roi.y, 1, 0.f);
+            return;
+        }
+        else {
+            tmp_trim.Allocate(roi.x, roi.y, 1, true);
+
+            max_intensity_projection.ClipInto(&tmp_trim);
+            tmp_trim.ClipIntoWithReplicativePadding(&max_intensity_projection);
 
 #ifdef DEBUG_IMG_POSTPROCESS_OUTPUT
-        max_intensity_projection.QuickAndDirtyWriteSlice(DEBUG_IMG_POSTPROCESS_OUTPUT "/max_intensity_projection_pre_resizing_roi_replicative.mrc", 1);
+            max_intensity_projection.QuickAndDirtyWriteSlice(DEBUG_IMG_POSTPROCESS_OUTPUT "/max_intensity_projection_pre_resizing_roi_replicative.mrc", 1);
 #endif
 
-        best_psi.ClipInto(&tmp_trim);
-        tmp_trim.ClipIntoWithReplicativePadding(&best_psi);
+            best_psi.ClipInto(&tmp_trim);
+            tmp_trim.ClipIntoWithReplicativePadding(&best_psi);
 
-        best_phi.ClipInto(&tmp_trim);
-        tmp_trim.ClipIntoWithReplicativePadding(&best_phi);
+            best_phi.ClipInto(&tmp_trim);
+            tmp_trim.ClipIntoWithReplicativePadding(&best_phi);
 
-        best_theta.ClipInto(&tmp_trim);
-        tmp_trim.ClipIntoWithReplicativePadding(&best_theta);
+            best_theta.ClipInto(&tmp_trim);
+            tmp_trim.ClipIntoWithReplicativePadding(&best_theta);
 
-        best_defocus.ClipInto(&tmp_trim);
-        tmp_trim.ClipIntoWithReplicativePadding(&best_defocus);
+            best_defocus.ClipInto(&tmp_trim);
+            tmp_trim.ClipIntoWithReplicativePadding(&best_defocus);
 
-        best_pixel_size.ClipInto(&tmp_trim);
-        tmp_trim.ClipIntoWithReplicativePadding(&best_pixel_size);
+            best_pixel_size.ClipInto(&tmp_trim);
+            tmp_trim.ClipIntoWithReplicativePadding(&best_pixel_size);
 
-        correlation_pixel_sum_image.ClipInto(&tmp_trim);
-        tmp_trim.ClipIntoWithReplicativePadding(&correlation_pixel_sum_image);
+            correlation_pixel_sum_image.ClipInto(&tmp_trim);
+            tmp_trim.ClipIntoWithReplicativePadding(&correlation_pixel_sum_image);
 
-        correlation_pixel_sum_of_squares_image.ClipInto(&tmp_trim);
-        tmp_trim.ClipIntoWithReplicativePadding(&correlation_pixel_sum_of_squares_image);
+            correlation_pixel_sum_of_squares_image.ClipInto(&tmp_trim);
+            tmp_trim.ClipIntoWithReplicativePadding(&correlation_pixel_sum_of_squares_image);
+        }
+        timer.lap("ClipINtoRepli");
     }
     else {
         MyDebugAssertTrue(max_intensity_projection.logical_x_dimension == (is_rotated_by_90 ? image_size.y : image_size.x), "The max intensity projection x dimension (%d) is not equal to the original (%d) and we did not resample", max_intensity_projection.logical_x_dimension, (is_rotated_by_90 ? image_size.y : image_size.x));
@@ -735,6 +766,7 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& max_intensity_proj
     if ( resizing_is_needed ) {
         // FIXME: I think I am implicitly assuming the resizing is always getting larger, which for now should be true.
         // Either generalize or add an assert.
+        timer.start("Resize");
         max_intensity_projection.Resize(image_size.x, image_size.y, image_size.z, no_value);
         best_phi.Resize(image_size.x, image_size.y, image_size.z, no_value);
         best_theta.Resize(image_size.x, image_size.y, image_size.z, no_value);
@@ -743,6 +775,7 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& max_intensity_proj
         best_pixel_size.Resize(image_size.x, image_size.y, image_size.z, no_value);
         correlation_pixel_sum_of_squares_image.Resize(image_size.x, image_size.y, image_size.z, no_value);
         correlation_pixel_sum_image.Resize(image_size.x, image_size.y, image_size.z, no_value);
+        timer.lap("Resize");
 
 #ifdef DEBUG_IMG_POSTPROCESS_OUTPUT
         max_intensity_projection.QuickAndDirtyWriteSlice(DEBUG_IMG_POSTPROCESS_OUTPUT "/max_intensity_projection_resized.mrc", 1);
@@ -765,17 +798,22 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& max_intensity_proj
         // The new images at the square binned size (remove the padding to power of two)
 
         // We'll fill all the images with -FLT_MAX to indicate to downstream code that the values are not valid measurements from an experiment.
+        timer.start("Allocate");
         tmp_phi.Allocate(image_size.x, image_size.y, image_size.z, true);
         tmp_theta.Allocate(image_size.x, image_size.y, image_size.z, true);
         tmp_psi.Allocate(image_size.x, image_size.y, image_size.z, true);
         tmp_defocus.Allocate(image_size.x, image_size.y, image_size.z, true);
         tmp_pixel_size.Allocate(image_size.x, image_size.y, image_size.z, true);
+        timer.lap("Allocate");
+
+        timer.start("set_to_constant");
 
         tmp_phi.SetToConstant(NN_no_value);
         tmp_theta.SetToConstant(NN_no_value);
         tmp_psi.SetToConstant(NN_no_value);
         tmp_defocus.SetToConstant(NN_no_value);
         tmp_pixel_size.SetToConstant(NN_no_value);
+        timer.lap("set_to_constant");
 
         long        searched_image_address = 0;
         long        out_of_bounds_value    = 0;
@@ -785,7 +823,7 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& max_intensity_proj
         // We need an offset from the pre_scaled back to the input so we can map back directly to image_size, skipping the pre_scaling size.
         int offset_ox = (image_size.x - image_pre_scaling_size.x) / 2;
         int offset_oy = (image_size.y - image_pre_scaling_size.y) / 2;
-
+        timer.start("NN loop");
         // Loop over the (possibly) binned image coordinates
         for ( int j = search_image_valid_area_lower_bound_y; j <= search_image_valid_area_upper_bound_y; j++ ) {
             // Using std::trunc (round to zero) as some pathological cases produce OOB +/- 1 otherwise
@@ -844,54 +882,72 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& max_intensity_proj
                 }
             }
         }
-
+        timer.lap("NN loop");
         MyDebugAssertTrue(out_of_bounds_value == 0, "There are out of bounds values in calculating the NN interpolation of the max intensity projection");
 
+        timer.start("Allocate2");
         tmp_mip.Allocate(image_pre_scaling_size.x, image_pre_scaling_size.y, image_pre_scaling_size.z, false);
         tmp_sum.Allocate(image_pre_scaling_size.x, image_pre_scaling_size.y, image_pre_scaling_size.z, false);
         tmp_sum_sq.Allocate(image_pre_scaling_size.x, image_pre_scaling_size.y, image_pre_scaling_size.z, false);
+        timer.lap("Allocate2");
 
+        timer.start("Resize2");
         // Resize from any fourier padding to the cropped size
         max_intensity_projection.Resize(image_cropped_size.x, image_cropped_size.y, image_cropped_size.z);
         correlation_pixel_sum_image.Resize(image_cropped_size.x, image_cropped_size.y, image_cropped_size.z);
         correlation_pixel_sum_of_squares_image.Resize(image_cropped_size.x, image_cropped_size.y, image_cropped_size.z);
-
+        timer.lap("Resize2");
 #ifdef DEBUG_IMG_POSTPROCESS_OUTPUT
         max_intensity_projection.QuickAndDirtyWriteSlice(DEBUG_IMG_POSTPROCESS_OUTPUT "/max_intensity_projection_resized_to_cropped_dim.mrc", 1);
 #endif
-
-        // Now undo the fourier binning
-        max_intensity_projection.ForwardFFT( );
-        max_intensity_projection.ClipInto(&tmp_mip, 0.0f, false, 1.0f, 0, 0, 0, true);
-        tmp_mip.BackwardFFT( );
-        max_intensity_projection.Allocate(image_size.x, image_size.y, image_size.z, true);
-        tmp_mip.ClipInto(&max_intensity_projection, 0.0f, false, 1.0f, 0, 0, 0, true);
-
-#ifdef DEBUG_IMG_POSTPROCESS_OUTPUT
-        max_intensity_projection.QuickAndDirtyWriteSlice(DEBUG_IMG_POSTPROCESS_OUTPUT "/max_intensity_projection_resized_to_input_dim.mrc", 1);
-#endif
-
         // Dilate the radius of the valid area mask
         x_radius *= GetFullBinningFactor( );
         y_radius *= GetFullBinningFactor( );
+        timer.start("undo fourier binning");
+#pragma omp parallel for num_threads(n_threads) default(none) shared(max_intensity_projection, tmp_mip, correlation_pixel_sum_image, tmp_sum, correlation_pixel_sum_of_squares_image, tmp_sum_sq)
+        for ( int i = 0; i < n_images; i++ ) {
+            // Now undo the fourier binning
 
-        correlation_pixel_sum_image.ForwardFFT( );
-        correlation_pixel_sum_image.ClipInto(&tmp_sum, 0.0f, false, 1.0f, 0, 0, 0, true);
-        tmp_sum.BackwardFFT( );
-        correlation_pixel_sum_image.Allocate(image_size.x, image_size.y, image_size.z, true);
-        tmp_sum.ClipInto(&correlation_pixel_sum_image, 0.0f, false, 1.0f, 0, 0, 0, true);
+            switch ( i ) {
+                case 0: {
+                    max_intensity_projection.ForwardFFT( );
+                    max_intensity_projection.ClipInto(&tmp_mip, 0.0f, false, 1.0f, 0, 0, 0, true);
+                    tmp_mip.BackwardFFT( );
+                    max_intensity_projection.Allocate(image_size.x, image_size.y, image_size.z, true);
+                    tmp_mip.ClipInto(&max_intensity_projection, 0.0f, false, 1.0f, 0, 0, 0, true);
 
-        correlation_pixel_sum_of_squares_image.ForwardFFT( );
-        correlation_pixel_sum_of_squares_image.ClipInto(&tmp_sum_sq, 0.0f, false, 1.0f, 0, 0, 0, true);
-        tmp_sum_sq.BackwardFFT( );
-        correlation_pixel_sum_of_squares_image.Allocate(image_size.x, image_size.y, image_size.z, true);
-        tmp_sum_sq.ClipInto(&correlation_pixel_sum_of_squares_image, 0.0f, false, 1.0f, 0, 0, 0, true);
+#ifdef DEBUG_IMG_POSTPROCESS_OUTPUT
+                    max_intensity_projection.QuickAndDirtyWriteSlice(DEBUG_IMG_POSTPROCESS_OUTPUT "/max_intensity_projection_resized_to_input_dim.mrc", 1);
+#endif
+                    break;
+                }
+                case 1: {
+
+                    correlation_pixel_sum_image.ForwardFFT( );
+                    correlation_pixel_sum_image.ClipInto(&tmp_sum, 0.0f, false, 1.0f, 0, 0, 0, true);
+                    tmp_sum.BackwardFFT( );
+                    correlation_pixel_sum_image.Allocate(image_size.x, image_size.y, image_size.z, true);
+                    tmp_sum.ClipInto(&correlation_pixel_sum_image, 0.0f, false, 1.0f, 0, 0, 0, true);
+                    break;
+                }
+                case 2: {
+                    correlation_pixel_sum_of_squares_image.ForwardFFT( );
+                    correlation_pixel_sum_of_squares_image.ClipInto(&tmp_sum_sq, 0.0f, false, 1.0f, 0, 0, 0, true);
+                    tmp_sum_sq.BackwardFFT( );
+                    correlation_pixel_sum_of_squares_image.Allocate(image_size.x, image_size.y, image_size.z, true);
+                    tmp_sum_sq.ClipInto(&correlation_pixel_sum_of_squares_image, 0.0f, false, 1.0f, 0, 0, 0, true);
+                    break;
+                }
+            }
+        }
+        timer.lap("undo fourier binning");
     } // end resampling_is_needed
 
     // FIXME: when resizing and not resampling, I'm not sure if this block is required.
 
     // Create a mask that will be filled based on the possibly rotated and resized search image, and then rescaled in the same manner, so that we can use this for adjusting the
     // stats images/ histogram elsewhere post resizing.
+    timer.start("valid mask");
     valid_area_mask.Allocate(max_intensity_projection.logical_x_dimension, max_intensity_projection.logical_y_dimension, 1, true);
     valid_area_mask.SetToConstant(1.0f);
     constexpr float mask_radius = 7.f;
@@ -900,14 +956,51 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& max_intensity_proj
 
     valid_area_mask.Binarise(0.9f);
     valid_area_mask.ZeroFFTWPadding( );
+    timer.lap("valid mask");
 
+    timer.start("NN fill");
     if ( resampling_is_needed ) {
-        FillInNearestNeighbors(best_psi, tmp_psi, valid_area_mask, NN_no_value);
-        FillInNearestNeighbors(best_phi, tmp_phi, valid_area_mask, NN_no_value);
-        FillInNearestNeighbors(best_theta, tmp_theta, valid_area_mask, NN_no_value);
-        FillInNearestNeighbors(best_defocus, tmp_defocus, valid_area_mask, NN_no_value);
-        FillInNearestNeighbors(best_pixel_size, tmp_pixel_size, valid_area_mask, NN_no_value);
+#pragma omp parallel for num_threads(n_threads) default(none) shared(tmp_phi, tmp_theta, tmp_psi, tmp_defocus, tmp_pixel_size, valid_area_mask, best_phi, best_theta, best_psi, best_defocus, best_pixel_size)
+        for ( int i = 0; i < n_images; i++ ) {
+            Image* ptr;
+            Image* best_ptr;
+            switch ( i ) {
+                case 0: {
+                    ptr      = &tmp_psi;
+                    best_ptr = &best_psi;
+                    break;
+                }
+                case 1: {
+                    ptr      = &tmp_phi;
+                    best_ptr = &best_phi;
+                    break;
+                }
+                case 2: {
+                    ptr      = &tmp_theta;
+                    best_ptr = &best_theta;
+                    break;
+                }
+                case 3: {
+                    ptr      = &tmp_defocus;
+                    best_ptr = &best_defocus;
+                    break;
+                }
+                case 4: {
+                    ptr      = &tmp_pixel_size;
+                    best_ptr = &best_pixel_size;
+                    break;
+                }
+                default: {
+                    ptr      = nullptr;
+                    best_ptr = nullptr;
+                    break;
+                }
+            }
+            if ( ptr != nullptr )
+                FillInNearestNeighbors(*best_ptr, *ptr, valid_area_mask, NN_no_value);
+        }
     }
+    timer.lap("NN fill");
 
     // For the other images, calculate the mean under the mask and change the padding to this so the display contrast is okay
     double mip_mean        = 0.0;
@@ -918,6 +1011,7 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& max_intensity_proj
     double pixel_size_mean = 0.0;
     double n_counted       = 0.0;
 
+    timer.start("final loop");
     for ( long address = 0; address < max_intensity_projection.real_memory_allocated; address++ ) {
         n_counted += valid_area_mask.real_values[address];
         if ( valid_area_mask.real_values[address] > 0.0f ) {
@@ -942,6 +1036,8 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image& max_intensity_proj
             correlation_pixel_sum_image.real_values[address]            = 0.0f;
         }
     }
+    timer.lap("final loop");
+    timer.print_times( );
 };
 
 // //sa_shared/git/grigorieff_lab_cistem/cisTEM
@@ -953,7 +1049,7 @@ void TemplateMatchingDataSizer::FillInNearestNeighbors(Image& output_image, Imag
     int size_neighborhood = 3;
     // FIXME: MAX_BINNING_FACTOR is not enforced anywhere!!
     while ( float(size_neighborhood) < cistem::match_template::MAX_BINNING_FACTOR ) {
-        if ( 1.5f * GetFullBinningFactor( ) <= float(size_neighborhood) ) {
+        if ( 2.0f * GetFullBinningFactor( ) <= float(size_neighborhood) ) {
             break;
         }
         else
@@ -973,12 +1069,13 @@ void TemplateMatchingDataSizer::FillInNearestNeighbors(Image& output_image, Imag
                 // First check the line in memory that includes the current pixel, setting boundaries in the for loop
                 for ( int x = std::max(i - offset_max, 0); x <= std::min(i + offset_max, nn_upsampled_image.logical_x_dimension - 1); x++ ) {
                     // We don't need to check the current pixel
-                    if ( x != i ) {
+                    int x_dist_squared = (i - x) * (i - x);
+                    if ( x_dist_squared < min_distance_squared && x_dist_squared != 0 ) {
                         // No need to load the value if the distance is already too large
-                        if ( x * x < min_distance_squared ) {
+                        if ( x_dist_squared < min_distance_squared ) {
                             current_value = nn_upsampled_image.ReturnRealPixelFromPhysicalCoord(x, j, 0);
                             if ( current_value != no_value ) {
-                                min_distance_squared = x * x;
+                                min_distance_squared = x_dist_squared;
                                 closest_value        = current_value;
                             }
                         }
@@ -998,25 +1095,27 @@ void TemplateMatchingDataSizer::FillInNearestNeighbors(Image& output_image, Imag
                         if ( y < 0 || y >= nn_upsampled_image.logical_y_dimension ) {
                             continue;
                         }
+                        int y_dist_squared = (y - j) * (y - j);
                         for ( int x = std::max(i - offset_max, 0); x <= std::min(i + offset_max, nn_upsampled_image.logical_x_dimension - 1); x++ ) {
                             // This time we hit all pixels in the line
-
+                            int x_dist_squared = (i - x) * (i - x);
                             // No need to load the value if the distance is already too large
-                            if ( y * y + x * x < min_distance_squared ) {
+                            if ( y_dist_squared + x_dist_squared < min_distance_squared ) {
                                 current_value = nn_upsampled_image.ReturnRealPixelFromPhysicalCoord(x, y, 0);
                                 if ( current_value != no_value ) {
-                                    min_distance_squared = y * y + x * x;
+                                    min_distance_squared = y_dist_squared + x_dist_squared;
                                     closest_value        = current_value;
                                 }
                             }
-                            // The smallest distance we can get now is == to the x offset
+                            // The smallest distance over this strip is now the y-offset (in a row next to our wanted pixel)
                             if ( min_distance_squared == y_offset * y_offset ) {
                                 goto endOfElse;
                             }
                         }
                     }
-                    // If we get here, we've checked the full neighborhood size y_offset * 2, which meanse the smallest distance > y_offset is the corner, = sqrt(y_offset^2 + y_offset^2)
-                    if ( min_distance_squared == 2 * y_offset * y_offset ) {
+                    // If we get here, we've checked the full neighborhood size y_offset * 2 + 1,
+                    // so that the smallest squared distance in the next neighborhood is (y+1)^2 > y_offset is the corner, = sqrt(y_offset^2 + y_offset^2)
+                    if ( min_distance_squared <= (1 + y_offset) * (1 + y_offset) ) {
                         goto endOfElse;
                     }
                     y_offset++;

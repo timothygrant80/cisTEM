@@ -29,6 +29,7 @@ class TemplateMatchingCore {
     // CPU images to be passed in -
     std::shared_ptr<GpuImage> template_gpu_shared;
     std::shared_ptr<GpuImage> d_input_image;
+    std::shared_ptr<GpuImage> d_input_image_sq;
     bool                      is_set_input_image_ptr{ };
 
     bool  use_lerp_for_resizing{ };

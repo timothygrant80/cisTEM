@@ -58,14 +58,5 @@ bool QuickTestApp::DoCalculation( ) {
     // quick_test_gpu.callHelloFromGPU(idx);
 #endif
 
-    std::shared_ptr<float> a = std::make_shared<float>(3.14f);
-    std::shared_ptr<float> b = a;
-
-    std::cerr << "a: " << a << std::endl;
-    std::cerr << "b: " << b << std::endl;
-
-    std::cerr << "a.data() " << a.get( ) << std::endl;
-    std::cerr << "b.data() " << b.get( ) << std::endl;
-
     return true;
 }

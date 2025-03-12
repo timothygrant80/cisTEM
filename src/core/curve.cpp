@@ -288,7 +288,7 @@ void Curve::ResampleCurve(Curve* input_curve, int wanted_number_of_points) {
  */
 float Curve::ReturnLinearInterpolationFromI(float wanted_i) {
     DebugCheckEmpty( );
-    MyDebugAssertTrue(wanted_i <= NumberOfPoints( ) - 1, "Index too high");
+    MyDebugAssertTrue(wanted_i <= NumberOfPoints( ) - 1, "Index too high wanted_i %f >= %i", wanted_i, NumberOfPoints( ) - 1);
     MyDebugAssertTrue(wanted_i >= 0, "Index too low");
 
     int i = int(wanted_i);

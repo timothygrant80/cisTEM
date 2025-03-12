@@ -424,6 +424,10 @@ if ENABLE_ALIGNCOORDINATES_AM
 bin_PROGRAMS += align_coordinates
 endif
 
+if ENABLE_ALIGNSYMMETRY_AM
+bin_PROGRAMS += align_symmetry
+endif
+
 if ENABLE_FINDDQE_AM
 bin_PROGRAMS += find_dqe
 endif

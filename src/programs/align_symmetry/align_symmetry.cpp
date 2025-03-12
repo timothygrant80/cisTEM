@@ -28,12 +28,12 @@ void AlignSymmetryApp::DoInteractiveUserInput( ) {
     wanted_symmetry             = my_input->GetSymmetryFromUser("Symmetry to align to", "The symmetry you want to align to", "C2");
     output_volume_file_no_sym   = my_input->GetFilenameFromUser("Output aligned volume", "The volume that has been aligned, but not symmetrised", "my_volume_ali.mrc", false);
     output_volume_file_with_sym = my_input->GetFilenameFromUser("Output symmetrised volume", "The volume that has been aligned and symmetrised", "my_volume_ali_sym.mrc", false);
-    //start_angle_for_search = my_input->GetFloatFromUser("Start angle for search (degrees)", "Angle at which to begin the search on each axis", "-90.0");
-    //end_angle_for_search = my_input->GetFloatFromUser("End angle for search (degrees)", "Angle at which to end the search on each axis", "90.0");
-    initial_angular_step = my_input->GetFloatFromUser("Initial angular search step (degrees)", "angular step for the initial search", "5.0");
+    start_angle_for_search      = my_input->GetFloatFromUser("Start angle for search (degrees)", "Angle at which to begin the search on each axis", "-90.0");
+    end_angle_for_search        = my_input->GetFloatFromUser("End angle for search (degrees)", "Angle at which to end the search on each axis", "90.0");
+    initial_angular_step        = my_input->GetFloatFromUser("Initial angular search step (degrees)", "angular step for the initial search", "5.0");
 
-    start_angle_for_search = -90;
-    end_angle_for_search   = 90;
+    // start_angle_for_search = -90;
+    // end_angle_for_search   = 90;
     delete my_input;
 
     int current_class = 0;
@@ -131,7 +131,9 @@ bool AlignSymmetryApp::DoCalculation( ) {
 
     input_3d.InitWithDimensions(input_file->ReturnXSize( ), input_file->ReturnYSize( ), input_file->ReturnZSize( ), 1, wanted_symmetry);
     input_3d.density_map->ReadSlices(input_file, 1, input_3d.density_map->logical_z_dimension);
+    input_3d.density_map->ZeroFloatAndNormalize(1, input_3d.density_map->logical_x_dimension);
     input_3d.PrepareForProjections(0.0, 0.5, false, false);
+
     original_projection_image.Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
     current_projection_image.Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
     check1_projection_image.Allocate(input_3d.density_map->logical_x_dimension, input_3d.density_map->logical_y_dimension, false);
@@ -142,6 +144,10 @@ bool AlignSymmetryApp::DoCalculation( ) {
     input_volume.ReadSlices(input_file, 1, input_file->ReturnNumberOfSlices( ));
     input_volume.ZeroFloatAndNormalize(1, input_volume.logical_x_dimension);
     output_volume.Allocate(input_volume.logical_x_dimension, input_volume.logical_y_dimension, input_volume.logical_z_dimension);
+
+    // input_3d.density_map->CopyFrom(&input_volume);
+    // input_3d.density_map->ForwardFFT( );
+    // input_3d.density_map->SwapRealSpaceQuadrants( ); // revert
 
     delete input_file;
 
@@ -491,7 +497,7 @@ bool AlignSymmetryApp::DoCalculation( ) {
         output_file->SetPixelSize(input_pixel_size);
         delete output_file;
 
-        wxPrintf("\nResults :-\n\nX-Rot = %.2f degrees\nY-Rot =  %.2f degrees\nZ-Rot = %.2f degrees\n\nX-Shift = %.2f pix.\nY-Shift = %.2f pix.\nZ-Shift = %.2f pix.\n", best_x, best_y, best_z, total_shift_x, total_shift_y, total_shift_z);
+        wxPrintf("\nResults :-\n\nX-Rot = %.2f degrees\nY-Rot =  %.2f degrees\nZ-Rot = %.2f degrees\n\nX-Shift = %.2f pix.\nY-Shift = %.2f pix.\nZ-Shift = %.2f pix. Best Score: %3.3f\n", best_x, best_y, best_z, total_shift_x, total_shift_y, total_shift_z, best_correlation);
         wxPrintf("\nAlignSymmetry: Normal termination\n\n");
     }
     else {

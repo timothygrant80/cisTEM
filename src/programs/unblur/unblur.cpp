@@ -275,7 +275,7 @@ bool UnBlurApp::DoCalculation( ) {
     int         last_frame                           = my_current_job.arguments[30].ReturnIntegerArgument( );
     int         number_of_frames_for_running_average = my_current_job.arguments[31].ReturnIntegerArgument( );
     int         max_threads                          = my_current_job.arguments[32].ReturnIntegerArgument( );
-    bool        saved_aligned_frames                 = my_current_job.arguments[33].ReturnBoolArgument( );
+    bool        save_aligned_frames                  = my_current_job.arguments[33].ReturnBoolArgument( );
     std::string aligned_frames_filename              = my_current_job.arguments[34].ReturnStringArgument( );
     std::string output_shift_text_file               = my_current_job.arguments[35].ReturnStringArgument( );
     int         eer_frames_per_image                 = my_current_job.arguments[36].ReturnIntegerArgument( );
@@ -681,7 +681,7 @@ bool UnBlurApp::DoCalculation( ) {
         for ( image_counter = first_frame - 1; image_counter < last_frame; image_counter++ ) {
             sum_image.AddImage(&image_stack[image_counter]);
 
-            if ( saved_aligned_frames == true ) {
+            if ( save_aligned_frames == true ) {
                 image_stack[image_counter].QuickAndDirtyWriteSlice(aligned_frames_filename, image_counter + 1);
             }
         }
@@ -693,7 +693,7 @@ bool UnBlurApp::DoCalculation( ) {
         for ( image_counter = first_frame - 1; image_counter < last_frame; image_counter++ ) {
             sum_image.AddImage(&image_stack[image_counter]);
 
-            if ( saved_aligned_frames == true ) {
+            if ( save_aligned_frames == true ) {
                 image_stack[image_counter].QuickAndDirtyWriteSlice(aligned_frames_filename, image_counter + 1);
             }
         }

@@ -8,7 +8,7 @@
             "build_dir": "${workspaceFolder}/build",
             "common_flags": " --enable-experimental --enable-openmp --disable-build-all --enable-profiling",
             "experimental_algo_flags": "--enable-fp16-particlestacks  --disable-multiple-global-refinements",
-            "common_optional_programs": ""
+            "common_optional_programs": "--enable-build-scale-with-mask --enable-build-create-mask"
             // "common_optional_programs": "--enable-build-sharpen-map --enable-build-convert-binary-to-star --enable-build-convert-eer-to-mrc --enable-build-resize --enable-build-resample --enable-build-sum_all_mrc_files --enable-build-sum_all_tif_files --enable-build-convert_par_to_star --enable-build-quick_test"
         }
     },

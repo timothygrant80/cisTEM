@@ -204,7 +204,20 @@ if test "x$is_cuda_ge_11" == "x1" ; then
 else
   NVCCFLAGS+=" -std=c++11" 
 fi
-  
+
+# to trouble shoot ptx warnings for example.  
+# 4.2.5.5. --keep-dir directory (-keep-dir)
+# Keep all intermediate files that are generated during internal compilation steps in this directory.
+nvcc_keep_dir=""
+AC_ARG_WITH(keep-dir,
+AS_HELP_STRING([--with-keep-dir=PATH],[Use the given path to save NVCC intermediates for debugging]),
+[
+    if test "$withval" != "yes" -a "$withval" != ""; then
+        nvcc_keep_dir=" --keep-dir $withval"
+    fi
+])
+
+NVCCFLAGS+=$nvcc_keep_dir
 #--extra-device-vectorization
 # -Xcompiler= -DGPU -DSTDC_HEADERS=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_MEMORY_H=1 -DHAVE_STRINGS_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_UNISTD_H=1 -DHAVE_DLFCN_H=1"
 NVCCFLAGS+=" --default-stream per-thread -m64 -O3 --use_fast_math  -Xptxas --warn-on-local-memory-usage,--warn-on-spills,--warn-on-double-precision-use,--generate-line-info "

@@ -322,6 +322,15 @@ AC_ARG_ENABLE(build-align-coordinates, AS_HELP_STRING([--enable-build-align-coor
   ])
 AM_CONDITIONAL([ENABLE_ALIGNCOORDINATES_AM], [test "x$build_align_coordinates" = "xyes"])
 
+AS_IF([test "x$build_all" = "xyes"], [build_align_symmetry="yes"])
+AC_ARG_ENABLE(build-align-symmetry, AS_HELP_STRING([--enable-build-align-symmetry],[build align_coordinates  [default="no"]]),[
+  if test "x$enableval" = "xyes"; then
+    build_align_symmetry=yes
+  	AC_MSG_NOTICE([Building align_coordinates])	
+  fi
+  ])
+AM_CONDITIONAL([ENABLE_ALIGNSYMMETRY_AM], [test "x$build_align_symmetry" = "xyes"])
+
 AS_IF([test "x$build_all" = "xyes"], [build_find_dqe="yes"])    
 AC_ARG_ENABLE(build-find-dqe, AS_HELP_STRING([--enable-build-find-dqe],[build find_dqe  [default="no"]]),[
   if test "x$enableval" = "xyes"; then

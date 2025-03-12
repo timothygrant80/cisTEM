@@ -138,12 +138,15 @@ class GpuImage {
 
     ////////////////////////////////////////////////////////
 
+    // At some point having either a queue or something else will be helpful if these continue to expand.
     cudaEvent_t npp_calc_event;
     cudaEvent_t block_host_event;
     cudaEvent_t return_sum_of_squares_event;
+    cudaEvent_t return_sum_of_reals_event;
     bool        is_npp_calc_event_initialized;
     bool        is_block_host_event_initialized;
     bool        is_return_sum_of_squares_event_initialized;
+    bool        is_return_sum_of_reals_event_initialized;
     //	cublasHandle_t cublasHandle;
 
     cufftHandle cuda_plan_forward;
@@ -184,6 +187,7 @@ class GpuImage {
     template <typename StorageTypeBase = float>
     void PhaseShift(float wanted_x_shift, float wanted_y_shift, float wanted_z_shift); /**CPU_eq**/
 
+    void MultiplyByConstant(float* scale_factor); // pointer methods are so we can queue work on a stream w/o waiting on return values
     void MultiplyByConstant(float scale_factor); /**CPU_eq**/
     void MultiplyByConstant16f(const float scale_factor, int n_slices = 1);
     void MultiplyByConstant16f(__half* input_ptr, const float scale_factor, int n_slices = 1);
@@ -194,6 +198,7 @@ class GpuImage {
     void MultiplyPixelWise(const float& other_array, const int other_array_size); // dose filter for example
     void MultiplyPixelWise(GpuImage& other_image); /**CPU_eq**/
     void MultiplyPixelWise(GpuImage& other_image, GpuImage& output_image); /**CPU_eq**/
+    void DividePixelWise(GpuImage& other_image); /**CPU_eq**/
 
     template <typename StorageTypeBase = float>
     void MultiplyPixelWiseComplexConjugate(GpuImage& other_image, GpuImage& result_image, int phase_multiplier);
@@ -222,15 +227,15 @@ class GpuImage {
     template <class InputType, class OutputType>
     void _BackwardFFT( );
 
-    void ForwardFFT(bool should_scale = true); /**CPU_eq**/
-    void ForwardFFTBatched(bool should_scale = true);
+    void ForwardFFT(bool should_scale = true, cudaStream_t stream = cudaStreamPerThread);
+    void ForwardFFTBatched(bool should_scale = true, cudaStream_t stream = cudaStreamPerThread);
 
-    void BackwardFFT( ); /**CPU_eq**/
-    void BackwardFFTBatched(int wanted_batch_size = 0); // if zero, defaults to dims.z
+    void BackwardFFT(cudaStream_t stream = cudaStreamPerThread); /**CPU_eq**/
+    void BackwardFFTBatched(int wanted_batch_size = 0, cudaStream_t stream = cudaStreamPerThread); // if zero, defaults to dims.z
 
-    void ForwardFFTAndClipInto(GpuImage& image_to_insert, bool should_scale);
+    void ForwardFFTAndClipInto(GpuImage& image_to_insert, bool should_scale, cudaStream_t stream = cudaStreamPerThread);
     template <typename LoadType, typename StoreType = __half>
-    void BackwardFFTAfterComplexConjMul(LoadType* image_to_multiply, bool load_half_precision, StoreType* output_ptr = nullptr);
+    void BackwardFFTAfterComplexConjMul(LoadType* image_to_multiply, bool load_half_precision, StoreType* output_ptr = nullptr, cudaStream_t stream = cudaStreamPerThread);
 
     void Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted_z_dimension, float wanted_padding_value, bool zero_central_pixel = false);
     void Consume(GpuImage* other_image);
@@ -239,11 +244,12 @@ class GpuImage {
     void CopyGpuImageMetaData(const GpuImage* other_image);
     void CopyLoopingAndAddressingFrom(GpuImage* other_image);
 
-    void  L2Norm( );
+    void  L2Norm(cudaStream_t stream = cudaStreamPerThread);
     float ReturnSumOfSquares( );
 
+    void NormalizeRealSpaceSumToUnity(cudaStream_t stream = cudaStreamPerThread);
     void NormalizeRealSpaceStdDeviation(float additional_scalar, float pre_calculated_avg, float average_on_edge);
-    void NormalizeRealSpaceStdDeviationAndCastToFp16(float additional_scalar, float pre_calculated_avg, float average_on_edge);
+    void NormalizeRealSpaceStdDeviationAndCastToFp16(float additional_scalar, float pre_calculated_avg, float average_on_edge, cudaStream_t stream = cudaStreamPerThread);
 
     float ReturnAverageOfRealValuesOnEdges( );
     void  Deallocate( );
@@ -318,10 +324,11 @@ class GpuImage {
     bool Init(Image& cpu_image, bool pin_host_memory = true, bool allocate_real_values = true);
     void SetupInitialValues( );
     void UpdateBoolsToDefault( );
-    void SetCufftPlan(cistem::fft_type::Enum plan_type, void* input_buffer, void* output_buffer);
+    void SetCufftPlan(cistem::fft_type::Enum plan_type, void* input_buffer, void* output_buffer, cudaStream_t stream = cudaStreamPerThread);
 
     cistem::fft_type::Enum set_plan_type;
     long long              set_batch_size;
+    cudaStream_t           set_stream_for_cufft;
     bool                   is_batched_transform;
 
     template <int ntds_x = 32, int ntds_y = 32>
@@ -440,6 +447,7 @@ class GpuImage {
                                  bool             swap_quadrants,
                                  bool             apply_shifts,
                                  bool             zero_central_pixel = false,
+                                 GpuImage*        mask               = nullptr,
                                  cudaStream_t     stream             = cudaStreamPerThread);
 
     void Abs( );
@@ -447,6 +455,7 @@ class GpuImage {
     void AbsDiff(GpuImage& other_image, GpuImage& output_image);
     void SquareRealValues( );
     void SquareRootRealValues( );
+    void ReciprocalSquareRootRealValues( );
     void LogarithmRealValues( );
     void ExponentiateRealValues( );
     void AddConstant(const float add_val);
@@ -473,8 +482,17 @@ class GpuImage {
     void ReplaceOutliersWithMean(float maximum_n_sigmas);
 
     // Statitical Methods
-    float ReturnSumOfRealValues( );
-    // float3    ReturnSumOfRealValues3Channel( );
+    void SumOfRealValues(cudaStream_t wanted_stream);
+    // host waits on this
+    float ReturnSumOfRealValues(cudaStream_t stream = cudaStreamPerThread);
+
+    void      ThresholdGreaterThanValue(const float wanted_min_val, cudaStream_t stream = cudaStreamPerThread);
+    void      ThresholdLessThanValue(const float wanted_max_val, cudaStream_t stream = cudaStreamPerThread);
+    void      ThresholdLessThanOrGreaterThanValue(const float  wanted_min_threshold,
+                                                  const float  wanted_min_val,
+                                                  const float  wanted_max_threshold,
+                                                  const float  wanted_max_val,
+                                                  cudaStream_t stream = cudaStreamPerThread);
     NppiPoint min_idx;
     NppiPoint max_idx;
     float     min_value;
@@ -528,7 +546,7 @@ class GpuImage {
                             b_weighted_correlation };
 
     //  void CublasInit();
-    void NppInit( );
+    void NppInit(cudaStream_t stream = cudaStreamPerThread);
     void BufferInit(BufferType bt, int n_elements = 0);
     void BufferDestroy( );
     void FreeFFTPlan( );

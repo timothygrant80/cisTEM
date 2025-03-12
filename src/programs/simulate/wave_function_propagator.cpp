@@ -782,9 +782,12 @@ void WaveFunctionPropagator::ReturnImageContrast(Image& wave_function_sq_modulus
             myfile << std::to_string(known_astigmatism_angle) + "\n"; // ang
             myfile << "no\n"; // phase shift
             myfile << do_tilt; // tilt
+            myfile << "no\n"; // sample thickness
             myfile << "yes\n"; // expert opt
             myfile << "yes\n"; // resample if too small
+            myfile << "2.8\n"; // resample threshold
             myfile << "no\n"; // know defocus
+            myfile << "no\n"; // weight down low res signal
             myfile << std::to_string(myroundint(std::max(for_ctffind.nThreads, 2.0f))) + "\n"; // nThreads
             myfile << "eof\n";
             myfile.close( );

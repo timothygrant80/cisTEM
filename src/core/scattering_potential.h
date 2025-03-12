@@ -33,8 +33,8 @@ class ScatteringPotential {
     std::vector<wxString> pdb_file_names;
 
     // When simulating a simple 3d density, we only need a single pdb object and not a full ensemble
-    void InitPdbObject(bool is_alpha_fold_prediction, double* center_of_mass = nullptr);
-    void InitPdbObject(wxString const& filename, int wanted_cubic_size, bool is_alpha_fold_prediction, double* center_of_mass = nullptr);
+    void InitPdbObject(bool is_alpha_fold_prediction, bool use_hetatms, double* center_of_mass = nullptr);
+    void InitPdbObject(wxString const& filename, int wanted_cubic_size, bool is_alpha_fold_prediction, bool use_hetatms, double* center_of_mass = nullptr);
 
     void InitPdbEnsemble(bool              shift_by_center_of_mass,
                          int               minimum_padding_x_and_y,
@@ -45,10 +45,11 @@ class ScatteringPotential {
                          float             wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
                          float             wanted_tilt_angle_to_emulat,
                          bool              is_alpha_fold_prediction,
+                         bool              allow_hetatms,
                          cisTEMParameters& wanted_star_file,
                          bool              use_star_file);
 
-    long ReturnTotalNumberOfNonWaterAtoms( );
+    long ReturnTotalNumberOfNonSolventAtoms( );
 
     static inline float ReturnScatteringParamtersA(AtomType id, int term_number) { return SCATTERING_PARAMETERS_A[id][term_number]; };
 
@@ -73,9 +74,11 @@ class ScatteringPotential {
     int GetNeighborhoodSize( );
     int GetNeighborhoodSize(float wanted_bfactor);
 
+    inline void SetUseHydrogens(float use_hydrogens) { _use_hydrogens = use_hydrogens; };
+
     inline float lead_term( ) const { return _lead_term; };
 
-    inline float ReturnScatteringPotentialOfAVoxel(corners& R, float* bPlusB, AtomType& atom_id) {
+    inline float ReturnScatteringPotentialOfAVoxel(corners& R, float* bPlusB, const AtomType atom_id) {
 
         MyDebugAssertTrue(_wavelength > 0.0, "Wavelength not set");
         MyDebugAssertTrue(_lead_term > 0.0, "Wavelength not set");
@@ -97,7 +100,6 @@ class ScatteringPotential {
             temp_potential += ReturnScatteringParamtersA(atom_id, iGaussian) * fabsf(t0);
 
         } // loop over gaussian fits
-
         return temp_potential *= _lead_term;
     };
 
@@ -140,8 +142,9 @@ class ScatteringPotential {
     float _bfactor_scaling;
     int   _cubic_size;
     float _minimum_thickness_z;
-    long  _number_of_non_water_atoms;
+    long  _number_of_non_solvent_atoms;
     int   _padding;
+    float _use_hydrogens;
     PDB*  _current_specimen;
 };
 

@@ -102,7 +102,9 @@ class PDB {
     std::vector<InitialOrientations> initial_values;
 
     // If generating a particle stack, this may be set to true after PDB initialization. It wouldn't make sense to enable this for a micrograph or tilt-series
-    bool  generate_noise_atoms          = false;
+    bool generate_noise_atoms = false;
+    bool use_hetatm           = false;
+
     int   number_of_noise_particles     = 0;
     int   max_number_of_noise_particles = 0;
     float noise_particle_radius_as_mutliple_of_particle_radius;
@@ -126,6 +128,7 @@ class PDB {
         float emulate_tilt_angle,
         bool  shift_by_center_of_mass,
         bool  is_alpha_fold_prediction,
+        bool  allow_hetatms,
         bool  use_star_file);
 
     PDB(wxString          Filename,
@@ -141,6 +144,7 @@ class PDB {
         float             emulate_tilt_angle,
         bool              shift_by_center_of_mass,
         bool              is_alpha_fold_prediction,
+        bool              allow_hetatms,
         cisTEMParameters& wanted_star_file,
         bool              use_star_file);
 
@@ -151,6 +155,7 @@ class PDB {
         int      minimum_paddeding_x_and_y,
         double   minimum_thickness_z,
         bool     is_alpha_fold_prediction,
+        bool     allow_hetatms,
         double*  center_of_mass = nullptr);
 
     ~PDB( );

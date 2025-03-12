@@ -53,7 +53,8 @@ bool MyTest(const wxString& cistem_ref_dir, wxString& temp_directory) {
     // If we are using an alpha-fold prediction, the bfactors stored are confidence scores and need
     // to be convereted to bfactors. In this case we have "real" bfactors, so we don't need to do anything.
     bool is_from_alpha_fold = false;
-    sp.InitPdbObject(is_from_alpha_fold);
+    bool allow_hetatms      = false;
+    sp.InitPdbObject(is_from_alpha_fold, allow_hetatms);
 
     // Finally, we need to know what orientation the molecule should be placed in.
     // For translation, the default is to center atoms on their COM prior to rotation. This

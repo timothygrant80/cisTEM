@@ -44,9 +44,9 @@ Atom& Atom::operator=(const Atom& other_atom) {
 
 Atom& Atom::operator=(const Atom* other_atom) {
     if ( this != other_atom ) {
+        this->name             = other_atom->name;
         this->atom_type        = other_atom->atom_type;
         this->is_real_particle = other_atom->is_real_particle;
-        this->name             = other_atom->name;
         this->x_coordinate     = other_atom->x_coordinate; // Angstrom
         this->y_coordinate     = other_atom->y_coordinate; // Angstrom
         this->z_coordinate     = other_atom->z_coordinate; // Angstrom
@@ -164,6 +164,7 @@ PDB& PDB::operator=(const PDB* other_pdb) {
         this->MIN_THICKNESS        = other_pdb->MIN_THICKNESS;
         this->star_file_parameters = other_pdb->star_file_parameters;
         this->use_star_file        = other_pdb->use_star_file;
+        this->use_hetatm           = other_pdb->use_hetatm;
 
         this->atoms.reserve(other_pdb->atoms.size( ));
         for ( long current_atom = 0; current_atom < other_pdb->atoms.size( ); current_atom++ ) {
@@ -193,10 +194,10 @@ PDB::PDB(long   number_of_non_water_atoms,
          float  wanted_tilt_angle_to_emulate,
          bool   shift_by_center_of_mass,
          bool   is_alpha_fold_prediction,
+         bool   allow_hetatms,
          bool   use_star_file) {
 
     this->use_star_file = use_star_file;
-    wxPrintf("IN constructor 1 and use_star_file = %d\n", use_star_file);
 
     input_file_stream  = NULL;
     input_text_stream  = NULL;
@@ -227,6 +228,7 @@ PDB::PDB(long   number_of_non_water_atoms,
     this->noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius = wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius;
     this->emulate_tilt_angle                                                          = wanted_tilt_angle_to_emulate;
     this->shift_by_center_of_mass                                                     = shift_by_center_of_mass;
+    this->use_hetatm                                                                  = allow_hetatms;
 }
 
 PDB::PDB(wxString          Filename,
@@ -242,13 +244,12 @@ PDB::PDB(wxString          Filename,
          float             wanted_tilt_angle_to_emulate,
          bool              shift_by_center_of_mass,
          bool              is_alpha_fold_prediction,
+         bool              allow_hetatms,
          cisTEMParameters& wanted_star_file,
          bool              use_star_file) {
 
     star_file_parameters = wanted_star_file;
     this->use_star_file  = use_star_file;
-
-    wxPrintf("IN constructor 2 and use_star_file = %d\n", use_star_file);
 
     input_file_stream  = NULL;
     input_text_stream  = NULL;
@@ -274,6 +275,7 @@ PDB::PDB(wxString          Filename,
     this->noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius = wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius;
     this->emulate_tilt_angle                                                          = wanted_tilt_angle_to_emulate;
     this->shift_by_center_of_mass                                                     = shift_by_center_of_mass;
+    this->use_hetatm                                                                  = allow_hetatms;
 
     Open(Filename, wanted_access_type, wanted_records_per_line);
 }
@@ -285,6 +287,7 @@ PDB::PDB(wxString Filename,
          int      minimum_padding_x_and_y,
          double   minimum_thickness_z,
          bool     is_alpha_fold_prediction,
+         bool     allow_hetatms,
          double*  COM) {
     input_file_stream  = NULL;
     input_text_stream  = NULL;
@@ -314,6 +317,7 @@ PDB::PDB(wxString Filename,
 
     SetEmpty( );
     this->pixel_size = wanted_pixel_size;
+    this->use_hetatm = allow_hetatms;
     Open(Filename, wanted_access_type, wanted_records_per_line);
 }
 
@@ -437,8 +441,8 @@ void PDB::Init( ) {
                 for ( gemmi::Residue& res : chain.residues ) {
                     // wxPrintf("Residue Name, Segment, Entity type, %s %s\n",res.name,res.segment)
                     for ( gemmi::Atom& atom : res.atoms ) {
-                        // For now, we only want ATOM
-                        if ( res.het_flag == 'A' ) {
+                        bool use_residue = use_hetatm ? (res.het_flag == 'A' || res.het_flag == 'H') : (res.het_flag == 'A' && ! res.is_water( ));
+                        if ( use_residue ) { // 'A' = ATOM, 'H' = HETATM, 0 = unspecified
                             number_of_atoms++;
                         }
                     }
@@ -474,10 +478,11 @@ void PDB::Init( ) {
     for ( gemmi::Model& model : st.models ) {
         for ( gemmi::Chain& chain : model.chains ) {
             for ( gemmi::Residue& res : chain.residues ) {
-                // For now, we only want ATOM
-                if ( res.het_flag == 'A' ) { // 'A' = ATOM, 'H' = HETATM, 0 = unspecified
+                // For now, we default to only want ATOM
+                // Note that even though HOH is a HETATM gemmi sets the het flag to A
+                bool use_residue = use_hetatm ? (res.het_flag == 'A' || res.het_flag == 'H') : (res.het_flag == 'A' && ! res.is_water( ));
+                if ( use_residue ) { // 'A' = ATOM, 'H' = HETATM, 0 = unspecified
                     for ( gemmi::Atom& atom : res.atoms ) {
-
                         if ( is_alpha_fold_prediction ) {
                             std::cerr << "Alpha fold prediction not implemented yet" << std::endl;
                             // Convert the confidence score to a bfactor. The formula is adhoc.
@@ -493,75 +498,84 @@ void PDB::Init( ) {
                             // atoms[current_atom_number].bfactor = atom.b_iso;
                         }
 
-                        switch ( atom.element.ordinal( ) ) {
-
-                            case 0:
-                                MyDebugPrintWithDetails("Error, non-element type, %s\n", atoms[current_atom_number].name);
-                                exit(-1);
-                                break;
-                            case 1:
-                                i_atom_type = hydrogen;
-                                break;
-                            case 6:
-                                i_atom_type = carbon;
-                                break;
-                            case 7:
-                                i_atom_type = nitrogen;
-                                break;
-                            case 8:
-                                i_atom_type = oxygen;
-                                break;
-                            case 9:
-                                i_atom_type = fluorine;
-                                break;
-                            case 11:
-                                i_atom_type = sodium;
-                                break;
-                            case 12:
-                                i_atom_type = magnesium;
-                                break;
-                            case 14:
-                                i_atom_type = silicon;
-                                break;
-                            case 15:
-                                i_atom_type = phosphorus;
-                                break;
-                            case 16:
-                                i_atom_type = sulfur;
-                                break;
-                            case 17:
-                                i_atom_type = chlorine;
-                                break;
-                            case 19:
-                                i_atom_type = potassium;
-                                break;
-                            case 20:
-                                i_atom_type = calcium;
-                                break;
-                            case 25:
-                                i_atom_type = manganese;
-                                break;
-                            case 27:
-                                i_atom_type = iron;
-                                break;
-                            case 28:
-                                i_atom_type = cobalt;
-                                break;
-                            case 30:
-                                i_atom_type = zinc;
-                                break;
-                            case 34:
-                                i_atom_type = selenium;
-                                break;
-                            case 79:
-                                i_atom_type = gold;
-                                break;
-                            default:
-                                wxPrintf("Un-coded conversion from gemmi::el to Atom::atom_type\n");
-                                std::cerr << "Element is " << atom.element.name( ) << "and el" << atom.element.ordinal( ) << '\n';
-                                exit(-1);
-                                break;
+                        if ( res.is_water( ) ) {
+                            std::cerr << "Caution, water is not fully implemented yet " << wxString(atom.name) << std::endl;
+                            i_atom_type = water;
                         }
+                        else {
+                            switch ( atom.element.ordinal( ) ) {
+
+                                case 0:
+                                    MyDebugPrintWithDetails("Error, non-element type, %s\n", atoms[current_atom_number].name);
+                                    exit(-1);
+                                    break;
+                                case 1:
+                                    i_atom_type = hydrogen;
+                                    break;
+                                case 6:
+                                    i_atom_type = carbon;
+                                    break;
+                                case 7:
+                                    i_atom_type = nitrogen;
+                                    break;
+                                case 8:
+                                    i_atom_type = oxygen;
+                                    break;
+                                case 9:
+                                    i_atom_type = fluorine;
+                                    break;
+                                case 11:
+                                    i_atom_type = sodium;
+                                    break;
+                                case 12:
+                                    i_atom_type = magnesium;
+                                    break;
+                                case 14:
+                                    i_atom_type = silicon;
+                                    break;
+                                case 15:
+                                    i_atom_type = phosphorus;
+                                    break;
+                                case 16:
+                                    i_atom_type = sulfur;
+                                    break;
+                                case 17:
+                                    i_atom_type = chlorine;
+                                    break;
+                                case 19:
+                                    i_atom_type = potassium;
+                                    break;
+                                case 20:
+                                    i_atom_type = calcium;
+                                    break;
+                                case 25:
+                                    i_atom_type = manganese;
+                                    break;
+                                case 26:
+                                    i_atom_type = iron;
+                                    break;
+                                case 27:
+                                    i_atom_type = iron;
+                                    break;
+                                case 28:
+                                    i_atom_type = cobalt;
+                                    break;
+                                case 30:
+                                    i_atom_type = zinc;
+                                    break;
+                                case 34:
+                                    i_atom_type = selenium;
+                                    break;
+                                case 79:
+                                    i_atom_type = gold;
+                                    break;
+                                default:
+                                    wxPrintf("Un-coded conversion from gemmi::el to Atom::atom_type\n");
+                                    std::cerr << "Element is " << atom.element.name( ) << " and el" << atom.element.ordinal( ) << '\n';
+                                    exit(-1);
+                                    break;
+                            }
+                        } // if/else on water vs normal atom
 
                         atoms.emplace_back(wxString(atom.name), true, i_atom_type, float(atom.pos.x), float(atom.pos.y), float(atom.pos.z), atom.occ, i_bfactor, float(atom.charge));
                         current_atom_number++;
@@ -571,9 +585,9 @@ void PDB::Init( ) {
                             std::cerr << "Atom is " << atoms.back( ).name << " " << current_atom_number << " " << atoms.back( ).x_coordinate << atoms.back( ).atom_type << " " << atoms.back( ).bfactor << '\n';
                             exit(1);
                         }
-                    }
-                }
-            }
+                    } // loop over atoms in residue
+                } // if on use residue
+            } // loop over residues
         }
     }
 
@@ -620,14 +634,18 @@ void PDB::Init( ) {
     }
     // Finally, calculate the center of mass of the PDB object if it is not provided and is to be applied.
     if ( ! use_provided_com && shift_by_center_of_mass ) {
-        for ( current_atom_number = 0; current_atom_number < number_of_real_atoms; current_atom_number++ ) {
-            center_of_mass[0] += atoms[current_atom_number].x_coordinate;
-            center_of_mass[1] += atoms[current_atom_number].y_coordinate;
-            center_of_mass[2] += atoms[current_atom_number].z_coordinate;
+        long number_counted = 0;
+        for ( current_atom_number = 0; current_atom_number < atoms.size( ); current_atom_number++ ) {
+            if ( atoms[current_atom_number].is_real_particle ) {
+                center_of_mass[0] += atoms[current_atom_number].x_coordinate;
+                center_of_mass[1] += atoms[current_atom_number].y_coordinate;
+                center_of_mass[2] += atoms[current_atom_number].z_coordinate;
+                number_counted++;
+            }
         }
 
         for ( current_atom_number = 0; current_atom_number < 3; current_atom_number++ ) {
-            center_of_mass[current_atom_number] /= number_of_real_atoms;
+            center_of_mass[current_atom_number] /= number_counted;
             if ( std::isnan(center_of_mass[current_atom_number]) ) {
                 wxPrintf("NaN in center of mass calc from PDB for coordinate %ld, 0=x,1=y,2=z", current_atom_number);
                 throw;

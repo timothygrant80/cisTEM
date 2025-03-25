@@ -847,8 +847,8 @@ reconstruct3d_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
 merge3d_SOURCES  = programs/merge3d/merge3d.cpp
 merge3d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
-merge3d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-merge3d_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
+merge3d_CPPFLAGS = $(WX_CPPFLAGS_BASE) -I/mnt/libtorch/include -I/mnt/libtorch/include/torch/csrc/api/include #-diag-disable 1011 -diag-disable 2196 -diag-disable 1628
+merge3d_LDADD    = -L/mnt/libtorch/lib -ltorch -ltorch_cpu -lc10 libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
 merge3d_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
 calc_occ_SOURCES  = programs/calc_occ/calc_occ.cpp
@@ -865,8 +865,8 @@ project3d_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
 refine3d_SOURCES  = programs/refine3d/refine3d.cpp
 refine3d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
-refine3d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-refine3d_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
+refine3d_CPPFLAGS = $(WX_CPPFLAGS_BASE) 
+refine3d_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS) 
 refine3d_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
 remove_outlier_pixels_SOURCES  = programs/remove_outlier_pixels/remove_outlier_pixels.cpp

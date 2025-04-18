@@ -808,7 +808,7 @@ bool Refine2DApp::DoCalculation( ) {
                 }
                 //if (exclude_blank_edges && input_image_local.ContainsBlankEdges(mask_radius_for_noise)) {number_of_blank_edges_local++; continue;}
 
-                if ( input_image_local.ContainsBlankEdges(mask_radius_for_noise) || input_image_local.ContainsRepeatedLineEdges( ) ) {
+                if ( exclude_blank_edges && (input_image_local.ContainsBlankEdges(mask_radius_for_noise) || input_image_local.ContainsRepeatedLineEdges( )) ) {
                     number_of_blank_edges_local++;
                     continue;
                 }

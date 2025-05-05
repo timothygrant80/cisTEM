@@ -1178,6 +1178,7 @@ endif
 noinst_LIBRARIES = libcore.a libguicore.a libdlib.a
 bin_PROGRAMS =  cisTEM_job_control \
                 unblur \
+                ShiftFieldGeneration \
                 console_test \
                 unit_test_runner \
                 samples_functional_testing \
@@ -1672,6 +1673,11 @@ unblur_SOURCES = programs/unblur/unblur.cpp dlib/dlib/all/source.cpp programs/un
 unblur_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 unblur_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 unblur_LDADD = libcore.a libdlib.a -lX11 $(LIBS) $(WX_LIBS_BASE)
+
+ShiftFieldGeneration_SOURCES = programs/unblur/ShiftFieldGeneration.cpp dlib/dlib/all/source.cpp programs/unblur/bicubicspline.cpp programs/unblur/cubicspline.cpp programs/unblur/movieframespline.cpp
+ShiftFieldGeneration_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+ShiftFieldGeneration_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+ShiftFieldGeneration_LDADD = libcore.a libdlib.a -lX11 $(LIBS) $(WX_LIBS_BASE)
 
 applyctf_SOURCES  = programs/applyctf/applyctf.cpp
 applyctf_CXXFLAGS = $(WX_CPPFLAGS_BASE)

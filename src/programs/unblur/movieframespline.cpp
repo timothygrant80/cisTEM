@@ -196,6 +196,46 @@ void MovieFrameSpline::Update3DSplineInterpMapping(matrix<double> x_vector, matr
     this->MappingMat_z  = this->Spline1d[0][0].MappingMatrix(this->z);
 }
 
+void MovieFrameSpline::Update3DSplineInterpFrames(matrix<double> z_vector) {
+    // wxPrintf("not enter mapping update?\n");
+
+    // this->x                  = x_vector;
+    // this->y                  = y_vector;
+    this->z = z_vector;
+    // this->Mapping_Mat_Row_no = y_vector.size( );
+    // this->Mapping_Mat_Col_no = x_vector.size( );
+    this->Mapping_Mat_z_no = z_vector.size( );
+
+    // wxPrintf("in mapping update?\n");
+    // matrix<double> Control_On_Image;
+    // Control_On_Image.set_size(this->knot_no_y + 2, this->knot_no_x + 2);
+    // wxPrintf("1sd?\n");
+    this->Spline1d[0][0].MappingMat = this->Spline1d[0][0].MappingMatrix(this->z);
+    // wxPrintf("2sd?\n");
+    // this->Spline2d[0].MappingMat = this->Spline2d[0].MappingMatrix(x_vector, y_vector);
+    // this->MappingMat_xy          = this->Spline2d[0].MappingMat;
+    this->MappingMat_z = this->Spline1d[0][0].MappingMat;
+    for ( int i = 0; i < this->knot_no_y; i++ ) {
+        for ( int j = 0; j < this->knot_no_x; j++ ) {
+            // wxPrintf("update1d\n");
+            // this->Spline1d[i][j].UpdateSpline(this->value_on_knot[i][j]); //here is indeed update the qy for quadratic spline
+            // this->Spline1d[i][j].FineGridCurve = this->Spline1d[i][j].SplineCurve(this->z, this->Spline1d[i][j].Qy);
+            this->Spline1d[i][j].MappingMat     = this->MappingMat_z;
+            this->Spline1d[i][j].Mapping_Mat_no = this->Mapping_Mat_z_no;
+            // this->Spline1d[i][j].MappingMat = this->Spline1d[i][j].MappingMatrix(this->z);
+        }
+    }
+    // for ( int frame_ind = 1; frame_ind < this->frame_no; frame_ind++ ) {
+    //     // wxPrintf("update2d\n");
+    //     this->Spline2d[frame_ind].MappingMat         = this->MappingMat_xy;
+    //     this->Spline2d[frame_ind].Mapping_Mat_Row_no = this->Mapping_Mat_Row_no;
+    //     this->Spline2d[frame_ind].Mapping_Mat_Col_no = this->Mapping_Mat_Col_no;
+    //     // this->Spline2d[frame_ind].MappingMat = this->Spline2d[frame_ind].MappingMatrix(x_vector, y_vector);
+    //     // this->Spline2d[frame_ind].MappingMat = this->Spline2d[frame_ind].MappingMatrix(this->x, this->y);
+    //     // wxPrintf(" mappin mat row and col %d %d\n", int(this->Spline2d[frame_ind].Mapping_Mat_Row_no), int(this->Spline2d[frame_ind].Mapping_Mat_Col_no));
+    // }
+}
+
 void MovieFrameSpline::Update3DSplineInterpMappingControl(matrix<double> x_vector, matrix<double> y_vector, matrix<double> z_vector) {
     // wxPrintf("not enter mapping update?\n");
 

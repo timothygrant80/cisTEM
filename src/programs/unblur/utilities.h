@@ -534,6 +534,30 @@ void write_joins(std::string output_path, std::string join_file_pref, column_vec
     joinfile.close( );
 }
 
+matrix<double> read_join_file(std::string join_file, int knot_on_x, int knot_on_y, int knot_on_z) {
+
+    std::ifstream ijoinfile(join_file.c_str( ));
+    if ( ! ijoinfile.is_open( ) ) {
+        wxPrintf("\nError: Cannot open file %s\n", join_file.c_str( ));
+        return matrix<double>( );
+    }
+
+    int           joinsize = knot_on_x * knot_on_y * knot_on_z * 2;
+    column_vector Join1d;
+    Join1d.set_size(joinsize, 1);
+
+    for ( int i = 0; i < joinsize; i++ ) {
+        if ( ! (ijoinfile >> Join1d(i)) ) {
+            wxPrintf("\nError: Unable to read data from file %s at index %d\n", join_file.c_str( ), i);
+            ijoinfile.close( );
+            return matrix<double>( );
+        }
+    }
+
+    ijoinfile.close( );
+    return Join1d;
+}
+
 matrix<double> read_joins(std::string join_file_pref, std::string output_path, int joinsize) {
     wxPrintf("reading the joins from\n");
     std::ifstream      ijoinfile;

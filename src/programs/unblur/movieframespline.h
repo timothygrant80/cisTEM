@@ -48,12 +48,14 @@ class MovieFrameSpline {
     long             Mapping_Mat_z_no;
     matrix<double>** value_on_knot; // shape: knot_no_y, knot_no_x, knot_no_z
 
-    void            Initialize(int knot_no_along_z, int row_no, int column_no, int frame_no, int image_x_dim, int image_y_dim, float spline_knotz_distance, float spline_knotx_distance, float spline_knoty_distance);
-    void            InitializeForward(int knot_no_along_z, int row_no, int column_no, int frame_no, int image_x_dim, int image_y_dim, float spline_knotz_distance, float spline_knotx_distance, float spline_knoty_distance);
-    void            CopyFrom(MovieFrameSpline other_MovieFrameSpline);
-    void            Update3DSplineOnKnotValue(matrix<double>** value_on_knot);
-    void            Update3DSplineInterpMapping(matrix<double> x_vector, matrix<double> y_vector, matrix<double> z_vector);
-    void            Update3DSplineInterpMappingControl(matrix<double> x_vector, matrix<double> y_vector, matrix<double> z_vector);
+    void Initialize(int knot_no_along_z, int row_no, int column_no, int frame_no, int image_x_dim, int image_y_dim, float spline_knotz_distance, float spline_knotx_distance, float spline_knoty_distance);
+    void InitializeForward(int knot_no_along_z, int row_no, int column_no, int frame_no, int image_x_dim, int image_y_dim, float spline_knotz_distance, float spline_knotx_distance, float spline_knoty_distance);
+    void CopyFrom(MovieFrameSpline other_MovieFrameSpline);
+    void Update3DSplineOnKnotValue(matrix<double>** value_on_knot);
+    void Update3DSplineInterpMapping(matrix<double> x_vector, matrix<double> y_vector, matrix<double> z_vector);
+    void Update3DSplineInterpMappingControl(matrix<double> x_vector, matrix<double> y_vector, matrix<double> z_vector);
+    void Update3DSplineInterpFrames(matrix<double> z_vector);
+
     void            Update3DSpline1dInput(matrix<double> value_on_knot_1d);
     void            Update3DSpline1dInputControlPoints(matrix<double> Q_1d);
     void            Update3DSpline(matrix<double>** value_on_knot);

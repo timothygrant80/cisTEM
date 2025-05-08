@@ -7014,7 +7014,7 @@ void Image::ComputeFilteredAmplitudeSpectrumFull2D(Image* average_spectrum_maske
     //			average_spectrum_masked->SetMaximumValue(average_spectrum_masked->ReturnMaximumValue(3,3));
 
     average_spectrum_masked->CopyFrom(this);
-    if (apply_cosine_mask) {
+    if ( apply_cosine_mask ) {
         average_spectrum_masked->CosineMask(float(average_spectrum_masked->logical_x_dimension) * pixel_size_for_fitting / std::max(maximum_resolution, 8.0f), float(average_spectrum_masked->logical_x_dimension) * pixel_size_for_fitting / std::max(maximum_resolution, 4.0f), true);
     }
     //			average_spectrum_masked->QuickAndDirtyWriteSlice("dbg_spec_before_thresh.mrc",1);
@@ -9098,6 +9098,47 @@ void Image::SwapRealSpaceQuadrants( ) {
         object_is_centred_in_box = false;
     else
         object_is_centred_in_box = true;
+}
+
+float Image::NormalizedCrossCorrelation(Image* other_image) {
+    MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+    MyDebugAssertTrue(is_in_real_space == other_image->is_in_real_space, "Images are in different spaces");
+    MyDebugAssertTrue(HasSameDimensionsAs(other_image) == true, "Images are different sizes");
+
+    long  counter;
+    float ab_buffer = 0;
+    float aa_buffer = 0;
+    float bb_buffer = 0;
+    // make some backups..
+
+    Image buffer_image_1;
+    Image buffer_image_2;
+
+    buffer_image_1.Allocate(logical_x_dimension, logical_y_dimension, logical_z_dimension);
+    buffer_image_1.SetToConstant(0.0f);
+    buffer_image_2.Allocate(logical_x_dimension, logical_y_dimension, logical_z_dimension);
+    buffer_image_2.SetToConstant(0.0f);
+
+    for ( counter = 0; counter < logical_x_dimension * logical_y_dimension; counter++ ) {
+        buffer_image_1.real_values[counter] = real_values[counter];
+        buffer_image_2.real_values[counter] = other_image->real_values[counter];
+    }
+    // normalise the images..
+
+    buffer_image_1.ZeroFloatAndNormalize(1.0f);
+    buffer_image_2.ZeroFloatAndNormalize(1.0f);
+
+    // do correlation and restore the images...
+
+    for ( counter = 0; counter < logical_x_dimension * logical_y_dimension; counter++ ) {
+        ab_buffer                         = ab_buffer + (real_values[counter] * other_image->real_values[counter]);
+        aa_buffer                         = aa_buffer + pow(real_values[counter], 2);
+        bb_buffer                         = bb_buffer + pow(other_image->real_values[counter], 2);
+        real_values[counter]              = buffer_image_1.real_values[counter];
+        other_image->real_values[counter] = buffer_image_2.real_values[counter];
+    }
+
+    return float(ab_buffer / sqrt(aa_buffer * bb_buffer));
 }
 
 void Image::CalculateCrossCorrelationImageWith(Image* other_image) {

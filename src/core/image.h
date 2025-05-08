@@ -510,6 +510,7 @@ class Image {
     void  ApplyCurveFilterUninterpolated(Curve* filter_to_apply, float resolution_limit = 1.0f, float scale = 0.0f);
     void  MaskCentralCross(int vertical_half_width = 1, int horizontal_half_width = 1);
     void  ZeroCentralPixel( );
+    float NormalizedCrossCorrelation(Image* other_image);
     void  CalculateCrossCorrelationImageWith(Image* other_image);
     void  CalculatePhaseCrossCorrelationImageWith(Image& other_image, Peak& found_peak, float peak_shift_multiplier, bool normalize);
     void  SwapFourierSpaceQuadrants(bool also_swap_real_space_quadrants = true);

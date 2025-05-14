@@ -40,11 +40,8 @@ bool AlignNMR::DoCalculation( ) {
     Peak  my_peak;
     Image spec1;
     Image spec2;
-    Image mask_spec1;
-    Image mask_spec2;
     Image shift;
     Image spec2_copy;
-    Image applied_shift;
 
     // get the spectra..
 

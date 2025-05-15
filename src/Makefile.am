@@ -476,6 +476,12 @@ if ENABLE_MEASURETEMPLATEBIAS_AM
 bin_PROGRAMS += measure_template_bias
 endif
 
+
+
+if ENABLE_ALIGNNMRSPECTRA_AM
+bin_PROGRAMS += align_nmr_spectra
+endif
+
 ########################################################
 # End optional programs
 ########################################################
@@ -1179,6 +1185,14 @@ samples_functional_testing_SOURCES  = programs/samples/samples_functional_testin
 samples_functional_testing_SOURCES += programs/samples/common/helper_functions.cpp programs/samples/common/embedded_test_file.cpp programs/samples/common/numeric_test_file.cpp
 samples_functional_testing_SOURCES += programs/samples/0_simple/disk_io_image.cpp  
 samples_functional_testing_SOURCES += programs/samples/6_simulation/simple_3d.cpp
+
+
+
+align_nmr_spectra_SOURCES  = programs/align_nmr_spectra/align_nmr_spectra.cpp
+align_nmr_spectra_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+align_nmr_spectra_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+align_nmr_spectra_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
+align_nmr_spectra_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 if WANT_CISTEM_GPU_AM
         samples_functional_testing_SOURCES += programs/samples/1_cpu_gpu_comparison/resize_comparison.cpp programs/samples/1_cpu_gpu_comparison/projection_comparison.cpp programs/samples/1_cpu_gpu_comparison/masking.cpp programs/samples/1_cpu_gpu_comparison/statistical_ops.cpp 
         # samples_functional_testing_SOURCES += programs/samples/3_tensor_ops/gpu_image_tensor_ops.cpp

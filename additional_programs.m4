@@ -445,8 +445,6 @@ AC_ARG_ENABLE(build-measure-template-bias, AS_HELP_STRING([--enable-build-measur
   ])
 AM_CONDITIONAL([ENABLE_MEASURETEMPLATEBIAS_AM], [test "x$build_measure_template_bias" = "xyes"])
 
-
-
 AS_IF([test "x$build_all" = "xyes"], [build_align_nmr_spectra="yes"])
 AC_ARG_ENABLE(build-align-nmr-spectra, AS_HELP_STRING([--enable-build-align-nmr-spectra],[build align_nmr_spectra  [default="no"]]),[
   if test "$enableval" = yes; then
@@ -456,4 +454,12 @@ AC_ARG_ENABLE(build-align-nmr-spectra, AS_HELP_STRING([--enable-build-align-nmr-
   ])
 AM_CONDITIONAL([ENABLE_ALIGNNMRSPECTRA_AM], [test "x$build_align_nmr_spectra" = "xyes"])
 
+AS_IF([test "x$build_all" = "xyes"], [build_correlate_nmr_spectra="yes"])
+AC_ARG_ENABLE(build-correlate-nmr-spectra, AS_HELP_STRING([--enable-correlate-nmr-spectra],[build correlate_nmr_spectra  [default="no"]]),[
+  if test "$enableval" = yes; then
+    build_correlate_nmr_spectra=yes
+    AC_MSG_NOTICE([Building correlate_nmr_spectra])
+  fi
+  ])
+AM_CONDITIONAL([ENABLE_CORRELATENMRSPECTRA_AM], [test "x$build_correlate_nmr_spectra" = "xyes"])
 ])

@@ -230,7 +230,7 @@ bool CorrelateNMRSpectra::DoCalculation( ) {
     pixel_size_1 = my_output_file_1.ReturnPixelSize( );
     pixel_size_2 = my_output_file_2.ReturnPixelSize( );
 
-    if ( filter_spectra == true ) {
+    if ( filter_spectra ) {
 
         // filter first spectra
 

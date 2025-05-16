@@ -9114,15 +9114,8 @@ float Image::NormalizedCrossCorrelation(Image* other_image) {
     Image buffer_image_1;
     Image buffer_image_2;
 
-    buffer_image_1.Allocate(logical_x_dimension, logical_y_dimension, logical_z_dimension);
-    buffer_image_1.SetToConstant(0.0f);
-    buffer_image_2.Allocate(logical_x_dimension, logical_y_dimension, logical_z_dimension);
-    buffer_image_2.SetToConstant(0.0f);
-
-    for ( counter = 0; counter < logical_x_dimension * logical_y_dimension; counter++ ) {
-        buffer_image_1.real_values[counter] = real_values[counter];
-        buffer_image_2.real_values[counter] = other_image->real_values[counter];
-    }
+    buffer_image_1.CopyFrom(this);
+    buffer_image_2.CopyFrom(other_image);
     // normalise the images..
 
     buffer_image_1.ZeroFloatAndNormalize(1.0f);

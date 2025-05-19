@@ -484,6 +484,10 @@ if ENABLE_CORRELATENMRSPECTRA_AM
 bin_PROGRAMS += correlate_nmr_spectra
 endif
 
+if ENABLE_FILTERIMAGES_AM
+bin_PROGRAMS += filter_images
+endif
+
 ########################################################
 # End optional programs
 ########################################################
@@ -1199,6 +1203,12 @@ correlate_nmr_spectra_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 correlate_nmr_spectra_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 correlate_nmr_spectra_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
 correlate_nmr_spectra_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
+
+filter_images_SOURCES  = programs/filter_images/filter_images.cpp
+filter_images_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+filter_images_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+filter_images_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
+filter_images_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
 if WANT_CISTEM_GPU_AM
         samples_functional_testing_SOURCES += programs/samples/1_cpu_gpu_comparison/resize_comparison.cpp programs/samples/1_cpu_gpu_comparison/projection_comparison.cpp programs/samples/1_cpu_gpu_comparison/masking.cpp programs/samples/1_cpu_gpu_comparison/statistical_ops.cpp 

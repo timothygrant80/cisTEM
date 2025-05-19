@@ -462,4 +462,15 @@ AC_ARG_ENABLE(build-correlate-nmr-spectra, AS_HELP_STRING([--enable-correlate-nm
   fi
   ])
 AM_CONDITIONAL([ENABLE_CORRELATENMRSPECTRA_AM], [test "x$build_correlate_nmr_spectra" = "xyes"])
+
+AS_IF([test "x$build_all" = "xyes"], [build_filter_images="yes"])
+AC_ARG_ENABLE(build-filter-images, AS_HELP_STRING([--enable-filter-images],[build filter_images  [default="no"]]),[
+  if test "$enableval" = yes; then
+    build_filter_images=yes
+    AC_MSG_NOTICE([Building filter_images])
+  fi
+  ])
+AM_CONDITIONAL([ENABLE_FILTERIMAGES_AM], [test "x$build_filter_images" = "xyes"])
+
 ])
+

@@ -496,7 +496,7 @@ class Image {
                                         int    wanted_coordinate_of_box_center_y = 0,
                                         int    wanted_coordinate_of_box_center_z = 0);
 
-    void  ChangePixelSize(Image* other_image, float wanted_factor, float wanted_tolerance, bool return_fft = false);
+    float ChangePixelSize(Image* other_image, float wanted_factor, float wanted_tolerance, bool return_fft = false);
     void  InsertOtherImageAtSpecifiedPosition(Image* other_image, int wanted_x_coord, int wanted_y_coord, int wanted_z_coord, float threshold_value = -FLT_MAX);
     void  Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted_z_dimension, float wanted_padding_value = 0);
     void  RealSpaceBinning(int bin_x, int bin_y, int bin_z = 1, bool symmetrical = false, bool exclude_incomplete_bins = false);

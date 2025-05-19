@@ -8111,10 +8111,21 @@ void Image::ClipInto(Image* other_image, float wanted_padding_value, bool fill_w
     }
 }
 
-void Image::ChangePixelSize(Image* other_image, float wanted_factor, float wanted_tolerance, bool return_fft) {
+/**
+ * @brief Returns the actual resampling factor used
+ * 
+ * @param other_image 
+ * @param wanted_factor 
+ * @param wanted_tolerance 
+ * @param return_fft 
+ * @return float 
+ */
+float Image::ChangePixelSize(Image* other_image, float wanted_factor, float wanted_tolerance, bool return_fft) {
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
     MyDebugAssertTrue(other_image->is_in_memory, "Other image Memory not allocated");
     MyDebugAssertTrue(is_in_real_space, "Image must be in real space");
+
+    float used_factor = wanted_factor;
 
     if ( fabsf(wanted_factor - 1.0f) < wanted_tolerance ) {
         if ( other_image != this ) {
@@ -8128,7 +8139,7 @@ void Image::ChangePixelSize(Image* other_image, float wanted_factor, float wante
         if ( return_fft )
             other_image->ForwardFFT( );
 
-        return;
+        return used_factor;
     }
 
     // Note: only the z dimension is being initialized like this.
@@ -8197,11 +8208,13 @@ void Image::ChangePixelSize(Image* other_image, float wanted_factor, float wante
     temp_image.ForwardFFT( );
     temp_image.Resize(new_x_dimension, new_y_dimension, new_z_dimension);
 
+    used_factor = float(pad_x_dimension) / float(new_x_dimension);
+
     if ( new_x_dimension == other_image->logical_x_dimension && new_y_dimension == other_image->logical_y_dimension && new_z_dimension == other_image->logical_z_dimension ) {
         other_image->CopyFrom(&temp_image);
         if ( ! return_fft )
             other_image->BackwardFFT( );
-        return;
+        return used_factor;
     }
 
     temp_image.BackwardFFT( );
@@ -8209,6 +8222,8 @@ void Image::ChangePixelSize(Image* other_image, float wanted_factor, float wante
 
     if ( return_fft )
         other_image->ForwardFFT( );
+
+    return used_factor;
 }
 
 // Bilinear interpolation in real space, at point (x,y) where x and y are physical coordinates (i.e. first pixel has x,y = 0,0)

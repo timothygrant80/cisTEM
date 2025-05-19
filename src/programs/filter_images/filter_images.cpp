@@ -35,6 +35,9 @@ void FilterImages::DoInteractiveUserInput( ) {
 // override the do calculation method which will be what is actually run..
 
 bool FilterImages::DoCalculation( ) {
+    enum FilterOptions { HIGHPASS = 1,
+                         LOWPASS  = 2,
+                         BANDPASS = 3 };
 
     std::string input_filename  = my_current_job.arguments[0].ReturnStringArgument( );
     std::string output_filename = my_current_job.arguments[1].ReturnStringArgument( );
@@ -48,9 +51,7 @@ bool FilterImages::DoCalculation( ) {
 
     Image my_image;
 
-    pixel_size = my_input_file.ReturnPixelSize( );
-
-    if ( filter_type == 1 ) {
+    if ( filter_type == HIGHPASS ) {
         wxPrintf("\nApplying Highpass filter...\n\n");
 
         my_image.ReadSlice(&my_input_file, 1);
@@ -59,7 +60,7 @@ bool FilterImages::DoCalculation( ) {
         my_image.BackwardFFT( );
         my_image.WriteSlice(&my_output_file, 1);
     }
-    else if ( filter_type == 2 ) {
+    else if ( filter_type == LOWPASS ) {
         wxPrintf("\nApplying Lowpass filter...\n\n");
 
         my_image.ReadSlice(&my_input_file, 1);
@@ -68,7 +69,7 @@ bool FilterImages::DoCalculation( ) {
         my_image.BackwardFFT( );
         my_image.WriteSlice(&my_output_file, 1);
     }
-    else if ( filter_type == 3 ) {
+    else if ( filter_type == BANDPASS ) {
         wxPrintf("\nApplying Bandpass filter...\n\n");
 
         my_image.ReadSlice(&my_input_file, 1);

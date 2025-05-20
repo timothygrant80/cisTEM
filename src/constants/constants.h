@@ -68,7 +68,7 @@ enum Enum : int {
     fraction_of_search_positions_that_are_independent,
     number_of_histogram_bins,
     ccc_scalar,
-    input_pixel_size,
+    search_pixel_size,
     input_binning_factor,
     number_of_valid_search_pixels,
     disable_flat_fielding,

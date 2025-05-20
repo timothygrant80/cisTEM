@@ -110,6 +110,8 @@ class MRCHeader {
 
     bool this_is_in_mastronarde_4bit_hack_format;
 
+    bool dimensions_set;
+
   public:
     // methods
 

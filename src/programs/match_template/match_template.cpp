@@ -115,7 +115,7 @@ void MatchTemplateApp::AddCommandLineOptions( ) {
     command_line_parser.AddLongSwitch("disable-flat-fielding", "Disable flat fielding. Default false");
     command_line_parser.AddOption("", "n-expected-false-positives", "average number of false positives per image, (defaults to 1)", wxCMD_LINE_VAL_DOUBLE);
     command_line_parser.AddLongSwitch("ignore-defocus-for-threshold", "assume the defocus planes are not independent locs for threshold calc, (defaults false)");
-    command_line_parser.AddLongSwitch("skip-result-rescaling", "Skip the rescaling of the results their original size, (defaults false)");
+    command_line_parser.AddLongSwitch("apply-result-rescaling", "Rescale the results their original size, (defaults false)");
 
 #ifdef TEST_LOCAL_NORMALIZATION
     command_line_parser.AddOption("", "healpix-file", "Healpix file for the input images", wxCMD_LINE_VAL_STRING);
@@ -286,12 +286,12 @@ bool MatchTemplateApp::DoCalculation( ) {
     bool   use_gpu_prj                  = true;
     bool   disable_flat_fielding        = false;
     bool   ignore_defocus_for_threshold = false;
-    bool   skip_result_rescaling{ };
+    bool   apply_result_rescaling{ };
     double n_expected_false_positives{1.0};
 
-    if ( command_line_parser.FoundSwitch("skip-result-rescaling") ) {
-        SendInfo("Skipping result rescaling\n");
-        skip_result_rescaling = true;
+    if ( command_line_parser.FoundSwitch("apply-result-rescaling") ) {
+        SendInfo("Applying result rescaling\n");
+        apply_result_rescaling = true;
     }
     if ( command_line_parser.FoundSwitch("ignore-defocus-for-threshold") ) {
         SendInfo("Using one defocus plane for threshold calc\n");
@@ -1196,7 +1196,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     correlation_pixel_sum_image.ZeroFFTWPadding( );
     correlation_pixel_sum_of_squares_image.ZeroFFTWPadding( );
 
-    // Even if we skip_result_rescaling, we still want to remove any padding.
+    // Even if we apply_result_rescaling, we still want to remove any padding.
     data_sizer.ResizeImage_postSearch(max_intensity_projection,
                                       best_psi,
                                       best_phi,
@@ -1205,10 +1205,10 @@ bool MatchTemplateApp::DoCalculation( ) {
                                       best_pixel_size,
                                       correlation_pixel_sum_image,
                                       correlation_pixel_sum_of_squares_image,
-                                      skip_result_rescaling,
+                                      apply_result_rescaling,
                                       max_threads);
 
-    float output_pixel_size = skip_result_rescaling ? data_sizer.GetSearchPixelSize( ) : data_sizer.GetPixelSize( );
+    float output_pixel_size = apply_result_rescaling ? data_sizer.GetPixelSize( ) : data_sizer.GetSearchPixelSize( );
 
     profile_timing.lap("Resize_postSearch");
     profile_timing.print_times( );
@@ -1248,68 +1248,67 @@ bool MatchTemplateApp::DoCalculation( ) {
 
         temp_image.CopyFrom(&max_intensity_projection);
         MRCFile mip_out(mip_output_file.ToStdString( ), true);
-        mip_out.SetPixelSize(output_pixel_size);
 #ifdef USE_FP16_PARTICLE_STACKS
         mip_out.SetOutputToFP16( );
 #endif
         temp_image.WriteSlice(&mip_out, 1);
+        mip_out.SetPixelSizeAndWriteHeader(output_pixel_size);
 
         MRCFile scaled_mip_output_mrcfile(scaled_mip_output_file.ToStdString( ), true);
-        scaled_mip_output_mrcfile.SetPixelSize(output_pixel_size);
 #ifdef USE_FP16_PARTICLE_STACKS
         scaled_mip_output_mrcfile.SetOutputToFP16( );
 #endif
         scaled_mip.WriteSlice(&scaled_mip_output_mrcfile, 1);
+        scaled_mip_output_mrcfile.SetPixelSizeAndWriteHeader(output_pixel_size);
 
         MRCFile correlation_pixel_sum_output_mrcfile(correlation_avg_output_file.ToStdString( ), true);
-        correlation_pixel_sum_output_mrcfile.SetPixelSize(output_pixel_size);
 #ifdef USE_FP16_PARTICLE_STACKS
         correlation_pixel_sum_output_mrcfile.SetOutputToFP16( );
 #endif
         correlation_pixel_sum_image.WriteSlice(&correlation_pixel_sum_output_mrcfile, 1);
+        correlation_pixel_sum_output_mrcfile.SetPixelSizeAndWriteHeader(output_pixel_size);
 
         MRCFile correlation_pixel_sum_of_squares_output_mrcfile(correlation_std_output_file.ToStdString( ), true);
-        correlation_pixel_sum_of_squares_output_mrcfile.SetPixelSize(output_pixel_size);
 #ifdef USE_FP16_PARTICLE_STACKS
         correlation_pixel_sum_of_squares_output_mrcfile.SetOutputToFP16( );
 #endif
         correlation_pixel_sum_of_squares_image.WriteSlice(&correlation_pixel_sum_of_squares_output_mrcfile, 1);
+        correlation_pixel_sum_of_squares_output_mrcfile.SetPixelSizeAndWriteHeader(output_pixel_size);
 
         MRCFile best_psi_output_mrcfile(best_psi_output_file.ToStdString( ), true);
-        best_psi_output_mrcfile.SetPixelSize(output_pixel_size);
 #ifdef USE_FP16_PARTICLE_STACKS
         best_psi_output_mrcfile.SetOutputToFP16( );
 #endif
         best_psi.WriteSlice(&best_psi_output_mrcfile, 1);
+        best_psi_output_mrcfile.SetPixelSizeAndWriteHeader(output_pixel_size);
 
         MRCFile best_theta_output_mrcfile(best_theta_output_file.ToStdString( ), true);
-        best_theta_output_mrcfile.SetPixelSize(output_pixel_size);
 #ifdef USE_FP16_PARTICLE_STACKS
         best_theta_output_mrcfile.SetOutputToFP16( );
 #endif
         best_theta.WriteSlice(&best_theta_output_mrcfile, 1);
+        best_theta_output_mrcfile.SetPixelSizeAndWriteHeader(output_pixel_size);
 
         MRCFile best_phi_output_mrcfile(best_phi_output_file.ToStdString( ), true);
-        best_phi_output_mrcfile.SetPixelSize(output_pixel_size);
 #ifdef USE_FP16_PARTICLE_STACKS
         best_phi_output_mrcfile.SetOutputToFP16( );
 #endif
         best_phi.WriteSlice(&best_phi_output_mrcfile, 1);
+        best_phi_output_mrcfile.SetPixelSizeAndWriteHeader(output_pixel_size);
 
         MRCFile best_defocus_output_mrcfile(best_defocus_output_file.ToStdString( ), true);
-        best_defocus_output_mrcfile.SetPixelSize(output_pixel_size);
 #ifdef USE_FP16_PARTICLE_STACKS
         best_defocus_output_mrcfile.SetOutputToFP16( );
 #endif
         best_defocus.WriteSlice(&best_defocus_output_mrcfile, 1);
+        best_defocus_output_mrcfile.SetPixelSizeAndWriteHeader(output_pixel_size);
 
         MRCFile best_pixel_size_output_mrcfile(best_pixel_size_output_file.ToStdString( ), true);
-        best_pixel_size_output_mrcfile.SetPixelSize(output_pixel_size);
 #ifdef USE_FP16_PARTICLE_STACKS
         best_pixel_size_output_mrcfile.SetOutputToFP16( );
 #endif
         best_pixel_size.WriteSlice(&best_pixel_size_output_mrcfile, 1);
-
+        best_pixel_size_output_mrcfile.SetPixelSizeAndWriteHeader(output_pixel_size);
         // write out histogram..
 
         NumericTextFile histogram_file(output_histogram_file, OPEN_TO_WRITE, 4);
@@ -1374,15 +1373,15 @@ bool MatchTemplateApp::DoCalculation( ) {
             result[cm_t::number_of_angles_searched]                         = actual_number_of_angles_searched;
             result[cm_t::fraction_of_search_positions_that_are_independent] = fraction_of_search_positions_that_are_independent;
             result[cm_t::ccc_scalar]                                        = 1.0f; // (float)sqrt_input_pixels is redundant, but we need all the results to calculate the scaling from the global CCC moments
-            result[cm_t::input_pixel_size]                                  = output_pixel_size;
-            result[cm_t::input_binning_factor]                              = skip_result_rescaling ? data_sizer.GetFullBinningFactor( ) : 1.0f;
-            result[cm_t::number_of_valid_search_pixels]                     = float(data_sizer.GetNumberOfValidSearchPixels( )); // if skip_result_rescaling is true, this will = image_size_x * image_size_y as they are cropped to the ROI
+            result[cm_t::search_pixel_size]                                 = output_pixel_size;
+            result[cm_t::input_binning_factor]                              = apply_result_rescaling ? 1.0f : data_sizer.GetFullBinningFactor( );
+            result[cm_t::number_of_valid_search_pixels]                     = float(data_sizer.GetNumberOfValidSearchPixels( )); // if apply_result_rescaling is false, this will = image_size_x * image_size_y as they are cropped to the ROI
             result[cm_t::disable_flat_fielding]                             = float(disable_flat_fielding);
             result[cm_t::number_of_expected_false_positives]                = float(n_expected_false_positives);
 
-            if ( skip_result_rescaling ) {
+            if ( ! apply_result_rescaling ) {
                 MyDebugAssertTrue(data_sizer.GetNumberOfValidSearchPixels( ) == (max_intensity_projection.logical_x_dimension * max_intensity_projection.logical_y_dimension),
-                                  "If skip_result_rescaling is true, the number of valid search pixels (%ld) must equal the image size (%d, %d)\n", data_sizer.GetNumberOfValidSearchPixels( ), max_intensity_projection.logical_x_dimension, max_intensity_projection.logical_y_dimension);
+                                  "If apply_result_rescaling is true, the number of valid search pixels (%ld) must equal the image size (%d, %d)\n", data_sizer.GetNumberOfValidSearchPixels( ), max_intensity_projection.logical_x_dimension, max_intensity_projection.logical_y_dimension);
             }
         }
 
@@ -1534,7 +1533,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
         int    image_size_x                                      = int(aggregated_results[array_location].collated_data_array[cistem::match_template::image_size_x]);
         int    image_size_y                                      = int(aggregated_results[array_location].collated_data_array[cistem::match_template::image_size_y]);
         int    image_real_memory_allocated                       = int(aggregated_results[array_location].collated_data_array[cistem::match_template::image_real_memory_allocated]);
-        float  input_pixel_size                                  = aggregated_results[array_location].collated_data_array[cistem::match_template::input_pixel_size];
+        float  search_pixel_size                                 = aggregated_results[array_location].collated_data_array[cistem::match_template::search_pixel_size];
         float  input_binning_factor                              = aggregated_results[array_location].collated_data_array[cistem::match_template::input_binning_factor];
         long   number_of_valid_search_pixels                     = long(aggregated_results[array_location].collated_data_array[cistem::match_template::number_of_valid_search_pixels]);
         double n_expected_false_positives                        = double(aggregated_results[array_location].collated_data_array[cistem::match_template::number_of_expected_false_positives]);
@@ -1570,11 +1569,11 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
         }
 
         MRCFile mip_output_file(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[21].ReturnStringArgument( ), true);
-        mip_output_file.SetPixelSize(input_pixel_size);
 #ifdef USE_FP16_PARTICLE_STACKS
         mip_output_file.SetOutputToFP16( );
 #endif
         temp_image.WriteSlice(&mip_output_file, 1);
+        mip_output_file.SetPixelSizeAndWriteHeader(search_pixel_size);
 
         wxPrintf("Writing result %i\n", aggregated_results[array_location].image_number - 1);
 
@@ -1583,11 +1582,12 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
             temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_psi_data[pixel_counter];
         }
         MRCFile psi_output_file(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[22].ReturnStringArgument( ), true);
-        psi_output_file.SetPixelSize(input_pixel_size);
 #ifdef USE_FP16_PARTICLE_STACKS
         psi_output_file.SetOutputToFP16( );
 #endif
         temp_image.WriteSlice(&psi_output_file, 1);
+        psi_output_file.SetPixelSizeAndWriteHeader(search_pixel_size);
+
         psi_image.CopyFrom(&temp_image);
         //theta
 
@@ -1595,12 +1595,13 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
             temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_theta_data[pixel_counter];
         }
         MRCFile theta_output_file(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[23].ReturnStringArgument( ), true);
-        theta_output_file.SetPixelSize(input_pixel_size);
 #ifdef USE_FP16_PARTICLE_STACKS
         theta_output_file.SetOutputToFP16( );
 #endif
 
         temp_image.WriteSlice(&theta_output_file, 1);
+        theta_output_file.SetPixelSizeAndWriteHeader(search_pixel_size);
+
         theta_image.CopyFrom(&temp_image);
 
         // phi
@@ -1609,11 +1610,12 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
             temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_phi_data[pixel_counter];
         }
         MRCFile phi_output_file(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[24].ReturnStringArgument( ), true);
-        phi_output_file.SetPixelSize(input_pixel_size);
 #ifdef USE_FP16_PARTICLE_STACKS
         phi_output_file.SetOutputToFP16( );
 #endif
         temp_image.WriteSlice(&phi_output_file, 1);
+        phi_output_file.SetPixelSizeAndWriteHeader(search_pixel_size);
+
         phi_image.CopyFrom(&temp_image);
 
         // defocus
@@ -1622,11 +1624,12 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
             temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_defocus_data[pixel_counter];
         }
         MRCFile defocus_output_file(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[25].ReturnStringArgument( ), true);
-        defocus_output_file.SetPixelSize(input_pixel_size);
 #ifdef USE_FP16_PARTICLE_STACKS
         defocus_output_file.SetOutputToFP16( );
 #endif
         temp_image.WriteSlice(&defocus_output_file, 1);
+        defocus_output_file.SetPixelSizeAndWriteHeader(search_pixel_size);
+
         defocus_image.CopyFrom(&temp_image);
 
         // pixel size
@@ -1635,19 +1638,20 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
             temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_pixel_size_data[pixel_counter];
         }
         MRCFile pixel_size_output_file(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[26].ReturnStringArgument( ), true);
-        pixel_size_output_file.SetPixelSize(input_pixel_size);
 #ifdef USE_FP16_PARTICLE_STACKS
         pixel_size_output_file.SetOutputToFP16( );
 #endif
         temp_image.WriteSlice(&pixel_size_output_file, 1);
+        pixel_size_output_file.SetPixelSizeAndWriteHeader(search_pixel_size);
+
         pixel_size_image.CopyFrom(&temp_image);
 
         MRCFile scaled_mip_output_mrcfile(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[27].ReturnStringArgument( ), true);
-        scaled_mip_output_mrcfile.SetPixelSize(input_pixel_size);
 #ifdef USE_FP16_PARTICLE_STACKS
         scaled_mip_output_mrcfile.SetOutputToFP16( );
 #endif
         scaled_mip.WriteSlice(&scaled_mip_output_mrcfile, 1);
+        scaled_mip_output_mrcfile.SetPixelSizeAndWriteHeader(search_pixel_size);
 
         // sums
 
@@ -1655,24 +1659,22 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
             temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_pixel_sums[pixel_counter];
         }
         MRCFile sum_output_file(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[36].ReturnStringArgument( ), true);
-        sum_output_file.SetPixelSize(input_pixel_size);
 #ifdef USE_FP16_PARTICLE_STACKS
         sum_output_file.SetOutputToFP16( );
 #endif
         temp_image.WriteSlice(&sum_output_file, 1);
-
+        sum_output_file.SetPixelSizeAndWriteHeader(search_pixel_size);
         // square sums
 
         for ( pixel_counter = 0; pixel_counter < image_real_memory_allocated; pixel_counter++ ) {
             temp_image.real_values[pixel_counter] = aggregated_results[array_location].collated_pixel_square_sums[pixel_counter];
         }
         MRCFile square_sum_output_file(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[28].ReturnStringArgument( ), true);
-        square_sum_output_file.SetPixelSize(input_pixel_size);
 #ifdef USE_FP16_PARTICLE_STACKS
         square_sum_output_file.SetOutputToFP16( );
 #endif
         temp_image.WriteSlice(&square_sum_output_file, 1);
-
+        square_sum_output_file.SetPixelSizeAndWriteHeader(search_pixel_size);
         // histogram
 
         //NumericTextFile histogram_file(wxString::Format("%s/histogram_%i.txt", directory_for_writing_results, aggregated_results[array_location].image_number), OPEN_TO_WRITE, 4);
@@ -1809,9 +1811,9 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
             current_peak.x = current_peak.x + scaled_mip.physical_address_of_box_center_x;
             current_peak.y = current_peak.y + scaled_mip.physical_address_of_box_center_y;
 
-            // arguments[2] = input_pixel_size
-            temp_peak_info.x_pos = current_peak.x * input_pixel_size; // RETURNING IN ANGSTROMS (also takes care of binning if present)
-            temp_peak_info.y_pos = current_peak.y * input_pixel_size; // RETURNING IN ANGSTROMS
+            // arguments[2] = search_pixel_size
+            temp_peak_info.x_pos = current_peak.x * search_pixel_size; // RETURNING IN ANGSTROMS (also takes care of binning if present)
+            temp_peak_info.y_pos = current_peak.y * search_pixel_size; // RETURNING IN ANGSTROMS
 
             //            wxPrintf("Peak = %f, %f, %f : %f\n", current_peak.x, current_peak.y, current_peak.value);
 
@@ -1849,8 +1851,8 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
             }
 
             //        wxPrintf("Peak %4i at x, y, psi, theta, phi, defocus, pixel size = %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f, %12.6f : %10.6f\n", number_of_peaks_found, current_peak.x, current_peak.y, current_psi, current_theta, current_phi, current_defocus, current_pixel_size, current_peak.value);
-            //        coordinates[0] = current_peak.x * input_pixel_size;
-            //        coordinates[1] = current_peak.y * input_pixel_size;
+            //        coordinates[0] = current_peak.x * search_pixel_size;
+            //        coordinates[1] = current_peak.y * search_pixel_size;
             ////        coordinates[2] = binned_pixel_size * (slab.physical_address_of_box_center_z - binned_reconstruction.physical_address_of_box_center_z) - current_defocus;
             //        coordinates[2] = binned_pixel_size * slab.physical_address_of_box_center_z - current_defocus;
             //        coordinate_file.WriteLine(coordinates);
@@ -1885,7 +1887,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
 
         // save the output image
 
-        result_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[38].ReturnStringArgument( ), 1, true, input_pixel_size);
+        result_image.QuickAndDirtyWriteSlice(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[38].ReturnStringArgument( ), 1, true, search_pixel_size);
 
         // tell the gui that this result is available...
 
@@ -1932,7 +1934,7 @@ void AggregatedTemplateResult::AddResult(float* result_array, long array_size, i
     int   image_size_x                = result_array[cistem::match_template::image_size_x];
     int   image_size_y                = result_array[cistem::match_template::image_size_y];
     int   image_real_memory_allocated = result_array[cistem::match_template::image_real_memory_allocated];
-    float input_pixel_size            = result_array[cistem::match_template::input_pixel_size];
+    float search_pixel_size           = result_array[cistem::match_template::search_pixel_size];
 
     // FIXME: change to nullptr
     if ( collated_data_array == NULL ) {
@@ -2158,18 +2160,18 @@ void MatchTemplateApp::RescaleMipAndStatisticalArraysByGlobalMeanAndStdDev(Image
     // float estimated_radius_in_pixels = current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[39].ReturnFloatArgument( );
 
     // // The factor of 4 (two particle diameters) is in no way optimized.
-    // float objective_aperture_resolution = input_pixel_size * estimated_radius_in_pixels * 4.0f;
+    // float objective_aperture_resolution = search_pixel_size * estimated_radius_in_pixels * 4.0f;
     // float mask_falloff                  = 7.f;
 
     // // std::cerr << "Inside test filtered mip" << std::endl;
     // // std::cerr << "Objective aperture resolution: " << objective_aperture_resolution << std::endl;
     // // std::cerr << "Mask falloff: " << mask_falloff << std::endl;
-    // // std::cerr << "Pixel size: " << input_pixel_size << std::endl;
+    // // std::cerr << "Pixel size: " << search_pixel_size << std::endl;
     // // std::cerr << "Estimated radius in pixels: " << estimated_radius_in_pixels << std::endl;
 
     // Image temp_filtered_img;
     // temp_filtered_img.Allocate(temp_image.logical_x_dimension, temp_image.logical_y_dimension, true);
-    // temp_filtered_img.ReturnCosineMaskBandpassResolution(input_pixel_size, objective_aperture_resolution, mask_falloff);
+    // temp_filtered_img.ReturnCosineMaskBandpassResolution(search_pixel_size, objective_aperture_resolution, mask_falloff);
 
     // // Direct at the avg image first
     // for ( pixel_counter = 0; pixel_counter < image_real_memory_allocated; pixel_counter++ ) {

@@ -122,7 +122,6 @@ void TemplateMatchingDataSizer::PreProcessInputImage(Image& input_image, bool sw
 
     input_image.ZeroCentralPixel( );
 
-
     if ( is_first_whitening ) {
         input_image.Compute1DPowerSpectrumCurve(&local_whitening_filter, &number_of_terms);
         local_whitening_filter.SquareRoot( );
@@ -657,7 +656,7 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image&     max_intensity_
                                                        Image&     best_pixel_size,
                                                        Image&     correlation_pixel_sum_image,
                                                        Image&     correlation_pixel_sum_of_squares_image,
-                                                       const bool skip_result_rescaling,
+                                                       const bool apply_result_rescaling,
                                                        const int  n_threads) {
 
     MyDebugAssertTrue(sizing_is_set, "Sizing has not been set");
@@ -684,19 +683,7 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image&     max_intensity_
         timer.start("ClipINtoRepli");
         Image tmp_trim;
 
-        if ( skip_result_rescaling ) {
-            // remove any padding regions and there is no need to then calculate the valid area mask or any of the subsequent steps.
-            max_intensity_projection.Resize(roi.x, roi.y, 1, 0.f);
-            best_psi.Resize(roi.x, roi.y, 1, 0.f);
-            best_theta.Resize(roi.x, roi.y, 1, 0.f);
-            best_phi.Resize(roi.x, roi.y, 1, 0.f);
-            best_defocus.Resize(roi.x, roi.y, 1, 0.f);
-            best_pixel_size.Resize(roi.x, roi.y, 1, 0.f);
-            correlation_pixel_sum_image.Resize(roi.x, roi.y, 1, 0.f);
-            correlation_pixel_sum_of_squares_image.Resize(roi.x, roi.y, 1, 0.f);
-            return;
-        }
-        else {
+        if ( apply_result_rescaling ) {
             tmp_trim.Allocate(roi.x, roi.y, 1, true);
 
             max_intensity_projection.ClipInto(&tmp_trim);
@@ -726,6 +713,18 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image&     max_intensity_
 
             correlation_pixel_sum_of_squares_image.ClipInto(&tmp_trim);
             tmp_trim.ClipIntoWithReplicativePadding(&correlation_pixel_sum_of_squares_image);
+        }
+        else {
+            // remove any padding regions and there is no need to then calculate the valid area mask or any of the subsequent steps.
+            max_intensity_projection.Resize(roi.x, roi.y, 1, 0.f);
+            best_psi.Resize(roi.x, roi.y, 1, 0.f);
+            best_theta.Resize(roi.x, roi.y, 1, 0.f);
+            best_phi.Resize(roi.x, roi.y, 1, 0.f);
+            best_defocus.Resize(roi.x, roi.y, 1, 0.f);
+            best_pixel_size.Resize(roi.x, roi.y, 1, 0.f);
+            correlation_pixel_sum_image.Resize(roi.x, roi.y, 1, 0.f);
+            correlation_pixel_sum_of_squares_image.Resize(roi.x, roi.y, 1, 0.f);
+            return;
         }
         timer.lap("ClipINtoRepli");
     }

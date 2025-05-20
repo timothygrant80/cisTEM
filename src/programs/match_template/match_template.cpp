@@ -869,7 +869,7 @@ bool MatchTemplateApp::DoCalculation( ) {
             data_sizer.whitening_filter_ptr->MakeThreadSafeForNThreads(max_threads);
             size_t L2_window_size;
             // note that we need the firstprivate so the shared ptr is intialized the first time it is encountered
-#pragma omp parallel num_threads(max_threads) default(none) shared(L2_window_size, first_gpu_loop, GPU, data_sizer, first_search_position, incPos, maxPos, max_threads,                          \
+#pragma omp parallel num_threads(max_threads) default(none) shared(L2_window_size, first_gpu_loop, GPU, first_search_position, incPos, maxPos, max_threads,                                      \
                                                                    d_input_image, angles, my_progress, template_reconstruction, use_fast_fft, projection_filter,                                 \
                                                                    min_counter_val, profile_timing, current_projection, psi_start, psi_step, psi_max,                                            \
                                                                    global_euler_search, number_of_search_positions, number_of_search_positions_per_thread, use_gpu_prj,                          \

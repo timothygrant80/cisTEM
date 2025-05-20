@@ -223,6 +223,9 @@ noinst_HEADERS = core/stopwatch.h \
                  programs/refine3d/ProjectionComparisonObjects.h \
                  core/pdb.h \
                  core/scattering_potential.h \
+                 gui/AtomicCoordinatesAssetPanel.h \
+                 gui/AtomicCoordinatesChooserDialog.h \
+                 gui/AtomicCoordinatesImportDialog.h \
                  programs/cisTEM_display/display_gui.h
                  
 
@@ -231,9 +234,6 @@ noinst_HEADERS = core/stopwatch.h \
                  
 if EXPERIMENTAL_AM
 noinst_HEADERS += 	gui/icons/experimental_icon.cpp \
-                    gui/AtomicCoordinatesAssetPanel.h \
-                    gui/AtomicCoordinatesChooserDialog.h \
-                    gui/AtomicCoordinatesImportDialog.h \
                     core/water.h \
                     programs/simulate/wave_function_propagator.h  \
                     programs/match_template/template_matching_data_sizer.h 
@@ -737,10 +737,13 @@ cisTEM_SOURCES = programs/projectx/projectx.cpp \
                 gui/MatchTemplateResultsPanel.cpp \
                 gui/RefineTemplatePanel.cpp \
                 gui/CombineRefinementPackagesWizard.cpp \
+                gui/AtomicCoordinatesAssetPanel.cpp \
+                gui/AtomicCoordinatesChooserDialog.cpp \
+                gui/AtomicCoordinatesImportDialog.cpp \
                 gui/ResampleDialog.cpp
 
 if EXPERIMENTAL_AM
-cisTEM_SOURCES +=  gui/RefineTemplateDevPanel.cpp gui/MyExperimentalPanel.cpp gui/AtomicCoordinatesAssetPanel.cpp gui/AtomicCoordinatesChooserDialog.cpp gui/AtomicCoordinatesImportDialog.cpp
+cisTEM_SOURCES +=  gui/RefineTemplateDevPanel.cpp gui/MyExperimentalPanel.cpp 
 endif
 
 if ENABLE_WEBVIEW_AM

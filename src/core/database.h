@@ -106,9 +106,10 @@ class Database {
     int  Finalize(sqlite3_stmt* current_statement);
     void CheckBindCode(int return_code);
 
-    int    ReturnSingleIntFromSelectCommand(wxString select_command);
-    long   ReturnSingleLongFromSelectCommand(wxString select_command);
-    double ReturnSingleDoubleFromSelectCommand(wxString select_command);
+    int      ReturnSingleIntFromSelectCommand(wxString select_command);
+    long     ReturnSingleLongFromSelectCommand(wxString select_command);
+    double   ReturnSingleDoubleFromSelectCommand(wxString select_command);
+    wxString ReturnSingleStringFromSelectCommand(wxString select_command);
 
     wxArrayInt    ReturnIntArrayFromSelectCommand(wxString select_command);
     wxArrayLong   ReturnLongArrayFromSelectCommand(wxString select_command);
@@ -139,6 +140,7 @@ class Database {
 
     int  ReturnHighestTemplateMatchID( );
     int  ReturnHighestTemplateMatchJobID( );
+    int  ReturnHighestTemplateMatchesPackageID( );
     void SetActiveTemplateMatchJobForGivenImageAssetID(long image_asset, long template_match_job_id);
 
     int ReturnNumberOfPreviousMovieAlignmentsByAssetID(int wanted_asset_id);
@@ -164,6 +166,7 @@ class Database {
     void GetActiveDefocusValuesByImageID(long wanted_image_id, float& defocus_1, float& defocus_2, float& defocus_angle, float& phase_shift, float& amplitude_contrast, float& tilt_angle, float& tilt_axis);
 
     void AddRefinementPackageAsset(RefinementPackage* asset_to_add);
+    void AddTemplateMatchesPackageAsset(TemplateMatchesPackage* asset_to_add);
 
     wxArrayLong Return2DClassMembers(long wanted_classifiction_id, int wanted_class);
     int         ReturnNumberOf2DClassMembers(long wanted_classification_id, int wanted_class_number);
@@ -195,12 +198,11 @@ class Database {
 
     void EndVolumeAssetInsert( ) { EndBatchInsert( ); };
 
-#ifdef EXPERIMENTAL
     void BeginAtomicCoordinatesAssetInsert( );
     void AddNextAtomicCoordinatesAsset(const AtomicCoordinatesAsset* asset);
 
     void EndAtomicCoordinatesAssetInsert( ) { EndBatchInsert( ); };
-#endif
+
     void BeginParticlePositionAssetInsert( );
     //void AddNextParticlePositionAsset(int particle_position_asset_id, int parent_image_asset_id, int pick_job_id, double x_position, double y_position);
     void AddNextParticlePositionAsset(const ParticlePositionAsset* asset);
@@ -296,12 +298,10 @@ class Database {
 
     void EndAllVolumeAssetsSelect( ) { EndBatchSelect( ); };
 
-#ifdef EXPERIMENTAL
     void                   BeginAllAtomicCoordinatesAssetsSelect( );
     AtomicCoordinatesAsset GetNextAtomicCoordinatesAsset( );
 
     void EndAllAtomicCoordinatesAssetsSelect( ) { EndBatchSelect( ); };
-#endif
 
     void       BeginAllVolumeGroupsSelect( );
     AssetGroup GetNextVolumeGroup( );
@@ -316,7 +316,12 @@ class Database {
     void               BeginAllRefinementPackagesSelect( );
     RefinementPackage* GetNextRefinementPackage( );
 
+    void                    BeginAllTemplateMatchesPackagesSelect( );
+    TemplateMatchesPackage* GetNextTemplateMatchesPackage( );
+
     void EndAllRefinementPackagesSelect( ) { EndBatchSelect( ); };
+
+    void EndAllTemplateMatchesPackagesSelect( ) { EndBatchSelect( ); };
 
     void AddStartupJob(long startup_job_id, long refinement_package_asset_id, wxString name, int number_of_starts, int number_of_cycles, float initial_res_limit, float final_res_limit, bool auto_mask, bool auto_percent_used, float initial_percent_used, float final_percent_used, float mask_radius, bool apply_blurring, float smoothing_factor, wxArrayLong result_volume_ids);
     void AddReconstructionJob(long reconstruction_id, long refinement_package_asset_id, long refinement_id, wxString name, float inner_mask_radius, float outer_mask_radius, float resolution_limit, float score_weight_conversion, bool should_adjust_score, bool should_crop_images, bool should_save_half_maps, bool should_likelihood_blur, float smoothing_factor, int class_number, long volume_asset_id);

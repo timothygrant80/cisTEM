@@ -34,7 +34,7 @@ ProjectionComparisonObjects::ProjectionComparisonObjects( ) {
     is_allocated_weighted_correlation_buffers = false;
     old_buffer_size                           = 0;
 
-#ifdef CISTEM_DEBUG
+#ifdef DEBUG
     nprj = 0;
     // Get some extra info to make sure all the allocation/deallocation is working. I.e. even if we succeed (no segfaults and correct results)
     // we still want to be sure we aren't alloc/dealloc or copying data around unecessarily.
@@ -65,7 +65,7 @@ ProjectionComparisonObjects::ProjectionComparisonObjects( ) {
 ProjectionComparisonObjects::~ProjectionComparisonObjects( ) {
     Deallocate( );
 
-#ifdef CISTEM_DEBUG
+#ifdef DEBUG
     if ( ReturnThreadNumberOfCurrentThread( ) == 0 ) {
         wxPrintf("\n----------------------------------------------------\n");
         wxPrintf("Image type : Calls : Allocs : HtoD copies\n");
@@ -227,13 +227,13 @@ void ProjectionComparisonObjects::PrepareGpuVolumeProjection(InputVolumeType& in
     if ( is_for_global_search ) {
         MyDebugAssertFalse(is_allocated_gpu_search_density_map, "Gpu search density map is already allocated");
         gpu_search_density_map.Init(temp_image, false, false);
-        gpu_search_density_map.CopyHostToDeviceTextureComplex3d(temp_image);
+        gpu_search_density_map.CopyHostToDeviceTextureComplex<3>(temp_image);
         is_allocated_gpu_search_density_map = true;
     }
     else {
         MyDebugAssertFalse(is_allocated_gpu_density_map, "Gpu density map is already allocated");
         gpu_density_map.Init(temp_image, false, false);
-        gpu_density_map.CopyHostToDeviceTextureComplex3d(temp_image);
+        gpu_density_map.CopyHostToDeviceTextureComplex<3>(temp_image);
         is_allocated_gpu_density_map = true;
     }
 
@@ -274,7 +274,7 @@ void ProjectionComparisonObjects::PrepareGpuImages(Particle& host_particle, Imag
             // for the projection, we don't care about the host data, just the size and pointer association.
             bool was_gpu_projection_memory_changed = tmp_gpu_projection->Init(host_projection_image, pin_host_memory, allocate_gpu_memory_if_needed);
 
-#ifdef CISTEM_DEBUG
+#ifdef DEBUG
             int& particle_alloc                    = is_for_global_search ? n_search_particle_image_allocations : n_particle_image_allocations;
             int& projection_alloc                  = is_for_global_search ? n_search_projection_image_allocations : n_projection_image_allocations;
             int& calls_to                          = is_for_global_search ? n_calls_to_prep_search_images : n_calls_to_prep_images;
@@ -305,7 +305,7 @@ void ProjectionComparisonObjects::PrepareGpuImages(Particle& host_particle, Imag
             }
             host_particle.RecordGpuCTFImageAssociation( );
 
-#ifdef CISTEM_DEBUG
+#ifdef DEBUG
             int& ctf_alloc      = is_for_global_search ? n_search_ctf_image_allocations : n_ctf_image_allocations;
             int& calls_to       = is_for_global_search ? n_calls_to_prep_search_ctf_images : n_calls_to_prep_ctf_images;
             int& ctf_copy_calls = is_for_global_search ? n_search_ctf_image_HtoD_copies : n_ctf_image_HtoD_copies;
@@ -359,8 +359,31 @@ float ProjectionComparisonObjects::DoGpuProjection( ) {
     MyDebugAssertTrue(current_particle_image->is_in_memory_gpu, "gpu_particle_image is not allocated");
 #endif
 
-    current_projection->ExtractSliceShiftAndCtf(current_density_map, &gpu_ctf_image, particle->alignment_parameters, reference_volume->pixel_size, particle->pixel_size / particle->filter_radius_high, true,
-                                                swap_quadrants, apply_shifts, apply_ctf, absolute_ctf);
+    MyDebugAssertFalse(absolute_ctf, "Absolute CTF is not implemented for GPU projection (but could be easily)");
+
+    constexpr float real_space_binning_factor = 1.0f;
+    constexpr bool  use_ctf_texture           = false;
+
+    if ( apply_ctf ) {
+        current_projection->ExtractSliceShiftAndCtf<true, use_ctf_texture>(current_density_map,
+                                                                           &gpu_ctf_image, particle->alignment_parameters,
+                                                                           reference_volume->pixel_size,
+                                                                           real_space_binning_factor,
+                                                                           particle->pixel_size / particle->filter_radius_high,
+                                                                           true,
+                                                                           swap_quadrants,
+                                                                           apply_shifts);
+    }
+    else {
+        current_projection->ExtractSliceShiftAndCtf<false, use_ctf_texture>(current_density_map,
+                                                                            &gpu_ctf_image, particle->alignment_parameters,
+                                                                            reference_volume->pixel_size,
+                                                                            real_space_binning_factor,
+                                                                            particle->pixel_size / particle->filter_radius_high,
+                                                                            true,
+                                                                            swap_quadrants,
+                                                                            apply_shifts);
+    }
 
 #ifdef CALCULATE_SCORE_ON_CPU_DISABLE_GPU_PARTICLE
     current_projection->CopyDeviceToHostAndSynchronize(false);

@@ -4,6 +4,8 @@
 #include "../../gpu_core_headers.h"
 
 // Manage an array of pointers to device memory.
+// TODO: I don't remember why I (thought) this was needed over a std::vector.
+// Probably related to copying or the custome allocator, which could probably be replaced with a std::vector.
 
 template <typename PtrType>
 class DevicePointerArray {

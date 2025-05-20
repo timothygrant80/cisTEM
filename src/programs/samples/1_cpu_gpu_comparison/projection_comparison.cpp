@@ -104,8 +104,6 @@ bool DoCPUvsGPUProjectionTest(const wxString& cistem_ref_dir, const wxString& te
         score  = ref_prj.ReturnCorrelationCoefficientUnnormalized(cpu_prj, mask_radius);
         passed = passed && (score > 0.999f);
 
-        // wxPrintf("Projection match %d: %f\n", iPrj, score);
-
         // Now for a negative control, mess up the angles.
 
         // Make a projection the angles and shifts are *NOT* set to.
@@ -139,7 +137,7 @@ bool DoCPUvsGPUProjectionTest(const wxString& cistem_ref_dir, const wxString& te
     gpu_volume.Init(cpu_volume, false, true);
 
     // The volume is already in Fourier space, so we can copy it to texture cache for interpolation.
-    gpu_volume.CopyHostToDeviceTextureComplex3d(cpu_volume);
+    gpu_volume.CopyHostToDeviceTextureComplex<3>(cpu_volume);
 
     // Image centered;
     // centered.CopyFrom(&cimg);
@@ -197,7 +195,7 @@ bool DoCPUvsGPUProjectionTest(const wxString& cistem_ref_dir, const wxString& te
     new_cpu_volume.SwapRealSpaceQuadrants( );
 
     for ( int iLoop = 0; iLoop < n_loops; iLoop++ ) {
-        my_angles_and_shifts.Init(my_rand.GetUniformRandomSTD(-180.f, 180), my_rand.GetUniformRandomSTD(0.f, 180), my_rand.GetUniformRandomSTD(0.f, 360), 0.f, 0.f);
+        my_angles_and_shifts.Init(my_rand.GetUniformRandomSTD(-180.f, 180.f), my_rand.GetUniformRandomSTD(0.f, 180.f), my_rand.GetUniformRandomSTD(0.f, 360.f), 0.f, 0.f);
         new_cpu_volume.ExtractSlice(cpu_prj, my_angles_and_shifts, 0.f, false);
         gpu_prj.ExtractSlice(&gpu_volume, my_angles_and_shifts, pixel_size, 0.f, false);
 
@@ -226,27 +224,34 @@ bool DoCPUvsGPUProjectionTest(const wxString& cistem_ref_dir, const wxString& te
 
     // For particle alignment, the res-limit defaults to 0.5 (nyquist).
     // This means this testing is not strictly valid for the corners in Fourier space, which are used in TM i think.
-    float             res_limit      = 0.5f;
-    std::vector<bool> limit_res      = {true, true, true};
-    std::vector<bool> swap_quadrants = {false, false, true};
-    std::vector<bool> apply_shifts   = {false, true, true};
-    std::vector<bool> apply_ctf      = {false, false, false};
-    std::vector<bool> absolute_ctf   = {false, false, false};
-    std::vector<bool> whiten         = {true, true, true};
+    float             res_limit       = 0.5f;
+    std::vector<bool> limit_res       = {true, true, true};
+    std::vector<bool> swap_quadrants  = {false, false, true};
+    std::vector<bool> apply_shifts    = {false, true, true};
+    std::vector<bool> whiten          = {true, true, true};
+    constexpr bool    apply_ctf       = false;
+    constexpr bool    use_ctf_texture = false;
 
     // Dummy ctf imag; TODO: add random CTFs w/ w/o absolute CTF. needs to be updated with
     GpuImage ctf_img;
     ctf_img.CopyFrom(&gpu_prj);
     ctf_img.SetToConstant(1.f);
-
+    constexpr float real_space_binning_factor = 1.0f;
     for ( int iCondition = 0; iCondition < condition_name.size( ); iCondition++ ) {
         SamplesBeginTest(condition_name[iCondition].c_str( ), passed);
         for ( int iLoop = 0; iLoop < n_loops; iLoop++ ) {
             // Compared to the previous, we now pass a bool to pug Extract slice and add and extra method call for the GPU to get whitening of the PS.
-            my_angles_and_shifts.Init(my_rand.GetUniformRandomSTD(-180.f, 180), my_rand.GetUniformRandomSTD(0.f, 180), my_rand.GetUniformRandomSTD(0.f, 360), 0.f, 0.f);
+            my_angles_and_shifts.Init(my_rand.GetUniformRandomSTD(-180.f, 180.f), my_rand.GetUniformRandomSTD(0.f, 180.f), my_rand.GetUniformRandomSTD(0.f, 360.f), 0.f, 0.f);
             new_cpu_volume.ExtractSlice(cpu_prj, my_angles_and_shifts, res_limit, limit_res[iCondition]);
-            gpu_prj.ExtractSliceShiftAndCtf(&gpu_volume, &ctf_img, my_angles_and_shifts, pixel_size, res_limit, limit_res[iCondition],
-                                            swap_quadrants[iCondition], apply_shifts[iCondition], apply_ctf[iCondition], absolute_ctf[iCondition]);
+            gpu_prj.ExtractSliceShiftAndCtf<apply_ctf, use_ctf_texture>(&gpu_volume,
+                                                                        &ctf_img,
+                                                                        my_angles_and_shifts,
+                                                                        pixel_size,
+                                                                        real_space_binning_factor,
+                                                                        res_limit,
+                                                                        limit_res[iCondition],
+                                                                        swap_quadrants[iCondition],
+                                                                        apply_shifts[iCondition]);
             if ( whiten[iCondition] ) {
                 gpu_prj.Whiten( );
             }

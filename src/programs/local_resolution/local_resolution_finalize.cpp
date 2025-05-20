@@ -118,11 +118,11 @@ bool LocalResolutionFinalize::DoCalculation( ) {
 
         Image temp_combined_map;
         temp_combined_map = combined_resolution_map;
-        bool                  is_an_outlier_hotspot;
-        EmpiricalDistribution neighborhood;
-        Curve                 neighborhood_histogram;
-        float                 neighborhood_worst_res;
-        float                 neighborhood_second_worst_res;
+        bool                          is_an_outlier_hotspot;
+        EmpiricalDistribution<double> neighborhood;
+        Curve                         neighborhood_histogram;
+        float                         neighborhood_worst_res;
+        float                         neighborhood_second_worst_res;
         for ( int k_in = sampling_step; k_in < combined_resolution_map.logical_z_dimension - sampling_step; k_in++ ) {
             k_out_min = k_in - sampling_step;
             k_out_max = k_in + sampling_step;

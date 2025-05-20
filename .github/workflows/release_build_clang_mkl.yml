@@ -14,7 +14,7 @@ jobs:
     with:
       build_type: "GPU_release_clang_MKL"
       configure_options: "--with-cuda "
-      global_configure_options: " --enable-openmp --enable-experimental --with-wx-config=/opt/WX/clang-static/bin/wx-config --disable-multiple-global-refinements --enable-smooth-mip "
+      global_configure_options: "  --disable-FastFFT --enable-openmp --enable-experimental --with-wx-config=/opt/WX/clang-static/bin/wx-config --disable-multiple-global-refinements  "
       runs_on_os: ubuntu-latest
       CC: clang
       CXX: clang++

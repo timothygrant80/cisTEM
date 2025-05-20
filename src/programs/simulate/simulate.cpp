@@ -6,7 +6,6 @@
 #include "calc_hydration_radius.h"
 #include "../../core/scattering_potential.h"
 #include "wave_function_propagator.h"
-#include "../../core/padded_coordinates.h"
 
 const int MAX_3D_SIZE = 1536; // ~14.5 Gb in single precision
 
@@ -196,6 +195,10 @@ class SimulateApp : public MyApp {
     float                 water_scaling               = 1.0f;
     float                 non_water_inelastic_scaling = 1.0f;
 
+    float extra_rot_x{ };
+    float extra_rot_y{ };
+    float extra_rot_z{ };
+
     Coords    coords;
     StopWatch timer;
 
@@ -220,8 +223,9 @@ class SimulateApp : public MyApp {
     float noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius = -0.05;
     float noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius = 0.10;
     float emulate_tilt_angle                                                          = 0.0f;
-
-    void probability_density_2d(PDB* pdb_ensemble, int time_step);
+    float use_hydrogens                                                               = 0.f;
+    bool  use_hetatm                                                                  = false;
+    void  probability_density_2d(PDB* pdb_ensemble, int time_step);
 
     void calc_water_potential(Image* projected_water, AtomType atom_id);
     void fill_water_potential(const PDB* current_specimen, Image* scattering_slab, Image* scattering_potential,
@@ -307,6 +311,9 @@ void SimulateApp::AddCommandLineOptions( ) {
 
     // Option to skip centering by mass
     command_line_parser.AddLongSwitch("skip-centering-by-mass", "Skip centering by mass");
+    // Allow hydrogens if they are found in the atomic model
+    command_line_parser.AddOption("", "use-hydrogens", "Allow hydrogens if they are found in the atomic model with weight = default 0 ", wxCMD_LINE_VAL_DOUBLE);
+    command_line_parser.AddLongSwitch("use-hetatm", "Allow hetatm if they are found in the atomic model");
 
     // Options for computation (TODO add gpu flag here)
     command_line_parser.AddOption("j", "", "Desired number of threads. Overrides interactive user input. Is overriden by env var OMP_NUM_THREADS", wxCMD_LINE_VAL_NUMBER);
@@ -358,6 +365,10 @@ void SimulateApp::AddCommandLineOptions( ) {
     command_line_parser.AddOption("", "bf", "Maximum number of neighboring noise particles when simulating an image stack. Default is 0", wxCMD_LINE_VAL_DOUBLE);
     command_line_parser.AddLongSwitch("disable-water-shell-only", "normally when adding constant background to a 3d, taper off 4 Ang into the water");
     command_line_parser.AddLongSwitch("is-alpha-fold-prediction", "Is this a alpha-fold prediction? If so, convert the confidence score stored in the bfactor column to a bfactor. default is no");
+
+    command_line_parser.AddOption("", "extra-rot-x", "rotate around x", wxCMD_LINE_VAL_DOUBLE);
+    command_line_parser.AddOption("", "extra-rot-y", "rotate around y", wxCMD_LINE_VAL_DOUBLE);
+    command_line_parser.AddOption("", "extra-rot-z", "rotate around z", wxCMD_LINE_VAL_DOUBLE);
 
     //    command_line_parser.AddOption("j","","Desired number of threads. Overrides interactive user input. Is overriden by env var OMP_NUM_THREADS",wxCMD_LINE_VAL_NUMBER);
 }
@@ -417,6 +428,15 @@ void SimulateApp::DoInteractiveUserInput( ) {
     }
     if ( command_line_parser.FoundSwitch("skip-centering-by-mass") )
         SHIFT_BY_CENTER_OF_MASS = false;
+    if ( command_line_parser.Found("use-hydrogens", &temp_double) ) {
+        use_hydrogens = temp_double;
+    }
+    if ( command_line_parser.FoundSwitch("use-hetatm") ) {
+        use_hetatm = true;
+    }
+
+    // Must be set before calculating any scattering potentials to have an effect.
+    sp.SetUseHydrogens(use_hydrogens);
 
     // CONTROL FOR DEBUGGING AND VALIDATION
     add_mean_water_potential = command_line_parser.Found("add-constant-background");
@@ -478,6 +498,16 @@ void SimulateApp::DoInteractiveUserInput( ) {
         water_shell_only = false;
     if ( command_line_parser.Found("is-alpha-fold-prediction") )
         is_alpha_fold_prediction = true;
+
+    if ( command_line_parser.Found("extra-rot-x", &temp_double) ) {
+        extra_rot_x = (float)temp_double;
+    }
+    if ( command_line_parser.Found("extra-rot-y", &temp_double) ) {
+        extra_rot_y = (float)temp_double;
+    }
+    if ( command_line_parser.Found("extra-rot-z", &temp_double) ) {
+        extra_rot_z = (float)temp_double;
+    }
 
     if ( DO_CROSSHAIR )
         DO_SOLVENT = false;
@@ -754,7 +784,7 @@ bool SimulateApp::DoCalculation( ) {
                            noise_particle_radius_as_mutliple_of_particle_radius,
                            noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
                            noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
-                           emulate_tilt_angle, is_alpha_fold_prediction, input_star_file, use_existing_params);
+                           emulate_tilt_angle, is_alpha_fold_prediction, use_hetatm, input_star_file, use_existing_params);
     }
     else {
         // Over-ride the max number of noise particles
@@ -764,11 +794,11 @@ bool SimulateApp::DoCalculation( ) {
                            noise_particle_radius_as_mutliple_of_particle_radius,
                            noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
                            noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
-                           emulate_tilt_angle, is_alpha_fold_prediction, input_star_file, use_existing_params);
+                           emulate_tilt_angle, is_alpha_fold_prediction, use_hetatm, input_star_file, use_existing_params);
     }
 
     if ( DO_PRINT ) {
-        wxPrintf("\nThere are %ld non-water atoms in the specimen.\n", sp.ReturnTotalNumberOfNonWaterAtoms( ));
+        wxPrintf("\nThere are %ld non-solvent atoms in the specimen.\n", sp.ReturnTotalNumberOfNonSolventAtoms( ));
     }
     if ( DO_PRINT ) {
         wxPrintf("\nCurrent number of PDBs %d\n", sp.pdb_file_names.size( ));
@@ -867,9 +897,6 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
     parameter_vect[14] = 10; //Sigma
     parameter_vect[15] = 10; //Score
     parameter_vect[16] = 0; // Change
-    // Keep a copy of the unscaled pixel size to handle magnification changes.
-    this->unscaled_pixel_size = this->wanted_pixel_size;
-
     // Keep a copy of the unscaled pixel size to handle magnification changes.
     this->unscaled_pixel_size = this->wanted_pixel_size;
 
@@ -1021,7 +1048,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
             else {
                 // FIXME this isn't really a good sampling
                 tilt_psi.push_back(my_rand.GetUniformRandomSTD(0.f, 360.f));
-                tilt_theta.push_back(my_rand.GetUniformRandomSTD(0, r_theta_max));
+                tilt_theta.push_back(my_rand.GetUniformRandomSTD(0.f, r_theta_max));
                 // tilt_phi[iTilt]   = -1 * tilt_psi[iTilt] + my_rand.GetUniformRandomSTD(0.f, r_phi_max); //*(2*PI);
                 tilt_phi.push_back(my_rand.GetUniformRandomSTD(0.f, r_phi_max)); //*(2*PI);
 
@@ -1095,7 +1122,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
         wxPrintf("Got here emulate is %f\n", emulate_tilt_angle);
     }
     // FIXME I think this should somehow be derived from the information already stored in the scattering potential  object
-    PDB current_specimen(sp.ReturnTotalNumberOfNonWaterAtoms( ), bin3d * (wanted_output_size - IsOdd(wanted_output_size)), wanted_pixel_size, minimum_padding_x_and_y, minimum_thickness_z,
+    PDB current_specimen(sp.ReturnTotalNumberOfNonSolventAtoms( ), bin3d * (wanted_output_size - IsOdd(wanted_output_size)), wanted_pixel_size, minimum_padding_x_and_y, minimum_thickness_z,
                          max_number_of_noise_particles,
                          noise_particle_radius_as_mutliple_of_particle_radius,
                          noise_particle_radius_randomizer_lower_bound_as_praction_of_particle_radius,
@@ -1103,6 +1130,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
                          emulate_tilt_angle,
                          SHIFT_BY_CENTER_OF_MASS,
                          is_alpha_fold_prediction,
+                         use_hetatm,
                          use_existing_params);
 
     timer.lap("Init H20 & Spec");
@@ -1173,7 +1201,18 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
 
         // Override any rotations when making a 3d reference
         if ( do3d || DO_PHASE_PLATE || DO_NOT_RANDOMIZE_ANGLES ) {
-            particle_rot.SetToIdentity( );
+            if ( do3d ) {
+                // Because these are not proper euler angles, we can't just flip the order to get the transpose, we need to actually take the transpose the rotation matrix
+                // The angles are used to cut out a slice of the 3d in cisTEM (rotates the projection into the 3d, i.e. a passive transofrm)
+                // We are using them here to activly transform the atom coordinates, so we also need to negate.
+                RotationMatrix tmp;
+                tmp.SetToRotation(-extra_rot_x, -extra_rot_y, -extra_rot_z); // To match what is output by align_symmetry, not sure why z is not negated
+                particle_rot = tmp.ReturnTransposed( );
+            }
+            else {
+                particle_rot.SetToIdentity( );
+            }
+
             rotate_waters.SetToIdentity( );
             max_rotation.SetToIdentity( );
         }
@@ -1363,8 +1402,8 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
             }
 
             timer.start("Xform Global");
-            current_specimen.TransformGlobalAndSortOnZ(sp.ReturnTotalNumberOfNonWaterAtoms( ), shift_x[iTilt] + total_drift, shift_y[iTilt] + total_drift, 0.0f, rotate_waters);
-            // current_specimen.TransformGlobalAndSortOnZ(sp.ReturnTotalNumberOfNonWaterAtoms( ), iTilt * 10 + total_drift, 0, 0.f, rotate_waters);
+            current_specimen.TransformGlobalAndSortOnZ(sp.ReturnTotalNumberOfNonSolventAtoms( ), shift_x[iTilt] + total_drift, shift_y[iTilt] + total_drift, 0.0f, rotate_waters);
+            // current_specimen.TransformGlobalAndSortOnZ(sp.ReturnTotalNumberOfNonSolventAtoms( ), iTilt * 10 + total_drift, 0, 0.f, rotate_waters);
 
             timer.lap("Xform Global");
 
@@ -1642,6 +1681,8 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
                         }
 
                         distance_slab.MultiplyByConstant(this->wgt);
+                        if ( CALC_HOLES_ONLY )
+                            scattering_slab.SetToConstant(0.0f);
                         scattering_slab.AddImage(&distance_slab);
                     }
 
@@ -1674,7 +1715,11 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
                         ZeroFloatArray(dose_filter, Potential_3d.real_memory_allocated / 2);
 
                         // Normally the pre-exposure is added to each frame. Here it is taken to be the total exposure.
-                        my_electron_dose.CalculateCummulativeDoseFilterAs1DArray(&Potential_3d, dose_filter, std::max(this->pre_exposure, 1.0f), std::max(this->number_of_frames * this->dose_per_frame, 1.0f));
+                        my_electron_dose.CalculateCummulativeDoseFilterAs1DArray(&Potential_3d,
+                                                                                 dose_filter,
+                                                                                 std::max(this->pre_exposure, 1.0f),
+                                                                                 std::max(this->number_of_frames * this->dose_per_frame,
+                                                                                          1.0f));
 
                         if ( MODIFY_ONLY_SIGNAL == 1 ) {
                             for ( long pixel_counter = 0; pixel_counter < Potential_3d.real_memory_allocated / 2; pixel_counter++ ) {
@@ -1927,7 +1972,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
                 std::string fileNameOUT = "crosshair" + this->output_filename;
                 MRCFile     mrc_out(fileNameOUT, true);
                 coords.PadToWantedSize(&cross_hair, wanted_output_size);
-                EmpiricalDistribution my_dist = cross_hair.ReturnDistributionOfRealValues( );
+                EmpiricalDistribution<double> my_dist = cross_hair.ReturnDistributionOfRealValues( );
                 cross_hair.Binarise(0.9 * my_dist.GetMaximum( ));
                 cross_hair.WriteSlices(&mrc_out, 1, 1);
                 mrc_out.SetPixelSize(this->wanted_pixel_size);
@@ -1952,7 +1997,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
             complemenatry_mask.CopyFrom(&sampled_potential);
             complemenatry_mask.MultiplyAddConstant(-1.0, 1.0);
 
-            if ( water_scaling > 0 ) {
+            if ( water_scaling > 0 && DO_SOLVENT ) {
                 // Apply the sampling mask. If the waters are multiplied by zero, this won't work so skip it.
                 for ( int iTot = 0; iTot < nSlabs; iTot++ ) {
 
@@ -1995,7 +2040,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
             }
 
             if ( DO_PRINT ) {
-                wxPrintf("\n\t%ld out of bounds of %ld = percent\n\n", nOutOfBounds, sp.ReturnTotalNumberOfNonWaterAtoms( ));
+                wxPrintf("\n\t%ld out of bounds of %ld = percent\n\n", nOutOfBounds, sp.ReturnTotalNumberOfNonSolventAtoms( ));
             }
 
             //        #pragma omp parallel num_threads(4)
@@ -2033,7 +2078,7 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
             }
 
             if ( DO_PRINT ) {
-                wxPrintf("\n\t%ld out of bounds of %ld = percent\n\n", nOutOfBounds, sp.ReturnTotalNumberOfNonWaterAtoms( ));
+                wxPrintf("\n\t%ld out of bounds of %ld = percent\n\n", nOutOfBounds, sp.ReturnTotalNumberOfNonSolventAtoms( ));
             }
 
             //        #pragma omp parallel num_threads(4)
@@ -2178,14 +2223,14 @@ void SimulateApp::probability_density_2d(PDB* pdb_ensemble, int time_step) {
             } // loop over image, then optionally perfect reference
 
             if ( DO_PRINT ) {
-                wxPrintf("before the destructor there are %ld non-water-atoms\n", sp.ReturnTotalNumberOfNonWaterAtoms( ));
+                wxPrintf("before the destructor there are %ld non-water-atoms\n", sp.ReturnTotalNumberOfNonSolventAtoms( ));
             }
             if ( DO_PHASE_PLATE ) {
 
                 std::string fileNameOUT = "phaseGrating_" + this->output_filename;
                 MRCFile     mrc_out(fileNameOUT, true);
                 coords.PadToWantedSize(&sum_phase, wanted_output_size);
-                EmpiricalDistribution phase_shift_distribution = sum_phase.ReturnDistributionOfRealValues( );
+                EmpiricalDistribution<double> phase_shift_distribution = sum_phase.ReturnDistributionOfRealValues( );
                 wxPrintf("\n\tPhase plate shift avg: %3.6f\n\tPhase plate shift std %3.6f\n\tPhase plate shift relative error %3.6f\n",
                          phase_shift_distribution.GetSampleMean( ), phase_shift_distribution.GetSampleVariance( ), 100.f * std::abs(phase_shift_distribution.GetSampleMean( ) - pi_v<float> / 2) / (pi_v<float> / 2));
                 sum_phase.WriteSlices(&mrc_out, 1, 1);

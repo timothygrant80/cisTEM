@@ -56,77 +56,57 @@ void ElectronDose::CalculateDoseFilterAs1DArray(Image* ref_image, float* filter_
 
     //	MyDebugAssertTrue(ref_image->logical_z_dimension == 1, "Reference Image is a 3D!");
 
-    int i;
-    int j;
-    int k;
-
-    float x;
-    float y;
-    float z;
-
-    int array_counter = 0;
+    long array_counter = 0;
 
     const float reduced_fourier_voxel_size = ref_image->fourier_voxel_size_x / pixel_size;
     // The spatial frequency is calculated as sqrt(x^2 + y^2 + z^2)/pixel_size.
     // To remove the sqrt call, we square the pixel size to move it inside, and then absorb the sqrt i.e. () ^ 1/2 into the exponent critical_dose_b -> critical_dose_b / 2
     float pixel_size_sq = pixel_size * pixel_size;
-    for ( k = 0; k <= ref_image->physical_upper_bound_complex_z; k++ ) {
-        z = ref_image->ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * ref_image->fourier_voxel_size_z;
-        z = (z * z / pixel_size_sq);
+    for ( int k = 0; k <= ref_image->physical_upper_bound_complex_z; k++ ) {
+        float z = float(ref_image->ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k)) * ref_image->fourier_voxel_size_z;
+        z       = (z * z / pixel_size_sq);
 
-        for ( j = 0; j <= ref_image->physical_upper_bound_complex_y; j++ ) {
-            y = ref_image->ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * ref_image->fourier_voxel_size_y;
-            y = (y * y / pixel_size_sq);
+        for ( int j = 0; j <= ref_image->physical_upper_bound_complex_y; j++ ) {
+            float y = float(ref_image->ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j)) * ref_image->fourier_voxel_size_y;
+            y       = (y * y / pixel_size_sq);
 
-            for ( i = 0; i <= ref_image->physical_upper_bound_complex_x; i++ ) {
-                x                           = i * reduced_fourier_voxel_size;
+            for ( int i = 0; i <= ref_image->physical_upper_bound_complex_x; i++ ) {
+                float x                     = float(i) * reduced_fourier_voxel_size;
                 filter_array[array_counter] = ReturnDoseFilter(dose_finish, ReturnCriticalDose(x * x + y + z));
                 array_counter++;
             }
         }
     }
 
-    filter_array[0] = 1.0;
+    filter_array[0] = 1.0f;
 }
 
 void ElectronDose::CalculateCummulativeDoseFilterAs1DArray(Image* ref_image, float* filter_array, float dose_start, float dose_finish) {
 
     //	MyDebugAssertTrue(ref_image->logical_z_dimension == 1, "Reference Image is a 3D!");
 
-    int i;
-    int j;
-    int k;
-
-    float x;
-    float y;
-    float z;
-
-    int         array_counter              = 0;
+    long        array_counter              = 0;
     const float reduced_fourier_voxel_size = ref_image->fourier_voxel_size_x / pixel_size;
     // The spatial frequency is calculated as sqrt(x^2 + y^2 + z^2)/pixel_size.
     // To remove the sqrt call, we square the pixel size to move it inside, and then absorb the sqrt i.e. () ^ 1/2 into the exponent critical_dose_b -> critical_dose_b / 2
     float pixel_size_sq = pixel_size * pixel_size;
 
-    for ( k = 0; k <= ref_image->physical_upper_bound_complex_z; k++ ) {
-        z = ref_image->ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * ref_image->fourier_voxel_size_z;
-        z = (z * z / pixel_size_sq);
+    for ( int k = 0; k <= ref_image->physical_upper_bound_complex_z; k++ ) {
+        float z = float(ref_image->ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k)) * ref_image->fourier_voxel_size_z;
+        z       = (z * z / pixel_size_sq);
 
-        for ( j = 0; j <= ref_image->physical_upper_bound_complex_y; j++ ) {
-            y = ref_image->ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * ref_image->fourier_voxel_size_y;
-            y = (y * y / pixel_size_sq);
+        for ( int j = 0; j <= ref_image->physical_upper_bound_complex_y; j++ ) {
+            float y = float(ref_image->ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j)) * ref_image->fourier_voxel_size_y;
+            y       = (y * y / pixel_size_sq);
 
-            for ( i = 0; i <= ref_image->physical_upper_bound_complex_x; i++ ) {
-                if ( i == 0 && j == 0 && k == 0 )
-                    filter_array[array_counter] = 1;
-                else {
-                    x                           = i * reduced_fourier_voxel_size;
-                    filter_array[array_counter] = ReturnCummulativeDoseFilter(dose_start, dose_finish, ReturnCriticalDose(x * x + y + z));
-                }
+            for ( int i = 0; i <= ref_image->physical_upper_bound_complex_x; i++ ) {
+                float x                     = float(i) * reduced_fourier_voxel_size;
+                filter_array[array_counter] = ReturnCummulativeDoseFilter(dose_start, dose_finish, ReturnCriticalDose(x * x + y + z));
 
                 array_counter++;
             }
         }
     }
 
-    filter_array[0] = 1.0;
+    filter_array[0] = 1.0f;
 }

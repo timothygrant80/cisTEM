@@ -200,7 +200,6 @@ void AppendVolumeAssetsToComboBox(wxComboBox* ComboBox) {
     ComboBox->Thaw( );
 }
 
-#ifdef EXPERIMENTAL
 void AppendAtomicCoordinatesAssetsToComboBox(wxComboBox* ComboBox) {
     extern AtomicCoordinatesAssetPanel* atomic_coordinates_asset_panel;
     ComboBox->Freeze( );
@@ -211,7 +210,6 @@ void AppendAtomicCoordinatesAssetsToComboBox(wxComboBox* ComboBox) {
 
     ComboBox->Thaw( );
 }
-#endif
 
 void AppendRefinementPackagesToComboBox(wxComboBox* ComboBox) {
     extern MyRefinementPackageAssetPanel* refinement_package_asset_panel;

@@ -107,11 +107,21 @@ inline int MakeEven(int number_to_make_even) {
         return number_to_make_even + 1;
 }
 
-// Function to check if x is power of 2
-inline bool is_power_of_two(int n) {
-    if ( n == 0 )
+inline int get_next_power_of_two(const int input_value) {
+    int tmp_val = 1;
+    while ( tmp_val < input_value )
+        tmp_val = tmp_val << 1;
+
+    return tmp_val;
+}
+
+inline bool is_power_of_two(const int input_value) {
+    int tmp_val = get_next_power_of_two(input_value);
+
+    if ( tmp_val > input_value )
         return false;
-    return (ceil(log2((float)n)) == floor(log2((float)n)));
+    else
+        return true;
 }
 
 inline float rad_2_deg(float radians) {
@@ -197,6 +207,20 @@ inline int RoundAndMakeEven(float a) {
 }
 
 /**
+ * @brief This function reproduces the modulo operation in Python, which is different than C++ for negative numbers.
+ * 
+ * @param a 
+ * @param b 
+ * @return int 
+ */
+inline int PythonLikeModulo(int a, int b) {
+    if ( a < 0 || b < 0 )
+        return ((a % b) + b) % b;
+    else
+        return a % b;
+}
+
+/**
  * @brief Some functions will fail if their output is directed at /dev/null, so this function is here to prevent that.
  * Examples may be found in numeric_text_file and mrc_file.cpp
  * 
@@ -254,15 +278,15 @@ inline std::complex<float> MakeComplex(const float& real, const float& imag) {
 }
 
 inline bool DoublesAreAlmostTheSame(double a, double b) {
-    return (fabs(a - b) < 0.000001);
+    return (fabs(a - b) < cistem::double_epsilon);
 }
 
 inline bool FloatsAreAlmostTheSame(float a, float b) {
-    return (fabs(a - b) < 0.0001);
+    return (fabs(a - b) < cistem::float_epsilon);
 }
 
 inline bool HalfFloatsAreAlmostTheSame(const half_float::half a, const half_float::half b) {
-    return (fabs(float(a) - float(b)) < 0.001);
+    return (fabs(float(a) - float(b)) < cistem::half_float_epsilon);
 }
 
 template <typename T>

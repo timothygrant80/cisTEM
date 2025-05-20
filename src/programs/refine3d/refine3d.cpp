@@ -819,7 +819,7 @@ bool Refine3DApp::DoCalculation( ) {
 
     if ( padding != 1.0 ) {
         input_3d.density_map->Resize(input_3d.density_map->logical_x_dimension * padding, input_3d.density_map->logical_y_dimension * padding, input_3d.density_map->logical_z_dimension * padding, input_3d.density_map->ReturnAverageOfRealValuesOnEdges( ));
-        //		refine_statistics.part_SSNR.ResampleCurve(&refine_statistics.part_SSNR, refine_statistics.part_SSNR.number_of_points * padding);
+        //		refine_statistics.part_SSNR.ResampleCurve(&refine_statistics.part_SSNR, refine_statistics.part_SSNR.NumberOfPoints( ) * padding);
     }
 
     //	input_3d.PrepareForProjections(high_resolution_limit);
@@ -859,12 +859,15 @@ bool Refine3DApp::DoCalculation( ) {
         percentage         = float(max_samples) / float(images_to_process) / random_reset_count;
         sum_power.SetToConstant(0.0f);
         number_of_blank_edges = 0;
-        noise_power_spectrum.SetupXAxis(0.0f, 0.5f * sqrtf(2.0f), int((sum_power.logical_x_dimension / 2.0f + 1.0f) * sqrtf(2.0f) + 1.0f));
-        number_of_terms.SetupXAxis(0.0f, 0.5f * sqrtf(2.0f), int((sum_power.logical_x_dimension / 2.0f + 1.0f) * sqrtf(2.0f) + 1.0f));
+        noise_power_spectrum.SetupXAxisForFourierSpace(sum_power.logical_x_dimension, 2.f);
+        number_of_terms.SetupXAxisForFourierSpace(sum_power.logical_x_dimension, 2.f);
         if ( is_running_locally == true )
             my_progress = new ProgressBar(images_to_process / max_threads);
         current_line         = 0;
         random_reset_counter = 0;
+
+        noise_power_spectrum.MakeThreadSafeForNThreads(max_threads);
+        number_of_terms.MakeThreadSafeForNThreads(max_threads);
 
 #pragma omp parallel num_threads(max_threads) default(none) shared(input_star_file, first_particle, last_particle, my_progress, percentage, exclude_blank_edges, input_stack,                                                                                                                                                                                                                                  \
                                                                    outer_mask_radius, mask_falloff, number_of_blank_edges, sum_power, current_line, global_random_number_generator, random_reset_count, random_reset_counter) private(current_line_local, input_parameters, image_counter, number_of_blank_edges_local, variance, temp_image_local, sum_power_local, input_image_local, temp_float, file_read, \

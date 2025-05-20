@@ -34,8 +34,8 @@ MyFindCTFPanel::MyFindCTFPanel(wxWindow* parent)
     ExpertPanel->SetSize(input_size);
 
     AmplitudeContrastNumericCtrl->SetMinMaxValue(0.0f, 1.0f);
-    MinResNumericCtrl->SetMinMaxValue(0.0f, 50.0f);
-    MaxResNumericCtrl->SetMinMaxValue(0.0f, 50.0f);
+    MinResNumericCtrl->SetMinMaxValue(0.0f, FLT_MAX);
+    MaxResNumericCtrl->SetMinMaxValue(0.0f, FLT_MAX);
     DefocusStepNumericCtrl->SetMinMaxValue(1.0f, FLT_MAX);
     ToleratedAstigmatismNumericCtrl->SetMinMaxValue(0.0f, FLT_MAX);
     MinPhaseShiftNumericCtrl->SetMinMaxValue(-190, 190);
@@ -460,6 +460,33 @@ void MyFindCTFPanel::OnFindAdditionalPhaseCheckBox(wxCommandEvent& event) {
     }
 }
 
+void MyFindCTFPanel::OnFitNodesCheckBox(wxCommandEvent& event) {
+    if ( FitNodesCheckBox->IsChecked( ) == true ) {
+        Freeze( );
+        FitNodes1DCheckBox->Enable(true);
+        FitNodes2DCheckBox->Enable(true);
+        FitNodesMinResStaticText->Enable(true);
+        FitNodesMinResNumericCtrl->Enable(true);
+        FitNodesMaxResStaticText->Enable(true);
+        FitNodesMaxResNumericCtrl->Enable(true);
+        FitNodesRoundedSquareCheckBox->Enable(true);
+        FitNodesWeightsCheckBox->Enable(true);
+        Thaw( );
+    }
+    else {
+        Freeze( );
+        FitNodes1DCheckBox->Enable(false);
+        FitNodes2DCheckBox->Enable(false);
+        FitNodesMinResStaticText->Enable(false);
+        FitNodesMinResNumericCtrl->Enable(false);
+        FitNodesMaxResStaticText->Enable(false);
+        FitNodesMaxResNumericCtrl->Enable(false);
+        FitNodesRoundedSquareCheckBox->Enable(false);
+        FitNodesWeightsCheckBox->Enable(false);
+        Thaw( );
+    }
+}
+
 void MyFindCTFPanel::OnRestrainAstigmatismCheckBox(wxCommandEvent& event) {
     if ( RestrainAstigmatismCheckBox->IsChecked( ) == true ) {
         Freeze( );
@@ -535,6 +562,7 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
     float       known_defocus_2;
     float       known_phase_shift;
     bool        resample_if_pixel_too_small;
+    float       resample_pixel_size;
     bool        large_astigmatism_expected;
     bool        filter_lowres_signal = true;
 
@@ -557,6 +585,14 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
 
     int current_eer_frames_per_image = 0;
     int current_eer_super_res_factor = 1;
+
+    bool  fit_nodes;
+    bool  fit_nodes_1d;
+    bool  fit_nodes_2d;
+    float fit_nodes_min_res;
+    float fit_nodes_max_res;
+    bool  fit_nodes_rounded_square;
+    bool  fit_nodes_weights;
 
     // allocate space for the buffered results..
 
@@ -604,6 +640,25 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
     else
         filter_lowres_signal = false;
 
+    if ( FitNodesCheckBox->IsChecked( ) == true ) {
+        fit_nodes                = true;
+        fit_nodes_min_res        = FitNodesMinResNumericCtrl->ReturnValue( );
+        fit_nodes_max_res        = FitNodesMaxResNumericCtrl->ReturnValue( );
+        fit_nodes_1d             = FitNodes1DCheckBox->IsChecked( );
+        fit_nodes_2d             = FitNodes2DCheckBox->IsChecked( );
+        fit_nodes_rounded_square = FitNodesRoundedSquareCheckBox->IsChecked( );
+        fit_nodes_weights        = FitNodesWeightsCheckBox->IsChecked( );
+    }
+    else {
+        fit_nodes         = false;
+        fit_nodes_min_res = 10.0f;
+        fit_nodes_max_res = 3.0f;
+        fit_nodes_1d      = false;
+        fit_nodes_2d      = false;
+    }
+
+    resample_if_pixel_too_small                 = ResamplePixelSizeCheckBox->IsChecked( );
+    resample_pixel_size                         = ResamplePixelSizeNumericCtrl->ReturnValue( );
     OneSecondProgressDialog* my_progress_dialog = new OneSecondProgressDialog("Preparing Job", "Preparing Job...", number_of_jobs, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE | wxPD_APP_MODAL);
     current_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection( )], "ctffind", number_of_jobs);
 
@@ -636,12 +691,13 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
         // resample_if_pixel_too_small (bool);
 
         if ( input_is_a_movie == true ) {
-            parent_asset_id = image_asset_panel->ReturnAssetPointer(active_group.members[counter])->parent_id;
-            input_filename  = movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->filename.GetFullPath( ).ToStdString( );
-            pixel_size      = movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->pixel_size;
+            parent_asset_id           = image_asset_panel->ReturnAssetPointer(active_group.members[counter])->parent_id;
+            MovieAsset* current_movie = movie_asset_panel->ReturnAssetPointer(movie_asset_panel->ReturnArrayPositionFromAssetID(parent_asset_id));
+            input_filename            = current_movie->filename.GetFullPath( ).ToStdString( );
+            pixel_size                = current_movie->pixel_size;
 
-            current_movie_size = (float(movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->x_size) / movie_asset_panel->ReturnAssetBinningFactor(active_group.members[counter])) * (float(movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->y_size) / movie_asset_panel->ReturnAssetBinningFactor(active_group.members[counter]));
-            current_movie_size *= movie_asset_panel->ReturnAssetPointer(active_group.members[counter])->number_of_frames;
+            current_movie_size = (float(current_movie->x_size) / current_movie->output_binning_factor) * (float(current_movie->y_size) / current_movie->output_binning_factor);
+            current_movie_size *= current_movie->number_of_frames;
             max_movie_size = std::max(max_movie_size, current_movie_size);
         }
         else {
@@ -665,14 +721,14 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
         output_diagnostic_filename = buffer_filename.ToStdString( );
 
         // These parameters are not presented in the GUI (yet?)
-        astigmatism_is_known        = false;
-        defocus_is_known            = false;
-        known_astigmatism           = 0.0;
-        known_astigmatism_angle     = 0.0;
-        known_defocus_1             = 0.0;
-        known_defocus_2             = 0.0;
-        known_phase_shift           = 0.0;
-        resample_if_pixel_too_small = true;
+        astigmatism_is_known    = false;
+        defocus_is_known        = false;
+        known_astigmatism       = 0.0;
+        known_astigmatism_angle = 0.0;
+        known_defocus_1         = 0.0;
+        known_defocus_2         = 0.0;
+        known_phase_shift       = 0.0;
+        // resample_if_pixel_too_small = true;
 
         if ( input_is_a_movie ) {
             parent_asset_id           = image_asset_panel->ReturnAssetPointer(active_group.members[counter])->parent_id;
@@ -710,7 +766,7 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
 
         const int number_of_threads = 1;
 
-        current_job_package.AddJob("sbisffffifffffbfbfffbffbbsbsbfffbfffbiiib", input_filename.c_str( ), // 0
+        current_job_package.AddJob("sbisffffifffffbfbfffbffbbsbsbfffbfffbiiibbbbfffbb", input_filename.c_str( ), // 0
                                    input_is_a_movie, // 1
                                    number_of_frames_to_average, //2
                                    output_diagnostic_filename.c_str( ), // 3
@@ -734,23 +790,31 @@ void MyFindCTFPanel::StartEstimationClick(wxCommandEvent& event) {
                                    known_astigmatism, // 21
                                    known_astigmatism_angle, // 22
                                    resample_if_pixel_too_small, // 23
-                                   movie_is_gain_corrected,
-                                   current_gain_filename.ToStdString( ).c_str( ),
-                                   movie_is_dark_corrected,
-                                   current_dark_filename.ToStdString( ).c_str( ),
-                                   correct_movie_mag_distortion,
-                                   movie_mag_distortion_angle,
-                                   movie_mag_distortion_major_scale,
-                                   movie_mag_distortion_minor_scale,
-                                   defocus_is_known,
-                                   known_defocus_1,
-                                   known_defocus_2,
-                                   known_phase_shift,
-                                   determine_tilt,
-                                   number_of_threads,
-                                   current_eer_frames_per_image,
-                                   current_eer_super_res_factor,
-                                   filter_lowres_signal);
+                                   movie_is_gain_corrected, // 24
+                                   current_gain_filename.ToStdString( ).c_str( ), // 25
+                                   movie_is_dark_corrected, // 26
+                                   current_dark_filename.ToStdString( ).c_str( ), // 27
+                                   correct_movie_mag_distortion, // 28
+                                   movie_mag_distortion_angle, // 29
+                                   movie_mag_distortion_major_scale, // 30
+                                   movie_mag_distortion_minor_scale, // 31
+                                   defocus_is_known, // 32
+                                   known_defocus_1, // 33
+                                   known_defocus_2, // 34
+                                   known_phase_shift, // 35
+                                   determine_tilt, // 36
+                                   number_of_threads, // 37
+                                   current_eer_frames_per_image, // 38
+                                   current_eer_super_res_factor, // 39
+                                   filter_lowres_signal, // 40
+                                   fit_nodes, // 41
+                                   fit_nodes_1d, // 42
+                                   fit_nodes_2d, // 43
+                                   fit_nodes_min_res, // 44
+                                   fit_nodes_max_res, // 45
+                                   resample_pixel_size, // 46
+                                   fit_nodes_rounded_square, // 47
+                                   fit_nodes_weights); // 48
 
         my_progress_dialog->Update(counter + 1);
     }
@@ -945,7 +1009,7 @@ void MyFindCTFPanel::ProcessResult(JobResult* result_to_process) // this will ha
 
         wxString image_filename = image_asset_panel->ReturnAssetPointer(active_group.members[result_to_process->job_number])->filename.GetFullPath( );
 
-        CTFResultsPanel->Draw(current_job_package.jobs[result_to_process->job_number].arguments[3].ReturnStringArgument( ), current_job_package.jobs[result_to_process->job_number].arguments[16].ReturnBoolArgument( ), result_to_process->result_data[0], result_to_process->result_data[1], result_to_process->result_data[2], result_to_process->result_data[3], result_to_process->result_data[4], result_to_process->result_data[5], result_to_process->result_data[6], result_to_process->result_data[7], result_to_process->result_data[8], result_to_process->result_data[9], image_filename);
+        CTFResultsPanel->Draw(current_job_package.jobs[result_to_process->job_number].arguments[3].ReturnStringArgument( ), current_job_package.jobs[result_to_process->job_number].arguments[16].ReturnBoolArgument( ), result_to_process->result_data[0], result_to_process->result_data[1], result_to_process->result_data[2], result_to_process->result_data[3], result_to_process->result_data[4], result_to_process->result_data[5], result_to_process->result_data[6], result_to_process->result_data[7], result_to_process->result_data[8], result_to_process->result_data[9], result_to_process->result_data[10], image_filename);
         time_of_last_result_update = time(NULL);
     }
 
@@ -1017,7 +1081,7 @@ void MyFindCTFPanel::WriteResultToDataBase( ) {
     main_frame->current_project.database.Begin( );
 
     // loop over all the jobs, and add them..
-    main_frame->current_project.database.BeginBatchInsert("ESTIMATED_CTF_PARAMETERS", 34,
+    main_frame->current_project.database.BeginBatchInsert("ESTIMATED_CTF_PARAMETERS", 46,
                                                           "CTF_ESTIMATION_ID",
                                                           "CTF_ESTIMATION_JOB_ID",
                                                           "DATETIME_OF_RUN",
@@ -1051,7 +1115,19 @@ void MyFindCTFPanel::WriteResultToDataBase( ) {
                                                           "LARGE_ASTIGMATISM_EXPECTED",
                                                           "ICINESS",
                                                           "TILT_ANGLE",
-                                                          "TILT_AXIS");
+                                                          "TILT_AXIS",
+                                                          "SAMPLE_THICKNESS",
+                                                          "SAMPLE_THICKNESS_JSON",
+                                                          "DETERMINE_TILT",
+                                                          "FIT_NODES",
+                                                          "FIT_NODES_1D",
+                                                          "FIT_NODES_2D",
+                                                          "FIT_NODES_LOW_LIMIT",
+                                                          "FIT_NODES_HIGH_LIMIT",
+                                                          "FIT_NODES_ROUNDED_SQUARE",
+                                                          "FIT_NODES_DOWNWEIGHT_NODES",
+                                                          "RESAMPLE_IF_NESCESSARY",
+                                                          "TARGET_PIXEL_SIZE");
 
     wxDateTime now                    = wxDateTime::Now( );
     counter_aliasing_within_fit_range = 0;
@@ -1080,7 +1156,7 @@ void MyFindCTFPanel::WriteResultToDataBase( ) {
             phase_shift_step            = 0;
         }
 
-        main_frame->current_project.database.AddToBatchInsert("iiliirrrrirrrrririrrrrrrrrrrtiirrr", ctf_estimation_id,
+        main_frame->current_project.database.AddToBatchInsert("iiliirrrrirrrrririrrrrrrrrrrtiirrrrtiiiirriiir", ctf_estimation_id,
                                                               ctf_estimation_job_id,
                                                               (long int)now.GetAsDOS( ),
                                                               image_asset_id,
@@ -1113,7 +1189,20 @@ void MyFindCTFPanel::WriteResultToDataBase( ) {
                                                               current_job_package.jobs[counter].arguments[14].ReturnBoolArgument( ), // large astigmatism expected
                                                               buffered_results[counter].result_data[7], // iciness
                                                               buffered_results[counter].result_data[8], // tilt angle
-                                                              buffered_results[counter].result_data[9]); // tilt axis
+                                                              buffered_results[counter].result_data[9], // tilt axis
+                                                              buffered_results[counter].result_data[10], // sample thickness
+                                                              "",
+                                                              current_job_package.jobs[counter].arguments[36].ReturnBoolArgument( ), // Determine tilt,
+                                                              current_job_package.jobs[counter].arguments[41].ReturnBoolArgument( ), // Fit nodes,
+                                                              current_job_package.jobs[counter].arguments[42].ReturnBoolArgument( ), // Fit nodes 1D search
+                                                              current_job_package.jobs[counter].arguments[43].ReturnBoolArgument( ), // Fit nodes 2D search
+                                                              current_job_package.jobs[counter].arguments[44].ReturnFloatArgument( ), // Fit nodes low resolution limit
+                                                              current_job_package.jobs[counter].arguments[45].ReturnFloatArgument( ), // Fit nodes high resolution limit
+                                                              current_job_package.jobs[counter].arguments[47].ReturnBoolArgument( ), // Fit nodes use rounded square model
+                                                              current_job_package.jobs[counter].arguments[48].ReturnBoolArgument( ), // Fit nodes downweight signla in nodes
+                                                              current_job_package.jobs[counter].arguments[23].ReturnBoolArgument( ), // Resample if pixel size is too small
+                                                              current_job_package.jobs[counter].arguments[46].ReturnFloatArgument( ) // Target pixel size
+        );
         ctf_estimation_id++;
         my_progress_dialog->Update(counter + 1);
 

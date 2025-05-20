@@ -124,17 +124,18 @@ if test "$want_cuda" = "yes" ; then
 fi
 
 # This is the code that will be generated at compile time and should be specified for the most used gpu 
+# TODO: export target_arch to link against pre-built FastFFT that has the same target arch
 target_arch=""
-AC_ARG_WITH([target-gpu-arch], AS_HELP_STRING([--with-target-gpu-arch@<:@=60,61,70,75,80,86@:>@], [Primary architecture to compile for (default=86)]),
+AC_ARG_WITH([target-gpu-arch], AS_HELP_STRING([--with-target-gpu-arch@<:@=70,75,80,86,89,90@:>@], [Primary architecture to compile for (default=86)]),
 [
-	if test "$withval" = "86" ; then target_arch=86 
+	if test "$withval" = "90" ; then target_arch=90
+	elif  test "$withval" = "89" ; then target_arch=89
+	elif  test "$withval" = "86" ; then target_arch=86 
 	elif  test "$withval" = "80" ; then target_arch=80
 	elif  test "$withval" = "75" ; then target_arch=75
 	elif  test "$withval" = "70" ; then target_arch=70
-	elif  test "$withval" = "61" ; then target_arch=61
-	elif  test "$withval" = "60" ; then target_arch=60
-	else
-		AC_MSG_ERROR([Requested target-gpu-arch must be in 60,61,70,75,80,86, not $withval])
+		else
+		AC_MSG_ERROR([Requested target-gpu-arch must be in 70,75,80,86,89,90 not $withval])
 	fi
 	
 ], [ target_arch="86"] )
@@ -146,61 +147,80 @@ NVCCFLAGS+=" --gpu-architecture=sm_$target_arch -gencode=arch=compute_$target_ar
 
 # This is the oldest arch that will have JIT-able code g
 oldest_arch=""
-AC_ARG_WITH([oldest-gpu-arch], AS_HELP_STRING([--with-oldest-gpu-arch@<:@=60,61,70,75,80,86:>@], [Oldest architecture make compatible for (default=70)]),
+AC_ARG_WITH([oldest-gpu-arch], AS_HELP_STRING([--with-oldest-gpu-arch@<:@=70,75,80,86,89,90:>@], [Oldest architecture make compatible for (default=80)]),
 [
-	if test "$withval" = "86" ; then oldest_arch=86 
+	if test "$withval" = "90" ; then oldest_arch=90
+	elif  test "$withval" = "89" ; then oldest_arch=89
+	elif  test "$withval" = "86" ; then oldest_arch=86 
 	elif  test "$withval" = "80" ; then oldest_arch=80
 	elif  test "$withval" = "75" ; then oldest_arch=75
 	elif  test "$withval" = "70" ; then oldest_arch=70
-	elif  test "$withval" = "61" ; then oldest_arch=61
-	elif  test "$withval" = "60" ; then oldest_arch=60
-	else
-		AC_MSG_ERROR([Requested target-oldest_arch must be in 60,61,70,75,80,86, not $withval])
+		else
+		AC_MSG_ERROR([Requested target-oldest_arch must be in 70,75,80,86,89 not $withval])
 	fi
 	
-], [ oldest_arch="70"] )
+], [ oldest_arch="80"] )
 AC_MSG_NOTICE([oldest gpu architecture is sm$oldest_arch])
 
 if test "$oldest_arch" -gt "$target_arch" ; then 
 	AC_MSG_ERROR([Requested target-oldest_arch is greater than the target arch.]) 
 else
-	current_arch="60"
-	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -lt "$target_arch" ; then
-		NVCCFLAGS+=" -gencode=arch=compute_$current_arch,code=sm_$current_arch"
-	fi
-	
-	current_arch="61"
-	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -lt "$target_arch" ; then
-		NVCCFLAGS+=" -gencode=arch=compute_$current_arch,code=sm_$current_arch"
-	fi
-	
+
 	current_arch="70"
-	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -lt "$target_arch" ; then
+	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -ne "$target_arch" ; then
 		NVCCFLAGS+=" -gencode=arch=compute_$current_arch,code=sm_$current_arch"
 	fi	
 	
 	current_arch="75"
-	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -lt "$target_arch" ; then
+	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -ne "$target_arch" ; then
 		NVCCFLAGS+=" -gencode=arch=compute_$current_arch,code=sm_$current_arch"
 	fi	
 	
 	current_arch="80"
-	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -lt "$target_arch" ; then
+	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -ne "$target_arch" ; then
 		NVCCFLAGS+=" -gencode=arch=compute_$current_arch,code=sm_$current_arch"
 	fi		
+
+	current_arch="86"
+	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -ne "$target_arch" ; then
+		NVCCFLAGS+=" -gencode=arch=compute_$current_arch,code=sm_$current_arch"
+	fi	
+
+	current_arch="89"
+	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -ne "$target_arch" ; then
+		NVCCFLAGS+=" -gencode=arch=compute_$current_arch,code=sm_$current_arch"
+	fi	
+
+	current_arch="90"
+	if test "$current_arch" -ge $oldest_arch && test "$current_arch" -ne "$target_arch" ; then
+		NVCCFLAGS+=" -gencode=arch=compute_$current_arch,code=sm_$current_arch"
+	fi	
 		
 fi
 
 if test "x$is_cuda_ge_11" == "x1" ; then
   AC_MSG_NOTICE([CUDA >= 11.0, enabling --extra-device-vectorization])
-  NVCCFLAGS+=" --extra-device-vectorization -std=c++17 --expt-relaxed-constexpr -t8" 
+  NVCCFLAGS+=" --extra-device-vectorization -std=c++17 --expt-relaxed-constexpr --threads=8 --split-compile=8 " 
 else
   NVCCFLAGS+=" -std=c++11" 
 fi
-  
+
+# to trouble shoot ptx warnings for example.  
+# 4.2.5.5. --keep-dir directory (-keep-dir)
+# Keep all intermediate files that are generated during internal compilation steps in this directory.
+nvcc_keep_dir=""
+AC_ARG_WITH(keep-dir,
+AS_HELP_STRING([--with-keep-dir=PATH],[Use the given path to save NVCC intermediates for debugging]),
+[
+    if test "$withval" != "yes" -a "$withval" != ""; then
+        nvcc_keep_dir=" --keep-dir $withval"
+    fi
+])
+
+NVCCFLAGS+=$nvcc_keep_dir
 #--extra-device-vectorization
 # -Xcompiler= -DGPU -DSTDC_HEADERS=1 -DHAVE_SYS_TYPES_H=1 -DHAVE_SYS_STAT_H=1 -DHAVE_STDLIB_H=1 -DHAVE_STRING_H=1 -DHAVE_MEMORY_H=1 -DHAVE_STRINGS_H=1 -DHAVE_INTTYPES_H=1 -DHAVE_STDINT_H=1 -DHAVE_UNISTD_H=1 -DHAVE_DLFCN_H=1"
-NVCCFLAGS+=" --default-stream per-thread -m64 -O3 --use_fast_math  -Xptxas --warn-on-local-memory-usage,--warn-on-spills, --generate-line-info "
+NVCCFLAGS+=" --default-stream per-thread -m64 -O3 --use_fast_math  -Xptxas --warn-on-local-memory-usage,--warn-on-spills,--warn-on-double-precision-use,--generate-line-info "
 
 AC_ARG_ENABLE(gpu-cache-hints, AS_HELP_STRING([--disable-gpu-cache-hints],[Do not use the intrinsics for cache hints]),[
   if test "$enableval" = no; then

@@ -693,9 +693,6 @@ void azimuthal_alignment(Image* input_stack, Image* input_stack_times_ctf, int n
     Image* stack_for_alignment; // pointer that can be switched between running average stack and image stack if necessary
     Peak   current_peak;
 
-    Curve x_shifts_curve;
-    Curve y_shifts_curve;
-
     sum_of_images.Allocate(input_stack_times_ctf[0].logical_x_dimension, input_stack_times_ctf[0].logical_y_dimension, false);
     sum_of_images.SetToConstant(0.0);
 
@@ -856,7 +853,7 @@ void azimuthal_alignment(Image* input_stack, Image* input_stack_times_ctf, int n
 
 		if (inner_radius_for_peak_search != 0) // in this case, weird things can happen (+1/-1 flips), we want to really smooth it. use a polynomial.  This should only affect the first round..
 		{
-			if (x_shifts_curve.number_of_points > 2)
+			if (x_shifts_curve.NumberOfPoints( ) > 2)
 			{
 				x_shifts_curve.FitPolynomialToData(4);
 				y_shifts_curve.FitPolynomialToData(4);
@@ -873,7 +870,7 @@ void azimuthal_alignment(Image* input_stack, Image* input_stack_times_ctf, int n
 		}
 		else
 		{
-			if (savitzy_golay_window_size < x_shifts_curve.number_of_points) // when the input movie is dodgy (very few frames), the fitting won't work
+			if (savitzy_golay_window_size < x_shifts_curve.NumberOfPoints( )) // when the input movie is dodgy (very few frames), the fitting won't work
 			{
 				x_shifts_curve.FitSavitzkyGolayToData(savitzy_golay_window_size, 1);
 				y_shifts_curve.FitSavitzkyGolayToData(savitzy_golay_window_size, 1);

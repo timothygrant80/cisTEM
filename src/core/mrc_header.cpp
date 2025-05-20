@@ -7,6 +7,7 @@ MRCHeader::MRCHeader( ) {
     buffer = new char[1024];
     InitPointers( );
     this_is_in_mastronarde_4bit_hack_format = false;
+    dimensions_set                          = false;
 }
 
 //!>  \brief  Default destructor - deallocate the memory;
@@ -66,6 +67,7 @@ void MRCHeader::PrintInfo( ) {
 }
 
 float MRCHeader::ReturnPixelSize( ) {
+    MyDebugAssertTrue(dimensions_set, "Dimensions not set yet!");
     if ( cell_a_x[0] == 0.0 ) {
         return 0.0;
     }
@@ -74,8 +76,8 @@ float MRCHeader::ReturnPixelSize( ) {
     }
 }
 
-// Make sure to call this after the volume / image dimensions have been set
 void MRCHeader::SetPixelSize(float wanted_pixel_size) {
+    MyDebugAssertTrue(dimensions_set, "Dimensions not set yet!");
     cell_a_x[0] = wanted_pixel_size * mx[0];
     cell_a_y[0] = wanted_pixel_size * my[0];
     cell_a_z[0] = wanted_pixel_size * mz[0];
@@ -93,6 +95,7 @@ void MRCHeader::SetDimensionsImage(int wanted_x_dim, int wanted_y_dim) {
     my[0] = wanted_y_dim;
 
     space_group_number[0] = 1; // Contravening MRC2014 definition, which indicate we should set this to 0 when dealing with (stacks of) 2D images
+    dimensions_set        = true;
 }
 
 void MRCHeader::SetNumberOfImages(int wanted_number_of_images) {
@@ -114,6 +117,7 @@ void MRCHeader::SetDimensionsVolume(int wanted_x_dim, int wanted_y_dim, int want
     mz[0] = wanted_z_dim;
 
     space_group_number[0] = 1;
+    dimensions_set        = true;
 }
 
 void MRCHeader::SetDensityStatistics(float wanted_min, float wanted_max, float wanted_mean, float wanted_rms) {
@@ -201,6 +205,8 @@ void MRCHeader::ReadHeader(std::fstream* MRCFile) {
     // Read the first 1024 bytes into buffer, the pointers should then all be set..
     MRCFile->seekg(0);
     MRCFile->read(buffer, 1024);
+
+    dimensions_set = true;
 
     // work out some extra details..
 
@@ -306,6 +312,8 @@ void MRCHeader::WriteHeader(std::fstream* MRCFile) {
 
 void MRCHeader::BlankHeader( ) {
     long counter;
+
+    dimensions_set = false;
 
     nx[0]                  = 0;
     ny[0]                  = 0;

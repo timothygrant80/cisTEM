@@ -110,6 +110,8 @@ class MRCHeader {
 
     bool this_is_in_mastronarde_4bit_hack_format;
 
+    bool dimensions_set;
+
   public:
     // methods
 
@@ -160,7 +162,6 @@ class MRCHeader {
 
     inline void SetMode(int wanted_mode) {
         MyDebugAssertTrue(wanted_mode == 2 || wanted_mode == 12, "Only mode 2 (fp32) and mode 12 (fp16 are currently supported for writing MRCFiles)");
-        std::cerr << "Setting mode to " << wanted_mode << std::endl;
         mode[0]         = wanted_mode;
         bytes_per_pixel = 2;
     };

@@ -41,10 +41,10 @@ bool SamplesTestingApp::DoCalculation( ) {
 
     SamplesPrintTestStartMessage("Starting samples testing", true);
 
-    // DiskIOImageRunner(hiv_images_80x80x10_filename, temp_directory);
-    Simple3dSimulationRunner(hiv_image_80x80x1_filename, temp_directory);
-
 #ifdef ENABLEGPU
+
+    ResampleRunner(temp_directory);
+    exit(0);
     // These are broken, I'm not quite sure where, seems to be allocation issues related to consme that Shiran wrote. Revisit.
     // BatchedCorrelationRunner(hiv_images_80x80x10_filename, temp_directory);
     SimpleCuFFTRunner(hiv_image_80x80x1_filename, temp_directory);
@@ -60,6 +60,9 @@ bool SamplesTestingApp::DoCalculation( ) {
 #else
     wxPrintf("GPU support disabled. skipping GPU tests.\n");
 #endif
+
+    // DiskIOImageRunner(hiv_images_80x80x10_filename, temp_directory);
+    Simple3dSimulationRunner(hiv_image_80x80x1_filename, temp_directory);
 
     SamplesBeginTest("All samples: ", passed);
     SamplesPrintResult(samples_tests_have_all_passed, __LINE__);

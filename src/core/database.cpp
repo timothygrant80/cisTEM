@@ -233,6 +233,23 @@ double Database::ReturnSingleDoubleFromSelectCommand(wxString select_command) {
     return value;
 }
 
+wxString Database::ReturnSingleStringFromSelectCommand(wxString select_command) {
+    MyDebugAssertTrue(is_open == true, "database not open!");
+
+    int           return_code;
+    sqlite3_stmt* current_statement;
+    wxString      value;
+
+    Prepare(select_command, &current_statement);
+    Step(current_statement);
+
+    value = sqlite3_column_text(current_statement, 0);
+
+    Finalize(current_statement);
+
+    return value;
+}
+
 long Database::ReturnHighestRefinementID( ) {
     return ReturnSingleLongFromSelectCommand("SELECT MAX(REFINEMENT_ID) FROM REFINEMENT_LIST");
 }
@@ -255,6 +272,10 @@ int Database::ReturnHighestAlignmentID( ) {
 
 int Database::ReturnHighestTemplateMatchID( ) {
     return ReturnSingleIntFromSelectCommand("SELECT MAX(TEMPLATE_MATCH_ID) FROM TEMPLATE_MATCH_LIST");
+}
+
+int Database::ReturnHighestTemplateMatchesPackageID( ) {
+    return ReturnSingleIntFromSelectCommand("SELECT MAX(TEMPLATE_MATCHES_PACKAGE_ASSET_ID) FROM TEMPLATE_MATCHES_PACKAGE_ASSETS");
 }
 
 int Database::ReturnHighestFindCTFID( ) {
@@ -1148,7 +1169,6 @@ void Database::AddNextVolumeAsset(int image_asset_id, wxString name, wxString fi
     AddToBatchInsert("ittiriiitt", image_asset_id, name.ToUTF8( ).data( ), filename.ToUTF8( ).data( ), reconstruction_job_id, pixel_size, x_size, y_size, z_size, half_map_1_filename.ToUTF8( ).data( ), half_map_2_filename.ToUTF8( ).data( ));
 }
 
-#ifdef EXPERIMENTAL
 void Database::BeginAtomicCoordinatesAssetInsert( ) {
     BeginBatchInsert("ATOMIC_COORDINATES_ASSETS", 11, "ATOMIC_COORDINATES_ASSET_ID", "NAME", "FILENAME", "SIMULATION_3D_JOB_ID", "X_SIZE", "Y_SIZE", "Z_SIZE", "PDB_ID", "PDB_AVG_BFACTOR", "PDB_STD_BFACTOR", "EFFECTIVE_WEIGHT");
 }
@@ -1158,7 +1178,6 @@ void Database::AddNextAtomicCoordinatesAsset(const AtomicCoordinatesAsset* asset
                      asset->simulation_3d_job_id, asset->x_size, asset->y_size, asset->z_size,
                      asset->pdb_id.ToUTF8( ).data( ), asset->pdb_avg_bfactor, asset->pdb_std_bfactor, asset->effective_weight);
 }
-#endif
 
 void Database::AddNextImageAsset(int image_asset_id, wxString name, wxString filename, int position_in_stack, int parent_movie_id, int alignment_id, int ctf_estimation_id, int x_size, int y_size, double voltage, double pixel_size, double spherical_aberration, int protein_is_white) {
     AddToBatchInsert("ittiiiiiirrri", image_asset_id, name.ToUTF8( ).data( ), filename.ToUTF8( ).data( ), position_in_stack, parent_movie_id, alignment_id, ctf_estimation_id, x_size, y_size, pixel_size, voltage, spherical_aberration, protein_is_white);
@@ -1349,11 +1368,9 @@ void Database::BeginAllVolumeAssetsSelect( ) {
     BeginBatchSelect("SELECT * FROM VOLUME_ASSETS;");
 }
 
-#ifdef EXPERIMENTAL
 void Database::BeginAllAtomicCoordinatesAssetsSelect( ) {
     BeginBatchSelect("SELECT * FROM ATOMIC_COORDINATES_ASSETS;");
 }
-#endif
 
 void Database::BeginAllParticlePositionGroupsSelect( ) {
     BeginBatchSelect("SELECT * FROM PARTICLE_POSITION_GROUP_LIST;");
@@ -1365,6 +1382,10 @@ void Database::BeginAllVolumeGroupsSelect( ) {
 
 void Database::BeginAllRefinementPackagesSelect( ) {
     BeginBatchSelect("SELECT * FROM REFINEMENT_PACKAGE_ASSETS;");
+}
+
+void Database::BeginAllTemplateMatchesPackagesSelect( ) {
+    BeginBatchSelect("SELECT * FROM TEMPLATE_MATCHES_PACKAGE_ASSETS;");
 }
 
 void Database::BeginAllRunProfilesSelect( ) {
@@ -1547,6 +1568,16 @@ RefinementPackage* Database::GetNextRefinementPackage( ) {
     MyDebugAssertTrue(return_code == SQLITE_DONE, "SQL error, return code : %i\n", return_code);
 
     Finalize(list_statement);
+
+    return temp_package;
+}
+
+TemplateMatchesPackage* Database::GetNextTemplateMatchesPackage( ) {
+    TemplateMatchesPackage* temp_package;
+
+    temp_package = new TemplateMatchesPackage;
+
+    GetFromBatchSelect("ltt", &temp_package->asset_id, &temp_package->name, &temp_package->starfile_filename);
 
     return temp_package;
 }
@@ -1737,8 +1768,6 @@ VolumeAsset Database::GetNextVolumeAsset( ) {
     return temp_asset;
 }
 
-#ifdef EXPERIMENTAL
-
 AtomicCoordinatesAsset Database::GetNextAtomicCoordinatesAsset( ) {
     AtomicCoordinatesAsset temp_asset;
     // Note: no distinction between single and double (s/r) seems to be made in writing to the DB, based on format strings, yet when reading it must be correct.
@@ -1748,7 +1777,6 @@ AtomicCoordinatesAsset Database::GetNextAtomicCoordinatesAsset( ) {
                        &temp_asset.pdb_avg_bfactor, &temp_asset.pdb_std_bfactor, &temp_asset.effective_weight);
     return temp_asset;
 }
-#endif
 
 void Database::AddOrReplaceRunProfile(RunProfile* profile_to_add) {
 
@@ -1812,6 +1840,11 @@ void Database::AddRefinementPackageAsset(RefinementPackage* asset_to_add) {
     }
 
     EndBatchInsert( );
+}
+
+void Database::AddTemplateMatchesPackageAsset(TemplateMatchesPackage* asset_to_add) {
+    BeginCommitLocker active_locker(this);
+    InsertOrReplace("TEMPLATE_MATCHES_PACKAGE_ASSETS", "Ptt", "TEMPLATE_MATCHES_PACKAGE_ASSET_ID", "NAME", "STARFILE_FILENAME", asset_to_add->asset_id, asset_to_add->name.ToUTF8( ).data( ), asset_to_add->starfile_filename.ToUTF8( ).data( ));
 }
 
 void Database::AddStartupJob(long startup_job_id, long refinement_package_asset_id, wxString name, int number_of_starts, int number_of_cycles, float initial_res_limit, float final_res_limit, bool auto_mask, bool auto_percent_used, float initial_percent_used, float final_percent_used, float mask_radius, bool apply_blurring, float smoothing_factor, wxArrayLong result_volume_ids) {
@@ -2046,7 +2079,7 @@ void Database::AddRefinement(Refinement* refinement_to_add) {
 
         BeginBatchInsert(wxString::Format("REFINEMENT_RESOLUTION_STATISTICS_%li_%i", refinement_to_add->refinement_id, class_counter), 6, "SHELL", "RESOLUTION", "FSC", "PART_FSC", "PART_SSNR", "REC_SSNR");
 
-        for ( counter = 0; counter <= refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.FSC.number_of_points; counter++ ) {
+        for ( counter = 0; counter <= refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.FSC.NumberOfPoints( ); counter++ ) {
             AddToBatchInsert("lrrrrr", counter, refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.FSC.data_x[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.FSC.data_y[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.part_FSC.data_y[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.part_SSNR.data_y[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.rec_SSNR.data_y[counter]);
         }
 
@@ -2069,7 +2102,7 @@ void Database::UpdateRefinementResolutionStatistics(Refinement* refinement_to_ad
 
         BeginBatchInsert(wxString::Format("REFINEMENT_RESOLUTION_STATISTICS_%li_%i", refinement_to_add->refinement_id, class_counter), 6, "SHELL", "RESOLUTION", "FSC", "PART_FSC", "PART_SSNR", "REC_SSNR");
 
-        for ( counter = 0; counter <= refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.FSC.number_of_points; counter++ ) {
+        for ( counter = 0; counter <= refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.FSC.NumberOfPoints( ); counter++ ) {
             AddToBatchInsert("lrrrrr", counter, refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.FSC.data_x[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.FSC.data_y[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.part_FSC.data_y[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.part_SSNR.data_y[counter], refinement_to_add->class_refinement_results[class_counter - 1].class_resolution_statistics.rec_SSNR.data_y[counter]);
         }
 

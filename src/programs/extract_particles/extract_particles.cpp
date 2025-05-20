@@ -34,8 +34,8 @@ void ExtractParticlesApp::DoInteractiveUserInput( ) {
 
 bool ExtractParticlesApp::DoCalculation( ) {
 
-    ProgressBar*          my_progress_bar;
-    EmpiricalDistribution my_dist;
+    ProgressBar*                  my_progress_bar;
+    EmpiricalDistribution<double> my_dist;
 
     // Get the arguments for this job..
     wxString micrograph_filename   = my_current_job.arguments[0].ReturnStringArgument( );

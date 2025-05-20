@@ -1,5 +1,5 @@
 ///////////////////////////////////////////////////////////////////////////
-// C++ code generated with wxFormBuilder (version 3.10.1-0-g8feb16b3)
+// C++ code generated with wxFormBuilder (version 3.10.0-4761b0c)
 // http://www.wxformbuilder.org/
 //
 // PLEASE DO *NOT* EDIT THIS FILE!
@@ -9,8 +9,10 @@
 
 #include <wx/artprov.h>
 #include <wx/xrc/xmlres.h>
+class ContainedParticleListControl;
 class ContentsList;
 class NumericTextCtrl;
+class TemplateMatchesPackageListControl;
 class VolumeAssetPickerComboPanel;
 
 #include <wx/listctrl.h>
@@ -254,6 +256,64 @@ class ImageImportDialog : public wxDialog
 		ImageImportDialog( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxT("Import Images"), const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 484,559 ), long style = wxCLOSE_BOX );
 
 		~ImageImportDialog();
+
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class TemplateMatchesPackageAssetPanelParent
+///////////////////////////////////////////////////////////////////////////////
+class TemplateMatchesPackageAssetPanelParent : public wxPanel
+{
+	private:
+
+	protected:
+		wxStaticLine* m_staticline52;
+		wxSplitterWindow* m_splitter11;
+		wxPanel* m_panel50;
+		wxStaticText* m_staticText313;
+		wxButton* CreateButton;
+		wxButton* RenameButton;
+		wxButton* DeleteButton;
+		wxStaticLine* m_staticline122;
+		wxButton* ImportButton;
+		wxButton* ExportButton;
+		wxButton* CombineButton;
+		TemplateMatchesPackageListControl* RefinementPackageListCtrl;
+		wxPanel* m_panel51;
+		wxStaticText* ContainedParticlesStaticText;
+		ContainedParticleListControl* ContainedParticlesListCtrl;
+		wxStaticLine* m_staticline53;
+		wxStaticText* m_staticText319;
+		wxTextCtrl* StarFileNameText;
+
+		// Virtual event handlers, override them in your derived class
+		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
+		virtual void OnCreateClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnRenameClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnDeleteClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnImportClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnExportClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnCombineClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void MouseCheckPackagesVeto( wxMouseEvent& event ) { event.Skip(); }
+		virtual void MouseVeto( wxMouseEvent& event ) { event.Skip(); }
+		virtual void OnBeginEdit( wxListEvent& event ) { event.Skip(); }
+		virtual void OnEndEdit( wxListEvent& event ) { event.Skip(); }
+		virtual void OnPackageActivated( wxListEvent& event ) { event.Skip(); }
+		virtual void OnPackageFocusChange( wxListEvent& event ) { event.Skip(); }
+		virtual void MouseCheckParticlesVeto( wxMouseEvent& event ) { event.Skip(); }
+
+
+	public:
+
+		TemplateMatchesPackageAssetPanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( -1,-1 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+
+		~TemplateMatchesPackageAssetPanelParent();
+
+		void m_splitter11OnIdle( wxIdleEvent& )
+		{
+			m_splitter11->SetSashPosition( 600 );
+			m_splitter11->Disconnect( wxEVT_IDLE, wxIdleEventHandler( TemplateMatchesPackageAssetPanelParent::m_splitter11OnIdle ), NULL, this );
+		}
 
 };
 

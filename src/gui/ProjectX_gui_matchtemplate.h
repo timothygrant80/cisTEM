@@ -249,6 +249,13 @@ class MatchTemplatePanelParent : public JobPanel
 		wxStaticText* m_staticText857;
 		wxStaticText* m_staticText849;
 		NumericTextCtrl* MinPeakRadiusNumericCtrl;
+		wxStaticText* m_staticText8571;
+		wxStaticText* m_staticText6991;
+		wxRadioButton* UseGPURadioYes;
+		wxRadioButton* UseGPURadioNo;
+		wxStaticText* m_staticText69911;
+		wxRadioButton* UseFastFFTRadioYes;
+		wxRadioButton* UseFastFFTRadioNo;
 		wxPanel* OutputTextPanel;
 		wxTextCtrl* output_textctrl;
 		wxPanel* InfoPanel;
@@ -264,7 +271,6 @@ class MatchTemplatePanelParent : public JobPanel
 		wxPanel* StartPanel;
 		wxStaticText* RunProfileText;
 		MemoryComboBox* RunProfileComboBox;
-		wxCheckBox* UseGpuCheckBox;
 		wxButton* StartEstimationButton;
 		wxCheckBox* ResumeRunCheckBox;
 
@@ -283,7 +289,7 @@ class MatchTemplatePanelParent : public JobPanel
 		wxComboBox* SymmetryComboBox;
 		ShowTemplateMatchResultsPanel* ResultsPanel;
 
-		MatchTemplatePanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1200,731 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+		MatchTemplatePanelParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1268,974 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 
 		~MatchTemplatePanelParent();
 

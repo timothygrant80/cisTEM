@@ -41,7 +41,7 @@ bool DoStatsticalMomentsTests(const wxString& hiv_image_80x80x1_filename, wxStri
     Image*   noise_image = new Image[img_size.size( )];
     GpuImage test_image;
 
-    EmpiricalDistribution* my_dist = new EmpiricalDistribution[img_size.size( )];
+    EmpiricalDistribution<double>* my_dist = new EmpiricalDistribution<double>[img_size.size( )];
 
     // prepare the test cpu images.
     n = 0;

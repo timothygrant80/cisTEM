@@ -466,6 +466,22 @@ void RotationMatrix::ConvertToValidEulerAngles(float& output_phi_in_degrees, flo
 #endif*/
 }
 
+/**
+ * @brief Although rotation matrix "m" is stored in a c-style array, it is used as a column major martrix. 
+ * 
+ * The Elemental rotations are defined by the right-hand rule, positive angles are counter-clockwise looking down that axis toward the origin.
+ * 
+ * It left multiplies a column vector as R * X
+ * 
+ * The rotation may be thought of as:
+ * 
+ *  --> an active intrinsic rotation of X around Z(phi) -> Y'(theta) -> Z''(psi)
+ *  --> an active intrinsic rotation of X around the fixed Z(phi) -> Y(theta) -> Z(psi)
+ * 
+ * @param wanted_euler_phi_in_degrees 
+ * @param wanted_euler_theta_in_degrees 
+ * @param wanted_euler_psi_in_degrees 
+ */
 void RotationMatrix::SetToEulerRotation(float wanted_euler_phi_in_degrees, float wanted_euler_theta_in_degrees, float wanted_euler_psi_in_degrees) {
 
     float cos_phi;

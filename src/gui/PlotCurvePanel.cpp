@@ -125,7 +125,7 @@ void PlotCurvePanel::AddCurve(Curve& curve_to_add, wxColour wanted_plot_colour, 
     current_plot_vector_layer->SetDrawOutsideMargins(false);
     current_plot_vector_layer->ShowName(false);
 
-    for ( int point_counter = 0; point_counter < curve_to_add.number_of_points; point_counter++ ) {
+    for ( int point_counter = 0; point_counter < curve_to_add.NumberOfPoints( ); point_counter++ ) {
         current_x_data.push_back(curve_to_add.data_x[point_counter]);
         current_y_data.push_back(curve_to_add.data_y[point_counter]);
     }

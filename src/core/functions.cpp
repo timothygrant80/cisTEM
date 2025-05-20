@@ -506,7 +506,7 @@ int ReturnClosestFactorizedUpper(int wanted_int, int largest_factor, bool enforc
         enforce_even = true;
         increment    = enforce_factor;
         // Start at the lowest possible factor
-        wanted_int = wanted_int + (enforce_factor - (wanted_int % enforce_factor));
+        wanted_int = wanted_int - (wanted_int % enforce_factor);
     }
     else {
         increment = 2;
@@ -1063,9 +1063,6 @@ int sizeCanBe4BitK2SuperRes(int nx, int ny) {
 }
 
 // Headers for time and processor count
-#ifdef _OPENMP
-#include <omp.h>
-#endif
 #ifdef _WIN32
 #include <Windows.h>
 typedef BOOL(WINAPI* LPFN_GLPI)(PSYSTEM_LOGICAL_PROCESSOR_INFORMATION, PDWORD);
@@ -1373,17 +1370,6 @@ int ReturnAppropriateNumberOfThreads(int optimalThreads) {
     numThreads = 1;
 #endif
     return numThreads;
-}
-
-/*!
- * Returns the thread number of the current thread, numbered from 0
- */
-int ReturnThreadNumberOfCurrentThread( ) {
-#ifdef _OPENMP
-    return omp_get_thread_num( );
-#else
-    return 0;
-#endif
 }
 
 // Inverse error function and complementary inverse error function

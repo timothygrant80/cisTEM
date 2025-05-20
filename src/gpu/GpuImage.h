@@ -30,8 +30,6 @@ class GpuImage {
     GpuImage& operator=(const GpuImage& t);
     GpuImage& operator=(const GpuImage* t);
 
-    // FIXME: move constructor?
-
     /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
     // START MEMBER VARIABLES FROM THE cpu IMAGE CLASS
 
@@ -140,12 +138,15 @@ class GpuImage {
 
     ////////////////////////////////////////////////////////
 
+    // At some point having either a queue or something else will be helpful if these continue to expand.
     cudaEvent_t npp_calc_event;
     cudaEvent_t block_host_event;
     cudaEvent_t return_sum_of_squares_event;
+    cudaEvent_t return_sum_of_reals_event;
     bool        is_npp_calc_event_initialized;
     bool        is_block_host_event_initialized;
     bool        is_return_sum_of_squares_event_initialized;
+    bool        is_return_sum_of_reals_event_initialized;
     //	cublasHandle_t cublasHandle;
 
     cufftHandle cuda_plan_forward;
@@ -185,13 +186,19 @@ class GpuImage {
     void ZeroCentralPixel( ); /**CPU_eq**/
     template <typename StorageTypeBase = float>
     void PhaseShift(float wanted_x_shift, float wanted_y_shift, float wanted_z_shift); /**CPU_eq**/
+
+    void MultiplyByConstant(float* scale_factor); // pointer methods are so we can queue work on a stream w/o waiting on return values
     void MultiplyByConstant(float scale_factor); /**CPU_eq**/
+    void MultiplyByConstant16f(const float scale_factor, int n_slices = 1);
+    void MultiplyByConstant16f(__half* input_ptr, const float scale_factor, int n_slices = 1);
+
     void SetToConstant(float val);
     void SetToConstant(Npp32fc val);
     void Conj( ); // FIXME
     void MultiplyPixelWise(const float& other_array, const int other_array_size); // dose filter for example
     void MultiplyPixelWise(GpuImage& other_image); /**CPU_eq**/
     void MultiplyPixelWise(GpuImage& other_image, GpuImage& output_image); /**CPU_eq**/
+    void DividePixelWise(GpuImage& other_image); /**CPU_eq**/
 
     template <typename StorageTypeBase = float>
     void MultiplyPixelWiseComplexConjugate(GpuImage& other_image, GpuImage& result_image, int phase_multiplier);
@@ -199,7 +206,6 @@ class GpuImage {
     template <typename StorageTypeBase = float>
     void MultiplyPixelWiseComplexConjugate(GpuImage& other_image, GpuImage& result_image) { MultiplyPixelWiseComplexConjugate<StorageTypeBase>(other_image, result_image, 0); };
 
-    void SwapFourierSpaceQuadrants( );
     template <typename StorageTypeBase = float>
     void SwapRealSpaceQuadrants( ); /**CPU_eq**/
     void ClipInto(GpuImage* other_image,
@@ -221,15 +227,15 @@ class GpuImage {
     template <class InputType, class OutputType>
     void _BackwardFFT( );
 
-    void ForwardFFT(bool should_scale = true); /**CPU_eq**/
-    void ForwardFFTBatched(bool should_scale = true);
+    void ForwardFFT(bool should_scale = true, cudaStream_t stream = cudaStreamPerThread);
+    void ForwardFFTBatched(bool should_scale = true, cudaStream_t stream = cudaStreamPerThread);
 
-    void BackwardFFT( ); /**CPU_eq**/
-    void BackwardFFTBatched(int wanted_batch_size = 0); // if zero, defaults to dims.z
+    void BackwardFFT(cudaStream_t stream = cudaStreamPerThread); /**CPU_eq**/
+    void BackwardFFTBatched(int wanted_batch_size = 0, cudaStream_t stream = cudaStreamPerThread); // if zero, defaults to dims.z
 
-    void ForwardFFTAndClipInto(GpuImage& image_to_insert, bool should_scale);
+    void ForwardFFTAndClipInto(GpuImage& image_to_insert, bool should_scale, cudaStream_t stream = cudaStreamPerThread);
     template <typename LoadType, typename StoreType = __half>
-    void BackwardFFTAfterComplexConjMul(LoadType* image_to_multiply, bool load_half_precision, StoreType* output_ptr = nullptr);
+    void BackwardFFTAfterComplexConjMul(LoadType* image_to_multiply, bool load_half_precision, StoreType* output_ptr = nullptr, cudaStream_t stream = cudaStreamPerThread);
 
     void Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted_z_dimension, float wanted_padding_value, bool zero_central_pixel = false);
     void Consume(GpuImage* other_image);
@@ -238,10 +244,12 @@ class GpuImage {
     void CopyGpuImageMetaData(const GpuImage* other_image);
     void CopyLoopingAndAddressingFrom(GpuImage* other_image);
 
-    void  L2Norm( );
+    void  L2Norm(cudaStream_t stream = cudaStreamPerThread);
     float ReturnSumOfSquares( );
 
+    void NormalizeRealSpaceSumToUnity(cudaStream_t stream = cudaStreamPerThread);
     void NormalizeRealSpaceStdDeviation(float additional_scalar, float pre_calculated_avg, float average_on_edge);
+    void NormalizeRealSpaceStdDeviationAndCastToFp16(float additional_scalar, float pre_calculated_avg, float average_on_edge, cudaStream_t stream = cudaStreamPerThread);
 
     float ReturnAverageOfRealValuesOnEdges( );
     void  Deallocate( );
@@ -255,6 +263,7 @@ class GpuImage {
 
     void CopyFP32toFP16buffer(bool deallocate_single_precision = true);
     void CopyFP16buffertoFP32(bool deallocate_half_precision = true);
+    void CopyFP32toFP16bufferAndScale(float scalar);
 
     void AllocateTmpVarsAndEvents( );
     // If we allocate the fp16 buffer, we will not allocate fp32, will leave it alone if the same size, and will remove it if different.
@@ -275,8 +284,10 @@ class GpuImage {
 
     void CopyHostToDeviceAndSynchronize(Image& host_image, bool pin_host_memory = true) { CopyHostToDevice(host_image, true, pin_host_memory); };
 
-    void CopyHostToDeviceTextureComplex3d(Image& host_image);
-    void CopyHostToDeviceTextureComplex2d(Image& host_image);
+    template <int n_dims>
+    void CopyHostToDeviceTextureComplex(Image& host_image);
+    template <int n_dims>
+    void CopyHostToDeviceTextureRealValued(Image& host_image);
 
     void CopyHostToDevice16f(Image& host_image, bool should_block_until_finished = false); // CTF images in the ImageClass are stored as complex, even if they only have a real part. This is a waste of memory bandwidth on the GPU
     void CopyDeviceToHostAndSynchronize(Image& cpu_image, bool unpin_host_memory = true);
@@ -292,11 +303,6 @@ class GpuImage {
     void WaitBlocking( );
     void RecordAndWait( );
     // Maximum intensity projection
-    void MipPixelWise(GpuImage& other_image);
-    void MipPixelWise(GpuImage& other_image, GpuImage& psi, GpuImage& phi, GpuImage& theta,
-                      float c_psi, float c_phi, float c_theta);
-    void MipPixelWise(GpuImage& other_image, GpuImage& psi, GpuImage& phi, GpuImage& theta, GpuImage& defocus, GpuImage& pixel,
-                      float c_psi, float c_phi, float c_theta, float c_defocus, float c_pixel);
 
     // FIXME: These are added for the unblur refinement but are untested.
     template <typename StorageTypeBase = float>
@@ -318,10 +324,11 @@ class GpuImage {
     bool Init(Image& cpu_image, bool pin_host_memory = true, bool allocate_real_values = true);
     void SetupInitialValues( );
     void UpdateBoolsToDefault( );
-    void SetCufftPlan(cistem::fft_type::Enum plan_type, void* input_buffer, void* output_buffer);
+    void SetCufftPlan(cistem::fft_type::Enum plan_type, void* input_buffer, void* output_buffer, cudaStream_t stream = cudaStreamPerThread);
 
     cistem::fft_type::Enum set_plan_type;
     long long              set_batch_size;
+    cudaStream_t           set_stream_for_cufft;
     bool                   is_batched_transform;
 
     template <int ntds_x = 32, int ntds_y = 32>
@@ -338,6 +345,29 @@ class GpuImage {
                                input_dims.z);
     };
 
+    // Use this for kernels that will explicitly skip over the FFTW padding
+    template <int ntds_x = 32, int ntds_y = 32>
+    __inline__ void ReturnLaunchParametersNoFFTWPadding(int4 input_dims) {
+        static_assert(ntds_x % cistem::gpu::warp_size == 0);
+        static_assert(ntds_x * ntds_y <= cistem::gpu::max_threads_per_block);
+
+        threadsPerBlock = dim3(ntds_x, ntds_y, 1);
+        gridDims        = dim3((input_dims.x + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                               (input_dims.y + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                               input_dims.z);
+    };
+
+    template <int ntds_x = 32, int ntds_y = 32>
+    __inline__ void ReturnLaunchParametersNoFFTWPadding(int input_x_dim, int input_y_dim, int input_z_dim, dim3& wanted_gridDims, dim3& wanted_threadsPerBlock) {
+        static_assert(ntds_x % cistem::gpu::warp_size == 0);
+        static_assert(ntds_x * ntds_y <= cistem::gpu::max_threads_per_block);
+
+        wanted_threadsPerBlock = dim3(ntds_x, ntds_y, 1);
+        wanted_gridDims        = dim3((input_x_dim + threadsPerBlock.x - 1) / threadsPerBlock.x,
+                                      (input_y_dim + threadsPerBlock.y - 1) / threadsPerBlock.y,
+                                      input_z_dim);
+    };
+
     __inline__ void ReturnLaunchParameters1d_X(const int4 input_dims, const bool real_space) {
         int div = 1;
         if ( ! real_space )
@@ -345,7 +375,10 @@ class GpuImage {
 
         using namespace cistem::gpu;
         // Note: that second set of parens changes the division!
-        threadsPerBlock = dim3(std::max(min_threads_per_block, std::min(max_threads_per_block, warp_size * ((input_dims.w / div + warp_size - 1) / warp_size))), 1, 1);
+        threadsPerBlock = dim3(std::max(min_threads_per_block,
+                                        std::min(max_threads_per_block,
+                                                 warp_size * ((input_dims.w / div + warp_size - 1) / warp_size))),
+                               1, 1);
         gridDims        = dim3((input_dims.w / div + threadsPerBlock.x - 1) / threadsPerBlock.x,
                                (input_dims.y + threadsPerBlock.y - 1) / threadsPerBlock.y,
                                input_dims.z);
@@ -358,7 +391,10 @@ class GpuImage {
 
         using namespace cistem::gpu;
         // Note: that second set of parens changes the division!
-        threadsPerBlock = dim3(std::max(min_threads_per_block, std::min(max_threads_per_block / stride_y, warp_size * ((input_dims.w / div + warp_size - 1) / warp_size))), stride_y, 1);
+        threadsPerBlock = dim3(std::max(min_threads_per_block,
+                                        std::min(max_threads_per_block / stride_y,
+                                                 warp_size * ((input_dims.w / div + warp_size - 1) / warp_size))),
+                               stride_y, 1);
         gridDims        = dim3((input_dims.w / div + threadsPerBlock.x - 1) / threadsPerBlock.x,
                                (input_dims.y + threadsPerBlock.y - 1) / threadsPerBlock.y,
                                input_dims.z);
@@ -369,7 +405,15 @@ class GpuImage {
         // is to limit the number of SMs available for some kernels so that other threads on the device can run in parallel.
         // limit_SMs_by_threads is default 1, so this must be set prior to this call.
         threadsPerBlock = dim3(M, 1, 1);
-        gridDims        = dim3(myroundint(N * number_of_streaming_multiprocessors));
+        gridDims        = dim3(myroundint(N * number_of_streaming_multiprocessors), 1, 1);
+    };
+
+    __inline__ void ReturnLaunchParametersLimitSMs(float N, int M, dim3& wanted_gridDims, dim3& wanted_threadsPerBlock) {
+        // This should only be called for kernels with grid stride loops setup. The idea
+        // is to limit the number of SMs available for some kernels so that other threads on the device can run in parallel.
+        // limit_SMs_by_threads is default 1, so this must be set prior to this call.
+        wanted_threadsPerBlock = dim3(M, 1, 1);
+        wanted_gridDims        = dim3(myroundint(N * number_of_streaming_multiprocessors), 1, 1);
     };
 
     void UpdateFlagsFromHostImage(Image& host_image);
@@ -392,14 +436,26 @@ class GpuImage {
 
     void ExtractSlice(GpuImage* volume_to_extract_from, AnglesAndShifts& angles_and_shifts, float pixel_size, float resolution_limit = 1.f, bool apply_resolution_limit = true, bool whiten_spectrum = false);
 
-    void ExtractSliceShiftAndCtf(GpuImage* volume_to_extract_from, GpuImage* ctf_image, AnglesAndShifts& angles_and_shifts, float pixel_size, float resolution_limit, bool apply_resolution_limit,
-                                 bool swap_quadrants, bool apply_shifts, bool apply_ctf, bool absolute_ctf, bool zero_central_pixel = false, cudaStream_t stream = cudaStreamPerThread);
+    template <bool apply_ctf, bool use_ctf_texture>
+    void ExtractSliceShiftAndCtf(GpuImage*        volume_to_extract_from,
+                                 GpuImage*        ctf_image,
+                                 AnglesAndShifts& angles_and_shifts,
+                                 float            pixel_size,
+                                 float            real_space_binning_factor,
+                                 float            resolution_limit,
+                                 bool             apply_resolution_limit,
+                                 bool             swap_quadrants,
+                                 bool             apply_shifts,
+                                 bool             zero_central_pixel = false,
+                                 GpuImage*        mask               = nullptr,
+                                 cudaStream_t     stream             = cudaStreamPerThread);
 
     void Abs( );
     void AbsDiff(GpuImage& other_image); // inplace
     void AbsDiff(GpuImage& other_image, GpuImage& output_image);
     void SquareRealValues( );
     void SquareRootRealValues( );
+    void ReciprocalSquareRootRealValues( );
     void LogarithmRealValues( );
     void ExponentiateRealValues( );
     void AddConstant(const float add_val);
@@ -426,8 +482,17 @@ class GpuImage {
     void ReplaceOutliersWithMean(float maximum_n_sigmas);
 
     // Statitical Methods
-    float ReturnSumOfRealValues( );
-    // float3    ReturnSumOfRealValues3Channel( );
+    void SumOfRealValues(cudaStream_t wanted_stream);
+    // host waits on this
+    float ReturnSumOfRealValues(cudaStream_t stream = cudaStreamPerThread);
+
+    void      ThresholdGreaterThanValue(const float wanted_min_val, cudaStream_t stream = cudaStreamPerThread);
+    void      ThresholdLessThanValue(const float wanted_max_val, cudaStream_t stream = cudaStreamPerThread);
+    void      ThresholdLessThanOrGreaterThanValue(const float  wanted_min_threshold,
+                                                  const float  wanted_min_val,
+                                                  const float  wanted_max_threshold,
+                                                  const float  wanted_max_val,
+                                                  cudaStream_t stream = cudaStreamPerThread);
     NppiPoint min_idx;
     NppiPoint max_idx;
     float     min_value;
@@ -481,7 +546,7 @@ class GpuImage {
                             b_weighted_correlation };
 
     //  void CublasInit();
-    void NppInit( );
+    void NppInit(cudaStream_t stream = cudaStreamPerThread);
     void BufferInit(BufferType bt, int n_elements = 0);
     void BufferDestroy( );
     void FreeFFTPlan( );

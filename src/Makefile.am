@@ -29,6 +29,7 @@ noinst_HEADERS = core/stopwatch.h \
                  core/run_profile.h \
                  core/run_profile_manager.h \
                  core/refinement_package.h \
+                 core/template_matches_package.h \
                  core/refinement.h \
                  core/database.h \
                  core/project.h \
@@ -96,6 +97,7 @@ noinst_HEADERS = core/stopwatch.h \
                  gui/MyAddRunCommandDialog.h \
                  gui/MyNewProjectWizard.h \
                  gui/MyNewRefinementPackageWizard.h \
+                 gui/NewTemplateMatchesPackageWizard.h \
                  gui/MyResultsPanel.h \
                  gui/MyAssetsPanel.h \
                  gui/ActionsPanelSpa.h \
@@ -106,6 +108,7 @@ noinst_HEADERS = core/stopwatch.h \
                  gui/MyFrealignExportDialog.h \
                  gui/MyRelionExportDialog.h \
                  gui/MyRefinementPackageAssetPanel.h \
+                 gui/TemplateMatchesPackageAssetPanel.h \
                  gui/MyRenameDialog.h \
                  gui/MyVolumeChooserDialog.h \
                  gui/MyRefine3DPanel.h \
@@ -220,6 +223,9 @@ noinst_HEADERS = core/stopwatch.h \
                  programs/refine3d/ProjectionComparisonObjects.h \
                  core/pdb.h \
                  core/scattering_potential.h \
+                 gui/AtomicCoordinatesAssetPanel.h \
+                 gui/AtomicCoordinatesChooserDialog.h \
+                 gui/AtomicCoordinatesImportDialog.h \
                  programs/cisTEM_display/display_gui.h
                  
 
@@ -228,11 +234,9 @@ noinst_HEADERS = core/stopwatch.h \
                  
 if EXPERIMENTAL_AM
 noinst_HEADERS += 	gui/icons/experimental_icon.cpp \
-                    gui/AtomicCoordinatesAssetPanel.h \
-                    gui/AtomicCoordinatesChooserDialog.h \
-                    gui/AtomicCoordinatesImportDialog.h \
                     core/water.h \
-                    programs/simulate/wave_function_propagator.h 
+                    programs/simulate/wave_function_propagator.h  \
+                    programs/match_template/template_matching_data_sizer.h 
 
 endif      
 
@@ -420,6 +424,10 @@ if ENABLE_ALIGNCOORDINATES_AM
 bin_PROGRAMS += align_coordinates
 endif
 
+if ENABLE_ALIGNSYMMETRY_AM
+bin_PROGRAMS += align_symmetry
+endif
+
 if ENABLE_FINDDQE_AM
 bin_PROGRAMS += find_dqe
 endif
@@ -476,6 +484,10 @@ if ENABLE_MEASURETEMPLATEBIAS_AM
 bin_PROGRAMS += measure_template_bias
 endif
 
+if ENABLE_CALCULATETEMPLATEPVALUE_AM
+bin_PROGRAMS += calculate_template_pvalue
+endif
+
 if ENABLE_ALIGNNMRSPECTRA_AM
 bin_PROGRAMS += align_nmr_spectra
 endif
@@ -512,6 +524,7 @@ endif
 
 if WANT_CISTEM_GPU_AM
 
+# FIXME: gpu_devices should either be compiled like other programs, or removed as it really is not needed.
 bin_PROGRAMS +=  gpu_devices
 noinst_LIBRARIES += libgpucore.a  
 
@@ -524,23 +537,26 @@ libgpucore_a_SOURCES  =      gpu/core_extensions/stop_watch_gpu.cu \
                              gpu/TensorManager.cu \
                              gpu/GpuImage.cu \
                              programs/refine3d/batched_search.cu \
-                             test/gpu/test_gpu_kernels.cu
-if ENABLE_FASTFFT_AM
-    libgpucore_a_SOURCES += ext/FastFFT/src/FastFFT.cu
+                             test/gpu/test_gpu_kernels.cu \
+                             programs/quick_test/quick_test_gpu.cu
+if ENABLE_LOCAL_BUILD_OF_FASTFFT_AM
+    libgpucore_a_SOURCES += ../include/FastFFT/src/fastfft/FastFFT.cu
 endif
 
 libgpucore_OBJECTS=$(libgpucore_a_SOURCES:.cu=.o)                                                   
 
 libgpucore_a_CFLAGS = -DENABLEGPU $(CUDA_CPPFLAGS) $(WX_CPPFLAGS_BASE)
 libgpucore_a_CXXFLAGS = -DENABLEGPU $(CUDA_CXXFLAGS) $(WX_CXXFLAGS_BASE)
-libgpucore_a_LIBADD = gpu/gpudevicecode.o 
+libgpucore_a_LIBADD = $(libFastFFT_OBJECTS) gpu/gpudevicecode.o 
 libgpucore_a_AR = $(NVCC) -DENABLEGPU $(CUDA_CXXFLAGS) -lib -o
 
+# This line only knows about objects build from libgpucore_a_SOURCES. We have to add any others e.g. gpu/gpu_device_code.o mannually above in the LIBADD
 .cu.o:
 	$(NVCC) -DENABLEGPU $(CUDA_CXXFLAGS) $(WX_CPPFLAGS_BASE) -dc -o $@ $<
     
-gpu/gpudevicecode.o: $(libgpucore_OBJECTS)
-	$(NVCC) -DENABLEGPU $(CUDA_CXXFLAGS) --device-link $(libgpucore_OBJECTS) -o gpu/gpudevicecode.o $(CUDA_LIBS)
+# FastFFT_LIBS will be empty if we are building the library, or /opt/FastFFT/lib/FastFFT.o if we are linking from the object included in the build container (latter prefered) $(libgpucore_OBJECTS) $(libFastFFT_OBJECTS)
+gpu/gpudevicecode.o: $(libgpucore_OBJECTS) $(libFastFFT_OBJECTS)
+	$(NVCC) -DENABLEGPU $(CUDA_CXXFLAGS) --device-link $^ -o gpu/gpudevicecode.o $(CUDA_LIBS)
 
 endif
 
@@ -590,6 +606,7 @@ libcore_a_SOURCES  = core/stopwatch.cpp \
                        core/frealign_parameter_file.cpp \
                        core/basic_star_file_reader.cpp \
                        core/refinement_package.cpp \
+                       core/template_matches_package.cpp \
                        core/refinement.cpp \
                        core/classification.cpp \
                        core/particle_finder.cpp \
@@ -673,6 +690,7 @@ cisTEM_SOURCES = programs/projectx/projectx.cpp \
                 gui/MyAddRunCommandDialog.cpp \
                 gui/MyNewProjectWizard.cpp \
                 gui/MyNewRefinementPackageWizard.cpp \
+                gui/NewTemplateMatchesPackageWizard.cpp \
                 gui/UnblurResultsPanel.cpp \
                 gui/ShowCTFResultsPanel.cpp \
                 gui/PickingResultsDisplayPanel.cpp \
@@ -689,6 +707,7 @@ cisTEM_SOURCES = programs/projectx/projectx.cpp \
                 gui/MyFrealignExportDialog.cpp \
                 gui/MyRelionExportDialog.cpp \
                 gui/MyRefinementPackageAssetPanel.cpp \
+                gui/TemplateMatchesPackageAssetPanel.cpp \
                 gui/MyRefine3DPanel.cpp \
                 gui/MyRefine2DPanel.cpp \
                 gui/ClassificationPlotPanel.cpp \
@@ -718,10 +737,13 @@ cisTEM_SOURCES = programs/projectx/projectx.cpp \
                 gui/MatchTemplateResultsPanel.cpp \
                 gui/RefineTemplatePanel.cpp \
                 gui/CombineRefinementPackagesWizard.cpp \
+                gui/AtomicCoordinatesAssetPanel.cpp \
+                gui/AtomicCoordinatesChooserDialog.cpp \
+                gui/AtomicCoordinatesImportDialog.cpp \
                 gui/ResampleDialog.cpp
 
 if EXPERIMENTAL_AM
-cisTEM_SOURCES +=  gui/RefineTemplateDevPanel.cpp gui/MyExperimentalPanel.cpp gui/AtomicCoordinatesAssetPanel.cpp gui/AtomicCoordinatesChooserDialog.cpp gui/AtomicCoordinatesImportDialog.cpp
+cisTEM_SOURCES +=  gui/RefineTemplateDevPanel.cpp gui/MyExperimentalPanel.cpp 
 endif
 
 if ENABLE_WEBVIEW_AM
@@ -794,7 +816,7 @@ applyctf_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 applyctf_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
 applyctf_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
-ctffind_SOURCES  = programs/ctffind/ctffind.cpp programs/ctffind/ctffind_image_ctf_comparison.cpp programs/ctffind/ctffind_objective_functions.cpp programs/ctffind/ctffind_tilt.cpp
+ctffind_SOURCES = programs/ctffind/ctffind.cpp programs/ctffind/ctftilt.cpp programs/ctffind/ctffind_thickness_nodes.cpp programs/ctffind/ctffind_image_ctf_comparison.cpp programs/ctffind/ctffind_objective_functions.cpp
 ctffind_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 ctffind_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
@@ -1035,11 +1057,24 @@ local_resolution_finalize_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 local_resolution_finalize_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
 local_resolution_finalize_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
-quick_test_SOURCES  = programs/quick_test/quick_test.cpp
+
+quick_test_SOURCES  = programs/quick_test/quick_test.cpp 
+if WANT_CISTEM_GPU_AM 
+quick_test_CXXFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
+quick_test_CPPFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
+else
 quick_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 quick_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-quick_test_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
+endif
+
+quick_test_LDSTRING=
+if WANT_CISTEM_GPU_AM
+# WANT_CISTEM_GPU_AM also implies ENABLE_FASTFFT_AM 
+    quick_test_LDSTRING += libgpucore.a
+endif
+quick_test_LDADD    = $(quick_test_LDSTRING) libcore.a $(WX_LIBS_BASE) $(MKL_LIBS) $(CUDA_LIBS)
 quick_test_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
+
 
 local_resolution_filter_SOURCES  = programs/local_resolution_filter/local_resolution_filter.cpp
 local_resolution_filter_CXXFLAGS = $(WX_CPPFLAGS_BASE)
@@ -1211,7 +1246,11 @@ filter_images_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
 filter_images_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
 if WANT_CISTEM_GPU_AM
-        samples_functional_testing_SOURCES += programs/samples/1_cpu_gpu_comparison/resize_comparison.cpp programs/samples/1_cpu_gpu_comparison/projection_comparison.cpp programs/samples/1_cpu_gpu_comparison/masking.cpp programs/samples/1_cpu_gpu_comparison/statistical_ops.cpp 
+        samples_functional_testing_SOURCES += programs/samples/0_simple/resample.cpp
+        samples_functional_testing_SOURCES += programs/samples/1_cpu_gpu_comparison/resize_comparison.cpp 
+        samples_functional_testing_SOURCES += programs/samples/1_cpu_gpu_comparison/projection_comparison.cpp 
+        samples_functional_testing_SOURCES += programs/samples/1_cpu_gpu_comparison/masking.cpp 
+        samples_functional_testing_SOURCES += programs/samples/1_cpu_gpu_comparison/statistical_ops.cpp 
         # samples_functional_testing_SOURCES += programs/samples/3_tensor_ops/gpu_image_tensor_ops.cpp
         samples_functional_testing_SOURCES += programs/samples/4_ffts/simple_cufft.cpp
         samples_functional_testing_SOURCES += programs/samples/5_batched_ops/batched_correlation.cpp
@@ -1229,6 +1268,7 @@ endif
 samples_functional_testing_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
 match_template_SOURCES  = programs/match_template/match_template.cpp
+match_template_SOURCES += programs/match_template/template_matching_data_sizer.cpp
 match_template_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 match_template_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 match_template_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
@@ -1236,6 +1276,7 @@ match_template_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
 if WANT_CISTEM_GPU_AM  
     match_template_gpu_SOURCES  = programs/match_template/match_template.cpp
+    match_template_gpu_SOURCES += programs/match_template/template_matching_data_sizer.cpp
     match_template_gpu_CXXFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
     match_template_gpu_CPPFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
     match_template_gpu_LDADD    = libgpucore.a libcore.a $(WX_LIBS_BASE) $(MKL_LIBS) $(CUDA_LIBS)
@@ -1282,10 +1323,10 @@ if EXPERIMENTAL_AM
     refine_template_dev_LDADD = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
     refine_template_dev_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 endif
-
-unit_test_runner_SOURCES  = test/unit_test_runner.cpp 
-unit_test_runner_SOURCES  += test/core/test_matrix.cpp 
-unit_test_runner_SOURCES  += test/core/test_non_wx_functions.cpp
+    unit_test_runner_SOURCES  = test/unit_test_runner.cpp 
+    unit_test_runner_SOURCES  += test/core/test_matrix.cpp 
+    unit_test_runner_SOURCES  += test/core/test_non_wx_functions.cpp
+    unit_test_runner_SOURCES  += test/core/test_curve.cpp
 if WANT_CISTEM_GPU_AM
     unit_test_runner_SOURCES += test/gpu/test_gpu.cpp
                             
@@ -1308,3 +1349,9 @@ if WANT_CISTEM_GPU_AM
     gpu_devices_LDADD    =  libgpucore.a libcore.a $(WX_LIBS_BASE) $(MKL_LIBS) $(CUDA_LIBS)
     gpu_devices_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 endif
+
+calculate_template_pvalue_SOURCES  = programs/calculate_template_pvalue/calculate_template_pvalue.cpp
+calculate_template_pvalue_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+calculate_template_pvalue_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+calculate_template_pvalue_LDADD    = libcore.a $(WX_LIBS_BASE)
+calculate_template_pvalue_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)

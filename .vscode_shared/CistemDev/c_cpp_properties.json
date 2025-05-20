@@ -34,7 +34,8 @@
                 "WXUSINGDLL",
                 "__WXGTK__",
                 "ENABLEGPU",
-                "SHOW_CISTEM_GPU_OPTIONS"
+                "SHOW_CISTEM_GPU_OPTIONS",
+                "cisTEM_USING_FastFFT"
             ],
             "compilerPath": "/opt/intel/oneapi/compiler/latest/linux/bin/intel64/icpc",
             "cStandard": "c17",
@@ -57,7 +58,8 @@
                 "__WXGTK__",
                 "DEBUG",
                 "ENABLEGPU",
-                "SHOW_CISTEM_GPU_OPTIONS"
+                "SHOW_CISTEM_GPU_OPTIONS",
+                "cisTEM_USING_FastFFT"
             ],
             "compilerPath": "/opt/intel/oneapi/compiler/latest/linux/bin/intel64/icpc",
             "cStandard": "c17",

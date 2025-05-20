@@ -38,7 +38,7 @@ bool ResetMRCHeaderApp::DoCalculation( ) {
 
     Image my_image;
 
-    EmpiricalDistribution my_distribution;
+    EmpiricalDistribution<double> my_distribution;
 
     //wxPrintf("Resetting MRC header of file %s...\n",input_filename);
 

@@ -93,6 +93,8 @@ class Image {
         return false;
     }
 
+    // TODO: these two functions are deprecated and instead, the cistem::is_pointer_in_memory_and_registered(ptr)
+    // method from gpu_core_headers.h should be used to directly check if the pointer is in memory and registered.
     template <typename StorageBaseType>
     bool IsMemoryPageLocked(StorageBaseType* ptr) {
         if constexpr ( std::is_same_v<StorageBaseType, float> )
@@ -173,6 +175,7 @@ class Image {
     void  ComputeFSCVectorized(Image* other_image, Image* work_this_image_squared, Image* work_other_image_squared, Image* work_cross_product_image, int number_of_shells, int* shell_number, float* computed_fsc, double* work_sum_of_squares, double* work_sum_of_other_squares, double* work_sum_of_cross_products);
     void  ComputeFSC(Image* other_image, int number_of_shells, int* shell_number, float* computed_fsc, double* work_sum_of_squares, double* work_sum_of_other_squares, double* work_sum_of_cross_products);
     void  DividePixelWise(Image& other_image);
+    bool  IsAlmostEqual(Image& other_image, bool print_if_failed = true, float epsilon = 0.0001f);
     void  AddGaussianNoise(float wanted_sigma_value = 1.0, RandomNumberGenerator* provided_generator = NULL);
     // using cistem::NoiseType from defines.h
     void AddNoise(NoiseType wanted_noise_type, float noise_param_1, float noise_param_2);
@@ -212,7 +215,7 @@ class Image {
         AddNoise(GAMMA, wanted_alpha_value, wanted_beta_value);
     }
 
-    EmpiricalDistribution ReturnDistributionOfRealValues(float wanted_mask_radius = 0.0, bool outside = false, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0);
+    EmpiricalDistribution<double> ReturnDistributionOfRealValues(float wanted_mask_radius = 0.0, bool outside = false, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0);
 
     long ZeroFloat(float wanted_mask_radius = 0.0, bool outsize = false);
     long ZeroFloatAndNormalize(float wanted_sigma_value = 1.0, float wanted_mask_radius = 0.0, bool outside = false);
@@ -223,7 +226,7 @@ class Image {
     void  ReplaceOutliersWithMean(float mean, float stdDev, float maximum_n_sigmas);
     void  ReplaceOutliersWithMean(float maximum_n_sigmas);
     float ReturnVarianceOfRealValues(float wanted_mask_radius = 0.0, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0, bool invert_mask = false);
-    void  UpdateDistributionOfRealValues(EmpiricalDistribution* distribution_to_update, float wanted_mask_radius = 0.0, bool outside = false, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0);
+    void  UpdateDistributionOfRealValues(EmpiricalDistribution<double>* distribution_to_update, float wanted_mask_radius = 0.0, bool outside = false, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0);
     void  ApplySqrtNFilter( );
     void  Whiten(float resolution_limit = 1.0, Curve* whitening_filter = NULL);
     void  OptimalFilterBySNRImage(Image& SNR_image, int include_reference_weighting = 1);
@@ -252,7 +255,7 @@ class Image {
     void                RotateInPlaceAboutZBy90Degrees(bool rotate_by_positive_90 = true, bool preserve_origin = false);
     void                Rotate2DSample(Image& rotated_image, AnglesAndShifts& rotation_angle, float mask_radius_in_pixels = 0.0);
     float               Skew2D(Image& skewed_image, float height_offset, float minimum_height, float skew_axis, float skew_angle, bool adjust_signal = false);
-    float               ReturnLinearInterpolated2D(float& wanted_physical_x_coordinate, float& wanted_physical_y_coordinate);
+    float               ReturnLinearInterpolated2D(const float wanted_physical_x_coordinate, const float wanted_physical_y_coordinate);
     float               ReturnNearest2D(float& wanted_physical_x_coordinate, float& wanted_physical_y_coordinate);
     void                ExtractSlice(Image& image_to_extract, AnglesAndShifts& angles_and_shifts_of_image, float resolution_limit = 1.0, bool apply_resolution_limit = true);
     void                ExtractSliceByRotMatrix(Image& image_to_extract, RotationMatrix& wanted_matrix, float resolution_limit = 1.0, bool apply_resolution_limit = true);
@@ -427,6 +430,7 @@ class Image {
 
     void AddFFTWPadding( );
     void RemoveFFTWPadding( );
+    void ZeroFFTWPadding( );
 
     inline void ReadSlice(MRCFile* input_file, long slice_to_read) {
         MyDebugAssertTrue(slice_to_read > 0, "Start slice is 0, the first slice is 1!");
@@ -470,13 +474,29 @@ class Image {
     void QuickAndDirtyReadSlice(std::string filename, long slice_to_read);
     void QuickAndDirtyReadSlices(std::string filename, int first_slice_to_read, int last_slice_to_read);
 
-    bool  IsConstant(bool compare_to_constant = false, float constant_to_compare = 0.0f);
-    bool  HasNan( );
-    bool  HasNegativeRealValue( );
-    void  SetToConstant(float wanted_value);
-    void  ClipIntoLargerRealSpace2D(Image* other_image, float wanted_padding_value = 0);
-    void  ClipInto(Image* other_image, float wanted_padding_value = 0.0, bool fill_with_noise = false, float wanted_noise_sigma = 1.0, int wanted_coordinate_of_box_center_x = 0, int wanted_coordinate_of_box_center_y = 0, int wanted_coordinate_of_box_center_z = 0);
-    void  ChangePixelSize(Image* other_image, float wanted_factor, float wanted_tolerance, bool return_fft = false);
+    bool IsConstant(bool compare_to_constant = false, float constant_to_compare = 0.0f);
+    bool HasNan( );
+    bool HasNegativeRealValue( );
+    void SetToConstant(float wanted_value);
+
+    void ClipIntoLargerRealSpace2D(Image* other_image,
+                                   float  wanted_padding_value = 0);
+
+    void ClipInto(Image* other_image,
+                  float  wanted_padding_value              = 0.0,
+                  bool   fill_with_noise                   = false,
+                  float  wanted_noise_sigma                = 1.0,
+                  int    wanted_coordinate_of_box_center_x = 0,
+                  int    wanted_coordinate_of_box_center_y = 0,
+                  int    wanted_coordinate_of_box_center_z = 0,
+                  bool   skip_padding                      = false);
+
+    void ClipIntoWithReplicativePadding(Image* other_image,
+                                        int    wanted_coordinate_of_box_center_x = 0,
+                                        int    wanted_coordinate_of_box_center_y = 0,
+                                        int    wanted_coordinate_of_box_center_z = 0);
+
+    float ChangePixelSize(Image* other_image, float wanted_factor, float wanted_tolerance, bool return_fft = false);
     void  InsertOtherImageAtSpecifiedPosition(Image* other_image, int wanted_x_coord, int wanted_y_coord, int wanted_z_coord, float threshold_value = -FLT_MAX);
     void  Resize(int wanted_x_dimension, int wanted_y_dimension, int wanted_z_dimension, float wanted_padding_value = 0);
     void  RealSpaceBinning(int bin_x, int bin_y, int bin_z = 1, bool symmetrical = false, bool exclude_incomplete_bins = false);
@@ -506,6 +526,7 @@ class Image {
     void  InvertHandedness( );
     void  ApplyCTFPhaseFlip(CTF ctf_to_apply);
     void  ApplyCTF(CTF ctf_to_apply, bool absolute = false, bool apply_beam_tilt = false, bool apply_envelope = false);
+    void  ApplyPowerspectrumWithThickness(CTF ctf_to_apply);
     void  ApplyCurveFilter(Curve* filter_to_apply, float resolution_limit = 1.0);
     void  ApplyCurveFilterUninterpolated(Curve* filter_to_apply, float resolution_limit = 1.0f, float scale = 0.0f);
     void  MaskCentralCross(int vertical_half_width = 1, int horizontal_half_width = 1);
@@ -513,7 +534,7 @@ class Image {
     float NormalizedCrossCorrelation(Image* other_image);
     void  CalculateCrossCorrelationImageWith(Image* other_image);
     void  CalculatePhaseCrossCorrelationImageWith(Image& other_image, Peak& found_peak, float peak_shift_multiplier, bool normalize);
-    void  SwapFourierSpaceQuadrants(bool also_swap_real_space_quadrants = true);
+    void  SwapFourierSpaceQuadrants(bool also_swap_real_space_quadrants = true, bool is_a_ctf_image = false);
     void  SwapRealSpaceQuadrants( );
     void  ComputeAmplitudeSpectrumFull2D(Image* other_image, bool calculate_phases = false, float phase_multiplier = 1.0f);
     void  ComputeFilteredAmplitudeSpectrumFull2D(Image* average_spectrum_masked, Image* current_power_spectrum, float& average, float& sigma, float minimum_resolution, float maximum_resolution, float pixel_size_for_fitting, bool apply_cosine_mask = true);
@@ -558,6 +579,8 @@ class Image {
     float GetCorrelationWithCTF(CTF ctf);
     void  SetupQuickCorrelationWithCTF(CTF ctf, int& number_of_values, double& norm_image, double& image_mean, int* addresses, float* spatial_frequency_squared, float* azimuth);
     float QuickCorrelationWithCTF(CTF ctf, int number_of_values, double norm_image, double image_mean, int* addresses, float* spatial_frequency_squared, float* azimuth);
+    float QuickCorrelationWithCTFThickness(CTF ctf, int number_of_values, double norm_image, double image_mean, int* addresses, float* spatial_frequency_squared, float* azimuth, float* weights, bool use_rounded_square);
+
     float ReturnIcinessOfSpectrum(float pixel_size_in_Angstroms);
 
     // Interpolation

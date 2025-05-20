@@ -915,6 +915,36 @@ void Image::DividePixelWise(Image& other_image) {
     }
 }
 
+bool Image::IsAlmostEqual(Image& other_image, bool print_if_failed, float epsilon) {
+    MyDebugAssertTrue(is_in_memory, "Image memory not allocated");
+    MyDebugAssertTrue(other_image.is_in_memory, "Other image memory not allocated");
+    MyDebugAssertTrue(is_in_real_space == other_image.is_in_real_space, "Both images need to be in same space");
+    MyDebugAssertTrue(HasSameDimensionsAs(&other_image), "Images should have same dimensions, but they don't: %i %i %i        %i %i %i", logical_x_dimension, logical_y_dimension, logical_z_dimension, other_image.logical_x_dimension, other_image.logical_y_dimension, other_image.logical_z_dimension);
+
+    long pixel_counter;
+
+    if ( is_in_real_space ) {
+        for ( pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++ ) {
+            if ( ! RelativeErrorIsLessThanEpsilon(real_values[pixel_counter], other_image.real_values[pixel_counter], print_if_failed, epsilon) ) {
+                return false;
+            }
+        }
+    }
+    else {
+        // Iterate through forier space
+        for ( pixel_counter = 0; pixel_counter < real_memory_allocated / 2; pixel_counter++ ) {
+            if ( ! RelativeErrorIsLessThanEpsilon(real(complex_values[pixel_counter]), real(other_image.complex_values[pixel_counter]), print_if_failed, epsilon) ) {
+                return false;
+            }
+            if ( ! RelativeErrorIsLessThanEpsilon(imag(complex_values[pixel_counter]), imag(other_image.complex_values[pixel_counter]), print_if_failed, epsilon) ) {
+                return false;
+            }
+        }
+    }
+
+    return true;
+}
+
 void Image::AddGaussianNoise(float wanted_sigma_value, RandomNumberGenerator* provided_generator) {
     MyDebugAssertTrue(is_in_real_space == true, "Image must be in real space");
 
@@ -975,7 +1005,7 @@ void Image::AddNoise(NoiseType wanted_noise_type, float noise_param_1, float noi
 long Image::ZeroFloat(float wanted_mask_radius, bool outside) {
     MyDebugAssertTrue(is_in_real_space == true, "Image must be in real space");
 
-    EmpiricalDistribution my_distribution = ReturnDistributionOfRealValues(wanted_mask_radius, outside);
+    EmpiricalDistribution<double> my_distribution = ReturnDistributionOfRealValues(wanted_mask_radius, outside);
     AddConstant(-my_distribution.GetSampleMean( ));
 
     return my_distribution.GetNumberOfSamples( );
@@ -984,7 +1014,7 @@ long Image::ZeroFloat(float wanted_mask_radius, bool outside) {
 long Image::ZeroFloatAndNormalize(float wanted_sigma_value, float wanted_mask_radius, bool outside) {
     MyDebugAssertTrue(is_in_real_space == true, "Image must be in real space");
 
-    EmpiricalDistribution my_distribution = ReturnDistributionOfRealValues(wanted_mask_radius, outside);
+    EmpiricalDistribution<double> my_distribution = ReturnDistributionOfRealValues(wanted_mask_radius, outside);
     if ( my_distribution.IsConstant( ) ) {
         AddConstant(-my_distribution.GetSampleMean( ));
     }
@@ -998,7 +1028,7 @@ long Image::ZeroFloatAndNormalize(float wanted_sigma_value, float wanted_mask_ra
 long Image::Normalize(float wanted_sigma_value, float wanted_mask_radius, bool outside) {
     MyDebugAssertTrue(is_in_real_space == true, "Image must be in real space");
 
-    EmpiricalDistribution my_distribution = ReturnDistributionOfRealValues(wanted_mask_radius, outside);
+    EmpiricalDistribution<double> my_distribution = ReturnDistributionOfRealValues(wanted_mask_radius, outside);
     if ( ! my_distribution.IsConstant( ) ) {
         AddMultiplyAddConstant(-my_distribution.GetSampleMean( ), wanted_sigma_value / sqrtf(my_distribution.GetSampleVariance( )), my_distribution.GetSampleMean( ));
     }
@@ -1261,7 +1291,7 @@ void Image::Whiten(float resolution_limit, Curve* whitening_filter) {
 
 void Image::MultiplyByWeightsCurve(Curve& weights, float scale_factor) {
     MyDebugAssertTrue(is_in_real_space == false, "Image to filter not in Fourier space");
-    MyDebugAssertTrue(weights.number_of_points > 0, "weights curve not calculated");
+    MyDebugAssertTrue(weights.NumberOfPoints( ) > 0, "weights curve not calculated");
 
     int i;
     int j;
@@ -1294,7 +1324,7 @@ void Image::MultiplyByWeightsCurve(Curve& weights, float scale_factor) {
                 // compute radius, in units of physical Fourier pixels
                 bin = int(sqrtf(frequency_squared) * number_of_bins2);
 
-                if ( (frequency_squared <= 0.25) && (bin < weights.number_of_points) ) {
+                if ( (frequency_squared <= 0.25) && (bin < weights.NumberOfPoints( )) ) {
                     //					if (power == 1.0)
                     //					{
                     real_a[pixel_counter] = real_a[pixel_counter] * fabsf(weights.data_y[bin]) * scale_factor;
@@ -1478,7 +1508,7 @@ void Image::OptimalFilterWarp(CTF ctf, float pixel_size_in_angstroms, float ssnr
 
 void Image::OptimalFilterSSNR(Curve& SSNR) {
     MyDebugAssertTrue(is_in_real_space == false, "Image to filter not in Fourier space");
-    MyDebugAssertTrue(SSNR.number_of_points > 0, "SSNR curve not calculated");
+    MyDebugAssertTrue(SSNR.NumberOfPoints( ) > 0, "SSNR curve not calculated");
 
     int i;
     int j;
@@ -1495,7 +1525,7 @@ void Image::OptimalFilterSSNR(Curve& SSNR) {
 
     long pixel_counter = 0;
 
-    //	number_of_bins2 = 2 * (SSNR.number_of_points - 1);
+    //	number_of_bins2 = 2 * (SSNR.NumberOfPoints( ) - 1);
     number_of_bins2 = ReturnLargestLogicalDimension( );
 
     for ( k = 0; k <= physical_upper_bound_complex_z; k++ ) {
@@ -1510,7 +1540,7 @@ void Image::OptimalFilterSSNR(Curve& SSNR) {
                 // compute radius, in units of physical Fourier pixels
                 bin = int(sqrtf(frequency_squared) * number_of_bins2);
 
-                if ( (frequency_squared <= 0.25) && (bin < SSNR.number_of_points) ) {
+                if ( (frequency_squared <= 0.25) && (bin < SSNR.NumberOfPoints( )) ) {
                     snr = fabsf(SSNR.data_y[bin]);
                     // Should this be the same as in OptimalFilterBySNRImage?
                     //					complex_values[pixel_counter] *= sqrtf(1.0 + snr);
@@ -1527,7 +1557,7 @@ void Image::OptimalFilterSSNR(Curve& SSNR) {
 
 void Image::OptimalFilterFSC(Curve& FSC) {
     MyDebugAssertTrue(is_in_real_space == false, "Image to filter not in Fourier space");
-    MyDebugAssertTrue(FSC.number_of_points > 0, "FSC curve not calculated");
+    MyDebugAssertTrue(FSC.NumberOfPoints( ) > 0, "FSC curve not calculated");
 
     int i;
     int j;
@@ -1543,7 +1573,7 @@ void Image::OptimalFilterFSC(Curve& FSC) {
 
     long pixel_counter = 0;
 
-    //	number_of_bins2 = 2 * (FSC.number_of_points - 1);
+    //	number_of_bins2 = 2 * (FSC.NumberOfPoints( ) - 1);
     number_of_bins2 = ReturnLargestLogicalDimension( );
 
     for ( k = 0; k <= physical_upper_bound_complex_z; k++ ) {
@@ -1558,7 +1588,7 @@ void Image::OptimalFilterFSC(Curve& FSC) {
                 // compute radius, in units of physical Fourier pixels
                 bin = int(sqrtf(frequency_squared) * number_of_bins2);
 
-                if ( (frequency_squared <= 0.25) && (bin < FSC.number_of_points) ) {
+                if ( (frequency_squared <= 0.25) && (bin < FSC.NumberOfPoints( )) ) {
                     //					if (FSC.data_y[bin] != 0.0) complex_values[pixel_counter] /= (1.0 + 0.5 * (1.0 - fabsf(FSC.data_y[bin])) / fabsf(FSC.data_y[bin]));
                     if ( FSC.data_y[bin] != 0.0 )
                         complex_values[pixel_counter] *= 2.0 * fabsf(FSC.data_y[bin]) / (1.0 + fabsf(FSC.data_y[bin]));
@@ -4207,7 +4237,7 @@ void Image::LocalResSignificanceFilter(float pixel_size, float starting_resoluti
     int pixels_above_threshold;
     int pixels_added;
 
-    EmpiricalDistribution distro;
+    EmpiricalDistribution<double> distro;
 
     automask.CopyFrom(this);
     sharp3d.CopyFrom(this);
@@ -4813,6 +4843,12 @@ void Image::MultiplyAddConstant(float constant_to_multiply_by, float constant_to
     }
 }
 
+/**
+ * @brief Returns pixel wise (x - c1) * c2
+ * 
+ * @param constant_to_add 
+ * @param constant_to_multiply_by 
+ */
 void Image::AddMultiplyConstant(float constant_to_add, float constant_to_multiply_by) {
     for ( long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++ ) {
         real_values[pixel_counter] = (real_values[pixel_counter] + constant_to_add) * constant_to_multiply_by;
@@ -5151,7 +5187,7 @@ void Image::WriteSlicesAndFillHeader(std::string wanted_filename, float wanted_p
     output_file.OpenFile(wanted_filename, true);
     WriteSlices(&output_file, 1, logical_z_dimension);
     output_file.SetPixelSize(wanted_pixel_size);
-    EmpiricalDistribution density_distribution;
+    EmpiricalDistribution<double> density_distribution;
     UpdateDistributionOfRealValues(&density_distribution);
     output_file.SetDensityStatistics(density_distribution.GetMinimum( ), density_distribution.GetMaximum( ), density_distribution.GetSampleMean( ), sqrtf(density_distribution.GetSampleVariance( )));
     output_file.CloseFile( );
@@ -5230,6 +5266,18 @@ void Image::RemoveFFTWPadding( ) {
 
             current_read_position += padding_jump_value;
         }
+    }
+}
+
+void Image::ZeroFFTWPadding( ) {
+    MyDebugAssertTrue(is_in_memory, "Image not allocated!");
+    MyDebugAssertTrue(padding_jump_value == 1 || padding_jump_value == 2, "Padding jump value is not 1 or 2");
+
+    for ( int end_of_x_line = logical_x_dimension; end_of_x_line < real_memory_allocated; end_of_x_line += (logical_x_dimension + padding_jump_value) ) {
+        // padding_jump_value is always 1 or 2
+        real_values[end_of_x_line] = 0.0f;
+        if ( padding_jump_value > 1 )
+            real_values[end_of_x_line + 1] = 0.0f;
     }
 }
 
@@ -5855,7 +5903,7 @@ float Image::ReturnAverageOfRealValues(float wanted_mask_radius, bool invert_mas
     return float(sum / (long(logical_x_dimension) * long(logical_y_dimension) * long(logical_z_dimension)));
 }
 
-void Image::UpdateDistributionOfRealValues(EmpiricalDistribution* my_distribution, float wanted_mask_radius, bool outside, float wanted_center_x, float wanted_center_y, float wanted_center_z) {
+void Image::UpdateDistributionOfRealValues(EmpiricalDistribution<double>* my_distribution, float wanted_mask_radius, bool outside, float wanted_center_x, float wanted_center_y, float wanted_center_z) {
 
     MyDebugAssertTrue(is_in_real_space, "Image must be in real space");
 
@@ -5929,10 +5977,10 @@ void Image::UpdateDistributionOfRealValues(EmpiricalDistribution* my_distributio
     }
 }
 
-EmpiricalDistribution Image::ReturnDistributionOfRealValues(float wanted_mask_radius, bool outside, float wanted_center_x, float wanted_center_y, float wanted_center_z) {
+EmpiricalDistribution<double> Image::ReturnDistributionOfRealValues(float wanted_mask_radius, bool outside, float wanted_center_x, float wanted_center_y, float wanted_center_z) {
     MyDebugAssertTrue(is_in_real_space, "Image must be in real space");
 
-    EmpiricalDistribution my_distribution;
+    EmpiricalDistribution<double> my_distribution;
 
     UpdateDistributionOfRealValues(&my_distribution, wanted_mask_radius, outside, wanted_center_x, wanted_center_y, wanted_center_z);
 
@@ -5946,13 +5994,13 @@ void Image::ComputeAverageAndSigmaOfValuesInSpectrum(float minimum_radius, float
     MyDebugAssertTrue(logical_z_dimension == 1, "Meant for images, not volumes");
 
     // Private variables
-    int                   i, j;
-    float                 x_sq, y_sq, rad_sq;
-    EmpiricalDistribution my_distribution;
-    const float           min_rad_sq          = powf(minimum_radius, 2);
-    const float           max_rad_sq          = powf(maximum_radius, 2);
-    const float           cross_half_width_sq = powf(cross_half_width, 2);
-    long                  address             = -1;
+    int                           i, j;
+    float                         x_sq, y_sq, rad_sq;
+    EmpiricalDistribution<double> my_distribution;
+    const float                   min_rad_sq          = powf(minimum_radius, 2);
+    const float                   max_rad_sq          = powf(maximum_radius, 2);
+    const float                   cross_half_width_sq = powf(cross_half_width, 2);
+    long                          address             = -1;
 
     for ( j = 0; j < logical_y_dimension; j++ ) {
         y_sq = powf(j - physical_address_of_box_center_y, 2);
@@ -6223,6 +6271,39 @@ float Image::QuickCorrelationWithCTF(CTF ctf, int number_of_values, double norm_
     return (cross_product - image_mean * ctf_sum) / sqrt(norm_image * (norm_ctf - ctf_sum * ctf_sum / number_of_values)) - astigmatism_penalty;
 }
 
+float Image::QuickCorrelationWithCTFThickness(CTF ctf, int number_of_values, double norm_image, double image_mean, int* addresses, float* spatial_frequency_squared, float* azimuth, float* weights, bool use_rounded_square) {
+
+    // Local variables
+    int    i, j;
+    double cross_product = 0.0;
+    double norm_ctf      = 0.0;
+    double ctf_sum       = 0.;
+    float  current_ctf_value;
+    float  astigmatism_penalty;
+
+    for ( i = 0; i < number_of_values; i++ ) {
+        if ( weights != nullptr && weights[i] <= 0.9 )
+            continue;
+        j = addresses[i];
+        // Center it around 0 by subtracting 0.5
+        current_ctf_value = ctf.EvaluatePowerspectrumWithThickness(spatial_frequency_squared[i], azimuth[i], use_rounded_square) - 0.5;
+        cross_product += real_values[j] * current_ctf_value;
+        norm_ctf += pow(current_ctf_value, 2);
+        ctf_sum += current_ctf_value;
+    }
+
+    // Compute the penalty due to astigmatism
+    if ( ctf.GetAstigmatismTolerance( ) > 0.0 ) {
+        astigmatism_penalty = powf(ctf.GetAstigmatism( ), 2) * 0.5 / powf(ctf.GetAstigmatismTolerance( ), 2) / float(number_of_values);
+    }
+    else {
+        astigmatism_penalty = 0.0;
+    }
+
+    // The final score: norm_image is already a sum of squared deviations from mean; norm_ctf requires adjustment to give true CC
+    return (cross_product - image_mean * ctf_sum) / sqrt(norm_image * (norm_ctf - ctf_sum * ctf_sum / number_of_values)) - astigmatism_penalty;
+}
+
 void Image::ApplyMirrorAlongY( ) {
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
     MyDebugAssertTrue(is_in_real_space, "Not in real space");
@@ -6431,7 +6512,7 @@ void Image::AverageRadially( ) {
 void Image::Compute1DRotationalAverage(Curve& average, Curve& number_of_values, bool fractional_radius_in_real_space, bool average_real_parts) {
 
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
-    MyDebugAssertTrue(average.number_of_points == number_of_values.number_of_points, "Curves do not have the same number of points");
+    MyDebugAssertTrue(average.NumberOfPoints( ) == number_of_values.NumberOfPoints( ), "Curves do not have the same number of points");
     MyDebugAssertTrue((is_in_real_space && ! average_real_parts) || ! is_in_real_space, "average_real_part not possible for real space image");
 
     int   i;
@@ -6522,7 +6603,7 @@ void Image::Compute1DRotationalAverage(Curve& average, Curve& number_of_values, 
     }
 
     // Do the actual averaging
-    for ( int counter = 0; counter < average.number_of_points; counter++ ) {
+    for ( int counter = 0; counter < average.NumberOfPoints( ); counter++ ) {
         if ( number_of_values.data_y[counter] != 0.0 )
             average.data_y[counter] /= number_of_values.data_y[counter];
     }
@@ -6539,13 +6620,13 @@ void Image::Compute1DPowerSpectrumCurve(Curve* curve_with_average_power, Curve* 
 
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
     MyDebugAssertFalse(is_in_real_space, "Image not in Fourier space");
-    MyDebugAssertTrue(curve_with_average_power->number_of_points > 0, "Curve not setup");
+    MyDebugAssertTrue(curve_with_average_power->NumberOfPoints( ) > 0, "Curve not setup");
     MyDebugAssertTrue(curve_with_average_power->data_x[0] == 0.0, "Curve does not start at x = 0\n");
     // Using the FloatsAreAlmostEqual criterion |a-b| < 0.0001, otherwise, errors like Curve does not go to at least x = 0.5 (it goes to 0.5)
-    MyDebugAssertTrue(curve_with_average_power->data_x[curve_with_average_power->number_of_points - 1] >= 0.49999, "Curve does not go to at least x = 0.5 (it goes to %f)\n", curve_with_average_power->data_x[curve_with_average_power->number_of_points - 1]);
-    MyDebugAssertTrue(curve_with_average_power->number_of_points == curve_with_number_of_values->number_of_points, "Curves need to have the same number of points");
+    MyDebugAssertTrue(curve_with_average_power->data_x[curve_with_average_power->NumberOfPoints( ) - 1] >= 0.49999, "Curve does not go to at least x = 0.5 (it goes to %f)\n", curve_with_average_power->data_x[curve_with_average_power->NumberOfPoints( ) - 1]);
+    MyDebugAssertTrue(curve_with_average_power->NumberOfPoints( ) == curve_with_number_of_values->NumberOfPoints( ), "Curves need to have the same number of points");
     MyDebugAssertTrue(curve_with_average_power->data_x[0] == curve_with_number_of_values->data_x[0], "Curves need to have the same starting point");
-    MyDebugAssertTrue(curve_with_average_power->data_x[curve_with_average_power->number_of_points - 1] == curve_with_number_of_values->data_x[curve_with_number_of_values->number_of_points - 1], "Curves need to have the same ending point");
+    MyDebugAssertTrue(curve_with_average_power->data_x[curve_with_average_power->NumberOfPoints( ) - 1] == curve_with_number_of_values->data_x[curve_with_number_of_values->NumberOfPoints( ) - 1], "Curves need to have the same ending point");
 
     int   i, j, k;
     float sq_dist_x, sq_dist_y, sq_dist_z;
@@ -6590,7 +6671,7 @@ void Image::Compute1DPowerSpectrumCurve(Curve* curve_with_average_power, Curve* 
     }
 
     // Do the actual averaging
-    for ( counter = 0; counter < curve_with_average_power->number_of_points; counter++ ) {
+    for ( counter = 0; counter < curve_with_average_power->NumberOfPoints( ); counter++ ) {
         if ( curve_with_number_of_values->data_y[counter] > 0.0 ) {
             curve_with_average_power->data_y[counter] /= curve_with_number_of_values->data_y[counter];
         }
@@ -6737,7 +6818,7 @@ void Image::ApplyLocalResolutionFilter(Image& local_resolution_map, float pixel_
     const bool small_step_size = true;
 
     // Get some stats about the local resolution volume
-    EmpiricalDistribution distribution_of_local_resolutions;
+    EmpiricalDistribution<double> distribution_of_local_resolutions;
     local_resolution_map.UpdateDistributionOfRealValues(&distribution_of_local_resolutions, float(logical_x_dimension) * 0.45);
     float min_res_Angstroms = distribution_of_local_resolutions.GetMinimum( );
     float max_res_Angstroms = distribution_of_local_resolutions.GetMaximum( );
@@ -7788,7 +7869,92 @@ void Image::InsertOtherImageAtSpecifiedPosition(Image* other_image, int wanted_x
 }
 
 // If you don't want to clip from the center, you can give wanted_coordinate_of_box_center_{x,y,z}. This will define the pixel in the image at which other_image will be centered. (0,0,0) means center of image.
-void Image::ClipInto(Image* other_image, float wanted_padding_value, bool fill_with_noise, float wanted_noise_sigma, int wanted_coordinate_of_box_center_x, int wanted_coordinate_of_box_center_y, int wanted_coordinate_of_box_center_z) {
+void Image::ClipIntoWithReplicativePadding(Image* other_image,
+                                           int    wanted_coordinate_of_box_center_x,
+                                           int    wanted_coordinate_of_box_center_y,
+                                           int    wanted_coordinate_of_box_center_z) {
+    MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+    MyDebugAssertTrue(other_image->is_in_memory, "Other image Memory not allocated");
+    MyDebugAssertTrue(is_in_real_space, "ClipIntoWithReplicativePadding only works for real space images");
+    MyDebugAssertTrue(object_is_centred_in_box, "real space image, not centred in box");
+
+    // take other following attributes
+
+    other_image->is_in_real_space         = is_in_real_space;
+    other_image->object_is_centred_in_box = object_is_centred_in_box;
+
+    long pixel_counter = 0;
+    long other_address = 0;
+
+    // The logic for the mirroring permutations is ugly, so to make it something we can put into a loop
+    // and only write out once, we'll use some arrays for the size dimensions.
+    int       my_index[3];
+    int       my_mirrored_index[3];
+    const int my_dims[3] = {
+            logical_x_dimension,
+            logical_y_dimension,
+            logical_z_dimension};
+    ZeroArray(my_index, 3);
+    ZeroArray(my_mirrored_index, 3);
+
+    for ( int kk = 0; kk < other_image->logical_z_dimension; kk++ ) {
+        my_index[2] = physical_address_of_box_center_z + wanted_coordinate_of_box_center_z + (kk - other_image->physical_address_of_box_center_z);
+
+        for ( int jj = 0; jj < other_image->logical_y_dimension; jj++ ) {
+            my_index[1] = physical_address_of_box_center_y + wanted_coordinate_of_box_center_y + (jj - other_image->physical_address_of_box_center_y);
+            for ( int ii = 0; ii < other_image->logical_x_dimension; ii++ ) {
+                my_index[0] = physical_address_of_box_center_x + wanted_coordinate_of_box_center_x + (ii - other_image->physical_address_of_box_center_x);
+
+                // check to see if we are out of bounds which should only happen if we are clipping a smaller image into a larger one
+                if ( my_index[2] < 0 || my_index[2] >= my_dims[2] ||
+                     my_index[1] < 0 || my_index[1] >= my_dims[1] ||
+                     my_index[0] < 0 || my_index[0] >= my_dims[0] ) {
+
+                    for ( int i_dim = 0; i_dim < 3; i_dim++ ) {
+                        if ( my_index[i_dim] < 0 ) {
+                            // we may cycle back and forth if we overshoot the upper boundary etc.
+                            int wrap_around_permutation = (-my_index[i_dim] - 1) / my_dims[i_dim];
+                            if ( IsEven(wrap_around_permutation) ) {
+                                my_mirrored_index[i_dim] = my_dims[i_dim] - PythonLikeModulo(my_index[i_dim], (my_dims[i_dim] + 1));
+                            }
+                            else {
+                                my_mirrored_index[i_dim] = my_dims[i_dim] - 1 - PythonLikeModulo(-my_index[i_dim], (my_dims[i_dim] + 1));
+                            }
+                        }
+                        else if ( my_index[i_dim] >= my_dims[i_dim] ) {
+                            int wrap_around_permutation = my_index[i_dim] / my_dims[i_dim];
+                            if ( IsEven(wrap_around_permutation) ) {
+                                my_mirrored_index[i_dim] = my_dims[i_dim] - 3 - PythonLikeModulo(-my_index[i_dim], (my_dims[i_dim] - 1));
+                            }
+                            else {
+                                my_mirrored_index[i_dim] = my_dims[i_dim] - 1 - PythonLikeModulo(my_index[i_dim], my_dims[i_dim]);
+                            }
+                        }
+                        else {
+                            my_mirrored_index[i_dim] = my_index[i_dim];
+                        }
+                    }
+
+                    other_image->real_values[pixel_counter] = ReturnRealPixelFromPhysicalCoord(my_mirrored_index[0],
+                                                                                               my_mirrored_index[1],
+                                                                                               my_mirrored_index[2]);
+                }
+                else {
+                    other_image->real_values[pixel_counter] = ReturnRealPixelFromPhysicalCoord(my_index[0],
+                                                                                               my_index[1],
+                                                                                               my_index[2]);
+                }
+
+                pixel_counter++;
+            }
+
+            pixel_counter += other_image->padding_jump_value;
+        }
+    }
+}
+
+// If you don't want to clip from the center, you can give wanted_coordinate_of_box_center_{x,y,z}. This will define the pixel in the image at which other_image will be centered. (0,0,0) means center of image.
+void Image::ClipInto(Image* other_image, float wanted_padding_value, bool fill_with_noise, float wanted_noise_sigma, int wanted_coordinate_of_box_center_x, int wanted_coordinate_of_box_center_y, int wanted_coordinate_of_box_center_z, bool skip_padding) {
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
     MyDebugAssertTrue(other_image->is_in_memory, "Other image Memory not allocated");
     MyDebugAssertFalse(is_in_real_space == true && fill_with_noise == true, "Fill with noise, only for fourier space");
@@ -7824,19 +7990,29 @@ void Image::ClipInto(Image* other_image, float wanted_padding_value, bool fill_w
         MyDebugAssertTrue(object_is_centred_in_box, "real space image, not centred in box");
 
         for ( kk = 0; kk < other_image->logical_z_dimension; kk++ ) {
+            // kk_logi => the vector from the centered origin in the destination image to the current physical pixel in the destination image
             kk_logi = kk - other_image->physical_address_of_box_center_z;
-            k       = physical_address_of_box_center_z + wanted_coordinate_of_box_center_z + kk_logi;
+            // k => coordinate of the source image that has the same logical coordinate (relative to the center of the image) plus
+            // the offset to the box center. This as offsetting the origin of the source image (a passive transformation)
+            // So a positive shift of the origin results in a negative shift of the image.
+
+            k = physical_address_of_box_center_z + wanted_coordinate_of_box_center_z + kk_logi;
 
             for ( jj = 0; jj < other_image->logical_y_dimension; jj++ ) {
                 jj_logi = jj - other_image->physical_address_of_box_center_y;
                 j       = physical_address_of_box_center_y + wanted_coordinate_of_box_center_y + jj_logi;
 
+                // the k/j conditions will be the same for all x, so do them first for the whole valid linel
+                // the valid line can be solved for by x_l - other_ox + this_oxx + offset >= 0 , so x_l >= other_ox - this_oxx - offset
+                // similarly logical_x_dimension > x_h - other_ox + this_oxx + offset, so x_h < logical_x_dimension + other_ox - this_oxx - offset
+                // Then we can get rid of the conditions in the inner loop. if skipping noise, just the copy, otherwise 3 for loops to fill.
                 for ( ii = 0; ii < other_image->logical_x_dimension; ii++ ) {
                     ii_logi = ii - other_image->physical_address_of_box_center_x;
                     i       = physical_address_of_box_center_x + wanted_coordinate_of_box_center_x + ii_logi;
 
                     if ( k < 0 || k >= logical_z_dimension || j < 0 || j >= logical_y_dimension || i < 0 || i >= logical_x_dimension ) {
-                        other_image->real_values[pixel_counter] = wanted_padding_value;
+                        if ( ! skip_padding )
+                            other_image->real_values[pixel_counter] = wanted_padding_value;
                     }
                     else {
                         other_image->real_values[pixel_counter] = ReturnRealPixelFromPhysicalCoord(i, j, k);
@@ -7935,26 +8111,39 @@ void Image::ClipInto(Image* other_image, float wanted_padding_value, bool fill_w
     }
 }
 
-void Image::ChangePixelSize(Image* other_image, float wanted_factor, float wanted_tolerance, bool return_fft) {
+/**
+ * @brief Returns the actual resampling factor used
+ * 
+ * @param other_image 
+ * @param wanted_factor 
+ * @param wanted_tolerance 
+ * @param return_fft 
+ * @return float 
+ */
+float Image::ChangePixelSize(Image* other_image, float wanted_factor, float wanted_tolerance, bool return_fft) {
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
     MyDebugAssertTrue(other_image->is_in_memory, "Other image Memory not allocated");
     MyDebugAssertTrue(is_in_real_space, "Image must be in real space");
 
-    if ( fabsf(wanted_factor - 1.0f) < wanted_tolerance && return_fft ) {
-        if ( other_image == this )
-            ForwardFFT( );
-        else {
-            this->ClipInto(other_image);
-            other_image->ForwardFFT( );
-        }
-        return;
-    }
+    float used_factor = wanted_factor;
+
     if ( fabsf(wanted_factor - 1.0f) < wanted_tolerance ) {
-        if ( other_image != this )
-            this->ClipInto(other_image);
-        return;
+        if ( other_image != this ) {
+            // For a 512 cube this is 2x as fast than clip into of the same size if we can do it
+            if ( HasSameDimensionsAs(other_image) )
+                other_image->CopyFrom(this);
+            else
+                ClipInto(other_image);
+        }
+
+        if ( return_fft )
+            other_image->ForwardFFT( );
+
+        return used_factor;
     }
 
+    // Note: only the z dimension is being initialized like this.
+    // currently, all x/y values are set before being accessed, but this is a bit sloppy.
     int   old_x_dimension, old_y_dimension, old_z_dimension = 1;
     int   new_x_dimension, new_y_dimension, new_z_dimension = 1;
     int   pad_x_dimension, pad_y_dimension, pad_z_dimension = 1;
@@ -8019,11 +8208,13 @@ void Image::ChangePixelSize(Image* other_image, float wanted_factor, float wante
     temp_image.ForwardFFT( );
     temp_image.Resize(new_x_dimension, new_y_dimension, new_z_dimension);
 
+    used_factor = float(pad_x_dimension) / float(new_x_dimension);
+
     if ( new_x_dimension == other_image->logical_x_dimension && new_y_dimension == other_image->logical_y_dimension && new_z_dimension == other_image->logical_z_dimension ) {
         other_image->CopyFrom(&temp_image);
         if ( ! return_fft )
             other_image->BackwardFFT( );
-        return;
+        return used_factor;
     }
 
     temp_image.BackwardFFT( );
@@ -8031,6 +8222,8 @@ void Image::ChangePixelSize(Image* other_image, float wanted_factor, float wante
 
     if ( return_fft )
         other_image->ForwardFFT( );
+
+    return used_factor;
 }
 
 // Bilinear interpolation in real space, at point (x,y) where x and y are physical coordinates (i.e. first pixel has x,y = 0,0)
@@ -8589,6 +8782,43 @@ void Image::ApplyCTF(CTF ctf_to_apply, bool absolute, bool apply_beam_tilt, bool
     //	exit(0);
 }
 
+// This function assumes the image is in real space and multiplies it with the
+// power spectrum of the CTF taking thon ring modulation caused by thick samples
+// into account.
+
+void Image::ApplyPowerspectrumWithThickness(CTF ctf_to_apply) {
+    MyDebugAssertTrue(is_in_memory, "Memory not allocated");
+    MyDebugAssertTrue(is_in_real_space == true, "image not in real space");
+    MyDebugAssertTrue(logical_z_dimension == 1, "Volumes not supported");
+
+    int         i, j;
+    float       j_logi, j_logi_sq, i_logi, i_logi_sq;
+    float       current_spatial_frequency_squared;
+    long        address                     = 0;
+    const float inverse_logical_x_dimension = 1.0 / float(logical_x_dimension);
+    const float inverse_logical_y_dimension = 1.0 / float(logical_y_dimension);
+    float       current_azimuth;
+    float       current_ctf_value;
+
+    for ( j = 0; j < logical_y_dimension; j++ ) {
+        address   = j * (padding_jump_value + 2 * physical_address_of_box_center_x);
+        j_logi    = float(j - physical_address_of_box_center_y) * inverse_logical_y_dimension;
+        j_logi_sq = powf(j_logi, 2);
+        for ( i = 0; i < logical_x_dimension; i++ ) {
+            i_logi    = float(i - physical_address_of_box_center_x) * inverse_logical_x_dimension;
+            i_logi_sq = powf(i_logi, 2);
+
+            // Where are we?
+            current_spatial_frequency_squared = j_logi_sq + i_logi_sq;
+
+            current_azimuth   = atan2f(j_logi, i_logi);
+            current_ctf_value = ctf_to_apply.EvaluatePowerspectrumWithThickness(current_spatial_frequency_squared, current_azimuth);
+            // Apply powespectrum
+            real_values[address + i] *= current_ctf_value;
+        }
+    }
+}
+
 void Image::SharpenMap(float pixel_size, float resolution_limit, bool invert_hand, float inner_mask_radius, float outer_mask_radius, float start_res_for_whitening, float additional_bfactor_low, float additional_bfactor_high, float filter_edge, bool should_auto_mask, Image* input_mask, ResolutionStatistics* input_resolution_statistics, float statistics_scale_factor, Curve* original_log_plot, Curve* sharpened_log_plot) {
 
     float cosine_edge = 10.0;
@@ -8636,7 +8866,7 @@ void Image::SharpenMap(float pixel_size, float resolution_limit, bool invert_han
     power_spectrum.SquareRoot( );
 
     if ( original_log_plot != NULL ) {
-        for ( int counter = 0; counter < original_log_plot->number_of_points; counter++ ) {
+        for ( int counter = 0; counter < original_log_plot->NumberOfPoints( ); counter++ ) {
             if ( original_log_plot->data_x[counter] == 0.0 ) {
                 original_log_plot->data_x[counter] = (pixel_size * original_log_plot->data_x[counter + 1]);
                 original_log_plot->data_y[counter] = logf(power_spectrum.data_y[counter + 1]);
@@ -8675,7 +8905,7 @@ void Image::SharpenMap(float pixel_size, float resolution_limit, bool invert_han
         buffer_image.Compute1DPowerSpectrumCurve(&power_spectrum, &number_of_terms);
         power_spectrum.SquareRoot( );
 
-        for ( int counter = 0; counter < sharpened_log_plot->number_of_points; counter++ ) {
+        for ( int counter = 0; counter < sharpened_log_plot->NumberOfPoints( ); counter++ ) {
             if ( sharpened_log_plot->data_x[counter] == 0.0 ) {
                 sharpened_log_plot->data_x[counter] = (pixel_size * sharpened_log_plot->data_x[counter + 1]);
                 sharpened_log_plot->data_y[counter] = logf(power_spectrum.data_y[counter + 1]);
@@ -8754,7 +8984,7 @@ float Image::CalculateBFactor(float pixel_size, float low_resolution, float high
     // Now get the number of new points
     int number_in_resolution_range      = 0;
     int first_index_in_resolution_range = 0;
-    for ( int i = 0; i < power_spectrum.number_of_points; i++ ) {
+    for ( int i = 0; i < power_spectrum.NumberOfPoints( ); i++ ) {
         if ( power_spectrum.data_x[i] >= low_resolution_in_pixels && power_spectrum.data_x[i] <= high_resolution_in_pixels ) {
             if ( first_index_in_resolution_range == 0 )
                 first_index_in_resolution_range = i;
@@ -8765,7 +8995,7 @@ float Image::CalculateBFactor(float pixel_size, float low_resolution, float high
     // Setup a new curve that only contains the requested resolution range and copy from the original full spectrum.
     Curve trimmed_power_spectrum;
     trimmed_power_spectrum.SetupXAxis(low_resolution_in_pixels, high_resolution_in_pixels, number_in_resolution_range);
-    for ( int i = 0; i < trimmed_power_spectrum.number_of_points; i++ ) {
+    for ( int i = 0; i < trimmed_power_spectrum.NumberOfPoints( ); i++ ) {
         trimmed_power_spectrum.data_x[i] = powf(power_spectrum.data_x[i + first_index_in_resolution_range], 2.0f);
         trimmed_power_spectrum.data_y[i] = isfinite(power_spectrum.data_y[i + first_index_in_resolution_range]) ? power_spectrum.data_y[i + first_index_in_resolution_range] : 0.0f;
     }
@@ -8860,9 +9090,9 @@ void Image::ApplyBFactorAndWhiten(Curve& power_spectrum, float bfactor_low, floa
 
                 if ( frequency_squared <= bfactor_res_limit2 )
                     filter_value = exp(-bfactor_low * frequency_squared * 0.25);
-                else if ( (frequency_squared > bfactor_res_limit2) && (frequency_squared <= 0.25) && (bin < power_spectrum.number_of_points) )
+                else if ( (frequency_squared > bfactor_res_limit2) && (frequency_squared <= 0.25) && (bin < power_spectrum.NumberOfPoints( )) )
                     filter_value = filter_value_blimit * exp(-(bfactor_low * bfactor_res_limit2 + bfactor_high * (frequency_squared - bfactor_res_limit2)) * 0.25) / power_spectrum.data_y[bin];
-                //				else if ((frequency_squared > bfactor_res_limit2) && (frequency_squared <= 0.25) && (bin < power_spectrum.number_of_points)) filter_value = filter_value_blimit / power_spectrum.data_y[bin];
+                //				else if ((frequency_squared > bfactor_res_limit2) && (frequency_squared <= 0.25) && (bin < power_spectrum.NumberOfPoints( ))) filter_value = filter_value_blimit / power_spectrum.data_y[bin];
                 else
                     filter_value = 0.0;
 
@@ -8987,9 +9217,16 @@ bool Image::HasSameDimensionsAs(Image* other_image) {
 
 //END_FOR_STAND_ALONE_CTFFIND
 
-void Image::SwapFourierSpaceQuadrants(bool also_swap_real_space_quadrants) {
+void Image::SwapFourierSpaceQuadrants(bool also_swap_real_space_quadrants, bool is_a_ctf_image) {
     MyDebugAssertTrue(is_in_memory, "Image memory not allocated");
-    MyDebugAssertTrue(is_in_real_space, "Image is not in real space");
+    MyDebugAssertTrue((is_in_real_space && ! is_a_ctf_image) || (! is_in_real_space && is_a_ctf_image), "Image is not in real space or is a CTF image");
+    if ( is_a_ctf_image )
+        MyDebugAssertFalse(also_swap_real_space_quadrants, "Cannot swap real space quadrants for CTF images");
+
+    if ( is_a_ctf_image ) {
+        BackwardFFT( );
+        ZeroFFTWPadding( );
+    }
 
     if ( also_swap_real_space_quadrants ) {
         // For convenience, just do the real space swap here. This is of course inefficient, and could be implemented at the end of this method, but
@@ -10832,7 +11069,7 @@ float Image::Skew2D(Image& skewed_image, float height_offset, float minimum_heig
 }
 
 //BEGIN_FOR_STAND_ALONE_CTFFIND
-float Image::ReturnLinearInterpolated2D(float& wanted_physical_x_coordinate, float& wanted_physical_y_coordinate) {
+float Image::ReturnLinearInterpolated2D(const float wanted_physical_x_coordinate, const float wanted_physical_y_coordinate) {
     MyDebugAssertTrue(is_in_memory, "Memory not allocated");
     MyDebugAssertTrue(is_in_real_space, "Is in Fourier space");
 

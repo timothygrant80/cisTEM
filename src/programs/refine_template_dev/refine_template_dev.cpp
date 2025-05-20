@@ -647,6 +647,9 @@ bool RefineTemplateDevApp::DoCalculation( ) {
     if ( max_threads > number_of_peaks_found )
         max_threads = number_of_peaks_found;
 
+    whitening_filter.MakeThreadSafeForNThreads(max_threads);
+    number_of_terms.MakeThreadSafeForNThreads(max_threads);
+
 #pragma omp parallel num_threads(max_threads) default(none) shared(number_of_peaks_found, found_peaks, input_image, mask_radius, pixel_size, mask_falloff,                                                                                                                                                                                                                     \
                                                                    mip_image, scaled_mip_image, phi_image, theta_image, psi_image, defocus_image, pixel_size_image, defocus_search_range, defocus_refine_step, pixel_size_search_range,                                                                                                                                        \
                                                                    pixel_size_refine_step, defocus1, defocus2, defocus_angle, angular_step, in_plane_angular_step, whitening_filter, input_reconstruction, min_peak_radius2, best_mip,                                                                                                                                         \

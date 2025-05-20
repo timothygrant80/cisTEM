@@ -189,7 +189,7 @@ bool RemoveRelionStripes::DoCalculation( ) {
 
 		// ok.. should have a mask..
 
-		EmpiricalDistribution current_distribution;
+		EmpiricalDistribution<double> current_distribution;
 		pixel_counter = 0;
 
 		for (j = 0; j < input_image.logical_y_dimension; j++)

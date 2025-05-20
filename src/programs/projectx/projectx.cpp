@@ -39,14 +39,13 @@ ExperimentalPanel*      experimental_panel;
 RefineTemplateDevPanel* refine_template_dev_panel;
 #endif
 
-MyMovieAssetPanel*            movie_asset_panel;
-MyImageAssetPanel*            image_asset_panel;
-MyParticlePositionAssetPanel* particle_position_asset_panel;
-MyVolumeAssetPanel*           volume_asset_panel;
-#ifdef EXPERIMENTAL
-AtomicCoordinatesAssetPanel* atomic_coordinates_asset_panel;
-#endif
-MyRefinementPackageAssetPanel* refinement_package_asset_panel;
+MyMovieAssetPanel*                movie_asset_panel;
+MyImageAssetPanel*                image_asset_panel;
+MyParticlePositionAssetPanel*     particle_position_asset_panel;
+MyVolumeAssetPanel*               volume_asset_panel;
+AtomicCoordinatesAssetPanel*      atomic_coordinates_asset_panel;
+TemplateMatchesPackageAssetPanel* template_matches_package_asset_panel;
+MyRefinementPackageAssetPanel*    refinement_package_asset_panel;
 
 MyMovieAlignResultsPanel* movie_results_panel;
 MyFindCTFResultsPanel*    ctf_results_panel;
@@ -135,13 +134,13 @@ bool MyGuiApp::OnInit( ) {
     // Individual Panels
     run_profiles_panel = new MyRunProfilesPanel(settings_panel->SettingsBook);
 
-    movie_asset_panel             = new MyMovieAssetPanel(assets_panel->AssetsBook);
-    image_asset_panel             = new MyImageAssetPanel(assets_panel->AssetsBook);
-    particle_position_asset_panel = new MyParticlePositionAssetPanel(assets_panel->AssetsBook);
-    volume_asset_panel            = new MyVolumeAssetPanel(assets_panel->AssetsBook);
-#ifdef EXPERIMENTAL
-    atomic_coordinates_asset_panel = new AtomicCoordinatesAssetPanel(assets_panel->AssetsBook);
-#endif
+    movie_asset_panel                    = new MyMovieAssetPanel(assets_panel->AssetsBook);
+    image_asset_panel                    = new MyImageAssetPanel(assets_panel->AssetsBook);
+    particle_position_asset_panel        = new MyParticlePositionAssetPanel(assets_panel->AssetsBook);
+    volume_asset_panel                   = new MyVolumeAssetPanel(assets_panel->AssetsBook);
+    atomic_coordinates_asset_panel       = new AtomicCoordinatesAssetPanel(assets_panel->AssetsBook);
+    template_matches_package_asset_panel = new TemplateMatchesPackageAssetPanel(assets_panel->AssetsBook);
+
     refinement_package_asset_panel = new MyRefinementPackageAssetPanel(assets_panel->AssetsBook);
     align_movies_panel             = new MyAlignMoviesPanel(actions_panel_spa->ActionsBook);
     findctf_panel                  = new MyFindCTFPanel(actions_panel_spa->ActionsBook);
@@ -293,9 +292,8 @@ bool MyGuiApp::OnInit( ) {
     assets_panel->AssetsBook->AddPage(particle_position_asset_panel, "Particle Positions", false, 2);
     assets_panel->AssetsBook->AddPage(volume_asset_panel, "3D Volumes", false, 3);
     assets_panel->AssetsBook->AddPage(refinement_package_asset_panel, "Refine Pkgs.", false, 4);
-#ifdef EXPERIMENTAL
     assets_panel->AssetsBook->AddPage(atomic_coordinates_asset_panel, "Atomic Coordinates", false, 5);
-#endif
+    assets_panel->AssetsBook->AddPage(template_matches_package_asset_panel, "MT Pkgs.", false, 4);
 
     actions_panel_spa->ActionsBook->AddPage(align_movies_panel, "Align Movies", true, 0);
     actions_panel_spa->ActionsBook->AddPage(findctf_panel, "Find CTF", false, 1);

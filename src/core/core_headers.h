@@ -159,6 +159,7 @@ class StackDump : public wxStackWalker // so we can give backtraces..
 #include "electron_dose.h"
 #include "angular_distribution_histogram.h"
 #include "refinement_package.h"
+#include "template_matches_package.h"
 #include "refinement.h"
 #include "classification.h"
 #include "classification_selection.h"
@@ -196,8 +197,9 @@ class StackDump : public wxStackWalker // so we can give backtraces..
 #include <npps_arithmetic_and_logical_operations.h>
 #include <typeinfo>
 #include <limits>
-
 #endif
+
+#include "padded_coordinates.h"
 
 #ifdef MKL
 #define MKL_Complex8 std::complex<float>
@@ -206,4 +208,27 @@ class StackDump : public wxStackWalker // so we can give backtraces..
 
 extern RandomNumberGenerator global_random_number_generator;
 
+#ifdef _OPENMP
+#include <omp.h>
 #endif
+
+/*!
+ * Returns the thread number of the current thread, numbered from 0
+ */
+inline int ReturnThreadNumberOfCurrentThread( ) {
+#ifdef _OPENMP
+    return omp_get_thread_num( );
+#else
+    return 0;
+#endif
+};
+
+inline int ReturnNumberOfThreads( ) {
+#ifdef _OPENMP
+    return omp_get_num_threads( );
+#else
+    return 1;
+#endif
+};
+
+#endif // SRC_PROGRAMS_CORE_CORE_HEADERS_H_

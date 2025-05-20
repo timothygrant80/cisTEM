@@ -32,18 +32,19 @@ void ScatteringPotential::SetDefaultValues( ) {
     _cubic_size                           = 0;
     _minimum_thickness_z                  = 0;
     _bfactor_scaling                      = 1.f;
-    _number_of_non_water_atoms            = 0;
+    _number_of_non_solvent_atoms          = 0;
     _padding                              = 1;
+    _use_hydrogens                        = 0.f;
 }
 
-void ScatteringPotential::InitPdbObject(const wxString& filename, int wanted_cubic_size, bool is_alpha_fold_prediction, double* center_of_mass) {
+void ScatteringPotential::InitPdbObject(const wxString& filename, int wanted_cubic_size, bool is_alpha_fold_prediction, bool use_hetatms, double* center_of_mass) {
     MyDebugAssertFalse(pdb_file_names.size( ) > 0, "You can only call this function once");
     _cubic_size = wanted_cubic_size;
     pdb_file_names.push_back(filename);
-    InitPdbObject(is_alpha_fold_prediction, center_of_mass);
+    InitPdbObject(is_alpha_fold_prediction, use_hetatms, center_of_mass);
 }
 
-void ScatteringPotential::InitPdbObject(bool is_alpha_fold_prediction, double* center_of_mass) {
+void ScatteringPotential::InitPdbObject(bool is_alpha_fold_prediction, bool use_hetatms, double* center_of_mass) {
 
     MyDebugAssertTrue(_cubic_size > 0, "You must set the cubic size before calling this function");
     MyDebugAssertTrue(_pixel_size > 0.0, "Pixel size not set");
@@ -64,6 +65,7 @@ void ScatteringPotential::InitPdbObject(bool is_alpha_fold_prediction, double* c
                               minimum_padding_x_and_y,
                               minimum_thickness_z,
                               is_alpha_fold_prediction,
+                              use_hetatms,
                               center_of_mass);
 }
 
@@ -76,6 +78,7 @@ void ScatteringPotential::InitPdbEnsemble(bool              shift_by_center_of_m
                                           float             wanted_noise_particle_radius_randomizer_upper_bound_as_praction_of_particle_radius,
                                           float             wanted_tilt_angle_to_emulate,
                                           bool              is_alpha_fold_prediction,
+                                          bool              use_hetatms,
                                           cisTEMParameters& wanted_star_file,
                                           bool              use_star_file) {
 
@@ -102,21 +105,22 @@ void ScatteringPotential::InitPdbEnsemble(bool              shift_by_center_of_m
                                   wanted_tilt_angle_to_emulate,
                                   shift_by_center_of_mass,
                                   is_alpha_fold_prediction,
+                                  use_hetatms,
                                   wanted_star_file,
                                   use_star_file);
     }
 }
 
-long ScatteringPotential::ReturnTotalNumberOfNonWaterAtoms( ) {
+long ScatteringPotential::ReturnTotalNumberOfNonSolventAtoms( ) {
 
-    if ( _number_of_non_water_atoms == 0 ) {
+    if ( _number_of_non_solvent_atoms == 0 ) {
         // Get a count of the total non water atoms
         for ( int iPDB = 0; iPDB < pdb_ensemble.size( ); iPDB++ ) {
-            _number_of_non_water_atoms += (pdb_ensemble[iPDB].number_of_real_and_noise_atoms * pdb_ensemble[iPDB].number_of_particles_initialized);
+            _number_of_non_solvent_atoms += (pdb_ensemble[iPDB].number_of_real_and_noise_atoms * pdb_ensemble[iPDB].number_of_particles_initialized);
         }
     }
 
-    return _number_of_non_water_atoms;
+    return _number_of_non_solvent_atoms;
 }
 
 void ScatteringPotential::calc_scattering_potential(Image&         image_vol,
@@ -217,18 +221,26 @@ void ScatteringPotential::calc_scattering_potential(const PDB* current_specimen,
     float bfX(0), bfY(0), bfZ(0);
 
     float bPlusB[5];
+    float bPlusB_hydrogen[5];
     // TODO experiment with the scheduling. Until the specimen is consistently full, many consecutive slabs may have very little work for the assigned threads to handle.
 
 #pragma omp parallel for num_threads(number_of_threads) private(                                                       \
-        atom_id, bFactor, bPlusB, radius, ix, iy, iz, x1, x2, y1, y2, z1, z2, indX, indY,                              \
+        atom_id, bFactor, bPlusB, bPlusB_hydrogen, radius, ix, iy, iz, x1, x2, y1, y2, z1, z2, indX, indY,             \
         indZ, sx, sy, sz, dx, dy, dz, xDistSq, yDistSq, zDistSq, iLim, jLim, kLim, iGaussian, element_inelastic_ratio, \
         water_offset, atoms_values_tmp, atoms_added_idx, atoms_distances_tmp, n_atoms_added, bfX, bfY, bfZ)
-    for ( long current_atom = 0; current_atom < ReturnTotalNumberOfNonWaterAtoms( ); current_atom++ ) {
-        n_atoms_added = 0;
 
-        atom_id = current_specimen->atoms.at(current_atom).atom_type;
-        if ( atom_id == hydrogen )
-            continue;
+    for ( long current_atom = 0; current_atom < ReturnTotalNumberOfNonSolventAtoms( ); current_atom++ ) {
+        n_atoms_added          = 0;
+        float hydrogen_scaling = 1.0f;
+        atom_id                = current_specimen->atoms.at(current_atom).atom_type;
+        // float atom_charge      = current_specimen->atoms.at(current_atom).charge;
+
+        if ( atom_id == hydrogen ) {
+            if ( _use_hydrogens == 0.f )
+                continue;
+            else
+                hydrogen_scaling = _use_hydrogens;
+        }
 
         element_inelastic_ratio = sqrtf(non_water_inelastic_scaling / ReturnAtomicNumber(atom_id)); // Reimer/Ross_Messemer 1989
         bFactor                 = GetCompleteBfactor(current_specimen->atoms.at(current_atom).bfactor);
@@ -275,6 +287,20 @@ void ScatteringPotential::calc_scattering_potential(const PDB* current_specimen,
             bPlusB[iGaussian] = 2 * pi_v<float> / sqrt(bFactor + ReturnScatteringParamtersB(atom_id, iGaussian));
         }
 
+        // float charge_scaling = 1.0f;
+        // if ( atom_charge != 0.0f ) {
+        //     if ( atom_id != carbon ) {
+        //         std::cerr << "Warning: charge on non-carbon atom " << atom_id << std::endl;
+        //         charge_scaling = 1.0f;
+        //     }
+        //     else {
+        //         charge_scaling = atom_charge;
+        //     }
+        //     // for ( iGaussian = 0; iGaussian < 5; iGaussian++ ) {
+        //     //     bPlusB_hydrogen[iGaussian] = 2 * pi_v<float> / sqrt(bFactor + ReturnScatteringParamtersB(hydrogen, iGaussian));
+        //     // }
+        // }
+
         // For accurate calculations, a thin slab is used, s.t. those atoms outside are the majority. Check this first, but account for the size of the atom, as it may reside in more than one slab.
         //        if (iz <= slabIDX_end[iSlab]  && iz >= slabIDX_start[iSlab])
         if ( iz <= z_top && iz >= z_low ) {
@@ -304,8 +330,12 @@ void ScatteringPotential::calc_scattering_potential(const PDB* current_specimen,
                         if ( indZ <= slabIDX_end[iSlab] && indZ >= slabIDX_start[iSlab] && indX > 0 && indY > 0 && indX < size.x && indY < size.y ) {
                             // Calculate the scattering potential
 
-                            atoms_added_idx[n_atoms_added]     = scattering_slab->ReturnReal1DAddressFromPhysicalCoord(indX, indY, indZ - slabIDX_start[iSlab]);
-                            atoms_values_tmp[n_atoms_added]    = ReturnScatteringPotentialOfAVoxel(R, bPlusB, atom_id);
+                            atoms_added_idx[n_atoms_added]  = scattering_slab->ReturnReal1DAddressFromPhysicalCoord(indX, indY, indZ - slabIDX_start[iSlab]);
+                            atoms_values_tmp[n_atoms_added] = hydrogen_scaling * ReturnScatteringPotentialOfAVoxel(R, bPlusB, atom_id);
+                            // charge_scaling *
+                            // if ( atom_charge != 0.0f ) {
+                            //     atoms_values_tmp[n_atoms_added] += atom_charge * ReturnScatteringPotentialOfAVoxel(R, bPlusB_hydrogen, hydrogen);
+                            // }
                             atoms_distances_tmp[n_atoms_added] = xDistSq + yDistSq + zDistSq;
 
                             //                            scattering_slab->real_values[atoms_added_idx[n_atoms_added]] += temp_potential;
@@ -341,6 +371,13 @@ int ScatteringPotential::GetNeighborhoodSize( ) {
 
 int ScatteringPotential::GetNeighborhoodSize(float wanted_bfactor) {
     MyDebugAssertTrue(_pixel_size > 0, "Pixel size is not set");
+    // FIXME: I had fit this at somepoint and I think it was without the factor of 1/4 in GetCompleteBFactor
+    // based on some high BF sims, it seems to small, so putting the 4.0f here for a minute.
+    int neighborhood = 1 + myroundint((0.4f * sqrtf(0.6f * wanted_bfactor * 4.0f) + 0.2f) / _pixel_size);
+    if ( IsEven(neighborhood) )
+        neighborhood -= 1;
+    neighborhood = std::max(3, neighborhood);
 
-    return 1 + myroundint((0.4f * sqrtf(0.6f * wanted_bfactor) + 0.2f) / _pixel_size);
+    MyDebugAssertTrue(neighborhood > 0, "size neighborhood is less than 1");
+    return neighborhood;
 }

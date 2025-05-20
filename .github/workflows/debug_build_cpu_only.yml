@@ -14,7 +14,7 @@ jobs:
     with:
       build_type: "cpu_debug"
       configure_options: "--enable-debugmode "
-      global_configure_options: " --disable-build-all --enable-openmp --enable-experimental --disable-multiple-global-refinements --enable-smooth-mip --disable-multiple-global-refinements --with-wx-config=/opt/WX/icc-static/bin/wx-config"
+      global_configure_options: " --disable-FastFFT --enable-openmp --enable-experimental --disable-multiple-global-refinements  --disable-multiple-global-refinements --with-wx-config=/opt/WX/icc-static/bin/wx-config"
       runs_on_os: ubuntu-latest
       CC: icc
       CXX: icpc

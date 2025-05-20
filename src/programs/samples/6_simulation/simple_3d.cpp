@@ -53,7 +53,8 @@ bool MyTest(const wxString& cistem_ref_dir, wxString& temp_directory) {
     // If we are using an alpha-fold prediction, the bfactors stored are confidence scores and need
     // to be convereted to bfactors. In this case we have "real" bfactors, so we don't need to do anything.
     bool is_from_alpha_fold = false;
-    sp.InitPdbObject(is_from_alpha_fold);
+    bool allow_hetatms      = false;
+    sp.InitPdbObject(is_from_alpha_fold, allow_hetatms);
 
     // Finally, we need to know what orientation the molecule should be placed in.
     // For translation, the default is to center atoms on their COM prior to rotation. This
@@ -153,7 +154,7 @@ bool MyTest(const wxString& cistem_ref_dir, wxString& temp_directory) {
     for ( int i = 0; i < 10; i++ ) {
 
         // FIXME add a get random orientation with even sampling to functions and also use that elsewher
-        angles_and_shifts.GenerateEulerMatrices(my_rand.GetUniformRandomSTD(0, 360.f), my_rand.GetUniformRandomSTD(0, 180.f), my_rand.GetUniformRandomSTD(0, 360.f));
+        angles_and_shifts.GenerateEulerMatrices(my_rand.GetUniformRandomSTD(0.f, 360.f), my_rand.GetUniformRandomSTD(0.f, 180.f), my_rand.GetUniformRandomSTD(0.f, 360.f));
 
         test_sim.is_in_real_space         = true;
         test_sim.object_is_centred_in_box = true;

@@ -4,5 +4,6 @@
 // Aggregate program headers for Makefile.am
 
 #include "disk_io_image.h"
+#include "resample.h"
 
 #endif

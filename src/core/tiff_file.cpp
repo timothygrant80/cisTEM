@@ -247,7 +247,8 @@ void TiffFile::ReadSlicesFromDisk(int start_slice, int end_slice, float* output_
 
                                 number_of_bytes_placed_in_buffer = TIFFReadEncodedStrip(tif, strip_counter, (char*)buf, (tsize_t)-1);
                                 if ( strip_counter < TIFFNumberOfStrips(tif) - 1 )
-                                    MyDebugAssertTrue(number_of_bytes_placed_in_buffer == rows_per_strip * ReturnXSize( ), "Unexpected number of bytes in uint8 buffer");
+                                    MyDebugAssertTrue(number_of_bytes_placed_in_buffer == rows_per_strip * ReturnXSize( ), "On strip (%ld)/(%ld) found an unexpected number of bytes (%ld) in uint8 buffer, with (%d) rows_per_strip an (%d) strips\n(-1) indicates a Tiff error\n",
+                                                      long(strip_counter), long(TIFFNumberOfStrips(tif)), long(number_of_bytes_placed_in_buffer), rows_per_strip, TIFFNumberOfStrips(tif));
 
                                 output_counter = strip_counter * rows_per_strip * ReturnXSize( ) + ((directory_counter - start_slice + 1) * ReturnXSize( ) * ReturnYSize( ));
                                 for ( long counter = 0; counter < number_of_bytes_placed_in_buffer; counter++ ) {

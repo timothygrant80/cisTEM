@@ -719,8 +719,6 @@ void WaveFunctionPropagator::ReturnImageContrast(Image& wave_function_sq_modulus
 
     wxPrintf("Astigmatism params are %3.3e %3.3e\n", known_astigmatism, known_astigmatism_angle);
 
-    wxPrintf("\t\t\n\nSEED is %lde\n\n", (long)my_rand.seed);
-
     //	std::string phase_name = "/dev/shm/phase_" + file_id + ".mrc";
     //	std::string text_file_name = "/dev/shm/fit_" + file_id;
     //	std::string text_file_name_2 = "/dev/shm/fit_" + file_id + "_2.txt";
@@ -784,9 +782,12 @@ void WaveFunctionPropagator::ReturnImageContrast(Image& wave_function_sq_modulus
             myfile << std::to_string(known_astigmatism_angle) + "\n"; // ang
             myfile << "no\n"; // phase shift
             myfile << do_tilt; // tilt
+            myfile << "no\n"; // sample thickness
             myfile << "yes\n"; // expert opt
             myfile << "yes\n"; // resample if too small
+            myfile << "2.8\n"; // resample threshold
             myfile << "no\n"; // know defocus
+            myfile << "no\n"; // weight down low res signal
             myfile << std::to_string(myroundint(std::max(for_ctffind.nThreads, 2.0f))) + "\n"; // nThreads
             myfile << "eof\n";
             myfile.close( );

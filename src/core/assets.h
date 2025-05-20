@@ -148,7 +148,6 @@ class VolumeAsset : public Asset {
     void CopyFrom(Asset* other_asset);
 };
 
-#ifdef EXPERIMENTAL
 class AtomicCoordinatesAsset : public Asset {
 
   public:
@@ -170,7 +169,6 @@ class AtomicCoordinatesAsset : public Asset {
     void Update(wxString wanted_filename);
     void CopyFrom(Asset* other_asset);
 };
-#endif
 
 /*
 class ClassesAsset : public Asset {
@@ -205,20 +203,18 @@ class AssetList {
     //	virtual long FindFile(wxFileName file_to_find) = 0;
     virtual void CheckMemory( ) = 0;
 
-    virtual Asset*                 ReturnAssetPointer(long wanted_asset) = 0;
-    virtual MovieAsset*            ReturnMovieAssetPointer(long wanted_asset);
-    virtual ImageAsset*            ReturnImageAssetPointer(long wanted_asset);
-    virtual ParticlePositionAsset* ReturnParticlePositionAssetPointer(long wanted_asset);
-    virtual VolumeAsset*           ReturnVolumeAssetPointer(long wanted_asset);
-#ifdef EXPERIMENTAL
+    virtual Asset*                  ReturnAssetPointer(long wanted_asset) = 0;
+    virtual MovieAsset*             ReturnMovieAssetPointer(long wanted_asset);
+    virtual ImageAsset*             ReturnImageAssetPointer(long wanted_asset);
+    virtual ParticlePositionAsset*  ReturnParticlePositionAssetPointer(long wanted_asset);
+    virtual VolumeAsset*            ReturnVolumeAssetPointer(long wanted_asset);
     virtual AtomicCoordinatesAsset* ReturnAtomicCoordinatesAssetPointer(long wanted_asset);
-#endif
-    virtual int      ReturnAssetID(long wanted_asset)                                      = 0;
-    virtual long     ReturnParentAssetID(long wanted_asset)                                = 0;
-    virtual wxString ReturnAssetName(long wanted_asset)                                    = 0;
-    virtual int      ReturnArrayPositionFromID(int wanted_id, int last_found_position = 0) = 0;
-    virtual int      ReturnArrayPositionFromParentID(int wanted_id)                        = 0;
-    virtual wxString ReturnAssetFullFilename(long wanted_asst)                             = 0;
+    virtual int                     ReturnAssetID(long wanted_asset)                                      = 0;
+    virtual long                    ReturnParentAssetID(long wanted_asset)                                = 0;
+    virtual wxString                ReturnAssetName(long wanted_asset)                                    = 0;
+    virtual int                     ReturnArrayPositionFromID(int wanted_id, int last_found_position = 0) = 0;
+    virtual int                     ReturnArrayPositionFromParentID(int wanted_id)                        = 0;
+    virtual wxString                ReturnAssetFullFilename(long wanted_asst)                             = 0;
 
     long ReturnNumberOfAssets( ) { return number_of_assets; }
 };
@@ -318,7 +314,6 @@ class VolumeAssetList : public AssetList {
     void CheckMemory( );
 };
 
-#ifdef EXPERIMENTAL
 class AtomicCoordinatesAssetList : public AssetList {
 
   public:
@@ -341,6 +336,5 @@ class AtomicCoordinatesAssetList : public AssetList {
     long FindFile(wxFileName file_to_find, bool also_check_vs_shortname = false, long max_asset_number_to_check = -1);
     void CheckMemory( );
 };
-#endif
 
 #endif

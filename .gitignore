@@ -23,6 +23,7 @@ RemoteSystemsTempFiles
 **/.DS_Store
 .vscode
 /.devcontainer.json
+.devcontainer/*
 /devcontainer.json
 cistem_config.in*
 scripts/testing/post_format_test.cpp
@@ -32,3 +33,4 @@ configure~
 *.tif
 *.dff
 __pycache__/
+include/Eigen

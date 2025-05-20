@@ -80,7 +80,7 @@ class BatchedSearch {
     // IntegerPeak* _device_peak_buffer;
 
     void print_angle_and_mirror( ) {
-        for ( int i = 0; i < _in_plane_angle.size( ); i++ ) {
+        for ( size_t i = 0; i < _in_plane_angle.size( ); i++ ) {
             std::cerr << i << "  angle: " << _in_plane_angle[i] << " mirrored: " << _is_search_result_mirrored[i] << std::endl;
         }
     }

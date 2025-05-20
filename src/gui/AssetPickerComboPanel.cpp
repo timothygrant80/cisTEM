@@ -2,9 +2,7 @@
 
 extern MyVolumeAssetPanel*            volume_asset_panel;
 extern MyRefinementPackageAssetPanel* refinement_package_asset_panel;
-#ifdef EXPERIMENTAL
-extern AtomicCoordinatesAssetPanel* atomic_coordinates_asset_panel;
-#endif
+extern AtomicCoordinatesAssetPanel*   atomic_coordinates_asset_panel;
 
 AssetPickerListCtrl::AssetPickerListCtrl(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style, const wxValidator& validator, const wxString& name)
     : wxListCtrl(parent, id, pos, size, style, validator, name) {
@@ -148,6 +146,14 @@ ClassificationPickerComboPanel::ClassificationPickerComboPanel(wxWindow* parent,
 }
 
 ImageGroupPickerComboPanel::ImageGroupPickerComboPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
+    : AssetPickerComboPanel(parent, id, pos, size, style) {
+}
+
+TMJobPickerComboPanel::TMJobPickerComboPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
+    : AssetPickerComboPanel(parent, id, pos, size, style) {
+}
+
+TMPackagePickerComboPanel::TMPackagePickerComboPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
     : AssetPickerComboPanel(parent, id, pos, size, style) {
 }
 

@@ -275,7 +275,7 @@ bool UnBlurApp::DoCalculation( ) {
     int         last_frame                           = my_current_job.arguments[30].ReturnIntegerArgument( );
     int         number_of_frames_for_running_average = my_current_job.arguments[31].ReturnIntegerArgument( );
     int         max_threads                          = my_current_job.arguments[32].ReturnIntegerArgument( );
-    bool        saved_aligned_frames                 = my_current_job.arguments[33].ReturnBoolArgument( );
+    bool        save_aligned_frames                  = my_current_job.arguments[33].ReturnBoolArgument( );
     std::string aligned_frames_filename              = my_current_job.arguments[34].ReturnStringArgument( );
     std::string output_shift_text_file               = my_current_job.arguments[35].ReturnStringArgument( );
     int         eer_frames_per_image                 = my_current_job.arguments[36].ReturnIntegerArgument( );
@@ -681,7 +681,7 @@ bool UnBlurApp::DoCalculation( ) {
         for ( image_counter = first_frame - 1; image_counter < last_frame; image_counter++ ) {
             sum_image.AddImage(&image_stack[image_counter]);
 
-            if ( saved_aligned_frames == true ) {
+            if ( save_aligned_frames == true ) {
                 image_stack[image_counter].QuickAndDirtyWriteSlice(aligned_frames_filename, image_counter + 1);
             }
         }
@@ -693,7 +693,7 @@ bool UnBlurApp::DoCalculation( ) {
         for ( image_counter = first_frame - 1; image_counter < last_frame; image_counter++ ) {
             sum_image.AddImage(&image_stack[image_counter]);
 
-            if ( saved_aligned_frames == true ) {
+            if ( save_aligned_frames == true ) {
                 image_stack[image_counter].QuickAndDirtyWriteSlice(aligned_frames_filename, image_counter + 1);
             }
         }
@@ -810,7 +810,7 @@ bool UnBlurApp::DoCalculation( ) {
     sum_image.BackwardFFT( );
     sum_image.WriteSlice(&output_file, 1); // I made this change as the file is only used once, and this way it is not created until it is actually written, which is cleaner for cancelled / crashed jobs
     output_file.SetPixelSize(output_pixel_size);
-    EmpiricalDistribution density_distribution;
+    EmpiricalDistribution<double> density_distribution;
     sum_image.UpdateDistributionOfRealValues(&density_distribution);
     output_file.SetDensityStatistics(density_distribution.GetMinimum( ), density_distribution.GetMaximum( ), density_distribution.GetSampleMean( ), sqrtf(density_distribution.GetSampleVariance( )));
     output_file.CloseFile( );
@@ -1011,7 +1011,7 @@ void unblur_refine_alignment(Image* input_stack, int number_of_images, int max_i
 
         if ( inner_radius_for_peak_search != 0 ) // in this case, weird things can happen (+1/-1 flips), we want to really smooth it. use a polynomial.  This should only affect the first round..
         {
-            if ( x_shifts_curve.number_of_points > 2 ) {
+            if ( x_shifts_curve.NumberOfPoints( ) > 2 ) {
                 x_shifts_curve.FitPolynomialToData(4);
                 y_shifts_curve.FitPolynomialToData(4);
 
@@ -1028,7 +1028,7 @@ void unblur_refine_alignment(Image* input_stack, int number_of_images, int max_i
             }
         }
         else {
-            if ( savitzy_golay_window_size < x_shifts_curve.number_of_points ) // when the input movie is dodgy (very few frames), the fitting won't work
+            if ( savitzy_golay_window_size < x_shifts_curve.NumberOfPoints( ) ) // when the input movie is dodgy (very few frames), the fitting won't work
             {
                 x_shifts_curve.FitSavitzkyGolayToData(savitzy_golay_window_size, 1);
                 y_shifts_curve.FitSavitzkyGolayToData(savitzy_golay_window_size, 1);

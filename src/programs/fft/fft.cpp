@@ -1,7 +1,7 @@
 #include "../../core/core_headers.h"
 
 class
-        fft : public MyApp {
+        FFTApp : public MyApp {
 
   public:
     bool DoCalculation( );
@@ -10,15 +10,15 @@ class
   private:
 };
 
-IMPLEMENT_APP(fft)
+IMPLEMENT_APP(FFTApp)
 
 // override the DoInteractiveUserInput
 
-void fft::DoInteractiveUserInput( ) {
+void FFTApp::DoInteractiveUserInput( ) {
 
     int new_z_size = 1;
 
-    UserInput* my_input = new UserInput("fft", 1.0);
+    UserInput* my_input = new UserInput("FFTApp", 1.0);
 
     std::string input_filename     = my_input->GetFilenameFromUser("Input image file name", "Filename of input image", "input.mrc", true);
     std::string output_filename    = my_input->GetFilenameFromUser("Output image file name", "Filename of output image", "output.mrc", false);
@@ -33,7 +33,7 @@ void fft::DoInteractiveUserInput( ) {
 
 // override the do calculation method which will be what is actually run..
 
-bool fft::DoCalculation( ) {
+bool FFTApp::DoCalculation( ) {
 
     std::string input_filename     = my_current_job.arguments[0].ReturnStringArgument( );
     std::string output_filename    = my_current_job.arguments[1].ReturnStringArgument( );
@@ -44,9 +44,9 @@ bool fft::DoCalculation( ) {
     ImageFile my_input_file(input_filename, false);
     MRCFile   my_output_file(output_filename, true);
 
-    Image                 my_image;
-    Image                 my_amplitude_spectrum;
-    EmpiricalDistribution my_distribution;
+    Image                         my_image;
+    Image                         my_amplitude_spectrum;
+    EmpiricalDistribution<double> my_distribution;
 
     // pixel size could be non-square/cubic but we will ignore this here and assume it is square/cubic
     pixel_size = my_input_file.ReturnPixelSize( );

@@ -69,16 +69,14 @@ class MyMainFrame : public MainFrame, public SocketCommunicator, public UpdatePr
     void DirtyMovieGroups( );
     void DirtyImageGroups( );
     void DirtyVolumes( );
-#ifdef EXPERIMENTAL
     void DirtyAtomicCoordinates( );
-#endif
     void DirtyParticlePositionGroups( );
     void DirtyRunProfiles( );
     void DirtyRefinementPackages( );
     void DirtyRefinements( );
     void DirtyClassificationSelections( );
     void DirtyClassifications( );
-
+    void DirtyTemplateMatchesPackages( );
     void ResetAllPanels( );
 
     void ClearScratchDirectory( );

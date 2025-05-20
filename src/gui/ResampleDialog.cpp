@@ -125,8 +125,8 @@ void ResampleDialog::OnOK(wxCommandEvent& event) {
             my_dialog = new OneSecondProgressDialog("Refinement Package", "Resampling original particle stack...", package_to_bin.contained_particles.GetCount( ) * 2, this, wxPD_REMAINING_TIME | wxPD_AUTO_HIDE | wxPD_APP_MODAL);
         // int                      resample_box_size = myroundint(original_particle_stack.ReturnXSize( ) / binning_val);
 
-        Image                 current_image;
-        EmpiricalDistribution stack_distribution;
+        Image                         current_image;
+        EmpiricalDistribution<double> stack_distribution;
 
         std::string combined_stack_filename = wxString::Format(main_frame->current_project.particle_stack_directory.GetFullPath( ) + "/particle_stack_%li.mrc", refinement_package_asset_panel->current_asset_number).ToStdString( );
         MRCFile     resampled_stack_file(combined_stack_filename);
@@ -260,11 +260,11 @@ void ResampleDialog::OnOK(wxCommandEvent& event) {
         tmp_asset->asset_name            = tmp_asset->filename.GetName( );
         tmp_asset->reconstruction_job_id = -1;
 
-        MRCFile               original_volume_file(original_volume_asset->filename.GetFullPath( ).ToStdString( ));
-        MRCFile               resampled_volume_file(resampled_3d_filename.ToStdString( ));
-        Image                 my_volume;
-        EmpiricalDistribution volume_distribution;
-        const long            number_of_slices = original_volume_file.ReturnNumberOfSlices( );
+        MRCFile                       original_volume_file(original_volume_asset->filename.GetFullPath( ).ToStdString( ));
+        MRCFile                       resampled_volume_file(resampled_3d_filename.ToStdString( ));
+        Image                         my_volume;
+        EmpiricalDistribution<double> volume_distribution;
+        const long                    number_of_slices = original_volume_file.ReturnNumberOfSlices( );
         my_volume.ReadSlices(&original_volume_file, 1, number_of_slices);
         my_volume.ForwardFFT( );
         my_volume.Resize(resample_box_size, resample_box_size, resample_box_size, 0.f);

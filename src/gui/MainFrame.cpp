@@ -6,14 +6,14 @@
 #define SERVER_ID 100
 #define SOCKET_ID 101
 
-extern MyAssetsPanel*                assets_panel;
-extern MyMovieAssetPanel*            movie_asset_panel;
-extern MyImageAssetPanel*            image_asset_panel;
-extern MyParticlePositionAssetPanel* particle_position_asset_panel;
-extern MyVolumeAssetPanel*           volume_asset_panel;
-#ifdef EXPERIMENTAL
-extern AtomicCoordinatesAssetPanel* atomic_coordinates_asset_panel;
-#endif
+extern MyAssetsPanel*                    assets_panel;
+extern MyMovieAssetPanel*                movie_asset_panel;
+extern MyImageAssetPanel*                image_asset_panel;
+extern MyParticlePositionAssetPanel*     particle_position_asset_panel;
+extern MyVolumeAssetPanel*               volume_asset_panel;
+extern AtomicCoordinatesAssetPanel*      atomic_coordinates_asset_panel;
+extern TemplateMatchesPackageAssetPanel* template_matches_package_asset_panel;
+
 extern MyRefinementPackageAssetPanel* refinement_package_asset_panel;
 
 extern ActionsPanelSpa* actions_panel_spa;
@@ -237,9 +237,8 @@ void MyMainFrame::ResetAllPanels( ) {
     movie_asset_panel->Reset( );
     image_asset_panel->Reset( );
     volume_asset_panel->Reset( );
-#ifdef EXPERIMENTAL
     atomic_coordinates_asset_panel->Reset( );
-#endif
+    template_matches_package_asset_panel->Reset( );
     particle_position_asset_panel->Reset( );
     refinement_package_asset_panel->Reset( );
 
@@ -277,9 +276,7 @@ void MyMainFrame::DirtyEverything( ) {
     DirtyClassificationSelections( );
     DirtyClassifications( );
     DirtyVolumes( );
-#ifdef EXPERIMENTAL
     DirtyAtomicCoordinates( );
-#endif
 }
 
 void MyMainFrame::DirtyVolumes( ) {
@@ -289,17 +286,15 @@ void MyMainFrame::DirtyVolumes( ) {
     sharpen_3d_panel->volumes_are_dirty     = true;
     refine_ctf_panel->volumes_are_dirty     = true;
 
+    match_template_panel->volumes_are_dirty = true;
 #ifdef EXPERIMENTAL
-    match_template_panel->volumes_are_dirty  = true;
     refine_template_panel->volumes_are_dirty = true;
 #endif
 }
 
-#ifdef EXPERIMENTAL
 void MyMainFrame::DirtyAtomicCoordinates( ) {
     atomic_coordinates_asset_panel->is_dirty = true;
 }
-#endif
 
 void MyMainFrame::DirtyMovieGroups( ) {
     movie_asset_panel->is_dirty               = true;
@@ -309,16 +304,14 @@ void MyMainFrame::DirtyMovieGroups( ) {
 }
 
 void MyMainFrame::DirtyImageGroups( ) {
-    image_asset_panel->is_dirty                 = true;
-    findctf_panel->group_combo_is_dirty         = true;
-    ctf_results_panel->group_combo_is_dirty     = true;
-    findparticles_panel->group_combo_is_dirty   = true;
-    picking_results_panel->group_combo_is_dirty = true;
-#ifdef EXPERIMENTAL
+    image_asset_panel->is_dirty                        = true;
+    findctf_panel->group_combo_is_dirty                = true;
+    ctf_results_panel->group_combo_is_dirty            = true;
+    findparticles_panel->group_combo_is_dirty          = true;
+    picking_results_panel->group_combo_is_dirty        = true;
     match_template_panel->group_combo_is_dirty         = true;
     match_template_results_panel->group_combo_is_dirty = true;
     refine_template_panel->group_combo_is_dirty        = true;
-#endif
 }
 
 void MyMainFrame::DirtyParticlePositionGroups( ) {
@@ -335,6 +328,10 @@ void MyMainFrame::DirtyRefinementPackages( ) {
     refine2d_results_panel->refinement_package_combo_is_dirty = true;
     ab_initio_3d_panel->refinement_package_combo_is_dirty     = true;
     generate_3d_panel->refinement_package_combo_is_dirty      = true;
+}
+
+void MyMainFrame::DirtyTemplateMatchesPackages( ) {
+    template_matches_package_asset_panel->is_dirty = true;
 }
 
 void MyMainFrame::DirtyRefinements( ) {
@@ -354,20 +351,18 @@ void MyMainFrame::DirtyClassificationSelections( ) {
 }
 
 void MyMainFrame::DirtyRunProfiles( ) {
-    run_profiles_panel->is_dirty                 = true;
-    align_movies_panel->run_profiles_are_dirty   = true;
-    findctf_panel->run_profiles_are_dirty        = true;
-    findparticles_panel->run_profiles_are_dirty  = true;
-    classification_panel->run_profiles_are_dirty = true;
-    refine_3d_panel->run_profiles_are_dirty      = true;
-    refine_ctf_panel->run_profiles_are_dirty     = true;
-    auto_refine_3d_panel->run_profiles_are_dirty = true;
-    ab_initio_3d_panel->run_profiles_are_dirty   = true;
-    generate_3d_panel->run_profiles_are_dirty    = true;
-#ifdef EXPERIMENTAL
+    run_profiles_panel->is_dirty                  = true;
+    align_movies_panel->run_profiles_are_dirty    = true;
+    findctf_panel->run_profiles_are_dirty         = true;
+    findparticles_panel->run_profiles_are_dirty   = true;
+    classification_panel->run_profiles_are_dirty  = true;
+    refine_3d_panel->run_profiles_are_dirty       = true;
+    refine_ctf_panel->run_profiles_are_dirty      = true;
+    auto_refine_3d_panel->run_profiles_are_dirty  = true;
+    ab_initio_3d_panel->run_profiles_are_dirty    = true;
+    generate_3d_panel->run_profiles_are_dirty     = true;
     match_template_panel->run_profiles_are_dirty  = true;
     refine_template_panel->run_profiles_are_dirty = true;
-#endif
 }
 
 // SOCKETS
@@ -641,7 +636,7 @@ void MyMainFrame::OpenProject(wxString project_filename) {
 
         int counter;
         // Note: the second to last arg must be incremented if additional actions are added below.
-        OneSecondProgressDialog* my_dialog = new OneSecondProgressDialog("Open Project", "Opening Project", 11, this);
+        OneSecondProgressDialog* my_dialog = new OneSecondProgressDialog("Open Project", "Opening Project", 12, this);
 
         movie_asset_panel->ImportAllFromDatabase( );
         my_dialog->Update(1, "Opening project (loading image assets...)");
@@ -660,17 +655,17 @@ void MyMainFrame::OpenProject(wxString project_filename) {
         my_dialog->Update(7, "Opening project (loading CTF estimation results...)");
         //	current_project.database.AddCTFIcinessColumnIfNecessary();
         ctf_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT IMAGE_ASSET_ID FROM ESTIMATED_CTF_PARAMETERS");
-//	current_project.database.AddCTFIcinessColumnIfNecessary();
-#ifdef EXPERIMENTAL
+        //	current_project.database.AddCTFIcinessColumnIfNecessary();
         my_dialog->Update(8, "Opening project (loading Match Template Results...)");
         match_template_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT IMAGE_ASSET_ID FROM TEMPLATE_MATCH_LIST");
         my_dialog->Update(9, "Opening project (loading atomic coordinates assets...)");
         atomic_coordinates_asset_panel->ImportAllFromDatabase( );
-#endif
+        my_dialog->Update(10, "Opening project (loading Template Matches Packages...)");
+        template_matches_package_asset_panel->ImportAllFromDatabase( );
 
-        my_dialog->Update(10, "Opening project (finishing...)");
+        my_dialog->Update(11, "Opening project (finishing...)");
         picking_results_panel->OnProjectOpen( );
-        my_dialog->Update(11, "Opening project (all done)");
+        my_dialog->Update(12, "Opening project (all done)");
 
         SetTitle("cisTEM - [" + current_project.project_name + "]");
         DirtyEverything( );

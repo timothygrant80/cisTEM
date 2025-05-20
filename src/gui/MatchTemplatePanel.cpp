@@ -21,9 +21,19 @@ MatchTemplatePanel::MatchTemplatePanel(wxWindow* parent)
     set_up_to_resume_job   = false;
 
 #ifndef SHOW_CISTEM_GPU_OPTIONS
-    UseGpuCheckBox->Show(false);
+    UseGPURadioYes->Enable(false);
+    UseGPURadioNo->Enable(false);
+    UseFastFFTRadioYes->Enable(false);
+    UseFastFFTRadioNo->Enable(false);
 #endif
 
+#ifndef cisTEM_USING_FastFFT
+    UseFastFFTRadioYes->Enable(false);
+    UseFastFFTRadioNo->Enable(false);
+#endif
+
+    // We need to allow a higher precision, otherwise, the option to resample will almost always be taken
+    HighResolutionLimitNumericCtrl->SetPrecision(4);
     SetInfo( );
     FillGroupComboBox( );
     FillRunProfileComboBox( );
@@ -158,9 +168,13 @@ void MatchTemplatePanel::ResetDefaults( ) {
     }
 
 #ifdef SHOW_CISTEM_GPU_OPTIONS
-    UseGpuCheckBox->SetValue(true);
+    UseGPURadioYes->SetValue(true);
+#ifdef cisTEM_USING_FastFFT
+    UseFastFFTRadioYes->SetValue(true);
+#endif
 #else
-    UseGpuCheckBox->SetValue(false); // Already disabled, but also set to un-ticked for visual consistency.
+    UseGPURadioNo->SetValue(true);
+    UseFastFFTRadioNo->SetValue(true);
 #endif
 
     DefocusSearchRangeNumericCtrl->ChangeValueFloat(1200.0f);
@@ -231,7 +245,7 @@ void MatchTemplatePanel::SetInfo( ) {
     InfoText->EndAlignment( );
 
     InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
-    InfoText->WriteText(wxT("Blah Blah Blah - See (Rickgauer, 2017)."));
+    InfoText->WriteText(wxT("TODO: update this with the 2020 paper (finding things in cells) combined with things for bigger regions (Johannes' paper) or baited recon (newer paper)."));
     InfoText->Newline( );
     InfoText->Newline( );
     InfoText->EndAlignment( );
@@ -255,12 +269,12 @@ void MatchTemplatePanel::SetInfo( ) {
     InfoText->BeginBold( );
     InfoText->WriteText(wxT("Reference Volume : "));
     InfoText->EndBold( );
-    InfoText->WriteText(wxT("The volume that will used for the template search."));
+    InfoText->WriteText(wxT("The volume that will used for the template search TODO: add a description of how to generate a reference, and padding/sizing considerations."));
     InfoText->Newline( );
     InfoText->BeginBold( );
     InfoText->WriteText(wxT("Run Profile : "));
     InfoText->EndBold( );
-    InfoText->WriteText(wxT("The selected run profile will be used to run the job. The run profile describes how the job should be run (e.g. how many processors should be used, and on which different computers).  Run profiles are set in the Run Profile panel, located under settings."));
+    InfoText->WriteText(wxT("TODO: reference threading vs process balance. The selected run profile will be used to run the job. The run profile describes how the job should be run (e.g. how many processors should be used, and on which different computers).  Run profiles are set in the Run Profile panel, located under settings."));
     InfoText->Newline( );
     InfoText->Newline( );
     InfoText->EndAlignment( );
@@ -275,6 +289,7 @@ void MatchTemplatePanel::SetInfo( ) {
     InfoText->Newline( );
     InfoText->EndAlignment( );
 
+    // TODO: add section on scaling based on pixel size. Note that the input is a target that may slightly differ. Note limits on sizing and power of two (ref to fast FFT bit)
     InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
     InfoText->BeginBold( );
     InfoText->WriteText(wxT("Out of Plane Angular Step : "));
@@ -387,9 +402,6 @@ void MatchTemplatePanel::OnUpdateUI(wxUpdateUIEvent& event) {
             RunProfileComboBox->Enable(true);
             GroupComboBox->Enable(true);
             ReferenceSelectPanel->Enable(true);
-#ifdef SHOW_CISTEM_GPU_OPTIONS
-            UseGpuCheckBox->Enable(true);
-#endif
 
             if ( RunProfileComboBox->GetCount( ) > 0 ) {
                 if ( image_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection( )) > 0 && run_profiles_panel->run_profile_manager.ReturnTotalJobs(RunProfileComboBox->GetSelection( )) > 0 && all_images_have_defocus_values == true ) {
@@ -432,9 +444,6 @@ void MatchTemplatePanel::OnUpdateUI(wxUpdateUIEvent& event) {
             GroupComboBox->Enable(false);
             ReferenceSelectPanel->Enable(false);
             RunProfileComboBox->Enable(false);
-            UseGpuCheckBox->Enable(false); // Doesn't matter if SHOW_CISTEM_GPU_OPTIONS
-            //StartAlignmentButton->SetLabel("Stop Job");
-            //StartAlignmentButton->Enable(true);
         }
 
         if ( group_combo_is_dirty == true ) {
@@ -579,6 +588,7 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
     int number_of_pixel_size_positions;
 
     bool use_gpu;
+    bool use_fast_fft;
     int  max_threads = 1; // Only used for the GPU code. For GUI this comes from the run profile -> command line override as in other programs.
 
     int image_number_for_gui;
@@ -640,12 +650,8 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
 
     float min_peak_radius = MinPeakRadiusNumericCtrl->ReturnValue( );
 
-    if ( UseGpuCheckBox->GetValue( ) == true ) {
-        use_gpu = true;
-    }
-    else {
-        use_gpu = false;
-    }
+    use_gpu      = UseGPURadioYes->GetValue( ) ? true : false;
+    use_fast_fft = UseFastFFTRadioYes->GetValue( ) ? true : false;
 
     wxString wanted_symmetry    = SymmetryComboBox->GetValue( );
     wanted_symmetry             = SymmetryComboBox->GetValue( ).Upper( );
@@ -673,10 +679,13 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
         }
     }
 
+    // Normally this is called in EulerSearch::InitGrid, but we need to re-call it here to get the search positions WITHOUT the default randomization to phi (azimuthal angle.)
     current_image_euler_search->CalculateGridSearchPositions(false);
 
+    // Optionally split each image over multiple jobs (processes)
+    // The coordinating thread needs to process all the worker's results, so we can only process 1 image at a time, i.e. 
+    // the min number of jobs per image is number_of_processes
     if ( use_gpu ) {
-        //	number_of_jobs_per_image_in_gui = std::max((int)1,number_of_processes / 2); // Using two threads in each job
         number_of_jobs_per_image_in_gui = number_of_processes; // Using two threads in each job
 
         number_of_jobs = number_of_jobs_per_image_in_gui * active_group.number_of_members;
@@ -876,8 +885,13 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
             //			wxString directory_for_results = main_frame->ReturnScratchDirectory();
 
             //wxPrintf("%i = %i - %i\n", job_counter, first_search_position, last_search_position);
+            // These are accessed directly via index in MatchTemplateApp::MasterHandleProgramDefinedResult
+            // any changes here MUST be propagated there, e.g. jobs[0].arguments[37].ReturnStringArgument( );
+            // NOTE: also, please keep in sync with the manual command line arguments.
+            // TODO: this is a bit of a mess.
 
-            current_job_package.AddJob("ttffffffffffifffffbfftttttttttftiiiitttfbi", input_search_image.ToUTF8( ).data( ),
+            current_job_package.AddJob("ttffffffffffifffffbfftttttttttftiiiitttfbbi",
+                                       input_search_image.ToUTF8( ).data( ),
                                        input_reconstruction.ToUTF8( ).data( ),
                                        pixel_size,
                                        voltage_kV,
@@ -905,7 +919,7 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
                                        best_defocus_output_file.ToUTF8( ).data( ),
                                        best_pixel_size_output_file.ToUTF8( ).data( ),
                                        scaled_mip_output_file.ToUTF8( ).data( ),
-                                       correlation_avg_output_file.ToUTF8( ).data( ),
+                                       correlation_std_output_file.ToUTF8( ).data( ),
                                        wanted_symmetry.ToUTF8( ).data( ),
                                        wanted_in_plane_angular_step,
                                        output_histogram_file.ToUTF8( ).data( ),
@@ -913,11 +927,12 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
                                        last_search_position,
                                        image_number_for_gui,
                                        number_of_jobs_per_image_in_gui,
-                                       correlation_std_output_file.ToUTF8( ).data( ),
+                                       correlation_avg_output_file.ToUTF8( ).data( ),
                                        directory_for_results.ToUTF8( ).data( ),
                                        output_result_file.ToUTF8( ).data( ),
                                        min_peak_radius,
                                        use_gpu,
+                                       use_fast_fft,
                                        max_threads);
         }
 

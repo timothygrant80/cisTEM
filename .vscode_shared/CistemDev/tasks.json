@@ -6,9 +6,9 @@
         "env": {
             "cuda_dir": "/usr/local/cuda",
             "build_dir": "${workspaceFolder}/build",
-            "common_flags": " --enable-experimental --enable-openmp --disable-build-all",
-            "experimental_algo_flags": "--enable-fp16-particlestacks --enable-smooth-mip --disable-multiple-global-refinements",
-            "common_optional_programs": ""
+            "common_flags": " --enable-experimental --enable-openmp --disable-build-all --enable-profiling",
+            "experimental_algo_flags": "--enable-fp16-particlestacks  --disable-multiple-global-refinements",
+            "common_optional_programs": "--enable-build-scale-with-mask --enable-build-create-mask --enable-build-resample --enable-build-resize"
             // "common_optional_programs": "--enable-build-sharpen-map --enable-build-convert-binary-to-star --enable-build-convert-eer-to-mrc --enable-build-resize --enable-build-resample --enable-build-sum_all_mrc_files --enable-build-sum_all_tif_files --enable-build-convert_par_to_star --enable-build-quick_test"
         }
     },
@@ -16,7 +16,7 @@
         {
             "label": "Configure cisTEM build",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/intel-gpu-static && cd ${build_dir}/intel-gpu-static && CC=icc CXX=icpc ../../configure --with-wx-config=/opt/WX/icc-static/bin/wx-config --enable-staticmode --with-cuda=${cuda_dir} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+            "command": "mkdir -p ${build_dir}/intel-gpu-static && cd ${build_dir}/intel-gpu-static && CC=icc CXX=icpc ../../configure ${input:additional_compiler_flags} --with-wx-config=/opt/WX/icc-static/bin/wx-config --enable-staticmode --with-cuda=${cuda_dir} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
         },
         {
             "label": "BUILD cisTEM",
@@ -26,7 +26,7 @@
         {
             "label": "Configure cisTEM DEBUG build",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/intel-gpu-debug-static && cd ${build_dir}/intel-gpu-debug-static && CC=icc CXX=icpc ../../configure --enable-debugmode --enable-gpu-debug --with-wx-config=/opt/WX/icc-static/bin/wx-config --enable-staticmode --with-cuda=${cuda_dir} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+            "command": "mkdir -p ${build_dir}/intel-gpu-debug-static && cd ${build_dir}/intel-gpu-debug-static && CC=icc CXX=icpc ../../configure ${input:additional_compiler_flags} --enable-debugmode --enable-gpu-debug --with-wx-config=/opt/WX/icc-static/bin/wx-config --enable-staticmode --with-cuda=${cuda_dir} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
         },
         {
             "label": "BUILD cisTEM DEBUG",
@@ -34,9 +34,19 @@
             "command": "cd ${build_dir}/intel-gpu-debug-static && make -j${input:compile_cores}"
         }
         {
+            "label": "Configure cisTEM DEBUG build TMPVALUE",
+            "type": "shell",
+            "command": "mkdir -p ${build_dir}/intel-gpu-debug-static-tmpvalue && cd ${build_dir}/intel-gpu-debug-static-tmpvalue && CC=icc CXX=icpc ../../configure ${input:additional_compiler_flags} --enable-debugmode --enable-gpu-debug --with-wx-config=/opt/WX/icc-static/bin/wx-config --enable-staticmode --with-cuda=${cuda_dir} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} --enable-build-calculate-template-pvalue"
+        },
+        {
+            "label": "BUILD cisTEM DEBUG TMPVALUE",
+            "type": "shell",
+            "command": "cd ${build_dir}/intel-gpu-debug-static-tmpvalue && make -j${input:compile_cores}"
+        }
+        {
             "label": "Configure cisTEM DEBUG build, CPU only",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/intel-debug-static && cd ${build_dir}/intel-debug-static && CC=icc CXX=icpc ../../configure --enable-debugmode --with-wx-config=/opt/WX/icc-static/bin/wx-config --enable-staticmode ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+            "command": "mkdir -p ${build_dir}/intel-debug-static && cd ${build_dir}/intel-debug-static && CC=icc CXX=icpc ../../configure ${input:additional_compiler_flags} --enable-debugmode --with-wx-config=/opt/WX/icc-static/bin/wx-config --enable-staticmode ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
         },
         {
             "label": "BUILD cisTEM DEBUG, CPU only",
@@ -46,7 +56,7 @@
         {
             "label": "CONFIG GNU, gpu",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/GNU-gpu && cd ${build_dir}/GNU-gpu && CC=gcc CXX=g++ ../../configure  --with-cuda=${cuda_dir}  --enable-staticmode  --with-wx-config=/opt/WX/gcc-static/bin/wx-config ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+            "command": "mkdir -p ${build_dir}/GNU-gpu && cd ${build_dir}/GNU-gpu && CC=gcc CXX=g++ ../../configure  ${input:additional_compiler_flags} --with-cuda=${cuda_dir}  --enable-staticmode  --with-wx-config=/opt/WX/gcc-static/bin/wx-config ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
         },
         {
             "label": "BUILD GNU, gpu",
@@ -56,7 +66,7 @@
         {
             "label": "CONFIG clang, gpu",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/clang-gpu && cd ${build_dir}/clang-gpu && CC=clang CXX=clang++ ../../configure  --with-cuda=${cuda_dir}  --enable-staticmode  --with-wx-config=/opt/WX/clang-static/bin/wx-config ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+            "command": "mkdir -p ${build_dir}/clang-gpu && cd ${build_dir}/clang-gpu && CC=clang CXX=clang++ ../../configure  ${input:additional_compiler_flags} --with-cuda=${cuda_dir}  --enable-staticmode  --with-wx-config=/opt/WX/clang-static/bin/wx-config ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
         },
         {
             "label": "BUILD clang, gpu",
@@ -70,6 +80,12 @@
             "id": "compile_cores",
             "description": "Number of threads for compiling.",
             "default": "8"
+        },
+        {
+            "type": "promptString",
+            "id": "additional_compiler_flags",
+            "description": "additional_compiler_flags",
+            "default": ""
         }
     ]
 }

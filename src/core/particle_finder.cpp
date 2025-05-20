@@ -383,7 +383,7 @@ ArrayOfParticlePositionAssets ParticleFinder::ReturnArrayOfParticlePositionAsset
     temp_asset.picking_id = 0;
 
     // Loop over picked coordinates
-    for ( int particle_counter = 0; particle_counter < results_x_y.number_of_points; particle_counter++ ) {
+    for ( int particle_counter = 0; particle_counter < results_x_y.NumberOfPoints( ); particle_counter++ ) {
         // Finish setting up the asset. We use an ID that hasn't been used for any other position asset previously.
         temp_asset.asset_id++;
         temp_asset.x_position         = results_x_y.data_x[particle_counter];
@@ -721,7 +721,7 @@ void ParticleFinder::DoTemplateMatching( ) {
                 template_medium.Compute1DPowerSpectrumCurve(&current_power_spectrum, &current_number_of_fourier_elements);
                 b_numerator   = 0.0;
                 b_denominator = 0.0;
-                for ( int curve_counter = 0; curve_counter < current_power_spectrum.number_of_points; curve_counter++ ) {
+                for ( int curve_counter = 0; curve_counter < current_power_spectrum.NumberOfPoints( ); curve_counter++ ) {
                     b_numerator += pow(current_power_spectrum.data_x[curve_counter], 2) * current_power_spectrum.data_y[curve_counter];
                     b_denominator += current_power_spectrum.data_y[curve_counter];
                 }
@@ -876,7 +876,7 @@ void ParticleFinder::WhitenMicrographBackground( ) {
     // Next, we need to whiten the noise in the micrograph and ensure that at each pixel
     // it has a variance of 1.0
     background_whitening_filter = background_power_spectrum;
-    for ( int counter = 0; counter < background_power_spectrum.number_of_points; counter++ ) {
+    for ( int counter = 0; counter < background_power_spectrum.NumberOfPoints( ); counter++ ) {
         if ( background_power_spectrum.data_y[counter] > 0.0 ) {
             background_whitening_filter.data_y[counter] = 1.0 / sqrtf(background_power_spectrum.data_y[counter]);
         }
@@ -910,7 +910,7 @@ void ParticleFinder::WhitenMicrographBackground( ) {
     wxPrintf("\nChecking whitening worked correctly (debug)...\n");
     my_progress_bar = new ProgressBar(number_of_background_boxes);
     temp_curve.ZeroYData( );
-    EmpiricalDistribution dist;
+    EmpiricalDistribution<double> dist;
     for ( int background_box_counter = 0; background_box_counter < number_of_background_boxes; background_box_counter++ ) {
         if ( background_box_counter >= number_of_background_boxes_to_skip ) {
             box.QuickAndDirtyReadSlice("dbg_background_box.mrc", background_box_counter + 1 - number_of_background_boxes_to_skip);
@@ -1282,7 +1282,7 @@ void ParticleFinder::PrepareTemplateForMatching(Image* template_image, Image& pr
 
     Image temporary_image;
 
-    EmpiricalDistribution my_dist;
+    EmpiricalDistribution<double> my_dist;
 
     temporary_image = template_image;
 
@@ -1391,12 +1391,12 @@ void ComputeScheresPickingFunction(Image *micrograph, Image *micrograph_local_me
 	// We assume the template has been normalized such that its mean is 0.0 and its stdev 1.0 outside the mask
 	// (I'm not sure that this is exactly what Sjors does, nor whether this is the correct thing to do)
 #ifdef DEBUG
-	EmpiricalDistribution template_values_outside_radius = template_image->ReturnDistributionOfRealValues(mask_radius,true);
+	EmpiricalDistribution<double> template_values_outside_radius = template_image->ReturnDistributionOfRealValues(mask_radius,true);
 	MyDebugAssertTrue(fabs(template_values_outside_radius.GetSampleMean()) < 0.001,"Template should be normalized to have mean value of 0.0 outside radius");
 	const float template_sum_outside_of_mask = template_values_outside_radius.GetSampleSum();
 	const float template_sum_of_squares_outside_of_mask = template_values_outside_radius.GetSampleSumOfSquares();
 #endif
-	EmpiricalDistribution template_values_inside_radius  = template_image->ReturnDistributionOfRealValues(mask_radius,false);
+	EmpiricalDistribution<double> template_values_inside_radius  = template_image->ReturnDistributionOfRealValues(mask_radius,false);
 	const float template_sum_inside_of_mask = template_values_inside_radius.GetSampleSum();
 	const float template_sum_of_squares_inside_of_mask = template_values_inside_radius.GetSampleSumOfSquares();
 	wxPrintf("Template sum of squares inside of mask = %e\n", template_sum_of_squares_inside_of_mask);

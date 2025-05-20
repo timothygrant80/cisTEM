@@ -1629,7 +1629,7 @@ void AbInitioManager::SetupRefinementJob( ) {
             temp.Init(input_refinement->resolution_statistics_box_size, input_refinement->resolution_statistics_box_size);
             temp.GenerateDefaultStatistics(active_refinement_package->estimated_particle_weight_in_kda);
 
-            for ( counter = 0; counter < input_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.number_of_points; counter++ ) {
+            for ( counter = 0; counter < input_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.NumberOfPoints( ); counter++ ) {
                 if ( input_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.data_y[counter] > temp.part_SSNR.data_y[counter] ) {
                     input_refinement->class_refinement_results[class_counter].class_resolution_statistics.part_SSNR.data_y[counter] = temp.part_SSNR.data_y[counter];
                 }
@@ -2582,7 +2582,7 @@ void AbInitio3DPanel::OnVolumeResampled(ReturnProcessedImageEvent& my_event) {
         new_image->WriteSlices(&output_file, 1, new_image->logical_z_dimension);
         output_file.SetPixelSize(my_abinitio_manager.active_refinement_package->contained_particles[0].pixel_size);
 
-        EmpiricalDistribution density_distribution;
+        EmpiricalDistribution<double> density_distribution;
         new_image->UpdateDistributionOfRealValues(&density_distribution);
         output_file.SetDensityStatistics(density_distribution.GetMinimum( ), density_distribution.GetMaximum( ), density_distribution.GetSampleMean( ), sqrtf(density_distribution.GetSampleVariance( )));
         output_file.CloseFile( );

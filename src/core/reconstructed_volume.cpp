@@ -390,7 +390,7 @@ void ReconstructedVolume::Calculate3DSimple(Reconstruct3D& reconstruction) {
 void ReconstructedVolume::Calculate3DOptimal(Reconstruct3D& reconstruction, ResolutionStatistics& statistics, float weiner_filter_nominator) {
     MyDebugAssertTrue(density_map != NULL, "Error: reconstruction volume has not been initialized");
     //	MyDebugAssertTrue(has_statistics, "Error: 3D statistics have not been calculated");
-    MyDebugAssertTrue(int((reconstruction.image_reconstruction.ReturnSmallestLogicalDimension( ) / 2 + 1) * sqrtf(3.0)) + 1 == statistics.part_SSNR.number_of_points, "Error: part_SSNR table incompatible with volume");
+    MyDebugAssertTrue(int((reconstruction.image_reconstruction.ReturnSmallestLogicalDimension( ) / 2 + 1) * sqrtf(3.0)) + 1 == statistics.part_SSNR.NumberOfPoints( ), "Error: part_SSNR table incompatible with volume");
 
     int i;
     int j;
@@ -408,14 +408,14 @@ void ReconstructedVolume::Calculate3DOptimal(Reconstruct3D& reconstruction, Reso
 
     int number_of_bins2 = reconstruction.image_reconstruction.ReturnSmallestLogicalDimension( );
 
-    float* wiener_constant = new float[statistics.part_SSNR.number_of_points];
+    float* wiener_constant = new float[statistics.part_SSNR.NumberOfPoints( )];
 
     reconstruction.CompleteEdges( );
 
     // Now do the division by the CTF volume
     pixel_counter = 0;
 
-    for ( i = 0; i < statistics.part_SSNR.number_of_points; i++ ) {
+    for ( i = 0; i < statistics.part_SSNR.NumberOfPoints( ); i++ ) {
         if ( statistics.part_SSNR.data_y[i] > 0.0 ) {
             //			wiener_constant[i] = 1.0 / statistics.part_SSNR.data_y[i];
             //			wiener_constant[i] = 1.0 / pssnr_correction_factor / statistics.part_SSNR.data_y[i];
@@ -539,7 +539,7 @@ float ReconstructedVolume::ComputeOrientationDistributionEfficiency(Reconstruct3
     radius_75pc  = -1.0;
     radius_100pc = -1.0;
     //
-    for ( pixel_counter = psf_radial_average.number_of_points - 2; pixel_counter >= 0; pixel_counter-- ) {
+    for ( pixel_counter = psf_radial_average.NumberOfPoints( ) - 2; pixel_counter >= 0; pixel_counter-- ) {
         if ( psf_radial_average.data_y[pixel_counter] > 0.0 && radius_0pc < 0.0 ) {
             radius_0pc = psf_radial_average.data_x[pixel_counter + 1];
         }
@@ -727,7 +727,7 @@ void ReconstructedVolume::FinalizeOptimal(Reconstruct3D& reconstruction, Image* 
     output_file.OpenFile(output_volume.ToStdString( ), true);
     density_map->WriteSlices(&output_file, 1, density_map->logical_z_dimension);
     output_file.SetPixelSize(original_pixel_size);
-    EmpiricalDistribution density_distribution;
+    EmpiricalDistribution<double> density_distribution;
     density_map->UpdateDistributionOfRealValues(&density_distribution);
     output_file.SetDensityStatistics(density_distribution.GetMinimum( ), density_distribution.GetMaximum( ), density_distribution.GetSampleMean( ), sqrtf(density_distribution.GetSampleVariance( )));
     output_file.CloseFile( );
@@ -810,7 +810,7 @@ void ReconstructedVolume::Calculate3DML(Reconstruct3D& reconstruction) {
     MyDebugAssertTrue(density_map != NULL, "Error: reconstruction volume has not been initialized");
     //	MyDebugAssertTrue(has_statistics, "Error: 3D statistics have not been calculated");
     // This would have to be added back if FinalizeML was used
-    //	MyDebugAssertTrue(int((reconstruction.image_reconstruction.ReturnSmallestLogicalDimension() / 2 + 1) * sqrtf(3.0)) + 1 == reconstruction.signal_power_spectrum->number_of_points, "Error: signal_power_spectrum table incompatible with volume");
+    //	MyDebugAssertTrue(int((reconstruction.image_reconstruction.ReturnSmallestLogicalDimension() / 2 + 1) * sqrtf(3.0)) + 1 == reconstruction.signal_power_spectrum->NumberOfPoints( ), "Error: signal_power_spectrum table incompatible with volume");
 
     int i;
     int j;
@@ -830,7 +830,7 @@ void ReconstructedVolume::Calculate3DML(Reconstruct3D& reconstruction) {
     int number_of_bins2 = reconstruction.image_reconstruction.ReturnSmallestLogicalDimension( );
 
     // This would have to be added back if FinalizeML was used
-    //	float *wiener_constant = new float[reconstruction.signal_power_spectrum->number_of_points];
+    //	float *wiener_constant = new float[reconstruction.signal_power_spectrum->NumberOfPoints( )];
     float* wiener_constant = new float[314];
 
     reconstruction.CompleteEdges( );
@@ -839,7 +839,7 @@ void ReconstructedVolume::Calculate3DML(Reconstruct3D& reconstruction) {
     pixel_counter = 0;
 
     // This would have to be added back if FinalizeML was used
-    //	for (i = 0; i < reconstruction.signal_power_spectrum->number_of_points; i++)
+    //	for (i = 0; i < reconstruction.signal_power_spectrum->NumberOfPoints( ); i++)
     //	{
     //		if (reconstruction.signal_power_spectrum->data_y[i] != 0.0) wiener_constant[i] = reconstruction.noise_power_spectrum->data_y[i] / reconstruction.signal_power_spectrum->data_y[i];
     //		else wiener_constant[i] = - 1.0;

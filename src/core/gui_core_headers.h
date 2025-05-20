@@ -86,6 +86,7 @@
 #include "../gui/ImportRefinementPackageWizard.h"
 #include "../gui/ExportRefinementPackageWizard.h"
 #include "../gui/MyNewRefinementPackageWizard.h"
+#include "../gui/NewTemplateMatchesPackageWizard.h"
 #include "../gui/MyResultsPanel.h"
 #include "../gui/ActionsPanelSpa.h"
 #include "../gui/ActionsPanelTm.h"
@@ -96,6 +97,7 @@
 #include "../gui/MyFrealignExportDialog.h"
 #include "../gui/MyRelionExportDialog.h"
 #include "../gui/MyRefinementPackageAssetPanel.h"
+#include "../gui/TemplateMatchesPackageAssetPanel.h"
 #include "../gui/ResampleDialog.h"
 #include "../gui/CombineRefinementPackagesWizard.h"
 #include "../gui/MyRenameDialog.h"
@@ -133,10 +135,11 @@
 #ifdef EXPERIMENTAL
 #include "../gui/MyExperimentalPanel.h"
 #include "../gui/RefineTemplateDevPanel.h"
+#endif
+
 #include "../gui/AtomicCoordinatesAssetPanel.h"
 #include "../gui/AtomicCoordinatesChooserDialog.h"
 #include "../gui/AtomicCoordinatesImportDialog.h"
-#endif
 // FIXME: These and all the panel integers should be in defines as enums, and should be in their own header
 // included at the top of core headers
 #define REFINEMENT 0

@@ -9,13 +9,11 @@ MyAssetsPanel::MyAssetsPanel(wxWindow* parent, wxWindowID id, const wxPoint& pos
 // TODO: destructor
 
 void MyAssetsPanel::OnAssetsBookPageChanged(wxBookCtrlEvent& event) {
-    extern MyMovieAssetPanel*            movie_asset_panel;
-    extern MyImageAssetPanel*            image_asset_panel;
-    extern MyParticlePositionAssetPanel* particle_position_asset_panel;
-    extern MyVolumeAssetPanel*           volume_asset_panel;
-#ifdef EXPERIMENTAL
-    extern AtomicCoordinatesAssetPanel* atomic_coordinates_asset_panel;
-#endif
+    extern MyMovieAssetPanel*             movie_asset_panel;
+    extern MyImageAssetPanel*             image_asset_panel;
+    extern MyParticlePositionAssetPanel*  particle_position_asset_panel;
+    extern MyVolumeAssetPanel*            volume_asset_panel;
+    extern AtomicCoordinatesAssetPanel*   atomic_coordinates_asset_panel;
     extern MyRefinementPackageAssetPanel* refinement_package_asset_panel;
 
 #ifdef __WXOSX__

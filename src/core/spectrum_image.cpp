@@ -11,25 +11,25 @@ float SpectrumImage::FindRotationalAlignmentBetweenTwoStacksOfImages(Image* othe
     MyDebugAssertTrue(this[0].HasSameDimensionsAs(&other_image[0]), "Images and reference images do not have same dimensions.");
 
     // Local variables
-    const float           minimum_radius_sq           = pow(minimum_radius, 2);
-    const float           maximum_radius_sq           = pow(maximum_radius, 2);
-    const float           inverse_logical_x_dimension = 1.0 / float(this[0].logical_x_dimension);
-    const float           inverse_logical_y_dimension = 1.0 / float(this[0].logical_y_dimension);
-    float                 best_cc                     = -std::numeric_limits<float>::max( );
-    float                 best_rotation               = -std::numeric_limits<float>::max( );
-    float                 current_rotation            = -search_half_range;
-    float                 current_rotation_rad;
-    EmpiricalDistribution cc_numerator_dist;
-    EmpiricalDistribution cc_denom_self_dist;
-    EmpiricalDistribution cc_denom_other_dist;
-    int                   current_image;
-    int                   i, i_logi;
-    float                 i_logi_frac, ii_phys;
-    int                   j, j_logi;
-    float                 j_logi_frac, jj_phys;
-    float                 current_interpolated_value;
-    long                  address_in_other_image;
-    float                 current_cc;
+    const float                   minimum_radius_sq           = pow(minimum_radius, 2);
+    const float                   maximum_radius_sq           = pow(maximum_radius, 2);
+    const float                   inverse_logical_x_dimension = 1.0 / float(this[0].logical_x_dimension);
+    const float                   inverse_logical_y_dimension = 1.0 / float(this[0].logical_y_dimension);
+    float                         best_cc                     = -std::numeric_limits<float>::max( );
+    float                         best_rotation               = -std::numeric_limits<float>::max( );
+    float                         current_rotation            = -search_half_range;
+    float                         current_rotation_rad;
+    EmpiricalDistribution<double> cc_numerator_dist;
+    EmpiricalDistribution<double> cc_denom_self_dist;
+    EmpiricalDistribution<double> cc_denom_other_dist;
+    int                           current_image;
+    int                           i, i_logi;
+    float                         i_logi_frac, ii_phys;
+    int                           j, j_logi;
+    float                         j_logi_frac, jj_phys;
+    float                         current_interpolated_value;
+    long                          address_in_other_image;
+    float                         current_cc;
 
     // Loop over possible rotations
     while ( current_rotation < search_half_range + search_step_size ) {
@@ -120,27 +120,27 @@ void SpectrumImage::GeneratePowerspectrum(CTF ctf_to_apply) {
 
 // Overlays an rotationally averaged sector and an model based sector on the
 // power spectrum
-void SpectrumImage::OverlayCTF(CTF* ctf, Image* number_of_extrema, Image* ctf_values, int number_of_bins_in_1d_spectra, double spatial_frequency[], double rotational_average_astig[], float number_of_extrema_profile[], float ctf_values_profile[], Curve* epa_pre_max, Curve* epa_post_max) {
+void SpectrumImage::OverlayCTF(CTF* ctf, Image* number_of_extrema, Image* ctf_values, int number_of_bins_in_1d_spectra, double spatial_frequency[], double rotational_average_astig[], float number_of_extrema_profile[], float ctf_values_profile[], Curve* epa_pre_max, Curve* epa_post_max, bool fit_nodes) {
     MyDebugAssertTrue(this->is_in_memory, "Spectrum memory not allocated");
 
     //
-    EmpiricalDistribution values_in_rings;
-    EmpiricalDistribution values_in_fitting_range;
-    int                   i;
-    int                   j;
-    long                  address;
-    float                 i_logi, i_logi_sq;
-    float                 j_logi, j_logi_sq;
-    float                 current_spatial_frequency_squared;
-    float                 current_azimuth;
-    float                 current_defocus;
-    float                 current_phase_aberration;
-    float                 sq_sf_of_phase_aberration_maximum;
-    const float           lowest_freq  = pow(ctf->GetLowestFrequencyForFitting( ), 2);
-    const float           highest_freq = pow(ctf->GetHighestFrequencyForFitting( ), 2);
-    float                 current_ctf_value;
-    float                 target_sigma;
-    int                   chosen_bin;
+    EmpiricalDistribution<double> values_in_rings;
+    EmpiricalDistribution<double> values_in_fitting_range;
+    int                           i;
+    int                           j;
+    long                          address;
+    float                         i_logi, i_logi_sq;
+    float                         j_logi, j_logi_sq;
+    float                         current_spatial_frequency_squared;
+    float                         current_azimuth;
+    float                         current_defocus;
+    float                         current_phase_aberration;
+    float                         sq_sf_of_phase_aberration_maximum;
+    const float                   lowest_freq  = pow(ctf->GetLowestFrequencyForFitting( ), 2);
+    const float                   highest_freq = pow(ctf->GetHighestFrequencyForFitting( ), 2);
+    float                         current_ctf_value;
+    float                         target_sigma;
+    int                           chosen_bin;
 
     //this->QuickAndDirtyWriteSlice("dbg_spec_overlay_entry.mrc",1);
 
@@ -179,6 +179,9 @@ void SpectrumImage::OverlayCTF(CTF* ctf, Image* number_of_extrema, Image* ctf_va
             if ( current_spatial_frequency_squared > lowest_freq && current_spatial_frequency_squared <= highest_freq ) {
                 current_azimuth   = atan2(j_logi, i_logi);
                 current_ctf_value = fabs(ctf->Evaluate(current_spatial_frequency_squared, current_azimuth));
+                if ( fit_nodes ) {
+                    current_ctf_value = ctf->EvaluatePowerspectrumWithThickness(current_spatial_frequency_squared, current_azimuth);
+                }
                 if ( current_ctf_value > 0.5 )
                     values_in_rings.AddSampleValue(this->real_values[address]);
                 values_in_fitting_range.AddSampleValue(this->real_values[address]);
@@ -407,16 +410,16 @@ void SpectrumImage::RescaleSpectrumAndRotationalAverage(Image* number_of_extrema
         }
 
         // Fit the minima and maximum curves using Savitzky-Golay smoothing
-        if ( maxima_curve->number_of_points > sg_width )
+        if ( maxima_curve->NumberOfPoints( ) > sg_width )
             maxima_curve->FitSavitzkyGolayToData(sg_width, sg_order);
-        if ( minima_curve->number_of_points > sg_width )
+        if ( minima_curve->NumberOfPoints( ) > sg_width )
             minima_curve->FitSavitzkyGolayToData(sg_width, sg_order);
 
         // Replace the background and peak envelopes with the smooth min/max curves
         for ( bin_counter = 0; bin_counter < number_of_bins; bin_counter++ ) {
-            if ( minima_curve->number_of_points > sg_width )
+            if ( minima_curve->NumberOfPoints( ) > sg_width )
                 background[bin_counter] = minima_curve->ReturnSavitzkyGolayInterpolationFromX(spatial_frequency[bin_counter]);
-            if ( maxima_curve->number_of_points > sg_width )
+            if ( maxima_curve->NumberOfPoints( ) > sg_width )
                 peak[bin_counter] = maxima_curve->ReturnSavitzkyGolayInterpolationFromX(spatial_frequency[bin_counter]);
         }
 

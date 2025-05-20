@@ -7,6 +7,39 @@
 
 using namespace cistem;
 
+// I pulled these from FastFFT so wrapping in the namespace here incase they diverge.
+namespace cistem {
+template <typename T>
+inline bool is_pointer_in_memory_and_registered(T ptr) {
+    wxMutexLocker lock(Image::s_mutexProtectingFFTW); // the mutex will be unlocked when this object is destroyed (when it goes out of scope)
+    MyDebugAssertTrue(lock.IsOk( ), "Mute locking failed");
+
+    cudaPointerAttributes attr;
+    cudaErr(cudaPointerGetAttributes(&attr, ptr));
+
+    if ( attr.type == 1 && attr.devicePointer == attr.hostPointer ) {
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+
+template <typename T>
+inline bool is_pointer_in_device_memory(T ptr) {
+    // FIXME: I don't think this is thread safe, add a mutex as in cistem::GpuImage
+    cudaPointerAttributes attr;
+    cudaErr(cudaPointerGetAttributes(&attr, ptr));
+
+    if ( attr.type == 2 || attr.type == 3 ) {
+        return true;
+    }
+    else {
+        return false;
+    }
+}
+} // namespace cistem
+
 // #include "../../include/ieee-754-half/half.hpp"
 
 /** 
@@ -34,11 +67,9 @@ void Image::AllocatePageLockedMemory(int wanted_x_size, int wanted_y_size, int w
         // The current methods require the fp32 memory to be allocated prior to allocating the fp16 memory
         Allocate16fBuffer( );
         RegisterPageLockedMemory(real_values_16f);
-        SetIsMemoryPageLocked(real_values_16f, true);
     }
     if constexpr ( std::is_same_v<StorageBaseType, float> ) {
         RegisterPageLockedMemory(real_values);
-        SetIsMemoryPageLocked(real_values, true);
     }
 }
 
@@ -47,17 +78,15 @@ template void Image::AllocatePageLockedMemory<half_float::half>(int wanted_x_siz
 
 template <typename StorageBaseType>
 void Image::RegisterPageLockedMemory(StorageBaseType* ptr) {
-    wxMutexLocker lock(s_mutexProtectingFFTW); // the mutex will be unlocked when this object is destroyed (when it goes out of scope)
-    MyDebugAssertTrue(lock.IsOk( ), "Mute locking failed");
 
-    if ( ! IsMemoryPageLocked(ptr) ) {
+    // Note: this should be threadsafe as is_pointer_in_memory_and_registered has a mutex inside prior to returning true/false
+    if ( is_pointer_in_memory_and_registered(ptr) ) {
         if constexpr ( std::is_same_v<StorageBaseType, half_float::half> ) {
             cudaErr(cudaHostRegister(real_values_16f, sizeof(StorageBaseType) * real_memory_allocated, cudaHostRegisterDefault));
         }
         if constexpr ( std::is_same_v<StorageBaseType, float> ) {
             cudaErr(cudaHostRegister(real_values, sizeof(StorageBaseType) * real_memory_allocated, cudaHostRegisterDefault));
         }
-        SetIsMemoryPageLocked(ptr, true);
     }
 }
 
@@ -68,16 +97,14 @@ template <typename StorageBaseType>
 void Image::UnRegisterPageLockedMemory(StorageBaseType* ptr) {
     MyDebugAssertTrue(IsMemoryAllocated(ptr), "Image is not in memory");
 
-    if ( IsMemoryPageLocked(ptr) ) {
-        wxMutexLocker lock(s_mutexProtectingFFTW); // the mutex will be unlocked when this object is destroyed (when it goes out of scope)
-        MyDebugAssertTrue(lock.IsOk( ), "Mute locking failed");
+    // Note: this should be threadsafe as is_pointer_in_memory_and_registered has a mutex inside prior to returning true/false
+    if ( is_pointer_in_memory_and_registered(ptr) ) {
         if constexpr ( std::is_same_v<StorageBaseType, half_float::half> ) {
             cudaErr(cudaHostUnregister(real_values_16f));
         }
         if constexpr ( std::is_same_v<StorageBaseType, float> ) {
             cudaErr(cudaHostUnregister(real_values));
         }
-        SetIsMemoryPageLocked(ptr, false);
     }
 }
 

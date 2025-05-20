@@ -36,7 +36,7 @@ if [[ $1 == "-h" || $1 == "--help" ]] ; then
     echo "      --compiler: icpc or g++, default is icpc [g++ builds not supported yet]"
     echo "      --build-type: static or dynamic, default is static [BUT only dynamic is supported for --wx-version dev]"
     echo "      --npm: build npm, default is false if not specified"
-    echo "      --ref-images: build reference images, default is false if not specified"
+    echo "      --ref-images: build reference images, default is true if not specified"
     echo "      --tag-suffix: to append to the image tag"
     echo ""
     echo "For example, to build the base image without cache, and the top image with wxWidgets 3.1.5, g++, dynamic, npm, and ref-images:"

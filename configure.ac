@@ -29,8 +29,8 @@ fi
 
 # don't let the AC_PROG_CXX set default flags, set them back to input..
 
-CXXFLAGS="$INPUT_CXXFLAGS"
-CPPFLAGS="$INPUT_CPPFLAGS"
+CXXFLAGS="$INPUT_CXXFLAGS -I$TOPSRCDIR/../include"
+CPPFLAGS="$INPUT_CPPFLAGS -I$TOPSRCDIR/../include"
 
 # set up initial flags
 AC_MSG_NOTICE([Setting up initial flags])
@@ -110,11 +110,13 @@ AC_ARG_ENABLE(multiple-global-refinements, AS_HELP_STRING([--disable-multiple-gl
   fi
 ]) # No action needed if flag is not present as multiple global refinements is the default.
 
-# AC_DEFINE_UNQUOTED([_FILE_OFFSET_BITS], [64], [Define the file offset bits])
-# AC_DEFINE([_LARGEFILE_SOURCE], [], [Define the large file source])
+# NOTE: Ofast, also for gcc, adds more aggressive optimizations, than O3 and also sets -fno-protect-parens which we do not want.
+# Unlike gcc, -fno-protect-parens is not a default for icpc, so we need to add it here.
+# TODO: test  with -ipo (may take longer to compile but iterprocess optimization may worth it)
+# -fprotect-parens
 if test "x$CXX" = "xicpc"; then		
-	CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -no-prec-sqrt $WARNINGS_ON -std=c++${CPP_STANDARD} -wd1125"
-	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -no-prec-sqrt $WARNINGS_ON"
+	CXXFLAGS="$CXXFLAGS -O3 -no-prec-div -no-prec-sqrt -fprotect-parens $WARNINGS_ON -std=c++${CPP_STANDARD} -wd1125"
+	CPPFLAGS="$CPPFLAGS -O3 -no-prec-div -no-prec-sqrt -fprotect-parens $WARNINGS_ON"
   # This may only be needed for dynamic linking
   
   LIBS="$LIBS -lz"
@@ -124,8 +126,8 @@ else
 	  CXXFLAGS="$CXXFLAGS -m64 -funroll-loops -O3 -pipe $WARNINGS_ON  -std=c++${CPP_STANDARD} -Wno-c++11-narrowing" 		
 	  CPPFLAGS="$CPPFLAGS -m64 -funroll-loops -O3 -pipe $WARNINGS_ON "
   else 
-	  CXXFLAGS="$CXXFLAGS -m64 -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations -std=c++${CPP_STANDARD}" 		
-	  CPPFLAGS="$CPPFLAGS -m64 -funroll-loops -O3 -pipe $WARNINGS_ON -fexpensive-optimizations"
+	  CXXFLAGS="$CXXFLAGS -m64 -funroll-loops -O3 -fprotect-parens -pipe $WARNINGS_ON -fexpensive-optimizations -std=c++${CPP_STANDARD}" 		
+	  CPPFLAGS="$CPPFLAGS -m64 -funroll-loops -O3 -fprotect-parens -pipe $WARNINGS_ON -fexpensive-optimizations"
 
 	  #sqlite needs dl on gcc
 	
@@ -215,8 +217,8 @@ AC_ARG_ENABLE(debugmode, AS_HELP_STRING([--enable-debugmode],[Compile in debug m
   if test "$enableval" = yes; then
     AC_DEFINE([DEBUG], [], [Define the debug flag])
     if test "x$CXX" = "xicpc"; then   
-        CXXFLAGS="-O2 -debug -no-prec-div -no-prec-sqrt $WARNINGS_ON -std=c++${CPP_STANDARD} -wd1125"
-        CPPFLAGS="-O2 -debug -no-prec-div -no-prec-sqrt $WARNINGS_ON"
+        CXXFLAGS="-O2 -debug -no-prec-div -no-prec-sqrt -fprotect-parens $WARNINGS_ON -std=c++${CPP_STANDARD} -wd1125"
+        CPPFLAGS="-O2 -debug -no-prec-div -no-prec-sqrt -fprotect-parens $WARNINGS_ON"
     else
         CPPFLAGS="-O2 -g $WARNINGS_ON $INPUT_CPPFLAGS"
         CXXFLAGS="-O2 -g -std=c++${CPP_STANDARD} $WARNINGS_ON $INPUT_CXXFLAGS"
@@ -235,18 +237,20 @@ AC_ARG_ENABLE(debugmode, AS_HELP_STRING([--enable-debugmode],[Compile in debug m
 # BEGIN CUDA CHECKS AND SETS
 ###############################
 
-
-FastFFT_INCLUDES=""
-use_FastFFT="no"
-AC_ARG_ENABLE(FastFFT, AS_HELP_STRING([--enable-FastFFT],[FastFFT library for gpu builds [default=no]]),[
+# This also has an effect in submodule_FastFFT on the FastFFT_FLAGS
+want_gpu_debug="no"
+AC_ARG_ENABLE(gpu-debug, AS_HELP_STRING([--enable-gpu-debug],[Compile heavy synchronous checking [default=no]]),[
   if test "$enableval" = yes; then
-    # Call the m4 macro to check and setup for FastFFT if present and requested
-    submodule_FastFFT
+    AC_DEFINE([ENABLE_GPU_DEBUG],[], [use the gpu or not])
+  	AC_MSG_NOTICE([Compiling with synchronizing debug checks for GPU code])	
+    want_gpu_debug="yes"
   fi
   ]) 
   
-if test "$want_cuda" = "yes" ; then
+# Call the m4 macro to check and setup for FastFFT if present and requested. Must be run after AX_CUDA
+submodule_FastFFT
 
+if test "x$want_cuda" = "xyes" ; then
 
     # ~Runtime about 85% with K3 images, but mips are different - total detection is ~the same. 
     # Determined this is likely just numerical error. Enabling by default.
@@ -264,8 +268,8 @@ if test "$want_cuda" = "yes" ; then
     fi
 
     AC_MSG_NOTICE([Adding the CUDA includes Setting up NVCC initial flags])
-    CUDA_CPPFLAGS="$CUDA_CFLAGS $NVCCFLAGS $FastFFT_FLAGS"
-    CUDA_CXXFLAGS="$CUDA_CFLAGS $NVCCFLAGS $FastFFT_FLAGS"
+    CUDA_CPPFLAGS="$FastFFT_CUDA_FLAGS $FastFFT_DEFINES $CUDA_CFLAGS $NVCCFLAGS"
+    CUDA_CXXFLAGS="$FastFFT_CUDA_FLAGS $FastFFT_DEFINES $CUDA_CFLAGS $NVCCFLAGS"
     
     CXXFLAGS="$CXXFLAGS $use_gpu_cache_hints $CUDA_CFLAGS"
     CPPFLAGS="$CPPFLAGS $use_gpu_cache_hints $CUDA_CFLAGS"
@@ -283,7 +287,6 @@ fi
 
 # Define WANT_CISTEM_GPU_AM to be used in the Makefile on a per-program basis to then define ENABLEGPU or not.
 AM_CONDITIONAL([WANT_CISTEM_GPU_AM], [test "$want_cuda" = "yes"])
-AM_CONDITIONAL([ENABLE_FASTFFT_AM], [test "x$use_FastFFT" = "xyes"])
 
 # fftw
 
@@ -317,11 +320,24 @@ AC_ARG_ENABLE(profiling, AS_HELP_STRING([--enable-profiling],[Include fine-grain
 AM_CONDITIONAL([ENABLEPROFILING_AM], [test x$want_profiling = xtrue])
 
 AC_ARG_ENABLE(fp16-particlestacks, AS_HELP_STRING([--enable-fp16-particlestacks],[Save particle stacks in reduced precision. Use with caution  [default=no]]),[
-  if test "$enableval" = yes; then
+  if test "x$enableval" = "xyes"; then
     AC_DEFINE([USE_FP16_PARTICLE_STACKS], [], [Save particle stacks in reduced precision])
   	AC_MSG_NOTICE([Compiling with reduced precision particle stacks])	
   fi
   ]) 
+
+AC_ARG_ENABLE(fp16-tm-outputs, AS_HELP_STRING([--disable-fp16-tm-outputs],[Disable saving template matching outputs in reduced precision ]),[
+  if test "x$enableval" = "xno"; then
+  	AC_MSG_NOTICE([Not Compiling with reduced precision template matching outputs])	
+  else
+    AC_DEFINE([USE_FP16_TM_OUTPUTS], [], [Save template matching outputs in reduced precision])
+    AC_MSG_NOTICE([Compiling with reduced precision template matching outputs])	
+  fi
+  ],
+  [
+  AC_DEFINE([USE_FP16_TM_OUTPUTS], [], [Save template matching outputs in reduced precision])
+  AC_MSG_NOTICE([Compiling with reduced precision template matching outputs])
+  ])
 
 
   
@@ -337,14 +353,6 @@ AC_ARG_ENABLE(wx-webview, AS_HELP_STRING([--enable-wx-webview],[Compile with exp
 AM_CONDITIONAL([ENABLE_WEBVIEW_AM], [test x$want_webview = xtrue])
 
 
-
-AC_ARG_ENABLE(gpu-debug, AS_HELP_STRING([--enable-gpu-debug],[Compile heavy synchronous checking [default=no]]),[
-  if test "$enableval" = yes; then
-    AC_DEFINE([ENABLE_GPU_DEBUG],[], [use the gpu or not])
-  	AC_MSG_NOTICE([Compiling with synchronizing debug checks for GPU code])	
-  fi
-  ]) 
-  
 # experimental
 compile_experimental="false"
 AC_ARG_ENABLE(experimental, AS_HELP_STRING([--enable-experimental],[Compile with experimental [default=no]]),[
@@ -693,14 +701,18 @@ AC_SUBST(WX_CPPFLAGS_BASE)
 AC_SUBST(CUDA_CXXFLAGS)
 AC_SUBST(CUDA_CPPFLAGS)
 AC_SUBST(CUDA_LIBS)
+AC_SUBST(libFastFFT_OBJECTS)
 AC_SUBST(MKL_LIBS)
 AC_SUBST(LIBTOOL_FLAGS)
+
+
 
   AC_MSG_NOTICE([Using CUDA_CXXFLAGS=$CUDA_CXXFLAGS])
   AC_MSG_NOTICE([WX_LIBS_BASE=$WX_LIBS_BASE])
   AC_MSG_NOTICE([WX_LIBS=$WX_LIBS])
   AC_MSG_NOTICE([LIBS=$LIBS])
   AC_MSG_NOTICE([MKL_LIBS=$MKL_LIBS])
+  AC_MSG_NOTICE([libFastFFT_OBJECTS=$libFastFFT_OBJECTS])
 
 AC_CONFIG_FILES([Makefile src/Makefile])
 AC_CONFIG_HEADERS([cistem_config.h:cistem_config.in])

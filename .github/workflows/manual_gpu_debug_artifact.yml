@@ -52,7 +52,7 @@ jobs:
         rm -rf gpu-test-artifact/programs 2>/dev/null || true
         
     - name: Create GPU test artifact
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4
       with: 
         name: cistem-gpu-test-artifact
         path: gpu-test-artifact

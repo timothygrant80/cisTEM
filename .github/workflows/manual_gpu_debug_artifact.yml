@@ -1,0 +1,64 @@
+# This was made to build and store cisTEM programs so that they can be used for testing by copilot agent.
+# The GPU runner is not playing nice with the agent, and the artifacts seem unreasonably slow to fetch (10min)
+# This might be fixed with caching vs artifacts, or by specifying a smaller artifact size.
+# Leaving as it might be useful, and it is manually triggered. 
+
+name: Manual GPU Debug Artifact Build
+
+on:
+  workflow_dispatch:
+    # This enables manual triggering only
+    # This workflow creates GPU debug artifacts for testing purposes
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    container: 
+      image: cistemdashorg/cistem_build_env:v2.2.0
+      options: --user root --rm
+    steps:
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+        
+    - name: regenerate_project
+      run: ./regenerate_project.b
+      
+    - name: configure
+      env:
+        CC: icc
+        CXX: icpc
+      run: |
+        . /opt/intel/oneapi/setvars.sh && export PATH=/usr/bin:$PATH
+        mkdir -p build/GPU_debug 
+        cd build/GPU_debug 
+        echo $CC
+        echo $CXX
+        git config --global --add safe.directory /__w/cisTEM/cisTEM
+        ../../configure --enable-gpu-debug --enable-debugmode --with-cuda --disable-FastFFT --enable-openmp --enable-experimental --disable-multiple-global-refinements --with-wx-config=/opt/WX/icc-static/bin/wx-config
+        VERSION=$(cat config.log | grep CISTEM_VERSION_TEXT | cut -d' ' -f3 | tr -d '"')
+        echo "version=$VERSION" >> $GITHUB_OUTPUT
+        
+    - uses: ammaraskar/gcc-problem-matcher@master
+    
+    - name: make 
+      run: |
+        . /opt/intel/oneapi/setvars.sh && export PATH=/usr/bin:$PATH
+        cd build/GPU_debug && make -j 4
+        
+    - name: prepare artifacts
+      run: |
+        mkdir -p gpu-test-artifact
+        cp -r build/GPU_debug/src/*.* gpu-test-artifact/ || true
+        cp -r build/GPU_debug/src/* gpu-test-artifact/ || true
+        # Remove source directories to reduce artifact size
+        rm -rf gpu-test-artifact/core 2>/dev/null || true
+        rm -rf gpu-test-artifact/gui 2>/dev/null || true
+        rm -rf gpu-test-artifact/programs 2>/dev/null || true
+        
+    - name: Create GPU test artifact
+      uses: actions/upload-artifact@v4
+      with: 
+        name: cistem-gpu-test-artifact
+        path: gpu-test-artifact
+        retention-days: 90

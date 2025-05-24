@@ -12,6 +12,9 @@ on:
 jobs:
   cleanup:
     runs-on: ubuntu-latest
+    permissions:
+      actions: write  # Needed to delete workflow runs
+      contents: read  # Default permission to read repository contents
     steps:
       - name: Cleanup old workflow runs
         uses: actions/github-script@v6

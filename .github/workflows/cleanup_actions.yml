@@ -5,7 +5,7 @@ on:
     inputs:
       days:
         description: 'Days to keep workflows (default: 30, supports fractional values like 0.5)'
-        required: false
+        required: True
         default: '30'
         type: float
 

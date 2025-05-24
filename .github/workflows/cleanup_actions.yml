@@ -4,7 +4,7 @@ on:
   workflow_dispatch:
     inputs:
       days:
-        description: 'Days to keep workflows (default: 30)'
+        description: 'Days to keep workflows (default: 30, supports fractional values like 0.5)'
         required: false
         default: '30'
         type: string
@@ -20,11 +20,14 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            const daysToKeep = parseInt(core.getInput('days')) || 30;
+            // Parse the days input, supporting fractional values
+            const daysInput = core.getInput('days');
+            const parsedDays = parseFloat(daysInput);
+            const daysToKeep = !isNaN(parsedDays) ? parsedDays : 30;
             const cutoffDate = new Date();
             cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
             
-            console.log(`Cleaning up workflow runs older than ${daysToKeep} days (before ${cutoffDate.toISOString()})`);
+            console.log(`Cleaning up workflow runs older than ${daysToKeep} day${daysToKeep === 1 ? '' : 's'} (before ${cutoffDate.toISOString()})`);
             
             // Get list of all workflows
             const workflows = await github.rest.actions.listRepoWorkflows({

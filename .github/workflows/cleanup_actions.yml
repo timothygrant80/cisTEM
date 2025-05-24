@@ -24,8 +24,8 @@ jobs:
             const parsedDays = ${{ inputs.days }}
             const daysToKeep = !isNaN(parsedDays) ? parsedDays : 30;
             const cutoffDate = new Date();
-            cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);
-            
+            cutoffDate.setTime(cutoffDate.getTime() - (daysToKeep  * 24 * 60 * 60 * 1000));
+
             console.log(`Cleaning up workflow runs older than ${daysToKeep} day${daysToKeep === 1 ? '' : 's'} (before ${cutoffDate.toISOString()})`);
             
             // Get list of all workflows

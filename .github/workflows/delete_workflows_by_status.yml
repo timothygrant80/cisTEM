@@ -20,30 +20,75 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            // Get input status and map common formats to API status values
+            // Function to normalize status strings for comparison
+            // This will strip spaces, dashes, and underscores and convert to lowercase
+            // to help match different variations of the same status
+            function normalizeStatus(statusString) {
+              if (!statusString) return '';
+              return statusString.toLowerCase().replace(/[- _]/g, '');
+            }
+            
+            // Get input status and map common formats to API values
             let inputStatus = core.getInput('status') || 'action required';
             
             // Map of human-friendly status names to API values
             const statusMap = {
+              // Common human-readable to API mappings
               'action required': 'action_required',
+              'action_required': 'action_required', // Already in API format
+              'actionrequired': 'action_required',  // Without space
+              
               'in progress': 'in_progress',
+              'in_progress': 'in_progress',         // Already in API format
+              'inprogress': 'in_progress',          // Without space
+              
               'cancelled': 'cancelled',
+              'canceled': 'cancelled',              // Alternative spelling
+              
               'failure': 'failure',
+              'failed': 'failure',                  // Alternative wording
+              'fail': 'failure',                    // Short form
+              
               'success': 'success',
+              'successful': 'success',              // Alternative wording
+              'succeeded': 'success',               // Alternative wording
+              
               'queued': 'queued',
+              
               'waiting': 'waiting',
+              'wait': 'waiting',                    // Short form
+              
               'completed': 'completed',
+              'complete': 'completed',              // Alternative form
+              
               'neutral': 'neutral',
+              
               'skipped': 'skipped',
+              'skip': 'skipped',                    // Short form
+              
               'timed out': 'timed_out',
+              'timed_out': 'timed_out',             // Already in API format
+              'timeout': 'timed_out',               // Alternative wording
+              'timedout': 'timed_out',              // Without space
+              
               'requested': 'requested',
+              'request': 'requested',               // Short form
+              
               'pending': 'pending'
             };
             
-            // Convert to API status if needed
+            // Debug: Print out the complete status map for reference
+            console.log('Status mapping reference:');
+            for (const [humanStatus, apiStatus] of Object.entries(statusMap)) {
+              console.log(`  "${humanStatus}" → "${apiStatus}"`);
+            }
+            
+            // Convert to API status if needed - handle case insensitive matching
+            // Try to find a match in the status map, if not found, use the input as is
             const status = statusMap[inputStatus.toLowerCase()] || inputStatus;
             
-            console.log(`Looking for workflow runs with status: ${inputStatus} (API: ${status})`);
+            console.log(`Looking for workflow runs with status: "${inputStatus}" (API: "${status}")`);
+            console.log('Will print actual API status values for all workflow runs to help troubleshoot...');
             
             // Get list of all workflows
             const workflows = await github.rest.actions.listRepoWorkflows({
@@ -54,6 +99,7 @@ jobs:
             let deletedRuns = 0;
             let canceledRuns = 0;
             let processedWorkflows = 0;
+            let uniqueStatusesFound = new Set();  // Track unique status values for debugging
             
             // Process each workflow
             for (const workflow of workflows.data.workflows) {
@@ -80,12 +126,33 @@ jobs:
                 
                 // Process runs on this page
                 for (const run of runs.data.workflow_runs) {
+                  // Debug: Print the actual status of each run to help troubleshoot
+                  console.log(`Run #${run.id} for workflow "${workflow.name}" has actual API status: "${run.status}"`);
+                  
+                  // Track unique status values for debugging
+                  if (run.status) {
+                    uniqueStatusesFound.add(run.status);
+                  }
+                  
                   // Check if this run matches the requested status
-                  if (run.status === status) {
-                    console.log(`Found run #${run.id} with status "${status}" for workflow "${workflow.name}"`);
+                  // Try three different matching methods:
+                  // 1. Exact match (case insensitive)
+                  // 2. Normalized match (removing spaces, underscores, dashes)
+                  // 3. Check if one contains the other (for partial matches)
+                  const runStatus = run.status || '';
+                  const normalizedRunStatus = normalizeStatus(runStatus);
+                  const normalizedTargetStatus = normalizeStatus(status);
+                  
+                  if (runStatus.toLowerCase() === status.toLowerCase() || 
+                      normalizedRunStatus === normalizedTargetStatus || 
+                      normalizedRunStatus.includes(normalizedTargetStatus) || 
+                      normalizedTargetStatus.includes(normalizedRunStatus)) {
+                      
+                    console.log(`Found run #${run.id} with matching status "${runStatus}" for workflow "${workflow.name}"`);
+                    console.log(`Match details: Run status="${runStatus}" (normalized: "${normalizedRunStatus}"), Target="${status}" (normalized: "${normalizedTargetStatus}")`);
                     
                     // If the workflow is still in progress, cancel it first
-                    if (!['completed', 'cancelled', 'failure', 'success'].includes(run.status)) {
+                    if (!['completed', 'cancelled', 'failure', 'success'].includes(runStatus)) {
                       console.log(`Canceling run #${run.id} for workflow "${workflow.name}"`);
                       try {
                         await github.rest.actions.cancelWorkflowRun({
@@ -126,3 +193,16 @@ jobs:
             }
             
             console.log(`Operation complete. Processed ${processedWorkflows} workflows, canceled ${canceledRuns} runs, and deleted ${deletedRuns} workflow runs with status "${inputStatus}" (API: "${status}")`);
+            
+            // Print summary of all unique statuses found for debugging purposes
+            console.log(`\nUNIQUE API STATUS VALUES FOUND:`);
+            const uniqueStatusesArray = Array.from(uniqueStatusesFound).sort();
+            for (const uniqueStatus of uniqueStatusesArray) {
+              console.log(`  - "${uniqueStatus}"`);
+            }
+            console.log(`Total unique status values: ${uniqueStatusesArray.length}`);
+            
+            if (deletedRuns === 0) {
+              console.log(`\nNo matching workflow runs found with status "${status}".`);
+              console.log(`Please check if the target status exists in the list above and try again with the exact API status value.`);
+            }

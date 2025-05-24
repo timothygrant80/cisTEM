@@ -35,4 +35,16 @@ Common workflow statuses include:
 - `queued` - Workflows waiting to be run
 - `waiting` - Workflows waiting for conditions or approval
 
-This workflow will first cancel any active runs with the specified status, then delete them. The workflow automatically maps user-friendly status names to their API equivalents (e.g., "action required" to "action_required").
+When the workflow runs, it will print out all unique API status values found in your workflow history, which can be helpful for troubleshooting. If the workflow doesn't find any matching runs, you can try running it again using the exact API status value shown in the output.
+
+### Status Matching Logic
+
+The workflow uses three different methods to match the requested status with workflow runs:
+
+1. **Exact match** (case-insensitive): The status strings match exactly (ignoring case)
+2. **Normalized match**: After removing spaces, underscores, and dashes, the strings match
+3. **Partial match**: One normalized string contains the other
+
+This flexible matching helps ensure that variations like `action required`, `action_required`, and `actionrequired` all match the same workflows.
+
+The workflow will first cancel any active runs with the specified status, then delete them. It automatically maps user-friendly status names to their API equivalents (e.g., "action required" to "action_required").

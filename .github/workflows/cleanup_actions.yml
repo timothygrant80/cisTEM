@@ -5,9 +5,9 @@ on:
     inputs:
       days:
         description: 'Days to keep workflows (default: 30, supports fractional values like 0.5)'
-        required: True
-        default: '30'
-        type: float
+        required: true
+        default: 30.0
+        type: number
 
 jobs:
   cleanup:
@@ -22,8 +22,8 @@ jobs:
           script: |
             // Parse the days input, supporting fractional values
             const daysInput = core.getInput('days');
-            console.log(`daysInput ${daysInput} alternatively ${{ github.event.inputs.myInput }}"`);
-            const parsedDays = parseFloat(daysInput);
+            console.log(`daysInput ${daysInput} alternatively ${{ github.event.inputs.myInput }} inputs ${{ inputs.days }}"`);
+            const parsedDays = ${{ inputs.days }}
             const daysToKeep = !isNaN(parsedDays) ? parsedDays : 30;
             const cutoffDate = new Date();
             cutoffDate.setDate(cutoffDate.getDate() - daysToKeep);

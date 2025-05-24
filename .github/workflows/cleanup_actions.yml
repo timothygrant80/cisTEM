@@ -22,7 +22,7 @@ jobs:
           script: |
             // Parse the days input, supporting fractional values
             const daysInput = core.getInput('days');
-            console.log(`daysInput ${daysInput} day${daysInput === 1 ? '' : 's'} (before ${cutoffDate.toISOString()})`);
+            console.log(`daysInput ${daysInput}`);
             const parsedDays = parseFloat(daysInput);
             const daysToKeep = !isNaN(parsedDays) ? parsedDays : 30;
             const cutoffDate = new Date();

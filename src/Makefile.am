@@ -1123,9 +1123,9 @@ azimuthal_average_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 azimuthal_average_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
 azimuthal_average_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
-blush_refinement_SOURCES  = programs/blush_refinement/blush_refinement.cpp
+blush_refinement_SOURCES  = programs/blush_refinement/blush_refinement.cpp programs/blush_refinement/blush_model.cpp
 blush_refinement_CXXFLAGS = $(WX_CPPFLAGS_BASE)
-blush_refinement_CPPFLAGS = $(WX_CPPFLAGS_BASE) -I/mnt/libtorch/include -I/mnt/libtorch/include/torch/csrc/api/include -diag-disable 1011 -diag-disable 2196 -diag-disable 1628
+blush_refinement_CPPFLAGS = $(WX_CPPFLAGS_BASE) -I/mnt/libtorch/include -I/mnt/libtorch/include/torch/csrc/api/include -diag-disable 1011 -diag-disable 2196 -diag-disable 1628 -diag-disable 186
 # blush_refinement_CPPFLAGS = -I/home/tim/VS_Projects/embedding_python_practice/include/libtorch/include -I/home/tim/VS_Projects/embedding_python_practice/include/libtorch/include/torch/csrc/api/include $(WX_CPPFLAGS_BASE) 
 blush_refinement_LDADD    = -L/mnt/libtorch/lib -ltorch -ltorch_cpu -lc10 libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
 # blush_refinement_LDADD = libcore.a -L/home/tim/VS_Projects/embedding_python_practice/include/libtorch/lib -ltorch -ltorch_cpu -lc10 $(WX_LIBS_BASE) 

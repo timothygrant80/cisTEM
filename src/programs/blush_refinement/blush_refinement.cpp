@@ -2,12 +2,13 @@
 // LibTorch v2.5.0+cpu used to run this code.
 #include <torch/nn/functional/conv.h>
 #include <torch/script.h>
-#include <torch/torch.h>
+// #include <torch/torch.h>
 #include <chrono>
 
-// #include "blush_model.h" // includes torch/torch.h
 #include "../../core/core_headers.h"
 #include <numeric>
+
+#include "blush_model.h" // includes torch/torch.h
 
 using namespace torch::indexing;
 using torch::Tensor;
@@ -214,6 +215,7 @@ void BlushRefinement::DoInteractiveUserInput( ) {
 
 // NOTE: all libtorch functionality sorts by and assumes z, y, x rather than x, y, z
 bool BlushRefinement::DoCalculation( ) {
+
     // compare_text_file_lines("real_values.txt", "misc_txts/py_real_values.txt", "misc_txts/comp_real_values.txt");
     // compare_text_file_lines("real_values.txt", "model_input_txts/py_1D_tensor_real_values.txt", "comp_torchscript_0_60_60.txt");
     // compare_text_file_lines("real_values.txt", "model_input_txts/py_3D_tensor_real_values_zyx.txt", "comp_torchscript_0_60_60_zyx.txt");
@@ -245,8 +247,8 @@ bool BlushRefinement::DoCalculation( ) {
 
     // return false;
     // Minimal Slice issue example:
-    // using namespace torch::indexing::Slice
-    // using torch::Tensor
+    // using namespace torch::indexing::Slice;
+    using torch::Tensor;
     // {
     //     // 1. Create a multidimensional tensor.
     //     try {
@@ -334,18 +336,38 @@ bool BlushRefinement::DoCalculation( ) {
     // abort( );
 
     // NOTE: This is crucial for giving improved runtime for tensor ops
-    // torch::set_num_threads(max_threads / 2);
-    // torch::set_num_interop_threads(max_threads / 2);
-    // torch::set_num_threads(1);
+    torch::set_num_threads(1);
+    // torch::set_num_interop_threads(max_threads);
 
     // NOTE: These are parameters that are directly relevant to the processing in the model
     // model_voxel_size and model_block_size are values that are predetermined in model parameters; the latter 3
     // could technically be user specified.
 
-    torch::jit::script::Module model;
-    MRCFile                    input_mrc(input_volume_filename);
-    float                      vol_original_pixel_size = input_mrc.ReturnPixelSize( );
-    Image                      input_volume;
+    BlushModel model(2, 2);
+    try {
+        // DEBUG: write out model params for comparison to python layers
+        std::ofstream params_txt("cpp_named_params.txt", std::iostream::trunc | std::iostream::out);
+        params_txt.close( );
+        params_txt.open("cpp_named_params.txt", std::ios::app);
+        if ( params_txt.is_open( ) ) {
+            for ( auto& param : model.named_parameters( ) ) {
+                params_txt << param.key( ) << std::endl;
+            }
+        }
+        else {
+            wxPrintf("Error opening cpp_named_params.txt");
+        }
+        model.load_weights("test_weights_saving_function.dat");
+    } catch ( std::exception& e ) {
+        wxPrintf("%s\n", e.what( ));
+    }
+
+    // Set to evaluation mode:
+    model.eval( );
+
+    MRCFile input_mrc(input_volume_filename);
+    float   vol_original_pixel_size = input_mrc.ReturnPixelSize( );
+    Image   input_volume;
 
     float scale_factor = vol_original_pixel_size / model_voxel_size;
     // Uh-oh, our new box size isn't even; make it so
@@ -364,7 +386,7 @@ bool BlushRefinement::DoCalculation( ) {
     if ( use_dbg )
         wxPrintf("new_box_size == %i\n", new_box_size);
 
-    std::vector<torch::jit::IValue> inputs; // For passing tensors to model
+    // std::vector<torch::jit::IValue> inputs; // For passing tensors to model
 
     wxDateTime overall_start = wxDateTime::Now( );
     wxDateTime overall_finish;
@@ -399,18 +421,18 @@ bool BlushRefinement::DoCalculation( ) {
     }
 
     // Read traced model
-    {
-        // NOTE: this presupposes that the traced model will be present within the execution directory. It would
-        // be useful to find a way to store the traced model in the cisTEM/src/programs/blush_refinement
-        // and copy it to the build directory during compiling to simplify packaging the model alongside
-        // the binaries.
-        wxString model_directory{wxStandardPaths::Get( ).GetExecutablePath( )};
-        model_directory = model_directory.BeforeLast('/');
-        model_directory += "/traced_blush_with_script.pt";
-        model_filename = model_directory.ToStdString( );
-        // DEBUG:
-        wxPrintf("\nModel path: %s\n\n", model_filename);
-    }
+    // {
+    //     // NOTE: this presupposes that the traced model will be present within the execution directory. It would
+    //     // be useful to find a way to store the traced model in the cisTEM/src/programs/blush_refinement
+    //     // and copy it to the build directory during compiling to simplify packaging the model alongside
+    //     // the binaries.
+    //     wxString model_directory{wxStandardPaths::Get( ).GetExecutablePath( )};
+    //     model_directory = model_directory.BeforeLast('/');
+    //     model_directory += "/traced_blush_with_script.pt";
+    //     model_filename = model_directory.ToStdString( );
+    //     // DEBUG:
+    //     wxPrintf("\nModel path: %s\n\n", model_filename);
+    // }
 
     if ( use_dbg )
         wxPrintf("Blush model successfully loaded.\n");
@@ -420,7 +442,35 @@ bool BlushRefinement::DoCalculation( ) {
     in_std = torch::zeros({box_size, box_size, box_size}); // locally derived standard deviation -- passed to model
     input_volume.RemoveFFTWPadding( );
 
-    real_values_tensor = torch::from_blob(input_volume.real_values, {num_pixels}, torch::kFloat32);
+    real_values_tensor = torch::zeros({box_size, box_size, box_size}, torch::kFloat32);
+    real_values_tensor = torch::from_blob(input_volume.real_values, {box_size, box_size, box_size}, torch::kFloat32).contiguous( );
+    real_values_tensor = real_values_tensor.permute({2, 1, 0}).contiguous( );
+    // real_values_tensor = torch::swapaxes(real_values_tensor, 0, 2); // Torch expects z-fastest (i.e., z, y, x organization) rather than x-fastest, which cisTEM uses, so swap those axes
+    // write_real_values_to_text_file("reshaped_cpp_vals.txt", box_size, false, true, &real_values_tensor);
+    // compare_text_file_lines("reshaped_cpp_vals.txt", "py_tensorized_real_values.txt", "comp_read_in_values.txt");
+    // #pragma omp parallel for collapse(3) num_threads(max_threads)
+    //     for ( int z = 0; z < box_size; ++z ) {
+    //         for ( int y = 0; y < box_size; ++y ) {
+    //             for ( int x = 0; x < box_size; ++x ) {
+    //                 // x changes fastest in your array
+    //                 int idx                     = x + y * box_size + z * box_size * box_size;
+    //                 real_values_tensor[x][y][z] = input_volume.real_values[idx];
+    //             }
+    //         }
+    //     }
+
+    // try {
+    //     // Compare whole block
+    //     write_real_values_to_text_file("full_tensor_cpp.txt", box_size, false, true, &real_values_tensor);
+    //     compare_text_file_lines("full_tensor_cpp.txt", "full_tensor_py.py", "new_comp_full_tensor.txt");
+
+    //     // Compare slice
+    //     auto slice_of_rv = real_values_tensor.slice(0, 0, 64, 1).slice(1, 0, 64, 1).slice(2, 0, 64, 1);
+    //     write_real_values_to_text_file("sliced_tensor_cpp.txt", model_block_size, false, true, &slice_of_rv);
+    //     compare_text_file_lines("sliced_tensor_cpp.txt", "sliced_tensor_py.py", "new_comp_slicing.txt");
+    // } catch ( std::exception& e ) {
+    //     wxPrintf("%s\n", e.what( ));
+    // }
 
     if ( torch::any(torch::isnan(real_values_tensor)).item<bool>( ) ) {
         wxPrintf("This tensor contains NaN values.\n");
@@ -428,8 +478,15 @@ bool BlushRefinement::DoCalculation( ) {
     if ( torch::any(torch::isinf(real_values_tensor)).item<bool>( ) ) {
         wxPrintf("Tensor contains inf values.\n");
     }
+    // try {
+    //     real_values_tensor = real_values_tensor.permute({2, 1, 0}).contiguous( );
+    // } catch ( std::exception& e ) {
+    //     wxPrintf("Error permuting: %s\n", e.what( ));
+    // }
 
-    real_values_tensor = real_values_tensor.reshape({box_size, box_size, box_size}); // Shape this as a 3D volume instead of linearized 1D
+    wxPrintf("Image mean: %f\n", input_volume.ReturnAverageOfRealValues( ));
+    wxPrintf("Tensor mean: %f\n", torch::mean(real_values_tensor).item<float>( ));
+    wxPrintf("Other tensor mean (.mean()): %f\n", real_values_tensor.mean( ).item<float>( ));
 
     if ( use_dbg )
         wxPrintf("Loaded real_values into tensor; shape is: %ld, %ld, %ld\n", real_values_tensor.size(0), real_values_tensor.size(1), real_values_tensor.size(2));
@@ -437,12 +494,16 @@ bool BlushRefinement::DoCalculation( ) {
 
     wxPrintf("Generating post-processing grids.\n");
 
-    Tensor             weights_tensor = make_weight_box(model_block_size, 10);
+    Tensor weights_tensor = make_weight_box(model_block_size, 10);
+    // wxPrintf("Comparing weights tensor to Python weights tensor...\n");
+    // compare_text_file_lines("initial_weights_grid_vals.txt", "py_weight_block.txt", "comp_weights_grid_vals.txt", true);
     std::vector<float> weights_grid(std::pow(model_block_size, 3));
     std::memcpy(weights_grid.data( ), weights_tensor.data_ptr<float>( ), std::pow(model_block_size, 3) * sizeof(float));
 
-    std::vector<float> infer_grid(num_pixels);
-    std::vector<float> count_grid(num_pixels);
+    // std::vector<float> infer_grid(num_pixels);
+    // std::vector<float> count_grid(num_pixels);
+    Tensor infer_grid = torch::zeros({box_size, box_size, box_size}, torch::kFloat32);
+    Tensor count_grid = torch::zeros({box_size, box_size, box_size}, torch::kFloat32);
 
     wxPrintf("Completed generation of post-processing grids.\n");
 
@@ -476,8 +537,13 @@ bool BlushRefinement::DoCalculation( ) {
         return false;
     }
 
+    // Check if the Python and C++ standard deviation tensors match (and real_values_tensor post normalization)
     if ( use_dbg ) {
-        wxPrintf("in_std shape after std dev block: [%ld, %ld, %ld]\n", in_std.size(0), in_std.size(1), in_std.size(2) /*in_std.size(3)*/);
+        // wxPrintf("in_std shape after std dev block: [%ld, %ld, %ld]\n", in_std.size(0), in_std.size(1), in_std.size(2) /*in_std.size(3)*/);
+        // write_real_values_to_text_file("in_std_after_norm_cpp.txt", box_size, false, true, &in_std);
+        // write_real_values_to_text_file("real_values_tensor_after_in_std_norm_cpp.txt", box_size, false, true, &real_values_tensor);
+        // compare_text_file_lines("in_std_after_norm_cpp.txt", "in_std_after_norm_py.txt", "comp_in_std_after_norm.txt");
+        // compare_text_file_lines("real_values_tensor_after_in_std_norm_cpp.txt", "real_values_tensor_after_in_std_norm_py.txt", "comp_real_values_tensor_after_in_std_norm.txt");
         // compare_text_file_lines("get_local_std_dev1.txt", "get_local_std_dev2.txt", "dif_iter_local_std_dev_cmp.txt");
     }
 
@@ -507,10 +573,7 @@ bool BlushRefinement::DoCalculation( ) {
         float           radius            = particle_diameter / (2 * model_voxel_size) + mask_edge_width / 2.0f;
         radius                            = std::min(radius, ((new_box_size - mask_edge_width) / 2.0f) + 1);
 
-        // #pragma omp parallel for default(shared) num_threads(max_threads)
-        for ( int pixel_counter = 0; pixel_counter < num_pixels; pixel_counter++ ) {
-            direct_input_mask.real_values[pixel_counter] = 1;
-        }
+        direct_input_mask.SetToConstant(1);
         direct_input_mask.CosineMask(radius, mask_edge_width, false, true);
 
         // Check cosine mask
@@ -520,14 +583,49 @@ bool BlushRefinement::DoCalculation( ) {
 
         direct_input_mask.RemoveFFTWPadding( );
         mask_tensor = torch::from_blob(direct_input_mask.real_values, {box_size, box_size, box_size}, torch::kFloat32);
-        // mask_tensor = mask_tensor.swapaxes(0, 2);
+        mask_tensor = mask_tensor.permute({2, 1, 0}).contiguous( );
         // mask_tensor         = mask_tensor.reshape({new_box_size, new_box_size, new_box_size});
+
+        // Check if tensor masks work with a single thread
+        if ( use_dbg ) {
+            Tensor tmp_reals  = real_values_tensor.clone( );
+            Tensor tmp_in_std = in_std.clone( );
+
+            tmp_reals *= mask_tensor;
+            tmp_in_std *= mask_tensor;
+
+            // wxPrintf("Writing masked tensors...\n");
+            // write_real_values_to_text_file("cpp_masked_volume.txt", box_size, false, true, &tmp_reals);
+            // write_real_values_to_text_file("cpp_masked_in_std.txt", box_size, false, true, &tmp_in_std);
+            // wxPrintf("Comparing masked tensors...\n");
+            // compare_text_file_lines("cpp_masked_volume.txt", "python_masked_volume_output.txt", "comp_masked_volume.txt");
+            // compare_text_file_lines("cpp_masked_in_std.txt", "python_masked_in_std_output.txt", "comp_masked_in_std.txt");
+
+            // Switch from z-fastest back to x-fastest
+            tmp_reals  = tmp_reals.permute({2, 1, 0}).contiguous( );
+            tmp_in_std = tmp_in_std.permute({2, 1, 0}).contiguous( );
+
+            // Now copy to cisTEM for writing out
+            Image tmp_masked_vol(input_volume);
+            Image tmp_masked_in_std(input_volume);
+
+            std::memcpy(tmp_masked_vol.real_values, tmp_reals.data_ptr<float>( ), num_pixels * sizeof(float));
+            std::memcpy(tmp_masked_in_std.real_values, tmp_in_std.data_ptr<float>( ), num_pixels * sizeof(float));
+            tmp_masked_vol.AddFFTWPadding( );
+            tmp_masked_in_std.AddFFTWPadding( );
+            tmp_masked_vol.QuickAndDirtyWriteSlices("tensor_masked_volume.mrc", 1, box_size, true);
+            tmp_masked_in_std.QuickAndDirtyWriteSlices("tensor_masked_in_std.mrc", 1, box_size, true);
+        }
 
         if ( use_dbg ) {
             std::memcpy(direct_input_mask.real_values, mask_tensor.data_ptr<float>( ), num_pixels * sizeof(float));
             direct_input_mask.AddFFTWPadding( );
             direct_input_mask.QuickAndDirtyWriteSlices("cli_binary_mask.mrc", 1, box_size, true);
             direct_input_mask.RemoveFFTWPadding( ); // To keep consistent with the non-debug state of the Image mask
+
+            // Check means:
+            wxPrintf("Mask info:\nTensor mean = %f\ncisTEM mean = %f\n", mask_tensor.mean( ).item<float>( ), direct_input_mask.ReturnAverageOfRealValues( ));
+            wxPrintf("mask_tensor dims: [%ld, %ld, %ld]\n", mask_tensor.size(0), mask_tensor.size(1), mask_tensor.size(2));
 
             // Also check in_std and real_values tensor
             Image tmp_real;
@@ -574,18 +672,6 @@ bool BlushRefinement::DoCalculation( ) {
             in_std_img.RemoveFFTWPadding( );
             std::memcpy(real_values_tensor.data_ptr<float>( ), input_volume.real_values, num_pixels * sizeof(float));
             std::memcpy(in_std.data_ptr<float>( ), in_std_img.real_values, num_pixels * sizeof(float));
-
-            // torch::swapaxes(real_values_tensor, 0, 2);
-            // torch::swapaxes(in_std, 0, 2);
-            // write_real_values_to_text_file("real_values.txt", box_size, true, true, nullptr, input_volume.real_values);
-            // write_real_values_to_text_file("in_std.txt", box_size, true, true, nullptr, in_std_img.real_values);
-            // torch::swapaxes(real_values_tensor, 0, 2);
-            // torch::swapaxes(in_std, 0, 2);
-            // Check against Python (for both):
-            // write_real_values_to_text_file("masked_volume_output.txt", box_size, false, true, &real_values_tensor);
-            // write_real_values_to_text_file("masked_in_std_output.txt", box_size, false, true, &in_std);
-            // compare_text_file_lines("masked_volume_output.txt", "python_masked_volume_output.txt", "comp_masked_volume.txt", true);
-            // compare_text_file_lines("masked_in_std_output.txt", "python_masked_in_std_output.txt", "comp_masked_in_std.txt", true);
         }
     } catch ( std::exception& e ) {
         wxPrintf("Error generating/applying mask. %s\n", e.what( ));
@@ -624,24 +710,126 @@ bool BlushRefinement::DoCalculation( ) {
                  in_std.size(3));
     }
 
-    try {
-        // FIXME: this works for now for testing purposes; but, this would need to be included alongside the project whenever blush was needed
-        // model = torch::jit::load("/home/tim/VS_Projects/cisTEM/src/programs/blush_refinement/blush_model.pt");
-        wxPrintf("Loading model...\n");
-        model = torch::jit::load(model_filename);
-    } catch ( std::exception& e ) {
-        wxPrintf("Failed to load blush model: %s\n", e.what( ));
-        return false;
-    }
+    // try {
+    //     // FIXME: this works for now for testing purposes; but, this would need to be included alongside the project whenever blush was needed
+    //     // model = torch::jit::load("/home/tim/VS_Projects/cisTEM/src/programs/blush_refinement/blush_model.pt");
+    //     wxPrintf("Loading model...\n");
+    //     model = torch::jit::load(model_filename);
+    // } catch ( std::exception& e ) {
+    //     wxPrintf("Failed to load blush model: %s\n", e.what( ));
+    //     return false;
+    // }
 
     Tensor output_vol_tensor, output_mask_tensor; // output,
     direct_input_mask.AddFFTWPadding( );
+
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // Try passing the entire volume and mask to the model instead of blocking for now; then do the same in Python, so the two can be compared to see if the model is working as anticipated.
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    // auto full_volume_passed_output    = model.forward(real_values_tensor, in_std);
+    // auto output_of_full_volume_passed = std::get<0>(full_volume_passed_output);
+    // output_of_full_volume_passed      = output_of_full_volume_passed.squeeze(0);
+    // write_real_values_to_text_file("full_volume_output_cpp.txt", box_size, false, true, &output_of_full_volume_passed);
+    // // Compare the volume with the Python values
+    // compare_text_file_lines("full_volume_output_cpp.txt", "full_volume_output_py.txt", "comp_full_volume_output.txt");
+    // {
+    //     Image full_volume_output;
+    //     full_volume_output.Allocate(&input_volume);
+    //     output_of_full_volume_passed = output_of_full_volume_passed.permute({2, 1, 0}).contiguous( ); // switch back to x-fastest
+    //     std::memcpy(full_volume_output.real_values, output_of_full_volume_passed.data_ptr<float>( ), num_pixels * sizeof(float));
+    //     full_volume_output.AddFFTWPadding( );
+    //     full_volume_output.QuickAndDirtyWriteSlices("full_volume_output_cpp.mrc", 1, box_size, true);
+    // }
+    // return true;
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
+    //     std::ifstream py_vals_txt("full_volume_output_py.txt");
+    //     std::string   s;
+    //     at::Tensor    python_vals = torch::zeros({num_pixels}, torch::kFloat32);
+    //     wxPrintf("Loading Py values...\n");
+    // #pragma omp parallel for num_threads(max_threads)
+    //     for ( int k = 0; k < box_size; k++ ) {
+    //         std::getline(py_vals_txt, s);
+    //         std::istringstream in_val(s);
+    //         float              val;
+    //         in_val >> val;
+    //         python_vals[k] = val;
+    //     }
+
+    //     python_vals = python_vals.reshape({box_size, box_size, box_size});
+
+    //     std::ofstream comp("comp_full_volume_output.txt", std::ofstream::trunc | std::ofstream::out);
+    //     comp.close( );
+    //     comp.open("comp_full_volume_output.txt", std::ios::app);
+    //     // #pragma omp parallel for num_threads(max_threads) collapse(3)
+    //     wxPrintf("Comparing real values...\n");
+    //     try {
+    //         constexpr float eps              = 1e-2;
+    //         torch::Tensor   diff             = (output_of_full_volume_passed - python_vals).abs( );
+    //         torch::Tensor   within_tolerance = diff.le(eps);
+
+    //         for ( int x = 0; x < box_size; x++ ) {
+    //             for ( int y = 0; y < box_size; y++ ) {
+    //                 for ( int z = 0; z < box_size; z++ ) {
+    //                     if ( within_tolerance[z][y][x].item<bool>( ) )
+    //                         comp << "SAME" << std::endl;
+    //                     else
+    //                         comp << "DIFFERENT" << std::endl;
+    //                 }
+    //             }
+    //         }
+    //         comp.close( );
+    //     } catch ( std::exception& e ) {
+    //         wxPrintf("%s\n", e.what( ));
+    //     }
+
+    // wxPrintf("Comparing full volume outputs....\n");
+    // compare_text_file_lines("full_volume_output_cpp.txt", "full_volume_output_py.txt", "comp_full_volume_output.txt");
+    // {
+    //     output_of_full_volume_passed = torch::swapaxes(output_of_full_volume_passed, 0, 2); // switch back to x-fastest before copying back to cisTEM volume
+    //     Image output_volume;
+    //     output_volume.Allocate(new_box_size, new_box_size, new_box_size);
+    //     if ( use_dbg )
+    //         wxPrintf("About to copy output tensor to real_values in output volume...\n");
+    //     // Perhaps this memcpy is going wrong
+    //     std::memcpy(output_volume.real_values, output_of_full_volume_passed.data_ptr<float>( ), num_pixels * sizeof(float));
+    //     output_volume.AddFFTWPadding( );
+
+    //     if ( scale_factor != 1 ) {
+    //         output_volume.ForwardFFT( );
+    //         output_volume.Resize(input_volume.logical_x_dimension / scale_factor, input_volume.logical_x_dimension / scale_factor, input_volume.logical_x_dimension / scale_factor);
+    //         output_volume.Resize(input_mrc.ReturnXSize( ), input_mrc.ReturnXSize( ), input_mrc.ReturnXSize( ));
+    //         output_volume.BackwardFFT( );
+    //     }
+
+    //     output_volume.QuickAndDirtyWriteSlices(output_mrc_filename, 1, output_volume.logical_x_dimension, true);
+
+    //     wxPrintf("Blush complete.\n");
+    //     overall_finish      = wxDateTime::Now( );
+    //     wxTimeSpan duration = overall_finish.Subtract(overall_start);
+    //     wxPrintf("Total blush runtime:         %s\n", duration.Format( ));
+    // }
+    // return true;
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+    //////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+
     try {
         wxPrintf("Running blush model...\n");
         blush_start = wxDateTime::Now( );
 
         BlockIterator it({new_box_size, new_box_size, new_box_size}, model_block_size, strides);
         int           bi = 0;
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // DEBUG:
+        std::ofstream out_vals("cpp_means.txt", std::ofstream::trunc | std::ofstream::out);
+        out_vals.close( );
+        out_vals.open("cpp_tensor_means.txt", std::ios::app);
+        std::ofstream cistem_mean_vals("cistem_mean_vals.txt", std::ofstream::trunc | std::ofstream::out);
+        cistem_mean_vals.close( );
+        cistem_mean_vals.open("cistem_mean_vals.txt", std::ios::app);
+        ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+        // #pragma omp parallel for num_threads(max_threads) default(shared)
         for ( auto it_coords : it ) {
             Tensor real_val_block = torch::zeros({1, model_block_size, model_block_size, model_block_size});
             Tensor std_dev_block  = torch::zeros({1, model_block_size, model_block_size, model_block_size});
@@ -649,36 +837,47 @@ bool BlushRefinement::DoCalculation( ) {
             int x = std::get<0>(it_coords);
             int y = std::get<1>(it_coords);
             int z = std::get<2>(it_coords);
-            wxPrintf("x == %i, y == %i, z == %i\n", x, y, z);
+            // wxPrintf("x == %i, y == %i, z == %i\n", x, y, z);
 
             // -1 is the stop value returned by the iterator when all blocks are done
             // If we have -1, then we should just be done.
             if ( x > -1 ) {
+                // float manual_mean;
                 float cur_array_sum = 0.0f;
-                for ( int k = z; k < z + model_block_size; k++ ) {
-                    for ( int j = y; j < y + model_block_size; j++ ) {
-                        for ( int i = x; i < x + model_block_size; i++ ) {
-                            float cur_array_val = direct_input_mask.ReturnRealPixelFromPhysicalCoord(i, j, k);
-                            cur_array_sum += cur_array_val;
-                            // if ( use_dbg ) {
-                            //     ofarray_slice << cur_array_val << std::endl;
-                            // }
-                        }
-                    }
-                }
-                float mask_mean = cur_array_sum / std::pow(model_block_size, 3);
-                wxPrintf("mask manual mean: %f\n", mask_mean);
+                // for ( int k = z; k < z + model_block_size; k++ ) {
+                //     for ( int j = y; j < y + model_block_size; j++ ) {
+                //         for ( int i = x; i < x + model_block_size; i++ ) {
+                //             float cur_array_val = direct_input_mask.ReturnRealPixelFromPhysicalCoord(i, j, k);
+                //             cur_array_sum += cur_array_val;
+                //             // if ( use_dbg ) {
+                //             //     ofarray_slice << cur_array_val << std::endl;
+                //             // }
+                //         }
+                //     }
+                // }
+                auto  current_slice = mask_tensor.slice(0, z, z + model_block_size, 1).slice(1, y, y + model_block_size, 1).slice(2, x, x + model_block_size, 1);
+                float mask_mean     = current_slice.mean( ).item<float>( );
+                // manual_mean         = cur_array_sum / std::pow(model_block_size, 3);
+
+                // DEBUG:
+                if ( out_vals.is_open( ) )
+                    out_vals << mask_mean << std::endl;
+                // if ( cistem_mean_vals.is_open( ) )
+                //     cistem_mean_vals << manual_mean << std::endl;
+
+                // wxPrintf("mask tensor mean: %f\n", mask_mean);
+                // wxPrintf("manual mask mean: %f\n", manual_mean);
                 if ( mask_mean < 0.3 ) {
-                    if ( x == 0 && y == 0 && z == 0 ) {
-                        std::ofstream ofs;
-                        ofs.open("cpp_throw_out.txt", std::ofstream::out | std::ofstream::trunc);
-                        ofs.close( );
-                    }
-                    std::ofstream ofile("cpp_throw_out.txt", std::ios::app);
-                    if ( ofile.is_open( ) ) {
-                        ofile << "THROW" << std::endl;
-                        ofile.close( );
-                    }
+                    // if ( x == 0 && y == 0 && z == 0 ) {
+                    //     std::ofstream ofs;
+                    //     ofs.open("cpp_throw_out.txt", std::ofstream::out | std::ofstream::trunc);
+                    //     ofs.close( );
+                    // }
+                    // std::ofstream ofile("cpp_throw_out.txt", std::ios::app);
+                    // if ( ofile.is_open( ) ) {
+                    //     ofile << "THROW" << std::endl;
+                    //     ofile.close( );
+                    // }
                     continue;
                 }
                 // else {
@@ -690,401 +889,106 @@ bool BlushRefinement::DoCalculation( ) {
                 // }
 
                 // tensors have inherent zyx; so x coord must start from k, and z from i (y unaffected)
-                for ( int k = 0; k < model_block_size; k++ ) {
-                    for ( int j = 0; j < model_block_size; j++ ) {
-                        for ( int i = 0; i < model_block_size; i++ ) {
-                            real_val_block.index({0, i, j, k}) = input_volume.ReturnRealPixelFromPhysicalCoord(k + x, j + y, i + z);
-                            std_dev_block.index({0, i, j, k})  = in_std_img.ReturnRealPixelFromPhysicalCoord(k + x, j + y, i + z);
-                            // real_val_block.index({0, i, j, k}) = real_values_tensor.index({0, i + x, j + y, k + z}).item<float>( );
-                            // std_dev_block.index({0, i, j, k})  = in_std.index({0, i + x, j + y, k + z}).item<float>( );
-                        }
-                    }
-                }
-                // Manually load the tensors
-                // for ( int k = z; k < z + model_block_size; k++ ) {
-                //     for ( int j = y; j < y + model_block_size; j++ ) {
-                //         for ( int i = x; i < x + model_block_size; i++ ) {
-                //             real_val_block[0][i - x][j - y][k - z] = real_values_tensor[0][i][j][k].item<float>( );
-                //             std_dev_block[0][i - x][j - y][k - z]  = in_std[0][i][j][k].item<float>( );
+                // for ( int k = 0; k < model_block_size; k++ ) {
+                //     for ( int j = 0; j < model_block_size; j++ ) {
+                //         for ( int i = 0; i < model_block_size; i++ ) {
+                //             real_val_block.index({0, i, j, k}) = input_volume.ReturnRealPixelFromPhysicalCoord(k + x, j + y, i + z);
+                //             std_dev_block.index({0, i, j, k})  = in_std_img.ReturnRealPixelFromPhysicalCoord(k + x, j + y, i + z);
+                //             // real_val_block.index({0, i, j, k}) = real_values_tensor.index({0, i + x, j + y, k + z}).item<float>( );
+                //             // std_dev_block.index({0, i, j, k})  = in_std.index({0, i + x, j + y, k + z}).item<float>( );
                 //         }
                 //     }
                 // }
-
-                if ( use_dbg && x == 0 && y == 60 && z == 60 ) {
-                    wxPrintf("About to write and compare files...\n");
-                    // write_real_values_to_text_file("model_input_txts/real_vals_sliced_0_60_60.txt", model_block_size, false, true, &real_val_block);
-                    // write_real_values_to_text_file("model_input_txts/in_std_sliced_0_60_60.txt", model_block_size, false, true, &std_dev_block);
-                    // compare_text_file_lines("model_input_txts/real_vals_sliced_0_60_60.txt", "model_input_txts/python_torchscript_model_input_0_60_60.txt", "model_input_txts/comp_torchscript_input_0_60_60.txt");
-                    // Read in values from the Python side and pass to the TorchScript model to see if the TorchScript outputs are even the same
-                    std::unique_ptr<float[]> rv_arr(new float[num_subset_pixels]);
-                    std::unique_ptr<float[]> is_array(new float[num_subset_pixels]);
-                    read_real_values_from_text_file("model_input_txts/python_torchscript_model_input_0_60_60.txt", rv_arr, model_block_size);
-                    read_real_values_from_text_file("model_input_txts/python_torchscript_in_std_model_input_0_60_60.txt", is_array, model_block_size);
-
-                    for ( int pixel_counter = 0; pixel_counter < num_subset_pixels; pixel_counter++ ) {
-                        int x_ = pixel_counter / (model_block_size * model_block_size);
-                        int y_ = (pixel_counter / model_block_size) % model_block_size;
-                        int z_ = pixel_counter % model_block_size;
-
-                        real_val_block.index({0, z_, y_, x_}) = rv_arr[pixel_counter];
-                        std_dev_block.index({0, z_, y_, x_})  = is_array[pixel_counter];
-                    }
-                    // write_real_values_to_text_file("model_input_txts/real_vals_sliced_0_60_60.txt", model_block_size, false, true, &real_val_block);
-                    // write_real_values_to_text_file("model_input_txts/in_std_sliced_0_60_60.txt", model_block_size, false, true, &std_dev_block);
-                    // compare_text_file_lines("model_input_txts/real_vals_sliced_0_60_60.txt", "model_input_txts/python_torchscript_model_input_0_60_60.txt", "model_input_txts/comp_torchscript_input_0_60_60.txt");
-                    // compare_text_file_lines("model_input_txts/in_std_sliced_0_60_60.txt", "model_input_txts/python_torchscript_in_std_model_input_0_60_60.txt", "model_input_txts/comp_torchscript_in_std_input_0_60_60.txt");
-                    // compare_text_file_lines("real_vals_sliced_0_60_60.txt", "model_input_txts/cpp_origin_py_vol_input_0_60_60.txt", "comp_py_real_vals_slice_w_cpp_slice.txt");
-                    // compare_text_file_lines("in_std_sliced_0_60_60.txt", "model_input_txts/cpp_origin_py_std_input_0_60_60.txt", "comp_py_in_std_slice_w_cpp_slice.txt");
-                }
-                // std_dev_block  = slice_tensor(in_std, x, y, z, model_block_size);
-                // std_dev_block = in_std.slice(bi).slice(3, z, z + model_block_size).slice(2, y, y + model_block_size).slice(1, x, x + model_block_size);
-                // (test_slicing_of_std_dev_and_real_values(real_val_block.squeeze(0), std_dev_block.squeeze(0), real_values_tensor.squeeze(0), in_std.squeeze(0), x, y, z)) ? wxPrintf("Passed; slice matches the original tensor.\n") : wxPrintf("Failed; slice does not match the original tensor.\n");
-
-                // Validate; check manually loaded tensors
-                //                 real_val_block = torch::zeros({1, model_block_size, model_block_size, model_block_size});
-                //                 std_dev_block  = torch::zeros({1, model_block_size, model_block_size, model_block_size});
-                // #pragma omp parallel for default(shared) num_threads(max_threads)
-                //                 for ( int pixel_counter = 0; pixel_counter < model_block_size * model_block_size * model_block_size; pixel_counter++ ) {
-                //                     int z_pos = pixel_counter / (model_block_size * model_block_size);
-                //                     int y_pos = (pixel_counter / model_block_size) % model_block_size;
-                //                     int x_pos = pixel_counter % model_block_size;
-
-                //                     real_val_block[0][x_pos][y_pos][z_pos] = real_values_tensor[0][x + x_pos][y + y_pos][z + z_pos].item<float>( );
-                //                     std_dev_block[0][x_pos][y_pos][z_pos]  = in_std[0][x + x_pos][y + y_pos][z + z_pos].item<float>( );
-                //                 }
-                // if ( use_dbg && (x == 0 && y == 60 && z == 60) ) {
-                // auto vol_sizes = real_val_block.sizes( );
-                // for ( int i = 0; i < real_val_block.dim( ); i++ ) {
-                //     wxPrintf("dim %i: %li ", i, vol_sizes[i]);
-                // }
-                // wxPrintf("\n");
-
-                // auto std_dev_sizes = std_dev_block.sizes( );
-                // for ( int i = 0; i < std_dev_block.dim( ); i++ ) {
-                //     wxPrintf("dim %i: %li ", i, std_dev_sizes[i]);
-                // }
-                // wxPrintf("\n");
-                // wxPrintf("real_values_tensor strides: ");
-                // auto real_values_strides = real_values_tensor.strides( );
-                // for ( int i = 0; i < real_values_strides.size( ); i++ ) {
-                //     wxPrintf("%li ", real_values_strides[i]);
-                // }
-                // wxPrintf("\n");
-                // wxPrintf("in_std strides: ");
-                // auto in_std_strides = in_std.strides( );
-                // for ( int i = 0; i < in_std_strides.size( ); i++ ) {
-                //     wxPrintf("%li ", in_std_strides[i]);
-                // }
-                // std::string vol_fname = wxString::Format("model_input_txts/vol_input_block_%i_%i_%i.txt", x, y, z).ToStdString( );
-                // std::string std_fname = wxString::Format("model_input_txts/std_input_block_%i_%i_%i.txt", x, y, z).ToStdString( );
-                // write_real_values_to_text_file(vol_fname, model_block_size, false, true, &real_val_block);
-                // write_real_values_to_text_file(std_fname, model_block_size, false, true, &std_dev_block);
-                // }
-                // if ( use_dbg ) {
-                //     wxPrintf("real_val_block dims: [%ld, %ld, %ld]\n", real_val_block.size(0), real_val_block.size(1), real_val_block.size(2));
-                //     wxPrintf("std_dev_block dims: [%ld, %ld, %ld]\n", std_dev_block.size(0), std_dev_block.size(1), std_dev_block.size(2));
-                // }
-                // wxPrintf("z == %i\n", z);
+                real_val_block = real_values_tensor.slice(1, z, z + model_block_size, 1).slice(2, y, y + model_block_size, 1).slice(3, x, x + model_block_size, 1);
+                std_dev_block  = real_values_tensor.slice(1, z, z + model_block_size, 1).slice(2, y, y + model_block_size, 1).slice(3, x, x + model_block_size, 1);
                 bi++;
             }
 
             // NOTE: this will always be done right after the initial loading, so we don't need to worry about bi really
             if ( bi == batch_size ) {
-                if ( ! inputs.empty( ) )
-                    inputs.clear( );
-                inputs.push_back(real_val_block);
-                inputs.push_back(std_dev_block);
-                // Pass the blocks as inputs to the model
-                // inputs.push_back(blocks[bi][0]);
-                // inputs.push_back(blocks[bi][1]);
-                // output = model.forward(inputs).toTensor( ); // This output SHOULD contain a single tensor that consists of two tensors: the model's volume output and mask output -- doesn't
-                // auto output = model.forward(inputs).toTensorList( );
-                // wxPrintf("About to pass to model...\n");
-                auto init_output = model.forward(inputs).toTensor( );
-                // (init_output.isTensor( )) ? wxPrintf("init_output is a tensor\n") : wxPrintf("init_output is not a tensor\n");
-                Tensor output = init_output.squeeze(0);
-                // torch::swapaxes(output, 0, 2);
+                auto   init_output = model.forward(real_val_block, std_dev_block);
+                Tensor output      = std::get<0>(init_output);
+                output             = output.detach( );
 
-                // wxPrintf("output shape: ");
-                // auto dims = output.sizes( );
-                // for ( int i = 0; i < dims.size( ); i++ ) {
-                //     if ( i != dims.size( ) - 1 )
-                //         wxPrintf("%li, ", dims[i]);
-                //     else
-                //         wxPrintf("%li\n", dims[i]);
-                // }
+                // wxPrintf("Output shape: [%ld, %ld, %ld, %ld]\n", output.size(0), output.size(1), output.size(2), output.size(3));
 
-                if ( use_dbg && x == 0 && y == 60 && z == 60 ) {
-                    std::string output_filename = wxString::Format("model_output_txts/cpp_output_%i_%i_%i.txt", x, y, z).ToStdString( );
-                    // std::string output_filename = wxString::Format("output_ts_txts/cpp_output_%i_%i_%i.txt", x, y, z).ToStdString( );
-                    write_real_values_to_text_file(output_filename, model_block_size, false, true, &output);
-                    // compare_text_file_lines(output_filename, "output_ts_txts/python_torchscript_model_output_0_60_60.txt", "output_ts_txts/comp_torchscript_0_60_60.txt");
-                    compare_text_file_lines(output_filename, "model_output_txts/python_torchscript_model_output_0_60_60.txt", "model_output_txts/comp_torchscript_0_60_60.txt");
+                for ( int i = 0; i < batch_size; i++ ) {
+                    // Update inference grid
+                    // NOTE: slicing this way makes a "view" of the tensor, which means that the original tensor is modified as well;
+                    // thus the final addition to the infer_grid and count_grid tensors will be reflected in the original tensors
+                    Tensor infer_grid_slice = infer_grid.slice(0, z, z + model_block_size, 1).slice(1, y, y + model_block_size, 1).slice(2, x, x + model_block_size, 1);
+                    auto   update           = output[i] * weights_tensor;
+                    infer_grid_slice += update;
+
+                    // Update count grid
+                    Tensor count_grid_slice = count_grid.slice(0, z, z + model_block_size, 1).slice(1, y, y + model_block_size, 1).slice(2, x, x + model_block_size, 1);
+                    count_grid_slice += weights_tensor;
                 }
+                // std::vector<float> output_vol_vec(std::pow(model_block_size, 3));
+                // std::memcpy(output_vol_vec.data( ), output.data_ptr<float>( ), std::pow(model_block_size, 3));
 
-                // wxPrintf("Finish model processing for this iteration.\n");
-                // std::ofstream ofs;
-                // ofs.open("output_tensor_vals.txt", std::ios::app);
-                // for ( int k = 0; k < model_block_size; k++ ) {
-                //     for ( int j = 0; j < model_block_size; j++ ) {
-                //         for ( int i = 0; i < model_block_size; i++ ) {
-                //             ofs << output[i][j][k].item<float>( ) << std::endl;
-                //         }
-                //     }
-                // }
-                // c10::IValue output = model.forward(inputs);
-                // if ( use_dbg ) {
-                //     wxPrintf("Tuple conversion worked?\n");
-                // }
-                // Tensor output_vol_tensor  = output[0];
-                // Tensor output_mask_tensor = output[1];
-                // Tensor output_vol_tensor  = output.elements( ).at(0).toTensor( );
-                // Tensor output_mask_tensor = output.elements( ).at(1).toTensor( );
-                // if ( use_dbg ) {
-                //     // std::cout << "output sizes: " << output.sizes( ) << std::endl;
-                //     torch::IntArrayRef sizes = output.sizes( );
-                //     wxPrintf("output dim: %li\n", output.dim( ));
-                //     wxPrintf("output sizes: ");
-                //     for ( int i = 0; i < sizes.size( ); i++ ) {
-                //         wxPrintf("%li", sizes[i]);
-                //         if ( i < sizes.size( ) - 1 ) {
-                //             wxPrintf("x");
-                //         }
-                //     }
-                //     wxPrintf("\n");
-                //     wxPrintf("output shape: [%ld, %ld, %ld]\n", output.size(0), output.size(1), output.size(2));
-                // }
-                // output_vol_tensor = output.slice(0, 0, 1);
-                // if ( use_dbg ) {
-                // wxPrintf("output_vol_tensor.dim() == %li\n", output_vol_tensor.dim( )); // Want this to be 4...
-                // wxPrintf("output_vol_tensor shape: [%ld, %ld, %ld, %ld]\n", output_vol_tensor.size(0), output_vol_tensor.size(1), output_vol_tensor.size(2), output_vol_tensor.size(3));
-                // }
-                // Pass the tensor to a vector
-                // std::vector<std::vector<std::vector<float>>> output_vol_vec = cubic_zeros_vector(model_block_size);
-                std::vector<float> output_vol_vec(std::pow(model_block_size, 3));
-                std::memcpy(output_vol_vec.data( ), output.data_ptr<float>( ), std::pow(model_block_size, 3));
-                // wxString tmp_output_filename = wxString::Format("model_output_txts/cpp_output_%i_%i_%i.txt", x, y, z);
-                // write_real_values_to_text_file(tmp_output_filename.ToStdString( ), model_block_size, true, true, nullptr, output_vol_vec.data( ));
-
-                // output_mask_tensor = output.slice(1, 1, 2).unsqueeze(1);
-                // output_mask_tensor = output_mask_tensor.squeeze(0);
-                // OR:
-                // output_mask_tensor = at::sigmoid(output_mask_tensor.squeeze(1))
-                // output_mask_tensor = output_mask_tensor.sigmoid( );
-                // if ( use_dbg ) {
-                // wxPrintf("output_mask_tensor num dims: %li\n", output_mask_tensor.dim( ));
-                // wxPrintf("output_mask_tensor shape: [%ld, %ld, %ld]\n", output_mask_tensor.size(0), output_mask_tensor.size(1), output_mask_tensor.size(2));
-                // }
-
-                // std::vector<std::vector<std::vector<float>>> output_mask_vec = cubic_zeros_vector(model_block_size);
-                // std::memcpy(output_mask_vec.data( ), output_mask_tensor.data_ptr<float>( ), std::pow(model_block_size, 3));
-
-                // FIXME: questionable whether this is even working correctly given lack of success with other slicing methods
-                // Here there is still access to x, y, and z; this means it will be possible to assign from the output(s) the proper
-                // value to each waiting grid (infer, mask, and count)
-                // Because bi == 1 always (since batch_size == 1), I can always assume output_vol_tensor[0] (and since output_vol_tensor is 1,64,64,64, it should be easy to assign)
-                // for ( int i = 0; i < bi; i++ ) {
-                //     infer_grid.slice(0, coords[i][0], coords[i][0] + model_block_size)
-                //             .slice(1, coords[i][1], coords[i][1] + model_block_size)
-                //             .slice(2, coords[i][2], coords[i][2] + model_block_size) += output_vol_tensor[i] * weights_grid;
-                //     mask_grid.slice(0, coords[i][0], coords[i][0] + model_block_size)
-                //             .slice(1, coords[i][1], coords[i][1] + model_block_size)
-                //             .slice(2, coords[i][2], coords[i][2] + model_block_size) += output_mask_tensor[i] * weights_grid;
-                //     count_grid.slice(0, coords[i][0], coords[i][0] + model_block_size)
-                //             .slice(1, coords[i][1], coords[i][1] + model_block_size)
-                //             .slice(2, coords[i][2], coords[i][2] + model_block_size) += weights_grid;
-                // }
-
-                // Nah, let's just parallelize it now.
-                // if ( x == 0 and z == 0 )
-                // write_real_values_to_text_file("direct_model_output.txt", model_block_size, true, true, nullptr, output_vol_vec.data( ));
                 // #pragma omp parallel for default(shared) num_threads(max_threads)
-                for ( int pixel_counter = 0; pixel_counter < num_subset_pixels; pixel_counter++ ) {
-                    int Z = pixel_counter / (model_block_size * model_block_size);
-                    int Y = (pixel_counter / model_block_size) % model_block_size;
-                    int X = pixel_counter % model_block_size;
+                // for ( int pixel_counter = 0; pixel_counter < num_subset_pixels; pixel_counter++ ) {
+                //     int Z = pixel_counter / (model_block_size * model_block_size);
+                //     int Y = (pixel_counter / model_block_size) % model_block_size;
+                //     int X = pixel_counter % model_block_size;
 
-                    int x_coord = X + x;
-                    int y_coord = Y + y;
-                    int z_coord = Z + z;
+                //     int x_coord = X + x;
+                //     int y_coord = Y + y;
+                //     int z_coord = Z + z;
 
-                    // Finds the corresponding subset of the data in the full size volumes
-                    int index = x_coord + X * (y_coord + Y * z_coord);
+                //     // Finds the corresponding subset of the data in the full size volumes
+                //     int index = x_coord + X * (y_coord + Y * z_coord);
 
-                    if ( isnan(output_vol_vec[pixel_counter]) )
-                        output_vol_vec[pixel_counter] = 0;
+                //     if ( isnan(output_vol_vec[pixel_counter]) )
+                //         output_vol_vec[pixel_counter] = 0;
 
-                    infer_grid[index] += output_vol_vec[pixel_counter] * weights_grid[index];
-                    // if ( output_vol_vec[pixel_counter] != 0.0f )
-                    // wxPrintf("output_vol_vect[%i] == %f\n", pixel_counter, output_vol_vec[pixel_counter]);
-                    // FIXME: this may be causing problems; mask_grid being a 2D means it will not reach the same index as infer_grid
-                    // Should mask be 3D? Check the single_blush python code to see if it should
-                    // mask_grid[index] = output_vol_vec[pixel_counter] * weights_grid[index];
-                    count_grid[index] += weights_grid[index];
-                }
-                // for ( int k = z; k < model_block_size; k++ ) {
-                //     for ( int j = y; j < model_block_size; j++ ) {
-                //         for ( int i = x; i < model_block_size; i++ ) {
-                //             infer_grid[x + i][y + j][z + k] += output_vol_tensor[0][i][j][k] * weights_grid[x + i][y + j][z + k];
-                //             mask_grid[x + i][y + j][z + k] += output_vol_tensor[0][i][j][k] * weights_grid[x + i][y + j][z + k];
-                //             count_grid[x + i][y + j][z + k] += weights_grid[x + i][y + j][z + k];
-                //         }
-                //     }
+                //     infer_grid[index] += output_vol_vec[pixel_counter] * weights_grid[index];
+                //     // if ( output_vol_vec[pixel_counter] != 0.0f )
+                //     // wxPrintf("output_vol_vect[%i] == %f\n", pixel_counter, output_vol_vec[pixel_counter]);
+                //     // FIXME: this may be causing problems; mask_grid being a 2D means it will not reach the same index as infer_grid
+                //     // Should mask be 3D? Check the single_blush python code to see if it should
+                //     // mask_grid[index] = output_vol_vec[pixel_counter] * weights_grid[index];
+                //     count_grid[index] += weights_grid[index];
                 // }
                 bi = 0;
             }
         }
 
+        infer_grid = torch::where(count_grid > 0, infer_grid / count_grid, infer_grid);
+        infer_grid = torch::where(count_grid < 1e-1, 0, infer_grid); // Set values where count_grid is less than 0.1 to 0
+        infer_grid *= mask_tensor;
         // Check the values of infer grid prior to the update
-        wxPrintf("Printing pre_norm values...\n");
-        // write_real_values_to_text_file("pre_norm_infer_grid.txt", box_size, true, true, nullptr, infer_grid.data( ));
-        // compare_text_file_lines("pre_norm_infer_grid.txt", "python_pre_norm_infer_grid.txt", "comp_pre_norm_infer_grid.txt", true);
+        // wxPrintf("Printing pre_norm values...\n");
 
-        constexpr float c_assume_zero_threshold = 0.1f;
+        //         constexpr float c_assume_zero_threshold = 0.1f;
 
-        // TODO: This can be multithreaded to speed things up
-        // Do 1D for loop, perform index calculations based on the placement in the loop,
-        // then conduct grid updates
-        // Can even keep the door open to non-cubic volumes by setting the limiting dimension to be
-        // the product of the 3 infer_grid dimensions rather than relying on box size
+        // #pragma omp parallel for default(shared) num_threads(max_threads)
+        //         for ( long pixel_counter = 0; pixel_counter < num_pixels; pixel_counter++ ) {
+        //             if ( isnan(infer_grid[pixel_counter]) )
+        //                 infer_grid[pixel_counter] = 0;
 
-        // NOTE: This mimics the Pythonic where syntax such as: infer_grid[count_grid > 0] /= count_grid[count_grid > 0]
-        // It's like a ternary operator applied across the whole tensor; args are: (condition, value to apply if true, value to apply if false)
-        // if ( use_dbg ) {
-        //     wxPrintf("std_dev_val == %f\n", std_dev_val);
-        //     wxPrintf("mean_val == %f\n", mean_val);
-        // }
-#pragma omp parallel for default(shared) num_threads(max_threads)
-        for ( long pixel_counter = 0; pixel_counter < num_pixels; pixel_counter++ ) {
-            // int Z = pixel_counter / (model_block_size * model_block_size);
-            // int Y = (pixel_counter / model_block_size) % model_block_size;
-            // int X = pixel_counter % model_voxel_size;
-
-            // // int x_coord = X + x;
-            // // int y_coord = Y + y;
-            // // int z_coord = Z + z;
-
-            // // int index = x_coord + X * (y_coord + Y * z_coord);
-            // int index = X
-
-            // Check if nan, I guess: this only evals to true if NaN
-            if ( isnan(infer_grid[pixel_counter]) )
-                infer_grid[pixel_counter] = 0;
-
-            if ( count_grid[pixel_counter] > 0 ) {
-                infer_grid[pixel_counter] /= count_grid[pixel_counter];
-                // mask_grid[pixel_counter] /= count_grid[pixel_counter];
-            }
-
-            if ( infer_grid[pixel_counter] < c_assume_zero_threshold )
-                infer_grid[pixel_counter] = 0;
-            // if ( mask_grid[pixel_counter] < c_assume_zero_threshold )
-            // mask_grid[pixel_counter] = 0;
-
-            // Mask out the final inference, and normalize?
-            infer_grid[pixel_counter] *= direct_input_mask.real_values[pixel_counter];
-            // mask_grid[pixel_counter] *= direct_input_mask.real_values[pixel_counter];
-            // wxPrintf("infer_grid[%li] == %f\n", pixel_counter, infer_grid[pixel_counter]);
-            // FIXME: Perhaps I can get rid of this normalization step, opting instead to call Image::Normalize after copying to Image object
-            infer_grid[pixel_counter] = infer_grid[pixel_counter] * (std_dev * 1e-8) + mean;
-        }
-        // infer_grid = torch::where(count_grid > 0, infer_grid / count_grid, infer_grid);
-        // mask_grid  = torch::where(count_grid > 0, mask_grid / count_grid, mask_grid);
-        // infer_grid = torch::where(infer_grid < c_assume_zero_threshold, torch::zeros_like(infer_grid), infer_grid);
-        // mask_grid  = torch::where(mask_grid < c_assume_zero_threshold, torch::zeros_like(mask_grid), mask_grid);
-
-        // wxPrintf("About to enter infer_grid/mask_grid parallelized loop.\n");
-
-        // FIXME: something here is causing variable crash
-        //             long pixel_counter;
-        // #pragma omp parallel for default(shared) num_threads(max_threads) private(pixel_counter)
-        //             // NOTE: Need to start from the start point of the
-        //             for ( pixel_counter = 0; pixel_counter < total_pixels; pixel_counter++ ) {
-        //                 int i = (pixel_counter % new_box_size);
-        //                 int j = ((pixel_counter / new_box_size) % new_box_size);
-        //                 int k = (pixel_counter / (new_box_size * new_box_size));
-
-        //                 // float infer_val = infer_grid.index({i, j, k}).item<float>( );
-        //                 // float count_val = count_grid.index({i, j, k}).item<float>( );
-        //                 // float mask_val  = mask_grid.index({i, j, k}).item<float>( );
-        //                 float infer_val = infer_grid[i][j][k].item<float>( );
-        //                 float count_val = count_grid[i][j][k].item<float>( );
-        //                 float mask_val  = mask_grid[i][j][k].item<float>( );
-        //                 if ( count_val > 0 ) {
-        //                     infer_grid[i][j][k] /= count_val;
-        //                     mask_grid[i][j][k] /= count_val;
-        //                     if ( infer_val < c_assume_zero_threshold )
-        //                         infer_grid[i][j][k] = 0;
-        //                     if ( mask_val < c_assume_zero_threshold )
-        //                         mask_grid[i][j][k] = 0;
-        //                 }
+        //             if ( count_grid[pixel_counter] > 0 ) {
+        //                 infer_grid[pixel_counter] /= count_grid[pixel_counter];
+        //                 // mask_grid[pixel_counter] /= count_grid[pixel_counter];
         //             }
-        // for ( int k = 0; k < infer_grid.size(2); k++ ) {
-        //     for ( int j = 0; j < infer_grid.size(1); j++ ) {
-        //         for ( int i = 0; i < infer_grid.size(0); i++ ) {
-        //             float infer_val = infer_grid[i][j][k].item<float>( );
-        //             float count_val = count_grid[i][j][k].item<float>( );
-        //             float mask_val  = mask_grid[i][j][k].item<float>( );
-        //             if ( count_val > 0 ) {
-        //                 infer_grid[i][j][k] /= count_val;
-        //                 mask_grid[i][j][k] /= count_val;
-        //                 if ( infer_val < c_assume_zero_threshold )
-        //                     infer_grid[i][j][k] = 0;
-        //                 if ( mask_val < c_assume_zero_threshold )
-        //                     mask_grid[i][j][k] = 0;
-        //             }
+
+        //             if ( infer_grid[pixel_counter] < c_assume_zero_threshold )
+        //                 infer_grid[pixel_counter] = 0;
+        //             // if ( mask_grid[pixel_counter] < c_assume_zero_threshold )
+        //             // mask_grid[pixel_counter] = 0;
+
+        //             // Mask out the final inference, and normalize?
+        //             infer_grid[pixel_counter] *= direct_input_mask.real_values[pixel_counter];
+        //             // mask_grid[pixel_counter] *= direct_input_mask.real_values[pixel_counter];
+        //             // wxPrintf("infer_grid[%li] == %f\n", pixel_counter, infer_grid[pixel_counter]);
+        //             // FIXME: Perhaps I can get rid of this normalization step, opting instead to call Image::Normalize after copying to Image object
+        //             infer_grid[pixel_counter] = infer_grid[pixel_counter] * (std_dev * 1e-8) + mean;
         //         }
-        //     }
-        // }
-        // write_real_values_to_text_file("post_norm_infer_grid.txt", box_size, true, true, nullptr, infer_grid.data( ));
-        // compare_text_file_lines("post_norm_infer_grid.txt", "python_post_norm_infer_grid.txt", "comp_post_norm_infer_grid.txt", true);
-
-        // infer_grid *= mask_tensor;
-        // mask_grid *= mask_tensor;
-
-        // if ( use_dbg ) {
-        //     std::ofstream ofile("pre_mean_infer_grid_vals.txt");
-        //     if ( ofile.is_open( ) ) {
-        //         for ( int a = 0; a < infer_grid.size(2); a++ ) {
-        //             for ( int b = 0; b < infer_grid.size(1); b++ ) {
-        //                 for ( int c = 0; c < infer_grid.size(0); c++ ) {
-        //                     ofile << infer_grid[c][b][a].item<float>( ) << std::endl;
-        //                 }
-        //             }
-        //         }
-        //         ofile.close( );
-        //     }
-        //     else {
-        //         wxPrintf("pre_mean_infer_grid_vals.txt did not open.\n\n");
-        //     }
-        // }
-
-        // Return the inference grid back to its original distribution by multiplying all values by std_dev and adding the mean
-        // infer_grid = infer_grid * (std_dev * 1e-8) + mean;
-        // if ( use_dbg ) {
-        //     wxPrintf("\n\ninfer_grid dims: [%ld, %ld, %ld]\n", infer_grid.size(0), infer_grid.size(1), infer_grid.size(2));
-        //     wxPrintf("mask_grid dims: [%ld, %ld, %ld]\n", mask_grid.size(0), mask_grid.size(1), mask_grid.size(2));
-        // }
-        // if ( use_dbg ) {
-        // std::ofstream ofile("post_mean_infer_grid_vals.txt");
-        // if ( ofile.is_open( ) ) {
-        //     for ( int a = 0; a < infer_grid.size(2); a++ ) {
-        //         for ( int b = 0; b < infer_grid.size(1); b++ ) {
-        //             for ( int c = 0; c < infer_grid.size(0); c++ ) {
-        //                 ofile << infer_grid[c][b][a].item<float>( ) << std::endl;
-        //             }
-        //         }
-        //     }
-        //     ofile.close( );
-        // }
-        // else {
-        //     wxPrintf("post_mean_infer_grid_vals.txt did not open.\n\n");
-        // }
-        // }
-        compare_text_file_lines("model_output_txts/cpp_output_0_60_60.txt", "model_output_txts/python_torchscript_model_output_0_60_60.txt", "torchscript_output_comp_0_60_60.txt");
-        compare_text_file_lines("man_vol_input_block_0_60_60.txt", "model_input_txts/vol_input_block_0_60_60.txt", "comp_vol_input_block_0_60_60.txt");
         blush_finish              = wxDateTime::Now( );
         wxTimeSpan blush_duration = blush_finish.Subtract(blush_start);
+        out_vals.close( );
+        cistem_mean_vals.close( );
         wxPrintf("Finished running blush model. Total duration:        %s\n", blush_duration.Format( ));
 
     }
@@ -1094,28 +998,28 @@ bool BlushRefinement::DoCalculation( ) {
         return false;
     }
 
-    if ( use_dbg ) {
-        // Check count_grid values
-        wxPrintf("Writing out count_grid and infer_grid vals...\n");
-        std::ofstream ofs1("count_grid_vals.txt", std::ofstream::trunc | std::ofstream::out);
-        std::ofstream ofs2("infer_grid_vals.txt", std::ofstream::trunc | std::ofstream::out);
-        ofs1.close( );
-        ofs2.close( );
-        ofs1.open("count_grid_vals.txt", std::ios::app);
-        ofs2.open("infer_grid_vals.txt", std::ios::app);
-        if ( ofs1.is_open( ) && ofs2.is_open( ) ) {
-            for ( int i = 0; i < num_pixels; i++ ) {
-                ofs1 << count_grid[i] << std::endl;
-                ofs2 << infer_grid[i] << std::endl;
-            }
-            ofs1.close( );
-            ofs2.close( );
-        }
-        else {
-            wxPrintf("Failed to open one of the text files.\n");
-        }
-        wxPrintf("Finished writing out count_grid and infer_grid vals.\n");
-    }
+    // if ( use_dbg ) {
+    //     // Check count_grid values
+    //     wxPrintf("Writing out count_grid and infer_grid vals...\n");
+    //     std::ofstream ofs1("count_grid_vals.txt", std::ofstream::trunc | std::ofstream::out);
+    //     std::ofstream ofs2("infer_grid_vals.txt", std::ofstream::trunc | std::ofstream::out);
+    //     ofs1.close( );
+    //     ofs2.close( );
+    //     ofs1.open("count_grid_vals.txt", std::ios::app);
+    //     ofs2.open("infer_grid_vals.txt", std::ios::app);
+    //     if ( ofs1.is_open( ) && ofs2.is_open( ) ) {
+    //         for ( int i = 0; i < num_pixels; i++ ) {
+    //             ofs1 << count_grid[i] << std::endl;
+    //             ofs2 << infer_grid[i] << std::endl;
+    //         }
+    //         ofs1.close( );
+    //         ofs2.close( );
+    //     }
+    //     else {
+    //         wxPrintf("Failed to open one of the text files.\n");
+    //     }
+    //     wxPrintf("Finished writing out count_grid and infer_grid vals.\n");
+    // }
 
     // NOTE: Here relion would normally apply additional filtering before writing out the actual volume.
     // However, cisTEM does its own filtering and this should not necessarily be needed. If something goes wrong,
@@ -1142,47 +1046,14 @@ bool BlushRefinement::DoCalculation( ) {
     // output_vol_tensor = output_vol_tensor.squeeze(0);
     // output_vol_tensor = output_vol_tensor.contiguous( );
 
-    // if ( use_dbg ) {
-    //     wxPrintf("About to copy input volume to output volume...\n");
-    //     std::ofstream ofile;
-    //     ofile.open("output_tensor_vals.txt", std::ios::app);
-    //     if ( ofile.is_open( ) ) {
-    //         for ( int i = 0; i < box_size; i++ ) {
-    //             for ( int j = 0; j < box_size; j++ ) {
-    //                 for ( int k = 0; k < box_size; k++ ) {
-    //                     auto element = output[k][j][i];
-    //                     ofile << element.item<float>( ) << std::endl;
-    //                 }
-    //             }
-    //         }
-    //         ofile.close( );
-    //     }
-    // }
-
-    // DEBUG: ONE LAST FUCKING INFER_GRID CHECK I GUESS
-    if ( use_dbg ) {
-        std::ofstream o("infer_grid.txt", std::ofstream::trunc | std::ofstream::out);
-        o.close( );
-        o.open("infer_grid.txt", std::ios::app);
-        if ( o.is_open( ) ) {
-            for ( int i = 0; i < num_pixels; i++ ) {
-                o << infer_grid[i] << std::endl;
-            }
-            o.close( );
-        }
-        else {
-            wxPrintf("Failed to open infer_grid.txt\n");
-        }
-
-        // COMPARE THE FUCKING infer_grid.txt WITH THE FUCKING infer_grid_vals.txt
-        // compare_text_file_lines("infer_grid.txt", "infer_grid_vals.txt", "cpp_comp_infer_grid_outputs.txt", true);
-    }
     Image output_volume;
     output_volume.Allocate(new_box_size, new_box_size, new_box_size);
     if ( use_dbg )
         wxPrintf("About to copy output tensor to real_values in output volume...\n");
     // Perhaps this memcpy is going wrong
-    std::memcpy(output_volume.real_values, infer_grid.data( ), num_pixels * sizeof(float));
+    wxPrintf("Permuting infer_grid to x-fastest...\n");
+    infer_grid = infer_grid.permute({2, 1, 0}).contiguous( ); // switch back to x-fastest
+    std::memcpy(output_volume.real_values, infer_grid.data_ptr<float>( ), num_pixels * sizeof(float));
     output_volume.AddFFTWPadding( );
 
     if ( scale_factor != 1 ) {
@@ -1194,6 +1065,9 @@ bool BlushRefinement::DoCalculation( ) {
 
     output_volume.QuickAndDirtyWriteSlices(output_mrc_filename, 1, output_volume.logical_x_dimension, true);
 
+    wxPrintf("Comparing means from Python and C++...\n");
+    // compare_text_file_lines("cpp_tensor_means.txt", "py_tensor_means.txt", "comp_tensor_means.txt");
+    // compare_text_file_lines("cistem_mean_vals.txt", "py_tensor_means.txt", "comp_py_tensor_means_w_cistem_means.txt");
     wxPrintf("Blush complete.\n");
     overall_finish      = wxDateTime::Now( );
     wxTimeSpan duration = overall_finish.Subtract(overall_start);
@@ -1447,26 +1321,26 @@ Tensor make_weight_box(const int& block_size, int margin) {
     weight_grid = weight_grid.clamp_min(1e-6); // avoid zeros
 
     //Let 's just check what' s going on with the weights_grid...
-    {
-        // First, clear the text file
-        std::ofstream ofs;
-        ofs.open("initial_weights_grid_vals.txt", std::ofstream::trunc | std::ofstream::out);
-        ofs.close( );
-        ofs.open("initial_weights_grid_vals.txt", std::ios::app);
-        if ( ofs.is_open( ) ) {
-            for ( int a = 0; a < weight_grid.size(2); a++ ) {
-                for ( int b = 0; b < weight_grid.size(1); b++ ) {
-                    for ( int c = 0; c < weight_grid.size(0); c++ ) {
-                        ofs << weight_grid[c][b][a].item<float>( ) << std::endl;
-                    }
-                }
-            }
-            ofs.close( );
-        }
-        else {
-            wxPrintf("initial_weights_grid_vals.txt did not open.\n\n");
-        }
-    }
+    // {
+    //     // First, clear the text file
+    //     std::ofstream ofs;
+    //     ofs.open("initial_weights_grid_vals.txt", std::ofstream::trunc | std::ofstream::out);
+    //     ofs.close( );
+    //     ofs.open("initial_weights_grid_vals.txt", std::ios::app);
+    //     if ( ofs.is_open( ) ) {
+    //         for ( int a = 0; a < weight_grid.size(2); a++ ) {
+    //             for ( int b = 0; b < weight_grid.size(1); b++ ) {
+    //                 for ( int c = 0; c < weight_grid.size(0); c++ ) {
+    //                     ofs << weight_grid[c][b][a].item<float>( ) << std::endl;
+    //                 }
+    //             }
+    //         }
+    //         ofs.close( );
+    //     }
+    //     else {
+    //         wxPrintf("initial_weights_grid_vals.txt did not open.\n\n");
+    //     }
+    // }
 
     return weight_grid;
 }
@@ -1951,9 +1825,9 @@ void compare_text_file_lines(std::string fname1, std::string fname2, std::string
             break;
         }
         if ( ! print_vals )
-            (std::abs(dev1 - dev2) > 1e-4) ? comp_f << "DIFFERENT" << std::endl : comp_f << "SAME" << std::endl;
+            (std::abs(dev1 - dev2) > 1e-2) ? comp_f << "DIFFERENT" << std::endl : comp_f << "SAME" << std::endl;
         else
-            (std::abs(dev1 - dev2) > 1e-4) ? comp_f << "DIFFERENT " << dev1 << " | " << dev2 << std::endl : comp_f << "SAME " << dev1 << " | " << dev2 << std::endl;
+            (std::abs(dev1 - dev2) > 1e-2) ? comp_f << "DIFFERENT " << dev1 << " | " << dev2 << std::endl : comp_f << "SAME " << dev1 << " | " << dev2 << std::endl;
     }
     wxPrintf("Completed comparison of text files %s and %s.\n", fname1, fname2);
 }

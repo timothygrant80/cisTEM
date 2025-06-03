@@ -619,6 +619,8 @@ void ReconstructedVolume::FinalizeSimple(Reconstruct3D& reconstruction, int& ori
     //	output_3d.mask_volume_in_voxels = output_3d1.mask_volume_in_voxels;
     output_file.OpenFile(output_volume.ToStdString( ), true);
     density_map->WriteSlices(&output_file, 1, density_map->logical_z_dimension);
+    // Make sure the size is set appropriately
+    output_file.my_header.SetDimensionsVolume(density_map->logical_x_dimension, density_map->logical_y_dimension, density_map->logical_z_dimension);
     output_file.SetPixelSize(original_pixel_size);
     output_file.CloseFile( );
     density_map->ForwardFFT( );

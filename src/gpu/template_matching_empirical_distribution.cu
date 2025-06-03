@@ -1,3 +1,25 @@
+/**
+ * @file template_matching_empirical_distribution.cu
+ * @brief CUDA implementation of the TM_EmpiricalDistribution class.
+ *
+ * This file contains the CUDA kernels and device management functions for the
+ * TM_EmpiricalDistribution class, which is responsible for GPU-accelerated
+ * accumulation of statistics (sum, sum of squares, histogram) from
+ * batches of Cross-Correlation Function (CCF) images.
+ *
+ * Key functionalities include:
+ * - Initialization of CUDA resources (streams, events, device memory).
+ * - CUDA kernels for accumulating per-pixel statistics and histograms.
+ * - Management of data transfers between host and device.
+ * - Generation of Maximum Intensity Projections (MIPs) and corresponding angle maps.
+ *
+ * @note Thread Safety: The methods of TM_EmpiricalDistribution are intended to be called
+ * by a single host thread. Internal operations are enqueued onto a dedicated CUDA stream
+ * (`calc_stream_`) for asynchronous execution on the GPU. Synchronization primitives
+ * like `cudaEventSynchronize` are used where necessary to coordinate host and device.
+ * The `active_idx_` mechanism for double buffering CCF and angle data is managed
+ * internally and does not make the class methods thread-safe for concurrent host calls.
+ */
 
 #include "gpu_core_headers.h"
 #include "gpu_indexing_functions.h"
@@ -41,6 +63,16 @@ TM_EmpiricalDistribution<ccfType, mipType>::TM_EmpiricalDistribution(GpuImage* r
                                                                                  higher_order_moments_{false},
                                                                                  image_plane_mem_allocated_{reference_image->real_memory_allocated} {
 
+    // Design Note: This constructor initializes all necessary GPU resources.
+    // - A dedicated CUDA stream (`calc_stream_`) is created for all operations within this class instance.
+    //   This allows for asynchronous execution and potential overlap with CPU tasks or other GPU operations
+    //   if the application is designed to support it (though this class itself is single-threaded from host).
+    // - A CUDA event (`mip_stack_is_ready_event_`) is used for fine-grained synchronization,
+    //   particularly for signaling the completion of MIP stack processing.
+    // - GPU memory is allocated for statistical arrays, CCF image batches (double-buffered),
+    //   angle data, and the histogram.
+    // - Launch parameters for CUDA kernels are determined based on the reference image dimensions and ROI.
+
     std::cerr << "n_images" << n_imgs_to_process_at_once_ << std::endl;
     int least_priority, highest_priority;
 
@@ -72,7 +104,9 @@ TM_EmpiricalDistribution<ccfType, mipType>::TM_EmpiricalDistribution(GpuImage* r
     // Every block will have a shared memory array of the size of the number of bins and aggregate those into their own
     // temp arrays. Only at the end of the search will these be added together'
 
-    // For an GpuImage the following would be GridDimension_2d( ) * TM::histogram_number_of_points * sizeof(histogram_storage_t)
+    // Design Note: Histogram data is stored per-block in global memory initially,
+    // then aggregated in a final step. Shared memory (`smem`) is used within
+    // `AccumulateDistributionKernel` for efficient per-block histogram updates.
     cudaErr(cudaMallocAsync(&histogram_, gridDims_.x * gridDims_.y * TM::histogram_number_of_points * sizeof(histogram_storage_t), calc_stream_[0]));
     ZeroHistogram( );
 
@@ -119,6 +153,10 @@ void TM_EmpiricalDistribution<ccfType, mipType>::AllocateAndZeroStatisticalArray
     //     cudaErr(cudaMallocAsync((void**)&secondary_peaks, sizeof(__half) * d_input_image.real_memory_allocated * n_global_search_images_to_save * 4, cudaStreamPerThread));
     //     cudaErr(cudaMemsetAsync(secondary_peaks, 0, sizeof(__half) * d_input_image.real_memory_allocated * n_global_search_images_to_save * 4, cudaStreamPerThread));
     // }
+    // Thread Safety Note: All CUDA API calls here are enqueued onto `calc_stream_[0]`.
+    // The host thread calling this function will continue execution after these calls are enqueued.
+    // Synchronization, if needed before using these buffers, must be handled by the caller
+    // or by subsequent operations within this class that use `cudaStreamSynchronize` or events.
 };
 
 template <typename ccfType, typename mipType>
@@ -129,6 +167,15 @@ TM_EmpiricalDistribution<ccfType, mipType>::~TM_EmpiricalDistribution( ) {
 
 template <typename ccfType, typename mipType>
 void TM_EmpiricalDistribution<ccfType, mipType>::Delete( ) {
+    // Design Note: Releases all GPU resources associated with this instance.
+    // - Frees all `cudaMallocAsync` allocated memory.
+    // - Destroys the CUDA stream and event.
+    // - Frees host-pinned memory.
+    // All `cudaFreeAsync` calls are enqueued onto `calc_stream_[0]`.
+    // A `cudaStreamDestroy` will implicitly synchronize the stream before destruction.
+    // Thread Safety Note: This method should only be called when no other operations
+    // are pending on `calc_stream_[0]`. The `cudaStreamDestroy` will wait for
+    // all enqueued tasks in `calc_stream_[0]` to complete.
     MyDebugAssertFalse(cudaStreamQuery(calc_stream_[0]) == cudaErrorInvalidResourceHandle, "The cuda stream is invalid");
 
     cudaErr(cudaFreeAsync(histogram_, calc_stream_[0]));
@@ -156,6 +203,9 @@ void TM_EmpiricalDistribution<ccfType, mipType>::Delete( ) {
 
 template <typename ccfType, typename mipType>
 void TM_EmpiricalDistribution<ccfType, mipType>::ZeroHistogram( ) {
+    // Design Note: Specifically zeros the global histogram buffer on the GPU.
+    // This is used during initialization and potentially between distinct accumulation phases if needed.
+    // Operation is asynchronous on `calc_stream_[0]`.
     cudaErr(cudaMemsetAsync(histogram_, 0, gridDims_.x * gridDims_.y * TM::histogram_number_of_points * sizeof(histogram_storage_t), calc_stream_[0]));
 }
 
@@ -163,6 +213,14 @@ void TM_EmpiricalDistribution<ccfType, mipType>::ZeroHistogram( ) {
 // Kernels and inline helper functions called from EmpiricalDistribution::AccumulateDistribution
 ////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 
+/**
+ * @brief Device function to convert input CCF value to float and calculate histogram bin index.
+ * @tparam T Data type of the input pointer (ccfType or histogram_storage_t).
+ * @param input_ptr Pointer to the input CCF data.
+ * @param pixel_idx Output: calculated histogram bin index.
+ * @param address Linear memory address of the CCF value.
+ * @return The CCF value converted to float.
+ */
 template <typename T>
 inline __device__ float convert_input(const T* __restrict__ input_ptr,
                                       int& pixel_idx,
@@ -189,6 +247,21 @@ inline __device__ float convert_input(const T* __restrict__ input_ptr,
     return val;
 }
 
+/**
+ * @brief Device function to update sum, sum of squares using Kahan summation, and track max CCF value.
+ * Implements a trimming logic based on standard deviation for robust statistics.
+ * @param val Current CCF value.
+ * @param sum Accumulated sum (updated by reference).
+ * @param sum_sq Accumulated sum of squares (updated by reference).
+ * @param sum_counter_val Accumulation counter (updated by reference).
+ * @param sum_err Kahan summation error term for sum (updated by reference).
+ * @param sum_sq_err Kahan summation error term for sum_sq (updated by reference).
+ * @param max_val Current maximum CCF value found for this pixel (updated by reference).
+ * @param max_idx Index of the image in the batch corresponding to max_val (updated by reference).
+ * @param idx Current image index in the batch.
+ * @param min_counter_val Minimum count for robust statistics calculation.
+ * @param threshold_val Sigma threshold for outlier rejection.
+ */
 inline __device__ void sum_squares_and_check_max(const float val,
                                                  float&      sum,
                                                  float&      sum_sq,
@@ -228,6 +301,25 @@ inline __device__ void sum_squares_and_check_max(const float val,
     }
 }
 
+/**
+ * @brief Device function to write accumulated statistics and MIP data to global memory.
+ * @tparam ccfType Data type of CCF values.
+ * @tparam mipType Data type of MIP values (packed).
+ * @param sum_array Device pointer to sum array.
+ * @param sum_sq_array Device pointer to sum of squares array.
+ * @param sum_counter Device pointer to counter array.
+ * @param mip_psi Device pointer to packed MIP value and psi angle array.
+ * @param theta_phi Device pointer to packed theta and phi angle array.
+ * @param sum Current sum for the pixel.
+ * @param sum_sq Current sum of squares for the pixel.
+ * @param sum_counter_val Current counter for the pixel.
+ * @param psi Device pointer to psi angles for the current batch.
+ * @param theta Device pointer to theta angles for the current batch.
+ * @param phi Device pointer to phi angles for the current batch.
+ * @param max_val Maximum CCF value found for this pixel in the current batch.
+ * @param max_idx Index within the batch corresponding to max_val.
+ * @param address Linear memory address for the current pixel.
+ */
 template <typename ccfType, typename mipType>
 inline __device__ void write_mip_and_stats(float*      sum_array,
                                            float*      sum_sq_array,
@@ -286,6 +378,20 @@ inline __device__ void write_mip_and_stats(float*      sum_array,
 // TODO: __half2 atomicAdd(__half2 *address, __half2 val);
 // TODO: __nv_bfloat162 atomicAdd(__nv_bfloat162 *address, __nv_bfloat162 val);
 
+/**
+ * @brief CUDA kernel to accumulate CCF statistics and update MIPs.
+ *
+ * This kernel processes a batch of CCF images. For each pixel:
+ * 1. Iterates through all images in the batch.
+ * 2. Converts CCF value, calculates histogram bin, and updates shared memory histogram using atomicAdd.
+ * 3. Updates sum, sum of squares (with Kahan summation and outlier trimming), and tracks the maximum CCF value and corresponding angles.
+ * 4. After processing all images in the batch for a pixel, writes the updated sum, sum_sq, counter, and MIP data (if current max is greater than stored MIP) to global memory.
+ * 5. Finally, writes the block's partial histogram from shared memory to its designated spot in global memory.
+ *
+ * @note Each thread block processes a tile of the image.
+ * @note Shared memory `smem` is used for efficient, coalesced updates to the histogram within a block.
+ * @note Angle data (psi, theta, phi) for the current batch is read from global memory.
+ */
 template <typename ccfType, typename mipType>
 __global__ void __launch_bounds__(TM::histogram_number_of_points)
         AccumulateDistributionKernel(const ccfType* __restrict__ input_ptr,
@@ -374,6 +480,17 @@ __global__ void __launch_bounds__(TM::histogram_number_of_points)
         stored_array[i] = int(smem[i]);
 }
 
+/**
+ * @brief CUDA kernel to finalize histogram accumulation.
+ *
+ * This kernel sums up the partial histograms computed by each block in `AccumulateDistributionKernel`.
+ * Each thread accumulates values for a specific bin across all block-local histograms.
+ * The final aggregated histogram is written back to the first block's portion of the histogram memory.
+ *
+ * @param input_ptr Device pointer to the histogram data (contains block-wise partial histograms).
+ * @param n_bins Total number of histogram bins.
+ * @param n_blocks Total number of thread blocks that contributed to partial histograms.
+ */
 __global__ void
 FinalAccumulateKernel(histogram_storage_t* input_ptr, const int n_bins, const int n_blocks) {
 
@@ -394,10 +511,21 @@ FinalAccumulateKernel(histogram_storage_t* input_ptr, const int n_bins, const in
  * If set to record a histogram, a fused kernal will be called to accumulate the histogram and the pixel wise distribution
  * If set to track 3rd and 4th moments of the distribution, a fused kernel will be called to accumulate the moments and the pixel wise distribution
  * 
- * @param input_data - pointer to the input data to accumulate, a stack of images.
  * @param n_images_this_batch - number of slices to accumulate, must be <= n_imgs_to_process_at_once_
+ *
+ * @note Design:
+ * - Ensures the number of images in the batch is valid.
+ * - Asynchronously copies the current batch's angle data from host-pinned memory to device memory
+ *   using `UpdateDeviceAngleArrays()`, which enqueues the copy on `calc_stream_[0]`.
+ * - Launches `AccumulateDistributionKernel` on `calc_stream_[0]`. This kernel reads from
+ *   `ccf_array_.at(active_idx_)` and `device_host_angle_arrays_.at(active_idx_)`.
+ * - After launching the kernel, it calls `SetActive_idx()` to switch the `active_idx_`.
+ *   This allows the host to start filling the *next* `ccf_array_` buffer and `host_angle_arrays_`
+ *   while the current batch is being processed on the GPU, achieving H2D-D2D overlap.
+ *
+ * @note Thread Safety: This method is not thread-safe for concurrent calls from multiple host threads.
+ * It relies on `active_idx_` for internal double buffering, managed by a single calling sequence.
  */
-
 template <typename ccfType, typename mipType>
 void TM_EmpiricalDistribution<ccfType, mipType>::AccumulateDistribution(int n_images_this_batch) {
     MyDebugAssertTrue(n_images_this_batch <= n_imgs_to_process_at_once_, "The number of images to accumulate is greater than the number of images to accumulate concurrently");
@@ -428,9 +556,20 @@ void TM_EmpiricalDistribution<ccfType, mipType>::AccumulateDistribution(int n_im
     postcheck;
 
     // Switch the active index
+    // This allows the CPU to prepare the next batch of CCF data and angles in the inactive buffers
+    // while the GPU is processing the current batch using the (previously) active buffers.
     SetActive_idx( );
 };
 
+/**
+ * @brief Performs the final accumulation of the histogram.
+ *
+ * Launches `FinalAccumulateKernel` to sum partial histograms from each block
+ * into a single global histogram. This is typically called once after all batches
+ * have been processed by `AccumulateDistribution`.
+ *
+ * @note All GPU operations are enqueued on `calc_stream_[0]`.
+ */
 template <typename ccfType, typename mipType>
 void TM_EmpiricalDistribution<ccfType, mipType>::FinalAccumulate( ) {
     MyDebugAssertFalse(cudaStreamQuery(calc_stream_[0]) == cudaErrorInvalidResourceHandle, "The cuda stream is invalid");
@@ -447,6 +586,21 @@ void TM_EmpiricalDistribution<ccfType, mipType>::FinalAccumulate( ) {
     postcheck;
 }
 
+/**
+ * @brief Copies the final aggregated histogram from GPU to a host array and adds to it.
+ *
+ * This function performs a synchronous D2H copy of the histogram.
+ *
+ * @param array_to_add_to Host array to which the GPU histogram data will be added.
+ *
+ * @note This function involves a synchronous `cudaMemcpyDeviceToHost`.
+ * It will block the calling host thread until the copy is complete.
+ * This implies that all preceding work on `calc_stream_[0]` affecting the histogram
+ * (i.e., `AccumulateDistributionKernel` calls and `FinalAccumulateKernel`)
+ * should ideally be synchronized with `calc_stream_[0]` before this copy,
+ * or `FinalAccumulate` should be called and synchronized before this.
+ * The current implementation copies from `histogram_` which is the target of `FinalAccumulateKernel`.
+ */
 template <typename ccfType, typename mipType>
 void TM_EmpiricalDistribution<ccfType, mipType>::CopyToHostAndAdd(long* array_to_add_to) {
 
@@ -462,10 +616,28 @@ void TM_EmpiricalDistribution<ccfType, mipType>::CopyToHostAndAdd(long* array_to
     cudaErr(cudaFreeHost(tmp_array));
 }
 
-// Note: we allow for float in the constructor checking, however, we don't need this for our implementation, so we won't instantiate it.
-// template class TM_EmpiricalDistribution<float>;
-
-// TODO: I'm not sure  __restrict__ can be applied to the sum image b/c the value is both read and written to, but this migh tbe okay.
+/**
+ * @brief CUDA kernel to accumulate sums and sums of squares into global sum images, then zero per-batch accumulators.
+ *
+ * This kernel is called by `CopySumAndSumSqAndZero`. It adds the per-batch `sum_array` and `sum_sq_array`
+ * (which hold sums across `n_imgs_to_process_at_once_` images for each pixel) to the global
+ * `sum_img_array` and `sq_sum_img_array` (which are GpuImage objects holding the total sums across all batches).
+ * After adding, it zeros out `sum_array`, `sum_sq_array`, and `sum_counter` to prepare for the next call
+ * to `AccumulateDistributionKernel` (though typically `CopySumAndSumSqAndZero` is called at the very end).
+ *
+ * @param sum Device pointer to the per-batch sum array (read from, then zeroed).
+ * @param sumsq Device pointer to the per-batch sum of squares array (read from, then zeroed).
+ * @param sum_img_array Device pointer to the global sum image array (accumulated into).
+ * @param sq_sum_img_array Device pointer to the global sum of squares image array (accumulated into).
+ * @param sum_counter Device pointer to the per-batch counter array (zeroed).
+ * @param numel Total number of elements (pixels) in the image.
+ *
+ * @note The use of `cudaStreamPerThread` in the calling function `CopySumAndSumSqAndZero` is unusual
+ *       for a class that primarily uses a dedicated stream (`calc_stream_`). This might be an oversight
+ *       or intended for a specific reason not immediately obvious. If `sum_array`, etc., are written to
+ *       by kernels on `calc_stream_`, using `cudaStreamPerThread` here without proper synchronization
+ *       could lead to race conditions. It should ideally use `calc_stream_[0]`.
+ */
 __global__ void AccumulateSumsKernel(float* sum,
                                      float* sumsq,
                                      float* __restrict__ sum_img_array,
@@ -485,12 +657,33 @@ __global__ void AccumulateSumsKernel(float* sum,
     }
 }
 
+/**
+ * @brief Copies accumulated sum and sum_sq arrays to provided GpuImage objects and zeros the internal accumulators.
+ *
+ * This function launches `AccumulateSumsKernel` to transfer the content of the internal
+ * `sum_array` and `sum_sq_array` (which are accumulated per batch by `AccumulateDistributionKernel`)
+ * into the provided `sum_img` and `sq_sum_img` GpuImage objects. After the copy/accumulation,
+ * the internal `sum_array`, `sum_sq_array`, and `sum_counter` are zeroed.
+ * This is typically called after all image batches have been processed to get the final
+ * sum and sum of squares images.
+ *
+ * @param sum_img Output GpuImage to store the total sum array.
+ * @param sq_sum_img Output GpuImage to store the total sum_sq array.
+ *
+ * @note Critical: The kernel launch `AccumulateSumsKernel<<<..., cudaStreamPerThread>>>` uses `cudaStreamPerThread` (default stream).
+ * If `sum_array`, `sum_sq_array`, `sum_counter` were last written by kernels on `calc_stream_[0]` (e.g., `AccumulateDistributionKernel`),
+ * there's a potential race condition unless `calc_stream_[0]` was synchronized before this call.
+ * This should likely use `calc_stream_[0]` for consistency and safety within the class's stream model.
+ * Consider changing `cudaStreamPerThread` to `calc_stream_[0]`.
+ */
 template <typename ccfType, typename mipType>
 void TM_EmpiricalDistribution<ccfType, mipType>::CopySumAndSumSqAndZero(GpuImage& sum_img, GpuImage& sq_sum_img) {
     precheck;
     dim3 threadsPerBlock = dim3(1024, 1, 1);
     dim3 gridDims        = dim3((image_plane_mem_allocated_ + threadsPerBlock.x - 1) / threadsPerBlock.x, 1, 1);
 
+    // Potential Stream Issue: Uses cudaStreamPerThread. If sum_array etc. are populated
+    // by kernels on calc_stream_[0], this needs synchronization or to use calc_stream_[0].
     AccumulateSumsKernel<<<gridDims, threadsPerBlock, 0, cudaStreamPerThread>>>(sum_array,
                                                                                 sum_sq_array,
                                                                                 sum_img.real_values,
@@ -500,9 +693,26 @@ void TM_EmpiricalDistribution<ccfType, mipType>::CopySumAndSumSqAndZero(GpuImage
     postcheck;
 }
 
-//                                 const __half* __restrict__ secondary_peaks,
-//const int n_peaks
-
+/**
+ * @brief CUDA kernel to convert packed MIP and angle data to separate float arrays.
+ *
+ * This kernel reads from `mip_psi` (packed MIP value and psi angle) and
+ * `theta_phi` (packed theta and phi angles) and writes them out to separate
+ * float arrays corresponding to GpuImage real_values.
+ *
+ * @tparam mipType Data type of the packed MIP/angle arrays (e.g., __half2, __nv_bfloat162).
+ * @param mip_psi Device pointer to packed MIP value and psi angle.
+ * @param theta_phi Device pointer to packed theta and phi angles.
+ * @param numel Total number of elements (pixels).
+ * @param mip Output device pointer for MIP values (float).
+ * @param psi Output device pointer for psi angles (float).
+ * @param theta Output device pointer for theta angles (float).
+ * @param phi Output device pointer for phi angles (float).
+ *
+ * @note The kernel unpacks types like `__half2` into two float values.
+ * @note The use of `cudaStreamPerThread` in the calling function `MipToImage` has similar
+ *       concerns as in `CopySumAndSumSqAndZero` regarding synchronization with `calc_stream_`.
+ */
 template <typename mipType>
 __global__ void MipToImageKernel(const mipType* __restrict__ mip_psi,
                                  const mipType* __restrict__ theta_phi,
@@ -537,6 +747,24 @@ __global__ void MipToImageKernel(const mipType* __restrict__ mip_psi,
     // }
 }
 
+/**
+ * @brief Converts internal MIP and angle representations to output GpuImage objects.
+ *
+ * Launches `MipToImageKernel` to unpack the `mip_psi` and `theta_phi` arrays
+ * (which store MIPs and angles in a packed format like `__half2` or `__nv_bfloat162`)
+ * into the provided floating-point `GpuImage` objects.
+ * This is typically called after all processing to retrieve the final MIPs and angle maps.
+ *
+ * @param d_max_intensity_projection Output GpuImage for the MIP.
+ * @param d_best_psi Output GpuImage for the psi angle map.
+ * @param d_best_theta Output GpuImage for the theta angle map.
+ * @param d_best_phi Output GpuImage for the phi angle map.
+ *
+ * @note Critical: The kernel launch `MipToImageKernel<mipType><<<..., cudaStreamPerThread>>>` uses `cudaStreamPerThread`.
+ * If `mip_psi` and `theta_phi` were last written by `AccumulateDistributionKernel` on `calc_stream_[0]`,
+ * a race condition is possible without prior synchronization of `calc_stream_[0]`.
+ * This should likely use `calc_stream_[0]` for safety.
+ */
 template <typename ccfType, typename mipType>
 void TM_EmpiricalDistribution<ccfType, mipType>::MipToImage(GpuImage& d_max_intensity_projection,
                                                             GpuImage& d_best_psi,
@@ -547,6 +775,8 @@ void TM_EmpiricalDistribution<ccfType, mipType>::MipToImage(GpuImage& d_max_inte
     dim3 threadsPerBlock = dim3(1024, 1, 1);
     dim3 gridDims        = dim3((image_plane_mem_allocated_ + threadsPerBlock.x - 1) / threadsPerBlock.x, 1, 1);
 
+    // FIXME: Potential Stream Issue: Uses cudaStreamPerThread. If mip_psi and theta_phi are populated
+    // by kernels on calc_stream_[0], this needs synchronization or to use calc_stream_[0].
     // third arg was secondary_peaks,
     // last arg was n_global_search_images_to_save
     MipToImageKernel<mipType><<<gridDims, threadsPerBlock, 0, cudaStreamPerThread>>>(mip_psi,

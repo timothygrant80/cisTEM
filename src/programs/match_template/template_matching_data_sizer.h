@@ -8,8 +8,9 @@
 // #define USE_NEAREST_NEIGHBOR_INTERPOLATION
 // The USE_ZERO_PADDING_NOT_NOISE should be defined as padding with noise in real-space adds power to the noise
 // in every Fourier voxel reducing the SSNR. I'm leaving the option here to test noise padding for pathological images in the future.
-//#define USE_ZERO_PADDING_NOT_NOISE
+#define USE_ZERO_PADDING_NOT_NOISE
 // #define USE_REPLICATIVE_PADDING
+// #define DEBUG_NOISE_WITH_CONSTANT_SEED
 
 constexpr bool  MUST_BE_POWER_OF_TWO                   = false; // Required for half-precision xforms
 constexpr int   MUST_BE_FACTOR_OF                      = 0; // May be faster

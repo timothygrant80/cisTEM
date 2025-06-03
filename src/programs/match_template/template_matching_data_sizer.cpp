@@ -571,8 +571,17 @@ void TemplateMatchingDataSizer::ResizeImage_preSearch(Image& input_image, const 
         wxPrintf("Resampling the input image\n");
 
         tmp_sq.Allocate(image_pre_scaling_size.x, image_pre_scaling_size.y, image_pre_scaling_size.z, true);
+#ifdef DEBUG_NOISE_WITH_CONSTANT_SEED
+        if ( skip_padding_in_clipinto ) {
+            tmp_sq.SetToConstant(0.0f);
+            std::string           seed_str = "debug_seed_could_be_image_name";
+            RandomNumberGenerator noise_gen(seed_str);
+            tmp_sq.AddNoiseUsingGenerator(noise_gen, GAUSSIAN, 0.f, 1.0f);
+        }
+#else
         if ( skip_padding_in_clipinto )
-            tmp_sq.FillWithNoiseFromNormalDistribution(0.f, 1.0f);
+            tmp_sq.FillWithNoise(GAUSSIAN, 0.f, 1.0f);
+#endif
 
 #ifdef USE_REPLICATIVE_PADDING
         input_image.ClipIntoWithReplicativePadding(&tmp_sq);
@@ -610,7 +619,16 @@ void TemplateMatchingDataSizer::ResizeImage_preSearch(Image& input_image, const 
         tmp_sq.ClipIntoWithReplicativePadding(&input_image);
 #else
 #ifndef USE_ZERO_PADDING_NOT_NOISE
-        input_image.FillWithNoiseFromNormalDistribution(0.f, 1.0f);
+#ifdef DEBUG_NOISE_WITH_CONSTANT_SEED
+        if ( skip_padding_in_clipinto ) {
+            input_image.SetToConstant(0.0f);
+            std::string           seed_str = "debug_seed_could_be_image_name";
+            RandomNumberGenerator noise_gen(seed_str);
+            input_image.AddNoiseUsingGenerator(noise_gen, GAUSSIAN, 0.f, 1.0f);
+        }
+#else
+        input_image.FillWithNoise(GAUSSIAN, 0.f, 1.0f);
+#endif
 #endif // ndef USE_ZERO_PADDING_NOT_NOISE
         tmp_sq.ClipInto(&input_image, 0.0f, false, 1.0f, 0, 0, 0, skip_padding_in_clipinto);
 #endif // USE_REPLICATIVE_PADDING

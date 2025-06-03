@@ -1,3 +1,52 @@
+/**
+ * @file TemplateMatchingCore.cu
+ * @brief CUDA implementation of the TemplateMatchingCore class.
+ *
+ * This file contains the definitions of methods for the TemplateMatchingCore class,
+ * which are executed on the GPU using CUDA. It handles the low-level details of
+ * GPU memory management, kernel launches, and stream synchronization for template matching.
+ *
+ * Thread Safety and GPU Execution Model:
+ * - Each TemplateMatchingCore instance is designed to be managed by a single CPU host thread.
+ * - GPU operations are typically enqueued onto CUDA streams (often `cudaStreamPerThread` or
+ *   custom streams managed by `ProjectionQueue`).
+ * - `cudaStreamPerThread` provides a separate default stream for each host thread,
+ *   allowing for concurrent kernel execution from different host threads if the GPU
+ *   hardware supports it.
+ * - Synchronization primitives like `cudaEvent_t` and `cudaStreamSynchronize` are used
+ *   to manage dependencies between GPU operations and between GPU and CPU.
+ * - The `ProjectionQueue` class is used to manage a pool of CUDA streams and events
+ *   for asynchronous projection generation and processing, overlapping data transfers
+ *   and computations.
+ * - Data shared between CPU threads (e.g., input images loaded once) is typically
+ *   uploaded to the GPU and then accessed via `std::shared_ptr<GpuImage>` by multiple
+ *   `TemplateMatchingCore` instances. The `GpuImage` class itself should handle
+ *   any necessary internal GPU-side synchronization if its state can be modified
+ *   concurrently (though often these are read-only on the GPU during the core loop).
+ * - Result accumulation (e.g., MIPs, best angles) is done on GPU memory local to
+ *   the `TemplateMatchingCore` instance. Final aggregation of results from multiple
+ *   instances/threads is handled by the calling code (e.g., `MatchTemplateApp`) on the CPU.
+ *
+ * Key Operations:
+ * - `Init`: Sets up GPU resources, allocates memory for projections, statistical buffers,
+ *   and initializes search parameters.
+ * - `RunInnerLoop`: The main computational kernel. It iterates through assigned search
+ *   orientations (Psi angles and Euler search positions).
+ *   - Generates 2D projections from a 3D template (either on GPU or CPU then transferred).
+ *     - GPU projections use `ExtractSliceShiftAndCtf`.
+ *     - CPU projections are made, then copied to GPU.
+ *   - Normalizes projections.
+ *   - Performs FFTs (potentially using FastFFT library).
+ *   - Calculates Cross-Correlation Functions (CCFs) by multiplying in Fourier space
+ *     with the FFT of the input image and then inverse FFT.
+ *   - Updates an empirical distribution of CCF values using `TM_EmpiricalDistribution`.
+ *   - Identifies peaks (Maximum Intensity Projections - MIPs) and corresponding angles.
+ * - L2 Cache Management: Methods like `SetL2CachePersisting` and `SetL2AccessPolicy`
+ *   are provided to potentially optimize performance on supported GPU architectures
+ *   by influencing how data is cached in L2.
+ * - `UpdateSecondaryPeaksKernel`: A CUDA global kernel to manage and update a list
+ *   of secondary peaks if more than one top peak per search position is required.
+ */
 #include "gpu_core_headers.h"
 #include "gpu_indexing_functions.h"
 
@@ -13,6 +62,17 @@
 #endif
 #endif
 // Implementation is in the header as it is only used here for now.
+/**
+ * @brief Manages a queue of projections for asynchronous processing.
+ *
+ * The ProjectionQueue is crucial for overlapping GPU projection generation,
+ * data transfers, and the main CCC computation. It uses a set of CUDA streams
+ * and events to manage dependencies.
+ *
+ * For example, one projection can be generated on `projection_queue.gpu_projection_stream[i]`
+ * while the main processing of a previous projection occurs on `cudaStreamPerThread`.
+ * Events ensure that the main processing waits for the projection to be ready.
+ */
 #include "projection_queue.cuh"
 
 constexpr bool trouble_shoot_mip = false;
@@ -40,6 +100,13 @@ void TemplateMatchingCore::Init(MyApp*                    parent_pointer,
                                 bool                      use_fast_fft,
                                 bool                      use_gpu_prj,
                                 int                       number_of_global_search_images_to_save) {
+
+    // --- Thread Safety Note ---
+    // This Init method is called once per TemplateMatchingCore instance.
+    // It allocates GPU resources that are specific to this instance.
+    // `wanted_template_reconstruction` and `wanted_input_image` are shared_ptrs,
+    // allowing multiple instances to safely reference the same underlying GPU data
+    // (which should be immutable or properly synchronized if modified elsewhere during this time).
 
     MyDebugAssertFalse(object_initialized_, "Init must only be called once!");
     MyDebugAssertFalse(wanted_input_image->is_in_real_space, "Input image must be in Fourier space");
@@ -110,6 +177,9 @@ void TemplateMatchingCore::Init(MyApp*                    parent_pointer,
 };
 
 size_t TemplateMatchingCore::SetL2CachePersisting(const float L2_persistance_fraction) {
+    // --- Thread Safety Note ---
+    // This method is intended to be called by a single thread (thread 0 assertion)
+    // to set a global L2 cache policy. This is a device-wide setting.
     MyDebugAssertTrue(is_set_input_image_ptr, "Input image must be set before calling SetL2CachePersisting");
     MyDebugAssertTrue(ReturnThreadNumberOfCurrentThread( ) == 0, "SetL2CachePersisting must be called from thread 0");
 
@@ -167,6 +237,10 @@ size_t TemplateMatchingCore::SetL2CachePersisting(const float L2_persistance_fra
 };
 
 void TemplateMatchingCore::ClearL2CachePersisting( ) {
+    // --- Thread Safety Note ---
+    // Similar to SetL2CachePersisting, this likely affects global device state.
+    // The assertion "Not implemented" and the TODO suggest caution.
+    // Proper synchronization would be needed if multiple instances could call this.
     // TODO: we need to make sure we are the last user of this before clearing.
     // If there is any perf improvement, make this a whole object that we use shared pointers for within template matching core.
     MyDebugAssertTrue(false, "Not implemented");
@@ -174,6 +248,11 @@ void TemplateMatchingCore::ClearL2CachePersisting( ) {
 }
 
 void TemplateMatchingCore::SetL2AccessPolicy(const size_t window_size) {
+    // --- Thread Safety Note ---
+    // This method sets an access policy for the current CUDA stream (`cudaStreamPerThread`).
+    // Since each TemplateMatchingCore instance (and thus each host thread using it)
+    // has its own `cudaStreamPerThread`, this operation is local to the calling thread's stream
+    // and therefore safe in a multi-threaded context where each thread manages its own instance.
     stream_attribute.accessPolicyWindow.base_ptr  = reinterpret_cast<void*>(d_input_image->complex_values_fp16); // Global Memory data pointer
     stream_attribute.accessPolicyWindow.num_bytes = window_size; // Number of bytes for persistence access
     stream_attribute.accessPolicyWindow.hitRatio  = 0.8; // Hint for cache hit ratio
@@ -184,10 +263,89 @@ void TemplateMatchingCore::SetL2AccessPolicy(const size_t window_size) {
 };
 
 void TemplateMatchingCore::ClearL2AccessPolicy( ) {
+    // --- Thread Safety Note ---
+    // Similar to SetL2AccessPolicy, this clears the policy for the current thread's stream.
+    // Safe when each thread manages its own TemplateMatchingCore instance.
     stream_attribute.accessPolicyWindow.num_bytes = 0; // Setting the window size to 0 disable it
     cudaStreamSetAttribute(cudaStreamPerThread, cudaStreamAttributeAccessPolicyWindow, &stream_attribute); // Overwrite the access policy attribute to a CUDA Stream
 }
 
+/**
+ * @brief Main computational loop for template matching.
+ * 
+ * --- Thread Safety and GPU Concurrency Overview ---
+ * This is the core computational method. Each call to RunInnerLoop is by a CPU thread
+ * that owns this TemplateMatchingCore instance.
+ *
+ * 1. Initialization:
+ *    - `my_dist` (TM_EmpiricalDistribution) is initialized or reset. This object manages
+ *      its own GPU resources for accumulating CCF statistics, likely on `cudaStreamPerThread`.
+ *    - Statistical buffers (`d_max_intensity_projection`, etc.) are zeroed on `cudaStreamPerThread`.
+ *
+ * 2. ProjectionQueue:
+ *    - `ProjectionQueue projection_queue(n_prjs);` creates a helper to manage asynchronous
+ *      projection generation. It uses its own set of CUDA streams.
+ *    - `projection_queue.RecordProjectionReadyBlockingHost(current_projection_idx, cudaStreamPerThread);`
+ *      This seems to be an initial synchronization point.
+ *
+ * 3. Main Loop (over search positions and psi angles):
+ *    - `current_projection_idx = projection_queue.GetAvailableProjectionIDX();`
+ *      Gets an index for a projection buffer/stream from the queue. This call might block
+ *      if all projection resources are currently busy, ensuring that the host thread
+ *      doesn't get too far ahead of the GPU's capacity to process projections.
+ *
+ *    - GPU Projection Path (`if (use_gpu_prj)`):
+ *      - `d_current_projection[idx].ExtractSliceShiftAndCtf(...)` is enqueued on
+ *        `projection_queue.gpu_projection_stream[current_projection_idx]`.
+ *      - `d_current_projection[idx].BackwardFFT(...)` is also enqueued on the same projection stream.
+ *      - This allows projection generation and its initial FFT to happen on a dedicated stream,
+ *        potentially in parallel with other operations on `cudaStreamPerThread` or other projection streams.
+ *
+ *    - CPU Projection Path (`else`):
+ *      - CPU performs `ExtractSlice`, `MultiplyPixelWise`, `BackwardFFT`.
+ *      - `d_current_projection[idx].CopyHostToDevice(...)` enqueued on `projection_queue.gpu_projection_stream[idx]`.
+ *      - `projection_queue.RecordProjectionReadyBlockingHost(...)` ensures host waits if GPU copy falls behind.
+ *      - `projection_queue.RecordGpuProjectionReadyStreamPerThreadWait(idx)`: Makes `cudaStreamPerThread`
+ *        wait for the H2D copy on `projection_queue.gpu_projection_stream[idx]` to complete before
+ *        `cudaStreamPerThread` uses that projection data.
+ *
+ *    - Normalization and Main FFT/CCF Calculation:
+ *      - `d_current_projection[idx].NormalizeRealSpaceStdDeviationAndCastToFp16(...)` (if use_fast_fft) or
+ *        `NormalizeRealSpaceStdDeviation` then `ClipInto` (else) are enqueued on
+ *        `projection_queue.gpu_projection_stream[idx]` or `cudaStreamPerThread` respectively.
+ *      - `projection_queue.RecordGpuProjectionReadyStreamPerThreadWait(idx)`: (If FastFFT) Ensures `cudaStreamPerThread`
+ *        waits for normalization on the projection stream.
+ *      - `FT.FwdImageInvFFT(...)` (FastFFT path) or `d_padded_reference.ForwardFFT()`, `BackwardFFTAfterComplexConjMul(...)`
+ *        (standard path) perform the core CCF calculation. These operations are enqueued on `cudaStreamPerThread`.
+ *        The input to these operations is `d_current_projection[idx]` (after normalization) and `d_input_image`.
+ *        The output CCF is written to `my_dist->GetCCFArray(current_mip_to_process)`.
+ *
+ *    - Empirical Distribution Update:
+ *      - `my_dist->UpdateHostAngleArrays(...)` (CPU operation).
+ *      - `my_dist->AccumulateDistribution(current_mip_to_process)`: This method processes a batch of CCFs.
+ *        It likely enqueues kernels on `cudaStreamPerThread` to update histograms and MIPs on the GPU.
+ *        It uses its own internal events (`my_dist->MakeHostWaitOnMipStackIsReadyEvent()`,
+ *        `my_dist->RecordMipStackIsReadyBlockingHost()`) to manage synchronization for batches of CCFs,
+ *        allowing the host to prepare the next batch while the GPU processes the current one.
+ *
+ * 4. Finalization:
+ *    - Remaining CCFs in `my_dist` are processed.
+ *    - `my_dist->CopySumAndSumSqAndZero(d_sum1, d_sumSq1)`: Copies statistical sums.
+ *    - `my_dist->MipToImage(...)`: Generates final MIP images from accumulated data.
+ *    - `my_dist->FinalAccumulate()`: Performs final calculations for the distribution.
+ *    - `cudaStreamSynchronize(cudaStreamPerThread)`: Host thread blocks until all work
+ *      enqueued on `cudaStreamPerThread` for this `RunInnerLoop` call is complete. This ensures
+ *      that all GPU results (MIPs, best angles, statistical sums) are ready before the
+ *      function returns and the host thread potentially accesses them or deallocates resources.
+ *
+ * Overall Concurrency:
+ * - Multiple `TemplateMatchingCore` instances (each in its own CPU thread) can run `RunInnerLoop` concurrently.
+ * - Within each `RunInnerLoop`, the `ProjectionQueue` allows projection generation/transfer to overlap
+ *   with the main CCF calculations using separate CUDA streams.
+ * - `TM_EmpiricalDistribution` also uses techniques to batch processing and overlap CPU/GPU work.
+ * - Synchronization is handled by CUDA events between streams and `cudaStreamSynchronize` at the end
+ *   of major phases or the entire loop.
+ */
 void TemplateMatchingCore::RunInnerLoop(Image&      projection_filter,
                                         int         threadIDX,
                                         long&       current_correlation_position,
@@ -264,6 +422,9 @@ void TemplateMatchingCore::RunInnerLoop(Image&      projection_filter,
     ProjectionQueue projection_queue(n_prjs);
     // We need to make sure the host blocks on all setup work before we start to make projections,
     // since we are using more than one stream.
+    // This synchronize ensures that any setup operations on cudaStreamPerThread (like buffer zeroing)
+    // are complete before projection_queue starts enqueuing work on its streams that might
+    // depend on that setup.
     cudaErr(cudaStreamSynchronize(cudaStreamPerThread));
     projection_queue.RecordProjectionReadyBlockingHost(current_projection_idx, cudaStreamPerThread);
 
@@ -284,11 +445,19 @@ void TemplateMatchingCore::RunInnerLoop(Image&      projection_filter,
             constexpr float shifts_in_x_y                               = 0.0f;
             constexpr bool  apply_shifts                                = false;
             constexpr bool  swap_real_space_quadrants_during_projection = true;
+            // --- Per-Orientation Processing ---
+            // The ProjectionQueue manages a set of projection "slots".
+            // GetAvailableProjectionIDX might block if all slots are busy,
+            // providing backpressure to the CPU thread.
             // FIXME, change this to also store psi and to have methods to convert between an index encoded as an int and the actual angles
             angles.Init(global_euler_search.list_of_search_parameters[current_search_position][0], global_euler_search.list_of_search_parameters[current_search_position][1], current_psi, shifts_in_x_y, shifts_in_x_y);
             current_projection_idx = projection_queue.GetAvailableProjectionIDX( );
             if ( use_gpu_prj ) {
-
+                // --- GPU Projection Path ---
+                // Projection generation and initial FFT are enqueued on a dedicated
+                // stream from the projection_queue. This allows these operations
+                // to potentially run concurrently with other work on cudaStreamPerThread
+                // or on other projection_queue streams.
                 d_current_projection[current_projection_idx].is_in_real_space = false;
 
 #ifdef TEST_IES
@@ -348,6 +517,8 @@ void TemplateMatchingCore::RunInnerLoop(Image&      projection_filter,
                 }
             }
             else {
+                // --- CPU Projection Path ---
+                // CPU generates the projection.
                 // Make sure the previous copy from host -> device has completed before we start to make another projection.
                 // Event is created as non-blocking so this is a busy-wait.
                 MyDebugAssertFalse(cpu_template == nullptr, "Template reconstruction is not set with SetCpuTemplate");
@@ -365,10 +536,13 @@ void TemplateMatchingCore::RunInnerLoop(Image&      projection_filter,
 
                 d_current_projection[current_projection_idx].CopyHostToDevice(current_projection[current_projection_idx], false, false, projection_queue.gpu_projection_stream[current_projection_idx]);
 
-                // We need to make sure the current cpu projection is not used by the host until the gpu has finished with it, which may be independent of the main work
-                // in cudaStreamPerThread, this is a blocking event for the host (if the queue is otherwise full)
+                // projection_queue.RecordProjectionReadyBlockingHost: Host may block here if the H2D copy
+                // on the projection_queue stream hasn't completed, ensuring the CPU doesn't overwrite
+                // `current_projection[idx]` while it's still being copied.
                 projection_queue.RecordProjectionReadyBlockingHost(current_projection_idx, projection_queue.gpu_projection_stream[current_projection_idx]);
-                // We need the main work in cudaStreamPerThread to wait on the transfer in this stream, which if the CPU thread is ahead, should be a non-blocking event
+                // projection_queue.RecordGpuProjectionReadyStreamPerThreadWait: cudaStreamPerThread (main work stream)
+                // will wait for the H2D copy on projection_queue.gpu_projection_stream[idx] to complete
+                // before proceeding with operations that use this projection data.
                 projection_queue.RecordGpuProjectionReadyStreamPerThreadWait(current_projection_idx);
 
                 // Note: I had deleted this in the dev branch for FastFFT. Review when possible
@@ -380,9 +554,7 @@ void TemplateMatchingCore::RunInnerLoop(Image&      projection_filter,
                 }
             }
 
-            // For the host to execute the preceding line, it was to wait on the return value from ReturnSumOfSquares. This could be a bit of a performance regression as otherwise it can queue up all the reamining
-            // GPU work and get back to calculating the next projection. The commented out method is an attempt around that, but currently the mips come out a little different a bit faster.
-
+            // --- Normalization and CCF Calculation ---
             if ( use_fast_fft ) {
 #ifdef cisTEM_USING_FastFFT
                 // float scale_factor = rsqrtf(d_current_projection[current_projection_idx].ReturnSumOfSquares( ) / (float)d_padded_reference.number_of_real_space_pixels - (average_of_reals * average_of_reals));
@@ -394,7 +566,6 @@ void TemplateMatchingCore::RunInnerLoop(Image&      projection_filter,
                 // For the first point, let's just check 1/0/0 and call a different kernel if we know we don't need the other factors (still have to wait on L2Norm called from npp, so we can't do it all on host)
                 // For the full NCC, have an overload that passes three more array pointers, one to FFT(image) one to FFT(image^2) and one to conj(FFT(template mask)) // use this for the full NCC given an image mask of all ones
                 // For the case the template mask is assumed rotationally invariant, pass a single array pointer that is the full normalization term to be multiplied by T3 then sqrted (this needs to be used AFTER the back FFT)
-                //     In both of these cases, we don't need to apply the normalization until we go to the mip
                 d_current_projection[current_projection_idx].NormalizeRealSpaceStdDeviationAndCastToFp16(scale_factor,
                                                                                                          average_of_reals,
                                                                                                          average_on_edge,
@@ -403,28 +574,37 @@ void TemplateMatchingCore::RunInnerLoop(Image&      projection_filter,
                 // Make sure the FastFFT, using the cudaStreamPerThread stream waits on  projection_queue.gpu_projection_stream[current_projection_idx] before doing work
                 projection_queue.RecordGpuProjectionReadyStreamPerThreadWait(current_projection_idx);
 
-                // Since we have cast the projection to the fp16 buffer, we can let the host know that this gpu projection is ready to receive another projection
+                // Host can be signaled that this projection slot is now free for another CPU projection
+                // to be copied into, as the GPU data has been processed up to normalization and cast to fp16.
+                // The actual FFT (FwdImageInvFFT) will use the fp16 buffer.
                 projection_queue.RecordProjectionReadyBlockingHost(current_projection_idx, projection_queue.gpu_projection_stream[current_projection_idx]);
 
+                // Core CCF calculation (FFT, complex multiply, IFFT) enqueued on cudaStreamPerThread.
+                // Input: d_current_projection[idx].real_values_fp16 (from normalization)
+                //        d_input_image->complex_values_fp16 (pre-loaded shared input)
+                // Output: my_dist->GetCCFArray(current_mip_to_process)
                 FT.FwdImageInvFFT(d_current_projection[current_projection_idx].real_values_fp16, (__half2*)d_input_image->complex_values_fp16, my_dist->GetCCFArray(current_mip_to_process), noop, conj_mul_then_scale, noop);
 
 #endif // cisTEM_USING_FastFFT
             }
             else {
+                // Standard FFT path (not FastFFT)
                 // The average in the full padded image will be different;
                 average_of_reals *= ((float)d_current_projection[current_projection_idx].number_of_real_space_pixels / (float)d_padded_reference.number_of_real_space_pixels);
                 d_current_projection[current_projection_idx].NormalizeRealSpaceStdDeviation(float(d_padded_reference.number_of_real_space_pixels), average_of_reals, average_on_edge);
-                d_current_projection[current_projection_idx].ClipInto(&d_padded_reference, 0, false, 0, 0, 0, 0);
-                // d_current_projection[current_projection_idx].MultiplyByConstant(rsqrtf(d_current_projection[current_projection_idx].ReturnSumOfSquares( ) / (float)d_padded_reference.number_of_real_space_pixels - (average_of_reals * average_of_reals)));
+                d_current_projection[current_projection_idx].ClipInto(&d_padded_reference, 0, false, 0, 0, 0, 0); // Result in d_padded_reference
 
-                // Unlike with FastFFT we stay in the fp32 buffer, but after clip into we are now in padded reference so this projection is ready for re-use
                 if ( use_gpu_prj ) {
-                    // Note the stream change will not affect the padded projection
+                    // If GPU projection, the original d_current_projection[idx] buffer can be marked ready
+                    // for reuse by the host/projection_queue after ClipInto.
+                    // The stream here is cudaStreamPerThread as ClipInto was on it.
                     projection_queue.RecordProjectionReadyBlockingHost(current_projection_idx, cudaStreamPerThread);
                 }
-
+                // Core CCF calculation (FFT, complex multiply, IFFT) enqueued on cudaStreamPerThread.
+                // Input: d_padded_reference (contains normalized projection)
+                //        d_input_image->complex_values_fp16
+                // Output: my_dist->GetCCFArray(current_mip_to_process)
                 d_padded_reference.ForwardFFT(false);
-                //      d_padded_reference.ForwardFFTAndClipInto(d_current_projection,false);
                 d_padded_reference.BackwardFFTAfterComplexConjMul(d_input_image->complex_values_fp16, true, my_dist->GetCCFArray(current_mip_to_process));
             }
 
@@ -445,19 +625,21 @@ void TemplateMatchingCore::RunInnerLoop(Image&      projection_filter,
             my_dist->UpdateHostAngleArrays(current_mip_to_process, current_psi, global_euler_search.list_of_search_parameters[current_search_position][1], global_euler_search.list_of_search_parameters[current_search_position][0]);
 
             current_mip_to_process++;
-            if ( current_mip_to_process == my_dist->n_imgs_to_process_at_once( ) ) {
-                // Make sure the last stack has been processed before we start the next one
+            if ( current_mip_to_process == my_dist->n_imgs_to_process_at_once( ) - 1 ) {
+                // --- Process a Batch of CCFs ---
+                // Host waits for the previous batch of MIPs/distribution updates to complete on GPU.
                 my_dist->MakeHostWaitOnMipStackIsReadyEvent( );
-                // On the first loop this will not do anything, so we can change the active_idx, and move forward to calculate the alternate stack of ccfs while the mip works on this one
 
                 total_mip_processed += current_mip_to_process;
                 // current_mip_to_process only matters after the main loop, the TM empirical dist will also update the active_idx_ before returning from Accumulate distribution
                 my_dist->AccumulateDistribution(current_mip_to_process);
 
-                // We've queued up all the work for the current stack, so record the event that will be used to block the host until the stack is ready
+                // Record an event on cudaStreamPerThread after AccumulateDistribution work is enqueued.
+                // The host will use this event (via MakeHostWaitOnMipStackIsReadyEvent) before starting
+                // the *next* batch, allowing overlap.
                 my_dist->RecordMipStackIsReadyBlockingHost( );
 
-                current_mip_to_process = 0;
+                current_mip_to_process = 0; // Reset for the next batch.
             }
 
             ccc_counter++;
@@ -543,9 +725,33 @@ void TemplateMatchingCore::RunInnerLoop(Image&      projection_filter,
         cudaErr(cudaFreeAsync(secondary_peaks, cudaStreamPerThread));
     }
 
+    // --- Final Synchronization ---
+    // Host thread blocks until ALL operations enqueued on cudaStreamPerThread
+    // for this RunInnerLoop call are complete. This ensures all GPU results are finalized
+    // before the function returns.
     cudaErr(cudaStreamSynchronize(cudaStreamPerThread));
 }
 
+/**
+ * @global
+ * @brief CUDA kernel to update secondary peaks. Not currently used but may be useful in future.
+ *
+ * This kernel is launched if `n_global_search_images_to_save > 1`.
+ * It iterates through pixels (img_index) and for each pixel, checks if the current
+ * orientation's CCF peak (`mip_psi[img_index]`) is better than any of the
+ * already stored secondary peaks for that pixel. If so, it inserts the new peak
+ * and shifts existing ones.
+ *
+ * Threading:
+ * - Standard CUDA grid-stride loop. Each thread processes multiple pixels.
+ * - Assumes `secondary_peaks` is a 3D-like array storing (score, psi, theta, phi)
+ *   for `NY` (n_global_search_images_to_save) peaks for each of `NX` pixels.
+ * - `mip_psi` and `theta_phi` contain the current orientation's peak score, psi, theta, phi.
+ * - Access to `secondary_peaks` for a given `img_index` is exclusive to the thread(s)
+ *   handling that `img_index`. No race conditions between different `img_index`.
+ * - Within an `img_index`, the update logic (finding `best_index` and shifting)
+ *   is sequential.
+ */
 __global__ void
 UpdateSecondaryPeaksKernel(__half*   secondary_peaks,
                            __half2*  mip_psi,

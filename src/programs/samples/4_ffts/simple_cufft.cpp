@@ -55,7 +55,7 @@ bool DoInPlaceR2CandC2R(const wxString& hiv_image_80x80x1_filename, wxString& te
     for ( auto iSize : fft_sizes ) {
 
         test_image.Allocate(iSize, iSize, 1, should_allocate_in_real_space, should_make_fftw_plan);
-        test_image.FillWithNoiseFromNormalDistribution(0.f, 1.f);
+        test_image.FillWithNoise(GAUSSIAN, 0.f, 1.f);
         GpuImage gpu_test_image;
         gpu_test_image.Init(test_image);
         gpu_test_image.CopyHostToDeviceAndSynchronize(test_image);
@@ -85,7 +85,7 @@ bool DoInPlaceR2CandC2R(const wxString& hiv_image_80x80x1_filename, wxString& te
             continue;
         }
         test_image.Allocate(iSize, iSize, 1, should_allocate_in_real_space, should_make_fftw_plan);
-        test_image.FillWithNoiseFromNormalDistribution(0.f, 1.f);
+        test_image.FillWithNoise(GAUSSIAN, 0.f, 1.f);
         GpuImage gpu_test_image;
         gpu_test_image.Init(test_image);
         gpu_test_image.CopyHostToDeviceAndSynchronize(test_image);
@@ -113,7 +113,7 @@ bool DoInPlaceR2CandC2R(const wxString& hiv_image_80x80x1_filename, wxString& te
     for ( int i = 1; i < fft_sizes.size( ); i++ ) {
 
         test_image.Allocate(fft_sizes[i], fft_sizes[i - 1], 1, should_allocate_in_real_space, should_make_fftw_plan);
-        test_image.FillWithNoiseFromNormalDistribution(0.f, 1.f);
+        test_image.FillWithNoise(GAUSSIAN, 0.f, 1.f);
         GpuImage gpu_test_image;
         gpu_test_image.Init(test_image);
         gpu_test_image.CopyHostToDeviceAndSynchronize(test_image);
@@ -163,7 +163,7 @@ bool DoInPlaceR2CandC2RBatched(const wxString& hiv_image_80x80x1_filename, wxStr
     // correct place in the 3d's image memory.
 
     cpu_batch.Allocate(image_size, image_size, batch_size, should_allocate_in_real_space, should_make_fftw_plan);
-    cpu_batch.FillWithNoiseFromNormalDistribution(0.f, 1.f);
+    cpu_batch.FillWithNoise(GAUSSIAN, 0.f, 1.f);
 
     // The address range is tracked for each pointer accessing subsets of the full block of memory, so we DO NOT want to pin it here.
     constexpr bool pin_host_memory = false;

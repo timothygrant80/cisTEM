@@ -177,42 +177,32 @@ class Image {
     void  DividePixelWise(Image& other_image);
     bool  IsAlmostEqual(Image& other_image, bool print_if_failed = true, float epsilon = 0.0001f);
     void  AddGaussianNoise(float wanted_sigma_value = 1.0, RandomNumberGenerator* provided_generator = NULL);
-    // using cistem::NoiseType from defines.h
-    void AddNoise(NoiseType wanted_noise_type, float noise_param_1, float noise_param_2);
+    
+    void AddNoiseUsingGenerator(RandomNumberGenerator& provided_generator, NoiseType wanted_noise_type, float noise_param_1, float noise_param_2 = 1.0f);
 
-    void AddNoiseFromUniformDistribution(float wanted_minimum_value, float wanted_maximum_value) { AddNoise(UNIFORM, wanted_minimum_value, wanted_maximum_value); }
-
-    void AddNoiseFromNormalDistribution(float wanted_mean_value, float wanted_sigma_value) { AddNoise(GAUSSIAN, wanted_mean_value, wanted_sigma_value); }
-
-    void AddNoiseFromPoissonDistribution(float wanted_mean_value) { AddNoise(POISSON, wanted_mean_value, 0.1f); }
-
-    void AddNoiseFromExponentialDistribution(float wanted_lambda_value) { AddNoise(EXPONENTIAL, wanted_lambda_value, 0.1f); }
-
-    void AddNoiseFromGammaDistribution(float wanted_alpha_value, float wanted_beta_value) { AddNoise(GAMMA, wanted_alpha_value, wanted_beta_value); }
-
-    void FillWithNoiseFromUniformDistribution(float wanted_minimum_value, float wanted_maximum_value) {
-        SetToConstant(0.f);
-        AddNoise(UNIFORM, wanted_minimum_value, wanted_maximum_value);
+    void AddNoise(NoiseType wanted_noise_type, float noise_param_1, float noise_param_2 = 1.0f) {
+        // This will be used in most cases. For debugging and trouble shooting, we may want to provide a custom random number generator that has a fixed seed.
+        RandomNumberGenerator my_rng(pi_v<float>);
+        AddNoiseUsingGenerator(my_rng, wanted_noise_type, noise_param_1, noise_param_2);
     }
 
-    void FillWithNoiseFromNormalDistribution(float wanted_mean_value, float wanted_sigma_value) {
+    /**
+     * @brief Zeros the image then fills noise to the image based on the specified noise type and parameters.
+     * 
+     * Noise types are defined in defines.h as cistem::NoiseType::
+     * - UNIFORM
+     * - GAUSSIAN
+     * - POISSON
+     * - EXPONENTIAL
+     * - GAMMA
+     * 
+     * @param wanted_noise_type 
+     * @param noise_param_1 
+     * @param noise_param_2 
+     */
+    void FillWithNoise(NoiseType wanted_noise_type, float noise_param_1, float noise_param_2 = 1.0f) {
         SetToConstant(0.f);
-        AddNoise(GAUSSIAN, wanted_mean_value, wanted_sigma_value);
-    }
-
-    void FillWithNoiseFromPoissonDistribution(float wanted_mean_value) {
-        SetToConstant(0.f);
-        AddNoise(POISSON, wanted_mean_value, 0.1f);
-    }
-
-    void FillWithNoiseFromExponentialDistribution(float wanted_lambda_value) {
-        SetToConstant(0.f);
-        AddNoise(EXPONENTIAL, wanted_lambda_value, 0.1f);
-    }
-
-    void FillWithNoiseFromGammaDistribution(float wanted_alpha_value, float wanted_beta_value) {
-        SetToConstant(0.f);
-        AddNoise(GAMMA, wanted_alpha_value, wanted_beta_value);
+        AddNoise(wanted_noise_type, noise_param_1, noise_param_2);
     }
 
     EmpiricalDistribution<double> ReturnDistributionOfRealValues(float wanted_mask_radius = 0.0, bool outside = false, float wanted_center_x = 0.0, float wanted_center_y = 0.0, float wanted_center_z = 0.0);

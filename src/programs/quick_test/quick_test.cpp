@@ -22,6 +22,7 @@ class
   public:
     bool     DoCalculation( );
     void     DoInteractiveUserInput( );
+    void     AddCommandLineOptions( );
     wxString symmetry_symbol;
     bool     my_test_1 = false;
     bool     my_test_2 = true;
@@ -34,10 +35,19 @@ class
 
 IMPLEMENT_APP(QuickTestApp)
 
+// Optional command-line stuff
+void QuickTestApp::AddCommandLineOptions( ) {
+    command_line_parser.AddLongSwitch("disable-user-input", "Disable interactive user input prompts. Default false");
+}
+
 // override the DoInteractiveUserInput
 
 void QuickTestApp::DoInteractiveUserInput( ) {
-
+    // This flag allows skipping interactive prompts, useful for automated testing with Copilot.
+    if ( command_line_parser.FoundSwitch("disable-user-input") ) {
+        std::cout << "Skipping interactive user input as per command line flag." << std::endl;
+        return;
+    }
     UserInput* my_input = new UserInput("QuickTest", 2.0);
 
     idx                           = my_input->GetIntFromUser("Index", "", "", 0, 1000);

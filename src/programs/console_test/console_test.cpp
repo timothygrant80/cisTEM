@@ -788,7 +788,7 @@ void MyTestApp::TestRandomVariableFunctions( ) {
     for ( int i = 0; i < test_normal_vals.size( ); i += 2 ) {
         test_image.SetToConstant(0.f);
         my_dist.Reset( );
-        test_image.AddNoiseFromNormalDistribution(test_normal_vals[i], test_normal_vals[i + 1]);
+        test_image.AddNoise(GAUSSIAN, test_normal_vals[i], test_normal_vals[i + 1]);
         test_image.UpdateDistributionOfRealValues(&my_dist);
         // Avoid zero division by adding 1
         if ( ! RelativeErrorIsLessThanEpsilon(my_dist.GetSampleMean( ) + 1.f, test_normal_vals[i] + 1.f, true, acceptable_error) )
@@ -803,7 +803,7 @@ void MyTestApp::TestRandomVariableFunctions( ) {
     for ( auto& val : test_poisson_vals ) {
         test_image.SetToConstant(0.f);
         my_dist.Reset( );
-        test_image.AddNoiseFromPoissonDistribution(val);
+        test_image.AddNoise(POISSON, val);
         test_image.UpdateDistributionOfRealValues(&my_dist);
         if ( ! RelativeErrorIsLessThanEpsilon(my_dist.GetSampleMean( ), val, true, acceptable_error) )
             FailTest;
@@ -816,7 +816,7 @@ void MyTestApp::TestRandomVariableFunctions( ) {
     const float uniform_max = 1.f;
     test_image.SetToConstant(0.f);
     my_dist.Reset( );
-    test_image.AddNoiseFromUniformDistribution(uniform_min, uniform_max);
+    test_image.AddNoise(UNIFORM, uniform_min, uniform_max);
     test_image.UpdateDistributionOfRealValues(&my_dist);
     // Avoid zero division by adding 1
     if ( ! RelativeErrorIsLessThanEpsilon(my_dist.GetSampleMean( ) + 1.f, 1.f, true, acceptable_error) )
@@ -831,7 +831,7 @@ void MyTestApp::TestRandomVariableFunctions( ) {
     for ( auto& val : test_poisson_vals ) {
         test_image.SetToConstant(0.f);
         my_dist.Reset( );
-        test_image.AddNoiseFromExponentialDistribution(val);
+        test_image.AddNoise(EXPONENTIAL, val);
         test_image.UpdateDistributionOfRealValues(&my_dist);
         if ( ! RelativeErrorIsLessThanEpsilon(my_dist.GetSampleMean( ), 1.f / val, true, acceptable_error) )
             FailTest;
@@ -846,7 +846,7 @@ void MyTestApp::TestRandomVariableFunctions( ) {
         beta = alpha + 1.f;
         test_image.SetToConstant(0.f);
         my_dist.Reset( );
-        test_image.AddNoiseFromGammaDistribution(alpha, beta);
+        test_image.AddNoise(GAMMA, alpha, beta);
         test_image.UpdateDistributionOfRealValues(&my_dist);
         if ( ! RelativeErrorIsLessThanEpsilon(my_dist.GetSampleMean( ), alpha * beta, true, 2.0f * acceptable_error) ) {
             wxPrintf("m,a/b %f %f\n", my_dist.GetSampleMean( ), alpha * beta);

@@ -53,7 +53,7 @@ bool DoBatchedCorrelationTest(const wxString& hiv_images_80x80x10_filename, wxSt
         seq_rotation_cache[i].ReadSlice(&input_file, 1);
         // First norm is to make sure the noise and image values are on the same scale
         seq_rotation_cache[i].ZeroFloatAndNormalize( );
-        seq_rotation_cache[i].AddNoiseFromNormalDistribution(0, n_search_images / (1.f + float(i)));
+        seq_rotation_cache[i].AddNoise(GAUSSIAN, 0, n_search_images / (1.f + float(i)));
         // Second norm is to make sure the image and reference values are on the same scale for correlation.
         seq_rotation_cache[i].ZeroFloatAndNormalize( );
         seq_rotation_cache[i].ForwardFFT( );

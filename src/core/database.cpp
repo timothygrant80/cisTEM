@@ -1,6 +1,9 @@
 #include "core_headers.h"
 #include "database_schema.h"
 
+// #define PRINT_FOR_SLOW_DEBUG
+// #define SKIP_TM_TABLE_CHECK
+
 Database::Database( ) {
     last_return_code = -1;
     is_open          = false;
@@ -2691,7 +2694,11 @@ std::pair<Database::TableChanges, Database::ColumnChanges> Database::CheckSchema
     int           counter;
     int           col_counter;
     for ( TableData& table : static_tables ) {
+#ifdef PRINT_FOR_SLOW_DEBUG
+        // Print out a line so I know something is happening using std::cerr including the current and total number of tables determined from static_tables without using counter variable
+        std::cerr << "Working on table " << (&table - &static_tables[0] + 1) << " / " << static_tables.size( ) << ": " << std::get<0>(table) << std::endl;
 
+#endif
         return_strings = ReturnStringArrayFromSelectCommand(wxString::Format("SELECT name FROM sqlite_master WHERE type='table' AND name='%s';", std::get<0>(table)));
         if ( return_strings.IsEmpty( ) ) {
             missing_tables.push_back(std::get<TABLE_NAME>(table));
@@ -2709,7 +2716,20 @@ std::pair<Database::TableChanges, Database::ColumnChanges> Database::CheckSchema
     }
 
     for ( TableData& table : dynamic_tables ) {
-
+#ifdef PRINT_FOR_SLOW_DEBUG
+        // Print out a line so I know something is happening using std::cerr including the current and total number of tables
+        std::cerr << "Working on table " << (&table - &dynamic_tables[0] + 1) << " / " << dynamic_tables.size( ) << ": " << std::get<0>(table) << std::endl;
+#ifdef SKIP_TM_TABLE_CHECK
+        if ( std::get<0>(table) == "TEMPLATE_MATCH_PEAK_LIST_" ) {
+            std::cerr << "Skipping table TEMPLATE_MATCH_PEAK_LIST_ check." << std::endl;
+            continue;
+        }
+                if ( std::get<0>(table) == "TEMPLATE_MATCH_PEAK_CHANGE_LIST_" ) {
+            std::cerr << "Skipping table TEMPLATE_MATCH_PEAK_CHANGE_LIST_ check." << std::endl;
+            continue;
+        }
+#endif
+#endif
         return_strings = ReturnStringArrayFromSelectCommand(wxString::Format("SELECT name FROM sqlite_master WHERE type='table' AND name  LIKE '%s_%';", std::get<0>(table)));
         for ( counter = 0; counter < return_strings.GetCount( ); counter++ ) {
             // Make sure it is not any of the static columns that happen to match

@@ -15,8 +15,8 @@ The script has two operational modes controlled by the FAST_DEVELOPMENT_CONDITIO
 1. When True: Uses only binning=1.2 with 5.0 degree angular sampling (faster development mode)
 2. When False: Tests all binning values (1.0, 1.2, 1.6) with 3.0 degree angular sampling
 
-Instead of performing analysis directly, this script outputs commands for the user to run
-the image_replicate_analysis.py tool separately.
+By default, this script outputs commands for the user to run the image_replicate_analysis.py
+tool separately. Use the --run-analysis flag to automatically execute the analysis.
 """
 
 import annoying_hack
@@ -29,13 +29,8 @@ import cistem_test_utils.run_job as runner
 from cistem_test_utils.temp_dir_manager import TempDirManager
 from cistem_test_utils.threshold_utils import extract_threshold_value
 from cistem_test_utils.image_replicate_analysis import ImageReplicateAnalysis
-import mrcfile
-import numpy as np
-import tempfile
 import os
-import shutil
 import sys
-import re
 
 # By default the "_gpu" suffix will be added unless the --old-cistem flag is used
 # or the --cpu flag is used
@@ -45,7 +40,7 @@ wanted_binary_name = 'match_template'
 NUM_REPLICATES = 5
 
 # Define whether to use fast development conditions
-FAST_DEVELOPMENT_CONDITIONS = True
+FAST_DEVELOPMENT_CONDITIONS = False
 
 # Define the binning values to test - modified based on development conditions
 if FAST_DEVELOPMENT_CONDITIONS:
@@ -169,32 +164,86 @@ def main():
             else:
                 print("Error: No threshold values were extracted.")
                 return 1
-                
+
             print(f"Binning value: {binning_value}")
-                
-            # Instead of running analysis directly, print commands for the user to run
-            print(f"\n{'-'*80}")
-            print(f"Replicate generation complete for binning {binning_value}")
-            print(f"{'-'*80}")
-            
-            # Suggest a list file location but don't create it - let user do it with wildcards
+
+            # Create a list file for the MIP files
             mip_list_file = join(binning_dir, "mip_files.txt")
-            
-            print("\nTo create a list of MIP files for analysis:")
-            print(f"find {binning_dir} -name 'mip.mrc' > {mip_list_file}")
-            
-            print("\nOr to analyze other image types, like theta maps:")
-            print(f"find {binning_dir} -name 'theta.mrc' > {binning_dir}/theta_files.txt")
-            
-            print("\nTo analyze the replicate results with the saved MIP list:")
-            print(f"python3 scripts/testing/programs/image_replicate_analysis.py --image-list {mip_list_file} --threshold {threshold_value:.3f}")
-            
-            print("\nOr to extract the threshold value directly from histogram files:")
-            print(f"threshold=$(awk '/threshold/{{print $NF; exit}}' {hist_filenames[0]})")
-            print(f"python3 scripts/testing/programs/image_replicate_analysis.py --image-list {mip_list_file} --threshold $threshold")
+
+            if args.run_analysis:
+                # Run the analysis automatically
+                print(f"\n{'-'*80}")
+                print(f"Running automatic analysis for binning {binning_value}")
+                print(f"{'-'*80}")
+
+                # Create the MIP files list
+                import subprocess
+                find_cmd = f"find {binning_dir} -name 'mip.mrc'"
+                result = subprocess.run(find_cmd, shell=True, capture_output=True, text=True)
+                if result.returncode != 0:
+                    print(f"Error creating MIP file list: {result.stderr}")
+                    continue
+
+                # Write the list to file
+                with open(mip_list_file, 'w') as f:
+                    f.write(result.stdout)
+
+                # Verify we have files in the list
+                if not result.stdout.strip():
+                    print(f"No MIP files found in {binning_dir}")
+                    continue
+
+                print(f"Created MIP file list: {mip_list_file}")
+                print(f"Found {len(result.stdout.strip().split())} MIP files")
+
+                # Run the image replicate analysis
+                try:
+                    # Import and use the ImageReplicateAnalysis directly
+                    image_files = result.stdout.strip().split('\n')
+                    # Filter out empty lines
+                    image_files = [f for f in image_files if f.strip()]
+
+                    if len(image_files) < 2:
+                        print(f"Error: Only {len(image_files)} MIP files found, need at least 2 for analysis")
+                        continue
+
+                    print(f"Running analysis on {len(image_files)} replicate MIP files...")
+                    print(f"Using threshold: {threshold_value:.3f}")
+
+                    # Create analyzer and run analysis
+                    analyzer = ImageReplicateAnalysis(image_files, threshold_value)
+                    analyzer.load_images()
+                    results = analyzer.analyze_replicates()
+                    analyzer.print_analysis(results)
+
+                except Exception as e:
+                    print(f"Error during image analysis: {str(e)}")
+                    import traceback
+                    traceback.print_exc()
+                    continue
+            else:
+                # Print commands for manual execution (original behavior)
+                print(f"\n{'-'*80}")
+                print(f"Replicate generation complete for binning {binning_value}")
+                print(f"{'-'*80}")
+
+                print("\nTo create a list of MIP files for analysis:")
+                print(f"find {binning_dir} -name 'mip.mrc' > {mip_list_file}")
+
+                print("\nOr to analyze other image types, like theta maps:")
+                print(f"find {binning_dir} -name 'theta.mrc' > {binning_dir}/theta_files.txt")
+
+                print("\nTo analyze the replicate results with the saved MIP list:")
+                print(f"python3 scripts/testing/programs/image_replicate_analysis.py --image-list {mip_list_file} --threshold {threshold_value:.3f}")
+
+                print("\nOr to extract the threshold value directly from histogram files:")
+                print(f"threshold=$(awk '/threshold/{{print $NF; exit}}' {hist_filenames[0]})")
+                print(f"python3 scripts/testing/programs/image_replicate_analysis.py --image-list {mip_list_file} --threshold $threshold")
 
         # Print the directory where files are saved
         print(f"\nMIP files saved in: {temp_dir}")
+        if not args.run_analysis:
+            print("To run automatic analysis next time, use: --run-analysis")
         print("To list temp directories: --list-temp-dirs")
         print("To remove this directory: --rm-temp-dir INDEX")
         print("To remove all temp directories: --rm-all-temp-dirs")

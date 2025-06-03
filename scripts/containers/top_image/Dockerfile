@@ -57,7 +57,8 @@ RUN if [[ "x${build_pytorch}" == "xtrue" ]]; then cd /tmp && wget https://downlo
 
 # Include the lib path in LD_RUN_PATH so on linking, the correct path is known 
 # TODO: could this be avoided as the installation? Will there be any problems if used without the actual install
-ENV LD_RUN_PATH=/opt/libtorch/lib:${LD_RUN_PATH}
+# Only set LD_RUN_PATH for non-static builds to avoid warnings
+RUN if [[ "x${build_type}" != "xstatic" ]]; then echo "export LD_RUN_PATH=/opt/libtorch/lib:\${LD_RUN_PATH}" >> /etc/profile.d/ld_run_path.sh; fi
 
 # TODO: if adding dynamic linking for the cuda libs, we can save a bunch of space in the image by removing these large static libs
 # Use the basename bit to ensure no rm -rf foibles with root dir in empyt string case

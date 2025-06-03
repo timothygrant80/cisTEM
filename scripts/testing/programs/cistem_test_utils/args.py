@@ -129,12 +129,23 @@ def parse_TM_args(wanted_binary_name):
     parser.add_argument('--fast-fft', dest='fast_fft', action='store_true', default=True,
                         help='Use FastFFT implementation (default: True)')
     args_to_check.append('fast_fft')
-    
+
     parser.add_argument('--max-threads', dest='max_threads', type=int, default=2,
                         help='Maximum number of threads to use (default: 2)')
     args_to_check.append('max_threads')
 
+    parser.add_argument('--run-analysis', dest='run_analysis', action='store_true', default=False,
+                        help='Run the image replicate analysis automatically instead of just printing commands (default: False)')
+    args_to_check.append('run_analysis')
+
     args = parser.parse_args()
+
+    # Centralized check for --run-analysis flag usage
+    script_name = os.path.basename(sys.argv[0])
+    if hasattr(args, 'run_analysis') and args.run_analysis and script_name != 'test_template_reproducibility.py':
+        print(f"Warning: --run-analysis flag is only meaningful in test_template_reproducibility.py, but this is {script_name}")
+        print("The --run-analysis flag will be ignored.")
+        args.run_analysis = False
 
     # Check if any temp directory management options are being used
     using_temp_management = args.list_temp_dirs or args.rm_temp_dir is not None or args.rm_all_temp_dirs
@@ -166,13 +177,13 @@ def parse_TM_args(wanted_binary_name):
         # Check if the binary exists
         if not os.path.isfile(os.path.join(args.binary_path, args.binary_name)):
             print('The binary ' + os.path.join(args.binary_path,
-                args.binary_name) + ' does not exist')
+                                               args.binary_name) + ' does not exist')
             sys.exit(1)
 
         # Check if make_template_result binary exists
         if not os.path.isfile(os.path.join(args.binary_path, args.results_binary_name)):
             print('The binary ' + os.path.join(args.binary_path,
-                args.results_binary_name) + ' does not exist')
+                                               args.results_binary_name) + ' does not exist')
             sys.exit(1)
 
         # if the optional data path is not given, use the default
@@ -182,7 +193,7 @@ def parse_TM_args(wanted_binary_name):
         # Check if the test data directory exists
         if not os.path.isdir(args.test_data_path):
             print('The test data directory [' +
-                args.test_data_path + '] does not exist')
+                  args.test_data_path + '] does not exist')
             print('Please provide a valid path to the test data directory as a second argument')
             sys.exit(1)
 

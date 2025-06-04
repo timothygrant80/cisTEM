@@ -1,0 +1,92 @@
+name: Cleanup Old Actions
+
+on:
+  workflow_dispatch:
+    inputs:
+      days:
+        description: 'Days to keep workflows (default: 30, supports fractional values like 0.5)'
+        required: true
+        default: 30.0
+        type: number
+
+jobs:
+  cleanup:
+    runs-on: ubuntu-latest
+    permissions:
+      actions: write  # Needed to delete workflow runs
+      contents: read  # Default permission to read repository contents
+    steps:
+      - name: Cleanup old workflow runs
+        uses: actions/github-script@v6
+        with:
+          script: |
+            // Parse the days input, supporting fractional values
+            const parsedDays = ${{ inputs.days }}
+            const daysToKeep = !isNaN(parsedDays) ? parsedDays : 30;
+            const cutoffDate = new Date();
+            cutoffDate.setTime(cutoffDate.getTime() - (daysToKeep  * 24 * 60 * 60 * 1000));
+
+            console.log(`Cleaning up workflow runs older than ${daysToKeep} day${daysToKeep === 1 ? '' : 's'} (before ${cutoffDate.toISOString()})`);
+            
+            // Get list of all workflows
+            const workflows = await github.rest.actions.listRepoWorkflows({
+              owner: context.repo.owner,
+              repo: context.repo.repo
+            });
+            
+            let deletedRuns = 0;
+            let processedWorkflows = 0;
+            
+            // Process each workflow
+            for (const workflow of workflows.data.workflows) {
+              processedWorkflows++;
+              console.log(`Processing workflow: ${workflow.name} (${workflow.id})`);
+              
+              let page = 1;
+              let hasMorePages = true;
+              
+              while (hasMorePages) {
+                // Get workflow runs with pagination
+                const runs = await github.rest.actions.listWorkflowRuns({
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  workflow_id: workflow.id,
+                  per_page: 100,
+                  page: page
+                });
+                
+                if (runs.data.workflow_runs.length === 0) {
+                  hasMorePages = false;
+                  continue;
+                }
+                
+                // Process runs on this page
+                for (const run of runs.data.workflow_runs) {
+                  const createdAt = new Date(run.created_at);
+                  
+                  // Delete if older than cutoff date
+                  if (createdAt < cutoffDate) {
+                    console.log(`Deleting run #${run.id} from ${createdAt.toISOString()} for workflow "${workflow.name}"`);
+                    try {
+                      await github.rest.actions.deleteWorkflowRun({
+                        owner: context.repo.owner,
+                        repo: context.repo.repo,
+                        run_id: run.id
+                      });
+                      deletedRuns++;
+                    } catch (error) {
+                      console.log(`Error deleting run #${run.id}: ${error.message}`);
+                    }
+                  }
+                }
+                
+                // Check if we need to process more pages
+                if (runs.data.workflow_runs.length < 100) {
+                  hasMorePages = false;
+                } else {
+                  page++;
+                }
+              }
+            }
+            
+            console.log(`Cleanup complete. Processed ${processedWorkflows} workflows and deleted ${deletedRuns} workflow runs.`);

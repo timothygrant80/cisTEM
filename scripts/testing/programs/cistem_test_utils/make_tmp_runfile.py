@@ -9,8 +9,22 @@ def match_template(config):
         use_gpu = "no"
     else:
         use_gpu = "yes"
+        
+    # Check if fast_fft is requested but GPU is not enabled
+    if config.get('fast_fft') and use_gpu == "no":
+        print("Error: --fast_fft option requires GPU to be enabled. Cannot use fast FFT with CPU.")
+        exit(1)
+        
+    # Set the use_fast_fft parameter based on the fast_fft flag
+    if config.get('fast_fft'):
+        use_fast_fft = "yes"
+    else:
+        use_fast_fft = "no"
 
-    high_res_limit = 2*config.get('data')[config.get('img_number')].get('pixel_size')
+    # Calculate high resolution limit with binning factor
+    high_res_limit = 2 * config.get('data')[config.get('img_number')].get('pixel_size') * config.get('binning')
+    # Ensure high_res_limit is formatted with at least 4 decimal places
+    high_res_limit_str = f"{high_res_limit:.4f}"
 
     # make a string that will then be used to create a temporary file for feading to stdin
     # TODO: optional output dir
@@ -35,7 +49,7 @@ def match_template(config):
         str(config.get('data')[config.get('img_number')].get('ctf').get('defocus_2')),
         str(config.get('data')[config.get('img_number')].get('ctf').get('defocus_angle')),
         str(config.get('data')[config.get('img_number')].get('ctf').get('extra_phase_shift')),
-        str(high_res_limit),
+        high_res_limit_str,
         str(config.get('out_of_plane_angle')),
         str(config.get('in_plane_angle')),
         str(config.get('defocus_range')),
@@ -46,6 +60,7 @@ def match_template(config):
         str(config.get('mask_radius')),
         str(config.get('model')[config.get('ref_number')].get('symmetry')),
         use_gpu,
+        use_fast_fft,
         str(config.get('max_threads'))]
 
     pre_process_cmd = " "

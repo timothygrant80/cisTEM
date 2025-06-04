@@ -23,6 +23,12 @@ class RandomNumberGenerator {
         }
     }
 
+    // TO make generator that returns a constant seed for a given input string (e.g., for reproducibility in tests where an image should have the same noise added each time)
+    RandomNumberGenerator(const std::string& input_string) : rng(rd( )) {
+        std::hash<std::string> hasher;
+        rng.seed(hasher(input_string));
+    }
+
     // Seed generator
     void SetSeed(int random_seed);
 

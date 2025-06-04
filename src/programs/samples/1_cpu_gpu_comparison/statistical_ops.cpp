@@ -50,7 +50,7 @@ bool DoStatsticalMomentsTests(const wxString& hiv_image_80x80x1_filename, wxStri
         random_variance = my_rand.GetUniformRandomSTD(0.5f, 10.0f);
 
         noise_image[n].Allocate(size, size, 1, true);
-        noise_image[n].FillWithNoiseFromNormalDistribution(random_mean, sqrtf(random_variance));
+        noise_image[n].FillWithNoise(GAUSSIAN, random_mean, sqrtf(random_variance));
         noise_image[n].AddConstant(random_mean);
         wxPrintf("cpu val at zero = %f\n", noise_image[n].real_values[0]);
 

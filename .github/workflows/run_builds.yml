@@ -47,7 +47,7 @@ jobs:
       fail-fast: true
     runs-on: ${{ inputs.runs_on_os }}
     container: 
-      image: cistemdashorg/cistem_build_env:v2.2.0
+      image: cistemdashorg/cistem_build_env:v2.2.1
       options: --user root --rm
       # options: --user root --rm --gpus all
     outputs:
@@ -92,7 +92,7 @@ jobs:
         rm -r src/gui
         rm -r src/programs
     # - name: Create binary artifact
-    #   uses: actions/upload-artifact@v2
+    #   uses: actions/upload-artifact@v4
     #   with: 
     #     name: cistem_binaries_${{ inputs.build_type }}
     #     path: build/${{ inputs.build_type }}/src

@@ -37,6 +37,16 @@ using namespace cistem_timer_noop;
 // FIXME: Probably need to disable resizing, or make sure it is handled
 #define TEST_LOCAL_NORMALIZATION
 
+/**
+ * @class AggregatedTemplateResult
+ * @brief Stores and aggregates template matching results from multiple processing units (e.g., worker threads or nodes).
+ *
+ * This class is used by the master process to collect partial results for each input image being searched.
+ * When all parts of a result for a given image are received, they are combined and finalized.
+ * The `collated_data_array` holds all the raw floating point data, and other `collated_*` members
+ * are pointers that provide structured views into this single block of memory for different types of data
+ * (MIP, angles, defocus, pixel sums, etc.).
+ */
 class AggregatedTemplateResult {
 
   public:
@@ -58,6 +68,19 @@ class AggregatedTemplateResult {
 
     AggregatedTemplateResult( );
     ~AggregatedTemplateResult( );
+    /**
+     * @brief Adds a partial result to the aggregated data.
+     *
+     * This method is called when a worker sends its computed results. It merges the incoming
+     * `result_array` into the appropriate sections of `collated_data_array`. For MIP and
+     * best angle/parameter maps, it updates values if the new result has a higher correlation.
+     * For sums and histograms, it accumulates the values.
+     *
+     * @param result_array The partial result data from a worker.
+     * @param array_size The total size of the `result_array`.
+     * @param result_number The image number this result pertains to (used for verification).
+     * @param number_of_expected_results The total number of partial results expected for this image.
+     */
     void AddResult(float* result_array, long array_size, int result_number, int number_of_expected_results);
 };
 
@@ -65,11 +88,34 @@ WX_DECLARE_OBJARRAY(AggregatedTemplateResult, ArrayOfAggregatedTemplateResults);
 #include <wx/arrimpl.cpp> // this is a magic incantation which must be done!
 WX_DEFINE_OBJARRAY(ArrayOfAggregatedTemplateResults);
 
+/**
+ * @class MatchTemplateApp
+ * @brief Main application class for the template matching program.
+ *
+ * This class orchestrates the template matching process, handling command-line arguments,
+ * user input (if interactive), distributing work (if in a parallel environment),
+ * and processing/saving the results. It can operate in both CPU and GPU accelerated modes.
+ * Thread safety for parallel execution (primarily OpenMP for GPU path) is managed through
+ * thread-local data where possible (e.g., `TemplateMatchingCore` instances) and critical sections
+ * for updating shared aggregated results.
+ */
 class
         MatchTemplateApp : public MyApp {
   public:
     bool DoCalculation( );
     void DoInteractiveUserInput( );
+    /**
+     * @brief Handles program-defined results received by the master process from worker processes.
+     *
+     * In a distributed environment, worker processes send their partial results (packaged as a float array)
+     * back to the master. This method is called on the master to receive, aggregate, and process these results.
+     * When all results for a particular image are collected, it finalizes them (e.g., peak picking)
+     * and may send them to a GUI or save them to disk.
+     * @param result_array The float array containing the partial result data.
+     * @param array_size The size of the `result_array`.
+     * @param result_number The identifier of the image this result pertains to.
+     * @param number_of_expected_results The total number of partial results expected for this image.
+     */
     void MasterHandleProgramDefinedResult(float* result_array, long array_size, int result_number, int number_of_expected_results);
     void ProgramSpecificInit( );
 
@@ -81,6 +127,21 @@ class
 
   private:
     void AddCommandLineOptions( );
+    /**
+     * @brief Calculates the global mean and standard deviation of Cross-Correlation Coefficients (CCCs).
+     *
+     * This function iterates over the per-pixel sums and sums-of-squares of CCCs (accumulated
+     * across all search angles) to determine the overall statistics of the CCC distribution.
+     * These global statistics are then used for normalizing the MIP and rescaling the histogram.
+     *
+     * @tparam StatsType The data type of the sum and sum_of_sqs arrays (e.g., float, double).
+     * @param[out] global_ccc_mean The calculated global mean of CCCs.
+     * @param[out] global_ccc_std_dev The calculated global standard deviation of CCCs.
+     * @param sum Pointer to the array of per-pixel sums of CCCs.
+     * @param sum_of_sqs Pointer to the array of per-pixel sums of squared CCCs.
+     * @param n_angles_in_search The total number of angles/orientations searched.
+     * @param N The total number of pixels in the sum/sum_of_sqs arrays (image_real_memory_allocated).
+     */
     template <typename StatsType>
     void CalcGlobalCCCScalingFactor(double&     global_ccc_mean,
                                     double&     global_ccc_std_dev,
@@ -89,10 +150,41 @@ class
                                     const float n_angles_in_search,
                                     const int   N);
 
+    /**
+     * @brief Resamples the histogram data based on global CCC mean and standard deviation.
+     *
+     * The raw histogram is collected based on initial estimates. After calculating the true
+     * global mean and standard deviation of the CCC distribution, this function rescales
+     * the histogram bins and interpolates counts from the original histogram (after
+     * Savitzky-Golay smoothing) to populate the resampled histogram. This provides a
+     * normalized view of the CCC distribution.
+     *
+     * @param histogram_ptr Pointer to the histogram data array (long type).
+     * @param global_ccc_mean The global mean of CCCs.
+     * @param global_ccc_std_dev The global standard deviation of CCCs.
+     */
     void ResampleHistogramData(long*        histogram_ptr,
                                const double global_ccc_mean,
                                const double global_ccc_std_dev);
 
+    /**
+     * @brief Rescales the Maximum Intensity Projection (MIP) and statistical arrays using global CCC mean and standard deviation.
+     *
+     * This function normalizes the MIP values to represent Signal-to-Noise Ratio (SNR) like scores: (CCC - mean) / std_dev.
+     * It also rescales the per-pixel sum and sum-of-squares arrays accordingly. The histogram data is also
+     * adjusted using `ResampleHistogramData`. If `disable_flat_fielding` is false, the `scaled_mip`
+     * is further normalized by local statistics (mean and std_dev derived from `correlation_pixel_sum`
+     * and `correlation_pixel_sum_of_squares`).
+     *
+     * @tparam StatsType The data type of the correlation_pixel_sum and correlation_pixel_sum_of_squares arrays.
+     * @param mip_image Pointer to the MIP image to be rescaled (modified in place).
+     * @param scaled_mip Pointer to the output scaled MIP image.
+     * @param correlation_pixel_sum Pointer to the array of per-pixel sums of CCCs (modified in place).
+     * @param correlation_pixel_sum_of_squares Pointer to the array of per-pixel sums of squared CCCs (modified in place).
+     * @param histogram Pointer to the histogram data array (modified in place via `ResampleHistogramData`).
+     * @param n_angles_in_search The total number of angles/orientations searched.
+     * @param disable_flat_fielding If true, local normalization for `scaled_mip` is skipped.
+     */
     template <typename StatsType>
     void RescaleMipAndStatisticalArraysByGlobalMeanAndStdDev(Image*      mip_image,
                                                              Image*      scaled_mip,
@@ -271,6 +363,52 @@ void MatchTemplateApp::DoInteractiveUserInput( ) {
 
 // override the do calculation method which will be what is actually run..
 
+/**
+ * @brief Performs the core template matching calculation.
+ *
+ * This is the main computational part of the program. It involves the following major steps:
+ * 1.  Parameter Retrieval: Parses command-line arguments and job parameters.
+ * 2.  Initialization:
+ *     - Reads the input image stack and the 3D template reconstruction.
+ *     - Initializes `TemplateMatchingDataSizer` to manage image/template resizing and preprocessing based on resolution limits and FFT requirements.
+ *     - Allocates memory for output images (MIP, best angles, defocus, pixel size) and statistical accumulation arrays (sum of CCCs, sum of squared CCCs, histogram).
+ * 3.  Search Setup:
+ *     - Initializes `EulerSearch` to define the grid of orientations to be searched.
+ *     - Sets up CTF parameters and generates the initial projection filter (CTF * whitening_filter).
+ * 4.  Main Search Loop: Iterates over:
+ *     - Pixel size variations (if enabled).
+ *     - Defocus variations (if enabled).
+ *     - For each pixel size/defocus combination:
+ *         - Updates the 3D template (if pixel size changed) and the projection filter (if defocus changed).
+ *         - **GPU Path (`use_gpu` is true and `ENABLEGPU` is defined):**
+ *             - Initializes `TemplateMatchingCore` instances, one per OpenMP thread. Each `TemplateMatchingCore` manages its own CUDA stream and resources.
+ *             - The input image and 3D template (if `use_gpu_prj` is true) are transferred to GPU memory (potentially shared via `std::shared_ptr<GpuImage>`).
+ *             - An OpenMP parallel region distributes the Euler search angles among threads.
+ *             - Each thread calls `TemplateMatchingCore::RunInnerLoop` to perform template projections (on GPU or CPU if `use_gpu_prj` is false),
+ *               cross-correlation (on GPU), and updates its local MIP and best parameter maps.
+ *             - After the parallel region, results from each thread (MIP, best angles, sums, histogram) are aggregated under an `#pragma omp critical` section.
+ *         - **CPU Path (`use_gpu` is false or `ENABLEGPU` is not defined):**
+ *             - Iterates through Euler search positions and in-plane rotations (psi).
+ *             - For each orientation:
+ *                 - Extracts a 2D projection from the 3D template.
+ *                 - Applies the projection filter.
+ *                 - Performs cross-correlation with the input image using FFTs.
+ *                 - Updates the MIP, best angle/parameter maps, and accumulates statistics (sums, histogram).
+ * 5.  Post-Processing and Output:
+ *     - If image resizing/rotation was performed for the search, results are mapped back to the original image dimensions using `TemplateMatchingDataSizer::ResizeImage_postSearch`.
+ *     - Global CCC statistics are calculated, and the MIP and histogram are rescaled/normalized using `RescaleMipAndStatisticalArraysByGlobalMeanAndStdDev`.
+ *     - If running locally (interactive or single job), output MRC files for MIP, scaled MIP, best angles, defocus, pixel size, and statistical maps are written. A histogram text file is also generated.
+ *     - If running as a worker in a distributed job, the processed results are packaged into a float array and sent to the master process via `SendProgramDefinedResultToMaster`.
+ *
+ * Thread Safety Considerations:
+ * - GPU Path: Each OpenMP thread gets its own `TemplateMatchingCore` instance, which encapsulates GPU resources and operations for that thread.
+ *   Shared GPU data (input image, 3D template) is managed with `std::shared_ptr` and accessed read-only by projection/correlation kernels.
+ *   Aggregation of results from different GPU threads into shared host arrays (e.g., global MIP, `correlation_pixel_sum`) is protected by an `#pragma omp critical` section.
+ * - CPU Path: If `max_threads` > 1 is specified for CPU, it's currently a warning, and `max_threads` is reset to 1, as the CPU path is serial within `DoCalculation`.
+ *   Parallelism in a CPU-only distributed job is achieved by running multiple `MatchTemplateApp` processes, each handling a subset of images or search angles, with results collated by a master process.
+ *
+ * @return True if the calculation completes successfully, false otherwise.
+ */
 bool MatchTemplateApp::DoCalculation( ) {
 
     bool is_rotated_by_90 = false;
@@ -456,6 +594,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     ImageFile input_search_image_file;
     ImageFile input_reconstruction_file;
 
+    // Open input files for search images and template reconstruction
     input_search_image_file.OpenFile(input_search_images_filename.ToStdString( ), false);
     input_reconstruction_file.OpenFile(input_reconstruction_filename.ToStdString( ), false);
 
@@ -483,6 +622,7 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     profile_timing.lap("Init");
 
+    // Read input image and reconstruction
     profile_timing.start("Read input images");
     input_image.ReadSlice(&input_search_image_file, 1);
 
@@ -492,6 +632,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     MyAssertTrue(input_reconstruction.IsCubic( ), "Input reconstruction should be cubic");
     profile_timing.lap("Read input images");
 
+    // Initialize TemplateMatchingDataSizer for managing image sizes and preprocessing
     profile_timing.start("PreProcessInputImage");
     TemplateMatchingDataSizer data_sizer(this, input_image, input_reconstruction, input_pixel_size, padding);
     if ( use_local_normalization && data_sizer.IsResamplingNeeded( ) ) {
@@ -501,6 +642,7 @@ bool MatchTemplateApp::DoCalculation( ) {
     data_sizer.PreProcessInputImage(input_image, false, true);
     profile_timing.lap("PreProcessInputImage");
 
+    // Resize template and image for the search resolution
     profile_timing.start("Resize_preSearch");
     data_sizer.SetImageAndTemplateSizing(high_resolution_limit_search, use_fast_fft);
     data_sizer.ResizeTemplate_preSearch(input_reconstruction, use_lerp_not_fourier_resampling, true);
@@ -514,10 +656,12 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     data_sizer.PrintImageSizes( );
 
+    // Apply padding to the reconstruction if specified
     if ( padding != 1.0f ) {
         input_reconstruction.Resize(input_reconstruction.logical_x_dimension * padding, input_reconstruction.logical_y_dimension * padding, input_reconstruction.logical_z_dimension * padding, input_reconstruction.ReturnAverageOfRealValuesOnEdges( ));
     }
 
+    // Allocate memory for output images and statistical arrays
     profile_timing.start("Allocate and zero arrays");
     padded_reference.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
     max_intensity_projection.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, 1);
@@ -740,15 +884,15 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     int nThreads = 2;
     int nGPUs    = 1;
-    int nJobs    = last_search_position - first_search_position + 1;
+    int nJobs    = last_search_position - first_search_position + 1; // Number of primary Euler angles
     if ( use_gpu && max_threads > nJobs ) {
         SendInfo(wxString::Format("\n\tWarning, you request more threads (%d) than there are search positions (%d)\n", max_threads, nJobs));
-        max_threads = nJobs;
+        max_threads = nJobs; // Cap threads to number of jobs if over-requested
     }
 
     int minPos = first_search_position;
     int maxPos = last_search_position;
-    int incPos = (nJobs) / (max_threads);
+    int incPos = (nJobs) / (max_threads); // Increment for distributing jobs to threads
 
     //    wxPrintf("First last and inc %d, %d, %d\n", minPos, maxPos, incPos);
 
@@ -805,11 +949,13 @@ bool MatchTemplateApp::DoCalculation( ) {
     }
 #endif
 
+    // Convert input image to FP16 on GPU if using GPU
     // Finally, we want to move this into the FP16 buffer. TODO: we can probably safely deallocate the single precision buffer here
     if ( use_gpu )
         d_input_image->CopyFP32toFP16buffer(false);
 #endif
 
+    // Initialize TemplateMatchingCore instances for GPU processing
     if ( use_gpu ) {
         number_of_search_positions_per_thread = number_of_search_positions / max_threads;
 
@@ -824,12 +970,15 @@ bool MatchTemplateApp::DoCalculation( ) {
 #endif
     }
 
+    // Initialize progress bar if running locally
     if ( is_running_locally == true ) {
         my_progress = new ProgressBar(number_of_search_positions_per_thread);
     }
 
+    // Main search loop: iterates over pixel size and defocus variations
     for ( int size_i = -myroundint(float(pixel_size_search_range) / float(pixel_size_step)); size_i <= myroundint(float(pixel_size_search_range) / float(pixel_size_step)); size_i++ ) {
         profile_timing.start("ChangePixelSize");
+        // Adjust template reconstruction for current pixel size
         // Manually set this so that if we do loop over the pixel size, it doesn't create any problems with the gpu branch
         template_reconstruction.is_fft_centered_in_box = false;
 
@@ -841,9 +990,10 @@ bool MatchTemplateApp::DoCalculation( ) {
         template_reconstruction.SwapRealSpaceQuadrants( );
         profile_timing.lap("SwapRealSpaceQuadrants");
 
+        // Prepare template for GPU if enabled
         if ( use_gpu ) {
 #ifdef ENABLEGPU
-
+            // Shared pointer for the 3D template on GPU, accessible by all threads.
             std::shared_ptr<GpuImage> template_reconstruction_gpu;
             if ( use_gpu_prj ) {
 
@@ -860,6 +1010,7 @@ bool MatchTemplateApp::DoCalculation( ) {
                 // This should be fine now, but .
                 profile_timing.start("CopyHostToDeviceTextureComplex");
 
+                // Create GpuImage from the CPU template and copy to GPU texture memory.
                 template_reconstruction_gpu = std::make_shared<GpuImage>(template_reconstruction);
                 template_reconstruction_gpu->CopyHostToDeviceTextureComplex<3>(template_reconstruction);
 
@@ -880,6 +1031,7 @@ bool MatchTemplateApp::DoCalculation( ) {
                 int tIDX = ReturnThreadNumberOfCurrentThread( );
                 // gpuDev.SetGpu( );
 
+                // Initialize TemplateMatchingCore for this thread on its first loop iteration
                 if ( first_gpu_loop.at(tIDX) ) {
 
 #ifdef USE_LERP_NOT_FOURIER_RESIZING
@@ -887,15 +1039,17 @@ bool MatchTemplateApp::DoCalculation( ) {
                     GPU[tIDX].binning_factor        = data_sizer.GetFullBinningFactor( );
 #endif
 
+                    // Determine the range of Euler search positions for this thread
                     int t_first_search_position = first_search_position + (tIDX * incPos);
                     int t_last_search_position  = first_search_position + (incPos - 1) + (tIDX * incPos);
-                    if ( tIDX == (max_threads - 1) )
+                    if ( tIDX == (max_threads - 1) ) // Last thread takes any remaining positions
                         t_last_search_position = maxPos;
                     profile_timing.start("Init GPU");
+                    // Initialize the TemplateMatchingCore instance for this thread
                     GPU[tIDX].Init(this,
-                                   template_reconstruction_gpu,
-                                   d_input_image,
-                                   current_projection,
+                                   template_reconstruction_gpu, // Shared pointer to GPU template
+                                   d_input_image, // Shared pointer to GPU input image
+                                   current_projection, // CPU projection image (used if use_gpu_prj is false)
                                    psi_max,
                                    psi_start,
                                    psi_step,
@@ -912,9 +1066,10 @@ bool MatchTemplateApp::DoCalculation( ) {
                                    use_gpu_prj);
 
                     profile_timing.lap("Init GPU");
-                    if ( ! use_gpu_prj ) {
+                    if ( ! use_gpu_prj ) { // If projections are on CPU, set CPU template for the core
                         GPU[tIDX].SetCpuTemplate(&template_reconstruction);
                     }
+                    // Critical section for printing, ensuring orderly output from threads
 #pragma omp critical
                     {
                         wxPrintf("Staring TemplateMatchingCore object %d to work on position range %d-%d\n", tIDX, t_first_search_position, t_last_search_position);
@@ -940,7 +1095,7 @@ bool MatchTemplateApp::DoCalculation( ) {
         for ( int defocus_i = -myroundint(float(defocus_search_range) / float(defocus_step)); defocus_i <= myroundint(float(defocus_search_range) / float(defocus_step)); defocus_i++ ) {
 
             profile_timing.start("Ctf and whitening filter");
-            // make the projection filter, which will be CTF * whitening filter
+            // Create projection filter (CTF * whitening_filter) for current defocus
             input_ctf.SetDefocus((defocus1 + float(defocus_i) * defocus_step) / wanted_pre_projection_pixel_size,
                                  (defocus2 + float(defocus_i) * defocus_step) / wanted_pre_projection_pixel_size,
                                  deg_2_rad(defocus_angle));
@@ -951,8 +1106,10 @@ bool MatchTemplateApp::DoCalculation( ) {
 
             profile_timing.lap("Ctf and whitening filter");
 
+            // GPU execution path
             if ( use_gpu ) {
 #ifdef ENABLEGPU
+                // Prepare projection filter for GPU (swap quadrants if projecting on GPU)
                 // Rather than multiplying the projection by the ctf_image, we will interpolate from it
                 // This allows intra projection down sampling and also keeps the ctf in fast read only cache.
                 // As with the 3d volume, we have to swap the fourier space quadrants and shift x by 1 to have spatially local interp
@@ -966,19 +1123,23 @@ bool MatchTemplateApp::DoCalculation( ) {
 
                 {
                     int tIDX = ReturnThreadNumberOfCurrentThread( );
-                    // gpuDev.SetGpu( );
+                    // gpuDev.SetGpu( ); // Potentially set GPU for this thread
 
+                    // Each thread calls RunInnerLoop on its TemplateMatchingCore instance
                     profile_timing.start("RunInnerLoop");
-                    GPU[tIDX].RunInnerLoop(projection_filter,
+                    GPU[tIDX].RunInnerLoop(projection_filter, // Current projection filter
                                            tIDX,
-                                           current_correlation_position,
+                                           current_correlation_position, // Used for progress, might need adjustment for per-thread
                                            min_counter_val,
                                            threshold_val);
                     profile_timing.lap("RunInnerLoop");
 
+                    // Critical section to aggregate results from each thread's GPU buffers to shared host arrays.
+                    // This prevents race conditions when updating global MIP, angle maps, sums, and histogram.
 #pragma omp critical
                     {
                         profile_timing.start("Transfer data back to host");
+                        // Copy results from this thread's GPU buffers to temporary host Images
                         Image mip_buffer   = GPU[tIDX].d_max_intensity_projection.CopyDeviceToNewHost(true, false);
                         Image psi_buffer   = GPU[tIDX].d_best_psi.CopyDeviceToNewHost(true, false);
                         Image phi_buffer   = GPU[tIDX].d_best_phi.CopyDeviceToNewHost(true, false);
@@ -987,12 +1148,14 @@ bool MatchTemplateApp::DoCalculation( ) {
                         Image sum   = GPU[tIDX].d_sum2.CopyDeviceToNewHost(true, false);
                         Image sumSq = GPU[tIDX].d_sumSq2.CopyDeviceToNewHost(true, false);
 
+                        // Aggregate results into global host arrays
                         // Note: even if we have ignored some invalid boundary values, copy over everything here
                         for ( int current_y = data_sizer.GetPrePaddingY( ); current_y < data_sizer.GetPrePaddingY( ) + data_sizer.GetRoiY( ); current_y++ ) {
                             for ( int current_x = data_sizer.GetPrePaddingX( ); current_x < data_sizer.GetPrePaddingX( ) + data_sizer.GetRoiX( ); current_x++ ) {
                                 // first mip
                                 long address = max_intensity_projection.ReturnReal1DAddressFromPhysicalCoord(current_x, current_y, 0);
 
+                                // Update global MIP and best angle/parameter maps if current thread found a better CCC
                                 if ( mip_buffer.real_values[address] > max_intensity_projection.real_values[address] ) {
                                     max_intensity_projection.real_values[address] = mip_buffer.real_values[address];
                                     best_psi.real_values[address]                 = psi_buffer.real_values[address];
@@ -1002,14 +1165,17 @@ bool MatchTemplateApp::DoCalculation( ) {
                                     best_pixel_size.real_values[address]          = float(size_i) * pixel_size_step;
                                 }
 
+                                // Accumulate sums and sums of squares
                                 correlation_pixel_sum[address] += (double)sum.real_values[address];
                                 correlation_pixel_sum_of_squares[address] += (double)sumSq.real_values[address];
                             }
                         }
 
+                        // Add this thread's histogram data to the global histogram
                         // GPU[tIDX].histogram.CopyToHostAndAdd(histogram_data);
                         GPU[tIDX].my_dist->CopyToHostAndAdd(histogram_data);
 
+                        // Update total number of angles searched
                         //                    current_correlation_position += GPU[tIDX].total_number_of_cccs_calculated;
                         actual_number_of_angles_searched += float(GPU[tIDX].total_number_of_cccs_calculated);
                         profile_timing.lap("Transfer data back to host");
@@ -1018,10 +1184,11 @@ bool MatchTemplateApp::DoCalculation( ) {
 
 #endif
             }
-            else {
+            else { // CPU execution path (serial within this function call)
                 profile_timing.start("RunInnerLoop cpu");
+                // Loop over Euler search positions
                 for ( current_search_position = first_search_position; current_search_position <= last_search_position; current_search_position++ ) {
-                    //loop over each rotation angle
+                    //loop over each in-plane rotation angle (psi)
 
                     //current_rotation = 0;
                     for ( current_psi = psi_start; current_psi <= psi_max; current_psi += psi_step ) {
@@ -1029,6 +1196,7 @@ bool MatchTemplateApp::DoCalculation( ) {
                         angles.Init(global_euler_search.list_of_search_parameters[current_search_position][0], global_euler_search.list_of_search_parameters[current_search_position][1], current_psi, 0.0, 0.0);
                         //                    angles.Init(130.0, 30.0, 199.5, 0.0, 0.0);
 
+                        // Extract 2D projection from 3D template
                         if ( padding != 1.0f ) {
                             template_reconstruction.ExtractSlice(padded_projection, angles, 1.0f, false);
                             padded_projection.SwapRealSpaceQuadrants( );
@@ -1041,18 +1209,22 @@ bool MatchTemplateApp::DoCalculation( ) {
                             current_projection.SwapRealSpaceQuadrants( );
                         }
 
+                        // Apply projection filter (CTF * whitening)
                         current_projection.MultiplyPixelWise(projection_filter);
 
+                        // Inverse FFT to get cross-correlation map (CCM)
                         current_projection.BackwardFFT( );
                         //current_projection.ReplaceOutliersWithMean(6.0f);
 
                         current_projection.AddConstant(-current_projection.ReturnAverageOfRealValuesOnEdges( ));
 
+                        // Normalize projection
                         // We want a variance of 1 in the padded FFT. Scale the small SumOfSquares (which is already divided by n) and then re-divide by N.
                         variance = current_projection.ReturnSumOfSquares( ) * current_projection.number_of_real_space_pixels / padded_reference.number_of_real_space_pixels - powf(current_projection.ReturnAverageOfRealValues( ) * current_projection.number_of_real_space_pixels / padded_reference.number_of_real_space_pixels, 2);
                         current_projection.DivideByConstant(sqrtf(variance));
-                        current_projection.ClipIntoLargerRealSpace2D(&padded_reference);
+                        current_projection.ClipIntoLargerRealSpace2D(&padded_reference); // Padded_reference now holds the normalized template projection
 
+                        // Forward FFT the padded reference (template projection)
                         // Note: The real space variance is set to 1.0 (for the padded size image) and that results in a variance of N in the FFT do to the scaling of the FFT,
                         // but the FFT values are divided by 1/N so the variance becomes N / (N^2) = is 1/N
                         padded_reference.ForwardFFT( );
@@ -1169,6 +1341,7 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     wxPrintf("\n\n\tTimings: Overall: %s\n", (wxDateTime::Now( ) - overall_start).Format( ));
 
+    // Post-search processing: resize results back to original dimensions if necessary
     profile_timing.start("Resize_postSearch");
     // We may have rotated or re-sized the image for performance. To map the results back, it will be
     // easiest to convert the statistical arrays back to images.
@@ -1192,10 +1365,11 @@ bool MatchTemplateApp::DoCalculation( ) {
         }
     }
 
-    // Remove any unwanted values in the padding area
+    // Remove any unwanted values in the padding area from FFTs
     correlation_pixel_sum_image.ZeroFFTWPadding( );
     correlation_pixel_sum_of_squares_image.ZeroFFTWPadding( );
 
+    // Resize output images (MIP, angles, etc.) and statistical maps back to original dimensions if search was on resized images.
     // Even if we apply_result_rescaling, we still want to remove any padding.
     data_sizer.ResizeImage_postSearch(max_intensity_projection,
                                       best_psi,
@@ -1212,6 +1386,8 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     profile_timing.lap("Resize_postSearch");
     profile_timing.print_times( );
+
+    // If running locally, finalize results (rescale MIP, save files)
     if ( is_running_locally ) {
         delete my_progress;
 
@@ -1226,6 +1402,7 @@ bool MatchTemplateApp::DoCalculation( ) {
         }
 #endif
 
+        // Rescale MIP and statistical arrays based on global CCC mean and stddev
         // Adjust the MIP by the measured mean and stddev of the full search CCC which is an estimate for the moments of the noise distribution of CCCs.
         Image scaled_mip = max_intensity_projection;
         RescaleMipAndStatisticalArraysByGlobalMeanAndStdDev(&max_intensity_projection,
@@ -1242,10 +1419,11 @@ bool MatchTemplateApp::DoCalculation( ) {
 #ifdef MKL
         vdErfcInv(1, &erf_input, &temp_threshold);
 #else
-        cisTEM_erfcinv(erf_input);
+        cisTEM_erfcinv(erf_input); // Note: This seems to be a custom function, ensure it's correctly defined and linked.
 #endif
         expected_threshold = sqrtf(2.0f) * (float)temp_threshold * CCG_NOISE_STDDEV;
 
+        // Write output MRC files for MIP, scaled MIP, best angles, defocus, pixel size, and statistical maps
         temp_image.CopyFrom(&max_intensity_projection);
         MRCFile mip_out(mip_output_file.ToStdString( ), true);
 #ifdef USE_FP16_PARTICLE_STACKS
@@ -1309,8 +1487,8 @@ bool MatchTemplateApp::DoCalculation( ) {
 #endif
         best_pixel_size.WriteSlice(&best_pixel_size_output_mrcfile, 1);
         best_pixel_size_output_mrcfile.SetPixelSizeAndWriteHeader(output_pixel_size);
-        // write out histogram..
 
+        // Write out histogram text file
         NumericTextFile histogram_file(output_histogram_file, OPEN_TO_WRITE, 4);
 
         double* expected_survival_histogram = new double[histogram_number_of_points];
@@ -1341,7 +1519,6 @@ bool MatchTemplateApp::DoCalculation( ) {
         histogram_file.Close( );
 
         // memory cleanup
-
         delete[] survival_histogram;
         delete[] expected_survival_histogram;
     }
@@ -1387,6 +1564,7 @@ bool MatchTemplateApp::DoCalculation( ) {
 
         result_array_counter = cistem::match_template::COUNT;
 
+        // Copy the MIP, best angles, defocus, pixel size, and statistical data to the result array
         for ( pixel_counter = 0; pixel_counter < max_intensity_projection.real_memory_allocated; pixel_counter++ ) {
             result[result_array_counter] = max_intensity_projection.real_values[pixel_counter];
             result_array_counter++;
@@ -1432,6 +1610,7 @@ bool MatchTemplateApp::DoCalculation( ) {
             result_array_counter++;
         }
 
+        // Send the packed result to the master process
         SendProgramDefinedResultToMaster(result, number_of_result_floats, image_number_for_gui, number_of_jobs_per_image_in_gui);
         // The result should not be deleted here, as the worker thread will free it up once it has been send to the master
         // delete [] result;
@@ -1457,7 +1636,28 @@ bool MatchTemplateApp::DoCalculation( ) {
     return true;
 }
 
-// Result number is image_number_for_gui i.e. the idx numbered from 1 -> number of jobs per image in gui
+/**
+ * @brief Handles program-defined results received by the master process from worker processes.
+ *
+ * This method is called on the master process when it receives a partial result from a worker.
+ * It finds or creates an `AggregatedTemplateResult` object for the specific image (`result_number`).
+ * The incoming `result_array` is then added to this `AggregatedTemplateResult`.
+ *
+ * If all expected partial results for an image have been received:
+ * 1.  The aggregated data (MIP, angles, sums, histogram) is retrieved.
+ * 2.  The MIP and statistical arrays are rescaled using global CCC statistics (`RescaleMipAndStatisticalArraysByGlobalMeanAndStdDev`).
+ * 3.  Output MRC files are written for the finalized MIP, angle maps, defocus, pixel size, and statistical maps.
+ * 4.  A histogram text file is generated.
+ * 5.  Peak picking is performed on the scaled MIP to identify potential particle locations.
+ * 6.  The identified peaks and associated parameters are used to generate a result image (projections of the template at peak locations).
+ * 7.  This result image is saved, and the peak information is sent to the GUI socket if connected.
+ * 8.  The `AggregatedTemplateResult` object for the completed image is removed.
+ *
+ * @param result_array The float array containing the partial result data from a worker.
+ * @param array_size The size of the `result_array`.
+ * @param result_number The identifier of the image this result pertains to (job ID, essentially).
+ * @param number_of_expected_results The total number of partial results expected for this image.
+ */
 void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, long array_size, int result_number, int number_of_expected_results) {
 
     // do we have this image number already?
@@ -1471,6 +1671,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
 
     wxPrintf("Master Handling result for image %i..", result_number);
 
+    // Check if an AggregatedTemplateResult already exists for this image
     for ( int result_counter = 0; result_counter < aggregated_results.GetCount( ); result_counter++ ) {
         if ( aggregated_results[result_counter].image_number == result_number ) {
             aggregated_results[result_counter].AddResult(result_array, array_size, result_number, number_of_expected_results);
@@ -1481,7 +1682,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
         }
     }
 
-    // we aren't collecting data for this result yet.. start
+    // If no existing result, create a new one
     if ( need_a_new_result == true ) {
         AggregatedTemplateResult result_to_add;
         // So I guess this Add, then index into size - 1 is like push_back kinda?
@@ -1492,13 +1693,14 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
         wxPrintf("Adding new result to array for image %i, at %i\n", result_number, array_location);
     }
 
-    // did this complete a result?
-
+    // Check if all expected results for this image have been received
     if ( aggregated_results[array_location].number_of_received_results == number_of_expected_results ) {
+        // All parts of the result for this image are now collected. Proceed to finalize.
         // TODO send the result back to the GUI, for now hack mode to save the files to the directory..
 
         wxString directory_for_writing_results = current_job_package.jobs[0].arguments[37].ReturnStringArgument( );
 
+        // Image objects for storing and processing results
         Image temp_image;
 
         Image scaled_mip;
@@ -1646,6 +1848,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
 
         pixel_size_image.CopyFrom(&temp_image);
 
+        // Write scaled MIP (locally normalized if flat fielding enabled)
         MRCFile scaled_mip_output_mrcfile(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[27].ReturnStringArgument( ), true);
 #ifdef USE_FP16_PARTICLE_STACKS
         scaled_mip_output_mrcfile.SetOutputToFP16( );
@@ -1653,6 +1856,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
         scaled_mip.WriteSlice(&scaled_mip_output_mrcfile, 1);
         scaled_mip_output_mrcfile.SetPixelSizeAndWriteHeader(search_pixel_size);
 
+        // Write statistical sum and sum_of_squares maps
         // sums
 
         for ( pixel_counter = 0; pixel_counter < image_real_memory_allocated; pixel_counter++ ) {
@@ -1675,8 +1879,8 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
 #endif
         temp_image.WriteSlice(&square_sum_output_file, 1);
         square_sum_output_file.SetPixelSizeAndWriteHeader(search_pixel_size);
-        // histogram
 
+        // Write histogram text file
         //NumericTextFile histogram_file(wxString::Format("%s/histogram_%i.txt", directory_for_writing_results, aggregated_results[array_location].image_number), OPEN_TO_WRITE, 4);
         NumericTextFile histogram_file(current_job_package.jobs[(aggregated_results[array_location].image_number - 1) * number_of_expected_results].arguments[31].ReturnStringArgument( ), OPEN_TO_WRITE, 4);
 
@@ -1894,6 +2098,7 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
         ArrayOfTemplateMatchFoundPeakInfos blank_changes;
         SendTemplateMatchingResultToSocket(controller_socket, aggregated_results[array_location].image_number, expected_threshold, all_peak_infos, blank_changes);
 
+        // Clean up: remove the completed AggregatedTemplateResult and associated memory
         // this should be done now.. so delete it
 
         aggregated_results.RemoveAt(array_location);
@@ -1902,6 +2107,10 @@ void MatchTemplateApp::MasterHandleProgramDefinedResult(float* result_array, lon
     }
 }
 
+/**
+ * @brief Constructor for AggregatedTemplateResult.
+ * Initializes members to default values, pointers to NULL.
+ */
 AggregatedTemplateResult::AggregatedTemplateResult( ) {
     image_number                    = -1;
     number_of_received_results      = 0;
@@ -1920,30 +2129,62 @@ AggregatedTemplateResult::AggregatedTemplateResult( ) {
     collated_histogram_data    = NULL;
 }
 
+/**
+ * @brief Destructor for AggregatedTemplateResult.
+ * Frees the `collated_data_array` if it was allocated.
+ */
 AggregatedTemplateResult::~AggregatedTemplateResult( ) {
     if ( collated_data_array != NULL )
         delete[] collated_data_array;
 }
 
+/**
+ * @brief Adds a partial result to this AggregatedTemplateResult object.
+ *
+ * This method is responsible for merging a new `result_array` (typically from a worker process)
+ * into the existing aggregated data.
+ *
+ * If this is the first result being added (`collated_data_array == NULL`):
+ * - Allocates `collated_data_array` to the size of the incoming `result_array`.
+ * - Initializes `collated_*` pointers to point to the correct offsets within `collated_data_array`.
+ * - Copies header information (image size, histogram bins, etc.) from `result_array` to `collated_data_array`.
+ *
+ * For all results (first or subsequent):
+ * - Updates `total_number_of_angles_searched`.
+ * - Iterates through the pixel data:
+ *   - If the MIP value in `result_array` is greater than the current `collated_mip_data` for a pixel,
+ *     updates `collated_mip_data` and the corresponding best angle/defocus/pixel_size values for that pixel.
+ * - Accumulates `collated_pixel_sums` and `collated_pixel_square_sums`.
+ * - Accumulates `collated_histogram_data`.
+ * - Increments `number_of_received_results`.
+ *
+ * @param result_array The float array containing the partial result data.
+ * @param array_size The total size of the `result_array`.
+ * @param result_number The image number this result pertains to (used for verification, though not explicitly here).
+ * @param number_of_expected_results The total number of partial results expected for this image (used for logging).
+ */
 void AggregatedTemplateResult::AddResult(float* result_array, long array_size, int result_number, int number_of_expected_results) {
 
-    int offset = cistem::match_template::COUNT;
+    int offset = cistem::match_template::COUNT; // Offset to the start of actual image data after header info
 
     const int histogram_number_of_points = cistem::match_template::histogram_number_of_points;
 
+    // Extract metadata from the incoming result_array
     int   image_size_x                = result_array[cistem::match_template::image_size_x];
     int   image_size_y                = result_array[cistem::match_template::image_size_y];
     int   image_real_memory_allocated = result_array[cistem::match_template::image_real_memory_allocated];
     float search_pixel_size           = result_array[cistem::match_template::search_pixel_size];
 
+    // If this is the first result, allocate memory and set up pointers
     // FIXME: change to nullptr
     if ( collated_data_array == NULL ) {
-        collated_data_array = new float[array_size];
+        collated_data_array = new float[array_size]; // Allocate the main buffer
         ZeroFloatArray(collated_data_array, array_size);
         number_of_received_results      = 0;
         total_number_of_angles_searched = 0.0f;
         disable_flat_fielding           = result_array[cistem::match_template::disable_flat_fielding]; // FIXME: shouldn't we check that these are consistent across all results?
 
+        // Set up pointers to different data sections within collated_data_array
         // nasty..
 
         collated_mip_data          = &collated_data_array[offset + image_real_memory_allocated * 0];
@@ -1962,8 +2203,10 @@ void AggregatedTemplateResult::AddResult(float* result_array, long array_size, i
         }
     }
 
+    // Update the total number of angles searched across all results
     total_number_of_angles_searched += result_array[cistem::match_template::number_of_angles_searched];
 
+    // Pointers for the different data sections in result_array
     float* result_mip_data          = &result_array[offset + image_real_memory_allocated * 0];
     float* result_psi_data          = &result_array[offset + image_real_memory_allocated * 1];
     float* result_theta_data        = &result_array[offset + image_real_memory_allocated * 2];
@@ -2019,9 +2262,7 @@ void AggregatedTemplateResult::AddResult(float* result_array, long array_size, i
  * @param sum_of_sqs 
  * @param sum 
  * @param n_angles_in_search 
- * @param NX
- * @param NY
- * @param padding_jump_value 
+ * @param N Total number of elements in sum and sum_of_sqs arrays (image_real_memory_allocated).
  */
 template <typename StatsType>
 void MatchTemplateApp::CalcGlobalCCCScalingFactor(double&     global_ccc_mean,
@@ -2056,6 +2297,19 @@ void MatchTemplateApp::CalcGlobalCCCScalingFactor(double&     global_ccc_mean,
     return;
 }
 
+/**
+ * @brief Resamples the histogram data based on global CCC mean and standard deviation.
+ *
+ * The raw histogram is collected based on initial estimates. After calculating the true
+ * global mean and standard deviation of the CCC distribution, this function rescales
+ * the histogram bins and interpolates counts from the original histogram (after
+ * Savitzky-Golay smoothing) to populate the resampled histogram. This provides a
+ * normalized view of the CCC distribution.
+ *
+ * @param histogram_ptr Pointer to the histogram data array (long type).
+ * @param global_ccc_mean The global mean of CCCs.
+ * @param global_ccc_std_dev The global standard deviation of CCCs.
+ */
 void MatchTemplateApp::ResampleHistogramData(long*        histogram_ptr,
                                              const double global_ccc_mean,
                                              const double global_ccc_std_dev) {
@@ -2065,26 +2319,54 @@ void MatchTemplateApp::ResampleHistogramData(long*        histogram_ptr,
     // Sample the existing histogram onto a curve object that we can rescale smoothly.
     Curve histogram_curve;
     for ( int i_hist = 0; i_hist < histogram_number_of_points; ++i_hist ) {
+        // Original x-value is scaled to (x - mean) / std_dev before adding to curve
         histogram_curve.AddPoint(float((double(histogram_first_bin_midpoint + histogram_step * float(i_hist)) - global_ccc_mean) / global_ccc_std_dev), float(histogram_ptr[i_hist]));
     }
 
     // We expect the curve to be fairly smooth already, so we'll use a small window size for the fitting.
     // I'm not sure if the polynomial order should be 1 or 3.
+    // Smooth the histogram data using Savitzky-Golay filter
     histogram_curve.FitSavitzkyGolayToData(5, 3);
 
     // We accumulated the histogram based on our best guess at the values from the ccg, but we now need to rescale each x-value and
     // interoplate that from the existing histogram.
+    // Populate the original histogram_ptr with new counts interpolated from the smoothed, rescaled curve.
     double scaled_histogram_midpoint;
     for ( int i_hist = 0; i_hist < histogram_number_of_points; ++i_hist ) {
+        // Calculate the midpoint of the current bin in the *target* rescaled space
         scaled_histogram_midpoint = (double(histogram_first_bin_midpoint + histogram_step * float(i_hist)) - global_ccc_mean) / global_ccc_std_dev;
         // mip values are scaled by (measured_value - global_ccc_mean) / global_ccc_std_dev.
         // To find the corresponding unscaled value in the measured histogram then
         // we need to divide by mip_rescaling_factor.
         // histogram_ptr[i_hist] = long(histogram_curve.ReturnSavitzkyGolayInterpolationFromX(global_ccc_mean + (scaled_histogram_midpoint * global_ccc_std_dev)));
+        // Interpolate the count for this scaled midpoint from the smoothed curve (which is already in the scaled domain)
         histogram_ptr[i_hist] = long(histogram_curve.ReturnSavitzkyGolayInterpolationFromX(scaled_histogram_midpoint));
     }
 }
 
+/**
+ * @brief Rescales the Maximum Intensity Projection (MIP) and statistical arrays (sum, sum_of_squares)
+ *        using the calculated global mean and standard deviation of the Cross-Correlation Coefficients (CCCs).
+ *        Also resamples the histogram based on these global statistics.
+ *
+ * The primary goal is to transform raw CCC values into more meaningful scores, often resembling SNR.
+ * - MIP values are rescaled as: `(mip_value - global_ccc_mean) / global_ccc_std_dev`.
+ * - Per-pixel sums and sums-of-squares are also rescaled to reflect this transformation.
+ * - The histogram is resampled to align with the new distribution of scaled CCCs using `ResampleHistogramData`.
+ * - If `disable_flat_fielding` is false, the `scaled_mip` is further normalized by dividing the
+ *   globally rescaled MIP by the local standard deviation (derived from the rescaled per-pixel sums and sums-of-squares),
+ *   after subtracting the local mean. This aims to correct for local variations in background or noise.
+ *
+ * @tparam StatsType The data type of `correlation_pixel_sum` and `correlation_pixel_sum_of_squares`.
+ * @param mip_image Pointer to the MIP image. Its real_values are modified to be the globally rescaled CCCs.
+ * @param scaled_mip Pointer to the output scaled MIP image. This will contain the `mip_image` values,
+ *                   potentially further normalized by local statistics if flat fielding is enabled.
+ * @param correlation_pixel_sum Pointer to the array of per-pixel sums of CCCs. Modified to reflect global rescaling.
+ * @param correlation_pixel_sum_of_squares Pointer to the array of per-pixel sums of squared CCCs. Modified to reflect global rescaling.
+ * @param histogram Pointer to the histogram data. Modified by `ResampleHistogramData`.
+ * @param n_angles_in_search The total number of angles/orientations searched, used for calculating moments.
+ * @param disable_flat_fielding If true, the local normalization step for `scaled_mip` is skipped.
+ */
 template <typename StatsType>
 void MatchTemplateApp::RescaleMipAndStatisticalArraysByGlobalMeanAndStdDev(Image*      mip_image,
                                                                            Image*      scaled_mip,

@@ -960,14 +960,28 @@ void Image::AddGaussianNoise(float wanted_sigma_value, RandomNumberGenerator* pr
     }
 }
 
-void Image::AddNoise(NoiseType wanted_noise_type, float noise_param_1, float noise_param_2) {
+// using cistem::NoiseType from defines.h
+/**
+ * @brief Adds noise to the image based on the specified noise type and parameters.
+ * 
+ * Noise types are defined in defines.h as cistem::NoiseType::
+ * - UNIFORM
+ * - GAUSSIAN
+ * - POISSON
+ * - EXPONENTIAL
+ * - GAMMA
+ * 
+__ @param my_rng RandomNumberGenerator instance to generate random numbers.
+ * @param wanted_noise_type The type of noise to add (e.g., GAUSSIAN, POISSON, etc.).
+ * @param noise_param_1 First parameter for the noise type (e.g., mean for GAUSSIAN, lambda for POISSON).
+ * @param noise_param_2 Second parameter for the noise type (e.g., standard deviation for GAUSSIAN, beta for GAMMA).
+ */
+void Image::AddNoiseUsingGenerator(RandomNumberGenerator& my_rng, NoiseType wanted_noise_type, float noise_param_1, float noise_param_2) {
     MyDebugAssertTrue(is_in_real_space == true, "Image must be in real space");
     // These could go down in the switch, but I think it is cleaner to keep DebugAsserts at the top of the method like elsewhere in cisTEM.
     MyDebugAssertTrue(wanted_noise_type == POISSON ? noise_param_1 > 0 : true, "Mean of a Poisson distribution must be positive");
     MyDebugAssertTrue(wanted_noise_type == EXPONENTIAL ? noise_param_1 > 0 : true, "Mean of an Exponential distribution must be positive");
     MyDebugAssertTrue(wanted_noise_type == GAMMA ? (noise_param_1 > 0 && noise_param_2 > 0) : true, "alpha and beta of a Gamma distribution must be positive");
-
-    RandomNumberGenerator my_rng(pi_v<float>);
 
     switch ( wanted_noise_type ) {
         case GAUSSIAN:

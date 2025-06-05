@@ -268,20 +268,23 @@ class Image {
     void                LocalResSignificanceFilter(float pixel_size, float starting_resolution, float mask_radius_in_angstroms);
     void                GaussianLowPassFilter(float sigma);
     void                GaussianHighPassFilter(float sigma);
-    void                ApplyLocalResolutionFilter(Image& local_resolution_map, float pixel_size, int wanted_number_of_levels);
-    void                CircleMask(float wanted_mask_radius, bool invert = false);
-    void                CircleMaskWithValue(float wanted_mask_radius, float wanted_mask_value, bool invert = false);
-    void                SquareMaskWithValue(float wanted_mask_dim, float wanted_mask_value, bool invert = false, int wanted_center_x = 0, int wanted_center_y = 0, int wanted_center_z = 0);
-    void                TriangleMask(float wanted_triangle_half_base_length);
-    void                CalculateCTFImage(CTF& ctf_of_image, bool calculate_complex_ctf = false, bool apply_coherence_envelope = false, bool use_half_precision = false);
-    void                CalculateBeamTiltImage(CTF& ctf_of_image, bool output_phase_shifts = false);
-    bool                ContainsBlankEdges(float mask_radius = 0.0);
-    void                CorrectMagnificationDistortion(float distortion_angle, float distortion_major_axis, float distortion_minor_axis);
-    float               ApplyMask(Image& mask_file, float cosine_edge_width, float weight_outside_mask, float low_pass_filter_outside, float filter_cosine_edge_width, float outside_mask_value = 0.0, bool use_outside_mask_value = false);
-    Peak                CenterOfMass(float threshold = 0.0, bool apply_threshold = false);
-    Peak                StandardDeviationOfMass(float threshold = 0.0, bool apply_threshold = false, bool invert_densities = false);
-    float               ReturnAverageOfMaxN(int number_of_pixels_to_average = 100, float mask_radius = 0.0);
-    float               ReturnAverageOfMinN(int number_of_pixels_to_average = 100, float mask_radius = 0.0);
+    void                ReplaceLowfreqWithNoise(float sigma, Image defocus_fix_ctfimg);
+    void                RandomrizeLowFrequency(float sigma);
+
+    void  ApplyLocalResolutionFilter(Image& local_resolution_map, float pixel_size, int wanted_number_of_levels);
+    void  CircleMask(float wanted_mask_radius, bool invert = false);
+    void  CircleMaskWithValue(float wanted_mask_radius, float wanted_mask_value, bool invert = false);
+    void  SquareMaskWithValue(float wanted_mask_dim, float wanted_mask_value, bool invert = false, int wanted_center_x = 0, int wanted_center_y = 0, int wanted_center_z = 0);
+    void  TriangleMask(float wanted_triangle_half_base_length);
+    void  CalculateCTFImage(CTF& ctf_of_image, bool calculate_complex_ctf = false, bool apply_coherence_envelope = false, bool use_half_precision = false);
+    void  CalculateBeamTiltImage(CTF& ctf_of_image, bool output_phase_shifts = false);
+    bool  ContainsBlankEdges(float mask_radius = 0.0);
+    void  CorrectMagnificationDistortion(float distortion_angle, float distortion_major_axis, float distortion_minor_axis);
+    float ApplyMask(Image& mask_file, float cosine_edge_width, float weight_outside_mask, float low_pass_filter_outside, float filter_cosine_edge_width, float outside_mask_value = 0.0, bool use_outside_mask_value = false);
+    Peak  CenterOfMass(float threshold = 0.0, bool apply_threshold = false);
+    Peak  StandardDeviationOfMass(float threshold = 0.0, bool apply_threshold = false, bool invert_densities = false);
+    float ReturnAverageOfMaxN(int number_of_pixels_to_average = 100, float mask_radius = 0.0);
+    float ReturnAverageOfMinN(int number_of_pixels_to_average = 100, float mask_radius = 0.0);
 
     void AddSlices(Image& sum_of_slices, int first_slice = 0, int last_slice = 0, bool calculate_average = false);
 

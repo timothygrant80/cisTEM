@@ -3631,6 +3631,178 @@ void Image::GaussianHighPassFilter(float sigma) {
     }
 }
 
+void Image::ReplaceLowfreqWithNoise(float sigma, Image defocus_fix_ctfimg) {
+    MyDebugAssertTrue(is_in_real_space == false, "Image Must Be Complex");
+
+    int i;
+    int j;
+    int k;
+
+    float x;
+    float y;
+    float z;
+
+    long pixel_counter = 0;
+
+    float frequency_squared;
+    float frequency;
+    float one_over_two_sigma_squared = 0.5 / powf(sigma, 2);
+
+    RandomNumberGenerator* rand_generator;
+    float                  target_ctf_amplitude;
+    float                  pixel_real;
+    float                  pixel_imag;
+    // if ( provided_generator == NULL )
+    //     used_generator = &global_random_number_generator;
+    // else
+    //     used_generator = provided_generator;
+
+    // for ( long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++ ) {
+    //     real_values[pixel_counter] += wanted_sigma_value * used_generator->GetNormalRandom( );
+    // }
+    float cutoff_freq               = sigma;
+    float half_coswith              = 0.005;
+    float squared_zero_cutoff_left  = powf(cutoff_freq - half_coswith, 2);
+    float squared_zero_cutoff_right = powf(cutoff_freq + half_coswith, 2);
+    float complex_ratio;
+    float current_phase;
+    wxPrintf("cutoff_freq: %f\n", cutoff_freq);
+    wxPrintf("half_coswith: %f\n", half_coswith);
+    wxPrintf("squared_zero_cutoff_left: %f\n", squared_zero_cutoff_left);
+    wxPrintf("squared_zero_cutoff_right: %f\n", squared_zero_cutoff_right);
+
+    for ( k = 0; k <= physical_upper_bound_complex_z; k++ ) {
+        z = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z, 2);
+
+        for ( j = 0; j <= physical_upper_bound_complex_y; j++ ) {
+            y = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y, 2);
+
+            for ( i = 0; i <= physical_upper_bound_complex_x; i++ ) {
+                x = powf(i * fourier_voxel_size_x, 2);
+
+                // compute squared radius, in units of reciprocal pixels
+                frequency_squared = x + y + z;
+                frequency         = sqrtf(frequency_squared);
+
+                if ( frequency_squared <= squared_zero_cutoff_left ) {
+                    pixel_real           = real(defocus_fix_ctfimg.complex_values[pixel_counter]);
+                    pixel_imag           = imag(defocus_fix_ctfimg.complex_values[pixel_counter]);
+                    target_ctf_amplitude = sqrtf(powf(pixel_real, 2) + powf(pixel_imag, 2));
+                    current_phase        = global_random_number_generator.GetUniformRandom( ) * PI;
+                    // current_phase = rand_generator.GetUniformRandom( ) * PI;
+                    wxPrintf("current_phase: %f\n", current_phase);
+
+                    complex_values[pixel_counter] = (target_ctf_amplitude * cosf(current_phase)) + I * (target_ctf_amplitude * sinf(current_phase));
+                }
+                else if ( frequency_squared > squared_zero_cutoff_left && frequency_squared <= squared_zero_cutoff_right ) {
+                    pixel_real           = real(defocus_fix_ctfimg.complex_values[pixel_counter]);
+                    pixel_imag           = imag(defocus_fix_ctfimg.complex_values[pixel_counter]);
+                    target_ctf_amplitude = sqrtf(powf(pixel_real, 2) + powf(pixel_imag, 2));
+                    current_phase        = global_random_number_generator.GetUniformRandom( ) * PI;
+                    // current_phase = rand_generator.GetUniformRandom( ) * PI;
+
+                    complex_ratio                 = 1.0f - cosf((frequency - half_coswith) / (2 * half_coswith) * PI / 2);
+                    complex_values[pixel_counter] = complex_ratio * complex_values[pixel_counter] + (1.0f - complex_ratio) * (target_ctf_amplitude * cosf(current_phase) + I * (target_ctf_amplitude * sinf(current_phase)));
+                }
+                else {
+                    complex_values[pixel_counter] = complex_values[pixel_counter];
+                }
+
+                // complex_values[pixel_counter] *= 1.0 - expf(-frequency_squared * one_over_two_sigma_squared);
+                // complex_values[pixel_counter] = defocus_fix_ctfimg.complex_values[pixel_counter] + (1.0 - defocus_fix_ctfimg.complex_values[pixel_counter]) * global_random_number_generator.GetNormalRandom( );
+
+                pixel_counter++;
+            }
+        }
+    }
+}
+
+void Image::RandomrizeLowFrequency(float sigma) {
+    MyDebugAssertTrue(is_in_real_space == false, "Image Must Be Complex");
+
+    int i;
+    int j;
+    int k;
+
+    float x;
+    float y;
+    float z;
+
+    long pixel_counter = 0;
+
+    float frequency_squared;
+    float frequency;
+    float one_over_two_sigma_squared = 0.5 / powf(sigma, 2);
+
+    RandomNumberGenerator* rand_generator;
+    float                  target_amplitude;
+    float                  pixel_real;
+    float                  pixel_imag;
+    // if ( provided_generator == NULL )
+    //     used_generator = &global_random_number_generator;
+    // else
+    //     used_generator = provided_generator;
+
+    // for ( long pixel_counter = 0; pixel_counter < real_memory_allocated; pixel_counter++ ) {
+    //     real_values[pixel_counter] += wanted_sigma_value * used_generator->GetNormalRandom( );
+    // }
+    float cutoff_freq               = sigma;
+    float half_coswith              = 0.005;
+    float squared_zero_cutoff_left  = powf(cutoff_freq - half_coswith, 2);
+    float squared_zero_cutoff_right = powf(cutoff_freq + half_coswith, 2);
+    float complex_ratio;
+    float current_phase;
+    wxPrintf("cutoff_freq: %f\n", cutoff_freq);
+    wxPrintf("half_coswith: %f\n", half_coswith);
+    wxPrintf("squared_zero_cutoff_left: %f\n", squared_zero_cutoff_left);
+    wxPrintf("squared_zero_cutoff_right: %f\n", squared_zero_cutoff_right);
+
+    for ( k = 0; k <= physical_upper_bound_complex_z; k++ ) {
+        z = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z, 2);
+
+        for ( j = 0; j <= physical_upper_bound_complex_y; j++ ) {
+            y = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y, 2);
+
+            for ( i = 0; i <= physical_upper_bound_complex_x; i++ ) {
+                x = powf(i * fourier_voxel_size_x, 2);
+
+                // compute squared radius, in units of reciprocal pixels
+                frequency_squared = x + y + z;
+                frequency         = sqrtf(frequency_squared);
+
+                if ( frequency_squared <= squared_zero_cutoff_left ) {
+                    pixel_real       = real(complex_values[pixel_counter]);
+                    pixel_imag       = imag(complex_values[pixel_counter]);
+                    target_amplitude = sqrtf(powf(pixel_real, 2) + powf(pixel_imag, 2));
+                    current_phase    = global_random_number_generator.GetUniformRandom( ) * PI;
+                    // current_phase = rand_generator.GetUniformRandom( ) * PI;
+                    // wxPrintf("current_phase: %f\n", current_phase);
+
+                    complex_values[pixel_counter] = (target_amplitude * cosf(current_phase)) + I * (target_amplitude * sinf(current_phase));
+                }
+                else if ( frequency_squared > squared_zero_cutoff_left && frequency_squared <= squared_zero_cutoff_right ) {
+                    pixel_real       = real(complex_values[pixel_counter]);
+                    pixel_imag       = imag(complex_values[pixel_counter]);
+                    target_amplitude = sqrtf(powf(pixel_real, 2) + powf(pixel_imag, 2));
+                    current_phase    = global_random_number_generator.GetUniformRandom( ) * PI;
+                    // current_phase = rand_generator.GetUniformRandom( ) * PI;
+
+                    complex_ratio                 = 1.0f - cosf((frequency - half_coswith) / (2 * half_coswith) * PI / 2);
+                    complex_values[pixel_counter] = complex_ratio * complex_values[pixel_counter] + (1.0f - complex_ratio) * (target_amplitude * cosf(current_phase) + I * (target_amplitude * sinf(current_phase)));
+                }
+                else {
+                    complex_values[pixel_counter] = complex_values[pixel_counter];
+                }
+
+                // complex_values[pixel_counter] *= 1.0 - expf(-frequency_squared * one_over_two_sigma_squared);
+                // complex_values[pixel_counter] = defocus_fix_ctfimg.complex_values[pixel_counter] + (1.0 - defocus_fix_ctfimg.complex_values[pixel_counter]) * global_random_number_generator.GetNormalRandom( );
+
+                pixel_counter++;
+            }
+        }
+    }
+}
+
 void Image::RandomisePhases(float wanted_radius_in_reciprocal_pixels) {
     bool need_to_fft = false;
 
@@ -7014,7 +7186,7 @@ void Image::ComputeFilteredAmplitudeSpectrumFull2D(Image* average_spectrum_maske
     //			average_spectrum_masked->SetMaximumValue(average_spectrum_masked->ReturnMaximumValue(3,3));
 
     average_spectrum_masked->CopyFrom(this);
-    if (apply_cosine_mask) {
+    if ( apply_cosine_mask ) {
         average_spectrum_masked->CosineMask(float(average_spectrum_masked->logical_x_dimension) * pixel_size_for_fitting / std::max(maximum_resolution, 8.0f), float(average_spectrum_masked->logical_x_dimension) * pixel_size_for_fitting / std::max(maximum_resolution, 4.0f), true);
     }
     //			average_spectrum_masked->QuickAndDirtyWriteSlice("dbg_spec_before_thresh.mrc",1);

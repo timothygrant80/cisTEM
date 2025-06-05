@@ -559,21 +559,156 @@ bool MatchTemplateApp::DoCalculation( ) {
     input_image.SwapRealSpaceQuadrants( );
 
     input_image.ZeroCentralPixel( );
+    // input_image.QuickAndDirtyWriteSlice("/data/lingli/NMDA_EMPIAR-11266/Proj_6whymem_memfix_sym/whitening_filter_test/sim_input_image.mrc", 1, true, 1.0);
+    // input_image.QuickAndDirtyWriteSlice("/data/lingli/NMDA_EMPIAR-11266/Proj_6whymem_memfix_sym_1201/20241007_simulate_S384_T2000_D20000_B10_00_D20000/proj_input_image.mrc", 1, true, 1.0);
+    // input_image.QuickAndDirtyWriteSlice("/data/lingli/NMDA_EMPIAR-11266/Simulation_6whymem_memfix_sym_1007/TempMatch/6whymem_memfix_sym_D20000_03_patchwhite/Assets/TemplateMatching/Test_crop_11/input_image.mrc", 1, true, 1.0);
+    input_image.QuickAndDirtyWriteSlice("input_image.mrc", 1, true, pixel_size);
+    // high pass freq determination ======================================
+    // first zero of ctf
+    float wavelength = ReturnWavelenthInAngstroms(voltage_kV);
+    float defocus    = (defocus1 + defocus2) / 2.0f;
+    // float zero_crossing = input_ctf.ReturnDefocusCrossing(wavelength, defocus, 0.0f);
+
+    CTF   highpass_freq_ctf;
+    float hpdefocus1 = 2200.0f;
+    float hpdefocus2 = 2200.0f;
+    highpass_freq_ctf.Init(voltage_kV, spherical_aberration_mm, amplitude_contrast, hpdefocus1, hpdefocus2, defocus_angle, 0.0, 0.0, 0.0, pixel_size, deg_2_rad(phase_shift));
+    highpass_freq_ctf.SetDefocus((hpdefocus1) / pixel_size, (hpdefocus2) / pixel_size, deg_2_rad(defocus_angle));
+
+    float first_zero_fre = highpass_freq_ctf.ReturnSquaredSpatialFrequencyOfAZero(2, 0.0);
+    first_zero_fre       = 1 / sqrtf(hpdefocus1 * wavelength);
+    wxPrintf("First zero frequency: %f\n", first_zero_fre);
+    float first_max_freq = first_zero_fre * 0.5f;
+
+    // ---- try to randomize the low frequency
+    input_image.RandomrizeLowFrequency(first_max_freq);
+    input_image.BackwardFFT( );
+    input_image.QuickAndDirtyWriteSlice("/data/lingli/ECOLI_ACRB/White_LowFreq/randomized_phase_lowfreq_sqrt_wavelength_defocus.mrc", 1, true, pixel_size);
+    input_image.ForwardFFT( );
+    // input_image.GaussianHighPassFilter(first_max_freq);
+    // input_image.BackwardFFT( );
+    // input_image.QuickAndDirtyWriteSlice("/data/lingli/ECOLI_ACRB/White_LowFreq/RandomPhase_LowFreq/Highpass_filtered.mrc", 1, true, pixel_size);
+    // input_image.ForwardFFT( );
+    // ----------------------------------------
+
+    // // ---- try to replace the low frequency with noise
+    // Image defocus_fix_ctfimg;
+    // defocus_fix_ctfimg.Allocate(input_image.logical_x_dimension, input_image.logical_y_dimension, false);
+    // // .Allocate(input_reconstruction_file.ReturnXSize( ), input_reconstruction_file.ReturnXSize( ), false);
+    // defocus_fix_ctfimg.CalculateCTFImage(highpass_freq_ctf);
+    // // defocus_fix_ctfimg.ZeroCentralPixel( );
+    // defocus_fix_ctfimg.BackwardFFT( );
+    // defocus_fix_ctfimg.SwapRealSpaceQuadrants( );
+    // defocus_fix_ctfimg.QuickAndDirtyWriteSlice("defocus_fix.mrc", 1, true, pixel_size);
+    // defocus_fix_ctfimg.SwapRealSpaceQuadrants( );
+
+    // input_image.ReplaceLowfreqWithNoise(first_max_freq, defocus_fix_ctfimg);
+
+    // // input_image.GaussianHighPassFilter(first_max_freq);
+    // // input_image.ReplaceLowfreqWithNoise(first_max_freq, defocus_fix_ctfimg);
+    // // input_image.BackwardFFT( );
+
+    // input_image.BackwardFFT( );
+    // input_image.QuickAndDirtyWriteSlice("noise_filled_img.mrc", 1, true, pixel_size);
+    // input_image.ForwardFFT( );
+
+    // input_image.GaussianHighPassFilter(first_max_freq);
+    // input_image.BackwardFFT( );
+
+    // input_image.QuickAndDirtyWriteSlice("noise_filled_img_highpass_again.mrc", 1, true, pixel_size);
+    // input_image.ForwardFFT( );
+    // // -----------------------------------------------------------
+
+    //  =================================== ===============================
+
     input_image.Compute1DPowerSpectrumCurve(&whitening_filter, &number_of_terms);
+    // whitening_filter.WriteToFile("/data/lingli/NMDA_EMPIAR-11266/Proj_6whymem_memfix_sym/whitening_filter_test/sim_whitening_filter_proj_1DPowerSpectrumCurve.txt");
+
     whitening_filter.SquareRoot( );
+    // // whitening_filter.WriteToFile("/data/lingli/NMDA_EMPIAR-11266/Proj_6whymem_memfix_sym/whitening_filter_test/sim_whitening_filter_proj_squareroot.txt");
+
     whitening_filter.Reciprocal( );
+    // // whitening_filter.WriteToFile("/data/lingli/NMDA_EMPIAR-11266/Proj_6whymem_memfix_sym/whitening_filter_test/sim_whitening_filter_proj_reci.txt");
+
     whitening_filter.MultiplyByConstant(1.0f / whitening_filter.ReturnMaximumValue( ));
+    // // whitening_filter.WriteToFile("/data/lingli/NMDA_EMPIAR-11266/Proj_6whymem_memfix_sym_1201/20241007_simulate_S384_T2000_D20000_B10_00_D20000/proj_whitening_filter.txt");
+    // whitening_filter.WriteToFile("/data/lingli/NMDA_EMPIAR-11266/Simulation_6whymem_memfix_sym_1007/TempMatch/6whymem_memfix_sym_D20000_03_patchwhite/Assets/TemplateMatching/Test_crop_11/whitening_filter_from_input_image.txt");
+
+    // // whitening_filter.WriteToFile("/data/lingli/NMDA_EMPIAR-11266/Simulation_6whymem_memfix_sym_1007/TempMatch/6whymem_local/whitening_filter_proj_nomem.txt");
+
+    // // Image     whitening_filter_img;
+    // // ImageFile whitening_filter_img_file;
+    // // whitening_filter_img_file.OpenFile("/data/lingli/NMDA_EMPIAR-11266/Proj_6whymem_memfix_sym/20241007_proj/20241007_simulate_S384_T2000_D20000_B10_00_D20000.mrc", false);
+    // // whitening_filter_img.ReadSlice(&whitening_filter_img_file, 1);
+
+    // // whitening_filter_img.ReplaceOutliersWithMean(5.0f);
+    // // whitening_filter_img.ForwardFFT( );
+    // // whitening_filter_img.SwapRealSpaceQuadrants( );
+    // // whitening_filter_img.ZeroCentralPixel( );
+    // // whitening_filter_img.Compute1DPowerSpectrumCurve(&whitening_filter, &number_of_terms);
+
+    // // whitening_filter.SquareRoot( );
+    // // whitening_filter.Reciprocal( );
+    // // whitening_filter.MultiplyByConstant(1.0f / whitening_filter.ReturnMaximumValue( ));
+    // // whitening_filter.WriteToFile("/data/lingli/NMDA_EMPIAR-11266/Proj_6whymem_memfix_sym/20241007_proj/whitening_filter_new.txt");
+    // // std::string     white_filter_readin_filename = "/data/lingli/NMDA_EMPIAR-11266/Simulation_6whymem_memfix_sym_1007/TempMatch/6whymem_local/whitening_filter_proj.txt";
+
+    // // // read in the whitening filter (read in part1)
+    // // // std::string     white_filter_readin_filename = "/data/lingli/NMDA_EMPIAR-11266/Simulation_6whymem_memfix_sym_1007/TempMatch/6whymem_local/whitening_filter_origin.txt";
+    // // std::string white_filter_readin_filename = "/data/lingli/NMDA_EMPIAR-11266/Proj_6whymem_memfix_sym_1201/20241007_simulate_S384_T2000_D20000_B10_00_D20000_2DTM/whitening_filter_from_input_image.txt";
+
+    // // NumericTextFile white_filter_readin_file(white_filter_readin_filename, OPEN_TO_READ, 2);
+    // // for ( int i = 0; i < white_filter_readin_file.number_of_lines; i++ ) {
+    // //     float tmp[2];
+    // //     white_filter_readin_file.ReadLine(tmp);
+    // //     whitening_filter.data_x[i] = tmp[0];
+    // //     whitening_filter.data_y[i] = tmp[1];
+    // // }
+    // // whitening_filter.WriteToFile("/data/lingli/NMDA_EMPIAR-11266/Simulation_6whymem_memfix_sym_1007/TempMatch/6whymem_local/prjimg_using_whitening_filter_origin.txt");
+    // whitening_filter.WriteToFile("/data/lingli/NMDA_EMPIAR-11266/Simulation_6whymem_memfix_sym_1007/TempMatch/6whymem_memfix_sym_D20000_03_patchwhite/Assets/TemplateMatching/Test_crop_11/whitening_filter_used.txt");
+
+    // apply percentage of whitening filter ===============================
+    float percentage = 1.0f;
+    for ( int i = 0; i < whitening_filter.number_of_points; i++ ) {
+        float tmp                  = whitening_filter.data_y[i];
+        whitening_filter.data_y[i] = tmp * percentage + (1.0f - percentage); // apply a percentage of the whitening filter
+    }
+    //  =================================== ===============================
 
     input_image.ApplyCurveFilter(&whitening_filter);
-    input_image.ZeroCentralPixel( );
+    // // write out the filtered input image (part2)
+    // if ( input_image.is_in_real_space == false ) {
+    //     input_image.BackwardFFT( );
+    //     input_image.QuickAndDirtyWriteSlice("/data/lingli/NMDA_EMPIAR-11266/Simulation_6whymem_memfix_sym_1007/TempMatch/6whymem_local/prjimg_using_whitening_filter_origin.mrc", 1);
+    //     input_image.ForwardFFT( );
+    // }
+    // else {
+    //     input_image.QuickAndDirtyWriteSlice("/data/lingli/NMDA_EMPIAR-11266/Simulation_6whymem_memfix_sym_1007/TempMatch/6whymem_local/prjimg_using_whitening_filter_origin.mrc", 1);
+    // }
+    // //  =================================== ===============
+    // input_image.GaussianHighPassFilter(first_max_freq);
+    // input_image.BackwardFFT( );
+    // input_image.QuickAndDirtyWriteSlice("/data/lingli/ECOLI_ACRB/White_LowFreq/RandomPhase_LowFreq/Highpass_filter_sqrt_of_wavelength_defocus_after_whitening.mrc", 1, true, pixel_size);
+    // input_image.ForwardFFT( );
+    // //---------
+    // input_image.ZeroCentralPixel( );
     // Note: we are dividing by the sqrt of the sum of squares, so the variance in the images 1/N, not 1. This is where the need to multiply the mips by sqrt(N) comes from.
     // Dividing by sqrt(input_image.ReturnSumOfSquares() / N) would result in a properly normalized CCC value.
     input_image.DivideByConstant(sqrtf(input_image.ReturnSumOfSquares( )));
     //input_image.QuickAndDirtyWriteSlice("/tmp/white.mrc", 1);
     //exit(-1);
+    // write out the filtered input image (part2)
 
+    // if ( input_image.is_in_real_space == false ) {
+    //     input_image.BackwardFFT( );
+    //     input_image.QuickAndDirtyWriteSlice("/data/lingli/NMDA_EMPIAR-11266/Simulation_6whymem_memfix_sym_1007/TempMatch/6whymem_memfix_sym_D20000_03_patchwhite/Assets/TemplateMatching/Test_crop_11/input_image_whiten.mrc", 1);
+    //     input_image.ForwardFFT( );
+    // }
+    // else {
+    //     input_image.QuickAndDirtyWriteSlice("/data/lingli/NMDA_EMPIAR-11266/Simulation_6whymem_memfix_sym_1007/TempMatch/6whymem_memfix_sym_D20000_03_patchwhite/Assets/TemplateMatching/Test_crop_11/input_image_whiten.mrc", 1);
+    // }
     // count total searches (lazy)
-
+    wxPrintf("whitening filter applied\n");
     total_correlation_positions  = 0;
     current_correlation_position = 0;
 
@@ -672,7 +807,6 @@ bool MatchTemplateApp::DoCalculation( ) {
 
     //    wxPrintf("Starting job\n");
     for ( size_i = -myroundint(float(pixel_size_search_range) / float(pixel_size_step)); size_i <= myroundint(float(pixel_size_search_range) / float(pixel_size_step)); size_i++ ) {
-
         //        template_reconstruction.CopyFrom(&input_reconstruction);
         input_reconstruction.ChangePixelSize(&template_reconstruction, (pixel_size + float(size_i) * pixel_size_step) / pixel_size, 0.001f, true);
         //    template_reconstruction.ForwardFFT();
@@ -724,6 +858,25 @@ bool MatchTemplateApp::DoCalculation( ) {
             // make the projection filter, which will be CTF * whitening filter
             input_ctf.SetDefocus((defocus1 + float(defocus_i) * defocus_step) / pixel_size, (defocus2 + float(defocus_i) * defocus_step) / pixel_size, deg_2_rad(defocus_angle));
             //            input_ctf.SetDefocus((defocus1 + 200) / pixel_size, (defocus2 + 200) / pixel_size, deg_2_rad(defocus_angle));
+
+            // this part is just to write out the ctf image or whitneniing filter image ===================================
+            // if ( defocus_i == -myroundint(float(defocus_search_range) / float(defocus_step)) ) {
+            //     wxPrintf("Defocus %f %f %f\n", (defocus1 + float(defocus_i) * defocus_step) / pixel_size, (defocus2 + float(defocus_i) * defocus_step) / pixel_size, deg_2_rad(defocus_angle));
+            //     projection_filter.CalculateCTFImage(input_ctf);
+            //     // projection_filter.BackwardFFT( );
+            //     // projection_filter.SwapRealSpaceQuadrants( );
+            //     // projection_filter.QuickAndDirtyWriteSlices("/data/lingli/tmp/projection_filter_ctf.mrc", 1, projection_filter.logical_z_dimension, true, 1.0);
+            //     // projection_filter.SwapRealSpaceQuadrants( );
+            //     // projection_filter.ForwardFFT( );
+            //     projection_filter.ApplyCurveFilter(&whitening_filter);
+            //     projection_filter.BackwardFFT( );
+            //     projection_filter.SwapRealSpaceQuadrants( );
+            //     // projection_filter.QuickAndDirtyWriteSlices("/data/lingli/tmp/projection_filter_whiten.mrc", 1, projection_filter.logical_z_dimension, true, 1.0);
+            //     projection_filter.SwapRealSpaceQuadrants( );
+            //     projection_filter.ForwardFFT( );
+            // }
+            // ==============================================================================================================
+
             projection_filter.CalculateCTFImage(input_ctf);
             projection_filter.ApplyCurveFilter(&whitening_filter);
 

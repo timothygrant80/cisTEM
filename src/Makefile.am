@@ -216,6 +216,7 @@ noinst_HEADERS = core/stopwatch.h \
                  gui/icons/vsv_sharpening.cpp \
                  gui/icons/refine_ctf_icon.cpp \
                  gui/icons/refine_template_icon.cpp \
+				 gui/workflows/Icons.cpp \
                  programs/console_test/hiv_image_80x80x1.cpp \
                  programs/console_test/hiv_images_shift_noise_80x80x10.cpp \
                  programs/console_test/sine_128x128x1.cpp \
@@ -645,6 +646,7 @@ libguicore_a_CPPFLAGS = $(WX_CPPFLAGS)
 cisTEM_SOURCES = programs/projectx/projectx.cpp \
                 programs/cisTEM_display/display_gui.cpp \
                 gui/gui_globals.cpp \
+				gui/workflows/Icons.cpp \
                 gui/MyFSCPanel.cpp \
                 gui/MyRefinementResultsPanel.cpp \
                 gui/PlotFSCPanel.cpp  \

@@ -4,7 +4,7 @@
             "name": "Linux",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/opt/WX/intel-dynamic/include/wx-3.0/",
+                "/opt/WX/icc-static/include/wx-3.0/",
                 "/usr/local/cuda/include",
                 "/opt/cuTensor/include"
             ],

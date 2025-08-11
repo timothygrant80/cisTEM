@@ -1,4 +1,6 @@
 #include "../core/gui_core_headers.h"
+#include "workflows/SpaWorkflow.h"
+#include "workflows/WorkflowRegistry.h"
 
 ActionsPanelSpa::ActionsPanelSpa(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
     : ActionsPanelParent(parent, id, pos, size, style) {

@@ -114,18 +114,6 @@
         "github.copilot-chat": "ui"
     },
         "github.copilot.enable": {
-        "*": true,
-        "markdown": true,
-        "scminput": false,
-        "quarto": false,
-        "yaml": true,
-        "cuda-cpp": true,
-        "shellscript": true,
-        "python": true,
-        "jsonc": true,
-        "log": false,
-        "matlab": true
-    },
     "github.copilot.chat.codeGeneration.instructions": [],
     "github.copilot.chat.codeGeneration.useInstructionFiles": false
 }

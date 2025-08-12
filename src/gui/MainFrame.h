@@ -16,8 +16,6 @@ class MyMainFrame : public MainFrame, public SocketCommunicator, public UpdatePr
     MyMainFrame(wxWindow* parent);
     ~MyMainFrame( );
 
-    std::shared_ptr<WorkflowRegistry( )> registry;
-
     //// end generated class members
 
     wxTreeItemId tree_root;
@@ -108,7 +106,6 @@ class MyMainFrame : public MainFrame, public SocketCommunicator, public UpdatePr
 
     void SetSingleParticleWorkflow(bool triggered_by_gui_event = false);
     void SetTemplateMatchingWorkflow(bool triggered_by_gui_event = false);
-    void SetActionsPanelChild(wxWindow* panel);
     void SwitchWorkflowPanels(const wxString& workflow_name);
 
     // void OnSingleParticleWorkflow(wxCommandEvent& event);
@@ -156,7 +153,6 @@ class MyMainFrame : public MainFrame, public SocketCommunicator, public UpdatePr
     // Only used in schema update at this point
     OneSecondProgressDialog* update_progress_dialog;
     void                     UpdateDatabase(std::pair<Database::TableChanges, Database::ColumnChanges>& schema_comparison);
-    ActionsPanelParent*      actions_panel_child;
 };
 
 #endif // _gui_MainFrame_h_

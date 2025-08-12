@@ -160,7 +160,7 @@ bool MyGuiApp::OnInit( ) {
     // sharpen_3d_panel               = new Sharpen3DPanel(actions_panel_spa->ActionsBook);
 
     actions_panel = static_cast<ActionsPanelParent*>(WorkflowRegistry::Instance( ).CreateActionsPanel("Single Particle", main_frame->MenuBook));
-    main_frame->SetActionsPanelChild(actions_panel);
+    // main_frame->SetActionsPanelChild(actions_panel);
 
     // Theoretically, this should no longer be required since the logic for instantiating
     // the different panels on the Actions Panel should be elsewhere

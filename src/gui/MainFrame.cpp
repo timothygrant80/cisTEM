@@ -981,30 +981,22 @@ void MyMainFrame::SwitchWorkflowPanels(const wxString& workflow_name) {
     int current_page_idx  = MenuBook->GetSelection( );
     int actions_panel_idx = MenuBook->FindPage(actions_panel);
     MenuBook->RemovePage(actions_panel_idx);
-    // MenuBook->DeletePage(current_page_idx);
-    if ( actions_panel_child ) {
-        // TODO: perhaps reparent shared panels first, then delete? But this would require instantiating the panel first, which does not work.
-        // so full on new operator must occur below...
-        actions_panel_child->Destroy( );
-        actions_panel_child = nullptr;
-        // actions_panel->Destroy( );
-        // actions_panel = nullptr;
+
+    if ( actions_panel ) {
+        actions_panel->Destroy( );
+        actions_panel = nullptr;
     }
 
     actions_panel = static_cast<ActionsPanelParent*>(WorkflowRegistry::Instance( ).CreateActionsPanel(workflow_name, this->MenuBook));
-    SetActionsPanelChild(actions_panel);
-    // SetActionsPanelChild(actions_panel);
-    this->MenuBook->InsertPage(actions_panel_idx, actions_panel, "Actions", false, current_page_idx);
+    this->MenuBook->InsertPage(actions_panel_idx, actions_panel, "Actions", false, actions_panel_idx);
     this->MenuBook->SetSelection(current_page_idx);
-    // TODO: add change for results panel as well
+
+    // TODO: Repeat above logic for any panels that are different between workflows
+
     actions_panel->Layout( );
     MenuBook->Layout( );
     Layout( );
     Thaw( );
-}
-
-void MyMainFrame::SetActionsPanelChild(wxWindow* panel) {
-    actions_panel_child = static_cast<ActionsPanelParent*>(panel);
 }
 
 // void MyMainFrame::SetSingleParticleWorkflow(bool triggered_by_gui_event) {

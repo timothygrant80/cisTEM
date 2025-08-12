@@ -25,11 +25,15 @@ MyRefinementResultsPanel::MyRefinementResultsPanel(wxWindow* parent)
 
 #include "icons/show_angles.cpp"
 #include "icons/show_text.cpp"
+#include "icons/small_save_icon.cpp"
 
-    wxBitmap angles_popup_bmp     = wxBITMAP_PNG_FROM_DATA(show_angles);
-    wxBitmap parameters_popup_bmp = wxBITMAP_PNG_FROM_DATA(show_text);
+    wxBitmap angles_popup_bmp       = wxBITMAP_PNG_FROM_DATA(show_angles);
+    wxBitmap parameters_popup_bmp   = wxBITMAP_PNG_FROM_DATA(show_text);
+    wxBitmap binned_angles_save_bmp = wxBITMAP_PNG_FROM_DATA(small_save_icon);
     AngularPlotDetailsButton->SetBitmap(angles_popup_bmp);
     ParametersDetailButton->SetBitmap(parameters_popup_bmp);
+    SaveBinnedAngularPlotButton->SetBitmap(binned_angles_save_bmp);
+    Layout( );
 
     //	FSCPlotPanel->ClassComboBox->Connect( wxEVT_COMMAND_COMBOBOX_SELECTED, wxCommandEventHandler( MyRefinementResultsPanel::OnClassComboBoxChange ), NULL, this );
 }
@@ -327,6 +331,22 @@ void MyRefinementResultsPanel::AngularPlotPopupClick(wxCommandEvent& event) {
         plot_dialog->ShowModal( );
         plot_dialog->Destroy( );
     }
+}
+
+void MyRefinementResultsPanel::SaveBinnedPlotClick(wxCommandEvent& event) {
+    ProperOverwriteCheckSaveDialog* saveFileDialog;
+    saveFileDialog = new ProperOverwriteCheckSaveDialog(this, _("Save png image"), "PNG files (*.png)|*.png", ".png");
+    if ( saveFileDialog->ShowModal( ) == wxID_CANCEL ) {
+        saveFileDialog->Destroy( );
+        return;
+    }
+
+    // save the file then..
+
+    // TODO: this would likely be the only difference; change the source of data
+    // for the saving of the file
+    AngularPlotPanel->buffer_bitmap.SaveFile(saveFileDialog->ReturnProperPath( ), wxBITMAP_TYPE_PNG);
+    saveFileDialog->Destroy( );
 }
 
 void MyRefinementResultsPanel::PopupParametersClick(wxCommandEvent& event) {

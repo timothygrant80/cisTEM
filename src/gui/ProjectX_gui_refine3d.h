@@ -169,6 +169,7 @@ class RefinementResultsPanel : public wxPanel
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void PopupParametersClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void AngularPlotPopupClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void SaveBinnedPlotClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnJobDetailsToggle( wxCommandEvent& event ) { event.Skip(); }
 
 
@@ -177,6 +178,7 @@ class RefinementResultsPanel : public wxPanel
 		RefinementPickerComboPanel* InputParametersComboBox;
 		NoFocusBitmapButton* ParametersDetailButton;
 		NoFocusBitmapButton* AngularPlotDetailsButton;
+		NoFocusBitmapButton* SaveBinnedAngularPlotButton;
 
 		RefinementResultsPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 1007,587 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 

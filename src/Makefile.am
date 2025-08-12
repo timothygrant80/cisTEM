@@ -757,7 +757,7 @@ cisTEM_CPPFLAGS = $(WX_CPPFLAGS)
 cisTEM_LDADD    = libguicore.a libcore.a $(WX_LIBS) $(MKL_LIBS)
 cisTEM_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
-cisTEM_display_SOURCES = programs/cisTEM_display/cisTEM_display.cpp programs/cisTEM_display/display_gui.cpp gui/DisplayPanel.cpp gui/DisplayFrame.cpp
+cisTEM_display_SOURCES = programs/cisTEM_display/cisTEM_display.cpp programs/cisTEM_display/display_gui.cpp gui/DisplayPanel.cpp gui/DisplayFrame.cpp programs/cisTEM_display/DisplayServer.cpp
 cisTEM_display_CXXFLAGS = $(WX_CPPFLAGS)
 cisTEM_display_CPPFLAGS = $(WX_CPPFLAGS)
 cisTEM_display_LDADD = libguicore.a libcore.a $(WX_LIBS) $(MKL_LIBS)

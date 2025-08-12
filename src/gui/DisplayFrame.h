@@ -13,6 +13,7 @@ class DisplayFrame : public DisplayFrameParent {
     //Additional functions
     void DisableAllToolbarButtons( );
     void EnableAllToolbarButtons( );
+    void OnServerOpenFile(wxCommandEvent& event);
 
     // GUI event functions
     void OnCharHook(wxKeyEvent& event);

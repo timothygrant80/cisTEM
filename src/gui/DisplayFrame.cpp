@@ -62,12 +62,11 @@ void DisplayFrame::OnFileOpenClick(wxCommandEvent& event) {
 }
 
 void DisplayFrame::OnSaveDisplayedImagesClick(wxCommandEvent& event) {
-    // Mimics the logic ProperOverwriteCheckSaveDialog
+    // Mimics the logic ProperOverwriteCheckSaveDialog in my_controls.cpp
     wxFileDialog save_file_dialog(this, _("Save png image"), wxEmptyString, wxEmptyString, "PNG files (*.png)|*.png", wxFD_SAVE | wxFD_OVERWRITE_PROMPT, wxDefaultPosition, wxDefaultSize, wxFileDialogNameStr);
 
     wxString wanted_extension = ".png";
     wxString default_dir      = cisTEMDisplayPanel->ReturnCurrentPanel( )->filename;
-    wxPrintf("default_dir: %s\n", default_dir);
 
     // Strip away the filename to get the directory
     default_dir = default_dir.BeforeLast('/');
@@ -76,13 +75,38 @@ void DisplayFrame::OnSaveDisplayedImagesClick(wxCommandEvent& event) {
     wxString extension_lowercase = wanted_extension.Lower( );
     wxString extension_uppercase = wanted_extension.Upper( );
 
-    wxPrintf("default_dir: %s\n", default_dir);
     if ( save_file_dialog.ShowModal( ) == wxID_CANCEL ) {
         save_file_dialog.Destroy( );
         return;
     }
 
-    cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_bitmap.SaveFile(save_file_dialog.GetPath( ), wxBITMAP_TYPE_PNG);
+    // Crop out the blank space around the image: get the true width of the relevant area on the bitmap.
+    wxBitmap sub_bitmap;
+    int      sub_bmp_width;
+    int      sub_bmp_height;
+    int      single_image_x = cisTEMDisplayPanel->ReturnCurrentPanel( )->single_image_x;
+    int      single_image_y = cisTEMDisplayPanel->ReturnCurrentPanel( )->single_image_y;
+    float    scale_factor   = cisTEMDisplayPanel->ReturnCurrentPanel( )->actual_scale_factor;
+    if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->single_image ) {
+        cisTEMDisplayPanel->ReturnCurrentPanel( )->GetClientSize(&sub_bmp_width, &sub_bmp_height);
+        if ( single_image_x * scale_factor + sub_bmp_width > cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_image->GetWidth( ) ) {
+            sub_bmp_width = cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_image->GetWidth( ) - single_image_x * scale_factor;
+        }
+        if ( single_image_y * scale_factor + sub_bmp_height > cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_image->GetHeight( ) ) {
+            sub_bmp_height = cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_image->GetHeight( ) - single_image_y * scale_factor;
+        }
+        wxRect  sub_bmp_dims(single_image_x * scale_factor, single_image_y * scale_factor, sub_bmp_width, sub_bmp_height);
+        wxImage tmp_sub_img(cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_image->GetSubImage(sub_bmp_dims));
+        sub_bitmap = wxBitmap(tmp_sub_img);
+    }
+    else {
+        sub_bmp_width  = cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnImageXSize( ) * cisTEMDisplayPanel->ReturnCurrentPanel( )->actual_scale_factor * cisTEMDisplayPanel->ReturnCurrentPanel( )->images_in_x;
+        sub_bmp_height = cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnImageYSize( ) * cisTEMDisplayPanel->ReturnCurrentPanel( )->actual_scale_factor * cisTEMDisplayPanel->ReturnCurrentPanel( )->images_in_y;
+        wxRect sub_bmp_dims(single_image_x * scale_factor, single_image_y * scale_factor, sub_bmp_width, sub_bmp_height);
+        sub_bitmap = cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_bitmap.GetSubBitmap(sub_bmp_dims);
+    }
+
+    sub_bitmap.SaveFile(save_file_dialog.GetPath( ), wxBITMAP_TYPE_PNG);
 }
 
 void DisplayFrame::OnServerOpenFile(wxCommandEvent& event) {

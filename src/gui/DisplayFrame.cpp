@@ -61,6 +61,30 @@ void DisplayFrame::OnFileOpenClick(wxCommandEvent& event) {
     cisTEMDisplayPanel->OnOpen(event);
 }
 
+void DisplayFrame::OnSaveDisplayedImagesClick(wxCommandEvent& event) {
+    // Mimics the logic ProperOverwriteCheckSaveDialog
+    wxFileDialog save_file_dialog(this, _("Save png image"), wxEmptyString, wxEmptyString, "PNG files (*.png)|*.png", wxFD_SAVE | wxFD_OVERWRITE_PROMPT, wxDefaultPosition, wxDefaultSize, wxFileDialogNameStr);
+
+    wxString wanted_extension = ".png";
+    wxString default_dir      = cisTEMDisplayPanel->ReturnCurrentPanel( )->filename;
+    wxPrintf("default_dir: %s\n", default_dir);
+
+    // Strip away the filename to get the directory
+    default_dir = default_dir.BeforeLast('/');
+
+    save_file_dialog.SetDirectory(default_dir);
+    wxString extension_lowercase = wanted_extension.Lower( );
+    wxString extension_uppercase = wanted_extension.Upper( );
+
+    wxPrintf("default_dir: %s\n", default_dir);
+    if ( save_file_dialog.ShowModal( ) == wxID_CANCEL ) {
+        save_file_dialog.Destroy( );
+        return;
+    }
+
+    cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_bitmap.SaveFile(save_file_dialog.GetPath( ), wxBITMAP_TYPE_PNG);
+}
+
 void DisplayFrame::OnServerOpenFile(wxCommandEvent& event) {
     wxString filename = event.GetString( );
     if ( cisTEMDisplayPanel ) {
@@ -459,6 +483,7 @@ void DisplayFrame::DisableAllToolbarButtons( ) {
 
     // Open menu only needs close tab disabled
     DisplayCloseTab->Enable(false);
+    SaveDisplayedImages->Enable(false);
 
     // Label menu
     LabelLocationNumber->Enable(false);
@@ -482,6 +507,7 @@ void DisplayFrame::DisableAllToolbarButtons( ) {
 void DisplayFrame::EnableAllToolbarButtons( ) {
     // Open menu only needs close tab disabled
     DisplayCloseTab->Enable( );
+    SaveDisplayedImages->Enable( );
 
     // Label menu
     LabelLocationNumber->Enable( );

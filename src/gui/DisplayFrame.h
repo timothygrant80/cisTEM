@@ -21,6 +21,7 @@ class DisplayFrame : public DisplayFrameParent {
 
     // File menu
     void OnFileOpenClick(wxCommandEvent& event);
+	void OnSaveDisplayedImagesClick(wxCommandEvent& event);
     void OnCloseTabClick(wxCommandEvent& event);
     void OnExitClick(wxCommandEvent& event);
 

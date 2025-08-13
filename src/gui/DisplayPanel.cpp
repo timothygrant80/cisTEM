@@ -1570,14 +1570,16 @@ void DisplayNotebookPanel::UpdateImageStatusInfo(int x_pos, int y_pos) {
 
             StatusText += wxT(", Value=") + wxString::Format(wxT("%f"), raw_pixel_value);
 
-            //if (selected_distance != 0 && show_selection_distances ) StatusText += wxT(", Dist=") + wxString::Format(wxT("%f"), selected_distance);
+            if ( selected_distance != 0 && show_selection_distances )
+                StatusText += wxT(", Dist=") + wxString::Format(wxT("%f"), selected_distance);
             //if (image_picking_mode_enabled == INTEGRATE_PICK && integrate_box_x_pos != -1 && integrate_box_y_pos != -1) StatusText += wxT(", Integrated Value =") + wxString::Format(wxT("%f"), integrated_value);
             parent_display_panel->StatusText->SetLabel(StatusText);
         }
         else {
             wxString StatusText = wxT("");
 
-            //if (selected_distance != 0 && show_selection_distances ) StatusText += wxT("Dist=") + wxString::Format(wxT("%f"), selected_distance);
+            if ( selected_distance != 0 && show_selection_distances )
+                StatusText += wxT("Dist=") + wxString::Format(wxT("%f"), selected_distance);
             //	if (image_picking_mode_enabled == INTEGRATE_PICK && integrate_box_x_pos != -1 && integrate_box_y_pos != -1) StatusText += wxT("Integrated Value =") + wxString::Format(wxT("%f"), integrated_value);
             parent_display_panel->StatusText->SetLabel(StatusText);
         }
@@ -1614,14 +1616,16 @@ void DisplayNotebookPanel::UpdateImageStatusInfo(int x_pos, int y_pos) {
 
                 StatusText += wxT(", Value=") + wxString::Format(wxT("%f"), raw_pixel_value);
 
-                //	if (selected_distance != 0 && show_selection_distances ) StatusText += wxT(", Dist=") + wxString::Format(wxT("%f"), selected_distance);
+                if ( selected_distance != 0 && show_selection_distances )
+                    StatusText += wxT(", Dist=") + wxString::Format(wxT("%f"), selected_distance);
                 //	if (image_picking_mode_enabled == INTEGRATE_PICK && integrate_box_x_pos != -1 && integrate_box_y_pos != -1) StatusText += wxT(", Integrated Value =") + wxString::Format(wxT("%f"), integrated_value);
                 parent_display_panel->StatusText->SetLabel(StatusText);
             }
             else {
                 wxString StatusText = wxT("");
 
-                //	if (selected_distance != 0 && show_selection_distances ) StatusText += wxT("Dist=") + wxString::Format(wxT("%f"), selected_distance);
+                if ( selected_distance != 0 && show_selection_distances )
+                    StatusText += wxT("Dist=") + wxString::Format(wxT("%f"), selected_distance);
                 //	if (image_picking_mode_enabled == INTEGRATE_PICK && integrate_box_x_pos != -1 && integrate_box_y_pos != -1) StatusText += wxT("Integrated Value =") + wxString::Format(wxT("%f"), integrated_value);
                 parent_display_panel->StatusText->SetLabel(StatusText);
             }
@@ -1629,7 +1633,8 @@ void DisplayNotebookPanel::UpdateImageStatusInfo(int x_pos, int y_pos) {
         else {
             wxString StatusText = wxT("");
 
-            // 		if (selected_distance != 0 && show_selection_distances ) StatusText += wxT("Dist=") + wxString::Format(wxT("%f"), selected_distance);
+            if ( selected_distance != 0 && show_selection_distances )
+                StatusText += wxT("Dist=") + wxString::Format(wxT("%f"), selected_distance);
             // 		if (image_picking_mode_enabled == INTEGRATE_PICK && integrate_box_x_pos != -1 && integrate_box_y_pos != -1) StatusText += wxT(" Integrated Value =") + wxString::Format(wxT("%f"), integrated_value);
             parent_display_panel->StatusText->SetLabel(StatusText);
         }

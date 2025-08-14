@@ -139,6 +139,9 @@ DisplayFrameParent::DisplayFrameParent( wxWindow* parent, wxWindowID id, const w
 	m_menubar2->Append( DisplayOptionsMenu, wxT("Options") );
 
 	DisplayHelpMenu = new wxMenu();
+	HelpDisplayControls = new wxMenuItem( DisplayHelpMenu, wxID_ANY, wxString( wxT("Display Controls") ) , wxT("User Manual for cisTEM Display"), wxITEM_NORMAL );
+	DisplayHelpMenu->Append( HelpDisplayControls );
+
 	HelpAbout = new wxMenuItem( DisplayHelpMenu, wxID_ANY, wxString( wxT("Documentation") ) , wxEmptyString, wxITEM_NORMAL );
 	DisplayHelpMenu->Append( HelpAbout );
 
@@ -178,6 +181,7 @@ DisplayFrameParent::DisplayFrameParent( wxWindow* parent, wxWindowID id, const w
 	DisplayOptionsMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSingleImageModeClick ), this, OptionsSingleImageMode->GetId());
 	DisplayOptionsMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnShowSelectionDistancesClick ), this, OptionsShowSelectionDistances->GetId());
 	DisplayOptionsMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnShowResolution ), this, OptionsShowResolution->GetId());
+	DisplayHelpMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnDisplayControlsClick ), this, HelpDisplayControls->GetId());
 	DisplayHelpMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnDocumentationClick ), this, HelpAbout->GetId());
 }
 

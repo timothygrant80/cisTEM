@@ -502,6 +502,81 @@ void DisplayFrame::OnDocumentationClick(wxCommandEvent& event) {
     wxLaunchDefaultBrowser("http://www.cistem.org/documentation");
 }
 
+void DisplayFrame::OnDisplayControlsClick(wxCommandEvent& event) {
+    // 1. Create a simple scroll window dialog
+    wxDialog* manual_dialog = new wxDialog(this, wxID_ANY, "cisTEM Display Manual", wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER, "cisTEM Display Manual");
+
+    // 2. Populate the dialog with text that explains the display controls
+    wxScrolledWindow* scrolled_window = new wxScrolledWindow(manual_dialog, wxID_ANY);
+    wxBoxSizer*       content_sizer   = new wxBoxSizer(wxVERTICAL);
+
+    wxRichTextCtrl* text_ctrl = new wxRichTextCtrl(scrolled_window, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
+
+    text_ctrl->BeginFontSize(16);
+    text_ctrl->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
+    text_ctrl->BeginBold( );
+    text_ctrl->WriteText("cisTEM Display Manual\n\n");
+    text_ctrl->EndBold( );
+    text_ctrl->EndAlignment( );
+    text_ctrl->EndFontSize( );
+
+    text_ctrl->BeginFontSize(12);
+    text_ctrl->BeginBold( );
+    text_ctrl->WriteText("\nKeyboard Shortcuts\n\n");
+    text_ctrl->EndBold( );
+    text_ctrl->EndFontSize( );
+
+    text_ctrl->BeginBold( );
+    text_ctrl->WriteText("\n1. Left Arrow Key");
+    text_ctrl->EndBold( );
+    text_ctrl->WriteText(": Scroll to the previous open image tab.\n");
+    text_ctrl->BeginBold( );
+    text_ctrl->WriteText("2. Right Arrow Key");
+    text_ctrl->EndBold( );
+    text_ctrl->WriteText(": Scroll to the next open image tab.\n");
+    text_ctrl->BeginBold( );
+    text_ctrl->WriteText("3. Up Arrow Key");
+    text_ctrl->EndBold( );
+    text_ctrl->WriteText(": Scroll to the next section of images/slices that will fit within the current display window.\n");
+    text_ctrl->BeginBold( );
+    text_ctrl->WriteText("4. Down Arrow Key");
+    text_ctrl->EndBold( );
+    text_ctrl->WriteText(": Scroll to the previous section of images/slices that will fit within the current display window.\n");
+
+    text_ctrl->BeginBold( );
+    text_ctrl->BeginFontSize(12);
+    text_ctrl->WriteText("\nMouse Controls\n\n");
+    text_ctrl->EndFontSize( );
+    text_ctrl->WriteText("\n1. Left Mouse Button");
+    text_ctrl->EndBold( );
+    text_ctrl->WriteText(": Select or deselect images or coordinates, depending on the current picking mode (found within the Select menu).\n");
+    text_ctrl->BeginBold( );
+    text_ctrl->WriteText("2. Right Mouse Button");
+    text_ctrl->EndBold( );
+    text_ctrl->WriteText(": Create a zoomed/upscaled subwindow that will display a more detailed view of the image contents below the mouse position. This can be dragged to view different areas of the image.\n");
+    text_ctrl->BeginBold( );
+    text_ctrl->WriteText("3. Middle Mouse Button");
+    text_ctrl->EndBold( );
+    text_ctrl->WriteText(": When in Single Image Mode (selected from the Options menu), dragging the mouse will shift the displayed window in the direction of the drag.");
+
+    wxStdDialogButtonSizer* button_sizer = new wxStdDialogButtonSizer( );
+    wxButton*               ok_button    = new wxButton(manual_dialog, wxID_OK);
+    button_sizer->AddButton(ok_button);
+    button_sizer->Realize( );
+
+    content_sizer->Add(text_ctrl, 1, wxEXPAND | wxALL, 10);
+    scrolled_window->SetSizer(content_sizer);
+    scrolled_window->SetScrollRate(5, 5);
+    wxBoxSizer* main_sizer = new wxBoxSizer(wxVERTICAL);
+    main_sizer->Add(scrolled_window, 1, wxEXPAND);
+    main_sizer->Add(button_sizer, 0, wxALIGN_RIGHT | wxALL, 5);
+    manual_dialog->SetSizerAndFit(main_sizer);
+    manual_dialog->SetMinSize(wxSize(900, 500));
+
+    manual_dialog->Layout( );
+    manual_dialog->Show( );
+}
+
 // This prevents using buttons when an image or stack is not open to act on
 void DisplayFrame::DisableAllToolbarButtons( ) {
 

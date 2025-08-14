@@ -21,7 +21,7 @@ class DisplayFrame : public DisplayFrameParent {
 
     // File menu
     void OnFileOpenClick(wxCommandEvent& event);
-	void OnSaveDisplayedImagesClick(wxCommandEvent& event);
+    void OnSaveDisplayedImagesClick(wxCommandEvent& event);
     void OnCloseTabClick(wxCommandEvent& event);
     void OnExitClick(wxCommandEvent& event);
 
@@ -48,6 +48,7 @@ class DisplayFrame : public DisplayFrameParent {
 
     // Help menu
     void OnDocumentationClick(wxCommandEvent& event);
+    void OnDisplayControlsClick(wxCommandEvent& event);
 
   private:
     bool     is_fullscreen;

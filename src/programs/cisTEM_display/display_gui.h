@@ -90,6 +90,7 @@ class DisplayFrameParent : public wxFrame
 		wxMenuItem* OptionsShowSelectionDistances;
 		wxMenuItem* OptionsShowResolution;
 		wxMenu* DisplayHelpMenu;
+		wxMenuItem* HelpDisplayControls;
 		wxMenuItem* HelpAbout;
 
 		// Virtual event handlers, override them in your derived class
@@ -113,6 +114,7 @@ class DisplayFrameParent : public wxFrame
 		virtual void OnSingleImageModeClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnShowSelectionDistancesClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnShowResolution( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnDisplayControlsClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnDocumentationClick( wxCommandEvent& event ) { event.Skip(); }
 
 

@@ -183,6 +183,7 @@ noinst_HEADERS = core/stopwatch.h \
                  gui/icons/display_global_icon.cpp \
                  gui/icons/display_histogram_icon.cpp \
                  gui/icons/display_invert_icon.cpp \
+                 gui/icons/display_bim_icon.cpp \
                  gui/icons/display_local_icon.cpp \
                  gui/icons/display_manual_icon.cpp \
                  gui/icons/display_next_icon.cpp \

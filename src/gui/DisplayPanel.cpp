@@ -47,6 +47,7 @@ void DisplayPanel::Initialise(int wanted_style_flags) {
 #include "icons/display_fft_icon.cpp"
 #include "icons/display_invert_icon.cpp"
 #include "icons/display_high_quality_icon.cpp"
+#include "icons/display_bim_icon.cpp"
 
     style_flags = wanted_style_flags;
 
@@ -160,7 +161,7 @@ void DisplayPanel::Initialise(int wanted_style_flags) {
     Toolbar->AddSeparator( );
 
     //this is for icon display
-    Toolbar->AddTool(Toolbar_Traj, wxT("Plot Trajectory"), wxBITMAP_PNG_FROM_DATA(display_invert_icon), wxNullBitmap, wxITEM_CHECK, wxT("Plot Trajectory"), wxT("Plot Trajectory"));
+    Toolbar->AddTool(Toolbar_Traj, wxT("Plot Trajectory"), wxBITMAP_PNG_FROM_DATA(display_bim_icon), wxNullBitmap, wxITEM_CHECK, wxT("Plot Trajectory"), wxT("Plot Trajectory"));
     // need a new icon for this
     Toolbar->EnableTool(Toolbar_Traj, true);
 

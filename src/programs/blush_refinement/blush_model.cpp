@@ -20,140 +20,6 @@ using NORM_MODULE = torch::nn::InstanceNorm3d;
 using ACTIVATION  = torch::nn::SiLU;
 using CONV_3D     = torch::nn::Conv3d;
 
-// // Weight box creation
-// torch::Tensor make_weight_box(int size, int margin = 4) {
-//     margin = margin > 0 ? margin : 1;
-//     int s  = size - margin * 2;
-
-//     at::Tensor z = torch::linspace(-s / 2, s / 2, s); //.view({-1, 1, 1, 1});
-//     at::Tensor y = torch::linspace(-s / 2, s / 2, s); //.view({1, -1, 1, 1});
-//     at::Tensor x = torch::linspace(-s / 2, s / 2, s); //.view({1, 1, -1, 1});
-
-//     at::Tensor r = torch::maximum(torch::abs(x), torch::abs(y));
-//     r            = torch::maximum(torch::abs(z), r);
-//     r            = torch::cos(r / r.max( ) * (M_PI / 2)) * 0.6 + 0.4;
-
-//     auto w                                                                                            = torch::zeros({size, size, size});
-//     w.slice(0, margin, size - margin).slice(1, margin, size - margin).slice(2, margin, size - margin) = r;
-
-//     return w;
-// }
-
-/**
- * @brief C++ method of calculating the weight box; will need to compare this against the one above
- * 
- * @param block_size 
- * @param margin 
- * @return at::Tensor 
- */
-// at::Tensor cpp_make_weight_box(const int& block_size, int margin) {
-//     margin = (margin - 1 > 0) ? margin - 1 : 0;
-//     int s  = block_size - (margin * 2);
-
-//     std::cout << "s == " << std::to_string(s) << std::endl;
-//     // wxPrintf("s == %i\n", s);
-
-//     // Create evenly spaced 1D tensors; should range from -27 to 27, with increments of...55?
-//     torch::Tensor x = torch::linspace(-s / 2, s / 2, s);
-//     torch::Tensor y = torch::linspace(-s / 2, s / 2, s);
-//     torch::Tensor z = torch::linspace(-s / 2, s / 2, s);
-
-//     // Broadcasting means these tensors can be subsequently expanded to fit the appropriate dimensions as needed
-//     // Each of these tensors is different, and later they are sliced together dimensionally
-//     // expand broadcasts the dimension with s, so the values of the linspace array are applied in all 3 dimensions
-//     // This is meant to replicate numpy.meshgrid functionality
-//     at::Tensor xx = x.view({s, 1, 1}).expand({s, s, s});
-//     at::Tensor yy = y.view({1, s, 1}).expand({s, s, s});
-//     at::Tensor zz = z.view({1, 1, s}).expand({s, s, s});
-//     // {
-//     //     std::ofstream ofile("xx_values.txt");
-//     //     if ( ofile.is_open( ) ) {
-//     //         for ( int a = 0; a < xx.size(2); a++ ) {
-//     //             for ( int b = 0; b < xx.size(1); b++ ) {
-//     //                 for ( int c = 0; c < xx.size(0); c++ ) {
-//     //                     ofile << xx[c][b][a].item<float>( ) << std::endl;
-//     //                 }
-//     //             }
-//     //         }
-//     //         ofile.close( );
-//     //     }
-//     //     else {
-//     //         wxPrintf("xx_values.txt failed to open.\n");
-//     //     }
-//     // }
-
-//     // Radial distance; performs pixelwise comparison of the values at each point in all 3 tensors, selecting the one with the largest value at each pixel
-//     // The max function actually returns both the raw values being compared along with the indices where the max value came from (including which tensor it came from)
-//     //  We want the actual values before applying cosine falloff
-//     xx                = xx.abs( );
-//     yy                = yy.abs( );
-//     zz                = zz.abs( );
-//     at::Tensor radius = torch::zeros_like(xx);
-//     {
-//         // torch::max only accepts 2 args; break apart the comparison of the broadcasted linspace arrays
-//         // Life cannot be so easy; I must use nested for to complete this comparison
-//         // auto max1 = torch::max(xx.abs( ), yy.abs( ));
-//         // radius    = torch::max(max1, zz.max( ));
-//         for ( int k = 0; k < xx.size(2); k++ ) {
-//             for ( int j = 0; j < xx.size(1); j++ ) {
-//                 for ( int i = 0; i < xx.size(0); i++ ) {
-//                     float max = std::max(zz[i][j][k].item<float>( ), std::max(xx[i][j][k].item<float>( ), yy[i][j][k].item<float>( )));
-//                     // max             = torch::max(max, zz[i][j][k].item<float>( ));
-//                     radius[i][j][k] = max;
-//                 }
-//             }
-//         }
-//     }
-//     // {
-//     //     std::ofstream ofile("radius_values.txt");
-//     //     if ( ofile.is_open( ) ) {
-//     //         for ( int a = 0; a < radius.size(2); a++ ) {
-//     //             for ( int b = 0; b < radius.size(1); b++ ) {
-//     //                 for ( int c = 0; c < radius.size(0); c++ ) {
-//     //                     ofile << radius[c][b][a].item<float>( ) << std::endl;
-//     //                 }
-//     //             }
-//     //         }
-//     //         ofile.close( );
-//     //     }
-//     // }
-//     // Cosine transformation; creates a smooth falloff where values decrease the further from the center you go
-//     radius = torch::cos(radius / radius.max( ) * (M_PI / 2));
-
-//     // Sets up the output tensor that will slice from each of the tensors
-//     torch::Tensor weight_grid = torch::zeros({block_size, block_size, block_size});
-
-//     auto slices = weight_grid.slice(0, margin, block_size - margin).slice(1, margin, block_size - margin).slice(2, margin, block_size - margin);
-//     slices.copy_(radius);
-//     weight_grid = weight_grid.clamp_min(1e-6); // avoid zeros
-
-//     //Let 's just check what' s going on with the weights_grid...
-//     {
-//         // First, clear the text file
-//         std::ofstream ofs;
-//         ofs.open("initial_weights_grid_vals.txt", std::ofstream::trunc | std::ofstream::out);
-//         ofs.close( );
-//         ofs.open("initial_weights_grid_vals.txt", std::ios::app);
-//         if ( ofs.is_open( ) ) {
-//             for ( int a = 0; a < weight_grid.size(2); a++ ) {
-//                 for ( int b = 0; b < weight_grid.size(1); b++ ) {
-//                     for ( int c = 0; c < weight_grid.size(0); c++ ) {
-//                         ofs << weight_grid[c][b][a].item<float>( ) << std::endl;
-//                     }
-//                 }
-//             }
-//             ofs.close( );
-//         }
-//         else {
-//             std::cout << "initial_weights_grid_vals.txt did not open.\n"
-//                       << std::endl;
-//             // wxPrintf("initial_weights_grid_vals.txt did not open.\n\n");
-//         }
-//     }
-
-//     return weight_grid;
-// }
-
 DoubleConv::DoubleConv(int in_channels, int out_channels, int mid_channels) {
     if ( mid_channels == -1 )
         mid_channels = out_channels;
@@ -276,7 +142,7 @@ std::tuple<torch::Tensor, torch::Tensor> BlushModel::forward(torch::Tensor grid,
 void BlushModel::load_weights(const std::string& path) {
     std::ifstream file(path, std::ios::binary);
     if ( ! file )
-        throw std::runtime_error("Failed to open file for reading");
+        throw std::runtime_error("Failed to open " + path + " weights file for reading");
 
     std::unordered_map<std::string, torch::Tensor> params_map;
     for ( auto& pair : named_parameters( ) ) {

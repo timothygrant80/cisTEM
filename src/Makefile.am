@@ -286,15 +286,13 @@ bin_PROGRAMS =  cisTEM_job_control \
                 convert_binary_to_star \
                 convert_eer_to_mrc \
                 azimuthal_average \
-                blush_refinement \
                 normalize_stack \
                 print_stack_statistics \
                 combine_stacks_by_star \
                 match_template \
                 refine_template \
                 make_template_result \
-                prepare_stack_matchtemplate \
-                cisTEM_display 
+                prepare_stack_matchtemplate
 
 
 
@@ -306,6 +304,10 @@ bin_PROGRAMS += quick_test console_test unit_test_runner samples_functional_test
 #######################################################
 if ENABLE_APPLYCTF_AM
 bin_PROGRAMS += applyctf
+endif
+
+if ENABLE_BLUSH_REFINEMENT_AM
+bin_PROGRAMS += blush_refinement
 endif
 
 if ENABLE_PROJECT3D_AM
@@ -768,7 +770,7 @@ cisTEM_SOURCES += gui/WebViewPanel.cpp
 endif
 
 cisTEM_CXXFLAGS = $(WX_CPPFLAGS)
-cisTEM_CPPFLAGS = $(WX_CPPFLAGS) -I/home/tim/VS_Projects/embedding_python_practice/include/libtorch/include -I/home/tim/VS_Projects/embedding_python_practice/include/libtorch/include/torch/
+cisTEM_CPPFLAGS = $(WX_CPPFLAGS)
 cisTEM_LDADD    = libguicore.a libcore.a $(WX_LIBS) $(MKL_LIBS)
 cisTEM_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
@@ -846,9 +848,13 @@ reconstruct3d_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
 reconstruct3d_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
 merge3d_SOURCES  = programs/merge3d/merge3d.cpp
+if ENABLE_BLUSH
+merge3d_SOURCES += programs/blush_refinement/blush_model.cpp
+endif
+
 merge3d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
-merge3d_CPPFLAGS = $(WX_CPPFLAGS_BASE) -I/mnt/libtorch/include -I/mnt/libtorch/include/torch/csrc/api/include #-diag-disable 1011 -diag-disable 2196 -diag-disable 1628
-merge3d_LDADD    = -L/mnt/libtorch/lib -ltorch -ltorch_cpu -lc10 libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
+merge3d_CPPFLAGS = $(WX_CPPFLAGS_BASE) $(BLUSH_CPPFLAGS) -diag-disable 1011 -diag-disable 2196 -diag-disable 1628 -diag-disable 186
+merge3d_LDADD    = $(BLUSH_LIBS) libcore.a  $(WX_LIBS_BASE) $(MKL_LIBS)
 merge3d_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
 calc_occ_SOURCES  = programs/calc_occ/calc_occ.cpp
@@ -1123,13 +1129,13 @@ azimuthal_average_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 azimuthal_average_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
 azimuthal_average_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
+if ENABLE_BLUSH_REFINEMENT_AM
 blush_refinement_SOURCES  = programs/blush_refinement/blush_refinement.cpp programs/blush_refinement/blush_model.cpp
 blush_refinement_CXXFLAGS = $(WX_CPPFLAGS_BASE)
-blush_refinement_CPPFLAGS = $(WX_CPPFLAGS_BASE) -I/mnt/libtorch/include -I/mnt/libtorch/include/torch/csrc/api/include -diag-disable 1011 -diag-disable 2196 -diag-disable 1628 -diag-disable 186
-# blush_refinement_CPPFLAGS = -I/home/tim/VS_Projects/embedding_python_practice/include/libtorch/include -I/home/tim/VS_Projects/embedding_python_practice/include/libtorch/include/torch/csrc/api/include $(WX_CPPFLAGS_BASE) 
-blush_refinement_LDADD    = -L/mnt/libtorch/lib -ltorch -ltorch_cpu -lc10 libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
-# blush_refinement_LDADD = libcore.a -L/home/tim/VS_Projects/embedding_python_practice/include/libtorch/lib -ltorch -ltorch_cpu -lc10 $(WX_LIBS_BASE) 
+blush_refinement_CPPFLAGS = $(WX_CPPFLAGS_BASE) $(BLUSH_CPPFLAGS) -diag-disable 1011 -diag-disable 2196 -diag-disable 1628 -diag-disable 186
+blush_refinement_LDADD    = $(BLUSH_LIBS) libcore.a $(WX_LIBS_BASE) $(MKL_LIBS) #-L/mnt/libtorch/lib -ltorch -ltorch_cpu -lc10
 blus_refinement_LIBTOOLFLAGS= $(LIBTOOL_FLAGS)
+endif
 
 multiply_two_stacks_SOURCES  = programs/multiply_two_stacks/multiply_two_stacks.cpp
 multiply_two_stacks_CXXFLAGS = $(WX_CPPFLAGS_BASE)
@@ -1380,3 +1386,16 @@ calculate_template_pvalue_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 calculate_template_pvalue_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 calculate_template_pvalue_LDADD    = libcore.a $(WX_LIBS_BASE)
 calculate_template_pvalue_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
+
+# merge3d and blush_refinement, the programs that use the blush model, need access to the file
+# that contains the model weights generated in PyTorch; this will automatically
+# copy the file to avoid users having to manually copy it to the execution directory
+if ENABLE_BLUSH
+EXTRA_DIST = programs/blush_refinement/blush_weights.dat
+copy_blush_weights:
+	cp $(srcdir)/programs/blush_refinement/blush_weights.dat $(builddir)/blush_weights.dat
+
+all-local: copy_blush_weights
+clean-local:
+	rm $(builddir)/blush_weights.dat
+endif

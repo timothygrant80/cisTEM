@@ -82,6 +82,11 @@ class RefinementManager {
     RunProfile active_refinement_run_profile;
     RunProfile active_reconstruction_run_profile;
 
+#ifdef BLUSH
+    wxRadioButton* EnableBlushYesButton;
+    wxRadioButton* EnableBlushNoButton;
+#endif
+
     wxArrayString current_reference_filenames;
     wxArrayLong   current_reference_asset_ids;
 
@@ -114,6 +119,9 @@ class RefinementManager {
 
     //	void StartRefinement();
     //	void StartReconstruction();
+
+  private:
+    bool apply_blush_denoising = false;
 };
 
 class MyRefine3DPanel : public Refine3DPanel {

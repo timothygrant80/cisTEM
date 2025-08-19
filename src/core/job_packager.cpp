@@ -1350,7 +1350,7 @@ RunJob& RunJob::operator=(const RunJob& other_job) {
 
 RunArgument::RunArgument( ) {
     is_allocated     = false;
-    type_of_argument = NONE_TYPE;
+    type_of_argument = NONE;
     string_argument  = NULL;
     integer_argument = NULL;
     float_argument   = NULL;
@@ -1376,7 +1376,7 @@ void RunArgument::Deallocate( ) {
 }
 
 long RunArgument::ReturnEncodedByteTransferSize( ) {
-    MyDebugAssertTrue(type_of_argument != NONE_TYPE, "Can't calculate size of a nothing argument!!");
+    MyDebugAssertTrue(type_of_argument != NONE, "Can't calculate size of a nothing argument!!");
 
     if ( type_of_argument == TEXT )
         return string_argument->length( ) + 4 + 1; // descriptor byte + length of string (4 bytes) + 1 byte per character

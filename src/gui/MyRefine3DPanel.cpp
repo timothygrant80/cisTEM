@@ -28,6 +28,20 @@ MyRefine3DPanel::MyRefine3DPanel(wxWindow* parent)
     wxSize input_size = InputSizer->GetMinSize( );
     input_size.x += wxSystemSettings::GetMetric(wxSYS_VSCROLL_X);
     input_size.y = -1;
+
+#ifdef BLUSH
+    wxBoxSizer*   BlushSizer = new wxBoxSizer(wxHORIZONTAL);
+    wxStaticText* BlushLabel = new wxStaticText(ExpertPanel, wxID_ANY, "Enable Blush Denoising?");
+    fgSizer1->Add(BlushLabel, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+
+    my_refinement_manager.EnableBlushYesButton = new wxRadioButton(ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, 0);
+    my_refinement_manager.EnableBlushNoButton  = new wxRadioButton(ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0);
+    BlushSizer->Add(my_refinement_manager.EnableBlushYesButton, 0, wxALL, 5);
+    BlushSizer->Add(my_refinement_manager.EnableBlushNoButton, 0, wxALL, 5);
+    fgSizer1->Add(BlushSizer, wxEXPAND);
+    fgSizer1->Layout( );
+#endif
+
     ExpertPanel->SetMinSize(input_size);
     ExpertPanel->SetSize(input_size);
 
@@ -550,6 +564,11 @@ void MyRefine3DPanel::SetDefaults( ) {
         LowPassMaskYesRadio->SetValue(false);
         LowPassMaskNoRadio->SetValue(true);
         MaskFilterResolutionText->ChangeValueFloat(20.00);
+
+#ifdef BLUSH
+        my_refinement_manager.EnableBlushNoButton->SetValue(true);
+        my_refinement_manager.EnableBlushYesButton->SetValue(false);
+#endif
 
         ExpertPanel->Thaw( );
     }
@@ -1093,6 +1112,9 @@ void RefinementManager::BeginRefinementCycle( ) {
     active_should_mask                   = my_parent->UseMaskCheckBox->GetValue( );
     active_should_auto_mask              = my_parent->AutoMaskYesRadioButton->GetValue( );
     active_centre_mass                   = my_parent->AutoCenterYesRadioButton->GetValue( );
+#ifdef BLUSH
+    apply_blush_denoising = EnableBlushYesButton->GetValue( );
+#endif
 
     if ( my_parent->MaskSelectPanel->ReturnSelection( ) >= 0 )
         active_mask_asset_id = volume_asset_panel->ReturnAssetID(my_parent->MaskSelectPanel->ReturnSelection( ));
@@ -1300,7 +1322,9 @@ void RefinementManager::SetupMerge3dJob( ) {
         wxString orthogonal_views_filename   = main_frame->current_project.volume_asset_directory.GetFullPath( ) + wxString::Format("/OrthViews/volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
         float    weiner_nominator            = 1.0f;
         float    alignment_res               = 5;
-        my_parent->current_job_package.AddJob("ttttfffttibtiff", output_reconstruction_1.ToUTF8( ).data( ),
+        float    particle_diameter           = static_cast<float>(active_refinement_package->estimated_particle_size_in_angstroms);
+
+        my_parent->current_job_package.AddJob("ttttfffttibtifffb", output_reconstruction_1.ToUTF8( ).data( ),
                                               output_reconstruction_2.ToUTF8( ).data( ),
                                               output_reconstruction_filtered.ToUTF8( ).data( ),
                                               output_resolution_statistics.ToUTF8( ).data( ),
@@ -1310,7 +1334,8 @@ void RefinementManager::SetupMerge3dJob( ) {
                                               class_counter + 1,
                                               save_orthogonal_views_image,
                                               orthogonal_views_filename.ToUTF8( ).data( ),
-                                              number_of_reconstruction_jobs, weiner_nominator, alignment_res);
+                                              number_of_reconstruction_jobs, weiner_nominator, alignment_res,
+                                              particle_diameter, apply_blush_denoising);
     }
 }
 

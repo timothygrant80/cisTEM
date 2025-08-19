@@ -731,7 +731,10 @@ void Generate3DPanel::SetupMerge3dJob( ) {
         wxString orthogonal_views_filename   = main_frame->current_project.volume_asset_directory.GetFullPath( ) + wxString::Format("/OrthViews/generate3d_volume_%li_%li_%i.mrc", number_of_3d_jobs + 1, input_refinement->refinement_id, class_counter + 1);
         float    weiner_nominator            = 1.0f;
         float    alignment_res               = 5;
-        current_job_package.AddJob("ttttfffttibtiff", output_reconstruction_1.ToUTF8( ).data( ),
+
+        // NOTE: the final two arguments are only used for blush, but blush will not be used for generate3D.
+        // The merge3d program still expects them, however, so they will be passed here but never used.
+        current_job_package.AddJob("ttttfffttibtifffb", output_reconstruction_1.ToUTF8( ).data( ),
                                    output_reconstruction_2.ToUTF8( ).data( ),
                                    output_reconstruction_filtered.ToUTF8( ).data( ),
                                    output_resolution_statistics.ToUTF8( ).data( ),
@@ -741,7 +744,8 @@ void Generate3DPanel::SetupMerge3dJob( ) {
                                    class_counter + 1,
                                    save_orthogonal_views_image,
                                    orthogonal_views_filename.ToUTF8( ).data( ),
-                                   number_of_reconstruction_jobs, weiner_nominator, alignment_res);
+                                   number_of_reconstruction_jobs, weiner_nominator, alignment_res,
+                                   0.0f, false);
     }
 }
 

@@ -508,5 +508,20 @@ AC_ARG_ENABLE(build-filter-images, AS_HELP_STRING([--enable-filter-images],[buil
   ])
 AM_CONDITIONAL([ENABLE_FILTERIMAGES_AM], [test "x$build_filter_images" = "xyes"])
 
+AS_IF([test "x$enable_blush" = "xyes"], [
+  AC_ARG_ENABLE(build-blush-refinement, AS_HELP_STRING([--enable-build-blush-refinement],[build blush_refinement [default="no"]]),[
+    if test "$enableval" = yes; then
+      build_blush_refinement=yes
+    else
+      build_blush_refinement=no
+    fi
+  ], [build_blush_refinement=no])
+  AM_CONDITIONAL([ENABLE_BLUSH_REFINEMENT_AM], [test "x$build_blush_refinement" = "xyes"])
+], [
+  build_blush_refinement=no
+  AM_CONDITIONAL([ENABLE_BLUSH_REFINEMENT_AM], [false])
 ])
-
+AS_IF([test "x$build_blush_refinement" = "xno" -a "x$enable_blush" != "xyes"], [
+  AC_MSG_WARN([blush_refinement will NOT be built because Blush support (--enable-blush) is not enabled.])
+])
+])

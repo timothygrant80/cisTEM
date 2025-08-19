@@ -66,6 +66,7 @@ class AutoRefine3DPanelParent : public JobPanel
 		wxScrolledWindow* ExpertPanel;
 		wxBoxSizer* InputSizer;
 		wxButton* ResetAllDefaultsButton;
+		wxFlexGridSizer* fgSizer1;
 		wxStaticText* m_staticText202;
 		wxStaticText* NoMovieFramesStaticText;
 		NumericTextCtrl* LowResolutionLimitTextCtrl;

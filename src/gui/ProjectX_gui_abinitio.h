@@ -75,6 +75,7 @@ class AbInitio3DPanelParent : public JobPanel
 		wxBoxSizer* InputSizer;
 		wxStaticText* m_staticText531;
 		wxButton* ResetAllDefaultsButton;
+		wxFlexGridSizer* fgSizer1;
 		wxStaticText* NoMovieFramesStaticText;
 		NumericTextCtrl* InitialResolutionLimitTextCtrl;
 		wxStaticText* m_staticText196;

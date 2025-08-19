@@ -296,6 +296,7 @@ class Refine3DPanel : public JobPanel
 		wxCheckBox* RefineXShiftCheckBox;
 		wxCheckBox* RefineYShiftCheckBox;
 		wxCheckBox* RefineOccupanciesCheckBox;
+		wxFlexGridSizer* fgSizer1;
 		wxStaticText* m_staticText202;
 		wxStaticText* NoMovieFramesStaticText;
 		NumericTextCtrl* LowResolutionLimitTextCtrl;

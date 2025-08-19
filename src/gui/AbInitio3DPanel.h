@@ -36,6 +36,11 @@ class AbInitioManager {
     wxArrayFloat align_sym_best_z_shifts;
     bool         apply_symmetry;
 
+#ifdef BLUSH
+    wxRadioButton* EnableBlushYesButton;
+    wxRadioButton* EnableBlushNoButton;
+#endif
+
     RefinementPackage* active_refinement_package;
     Refinement*        input_refinement;
     Refinement*        output_refinement;
@@ -123,6 +128,9 @@ class AbInitioManager {
 
     void OnMaskerThreadComplete( );
     void DoMasking( );
+
+  private:
+    bool apply_blush_denoising = false;
 };
 
 class AbInitio3DPanel : public AbInitio3DPanelParent {

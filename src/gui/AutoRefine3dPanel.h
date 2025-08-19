@@ -74,6 +74,11 @@ class AutoRefinementManager {
     bool reference_3d_contains_all_particles;
     bool this_is_the_final_round;
 
+#ifdef BLUSH
+    wxRadioButton* EnableBlushYesButton;
+    wxRadioButton* EnableBlushNoButton;
+#endif
+
     RefinementPackage* active_refinement_package;
     Refinement*        input_refinement;
     Refinement*        output_refinement;
@@ -116,6 +121,9 @@ class AutoRefinementManager {
 
     //	void StartRefinement();
     //	void StartReconstruction();
+
+  private:
+    bool apply_blush_denoising = false;
 };
 
 class AutoRefine3DPanel : public AutoRefine3DPanelParent {

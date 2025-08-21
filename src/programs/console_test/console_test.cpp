@@ -37,7 +37,7 @@
 
 void printArray(Image& image, bool round_to_int = false) {
     float val;
-
+    wxPrintf("Running tests...\n");
     for ( int k = 0; k < image.logical_z_dimension; k++ ) {
         wxPrintf("z = %i\n", k);
         for ( int i = 0; i < image.logical_x_dimension; i++ ) {
@@ -100,6 +100,7 @@ class
     void TestStarToBinaryFileConversion( );
     void TestElectronExposureFilter( );
     void TestEmpiricalDistribution( );
+    void TestEmpiricalDistributionThreadSafety( );
     void TestSumOfSquaresFourierAndFFTNormalization( );
     void TestRandomVariableFunctions( );
     void TestIntegerShifts( );
@@ -159,6 +160,7 @@ bool MyTestApp::DoCalculation( ) {
     TestElectronExposureFilter( );
     TestDatabase( );
     TestEmpiricalDistribution( );
+    TestEmpiricalDistributionThreadSafety( );
     TestSumOfSquaresFourierAndFFTNormalization( );
     TestRandomVariableFunctions( );
     TestIntegerShifts( );
@@ -701,6 +703,123 @@ void MyTestApp::TestEmpiricalDistribution( ) {
         FailTest;
     if ( ! RelativeErrorIsLessThanEpsilon(my_dist.GetSampleSumOfSquares( ), 6400.f) )
         FailTest;
+
+    EndTest( );
+}
+
+/** 
+ * RAII helper to capture wx logging output into a buffer safely. If we expand usage, could move this to defines.
+ * There is still something I'm not clear on where the log message is still printed to the console unless the calls are scoped individually.
+ * In any event, this works okay for now, without peeling back all the layers of wxLog.
+ */
+struct LogCaptureRAII {
+    wxLogBuffer buffer;
+
+    LogCaptureRAII( ) {
+    }
+
+    // Disable copy, allow move if needed in future
+    LogCaptureRAII(const LogCaptureRAII&)            = delete;
+    LogCaptureRAII& operator=(const LogCaptureRAII&) = delete;
+
+    template <class Obj, class MemFn, class... Args>
+    decltype(auto) call(Obj&& obj, MemFn memfn, Args&&... args) {
+        clear( );
+        wxLog* old_target;
+        old_target = wxLog::SetActiveTarget(&buffer);
+
+        // memfn is a pointer-to-member (e.g., &T::foo)
+        if constexpr ( std::is_void_v<std::invoke_result_t<MemFn, Obj, Args...>> ) {
+
+            (std::forward<Obj>(obj).*memfn)(std::forward<Args>(args)...);
+            return;
+        }
+        else {
+            auto&& r = (std::forward<Obj>(obj).*memfn)(std::forward<Args>(args)...);
+            return std::forward<decltype(r)>(r);
+        }
+
+        wxLog::SetActiveTarget(old_target);
+    }
+
+    // Check whether the captured buffer contains the given substring
+    bool contains(const wxString& string_to_check) {
+        wxString all = buffer.GetBuffer( );
+        return ! all.IsEmpty( ) && all.Find(string_to_check) != wxNOT_FOUND;
+    }
+
+    void clear( ) {
+        auto b = buffer.GetBuffer( );
+        b.Clear( );
+    }
+};
+
+/**
+ * @brief This is the prototypical case for functions we know not to be thread safe, which should print a warning if declared shared and not otherwise.
+ * 
+ */
+void MyTestApp::TestEmpiricalDistributionThreadSafety( ) {
+    BeginTest("Empirical Distribution Thread Safety Warnings");
+
+    // Outside any parallel region
+    EmpiricalDistribution<double> dist_outside; // Ensure we have a fresh instance for each test
+    EmpiricalDistribution<double> dist_shared; // Ensure we have a fresh instance for each test
+    EmpiricalDistribution<double> dist_private; // Ensure we have a fresh instance for each test
+
+    // The constructed flag should match the runtime query
+    if ( dist_outside.GetConstructedInParallelRegion( ) != ReturnInParallelRegionBool( ) )
+        FailTest;
+
+        // If we are in debug mode with OpenMP, capture a warning from inside a parallel region
+#if defined(DEBUG) && defined(_OPENMP)
+#pragma omp parallel num_threads(2)
+    {
+        // Inside vs outside: the flags should differ
+        if ( dist_outside.GetConstructedInParallelRegion( ) == ReturnInParallelRegionBool( ) )
+            FailTest;
+
+// Capture exactly once to avoid interleaving from multiple threads
+// We just want to know that we are in a parallel region but one thread exectuing is enough for the test.
+#pragma omp single
+        {
+            // Trigger the warning without mutating shared state
+            LogCaptureRAII cap;
+            cap.call(dist_outside, &EmpiricalDistribution<double>::IsConstant);
+            if ( ! cap.contains("Warning: Potential thread safety") )
+                FailTest;
+        }
+    }
+
+    // We shouldnot have the warning here because we called outside a parallel region
+    {
+        LogCaptureRAII cap;
+        cap.call(dist_outside, &EmpiricalDistribution<double>::IsConstant);
+        if ( cap.contains("Warning: Potential thread safety") )
+            FailTest;
+    }
+
+// Now we'll test shared and private variables which should Fail and not fail respectively
+#pragma omp parallel num_threads(2) shared(dist_shared) private(dist_private)
+    {
+#pragma omp single
+        {
+            {
+                LogCaptureRAII cap;
+                cap.call(dist_shared, &EmpiricalDistribution<double>::IsConstant);
+                if ( ! cap.contains("Warning: Potential thread safety") )
+                    FailTest;
+            }
+
+            {
+                LogCaptureRAII cap;
+                cap.call(dist_private, &EmpiricalDistribution<double>::IsConstant);
+                if ( cap.contains("Warning: Potential thread safety") )
+                    FailTest;
+            }
+        }
+    }
+
+#endif
 
     EndTest( );
 }
@@ -2218,3 +2337,9 @@ void MyTestApp::WriteNumericTextFile(const char* filename) {
 
     fclose(output_file);
 }
+
+// Only unset if we set it.
+#if defined(unset_cisTEM_LOG_WXPRINTF)
+#undef unset_cisTEM_LOG_WXPRINTF
+#undef cisTEM_LOG_WXPRINTF
+#endif

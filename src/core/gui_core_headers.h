@@ -88,6 +88,8 @@
 #include "../gui/MyNewRefinementPackageWizard.h"
 #include "../gui/NewTemplateMatchesPackageWizard.h"
 #include "../gui/MyResultsPanel.h"
+// #include "../gui/ResultsPanelSpa.h"
+// #include "../gui/ResultsPanelTm.h"
 #include "../gui/ActionsPanelSpa.h"
 #include "../gui/ActionsPanelTm.h"
 #include "../gui/MyAssetsPanel.h"

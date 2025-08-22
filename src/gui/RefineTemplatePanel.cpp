@@ -70,22 +70,25 @@ bool RefineTemplatePanel::CheckGroupHasTemplateMatchRunDone( ) {
     int         images_with_template_match_counter;
     bool        image_was_found;
 
-    for ( int image_in_group_counter = 0; image_in_group_counter < image_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection( )); image_in_group_counter++ ) {
-        current_image_id = image_asset_panel->all_assets_list->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection( ), image_in_group_counter))->asset_id;
-        image_was_found  = false;
+    if ( images_with_template_match_result.GetCount( ) > 0 ) {
+        for ( int image_in_group_counter = 0; image_in_group_counter < image_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection( )); image_in_group_counter++ ) {
+            current_image_id = image_asset_panel->all_assets_list->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection( ), image_in_group_counter))->asset_id;
+            image_was_found  = false;
 
-        for ( images_with_template_match_counter = 0; images_with_template_match_counter < images_with_template_match_result.GetCount( ); images_with_template_match_counter++ ) {
-            if ( images_with_template_match_result[images_with_template_match_counter] == current_image_id ) {
-                image_was_found = true;
-                break;
+            for ( images_with_template_match_counter = 0; images_with_template_match_counter < images_with_template_match_result.GetCount( ); images_with_template_match_counter++ ) {
+                if ( images_with_template_match_result[images_with_template_match_counter] == current_image_id ) {
+                    image_was_found = true;
+                    break;
+                }
             }
-        }
 
-        if ( image_was_found == false )
-            return false;
+            if ( image_was_found == false )
+                return false;
+        }
     }
 
-    return true;
+    // Should always default to false return, not true
+    return false;
 }
 
 void RefineTemplatePanel::ResetAllDefaultsClick(wxCommandEvent& event) {
@@ -148,7 +151,19 @@ void RefineTemplatePanel::ResetDefaults( ) {
 
     active_group.CopyFrom(&image_asset_panel->all_groups_list->groups[GroupComboBox->GetSelection( )]);
 
-    if ( active_group.number_of_members > 0 ) {
+    // Check if there are any such dynamic tables that exist before querying the database
+    bool template_match_dynamic_tables_exist;
+    if ( main_frame->current_project.database.is_open ) {
+        if ( main_frame->current_project.database.ReturnStringArrayFromSelectCommand("SELECT name FROM sqlite_master WHERE type = 'table' AND name LIKE 'TEMPLATE_MATCH_PEAK_LIST_'").GetCount( ) > 0 )
+            template_match_dynamic_tables_exist = true;
+        else
+            template_match_dynamic_tables_exist = false;
+    }
+    else {
+        template_match_dynamic_tables_exist = false;
+    }
+
+    if ( active_group.number_of_members > 0 && template_match_dynamic_tables_exist ) {
         ImageAsset* current_image;
         current_image = image_asset_panel->all_assets_list->ReturnImageAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection( ), 0)); // first image in group
         HighResolutionLimitNumericCtrl->ChangeValueFloat(2.0f * current_image->pixel_size);

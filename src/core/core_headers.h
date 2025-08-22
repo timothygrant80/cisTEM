@@ -70,6 +70,7 @@ typedef struct CurvePoint {
 #include <wx/wfstream.h>
 #include <wx/tokenzr.h>
 #include <wx/textfile.h>
+#include <wx/log.h>
 #include <wx/regex.h>
 #include <wx/stackwalk.h>
 #include <wx/xml/xml.h>
@@ -230,5 +231,13 @@ inline int ReturnNumberOfThreads( ) {
     return 1;
 #endif
 };
+
+inline bool ReturnInParallelRegionBool( ) {
+#ifdef _OPENMP
+    return omp_in_parallel( ) == 0 ? false : true;
+#else
+    return false;
+#endif
+}
 
 #endif // SRC_PROGRAMS_CORE_CORE_HEADERS_H_

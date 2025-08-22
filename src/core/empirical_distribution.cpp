@@ -2,9 +2,99 @@
 
 // Initialise an empirical distribution
 template <class Accumulator_t>
-EmpiricalDistribution<Accumulator_t>::EmpiricalDistribution( ) {
+EmpiricalDistribution<Accumulator_t>::EmpiricalDistribution( )
+    : constructed_in_parallel_region(ReturnInParallelRegionBool( )) {
     static_assert(std::is_same_v<Accumulator_t, double> || std::is_same_v<Accumulator_t, float>, "Accumulator_t must be double or float");
     Reset( );
+}
+
+template <class Accumulator_t>
+EmpiricalDistribution<Accumulator_t>::EmpiricalDistribution(const EmpiricalDistribution& other)
+    : constructed_in_parallel_region(ReturnInParallelRegionBool( )) {
+    static_assert(std::is_same_v<Accumulator_t, double> || std::is_same_v<Accumulator_t, float>, "Accumulator_t must be double or float");
+    // Copy all member variables from other
+    sum_of_samples                 = other.sum_of_samples;
+    sum_of_squared_samples         = other.sum_of_squared_samples;
+    number_of_samples_NON_integral = other.number_of_samples_NON_integral;
+    kahan_correction_sum           = other.kahan_correction_sum;
+    kahan_correction_sum_sqs       = other.kahan_correction_sum_sqs;
+    number_of_samples              = other.number_of_samples;
+    minimum                        = other.minimum;
+    maximum                        = other.maximum;
+    is_constant                    = other.is_constant;
+    last_added_value               = other.last_added_value;
+    mean_welford                   = other.mean_welford;
+    var_times_n_minus_1_welford    = other.var_times_n_minus_1_welford;
+    is_welford                     = other.is_welford;
+    is_default                     = other.is_default;
+}
+
+template <class Accumulator_t>
+EmpiricalDistribution<Accumulator_t>::EmpiricalDistribution(EmpiricalDistribution&& other) noexcept
+    : constructed_in_parallel_region(ReturnInParallelRegionBool( )) {
+    static_assert(std::is_same_v<Accumulator_t, double> || std::is_same_v<Accumulator_t, float>, "Accumulator_t must be double or float");
+    // Move (bitwise copy suffices for these trivially movable members)
+    sum_of_samples                 = other.sum_of_samples;
+    sum_of_squared_samples         = other.sum_of_squared_samples;
+    number_of_samples_NON_integral = other.number_of_samples_NON_integral;
+    kahan_correction_sum           = other.kahan_correction_sum;
+    kahan_correction_sum_sqs       = other.kahan_correction_sum_sqs;
+    number_of_samples              = other.number_of_samples;
+    minimum                        = other.minimum;
+    maximum                        = other.maximum;
+    is_constant                    = other.is_constant;
+    last_added_value               = other.last_added_value;
+    mean_welford                   = other.mean_welford;
+    var_times_n_minus_1_welford    = other.var_times_n_minus_1_welford;
+    is_welford                     = other.is_welford;
+    is_default                     = other.is_default;
+}
+
+template <class Accumulator_t>
+EmpiricalDistribution<Accumulator_t>& EmpiricalDistribution<Accumulator_t>::operator=(const EmpiricalDistribution& other) {
+    MyDebugWarnThreadSafety(GetConstructedInParallelRegion( ) != ReturnInParallelRegionBool( ));
+    static_assert(std::is_same_v<Accumulator_t, double> || std::is_same_v<Accumulator_t, float>, "Accumulator_t must be double or float");
+    if ( this != &other ) {
+        // constructed_in_parallel_region is const and intentionally not reassigned
+        sum_of_samples                 = other.sum_of_samples;
+        sum_of_squared_samples         = other.sum_of_squared_samples;
+        number_of_samples_NON_integral = other.number_of_samples_NON_integral;
+        kahan_correction_sum           = other.kahan_correction_sum;
+        kahan_correction_sum_sqs       = other.kahan_correction_sum_sqs;
+        number_of_samples              = other.number_of_samples;
+        minimum                        = other.minimum;
+        maximum                        = other.maximum;
+        is_constant                    = other.is_constant;
+        last_added_value               = other.last_added_value;
+        mean_welford                   = other.mean_welford;
+        var_times_n_minus_1_welford    = other.var_times_n_minus_1_welford;
+        is_welford                     = other.is_welford;
+        is_default                     = other.is_default;
+    }
+    return *this;
+}
+
+template <class Accumulator_t>
+EmpiricalDistribution<Accumulator_t>& EmpiricalDistribution<Accumulator_t>::operator=(EmpiricalDistribution&& other) noexcept {
+    MyDebugWarnThreadSafety(GetConstructedInParallelRegion( ) != ReturnInParallelRegionBool( ));
+    if ( this != &other ) {
+        // constructed_in_parallel_region is const and intentionally not reassigned
+        sum_of_samples                 = other.sum_of_samples;
+        sum_of_squared_samples         = other.sum_of_squared_samples;
+        number_of_samples_NON_integral = other.number_of_samples_NON_integral;
+        kahan_correction_sum           = other.kahan_correction_sum;
+        kahan_correction_sum_sqs       = other.kahan_correction_sum_sqs;
+        number_of_samples              = other.number_of_samples;
+        minimum                        = other.minimum;
+        maximum                        = other.maximum;
+        is_constant                    = other.is_constant;
+        last_added_value               = other.last_added_value;
+        mean_welford                   = other.mean_welford;
+        var_times_n_minus_1_welford    = other.var_times_n_minus_1_welford;
+        is_welford                     = other.is_welford;
+        is_default                     = other.is_default;
+    }
+    return *this;
 }
 
 template <class Accumulator_t>
@@ -14,6 +104,7 @@ EmpiricalDistribution<Accumulator_t>::~EmpiricalDistribution( ) {
 
 template <class Accumulator_t>
 void EmpiricalDistribution<Accumulator_t>::Reset( ) {
+    MyDebugWarnThreadSafety(GetConstructedInParallelRegion( ) != ReturnInParallelRegionBool( ));
     sum_of_samples                 = Accumulator_t{0.0};
     sum_of_squared_samples         = Accumulator_t{0.0};
     number_of_samples_NON_integral = Accumulator_t{0.0};
@@ -32,7 +123,7 @@ void EmpiricalDistribution<Accumulator_t>::Reset( ) {
 
 template <class Accumulator_t>
 void EmpiricalDistribution<Accumulator_t>::AddSampleValue(float sample_value) {
-    MyDebugAssertFalse(ReturnThreadNumberOfCurrentThread( ) > 0, "This function is not thread safe  b/c of last_added_value.");
+    MyDebugWarnThreadSafety(GetConstructedInParallelRegion( ) != ReturnInParallelRegionBool( ));
     MyDebugAssertFalse(is_welford, "Cannot use AddSampleValue with Welford accumulator.");
     is_default = true;
 
@@ -52,7 +143,7 @@ void EmpiricalDistribution<Accumulator_t>::AddSampleValue(float sample_value) {
 
 template <class Accumulator_t>
 void EmpiricalDistribution<Accumulator_t>::AddSampleValueWithKahanCorrection(float sample_value) {
-    MyDebugAssertFalse(ReturnThreadNumberOfCurrentThread( ) > 0, "This function is not thread safe  b/c of last_added_value.");
+    MyDebugWarnThreadSafety(GetConstructedInParallelRegion( ) != ReturnInParallelRegionBool( ));
     MyDebugAssertFalse(is_welford, "Cannot use AddSampleValue with Welford accumulator.");
     is_default = true;
 
@@ -81,6 +172,7 @@ void EmpiricalDistribution<Accumulator_t>::AddSampleValueWithKahanCorrection(flo
 
 template <class Accumulator_t>
 void EmpiricalDistribution<Accumulator_t>::AddSampleValueForWelford(float sample_value) {
+    MyDebugWarnThreadSafety(GetConstructedInParallelRegion( ) != ReturnInParallelRegionBool( ));
     MyDebugAssertFalse(is_default, "Cannot use AddSampleValueForWelford with default accumulator.");
     is_welford = true;
 
@@ -96,6 +188,7 @@ void EmpiricalDistribution<Accumulator_t>::AddSampleValueForWelford(float sample
 
 template <class Accumulator_t>
 void EmpiricalDistribution<Accumulator_t>::AddSampleValueForWelfordBatched(float sample_mean, float sample_var_times_n_minus_1_welford, Accumulator_t& n_this_batch) {
+    MyDebugWarnThreadSafety(GetConstructedInParallelRegion( ) != ReturnInParallelRegionBool( ));
     MyDebugAssertFalse(is_default, "Cannot use AddSampleValueForWelford with default accumulator.");
     is_welford = true;
 
@@ -111,12 +204,14 @@ void EmpiricalDistribution<Accumulator_t>::AddSampleValueForWelfordBatched(float
 
 template <class Accumulator_t>
 bool EmpiricalDistribution<Accumulator_t>::IsConstant( ) {
+    MyDebugWarnThreadSafety(GetConstructedInParallelRegion( ) != ReturnInParallelRegionBool( ));
     MyDebugAssertFalse(is_welford, "Cannot use IsConstant with Welford accumulator.");
     return is_constant;
 }
 
 template <class Accumulator_t>
 float EmpiricalDistribution<Accumulator_t>::GetSampleSumOfSquares( ) {
+    MyDebugWarnThreadSafety(GetConstructedInParallelRegion( ) != ReturnInParallelRegionBool( ));
     if ( is_welford )
         return var_times_n_minus_1_welford;
 
@@ -126,6 +221,7 @@ float EmpiricalDistribution<Accumulator_t>::GetSampleSumOfSquares( ) {
 
 template <class Accumulator_t>
 long EmpiricalDistribution<Accumulator_t>::GetNumberOfSamples( ) {
+    MyDebugWarnThreadSafety(GetConstructedInParallelRegion( ) != ReturnInParallelRegionBool( ));
     if ( is_welford )
         return long(number_of_samples_NON_integral);
     else
@@ -134,6 +230,7 @@ long EmpiricalDistribution<Accumulator_t>::GetNumberOfSamples( ) {
 
 template <class Accumulator_t>
 float EmpiricalDistribution<Accumulator_t>::GetSampleSum( ) {
+    MyDebugWarnThreadSafety(GetConstructedInParallelRegion( ) != ReturnInParallelRegionBool( ));
     if ( is_welford )
         return mean_welford * number_of_samples_NON_integral;
     else
@@ -142,6 +239,7 @@ float EmpiricalDistribution<Accumulator_t>::GetSampleSum( ) {
 
 template <class Accumulator_t>
 float EmpiricalDistribution<Accumulator_t>::GetSampleMean( ) {
+    MyDebugWarnThreadSafety(GetConstructedInParallelRegion( ) != ReturnInParallelRegionBool( ));
     if ( number_of_samples > 0 || number_of_samples_NON_integral > Accumulator_t{0.0} ) {
         if ( is_welford )
             return mean_welford;
@@ -155,6 +253,7 @@ float EmpiricalDistribution<Accumulator_t>::GetSampleMean( ) {
 
 template <class Accumulator_t>
 float EmpiricalDistribution<Accumulator_t>::GetSampleVariance( ) {
+    MyDebugWarnThreadSafety(GetConstructedInParallelRegion( ) != ReturnInParallelRegionBool( ));
     MyDebugAssertFalse(is_welford, "Cannot use GetSampleVariance with Welford accumulator.");
     if ( number_of_samples > 0 ) {
         return (sum_of_squared_samples / float(number_of_samples)) - pow(sum_of_samples / float(number_of_samples), 2);
@@ -166,6 +265,7 @@ float EmpiricalDistribution<Accumulator_t>::GetSampleVariance( ) {
 
 template <class Accumulator_t>
 float EmpiricalDistribution<Accumulator_t>::GetUnbiasedEstimateOfPopulationVariance( ) {
+    MyDebugWarnThreadSafety(GetConstructedInParallelRegion( ) != ReturnInParallelRegionBool( ));
     if ( number_of_samples > 0 || number_of_samples_NON_integral > Accumulator_t{0.0} ) {
         if ( is_welford )
             return var_times_n_minus_1_welford / float(number_of_samples_NON_integral - 1);

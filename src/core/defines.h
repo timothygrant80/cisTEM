@@ -75,6 +75,7 @@ namespace cistem {
 #define MyPrintfRed(...)  {wxPrintf(ANSI_COLOR_RED); wxPrintf(__VA_ARGS__); wxPrintf(ANSI_COLOR_RESET);}
 
 #ifdef DEBUG
+#define MyDebugWarnThreadSafety(cond, ...) {if (cond) { wxLogWarning("Potential thread safety issue detected, this object should be declared private or explicitly constructed in thread parallel region %s:%i\n%s\n", __FILE__,__LINE__,__PRETTY_FUNCTION__); }}
 #define MyDebugPrintWithDetails(...)	{wxPrintf(__VA_ARGS__); wxPrintf("From %s:%i\n%s\n\n", __FILE__,__LINE__,__PRETTY_FUNCTION__); StackDump dump(NULL); dump.Walk(2);}
 #define MyPrintWithDetails(...)	{wxPrintf(__VA_ARGS__); wxPrintf("From %s:%i\n%s\n", __FILE__,__LINE__,__PRETTY_FUNCTION__);StackDump dump(NULL); dump.Walk(2);}
 #define MyDebugPrint(...)	{wxPrintf(__VA_ARGS__); wxPrintf("\n");}
@@ -82,6 +83,7 @@ namespace cistem {
 #define MyDebugAssertFalse(cond, msg, ...) {if ((cond) == true) { wxPrintf("\n" msg, ##__VA_ARGS__); wxPrintf("\nFailed Assert at %s:%i\n%s\n", __FILE__,__LINE__,__PRETTY_FUNCTION__); DEBUG_ABORT;}}
 #define DEBUG_ABORT {StackDump dump(NULL); dump.Walk(1); abort();}
 #else
+#define MyDebugWarnThreadSafety(cond, ...) 
 #define MyPrintWithDetails(...)	{wxPrintf(__VA_ARGS__); wxPrintf("From %s:%i\n%s\n", __FILE__,__LINE__,__PRETTY_FUNCTION__);}
 #define MyDebugPrintWithDetails(...)
 #define MyDebugPrint(...)

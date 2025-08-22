@@ -16,6 +16,8 @@ class EmpiricalDistribution {
     bool          is_constant;
     float         last_added_value;
 
+    bool const constructed_in_parallel_region;
+
     Accumulator_t mean_welford;
     Accumulator_t var_times_n_minus_1_welford;
     // We don't trax min/max/last_added_value  or is_constant for Welford, set this to prevent those methods
@@ -26,7 +28,12 @@ class EmpiricalDistribution {
   public:
     // Constructors, destructors
     EmpiricalDistribution( );
+    EmpiricalDistribution(const EmpiricalDistribution& other);
+    EmpiricalDistribution(EmpiricalDistribution&& other) noexcept;
     ~EmpiricalDistribution( );
+
+    EmpiricalDistribution& operator=(const EmpiricalDistribution& other);
+    EmpiricalDistribution& operator=(EmpiricalDistribution&& other) noexcept;
 
     void  AddSampleValue(float sample_value);
     void  AddSampleValueWithKahanCorrection(float sample_value);
@@ -44,6 +51,9 @@ class EmpiricalDistribution {
     inline float GetMaximum( ) { return maximum; };
 
     bool IsConstant( );
+
+    inline bool GetConstructedInParallelRegion( ) const { return constructed_in_parallel_region; }
+
     void PopulateHistogram( );
     void Reset( );
 };

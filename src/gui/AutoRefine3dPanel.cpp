@@ -30,6 +30,21 @@ AutoRefine3DPanel::AutoRefine3DPanel(wxWindow* parent)
     wxSize input_size = InputSizer->GetMinSize( );
     input_size.x += wxSystemSettings::GetMetric(wxSYS_VSCROLL_X);
     input_size.y = -1;
+
+    // If blush is enabled, give the user the option to use it or not.
+#ifdef BLUSH
+    wxBoxSizer*   BlushSizer = new wxBoxSizer(wxHORIZONTAL);
+    wxStaticText* BlushLabel = new wxStaticText(ExpertPanel, wxID_ANY, "Enable Blush Denoising?");
+    fgSizer1->Add(BlushLabel, 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 5);
+
+    my_refinement_manager.EnableBlushYesButton = new wxRadioButton(ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, 0);
+    my_refinement_manager.EnableBlushNoButton  = new wxRadioButton(ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0);
+    BlushSizer->Add(my_refinement_manager.EnableBlushYesButton, 0, wxALL, 5);
+    BlushSizer->Add(my_refinement_manager.EnableBlushNoButton, 0, wxALL, 5);
+    fgSizer1->Add(BlushSizer, wxEXPAND);
+    fgSizer1->Layout( );
+#endif
+
     ExpertPanel->SetMinSize(input_size);
     ExpertPanel->SetSize(input_size);
 
@@ -370,6 +385,11 @@ void AutoRefine3DPanel::SetDefaults( ) {
         LowPassMaskYesRadio->SetValue(false);
         LowPassMaskNoRadio->SetValue(true);
         MaskFilterResolutionText->ChangeValueFloat(20.00);
+
+#ifdef BLUSH
+        my_refinement_manager.EnableBlushNoButton->SetValue(true);
+        my_refinement_manager.EnableBlushYesButton->SetValue(false);
+#endif
 
         ExpertPanel->Thaw( );
     }
@@ -792,6 +812,10 @@ void AutoRefinementManager::BeginRefinementCycle( ) {
     active_mask_edge                   = my_parent->MaskEdgeTextCtrl->ReturnValue( );
     active_mask_weight                 = my_parent->MaskWeightTextCtrl->ReturnValue( );
 
+#ifdef BLUSH
+    apply_blush_denoising = EnableBlushYesButton->GetValue( );
+#endif
+
     reference_3d_contains_all_particles = false;
 
     active_refinement_run_profile     = run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection( )];
@@ -1049,9 +1073,10 @@ void AutoRefinementManager::SetupMerge3dJob( ) {
         wxString orthogonal_views_filename   = main_frame->current_project.volume_asset_directory.GetFullPath( ) + wxString::Format("/OrthViews/volume_%li_%i.mrc", output_refinement->refinement_id, class_counter + 1);
         float    weiner_nominator            = 1.0f;
 
-        float alignment_res = class_high_res_limits[class_counter];
+        float alignment_res     = class_high_res_limits[class_counter];
+        float particle_diameter = static_cast<float>(active_refinement_package->estimated_particle_size_in_angstroms);
 
-        my_parent->current_job_package.AddJob("ttttfffttibtiff", output_reconstruction_1.ToUTF8( ).data( ),
+        my_parent->current_job_package.AddJob("ttttfffttibtifffb", output_reconstruction_1.ToUTF8( ).data( ),
                                               output_reconstruction_2.ToUTF8( ).data( ),
                                               output_reconstruction_filtered.ToUTF8( ).data( ),
                                               output_resolution_statistics.ToUTF8( ).data( ),
@@ -1061,7 +1086,8 @@ void AutoRefinementManager::SetupMerge3dJob( ) {
                                               class_counter + 1,
                                               save_orthogonal_views_image,
                                               orthogonal_views_filename.ToUTF8( ).data( ),
-                                              number_of_reconstruction_jobs, weiner_nominator, alignment_res);
+                                              number_of_reconstruction_jobs, weiner_nominator, alignment_res,
+                                              particle_diameter, apply_blush_denoising);
     }
 }
 
@@ -1692,6 +1718,7 @@ void AutoRefinementManager::ProcessJobResult(JobResult* result_to_process) {
         }
     }
     else if ( running_job_type == MERGE ) {
+        // TODO: add logic for tracking blush progress in progress bar?
         //	wxPrintf("received merge result!\n");
 
         // add to the correct resolution statistics..

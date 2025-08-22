@@ -19,7 +19,7 @@
 
 // data types.. (moved from job_packager.h)
 
-#define NONE        	 0
+#define NONE      	 0
 #define TEXT			 1
 #define INTEGER			 2
 #define FLOAT			 3

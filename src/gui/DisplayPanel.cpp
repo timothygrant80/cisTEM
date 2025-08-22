@@ -372,6 +372,11 @@ void DisplayPanel::OnFFT(wxCommandEvent& WXUNUSED(event)) {
 void DisplayPanel::OnTrajectory(wxCommandEvent& WXUNUSED(event)) {
     DisplayNotebookPanel* current_panel = ReturnCurrentPanel( );
     if ( current_panel->patch_track_on == false ) {
+        if ( current_panel->use_trajectory )
+            current_panel->use_trajectory = false;
+        else {
+            current_panel->use_trajectory = true;
+        }
         wxPrintf("current result is not a patch tracking result\n");
         return;
     }
@@ -502,7 +507,7 @@ void DisplayPanel::OnTrajectory(wxCommandEvent& WXUNUSED(event)) {
                     int index_counter = 1;
                     for ( int i = 0; i < patch_no; i++ ) {
                         float x0_org = current_panel->actual_scale_factor * current_panel->trajectory_x[index_counter];
-                        float y0_org = current_panel->actual_scale_factor * current_panel->trajectory_y[index_counter];
+                        float y0_org = current_panel->actual_scale_factor * current_panel->ReturnImageYSize( ) - current_panel->actual_scale_factor * current_panel->trajectory_y[index_counter];
                         // wxPrintf("x0 y0 %f %f", current_panel->trajectory_x[index_counter], current_panel->trajectory_y[index_counter]);
                         // dc.SetPen(wxPen(*wxBLACK, line_width)); //, wxSOLID));
                         dc.DrawCircle(x0_org, y0_org, circle_radius);
@@ -514,7 +519,8 @@ void DisplayPanel::OnTrajectory(wxCommandEvent& WXUNUSED(event)) {
                         float y0 = y0_org;
                         for ( int j = 0; j < frame_no; j++ ) {
                             float x1 = -scale * current_panel->trajectory_x[index_counter] + x0_org;
-                            float y1 = -scale * current_panel->trajectory_y[index_counter] + y0_org;
+                            // float y1 = -scale * current_panel->trajectory_y[index_counter] + y0_org;
+                            float y1 = scale * current_panel->trajectory_y[index_counter] + y0_org;
                             dc.DrawLine(x0, y0, x1, y1);
                             index_counter++;
                             x0 = x1;
@@ -3004,7 +3010,7 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
 
                     dc.SelectObject(panel_bitmap);
                     dc.DrawBitmap(*DrawBitmap, big_x * scaled_x_size, big_y * scaled_y_size);
-
+                    float y_dim = scaled_y_size;
                     // This is the place where the following section of code will plot trajectory on the panel. finally find it, and have no idea why so far.
                     // wxPrintf(" in display panel patch_track_on is %i\n", patch_track_on);
                     if ( use_trajectory && patch_track_on ) {
@@ -3022,17 +3028,22 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
                             int frame_no      = trajectory_y[0];
                             int index_counter = 1;
                             for ( int i = 0; i < patch_no; i++ ) {
+                                // for ( int i = 0; i < 3; i++ ) {
                                 float x0_org = actual_scale_factor * trajectory_x[index_counter];
-                                float y0_org = actual_scale_factor * trajectory_y[index_counter];
+                                // float y0_org = actual_scale_factor * trajectory_y[index_counter];
+                                // the canvas drawing the trajectory origin at top left. but the displayed micrograph origin at bottom left.
+                                float y0_org = scaled_y_size - actual_scale_factor * trajectory_y[index_counter];
                                 // wxPrintf("x0 y0 %f %f", trajectory_x[index_counter], trajectory_y[index_counter]);
                                 dc.DrawCircle(x0_org, y0_org, circle_radius);
-
+                                // wxPrintf("y_dim %f\n", y_dim);
+                                // wxPrintf("x0_org %f y0_org %f\n", x0_org, y0_org);
                                 index_counter++;
                                 float x0 = x0_org;
                                 float y0 = y0_org;
                                 for ( int j = 0; j < frame_no; j++ ) {
                                     float x1 = -scale * trajectory_x[index_counter] + x0_org;
-                                    float y1 = -scale * trajectory_y[index_counter] + y0_org;
+                                    // float y1 = -scale * trajectory_y[index_counter] + y0_org;
+                                    float y1 = scale * trajectory_y[index_counter] + y0_org; // the canvas drawing the trajectory origin at top left. but the displayed micrograph origin at bottom left.
                                     dc.DrawLine(x0, y0, x1, y1);
                                     index_counter++;
                                     x0 = x1;

@@ -109,12 +109,6 @@ enum Enum : int {
 
 } // namespace job_type
 
-namespace workflow {
-enum Enum : int { single_particle,
-                  template_matching,
-                  pharma };
-} // namespace workflow
-
 namespace PCOS_image_type {
 enum Enum : int { reference_volume_t,
                   particle_image_t,

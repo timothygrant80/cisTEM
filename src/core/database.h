@@ -15,7 +15,8 @@ class Database {
     sqlite3*   sqlite_database;
     int        last_return_code;
     wxFileName database_file;
-    bool       is_open;
+
+    bool is_open; // for tracking database status when performing operations that occur before database has been within MainFrame::current_project
 
     Database( );
     ~Database( );

@@ -2,14 +2,12 @@
 #define _gui_MainFrame_h_
 #include "UpdateProgressTracker.h"
 #include "workflows/WorkflowRegistry.h"
-#include <memory>
 
 /** Implementing MainFrame */
 class MyMainFrame : public MainFrame, public SocketCommunicator, public UpdateProgressTracker {
     bool is_fullscreen;
     // cistem::workflow::Enum current_workflow;
-    wxString               current_workflow = "";
-    cistem::workflow::Enum previous_workflow;
+    wxString current_workflow = "";
 
   public:
     /** Constructor */
@@ -108,40 +106,12 @@ class MyMainFrame : public MainFrame, public SocketCommunicator, public UpdatePr
     void SetTemplateMatchingWorkflow(bool triggered_by_gui_event = false);
     void SwitchWorkflowPanels(const wxString& workflow_name);
 
-    // void OnSingleParticleWorkflow(wxCommandEvent& event);
-    // void OnTemplateMatchingWorkflow(wxCommandEvent& event);
-
-    inline wxString ReturnCurrentWorkflow( ) {
-        for ( int workflow_option_counter = 0; workflow_option_counter < 0; workflow_option_counter++ ) {
-            if ( WorkflowMenu->IsChecked(workflow_option_counter) ) {
-                current_workflow = WorkflowMenu->GetLabel(workflow_option_counter);
-            }
-        }
-
-        // Should not get here, but in case we do, just assume SPA
-        if ( current_workflow.IsEmpty( ) )
-            current_workflow = "Single Particle";
-        if ( current_project.database.is_open )
-            current_project.RecordCurrentWorkflowInDB(current_workflow);
-        return current_workflow;
-    };
-
-    inline cistem::workflow::Enum ReturnPreviousWorkflow( ) { return previous_workflow; };
-
     inline void ManuallyUpdateWorkflowMenuCheckBox( ) {
-
-        // if ( current_workflow == cistem::workflow::single_particle ) {
-        // WorkflowMenu->Check(WorkflowSingleParticle->GetId( ), true);
-        // }
-        //
-        // if ( current_workflow == cistem::workflow::template_matching ) {
-        // WorkflowMenu->Check(WorkflowTemplateMatching->GetId( ), true);
-        // }
-        if ( current_workflow.Cmp("Single Particle") ) {
+        if ( current_workflow.IsSameAs("Single Particle") ) {
             WorkflowMenu->Check(WorkflowMenu->FindItem("Single Particle"), true);
             WorkflowMenu->Check(WorkflowMenu->FindItem("Template Matching"), false);
         }
-        else if ( current_workflow.Cmp("Template Matching") ) {
+        else if ( current_workflow.IsSameAs("Template Matching") ) {
             WorkflowMenu->Check(WorkflowMenu->FindItem("Template Matching"), true);
             WorkflowMenu->Check(WorkflowMenu->FindItem("Single Particle"), false);
         }

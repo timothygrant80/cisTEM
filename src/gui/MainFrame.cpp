@@ -16,8 +16,6 @@ extern TemplateMatchesPackageAssetPanel* template_matches_package_asset_panel;
 
 extern MyRefinementPackageAssetPanel* refinement_package_asset_panel;
 
-// extern ActionsPanelSpa* actions_panel_spa;
-// extern ActionsPanelTm*  actions_panel_tm;
 extern ActionsPanelParent* actions_panel;
 
 extern MyAlignMoviesPanel*   align_movies_panel;
@@ -76,15 +74,17 @@ MyMainFrame::MyMainFrame(wxWindow* parent)
     int x_offset;
     int y_offset;
 
-    // Now, try to load it in. We get to do this because the specific register for
-    // each workflow is static, so C++ static initialization phase initializes
-    // them before the execution of wxApp::OnInit() or main() run
+    // We get to do this because the specific register for each workflow is static, so C++ static initialization
+    // phase initializes them before the execution of wxApp::OnInit() or main() run
     for ( const auto& name : WorkflowRegistry::Instance( ).GetWorkflowNames( ) ) {
         wxMenuItem* item = new wxMenuItem(WorkflowMenu, wxID_ANY, name, wxEmptyString, wxITEM_RADIO);
         WorkflowMenu->Append(item);
         WorkflowMenu->Bind(wxEVT_MENU, &MyMainFrame::OnWorkflowMenuSelection, this, item->GetId( ));
     }
-    current_workflow = "Single Particle"; // Default initialize into Single Particle workflow
+
+    // Defaults into Single Particle which can be later updated by the value stored in the
+    // database, which does not happen until after panel construction.
+    current_workflow = "Single Particle";
 
     if ( screen_x_size > 1920 && screen_y_size > 1080 ) {
         x_offset = (screen_x_size - 1920) / 2;
@@ -121,6 +121,9 @@ void MyMainFrame::OnWorkflowMenuSelection(wxCommandEvent& event) {
         if ( name != current_workflow ) {
             current_workflow = name;
             SwitchWorkflowPanels(name);
+            if ( current_project.database.is_open ) {
+                current_project.database.RecordCurrentWorkflowInDB(current_workflow);
+            }
         }
     }
 }
@@ -712,29 +715,35 @@ void MyMainFrame::OpenProject(wxString project_filename) {
         ClearScratchDirectory( );
         overview_panel->SetProjectInfo( );
 
-        // Set the Workflow
-        if ( current_workflow != ReturnCurrentWorkflow( ) ) {
-            current_workflow = ReturnCurrentWorkflow( );
-        }
-        if ( current_project.database.is_open ) {
-            current_project.database.RecordCurrentWorkflowInDB(current_workflow);
-            // Now update the panels
-            SwitchWorkflowPanels(current_workflow);
-            // actions_panel = static_cast<ActionsPanelParent*>(WorkflowRegistry::Instance( ).CreateActionsPanel(current_workflow, this->MenuBook));
-            // SetActionsPanelChild(actions_panel);
+        // This should never execute, but if somehow current_workflow is empty, log that it was and set a default.
+        if ( current_workflow.IsEmpty( ) ) {
+            wxLogWarning("The current workflow could not be found; returning Single Particle as default to prevent errors.");
+            current_workflow = "Single Particle";
         }
 
-        // switch ( current_project.current_workflow ) {
-        // case cistem::workflow::template_matching: {
-        // We need to set the current workflow to the default prior to calling SetTemplateMatchingWorkflow, or else
-        // it will think it is already set and not change the workflow.
-        // current_workflow = cistem::workflow::single_particle;
-        // SetTemplateMatchingWorkflow( );
-        // break;
-        // }
-        // default: {
-        // }
-        // }
+        if ( current_project.database.is_open ) {
+            // Need to check if there is already a value recorded first.
+            // Know database is open so check what is currently recorded
+            if ( current_project.database.CheckIfCurrentWorkflowIsInteger( ) ) {
+                const int workflow_val = current_project.database.ReturnSingleIntFromSelectCommand("select CURRENT_WORKFLOW from MASTER_SETTINGS");
+
+                // When using enum logic, these were the values used for setting the respective workflows
+                constexpr int old_spa_val = 0;
+                constexpr int old_tm_val  = 1;
+                if ( workflow_val == old_spa_val ) {
+                    current_workflow = "Single Particle";
+                }
+                else if ( workflow_val == old_tm_val ) {
+                    current_workflow = "Template Matching";
+                }
+            }
+            else {
+                current_workflow = current_project.database.ReturnSingleStringFromSelectCommand("select CURRENT_WORKFLOW from MASTER_SETTINGS");
+            }
+            current_project.database.RecordCurrentWorkflowInDB(current_workflow);
+            SwitchWorkflowPanels(current_workflow);
+            ManuallyUpdateWorkflowMenuCheckBox( );
+        }
     }
     else {
         wxMessageBox(wxString::Format("Error Opening database :- \n%s\n\nDoes the file exist?", project_filename), "Cannot open database!", wxICON_ERROR);
@@ -948,33 +957,6 @@ bool MyMainFrame::MigrateProject(wxString old_project_directory, wxString new_pr
     return true;
 }
 
-template <class FrameTypeFrom, class FrameTypeTo>
-void MyMainFrame::UpdateWorkflow(FrameTypeFrom* input_frame, FrameTypeTo* output_frame, wxString frame_name) {
-
-    // Record the currently displayed page so we can maintain it.
-    int displayed_page_idx = MenuBook->FindPage(MenuBook->GetCurrentPage( ));
-
-    // Get the stored index of the input frame so we can replace it in-place.
-    int current_page_idx = MenuBook->FindPage(input_frame);
-    MenuBook->RemovePage(current_page_idx);
-
-    // Since we remove the original page and replace it with a new one, we have
-    // to ensure that panels that make up the page have the new page as their
-    // parent.
-    align_movies_panel->Reparent(output_frame->ActionsBook);
-    findctf_panel->Reparent(output_frame->ActionsBook);
-    generate_3d_panel->Reparent(output_frame->ActionsBook);
-    sharpen_3d_panel->Reparent(output_frame->ActionsBook);
-
-    // TODO: number two needs to be set from some record.
-    MenuBook->InsertPage(current_page_idx, output_frame, frame_name, false, current_page_idx);
-
-    MenuBook->SetSelection(displayed_page_idx);
-
-    Layout( );
-    Refresh( );
-}
-
 void MyMainFrame::SwitchWorkflowPanels(const wxString& workflow_name) {
     Freeze( );
 
@@ -998,58 +980,6 @@ void MyMainFrame::SwitchWorkflowPanels(const wxString& workflow_name) {
     Layout( );
     Thaw( );
 }
-
-// void MyMainFrame::SetSingleParticleWorkflow(bool triggered_by_gui_event) {
-
-//     // The idenitiy of the event (selecting worflow menu) defines the output panel.
-//     if ( current_workflow != cistem::workflow::single_particle ) {
-//         previous_workflow = current_workflow;
-//         // With only two workflows, we don't need the switch, but
-//         switch ( current_workflow ) {
-//             case cistem::workflow::template_matching: {
-//                 UpdateWorkflow(actions_panel_tm, actions_panel_spa, "Actions");
-
-//                 // If other panels, e.g. results is a likely next candidate, it should go here.
-//                 // TODO: if there are multiple panels to switch, we'll need to only do the update and set the icon for the LAST call in this sequence.
-//                 break;
-//             }
-//             default: {
-//                 MyDebugAssertTrue(false, "Unknown workflow");
-//                 break;
-//             }
-//         }
-//         current_workflow = cistem::workflow::single_particle;
-//         if ( current_project.is_open == true )
-//             current_project.RecordCurrentWorkflowInDB(current_workflow);
-//         // If not called from the GUI, we need to update the menu.
-//         if ( ! triggered_by_gui_event ) {
-//             ManuallyUpdateWorkflowMenuCheckBox( );
-//         }
-//     }
-// }
-
-// void MyMainFrame::OnSingleParticleWorkflow(wxCommandEvent& event) {
-//     SetSingleParticleWorkflow(true);
-// }
-
-// void MyMainFrame::SetTemplateMatchingWorkflow(bool triggered_by_gui_event) {
-//     if ( current_workflow != cistem::workflow::template_matching ) {
-//         previous_workflow = current_workflow;
-//         UpdateWorkflow(actions_panel_spa, actions_panel_tm, "Actions");
-//         current_workflow = cistem::workflow::template_matching;
-//         if ( current_project.is_open == true )
-//             current_project.RecordCurrentWorkflowInDB(current_workflow);
-
-//         // If not called from the GUI, we need to update the menu.
-//         if ( ! triggered_by_gui_event ) {
-//             ManuallyUpdateWorkflowMenuCheckBox( );
-//         }
-//     }
-// }
-
-// void MyMainFrame::OnTemplateMatchingWorkflow(wxCommandEvent& event) {
-//     SetTemplateMatchingWorkflow(true);
-// }
 
 void MyMainFrame::UpdateDatabase(std::pair<Database::TableChanges, Database::ColumnChanges>& schema_comparison) {
     // 1. Estimate number of rows that will be updated

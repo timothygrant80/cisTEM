@@ -48,9 +48,10 @@ struct SpaWorkflowRegister {
             generate_3d_panel              = new Generate3DPanel(actions_panel->ActionsBook);
             sharpen_3d_panel               = new Sharpen3DPanel(actions_panel->ActionsBook);
 
-            // const int num_imgs = ActionsSpaBookIconImages->GetImageCount( );
-            // wxPrintf("Image count %i\n", num_imgs);
-            actions_panel->ActionsBook->AssignImageList(GetActionsSpaBookIconImages( ));
+            if ( ! actions_panel->ActionsBook->GetImageList( ) ) {
+                actions_panel->ActionsBook->AssignImageList(GetActionsSpaBookIconImages( ));
+            }
+
             actions_panel->ActionsBook->AddPage(align_movies_panel, "Align Movies", true, 0);
             actions_panel->ActionsBook->AddPage(findctf_panel, "Find CTF", false, 1);
             actions_panel->ActionsBook->AddPage(findparticles_panel, "Find Particles", false, 2);

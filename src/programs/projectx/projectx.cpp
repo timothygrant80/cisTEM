@@ -27,9 +27,6 @@ Sharpen3DPanel*       sharpen_3d_panel;
 
 MyOverviewPanel*    overview_panel;
 ActionsPanelParent* actions_panel;
-
-// ActionsPanelSpa*           actions_panel_spa;
-// ActionsPanelTm*            actions_panel_tm;
 AssetsPanel*               assets_panel;
 MyResultsPanel*            results_panel;
 SettingsPanel*             settings_panel;
@@ -125,9 +122,6 @@ bool MyGuiApp::OnInit( ) {
 
     // Left hand Panels
     overview_panel = new MyOverviewPanel(main_frame->MenuBook, wxID_ANY);
-    // actions_panel_spa = new ActionsPanelSpa(main_frame->MenuBook, wxID_ANY);
-    // actions_panel_tm  = new ActionsPanelTm(main_frame->MenuBook, wxID_ANY);
-
     assets_panel   = new MyAssetsPanel(main_frame->MenuBook, wxID_ANY);
     results_panel  = new MyResultsPanel(main_frame->MenuBook, wxID_ANY);
     settings_panel = new MySettingsPanel(main_frame->MenuBook, wxID_ANY);
@@ -147,33 +141,9 @@ bool MyGuiApp::OnInit( ) {
 
     refinement_package_asset_panel = new MyRefinementPackageAssetPanel(assets_panel->AssetsBook);
 
-    // refinement_package_asset_panel = new MyRefinementPackageAssetPanel(assets_panel->AssetsBook);
-    // align_movies_panel             = new MyAlignMoviesPanel(actions_panel_spa->ActionsBook);
-    // findctf_panel                  = new MyFindCTFPanel(actions_panel_spa->ActionsBook);
-    // findparticles_panel            = new MyFindParticlesPanel(actions_panel_spa->ActionsBook);
-    // classification_panel           = new MyRefine2DPanel(actions_panel_spa->ActionsBook);
-    // ab_initio_3d_panel             = new AbInitio3DPanel(actions_panel_spa->ActionsBook);
-    // auto_refine_3d_panel           = new AutoRefine3DPanel(actions_panel_spa->ActionsBook);
-    // refine_3d_panel                = new MyRefine3DPanel(actions_panel_spa->ActionsBook);
-    // refine_ctf_panel               = new RefineCTFPanel(actions_panel_spa->ActionsBook);
-    // generate_3d_panel              = new Generate3DPanel(actions_panel_spa->ActionsBook);
-    // sharpen_3d_panel               = new Sharpen3DPanel(actions_panel_spa->ActionsBook);
+	// See src/gui/workflows/SpaWorkflow.h for instantiation of the SPA workflow panels
 
     actions_panel = static_cast<ActionsPanelParent*>(WorkflowRegistry::Instance( ).CreateActionsPanel("Single Particle", main_frame->MenuBook));
-    // main_frame->SetActionsPanelChild(actions_panel);
-
-    // Theoretically, this should no longer be required since the logic for instantiating
-    // the different panels on the Actions Panel should be elsewhere
-    // align_movies_panel   = new MyAlignMoviesPanel(actions_panel->ActionsBook);
-    // findctf_panel        = new MyFindCTFPanel(actions_panel->ActionsBook);
-    // findparticles_panel  = new MyFindParticlesPanel(actions_panel->ActionsBook);
-    // classification_panel = new MyRefine2DPanel(actions_panel->ActionsBook);
-    // ab_initio_3d_panel   = new AbInitio3DPanel(actions_panel->ActionsBook);
-    // auto_refine_3d_panel = new AutoRefine3DPanel(actions_panel->ActionsBook);
-    // refine_3d_panel      = new MyRefine3DPanel(actions_panel->ActionsBook);
-    // refine_ctf_panel     = new RefineCTFPanel(actions_panel->ActionsBook);
-    // generate_3d_panel    = new Generate3DPanel(actions_panel->ActionsBook);
-    // sharpen_3d_panel     = new Sharpen3DPanel(actions_panel->ActionsBook);
 
     movie_results_panel      = new MyMovieAlignResultsPanel(results_panel->ResultsBook);
     ctf_results_panel        = new MyFindCTFResultsPanel(results_panel->ResultsBook);
@@ -181,12 +151,8 @@ bool MyGuiApp::OnInit( ) {
     refine2d_results_panel   = new Refine2DResultsPanel(results_panel->ResultsBook);
     refinement_results_panel = new MyRefinementResultsPanel(results_panel->ResultsBook);
 
-    // The other panels will be "stolen" from actions_panel_spa by "Reparenting" when the menu
-    // item is selected in MainFrame.cpp
+	// See src/gui/workflows/TmWorkflow.h for instantiation of Template Matching workflow panels.
 
-    // match_template_panel         = new MatchTemplatePanel(actions_panel->ActionsBook);
-    // match_template_results_panel = new MatchTemplateResultsPanel(actions_panel->ActionsBook);
-    // refine_template_panel        = new RefineTemplatePanel(actions_panel->ActionsBook);
 #ifdef EXPERIMENTAL
     refine_template_dev_panel = new RefineTemplateDevPanel(experimental_panel->ExperimentalBook);
 #endif
@@ -264,9 +230,8 @@ bool MyGuiApp::OnInit( ) {
 
     SettingsBookIconImages->Add(run_profiles_icon_bmp);
 
+	// See src/gui/workflows headers for assignment of wxImageList to Actions Panel
     main_frame->MenuBook->AssignImageList(MenuBookIconImages);
-    // actions_panel_spa->ActionsBook->AssignImageList(ActionsSpaBookIconImages);
-    // actions_panel_tm->ActionsBook->AssignImageList(ActionsTmBookIconImages);
     assets_panel->AssetsBook->AssignImageList(AssetsBookIconImages);
     results_panel->ResultsBook->AssignImageList(ResultsBookIconImages);
     settings_panel->SettingsBook->AssignImageList(SettingsBookIconImages);
@@ -279,10 +244,7 @@ bool MyGuiApp::OnInit( ) {
     main_frame->MenuBook->AddPage(overview_panel, "Overview", true, 0);
     main_frame->MenuBook->AddPage(assets_panel, "Assets", false, 1);
     main_frame->MenuBook->AddPage(actions_panel, "Actions", false, 2);
-    // main_frame->MenuBook->AddPage(actions_panel_tm, "Actions", false, 2);
-    // main_frame->MenuBook->RemovePage(2);
 
-    // main_frame->MenuBook->AddPage(actions_panel_spa, "Actions", false, 2);
     main_frame->MenuBook->AddPage(results_panel, "Results", false, 3);
     main_frame->MenuBook->AddPage(settings_panel, "Settings", false, 4);
 #ifdef EXPERIMENTAL

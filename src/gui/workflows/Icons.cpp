@@ -32,35 +32,44 @@
 #include <wx/bitmap.h>
 
 wxImageList* GetActionsSpaBookIconImages( ) {
-    wxImageList* list = nullptr;
-    if ( ! list ) {
-        list = new wxImageList( );
-        list->Add(wxBITMAP_PNG_FROM_DATA(movie_align_icon));
-        list->Add(wxBITMAP_PNG_FROM_DATA(ctf_icon));
-        list->Add(wxBITMAP_PNG_FROM_DATA(particle_position_icon));
-        list->Add(wxBITMAP_PNG_FROM_DATA(classification_icon));
-        list->Add(wxBITMAP_PNG_FROM_DATA(abinitio_icon));
-        list->Add(wxBITMAP_PNG_FROM_DATA(growth));
-        list->Add(wxBITMAP_PNG_FROM_DATA(manual_refine_icon));
-        list->Add(wxBITMAP_PNG_FROM_DATA(refine_ctf_icon));
-        list->Add(wxBITMAP_PNG_FROM_DATA(generate3d_icon));
-        list->Add(wxBITMAP_PNG_FROM_DATA(sharpen_map_icon));
+
+    /* It is theoretically possible to get a statically initialized wxImageList to avoid re-instantiating a new
+	list every time the workflow is changed, but the tradeoff in added code and complexity is likely not worth 
+	it. The number of icons that are being added to these lists are maximally in the tens, which makes such 
+	lazy loading relatively inexpensive. If the number of images were in the hundreds to thousands, this may be 
+	a worthy solution, but despite being non-optimal, for cisTEM's case this is a perfectly suitable solution. */
+
+	wxImageList* spa_list = nullptr;
+
+    if ( ! spa_list ) {
+        spa_list = new wxImageList( );
+        spa_list->Add(wxBITMAP_PNG_FROM_DATA(movie_align_icon));
+        spa_list->Add(wxBITMAP_PNG_FROM_DATA(ctf_icon));
+        spa_list->Add(wxBITMAP_PNG_FROM_DATA(particle_position_icon));
+        spa_list->Add(wxBITMAP_PNG_FROM_DATA(classification_icon));
+        spa_list->Add(wxBITMAP_PNG_FROM_DATA(abinitio_icon));
+        spa_list->Add(wxBITMAP_PNG_FROM_DATA(growth));
+        spa_list->Add(wxBITMAP_PNG_FROM_DATA(manual_refine_icon));
+        spa_list->Add(wxBITMAP_PNG_FROM_DATA(refine_ctf_icon));
+        spa_list->Add(wxBITMAP_PNG_FROM_DATA(generate3d_icon));
+        spa_list->Add(wxBITMAP_PNG_FROM_DATA(sharpen_map_icon));
     }
 
-    return list;
+    return spa_list;
 }
 
 wxImageList* GetActionsTmBookIconImages( ) {
-    wxImageList* list = nullptr;
-    if ( ! list ) {
-        list = new wxImageList( );
-        list->Add(wxBITMAP_PNG_FROM_DATA(movie_align_icon));
-        list->Add(wxBITMAP_PNG_FROM_DATA(ctf_icon));
-        list->Add(wxBITMAP_PNG_FROM_DATA(match_template_icon));
-        list->Add(wxBITMAP_PNG_FROM_DATA(refine_template_icon));
-        list->Add(wxBITMAP_PNG_FROM_DATA(generate3d_icon));
-        list->Add(wxBITMAP_PNG_FROM_DATA(sharpen_map_icon));
+    wxImageList* tm_list = nullptr;
+
+    if ( ! tm_list ) {
+        tm_list = new wxImageList( );
+        tm_list->Add(wxBITMAP_PNG_FROM_DATA(movie_align_icon));
+        tm_list->Add(wxBITMAP_PNG_FROM_DATA(ctf_icon));
+        tm_list->Add(wxBITMAP_PNG_FROM_DATA(match_template_icon));
+        tm_list->Add(wxBITMAP_PNG_FROM_DATA(refine_template_icon));
+        tm_list->Add(wxBITMAP_PNG_FROM_DATA(generate3d_icon));
+        tm_list->Add(wxBITMAP_PNG_FROM_DATA(sharpen_map_icon));
     }
 
-    return list;
+    return tm_list;
 }

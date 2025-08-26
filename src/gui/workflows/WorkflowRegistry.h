@@ -18,8 +18,6 @@ struct WorkflowDefinition {
 
 class WorkflowRegistry {
   public:
-    // using PanelFactory = std::function<wxPanel*(wxWindow*)>;
-
     inline static WorkflowRegistry& Instance( ) {
         static WorkflowRegistry instance;
         return instance;

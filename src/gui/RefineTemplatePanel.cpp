@@ -70,6 +70,8 @@ bool RefineTemplatePanel::CheckGroupHasTemplateMatchRunDone( ) {
     int         images_with_template_match_counter;
     bool        image_was_found;
 
+    // If check prevents looking for results when there are none, which could
+    // cause a crash.
     if ( images_with_template_match_result.GetCount( ) > 0 ) {
         for ( int image_in_group_counter = 0; image_in_group_counter < image_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection( )); image_in_group_counter++ ) {
             current_image_id = image_asset_panel->all_assets_list->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection( ), image_in_group_counter))->asset_id;

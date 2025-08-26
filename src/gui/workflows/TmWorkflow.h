@@ -41,7 +41,10 @@ struct TmWorkflowRegister {
             generate_3d_panel                = new Generate3DPanel(actions_panel->ActionsBook);
             sharpen_3d_panel                 = new Sharpen3DPanel(actions_panel->ActionsBook);
 
-            actions_panel->ActionsBook->AssignImageList(GetActionsTmBookIconImages( ));
+            if ( ! actions_panel->ActionsBook->GetImageList( ) ) {
+                actions_panel->ActionsBook->AssignImageList(GetActionsTmBookIconImages( ));
+            }
+
             actions_panel->ActionsBook->AddPage(align_movies_panel, "Align Movies", true, 0);
             actions_panel->ActionsBook->AddPage(findctf_panel, "Find CTF", false, 1);
             actions_panel->ActionsBook->AddPage(match_template_panel, "Match Templates", false, 2);

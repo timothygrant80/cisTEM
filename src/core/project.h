@@ -25,9 +25,9 @@ class Project {
     double total_cpu_hours;
     int    total_jobs_run;
 
-    int                    integer_database_version;
-    wxString               cistem_version_text;
-    cistem::workflow::Enum current_workflow; // It would be better to connect this somehow to main_frame.current_workflow or vice-versa
+    int      integer_database_version;
+    wxString cistem_version_text;
+    wxString current_workflow; // It would be better to connect this somehow to main_frame.current_workflow or vice-versa
 
     Project( );
     ~Project( );
@@ -38,5 +38,5 @@ class Project {
     bool ReadMasterSettings( );
     void WriteProjectStatisticsToDatabase( );
 
-    inline bool RecordCurrentWorkflowInDB(cistem::workflow::Enum workflow) { return database.RecordCurrentWorkflowInDB(workflow); }
+    inline bool RecordCurrentWorkflowInDB(wxString workflow) { return database.RecordCurrentWorkflowInDB(workflow); }
 };

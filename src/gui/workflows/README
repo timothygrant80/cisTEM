@@ -1,0 +1,129 @@
+# Workflow System Integration Guide
+
+This document outlines the steps required to add a new workflow to the cisTEM GUI using the workflow registry system introduced in this PR. Workflows allow for modular, dynamic switching between major analysis modes—such as Single Particle, Template Matching, or new ones you invent—via the graphical interface.
+
+## Overview
+
+The workflow system is managed via the central registry class at:
+- `src/gui/workflows/WorkflowRegistry.h`
+
+Each workflow is defined by a name and factory functions for its key panels (currently ActionsPanel, optionally ResultsPanel). These workflows are registered at static initialization and presented as selectable options in the GUI's Workflow menu.
+
+## Steps to Add a New Workflow
+
+Below is a step-by-step example for adding a new workflow called **Simulate**.
+
+### 1. Create Workflow Panel(s)
+
+Start by designing your workflow-specific panels. At minimum, you need an Actions Panel.
+
+**Example: Actions Panel**
+- Create `src/gui/ActionsPanelSimulate.h` and `.cpp` with a class like `ActionsPanelSimulate : public ActionsPanelParent`.
+- Implement workflow-specific logic and subpages as desired.
+
+**Example: Results Panel (optional)**
+- Create `src/gui/ResultsPanelSimulate.h` and `.cpp` (subclassing `ResultsPanelParent`).
+
+### 2. Add Workflow Icons
+
+Add any custom icons for this workflow to:
+- `src/gui/workflows/Icons.cpp`
+- Define and implement a getter such as `wxImageList* GetActionsSimulateBookIconImages();`
+
+### 3. Define the Workflow Registration
+
+Create a new header for your workflow definition and registration logic:
+- `src/gui/workflows/SimulateWorkflow.h`
+
+Example content:
+```cpp
+#include "../ActionsPanelSimulate.h"
+#include "Icons.h"
+#include "WorkflowRegistry.h"
+
+extern ActionsPanelParent* actions_panel;
+
+struct SimulateWorkflowRegister {
+    SimulateWorkflowRegister() {
+        WorkflowDefinition def;
+        def.name = "Simulate";
+        def.createActionsPanel = [](wxWindow* parent) {
+            ActionsPanelSimulate* panel = new ActionsPanelSimulate(parent);
+            // Instantiate any subpanels here...
+            panel->ActionsBook->AssignImageList(GetActionsSimulateBookIconImages());
+            // AddPage for each panel
+            return static_cast<ActionsPanelParent*>(panel);
+        };
+        WorkflowRegistry::Instance().RegisterWorkflow(def);
+    }
+};
+
+static SimulateWorkflowRegister register_simulate_workflow;
+```
+
+- Place this header in `src/gui/workflows/SimulateWorkflow.h` and include it in your panel’s `.cpp` or the main GUI headers as appropriate.
+
+### 4. Register Workflow in the Registry
+
+When the program starts, your workflow is automatically registered thanks to static initialization. The WorkflowRegistry singleton manages all registered workflows:
+- **File:** `src/gui/workflows/WorkflowRegistry.h`
+- **Key Method:** `RegisterWorkflow(const WorkflowDefinition def)`
+
+### 5. Integrate Panels in Main Application
+
+In your main GUI source (typically `src/programs/projectx/projectx.cpp` or `src/gui/MainFrame.cpp`):
+- Update includes to reference your new workflow header.
+- The registry will make your workflow available as a menu item automatically.
+- The Actions panel for your workflow is created like so:
+  ```cpp
+  actions_panel = static_cast<ActionsPanelParent*>(
+      WorkflowRegistry::Instance().CreateActionsPanel("Simulate", main_frame->MenuBook));
+  ```
+- If you implement ResultsPanel logic, add a similar factory to your WorkflowDefinition and hook it up in the main frame.
+
+### 6. Update wxFormBuilder Project (GUI Menu)
+
+To make your workflow accessible from the GUI:
+- Open `src/gui/wxformbuilder/ProjectX_main.fbp` in wxFormBuilder.
+- Add a new radio item to the "Workflow" menu with the label "Simulate".
+- Assign its event handler to call your workflow switch logic (usually via `OnWorkflowMenuSelection`).
+
+**Note:** You do not need to manually wire menu items to workflow logic—the registry and main frame handle this dynamically. However, you must ensure the menu item exists and matches the workflow name.
+
+### 7. Add Panel Instantiation and Layout
+
+Within your workflow’s ActionsPanel, instantiate all required subpanels and add them to the book via `AddPage`. Assign your custom icon list via `AssignImageList`.
+
+**Example (in ActionsPanelSimulate):**
+```cpp
+ActionsBook->AssignImageList(GetActionsSimulateBookIconImages());
+ActionsBook->AddPage(simulate_panel, "Run Simulation", true, 0);
+ActionsBook->AddPage(results_panel, "Simulation Results", false, 1);
+// ...etc.
+```
+
+### 8. Persist Workflow State
+
+Workflow state is managed via the project and database classes and automatically updated using:
+- `Project::RecordCurrentWorkflowInDB(wxString workflow)`
+- No additional changes are needed for new workflows, as everything is keyed from the workflow name.
+
+## Reference: Key Files and Locations
+
+- **WorkflowRegistry:** `src/gui/workflows/WorkflowRegistry.h`
+- **Icons:** `src/gui/workflows/Icons.h`, `src/gui/workflows/Icons.cpp`
+- **Example Workflow Registration:** `src/gui/workflows/SimulateWorkflow.h`
+- **Panel Implementation:** `src/gui/ActionsPanelSimulate.h`/`.cpp`, `src/gui/ResultsPanelSimulate.h`/`.cpp`
+- **Main Frame Integration:** `src/programs/projectx/projectx.cpp`, `src/gui/MainFrame.cpp`
+- **wxFormBuilder GUI:** `src/gui/wxformbuilder/ProjectX_main.fbp`
+
+## Tips
+
+- Always match the workflow name exactly between registration and menu item labels.
+- Use static initialization to ensure registration is performed before GUI logic.
+- Icons should be added to your custom list and assigned as shown.
+- For more advanced workflows, extend your WorkflowDefinition with additional panels as needed.
+
+---
+
+**For further help, see the documentation in each source file, especially comments in `WorkflowRegistry.h` and your workflow panel header.**

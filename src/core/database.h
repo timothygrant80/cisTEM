@@ -3,7 +3,6 @@
 
 class Database {
 
-    bool is_open;
     bool in_batch_insert;
     bool in_batch_select;
 
@@ -16,6 +15,8 @@ class Database {
     sqlite3*   sqlite_database;
     int        last_return_code;
     wxFileName database_file;
+
+    bool is_open; // for tracking database status when performing operations that occur before database has been within MainFrame::current_project
 
     Database( );
     ~Database( );
@@ -71,8 +72,47 @@ class Database {
         }
     }
 
-    inline bool RecordCurrentWorkflowInDB(cistem::workflow::Enum workflow) {
-        ExecuteSQL(wxString::Format("UPDATE MASTER_SETTINGS SET CURRENT_WORKFLOW = %i", workflow));
+    inline bool RecordCurrentWorkflowInDB(const wxString& workflow) {
+        // Perform update of workflow stored as integer to workflow stored as string
+        if ( CheckIfCurrentWorkflowIsInteger( ) ) {
+            ExecuteSQL("CREATE TABLE MASTER_SETTINGS_BACKUP AS SELECT * FROM MASTER_SETTINGS;");
+            ExecuteSQL("DROP TABLE MASTER_SETTINGS;");
+            ExecuteSQL(wxString("CREATE TABLE MASTER_SETTINGS (") +
+                       "NUMBER INTEGER, " +
+                       "PROJECT_DIRECTORY TEXT, " +
+                       "PROJECT_NAME TEXT, " +
+                       "CURRENT_VERSION TEXT, " +
+                       "TOTAL_CPU_HOURS INTEGER, " +
+                       "TOTAL_JOBS_RUN INTEGER, " +
+                       "CISTEM_VERSION_TEXT TEXT, " +
+                       "CURRENT_WORKFLOW TEXT);");
+
+            ExecuteSQL(wxString::Format("INSERT INTO MASTER_SETTINGS ("
+                                        "NUMBER, "
+                                        "PROJECT_DIRECTORY, "
+                                        "PROJECT_NAME, "
+                                        "CURRENT_VERSION, "
+                                        "TOTAL_CPU_HOURS, "
+                                        "TOTAL_JOBS_RUN, "
+                                        "CISTEM_VERSION_TEXT, "
+                                        "CURRENT_WORKFLOW"
+                                        ")"
+                                        "SELECT "
+                                        "NUMBER, "
+                                        "PROJECT_DIRECTORY, "
+                                        "PROJECT_NAME, "
+                                        "CURRENT_VERSION, "
+                                        "TOTAL_CPU_HOURS, "
+                                        "TOTAL_JOBS_RUN, "
+                                        "CISTEM_VERSION_TEXT, "
+                                        "'%s' "
+                                        "FROM MASTER_SETTINGS_BACKUP;",
+                                        workflow));
+            ExecuteSQL("DROP TABLE MASTER_SETTINGS_BACKUP;");
+        }
+        else {
+            ExecuteSQL(wxString::Format("UPDATE MASTER_SETTINGS SET CURRENT_WORKFLOW = '%s'", workflow));
+        }
         return true;
     }
 
@@ -82,7 +122,7 @@ class Database {
     bool AddColumnToTable(wxString table_name, wxString column_name, wxString column_format, wxString default_value);
     //bool DeleteTable(const char *table_name);
     bool InsertOrReplace(const char* table_name, const char* column_format, ...);
-    bool GetMasterSettings(wxFileName& project_directory, wxString& project_name, int& imported_integer_version, double& total_cpu_hours, int& total_jobs_run, wxString& cistem_version_text, cistem::workflow::Enum& current_workflow);
+    bool GetMasterSettings(wxFileName& project_directory, wxString& project_name, int& imported_integer_version, double& total_cpu_hours, int& total_jobs_run, wxString& cistem_version_text, wxString& current_workflow);
 
     bool SetProjectStatistics(double& total_cpu_hours, int& total_jobs_run);
     bool CreateAllTables( );
@@ -380,6 +420,7 @@ class Database {
     std::pair<TableChanges, ColumnChanges> CheckSchema( );
     bool                                   UpdateSchema(ColumnChanges columns, UpdateProgressTracker* progress_bar = nullptr, unsigned long total_num_rows = 0, int normalized_increments = 100);
     bool                                   UpdateVersion( );
+    bool                                   CheckIfCurrentWorkflowIsInteger( );
 };
 
 class BeginCommitLocker // just call begin in the contructor, and commit in the destructor, if it hasn't already been called.

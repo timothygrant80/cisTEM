@@ -29,7 +29,7 @@
         <property name="use_array_enum">0</property>
         <property name="use_enum">1</property>
         <property name="use_microsoft_bom">0</property>
-        <object class="Frame" expanded="0">
+        <object class="Frame" expanded="1">
             <property name="aui_managed">0</property>
             <property name="aui_manager_style">wxAUI_MGR_DEFAULT</property>
             <property name="bg"></property>
@@ -186,7 +186,7 @@
                     </object>
                 </object>
             </object>
-            <object class="wxMenuBar" expanded="0">
+            <object class="wxMenuBar" expanded="1">
                 <property name="bg"></property>
                 <property name="context_help"></property>
                 <property name="context_menu">1</property>
@@ -273,42 +273,10 @@
                         <event name="OnMenuSelection">OnFileExit</event>
                     </object>
                 </object>
-                <object class="wxMenu" expanded="0">
+                <object class="wxMenu" expanded="1">
                     <property name="label">Workflow</property>
                     <property name="name">WorkflowMenu</property>
                     <property name="permission">protected</property>
-                    <object class="wxMenuItem" expanded="0">
-                        <property name="bitmap"></property>
-                        <property name="checked">1</property>
-                        <property name="enabled">1</property>
-                        <property name="help"></property>
-                        <property name="id">wxID_ANY</property>
-                        <property name="kind">wxITEM_RADIO</property>
-                        <property name="label">Single Particle </property>
-                        <property name="name">WorkflowSingleParticle</property>
-                        <property name="permission">protected</property>
-                        <property name="shortcut"></property>
-                        <property name="unchecked_bitmap"></property>
-                        <event name="OnMenuSelection">OnSingleParticleWorkflow</event>
-                    </object>
-                    <object class="wxMenuItem" expanded="0">
-                        <property name="bitmap"></property>
-                        <property name="checked">0</property>
-                        <property name="enabled">1</property>
-                        <property name="help"></property>
-                        <property name="id">wxID_ANY</property>
-                        <property name="kind">wxITEM_RADIO</property>
-                        <property name="label">Template Matching</property>
-                        <property name="name">WorkflowTemplateMatching</property>
-                        <property name="permission">protected</property>
-                        <property name="shortcut"></property>
-                        <property name="unchecked_bitmap"></property>
-                        <event name="OnMenuSelection">OnTemplateMatchingWorkflow</event>
-                    </object>
-                    <object class="separator" expanded="0">
-                        <property name="name">m_separator11</property>
-                        <property name="permission">none</property>
-                    </object>
                 </object>
                 <object class="wxMenu" expanded="0">
                     <property name="label">Help</property>
@@ -1311,7 +1279,6 @@
                 </object>
             </object>
         </object>
-
         <object class="Dialog" expanded="0">
             <property name="aui_managed">0</property>
             <property name="aui_manager_style">wxAUI_MGR_DEFAULT</property>

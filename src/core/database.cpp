@@ -878,7 +878,7 @@ bool Database::InsertOrReplace(const char* table_name, const char* column_format
     return true;
 }
 
-bool Database::GetMasterSettings(wxFileName& project_directory, wxString& project_name, int& imported_integer_version, double& total_cpu_hours, int& total_jobs_run, wxString& cistem_version_text, cistem::workflow::Enum& current_workflow) {
+bool Database::GetMasterSettings(wxFileName& project_directory, wxString& project_name, int& imported_integer_version, double& total_cpu_hours, int& total_jobs_run, wxString& cistem_version_text, wxString& current_workflow) {
     MyDebugAssertTrue(is_open == true, "database not open!");
 
     sqlite3_stmt* sqlite_statement;
@@ -893,7 +893,7 @@ bool Database::GetMasterSettings(wxFileName& project_directory, wxString& projec
     total_cpu_hours          = sqlite3_column_double(sqlite_statement, 4);
     total_jobs_run           = sqlite3_column_int(sqlite_statement, 5);
     cistem_version_text      = sqlite3_column_text(sqlite_statement, 6);
-    current_workflow         = static_cast<cistem::workflow::Enum>(sqlite3_column_int(sqlite_statement, 7));
+    current_workflow         = sqlite3_column_text(sqlite_statement, 7);
 
     Finalize(sqlite_statement);
     return true;
@@ -2724,7 +2724,7 @@ std::pair<Database::TableChanges, Database::ColumnChanges> Database::CheckSchema
             std::cerr << "Skipping table TEMPLATE_MATCH_PEAK_LIST_ check." << std::endl;
             continue;
         }
-                if ( std::get<0>(table) == "TEMPLATE_MATCH_PEAK_CHANGE_LIST_" ) {
+        if ( std::get<0>(table) == "TEMPLATE_MATCH_PEAK_CHANGE_LIST_" ) {
             std::cerr << "Skipping table TEMPLATE_MATCH_PEAK_CHANGE_LIST_ check." << std::endl;
             continue;
         }
@@ -2748,6 +2748,44 @@ std::pair<Database::TableChanges, Database::ColumnChanges> Database::CheckSchema
     }
 
     return std::pair<TableChanges, ColumnChanges>(missing_tables, missing_columns);
+}
+
+/**
+ * @brief Older versions of cisTEM used an integer type to represent workflow.
+ * Newer versions use a string, and so the database must be checked for this
+ * to avoid a crash when cisTEM loads up the static tables.
+ * 
+ * @return true If workflow uses integer.
+ * @return false If workflow uses text.
+ */
+bool Database::CheckIfCurrentWorkflowIsInteger( ) {
+    const char*   sql       = "PRAGMA table_info(MASTER_SETTINGS);";
+    const char*   error_msg = NULL;
+    sqlite3_stmt* stmt;
+    bool          is_integer = false;
+
+    if ( sqlite3_prepare_v2(sqlite_database, sql, -1, &stmt, &error_msg) != SQLITE_OK ) {
+        MyPrintWithDetails("SQL Error: %s\nTrying to execute the following command: \n\n%s\n", error_msg, sql);
+        sqlite3_free((void*)error_msg);
+        DEBUG_ABORT;
+    }
+
+    while ( sqlite3_step(stmt) == SQLITE_ROW ) {
+        const unsigned char* column_name = sqlite3_column_text(stmt, 1); // Gets name
+        const unsigned char* column_type = sqlite3_column_text(stmt, 2); // Gets type
+
+        if ( column_name && std::string(reinterpret_cast<const char*>(column_name)) == "CURRENT_WORKFLOW" ) {
+            if ( column_type ) {
+                std::string type_str = reinterpret_cast<const char*>(column_type);
+                if ( type_str == "INTEGER" ) {
+                    is_integer = true;
+                }
+            }
+            break;
+        }
+    }
+    sqlite3_finalize(stmt);
+    return is_integer;
 }
 
 BeginCommitLocker::BeginCommitLocker(Database* wanted_database) {

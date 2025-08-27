@@ -1,5 +1,6 @@
 //#include "../../core/core_headers.h"
 #include "../../core/gui_core_headers.h"
+#include "../../gui/workflows/WorkflowRegistry.h"
 
 class
         MyGuiApp : public wxApp {
@@ -24,9 +25,8 @@ RefineCTFPanel*       refine_ctf_panel;
 Generate3DPanel*      generate_3d_panel;
 Sharpen3DPanel*       sharpen_3d_panel;
 
-MyOverviewPanel*           overview_panel;
-ActionsPanelSpa*           actions_panel_spa;
-ActionsPanelTm*            actions_panel_tm;
+MyOverviewPanel*    overview_panel;
+ActionsPanelParent* actions_panel;
 AssetsPanel*               assets_panel;
 MyResultsPanel*            results_panel;
 SettingsPanel*             settings_panel;
@@ -121,12 +121,10 @@ bool MyGuiApp::OnInit( ) {
     SetupDefaultColorBar( );
 
     // Left hand Panels
-    overview_panel    = new MyOverviewPanel(main_frame->MenuBook, wxID_ANY);
-    actions_panel_spa = new ActionsPanelSpa(main_frame->MenuBook, wxID_ANY);
-    actions_panel_tm  = new ActionsPanelTm(main_frame->MenuBook, wxID_ANY);
-    assets_panel      = new MyAssetsPanel(main_frame->MenuBook, wxID_ANY);
-    results_panel     = new MyResultsPanel(main_frame->MenuBook, wxID_ANY);
-    settings_panel    = new MySettingsPanel(main_frame->MenuBook, wxID_ANY);
+    overview_panel = new MyOverviewPanel(main_frame->MenuBook, wxID_ANY);
+    assets_panel   = new MyAssetsPanel(main_frame->MenuBook, wxID_ANY);
+    results_panel  = new MyResultsPanel(main_frame->MenuBook, wxID_ANY);
+    settings_panel = new MySettingsPanel(main_frame->MenuBook, wxID_ANY);
 #ifdef EXPERIMENTAL
     experimental_panel = new MyExperimentalPanel(main_frame->MenuBook, wxID_ANY);
 #endif
@@ -142,16 +140,10 @@ bool MyGuiApp::OnInit( ) {
     template_matches_package_asset_panel = new TemplateMatchesPackageAssetPanel(assets_panel->AssetsBook);
 
     refinement_package_asset_panel = new MyRefinementPackageAssetPanel(assets_panel->AssetsBook);
-    align_movies_panel             = new MyAlignMoviesPanel(actions_panel_spa->ActionsBook);
-    findctf_panel                  = new MyFindCTFPanel(actions_panel_spa->ActionsBook);
-    findparticles_panel            = new MyFindParticlesPanel(actions_panel_spa->ActionsBook);
-    classification_panel           = new MyRefine2DPanel(actions_panel_spa->ActionsBook);
-    ab_initio_3d_panel             = new AbInitio3DPanel(actions_panel_spa->ActionsBook);
-    auto_refine_3d_panel           = new AutoRefine3DPanel(actions_panel_spa->ActionsBook);
-    refine_3d_panel                = new MyRefine3DPanel(actions_panel_spa->ActionsBook);
-    refine_ctf_panel               = new RefineCTFPanel(actions_panel_spa->ActionsBook);
-    generate_3d_panel              = new Generate3DPanel(actions_panel_spa->ActionsBook);
-    sharpen_3d_panel               = new Sharpen3DPanel(actions_panel_spa->ActionsBook);
+
+	// See src/gui/workflows/SpaWorkflow.h for instantiation of the SPA workflow panels
+
+    actions_panel = static_cast<ActionsPanelParent*>(WorkflowRegistry::Instance( ).CreateActionsPanel("Single Particle", main_frame->MenuBook));
 
     movie_results_panel      = new MyMovieAlignResultsPanel(results_panel->ResultsBook);
     ctf_results_panel        = new MyFindCTFResultsPanel(results_panel->ResultsBook);
@@ -159,22 +151,17 @@ bool MyGuiApp::OnInit( ) {
     refine2d_results_panel   = new Refine2DResultsPanel(results_panel->ResultsBook);
     refinement_results_panel = new MyRefinementResultsPanel(results_panel->ResultsBook);
 
-    // The other panels will be "stolen" from actions_panel_spa by "Reparenting" when the menu
-    // item is selected in MainFrame.cpp
-    match_template_panel         = new MatchTemplatePanel(actions_panel_tm->ActionsBook);
-    match_template_results_panel = new MatchTemplateResultsPanel(actions_panel_tm->ActionsBook);
-    refine_template_panel        = new RefineTemplatePanel(actions_panel_tm->ActionsBook);
+	// See src/gui/workflows/TmWorkflow.h for instantiation of Template Matching workflow panels.
+
 #ifdef EXPERIMENTAL
     refine_template_dev_panel = new RefineTemplateDevPanel(experimental_panel->ExperimentalBook);
 #endif
 
     // Setup list books
-    MenuBookIconImages       = new wxImageList( );
-    ActionsSpaBookIconImages = new wxImageList( );
-    ActionsTmBookIconImages  = new wxImageList( );
-    AssetsBookIconImages     = new wxImageList( );
-    ResultsBookIconImages    = new wxImageList( );
-    SettingsBookIconImages   = new wxImageList( );
+    MenuBookIconImages     = new wxImageList( );
+    AssetsBookIconImages   = new wxImageList( );
+    ResultsBookIconImages  = new wxImageList( );
+    SettingsBookIconImages = new wxImageList( );
 
 #ifdef EXPERIMENTAL
     ExperimentalBookIconImages = new wxImageList( );
@@ -226,17 +213,6 @@ bool MyGuiApp::OnInit( ) {
     MenuBookIconImages->Add(experimental_icon_bmp);
 #endif
 
-    ActionsSpaBookIconImages->Add(movie_align_icon_bmp);
-    ActionsSpaBookIconImages->Add(ctf_icon_bmp);
-    ActionsSpaBookIconImages->Add(find_particles_icon_bmp);
-    ActionsSpaBookIconImages->Add(classification_icon_bmp);
-    ActionsSpaBookIconImages->Add(ab_initio_3d_icon_bmp);
-    ActionsSpaBookIconImages->Add(refine3d_icon_bmp);
-    ActionsSpaBookIconImages->Add(manual_refine3d_icon_bmp);
-    ActionsSpaBookIconImages->Add(refine_ctf_icon_bmp);
-    ActionsSpaBookIconImages->Add(generate3d_icon_bmp);
-    ActionsSpaBookIconImages->Add(sharpen_map_icon_bmp);
-
     AssetsBookIconImages->Add(movie_icon_bmp);
     AssetsBookIconImages->Add(image_icon_bmp);
     AssetsBookIconImages->Add(particle_position_icon_bmp);
@@ -254,16 +230,8 @@ bool MyGuiApp::OnInit( ) {
 
     SettingsBookIconImages->Add(run_profiles_icon_bmp);
 
-    ActionsTmBookIconImages->Add(movie_align_icon_bmp);
-    ActionsTmBookIconImages->Add(ctf_icon_bmp);
-    ActionsTmBookIconImages->Add(match_template_icon_bmp);
-    ActionsTmBookIconImages->Add(refine_template_icon_bmp);
-    ActionsTmBookIconImages->Add(generate3d_icon_bmp);
-    ActionsTmBookIconImages->Add(sharpen_map_icon_bmp);
-
+	// See src/gui/workflows headers for assignment of wxImageList to Actions Panel
     main_frame->MenuBook->AssignImageList(MenuBookIconImages);
-    actions_panel_spa->ActionsBook->AssignImageList(ActionsSpaBookIconImages);
-    actions_panel_tm->ActionsBook->AssignImageList(ActionsTmBookIconImages);
     assets_panel->AssetsBook->AssignImageList(AssetsBookIconImages);
     results_panel->ResultsBook->AssignImageList(ResultsBookIconImages);
     settings_panel->SettingsBook->AssignImageList(SettingsBookIconImages);
@@ -275,10 +243,8 @@ bool MyGuiApp::OnInit( ) {
 
     main_frame->MenuBook->AddPage(overview_panel, "Overview", true, 0);
     main_frame->MenuBook->AddPage(assets_panel, "Assets", false, 1);
-    main_frame->MenuBook->AddPage(actions_panel_tm, "Actions", false, 2);
-    main_frame->MenuBook->RemovePage(2);
+    main_frame->MenuBook->AddPage(actions_panel, "Actions", false, 2);
 
-    main_frame->MenuBook->AddPage(actions_panel_spa, "Actions", false, 2);
     main_frame->MenuBook->AddPage(results_panel, "Results", false, 3);
     main_frame->MenuBook->AddPage(settings_panel, "Settings", false, 4);
 #ifdef EXPERIMENTAL
@@ -294,25 +260,6 @@ bool MyGuiApp::OnInit( ) {
     assets_panel->AssetsBook->AddPage(refinement_package_asset_panel, "Refine Pkgs.", false, 4);
     assets_panel->AssetsBook->AddPage(atomic_coordinates_asset_panel, "Atomic Coordinates", false, 5);
     assets_panel->AssetsBook->AddPage(template_matches_package_asset_panel, "MT Pkgs.", false, 4);
-
-    actions_panel_spa->ActionsBook->AddPage(align_movies_panel, "Align Movies", true, 0);
-    actions_panel_spa->ActionsBook->AddPage(findctf_panel, "Find CTF", false, 1);
-    actions_panel_spa->ActionsBook->AddPage(findparticles_panel, "Find Particles", false, 2);
-    actions_panel_spa->ActionsBook->AddPage(classification_panel, "2D Classify", false, 3);
-    actions_panel_spa->ActionsBook->AddPage(ab_initio_3d_panel, "Ab-Initio 3D", false, 4);
-    actions_panel_spa->ActionsBook->AddPage(auto_refine_3d_panel, "Auto Refine", false, 5);
-    actions_panel_spa->ActionsBook->AddPage(refine_3d_panel, "Manual Refine", false, 6);
-    actions_panel_spa->ActionsBook->AddPage(refine_ctf_panel, "Refine CTF", false, 7);
-    actions_panel_spa->ActionsBook->AddPage(generate_3d_panel, "Generate 3D", false, 8);
-    actions_panel_spa->ActionsBook->AddPage(sharpen_3d_panel, "Sharpen 3D", false, 9);
-
-    actions_panel_tm->ActionsBook->AddPage(align_movies_panel, "Align Movies", true, 0);
-    actions_panel_tm->ActionsBook->AddPage(findctf_panel, "Find CTF", false, 1);
-    actions_panel_tm->ActionsBook->AddPage(match_template_panel, "Match Templates", false, 2);
-    actions_panel_tm->ActionsBook->AddPage(refine_template_panel, "Refine Template", false, 3);
-    actions_panel_tm->ActionsBook->AddPage(match_template_results_panel, "MT Results", false, 2);
-    actions_panel_tm->ActionsBook->AddPage(generate_3d_panel, "Generate 3D", false, 4);
-    actions_panel_tm->ActionsBook->AddPage(sharpen_3d_panel, "Sharpen 3D", false, 5);
 
     results_panel->ResultsBook->AddPage(movie_results_panel, "Align Movies", true, 0);
     results_panel->ResultsBook->AddPage(ctf_results_panel, "Find CTF", false, 1);

@@ -16,8 +16,7 @@ extern TemplateMatchesPackageAssetPanel* template_matches_package_asset_panel;
 
 extern MyRefinementPackageAssetPanel* refinement_package_asset_panel;
 
-extern ActionsPanelSpa* actions_panel_spa;
-extern ActionsPanelTm*  actions_panel_tm;
+extern ActionsPanelParent* actions_panel;
 
 extern MyAlignMoviesPanel*   align_movies_panel;
 extern MyFindCTFPanel*       findctf_panel;
@@ -75,6 +74,18 @@ MyMainFrame::MyMainFrame(wxWindow* parent)
     int x_offset;
     int y_offset;
 
+    // We get to do this because the specific register for each workflow is static, so C++ static initialization
+    // phase initializes them before the execution of wxApp::OnInit() or main() run
+    for ( const auto& name : WorkflowRegistry::Instance( ).GetWorkflowNames( ) ) {
+        wxMenuItem* item = new wxMenuItem(WorkflowMenu, wxID_ANY, name, wxEmptyString, wxITEM_RADIO);
+        WorkflowMenu->Append(item);
+        WorkflowMenu->Bind(wxEVT_MENU, &MyMainFrame::OnWorkflowMenuSelection, this, item->GetId( ));
+    }
+
+    // Defaults into Single Particle which can be later updated by the value stored in the
+    // database, which does not happen until after panel construction.
+    current_workflow = "Single Particle";
+
     if ( screen_x_size > 1920 && screen_y_size > 1080 ) {
         x_offset = (screen_x_size - 1920) / 2;
         y_offset = (screen_y_size - 1080) / 2;
@@ -101,6 +112,20 @@ MyMainFrame::~MyMainFrame( ) {
     ShutDownServer( );
     ShutDownSocketMonitor( );
     ClearScratchDirectory( );
+}
+
+void MyMainFrame::OnWorkflowMenuSelection(wxCommandEvent& event) {
+    wxMenuItem* workflow_item = WorkflowMenu->FindItem(event.GetId( ));
+    if ( workflow_item ) {
+        const wxString name = workflow_item->GetItemLabelText( );
+        if ( name != current_workflow ) {
+            current_workflow = name;
+            SwitchWorkflowPanels(name);
+            if ( current_project.database.is_open ) {
+                current_project.database.RecordCurrentWorkflowInDB(current_workflow);
+            }
+        }
+    }
 }
 
 void MyMainFrame::OnCharHook(wxKeyEvent& event) {
@@ -286,10 +311,12 @@ void MyMainFrame::DirtyVolumes( ) {
     sharpen_3d_panel->volumes_are_dirty     = true;
     refine_ctf_panel->volumes_are_dirty     = true;
 
-    match_template_panel->volumes_are_dirty = true;
+    if ( current_workflow == "Template Matching" ) {
+        match_template_panel->volumes_are_dirty = true;
 #ifdef EXPERIMENTAL
-    refine_template_panel->volumes_are_dirty = true;
+        refine_template_panel->volumes_are_dirty = true;
 #endif
+    }
 }
 
 void MyMainFrame::DirtyAtomicCoordinates( ) {
@@ -304,14 +331,17 @@ void MyMainFrame::DirtyMovieGroups( ) {
 }
 
 void MyMainFrame::DirtyImageGroups( ) {
-    image_asset_panel->is_dirty                        = true;
-    findctf_panel->group_combo_is_dirty                = true;
-    ctf_results_panel->group_combo_is_dirty            = true;
-    findparticles_panel->group_combo_is_dirty          = true;
-    picking_results_panel->group_combo_is_dirty        = true;
-    match_template_panel->group_combo_is_dirty         = true;
-    match_template_results_panel->group_combo_is_dirty = true;
-    refine_template_panel->group_combo_is_dirty        = true;
+    image_asset_panel->is_dirty                 = true;
+    findctf_panel->group_combo_is_dirty         = true;
+    ctf_results_panel->group_combo_is_dirty     = true;
+    findparticles_panel->group_combo_is_dirty   = true;
+    picking_results_panel->group_combo_is_dirty = true;
+
+    if ( current_workflow == "Template Matching" ) {
+        match_template_panel->group_combo_is_dirty         = true;
+        match_template_results_panel->group_combo_is_dirty = true;
+        refine_template_panel->group_combo_is_dirty        = true;
+    }
 }
 
 void MyMainFrame::DirtyParticlePositionGroups( ) {
@@ -331,7 +361,8 @@ void MyMainFrame::DirtyRefinementPackages( ) {
 }
 
 void MyMainFrame::DirtyTemplateMatchesPackages( ) {
-    template_matches_package_asset_panel->is_dirty = true;
+    if ( current_workflow == "Template Matching" )
+        template_matches_package_asset_panel->is_dirty = true;
 }
 
 void MyMainFrame::DirtyRefinements( ) {
@@ -351,18 +382,24 @@ void MyMainFrame::DirtyClassificationSelections( ) {
 }
 
 void MyMainFrame::DirtyRunProfiles( ) {
-    run_profiles_panel->is_dirty                  = true;
-    align_movies_panel->run_profiles_are_dirty    = true;
-    findctf_panel->run_profiles_are_dirty         = true;
-    findparticles_panel->run_profiles_are_dirty   = true;
-    classification_panel->run_profiles_are_dirty  = true;
-    refine_3d_panel->run_profiles_are_dirty       = true;
-    refine_ctf_panel->run_profiles_are_dirty      = true;
-    auto_refine_3d_panel->run_profiles_are_dirty  = true;
-    ab_initio_3d_panel->run_profiles_are_dirty    = true;
-    generate_3d_panel->run_profiles_are_dirty     = true;
-    match_template_panel->run_profiles_are_dirty  = true;
-    refine_template_panel->run_profiles_are_dirty = true;
+    if ( current_workflow == "Single Particle" ) {
+        run_profiles_panel->is_dirty                 = true;
+        align_movies_panel->run_profiles_are_dirty   = true;
+        findctf_panel->run_profiles_are_dirty        = true;
+        findparticles_panel->run_profiles_are_dirty  = true;
+        classification_panel->run_profiles_are_dirty = true;
+        refine_3d_panel->run_profiles_are_dirty      = true;
+        refine_ctf_panel->run_profiles_are_dirty     = true;
+        auto_refine_3d_panel->run_profiles_are_dirty = true;
+        ab_initio_3d_panel->run_profiles_are_dirty   = true;
+        generate_3d_panel->run_profiles_are_dirty    = true;
+    }
+    else if ( current_workflow == "Template Matching" ) {
+        align_movies_panel->run_profiles_are_dirty    = true;
+        findctf_panel->run_profiles_are_dirty         = true;
+        match_template_panel->run_profiles_are_dirty  = true;
+        refine_template_panel->run_profiles_are_dirty = true;
+    }
 }
 
 // SOCKETS
@@ -657,11 +694,14 @@ void MyMainFrame::OpenProject(wxString project_filename) {
         ctf_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT IMAGE_ASSET_ID FROM ESTIMATED_CTF_PARAMETERS");
         //	current_project.database.AddCTFIcinessColumnIfNecessary();
         my_dialog->Update(8, "Opening project (loading Match Template Results...)");
-        match_template_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT IMAGE_ASSET_ID FROM TEMPLATE_MATCH_LIST");
-        my_dialog->Update(9, "Opening project (loading atomic coordinates assets...)");
-        atomic_coordinates_asset_panel->ImportAllFromDatabase( );
-        my_dialog->Update(10, "Opening project (loading Template Matches Packages...)");
-        template_matches_package_asset_panel->ImportAllFromDatabase( );
+
+        if ( current_workflow == "Template Matching" ) {
+            match_template_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT IMAGE_ASSET_ID FROM TEMPLATE_MATCH_LIST");
+            my_dialog->Update(9, "Opening project (loading atomic coordinates assets...)");
+            atomic_coordinates_asset_panel->ImportAllFromDatabase( );
+            my_dialog->Update(10, "Opening project (loading Template Matches Packages...)");
+            template_matches_package_asset_panel->ImportAllFromDatabase( );
+        }
 
         my_dialog->Update(11, "Opening project (finishing...)");
         picking_results_panel->OnProjectOpen( );
@@ -675,17 +715,34 @@ void MyMainFrame::OpenProject(wxString project_filename) {
         ClearScratchDirectory( );
         overview_panel->SetProjectInfo( );
 
-        // Set the Workflow
-        switch ( current_project.current_workflow ) {
-            case cistem::workflow::template_matching: {
-                // We need to set the current workflow to the default prior to calling SetTemplateMatchingWorkflow, or else
-                // it will think it is already set and not change the workflow.
-                current_workflow = cistem::workflow::single_particle;
-                SetTemplateMatchingWorkflow( );
-                break;
+        // This should never execute, but if somehow current_workflow is empty, log that it was and set a default.
+        if ( current_workflow.IsEmpty( ) ) {
+            wxLogWarning("The current workflow could not be found; returning Single Particle as default to prevent errors.");
+            current_workflow = "Single Particle";
+        }
+
+        if ( current_project.database.is_open ) {
+            // Need to check if there is already a value recorded first.
+            // Know database is open so check what is currently recorded
+            if ( current_project.database.CheckIfCurrentWorkflowIsInteger( ) ) {
+                const int workflow_val = current_project.database.ReturnSingleIntFromSelectCommand("select CURRENT_WORKFLOW from MASTER_SETTINGS");
+
+                // When using enum logic, these were the values used for setting the respective workflows
+                constexpr int old_spa_val = 0;
+                constexpr int old_tm_val  = 1;
+                if ( workflow_val == old_spa_val ) {
+                    current_workflow = "Single Particle";
+                }
+                else if ( workflow_val == old_tm_val ) {
+                    current_workflow = "Template Matching";
+                }
             }
-            default: {
+            else {
+                current_workflow = current_project.database.ReturnSingleStringFromSelectCommand("select CURRENT_WORKFLOW from MASTER_SETTINGS");
             }
+            current_project.database.RecordCurrentWorkflowInDB(current_workflow);
+            SwitchWorkflowPanels(current_workflow);
+            ManuallyUpdateWorkflowMenuCheckBox( );
         }
     }
     else {
@@ -900,81 +957,28 @@ bool MyMainFrame::MigrateProject(wxString old_project_directory, wxString new_pr
     return true;
 }
 
-template <class FrameTypeFrom, class FrameTypeTo>
-void MyMainFrame::UpdateWorkflow(FrameTypeFrom* input_frame, FrameTypeTo* output_frame, wxString frame_name) {
+void MyMainFrame::SwitchWorkflowPanels(const wxString& workflow_name) {
+    Freeze( );
 
-    // Record the currently displayed page so we can maintain it.
-    int displayed_page_idx = MenuBook->FindPage(MenuBook->GetCurrentPage( ));
+    int current_page_idx  = MenuBook->GetSelection( );
+    int actions_panel_idx = MenuBook->FindPage(actions_panel);
+    MenuBook->RemovePage(actions_panel_idx);
 
-    // Get the stored index of the input frame so we can replace it in-place.
-    int current_page_idx = MenuBook->FindPage(input_frame);
-    MenuBook->RemovePage(current_page_idx);
+    if ( actions_panel ) {
+        actions_panel->Destroy( );
+        actions_panel = nullptr;
+    }
 
-    // Set the parent to the output frame
-    align_movies_panel->Reparent(output_frame->ActionsBook);
-    findctf_panel->Reparent(output_frame->ActionsBook);
-    generate_3d_panel->Reparent(output_frame->ActionsBook);
-    sharpen_3d_panel->Reparent(output_frame->ActionsBook);
+    actions_panel = static_cast<ActionsPanelParent*>(WorkflowRegistry::Instance( ).CreateActionsPanel(workflow_name, this->MenuBook));
+    this->MenuBook->InsertPage(actions_panel_idx, actions_panel, "Actions", false, actions_panel_idx);
+    this->MenuBook->SetSelection(current_page_idx);
 
-    // TODO: number two needs to be set from some record.
-    MenuBook->InsertPage(current_page_idx, output_frame, frame_name, false, current_page_idx);
+    // TODO: Repeat above logic for any panels that are different between workflows
 
-    MenuBook->SetSelection(displayed_page_idx);
-
+    actions_panel->Layout( );
+    MenuBook->Layout( );
     Layout( );
-    Refresh( );
-}
-
-void MyMainFrame::SetSingleParticleWorkflow(bool triggered_by_gui_event) {
-
-    // The idenitiy of the event (selecting worflow menu) defines the output panel.
-    if ( current_workflow != cistem::workflow::single_particle ) {
-        previous_workflow = current_workflow;
-        // With only two workflows, we don't need the switch, but
-        switch ( current_workflow ) {
-            case cistem::workflow::template_matching: {
-                UpdateWorkflow(actions_panel_tm, actions_panel_spa, "Actions");
-
-                // If other panels, e.g. results is a likely next candidate, it should go here.
-                // TODO: if there are multiple panels to switch, we'll need to only do the update and set the icon for the LAST call in this sequence.
-                break;
-            }
-            default: {
-                MyDebugAssertTrue(false, "Unknown workflow");
-                break;
-            }
-        }
-        current_workflow = cistem::workflow::single_particle;
-        if ( current_project.is_open == true )
-            current_project.RecordCurrentWorkflowInDB(current_workflow);
-        // If not called from the GUI, we need to update the menu.
-        if ( ! triggered_by_gui_event ) {
-            ManuallyUpdateWorkflowMenuCheckBox( );
-        }
-    }
-}
-
-void MyMainFrame::OnSingleParticleWorkflow(wxCommandEvent& event) {
-    SetSingleParticleWorkflow(true);
-}
-
-void MyMainFrame::SetTemplateMatchingWorkflow(bool triggered_by_gui_event) {
-    if ( current_workflow != cistem::workflow::template_matching ) {
-        previous_workflow = current_workflow;
-        UpdateWorkflow(actions_panel_spa, actions_panel_tm, "Actions");
-        current_workflow = cistem::workflow::template_matching;
-        if ( current_project.is_open == true )
-            current_project.RecordCurrentWorkflowInDB(current_workflow);
-
-        // If not called from the GUI, we need to update the menu.
-        if ( ! triggered_by_gui_event ) {
-            ManuallyUpdateWorkflowMenuCheckBox( );
-        }
-    }
-}
-
-void MyMainFrame::OnTemplateMatchingWorkflow(wxCommandEvent& event) {
-    SetTemplateMatchingWorkflow(true);
+    Thaw( );
 }
 
 void MyMainFrame::UpdateDatabase(std::pair<Database::TableChanges, Database::ColumnChanges>& schema_comparison) {

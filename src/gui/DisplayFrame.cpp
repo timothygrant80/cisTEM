@@ -1,5 +1,6 @@
 #include "../core/gui_core_headers.h"
 #include "../programs/cisTEM_display/DisplayServer.h" // includes wxEVT_SERVER_OPEN_FILE
+#include <wx/pen.h>
 
 DisplayFrame::DisplayFrame(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style)
     : DisplayFrameParent(NULL, wxID_ANY, title, pos, size, style) {
@@ -81,32 +82,133 @@ void DisplayFrame::OnSaveDisplayedImagesClick(wxCommandEvent& event) {
     }
 
     // Crop out the blank space around the image: get the true width of the relevant area on the bitmap.
-    wxBitmap sub_bitmap;
-    int      sub_bmp_width;
-    int      sub_bmp_height;
-    int      single_image_x = cisTEMDisplayPanel->ReturnCurrentPanel( )->single_image_x;
-    int      single_image_y = cisTEMDisplayPanel->ReturnCurrentPanel( )->single_image_y;
-    float    scale_factor   = cisTEMDisplayPanel->ReturnCurrentPanel( )->actual_scale_factor;
-    if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->single_image ) {
-        cisTEMDisplayPanel->ReturnCurrentPanel( )->GetClientSize(&sub_bmp_width, &sub_bmp_height);
-        if ( single_image_x * scale_factor + sub_bmp_width > cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_image->GetWidth( ) ) {
-            sub_bmp_width = cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_image->GetWidth( ) - single_image_x * scale_factor;
-        }
-        if ( single_image_y * scale_factor + sub_bmp_height > cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_image->GetHeight( ) ) {
-            sub_bmp_height = cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_image->GetHeight( ) - single_image_y * scale_factor;
-        }
-        wxRect  sub_bmp_dims(single_image_x * scale_factor, single_image_y * scale_factor, sub_bmp_width, sub_bmp_height);
-        wxImage tmp_sub_img(cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_image->GetSubImage(sub_bmp_dims));
-        sub_bitmap = wxBitmap(tmp_sub_img);
-    }
-    else {
-        sub_bmp_width  = cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnImageXSize( ) * cisTEMDisplayPanel->ReturnCurrentPanel( )->actual_scale_factor * cisTEMDisplayPanel->ReturnCurrentPanel( )->images_in_x;
-        sub_bmp_height = cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnImageYSize( ) * cisTEMDisplayPanel->ReturnCurrentPanel( )->actual_scale_factor * cisTEMDisplayPanel->ReturnCurrentPanel( )->images_in_y;
-        wxRect sub_bmp_dims(single_image_x * scale_factor, single_image_y * scale_factor, sub_bmp_width, sub_bmp_height);
-        sub_bitmap = cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_bitmap.GetSubBitmap(sub_bmp_dims);
-    }
+    wxBitmap sub_bitmap = CropImageForSaving( );
 
     sub_bitmap.SaveFile(save_file_dialog.GetPath( ), wxBITMAP_TYPE_PNG);
+}
+
+void DisplayFrame::OnSaveDisplayedImagesWithLegendClick(wxCommandEvent& event) {
+    // Mimics the logic ProperOverwriteCheckSaveDialog in my_controls.cpp
+    wxFileDialog save_file_dialog(this, _("Save png image with legend"), wxEmptyString, wxEmptyString, "PNG files (*.png)|*.png", wxFD_SAVE | wxFD_OVERWRITE_PROMPT, wxDefaultPosition, wxDefaultSize, wxFileDialogNameStr);
+
+    wxString wanted_extension = ".png";
+    wxString default_dir      = cisTEMDisplayPanel->ReturnCurrentPanel( )->filename;
+
+    // Strip away the filename to get the directory
+    default_dir = default_dir.BeforeLast('/');
+
+    save_file_dialog.SetDirectory(default_dir);
+    wxString extension_lowercase = wanted_extension.Lower( );
+    wxString extension_uppercase = wanted_extension.Upper( );
+
+    if ( save_file_dialog.ShowModal( ) == wxID_CANCEL ) {
+        save_file_dialog.Destroy( );
+        return;
+    }
+
+    // Crop out the blank space around the image: get the true width of the relevant area on the bitmap.
+    wxBitmap sub_bitmap     = CropImageForSaving( );
+    int      sub_bmp_width  = sub_bitmap.GetWidth( );
+    int      sub_bmp_height = sub_bitmap.GetHeight( );
+
+    // Create legend, width of 80 pixels
+    int legend_width = 80;
+
+    int     legend_height = sub_bmp_height;
+    wxImage legend_img(legend_width, legend_height);
+
+    // Draw color bar gradient; this method calculates a value for each row
+    // of the legend and fills it in with a grayscale color by using the
+    // proportional distance from the top (max) to the bottom (min).
+    for ( int y = 0; y < legend_height; ++y ) {
+        double t = 1.0 - double(y) / legend_height;
+
+        // Simple grayscale: interpolate between min and max
+        unsigned char val = static_cast<unsigned char>(255 * t);
+        for ( int x = 0; x < legend_width; ++x ) {
+            legend_img.SetRGB(x, y, val, val, val);
+        }
+    }
+
+    // Draw min/max text
+    // Note: wxImage does not support drawing directly, so we convert to wxBitmap for this step
+    // and then convert back to wxImage
+    wxBitmap   legend_bmp(legend_img);
+    wxMemoryDC dc(legend_bmp);
+
+    // Add a spacer between the image and the legend
+    int     spacer_width = 15;
+    wxImage spacer_img(spacer_width, sub_bmp_height);
+    for ( int y = 0; y < sub_bmp_height; ++y ) {
+        for ( int x = 0; x < spacer_width; ++x ) {
+            spacer_img.SetRGB(x, y, 255, 255, 255);
+        }
+    }
+
+    int     combined_width = sub_bmp_width + legend_width + spacer_width;
+    int     white_space    = 200;
+    wxImage background_img(combined_width + white_space, sub_bmp_height + white_space);
+    for ( int i = 0; i < background_img.GetWidth( ); ++i ) {
+        for ( int j = 0; j < background_img.GetHeight( ); ++j ) {
+            background_img.SetRGB(i, j, 255, 255, 255);
+        }
+    }
+
+    // Minimum tick spacing should be about 1/5 of the legend height to balance readability and clutter;
+    // if there is not much space, only use 2 gradations (min and max)
+    int min_tick_spacing = sub_bmp_height / 5;
+    int num_gradations   = std::max(2, legend_height / min_tick_spacing);
+
+    float min_pixel, max_pixel;
+    cisTEMDisplayPanel->ReturnCurrentPanel( )->image_memory_buffer->GetMinMax(min_pixel, max_pixel);
+    float pixel_range = max_pixel - min_pixel;
+
+    // Convert to bitmap to be able to draw
+    wxBitmap background_bmp(background_img);
+    dc.SelectObject(background_bmp);
+    dc.SetPen(wxPen(*wxBLACK, 2));
+
+    for ( int i = 0; i < num_gradations; ++i ) {
+        // Spread gradations only across the legend area
+        int legend_top_y    = white_space / 2;
+        int legend_bottom_y = legend_top_y + legend_height - 1;
+        int y               = legend_top_y + int(i * (legend_height - 1) / (num_gradations - 1));
+
+        // Calculate the value corresponding to this gradation by interpolating between min and max
+        double value = max_pixel - (pixel_range * i) / (num_gradations - 1);
+
+        int legend_right_x    = sub_bmp_width + spacer_width + white_space / 2 + legend_width;
+        int gradation_start_x = legend_right_x;
+        int gradation_end_x   = gradation_start_x + 10;
+
+        dc.DrawLine(gradation_start_x, y, gradation_end_x, y);
+
+        // Subtract 12 from y to better align text with gradation line, add 5 to starting point
+        // to space out from the gradation line
+        dc.DrawText(wxString::Format("%.2f", value), gradation_end_x + 5, y - 12);
+    }
+
+    dc.SelectObject(wxNullBitmap);
+
+    // Combine all the images
+    wxImage combined_img(background_img.GetWidth( ), background_img.GetHeight( ), true);
+    combined_img.Paste(background_bmp.ConvertToImage( ), 0, 0);
+    combined_img.Paste(sub_bitmap.ConvertToImage( ), white_space / 2, white_space / 2);
+    combined_img.Paste(spacer_img, sub_bmp_width + white_space / 2, white_space / 2);
+    combined_img.Paste(legend_bmp.ConvertToImage( ), sub_bmp_width + spacer_width + white_space / 2, white_space / 2);
+
+    // Finally, draw a rectangle around the legend area to separate it from the background
+    // This is done last to ensure the rectangle is on top of everything else and transparent
+    // so there's nothing blocking the view of the legend, but the rectangle border is still
+    // visible.
+    wxBitmap combined_bmp(combined_img);
+    dc.SelectObject(combined_bmp);
+    dc.SetBrush(*wxTRANSPARENT_BRUSH);
+    dc.DrawRectangle(sub_bmp_width + spacer_width + white_space / 2, white_space / 2, legend_width, legend_height);
+    combined_img = combined_bmp.ConvertToImage( );
+    dc.SelectObject(wxNullBitmap);
+
+    combined_img.SaveFile(save_file_dialog.GetPath( ), wxBITMAP_TYPE_PNG);
 }
 
 void DisplayFrame::OnServerOpenFile(wxCommandEvent& event) {
@@ -583,6 +685,7 @@ void DisplayFrame::DisableAllToolbarButtons( ) {
     // Open menu only needs close tab disabled
     DisplayCloseTab->Enable(false);
     SaveDisplayedImages->Enable(false);
+    SaveDisplayedImagesWithLegend->Enable(false);
 
     // Label menu
     LabelLocationNumber->Enable(false);
@@ -607,6 +710,7 @@ void DisplayFrame::EnableAllToolbarButtons( ) {
     // Open menu only needs close tab disabled
     DisplayCloseTab->Enable( );
     SaveDisplayedImages->Enable( );
+    SaveDisplayedImagesWithLegend->Enable( );
 
     // Label menu
     LabelLocationNumber->Enable( );
@@ -765,4 +869,57 @@ void DisplayFrame::ClearTextFileFromPanel( ) {
     cisTEMDisplayPanel->ReturnCurrentPanel( )->short_txt_filename = wxEmptyString;
     cisTEMDisplayPanel->ReturnCurrentPanel( )->current_file_path  = wxEmptyString;
     cisTEMDisplayPanel->SetTabNameSaved( );
+}
+
+/**
+ * @brief Crops the current image at the borders to remove excess blank space aroudn the image(s) being displayed.
+ * 
+ * @return wxBitmap The cropped bitmap ready for saving.
+ */
+wxBitmap DisplayFrame::CropImageForSaving( ) {
+
+    // TODO: must also account for the case of a single image being displayed but not being in single image mode;
+    // failure to do so causes the saved image to have excessively large legend (speicfically in terms of legend height)
+    // because the image is small but the legend is sized for the full panel.
+    wxBitmap sub_bitmap;
+    int      sub_bmp_width;
+    int      sub_bmp_height;
+    int      single_image_x = cisTEMDisplayPanel->ReturnCurrentPanel( )->single_image_x;
+    int      single_image_y = cisTEMDisplayPanel->ReturnCurrentPanel( )->single_image_y;
+    float    scale_factor   = cisTEMDisplayPanel->ReturnCurrentPanel( )->actual_scale_factor;
+    if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->single_image ) {
+        cisTEMDisplayPanel->ReturnCurrentPanel( )->GetClientSize(&sub_bmp_width, &sub_bmp_height);
+        if ( single_image_x * scale_factor + sub_bmp_width > cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_image->GetWidth( ) ) {
+            sub_bmp_width = cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_image->GetWidth( ) - single_image_x * scale_factor;
+        }
+        if ( single_image_y * scale_factor + sub_bmp_height > cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_image->GetHeight( ) ) {
+            sub_bmp_height = cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_image->GetHeight( ) - single_image_y * scale_factor;
+        }
+        wxRect  sub_bmp_dims(single_image_x * scale_factor, single_image_y * scale_factor, sub_bmp_width, sub_bmp_height);
+        wxImage tmp_sub_img(cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_image->GetSubImage(sub_bmp_dims));
+        sub_bitmap = wxBitmap(tmp_sub_img);
+    }
+    else {
+        int num_rows_with_imgs = cisTEMDisplayPanel->ReturnCurrentPanel( )->images_in_current_view / cisTEMDisplayPanel->ReturnCurrentPanel( )->images_in_x;
+
+        // if columns_in_x is 0, then we have less than one full row of images, the number of rows shown is 1
+        // if columns_in_x is > 0, then we have at least one full row of images, and the number of rows shown is either 1 or more;
+        // we can check if it's more than one by using modulus; if it's 0, then all rows are filled, otherwise we have a partial row
+        // and must increment by 1.
+        if ( num_rows_with_imgs > 0 ) {
+            // We have a partial row, so increment filled_rows by 1
+            if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->images_in_current_view % cisTEMDisplayPanel->ReturnCurrentPanel( )->images_in_x != 0 ) {
+                num_rows_with_imgs++;
+            }
+        }
+        else {
+            num_rows_with_imgs = 1;
+        }
+
+        sub_bmp_width  = cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnImageXSize( ) * cisTEMDisplayPanel->ReturnCurrentPanel( )->actual_scale_factor * cisTEMDisplayPanel->ReturnCurrentPanel( )->images_in_x;
+        sub_bmp_height = cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnImageYSize( ) * cisTEMDisplayPanel->ReturnCurrentPanel( )->actual_scale_factor * num_rows_with_imgs;
+        wxRect sub_bmp_dims(single_image_x * scale_factor, single_image_y * scale_factor, sub_bmp_width, sub_bmp_height);
+        sub_bitmap = cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_bitmap.GetSubBitmap(sub_bmp_dims);
+    }
+    return sub_bitmap;
 }

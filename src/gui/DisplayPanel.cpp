@@ -2338,8 +2338,17 @@ void DisplayNotebookPanel::ReDrawPanel(void) {
             images_in_x            = 1;
             images_in_y            = 1;
         }
-        else
-            images_in_current_view = images_in_x * images_in_y;
+        else {
+            // Checks if the number of images that will be displayed on the panel will fill the available
+            // space; if not, then we adjust the images_in_current_view to be accurate.
+            const int imgs_remaining = ReturnNumberofImages( ) + 1 - current_location;
+            if ( imgs_remaining < images_in_x * images_in_y ) {
+                images_in_current_view = imgs_remaining;
+            }
+            else {
+                images_in_current_view = images_in_x * images_in_y;
+            }
+        }
 
         if ( current_location != location_on_last_draw || images_in_x != images_in_x_on_last_draw || images_in_y != images_in_y_on_last_draw ) {
             //dc.Clear();

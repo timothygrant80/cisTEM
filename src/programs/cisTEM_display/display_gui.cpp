@@ -50,6 +50,16 @@ DisplayFrameParent::DisplayFrameParent( wxWindow* parent, wxWindowID id, const w
 
 	DisplayFileMenu->AppendSeparator();
 
+	SaveDisplayedImages = new wxMenuItem( DisplayFileMenu, wxID_ANY, wxString( wxT("Save Displayed Image(s) As PNG") ) , wxEmptyString, wxITEM_NORMAL );
+	DisplayFileMenu->Append( SaveDisplayedImages );
+	SaveDisplayedImages->Enable( false );
+
+	SaveDisplayedImagesWithLegend = new wxMenuItem( DisplayFileMenu, wxID_ANY, wxString( wxT("Save Displayed Image(s) As PNG with Legend") ) , wxEmptyString, wxITEM_NORMAL );
+	DisplayFileMenu->Append( SaveDisplayedImagesWithLegend );
+	SaveDisplayedImagesWithLegend->Enable( false );
+
+	DisplayFileMenu->AppendSeparator();
+
 	SelectOpenTxt = new wxMenuItem( DisplayFileMenu, wxID_ANY, wxString( wxT("Open Text File") ) , wxEmptyString, wxITEM_NORMAL );
 	DisplayFileMenu->Append( SelectOpenTxt );
 	SelectOpenTxt->Enable( false );
@@ -133,6 +143,9 @@ DisplayFrameParent::DisplayFrameParent( wxWindow* parent, wxWindowID id, const w
 	m_menubar2->Append( DisplayOptionsMenu, wxT("Options") );
 
 	DisplayHelpMenu = new wxMenu();
+	HelpDisplayControls = new wxMenuItem( DisplayHelpMenu, wxID_ANY, wxString( wxT("Display Controls") ) , wxT("User Manual for cisTEM Display"), wxITEM_NORMAL );
+	DisplayHelpMenu->Append( HelpDisplayControls );
+
 	HelpAbout = new wxMenuItem( DisplayHelpMenu, wxID_ANY, wxString( wxT("Documentation") ) , wxEmptyString, wxITEM_NORMAL );
 	DisplayHelpMenu->Append( HelpAbout );
 
@@ -155,6 +168,8 @@ DisplayFrameParent::DisplayFrameParent( wxWindow* parent, wxWindowID id, const w
 	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( DisplayFrameParent::OnUpdateUI ) );
 	DisplayFileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnFileOpenClick ), this, DisplayFileOpen->GetId());
 	DisplayFileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnCloseTabClick ), this, DisplayCloseTab->GetId());
+	DisplayFileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSaveDisplayedImagesClick ), this, SaveDisplayedImages->GetId());
+	DisplayFileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSaveDisplayedImagesWithLegendClick ), this, SaveDisplayedImagesWithLegend->GetId());
 	DisplayFileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnOpenTxtClick ), this, SelectOpenTxt->GetId());
 	DisplayFileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSaveTxtClick ), this, SelectSaveTxt->GetId());
 	DisplayFileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSaveTxtAsClick ), this, SelectSaveTxtAs->GetId());
@@ -171,6 +186,7 @@ DisplayFrameParent::DisplayFrameParent( wxWindow* parent, wxWindowID id, const w
 	DisplayOptionsMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSingleImageModeClick ), this, OptionsSingleImageMode->GetId());
 	DisplayOptionsMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnShowSelectionDistancesClick ), this, OptionsShowSelectionDistances->GetId());
 	DisplayOptionsMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnShowResolution ), this, OptionsShowResolution->GetId());
+	DisplayHelpMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnDisplayControlsClick ), this, HelpDisplayControls->GetId());
 	DisplayHelpMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnDocumentationClick ), this, HelpAbout->GetId());
 }
 

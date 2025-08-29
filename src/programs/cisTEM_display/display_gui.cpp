@@ -54,6 +54,10 @@ DisplayFrameParent::DisplayFrameParent( wxWindow* parent, wxWindowID id, const w
 	DisplayFileMenu->Append( SaveDisplayedImages );
 	SaveDisplayedImages->Enable( false );
 
+	SaveDisplayedImagesWithLegend = new wxMenuItem( DisplayFileMenu, wxID_ANY, wxString( wxT("Save Displayed Image(s) As PNG with Legend") ) , wxEmptyString, wxITEM_NORMAL );
+	DisplayFileMenu->Append( SaveDisplayedImagesWithLegend );
+	SaveDisplayedImagesWithLegend->Enable( false );
+
 	DisplayFileMenu->AppendSeparator();
 
 	SelectOpenTxt = new wxMenuItem( DisplayFileMenu, wxID_ANY, wxString( wxT("Open Text File") ) , wxEmptyString, wxITEM_NORMAL );
@@ -165,6 +169,7 @@ DisplayFrameParent::DisplayFrameParent( wxWindow* parent, wxWindowID id, const w
 	DisplayFileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnFileOpenClick ), this, DisplayFileOpen->GetId());
 	DisplayFileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnCloseTabClick ), this, DisplayCloseTab->GetId());
 	DisplayFileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSaveDisplayedImagesClick ), this, SaveDisplayedImages->GetId());
+	DisplayFileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSaveDisplayedImagesWithLegendClick ), this, SaveDisplayedImagesWithLegend->GetId());
 	DisplayFileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnOpenTxtClick ), this, SelectOpenTxt->GetId());
 	DisplayFileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSaveTxtClick ), this, SelectSaveTxt->GetId());
 	DisplayFileMenu->Bind(wxEVT_COMMAND_MENU_SELECTED, wxCommandEventHandler( DisplayFrameParent::OnSaveTxtAsClick ), this, SelectSaveTxtAs->GetId());

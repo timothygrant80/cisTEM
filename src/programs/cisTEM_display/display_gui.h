@@ -69,6 +69,7 @@ class DisplayFrameParent : public wxFrame
 		wxMenuItem* DisplayFileOpen;
 		wxMenuItem* DisplayCloseTab;
 		wxMenuItem* SaveDisplayedImages;
+		wxMenuItem* SaveDisplayedImagesWithLegend;
 		wxMenuItem* SelectOpenTxt;
 		wxMenuItem* SelectSaveTxt;
 		wxMenuItem* SelectSaveTxtAs;
@@ -98,6 +99,7 @@ class DisplayFrameParent : public wxFrame
 		virtual void OnFileOpenClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnCloseTabClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnSaveDisplayedImagesClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnSaveDisplayedImagesWithLegendClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnOpenTxtClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnSaveTxtClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnSaveTxtAsClick( wxCommandEvent& event ) { event.Skip(); }

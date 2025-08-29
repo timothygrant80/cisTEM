@@ -22,6 +22,7 @@ class DisplayFrame : public DisplayFrameParent {
     // File menu
     void OnFileOpenClick(wxCommandEvent& event);
     void OnSaveDisplayedImagesClick(wxCommandEvent& event);
+    void OnSaveDisplayedImagesWithLegendClick(wxCommandEvent& event);
     void OnCloseTabClick(wxCommandEvent& event);
     void OnExitClick(wxCommandEvent& event);
 
@@ -56,6 +57,7 @@ class DisplayFrame : public DisplayFrameParent {
     bool     LoadCoords(wxString current_line, long& x, long& y, long& image_number);
     bool     LoadImageSelections(wxString current_line);
     void     ClearTextFileFromPanel( );
+    wxBitmap CropImageForSaving( );
 };
 
 #endif

@@ -359,8 +359,9 @@ void MyMainFrame::DirtyRefinementPackages( ) {
     generate_3d_panel->refinement_package_combo_is_dirty      = true;
 }
 
-void MyMainFrame::DirtyTemplateMatchesPackages( ) {
-    if ( current_workflow == "Template Matching" )
+ // NOTE: this can only be set when this workflow is active so the logic gate is probably not needed.
+ void MyMainFrame::DirtyTemplateMatchesPackages( ) {
+ if ( current_workflow == "Template Matching" )
         template_matches_package_asset_panel->is_dirty = true;
 }
 
@@ -382,10 +383,12 @@ void MyMainFrame::DirtyClassificationSelections( ) {
 }
 
 void MyMainFrame::DirtyRunProfiles( ) {
+
+    align_movies_panel->run_profiles_are_dirty = true;
+    findctf_panel->run_profiles_are_dirty      = true;
+    run_profiles_panel->is_dirty               = true;
+
     if ( current_workflow == "Single Particle" ) {
-        run_profiles_panel->is_dirty                 = true;
-        align_movies_panel->run_profiles_are_dirty   = true;
-        findctf_panel->run_profiles_are_dirty        = true;
         findparticles_panel->run_profiles_are_dirty  = true;
         classification_panel->run_profiles_are_dirty = true;
         refine_3d_panel->run_profiles_are_dirty      = true;
@@ -395,8 +398,6 @@ void MyMainFrame::DirtyRunProfiles( ) {
         generate_3d_panel->run_profiles_are_dirty    = true;
     }
     else if ( current_workflow == "Template Matching" ) {
-        align_movies_panel->run_profiles_are_dirty    = true;
-        findctf_panel->run_profiles_are_dirty         = true;
         match_template_panel->run_profiles_are_dirty  = true;
         refine_template_panel->run_profiles_are_dirty = true;
     }
@@ -980,6 +981,32 @@ void MyMainFrame::SwitchWorkflowPanels(const wxString& workflow_name) {
     actions_panel = static_cast<ActionsPanelParent*>(WorkflowRegistry::Instance( ).CreateActionsPanel(workflow_name, this->MenuBook));
     this->MenuBook->InsertPage(actions_panel_idx, actions_panel, "Actions", false, actions_panel_idx);
     this->MenuBook->SetSelection(current_page_idx);
+
+    // FIXME: This is a temp fix to handle the case for single_particle and template_matching workflows.
+    // NOTES:
+    // The state tracking "is_dirty" variables for each panel should be reworked, since this is global information shared to the panels
+    // I think main_frame could store the is_dirty state (and renamed to something better like _requires_refresh) and then all panels
+    // could query main_frame when they are shown to see if they need to refresh their contents.
+
+    if ( workflow_name == "Template Matching" ) {
+        match_template_panel->volumes_are_dirty            = volume_asset_panel->is_dirty;
+        match_template_panel->group_combo_is_dirty         = image_asset_panel->is_dirty;
+        match_template_results_panel->group_combo_is_dirty = image_asset_panel->is_dirty;
+        match_template_panel->run_profiles_are_dirty       = align_movies_panel->run_profiles_are_dirty;
+        refine_template_panel->run_profiles_are_dirty      = align_movies_panel->run_profiles_are_dirty;
+#ifdef EXPERIMENTAL
+        refine_template_panel->volumes_are_dirty = volume_asset_panel->is_dirty;
+#endif
+    }
+    else {
+        findparticles_panel->run_profiles_are_dirty  = align_movies_panel->run_profiles_are_dirty;
+        classification_panel->run_profiles_are_dirty = align_movies_panel->run_profiles_are_dirty;
+        refine_3d_panel->run_profiles_are_dirty      = align_movies_panel->run_profiles_are_dirty;
+        refine_ctf_panel->run_profiles_are_dirty     = align_movies_panel->run_profiles_are_dirty;
+        auto_refine_3d_panel->run_profiles_are_dirty = align_movies_panel->run_profiles_are_dirty;
+        ab_initio_3d_panel->run_profiles_are_dirty   = align_movies_panel->run_profiles_are_dirty;
+        generate_3d_panel->run_profiles_are_dirty    = align_movies_panel->run_profiles_are_dirty;
+    }
 
     // TODO: Repeat above logic for any panels that are different between workflows
 

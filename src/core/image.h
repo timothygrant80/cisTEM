@@ -131,9 +131,9 @@ class Image {
     Image(int wanted_x_size, int wanted_y_size, int wanted_z_size = 1, bool is_in_real_space = true, bool do_fft_planning = true);
     Image(const Image& other_image); // copy constructor
     ~Image( );
-    std::tuple<int, int> CropAndAddGaussianNoiseToDarkAreas(float sigma_for_filter = 0.01, float threshold_percentile = 0.1, float erosion_pixels = 0.0, float sigma_for_soft_edge = 0.01, bool calc_sigma_mean = true, float sigma_for_noise = 1.0, float mean_for_noise = 0.0, bool save_maks = false, wxString mask_filename = "");
-    Image&               operator=(const Image& t);
-    Image&               operator=(const Image* t);
+
+    Image& operator=(const Image& t);
+    Image& operator=(const Image* t);
 
     void SetupInitialValues( );
 
@@ -177,7 +177,7 @@ class Image {
     void  DividePixelWise(Image& other_image);
     bool  IsAlmostEqual(Image& other_image, bool print_if_failed = true, float epsilon = 0.0001f);
     void  AddGaussianNoise(float wanted_sigma_value = 1.0, RandomNumberGenerator* provided_generator = NULL);
-
+    
     void AddNoiseUsingGenerator(RandomNumberGenerator& provided_generator, NoiseType wanted_noise_type, float noise_param_1, float noise_param_2 = 1.0f);
 
     void AddNoise(NoiseType wanted_noise_type, float noise_param_1, float noise_param_2 = 1.0f) {

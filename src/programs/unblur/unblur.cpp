@@ -2,7 +2,7 @@
 
 // The timing that unblur originally tracks is always on, by direct reference to cistem_timer::StopWatch
 // The profiling for development is under conrtol of --enable-profiling.
-#ifdef PROFILING
+#ifdef CISTEM_PROFILING
 using namespace cistem_timer;
 #else
 #define PRINT_VERBOSE
@@ -275,7 +275,7 @@ bool UnBlurApp::DoCalculation( ) {
     int         last_frame                           = my_current_job.arguments[30].ReturnIntegerArgument( );
     int         number_of_frames_for_running_average = my_current_job.arguments[31].ReturnIntegerArgument( );
     int         max_threads                          = my_current_job.arguments[32].ReturnIntegerArgument( );
-    bool        saved_aligned_frames                 = my_current_job.arguments[33].ReturnBoolArgument( );
+    bool        save_aligned_frames                  = my_current_job.arguments[33].ReturnBoolArgument( );
     std::string aligned_frames_filename              = my_current_job.arguments[34].ReturnStringArgument( );
     std::string output_shift_text_file               = my_current_job.arguments[35].ReturnStringArgument( );
     int         eer_frames_per_image                 = my_current_job.arguments[36].ReturnIntegerArgument( );
@@ -341,7 +341,6 @@ bool UnBlurApp::DoCalculation( ) {
     long slice_byte_size;
 
     Image* unbinned_image_stack; // We will allocate this later depending on if we are binning or not.
-    Image* cropped_image_stack;
     Image* image_stack = new Image[number_of_input_images];
     Image* running_average_stack; // we will allocate this later if necessary;
 
@@ -520,7 +519,6 @@ bool UnBlurApp::DoCalculation( ) {
     if ( pre_binning_factor > 1 ) {
         unbinned_image_stack = image_stack;
         image_stack          = new Image[number_of_input_images];
-        cropped_image_stack  = new Image[number_of_input_images];
         pixel_size           = output_pixel_size * pre_binning_factor;
     }
     else {
@@ -544,16 +542,8 @@ bool UnBlurApp::DoCalculation( ) {
         profile_timing.start("make prebinned stack");
 #pragma omp parallel for default(shared) num_threads(max_threads) private(image_counter)
         for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
-            cropped_image_stack[image_counter].Allocate(unbinned_image_stack[image_counter].logical_x_dimension / 2, unbinned_image_stack[image_counter].logical_y_dimension / 2, 1, true);
-            unbinned_image_stack[image_counter].BackwardFFT( );
-            unbinned_image_stack[image_counter].ClipInto(&cropped_image_stack[image_counter]);
-
-            unbinned_image_stack[image_counter].ForwardFFT( );
-            cropped_image_stack[image_counter].ForwardFFT( );
-            cropped_image_stack[image_counter].ZeroCentralPixel( );
-
-            image_stack[image_counter].Allocate(cropped_image_stack[image_counter].logical_x_dimension / pre_binning_factor, cropped_image_stack[image_counter].logical_y_dimension / pre_binning_factor, 1, false);
-            cropped_image_stack[image_counter].ClipInto(&image_stack[image_counter]);
+            image_stack[image_counter].Allocate(unbinned_image_stack[image_counter].logical_x_dimension / pre_binning_factor, unbinned_image_stack[image_counter].logical_y_dimension / pre_binning_factor, 1, false);
+            unbinned_image_stack[image_counter].ClipInto(&image_stack[image_counter]);
             //image_stack[image_counter].QuickAndDirtyWriteSlice("binned.mrc", image_counter + 1);
         }
         profile_timing.lap("make prebinned stack");
@@ -585,8 +575,7 @@ bool UnBlurApp::DoCalculation( ) {
         // we don't need the binned images anymore..
 
         delete[] image_stack;
-        // delete [] cropped_image_stack;
-        image_stack = cropped_image_stack;
+        image_stack = unbinned_image_stack;
         pixel_size  = output_pixel_size;
 
         // Adjust the shifts, then phase shift the original images
@@ -616,13 +605,6 @@ bool UnBlurApp::DoCalculation( ) {
         unblur_refine_alignment(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, output_pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts, profile_timing_refinement_method);
         profile_timing.lap("final refine");
         // if allocated delete the binned stack, and swap the unbinned to image_stack - so that no matter what is happening we can just use image_stack
-        delete[] cropped_image_stack;
-        image_stack = unbinned_image_stack;
-#pragma omp parallel for default(shared) num_threads(max_threads) private(image_counter)
-        for ( image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
-
-            image_stack[image_counter].PhaseShift(x_shifts[image_counter], y_shifts[image_counter], 0.0);
-        }
     }
     unblur_timing.lap("final refine");
 
@@ -636,10 +618,8 @@ bool UnBlurApp::DoCalculation( ) {
             profile_timing.start("amplitude spectrum");
             sum_image_no_dose_filter.Allocate(image_stack[0].logical_x_dimension, image_stack[0].logical_y_dimension, false);
             sum_image_no_dose_filter.SetToConstant(0.0);
-        }
 
-        for ( image_counter = first_frame - 1; image_counter < last_frame; image_counter++ ) {
-            if ( write_out_amplitude_spectrum == true ) {
+            for ( image_counter = first_frame - 1; image_counter < last_frame; image_counter++ ) {
                 sum_image_no_dose_filter.AddImage(&image_stack[image_counter]);
             }
             profile_timing.lap("amplitude spectrum");
@@ -698,11 +678,10 @@ bool UnBlurApp::DoCalculation( ) {
 
         } // end omp section
         profile_timing.start("final sum");
-
         for ( image_counter = first_frame - 1; image_counter < last_frame; image_counter++ ) {
             sum_image.AddImage(&image_stack[image_counter]);
 
-            if ( saved_aligned_frames == true ) {
+            if ( save_aligned_frames == true ) {
                 image_stack[image_counter].QuickAndDirtyWriteSlice(aligned_frames_filename, image_counter + 1);
             }
         }
@@ -711,11 +690,10 @@ bool UnBlurApp::DoCalculation( ) {
     else // just add them
     {
         profile_timing.start("final sum");
-
         for ( image_counter = first_frame - 1; image_counter < last_frame; image_counter++ ) {
             sum_image.AddImage(&image_stack[image_counter]);
 
-            if ( saved_aligned_frames == true ) {
+            if ( save_aligned_frames == true ) {
                 image_stack[image_counter].QuickAndDirtyWriteSlice(aligned_frames_filename, image_counter + 1);
             }
         }
@@ -811,20 +789,6 @@ bool UnBlurApp::DoCalculation( ) {
 
     //  Shall we write out a scaled image?
 
-    sum_image.BackwardFFT( );
-    float                original_x    = sum_image.logical_x_dimension;
-    float                original_y    = sum_image.logical_y_dimension;
-    std::string          mask_filename = output_filename.substr(0, output_filename.size( ) - 4) + "_mask.mrc";
-    std::tuple<int, int> crop_location = sum_image.CropAndAddGaussianNoiseToDarkAreas(0.01, 0.1, 20, 0.01, true, 1.0, 0.0, true, mask_filename);
-    float                temp_float2[2];
-
-    NumericTextFile crop_output_file(output_filename + ".crop", OPEN_TO_WRITE, 2);
-
-    temp_float2[0] = std::get<0>(crop_location);
-    temp_float2[1] = std::get<1>(crop_location);
-
-    crop_output_file.WriteLine(temp_float2);
-    sum_image.ForwardFFT( );
     if ( write_out_small_sum_image == true ) {
         profile_timing.start("write out small sum image");
         // work out a good size..
@@ -842,10 +806,8 @@ bool UnBlurApp::DoCalculation( ) {
 
     // now we just need to write out the final sum..
     profile_timing.start("write out sum image");
-
-    sum_image.BackwardFFT( );
     MRCFile output_file(output_filename, true);
-
+    sum_image.BackwardFFT( );
     sum_image.WriteSlice(&output_file, 1); // I made this change as the file is only used once, and this way it is not created until it is actually written, which is cleaner for cancelled / crashed jobs
     output_file.SetPixelSize(output_pixel_size);
     EmpiricalDistribution<double> density_distribution;
@@ -857,8 +819,7 @@ bool UnBlurApp::DoCalculation( ) {
     // fill the result..
 
     profile_timing.start("fill result");
-
-    float* result_array = new float[number_of_input_images * 2 + 4];
+    float* result_array = new float[number_of_input_images * 2];
 
     if ( is_running_locally == true ) {
         NumericTextFile shifts_file(output_shift_text_file, OPEN_TO_WRITE, 2);
@@ -878,17 +839,11 @@ bool UnBlurApp::DoCalculation( ) {
             result_array[image_counter]                          = x_shifts[image_counter] * output_pixel_size;
             result_array[image_counter + number_of_input_images] = y_shifts[image_counter] * output_pixel_size;
         }
-        result_array[2 * number_of_input_images]     = original_x;
-        result_array[2 * number_of_input_images + 1] = original_y;
-        result_array[2 * number_of_input_images + 2] = temp_float2[0];
-        result_array[2 * number_of_input_images + 3] = temp_float2[1];
     }
 
+    my_result.SetResult(number_of_input_images * 2, result_array);
     profile_timing.lap("fill result");
     profile_timing.start("cleanup");
-
-    my_result.SetResult(number_of_input_images * 2 + 4, result_array);
-
     delete[] result_array;
     delete[] x_shifts;
     delete[] y_shifts;

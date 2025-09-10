@@ -215,6 +215,16 @@ class TemplateMatchingDataSizer {
         return input_size / float(wanted_binned_size);
     }
 
+    inline float GetRealizedHighResolutionLimitBasedOnWantedSize(float input_pixel_size, float input_size, float wanted_size) {
+        int   wanted_binned_size = wanted_size;
+        float realized_binning_factor;
+        if ( IsOdd(wanted_binned_size) )
+            wanted_binned_size++;
+
+        realized_binning_factor = input_size / float(wanted_binned_size);
+        return 2.0f * input_pixel_size * realized_binning_factor;
+    }
+
     inline int2 GetPrePadding( ) const {
         return pre_padding;
     }

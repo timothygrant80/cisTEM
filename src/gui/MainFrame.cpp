@@ -1045,32 +1045,6 @@ void MyMainFrame::SwitchWorkflowPanels(const wxString& workflow_name) {
     this->MenuBook->InsertPage(actions_panel_idx, actions_panel, "Actions", false, actions_panel_idx);
     this->MenuBook->SetSelection(current_page_idx);
 
-    // FIXME: This is a temp fix to handle the case for single_particle and template_matching workflows.
-    // NOTES:
-    // The state tracking "is_dirty" variables for each panel should be reworked, since this is global information shared to the panels
-    // I think main_frame could store the is_dirty state (and renamed to something better like _requires_refresh) and then all panels
-    // could query main_frame when they are shown to see if they need to refresh their contents.
-
-    if ( workflow_name == "Template Matching" ) {
-        match_template_panel->volumes_are_dirty            = volume_asset_panel->is_dirty;
-        match_template_panel->group_combo_is_dirty         = image_asset_panel->is_dirty;
-        match_template_results_panel->group_combo_is_dirty = image_asset_panel->is_dirty;
-        match_template_panel->run_profiles_are_dirty       = align_movies_panel->run_profiles_are_dirty;
-        refine_template_panel->run_profiles_are_dirty      = align_movies_panel->run_profiles_are_dirty;
-#ifdef EXPERIMENTAL
-        refine_template_panel->volumes_are_dirty = volume_asset_panel->is_dirty;
-#endif
-    }
-    else {
-        findparticles_panel->run_profiles_are_dirty  = align_movies_panel->run_profiles_are_dirty;
-        classification_panel->run_profiles_are_dirty = align_movies_panel->run_profiles_are_dirty;
-        refine_3d_panel->run_profiles_are_dirty      = align_movies_panel->run_profiles_are_dirty;
-        refine_ctf_panel->run_profiles_are_dirty     = align_movies_panel->run_profiles_are_dirty;
-        auto_refine_3d_panel->run_profiles_are_dirty = align_movies_panel->run_profiles_are_dirty;
-        ab_initio_3d_panel->run_profiles_are_dirty   = align_movies_panel->run_profiles_are_dirty;
-        generate_3d_panel->run_profiles_are_dirty    = align_movies_panel->run_profiles_are_dirty;
-    }
-
     // TODO: Repeat above logic for any panels that are different between workflows
 
     actions_panel->Layout( );

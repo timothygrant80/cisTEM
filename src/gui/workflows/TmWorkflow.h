@@ -35,7 +35,6 @@ struct TmWorkflowRegister {
             actions_panel                    = static_cast<ActionsPanelParent*>(actions_panel_tm);
             align_movies_panel               = new MyAlignMoviesPanel(actions_panel->ActionsBook);
             findctf_panel                    = new MyFindCTFPanel(actions_panel->ActionsBook);
-            match_template_results_panel     = new MatchTemplateResultsPanel(actions_panel->ActionsBook);
             match_template_panel             = new MatchTemplatePanel(actions_panel->ActionsBook);
             refine_template_panel            = new RefineTemplatePanel(actions_panel->ActionsBook);
             generate_3d_panel                = new Generate3DPanel(actions_panel->ActionsBook);
@@ -49,7 +48,6 @@ struct TmWorkflowRegister {
             actions_panel->ActionsBook->AddPage(findctf_panel, "Find CTF", false, 1);
             actions_panel->ActionsBook->AddPage(match_template_panel, "Match Templates", false, 2);
             actions_panel->ActionsBook->AddPage(refine_template_panel, "Refine Template", false, 3);
-            actions_panel->ActionsBook->AddPage(match_template_results_panel, "MT Results", false, 2);
             actions_panel->ActionsBook->AddPage(generate_3d_panel, "Generate 3D", false, 4);
             actions_panel->ActionsBook->AddPage(sharpen_3d_panel, "Sharpen 3D", false, 5);
 

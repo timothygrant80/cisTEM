@@ -63,7 +63,7 @@ struct SpaWorkflowRegister {
             actions_panel->ActionsBook->AddPage(generate_3d_panel, "Generate 3D", false, 8);
             actions_panel->ActionsBook->AddPage(sharpen_3d_panel, "Sharpen 3D", false, 9);
 
-            return actions_panel;
+                return actions_panel;
         };
         // TODO: define a results panel function as well
         WorkflowRegistry::Instance( ).RegisterWorkflow(def);

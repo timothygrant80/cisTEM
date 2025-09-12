@@ -25,8 +25,8 @@ fi
 # somewhere near vscode 1.98 the devcontainers extension stopped recognizing softlinks to .devcontainer.json
 # this is acknowedged as a bug (https://github.com/microsoft/vscode-remote-release/issues/10536)
 # As a workaround we create a softlink to .devcontainer.json in the current directory
-mkdir -p .devcontainer.json
-cd  .devcontainer.json
+mkdir -p .devcontainer
+cd  .devcontainer
 if [[ ! -L .devcontainer.json ]] ; then
     ln -s ../.vscode/devcontainer.json .devcontainer.json
 fi

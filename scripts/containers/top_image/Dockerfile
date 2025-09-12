@@ -65,8 +65,7 @@ RUN if [[ "x${build_type}" != "xstatic" ]]; then echo "export LD_RUN_PATH=/opt/l
 # RUN ls /usr/local/cuda/lib64/lib*_static.a | grep -v cufft_static.a | while read a; do rm -rf /usr/local/cuda/lib64/$(basename $a); done && \
 #     rm -rf /usr/local/cuda/lib64/libcufft_static_nocallback.a
 
-
+RUN echo "set filename-display basename" > /home/cisTEMdev/.gdbinit
 
 USER cisTEMdev
 WORKDIR /home/cisTEMdev
-

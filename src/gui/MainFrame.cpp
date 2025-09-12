@@ -273,6 +273,7 @@ void MyMainFrame::ResetAllPanels( ) {
     picking_results_panel->Clear( );
     refine2d_results_panel->Clear( );
     refinement_results_panel->Clear( );
+    match_template_results_panel->Clear( );
 
     align_movies_panel->Reset( );
     findctf_panel->Reset( );
@@ -285,7 +286,6 @@ void MyMainFrame::ResetAllPanels( ) {
     generate_3d_panel->Reset( );
     sharpen_3d_panel->Reset( );
     match_template_panel->Reset( );
-    match_template_results_panel->Clear( );
     refine_template_panel->Reset( );
 
     DirtyEverything( );
@@ -338,9 +338,8 @@ void MyMainFrame::DirtyImageGroups( ) {
     picking_results_panel->group_combo_is_dirty = true;
 
     if ( current_workflow == "Template Matching" ) {
-        match_template_panel->group_combo_is_dirty         = true;
-        match_template_results_panel->group_combo_is_dirty = true;
-        refine_template_panel->group_combo_is_dirty        = true;
+        match_template_panel->group_combo_is_dirty  = true;
+        refine_template_panel->group_combo_is_dirty = true;
     }
 }
 
@@ -366,10 +365,11 @@ void MyMainFrame::DirtyTemplateMatchesPackages( ) {
 }
 
 void MyMainFrame::DirtyRefinements( ) {
-    refine_3d_panel->input_params_combo_is_dirty     = true;
-    refine_ctf_panel->input_params_combo_is_dirty    = true;
-    refinement_results_panel->input_params_are_dirty = true;
-    generate_3d_panel->input_params_combo_is_dirty   = true;
+    refine_3d_panel->input_params_combo_is_dirty       = true;
+    refine_ctf_panel->input_params_combo_is_dirty      = true;
+    refinement_results_panel->input_params_are_dirty   = true;
+    generate_3d_panel->input_params_combo_is_dirty     = true;
+    match_template_results_panel->group_combo_is_dirty = true;
 }
 
 void MyMainFrame::DirtyClassifications( ) {
@@ -695,8 +695,10 @@ void MyMainFrame::OpenProject(wxString project_filename) {
         //	current_project.database.AddCTFIcinessColumnIfNecessary();
         my_dialog->Update(8, "Opening project (loading Match Template Results...)");
 
+        // If this is in the if block, then by default it will never get filled as we default to Single Particle
+        match_template_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT IMAGE_ASSET_ID FROM TEMPLATE_MATCH_LIST");
+
         if ( current_workflow == "Template Matching" ) {
-            match_template_results_panel->FillBasedOnSelectCommand("SELECT DISTINCT IMAGE_ASSET_ID FROM TEMPLATE_MATCH_LIST");
             my_dialog->Update(9, "Opening project (loading atomic coordinates assets...)");
             atomic_coordinates_asset_panel->ImportAllFromDatabase( );
             my_dialog->Update(10, "Opening project (loading Template Matches Packages...)");
@@ -739,6 +741,12 @@ void MyMainFrame::OpenProject(wxString project_filename) {
             }
             else {
                 current_workflow = current_project.database.ReturnSingleStringFromSelectCommand("select CURRENT_WORKFLOW from MASTER_SETTINGS");
+                // FIXME: this should never execute, but if somehow current_workflow is empty, log that it was and set a default.
+                //        This is a bandaid on something that is otherwise broken (we aren't storing the workflow somewhere properly)
+                if ( current_workflow.IsEmpty( ) ) {
+                    wxLogWarning("The current workflow returned empty from the database call; returning Single Particle as default to prevent errors.");
+                    current_workflow = "Single Particle";
+                }
             }
             current_project.database.RecordCurrentWorkflowInDB(current_workflow);
             SwitchWorkflowPanels(current_workflow);
@@ -978,6 +986,12 @@ void MyMainFrame::SwitchWorkflowPanels(const wxString& workflow_name) {
     actions_panel->Layout( );
     MenuBook->Layout( );
     Layout( );
+
+    // After creating the new panels, ensure they have correct dirty state
+    if ( current_project.is_open ) {
+        DirtyEverything( ); // This will set all panels to dirty state
+    }
+
     Thaw( );
 }
 

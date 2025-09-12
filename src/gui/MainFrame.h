@@ -102,8 +102,6 @@ class MyMainFrame : public MainFrame, public SocketCommunicator, public UpdatePr
     template <class FrameTypeFrom, class FrameTypeTo>
     void UpdateWorkflow(FrameTypeFrom* input_frame, FrameTypeTo* output_frame, wxString frame_name);
 
-    void SetSingleParticleWorkflow(bool triggered_by_gui_event = false);
-    void SetTemplateMatchingWorkflow(bool triggered_by_gui_event = false);
     void SwitchWorkflowPanels(const wxString& workflow_name);
 
     inline void ManuallyUpdateWorkflowMenuCheckBox( ) {

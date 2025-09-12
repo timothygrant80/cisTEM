@@ -25,8 +25,8 @@ RefineCTFPanel*       refine_ctf_panel;
 Generate3DPanel*      generate_3d_panel;
 Sharpen3DPanel*       sharpen_3d_panel;
 
-MyOverviewPanel*    overview_panel;
-ActionsPanelParent* actions_panel;
+MyOverviewPanel*           overview_panel;
+ActionsPanelParent*        actions_panel;
 AssetsPanel*               assets_panel;
 MyResultsPanel*            results_panel;
 SettingsPanel*             settings_panel;
@@ -141,17 +141,18 @@ bool MyGuiApp::OnInit( ) {
 
     refinement_package_asset_panel = new MyRefinementPackageAssetPanel(assets_panel->AssetsBook);
 
-	// See src/gui/workflows/SpaWorkflow.h for instantiation of the SPA workflow panels
+    // See src/gui/workflows/SpaWorkflow.h for instantiation of the SPA workflow panels
 
     actions_panel = static_cast<ActionsPanelParent*>(WorkflowRegistry::Instance( ).CreateActionsPanel("Single Particle", main_frame->MenuBook));
 
-    movie_results_panel      = new MyMovieAlignResultsPanel(results_panel->ResultsBook);
-    ctf_results_panel        = new MyFindCTFResultsPanel(results_panel->ResultsBook);
-    picking_results_panel    = new MyPickingResultsPanel(results_panel->ResultsBook);
-    refine2d_results_panel   = new Refine2DResultsPanel(results_panel->ResultsBook);
-    refinement_results_panel = new MyRefinementResultsPanel(results_panel->ResultsBook);
+    movie_results_panel          = new MyMovieAlignResultsPanel(results_panel->ResultsBook);
+    ctf_results_panel            = new MyFindCTFResultsPanel(results_panel->ResultsBook);
+    picking_results_panel        = new MyPickingResultsPanel(results_panel->ResultsBook);
+    refine2d_results_panel       = new Refine2DResultsPanel(results_panel->ResultsBook);
+    refinement_results_panel     = new MyRefinementResultsPanel(results_panel->ResultsBook);
+    match_template_results_panel = new MatchTemplateResultsPanel(results_panel->ResultsBook);
 
-	// See src/gui/workflows/TmWorkflow.h for instantiation of Template Matching workflow panels.
+    // See src/gui/workflows/TmWorkflow.h for instantiation of Template Matching workflow panels.
 
 #ifdef EXPERIMENTAL
     refine_template_dev_panel = new RefineTemplateDevPanel(experimental_panel->ExperimentalBook);
@@ -230,7 +231,7 @@ bool MyGuiApp::OnInit( ) {
 
     SettingsBookIconImages->Add(run_profiles_icon_bmp);
 
-	// See src/gui/workflows headers for assignment of wxImageList to Actions Panel
+    // See src/gui/workflows headers for assignment of wxImageList to Actions Panel
     main_frame->MenuBook->AssignImageList(MenuBookIconImages);
     assets_panel->AssetsBook->AssignImageList(AssetsBookIconImages);
     results_panel->ResultsBook->AssignImageList(ResultsBookIconImages);
@@ -259,13 +260,14 @@ bool MyGuiApp::OnInit( ) {
     assets_panel->AssetsBook->AddPage(volume_asset_panel, "3D Volumes", false, 3);
     assets_panel->AssetsBook->AddPage(refinement_package_asset_panel, "Refine Pkgs.", false, 4);
     assets_panel->AssetsBook->AddPage(atomic_coordinates_asset_panel, "Atomic Coordinates", false, 5);
-    assets_panel->AssetsBook->AddPage(template_matches_package_asset_panel, "MT Pkgs.", false, 4);
+    assets_panel->AssetsBook->AddPage(template_matches_package_asset_panel, "TM Pkgs.", false, 4); // re-using icon FIXME
 
     results_panel->ResultsBook->AddPage(movie_results_panel, "Align Movies", true, 0);
     results_panel->ResultsBook->AddPage(ctf_results_panel, "Find CTF", false, 1);
     results_panel->ResultsBook->AddPage(picking_results_panel, "Find Particles", false, 2);
     results_panel->ResultsBook->AddPage(refine2d_results_panel, "2D Classify", false, 3);
     results_panel->ResultsBook->AddPage(refinement_results_panel, "3D Refinement", false, 4);
+    results_panel->ResultsBook->AddPage(match_template_results_panel, "TM Results", false, 2); // re-using icon FIXME
 
     settings_panel->SettingsBook->AddPage(run_profiles_panel, "Run Profiles", true, 0);
 

@@ -1,5 +1,6 @@
 //BEGIN_FOR_STAND_ALONE_CTFFIND
 #include "core_headers.h"
+#include <memory>
 
 using namespace cistem;
 
@@ -11964,9 +11965,6 @@ float Image::ReturnBeamTiltSignificanceScore(Image calculated_beam_tilt) {
 }
 
 void Image::ApplyRampFilter( ) {
-    float x;
-    float y;
-    float z;
 
     float frequency_squared;
     float current_frequency;
@@ -11974,23 +11972,23 @@ void Image::ApplyRampFilter( ) {
     // sqrt(2) because of the diagonal, the max frequency can only be half of that
     float max_frequency = 0.5f * sqrt(2);
     float current_filter;
-    bool  do_reverse_FFT = false;
+    bool  do_backward_FFT = false;
 
     long pixel_counter = 0;
 
     if ( is_in_real_space ) {
         this->ForwardFFT( );
-        do_reverse_FFT = true;
+        do_backward_FFT = true;
     }
     // Go through and calculate the total frequency, from all dimensions
     for ( int k = 0; k <= physical_upper_bound_complex_z; k++ ) {
-        z = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z, 2);
+        float z = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Z(k) * fourier_voxel_size_z, 2);
 
         for ( int j = 0; j <= physical_upper_bound_complex_y; j++ ) {
-            y = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y, 2);
+            float y = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_Y(j) * fourier_voxel_size_y, 2);
 
             for ( int i = 0; i <= physical_upper_bound_complex_x; i++ ) {
-                x = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_X(i) * fourier_voxel_size_x, 2);
+                float x = powf(ReturnFourierLogicalCoordGivenPhysicalCoord_X(i) * fourier_voxel_size_x, 2);
 
                 frequency_squared = x + y + z;
                 // Get the actual frequency, set the filter
@@ -12007,24 +12005,26 @@ void Image::ApplyRampFilter( ) {
             }
         }
     }
-    if ( do_reverse_FFT )
+    if ( do_backward_FFT )
         this->BackwardFFT( );
 }
 
 void Image::AverageRotationally( ) {
     // image must be in real space
-    bool switchBackToComplex = false;
+    bool input_image_in_fourier_space = false;
     if ( ! this->is_in_real_space ) {
         this->BackwardFFT( );
-        switchBackToComplex = true;
+        input_image_in_fourier_space = true;
     }
     // max radius in real space is sqrt(2)*0.5*logical_dimension
     long number_of_rings = this->logical_x_dimension;
     //float edge_value = current_image->ReturnAverageOfRealValues(std::min(current_image->physical_address_of_box_center_x - 2, current_image->physical_address_of_box_center_y - 2), true);
-    float   edge_value;
-    double* ring_axis   = new double[number_of_rings];
-    double* ring_values = new double[number_of_rings];
-    double* ring_weight = new double[number_of_rings];
+    float edge_value;
+    auto  ring_axis   = std::make_unique<float[]>(number_of_rings); // size is the number of elements
+    auto  ring_values = std::make_unique<float[]>(number_of_rings);
+    auto  ring_weight = std::make_unique<float[]>(number_of_rings);
+    ZeroArray(ring_values.get( ), number_of_rings);
+    ZeroArray(ring_weight.get( ), number_of_rings);
 
     long central_x_pixel = this->physical_address_of_box_center_x;
     long central_y_pixel = this->physical_address_of_box_center_y;
@@ -12035,9 +12035,6 @@ void Image::AverageRotationally( ) {
     double difference;
     long   index_of_bin;
     long   counter;
-    long   x;
-    long   y;
-    long   z;
 
     // intialize values and weights (number of bins run from 0 to N-1)
     // TODO: remove this comment
@@ -12046,8 +12043,6 @@ void Image::AverageRotationally( ) {
     for ( counter = 0; counter < number_of_rings; counter++ ) {
         ring_axis[counter] = 0.0 + counter * (this->ReturnMaximumDiagonalRadius( ) - 0.0) / float(number_of_rings - 1); // Diagonal because we're using the physical address (0 is the upper left corner)
         // = counter * (sqrt(pow(physical_address_of_box_center_x, 2) + pow(physical_address_of_box_center_y, 2) + pow(physical_address_of_box_center_z, 2)));
-        ring_values[counter] = 0; // What is this?
-        ring_weight[counter] = 0; // What is this?
     }
 
     // edge radius in real space is 0.5*logical_dimension
@@ -12059,9 +12054,9 @@ void Image::AverageRotationally( ) {
 
     // z-dim first; that's each image in the volume (looking "through" the image rather than at the side)
     // Nested loops mean move across the image starting at the first image (z), the first row of pixels, going column by column (left to right across the image, going from top to bottom)
-    for ( z = 0; z < this->logical_z_dimension; z++ ) {
-        for ( y = 0; y < this->logical_y_dimension; y++ ) {
-            for ( x = 0; x < this->logical_x_dimension; x++ ) {
+    for ( long z = 0; z < this->logical_z_dimension; z++ ) {
+        for ( long y = 0; y < this->logical_y_dimension; y++ ) {
+            for ( long x = 0; x < this->logical_x_dimension; x++ ) {
                 radius       = sqrtf(powf(double(central_x_pixel - x), 2) + powf(double(central_y_pixel - y), 2) + powf(double(central_z_pixel - z), 2)); // Here we're moving ring by ring closer to the corner of the image
                 index_of_bin = long((radius - ring_axis[0]) / (ring_axis[1] - ring_axis[0]));
 
@@ -12098,12 +12093,14 @@ void Image::AverageRotationally( ) {
 
     counter = 0;
 
-    for ( z = 0; z < this->logical_z_dimension; z++ ) {
-        for ( y = 0; y < this->logical_y_dimension; y++ ) {
-            for ( x = 0; x < this->logical_x_dimension; x++ ) {
-
-                radius       = sqrtf(powf(double(central_x_pixel - x), 2) + powf(double(central_y_pixel - y), 2) + powf(double(central_z_pixel - z), 2));
-                index_of_bin = long((radius - ring_axis[0]) / (ring_axis[1] - ring_axis[0]));
+    for ( long z = 0; z < this->logical_z_dimension; z++ ) {
+        float z_radius_squared = powf(float(central_z_pixel - z), 2);
+        for ( long y = 0; y < this->logical_y_dimension; y++ ) {
+            float y_radius_squared = powf(float(central_y_pixel - y), 2); // same
+            for ( long x = 0; x < this->logical_x_dimension; x++ ) {
+                float x_radius_squared = powf(float(central_x_pixel - x), 2);
+                radius                 = sqrtf(z_radius_squared + y_radius_squared + x_radius_squared);
+                index_of_bin           = long((radius - ring_axis[0]) / (ring_axis[1] - ring_axis[0]));
 
                 if ( index_of_bin >= edge_bin ) {
                     // set corner values to average at edge
@@ -12146,10 +12143,6 @@ void Image::AverageRotationally( ) {
         }
     }*/
 
-    if ( switchBackToComplex )
+    if ( input_image_in_fourier_space )
         this->ForwardFFT( );
-
-    delete[] ring_axis;
-    delete[] ring_values;
-    delete[] ring_weight;
 }

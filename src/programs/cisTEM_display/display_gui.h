@@ -68,6 +68,8 @@ class DisplayFrameParent : public wxFrame
 		wxMenu* DisplayFileMenu;
 		wxMenuItem* DisplayFileOpen;
 		wxMenuItem* DisplayCloseTab;
+		wxMenuItem* SaveDisplayedImages;
+		wxMenuItem* SaveDisplayedImagesWithLegend;
 		wxMenuItem* SelectOpenTxt;
 		wxMenuItem* SelectSaveTxt;
 		wxMenuItem* SelectSaveTxtAs;
@@ -89,12 +91,15 @@ class DisplayFrameParent : public wxFrame
 		wxMenuItem* OptionsShowSelectionDistances;
 		wxMenuItem* OptionsShowResolution;
 		wxMenu* DisplayHelpMenu;
+		wxMenuItem* HelpDisplayControls;
 		wxMenuItem* HelpAbout;
 
 		// Virtual event handlers, override them in your derived class
 		virtual void OnUpdateUI( wxUpdateUIEvent& event ) { event.Skip(); }
 		virtual void OnFileOpenClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnCloseTabClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnSaveDisplayedImagesClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnSaveDisplayedImagesWithLegendClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnOpenTxtClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnSaveTxtClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnSaveTxtAsClick( wxCommandEvent& event ) { event.Skip(); }
@@ -111,6 +116,7 @@ class DisplayFrameParent : public wxFrame
 		virtual void OnSingleImageModeClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnShowSelectionDistancesClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnShowResolution( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnDisplayControlsClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void OnDocumentationClick( wxCommandEvent& event ) { event.Skip(); }
 
 

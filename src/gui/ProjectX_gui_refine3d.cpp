@@ -102,12 +102,15 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	ParametersDetailButton = new NoFocusBitmapButton( m_panel125, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBU_AUTODRAW|0 );
 
 	ParametersDetailButton->SetDefault();
-	bSizer497->Add( ParametersDetailButton, 0, wxLEFT|wxTOP, 5 );
+	bSizer497->Add( ParametersDetailButton, 0, wxEXPAND|wxTOP, 5 );
 
 	AngularPlotDetailsButton = new NoFocusBitmapButton( m_panel125, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBU_AUTODRAW|0 );
 
 	AngularPlotDetailsButton->SetDefault();
-	bSizer497->Add( AngularPlotDetailsButton, 0, wxRIGHT|wxTOP, 5 );
+	bSizer497->Add( AngularPlotDetailsButton, 0, wxEXPAND|wxTOP, 5 );
+
+	SaveBinnedAngularPlotButton = new NoFocusBitmapButton( m_panel125, wxID_ANY, wxNullBitmap, wxDefaultPosition, wxDefaultSize, wxBU_AUTODRAW|0 );
+	bSizer497->Add( SaveBinnedAngularPlotButton, 0, wxEXPAND|wxTOP, 5 );
 
 
 	bSizer495->Add( bSizer497, 0, wxEXPAND, 5 );
@@ -614,6 +617,7 @@ RefinementResultsPanel::RefinementResultsPanel( wxWindow* parent, wxWindowID id,
 	this->Connect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RefinementResultsPanel::OnUpdateUI ) );
 	ParametersDetailButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementResultsPanel::PopupParametersClick ), NULL, this );
 	AngularPlotDetailsButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementResultsPanel::AngularPlotPopupClick ), NULL, this );
+	SaveBinnedAngularPlotButton->Connect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementResultsPanel::SaveBinnedPlotClick ), NULL, this );
 	JobDetailsToggleButton->Connect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( RefinementResultsPanel::OnJobDetailsToggle ), NULL, this );
 }
 
@@ -623,6 +627,7 @@ RefinementResultsPanel::~RefinementResultsPanel()
 	this->Disconnect( wxEVT_UPDATE_UI, wxUpdateUIEventHandler( RefinementResultsPanel::OnUpdateUI ) );
 	ParametersDetailButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementResultsPanel::PopupParametersClick ), NULL, this );
 	AngularPlotDetailsButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementResultsPanel::AngularPlotPopupClick ), NULL, this );
+	SaveBinnedAngularPlotButton->Disconnect( wxEVT_COMMAND_BUTTON_CLICKED, wxCommandEventHandler( RefinementResultsPanel::SaveBinnedPlotClick ), NULL, this );
 	JobDetailsToggleButton->Disconnect( wxEVT_COMMAND_TOGGLEBUTTON_CLICKED, wxCommandEventHandler( RefinementResultsPanel::OnJobDetailsToggle ), NULL, this );
 
 }

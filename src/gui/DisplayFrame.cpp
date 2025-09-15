@@ -1,4 +1,6 @@
 #include "../core/gui_core_headers.h"
+#include "../programs/cisTEM_display/DisplayServer.h" // includes wxEVT_SERVER_OPEN_FILE
+#include <wx/pen.h>
 
 DisplayFrame::DisplayFrame(wxWindow* parent, wxWindowID id, const wxString& title, const wxPoint& pos, const wxSize& size, long style)
     : DisplayFrameParent(NULL, wxID_ANY, title, pos, size, style) {
@@ -36,6 +38,7 @@ DisplayFrame::DisplayFrame(wxWindow* parent, wxWindowID id, const wxString& titl
     }
 
     Bind(wxEVT_CHAR_HOOK, &DisplayFrame::OnCharHook, this);
+    Bind(EVT_SERVER_OPEN_FILE, &DisplayFrame::OnServerOpenFile, this);
 }
 
 DisplayFrame::~DisplayFrame( ) {
@@ -57,6 +60,164 @@ void DisplayFrame::OnCharHook(wxKeyEvent& event) {
 
 void DisplayFrame::OnFileOpenClick(wxCommandEvent& event) {
     cisTEMDisplayPanel->OnOpen(event);
+}
+
+void DisplayFrame::OnSaveDisplayedImagesClick(wxCommandEvent& event) {
+    // Mimics the logic ProperOverwriteCheckSaveDialog in my_controls.cpp
+    wxFileDialog save_file_dialog(this, _("Save png image"), wxEmptyString, wxEmptyString, "PNG files (*.png)|*.png", wxFD_SAVE | wxFD_OVERWRITE_PROMPT, wxDefaultPosition, wxDefaultSize, wxFileDialogNameStr);
+
+    wxString wanted_extension = ".png";
+    wxString default_dir      = cisTEMDisplayPanel->ReturnCurrentPanel( )->filename;
+
+    // Strip away the filename to get the directory
+    default_dir = default_dir.BeforeLast('/');
+
+    save_file_dialog.SetDirectory(default_dir);
+    wxString extension_lowercase = wanted_extension.Lower( );
+    wxString extension_uppercase = wanted_extension.Upper( );
+
+    if ( save_file_dialog.ShowModal( ) == wxID_CANCEL ) {
+        save_file_dialog.Destroy( );
+        return;
+    }
+
+    // Crop out the blank space around the image: get the true width of the relevant area on the bitmap.
+    wxBitmap sub_bitmap = CropImageForSaving( );
+
+    sub_bitmap.SaveFile(save_file_dialog.GetPath( ), wxBITMAP_TYPE_PNG);
+}
+
+void DisplayFrame::OnSaveDisplayedImagesWithLegendClick(wxCommandEvent& event) {
+    // Mimics the logic ProperOverwriteCheckSaveDialog in my_controls.cpp
+    wxFileDialog save_file_dialog(this, _("Save png image with legend"), wxEmptyString, wxEmptyString, "PNG files (*.png)|*.png", wxFD_SAVE | wxFD_OVERWRITE_PROMPT, wxDefaultPosition, wxDefaultSize, wxFileDialogNameStr);
+
+    wxString wanted_extension = ".png";
+    wxString default_dir      = cisTEMDisplayPanel->ReturnCurrentPanel( )->filename;
+
+    // Strip away the filename to get the directory
+    default_dir = default_dir.BeforeLast('/');
+
+    save_file_dialog.SetDirectory(default_dir);
+    wxString extension_lowercase = wanted_extension.Lower( );
+    wxString extension_uppercase = wanted_extension.Upper( );
+
+    if ( save_file_dialog.ShowModal( ) == wxID_CANCEL ) {
+        save_file_dialog.Destroy( );
+        return;
+    }
+
+    // Crop out the blank space around the image: get the true width of the relevant area on the bitmap.
+    wxBitmap sub_bitmap     = CropImageForSaving( );
+    int      sub_bmp_width  = sub_bitmap.GetWidth( );
+    int      sub_bmp_height = sub_bitmap.GetHeight( );
+
+    // Create legend, width of 80 pixels
+    int legend_width = 80;
+
+    int     legend_height = sub_bmp_height;
+    wxImage legend_img(legend_width, legend_height);
+
+    // Draw color bar gradient; this method calculates a value for each row
+    // of the legend and fills it in with a grayscale color by using the
+    // proportional distance from the top (max) to the bottom (min).
+    for ( int y = 0; y < legend_height; ++y ) {
+        double t = 1.0 - double(y) / legend_height;
+
+        // Simple grayscale: interpolate between min and max
+        unsigned char val = static_cast<unsigned char>(255 * t);
+        for ( int x = 0; x < legend_width; ++x ) {
+            legend_img.SetRGB(x, y, val, val, val);
+        }
+    }
+
+    // Draw min/max text
+    // Note: wxImage does not support drawing directly, so we convert to wxBitmap for this step
+    // and then convert back to wxImage
+    wxBitmap   legend_bmp(legend_img);
+    wxMemoryDC dc(legend_bmp);
+
+    // Add a spacer between the image and the legend
+    int     spacer_width = 15;
+    wxImage spacer_img(spacer_width, sub_bmp_height);
+    for ( int y = 0; y < sub_bmp_height; ++y ) {
+        for ( int x = 0; x < spacer_width; ++x ) {
+            spacer_img.SetRGB(x, y, 255, 255, 255);
+        }
+    }
+
+    int     combined_width = sub_bmp_width + legend_width + spacer_width;
+    int     white_space    = 200;
+    wxImage background_img(combined_width + white_space, sub_bmp_height + white_space);
+    for ( int i = 0; i < background_img.GetWidth( ); ++i ) {
+        for ( int j = 0; j < background_img.GetHeight( ); ++j ) {
+            background_img.SetRGB(i, j, 255, 255, 255);
+        }
+    }
+
+    // Minimum tick spacing should be about 1/5 of the legend height to balance readability and clutter;
+    // if there is not much space, only use 2 gradations (min and max)
+    int min_tick_spacing = sub_bmp_height / 5;
+    int num_gradations   = std::max(2, legend_height / min_tick_spacing);
+
+    float min_pixel, max_pixel;
+    cisTEMDisplayPanel->ReturnCurrentPanel( )->image_memory_buffer->GetMinMax(min_pixel, max_pixel);
+    float pixel_range = max_pixel - min_pixel;
+
+    // Convert to bitmap to be able to draw
+    wxBitmap background_bmp(background_img);
+    dc.SelectObject(background_bmp);
+    dc.SetPen(wxPen(*wxBLACK, 2));
+
+    for ( int i = 0; i < num_gradations; ++i ) {
+        // Spread gradations only across the legend area
+        int legend_top_y    = white_space / 2;
+        int legend_bottom_y = legend_top_y + legend_height - 1;
+        int y               = legend_top_y + int(i * (legend_height - 1) / (num_gradations - 1));
+
+        // Calculate the value corresponding to this gradation by interpolating between min and max
+        double value = max_pixel - (pixel_range * i) / (num_gradations - 1);
+
+        int legend_right_x    = sub_bmp_width + spacer_width + white_space / 2 + legend_width;
+        int gradation_start_x = legend_right_x;
+        int gradation_end_x   = gradation_start_x + 10;
+
+        dc.DrawLine(gradation_start_x, y, gradation_end_x, y);
+
+        // Subtract 12 from y to better align text with gradation line, add 5 to starting point
+        // to space out from the gradation line
+        dc.DrawText(wxString::Format("%.2f", value), gradation_end_x + 5, y - 12);
+    }
+
+    dc.SelectObject(wxNullBitmap);
+
+    // Combine all the images
+    wxImage combined_img(background_img.GetWidth( ), background_img.GetHeight( ), true);
+    combined_img.Paste(background_bmp.ConvertToImage( ), 0, 0);
+    combined_img.Paste(sub_bitmap.ConvertToImage( ), white_space / 2, white_space / 2);
+    combined_img.Paste(spacer_img, sub_bmp_width + white_space / 2, white_space / 2);
+    combined_img.Paste(legend_bmp.ConvertToImage( ), sub_bmp_width + spacer_width + white_space / 2, white_space / 2);
+
+    // Finally, draw a rectangle around the legend area to separate it from the background
+    // This is done last to ensure the rectangle is on top of everything else and transparent
+    // so there's nothing blocking the view of the legend, but the rectangle border is still
+    // visible.
+    wxBitmap combined_bmp(combined_img);
+    dc.SelectObject(combined_bmp);
+    dc.SetBrush(*wxTRANSPARENT_BRUSH);
+    dc.DrawRectangle(sub_bmp_width + spacer_width + white_space / 2, white_space / 2, legend_width, legend_height);
+    combined_img = combined_bmp.ConvertToImage( );
+    dc.SelectObject(wxNullBitmap);
+
+    combined_img.SaveFile(save_file_dialog.GetPath( ), wxBITMAP_TYPE_PNG);
+}
+
+void DisplayFrame::OnServerOpenFile(wxCommandEvent& event) {
+    wxString filename = event.GetString( );
+    if ( cisTEMDisplayPanel ) {
+        cisTEMDisplayPanel->OpenFile(filename, filename);
+        this->Raise( );
+        this->SetFocus( );
+    }
 }
 
 void DisplayFrame::OnCloseTabClick(wxCommandEvent& event) {
@@ -443,11 +604,88 @@ void DisplayFrame::OnDocumentationClick(wxCommandEvent& event) {
     wxLaunchDefaultBrowser("http://www.cistem.org/documentation");
 }
 
+void DisplayFrame::OnDisplayControlsClick(wxCommandEvent& event) {
+    // 1. Create a simple scroll window dialog
+    wxDialog* manual_dialog = new wxDialog(this, wxID_ANY, "cisTEM Display Manual", wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER, "cisTEM Display Manual");
+
+    // 2. Populate the dialog with text that explains the display controls
+    wxScrolledWindow* scrolled_window = new wxScrolledWindow(manual_dialog, wxID_ANY);
+    wxBoxSizer*       content_sizer   = new wxBoxSizer(wxVERTICAL);
+
+    wxRichTextCtrl* text_ctrl = new wxRichTextCtrl(scrolled_window, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxTE_MULTILINE | wxTE_READONLY);
+
+    text_ctrl->BeginFontSize(16);
+    text_ctrl->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
+    text_ctrl->BeginBold( );
+    text_ctrl->WriteText("cisTEM Display Manual\n\n");
+    text_ctrl->EndBold( );
+    text_ctrl->EndAlignment( );
+    text_ctrl->EndFontSize( );
+
+    text_ctrl->BeginFontSize(12);
+    text_ctrl->BeginBold( );
+    text_ctrl->WriteText("\nKeyboard Shortcuts\n\n");
+    text_ctrl->EndBold( );
+    text_ctrl->EndFontSize( );
+
+    text_ctrl->BeginBold( );
+    text_ctrl->WriteText("\n1. Left Arrow Key");
+    text_ctrl->EndBold( );
+    text_ctrl->WriteText(": Scroll to the previous open image tab.\n");
+    text_ctrl->BeginBold( );
+    text_ctrl->WriteText("2. Right Arrow Key");
+    text_ctrl->EndBold( );
+    text_ctrl->WriteText(": Scroll to the next open image tab.\n");
+    text_ctrl->BeginBold( );
+    text_ctrl->WriteText("3. Up Arrow Key");
+    text_ctrl->EndBold( );
+    text_ctrl->WriteText(": Scroll to the next section of images/slices that will fit within the current display window.\n");
+    text_ctrl->BeginBold( );
+    text_ctrl->WriteText("4. Down Arrow Key");
+    text_ctrl->EndBold( );
+    text_ctrl->WriteText(": Scroll to the previous section of images/slices that will fit within the current display window.\n");
+
+    text_ctrl->BeginBold( );
+    text_ctrl->BeginFontSize(12);
+    text_ctrl->WriteText("\nMouse Controls\n\n");
+    text_ctrl->EndFontSize( );
+    text_ctrl->WriteText("\n1. Left Mouse Button");
+    text_ctrl->EndBold( );
+    text_ctrl->WriteText(": Select or deselect images or coordinates, depending on the current picking mode (found within the Select menu).\n");
+    text_ctrl->BeginBold( );
+    text_ctrl->WriteText("2. Right Mouse Button");
+    text_ctrl->EndBold( );
+    text_ctrl->WriteText(": Create a zoomed/upscaled subwindow that will display a more detailed view of the image contents below the mouse position. This can be dragged to view different areas of the image.\n");
+    text_ctrl->BeginBold( );
+    text_ctrl->WriteText("3. Middle Mouse Button");
+    text_ctrl->EndBold( );
+    text_ctrl->WriteText(": When in Single Image Mode (selected from the Options menu), dragging the mouse will shift the displayed window in the direction of the drag.");
+
+    wxStdDialogButtonSizer* button_sizer = new wxStdDialogButtonSizer( );
+    wxButton*               ok_button    = new wxButton(manual_dialog, wxID_OK);
+    button_sizer->AddButton(ok_button);
+    button_sizer->Realize( );
+
+    content_sizer->Add(text_ctrl, 1, wxEXPAND | wxALL, 10);
+    scrolled_window->SetSizer(content_sizer);
+    scrolled_window->SetScrollRate(5, 5);
+    wxBoxSizer* main_sizer = new wxBoxSizer(wxVERTICAL);
+    main_sizer->Add(scrolled_window, 1, wxEXPAND);
+    main_sizer->Add(button_sizer, 0, wxALIGN_RIGHT | wxALL, 5);
+    manual_dialog->SetSizerAndFit(main_sizer);
+    manual_dialog->SetMinSize(wxSize(900, 500));
+
+    manual_dialog->Layout( );
+    manual_dialog->Show( );
+}
+
 // This prevents using buttons when an image or stack is not open to act on
 void DisplayFrame::DisableAllToolbarButtons( ) {
 
     // Open menu only needs close tab disabled
     DisplayCloseTab->Enable(false);
+    SaveDisplayedImages->Enable(false);
+    SaveDisplayedImagesWithLegend->Enable(false);
 
     // Label menu
     LabelLocationNumber->Enable(false);
@@ -471,6 +709,8 @@ void DisplayFrame::DisableAllToolbarButtons( ) {
 void DisplayFrame::EnableAllToolbarButtons( ) {
     // Open menu only needs close tab disabled
     DisplayCloseTab->Enable( );
+    SaveDisplayedImages->Enable( );
+    SaveDisplayedImagesWithLegend->Enable( );
 
     // Label menu
     LabelLocationNumber->Enable( );
@@ -629,4 +869,57 @@ void DisplayFrame::ClearTextFileFromPanel( ) {
     cisTEMDisplayPanel->ReturnCurrentPanel( )->short_txt_filename = wxEmptyString;
     cisTEMDisplayPanel->ReturnCurrentPanel( )->current_file_path  = wxEmptyString;
     cisTEMDisplayPanel->SetTabNameSaved( );
+}
+
+/**
+ * @brief Crops the current image at the borders to remove excess blank space aroudn the image(s) being displayed.
+ * 
+ * @return wxBitmap The cropped bitmap ready for saving.
+ */
+wxBitmap DisplayFrame::CropImageForSaving( ) {
+
+    // TODO: must also account for the case of a single image being displayed but not being in single image mode;
+    // failure to do so causes the saved image to have excessively large legend (speicfically in terms of legend height)
+    // because the image is small but the legend is sized for the full panel.
+    wxBitmap sub_bitmap;
+    int      sub_bmp_width;
+    int      sub_bmp_height;
+    int      single_image_x = cisTEMDisplayPanel->ReturnCurrentPanel( )->single_image_x;
+    int      single_image_y = cisTEMDisplayPanel->ReturnCurrentPanel( )->single_image_y;
+    float    scale_factor   = cisTEMDisplayPanel->ReturnCurrentPanel( )->actual_scale_factor;
+    if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->single_image ) {
+        cisTEMDisplayPanel->ReturnCurrentPanel( )->GetClientSize(&sub_bmp_width, &sub_bmp_height);
+        if ( single_image_x * scale_factor + sub_bmp_width > cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_image->GetWidth( ) ) {
+            sub_bmp_width = cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_image->GetWidth( ) - single_image_x * scale_factor;
+        }
+        if ( single_image_y * scale_factor + sub_bmp_height > cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_image->GetHeight( ) ) {
+            sub_bmp_height = cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_image->GetHeight( ) - single_image_y * scale_factor;
+        }
+        wxRect  sub_bmp_dims(single_image_x * scale_factor, single_image_y * scale_factor, sub_bmp_width, sub_bmp_height);
+        wxImage tmp_sub_img(cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_image->GetSubImage(sub_bmp_dims));
+        sub_bitmap = wxBitmap(tmp_sub_img);
+    }
+    else {
+        int num_rows_with_imgs = cisTEMDisplayPanel->ReturnCurrentPanel( )->images_in_current_view / cisTEMDisplayPanel->ReturnCurrentPanel( )->images_in_x;
+
+        // if columns_in_x is 0, then we have less than one full row of images, the number of rows shown is 1
+        // if columns_in_x is > 0, then we have at least one full row of images, and the number of rows shown is either 1 or more;
+        // we can check if it's more than one by using modulus; if it's 0, then all rows are filled, otherwise we have a partial row
+        // and must increment by 1.
+        if ( num_rows_with_imgs > 0 ) {
+            // We have a partial row, so increment filled_rows by 1
+            if ( cisTEMDisplayPanel->ReturnCurrentPanel( )->images_in_current_view % cisTEMDisplayPanel->ReturnCurrentPanel( )->images_in_x != 0 ) {
+                num_rows_with_imgs++;
+            }
+        }
+        else {
+            num_rows_with_imgs = 1;
+        }
+
+        sub_bmp_width  = cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnImageXSize( ) * cisTEMDisplayPanel->ReturnCurrentPanel( )->actual_scale_factor * cisTEMDisplayPanel->ReturnCurrentPanel( )->images_in_x;
+        sub_bmp_height = cisTEMDisplayPanel->ReturnCurrentPanel( )->ReturnImageYSize( ) * cisTEMDisplayPanel->ReturnCurrentPanel( )->actual_scale_factor * num_rows_with_imgs;
+        wxRect sub_bmp_dims(single_image_x * scale_factor, single_image_y * scale_factor, sub_bmp_width, sub_bmp_height);
+        sub_bitmap = cisTEMDisplayPanel->ReturnCurrentPanel( )->panel_bitmap.GetSubBitmap(sub_bmp_dims);
+    }
+    return sub_bitmap;
 }

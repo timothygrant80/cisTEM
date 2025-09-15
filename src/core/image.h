@@ -177,7 +177,7 @@ class Image {
     void  DividePixelWise(Image& other_image);
     bool  IsAlmostEqual(Image& other_image, bool print_if_failed = true, float epsilon = 0.0001f);
     void  AddGaussianNoise(float wanted_sigma_value = 1.0, RandomNumberGenerator* provided_generator = NULL);
-    
+
     void AddNoiseUsingGenerator(RandomNumberGenerator& provided_generator, NoiseType wanted_noise_type, float noise_param_1, float noise_param_2 = 1.0f);
 
     void AddNoise(NoiseType wanted_noise_type, float noise_param_1, float noise_param_2 = 1.0f) {
@@ -519,6 +519,7 @@ class Image {
     void  ApplyPowerspectrumWithThickness(CTF ctf_to_apply);
     void  ApplyCurveFilter(Curve* filter_to_apply, float resolution_limit = 1.0);
     void  ApplyCurveFilterUninterpolated(Curve* filter_to_apply, float resolution_limit = 1.0f, float scale = 0.0f);
+    void  ApplyRampFilter( );
     void  MaskCentralCross(int vertical_half_width = 1, int horizontal_half_width = 1);
     void  ZeroCentralPixel( );
     float NormalizedCrossCorrelation(Image* other_image);
@@ -535,6 +536,7 @@ class Image {
     void  Compute1DRotationalAverage(Curve& average, Curve& number_of_values, bool fractional_radius_in_real_space = false, bool average_real_parts = false);
     void  ComputeSpatialFrequencyAtEveryVoxel( );
     void  AverageRadially( );
+    void  AverageRotationally( );
     void  ComputeLocalMeanAndVarianceMaps(Image* local_mean_map, Image* local_variance_map, Image* mask, long number_of_pixels_within_mask);
     void  SpectrumBoxConvolution(Image* output_image, int box_size, float minimum_radius);
     void  TaperEdges( );

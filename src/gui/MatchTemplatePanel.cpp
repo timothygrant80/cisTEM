@@ -1293,3 +1293,22 @@ wxArrayLong MatchTemplatePanel::CheckForUnfinishedWork(bool is_checked, bool is_
     }
     return unfinished_match_template_ids;
 }
+
+// Queue functionality implementation
+void MatchTemplatePanel::OnAddToQueueClick(wxCommandEvent& event) {
+    // Stub implementation for testing
+    wxMessageDialog* dialog = new wxMessageDialog(this,
+                                                  "Add To Queue button successfully implemented!\n\n"
+                                                  "This will queue the current template matching job for later execution.",
+                                                  "Queue Implementation Test",
+                                                  wxOK | wxICON_INFORMATION);
+    dialog->ShowModal();
+    delete dialog;
+
+    // TODO: Implement actual queue functionality
+    // 1. Collect all parameters from GUI
+    // 2. Generate job_id
+    // 3. Store in database with IS_ACTIVE = 0
+    // 4. Add to Results Panel as pending
+    // 5. Update queue manager UI if visible
+}

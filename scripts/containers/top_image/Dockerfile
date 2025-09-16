@@ -23,13 +23,14 @@ ARG build_compiler="icpc"
 ARG build_wx_version="stable"
 ARG build_npm="false"
 ARG build_ref_images="false"
+ARG build_claude="false"
 
 SHELL ["/bin/bash", "-c"]
 # some rebuild comment
 ENV CISTEM_REF_IMAGES=/cisTEMdev/cistem_reference_images
 
 # Install wxWidgets
-COPY install_wx_3.1.5.sh install_node_16.sh /tmp/
+COPY install_wx_3.1.5.sh install_node_16.sh install_node_22_and_claude.sh /tmp/
 
 
 # If we do not do this, we want to link the static or dynamic libs from /opt/WX to /usr/bin so we don't need to set it on configure lines and also so that wxformbuilder can find them
@@ -52,7 +53,8 @@ RUN cd /opt/WX && \
 RUN echo "build npm" && if [[ "x${build_npm}" == "xtrue" ]] ; then /tmp/install_node_16.sh ; fi
 
 # TODO: this flag doesn't exist in the build script. Relocating from the base image to the top image
-RUN if [[ "x${build_pytorch}" == "xtrue" ]]; then cd /tmp && wget https://download.pytorch.org/libtorch/cu113/libtorch-cxx11-abi-shared-with-deps-1.11.0%2Bcu113.zip && unzip libtorch-cxx11-abi-shared-with-deps-1.11.0+cu113.zip && rm libtorch-cxx11-abi-shared-with-deps-1.11.0+cu113.zip && mv libtorch /opt ; fi
+# TODO: this is the current version needed for blush, but we may want GPU capability.
+RUN if [[ "x${build_libtorch}" == "xtrue" ]]; then cd /tmp && rm -f torch.zip && wget https://download.pytorch.org/libtorch/cpu/libtorch-win-shared-with-deps-2.5.0%2Bcpu.zip -O torch.zip && unzip torch.zip && rm torch.zip && mv libtorch /opt ; fi
 
 
 # Include the lib path in LD_RUN_PATH so on linking, the correct path is known 
@@ -65,7 +67,10 @@ RUN if [[ "x${build_type}" != "xstatic" ]]; then echo "export LD_RUN_PATH=/opt/l
 # RUN ls /usr/local/cuda/lib64/lib*_static.a | grep -v cufft_static.a | while read a; do rm -rf /usr/local/cuda/lib64/$(basename $a); done && \
 #     rm -rf /usr/local/cuda/lib64/libcufft_static_nocallback.a
 
-RUN echo "set filename-display basename" > /home/cisTEMdev/.gdbinit
+
 
 USER cisTEMdev
 WORKDIR /home/cisTEMdev
+
+RUN echo "set filename-display basename" > /home/cisTEMdev/.gdbinit
+RUN echo "build claude" && if [[ "x${build_claude}" == "xtrue" ]] ; then /tmp/install_node_22_and_claude.sh ; fi

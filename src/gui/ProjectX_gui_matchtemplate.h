@@ -272,6 +272,7 @@ class MatchTemplatePanelParent : public JobPanel
 		wxStaticText* RunProfileText;
 		MemoryComboBox* RunProfileComboBox;
 		wxButton* StartEstimationButton;
+		wxButton* AddToQueueButton;
 		wxCheckBox* ResumeRunCheckBox;
 
 		// Virtual event handlers, override them in your derived class
@@ -281,6 +282,7 @@ class MatchTemplatePanelParent : public JobPanel
 		virtual void FinishButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void TerminateButtonClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void StartEstimationClick( wxCommandEvent& event ) { event.Skip(); }
+		virtual void OnAddToQueueClick( wxCommandEvent& event ) { event.Skip(); }
 		virtual void ResumeRunCheckBoxOnCheckBox( wxCommandEvent& event ) { event.Skip(); }
 
 

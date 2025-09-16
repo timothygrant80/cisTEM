@@ -34,3 +34,5 @@ configure~
 *.dff
 __pycache__/
 include/Eigen
+
+.claude/cache/

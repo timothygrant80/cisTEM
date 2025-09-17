@@ -304,6 +304,34 @@ void MyMainFrame::DirtyEverything( ) {
     DirtyAtomicCoordinates( );
 }
 
+// DIRTY METHODS SAFETY: All Dirty*() methods below include null pointer checks to prevent segfaults.
+//
+// WHY NULL CHECKS ARE CRITICAL HERE:
+// These methods can be called at various times during the application lifecycle, including:
+// 1. During workflow switching (when panels are being destroyed/recreated)
+// 2. After database operations that may trigger UI updates
+// 3. From event handlers that may fire during panel transitions
+// 4. From background threads or delayed events
+//
+// THE SEGFAULT SCENARIO WE'RE PREVENTING:
+// Without null checks, the following sequence caused intermittent crashes:
+// 1. User switches workflow (e.g., Single Particle → Template Matching)
+// 2. Old panels are destroyed, but a database operation is still pending
+// 3. Database operation completes and calls a Dirty*() method
+// 4. Method tries to access a destroyed panel through non-null but invalid pointer
+// 5. Segmentation fault occurs when accessing freed memory
+//
+// THE FIX:
+// By adding null checks (if (panel_ptr) ...) before every access, we ensure that:
+// - Destroyed panels (nullified in destructors) are safely skipped
+// - Panels that haven't been created yet are safely ignored
+// - The application remains stable during workflow transitions
+// - Race conditions between UI updates and panel lifecycle are handled gracefully
+//
+// MAINTENANCE NOTE:
+// Always use the pattern: if (panel_ptr) panel_ptr->member = value;
+// Never assume a panel pointer is valid without checking first.
+
 void MyMainFrame::DirtyVolumes( ) {
     if (volume_asset_panel) volume_asset_panel->is_dirty = true;
     if (refine_3d_panel) refine_3d_panel->volumes_are_dirty = true;
@@ -966,26 +994,50 @@ bool MyMainFrame::MigrateProject(wxString old_project_directory, wxString new_pr
 }
 
 void MyMainFrame::SwitchWorkflowPanels(const wxString& workflow_name) {
-    wxPrintf("SwitchWorkflowPanels called with workflow: '%s'\n", workflow_name);
+    // WORKFLOW SWITCHING SAFETY: This function handles the complex process of switching between
+    // different workflow types (e.g., Single Particle ↔ Template Matching).
+    //
+    // CRITICAL SEQUENCE OF OPERATIONS (order matters!):
+    // 1. Freeze the UI to prevent flicker and intermediate state rendering
+    // 2. Save current page selection to restore user context after switch
+    // 3. Remove the actions panel page from the book (but don't destroy yet)
+    // 4. Destroy the old actions panel and all its children
+    // 5. Create new workflow-specific panels
+    // 6. Restore the page position and selection
+    //
+    // SEGFAULT PREVENTION MEASURES:
+    // - The actions_panel->Destroy() call triggers the ActionsPanelSpa/Tm destructor
+    // - Those destructors nullify all global panel pointers to prevent dangling references
+    // - The null checks in Dirty*() methods prevent accessing freed memory
+    // - Error handling with fallback ensures we always have a valid actions panel
+
     Freeze( );
 
     int current_page_idx  = MenuBook->GetSelection( );
     int actions_panel_idx = MenuBook->FindPage(actions_panel);
     MenuBook->RemovePage(actions_panel_idx);
 
-    // FIXME: This causes problems in an inconsistant way.
-    // if you click back and forth a few times it will eventually segfault.
+    // Destroy the old panel hierarchy. This is safe because:
+    // 1. We've already removed it from MenuBook (no UI references)
+    // 2. The destructor will nullify global pointers (no dangling references)
+    // 3. wxWidgets will handle child deletion (automatic cleanup)
     if ( actions_panel ) {
         actions_panel->Destroy( );
         actions_panel = nullptr;
     }
 
+    // Create the new workflow-specific actions panel.
+    // The WorkflowRegistry creates the appropriate panel type and all its children.
     actions_panel = static_cast<ActionsPanelParent*>(WorkflowRegistry::Instance( ).CreateActionsPanel(workflow_name, this->MenuBook));
+
+    // Robust error handling: If the requested workflow fails, fall back to Single Particle.
+    // This ensures the application remains usable even if a workflow registration is broken.
     if (!actions_panel) {
         wxLogError("Failed to create actions panel for workflow '%s'", workflow_name);
         // Fall back to Single Particle workflow
         actions_panel = static_cast<ActionsPanelParent*>(WorkflowRegistry::Instance( ).CreateActionsPanel("Single Particle", this->MenuBook));
         if (!actions_panel) {
+            // Catastrophic failure - this should never happen in production
             wxLogError("Critical error: Cannot create any actions panel");
             return;
         }

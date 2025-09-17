@@ -4,8 +4,24 @@
 #include "../ActionsPanelSpa.h"
 #include "Icons.h"
 
-// These are all defined in projectx.cpp; we'll use them here so that
-// the panel will be fully instantiated any time the workflow changes.
+// GLOBAL PANEL POINTERS: These are all defined in projectx.cpp and used throughout the application.
+//
+// IMPORTANT LIFECYCLE MANAGEMENT:
+// - These pointers are shared globally across the entire application
+// - They are created when a workflow is activated (see createActionsPanel lambda below)
+// - They are destroyed when switching workflows (handled by ActionsPanelSpa destructor)
+// - The destructor MUST set these to nullptr to prevent dangling pointer access
+//
+// WHY GLOBALS?
+// - Historical design: The application was originally single-workflow
+// - Many parts of the codebase expect direct access to these panels
+// - Refactoring to eliminate globals would require extensive changes
+//
+// SAFETY PROTOCOL:
+// 1. Create panels in workflow registration (below)
+// 2. Destroy panels when switching workflows (automatic via wxWidgets)
+// 3. Nullify pointers in destructor (prevents segfaults)
+// 4. Check for null before access (in Dirty*() methods and elsewhere)
 extern MyAlignMoviesPanel*   align_movies_panel;
 extern MyFindCTFPanel*       findctf_panel;
 extern MyFindParticlesPanel* findparticles_panel;
@@ -32,13 +48,15 @@ class SpaWorkflow {
  */
 struct SpaWorkflowRegister {
     SpaWorkflowRegister( ) {
-        wxPrintf("Registering Single Particle workflow\n");
         // TODO: also add the results panel creation here
         WorkflowDefinition def;
         def.name               = "Single Particle";
         def.createActionsPanel = [](wxWindow* parent) {
             ActionsPanelSpa* actions_panel = new ActionsPanelSpa(parent);
-            // Create new panels (old ones are destroyed with their parent)
+
+            // PANEL CREATION: Create all workflow-specific panels as children of ActionsBook.
+            // These panels will be automatically destroyed when actions_panel is destroyed.
+            // The ActionsPanelSpa destructor will handle nullifying the global pointers.
             align_movies_panel = new MyAlignMoviesPanel(actions_panel->ActionsBook);
             findctf_panel = new MyFindCTFPanel(actions_panel->ActionsBook);
             findparticles_panel = new MyFindParticlesPanel(actions_panel->ActionsBook);

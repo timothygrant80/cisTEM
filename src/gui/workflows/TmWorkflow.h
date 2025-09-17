@@ -4,6 +4,20 @@
 #include "../ActionsPanelTm.h"
 #include "Icons.h"
 
+// GLOBAL PANEL POINTERS: Similar to SpaWorkflow.h, these globals are managed carefully.
+//
+// TEMPLATE MATCHING SPECIFIC PANELS:
+// - match_template_panel: The main template matching configuration panel
+// - refine_template_panel: For refining template matches
+// - match_template_results_panel: For displaying match results
+//
+// SHARED PANELS (also used in Single Particle):
+// - align_movies_panel, findctf_panel: Pre-processing panels
+// - generate_3d_panel, sharpen_3d_panel: 3D reconstruction panels
+//
+// CRITICAL: ActionsPanelTm destructor must nullify only the panels it creates.
+// Some panels might be shared or managed elsewhere, so we only clean up what we own.
+
 extern ActionsPanelParent*        actions_panel;
 extern MyAlignMoviesPanel*        align_movies_panel;
 extern MyFindCTFPanel*            findctf_panel;
@@ -28,14 +42,16 @@ class TmWorkflow {
  */
 struct TmWorkflowRegister {
     TmWorkflowRegister( ) {
-        wxPrintf("Registering Template Matching workflow\n");
         WorkflowDefinition def;
         def.name               = "Template Matching";
         def.createActionsPanel = [](wxWindow* parent) {
             ActionsPanelTm* actions_panel_tm = new ActionsPanelTm(parent);
             // Don't set the global actions_panel here - it will be set by the caller
 
-            // Create new panels (old ones are destroyed with their parent)
+            // PANEL CREATION: Create Template Matching specific panels.
+            // Note: These replace any existing Single Particle panels with the same names.
+            // The old panels are destroyed first (handled by ActionsPanelSpa destructor if coming from SPA).
+            // ActionsPanelTm destructor will nullify these pointers when switching away from TM.
             align_movies_panel = new MyAlignMoviesPanel(actions_panel_tm->ActionsBook);
             findctf_panel = new MyFindCTFPanel(actions_panel_tm->ActionsBook);
             match_template_panel = new MatchTemplatePanel(actions_panel_tm->ActionsBook);

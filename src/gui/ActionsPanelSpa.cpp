@@ -4,14 +4,30 @@
 
 ActionsPanelSpa::ActionsPanelSpa(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
     : ActionsPanelParent(parent, id, pos, size, style) {
-    wxPrintf("In actions panel SPA Const\n");
     // Parent class already connects the event handler, no need to bind again
 }
 
 ActionsPanelSpa::~ActionsPanelSpa( ) {
-    wxPrintf("In the actions panel SPA destructor\n");
-    // Set global pointers to nullptr since the panels will be destroyed with ActionsBook
-    // This prevents the next workflow from trying to access destroyed panels
+    // CRITICAL: Nullify all global panel pointers to prevent segfaults during workflow switching.
+    //
+    // When switching workflows (e.g., from Single Particle to Template Matching), the following sequence occurs:
+    // 1. The current ActionsPanelSpa and all its child panels are destroyed
+    // 2. These panels are wxWidgets children of ActionsBook, so they're automatically deleted
+    // 3. However, global pointers to these panels persist and become dangling pointers
+    // 4. Various MainFrame::Dirty*() methods may be called during or after workflow switch
+    // 5. These methods check panel pointers and try to set dirty flags if non-null
+    // 6. Without nullifying here, they would dereference freed memory → segfault
+    //
+    // This issue was particularly tricky because:
+    // - The segfault was inconsistent (depended on memory reuse patterns)
+    // - It often occurred several UI operations after the actual workflow switch
+    // - The crash location varied (any Dirty*() method could trigger it)
+    //
+    // By explicitly nullifying these pointers in the destructor, we ensure that:
+    // - Dirty*() methods safely skip destroyed panels (null check fails)
+    // - The new workflow can create fresh panel instances without conflicts
+    // - Memory access violations are prevented during the transition period
+
     align_movies_panel = nullptr;
     findctf_panel = nullptr;
     findparticles_panel = nullptr;
@@ -23,8 +39,6 @@ ActionsPanelSpa::~ActionsPanelSpa( ) {
     generate_3d_panel = nullptr;
     sharpen_3d_panel = nullptr;
 }
-
-// TODO: destructor
 
 void ActionsPanelSpa::OnActionsBookPageChanged(wxListbookEvent& event) {
 

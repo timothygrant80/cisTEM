@@ -28,30 +28,33 @@ class TmWorkflow {
  */
 struct TmWorkflowRegister {
     TmWorkflowRegister( ) {
+        wxPrintf("Registering Template Matching workflow\n");
         WorkflowDefinition def;
         def.name               = "Template Matching";
         def.createActionsPanel = [](wxWindow* parent) {
             ActionsPanelTm* actions_panel_tm = new ActionsPanelTm(parent);
-            actions_panel                    = static_cast<ActionsPanelParent*>(actions_panel_tm);
-            align_movies_panel               = new MyAlignMoviesPanel(actions_panel->ActionsBook);
-            findctf_panel                    = new MyFindCTFPanel(actions_panel->ActionsBook);
-            match_template_panel             = new MatchTemplatePanel(actions_panel->ActionsBook);
-            refine_template_panel            = new RefineTemplatePanel(actions_panel->ActionsBook);
-            generate_3d_panel                = new Generate3DPanel(actions_panel->ActionsBook);
-            sharpen_3d_panel                 = new Sharpen3DPanel(actions_panel->ActionsBook);
+            // Don't set the global actions_panel here - it will be set by the caller
 
-            if ( ! actions_panel->ActionsBook->GetImageList( ) ) {
-                actions_panel->ActionsBook->AssignImageList(GetActionsTmBookIconImages( ));
+            // Create new panels (old ones are destroyed with their parent)
+            align_movies_panel = new MyAlignMoviesPanel(actions_panel_tm->ActionsBook);
+            findctf_panel = new MyFindCTFPanel(actions_panel_tm->ActionsBook);
+            match_template_panel = new MatchTemplatePanel(actions_panel_tm->ActionsBook);
+            refine_template_panel = new RefineTemplatePanel(actions_panel_tm->ActionsBook);
+            generate_3d_panel = new Generate3DPanel(actions_panel_tm->ActionsBook);
+            sharpen_3d_panel = new Sharpen3DPanel(actions_panel_tm->ActionsBook);
+
+            if ( ! actions_panel_tm->ActionsBook->GetImageList( ) ) {
+                actions_panel_tm->ActionsBook->AssignImageList(GetActionsTmBookIconImages( ));
             }
 
-            actions_panel->ActionsBook->AddPage(align_movies_panel, "Align Movies", true, 0);
-            actions_panel->ActionsBook->AddPage(findctf_panel, "Find CTF", false, 1);
-            actions_panel->ActionsBook->AddPage(match_template_panel, "Match Templates", false, 2);
-            actions_panel->ActionsBook->AddPage(refine_template_panel, "Refine Template", false, 3);
-            actions_panel->ActionsBook->AddPage(generate_3d_panel, "Generate 3D", false, 4);
-            actions_panel->ActionsBook->AddPage(sharpen_3d_panel, "Sharpen 3D", false, 5);
+            actions_panel_tm->ActionsBook->AddPage(align_movies_panel, "Align Movies", true, 0);
+            actions_panel_tm->ActionsBook->AddPage(findctf_panel, "Find CTF", false, 1);
+            actions_panel_tm->ActionsBook->AddPage(match_template_panel, "Match Templates", false, 2);
+            actions_panel_tm->ActionsBook->AddPage(refine_template_panel, "Refine Template", false, 3);
+            actions_panel_tm->ActionsBook->AddPage(generate_3d_panel, "Generate 3D", false, 4);
+            actions_panel_tm->ActionsBook->AddPage(sharpen_3d_panel, "Sharpen 3D", false, 5);
 
-            return actions_panel;
+            return actions_panel_tm;
         };
         // TODO: define a results panel function as well
         WorkflowRegistry::Instance( ).RegisterWorkflow(def);

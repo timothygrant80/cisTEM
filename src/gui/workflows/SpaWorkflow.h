@@ -32,21 +32,23 @@ class SpaWorkflow {
  */
 struct SpaWorkflowRegister {
     SpaWorkflowRegister( ) {
+        wxPrintf("Registering Single Particle workflow\n");
         // TODO: also add the results panel creation here
         WorkflowDefinition def;
         def.name               = "Single Particle";
         def.createActionsPanel = [](wxWindow* parent) {
             ActionsPanelSpa* actions_panel = new ActionsPanelSpa(parent);
-            align_movies_panel             = new MyAlignMoviesPanel(actions_panel->ActionsBook);
-            findctf_panel                  = new MyFindCTFPanel(actions_panel->ActionsBook);
-            findparticles_panel            = new MyFindParticlesPanel(actions_panel->ActionsBook);
-            classification_panel           = new MyRefine2DPanel(actions_panel->ActionsBook);
-            refine_3d_panel                = new MyRefine3DPanel(actions_panel->ActionsBook);
-            refine_ctf_panel               = new RefineCTFPanel(actions_panel->ActionsBook);
-            auto_refine_3d_panel           = new AutoRefine3DPanel(actions_panel->ActionsBook);
-            ab_initio_3d_panel             = new AbInitio3DPanel(actions_panel->ActionsBook);
-            generate_3d_panel              = new Generate3DPanel(actions_panel->ActionsBook);
-            sharpen_3d_panel               = new Sharpen3DPanel(actions_panel->ActionsBook);
+            // Create new panels (old ones are destroyed with their parent)
+            align_movies_panel = new MyAlignMoviesPanel(actions_panel->ActionsBook);
+            findctf_panel = new MyFindCTFPanel(actions_panel->ActionsBook);
+            findparticles_panel = new MyFindParticlesPanel(actions_panel->ActionsBook);
+            classification_panel = new MyRefine2DPanel(actions_panel->ActionsBook);
+            refine_3d_panel = new MyRefine3DPanel(actions_panel->ActionsBook);
+            refine_ctf_panel = new RefineCTFPanel(actions_panel->ActionsBook);
+            auto_refine_3d_panel = new AutoRefine3DPanel(actions_panel->ActionsBook);
+            ab_initio_3d_panel = new AbInitio3DPanel(actions_panel->ActionsBook);
+            generate_3d_panel = new Generate3DPanel(actions_panel->ActionsBook);
+            sharpen_3d_panel = new Sharpen3DPanel(actions_panel->ActionsBook);
 
             if ( ! actions_panel->ActionsBook->GetImageList( ) ) {
                 actions_panel->ActionsBook->AssignImageList(GetActionsSpaBookIconImages( ));

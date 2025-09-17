@@ -4,13 +4,25 @@
 
 ActionsPanelTm::ActionsPanelTm(wxWindow* parent, wxWindowID id, const wxPoint& pos, const wxSize& size, long style)
     : ActionsPanelParent(parent, id, pos, size, style) {
-    // Bind OnListBookPageChanged from
-    Bind(wxEVT_LISTBOOK_PAGE_CHANGED, wxBookCtrlEventHandler(ActionsPanelTm::OnActionsBookPageChanged), this);
+    wxPrintf("In actions panel TM Const\n");
+    // Parent class already connects the event handler, no need to bind again
+}
+
+ActionsPanelTm::~ActionsPanelTm( ) {
+    wxPrintf("In the actions panel TM destructor\n");
+    // Set global pointers to nullptr since the panels will be destroyed with ActionsBook
+    // This prevents the next workflow from trying to access destroyed panels
+    align_movies_panel = nullptr;
+    findctf_panel = nullptr;
+    match_template_panel = nullptr;
+    refine_template_panel = nullptr;
+    generate_3d_panel = nullptr;
+    sharpen_3d_panel = nullptr;
 }
 
 // TODO: destructor
 
-void ActionsPanelTm::OnActionsBookPageChanged(wxBookCtrlEvent& event) {
+void ActionsPanelTm::OnActionsBookPageChanged(wxListbookEvent& event) {
 
     extern MyAlignMoviesPanel*        align_movies_panel;
     extern MyFindCTFPanel*            findctf_panel;

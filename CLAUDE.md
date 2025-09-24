@@ -48,86 +48,42 @@ cisTEM is a scientific computing application for cryo-electron microscopy (cryo-
 
 cisTEM uses GNU Autotools as the primary build system with Intel MKL for optimized FFT operations.
 
-### Developer Build Process
+For detailed build instructions, see `scripts/CLAUDE.md`.
 
-For development builds, follow this sequence from the project root:
-
-1. **Initial setup after clean install:**
-
-   ```bash
-   ./regenerate_containers.sh
-   ./regenerate_project.b
-   ```
-
-2. **Configure and build using VS Code tasks:**
-   - Use VS Code Command Palette → Tasks: Run Task
-   - Default profiles:
-     - `Configure cisTEM DEBUG build` (only needed if build system files changed: configure.ac, *.m4, Makefile.am)
-     - `BUILD cisTEM DEBUG`
-   - **Note:** If you modify configure.ac, any .m4 files, or Makefile.am, run `./regenerate_project.b`, then configure, then build
-
-3. **Manual build process:**
-
-   ```bash
-   # Example debug build with Intel compiler and GPU support
-   mkdir -p build/intel-gpu-debug-static
-   cd build/intel-gpu-debug-static
-   CC=icc CXX=icpc ../../configure --enable-debugmode --enable-gpu-debug \
-     --with-wx-config=/opt/WX/icc-static/bin/wx-config \
-     --enable-staticmode --with-cuda=/usr/local/cuda \
-     --enable-experimental --enable-openmp
-   make -j8
-   ```
-
-### CMake (Alternative)
+### Quick Start
 
 ```bash
-mkdir build && cd build
-cmake -DBUILD_STATIC_BINARIES=ON -DBUILD_EXPERIMENTAL_FEATURES=OFF ..
-make -j$(nproc)
+# Initial setup
+./regenerate_containers.sh
+./regenerate_project.b
+
+# Configure and build using VS Code
+# Command Palette → Tasks: Run Task → BUILD cisTEM DEBUG
+
+# Or manually:
+mkdir -p build/debug && cd build/debug
+../../configure --enable-debugmode
+make -j16
 ```
-
-Build options for CMake:
-
-- `BUILD_STATIC_BINARIES=ON/OFF` - Static vs dynamic linking
-- `BUILD_EXPERIMENTAL_FEATURES=ON/OFF` - Include experimental code
-- `BUILD_OpenMP=ON/OFF` - Enable OpenMP multithreading
-
-### Docker Development Environment
-The project uses a Docker container for cross-platform development. Container definitions are in `scripts/containers/` with base and top layer architecture.
 
 ## Architecture
 
 ### Core Components
 
-- **src/core/** - Core libraries and data structures
-  - Image processing classes (`image.h`, `mrc_file.h`)
-  - Mathematical utilities (`matrix.h`, `functions.h`)
-  - Database interface (SQLite integration)
-  - GPU acceleration headers and CUDA code
-
-- **src/gui/** - wxWidgets-based graphical interface
-  - Main application framework
-  - Panel components for different workflows
-  - Icon resources and UI elements
-
-- **src/programs/** - Command-line executables
-  - Individual processing programs (ctffind, unblur, refine3d, etc.)
-  - Each program is self-contained with its own main()
+- **src/core/** - Core libraries and data structures (see `src/core/CLAUDE.md`)
+- **src/gui/** - wxWidgets-based graphical interface (see `src/gui/CLAUDE.md`)
+- **src/programs/** - Command-line executables (see `src/programs/CLAUDE.md`)
+- **scripts/** - Build and utility scripts (see `scripts/CLAUDE.md`)
 
 ### Key Dependencies
 
 - **Intel MKL** - Primary FFT library for optimized performance
-- **FFTW** - Alternative FFT library (maintained for portability but not officially supported due to restrictive licensing)
 - **wxWidgets** - GUI framework (typically 3.0.5 stable)
-- **LibTIFF** - TIFF image file support
 - **SQLite** - Database backend
 - **CUDA** - GPU acceleration (optional)
 - **Intel C++ Compiler (icc/icpc)** - Primary compiler for performance builds
 
-## Development Commands
-
-### Testing
+## Testing
 
 cisTEM has a multi-tiered testing approach:
 
@@ -140,34 +96,9 @@ cisTEM has a multi-tiered testing approach:
 
 # Functional tests - Test complete workflows and image processing tasks
 ./samples_functional_testing
-
-# Quick test executable
-./quick_test
 ```
 
-**Testing hierarchy:**
-
-- `unit_test_runner` - Basic unit tests for core functionality
-- `console_test` - Intermediate complexity, testing individual methods with embedded test data
-- `samples_functional_testing` - Full workflow tests simulating real image processing tasks
-
-Refer to `.github/workflows/` for CI test configurations and current testing priorities.
-
-### GPU Development
-
-The project includes CUDA code for GPU acceleration. GPU-related files are primarily in:
-
-- Core extensions for GPU operations
-- Specialized GPU kernels for image processing
-- CUDA FFT implementations
-
-### Code Structure Notes
-
-- Most core functionality is in header-only or heavily templated C++ code
-- Image processing uses custom Image class with MRC file format support
-- Database schema is defined for project management
-- Extensive use of wxWidgets for cross-platform GUI components
-- Legacy features mean style isn't fully coherent, but the project aims to unify as code is modified
+Refer to `.github/workflows/` for CI test configurations.
 
 ## Code Style and Standards
 
@@ -191,59 +122,24 @@ The project includes CUDA code for GPU acceleration. GPU-related files are prima
 - **Descriptive Messages:** Write clear, concise commit messages that explain what was changed and why
 - **Test Before Commit:** Verify that changes work as expected before committing
 
-## wxWidgets Best Practices for cisTEM
+
+## Modern C++ Best Practices
+
+### Container Usage
+
+**Use STL containers for new code.** wxWidgets legacy containers (wxArray, wxList) exist only for compatibility.
+
+| Use Case | Recommended | Avoid |
+|----------|-------------|-------|
+| Dynamic arrays | `std::vector<T>` | wxArray, wxVector |
+| Lists | `std::list<T>`, `std::deque<T>` | wxList |
+| String lists | `std::vector<wxString>` | wxArrayString |
 
 ### Memory Management
-- **Widget Ownership:** Create widgets with clear parent-child relationships. Parent widgets automatically delete their children.
-- **Avoid Complex Member Widgets:** Don't use `std::unique_ptr` or member variables for widgets that may outlive workflow switches. Instead, create them locally in dialogs.
-- **Dialog-Scoped Resources:** For temporary UI elements (like queue managers), create them as children of dialogs rather than panel members.
 
-Example:
-```cpp
-// GOOD: Dialog owns the widget
-wxDialog* dialog = new wxDialog(parent, ...);
-MyWidget* widget = new MyWidget(dialog);  // Dialog will delete it
-
-// AVOID: Complex lifecycle management
-class Panel {
-    std::unique_ptr<MyWidget> persistent_widget;  // Risky during workflow switches
-};
-```
-
-### Database Access Patterns
-- **Defer Database Operations:** Never access the database in constructors, especially during workflow switching when `main_frame` might be invalid.
-- **Use Lazy Loading:** Implement a flag-based approach for database operations.
-
-Example:
-```cpp
-// GOOD: Lazy loading pattern
-class MyWidget {
-    bool needs_database_load = true;
-
-    void OnFirstUse() {
-        if (needs_database_load && main_frame && main_frame->current_project.is_open) {
-            LoadFromDatabase();
-            needs_database_load = false;
-        }
-    }
-};
-```
-
-### Workflow Switching Robustness
-- **Design for Destruction:** Panels are destroyed and recreated during workflow switches. Don't assume persistence.
-- **State in Database:** Keep complex state in the database rather than in memory.
-- **Avoid Destructor Logic:** Don't put complex logic in destructors; wxWidgets handles most cleanup automatically.
-
-### Build System Tips
-- **Parallel Builds:** Use `make -j16` (or available thread count) for faster compilation
-- **Force Rebuilds:** Delete dependency files to force rebuild: `rm gui/.deps/cisTEM-TargetFile.*`
-- **VS Code Quirks:** Git diffs may need manual refresh in VS Code after file changes
-
-## Environment Variables
-
-- `WX_CONFIG` - Path to wx-config for specifying wxWidgets installation
-- CUDA environment variables for GPU builds
-- Various build flags configured in `.vscode/tasks.json`
+- **GUI objects:** Use raw pointers with parent-child ownership (see `src/gui/CLAUDE.md`)
+- **Non-GUI objects:** Use smart pointers (`std::unique_ptr`, `std::shared_ptr`)
+- **Large arrays:** Use `new`/`delete` for explicit control
 
 ## IDE Configuration
 
@@ -252,110 +148,3 @@ The project is designed for development with Visual Studio Code using Docker con
 - VS Code settings linked via `.vscode` symlink to `.vscode_shared/CistemDev`
 - Container environment managed through `regenerate_containers.sh`
 - Build tasks pre-configured for different compiler and configuration combinations
-
-## Template Matching Queue Development Patterns
-
-### Static Members for Cross-Dialog Persistence
-When implementing features that need to persist across dialog instances (like queues), use static members rather than complex lifecycle management:
-```cpp
-// In header
-static std::deque<QueueItem> execution_queue;
-static long currently_running_id;
-
-// In cpp file - define static members
-std::deque<QueueItem> QueueManager::execution_queue;
-long QueueManager::currently_running_id = -1;
-```
-
-### Job Completion Tracking Pattern
-For async job tracking in panels, store the job ID when starting and check it in completion callbacks:
-```cpp
-// In job panel header
-long running_queue_job_id;  // -1 if not from queue
-
-// In job start
-running_queue_job_id = job.template_match_id;
-
-// In ProcessAllJobsFinished or similar
-if (running_queue_job_id > 0) {
-    UpdateQueueStatus(running_queue_job_id, "complete");
-    running_queue_job_id = -1;
-}
-```
-
-This pattern allows proper status updates without tight coupling between components.
-
-## wxWidgets Modern C++ Best Practices
-
-### Container Selection
-
-**Use STL containers for new code.** wxWidgets legacy containers (wxArray, wxList, wxVector) exist only for compatibility and should not be used in new development.
-
-| Use Case | Recommended | Avoid |
-|----------|-------------|-------|
-| Dynamic arrays | `std::vector<T>` | wxArray, wxVector |
-| Lists | `std::list<T>`, `std::deque<T>` | wxList |
-| String lists | `std::vector<wxString>` | wxArrayString |
-| Maps | `std::map`, `std::unordered_map` | wxHashMap |
-
-**Rationale:** STL containers are more efficient, safer with run-time checks, and integrate better with modern C++ features.
-
-### Memory Management for wxWidgets Objects
-
-#### GUI Objects (wxWindow-derived)
-
-**Use raw pointers with parent-child ownership model:**
-
-```cpp
-// GOOD: Parent manages child lifetime
-wxDialog* dialog = new wxDialog(parent, ...);
-wxButton* button = new wxButton(dialog, ...);  // Dialog will delete button
-
-// AVOID: Smart pointers with GUI objects
-std::unique_ptr<wxDialog> dialog;  // Risk of double-deletion
-```
-
-**Key Rules:**
-
-- Always specify a parent for wxWindow-derived objects
-- Parents automatically delete their children
-- Use `Destroy()` method, not `delete` for top-level windows
-- Never use smart pointers with wxWindow objects (causes double-deletion crashes)
-
-#### Non-GUI Objects
-
-**Use smart pointers freely:**
-
-```cpp
-// GOOD: Smart pointers for data structures
-std::unique_ptr<DataProcessor> processor = std::make_unique<DataProcessor>();
-std::shared_ptr<ImageData> shared_data = std::make_shared<ImageData>();
-```
-
-### Static Members for Persistent State
-
-For features that need to persist across dialog instances:
-
-```cpp
-// In header
-class QueueManager {
-    static std::deque<QueueItem> execution_queue;  // Survives dialog recreation
-};
-
-// In cpp file
-std::deque<QueueItem> QueueManager::execution_queue;  // Define static member
-```
-
-### Build Configuration
-
-- Enable STL support: `--enable-std_containers` or `wxUSE_STD_CONTAINERS=1`
-- Modern wxWidgets (3.3+) implements legacy containers using STL internally
-- C++11 is minimum requirement, C++14/17 features supported
-
-### Best Practices Summary
-
-- **Data structures:** Use STL containers, not wx legacy containers
-- **GUI objects:** Raw pointers with parent-child model
-- **Non-GUI objects:** Smart pointers recommended
-- **Persistence:** Static members for cross-dialog state
-- **Memory safety:** Let wxWidgets handle GUI lifecycle, use RAII for everything else

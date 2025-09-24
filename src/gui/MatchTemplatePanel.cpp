@@ -332,6 +332,12 @@ void MatchTemplatePanel::SetInfo( ) {
 }
 
 void MatchTemplatePanel::FillGroupComboBox( ) {
+    // Called from constructor (when panel is created) or OnUpdateUI (when groups change)
+    // Return early if no project is open (can happen during workflow switching)
+    if ( ! main_frame->current_project.is_open ) {
+        return;
+    }
+
     GroupComboBox->FillComboBox(true);
 
     if ( GroupComboBox->GetCount( ) > 0 && main_frame->current_project.is_open == true )

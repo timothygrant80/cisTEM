@@ -1,512 +1,154 @@
+# Additional programs configuration for cisTEM
 #
+# This file defines optional programs that can be built with cisTEM.
+# By default, all programs are built unless --disable-build-all is specified.
+#
+# Configuration flags:
+#   --disable-build-all              : Only build essential programs (GUI requirements)
+#   --enable-build-<program-name>    : Build specific program when --disable-build-all is set
+#
+# To add a new optional program:
+#   1. Add a line in the main macro below:
+#      CISTEM_OPTIONAL_PROGRAM([program_internal_name], [ENABLE_PROGRAMNAME], [display_name])
+#   2. Add corresponding AM_CONDITIONAL block in src/Makefile.am:
+#      if ENABLE_PROGRAMNAME_AM
+#      bin_PROGRAMS += your_program
+#      endif
+#
+# Example: To add a program called "my_filter":
+#   1. Add to this file:
+#      CISTEM_OPTIONAL_PROGRAM([my_filter], [ENABLE_MYFILTER], [my_filter])
+#   2. User can then configure with:
+#      ./configure --disable-build-all --enable-build-my-filter
 
+# Define a reusable macro for optional programs
+# Usage: CISTEM_OPTIONAL_PROGRAM([program_name], [CONDITIONAL_NAME], [display_name])
+AC_DEFUN([CISTEM_OPTIONAL_PROGRAM], [
+    AS_IF([test "x$build_all" = "xyes"],
+          [build_$1="yes"],
+          [build_$1="no"])
 
-# These are programs not central to running cisTEM but that users may find helpful
-AC_DEFUN([AX_ADDITIONAL_PROGRAMS],
-[
-AC_MSG_NOTICE([Checking for additional programs])
+    AC_ARG_ENABLE([build-$1],
+        AS_HELP_STRING([--enable-build-$1], [build $3 @<:@default="no"@:>@]),
+        [AS_IF([test "x$enableval" = "xyes"],
+               [build_$1=yes
+                AC_MSG_NOTICE([Building $3])])])
 
-build_all="yes"
-AC_ARG_ENABLE(build-all, AS_HELP_STRING([--disable-build-all],[only build essential and requested programs]))
-AS_IF([test "x$enable_build_all" = "xno"], [
-    build_all="no"
-    AC_MSG_NOTICE([Building only essential and requested programs])
-    ])
-    
-AC_MSG_NOTICE([Checking for additional programs 1])
-
-AS_IF([test "x$build_all" = "xyes"], [build_apply_ctf="yes"], [build_apply_ctf="no"])
-AC_ARG_ENABLE(build-applyctf, AS_HELP_STRING([--enable-build-applyctf],[build applyctf  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_apply_ctf=yes
-  	AC_MSG_NOTICE([Building applyctf])
-  fi
-  ])  
-AM_CONDITIONAL([ENABLE_APPLYCTF_AM], [test "x$build_apply_ctf" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_project3D="yes"], [build_project3D="no"])
-AC_ARG_ENABLE(build-project3D, AS_HELP_STRING([--enable-build-project3D],[build project3D  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_project3D=yes
-  	AC_MSG_NOTICE([Building project3D])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_PROJECT3D_AM], [test "x$build_project3D" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_calc_occ="yes"], [build_calc_occ="no"])
-AC_ARG_ENABLE(build-calc-occ, AS_HELP_STRING([--enable-build-calc-occ],[build calc_occ  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_calc_occ=yes
-  	AC_MSG_NOTICE([Building calc_occ])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_CALCOCC_AM], [test "x$build_calc_occ" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_remove_outlier_pixels="yes"], [build_remove_outlier_pixels="no"])
-AC_ARG_ENABLE(build-remove-outlier-pixels, AS_HELP_STRING([--enable-build-remove-outlier-pixels],[build remove_outlier_pixels  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_remove_outlier_pixels=yes
-  	AC_MSG_NOTICE([Building remove_outlier_pixels])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_REMOVEOUTLIERPIXELS_AM], [test "x$build_remove_outlier_pixels" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_resize="yes"], [build_resize="no"])
-AC_ARG_ENABLE(build-resize, AS_HELP_STRING([--enable-build-resize],[build resize  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_resize=yes
-  	AC_MSG_NOTICE([Building resize])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_RESIZE_AM], [test "x$build_resize" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_resample="yes"], [build_resample="no"])
-AC_ARG_ENABLE(build-resample, AS_HELP_STRING([--enable-build-resample],[build resample  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_resample=yes
-  	AC_MSG_NOTICE([Building resample])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_RESAMPLE_AM], [test "x$build_resample" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_reset_mrc_header="yes"], [build_reset_mrc_header="no"])
-AC_ARG_ENABLE(build-reset-mrc-header, AS_HELP_STRING([--enable-build-reset-mrc-header],[build reset_mrc_header  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_reset_mrc_header=yes
-  	AC_MSG_NOTICE([Building reset_mrc_header])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_RESETMRCHEADER_AM], [test "x$build_reset_mrc_header" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_estimate_dataset_ssnr="yes"], [build_estimate_dataset_ssnr="no"])
-AC_ARG_ENABLE(build-estimate-dataset-ssnr, AS_HELP_STRING([--enable-build-estimate-dataset-ssnr],[build estimate_dataset_ssnr  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_estimate_dataset_ssnr=yes
-  	AC_MSG_NOTICE([Building estimate_dataset_ssnr])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_ESTIMATEDATASETSSNR_AM], [test "x$build_estimate_dataset_ssnr" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_montage="yes"], [build_montage="no"])
-AC_ARG_ENABLE(build-montage, AS_HELP_STRING([--enable-build-montage],[build montage  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_montage=yes
-  	AC_MSG_NOTICE([Building montage])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_MONTAGE_AM], [test "x$build_montage" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_extract_particles="yes"], [build_extract_particles="no"])
-AC_ARG_ENABLE(build-extract-particles, AS_HELP_STRING([--enable-build-extract-particles],[build extract_particles  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_extract_particles=yes
-  	AC_MSG_NOTICE([Building extract_particles])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_EXTRACTPARTICLES_AM], [test "x$build_extract_particles" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_sum_all_mrc_files="yes"], [build_sum_all_mrc_files="no"])
-AC_ARG_ENABLE(build-sum-all-mrc-files, AS_HELP_STRING([--enable-build-sum-all-mrc-files],[build sum_all_mrc_files  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_sum_all_mrc_files=yes
-  	AC_MSG_NOTICE([Building sum_all_mrc_files])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_SUMALLMRCFILES_AM], [test "x$build_sum_all_mrc_files" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_sum_all_tif_files="yes"], [build_sum_all_tif_files="no"])
-AC_ARG_ENABLE(build-sum-all-tif-files, AS_HELP_STRING([--enable-build-sum-all-tif-files],[build sum_all_tif_files  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_sum_all_tif_files=yes
-  	AC_MSG_NOTICE([Building sum_all_tif_files])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_SUMALLTIFFILES_AM], [test "x$build_sum_all_tif_files" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_sum_all_eer_files="yes"], [build_sum_all_eer_files="no"])
-AC_ARG_ENABLE(build-sum-all-eer-files, AS_HELP_STRING([--enable-build-sum-all-eer-files],[build sum_all_eer_files  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_sum_all_eer_files=yes
-  	AC_MSG_NOTICE([Building sum_all_eer_files])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_SUMALLEERFILES_AM], [test "x$build_sum_all_eer_files" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_apply_gain_ref="yes"], [build_apply_gain_ref="no"])
-AC_ARG_ENABLE(build-apply-gain-ref, AS_HELP_STRING([--enable-build-apply-gain-ref],[build apply_gain_ref  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_apply_gain_ref=yes
-  	AC_MSG_NOTICE([Building apply_gain_ref])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_APPLYGAINREF_AM], [test "x$build_apply_gain_ref" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_scale_with_mask="yes"], [build_scale_with_mask="no"])
-AC_ARG_ENABLE(build-scale-with-mask, AS_HELP_STRING([--enable-build-scale-with-mask],[build scale_with_mask  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_scale_with_mask=yes
-  	AC_MSG_NOTICE([Building scale_with_mask])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_SCALEWITHMASK_AM], [test "x$build_scale_with_mask" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_mag_distortion_correct="yes"], [build_mag_distortion_correct="no"])
-AC_ARG_ENABLE(build-mag-distortion-correct, AS_HELP_STRING([--enable-build-mag-distortion-correct],[build mag_distortion_correct  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_mag_distortion_correct=yes
-  	AC_MSG_NOTICE([Building mag_distortion_correct])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_MAGDISTORTIONCORRECT_AM], [test "x$build_mag_distortion_correct" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_apply_mask="yes"], [build_apply_mask="no"])
-AC_ARG_ENABLE(build-apply-mask, AS_HELP_STRING([--enable-build-apply-mask],[build apply_mask  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_apply_mask=yes
-  	AC_MSG_NOTICE([Building apply_mask])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_APPLYMASK_AM], [test "x$build_apply_mask" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_convert_tif_to_mrc="yes"])
-AC_ARG_ENABLE(build-convert-tif-to-mrc, AS_HELP_STRING([--enable-build-convert-tif-to-mrc],[build convert_tif_to_mrc  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_convert_tif_to_mrc=yes
-  	AC_MSG_NOTICE([Building convert_tif_to_mrc])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_CONVERTTIFTOMRC_AM], [test "x$build_convert_tif_to_mrc" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_remove_inf_and_nan="yes"])
-AC_ARG_ENABLE(build-remove-inf-and-nan, AS_HELP_STRING([--enable-build-remove-inf-and-nan],[build remove_inf_and_nan  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_remove_inf_and_nan=yes
-  	AC_MSG_NOTICE([Building remove_inf_and_nan])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_REMOVEINFANDNAN_AM], [test "x$build_remove_inf_and_nan" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_make_orth_views="yes"])
-AC_ARG_ENABLE(build-make-orth-views, AS_HELP_STRING([--enable-build-make-orth-views],[build make_orth_views  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_make_orth_views=yes
-  	AC_MSG_NOTICE([Building make_orth_views])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_MAKEORTHVIEWS_AM], [test "x$build_make_orth_views" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_sharpen_map="yes"])
-AC_ARG_ENABLE(build-sharpen-map, AS_HELP_STRING([--enable-build-sharpen-map],[build sharpen_map  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_sharpen_map=yes
-  	AC_MSG_NOTICE([Building sharpen_map])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_SHARPENMAP_AM], [test "x$build_sharpen_map" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_calculate_fsc="yes"])
-AC_ARG_ENABLE(build-calculate-fsc, AS_HELP_STRING([--enable-build-calculate-fsc],[build calculate_fsc  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_calculate_fsc=yes
-  	AC_MSG_NOTICE([Building calculate_fsc])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_CALCULATEFSC_AM], [test "x$build_calculate_fsc" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_make_size_map="yes"])
-AC_ARG_ENABLE(build-make-size-map, AS_HELP_STRING([--enable-build-make-size-map],[build make_size_map  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_make_size_map=yes
-  	AC_MSG_NOTICE([Building make_size_map])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_MAKESIZEMAP_AM], [test "x$build_make_size_map" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_convert_par_to_star="yes"])
-AC_ARG_ENABLE(build-convert-par-to-star, AS_HELP_STRING([--enable-build-convert-par-to-star],[build convert_par_to_star  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_convert_par_to_star=yes
-  	AC_MSG_NOTICE([Building convert_par_to_star])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_CONVERTPARTOSTAR_AM], [test "x$build_convert_par_to_star" = "xyes"])
-
-
-AS_IF([test "x$build_all" = "xyes"], [build_subtract_from_stack="yes"])
-AC_ARG_ENABLE(build-subtract_from_stack, AS_HELP_STRING([--enable-build-subtract-from-stack],[build subtract-from-stack  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_subtract_from_stack=yes
-  	AC_MSG_NOTICE([Building subtract_from_stack])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_SUBTRACTFROMSTACK_AM], [test "x$build_subtract_from_stack" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_binarize="yes"])
-AC_ARG_ENABLE(build-binarize, AS_HELP_STRING([--enable-build-binarize],[build binarize  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_binarize=yes
-  	AC_MSG_NOTICE([Building binarize])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_BINARIZE_AM], [test "x$build_binarize" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_move_volume_xyz="yes"])
-AC_ARG_ENABLE(build-move-volume-xyz, AS_HELP_STRING([--enable-build-move-volume-xyz],[build move_volume_xyz  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_move_volume_xyz=yes
-  	AC_MSG_NOTICE([Building move_volume_xyz])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_MOVEVOLUMEXYZ_AM], [test "x$build_move_volume_xyz" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_symmetry_expand_stack_and_par="yes"])
-AC_ARG_ENABLE(build-symmetry-expand-stack-and-par, AS_HELP_STRING([--enable-build-symmetry-expand-stack-and-par],[build symmetry_expand_stack_and_par  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_symmetry_expand_stack_and_par=yes
-  	AC_MSG_NOTICE([Building symmetry_expand_stack_and_par])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_SYMMETRYEXPANDSTACKANDPAR_AM], [test "x$build_symmetry_expand_stack_and_par" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_subtract_two_stacks="yes"])
-AC_ARG_ENABLE(build-subtract-two-stacks, AS_HELP_STRING([--enable-build-subtract-two-stacks],[build subtract_two_stacks  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_subtract_two_stacks=yes
-  	AC_MSG_NOTICE([Building subtract_two_stacks])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_SUBTRACTTWOSTACKS_AM], [test "x$build_subtract_two_stacks" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_add_two_stacks="yes"])
-AC_ARG_ENABLE(build-add-two-stacks, AS_HELP_STRING([--enable-build-add-two-stacks],[build add_two_stacks  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_add_two_stacks=yes
-  	AC_MSG_NOTICE([Building add_two_stacks])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_ADDTWOSTACKS_AM], [test "x$build_add_two_stacks" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_multiply_two_stacks="yes"])
-AC_ARG_ENABLE(build-multiply-two-stacks, AS_HELP_STRING([--enable-build-multiply-two-stacks],[build multiply_two_stacks  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_multiply_two_stacks=yes
-  	AC_MSG_NOTICE([Building multiply_two_stacks])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_MULTIPLYTWOSTACKS_AM], [test "x$build_multiply_two_stacks" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_divide_two_stacks="yes"])
-AC_ARG_ENABLE(build-divide-two-stacks, AS_HELP_STRING([--enable-build-divide-two-stacks],[build divide_two_stacks  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_divide_two_stacks=yes
-  	AC_MSG_NOTICE([Building divide_two_stacks])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_DIVIDETWOSTACKS_AM], [test "x$build_divide_two_stacks" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_invert_stack="yes"])
-AC_ARG_ENABLE(build-invert-stack, AS_HELP_STRING([--enable-build-invert-stack],[build invert_stack  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_invert_stack=yes
-  	AC_MSG_NOTICE([Building invert_stack])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_INVERTSTACK_AM], [test "x$build_invert_stack" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_align_coordinates="yes"])
-AC_ARG_ENABLE(build-align-coordinates, AS_HELP_STRING([--enable-build-align-coordinates],[build align_coordinates  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_align_coordinates=yes
-  	AC_MSG_NOTICE([Building align_coordinates])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_ALIGNCOORDINATES_AM], [test "x$build_align_coordinates" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_align_symmetry="yes"])
-AC_ARG_ENABLE(build-align-symmetry, AS_HELP_STRING([--enable-build-align-symmetry],[build align_coordinates  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_align_symmetry=yes
-  	AC_MSG_NOTICE([Building align_coordinates])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_ALIGNSYMMETRY_AM], [test "x$build_align_symmetry" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_find_dqe="yes"])    
-AC_ARG_ENABLE(build-find-dqe, AS_HELP_STRING([--enable-build-find-dqe],[build find_dqe  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_find_dqe=yes
-  	AC_MSG_NOTICE([Building find_dqe])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_FINDDQE_AM], [test "x$build_find_dqe" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_combine_via_max="yes"])
-AC_ARG_ENABLE(build-combine-via-max, AS_HELP_STRING([--enable-build-combine-via-max],[build combine_via_max  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_combine_via_max=yes
-  	AC_MSG_NOTICE([Building combine_via_max])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_COMBINEVIAMAX_AM], [test "x$build_combine_via_max" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_remove_relion_stripes="yes"])
-AC_ARG_ENABLE(build-remove-relion-stripes, AS_HELP_STRING([--enable-build-remove-relion-stripes],[build remove_relion_stripes  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_remove_relion_stripes=yes
-  	AC_MSG_NOTICE([Building remove_relion_stripes])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_REMOVERELIONSTRIPES_AM], [test "x$build_remove_relion_stripes" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_create_mask="yes"])
-AC_ARG_ENABLE(build-create-mask, AS_HELP_STRING([--enable-build-create-mask],[build create_mask  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_create_mask=yes
-  	AC_MSG_NOTICE([Building create_mask])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_CREATEMASK_AM], [test "x$build_create_mask" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_invert_hand="yes"])
-AC_ARG_ENABLE(build-invert-hand, AS_HELP_STRING([--enable-build-invert-hand],[build invert_hand  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_invert_hand=yes
-  	AC_MSG_NOTICE([Building invert_hand])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_INVERTHAND_AM], [test "x$build_invert_hand" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_append_stacks="yes"])
-AC_ARG_ENABLE(build-append-stacks, AS_HELP_STRING([--enable-build-append-stacks],[build append_stacks  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_append_stacks=yes
-  	AC_MSG_NOTICE([Building append_stacks])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_APPENDSTACKS_AM], [test "x$build_append_stacks" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_convert_star_to_binary="yes"])
-AC_ARG_ENABLE(build-convert-star-to-binary, AS_HELP_STRING([--enable-build-convert-star-to-binary],[build convert_star_to_binary  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_convert_star_to_binary=yes
-  	AC_MSG_NOTICE([Building convert_star_to_binary])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_CONVERTSTARTOBINARY_AM], [test "x$build_convert_star_to_binary" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_convert_binary_to_star="yes"])
-AC_ARG_ENABLE(build-convert-binary-to-star, AS_HELP_STRING([--enable-build-convert-binary-to-star],[build convert_binary_to_star  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_convert_binary_to_star=yes
-  	AC_MSG_NOTICE([Building convert_binary_to_star])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_CONVERTBINARYTOSTAR_AM], [test "x$build_convert_binary_to_star" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_convert_eer_to_mrc="yes"])
-AC_ARG_ENABLE(build-convert-eer-to-mrc, AS_HELP_STRING([--enable-build-convert-eer-to-mrc],[build convert_eer_to_mrc  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_convert_eer_to_mrc=yes
-  	AC_MSG_NOTICE([Building convert_eer_to_mrc])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_CONVERTEERTOMRC_AM], [test "x$build_convert_eer_to_mrc" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_azimuthal_average="yes"])
-AC_ARG_ENABLE(build-azimuthal-average, AS_HELP_STRING([--enable-build-azimuthal-average],[build azimuthal_average  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_azimuthal_average=yes
-  	AC_MSG_NOTICE([Building azimuthal_average])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_AZIMUTHALAVERAGE_AM], [test "x$build_azimuthal_average" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_normalize_stack="yes"])
-AC_ARG_ENABLE(build-normalize-stack, AS_HELP_STRING([--enable-build-normalize-stack],[build normalize_stack  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_normalize_stack=yes
-  	AC_MSG_NOTICE([Building normalize_stack])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_NORMALIZESTACK_AM], [test "x$build_normalize_stack" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_print_stack_statistics="yes"])
-AC_ARG_ENABLE(build-print-stack-statistics, AS_HELP_STRING([--enable-build-print-stack-statistics],[build print_stack_statistics  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_print_stack_statistics=yes
-  	AC_MSG_NOTICE([Building print_stack_statistics])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_PRINTSTACKSTATISTICS_AM], [test "x$build_print_stack_statistics" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_combine_stacks_by_star="yes"])
-AC_ARG_ENABLE(build-combine-stacks-by-star, AS_HELP_STRING([--enable-build-combine-stacks-by-star],[build combine_stacks_by_star  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_combine_stacks_by_star=yes
-  	AC_MSG_NOTICE([Building combine_stacks_by_star])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_COMBINESTACKSBYSTAR_AM], [test "x$build_combine_stacks_by_star" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_measure_template_bias="yes"])
-AC_ARG_ENABLE(build-measure-template-bias, AS_HELP_STRING([--enable-build-measure-template-bias],[build measure_template_bias  [default="no"]]),[
-  if test "x$enableval" = "xyes"; then
-    build_measure_template_bias=yes
-  	AC_MSG_NOTICE([Building measure_template_bias])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_MEASURETEMPLATEBIAS_AM], [test "x$build_measure_template_bias" = "xyes"])
-
-
-use_Eigen="no"
-AS_IF([test "x$build_all" = "xyes"], [build_calculate_template_pvalue="yes"], [build_calculate_template_pvalue="no"])
-AC_ARG_ENABLE(build-calculate-template-pvalue, AS_HELP_STRING([--enable-build-calculate-template-pvalue],[build calculate_template_pvalue  [default="no"]]),[
-  if test "x$enableval" = "xyes" ; then
-    # Check for Eigen which is currently needed but is slated to be replaced with MKL
-    # The version that should be installed is 3.4.0
-    AC_CHECK_FILE("$TOPSRCDIR/include/Eigen/Dense",[use_Eigen="yes"],[use_Eigen="no"])
-
-  fi
-  ], [
-    AC_CHECK_FILE("$TOPSRCDIR/include/Eigen/Dense",[use_Eigen="yes"],[use_Eigen="no"])
-  ])
-
-  if test "x$use_Eigen" = "xyes"; then
-      # If this is build-all then this value is already yes, other wise we need to set it
-      build_calculate_template_pvalue=yes
-      AC_MSG_NOTICE([Building calculate_template_pvalue])
-  else
-      build_calculate_template_pvalue=no
-      AC_MSG_NOTICE([Eigen is required to build calculate_template_pvalue. Please install Eigen v3.4.0 or configure without --enable-calculate-template-pvalue])
-  fi
-
-AM_CONDITIONAL([ENABLE_CALCULATETEMPLATEPVALUE_AM], [test "x$build_calculate_template_pvalue" = "xyes"])
-AS_IF([test "x$build_all" = "xyes"], [build_align_nmr_spectra="yes"])
-AC_ARG_ENABLE(build-align-nmr-spectra, AS_HELP_STRING([--enable-build-align-nmr-spectra],[build align_nmr_spectra  [default="no"]]),[
-  if test "$enableval" = yes; then
-    build_align_nmr_spectra=yes
-  	AC_MSG_NOTICE([Building align_nmr_spectra])	
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_ALIGNNMRSPECTRA_AM], [test "x$build_align_nmr_spectra" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_correlate_nmr_spectra="yes"])
-AC_ARG_ENABLE(build-correlate-nmr-spectra, AS_HELP_STRING([--enable-correlate-nmr-spectra],[build correlate_nmr_spectra  [default="no"]]),[
-  if test "$enableval" = yes; then
-    build_correlate_nmr_spectra=yes
-    AC_MSG_NOTICE([Building correlate_nmr_spectra])
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_CORRELATENMRSPECTRA_AM], [test "x$build_correlate_nmr_spectra" = "xyes"])
-
-AS_IF([test "x$build_all" = "xyes"], [build_filter_images="yes"])
-AC_ARG_ENABLE(build-filter-images, AS_HELP_STRING([--enable-filter-images],[build filter_images  [default="no"]]),[
-  if test "$enableval" = yes; then
-    build_filter_images=yes
-    AC_MSG_NOTICE([Building filter_images])
-  fi
-  ])
-AM_CONDITIONAL([ENABLE_FILTERIMAGES_AM], [test "x$build_filter_images" = "xyes"])
-
+    AM_CONDITIONAL([$2_AM], [test "x$build_$1" = "xyes"])
 ])
 
+# Main macro for configuring all optional programs
+AC_DEFUN([NON_ESSENTIAL_PROGRAMS_TO_BE_COMPILED],
+[
+    AC_MSG_NOTICE([Checking for additional programs])
+
+    # Check if we should build all programs
+    build_all="yes"
+    AC_ARG_ENABLE(build-all,
+        AS_HELP_STRING([--disable-build-all], [only build essential and requested programs]),
+        [AS_IF([test "x$enable_build_all" = "xno"],
+               [build_all="no"
+                AC_MSG_NOTICE([Building only essential and requested programs])])])
+
+    AC_MSG_NOTICE([Checking for additional programs 1])
+
+    # Define all optional programs using the macro
+    # Format: CISTEM_OPTIONAL_PROGRAM([internal_name], [CONDITIONAL_NAME], [display_name])
+
+    CISTEM_OPTIONAL_PROGRAM([applyctf], [ENABLE_APPLYCTF], [applyctf])
+    CISTEM_OPTIONAL_PROGRAM([project3d], [ENABLE_PROJECT3D], [project3D])
+    CISTEM_OPTIONAL_PROGRAM([calc_occ], [ENABLE_CALCOCC], [calc_occ])
+    CISTEM_OPTIONAL_PROGRAM([remove_outlier_pixels], [ENABLE_REMOVEOUTLIERPIXELS], [remove_outlier_pixels])
+    CISTEM_OPTIONAL_PROGRAM([resize], [ENABLE_RESIZE], [resize])
+    CISTEM_OPTIONAL_PROGRAM([resample], [ENABLE_RESAMPLE], [resample])
+    CISTEM_OPTIONAL_PROGRAM([reset_mrc_header], [ENABLE_RESETMRCHEADER], [reset_mrc_header])
+    CISTEM_OPTIONAL_PROGRAM([estimate_dataset_ssnr], [ENABLE_ESTIMATEDATASETSSNR], [estimate_dataset_ssnr])
+    CISTEM_OPTIONAL_PROGRAM([montage], [ENABLE_MONTAGE], [montage])
+    CISTEM_OPTIONAL_PROGRAM([extract_particles], [ENABLE_EXTRACTPARTICLES], [extract_particles])
+    CISTEM_OPTIONAL_PROGRAM([sum_all_mrc_files], [ENABLE_SUMALLMRCFILES], [sum_all_mrc_files])
+    CISTEM_OPTIONAL_PROGRAM([sum_all_tif_files], [ENABLE_SUMALLTIFFILES], [sum_all_tif_files])
+    CISTEM_OPTIONAL_PROGRAM([sum_all_eer_files], [ENABLE_SUMALLEERFILES], [sum_all_eer_files])
+    CISTEM_OPTIONAL_PROGRAM([apply_gain_ref], [ENABLE_APPLYGAINREF], [apply_gain_ref])
+    CISTEM_OPTIONAL_PROGRAM([scale_with_mask], [ENABLE_SCALEWITHMASK], [scale_with_mask])
+    CISTEM_OPTIONAL_PROGRAM([mag_distortion_correct], [ENABLE_MAGDISTORTIONCORRECT], [mag_distortion_correct])
+    CISTEM_OPTIONAL_PROGRAM([apply_mask], [ENABLE_APPLYMASK], [apply_mask])
+    CISTEM_OPTIONAL_PROGRAM([convert_tif_to_mrc], [ENABLE_CONVERTTIFTOMRC], [convert_tif_to_mrc])
+    CISTEM_OPTIONAL_PROGRAM([remove_inf_and_nan], [ENABLE_REMOVEINFANDNAN], [remove_inf_and_nan])
+    CISTEM_OPTIONAL_PROGRAM([make_orth_views], [ENABLE_MAKEORTHVIEWS], [make_orth_views])
+    CISTEM_OPTIONAL_PROGRAM([sharpen_map], [ENABLE_SHARPENMAP], [sharpen_map])
+    CISTEM_OPTIONAL_PROGRAM([calculate_fsc], [ENABLE_CALCULATEFSC], [calculate_fsc])
+    CISTEM_OPTIONAL_PROGRAM([make_size_map], [ENABLE_MAKESIZEMAP], [make_size_map])
+    CISTEM_OPTIONAL_PROGRAM([convert_par_to_star], [ENABLE_CONVERTPARTOSTAR], [convert_par_to_star])
+    CISTEM_OPTIONAL_PROGRAM([subtract_from_stack], [ENABLE_SUBTRACTFROMSTACK], [subtract_from_stack])
+    CISTEM_OPTIONAL_PROGRAM([binarize], [ENABLE_BINARIZE], [binarize])
+    CISTEM_OPTIONAL_PROGRAM([move_volume_xyz], [ENABLE_MOVEVOLUMEXYZ], [move_volume_xyz])
+    CISTEM_OPTIONAL_PROGRAM([symmetry_expand_stack_and_par], [ENABLE_SYMMETRYEXPANDSTACKANDPAR], [symmetry_expand_stack_and_par])
+    CISTEM_OPTIONAL_PROGRAM([subtract_two_stacks], [ENABLE_SUBTRACTTWOSTACKS], [subtract_two_stacks])
+    CISTEM_OPTIONAL_PROGRAM([add_two_stacks], [ENABLE_ADDTWOSTACKS], [add_two_stacks])
+    CISTEM_OPTIONAL_PROGRAM([multiply_two_stacks], [ENABLE_MULTIPLYTWOSTACKS], [multiply_two_stacks])
+    CISTEM_OPTIONAL_PROGRAM([divide_two_stacks], [ENABLE_DIVIDETWOSTACKS], [divide_two_stacks])
+    CISTEM_OPTIONAL_PROGRAM([invert_stack], [ENABLE_INVERTSTACK], [invert_stack])
+    CISTEM_OPTIONAL_PROGRAM([align_coordinates], [ENABLE_ALIGNCOORDINATES], [align_coordinates])
+    CISTEM_OPTIONAL_PROGRAM([align_symmetry], [ENABLE_ALIGNSYMMETRY], [align_symmetry])
+    CISTEM_OPTIONAL_PROGRAM([find_dqe], [ENABLE_FINDDQE], [find_dqe])
+    CISTEM_OPTIONAL_PROGRAM([combine_via_max], [ENABLE_COMBINEVIAMAX], [combine_via_max])
+    CISTEM_OPTIONAL_PROGRAM([remove_relion_stripes], [ENABLE_REMOVERELIONSTRIPES], [remove_relion_stripes])
+    CISTEM_OPTIONAL_PROGRAM([create_mask], [ENABLE_CREATEMASK], [create_mask])
+    CISTEM_OPTIONAL_PROGRAM([invert_hand], [ENABLE_INVERTHAND], [invert_hand])
+    CISTEM_OPTIONAL_PROGRAM([append_stacks], [ENABLE_APPENDSTACKS], [append_stacks])
+    CISTEM_OPTIONAL_PROGRAM([convert_star_to_binary], [ENABLE_CONVERTSTARTOBINARY], [convert_star_to_binary])
+    CISTEM_OPTIONAL_PROGRAM([convert_binary_to_star], [ENABLE_CONVERTBINARYTOSTAR], [convert_binary_to_star])
+    CISTEM_OPTIONAL_PROGRAM([convert_eer_to_mrc], [ENABLE_CONVERTEERTOMRC], [convert_eer_to_mrc])
+    CISTEM_OPTIONAL_PROGRAM([azimuthal_average], [ENABLE_AZIMUTHALAVERAGE], [azimuthal_average])
+    CISTEM_OPTIONAL_PROGRAM([normalize_stack], [ENABLE_NORMALIZESTACK], [normalize_stack])
+    CISTEM_OPTIONAL_PROGRAM([print_stack_statistics], [ENABLE_PRINTSTACKSTATISTICS], [print_stack_statistics])
+    CISTEM_OPTIONAL_PROGRAM([combine_stacks_by_star], [ENABLE_COMBINESTACKSBYSTAR], [combine_stacks_by_star])
+    CISTEM_OPTIONAL_PROGRAM([measure_template_bias], [ENABLE_MEASURETEMPLATEBIAS], [measure_template_bias])
+    CISTEM_OPTIONAL_PROGRAM([align_nmr_spectra], [ENABLE_ALIGNNMRSPECTRA], [align_nmr_spectra])
+    CISTEM_OPTIONAL_PROGRAM([correlate_nmr_spectra], [ENABLE_CORRELATENMRSPECTRA], [correlate_nmr_spectra])
+    CISTEM_OPTIONAL_PROGRAM([filter_images], [ENABLE_FILTERIMAGES], [filter_images])
+
+    # Special case: calculate_template_pvalue needs Eigen library check
+    use_Eigen="no"
+    want_calculate_template_pvalue="no"
+
+    AS_IF([test "x$build_all" = "xyes"],
+          [want_calculate_template_pvalue="yes"],
+          [want_calculate_template_pvalue="no"])
+
+    AC_ARG_ENABLE(build-calculate-template-pvalue,
+        AS_HELP_STRING([--enable-build-calculate-template-pvalue], [build calculate_template_pvalue @<:@default="no"@:>@]),
+        [AS_IF([test "x$enableval" = "xyes"],
+               [want_calculate_template_pvalue="yes"])])
+
+    # Only check for Eigen if we actually want to build calculate_template_pvalue
+    AS_IF([test "x$want_calculate_template_pvalue" = "xyes"],
+          [AC_MSG_NOTICE([Checking for Eigen v3.4.0 or later])
+           AC_CHECK_FILE("$TOPSRCDIR/include/Eigen/Dense",
+                         [use_Eigen="yes"],
+                         [use_Eigen="no"])
+
+           AS_IF([test "x$use_Eigen" = "xyes"],
+                 [build_calculate_template_pvalue="yes"
+                  AC_MSG_NOTICE([Building calculate_template_pvalue])],
+                 [build_calculate_template_pvalue="no"
+                  AC_MSG_NOTICE([Eigen is required to build calculate_template_pvalue. Please install Eigen v3.4.0 or configure without --enable-build-calculate-template-pvalue])])],
+          [build_calculate_template_pvalue="no"])
+
+    AM_CONDITIONAL([ENABLE_CALCULATETEMPLATEPVALUE_AM], [test "x$build_calculate_template_pvalue" = "xyes"])
+])
+
+dnl COMMENTED EXAMPLE OF ORIGINAL PATTERN (DO NOT USE - SHOWN FOR REFERENCE ONLY)
+dnl This shows how each program was originally defined with ~12 lines of repetitive code.
+dnl The new CISTEM_OPTIONAL_PROGRAM macro above replaces all this boilerplate.
+dnl
+dnl AS_IF([test "x$build_all" = "xyes"], [build_apply_ctf="yes"], [build_apply_ctf="no"])
+dnl AC_ARG_ENABLE(build-applyctf, AS_HELP_STRING([--enable-build-applyctf],[build applyctf  [default="no"]]),[
+dnl   if test "x$enableval" = "xyes"; then
+dnl     build_apply_ctf=yes
+dnl     AC_MSG_NOTICE([Building applyctf])
+dnl   fi
+dnl   ])
+dnl AM_CONDITIONAL([ENABLE_APPLYCTF_AM], [test "x$build_apply_ctf" = "xyes"])
+dnl
+dnl NOTE: one newline is needed at the end of this file for autoconf to work correctly

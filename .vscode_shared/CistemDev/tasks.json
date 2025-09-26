@@ -6,7 +6,8 @@
         "env": {
             "cuda_dir": "/usr/local/cuda",
             "build_dir": "${workspaceFolder}/build",
-            "common_flags": " --enable-experimental --enable-openmp --disable-build-all --enable-profiling",
+            // -diag-file-append makes Intel compiler show absolute paths in error messages for easier IDE navigation
+            "common_flags": "--enable-experimental --enable-openmp --disable-build-all --enable-profiling",
             "experimental_algo_flags": "--enable-fp16-particlestacks  --disable-multiple-global-refinements",
             "common_optional_programs": "--enable-build-scale-with-mask --enable-build-create-mask --enable-build-resample --enable-build-resize"
             // "common_optional_programs": "--enable-build-sharpen-map --enable-build-convert-binary-to-star --enable-build-convert-eer-to-mrc --enable-build-resize --enable-build-resample --enable-build-sum_all_mrc_files --enable-build-sum_all_tif_files --enable-build-convert_par_to_star --enable-build-quick_test"
@@ -21,7 +22,19 @@
         {
             "label": "BUILD cisTEM",
             "type": "shell",
-            "command": "cd ${build_dir}/intel-gpu-static && make -j${input:compile_cores}"
+            "command": "cd ${build_dir}/intel-gpu-static && make -j${input:compile_cores} 2>&1 | sed -u 's|../../../src/|${workspaceFolder}/src/|g'",
+            "problemMatcher": {
+                "owner": "icpc",
+                "fileLocation": "absolute",
+                "pattern": {
+                    "regexp": "^(.*)\\((\\d+)\\):\\s+(warning|error|remark)\\s+#?(\\d+)?:\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "severity": 3,
+                    "code": 4,
+                    "message": 5
+                }
+            }
         },
         {
             "label": "Configure cisTEM DEBUG build",
@@ -31,8 +44,20 @@
         {
             "label": "BUILD cisTEM DEBUG",
             "type": "shell",
-            "command": "cd ${build_dir}/intel-gpu-debug-static && make -j${input:compile_cores}"
-        }
+            "command": "cd ${build_dir}/intel-gpu-debug-static && make -j${input:compile_cores} 2>&1 | sed -u 's|../../../src/|${workspaceFolder}/src/|g'",
+            "problemMatcher": {
+                "owner": "icpc",
+                "fileLocation": "absolute",
+                "pattern": {
+                    "regexp": "^(.*)\\((\\d+)\\):\\s+(warning|error|remark)\\s+#?(\\d+)?:\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "severity": 3,
+                    "code": 4,
+                    "message": 5
+                }
+            }
+        },
         {
             "label": "Configure cisTEM DEBUG build TMPVALUE",
             "type": "shell",
@@ -41,8 +66,20 @@
         {
             "label": "BUILD cisTEM DEBUG TMPVALUE",
             "type": "shell",
-            "command": "cd ${build_dir}/intel-gpu-debug-static-tmpvalue && make -j${input:compile_cores}"
-        }
+            "command": "cd ${build_dir}/intel-gpu-debug-static-tmpvalue && make -j${input:compile_cores} 2>&1 | sed -u 's|../../../src/|${workspaceFolder}/src/|g'",
+            "problemMatcher": {
+                "owner": "icpc",
+                "fileLocation": "absolute",
+                "pattern": {
+                    "regexp": "^(.*)\\((\\d+)\\):\\s+(warning|error|remark)\\s+#?(\\d+)?:\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "severity": 3,
+                    "code": 4,
+                    "message": 5
+                }
+            }
+        },
         {
             "label": "Configure cisTEM DEBUG build, CPU only",
             "type": "shell",
@@ -51,7 +88,19 @@
         {
             "label": "BUILD cisTEM DEBUG, CPU only",
             "type": "shell",
-            "command": "cd ${build_dir}/intel-debug-static && make -j${input:compile_cores}"
+            "command": "cd ${build_dir}/intel-debug-static && make -j${input:compile_cores} 2>&1 | sed -u 's|../../../src/|${workspaceFolder}/src/|g'",
+            "problemMatcher": {
+                "owner": "icpc",
+                "fileLocation": "absolute",
+                "pattern": {
+                    "regexp": "^(.*)\\((\\d+)\\):\\s+(warning|error|remark)\\s+#?(\\d+)?:\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "severity": 3,
+                    "code": 4,
+                    "message": 5
+                }
+            }
         },
         {
             "label": "CONFIG GNU, gpu",

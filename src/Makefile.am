@@ -548,8 +548,11 @@ libgpucore_OBJECTS=$(libgpucore_a_SOURCES:.cu=.o)
 
 libgpucore_a_CFLAGS = -DENABLEGPU $(CUDA_CPPFLAGS) $(WX_CPPFLAGS_BASE)
 libgpucore_a_CXXFLAGS = -DENABLEGPU $(CUDA_CXXFLAGS) $(WX_CXXFLAGS_BASE)
-libgpucore_a_LIBADD = $(libFastFFT_OBJECTS) gpu/gpudevicecode.o 
+libgpucore_a_LIBADD = $(libFastFFT_OBJECTS) gpu/gpudevicecode.o
 libgpucore_a_AR = $(NVCC) -DENABLEGPU $(CUDA_CXXFLAGS) -lib -o
+
+# Add SUFFIXES for CUDA compilation
+SUFFIXES = .cu .o
 
 # This line only knows about objects build from libgpucore_a_SOURCES. We have to add any others e.g. gpu/gpu_device_code.o mannually above in the LIBADD
 .cu.o:
@@ -1344,7 +1347,6 @@ unit_test_runner_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
 
 if WANT_CISTEM_GPU_AM
-    gpu_devices_SUFFIXES = .cpp
     gpu_devices_SOURCES  =  programs/gpu_devices/gpu_devices.cpp
     gpu_devices_CXXFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
     gpu_devices_CPPFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
@@ -1355,5 +1357,5 @@ endif
 calculate_template_pvalue_SOURCES  = programs/calculate_template_pvalue/calculate_template_pvalue.cpp
 calculate_template_pvalue_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 calculate_template_pvalue_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-calculate_template_pvalue_LDADD    = libcore.a $(WX_LIBS_BASE)
+calculate_template_pvalue_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
 calculate_template_pvalue_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)

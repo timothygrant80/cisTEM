@@ -24,21 +24,38 @@ ARG build_wx_version="stable"
 ARG build_npm="false"
 ARG build_ref_images="false"
 ARG build_claude="false"
+ARG build_libtorch="true"
+ARG build_docs="true"
 
 SHELL ["/bin/bash", "-c"]
 # some rebuild comment
 ENV CISTEM_REF_IMAGES=/cisTEMdev/cistem_reference_images
 
+# We need a more recent python so we'll put that in a virtual environment at /opt/venv
+# Copy the script into the image
+COPY install_python_310_venv.sh /tmp/
+RUN bash /tmp/install_python_310_venv.sh && rm -f /tmp/install_python_310_venv.sh
+
+# Default shell uses the venv Python for subsequent RUN steps
+ENV VIRTUAL_ENV=/opt/venv
+ENV PATH="$VIRTUAL_ENV/bin:$PATH"
+
+# Verify
+RUN python --version && pip --version
+
 # Install wxWidgets
-COPY install_wx_3.1.5.sh install_node_16.sh install_node_22_and_claude.sh /tmp/
+COPY install_wx_3.1.5.sh install_node_16.sh install_node_22_and_claude.sh requirements.txt install_libtorch.sh install_documentation_tooling.sh /tmp/
 
 
 # If we do not do this, we want to link the static or dynamic libs from /opt/WX to /usr/bin so we don't need to set it on configure lines and also so that wxformbuilder can find them
 RUN echo "checking for wxWidgets 3.1.5" && if [[ "x${build_wx_version}" == "xdev" ]]; then /tmp/install_wx_3.1.5.sh  ; else echo "linking the (${build_type}) wx-config system wide"  && ln -sf /opt/WX/icc-${build_type}/bin/wx-config /usr/bin/wx-config ; fi
 
+# Install Python packages from requirements.txt
+RUN pip3 install -r /tmp/requirements.txt
+
 # Get reference images for testing and debugging
-RUN mkdir -p /opt && pip3 install gdown toml mrcfile numpy matplotlib scipy && cd /opt && gdown --fuzzy https://drive.google.com/file/d/12OiZIkfm4YF61lJo5-EEVc264pYD13OJ/view?usp=sharing && tar -xjvf FastFFT_forBuild.tar.bz2 && rm FastFFT_forBuild.tar.bz2 && mv FastFFT_forBuild /opt/FastFFT
-RUN if [[ "x${build_ref_images}" == "xtrue" ]]; then mkdir -p /cisTEMdev && pip3 install gdown toml mrcfile numpy matplotlib scipy && cd /cisTEMdev && gdown --fuzzy https://drive.google.com/file/d/197sE_pO4FWmjCo0zlqRJXAxN2BLbmHS_/view?usp=sharing && tar -xjvf cistem_reference_images_fp32.tar.bz2 && rm cistem_reference_images_fp32.tar.bz2 ;fi
+RUN mkdir -p /opt && cd /opt && gdown --fuzzy https://drive.google.com/file/d/12OiZIkfm4YF61lJo5-EEVc264pYD13OJ/view?usp=sharing && tar -xjvf FastFFT_forBuild.tar.bz2 && rm FastFFT_forBuild.tar.bz2 && mv FastFFT_forBuild /opt/FastFFT
+RUN if [[ "x${build_ref_images}" == "xtrue" ]]; then mkdir -p /cisTEMdev && cd /cisTEMdev && gdown --fuzzy https://drive.google.com/file/d/197sE_pO4FWmjCo0zlqRJXAxN2BLbmHS_/view?usp=sharing && tar -xjvf cistem_reference_images_fp32.tar.bz2 && rm cistem_reference_images_fp32.tar.bz2 ;fi
 
 
 # Will this work with wx 3.0.5?
@@ -52,9 +69,9 @@ RUN cd /opt/WX && \
 # # Install Node 16
 RUN echo "build npm" && if [[ "x${build_npm}" == "xtrue" ]] ; then /tmp/install_node_16.sh ; fi
 
-# TODO: this flag doesn't exist in the build script. Relocating from the base image to the top image
-# TODO: this is the current version needed for blush, but we may want GPU capability.
-RUN if [[ "x${build_libtorch}" == "xtrue" ]]; then cd /tmp && rm -f torch.zip && wget https://download.pytorch.org/libtorch/cpu/libtorch-win-shared-with-deps-2.5.0%2Bcpu.zip -O torch.zip && unzip torch.zip && rm torch.zip && mv libtorch /opt ; fi
+# Download and install LibTorch 2.5.0 CPU-only (cxx11 ABI for compatibility with GCC 11+)
+# This is required for blush regularization and other ML-based tools
+RUN if [[ "x${build_libtorch}" == "xtrue" ]]; then echo "installing lib torch" && /tmp/install_libtorch.sh ; else echo "NOT installing libtorch" ; fi
 
 
 # Include the lib path in LD_RUN_PATH so on linking, the correct path is known 
@@ -67,7 +84,9 @@ RUN if [[ "x${build_type}" != "xstatic" ]]; then echo "export LD_RUN_PATH=/opt/l
 # RUN ls /usr/local/cuda/lib64/lib*_static.a | grep -v cufft_static.a | while read a; do rm -rf /usr/local/cuda/lib64/$(basename $a); done && \
 #     rm -rf /usr/local/cuda/lib64/libcufft_static_nocallback.a
 
+RUN echo 'source /opt/venv/bin/activate' >> /home/cisTEMdev/.bashrc
 
+RUN if [[ "x${build_docs}" == "xtrue" ]] ; then /tmp/install_documentation_tooling.sh ; fi
 
 USER cisTEMdev
 WORKDIR /home/cisTEMdev

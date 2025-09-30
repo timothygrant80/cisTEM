@@ -191,8 +191,9 @@ AC_ARG_ENABLE(mkl, AS_HELP_STRING([--disable-mkl],[Do not use the Intel MKL]), [
  fi
 ])
 
-
-
+# LibTorch
+# Check for LibTorch support for ML-based tools (e.g., blush regularization)
+AX_LIBTORCH
 
 # wx-config 
 
@@ -715,6 +716,8 @@ AC_SUBST(CUDA_CPPFLAGS)
 AC_SUBST(CUDA_LIBS)
 AC_SUBST(libFastFFT_OBJECTS)
 AC_SUBST(MKL_LIBS)
+AC_SUBST(LIBTORCH_LIBS)
+AC_SUBST(LIBTORCH_RPATH)
 AC_SUBST(LIBTOOL_FLAGS)
 
 
@@ -724,6 +727,7 @@ AC_SUBST(LIBTOOL_FLAGS)
   AC_MSG_NOTICE([WX_LIBS=$WX_LIBS])
   AC_MSG_NOTICE([LIBS=$LIBS])
   AC_MSG_NOTICE([MKL_LIBS=$MKL_LIBS])
+  AC_MSG_NOTICE([LIBTORCH_LIBS=$LIBTORCH_LIBS])
   AC_MSG_NOTICE([libFastFFT_OBJECTS=$libFastFFT_OBJECTS])
 
 AC_CONFIG_FILES([Makefile src/Makefile])

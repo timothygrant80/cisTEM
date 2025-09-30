@@ -37,12 +37,13 @@ if [[ $1 == "-h" || $1 == "--help" ]] ; then
     echo "      --build-type: static or dynamic, default is static [BUT only dynamic is supported for --wx-version dev]"
     echo "      --npm: build npm, default is false if not specified"
     echo "      --claude: build claude, default is false if not specified"
-    echo "      --libtorch: build libtorch, default is false if not specified"
+    echo "      --skip-libtorch: default is true to include libtorch dynamic libraries for blush imple if not specified"
     echo "      --ref-images: build reference images, default is true if not specified"
+    echo "      --skip-docs: skip including depenencies for the new docs system, default is false if not specified"
     echo "      --tag-suffix: to append to the image tag"
     echo ""
     echo "For example, to build the base image without cache, and the top image with wxWidgets 3.1.5, g++, dynamic, npm, and ref-images:"
-    echo "      build_base.sh base --no-cache --wx-version=dev --compiler=g++ --npm --ref-images"
+    echo "      create_containers.sh base --no-cache --wx-version=dev --compiler=g++ --npm --ref-images"
     exit 0
 fi
 
@@ -89,7 +90,8 @@ build_compiler="icpc"
 build_wx_version="stable"
 build_npm="false"
 build_ref_images="true"
-build_libtorch="false"
+build_libtorch="true"
+build_docs="true"
 tag_suffix=""
 build_claude="false"
 
@@ -142,8 +144,12 @@ while [[ $# -gt 0 ]]; do
         build_ref_images="true"
         shift # past argument
         ;;
-    --libtorch)
-        build_libtorch="true"
+    --skip-libtorch)
+        build_libtorch="false"
+        shift # past argument
+        ;;
+    --skip-docs)
+        build_docs="false"
         shift # past argument
         ;;
     --tag-suffix)
@@ -216,6 +222,7 @@ else
     echo "    claude: ${build_claude}"
     echo "    ref-images: ${build_ref_images}"
     echo "    libtorch: ${build_libtorch}"
+    echo "    docs system: ${build_docs}"
     echo "    container version: ${top_container_version}"
     echo "    container base version: ${base_container_version}"
     echo "    container repository: ${container_repository}"
@@ -230,6 +237,7 @@ else
 
     awk -v VER="base_image_v$base_container_version" -v REPO="FROM $container_repository" '{if($0 ~ "FROM fake_repo") print REPO":"VER; else print $0}' ${path_to_top_dockerfile}/Dockerfile > ${path_to_dockerfile}/Dockerfile
     cp ${path_to_top_dockerfile}/install*.sh ${path_to_dockerfile}/
+    cp ${path_to_top_dockerfile}/../requirements.txt ${path_to_dockerfile}/
 
     
     # Modify the devcontainer.json to use the correct full image, this should be soft linked from the project root to the .vscode_shared/UserName/devcontainer_VERSION.json
@@ -252,5 +260,6 @@ docker build ${skip_cache} --tag ${container_repository}:${prefix}${container_ve
     --build-arg build_npm=${build_npm} \
     --build-arg build_ref_images=${build_ref_images} \
     --build-arg build_libtorch=${build_libtorch} \
+    --build-arg build_docs=${build_docs} \
     --build-arg build_claude=${build_claude} \
     ${path_to_dockerfile}

@@ -6,6 +6,7 @@
 #include "wx/socket.h"
 
 #include "../../core/core_headers.h"
+#include "../../../include/libtorch/cistem_torch_helper.h"
 
 // embedded images..
 
@@ -108,6 +109,9 @@ class
     void TestRunProfileDiskOperations( );
     void TestCTFNodes( );
     void TestSpectrumImageMethods( );
+#ifdef cisTEM_USING_LIBTORCH
+    void TestLibTorch( );
+#endif
 
     void BeginTest(const char* test_name);
     void EndTest( );
@@ -167,6 +171,9 @@ bool MyTestApp::DoCalculation( ) {
     TestRunProfileDiskOperations( );
     TestCTFNodes( );
     TestSpectrumImageMethods( );
+#ifdef cisTEM_USING_LIBTORCH
+    TestLibTorch( );
+#endif
 
     wxPrintf("\n\n\n");
 
@@ -2141,6 +2148,30 @@ void MyTestApp::TestSpectrumImageMethods( ) {
     EndTest( );
 }
 
+#ifdef cisTEM_USING_LIBTORCH
+void MyTestApp::TestLibTorch( ) {
+    BeginTest("LibTorch Linking and Basic Operations");
+
+    // Create a tensor with values [1, 2, 3, 4] in a 2x2 matrix
+    torch::Tensor tensor = torch::tensor({{1.0f, 2.0f}, {3.0f, 4.0f}});
+
+    // Square the tensor (element-wise multiplication)
+    torch::Tensor squared = tensor * tensor;
+
+    // Check that the result is correct: [1, 4, 9, 16]
+    float expected[] = {1.0f, 4.0f, 9.0f, 16.0f};
+    float* data = squared.data_ptr<float>();
+
+    for (int i = 0; i < 4; i++) {
+        if (std::abs(data[i] - expected[i]) > 0.0001f) {
+            FailTest;
+        }
+    }
+
+    EndTest( );
+}
+#endif
+
 void MyTestApp::BeginTest(const char* test_name) {
     // For access by other tests when running CheckDependencies
     current_test_name               = test_name;
@@ -2337,6 +2368,8 @@ void MyTestApp::WriteNumericTextFile(const char* filename) {
 
     fclose(output_file);
 }
+
+
 
 // Only unset if we set it.
 #if defined(unset_cisTEM_LOG_WXPRINTF)

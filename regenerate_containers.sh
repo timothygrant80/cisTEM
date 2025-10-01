@@ -31,3 +31,9 @@ if [[ ! -L .devcontainer.json ]] ; then
     ln -s ../.vscode/devcontainer.json .devcontainer.json
 fi
 cd ..
+
+# Install clang-format-14 pre-commit hook
+if [ -f scripts/install_clang_format_hook.sh ]; then
+    echo "Installing clang-format-14 pre-commit hook..."
+    ./scripts/install_clang_format_hook.sh
+fi

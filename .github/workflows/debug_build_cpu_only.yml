@@ -2,11 +2,15 @@ name: cisTEM cpu debug
 
 on:
   push:
-    branches: 
+    branches:
       - master
       - '*_with_ci'
   pull_request:
     branches: master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   run_build:  

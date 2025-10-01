@@ -57,16 +57,16 @@ struct SpaWorkflowRegister {
             // PANEL CREATION: Create all workflow-specific panels as children of ActionsBook.
             // These panels will be automatically destroyed when actions_panel is destroyed.
             // The ActionsPanelSpa destructor will handle nullifying the global pointers.
-            align_movies_panel = new MyAlignMoviesPanel(actions_panel->ActionsBook);
-            findctf_panel = new MyFindCTFPanel(actions_panel->ActionsBook);
-            findparticles_panel = new MyFindParticlesPanel(actions_panel->ActionsBook);
+            align_movies_panel   = new MyAlignMoviesPanel(actions_panel->ActionsBook);
+            findctf_panel        = new MyFindCTFPanel(actions_panel->ActionsBook);
+            findparticles_panel  = new MyFindParticlesPanel(actions_panel->ActionsBook);
             classification_panel = new MyRefine2DPanel(actions_panel->ActionsBook);
-            refine_3d_panel = new MyRefine3DPanel(actions_panel->ActionsBook);
-            refine_ctf_panel = new RefineCTFPanel(actions_panel->ActionsBook);
+            refine_3d_panel      = new MyRefine3DPanel(actions_panel->ActionsBook);
+            refine_ctf_panel     = new RefineCTFPanel(actions_panel->ActionsBook);
             auto_refine_3d_panel = new AutoRefine3DPanel(actions_panel->ActionsBook);
-            ab_initio_3d_panel = new AbInitio3DPanel(actions_panel->ActionsBook);
-            generate_3d_panel = new Generate3DPanel(actions_panel->ActionsBook);
-            sharpen_3d_panel = new Sharpen3DPanel(actions_panel->ActionsBook);
+            ab_initio_3d_panel   = new AbInitio3DPanel(actions_panel->ActionsBook);
+            generate_3d_panel    = new Generate3DPanel(actions_panel->ActionsBook);
+            sharpen_3d_panel     = new Sharpen3DPanel(actions_panel->ActionsBook);
 
             if ( ! actions_panel->ActionsBook->GetImageList( ) ) {
                 actions_panel->ActionsBook->AssignImageList(GetActionsSpaBookIconImages( ));

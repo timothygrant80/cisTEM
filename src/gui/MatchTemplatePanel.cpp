@@ -689,7 +689,7 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
     current_image_euler_search->CalculateGridSearchPositions(false);
 
     // Optionally split each image over multiple jobs (processes)
-    // The coordinating thread needs to process all the worker's results, so we can only process 1 image at a time, i.e. 
+    // The coordinating thread needs to process all the worker's results, so we can only process 1 image at a time, i.e.
     // the min number of jobs per image is number_of_processes
     if ( use_gpu ) {
         number_of_jobs_per_image_in_gui = number_of_processes; // Using two threads in each job
@@ -1302,7 +1302,7 @@ void MatchTemplatePanel::OnAddToQueueClick(wxCommandEvent& event) {
                                                   "This will queue the current template matching job for later execution.",
                                                   "Queue Implementation Test",
                                                   wxOK | wxICON_INFORMATION);
-    dialog->ShowModal();
+    dialog->ShowModal( );
     delete dialog;
 
     // TODO: Implement actual queue functionality

@@ -2159,11 +2159,11 @@ void MyTestApp::TestLibTorch( ) {
     torch::Tensor squared = tensor * tensor;
 
     // Check that the result is correct: [1, 4, 9, 16]
-    float expected[] = {1.0f, 4.0f, 9.0f, 16.0f};
-    float* data = squared.data_ptr<float>();
+    float  expected[] = {1.0f, 4.0f, 9.0f, 16.0f};
+    float* data       = squared.data_ptr<float>( );
 
-    for (int i = 0; i < 4; i++) {
-        if (std::abs(data[i] - expected[i]) > 0.0001f) {
+    for ( int i = 0; i < 4; i++ ) {
+        if ( std::abs(data[i] - expected[i]) > 0.0001f ) {
             FailTest;
         }
     }
@@ -2368,8 +2368,6 @@ void MyTestApp::WriteNumericTextFile(const char* filename) {
 
     fclose(output_file);
 }
-
-
 
 // Only unset if we set it.
 #if defined(unset_cisTEM_LOG_WXPRINTF)

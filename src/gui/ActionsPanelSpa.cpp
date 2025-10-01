@@ -28,16 +28,16 @@ ActionsPanelSpa::~ActionsPanelSpa( ) {
     // - The new workflow can create fresh panel instances without conflicts
     // - Memory access violations are prevented during the transition period
 
-    align_movies_panel = nullptr;
-    findctf_panel = nullptr;
-    findparticles_panel = nullptr;
+    align_movies_panel   = nullptr;
+    findctf_panel        = nullptr;
+    findparticles_panel  = nullptr;
     classification_panel = nullptr;
-    refine_3d_panel = nullptr;
-    refine_ctf_panel = nullptr;
+    refine_3d_panel      = nullptr;
+    refine_ctf_panel     = nullptr;
     auto_refine_3d_panel = nullptr;
-    ab_initio_3d_panel = nullptr;
-    generate_3d_panel = nullptr;
-    sharpen_3d_panel = nullptr;
+    ab_initio_3d_panel   = nullptr;
+    generate_3d_panel    = nullptr;
+    sharpen_3d_panel     = nullptr;
 }
 
 void ActionsPanelSpa::OnActionsBookPageChanged(wxListbookEvent& event) {

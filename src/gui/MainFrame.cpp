@@ -333,58 +333,87 @@ void MyMainFrame::DirtyEverything( ) {
 // Never assume a panel pointer is valid without checking first.
 
 void MyMainFrame::DirtyVolumes( ) {
-    if (volume_asset_panel) volume_asset_panel->is_dirty = true;
-    if (refine_3d_panel) refine_3d_panel->volumes_are_dirty = true;
-    if (auto_refine_3d_panel) auto_refine_3d_panel->volumes_are_dirty = true;
-    if (sharpen_3d_panel) sharpen_3d_panel->volumes_are_dirty = true;
-    if (refine_ctf_panel) refine_ctf_panel->volumes_are_dirty = true;
+    if ( volume_asset_panel )
+        volume_asset_panel->is_dirty = true;
+    if ( refine_3d_panel )
+        refine_3d_panel->volumes_are_dirty = true;
+    if ( auto_refine_3d_panel )
+        auto_refine_3d_panel->volumes_are_dirty = true;
+    if ( sharpen_3d_panel )
+        sharpen_3d_panel->volumes_are_dirty = true;
+    if ( refine_ctf_panel )
+        refine_ctf_panel->volumes_are_dirty = true;
 
     if ( current_workflow == "Template Matching" ) {
-        if (match_template_panel) match_template_panel->volumes_are_dirty = true;
+        if ( match_template_panel )
+            match_template_panel->volumes_are_dirty = true;
 #ifdef EXPERIMENTAL
-        if (refine_template_panel) refine_template_panel->volumes_are_dirty = true;
+        if ( refine_template_panel )
+            refine_template_panel->volumes_are_dirty = true;
 #endif
     }
 }
 
 void MyMainFrame::DirtyAtomicCoordinates( ) {
-    if (atomic_coordinates_asset_panel) atomic_coordinates_asset_panel->is_dirty = true;
+    if ( atomic_coordinates_asset_panel )
+        atomic_coordinates_asset_panel->is_dirty = true;
 }
 
 void MyMainFrame::DirtyMovieGroups( ) {
-    if (movie_asset_panel) movie_asset_panel->is_dirty = true;
-    if (align_movies_panel) align_movies_panel->group_combo_is_dirty = true;
-    if (movie_results_panel) movie_results_panel->group_combo_is_dirty = true;
-    if (image_asset_panel) image_asset_panel->EnableNewFromParentButton( );
+    if ( movie_asset_panel )
+        movie_asset_panel->is_dirty = true;
+    if ( align_movies_panel )
+        align_movies_panel->group_combo_is_dirty = true;
+    if ( movie_results_panel )
+        movie_results_panel->group_combo_is_dirty = true;
+    if ( image_asset_panel )
+        image_asset_panel->EnableNewFromParentButton( );
 }
 
 void MyMainFrame::DirtyImageGroups( ) {
-    if (image_asset_panel) image_asset_panel->is_dirty = true;
-    if (findctf_panel) findctf_panel->group_combo_is_dirty = true;
-    if (ctf_results_panel) ctf_results_panel->group_combo_is_dirty = true;
-    if (findparticles_panel) findparticles_panel->group_combo_is_dirty = true;
-    if (picking_results_panel) picking_results_panel->group_combo_is_dirty = true;
+    if ( image_asset_panel )
+        image_asset_panel->is_dirty = true;
+    if ( findctf_panel )
+        findctf_panel->group_combo_is_dirty = true;
+    if ( ctf_results_panel )
+        ctf_results_panel->group_combo_is_dirty = true;
+    if ( findparticles_panel )
+        findparticles_panel->group_combo_is_dirty = true;
+    if ( picking_results_panel )
+        picking_results_panel->group_combo_is_dirty = true;
 
     if ( current_workflow == "Template Matching" ) {
-        if (match_template_panel) match_template_panel->group_combo_is_dirty = true;
-        if (refine_template_panel) refine_template_panel->group_combo_is_dirty = true;
+        if ( match_template_panel )
+            match_template_panel->group_combo_is_dirty = true;
+        if ( refine_template_panel )
+            refine_template_panel->group_combo_is_dirty = true;
     }
 }
 
 void MyMainFrame::DirtyParticlePositionGroups( ) {
-    if (particle_position_asset_panel) particle_position_asset_panel->is_dirty = true;
+    if ( particle_position_asset_panel )
+        particle_position_asset_panel->is_dirty = true;
 }
 
 void MyMainFrame::DirtyRefinementPackages( ) {
-    if (refinement_package_asset_panel) refinement_package_asset_panel->is_dirty = true;
-    if (classification_panel) classification_panel->refinement_package_combo_is_dirty = true;
-    if (refine_3d_panel) refine_3d_panel->refinement_package_combo_is_dirty = true;
-    if (refine_ctf_panel) refine_ctf_panel->refinement_package_combo_is_dirty = true;
-    if (auto_refine_3d_panel) auto_refine_3d_panel->refinement_package_combo_is_dirty = true;
-    if (refinement_results_panel) refinement_results_panel->refinement_package_is_dirty = true;
-    if (refine2d_results_panel) refine2d_results_panel->refinement_package_combo_is_dirty = true;
-    if (ab_initio_3d_panel) ab_initio_3d_panel->refinement_package_combo_is_dirty = true;
-    if (generate_3d_panel) generate_3d_panel->refinement_package_combo_is_dirty = true;
+    if ( refinement_package_asset_panel )
+        refinement_package_asset_panel->is_dirty = true;
+    if ( classification_panel )
+        classification_panel->refinement_package_combo_is_dirty = true;
+    if ( refine_3d_panel )
+        refine_3d_panel->refinement_package_combo_is_dirty = true;
+    if ( refine_ctf_panel )
+        refine_ctf_panel->refinement_package_combo_is_dirty = true;
+    if ( auto_refine_3d_panel )
+        auto_refine_3d_panel->refinement_package_combo_is_dirty = true;
+    if ( refinement_results_panel )
+        refinement_results_panel->refinement_package_is_dirty = true;
+    if ( refine2d_results_panel )
+        refine2d_results_panel->refinement_package_combo_is_dirty = true;
+    if ( ab_initio_3d_panel )
+        ab_initio_3d_panel->refinement_package_combo_is_dirty = true;
+    if ( generate_3d_panel )
+        generate_3d_panel->refinement_package_combo_is_dirty = true;
 }
 
 void MyMainFrame::DirtyTemplateMatchesPackages( ) {
@@ -393,40 +422,60 @@ void MyMainFrame::DirtyTemplateMatchesPackages( ) {
 }
 
 void MyMainFrame::DirtyRefinements( ) {
-    if (refine_3d_panel) refine_3d_panel->input_params_combo_is_dirty = true;
-    if (refine_ctf_panel) refine_ctf_panel->input_params_combo_is_dirty = true;
-    if (refinement_results_panel) refinement_results_panel->input_params_are_dirty = true;
-    if (generate_3d_panel) generate_3d_panel->input_params_combo_is_dirty = true;
-    if (match_template_results_panel) match_template_results_panel->group_combo_is_dirty = true;
+    if ( refine_3d_panel )
+        refine_3d_panel->input_params_combo_is_dirty = true;
+    if ( refine_ctf_panel )
+        refine_ctf_panel->input_params_combo_is_dirty = true;
+    if ( refinement_results_panel )
+        refinement_results_panel->input_params_are_dirty = true;
+    if ( generate_3d_panel )
+        generate_3d_panel->input_params_combo_is_dirty = true;
+    if ( match_template_results_panel )
+        match_template_results_panel->group_combo_is_dirty = true;
 }
 
 void MyMainFrame::DirtyClassifications( ) {
-    if (refine2d_results_panel) refine2d_results_panel->input_params_combo_is_dirty = true;
+    if ( refine2d_results_panel )
+        refine2d_results_panel->input_params_combo_is_dirty = true;
 }
 
 void MyMainFrame::DirtyClassificationSelections( ) {
-    if (refine2d_results_panel) refine2d_results_panel->classification_selections_are_dirty = true;
-    if (ab_initio_3d_panel) ab_initio_3d_panel->classification_selections_are_dirty = true;
+    if ( refine2d_results_panel )
+        refine2d_results_panel->classification_selections_are_dirty = true;
+    if ( ab_initio_3d_panel )
+        ab_initio_3d_panel->classification_selections_are_dirty = true;
 }
 
 void MyMainFrame::DirtyRunProfiles( ) {
 
-    if (run_profiles_panel) run_profiles_panel->is_dirty = true;
-    if (align_movies_panel) align_movies_panel->run_profiles_are_dirty = true;
-    if (findctf_panel) findctf_panel->run_profiles_are_dirty = true;
+    if ( run_profiles_panel )
+        run_profiles_panel->is_dirty = true;
+    if ( align_movies_panel )
+        align_movies_panel->run_profiles_are_dirty = true;
+    if ( findctf_panel )
+        findctf_panel->run_profiles_are_dirty = true;
 
     if ( current_workflow == "Single Particle" ) {
-        if (findparticles_panel) findparticles_panel->run_profiles_are_dirty = true;
-        if (classification_panel) classification_panel->run_profiles_are_dirty = true;
-        if (refine_3d_panel) refine_3d_panel->run_profiles_are_dirty = true;
-        if (refine_ctf_panel) refine_ctf_panel->run_profiles_are_dirty = true;
-        if (auto_refine_3d_panel) auto_refine_3d_panel->run_profiles_are_dirty = true;
-        if (ab_initio_3d_panel) ab_initio_3d_panel->run_profiles_are_dirty = true;
-        if (generate_3d_panel) generate_3d_panel->run_profiles_are_dirty = true;
+        if ( findparticles_panel )
+            findparticles_panel->run_profiles_are_dirty = true;
+        if ( classification_panel )
+            classification_panel->run_profiles_are_dirty = true;
+        if ( refine_3d_panel )
+            refine_3d_panel->run_profiles_are_dirty = true;
+        if ( refine_ctf_panel )
+            refine_ctf_panel->run_profiles_are_dirty = true;
+        if ( auto_refine_3d_panel )
+            auto_refine_3d_panel->run_profiles_are_dirty = true;
+        if ( ab_initio_3d_panel )
+            ab_initio_3d_panel->run_profiles_are_dirty = true;
+        if ( generate_3d_panel )
+            generate_3d_panel->run_profiles_are_dirty = true;
     }
     else if ( current_workflow == "Template Matching" ) {
-        if (match_template_panel) match_template_panel->run_profiles_are_dirty = true;
-        if (refine_template_panel) refine_template_panel->run_profiles_are_dirty = true;
+        if ( match_template_panel )
+            match_template_panel->run_profiles_are_dirty = true;
+        if ( refine_template_panel )
+            refine_template_panel->run_profiles_are_dirty = true;
     }
 }
 
@@ -1032,11 +1081,11 @@ void MyMainFrame::SwitchWorkflowPanels(const wxString& workflow_name) {
 
     // Robust error handling: If the requested workflow fails, fall back to Single Particle.
     // This ensures the application remains usable even if a workflow registration is broken.
-    if (!actions_panel) {
+    if ( ! actions_panel ) {
         wxLogError("Failed to create actions panel for workflow '%s'", workflow_name);
         // Fall back to Single Particle workflow
         actions_panel = static_cast<ActionsPanelParent*>(WorkflowRegistry::Instance( ).CreateActionsPanel("Single Particle", this->MenuBook));
-        if (!actions_panel) {
+        if ( ! actions_panel ) {
             // Catastrophic failure - this should never happen in production
             wxLogError("Critical error: Cannot create any actions panel");
             return;

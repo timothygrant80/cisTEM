@@ -52,12 +52,12 @@ struct TmWorkflowRegister {
             // Note: These replace any existing Single Particle panels with the same names.
             // The old panels are destroyed first (handled by ActionsPanelSpa destructor if coming from SPA).
             // ActionsPanelTm destructor will nullify these pointers when switching away from TM.
-            align_movies_panel = new MyAlignMoviesPanel(actions_panel_tm->ActionsBook);
-            findctf_panel = new MyFindCTFPanel(actions_panel_tm->ActionsBook);
-            match_template_panel = new MatchTemplatePanel(actions_panel_tm->ActionsBook);
+            align_movies_panel    = new MyAlignMoviesPanel(actions_panel_tm->ActionsBook);
+            findctf_panel         = new MyFindCTFPanel(actions_panel_tm->ActionsBook);
+            match_template_panel  = new MatchTemplatePanel(actions_panel_tm->ActionsBook);
             refine_template_panel = new RefineTemplatePanel(actions_panel_tm->ActionsBook);
-            generate_3d_panel = new Generate3DPanel(actions_panel_tm->ActionsBook);
-            sharpen_3d_panel = new Sharpen3DPanel(actions_panel_tm->ActionsBook);
+            generate_3d_panel     = new Generate3DPanel(actions_panel_tm->ActionsBook);
+            sharpen_3d_panel      = new Sharpen3DPanel(actions_panel_tm->ActionsBook);
 
             if ( ! actions_panel_tm->ActionsBook->GetImageList( ) ) {
                 actions_panel_tm->ActionsBook->AssignImageList(GetActionsTmBookIconImages( ));

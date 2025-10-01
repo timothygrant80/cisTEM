@@ -27,12 +27,12 @@ ActionsPanelTm::~ActionsPanelTm( ) {
     // Note: Only nullify panels that actually exist in this workflow to avoid
     // accidentally clearing pointers that might be managed elsewhere.
 
-    align_movies_panel = nullptr;
-    findctf_panel = nullptr;
-    match_template_panel = nullptr;
+    align_movies_panel    = nullptr;
+    findctf_panel         = nullptr;
+    match_template_panel  = nullptr;
     refine_template_panel = nullptr;
-    generate_3d_panel = nullptr;
-    sharpen_3d_panel = nullptr;
+    generate_3d_panel     = nullptr;
+    sharpen_3d_panel      = nullptr;
 }
 
 void ActionsPanelTm::OnActionsBookPageChanged(wxListbookEvent& event) {

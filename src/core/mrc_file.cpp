@@ -134,7 +134,6 @@ void MRCFile::SetPixelSize(float wanted_pixel_size) {
     my_header.SetPixelSize(wanted_pixel_size);
 }
 
-
 void MRCFile::ReadSlicesFromDisk(int start_slice, int end_slice, float* output_array) {
 
     using half = half_float::half;

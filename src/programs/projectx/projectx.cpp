@@ -14,53 +14,53 @@ IMPLEMENT_APP(MyGuiApp)
 
 MyMainFrame* main_frame = nullptr;
 
-MyAlignMoviesPanel*   align_movies_panel = nullptr;
-MyFindCTFPanel*       findctf_panel = nullptr;
-MyFindParticlesPanel* findparticles_panel = nullptr;
+MyAlignMoviesPanel*   align_movies_panel   = nullptr;
+MyFindCTFPanel*       findctf_panel        = nullptr;
+MyFindParticlesPanel* findparticles_panel  = nullptr;
 MyRefine2DPanel*      classification_panel = nullptr;
-AbInitio3DPanel*      ab_initio_3d_panel = nullptr;
+AbInitio3DPanel*      ab_initio_3d_panel   = nullptr;
 AutoRefine3DPanel*    auto_refine_3d_panel = nullptr;
-MyRefine3DPanel*      refine_3d_panel = nullptr;
-RefineCTFPanel*       refine_ctf_panel = nullptr;
-Generate3DPanel*      generate_3d_panel = nullptr;
-Sharpen3DPanel*       sharpen_3d_panel = nullptr;
+MyRefine3DPanel*      refine_3d_panel      = nullptr;
+RefineCTFPanel*       refine_ctf_panel     = nullptr;
+Generate3DPanel*      generate_3d_panel    = nullptr;
+Sharpen3DPanel*       sharpen_3d_panel     = nullptr;
 
-MyOverviewPanel*           overview_panel = nullptr;
-ActionsPanelParent*        actions_panel = nullptr;
-AssetsPanel*               assets_panel = nullptr;
-MyResultsPanel*            results_panel = nullptr;
-SettingsPanel*             settings_panel = nullptr;
-MatchTemplatePanel*        match_template_panel = nullptr;
+MyOverviewPanel*           overview_panel               = nullptr;
+ActionsPanelParent*        actions_panel                = nullptr;
+AssetsPanel*               assets_panel                 = nullptr;
+MyResultsPanel*            results_panel                = nullptr;
+SettingsPanel*             settings_panel               = nullptr;
+MatchTemplatePanel*        match_template_panel         = nullptr;
 MatchTemplateResultsPanel* match_template_results_panel = nullptr;
-RefineTemplatePanel*       refine_template_panel = nullptr;
+RefineTemplatePanel*       refine_template_panel        = nullptr;
 
 #ifdef EXPERIMENTAL
-ExperimentalPanel*      experimental_panel = nullptr;
+ExperimentalPanel*      experimental_panel        = nullptr;
 RefineTemplateDevPanel* refine_template_dev_panel = nullptr;
 #endif
 
-MyMovieAssetPanel*                movie_asset_panel = nullptr;
-MyImageAssetPanel*                image_asset_panel = nullptr;
-MyParticlePositionAssetPanel*     particle_position_asset_panel = nullptr;
-MyVolumeAssetPanel*               volume_asset_panel = nullptr;
-AtomicCoordinatesAssetPanel*      atomic_coordinates_asset_panel = nullptr;
+MyMovieAssetPanel*                movie_asset_panel                    = nullptr;
+MyImageAssetPanel*                image_asset_panel                    = nullptr;
+MyParticlePositionAssetPanel*     particle_position_asset_panel        = nullptr;
+MyVolumeAssetPanel*               volume_asset_panel                   = nullptr;
+AtomicCoordinatesAssetPanel*      atomic_coordinates_asset_panel       = nullptr;
 TemplateMatchesPackageAssetPanel* template_matches_package_asset_panel = nullptr;
-MyRefinementPackageAssetPanel*    refinement_package_asset_panel = nullptr;
+MyRefinementPackageAssetPanel*    refinement_package_asset_panel       = nullptr;
 
-MyMovieAlignResultsPanel* movie_results_panel = nullptr;
-MyFindCTFResultsPanel*    ctf_results_panel = nullptr;
-MyPickingResultsPanel*    picking_results_panel = nullptr;
-Refine2DResultsPanel*     refine2d_results_panel = nullptr;
+MyMovieAlignResultsPanel* movie_results_panel      = nullptr;
+MyFindCTFResultsPanel*    ctf_results_panel        = nullptr;
+MyPickingResultsPanel*    picking_results_panel    = nullptr;
+Refine2DResultsPanel*     refine2d_results_panel   = nullptr;
 MyRefinementResultsPanel* refinement_results_panel = nullptr;
 
 MyRunProfilesPanel* run_profiles_panel = nullptr;
 
-wxImageList* MenuBookIconImages = nullptr;
+wxImageList* MenuBookIconImages       = nullptr;
 wxImageList* ActionsSpaBookIconImages = nullptr;
-wxImageList* ActionsTmBookIconImages = nullptr;
-wxImageList* AssetsBookIconImages = nullptr;
-wxImageList* ResultsBookIconImages = nullptr;
-wxImageList* SettingsBookIconImages = nullptr;
+wxImageList* ActionsTmBookIconImages  = nullptr;
+wxImageList* AssetsBookIconImages     = nullptr;
+wxImageList* ResultsBookIconImages    = nullptr;
+wxImageList* SettingsBookIconImages   = nullptr;
 #ifdef EXPERIMENTAL
 wxImageList* ExperimentalBookIconImages = nullptr;
 #endif

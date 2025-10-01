@@ -25,3 +25,28 @@ jobs:
           sources: "src/**/*.cpp,src/**/*.h,src/**/*.cc,src/**/*.cxx,src/**/*.hpp,src/**/*.cu,src/**/*.cuh"
           excludes: "include/**/*,src/gui/wxformbuilder/**/*,src/gui/*ProjectX_gui*"
           style: file
+
+  # Build workflows - only run if formatting check passes
+  build-gpu-debug:
+    needs: check-format
+    uses: ./.github/workflows/debug_build.yml
+
+  build-cpu-debug:
+    needs: check-format
+    uses: ./.github/workflows/debug_build_cpu_only.yml
+
+  build-gpu-release:
+    needs: check-format
+    uses: ./.github/workflows/release_build.yml
+
+  build-gpu-release-gnu-mkl:
+    needs: check-format
+    uses: ./.github/workflows/release_build_GNU_mkl.yml
+
+  build-gpu-release-clang-mkl:
+    needs: check-format
+    uses: ./.github/workflows/release_build_clang_mkl.yml
+
+  build-gpu-release-no-experimental:
+    needs: check-format
+    uses: ./.github/workflows/release_build_full_no_experimental.yml

@@ -1,19 +1,21 @@
 name: cisTEM cpu debug
 
 on:
-  push:
+  workflow_run:
+    workflows: ["Check C++ Formatting"]
+    types:
+      - completed
     branches:
       - master
       - '*_with_ci'
-  pull_request:
-    branches: master
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
   cancel-in-progress: true
 
 jobs:
-  run_build:  
+  run_build:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     uses: ./.github/workflows/run_builds.yml
     with:
       build_type: "cpu_debug"

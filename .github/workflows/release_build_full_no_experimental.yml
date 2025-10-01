@@ -1,12 +1,13 @@
 name: cisTEM GPU release no experimental full build
 
 on:
-  push:
+  workflow_run:
+    workflows: ["Check C++ Formatting"]
+    types:
+      - completed
     branches:
       - master
       - '*_with_ci'
-  pull_request:
-    branches: master
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}
@@ -14,6 +15,7 @@ concurrency:
 
 jobs:
   run_build:
+    if: ${{ github.event.workflow_run.conclusion == 'success' }}
     uses: ./.github/workflows/run_builds.yml
     with:
       build_type: "GPU_release_no_experimental_full"

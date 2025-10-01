@@ -8,6 +8,10 @@ on:
     branches:
       - master
       - '*_with_ci'
+  pull_request:
+    branches:
+      - master
+      - '*_with_ci'
 
 concurrency:
   group: ${{ github.workflow }}-${{ github.ref }}

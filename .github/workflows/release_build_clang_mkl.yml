@@ -19,7 +19,7 @@ concurrency:
 
 jobs:
   run_build:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+    if: ${{ github.event_name == 'pull_request' || github.event.workflow_run.conclusion == 'success' }}
     uses: ./.github/workflows/run_builds.yml
     with:
       build_type: "GPU_release_clang_MKL"

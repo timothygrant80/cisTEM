@@ -47,7 +47,7 @@ jobs:
       fail-fast: true
     runs-on: ${{ inputs.runs_on_os }}
     container: 
-      image: cistemdashorg/cistem_build_env:v2.2.1
+      image: cistemdashorg/cistem_build_env:v2.2.2
       options: --user root --rm
       # options: --user root --rm --gpus all
     outputs:

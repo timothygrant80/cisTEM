@@ -332,6 +332,12 @@ void MatchTemplatePanel::SetInfo( ) {
 }
 
 void MatchTemplatePanel::FillGroupComboBox( ) {
+    // Called from constructor (when panel is created) or OnUpdateUI (when groups change)
+    // Return early if no project is open (can happen during workflow switching)
+    if ( ! main_frame->current_project.is_open ) {
+        return;
+    }
+
     GroupComboBox->FillComboBox(true);
 
     if ( GroupComboBox->GetCount( ) > 0 && main_frame->current_project.is_open == true )
@@ -683,7 +689,7 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
     current_image_euler_search->CalculateGridSearchPositions(false);
 
     // Optionally split each image over multiple jobs (processes)
-    // The coordinating thread needs to process all the worker's results, so we can only process 1 image at a time, i.e. 
+    // The coordinating thread needs to process all the worker's results, so we can only process 1 image at a time, i.e.
     // the min number of jobs per image is number_of_processes
     if ( use_gpu ) {
         number_of_jobs_per_image_in_gui = number_of_processes; // Using two threads in each job
@@ -1286,4 +1292,23 @@ wxArrayLong MatchTemplatePanel::CheckForUnfinishedWork(bool is_checked, bool is_
         SetInputsForPossibleReRun(false);
     }
     return unfinished_match_template_ids;
+}
+
+// Queue functionality implementation
+void MatchTemplatePanel::OnAddToQueueClick(wxCommandEvent& event) {
+    // Stub implementation for testing
+    wxMessageDialog* dialog = new wxMessageDialog(this,
+                                                  "Add To Queue button successfully implemented!\n\n"
+                                                  "This will queue the current template matching job for later execution.",
+                                                  "Queue Implementation Test",
+                                                  wxOK | wxICON_INFORMATION);
+    dialog->ShowModal( );
+    delete dialog;
+
+    // TODO: Implement actual queue functionality
+    // 1. Collect all parameters from GUI
+    // 2. Generate job_id
+    // 3. Store in database with IS_ACTIVE = 0
+    // 4. Add to Results Panel as pending
+    // 5. Update queue manager UI if visible
 }

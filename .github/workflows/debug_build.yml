@@ -1,15 +1,10 @@
 name: cisTEM GPU debug
 
 on:
-  push:
-    branches: 
-      - master
-      - '*_with_ci'
-  pull_request:
-    branches: master
+  workflow_call:
 
 jobs:
-  run_build:  
+  run_build:
     uses: ./.github/workflows/run_builds.yml
     with:
       build_type: "GPU_debug"

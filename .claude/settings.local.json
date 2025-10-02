@@ -1,0 +1,14 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(find:*)",
+      "Bash(git branch:*)",
+      "Bash(git show-branch:*)",
+      "Bash(git merge-base:*)",
+      "Bash(git ls-tree:*)",
+      "Bash(grep:*)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

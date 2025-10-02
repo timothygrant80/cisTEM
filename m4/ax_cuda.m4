@@ -63,7 +63,7 @@ if test "$want_cuda" = "yes" ; then
   	libdir=lib64
 
 	# set CUDA flags for static compilation. This is required for cufft callbacks.
-    if test "x$static_link" == "xtrue"
+    if test "x$static_link" = "xtrue"
 	then
       AC_MSG_NOTICE([static linking of cuda libs])
 	  CUDA_CFLAGS="-I$cuda_home_path/include "
@@ -198,7 +198,7 @@ else
 		
 fi
 
-if test "x$is_cuda_ge_11" == "x1" ; then
+if test "x$is_cuda_ge_11" = "x1" ; then
   AC_MSG_NOTICE([CUDA >= 11.0, enabling --extra-device-vectorization])
   NVCCFLAGS+=" --extra-device-vectorization -std=c++17 --expt-relaxed-constexpr --threads=8 --split-compile=8 " 
 else

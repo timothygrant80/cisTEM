@@ -15,8 +15,8 @@ AC_PROG_CXX([icpc g++ clang++])
 AM_PROG_CC_C_O
 
 AC_PROG_INSTALL
-AC_LIBTOOL_DLOPEN
-AC_PROG_LIBTOOL
+LT_PREREQ([2.4])
+LT_INIT([dlopen])
 AC_LANG(C++)
 
 # Set this for the gpu makefile hack
@@ -67,7 +67,7 @@ CPP_STANDARD=17
 #   --enable-build-program will add the additional program(s)
 #     these flags have no meaning unles --disable-build-all is set
 #
-AX_ADDITIONAL_PROGRAMS
+NON_ESSENTIAL_PROGRAMS_TO_BE_COMPILED
 
 # if test "$want_cuda" = "yes" ; then
 #   CPP_STANDARD=17
@@ -191,8 +191,9 @@ AC_ARG_ENABLE(mkl, AS_HELP_STRING([--disable-mkl],[Do not use the Intel MKL]), [
  fi
 ])
 
-
-
+# LibTorch
+# Check for LibTorch support for ML-based tools (e.g., blush regularization)
+AX_LIBTORCH
 
 # wx-config 
 
@@ -216,12 +217,12 @@ AC_ARG_ENABLE(debugmode, AS_HELP_STRING([--enable-debugmode],[Compile in debug m
 [
   if test "$enableval" = yes; then
     AC_DEFINE([DEBUG], [], [Define the debug flag])
-    if test "x$CXX" = "xicpc"; then   
+    if test "x$CXX" = "xicpc"; then
         CXXFLAGS="-O2 -debug -no-prec-div -no-prec-sqrt -fprotect-parens $WARNINGS_ON -std=c++${CPP_STANDARD} -wd1125"
         CPPFLAGS="-O2 -debug -no-prec-div -no-prec-sqrt -fprotect-parens $WARNINGS_ON"
     else
-        CPPFLAGS="-O2 -g $WARNINGS_ON $INPUT_CPPFLAGS"
-        CXXFLAGS="-O2 -g -std=c++${CPP_STANDARD} $WARNINGS_ON $INPUT_CXXFLAGS"
+        CPPFLAGS="-O2 -g $WARNINGS_ON"
+        CXXFLAGS="-O2 -g -std=c++${CPP_STANDARD} $WARNINGS_ON"
     fi
   else
     AC_DEFINE([NDEBUG], [], [Define the nodebug flag for either g++ or clang builds])
@@ -491,11 +492,23 @@ AC_CHECK_FILE("$MKLROOT/include/mkl.h",
 AC_DEFINE([MKL_ILP64], [], [Use the MKL ILP64 interface])
 
 
-# FIXME would not match next block
+# Configure MKL based on threading options
 if test "x$CXX" = "xicpc"; then
-  CPPFLAGS="$CPPFLAGS -qmkl=sequential -I"${MKLROOT}/include" "
-  CXXFLAGS="$CXXFLAGS -qmkl=sequential -I"${MKLROOT}/include" "
-  LIBS="$LIBS -qmkl=sequential "
+  if test "x$use_mkl_threads" = "xyes"; then
+    CPPFLAGS="$CPPFLAGS -qmkl=parallel -I"${MKLROOT}/include" "
+    CXXFLAGS="$CXXFLAGS -qmkl=parallel -I"${MKLROOT}/include" "
+    LIBS="$LIBS -qmkl=parallel "
+  elif test "x$use_gnu_threads" = "xyes"; then
+    # Intel compiler with GNU OpenMP threads
+    CPPFLAGS="$CPPFLAGS -I"${MKLROOT}/include" "
+    CXXFLAGS="$CXXFLAGS -I"${MKLROOT}/include" "
+    # Let the manual linking below handle GNU threads
+  else
+    # Sequential (default)
+    CPPFLAGS="$CPPFLAGS -qmkl=sequential -I"${MKLROOT}/include" "
+    CXXFLAGS="$CXXFLAGS -qmkl=sequential -I"${MKLROOT}/include" "
+    LIBS="$LIBS -qmkl=sequential "
+  fi
 else
   CPPFLAGS="$CPPFLAGS -I"${MKLROOT}/include" "
   CXXFLAGS="$CXXFLAGS -I"${MKLROOT}/include" "
@@ -633,7 +646,7 @@ else
 set_git_versioning_defaults="no"
 AC_CHECK_FILE("$TOPSRCDIR/.git/HEAD",
   [
-    if test "x$GIT_CHECK" == "xyes"; then 
+    if test "x$GIT_CHECK" = "xyes"; then 
       # All the args require the extra double quotes to be properly formated later on.
       
       # Get the current branch, which could have multiple refs, which is why we need the awk (*) marks the active branch.
@@ -703,6 +716,8 @@ AC_SUBST(CUDA_CPPFLAGS)
 AC_SUBST(CUDA_LIBS)
 AC_SUBST(libFastFFT_OBJECTS)
 AC_SUBST(MKL_LIBS)
+AC_SUBST(LIBTORCH_LIBS)
+AC_SUBST(LIBTORCH_RPATH)
 AC_SUBST(LIBTOOL_FLAGS)
 
 
@@ -712,6 +727,7 @@ AC_SUBST(LIBTOOL_FLAGS)
   AC_MSG_NOTICE([WX_LIBS=$WX_LIBS])
   AC_MSG_NOTICE([LIBS=$LIBS])
   AC_MSG_NOTICE([MKL_LIBS=$MKL_LIBS])
+  AC_MSG_NOTICE([LIBTORCH_LIBS=$LIBTORCH_LIBS])
   AC_MSG_NOTICE([libFastFFT_OBJECTS=$libFastFFT_OBJECTS])
 
 AC_CONFIG_FILES([Makefile src/Makefile])

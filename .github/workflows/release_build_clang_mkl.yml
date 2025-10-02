@@ -1,12 +1,7 @@
 name: cisTEM GPU release, clang MKL
 
 on:
-  push:
-    branches: 
-      - master
-      - '*_with_ci'
-  pull_request:
-    branches: master
+  workflow_call:
 
 jobs:
   run_build:

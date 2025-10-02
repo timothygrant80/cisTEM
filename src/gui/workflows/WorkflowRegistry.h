@@ -28,7 +28,16 @@ class WorkflowRegistry {
     };
 
     wxPanel* CreateActionsPanel(const wxString& name, wxWindow* parent) {
-        return factories[name].createActionsPanel(parent);
+        auto it = factories.find(name);
+        if ( it == factories.end( ) ) {
+            wxLogError("Workflow '%s' not found in registry", name);
+            return nullptr;
+        }
+        if ( ! it->second.createActionsPanel ) {
+            wxLogError("Workflow '%s' has no createActionsPanel function", name);
+            return nullptr;
+        }
+        return it->second.createActionsPanel(parent);
     };
 
     // wxPanel* CreateResultsPanel(const wxString& name, wxWindow* parent) {

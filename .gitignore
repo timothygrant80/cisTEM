@@ -1,5 +1,9 @@
 autom4te.cache
-m4
+m4/*
+!m4/ax_cuda.m4
+!m4/additional_programs.m4
+!m4/submodule_FastFFT.m4
+!m4/libtorch.m4
 config.sub
 Makefile.in
 ltmain.sh
@@ -34,3 +38,6 @@ configure~
 *.dff
 __pycache__/
 include/Eigen
+
+.claude/cache/
+worktrees/

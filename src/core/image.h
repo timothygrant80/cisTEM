@@ -177,7 +177,7 @@ class Image {
     void  DividePixelWise(Image& other_image);
     bool  IsAlmostEqual(Image& other_image, bool print_if_failed = true, float epsilon = 0.0001f);
     void  AddGaussianNoise(float wanted_sigma_value = 1.0, RandomNumberGenerator* provided_generator = NULL);
-    
+
     void AddNoiseUsingGenerator(RandomNumberGenerator& provided_generator, NoiseType wanted_noise_type, float noise_param_1, float noise_param_2 = 1.0f);
 
     void AddNoise(NoiseType wanted_noise_type, float noise_param_1, float noise_param_2 = 1.0f) {

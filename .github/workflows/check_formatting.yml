@@ -1,0 +1,52 @@
+name: Check C++ Formatting
+
+on:
+  push:
+    branches:
+      - master
+      - '*_with_ci'
+  pull_request:
+    branches: master
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  check-format:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Check C++ formatting
+        uses: RafikFarhad/clang-format-github-action@v3
+        with:
+          sources: "src/**/*.cpp,src/**/*.h,src/**/*.cc,src/**/*.cxx,src/**/*.hpp,src/**/*.cu,src/**/*.cuh"
+          excludes: "include/**/*,src/gui/wxformbuilder/**/*,src/gui/*ProjectX_gui*"
+          style: file
+
+  # Build workflows - only run if formatting check passes
+  build-gpu-debug:
+    needs: check-format
+    uses: ./.github/workflows/debug_build.yml
+
+  build-cpu-debug:
+    needs: check-format
+    uses: ./.github/workflows/debug_build_cpu_only.yml
+
+  build-gpu-release:
+    needs: check-format
+    uses: ./.github/workflows/release_build.yml
+
+  build-gpu-release-gnu-mkl:
+    needs: check-format
+    uses: ./.github/workflows/release_build_GNU_mkl.yml
+
+  build-gpu-release-clang-mkl:
+    needs: check-format
+    uses: ./.github/workflows/release_build_clang_mkl.yml
+
+  build-gpu-release-no-experimental:
+    needs: check-format
+    uses: ./.github/workflows/release_build_full_no_experimental.yml

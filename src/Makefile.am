@@ -1,3 +1,16 @@
+# cisTEM Makefile for src directory
+#
+# LibTorch Support:
+# -----------------
+# Programs requiring LibTorch (e.g., blush regularization) should add to their LDADD:
+#   program_LDADD = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS) $(LIBTORCH_LIBS)
+#
+# And add RPATH flags to their LDFLAGS:
+#   program_LDFLAGS = $(LIBTORCH_RPATH)
+#
+# The LIBTORCH_RPATH setting enables bundling of .so files with the distribution.
+# See m4/libtorch.m4 for configuration details.
+
 noinst_HEADERS = core/stopwatch.h \
                  core/asset_group.h \
                  core/core_headers.h \
@@ -548,8 +561,11 @@ libgpucore_OBJECTS=$(libgpucore_a_SOURCES:.cu=.o)
 
 libgpucore_a_CFLAGS = -DENABLEGPU $(CUDA_CPPFLAGS) $(WX_CPPFLAGS_BASE)
 libgpucore_a_CXXFLAGS = -DENABLEGPU $(CUDA_CXXFLAGS) $(WX_CXXFLAGS_BASE)
-libgpucore_a_LIBADD = $(libFastFFT_OBJECTS) gpu/gpudevicecode.o 
+libgpucore_a_LIBADD = $(libFastFFT_OBJECTS) gpu/gpudevicecode.o
 libgpucore_a_AR = $(NVCC) -DENABLEGPU $(CUDA_CXXFLAGS) -lib -o
+
+# Add SUFFIXES for CUDA compilation
+SUFFIXES = .cu .o
 
 # This line only knows about objects build from libgpucore_a_SOURCES. We have to add any others e.g. gpu/gpu_device_code.o mannually above in the LIBADD
 .cu.o:
@@ -779,8 +795,8 @@ cisTEM_job_control_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 # both codepaths with the most src code overlap as possible, for console tests
 # we often have to write a distinct enough version of the test for the GPU
 # that we just write seperate methods and use precompiler guards (one binary.)
-console_test_SOURCES  = programs/console_test/console_test.cpp 
-if WANT_CISTEM_GPU_AM 
+console_test_SOURCES  = programs/console_test/console_test.cpp
+if WANT_CISTEM_GPU_AM
 console_test_CXXFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
 console_test_CPPFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
 else
@@ -788,14 +804,21 @@ console_test_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 console_test_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 endif
 
+# Add LibTorch flags if enabled
+if ENABLE_LIBTORCH_AM
+console_test_CXXFLAGS += $(LIBTORCH_CXX_FLAGS)
+console_test_CPPFLAGS += $(LIBTORCH_CXX_FLAGS)
+endif
+
 console_test_LDSTRING=
 if WANT_CISTEM_GPU_AM
-# WANT_CISTEM_GPU_AM also implies ENABLE_FASTFFT_AM 
+# WANT_CISTEM_GPU_AM also implies ENABLE_FASTFFT_AM
     console_test_LDSTRING += libgpucore.a
 endif
 
 
-console_test_LDADD    = $(console_test_LDSTRING) libcore.a $(WX_LIBS_BASE) $(MKL_LIBS) $(CUDA_LIBS)
+console_test_LDADD    = $(console_test_LDSTRING) libcore.a $(WX_LIBS_BASE) $(MKL_LIBS) $(CUDA_LIBS) $(LIBTORCH_LIBS)
+console_test_LDFLAGS  = $(LIBTORCH_RPATH)
 console_test_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
 
@@ -1344,7 +1367,6 @@ unit_test_runner_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
 
 if WANT_CISTEM_GPU_AM
-    gpu_devices_SUFFIXES = .cpp
     gpu_devices_SOURCES  =  programs/gpu_devices/gpu_devices.cpp
     gpu_devices_CXXFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
     gpu_devices_CPPFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
@@ -1355,5 +1377,5 @@ endif
 calculate_template_pvalue_SOURCES  = programs/calculate_template_pvalue/calculate_template_pvalue.cpp
 calculate_template_pvalue_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 calculate_template_pvalue_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-calculate_template_pvalue_LDADD    = libcore.a $(WX_LIBS_BASE)
+calculate_template_pvalue_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
 calculate_template_pvalue_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)

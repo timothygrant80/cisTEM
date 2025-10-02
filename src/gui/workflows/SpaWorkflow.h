@@ -4,8 +4,24 @@
 #include "../ActionsPanelSpa.h"
 #include "Icons.h"
 
-// These are all defined in projectx.cpp; we'll use them here so that
-// the panel will be fully instantiated any time the workflow changes.
+// GLOBAL PANEL POINTERS: These are all defined in projectx.cpp and used throughout the application.
+//
+// IMPORTANT LIFECYCLE MANAGEMENT:
+// - These pointers are shared globally across the entire application
+// - They are created when a workflow is activated (see createActionsPanel lambda below)
+// - They are destroyed when switching workflows (handled by ActionsPanelSpa destructor)
+// - The destructor MUST set these to nullptr to prevent dangling pointer access
+//
+// WHY GLOBALS?
+// - Historical design: The application was originally single-workflow
+// - Many parts of the codebase expect direct access to these panels
+// - Refactoring to eliminate globals would require extensive changes
+//
+// SAFETY PROTOCOL:
+// 1. Create panels in workflow registration (below)
+// 2. Destroy panels when switching workflows (automatic via wxWidgets)
+// 3. Nullify pointers in destructor (prevents segfaults)
+// 4. Check for null before access (in Dirty*() methods and elsewhere)
 extern MyAlignMoviesPanel*   align_movies_panel;
 extern MyFindCTFPanel*       findctf_panel;
 extern MyFindParticlesPanel* findparticles_panel;
@@ -37,16 +53,20 @@ struct SpaWorkflowRegister {
         def.name               = "Single Particle";
         def.createActionsPanel = [](wxWindow* parent) {
             ActionsPanelSpa* actions_panel = new ActionsPanelSpa(parent);
-            align_movies_panel             = new MyAlignMoviesPanel(actions_panel->ActionsBook);
-            findctf_panel                  = new MyFindCTFPanel(actions_panel->ActionsBook);
-            findparticles_panel            = new MyFindParticlesPanel(actions_panel->ActionsBook);
-            classification_panel           = new MyRefine2DPanel(actions_panel->ActionsBook);
-            refine_3d_panel                = new MyRefine3DPanel(actions_panel->ActionsBook);
-            refine_ctf_panel               = new RefineCTFPanel(actions_panel->ActionsBook);
-            auto_refine_3d_panel           = new AutoRefine3DPanel(actions_panel->ActionsBook);
-            ab_initio_3d_panel             = new AbInitio3DPanel(actions_panel->ActionsBook);
-            generate_3d_panel              = new Generate3DPanel(actions_panel->ActionsBook);
-            sharpen_3d_panel               = new Sharpen3DPanel(actions_panel->ActionsBook);
+
+            // PANEL CREATION: Create all workflow-specific panels as children of ActionsBook.
+            // These panels will be automatically destroyed when actions_panel is destroyed.
+            // The ActionsPanelSpa destructor will handle nullifying the global pointers.
+            align_movies_panel   = new MyAlignMoviesPanel(actions_panel->ActionsBook);
+            findctf_panel        = new MyFindCTFPanel(actions_panel->ActionsBook);
+            findparticles_panel  = new MyFindParticlesPanel(actions_panel->ActionsBook);
+            classification_panel = new MyRefine2DPanel(actions_panel->ActionsBook);
+            refine_3d_panel      = new MyRefine3DPanel(actions_panel->ActionsBook);
+            refine_ctf_panel     = new RefineCTFPanel(actions_panel->ActionsBook);
+            auto_refine_3d_panel = new AutoRefine3DPanel(actions_panel->ActionsBook);
+            ab_initio_3d_panel   = new AbInitio3DPanel(actions_panel->ActionsBook);
+            generate_3d_panel    = new Generate3DPanel(actions_panel->ActionsBook);
+            sharpen_3d_panel     = new Sharpen3DPanel(actions_panel->ActionsBook);
 
             if ( ! actions_panel->ActionsBook->GetImageList( ) ) {
                 actions_panel->ActionsBook->AssignImageList(GetActionsSpaBookIconImages( ));
@@ -63,7 +83,7 @@ struct SpaWorkflowRegister {
             actions_panel->ActionsBook->AddPage(generate_3d_panel, "Generate 3D", false, 8);
             actions_panel->ActionsBook->AddPage(sharpen_3d_panel, "Sharpen 3D", false, 9);
 
-                return actions_panel;
+            return actions_panel;
         };
         // TODO: define a results panel function as well
         WorkflowRegistry::Instance( ).RegisterWorkflow(def);

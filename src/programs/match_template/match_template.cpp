@@ -37,6 +37,9 @@ using namespace cistem_timer_noop;
 // FIXME: Probably need to disable resizing, or make sure it is handled
 #define TEST_LOCAL_NORMALIZATION
 
+// Testing a size optimized approach for search
+#define MAX_SEARCH_SIZE 1024
+
 /**
  * @class AggregatedTemplateResult
  * @brief Stores and aggregates template matching results from multiple processing units (e.g., worker threads or nodes).
@@ -635,6 +638,20 @@ bool MatchTemplateApp::DoCalculation( ) {
     // Initialize TemplateMatchingDataSizer for managing image sizes and preprocessing
     profile_timing.start("PreProcessInputImage");
     TemplateMatchingDataSizer data_sizer(this, input_image, input_reconstruction, input_pixel_size, padding);
+
+#ifdef MAX_SEARCH_SIZE
+
+    if ( input_image.logical_x_dimension > MAX_SEARCH_SIZE || input_image.logical_y_dimension > MAX_SEARCH_SIZE ) {
+        // Work out how much we have to change the high_resolution limit_search to make the image smaller
+        float high_limit_x = data_sizer.GetRealizedHighResolutionLimitBasedOnWantedSize(input_pixel_size, input_image.logical_x_dimension, MAX_SEARCH_SIZE);
+        float high_limit_y = data_sizer.GetRealizedHighResolutionLimitBasedOnWantedSize(input_pixel_size, input_image.logical_y_dimension, MAX_SEARCH_SIZE);
+        wxPrintf("Your input image is %i x %i pixels. To fit within the max search size of %i, the high resolution limit for the search has been changed from %3.2fA to %3.2fA\n",
+                 input_image.logical_x_dimension, input_image.logical_y_dimension, MAX_SEARCH_SIZE, high_resolution_limit_search, std::max(high_limit_x, high_limit_y));
+        high_resolution_limit_search = std::max(high_limit_x, high_limit_y);
+    }
+
+#endif
+
     if ( use_local_normalization && data_sizer.IsResamplingNeeded( ) ) {
         SendError("Local normalization is not yet supported with resampling.");
     }

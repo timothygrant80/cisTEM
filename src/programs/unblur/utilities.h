@@ -217,11 +217,11 @@ std::vector<int> FixOutliers(matrix<double>* patch_peaksx, matrix<double>* patch
     auto last = std::unique(missed_index.begin( ), missed_index.end( ));
     missed_index.erase(last, missed_index.end( ));
 
-    wxPrintf("outliers:\n");
-    for ( int i = 0; i < missed_index.size( ); i++ ) {
-        wxPrintf("%d\t", missed_index[i]);
-    }
-    wxPrintf("\n");
+    // wxPrintf("outliers:\n");
+    // for ( int i = 0; i < missed_index.size( ); i++ ) {
+    //     wxPrintf("%d\t", missed_index[i]);
+    // }
+    // wxPrintf("\n");
 
     if ( write_out_the_outliers ) {
         float           outlier;
@@ -319,7 +319,7 @@ float CalculateDiffSquare(Image** patch_stack, int patch_no, int image_no, bool 
     for ( int patch_index = 0; patch_index < patch_no; patch_index++ ) {
         sum_of_images.Allocate(patch_dim, patch_dim, false);
         sum_of_images.SetToConstant(0.0);
-        wxPrintf("patch %d\n", patch_index);
+        // wxPrintf("patch %d\n", patch_index);
         peak_sum[patch_index] = 0;
         pixmult[patch_index]  = 0;
 
@@ -402,7 +402,7 @@ void Generate_CoeffSpline(bicubicsplinestack ccmap_stack, Image** patch_stack, f
         tmpimg.Allocate(quater_patch_dim, quater_patch_dim, false);
         sum_of_images.Allocate(patch_dim, patch_dim, false);
         sum_of_images.SetToConstant(0.0);
-        wxPrintf("patch %d\n", patch_index);
+        // wxPrintf("patch %d\n", patch_index);
         // apply b factor to the patch stack and generate image sum
         // wxPrintf("check the patch stack values: \n");
         // for ( int ii = 0; ii < quater_patch_dim; ii += 50 ) {
@@ -501,7 +501,7 @@ void Generate_RefStack(Image** patch_stack, Image** ref_stack, int patch_no, int
 
         sum_of_images.Allocate(patch_dim, patch_dim, false);
         sum_of_images.SetToConstant(0.0);
-        wxPrintf("patch %d\n", patch_index);
+        // wxPrintf("patch %d\n", patch_index);
 
         for ( int image_counter = 0; image_counter < image_no; image_counter++ ) {
             sum_of_images.AddImage(&patch_stack[patch_index][image_counter]);
@@ -625,7 +625,7 @@ void patch_trimming_basedon_locations(Image* input_stack, Image** patch_stack, i
     // for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
 #pragma omp parallel for default(shared) num_threads(max_threads)
     for ( int patch_counter = 0; patch_counter < number_of_patchgroups; patch_counter++ ) {
-        wxPrintf("current patch: %i\n", patch_counter);
+        // wxPrintf("current patch: %i\n", patch_counter);
         for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
             float image_mean;
             if ( mean_padding ) {

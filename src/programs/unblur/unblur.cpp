@@ -40,8 +40,6 @@ typedef matrix<double, 0, 1>  column_vector;
 MovieFrameSpline              Spline3dx, Spline3dy;
 bicubicsplinestack            ccmap_stack;
 
-// typedef matrix<double, 18, 1> param_vector;
-
 // ----------------------------------------------------------------------------------------
 class unblur_refine_alignment_object {
 
@@ -188,7 +186,6 @@ class unblur_refine_alignment_object {
 #pragma omp for
             for ( int i = 0; i < target_index.size( ); ++i ) {
                 int image_counter = target_index[i];
-                // wxPrintf("before update %i %f %f \n", image_counter, this->current_x_shifts[image_counter], this->current_y_shifts[image_counter]);
                 sum_of_images_minus_current.CopyFrom(&sum_of_images);
                 sum_of_images_minus_current.SubtractImage(&this->stack_for_alignment[image_counter]);
                 sum_of_images_minus_current.ApplyBFactor(target_unitless_bfactor);
@@ -248,14 +245,6 @@ class unblur_refine_alignment_object {
                 this->smooth_x_shifts[image_counter] = this->x_shifts_curve.savitzky_golay_fit[image_counter] - this->x_shifts[image_counter];
                 this->smooth_y_shifts[image_counter] = this->y_shifts_curve.savitzky_golay_fit[image_counter] - this->y_shifts[image_counter];
             }
-            //                     //copy back
-            //                     for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
-            //                         this->current_x_shifts[image_counter] = this->x_shifts_curve.savitzky_golay_fit[image_counter] - this->x_shifts[image_counter];
-            //                         this->current_y_shifts[image_counter] = this->y_shifts_curve.savitzky_golay_fit[image_counter] - this->y_shifts[image_counter];
-
-            // #ifdef PRINT_VERBOSE
-            //                         wxPrintf("After SG = %li : %f, %f\n", image_counter, x_shifts_curve.savitzky_golay_fit[image_counter], y_shifts_curve.savitzky_golay_fit[image_counter]);
-            // #endif
         }
     };
 
@@ -283,11 +272,6 @@ class unblur_refine_alignment_object {
 
         std::vector<int> outlier_ind = findOutlierUpperBoundIndices(diff_vec);
 
-        wxPrintf("outliers overall:\n");
-        for ( int i = 0; i < outlier_ind.size( ); i++ ) {
-            wxPrintf("%d\t", outlier_ind[i]);
-        }
-        wxPrintf("\n");
         return outlier_ind;
     }
 
@@ -322,19 +306,15 @@ class unblur_refine_alignment_object {
                 std::vector<int> outlier_ind;
                 outlier_ind = SearchOutlierIndices( );
 
-                for ( int i = 0; i < outlier_ind.size( ); i++ ) {
-                    wxPrintf("outlier 1 %d %f %f\n", outlier_ind[i], this->current_x_shifts[outlier_ind[i]], this->current_y_shifts[outlier_ind[i]]);
-                }
-
                 Calculate_Shifts(outlier_ind, this->unitless_bfactor * 2);
                 Smooth_Shifts( ); //update the smooth shifts
 
                 //check back the outliers and std
                 std::vector<int> new_outlier_ind = SearchOutlierIndices( );
                 // subtract shift of the middle image from all images to keep things centred around it
-                for ( int i = 0; i < outlier_ind.size( ); i++ ) {
-                    wxPrintf("outlier 2 %d %f %f\n", outlier_ind[i], this->current_x_shifts[outlier_ind[i]], this->current_y_shifts[outlier_ind[i]]);
-                }
+                // for ( int i = 0; i < outlier_ind.size( ); i++ ) {
+                //     wxPrintf("outlier 2 %d %f %f\n", outlier_ind[i], this->current_x_shifts[outlier_ind[i]], this->current_y_shifts[outlier_ind[i]]);
+                // }
 
                 std::vector<int> common_elements;
                 common_elements = FindCommonElements(outlier_ind, new_outlier_ind);
@@ -365,8 +345,8 @@ class unblur_refine_alignment_object {
             // wxPrintf(" max shift convergence %f\n", this->max_shift_convergence_threshold);
 
             if ( iteration_counter >= max_iterations || max_shift <= this->max_shift_convergence_threshold ) {
-                wxPrintf("returning, iteration = %li, max_shift = %f\n", iteration_counter, max_shift);
-                wxPrintf(" max shift convergence %f\n", this->max_shift_convergence_threshold);
+                // wxPrintf("returning, iteration = %li, max_shift = %f\n", iteration_counter, max_shift);
+                // wxPrintf(" max shift convergence %f\n", this->max_shift_convergence_threshold);
                 delete[] this->current_x_shifts;
                 delete[] this->current_y_shifts;
                 delete[] this->smooth_x_shifts;
@@ -378,7 +358,7 @@ class unblur_refine_alignment_object {
                 break;
             }
             else {
-                wxPrintf("Not. returning, iteration = %li, max_shift = %f\n", iteration_counter, max_shift);
+                // wxPrintf("Not. returning, iteration = %li, max_shift = %f\n", iteration_counter, max_shift);
             }
 
             // going to be doing another round so we need to make the new sum..
@@ -487,11 +467,9 @@ param_vector_linear residual_derivative_linear(
     const double c1 = params(1);
     const double c2 = params(2), c3 = params(3), c4 = params(4), c5 = params(5), c6 = params(6), c7 = params(7);
     const double c8 = params(8);
-    //add  params(9) to params(17) equals to 0??
-    //add  der(9) to der(17) equals to 0??
-    const double x = data.first(0);
-    const double y = data.first(1);
-    const double t = data.first(2);
+    const double x  = data.first(0);
+    const double y  = data.first(1);
+    const double t  = data.first(2);
 
     const double temp = c0 * t + c1 * pow(t, 2) + c2 * pow(t, 3) + c3 * x * t + c4 * x * pow(t, 2) + c5 * x * pow(t, 3) + c6 * y * t + c7 * y * pow(t, 2) + c8 * y * pow(t, 3);
     der(0)            = t;
@@ -505,31 +483,6 @@ param_vector_linear residual_derivative_linear(
     der(8)            = y * pow(t, 3);
 
     return der;
-}
-
-double minfunc3dSplineObjectxy(matrix<double> join_1d) {
-    double         result, result1, result2;
-    int            len, halflen;
-    matrix<double> tmp;
-    len       = join_1d.size( );
-    halflen   = len / 2;
-    int count = 0;
-    // cout << range(0, halflen) << endl;
-    // cout << range(halflen, len - 1) << endl;
-    tmp = colm(join_1d, range(0, halflen - 1));
-    tmp.set_size(halflen, 1);
-    for ( int i = 0; i < halflen; i++ ) {
-        tmp(i) = join_1d(count);
-        count++;
-    }
-    result1 = Spline3dx.OptimizationKnotObejctFast(tmp);
-    for ( int i = 0; i < halflen; i++ ) {
-        tmp(i) = join_1d(count);
-        count++;
-    }
-    result2 = Spline3dy.OptimizationKnotObejctFast(tmp);
-    result  = result1 + result2;
-    return result;
 }
 
 double minfunc3dSplineObjectxyControlPoints(matrix<double> control_1d) {
@@ -556,53 +509,6 @@ double minfunc3dSplineObjectxyControlPoints(matrix<double> control_1d) {
     result2 = Spline3dy.OptimizationKnotObejctFromControlPoints(tmp);
     result  = result1 + result2;
     return result;
-}
-
-double minfunc3dSplineCCLossObject(matrix<double> join_1d) {
-    double          loss;
-    matrix<double>* shiftsx;
-    matrix<double>* shiftsy;
-    int             len, halflen;
-    matrix<double>  knot_on_spline_for_x, knot_on_spline_for_y;
-    len       = join_1d.size( );
-    halflen   = len / 2;
-    int count = 0;
-
-    // pass some params:
-    int image_no    = Spline3dx.frame_no;
-    int patch_x_num = Spline3dx.Mapping_Mat_Col_no;
-    int patch_y_num = Spline3dx.Mapping_Mat_Row_no;
-
-    int ccmap_patch_dim      = ccmap_stack.m;
-    int half_ccmap_patch_dim = ccmap_patch_dim / 2;
-
-    // tmp = colm(join_1d, range(0, halflen - 1));
-    knot_on_spline_for_x.set_size(halflen, 1);
-    for ( int i = 0; i < halflen; i++ ) {
-        knot_on_spline_for_x(i) = join_1d(count);
-        count++;
-    }
-
-    shiftsx = Spline3dx.KnotToInterp(knot_on_spline_for_x);
-
-    knot_on_spline_for_y.set_size(halflen, 1);
-    for ( int i = 0; i < halflen; i++ ) {
-        knot_on_spline_for_y(i) = join_1d(count);
-        count++;
-    }
-    shiftsy = Spline3dy.KnotToInterp(knot_on_spline_for_y);
-
-    loss = 0;
-    for ( int img_ind = 0; img_ind < image_no; img_ind++ ) {
-        for ( int i = 0; i < patch_y_num; i++ ) {
-            for ( int j = 0; j < patch_x_num; j++ ) {
-                int patch_ind = i * patch_x_num + j;
-                loss -= ccmap_stack.spline_stack[patch_ind * image_no + img_ind].ApplySplineFunc(shiftsx[img_ind](i, j) + half_ccmap_patch_dim, shiftsy[img_ind](i, j) + half_ccmap_patch_dim);
-            }
-        }
-    }
-    loss = loss;
-    return loss;
 }
 
 double minfunc3dSplineCCLossObjectControlPoints(matrix<double> control_1d) {
@@ -654,10 +560,9 @@ double minfunc3dSplineCCLossObjectControlPoints(matrix<double> control_1d) {
     return loss;
 }
 
-void split_and_update(matrix<double> Join1d, int joinsize);
 void apply_fitting_quadratic_sup(Image* super_res_stack, float output_binning_factor, int number_of_images, param_vector_quadratic params_x, param_vector_quadratic params_y, int max_threads);
 void apply_fitting_linear_sup(Image* input_stack, Image* super_res_stack, float output_binning_factor, int number_of_images, param_vector_linear params_x, param_vector_linear params_y);
-void apply_fitting_spline_sup(int output_x_size, int output_y_size, Image* super_res_stack, float output_binning_factor, int number_of_images, column_vector Join1d_R0, column_vector Join1d_R1, int max_threads);
+
 void apply_fitting_spline_sup_control(int output_x_size, int output_y_size, Image* super_res_stack, float output_binning_factor, int number_of_images, column_vector Control1d_R0, column_vector Control1d_R1, int max_threads);
 void dosefilter(Image* image_stack, int first_frame, int last_frame, float* dose_filter_sum_of_squares, ElectronDose* my_electron_dose, StopWatch profile_timing, float exposure_per_frame, float pre_exposure_amount, int max_threads);
 void write_shifts(int patch_no_x, int patch_no_y, int image_no, std::string output_path, std::string shift_file_prefx, std::string shift_file_prefy);
@@ -666,11 +571,10 @@ void write_quad_shifts(int image_no, int patch_no_x, int patch_no_y, param_vecto
 void write_shifts_forGUI_quad(int image_dim_x, int image_dim_y, int image_no, int patch_no_x, int patch_no_y, param_vector_quadratic params_x, param_vector_quadratic params_y, float** patch_locations, std::string output_path, bool write_out_small_sum_image);
 void write_linear_shifts(int image_no, int patch_no_x, int patch_no_y, param_vector_linear params_x, param_vector_linear params_y, float** patch_locations, std::string output_path, std::string shift_file_prefx, std::string shift_file_prefy);
 void write_shifts_forGUI_linear(int image_dim_x, int image_dim_y, int image_no, int patch_no_x, int patch_no_y, param_vector_linear params_x, param_vector_linear params_y, float** patch_locations, std::string output_path, bool write_out_small_sum_image);
-void Spline_Refine(Image** patch_stack, column_vector& Control_1d_search, column_vector& Control1d_ccmap, double knot_on_x, double knot_on_y, double knot_on_z, int number_of_input_images, int image_dim_x, int image_dim_y, double search_sample_dose, double total_dose, double pixel_size, double exposure_per_frame, double coeffspline_unitless_bfactor, int patch_num_x, int patch_num_y, int max_threads, int output_x_size, int output_y_size, wxString outputpath, int output_binning_factor, int pre_binning_factor, int patch_num, matrix<double> patch_locations_x, matrix<double> patch_locations_y, matrix<double> z);
 void Spline_Fitting(column_vector& Control_1d_search, double deriv_eps, double f_min, unsigned long max_iter, double stop_cri_scale, double knot_on_x, double knot_on_y, double knot_on_z, double knot_x_dis, double knot_y_dis, double search_sample_dose, wxString outputpath);
 void Spline_Shift_Implement(Image** patch_stack, int patch_num_x, int patch_num_y, int number_of_input_images, int max_threads);
-void Spline_Shift_Reverse(Image** patch_stack, int patch_num_x, int patch_num_y, int number_of_input_images, int max_threads);
 void Spline_LossRefine(column_vector& Control1d_ccmap, double deriv_eps, double f_min, unsigned long max_iter, double stop_cri_scale, double knot_on_x, double knot_on_y, double knot_on_z, double knot_x_dis, double knot_y_dis, double search_sample_dose, wxString outputpath);
+
 IMPLEMENT_APP(UnBlurApp)
 
 void UnBlurApp::DoInteractiveUserInput( ) {
@@ -715,7 +619,6 @@ void UnBlurApp::DoInteractiveUserInput( ) {
     int      max_threads;
     int      eer_frames_per_image = 0;
     int      eer_super_res_factor = 1;
-    // wxString MotCorpath           = "";
 
     bool save_aligned_frames;
 
@@ -806,9 +709,8 @@ void UnBlurApp::DoInteractiveUserInput( ) {
         last_frame                           = 0;
         number_of_frames_for_running_average = 1;
         save_aligned_frames                  = false;
-        // aligned_frames_filename              = "";
-        eer_frames_per_image = 0;
-        eer_super_res_factor = 1;
+        eer_frames_per_image                 = 0;
+        eer_super_res_factor                 = 1;
     }
 
     correct_mag_distortion = my_input->GetYesNoFromUser("Correct Magnification Distortion?", "If yes, a magnification distortion can be corrected", "no");
@@ -845,8 +747,6 @@ void UnBlurApp::DoInteractiveUserInput( ) {
             patch_num_x = 4;
             patch_num_y = 4;
         }
-        // patch_num_x      = my_input->GetIntFromUser("Number of Patches along X Axis", "input integer", "6");
-        // patch_num_y      = my_input->GetIntFromUser("Number of Patches along Y Axis", "input integer", "4");
     }
 
     else {
@@ -872,7 +772,6 @@ void UnBlurApp::DoInteractiveUserInput( ) {
     bool        write_out_small_sum_image    = false;
     std::string small_sum_image_filename     = "/dev/null";
 
-    // my_current_job.ManualSetArguments("ttfffbbfifbiifffbsbsfbfffbtbtiiiibttiisbbiii", input_filename.c_str( ),
     my_current_job.ManualSetArguments("ttfffbbfifbiifffbsbsfbfffbtbtiiiibiisbbiii", input_filename.c_str( ),
                                       output_filename.c_str( ),
                                       original_pixel_size,
@@ -1376,12 +1275,6 @@ bool UnBlurApp::DoCalculation( ) {
                 patch_locations_y(patch_num_y - patch_y_ind - 1) = image_dim_y - patch_y_ind * step_size_y * 2 - step_size_y;
                 // patch_locations_y(patch_y_ind) = patch_locations_y(patch_y_ind) / output_binning_factor;
             }
-            for ( int patch_x_ind = 0; patch_x_ind < patch_num_x; patch_x_ind++ ) {
-                wxPrintf("x loc %f\n", patch_locations_x(patch_x_ind));
-            }
-            for ( int patch_y_ind = 0; patch_y_ind < patch_num_y; patch_y_ind++ ) {
-                wxPrintf("y loc %f\n", patch_locations_y(patch_y_ind));
-            }
 
             // */
             float** patch_locations;
@@ -1411,7 +1304,7 @@ bool UnBlurApp::DoCalculation( ) {
             unblur_timing.start("Patch Alignment");
             unblur_refine_alignment_object patch_object;
             for ( int patch_counter = 0; patch_counter < patch_num; patch_counter++ ) {
-                wxPrintf("aligning patch %d\n", patch_counter);
+                // wxPrintf("aligning patch %d\n", patch_counter);
 
                 patch_object.Initialize(patch_stack[patch_counter], number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0, max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, 5, 3, max_threads, patch_shift_x[patch_counter], patch_shift_y[patch_counter], false);
                 // patch_object.alignment_refine(false);
@@ -1626,27 +1519,24 @@ bool UnBlurApp::DoCalculation( ) {
                 }
                 wxPrintf("knot_on_z %f\n", knot_on_z);
                 wxPrintf("sample dose %f\n", sample_dose);
-                // double knot_on_x  = 8; //patch_num_x; //8;
+
                 double knot_on_x;
                 double knot_on_y;
                 if ( patch_num_x < 6 ) {
                     knot_on_x = patch_num_x;
                 }
                 else {
-                    knot_on_x = myroundint(float(patch_num_x) / 3.0 * 2.0); //patch_num_x; //8;
+                    knot_on_x = myroundint(float(patch_num_x) / 3.0 * 2.0);
                 }
                 if ( patch_num_y < 6 ) {
                     knot_on_y = patch_num_y;
                 }
                 else {
-                    knot_on_y = myroundint(float(patch_num_y) / 3.0 * 2.0); //patch_num_y; //5;
+                    knot_on_y = myroundint(float(patch_num_y) / 3.0 * 2.0);
                 }
 
-                // double knot_on_x = round(patch_num_x / 3 * 2); //patch_num_x; //8;
                 wxPrintf("knot_on_x %f\n", knot_on_x);
                 double knot_x_dis = ceil(image_dim_x / (knot_on_x - 1));
-                // double knot_on_y  = 5; //patch_num_y; //5;
-                // double knot_on_y = round(patch_num_y / 3 * 2); //patch_num_y; //5;
                 wxPrintf("knot_on_y %f\n", knot_on_y);
 
                 double knot_y_dis       = ceil(image_dim_y / (knot_on_y - 1));
@@ -1694,321 +1584,63 @@ bool UnBlurApp::DoCalculation( ) {
                 double knot_on_y_start;
                 double knot_on_x_end;
                 double knot_on_y_end;
-                double sample_dose_start;
                 bool   fine_search = false;
 
                 patch_stack = new Image*[patch_num];
                 for ( int i = 0; i < patch_num; i++ ) {
                     patch_stack[i] = new Image[number_of_input_images];
                 }
-                if ( fine_search ) {
-                    if ( number_of_input_images == 4 ) {
-                        fine_search = false;
-                        wxPrintf("too few images for fine search\n");
-                    }
-                    else if ( (ceil(total_dose / int(sample_dose)) + 1) > number_of_input_images ) {
-                        fine_search = false;
-                        wxPrintf("too few images for fine search\n");
-                    }
-                    else if ( sample_dose < 4 ) {
-                        sample_dose_start = sample_dose;
-                        if ( sample_dose_start < 1 ) {
-                            fine_search = false;
-                            wxPrintf("too few images for fine search\n");
-                        }
-                    }
-                    else {
-                        sample_dose_start = 4;
-                    }
-                }
 
-                if ( fine_search ) {
-                    patch_trimming_basedon_locations(counting_image_stack, patch_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath.ToStdString( ), "patch", max_threads, false, false, patch_locations);
+                patch_trimming_basedon_locations(counting_image_stack, patch_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath.ToStdString( ), "patch_pix", max_threads, false, false, patch_locations);
 
-                    float           diff_square, diff_counting_square;
-                    NumericTextFile AICRecord(outputpath.ToStdString( ) + "AIC_records.txt", OPEN_TO_WRITE, 11);
-                    AICRecord.WriteCommentLine("knot_on_x\tknot_on_y\tknot_on_z\tknot_x_dis\tknot_y_dis\tsearch_sample_dose\tsigma_square\tk\tdiff_square\tlikelihood\tAIC");
+                // /*
+                ccmap_stack.InitializeSplineStack(quater_patch_dim, quater_patch_dim, patch_num * number_of_input_images, 1, 1);
 
-                    column_vector best_control_1d, best_control_1d_ccmap;
+                Spline3dx.Initialize(knot_on_z, knot_on_y, knot_on_x, number_of_input_images, image_dim_x, image_dim_y, knot_z_dis, knot_x_dis, knot_y_dis);
+                Spline3dy.Initialize(knot_on_z, knot_on_y, knot_on_x, number_of_input_images, image_dim_x, image_dim_y, knot_z_dis, knot_x_dis, knot_y_dis);
+                Spline3dx.Update3DSplineInterpMappingControl(patch_locations_x, patch_locations_y, z);
+                Spline3dy.Update3DSplineInterpMappingControl(patch_locations_x, patch_locations_y, z);
 
-                    double best_knot_on_x;
-                    double best_knot_on_y;
-                    double best_knot_on_z;
-                    double best_knot_x_dis;
-                    double best_knot_y_dis;
-                    double best_sample_dose;
-                    double best_sigma_square;
-                    double best_k;
-                    double best_diff_square;
-                    double best_likelihood;
-                    double best_AIC;
+                Control1d                         = ones_matrix<double>(knot_on_x * knot_on_y * knot_on_z * 2, 1);
+                Control1d_ccmap                   = zeros_matrix<double>(knot_on_x * knot_on_y * knot_on_z * 2, 1);
+                unsigned long max_iter_splinefit  = 20;
+                unsigned long max_iter_lossrefine = 50;
+                double        f_min               = -100;
+                double        stop_cri_scale      = 1e6;
+                double        deriv_eps           = 1e-2;
+                double        deriv_eps_loss      = 1e-1;
+                unblur_timing.start("Initial Model Fitting");
+                Spline_Fitting(Control1d, deriv_eps, f_min, max_iter_splinefit, stop_cri_scale, knot_on_x, knot_on_y, knot_on_z, knot_x_dis, knot_y_dis, sample_dose, outputpath);
+                Spline_Shift_Implement(patch_stack, patch_num_x, patch_num_y, number_of_input_images, max_threads);
+                write_shifts(patch_num_x, patch_num_y, number_of_input_images, outputpath.ToStdString( ), "_shiftx_R0", "_shifty_R0");
+                unblur_timing.lap("Initial Model Fitting");
 
-                    bool firsttry = true;
-                    // sample_dose_start = 4;
-                    wxPrintf("sample dose start %f\n", sample_dose_start);
-                    int max_sample_dose = ceil(exposure_per_frame * number_of_input_images / 3);
-                    wxPrintf("max sample dose %d\n", max_sample_dose);
+                wxPrintf("Loss Refine\n");
 
-                    ccmap_stack.InitializeSplineStack(quater_patch_dim, quater_patch_dim, patch_num * number_of_input_images, 1, 1);
+                unblur_timing.start("Loss Refine Preparation");
+                Generate_CoeffSpline(ccmap_stack, patch_stack, coeffspline_unitless_bfactor, patch_num, number_of_input_images, max_threads, false, outputpath.ToStdString( ), "CCMapBfactor_R1");
+                unblur_timing.lap("Loss Refine Preparation");
+                wxPrintf("Refine\n");
 
-                    // for ( int sample = sample_dose_start; sample <= max_sample_dose; sample++ ) {
-                    for ( int sample = sample_dose_start; sample <= max_sample_dose; sample++ ) {
+                unblur_timing.start("Model Refinement");
+                Spline_LossRefine(Control1d_ccmap, deriv_eps_loss, f_min, max_iter_lossrefine, stop_cri_scale, knot_on_x, knot_on_y, knot_on_z, knot_x_dis, knot_y_dis, sample_dose, outputpath.ToStdString( ));
+                write_shifts(patch_num_x, patch_num_y, number_of_input_images, outputpath.ToStdString( ), "_shiftx_R1", "_shifty_R1");
+                unblur_timing.lap("Model Refinement");
+                wxPrintf("write joins for GUI\n");
 
-                        if ( sample > sample_dose_start ) {
-                            knot_on_x_start = best_knot_on_x;
-                            knot_on_y_start = best_knot_on_y;
-                            knot_on_x_end   = knot_on_x_start;
-                            knot_on_y_end   = knot_on_y_start;
-                        }
-                        else {
-                            knot_on_x_start = int(patch_num_x / 2);
-                            knot_on_y_start = int(patch_num_y / 2);
-                            knot_on_x_end   = patch_num_x;
-                            knot_on_y_end   = patch_num_y;
-                            // knot_on_x_start = int(patch_num_x / 2);
-                            // knot_on_y_start = int(patch_num_y / 2);
-                            // knot_on_x_end   = knot_on_x_start;
-                            // knot_on_y_end   = knot_on_y_start;
-                        }
-                        for ( int knot_x = knot_on_x_start; knot_x <= knot_on_x_end; knot_x++ ) {
-                            for ( int knot_y = knot_on_y_start; knot_y <= knot_on_y_end; knot_y++ ) {
-                                // for ( int knot_x = knot_on_x_start; knot_x <= patch_num_x; knot_x++ ) {
-                                //     for ( int knot_y = knot_on_y_start; knot_y <= patch_num_y; knot_y++ ) {
-                                knot_on_x = knot_x;
-                                knot_on_y = knot_y;
-                                wxPrintf("sample dose %d\n", sample);
-                                wxPrintf("pixel size %f\n", pixel_size);
-                                // double total_dose  = exposure_per_frame * number_of_input_images;
-                                double        search_sample_dose = double(sample);
-                                double        knot_on_z          = ceil(total_dose / search_sample_dose) + 1;
-                                column_vector Control_1d_search;
+                write_joins(outputpath.ToStdString( ), "Control_R0", Control1d);
+                write_joins(outputpath.ToStdString( ), "Control_R1", Control1d_ccmap);
+                // if ( is_running_locally == false ) {
+                wxPrintf("write shifts for GUI\n");
+                write_shifts_forGUI(output_x_size, output_y_size, patch_num_x, patch_num_y, patch_locations, number_of_input_images, outputpath.ToStdString( ), output_binning_factor, Control1d, Control1d_ccmap, write_out_small_sum_image);
 
-                                // Spline_Refine(patch_stack, Control_1d_search, Control1d_ccmap, knot_on_x, knot_on_y, knot_on_z, number_of_input_images, image_dim_x, image_dim_y, search_sample_dose, total_dose, pixel_size, exposure_per_frame, coeffspline_unitless_bfactor, patch_num_x, patch_num_y, max_threads, output_x_size, output_y_size, outputpath, output_binning_factor, pre_binning_factor, patch_num, patch_locations_x, patch_locations_y, z);
-
-                                double knot_z_dis = search_sample_dose;
-                                knot_on_z         = ceil(total_dose / search_sample_dose) + 1;
-                                double knot_x_dis = ceil(image_dim_x / (knot_on_x - 1));
-                                double knot_y_dis = ceil(image_dim_y / (knot_on_y - 1));
-                                Spline3dx.Initialize(knot_on_z, knot_on_y, knot_on_x, number_of_input_images, image_dim_x, image_dim_y, knot_z_dis, knot_x_dis, knot_y_dis);
-                                Spline3dy.Initialize(knot_on_z, knot_on_y, knot_on_x, number_of_input_images, image_dim_x, image_dim_y, knot_z_dis, knot_x_dis, knot_y_dis);
-                                wxPrintf("before update 3d spline\n");
-                                Spline3dx.Update3DSplineInterpMappingControl(patch_locations_x, patch_locations_y, z);
-                                Spline3dy.Update3DSplineInterpMappingControl(patch_locations_x, patch_locations_y, z);
-
-                                Control_1d_search                 = ones_matrix<double>(knot_on_x * knot_on_y * knot_on_z * 2, 1);
-                                Control1d_ccmap                   = zeros_matrix<double>(knot_on_x * knot_on_y * knot_on_z * 2, 1);
-                                unsigned long max_iter            = 15;
-                                double        f_min               = -100;
-                                double        stop_cri_scale      = 1e6;
-                                double        stop_cri_scale_loss = 1e5;
-                                double        deriv_eps           = 1e-2;
-                                double        deriv_eps_loss      = 1e-1;
-
-                                Spline_Fitting(Control_1d_search, deriv_eps, f_min, max_iter, stop_cri_scale, knot_on_x, knot_on_y, knot_on_z, knot_x_dis, knot_y_dis, search_sample_dose, outputpath);
-                                Spline_Shift_Implement(patch_stack, patch_num_x, patch_num_y, number_of_input_images, max_threads);
-                                Generate_CoeffSpline(ccmap_stack, patch_stack, coeffspline_unitless_bfactor, patch_num, number_of_input_images, max_threads, false, outputpath.ToStdString( ), "CCMapBfactor_R1");
-                                Spline_LossRefine(Control1d_ccmap, deriv_eps_loss, f_min, 10, stop_cri_scale_loss, knot_on_x, knot_on_y, knot_on_z, knot_x_dis, knot_y_dis, search_sample_dose, outputpath.ToStdString( ));
-                                Spline_Shift_Implement(patch_stack, patch_num_x, patch_num_y, number_of_input_images, max_threads);
-
-                                double likelihood;
-                                double AIC;
-                                double k;
-                                double sigma_square;
-
-                                sigma_square = exposure_per_frame * pixel_size * pixel_size;
-                                k            = knot_on_x * knot_on_y * knot_on_z * 2;
-                                diff_square  = CalculateDiffSquare(patch_stack, patch_num, number_of_input_images, false, max_threads, outputpath.ToStdString( ), "Ref_Stack");
-                                likelihood   = -diff_square / 2 / sigma_square;
-                                AIC          = k - likelihood;
-
-                                wxPrintf("pixel size %f\n", pixel_size);
-                                wxPrintf("diff square and couting diff square %f %f\n", diff_square); //, diff_counting_square);
-                                wxPrintf("current sigmasquare k, diffsquare, like, AIC are %g, %g, %g, %g \n ", sigma_square, k, diff_square, likelihood, AIC);
-
-                                double temp_array[11];
-                                temp_array[0]  = knot_on_x;
-                                temp_array[1]  = knot_on_y;
-                                temp_array[2]  = knot_on_z;
-                                temp_array[3]  = knot_x_dis;
-                                temp_array[4]  = knot_y_dis;
-                                temp_array[5]  = search_sample_dose;
-                                temp_array[6]  = sigma_square;
-                                temp_array[7]  = k;
-                                temp_array[8]  = diff_square;
-                                temp_array[9]  = likelihood;
-                                temp_array[10] = AIC;
-
-                                AICRecord.WriteLine(temp_array);
-
-                                double refined_error = minfunc3dSplineObjectxyControlPoints(Control_1d_search);
-                                // Spline_Shift_Reverse(patch_stack, patch_num_x, patch_num_y, number_of_input_images, max_threads);
-
-                                double refined_error_ccmap = minfunc3dSplineCCLossObjectControlPoints(Control1d_ccmap);
-                                // Spline_Shift_Reverse(patch_stack, patch_num_x, patch_num_y, number_of_input_images, max_threads);
-                                //try retrimming
-                                patch_trimming_basedon_locations(counting_image_stack, patch_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath.ToStdString( ), "patch", max_threads, false, false, patch_locations);
-
-                                if ( firsttry ) {
-                                    best_knot_on_x        = knot_on_x;
-                                    best_knot_on_y        = knot_on_y;
-                                    best_knot_on_z        = knot_on_z;
-                                    best_knot_x_dis       = knot_x_dis;
-                                    best_knot_y_dis       = knot_y_dis;
-                                    best_sample_dose      = search_sample_dose;
-                                    best_sigma_square     = sigma_square;
-                                    best_k                = k;
-                                    best_diff_square      = diff_square;
-                                    best_likelihood       = likelihood;
-                                    best_AIC              = AIC;
-                                    best_control_1d       = Control_1d_search;
-                                    best_control_1d_ccmap = Control1d_ccmap;
-                                    firsttry              = false;
-                                }
-                                if ( AIC < best_AIC ) {
-                                    best_knot_on_x        = knot_on_x;
-                                    best_knot_on_y        = knot_on_y;
-                                    best_knot_on_z        = knot_on_z;
-                                    best_knot_x_dis       = knot_x_dis;
-                                    best_knot_y_dis       = knot_y_dis;
-                                    best_sample_dose      = search_sample_dose;
-                                    best_sigma_square     = sigma_square;
-                                    best_k                = k;
-                                    best_diff_square      = diff_square;
-                                    best_likelihood       = likelihood;
-                                    best_AIC              = AIC;
-                                    best_control_1d       = Control_1d_search;
-                                    best_control_1d_ccmap = Control1d_ccmap;
-                                }
-                            }
-                        }
-                    }
-
-                    double temp_array[11];
-                    AICRecord.WriteCommentLine("best parameter set");
-                    AICRecord.WriteCommentLine("knot_on_x\tknot_on_y\tknot_on_z\tknot_x_dis\tknot_y_dis\tsearch_sample_dose\tsigma_square\tk\tdiff_square\tlikelihood\tAIC");
-
-                    temp_array[0]  = best_knot_on_x;
-                    temp_array[1]  = best_knot_on_y;
-                    temp_array[2]  = best_knot_on_z;
-                    temp_array[3]  = best_knot_x_dis;
-                    temp_array[4]  = best_knot_y_dis;
-                    temp_array[5]  = best_sample_dose;
-                    temp_array[6]  = best_sigma_square;
-                    temp_array[7]  = best_k;
-                    temp_array[8]  = best_diff_square;
-                    temp_array[9]  = best_likelihood;
-                    temp_array[10] = best_AIC;
-
-                    AICRecord.WriteLine(temp_array);
-                    AICRecord.Close( );
-
-                    // implement the best values-------------------------------------------------------
-                    knot_on_x = best_knot_on_x;
-                    knot_on_y = best_knot_on_y;
-                    wxPrintf("implement knot_on_x y %f %f\n", knot_on_x, knot_on_y);
-                    wxPrintf("sample dose %f\n", best_sample_dose);
-                    sample_dose     = best_sample_dose;
-                    Control1d       = best_control_1d;
-                    Control1d_ccmap = best_control_1d_ccmap;
-                    knot_z_dis      = sample_dose;
-                    knot_on_z       = best_knot_on_z;
-                    knot_x_dis      = best_knot_x_dis;
-                    knot_y_dis      = best_knot_y_dis;
-
-                    Spline3dx.Initialize(knot_on_z, knot_on_y, knot_on_x, number_of_input_images, image_dim_x, image_dim_y, knot_z_dis, knot_x_dis, knot_y_dis);
-                    Spline3dy.Initialize(knot_on_z, knot_on_y, knot_on_x, number_of_input_images, image_dim_x, image_dim_y, knot_z_dis, knot_x_dis, knot_y_dis);
-                    Spline3dx.Update3DSplineInterpMappingControl(patch_locations_x, patch_locations_y, z);
-                    Spline3dy.Update3DSplineInterpMappingControl(patch_locations_x, patch_locations_y, z);
-                    // update the control point and smooth interpolation
-                    // upadate the parameters here
-                    double refined_error = minfunc3dSplineObjectxyControlPoints(best_control_1d);
-                    write_joins(outputpath.ToStdString( ), "Control_R0_bf", best_control_1d);
-
-                    patch_trimming_basedon_locations(counting_image_stack, patch_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath.ToStdString( ), "patch", max_threads, false, false, patch_locations);
-
-                    // Spline_Shift_Implement(patch_stack, patch_num_x, patch_num_y, number_of_input_images, max_threads);
-
-                    // double refined_error_ccmap = minfunc3dSplineCCLossObjectControlPoints(best_control_1d_ccmap);
-                    // Generate_CoeffSpline(ccmap_stack, patch_stack, coeffspline_unitless_bfactor, patch_num, number_of_input_images, false, outputpath.ToStdString( ), "CCMapBfactor_R1");
-                    double        f_min               = -100;
-                    double        stop_cri_scale      = 1e6;
-                    double        stop_cri_scale_loss = 1e6;
-                    double        deriv_eps           = 1e-2;
-                    double        deriv_eps_loss      = 1e-1;
-                    unsigned long max_iter_splinefit  = 20;
-                    unsigned long max_iter_lossrefine = 50;
-
-                    Spline_Fitting(best_control_1d, deriv_eps, f_min, max_iter_splinefit, stop_cri_scale, knot_on_x, knot_on_y, knot_on_z, knot_x_dis, knot_y_dis, best_sample_dose, outputpath);
-                    Spline_Shift_Implement(patch_stack, patch_num_x, patch_num_y, number_of_input_images, max_threads);
-                    write_shifts(patch_num_x, patch_num_y, number_of_input_images, outputpath.ToStdString( ), "_shiftx_R0", "_shifty_R0");
-                    double refined_error_ccmap = minfunc3dSplineCCLossObjectControlPoints(best_control_1d_ccmap);
-                    Generate_CoeffSpline(ccmap_stack, patch_stack, coeffspline_unitless_bfactor, patch_num, number_of_input_images, max_threads, false, outputpath.ToStdString( ), "CCMapBfactor_R1");
-
-                    // do some finner search
-                    Spline_LossRefine(best_control_1d_ccmap, deriv_eps_loss, f_min, max_iter_lossrefine, stop_cri_scale_loss, knot_on_x, knot_on_y, knot_on_z, knot_x_dis, knot_y_dis, sample_dose, outputpath.ToStdString( ));
-                    write_joins(outputpath.ToStdString( ), "Control_R0", best_control_1d);
-                    write_joins(outputpath.ToStdString( ), "Control_R1", best_control_1d_ccmap);
-                    write_shifts(patch_num_x, patch_num_y, number_of_input_images, outputpath.ToStdString( ), "_shiftx_R1", "_shifty_R1");
-
-                    // if ( is_running_locally == false ) {
-                    // wxPrintf("write shifts for GUI\n");
-                    write_shifts_forGUI(output_x_size, output_y_size, patch_num_x, patch_num_y, patch_locations, number_of_input_images, outputpath.ToStdString( ), output_binning_factor, Control1d, Control1d_ccmap, write_out_small_sum_image);
-                    // output_x_size, output_y_size, raw_image_stack, output_binning_factor, number_of_input_images, Control1d, Control1d_ccmap
-                    // }
-                }
-                else {
-                    patch_trimming_basedon_locations(counting_image_stack, patch_stack, number_of_input_images, patch_num_x, patch_num_y, output_stack_box_size, outputpath.ToStdString( ), "patch_pix", max_threads, false, false, patch_locations);
-
-                    // /*
-                    ccmap_stack.InitializeSplineStack(quater_patch_dim, quater_patch_dim, patch_num * number_of_input_images, 1, 1);
-
-                    // Spline_Refine(patch_stack, Control1d, Control1d_ccmap, knot_on_x, knot_on_y, knot_on_z, number_of_input_images, image_dim_x, image_dim_y, sample_dose, total_dose, pixel_size, exposure_per_frame, coeffspline_unitless_bfactor, patch_num_x, patch_num_y, max_threads, output_x_size, output_y_size, outputpath, output_binning_factor, pre_binning_factor, patch_num, patch_locations_x, patch_locations_y, z);
-
-                    Spline3dx.Initialize(knot_on_z, knot_on_y, knot_on_x, number_of_input_images, image_dim_x, image_dim_y, knot_z_dis, knot_x_dis, knot_y_dis);
-                    Spline3dy.Initialize(knot_on_z, knot_on_y, knot_on_x, number_of_input_images, image_dim_x, image_dim_y, knot_z_dis, knot_x_dis, knot_y_dis);
-                    Spline3dx.Update3DSplineInterpMappingControl(patch_locations_x, patch_locations_y, z);
-                    Spline3dy.Update3DSplineInterpMappingControl(patch_locations_x, patch_locations_y, z);
-
-                    Control1d                         = ones_matrix<double>(knot_on_x * knot_on_y * knot_on_z * 2, 1);
-                    Control1d_ccmap                   = zeros_matrix<double>(knot_on_x * knot_on_y * knot_on_z * 2, 1);
-                    unsigned long max_iter_splinefit  = 20;
-                    unsigned long max_iter_lossrefine = 50;
-                    double        f_min               = -100;
-                    double        stop_cri_scale      = 1e6;
-                    double        deriv_eps           = 1e-2;
-                    double        deriv_eps_loss      = 1e-1;
-                    unblur_timing.start("Initial Model Fitting");
-                    Spline_Fitting(Control1d, deriv_eps, f_min, max_iter_splinefit, stop_cri_scale, knot_on_x, knot_on_y, knot_on_z, knot_x_dis, knot_y_dis, sample_dose, outputpath);
-                    Spline_Shift_Implement(patch_stack, patch_num_x, patch_num_y, number_of_input_images, max_threads);
-                    write_shifts(patch_num_x, patch_num_y, number_of_input_images, outputpath.ToStdString( ), "_shiftx_R0", "_shifty_R0");
-                    unblur_timing.lap("Initial Model Fitting");
-
-                    wxPrintf("Loss Refine\n");
-
-                    unblur_timing.start("Loss Refine Preparation");
-                    Generate_CoeffSpline(ccmap_stack, patch_stack, coeffspline_unitless_bfactor, patch_num, number_of_input_images, max_threads, false, outputpath.ToStdString( ), "CCMapBfactor_R1");
-                    unblur_timing.lap("Loss Refine Preparation");
-                    wxPrintf("Refine\n");
-
-                    unblur_timing.start("Model Refinement");
-                    Spline_LossRefine(Control1d_ccmap, deriv_eps_loss, f_min, max_iter_lossrefine, stop_cri_scale, knot_on_x, knot_on_y, knot_on_z, knot_x_dis, knot_y_dis, sample_dose, outputpath.ToStdString( ));
-                    write_shifts(patch_num_x, patch_num_y, number_of_input_images, outputpath.ToStdString( ), "_shiftx_R1", "_shifty_R1");
-                    unblur_timing.lap("Model Refinement");
-                    wxPrintf("write joins for GUI\n");
-
-                    write_joins(outputpath.ToStdString( ), "Control_R0", Control1d);
-                    write_joins(outputpath.ToStdString( ), "Control_R1", Control1d_ccmap);
-                    // if ( is_running_locally == false ) {
-                    wxPrintf("write shifts for GUI\n");
-                    write_shifts_forGUI(output_x_size, output_y_size, patch_num_x, patch_num_y, patch_locations, number_of_input_images, outputpath.ToStdString( ), output_binning_factor, Control1d, Control1d_ccmap, write_out_small_sum_image);
-                    // }
-                    // */
-                    // ------------------------------------
-                    double refined_error       = minfunc3dSplineObjectxyControlPoints(Control1d);
-                    double refined_error_ccmap = minfunc3dSplineCCLossObjectControlPoints(Control1d_ccmap);
-                    std::cout << refined_error << endl;
-                    std::cout << refined_error_ccmap << endl;
-                }
+                // */
+                // ------------------------------------
+                double refined_error       = minfunc3dSplineObjectxyControlPoints(Control1d);
+                double refined_error_ccmap = minfunc3dSplineCCLossObjectControlPoints(Control1d_ccmap);
+                std::cout << refined_error << endl;
+                std::cout << refined_error_ccmap << endl;
+                // }
                 for ( int i = 0; i < patch_num; ++i ) {
                     delete[] patch_stack[i]; // each i-th pointer must be deleted first
                 }
@@ -2022,8 +1654,7 @@ bool UnBlurApp::DoCalculation( ) {
                         raw_image_stack[image_counter].BackwardFFT( );
                     }
                 }
-                // Control1d       = read_joins("Control_R0", outputpath.ToStdString( ), knot_on_x * knot_on_y * knot_on_z * 2);
-                // Control1d_ccmap = read_joins("Control_R1", outputpath.ToStdString( ), knot_on_x * knot_on_y * knot_on_z * 2);
+
                 unblur_timing.lap("Distortion Modeling total time");
 
                 wxPrintf("correcting distortion\n");
@@ -2200,11 +1831,9 @@ bool UnBlurApp::DoCalculation( ) {
 #endif
             }
 
-            wxPrintf("mark 1\n");
             my_result.SetResult(number_of_input_images * 2, result_array);
-            wxPrintf("mark 2\n");
             profile_timing.lap("fill result");
-            wxPrintf("mark 3\n");
+
             delete[] result_array;
             delete[] x_shifts;
             delete[] y_shifts;
@@ -2422,28 +2051,24 @@ bool UnBlurApp::DoCalculation( ) {
         // output_file.CloseFile( );
         // profile_timing.lap("write out sum image");
 
-        wxPrintf("mark 4\n");
+        // wxPrintf("mark 4\n");
     }
 
     if ( should_dose_filter == true ) {
         delete my_electron_dose;
         delete[] dose_filter_sum_of_squares;
     }
-    wxPrintf("mark 5\n");
+
+    wxPrintf("completed processing %s\n", input_filename.c_str( ));
     unblur_timing.print_times( );
     profile_timing.print_times( );
     profile_timing_refinement_method.print_times( );
-    wxPrintf("mark 6\n");
+
     delete[] image_stack;
     return true;
 }
 
 void Spline_Fitting(column_vector& Control_1d_search, double deriv_eps, double f_min, unsigned long max_iter, double stop_cri_scale, double knot_on_x, double knot_on_y, double knot_on_z, double knot_x_dis, double knot_y_dis, double search_sample_dose, wxString outputpath) {
-
-    wxPrintf("knot_on_x %f\n", knot_on_x);
-    wxPrintf("knot_on_y %f\n", knot_on_y);
-    wxPrintf("knot_x_dis %f\n", knot_x_dis);
-    wxPrintf("knot_y_dis %f\n", knot_y_dis);
 
     int maxsize = knot_on_x * knot_on_y * knot_on_z * 2;
 
@@ -2506,144 +2131,6 @@ void Spline_Shift_Implement(Image** patch_stack, int patch_num_x, int patch_num_
             }
         }
     }
-};
-
-void Spline_Shift_Reverse(Image** patch_stack, int patch_num_x, int patch_num_y, int number_of_input_images, int max_threads) {
-
-#pragma omp parallel for default(shared) num_threads(max_threads)
-    for ( int image_ind = 0; image_ind < number_of_input_images; image_ind++ ) {
-        for ( int i = 0; i < patch_num_y; i++ ) {
-            for ( int j = 0; j < patch_num_x; j++ ) {
-                int patch_ind = i * patch_num_x + j;
-                patch_stack[patch_ind][image_ind].PhaseShift(-Spline3dx.smooth_interp[image_ind](i, j), -Spline3dy.smooth_interp[image_ind](i, j), 0.0);
-            }
-        }
-    }
-};
-
-void Spline_Refine(Image** patch_stack, column_vector& Control_1d_search, column_vector& Control1d_ccmap, double knot_on_x, double knot_on_y, double knot_on_z, int number_of_input_images, int image_dim_x, int image_dim_y, double search_sample_dose, double total_dose, double pixel_size, double exposure_per_frame, double coeffspline_unitless_bfactor, int patch_num_x, int patch_num_y, int max_threads, int output_x_size, int output_y_size, wxString outputpath, int output_binning_factor, int pre_binning_factor, int patch_num, matrix<double> patch_locations_x, matrix<double> patch_locations_y, matrix<double> z) {
-    // double knot_on_z      = 2;
-    // double knot_z_dis     = ceil(total_dose / (knot_on_z - 1));
-    double knot_z_dis = search_sample_dose;
-    knot_on_z         = ceil(total_dose / search_sample_dose) + 1;
-    // double         knot_on_x  = 6; //8;
-    double knot_x_dis = ceil(image_dim_x / (knot_on_x - 1));
-    double knot_y_dis = ceil(image_dim_y / (knot_on_y - 1));
-    wxPrintf("image_dim_x %d\n", image_dim_x);
-    wxPrintf("image_dim_y %d\n", image_dim_y);
-    wxPrintf("knot_on_x %f\n", knot_on_x);
-    wxPrintf("knot_on_y %f\n", knot_on_y);
-    wxPrintf("knot_x_dis %f\n", knot_x_dis);
-    wxPrintf("knot_y_dis %f\n", knot_y_dis);
-    // double         knot_on_y  = 4; //5;
-    // column_vector Control_1d_search, Control1d_ccmap;
-
-    Spline3dx.Initialize(knot_on_z, knot_on_y, knot_on_x, number_of_input_images, image_dim_x, image_dim_y, knot_z_dis, knot_x_dis, knot_y_dis);
-    Spline3dy.Initialize(knot_on_z, knot_on_y, knot_on_x, number_of_input_images, image_dim_x, image_dim_y, knot_z_dis, knot_x_dis, knot_y_dis);
-    wxPrintf("before update 3d spline\n");
-    Spline3dx.Update3DSplineInterpMappingControl(patch_locations_x, patch_locations_y, z);
-    Spline3dy.Update3DSplineInterpMappingControl(patch_locations_x, patch_locations_y, z);
-
-    int maxsize         = knot_on_x * knot_on_y * knot_on_z * 2;
-    Control_1d_search   = ones_matrix<double>(knot_on_x * knot_on_y * knot_on_z * 2, 1);
-    double search_error = minfunc3dSplineObjectxyControlPoints(Control_1d_search);
-    wxPrintf("initial loss: %f \n", search_error);
-    double search_converge_Cri = search_error / 100000;
-    std::cout << " knot_x_num, knot_y_num, sample_dose, " << knot_on_x << " " << knot_on_y << " " << search_sample_dose << endl;
-    std::cout << " initial error, " << search_error << endl;
-    std::cout << " stop criteria, " << search_converge_Cri << endl;
-    auto start1 = std::chrono::high_resolution_clock::now( );
-    //
-    find_min_using_approximate_derivatives(lbfgs_search_strategy(maxsize * 4), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
-                                           objective_delta_stop_strategy(search_converge_Cri, 50).be_verbose( ),
-                                           minfunc3dSplineObjectxyControlPoints, Control_1d_search, -100, 1e-2);
-    //
-    auto stop1     = std::chrono::high_resolution_clock::now( );
-    auto duration1 = std::chrono::duration_cast<std::chrono::minutes>(stop1 - start1);
-    std::cout << "Lap time " << duration1.count( ) << " minutes\n";
-
-    double likelihood;
-    double AIC;
-    double k;
-
-    wxPrintf("pixel size %f\n", pixel_size);
-    k = knot_on_x * knot_on_y * knot_on_z * 2;
-#pragma omp parallel for default(shared) num_threads(max_threads)
-    for ( int image_ind = 0; image_ind < number_of_input_images; image_ind++ ) {
-        for ( int i = 0; i < patch_num_y; i++ ) {
-            for ( int j = 0; j < patch_num_x; j++ ) {
-                int patch_ind = i * patch_num_x + j;
-                patch_stack[patch_ind][image_ind].PhaseShift(Spline3dx.smooth_interp[image_ind](i, j), Spline3dy.smooth_interp[image_ind](i, j), 0.0);
-            }
-        }
-    }
-
-    //further refine
-
-    // int quater_patch_dim = 64 / 2;
-    // ccmap_stack.InitializeSplineStack(quater_patch_dim, quater_patch_dim, patch_num * number_of_input_images, 1, 1);
-    // Generate_CoeffSpline(ccmap_stack, patch_stack, unitless_bfactor, patch_num, number_of_input_images, false, outputpath.ToStdString( ), "CCMapBfactor_R1");
-    Generate_CoeffSpline(ccmap_stack, patch_stack, coeffspline_unitless_bfactor, patch_num, number_of_input_images, max_threads, false, outputpath.ToStdString( ), "CCMapBfactor_R1");
-
-    // for ( int i = 0; i < patch_num; ++i ) {
-    //     delete[] patch_stack[i]; // each i-th pointer must be deleted first
-    // }
-    // delete[] patch_stack; // now delete pointer array
-    // patch_stack = NULL;
-    // Join1d_ccmap = zeros_matrix<double>(knot_on_x * knot_on_y * (knot_on_z)*2, 1);
-    // Control1d_ccmap = zeros_matrix<double>((knot_on_x + 2) * (knot_on_y + 2) * (knot_on_z + 1) * 2, 1);
-    Control1d_ccmap = zeros_matrix<double>(knot_on_x * knot_on_y * (knot_on_z)*2, 1);
-    // std::cout << "control1d_ccmap " << Control1d_ccmap << endl;
-    // double ccmap_error = minfunc3dSplineCCLossObject(Join1d_ccmap);
-    double ccmap_error = minfunc3dSplineCCLossObjectControlPoints(Control1d_ccmap);
-    wxPrintf("initial loss: %f \n", ccmap_error);
-    double stop_cri_map = abs(ccmap_error / 100000);
-    std::cout << " initial error, " << ccmap_error << endl;
-    std::cout << " stop criteria, " << stop_cri_map << endl;
-    auto start2 = std::chrono::high_resolution_clock::now( );
-    find_min_using_approximate_derivatives(lbfgs_search_strategy(maxsize * 4), // when it's 10, the result is not correct, when it's 1000, result is close, 10000 give the best. Remains to figure out why.
-                                           objective_delta_stop_strategy(stop_cri_map, 50).be_verbose( ),
-                                           minfunc3dSplineCCLossObjectControlPoints, Control1d_ccmap, -100, 1e-1);
-    auto stop2     = std::chrono::high_resolution_clock::now( );
-    auto duration2 = std::chrono::duration_cast<std::chrono::minutes>(stop2 - start2);
-    std::cout << "Lap time " << duration2.count( ) << " minutes\n";
-
-    // write_joins(outputpath.ToStdString( ), "Joins_R1", Join1d_ccmap);
-    write_joins(outputpath.ToStdString( ), "Control_R1", Control1d_ccmap);
-    write_shifts(patch_num_x, patch_num_y, number_of_input_images, outputpath.ToStdString( ), "_shiftx_R1", "_shifty_R1");
-// ccmap_stack.FreeSplineStack( );
-#pragma omp parallel for default(shared) num_threads(max_threads)
-    for ( int image_ind = 0; image_ind < number_of_input_images; image_ind++ ) {
-        for ( int i = 0; i < patch_num_y; i++ ) {
-            for ( int j = 0; j < patch_num_x; j++ ) {
-                int patch_ind = i * patch_num_x + j;
-                patch_stack[patch_ind][image_ind].PhaseShift(Spline3dx.smooth_interp[image_ind](i, j), Spline3dy.smooth_interp[image_ind](i, j), 0.0);
-            }
-        }
-    }
-};
-
-void split_and_update(matrix<double> Join1d, int joinsize) {
-    int            count = 0;
-    matrix<double> knot_on_spline_for_x, knot_on_spline_for_y;
-    int            halflen = joinsize / 2;
-    // int            halflen = knot_on_x * knot_on_y * knot_on_z;
-    knot_on_spline_for_x.set_size(halflen, 1);
-    for ( int i = 0; i < halflen; i++ ) {
-        knot_on_spline_for_x(i) = Join1d(count);
-        count++;
-    }
-
-    // Spline3dx.Update3DSpline1dInput(knot_on_spline_for_x);
-    Spline3dx.Update3DSpline1dInput(knot_on_spline_for_x);
-
-    knot_on_spline_for_y.set_size(halflen, 1);
-    for ( int i = 0; i < halflen; i++ ) {
-        knot_on_spline_for_y(i) = Join1d(count);
-        count++;
-    }
-    // Spline3dy.Update3DSpline1dInput(knot_on_spline_for_y);
-    Spline3dy.Update3DSpline1dInput(knot_on_spline_for_y);
 };
 
 void apply_fitting_quadratic_sup(Image* super_res_stack, float output_binning_factor, int number_of_images, param_vector_quadratic params_x, param_vector_quadratic params_y, int max_threads) {
@@ -2712,125 +2199,6 @@ void apply_fitting_quadratic_sup(Image* super_res_stack, float output_binning_fa
     }
 }
 
-void apply_fitting_spline_sup(int output_x_size, int output_y_size, Image* super_res_stack, float output_binning_factor, int number_of_images, column_vector Join1d_R0, column_vector Join1d_R1, int max_threads) {
-    int   super_dim_x     = super_res_stack[0].logical_x_dimension;
-    int   super_dim_y     = super_res_stack[0].logical_y_dimension;
-    int   image_dim_x     = output_x_size;
-    int   image_dim_y     = output_y_size;
-    float x_binning_float = super_res_stack[0].logical_x_dimension / image_dim_x;
-    float y_binning_float = super_res_stack[0].logical_y_dimension / image_dim_y;
-    int   totalpixels     = super_dim_x * super_dim_y;
-
-    float* original_map_x = new float[totalpixels];
-    float* original_map_y = new float[totalpixels];
-
-    int              joinsize = Join1d_R0.size( );
-    MovieFrameSpline spline3dx_R0, spline3dy_R0;
-    wxPrintf("Join size: %d\n", joinsize);
-    // split_and_update(Join1d_R0, joinsize);
-    // spline3dx_R0.CopyFrom(Spline3dx);
-    // spline3dy_R0.CopyFrom(Spline3dy); //check copyfrom
-
-    spline3dx_R0.Initialize(Spline3dx.knot_no_z, Spline3dx.knot_no_y, Spline3dx.knot_no_x, Spline3dx.frame_no, image_dim_x, image_dim_y, Spline3dx.spline_patch_dimz, Spline3dx.spline_patch_dimx, Spline3dx.spline_patch_dimy);
-    spline3dy_R0.Initialize(Spline3dy.knot_no_z, Spline3dy.knot_no_y, Spline3dy.knot_no_x, Spline3dy.frame_no, image_dim_x, image_dim_y, Spline3dy.spline_patch_dimz, Spline3dy.spline_patch_dimx, Spline3dy.spline_patch_dimy);
-    spline3dx_R0.Update3DSplineInterpMapping(Spline3dx.x, Spline3dx.y, Spline3dx.z);
-    spline3dy_R0.Update3DSplineInterpMapping(Spline3dy.x, Spline3dy.y, Spline3dy.z);
-    wxPrintf("initialized spline 3d for 0 round\n");
-    int            count = 0;
-    matrix<double> knot_on_spline_for_x, knot_on_spline_for_y;
-    int            halflen = joinsize / 2;
-    // int            halflen = knot_on_x * knot_on_y * knot_on_z;
-    knot_on_spline_for_x.set_size(halflen, 1);
-    for ( int i = 0; i < halflen; i++ ) {
-        knot_on_spline_for_x(i) = Join1d_R0(count);
-        count++;
-    }
-
-    // Spline3dx.Update3DSpline1dInput(knot_on_spline_for_x);
-    // wxPrintf("before update3d spline x\n");
-    spline3dx_R0.Update3DSpline1dInput(knot_on_spline_for_x);
-    // wxPrintf("done update3d spline x\n");
-    knot_on_spline_for_y.set_size(halflen, 1);
-    for ( int i = 0; i < halflen; i++ ) {
-        knot_on_spline_for_y(i) = Join1d_R0(count);
-        count++;
-    }
-    // Spline3dy.Update3DSpline1dInput(knot_on_spline_for_y);
-    spline3dy_R0.Update3DSpline1dInput(knot_on_spline_for_y);
-
-    count = 0;
-    for ( int i = 0; i < halflen; i++ ) {
-        knot_on_spline_for_x(i) = Join1d_R1(count);
-        count++;
-    }
-    Spline3dx.Update3DSpline1dInput(knot_on_spline_for_x);
-    for ( int i = 0; i < halflen; i++ ) {
-        knot_on_spline_for_y(i) = Join1d_R1(count);
-        count++;
-    }
-    Spline3dy.Update3DSpline1dInput(knot_on_spline_for_y);
-
-    // split_and_update(Join1d_R1, joinsize);
-    // initialize the pixel coordinates
-    for ( int i = 0; i < super_dim_y; i++ ) {
-        for ( int j = 0; j < super_dim_x; j++ ) {
-            original_map_x[i * super_dim_x + j] = float(j) / x_binning_float;
-            original_map_y[i * super_dim_x + j] = float(i) / y_binning_float;
-        }
-    }
-
-    Image  tmp_sup_res;
-    float* shifted_map_x;
-    float* shifted_map_y;
-    // int   pix;
-
-#pragma omp parallel for num_threads(max_threads) private(tmp_sup_res, shifted_map_x, shifted_map_y)
-    for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
-        shifted_map_x = new float[totalpixels];
-        shifted_map_y = new float[totalpixels];
-        wxPrintf("generating interpolation map %i \n ", image_counter + 1);
-        for ( int i = 0; i < super_dim_y; i++ ) {
-            for ( int j = 0; j < super_dim_x; j++ ) {
-                int pix            = i * super_dim_x + j;
-                shifted_map_x[pix] = j + Spline3dx.Apply3DSplineFunc(original_map_x[pix], original_map_y[pix], image_counter) * x_binning_float;
-                shifted_map_y[pix] = i + Spline3dy.Apply3DSplineFunc(original_map_x[pix], original_map_y[pix], image_counter) * y_binning_float;
-                shifted_map_x[pix] = shifted_map_x[pix] + spline3dx_R0.Apply3DSplineFunc(original_map_x[pix], original_map_y[pix], image_counter) * x_binning_float;
-                shifted_map_y[pix] = shifted_map_y[pix] + spline3dy_R0.Apply3DSplineFunc(original_map_x[pix], original_map_y[pix], image_counter) * y_binning_float;
-            }
-        }
-
-        wxPrintf("correcting frame %i \n ", image_counter + 1);
-        tmp_sup_res.CopyFrom(&super_res_stack[image_counter]);
-        super_res_stack[image_counter].SetToConstant(tmp_sup_res.ReturnAverageOfRealValuesOnEdges( ));
-        tmp_sup_res.Distortion(&super_res_stack[image_counter], shifted_map_x, shifted_map_y);
-        delete[] shifted_map_x;
-        delete[] shifted_map_y;
-        shifted_map_x = nullptr;
-        shifted_map_y = nullptr;
-        tmp_sup_res.Deallocate( );
-    }
-    wxPrintf("distortion finished\n");
-
-    delete[] original_map_x;
-    delete[] original_map_y;
-    original_map_x = nullptr;
-    original_map_y = nullptr;
-#pragma omp parallel for num_threads(max_threads)
-    for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
-        super_res_stack[image_counter].ForwardFFT(true);
-        super_res_stack[image_counter].ZeroCentralPixel( );
-        super_res_stack[image_counter].Resize(image_dim_x, image_dim_y, 1);
-        super_res_stack[image_counter].BackwardFFT( );
-    }
-    // spline3dx_R0.Destroy( );
-    // spline3dy_R0.Destroy( );
-    wxPrintf("here?");
-    spline3dx_R0.Deallocate( );
-    spline3dy_R0.Deallocate( );
-    // Spline3dx.Deallocate( );
-    // Spline3dy.Deallocate( );
-};
-
 void apply_fitting_spline_sup_control(int output_x_size, int output_y_size, Image* super_res_stack, float output_binning_factor, int number_of_images, column_vector Control1d_R0, column_vector Control1d_R1, int max_threads) {
     int   super_dim_x     = super_res_stack[0].logical_x_dimension;
     int   super_dim_y     = super_res_stack[0].logical_y_dimension;
@@ -2887,7 +2255,6 @@ void apply_fitting_spline_sup_control(int output_x_size, int output_y_size, Imag
     }
     Spline3dy.Update3DSpline1dInputControlPoints(control_on_spline_for_y);
 
-    // split_and_update(Join1d_R1, joinsize);
     // initialize the pixel coordinates
     wxPrintf("x_binning_float %f \n", x_binning_float);
     wxPrintf("y_binning_float %f \n", y_binning_float);
@@ -2908,7 +2275,7 @@ void apply_fitting_spline_sup_control(int output_x_size, int output_y_size, Imag
     for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
         shifted_map_x = new float[totalpixels];
         shifted_map_y = new float[totalpixels];
-        wxPrintf("generating interpolation map %i \n ", image_counter + 1);
+        // wxPrintf("generating interpolation map %i \n ", image_counter + 1);
         for ( int i = 0; i < super_dim_y; i++ ) {
             for ( int j = 0; j < super_dim_x; j++ ) {
                 int pix            = i * super_dim_x + j;

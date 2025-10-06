@@ -1178,7 +1178,7 @@ endif
 
 noinst_LIBRARIES = libcore.a libguicore.a libdlib.a
 bin_PROGRAMS =  cisTEM_job_control \
-                unblur \
+                unbend \
                 ShiftFieldGeneration \
                 console_test \
                 unit_test_runner \
@@ -1668,14 +1668,17 @@ endif
 
 console_test_LDADD    = $(console_test_LDSTRING) libcore.a $(WX_LIBS_BASE) $(CUDA_LIBS)
 
+unbend_SOURCES = programs/unbend/unbend.cpp dlib/dlib/all/source.cpp programs/unbend/bicubicspline.cpp programs/unbend/cubicspline.cpp programs/unbend/movieframespline.cpp #programs/unblur/alignmentrefinement.cpp
+unbend_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+unbend_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+unbend_LDADD = libcore.a libdlib.a -lX11 $(LIBS) $(WX_LIBS_BASE)
 
+# unblur_SOURCES = programs/unblur/unblur.cpp dlib/dlib/all/source.cpp programs/unblur/bicubicspline.cpp programs/unblur/cubicspline.cpp programs/unblur/movieframespline.cpp #programs/unblur/alignmentrefinement.cpp
+# unblur_CXXFLAGS = $(WX_CPPFLAGS_BASE)
+# unblur_CPPFLAGS = $(WX_CPPFLAGS_BASE)
+# unblur_LDADD = libcore.a libdlib.a -lX11 $(LIBS) $(WX_LIBS_BASE)
 
-unblur_SOURCES = programs/unblur/unblur.cpp dlib/dlib/all/source.cpp programs/unblur/bicubicspline.cpp programs/unblur/cubicspline.cpp programs/unblur/movieframespline.cpp
-unblur_CXXFLAGS = $(WX_CPPFLAGS_BASE)
-unblur_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-unblur_LDADD = libcore.a libdlib.a -lX11 $(LIBS) $(WX_LIBS_BASE)
-
-ShiftFieldGeneration_SOURCES = programs/unblur/ShiftFieldGeneration.cpp dlib/dlib/all/source.cpp programs/unblur/bicubicspline.cpp programs/unblur/cubicspline.cpp programs/unblur/movieframespline.cpp
+ShiftFieldGeneration_SOURCES = programs/unbend/ShiftFieldGeneration.cpp dlib/dlib/all/source.cpp programs/unbend/bicubicspline.cpp programs/unbend/cubicspline.cpp programs/unbend/movieframespline.cpp
 ShiftFieldGeneration_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 ShiftFieldGeneration_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 ShiftFieldGeneration_LDADD = libcore.a libdlib.a -lX11 $(LIBS) $(WX_LIBS_BASE)

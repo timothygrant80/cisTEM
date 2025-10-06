@@ -8,6 +8,7 @@
 #include <vector>
 #include <dlib/dlib/matrix.h>
 #include "utilities.h"
+// #include "alignmentrefinement.h"
 
 // The timing that unblur originally tracks is always on, by direct reference to cistem_timer::StopWatch
 // The profiling for development is under conrtol of --enable-profiling.
@@ -19,7 +20,7 @@ using namespace cistem_timer_noop;
 #endif
 
 class
-        UnBlurApp : public MyApp {
+        UnBendApp : public MyApp {
 
   public:
     bool DoCalculation( );
@@ -560,10 +561,14 @@ double minfunc3dSplineCCLossObjectControlPoints(matrix<double> control_1d) {
     return loss;
 }
 
+void Spline_Fitting(column_vector& Control_1d_search, double deriv_eps, double f_min, unsigned long max_iter, double stop_cri_scale, double knot_on_x, double knot_on_y, double knot_on_z, double knot_x_dis, double knot_y_dis, double search_sample_dose, wxString outputpath);
+void Spline_Shift_Implement(Image** patch_stack, int patch_num_x, int patch_num_y, int number_of_input_images, int max_threads);
+void Spline_LossRefine(column_vector& Control1d_ccmap, double deriv_eps, double f_min, unsigned long max_iter, double stop_cri_scale, double knot_on_x, double knot_on_y, double knot_on_z, double knot_x_dis, double knot_y_dis, double search_sample_dose, wxString outputpath);
+
 void apply_fitting_quadratic_sup(Image* super_res_stack, float output_binning_factor, int number_of_images, param_vector_quadratic params_x, param_vector_quadratic params_y, int max_threads);
 void apply_fitting_linear_sup(Image* input_stack, Image* super_res_stack, float output_binning_factor, int number_of_images, param_vector_linear params_x, param_vector_linear params_y);
-
 void apply_fitting_spline_sup_control(int output_x_size, int output_y_size, Image* super_res_stack, float output_binning_factor, int number_of_images, column_vector Control1d_R0, column_vector Control1d_R1, int max_threads);
+
 void dosefilter(Image* image_stack, int first_frame, int last_frame, float* dose_filter_sum_of_squares, ElectronDose* my_electron_dose, StopWatch profile_timing, float exposure_per_frame, float pre_exposure_amount, int max_threads);
 void write_shifts(int patch_no_x, int patch_no_y, int image_no, std::string output_path, std::string shift_file_prefx, std::string shift_file_prefy);
 void write_shifts_forGUI(int image_dim_x, int image_dim_y, int patch_no_x, int patch_no_y, float** patch_locations, int image_no, std::string output_path, float output_binning_factor, column_vector Control1d, column_vector Control1d_ccmap, bool write_out_small_sum_image);
@@ -571,13 +576,10 @@ void write_quad_shifts(int image_no, int patch_no_x, int patch_no_y, param_vecto
 void write_shifts_forGUI_quad(int image_dim_x, int image_dim_y, int image_no, int patch_no_x, int patch_no_y, param_vector_quadratic params_x, param_vector_quadratic params_y, float** patch_locations, std::string output_path, bool write_out_small_sum_image);
 void write_linear_shifts(int image_no, int patch_no_x, int patch_no_y, param_vector_linear params_x, param_vector_linear params_y, float** patch_locations, std::string output_path, std::string shift_file_prefx, std::string shift_file_prefy);
 void write_shifts_forGUI_linear(int image_dim_x, int image_dim_y, int image_no, int patch_no_x, int patch_no_y, param_vector_linear params_x, param_vector_linear params_y, float** patch_locations, std::string output_path, bool write_out_small_sum_image);
-void Spline_Fitting(column_vector& Control_1d_search, double deriv_eps, double f_min, unsigned long max_iter, double stop_cri_scale, double knot_on_x, double knot_on_y, double knot_on_z, double knot_x_dis, double knot_y_dis, double search_sample_dose, wxString outputpath);
-void Spline_Shift_Implement(Image** patch_stack, int patch_num_x, int patch_num_y, int number_of_input_images, int max_threads);
-void Spline_LossRefine(column_vector& Control1d_ccmap, double deriv_eps, double f_min, unsigned long max_iter, double stop_cri_scale, double knot_on_x, double knot_on_y, double knot_on_z, double knot_x_dis, double knot_y_dis, double search_sample_dose, wxString outputpath);
 
-IMPLEMENT_APP(UnBlurApp)
+IMPLEMENT_APP(UnBendApp)
 
-void UnBlurApp::DoInteractiveUserInput( ) {
+void UnBendApp::DoInteractiveUserInput( ) {
     std::string input_filename;
     std::string output_filename;
     // std::string aligned_frames_filename;
@@ -622,7 +624,7 @@ void UnBlurApp::DoInteractiveUserInput( ) {
 
     bool save_aligned_frames;
 
-    UserInput* my_input = new UserInput("Unblur", 3.0);
+    UserInput* my_input = new UserInput("UnBend", 1.0);
 
     input_filename  = my_input->GetFilenameFromUser("Input stack filename", "The input file, containing your raw movie frames", "my_movie.mrc", true);
     output_filename = my_input->GetFilenameFromUser("Output aligned sum", "The output file, containing a weighted sum of the aligned input frames", "my_aligned_sum.mrc", false);
@@ -821,7 +823,7 @@ void UnBlurApp::DoInteractiveUserInput( ) {
 
 // overide the do calculation method which will be what is actually run..
 
-bool UnBlurApp::DoCalculation( ) {
+bool UnBendApp::DoCalculation( ) {
     int  pre_binning_factor;
     long image_counter;
     int  pixel_counter;
@@ -872,16 +874,14 @@ bool UnBlurApp::DoCalculation( ) {
     int         number_of_frames_for_running_average = my_current_job.arguments[31].ReturnIntegerArgument( );
     int         max_threads                          = my_current_job.arguments[32].ReturnIntegerArgument( );
     bool        saved_aligned_frames                 = my_current_job.arguments[33].ReturnBoolArgument( );
-    // std::string aligned_frames_filename              = my_current_job.arguments[34].ReturnStringArgument( );
-    // std::string output_shift_text_file               = my_current_job.arguments[35].ReturnStringArgument( );
-    int      eer_frames_per_image = my_current_job.arguments[34].ReturnIntegerArgument( );
-    int      eer_super_res_factor = my_current_job.arguments[35].ReturnIntegerArgument( );
-    wxString outputpath           = my_current_job.arguments[36].ReturnStringArgument( );
-    bool     patch_track          = my_current_job.arguments[37].ReturnBoolArgument( );
-    bool     overwritepatchnumber = my_current_job.arguments[38].ReturnBoolArgument( );
-    int      patch_num_x          = my_current_job.arguments[39].ReturnIntegerArgument( );
-    int      patch_num_y          = my_current_job.arguments[40].ReturnIntegerArgument( );
-    int      distortion_model     = my_current_job.arguments[41].ReturnIntegerArgument( );
+    int         eer_frames_per_image                 = my_current_job.arguments[34].ReturnIntegerArgument( );
+    int         eer_super_res_factor                 = my_current_job.arguments[35].ReturnIntegerArgument( );
+    wxString    outputpath                           = my_current_job.arguments[36].ReturnStringArgument( );
+    bool        patch_track                          = my_current_job.arguments[37].ReturnBoolArgument( );
+    bool        overwritepatchnumber                 = my_current_job.arguments[38].ReturnBoolArgument( );
+    int         patch_num_x                          = my_current_job.arguments[39].ReturnIntegerArgument( );
+    int         patch_num_y                          = my_current_job.arguments[40].ReturnIntegerArgument( );
+    int         distortion_model                     = my_current_job.arguments[41].ReturnIntegerArgument( );
     // wxString    MotCorpath                           = my_current_job.arguments[43].ReturnStringArgument( );
 
     if ( is_running_locally == false )
@@ -1180,6 +1180,7 @@ bool UnBlurApp::DoCalculation( ) {
         total_rounds = 2;
     else
         total_rounds = 1;
+
     for ( int round_index = 0; round_index < total_rounds; round_index++ ) {
         if ( round_index == 1 ) {
             int image_dim_x           = image_stack[0].logical_x_dimension;
@@ -1450,7 +1451,7 @@ bool UnBlurApp::DoCalculation( ) {
 
                     delete[] image_stack;
                     image_stack = nullptr;
-                    unblur_timing.lap("Distortion Modeling");
+                    unblur_timing.lap("Distortion Modeling total time");
                     unblur_timing.start("Distortion Correction");
                     apply_fitting_quadratic_sup(raw_image_stack, output_binning_factor, number_of_input_images, x_quad, y_quad, max_threads);
                     image_stack = raw_image_stack;
@@ -1609,6 +1610,7 @@ bool UnBlurApp::DoCalculation( ) {
                 double        stop_cri_scale      = 1e6;
                 double        deriv_eps           = 1e-2;
                 double        deriv_eps_loss      = 1e-1;
+
                 unblur_timing.start("Initial Model Fitting");
                 Spline_Fitting(Control1d, deriv_eps, f_min, max_iter_splinefit, stop_cri_scale, knot_on_x, knot_on_y, knot_on_z, knot_x_dis, knot_y_dis, sample_dose, outputpath);
                 Spline_Shift_Implement(patch_stack, patch_num_x, patch_num_y, number_of_input_images, max_threads);
@@ -2139,8 +2141,8 @@ void apply_fitting_quadratic_sup(Image* super_res_stack, float output_binning_fa
     int   super_dim_y     = super_res_stack[0].logical_y_dimension;
     int   image_dim_x     = myroundint(super_res_stack[0].logical_x_dimension / output_binning_factor);
     int   image_dim_y     = myroundint(super_res_stack[0].logical_y_dimension / output_binning_factor);
-    float x_binning_float = super_res_stack[0].logical_x_dimension / image_dim_x;
-    float y_binning_float = super_res_stack[0].logical_y_dimension / image_dim_y;
+    float x_binning_float = float(super_res_stack[0].logical_x_dimension) / float(image_dim_x);
+    float y_binning_float = float(super_res_stack[0].logical_y_dimension) / float(image_dim_y);
     int   totalpixels     = super_dim_x * super_dim_y;
 
     input_vector input;
@@ -2158,14 +2160,14 @@ void apply_fitting_quadratic_sup(Image* super_res_stack, float output_binning_fa
             original_map_y[i * super_dim_x + j] = float(i) / y_binning_float;
         }
     }
-
+    wxPrintf("correcting frames with quadratic function (dome model)\n");
     Image tmp_sup_res;
 #pragma omp parallel for num_threads(max_threads) private(tmp_sup_res, shifted_map_x, shifted_map_y, input)
     for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
         tmp_sup_res.Allocate(super_res_stack[0].logical_x_dimension, super_res_stack[0].logical_y_dimension, 1, true);
         shifted_map_x = new float[totalpixels];
         shifted_map_y = new float[totalpixels];
-        wxPrintf("correcting frame %i \n ", image_counter + 1);
+        // wxPrintf("correcting frame %i \n ", image_counter + 1);
         // time     = image_counter;
         // input(2) = time;
         input(2) = image_counter;
@@ -2319,8 +2321,8 @@ void apply_fitting_linear_sup(Image* input_stack, Image* super_res_stack, float 
     int   super_dim_y     = super_res_stack[0].logical_y_dimension;
     int   image_dim_x     = myroundint(super_res_stack[0].logical_x_dimension / output_binning_factor);
     int   image_dim_y     = myroundint(super_res_stack[0].logical_y_dimension / output_binning_factor);
-    float x_binning_float = super_res_stack[0].logical_x_dimension / image_dim_x;
-    float y_binning_float = super_res_stack[0].logical_y_dimension / image_dim_y;
+    float x_binning_float = float(super_res_stack[0].logical_x_dimension) / float(image_dim_x);
+    float y_binning_float = float(super_res_stack[0].logical_y_dimension) / float(image_dim_y);
     int   totalpixels     = super_dim_x * super_dim_y;
 
     input_vector input;
@@ -2340,9 +2342,10 @@ void apply_fitting_linear_sup(Image* input_stack, Image* super_res_stack, float 
     }
 
     Image tmp_sup_res;
+    wxPrintf("correcting frames with linear function\n");
     tmp_sup_res.Allocate(super_res_stack[0].logical_x_dimension, super_res_stack[0].logical_y_dimension, 1, true);
     for ( int image_counter = 0; image_counter < number_of_images; image_counter++ ) {
-        wxPrintf("correcting frame %i \n ", image_counter + 1);
+        // wxPrintf("correcting frame %i \n ", image_counter + 1);
         time     = image_counter;
         input(2) = time;
         for ( int pix = 0; pix < totalpixels; pix++ ) {

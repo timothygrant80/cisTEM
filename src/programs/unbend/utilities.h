@@ -8,6 +8,7 @@
 // #include <numeric>
 // #include <iostream>
 #include "movieframespline.h"
+// #include "alignmentrefinement.h"
 // #include "movieframespline_quad.h"
 
 using namespace std;

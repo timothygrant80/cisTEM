@@ -623,6 +623,7 @@ void UnBendApp::DoInteractiveUserInput( ) {
     int      eer_super_res_factor = 1;
 
     bool save_aligned_frames;
+    bool smooth_full_frame_shifts_by_SG_filter;
 
     UserInput* my_input = new UserInput("UnBend", 1.0);
 
@@ -684,6 +685,7 @@ void UnBendApp::DoInteractiveUserInput( ) {
         // else {
         //     aligned_frames_filename = "";
         // }
+        smooth_full_frame_shifts_by_SG_filter = my_input->GetYesNoFromUser("Smooth the full frame shifts?", "If yes, the shift amount of the full frame is smoothed by Savitzky-Golay filter(Unblur version 2.0 full frame alignment)", "no");
 
         if ( FilenameExtensionMatches(input_filename, "eer") ) {
             eer_frames_per_image = my_input->GetIntFromUser("Number of EER frames per image", "If the input movie is in EER format, we will average EER frames together so that each frame image for alignment has a reasonable exposure", "25", 1);
@@ -695,24 +697,25 @@ void UnBendApp::DoInteractiveUserInput( ) {
         }
     }
     else {
-        minimum_shift_in_angstroms           = original_pixel_size * output_binning_factor + 0.001;
-        maximum_shift_in_angstroms           = 100.0;
-        bfactor_in_angstroms                 = 1500.0;
-        vertical_mask_size                   = 1;
-        horizontal_mask_size                 = 1;
-        termination_threshold_in_angstroms   = original_pixel_size * output_binning_factor / 2;
-        max_iterations                       = 20;
-        should_restore_power                 = true;
-        movie_is_gain_corrected              = true;
-        movie_is_dark_corrected              = true;
-        gain_filename                        = "";
-        dark_filename                        = "";
-        first_frame                          = 1;
-        last_frame                           = 0;
-        number_of_frames_for_running_average = 1;
-        save_aligned_frames                  = false;
-        eer_frames_per_image                 = 0;
-        eer_super_res_factor                 = 1;
+        minimum_shift_in_angstroms            = original_pixel_size * output_binning_factor + 0.001;
+        maximum_shift_in_angstroms            = 100.0;
+        bfactor_in_angstroms                  = 1500.0;
+        vertical_mask_size                    = 1;
+        horizontal_mask_size                  = 1;
+        termination_threshold_in_angstroms    = original_pixel_size * output_binning_factor / 2;
+        max_iterations                        = 20;
+        should_restore_power                  = true;
+        movie_is_gain_corrected               = true;
+        movie_is_dark_corrected               = true;
+        gain_filename                         = "";
+        dark_filename                         = "";
+        first_frame                           = 1;
+        last_frame                            = 0;
+        number_of_frames_for_running_average  = 1;
+        save_aligned_frames                   = false;
+        smooth_full_frame_shifts_by_SG_filter = false;
+        eer_frames_per_image                  = 0;
+        eer_super_res_factor                  = 1;
     }
 
     correct_mag_distortion = my_input->GetYesNoFromUser("Correct Magnification Distortion?", "If yes, a magnification distortion can be corrected", "no");
@@ -774,7 +777,7 @@ void UnBendApp::DoInteractiveUserInput( ) {
     bool        write_out_small_sum_image    = false;
     std::string small_sum_image_filename     = "/dev/null";
 
-    my_current_job.ManualSetArguments("ttfffbbfifbiifffbsbsfbfffbtbtiiiibiisbbiii", input_filename.c_str( ),
+    my_current_job.ManualSetArguments("ttfffbbfifbiifffbsbsfbfffbtbtiiiibbiisbbiii", input_filename.c_str( ),
                                       output_filename.c_str( ),
                                       original_pixel_size,
                                       minimum_shift_in_angstroms,
@@ -808,6 +811,7 @@ void UnBendApp::DoInteractiveUserInput( ) {
                                       number_of_frames_for_running_average,
                                       max_threads,
                                       save_aligned_frames,
+                                      smooth_full_frame_shifts_by_SG_filter,
                                       //   aligned_frames_filename.c_str( ),
                                       //   output_shift_text_file.c_str( ),
                                       eer_frames_per_image,
@@ -840,48 +844,49 @@ bool UnBendApp::DoCalculation( ) {
 
     // get the arguments for this job..
 
-    std::string input_filename                       = my_current_job.arguments[0].ReturnStringArgument( );
-    std::string output_filename                      = my_current_job.arguments[1].ReturnStringArgument( );
-    float       original_pixel_size                  = my_current_job.arguments[2].ReturnFloatArgument( );
-    float       minumum_shift_in_angstroms           = my_current_job.arguments[3].ReturnFloatArgument( );
-    float       maximum_shift_in_angstroms           = my_current_job.arguments[4].ReturnFloatArgument( );
-    bool        should_dose_filter                   = my_current_job.arguments[5].ReturnBoolArgument( );
-    bool        should_restore_power                 = my_current_job.arguments[6].ReturnBoolArgument( );
-    float       termination_threshold_in_angstoms    = my_current_job.arguments[7].ReturnFloatArgument( );
-    int         max_iterations                       = my_current_job.arguments[8].ReturnIntegerArgument( );
-    float       bfactor_in_angstoms                  = my_current_job.arguments[9].ReturnFloatArgument( );
-    bool        should_mask_central_cross            = my_current_job.arguments[10].ReturnBoolArgument( );
-    int         horizontal_mask_size                 = my_current_job.arguments[11].ReturnIntegerArgument( );
-    int         vertical_mask_size                   = my_current_job.arguments[12].ReturnIntegerArgument( );
-    float       acceleration_voltage                 = my_current_job.arguments[13].ReturnFloatArgument( );
-    float       exposure_per_frame                   = my_current_job.arguments[14].ReturnFloatArgument( );
-    float       pre_exposure_amount                  = my_current_job.arguments[15].ReturnFloatArgument( );
-    bool        movie_is_gain_corrected              = my_current_job.arguments[16].ReturnBoolArgument( );
-    wxString    gain_filename                        = my_current_job.arguments[17].ReturnStringArgument( );
-    bool        movie_is_dark_corrected              = my_current_job.arguments[18].ReturnBoolArgument( );
-    wxString    dark_filename                        = my_current_job.arguments[19].ReturnStringArgument( );
-    float       output_binning_factor                = my_current_job.arguments[20].ReturnFloatArgument( );
-    bool        correct_mag_distortion               = my_current_job.arguments[21].ReturnBoolArgument( );
-    float       mag_distortion_angle                 = my_current_job.arguments[22].ReturnFloatArgument( );
-    float       mag_distortion_major_scale           = my_current_job.arguments[23].ReturnFloatArgument( );
-    float       mag_distortion_minor_scale           = my_current_job.arguments[24].ReturnFloatArgument( );
-    bool        write_out_amplitude_spectrum         = my_current_job.arguments[25].ReturnBoolArgument( );
-    std::string amplitude_spectrum_filename          = my_current_job.arguments[26].ReturnStringArgument( );
-    bool        write_out_small_sum_image            = my_current_job.arguments[27].ReturnBoolArgument( );
-    std::string small_sum_image_filename             = my_current_job.arguments[28].ReturnStringArgument( );
-    int         first_frame                          = my_current_job.arguments[29].ReturnIntegerArgument( );
-    int         last_frame                           = my_current_job.arguments[30].ReturnIntegerArgument( );
-    int         number_of_frames_for_running_average = my_current_job.arguments[31].ReturnIntegerArgument( );
-    int         max_threads                          = my_current_job.arguments[32].ReturnIntegerArgument( );
-    bool        saved_aligned_frames                 = my_current_job.arguments[33].ReturnBoolArgument( );
-    int         eer_frames_per_image                 = my_current_job.arguments[34].ReturnIntegerArgument( );
-    int         eer_super_res_factor                 = my_current_job.arguments[35].ReturnIntegerArgument( );
-    wxString    outputpath                           = my_current_job.arguments[36].ReturnStringArgument( );
-    bool        patch_track                          = my_current_job.arguments[37].ReturnBoolArgument( );
-    bool        overwritepatchnumber                 = my_current_job.arguments[38].ReturnBoolArgument( );
-    int         patch_num_x                          = my_current_job.arguments[39].ReturnIntegerArgument( );
-    int         patch_num_y                          = my_current_job.arguments[40].ReturnIntegerArgument( );
-    int         distortion_model                     = my_current_job.arguments[41].ReturnIntegerArgument( );
+    std::string input_filename                        = my_current_job.arguments[0].ReturnStringArgument( );
+    std::string output_filename                       = my_current_job.arguments[1].ReturnStringArgument( );
+    float       original_pixel_size                   = my_current_job.arguments[2].ReturnFloatArgument( );
+    float       minumum_shift_in_angstroms            = my_current_job.arguments[3].ReturnFloatArgument( );
+    float       maximum_shift_in_angstroms            = my_current_job.arguments[4].ReturnFloatArgument( );
+    bool        should_dose_filter                    = my_current_job.arguments[5].ReturnBoolArgument( );
+    bool        should_restore_power                  = my_current_job.arguments[6].ReturnBoolArgument( );
+    float       termination_threshold_in_angstoms     = my_current_job.arguments[7].ReturnFloatArgument( );
+    int         max_iterations                        = my_current_job.arguments[8].ReturnIntegerArgument( );
+    float       bfactor_in_angstoms                   = my_current_job.arguments[9].ReturnFloatArgument( );
+    bool        should_mask_central_cross             = my_current_job.arguments[10].ReturnBoolArgument( );
+    int         horizontal_mask_size                  = my_current_job.arguments[11].ReturnIntegerArgument( );
+    int         vertical_mask_size                    = my_current_job.arguments[12].ReturnIntegerArgument( );
+    float       acceleration_voltage                  = my_current_job.arguments[13].ReturnFloatArgument( );
+    float       exposure_per_frame                    = my_current_job.arguments[14].ReturnFloatArgument( );
+    float       pre_exposure_amount                   = my_current_job.arguments[15].ReturnFloatArgument( );
+    bool        movie_is_gain_corrected               = my_current_job.arguments[16].ReturnBoolArgument( );
+    wxString    gain_filename                         = my_current_job.arguments[17].ReturnStringArgument( );
+    bool        movie_is_dark_corrected               = my_current_job.arguments[18].ReturnBoolArgument( );
+    wxString    dark_filename                         = my_current_job.arguments[19].ReturnStringArgument( );
+    float       output_binning_factor                 = my_current_job.arguments[20].ReturnFloatArgument( );
+    bool        correct_mag_distortion                = my_current_job.arguments[21].ReturnBoolArgument( );
+    float       mag_distortion_angle                  = my_current_job.arguments[22].ReturnFloatArgument( );
+    float       mag_distortion_major_scale            = my_current_job.arguments[23].ReturnFloatArgument( );
+    float       mag_distortion_minor_scale            = my_current_job.arguments[24].ReturnFloatArgument( );
+    bool        write_out_amplitude_spectrum          = my_current_job.arguments[25].ReturnBoolArgument( );
+    std::string amplitude_spectrum_filename           = my_current_job.arguments[26].ReturnStringArgument( );
+    bool        write_out_small_sum_image             = my_current_job.arguments[27].ReturnBoolArgument( );
+    std::string small_sum_image_filename              = my_current_job.arguments[28].ReturnStringArgument( );
+    int         first_frame                           = my_current_job.arguments[29].ReturnIntegerArgument( );
+    int         last_frame                            = my_current_job.arguments[30].ReturnIntegerArgument( );
+    int         number_of_frames_for_running_average  = my_current_job.arguments[31].ReturnIntegerArgument( );
+    int         max_threads                           = my_current_job.arguments[32].ReturnIntegerArgument( );
+    bool        saved_aligned_frames                  = my_current_job.arguments[33].ReturnBoolArgument( );
+    bool        smooth_full_frame_shifts_by_SG_filter = my_current_job.arguments[34].ReturnBoolArgument( );
+    int         eer_frames_per_image                  = my_current_job.arguments[35].ReturnIntegerArgument( );
+    int         eer_super_res_factor                  = my_current_job.arguments[36].ReturnIntegerArgument( );
+    wxString    outputpath                            = my_current_job.arguments[37].ReturnStringArgument( );
+    bool        patch_track                           = my_current_job.arguments[38].ReturnBoolArgument( );
+    bool        overwritepatchnumber                  = my_current_job.arguments[39].ReturnBoolArgument( );
+    int         patch_num_x                           = my_current_job.arguments[40].ReturnIntegerArgument( );
+    int         patch_num_y                           = my_current_job.arguments[41].ReturnIntegerArgument( );
+    int         distortion_model                      = my_current_job.arguments[42].ReturnIntegerArgument( );
     // wxString    MotCorpath                           = my_current_job.arguments[43].ReturnStringArgument( );
 
     if ( is_running_locally == false )
@@ -908,7 +913,7 @@ bool UnBendApp::DoCalculation( ) {
     ImageFile input_file;
     bool      input_file_is_valid = input_file.OpenFile(input_filename, false, false, false, eer_super_res_factor, eer_frames_per_image);
     if ( ! input_file_is_valid ) {
-        SendInfo(wxString::Format("Input movie %s seems to be corrupt. Unblur results may not be meaningful.\n", input_filename));
+        SendInfo(wxString::Format("Input movie %s seems to be corrupt. Unbend results may not be meaningful.\n", input_filename));
     }
     else {
         wxPrintf("Input file looks OK, proceeding\n");
@@ -955,7 +960,7 @@ bool UnBendApp::DoCalculation( ) {
         raw_image_stack = new Image[number_of_input_images];
     }
     Image* counting_image_stack;
-    Image* unbinned_counting_stack;
+
     if ( patch_track ) {
         counting_image_stack = new Image[number_of_input_images];
     }
@@ -1716,7 +1721,7 @@ bool UnBendApp::DoCalculation( ) {
             //SendInfo(wxString::Format("Doing main alignment on %s\n",input_filename));
             unblur_refine_alignment_object main_alignment_object;
             main_alignment_object.Initialize(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, termination_threshold_in_pixels, pixel_size, number_of_frames_for_running_average, myroundint(5.0f / exposure_per_frame), max_threads, x_shifts, y_shifts, false);
-            main_alignment_object.alignment_refine(false);
+            main_alignment_object.alignment_refine(smooth_full_frame_shifts_by_SG_filter);
 
             unblur_timing.lap("whole frame main refine");
             profile_timing.lap("main refine");
@@ -1773,7 +1778,7 @@ bool UnBendApp::DoCalculation( ) {
                 profile_timing.start("final refine");
                 unblur_refine_alignment_object refine_alignment_object;
                 refine_alignment_object.Initialize(image_stack, number_of_input_images, max_iterations, unitless_bfactor, should_mask_central_cross, vertical_mask_size, horizontal_mask_size, 0., max_shift_in_pixels, 1, output_pixel_size, number_of_frames_for_running_average, 5, max_threads, x_shifts, y_shifts, false);
-                refine_alignment_object.alignment_refine(false);
+                refine_alignment_object.alignment_refine(smooth_full_frame_shifts_by_SG_filter);
 
                 profile_timing.lap("final refine");
                 // if allocated delete the binned stack, and swap the unbinned to image_stack - so that no matter what is happening we can just use image_stack

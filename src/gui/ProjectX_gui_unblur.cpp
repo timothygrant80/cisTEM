@@ -592,11 +592,28 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	dose_filter_checkbox->SetValue(true);
 	dose_filter_checkbox->SetToolTip( wxT("Make a dose weighted sum") );
 
-	fgSizer1->Add( dose_filter_checkbox, 1, wxALIGN_LEFT|wxALL, 5 );
+	fgSizer1->Add( dose_filter_checkbox, 0, wxALL, 5 );
 
 	restore_power_checkbox = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Restore Power?"), wxDefaultPosition, wxDefaultSize, 0 );
 	restore_power_checkbox->SetValue(true);
 	fgSizer1->Add( restore_power_checkbox, 1, wxALIGN_RIGHT|wxALL, 5 );
+
+	smooth_fullframe_alignment = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Smooth Full-frame Shifts (Unblur V2 feature)"), wxDefaultPosition, wxDefaultSize, 0 );
+	smooth_fullframe_alignment->Wrap( -1 );
+	smooth_fullframe_alignment->SetFont( wxFont( 10, wxFONTFAMILY_SWISS, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxT("Sans") ) );
+
+	fgSizer1->Add( smooth_fullframe_alignment, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	smooth_fullframe_shift = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Smooth by Savitzky-Golay Filter"), wxDefaultPosition, wxDefaultSize, 0 );
+	smooth_fullframe_shift->SetToolTip( wxT("Make a dose weighted sum") );
+
+	fgSizer1->Add( smooth_fullframe_shift, 1, wxALIGN_LEFT|wxALL, 5 );
+
+
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
 
 	m_staticText45 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Convergence"), wxDefaultPosition, wxDefaultSize, 0 );
 	m_staticText45->Wrap( -1 );
@@ -618,7 +635,7 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 	m_staticText47->Wrap( -1 );
 	fgSizer1->Add( m_staticText47, 0, wxALL, 5 );
 
-	max_iterations_spinctrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 50, 20 );
+	max_iterations_spinctrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 50, 10 );
 	fgSizer1->Add( max_iterations_spinctrl, 0, wxALL|wxEXPAND, 5 );
 
 	m_staticText48 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Filter"), wxDefaultPosition, wxDefaultSize, 0 );
@@ -674,14 +691,14 @@ AlignMoviesPanel::AlignMoviesPanel( wxWindow* parent, wxWindowID id, const wxPoi
 
 	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
 
-	DistortionModelChoice_static_text = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tDistortion Model Type :"), wxDefaultPosition, wxDefaultSize, 0 );
+	DistortionModelChoice_static_text = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tDistortion Model Type :\n\t(1: linear, 2: quadratic, 3: spline)"), wxDefaultPosition, wxDefaultSize, 0 );
 	DistortionModelChoice_static_text->Wrap( -1 );
 	fgSizer1->Add( DistortionModelChoice_static_text, 0, wxALL, 5 );
 
 	DistortionModelChoice_spinctrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 3, 3 );
 	fgSizer1->Add( DistortionModelChoice_spinctrl, 0, wxALL, 5 );
 
-	OverwriteDefaultPatchNumber_checkbox = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Overwrite The Patch Number From Unblur?"), wxDefaultPosition, wxDefaultSize, 0 );
+	OverwriteDefaultPatchNumber_checkbox = new wxCheckBox( ExpertPanel, wxID_ANY, wxT("Overwrite The Patch Number From Unbend?"), wxDefaultPosition, wxDefaultSize, 0 );
 	fgSizer1->Add( OverwriteDefaultPatchNumber_checkbox, 0, wxALL, 5 );
 
 

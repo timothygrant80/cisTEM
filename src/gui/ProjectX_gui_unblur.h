@@ -210,6 +210,8 @@ class AlignMoviesPanel : public JobPanel
 		wxStaticText* m_staticText44;
 		wxCheckBox* dose_filter_checkbox;
 		wxCheckBox* restore_power_checkbox;
+		wxStaticText* smooth_fullframe_alignment;
+		wxCheckBox* smooth_fullframe_shift;
 		wxStaticText* m_staticText45;
 		wxStaticText* m_staticText46;
 		wxTextCtrl* termination_threshold_text;
@@ -269,7 +271,7 @@ class AlignMoviesPanel : public JobPanel
 	public:
 		MovieGroupPickerComboPanel* GroupComboBox;
 
-		AlignMoviesPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 927,653 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+		AlignMoviesPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 927,772 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 
 		~AlignMoviesPanel();
 

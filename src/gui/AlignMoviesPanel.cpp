@@ -80,6 +80,7 @@ void MyAlignMoviesPanel::ResetDefaults( ) {
     maximum_shift_text->ChangeValue("40");
     dose_filter_checkbox->SetValue(true);
     restore_power_checkbox->SetValue(true);
+    smooth_fullframe_shift->SetValue(false);
     termination_threshold_text->ChangeValue("1");
     max_iterations_spinctrl->SetValue(10);
     bfactor_spinctrl->SetValue(1500);
@@ -141,7 +142,7 @@ void MyAlignMoviesPanel::SetInfo( ) {
     InfoText->EndAlignment( );
 
     InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
-    InfoText->WriteText(wxT("Physical drift and beam induced motion (Brilot et al., 2012; Campbell et al., 2012; Li et al., 2013; Scheres, 2014) of the specimen leads to a degradation of information within images, and will ultimately limit the resolution of any reconstruction.  Aligning a movie prior to calculating the sum will prevent a large amount of this degradation and lead to better data.  This panel therefore attempts to align movies based on the Unblur algorithm described in (Grant and Grigorieff, 2015)."));
+    InfoText->WriteText(wxT("Physical drift and beam induced motion (Brilot et al., 2012; Campbell et al., 2012; Li et al., 2013; Scheres, 2014) of the specimen leads to a degradation of information within images, and will ultimately limit the resolution of any reconstruction.  Aligning a movie prior to calculating the sum will prevent a large amount of this degradation and lead to better data.  This panel therefore attempts to align movies based on the Unbend algorithm described in (Grant and Grigorieff, 2015)."));
     InfoText->Newline( );
     InfoText->Newline( );
     InfoText->EndAlignment( );
@@ -512,6 +513,7 @@ void MyAlignMoviesPanel::StartAlignmentClick(wxCommandEvent& event) {
 
     bool should_dose_filter;
     bool should_restore_power;
+    bool smooth_full_frame_shifts_by_SG_filter;
 
     double termination_threshold;
     int    max_iterations;
@@ -603,6 +605,9 @@ void MyAlignMoviesPanel::StartAlignmentClick(wxCommandEvent& event) {
 
     // restore power
     should_restore_power = restore_power_checkbox->IsChecked( );
+
+    // smooth full frame shift (Unblur V2 feature)
+    smooth_full_frame_shifts_by_SG_filter = smooth_fullframe_shift->IsChecked( );
 
     // termination threshold
     ok_number_conversion = termination_threshold_text->GetLineText(0).ToDouble(&termination_threshold);
@@ -737,6 +742,7 @@ void MyAlignMoviesPanel::StartAlignmentClick(wxCommandEvent& event) {
         max_threads                          = 1;
 
         patchcorrection = Distortion_Correction_checkbox->IsChecked( );
+
         if ( patchcorrection ) {
             distortion_model            = DistortionModelChoice_spinctrl->GetValue( );
             overwritedefaultpatchnumber = OverwriteDefaultPatchNumber_checkbox->IsChecked( );
@@ -753,7 +759,7 @@ void MyAlignMoviesPanel::StartAlignmentClick(wxCommandEvent& event) {
         // std::string aligned_frames_filename = "/dev/null";
         // std::string output_shift_text_file  = "/dev/null";
 
-        current_job_package.AddJob("ssfffbbfifbiifffbsbsfbfffbtbtiiiibiisbbiii", current_filename.c_str( ), //0
+        current_job_package.AddJob("ssfffbbfifbiifffbsbsfbfffbtbtiiiibbiisbbiii", current_filename.c_str( ), //0
                                    // current_job_package.AddJob("ssfffbbfifbiifffbsbsfbfffbtbtiiiibttiisbbiii", current_filename.c_str( ), //0
 
                                    output_filename.ToUTF8( ).data( ),
@@ -789,6 +795,7 @@ void MyAlignMoviesPanel::StartAlignmentClick(wxCommandEvent& event) {
                                    number_of_frames_for_running_average,
                                    max_threads,
                                    saved_aligned_frames,
+                                   smooth_full_frame_shifts_by_SG_filter,
                                    //    aligned_frames_filename.c_str( ),
                                    //    output_shift_text_file.c_str( ),
                                    current_eer_frames_per_image,
@@ -816,11 +823,11 @@ void MyAlignMoviesPanel::StartAlignmentClick(wxCommandEvent& event) {
     {
         output_textctrl->AppendText("Approx. memory for each process is ");
         output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLUE));
-        output_textctrl->AppendText(wxString::Format(" %.2f GB", max_movie_size_in_gb));
+        output_textctrl->AppendText(wxString::Format(" %.2f GB", max_movie_size_in_gb * 3));
         output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLACK));
         output_textctrl->AppendText(".\nIf running on a single machine, that machine will need at least ");
         output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLUE));
-        output_textctrl->AppendText(wxString::Format(" %.2f GB", min_memory_in_gb_if_run_on_one_machine));
+        output_textctrl->AppendText(wxString::Format(" %.2f GB", min_memory_in_gb_if_run_on_one_machine * 3));
         output_textctrl->SetDefaultStyle(wxTextAttr(*wxBLACK));
         output_textctrl->AppendText(" of memory.\nIf you do not have enough memory available you will have to use a run profile with fewer processes.\n");
     }
@@ -1019,19 +1026,19 @@ void MyAlignMoviesPanel::ProcessResult(JobResult* result_to_process) // this wil
                 GraphPanel->ImageDisplayPanel->OpenFile(current_job_package.jobs[result_to_process->job_number].arguments[28].ReturnStringArgument( ), current_filename.GetName( ));
                 DisplayNotebookPanel* current_panel         = reinterpret_cast<DisplayNotebookPanel*>(GraphPanel->ImageDisplayPanel->my_notebook->GetPage(0));
                 current_panel->use_unscaled_image_for_popup = true;
-                if ( current_job_package.jobs[result_to_process->job_number].arguments[37].ReturnBoolArgument( ) ) {
-                    wxPrintf("patch tracking enabled %s \n", current_job_package.jobs[result_to_process->job_number].arguments[36].ReturnStringArgument( ));
-                    GraphPanel->ImageDisplayPanel->LoadTrajectory(0, current_job_package.jobs[result_to_process->job_number].arguments[36].ReturnStringArgument( ) + "/patch_shift.txt");
+                if ( current_job_package.jobs[result_to_process->job_number].arguments[38].ReturnBoolArgument( ) ) {
+                    wxPrintf("patch tracking enabled %s \n", current_job_package.jobs[result_to_process->job_number].arguments[37].ReturnStringArgument( ));
+                    GraphPanel->ImageDisplayPanel->LoadTrajectory(0, current_job_package.jobs[result_to_process->job_number].arguments[37].ReturnStringArgument( ) + "/patch_shift.txt");
                 }
             }
             else {
                 wxPrintf("case1 2 \n");
                 GraphPanel->ImageDisplayPanel->ChangeFileForTabNumber(0, current_job_package.jobs[result_to_process->job_number].arguments[28].ReturnStringArgument( ), "");
-                if ( current_job_package.jobs[result_to_process->job_number].arguments[37].ReturnBoolArgument( ) ) {
-                    GraphPanel->ImageDisplayPanel->LoadTrajectory(0, current_job_package.jobs[result_to_process->job_number].arguments[36].ReturnStringArgument( ) + "/patch_shift.txt");
+                if ( current_job_package.jobs[result_to_process->job_number].arguments[38].ReturnBoolArgument( ) ) {
+                    GraphPanel->ImageDisplayPanel->LoadTrajectory(0, current_job_package.jobs[result_to_process->job_number].arguments[37].ReturnStringArgument( ) + "/patch_shift.txt");
                 }
             }
-            // if ( DoesFileExist(current_job_package.jobs[result_to_process->job_number].arguments[36].ReturnStringArgument( ) + "fullframe_shift.txt") == true ) {
+            // if ( DoesFileExist(current_job_package.jobs[result_to_process->job_number].arguments[37].ReturnStringArgument( ) + "fullframe_shift.txt") == true ) {
 
             // }
         }
@@ -1041,16 +1048,16 @@ void MyAlignMoviesPanel::ProcessResult(JobResult* result_to_process) // this wil
                 GraphPanel->ImageDisplayPanel->ChangeFile(sum_filename.GetFullPath( ), sum_filename.GetShortPath( ));
                 DisplayNotebookPanel* current_panel         = reinterpret_cast<DisplayNotebookPanel*>(GraphPanel->ImageDisplayPanel->my_notebook->GetPage(0));
                 current_panel->use_unscaled_image_for_popup = true;
-                if ( current_job_package.jobs[result_to_process->job_number].arguments[37].ReturnBoolArgument( ) ) {
-                    GraphPanel->ImageDisplayPanel->LoadTrajectory(0, current_job_package.jobs[result_to_process->job_number].arguments[36].ReturnStringArgument( ) + "/patch_shift.txt");
+                if ( current_job_package.jobs[result_to_process->job_number].arguments[38].ReturnBoolArgument( ) ) {
+                    GraphPanel->ImageDisplayPanel->LoadTrajectory(0, current_job_package.jobs[result_to_process->job_number].arguments[37].ReturnStringArgument( ) + "/patch_shift.txt");
                 }
             }
             else {
                 wxPrintf("case2 2 \n");
                 // GraphPanel->ImageDisplayPanel->ChangeFile(sum_filename.GetFullPath( ), sum_filename.GetShortPath( ));
                 GraphPanel->ImageDisplayPanel->ChangeFileForTabNumber(0, sum_filename.GetFullPath( ), sum_filename.GetShortPath( ));
-                if ( current_job_package.jobs[result_to_process->job_number].arguments[37].ReturnBoolArgument( ) ) {
-                    GraphPanel->ImageDisplayPanel->LoadTrajectory(0, current_job_package.jobs[result_to_process->job_number].arguments[36].ReturnStringArgument( ) + "/patch_shift.txt");
+                if ( current_job_package.jobs[result_to_process->job_number].arguments[38].ReturnBoolArgument( ) ) {
+                    GraphPanel->ImageDisplayPanel->LoadTrajectory(0, current_job_package.jobs[result_to_process->job_number].arguments[37].ReturnStringArgument( ) + "/patch_shift.txt");
                 }
             }
         }
@@ -1159,8 +1166,8 @@ void MyAlignMoviesPanel::WriteResultToDataBase( ) {
                                                               include_all_frames_checkbox->GetValue( ), // include all frames
                                                               current_job_package.jobs[counter].arguments[29].ReturnIntegerArgument( ), // first_frame
                                                               current_job_package.jobs[counter].arguments[30].ReturnIntegerArgument( ), // last_frame
-                                                              current_job_package.jobs[counter].arguments[36].ReturnStringArgument( ).c_str( ), // output path
-                                                              current_job_package.jobs[counter].arguments[37].ReturnBoolArgument( ) //patch track or not
+                                                              current_job_package.jobs[counter].arguments[37].ReturnStringArgument( ).c_str( ), // output path
+                                                              current_job_package.jobs[counter].arguments[38].ReturnBoolArgument( ) //patch track or not
         );
 
         alignment_id++;

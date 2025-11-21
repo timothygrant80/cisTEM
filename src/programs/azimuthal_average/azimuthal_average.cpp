@@ -60,6 +60,7 @@ void AzimuthalAverageNew::DoInteractiveUserInput( ) {
     float pixel_size;
     // ctf parameters
     wxString input_star_filename;
+    bool     relion_star = false;
     float    acceleration_voltage;
     float    spherical_aberration;
     float    amplitude_contrast;
@@ -138,6 +139,7 @@ void AzimuthalAverageNew::DoInteractiveUserInput( ) {
 
     if ( input_ctf_values_from_star_file == true ) {
         input_star_filename = my_input->GetFilenameFromUser("Input star file", "The input star file", "my_parameters.star", true);
+        relion_star         = my_input->GetYesNoFromUser("Is it a Relion star file?", "The Program expects a cistem starfile and the default answer is no, but can accept a Relion star file if this is set to Yes.", "NO");
     }
     else {
         defocus_1              = my_input->GetFloatFromUser("Underfocus 1 (A)", "In Angstroms, the objective lens underfocus along the first axis", "1.2");
@@ -230,8 +232,8 @@ void AzimuthalAverageNew::DoInteractiveUserInput( ) {
 
     delete my_input;
 
-    my_current_job.Reset(54);
-    my_current_job.ManualSetArguments("tffffbtffffbffiibfbbttbbtiiiiibbbttbttbfffffttffffbbi", input_filename.ToUTF8( ).data( ),
+    my_current_job.Reset(55);
+    my_current_job.ManualSetArguments("tffffbtffffbffiibfbbttbbtiiiiibbbttbttbfffffttffffbbib", input_filename.ToUTF8( ).data( ),
                                       pixel_size,
                                       acceleration_voltage,
                                       spherical_aberration,
@@ -285,7 +287,8 @@ void AzimuthalAverageNew::DoInteractiveUserInput( ) {
                                       outside_value,
                                       use_outside_value,
                                       use_memory,
-                                      max_threads);
+                                      max_threads,
+                                      relion_star);
 }
 
 // override the do calculation method which will be what is actually run..
@@ -345,6 +348,7 @@ bool AzimuthalAverageNew::DoCalculation( ) {
     bool     use_outside_value                        = my_current_job.arguments[50].ReturnBoolArgument( );
     bool     use_memory                               = my_current_job.arguments[51].ReturnBoolArgument( );
     int      max_threads                              = my_current_job.arguments[52].ReturnIntegerArgument( );
+    bool     relion_star                              = my_current_job.arguments[53].ReturnBoolArgument( );
 
     // initiate I/O variables
     MRCFile  my_input_file(input_filename.ToStdString( ), false); // check all the functions and things done with the MRCFile and also check the wxPrintF statement
@@ -420,31 +424,52 @@ bool AzimuthalAverageNew::DoCalculation( ) {
     ctf_parameters* ctf_parameters_stack = new ctf_parameters[number_of_input_images];
 
     if ( input_ctf_values_from_star_file == true ) {
-        //cisTEM star
-        cisTEMParameters input_star_file;
-        //Relion Star
-        //BasicStarFileReader input_star_file;
-        //wxString            star_error_text;
-        if ( (is_running_locally && ! DoesFileExist(input_star_filename.ToStdString( ))) ) {
-            SendErrorAndCrash(wxString::Format("Error: Input star file %s not found\n", input_star_filename));
+        if ( relion_star ) {
+            //Relion Star
+            BasicStarFileReader input_star_file;
+            //wxString            star_error_text;
+            if ( (is_running_locally && ! DoesFileExist(input_star_filename.ToStdString( ))) ) {
+                SendErrorAndCrash(wxString::Format("Error: Input star file %s not found\n", input_star_filename));
+            }
+            //RELION star
+            input_star_file.ReadFile(input_star_filename.ToStdString( ));
+            for ( long image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+                ctf_parameters_stack[image_counter].acceleration_voltage          = acceleration_voltage;
+                ctf_parameters_stack[image_counter].spherical_aberration          = spherical_aberration;
+                ctf_parameters_stack[image_counter].amplitude_contrast            = amplitude_contrast;
+                ctf_parameters_stack[image_counter].defocus_1                     = input_star_file.ReturnDefocus1(image_counter);
+                ctf_parameters_stack[image_counter].defocus_2                     = input_star_file.ReturnDefocus2(image_counter);
+                ctf_parameters_stack[image_counter].astigmatism_angle             = input_star_file.ReturnDefocusAngle(image_counter);
+                ctf_parameters_stack[image_counter].lowest_frequency_for_fitting  = 0.0;
+                ctf_parameters_stack[image_counter].highest_frequency_for_fitting = 0.5;
+                ctf_parameters_stack[image_counter].astigmatism_tolerance         = 0.0;
+                ctf_parameters_stack[image_counter].pixel_size                    = pixel_size;
+                ctf_parameters_stack[image_counter].additional_phase_shift        = input_star_file.ReturnPhaseShift(image_counter);
+                //wxPrintf("The current image is %li and its defocus is %f\n", image_counter+1, input_star_file.ReturnDefocus1(image_counter) );
+            }
         }
-        //CisTEM star
-        input_star_file.ReadFromcisTEMStarFile(input_star_filename.ToStdString( ));
-        //RELION star
-        //input_star_file.ReadFile(input_star_filename.ToStdString( ));
-        for ( long image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
-            ctf_parameters_stack[image_counter].acceleration_voltage          = acceleration_voltage;
-            ctf_parameters_stack[image_counter].spherical_aberration          = spherical_aberration;
-            ctf_parameters_stack[image_counter].amplitude_contrast            = amplitude_contrast;
-            ctf_parameters_stack[image_counter].defocus_1                     = input_star_file.ReturnDefocus1(image_counter);
-            ctf_parameters_stack[image_counter].defocus_2                     = input_star_file.ReturnDefocus2(image_counter);
-            ctf_parameters_stack[image_counter].astigmatism_angle             = input_star_file.ReturnDefocusAngle(image_counter);
-            ctf_parameters_stack[image_counter].lowest_frequency_for_fitting  = 0.0;
-            ctf_parameters_stack[image_counter].highest_frequency_for_fitting = 0.5;
-            ctf_parameters_stack[image_counter].astigmatism_tolerance         = 0.0;
-            ctf_parameters_stack[image_counter].pixel_size                    = pixel_size;
-            ctf_parameters_stack[image_counter].additional_phase_shift        = input_star_file.ReturnPhaseShift(image_counter);
-            //wxPrintf("The current image is %li and its defocus is %f\n", image_counter+1, input_star_file.ReturnDefocus1(image_counter) );
+        else {
+            //cisTEM star
+            cisTEMParameters input_star_file;
+            if ( (is_running_locally && ! DoesFileExist(input_star_filename.ToStdString( ))) ) {
+                SendErrorAndCrash(wxString::Format("Error: Input star file %s not found\n", input_star_filename));
+            }
+            //CisTEM star
+            input_star_file.ReadFromcisTEMStarFile(input_star_filename.ToStdString( ));
+            for ( long image_counter = 0; image_counter < number_of_input_images; image_counter++ ) {
+                ctf_parameters_stack[image_counter].acceleration_voltage          = acceleration_voltage;
+                ctf_parameters_stack[image_counter].spherical_aberration          = spherical_aberration;
+                ctf_parameters_stack[image_counter].amplitude_contrast            = amplitude_contrast;
+                ctf_parameters_stack[image_counter].defocus_1                     = input_star_file.ReturnDefocus1(image_counter);
+                ctf_parameters_stack[image_counter].defocus_2                     = input_star_file.ReturnDefocus2(image_counter);
+                ctf_parameters_stack[image_counter].astigmatism_angle             = input_star_file.ReturnDefocusAngle(image_counter);
+                ctf_parameters_stack[image_counter].lowest_frequency_for_fitting  = 0.0;
+                ctf_parameters_stack[image_counter].highest_frequency_for_fitting = 0.5;
+                ctf_parameters_stack[image_counter].astigmatism_tolerance         = 0.0;
+                ctf_parameters_stack[image_counter].pixel_size                    = pixel_size;
+                ctf_parameters_stack[image_counter].additional_phase_shift        = input_star_file.ReturnPhaseShift(image_counter);
+                //wxPrintf("The current image is %li and its defocus is %f\n", image_counter+1, input_star_file.ReturnDefocus1(image_counter) );
+            }
         }
     }
 

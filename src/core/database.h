@@ -1,3 +1,6 @@
+#ifndef _SRC_CORE_DATABASE_H_
+#define _SRC_CORE_DATABASE_H_
+
 #include "../constants/constants.h"
 #include "../gui/UpdateProgressTracker.h"
 
@@ -183,6 +186,8 @@ class Database {
     int  ReturnHighestTemplateMatchesPackageID( );
     void SetActiveTemplateMatchJobForGivenImageAssetID(long image_asset, long template_match_job_id);
 
+    bool ReturnAllAssetIdsWithUnderfocus(int group_list_id, int total_group_members, wxArrayLong& underfocus_asset_ids);
+
     int ReturnNumberOfPreviousMovieAlignmentsByAssetID(int wanted_asset_id);
     int ReturnNumberOfPreviousTemplateMatchesByAssetID(int wanted_asset_id);
     int ReturnNumberOfPreviousCTFEstimationsByAssetID(int wanted_asset_id);
@@ -263,6 +268,16 @@ class Database {
 
     bool CreateRefinementPackageContainedParticlesTable(const long refinement_package_asset_id) { return CreateTable(wxString::Format("REFINEMENT_PACKAGE_CONTAINED_PARTICLES_%li", refinement_package_asset_id), "piirrrrrrrrrri", "ORIGINAL_PARTICLE_POSITION_ASSET_ID", "PARENT_IMAGE_ASSET_ID", "POSITION_IN_STACK", "X_POSITION", "Y_POSITION", "PIXEL_SIZE", "DEFOCUS_1", "DEFOCUS_2", "DEFOCUS_ANGLE", "PHASE_SHIFT", "SPHERICAL_ABERRATION", "MICROSCOPE_VOLTAGE", "AMPLITUDE_CONTRAST", "ASSIGNED_SUBSET"); };
 
+    bool CreateRefinementPackageContainedParticlesMultiViewTable(const long refinement_package_asset_id) {
+        return CreateTable(wxString::Format("REFINEMENT_PACKAGE_CONTAINED_PARTICLES_MULTI_VIEW_%li", refinement_package_asset_id),
+                           "pirr",
+                           "POSITION_IN_STACK", "PARTICLE_GROUP", "PRE_EXPOSURE", "TOTAL_EXPOSURE");
+    };
+
+    bool DoesRefinementPackageHaveMultiView(const long refinement_package_asset_id) {
+        return DoesTableExist(wxString::Format("REFINEMENT_PACKAGE_CONTAINED_PARTICLES_MULTI_VIEW_%li", refinement_package_asset_id));
+    };
+
     bool CreateRefinementPackageCurrent3DReferencesTable(const long refinement_package_asset_id) { return CreateTable(wxString::Format("REFINEMENT_PACKAGE_CURRENT_REFERENCES_%li", refinement_package_asset_id), "pi", "CLASS_NUMBER", "VOLUME_ASSET_ID"); };
 
     bool CreateRefinementPackageRefinementsList(const long refinement_package_asset_id) { return CreateTable(wxString::Format("REFINEMENT_PACKAGE_REFINEMENTS_LIST_%li", refinement_package_asset_id), "pl", "REFINEMENT_NUMBER", "REFINEMENT_ID"); };
@@ -283,7 +298,7 @@ class Database {
 
     bool CreateTemplateMatchPeakChangeListTable(const long template_match_job_id) { return CreateTable(wxString::Format("TEMPLATE_MATCH_PEAK_CHANGE_LIST_%li", template_match_job_id), "prrrrrrrrii", "PEAK_NUMBER", "X_POSITION", "Y_POSITION", "PSI", "THETA", "PHI", "DEFOCUS", "PIXEL_SIZE", "PEAK_HEIGHT", "ORIGINAL_PEAK_NUMBER", "NEW_PEAK_NUMBER"); }
 
-    bool CreateRefinementResultTable(const long refinement_id, const int class_number) { return CreateTable(wxString::Format("REFINEMENT_RESULT_%li_%i", refinement_id, class_number), "Prrrrrrrrrrrrrirrrrrrrri", "POSITION_IN_STACK", "PSI", "THETA", "PHI", "XSHIFT", "YSHIFT", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "PHASE_SHIFT", "OCCUPANCY", "LOGP", "SIGMA", "SCORE", "IMAGE_IS_ACTIVE", "PIXEL_SIZE", "MICROSCOPE_VOLTAGE", "MICROSCOPE_CS", "AMPLITUDE_CONTRAST", "BEAM_TILT_X", "BEAM_TILT_Y", "IMAGE_SHIFT_X", "IMAGE_SHIFT_Y", "ASSIGNED_SUBSET"); };
+    bool CreateRefinementResultTable(const long refinement_id, const int class_number) { return CreateTable(wxString::Format("REFINEMENT_RESULT_%li_%i", refinement_id, class_number), "Prrrrrrrrrrrrrirrrrrrrriiirr", "POSITION_IN_STACK", "PSI", "THETA", "PHI", "XSHIFT", "YSHIFT", "DEFOCUS1", "DEFOCUS2", "DEFOCUS_ANGLE", "PHASE_SHIFT", "OCCUPANCY", "LOGP", "SIGMA", "SCORE", "IMAGE_IS_ACTIVE", "PIXEL_SIZE", "MICROSCOPE_VOLTAGE", "MICROSCOPE_CS", "AMPLITUDE_CONTRAST", "BEAM_TILT_X", "BEAM_TILT_Y", "IMAGE_SHIFT_X", "IMAGE_SHIFT_Y", "ASSIGNED_SUBSET", "BEAM_TILT_GROUP", "PARTICLE_GROUP", "PRE_EXPOSURE", "TOTAL_EXPOSURE"); };
 
     bool CreateRefinementResolutionStatisticsTable(const long refinement_id, int class_number) { return CreateTable(wxString::Format("REFINEMENT_RESOLUTION_STATISTICS_%li_%i", refinement_id, class_number), "prrrrr", "SHELL", "RESOLUTION", "FSC", "PART_FSC", "PART_SSNR", "REC_SSNR"); };
 
@@ -433,3 +448,5 @@ class BeginCommitLocker // just call begin in the contructor, and commit in the 
     ~BeginCommitLocker( );
     void Commit( );
 };
+
+#endif // _SRC_CORE_DATABASE_H_

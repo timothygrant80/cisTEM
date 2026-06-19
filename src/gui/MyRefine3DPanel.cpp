@@ -1689,182 +1689,6 @@ void RefinementManager::SetupRefinementJob( ) {
                                                   defocus_bias);
         }
     }
-
-    /*
-
-	int class_counter;
-		long counter;
-		long number_of_refinement_jobs;
-		int number_of_refinement_processes;
-		float current_particle_counter;
-
-		long number_of_particles;
-		float particles_per_job;
-
-		// get the last refinement for the currently selected refinement package..
-
-		input_refinement->WriteFrealignParameterFiles(main_frame->current_project.parameter_file_directory.GetFullPath() + "/input_par");
-		input_refinement->WriteResolutionStatistics(main_frame->current_project.parameter_file_directory.GetFullPath() + "/input_stats");
-
-	//	wxPrintf("Input refinement has %li particles\n", input_refinement->number_of_particles);
-
-		// for now, number of jobs is number of processes -1 (master)..
-
-		number_of_refinement_processes = run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()].ReturnTotalJobs();
-		number_of_refinement_jobs = number_of_refinement_processes - 1;
-
-		number_of_particles = refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles.GetCount();
-		if (number_of_particles - number_of_refinement_jobs < number_of_refinement_jobs) particles_per_job = 1;
-		else particles_per_job = float(number_of_particles - number_of_refinement_jobs) / float(number_of_refinement_jobs);
-
-		my_parent->current_job_package.Reset(run_profiles_panel->run_profile_manager.run_profiles[my_parent->RefinementRunProfileComboBox->GetSelection()], "refine3d", number_of_refinement_jobs * refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).number_of_classes);
-
-		for (class_counter = 0; class_counter < refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).number_of_classes; class_counter++)
-		{
-			current_particle_counter = 1;
-
-			for (counter = 0; counter < number_of_refinement_jobs; counter++)
-			{
-
-				wxString input_particle_images					= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).stack_filename;
-				wxString input_parameter_file 					= main_frame->current_project.parameter_file_directory.GetFullPath() + wxString::Format("/input_par_%li_%i.par", current_input_refinement_id, class_counter + 1);
-				wxString input_reconstruction					= volume_asset_panel->ReturnAssetLongFilename(volume_asset_panel->ReturnArrayPositionFromAssetID(refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).references_for_next_refinement[class_counter]));
-				wxString input_reconstruction_statistics 		= main_frame->current_project.parameter_file_directory.GetFullPath() + wxString::Format("/input_stats_%li_%i.txt", current_input_refinement_id, class_counter + 1);
-				bool	 use_statistics							= true;
-
-				wxString ouput_matching_projections		 		= "";
-				//wxString output_parameter_file					= "/tmp/output_par.par";
-				//wxString ouput_shift_file						= "/tmp/output_shift.shft";
-				wxString output_parameter_file					= "/dev/null";
-				wxString ouput_shift_file						= "/dev/null";
-
-				wxString my_symmetry							= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).symmetry;
-				long	 first_particle							= myroundint(current_particle_counter);
-
-				current_particle_counter += particles_per_job;
-				if (current_particle_counter > number_of_particles) current_particle_counter = number_of_particles;
-
-				long	 last_particle							= myroundint(current_particle_counter);
-				current_particle_counter++;
-
-				float	 percent_used							= my_parent->PercentUsedTextCtrl->ReturnValue() / 100.0;
-
-
-				// for now we take the paramters of the first image!!!!
-
-				float 	 pixel_size								= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].pixel_size;
-				float    voltage_kV								= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].microscope_voltage;
-				float 	 spherical_aberration_mm				= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].spherical_aberration;
-				float    amplitude_contrast						= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).contained_particles[0].amplitude_contrast;
-				float	 molecular_mass_kDa						= refinement_package_asset_panel->all_refinement_packages.Item(my_parent->RefinementPackageComboBox->GetSelection()).estimated_particle_weight_in_kda;
-				float    mask_radius							= my_parent->MaskRadiusTextCtrl->ReturnValue();
-				float    low_resolution_limit					= my_parent->LowResolutionLimitTextCtrl->ReturnValue();
-				float    high_resolution_limit					= my_parent->HighResolutionLimitTextCtrl->ReturnValue();
-				float	 signed_CC_limit						= my_parent->SignedCCResolutionTextCtrl->ReturnValue();
-				float	 classification_resolution_limit		= my_parent->ClassificationHighResLimitTextCtrl->ReturnValue();
-				float    mask_radius_search						= my_parent->GlobalMaskRadiusTextCtrl->ReturnValue();
-				float	 high_resolution_limit_search			= my_parent->HighResolutionLimitTextCtrl->ReturnValue();
-				float	 angular_step							= my_parent->AngularStepTextCtrl->ReturnValue();
-				int		 best_parameters_to_keep				= my_parent->NumberToRefineSpinCtrl->GetValue();
-				float	 max_search_x							= my_parent->SearchRangeXTextCtrl->ReturnValue();
-				float	 max_search_y							= my_parent->SearchRangeYTextCtrl->ReturnValue();
-				float    mask_center_2d_x						= my_parent->SphereXTextCtrl->ReturnValue();
-				float 	 mask_center_2d_y						= my_parent->SphereYTextCtrl->ReturnValue();
-				float    mask_center_2d_z						= my_parent->SphereZTextCtrl->ReturnValue();
-				float    mask_radius_2d							= my_parent->SphereRadiusTextCtrl->ReturnValue();
-
-				float	 defocus_search_range					= my_parent->DefocusSearchRangeTextCtrl->ReturnValue();
-				float	 defocus_step							= my_parent->DefocusSearchStepTextCtrl->ReturnValue();
-				float	 padding								= 1.0;
-
-				bool global_search;
-				bool local_refinement;
-
-				if (my_parent->GlobalRefinementRadio->GetValue() == true)
-				{
-					global_search = true;
-					local_refinement = false;
-				}
-				else
-				{
-					global_search = false;
-					local_refinement = true;
-				}
-
-
-				bool refine_psi 								= my_parent->RefinePsiCheckBox->GetValue();
-				bool refine_theta								= my_parent->RefineThetaCheckBox->GetValue();
-				bool refine_phi									= my_parent->RefinePhiCheckBox->GetValue();
-				bool refine_x_shift								= my_parent->RefineXShiftCheckBox->GetValue();
-				bool refine_y_shift								= my_parent->RefineYShiftCheckBox->GetValue();
-				bool calculate_matching_projections				= false;
-				bool apply_2d_masking							= my_parent->SphereClassificatonYesRadio->GetValue();
-				bool ctf_refinement								= my_parent->RefineCTFYesRadio->GetValue();
-				bool invert_contrast							= false;
-
-				bool normalize_particles = true;
-				bool exclude_blank_edges = false;
-				bool normalize_input_3d;
-
-				if (my_parent->ApplyBlurringYesRadioButton->GetValue() == true) normalize_input_3d = false;
-				else normalize_input_3d = true;
-
-				my_parent->current_job_package.AddJob("ttttbttttiiffffffffffffffifffffffffbbbbbbbbbbbbbbi",
-																	input_particle_images.ToUTF8().data(), 				// 0
-																	input_parameter_file.ToUTF8().data(), 				// 1
-																	input_reconstruction.ToUTF8().data(), 				// 2
-																	input_reconstruction_statistics.ToUTF8().data(),	// 3
-																	use_statistics, 									// 4
-																	ouput_matching_projections.ToUTF8().data(),			// 5
-																	output_parameter_file.ToUTF8().data(),				// 6
-																	ouput_shift_file.ToUTF8().data(),					// 7
-																	my_symmetry.ToUTF8().data(),						// 8
-																	first_particle, 									// 9
-																	last_particle,										// 10
-																	percent_used,										// 11
-																	pixel_size, 										// 12
-																	voltage_kV,											// 13
-																	spherical_aberration_mm,							// 14
-																	amplitude_contrast,									// 15
-																	molecular_mass_kDa,									// 16
-																	mask_radius,										// 17
-																	low_resolution_limit,								// 18
-																	high_resolution_limit,								// 19
-																	signed_CC_limit,									// 20
-																	classification_resolution_limit,					// 21
-																	mask_radius_search,									// 22
-																	high_resolution_limit_search,						// 23
-																	angular_step,										// 24
-																	best_parameters_to_keep,							// 25
-																	max_search_x,										// 26
-																	max_search_y,										// 27
-																	mask_center_2d_x,									// 28
-																	mask_center_2d_y,									// 29
-																	mask_center_2d_z,									// 30
-																	mask_radius_2d,										// 31
-																	defocus_search_range,								// 32
-																	defocus_step,										// 33
-																	padding,											// 34
-																	global_search,										// 35
-																	local_refinement,									// 36
-																	refine_psi,											// 37
-																	refine_theta,										// 38
-																	refine_phi, 										// 39
-																	refine_x_shift,										// 40
-																	refine_y_shift,										// 41
-																	calculate_matching_projections,						// 42
-																	apply_2d_masking,									// 43
-																	ctf_refinement,										// 44
-																	normalize_particles,								// 45
-																	invert_contrast,									// 46
-																	exclude_blank_edges,								// 47
-																	normalize_input_3d,									// 48
-																	class_counter);										// 49
-
-
-			}
-
-		}*/
 }
 
 void RefinementManager::ProcessJobResult(JobResult* result_to_process) {
@@ -1878,6 +1702,20 @@ void RefinementManager::ProcessJobResult(JobResult* result_to_process) {
         //	wxPrintf("Received a refinement result for class #%i, particle %li\n", current_class + 1, current_particle + 1);
         //wxPrintf("output refinement has %i classes and %li particles\n", output_refinement->number_of_classes, output_refinement->number_of_particles);
 
+        /**
+         * @brief Update refinement parameters from worker results
+         *
+         * Updates all refinement parameters from the worker result array, including
+         * angles, shifts, CTF parameters (when CTF refinement is enabled), and scores.
+         * Multi-view data is preserved from input_refinement as it doesn't change during refinement.
+         *
+         * @note Similar parameter update code exists in:
+         *  - AbInitio3DPanel.cpp:~2190
+         *  - AutoRefine3dPanel.cpp:~1580
+         *  - RefineCTFPanel.cpp:~1394 (CTF-specific)
+         *
+         * @todo Refactor into centralized RefinementResult::UpdateFromWorkerResult() method
+         */
         output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].position_in_stack                  = long(result_to_process->result_data[1] + 0.5);
         output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].image_is_active                    = int(result_to_process->result_data[2]);
         output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].psi                                = result_to_process->result_data[3];
@@ -1902,6 +1740,16 @@ void RefinementManager::ProcessJobResult(JobResult* result_to_process) {
         output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].image_shift_y                      = result_to_process->result_data[23];
         output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].amplitude_contrast                 = result_to_process->result_data[24];
         output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].assigned_subset                    = result_to_process->result_data[25];
+
+        // Copy multi-view data from input_refinement (not modified by refinement)
+        output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].beam_tilt_group =
+                input_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].beam_tilt_group;
+        output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].particle_group =
+                input_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].particle_group;
+        output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].pre_exposure =
+                input_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].pre_exposure;
+        output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].total_exposure =
+                input_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].total_exposure;
 
         /*	wxPrintf("Recieved a result for particle %li, x_shift = %f, y_shift = %f, psi = %f, theta = %f, phi = %f\n",		output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].position_in_stack,
 																															output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].xshift,

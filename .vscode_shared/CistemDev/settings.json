@@ -103,52 +103,23 @@
         "stream_ref": "cpp",
         "core": "cpp",
         "__verbose_abort": "cpp",
-        "barrier": "cpp"
+        "barrier": "cpp",
+        "__threading_support": "cpp"
     },
     "C_Cpp.clang_format_path": "/usr/bin/clang-format-14",
+    "C_Cpp.formatting": "clangFormat",
     "editor.formatOnSave": true,
+    "[cpp]": {
+        "editor.defaultFormatter": "ms-vscode.cpptools"
+    },
+    "[c]": {
+        "editor.defaultFormatter": "ms-vscode.cpptools"
+    },
+    "[cuda-cpp]": {
+        "editor.defaultFormatter": "ms-vscode.cpptools"
+    },
     "DockerRun.DisableDockerrc": true,
     "html.format.endWithNewline": true,
     "editor.fontSize": 12,
-    "editor.inlineSuggest.minShowDelay": 2,
-    "remote.extensionKind": {
-        "github.copilot-chat": "ui"
-    },
-    "github.copilot.enable": {
-        "*": true,
-        "markdown": true,
-        "scminput": false,
-        "quarto": false,
-        "yaml": true,
-        "cuda-cpp": true,
-        "shellscript": true,
-        "python": true,
-        "jsonc": true,
-        "log": false,
-        "matlab": true
-    },
-    "chat.tools.terminal.autoApprove": {
-        "mkdir": true,
-        "echo": true,
-        "/^git (status|show|log)\\b/": true,
-        "ls": true,
-        "cd": true,
-        "pwd": true,
-        "cat": true,
-        "grep": true,
-        "head": true,
-        "tail": true,
-        "find": true,
-        "date": true,
-        "whoami": true,
-        "df": true,
-        "du": true,
-        "cp": false,
-        "mv": false,
-        "rm": false,
-        "del": false,
-        "/dangerous/": false
-    },
-    "github.copilot.chat.codeGeneration.instructions": [],
-    "github.copilot.chat.codeGeneration.useInstructionFiles": false
+    "editor.inlineSuggest.minShowDelay": 2
 }

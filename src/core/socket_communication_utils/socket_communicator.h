@@ -93,7 +93,7 @@ class SocketCommunicator {
 
     virtual void HandleSocketDisconnect(wxSocketBase* connected_socket) { wxPrintf("Warning:: Unhandled Socket Disconnect(HandleSocketDisconnect)\n"); }
 
-    virtual void HandleSocketTemplateMatchResultReady(wxSocketBase* connected_socket, int& image_number, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes) { wxPrintf("Warning:: Unhandled Socket Message (HandleSocketTemplateMatchResultReady)\n"); }
+    virtual void HandleSocketTemplateMatchResultReady(wxSocketBase* connected_socket, int& image_number, float& high_res_limit_used, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes) { wxPrintf("Warning:: Unhandled Socket Message (HandleSocketTemplateMatchResultReady)\n"); }
 };
 
 class SocketServerThread : public wxThread {

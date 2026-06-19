@@ -76,8 +76,8 @@ class TemplateMatchingCore {
     GpuImage d_best_defocus;
     GpuImage d_best_pixel_size;
 
-    GpuImage d_sum1, d_sum2;
-    GpuImage d_sumSq1, d_sumSq2;
+    GpuImage d_sum1;
+    GpuImage d_sumSq1;
     bool     is_allocated_sum_buffer = false;
     int      is_non_zero_sum_buffer;
 
@@ -228,11 +228,9 @@ class TemplateMatchingCore {
     void                SetL2AccessPolicy(size_t window_size);
     void                ClearL2AccessPolicy( );
 
-    void RunInnerLoop(Image&      projection_filter,
-                      int         threadIDX,
-                      long&       current_correlation_position,
-                      const float min_counter_val,
-                      const float threshold_val);
+    void RunInnerLoop(Image& projection_filter,
+                      int    threadIDX,
+                      long&  current_correlation_position);
 };
 
 #endif

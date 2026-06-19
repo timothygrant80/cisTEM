@@ -415,18 +415,22 @@ std::string UserInput::GetFilenameFromUser(const char* my_text, const char* help
 
         if ( input[0] != 0 && input[0] != '?' ) {
 
+            // Expand ~/ to the user's home directory. Note: MakeAbsolute() would also
+            // resolve relative paths and ".." components via wxPATH_NORM_DOTS | wxPATH_NORM_ABSOLUTE.
+            wxFileName expanded(input);
+            expanded.Normalize(wxPATH_NORM_TILDE);
+            wxString expanded_path = expanded.GetFullPath( );
+
             if ( must_exist == false ) {
-                DoGotValidAnswer(my_text, input);
-                std::string my_string(input);
-                return my_string;
+                DoGotValidAnswer(my_text, expanded_path.ToUTF8( ).data( ));
+                return std::string(expanded_path.ToUTF8( ).data( ));
             }
             else {
                 // check the file exits..
 
-                if ( wxFileName::FileExists(input) == true ) {
-                    DoGotValidAnswer(my_text, input);
-                    std::string my_string(input);
-                    return my_string;
+                if ( wxFileName::FileExists(expanded_path) == true ) {
+                    DoGotValidAnswer(my_text, expanded_path.ToUTF8( ).data( ));
+                    return std::string(expanded_path.ToUTF8( ).data( ));
                 }
                 else {
                     if ( output_is_a_tty == true ) {

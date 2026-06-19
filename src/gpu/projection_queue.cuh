@@ -23,28 +23,28 @@ constexpr int n_prjs = 20;
  *    - `gpu_projection_is_ready_Event`: Signaled on a `gpu_projection_stream` after a GPU projection
  *      (or data transfer to GPU) is complete and ready for further processing by the main
  *      computation stream (e.g., `cudaStreamPerThread`).
- *    - `cpu_projection_is_writeable_Event`: Signaled on a `gpu_projection_stream` (or `cudaStreamPerThread`
+ *    - `projection_slot_is_writeable_Event`: Signaled on a `gpu_projection_stream` (or `cudaStreamPerThread`
  *      depending on the path) after the data in the corresponding CPU projection buffer (if used)
  *      has been copied to the GPU, or after the GPU projection buffer has been consumed by the main
  *      computation stream. This indicates the CPU buffer or GPU projection slot can be reused.
  *
  * 2. `GetAvailableProjectionIDX()`: This is the core method for acquiring a projection slot.
- *    - It first checks `submitted_prj_queue` (projections that are being processed or have finished copying)
- *      to see if any `cpu_projection_is_writeable_Event` has signaled. If so, that slot is moved
- *      back to `available_prj_queue`.
- *    - If `available_prj_queue` is empty, it means all slots are currently in use. The method then
- *      blocks (busy-waits via `cudaEventSynchronize`) on the `cpu_projection_is_writeable_Event`
+ *    - It first checks `submitted_prj_queue_` (projections that are being processed or have finished copying)
+ *      to see if any `projection_slot_is_writeable_Event` has signaled. If so, that slot is moved
+ *      back to `available_prj_queue_`.
+ *    - If `available_prj_queue_` is empty, it means all slots are currently in use. The method then
+ *      blocks (busy-waits via `cudaEventSynchronize`) on the `projection_slot_is_writeable_Event`
  *      of the oldest submitted projection, forcing the host to wait until a slot becomes free.
- *    - Once an available slot is found or becomes free, its index is moved from `available_prj_queue`
- *      to `submitted_prj_queue`, and the index is returned to the caller.
+ *    - Once an available slot is found or becomes free, its index is moved from `available_prj_queue_`
+ *      to `submitted_prj_queue_`, and the index is returned to the caller.
  *
  * 3. `RecordProjectionReadyBlockingHost(idx, stream)`:
- *    - Records `cpu_projection_is_writeable_Event[idx]` on the provided `stream`.
+ *    - Records `projection_slot_is_writeable_Event[idx]` on the provided `stream`.
  *    - This event is used by `GetAvailableProjectionIDX` to determine when a projection slot (and its
  *      associated CPU buffer, if applicable) can be safely reused by the host for preparing the next projection.
  *      It signals that the GPU has finished with the data that was in that slot for the *previous* iteration.
  *
- * 4. `RecordGpuProjectionReadyStreamPerThreadWait(idx)`:
+ * 4. `StreamPerThreadWaitOnGpuProjection(idx)`:
  *    - Records `gpu_projection_is_ready_Event[idx]` on `gpu_projection_stream[idx]` (the stream where the
  *      projection was generated or H2D copied).
  *    - Then, it makes the main computation stream (`cudaStreamPerThread`) wait for this event.
@@ -62,10 +62,21 @@ class ProjectionQueue {
   private:
     int             n_prjs_in_queue_;
     cudaEvent_t     gpu_projection_is_ready_Event[n_prjs];
-    std::queue<int> available_prj_queue;
-    std::queue<int> submitted_prj_queue;
+    std::queue<int> available_prj_queue_;
+    std::queue<int> submitted_prj_queue_;
 
     cudaError_t event_status;
+
+    inline void make_slot_available_( ) {
+        available_prj_queue_.push(submitted_prj_queue_.front( ));
+        submitted_prj_queue_.pop( );
+    };
+
+    inline int schedule_and_return_slot_idx_( ) {
+        submitted_prj_queue_.push(available_prj_queue_.front( ));
+        available_prj_queue_.pop( );
+        return submitted_prj_queue_.back( );
+    }
 
   public:
     cudaStream_t gpu_projection_stream[n_prjs]; ///< Dedicated CUDA streams for each projection slot.
@@ -73,7 +84,7 @@ class ProjectionQueue {
      * @brief Events: CPU-side projection buffer (or GPU slot) is writeable/reusable by the host.
      * Signaled when the GPU is done with the data from the previous use of this slot.
      */
-    cudaEvent_t cpu_projection_is_writeable_Event[n_prjs];
+    cudaEvent_t projection_slot_is_writeable_Event[n_prjs];
 
     cistem_timer_noop::StopWatch timer; ///< Timer for profiling busy-wait periods.
 
@@ -92,21 +103,45 @@ class ProjectionQueue {
             // Create dedicated streams for projection operations, potentially with a specific priority.
             cudaErr(cudaStreamCreateWithPriority(&gpu_projection_stream[i], cudaStreamNonBlocking, lowest_priority));
             // Events for signaling GPU projection readiness (for main stream to wait on).
-            cudaErr(cudaEventCreateWithFlags(&gpu_projection_is_ready_Event[i], cudaEventBlockingSync)); // Or cudaEventDisableTiming for potentially lower overhead
+            cudaErr(cudaEventCreateWithFlags(&gpu_projection_is_ready_Event[i], cudaEventBlockingSync | cudaEventDisableTiming));
             // Events for signaling CPU buffer/GPU slot reusability (for host to wait on).
-            cudaErr(cudaEventCreateWithFlags(&cpu_projection_is_writeable_Event[i], cudaEventBlockingSync)); // Or cudaEventDisableTiming
+            cudaErr(cudaEventCreateWithFlags(&projection_slot_is_writeable_Event[i], cudaEventBlockingSync | cudaEventDisableTiming));
         }
     }
 
     /**
      * @brief Destructor for ProjectionQueue.
      * Cleans up all created CUDA streams and events.
+     * Explicitly synchronizes streams before destroying resources to ensure safe cleanup.
      */
     ~ProjectionQueue( ) {
+        // Check if any streams still have pending work (diagnostic)
+        bool has_pending_work = false;
+        for ( int i = 0; i < n_prjs_in_queue_; i++ ) {
+            cudaError_t status = cudaStreamQuery(gpu_projection_stream[i]);
+            if ( status == cudaErrorNotReady ) {
+                has_pending_work = true;
+                break;
+            }
+        }
+        if ( has_pending_work ) {
+            wxPrintf("WARNING: ProjectionQueue destructor called with pending GPU work - synchronizing before cleanup\n");
+        }
+
+        // 1. Synchronize all streams to ensure work completes cleanly
+        for ( int i = 0; i < n_prjs_in_queue_; i++ ) {
+            cudaErr(cudaStreamSynchronize(gpu_projection_stream[i]));
+        }
+
+        // 2. Destroy events first (no longer needed after sync)
+        for ( int i = 0; i < n_prjs_in_queue_; i++ ) {
+            cudaErr(cudaEventDestroy(gpu_projection_is_ready_Event[i]));
+            cudaErr(cudaEventDestroy(projection_slot_is_writeable_Event[i]));
+        }
+
+        // 3. Destroy streams (now guaranteed empty)
         for ( int i = 0; i < n_prjs_in_queue_; i++ ) {
             cudaErr(cudaStreamDestroy(gpu_projection_stream[i]));
-            cudaErr(cudaEventDestroy(gpu_projection_is_ready_Event[i]));
-            cudaErr(cudaEventDestroy(cpu_projection_is_writeable_Event[i]));
         }
     }
 
@@ -115,61 +150,55 @@ class ProjectionQueue {
      * Called during initialization.
      */
     void ResetQueues( ) {
-        while ( ! submitted_prj_queue.empty( ) ) {
-            submitted_prj_queue.pop( );
+        while ( ! submitted_prj_queue_.empty( ) ) {
+            submitted_prj_queue_.pop( );
         }
         // All projection slots are initially available.
         for ( int i = 0; i < n_prjs_in_queue_; i++ )
-            available_prj_queue.push(i);
+            available_prj_queue_.push(i);
     }
 
     /**
      * @brief Gets the index of an available projection slot.
      *
-     * This method manages the recycling of projection slots. It checks if any previously
-     * submitted projections are now complete (i.e., their `cpu_projection_is_writeable_Event`
-     * has been signaled), making their slots available. If no slots are immediately available,
-     * it will block and wait for the oldest submitted projection to complete.
+     * This method manages the recycling of projection slots. 
+     * 1. It checks if any previously submitted projections are now complete (i.e., their `projection_slot_is_writeable_Event and moves those to the available_queue
+     * 2. If no slots are immediately available, it will block and wait for the oldest submitted projection to complete. So that there is always at LEAST one available slot before we leave the method
+     * 3. Grab the next available slot, move it to the end of the submitted queue and return that slot index for external use.
      *
      * @return The index of an available projection slot.
      */
     int
     GetAvailableProjectionIDX( ) {
 
-        // Check submitted projections: if the associated cpu_projection_is_writeable_Event has signaled,
+        // Check submitted projections: if the associated projection_slot_is_writeable_Event has signaled,
         // it means the slot is free. Move it from submitted to available queue.
-        while ( ! submitted_prj_queue.empty( ) ) {
-            event_status = cudaEventQuery(cpu_projection_is_writeable_Event[submitted_prj_queue.front( )]);
+        while ( ! submitted_prj_queue_.empty( ) ) {
+            event_status = cudaEventQuery(projection_slot_is_writeable_Event[submitted_prj_queue_.front( )]);
             if ( event_status == cudaErrorNotReady ) {
                 // The oldest submitted projection is not yet ready for reuse. Stop checking.
                 break;
             }
             else {
                 // This slot is ready. Move it to the available queue.
-                available_prj_queue.push(submitted_prj_queue.front( ));
-                submitted_prj_queue.pop( );
+                make_slot_available_( );
             }
         }
 
         // If no slots are available after the check, we must wait.
-        if ( available_prj_queue.empty( ) ) {
+        if ( available_prj_queue_.empty( ) ) {
             // This is a critical point for performance. If the host frequently waits here,
             // it means the GPU projection/processing pipeline is a bottleneck or the queue size is too small.
             timer.start("busy wait");
-            // Synchronize (block host) on the cpu_projection_is_writeable_Event of the oldest submitted projection.
+            // Synchronize (block host) on the projection_slot_is_writeable_Event of the oldest submitted projection.
             // This ensures the host waits until at least one slot becomes free.
-            cudaErr(cudaEventSynchronize(cpu_projection_is_writeable_Event[submitted_prj_queue.front( )]));
+            cudaErr(cudaEventSynchronize(projection_slot_is_writeable_Event[submitted_prj_queue_.front( )]));
             timer.lap("busy wait");
             // The slot is now free. Move it to the available queue.
-            available_prj_queue.push(submitted_prj_queue.front( ));
-            submitted_prj_queue.pop( );
+            make_slot_available_( );
         }
 
-        // Get an available slot, move it to submitted, and return its index.
-        submitted_prj_queue.push(available_prj_queue.front( ));
-        available_prj_queue.pop( );
-
-        return submitted_prj_queue.back( ); // Return the index of the slot just moved to submitted.
+        return schedule_and_return_slot_idx_( );
     }
 
     /**
@@ -180,11 +209,11 @@ class ProjectionQueue {
      * @param stream The CUDA stream on which to record the event.
      */
     inline void
-    RecordProjectionReadyBlockingHost(int idx, cudaStream_t stream) {
+    RecordProjectionReadyBlockingHost_Event(int idx, cudaStream_t stream) {
         // This event signals that the resources associated with projection `idx` (for its *previous* use)
         // are no longer needed by the GPU operations enqueued *up to this point on `stream`*.
         // `GetAvailableProjectionIDX` will later query or synchronize on this event.
-        cudaErr(cudaEventRecord(cpu_projection_is_writeable_Event[idx], stream));
+        cudaErr(cudaEventRecord(projection_slot_is_writeable_Event[idx], stream));
     }
 
     /**
@@ -199,7 +228,7 @@ class ProjectionQueue {
      * @param idx The index of the projection slot whose data needs to be waited upon.
      */
     inline void
-    RecordGpuProjectionReadyStreamPerThreadWait(int idx) {
+    StreamPerThreadWaitOnGpuProjection(int idx) {
         // Record an event on the projection-specific stream (`gpu_projection_stream[idx]`) to mark
         // the point when the projection data in slot `idx` is ready on the GPU.
         cudaErr(cudaEventRecord(gpu_projection_is_ready_Event[idx], gpu_projection_stream[idx]));

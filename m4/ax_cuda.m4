@@ -121,9 +121,7 @@ if test "$want_cuda" = "yes" ; then
 
 		have_cuda="yes"
 
-fi
-
-# This is the code that will be generated at compile time and should be specified for the most used gpu 
+# This is the code that will be generated at compile time and should be specified for the most used gpu
 # TODO: export target_arch to link against pre-built FastFFT that has the same target arch
 target_arch=""
 AC_ARG_WITH([target-gpu-arch], AS_HELP_STRING([--with-target-gpu-arch@<:@=70,75,80,86,89,90@:>@], [Primary architecture to compile for (default=86)]),
@@ -201,9 +199,9 @@ fi
 
 if test "x$is_cuda_ge_11" = "x1" ; then
   AC_MSG_NOTICE([CUDA >= 11.0, enabling --extra-device-vectorization])
-  NVCCFLAGS+=" --extra-device-vectorization -std=c++17 --expt-relaxed-constexpr --threads=8 --split-compile=8 "
+  NVCCFLAGS+=" --extra-device-vectorization -std=c++17 --expt-relaxed-constexpr --threads=8 --split-compile=8 " 
 else
-  AC_MSG_NOTICE([CUDA VERSION is not >= 11.0, some optimizations will be disabled])
+  AC_MSG_ERROR([CUDA VERSION is not > 11.0])
 fi
 
 # to trouble shoot ptx warnings for example.  
@@ -228,7 +226,9 @@ AC_ARG_ENABLE(gpu-cache-hints, AS_HELP_STRING([--disable-gpu-cache-hints],[Do no
   	NVCCFLAGS+=" -Xcompiler= -DDISABLECACHEHINTS"
   	AC_MSG_NOTICE([Disabling cache hint intrinsics requiring CUDA 11 or newer])  	
   fi])
-  
+
+fi # end if test "$want_cuda" = "yes"
+
 AC_SUBST(CUDA_LIBS)
 AC_SUBST(CUDA_CFLAGS)
 AC_SUBST(NVCCFLAGS)

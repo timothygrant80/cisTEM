@@ -89,8 +89,7 @@ def make_template_results(config):
         path.join(config.get('output_file_prefix'), 'slab.mrc'),
         str(config.get('sample_thickness')),
         str(config.get('data')[config.get('img_number')].get('pixel_size')),
-        str(config.get('result_binning_factor')),
-        str(config.get('result_ignore_n_pixels_from_edge'))]
+        str(config.get('result_binning_factor'))]
 
     return pre_process_cmd, input_cmd
 

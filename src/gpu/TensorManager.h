@@ -6,7 +6,7 @@ Provide an interface to the cuTensor library to the cistem GpuImage class
 #define _SRC_GPU_TENSORMANAGER_H_
 
 #include <cutensor.h>
-#include <cistem_config.h>
+
 #include "../constants/constants.h"
 
 class GpuImage;

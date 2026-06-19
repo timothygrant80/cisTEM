@@ -49,7 +49,7 @@ void ElectronDose::Init(float wanted_acceleration_voltage, float wanted_pixel_si
     critical_dose_a         = 0.24499;
     critical_dose_b         = -1.6649;
     critical_dose_c         = 2.8141;
-    reduced_critical_dose_b = critical_dose_b / 2.f;
+    reduced_critical_dose_b = critical_dose_b / 2.f; // small opt, remove sqrt in hot loop; rather than sqrt(f^2)^b -> [(f^2)^b]^0.5 -> (f^2)^(b/2)
 }
 
 void ElectronDose::CalculateDoseFilterAs1DArray(Image* ref_image, float* filter_array, float dose_start, float dose_finish) {

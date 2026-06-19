@@ -133,6 +133,7 @@ void MyAssetPanelParent::RemoveAssetClick(wxCommandEvent& event) {
                 }
 
                 main_frame->current_project.database.Commit( ); // commit transaction
+                ContentsListBox->SetItemCount(all_groups_list->groups[selected_group].number_of_members);
                 DoAfterDeletionCleanup( );
                 my_dialog->Destroy( );
             }
@@ -284,6 +285,7 @@ void MyAssetPanelParent::RemoveAllAssetsClick(wxCommandEvent& event) {
                 RemoveAllFromDatabase( );
                 main_frame->current_project.database.Commit( );
 
+                ContentsListBox->SetItemCount(0);
                 DoAfterDeletionCleanup( );
 
                 // delete from gui..

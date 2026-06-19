@@ -26,6 +26,8 @@ class RunProfile {
     void RemoveAll( );
     long ReturnTotalJobs( );
     void SubstituteExecutableName(wxString executable_name);
+    void AppendCLIArgument(const wxString& argument);
+    bool HasCLIArgument(const wxString& argument) const;
 
     RunProfile& operator=(const RunProfile& t);
     RunProfile& operator=(const RunProfile* t);

@@ -45,7 +45,7 @@ RefineTemplateDevPanel::RefineTemplateDevPanel(wxWindow* parent)
     GroupComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &RefineTemplateDevPanel::OnGroupComboBox, this);
 }
 
-bool RefineTemplateDevPanel::CheckGroupHasTemplateMatchRunDone( ) {
+bool RefineTemplateDevPanel::CheckGroupForTemplateMatchingCompletion( ) {
     wxArrayLong images_with_template_match_result = main_frame->current_project.database.ReturnLongArrayFromSelectCommand("SELECT DISTINCT IMAGE_ASSET_ID FROM TEMPLATE_MATCH_LIST");
     long        current_image_id;
     int         images_with_template_match_counter;
@@ -194,7 +194,7 @@ void RefineTemplateDevPanel::OnGroupComboBox(wxCommandEvent& event) {
     }
 
     if ( GroupComboBox->GetCount( ) > 0 && main_frame->current_project.is_open == true )
-        all_input_images_have_match_template_result = CheckGroupHasTemplateMatchRunDone( );
+        all_input_images_have_match_template_result = CheckGroupForTemplateMatchingCompletion( );
 
     if ( all_input_images_have_match_template_result == true && InputErrorText->IsShown( ) == true ) {
         InputErrorText->Show(false);
@@ -321,7 +321,7 @@ void RefineTemplateDevPanel::SetInfo( ) {
 void RefineTemplateDevPanel::FillGroupComboBox( ) {
     GroupComboBox->FillComboBox(true);
     if ( GroupComboBox->GetCount( ) > 0 && main_frame->current_project.is_open == true )
-        all_input_images_have_match_template_result = CheckGroupHasTemplateMatchRunDone( );
+        all_input_images_have_match_template_result = CheckGroupForTemplateMatchingCompletion( );
 
     if ( all_input_images_have_match_template_result == true && InputErrorText->IsShown( ) == true ) {
         InputErrorText->Show(false);
@@ -715,12 +715,13 @@ static int wxCMPFUNC_CONV SortByNewPeakNumber(TemplateMatchFoundPeakInfo** a, Te
         return 0;
 };
 
-void RefineTemplateDevPanel::HandleSocketTemplateMatchResultReady(wxSocketBase* connected_socket, int& image_number, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes) {
+void RefineTemplateDevPanel::HandleSocketTemplateMatchResultReady(wxSocketBase* connected_socket, int& image_number, float& high_res_limit_used, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes) {
     // result is available for an image..
 
     cached_results[image_number - 1].found_peaks.Clear( );
     cached_results[image_number - 1].found_peaks    = peak_infos;
     cached_results[image_number - 1].used_threshold = threshold_used;
+    cached_results[image_number - 1].high_res_limit = high_res_limit_used;
 
     cached_results[image_number - 1].peak_changes.Clear( );
     cached_results[image_number - 1].peak_changes = peak_changes;

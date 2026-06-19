@@ -204,6 +204,19 @@ void ResampleDialog::OnOK(wxCommandEvent& event) {
             current_particle_info.pixel_size        = resample_pixel_size;
             resampled_pkg->contained_particles.Add(current_particle_info);
 
+            /**
+             * @brief Complete copy of refinement parameters for resampling
+             *
+             * Copies all refinement parameters from the original refinement to the resampled version.
+             * The pixel_size is overridden with the new resampling value after copying.
+             * Multi-view data is preserved during the resampling process.
+             *
+             * @note Similar complete parameter copying exists in:
+             *  - CombineRefinementPackagesWizard.cpp:~334-361, ~371-398
+             *  - AutoRefine3dPanel.cpp:~1800-1840 (between classes)
+             *
+             * @todo Refactor into centralized RefinementResult::CopyAllFrom() method
+             */
             resampled_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].position_in_stack                  = particle_counter + 1;
             resampled_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].defocus1                           = old_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].defocus1;
             resampled_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].defocus2                           = old_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].defocus2;
@@ -225,6 +238,13 @@ void ResampleDialog::OnOK(wxCommandEvent& event) {
             resampled_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].score                              = old_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].score;
             resampled_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].image_is_active                    = old_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].image_is_active;
             resampled_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].sigma                              = old_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].sigma;
+
+            // Copy multi-view data
+            resampled_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].beam_tilt_group = old_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].beam_tilt_group;
+            resampled_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].particle_group  = old_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].particle_group;
+            resampled_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].pre_exposure    = old_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].pre_exposure;
+            resampled_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].total_exposure  = old_refinement->class_refinement_results[0].particle_refinement_results[particle_counter].total_exposure;
+
             overall_progress++;
             my_dialog->Update(overall_progress, "Filling Refinement Package with particles...");
         }

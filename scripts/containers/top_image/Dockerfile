@@ -21,15 +21,15 @@ ARG GCC_VER=11
 ARG build_type="static"
 ARG build_compiler="icpc"
 ARG build_wx_version="stable"
-ARG build_npm="false"
 ARG build_ref_images="false"
-ARG build_claude="false"
 ARG build_libtorch="true"
-ARG build_docs="true"
 
 SHELL ["/bin/bash", "-c"]
-# some rebuild comment
+
 ENV CISTEM_REF_IMAGES=/cisTEMdev/cistem_reference_images
+
+# Claude Code needs socat for MCP stdio transport and iproute2 for network diagnostics (ss)
+RUN apt-get update && apt-get install -y socat iproute2 && rm -rf /var/lib/apt/lists/*
 
 # We need a more recent python so we'll put that in a virtual environment at /opt/venv
 # Copy the script into the image
@@ -40,11 +40,12 @@ RUN bash /tmp/install_python_310_venv.sh && rm -f /tmp/install_python_310_venv.s
 ENV VIRTUAL_ENV=/opt/venv
 ENV PATH="$VIRTUAL_ENV/bin:$PATH"
 
+
 # Verify
 RUN python --version && pip --version
 
 # Install wxWidgets
-COPY install_wx_3.1.5.sh install_node_16.sh install_node_22_and_claude.sh requirements.txt install_libtorch.sh install_documentation_tooling.sh install_llm_optimization_tools.sh /tmp/
+COPY install_wx_3.1.5.sh requirements.txt install_libtorch.sh /tmp/
 
 
 # If we do not do this, we want to link the static or dynamic libs from /opt/WX to /usr/bin so we don't need to set it on configure lines and also so that wxformbuilder can find them
@@ -69,9 +70,6 @@ RUN cd /opt/WX && \
 #  TODO: move this to the base container. Very nice screen shot tool for layout editing with LLM
 RUN apt-get update && apt install -y flameshot && rm -rf /var/lib/apt/lists/*
 
-# # Install Node 16
-RUN echo "build npm" && if [[ "x${build_npm}" == "xtrue" ]] ; then /tmp/install_node_16.sh ; fi
-
 # Download and install LibTorch 2.5.0 CPU-only (cxx11 ABI for compatibility with GCC 11+)
 # This is required for blush regularization and other ML-based tools
 RUN if [[ "x${build_libtorch}" == "xtrue" ]]; then echo "installing lib torch" && /tmp/install_libtorch.sh ; else echo "NOT installing libtorch" ; fi
@@ -87,12 +85,18 @@ RUN if [[ "x${build_type}" != "xstatic" ]]; then echo "export LD_RUN_PATH=/opt/l
 # RUN ls /usr/local/cuda/lib64/lib*_static.a | grep -v cufft_static.a | while read a; do rm -rf /usr/local/cuda/lib64/$(basename $a); done && \
 #     rm -rf /usr/local/cuda/lib64/libcufft_static_nocallback.a
 
-RUN echo 'source /opt/venv/bin/activate' >> /home/cisTEMdev/.bashrc
-
-RUN if [[ "x${build_docs}" == "xtrue" ]] ; then /tmp/install_documentation_tooling.sh  && /tmp/install_llm_optimization_tools.sh ; fi
 
 USER cisTEMdev
 WORKDIR /home/cisTEMdev
 
 RUN echo "set filename-display basename" > /home/cisTEMdev/.gdbinit
-RUN echo "build claude" && if [[ "x${build_claude}" == "xtrue" ]] ; then /tmp/install_node_22_and_claude.sh ; fi
+
+# Even though we are not maintaining claude in the main cisTEM repo, still install it so i (BAH) can easily use it with my drop in tooling.
+# Make sure we open claude in verbose mode (can be turned off) so the startup hook ensureing skills are loaded is clear
+RUN curl -fsSL https://claude.ai/install.sh | bash && echo "alias claude='/home/cisTEMdev/.local/bin/claude --verbose'" >> /home/cisTEMdev/.bashrc
+# Configure git to use vscode as the diff/merge tool
+RUN git config --global diff.tool vscode && \
+    git config --global difftool.vscode.cmd 'code --wait --diff $LOCAL $REMOTE' && \
+    git config --global merge.tool vscode && \
+    git config --global mergetool.vscode.cmd 'code --wait $MERGED' && \
+    git config --global core.editor 'code --wait'

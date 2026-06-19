@@ -1,3 +1,6 @@
+#ifndef __SRC_CORE_TEMPLATE_MATCHING_H__
+#define __SRC_CORE_TEMPLATE_MATCHING_H__
+
 class Image;
 class ImageFile;
 
@@ -72,3 +75,5 @@ class TemplateMatchJobResults {
 };
 
 WX_DECLARE_OBJARRAY(TemplateMatchJobResults, ArrayOfTemplateMatchJobResults);
+
+#endif // __SRC_CORE_TEMPLATE_MATCHING_H__

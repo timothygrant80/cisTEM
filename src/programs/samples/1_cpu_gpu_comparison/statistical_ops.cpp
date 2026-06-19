@@ -1,7 +1,5 @@
 
 
-#include <cistem_config.h>
-
 #ifdef ENABLEGPU
 #include "../../../gpu/gpu_core_headers.h"
 #else

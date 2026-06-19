@@ -308,3 +308,36 @@ void NumericTextFile::WriteCommentLine(const char* format, ...) {
         va_end(args);
     }
 }
+
+bool NumericTextFile::ReadCommentValueAsFloat(const wxString& key, float& value) {
+    if ( ! file_is_not_dev_null || access_type != OPEN_TO_READ )
+        return false;
+
+    Rewind( );
+
+    while ( ! input_file_stream->Eof( ) ) {
+        wxString current_line = input_text_stream->ReadLine( );
+        current_line.Trim(false);
+
+        if ( ! current_line.StartsWith("#") && ! current_line.StartsWith("C") )
+            continue;
+
+        // Remove leading # or C and whitespace, then check for "KEY value"
+        wxString content = current_line.Mid(1);
+        content.Trim(false);
+
+        if ( content.StartsWith(key) ) {
+            wxString val_str = content.Mid(key.Length( ));
+            val_str.Trim(false);
+            double temp;
+            if ( val_str.ToDouble(&temp) ) {
+                value = float(temp);
+                Rewind( );
+                return true;
+            }
+        }
+    }
+
+    Rewind( );
+    return false;
+}

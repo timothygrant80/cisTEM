@@ -126,6 +126,7 @@ class ImportRefinementPackageWizardParent : public wxWizard
 		wxRadioButton* cisTEMRadioButton;
 		wxRadioButton* RelionRadioButton;
 		wxRadioButton* FrealignRadioButton;
+		wxRadioButton* emClarityRadioButton;
 		wxStaticText* m_staticText474;
 		wxStaticLine* m_staticline106;
 		wxStaticText* m_staticText41;
@@ -147,6 +148,7 @@ class ImportRefinementPackageWizardParent : public wxWizard
 		wxStaticText* m_staticText459;
 		wxStaticText* m_staticText460;
 		wxStaticText* m_staticText214;
+		wxStaticText* m_staticText2141;
 		wxStaticText* m_staticText462;
 		wxRadioButton* BlackProteinRadioButton;
 		wxRadioButton* WhiteProteinRadioButton;
@@ -165,6 +167,7 @@ class ImportRefinementPackageWizardParent : public wxWizard
 		wxComboBox* SymmetryComboBox;
 		NumericTextCtrl* MolecularWeightTextCtrl;
 		NumericTextCtrl* LargestDimensionTextCtrl;
+		NumericTextCtrl* LimitTotalExposureTextCtrl;
 
 		ImportRefinementPackageWizardParent( wxWindow* parent, wxWindowID id = wxID_ANY, const wxString& title = wxEmptyString, const wxBitmap& bitmap = wxNullBitmap, const wxPoint& pos = wxDefaultPosition, long style = wxDEFAULT_DIALOG_STYLE );
 		WizardPages m_pages;
@@ -535,6 +538,26 @@ class NumberofClassesWizardPanel : public wxPanel
 		NumberofClassesWizardPanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
 
 		~NumberofClassesWizardPanel();
+
+};
+
+///////////////////////////////////////////////////////////////////////////////
+/// Class LimitTotalExposurePanel
+///////////////////////////////////////////////////////////////////////////////
+class LimitTotalExposurePanel : public wxPanel
+{
+	private:
+
+	protected:
+		wxStaticText* m_staticText214;
+
+	public:
+		NumericTextCtrl* LimitExposureToWizardTextCtrl;
+		AutoWrapStaticText* InfoText;
+
+		LimitTotalExposurePanel( wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxSize( 600,400 ), long style = wxTAB_TRAVERSAL, const wxString& name = wxEmptyString );
+
+		~LimitTotalExposurePanel();
 
 };
 

@@ -234,8 +234,11 @@ void CombineRefinementPackagesWizard::OnFinished(wxWizardEvent& event) {
     }
     temp_combined_refinement->number_of_particles = output_particle_counter;
     temp_combined_refinement->SizeAndFillWithEmpty(output_particle_counter, 1);
+
     for ( counter = 0; counter < refinement_package_asset_panel->all_refinement_packages.GetCount( ); counter++ ) {
-        if ( package_selection_page->package_selection_panel->RefinementPackagesCheckListBox->IsChecked(counter) == true ) {
+        bool is_checked = package_selection_page->package_selection_panel->RefinementPackagesCheckListBox->IsChecked(counter);
+
+        if ( is_checked ) {
             array_of_packages_to_combine.Add(refinement_package_asset_panel->all_refinement_packages[counter]); // Add package to a separate array
         }
         else
@@ -284,18 +287,33 @@ void CombineRefinementPackagesWizard::OnFinished(wxWizardEvent& event) {
     wxWindowList                          all_children = refinement_selection_page->combined_package_refinement_selection_panel->CombinedRefinementScrollWindow->GetChildren( ); // Get the window's children for pulling user selected classes
     CombinedPackageRefinementSelectPanel* panel_pointer;
     wxArrayLong                           corresponding_refinement_ids[all_children.GetCount( )];
+    bool                                  use_random_parameters_for_package[all_children.GetCount( )];
+
     // all_children is parallel to array_of_packages_to_combine; can use this to add to corresponding_refinement_ids
     for ( int i = 0; i < all_children.GetCount( ); i++ ) {
         if ( all_children.Item(i)->GetData( )->GetClassInfo( )->GetClassName( ) == wxString("wxPanel") ) {
             panel_pointer = reinterpret_cast<CombinedPackageRefinementSelectPanel*>(all_children.Item(i)->GetData( ));
 
-            corresponding_refinement_ids->Add(array_of_packages_to_combine[i].refinement_ids[panel_pointer->RefinementComboBox->GetSelection( )]);
+            int  selected_refinement_index = panel_pointer->RefinementComboBox->GetSelection( );
+            bool use_random_parameters     = (selected_refinement_index == 0); // "Random Parameters" is first item (index 0)
+            long selected_refinement_id;
+
+            if ( use_random_parameters ) {
+                selected_refinement_id = -1; // Special value for random parameters
+            }
+            else {
+                selected_refinement_id = array_of_packages_to_combine[i].refinement_ids[selected_refinement_index - 1]; // Adjust for "Random Parameters" at index 0
+            }
+
+            corresponding_refinement_ids->Add(selected_refinement_id);
+            use_random_parameters_for_package[i] = use_random_parameters;
         }
     }
 
     wxWindowList                        class_page_children = combined_class_selection_page->combined_class_selection_panel->CombinedClassScrollWindow->GetChildren( );
     CombinedPackageClassSelectionPanel* panel_pointer2;
     int                                 package_classes[all_children.GetCount( )];
+
     for ( int i = 0; i < class_page_children.GetCount( ); i++ ) {
         if ( all_children.Item(i)->GetData( )->GetClassInfo( )->GetClassName( ) == wxString("wxPanel") ) {
             panel_pointer2     = reinterpret_cast<CombinedPackageClassSelectionPanel*>(class_page_children.Item(i)->GetData( ));
@@ -305,10 +323,65 @@ void CombineRefinementPackagesWizard::OnFinished(wxWizardEvent& event) {
 
     output_particle_counter = 0; // Return output_partice_counter to 0 before executing the read/write stack functions
 
+    // Create local random number generator with good seeding for random parameters
+    RandomNumberGenerator local_rand(pi_v<float>);
+
+    // Calculate total number of particles for progress dialog
+    long total_particles_to_combine = 0;
+    for ( counter = 0; counter < array_of_packages_to_combine.GetCount( ); counter++ ) {
+        total_particles_to_combine += array_of_packages_to_combine[counter].contained_particles.GetCount( );
+    }
+
+    // Create progress dialog for stack creation
+    // NOTE: Progress updates using output_particle_counter which only increments for kept particles.
+    // This can cause jumpiness when duplicates are skipped (database lookups happen per package).
+    // Could be smoothed by: 1) checking duplicates before I/O, 2) using separate progress counter
+    OneSecondProgressDialog* my_dialog = new OneSecondProgressDialog("Combining Stacks",
+                                                                     wxString::Format("Creating combined stack (%ld particles)...", total_particles_to_combine),
+                                                                     total_particles_to_combine,
+                                                                     this,
+                                                                     wxPD_REMAINING_TIME | wxPD_AUTO_HIDE | wxPD_APP_MODAL);
+
     // Now loop through the existing MRC filenames to get to the files; open, read through, then write each particle to new MRC file, close.
     for ( counter = 0; counter < array_of_packages_to_combine.GetCount( ); counter++ ) {
+        long refinement_id_to_query = corresponding_refinement_ids->Item(counter);
+        int  class_index_to_use     = package_classes[counter];
+
         MRCFile     input_file(array_of_packages_to_combine[counter].stack_filename.ToStdString( ), false);
-        Refinement* old_refinement = main_frame->current_project.database.GetRefinementByID(corresponding_refinement_ids->Item(counter));
+        Refinement* old_refinement;
+
+        if ( use_random_parameters_for_package[counter] ) {
+            // For "Random Parameters", we still need to load the most recent refinement
+            // to get all other parameters (defocus, multi-view, etc.) - we just randomize angles/shifts
+            long most_recent_refinement_id = array_of_packages_to_combine[counter].refinement_ids[array_of_packages_to_combine[counter].refinement_ids.GetCount( ) - 1];
+            wxPrintf("Using random parameters - loading most recent refinement ID %ld for base parameters\n", most_recent_refinement_id);
+            old_refinement = main_frame->current_project.database.GetRefinementByID(most_recent_refinement_id);
+        }
+        else {
+            old_refinement = main_frame->current_project.database.GetRefinementByID(refinement_id_to_query);
+        }
+
+        if ( old_refinement != nullptr ) {
+            wxPrintf("Successfully retrieved refinement from database:\n");
+            wxPrintf("  -> Refinement ID: %ld\n", old_refinement->refinement_id);
+            wxPrintf("  -> Refinement name: %s\n", old_refinement->name);
+            wxPrintf("  -> Number of particles: %ld\n", old_refinement->number_of_particles);
+            wxPrintf("  -> Number of classes: %d\n", old_refinement->number_of_classes);
+            wxPrintf("  -> Package asset ID: %ld\n", old_refinement->refinement_package_asset_id);
+
+            // Check first few particle groups from this refinement
+            if ( old_refinement->number_of_classes > class_index_to_use &&
+                 old_refinement->class_refinement_results[class_index_to_use].particle_refinement_results.GetCount( ) > 0 ) {
+                wxPrintf("  -> Sample particle groups from class %d: ", class_index_to_use);
+                for ( int sample_i = 0; sample_i < wxMin(10l, old_refinement->class_refinement_results[class_index_to_use].particle_refinement_results.GetCount( )); sample_i++ ) {
+                    wxPrintf("%d ", old_refinement->class_refinement_results[class_index_to_use].particle_refinement_results[sample_i].particle_group);
+                }
+                wxPrintf("\n");
+            }
+        }
+        else {
+            wxPrintf("ERROR: Failed to retrieve refinement from database!\n");
+        }
 
         for ( input_particle_counter = 0; input_particle_counter < array_of_packages_to_combine[counter].contained_particles.GetCount( ); input_particle_counter++ ) {
             image_from_previous_stack.ReadSlice(&input_file, input_particle_counter + 1);
@@ -330,6 +403,20 @@ void CombineRefinementPackagesWizard::OnFinished(wxWizardEvent& event) {
                     temp_combined_refinement_package->contained_particles[output_particle_counter].position_in_stack                   = output_particle_counter + 1;
                     temp_combined_refinement_package->contained_particles[output_particle_counter].original_particle_position_asset_id = output_particle_counter + 1; // Question of whether this will be needed here; it probably is
 
+                    /**
+                     * @brief Complete copy of refinement parameters when combining packages
+                     *
+                     * Copies all refinement parameters from the source refinement to the combined package.
+                     * Position_in_stack is updated to reflect the new contiguous numbering.
+                     * Multi-view data is preserved during the combination process.
+                     *
+                     * @note Similar complete parameter copying exists in:
+                     *  - ResampleDialog.cpp:~220-246
+                     *  - AutoRefine3dPanel.cpp:~1800-1840 (between classes)
+                     *  - Second instance at line ~371 in this file (for non-duplicate removal)
+                     *
+                     * @todo Refactor into centralized RefinementResult::CopyAllFrom() method
+                     */
                     temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].position_in_stack = output_particle_counter + 1;
                     temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].defocus1          = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].defocus1;
                     temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].defocus2          = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].defocus2;
@@ -337,10 +424,26 @@ void CombineRefinementPackagesWizard::OnFinished(wxWizardEvent& event) {
                     temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].phase_shift       = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].phase_shift;
                     temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].logp              = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].logp;
 
-                    temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].occupancy       = 100.0;
-                    temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].phi             = global_random_number_generator.GetUniformRandom( ) * 180.0;
-                    temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].theta           = rad_2_deg(acosf(2.0f * fabsf(global_random_number_generator.GetUniformRandom( )) - 1.0f));
-                    temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].psi             = global_random_number_generator.GetUniformRandom( ) * 180.0;
+                    temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].occupancy = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].occupancy;
+
+                    if ( use_random_parameters_for_package[counter] ) {
+                        // User explicitly selected "Random Parameters" - generate random angles and shifts using STL methods
+                        temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].phi   = local_rand.GetUniformRandomSTD(-180.0f, 180.0f);
+                        temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].theta = rad_2_deg(acosf(local_rand.GetUniformRandomSTD(-1.0f, 1.0f))); // Uniform on sphere
+                        temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].psi   = local_rand.GetUniformRandomSTD(-180.0f, 180.0f);
+
+                        // Generate normally distributed shifts (unit normal: mean=0, std=1)
+                        temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].xshift = local_rand.GetNormalRandomSTD(0.0f, 1.0f);
+                        temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].yshift = local_rand.GetNormalRandomSTD(0.0f, 1.0f);
+                    }
+                    else {
+                        // User selected existing refinement - preserve refined angles and shifts
+                        temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].phi    = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].phi;
+                        temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].theta  = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].theta;
+                        temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].psi    = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].psi;
+                        temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].xshift = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].xshift;
+                        temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].yshift = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].yshift;
+                    }
                     temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].score           = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].score;
                     temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].image_is_active = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].image_is_active;
                     temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].sigma           = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].sigma;
@@ -353,6 +456,13 @@ void CombineRefinementPackagesWizard::OnFinished(wxWizardEvent& event) {
                     temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].beam_tilt_y                        = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].beam_tilt_y;
                     temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].image_shift_x                      = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].image_shift_x;
                     temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].image_shift_y                      = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].image_shift_y;
+
+                    // Copy multi-view data
+                    temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].beam_tilt_group = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].beam_tilt_group;
+                    temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].particle_group  = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].particle_group;
+                    temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].pre_exposure    = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].pre_exposure;
+                    temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].total_exposure  = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].total_exposure;
+                    temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].assigned_subset = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].assigned_subset;
                 }
             }
 
@@ -367,6 +477,21 @@ void CombineRefinementPackagesWizard::OnFinished(wxWizardEvent& event) {
                 temp_combined_refinement_package->contained_particles[output_particle_counter].position_in_stack                   = output_particle_counter + 1;
                 temp_combined_refinement_package->contained_particles[output_particle_counter].original_particle_position_asset_id = output_particle_counter + 1; // Appears this is necessary when combining and not wanting to remove duplicates; at least this is resolved
 
+                /**
+                 * @brief Complete copy of refinement parameters when combining packages (no duplicate removal)
+                 *
+                 * Copies all refinement parameters from the source refinement to the combined package.
+                 * This path is taken when the user chooses not to remove duplicates.
+                 * Position_in_stack is updated to reflect the new contiguous numbering.
+                 * Multi-view data is preserved during the combination process.
+                 *
+                 * @note Similar complete parameter copying exists in:
+                 *  - ResampleDialog.cpp:~220-246
+                 *  - AutoRefine3dPanel.cpp:~1800-1840 (between classes)
+                 *  - First instance at line ~347 in this file (with duplicate removal)
+                 *
+                 * @todo Refactor into centralized RefinementResult::CopyAllFrom() method
+                 */
                 temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].position_in_stack = output_particle_counter + 1;
                 temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].defocus1          = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].defocus1;
                 temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].defocus2          = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].defocus2;
@@ -374,10 +499,26 @@ void CombineRefinementPackagesWizard::OnFinished(wxWizardEvent& event) {
                 temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].phase_shift       = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].phase_shift;
                 temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].logp              = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].logp;
 
-                temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].occupancy       = 100.0;
-                temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].phi             = global_random_number_generator.GetUniformRandom( ) * 180.0;
-                temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].theta           = rad_2_deg(acosf(2.0f * fabsf(global_random_number_generator.GetUniformRandom( )) - 1.0f));
-                temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].psi             = global_random_number_generator.GetUniformRandom( ) * 180.0;
+                temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].occupancy = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].occupancy;
+
+                if ( use_random_parameters_for_package[counter] ) {
+                    // User explicitly selected "Random Parameters" - generate random angles and shifts using STL methods
+                    temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].phi   = local_rand.GetUniformRandomSTD(-180.0f, 180.0f);
+                    temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].theta = rad_2_deg(acosf(local_rand.GetUniformRandomSTD(-1.0f, 1.0f))); // Uniform on sphere
+                    temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].psi   = local_rand.GetUniformRandomSTD(-180.0f, 180.0f);
+
+                    // Generate normally distributed shifts (unit normal: mean=0, std=1)
+                    temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].xshift = local_rand.GetNormalRandomSTD(0.0f, 1.0f);
+                    temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].yshift = local_rand.GetNormalRandomSTD(0.0f, 1.0f);
+                }
+                else {
+                    // User selected existing refinement - preserve refined angles and shifts
+                    temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].phi    = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].phi;
+                    temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].theta  = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].theta;
+                    temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].psi    = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].psi;
+                    temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].xshift = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].xshift;
+                    temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].yshift = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].yshift;
+                }
                 temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].score           = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].score;
                 temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].image_is_active = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].image_is_active;
                 temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].sigma           = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].sigma;
@@ -390,13 +531,22 @@ void CombineRefinementPackagesWizard::OnFinished(wxWizardEvent& event) {
                 temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].beam_tilt_y                        = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].beam_tilt_y;
                 temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].image_shift_x                      = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].image_shift_x;
                 temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].image_shift_y                      = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].image_shift_y;
+
+                // Copy multi-view data
+                temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].beam_tilt_group = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].beam_tilt_group;
+                temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].particle_group  = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].particle_group;
+                temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].pre_exposure    = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].pre_exposure;
+                temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].total_exposure  = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].total_exposure;
+                temp_combined_refinement->class_refinement_results[class_counter].particle_refinement_results[output_particle_counter].assigned_subset = old_refinement->class_refinement_results[package_classes[counter]].particle_refinement_results[input_particle_counter].assigned_subset;
             }
             output_particle_counter++;
+            my_dialog->Update(output_particle_counter);
         }
         input_file.CloseFile( );
     }
 
     combined_stacks_file.CloseFile( );
+    my_dialog->Destroy( );
 
     main_frame->current_project.database.Begin( ); // Have to add the newly combined package and its refinement to the database
     refinement_package_asset_panel->AddAsset(temp_combined_refinement_package);

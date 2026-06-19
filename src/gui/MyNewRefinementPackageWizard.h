@@ -130,6 +130,18 @@ class MolecularWeightWizardPage : public wxWizardPage {
     wxWizardPage* GetPrev( ) const;
 };
 
+class LimitTotalExposureWizardPage : public wxWizardPage {
+    MyNewRefinementPackageWizard* wizard_pointer;
+
+  public:
+    LimitTotalExposurePanel* my_panel;
+
+    LimitTotalExposureWizardPage(MyNewRefinementPackageWizard* parent, const wxBitmap& bitmap = wxNullBitmap);
+
+    wxWizardPage* GetNext( ) const;
+    wxWizardPage* GetPrev( ) const;
+};
+
 class LargestDimensionWizardPage : public wxWizardPage {
     MyNewRefinementPackageWizard* wizard_pointer;
 
@@ -300,6 +312,7 @@ class MyNewRefinementPackageWizard : public NewRefinementPackageWizard {
     InitialReferencesWizardPage*           initial_reference_page;
     SymmetryWizardPage*                    symmetry_page;
     MolecularWeightWizardPage*             molecular_weight_page;
+    LimitTotalExposureWizardPage*          limit_exposure_page;
     LargestDimensionWizardPage*            largest_dimension_page;
     ClassSelectionWizardPage*              class_selection_page;
     OutputPixelSizeWizardPage*             output_pixel_size_page;
@@ -323,6 +336,11 @@ class MyNewRefinementPackageWizard : public NewRefinementPackageWizard {
     void PageChanged(wxWizardEvent& event);
 
     wxArrayInt ReturnIDsOfActiveImages(ArrayOfRefinmentPackageParticleInfos& particle_info_buffer);
+
+    // Multi-view exposure limiting support
+    bool  has_multi_view_data         = false;
+    float maximum_exposure            = 0.0f;
+    bool  should_apply_exposure_limit = false;
 };
 
 #endif

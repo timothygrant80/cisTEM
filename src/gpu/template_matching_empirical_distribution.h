@@ -30,16 +30,6 @@
  * like the cpu version of EmpiricalDistribution or per pixel across many images.
  */
 
-/** @brief Number of images to process in a single batch on the GPU. */
-constexpr int n_imgs_to_process_at_once_ = 40;
-
-/** @brief Index offset for psi angle data within batched angle arrays. */
-constexpr int psi_idx = 0;
-/** @brief Index offset for theta angle data within batched angle arrays. */
-constexpr int theta_idx = 1 * n_imgs_to_process_at_once_;
-/** @brief Index offset for phi angle data within batched angle arrays. */
-constexpr int phi_idx = 2 * n_imgs_to_process_at_once_;
-
 /** @brief Data type used for storing histogram bins. */
 using histogram_storage_t = float;
 
@@ -65,7 +55,7 @@ using histogram_storage_t = float;
  * @note Thread Safety: This class is not designed for concurrent access from multiple host threads.
  * All method calls should be serialized by the owning host thread. Internal GPU operations
  * are managed with CUDA streams and events for asynchronicity and synchronization with the GPU.
- * The `active_idx_` member is used for double buffering of CCF and angle arrays to allow
+ * The `mip_dbl_buffer_idx_` member is used for double buffering of CCF and angle arrays to allow
  * data transfer to overlap with computation, but this is managed internally and does not
  * imply thread safety for external calls.
  */
@@ -84,19 +74,28 @@ class TM_EmpiricalDistribution {
 
     const int image_plane_mem_allocated_;
 
+    /** @brief Number of images to process in a single batch on the GPU.
+     *  Automatically sized based on image dimensions to balance memory usage. */
+    const int n_imgs_to_process_at_once_;
+
     float*   sum_array;
     float*   sum_sq_array;
     float*   sum_counter;
+    float*   sum_error_array;
+    float*   sum_sq_error_array;
     mipType* mip_psi;
     mipType* theta_phi;
     ccfType* psi;
     ccfType* theta;
     ccfType* phi;
 
-    int active_idx_{ };
+    // Can be 0 or 1
+    int mip_dbl_buffer_idx_{ };
+    // Can be 0 n_mips_to_process_at_once - 1
+    std::array<int, 2> mip_active_slice_{ };
 
     std::array<ccfType*, 2> host_angle_arrays_;
-    std::array<ccfType*, 2> device_host_angle_arrays_;
+    std::array<ccfType*, 2> device_angle_arrays_;
 
     std::array<ccfType*, 2> ccf_array_;
 
@@ -111,28 +110,9 @@ class TM_EmpiricalDistribution {
 
     cudaStream_t calc_stream_[1];
     cudaEvent_t  mip_stack_is_ready_event_[1];
-
-    // For the testing of trimmed local variance
-    float min_counter_val_{10.f};
-    float threshold_val_{3.0f};
+    cudaEvent_t  ccf_dbl_buffer_ready_event_[2]; ///< Signals CCF writes complete for each double buffer
 
   public:
-    /**
-     * @brief Sets the minimum counter value for the trimming algorithm.
-     * @param min_counter_val The minimum counter value.
-     */
-    void SetTrimmingAlgoMinCounterVal(float min_counter_val) {
-        min_counter_val_ = min_counter_val;
-    }
-
-    /**
-     * @brief Sets the threshold value for the trimming algorithm.
-     * @param threshold_val The threshold value.
-     */
-    void SetTrimmingAlgoThresholdVal(float threshold_val) {
-        threshold_val_ = threshold_val;
-    }
-
     /**
      * @brief Construct a new TM_EmpiricalDistribution object.
      *
@@ -172,37 +152,56 @@ class TM_EmpiricalDistribution {
     TM_EmpiricalDistribution& operator=(TM_EmpiricalDistribution&&)      = delete;
 
     /**
-     * @brief Gets the active index for double buffering.
-     * @return The active buffer index (0 or 1).
-     */
-    inline int GetActiveIdx( ) { return active_idx_; }
-
-    /**
      * @brief Toggles the active index for double buffering.
      * Switches between 0 and 1.
+     * Because all work on these buffers is in calc_stream_ switching buffers internally has no race condition.
      */
-    inline void SetActive_idx( ) {
-        if ( active_idx_ == 1 )
-            active_idx_ = 0;
+    inline void ToggleActiveDoubleBufferIdx( ) {
+        if ( mip_dbl_buffer_idx_ == 1 )
+            mip_dbl_buffer_idx_ = 0;
         else
-            active_idx_ = 1;
+            mip_dbl_buffer_idx_ = 1;
+
+        // Also reset the current mip index for the new active buffer
+        mip_active_slice_.at(mip_dbl_buffer_idx_) = 0;
+    }
+
+    inline int GetCurrentMip_idx( ) {
+        return mip_active_slice_.at(mip_dbl_buffer_idx_);
+    }
+
+    inline void IncrementCurrentMip_idx( ) {
+        mip_active_slice_.at(mip_dbl_buffer_idx_)++;
     }
 
     /**
      * @brief Gets the number of images processed at once in a batch.
      * @return The batch size.
      */
-    inline int n_imgs_to_process_at_once( ) { return n_imgs_to_process_at_once_; }
+    inline int n_imgs_to_process_at_once( ) const { return n_imgs_to_process_at_once_; }
+
+    /** @brief Index offset for psi angle data within batched angle arrays. */
+    inline int psi_idx( ) const { return 0; }
+
+    /** @brief Index offset for theta angle data within batched angle arrays. */
+    inline int theta_idx( ) const { return n_imgs_to_process_at_once_; }
+
+    /** @brief Index offset for phi angle data within batched angle arrays. */
+    inline int phi_idx( ) const { return 2 * n_imgs_to_process_at_once_; }
 
     /**
      * @brief Gets a device pointer to the CCF array for the current slice in the active buffer.
      * @param current_slice_to_process The index of the slice within the current batch.
      * @return Device pointer to the CCF data for the specified slice.
      */
-    inline ccfType* GetCCFArray(const int current_slice_to_process) {
+    inline ccfType* GetCCFArray( ) {
+
         // Provides a pointer to the start of the CCF data for the 'current_slice_to_process'
-        // within the currently active batch buffer ('active_idx_').
-        return &ccf_array_.at(active_idx_)[image_plane_mem_allocated_ * current_slice_to_process];
+        // within the currently active batch buffer ('mip_dbl_buffer_idx_').
+        const int current_mip_to_process = GetCurrentMip_idx( );
+        MyDebugAssertTrue(current_mip_to_process >= 0 && current_mip_to_process < n_imgs_to_process_at_once_, "current_mip_to_process (%d) should be >= 0 and < n_imgs_to_process_at_once_ (%d)", current_mip_to_process, n_imgs_to_process_at_once_);
+
+        return &ccf_array_.at(mip_dbl_buffer_idx_)[image_plane_mem_allocated_ * current_mip_to_process];
     }
 
     /**
@@ -223,10 +222,8 @@ class TM_EmpiricalDistribution {
      * based on the CCF data in the active device buffer.
      * This is the core GPU processing step for each batch.
      *
-     * @param n_images_this_batch The number of images in the current batch to process.
-     *                            This might be less than `n_imgs_to_process_at_once_` for the last batch.
      */
-    void AccumulateDistribution(int n_images_this_batch);
+    void AccumulateDistribution( );
 
     /**
      * @brief Performs final accumulation steps if needed (e.g., for higher-order moments, though not fully implemented).
@@ -246,7 +243,7 @@ class TM_EmpiricalDistribution {
      * @note The commented-out lines show examples of how a stream or host could wait for this event.
      */
     inline void
-    RecordMipStackIsReadyBlockingHost( ) {
+    RecordTmEmpricalDist_Event( ) {
         // Records an event into calc_stream_[0] after all preceding work in that stream is complete.
         cudaErr(cudaEventRecord(mip_stack_is_ready_event_[0], calc_stream_[0]));
         // This would make a stream wait
@@ -261,35 +258,62 @@ class TM_EmpiricalDistribution {
      * This ensures that GPU operations related to MIP stack generation are finished before the host proceeds.
      */
     inline void
-    MakeHostWaitOnMipStackIsReadyEvent( ) {
+    MakeHostWaitOnTmEmpricalDist_Stream( ) {
         // Blocks the calling host thread until the mip_stack_is_ready_event_[0] has been recorded.
         cudaErr(cudaEventSynchronize(mip_stack_is_ready_event_[0]));
+    }
+
+    /**
+     * @brief Records an event signaling that CCF writes to the current double buffer are complete.
+     *
+     * This should be called after the final FFT of a batch writes to the CCF buffer.
+     * The event is recorded on the stream where CCF writes occur (typically cudaStreamPerThread).
+     * AccumulateDistribution will wait on this event before the kernel reads the CCF data.
+     *
+     * @param ccf_write_stream The CUDA stream on which CCF data was written (e.g., cudaStreamPerThread).
+     */
+    inline void
+    RecordCCFBufferReadyEvent(cudaStream_t ccf_write_stream) {
+        cudaErr(cudaEventRecord(ccf_dbl_buffer_ready_event_[mip_dbl_buffer_idx_], ccf_write_stream));
+    }
+
+    /**
+     * @brief Makes calc_stream_ wait for CCF buffer writes to complete before kernel reads.
+     *
+     * Called internally at the start of AccumulateDistribution to ensure the kernel
+     * does not read CCF data before it has been fully written by the FFT operations.
+     */
+    inline void
+    WaitOnCCFBufferReady( ) {
+        cudaErr(cudaStreamWaitEvent(calc_stream_[0], ccf_dbl_buffer_ready_event_[mip_dbl_buffer_idx_], cudaEventWaitDefault));
     }
 
     /**
      * @brief Updates the host-side pinned memory for angle arrays with new angle values.
      * This data will be subsequently copied to the device.
      *
-     * @param current_mip_to_process Index of the current MIP/image within the batch.
      * @param current_psi Current psi angle.
      * @param current_theta Current theta angle.
      * @param current_phi Current phi angle.
      */
-    inline void UpdateHostAngleArrays(const int current_mip_to_process, const float current_psi, const float current_theta, const float current_phi) {
+    inline void UpdateHostAngleArrays(const float current_psi, const float current_theta, const float current_phi) {
+        const int current_mip_to_process = GetCurrentMip_idx( );
         MyDebugAssertTrue(current_mip_to_process >= 0 && current_mip_to_process < n_imgs_to_process_at_once_, "current_mip_to_process (%d) should be >= 0 and < n_imgs_to_process_at_once_ (%d)", current_mip_to_process, n_imgs_to_process_at_once_);
+
         // Populates the host-pinned buffer for angle data for the current image in the batch.
         // This buffer is then copied asynchronously to the device.
-        // The `active_idx_` ensures writing to the correct buffer in the double-buffering scheme.
+        // The `mip_dbl_buffer_idx_` ensures writing to the correct buffer in the double-buffering scheme.
         if constexpr ( std::is_same_v<ccfType, __half> ) {
-            host_angle_arrays_.at(active_idx_)[current_mip_to_process + psi_idx]   = __float2half_rn(current_psi);
-            host_angle_arrays_.at(active_idx_)[current_mip_to_process + theta_idx] = __float2half_rn(current_theta);
-            host_angle_arrays_.at(active_idx_)[current_mip_to_process + phi_idx]   = __float2half_rn(current_phi);
+            host_angle_arrays_.at(mip_dbl_buffer_idx_)[current_mip_to_process + psi_idx( )]   = __float2half_rn(current_psi);
+            host_angle_arrays_.at(mip_dbl_buffer_idx_)[current_mip_to_process + theta_idx( )] = __float2half_rn(current_theta);
+            host_angle_arrays_.at(mip_dbl_buffer_idx_)[current_mip_to_process + phi_idx( )]   = __float2half_rn(current_phi);
         }
         else {
-            host_angle_arrays_.at(active_idx_)[current_mip_to_process + psi_idx]   = __float2bfloat16_rn(current_psi);
-            host_angle_arrays_.at(active_idx_)[current_mip_to_process + theta_idx] = __float2bfloat16_rn(current_theta);
-            host_angle_arrays_.at(active_idx_)[current_mip_to_process + phi_idx]   = __float2bfloat16_rn(current_phi);
+            host_angle_arrays_.at(mip_dbl_buffer_idx_)[current_mip_to_process + psi_idx( )]   = __float2bfloat16_rn(current_psi);
+            host_angle_arrays_.at(mip_dbl_buffer_idx_)[current_mip_to_process + theta_idx( )] = __float2bfloat16_rn(current_theta);
+            host_angle_arrays_.at(mip_dbl_buffer_idx_)[current_mip_to_process + phi_idx( )]   = __float2bfloat16_rn(current_phi);
         }
+        IncrementCurrentMip_idx( );
     }
 
     /**
@@ -301,9 +325,9 @@ class TM_EmpiricalDistribution {
     // This would probably be better if all the arrays were contiguous in memory so we only have one api call per round FIXME
     inline void UpdateDeviceAngleArrays( ) {
         // Asynchronously copies the entire batch of angle data (psi, theta, phi for all images in the batch)
-        // from the host-pinned memory (`host_angle_arrays_`) to the corresponding device memory (`device_host_angle_arrays_`).
+        // from the host-pinned memory (`host_angle_arrays_`) to the corresponding device memory (`device_angle_arrays_`).
         // This operation is enqueued in `calc_stream_[0]`.
-        cudaErr(cudaMemcpyAsync(device_host_angle_arrays_.at(active_idx_), host_angle_arrays_.at(active_idx_), n_imgs_to_process_at_once_ * sizeof(ccfType) * 3, cudaMemcpyHostToDevice, calc_stream_[0]));
+        cudaErr(cudaMemcpyAsync(device_angle_arrays_.at(mip_dbl_buffer_idx_), host_angle_arrays_.at(mip_dbl_buffer_idx_), n_imgs_to_process_at_once_ * sizeof(ccfType) * 3, cudaMemcpyHostToDevice, calc_stream_[0]));
     }
 
     /**

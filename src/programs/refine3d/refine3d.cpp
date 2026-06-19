@@ -1,5 +1,8 @@
 #include "../../core/core_headers.h"
 
+// Enable experimental exposure filtering during refinement for multiview data
+// #define cisTEM_test_exposure_filtering
+
 class
         Refine3DApp : public MyApp {
   public:
@@ -1261,14 +1264,46 @@ bool Refine3DApp::DoCalculation( ) {
                 //			wxPrintf("tx, ty, sx, sy = %g %g %g %g\n", input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, image_shift_x, image_shift_y);
                 refine_particle_local.InitCTFImage(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, input_parameters.amplitude_contrast, input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, input_parameters.phase_shift, input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, image_shift_x, image_shift_y);
             }
+
+#ifdef cisTEM_test_exposure_filtering
+            // Set total exposure for multiview particle processing
+            refine_particle_local.total_exposure = input_parameters.total_exposure;
+#endif
+
             //		refine_particle_local.SetLowResolutionContrast(low_resolution_contrast);
             refine_particle_local.filter_radius_low = low_resolution_limit;
             refine_particle_local.SetIndexForWeightedCorrelation( );
+
+#ifdef cisTEM_test_exposure_filtering
+            // Integrate exposure decay with SSNR weighting (Grant & Grigorieff 2015)
+            // Create exposure-modified SSNR curve for local refinement
+            if ( refine_particle_local.total_exposure > 0.0f ) {
+                MyDebugAssertTrue(refine_particle_local.total_exposure > 0.0f, "Total exposure must be > 0 for exposure-SSNR filtering (particle %d)", image_counter);
+
+                // Make a copy of the SSNR curve and apply exposure decay
+                Curve exposure_modified_ssnr = refine_statistics.part_SSNR;
+                refine_particle_local.ApplyExposureDecayToSSNRCurve(exposure_modified_ssnr,
+                                                                    refine_particle_local.total_exposure,
+                                                                    input_parameters.microscope_voltage_kv);
+                if ( normalize_input_3d )
+                    refine_particle_local.WeightBySSNR(exposure_modified_ssnr, 1);
+                else
+                    refine_particle_local.WeightBySSNR(exposure_modified_ssnr, 0);
+            }
+            else {
+                // No exposure filtering, use original SSNR
+                if ( normalize_input_3d )
+                    refine_particle_local.WeightBySSNR(refine_statistics.part_SSNR, 1);
+                else
+                    refine_particle_local.WeightBySSNR(refine_statistics.part_SSNR, 0);
+            }
+#else
             if ( normalize_input_3d )
                 refine_particle_local.WeightBySSNR(refine_statistics.part_SSNR, 1);
             // Apply SSNR weighting only to image since input 3D map assumed to be calculated from correctly whitened images
             else
                 refine_particle_local.WeightBySSNR(refine_statistics.part_SSNR, 0);
+#endif
             refine_particle_local.PhaseFlipImage( );
             refine_particle_local.BeamTiltMultiplyImage( );
             //		refine_particle_local.CosineMask(false, true, 0.0);
@@ -1302,6 +1337,11 @@ bool Refine3DApp::DoCalculation( ) {
                     search_particle_local.SetParameters(input_parameters);
                     search_particle_local.number_of_search_dimensions = refine_particle_local.number_of_search_dimensions;
                     search_particle_local.InitCTFImage(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, input_parameters.amplitude_contrast, input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, input_parameters.phase_shift, input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, image_shift_x, image_shift_y);
+
+#ifdef cisTEM_test_exposure_filtering
+                    // Set total exposure for multiview particle processing
+                    search_particle_local.total_exposure = input_parameters.total_exposure;
+#endif
                     //				search_particle_local.SetLowResolutionContrast(low_resolution_contrast);
                     temp_image_local.CopyFrom(&input_image_local);
                     // Multiply by binning_factor so variance after binning is close to 1.
@@ -1319,7 +1359,27 @@ bool Refine3DApp::DoCalculation( ) {
                     search_particle_local.PhaseShiftInverse( );
                     // Always apply particle SSNR weighting (i.e. whitening) reference normalization since reference
                     // projections will not have SSNR (i.e. CTF-dependent) weighting applied
+
+#ifdef cisTEM_test_exposure_filtering
+                    // Integrate exposure decay with SSNR weighting (Grant & Grigorieff 2015)
+                    // Create exposure-modified SSNR curve
+                    if ( search_particle_local.total_exposure > 0.0f ) {
+                        MyDebugAssertTrue(search_particle_local.total_exposure > 0.0f, "Total exposure must be > 0 for exposure-SSNR filtering (particle %d)", image_counter);
+
+                        // Make a copy of the SSNR curve and apply exposure decay
+                        Curve exposure_modified_ssnr = search_statistics.part_SSNR;
+                        search_particle_local.ApplyExposureDecayToSSNRCurve(exposure_modified_ssnr,
+                                                                            search_particle_local.total_exposure,
+                                                                            input_parameters.microscope_voltage_kv);
+                        search_particle_local.WeightBySSNR(exposure_modified_ssnr, 1);
+                    }
+                    else {
+                        // No exposure filtering, use original SSNR
+                        search_particle_local.WeightBySSNR(search_statistics.part_SSNR, 1);
+                    }
+#else
                     search_particle_local.WeightBySSNR(search_statistics.part_SSNR, 1);
+#endif
                     search_particle_local.PhaseFlipImage( );
                     search_particle_local.BeamTiltMultiplyImage( );
                     //				search_particle_local.CosineMask(false, true, 0.0);

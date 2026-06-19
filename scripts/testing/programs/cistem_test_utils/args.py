@@ -59,7 +59,6 @@ def get_config(args, data_dir: str, ref_number: int, img_number: int):
     config['result_number_to_process'] = 1
     config['sample_thickness'] = 2000.0  # Angstrom
     config['result_binning_factor'] = 4
-    config['result_ignore_n_pixels_from_edge'] = -1
 
     for arg_val in args.args_to_check:
         # Store the default value for comparison

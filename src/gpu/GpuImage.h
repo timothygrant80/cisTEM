@@ -139,14 +139,11 @@ class GpuImage {
     ////////////////////////////////////////////////////////
 
     // At some point having either a queue or something else will be helpful if these continue to expand.
-    cudaEvent_t npp_calc_event;
+    // Events are initialized to nullptr; non-null indicates they've been created
     cudaEvent_t block_host_event;
     cudaEvent_t return_sum_of_squares_event;
     cudaEvent_t return_sum_of_reals_event;
-    bool        is_npp_calc_event_initialized;
-    bool        is_block_host_event_initialized;
-    bool        is_return_sum_of_squares_event_initialized;
-    bool        is_return_sum_of_reals_event_initialized;
+    cudaEvent_t fft_plan_event;
     //	cublasHandle_t cublasHandle;
 
     cufftHandle cuda_plan_forward;
@@ -296,12 +293,10 @@ class GpuImage {
     void  CopyDeviceToNewHost(Image& cpu_image, bool should_block_until_complete, bool free_gpu_memory, bool unpin_host_memory = true);
     Image CopyDeviceToNewHost(bool should_block_until_complete, bool free_gpu_memory, bool unpin_host_memory = true);
 
-    // Synchronize the full stream.
-    void Record( );
-    void RecordBlocking( );
-    void Wait( );
-    void WaitBlocking( );
-    void RecordAndWait( );
+    // Event synchronization with explicit stream control
+    void Record(cudaStream_t stream);
+    void Wait(cudaStream_t stream, bool block_host = false);
+    void RecordAndWait(cudaStream_t stream, bool block_host = false);
     // Maximum intensity projection
 
     // FIXME: These are added for the unblur refinement but are untested.
@@ -324,6 +319,21 @@ class GpuImage {
     bool Init(Image& cpu_image, bool pin_host_memory = true, bool allocate_real_values = true);
     void SetupInitialValues( );
     void UpdateBoolsToDefault( );
+
+    /**
+     * @brief Configure FFT plan with specified stream association
+     *
+     * Associates the cuFFT plans with a CUDA stream for asynchronous execution.
+     *
+     * @param plan_type Type of FFT plan to create
+     * @param input_buffer Input buffer pointer
+     * @param output_buffer Output buffer pointer
+     * @param stream CUDA stream to associate with the plan (default: cudaStreamPerThread)
+     *
+     * @note IMPORTANT: The caller must ensure that custom streams outlive this GpuImage object.
+     *       The GpuImage does not own the stream and will not destroy it. If a custom stream
+     *       is destroyed before this GpuImage, FFT operations will fail with undefined behavior.
+     */
     void SetCufftPlan(cistem::fft_type::Enum plan_type, void* input_buffer, void* output_buffer, cudaStream_t stream = cudaStreamPerThread);
 
     cistem::fft_type::Enum set_plan_type;
@@ -447,7 +457,6 @@ class GpuImage {
                                  bool             swap_quadrants,
                                  bool             apply_shifts,
                                  bool             zero_central_pixel = false,
-                                 GpuImage*        mask               = nullptr,
                                  cudaStream_t     stream             = cudaStreamPerThread);
 
     void Abs( );
@@ -526,7 +535,8 @@ class GpuImage {
     ///// Methods for creating or storing masks used for otherwise slow looping operations
     ////////////////////////////////////////////////////////////////////////
 
-    enum BufferType : int { b_image,
+    enum BufferType : int { no_buffer,
+                            b_image,
                             b_sum,
                             b_min,
                             b_minIDX,
@@ -546,8 +556,8 @@ class GpuImage {
                             b_weighted_correlation };
 
     //  void CublasInit();
-    void NppInit(cudaStream_t stream = cudaStreamPerThread);
-    void BufferInit(BufferType bt, int n_elements = 0);
+    void NppInit(cudaStream_t stream, BufferType bt = no_buffer, int n_elements = 0);
+    void BufferInit(BufferType bt, cudaStream_t stream, int n_elements = 0);
     void BufferDestroy( );
     void FreeFFTPlan( );
 
@@ -594,9 +604,10 @@ class GpuImage {
     float     ReturnSumSquareModulusComplexValues( );
 
     // Callback related parameters
-    bool is_set_convertInputf16Tof32;
-    bool is_set_scaleFFTAndStore;
-    bool is_set_complexConjMulLoad;
+    bool  is_set_convertInputf16Tof32;
+    bool  is_set_scaleFFTAndStore;
+    bool  is_set_complexConjMulLoad;
+    void* d_complexConjMulLoad_params; // Device memory for callback parameters
 
     /*template void d_MultiplyByScalar<T>(T* d_input, T* d_multiplicators, T* d_output, size_t elements, int batch);*/
 };

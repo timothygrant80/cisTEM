@@ -1,7 +1,13 @@
 {
+    // IMPORTANT: This file is synchronized with tasks.json build configurations.
+    // Each configuration here should match a build directory created by tasks.json.
+    // When adding new build profiles:
+    //   1. Add a Configure/BUILD task pair in tasks.json with a new build directory
+    //   2. Add a matching configuration here with forcedInclude pointing to that build's cistem_config.h
+    //   3. Configuration name should match the build directory name for clarity
     "configurations": [
         {
-            "name": "Linux",
+            "name": "intel-gpu-static",
             "includePath": [
                 "${workspaceFolder}/**",
                 "/opt/WX/icc-static/include/wx-3.0/",
@@ -9,10 +15,10 @@
                 "/opt/cuTensor/include"
             ],
             "defines": [
-                "_FILE_OFFSET_BITS=64",
-                "WXUSINGDLL",
-                "__WXGTK__",
-                "DEBUG"
+                "ENABLEGPU"
+            ],
+            "forcedInclude": [
+                "${workspaceFolder}/build/intel-gpu-static/cistem_config.h"
             ],
             "compilerPath": "/opt/intel/oneapi/compiler/latest/linux/bin/intel64/icpc",
             "cStandard": "c17",
@@ -22,20 +28,18 @@
             }
         },
         {
-            "name": "GPU Linux",
+            "name": "intel-gpu-debug-static",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/opt/WX/intel-dynamic/include/wx-3.0/",
+                "/opt/WX/icc-static/include/wx-3.0/",
                 "/usr/local/cuda/include",
                 "/opt/cuTensor/include"
             ],
             "defines": [
-                "_FILE_OFFSET_BITS=64",
-                "WXUSINGDLL",
-                "__WXGTK__",
-                "ENABLEGPU",
-                "SHOW_CISTEM_GPU_OPTIONS",
-                "cisTEM_USING_FastFFT"
+                "ENABLEGPU"
+            ],
+            "forcedInclude": [
+                "${workspaceFolder}/build/intel-gpu-debug-static/cistem_config.h"
             ],
             "compilerPath": "/opt/intel/oneapi/compiler/latest/linux/bin/intel64/icpc",
             "cStandard": "c17",
@@ -45,23 +49,81 @@
             }
         },
         {
-            "name": "GPU debug Linux",
+            "name": "intel-debug-static",
             "includePath": [
                 "${workspaceFolder}/**",
-                "/opt/WX/intel-dynamic/include/wx-3.0/",
+                "/opt/WX/icc-static/include/wx-3.0/",
+                "/usr/local/cuda/include",
+                "/opt/cuTensor/include"
+            ],
+            "defines": [],
+            "forcedInclude": [
+                "${workspaceFolder}/build/intel-debug-static/cistem_config.h"
+            ],
+            "compilerPath": "/opt/intel/oneapi/compiler/latest/linux/bin/intel64/icpc",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "browse": {
+                "limitSymbolsToIncludedHeaders": true
+            }
+        },
+        {
+            "name": "intel-gpu-debug-static-libtorch",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/opt/WX/icc-static/include/wx-3.0/",
                 "/usr/local/cuda/include",
                 "/opt/cuTensor/include"
             ],
             "defines": [
-                "_FILE_OFFSET_BITS=64",
-                "WXUSINGDLL",
-                "__WXGTK__",
-                "DEBUG",
-                "ENABLEGPU",
-                "SHOW_CISTEM_GPU_OPTIONS",
-                "cisTEM_USING_FastFFT"
+                "ENABLEGPU"
+            ],
+            "forcedInclude": [
+                "${workspaceFolder}/build/intel-gpu-debug-static-libtorch/cistem_config.h"
             ],
             "compilerPath": "/opt/intel/oneapi/compiler/latest/linux/bin/intel64/icpc",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "browse": {
+                "limitSymbolsToIncludedHeaders": true
+            }
+        },
+        {
+            "name": "GNU-gpu",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/opt/WX/gcc-static/include/wx-3.0/",
+                "/usr/local/cuda/include",
+                "/opt/cuTensor/include"
+            ],
+            "defines": [
+                "ENABLEGPU"
+            ],
+            "forcedInclude": [
+                "${workspaceFolder}/build/GNU-gpu/cistem_config.h"
+            ],
+            "compilerPath": "/usr/bin/g++",
+            "cStandard": "c17",
+            "cppStandard": "c++17",
+            "browse": {
+                "limitSymbolsToIncludedHeaders": true
+            }
+        },
+        {
+            "name": "clang-gpu",
+            "includePath": [
+                "${workspaceFolder}/**",
+                "/opt/WX/clang-static/include/wx-3.0/",
+                "/usr/local/cuda/include",
+                "/opt/cuTensor/include"
+            ],
+            "defines": [
+                "ENABLEGPU"
+            ],
+            "forcedInclude": [
+                "${workspaceFolder}/build/clang-gpu/cistem_config.h"
+            ],
+            "compilerPath": "/usr/bin/clang++",
             "cStandard": "c17",
             "cppStandard": "c++17",
             "browse": {

@@ -52,6 +52,10 @@ class NumericTextFile {
     void WriteLine(T* data_array);
 
     void WriteCommentLine(const char* format, ...);
+
+    // Search comment lines for "# KEY value" and return the value as a float.
+    // Returns true if found, false otherwise. Rewinds the file after scanning.
+    bool ReadCommentValueAsFloat(const wxString& key, float& value);
 };
 
 #endif // __SRC_CORE_NUMERIC_TEXT_FILE_H__

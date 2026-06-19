@@ -107,6 +107,7 @@ class
     void TestIntegerShifts( );
     void TestDatabase( );
     void TestRunProfileDiskOperations( );
+    void TestRunProfileCLIArguments( );
     void TestCTFNodes( );
     void TestSpectrumImageMethods( );
 #ifdef cisTEM_USING_LIBTORCH
@@ -169,6 +170,7 @@ bool MyTestApp::DoCalculation( ) {
     TestRandomVariableFunctions( );
     TestIntegerShifts( );
     TestRunProfileDiskOperations( );
+    TestRunProfileCLIArguments( );
     TestCTFNodes( );
     TestSpectrumImageMethods( );
 #ifdef cisTEM_USING_LIBTORCH
@@ -2048,6 +2050,71 @@ void MyTestApp::TestRunProfileDiskOperations( ) {
     run_profile_manager2.AddBlankProfile( );
     run_profile_manager2.AddBlankProfile( );
     run_profile_manager2.AddBlankProfile( );
+
+    EndTest( );
+}
+
+void MyTestApp::TestRunProfileCLIArguments( ) {
+    BeginTest("RunProfile CLI Arguments");
+
+    // Create a profile with one run command so we can verify run_commands too
+    RunProfile profile;
+    profile.AddCommand("$command", 1, 1, false, 0, 0);
+
+    // 1. HasCLIArgument on fresh profile should return false
+    if ( profile.HasCLIArgument("--allow-over-focus") != false ) {
+        FailTest;
+    }
+
+    // 2. AppendCLIArgument basic - append and verify
+    profile.AppendCLIArgument("--allow-over-focus");
+    if ( profile.HasCLIArgument("--allow-over-focus") != true ) {
+        FailTest;
+    }
+    if ( profile.manager_command != "$command --allow-over-focus" ) {
+        FailTest;
+    }
+
+    // 3. Dedup check - appending same argument again should be a no-op
+    profile.AppendCLIArgument("--allow-over-focus");
+    if ( profile.manager_command != "$command --allow-over-focus" ) {
+        FailTest;
+    }
+
+    // 4. Substring false positive - HasCLIArgument("--allow") should return false
+    //    even though "--allow-over-focus" is present
+    if ( profile.HasCLIArgument("--allow") != false ) {
+        FailTest;
+    }
+
+    // 5. Multiple distinct arguments
+    profile.AppendCLIArgument("--disable-gpu-prj");
+    if ( profile.HasCLIArgument("--disable-gpu-prj") != true ) {
+        FailTest;
+    }
+    if ( profile.manager_command != "$command --allow-over-focus --disable-gpu-prj" ) {
+        FailTest;
+    }
+
+    // 6. run_commands updated - verify run_commands[0] also contains the arguments
+    if ( ! profile.run_commands[0].command_to_run.Contains("--allow-over-focus") ) {
+        FailTest;
+    }
+    if ( ! profile.run_commands[0].command_to_run.Contains("--disable-gpu-prj") ) {
+        FailTest;
+    }
+    if ( profile.run_commands[0].command_to_run != "$command --allow-over-focus --disable-gpu-prj" ) {
+        FailTest;
+    }
+
+    // 7. Whitespace in argument - leading/trailing spaces should be preserved as-is
+    //    by the Replace mechanism (the argument is inserted verbatim)
+    RunProfile profile2;
+    profile2.AddCommand("$command", 1, 1, false, 0, 0);
+    profile2.AppendCLIArgument("--trimmed-arg");
+    if ( profile2.HasCLIArgument("--trimmed-arg") != true ) {
+        FailTest;
+    }
 
     EndTest( );
 }

@@ -794,7 +794,7 @@ bool CtffindApp::DoCalculation( ) {
     Image*           temp_image               = new Image( );
     Image*           sum_image                = new Image( );
     Image*           resampled_power_spectrum = new Image( );
-    bool             resampling_is_necessary;
+    bool             resampling_is_necessary{false};
     CTF*             current_ctf = new CTF( );
     float            average, sigma;
     int              convolution_box_size;

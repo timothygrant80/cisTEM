@@ -49,7 +49,7 @@ void Reconstruct3DApp::DoInteractiveUserInput( ) {
     bool     crop_images              = false;
     bool     split_even_odd           = true;
     bool     center_mass              = false;
-    bool     use_input_reconstruction = false;
+    bool     use_input_reconstruction = false; // Actually controls ML (Maximum Likelihood) blurring - poorly named variable
     bool     threshold_input_3d       = true;
     int      correct_ewald_sphere     = 0;
     bool     dump_arrays              = false;
@@ -93,7 +93,7 @@ void Reconstruct3DApp::DoInteractiveUserInput( ) {
     crop_images              = my_input->GetYesNoFromUser("Crop particle images", "Should the particle images be cropped to speed up computation?", "No");
     split_even_odd           = my_input->GetYesNoFromUser("If no subset assigned, FSC calc with even/odd particles?", "Should the FSC half volumes be calculated using even and odd particles? (only relevant if star file does not specify cisTEMAssignedSubset", "Yes");
     center_mass              = my_input->GetYesNoFromUser("Center mass", "Should the calculated map be centered in the box according to the center of mass (only for C symmetry)?", "No");
-    use_input_reconstruction = my_input->GetYesNoFromUser("Apply likelihood blurring", "Should ML blurring be applied?", "No");
+    use_input_reconstruction = my_input->GetYesNoFromUser("Apply likelihood blurring", "Should ML blurring be applied?", "No"); // Note: variable name is misleading - this controls ML blurring, not use of input reconstruction
     threshold_input_3d       = my_input->GetYesNoFromUser("Threshold input reconstruction", "Should the input reconstruction thresholded to suppress some of the background noise", "No");
     //	correct_ewald_sphere = my_input->GetIntFromUser("Correct for Ewald sphere curvature (0 = no, 1 = correct hand, -1 = wrong hand)", "Should the reconstruction be corrected for the Ewald sphere curvature?", "0", -1, 1);
     dump_arrays = my_input->GetYesNoFromUser("Dump intermediate arrays (merge later)", "Should the 3D reconstruction arrays be dumped to a file for later merging with other jobs", "No");
@@ -251,19 +251,16 @@ bool Reconstruct3DApp::DoCalculation( ) {
     wxDateTime my_time_in;
 
     if ( ! DoesFileExist(input_star_filename) ) {
-        SendError(wxString::Format("Error: Input star file %s not found\n", input_star_filename));
-        exit(-1);
+        SendErrorAndCrash(wxString::Format("Error: Input star file %s not found\n", input_star_filename));
     }
     if ( ! DoesFileExist(input_particle_stack) ) {
-        SendError(wxString::Format("Error: Input particle stack %s not found\n", input_particle_stack));
-        exit(-1);
+        SendErrorAndCrash(wxString::Format("Error: Input particle stack %s not found\n", input_particle_stack));
     }
     MRCFile  input_stack(input_particle_stack.ToStdString( ), false);
     MRCFile* input_3d_file;
     if ( use_input_reconstruction ) {
         if ( ! DoesFileExist(input_reconstruction) ) {
-            SendError(wxString::Format("Error: Input reconstruction %s not found\n", input_reconstruction));
-            exit(-1);
+            SendErrorAndCrash(wxString::Format("Error: Input reconstruction %s not found\n", input_reconstruction));
         }
         input_3d_file = new MRCFile(input_reconstruction.ToStdString( ), false);
     }
@@ -280,22 +277,6 @@ bool Reconstruct3DApp::DoCalculation( ) {
     // TODO: remove this - there may be cases when there are multiple particle groups and yet we do NOT want to apply an exposure filter during reconstruction
     apply_exposure_filter_during_reconstruction = input_star_file.ContainsMultipleParticleGroups( );
 
-    //	input_par_file.ReadFile(true, input_stack.ReturnZSize());
-    /*	input_par_file.ReduceAngles();
-	min_class = myroundint(input_par_file.ReturnMin(7));
-	max_class = myroundint(input_par_file.ReturnMax(7));
-	for (i = min_class; i <= max_class; i++)
-	{
-		temp_float = input_par_file.ReturnDistributionMax(2, i);
-		sigma = input_par_file.ReturnDistributionSigma(2, temp_float, i);
-		if (temp_float != 0.0) wxPrintf("theta max, sigma, phi max, sigma = %i %g %g", i, temp_float, sigma);
-		input_par_file.SetParameters(2, temp_float, sigma / 2.0, i);
-		temp_float = input_par_file.ReturnDistributionMax(3, i);
-		sigma = input_par_file.ReturnDistributionSigma(3, temp_float, i);
-		if (temp_float != 0.0) wxPrintf(" %g %g\n", temp_float, sigma);
-		input_par_file.SetParameters(3, temp_float, sigma / 2.0, i);
-	} */
-
     // sigma values
     input_star_file.RemoveSigmaOutliers(2.0, false, true);
 
@@ -310,12 +291,10 @@ bool Reconstruct3DApp::DoCalculation( ) {
     }
 
     if ( input_stack.ReturnXSize( ) != input_stack.ReturnYSize( ) ) {
-        SendError("Error: Particles are not square\n");
-        exit(-1);
+        SendErrorAndCrash("Error: Particles are not square\n");
     }
     if ( last_particle < first_particle && last_particle != 0 ) {
-        SendError("Error: Number of last particle to refine smaller than number of first particle to refine\n");
-        exit(-1);
+        SendErrorAndCrash("Error: Number of last particle to refine smaller than number of first particle to refine\n");
     }
 
     if ( last_particle == 0 )
@@ -479,13 +458,6 @@ bool Reconstruct3DApp::DoCalculation( ) {
             images_for_noise_power++;
     }
 
-    /*	for (i = 0; i < input_particle.number_of_parameters; i++)
-	{
-		parameter_average[i] /= input_par_file.number_of_lines;
-		parameter_variance[i] /= input_par_file.number_of_lines;
-		parameter_variance[i] -= powf(parameter_average[i],2);
-	}*/
-
     parameter_averages  = input_star_file.ReturnParameterAverages( );
     parameter_variances = input_star_file.ReturnParameterVariances( );
 
@@ -588,8 +560,9 @@ bool Reconstruct3DApp::DoCalculation( ) {
                 }
                 if ( input_parameters.position_in_stack < first_particle || input_parameters.position_in_stack > last_particle )
                     continue;
-                if ( apply_exposure_filter_during_reconstruction && input_parameters.beam_tilt_group == 0 )
-                    continue;
+                // Removed beam_tilt_group==0 skip - particles already filtered during import
+                // if ( apply_exposure_filter_during_reconstruction && input_parameters.beam_tilt_group == 0 )
+                //     continue;
 
                 image_counter++;
                 if ( is_running_locally == true && ReturnThreadNumberOfCurrentThread( ) == 0 )
@@ -781,9 +754,6 @@ bool Reconstruct3DApp::DoCalculation( ) {
             if ( input_parameters.position_in_stack < first_particle || input_parameters.position_in_stack > last_particle )
                 continue;
 
-            if ( apply_exposure_filter_during_reconstruction && input_parameters.beam_tilt_group == 0 )
-                continue;
-
             if ( input_parameters.occupancy == 0.0f || input_parameters.score < score_threshold || input_parameters.image_is_active < 0.0 ) {
                 if ( is_running_locally == false ) {
                     temp_float             = input_parameters.position_in_stack;
@@ -805,11 +775,14 @@ bool Reconstruct3DApp::DoCalculation( ) {
 
             input_particle.InitCTFImage(input_parameters.microscope_voltage_kv, input_parameters.microscope_spherical_aberration_mm, std::max(input_parameters.amplitude_contrast, 0.001f), input_parameters.defocus_1, input_parameters.defocus_2, input_parameters.defocus_angle, input_parameters.phase_shift, input_parameters.beam_tilt_x / 1000.0f, input_parameters.beam_tilt_y / 1000.0f, input_parameters.image_shift_x, input_parameters.image_shift_y, calculate_complex_ctf);
             if ( apply_exposure_filter_during_reconstruction ) {
+                MyDebugAssertTrue(input_parameters.total_exposure > 0.0f, "Total exposure must be > 0 when applying exposure filter (particle %d, pos_in_stack %d)", image_counter, input_parameters.position_in_stack);
+
+                // FIXME: we should probably just have this on the heap and set it once outside the loop
                 ElectronDose my_electron_dose(input_parameters.microscope_voltage_kv, input_parameters.pixel_size);
                 float        dose_filter[input_particle.ctf_image->real_memory_allocated / 2];
 
                 ZeroFloatArray(dose_filter, input_particle.ctf_image->real_memory_allocated / 2);
-                my_electron_dose.CalculateDoseFilterAs1DArray(&input_image_local, dose_filter, input_parameters.pre_exposure, input_parameters.total_exposure);
+                my_electron_dose.CalculateDoseFilterAs1DArray(input_particle.ctf_image, dose_filter, 0.0f, input_parameters.total_exposure);
 
                 for ( int pixel_counter = 0; pixel_counter < input_particle.ctf_image->real_memory_allocated / 2; pixel_counter++ ) {
                     input_particle.ctf_image->complex_values[pixel_counter] *= dose_filter[pixel_counter];
@@ -998,8 +971,9 @@ bool Reconstruct3DApp::DoCalculation( ) {
                     }
                 }
             }
-            else // no cropping
-            {
+            else {
+                // no cropping
+
                 if ( binning_factor != 1.0 ) {
                     //				temp_image_local.ReadSlice(&input_stack, input_particle.location_in_stack);
                     temp_image_local.CopyFrom(&input_image_local);
@@ -1081,6 +1055,7 @@ bool Reconstruct3DApp::DoCalculation( ) {
                     }
                 }
                 else {
+
                     //				input_particle.particle_image->ReadSlice(&input_stack, input_particle.location_in_stack);
                     input_particle.particle_image->CopyFrom(&input_image_local);
                     if ( invert_contrast )
@@ -1161,64 +1136,38 @@ bool Reconstruct3DApp::DoCalculation( ) {
 
             input_particle.particle_score     = input_parameters.score;
             input_particle.particle_occupancy = input_parameters.occupancy;
+            input_particle.logp               = input_parameters.logp;
+            input_particle.particle_group     = input_parameters.particle_group;
+            input_particle.total_exposure     = input_parameters.total_exposure;
             input_particle.sigma_noise        = input_parameters.sigma;
             if ( input_particle.sigma_noise <= 0.0 )
                 input_particle.sigma_noise = parameter_averages.sigma;
 
-            /*
-		 * Assign each particle to one of the two half-maps for later FSC
-		 */
-            if ( apply_exposure_filter_during_reconstruction ) // TODO - remove this branch - this was a hack for going from emClarity to cisTEM before particle_group and assigned_subset were available
-            {
-                if ( input_parameters.beam_tilt_group == 1 )
-                    input_particle.insert_even = false;
-                else if ( input_parameters.beam_tilt_group == 2 )
-                    input_particle.insert_even = true;
-                else {
-                    wxPrintf("\nReconstruct subtomogram average is temporarily using the beam_tilt_group to specify odd/even (1/2) or ignore (0), found %d\n", input_parameters.beam_tilt_group);
-                    exit(-1);
+            // Always use assigned_subset now, regardless of exposure filtering
+            // The beam_tilt_group hack has been handled during import
+            if ( input_parameters.assigned_subset < 1 ) {
+                // This particle has not yet been assigned to a subset. Let's do so now
+                if ( current_image_local == 0 )
+                    SendInfo("Warning: No assigned subset for FSC. This should not happen. Will use even/odd assignment.");
+                if ( input_parameters.position_in_stack % fsc_particle_repeat < fsc_particle_repeat / 2 ) {
+                    input_parameters.assigned_subset = 2;
                 }
+                else {
+                    input_parameters.assigned_subset = 1;
+                }
+            }
+            if ( input_parameters.assigned_subset == 2 ) {
+                input_particle.insert_even = true;
             }
             else {
-                if ( input_parameters.assigned_subset < 1 ) {
-                    // This particle has not yet been assigned to a subset. Let's do so now
-                    if ( current_image_local == 0 )
-                        SendInfo("Warning: No assigned subset for FSC. This should not happen. Will use even/odd assignment.");
-                    if ( input_parameters.position_in_stack % fsc_particle_repeat < fsc_particle_repeat / 2 ) {
-                        input_parameters.assigned_subset = 2;
-                    }
-                    else {
-                        input_parameters.assigned_subset = 1;
-                    }
-                }
-                if ( input_parameters.assigned_subset == 2 ) {
-                    input_particle.insert_even = true;
-                }
-                else {
-                    input_particle.insert_even = false;
-                }
+                input_particle.insert_even = false;
             }
 
-            //		input_particle.particle_image->BackwardFFT();
-            //		input_particle.particle_image->AddGaussianNoise(input_particle.particle_image->ReturnSumOfSquares());
-            //		input_particle.particle_image->AddGaussianNoise(100.0 * FLT_MIN);
-            //		input_particle.particle_image->ForwardFFT();
-            //		input_particle.particle_image->QuickAndDirtyWriteSlice("blurred.mrc", image_counter);
-
-            /*
-		 * Insert the particle image into one of the two half maps
-		 */
             if ( input_particle.insert_even ) {
                 my_reconstruction_2_local.InsertSliceWithCTF(input_particle, symmetry_weight);
             }
             else {
-                //			for (i = 0; i < input_particle.particle_image->real_memory_allocated / 2; i++) input_particle.particle_image->complex_values[i] = 1.0f + I * 0.0f;
-                //			for (i = 0; i < input_particle.ctf_image->real_memory_allocated / 2; i++) input_particle.ctf_image->complex_values[i] = 1.0f + I * 0.0f;
-                //			wxPrintf("2D central pixel = %g\n", std::abs(input_particle.particle_image->complex_values[0]));
-                //			wxPrintf("2D central CTF   = %g\n", std::abs(input_particle.ctf_image->complex_values[0]));
                 my_reconstruction_1_local.InsertSliceWithCTF(input_particle, symmetry_weight);
-                //			wxPrintf("3D central pixel = %g ratio = %g\n", std::abs(my_reconstruction_1.image_reconstruction.complex_values[0]), std::abs(my_reconstruction_1.image_reconstruction.complex_values[0])/std::abs(input_particle.particle_image->complex_values[0]));
-                //			wxPrintf("3D central CTF   = %g\n", std::abs(my_reconstruction_1.ctf_reconstruction[0]));
             }
 
             if ( is_running_locally == false ) {
@@ -1226,7 +1175,6 @@ bool Reconstruct3DApp::DoCalculation( ) {
                 JobResult* temp_result = new JobResult;
                 temp_result->SetResult(1, &temp_float);
                 AddJobToResultQueue(temp_result);
-                //wxPrintf("Refine3D : Adding job to job queue..\n");
             }
 
             if ( is_running_locally == true && ReturnThreadNumberOfCurrentThread( ) == 0 )

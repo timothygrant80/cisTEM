@@ -2,7 +2,7 @@
     "name": "cisTEM-${localEnv:USER}-${localWorkspaceFolderBasename}",
     "workspaceMount": "source=${localWorkspaceFolder},target=/workspaces/cisTEM,type=bind,consistency=cached",
     "workspaceFolder": "/workspaces/cisTEM",
-    "image": "cistemdashorg/cistem_build_env:v2.2.3",
+    "image": "cistemdashorg/cistem_build_env:v2.3.0",
     "remoteUser": "cisTEMdev",
     "hostRequirements": {
         "gpu": "optional"
@@ -22,7 +22,6 @@
     "customizations": {
         "vscode": {
             "extensions": [
-                "maelvalais.autoconf",
                 "ms-python.autopep8",
                 "ms-vscode.cpptools",
                 "ms-vscode.cpptools-extension-pack",
@@ -33,16 +32,17 @@
                 "ms-python.vscode-pylance",
                 "ms-python.python",
                 "frinkr.vscode-tabify",
-                "jomeinaster.bracket-peek",
-                "onnovalkering.vscode-singularity",
-                "GitHub.copilot",
-                "GitHub.copilot-chat"
+                "jomeinaster.bracket-peek"
             ]
         }
-    }
+    },
     // For custom mounts, use devcontainer CLI with --mount flag instead of hardcoding here.
     // Example bash aliases (add to ~/.bashrc):
     //   alias cistem-devcontainer='devcontainer up --mount type=bind,source=/scratch,target=/scratch --mount type=bind,source=/sa_shared,target=/sa_shared && devcontainer open'
     //   alias cistem-devcontainer-rebuild='devcontainer up --remove-existing-container --build-no-cache --mount type=bind,source=/scratch,target=/scratch --mount type=bind,source=/sa_shared,target=/sa_shared && devcontainer open'
     // Usage: Run from workspace directory: cistem-devcontainer (or cistem-devcontainer-rebuild to force rebuild)
+    "mounts": [
+        "source=/scratch,target=/scratch,type=bind",
+        "source=/sa_shared,target=/sa_shared,type=bind"
+    ]
 }

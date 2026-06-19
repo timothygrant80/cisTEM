@@ -7,6 +7,7 @@
             "cuda_dir": "/usr/local/cuda",
             "oldest_gpu_arch": "70",
             "target_gpu_arch": "86",
+            "gpu_debug_level": "0",
             "build_dir": "${workspaceFolder}/build",
             // -diag-file-append makes Intel compiler show absolute paths in error messages for easier IDE navigation
             "common_flags": "--enable-experimental --enable-openmp --disable-build-all --enable-profiling",
@@ -41,7 +42,7 @@
         {
             "label": "Configure cisTEM DEBUG build",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/intel-gpu-debug-static && cd ${build_dir}/intel-gpu-debug-static && CC=icc CXX=icpc ../../configure ${input:additional_compiler_flags} --enable-debugmode --enable-gpu-debug --with-wx-config=/opt/WX/icc-static/bin/wx-config --enable-staticmode --with-cuda=${cuda_dir} --with-oldest-gpu-arch=${oldest_gpu_arch} --with-target-gpu-arch=${target_gpu_arch} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+            "command": "mkdir -p ${build_dir}/intel-gpu-debug-static && cd ${build_dir}/intel-gpu-debug-static && CC=icc CXX=icpc ../../configure ${input:additional_compiler_flags} --enable-debugmode --with-gpu-debug=${gpu_debug_level} --with-wx-config=/opt/WX/icc-static/bin/wx-config --enable-staticmode --with-cuda=${cuda_dir} --with-oldest-gpu-arch=${oldest_gpu_arch} --with-target-gpu-arch=${target_gpu_arch} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
         },
         {
             "label": "BUILD cisTEM DEBUG",
@@ -58,12 +59,16 @@
                     "code": 4,
                     "message": 5
                 }
+            },
+            "group": {
+                "kind": "build",
+                "isDefault": true
             }
         },
         {
             "label": "Configure cisTEM DEBUG build TMPVALUE",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/intel-gpu-debug-static-tmpvalue && cd ${build_dir}/intel-gpu-debug-static-tmpvalue && CC=icc CXX=icpc ../../configure ${input:additional_compiler_flags} --enable-debugmode --enable-gpu-debug --with-wx-config=/opt/WX/icc-static/bin/wx-config --enable-staticmode --with-cuda=${cuda_dir} --with-oldest-gpu-arch=${oldest_gpu_arch} --with-target-gpu-arch=${target_gpu_arch} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} --enable-build-calculate-template-pvalue"
+            "command": "mkdir -p ${build_dir}/intel-gpu-debug-static-tmpvalue && cd ${build_dir}/intel-gpu-debug-static-tmpvalue && CC=icc CXX=icpc ../../configure ${input:additional_compiler_flags} --enable-debugmode --with-gpu-debug=${gpu_debug_level} --with-wx-config=/opt/WX/icc-static/bin/wx-config --enable-staticmode --with-cuda=${cuda_dir} --with-oldest-gpu-arch=${oldest_gpu_arch} --with-target-gpu-arch=${target_gpu_arch} ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} --enable-build-calculate-template-pvalue"
         },
         {
             "label": "BUILD cisTEM DEBUG TMPVALUE",
@@ -107,7 +112,7 @@
         {
             "label": "Configure cisTEM DEBUG build with LibTorch",
             "type": "shell",
-            "command": "mkdir -p ${build_dir}/intel-gpu-debug-static-libtorch && cd ${build_dir}/intel-gpu-debug-static-libtorch && CC=icc CXX=icpc ../../configure ${input:additional_compiler_flags} --enable-debugmode --enable-gpu-debug --with-wx-config=/opt/WX/icc-static/bin/wx-config --enable-staticmode --with-cuda=${cuda_dir} --with-oldest-gpu-arch=${oldest_gpu_arch} --with-target-gpu-arch=${target_gpu_arch} --enable-libtorch ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+            "command": "mkdir -p ${build_dir}/intel-gpu-debug-static-libtorch && cd ${build_dir}/intel-gpu-debug-static-libtorch && CC=icc CXX=icpc ../../configure ${input:additional_compiler_flags} --enable-debugmode --with-gpu-debug=${gpu_debug_level} --with-wx-config=/opt/WX/icc-static/bin/wx-config --enable-staticmode --with-cuda=${cuda_dir} --with-oldest-gpu-arch=${oldest_gpu_arch} --with-target-gpu-arch=${target_gpu_arch} --enable-libtorch ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
         },
         {
             "label": "BUILD cisTEM DEBUG with LibTorch",
@@ -159,6 +164,19 @@
             "id": "additional_compiler_flags",
             "description": "additional_compiler_flags",
             "default": ""
+        },
+        {
+            "type": "pickString",
+            "id": "remote_build",
+            "description": "Do a remote build?",
+            "options": ["no", "yes"],
+            "default": "no"
+        },
+        {
+            "type": "promptString",
+            "id": "remote_host",
+            "description": "SSH target for remote build (user@host). Ignored when remote_build=no.",
+            "default": "no"
         }
     ]
 }

@@ -17,7 +17,7 @@ class ElectronDose {
     ElectronDose(float wanted_acceleration_voltage, float wanted_pixel_size);
 
     void  Init(float wanted_acceleration_voltage, float wanted_pixel_size);
-    float ReturnCriticalDose(float spatial_frequency);
+    float ReturnCriticalDose(float spatial_frequency_squared);
     float ReturnDoseFilter(float dose_at_end_of_frame, float critical_dose);
     float ReturnCummulativeDoseFilter(float dose_at_start_of_exposure, float dose_at_end_of_exposure, float critical_dose);
     void  CalculateCummulativeDoseFilterAs1DArray(Image* ref_image, float* filter_array, float dose_start, float dose_finish);
@@ -25,8 +25,8 @@ class ElectronDose {
     void CalculateDoseFilterAs1DArray(Image* ref_image, float* filter_array, float dose_start, float dose_finish);
 };
 
-inline float ElectronDose::ReturnCriticalDose(float spatial_frequency) {
-    return (critical_dose_a * powf(spatial_frequency, reduced_critical_dose_b) + critical_dose_c) * voltage_scaling_factor;
+inline float ElectronDose::ReturnCriticalDose(float spatial_frequency_squared) {
+    return (critical_dose_a * powf(spatial_frequency_squared, reduced_critical_dose_b) + critical_dose_c) * voltage_scaling_factor;
 }
 
 inline float ElectronDose::ReturnDoseFilter(float dose_at_end_of_frame, float critical_dose) {

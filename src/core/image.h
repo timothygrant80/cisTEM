@@ -465,6 +465,7 @@ class Image {
     void QuickAndDirtyReadSlices(std::string filename, int first_slice_to_read, int last_slice_to_read);
 
     bool IsConstant(bool compare_to_constant = false, float constant_to_compare = 0.0f);
+    bool IsFinite( );
     bool HasNan( );
     bool HasNegativeRealValue( );
     void SetToConstant(float wanted_value);
@@ -581,6 +582,7 @@ class Image {
     void FindPeakAtOriginFast2DMask(int max_pix_x, int max_pix_y);
     Peak FindPeakAtOriginFast2D(int max_pix_x, int max_pix_y);
     Peak FindPeakWithIntegerCoordinates(float wanted_min_radius = 0.0, float wanted_max_radius = FLT_MAX, int wanted_min_distance_from_edges = 0);
+    void FindPeakWithIntegerCoordinatesForManyPeaks(std::vector<Peak>& peak_list, std::vector<Peak>& upsampled_peak_list, const float peak_threshold, const float peak_threshold_scale, const float exclusion_radius, const int wanted_min_distance_from_edges);
     Peak FindPeakWithParabolaFit(float wanted_min_radius = 0.0, float wanted_max_radius = FLT_MAX, int wanted_min_distance_from_edges = 0);
 
     void SubSampleWithNoisyResampling(Image* first_sampled_image, Image* second_sampled_image);

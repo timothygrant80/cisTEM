@@ -120,6 +120,20 @@ void RunProfile::SubstituteExecutableName(wxString executable_name) {
     }
 }
 
+void RunProfile::AppendCLIArgument(const wxString& argument) {
+    if ( HasCLIArgument(argument) )
+        return;
+    manager_command += " " + argument;
+    for ( long counter = 0; counter < number_of_run_commands; counter++ ) {
+        run_commands[counter].command_to_run += " " + argument;
+    }
+}
+
+bool RunProfile::HasCLIArgument(const wxString& argument) const {
+    return manager_command.Contains(" " + argument + " ") ||
+           manager_command.EndsWith(" " + argument);
+}
+
 RunProfile& RunProfile::operator=(const RunProfile& t) {
     // Check for self assignment
     if ( this != &t ) {

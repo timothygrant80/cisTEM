@@ -18,6 +18,11 @@ class RefinementPackageParticleInfo {
     float amplitude_contrast;
     float microscope_voltage;
     int   assigned_subset;
+
+    // Multi-view support fields
+    int   particle_group; // Links views of same particle (e.g., across tilt series)
+    float pre_exposure; // Accumulated dose before this image (e^-/A^2)
+    float total_exposure; // Total dose for this image (e^-/A^2)
 };
 
 WX_DECLARE_OBJARRAY(RefinementPackageParticleInfo, ArrayOfRefinmentPackageParticleInfos);
@@ -55,6 +60,8 @@ class RefinementPackage {
     RefinementPackageParticleInfo ReturnParticleInfoByPositionInStack(long wanted_position_in_stack);
 
     long ReturnLastRefinementID( );
+
+    bool ContainsMultiViewData( ) const;
 };
 
 WX_DECLARE_OBJARRAY(RefinementPackage, ArrayOfRefinementPackages);

@@ -1,4 +1,29 @@
-#define cisTEM_temp_disable_gpu_noFastFFT
+
+
+// BATCH_HIGH_RES_EXPERIMENT: Uncomment to enable batch iteration over high-res limit values
+// When enabled, clicking StartEstimation will automatically cycle through values:
+// - First run: GUI value as-is
+// - Subsequent runs: 0.5A steps landing on half/whole numbers up to end_value
+// - NOTE: there is no check that the user has supplied the --max-search-size which will change the resolution to be the highest for a given size. There
+//         is no plan to fix this directly, as we will make that CLI option a radio in this GUI and THEN we can fix it. For now, if you aren't BAH, you shouldn not be building with this hack anyway.
+// #define BATCH_HIGH_RES_EXPERIMENT
+// #define BATCH_ALL_TEMPLATES
+
+// Mutually exclusive hacks
+#if defined(BATCH_HIGH_RES_EXPERIMENT) && defined(BATCH_ALL_TEMPLATES)
+#error "BATCH_HIGH_RES_EXPERIMENT && BATCH_ALL_TEMPLATES cannot be defined together"
+#endif
+
+#if defined(BATCH_HIGH_RES_EXPERIMENT) || defined(BATCH_ALL_TEMPLATES)
+#include <cmath>
+// File-static variables for batch experiment state (confined to this translation unit)
+static bool  s_batch_experiment_active    = false;
+static float s_batch_experiment_end_value = 8.0f; // Stop after this value
+static float s_batch_experiment_step      = 0.5f; // Step size in Angstroms
+static int   s_first_volume_asset_idx     = 0;
+static int   s_number_of_volume_asset_idx = 0;
+static int   s_current_volume_asset_idx   = 0;
+#endif
 
 //#include "../core/core_headers.h"
 #include "../constants/constants.h"
@@ -10,6 +35,8 @@ extern MyVolumeAssetPanel*        volume_asset_panel;
 extern MyRunProfilesPanel*        run_profiles_panel;
 extern MyMainFrame*               main_frame;
 extern MatchTemplateResultsPanel* match_template_results_panel;
+
+constexpr std::array<int, 7> kAllowedSearchSizes = {4096, 2048, 1024, 512, 256, 128, 64};
 
 MatchTemplatePanel::MatchTemplatePanel(wxWindow* parent)
     : MatchTemplatePanelParent(parent) {
@@ -34,13 +61,9 @@ MatchTemplatePanel::MatchTemplatePanel(wxWindow* parent)
     UseFastFFTRadioNo->Enable(false);
 #endif
 
-#ifdef cisTEM_temp_disable_gpu_noFastFFT
-    UseGPURadioYes->Enable(false);
-    UseGPURadioNo->Enable(false);
-#endif
-
     // We need to allow a higher precision, otherwise, the option to resample will almost always be taken
     HighResolutionLimitNumericCtrl->SetPrecision(4);
+
     SetInfo( );
     FillGroupComboBox( );
     FillRunProfileComboBox( );
@@ -57,6 +80,9 @@ MatchTemplatePanel::MatchTemplatePanel(wxWindow* parent)
     result_bitmap.Create(1, 1, 24);
     time_of_last_result_update = time(NULL);
 
+    // Restrict the angular search values to what is allowed on the CLI input
+    OutofPlaneStepNumericCtrl->SetMinMaxValue(0.1f, 360.f);
+    InPlaneStepNumericCtrl->SetMinMaxValue(0.1f, 360.f);
     DefocusSearchRangeNumericCtrl->SetMinMaxValue(0.0f, FLT_MAX);
     DefocusSearchStepNumericCtrl->SetMinMaxValue(1.0f, FLT_MAX);
     PixelSizeSearchRangeNumericCtrl->SetMinMaxValue(0.0f, FLT_MAX);
@@ -78,7 +104,21 @@ MatchTemplatePanel::MatchTemplatePanel(wxWindow* parent)
     SymmetryComboBox->Append("T2");
     SymmetryComboBox->SetSelection(0);
 
+    SearchSizeComboBox->Clear( );
+    SearchSizeComboBox->Append("high-res limit");
+    for ( int size : kAllowedSearchSizes ) {
+        SearchSizeComboBox->Append(wxString::Format("%d", size));
+    }
+    SearchSizeComboBox->SetSelection(0);
+    SearchSizeComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, [this](wxCommandEvent&) {
+        HighResolutionLimitNumericCtrl->Enable(SearchSizeComboBox->GetSelection( ) == 0);
+    });
+
     GroupComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &MatchTemplatePanel::OnGroupComboBox, this);
+
+#ifdef BATCH_ALL_TEMPLATES
+    s_number_of_volume_asset_idx = volume_asset_panel->all_assets_list->number_of_assets;
+#endif
 }
 
 /*
@@ -174,15 +214,6 @@ void MatchTemplatePanel::ResetDefaults( ) {
         ResumeRunCheckBox->Enable(false);
     }
 
-#ifdef cisTEM_temp_disable_gpu_noFastFFT
-#ifdef SHOW_CISTEM_GPU_OPTIONS
-#ifdef cisTEM_USING_FastFFT
-    UseFastFFTRadioYes->SetValue(true);
-#endif
-#else
-    UseFastFFTRadioNo->SetValue(true);
-#endif
-#else
 #ifdef SHOW_CISTEM_GPU_OPTIONS
     UseGPURadioYes->SetValue(true);
 #ifdef cisTEM_USING_FastFFT
@@ -192,7 +223,8 @@ void MatchTemplatePanel::ResetDefaults( ) {
     UseGPURadioNo->SetValue(true);
     UseFastFFTRadioNo->SetValue(true);
 #endif
-#endif
+
+    UsePeakSamplingCorrectionRadioYes->SetValue(true);
 
     DefocusSearchRangeNumericCtrl->ChangeValueFloat(1200.0f);
     DefocusSearchStepNumericCtrl->ChangeValueFloat(200.0f);
@@ -262,7 +294,7 @@ void MatchTemplatePanel::SetInfo( ) {
     InfoText->EndAlignment( );
 
     InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
-    InfoText->WriteText(wxT("TODO: update this with the 2020 paper (finding things in cells) combined with things for bigger regions (Johannes' paper) or baited recon (newer paper)."));
+    InfoText->WriteText(wxT("In template matching, we localize macromolecular complexes in cryo-EM images using a matched filter, the optimal detector for a known signal in Gaussian noise. Compared to single-particle cryo-EM this approach produces a scoring metric that is meaningful on an absolute scale, allowing for automation and the ability to perform statistical inference using the results, while the trade-off is computational expense (Rickgauer, Grigorieff, Denk 2017). In addition to visual proteomics, our template matching implementation allows for high-fidelity detection of bound ligands without template bias while using substantially fewer images than single-particle cryo-EM (Lucas, Himes, Grigorieff 2023).\n\nThe quality of detection depends critically on how faithfully the reference volume reproduces the contrast of the target as it appears in the raw image. Templates are therefore best generated by physics-based simulation rather than simple projection of an atomic model. The cisTEM simulator uses multislice wave propagation through a fully atomistic specimen model, including a coarse-grained solvent representation and an explicit treatment of inelastic scattering via the Frozen-Plasmon method (Himes & Grigorieff, 2021).\n\nThe approach requires enough computation that GPU computation is essential for practical use, especially when searching multiple defocus planes for in situ samples (Lucas, Himes et al. 2021). In order to make the algorithm accessible to users without large GPU clusters, we have introduced a custom FFT library, highly optimized task level parallelsim and optional on-the-fly downsampling with a correction for correlation peak undersampling (Himes, Grant 2026)."));
     InfoText->Newline( );
     InfoText->Newline( );
     InfoText->EndAlignment( );
@@ -286,12 +318,42 @@ void MatchTemplatePanel::SetInfo( ) {
     InfoText->BeginBold( );
     InfoText->WriteText(wxT("Reference Volume : "));
     InfoText->EndBold( );
-    InfoText->WriteText(wxT("The volume that will used for the template search TODO: add a description of how to generate a reference, and padding/sizing considerations."));
+    InfoText->WriteText(wxT("The volume that will used for the template search. NOTE: if you are intend to compare results from different templates it is essential that they have the same average power spectrum, which can be achieved using the scale_with_mask program. Otherwise, differences in local image quality can mask real (or worse yet, create false) differences in template matching score between templates."));
+    InfoText->Newline( );
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("High-ResolutionLimit : "));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT("Defaults to Nyquist limit (2x pixel size) but can be increased to speed up processing, especially for samples that likely have less high-resolution information"));
+    InfoText->Newline( );
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Limit Search Size : "));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT("Alternative to setting the resolution limit, especially useful for data sets with images of different sizes. Uses the maximum resolution that fits in a square window of the specified size. For images > 4096 you MUST downsample to use the FastFFT option."));
+    InfoText->Newline( );
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Point Group Symmetry : "));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT("Restrict the search space by the given symmetry operator."));
+    InfoText->Newline( );
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Perform Defocus Search : "));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT("Repeat the full search at different nominal defocus values. The defocus offset is saved per-pixel in the results. Particularly useful for thicker in situ samples."));
+    InfoText->Newline( );
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Perform Pixel Size Search : "));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT("Repeat the full search, including defocus if specified, for different magnification changes. Generally, this should NOT be used and instead a refined pixel size is better determined for the data set using a few images at the outset of an experiment."));
+    InfoText->Newline( );
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Peak Selection : "));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT("Exclusion radius around each peak in x/y."));
     InfoText->Newline( );
     InfoText->BeginBold( );
     InfoText->WriteText(wxT("Run Profile : "));
     InfoText->EndBold( );
-    InfoText->WriteText(wxT("TODO: reference threading vs process balance. The selected run profile will be used to run the job. The run profile describes how the job should be run (e.g. how many processors should be used, and on which different computers).  Run profiles are set in the Run Profile panel, located under settings."));
+    InfoText->WriteText(wxT("The selected run profile will be used to run the job. For TM, prefer one process with 2-4 threads per GPU. Each process must see only one GPU, which can be accomplished by modifying the run command with \" CUDA_VISIBLE_DEVICES = N <path and command>\".\nRun profiles are set in the Run Profile panel, located under settings."));
     InfoText->Newline( );
     InfoText->Newline( );
     InfoText->EndAlignment( );
@@ -318,6 +380,21 @@ void MatchTemplatePanel::SetInfo( ) {
     InfoText->EndBold( );
     InfoText->WriteText(wxT("The angular step that should be used for the in plane search.  As with the out of plane angle, smaller values may increase accuracy, but will significantly increase the required processing time."));
     InfoText->Newline( );
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Use GPU : "));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT("Debug option. Generally should not be changed."));
+    InfoText->Newline( );
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Use FastFFT Library : "));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT("Debug option. Generally should not be changed unless you must search an image > 4096 in any dimension w/o downsampling."));
+    InfoText->Newline( );
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Use Peak Sampling Correction : "));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT("Debug option. Corrects for scalloping loss when peak intensity is split over pixels due to undersampling. Generally should not be changed."));
+    InfoText->Newline( );
     InfoText->Newline( );
     InfoText->EndAlignment( );
     InfoText->BeginAlignment(wxTEXT_ALIGNMENT_CENTRE);
@@ -330,6 +407,7 @@ void MatchTemplatePanel::SetInfo( ) {
     InfoText->Newline( );
     InfoText->EndAlignment( );
 
+    // NOTE: created these via export bibliography in Zotero using the Elsevier style.
     InfoText->BeginAlignment(wxTEXT_ALIGNMENT_LEFT);
     InfoText->BeginBold( );
     InfoText->WriteText(wxT("Rickgauer J.P., Grigorieff N., Denk W."));
@@ -343,6 +421,60 @@ void MatchTemplatePanel::SetInfo( ) {
     InfoText->EndTextColour( );
     InfoText->EndUnderline( );
     InfoText->Newline( );
+
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Lucas, B.A., Himes, B.A., Grigorieff, N."));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT("2023. Baited reconstruction with 2D template matching for high-resolution structure determination in vitro and in vivo without template bias. eLife 12, RP90486. "));
+    InfoText->BeginURL("https://doi.org/10.7554/eLife.90486");
+    InfoText->BeginUnderline( );
+    InfoText->BeginTextColour(*wxBLUE);
+    InfoText->WriteText(wxT("doi:10.7554/eLife.90486"));
+    InfoText->EndURL( );
+    InfoText->EndTextColour( );
+    InfoText->EndUnderline( );
+    InfoText->Newline( );
+
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Himes, B., Grigorieff, N."));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT(" 2021. Cryo-TEM simulations of amorphous radiation-sensitive samples using multislice wave propagation. IUCrJ 8, 943–953."));
+    InfoText->BeginURL("https://doi.org/10.1107/S2052252521008538");
+    InfoText->BeginUnderline( );
+    InfoText->BeginTextColour(*wxBLUE);
+    InfoText->WriteText(wxT("doi:10.1107/S2052252521008538"));
+    InfoText->EndURL( );
+    InfoText->EndTextColour( );
+    InfoText->EndUnderline( );
+    InfoText->Newline( );
+
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Lucas, B.A., Himes, B.A., Xue, L., Grant, T., Mahamid, J., Grigorieff, N."));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT(" 2021. Locating macromolecular assemblies in cells by 2D template matching with cisTEM. eLife 10, e68946. "));
+    InfoText->BeginURL("https://doi.org/10.7554/eLife.68946");
+    InfoText->BeginUnderline( );
+    InfoText->BeginTextColour(*wxBLUE);
+    InfoText->WriteText(wxT("doi:10.7554/eLife.68946"));
+    InfoText->EndURL( );
+    InfoText->EndTextColour( );
+    InfoText->EndUnderline( );
+    InfoText->Newline( );
+
+    InfoText->BeginBold( );
+    InfoText->WriteText(wxT("Himes B.A., Grant, T."));
+    InfoText->EndBold( );
+    InfoText->WriteText(wxT(" 2026. To Be Published."));
+    InfoText->BeginURL("http://example.com");
+    InfoText->BeginUnderline( );
+    InfoText->BeginTextColour(*wxBLUE);
+    InfoText->WriteText(wxT("doi:tbp"));
+    InfoText->EndURL( );
+    InfoText->EndTextColour( );
+    InfoText->EndUnderline( );
+    InfoText->Newline( );
+    InfoText->BeginBold( );
+
     InfoText->Newline( );
 
     InfoText->EndSuppressUndo( );
@@ -394,6 +526,113 @@ bool MatchTemplatePanel::CheckGroupHasDefocusValues( ) {
         if ( image_was_found == false )
             return false;
     }
+
+    return true;
+}
+
+/**
+ * @brief Checks the currently selected image group for over-focus (negative defocus) images
+ *        and presents the user with options to handle them.
+ *
+ * Queries the database to find images in the active group whose CTF estimates have
+ * defocus1 > 0 AND defocus2 > 0 (under-focus). Any images not meeting this criterion
+ * are considered over-focus. If over-focus images are found, a dialog is shown offering:
+ *
+ *   - YES: Create a new image group containing only the under-focus images, select it
+ *     in the GroupComboBox, and return true. Because this is called before
+ *     active_group.CopyFrom(), the caller will naturally pick up the new group.
+ *   - NO: Proceed anyway. Sets @p append_allow_over_focus to true so the caller can
+ *     pass --allow-over-focus to the worker processes.
+ *   - CANCEL: Abort the run.
+ *
+ * @param[out] append_allow_over_focus  Set to true if the user chose to proceed despite
+ *             over-focus images (NO), meaning --allow-over-focus should be appended to
+ *             the run profile. Unchanged otherwise.
+ * @return true if the caller should proceed with the job, false to abort.
+ */
+bool MatchTemplatePanel::CheckForOverFocus(bool& append_allow_over_focus) {
+    wxArrayLong underfocus_asset_ids;
+    int         group_list_id = image_asset_panel->all_groups_list->groups[GroupComboBox->GetSelection( )].id;
+    int         total_members = image_asset_panel->all_groups_list->groups[GroupComboBox->GetSelection( )].number_of_members;
+    bool        has_overfocus = main_frame->current_project.database.ReturnAllAssetIdsWithUnderfocus(
+                   group_list_id, total_members, underfocus_asset_ids);
+
+    if ( ! has_overfocus )
+        return true;
+
+    int overfocus_count = total_members - underfocus_asset_ids.GetCount( );
+
+    wxString message = wxString::Format(
+            "%d of %d images in this group have over-focus (negative defocus values), "
+            "which may produce unreliable template matching results.\n\n"
+            "Would you like to create a new image group containing only the %zu "
+            "under-focus images?\n\n"
+            "YES = Create a new filtered group and select it\n"
+            "NO = Ignore over-focus and proceed anyway (not recommended)\n"
+            "CANCEL = Abort",
+            overfocus_count, total_members,
+            underfocus_asset_ids.GetCount( ));
+
+    wxMessageDialog overfocus_dialog(this, message, "Over-Focus Detected",
+                                     wxYES_NO | wxCANCEL | wxYES_DEFAULT | wxICON_WARNING);
+
+    int result = overfocus_dialog.ShowModal( );
+
+    if ( result == wxID_CANCEL )
+        return false;
+
+    if ( result == wxID_NO ) {
+        append_allow_over_focus = true;
+        return true;
+    }
+
+    // wxID_YES — create a new filtered group
+    wxTextEntryDialog name_dialog(this, "Enter a name for the new image group:",
+                                  "New Image Group", "under_focus");
+    if ( name_dialog.ShowModal( ) != wxID_OK )
+        return false;
+
+    wxString new_group_name = name_dialog.GetValue( );
+
+    // Calling AddGroup increments all_groups_list->number_of_groups
+    image_asset_panel->all_groups_list->AddGroup(new_group_name);
+    // This is used in dynamic table naming in the DB so is indexed from 1 not 0
+    long new_group_id = image_asset_panel->all_groups_list->ReturnNumberOfGroups( );
+
+    // current_group_number in the image_asset_panel SEEMs to server the same function as number_of_groups (whereas a second var selected_group would map to current_group in my (BAH) mind)
+    image_asset_panel->current_group_number = new_group_id;
+
+    image_asset_panel->AddGroupToDatabase(new_group_id, new_group_name.ToUTF8( ).data( ), new_group_id);
+
+    // Man, group is a funny looking word at this point.
+    AssetGroup& new_group = image_asset_panel->all_groups_list->groups[image_asset_panel->all_groups_list->number_of_groups - 1];
+    new_group.id          = new_group_id;
+
+    // FIXME: this should probably be a database class method. (Or maybe it is and we should be calling it.)
+    main_frame->current_project.database.Begin( );
+    main_frame->current_project.database.BeginBatchInsert(
+            wxString::Format("IMAGE_GROUP_%ld", new_group_id), 2, "MEMBER_NUMBER", "IMAGE_ASSET_ID");
+
+    for ( size_t i = 0; i < underfocus_asset_ids.GetCount( ); i++ ) {
+        long asset_id = underfocus_asset_ids[i];
+        main_frame->current_project.database.AddToBatchInsert("ii", (int)i, (int)asset_id);
+        int array_pos = image_asset_panel->ReturnArrayPositionFromAssetID(asset_id);
+        new_group.AddMember(array_pos);
+    }
+
+    main_frame->current_project.database.EndBatchInsert( );
+    main_frame->current_project.database.Commit( );
+
+    // The method for image_asset_panel->DirtyGroups() is protected and I don't want to mess with it (BAH)
+    main_frame->DirtyImageGroups( );
+    FillGroupComboBox( );
+
+    // Presumably we always want to select the most recent addition which will be at the end so this (should) be safe
+    GroupComboBox->SetSelection(GroupComboBox->GetCount( ) - 1);
+
+    // Not sure why this is here, FIXME.
+    // wxCommandEvent dummy_event;
+    // OnGroupComboBox(dummy_event);
 
     return true;
 }
@@ -582,6 +821,48 @@ void MatchTemplatePanel::SetInputsForPossibleReRun(bool set_up_to_resume_job, Te
 
 void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
 
+#if defined(BATCH_HIGH_RES_EXPERIMENT) || defined(BATCH_ALL_TEMPLATES)
+
+    // We are running already, print the update
+    if ( s_batch_experiment_active ) {
+#ifdef BATCH_ALL_TEMPLATES
+        // Log what we're running (value was already set in ProcessAllJobsFinished)
+        WriteInfoText(wxString::Format("BATCH EXPERIMENT: Running ref index %d/%d: %s\n",
+                                       s_current_volume_asset_idx,
+                                       s_number_of_volume_asset_idx,
+                                       volume_asset_panel->ReturnAssetShortFilename(s_current_volume_asset_idx).ToUTF8( ).data( )));
+#else
+        // Log what we're running (value was already set in ProcessAllJobsFinished)
+        WriteInfoText(wxString::Format("BATCH EXPERIMENT: Running high-res limit = %.2f A",
+                                       HighResolutionLimitNumericCtrl->ReturnValue( )));
+#endif
+    }
+    else {
+        // First click - activate batch mode
+        // Print starting message
+        s_batch_experiment_active  = true;
+        s_current_volume_asset_idx = ReferenceSelectPanel->GetSelection( );
+        VolumeAsset* temp_volume   = volume_asset_panel->ReturnAssetPointer(ReferenceSelectPanel->GetSelection( ));
+#ifdef BATCH_ALL_TEMPLATES
+        WriteInfoText(wxString::Format("BATCH EXPERIMENT: Starting. Will run all templates in dropdown starting from %d (%s)",
+                                       s_current_volume_asset_idx,
+                                       temp_volume->filename.GetName( )));
+#else
+        WriteInfoText(wxString::Format("BATCH EXPERIMENT: Starting. Will run from %.2f to %.2f in %.1fA steps",
+                                       HighResolutionLimitNumericCtrl->ReturnValue( ),
+                                       s_batch_experiment_end_value,
+                                       s_batch_experiment_step));
+#endif
+    }
+#endif // print info block
+
+    // Over-focus check MUST be called before active_group.CopyFrom() below.
+    // If the user creates a new filtered group, CheckForOverFocus changes the
+    // GroupComboBox selection, so the subsequent CopyFrom picks up the new group.
+    bool append_allow_over_focus = false;
+    if ( ! CheckForOverFocus(append_allow_over_focus) )
+        return;
+
     active_group.CopyFrom(&image_asset_panel->all_groups_list->groups[GroupComboBox->GetSelection( )]);
 
     // Check if this is a resume job. If yes, get the job id and set the active
@@ -673,21 +954,42 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
 
     float min_peak_radius = MinPeakRadiusNumericCtrl->ReturnValue( );
 
-#ifdef cisTEM_temp_disable_gpu_noFastFFT
-    use_fast_fft = UseFastFFTRadioYes->GetValue( ) ? true : false;
-    use_gpu      = use_fast_fft;
-#else
-    use_gpu      = UseGPURadioYes->GetValue( ) ? true : false;
-    use_fast_fft = UseFastFFTRadioYes->GetValue( ) ? true : false;
-#endif
+    use_gpu                           = UseGPURadioYes->GetValue( ) ? true : false;
+    use_fast_fft                      = UseFastFFTRadioYes->GetValue( ) ? true : false;
+    bool use_peak_sampling_correction = UsePeakSamplingCorrectionRadioYes->GetValue( ) ? true : false;
 
-    wxString wanted_symmetry    = SymmetryComboBox->GetValue( );
-    wanted_symmetry             = SymmetryComboBox->GetValue( ).Upper( );
-    float high_resolution_limit = HighResolutionLimitNumericCtrl->ReturnValue( );
+    wxString wanted_symmetry = SymmetryComboBox->GetValue( ).Upper( );
+
+    float    high_resolution_limit;
+    wxString search_size_str   = SearchSizeComboBox->GetStringSelection( );
+    long     search_size_value = 0;
+
+    if ( search_size_str != "high-res limit" && search_size_str.ToLong(&search_size_value) ) {
+        bool is_valid = false;
+        for ( int allowed : kAllowedSearchSizes ) {
+            if ( search_size_value == allowed ) {
+                is_valid = true;
+                break;
+            }
+        }
+        if ( is_valid ) {
+            high_resolution_limit = static_cast<float>(search_size_value);
+        }
+        else {
+            high_resolution_limit = HighResolutionLimitNumericCtrl->ReturnValue( );
+        }
+    }
+    else {
+        high_resolution_limit = HighResolutionLimitNumericCtrl->ReturnValue( );
+    }
 
     wxPrintf("\n\nWanted symmetry %s, Defocus Range %3.3f, Defocus Step %3.3f\n", wanted_symmetry, defocus_search_range, defocus_step);
 
     RunProfile active_refinement_run_profile = run_profiles_panel->run_profile_manager.run_profiles[RunProfileComboBox->GetSelection( )];
+
+    if ( append_allow_over_focus ) {
+        active_refinement_run_profile.AppendCLIArgument("--allow-over-focus");
+    }
 
     int number_of_processes = active_refinement_run_profile.ReturnTotalJobs( );
 
@@ -697,7 +999,8 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
 
     current_image              = image_asset_panel->ReturnAssetPointer(active_group.members[0]);
     current_image_euler_search = new EulerSearch;
-    // WARNING: resolution_limit below is used before its value is set
+    // NOTE: resolution limit is not actually used here
+    resolution_limit = 1.f;
     current_image_euler_search->InitGrid(wanted_symmetry, wanted_out_of_plane_angular_step, 0.0, 0.0, 360.0, wanted_in_plane_angular_step, 0.0, current_image->pixel_size / resolution_limit, parameter_map, 1);
 
     if ( wanted_symmetry.StartsWith("C") ) {
@@ -918,7 +1221,7 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
             // NOTE: also, please keep in sync with the manual command line arguments.
             // TODO: this is a bit of a mess.
 
-            current_job_package.AddJob("ttffffffffffifffffbfftttttttttftiiiitttfbbi",
+            current_job_package.AddJob("ttffffffffffifffffbfftttttttttftiiiitttfbbbi",
                                        input_search_image.ToUTF8( ).data( ),
                                        input_reconstruction.ToUTF8( ).data( ),
                                        pixel_size,
@@ -961,6 +1264,7 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
                                        min_peak_radius,
                                        use_gpu,
                                        use_fast_fft,
+                                       use_peak_sampling_correction,
                                        max_threads);
         }
 
@@ -1004,12 +1308,13 @@ void MatchTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
     ProgressBar->Pulse( );
 }
 
-void MatchTemplatePanel::HandleSocketTemplateMatchResultReady(wxSocketBase* connected_socket, int& image_number, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes) {
+void MatchTemplatePanel::HandleSocketTemplateMatchResultReady(wxSocketBase* connected_socket, int& image_number, float& high_res_limit_used, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes) {
     // result is available for an image..
 
     cached_results[image_number - 1].found_peaks.Clear( );
     cached_results[image_number - 1].found_peaks    = peak_infos;
     cached_results[image_number - 1].used_threshold = threshold_used;
+    cached_results[image_number - 1].high_res_limit = high_res_limit_used;
 
     ResultsPanel->SetActiveResult(cached_results[image_number - 1]);
 
@@ -1059,6 +1364,14 @@ void MatchTemplatePanel::TerminateButtonClick(wxCommandEvent& event) {
     FinishButton->Show(true);
     ProgressPanel->Layout( );
     cached_results.Clear( );
+
+#if defined(BATCH_HIGH_RES_EXPERIMENT) || defined(BATCH_ALL_TEMPLATES)
+    // Cancel batch experiment on user termination
+    if ( s_batch_experiment_active ) {
+        s_batch_experiment_active = false;
+        WriteInfoText("BATCH EXPERIMENT: Cancelled by user");
+    }
+#endif
 
     //running_job = false;
 }
@@ -1185,6 +1498,76 @@ void MatchTemplatePanel::ProcessAllJobsFinished( ) {
 
     // Kill the job (in case it isn't already dead)
     main_frame->job_controller.KillJob(my_job_id);
+
+// Key section to advance to the next experiment in the batch
+#if defined(BATCH_HIGH_RES_EXPERIMENT) || defined(BATCH_ALL_TEMPLATES)
+#ifdef BATCH_HIGH_RES_EXPERIMENT
+    if ( s_batch_experiment_active ) {
+        float current_value = HighResolutionLimitNumericCtrl->ReturnValue( );
+
+        // Calculate next value: round up to next 0.5 boundary
+        float next_value = std::ceil(current_value * 2.0f) / 2.0f;
+        if ( next_value <= current_value ) {
+            next_value = current_value + s_batch_experiment_step;
+        }
+        // Ensure it lands on 0.5 boundary
+        next_value = std::round(next_value * 2.0f) / 2.0f;
+
+        if ( next_value <= s_batch_experiment_end_value ) {
+            WriteInfoText(wxString::Format("\nBATCH EXPERIMENT: Completed %.2f, next = %.2f",
+                                           current_value, next_value));
+
+            // Update the GUI so the Call after has the updated state
+            HighResolutionLimitNumericCtrl->ChangeValueFloat(next_value);
+
+            // Use CallAfter for safe event loop handling
+            CallAfter([this]( ) {
+                if ( s_batch_experiment_active ) {
+                    wxCommandEvent dummy_event;
+                    StartEstimationClick(dummy_event);
+                }
+            });
+            return; // Don't show Finish button yet
+        }
+        else {
+            // Done with all values
+            s_batch_experiment_active = false;
+            WriteInfoText(wxString::Format("BATCH EXPERIMENT: All values completed (ended at %.2f)!",
+                                           current_value));
+        }
+    }
+#endif
+
+#ifdef BATCH_ALL_TEMPLATES
+    if ( s_batch_experiment_active ) {
+
+        if ( s_current_volume_asset_idx + 1 < s_number_of_volume_asset_idx ) {
+            WriteInfoText(wxString::Format("BATCH EXPERIMENT: Completed template idx %d, next = %d/%d",
+                                           s_current_volume_asset_idx,
+                                           s_current_volume_asset_idx + 1,
+                                           s_number_of_volume_asset_idx));
+
+            // Update the GUI so the Call after has the updated state
+            s_current_volume_asset_idx++;
+            ReferenceSelectPanel->SetSelection(s_current_volume_asset_idx);
+
+            // Use CallAfter for safe event loop handling
+            CallAfter([this]( ) {
+                if ( s_batch_experiment_active ) {
+                    wxCommandEvent dummy_event;
+                    StartEstimationClick(dummy_event);
+                }
+            });
+            return; // Don't show Finish button yet
+        }
+        else {
+            // Done with all values
+            s_batch_experiment_active = false;
+            WriteInfoText(wxString::Format("BATCH EXPERIMENT: All templates are completed!"));
+        }
+    }
+#endif
+#endif // batch block
 
     WriteInfoText("All Jobs have finished.");
     ProgressBar->SetValue(100);

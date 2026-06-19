@@ -1,13 +1,39 @@
 #ifndef SRC_PROGRAMS_CORE_CORE_HEADERS_H_
 #define SRC_PROGRAMS_CORE_CORE_HEADERS_H_
 
-typedef struct Peak {
+// Verify that cistem_config.h has been included via compiler forced include (-include flag)
+// This ensures all configuration defines from configure.ac are available
+#ifndef CISTEM_CONFIG_H_INCLUDED
+#error "cistem_config.h must be included! Check build system configuration (configure.ac)."
+#endif
+
+struct Peak {
     float x;
     float y;
     float z;
     float value;
     long  physical_address_within_image;
-} Peak;
+
+    Peak( ) = default; // Peak () {}; would also work
+
+    // We could skip both ctors but by declaring this one it (helps) to avoid a mixup in ordering
+    Peak(float x_, float y_, float z_, float value_, long physical_address_within_image_)
+        : x(x_), y(y_), z(z_), value(value_), physical_address_within_image(physical_address_within_image_) {}
+};
+
+struct Sortable2dPeak {
+    float value;
+    long  physical_address_within_image;
+
+    Sortable2dPeak( ) = default;
+
+    Sortable2dPeak(float v, long addr)
+        : value(v), physical_address_within_image(addr) {}
+
+    bool operator<(const Sortable2dPeak& other) const {
+        return value < other.value; // defines a max-heap behavior if used by priority_queue
+    }
+};
 
 typedef struct Kernel2D {
     int   pixel_index[4];
@@ -21,8 +47,8 @@ typedef struct CurvePoint {
     float value_n;
 } CurvePoint;
 
-// All the defines set in configure.ac
-#include <cistem_config.h>
+// Configuration defines from configure.ac are automatically included via -include flag
+// See configure.ac:708-709 and verification check at top of this file
 #ifndef _LARGE_FILE_SOURCE
 #define _LARGE_FILE_SOURCE
 #endif
@@ -86,7 +112,7 @@ class StackDump : public wxStackWalker // so we can give backtraces..
         : wxStackWalker(argv0) {
     }
 
-    virtual void Walk(size_t skip = 1) {
+    virtual void MyWalk(size_t skip = 1) {
         wxPrintf("Stack dump:\n\n");
 
         wxStackWalker::Walk(skip);

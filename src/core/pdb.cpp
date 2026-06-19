@@ -6,6 +6,8 @@ WX_DEFINE_OBJARRAY(ArrayOfParticleTrajectories);
 #include "../../include/gemmi/mmread.hpp"
 #include "../../include/gemmi/gz.hpp"
 
+// #define cisTEM_RANDOMIZE_HYDROGENS
+
 Atom::Atom( ) {
     name             = "";
     atom_type        = hydrogen;
@@ -577,6 +579,24 @@ void PDB::Init( ) {
                             }
                         } // if/else on water vs normal atom
 
+#ifdef cisTEM_RANDOMIZE_HYDROGENS
+                        // NOTE: we leave H in the model and default to a weight (use_hydrogens from simulate) of 0.f
+                        if ( i_atom_type == hydrogen ) {
+                            RandomNumberGenerator my_rand(pi_v<float>);
+                            float                 dx          = my_rand.GetUniformRandomSTD(-1.f, 1.f);
+                            float                 dy          = my_rand.GetUniformRandomSTD(-1.f, 1.f);
+                            float                 dz          = my_rand.GetUniformRandomSTD(-1.f, 1.f);
+                            float                 amplitude   = my_rand.GetUniformRandomSTD(2.f, 5.f);
+                            float                 len         = sqrtf(dx * dx + dy * dy + dz * dz);
+                            float                 norm_factor = amplitude / len;
+                            dx *= norm_factor;
+                            dy *= norm_factor;
+                            dz *= norm_factor;
+                            atom.pos.x += dx;
+                            atom.pos.y += dy;
+                            atom.pos.z += dz;
+                        }
+#endif
                         atoms.emplace_back(wxString(atom.name), true, i_atom_type, float(atom.pos.x), float(atom.pos.y), float(atom.pos.z), atom.occ, i_bfactor, float(atom.charge));
                         current_atom_number++;
                         n_atoms_in_single_molecule_from_star_file++;

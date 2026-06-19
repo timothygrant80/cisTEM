@@ -1191,8 +1191,8 @@ bool RefineTemplateDevApp::DoCalculation( ) {
         }
 
         // tell the gui that this result is available...
-
-        SendTemplateMatchingResultToSocket(controller_socket, image_number_for_gui, threshold_for_result_plotting, all_peak_infos, all_peak_changes);
+        float high_res_limit_used = 2.0f * pixel_size;
+        SendTemplateMatchingResultToSocket(controller_socket, image_number_for_gui, high_res_limit_used, threshold_for_result_plotting, all_peak_infos, all_peak_changes);
         result_image.QuickAndDirtyWriteSlice(filename_for_gui_result_image.ToStdString( ), 1, true);
     }
 

@@ -1,7 +1,5 @@
 
 
-#include <cistem_config.h>
-
 #include "../../gpu/gpu_core_headers.h"
 #include "../../gpu/GpuImage.h"
 

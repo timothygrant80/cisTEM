@@ -45,6 +45,7 @@ noinst_HEADERS = core/stopwatch.h \
                  core/template_matches_package.h \
                  core/refinement.h \
                  core/database.h \
+                 core/database_schema.h \
                  core/project.h \
                  core/socket_communication_utils/job_packager.h \
                  core/job_tracker.h \
@@ -545,7 +546,6 @@ noinst_LIBRARIES += libgpucore.a
 
 libgpucore_a_SOURCES  =      gpu/core_extensions/stop_watch_gpu.cu \
                              gpu/core_extensions/image.cu \
-                             gpu/Histogram.cu \
                              gpu/template_matching_empirical_distribution.cu \
                              gpu/TemplateMatchingCore.cu \
                              gpu/DeviceManager.cu \
@@ -569,9 +569,13 @@ libgpucore_a_AR = $(NVCC) -DENABLEGPU $(CUDA_CXXFLAGS) -lib -o
 SUFFIXES = .cu .o
 
 # This line only knows about objects build from libgpucore_a_SOURCES. We have to add any others e.g. gpu/gpu_device_code.o mannually above in the LIBADD
+# -MD generates dependency files (.d), -MP adds phony targets for headers to avoid errors when headers are deleted
 .cu.o:
-	$(NVCC) -DENABLEGPU $(CUDA_CXXFLAGS) $(WX_CPPFLAGS_BASE) -dc -o $@ $<
-    
+	$(NVCC) -DENABLEGPU $(CUDA_CXXFLAGS) $(WX_CPPFLAGS_BASE) -MD -MP -dc -o $@ $<
+
+# Include generated dependency files for proper dependency tracking
+-include $(libgpucore_a_SOURCES:.cu=.d)
+
 # FastFFT_LIBS will be empty if we are building the library, or /opt/FastFFT/lib/FastFFT.o if we are linking from the object included in the build container (latter prefered) $(libgpucore_OBJECTS) $(libFastFFT_OBJECTS)
 gpu/gpudevicecode.o: $(libgpucore_OBJECTS) $(libFastFFT_OBJECTS)
 	$(NVCC) -DENABLEGPU $(CUDA_CXXFLAGS) --device-link $^ -o gpu/gpudevicecode.o $(CUDA_LIBS)
@@ -1296,14 +1300,16 @@ samples_functional_testing_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
 match_template_SOURCES  = programs/match_template/match_template.cpp
 match_template_SOURCES += programs/match_template/template_matching_data_sizer.cpp
+match_template_SOURCES += programs/match_template/template_matching_peak_extractor.cpp
 match_template_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 match_template_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 match_template_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
 match_template_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
-if WANT_CISTEM_GPU_AM  
+if WANT_CISTEM_GPU_AM
     match_template_gpu_SOURCES  = programs/match_template/match_template.cpp
     match_template_gpu_SOURCES += programs/match_template/template_matching_data_sizer.cpp
+    match_template_gpu_SOURCES += programs/match_template/template_matching_peak_extractor.cpp
     match_template_gpu_CXXFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
     match_template_gpu_CPPFLAGS = -DENABLEGPU $(WX_CPPFLAGS_BASE)
     match_template_gpu_LDADD    = libgpucore.a libcore.a $(WX_LIBS_BASE) $(MKL_LIBS) $(CUDA_LIBS)
@@ -1312,6 +1318,7 @@ match_template_gpu_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
 
 prepare_stack_matchtemplate_SOURCES  = programs/prepare_stack_matchtemplate/prepare_stack_matchtemplate.cpp
+prepare_stack_matchtemplate_SOURCES += programs/match_template/template_matching_peak_extractor.cpp
 prepare_stack_matchtemplate_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 prepare_stack_matchtemplate_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 prepare_stack_matchtemplate_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
@@ -1320,6 +1327,7 @@ prepare_stack_matchtemplate_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
 
 make_template_result_SOURCES  = programs/make_template_result/make_template_result.cpp
+make_template_result_SOURCES += programs/match_template/template_matching_peak_extractor.cpp
 make_template_result_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 make_template_result_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 make_template_result_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)

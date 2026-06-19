@@ -231,6 +231,7 @@ class MatchTemplatePanelParent : public JobPanel
 		NumericTextCtrl* InPlaneStepNumericCtrl;
 		wxStaticText* m_staticText190211;
 		NumericTextCtrl* HighResolutionLimitNumericCtrl;
+		wxStaticText* m_staticText190212;
 		wxStaticText* m_staticText19021;
 		wxStaticText* m_staticText698;
 		wxRadioButton* DefocusSearchYesRadio;
@@ -256,6 +257,9 @@ class MatchTemplatePanelParent : public JobPanel
 		wxStaticText* m_staticText69911;
 		wxRadioButton* UseFastFFTRadioYes;
 		wxRadioButton* UseFastFFTRadioNo;
+		wxStaticText* m_staticText699111;
+		wxRadioButton* UsePeakSamplingCorrectionRadioYes;
+		wxRadioButton* UsePeakSamplingCorrectionRadioNo;
 		wxPanel* OutputTextPanel;
 		wxTextCtrl* output_textctrl;
 		wxPanel* InfoPanel;
@@ -286,6 +290,7 @@ class MatchTemplatePanelParent : public JobPanel
 
 	public:
 		ImageGroupPickerComboPanel* GroupComboBox;
+		wxComboBox* SearchSizeComboBox;
 		wxComboBox* SymmetryComboBox;
 		ShowTemplateMatchResultsPanel* ResultsPanel;
 
@@ -349,6 +354,10 @@ class RefineTemplatePanelParent : public JobPanel
 		NumericTextCtrl* PixelSizeSearchRangeNumericCtrl;
 		wxStaticText* PixelSizeStepStaticText;
 		NumericTextCtrl* PixelSizeSearchStepNumericCtrl;
+		wxStaticText* m_staticText2011;
+		wxStaticText* m_staticText1891;
+		wxRadioButton* UsePeakSamplingCorrectionRadioYes;
+		wxRadioButton* UsePeakSamplingCorrectionRadioNo;
 		wxPanel* OutputTextPanel;
 		wxTextCtrl* output_textctrl;
 		wxPanel* InfoPanel;

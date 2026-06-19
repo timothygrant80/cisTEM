@@ -28,22 +28,19 @@ usr_path="../../.vscode"
 # Check for -h or --help
 if [[ $1 == "-h" || $1 == "--help" ]] ; then
     echo ""
-    echo "Usage: build_base.sh <base|top> [--no-cache] [--wx-version=<stable|dev>] [--compiler=<icpc|g++>] [--build-type=<static|dynamic>] [--npm ] [--ref-images ] [--tag-suffix=<string>]"
+    echo "Usage: create_containers.sh <base|top|ci> [--no-cache] [--wx-version=<stable|dev>] [--compiler=<icpc|g++>] [--build-type=<static|dynamic>] [--ref-images] [--skip-libtorch] [--tag-suffix=<string>]"
     echo "      --no-cache: build without cache, must be second arg"
     echo ""
     echo "  positional args are optional and only affect the top layer build"
     echo "      --wx-version: stable or dev, default is stable (currently 3.0.5)"
-    echo "      --compiler: icpc or g++, default is icpc [g++ builds not supported yet]"
+    echo "      --compiler: icpc or g++, default is icpc (icpc is primary, others for completeness)"
     echo "      --build-type: static or dynamic, default is static [BUT only dynamic is supported for --wx-version dev]"
-    echo "      --npm: build npm, default is false if not specified"
-    echo "      --claude: build claude, default is false if not specified"
-    echo "      --skip-libtorch: default is true to include libtorch dynamic libraries for blush imple if not specified"
-    echo "      --ref-images: build reference images, default is true if not specified"
-    echo "      --skip-docs: skip including depenencies for the new docs system, default is false if not specified"
+    echo "      --skip-libtorch: exclude libtorch dynamic libraries, default is to include"
+    echo "      --ref-images: include reference images, default is true"
     echo "      --tag-suffix: to append to the image tag"
     echo ""
-    echo "For example, to build the base image without cache, and the top image with wxWidgets 3.1.5, g++, dynamic, npm, and ref-images:"
-    echo "      create_containers.sh base --no-cache --wx-version=dev --compiler=g++ --npm --ref-images"
+    echo "For example, to build the base image without cache:"
+    echo "      create_containers.sh base --no-cache"
     exit 0
 fi
 
@@ -58,11 +55,11 @@ fi
 #   base - this is the base image that should be the same for all devs working on cisTEM in order to ensure critical tool-chain compatibility
 #   top - this is the top layer that is built on top of the base image and contains the dependencies that are more likely to change, and are less expensive to build/compile. This *may* be different for each dev.
 if [[ $# -lt 1 ]] ; then
-    echo "Usage: build_base.sh <base|top|-h|--help>"
+    echo "Usage: build_base.sh <base|top|ci|-h|--help>"
     exit 1
-else 
-    if [[ $1 != "base" && $1 != "top" ]] ; then
-        echo "Usage: build_base.sh <base|top|-h|--help>"
+else
+    if [[ $1 != "base" && $1 != "top" && $1 != "ci" ]] ; then
+        echo "Usage: build_base.sh <base|top|ci|-h|--help>"
         exit 1
     else
         build_layer=$1
@@ -88,12 +85,9 @@ fi
 build_type="static"
 build_compiler="icpc"
 build_wx_version="stable"
-build_npm="false"
 build_ref_images="true"
 build_libtorch="true"
-build_docs="true"
 tag_suffix=""
-build_claude="false"
 
 
 while [[ $# -gt 0 ]]; do
@@ -132,24 +126,12 @@ while [[ $# -gt 0 ]]; do
         shift # past argument
         shift # past value
         ;;
-    --npm)
-        build_npm="true"
-        shift # past argument
-        ;;
-    --claude)
-        build_claude="true"
-        shift # past argument
-        ;;
     --ref-images)
         build_ref_images="true"
         shift # past argument
         ;;
     --skip-libtorch)
         build_libtorch="false"
-        shift # past argument
-        ;;
-    --skip-docs)
-        build_docs="false"
         shift # past argument
         ;;
     --tag-suffix)
@@ -174,6 +156,7 @@ fi
 # A copy with the updated version number will be placed in a temp file and used to build the container
 path_to_base_dockerfile="base_image/"
 path_to_top_dockerfile="top_image/"
+path_to_ci_dockerfile="top_image_ci/"
 
 # Get the wanted version number from the CONTAINER_VERSION file
 # These are user specific and should be in the .vscode_shared/UserName directory
@@ -210,6 +193,26 @@ if [[ "x${build_layer}" == "xbase" ]] ; then
     prefix="base_image_v"
     container_version=${base_container_version}
     path_to_dockerfile=${path_to_base_dockerfile}
+elif [[ "x${build_layer}" == "xci" ]] ; then
+    prefix="v"
+    container_version=${top_container_version}
+
+    echo "Building CI layer with:"
+    echo "    container version: ${top_container_version}"
+    echo "    container base version: ${base_container_version}"
+    echo "    container repository: ${container_repository}"
+    echo "    path to ci dockerfile: ${path_to_ci_dockerfile}"
+    sleep 3
+    path_to_dockerfile=$(mktemp -d)
+    trap 'rm -rf -- "$path_to_dockerfile"' EXIT
+
+    # Rewrite FROM fake_repo to the actual base image
+    awk -v VER="base_image_v$base_container_version" -v REPO="FROM $container_repository" '{if($0 ~ "FROM fake_repo") print REPO":"VER; else print $0}' ${path_to_ci_dockerfile}/Dockerfile > ${path_to_dockerfile}/Dockerfile
+
+    # Override tag_suffix to always produce a -ci tag
+    if [[ -z "$tag_suffix" ]] ; then
+        tag_suffix="-ci"
+    fi
 else
     prefix="v"
     container_version=${top_container_version}
@@ -218,11 +221,8 @@ else
     echo "    wxWidgets version: ${build_wx_version}"
     echo "    compiler: ${build_compiler}"
     echo "    build type: ${build_type}"
-    echo "    npm: ${build_npm}"
-    echo "    claude: ${build_claude}"
     echo "    ref-images: ${build_ref_images}"
     echo "    libtorch: ${build_libtorch}"
-    echo "    docs system: ${build_docs}"
     echo "    container version: ${top_container_version}"
     echo "    container base version: ${base_container_version}"
     echo "    container repository: ${container_repository}"
@@ -253,13 +253,19 @@ fi
 echo "Building ${container_repository}:${prefix}${container_version}${tag_suffix} ${path_to_dockerfile}Dockerfile"
 
 
-docker build ${skip_cache} --tag ${container_repository}:${prefix}${container_version}${tag_suffix} \
-    --build-arg build_type=${build_type} \
-    --build-arg build_compiler=${build_compiler} \
-    --build-arg build_wx_version=${build_wx_version} \
-    --build-arg build_npm=${build_npm} \
-    --build-arg build_ref_images=${build_ref_images} \
-    --build-arg build_libtorch=${build_libtorch} \
-    --build-arg build_docs=${build_docs} \
-    --build-arg build_claude=${build_claude} \
-    ${path_to_dockerfile}
+if [[ "x${build_layer}" == "xci" ]] ; then
+    # CI image only needs a subset of build args
+    docker build ${skip_cache} --tag ${container_repository}:${prefix}${container_version}${tag_suffix} \
+        --build-arg build_type=${build_type} \
+        --build-arg build_compiler=${build_compiler} \
+        --build-arg build_wx_version=${build_wx_version} \
+        ${path_to_dockerfile}
+else
+    docker build ${skip_cache} --tag ${container_repository}:${prefix}${container_version}${tag_suffix} \
+        --build-arg build_type=${build_type} \
+        --build-arg build_compiler=${build_compiler} \
+        --build-arg build_wx_version=${build_wx_version} \
+        --build-arg build_ref_images=${build_ref_images} \
+        --build-arg build_libtorch=${build_libtorch} \
+        ${path_to_dockerfile}
+fi

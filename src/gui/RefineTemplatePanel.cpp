@@ -64,15 +64,16 @@ RefineTemplatePanel::RefineTemplatePanel(wxWindow* parent)
     GroupComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &RefineTemplatePanel::OnGroupComboBox, this);
 }
 
-bool RefineTemplatePanel::CheckGroupHasTemplateMatchRunDone( ) {
+bool RefineTemplatePanel::CheckGroupForTemplateMatchingCompletion( ) {
     wxArrayLong images_with_template_match_result = main_frame->current_project.database.ReturnLongArrayFromSelectCommand("SELECT DISTINCT IMAGE_ASSET_ID FROM TEMPLATE_MATCH_LIST");
     long        current_image_id;
     int         images_with_template_match_counter;
-    bool        image_was_found;
+    bool        image_was_found = images_with_template_match_result.GetCount( ) > 0;
 
     // If check prevents looking for results when there are none, which could
     // cause a crash.
-    if ( images_with_template_match_result.GetCount( ) > 0 ) {
+
+    if ( image_was_found ) {
         for ( int image_in_group_counter = 0; image_in_group_counter < image_asset_panel->ReturnGroupSize(GroupComboBox->GetSelection( )); image_in_group_counter++ ) {
             current_image_id = image_asset_panel->all_assets_list->ReturnAssetPointer(image_asset_panel->ReturnGroupMember(GroupComboBox->GetSelection( ), image_in_group_counter))->asset_id;
             image_was_found  = false;
@@ -89,8 +90,7 @@ bool RefineTemplatePanel::CheckGroupHasTemplateMatchRunDone( ) {
         }
     }
 
-    // Should always default to false return, not true
-    return false;
+    return image_was_found;
 }
 
 void RefineTemplatePanel::ResetAllDefaultsClick(wxCommandEvent& event) {
@@ -235,7 +235,7 @@ void RefineTemplatePanel::OnGroupComboBox(wxCommandEvent& event) {
     }
 
     if ( GroupComboBox->GetCount( ) > 0 && main_frame->current_project.is_open == true )
-        all_input_images_have_match_template_result = CheckGroupHasTemplateMatchRunDone( );
+        all_input_images_have_match_template_result = CheckGroupForTemplateMatchingCompletion( );
 
     if ( all_input_images_have_match_template_result == true && InputErrorText->IsShown( ) == true ) {
         InputErrorText->Show(false);
@@ -362,7 +362,7 @@ void RefineTemplatePanel::SetInfo( ) {
 void RefineTemplatePanel::FillGroupComboBox( ) {
     GroupComboBox->FillComboBox(true);
     if ( GroupComboBox->GetCount( ) > 0 && main_frame->current_project.is_open == true )
-        all_input_images_have_match_template_result = CheckGroupHasTemplateMatchRunDone( );
+        all_input_images_have_match_template_result = CheckGroupForTemplateMatchingCompletion( );
 
     if ( all_input_images_have_match_template_result == true && InputErrorText->IsShown( ) == true ) {
         InputErrorText->Show(false);
@@ -673,6 +673,7 @@ void RefineTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
 
         float    angular_range                   = 2.0f; // this doesn't seem to be used.
         bool     ctf_refinement                  = false; // also not used.
+        bool     use_peak_sampling_correction    = UsePeakSamplingCorrectionRadioYes->GetValue( ) ? true : false;
         int      max_threads                     = 1; // this will be overwritten when run in the gui based on the run profile
         int      first_search_position           = -1; // not used
         int      last_search_position            = -1; // not used
@@ -680,7 +681,7 @@ void RefineTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
         wxString directory_for_results           = main_frame->current_project.image_asset_directory.GetFullPath( ); // not used
         int      result_number                   = 1; // should be no image stacks through the gui.
 
-        current_job_package.AddJob("ttfffffffffffifffffbffttttttttttttttfffbtfiiiiiitft", input_search_image.ToUTF8( ).data( ),
+        current_job_package.AddJob("ttfffffffffffifffffbffttttttttttttttfffbtfiiiiiitftb", input_search_image.ToUTF8( ).data( ),
                                    input_reconstruction.ToUTF8( ).data( ),
                                    pixel_size,
                                    voltage_kV,
@@ -732,7 +733,8 @@ void RefineTemplatePanel::StartEstimationClick(wxCommandEvent& event) {
                                    max_threads,
                                    directory_for_results.ToUTF8( ).data( ),
                                    result_threshold,
-                                   output_result_file.ToUTF8( ).data( ));
+                                   output_result_file.ToUTF8( ).data( ),
+                                   use_peak_sampling_correction);
 
         my_progress_dialog->Update(image_counter + 1);
     }
@@ -788,12 +790,13 @@ static int wxCMPFUNC_CONV SortByNewPeakNumber(TemplateMatchFoundPeakInfo** a, Te
         return 0;
 };
 
-void RefineTemplatePanel::HandleSocketTemplateMatchResultReady(wxSocketBase* connected_socket, int& image_number, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes) {
+void RefineTemplatePanel::HandleSocketTemplateMatchResultReady(wxSocketBase* connected_socket, int& image_number, float& high_res_limit_used, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes) {
     // result is available for an image..
 
     cached_results[image_number - 1].found_peaks.Clear( );
     cached_results[image_number - 1].found_peaks    = peak_infos;
     cached_results[image_number - 1].used_threshold = threshold_used;
+    cached_results[image_number - 1].high_res_limit = high_res_limit_used;
 
     cached_results[image_number - 1].peak_changes.Clear( );
     cached_results[image_number - 1].peak_changes = peak_changes;

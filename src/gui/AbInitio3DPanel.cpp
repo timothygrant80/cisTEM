@@ -2187,6 +2187,20 @@ void AbInitioManager::ProcessJobResult(JobResult* result_to_process) {
         //	wxPrintf("Received a refinement result for class #%i, particle %li\n", current_class + 1, current_particle + 1);
         //wxPrintf("output refinement has %i classes and %li particles\n", output_refinement->number_of_classes, output_refinement->number_of_particles);
 
+        /**
+         * @brief Update refinement parameters from ab-initio worker results
+         *
+         * Updates all refinement parameters from the worker result array during ab-initio
+         * 3D reconstruction. Includes angles, shifts, CTF parameters, and scores.
+         * Multi-view data is preserved from input_refinement as it doesn't change during refinement.
+         *
+         * @note Similar parameter update code exists in:
+         *  - MyRefine3DPanel.cpp:~1895
+         *  - AutoRefine3dPanel.cpp:~1580
+         *  - RefineCTFPanel.cpp:~1394 (CTF-specific)
+         *
+         * @todo Refactor into centralized RefinementResult::UpdateFromWorkerResult() method
+         */
         output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].position_in_stack                  = long(result_to_process->result_data[1] + 0.5);
         output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].image_is_active                    = int(result_to_process->result_data[2]);
         output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].psi                                = result_to_process->result_data[3];
@@ -2211,6 +2225,16 @@ void AbInitioManager::ProcessJobResult(JobResult* result_to_process) {
         output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].image_shift_y                      = result_to_process->result_data[23];
         output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].amplitude_contrast                 = result_to_process->result_data[24];
         output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].assigned_subset                    = result_to_process->result_data[25];
+
+        // Copy multi-view data from input_refinement (not modified by refinement)
+        output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].beam_tilt_group =
+                input_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].beam_tilt_group;
+        output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].particle_group =
+                input_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].particle_group;
+        output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].pre_exposure =
+                input_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].pre_exposure;
+        output_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].total_exposure =
+                input_refinement->class_refinement_results[current_class].particle_refinement_results[current_particle].total_exposure;
 
         number_of_received_particle_results++;
         //wxPrintf("received result!\n");

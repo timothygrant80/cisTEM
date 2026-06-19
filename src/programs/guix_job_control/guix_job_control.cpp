@@ -63,7 +63,7 @@ class
     void HandleSocketJobFinished(wxSocketBase* connected_socket, int finished_job_number);
     void HandleSocketAllJobsFinished(wxSocketBase* connected_socket, long received_timing_in_milliseconds);
     void HandleSocketDisconnect(wxSocketBase* connected_socket);
-    void HandleSocketTemplateMatchResultReady(wxSocketBase* connected_socket, int& image_number, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes);
+    void HandleSocketTemplateMatchResultReady(wxSocketBase* connected_socket, int& image_number, float& high_res_limit_used, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes);
 
     // end
 
@@ -564,10 +564,10 @@ void JobControlApp::HandleSocketAllJobsFinished(wxSocketBase* connected_socket, 
     // don't die, wait for GUI to kill me..
 }
 
-void JobControlApp::HandleSocketTemplateMatchResultReady(wxSocketBase* connected_socket, int& image_number, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes) {
+void JobControlApp::HandleSocketTemplateMatchResultReady(wxSocketBase* connected_socket, int& image_number, float& high_res_limit_used, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes) {
     // pass on to the gui..
 
-    SendTemplateMatchingResultToSocket(gui_socket, image_number, threshold_used, peak_infos, peak_changes);
+    SendTemplateMatchingResultToSocket(gui_socket, image_number, high_res_limit_used, threshold_used, peak_infos, peak_changes);
 }
 
 void JobControlApp::HandleSocketDisconnect(wxSocketBase* connected_socket) {

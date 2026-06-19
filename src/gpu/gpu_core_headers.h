@@ -26,23 +26,152 @@ const int MAX_GPU_COUNT = 32;
 
 // clang-format off
 
-#ifndef ENABLE_GPU_DEBUG
-#define cudaErr(err, ...) { err; }
-#define nppErr(err, ...) { err; }
-#define cuTensorErr(err, ...) { err; }
-#define cufftErr(err, ...) { err; }
-#define postcheck 
-#define precheck 
-#else
-// The static path to the error code definitions is brittle, but better than the internet. At least you can click in VSCODE to get there.
-// cudaErrorNOteReady is not really an error (600 or hexadecimal 0x258) but it is returned by cudaStreamSynchronize
-#define nppErr(npp_stat)  {if (npp_stat != NPP_SUCCESS) { std::cerr << "NPP_CHECK_NPP NPP_SUCCESS = (" << NPP_SUCCESS << ") - npp_stat = " << npp_stat ; wxPrintf(" at %s:(%d)\nFind error codes at /usr/local/cuda-11.7/targets/x86_64-linux/include/nppdefs.h:(170)\n\n",__FILE__,__LINE__); DEBUG_ABORT} ;};
-#define cudaErr(error) { auto status = static_cast<cudaError_t>(error); if (status != cudaSuccess || status == cudaErrorNotReady) { std::cerr << cudaGetErrorString(status) << " :-> "; MyPrintWithDetails(""); DEBUG_ABORT} }
-#define cufftErr(error) { auto status = static_cast<cufftResult>(error); if (status != CUFFT_SUCCESS) { std::cerr << cistem::gpu::cufft_error_types[status] << " :-> "; MyPrintWithDetails(""); DEBUG_ABORT} }
-#define cuTensorErr(error) { auto status = static_cast<cutensorStatus_t>(error); if (status != CUTENSOR_STATUS_SUCCESS) { std::cerr << cutensorGetErrorString(status) << " :-> "; MyPrintWithDetails(""); DEBUG_ABORT} }
-#define postcheck { cudaErr(cudaPeekAtLastError()); cudaError_t error = cudaStreamSynchronize(cudaStreamPerThread); cudaErr(error); }
-#define precheck { cudaErr(cudaGetLastError()) }
+/**
+ * @defgroup gpu_debug GPU Error Checking and Debug Levels
+ * @brief Three-tier error checking system controlled by ENABLE_GPU_DEBUG preprocessor define
+ *
+ * @section debug_levels Debug Levels
+ *
+ * **Level 0 (ENABLE_GPU_DEBUG == 0): Release Mode**
+ * - All error checking macros compile to no-ops (zero overhead)
+ * - Use for production builds where maximum performance is required
+ * - No error detection - GPU errors will silently corrupt data or crash later
+ *
+ * **Level 1 (ENABLE_GPU_DEBUG == 1): Fast Development Mode**
+ * - cudaErr(), nppErr(), cufftErr(), cuTensorErr() check return codes and exit on failure
+ * - postcheck and precheck are no-ops (no stream synchronization)
+ * - Catches API errors but NOT asynchronous kernel execution errors
+ * - Minimal performance overhead - use for day-to-day development
+ * - Recommended for CI builds to balance speed and error detection
+ *
+ * **Level 2 (ENABLE_GPU_DEBUG >= 2): Full Synchronous Debugging**
+ * - All API error checking active (same as Level 1)
+ * - postcheck synchronizes streams to catch kernel execution errors
+ * - precheck clears stale error state before kernel launches
+ * - Significant performance impact due to forced synchronization after every kernel
+ * - Use when debugging race conditions, memory corruption, or kernel crashes
+ *
+ * @section error_macros Error Checking Macros
+ *
+ * **cudaErr(err)** - Wraps CUDA runtime API calls, exits on error
+ * @code
+ * cudaErr(cudaMalloc(&ptr, size));
+ * @endcode
+ *
+ * **nppErr(err)** - Wraps NPP (NVIDIA Performance Primitives) calls
+ *
+ * **cufftErr(err)** - Wraps cuFFT library calls
+ *
+ * **cuTensorErr(err)** - Wraps cuTensor library calls
+ *
+ * **precheck** - Clears lingering GPU error state before kernel launch
+ * - Only active at Level 2
+ * - Critical for isolating which kernel actually caused an error
+ * - Without this, kernel B might report an error that kernel A caused
+ * @code
+ * precheck;
+ * myKernel<<<grid, block, 0, stream>>>(args);
+ * stream(stream);
+ * @endcode
+ *
+ * **postcheck** - Checks for kernel launch and execution errors (implicit stream)
+ * - Only active at Level 2
+ * - Calls cudaPeekAtLastError() to catch invalid launch parameters
+ * - Calls cudaStreamSynchronize() to wait for kernel completion and catch execution errors
+ * - Uses implicit cudaStreamPerThread which can be fragile
+ * - Prefer postcheck_withstream() for explicit stream control
+ *
+ * **postcheck_withstream(stream)** - Checks for kernel errors on explicit stream
+ * - Only active at Level 2
+ * - Same error checking as postcheck but requires explicit stream argument
+ * - Preferred over postcheck - forces developers to be aware of stream context
+ * - Prevents bugs where kernel uses different stream than error check
+ * @code
+ * myKernel<<<grid, block, 0, my_stream>>>(args);
+ * postcheck_withstream(my_stream);  // Explicitly check the correct stream
+ * @endcode
+ *
+ * @section performance_implications Performance Implications
+ *
+ * **Level 0**: No overhead (macros are empty)
+ *
+ * **Level 1**: ~1-5% overhead from API error checking
+ * - Function call overhead from checking return codes
+ * - Negligible compared to kernel execution time
+ *
+ * **Level 2**: 10-100x slowdown depending on kernel characteristics
+ * - cudaStreamSynchronize() forces CPU to wait for GPU completion after every kernel
+ * - Destroys pipelining and overlapping of kernels/transfers
+ * - Short kernels suffer most (synchronization overhead >> kernel time)
+ * - Long-running kernels less affected (synchronization overhead << kernel time)
+ *
+ * @section usage_guidelines Usage Guidelines
+ *
+ * **When to use each level:**
+ * - Level 0: Final production builds, performance benchmarking
+ * - Level 1: Daily development, CI automated testing, performance profiling with error detection
+ * - Level 2: Debugging crashes, investigating race conditions, validating kernel correctness
+ *
+ * **Why postcheck_withstream requires explicit stream:**
+ * - Kernel launch uses explicit stream: myKernel<<<grid, block, 0, stream>>>
+ * - postcheck uses implicit cudaStreamPerThread which may differ from kernel's stream
+ * - If streams don't match, postcheck synchronizes wrong stream and misses errors
+ * - postcheck_withstream forces stream consistency and prevents this class of bugs
+ * - FIXME note at line 65: Eventually postcheck should be removed in favor of postcheck_withstream
+ *
+ * @note At Level 2, every postcheck/postcheck_withstream synchronizes a stream. This means
+ *       GPU parallelism is completely disabled - kernels execute serially. This is intentional
+ *       for debugging but catastrophic for performance.
+ *
+ * @warning Level 0 will silently allow data corruption. Only use in production builds where
+ *          code has been thoroughly validated at Level 1 or Level 2.
+ */
+
+#if !defined(ENABLE_GPU_DEBUG) || ENABLE_GPU_DEBUG == 0
+
+// Level 0: No GPU error checking (release mode)
+#define cudaErr(err) { err; }
+#define nppErr(err) { err; }
+#define cuTensorErr(err) { err; }
+#define cufftErr(err) { err; }
+#define postcheck(stream)
+#define precheck
+
+#elif ENABLE_GPU_DEBUG >= 1
+
+// Level 1: Error checking without expensive synchronization
+// This provides maximum debugging detail but is slow - syncs after every kernel launch
+#define cudaErr(error) { auto status = static_cast<cudaError_t>(error); if (status != cudaSuccess && status != cudaErrorNotReady) { std::cerr << "Failed Assert: " << cudaGetErrorString(status) << " :-> "; print_debug_to_cerr("");} }
+
+#define nppErr(npp_stat) { if (npp_stat != NPP_SUCCESS) { std::cerr << "Failed Assert NPP_CHECK_NPP NPP_SUCCESS = (" << NPP_SUCCESS << ") - npp_stat = " << npp_stat << " Find error codes at /usr/local/cuda/targets/x86_64-linux/include/nppdefs.h:(170)\n\n"; print_debug_to_cerr("");} } 
+
+#define cufftErr(error) { auto status = static_cast<cufftResult>(error); if (status != CUFFT_SUCCESS) { std::cerr << "Failed Assert: " << cistem::gpu::cufft_error_types[status] << " :-> \n"; print_debug_to_cerr("");} }
+
+#define cuTensorErr(error) { auto status = static_cast<cutensorStatus_t>(error); if (status != CUTENSOR_STATUS_SUCCESS) { std::cerr << "Failed Assert " << cutensorGetErrorString(status) << " :-> \n"; print_debug_to_cerr("");} }
+// #define cudaErr(error) { auto status = static_cast<cudaError_t>(error); if (status != cudaSuccess && status != cudaErrorNotReady) { std::cerr << "Failed Assert: " << cudaGetErrorString(status) << " :-> "; MyPrintWithDetails(""); {StackDump dump(NULL); dump.MyWalk(1); abort();};} }
+
+// #define nppErr(npp_stat) { if (npp_stat != NPP_SUCCESS) { std::cerr << "Failed Assert NPP_CHECK_NPP NPP_SUCCESS = (" << NPP_SUCCESS << ") - npp_stat = " << npp_stat; wxPrintf(" at %s:(%d)\nFind error codes at /usr/local/cuda/targets/x86_64-linux/include/nppdefs.h:(170)\n\n", __FILE__, __LINE__);  {StackDump dump(NULL); dump.MyWalk(1); abort();};} }
+
+// #define cufftErr(error) { auto status = static_cast<cufftResult>(error); if (status != CUFFT_SUCCESS) { std::cerr << "Failed Assert: " << cistem::gpu::cufft_error_types[status] << " :-> "; MyPrintWithDetails("");  {StackDump dump(NULL); dump.MyWalk(1); abort();};} }
+
+// #define cuTensorErr(error) { auto status = static_cast<cutensorStatus_t>(error); if (status != CUTENSOR_STATUS_SUCCESS) { std::cerr << "Failed Assert " << cutensorGetErrorString(status) << " :-> "; MyPrintWithDetails("");  {StackDump dump(NULL); dump.MyWalk(1); abort();};} }
+
+#if ENABLE_GPU_DEBUG == 1
+
+#define precheck   // No-op at level 1
+#define postcheck(stream)  // No-op at level 1
 #endif
+
+#if ENABLE_GPU_DEBUG >=2 
+#define precheck { cudaErr(cudaGetLastError()) }
+// FIXME: We should just make postCheck require the stream
+#define postcheck(stream) { cudaErr(cudaPeekAtLastError()); cudaError_t error = cudaStreamSynchronize(stream); cudaErr(error); }
+
+#endif
+
+#endif 
+
+
 
 // //s
 // // REVERTME

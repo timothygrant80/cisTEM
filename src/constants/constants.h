@@ -31,10 +31,6 @@ constexpr double double_epsilon     = 0.000001;
 constexpr float  float_epsilon      = 0.0001f;
 constexpr float  half_float_epsilon = 0.001f;
 
-// The default border to exclude when choosing peaks, e.g. in match_template, refine_template, prepare_stack_matchtemplate, make_template_result.
-constexpr const int fraction_of_box_size_to_exclude_for_border = 4;
-constexpr const int maximum_number_of_detections               = 1000;
-
 namespace match_template {
 
 /**
@@ -53,6 +49,10 @@ constexpr int   number_of_output_images     = 8; //mip, psi, theta, phi, pixel, 
 constexpr int   MAX_ALLOWED_NUMBER_OF_PEAKS = 1000; // An error will be thrown and job aborted if this number of peaks is exceeded in the make template results block
 constexpr float MAX_BINNING_FACTOR          = 10.f; // The maximum binning factor allowed for the template matching search image
 constexpr float MIN_VALUE_TO_MIP            = -0.5f; // The minimum value to be considered for the MIP, saves i/o but must be lower than the lowest likely mip value
+
+// Peak threshold scale for upsampled peak correction. Values < 1 enable sub-pixel
+// correction via FFT upsampling. Set "Use peak sampling correction" to No to override to 1.0f.
+constexpr float PEAK_THRESHOLD_SCALE = 0.85f;
 
 /**
  * @brief Used to encode search information in result arrays passed from client to server, 
@@ -73,6 +73,7 @@ enum Enum : int {
     number_of_valid_search_pixels,
     disable_flat_fielding,
     number_of_expected_false_positives,
+    use_peak_sampling_correction,
     COUNT
 };
 } // namespace match_template

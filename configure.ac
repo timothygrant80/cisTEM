@@ -19,6 +19,12 @@ LT_PREREQ([2.4])
 LT_INIT([dlopen])
 AC_LANG(C++)
 
+# Define marker to verify cistem_config.h inclusion via -include flag (see configure.ac:708-709)
+# AC_DEFINE entries are added to cistem_config.in by autoheader, then configure generates cistem_config.h from the template.
+# The -include compiler flag forces cistem_config.h inclusion in all compilation units, propagating all AC_DEFINE symbols.
+# core_headers.h:7 verifies this marker is defined to catch build system misconfiguration.
+AC_DEFINE([CISTEM_CONFIG_H_INCLUDED], [], [Marker to detect if cistem_config.h has been included])
+
 # Set this for the gpu makefile hack
 # TODO: I don't think this is still needed, but I'm not sure.
 TOPSRCDIR=$srcdir
@@ -240,13 +246,16 @@ AC_ARG_ENABLE(debugmode, AS_HELP_STRING([--enable-debugmode],[Compile in debug m
 
 # This also has an effect in submodule_FastFFT on the FastFFT_FLAGS
 want_gpu_debug="no"
-AC_ARG_ENABLE(gpu-debug, AS_HELP_STRING([--enable-gpu-debug],[Compile heavy synchronous checking [default=no]]),[
-  if test "$enableval" = yes; then
-    AC_DEFINE([ENABLE_GPU_DEBUG],[], [use the gpu or not])
-  	AC_MSG_NOTICE([Compiling with synchronizing debug checks for GPU code])	
-    want_gpu_debug="yes"
-  fi
-  ]) 
+AC_ARG_WITH([gpu-debug],
+  AS_HELP_STRING([--with-gpu-debug=LEVEL],[GPU debug level: 1=checks only, 2=+syncs [default=0]]),
+  [gpu_debug_level=$withval], [gpu_debug_level=0])
+
+if test "$gpu_debug_level" -gt 0; then
+  AC_DEFINE_UNQUOTED([ENABLE_GPU_DEBUG], [$gpu_debug_level], [GPU debug level])
+  AC_MSG_NOTICE([Compiling with GPU debug level $gpu_debug_level])
+  NVCCFLAGS="$NVCCFLAGS -DENABLE_GPU_DEBUG=$gpu_debug_level"
+  want_gpu_debug="yes"
+fi 
   
 # Call the m4 macro to check and setup for FastFFT if present and requested. Must be run after AX_CUDA
 submodule_FastFFT
@@ -368,9 +377,9 @@ AC_ARG_ENABLE(experimental, AS_HELP_STRING([--enable-experimental],[Compile with
  
 #rigorous socket check 
 
-AC_ARG_ENABLE(rigorous-sockets, AS_HELP_STRING([--enable-rigorous-sockets],[Use rigorous socket checking [default=no]]),[
+AC_ARG_ENABLE(rigorous-socket-check, AS_HELP_STRING([--enable-rigorous-socket-check],[Use rigorous socket checking [default=no]]),[
   if test "$enableval" = yes; then
-    AC_DEFINE([RIGOROUS_SOCKETS],[], [Define the rigorous sockets flag])
+    AC_DEFINE([RIGOROUS_SOCKET_CHECK],[], [Define the rigorous sockets flag])
   	AC_MSG_NOTICE([Compiling with rigorous socket checking])	
   fi
   ])
@@ -698,6 +707,12 @@ CXXFLAGS="$CXXFLAGS -I$CISTEM_CONFIG_DIR"
 CPPFLAGS="$CPPFLAGS -I$CISTEM_CONFIG_DIR"
 WX_CPPFLAGS="$WX_CPPFLAGS -I$CISTEM_CONFIG_DIR"
 WX_CPPFLAGS_BASE="$WX_CPPFLAGS_BASE -I$CISTEM_CONFIG_DIR"
+
+# Force inclusion of cistem_config.h in all compilation units
+# This ensures configuration defines from configure.ac are available everywhere
+# Supported by GCC, Clang, and Intel icpc compilers
+CXXFLAGS="$CXXFLAGS -include $CISTEM_CONFIG_DIR/cistem_config.h"
+CPPFLAGS="$CPPFLAGS -include $CISTEM_CONFIG_DIR/cistem_config.h"
 
 # Make sure the host compiler gets all flags when called from nvcc
 CUDA_TO_CPP="`echo $CPPFLAGS $WX_CPPFLAGS | sed -e 's/\s\+/,/g' | awk '{print "-Xcompiler " $0}'`"

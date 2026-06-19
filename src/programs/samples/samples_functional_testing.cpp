@@ -1,7 +1,6 @@
 //#include <wx/wx.h>
 
 // #include "common/samples_headers.h"
-#include <cistem_config.h>
 
 #ifdef ENABLEGPU
 #include "../../gpu/gpu_core_headers.h"

@@ -27,8 +27,8 @@ fi
 # As a workaround we create a softlink to .devcontainer.json in the current directory
 mkdir -p .devcontainer
 cd  .devcontainer
-if [[ ! -L .devcontainer.json ]] ; then
-    ln -s ../.vscode/devcontainer.json .devcontainer.json
+if [[ ! -L devcontainer.json ]] ; then
+    ln -s ../.vscode/devcontainer.json devcontainer.json
 fi
 cd ..
 

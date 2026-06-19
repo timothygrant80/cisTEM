@@ -1,4 +1,4 @@
-#include <cistem_config.h>
+
 
 #ifdef ENABLEGPU
 #include "../../../gpu/gpu_core_headers.h"
@@ -146,7 +146,7 @@ bool DoCPUvsGPUProjectionTest(const wxString& cistem_ref_dir, const wxString& te
     gpu_prj.ForwardFFT( );
 
     gpu_prj.SetToConstant(0.f);
-    gpu_prj.RecordAndWait( );
+    gpu_prj.RecordAndWait(cudaStreamPerThread, true);
 
     float3 xtrashifts = make_float3(0.0f, 0.0f, 0.0f);
 
@@ -165,7 +165,7 @@ bool DoCPUvsGPUProjectionTest(const wxString& cistem_ref_dir, const wxString& te
         gpu_prj.SwapRealSpaceQuadrants( );
         gpu_prj.BackwardFFT( );
         gpu_prj.CopyDeviceToHostAndSynchronize(cimg, false);
-        gpu_prj.RecordAndWait( );
+        gpu_prj.RecordAndWait(cudaStreamPerThread, true);
 
         cimg.ZeroFloatAndNormalize(1.f, mask_radius);
 
@@ -203,7 +203,7 @@ bool DoCPUvsGPUProjectionTest(const wxString& cistem_ref_dir, const wxString& te
         gpu_prj.SwapRealSpaceQuadrants( );
         gpu_prj.BackwardFFT( );
         gpu_prj.CopyDeviceToHostAndSynchronize(cimg, false);
-        gpu_prj.RecordAndWait( );
+        gpu_prj.RecordAndWait(cudaStreamPerThread, true);
 
         cpu_prj.SwapRealSpaceQuadrants( );
         cpu_prj.BackwardFFT( );

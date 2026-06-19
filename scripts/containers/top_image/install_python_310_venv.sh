@@ -1,22 +1,35 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Install prerequisites and add deadsnakes PPA (non-interactive)
-export DEBIAN_FRONTEND=noninteractive
-apt-get update
-apt-get install -y --no-install-recommends software-properties-common ca-certificates gnupg
-add-apt-repository -y ppa:deadsnakes/ppa
-apt-get update
 
-# Install Python 3.10 and venv tooling
+apt-get update
 apt-get install -y --no-install-recommends \
-  python3.10 python3.10-venv python3.10-distutils python3.10-dev
+    build-essential \
+    curl \
+    wget \
+    libssl-dev \
+    zlib1g-dev \
+    libncurses5-dev \
+    libncursesw5-dev \
+    libreadline-dev \
+    libffi-dev \
+    libsqlite3-dev \
+    libbz2-dev \
+    liblzma-dev \
+    tk-dev \
+    uuid-dev
+    
+cd /usr/src
+curl -O https://www.python.org/ftp/python/3.10.15/Python-3.10.15.tgz
+tar -xf Python-3.10.15.tgz
+cd Python-3.10.15
+./configure --enable-optimizations --enable-shared --with-ensurepip=install
+make -j"$(nproc)"
+make altinstall
+ldconfig
 
-# Create venv at /opt/venv with Python 3.10
-python3.10 -m venv /opt/venv
+ln -sf /usr/local/bin/python3.10 /usr/local/bin/python
+ln -sf /usr/local/bin/python3.10 /usr/local/bin/python3
+ln -sf /usr/local/bin/pip3.10 /usr/local/bin/pip
+ln -sf /usr/local/bin/pip3.10 /usr/local/bin/pip3
 
-# Optional: pre-upgrade pip/setuptools/wheel inside the venv
-/opt/venv/bin/python -m pip install --upgrade pip setuptools wheel
-
-# Make venv world-readable/executable so non-root can use it (adjust as needed)
-chmod -R a+rX /opt/venv

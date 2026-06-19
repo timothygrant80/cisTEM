@@ -33,5 +33,9 @@ class ImportRefinementPackageWizard : public ImportRefinementPackageWizardParent
   private:
     template <typename StarFileSource_t>
     void ImportRefinementPackage(StarFileSource_t& input_params_file, const int stack_x_size, const int stack_num_images);
+
+    // emClarity import support
+    float total_exposure_limit        = 40.0f; // Default exposure limit
+    bool  should_apply_exposure_limit = false;
 };
 #endif

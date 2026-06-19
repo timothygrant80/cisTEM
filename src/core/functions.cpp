@@ -1,5 +1,7 @@
 #include "core_headers.h"
 
+#include <memory>
+
 // for ip address
 #include <stdio.h>
 #include <sys/types.h>
@@ -157,24 +159,31 @@ bool SendwxStringToSocket(wxString* string_to_send, wxSocketBase* socket) {
     return true;
 }
 
-bool SendTemplateMatchingResultToSocket(wxSocketBase* socket, int& image_number, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes) {
+bool SendTemplateMatchingResultToSocket(wxSocketBase* socket, int& image_number, float& high_res_limit_used, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes) {
     // send the image number and all the peak details...
 
     int number_of_peaks   = peak_infos.GetCount( );
     int number_of_changes = peak_changes.GetCount( );
 
-    int number_of_bytes = sizeof(int) + sizeof(float) + sizeof(int) + sizeof(int) + (number_of_peaks * sizeof(float) * 8) + (number_of_changes * sizeof(float) * 10); // THIS WILL NEED TO BE CHANGED IF EXTRA THINGS ARE ADDED
+    int number_of_bytes = sizeof(int) + sizeof(float) + sizeof(float) + sizeof(int) + sizeof(int) + (number_of_peaks * sizeof(float) * 8) + (number_of_changes * sizeof(float) * 10); // THIS WILL NEED TO BE CHANGED IF EXTRA THINGS ARE ADDED
 
-    unsigned char* data_buffer = new unsigned char[number_of_bytes];
+    // Inter-process TCP send: sockets use wxSOCKET_WAITALL|wxSOCKET_BLOCK, so
+    // WriteToSocket blocks until bytes are copied to kernel send buffer.
+    // Buffer is safe to free after WriteToSocket returns.
+    // Note: this involves a user-space copy into data_buffer, then a kernel copy
+    // via write(). Future optimization: serialize directly to the socket.
+    auto data_buffer = std::make_unique<unsigned char[]>(number_of_bytes);
 
-    int* pointer_to_first_byte = reinterpret_cast<int*>(data_buffer);
+    int* pointer_to_first_byte = reinterpret_cast<int*>(data_buffer.get( ));
     pointer_to_first_byte[0]   = image_number;
     pointer_to_first_byte[1]   = number_of_peaks;
     pointer_to_first_byte[2]   = number_of_changes;
 
-    float* pointer_to_float_data = reinterpret_cast<float*>(data_buffer + (sizeof(int) * 3));
+    float* pointer_to_float_data = reinterpret_cast<float*>(data_buffer.get( ) + (sizeof(int) * 3));
 
     int float_position                    = 0;
+    pointer_to_float_data[float_position] = high_res_limit_used;
+    float_position++;
     pointer_to_float_data[float_position] = threshold_used;
     float_position++;
 
@@ -228,13 +237,13 @@ bool SendTemplateMatchingResultToSocket(wxSocketBase* socket, int& image_number,
         return false;
     if ( WriteToSocket(socket, &number_of_bytes, sizeof(int), true, "SendTemplateMatchImageNumberOfBytes", FUNCTION_DETAILS_AS_WXSTRING) == false )
         return false;
-    if ( WriteToSocket(socket, data_buffer, number_of_bytes, true, "SendTemplateMatchInfo", FUNCTION_DETAILS_AS_WXSTRING) == false )
+    if ( WriteToSocket(socket, data_buffer.get( ), number_of_bytes, true, "SendTemplateMatchInfo", FUNCTION_DETAILS_AS_WXSTRING) == false )
         return false;
 
     return true;
 }
 
-bool ReceiveTemplateMatchingResultFromSocket(wxSocketBase* socket, int& image_number, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes) {
+bool ReceiveTemplateMatchingResultFromSocket(wxSocketBase* socket, int& image_number, float& high_res_limit_used, float& threshold_used, ArrayOfTemplateMatchFoundPeakInfos& peak_infos, ArrayOfTemplateMatchFoundPeakInfos& peak_changes) {
     int number_of_bytes;
     int number_of_peaks;
     int number_of_changes;
@@ -242,8 +251,9 @@ bool ReceiveTemplateMatchingResultFromSocket(wxSocketBase* socket, int& image_nu
     if ( ReadFromSocket(socket, &number_of_bytes, sizeof(int), true, "SendTemplateMatchImageNumberOfBytes", FUNCTION_DETAILS_AS_WXSTRING) == false )
         return false;
 
-    unsigned char* data_buffer = new unsigned char[number_of_bytes];
-    if ( ReadFromSocket(socket, data_buffer, number_of_bytes, true, "SendTemplateMatchInfo", FUNCTION_DETAILS_AS_WXSTRING) == false )
+    // Owned locally; deserialized data copied into peak_infos/peak_changes by value.
+    auto data_buffer = std::make_unique<unsigned char[]>(number_of_bytes);
+    if ( ReadFromSocket(socket, data_buffer.get( ), number_of_bytes, true, "SendTemplateMatchInfo", FUNCTION_DETAILS_AS_WXSTRING) == false )
         return false;
 
     peak_infos.Clear( );
@@ -251,14 +261,16 @@ bool ReceiveTemplateMatchingResultFromSocket(wxSocketBase* socket, int& image_nu
 
     TemplateMatchFoundPeakInfo temp_peak_info;
 
-    int* pointer_to_first_byte = reinterpret_cast<int*>(data_buffer);
+    int* pointer_to_first_byte = reinterpret_cast<int*>(data_buffer.get( ));
     image_number               = pointer_to_first_byte[0];
     number_of_peaks            = pointer_to_first_byte[1];
     number_of_changes          = pointer_to_first_byte[2];
 
-    float* pointer_to_float_data = reinterpret_cast<float*>(data_buffer + (sizeof(int) * 3));
+    float* pointer_to_float_data = reinterpret_cast<float*>(data_buffer.get( ) + (sizeof(int) * 3));
     int    float_position        = 0;
 
+    high_res_limit_used = pointer_to_float_data[float_position];
+    float_position++;
     threshold_used = pointer_to_float_data[float_position];
     float_position++;
 
@@ -307,8 +319,6 @@ bool ReceiveTemplateMatchingResultFromSocket(wxSocketBase* socket, int& image_nu
 
         peak_changes.Add(temp_peak_info);
     }
-
-    delete[] data_buffer;
 
     return true;
 }

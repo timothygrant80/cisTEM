@@ -1,4 +1,4 @@
-#include <cistem_config.h>
+
 
 #ifdef ENABLEGPU
 #include "../../gpu/gpu_core_headers.h"
@@ -921,7 +921,7 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image&     max_intensity_
         x_radius *= GetFullBinningFactor( );
         y_radius *= GetFullBinningFactor( );
         timer.start("undo fourier binning");
-#pragma omp parallel for num_threads(n_threads) default(none) shared(max_intensity_projection, tmp_mip, correlation_pixel_sum_image, tmp_sum, correlation_pixel_sum_of_squares_image, tmp_sum_sq)
+#pragma omp parallel for num_threads(n_threads) default(none) shared(max_intensity_projection, tmp_mip, correlation_pixel_sum_image, tmp_sum, correlation_pixel_sum_of_squares_image, tmp_sum_sq, n_images)
         for ( int i = 0; i < n_images; i++ ) {
             // Now undo the fourier binning
 
@@ -977,7 +977,7 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image&     max_intensity_
 
     timer.start("NN fill");
     if ( resampling_is_needed ) {
-#pragma omp parallel for num_threads(n_threads) default(none) shared(tmp_phi, tmp_theta, tmp_psi, tmp_defocus, tmp_pixel_size, valid_area_mask, best_phi, best_theta, best_psi, best_defocus, best_pixel_size)
+#pragma omp parallel for num_threads(n_threads) default(none) shared(tmp_phi, tmp_theta, tmp_psi, tmp_defocus, tmp_pixel_size, valid_area_mask, best_phi, best_theta, best_psi, best_defocus, best_pixel_size, n_images)
         for ( int i = 0; i < n_images; i++ ) {
             Image* ptr;
             Image* best_ptr;
@@ -1057,7 +1057,7 @@ void TemplateMatchingDataSizer::ResizeImage_postSearch(Image&     max_intensity_
     timer.print_times( );
 };
 
-// //sa_shared/git/grigorieff_lab_cistem/cisTEM
+// //sa_shared/git/grigorieff_lab_cistem/cisTEMx
 void TemplateMatchingDataSizer::FillInNearestNeighbors(Image& output_image, Image& nn_upsampled_image, Image& valid_area_mask, const float no_value) {
 
     // Set the non-valid area to zero (not no_value) so that we can use the no_value to check if the pixel has been filled in.

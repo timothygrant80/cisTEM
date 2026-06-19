@@ -1793,7 +1793,7 @@ float cisTEMParameters::ReturnAverageScore(bool exclude_negative_film_numbers) {
 bool cisTEMParameters::ContainsMultipleParticleGroups( ) {
     bool particle_group_different_from_first = false;
     bool particle_group_to_compare_to_is_set = false; // use to record the first active particle group
-    int  particle_group_to_compare_to; // all other groups are compared to this
+    int  particle_group_to_compare_to        = 0; // all other groups are compared to this
 
     // First, check to see if the particle_group field is even set.
     if ( parameters_that_were_read.particle_group ) {

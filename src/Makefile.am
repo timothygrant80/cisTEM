@@ -310,7 +310,7 @@ bin_PROGRAMS += applyctf
 endif
 
 if ENABLE_BLUSHREFINEMENT_AM
-bin_PROGRAMS += blush_refinement
+bin_PROGRAMS += ipc_blush blush_refinement
 endif
 
 if ENABLE_PROJECT3D_AM
@@ -768,11 +768,6 @@ cisTEM_SOURCES = programs/projectx/projectx.cpp \
                 gui/AtomicCoordinatesImportDialog.cpp \
                 gui/ResampleDialog.cpp
 
-if ENABLE_LIBTORCH_AM
-if ENABLE_BLUSH
-cisTEM_SOURCES += programs/blush_refinement/blush_model.cpp programs/blush_refinement/blush_helpers.cpp
-endif
-endif
 
 if EXPERIMENTAL_AM
 cisTEM_SOURCES +=  gui/RefineTemplateDevPanel.cpp gui/MyExperimentalPanel.cpp 
@@ -784,11 +779,7 @@ endif
 
 cisTEM_CXXFLAGS = $(WX_CPPFLAGS) $(LIBTORCH_CXX_FLAGS)
 cisTEM_CPPFLAGS = $(WX_CPPFLAGS) $(LIBTORCH_CXX_FLAGS)
-if ENABLE_BLUSH
-cisTEM_LDADD    = $(LIBTORCH_LIBS) $(LIBTORCH_RPATH) libguicore.a libcore.a $(WX_LIBS) $(MKL_LIBS)
-else
 cisTEM_LDADD    = libguicore.a libcore.a $(WX_LIBS) $(MKL_LIBS)
-endif
 cisTEM_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
 cisTEM_display_SOURCES = programs/cisTEM_display/cisTEM_display.cpp programs/cisTEM_display/display_gui.cpp gui/DisplayPanel.cpp gui/DisplayFrame.cpp programs/cisTEM_display/DisplayServer.cpp
@@ -1151,10 +1142,27 @@ azimuthal_average_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
 if ENABLE_LIBTORCH_AM
 if ENABLE_BLUSHREFINEMENT_AM
-blush_refinement_SOURCES  = programs/blush_refinement/blush_model.cpp programs/blush_refinement/blush_helpers.cpp programs/blush_refinement/blush_refinement.cpp
+ipc_blush_SOURCES = programs/blush_refinement/blush_model.cpp programs/blush_refinement/blush_helpers.cpp programs/blush_refinement/ipc_blush.cpp
+ipc_blush_CXXFLAGS = $(LIBTORCH_CXX_FLAGS) # -diag-disable=1011,2196
+ipc_blush_CPPFLAGS = $(LIBTORCH_CXX_FLAGS) 
+# NOTE: ipc_blush links only LibTorch, avoiding cisTEM's sequential-MKL stack (see
+# ipc_blush.cpp, m4/libtorch.m4). Top-level -qmkl=sequential/-fopenmp still apply here since
+# Automake appends $(CXXFLAGS)/$(LIBS) after this rule's flags. --as-needed drops the
+# now-unused MKL libs (libtorch_cpu.so is self-contained, using only its own bundled libgomp
+# for torch::set_num_threads()). Keep -qopenmp: icpc emits __kmpc_* symbols around main() for
+# any OpenMP-compiled TU regardless of #pragma use, so dropping it undefines them at link.
+ipc_blush_LDFLAGS  = -L/opt/libtorch/lib \
+                     -Wl,-rpath,/opt/libtorch/lib \
+                     -Wl,-rpath,/opt/intel/oneapi/mkl/2021.4.0/lib/intel64 \
+                     -Wl,-rpath,/opt/intel/oneapi/compiler/2021.4.0/linux/compiler/lib/intel64_lin \
+                     -Wl,--as-needed -qopenmp
+ipc_blush_LDADD    =  $(LIBTORCH_LIBS) $(LIBTORCH_RPATH)
+ipc_blush_LINK = $(CXX) $(ipc_blush_CXXFLAGS) $(ipc_blush_LDFLAGS) -o $@
+
+blush_refinement_SOURCES  = programs/blush_refinement/blush_refinement.cpp
 blush_refinement_CXXFLAGS = $(WX_CPPFLAGS_BASE) $(LIBTORCH_CXX_FLAGS)
 blush_refinement_CPPFLAGS = $(WX_CPPFLAGS_BASE) $(LIBTORCH_CXX_FLAGS)
-blush_refinement_LDADD    = $(LIBTORCH_LIBS) $(LIBTORCH_RPATH) libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
+blush_refinement_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
 blush_refinement_LIBTOOLFLAGS= $(LIBTOOL_FLAGS)
 endif
 endif

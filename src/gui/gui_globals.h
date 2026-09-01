@@ -110,7 +110,7 @@ class OrthDrawerThread : public wxThread {
 
 class AutoMaskerThread : public wxThread {
   public:
-    AutoMaskerThread(wxWindow* parent, wxArrayString wanted_input_files, wxArrayString wanted_output_files, float wanted_pixel_size, float wanted_mask_radius, std::shared_ptr<std::atomic<bool>> stop_flag, bool apply_blush = false, int user_batch_size = 1, int max_threads = 1, int wanted_thread_id = -1, float wanted_max_resolution = -1) : wxThread(wxTHREAD_JOINABLE) {
+    AutoMaskerThread(wxWindow* parent, wxArrayString wanted_input_files, wxArrayString wanted_output_files, float wanted_pixel_size, float wanted_mask_radius, int wanted_thread_id = -1, float wanted_max_resolution = -1) : wxThread(wxTHREAD_JOINABLE) {
         main_thread_pointer = parent;
         input_files         = wanted_input_files;
         output_files        = wanted_output_files;
@@ -120,31 +120,23 @@ class AutoMaskerThread : public wxThread {
         max_resolution      = wanted_max_resolution;
         if ( max_resolution < pixel_size * 2.0f )
             max_resolution = pixel_size * 2.0f;
-        this->stop_flag       = stop_flag;
-        apply_blush_denoising = apply_blush;
-        batch_size            = user_batch_size;
-        maximum_num_threads   = max_threads;
     }
 
   protected:
-    wxWindow*                          main_thread_pointer;
-    wxArrayString                      input_files;
-    wxArrayString                      output_files;
-    float                              pixel_size;
-    float                              mask_radius;
-    int                                thread_id;
-    float                              max_resolution;
-    std::shared_ptr<std::atomic<bool>> stop_flag;
-    bool                               apply_blush_denoising;
-    int                                batch_size;
-    int                                maximum_num_threads;
+    wxWindow*     main_thread_pointer;
+    wxArrayString input_files;
+    wxArrayString output_files;
+    float         pixel_size;
+    float         mask_radius;
+    int           thread_id;
+    float         max_resolution;
 
     virtual ExitCode Entry( );
 };
 
 class Multiply3DMaskerThread : public wxThread {
   public:
-    Multiply3DMaskerThread(wxWindow* parent, wxArrayString wanted_input_files, wxArrayString wanted_output_files, wxString wanted_mask_filename, float wanted_cosine_edge_width, float wanted_weight_outside_mask, float wanted_low_pass_filter_radius, float wanted_pixel_size, float wanted_mask_radius, std::shared_ptr<std::atomic<bool>> stop_flag, bool apply_blush = false, int user_batch_size = 1, int max_threads = 1, int wanted_thread_id = -1) : wxThread(wxTHREAD_JOINABLE) {
+    Multiply3DMaskerThread(wxWindow* parent, wxArrayString wanted_input_files, wxArrayString wanted_output_files, wxString wanted_mask_filename, float wanted_cosine_edge_width, float wanted_weight_outside_mask, float wanted_low_pass_filter_radius, float wanted_pixel_size, float wanted_mask_radius, int wanted_thread_id = -1) : wxThread(wxTHREAD_JOINABLE) {
         main_thread_pointer    = parent;
         input_files            = wanted_input_files;
         output_files           = wanted_output_files;
@@ -155,10 +147,6 @@ class Multiply3DMaskerThread : public wxThread {
         pixel_size             = wanted_pixel_size;
         thread_id              = wanted_thread_id;
         mask_radius            = wanted_mask_radius;
-        this->stop_flag        = stop_flag;
-        apply_blush_denoising  = apply_blush;
-        batch_size             = user_batch_size;
-        maximum_num_threads    = max_threads;
     }
 
   protected:
@@ -168,15 +156,11 @@ class Multiply3DMaskerThread : public wxThread {
     wxString      mask_filename;
     int           thread_id;
 
-    float                              cosine_edge_width;
-    float                              weight_outside_mask;
-    float                              low_pass_filter_radius;
-    float                              pixel_size;
-    float                              mask_radius;
-    std::shared_ptr<std::atomic<bool>> stop_flag;
-    bool                               apply_blush_denoising;
-    int                                batch_size;
-    int                                maximum_num_threads;
+    float cosine_edge_width;
+    float weight_outside_mask;
+    float low_pass_filter_radius;
+    float pixel_size;
+    float mask_radius;
 
     virtual ExitCode Entry( );
 };

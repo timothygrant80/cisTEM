@@ -1686,41 +1686,10 @@ wxThread::ExitCode AutoMaskerThread::Entry( ) {
 
         for ( int class_counter = 0; class_counter < input_files.GetCount( ); class_counter++ ) {
 
-            if ( stop_flag && stop_flag->load(std::memory_order_relaxed) ) {
-                return (wxThread::ExitCode)0;
-            }
-
             input_file.OpenFile(input_files.Item(class_counter).ToStdString( ), false);
             input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices( ));
             input_file.CloseFile( );
 
-#ifdef cisTEM_USING_BLUSH
-            if ( apply_blush_denoising ) {
-
-                constexpr int stride_size{20};
-                constexpr int block_size{64};
-
-                const int total_blush_iterations = pow(((input_image.logical_x_dimension - block_size) / stride_size) + 1, 3) / batch_size;
-                bool      skip_blush             = (total_blush_iterations <= 1) ? true : false;
-                BlushHelpers::ApplyBlush(input_image, pixel_size, mask_radius, total_blush_iterations, batch_size, maximum_num_threads, stop_flag,
-                                         [this, total_blush_iterations](int percent, double seconds_remaining) {
-                                             // Check if GUI wants to terminate process; if so, return false so we kill the current process in the long-running blush function
-                                             // so resources are properly discarded
-                                             if ( stop_flag && stop_flag->load(std::memory_order_relaxed) ) {
-                                                 return false;
-                                             }
-
-                                             auto evt = new wxThreadEvent(EVT_UPDATE_MASK_THREAD_PROGRESS);
-                                             evt->SetInt(percent);
-                                             evt->SetExtraLong(seconds_remaining);
-                                             wxQueueEvent(main_thread_pointer, evt);
-                                             return true;
-                                         });
-                if ( stop_flag && stop_flag->load(std::memory_order_relaxed) ) {
-                    return (wxThread::ExitCode)0;
-                }
-            }
-#endif
             if ( ! apply_size_mask ) {
                 average_value = input_image.ReturnAverageOfRealValues( );
                 input_image.SetMinimumValue(average_value);
@@ -1824,40 +1793,10 @@ wxThread::ExitCode Multiply3DMaskerThread::Entry( ) {
         // loop through and mask
 
         for ( int class_counter = 0; class_counter < input_files.GetCount( ); class_counter++ ) {
-            if ( stop_flag && stop_flag->load(std::memory_order_relaxed) ) {
-                return (wxThread::ExitCode)0;
-            }
 
             input_file.OpenFile(input_files.Item(class_counter).ToStdString( ), false);
             input_image.ReadSlices(&input_file, 1, input_file.ReturnNumberOfSlices( ));
             input_file.CloseFile( );
-
-#ifdef cisTEM_USING_BLUSH
-            if ( apply_blush_denoising ) {
-
-                // TODO: adjust this for when input_files.GetCount() is greater than 1 (the refinement is operating on more than one class)
-                constexpr int stride_size{20};
-                constexpr int block_size{64};
-                const int     total_blush_iterations = pow(((input_image.logical_x_dimension - block_size) / stride_size) + 1, 3);
-                BlushHelpers::ApplyBlush(input_image, pixel_size, mask_radius, total_blush_iterations, batch_size, maximum_num_threads, stop_flag,
-                                         [this, total_blush_iterations](int percent, double seconds_remaining) {
-                                             // Check if GUI wants to terminate process; if so, return false so we kill the current process in the long-running blush function
-                                             // so resources are properly discarded
-                                             if ( stop_flag && stop_flag->load(std::memory_order_relaxed) ) {
-                                                 return false;
-                                             }
-
-                                             auto evt = new wxThreadEvent(EVT_UPDATE_MASK_THREAD_PROGRESS);
-                                             evt->SetInt(percent);
-                                             evt->SetExtraLong(seconds_remaining);
-                                             wxQueueEvent(main_thread_pointer, evt);
-                                             return true;
-                                         });
-                if ( stop_flag && stop_flag->load(std::memory_order_relaxed) ) {
-                    return (wxThread::ExitCode)0;
-                }
-            }
-#endif
 
             input_image.ApplyMask(mask_image, cosine_edge_width / pixel_size, weight_outside_mask, pixel_size / low_pass_filter_radius, pixel_size / 40.0);
             output_file.OpenFile(output_files.Item(class_counter).ToStdString( ), true);

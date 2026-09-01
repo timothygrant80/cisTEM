@@ -9,7 +9,7 @@
  */
 class BlockIterator {
   public:
-    BlockIterator(const std::tuple<int, int, int>& dims, const int& block_size, const int& strides) : x_index(0), y_index(0), z_index(0), index(0) {
+    BlockIterator(const std::tuple<int, int, int>& dims, const int& block_size, const int& strides) {
         x_range = GetStartingIndices(std::get<0>(dims), block_size, strides);
         y_range = GetStartingIndices(std::get<1>(dims), block_size, strides);
         z_range = GetStartingIndices(std::get<2>(dims), block_size, strides);
@@ -75,7 +75,6 @@ class BlockIterator {
     }
 
     std::tuple<int, int, int> get_coords_by_index(int index) {
-        int z_size = z_range.size( );
         int y_size = y_range.size( );
         int x_size = x_range.size( );
 
@@ -114,7 +113,6 @@ class BlockIterator {
     // }
 
   private:
-    int              x_index, y_index, z_index, index;
     std::vector<int> x_range, y_range, z_range;
 
     /**

@@ -23,10 +23,6 @@ wxThread* MaskingService::StartMasking(wxWindow* parent, MaskingParams& params) 
                 params.low_pass_radius,
                 params.pixel_size,
                 params.mask_radius,
-                params.stop_flag,
-                params.apply_blush,
-                params.batch_size,
-                params.num_blush_threads,
                 params.thread_id);
     }
     else {
@@ -37,11 +33,6 @@ wxThread* MaskingService::StartMasking(wxWindow* parent, MaskingParams& params) 
                 params.output_files,
                 params.pixel_size,
                 params.mask_radius,
-                params.stop_flag,
-                params.apply_blush,
-                params.batch_size,
-                params.num_blush_threads,
-                params.thread_id,
                 params.estimated_resolution);
     }
 
@@ -68,10 +59,7 @@ void DispatchMasking(PanelType* panel) {
     MaskingParams params;
 
     // Vals common between panel managers first
-    params.apply_blush       = panel->my_refinement_manager.apply_blush_denoising;
-    params.batch_size        = panel->my_refinement_manager.user_blush_batch_size;
-    params.num_blush_threads = panel->my_refinement_manager.num_blush_threads;
-    params.pixel_size        = panel->my_refinement_manager.input_refinement->resolution_statistics_pixel_size;
+    params.pixel_size = panel->my_refinement_manager.input_refinement->resolution_statistics_pixel_size;
 
     // Common between all panels
     params.thread_id             = panel->next_thread_id++;
@@ -84,21 +72,11 @@ void DispatchMasking(PanelType* panel) {
         params.mask_radius   = panel->my_refinement_manager.active_mask_radius;
         params.use_user_mask = panel->my_refinement_manager.active_should_mask;
 
-        if ( params.apply_blush ) {
-            if ( params.use_user_mask ) {
-                panel->WriteInfoText("Applying Blush inference and masking reference reconstruction with user mask...");
-            }
-            else {
-                panel->WriteInfoText("Applying Blush inference and automasking reference reconstruction...");
-            }
+        if ( params.use_user_mask ) {
+            panel->WriteInfoText("Masking reference reconstruction with selected mask...");
         }
         else {
-            if ( params.use_user_mask ) {
-                panel->WriteInfoText("Masking reference reconstruction with selected mask...");
-            }
-            else {
-                panel->WriteInfoText("Automasking reference reconstruction...");
-            }
+            panel->WriteInfoText("Automasking reference reconstruction...");
         }
 
         for ( size_t filename_counter = 0; filename_counter < panel->my_refinement_manager.current_reference_filenames.GetCount( ); filename_counter++ ) {

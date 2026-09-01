@@ -1,5 +1,4 @@
 #include "blush_model.h"
-#include "../../core/core_headers.h"
 
 #include <fstream>
 #include <iterator>

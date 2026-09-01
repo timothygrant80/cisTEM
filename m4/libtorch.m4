@@ -40,11 +40,11 @@ AC_DEFUN([AX_LIBTORCH],
 					[AC_MSG_ERROR([LibTorch is disabled by default. Specifying --disable-libtorch breaks the configuration. If you want to enable LibTorch, please configure with --enable-libtorch])])])],
 		[AC_MSG_NOTICE([LibTorch support not requested (use --enable-libtorch to enable)])])
 
-	AS_IF([test "x$static_link" = "xfalse" && test "x$use_libtorch" = "xyes"], [
-		AC_MSG_WARN([Dynamic linking of Intel MKL conflicts with LibTorch's built in MKL, and will segfault during FFT planning/destruction.])
-		AC_MSG_WARN([LibTorch will be disabled to continue with dynamic linking.])
-		use_libtorch="no"
-	])
+	# AS_IF([test "x$static_link" = "xfalse" && test "x$use_libtorch" = "xyes"], [
+	# 	AC_MSG_WARN([Dynamic linking of Intel MKL conflicts with LibTorch's built in MKL, and will segfault during FFT planning/destruction.])
+	# 	AC_MSG_WARN([LibTorch will be disabled to continue with dynamic linking.])
+	# 	use_libtorch="no"
+	# ])
 
 	# Set automake conditional for Makefile.am
 	AM_CONDITIONAL([ENABLE_LIBTORCH_AM], [test "x$use_libtorch" = "xyes"])
@@ -77,7 +77,7 @@ AC_DEFUN([AX_LIBTORCH],
 
 			# Set include paths as flags (not directly modifying CPPFLAGS/CXXFLAGS)
 			# Following FastFFT pattern: programs that need LibTorch will use LIBTORCH_CXX_FLAGS
-			LIBTORCH_CXX_FLAGS="-isystem -I${LIBTORCH_ROOT}/include -I${LIBTORCH_ROOT}/include/torch/csrc/api/include"
+			LIBTORCH_CXX_FLAGS="-isystem ${LIBTORCH_ROOT}/include -isystem ${LIBTORCH_ROOT}/include/torch/csrc/api/include -gdwarf-4"
 
 			# Warn about static linking issues
 			AS_IF([test "x$static_link" = "xtrue"],

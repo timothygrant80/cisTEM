@@ -99,6 +99,7 @@ class RefinementManager {
 
     void SetupInitialReconstructionJob( );
     void SetupInitialMerge3dJob( );
+    void SetupBlushInferenceJob( );
 
     void RunInitialReconstructionJob( );
     void RunInitialMerge3dJob( );
@@ -106,6 +107,7 @@ class RefinementManager {
     void RunRefinementJob( );
     void RunReconstructionJob( );
     void RunMerge3dJob( );
+    void RunBlushInferenceJob( );
 
     void ProcessJobResult(JobResult* result_to_process);
     void ProcessAllJobsFinished( );
@@ -117,6 +119,9 @@ class RefinementManager {
     bool apply_blush_denoising = false;
     int  user_blush_batch_size = 1;
     int  num_blush_threads     = 1;
+    int  num_blush_jobs;
+    int  complete_blush_jobs;
+    int  total_blush_progress;
 
   private:
 };

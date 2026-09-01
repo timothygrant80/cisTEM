@@ -1223,16 +1223,14 @@ void AbInitioManager::CycleRefinement( ) {
 
         start_with_reconstruction = false;
 
-        if ( active_should_automask || apply_blush_denoising ) {
-            if ( apply_blush_denoising ) {
-                wxPrintf("Running Blush...\n\n");
-                my_parent->NumberConnectedText->SetLabel("Running Blush...");
-                my_parent->Layout( );
-            }
-            // DoMasking(apply_blush_denoising);
-            DispatchMasking(my_parent);
+        if ( apply_blush_denoising ) {
+            SetupBlushInferenceJob( );
+            RunBlushInferenceJob( );
         }
         else {
+            if ( active_should_automask ) {
+                DispatchMasking(my_parent);
+            }
             SetupRefinementJob( );
             RunRefinementJob( );
         }
@@ -1279,15 +1277,16 @@ void AbInitioManager::CycleRefinement( ) {
                 RunAlignSymmetryJob( );
             }
             else {
-                if ( active_should_automask || apply_blush_denoising ) {
-                    if ( apply_blush_denoising ) {
-                        my_parent->NumberConnectedText->SetLabel("Running Blush...");
-                        my_parent->Layout( );
-                    }
-                    // DoMasking(apply_blush_denoising);
-                    DispatchMasking(my_parent);
+                if ( apply_blush_denoising ) {
+                    SetupBlushInferenceJob( );
+                    RunBlushInferenceJob( );
                 }
                 else {
+                    if ( active_should_automask ) {
+                        if ( apply_blush_denoising ) {
+                        }
+                        DispatchMasking(my_parent);
+                    }
                     SetupRefinementJob( );
                     RunRefinementJob( );
                 }
@@ -1319,15 +1318,14 @@ void AbInitioManager::CycleRefinement( ) {
                     current_percent_used = start_percent_used + (end_percent_used - start_percent_used) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
                 //current_percent_used = start_percent_used + (end_percent_used - start_percent_used) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
 
-                if ( active_should_automask || apply_blush_denoising ) {
-                    if ( apply_blush_denoising ) {
-                        my_parent->NumberConnectedText->SetLabel("Running Blush...");
-                        my_parent->Layout( );
-                    }
-                    // DoMasking(apply_blush_denoising);
-                    DispatchMasking(my_parent);
+                if ( apply_blush_denoising ) {
+                    my_parent->NumberConnectedText->SetLabel("Running Blush...");
+                    my_parent->Layout( );
                 }
                 else {
+                    if ( active_should_automask ) {
+                        DispatchMasking(my_parent);
+                    }
                     SetupRefinementJob( );
                     RunRefinementJob( );
                 }
@@ -2260,6 +2258,45 @@ void AbInitioManager::RunAlignSymmetryJob( ) {
     my_parent->ProgressBar->Pulse( );
 }
 
+void AbInitioManager::SetupBlushInferenceJob( ) {
+    num_blush_jobs       = current_reference_filenames.GetCount( );
+    complete_blush_jobs  = 0;
+    total_blush_progress = 0;
+
+    my_parent->current_job_package.Reset(active_refinement_run_profile, "blush_refinement", num_blush_jobs);
+    my_parent->NumberConnectedText->SetLabel("Running Blush...");
+    my_parent->Layout( );
+
+    for ( int ref_file = 0; ref_file < num_blush_jobs; ref_file++ ) {
+        // Prevent name chaining in subsequent iterations
+        wxString base_name = current_reference_filenames.Item(ref_file).BeforeLast('.');
+        if ( base_name.EndsWith("_blushed") ) {
+            base_name = base_name.BeforeLast('_');
+        }
+        wxString output_ref_filename = base_name.Append("_blushed.mrc");
+
+        my_parent->current_job_package.AddJob("sssffiii", current_reference_filenames.Item(ref_file).ToUTF8( ).data( ),
+                                              output_ref_filename.ToUTF8( ).data( ),
+                                              main_frame->ReturnBlushLogsScratchDirectory( ).ToUTF8( ).data( ),
+                                              active_global_mask_radius,
+                                              input_refinement->resolution_statistics_pixel_size,
+                                              user_blush_batch_size,
+                                              num_blush_threads,
+                                              ref_file);
+    }
+}
+
+void AbInitioManager::RunBlushInferenceJob( ) {
+    running_job_type = BLUSH_INFERENCE;
+    my_parent->WriteBlueText("Performing blush inference...");
+    current_job_id       = main_frame->job_controller.AddJob(my_parent, active_reconstruction_run_profile.manager_command, active_reconstruction_run_profile.gui_address);
+    my_parent->my_job_id = current_job_id;
+    if ( current_job_id != -1 ) {
+        my_parent->SetNumberConnectedTextToZeroAndStartTracking( );
+    }
+    my_parent->ProgressBar->Pulse( );
+}
+
 void AbInitioManager::ProcessJobResult(JobResult* result_to_process) {
     if ( running_job_type == REFINEMENT ) {
 
@@ -2445,6 +2482,35 @@ void AbInitioManager::ProcessJobResult(JobResult* result_to_process) {
             my_parent->TimeRemainingText->SetLabel(time_remaining.Format("Time Remaining : %Hh:%Mm:%Ss"));
         }
     }
+    else if ( running_job_type == BLUSH_INFERENCE ) {
+        // Validate result data before processing
+        if ( result_to_process->result_size < 3 ) {
+            MyDebugPrintWithDetails("Error: BLUSH_INFERENCE result has insufficient data (size=%i, expected >= 3)", result_to_process->result_size);
+            return;
+        }
+
+        int   current_ref{result_to_process->result_data[0]}; // -1 will denote process is ongoing, and this is simply an update event
+        float pct{result_to_process->result_data[1]};
+        int   seconds_rem{result_to_process->result_data[2]};
+
+        if ( current_ref == -1 ) {
+            if ( complete_blush_jobs < current_reference_filenames.GetCount( ) ) {
+                total_blush_progress += pct;
+                int overall_completion_pct = std::min(100, total_blush_progress / num_blush_jobs);
+                my_parent->ProgressBar->SetValue(overall_completion_pct);
+            }
+        }
+        else {
+            // Validate array bounds before accessing
+            if ( current_ref < 0 || current_ref >= current_reference_filenames.GetCount( ) ) {
+                MyDebugPrintWithDetails("Error: BLUSH_INFERENCE current_ref (%i) is out of bounds (array size=%i)", current_ref, current_reference_filenames.GetCount( ));
+                return;
+            }
+
+            complete_blush_jobs++;
+            current_reference_filenames.Item(current_ref) = current_reference_filenames.Item(current_ref).BeforeLast('.') + "_blushed.mrc";
+        }
+    }
 }
 
 void AbInitioManager::ProcessAllJobsFinished( ) {
@@ -2569,6 +2635,14 @@ void AbInitioManager::ProcessAllJobsFinished( ) {
             return; // just return, we will startup again when the thread finishes.
         }
     }
+    else if ( running_job_type == BLUSH_INFERENCE ) {
+        main_frame->job_controller.KillJob(my_parent->my_job_id);
+        if ( active_should_automask ) {
+            DispatchMasking(my_parent);
+        }
+        SetupRefinementJob( );
+        RunRefinementJob( );
+    }
 }
 
 void AbInitio3DPanel::OnOrthThreadComplete(ReturnProcessedImageEvent& my_event) {
@@ -2611,13 +2685,18 @@ void AbInitioManager::OnMaskerThreadComplete( ) {
 // to DoMasking that will determine if blush should be executed
 void AbInitio3DPanel::OnImposeSymmetryThreadComplete(wxThreadEvent& event) {
     if ( event.GetInt( ) == active_sym_thread_id ) {
-        if ( ! my_refinement_manager.apply_blush_denoising && my_refinement_manager.active_should_automask == true ) {
-            // my_refinement_manager.DoMasking( );
-            DispatchMasking(this);
+        if ( my_refinement_manager.apply_blush_denoising ) {
+            my_refinement_manager.SetupBlushInferenceJob( );
+            my_refinement_manager.RunBlushInferenceJob( );
         }
         else {
-            my_refinement_manager.SetupRefinementJob( );
-            my_refinement_manager.RunRefinementJob( );
+            if ( my_refinement_manager.active_should_automask ) {
+                DispatchMasking(this);
+            }
+            else {
+                my_refinement_manager.SetupRefinementJob( );
+                my_refinement_manager.RunRefinementJob( );
+            }
         }
     }
 }

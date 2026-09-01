@@ -1,9 +1,12 @@
+#include "blush_logger.h"
 #include "blush_helpers.h"
+#include "block_iterator.h"
+
 #include <chrono>
-
-// #include <torch/csrc/profiler/api.h>
-
-// #include "<wx/wx.h>"
+#include <fstream>
+#include <iostream>
+#include <unistd.h>
+#include <cstdio>
 
 namespace BlushHelpers {
 torch::Tensor get_local_std_dev(torch::Tensor grid, int size) {
@@ -27,16 +30,15 @@ torch::Tensor get_local_std_dev(torch::Tensor grid, int size) {
 
     // This convolution will remove the padded dimensions
     for ( int i = 0; i < 3; ++i ) {
-        new_grid = new_grid.permute({0, 1, 4, 2, 3}); // Shift (N, C, D, W, H) then (N, C, H, D, W) and finally (N, C, W, H, D)
+        new_grid = new_grid.permute({0, 1, 4, 2, 3}).contiguous( ); // Shift (N, C, D, W, H) then (N, C, H, D, W) and finally (N, C, W, H, D)
         new_grid = torch::nn::functional::conv3d(new_grid, kernel, options);
 
-        grid2 = grid2.permute({0, 1, 4, 2, 3}); // Same permutation
+        grid2 = grid2.permute({0, 1, 4, 2, 3}).contiguous( ); // Same permutation
         grid2 = torch::nn::functional::conv3d(grid2, /*weight=*/kernel, options);
     }
 
     torch::Tensor in_std = torch::sqrt(torch::clamp(grid2 - new_grid.square( ), 0));
-
-    in_std = in_std.squeeze(0);
+    in_std               = in_std.squeeze(0);
 
     return in_std.clone( );
 }
@@ -65,23 +67,13 @@ torch::Tensor make_weight_box(const int& block_size, int margin) {
     torch::Tensor yy = y.view({1, s, 1}).expand({s, s, s});
     torch::Tensor zz = z.view({1, 1, s}).expand({s, s, s});
 
-    // Radial distance; performs pixelwise comparison of the values at each point in all 3 tensors, selecting the one with the largest value at each pixel
-    // The max function actually returns both the raw values being compared along with the indices where the max value came from (including which tensor it came from)
-    // Want the actual values before applying cosine falloff
+    // Radial distance: elementwise max of the three absolute-coordinate tensors.
+    // NOTE: torch::max(Tensor, Tensor) is the elementwise overload and returns a plain Tensor;
+    // only the reduction overload torch::max(Tensor, dim) returns a (values, indices) tuple.
     xx                   = xx.abs( );
     yy                   = yy.abs( );
     zz                   = zz.abs( );
-    torch::Tensor radius = torch::zeros_like(xx);
-
-    for ( int k = 0; k < xx.size(2); k++ ) {
-        for ( int j = 0; j < xx.size(1); j++ ) {
-            for ( int i = 0; i < xx.size(0); i++ ) {
-                float max = std::max(zz[i][j][k].item<float>( ), std::max(xx[i][j][k].item<float>( ), yy[i][j][k].item<float>( )));
-                // max             = torch::max(max, zz[i][j][k].item<float>( ));
-                radius[i][j][k] = max;
-            }
-        }
-    }
+    torch::Tensor radius = torch::max(torch::max(xx, yy), zz);
 
     radius = torch::cos(radius / radius.max( ) * (M_PI / 2));
 
@@ -139,18 +131,12 @@ torch::Tensor generate_radial_mask(const int& box_size, const float& radius, con
  * @param input_volume Volume to have inference applied.
  * @param pixel_size Pixel size of the volume, needed for adjusting sampling to the voxel size used by the Blush model.
  * @param mask_radius Radius of the user defined mask.
- * @param total_iterations Total number of forward passes to the blush model. Used for GUI updates
  * @param batch_size Number of blocks passed to the blush model per forward pass.
  * @param max_threads Maximum number of allowed threads LibTorch is allowed.
  * @param stop_flag Used for transmission of user interrupt from the GUI to halt function execution.
  * @param progress_callback Updates the main GUI thread progress bar to prevent unmoving GUI.
  */
-void ApplyBlush(Image& input_volume, const float& pixel_size, const float& mask_radius, const int& total_iterations, const int& batch_size, const int& max_threads, std::shared_ptr<std::atomic<bool>> stop_flag, std::function<bool(int percentage, long seconds_remaining)> progress_callback) {
-
-    // SendInfo("Running Blush - this can take several minutes...\n");
-
-    // wxDateTime overall_start = wxDateTime::Now( );
-    // wxDateTime overall_finish;
+void ApplyBlush(std::vector<float>& input_volume, const std::string& model_filename, const int& box_size, const float& mask_radius, const int& batch_size, const int& max_threads, std::shared_ptr<std::atomic<bool>> stop_flag, std::function<bool(int percentage, long seconds_remaining)> progress_callback) {
 
     // NOTE: this is a no_grad guard, so that the Blush model does not track gradients in a computation graph for the forward pass.
     // If it were to track gradients, it would consume a lot of memory (sometimes greater than 32 GB).
@@ -165,50 +151,17 @@ void ApplyBlush(Image& input_volume, const float& pixel_size, const float& mask_
     constexpr int   model_block_size{64};
     constexpr int   strides{20};
     constexpr int   in_channels{2};
-    constexpr float mask_edge_in_angstr{10.0f}; // Edge width of the mask in Angstroms; this is the same as the Python model uses
-
-    std::string exe_path = wxStandardPaths::Get( ).GetExecutablePath( ).ToStdString( );
-
-    // remove the binary name from the path
-    size_t last_slash_idx = exe_path.rfind('/');
-    if ( std::string::npos != last_slash_idx ) {
-        exe_path = exe_path.substr(0, last_slash_idx + 1);
-    }
-    std::string model_filename = exe_path + "blush_weights.dat";
 
     BlushModel model(2, 2);
     try {
         model.load_weights(model_filename);
     } catch ( std::exception& e ) {
-        wxPrintf("Blush error - Error loading model weights: %s\n\nTry copying blush_weights.dat to cisTEM binary directory.\n", e.what( ));
-        wxPrintf("Blush inference aborted.\n");
+        BLUSH_LOG_ERROR("Error loading model weights: %s. Try copying blush_weights.dat to cisTEM binary directory.", e.what( ));
         return;
     }
 
     model.eval( );
-    float     scale_factor{1.0f};
-    const int original_box_size{input_volume.logical_x_dimension};
-    bool      must_resample{false};
-    int       new_box_size{input_volume.logical_x_dimension};
-    {
-        float           wanted_sf{pixel_size / model_voxel_size};
-        constexpr float tolerance{1e-2f};
-        new_box_size = static_cast<int>(std::floor(input_volume.logical_x_dimension * wanted_sf + 0.5f));
-        if ( new_box_size % 2 != 0 )
-            new_box_size++;
 
-        scale_factor  = static_cast<float>(new_box_size) / static_cast<float>(input_volume.logical_x_dimension);
-        must_resample = (std::abs(scale_factor - 1.0f) > tolerance);
-
-        if ( must_resample ) {
-            input_volume.ForwardFFT( );
-            input_volume.Resize(new_box_size, new_box_size, new_box_size);
-            input_volume.BackwardFFT( );
-        }
-    }
-
-    // Must remove padding because model as implemented expects none -- it is possible to account for the padding, it's just not implemented here for simplifying integration
-    // of the blush model into cisTEM.
     torch::Tensor                 blocks;
     std::vector<std::vector<int>> coords;
     torch::Tensor                 volume_tensor;
@@ -222,21 +175,21 @@ void ApplyBlush(Image& input_volume, const float& pixel_size, const float& mask_
     try {
         blocks        = torch::zeros({batch_size, in_channels, model_block_size, model_block_size, model_block_size});
         coords        = std::vector(batch_size, std::vector<int>(3, 0));
-        volume_tensor = torch::zeros({new_box_size, new_box_size, new_box_size}, torch::kFloat32);
-        local_std_dev = torch::zeros({new_box_size, new_box_size, new_box_size}, torch::kFloat32);
+        volume_tensor = torch::zeros({box_size, box_size, box_size}, torch::kFloat32);
+        local_std_dev = torch::zeros({box_size, box_size, box_size}, torch::kFloat32);
     } catch ( std::exception& e ) {
-        // wxPrintf("Blush error - Error setting up tensors: %s\n", e.what( ));
-        // SendErrorAndCrash(wxString::Format("Blush error - Error setting up tensors: %s\n", e.what( )));
+        BLUSH_LOG_ERROR("Error setting up tensors: %s", e.what( ));
+        return;
     }
 
-    input_volume.RemoveFFTWPadding( );
+    // input_volume.RemoveFFTWPadding( );
 
-    volume_tensor = torch::from_blob(input_volume.real_values, {new_box_size, new_box_size, new_box_size}, torch::kFloat32).clone( ).contiguous( );
+    volume_tensor = torch::from_blob(input_volume.data( ), {box_size, box_size, box_size}, torch::kFloat32).clone( ).contiguous( );
     volume_tensor = volume_tensor.permute({2, 1, 0}).contiguous( ); // Change to (z, y, x) order for LibTorch
 
     weights    = make_weight_box(model_block_size, 10);
-    infer_grid = torch::zeros({new_box_size, new_box_size, new_box_size}, torch::kFloat32);
-    count_grid = torch::zeros({new_box_size, new_box_size, new_box_size}, torch::kFloat32);
+    infer_grid = torch::zeros({box_size, box_size, box_size}, torch::kFloat32);
+    count_grid = torch::zeros({box_size, box_size, box_size}, torch::kFloat32);
 
     float volume_mean{0.0f}, volume_std{1.0f};
     try {
@@ -249,14 +202,13 @@ void ApplyBlush(Image& input_volume, const float& pixel_size, const float& mask_
         local_std_dev = tmp_local_std_dev / local_std_dev_mean;
         volume_tensor = (volume_tensor - volume_mean) / (volume_std + 1e-8);
     } catch ( std::exception& e ) {
-        // wxPrintf("Blush error - Error getting localized standard deviation and normalizing the volume tensor: %s\n", e.what( ));
-        // SendErrorAndCrash(wxString::Format("Blush error - Error getting localized standard deviation and normalizing the volume tensor: %s\n", e.what( )));
-        // TODO: Return or otherwise exit?
+        BLUSH_LOG_ERROR("Error getting localized standard deviation and normalizing volume tensor: %s", e.what( ));
+        return;
     }
 
     // Generate the mask
     int mask_edge_width = static_cast<int>(20.0f / model_voxel_size);
-    mask_tensor         = generate_radial_mask(new_box_size, mask_radius, mask_edge_width);
+    mask_tensor         = generate_radial_mask(box_size, mask_radius, mask_edge_width);
 
     // input_3d.mask_radius = mask_radius;
     volume_tensor *= mask_tensor;
@@ -265,17 +217,22 @@ void ApplyBlush(Image& input_volume, const float& pixel_size, const float& mask_
     // Set up done, now pass to the model
     int bi = 0;
     try {
-        BlockIterator it({new_box_size, new_box_size, new_box_size}, model_block_size, strides);
+        BlockIterator it({box_size, box_size, box_size}, model_block_size, strides);
         // int           bi = 0;
         //////////////// FOR UPDATING GUI /////////////////////////////////////////////////////
-        bool                                  calculated_avg_duration{false};
+        // bool                                  calculated_avg_duration{false};
         std::chrono::system_clock::time_point global_start_time{std::chrono::high_resolution_clock::now( )};
         int                                   current_iteration{0};
-        int                                   last_percent = -1;
+        int                                   last_percent{-1};
+        int                                   total_iterations{it.begin( ).size( )};
+        int                                   percent_completion{0};
         ///////////////////////////////////////////////////////////////////////////////////////
 
         std::vector<std::tuple<int, int, int>> batch_coords;
         batch_coords.reserve(batch_size);
+
+        double forward_only_ms{0.0};
+        long   forward_call_count{0};
 
         for ( auto it_coords : it ) {
             /* This is an InferenceMode guard that prevents the BlushModel using LibTorch from tracking
@@ -296,6 +253,7 @@ void ApplyBlush(Image& input_volume, const float& pixel_size, const float& mask_
             int y = std::get<1>(it_coords);
             int z = std::get<2>(it_coords);
 
+            current_iteration++;
             // Here -1 is just a method for determining if iterations have finished; could probably improve clarity,
             // but for now this note is enough.
             if ( x > -1 ) {
@@ -303,7 +261,6 @@ void ApplyBlush(Image& input_volume, const float& pixel_size, const float& mask_
                 float         mask_mean     = current_slice.mean( ).item<float>( );
 
                 // Skip this block if the mask mean is quite low as there must not be much density here.
-                current_iteration++;
 
                 // Using blush mask and the mean is too small
                 constexpr float mean_threshold = 0.3f;
@@ -321,11 +278,12 @@ void ApplyBlush(Image& input_volume, const float& pixel_size, const float& mask_
                 bi++;
 
                 if ( bi == batch_size ) {
-                    auto t0 = std::chrono::high_resolution_clock::now( );
-
                     // Returns inference results and a mask (all that's relevant here is the inference results)
-                    torch::Tensor                            batch  = blocks.slice(0, 0, bi);
-                    std::tuple<torch::Tensor, torch::Tensor> output = model.forward(batch.select(1, 0).contiguous( ), batch.select(1, 1).contiguous( ));
+                    torch::Tensor                            batch         = blocks.slice(0, 0, bi);
+                    auto                                     forward_start = std::chrono::high_resolution_clock::now( );
+                    std::tuple<torch::Tensor, torch::Tensor> output        = model.forward(batch.select(1, 0).contiguous( ), batch.select(1, 1).contiguous( ));
+                    forward_only_ms += std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now( ) - forward_start).count( );
+                    forward_call_count++;
 
                     // Extracts batches
                     torch::Tensor vol_outputs = std::get<0>(output).clone( );
@@ -343,21 +301,23 @@ void ApplyBlush(Image& input_volume, const float& pixel_size, const float& mask_
                     bi = 0;
                     batch_coords.clear( );
                 }
+            }
 
-                // Send a scope-controlled update of progress to the GUI
-                {
-                    int percent_completion = (float(current_iteration) / total_iterations) * 100;
-                    if ( current_iteration < total_iterations && percent_completion % 4 == 0 && percent_completion != last_percent ) {
-                        last_percent                = percent_completion;
-                        auto   now                  = std::chrono::high_resolution_clock::now( );
-                        double seconds_elapsed      = std::chrono::duration<double>(now - global_start_time).count( );
-                        double seconds_per_iter     = seconds_elapsed / double(current_iteration);
-                        long   iterations_remaining = total_iterations - current_iteration;
-                        long   seconds_remaining    = static_cast<long>(seconds_per_iter * iterations_remaining);
+            // Send a scope-controlled update of progress to the GUI
+            {
+                percent_completion = (float(current_iteration) / total_iterations) * 100;
+                percent_completion = std::min(percent_completion, 100);
+                if ( percent_completion - last_percent >= 5 && percent_completion != last_percent ) {
+                    int percent_increment       = percent_completion - last_percent;
+                    last_percent                = percent_completion;
+                    auto   now                  = std::chrono::high_resolution_clock::now( );
+                    double seconds_elapsed      = std::chrono::duration<double>(now - global_start_time).count( );
+                    double seconds_per_iter     = seconds_elapsed / double(current_iteration);
+                    long   iterations_remaining = total_iterations - current_iteration;
+                    long   seconds_remaining    = static_cast<long>(seconds_per_iter * iterations_remaining);
 
-                        if ( ! progress_callback(percent_completion, seconds_remaining) ) {
-                            return;
-                        }
+                    if ( ! progress_callback(percent_increment, seconds_remaining) ) {
+                        return;
                     }
                 }
             }
@@ -365,8 +325,11 @@ void ApplyBlush(Image& input_volume, const float& pixel_size, const float& mask_
 
         // Finally, if total valid blocks isn't a perfect multiple of batch_size, process what remains
         if ( bi > 0 ) {
-            torch::Tensor                            batch  = blocks.slice(0, 0, bi);
-            std::tuple<torch::Tensor, torch::Tensor> output = model.forward(batch.select(1, 0).contiguous( ), batch.select(1, 1).contiguous( ));
+            torch::Tensor                            batch         = blocks.slice(0, 0, bi);
+            auto                                     forward_start = std::chrono::high_resolution_clock::now( );
+            std::tuple<torch::Tensor, torch::Tensor> output        = model.forward(batch.select(1, 0).contiguous( ), batch.select(1, 1).contiguous( ));
+            forward_only_ms += std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now( ) - forward_start).count( );
+            forward_call_count++;
             // torch::Tensor vol_outputs    = std::get<0>(initial_output).clone( );
             torch::Tensor vol_outputs = std::get<0>(output).clone( );
 
@@ -382,28 +345,27 @@ void ApplyBlush(Image& input_volume, const float& pixel_size, const float& mask_
             }
         }
 
+#ifdef BLUSH_DEBUG_LOGGING
+        BLUSH_LOG_INFO("[PROFILE] Block loop (%d blocks): %.1f ms", total_iterations, std::chrono::duration<double, std::milli>(std::chrono::high_resolution_clock::now( ) - global_start_time).count( ));
+        BLUSH_LOG_INFO("[PROFILE] forward() total: %.1f ms across %ld calls (avg %.2f ms/call)", forward_only_ms, forward_call_count, forward_call_count > 0 ? forward_only_ms / forward_call_count : 0.0);
+#endif
+
         infer_grid = torch::where(count_grid > 0, infer_grid / count_grid, infer_grid);
         infer_grid = torch::where(count_grid < 1e-1f, torch::full_like(infer_grid, 0.0f), infer_grid); // Set values where count_grid is less than 0.1 to 0
         infer_grid *= mask_tensor;
 
         infer_grid = infer_grid * (volume_std + 1e-8) + volume_mean; // Normalize the inference grid
 
-        if ( (stop_flag && stop_flag->load(std::memory_order_relaxed)) || ! progress_callback(100, 0) )
+        if ( (stop_flag && stop_flag->load(std::memory_order_relaxed)) || ! progress_callback(100 - percent_completion, 0) )
             return;
 
         // Finally, put the result back into the input_3d.density_map, and handle resampling if needed
         infer_grid *= mask_tensor;
 
         infer_grid = infer_grid.permute({2, 1, 0}).contiguous( ); // Change back to (x, y, z) order for MRC output
-        std::memcpy(input_volume.real_values, infer_grid.data_ptr<float>( ), sizeof(float) * std::pow(new_box_size, 3));
-        input_volume.AddFFTWPadding( );
-        if ( must_resample ) {
-            input_volume.ForwardFFT( );
-            input_volume.Resize(original_box_size, original_box_size, original_box_size);
-            input_volume.BackwardFFT( );
-        }
+        std::memcpy(input_volume.data( ), infer_grid.data_ptr<float>( ), sizeof(float) * std::pow(box_size, 3));
     } catch ( std::exception& e ) {
-        wxPrintf("Error running Blush inference: %s\n", e.what( ));
+        BLUSH_LOG_ERROR("Error running Blush inference: block processing failed: %s", e.what( ));
         return;
     }
 }

@@ -1235,15 +1235,14 @@ void RefinementManager::BeginRefinementCycle( ) {
             current_reference_asset_ids.Item(class_counter) = volume_asset_panel->ReturnAssetID(volume_asset_panel->ReturnArrayPositionFromAssetID(active_refinement_package->references_for_next_refinement[class_counter]));
         }
 
-        if ( my_parent->UseMaskCheckBox->GetValue( ) == true || my_parent->AutoMaskYesRadioButton->GetValue( ) == true ) {
-            if ( apply_blush_denoising ) {
-                my_parent->NumberConnectedText->SetLabel("Running Blush...");
-                my_parent->Layout( );
-            }
-            DispatchMasking(my_parent);
-            // DoMasking( );
+        if ( apply_blush_denoising ) {
+            SetupBlushInferenceJob( );
+            RunBlushInferenceJob( );
         }
         else {
+            if ( my_parent->UseMaskCheckBox->GetValue( ) || my_parent->AutoMaskYesRadioButton->GetValue( ) ) {
+                DispatchMasking(my_parent);
+            }
             SetupRefinementJob( );
             RunRefinementJob( );
         }
@@ -1923,6 +1922,45 @@ void RefinementManager::SetupRefinementJob( ) {
 		}*/
 }
 
+void RefinementManager::SetupBlushInferenceJob( ) {
+    num_blush_jobs       = current_reference_filenames.GetCount( );
+    complete_blush_jobs  = 0;
+    total_blush_progress = 0;
+
+    my_parent->current_job_package.Reset(active_refinement_run_profile, "blush_refinement", num_blush_jobs);
+    my_parent->NumberConnectedText->SetLabel("Running Blush...");
+    my_parent->Layout( );
+
+    for ( int ref_file = 0; ref_file < num_blush_jobs; ref_file++ ) {
+        // Prevent name chaining in subsequent iterations
+        wxString base_name = current_reference_filenames.Item(ref_file).BeforeLast('.');
+        if ( base_name.EndsWith("_blushed") ) {
+            base_name = base_name.BeforeLast('_');
+        }
+        wxString output_ref_filename = base_name.Append("_blushed.mrc");
+
+        my_parent->current_job_package.AddJob("sssffiii", current_reference_filenames.Item(ref_file).ToUTF8( ).data( ),
+                                              output_ref_filename.ToUTF8( ).data( ),
+                                              main_frame->ReturnBlushLogsScratchDirectory( ).ToUTF8( ).data( ),
+                                              active_mask_radius,
+                                              input_refinement->resolution_statistics_pixel_size,
+                                              user_blush_batch_size,
+                                              num_blush_threads,
+                                              ref_file);
+    }
+}
+
+void RefinementManager::RunBlushInferenceJob( ) {
+    running_job_type = BLUSH_INFERENCE;
+    my_parent->WriteBlueText("Performing blush inference...");
+    current_job_id       = main_frame->job_controller.AddJob(my_parent, active_reconstruction_run_profile.manager_command, active_reconstruction_run_profile.gui_address);
+    my_parent->my_job_id = current_job_id;
+    if ( current_job_id != -1 ) {
+        my_parent->SetNumberConnectedTextToZeroAndStartTracking( );
+    }
+    my_parent->ProgressBar->Pulse( );
+}
+
 void RefinementManager::ProcessJobResult(JobResult* result_to_process) {
     if ( running_job_type == REFINEMENT ) {
 
@@ -2067,6 +2105,35 @@ void RefinementManager::ProcessJobResult(JobResult* result_to_process) {
             output_refinement->class_refinement_results[class_number - 1].class_resolution_statistics.part_FSC.AddPoint(current_resolution, part_fsc);
             output_refinement->class_refinement_results[class_number - 1].class_resolution_statistics.part_SSNR.AddPoint(current_resolution, part_ssnr);
             output_refinement->class_refinement_results[class_number - 1].class_resolution_statistics.rec_SSNR.AddPoint(current_resolution, rec_ssnr);
+        }
+    }
+    else if ( running_job_type == BLUSH_INFERENCE ) {
+        // Validate result data before processing
+        if ( result_to_process->result_size < 3 ) {
+            MyDebugPrintWithDetails("Error: BLUSH_INFERENCE result has insufficient data (size=%i, expected >= 3)", result_to_process->result_size);
+            return;
+        }
+
+        int   current_ref{result_to_process->result_data[0]}; // -1 will denote process is ongoing, and this is simply an update event
+        float pct{result_to_process->result_data[1]};
+        int   seconds_rem{result_to_process->result_data[2]};
+
+        if ( current_ref == -1 ) {
+            if ( complete_blush_jobs < current_reference_filenames.GetCount( ) ) {
+                total_blush_progress += pct;
+                int overall_completion_pct = std::min(100, total_blush_progress / num_blush_jobs);
+                my_parent->ProgressBar->SetValue(overall_completion_pct);
+            }
+        }
+        else {
+            // Validate array bounds before accessing
+            if ( current_ref < 0 || current_ref >= current_reference_filenames.GetCount( ) ) {
+                MyDebugPrintWithDetails("Error: BLUSH_INFERENCE current_ref (%i) is out of bounds (array size=%i)", current_ref, current_reference_filenames.GetCount( ));
+                return;
+            }
+
+            complete_blush_jobs++;
+            current_reference_filenames.Item(current_ref) = current_reference_filenames.Item(current_ref).BeforeLast('.') + "_blushed.mrc";
         }
     }
 }
@@ -2274,6 +2341,15 @@ void RefinementManager::ProcessAllJobsFinished( ) {
         main_frame->DirtyRefinements( );
         CycleRefinement( );
     }
+    else if ( running_job_type == BLUSH_INFERENCE ) {
+        // Already wrote the MRC when all jobs finished, so maybe spawn the next process(es) here
+        main_frame->job_controller.KillJob(my_parent->my_job_id);
+        if ( active_should_auto_mask || active_should_mask ) {
+            DispatchMasking(my_parent);
+        }
+        SetupRefinementJob( );
+        RunRefinementJob( );
+    }
 }
 
 void RefinementManager::CycleRefinement( ) {
@@ -2281,17 +2357,14 @@ void RefinementManager::CycleRefinement( ) {
         output_refinement         = new Refinement;
         start_with_reconstruction = false;
 
-        if ( active_should_mask || active_should_auto_mask || apply_blush_denoising ) {
-            if ( apply_blush_denoising ) {
-                my_parent->NumberConnectedText->SetLabel("Running Blush...");
-                my_parent->Layout( );
-            }
-            DispatchMasking(my_parent);
-            // DoMasking( );
+        if ( apply_blush_denoising ) {
+            SetupBlushInferenceJob( );
+            RunBlushInferenceJob( );
         }
         else {
-            SetupRefinementJob( );
-            RunRefinementJob( );
+            if ( active_should_mask || active_should_auto_mask ) {
+                DispatchMasking(my_parent);
+            }
         }
     }
     else {
@@ -2303,11 +2376,15 @@ void RefinementManager::CycleRefinement( ) {
             input_refinement  = output_refinement;
             output_refinement = new Refinement;
 
-            if ( active_should_mask == true || active_should_auto_mask == true ) {
-                DispatchMasking(my_parent);
-                // DoMasking( );
+            if ( apply_blush_denoising ) {
+                SetupBlushInferenceJob( );
+                RunBlushInferenceJob( );
             }
             else {
+                if ( active_should_mask || active_should_auto_mask ) {
+                    DispatchMasking(my_parent);
+                }
+
                 SetupRefinementJob( );
                 RunRefinementJob( );
             }

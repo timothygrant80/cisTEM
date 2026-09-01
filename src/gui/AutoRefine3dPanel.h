@@ -95,6 +95,7 @@ class AutoRefinementManager {
     void SetupRefinementJob( );
     void SetupReconstructionJob( );
     void SetupMerge3dJob( );
+    void SetupBlushInferenceJob( );
 
     void SetupInitialReconstructionJob( );
     void SetupInitialMerge3dJob( );
@@ -105,6 +106,7 @@ class AutoRefinementManager {
     void RunRefinementJob( );
     void RunReconstructionJob( );
     void RunMerge3dJob( );
+    void RunBlushInferenceJob( );
 
     //void SetupLocalSNRFilterJob();
     //void RunLocalSNRFilterJob();
@@ -120,6 +122,9 @@ class AutoRefinementManager {
     bool apply_blush_denoising = false;
     int  user_blush_batch_size = 1;
     int  num_blush_threads     = 1;
+    int  num_blush_jobs;
+    int  complete_blush_jobs;
+    int  total_blush_progress;
 };
 
 class AutoRefine3DPanel : public AutoRefine3DPanelParent {

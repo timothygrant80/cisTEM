@@ -24,79 +24,86 @@
 
 AC_DEFUN([AX_LIBTORCH],
 [
-    use_libtorch="no"
-    LIBTORCH_CXX_FLAGS=""
-    LIBTORCH_LIBS=""
-    LIBTORCH_RPATH=""
 
-    # Check if user wants to enable libtorch (opt-in)
-    AC_ARG_ENABLE(libtorch,
-        AS_HELP_STRING([--enable-libtorch], [Use LibTorch for ML-based tools @<:@default=no@:>@]),
-        [AS_IF([test "x$enableval" = "xyes"],
-               [use_libtorch="yes"
-                AC_MSG_NOTICE([LibTorch support requested by user])],
-               [AS_IF([test "x$enableval" = "xno"],
-                      [AC_MSG_ERROR([LibTorch is disabled by default. Specifying --disable-libtorch breaks the configuration. If you want to enable LibTorch, please configure with --enable-libtorch])])])],
-        [AC_MSG_NOTICE([LibTorch support not requested (use --enable-libtorch to enable)])])
+	use_libtorch="no"
+	LIBTORCH_CXX_FLAGS=""
+	LIBTORCH_LIBS=""
+	LIBTORCH_RPATH=""
 
-    AS_IF([test "x$use_libtorch" = "xyes"],
-    [
-        # Check if LIBTORCH_ROOT is set, otherwise try /opt/libtorch
-        AS_IF([test "x$LIBTORCH_ROOT" = "x"],
-              [LIBTORCH_ROOT="/opt/libtorch"])
+	# Check if user wants to enable libtorch (opt-in)
+	AC_ARG_ENABLE(libtorch,
+		AS_HELP_STRING([--enable-libtorch], [Use LibTorch for ML-based tools @<:@default=no@:>@]),
+		[AS_IF([test "x$enableval" = "xyes"],
+			[use_libtorch="yes"
+				AC_MSG_NOTICE([LibTorch support requested by user])],
+			[AS_IF([test "x$enableval" = "xno"],
+					[AC_MSG_ERROR([LibTorch is disabled by default. Specifying --disable-libtorch breaks the configuration. If you want to enable LibTorch, please configure with --enable-libtorch])])])],
+		[AC_MSG_NOTICE([LibTorch support not requested (use --enable-libtorch to enable)])])
 
-        AC_MSG_NOTICE([Checking for LibTorch in $LIBTORCH_ROOT])
+	# AS_IF([test "x$static_link" = "xfalse" && test "x$use_libtorch" = "xyes"], [
+	# 	AC_MSG_WARN([Dynamic linking of Intel MKL conflicts with LibTorch's built in MKL, and will segfault during FFT planning/destruction.])
+	# 	AC_MSG_WARN([LibTorch will be disabled to continue with dynamic linking.])
+	# 	use_libtorch="no"
+	# ])
 
-        # Check if libtorch exists (torch.h is in csrc/api/include subdirectory)
-        AC_CHECK_FILE(["$LIBTORCH_ROOT/include/torch/csrc/api/include/torch/torch.h"],
-        [
-            HAVE_LIBTORCH="yes"
-            AC_MSG_NOTICE([LibTorch found at $LIBTORCH_ROOT])
-        ],
-        [
-            HAVE_LIBTORCH="no"
-            use_libtorch="no"
-            AC_MSG_WARN([LibTorch not found at $LIBTORCH_ROOT. ML-based tools will not be available.])
-            AC_MSG_WARN([To enable LibTorch: set LIBTORCH_ROOT=/path/to/libtorch or install to /opt/libtorch])
-        ])
+	# Set automake conditional for Makefile.am
+	AM_CONDITIONAL([ENABLE_LIBTORCH_AM], [test "x$use_libtorch" = "xyes"])
 
-        AS_IF([test "x$HAVE_LIBTORCH" = "xyes"],
-        [
-            # Define preprocessor macro for conditional compilation
-            AC_DEFINE([cisTEM_USING_LIBTORCH], [], [Use LibTorch for ML-based tools])
+	AS_IF([test "x$use_libtorch" = "xyes"],
+	[
+		# Check if LIBTORCH_ROOT is set, otherwise try /opt/libtorch
+		AS_IF([test "x$LIBTORCH_ROOT" = "x"],
+			[LIBTORCH_ROOT="/opt/libtorch"])
 
-            # Set include paths as flags (not directly modifying CPPFLAGS/CXXFLAGS)
-            # Following FastFFT pattern: programs that need LibTorch will use LIBTORCH_CXX_FLAGS
-            LIBTORCH_CXX_FLAGS="-I${LIBTORCH_ROOT}/include -I${LIBTORCH_ROOT}/include/torch/csrc/api/include"
+		AC_MSG_NOTICE([Checking for LibTorch in $LIBTORCH_ROOT])
 
-            # Warn about static linking issues
-            AS_IF([test "x$static_link" = "xtrue"],
-                  [AC_MSG_WARN([Static linking with LibTorch is not recommended by PyTorch developers.])
-                   AC_MSG_WARN([LibTorch will be dynamically linked even in static build mode.])])
+		# Check if libtorch exists (torch.h is in csrc/api/include subdirectory)
+		AC_CHECK_FILE(["$LIBTORCH_ROOT/include/torch/csrc/api/include/torch/torch.h"],
+		[
+			HAVE_LIBTORCH="yes"
+			AC_MSG_NOTICE([LibTorch found at $LIBTORCH_ROOT])
+		],
+		[
+			HAVE_LIBTORCH="no"
+			use_libtorch="no"
+			AC_MSG_WARN([LibTorch not found at $LIBTORCH_ROOT. ML-based tools will not be available.])
+			AC_MSG_WARN([To enable LibTorch: set LIBTORCH_ROOT=/path/to/libtorch or install to /opt/libtorch])
+		])
 
-            # Always use dynamic linking for libtorch (even in static builds)
-            # Order matters: torch depends on torch_cpu, which depends on c10
-            LIBTORCH_LIBS="-L${LIBTORCH_ROOT}/lib -ltorch -ltorch_cpu -lc10"
+		AS_IF([test "x$HAVE_LIBTORCH" = "xyes"],
+		[
+			# Define preprocessor macro for conditional compilation
+			AC_DEFINE([cisTEM_USING_LIBTORCH], [], [Use LibTorch for ML-based tools])
 
-            # Set RPATH for runtime library location
-            # This allows the executable to find libraries relative to its location
-            # Enables bundling the .so files with the distribution
-            # $ORIGIN is a special variable that expands to the directory containing the executable
-            LIBTORCH_RPATH="-Wl,-rpath,'\$\$ORIGIN/lib' -Wl,-rpath,'\$\$ORIGIN/../lib' -Wl,-rpath,'${LIBTORCH_ROOT}/lib'"
+			# Set include paths as flags (not directly modifying CPPFLAGS/CXXFLAGS)
+			# Following FastFFT pattern: programs that need LibTorch will use LIBTORCH_CXX_FLAGS
+			LIBTORCH_CXX_FLAGS="-isystem ${LIBTORCH_ROOT}/include -isystem ${LIBTORCH_ROOT}/include/torch/csrc/api/include -gdwarf-4"
 
-            AC_MSG_NOTICE([LibTorch configuration:])
-            AC_MSG_NOTICE([  LIBTORCH_ROOT      = $LIBTORCH_ROOT])
-            AC_MSG_NOTICE([  LIBTORCH_CXX_FLAGS = $LIBTORCH_CXX_FLAGS])
-            AC_MSG_NOTICE([  LIBTORCH_LIBS      = $LIBTORCH_LIBS])
-            AC_MSG_NOTICE([  LIBTORCH_RPATH     = $LIBTORCH_RPATH])
-        ])
-    ])
+			# Warn about static linking issues
+			AS_IF([test "x$static_link" = "xtrue"],
+				[AC_MSG_WARN([Static linking with LibTorch is not recommended by PyTorch developers.])
+				AC_MSG_WARN([LibTorch will be dynamically linked even in static build mode.])])
 
-    # Set automake conditional for Makefile.am
-    AM_CONDITIONAL([ENABLE_LIBTORCH_AM], [test "x$use_libtorch" = "xyes"])
+			# Always use dynamic linking for libtorch (even in static builds)
+			# Order matters: torch depends on torch_cpu, which depends on c10
+			LIBTORCH_LIBS="-L${LIBTORCH_ROOT}/lib -ltorch -ltorch_cpu -lc10"
 
-    # Substitute variables for use in Makefile.am
-    AC_SUBST(LIBTORCH_CXX_FLAGS)
-    AC_SUBST(LIBTORCH_LIBS)
-    AC_SUBST(LIBTORCH_RPATH)
+			# Set RPATH for runtime library location
+			# This allows the executable to find libraries relative to its location
+			# Enables bundling the .so files with the distribution
+			# $ORIGIN is a special variable that expands to the directory containing the executable
+			LIBTORCH_RPATH="-Wl,-rpath,'\$\$ORIGIN/lib' -Wl,-rpath,'\$\$ORIGIN/../lib' -Wl,-rpath,'${LIBTORCH_ROOT}/lib'"
+
+			AC_MSG_NOTICE([LibTorch configuration:])
+			AC_MSG_NOTICE([  LIBTORCH_ROOT      = $LIBTORCH_ROOT])
+			AC_MSG_NOTICE([  LIBTORCH_CXX_FLAGS = $LIBTORCH_CXX_FLAGS])
+			AC_MSG_NOTICE([  LIBTORCH_LIBS      = $LIBTORCH_LIBS])
+			AC_MSG_NOTICE([  LIBTORCH_RPATH     = $LIBTORCH_RPATH])
+		])
+	])
+
+	# Substitute variables for use in Makefile.am
+	AC_SUBST(LIBTORCH_CXX_FLAGS)
+	AC_SUBST(LIBTORCH_LIBS)
+	AC_SUBST(LIBTORCH_RPATH)
 ])

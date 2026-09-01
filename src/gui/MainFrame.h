@@ -96,6 +96,7 @@ class MyMainFrame : public MainFrame, public SocketCommunicator, public UpdatePr
     wxString ReturnAutoRefine3DScratchDirectory( );
     wxString ReturnGenerate3DScratchDirectory( );
     wxString ReturnRefineCTFScratchDirectory( );
+    wxString ReturnBlushLogsScratchDirectory( );
 
     bool MigrateProject(wxString old_project_directory, wxString new_project_directory);
 

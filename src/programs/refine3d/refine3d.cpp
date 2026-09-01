@@ -761,6 +761,7 @@ bool Refine3DApp::DoCalculation( ) {
     }
     refine_statistics = input_statistics;
     input_3d.density_map->ReadSlices(&input_file, 1, input_3d.density_map->logical_z_dimension);
+
     //!!! This line is incompatible with ML !!!
     //	input_3d.density_map->CosineMask(outer_mask_radius / pixel_size, mask_falloff / pixel_size);
     //	input_3d.density_map->AddConstant(- input_3d.density_map->ReturnAverageOfRealValuesOnEdges());
@@ -1398,7 +1399,7 @@ bool Refine3DApp::DoCalculation( ) {
                     if ( take_random_best_parameter == true ) {
                         float best_value  = euler_search_local.list_of_best_parameters[1][5];
                         float worst_value = euler_search_local.list_of_best_parameters[best_parameters_to_keep][5];
-                        ;
+
                         float diff           = best_value - worst_value;
                         float top_percent    = best_value - (diff * 0.15);
                         int   number_to_keep = 1;

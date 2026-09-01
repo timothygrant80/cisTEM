@@ -523,6 +523,11 @@ void RefineCTFPanel::OnInputParametersComboBox(wxCommandEvent& event) {
 void RefineCTFPanel::TerminateButtonClick(wxCommandEvent& event) {
     main_frame->job_controller.KillJob(my_job_id);
 
+    if ( masking_thread ) {
+        masking_thread->Delete( );
+        masking_thread = nullptr;
+    }
+
     active_mask_thread_id = -1;
     active_orth_thread_id = -1;
 
@@ -1778,11 +1783,17 @@ void CTFRefinementManager::DoMasking( ) {
         my_parent->active_mask_thread_id = my_parent->next_thread_id;
         my_parent->next_thread_id++;
 
-        Multiply3DMaskerThread* mask_thread = new Multiply3DMaskerThread(my_parent, current_reference_filenames, masked_filenames, filename_of_mask, wanted_cosine_edge_width, wanted_weight_outside_mask, wanted_low_pass_filter_radius, input_refinement->resolution_statistics_pixel_size, my_parent->active_mask_thread_id);
+        if ( my_parent->masking_thread != nullptr ) {
+            my_parent->masking_thread->Delete( );
+            delete my_parent->masking_thread;
+            my_parent->masking_thread = nullptr;
+        }
+        my_parent->masking_thread = new Multiply3DMaskerThread(my_parent, current_reference_filenames, masked_filenames, filename_of_mask, wanted_cosine_edge_width, wanted_weight_outside_mask, wanted_low_pass_filter_radius, input_refinement->resolution_statistics_pixel_size, active_mask_radius, my_parent->active_mask_thread_id);
 
-        if ( mask_thread->Run( ) != wxTHREAD_NO_ERROR ) {
+        if ( my_parent->masking_thread->Run( ) != wxTHREAD_NO_ERROR ) {
             my_parent->WriteErrorText("Error: Cannot start masking thread, masking will not be performed");
-            delete mask_thread;
+            delete my_parent->masking_thread;
+            my_parent->masking_thread = nullptr;
         }
         else {
             current_reference_filenames = masked_filenames;
@@ -1795,12 +1806,12 @@ void CTFRefinementManager::DoMasking( ) {
 
         my_parent->active_mask_thread_id = my_parent->next_thread_id;
         my_parent->next_thread_id++;
+        my_parent->masking_thread = new AutoMaskerThread(my_parent, current_reference_filenames, masked_filenames, input_refinement->resolution_statistics_pixel_size, active_refinement_package->estimated_particle_size_in_angstroms * 0.75, my_parent->active_mask_thread_id);
 
-        AutoMaskerThread* mask_thread = new AutoMaskerThread(my_parent, current_reference_filenames, masked_filenames, input_refinement->resolution_statistics_pixel_size, active_refinement_package->estimated_particle_size_in_angstroms * 0.75, my_parent->active_mask_thread_id);
-
-        if ( mask_thread->Run( ) != wxTHREAD_NO_ERROR ) {
+        if ( my_parent->masking_thread->Run( ) != wxTHREAD_NO_ERROR ) {
             my_parent->WriteErrorText("Error: Cannot start masking thread, masking will not be performed");
-            delete mask_thread;
+            delete my_parent->masking_thread;
+            my_parent->masking_thread = nullptr;
         }
         else {
             current_reference_filenames = masked_filenames;

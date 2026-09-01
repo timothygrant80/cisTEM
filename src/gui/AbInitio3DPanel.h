@@ -1,6 +1,9 @@
 #ifndef __Abinitio3DPanel__
 #define __Abinitio3DPanel__
 
+#include <atomic>
+#include <memory>
+
 class AbInitio3DPanel;
 
 class AbInitioManager {
@@ -107,6 +110,7 @@ class AbInitioManager {
     void SetupRefinementJob( );
     void SetupReconstructionJob( );
     void SetupMerge3dJob( );
+    void SetupBlushInferenceJob( );
 
     void SetupInitialReconstructionJob( );
     void SetupInitialMerge3dJob( );
@@ -117,12 +121,19 @@ class AbInitioManager {
     void RunRefinementJob( );
     void RunReconstructionJob( );
     void RunMerge3dJob( );
+    void RunBlushInferenceJob( );
 
     void ProcessJobResult(JobResult* result_to_process);
     void ProcessAllJobsFinished( );
 
     void OnMaskerThreadComplete( );
-    void DoMasking( );
+
+    bool apply_blush_denoising = false;
+    int  user_blush_batch_size = 1;
+    int  num_blush_threads     = 1;
+    int  num_blush_jobs;
+    int  complete_blush_jobs;
+    int  total_blush_progress;
 };
 
 class AbInitio3DPanel : public AbInitio3DPanelParent {
@@ -130,8 +141,6 @@ class AbInitio3DPanel : public AbInitio3DPanelParent {
 
   protected:
     // Handlers for events.
-
-    AbInitioManager my_abinitio_manager;
 
     void OnUpdateUI(wxUpdateUIEvent& event);
     void OnExpertOptionsToggle(wxCommandEvent& event);
@@ -142,7 +151,8 @@ class AbInitio3DPanel : public AbInitio3DPanelParent {
     void ResetAllDefaultsClick(wxCommandEvent& event);
 
   public:
-    wxStopWatch stopwatch;
+    AbInitioManager my_refinement_manager;
+    wxStopWatch     stopwatch;
 
     long time_of_last_result_update;
     bool refinement_package_combo_is_dirty;
@@ -161,8 +171,6 @@ class AbInitio3DPanel : public AbInitio3DPanelParent {
     bool     old_automask_value;
 
     int active_orth_thread_id;
-    int active_mask_thread_id;
-    int active_sym_thread_id;
 
     int next_thread_id;
 
@@ -185,10 +193,12 @@ class AbInitio3DPanel : public AbInitio3DPanelParent {
     void SetTimeRemainingText(wxString wanted_text);
     void OnSocketAllJobsFinished( );
 
+    void OnUpdateMaskerThreadProgress(wxThreadEvent& event);
     void OnMaskerThreadComplete(wxThreadEvent& my_event);
     void OnOrthThreadComplete(ReturnProcessedImageEvent& my_event);
     void OnVolumeResampled(ReturnProcessedImageEvent& my_event);
     void OnImposeSymmetryThreadComplete(wxThreadEvent& event);
+    // void OnWorkerThreadMessage(wxThreadEvent& event);
 
   public:
     void Reset( );
@@ -206,6 +216,18 @@ class AbInitio3DPanel : public AbInitio3DPanelParent {
 
     void TakeCurrent( );
     void TakeLastStart( );
+
+    int active_mask_thread_id;
+    int active_sym_thread_id;
+
+    /* Because Blush inference and automasking are spawned on a wxThread, and processes in the GUI can be
+	terminated, it is necessary to have a method to be able to properly terminate this potentially 
+	long-running process to avoid memory leaks and segfaults. By giving the GUI panel access to the thread,
+	it can issue a destroy command that will clean up resources being used by the thread.
+	*/
+    // Use polymorphism to allow this pointer to store both the AutoMaskerThread as well as the Multiply3DMaskThread
+    wxThread*                          masking_thread = nullptr;
+    std::shared_ptr<std::atomic<bool>> stop_flag      = std::make_shared<std::atomic<bool>>(false); // For halting masking thread (mostly because of blush)
 };
 
 class ResampleVolumeThread : public wxThread {

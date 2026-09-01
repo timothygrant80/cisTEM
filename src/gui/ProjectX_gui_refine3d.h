@@ -298,6 +298,7 @@ class Refine3DPanel : public JobPanel
 		wxCheckBox* RefineXShiftCheckBox;
 		wxCheckBox* RefineYShiftCheckBox;
 		wxCheckBox* RefineOccupanciesCheckBox;
+		wxFlexGridSizer* fgSizer1;
 		wxStaticText* m_staticText202;
 		wxStaticText* NoMovieFramesStaticText;
 		NumericTextCtrl* LowResolutionLimitTextCtrl;
@@ -379,6 +380,14 @@ class Refine3DPanel : public JobPanel
 		wxRadioButton* LowPassMaskNoRadio;
 		wxStaticText* FilterResolutionStaticText;
 		NumericTextCtrl* MaskFilterResolutionText;
+		wxStaticText* m_staticText177;
+		wxStaticText* EnableBlushStaticText;
+		wxRadioButton* EnableBlushYesButton;
+		wxRadioButton* EnableBlushNoButton;
+		wxStaticText* BlushThreadsStaticText;
+		wxSpinCtrl* BlushThreadsSpinCtrl;
+		wxStaticText* BlushBatchSizeStaticText;
+		wxSpinCtrl* BlushBatchSizeSpinCtrl;
 		wxPanel* OutputTextPanel;
 		wxTextCtrl* output_textctrl;
 		wxPanel* InfoPanel;

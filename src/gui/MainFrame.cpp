@@ -984,6 +984,10 @@ wxString MyMainFrame::ReturnRefineCTFScratchDirectory( ) {
     return current_project.scratch_directory.GetFullPath( ) + "/RefineCTF/";
 }
 
+wxString MyMainFrame::ReturnBlushLogsScratchDirectory( ) {
+    return current_project.scratch_directory.GetFullPath( ) + "/BlushLogs/";
+}
+
 bool MyMainFrame::MigrateProject(wxString old_project_directory, wxString new_project_directory) {
     // this is very boring.. go through and update all the links in the database..
     // start transaction

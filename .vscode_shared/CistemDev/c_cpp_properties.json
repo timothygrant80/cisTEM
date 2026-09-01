@@ -6,7 +6,9 @@
                 "${workspaceFolder}/**",
                 "/opt/WX/icc-static/include/wx-3.0/",
                 "/usr/local/cuda/include",
-                "/opt/cuTensor/include"
+                "/opt/cuTensor/include",
+				"/opt/libtorch/include",
+				"/opt/libtorch/include/torch/csrc/api/include"
             ],
             "defines": [
                 "_FILE_OFFSET_BITS=64",

@@ -86,6 +86,7 @@ noinst_HEADERS = core/stopwatch.h \
                  core/eer_file.h \
                  gui/job_panel.h \
                  gui/gui_functions.h \
+				 gui/MaskingService.h \
                  gui/DatabaseUpdateDialog.h \
                  gui/ResultsDataViewListCtrl.h \
                  gui/BitmapPanel.h \
@@ -242,11 +243,12 @@ noinst_HEADERS = core/stopwatch.h \
                  gui/AtomicCoordinatesChooserDialog.h \
                  gui/AtomicCoordinatesImportDialog.h \
                  programs/cisTEM_display/display_gui.h
-                 
 
-                 
-
-                 
+if ENABLE_BLUSH
+noinst_HEADERS += programs/blush_refinement/blush_model.h \
+				  programs/blush_refinement/blush_helpers.h
+endif
+                             
 if EXPERIMENTAL_AM
 noinst_HEADERS += 	gui/icons/experimental_icon.cpp \
                     core/water.h \
@@ -271,6 +273,7 @@ noinst_LIBRARIES = libcore.a libguicore.a
 # Min needed for GUI
 bin_PROGRAMS =  cisTEM_job_control \
                 cisTEM \
+				cisTEM_display \
                 unblur \
                 reconstruct3d \
                 merge3d \
@@ -292,8 +295,7 @@ bin_PROGRAMS =  cisTEM_job_control \
                 match_template \
                 refine_template \
                 make_template_result \
-                prepare_stack_matchtemplate \
-                cisTEM_display 
+				prepare_stack_matchtemplate
 
 
 
@@ -305,6 +307,10 @@ bin_PROGRAMS += quick_test console_test unit_test_runner samples_functional_test
 #######################################################
 if ENABLE_APPLYCTF_AM
 bin_PROGRAMS += applyctf
+endif
+
+if ENABLE_BLUSHREFINEMENT_AM
+bin_PROGRAMS += ipc_blush blush_refinement
 endif
 
 if ENABLE_PROJECT3D_AM
@@ -646,7 +652,6 @@ libcore_a_SOURCES  = core/stopwatch.cpp \
                        core/padded_coordinates.cpp
 
 
-
 if EXPERIMENTAL_AM
 libcore_a_SOURCES += core/water.cpp
 endif
@@ -673,6 +678,7 @@ cisTEM_SOURCES = programs/projectx/projectx.cpp \
                 gui/BitmapPanel.cpp \
                 gui/PickingBitmapPanel.cpp \
                 gui/job_panel.cpp \
+				gui/MaskingService.cpp \
                 gui/ProjectX_gui_abinitio.cpp \
                 gui/ProjectX_gui_assets.cpp \
                 gui/ProjectX_gui_autorefine.cpp \
@@ -762,6 +768,7 @@ cisTEM_SOURCES = programs/projectx/projectx.cpp \
                 gui/AtomicCoordinatesImportDialog.cpp \
                 gui/ResampleDialog.cpp
 
+
 if EXPERIMENTAL_AM
 cisTEM_SOURCES +=  gui/RefineTemplateDevPanel.cpp gui/MyExperimentalPanel.cpp 
 endif
@@ -770,8 +777,8 @@ if ENABLE_WEBVIEW_AM
 cisTEM_SOURCES += gui/WebViewPanel.cpp
 endif
 
-cisTEM_CXXFLAGS = $(WX_CPPFLAGS)
-cisTEM_CPPFLAGS = $(WX_CPPFLAGS)
+cisTEM_CXXFLAGS = $(WX_CPPFLAGS) $(LIBTORCH_CXX_FLAGS)
+cisTEM_CPPFLAGS = $(WX_CPPFLAGS) $(LIBTORCH_CXX_FLAGS)
 cisTEM_LDADD    = libguicore.a libcore.a $(WX_LIBS) $(MKL_LIBS)
 cisTEM_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
@@ -784,7 +791,7 @@ cisTEM_display_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 gui_test_SOURCES = programs/gui_test/gui_test.cpp gui/PlotCurvePanel.cpp gui/mathplot.cpp
 gui_test_CXXFLAGS = $(WX_CPPFLAGS)
 gui_test_CPPFLAGS = $(WX_CPPFLAGS)
-gui_test_LDADD = libguicore.a libcore.a $(WX_LIBS)
+gui_test_LDADD = libguicore.a libcore.a $(WX_LIBS) $(MKL_LIBS)
 gui_test_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
 cisTEM_job_control_SOURCES  = programs/guix_job_control/guix_job_control.cpp 
@@ -858,7 +865,7 @@ reconstruct3d_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 merge3d_SOURCES  = programs/merge3d/merge3d.cpp
 merge3d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 merge3d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-merge3d_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
+merge3d_LDADD    = libcore.a  $(WX_LIBS_BASE) $(MKL_LIBS)
 merge3d_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
 calc_occ_SOURCES  = programs/calc_occ/calc_occ.cpp
@@ -876,7 +883,7 @@ project3d_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 refine3d_SOURCES  = programs/refine3d/refine3d.cpp
 refine3d_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 refine3d_CPPFLAGS = $(WX_CPPFLAGS_BASE)
-refine3d_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
+refine3d_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS) 
 refine3d_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
 remove_outlier_pixels_SOURCES  = programs/remove_outlier_pixels/remove_outlier_pixels.cpp
@@ -1133,6 +1140,33 @@ azimuthal_average_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 azimuthal_average_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
 azimuthal_average_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
 
+if ENABLE_LIBTORCH_AM
+if ENABLE_BLUSHREFINEMENT_AM
+ipc_blush_SOURCES = programs/blush_refinement/blush_model.cpp programs/blush_refinement/blush_helpers.cpp programs/blush_refinement/ipc_blush.cpp
+ipc_blush_CXXFLAGS = $(LIBTORCH_CXX_FLAGS) # -diag-disable=1011,2196
+ipc_blush_CPPFLAGS = $(LIBTORCH_CXX_FLAGS) 
+# NOTE: ipc_blush links only LibTorch, avoiding cisTEM's sequential-MKL stack (see
+# ipc_blush.cpp, m4/libtorch.m4). Top-level -qmkl=sequential/-fopenmp still apply here since
+# Automake appends $(CXXFLAGS)/$(LIBS) after this rule's flags. --as-needed drops the
+# now-unused MKL libs (libtorch_cpu.so is self-contained, using only its own bundled libgomp
+# for torch::set_num_threads()). Keep -qopenmp: icpc emits __kmpc_* symbols around main() for
+# any OpenMP-compiled TU regardless of #pragma use, so dropping it undefines them at link.
+ipc_blush_LDFLAGS  = -L/opt/libtorch/lib \
+                     -Wl,-rpath,/opt/libtorch/lib \
+                     -Wl,-rpath,/opt/intel/oneapi/mkl/2021.4.0/lib/intel64 \
+                     -Wl,-rpath,/opt/intel/oneapi/compiler/2021.4.0/linux/compiler/lib/intel64_lin \
+                     -Wl,--as-needed -qopenmp
+ipc_blush_LDADD    =  $(LIBTORCH_LIBS) $(LIBTORCH_RPATH)
+ipc_blush_LINK = $(CXX) $(ipc_blush_CXXFLAGS) $(ipc_blush_LDFLAGS) -o $@
+
+blush_refinement_SOURCES  = programs/blush_refinement/blush_refinement.cpp
+blush_refinement_CXXFLAGS = $(WX_CPPFLAGS_BASE) $(LIBTORCH_CXX_FLAGS)
+blush_refinement_CPPFLAGS = $(WX_CPPFLAGS_BASE) $(LIBTORCH_CXX_FLAGS)
+blush_refinement_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
+blush_refinement_LIBTOOLFLAGS= $(LIBTOOL_FLAGS)
+endif
+endif
+
 multiply_two_stacks_SOURCES  = programs/multiply_two_stacks/multiply_two_stacks.cpp
 multiply_two_stacks_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 multiply_two_stacks_CPPFLAGS = $(WX_CPPFLAGS_BASE)
@@ -1381,3 +1415,16 @@ calculate_template_pvalue_CXXFLAGS = $(WX_CPPFLAGS_BASE)
 calculate_template_pvalue_CPPFLAGS = $(WX_CPPFLAGS_BASE)
 calculate_template_pvalue_LDADD    = libcore.a $(WX_LIBS_BASE) $(MKL_LIBS)
 calculate_template_pvalue_LIBTOOLFLAGS = $(LIBTOOL_FLAGS)
+
+# merge3d and blush_refinement, the programs that use the blush model, need access to the file
+# that contains the model weights generated in PyTorch; this will automatically
+# copy the file to avoid users having to manually copy it to the execution directory
+# if ENABLE_BLUSH
+# EXTRA_DIST = programs/blush_refinement/blush_weights.dat
+# copy_blush_weights:
+# 	cp $(srcdir)/programs/blush_refinement/blush_weights.dat $(builddir)/blush_weights.dat
+
+# all-local: copy_blush_weights
+# clean-local:
+# 	rm $(builddir)/blush_weights.dat
+# endif

@@ -104,6 +104,28 @@
                 }
             }
         },
+		{
+            "label": "Config GNU DEBUG, CPU only",
+            "type": "shell",
+            "command": "mkdir -p ${build_dir}/gnu-debug-static && cd ${build_dir}/gnu-debug-static && CC=gcc CXX=g++ ../../configure ${input:additional_compiler_flags} --enable-debugmode --with-wx-config=/opt/WX/gcc-static/bin/wx-config --enable-staticmode ${experimental_algo_flags} ${common_optional_programs}  ${common_flags} "
+        },
+		{
+            "label": "BUILD cisTEM DEBUG GNU, CPU only",
+            "type": "shell",
+            "command": "cd ${build_dir}/gnu-debug-static && make -j${input:compile_cores} 2>&1 | sed -u 's|../../../src/|${workspaceFolder}/src/|g'",
+            "problemMatcher": {
+                "owner": "g++",
+                "fileLocation": "absolute",
+                "pattern": {
+                    "regexp": "^(.*)\\((\\d+)\\):\\s+(warning|error|remark)\\s+#?(\\d+)?:\\s+(.*)$",
+                    "file": 1,
+                    "line": 2,
+                    "severity": 3,
+                    "code": 4,
+                    "message": 5
+                }
+            }
+        },
         {
             "label": "Configure cisTEM DEBUG build with LibTorch",
             "type": "shell",

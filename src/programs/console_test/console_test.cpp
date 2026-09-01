@@ -2149,6 +2149,10 @@ void MyTestApp::TestSpectrumImageMethods( ) {
 }
 
 #ifdef cisTEM_USING_LIBTORCH
+#include "../../../include/libtorch/libtorch_push_macros.h"
+#include <torch/torch.h>
+#include "../../../include/libtorch/libtorch_pop_macros.h"
+
 void MyTestApp::TestLibTorch( ) {
     BeginTest("LibTorch Linking and Basic Operations");
 
@@ -2167,9 +2171,9 @@ void MyTestApp::TestLibTorch( ) {
             FailTest;
         }
     }
-
     EndTest( );
 }
+
 #endif
 
 void MyTestApp::BeginTest(const char* test_name) {

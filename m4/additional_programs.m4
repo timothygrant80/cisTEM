@@ -107,6 +107,7 @@ AC_DEFUN([NON_ESSENTIAL_PROGRAMS_TO_BE_COMPILED],
     CISTEM_OPTIONAL_PROGRAM([align_nmr_spectra], [ENABLE_ALIGNNMRSPECTRA], [align_nmr_spectra])
     CISTEM_OPTIONAL_PROGRAM([correlate_nmr_spectra], [ENABLE_CORRELATENMRSPECTRA], [correlate_nmr_spectra])
     CISTEM_OPTIONAL_PROGRAM([filter_images], [ENABLE_FILTERIMAGES], [filter_images])
+	CISTEM_OPTIONAL_PROGRAM([blush_refinement], [ENABLE_BLUSHREFINEMENT], [blush_refinement])
 
     # Special case: calculate_template_pvalue needs Eigen library check
     use_Eigen="no"

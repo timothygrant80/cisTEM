@@ -75,6 +75,7 @@ class AbInitio3DPanelParent : public JobPanel
 		wxBoxSizer* InputSizer;
 		wxStaticText* m_staticText531;
 		wxButton* ResetAllDefaultsButton;
+		wxFlexGridSizer* fgSizer1;
 		wxStaticText* NoMovieFramesStaticText;
 		NumericTextCtrl* InitialResolutionLimitTextCtrl;
 		wxStaticText* m_staticText196;
@@ -109,6 +110,14 @@ class AbInitio3DPanelParent : public JobPanel
 		wxStaticText* m_staticText662;
 		wxStaticText* m_staticText663;
 		wxSpinCtrl* ImagesPerClassSpinCtrl;
+		wxStaticText* m_staticText34;
+		wxStaticText* EnableBlushStaticText;
+		wxRadioButton* EnableBlushYesButton;
+		wxRadioButton* EnableBlushNoButton;
+		wxStaticText* BlushThreadsStaticText;
+		wxSpinCtrl* BlushThreadsSpinCtrl;
+		wxStaticText* BlushBatchSizeStaticText;
+		wxSpinCtrl* BlushBatchSizeSpinCtrl;
 		wxPanel* OutputTextPanel;
 		wxTextCtrl* output_textctrl;
 		AbInitioPlotPanel* PlotPanel;

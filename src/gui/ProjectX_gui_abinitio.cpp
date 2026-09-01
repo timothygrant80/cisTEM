@@ -218,7 +218,6 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 
 	InputSizer->Add( 0, 5, 0, wxEXPAND, 5 );
 
-	wxFlexGridSizer* fgSizer1;
 	fgSizer1 = new wxFlexGridSizer( 0, 2, 0, 0 );
 	fgSizer1->SetFlexibleDirection( wxBOTH );
 	fgSizer1->SetNonFlexibleGrowMode( wxFLEX_GROWMODE_SPECIFIED );
@@ -376,6 +375,75 @@ AbInitio3DPanelParent::AbInitio3DPanelParent( wxWindow* parent, wxWindowID id, c
 	ImagesPerClassSpinCtrl->SetMinSize( wxSize( 100,-1 ) );
 
 	fgSizer1->Add( ImagesPerClassSpinCtrl, 0, wxALIGN_CENTER_VERTICAL|wxALL, 5 );
+
+	m_staticText34 = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Blush Settings"), wxDefaultPosition, wxDefaultSize, 0 );
+	m_staticText34->Wrap( -1 );
+	m_staticText34->SetFont( wxFont( wxNORMAL_FONT->GetPointSize(), wxFONTFAMILY_DEFAULT, wxFONTSTYLE_NORMAL, wxFONTWEIGHT_BOLD, true, wxT("Sans") ) );
+
+	fgSizer1->Add( m_staticText34, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( 0, 0, 1, wxEXPAND, 5 );
+
+	EnableBlushStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("Enable Blush Denoising?"), wxDefaultPosition, wxDefaultSize, 0 );
+	EnableBlushStaticText->Wrap( -1 );
+	EnableBlushStaticText->Enable( false );
+
+	fgSizer1->Add( EnableBlushStaticText, 0, wxALL, 5 );
+
+	wxBoxSizer* bSizer27;
+	bSizer27 = new wxBoxSizer( wxHORIZONTAL );
+
+	EnableBlushYesButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("Yes"), wxDefaultPosition, wxDefaultSize, wxRB_GROUP );
+	EnableBlushYesButton->Enable( false );
+
+	bSizer27->Add( EnableBlushYesButton, 0, wxALL, 5 );
+
+	EnableBlushNoButton = new wxRadioButton( ExpertPanel, wxID_ANY, wxT("No"), wxDefaultPosition, wxDefaultSize, 0 );
+	EnableBlushNoButton->SetValue( true );
+	EnableBlushNoButton->Enable( false );
+
+	bSizer27->Add( EnableBlushNoButton, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( bSizer27, 1, wxEXPAND, 5 );
+
+	BlushThreadsStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tBlush Threads: "), wxDefaultPosition, wxDefaultSize, 0 );
+	BlushThreadsStaticText->Wrap( -1 );
+	BlushThreadsStaticText->Enable( false );
+	BlushThreadsStaticText->SetToolTip( wxT("A value between 4 and 16 is often plenty; be wary of using too many threads when on a shared system to prevent demanding too many threads for this process.") );
+
+	fgSizer1->Add( BlushThreadsStaticText, 0, wxALL, 5 );
+
+	wxBoxSizer* bSizer28;
+	bSizer28 = new wxBoxSizer( wxHORIZONTAL );
+
+	BlushThreadsSpinCtrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 128, 1 );
+	BlushThreadsSpinCtrl->Enable( false );
+
+	bSizer28->Add( BlushThreadsSpinCtrl, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( bSizer28, 1, wxEXPAND, 5 );
+
+	BlushBatchSizeStaticText = new wxStaticText( ExpertPanel, wxID_ANY, wxT("\tBlush Batch Size: "), wxDefaultPosition, wxDefaultSize, 0 );
+	BlushBatchSizeStaticText->Wrap( -1 );
+	BlushBatchSizeStaticText->Enable( false );
+	BlushBatchSizeStaticText->SetToolTip( wxT("Smaller batch sizes give better inference (de-noising), but larger batch sizes are faster. ") );
+
+	fgSizer1->Add( BlushBatchSizeStaticText, 0, wxALL, 5 );
+
+	wxBoxSizer* bSizer29;
+	bSizer29 = new wxBoxSizer( wxVERTICAL );
+
+	BlushBatchSizeSpinCtrl = new wxSpinCtrl( ExpertPanel, wxID_ANY, wxT("1"), wxDefaultPosition, wxDefaultSize, wxSP_ARROW_KEYS, 1, 10, 0 );
+	BlushBatchSizeSpinCtrl->Enable( false );
+	BlushBatchSizeSpinCtrl->SetToolTip( wxT("Smaller batch sizes give better inference (de-noising), but larger batch sizes are faster. ") );
+
+	bSizer29->Add( BlushBatchSizeSpinCtrl, 0, wxALL, 5 );
+
+
+	fgSizer1->Add( bSizer29, 1, wxEXPAND, 5 );
 
 
 	InputSizer->Add( fgSizer1, 1, wxEXPAND, 5 );

@@ -1,4 +1,5 @@
 #include "../core/gui_core_headers.h"
+#include "MaskingService.h"
 wxDEFINE_EVENT(wxEVT_RESAMPLE_VOLUME_EVENT, ReturnProcessedImageEvent);
 wxDEFINE_EVENT(wxEVT_COMMAND_IMPOSESYMMETRY_DONE, wxThreadEvent);
 
@@ -18,6 +19,14 @@ AbInitio3DPanel::AbInitio3DPanel(wxWindow* parent)
     wxSize input_size = InputSizer->GetMinSize( );
     input_size.x += wxSystemSettings::GetMetric(wxSYS_VSCROLL_X);
     input_size.y = -1;
+
+    // If blush is enabled, we'll give the user the option to use it or not.
+#ifdef cisTEM_USING_BLUSH
+    EnableBlushStaticText->Enable(true);
+    EnableBlushYesButton->Enable(true);
+    EnableBlushNoButton->Enable(true);
+#endif
+
     ExpertPanel->SetMinSize(input_size);
     ExpertPanel->SetSize(input_size);
 
@@ -26,12 +35,14 @@ AbInitio3DPanel::AbInitio3DPanel(wxWindow* parent)
     classification_selections_are_dirty = false;
     selected_refinement_package         = -1;
 
-    my_abinitio_manager.SetParent(this);
+    my_refinement_manager.SetParent(this);
     RefinementPackageComboBox->AssetComboBox->Bind(wxEVT_COMMAND_COMBOBOX_SELECTED, &AbInitio3DPanel::OnRefinementPackageComboBox, this);
     Bind(wxEVT_AUTOMASKERTHREAD_COMPLETED, &AbInitio3DPanel::OnMaskerThreadComplete, this);
     Bind(RETURN_PROCESSED_IMAGE_EVT, &AbInitio3DPanel::OnOrthThreadComplete, this);
+    Bind(EVT_UPDATE_MASK_THREAD_PROGRESS, &AbInitio3DPanel::OnUpdateMaskerThreadProgress, this);
     Bind(wxEVT_RESAMPLE_VOLUME_EVENT, &AbInitio3DPanel::OnVolumeResampled, this);
     Bind(wxEVT_COMMAND_IMPOSESYMMETRY_DONE, &AbInitio3DPanel::OnImposeSymmetryThreadComplete, this);
+    // Bind(EVT_WORKER_THREAD_MESSAGE, &AbInitio3DPanel::OnWorkerThreadMessage, this);
     FillRefinementPackagesComboBox( );
 
     // limits
@@ -298,29 +309,29 @@ void AbInitio3DPanel::OnInfoURL(wxTextUrlEvent& event) {
 }
 
 void AbInitio3DPanel::OnSocketJobResultMsg(JobResult& received_result) {
-    if ( my_abinitio_manager.running_job_type == ALIGN_SYMMETRY ) {
+    if ( my_refinement_manager.running_job_type == ALIGN_SYMMETRY ) {
         // is this better than all the current_best?
         int current_class = received_result.result_data[7] + 0.5;
 
         //wxPrintf("got final result %f, %f, %f - %f, %f, %f = %f\n", temp_result.result_data[0], temp_result.result_data[1], temp_result.result_data[2], temp_result.result_data[3], temp_result.result_data[4], temp_result.result_data[5], temp_result.result_data[6]);
-        if ( received_result.result_data[6] > my_abinitio_manager.align_sym_best_correlations[current_class] ) {
-            my_abinitio_manager.align_sym_best_correlations[current_class] = received_result.result_data[6];
-            my_abinitio_manager.align_sym_best_x_rots[current_class]       = received_result.result_data[0];
-            my_abinitio_manager.align_sym_best_y_rots[current_class]       = received_result.result_data[1];
-            my_abinitio_manager.align_sym_best_z_rots[current_class]       = received_result.result_data[2];
-            my_abinitio_manager.align_sym_best_x_shifts[current_class]     = received_result.result_data[3];
-            my_abinitio_manager.align_sym_best_y_shifts[current_class]     = received_result.result_data[4];
-            my_abinitio_manager.align_sym_best_z_shifts[current_class]     = received_result.result_data[5];
+        if ( received_result.result_data[6] > my_refinement_manager.align_sym_best_correlations[current_class] ) {
+            my_refinement_manager.align_sym_best_correlations[current_class] = received_result.result_data[6];
+            my_refinement_manager.align_sym_best_x_rots[current_class]       = received_result.result_data[0];
+            my_refinement_manager.align_sym_best_y_rots[current_class]       = received_result.result_data[1];
+            my_refinement_manager.align_sym_best_z_rots[current_class]       = received_result.result_data[2];
+            my_refinement_manager.align_sym_best_x_shifts[current_class]     = received_result.result_data[3];
+            my_refinement_manager.align_sym_best_y_shifts[current_class]     = received_result.result_data[4];
+            my_refinement_manager.align_sym_best_z_shifts[current_class]     = received_result.result_data[5];
         }
     }
     else {
-        my_abinitio_manager.ProcessJobResult(&received_result);
+        my_refinement_manager.ProcessJobResult(&received_result);
     }
 }
 
 void AbInitio3DPanel::OnSocketJobResultQueueMsg(ArrayofJobResults& received_queue) {
     for ( int counter = 0; counter < received_queue.GetCount( ); counter++ ) {
-        my_abinitio_manager.ProcessJobResult(&received_queue.Item(counter));
+        my_refinement_manager.ProcessJobResult(&received_queue.Item(counter));
     }
 }
 
@@ -333,7 +344,7 @@ void AbInitio3DPanel::SetTimeRemainingText(wxString wanted_text) {
 }
 
 void AbInitio3DPanel::OnSocketAllJobsFinished( ) {
-    my_abinitio_manager.ProcessAllJobsFinished( );
+    my_refinement_manager.ProcessAllJobsFinished( );
 }
 
 void AbInitio3DPanel::WriteInfoText(wxString text_to_write) {
@@ -456,6 +467,11 @@ void AbInitio3DPanel::AbInitio3DPanel::SetDefaults( ) {
         AlwaysApplySymmetryNoButton->SetValue(true);
         ImagesPerClassSpinCtrl->SetValue(5);
 
+#ifdef cisTEM_USING_BLUSH
+        EnableBlushNoButton->SetValue(true);
+        EnableBlushYesButton->SetValue(false);
+#endif
+
         ExpertPanel->Thaw( );
     }
 }
@@ -557,6 +573,19 @@ void AbInitio3DPanel::OnUpdateUI(wxUpdateUIEvent& event) {
                 else {
                     ImagesPerClassSpinCtrl->Enable(true);
                 }
+
+                if ( EnableBlushYesButton->GetValue( ) ) {
+                    BlushThreadsStaticText->Enable(true);
+                    BlushThreadsSpinCtrl->Enable(true);
+                    BlushBatchSizeStaticText->Enable(true);
+                    BlushBatchSizeSpinCtrl->Enable(true);
+                }
+                else {
+                    BlushThreadsStaticText->Enable(false);
+                    BlushThreadsSpinCtrl->Enable(false);
+                    BlushBatchSizeStaticText->Enable(false);
+                    BlushBatchSizeSpinCtrl->Enable(false);
+                }
             }
 
             bool estimation_button_status = false;
@@ -594,13 +623,13 @@ void AbInitio3DPanel::OnUpdateUI(wxUpdateUIEvent& event) {
             if ( ExpertToggleButton->GetValue( ) == true )
                 ExpertToggleButton->SetValue(false);
 
-            if ( my_abinitio_manager.number_of_rounds_run > 0 || my_abinitio_manager.number_of_starts_run > 0 ) {
+            if ( my_refinement_manager.number_of_rounds_run > 0 || my_refinement_manager.number_of_starts_run > 0 ) {
                 TakeCurrentResultButton->Enable(true);
             }
             else
                 TakeCurrentResultButton->Enable(false);
 
-            if ( my_abinitio_manager.number_of_starts_run > 0 ) {
+            if ( my_refinement_manager.number_of_starts_run > 0 ) {
                 TakeLastStartResultButton->Enable(true);
             }
             else
@@ -630,6 +659,12 @@ void AbInitio3DPanel::OnUpdateUI(wxUpdateUIEvent& event) {
     }
 }
 
+void AbInitio3DPanel::OnUpdateMaskerThreadProgress(wxThreadEvent& event) {
+    ProgressBar->SetValue(event.GetInt( ));
+    wxTimeSpan time_remaining = wxTimeSpan(0, 0, event.GetExtraLong( ));
+    TimeRemainingText->SetLabel(time_remaining.Format("Time Remaining : %Hh:%Mm:%Ss"));
+}
+
 void AbInitio3DPanel::OnExpertOptionsToggle(wxCommandEvent& event) {
     if ( ExpertToggleButton->GetValue( ) == true ) {
         ExpertPanel->Show(true);
@@ -642,6 +677,14 @@ void AbInitio3DPanel::OnExpertOptionsToggle(wxCommandEvent& event) {
 }
 
 void AbInitio3DPanel::TerminateButtonClick(wxCommandEvent& event) {
+
+    if ( masking_thread ) {
+        stop_flag->store(true, std::memory_order_relaxed);
+        StopAndDestroyMaskingThread(masking_thread);
+        stop_flag.reset( );
+        stop_flag = std::make_shared<std::atomic<bool>>(false);
+    }
+
     main_frame->job_controller.KillJob(my_job_id);
     Freeze( );
     WriteBlueText("Terminated Job");
@@ -705,7 +748,7 @@ void AbInitio3DPanel::FinishButtonClick(wxCommandEvent& event) {
 
 void AbInitio3DPanel::StartRefinementClick(wxCommandEvent& event) {
     stopwatch.Start( );
-    my_abinitio_manager.BeginRefinementCycle( );
+    my_refinement_manager.BeginRefinementCycle( );
     running_job = true;
 }
 
@@ -822,10 +865,10 @@ void AbInitio3DPanel::TakeCurrent( ) {
 
     current_startup_id = main_frame->current_project.database.ReturnHighestStartupID( ) + 1;
 
-    for ( int class_counter = 0; class_counter < my_abinitio_manager.input_refinement->number_of_classes; class_counter++ ) {
-        int current_round_number              = (my_abinitio_manager.number_of_rounds_to_run * my_abinitio_manager.number_of_starts_run) + my_abinitio_manager.number_of_rounds_run - 1;
+    for ( int class_counter = 0; class_counter < my_refinement_manager.input_refinement->number_of_classes; class_counter++ ) {
+        int current_round_number              = (my_refinement_manager.number_of_rounds_to_run * my_refinement_manager.number_of_starts_run) + my_refinement_manager.number_of_rounds_run - 1;
         input_file                            = main_frame->current_project.scratch_directory.GetFullPath( ) + wxString::Format("/Startup/startup3d_%i_%i.mrc", current_round_number, class_counter);
-        ResampleVolumeThread* resample_thread = new ResampleVolumeThread(this, input_file, my_abinitio_manager.active_refinement_package->stack_box_size, my_abinitio_manager.active_refinement_package->contained_particles[0].pixel_size, class_counter + 1);
+        ResampleVolumeThread* resample_thread = new ResampleVolumeThread(this, input_file, my_refinement_manager.active_refinement_package->stack_box_size, my_refinement_manager.active_refinement_package->contained_particles[0].pixel_size, class_counter + 1);
 
         if ( resample_thread->Run( ) != wxTHREAD_NO_ERROR ) {
             WriteErrorText("Error: Cannot start resample thread, results not saved");
@@ -839,13 +882,13 @@ void AbInitio3DPanel::TakeLastStart( ) {
     number_of_resampled_volumes_recieved = 0;
     current_startup_id                   = main_frame->current_project.database.ReturnHighestStartupID( ) + 1;
 
-    for ( int class_counter = 0; class_counter < my_abinitio_manager.input_refinement->number_of_classes; class_counter++ ) {
+    for ( int class_counter = 0; class_counter < my_refinement_manager.input_refinement->number_of_classes; class_counter++ ) {
         // what is the round number of the end of the last start..
 
-        int last_start_round_number = (my_abinitio_manager.number_of_rounds_to_run * my_abinitio_manager.number_of_starts_run) - 1;
+        int last_start_round_number = (my_refinement_manager.number_of_rounds_to_run * my_refinement_manager.number_of_starts_run) - 1;
         input_file                  = main_frame->current_project.scratch_directory.GetFullPath( ) + wxString::Format("/Startup/startup3d_%i_%i.mrc", last_start_round_number, class_counter);
 
-        ResampleVolumeThread* resample_thread = new ResampleVolumeThread(this, input_file, my_abinitio_manager.active_refinement_package->stack_box_size, my_abinitio_manager.active_refinement_package->contained_particles[0].pixel_size, class_counter + 1);
+        ResampleVolumeThread* resample_thread = new ResampleVolumeThread(this, input_file, my_refinement_manager.active_refinement_package->stack_box_size, my_refinement_manager.active_refinement_package->contained_particles[0].pixel_size, class_counter + 1);
 
         if ( resample_thread->Run( ) != wxTHREAD_NO_ERROR ) {
             WriteErrorText("Error: Cannot start resample thread, results not saved");
@@ -959,6 +1002,12 @@ void AbInitioManager::BeginRefinementCycle( ) {
     active_reconstruction_run_profile = run_profiles_panel->run_profile_manager.run_profiles[my_parent->ReconstructionRunProfileComboBox->GetSelection( )];
 
     active_auto_set_percent_used = my_parent->AutoPercentUsedYesRadio->GetValue( );
+
+#ifdef cisTEM_USING_BLUSH
+    apply_blush_denoising = my_parent->EnableBlushYesButton->GetValue( );
+    user_blush_batch_size = my_parent->BlushBatchSizeSpinCtrl->GetValue( );
+    num_blush_threads     = my_parent->BlushThreadsSpinCtrl->GetValue( );
+#endif
 
     // need to take into account symmetry
 
@@ -1174,10 +1223,14 @@ void AbInitioManager::CycleRefinement( ) {
 
         start_with_reconstruction = false;
 
-        if ( active_should_automask == true ) {
-            DoMasking( );
+        if ( apply_blush_denoising ) {
+            SetupBlushInferenceJob( );
+            RunBlushInferenceJob( );
         }
         else {
+            if ( active_should_automask ) {
+                DispatchMasking(my_parent);
+            }
             SetupRefinementJob( );
             RunRefinementJob( );
         }
@@ -1224,10 +1277,16 @@ void AbInitioManager::CycleRefinement( ) {
                 RunAlignSymmetryJob( );
             }
             else {
-                if ( active_should_automask == true ) {
-                    DoMasking( );
+                if ( apply_blush_denoising ) {
+                    SetupBlushInferenceJob( );
+                    RunBlushInferenceJob( );
                 }
                 else {
+                    if ( active_should_automask ) {
+                        if ( apply_blush_denoising ) {
+                        }
+                        DispatchMasking(my_parent);
+                    }
                     SetupRefinementJob( );
                     RunRefinementJob( );
                 }
@@ -1259,10 +1318,14 @@ void AbInitioManager::CycleRefinement( ) {
                     current_percent_used = start_percent_used + (end_percent_used - start_percent_used) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
                 //current_percent_used = start_percent_used + (end_percent_used - start_percent_used) * (float(number_of_rounds_run) / float(number_of_rounds_to_run - 1));
 
-                if ( active_should_automask == true ) {
-                    DoMasking( );
+                if ( apply_blush_denoising ) {
+                    my_parent->NumberConnectedText->SetLabel("Running Blush...");
+                    my_parent->Layout( );
                 }
                 else {
+                    if ( active_should_automask ) {
+                        DispatchMasking(my_parent);
+                    }
                     SetupRefinementJob( );
                     RunRefinementJob( );
                 }
@@ -1786,7 +1849,9 @@ void AbInitioManager::SetupRefinementJob( ) {
             bool defocus_bias            = false;
             int  max_threads             = 1;
 
-            my_parent->current_job_package.AddJob("ttttbttttiiffffffffffffifffffffffbbbbbbbbbbbbbbbibibb",
+            float particle_diameter = static_cast<float>(active_refinement_package->estimated_particle_size_in_angstroms);
+
+            my_parent->current_job_package.AddJob("ttttbttttiiffffffffffffifffffffffbbbbbbbbbbbbbbbibibbb",
                                                   input_particle_images.ToUTF8( ).data( ),
                                                   input_parameter_file.ToUTF8( ).data( ),
                                                   input_reconstruction.ToUTF8( ).data( ),
@@ -1937,6 +2002,14 @@ void AbInitioManager::SetupPrepareStackJob( ) {
             int number_of_classes = active_number_of_2d_classes;
             int images_per_class  = active_images_per_class;
 
+#ifdef cisTEM_USING_BLUSH
+            constexpr int MIN_BLUSH_BOX_SIZE = 86;
+            if ( apply_blush_denoising && resample_box && wanted_output_box_size < MIN_BLUSH_BOX_SIZE ) {
+                apply_blush_denoising = false;
+                my_parent->WriteErrorText(wxString::Format("Wanted output box (%i) size is less than minimum %i, so blush inference will be disabled.", wanted_output_box_size, MIN_BLUSH_BOX_SIZE));
+            }
+#endif
+
             my_parent->current_job_package.AddJob("ttttffbiiibbii", input_particle_images.ToUTF8( ).data( ),
                                                   output_classaverage_images.ToUTF8( ).data( ),
                                                   input_parameter_file.ToUTF8( ).data( ),
@@ -1995,7 +2068,16 @@ void AbInitioManager::SetupPrepareStackJob( ) {
             float    mask_radius            = active_global_mask_radius;
             bool     resample_box           = true;
             int      wanted_output_box_size = ReturnClosestFactorizedUpper(ReturnSafeBinnedBoxSize(active_refinement_package->stack_box_size, binning_factor), 3, true);
-            bool     process_a_subset       = true;
+            // TODO: add check for the wanted_output_box_size and compare against the min model_block_size + stride_size
+            bool process_a_subset = true;
+
+#ifdef cisTEM_USING_BLUSH
+            constexpr int MIN_BLUSH_BOX_SIZE = 86;
+            if ( resample_box && wanted_output_box_size < MIN_BLUSH_BOX_SIZE ) {
+                apply_blush_denoising = false;
+                my_parent->WriteErrorText(wxString::Format("Wanted output box size is less than minimum %i. Blush inference will be disabled.", MIN_BLUSH_BOX_SIZE));
+            }
+#endif
 
             FirstLastParticleForJob(first_particle, last_particle, number_of_particles, counter + 1, number_of_refinement_jobs);
 
@@ -2173,6 +2255,45 @@ void AbInitioManager::RunAlignSymmetryJob( ) {
         my_parent->SetNumberConnectedTextToZeroAndStartTracking( );
     }
 
+    my_parent->ProgressBar->Pulse( );
+}
+
+void AbInitioManager::SetupBlushInferenceJob( ) {
+    num_blush_jobs       = current_reference_filenames.GetCount( );
+    complete_blush_jobs  = 0;
+    total_blush_progress = 0;
+
+    my_parent->current_job_package.Reset(active_refinement_run_profile, "blush_refinement", num_blush_jobs);
+    my_parent->NumberConnectedText->SetLabel("Running Blush...");
+    my_parent->Layout( );
+
+    for ( int ref_file = 0; ref_file < num_blush_jobs; ref_file++ ) {
+        // Prevent name chaining in subsequent iterations
+        wxString base_name = current_reference_filenames.Item(ref_file).BeforeLast('.');
+        if ( base_name.EndsWith("_blushed") ) {
+            base_name = base_name.BeforeLast('_');
+        }
+        wxString output_ref_filename = base_name.Append("_blushed.mrc");
+
+        my_parent->current_job_package.AddJob("sssffiii", current_reference_filenames.Item(ref_file).ToUTF8( ).data( ),
+                                              output_ref_filename.ToUTF8( ).data( ),
+                                              main_frame->ReturnBlushLogsScratchDirectory( ).ToUTF8( ).data( ),
+                                              active_global_mask_radius,
+                                              input_refinement->resolution_statistics_pixel_size,
+                                              user_blush_batch_size,
+                                              num_blush_threads,
+                                              ref_file);
+    }
+}
+
+void AbInitioManager::RunBlushInferenceJob( ) {
+    running_job_type = BLUSH_INFERENCE;
+    my_parent->WriteBlueText("Performing blush inference...");
+    current_job_id       = main_frame->job_controller.AddJob(my_parent, active_reconstruction_run_profile.manager_command, active_reconstruction_run_profile.gui_address);
+    my_parent->my_job_id = current_job_id;
+    if ( current_job_id != -1 ) {
+        my_parent->SetNumberConnectedTextToZeroAndStartTracking( );
+    }
     my_parent->ProgressBar->Pulse( );
 }
 
@@ -2361,6 +2482,35 @@ void AbInitioManager::ProcessJobResult(JobResult* result_to_process) {
             my_parent->TimeRemainingText->SetLabel(time_remaining.Format("Time Remaining : %Hh:%Mm:%Ss"));
         }
     }
+    else if ( running_job_type == BLUSH_INFERENCE ) {
+        // Validate result data before processing
+        if ( result_to_process->result_size < 3 ) {
+            MyDebugPrintWithDetails("Error: BLUSH_INFERENCE result has insufficient data (size=%i, expected >= 3)", result_to_process->result_size);
+            return;
+        }
+
+        int   current_ref{result_to_process->result_data[0]}; // -1 will denote process is ongoing, and this is simply an update event
+        float pct{result_to_process->result_data[1]};
+        int   seconds_rem{result_to_process->result_data[2]};
+
+        if ( current_ref == -1 ) {
+            if ( complete_blush_jobs < current_reference_filenames.GetCount( ) ) {
+                total_blush_progress += pct;
+                int overall_completion_pct = std::min(100, total_blush_progress / num_blush_jobs);
+                my_parent->ProgressBar->SetValue(overall_completion_pct);
+            }
+        }
+        else {
+            // Validate array bounds before accessing
+            if ( current_ref < 0 || current_ref >= current_reference_filenames.GetCount( ) ) {
+                MyDebugPrintWithDetails("Error: BLUSH_INFERENCE current_ref (%i) is out of bounds (array size=%i)", current_ref, current_reference_filenames.GetCount( ));
+                return;
+            }
+
+            complete_blush_jobs++;
+            current_reference_filenames.Item(current_ref) = current_reference_filenames.Item(current_ref).BeforeLast('.') + "_blushed.mrc";
+        }
+    }
 }
 
 void AbInitioManager::ProcessAllJobsFinished( ) {
@@ -2485,6 +2635,14 @@ void AbInitioManager::ProcessAllJobsFinished( ) {
             return; // just return, we will startup again when the thread finishes.
         }
     }
+    else if ( running_job_type == BLUSH_INFERENCE ) {
+        main_frame->job_controller.KillJob(my_parent->my_job_id);
+        if ( active_should_automask ) {
+            DispatchMasking(my_parent);
+        }
+        SetupRefinementJob( );
+        RunRefinementJob( );
+    }
 }
 
 void AbInitio3DPanel::OnOrthThreadComplete(ReturnProcessedImageEvent& my_event) {
@@ -2508,8 +2666,12 @@ void AbInitio3DPanel::OnOrthThreadComplete(ReturnProcessedImageEvent& my_event) 
 }
 
 void AbInitio3DPanel::OnMaskerThreadComplete(wxThreadEvent& my_event) {
+    if ( masking_thread ) {
+        delete masking_thread;
+        masking_thread = nullptr;
+    }
     if ( my_event.GetInt( ) == active_mask_thread_id )
-        my_abinitio_manager.OnMaskerThreadComplete( );
+        my_refinement_manager.OnMaskerThreadComplete( );
 }
 
 void AbInitioManager::OnMaskerThreadComplete( ) {
@@ -2518,53 +2680,32 @@ void AbInitioManager::OnMaskerThreadComplete( ) {
     RunRefinementJob( );
 }
 
-void AbInitioManager::DoMasking( ) {
-    // right now do nothing. Take out event if changing back to thread.
-    //	MyDebugAssertTrue(my_parent->AutoMaskYesRadio->GetValue() == true, "DoMasking called, when masking not ticked!");
-    //	wxThreadEvent *my_thread_event = new wxThreadEvent(wxEVT_COMMAND_MYTHREAD_COMPLETED);
-    //	wxQueueEvent(my_parent, my_thread_event);
-
-    my_parent->WriteInfoText("Automasking reference reconstruction");
-
-    wxArrayString masked_filenames;
-    wxFileName    current_ref_filename;
-    wxString      current_masked_filename;
-
-    for ( int class_counter = 0; class_counter < current_reference_filenames.GetCount( ); class_counter++ ) {
-        current_ref_filename = current_reference_filenames.Item(class_counter);
-        current_ref_filename.ClearExt( );
-        current_masked_filename = current_ref_filename.GetFullPath( );
-        current_masked_filename += "_masked.mrc";
-
-        masked_filenames.Add(current_masked_filename);
-    }
-
-    my_parent->active_mask_thread_id = my_parent->next_thread_id;
-    my_parent->next_thread_id++;
-
-    AutoMaskerThread* mask_thread = new AutoMaskerThread(my_parent, current_reference_filenames, masked_filenames, input_refinement->resolution_statistics_pixel_size, active_global_mask_radius, my_parent->active_mask_thread_id);
-
-    if ( mask_thread->Run( ) != wxTHREAD_NO_ERROR ) {
-        my_parent->WriteErrorText("Error: Cannot start masking thread, masking will not be performed");
-        delete mask_thread;
-    }
-    else {
-        current_reference_filenames = masked_filenames;
-        return; // just return, we will startup again whent he mask thread finishes.
-    }
-}
-
+// FIXME: do we want to run this thread with blush? will need to pass an argument that allows specifying false for this value
+// It doesn't make much sense to include blush, since it is already being done at the other masking step, so will have to pass a boolean
+// to DoMasking that will determine if blush should be executed
 void AbInitio3DPanel::OnImposeSymmetryThreadComplete(wxThreadEvent& event) {
     if ( event.GetInt( ) == active_sym_thread_id ) {
-        if ( my_abinitio_manager.active_should_automask == true ) {
-            my_abinitio_manager.DoMasking( );
+        if ( my_refinement_manager.apply_blush_denoising ) {
+            my_refinement_manager.SetupBlushInferenceJob( );
+            my_refinement_manager.RunBlushInferenceJob( );
         }
         else {
-            my_abinitio_manager.SetupRefinementJob( );
-            my_abinitio_manager.RunRefinementJob( );
+            if ( my_refinement_manager.active_should_automask ) {
+                DispatchMasking(this);
+            }
+            else {
+                my_refinement_manager.SetupRefinementJob( );
+                my_refinement_manager.RunRefinementJob( );
+            }
         }
     }
 }
+
+// void AbInitio3DPanel::OnWorkerThreadMessage(wxThreadEvent& event) {
+//     wxString msg = event.GetString( );
+//     WriteErrorText(msg);
+//     my_refinement_manager.apply_blush_denoising = false; // skip future calls to blush if we can't do it
+// }
 
 void AbInitio3DPanel::OnVolumeResampled(ReturnProcessedImageEvent& my_event) {
     // in theory the long data should contain a pointer to wxPanel that we are going to add to the notebook..
@@ -2580,7 +2721,7 @@ void AbInitio3DPanel::OnVolumeResampled(ReturnProcessedImageEvent& my_event) {
 
         //new_image->QuickAndDirtyWriteSlices(current_output_filename.ToStdString(), 1, new_image->logical_z_dimension);
         new_image->WriteSlices(&output_file, 1, new_image->logical_z_dimension);
-        output_file.SetPixelSize(my_abinitio_manager.active_refinement_package->contained_particles[0].pixel_size);
+        output_file.SetPixelSize(my_refinement_manager.active_refinement_package->contained_particles[0].pixel_size);
 
         EmpiricalDistribution<double> density_distribution;
         new_image->UpdateDistributionOfRealValues(&density_distribution);
@@ -2588,16 +2729,16 @@ void AbInitio3DPanel::OnVolumeResampled(ReturnProcessedImageEvent& my_event) {
         output_file.CloseFile( );
     }
 
-    if ( number_of_resampled_volumes_recieved == my_abinitio_manager.input_refinement->number_of_classes ) {
+    if ( number_of_resampled_volumes_recieved == my_refinement_manager.input_refinement->number_of_classes ) {
         VolumeAsset temp_asset;
         main_frame->current_project.database.Begin( );
         main_frame->current_project.database.BeginVolumeAssetInsert( );
 
         wxArrayLong volume_asset_ids;
 
-        for ( int class_counter = 0; class_counter < my_abinitio_manager.input_refinement->number_of_classes; class_counter++ ) {
+        for ( int class_counter = 0; class_counter < my_refinement_manager.input_refinement->number_of_classes; class_counter++ ) {
             temp_asset.reconstruction_job_id = -1;
-            temp_asset.pixel_size            = my_abinitio_manager.active_refinement_package->contained_particles[0].pixel_size;
+            temp_asset.pixel_size            = my_refinement_manager.active_refinement_package->contained_particles[0].pixel_size;
             temp_asset.x_size                = new_image->logical_x_dimension;
             temp_asset.y_size                = new_image->logical_y_dimension;
             temp_asset.z_size                = new_image->logical_z_dimension;
@@ -2615,7 +2756,7 @@ void AbInitio3DPanel::OnVolumeResampled(ReturnProcessedImageEvent& my_event) {
 
         // now add the details of the startup job..
 
-        main_frame->current_project.database.AddStartupJob(current_startup_id, my_abinitio_manager.input_refinement->refinement_package_asset_id, wxString::Format("Refinement #%li", current_startup_id), my_abinitio_manager.number_of_starts_run, my_abinitio_manager.number_of_rounds_to_run, InitialResolutionLimitTextCtrl->ReturnValue( ), FinalResolutionLimitTextCtrl->ReturnValue( ), AutoMaskYesRadio->GetValue( ), AutoPercentUsedYesRadio->GetValue( ), my_abinitio_manager.start_percent_used, my_abinitio_manager.end_percent_used, my_abinitio_manager.active_global_mask_radius, ApplyBlurringYesRadioButton->GetValue( ), SmoothingFactorTextCtrl->ReturnValue( ), volume_asset_ids);
+        main_frame->current_project.database.AddStartupJob(current_startup_id, my_refinement_manager.input_refinement->refinement_package_asset_id, wxString::Format("Refinement #%li", current_startup_id), my_refinement_manager.number_of_starts_run, my_refinement_manager.number_of_rounds_to_run, InitialResolutionLimitTextCtrl->ReturnValue( ), FinalResolutionLimitTextCtrl->ReturnValue( ), AutoMaskYesRadio->GetValue( ), AutoPercentUsedYesRadio->GetValue( ), my_refinement_manager.start_percent_used, my_refinement_manager.end_percent_used, my_refinement_manager.active_global_mask_radius, ApplyBlurringYesRadioButton->GetValue( ), SmoothingFactorTextCtrl->ReturnValue( ), volume_asset_ids);
         main_frame->current_project.database.Commit( );
 
         FinishButton->Enable(true);

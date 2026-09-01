@@ -1,0 +1,858 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Cryo-EM Job Runner</title>
+<style>
+/* Deliberately a single native-desktop light theme (no dark mode) --
+   the reference (cisTEM's wxWidgets GUI) doesn't have one either.
+   No web fonts either: this runs on lab machines that may be offline. */
+
+:root{
+  --chrome:#E4E6E8;
+  --page-bg:#F2F3F4;
+  --surface:#FFFFFF;
+  --surface-sunken:#EBEDEE;
+  --border:#C4CBD1;
+  --border-strong:#9AA4AC;
+  --text:#1A1E22;
+  --text-secondary:#4B545C;
+  --text-tertiary:#7C868E;
+  --accent:#2F5FA6;
+  --accent-strong:#1F4680;
+  --accent-soft:#DCE7F5;
+  --success:#2F7D3C;
+  --success-soft:#E1F0E3;
+  --warning:#B07C12;
+  --warning-soft:#FAF0DC;
+  --critical:#C13B2B;
+  --critical-soft:#FBE6E2;
+  --idle:#8A929A;
+  --idle-soft:#E9EBEC;
+  --font-ui:-apple-system,"Segoe UI","Helvetica Neue",Arial,"Liberation Sans",sans-serif;
+  --font-mono:Consolas,"SFMono-Regular",Menlo,"Liberation Mono",monospace;
+}
+
+*{box-sizing:border-box;}
+html,body{height:100%;}
+body{
+  margin:0;background:var(--page-bg);color:var(--text);
+  font-family:var(--font-ui);font-size:12.5px;line-height:1.5;
+}
+button,input,select{font-family:var(--font-ui);}
+
+/* ---------- app shell ---------- */
+.app{display:flex;height:100vh;}
+
+.railnav{
+  width:84px;flex-shrink:0;background:var(--chrome);border-right:1px solid var(--border-strong);
+  display:flex;flex-direction:column;align-items:stretch;padding:10px 0;
+}
+.rail-item{
+  display:flex;flex-direction:column;align-items:center;gap:5px;
+  padding:11px 4px;margin:1px 6px;border-radius:3px;border:1px solid transparent;
+  background:none;color:var(--text-secondary);cursor:pointer;
+}
+.rail-item svg{width:22px;height:22px;}
+.rail-item span{font-size:10.5px;font-weight:600;}
+.rail-item:hover{background:rgba(0,0,0,0.05);}
+.rail-item.active{background:var(--accent);color:#fff;border-color:var(--accent-strong);}
+.rail-item:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+
+.mainarea{flex:1;display:flex;flex-direction:column;min-width:0;}
+
+.topbar{
+  height:46px;flex-shrink:0;background:var(--chrome);border-bottom:1px solid var(--border-strong);
+  display:flex;align-items:center;justify-content:space-between;padding:0 16px;gap:16px;
+}
+.topbar-title{display:flex;align-items:baseline;gap:9px;min-width:0;}
+.app-name{font-size:13px;font-weight:700;white-space:nowrap;}
+.app-sub{font-size:11.5px;color:var(--text-tertiary);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+
+.badge{
+  display:inline-flex;align-items:center;gap:6px;font-size:11px;font-weight:600;
+  padding:3px 9px 3px 8px;border-radius:2px;background:var(--idle-soft);color:var(--text-secondary);
+  border-left:3px solid var(--idle);white-space:nowrap;
+}
+.badge.ok{background:var(--success-soft);color:var(--success);border-left-color:var(--success);}
+.badge.bad{background:var(--critical-soft);color:var(--critical);border-left-color:var(--critical);}
+.badge .dot{width:5px;height:5px;background:currentColor;flex-shrink:0;}
+.badge .dot.pulse{animation:pulse 1.6s ease-in-out infinite;}
+@keyframes pulse{0%,100%{opacity:1;}50%{opacity:.3;}}
+@media (prefers-reduced-motion: reduce){.badge .dot.pulse{animation:none;}}
+
+.pagearea{flex:1;overflow-y:auto;padding:18px 22px 40px;}
+.tabpage{max-width:980px;}
+.tabpage[hidden]{display:none;}
+
+.page-heading{font-size:14.5px;font-weight:700;margin:0 0 3px;}
+.page-sub{font-size:11.5px;color:var(--text-tertiary);margin:0 0 16px;max-width:70ch;}
+
+/* ---------- group box (native fieldset look) ---------- */
+.groupbox{
+  position:relative;border:1px solid var(--border-strong);background:var(--surface);
+  padding:20px 18px 18px;margin-bottom:16px;border-radius:2px;
+}
+.groupbox-label{
+  position:absolute;top:-9px;left:11px;background:var(--page-bg);padding:0 6px;
+  font-size:11px;font-weight:700;color:var(--text-secondary);
+}
+
+/* ---------- buttons / inputs ---------- */
+button{
+  font-size:12px;font-weight:600;color:var(--text);cursor:pointer;border-radius:2px;
+  border:1px solid var(--border-strong);padding:6px 13px;
+  background:linear-gradient(#FDFDFD,#E7E9EB);
+}
+button:hover{background:linear-gradient(#FFFFFF,#DEE1E4);}
+button:active{background:linear-gradient(#DEE1E4,#E7E9EB);}
+button:disabled{opacity:.5;cursor:not-allowed;}
+button:focus-visible{outline:2px solid var(--accent);outline-offset:1px;}
+button.primary{background:linear-gradient(#3A6BB5,var(--accent-strong));border-color:var(--accent-strong);color:#fff;}
+button.primary:hover{background:linear-gradient(#4575C4,#204A8C);}
+button.small{padding:4px 10px;font-size:11px;}
+button.danger{color:var(--critical);}
+button.link{background:none;border:none;color:var(--accent);font-weight:600;padding:2px 0;}
+button.link:hover{background:none;text-decoration:underline;}
+
+.field{display:flex;flex-direction:column;gap:4px;margin-bottom:12px;}
+.field label{font-size:11px;font-weight:600;color:var(--text-secondary);}
+.field label .unit{font-weight:400;color:var(--text-tertiary);}
+.field input,.field select{
+  font-size:12.5px;padding:6px 8px;border-radius:2px;border:1px solid var(--border-strong);
+  background:var(--surface);color:var(--text);width:100%;
+}
+.field input{font-family:var(--font-mono);}
+.field input::placeholder{color:var(--text-tertiary);}
+.field input:focus,.field select:focus{outline:2px solid var(--accent);outline-offset:1px;}
+
+/* ---------- Assets ---------- */
+.asset-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--border);border:1px solid var(--border);}
+.asset-tile{background:var(--surface);padding:11px 13px;}
+.asset-label{font-size:10.5px;font-weight:600;color:var(--text-tertiary);}
+.asset-value{font-family:var(--font-mono);font-size:19px;font-weight:700;margin-top:3px;font-variant-numeric:tabular-nums;}
+.asset-value.running{color:var(--accent);}
+.asset-value.completed{color:var(--success);}
+.asset-value.failed{color:var(--critical);}
+
+.stage-inventory{width:100%;border-collapse:collapse;}
+.stage-inventory th{
+  text-align:left;font-size:10.5px;font-weight:700;color:var(--text-tertiary);
+  padding:6px 10px;background:var(--surface-sunken);border:1px solid var(--border);
+}
+.stage-inventory td{padding:8px 10px;border:1px solid var(--border);font-size:12px;}
+.stage-inventory td.num{font-family:var(--font-mono);text-align:right;}
+
+/* ---------- Actions ---------- */
+.actions-layout{display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:start;}
+.stage-list{padding:8px;}
+.stage-list ul{list-style:none;margin:0;padding:0;}
+.stage-list li{
+  padding:8px 10px;border-radius:2px;font-size:12.5px;font-weight:600;color:var(--text-secondary);
+  cursor:pointer;margin-bottom:2px;border:1px solid transparent;
+}
+.stage-list li:hover{background:var(--surface-sunken);}
+.stage-list li.active{background:var(--accent-soft);color:var(--accent-strong);border-color:var(--accent);}
+.stage-list li .stage-key{display:block;font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary);font-weight:400;margin-top:1px;}
+.stage-list li.active .stage-key{color:var(--accent);}
+
+.expert-toggle{margin:4px 0 12px;}
+#expertFields{border-top:1px dashed var(--border);padding-top:12px;margin-top:2px;}
+.submit-row{margin-top:6px;}
+.form-note{font-size:11px;color:var(--text-tertiary);margin-top:10px;line-height:1.5;}
+
+/* ---------- Results ---------- */
+.table-scroll{overflow-x:auto;margin:-4px -2px 0;}
+table.queue{width:100%;border-collapse:collapse;min-width:720px;}
+table.queue thead th{
+  text-align:left;font-size:10.5px;font-weight:700;color:var(--text-tertiary);
+  padding:7px 10px;background:var(--surface-sunken);border:1px solid var(--border);white-space:nowrap;
+}
+table.queue tbody td{padding:8px 10px;border:1px solid var(--border);font-size:12px;color:var(--text-secondary);white-space:nowrap;}
+table.queue tbody tr:nth-child(even) td{background:var(--surface-sunken);}
+table.queue tbody tr.clickable{cursor:pointer;}
+table.queue tbody tr.clickable:hover td{background:var(--accent-soft);}
+table.queue tbody tr.selected td{background:var(--accent-soft);}
+td.mono{font-family:var(--font-mono);}
+.job-name{font-weight:700;color:var(--text);}
+.job-id{font-family:var(--font-mono);font-size:10.5px;color:var(--text-tertiary);}
+
+.progress-track{width:92px;height:13px;border:1px solid var(--border-strong);background:var(--surface);}
+.progress-fill{height:100%;background:var(--accent);}
+.progress-fill.completed{background:var(--success);}
+.progress-fill.failed{background:var(--critical);}
+
+.empty-note{font-family:var(--font-ui);color:var(--text-tertiary);text-align:center;padding:30px 16px;font-size:12.5px;border:1px solid var(--border);background:var(--surface);}
+.empty-note .hint{display:block;font-size:11px;margin-top:4px;}
+
+/* ---------- Settings ---------- */
+.settings-row{display:flex;gap:10px;align-items:flex-end;}
+.settings-row .field{flex:1;margin-bottom:0;}
+.settings-note{font-size:11px;color:var(--text-tertiary);margin-top:10px;line-height:1.6;}
+.settings-note code{font-family:var(--font-mono);background:var(--surface-sunken);padding:1px 4px;border:1px solid var(--border);}
+
+/* ---------- log drawer (docked pane, not a floating card) ---------- */
+.log-drawer{
+  position:fixed;top:0;right:0;height:100vh;width:min(440px,92vw);background:var(--surface);
+  border-left:1px solid var(--border-strong);
+  transform:translateX(100%);transition:transform .18s ease;z-index:20;display:flex;flex-direction:column;
+}
+.log-drawer.open{transform:translateX(0);}
+.log-head{display:flex;justify-content:space-between;align-items:flex-start;padding:14px 16px;background:var(--chrome);border-bottom:1px solid var(--border-strong);gap:10px;}
+.log-title{font-size:12.5px;font-weight:700;}
+.log-meta{font-size:10.5px;color:var(--text-tertiary);margin-top:3px;font-family:var(--font-mono);}
+.log-body{flex:1;overflow-y:auto;padding:12px 14px;font-family:var(--font-mono);font-size:11.5px;line-height:1.6;color:var(--text-secondary);white-space:pre-wrap;background:var(--surface-sunken);margin:12px 14px;border:1px solid var(--border);}
+.log-close{background:none;border:1px solid transparent;color:var(--text-tertiary);font-size:16px;line-height:1;padding:2px 7px;border-radius:2px;}
+.log-close:hover{color:var(--text);background:rgba(0,0,0,0.06);}
+.log-actions{padding:10px 16px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;}
+.scrim{position:fixed;inset:0;background:rgba(20,24,28,0.25);z-index:19;opacity:0;pointer-events:none;transition:opacity .18s ease;}
+.scrim.open{opacity:1;pointer-events:auto;}
+
+@media (max-width:760px){
+  .actions-layout{grid-template-columns:1fr;}
+  .asset-grid{grid-template-columns:repeat(2,1fr);}
+}
+</style>
+</head>
+<body>
+
+<div class="app">
+
+  <nav class="railnav" id="railNav">
+    <button class="rail-item" data-tab="assets" title="Assets">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><ellipse cx="12" cy="5.5" rx="8" ry="3"/><path d="M4 5.5v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6"/><path d="M4 11.5v6c0 1.66 3.58 3 8 3s8-1.34 8-3v-6"/></svg>
+      <span>Assets</span>
+    </button>
+    <button class="rail-item" data-tab="actions" title="Actions">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M10 8.5l6 3.5-6 3.5v-7z" fill="currentColor" stroke="none"/></svg>
+      <span>Actions</span>
+    </button>
+    <button class="rail-item" data-tab="results" title="Results">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><rect x="3.5" y="4.5" width="17" height="15" rx="1"/><path d="M3.5 9.5h17M9 9.5V19.5"/></svg>
+      <span>Results</span>
+    </button>
+    <button class="rail-item" data-tab="settings" title="Settings">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 13.5a7.6 7.6 0 0 0 0-3l2-1.4-2-3.4-2.3.8a7.5 7.5 0 0 0-2.6-1.5L14 2.5h-4l-.5 2.5a7.5 7.5 0 0 0-2.6 1.5l-2.3-.8-2 3.4 2 1.4a7.6 7.6 0 0 0 0 3l-2 1.4 2 3.4 2.3-.8a7.5 7.5 0 0 0 2.6 1.5l.5 2.5h4l.5-2.5a7.5 7.5 0 0 0 2.6-1.5l2.3.8 2-3.4-2-1.4z"/></svg>
+      <span>Settings</span>
+    </button>
+  </nav>
+
+  <div class="mainarea">
+    <header class="topbar">
+      <div class="topbar-title">
+        <span class="app-name">Cryo-EM Job Runner</span>
+        <span class="app-sub" id="topSub">No pipeline connected</span>
+      </div>
+      <span class="badge" id="topConnStatus"><span class="dot" id="topConnDot"></span><span id="topConnLabel">Not connected</span></span>
+    </header>
+
+    <div class="pagearea">
+
+      <!-- ASSETS -->
+      <section class="tabpage" id="page-assets">
+        <h2 class="page-heading">Assets</h2>
+        <p class="page-sub">Everything this session knows about: jobs submitted so far, grouped by processing stage.</p>
+
+        <div class="groupbox">
+          <span class="groupbox-label">Queue Summary</span>
+          <div class="asset-grid">
+            <div class="asset-tile"><div class="asset-label">Queued</div><div class="asset-value" id="sumQueued">0</div></div>
+            <div class="asset-tile"><div class="asset-label">Running</div><div class="asset-value running" id="sumRunning">0</div></div>
+            <div class="asset-tile"><div class="asset-label">Completed</div><div class="asset-value completed" id="sumCompleted">0</div></div>
+            <div class="asset-tile"><div class="asset-label">Failed</div><div class="asset-value failed" id="sumFailed">0</div></div>
+            <div class="asset-tile"><div class="asset-label">Total</div><div class="asset-value" id="sumTotal">0</div></div>
+          </div>
+        </div>
+
+        <div class="groupbox">
+          <span class="groupbox-label">Stage Inventory</span>
+          <table class="stage-inventory" id="stageInventory">
+            <thead><tr><th>Stage</th><th class="num">Jobs Run</th><th class="num">Completed</th><th class="num">Failed</th></tr></thead>
+            <tbody id="stageInventoryBody"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <!-- ACTIONS -->
+      <section class="tabpage" id="page-actions" hidden>
+        <h2 class="page-heading">Actions</h2>
+        <p class="page-sub">Pick a processing step and submit it to the connected pipeline.</p>
+
+        <div class="actions-layout">
+          <div class="groupbox stage-list">
+            <span class="groupbox-label">Available Actions</span>
+            <ul id="stageList"></ul>
+          </div>
+
+          <div class="groupbox">
+            <span class="groupbox-label" id="actionFormLabel">Align Movies</span>
+
+            <div class="field">
+              <label for="jobName">Job name</label>
+              <input type="text" id="jobName" placeholder="e.g. grid1_session_001" />
+            </div>
+
+            <div id="paramFields"></div>
+
+            <button class="link expert-toggle" id="expertToggle" type="button">▸ Show Expert Options</button>
+            <div id="expertFields" hidden></div>
+
+            <div class="submit-row">
+              <button class="primary" id="submitBtn">Run</button>
+            </div>
+            <p class="form-note">Paths are passed through as typed — point them at wherever your pipeline reads and writes on the machine running the API server.</p>
+          </div>
+        </div>
+      </section>
+
+      <!-- RESULTS -->
+      <section class="tabpage" id="page-results" hidden>
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;gap:12px;">
+          <div>
+            <h2 class="page-heading">Results</h2>
+            <p class="page-sub">Jobs submitted this session. Click a row for its log.</p>
+          </div>
+          <button class="small" id="refreshBtn">Refresh</button>
+        </div>
+
+        <div class="groupbox" style="padding:10px;">
+          <div class="table-scroll">
+            <table class="queue">
+              <thead>
+                <tr><th>Job</th><th>Stage</th><th>Status</th><th>Progress</th><th>Submitted</th><th></th></tr>
+              </thead>
+              <tbody id="queueBody">
+                <tr><td colspan="6"><div class="empty-note">Not connected to a pipeline API<span class="hint">Go to Settings, enter your API base URL, and connect.</span></div></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <!-- SETTINGS -->
+      <section class="tabpage" id="page-settings" hidden>
+        <h2 class="page-heading">Settings</h2>
+        <p class="page-sub">Where jobs from this page actually go.</p>
+
+        <div class="groupbox">
+          <span class="groupbox-label">Connection</span>
+          <div class="settings-row">
+            <div class="field">
+              <label for="apiBase">API base URL</label>
+              <input type="text" id="apiBase" placeholder="http://localhost:8000/api" />
+            </div>
+            <button id="connectBtn">Connect</button>
+          </div>
+          <p class="settings-note"><span class="badge" id="settingsConnStatus"><span class="dot" id="settingsConnDot"></span><span id="settingsConnLabel">Not connected</span></span></p>
+          <p class="settings-note">No authentication is sent by this page — only point it at an API on a trusted network. See the bundled <code>server/</code> folder for a reference implementation and its contract.</p>
+        </div>
+
+        <div class="groupbox">
+          <span class="groupbox-label">Run Profile</span>
+          <div class="field" style="max-width:320px;">
+            <label for="runProfile">Execution target</label>
+            <select id="runProfile">
+              <option value="local_single">Local (single-threaded)</option>
+              <option value="local_multi">Local (multi-threaded)</option>
+              <option value="cluster_slurm">Cluster (Slurm)</option>
+            </select>
+          </div>
+          <p class="settings-note">Sent along with every submitted job as <code>run_profile</code> — how your API server acts on it is up to its implementation.</p>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<div class="scrim" id="scrim"></div>
+<div class="log-drawer" id="logDrawer">
+  <div class="log-head">
+    <div>
+      <div class="log-title" id="logTitle">Job log</div>
+      <div class="log-meta" id="logMeta"></div>
+    </div>
+    <button class="log-close" id="logClose" aria-label="Close log">&times;</button>
+  </div>
+  <div class="log-body" id="logBody">No log yet.</div>
+  <div class="log-actions">
+    <button class="small danger" id="cancelJobBtn">Cancel Job</button>
+  </div>
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  var STAGES = {
+    motion_correction: {
+      label: "Align Movies",
+      fields: [
+        {key:"input_glob", label:"Movie files", unit:"", type:"text", placeholder:"/data/session01/movies/*.tiff"},
+        {key:"gain_ref", label:"Gain reference", unit:"", type:"text", placeholder:"/data/session01/gain.mrc (optional)"},
+        {key:"pixel_size_a", label:"Pixel size", unit:"Å/px", type:"number", step:"0.001", placeholder:"0.83"},
+        {key:"dose_per_frame", label:"Dose per frame", unit:"e⁻/Å²", type:"number", step:"0.01", placeholder:"1.2"},
+        {key:"output_dir", label:"Output directory", unit:"", type:"text", placeholder:"/data/session01/motioncorr"}
+      ],
+      expertFields: [
+        {key:"patches_x", label:"Number of patches (X)", unit:"", type:"number", placeholder:"5"},
+        {key:"patches_y", label:"Number of patches (Y)", unit:"", type:"number", placeholder:"5"}
+      ]
+    },
+    ctf_estimation: {
+      label: "Find CTF",
+      fields: [
+        {key:"input_glob", label:"Micrographs", unit:"", type:"text", placeholder:"/data/session01/motioncorr/*.mrc"},
+        {key:"voltage_kv", label:"Voltage", unit:"kV", type:"number", placeholder:"300"},
+        {key:"cs_mm", label:"Spherical aberration (Cs)", unit:"mm", type:"number", step:"0.1", placeholder:"2.7"},
+        {key:"amp_contrast", label:"Amplitude contrast", unit:"", type:"number", step:"0.01", placeholder:"0.10"},
+        {key:"box_size", label:"Box size", unit:"px", type:"number", placeholder:"512"}
+      ],
+      expertFields: [
+        {key:"min_res_a", label:"Min resolution of fit", unit:"Å", type:"number", placeholder:"30"},
+        {key:"max_res_a", label:"Max resolution of fit", unit:"Å", type:"number", placeholder:"5"}
+      ]
+    },
+    particle_picking: {
+      label: "Find Particles",
+      fields: [
+        {key:"input_glob", label:"Micrographs", unit:"", type:"text", placeholder:"/data/session01/ctf/*.mrc"},
+        {key:"picker", label:"Picker", unit:"", type:"select", options:["blob","template"]},
+        {key:"particle_diameter_a", label:"Particle diameter", unit:"Å", type:"number", placeholder:"180"},
+        {key:"threshold", label:"Score threshold", unit:"", type:"number", step:"0.01", placeholder:"0.50"}
+      ],
+      expertFields: [
+        {key:"min_distance_a", label:"Minimum distance between particles", unit:"Å", type:"number", placeholder:"90"},
+        {key:"avoid_high_variance", label:"Avoid high-variance areas", unit:"", type:"select", options:["Yes","No"]}
+      ]
+    },
+    class2d: {
+      label: "2D Classification",
+      fields: [
+        {key:"particles_path", label:"Particle stack / .star", unit:"", type:"text", placeholder:"/data/session01/particles/particles.star"},
+        {key:"num_classes", label:"Number of classes", unit:"", type:"number", placeholder:"50"},
+        {key:"mask_diameter_a", label:"Mask diameter", unit:"Å", type:"number", placeholder:"200"},
+        {key:"iterations", label:"Iterations", unit:"", type:"number", placeholder:"25"}
+      ],
+      expertFields: [
+        {key:"angular_search_step", label:"Angular search step", unit:"°", type:"number", placeholder:"15"},
+        {key:"high_res_limit_a", label:"High-res limit", unit:"Å", type:"number", placeholder:"8"}
+      ]
+    },
+    refine3d: {
+      label: "Refine 3D",
+      fields: [
+        {key:"particles_path", label:"Particle stack / .star", unit:"", type:"text", placeholder:"/data/session01/particles/selected.star"},
+        {key:"initial_model_path", label:"Initial model", unit:"", type:"text", placeholder:"/data/session01/refs/initial.mrc"},
+        {key:"symmetry", label:"Symmetry", unit:"", type:"text", placeholder:"C1"},
+        {key:"mask_path", label:"Mask", unit:"", type:"text", placeholder:"/data/session01/refs/mask.mrc (optional)"}
+      ],
+      expertFields: [
+        {key:"global_search", label:"Global search", unit:"", type:"select", options:["Yes","No"]},
+        {key:"inner_mask_radius_a", label:"Inner mask radius", unit:"Å", type:"number", placeholder:"0"}
+      ]
+    }
+  };
+
+  var STAGE_ORDER = ["motion_correction","ctf_estimation","particle_picking","class2d","refine3d"];
+
+  var els = {};
+  ["apiBase","connectBtn","topConnStatus","topConnDot","topConnLabel","topSub",
+   "settingsConnStatus","settingsConnDot","settingsConnLabel",
+   "stageList","actionFormLabel","jobName","paramFields","expertToggle","expertFields","submitBtn",
+   "refreshBtn","queueBody","sumQueued","sumRunning","sumCompleted","sumFailed","sumTotal",
+   "stageInventoryBody","runProfile",
+   "scrim","logDrawer","logTitle","logMeta","logBody","logClose","cancelJobBtn"
+  ].forEach(function(id){ els[id] = document.getElementById(id); });
+
+  var state = {
+    apiBase: localStorage.getItem("cryoem_api_base") || "",
+    runProfile: localStorage.getItem("cryoem_run_profile") || "local_single",
+    connected: false,
+    jobs: [],
+    selectedJobId: null,
+    currentStage: STAGE_ORDER[0],
+    expertOpen: false,
+    pollTimer: null,
+    logTimer: null
+  };
+
+  // ---------- rail navigation ----------
+  var railItems = document.querySelectorAll(".rail-item");
+  var pages = {
+    assets: document.getElementById("page-assets"),
+    actions: document.getElementById("page-actions"),
+    results: document.getElementById("page-results"),
+    settings: document.getElementById("page-settings")
+  };
+  function showTab(name){
+    railItems.forEach(function(btn){ btn.classList.toggle("active", btn.dataset.tab === name); });
+    Object.keys(pages).forEach(function(key){ pages[key].hidden = key !== name; });
+  }
+  railItems.forEach(function(btn){
+    btn.addEventListener("click", function(){ showTab(btn.dataset.tab); });
+  });
+  showTab("assets");
+
+  // ---------- action stage list ----------
+  STAGE_ORDER.forEach(function(key){
+    var li = document.createElement("li");
+    li.dataset.stage = key;
+    li.innerHTML = STAGES[key].label + '<span class="stage-key">' + key + "</span>";
+    li.addEventListener("click", function(){ selectStage(key); });
+    els.stageList.appendChild(li);
+  });
+
+  function selectStage(key){
+    state.currentStage = key;
+    state.expertOpen = false;
+    els.stageList.querySelectorAll("li").forEach(function(li){
+      li.classList.toggle("active", li.dataset.stage === key);
+    });
+    els.actionFormLabel.textContent = STAGES[key].label;
+    renderParamFields();
+  }
+
+  function buildField(f){
+    var wrap = document.createElement("div");
+    wrap.className = "field";
+    var label = document.createElement("label");
+    label.textContent = f.label + " ";
+    if (f.unit){
+      var unitSpan = document.createElement("span");
+      unitSpan.className = "unit";
+      unitSpan.textContent = "(" + f.unit + ")";
+      label.appendChild(unitSpan);
+    }
+    wrap.appendChild(label);
+    var input;
+    if (f.type === "select"){
+      input = document.createElement("select");
+      f.options.forEach(function(o){
+        var op = document.createElement("option");
+        op.value = o; op.textContent = o;
+        input.appendChild(op);
+      });
+    } else {
+      input = document.createElement("input");
+      input.type = f.type;
+      if (f.step) input.step = f.step;
+      if (f.placeholder) input.placeholder = f.placeholder;
+    }
+    input.dataset.key = f.key;
+    wrap.appendChild(input);
+    return wrap;
+  }
+
+  function renderParamFields(){
+    var stage = STAGES[state.currentStage];
+    els.paramFields.innerHTML = "";
+    stage.fields.forEach(function(f){ els.paramFields.appendChild(buildField(f)); });
+
+    els.expertFields.innerHTML = "";
+    stage.expertFields.forEach(function(f){ els.expertFields.appendChild(buildField(f)); });
+    els.expertFields.hidden = !state.expertOpen;
+    els.expertToggle.textContent = (state.expertOpen ? "▾ Hide" : "▸ Show") + " Expert Options";
+  }
+
+  els.expertToggle.addEventListener("click", function(){
+    state.expertOpen = !state.expertOpen;
+    els.expertFields.hidden = !state.expertOpen;
+    els.expertToggle.textContent = (state.expertOpen ? "▾ Hide" : "▸ Show") + " Expert Options";
+  });
+
+  selectStage(state.currentStage);
+
+  // ---------- run profile ----------
+  els.runProfile.value = state.runProfile;
+  els.runProfile.addEventListener("change", function(){
+    state.runProfile = els.runProfile.value;
+    localStorage.setItem("cryoem_run_profile", state.runProfile);
+  });
+
+  // ---------- connection ----------
+  function normalizeBase(v){ return v.trim().replace(/\/+$/,""); }
+
+  function setConnected(ok, label){
+    state.connected = ok;
+    [ [els.topConnStatus, els.topConnDot, els.topConnLabel],
+      [els.settingsConnStatus, els.settingsConnDot, els.settingsConnLabel] ].forEach(function(trio){
+        var badge = trio[0], dot = trio[1], lbl = trio[2];
+        badge.className = "badge" + (ok ? " ok" : (label ? " bad" : ""));
+        dot.className = "dot" + (ok ? " pulse" : "");
+        lbl.textContent = label || (ok ? "Connected" : "Not connected");
+    });
+    els.topSub.textContent = ok ? state.apiBase : "No pipeline connected";
+  }
+
+  function apiUrl(path){ return state.apiBase + path; }
+
+  function testConnection(){
+    var base = normalizeBase(els.apiBase.value);
+    if (!base){ setConnected(false, "Enter an API base URL"); return; }
+    state.apiBase = base;
+    localStorage.setItem("cryoem_api_base", base);
+    setConnected(false, "Connecting…");
+    fetch(apiUrl("/health")).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(){
+      setConnected(true);
+      startPolling();
+      fetchJobs();
+    }).catch(function(){
+      setConnected(false, "Unreachable");
+      renderEmptyQueue("Could not reach " + base, "Check the address, and that the server allows requests from this page's origin (CORS).");
+    });
+  }
+  els.connectBtn.addEventListener("click", testConnection);
+  els.apiBase.value = state.apiBase;
+  if (state.apiBase) testConnection();
+
+  // ---------- submit ----------
+  els.submitBtn.addEventListener("click", function(){
+    if (!state.connected){ alert("Connect to a pipeline API first (Settings tab)."); return; }
+    var params = {};
+    els.paramFields.querySelectorAll("[data-key]").forEach(function(input){ readInto(params, input); });
+    els.expertFields.querySelectorAll("[data-key]").forEach(function(input){ readInto(params, input); });
+    params.run_profile = state.runProfile;
+
+    var body = { stage: state.currentStage, name: els.jobName.value.trim() || (STAGES[state.currentStage].label + " job"), params: params };
+    els.submitBtn.disabled = true;
+    els.submitBtn.textContent = "Submitting…";
+    fetch(apiUrl("/jobs"), {
+      method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)
+    }).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(){
+      els.jobName.value = "";
+      fetchJobs();
+      showTab("results");
+    }).catch(function(err){
+      alert("Job submission failed: " + err.message);
+    }).finally(function(){
+      els.submitBtn.disabled = false;
+      els.submitBtn.textContent = "Run";
+    });
+  });
+
+  function readInto(params, input){
+    var v = input.value;
+    if (input.type === "number") v = v === "" ? null : Number(v);
+    params[input.dataset.key] = v;
+  }
+
+  // ---------- polling ----------
+  function startPolling(){
+    if (state.pollTimer) clearInterval(state.pollTimer);
+    state.pollTimer = setInterval(function(){
+      if (document.visibilityState === "visible") fetchJobs();
+    }, 3000);
+  }
+
+  function fetchJobs(){
+    if (!state.connected) return;
+    fetch(apiUrl("/jobs")).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(data){
+      state.jobs = (data && data.jobs) || [];
+      renderQueue();
+      renderSummary();
+      renderStageInventory();
+      if (state.selectedJobId) refreshLogMeta();
+    }).catch(function(){
+      setConnected(false, "Lost connection");
+    });
+  }
+  els.refreshBtn.addEventListener("click", fetchJobs);
+
+  // ---------- rendering: Assets ----------
+  function renderSummary(){
+    var counts = {queued:0, running:0, completed:0, failed:0};
+    state.jobs.forEach(function(j){ if (counts[j.status] !== undefined) counts[j.status]++; });
+    els.sumQueued.textContent = counts.queued;
+    els.sumRunning.textContent = counts.running;
+    els.sumCompleted.textContent = counts.completed;
+    els.sumFailed.textContent = counts.failed;
+    els.sumTotal.textContent = state.jobs.length;
+  }
+
+  function renderStageInventory(){
+    els.stageInventoryBody.innerHTML = "";
+    STAGE_ORDER.forEach(function(key){
+      var jobsForStage = state.jobs.filter(function(j){ return j.stage === key; });
+      var completed = jobsForStage.filter(function(j){ return j.status === "completed"; }).length;
+      var failed = jobsForStage.filter(function(j){ return j.status === "failed"; }).length;
+      var tr = document.createElement("tr");
+      tr.innerHTML = "<td>" + STAGES[key].label + "</td>" +
+        "<td class='num'>" + jobsForStage.length + "</td>" +
+        "<td class='num'>" + completed + "</td>" +
+        "<td class='num'>" + failed + "</td>";
+      els.stageInventoryBody.appendChild(tr);
+    });
+  }
+
+  // ---------- rendering: Results ----------
+  function renderEmptyQueue(title, hint){
+    els.queueBody.innerHTML = "";
+    var tr = document.createElement("tr");
+    var td = document.createElement("td");
+    td.colSpan = 6;
+    var box = document.createElement("div");
+    box.className = "empty-note";
+    box.textContent = title;
+    if (hint){
+      var span = document.createElement("span");
+      span.className = "hint";
+      span.textContent = hint;
+      box.appendChild(span);
+    }
+    td.appendChild(box);
+    tr.appendChild(td);
+    els.queueBody.appendChild(tr);
+  }
+
+  function fmtTime(iso){
+    if (!iso) return "—";
+    try{
+      var d = new Date(iso);
+      return d.toLocaleTimeString([], {hour:"2-digit", minute:"2-digit"}) + " · " + d.toLocaleDateString();
+    }catch(e){ return iso; }
+  }
+
+  function renderQueue(){
+    if (!state.jobs.length){
+      renderEmptyQueue("No jobs yet", "Submit one from the Actions tab — it will appear here once the API accepts it.");
+      return;
+    }
+    var sorted = state.jobs.slice().sort(function(a,b){ return new Date(b.created_at || 0) - new Date(a.created_at || 0); });
+    els.queueBody.innerHTML = "";
+    sorted.forEach(function(job){
+      var tr = document.createElement("tr");
+      tr.className = "clickable" + (job.id === state.selectedJobId ? " selected" : "");
+      tr.addEventListener("click", function(){ openLog(job.id); });
+
+      var tdName = document.createElement("td");
+      var nameDiv = document.createElement("div");
+      nameDiv.className = "job-name";
+      nameDiv.textContent = job.name || job.id;
+      tdName.appendChild(nameDiv);
+      var idDiv = document.createElement("div");
+      idDiv.className = "job-id";
+      idDiv.textContent = job.id;
+      tdName.appendChild(idDiv);
+      tr.appendChild(tdName);
+
+      var tdStage = document.createElement("td");
+      tdStage.textContent = (STAGES[job.stage] && STAGES[job.stage].label) || job.stage;
+      tr.appendChild(tdStage);
+
+      var tdStatus = document.createElement("td");
+      var badge = document.createElement("span");
+      badge.className = "badge " + statusClass(job.status);
+      badge.innerHTML = '<span class="dot' + (job.status === "running" ? " pulse" : "") + '"></span>' + job.status;
+      tdStatus.appendChild(badge);
+      tr.appendChild(tdStatus);
+
+      var tdProgress = document.createElement("td");
+      var track = document.createElement("div");
+      track.className = "progress-track";
+      var fill = document.createElement("div");
+      fill.className = "progress-fill " + job.status;
+      fill.style.width = (job.progress != null ? job.progress : (job.status === "completed" ? 100 : 0)) + "%";
+      track.appendChild(fill);
+      tdProgress.appendChild(track);
+      tr.appendChild(tdProgress);
+
+      var tdTime = document.createElement("td");
+      tdTime.className = "mono";
+      tdTime.textContent = fmtTime(job.created_at);
+      tr.appendChild(tdTime);
+
+      var tdActions = document.createElement("td");
+      var viewBtn = document.createElement("button");
+      viewBtn.className = "small";
+      viewBtn.textContent = "Log";
+      viewBtn.addEventListener("click", function(e){ e.stopPropagation(); openLog(job.id); });
+      tdActions.appendChild(viewBtn);
+      tr.appendChild(tdActions);
+
+      els.queueBody.appendChild(tr);
+    });
+  }
+
+  function statusClass(status){
+    if (status === "completed") return "ok";
+    if (status === "failed") return "bad";
+    return "";
+  }
+
+  // ---------- log drawer ----------
+  function openLog(jobId){
+    state.selectedJobId = jobId;
+    renderQueue();
+    els.logDrawer.classList.add("open");
+    els.scrim.classList.add("open");
+    refreshLogMeta();
+    fetchLog();
+    if (state.logTimer) clearInterval(state.logTimer);
+    state.logTimer = setInterval(function(){
+      if (document.visibilityState === "visible") fetchLog();
+    }, 2500);
+  }
+
+  function closeLog(){
+    els.logDrawer.classList.remove("open");
+    els.scrim.classList.remove("open");
+    state.selectedJobId = null;
+    if (state.logTimer) clearInterval(state.logTimer);
+    renderQueue();
+  }
+  els.logClose.addEventListener("click", closeLog);
+  els.scrim.addEventListener("click", closeLog);
+
+  function currentJob(){ return state.jobs.find(function(j){ return j.id === state.selectedJobId; }); }
+
+  function refreshLogMeta(){
+    var job = currentJob();
+    if (!job){ els.logTitle.textContent = "Job log"; els.logMeta.textContent = ""; return; }
+    els.logTitle.textContent = job.name || job.id;
+    els.logMeta.textContent = job.id + " · " + job.status;
+    els.cancelJobBtn.disabled = !(job.status === "queued" || job.status === "running");
+  }
+
+  function fetchLog(){
+    if (!state.selectedJobId || !state.connected) return;
+    fetch(apiUrl("/jobs/" + state.selectedJobId + "/log")).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(data){
+      els.logBody.textContent = (data && data.log) || "No log output yet.";
+      els.logBody.scrollTop = els.logBody.scrollHeight;
+    }).catch(function(){
+      els.logBody.textContent = "Could not fetch log.";
+    });
+  }
+
+  els.cancelJobBtn.addEventListener("click", function(){
+    if (!state.selectedJobId) return;
+    fetch(apiUrl("/jobs/" + state.selectedJobId + "/cancel"), {method:"POST"}).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(){
+      fetchJobs();
+      refreshLogMeta();
+    }).catch(function(err){
+      alert("Could not cancel job: " + err.message);
+    });
+  });
+
+  renderStageInventory();
+
+})();
+</script>
+</body>
+</html>

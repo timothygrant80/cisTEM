@@ -1,5 +1,5 @@
 """
-Per-project SQLite storage for the Cryo-EM Job Runner reference backend.
+Per-project SQLite storage for the cisTEM3 reference backend.
 
 Each project is its own file at PROJECTS_ROOT/<project_id>/project.db. Table
 names and columns are lifted verbatim from a real cisTEM project database
@@ -236,7 +236,7 @@ def create_project(name, owner_user_id, owner_username):
             "CURRENT_VERSION, TOTAL_CPU_HOURS, TOTAL_JOBS_RUN, CISTEM_VERSION_TEXT, "
             "CURRENT_WORKFLOW, OWNER_USER_ID, OWNER_USERNAME) "
             "VALUES (1, ?, ?, 1, 0, 0, ?, 'SINGLE_PARTICLE', ?, ?)",
-            (str(pdir), name, "cryoem-job-runner web 0.1", owner_user_id, owner_username),
+            (str(pdir), name, "cistem3 web 0.1", owner_user_id, owner_username),
         )
         conn.execute("INSERT INTO MOVIE_IMPORT_DEFAULTS(NUMBER) VALUES (1)")
         conn.execute(

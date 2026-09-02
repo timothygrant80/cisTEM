@@ -1,5 +1,5 @@
 """
-Reference job-queue API for the Cryo-EM Job Runner page (job_runner.html).
+Reference job-queue API for the cisTEM3 page (job_runner.html).
 
 This is a STARTING POINT, not a production job scheduler. It implements the
 HTTP contract the front-end expects (see README.md), backed by one SQLite

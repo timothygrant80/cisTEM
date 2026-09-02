@@ -1,10 +1,11 @@
-# Cryo-EM Job Runner
+# cisTEM3
 
 A local, project-based job-submission UI for a single-particle cryo-EM processing pipeline (Align Movies → Find CTF → Find Particles → 2D Classification → Refine 3D), styled after cisTEM's desktop interface.
 
 Two pieces:
 
-- **`job_runner.html`** — a standalone page you open in your own browser. On load it shows a home screen: connect to an API, log in, then create or open a **project**; once one's open it submits jobs and polls status against a pipeline API you point it at (Connection panel), scoped to that project and to you. It makes no network calls anywhere else.
+- **`job_runner.html`** — a standalone page you open in your own browser. On load it auto-connects to the API address in `config.js` (`http://localhost:8000/api` by default) — success shows a login screen, failure shows an error screen with a Retry button. Once logged in you create or open a **project**; once one's open it submits jobs and polls status against that same API, scoped to that project and to you. It makes no network calls anywhere else.
+- **`config.js`** — the one file to edit if your API isn't at `localhost:8000`. A single `window.CRYOEM_CONFIG = { apiBase: "..." }`; reload the page after changing it.
 - **`server/app.py`** + **`server/db.py`** + **`server/auth.py`** — a small reference Flask API implementing the contract the page expects, backed by one SQLite file per project (`server/data/projects/<id>/project.db`) plus a global `server/data/auth.db` for user accounts and sessions. Ships in "simulation mode" (fake progress + fake numbers) so you can try the whole flow before your real pipeline is wired in.
 
 `reference/dashboard.html` is an earlier static mockup with richer diagnostic charts (throughput, defocus histogram, FSC curve) — a design reference, not wired to the job runner.
@@ -23,7 +24,7 @@ python app.py
 
 This serves the API at `http://localhost:8000/api`. On first run, since there are no users yet, it auto-creates an admin account and prints its password to the console (also written once to `server/data/admin_credentials.txt`) — copy that password before it scrolls away.
 
-Then open `job_runner.html` (double-click it, or `open job_runner.html`). On the home screen, enter `http://localhost:8000/api` as the API base URL and hit **Connect**.
+Then open `job_runner.html` (double-click it, or `open job_runner.html`). It connects to `http://localhost:8000/api` automatically — if your API is somewhere else, edit `config.js` first (see above) and reload.
 
 1. **Log in** as `admin` with the password from the console/credentials file.
 2. **Manage Users** (admin-only panel on the home screen) — create a real account for yourself (and anyone else) with a role of `user` or `admin`. There's no self-registration; only an admin can create accounts.

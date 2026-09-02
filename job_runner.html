@@ -3,7 +3,11 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>Cryo-EM Job Runner</title>
+<title>cisTEM3</title>
+<!-- Local config: edit config.js (sibling file) to change the default API
+     address without touching this file. Missing/failing to load is fine --
+     the app falls back to http://localhost:8000/api. -->
+<script src="config.js"></script>
 <style>
 /* Deliberately a single native-desktop light theme (no dark mode) --
    the reference (cisTEM's wxWidgets GUI) doesn't have one either.
@@ -153,7 +157,7 @@ button.link:hover{background:none;text-decoration:underline;}
 .home{min-height:100vh;display:flex;justify-content:center;padding:52px 20px;background:var(--page-bg);}
 .home[hidden]{display:none;}
 .home-inner{width:100%;max-width:560px;}
-.home-title{font-size:19px;font-weight:700;margin:0 0 3px;}
+.home-logo{display:block;width:100%;height:auto;margin:0 auto 14px;}
 .home-sub{font-size:11.5px;color:var(--text-tertiary);margin:0 0 18px;}
 
 /* ---------- Actions ---------- */
@@ -250,22 +254,30 @@ td.mono{font-family:var(--font-mono);}
 </head>
 <body>
 
-<div class="home" id="homeScreen">
+<div class="home" id="connectingScreen">
   <div class="home-inner">
-    <h1 class="home-title">Cryo-EM Job Runner</h1>
-    <p class="home-sub">Create a new project or open an existing one — everything about a project (imported movies, their metadata, job history) is kept in that project's own database.</p>
+    <img class="home-logo" src="logo.png" alt="cisTEM3">
+    <p class="home-sub" id="connectingLabel">Connecting…</p>
+  </div>
+</div>
 
+<div class="home" id="errorScreen" hidden>
+  <div class="home-inner">
+    <img class="home-logo" src="logo.png" alt="cisTEM3">
     <div class="groupbox">
-      <span class="groupbox-label">Connection</span>
-      <div class="settings-row">
-        <div class="field">
-          <label for="homeApiBase">API base URL</label>
-          <input type="text" id="homeApiBase" placeholder="http://localhost:8000/api" />
-        </div>
-        <button id="homeConnectBtn">Connect</button>
-      </div>
-      <p class="settings-note"><span class="badge" id="homeConnStatus"><span class="dot" id="homeConnDot"></span><span id="homeConnLabel">Not connected</span></span></p>
+      <span class="groupbox-label">Can't Reach the Pipeline API</span>
+      <p class="settings-note" id="errorMessage"></p>
+      <p class="settings-note">Check that the reference server (or your own backend) is running and reachable at that address, and that it allows requests from this page's origin (CORS). To change the default address, edit <code>config.js</code> next to this page and reload.</p>
+      <button class="primary" id="errorRetryBtn">Retry</button>
     </div>
+  </div>
+</div>
+
+<div class="home" id="homeScreen" hidden>
+  <div class="home-inner">
+    <img class="home-logo" src="logo.png" alt="cisTEM3">
+    <p class="home-sub">Create a new project or open an existing one — everything about a project (imported movies, their metadata, job history) is kept in that project's own database.</p>
+    <p class="home-sub" id="homeConnectedLabel"></p>
 
     <div class="groupbox" id="homeLoginBox" hidden>
       <span class="groupbox-label">Log In</span>
@@ -366,7 +378,7 @@ td.mono{font-family:var(--font-mono);}
   <div class="mainarea">
     <header class="topbar">
       <div class="topbar-title">
-        <span class="app-name">Cryo-EM Job Runner</span>
+        <span class="app-name">cisTEM3</span>
         <span class="app-sub" id="topSub">No pipeline connected</span>
       </div>
       <div style="display:flex;align-items:center;gap:10px;">
@@ -507,7 +519,7 @@ td.mono{font-family:var(--font-mono);}
             <button id="connectBtn">Connect</button>
           </div>
           <p class="settings-note"><span class="badge" id="settingsConnStatus"><span class="dot" id="settingsConnDot"></span><span id="settingsConnLabel">Not connected</span></span></p>
-          <p class="settings-note">No authentication is sent by this page — only point it at an API on a trusted network. See the bundled <code>server/</code> folder for a reference implementation and its contract.</p>
+          <p class="settings-note">Requests are authenticated with your logged-in session — only point it at an API on a trusted network. See the bundled <code>server/</code> folder for a reference implementation and its contract.</p>
         </div>
 
         <div class="groupbox">
@@ -635,7 +647,8 @@ td.mono{font-family:var(--font-mono);}
   var STAGE_ORDER = ["motion_correction","ctf_estimation","particle_picking","class2d","refine3d"];
 
   var els = {};
-  ["homeScreen","appShell","homeApiBase","homeConnectBtn","homeConnStatus","homeConnDot","homeConnLabel",
+  ["homeScreen","appShell","connectingScreen","connectingLabel","errorScreen","errorMessage","errorRetryBtn",
+   "homeConnectedLabel",
    "homeLoginBox","loginUsername","loginPassword","loginBtn","loginError",
    "homeUserStrip","homeUserLabel","homeUserRole","logoutBtn",
    "homeProjectPanels","projectOwnerHeader",
@@ -652,12 +665,14 @@ td.mono{font-family:var(--font-mono);}
   ].forEach(function(id){ els[id] = document.getElementById(id); });
 
   var state = {
-    apiBase: localStorage.getItem("cryoem_api_base") || "http://localhost:8000/api",
+    // Default comes from config.js (edit that file to change it) -- falls
+    // back to localhost:8000 if config.js is missing or didn't load.
+    apiBase: (window.CRYOEM_CONFIG && window.CRYOEM_CONFIG.apiBase) || "http://localhost:8000/api",
     authToken: localStorage.getItem("cryoem_auth_token") || null,
     currentUser: null,
     runProfile: localStorage.getItem("cryoem_run_profile") || "local_single",
     connected: false,
-    screen: "home",
+    screen: "connecting",
     projectId: null,
     projectName: null,
     lastProjectId: localStorage.getItem("cryoem_last_project_id") || null,
@@ -689,6 +704,8 @@ td.mono{font-family:var(--font-mono);}
   // ---------- home screen / project switching ----------
   function showScreen(name){
     state.screen = name;
+    els.connectingScreen.hidden = name !== "connecting";
+    els.errorScreen.hidden = name !== "error";
     els.homeScreen.hidden = name !== "home";
     els.appShell.hidden = name !== "app";
     if (name === "home" && state.connected) loadProjectList();
@@ -902,7 +919,6 @@ td.mono{font-family:var(--font-mono);}
 
   function syncApiBaseInputs(value){
     els.apiBase.value = value;
-    els.homeApiBase.value = value;
   }
 
   function updateTopSub(){
@@ -916,8 +932,7 @@ td.mono{font-family:var(--font-mono);}
   function setConnected(ok, label){
     state.connected = ok;
     [ [els.topConnStatus, els.topConnDot, els.topConnLabel],
-      [els.settingsConnStatus, els.settingsConnDot, els.settingsConnLabel],
-      [els.homeConnStatus, els.homeConnDot, els.homeConnLabel] ].forEach(function(trio){
+      [els.settingsConnStatus, els.settingsConnDot, els.settingsConnLabel] ].forEach(function(trio){
         var badge = trio[0], dot = trio[1], lbl = trio[2];
         badge.className = "badge" + (ok ? " ok" : (label ? " bad" : ""));
         dot.className = "dot" + (ok ? " pulse" : "");
@@ -947,11 +962,14 @@ td.mono{font-family:var(--font-mono);}
     });
   }
 
+  // Manual reconnect from the Settings tab mid-session (e.g. the API
+  // restarted, or you want to point at a different address without
+  // reloading). Not persisted anywhere -- config.js remains the one
+  // place that controls what address the page starts with on load.
   function testConnection(inputEl){
     var base = normalizeBase(inputEl.value);
     if (!base){ setConnected(false, "Enter an API base URL"); return; }
     state.apiBase = base;
-    localStorage.setItem("cryoem_api_base", base);
     syncApiBaseInputs(base);
     setConnected(false, "Connecting…");
     fetch(apiUrl("/health")).then(function(r){
@@ -969,9 +987,30 @@ td.mono{font-family:var(--font-mono);}
     });
   }
   els.connectBtn.addEventListener("click", function(){ testConnection(els.apiBase); });
-  els.homeConnectBtn.addEventListener("click", function(){ testConnection(els.homeApiBase); });
   syncApiBaseInputs(state.apiBase);
-  if (state.apiBase) testConnection(els.homeApiBase);
+
+  // Auto-connect on load to state.apiBase (from config.js) -- success shows
+  // the home/login screen, failure shows a dedicated error screen with a
+  // Retry button rather than leaving a half-usable form on screen.
+  function autoConnect(){
+    showScreen("connecting");
+    els.connectingLabel.textContent = "Connecting to " + state.apiBase + "…";
+    fetch(apiUrl("/health")).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(){
+      setConnected(true);
+      els.homeConnectedLabel.textContent = "Connected to " + state.apiBase;
+      showScreen("home");
+      checkAuth();
+    }).catch(function(){
+      setConnected(false, "Unreachable");
+      els.errorMessage.textContent = "Could not reach " + state.apiBase + ".";
+      showScreen("error");
+    });
+  }
+  els.errorRetryBtn.addEventListener("click", autoConnect);
+  autoConnect();
 
   // ---------- auth ----------
   function clearAuth(){
@@ -1578,7 +1617,8 @@ td.mono{font-family:var(--font-mono);}
   });
 
   renderStageInventory();
-  showScreen("home");
+  // Initial screen (connecting/home/error) is driven entirely by autoConnect(),
+  // called above once state.apiBase (from config.js) is known.
 
 })();
 </script>

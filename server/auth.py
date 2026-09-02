@@ -1,5 +1,5 @@
 """
-User accounts, login, and access control for the Cryo-EM Job Runner API.
+User accounts, login, and access control for the cisTEM3 API.
 
 Bearer-token auth, not cookies: the API runs with wide-open CORS
 (Access-Control-Allow-Origin: *) so job_runner.html can be opened as a
@@ -301,7 +301,7 @@ def bootstrap_admin_if_needed():
     conn.close()
 
     ADMIN_CREDENTIALS_PATH.write_text(
-        "Cryo-EM Job Runner -- initial admin account\n"
+        "cisTEM3 -- initial admin account\n"
         "username: admin\n"
         "password: {}\n"
         "\n"

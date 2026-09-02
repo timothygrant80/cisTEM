@@ -126,6 +126,8 @@ button.link:hover{background:none;text-decoration:underline;}
 .field input{font-family:var(--font-mono);}
 .field input::placeholder{color:var(--text-tertiary);}
 .field input:focus,.field select:focus{outline:2px solid var(--accent);outline-offset:1px;}
+.field.field-checkbox{flex-direction:row;align-items:center;gap:8px;}
+.field.field-checkbox input{width:auto;}
 
 /* ---------- Assets ---------- */
 .asset-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:1px;background:var(--border);border:1px solid var(--border);}
@@ -143,9 +145,18 @@ button.link:hover{background:none;text-decoration:underline;}
 }
 .stage-inventory td{padding:8px 10px;border:1px solid var(--border);font-size:12px;}
 .stage-inventory td.num{font-family:var(--font-mono);text-align:right;}
+.stage-inventory tbody tr.clickable{cursor:pointer;}
+.stage-inventory tbody tr.clickable:hover td{background:var(--accent-soft);}
+
+/* ---------- Home (project picker) ---------- */
+.home{min-height:100vh;display:flex;justify-content:center;padding:52px 20px;background:var(--page-bg);}
+.home[hidden]{display:none;}
+.home-inner{width:100%;max-width:560px;}
+.home-title{font-size:19px;font-weight:700;margin:0 0 3px;}
+.home-sub{font-size:11.5px;color:var(--text-tertiary);margin:0 0 18px;}
 
 /* ---------- Actions ---------- */
-.actions-layout{display:grid;grid-template-columns:220px 1fr;gap:16px;align-items:start;}
+.actions-layout{display:grid;grid-template-columns:200px 1fr 250px;gap:16px;align-items:start;}
 .stage-list{padding:8px;}
 .stage-list ul{list-style:none;margin:0;padding:0;}
 .stage-list li{
@@ -157,10 +168,30 @@ button.link:hover{background:none;text-decoration:underline;}
 .stage-list li .stage-key{display:block;font-family:var(--font-mono);font-size:10px;color:var(--text-tertiary);font-weight:400;margin-top:1px;}
 .stage-list li.active .stage-key{color:var(--accent);}
 
+.field-group-label{
+  font-size:10.5px;font-weight:700;color:var(--text-tertiary);text-transform:uppercase;letter-spacing:.03em;
+  margin:16px 0 8px;padding-top:14px;border-top:1px solid var(--border);
+}
+.field-group-label:first-child{margin-top:0;padding-top:0;border-top:none;}
+
 .expert-toggle{margin:4px 0 12px;}
 #expertFields{border-top:1px dashed var(--border);padding-top:12px;margin-top:2px;}
 .submit-row{margin-top:6px;}
 .form-note{font-size:11px;color:var(--text-tertiary);margin-top:10px;line-height:1.5;}
+
+/* ---------- Actions: job summary preview ---------- */
+.actions-preview{font-size:12px;}
+.preview-desc{font-size:11.5px;color:var(--text-secondary);line-height:1.5;margin:0 0 14px;}
+.summary-row{display:flex;justify-content:space-between;gap:10px;padding:5px 0;border-bottom:1px solid var(--border);}
+.summary-row:last-child{border-bottom:none;}
+.summary-key{font-size:11px;font-weight:600;color:var(--text-tertiary);white-space:nowrap;}
+.summary-val{font-family:var(--font-mono);font-size:11px;color:var(--text);text-align:right;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:145px;}
+.summary-val.empty{color:var(--text-tertiary);font-style:italic;font-family:var(--font-ui);}
+
+@media (max-width:980px){
+  .actions-layout{grid-template-columns:200px 1fr;}
+  .actions-preview{grid-column:1 / -1;}
+}
 
 /* ---------- Results ---------- */
 .table-scroll{overflow-x:auto;margin:-4px -2px 0;}
@@ -211,13 +242,54 @@ td.mono{font-family:var(--font-mono);}
 
 @media (max-width:760px){
   .actions-layout{grid-template-columns:1fr;}
+  .actions-preview{grid-column:auto;}
   .asset-grid{grid-template-columns:repeat(2,1fr);}
 }
 </style>
 </head>
 <body>
 
-<div class="app">
+<div class="home" id="homeScreen">
+  <div class="home-inner">
+    <h1 class="home-title">Cryo-EM Job Runner</h1>
+    <p class="home-sub">Create a new project or open an existing one — everything about a project (imported movies, their metadata, job history) is kept in that project's own database.</p>
+
+    <div class="groupbox">
+      <span class="groupbox-label">Connection</span>
+      <div class="settings-row">
+        <div class="field">
+          <label for="homeApiBase">API base URL</label>
+          <input type="text" id="homeApiBase" placeholder="http://localhost:8000/api" />
+        </div>
+        <button id="homeConnectBtn">Connect</button>
+      </div>
+      <p class="settings-note"><span class="badge" id="homeConnStatus"><span class="dot" id="homeConnDot"></span><span id="homeConnLabel">Not connected</span></span></p>
+    </div>
+
+    <div class="groupbox">
+      <span class="groupbox-label">New Project</span>
+      <div class="settings-row">
+        <div class="field">
+          <label for="newProjectName">Project name</label>
+          <input type="text" id="newProjectName" placeholder="e.g. Grid 1 Session A" />
+        </div>
+        <button class="primary" id="createProjectBtn">Create</button>
+      </div>
+    </div>
+
+    <div class="groupbox">
+      <span class="groupbox-label">Open Existing Project</span>
+      <table class="stage-inventory">
+        <thead><tr><th>Name</th><th class="num">Jobs Run</th><th></th></tr></thead>
+        <tbody id="projectListBody">
+          <tr><td colspan="3"><div class="empty-note">Not connected<span class="hint">Enter an API base URL above and connect.</span></div></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="app" id="appShell" hidden>
 
   <nav class="railnav" id="railNav">
     <button class="rail-item" data-tab="assets" title="Assets">
@@ -244,7 +316,10 @@ td.mono{font-family:var(--font-mono);}
         <span class="app-name">Cryo-EM Job Runner</span>
         <span class="app-sub" id="topSub">No pipeline connected</span>
       </div>
-      <span class="badge" id="topConnStatus"><span class="dot" id="topConnDot"></span><span id="topConnLabel">Not connected</span></span>
+      <div style="display:flex;align-items:center;gap:10px;">
+        <button class="small" id="closeProjectBtn">Close Project</button>
+        <span class="badge" id="topConnStatus"><span class="dot" id="topConnDot"></span><span id="topConnLabel">Not connected</span></span>
+      </div>
     </header>
 
     <div class="pagearea">
@@ -252,7 +327,35 @@ td.mono{font-family:var(--font-mono);}
       <!-- ASSETS -->
       <section class="tabpage" id="page-assets">
         <h2 class="page-heading">Assets</h2>
-        <p class="page-sub">Everything this session knows about: jobs submitted so far, grouped by processing stage.</p>
+        <p class="page-sub">Everything this project knows about: imported movies, movie groups, and jobs submitted so far.</p>
+
+        <div class="groupbox">
+          <span class="groupbox-label">Import Movies</span>
+          <p class="page-sub" style="margin:0 0 12px;">Microscope metadata is set once per import batch and stored with each movie — job forms below reference it instead of asking again.</p>
+          <div id="importFields"></div>
+          <div class="submit-row">
+            <button class="primary" id="importBtn">Import</button>
+          </div>
+          <p class="form-note" id="importNote"></p>
+        </div>
+
+        <div class="groupbox">
+          <span class="groupbox-label">Imported Movies</span>
+          <table class="stage-inventory">
+            <thead><tr><th>Name</th><th class="num">Voltage (kV)</th><th class="num">Pixel size (Å/px)</th><th class="num">Dose/frame</th></tr></thead>
+            <tbody id="movieListBody">
+              <tr><td colspan="4"><div class="empty-note">No movies imported yet</div></td></tr>
+            </tbody>
+          </table>
+        </div>
+
+        <div class="groupbox">
+          <span class="groupbox-label">Movie Groups</span>
+          <table class="stage-inventory">
+            <thead><tr><th>Group</th><th class="num">Movies</th></tr></thead>
+            <tbody id="movieGroupListBody"></tbody>
+          </table>
+        </div>
 
         <div class="groupbox">
           <span class="groupbox-label">Queue Summary</span>
@@ -302,6 +405,12 @@ td.mono{font-family:var(--font-mono);}
               <button class="primary" id="submitBtn">Run</button>
             </div>
             <p class="form-note">Paths are passed through as typed — point them at wherever your pipeline reads and writes on the machine running the API server.</p>
+          </div>
+
+          <div class="groupbox actions-preview">
+            <span class="groupbox-label">Job Summary</span>
+            <p class="preview-desc" id="previewDesc"></p>
+            <div id="jobSummaryBody"></div>
           </div>
         </div>
       </section>
@@ -388,26 +497,38 @@ td.mono{font-family:var(--font-mono);}
   var STAGES = {
     motion_correction: {
       label: "Align Movies",
+      description: "Aligns raw movie frames to correct for beam-induced motion, producing one averaged, motion-corrected micrograph per movie.",
       fields: [
-        {key:"input_glob", label:"Movie files", unit:"", type:"text", placeholder:"/data/session01/movies/*.tiff"},
-        {key:"gain_ref", label:"Gain reference", unit:"", type:"text", placeholder:"/data/session01/gain.mrc (optional)"},
-        {key:"pixel_size_a", label:"Pixel size", unit:"Å/px", type:"number", step:"0.001", placeholder:"0.83"},
-        {key:"dose_per_frame", label:"Dose per frame", unit:"e⁻/Å²", type:"number", step:"0.01", placeholder:"1.2"},
-        {key:"output_dir", label:"Output directory", unit:"", type:"text", placeholder:"/data/session01/motioncorr"}
+        {key:"movie_group_id", label:"Movie group", unit:"", type:"asset_select", group:"Input",
+         dynamicOptions:{endpoint:"/movie-groups", listKey:"movie_groups", value:"group_id", label:"group_name", countKey:"movie_count"}},
+        {key:"output_dir", label:"Output directory", unit:"", type:"text", placeholder:"/data/session01/motioncorr", group:"Output"}
       ],
       expertFields: [
-        {key:"patches_x", label:"Number of patches (X)", unit:"", type:"number", placeholder:"5"},
-        {key:"patches_y", label:"Number of patches (Y)", unit:"", type:"number", placeholder:"5"}
+        {key:"min_shift_a", label:"Minimum Shift", unit:"Å", type:"number", step:"0.1", placeholder:"2", group:"Shifts", tooltip:"Minimum shift for first alignment round"},
+        {key:"max_shift_a", label:"Maximum Shift", unit:"Å", type:"number", step:"0.1", placeholder:"40", group:"Shifts", tooltip:"Maximum shift for each alignment round"},
+        {key:"should_dose_filter", label:"Exposure Filter Sums?", type:"checkbox", default:true, group:"Exposure Filter", tooltip:"Make a dose-weighted sum using the exposure filter"},
+        {key:"should_restore_power", label:"Restore Power?", type:"checkbox", default:true, group:"Exposure Filter", tooltip:"High-pass filter to restore noise power after exposure filtering (only used if Exposure Filter Sums is enabled)"},
+        {key:"termination_threshold_a", label:"Termination Threshold", unit:"Å", type:"number", step:"0.1", placeholder:"1", group:"Convergence", tooltip:"Iteration stops once every frame shifts less than this between rounds"},
+        {key:"max_iterations", label:"Max Iterations", unit:"", type:"number", min:1, max:50, placeholder:"10", group:"Convergence", tooltip:"Maximum number of alignment rounds before stopping"},
+        {key:"bfactor_a2", label:"B-Factor", unit:"Å²", type:"number", min:0, max:5000, placeholder:"1500", group:"Filter", tooltip:"Low-pass filter applied to the reference sum before alignment"},
+        {key:"mask_central_cross", label:"Mask Central Cross?", type:"checkbox", default:true, group:"Filter", tooltip:"Mask the central cross of the reference's Fourier transform to reduce detector-artifact influence"},
+        {key:"horizontal_mask_px", label:"Horiz. Mask", unit:"px", type:"number", min:0, max:10, placeholder:"1", group:"Filter", tooltip:"Width of the horizontal mask line (only used if Mask Central Cross is enabled)"},
+        {key:"vertical_mask_px", label:"Vert. Mask", unit:"px", type:"number", min:0, max:10, placeholder:"1", group:"Filter", tooltip:"Width of the vertical mask line (only used if Mask Central Cross is enabled)"},
+        {key:"include_all_frames", label:"Include All Frames in Sum?", type:"checkbox", default:true, group:"Final Sum", tooltip:"Untick to sum only a subset of frames"},
+        {key:"first_frame", label:"First Frame to Sum", unit:"", type:"number", min:1, max:10000, placeholder:"1", group:"Final Sum", tooltip:"First frame included in the sum (only used if Include All Frames is disabled)"},
+        {key:"last_frame", label:"Last Frame to Sum", unit:"", type:"number", min:0, max:10000, placeholder:"0", group:"Final Sum", tooltip:"Last frame included in the sum; 0 = use the last frame of the movie (only used if Include All Frames is disabled)"},
+        {key:"save_scaled_sum", label:"Also Save Scaled Sum?", type:"checkbox", default:true, group:"Final Sum", tooltip:"Write a scaled copy of the sum to disk for faster display later"}
       ]
     },
     ctf_estimation: {
       label: "Find CTF",
+      description: "Estimates the contrast transfer function — defocus and astigmatism — for each motion-corrected micrograph.",
       fields: [
-        {key:"input_glob", label:"Micrographs", unit:"", type:"text", placeholder:"/data/session01/motioncorr/*.mrc"},
-        {key:"voltage_kv", label:"Voltage", unit:"kV", type:"number", placeholder:"300"},
-        {key:"cs_mm", label:"Spherical aberration (Cs)", unit:"mm", type:"number", step:"0.1", placeholder:"2.7"},
-        {key:"amp_contrast", label:"Amplitude contrast", unit:"", type:"number", step:"0.01", placeholder:"0.10"},
-        {key:"box_size", label:"Box size", unit:"px", type:"number", placeholder:"512"}
+        {key:"input_glob", label:"Micrographs", unit:"", type:"text", placeholder:"/data/session01/motioncorr/*.mrc", group:"Input"},
+        {key:"voltage_kv", label:"Voltage", unit:"kV", type:"number", placeholder:"300", group:"Microscope Parameters"},
+        {key:"cs_mm", label:"Spherical aberration (Cs)", unit:"mm", type:"number", step:"0.1", placeholder:"2.7", group:"Microscope Parameters"},
+        {key:"amp_contrast", label:"Amplitude contrast", unit:"", type:"number", step:"0.01", placeholder:"0.10", group:"Microscope Parameters"},
+        {key:"box_size", label:"Box size", unit:"px", type:"number", placeholder:"512", group:"Estimation"}
       ],
       expertFields: [
         {key:"min_res_a", label:"Min resolution of fit", unit:"Å", type:"number", placeholder:"30"},
@@ -416,11 +537,12 @@ td.mono{font-family:var(--font-mono);}
     },
     particle_picking: {
       label: "Find Particles",
+      description: "Locates candidate particles in each micrograph so they can be extracted for downstream processing.",
       fields: [
-        {key:"input_glob", label:"Micrographs", unit:"", type:"text", placeholder:"/data/session01/ctf/*.mrc"},
-        {key:"picker", label:"Picker", unit:"", type:"select", options:["blob","template"]},
-        {key:"particle_diameter_a", label:"Particle diameter", unit:"Å", type:"number", placeholder:"180"},
-        {key:"threshold", label:"Score threshold", unit:"", type:"number", step:"0.01", placeholder:"0.50"}
+        {key:"input_glob", label:"Micrographs", unit:"", type:"text", placeholder:"/data/session01/ctf/*.mrc", group:"Input"},
+        {key:"picker", label:"Picker", unit:"", type:"select", options:["blob","template"], group:"Picking Parameters"},
+        {key:"particle_diameter_a", label:"Particle diameter", unit:"Å", type:"number", placeholder:"180", group:"Picking Parameters"},
+        {key:"threshold", label:"Score threshold", unit:"", type:"number", step:"0.01", placeholder:"0.50", group:"Picking Parameters"}
       ],
       expertFields: [
         {key:"min_distance_a", label:"Minimum distance between particles", unit:"Å", type:"number", placeholder:"90"},
@@ -429,11 +551,12 @@ td.mono{font-family:var(--font-mono);}
     },
     class2d: {
       label: "2D Classification",
+      description: "Sorts extracted particles into 2D class averages to assess quality and discard junk before 3D processing.",
       fields: [
-        {key:"particles_path", label:"Particle stack / .star", unit:"", type:"text", placeholder:"/data/session01/particles/particles.star"},
-        {key:"num_classes", label:"Number of classes", unit:"", type:"number", placeholder:"50"},
-        {key:"mask_diameter_a", label:"Mask diameter", unit:"Å", type:"number", placeholder:"200"},
-        {key:"iterations", label:"Iterations", unit:"", type:"number", placeholder:"25"}
+        {key:"particles_path", label:"Particle stack / .star", unit:"", type:"text", placeholder:"/data/session01/particles/particles.star", group:"Input"},
+        {key:"num_classes", label:"Number of classes", unit:"", type:"number", placeholder:"50", group:"Classification Parameters"},
+        {key:"mask_diameter_a", label:"Mask diameter", unit:"Å", type:"number", placeholder:"200", group:"Classification Parameters"},
+        {key:"iterations", label:"Iterations", unit:"", type:"number", placeholder:"25", group:"Classification Parameters"}
       ],
       expertFields: [
         {key:"angular_search_step", label:"Angular search step", unit:"°", type:"number", placeholder:"15"},
@@ -442,11 +565,12 @@ td.mono{font-family:var(--font-mono);}
     },
     refine3d: {
       label: "Refine 3D",
+      description: "Refines particle orientations against a 3D reference volume to produce a higher-resolution reconstruction.",
       fields: [
-        {key:"particles_path", label:"Particle stack / .star", unit:"", type:"text", placeholder:"/data/session01/particles/selected.star"},
-        {key:"initial_model_path", label:"Initial model", unit:"", type:"text", placeholder:"/data/session01/refs/initial.mrc"},
-        {key:"symmetry", label:"Symmetry", unit:"", type:"text", placeholder:"C1"},
-        {key:"mask_path", label:"Mask", unit:"", type:"text", placeholder:"/data/session01/refs/mask.mrc (optional)"}
+        {key:"particles_path", label:"Particle stack / .star", unit:"", type:"text", placeholder:"/data/session01/particles/selected.star", group:"Input"},
+        {key:"initial_model_path", label:"Initial model", unit:"", type:"text", placeholder:"/data/session01/refs/initial.mrc", group:"Input"},
+        {key:"mask_path", label:"Mask", unit:"", type:"text", placeholder:"/data/session01/refs/mask.mrc (optional)", group:"Input"},
+        {key:"symmetry", label:"Symmetry", unit:"", type:"text", placeholder:"C1", group:"Refinement Parameters"}
       ],
       expertFields: [
         {key:"global_search", label:"Global search", unit:"", type:"select", options:["Yes","No"]},
@@ -458,18 +582,26 @@ td.mono{font-family:var(--font-mono);}
   var STAGE_ORDER = ["motion_correction","ctf_estimation","particle_picking","class2d","refine3d"];
 
   var els = {};
-  ["apiBase","connectBtn","topConnStatus","topConnDot","topConnLabel","topSub",
+  ["homeScreen","appShell","homeApiBase","homeConnectBtn","homeConnStatus","homeConnDot","homeConnLabel",
+   "newProjectName","createProjectBtn","projectListBody","closeProjectBtn",
+   "apiBase","connectBtn","topConnStatus","topConnDot","topConnLabel","topSub",
    "settingsConnStatus","settingsConnDot","settingsConnLabel",
    "stageList","actionFormLabel","jobName","paramFields","expertToggle","expertFields","submitBtn",
+   "previewDesc","jobSummaryBody",
+   "importFields","importBtn","importNote","movieListBody","movieGroupListBody",
    "refreshBtn","queueBody","sumQueued","sumRunning","sumCompleted","sumFailed","sumTotal",
    "stageInventoryBody","runProfile",
    "scrim","logDrawer","logTitle","logMeta","logBody","logClose","cancelJobBtn"
   ].forEach(function(id){ els[id] = document.getElementById(id); });
 
   var state = {
-    apiBase: localStorage.getItem("cryoem_api_base") || "",
+    apiBase: localStorage.getItem("cryoem_api_base") || "http://localhost:8000/api",
     runProfile: localStorage.getItem("cryoem_run_profile") || "local_single",
     connected: false,
+    screen: "home",
+    projectId: null,
+    projectName: null,
+    lastProjectId: localStorage.getItem("cryoem_last_project_id") || null,
     jobs: [],
     selectedJobId: null,
     currentStage: STAGE_ORDER[0],
@@ -495,6 +627,14 @@ td.mono{font-family:var(--font-mono);}
   });
   showTab("assets");
 
+  // ---------- home screen / project switching ----------
+  function showScreen(name){
+    state.screen = name;
+    els.homeScreen.hidden = name !== "home";
+    els.appShell.hidden = name !== "app";
+    if (name === "home" && state.connected) loadProjectList();
+  }
+
   // ---------- action stage list ----------
   STAGE_ORDER.forEach(function(key){
     var li = document.createElement("li");
@@ -511,12 +651,14 @@ td.mono{font-family:var(--font-mono);}
       li.classList.toggle("active", li.dataset.stage === key);
     });
     els.actionFormLabel.textContent = STAGES[key].label;
+    els.previewDesc.textContent = STAGES[key].description || "";
     renderParamFields();
   }
 
   function buildField(f){
     var wrap = document.createElement("div");
-    wrap.className = "field";
+    wrap.className = "field" + (f.type === "checkbox" ? " field-checkbox" : "");
+    if (f.tooltip) wrap.title = f.tooltip;
     var label = document.createElement("label");
     label.textContent = f.label + " ";
     if (f.unit){
@@ -525,7 +667,6 @@ td.mono{font-family:var(--font-mono);}
       unitSpan.textContent = "(" + f.unit + ")";
       label.appendChild(unitSpan);
     }
-    wrap.appendChild(label);
     var input;
     if (f.type === "select"){
       input = document.createElement("select");
@@ -534,33 +675,158 @@ td.mono{font-family:var(--font-mono);}
         op.value = o; op.textContent = o;
         input.appendChild(op);
       });
+    } else if (f.type === "checkbox"){
+      input = document.createElement("input");
+      input.type = "checkbox";
+      if (f.default) input.checked = true;
+    } else if (f.type === "asset_select"){
+      input = document.createElement("select");
+      input.disabled = true;
+      var loadingOpt = document.createElement("option");
+      loadingOpt.textContent = "Loading…";
+      input.appendChild(loadingOpt);
     } else {
       input = document.createElement("input");
       input.type = f.type;
       if (f.step) input.step = f.step;
+      if (f.min !== undefined) input.min = f.min;
+      if (f.max !== undefined) input.max = f.max;
       if (f.placeholder) input.placeholder = f.placeholder;
     }
     input.dataset.key = f.key;
-    wrap.appendChild(input);
+    if (f.type === "checkbox"){
+      wrap.appendChild(input);
+      wrap.appendChild(label);
+    } else {
+      wrap.appendChild(label);
+      wrap.appendChild(input);
+    }
     return wrap;
+  }
+
+  function renderGroupedFields(container, fields){
+    container.innerHTML = "";
+    var lastGroup = null;
+    fields.forEach(function(f){
+      if (f.group && f.group !== lastGroup){
+        var label = document.createElement("div");
+        label.className = "field-group-label";
+        label.textContent = f.group;
+        container.appendChild(label);
+        lastGroup = f.group;
+      }
+      container.appendChild(buildField(f));
+    });
+  }
+
+  function fieldDisplayValue(input){
+    if (!input) return "";
+    if (input.type === "checkbox") return input.checked ? "Yes" : "No";
+    if (input.tagName === "SELECT"){
+      return input.selectedIndex >= 0 ? input.options[input.selectedIndex].text : "";
+    }
+    return input.value.trim();
   }
 
   function renderParamFields(){
     var stage = STAGES[state.currentStage];
-    els.paramFields.innerHTML = "";
-    stage.fields.forEach(function(f){ els.paramFields.appendChild(buildField(f)); });
-
-    els.expertFields.innerHTML = "";
-    stage.expertFields.forEach(function(f){ els.expertFields.appendChild(buildField(f)); });
+    renderGroupedFields(els.paramFields, stage.fields);
+    renderGroupedFields(els.expertFields, stage.expertFields);
     els.expertFields.hidden = !state.expertOpen;
     els.expertToggle.textContent = (state.expertOpen ? "▾ Hide" : "▸ Show") + " Expert Options";
+    populateDynamicFields(stage.fields);
+    renderJobSummary();
+  }
+
+  function populateDynamicFields(fields){
+    fields.forEach(function(f){
+      if (!f.dynamicOptions) return;
+      var input = els.paramFields.querySelector('[data-key="' + f.key + '"]');
+      if (!input) return;
+      if (!state.projectId){
+        input.disabled = true;
+        input.innerHTML = "";
+        var noProjectOpt = document.createElement("option");
+        noProjectOpt.textContent = "Open a project first";
+        input.appendChild(noProjectOpt);
+        renderJobSummary();
+        return;
+      }
+      fetch(projectApiUrl(f.dynamicOptions.endpoint)).then(function(r){
+        if (!r.ok) throw new Error("HTTP " + r.status);
+        return r.json();
+      }).then(function(data){
+        var rows = (data && data[f.dynamicOptions.listKey]) || [];
+        input.innerHTML = "";
+        if (!rows.length){
+          input.disabled = true;
+          var emptyOpt = document.createElement("option");
+          emptyOpt.textContent = "No movie groups yet — import movies first";
+          input.appendChild(emptyOpt);
+          renderJobSummary();
+          return;
+        }
+        input.disabled = false;
+        rows.forEach(function(row){
+          var opt = document.createElement("option");
+          opt.value = row[f.dynamicOptions.value];
+          opt.textContent = row[f.dynamicOptions.label] + " (" + row[f.dynamicOptions.countKey] + " movies)";
+          input.appendChild(opt);
+        });
+        renderJobSummary();
+      }).catch(function(){
+        input.innerHTML = "";
+        var errOpt = document.createElement("option");
+        errOpt.textContent = "Could not load";
+        input.appendChild(errOpt);
+        renderJobSummary();
+      });
+    });
   }
 
   els.expertToggle.addEventListener("click", function(){
     state.expertOpen = !state.expertOpen;
     els.expertFields.hidden = !state.expertOpen;
     els.expertToggle.textContent = (state.expertOpen ? "▾ Hide" : "▸ Show") + " Expert Options";
+    renderJobSummary();
   });
+
+  // ---------- job summary preview ----------
+  function summaryRow(key, val){
+    var row = document.createElement("div");
+    row.className = "summary-row";
+    var k = document.createElement("span");
+    k.className = "summary-key";
+    k.textContent = key;
+    var v = document.createElement("span");
+    v.className = "summary-val" + (val ? "" : " empty");
+    v.textContent = val || "not set";
+    row.appendChild(k);
+    row.appendChild(v);
+    return row;
+  }
+
+  function renderJobSummary(){
+    var stage = STAGES[state.currentStage];
+    els.jobSummaryBody.innerHTML = "";
+    els.jobSummaryBody.appendChild(summaryRow("Job name", els.jobName.value.trim()));
+    stage.fields.forEach(function(f){
+      var input = els.paramFields.querySelector('[data-key="' + f.key + '"]');
+      els.jobSummaryBody.appendChild(summaryRow(f.label, fieldDisplayValue(input)));
+    });
+    if (state.expertOpen){
+      stage.expertFields.forEach(function(f){
+        var input = els.expertFields.querySelector('[data-key="' + f.key + '"]');
+        els.jobSummaryBody.appendChild(summaryRow(f.label, fieldDisplayValue(input)));
+      });
+    }
+    els.jobSummaryBody.appendChild(summaryRow("Run profile", els.runProfile.options[els.runProfile.selectedIndex].text));
+  }
+  els.paramFields.addEventListener("input", renderJobSummary);
+  els.paramFields.addEventListener("change", renderJobSummary);
+  els.expertFields.addEventListener("input", renderJobSummary);
+  els.expertFields.addEventListener("change", renderJobSummary);
+  els.jobName.addEventListener("input", renderJobSummary);
 
   selectStage(state.currentStage);
 
@@ -569,50 +835,301 @@ td.mono{font-family:var(--font-mono);}
   els.runProfile.addEventListener("change", function(){
     state.runProfile = els.runProfile.value;
     localStorage.setItem("cryoem_run_profile", state.runProfile);
+    renderJobSummary();
   });
 
   // ---------- connection ----------
   function normalizeBase(v){ return v.trim().replace(/\/+$/,""); }
 
+  function syncApiBaseInputs(value){
+    els.apiBase.value = value;
+    els.homeApiBase.value = value;
+  }
+
+  function updateTopSub(){
+    if (state.projectId){
+      els.topSub.textContent = state.projectName + (state.connected ? "" : " — disconnected");
+    } else {
+      els.topSub.textContent = state.connected ? state.apiBase : "No pipeline connected";
+    }
+  }
+
   function setConnected(ok, label){
     state.connected = ok;
     [ [els.topConnStatus, els.topConnDot, els.topConnLabel],
-      [els.settingsConnStatus, els.settingsConnDot, els.settingsConnLabel] ].forEach(function(trio){
+      [els.settingsConnStatus, els.settingsConnDot, els.settingsConnLabel],
+      [els.homeConnStatus, els.homeConnDot, els.homeConnLabel] ].forEach(function(trio){
         var badge = trio[0], dot = trio[1], lbl = trio[2];
         badge.className = "badge" + (ok ? " ok" : (label ? " bad" : ""));
         dot.className = "dot" + (ok ? " pulse" : "");
         lbl.textContent = label || (ok ? "Connected" : "Not connected");
     });
-    els.topSub.textContent = ok ? state.apiBase : "No pipeline connected";
+    updateTopSub();
   }
 
   function apiUrl(path){ return state.apiBase + path; }
+  function projectApiUrl(path){ return apiUrl("/projects/" + state.projectId + path); }
 
-  function testConnection(){
-    var base = normalizeBase(els.apiBase.value);
+  function testConnection(inputEl){
+    var base = normalizeBase(inputEl.value);
     if (!base){ setConnected(false, "Enter an API base URL"); return; }
     state.apiBase = base;
     localStorage.setItem("cryoem_api_base", base);
+    syncApiBaseInputs(base);
     setConnected(false, "Connecting…");
     fetch(apiUrl("/health")).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function(){
       setConnected(true);
-      startPolling();
-      fetchJobs();
+      if (state.screen === "home") loadProjectList();
+      if (state.projectId){ startPolling(); fetchJobs(); populateDynamicFields(STAGES[state.currentStage].fields); }
     }).catch(function(){
       setConnected(false, "Unreachable");
-      renderEmptyQueue("Could not reach " + base, "Check the address, and that the server allows requests from this page's origin (CORS).");
+      if (state.screen === "app"){
+        renderEmptyQueue("Could not reach " + base, "Check the address, and that the server allows requests from this page's origin (CORS).");
+      }
     });
   }
-  els.connectBtn.addEventListener("click", testConnection);
-  els.apiBase.value = state.apiBase;
-  if (state.apiBase) testConnection();
+  els.connectBtn.addEventListener("click", function(){ testConnection(els.apiBase); });
+  els.homeConnectBtn.addEventListener("click", function(){ testConnection(els.homeApiBase); });
+  syncApiBaseInputs(state.apiBase);
+  if (state.apiBase) testConnection(els.homeApiBase);
+
+  // ---------- project switching ----------
+  function openProject(projectId, projectName){
+    state.projectId = projectId;
+    state.projectName = projectName;
+    localStorage.setItem("cryoem_last_project_id", projectId);
+    state.lastProjectId = projectId;
+    updateTopSub();
+    showScreen("app");
+    showTab("assets");
+    renderParamFields();
+    loadImportDefaults();
+    loadMovies();
+    loadMovieGroups();
+    startPolling();
+    fetchJobs();
+  }
+
+  function closeProject(){
+    if (state.pollTimer) clearInterval(state.pollTimer);
+    if (state.logTimer) clearInterval(state.logTimer);
+    state.projectId = null;
+    state.projectName = null;
+    state.jobs = [];
+    state.selectedJobId = null;
+    updateTopSub();
+    showScreen("home");
+  }
+  els.closeProjectBtn.addEventListener("click", closeProject);
+
+  function loadProjectList(){
+    if (!state.connected) return;
+    fetch(apiUrl("/projects")).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(data){
+      renderProjectList((data && data.projects) || []);
+    }).catch(function(){
+      renderProjectList([]);
+    });
+  }
+
+  function renderProjectList(projects){
+    els.projectListBody.innerHTML = "";
+    if (!projects.length){
+      var tr = document.createElement("tr");
+      var td = document.createElement("td");
+      td.colSpan = 3;
+      var box = document.createElement("div");
+      box.className = "empty-note";
+      box.textContent = "No projects yet";
+      var hint = document.createElement("span");
+      hint.className = "hint";
+      hint.textContent = "Create one above to get started.";
+      box.appendChild(hint);
+      td.appendChild(box);
+      tr.appendChild(td);
+      els.projectListBody.appendChild(tr);
+      return;
+    }
+    var sorted = projects.slice().sort(function(a, b){
+      if (a.id === state.lastProjectId) return -1;
+      if (b.id === state.lastProjectId) return 1;
+      return a.name.localeCompare(b.name);
+    });
+    sorted.forEach(function(p){
+      var tr = document.createElement("tr");
+      tr.className = "clickable";
+      tr.addEventListener("click", function(){ openProject(p.id, p.name); });
+
+      var tdName = document.createElement("td");
+      tdName.textContent = p.name;
+      tr.appendChild(tdName);
+
+      var tdJobs = document.createElement("td");
+      tdJobs.className = "num";
+      tdJobs.textContent = p.total_jobs_run;
+      tr.appendChild(tdJobs);
+
+      var tdActions = document.createElement("td");
+      var delBtn = document.createElement("button");
+      delBtn.className = "small danger";
+      delBtn.textContent = "Delete";
+      delBtn.addEventListener("click", function(e){
+        e.stopPropagation();
+        if (!confirm('Delete project "' + p.name + '"? This cannot be undone.')) return;
+        fetch(apiUrl("/projects/" + p.id), {method: "DELETE"}).then(function(r){
+          if (!r.ok) throw new Error("HTTP " + r.status);
+          return r.json();
+        }).then(function(){ loadProjectList(); }).catch(function(err){
+          alert("Could not delete project: " + err.message);
+        });
+      });
+      tdActions.appendChild(delBtn);
+      tr.appendChild(tdActions);
+
+      els.projectListBody.appendChild(tr);
+    });
+  }
+
+  els.createProjectBtn.addEventListener("click", function(){
+    var name = els.newProjectName.value.trim();
+    if (!name){ alert("Enter a project name."); return; }
+    if (!state.connected){ alert("Connect to a pipeline API first."); return; }
+    els.createProjectBtn.disabled = true;
+    fetch(apiUrl("/projects"), {
+      method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: name})
+    }).then(function(r){
+      if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
+      return r.json();
+    }).then(function(p){
+      els.newProjectName.value = "";
+      openProject(p.id, p.name);
+    }).catch(function(err){
+      alert("Could not create project: " + err.message);
+    }).finally(function(){
+      els.createProjectBtn.disabled = false;
+    });
+  });
+
+  // ---------- movie import ----------
+  var IMPORT_FIELDS = [
+    {key:"input_glob", label:"Movie files", unit:"", type:"text", placeholder:"/data/session01/movies/*.tif", group:"Input"},
+    {key:"group_name", label:"Group name", unit:"", type:"text", placeholder:"e.g. Session 1", group:"Input"},
+    {key:"voltage_kv", label:"Voltage", unit:"kV", type:"number", placeholder:"300", group:"Microscope"},
+    {key:"cs_mm", label:"Spherical aberration (Cs)", unit:"mm", type:"number", step:"0.1", placeholder:"2.7", group:"Microscope"},
+    {key:"pixel_size_a", label:"Pixel size", unit:"Å/px", type:"number", step:"0.001", placeholder:"0.83", group:"Microscope"},
+    {key:"dose_per_frame", label:"Dose per frame", unit:"e⁻/Å²", type:"number", step:"0.01", placeholder:"1.2", group:"Microscope"},
+    {key:"gain_ref", label:"Gain reference", unit:"", type:"text", placeholder:"/data/session01/gain.mrc (optional)", group:"Corrections"},
+    {key:"dark_ref", label:"Dark reference", unit:"", type:"text", placeholder:"(optional)", group:"Corrections"}
+  ];
+  renderGroupedFields(els.importFields, IMPORT_FIELDS);
+
+  function setImportFieldValue(key, value){
+    if (value === null || value === undefined) return;
+    var input = els.importFields.querySelector('[data-key="' + key + '"]');
+    if (input) input.value = value;
+  }
+
+  function loadImportDefaults(){
+    if (!state.projectId) return;
+    fetch(projectApiUrl("/movies/import-defaults")).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(d){
+      if (!d) return;
+      setImportFieldValue("voltage_kv", d.VOLTAGE);
+      setImportFieldValue("cs_mm", d.SPHERICAL_ABERRATION);
+      setImportFieldValue("pixel_size_a", d.PIXEL_SIZE);
+      setImportFieldValue("dose_per_frame", d.EXPOSURE_PER_FRAME);
+      setImportFieldValue("gain_ref", d.GAIN_REFERENCE_FILENAME);
+      setImportFieldValue("dark_ref", d.DARK_REFERENCE_FILENAME);
+    }).catch(function(){});
+  }
+
+  els.importBtn.addEventListener("click", function(){
+    if (!state.projectId){ alert("Open a project first."); return; }
+    var body = {};
+    els.importFields.querySelectorAll("[data-key]").forEach(function(input){ readInto(body, input); });
+    if (!body.input_glob){ alert("Enter a path or glob for movie files."); return; }
+    els.importBtn.disabled = true;
+    els.importBtn.textContent = "Importing…";
+    fetch(projectApiUrl("/movies/import"), {
+      method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)
+    }).then(function(r){
+      if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
+      return r.json();
+    }).then(function(result){
+      els.importNote.textContent = result.synthetic
+        ? "No files matched that path, so " + result.movie_count + ' placeholder movies were created for "' + result.group_name + '" so you can exercise the flow without real data.'
+        : "Imported " + result.movie_count + ' movies into "' + result.group_name + '".';
+      loadMovies();
+      loadMovieGroups();
+      populateDynamicFields(STAGES.motion_correction.fields);
+    }).catch(function(err){
+      alert("Import failed: " + err.message);
+    }).finally(function(){
+      els.importBtn.disabled = false;
+      els.importBtn.textContent = "Import";
+    });
+  });
+
+  function loadMovies(){
+    if (!state.projectId) return;
+    fetch(projectApiUrl("/movies")).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(data){ renderMovieList((data && data.movies) || []); }).catch(function(){});
+  }
+
+  function renderMovieList(movies){
+    els.movieListBody.innerHTML = "";
+    if (!movies.length){
+      var tr = document.createElement("tr");
+      var td = document.createElement("td");
+      td.colSpan = 4;
+      var box = document.createElement("div");
+      box.className = "empty-note";
+      box.textContent = "No movies imported yet";
+      td.appendChild(box);
+      tr.appendChild(td);
+      els.movieListBody.appendChild(tr);
+      return;
+    }
+    movies.forEach(function(m){
+      var tr = document.createElement("tr");
+      tr.innerHTML = "<td>" + (m.NAME || "") + "</td>" +
+        "<td class='num'>" + (m.VOLTAGE != null ? m.VOLTAGE : "—") + "</td>" +
+        "<td class='num'>" + (m.PIXEL_SIZE != null ? m.PIXEL_SIZE : "—") + "</td>" +
+        "<td class='num'>" + (m.DOSE_PER_FRAME != null ? m.DOSE_PER_FRAME : "—") + "</td>";
+      els.movieListBody.appendChild(tr);
+    });
+  }
+
+  function loadMovieGroups(){
+    if (!state.projectId) return;
+    fetch(projectApiUrl("/movie-groups")).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(data){ renderMovieGroupList((data && data.movie_groups) || []); }).catch(function(){});
+  }
+
+  function renderMovieGroupList(groups){
+    els.movieGroupListBody.innerHTML = "";
+    groups.forEach(function(g){
+      var tr = document.createElement("tr");
+      tr.innerHTML = "<td>" + g.group_name + "</td><td class='num'>" + g.movie_count + "</td>";
+      els.movieGroupListBody.appendChild(tr);
+    });
+  }
 
   // ---------- submit ----------
   els.submitBtn.addEventListener("click", function(){
     if (!state.connected){ alert("Connect to a pipeline API first (Settings tab)."); return; }
+    if (!state.projectId){ alert("Open a project first."); return; }
     var params = {};
     els.paramFields.querySelectorAll("[data-key]").forEach(function(input){ readInto(params, input); });
     els.expertFields.querySelectorAll("[data-key]").forEach(function(input){ readInto(params, input); });
@@ -621,7 +1138,7 @@ td.mono{font-family:var(--font-mono);}
     var body = { stage: state.currentStage, name: els.jobName.value.trim() || (STAGES[state.currentStage].label + " job"), params: params };
     els.submitBtn.disabled = true;
     els.submitBtn.textContent = "Submitting…";
-    fetch(apiUrl("/jobs"), {
+    fetch(projectApiUrl("/jobs"), {
       method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)
     }).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
@@ -640,7 +1157,9 @@ td.mono{font-family:var(--font-mono);}
 
   function readInto(params, input){
     var v = input.value;
-    if (input.type === "number") v = v === "" ? null : Number(v);
+    if (input.type === "checkbox") v = input.checked;
+    else if (input.type === "number") v = v === "" ? null : Number(v);
+    else if (input.dataset.key === "movie_group_id") v = v === "" ? null : Number(v);
     params[input.dataset.key] = v;
   }
 
@@ -653,8 +1172,8 @@ td.mono{font-family:var(--font-mono);}
   }
 
   function fetchJobs(){
-    if (!state.connected) return;
-    fetch(apiUrl("/jobs")).then(function(r){
+    if (!state.connected || !state.projectId) return;
+    fetch(projectApiUrl("/jobs")).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function(data){
@@ -825,8 +1344,8 @@ td.mono{font-family:var(--font-mono);}
   }
 
   function fetchLog(){
-    if (!state.selectedJobId || !state.connected) return;
-    fetch(apiUrl("/jobs/" + state.selectedJobId + "/log")).then(function(r){
+    if (!state.selectedJobId || !state.connected || !state.projectId) return;
+    fetch(projectApiUrl("/jobs/" + state.selectedJobId + "/log")).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function(data){
@@ -838,8 +1357,8 @@ td.mono{font-family:var(--font-mono);}
   }
 
   els.cancelJobBtn.addEventListener("click", function(){
-    if (!state.selectedJobId) return;
-    fetch(apiUrl("/jobs/" + state.selectedJobId + "/cancel"), {method:"POST"}).then(function(r){
+    if (!state.selectedJobId || !state.projectId) return;
+    fetch(projectApiUrl("/jobs/" + state.selectedJobId + "/cancel"), {method:"POST"}).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function(){
@@ -851,6 +1370,7 @@ td.mono{font-family:var(--font-mono);}
   });
 
   renderStageInventory();
+  showScreen("home");
 
 })();
 </script>

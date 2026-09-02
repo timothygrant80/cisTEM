@@ -1,11 +1,11 @@
 # Cryo-EM Job Runner
 
-A local job-submission UI for a single-particle cryo-EM processing pipeline (Align Movies → Find CTF → Find Particles → 2D Classification → Refine 3D), styled after cisTEM's desktop interface.
+A local, project-based job-submission UI for a single-particle cryo-EM processing pipeline (Align Movies → Find CTF → Find Particles → 2D Classification → Refine 3D), styled after cisTEM's desktop interface.
 
 Two pieces:
 
-- **`job_runner.html`** — a standalone page you open in your own browser. It submits jobs and polls status against a pipeline API you point it at (Settings tab). It makes no network calls anywhere else.
-- **`server/app.py`** — a small reference Flask API implementing the contract the page expects. Ships in "simulation mode" (fake progress + fake numbers) so you can try the whole flow before your real pipeline is wired in.
+- **`job_runner.html`** — a standalone page you open in your own browser. On load it shows a home screen to create or open a **project**; once one's open it submits jobs and polls status against a pipeline API you point it at (Connection panel), scoped to that project. It makes no network calls anywhere else.
+- **`server/app.py`** + **`server/db.py`** — a small reference Flask API implementing the contract the page expects, backed by one SQLite file per project (`server/data/projects/<id>/project.db`). Ships in "simulation mode" (fake progress + fake numbers) so you can try the whole flow before your real pipeline is wired in.
 
 `reference/dashboard.html` is an earlier static mockup with richer diagnostic charts (throughput, defocus histogram, FSC curve) — a design reference, not wired to the job runner.
 
@@ -21,42 +21,66 @@ pip install -r requirements.txt
 python app.py
 ```
 
-This serves the API at `http://localhost:8000/api`. Then open `job_runner.html` (double-click it, or `open job_runner.html`). Go to **Settings**, enter `http://localhost:8000/api` as the API base URL, and hit **Connect**.
+This serves the API at `http://localhost:8000/api`. Then open `job_runner.html` (double-click it, or `open job_runner.html`). On the home screen, enter `http://localhost:8000/api` as the API base URL and hit **Connect**.
 
-Submit a job from **Actions** — since no real binaries are configured yet, it runs in simulation mode: progresses through a fake sequence and lands on `completed` with plausible placeholder numbers, so you can confirm the queue, log drawer, and cancel button all behave before pointing it at anything real.
+1. **Create a project** — give it a name and hit Create. You're taken into the app, scoped to that project.
+2. **Assets tab → Import Movies** — enter a path/glob for movie files plus microscope metadata (voltage, Cs, pixel size, dose/frame). If nothing matches (no real data on this machine), it fabricates ~12 placeholder movies so you can exercise the whole flow anyway.
+3. **Actions tab → Align Movies** — pick the movie group you just imported (metadata comes from the import, not retyped here), set an output directory, and Run. Since no real binaries are configured yet, it runs in simulation mode: progresses through a fake sequence and lands on `completed` with plausible placeholder numbers.
+4. **Results tab** — watch the queue, open a job's log, cancel a running one.
+5. **Close Project** (top right) returns you to the home screen — project data persists (it's a real SQLite file), so reopening it later shows the same movies and job history, even after restarting `app.py`.
 
 If your browser blocks `fetch` from a `file://` page, serve the folder instead: `python -m http.server 8080` from this directory, then open `http://localhost:8080/job_runner.html`.
 
 ## Wiring in your real pipeline
 
-Open `server/app.py` and fill in `STAGE_COMMANDS` — one command template per stage, using `{param_key}` placeholders filled from the job's submitted parameters:
+Open `server/app.py` and fill in `STAGE_COMMANDS` — one command template per stage, using `{param_key}` placeholders filled from the job's submitted parameters. For stages still using freeform typed params (`ctf_estimation`, `particle_picking`, `class2d`, `refine3d`) this is a direct 1:1 mapping, e.g.:
 
 ```python
-"motion_correction": {
-    "binary": "MotionCor2",
+"ctf_estimation": {
+    "binary": "ctffind",
     "command": [
-        "MotionCor2", "-InTiff", "{input_glob}",
-        "-Gain", "{gain_ref}", "-PixSize", "{pixel_size_a}",
-        "-FmDose", "{dose_per_frame}", "-OutMrc", "{output_dir}/",
+        "ctffind", "--in", "{input_glob}",
+        "--voltage", "{voltage_kv}", "--cs", "{cs_mm}",
+        "--box-size", "{box_size}",
     ],
 },
 ```
+
+`motion_correction` (Align Movies) is different: its job `params` carry a `movie_group_id`, not a file glob, because the movie files and their metadata now live in that project's `MOVIE_ASSETS`/`MOVIE_GROUP_MEMBERS` tables (set once at import time — see "Projects" below). `_run_real()`'s current template-fills-one-command model doesn't map cleanly onto "one job, N movies" batch execution; wiring a real `MotionCor2` (or similar) integration for this stage means resolving `params["movie_group_id"]` to its member movies (`server/db.py`'s `get_conn()` + a `MOVIE_GROUP_MEMBERS` join, same query `_write_motion_correction_results()` already uses) and looping a real command per movie, rather than a single template fill. This is real, but not yet built — flagged here rather than glossed over.
 
 Any stage left as `"command": None`, or whose `binary` isn't found on `PATH`, keeps running in simulation mode — so you can wire stages up one at a time.
 
 If you're driving **cryoSPARC** or **Slurm** instead of calling binaries directly, replace the body of `_run_real()` in `app.py` with calls to cryoSPARC's JSON API or `slurmrestd`, keeping the same job bookkeeping (status, progress, log, cancel) around it. The front end doesn't need to change either way — it only knows the HTTP contract below.
 
+## Projects
+
+Each project is a self-contained SQLite file (schema in `server/db.py`), modeled on a real cisTEM project database's table/column names wherever this app stores the same kind of data — `MASTER_SETTINGS`, `MOVIE_ASSETS`, `MOVIE_ALIGNMENT_LIST`, `RUN_PROFILES`, and so on. This means:
+
+- Microscope/movie metadata is entered once at import time and referenced by jobs afterward, instead of retyped into every job form.
+- A project survives restarting `app.py` — it's a file on disk, not an in-memory store.
+- Switching projects (Close Project → open a different one) is just pointing subsequent requests at a different file; nothing bleeds between projects.
+
+Only `motion_correction` is wired to real project data end-to-end right now. The other four stages are project-scoped (their job history lands in the right project) but still use typed/freeform params and don't read from or write to their own result tables yet (`ESTIMATED_CTF_PARAMETERS`, `PARTICLE_PICKING_LIST`, `CLASSIFICATION_LIST`, `REFINEMENT_LIST` — schema's there, just unused). See `CLAUDE.md` for the reasoning and what "wiring one up" would involve.
+
 ## The HTTP contract
 
-`job_runner.html` only ever calls these, against whatever base URL you give it:
+`job_runner.html` only ever calls these, against whatever base URL you give it. Everything except `/health` and `/projects` itself is scoped under a project id:
 
 | Method | Path | Purpose |
 |---|---|---|
 | `GET` | `/health` | Connectivity check. Any 2xx JSON response counts. |
-| `GET` | `/jobs` | List jobs: `{ "jobs": [Job, ...] }` |
-| `POST` | `/jobs` | Create a job. Body: `{ "stage", "name", "params": {...} }` → returns the created `Job` |
-| `GET` | `/jobs/:id/log` | `{ "log": "plain text, newline separated" }` |
-| `POST` | `/jobs/:id/cancel` | Best-effort cancel → returns the updated `Job` |
+| `GET` | `/projects` | List projects: `{ "projects": [{id, name, total_jobs_run, ...}, ...] }` |
+| `POST` | `/projects` | Create a project. Body: `{ "name" }` → returns its summary |
+| `GET` | `/projects/:id` | One project's summary |
+| `DELETE` | `/projects/:id` | Delete a project permanently (removes its `.db` file) |
+| `GET` | `/projects/:id/movies` | List imported movies |
+| `GET` | `/projects/:id/movie-groups` | List movie groups with member counts |
+| `GET` | `/projects/:id/movies/import-defaults` | Last-used import form values |
+| `POST` | `/projects/:id/movies/import` | Import movies. Body: `{input_glob, group_name, voltage_kv, cs_mm, pixel_size_a, dose_per_frame, gain_ref, dark_ref}` |
+| `GET` | `/projects/:id/jobs` | List jobs: `{ "jobs": [Job, ...] }` |
+| `POST` | `/projects/:id/jobs` | Create a job. Body: `{ "stage", "name", "params": {...} }` → returns the created `Job` |
+| `GET` | `/projects/:id/jobs/:id/log` | `{ "log": "plain text, newline separated" }` |
+| `POST` | `/projects/:id/jobs/:id/cancel` | Best-effort cancel → returns the updated `Job` |
 
 `Job` shape:
 
@@ -65,7 +89,7 @@ If you're driving **cryoSPARC** or **Slurm** instead of calling binaries directl
   "id": "a1b2c3d4e5",
   "stage": "motion_correction",
   "name": "grid1_session_001",
-  "params": { "...": "...", "run_profile": "local_single" },
+  "params": { "movie_group_id": 1, "output_dir": "...", "...": "...", "run_profile": "local_single" },
   "status": "queued | running | completed | failed | cancelled",
   "progress": 0,
   "created_at": "2026-09-01T14:03:00+00:00",
@@ -78,7 +102,7 @@ If you're driving **cryoSPARC** or **Slurm** instead of calling binaries directl
 
 Stages: `motion_correction` ("Align Movies"), `ctf_estimation` ("Find CTF"), `particle_picking` ("Find Particles"), `class2d` ("2D Classification"), `refine3d` ("Refine 3D").
 
-Point the page at any server that implements this contract — the reference Flask app is one option, not a requirement.
+Point the page at any server that implements this contract — the reference Flask app is one option, not a requirement. A different backend just needs to keep the same project/job bookkeeping shape around it.
 
 ## Security
 

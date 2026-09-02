@@ -4,8 +4,8 @@ A local, project-based job-submission UI for a single-particle cryo-EM processin
 
 Two pieces:
 
-- **`job_runner.html`** — a standalone page you open in your own browser. On load it shows a home screen to create or open a **project**; once one's open it submits jobs and polls status against a pipeline API you point it at (Connection panel), scoped to that project. It makes no network calls anywhere else.
-- **`server/app.py`** + **`server/db.py`** — a small reference Flask API implementing the contract the page expects, backed by one SQLite file per project (`server/data/projects/<id>/project.db`). Ships in "simulation mode" (fake progress + fake numbers) so you can try the whole flow before your real pipeline is wired in.
+- **`job_runner.html`** — a standalone page you open in your own browser. On load it shows a home screen: connect to an API, log in, then create or open a **project**; once one's open it submits jobs and polls status against a pipeline API you point it at (Connection panel), scoped to that project and to you. It makes no network calls anywhere else.
+- **`server/app.py`** + **`server/db.py`** + **`server/auth.py`** — a small reference Flask API implementing the contract the page expects, backed by one SQLite file per project (`server/data/projects/<id>/project.db`) plus a global `server/data/auth.db` for user accounts and sessions. Ships in "simulation mode" (fake progress + fake numbers) so you can try the whole flow before your real pipeline is wired in.
 
 `reference/dashboard.html` is an earlier static mockup with richer diagnostic charts (throughput, defocus histogram, FSC curve) — a design reference, not wired to the job runner.
 
@@ -21,13 +21,17 @@ pip install -r requirements.txt
 python app.py
 ```
 
-This serves the API at `http://localhost:8000/api`. Then open `job_runner.html` (double-click it, or `open job_runner.html`). On the home screen, enter `http://localhost:8000/api` as the API base URL and hit **Connect**.
+This serves the API at `http://localhost:8000/api`. On first run, since there are no users yet, it auto-creates an admin account and prints its password to the console (also written once to `server/data/admin_credentials.txt`) — copy that password before it scrolls away.
 
-1. **Create a project** — give it a name and hit Create. You're taken into the app, scoped to that project.
-2. **Assets tab → Import Movies** — enter a path/glob for movie files plus microscope metadata (voltage, Cs, pixel size, dose/frame). If nothing matches (no real data on this machine), it fabricates ~12 placeholder movies so you can exercise the whole flow anyway.
-3. **Actions tab → Align Movies** — pick the movie group you just imported (metadata comes from the import, not retyped here), set an output directory, and Run. Since no real binaries are configured yet, it runs in simulation mode: progresses through a fake sequence and lands on `completed` with plausible placeholder numbers.
-4. **Results tab** — watch the queue, open a job's log, cancel a running one.
-5. **Close Project** (top right) returns you to the home screen — project data persists (it's a real SQLite file), so reopening it later shows the same movies and job history, even after restarting `app.py`.
+Then open `job_runner.html` (double-click it, or `open job_runner.html`). On the home screen, enter `http://localhost:8000/api` as the API base URL and hit **Connect**.
+
+1. **Log in** as `admin` with the password from the console/credentials file.
+2. **Manage Users** (admin-only panel on the home screen) — create a real account for yourself (and anyone else) with a role of `user` or `admin`. There's no self-registration; only an admin can create accounts.
+3. **Create a project** — give it a name and hit Create. You're taken into the app, scoped to that project — and to you: other non-admin users won't see it.
+4. **Assets tab → Import Movies** — enter a path/glob for movie files plus microscope metadata (voltage, Cs, pixel size, dose/frame). If nothing matches (no real data on this machine), it fabricates ~12 placeholder movies so you can exercise the whole flow anyway.
+5. **Actions tab → Align Movies** — pick the movie group you just imported (metadata comes from the import, not retyped here), set an output directory, and Run. Since no real binaries are configured yet, it runs in simulation mode: progresses through a fake sequence and lands on `completed` with plausible placeholder numbers.
+6. **Results tab** — watch the queue, open a job's log, cancel a running one.
+7. **Close Project** (top right) returns you to the home screen — project data persists (it's a real SQLite file), so reopening it later shows the same movies and job history, even after restarting `app.py`. Your login persists too (a token in `localStorage`), so reloading the page skips straight back to the project picker.
 
 If your browser blocks `fetch` from a `file://` page, serve the folder instead: `python -m http.server 8080` from this directory, then open `http://localhost:8080/job_runner.html`.
 
@@ -62,15 +66,26 @@ Each project is a self-contained SQLite file (schema in `server/db.py`), modeled
 
 Only `motion_correction` is wired to real project data end-to-end right now. The other four stages are project-scoped (their job history lands in the right project) but still use typed/freeform params and don't read from or write to their own result tables yet (`ESTIMATED_CTF_PARAMETERS`, `PARTICLE_PICKING_LIST`, `CLASSIFICATION_LIST`, `REFINEMENT_LIST` — schema's there, just unused). See `CLAUDE.md` for the reasoning and what "wiring one up" would involve.
 
+## Users and access control
+
+Two roles: `user` (sees and manages only the projects they created) and `admin` (sees and can open/delete *every* project, and is the only role that can create new accounts). There's no public self-registration — an admin creates every account, from the home screen's Manage Users panel or `POST /users`.
+
+Auth is a bearer token (`Authorization: Bearer <token>`), issued by `POST /auth/login` and stored client-side in `localStorage`, not a cookie — this keeps it compatible with the API's wide-open CORS (`Access-Control-Allow-Origin: *`, which can't be combined with cookie credentials) and means it works the same whether `job_runner.html` is opened as a file or served. Tokens are tracked server-side (`server/auth.py`'s `SESSIONS` table) so logout genuinely revokes them, unlike a stateless JWT. See `server/auth.py`'s module docstring for more (session expiry, the login-timing-attack guard, the bootstrap-admin process).
+
 ## The HTTP contract
 
-`job_runner.html` only ever calls these, against whatever base URL you give it. Everything except `/health` and `/projects` itself is scoped under a project id:
+`job_runner.html` only ever calls these, against whatever base URL you give it. Everything except `/health`, `/auth/login`, and `/auth/logout` requires a valid `Authorization: Bearer <token>` header (a `401` otherwise); everything under `/projects/:id/...` additionally requires that you own that project or are an admin (a `403` otherwise, `404` if the project doesn't exist at all):
 
 | Method | Path | Purpose |
 |---|---|---|
-| `GET` | `/health` | Connectivity check. Any 2xx JSON response counts. |
-| `GET` | `/projects` | List projects: `{ "projects": [{id, name, total_jobs_run, ...}, ...] }` |
-| `POST` | `/projects` | Create a project. Body: `{ "name" }` → returns its summary |
+| `GET` | `/health` | Connectivity check. Any 2xx JSON response counts. No auth. |
+| `POST` | `/auth/login` | Body: `{username, password}` → `{token, user}`. No auth. |
+| `POST` | `/auth/logout` | Revokes the presented token if any. Always `200`. |
+| `GET` | `/auth/me` | `{user}` for the current token — used to silently re-validate a stored token on page load |
+| `GET` | `/users` | Admin only. List users: `{ "users": [{id, username, role, display_name, created_at}, ...] }` — no password hashes |
+| `POST` | `/users` | Admin only. Create a user. Body: `{username, password, role, display_name}` (`password` min. 8 characters, `role` is `user` or `admin`) |
+| `GET` | `/projects` | List projects: `{ "projects": [{id, name, total_jobs_run, owner_username, ...}, ...] }` — your own, or all of them if you're an admin |
+| `POST` | `/projects` | Create a project you own. Body: `{ "name" }` → returns its summary |
 | `GET` | `/projects/:id` | One project's summary |
 | `DELETE` | `/projects/:id` | Delete a project permanently (removes its `.db` file) |
 | `GET` | `/projects/:id/movies` | List imported movies |
@@ -106,7 +121,7 @@ Point the page at any server that implements this contract — the reference Fla
 
 ## Security
 
-The page sends no authentication header — an open network was the explicit choice for now. If you later expose this beyond a trusted lab network, add an `Authorization` header in `job_runner.html`'s `fetch` calls and check it in `app.py` (or put a reverse proxy in front that handles auth).
+Every request is authenticated (see "Users and access control" above) and projects are only visible to their owner or an admin. What's still explicitly *not* built, matching this app's "trusted lab network" scope: no rate limiting or lockout on login attempts, no HTTPS enforcement (bearer tokens over plain HTTP are sniffable on a hostile network — this only matters if the app leaves a trusted network), no password reset flow (a forgotten password needs an admin to recreate the account), and no user delete/edit endpoints (only create and list). If any of that matters for your deployment, put a reverse proxy in front that handles TLS and rate limiting, and treat the missing pieces above as the next things to build.
 
 ## Working on this in Claude Code
 

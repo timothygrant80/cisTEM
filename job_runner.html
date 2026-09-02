@@ -44,6 +44,7 @@ button,input,select{font-family:var(--font-ui);}
 
 /* ---------- app shell ---------- */
 .app{display:flex;height:100vh;}
+.app[hidden]{display:none;}
 
 .railnav{
   width:84px;flex-shrink:0;background:var(--chrome);border-right:1px solid var(--border-strong);
@@ -266,25 +267,77 @@ td.mono{font-family:var(--font-mono);}
       <p class="settings-note"><span class="badge" id="homeConnStatus"><span class="dot" id="homeConnDot"></span><span id="homeConnLabel">Not connected</span></span></p>
     </div>
 
-    <div class="groupbox">
-      <span class="groupbox-label">New Project</span>
+    <div class="groupbox" id="homeLoginBox" hidden>
+      <span class="groupbox-label">Log In</span>
       <div class="settings-row">
         <div class="field">
-          <label for="newProjectName">Project name</label>
-          <input type="text" id="newProjectName" placeholder="e.g. Grid 1 Session A" />
+          <label for="loginUsername">Username</label>
+          <input type="text" id="loginUsername" autocomplete="username" />
         </div>
-        <button class="primary" id="createProjectBtn">Create</button>
+        <div class="field">
+          <label for="loginPassword">Password</label>
+          <input type="password" id="loginPassword" autocomplete="current-password" />
+        </div>
+        <button class="primary" id="loginBtn">Log In</button>
+      </div>
+      <p class="settings-note" id="loginError"></p>
+    </div>
+
+    <div class="groupbox" id="homeUserStrip" hidden>
+      <div class="settings-row" style="align-items:center;">
+        <p class="settings-note" style="margin:0;">Logged in as <strong id="homeUserLabel"></strong> <span id="homeUserRole"></span></p>
+        <button class="small" id="logoutBtn">Log Out</button>
       </div>
     </div>
 
-    <div class="groupbox">
-      <span class="groupbox-label">Open Existing Project</span>
-      <table class="stage-inventory">
-        <thead><tr><th>Name</th><th class="num">Jobs Run</th><th></th></tr></thead>
-        <tbody id="projectListBody">
-          <tr><td colspan="3"><div class="empty-note">Not connected<span class="hint">Enter an API base URL above and connect.</span></div></td></tr>
-        </tbody>
-      </table>
+    <div id="homeProjectPanels" hidden>
+      <div class="groupbox">
+        <span class="groupbox-label">New Project</span>
+        <div class="settings-row">
+          <div class="field">
+            <label for="newProjectName">Project name</label>
+            <input type="text" id="newProjectName" placeholder="e.g. Grid 1 Session A" />
+          </div>
+          <button class="primary" id="createProjectBtn">Create</button>
+        </div>
+      </div>
+
+      <div class="groupbox">
+        <span class="groupbox-label">Open Existing Project</span>
+        <table class="stage-inventory">
+          <thead><tr><th>Name</th><th class="num">Jobs Run</th><th id="projectOwnerHeader" hidden>Owner</th><th></th></tr></thead>
+          <tbody id="projectListBody">
+            <tr><td colspan="4"><div class="empty-note">Not connected<span class="hint">Enter an API base URL above and connect.</span></div></td></tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="groupbox" id="homeManageUsers" hidden>
+        <span class="groupbox-label">Manage Users</span>
+        <table class="stage-inventory">
+          <thead><tr><th>Username</th><th>Display Name</th><th>Role</th></tr></thead>
+          <tbody id="userListBody"></tbody>
+        </table>
+        <div class="settings-row" style="margin-top:12px;">
+          <div class="field">
+            <label for="newUsername">Username</label>
+            <input type="text" id="newUsername" placeholder="e.g. alice" />
+          </div>
+          <div class="field">
+            <label for="newUserPassword">Password</label>
+            <input type="password" id="newUserPassword" placeholder="min. 8 characters" />
+          </div>
+          <div class="field">
+            <label for="newUserRole">Role</label>
+            <select id="newUserRole">
+              <option value="user">User</option>
+              <option value="admin">Admin</option>
+            </select>
+          </div>
+          <button class="primary" id="createUserBtn">Add User</button>
+        </div>
+        <p class="settings-note" id="createUserNote"></p>
+      </div>
     </div>
   </div>
 </div>
@@ -583,6 +636,10 @@ td.mono{font-family:var(--font-mono);}
 
   var els = {};
   ["homeScreen","appShell","homeApiBase","homeConnectBtn","homeConnStatus","homeConnDot","homeConnLabel",
+   "homeLoginBox","loginUsername","loginPassword","loginBtn","loginError",
+   "homeUserStrip","homeUserLabel","homeUserRole","logoutBtn",
+   "homeProjectPanels","projectOwnerHeader",
+   "homeManageUsers","userListBody","newUsername","newUserPassword","newUserRole","createUserBtn","createUserNote",
    "newProjectName","createProjectBtn","projectListBody","closeProjectBtn",
    "apiBase","connectBtn","topConnStatus","topConnDot","topConnLabel","topSub",
    "settingsConnStatus","settingsConnDot","settingsConnLabel",
@@ -596,6 +653,8 @@ td.mono{font-family:var(--font-mono);}
 
   var state = {
     apiBase: localStorage.getItem("cryoem_api_base") || "http://localhost:8000/api",
+    authToken: localStorage.getItem("cryoem_auth_token") || null,
+    currentUser: null,
     runProfile: localStorage.getItem("cryoem_run_profile") || "local_single",
     connected: false,
     screen: "home",
@@ -752,7 +811,7 @@ td.mono{font-family:var(--font-mono);}
         renderJobSummary();
         return;
       }
-      fetch(projectApiUrl(f.dynamicOptions.endpoint)).then(function(r){
+      apiFetch(projectApiUrl(f.dynamicOptions.endpoint)).then(function(r){
         if (!r.ok) throw new Error("HTTP " + r.status);
         return r.json();
       }).then(function(data){
@@ -870,6 +929,24 @@ td.mono{font-family:var(--font-mono);}
   function apiUrl(path){ return state.apiBase + path; }
   function projectApiUrl(path){ return apiUrl("/projects/" + state.projectId + path); }
 
+  // apiFetch injects the Authorization header when a token is present, and
+  // on a 401 (expired/revoked session) clears auth state and bounces to the
+  // login screen instead of leaving every call site to notice on its own.
+  function apiFetch(url, options){
+    options = options || {};
+    var headers = {};
+    for (var k in (options.headers || {})) headers[k] = options.headers[k];
+    if (state.authToken) headers["Authorization"] = "Bearer " + state.authToken;
+    options.headers = headers;
+    return fetch(url, options).then(function(r){
+      if (r.status === 401){
+        clearAuth();
+        throw new Error("Session expired — please log in again.");
+      }
+      return r;
+    });
+  }
+
   function testConnection(inputEl){
     var base = normalizeBase(inputEl.value);
     if (!base){ setConnected(false, "Enter an API base URL"); return; }
@@ -882,7 +959,7 @@ td.mono{font-family:var(--font-mono);}
       return r.json();
     }).then(function(){
       setConnected(true);
-      if (state.screen === "home") loadProjectList();
+      checkAuth();
       if (state.projectId){ startPolling(); fetchJobs(); populateDynamicFields(STAGES[state.currentStage].fields); }
     }).catch(function(){
       setConnected(false, "Unreachable");
@@ -895,6 +972,130 @@ td.mono{font-family:var(--font-mono);}
   els.homeConnectBtn.addEventListener("click", function(){ testConnection(els.homeApiBase); });
   syncApiBaseInputs(state.apiBase);
   if (state.apiBase) testConnection(els.homeApiBase);
+
+  // ---------- auth ----------
+  function clearAuth(){
+    state.authToken = null;
+    state.currentUser = null;
+    localStorage.removeItem("cryoem_auth_token");
+    if (state.screen === "app") closeProject();
+    updateAuthUI();
+  }
+
+  function updateAuthUI(){
+    var loggedIn = !!state.currentUser;
+    var isAdmin = loggedIn && state.currentUser.role === "admin";
+    els.homeLoginBox.hidden = !state.connected || loggedIn;
+    els.homeUserStrip.hidden = !loggedIn;
+    els.homeProjectPanels.hidden = !loggedIn;
+    els.homeManageUsers.hidden = !isAdmin;
+    els.projectOwnerHeader.hidden = !isAdmin;
+
+    if (loggedIn){
+      els.homeUserLabel.textContent = state.currentUser.display_name || state.currentUser.username;
+      els.homeUserRole.textContent = "(" + state.currentUser.role + ")";
+      if (state.screen === "home") loadProjectList();
+      if (isAdmin) loadUsers();
+    }
+  }
+
+  function checkAuth(){
+    if (!state.authToken){
+      state.currentUser = null;
+      updateAuthUI();
+      return;
+    }
+    apiFetch(apiUrl("/auth/me")).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(data){
+      state.currentUser = data.user;
+      updateAuthUI();
+    }).catch(function(){
+      // a 401 already ran clearAuth()/updateAuthUI() via apiFetch
+    });
+  }
+
+  function doLogin(){
+    var username = els.loginUsername.value.trim();
+    var password = els.loginPassword.value;
+    if (!username || !password){ els.loginError.textContent = "Enter a username and password."; return; }
+    els.loginBtn.disabled = true;
+    els.loginError.textContent = "";
+    fetch(apiUrl("/auth/login"), {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({username: username, password: password})
+    }).then(function(r){
+      return r.json().then(function(data){ return {ok: r.ok, data: data}; });
+    }).then(function(res){
+      if (!res.ok) throw new Error((res.data && res.data.error) || "Login failed");
+      state.authToken = res.data.token;
+      state.currentUser = res.data.user;
+      localStorage.setItem("cryoem_auth_token", state.authToken);
+      els.loginUsername.value = "";
+      els.loginPassword.value = "";
+      updateAuthUI();
+    }).catch(function(err){
+      els.loginError.textContent = err.message;
+    }).finally(function(){
+      els.loginBtn.disabled = false;
+    });
+  }
+  els.loginBtn.addEventListener("click", doLogin);
+  els.loginPassword.addEventListener("keydown", function(e){ if (e.key === "Enter") doLogin(); });
+
+  function doLogout(){
+    var token = state.authToken;
+    fetch(apiUrl("/auth/logout"), {
+      method: "POST", headers: token ? {"Authorization": "Bearer " + token} : {}
+    }).catch(function(){}).finally(function(){
+      clearAuth();
+    });
+  }
+  els.logoutBtn.addEventListener("click", doLogout);
+
+  // ---------- manage users (admin only) ----------
+  function loadUsers(){
+    apiFetch(apiUrl("/users")).then(function(r){
+      if (!r.ok) throw new Error("HTTP " + r.status);
+      return r.json();
+    }).then(function(data){
+      renderUserList((data && data.users) || []);
+    }).catch(function(){});
+  }
+
+  function renderUserList(users){
+    els.userListBody.innerHTML = "";
+    users.forEach(function(u){
+      var tr = document.createElement("tr");
+      tr.innerHTML = "<td>" + u.username + "</td><td>" + (u.display_name || "") + "</td><td>" + u.role + "</td>";
+      els.userListBody.appendChild(tr);
+    });
+  }
+
+  els.createUserBtn.addEventListener("click", function(){
+    var username = els.newUsername.value.trim();
+    var password = els.newUserPassword.value;
+    var role = els.newUserRole.value;
+    if (!username || !password){ els.createUserNote.textContent = "Enter a username and password."; return; }
+    els.createUserBtn.disabled = true;
+    apiFetch(apiUrl("/users"), {
+      method: "POST", headers: {"Content-Type": "application/json"},
+      body: JSON.stringify({username: username, password: password, role: role})
+    }).then(function(r){
+      return r.json().then(function(data){ return {ok: r.ok, data: data}; });
+    }).then(function(res){
+      if (!res.ok) throw new Error((res.data && res.data.error) || "Could not create user");
+      els.newUsername.value = "";
+      els.newUserPassword.value = "";
+      els.createUserNote.textContent = 'Created user "' + res.data.username + '".';
+      loadUsers();
+    }).catch(function(err){
+      els.createUserNote.textContent = err.message;
+    }).finally(function(){
+      els.createUserBtn.disabled = false;
+    });
+  });
 
   // ---------- project switching ----------
   function openProject(projectId, projectName){
@@ -926,8 +1127,8 @@ td.mono{font-family:var(--font-mono);}
   els.closeProjectBtn.addEventListener("click", closeProject);
 
   function loadProjectList(){
-    if (!state.connected) return;
-    fetch(apiUrl("/projects")).then(function(r){
+    if (!state.connected || !state.currentUser) return;
+    apiFetch(apiUrl("/projects")).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function(data){
@@ -938,11 +1139,12 @@ td.mono{font-family:var(--font-mono);}
   }
 
   function renderProjectList(projects){
+    var isAdmin = state.currentUser && state.currentUser.role === "admin";
     els.projectListBody.innerHTML = "";
     if (!projects.length){
       var tr = document.createElement("tr");
       var td = document.createElement("td");
-      td.colSpan = 3;
+      td.colSpan = isAdmin ? 4 : 3;
       var box = document.createElement("div");
       box.className = "empty-note";
       box.textContent = "No projects yet";
@@ -974,6 +1176,12 @@ td.mono{font-family:var(--font-mono);}
       tdJobs.textContent = p.total_jobs_run;
       tr.appendChild(tdJobs);
 
+      if (isAdmin){
+        var tdOwner = document.createElement("td");
+        tdOwner.textContent = p.owner_username || "—";
+        tr.appendChild(tdOwner);
+      }
+
       var tdActions = document.createElement("td");
       var delBtn = document.createElement("button");
       delBtn.className = "small danger";
@@ -981,7 +1189,7 @@ td.mono{font-family:var(--font-mono);}
       delBtn.addEventListener("click", function(e){
         e.stopPropagation();
         if (!confirm('Delete project "' + p.name + '"? This cannot be undone.')) return;
-        fetch(apiUrl("/projects/" + p.id), {method: "DELETE"}).then(function(r){
+        apiFetch(apiUrl("/projects/" + p.id), {method: "DELETE"}).then(function(r){
           if (!r.ok) throw new Error("HTTP " + r.status);
           return r.json();
         }).then(function(){ loadProjectList(); }).catch(function(err){
@@ -998,9 +1206,9 @@ td.mono{font-family:var(--font-mono);}
   els.createProjectBtn.addEventListener("click", function(){
     var name = els.newProjectName.value.trim();
     if (!name){ alert("Enter a project name."); return; }
-    if (!state.connected){ alert("Connect to a pipeline API first."); return; }
+    if (!state.connected || !state.currentUser){ alert("Log in first."); return; }
     els.createProjectBtn.disabled = true;
-    fetch(apiUrl("/projects"), {
+    apiFetch(apiUrl("/projects"), {
       method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({name: name})
     }).then(function(r){
       if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
@@ -1036,7 +1244,7 @@ td.mono{font-family:var(--font-mono);}
 
   function loadImportDefaults(){
     if (!state.projectId) return;
-    fetch(projectApiUrl("/movies/import-defaults")).then(function(r){
+    apiFetch(projectApiUrl("/movies/import-defaults")).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function(d){
@@ -1057,7 +1265,7 @@ td.mono{font-family:var(--font-mono);}
     if (!body.input_glob){ alert("Enter a path or glob for movie files."); return; }
     els.importBtn.disabled = true;
     els.importBtn.textContent = "Importing…";
-    fetch(projectApiUrl("/movies/import"), {
+    apiFetch(projectApiUrl("/movies/import"), {
       method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)
     }).then(function(r){
       if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
@@ -1079,7 +1287,7 @@ td.mono{font-family:var(--font-mono);}
 
   function loadMovies(){
     if (!state.projectId) return;
-    fetch(projectApiUrl("/movies")).then(function(r){
+    apiFetch(projectApiUrl("/movies")).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function(data){ renderMovieList((data && data.movies) || []); }).catch(function(){});
@@ -1111,7 +1319,7 @@ td.mono{font-family:var(--font-mono);}
 
   function loadMovieGroups(){
     if (!state.projectId) return;
-    fetch(projectApiUrl("/movie-groups")).then(function(r){
+    apiFetch(projectApiUrl("/movie-groups")).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function(data){ renderMovieGroupList((data && data.movie_groups) || []); }).catch(function(){});
@@ -1138,7 +1346,7 @@ td.mono{font-family:var(--font-mono);}
     var body = { stage: state.currentStage, name: els.jobName.value.trim() || (STAGES[state.currentStage].label + " job"), params: params };
     els.submitBtn.disabled = true;
     els.submitBtn.textContent = "Submitting…";
-    fetch(projectApiUrl("/jobs"), {
+    apiFetch(projectApiUrl("/jobs"), {
       method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(body)
     }).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
@@ -1173,7 +1381,7 @@ td.mono{font-family:var(--font-mono);}
 
   function fetchJobs(){
     if (!state.connected || !state.projectId) return;
-    fetch(projectApiUrl("/jobs")).then(function(r){
+    apiFetch(projectApiUrl("/jobs")).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function(data){
@@ -1345,7 +1553,7 @@ td.mono{font-family:var(--font-mono);}
 
   function fetchLog(){
     if (!state.selectedJobId || !state.connected || !state.projectId) return;
-    fetch(projectApiUrl("/jobs/" + state.selectedJobId + "/log")).then(function(r){
+    apiFetch(projectApiUrl("/jobs/" + state.selectedJobId + "/log")).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function(data){
@@ -1358,7 +1566,7 @@ td.mono{font-family:var(--font-mono);}
 
   els.cancelJobBtn.addEventListener("click", function(){
     if (!state.selectedJobId || !state.projectId) return;
-    fetch(projectApiUrl("/jobs/" + state.selectedJobId + "/cancel"), {method:"POST"}).then(function(r){
+    apiFetch(projectApiUrl("/jobs/" + state.selectedJobId + "/cancel"), {method:"POST"}).then(function(r){
       if (!r.ok) throw new Error("HTTP " + r.status);
       return r.json();
     }).then(function(){

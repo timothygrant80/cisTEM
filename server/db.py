@@ -193,6 +193,17 @@ def project_exists(project_id):
     return project_db_path(project_id).is_file()
 
 
+# Columns added after the original schema shipped. No migration framework
+# (see module docstring) -- each is a guarded ALTER TABLE, run unconditionally
+# on every open. A no-op on databases that already have the column, whether
+# that's because this ran before or because SCHEMA_SQL's CREATE TABLE already
+# included it on a brand-new database.
+_ALTER_STATEMENTS = [
+    "ALTER TABLE MASTER_SETTINGS ADD COLUMN OWNER_USER_ID INTEGER",
+    "ALTER TABLE MASTER_SETTINGS ADD COLUMN OWNER_USERNAME TEXT",
+]
+
+
 def get_conn(project_id):
     """Open a fresh connection scoped to one project, schema guaranteed present."""
     path = project_db_path(project_id)
@@ -201,10 +212,15 @@ def get_conn(project_id):
     conn.execute("PRAGMA journal_mode = WAL")
     conn.execute("PRAGMA busy_timeout = 5000")
     conn.executescript(SCHEMA_SQL)
+    for stmt in _ALTER_STATEMENTS:
+        try:
+            conn.execute(stmt)
+        except sqlite3.OperationalError:
+            pass  # column already exists
     return conn
 
 
-def create_project(name):
+def create_project(name, owner_user_id, owner_username):
     name = (name or "").strip()
     if not name:
         raise ValueError("project name is required")
@@ -218,8 +234,9 @@ def create_project(name):
         conn.execute(
             "INSERT INTO MASTER_SETTINGS(NUMBER, PROJECT_DIRECTORY, PROJECT_NAME, "
             "CURRENT_VERSION, TOTAL_CPU_HOURS, TOTAL_JOBS_RUN, CISTEM_VERSION_TEXT, "
-            "CURRENT_WORKFLOW) VALUES (1, ?, ?, 1, 0, 0, ?, 'SINGLE_PARTICLE')",
-            (str(pdir), name, "cryoem-job-runner web 0.1"),
+            "CURRENT_WORKFLOW, OWNER_USER_ID, OWNER_USERNAME) "
+            "VALUES (1, ?, ?, 1, 0, 0, ?, 'SINGLE_PARTICLE', ?, ?)",
+            (str(pdir), name, "cryoem-job-runner web 0.1", owner_user_id, owner_username),
         )
         conn.execute("INSERT INTO MOVIE_IMPORT_DEFAULTS(NUMBER) VALUES (1)")
         conn.execute(
@@ -240,8 +257,8 @@ def get_project_summary(project_id):
         return None
     conn = get_conn(project_id)
     row = conn.execute(
-        "SELECT PROJECT_NAME, TOTAL_JOBS_RUN, CISTEM_VERSION_TEXT, CURRENT_WORKFLOW "
-        "FROM MASTER_SETTINGS WHERE NUMBER=1"
+        "SELECT PROJECT_NAME, TOTAL_JOBS_RUN, CISTEM_VERSION_TEXT, CURRENT_WORKFLOW, "
+        "OWNER_USER_ID, OWNER_USERNAME FROM MASTER_SETTINGS WHERE NUMBER=1"
     ).fetchone()
     conn.close()
     if row is None:
@@ -252,10 +269,22 @@ def get_project_summary(project_id):
         "total_jobs_run": row["TOTAL_JOBS_RUN"] or 0,
         "cistem_version_text": row["CISTEM_VERSION_TEXT"],
         "current_workflow": row["CURRENT_WORKFLOW"],
+        "owner_user_id": row["OWNER_USER_ID"],
+        "owner_username": row["OWNER_USERNAME"],
     }
 
 
-def list_projects():
+def get_project_owner(project_id):
+    conn = get_conn(project_id)
+    row = conn.execute("SELECT OWNER_USER_ID FROM MASTER_SETTINGS WHERE NUMBER=1").fetchone()
+    conn.close()
+    return row["OWNER_USER_ID"] if row else None
+
+
+def list_projects(owner_user_id=None):
+    """owner_user_id=None returns every project (admin view); a real id
+    returns only that owner's projects, never NULL-owner (legacy/pre-auth)
+    ones -- those stay admin-only visible by default."""
     if not PROJECTS_ROOT.is_dir():
         return []
     out = []
@@ -266,8 +295,11 @@ def list_projects():
             summary = get_project_summary(entry.name)
         except sqlite3.DatabaseError:
             continue
-        if summary is not None:
-            out.append(summary)
+        if summary is None:
+            continue
+        if owner_user_id is not None and summary["owner_user_id"] != owner_user_id:
+            continue
+        out.append(summary)
     return out
 
 

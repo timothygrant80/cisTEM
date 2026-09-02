@@ -21,9 +21,13 @@ http://localhost:8000/api
 
 Security
 --------
-No authentication. CORS is wide open (Access-Control-Allow-Origin: *) so the
-page can be opened as a local file. Only run this on a trusted network --
-add an auth check before exposing it any wider.
+Bearer-token auth (see auth.py) -- every user has their own account and only
+sees their own projects, except admins, who see and can access all of them.
+CORS is wide open on origin (Access-Control-Allow-Origin: *) so the page can
+be opened as a local file, but that's orthogonal to auth: nothing works
+without a valid Authorization header regardless of where the request came
+from. Only run this on a trusted network -- there's no rate limiting or
+HTTPS enforcement (see README.md's Security section for what that implies).
 """
 
 import glob as glob_module
@@ -35,13 +39,14 @@ import time
 import uuid
 from datetime import datetime, timezone
 
-from flask import Flask, jsonify, request
+from flask import Flask, g, jsonify, request
 from flask_cors import CORS
 
+import auth
 import db
 
 app = Flask(__name__)
-CORS(app)  # wide open by design -- see Security note above
+CORS(app, resources={r"/api/*": {"origins": "*"}}, allow_headers=["Content-Type", "Authorization"])
 
 SYNTHETIC_MOVIE_COUNT = 12
 
@@ -346,39 +351,87 @@ def health():
     return jsonify({"status": "ok", "time": now_iso()})
 
 
-def _project_guard(project_id):
-    if not db.project_exists(project_id):
-        return jsonify({"error": "project not found"}), 404
-    return None
+# ---------------------------------------------------------------------------
+# Auth routes
+# ---------------------------------------------------------------------------
 
+@app.route("/api/auth/login", methods=["POST"])
+def login_route():
+    body = request.get_json(force=True, silent=True) or {}
+    user = auth.authenticate(body.get("username"), body.get("password"))
+    if user is None:
+        return jsonify({"error": "invalid username or password"}), 401
+    token = auth.create_session(user["id"])
+    return jsonify({"token": token, "user": user})
+
+
+@app.route("/api/auth/logout", methods=["POST"])
+def logout_route():
+    header = request.headers.get("Authorization", "")
+    if header.lower().startswith("bearer "):
+        auth.revoke_session(header[7:].strip())
+    return jsonify({"ok": True})
+
+
+@app.route("/api/auth/me")
+@auth.login_required
+def me_route():
+    return jsonify({"user": g.current_user})
+
+
+@app.route("/api/users", methods=["GET"])
+@auth.admin_required
+def list_users_route():
+    return jsonify({"users": auth.list_users()})
+
+
+@app.route("/api/users", methods=["POST"])
+@auth.admin_required
+def create_user_route():
+    body = request.get_json(force=True, silent=True) or {}
+    try:
+        user = auth.create_user(
+            body.get("username"), body.get("password"), body.get("role"),
+            display_name=body.get("display_name"), created_by_user_id=g.current_user["id"],
+        )
+    except ValueError as exc:
+        return jsonify({"error": str(exc)}), 400
+    return jsonify(user), 201
+
+
+# ---------------------------------------------------------------------------
+# Project routes
+# ---------------------------------------------------------------------------
 
 @app.route("/api/projects", methods=["GET"])
+@auth.login_required
 def list_projects_route():
-    return jsonify({"projects": db.list_projects()})
+    owner_user_id = None if g.current_user["role"] == "admin" else g.current_user["id"]
+    return jsonify({"projects": db.list_projects(owner_user_id=owner_user_id)})
 
 
 @app.route("/api/projects", methods=["POST"])
+@auth.login_required
 def create_project_route():
     body = request.get_json(force=True, silent=True) or {}
     try:
-        project_id = db.create_project(body.get("name"))
+        project_id = db.create_project(
+            body.get("name"), g.current_user["id"], g.current_user["username"]
+        )
     except ValueError as exc:
         return jsonify({"error": str(exc)}), 400
     return jsonify(db.get_project_summary(project_id)), 201
 
 
 @app.route("/api/projects/<project_id>")
+@auth.project_access_required
 def get_project_route(project_id):
-    summary = db.get_project_summary(project_id)
-    if summary is None:
-        return jsonify({"error": "not found"}), 404
-    return jsonify(summary)
+    return jsonify(db.get_project_summary(project_id))
 
 
 @app.route("/api/projects/<project_id>", methods=["DELETE"])
+@auth.project_access_required
 def delete_project_route(project_id):
-    if not db.project_exists(project_id):
-        return jsonify({"error": "not found"}), 404
     db.delete_project(project_id)
     return jsonify({"ok": True})
 
@@ -388,10 +441,8 @@ def delete_project_route(project_id):
 # ---------------------------------------------------------------------------
 
 @app.route("/api/projects/<project_id>/movies", methods=["GET"])
+@auth.project_access_required
 def list_movies(project_id):
-    err = _project_guard(project_id)
-    if err:
-        return err
     conn = db.get_conn(project_id)
     rows = conn.execute("SELECT * FROM MOVIE_ASSETS ORDER BY MOVIE_ASSET_ID").fetchall()
     conn.close()
@@ -399,10 +450,8 @@ def list_movies(project_id):
 
 
 @app.route("/api/projects/<project_id>/movie-groups", methods=["GET"])
+@auth.project_access_required
 def list_movie_groups(project_id):
-    err = _project_guard(project_id)
-    if err:
-        return err
     conn = db.get_conn(project_id)
     rows = conn.execute(
         "SELECT g.GROUP_ID as group_id, g.GROUP_NAME as group_name, "
@@ -415,10 +464,8 @@ def list_movie_groups(project_id):
 
 
 @app.route("/api/projects/<project_id>/movies/import-defaults", methods=["GET"])
+@auth.project_access_required
 def get_import_defaults(project_id):
-    err = _project_guard(project_id)
-    if err:
-        return err
     conn = db.get_conn(project_id)
     row = conn.execute("SELECT * FROM MOVIE_IMPORT_DEFAULTS WHERE NUMBER=1").fetchone()
     conn.close()
@@ -426,10 +473,8 @@ def get_import_defaults(project_id):
 
 
 @app.route("/api/projects/<project_id>/movies/import", methods=["POST"])
+@auth.project_access_required
 def import_movies(project_id):
-    err = _project_guard(project_id)
-    if err:
-        return err
     body = request.get_json(force=True, silent=True) or {}
 
     input_glob = (body.get("input_glob") or "").strip()
@@ -505,10 +550,8 @@ def import_movies(project_id):
 # ---------------------------------------------------------------------------
 
 @app.route("/api/projects/<project_id>/jobs", methods=["GET"])
+@auth.project_access_required
 def list_jobs(project_id):
-    err = _project_guard(project_id)
-    if err:
-        return err
     conn = db.get_conn(project_id)
     rows = conn.execute("SELECT * FROM JOBS ORDER BY CREATED_AT").fetchall()
     conn.close()
@@ -516,10 +559,8 @@ def list_jobs(project_id):
 
 
 @app.route("/api/projects/<project_id>/jobs", methods=["POST"])
+@auth.project_access_required
 def create_job(project_id):
-    err = _project_guard(project_id)
-    if err:
-        return err
     body = request.get_json(force=True, silent=True) or {}
     stage = body.get("stage")
     if stage not in STAGE_COMMANDS:
@@ -560,10 +601,8 @@ def create_job(project_id):
 
 
 @app.route("/api/projects/<project_id>/jobs/<job_id>")
+@auth.project_access_required
 def get_job(project_id, job_id):
-    err = _project_guard(project_id)
-    if err:
-        return err
     row = _fetch_job_row(project_id, job_id)
     if row is None:
         return jsonify({"error": "not found"}), 404
@@ -571,10 +610,8 @@ def get_job(project_id, job_id):
 
 
 @app.route("/api/projects/<project_id>/jobs/<job_id>/log")
+@auth.project_access_required
 def get_log(project_id, job_id):
-    err = _project_guard(project_id)
-    if err:
-        return err
     row = _fetch_job_row(project_id, job_id)
     if row is None:
         return jsonify({"error": "not found"}), 404
@@ -587,10 +624,8 @@ def get_log(project_id, job_id):
 
 
 @app.route("/api/projects/<project_id>/jobs/<job_id>/cancel", methods=["POST"])
+@auth.project_access_required
 def cancel_job(project_id, job_id):
-    err = _project_guard(project_id)
-    if err:
-        return err
     row = _fetch_job_row(project_id, job_id)
     if row is None:
         return jsonify({"error": "not found"}), 404
@@ -612,5 +647,6 @@ def cancel_job(project_id, job_id):
 
 
 if __name__ == "__main__":
+    auth.bootstrap_admin_if_needed()
     _recover_interrupted_jobs()
     app.run(host="0.0.0.0", port=8000, threaded=True)

@@ -747,6 +747,68 @@ def create_movie_group(project_id):
     return jsonify({"group_id": group_id, "group_name": group_name}), 201
 
 
+# Group 0 is the "All Movies" master list db.py seeds into every project --
+# every movie is a member of it, and the app treats it as the source of
+# truth for what exists. Renaming or deleting it would leave the project
+# without one, so both routes below refuse it.
+ALL_MOVIES_GROUP_ID = 0
+
+
+@app.route("/api/projects/<project_id>/movie-groups/<int:group_id>", methods=["PATCH"])
+@auth.project_access_required
+def rename_movie_group(project_id, group_id):
+    if group_id == ALL_MOVIES_GROUP_ID:
+        return jsonify({"error": "the All Movies group cannot be renamed"}), 400
+    body = request.get_json(force=True, silent=True) or {}
+    group_name = (body.get("group_name") or "").strip()
+    if not group_name:
+        return jsonify({"error": "group_name is required"}), 400
+
+    conn = db.get_conn(project_id)
+    row = conn.execute(
+        "SELECT GROUP_ID FROM MOVIE_GROUP_LIST WHERE GROUP_ID = ?", (group_id,)
+    ).fetchone()
+    if row is None:
+        conn.close()
+        return jsonify({"error": "no such group"}), 404
+    clash = conn.execute(
+        "SELECT GROUP_ID FROM MOVIE_GROUP_LIST WHERE LOWER(GROUP_NAME) = LOWER(?) AND GROUP_ID != ?",
+        (group_name, group_id),
+    ).fetchone()
+    if clash:
+        conn.close()
+        return jsonify({"error": 'a group named "{}" already exists'.format(group_name)}), 400
+    with conn:
+        conn.execute(
+            "UPDATE MOVIE_GROUP_LIST SET GROUP_NAME = ? WHERE GROUP_ID = ?", (group_name, group_id)
+        )
+    conn.close()
+    return jsonify({"group_id": group_id, "group_name": group_name})
+
+
+@app.route("/api/projects/<project_id>/movie-groups/<int:group_id>", methods=["DELETE"])
+@auth.project_access_required
+def delete_movie_group(project_id, group_id):
+    # Drops the group and its memberships only -- the movies themselves stay
+    # in the project (they're still in All Movies), same distinction the
+    # per-movie Remove makes between a group and the master list.
+    if group_id == ALL_MOVIES_GROUP_ID:
+        return jsonify({"error": "the All Movies group cannot be deleted"}), 400
+
+    conn = db.get_conn(project_id)
+    row = conn.execute(
+        "SELECT GROUP_ID FROM MOVIE_GROUP_LIST WHERE GROUP_ID = ?", (group_id,)
+    ).fetchone()
+    if row is None:
+        conn.close()
+        return jsonify({"error": "no such group"}), 404
+    with conn:
+        conn.execute("DELETE FROM MOVIE_GROUP_MEMBERS WHERE GROUP_ID = ?", (group_id,))
+        conn.execute("DELETE FROM MOVIE_GROUP_LIST WHERE GROUP_ID = ?", (group_id,))
+    conn.close()
+    return jsonify({"ok": True})
+
+
 @app.route("/api/projects/<project_id>/movies/delete", methods=["POST"])
 @auth.project_access_required
 def delete_movies(project_id):

@@ -552,8 +552,9 @@ From branch : <span id="versionBranch">—</span></p>
               <ul class="group-list" id="movieGroupList"></ul>
               <div class="asset-toolbar">
                 <button class="small" id="movieGroupAddBtn">Add</button>
-                <button class="small" disabled title="Not implemented yet -- group management is coming as its own feature.">Remove</button>
-                <button class="small" disabled title="Not implemented yet -- group management is coming as its own feature.">Invert</button>
+                <button class="small" id="movieGroupRenameBtn" disabled title="Select a group other than All Movies first.">Rename</button>
+                <button class="small" id="movieGroupRemoveBtn" disabled title="Select a group other than All Movies first.">Remove</button>
+                <button class="small" disabled title="Not implemented yet -- inverting a group's selection is coming as its own feature.">Invert</button>
               </div>
             </div>
 
@@ -908,7 +909,8 @@ From branch : <span id="versionBranch">—</span></p>
    "stageList","actionFormLabel","jobName","paramFields","expertToggle","expertFields","submitBtn",
    "previewDesc","jobSummaryBody",
    "importFields","importBtn","importNote","movieListBody","movieGroupList","movieImportOpenBtn",
-   "movieSelectAllCheckbox","movieGroupAddBtn","movieRemoveBtn","movieRemoveAllBtn","movieAddToGroupBtn",
+   "movieSelectAllCheckbox","movieGroupAddBtn","movieGroupRenameBtn","movieGroupRemoveBtn",
+   "movieRemoveBtn","movieRemoveAllBtn","movieAddToGroupBtn",
    "importScrim","importModal","importModalClose",
    "browseScrim","browseModal","browseModalClose","browseUpBtn","browsePath","browseList",
    "assetpageMovies","assetpagePlaceholder","placeholderPanelLabel",
@@ -2070,6 +2072,56 @@ From branch : <span id="versionBranch">—</span></p>
     });
   });
 
+  // All Movies (group 0) is the project's master list, so it can't be
+  // renamed or deleted -- the server refuses both too.
+  function selectedGroupName(){
+    var g = (state.movieGroups || []).filter(function(x){ return x.group_id === state.selectedGroupId; })[0];
+    return g ? g.group_name : "";
+  }
+
+  function updateGroupActionButtons(){
+    var isAllMovies = state.selectedGroupId === 0;
+    var reason = "The All Movies group can't be renamed or removed.";
+    els.movieGroupRenameBtn.disabled = isAllMovies;
+    els.movieGroupRenameBtn.title = isAllMovies ? reason : 'Rename "' + selectedGroupName() + '".';
+    els.movieGroupRemoveBtn.disabled = isAllMovies;
+    els.movieGroupRemoveBtn.title = isAllMovies ? reason : 'Remove the group "' + selectedGroupName() + '" (its movies stay in All Movies).';
+  }
+
+  els.movieGroupRenameBtn.addEventListener("click", function(){
+    if (!state.projectId || state.selectedGroupId === 0) return;
+    var current = selectedGroupName();
+    var groupName = prompt('Rename group "' + current + '" to:', current);
+    groupName = groupName ? groupName.trim() : "";
+    if (!groupName || groupName === current) return;
+    apiFetch(projectApiUrl("/movie-groups/" + state.selectedGroupId), {
+      method: "PATCH", headers: {"Content-Type": "application/json"}, body: JSON.stringify({group_name: groupName})
+    }).then(function(r){
+      if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
+      return r.json();
+    }).then(function(){
+      loadMovieGroups();
+    }).catch(function(err){
+      alert("Could not rename group: " + err.message);
+    });
+  });
+
+  els.movieGroupRemoveBtn.addEventListener("click", function(){
+    if (!state.projectId || state.selectedGroupId === 0) return;
+    var name = selectedGroupName();
+    if (!confirm('Remove the group "' + name + '"? Its movies stay in All Movies.')) return;
+    apiFetch(projectApiUrl("/movie-groups/" + state.selectedGroupId), {method: "DELETE"}).then(function(r){
+      if (!r.ok) return r.json().then(function(d){ throw new Error((d && d.error) || ("HTTP " + r.status)); });
+      return r.json();
+    }).then(function(){
+      state.selectedGroupId = 0;
+      loadMovieGroups();
+      loadMovies();
+    }).catch(function(err){
+      alert("Could not remove group: " + err.message);
+    });
+  });
+
   function updateMovieDetails(m){
     els.dMovieName.textContent = m ? (m.NAME || "—") : "—";
     els.dMovieFilename.textContent = m ? (m.FILENAME || "—") : "—";
@@ -2107,6 +2159,7 @@ From branch : <span id="versionBranch">—</span></p>
       li.addEventListener("click", function(){ selectMovieGroup(g.group_id); });
       els.movieGroupList.appendChild(li);
     });
+    updateGroupActionButtons();
   }
 
   function selectMovieGroup(groupId){
@@ -2114,6 +2167,7 @@ From branch : <span id="versionBranch">—</span></p>
     els.movieGroupList.querySelectorAll("li").forEach(function(li){
       li.classList.toggle("selected", Number(li.dataset.groupId) === groupId);
     });
+    updateGroupActionButtons();
     loadMovies();
   }
 
